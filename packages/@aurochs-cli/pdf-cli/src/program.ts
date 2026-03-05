@@ -9,6 +9,7 @@ import { runList } from "./commands/list";
 import { runShow } from "./commands/show";
 import { runExtract } from "./commands/extract";
 import { runBuild } from "./commands/build";
+import { runWrite, formatWritePretty } from "./commands/write";
 import { runPreview } from "./commands/preview";
 import {
   formatInfoPretty,
@@ -93,6 +94,16 @@ export function createProgram(): Command {
       const mode = program.opts().output as OutputMode;
       const result = await runBuild(spec);
       output(result, mode, formatBuildPretty);
+    });
+
+  program
+    .command("write")
+    .description("Write PdfDocument JSON to PDF binary")
+    .argument("<spec>", "JSON spec file path")
+    .action(async (spec: string) => {
+      const mode = program.opts().output as OutputMode;
+      const result = await runWrite(spec);
+      output(result, mode, formatWritePretty);
     });
 
   program

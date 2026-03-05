@@ -23,3 +23,9 @@ export {
   runPdfBuildPipeline,
   buildPdf,
 } from "./builder";
+
+export {
+  exportPdf,
+  exportPdfToFile,
+  type ExportPdfOptions,
+} from "./export";

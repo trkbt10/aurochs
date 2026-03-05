@@ -112,6 +112,14 @@
     "./test-utils/*": {
       "types": "./src/test-utils/*.ts",
       "default": "./src/test-utils/*.ts"
+    },
+    "./writer": {
+      "types": "./src/writer/index.ts",
+      "default": "./src/writer/index.ts"
+    },
+    "./writer/*": {
+      "types": "./src/writer/*.ts",
+      "default": "./src/writer/*.ts"
     }
   }
 }

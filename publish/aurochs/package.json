@@ -62,6 +62,10 @@
       "types": "./dist/@aurochs/pdf/src/index.d.ts",
       "import": "./dist/pdf/parser/index.js"
     },
+    "./pdf/writer": {
+      "types": "./dist/@aurochs/pdf/src/writer/index.d.ts",
+      "import": "./dist/pdf/writer/index.js"
+    },
     "./pdf/builder": {
       "types": "./dist/@aurochs-builder/pdf/src/index.d.ts",
       "import": "./dist/pdf/builder/index.js"

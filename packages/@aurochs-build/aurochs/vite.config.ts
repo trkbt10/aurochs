@@ -49,6 +49,8 @@ const entries = {
 
   // PDF Parser
   "pdf/parser/index": resolve(__dirname, "../../@aurochs/pdf/src/index.ts"),
+  // PDF Writer
+  "pdf/writer/index": resolve(__dirname, "../../@aurochs/pdf/src/writer/index.ts"),
   // PDF Builder
   "pdf/builder/index": resolve(__dirname, "../../@aurochs-builder/pdf/src/index.ts"),
   // PDF Renderer
