@@ -16,6 +16,7 @@ import noCrossPackageReexport from "./rules/no-cross-package-reexport.js";
 import noExportStar from "./rules/no-export-star.js";
 import maxParams from "./rules/max-params.js";
 import noBareRendererImport from "./rules/no-bare-renderer-import.js";
+import noNodeOnlyImport from "./rules/no-node-only-import.js";
 
 export default {
   rules: {
@@ -34,5 +35,6 @@ export default {
     "no-export-star": noExportStar,
     "max-params": maxParams,
     "no-bare-renderer-import": noBareRendererImport,
+    "no-node-only-import": noNodeOnlyImport,
   },
 };

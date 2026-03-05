@@ -85,6 +85,8 @@ export default [
         "custom/no-bare-renderer-import": "error",
         // Require object parameter for functions with 4+ params
         "custom/max-params": ["error", { max: 3 }],
+        // Prohibit Node.js-only packages in browser code (must use .node.ts files)
+        "custom/no-node-only-import": ["error", { packages: ["pngjs"] }],
         // Spread from modular groups
         ...rulesJSDoc,
         ...rulesRestrictedSyntax,

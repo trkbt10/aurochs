@@ -59,6 +59,10 @@ const entries = {
 };
 
 export default defineConfig({
+  resolve: {
+    // Use browser exports for conditional exports
+    conditions: ["browser", "import", "default"],
+  },
   plugins: [
     dts({
       outDir: resolve(__dirname, "../../../publish/aurochs/dist"),
@@ -108,6 +112,8 @@ export default defineConfig({
         "react-dom/server.browser",
         "node:path",
         "node:fs/promises",
+        // Node.js-only packages (not bundled for browser)
+        "pngjs",
       ],
       output: {
         preserveModules: false,
