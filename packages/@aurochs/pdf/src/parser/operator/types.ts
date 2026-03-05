@@ -70,6 +70,11 @@ export type ParsedPath = {
  */
 export type TextRun = {
   readonly text: string;
+  /**
+   * Original PDF byte sequence before decoding.
+   * Used for round-trip preservation of CID font text.
+   */
+  readonly rawBytes?: Uint8Array;
 
   /**
    * Snapshot of the text matrix (Tm) at the moment the text-showing operator ran.

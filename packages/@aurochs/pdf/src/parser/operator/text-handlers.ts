@@ -478,6 +478,18 @@ const handleTextNextLine: OperatorHandler = (ctx, gfxOps) => {
 // =============================================================================
 
 /**
+ * Convert raw PDF text string to byte array.
+ * PDF text strings are stored as Latin-1 encoded bytes.
+ */
+function rawTextToBytes(rawText: string): Uint8Array {
+  const bytes = new Uint8Array(rawText.length);
+  for (let i = 0; i < rawText.length; i++) {
+    bytes[i] = rawText.charCodeAt(i) & 0xff;
+  }
+  return bytes;
+}
+
+/**
  * Create a TextRun from current text state.
  *
  * Pure function that computes text position and metrics.
@@ -542,6 +554,7 @@ export function createTextRun(
 
   const run: TextRun = {
     text,
+    rawBytes: rawTextToBytes(text),
     textMatrix,
     x: startPos.x,
     y: startPos.y,

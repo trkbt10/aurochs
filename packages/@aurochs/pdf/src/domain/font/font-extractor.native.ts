@@ -6,9 +6,10 @@ import type { NativePdfPage, PdfArray, PdfDict, PdfObject, PdfStream } from "../
 import { decodePdfStream } from "../../native/stream/stream";
 import { normalizeFontFamily } from "./font-name-map";
 import { repairFontForWeb } from "./font-repair";
-import { parseToUnicodeCMap } from "./cmap/cmap-parser";
+import { parseToUnicodeCMap, type CMapParseResult } from "./cmap/cmap-parser";
 import { extractTrueTypeMetrics, normalizeMetricsTo1000 } from "./truetype-parser";
-import type { EmbeddedFont, EmbeddedFontMetrics, FontFormat } from "./embedded-font";
+import type { EmbeddedFont, EmbeddedFontMetrics, EmbeddedFontToUnicode, FontFormat } from "./embedded-font";
+import type { CIDOrdering } from "./types";
 
 function asDict(obj: PdfObject | undefined): PdfDict | null {
   return obj?.type === "dict" ? obj : null;
@@ -79,14 +80,54 @@ function getMimeType(format: FontFormat): string {
   }
 }
 
-function extractToUnicodeMap(page: NativePdfPage, fontDict: PdfDict): ReadonlyMap<number, string> | null {
+function extractToUnicodeMap(page: NativePdfPage, fontDict: PdfDict): CMapParseResult | null {
   const toUnicodeObj = resolve(page, dictGet(fontDict, "ToUnicode"));
   const stream = asStream(toUnicodeObj);
   if (!stream) {return null;}
   const decoded = decodePdfStream(stream);
   const cmap = new TextDecoder("latin1").decode(decoded);
-  const parsed = parseToUnicodeCMap(cmap);
-  return parsed.mapping;
+  return parseToUnicodeCMap(cmap);
+}
+
+/**
+ * Extract CID ordering from CIDSystemInfo dictionary.
+ */
+function extractCIDOrdering(page: NativePdfPage, fontDict: PdfDict): CIDOrdering | undefined {
+  // Check if it's a Type0 font
+  const subtypeObj = resolve(page, dictGet(fontDict, "Subtype"));
+  const subtype = subtypeObj?.type === "name" ? subtypeObj.value : null;
+  if (subtype !== "Type0") {return undefined;}
+
+  // Get DescendantFonts
+  const descendants = resolve(page, dictGet(fontDict, "DescendantFonts"));
+  const arr = asArray(descendants);
+  if (!arr || arr.items.length === 0) {return undefined;}
+
+  // Get CIDFont dictionary
+  const cidFont = asDict(resolve(page, arr.items[0]));
+  if (!cidFont) {return undefined;}
+
+  // Get CIDSystemInfo
+  const cidSystemInfo = resolveDict(page, dictGet(cidFont, "CIDSystemInfo"));
+  if (!cidSystemInfo) {return undefined;}
+
+  // Extract Ordering
+  const orderingObj = resolve(page, dictGet(cidSystemInfo, "Ordering"));
+  if (!orderingObj) {return undefined;}
+
+  const ordering = orderingObj.type === "string" ? orderingObj.text :
+                   orderingObj.type === "name" ? orderingObj.value : null;
+
+  if (!ordering) {return undefined;}
+
+  // Map to CIDOrdering type
+  if (ordering.includes("Japan1")) {return "Japan1";}
+  if (ordering.includes("GB1")) {return "GB1";}
+  if (ordering.includes("CNS1")) {return "CNS1";}
+  if (ordering.includes("Korea1")) {return "Korea1";}
+  if (ordering.includes("Identity")) {return "Identity";}
+
+  return undefined;
 }
 
 function getFontDescriptor(page: NativePdfPage, fontDict: PdfDict): PdfDict | null {
@@ -126,16 +167,29 @@ function normalizeEmbeddedFontData(args: {
   readonly format: FontFormat;
   readonly rawData: Uint8Array;
   readonly fontFamily: string;
-  readonly toUnicode: ReadonlyMap<number, string> | null;
+  readonly toUnicode: CMapParseResult | null;
 }): { data: Uint8Array; metrics: EmbeddedFontMetrics | undefined } {
   if (args.format !== "truetype") {
     return { data: args.rawData, metrics: undefined };
   }
 
-  const data = repairFontForWeb(args.rawData, new Map(args.toUnicode ?? []), args.fontFamily);
+  const data = repairFontForWeb(args.rawData, new Map(args.toUnicode?.mapping ?? []), args.fontFamily);
   const rawMetrics = extractTrueTypeMetrics(data);
   const metrics = rawMetrics ? normalizeMetricsTo1000(rawMetrics) : undefined;
   return { data, metrics };
+}
+
+/**
+ * Convert CMapParseResult to EmbeddedFontToUnicode for storage.
+ */
+function buildEmbeddedFontToUnicode(toUnicode: CMapParseResult | null): EmbeddedFontToUnicode | undefined {
+  if (!toUnicode || toUnicode.byteMapping.size === 0) {
+    return undefined;
+  }
+  return {
+    byteMapping: toUnicode.byteMapping,
+    sourceCodeByteLengths: toUnicode.sourceCodeByteLengths,
+  };
 }
 
 
@@ -185,6 +239,10 @@ export function extractEmbeddedFontsFromNativePages(pages: readonly NativePdfPag
       const toUnicode = extractToUnicodeMap(page, fontDict);
       const { data, metrics } = normalizeEmbeddedFontData({ format, rawData, fontFamily, toUnicode });
 
+      // Extract CID-specific information
+      const ordering = extractCIDOrdering(page, fontDict);
+      const codeByteWidth = toUnicode?.codeByteWidth ?? 1;
+
       fonts.push({
         baseFontName: baseFontRaw,
         fontFamily,
@@ -192,6 +250,9 @@ export function extractEmbeddedFontsFromNativePages(pages: readonly NativePdfPag
         data,
         mimeType,
         metrics,
+        toUnicode: buildEmbeddedFontToUnicode(toUnicode),
+        ordering,
+        codeByteWidth,
       });
     }
   }

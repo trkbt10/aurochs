@@ -6,6 +6,7 @@
  */
 
 import type { PdfText } from "../../domain/text";
+import type { PdfEmbeddedFont } from "../../domain/document";
 
 /**
  * Format a number for PDF content stream.
@@ -40,6 +41,94 @@ function escapeTextString(text: string): string {
 }
 
 /**
+ * Convert bytes to hex string for CID font text output.
+ */
+function bytesToHex(bytes: Uint8Array): string {
+  let result = "";
+  for (let i = 0; i < bytes.length; i++) {
+    result += bytes[i].toString(16).padStart(2, "0").toUpperCase();
+  }
+  return result;
+}
+
+/**
+ * Check if text should use hex string output (CID font).
+ */
+function shouldUseHexOutput(
+  text: PdfText,
+  embeddedFonts?: readonly PdfEmbeddedFont[]
+): boolean {
+  if (!text.rawBytes) {
+    return false;
+  }
+
+  // Find matching embedded font
+  const font = findEmbeddedFont(text, embeddedFonts);
+  if (!font) {
+    return false;
+  }
+
+  // CID fonts use 2-byte encoding or have CID ordering
+  return font.codeByteWidth === 2 || font.ordering !== undefined;
+}
+
+/**
+ * Normalize font name for matching.
+ * Removes leading slash and optionally subset prefix.
+ */
+function normalizeFontNameForMatch(name: string, removeSubsetPrefix: boolean): string {
+  let clean = name.startsWith("/") ? name.slice(1) : name;
+  if (removeSubsetPrefix) {
+    const plusIndex = clean.indexOf("+");
+    if (plusIndex > 0) {
+      clean = clean.slice(plusIndex + 1);
+    }
+  }
+  return clean;
+}
+
+/**
+ * Find the embedded font matching a text element.
+ */
+function findEmbeddedFont(
+  text: PdfText,
+  embeddedFonts?: readonly PdfEmbeddedFont[]
+): PdfEmbeddedFont | undefined {
+  if (!embeddedFonts) {
+    return undefined;
+  }
+
+  const rawTargetName = text.baseFont ?? text.fontName;
+  // Normalize target name (remove leading slash)
+  const targetName = normalizeFontNameForMatch(rawTargetName, false);
+  // Also get target without subset prefix for fallback matching
+  const targetNameNoSubset = normalizeFontNameForMatch(rawTargetName, true);
+
+  return embeddedFonts.find(f => {
+    // Direct match on fontFamily (already normalized)
+    if (f.fontFamily === targetName || f.fontFamily === targetNameNoSubset) {
+      return true;
+    }
+
+    // Match on baseFontName (remove leading slash)
+    const baseFontClean = f.baseFontName?.replace(/^\//, "");
+    if (baseFontClean === targetName) {
+      return true;
+    }
+
+    // Subset prefix match (e.g., "ABCDEF+FontName" matches "FontName")
+    if (baseFontClean?.includes("+")) {
+      const afterPlus = baseFontClean.split("+")[1];
+      if (afterPlus === targetName || afterPlus === targetNameNoSubset) {
+        return true;
+      }
+    }
+
+    return false;
+  });
+}
+
+/**
  * Context for text serialization.
  */
 export type TextSerializationContext = {
@@ -48,6 +137,11 @@ export type TextSerializationContext = {
    * e.g., "Helvetica" -> "F1"
    */
   readonly fontNameToResource: ReadonlyMap<string, string>;
+  /**
+   * Embedded fonts for CID font detection.
+   * When present, CID fonts will use hex string output.
+   */
+  readonly embeddedFonts?: readonly PdfEmbeddedFont[];
 };
 
 /**
@@ -111,7 +205,13 @@ export function serializeText(
   lines.push(`1 0 0 1 ${formatNum(posX)} ${formatNum(posY)} Tm`);
 
   // Show text (Tj operator)
-  lines.push(`(${escapeTextString(text.text)}) Tj`);
+  // Use hex string for CID fonts to preserve original byte sequence
+  if (shouldUseHexOutput(text, ctx.embeddedFonts) && text.rawBytes) {
+    const hexString = bytesToHex(text.rawBytes);
+    lines.push(`<${hexString}> Tj`);
+  } else {
+    lines.push(`(${escapeTextString(text.text)}) Tj`);
+  }
 
   // End text object
   lines.push("ET");
@@ -160,7 +260,14 @@ export function serializeTextBatch(
     }
 
     lines.push(`1 0 0 1 ${formatNum(posX)} ${formatNum(posY)} Tm`);
-    lines.push(`(${escapeTextString(text.text)}) Tj`);
+
+    // Use hex string for CID fonts to preserve original byte sequence
+    if (shouldUseHexOutput(text, ctx.embeddedFonts) && text.rawBytes) {
+      const hexString = bytesToHex(text.rawBytes);
+      lines.push(`<${hexString}> Tj`);
+    } else {
+      lines.push(`(${escapeTextString(text.text)}) Tj`);
+    }
   }
 
   lines.push("ET");

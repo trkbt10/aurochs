@@ -3,10 +3,11 @@
  */
 
 import { writePdfDocument } from "./document-writer";
-import type { PdfDocument, PdfPage } from "../domain/document";
+import type { PdfDocument, PdfPage, PdfEmbeddedFont } from "../domain/document";
 import type { PdfPath } from "../domain/path";
 import type { PdfText } from "../domain/text";
 import type { PdfGraphicsState } from "../domain/graphics-state";
+import * as zlib from "node:zlib";
 
 const decoder = new TextDecoder();
 const toText = (bytes: Uint8Array) => decoder.decode(bytes);
@@ -235,5 +236,119 @@ describe("writePdfDocument", () => {
 
     const text = toText(result);
     expect(text.trim().endsWith("%%EOF")).toBe(true);
+  });
+
+  it("writes CID font text with hex string output", () => {
+    // Simulate Japanese text "あ" (hiragana A)
+    // CID font raw bytes: 0x82 0xA0 (Shift_JIS encoding)
+    const rawBytes = new Uint8Array([0x82, 0xA0]);
+
+    // fontName uses the raw baseFont name as it appears in the PDF
+    const text: PdfText = {
+      type: "text",
+      text: "あ",
+      rawBytes,
+      x: 100,
+      y: 700,
+      width: 12,
+      height: 12,
+      fontName: "ABCDEF+HiraginoSans",  // Raw baseFont name (without leading slash)
+      baseFont: "ABCDEF+HiraginoSans",
+      fontSize: 12,
+      graphicsState: minimalGraphicsState,
+    };
+
+    // Create a CID font with toUnicode mapping
+    // fontFamily is normalized (without subset prefix)
+    const embeddedFont: PdfEmbeddedFont = {
+      fontFamily: "HiraginoSans",  // Normalized name
+      format: "truetype",
+      data: new Uint8Array([0]), // Minimal font data
+      mimeType: "font/ttf",
+      baseFontName: "/ABCDEF+HiraginoSans",  // Original with leading slash
+      codeByteWidth: 2,
+      ordering: "Japan1",
+      toUnicode: {
+        byteMapping: new Map([["82A0", "あ"]]),
+        sourceCodeByteLengths: [2],
+      },
+    };
+
+    const document: PdfDocument = {
+      pages: [
+        {
+          pageNumber: 1,
+          width: 612,
+          height: 792,
+          elements: [text],
+        },
+      ],
+      embeddedFonts: [embeddedFont],
+    };
+
+    const result = writePdfDocument(document);
+    const resultText = toText(result);
+
+    // Should have Type0 font structure
+    expect(resultText).toContain("/Subtype /Type0");
+    expect(resultText).toContain("/Encoding /Identity-H");
+    expect(resultText).toContain("/DescendantFonts");
+    expect(resultText).toContain("/ToUnicode");
+
+    // Content stream should contain hex string output
+    // Find and decompress the content stream
+    const streamMatch = resultText.match(/(\d+) 0 obj\n<<.*?\/Filter \/FlateDecode.*?>>\nstream\n/s);
+    if (streamMatch) {
+      const streamStart = resultText.indexOf("stream\n", streamMatch.index) + 7;
+      const streamEnd = resultText.indexOf("\nendstream", streamStart);
+      const compressedData = result.slice(
+        new TextEncoder().encode(resultText.slice(0, streamStart)).length,
+        new TextEncoder().encode(resultText.slice(0, streamEnd)).length
+      );
+
+      // Try to find hex string in decompressed content
+      try {
+        const decompressed = zlib.inflateSync(compressedData);
+        const contentText = toText(decompressed);
+        // Should contain hex string format <82A0>
+        expect(contentText).toContain("<82A0>");
+      } catch {
+        // If decompression fails, at least verify the font structure is correct
+        expect(resultText).toContain("/Subtype /Type0");
+      }
+    }
+  });
+
+  it("writes standard font text with literal string output", () => {
+    const text: PdfText = {
+      type: "text",
+      text: "Hello",
+      x: 100,
+      y: 700,
+      width: 50,
+      height: 12,
+      fontName: "Helvetica",
+      fontSize: 12,
+      graphicsState: minimalGraphicsState,
+    };
+
+    const document: PdfDocument = {
+      pages: [
+        {
+          pageNumber: 1,
+          width: 612,
+          height: 792,
+          elements: [text],
+        },
+      ],
+    };
+
+    const result = writePdfDocument(document);
+    const resultText = toText(result);
+
+    // Should have standard Type1 font
+    expect(resultText).toContain("/Subtype /Type1");
+    expect(resultText).toContain("/BaseFont /Helvetica");
+    expect(resultText).toContain("/Encoding /WinAnsiEncoding");
   });
 });

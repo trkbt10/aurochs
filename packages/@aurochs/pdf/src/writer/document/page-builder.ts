@@ -5,7 +5,7 @@
  */
 
 import type { PdfObject } from "../../native/core/types";
-import type { PdfPage, PdfElement } from "../../domain/document";
+import type { PdfPage, PdfElement, PdfEmbeddedFont } from "../../domain/document";
 import type { PdfPath } from "../../domain/path";
 import type { PdfText } from "../../domain/text";
 import type { PdfImage } from "../../domain/image";
@@ -67,7 +67,8 @@ function collectImages(elements: readonly PdfElement[]): PdfImage[] {
 function generateContentStreamOperators(
   elements: readonly PdfElement[],
   fontMap: ReadonlyMap<string, string>,
-  imageMap: ReadonlyMap<number, string>
+  imageMap: ReadonlyMap<number, string>,
+  embeddedFonts?: readonly PdfEmbeddedFont[]
 ): string {
   const operators: string[] = [];
   let imageIndex = 0;
@@ -94,6 +95,7 @@ function generateContentStreamOperators(
         // Build text serialization context
         const ctx = {
           fontNameToResource: fontMap,
+          embeddedFonts,
         };
         const textOps = [
           serializeGraphicsState(text.graphicsState, {
@@ -134,13 +136,15 @@ export type BuildPageOptions = {
   readonly fontObjMap: ReadonlyMap<string, number>;
   readonly imageObjMap: ReadonlyMap<number, number>;
   readonly tracker: PdfObjectTracker;
+  /** Embedded fonts for CID font text serialization. */
+  readonly embeddedFonts?: readonly PdfEmbeddedFont[];
 };
 
 /**
  * Build a page object.
  */
 export function buildPage(options: BuildPageOptions): PageBuildResult {
-  const { page, pagesObjNum, fontObjMap, imageObjMap, tracker } = options;
+  const { page, pagesObjNum, fontObjMap, imageObjMap, tracker, embeddedFonts } = options;
   // Allocate object numbers
   const pageObjNum = tracker.allocate();
   const contentObjNum = tracker.allocate();
@@ -174,7 +178,8 @@ export function buildPage(options: BuildPageOptions): PageBuildResult {
   const contentOperators = generateContentStreamOperators(
     page.elements,
     fontResourceMap,
-    imageResourceMap
+    imageResourceMap,
+    embeddedFonts
   );
   const contentStream = serializeContentStream(contentOperators, "FlateDecode");
   tracker.set(contentObjNum, serializeIndirectObject(contentObjNum, 0, contentStream));

@@ -4,6 +4,6 @@
  * Exports types for PDF document structure.
  */
 
-export type { PdfElement, PdfPage, PdfDocument, PdfEmbeddedFont } from "./types";
+export type { PdfElement, PdfPage, PdfDocument, PdfEmbeddedFont, PdfFontToUnicode, PdfFontMetrics } from "./types";
 
 export { PDF_UNITS, isPdfPath, isPdfText, isPdfImage } from "./types";

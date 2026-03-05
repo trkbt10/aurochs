@@ -250,7 +250,7 @@ function resolvePagesToParse(requested: readonly number[], pageCount: number): r
 }
 
 function buildEmbeddedFonts(
-  embeddedFontsRaw: readonly { readonly fontFamily: string; readonly format: PdfEmbeddedFont["format"]; readonly data: Uint8Array; readonly mimeType: string }[],
+  embeddedFontsRaw: readonly import("../../domain/font/embedded-font").EmbeddedFont[],
 ): readonly PdfEmbeddedFont[] | undefined {
   if (embeddedFontsRaw.length === 0) {
     return undefined;
@@ -260,6 +260,19 @@ function buildEmbeddedFonts(
     format: f.format,
     data: f.data,
     mimeType: f.mimeType,
+    baseFontName: f.baseFontName,
+    toUnicode: f.toUnicode ? {
+      byteMapping: f.toUnicode.byteMapping,
+      sourceCodeByteLengths: f.toUnicode.sourceCodeByteLengths,
+    } : undefined,
+    metrics: f.metrics ? {
+      ascender: f.metrics.ascender,
+      descender: f.metrics.descender,
+      widths: f.metrics.widths ?? new Map(),
+      defaultWidth: f.metrics.defaultWidth ?? 500,
+    } : undefined,
+    ordering: f.ordering,
+    codeByteWidth: f.codeByteWidth,
   }));
 }
 

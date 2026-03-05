@@ -284,6 +284,7 @@ function convertText(parsed: ParsedText, fontMappings: FontMappings): PdfText[] 
     results.push({
       type: "text" as const,
       text: decodedText,
+      rawBytes: run.rawBytes,
       x: minX,
       y: minY,
       width,

@@ -7,6 +7,7 @@
 import type { PdfImage } from "../image";
 import type { PdfPath } from "../path";
 import type { PdfText } from "../text";
+import type { CIDOrdering } from "../font";
 
 // =============================================================================
 // Element Types
@@ -66,6 +67,31 @@ export type PdfPage = {
 };
 
 /**
+ * ToUnicode mapping data for round-trip preservation.
+ * Used to reconstruct ToUnicode CMap when writing PDF.
+ */
+export type PdfFontToUnicode = {
+  /** Source bytes (hex) → Unicode string mapping. Key is uppercase hex (e.g., "8140" → "ア"). */
+  readonly byteMapping: ReadonlyMap<string, string>;
+  /** Source code byte lengths from codespace ranges (descending order). */
+  readonly sourceCodeByteLengths: readonly number[];
+};
+
+/**
+ * Font metrics for PDF writing.
+ */
+export type PdfFontMetrics = {
+  /** Ascender height in 1/1000 em units */
+  readonly ascender: number;
+  /** Descender depth in 1/1000 em units (negative) */
+  readonly descender: number;
+  /** Glyph widths: character code → width in 1/1000 em units */
+  readonly widths: ReadonlyMap<number, number>;
+  /** Default glyph width when not found in widths */
+  readonly defaultWidth: number;
+};
+
+/**
  * Embedded font data extracted from PDF.
  *
  * @see ISO 32000-1:2008 Section 9.9 (Embedded Font Programs)
@@ -79,6 +105,16 @@ export type PdfEmbeddedFont = {
   readonly data: Uint8Array;
   /** MIME type */
   readonly mimeType: string;
+  /** Original BaseFont name from PDF (e.g., "/ZRDQJE+Hiragino-Sans"). Includes subset prefix. */
+  readonly baseFontName?: string;
+  /** ToUnicode CMap information for round-trip preservation. */
+  readonly toUnicode?: PdfFontToUnicode;
+  /** Font metrics for accurate text layout. */
+  readonly metrics?: PdfFontMetrics;
+  /** CID ordering (Japan1, GB1, CNS1, Korea1, Identity). */
+  readonly ordering?: CIDOrdering;
+  /** Number of bytes per character code (1 for single-byte, 2 for CID fonts). */
+  readonly codeByteWidth?: 1 | 2;
 };
 
 export type PdfDocument = {

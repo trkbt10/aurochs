@@ -16,8 +16,13 @@ export {
 export {
   buildType1Font,
   buildEmbeddedFont,
+  buildType0Font,
   buildFonts,
 } from "./font-builder";
+
+export {
+  generateToUnicodeStream,
+} from "./tounicode-writer";
 
 export {
   buildImageXObject,

@@ -180,6 +180,7 @@ export function writePdfDocument(
       fontObjMap,
       imageObjMap: pageImageObjMap,
       tracker,
+      embeddedFonts: document.embeddedFonts,
     });
     pageObjNums.push(result.pageObjNum);
   }

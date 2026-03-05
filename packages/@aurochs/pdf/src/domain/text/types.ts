@@ -40,6 +40,12 @@ import type { CIDOrdering } from "../font";
 export type PdfText = {
   readonly type: "text";
   readonly text: string;
+  /**
+   * Original PDF byte sequence before decoding.
+   * Used for round-trip preservation of CID font text.
+   * When present, the writer should use this instead of re-encoding text.
+   */
+  readonly rawBytes?: Uint8Array;
 
   /**
    * X coordinate of the text's left edge in PDF points.
