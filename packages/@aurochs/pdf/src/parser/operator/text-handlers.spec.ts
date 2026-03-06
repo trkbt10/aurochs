@@ -214,6 +214,8 @@ describe("text-handlers", () => {
       const gs = createDefaultGraphicsState();
       const textRun = {
         text: "Hello",
+        rawText: "Hello",
+        codeByteWidth: 1 as const,
         textMatrix: IDENTITY_MATRIX,
         x: 0,
         y: 0,

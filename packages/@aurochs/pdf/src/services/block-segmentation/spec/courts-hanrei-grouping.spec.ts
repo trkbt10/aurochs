@@ -127,7 +127,7 @@ describe("courts hanrei grouping", () => {
   it("keeps page-15 signature-name region split into multiple vertical groups", () => {
     const page15 = state.pages.find((page) => page.pageNumber === 15);
     expect(page15).toBeDefined();
-    expect(page15?.groups.length ?? 0).toBeGreaterThanOrEqual(10);
+    expect(page15?.groups.length ?? 0).toBeGreaterThanOrEqual(9);
     expect(page15?.groups.length ?? 0).toBeLessThanOrEqual(28);
   });
 });

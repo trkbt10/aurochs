@@ -9,7 +9,7 @@ import {
   type PdfPath,
   type PdfText,
 } from "@aurochs/pdf/domain";
-import { decodeText, decodeTextWithFontInfo, type FontMappings } from "@aurochs/pdf/domain/font";
+import { decodeText, type FontMappings } from "@aurochs/pdf/domain/font";
 import type { ParsedElement, ParsedPath, ParsedText } from "@aurochs/pdf/parser/operator/index";
 import { buildPath, builtPathToPdfPath } from "@aurochs/pdf/parser/path/path-builder";
 import { rasterizeSoftMaskedFillPath } from "../../../@aurochs/pdf/src/parser/soft-mask/soft-mask-raster.native";
@@ -241,9 +241,11 @@ function convertText(parsed: ParsedText, fontMappings: FontMappings): PdfText[] 
       readonly fontMappings: FontMappings;
     }): string {
       const { run, primaryFontKey, fallbackFontKey, fontMappings } = args;
+      // Text is already decoded at parse time when fontInfo was available
       if (run.fontInfo) {
-        return decodeTextWithFontInfo(run.text, run.fontInfo);
+        return run.text;
       }
+      // Fallback: decode using fontMappings when fontInfo was not available at parse time
       const primary = decodeText(run.text, primaryFontKey, fontMappings);
       if (primary !== run.text || !fallbackFontKey || fallbackFontKey === primaryFontKey) {
         return primary;
@@ -284,7 +286,9 @@ function convertText(parsed: ParsedText, fontMappings: FontMappings): PdfText[] 
     results.push({
       type: "text" as const,
       text: decodedText,
+      rawText: run.rawText,
       rawBytes: run.rawBytes,
+      codeByteWidth: run.codeByteWidth,
       x: minX,
       y: minY,
       width,

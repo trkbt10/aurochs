@@ -17,6 +17,7 @@
 
 import type { PdfBBox, PdfMatrix, PdfGraphicsState, FontMetrics, FontInfo, FontMappings } from "../../domain";
 import { IDENTITY_MATRIX, transformPoint, multiplyMatrices, DEFAULT_FONT_METRICS } from "../../domain";
+import { decodeTextWithFontInfo } from "../../domain/font/decoding/text-decoder";
 import type {
   OperatorHandler,
   OperatorHandlerEntry,
@@ -552,9 +553,14 @@ export function createTextRun(
   // Calculate effective font size
   const effectiveFontSize = calculateEffectiveFontSize(currentFontSize, textMatrix, ctm);
 
+  // Decode text to Unicode when font info is available
+  const decodedText = currentFontInfo ? decodeTextWithFontInfo(text, currentFontInfo) : text;
+
   const run: TextRun = {
-    text,
+    text: decodedText,
+    rawText: text,
     rawBytes: rawTextToBytes(text),
+    codeByteWidth: currentCodeByteWidth,
     textMatrix,
     x: startPos.x,
     y: startPos.y,

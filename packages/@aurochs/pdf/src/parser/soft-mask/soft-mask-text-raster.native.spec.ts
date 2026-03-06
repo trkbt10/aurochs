@@ -114,6 +114,8 @@ describe("soft mask text rasterization (native)", () => {
 
     const run: TextRun = {
       text: "A",
+      rawText: "A",
+      codeByteWidth: 1,
       textMatrix: [1, 0, 0, 1, 0, 0] as const,
       x: 0,
       y: 0,

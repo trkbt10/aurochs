@@ -39,13 +39,29 @@ import type { CIDOrdering } from "../font";
 
 export type PdfText = {
   readonly type: "text";
+  /**
+   * Decoded Unicode text for display and processing.
+   */
   readonly text: string;
+  /**
+   * Original glyph codes before Unicode decoding.
+   * Used for round-trip preservation and position matching in rewritePdfContext.
+   *
+   * For single-byte fonts: each character represents one glyph code.
+   * For CID fonts (codeByteWidth=2): each pair of characters represents one CID.
+   */
+  readonly rawText?: string;
   /**
    * Original PDF byte sequence before decoding.
    * Used for round-trip preservation of CID font text.
    * When present, the writer should use this instead of re-encoding text.
    */
   readonly rawBytes?: Uint8Array;
+  /**
+   * Number of bytes per character code (1 for simple fonts, 2 for CID fonts).
+   * Used to calculate the original glyph count: rawText.length / codeByteWidth.
+   */
+  readonly codeByteWidth?: 1 | 2;
 
   /**
    * X coordinate of the text's left edge in PDF points.
