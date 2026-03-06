@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.4] - 2026-03-06
+
+### Added
+
+- PDF: auto-decode TextRun.text to Unicode at parse time using ToUnicode/fontInfo
+- PDF: rawText and codeByteWidth fields for safe translation round-trip
+
 ## [0.6.0] - 2026-03-05
 
 ### Added

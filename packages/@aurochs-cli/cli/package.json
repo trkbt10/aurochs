@@ -1,6 +1,6 @@
 {
   "name": "@aurochs-cli/cli",
-  "version": "0.6.3",
+  "version": "0.6.4",
   "type": "module",
   "bin": {
     "aurochs": "./dist/cli.js"
