@@ -1,6 +1,6 @@
 {
   "name": "aurochs",
-  "version": "0.6.4",
+  "version": "0.7.0",
   "type": "module",
   "sideEffects": false,
   "bin": {
@@ -30,6 +30,18 @@
       "types": "./dist/@aurochs-renderer/pptx/src/mermaid/index.d.ts",
       "import": "./dist/pptx/renderer/mermaid/index.js"
     },
+    "./pptx/renderer/react": {
+      "types": "./dist/@aurochs-renderer/pptx/src/react/index.d.ts",
+      "import": "./dist/pptx/renderer/react/index.js"
+    },
+    "./pptx/renderer/animation": {
+      "types": "./dist/@aurochs-renderer/pptx/src/animation/index.d.ts",
+      "import": "./dist/pptx/renderer/animation/index.js"
+    },
+    "./pptx/renderer/render-options": {
+      "types": "./dist/@aurochs-renderer/pptx/src/render-options.d.ts",
+      "import": "./dist/pptx/renderer/render-options/index.js"
+    },
     "./pptx/viewer": {
       "types": "./dist/@aurochs-ui/pptx-editor/src/viewer/index.d.ts",
       "import": "./dist/pptx/viewer/index.js"
@@ -53,6 +65,14 @@
     "./docx/renderer/mermaid": {
       "types": "./dist/@aurochs-renderer/docx/src/mermaid/index.d.ts",
       "import": "./dist/docx/renderer/mermaid/index.js"
+    },
+    "./docx/renderer/react": {
+      "types": "./dist/@aurochs-renderer/docx/src/react/index.d.ts",
+      "import": "./dist/docx/renderer/react/index.js"
+    },
+    "./docx/renderer/render-options": {
+      "types": "./dist/@aurochs-renderer/docx/src/render-options.d.ts",
+      "import": "./dist/docx/renderer/render-options/index.js"
     },
     "./docx/viewer": {
       "types": "./dist/@aurochs-ui/docx-editor/src/viewer/index.d.ts",

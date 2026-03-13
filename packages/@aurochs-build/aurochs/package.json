@@ -1,6 +1,6 @@
 {
   "name": "@aurochs-build/aurochs",
-  "version": "0.6.4",
+  "version": "0.7.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,8 +9,18 @@
     "verify": "node scripts/verify-exports.mjs"
   },
   "dependencies": {
+    "@aurochs-builder/pdf": "workspace:*",
+    "@aurochs-office/docx": "workspace:*",
+    "@aurochs-office/pptx": "workspace:*",
+    "@aurochs-office/xlsx": "workspace:*",
+    "@aurochs-renderer/docx": "workspace:*",
+    "@aurochs-renderer/pdf": "workspace:*",
     "@aurochs-renderer/pptx": "workspace:*",
+    "@aurochs-renderer/xlsx": "workspace:*",
+    "@aurochs-ui/docx-editor": "workspace:*",
     "@aurochs-ui/pptx-editor": "workspace:*",
+    "@aurochs-ui/xlsx-editor": "workspace:*",
+    "@aurochs/pdf": "workspace:*",
     "@aurochs-cli/cli": "workspace:*"
   },
   "devDependencies": {

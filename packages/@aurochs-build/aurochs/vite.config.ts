@@ -22,6 +22,9 @@ const entries = {
   "pptx/renderer/svg/index": resolve(__dirname, "../../@aurochs-renderer/pptx/src/svg/index.ts"),
   "pptx/renderer/ascii/index": resolve(__dirname, "../../@aurochs-renderer/pptx/src/ascii/index.ts"),
   "pptx/renderer/mermaid/index": resolve(__dirname, "../../@aurochs-renderer/pptx/src/mermaid/index.ts"),
+  "pptx/renderer/react/index": resolve(__dirname, "../../@aurochs-renderer/pptx/src/react/index.ts"),
+  "pptx/renderer/animation/index": resolve(__dirname, "../../@aurochs-renderer/pptx/src/animation/index.ts"),
+  "pptx/renderer/render-options/index": resolve(__dirname, "../../@aurochs-renderer/pptx/src/render-options.ts"),
   // PPTX Viewer
   "pptx/viewer/index": resolve(__dirname, "../../@aurochs-ui/pptx-editor/src/viewer/index.ts"),
 
@@ -33,6 +36,8 @@ const entries = {
   "docx/renderer/svg/index": resolve(__dirname, "../../@aurochs-renderer/docx/src/svg/index.ts"),
   "docx/renderer/ascii/index": resolve(__dirname, "../../@aurochs-renderer/docx/src/ascii/index.ts"),
   "docx/renderer/mermaid/index": resolve(__dirname, "../../@aurochs-renderer/docx/src/mermaid/index.ts"),
+  "docx/renderer/react/index": resolve(__dirname, "../../@aurochs-renderer/docx/src/react/index.ts"),
+  "docx/renderer/render-options/index": resolve(__dirname, "../../@aurochs-renderer/docx/src/render-options.ts"),
   // DOCX Viewer
   "docx/viewer/index": resolve(__dirname, "../../@aurochs-ui/docx-editor/src/viewer/index.ts"),
 
@@ -73,12 +78,17 @@ export default defineConfig({
         resolve(__dirname, "../../@aurochs-renderer/pptx/src/svg/**"),
         resolve(__dirname, "../../@aurochs-renderer/pptx/src/ascii/**"),
         resolve(__dirname, "../../@aurochs-renderer/pptx/src/mermaid/**"),
+        resolve(__dirname, "../../@aurochs-renderer/pptx/src/react/**"),
+        resolve(__dirname, "../../@aurochs-renderer/pptx/src/animation/**"),
+        resolve(__dirname, "../../@aurochs-renderer/pptx/src/render-options*"),
         resolve(__dirname, "../../@aurochs-ui/pptx-editor/src/viewer/**"),
         // DOCX
         resolve(__dirname, "../../@aurochs-office/docx/src/**"),
         resolve(__dirname, "../../@aurochs-renderer/docx/src/svg/**"),
         resolve(__dirname, "../../@aurochs-renderer/docx/src/ascii/**"),
         resolve(__dirname, "../../@aurochs-renderer/docx/src/mermaid/**"),
+        resolve(__dirname, "../../@aurochs-renderer/docx/src/react/**"),
+        resolve(__dirname, "../../@aurochs-renderer/docx/src/render-options*"),
         resolve(__dirname, "../../@aurochs-ui/docx-editor/src/viewer/**"),
         // XLSX
         resolve(__dirname, "../../@aurochs-office/xlsx/src/**"),

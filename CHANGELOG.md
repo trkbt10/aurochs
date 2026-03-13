@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-03-13
+
+### Added
+
+- PPTX React renderer export (`aurochs/pptx/renderer/react`) for custom UI composition
+- PPTX animation engine export (`aurochs/pptx/renderer/animation`) for programmatic animation control
+- PPTX render-options export (`aurochs/pptx/renderer/render-options`) for SVG rendering customization
+- DOCX React renderer export (`aurochs/docx/renderer/react`) for custom UI composition
+- DOCX render-options export (`aurochs/docx/renderer/render-options`) for SVG rendering customization
+
+### Fixed
+
+- Missing dependencies in `@aurochs-build/aurochs` for DOCX, XLSX, and PDF packages
+
 ## [0.6.4] - 2026-03-06
 
 ### Added
@@ -145,7 +159,9 @@ Project inception.
 - Text body and paragraph rendering
 - Theme and style support
 
-[Unreleased]: https://github.com/trkbt10/aurochs/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/trkbt10/aurochs/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/trkbt10/aurochs/compare/v0.6.4...v0.7.0
+[0.6.4]: https://github.com/trkbt10/aurochs/compare/v0.6.0...v0.6.4
 [0.6.0]: https://github.com/trkbt10/aurochs/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/trkbt10/aurochs/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/trkbt10/aurochs/compare/v0.3.2...v0.4.0
