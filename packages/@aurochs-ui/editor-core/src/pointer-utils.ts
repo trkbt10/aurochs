@@ -23,31 +23,6 @@ export type TextareaSelectionLike = {
   setSelectionRange(start: number, end: number, direction?: Exclude<TextSelectionDirection, null>): void;
 };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /**
  * Check if the event represents a primary pointer action (left click or touch).
  */
@@ -58,62 +33,12 @@ export function isPrimaryPointerAction(event: PrimaryPointerEventLike): boolean 
   return event.button === 0 || (event.buttons & 1) === 1;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /**
  * Check if the mouse event represents a primary action (left click).
  */
 export function isPrimaryMouseAction(event: PrimaryMouseEventLike): boolean {
   return event.button === 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 /**
  * Get the anchor position of a textarea selection.
@@ -124,31 +49,6 @@ export function getSelectionAnchor(textarea: TextareaSelectionLike): number {
   }
   return textarea.selectionStart ?? 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 /**
  * Apply a selection range to a textarea element.

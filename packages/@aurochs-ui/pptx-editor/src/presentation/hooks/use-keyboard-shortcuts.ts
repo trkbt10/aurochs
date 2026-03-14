@@ -9,6 +9,7 @@ import type { Slide, Shape } from "@aurochs-office/pptx/domain";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import type { SelectionState } from "../../context/slide/state";
 import type { PresentationEditorAction } from "../../context/presentation/editor/types";
+import { isInputTarget, getModKey, isPlatformMac, processShortcutHandlers } from "@aurochs-ui/editor-core/keyboard";
 
 export type UseKeyboardShortcutsParams = {
   readonly dispatch: (action: PresentationEditorAction) => void;
@@ -24,14 +25,6 @@ type ShortcutContext = {
   readonly primaryShape: Shape | undefined;
   readonly isMac: boolean;
 };
-
-function isInputTarget(target: EventTarget | null): boolean {
-  return target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement;
-}
-
-function getModKey(e: KeyboardEvent, isMac: boolean): boolean {
-  return isMac ? e.metaKey : e.ctrlKey;
-}
 
 function handleUndo(e: KeyboardEvent, ctx: ShortcutContext): boolean {
   const modKey = getModKey(e, ctx.isMac);
@@ -156,7 +149,7 @@ const SHORTCUT_HANDLERS = [
  */
 export function useKeyboardShortcuts({ dispatch, selection, slide, primaryShape }: UseKeyboardShortcutsParams): void {
   useEffect(() => {
-    const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
+    const isMac = isPlatformMac();
     const ctx: ShortcutContext = { dispatch, selection, slide, primaryShape, isMac };
 
     const handleKeyDown = (e: KeyboardEvent): void => {
@@ -164,11 +157,7 @@ export function useKeyboardShortcuts({ dispatch, selection, slide, primaryShape 
         return;
       }
 
-      for (const handler of SHORTCUT_HANDLERS) {
-        if (handler(e, ctx)) {
-          return;
-        }
-      }
+      processShortcutHandlers(e, ctx, SHORTCUT_HANDLERS);
     };
 
     window.addEventListener("keydown", handleKeyDown);

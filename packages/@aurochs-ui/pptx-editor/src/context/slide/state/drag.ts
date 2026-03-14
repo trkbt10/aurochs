@@ -1,33 +1,31 @@
 /**
  * @file Drag state management
  *
- * State types and utilities for drag operations (move, resize, rotate).
+ * PPTX-specific drag state types built on generic editor-core types.
+ * Uses branded Pixels/Degrees types from the PPTX domain.
  */
 
 import type { Pixels, Degrees } from "@aurochs-office/drawing-ml/domain/units";
 import type { Bounds, ShapeId } from "@aurochs-office/pptx/domain/types";
-import type { IdleDragState as CoreIdleDragState } from "@aurochs-ui/editor-core/drag-state";
+import type {
+  IdleDragState as CoreIdleDragState,
+  ResizeDragState as CoreResizeDragState,
+  PendingResizeDragState as CorePendingResizeDragState,
+  ResizeHandlePosition as CoreResizeHandlePosition,
+} from "@aurochs-ui/editor-core/drag-state";
 import {
   createIdleDragState as createCoreIdleDragState,
   isDragIdle as isCoreDragIdle,
 } from "@aurochs-ui/editor-core/drag-state";
 
-// =============================================================================
-// Types
-// =============================================================================
-
 /**
- * Resize handle positions
+ * Position of a resize handle on the selection box
  */
-export type ResizeHandlePosition =
-  | "nw" // top-left
-  | "n" // top-center
-  | "ne" // top-right
-  | "e" // middle-right
-  | "se" // bottom-right
-  | "s" // bottom-center
-  | "sw" // bottom-left
-  | "w"; // middle-left
+export type ResizeHandlePosition = CoreResizeHandlePosition;
+
+// =============================================================================
+// PPTX-specialized Types (using branded Pixels/Degrees/ShapeId)
+// =============================================================================
 
 /**
  * Idle state - no drag operation in progress
@@ -58,24 +56,7 @@ export type MoveDragState = {
 /**
  * Resize drag state
  */
-export type ResizeDragState = {
-  readonly type: "resize";
-  readonly handle: ResizeHandlePosition;
-  readonly startX: Pixels;
-  readonly startY: Pixels;
-  /** All shapes being resized (for multi-selection) */
-  readonly shapeIds: readonly ShapeId[];
-  /** Initial bounds for each shape */
-  readonly initialBoundsMap: ReadonlyMap<ShapeId, Bounds>;
-  /** Combined bounding box (for multi-selection) */
-  readonly combinedBounds: Bounds;
-  readonly aspectLocked: boolean;
-  /** Primary shape ID for backwards compatibility */
-  readonly shapeId: ShapeId;
-  readonly initialBounds: Bounds;
-  /** Current preview delta from start position (updated during drag, not committed to history) */
-  readonly previewDelta: PreviewDelta;
-};
+export type ResizeDragState = CoreResizeDragState<ShapeId>;
 
 /**
  * Rotate drag state
@@ -144,21 +125,7 @@ export type PendingMoveDragState = {
 /**
  * Pending resize drag state - waiting for threshold before confirming resize
  */
-export type PendingResizeDragState = {
-  readonly type: "pending-resize";
-  readonly handle: ResizeHandlePosition;
-  readonly startX: Pixels;
-  readonly startY: Pixels;
-  /** Client coordinates for threshold checking */
-  readonly startClientX: number;
-  readonly startClientY: number;
-  readonly shapeIds: readonly ShapeId[];
-  readonly initialBoundsMap: ReadonlyMap<ShapeId, Bounds>;
-  readonly combinedBounds: Bounds;
-  readonly aspectLocked: boolean;
-  readonly shapeId: ShapeId;
-  readonly initialBounds: Bounds;
-};
+export type PendingResizeDragState = CorePendingResizeDragState<ShapeId>;
 
 /**
  * Pending rotate drag state - waiting for threshold before confirming rotate

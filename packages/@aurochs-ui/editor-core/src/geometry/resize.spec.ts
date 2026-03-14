@@ -1,5 +1,5 @@
 /**
- * @file Unit tests for shape/resize.ts
+ * @file Unit tests for geometry/resize.ts
  */
 
 import {
@@ -19,7 +19,7 @@ import {
   calculateMultiResizeBounds,
   type ResizeBounds,
   type ResizeOptions,
-} from "@aurochs-ui/editor-core/geometry";
+} from "./resize";
 
 // =============================================================================
 // Test Fixtures
@@ -62,20 +62,14 @@ describe("calculateAspectDelta", () => {
   });
 
   it("uses width delta when larger (aspect locked)", () => {
-    // aspectRatio = 2, dw = 100, dh = 10
-    // aspectDw = dh * aspectRatio = 10 * 2 = 20
-    // |dw| = 100 > |aspectDw| = 20, so use dw
     const result = calculateAspectDelta({ dw: 100, dh: 10, aspectRatio: 2, aspectLocked: true });
     expect(result.dw).toBe(100);
-    expect(result.dh).toBe(50); // 100 / 2
+    expect(result.dh).toBe(50);
   });
 
   it("uses height delta when larger (aspect locked)", () => {
-    // aspectRatio = 2, dw = 10, dh = 100
-    // aspectDw = dh * aspectRatio = 100 * 2 = 200
-    // |dw| = 10 < |aspectDw| = 200, so use dh
     const result = calculateAspectDelta({ dw: 10, dh: 100, aspectRatio: 2, aspectLocked: true });
-    expect(result.dw).toBe(200); // 100 * 2
+    expect(result.dw).toBe(200);
     expect(result.dh).toBe(100);
   });
 
@@ -143,7 +137,6 @@ describe("resizeFromNW", () => {
 
   it("maintains aspect ratio when locked", () => {
     const result = resizeFromNW({ initial: wideBounds, dx: -50, dy: -25, options: aspectLockedOptions });
-    // Initial aspect ratio is 2:1, should maintain it
     expect(result.width / result.height).toBeCloseTo(2, 5);
   });
 });
@@ -171,8 +164,6 @@ describe("resizeFromN", () => {
 
   it("centers width change when aspect locked", () => {
     const result = resizeFromN(squareBounds, -20, aspectLockedOptions);
-    // Height increases by 20, width should also increase by 20 (1:1 ratio)
-    // Width centered: x shifts by (100 - 120) / 2 = -10
     expect(result.height).toBe(120);
     expect(result.width).toBe(120);
     expect(result.x).toBe(90);
@@ -210,7 +201,7 @@ describe("resizeFromE", () => {
     const result = resizeFromE(squareBounds, 20, aspectLockedOptions);
     expect(result.width).toBe(120);
     expect(result.height).toBe(120);
-    expect(result.y).toBe(90); // centered
+    expect(result.y).toBe(90);
   });
 });
 
@@ -251,7 +242,7 @@ describe("resizeFromS", () => {
     const result = resizeFromS(squareBounds, 20, aspectLockedOptions);
     expect(result.height).toBe(120);
     expect(result.width).toBe(120);
-    expect(result.x).toBe(90); // centered
+    expect(result.x).toBe(90);
   });
 });
 
@@ -292,7 +283,7 @@ describe("resizeFromW", () => {
     const result = resizeFromW(squareBounds, -20, aspectLockedOptions);
     expect(result.width).toBe(120);
     expect(result.height).toBe(120);
-    expect(result.y).toBe(90); // centered
+    expect(result.y).toBe(90);
   });
 });
 
@@ -348,8 +339,8 @@ describe("calculateRelativePosition", () => {
 
     const { relX, relY } = calculateRelativePosition(shapeBounds, combinedBounds);
 
-    expect(relX).toBe(0.25); // (150 - 100) / 200
-    expect(relY).toBe(0.25); // (125 - 100) / 100
+    expect(relX).toBe(0.25);
+    expect(relY).toBe(0.25);
   });
 
   it("returns 0 for zero-size combined bounds", () => {
@@ -371,10 +362,8 @@ describe("calculateMultiResizeBounds", () => {
 
     const result = calculateMultiResizeBounds(shapeBounds, combinedOld, combinedNew);
 
-    // Position should double (relative position 0.5 * 400 = 200)
     expect(result.x).toBe(200);
     expect(result.y).toBe(200);
-    // Size should double
     expect(result.width).toBe(100);
     expect(result.height).toBe(100);
   });
@@ -386,8 +375,6 @@ describe("calculateMultiResizeBounds", () => {
 
     const result = calculateMultiResizeBounds(shapeBounds, combinedOld, combinedNew);
 
-    // relX = (150 - 100) / 100 = 0.5
-    // newX = 200 + 0.5 * 200 = 300
     expect(result.x).toBe(300);
     expect(result.y).toBe(300);
     expect(result.width).toBe(100);

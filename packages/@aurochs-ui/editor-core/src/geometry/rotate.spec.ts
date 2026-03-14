@@ -1,5 +1,5 @@
 /**
- * @file Unit tests for shape/rotate.ts
+ * @file Unit tests for geometry/rotate.ts
  */
 
 import {
@@ -18,7 +18,7 @@ import {
   DEFAULT_SNAP_ANGLES,
   DEFAULT_SNAP_THRESHOLD,
   type Point,
-} from "@aurochs-ui/editor-core/geometry";
+} from "./rotate";
 
 // =============================================================================
 // normalizeAngle Tests
@@ -217,10 +217,9 @@ describe("calculateShapeCenter", () => {
 
 describe("rotateShapeAroundCenter", () => {
   it("rotates shape around external center", () => {
-    // Shape at (100, 0) with size 20x20, center at (0, 0), rotate 90 degrees
     const result = rotateShapeAroundCenter({
-      shapeX: 90, // x (so center is at 100)
-      shapeY: -10, // y (so center is at 0)
+      shapeX: 90,
+      shapeY: -10,
       shapeWidth: 20,
       shapeHeight: 20,
       initialRotation: 0,
@@ -229,8 +228,6 @@ describe("rotateShapeAroundCenter", () => {
       deltaAngleDeg: 90,
     });
 
-    // Shape center (100, 0) rotates to (0, 100)
-    // New top-left: (0 - 10, 100 - 10) = (-10, 90)
     expect(result.x).toBeCloseTo(-10, 5);
     expect(result.y).toBeCloseTo(90, 5);
     expect(result.rotation).toBe(90);
@@ -273,7 +270,6 @@ describe("rotateShapeAroundCenter", () => {
 
 describe("calculateRotationDelta", () => {
   it("calculates delta from start to current angle", () => {
-    // Start angle 0 (pointing right), current at 45 degrees
     const delta = calculateRotationDelta({
       centerX: 0,
       centerY: 0,
@@ -286,7 +282,6 @@ describe("calculateRotationDelta", () => {
   });
 
   it("calculates negative delta for clockwise rotation", () => {
-    // Start angle 90, current at 45
     const delta = calculateRotationDelta({
       centerX: 0,
       centerY: 0,
@@ -322,21 +317,15 @@ describe("getRotatedCorners", () => {
     const corners = getRotatedCorners({ x: 0, y: 0, width: 100, height: 50, rotation: 0 });
 
     expect(corners.length).toBe(4);
-    expect(corners[0]).toEqual({ x: 0, y: 0 }); // top-left
-    expect(corners[1]).toEqual({ x: 100, y: 0 }); // top-right
-    expect(corners[2]).toEqual({ x: 100, y: 50 }); // bottom-right
-    expect(corners[3]).toEqual({ x: 0, y: 50 }); // bottom-left
+    expect(corners[0]).toEqual({ x: 0, y: 0 });
+    expect(corners[1]).toEqual({ x: 100, y: 0 });
+    expect(corners[2]).toEqual({ x: 100, y: 50 });
+    expect(corners[3]).toEqual({ x: 0, y: 50 });
   });
 
   it("rotates corners 90 degrees around center", () => {
-    // Rectangle at (0, 0) size 100x100, center at (50, 50)
     const corners = getRotatedCorners({ x: 0, y: 0, width: 100, height: 100, rotation: 90 });
 
-    // After 90 degree rotation:
-    // (0, 0) -> rotated around (50, 50) -> (100, 0)
-    // (100, 0) -> (100, 100)
-    // (100, 100) -> (0, 100)
-    // (0, 100) -> (0, 0)
     expect(corners[0].x).toBeCloseTo(100, 5);
     expect(corners[0].y).toBeCloseTo(0, 5);
     expect(corners[1].x).toBeCloseTo(100, 5);
@@ -348,7 +337,6 @@ describe("getRotatedCorners", () => {
   });
 
   it("handles offset rectangle", () => {
-    // Rectangle at (100, 200) size 50x30
     const corners = getRotatedCorners({ x: 100, y: 200, width: 50, height: 30, rotation: 0 });
 
     expect(corners[0]).toEqual({ x: 100, y: 200 });
@@ -360,8 +348,6 @@ describe("getRotatedCorners", () => {
   it("rotates 180 degrees", () => {
     const corners = getRotatedCorners({ x: 0, y: 0, width: 100, height: 100, rotation: 180 });
 
-    // After 180 degree rotation around (50, 50):
-    // (0, 0) -> (100, 100)
     expect(corners[0].x).toBeCloseTo(100, 5);
     expect(corners[0].y).toBeCloseTo(100, 5);
   });
@@ -397,13 +383,11 @@ describe("getSvgRotationTransformForBounds", () => {
   });
 
   it("calculates center and returns correct transform", () => {
-    // Rectangle at (0, 0) size 100x100, center is (50, 50)
     const result = getSvgRotationTransformForBounds({ rotation: 45, x: 0, y: 0, width: 100, height: 100 });
     expect(result).toBe("rotate(45, 50, 50)");
   });
 
   it("handles offset rectangle", () => {
-    // Rectangle at (100, 200) size 50x30, center is (125, 215)
     const result = getSvgRotationTransformForBounds({ rotation: 90, x: 100, y: 200, width: 50, height: 30 });
     expect(result).toBe("rotate(90, 125, 215)");
   });

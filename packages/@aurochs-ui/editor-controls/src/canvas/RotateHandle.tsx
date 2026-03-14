@@ -25,7 +25,7 @@ export type RotateHandleProps = {
 // =============================================================================
 
 const HANDLE_RADIUS = 5;
-const HANDLE_FILL = colorTokens.text.primary;
+const HANDLE_FILL = colorTokens.background.primary;
 const HANDLE_STROKE = colorTokens.selection.primary;
 const HANDLE_STROKE_WIDTH = 1;
 

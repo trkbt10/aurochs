@@ -30,12 +30,11 @@ import { clientToSlideCoords } from "../shape/coords";
 import { collectShapeRenderData } from "../shape/traverse";
 import { findShapeByIdWithParents } from "../shape/query";
 import { getAbsoluteBounds } from "../shape/transform";
-import { getCombinedBoundsWithRotation } from "../shape/bounds";
-import { getSvgRotationTransformForBounds, normalizeAngle } from "../shape/rotate";
+import { getCombinedBoundsWithRotation, getSvgRotationTransformForBounds, applyDragPreview } from "@aurochs-ui/editor-core/geometry";
 import { createBoundsFromDrag } from "../shape/factory";
 import type { ShapeBounds as CreationBounds } from "../shape/creation-bounds";
 import { SlideContextMenu, type ContextMenuActions } from "./context-menu/SlideContextMenu";
-import { SelectionBox } from "../selection/SelectionBox";
+import { SelectionBox } from "@aurochs-ui/editor-controls/canvas";
 import { SlideRenderer } from "@aurochs-renderer/pptx/react";
 import { colorTokens } from "@aurochs-ui/ui-components/design-tokens";
 
@@ -123,14 +122,6 @@ type ShapeBounds = {
   readonly rotation: number;
 };
 
-type BaseBounds = {
-  readonly x: number;
-  readonly y: number;
-  readonly width: number;
-  readonly height: number;
-  readonly rotation: number;
-};
-
 type MarqueeSelection = {
   readonly startX: number;
   readonly startY: number;
@@ -145,164 +136,6 @@ type CreationDrag = {
   readonly currentX: number;
   readonly currentY: number;
 };
-
-// =============================================================================
-// Drag Preview Helpers
-// =============================================================================
-
-function applyMovePreview(id: ShapeId, baseBounds: BaseBounds, drag: Extract<DragState, { type: "move" }>): BaseBounds {
-  if (!drag.shapeIds.includes(id)) {
-    return baseBounds;
-  }
-  const dx = drag.previewDelta.dx as number;
-  const dy = drag.previewDelta.dy as number;
-  const initial = drag.initialBounds.get(id);
-  if (!initial) {
-    return baseBounds;
-  }
-  return {
-    ...baseBounds,
-    x: (initial.x as number) + dx,
-    y: (initial.y as number) + dy,
-  };
-}
-
-type ResizeDimensionsInput = {
-  readonly handle: ResizeHandlePosition;
-  readonly baseW: number;
-  readonly baseH: number;
-  readonly baseX: number;
-  readonly baseY: number;
-  readonly dx: number;
-  readonly dy: number;
-  readonly aspectLocked: boolean;
-};
-
-function calculateResizedDimensions({
-  handle,
-  baseW,
-  baseH,
-  baseX,
-  baseY,
-  dx,
-  dy,
-  aspectLocked,
-}: ResizeDimensionsInput): { newWidth: number; newHeight: number; newX: number; newY: number } {
-  const widthDelta = handle.includes("e") ? dx : handle.includes("w") ? -dx : 0;
-  const heightDelta = handle.includes("s") ? dy : handle.includes("n") ? -dy : 0;
-  const xDelta = handle.includes("w") ? dx : 0;
-  const yDelta = handle.includes("n") ? dy : 0;
-
-  const rawWidth = Math.max(10, baseW + widthDelta);
-  const rawHeight = Math.max(10, baseH + heightDelta);
-
-  if (!aspectLocked || baseW <= 0 || baseH <= 0) {
-    return {
-      newWidth: rawWidth,
-      newHeight: rawHeight,
-      newX: baseX + xDelta,
-      newY: baseY + yDelta,
-    };
-  }
-
-  const aspect = baseW / baseH;
-  const isVerticalOnly = handle === "n" || handle === "s";
-  const isHorizontalOnly = handle === "e" || handle === "w";
-
-  const finalWidth = isVerticalOnly ? rawHeight * aspect : rawWidth;
-  const finalHeight = isHorizontalOnly ? rawWidth / aspect : rawWidth / aspect;
-
-  return {
-    newWidth: finalWidth,
-    newHeight: finalHeight,
-    newX: baseX + xDelta,
-    newY: baseY + yDelta,
-  };
-}
-
-function applyResizePreview(
-  id: ShapeId,
-  baseBounds: BaseBounds,
-  drag: Extract<DragState, { type: "resize" }>,
-): BaseBounds {
-  if (!drag.shapeIds.includes(id)) {
-    return baseBounds;
-  }
-
-  const dx = drag.previewDelta.dx as number;
-  const dy = drag.previewDelta.dy as number;
-  const { handle, combinedBounds: cb, initialBoundsMap, aspectLocked } = drag;
-  const initial = initialBoundsMap.get(id);
-
-  if (!initial || !cb) {
-    return baseBounds;
-  }
-
-  const baseX = cb.x as number;
-  const baseY = cb.y as number;
-  const baseW = cb.width as number;
-  const baseH = cb.height as number;
-
-  const { newWidth, newHeight, newX, newY } = calculateResizedDimensions({
-    handle,
-    baseW,
-    baseH,
-    baseX,
-    baseY,
-    dx,
-    dy,
-    aspectLocked,
-  });
-
-  const scaleX = baseW > 0 ? newWidth / baseW : 1;
-  const scaleY = baseH > 0 ? newHeight / baseH : 1;
-
-  const relX = (initial.x as number) - baseX;
-  const relY = (initial.y as number) - baseY;
-
-  return {
-    x: newX + relX * scaleX,
-    y: newY + relY * scaleY,
-    width: (initial.width as number) * scaleX,
-    height: (initial.height as number) * scaleY,
-    rotation: baseBounds.rotation,
-  };
-}
-
-function applyRotatePreview(
-  id: ShapeId,
-  baseBounds: BaseBounds,
-  drag: Extract<DragState, { type: "rotate" }>,
-): BaseBounds {
-  if (!drag.shapeIds.includes(id)) {
-    return baseBounds;
-  }
-
-  const angleDelta = drag.previewAngleDelta as number;
-  const initialRotation = drag.initialRotationsMap.get(id);
-
-  if (initialRotation === undefined) {
-    return baseBounds;
-  }
-
-  return {
-    ...baseBounds,
-    rotation: normalizeAngle((initialRotation as number) + angleDelta),
-  };
-}
-
-function applyDragPreview(id: ShapeId, baseBounds: BaseBounds, drag: DragState): BaseBounds {
-  switch (drag.type) {
-    case "move":
-      return applyMovePreview(id, baseBounds, drag);
-    case "resize":
-      return applyResizePreview(id, baseBounds, drag);
-    case "rotate":
-      return applyRotatePreview(id, baseBounds, drag);
-    default:
-      return baseBounds;
-  }
-}
 
 // =============================================================================
 // Component

@@ -145,9 +145,15 @@ export { ShapeToolbar, type ShapeToolbarProps } from "./panels/ShapeToolbar";
 export { LayerPanel, type LayerPanelProps } from "./panels/LayerPanel";
 
 // Slide Editor Sub-components
-export { SelectionBox, type SelectionBoxProps, type SelectionBoxVariant } from "./selection/SelectionBox";
-export { ResizeHandle, type ResizeHandleProps } from "./selection/ResizeHandle";
-export { RotateHandle, type RotateHandleProps } from "./selection/RotateHandle";
+export {
+  SelectionBox,
+  type SelectionBoxProps,
+  type SelectionBoxVariant,
+  ResizeHandle,
+  type ResizeHandleProps,
+  RotateHandle,
+  type RotateHandleProps,
+} from "./selection";
 
 // Shape identity utilities
 export { getShapeId, hasShapeId } from "./shape/identity";

@@ -14,7 +14,7 @@ import type { PresentationEditorAction } from "../../context/presentation/editor
 import type { ViewportTransform } from "@aurochs-renderer/pptx/svg-viewport";
 import { screenToSlideCoords } from "@aurochs-renderer/pptx/svg-viewport";
 import { snapValue } from "../../slide-canvas/canvas-controls";
-import { isDragThresholdExceeded } from "../../drag";
+import { isDragThresholdExceeded } from "@aurochs-ui/editor-core/drag-utils";
 
 export type UseDragHandlersParams = {
   readonly drag: DragState;

@@ -6,6 +6,7 @@
   "sideEffects": false,
   "dependencies": {
     "@aurochs-ui/color-editor": "workspace:*",
+    "@aurochs-ui/editor-core": "workspace:*",
     "@aurochs-ui/ui-components": "workspace:*",
     "react-panel-layout": "^0.6.1"
   },
@@ -58,6 +59,18 @@
     "./editor-shell": {
       "types": "./src/editor-shell/index.ts",
       "default": "./src/editor-shell/index.ts"
+    },
+    "./canvas": {
+      "types": "./src/canvas/index.ts",
+      "default": "./src/canvas/index.ts"
+    },
+    "./text-edit": {
+      "types": "./src/text-edit/index.ts",
+      "default": "./src/text-edit/index.ts"
+    },
+    "./list-selection": {
+      "types": "./src/list-selection/index.ts",
+      "default": "./src/list-selection/index.ts"
     }
   }
 }

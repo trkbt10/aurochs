@@ -19,18 +19,10 @@ import type {
   TableColumn,
 } from "@aurochs-office/pptx/domain/table/types";
 import type { EditorProps } from "@aurochs-ui/ui-components/types";
+import { type CellPosition, getColumnLetter, getCellPreviewText } from "@aurochs-ui/editor-core/table-selection";
 
 export type TableEditorProps = EditorProps<Table> & {
   readonly style?: CSSProperties;
-};
-
-// =============================================================================
-// Types
-// =============================================================================
-
-type CellPosition = {
-  readonly row: number;
-  readonly col: number;
 };
 
 type CellGridProps = {
@@ -156,26 +148,7 @@ function getCellPreview(cell: TableCell, maxLength: number = 10): string {
     }
   }
 
-  const text = texts.join(" ").trim();
-  if (text.length > maxLength) {
-    return text.substring(0, maxLength) + "…";
-  }
-  return text;
-}
-
-/**
- * Generate column letter (A, B, C, ... Z, AA, AB, ...)
- * Uses recursive approach to avoid let
- */
-function getColumnLetter(index: number): string {
-  const buildLetter = (n: number, acc: string): string => {
-    if (n < 0) {
-      return acc;
-    }
-    const char = String.fromCharCode((n % 26) + 65);
-    return buildLetter(Math.floor(n / 26) - 1, char + acc);
-  };
-  return buildLetter(index, "");
+  return getCellPreviewText(texts.join(" "), maxLength);
 }
 
 // =============================================================================

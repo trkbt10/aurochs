@@ -31,8 +31,101 @@ export {
 export type { ClipboardContent } from "./clipboard";
 export { createClipboardContent, incrementPasteCount, markAsCopy, markAsCut } from "./clipboard";
 
-export type { IdleDragState } from "./drag-state";
-export { createIdleDragState, isDragIdle } from "./drag-state";
+export type {
+  IdleDragState,
+  PreviewDelta,
+  MoveDragState,
+  ResizeDragState,
+  RotateDragState,
+  CreateDragState,
+  MarqueeDragState,
+  PendingMoveDragState,
+  PendingResizeDragState,
+  PendingRotateDragState,
+  DragState,
+} from "./drag-state";
+export {
+  createIdleDragState,
+  isDragIdle,
+  isDragMove,
+  isDragResize,
+  isDragRotate,
+  isDragCreate,
+  isDragMarquee,
+  isDragPendingMove,
+  isDragPendingResize,
+  isDragPendingRotate,
+  isDragPending,
+} from "./drag-state";
+
+export { DRAG_THRESHOLD_PX, isDragThresholdExceeded } from "./drag-utils";
 
 export type { PrimaryMouseEventLike, PrimaryPointerEventLike, TextareaSelectionLike } from "./pointer-utils";
 export { applySelectionRange, getSelectionAnchor, isPrimaryMouseAction, isPrimaryPointerAction } from "./pointer-utils";
+
+// Geometry
+export type {
+  Point,
+  SimpleBounds,
+  RotatedBoundsInput,
+  RotationResult,
+  ResizeHandlePosition,
+  ResizeBounds,
+  ResizeOptions,
+} from "./geometry/types";
+
+export {
+  normalizeAngle,
+  degreesToRadians,
+  radiansToDegrees,
+  calculateAngleFromCenter,
+  DEFAULT_SNAP_ANGLES,
+  DEFAULT_SNAP_THRESHOLD,
+  snapAngle,
+  rotatePointAroundCenter,
+  calculateShapeCenter,
+  getRotatedCorners,
+  getSvgRotationTransform,
+  getSvgRotationTransformForBounds,
+  rotateShapeAroundCenter,
+  calculateRotationDelta,
+} from "./geometry/rotate";
+
+export {
+  calculateAspectDelta,
+  applyMinConstraints,
+  resizeFromNW,
+  resizeFromN,
+  resizeFromNE,
+  resizeFromE,
+  resizeFromSE,
+  resizeFromS,
+  resizeFromSW,
+  resizeFromW,
+  calculateResizeBounds,
+  calculateScaleFactors,
+  calculateRelativePosition,
+  calculateMultiResizeBounds,
+} from "./geometry/resize";
+
+export {
+  getCombinedBoundsWithRotation,
+} from "./geometry/bounds";
+
+export {
+  clientToCanvasCoords,
+} from "./geometry/coords";
+
+export type {
+  DragPreviewBounds,
+  MoveDragPreviewInput,
+  ResizeDragPreviewInput,
+  RotateDragPreviewInput,
+} from "./geometry/drag-preview";
+export {
+  calculateResizedDimensions,
+  applyMovePreview,
+  applyResizePreview,
+  applyRotatePreview,
+  applyDragPreview,
+} from "./geometry/drag-preview";

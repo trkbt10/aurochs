@@ -178,7 +178,7 @@ export function getDeleteButtonStyle(visible: boolean): CSSProperties {
     borderRadius: radiusTokens.sm,
     // Semi-transparent dark background
     backgroundColor: "rgba(0, 0, 0, 0.65)",
-    color: colorTokens.text.primary,
+    color: colorTokens.overlay.lightText,
     border: "none",
     cursor: "pointer",
     display: "flex",
@@ -206,7 +206,7 @@ export function getFxButtonStyle(visible: boolean): CSSProperties {
     padding: 0,
     borderRadius: "999px",
     backgroundColor: "rgba(0, 0, 0, 0.72)",
-    color: colorTokens.text.primary,
+    color: colorTokens.overlay.lightText,
     border: "1px solid rgba(255, 255, 255, 0.12)",
     cursor: "pointer",
     display: "inline-flex",
@@ -353,7 +353,7 @@ export function getAddButtonStyle(visible: boolean, _orientation: SlideListOrien
     borderRadius: radiusTokens.sm,
     // Subtle appearance - matches design system
     backgroundColor: visible ? colorTokens.accent.primary : "transparent",
-    color: colorTokens.text.primary,
+    color: colorTokens.text.inverse,
     border: "none",
     cursor: "pointer",
     display: "flex",

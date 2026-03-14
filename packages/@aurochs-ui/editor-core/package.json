@@ -36,6 +36,34 @@
     "./pointer-utils": {
       "types": "./src/pointer-utils.ts",
       "default": "./src/pointer-utils.ts"
+    },
+    "./geometry": {
+      "types": "./src/geometry/index.ts",
+      "default": "./src/geometry/index.ts"
+    },
+    "./drag-utils": {
+      "types": "./src/drag-utils.ts",
+      "default": "./src/drag-utils.ts"
+    },
+    "./text-edit": {
+      "types": "./src/text-edit.ts",
+      "default": "./src/text-edit.ts"
+    },
+    "./item-selection": {
+      "types": "./src/item-selection.ts",
+      "default": "./src/item-selection.ts"
+    },
+    "./table-selection": {
+      "types": "./src/table-selection.ts",
+      "default": "./src/table-selection.ts"
+    },
+    "./alignment": {
+      "types": "./src/alignment.ts",
+      "default": "./src/alignment.ts"
+    },
+    "./keyboard": {
+      "types": "./src/keyboard.ts",
+      "default": "./src/keyboard.ts"
     }
   }
 }

@@ -2,34 +2,35 @@
  * @file Slide selection operations
  *
  * Pure functions for managing slide selection state.
- * These can be tested without React.
+ * Delegates to @aurochs-ui/editor-core/item-selection for generic logic.
  */
 
 import type { SlideId, SlideWithId } from "@aurochs-office/pptx/app";
 import type { SlideSelectionState } from "./types";
-import { createEmptySlideSelection, createSingleSlideSelection } from "./types";
+import {
+  selectSingleItem,
+  selectItemRange,
+  toggleItemSelection,
+  addItemToSelection as addItemToSelectionGeneric,
+  removeItemFromSelection as removeItemFromSelectionGeneric,
+  isItemSelected,
+  isItemSelectionEmpty,
+  selectAllItems,
+  handleItemSelectionClick,
+} from "@aurochs-ui/editor-core/item-selection";
 
 /**
  * Select a single slide, replacing current selection
  */
 export function selectSingle(slideId: SlideId, index: number): SlideSelectionState {
-  return createSingleSlideSelection(slideId, index);
+  return selectSingleItem(slideId, index);
 }
 
 /**
  * Select a range of slides from anchor to target
  */
 export function selectRange(slides: readonly SlideWithId[], fromIndex: number, toIndex: number): SlideSelectionState {
-  const start = Math.min(fromIndex, toIndex);
-  const end = Math.max(fromIndex, toIndex);
-  const rangeIds = slides.slice(start, end + 1).map((s) => s.id);
-  const primaryId = slides[toIndex]?.id;
-
-  return {
-    selectedIds: rangeIds,
-    primaryId,
-    anchorIndex: fromIndex,
-  };
+  return selectItemRange(slides, fromIndex, toIndex);
 }
 
 /**
@@ -40,22 +41,7 @@ export function toggleSelection(
   slideId: SlideId,
   index: number,
 ): SlideSelectionState {
-  const isCurrentlySelected = currentSelection.selectedIds.includes(slideId);
-
-  if (isCurrentlySelected) {
-    const newIds = currentSelection.selectedIds.filter((id) => id !== slideId);
-    return {
-      selectedIds: newIds,
-      primaryId: newIds.length > 0 ? newIds[newIds.length - 1] : undefined,
-      anchorIndex: newIds.length > 0 ? index : undefined,
-    };
-  }
-
-  return {
-    selectedIds: [...currentSelection.selectedIds, slideId],
-    primaryId: slideId,
-    anchorIndex: index,
-  };
+  return toggleItemSelection(currentSelection, slideId, index);
 }
 
 /**
@@ -66,63 +52,35 @@ export function addToSelection(
   slideId: SlideId,
   index: number,
 ): SlideSelectionState {
-  if (currentSelection.selectedIds.includes(slideId)) {
-    return currentSelection;
-  }
-
-  return {
-    selectedIds: [...currentSelection.selectedIds, slideId],
-    primaryId: slideId,
-    anchorIndex: index,
-  };
+  return addItemToSelectionGeneric(currentSelection, slideId, index);
 }
 
 /**
  * Remove a slide from the selection
  */
 export function removeFromSelection(currentSelection: SlideSelectionState, slideId: SlideId): SlideSelectionState {
-  const newIds = currentSelection.selectedIds.filter((id) => id !== slideId);
-
-  if (newIds.length === currentSelection.selectedIds.length) {
-    return currentSelection; // Not in selection
-  }
-
-  const primaryId = currentSelection.primaryId === slideId ? newIds[newIds.length - 1] : currentSelection.primaryId;
-
-  return {
-    selectedIds: newIds,
-    primaryId,
-    anchorIndex: newIds.length > 0 ? currentSelection.anchorIndex : undefined,
-  };
+  return removeItemFromSelectionGeneric(currentSelection, slideId);
 }
 
 /**
  * Check if a slide is selected
  */
 export function isSelected(selection: SlideSelectionState, slideId: SlideId): boolean {
-  return selection.selectedIds.includes(slideId);
+  return isItemSelected(selection, slideId);
 }
 
 /**
  * Check if selection is empty
  */
 export function isSelectionEmpty(selection: SlideSelectionState): boolean {
-  return selection.selectedIds.length === 0;
+  return isItemSelectionEmpty(selection);
 }
 
 /**
  * Select all slides
  */
 export function selectAll(slides: readonly SlideWithId[]): SlideSelectionState {
-  if (slides.length === 0) {
-    return createEmptySlideSelection();
-  }
-
-  return {
-    selectedIds: slides.map((s) => s.id),
-    primaryId: slides[0]?.id,
-    anchorIndex: 0,
-  };
+  return selectAllItems(slides);
 }
 
 /**
@@ -143,13 +101,12 @@ export function handleSelectionClick({
   shiftKey: boolean;
   metaOrCtrlKey: boolean;
 }): SlideSelectionState {
-  if (shiftKey && currentSelection.anchorIndex !== undefined) {
-    return selectRange(slides, currentSelection.anchorIndex, index);
-  }
-
-  if (metaOrCtrlKey) {
-    return toggleSelection(currentSelection, slideId, index);
-  }
-
-  return selectSingle(slideId, index);
+  return handleItemSelectionClick({
+    items: slides,
+    currentSelection,
+    id: slideId,
+    index,
+    shiftKey,
+    metaOrCtrlKey,
+  });
 }

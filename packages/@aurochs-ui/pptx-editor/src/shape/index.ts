@@ -48,11 +48,11 @@ export type { AbsoluteBounds } from "./transform";
 export {
   getShapeBounds,
   getCombinedBounds,
-  getCombinedBoundsWithRotation,
   collectBoundsForIds,
   getCombinedCenter,
 } from "./bounds";
 export type { RotatedBoundsInput, SimpleBounds } from "./bounds";
+export { getCombinedBoundsWithRotation } from "./bounds";
 
 // =============================================================================
 // Capabilities
@@ -96,6 +96,7 @@ export type { ShapeRenderData } from "./traverse";
 // =============================================================================
 export { clientToSlideCoords } from "./coords";
 
+
 // =============================================================================
 // Alignment
 // =============================================================================
@@ -131,8 +132,9 @@ export {
   calculateScaleFactors,
   calculateRelativePosition,
   calculateMultiResizeBounds,
+  type ResizeBounds,
+  type ResizeOptions,
 } from "./resize";
-export type { ResizeBounds, ResizeOptions } from "./resize";
 
 // =============================================================================
 // Rotate
@@ -152,8 +154,9 @@ export {
   getSvgRotationTransformForBounds,
   rotateShapeAroundCenter,
   calculateRotationDelta,
+  type Point,
+  type RotationResult,
 } from "./rotate";
-export type { Point, RotationResult } from "./rotate";
 
 // =============================================================================
 // Render

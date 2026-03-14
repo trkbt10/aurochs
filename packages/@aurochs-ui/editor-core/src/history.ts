@@ -148,4 +148,3 @@ export function replacePresent<T>(history: UndoRedoHistory<T>, newPresent: T): U
     present: newPresent,
   };
 }
-

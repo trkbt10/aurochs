@@ -73,3 +73,9 @@ export {
   gridContainerStyle,
 } from "./editor-shell";
 export type { CanvasAreaProps } from "./editor-shell";
+
+// Canvas selection components
+export type { SelectionBoxVariant } from "./canvas";
+export { SelectionBox, type SelectionBoxProps } from "./canvas";
+export { ResizeHandle as CanvasResizeHandle, type ResizeHandleProps as CanvasResizeHandleProps } from "./canvas";
+export { RotateHandle as CanvasRotateHandle, type RotateHandleProps as CanvasRotateHandleProps } from "./canvas";

@@ -10,7 +10,8 @@
  * - multi: Dashed line "6 3", secondary color, handles always shown
  */
 
-import type { ResizeHandlePosition } from "../context/slide/state";
+import type { ResizeHandlePosition } from "@aurochs-ui/editor-core/geometry";
+import type { SelectionBoxVariant } from "./types";
 import { ResizeHandle } from "./ResizeHandle";
 import { RotateHandle } from "./RotateHandle";
 import { colorTokens } from "@aurochs-ui/ui-components/design-tokens";
@@ -18,14 +19,6 @@ import { colorTokens } from "@aurochs-ui/ui-components/design-tokens";
 // =============================================================================
 // Types
 // =============================================================================
-
-/**
- * Selection box variant:
- * - primary: Single selected shape (with handles)
- * - secondary: Non-primary shape in multi-selection (no handles)
- * - multi: Combined bounding box for multi-selection (with handles)
- */
-export type SelectionBoxVariant = "primary" | "secondary" | "multi";
 
 export type SelectionBoxProps = {
   /** X position */

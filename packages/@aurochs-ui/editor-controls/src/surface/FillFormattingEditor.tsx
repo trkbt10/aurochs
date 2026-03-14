@@ -165,7 +165,12 @@ export function FillFormattingEditor({
     return (
       <div className={className} style={{ ...containerStyle, ...style }}>
         <div style={rowStyle}>
-          {buildColorPicker({ renderSlot: renderColorPicker, color: value.color, onChange: handleColorChange, disabled })}
+          {buildColorPicker({
+            renderSlot: renderColorPicker,
+            color: value.color,
+            onChange: handleColorChange,
+            disabled,
+          })}
           <Select
             value={value.type}
             onChange={handleTypeChange}

@@ -2,6 +2,7 @@
  * @file Shape bounds
  *
  * Bounding box and geometry operations for shapes.
+ * Generic geometry functions are re-exported from @aurochs-ui/editor-core/geometry.
  */
 
 import type { Shape } from "@aurochs-office/pptx/domain";
@@ -9,32 +10,29 @@ import type { Bounds, ShapeId } from "@aurochs-office/pptx/domain/types";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import { getShapeTransform } from "@aurochs-renderer/pptx/svg";
 import { findShapeById } from "./query";
-import { getRotatedCorners } from "./rotate";
 
-// =============================================================================
-// Types
-// =============================================================================
-
-/**
- * Input for rotation-aware bounds calculation
- */
-export type RotatedBoundsInput = {
-  readonly x: number;
-  readonly y: number;
-  readonly width: number;
-  readonly height: number;
-  readonly rotation: number;
-};
+import type {
+  RotatedBoundsInput as CoreRotatedBoundsInput,
+  SimpleBounds as CoreSimpleBounds,
+} from "@aurochs-ui/editor-core/geometry";
+import { getCombinedBoundsWithRotation as coreCombinedBoundsWithRotation } from "@aurochs-ui/editor-core/geometry";
 
 /**
- * Simple numeric bounds (not branded with Pixels)
+ * Input for rotation-aware bounding box calculation
  */
-export type SimpleBounds = {
-  readonly x: number;
-  readonly y: number;
-  readonly width: number;
-  readonly height: number;
-};
+export type RotatedBoundsInput = CoreRotatedBoundsInput;
+
+/**
+ * Simple axis-aligned bounding box
+ */
+export type SimpleBounds = CoreSimpleBounds;
+
+/**
+ * Calculate combined axis-aligned bounding box considering rotated shapes
+ */
+export function getCombinedBoundsWithRotation(inputs: readonly RotatedBoundsInput[]): SimpleBounds | undefined {
+  return coreCombinedBoundsWithRotation(inputs);
+}
 
 // =============================================================================
 // Core Functions
@@ -95,54 +93,6 @@ export function getCombinedBounds(shapes: readonly Shape[]): Bounds | undefined 
     y: px(minY),
     width: px(maxX - minX),
     height: px(maxY - minY),
-  };
-}
-
-function getPointsForBounds(b: RotatedBoundsInput): readonly { x: number; y: number }[] {
-  if (b.rotation !== 0) {
-    return getRotatedCorners({ x: b.x, y: b.y, width: b.width, height: b.height, rotation: b.rotation });
-  }
-  return [
-    { x: b.x, y: b.y },
-    { x: b.x + b.width, y: b.y + b.height },
-  ];
-}
-
-function updateExtents(extents: Extents, point: { x: number; y: number }): Extents {
-  return {
-    minX: Math.min(extents.minX, point.x),
-    minY: Math.min(extents.minY, point.y),
-    maxX: Math.max(extents.maxX, point.x),
-    maxY: Math.max(extents.maxY, point.y),
-  };
-}
-
-function extentsFromPoints(points: readonly { x: number; y: number }[], initial: Extents): Extents {
-  return points.reduce(updateExtents, initial);
-}
-
-/**
- * Calculate combined bounding box with rotation consideration (AABB)
- *
- * Computes the axis-aligned bounding box that encompasses all rotated rectangles.
- * For each input, calculates the four rotated corners and finds the min/max extents.
- */
-export function getCombinedBoundsWithRotation(boundsList: readonly RotatedBoundsInput[]): SimpleBounds | undefined {
-  if (boundsList.length === 0) {
-    return undefined;
-  }
-
-  const initial: Extents = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
-  const { minX, minY, maxX, maxY } = boundsList.reduce(
-    (acc, b) => extentsFromPoints(getPointsForBounds(b), acc),
-    initial,
-  );
-
-  return {
-    x: minX,
-    y: minY,
-    width: maxX - minX,
-    height: maxY - minY,
   };
 }
 

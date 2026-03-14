@@ -5,7 +5,7 @@
  * Uses design tokens for consistent styling.
  */
 
-import type { ResizeHandlePosition } from "../context/slide/state";
+import type { ResizeHandlePosition } from "@aurochs-ui/editor-core/geometry";
 import { colorTokens } from "@aurochs-ui/ui-components/design-tokens";
 
 // =============================================================================
@@ -28,7 +28,7 @@ export type ResizeHandleProps = {
 // =============================================================================
 
 const HANDLE_SIZE = 8;
-const HANDLE_FILL = colorTokens.text.primary;
+const HANDLE_FILL = colorTokens.background.primary;
 const HANDLE_STROKE = colorTokens.selection.primary;
 const HANDLE_STROKE_WIDTH = 1;
 
