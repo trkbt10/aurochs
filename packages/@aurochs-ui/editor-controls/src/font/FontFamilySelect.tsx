@@ -1,8 +1,9 @@
 /**
- * @file FontFamilySelect - Font family selector based on document.fonts
+ * @file FontFamilySelect - Font family selector
  *
- * Uses SearchableSelect (same UX as the existing searchable select UI)
- * and renders each option in its own font for easier discovery.
+ * Uses Local Font Access API (queryLocalFonts) for system fonts
+ * and document.fonts for web fonts / embedded fonts.
+ * No external catalog required.
  */
 
 import { useMemo, type CSSProperties } from "react";
@@ -12,15 +13,9 @@ import type {
   SearchableSelectItemProps,
 } from "@aurochs-ui/ui-components/primitives/SearchableSelect";
 import { useDocumentFontFamilies } from "./useDocumentFontFamilies";
-import { useFontCatalogFamilies } from "./useFontCatalogFamilies";
-import { useFontCatalog } from "./FontCatalogContext";
-import type { FontCatalog, FontCatalogFamilyRecord } from "./types";
+import { useLocalFonts, type LocalFontFamily } from "./useLocalFonts";
 
 const CLEAR_VALUE = "__font_select_clear__";
-const CATALOG_HINT_VALUE = "__font_select_catalog_hint__";
-const CATALOG_LOADING_VALUE = "__font_select_catalog_loading__";
-const CATALOG_ERROR_VALUE = "__font_select_catalog_error__";
-const CATALOG_STATUS_VALUE = "__font_select_catalog_status__";
 
 type FontFamilySelectValue = string | typeof CLEAR_VALUE;
 
@@ -33,234 +28,67 @@ export type FontFamilySelectProps = {
   readonly placeholder?: string;
   readonly searchPlaceholder?: string;
   readonly sampleText?: string;
-  /** Optional injected catalog override (defaults to FontCatalogContext) */
-  readonly fontCatalog?: FontCatalog;
+  /** Auto-request local fonts on mount. Default: true. */
+  readonly autoRequestLocalFonts?: boolean;
 };
-
-function isFamilyLoaded(family: string): boolean {
-  if (typeof document === "undefined") {
-    return false;
-  }
-  // Using a generic size; only presence matters.
-  return document.fonts.check(`12px "${family.replaceAll('"', '\\"')}"`);
-}
 
 function uniqueFamilies(families: readonly string[]): readonly string[] {
   const seen = new Set<string>();
   const result: string[] = [];
   for (const family of families) {
     const normalized = family.trim();
-    if (normalized === "" || seen.has(normalized)) {
-      continue;
-    }
+    if (normalized === "" || seen.has(normalized)) { continue; }
     seen.add(normalized);
     result.push(normalized);
   }
   return result;
 }
 
-function getCatalogTagFilter(catalogHasCategories: boolean) {
-  if (!catalogHasCategories) {
-    return undefined;
-  }
-  return {
-    tags: [
-      { id: "sans-serif", label: "Sans" },
-      { id: "serif", label: "Serif" },
-      { id: "display", label: "Display" },
-      { id: "handwriting", label: "Handwriting" },
-      { id: "monospace", label: "Mono" },
-    ],
-    allLabel: "All",
-  };
-}
-
-function buildFontFamilyOptions({
+function buildOptions({
   loadedFamilies,
-  catalogRecords,
+  localFontFamilies,
   currentValue,
-  catalogLabel,
-  showCatalogHint,
-  catalogStatus,
-  catalogErrorMessage,
 }: {
   loadedFamilies: readonly string[];
-  catalogRecords: readonly FontCatalogFamilyRecord[];
+  localFontFamilies: readonly LocalFontFamily[];
   currentValue: string;
-  catalogLabel: string;
-  showCatalogHint: boolean;
-  catalogStatus: "idle" | "loading" | "loaded" | "error";
-  catalogErrorMessage: string | null;
 }): SearchableSelectOption<FontFamilySelectValue>[] {
-  const categoryLabels: Record<string, string> = {
-    "sans-serif": "Sans Serif",
-    serif: "Serif",
-    display: "Display",
-    handwriting: "Handwriting",
-    monospace: "Monospace",
-  };
-  const categoryOrder = ["sans-serif", "serif", "display", "handwriting", "monospace"] as const;
-
-  const catalogFamilies = catalogRecords.map((record) => record.family);
-  const categoryByFamily = new Map<string, string>();
-  for (const record of catalogRecords) {
-    const category = record.tags?.[0];
-    if (typeof category === "string" && category.trim() !== "") {
-      categoryByFamily.set(record.family, category.trim());
-    }
-  }
-
-  function getCatalogStatusLabel(): string {
-    if (catalogStatus === "loading") {
-      return `${catalogLabel}: Loading…`;
-    }
-    if (catalogStatus === "loaded") {
-      return `${catalogLabel}: Ready (${catalogFamilies.length})`;
-    }
-    if (catalogStatus === "error") {
-      return `${catalogLabel}: Failed`;
-    }
-    return `${catalogLabel}: Idle`;
-  }
-
   const options: SearchableSelectOption<FontFamilySelectValue>[] = [
-    {
-      value: CLEAR_VALUE,
-      label: "Default",
-      group: "Actions",
-      keywords: ["clear", "unset", "inherit", "default"],
-    },
+    { value: CLEAR_VALUE, label: "Default", group: "Actions", keywords: ["clear", "unset", "inherit", "default"] },
   ];
 
-  if (showCatalogHint) {
-    options.push({
-      value: CATALOG_STATUS_VALUE,
-      label: getCatalogStatusLabel(),
-      disabled: true,
-      group: "Actions",
-      keywords: ["catalog", "status", catalogLabel, catalogStatus],
-    });
-  }
-
+  // Current value if not in any list
+  const allFamilyNames = new Set([
+    ...loadedFamilies.map((f) => f.trim()),
+    ...localFontFamilies.map((f) => f.family.trim()),
+  ]);
   const normalizedCurrent = currentValue.trim();
-  const familySet = new Set(
-    [...loadedFamilies, ...catalogFamilies].map((family) => family.trim()).filter((family) => family !== ""),
-  );
-  if (normalizedCurrent !== "" && !familySet.has(normalizedCurrent)) {
-    options.push({
-      value: normalizedCurrent,
-      label: normalizedCurrent,
-      group: "Current",
-      keywords: [normalizedCurrent],
-    });
+  if (normalizedCurrent !== "" && !allFamilyNames.has(normalizedCurrent)) {
+    options.push({ value: normalizedCurrent, label: normalizedCurrent, group: "Current", keywords: [normalizedCurrent] });
   }
 
+  // Generic CSS families
   const genericFamilies = ["system-ui", "sans-serif", "serif", "monospace", "cursive", "fantasy"] as const;
-
-  if (showCatalogHint) {
-    options.push({
-      value: CATALOG_HINT_VALUE,
-      label: "Scroll or type to search…",
-      disabled: true,
-      group: catalogLabel,
-      keywords: ["search", "type", catalogLabel],
-    });
-  }
-
-  if (showCatalogHint && catalogStatus === "loading") {
-    options.push({
-      value: CATALOG_LOADING_VALUE,
-      label: "Loading…",
-      disabled: true,
-      group: catalogLabel,
-      keywords: ["loading", catalogLabel],
-    });
-  }
-
-  if (showCatalogHint && catalogStatus === "error") {
-    const msg = catalogErrorMessage?.trim() ? `: ${catalogErrorMessage.trim()}` : "";
-    options.push({
-      value: CATALOG_ERROR_VALUE,
-      label: `Failed to load font catalog${msg}`,
-      disabled: true,
-      group: catalogLabel,
-      keywords: ["error", "failed", catalogLabel],
-    });
-  }
-
-  if (showCatalogHint && catalogStatus === "loaded") {
-    const loadedSet = new Set(loadedFamilies.map((f) => f.trim()));
-    const groupedByCategory = new Map<string, string[]>();
-    const uncategorized: string[] = [];
-
-    for (const family of uniqueFamilies(catalogFamilies)) {
-      if (loadedSet.has(family)) {
-        continue;
-      }
-      const category = categoryByFamily.get(family);
-      if (!category) {
-        uncategorized.push(family);
-        continue;
-      }
-      const list = groupedByCategory.get(category);
-      if (list) {
-        list.push(family);
-      } else {
-        groupedByCategory.set(category, [family]);
-      }
-    }
-
-    const orderedCategories = [
-      ...categoryOrder.filter((key) => groupedByCategory.has(key)),
-      ...Array.from(groupedByCategory.keys())
-        .filter((key) => !categoryOrder.includes(key as (typeof categoryOrder)[number]))
-        .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" })),
-    ];
-
-    for (const category of orderedCategories) {
-      const families = groupedByCategory.get(category) ?? [];
-      const categoryLabel = categoryLabels[category] ?? category;
-      for (const family of families) {
-        options.push({
-          value: family,
-          label: family,
-          group: `${catalogLabel} — ${categoryLabel}`,
-          tags: [category],
-          keywords: [family, catalogLabel, category, categoryLabel],
-        });
-      }
-    }
-
-    for (const family of uncategorized) {
-      options.push({
-        value: family,
-        label: family,
-        group: catalogLabel,
-        keywords: [family, catalogLabel],
-      });
-    }
-  }
-
   for (const family of genericFamilies) {
-    options.push({
-      value: family,
-      label: family,
-      group: "Generic",
-      keywords: [family],
-    });
+    options.push({ value: family, label: family, group: "Generic", keywords: [family] });
   }
 
+  // Document-loaded fonts (web fonts, embedded fonts)
   for (const family of uniqueFamilies(loadedFamilies)) {
-    options.push({
-      value: family,
-      label: family,
-      group: "Loaded",
-      keywords: [family],
-    });
+    options.push({ value: family, label: family, group: "Document", keywords: [family] });
+  }
+
+  // Local system fonts (from queryLocalFonts API)
+  const loadedSet = new Set(loadedFamilies.map((f) => f.trim()));
+  for (const lf of localFontFamilies) {
+    if (loadedSet.has(lf.family.trim())) { continue; }
+    options.push({ value: lf.family, label: lf.family, group: "System", keywords: [lf.family, ...lf.styles] });
   }
 
   return options;
 }
+
+// Rendering
 
 const optionWrapStyle: CSSProperties = {
   display: "flex",
@@ -287,9 +115,7 @@ const optionPreviewStyle: CSSProperties = {
 
 function renderFontItem(sampleText: string) {
   return function FontItem({ option }: SearchableSelectItemProps<FontFamilySelectValue>) {
-    if (option.value === CLEAR_VALUE) {
-      return option.label;
-    }
+    if (option.value === CLEAR_VALUE) { return option.label; }
     return (
       <div style={optionWrapStyle}>
         <div style={optionLabelStyle}>{option.label}</div>
@@ -300,14 +126,13 @@ function renderFontItem(sampleText: string) {
 }
 
 function renderFontValue(option: SearchableSelectOption<FontFamilySelectValue>) {
-  if (option.value === CLEAR_VALUE) {
-    return option.label;
-  }
+  if (option.value === CLEAR_VALUE) { return option.label; }
   return <span style={{ fontFamily: option.value }}>{option.label}</span>;
 }
 
 /**
- * Font family selector using `document.fonts` as the primary source.
+ * Font family selector using document.fonts + Local Font Access API.
+ * Automatically requests local fonts on mount (configurable).
  */
 export function FontFamilySelect({
   value,
@@ -318,62 +143,27 @@ export function FontFamilySelect({
   placeholder = "Family",
   searchPlaceholder = "Search fonts...",
   sampleText = "AaBbCc",
-  fontCatalog: fontCatalogOverride,
+  autoRequestLocalFonts = true,
 }: FontFamilySelectProps) {
-  const fontCatalogFromContext = useFontCatalog();
-  const fontCatalog = fontCatalogOverride ?? fontCatalogFromContext;
   const documentFamilies = useDocumentFontFamilies();
-  const {
-    families: catalogFamilies,
-    records: catalogRecords,
-    status: catalogStatus,
-    errorMessage: catalogErrorMessage,
-  } = useFontCatalogFamilies(fontCatalog);
+  const { families: localFamilies, requestFonts, status } = useLocalFonts();
 
-  const catalogHasCategories = useMemo(
-    () => catalogRecords.some((record) => (record.tags?.[0] ?? "").trim() !== ""),
-    [catalogRecords],
-  );
+  // Auto-request local fonts on first render
+  useMemo(() => {
+    if (autoRequestLocalFonts && status === "idle") {
+      void requestFonts();
+    }
+  }, [autoRequestLocalFonts, status, requestFonts]);
 
   const options = useMemo(
-    () =>
-      buildFontFamilyOptions({
-        loadedFamilies: documentFamilies,
-        catalogRecords,
-        currentValue: value,
-        catalogLabel: fontCatalog?.label ?? "Catalog",
-        showCatalogHint: !!fontCatalog,
-        catalogStatus,
-        catalogErrorMessage,
-      }),
-    [documentFamilies, catalogRecords, value, fontCatalog?.label, catalogStatus, catalogErrorMessage, fontCatalog],
+    () => buildOptions({ loadedFamilies: documentFamilies, localFontFamilies: localFamilies, currentValue: value }),
+    [documentFamilies, localFamilies, value],
   );
 
-  const catalogSet = useMemo(() => new Set(catalogFamilies.map((f) => f.trim())), [catalogFamilies]);
-
   const handleChange = (next: FontFamilySelectValue) => {
-    if (next === CLEAR_VALUE) {
-      onChange(undefined);
-      return;
-    }
+    if (next === CLEAR_VALUE) { onChange(undefined); return; }
     const normalized = next.trim();
-    if (normalized === "") {
-      onChange(undefined);
-      return;
-    }
-
-    const shouldAttemptLoad = !!fontCatalog && catalogSet.has(normalized) && !isFamilyLoaded(normalized);
-    if (shouldAttemptLoad) {
-      void fontCatalog
-        .ensureFamilyLoaded(normalized)
-        .catch(() => false)
-        .finally(() => {
-          onChange(normalized);
-        });
-      return;
-    }
-
-    onChange(normalized);
+    onChange(normalized === "" ? undefined : normalized);
   };
 
   return (
@@ -388,7 +178,6 @@ export function FontFamilySelect({
       style={style}
       dropdownWidth={360}
       virtualization={{ itemHeight: 44, headerHeight: 22, overscan: 10 }}
-      tagFilter={getCatalogTagFilter(catalogHasCategories)}
       renderItem={renderFontItem(sampleText)}
       renderValue={renderFontValue}
     />

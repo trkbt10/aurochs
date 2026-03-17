@@ -41,12 +41,9 @@ export type {
   CellFormattingFeatures,
 } from "./table";
 
-// Font (catalog types, context, component, hooks)
-export type { FontCatalog, FontCatalogFamilyRecord } from "./font";
-export { FontCatalogProvider, useFontCatalog, type FontCatalogProviderProps } from "./font";
+// Font (local font access + document.fonts)
 export { FontFamilySelect, type FontFamilySelectProps } from "./font";
 export { useDocumentFontFamilies } from "./font";
-export { useFontCatalogFamilies, type FontCatalogFamiliesState } from "./font";
 
 // Zoom controls
 export type { ZoomMode, ZoomControlsProps } from "./zoom";
@@ -73,6 +70,9 @@ export {
   gridContainerStyle,
 } from "./editor-shell";
 export type { CanvasAreaProps } from "./editor-shell";
+
+// UI components (generic property panel utilities)
+export { OptionalPropertySection, type OptionalPropertySectionProps } from "./ui";
 
 // Canvas selection components
 export type { SelectionBoxVariant } from "./canvas";
