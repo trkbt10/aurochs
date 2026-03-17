@@ -8,7 +8,6 @@ import { useCallback } from "react";
 import type { LoadedPresentation } from "@aurochs-office/pptx/app";
 import { PresentationSlideshow } from "@aurochs-ui/pptx-editor";
 import { renderSlideToSvg } from "@aurochs-renderer/pptx/svg";
-import { useSvgFontLoader } from "../fonts/useSvgFontLoader";
 
 type Props = {
   presentation: LoadedPresentation;
@@ -19,22 +18,18 @@ type Props = {
 /** Full-screen slideshow presentation viewer. */
 export function PptxSlideshowPage({ presentation, startSlide, onExit }: Props) {
   const { presentation: pres } = presentation;
-  const loadSvgFonts = useSvgFontLoader();
 
   const getSlideContent = useCallback(
     (slideIndex: number) => {
       const slide = pres.getSlide(slideIndex);
       const { svg } = renderSlideToSvg(slide);
-      if (loadSvgFonts) {
-        void loadSvgFonts(svg);
-      }
       return {
         svg,
         timing: slide.timing,
         transition: slide.transition,
       };
     },
-    [pres, loadSvgFonts],
+    [pres],
   );
 
   return (

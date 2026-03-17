@@ -5,12 +5,11 @@
  * Uses SlideShareViewer from @aurochs-ui/pptx-editor/viewer.
  */
 
-import { useMemo, useCallback, useEffect } from "react";
+import { useCallback } from "react";
 import type { LoadedPresentation } from "@aurochs-office/pptx/app";
 import { renderSlideToSvg } from "@aurochs-renderer/pptx/svg";
 import { SlideShareViewer, type SlideshowSlideContent } from "@aurochs-ui/pptx-editor";
 import { useLazySvgCache } from "@aurochs-renderer/pptx/react";
-import { useSvgFontLoader } from "../fonts/useSvgFontLoader";
 
 type Props = {
   presentation: LoadedPresentation;
@@ -49,28 +48,6 @@ export function PptxViewerPage({ presentation, fileName, onBack, onStartSlidesho
     [pres],
   );
 
-  // Load fonts when slide content changes
-  const loadSvgFonts = useSvgFontLoader();
-  useEffect(() => {
-    if (!loadSvgFonts) {
-      return;
-    }
-    // Preload fonts for visible slide
-    const svg = getSlideContent(1);
-    void loadSvgFonts(svg);
-  }, [loadSvgFonts, getSlideContent]);
-
-  const handleSlideChange = useCallback(
-    (slideIndex: number) => {
-      if (!loadSvgFonts) {
-        return;
-      }
-      const svg = getSlideContent(slideIndex);
-      void loadSvgFonts(svg);
-    },
-    [loadSvgFonts, getSlideContent],
-  );
-
   return (
     <SlideShareViewer
       slideCount={totalSlides}
@@ -81,7 +58,6 @@ export function PptxViewerPage({ presentation, fileName, onBack, onStartSlidesho
       enableSlideshow
       enableFullscreen
       syncWithUrl
-      onSlideChange={handleSlideChange}
       onExit={onBack}
       style={{ height: "100vh" }}
     />

@@ -14,10 +14,11 @@ type Props = {
   readonly fileName: string | null;
   readonly onBack: () => void;
   readonly onFileSelect?: (file: File) => void;
+  readonly onStartEditor?: () => void;
 };
 
 /** PDF viewer page. */
-export function PdfViewerPage({ data, fileName, onBack, onFileSelect }: Props) {
+export function PdfViewerPage({ data, fileName, onBack, onFileSelect, onStartEditor }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -98,6 +99,27 @@ export function PdfViewerPage({ data, fileName, onBack, onFileSelect }: Props) {
           <span style={{ fontSize: 13, color: "#666" }}>
             Drop a PDF file here or click to upload
           </span>
+        </div>
+      )}
+
+      {/* Edit button */}
+      {data && onStartEditor && (
+        <div style={{ padding: "8px 16px", borderBottom: "1px solid #e5e5e5", display: "flex", justifyContent: "flex-end" }}>
+          <button
+            type="button"
+            onClick={onStartEditor}
+            style={{
+              padding: "6px 16px",
+              fontSize: 13,
+              backgroundColor: "#4472C4",
+              color: "#fff",
+              border: "none",
+              borderRadius: 4,
+              cursor: "pointer",
+            }}
+          >
+            Edit
+          </button>
         </div>
       )}
 

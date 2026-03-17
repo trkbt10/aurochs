@@ -16,8 +16,51 @@ import { DocxViewerPage } from "./pages/DocxViewerPage";
 import { XlsxEditorPage } from "./pages/XlsxEditorPage";
 import { XlsxViewerPage } from "./pages/XlsxViewerPage";
 import { PdfViewerPage } from "./pages/PdfViewerPage";
+import { PdfEditorPage } from "./pages/PdfEditorPage";
+import { createDefaultGraphicsState, type PdfDocument as PdfDoc } from "@aurochs/pdf";
 import { convertToPresentationDocument, type PresentationDocument } from "@aurochs-office/pptx/app";
 import "./App.css";
+
+/** Create a demo PDF document for the editor. */
+function createDemoPdf(): PdfDoc {
+  const gs = createDefaultGraphicsState();
+  return {
+    pages: [{
+      pageNumber: 1,
+      width: 612,
+      height: 792,
+      elements: [
+        {
+          type: "text",
+          text: "PDF Editor Demo",
+          x: 72, y: 720, width: 300, height: 36,
+          fontName: "Helvetica-Bold", fontSize: 36,
+          graphicsState: { ...gs, fillColor: { colorSpace: "DeviceRGB", components: [0.1, 0.1, 0.1] } },
+        },
+        {
+          type: "text",
+          text: "Click on elements to select them. Use Delete to remove.",
+          x: 72, y: 680, width: 450, height: 14,
+          fontName: "Helvetica", fontSize: 14,
+          graphicsState: { ...gs, fillColor: { colorSpace: "DeviceRGB", components: [0.4, 0.4, 0.4] } },
+        },
+        {
+          type: "path",
+          operations: [{ type: "rect", x: 72, y: 500, width: 200, height: 100 }],
+          paintOp: "fill",
+          graphicsState: { ...gs, fillColor: { colorSpace: "DeviceRGB", components: [0.27, 0.45, 0.77] } },
+        },
+        {
+          type: "path",
+          operations: [{ type: "rect", x: 300, y: 500, width: 150, height: 100 }],
+          paintOp: "fill",
+          graphicsState: { ...gs, fillColor: { colorSpace: "DeviceRGB", components: [0.93, 0.49, 0.19] } },
+        },
+      ],
+    }],
+    metadata: { title: "PDF Editor Demo" },
+  };
+}
 
 // Demo PPTX URL (in the public folder)
 const DEMO_PPTX_URL = import.meta.env.BASE_URL + "demo.pptx";
@@ -138,8 +181,16 @@ export function App() {
     xlsx.reset();
     setImportedDocument(null);
     setImportedFileName(null);
-    // Navigate to PDF viewer (user can drop a file there)
     navigate("/pdf/viewer");
+  }, [pptx, docx, xlsx, navigate]);
+
+  const handlePdfEditorDemo = useCallback(() => {
+    pptx.reset();
+    docx.reset();
+    xlsx.reset();
+    setImportedDocument(null);
+    setImportedFileName(null);
+    navigate("/pdf/editor");
   }, [pptx, docx, xlsx, navigate]);
 
   const handleBack = useCallback(() => {
@@ -223,6 +274,7 @@ export function App() {
       onXlsxDemo={handleXlsxDemo}
       onXlsxViewerDemo={handleXlsxViewerDemo}
       onPdfViewerDemo={handlePdfViewerDemo}
+      onPdfEditorDemo={handlePdfEditorDemo}
       isLoading={isLoading}
     />
   );
@@ -240,6 +292,7 @@ export function App() {
             onXlsxDemo={handleXlsxDemo}
             onXlsxViewerDemo={handleXlsxViewerDemo}
             onPdfViewerDemo={handlePdfViewerDemo}
+            onPdfEditorDemo={handlePdfEditorDemo}
             isLoading
           />
         );
@@ -319,14 +372,38 @@ export function App() {
     [pdf],
   );
 
+  const handleStartPdfEditor = useCallback(() => {
+    navigate("/pdf/editor");
+  }, [navigate]);
+
+  const handleExitPdfEditor = useCallback(() => {
+    if (pdf.data) {
+      navigate("/pdf/viewer");
+      return;
+    }
+    handleBack();
+  }, [handleBack, navigate, pdf.data]);
+
   const PdfViewerRoute = () => (
     <PdfViewerPage
       data={pdf.data}
       fileName={pdf.fileName}
       onBack={handleBack}
       onFileSelect={handlePdfFileSelect}
+      onStartEditor={pdf.data ? handleStartPdfEditor : undefined}
     />
   );
+
+  const PdfEditorRoute = () => {
+    const doc = pdf.document ?? createDemoPdf();
+    return (
+      <PdfEditorPage
+        document={doc}
+        fileName={pdf.fileName ?? "Demo PDF"}
+        onBack={handleExitPdfEditor}
+      />
+    );
+  };
 
   return (
     <Routes>
@@ -339,6 +416,7 @@ export function App() {
       <Route path="/xlsx/viewer" element={<XlsxViewerRoute />} />
       <Route path="/xlsx/editor" element={<XlsxEditorRoute />} />
       <Route path="/pdf/viewer" element={<PdfViewerRoute />} />
+      <Route path="/pdf/editor" element={<PdfEditorRoute />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

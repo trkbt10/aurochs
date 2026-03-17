@@ -31,6 +31,7 @@ type Props = {
   readonly onXlsxDemo: () => void;
   readonly onXlsxViewerDemo: () => void;
   readonly onPdfViewerDemo: () => void;
+  readonly onPdfEditorDemo: () => void;
   readonly isLoading?: boolean;
 };
 
@@ -89,6 +90,7 @@ export function LandingPage({
   onXlsxDemo,
   onXlsxViewerDemo,
   onPdfViewerDemo,
+  onPdfEditorDemo,
   isLoading,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -338,6 +340,10 @@ export function LandingPage({
                 <button className="demo-card-btn" onClick={onPdfViewerDemo} disabled={isLoading}>
                   <PlayIcon size={14} />
                   <span>View</span>
+                </button>
+                <button className="demo-card-btn" onClick={onPdfEditorDemo} disabled={isLoading}>
+                  <EditIcon size={14} />
+                  <span>Edit</span>
                 </button>
               </div>
             </div>
