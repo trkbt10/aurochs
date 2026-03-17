@@ -129,3 +129,17 @@ export {
   applyRotatePreview,
   applyDragPreview,
 } from "./geometry/drag-preview";
+
+// Adapter data types (SoT)
+export type {
+  TextStyle,
+  FontData,
+  FontMetricsData,
+  CaseTransformData,
+  TextJustifyData,
+  ParagraphSpacingData,
+  IndentData,
+  ListData,
+  PositionData,
+  SizeData,
+} from "./adapter-types";
