@@ -58,7 +58,7 @@ function getElementRotationDeg(element: PdfElement): number {
   const deg = (getElementRotationRad(element) * 180) / Math.PI;
   const normalized = ((deg % 360) + 360) % 360;
   // Snap near-zero and near-360 to 0
-  if (Math.abs(normalized) < 0.01 || Math.abs(normalized - 360) < 0.01) return 0;
+  if (Math.abs(normalized) < 0.01 || Math.abs(normalized - 360) < 0.01) { return 0; }
   return normalized;
 }
 
@@ -131,6 +131,19 @@ export function elementToSvgBounds(args: {
       width: w,
       height: h,
       rotation: getElementRotationDeg(element),
+    };
+  }
+
+  if (element.type === "table") {
+    const totalWidth = element.columns.reduce((sum, col) => sum + col.width, 0);
+    const totalHeight = element.rows.reduce((sum, row) => sum + row.height, 0);
+    return {
+      id,
+      x: element.x,
+      y: pageHeight - element.y,
+      width: totalWidth,
+      height: totalHeight,
+      rotation: 0,
     };
   }
 
@@ -234,6 +247,10 @@ export function moveElement(element: PdfElement, dx: number, dy: number): PdfEle
     ctm[4] += dx;
     ctm[5] -= dy;
     return { ...element, graphicsState: { ...element.graphicsState, ctm } };
+  }
+
+  if (element.type === "table") {
+    return { ...element, x: element.x + dx, y: element.y - dy };
   }
 
   return element;

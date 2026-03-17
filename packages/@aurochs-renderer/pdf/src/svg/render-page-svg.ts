@@ -1,3 +1,4 @@
+/** @file Render PDF pages and elements to SVG markup. */
 import type {
   PdfBBox,
   PdfDocument,
@@ -18,6 +19,7 @@ import { formatSvgMatrix, formatSvgNumber } from "./number-format";
 import { buildSvgPathData } from "./path-data";
 import { escapeXmlAttr, escapeXmlText } from "./xml-escape";
 import { resolveTextAnchor, type TextAnchor } from "./text-bounds";
+import { renderPdfTable } from "./table";
 
 type ClipPathRegistry = {
   readonly idsByKey: Map<string, string>;
@@ -368,6 +370,10 @@ function renderElement(element: PdfElement, pageHeight: number, registry: ClipPa
     return renderText(element, pageHeight, registry);
   }
 
+  if (element.type === "table") {
+    return renderPdfTable(element, pageHeight);
+  }
+
   return renderImage(element, pageHeight, registry);
 }
 
@@ -434,6 +440,7 @@ export function renderPdfPageToSvg(page: PdfPage, options: PdfSvgRenderOptions =
   return svg;
 }
 
+/** Render all pages of a PDF document to SVG strings. */
 export function renderPdfDocumentToSvgs(document: PdfDocument, options: PdfSvgRenderOptions = {}): readonly string[] {
   if (!document) {
     throw new Error("document is required");
@@ -442,6 +449,7 @@ export function renderPdfDocumentToSvgs(document: PdfDocument, options: PdfSvgRe
   return document.pages.map((page) => renderPdfPageToSvg(page, options));
 }
 
+/** Render a single page of a PDF document to SVG by page index. */
 export function renderPdfDocumentPageToSvg(
   document: PdfDocument,
   pageNumber: number,

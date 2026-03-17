@@ -76,6 +76,10 @@
     "./list-dnd": {
       "types": "./src/list-dnd.ts",
       "default": "./src/list-dnd.ts"
+    },
+    "./table-operations": {
+      "types": "./src/table-operations.ts",
+      "default": "./src/table-operations.ts"
     }
   }
 }

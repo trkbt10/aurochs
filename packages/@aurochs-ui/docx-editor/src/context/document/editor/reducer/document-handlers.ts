@@ -57,23 +57,5 @@ export const documentHandlers: HandlerMap = {
 
   SPLIT_PARAGRAPH: (state, _action) => state,
 
-  // -------------------------------------------------------------------------
-  // Table Operations (implemented in Phase 4)
-  // -------------------------------------------------------------------------
-
-  INSERT_TABLE: (state, _action) => state,
-
-  DELETE_TABLE: (state, _action) => state,
-
-  INSERT_TABLE_ROW: (state, _action) => state,
-
-  DELETE_TABLE_ROW: (state, _action) => state,
-
-  INSERT_TABLE_COLUMN: (state, _action) => state,
-
-  DELETE_TABLE_COLUMN: (state, _action) => state,
-
-  MERGE_TABLE_CELLS: (state, _action) => state,
-
-  SPLIT_TABLE_CELL: (state, _action) => state,
+  // Table operations moved to format-handlers/table-structure.ts
 };

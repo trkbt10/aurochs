@@ -40,6 +40,7 @@ function getElementLabel(element: PdfElement, index: number): string {
     }
     case "path": return "Path";
     case "image": return "Image";
+    case "table": return `Table (${element.rows.length}×${element.columns.length})`;
     default: return `Element ${index + 1}`;
   }
 }
@@ -49,6 +50,7 @@ function getElementIcon(element: PdfElement) {
     case "text": return <TextBoxIcon {...ICON_PROPS} />;
     case "image": return <PictureIcon {...ICON_PROPS} />;
     case "path": return <PenIcon {...ICON_PROPS} />;
+    case "table": return <TextBoxIcon {...ICON_PROPS} />;
     default: return <PenIcon {...ICON_PROPS} />;
   }
 }

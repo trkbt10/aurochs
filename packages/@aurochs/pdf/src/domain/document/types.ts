@@ -8,12 +8,49 @@ import type { PdfImage } from "../image";
 import type { PdfPath } from "../path";
 import type { PdfText } from "../text";
 import type { CIDOrdering } from "../font";
+import type { PdfGraphicsState } from "../graphics-state/types";
 
 // =============================================================================
 // Element Types
 // =============================================================================
 
-export type PdfElement = PdfPath | PdfText | PdfImage;
+export type PdfElement = PdfPath | PdfText | PdfImage | PdfTable;
+
+// =============================================================================
+// Table Types (synthetic — not native to PDF format)
+// =============================================================================
+
+/** Table cell in a PDF table. */
+export type PdfTableCell = {
+  readonly text: string;
+  readonly colSpan?: number;
+  readonly rowSpan?: number;
+  readonly backgroundColor?: string;
+  readonly verticalAlignment?: "top" | "center" | "bottom";
+};
+
+/** Table row in a PDF table. */
+export type PdfTableRow = {
+  readonly height: number;
+  readonly cells: readonly PdfTableCell[];
+};
+
+/**
+ * Synthetic table element for the PDF editor.
+ *
+ * Unlike PdfText/PdfPath/PdfImage, tables are not parsed from PDF content streams.
+ * They are created in the editor and rendered as SVG.
+ */
+export type PdfTable = {
+  readonly type: "table";
+  readonly x: number;
+  readonly y: number;
+  readonly columns: readonly { readonly width: number }[];
+  readonly rows: readonly PdfTableRow[];
+  readonly borderWidth?: number;
+  readonly borderColor?: string;
+  readonly graphicsState: PdfGraphicsState;
+};
 
 // =============================================================================
 // Document Structure
@@ -247,4 +284,9 @@ export function isPdfText(element: PdfElement): element is PdfText {
 /** Type guard for `PdfImage` elements. */
 export function isPdfImage(element: PdfElement): element is PdfImage {
   return element.type === "image";
+}
+
+/** Type guard for `PdfTable` elements. */
+export function isPdfTable(element: PdfElement): element is PdfTable {
+  return element.type === "table";
 }

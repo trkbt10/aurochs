@@ -56,10 +56,16 @@ export type IndentData = {
   readonly firstLine: string;
 };
 
+/** Bulleted list style options (must match react-editor-ui BulletedListStyle). */
+export type BulletedListStyle = "disc" | "circle" | "square";
+
+/** Numbered list style options (must match react-editor-ui NumberedListStyle). */
+export type NumberedListStyle = "decimal" | "lower-alpha" | "upper-alpha" | "lower-roman" | "upper-roman";
+
 /** List style for react-editor-ui ListSection. */
 export type ListData = {
   readonly type: "none" | "bulleted" | "numbered";
-  readonly style: string;
+  readonly style: BulletedListStyle | NumberedListStyle | "";
 };
 
 // =============================================================================

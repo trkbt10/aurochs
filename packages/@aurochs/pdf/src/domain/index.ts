@@ -88,8 +88,8 @@ export type { PdfText, PdfTextFontMetrics } from "./text";
 export type { PdfImage } from "./image";
 
 // Document domain
-export type { PdfElement, PdfPage, PdfDocument, PdfEmbeddedFont } from "./document";
-export { PDF_UNITS, PDF_PAGE_SIZES, isPdfPath, isPdfText, isPdfImage } from "./document";
+export type { PdfElement, PdfPage, PdfDocument, PdfEmbeddedFont, PdfTable, PdfTableRow, PdfTableCell } from "./document";
+export { PDF_UNITS, PDF_PAGE_SIZES, isPdfPath, isPdfText, isPdfImage, isPdfTable } from "./document";
 
 // Content stream domain
 export type { PdfTokenType, PdfToken } from "./content-stream";

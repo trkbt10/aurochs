@@ -2,48 +2,30 @@
  * @file TableEditor - Editor for Table type
  *
  * Edits full table: properties, grid (column widths), rows and cells.
+ * Uses shared TableCellGrid, TableDimensionEditor, TableStructureToolbar
+ * from editor-controls/table for format-agnostic UI.
  */
 
-import { useCallback, useState, type CSSProperties, type KeyboardEvent } from "react";
+import { useCallback, useMemo, useState, type CSSProperties } from "react";
 import { FieldGroup } from "@aurochs-ui/ui-components/layout";
 import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
-import { PixelsEditor } from "../primitives/PixelsEditor";
+import { TableCellGrid, TableDimensionEditor, TableStructureToolbar } from "@aurochs-ui/editor-controls/table";
 import { TablePropertiesEditor, createDefaultTableProperties } from "./TablePropertiesEditor";
 import { TableCellEditor, createDefaultTableCell } from "./TableCellEditor";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import type {
   Table,
   TableProperties,
-  TableGrid,
   TableRow,
   TableCell,
   TableColumn,
 } from "@aurochs-office/pptx/domain/table/types";
 import type { EditorProps } from "@aurochs-ui/ui-components/types";
-import { type CellPosition, getColumnLetter, getCellPreviewText } from "@aurochs-ui/editor-core/table-selection";
+import { type CellPosition, getColumnLetter } from "@aurochs-ui/editor-core/table-selection";
+import { pptxTableOperationAdapter } from "../../adapters/editor-controls/pptx-table-operation-adapter";
 
 export type TableEditorProps = EditorProps<Table> & {
   readonly style?: CSSProperties;
-};
-
-type CellGridProps = {
-  readonly rows: readonly TableRow[];
-  readonly grid: TableGrid;
-  readonly selectedCell: CellPosition | null;
-  readonly disabled?: boolean;
-  readonly onSelectCell: (pos: CellPosition) => void;
-};
-
-type ColumnWidthsEditorProps = {
-  readonly grid: TableGrid;
-  readonly disabled?: boolean;
-  readonly onChange: (grid: TableGrid) => void;
-};
-
-type RowHeightsEditorProps = {
-  readonly rows: readonly TableRow[];
-  readonly disabled?: boolean;
-  readonly onChange: (rows: readonly TableRow[]) => void;
 };
 
 // =============================================================================
@@ -54,54 +36,6 @@ const containerStyle: CSSProperties = {
   display: "flex",
   flexDirection: "column",
   gap: "16px",
-};
-
-const cellGridContainerStyle: CSSProperties = {
-  padding: "12px",
-  backgroundColor: "var(--bg-tertiary, #111111)",
-  borderRadius: "var(--radius-md, 8px)",
-  border: "1px solid var(--border-subtle, rgba(255, 255, 255, 0.08))",
-  overflowX: "auto",
-};
-
-const cellGridStyle: CSSProperties = {
-  display: "inline-grid",
-  gap: "2px",
-  minWidth: "100%",
-};
-
-const cellStyle: CSSProperties = {
-  padding: "8px 12px",
-  borderRadius: "4px",
-  cursor: "pointer",
-  transition: "background-color 150ms ease",
-  textAlign: "center",
-  fontSize: "12px",
-  minWidth: "60px",
-  whiteSpace: "nowrap",
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-};
-
-const cellUnselectedStyle: CSSProperties = {
-  ...cellStyle,
-  backgroundColor: "var(--bg-secondary, #1a1a1a)",
-  color: "var(--text-secondary, #a1a1a1)",
-};
-
-const cellSelectedStyle: CSSProperties = {
-  ...cellStyle,
-  backgroundColor: "var(--accent-blue, #0070f3)",
-  color: "var(--text-primary, #fafafa)",
-};
-
-const headerCellStyle: CSSProperties = {
-  ...cellStyle,
-  backgroundColor: "var(--bg-tertiary, #111111)",
-  color: "var(--text-tertiary, #737373)",
-  fontWeight: 600,
-  fontSize: "11px",
-  cursor: "default",
 };
 
 const sectionStyle: CSSProperties = {
@@ -118,171 +52,10 @@ const noSelectionStyle: CSSProperties = {
   fontSize: "13px",
 };
 
-const widthsContainerStyle: CSSProperties = {
-  display: "flex",
-  flexWrap: "wrap",
-  gap: "8px",
-};
-
-const widthItemStyle: CSSProperties = {
-  minWidth: "80px",
-};
-
 // =============================================================================
-// Helpers
+// Selected Cell Panel (PPTX-specific, retained as-is)
 // =============================================================================
 
-/**
- * Get preview text from cell
- */
-function getCellPreview(cell: TableCell, maxLength: number = 10): string {
-  if (!cell.textBody) {
-    return "";
-  }
-
-  const texts: string[] = [];
-  for (const para of cell.textBody.paragraphs) {
-    for (const run of para.runs) {
-      if (run.type === "text") {
-        texts.push(run.text);
-      }
-    }
-  }
-
-  return getCellPreviewText(texts.join(" "), maxLength);
-}
-
-// =============================================================================
-// Sub-Components
-// =============================================================================
-
-/**
- * Cell grid display with selection
- */
-function CellGrid({ rows, grid, selectedCell, disabled, onSelectCell }: CellGridProps) {
-  const colCount = grid?.columns?.length ?? 0;
-
-  if (!rows?.length || colCount === 0) {
-    return <div style={noSelectionStyle}>No cells in table</div>;
-  }
-
-  const gridTemplateColumns = `auto ${(grid?.columns ?? []).map(() => "1fr").join(" ")}`;
-
-  const handleCellClick = (row: number, col: number) => {
-    if (!disabled) {
-      onSelectCell({ row, col });
-    }
-  };
-
-  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>, row: number, col: number) => {
-    if (!disabled && (e.key === "Enter" || e.key === " ")) {
-      onSelectCell({ row, col });
-    }
-  };
-
-  return (
-    <div style={{ ...cellGridStyle, gridTemplateColumns }}>
-      {/* Header row with column letters */}
-      <div style={headerCellStyle}></div>
-      {grid.columns.map((_, colIndex) => (
-        <div key={`header-${colIndex}`} style={headerCellStyle}>
-          {getColumnLetter(colIndex)}
-        </div>
-      ))}
-
-      {/* Data rows */}
-      {rows.map((row, rowIndex) => (
-        <>
-          {/* Row number */}
-          <div key={`row-${rowIndex}-header`} style={headerCellStyle}>
-            {rowIndex + 1}
-          </div>
-
-          {/* Cells */}
-          {row.cells.map((cell, colIndex) => {
-            const isSelected = selectedCell?.row === rowIndex && selectedCell?.col === colIndex;
-            const cellStyleFinal = isSelected ? cellSelectedStyle : cellUnselectedStyle;
-            const preview = getCellPreview(cell);
-            const tabIndexValue = disabled ? -1 : 0;
-
-            return (
-              <div
-                key={`cell-${rowIndex}-${colIndex}`}
-                style={cellStyleFinal}
-                onClick={() => handleCellClick(rowIndex, colIndex)}
-                onKeyDown={(e) => handleKeyDown(e, rowIndex, colIndex)}
-                role="button"
-                tabIndex={tabIndexValue}
-                aria-selected={isSelected}
-                title={preview || `Cell ${getColumnLetter(colIndex)}${rowIndex + 1}`}
-              >
-                {preview || "—"}
-              </div>
-            );
-          })}
-        </>
-      ))}
-    </div>
-  );
-}
-
-/**
- * Column widths editor
- */
-function ColumnWidthsEditor({ grid, disabled, onChange }: ColumnWidthsEditorProps) {
-  const handleWidthChange = (index: number, width: number) => {
-    const newColumns = grid.columns.map((col, i) => (i === index ? { ...col, width: px(width) } : col));
-    onChange({ ...grid, columns: newColumns });
-  };
-
-  return (
-    <div style={widthsContainerStyle}>
-      {grid.columns.map((col, index) => (
-        <div key={index} style={widthItemStyle}>
-          <FieldGroup label={`Col ${getColumnLetter(index)}`}>
-            <PixelsEditor
-              value={col.width}
-              onChange={(w) => handleWidthChange(index, w)}
-              disabled={disabled}
-              min={10}
-            />
-          </FieldGroup>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/**
- * Row heights editor
- */
-function RowHeightsEditor({ rows, disabled, onChange }: RowHeightsEditorProps) {
-  const handleHeightChange = (index: number, height: number) => {
-    const newRows = rows.map((row, i) => (i === index ? { ...row, height: px(height) } : row));
-    onChange(newRows);
-  };
-
-  return (
-    <div style={widthsContainerStyle}>
-      {rows.map((row, index) => (
-        <div key={index} style={widthItemStyle}>
-          <FieldGroup label={`Row ${index + 1}`}>
-            <PixelsEditor
-              value={row.height}
-              onChange={(h) => handleHeightChange(index, h)}
-              disabled={disabled}
-              min={10}
-            />
-          </FieldGroup>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/**
- * Selected cell panel component
- */
 function SelectedCellPanel({
   selectedCell,
   selectedCellData,
@@ -329,23 +102,11 @@ export function TableEditor({ value, onChange, disabled, className, style }: Tab
     value.rows?.length > 0 && value.rows[0]?.cells?.length > 0 ? { row: 0, col: 0 } : null,
   );
 
+  const abstractTable = useMemo(() => pptxTableOperationAdapter.toAbstract(value), [value]);
+
   const handlePropertiesChange = useCallback(
     (properties: TableProperties) => {
       onChange({ ...value, properties });
-    },
-    [value, onChange],
-  );
-
-  const handleGridChange = useCallback(
-    (grid: TableGrid) => {
-      onChange({ ...value, grid });
-    },
-    [value, onChange],
-  );
-
-  const handleRowsChange = useCallback(
-    (rows: readonly TableRow[]) => {
-      onChange({ ...value, rows });
     },
     [value, onChange],
   );
@@ -371,6 +132,67 @@ export function TableEditor({ value, onChange, disabled, className, style }: Tab
     [value, onChange, selectedCell],
   );
 
+  // --- Structure operation handlers ---
+
+  const handleInsertRow = useCallback(
+    (position: "above" | "below") => {
+      if (!selectedCell) { return; }
+      const rowIndex = position === "above" ? selectedCell.row : selectedCell.row + 1;
+      onChange(pptxTableOperationAdapter.insertRow(value, rowIndex));
+    },
+    [value, onChange, selectedCell],
+  );
+
+  const handleRemoveRow = useCallback(() => {
+    if (!selectedCell) { return; }
+    onChange(pptxTableOperationAdapter.removeRow(value, selectedCell.row));
+    if (selectedCell.row >= value.rows.length - 1) {
+      setSelectedCell(value.rows.length > 1 ? { row: selectedCell.row - 1, col: selectedCell.col } : null);
+    }
+  }, [value, onChange, selectedCell]);
+
+  const handleInsertColumn = useCallback(
+    (position: "before" | "after") => {
+      if (!selectedCell) { return; }
+      const colIndex = position === "before" ? selectedCell.col : selectedCell.col + 1;
+      onChange(pptxTableOperationAdapter.insertColumn(value, colIndex));
+    },
+    [value, onChange, selectedCell],
+  );
+
+  const handleRemoveColumn = useCallback(() => {
+    if (!selectedCell) { return; }
+    onChange(pptxTableOperationAdapter.removeColumn(value, selectedCell.col));
+    if (selectedCell.col >= value.grid.columns.length - 1) {
+      setSelectedCell(value.grid.columns.length > 1 ? { row: selectedCell.row, col: selectedCell.col - 1 } : null);
+    }
+  }, [value, onChange, selectedCell]);
+
+  const handleMergeCells = useCallback(() => {
+    if (!selectedCell) { return; }
+    // Merge single cell → no-op, would need range selection for real merge
+    // For now this is a placeholder for future multi-cell selection
+  }, [selectedCell]);
+
+  const handleSplitCell = useCallback(() => {
+    if (!selectedCell) { return; }
+    onChange(pptxTableOperationAdapter.splitCell(value, selectedCell.row, selectedCell.col));
+  }, [value, onChange, selectedCell]);
+
+  const handleColumnWidthChange = useCallback(
+    (colIndex: number, width: number) => {
+      onChange(pptxTableOperationAdapter.setColumnWidth(value, colIndex, width));
+    },
+    [value, onChange],
+  );
+
+  const handleRowHeightChange = useCallback(
+    (rowIndex: number, height: number) => {
+      onChange(pptxTableOperationAdapter.setRowHeight(value, rowIndex, height));
+    },
+    [value, onChange],
+  );
+
   const getSelectedCellData = (): TableCell | null => {
     if (!selectedCell) {
       return null;
@@ -391,32 +213,43 @@ export function TableEditor({ value, onChange, disabled, className, style }: Tab
         <TablePropertiesEditor value={value.properties} onChange={handlePropertiesChange} disabled={disabled} />
       </OptionalPropertySection>
 
-      {/* Grid Structure */}
+      {/* Grid Structure (shared component) */}
       <OptionalPropertySection title="Grid Structure" defaultExpanded={false}>
-        <FieldGroup label="Column Widths">
-          <ColumnWidthsEditor grid={value.grid} onChange={handleGridChange} disabled={disabled} />
-        </FieldGroup>
-        <div style={{ marginTop: "12px" }}>
-          <FieldGroup label="Row Heights">
-            <RowHeightsEditor rows={value.rows} onChange={handleRowsChange} disabled={disabled} />
-          </FieldGroup>
-        </div>
+        <TableDimensionEditor
+          columns={abstractTable.columns}
+          rows={abstractTable.rows}
+          onColumnWidthChange={handleColumnWidthChange}
+          onRowHeightChange={handleRowHeightChange}
+          unitLabel="px"
+          disabled={disabled}
+        />
       </OptionalPropertySection>
 
-      {/* Cell Grid */}
+      {/* Structure Operations (shared component) */}
+      <OptionalPropertySection title="Structure" defaultExpanded={false}>
+        <TableStructureToolbar
+          onInsertRow={handleInsertRow}
+          onRemoveRow={handleRemoveRow}
+          onInsertColumn={handleInsertColumn}
+          onRemoveColumn={handleRemoveColumn}
+          onMergeCells={handleMergeCells}
+          onSplitCell={handleSplitCell}
+          hasSelection={selectedCell !== null}
+          disabled={disabled}
+        />
+      </OptionalPropertySection>
+
+      {/* Cell Grid (shared component) */}
       <FieldGroup label="Cells">
-        <div style={cellGridContainerStyle}>
-          <CellGrid
-            rows={value.rows}
-            grid={value.grid}
-            selectedCell={selectedCell}
-            disabled={disabled}
-            onSelectCell={setSelectedCell}
-          />
-        </div>
+        <TableCellGrid
+          table={abstractTable}
+          selectedCell={selectedCell ?? undefined}
+          onCellSelect={setSelectedCell}
+          disabled={disabled}
+        />
       </FieldGroup>
 
-      {/* Selected Cell Editor */}
+      {/* Selected Cell Editor (PPTX-specific) */}
       <SelectedCellPanel
         selectedCell={selectedCell}
         selectedCellData={selectedCellData}

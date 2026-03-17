@@ -5,12 +5,12 @@
  */
 
 import { createDefaultGraphicsState, type PdfDocument, type PdfText, type PdfPath } from "@aurochs/pdf";
-import { canUndo, canRedo } from "@aurochs-ui/editor-core/history";
+import { canUndo } from "@aurochs-ui/editor-core/history";
 import { isSelected } from "@aurochs-ui/editor-core/selection";
 import { isDragMove, isDragIdle, isDragResize, isDragPendingMove } from "@aurochs-ui/editor-core/drag-state";
 import { pdfEditorReducer, createInitialState } from "./reducer";
 import type { PdfEditorAction } from "./reducer";
-import type { PdfEditorState, PdfElementId } from "./types";
+import type { PdfEditorState } from "./types";
 import { createElementId } from "./types";
 
 // =============================================================================
@@ -31,7 +31,7 @@ function apply(state: PdfEditorState, ...actions: PdfEditorAction[]): PdfEditorS
 
 const id0 = createElementId(0, 0);
 const id1 = createElementId(0, 1);
-const id2 = createElementId(0, 2);
+const _id2 = createElementId(0, 2);
 
 // =============================================================================
 // Selection
@@ -137,27 +137,27 @@ describe("reducer: UNDO / REDO", () => {
 describe("reducer: Move", () => {
   it("START_PENDING_MOVE → pending-move drag state", () => {
     const s0 = apply(createInitialState(createTestDoc()), { type: "SELECT", elementId: id0, addToSelection: false });
-    const s1 = apply(s0, { type: "START_PENDING_MOVE", startX: 100, startY: 72, startClientX: 500, startClientY: 300, pageHeight: 792 });
+    const s1 = apply(s0, { type: "START_PENDING_MOVE", startX: 100, startY: 72, startClientX: 500, startClientY: 300 });
     expect(isDragPendingMove(s1.drag)).toBe(true);
   });
 
   it("CONFIRM_MOVE below threshold stays pending", () => {
     const s0 = apply(createInitialState(createTestDoc()), { type: "SELECT", elementId: id0, addToSelection: false });
-    const s1 = apply(s0, { type: "START_PENDING_MOVE", startX: 100, startY: 72, startClientX: 500, startClientY: 300, pageHeight: 792 });
+    const s1 = apply(s0, { type: "START_PENDING_MOVE", startX: 100, startY: 72, startClientX: 500, startClientY: 300 });
     const s2 = apply(s1, { type: "CONFIRM_MOVE", clientX: 501, clientY: 300 }); // 1px move < 2px threshold
     expect(isDragPendingMove(s2.drag)).toBe(true);
   });
 
   it("CONFIRM_MOVE above threshold transitions to move", () => {
     const s0 = apply(createInitialState(createTestDoc()), { type: "SELECT", elementId: id0, addToSelection: false });
-    const s1 = apply(s0, { type: "START_PENDING_MOVE", startX: 100, startY: 72, startClientX: 500, startClientY: 300, pageHeight: 792 });
+    const s1 = apply(s0, { type: "START_PENDING_MOVE", startX: 100, startY: 72, startClientX: 500, startClientY: 300 });
     const s2 = apply(s1, { type: "CONFIRM_MOVE", clientX: 510, clientY: 300 }); // 10px > threshold
     expect(isDragMove(s2.drag)).toBe(true);
   });
 
   it("UPDATE_MOVE updates preview delta", () => {
     const s0 = apply(createInitialState(createTestDoc()), { type: "SELECT", elementId: id0, addToSelection: false });
-    const s1 = apply(s0, { type: "START_PENDING_MOVE", startX: 100, startY: 72, startClientX: 500, startClientY: 300, pageHeight: 792 });
+    const s1 = apply(s0, { type: "START_PENDING_MOVE", startX: 100, startY: 72, startClientX: 500, startClientY: 300 });
     const s2 = apply(s1, { type: "CONFIRM_MOVE", clientX: 510, clientY: 300 });
     const s3 = apply(s2, { type: "UPDATE_MOVE", currentX: 150, currentY: 72 });
     if (isDragMove(s3.drag)) {
@@ -167,7 +167,7 @@ describe("reducer: Move", () => {
 
   it("END_MOVE commits move to history", () => {
     const s0 = apply(createInitialState(createTestDoc()), { type: "SELECT", elementId: id0, addToSelection: false });
-    const s1 = apply(s0, { type: "START_PENDING_MOVE", startX: 100, startY: 72, startClientX: 500, startClientY: 300, pageHeight: 792 });
+    const s1 = apply(s0, { type: "START_PENDING_MOVE", startX: 100, startY: 72, startClientX: 500, startClientY: 300 });
     const s2 = apply(s1, { type: "CONFIRM_MOVE", clientX: 510, clientY: 300 });
     const s3 = apply(s2, { type: "UPDATE_MOVE", currentX: 150, currentY: 72 });
     const s4 = apply(s3, { type: "END_MOVE" });
@@ -179,7 +179,7 @@ describe("reducer: Move", () => {
 
   it("END_MOVE from pending-move just clears drag", () => {
     const s0 = apply(createInitialState(createTestDoc()), { type: "SELECT", elementId: id0, addToSelection: false });
-    const s1 = apply(s0, { type: "START_PENDING_MOVE", startX: 100, startY: 72, startClientX: 500, startClientY: 300, pageHeight: 792 });
+    const s1 = apply(s0, { type: "START_PENDING_MOVE", startX: 100, startY: 72, startClientX: 500, startClientY: 300 });
     const s2 = apply(s1, { type: "END_MOVE" });
     expect(isDragIdle(s2.drag)).toBe(true);
     expect(canUndo(s2.documentHistory)).toBe(false);
@@ -193,13 +193,13 @@ describe("reducer: Move", () => {
 describe("reducer: Resize", () => {
   it("START_RESIZE creates resize drag state", () => {
     const s0 = apply(createInitialState(createTestDoc()), { type: "SELECT", elementId: id0, addToSelection: false });
-    const s1 = apply(s0, { type: "START_RESIZE", handle: "se", startX: 300, startY: 92, pageHeight: 792 });
+    const s1 = apply(s0, { type: "START_RESIZE", handle: "se", startX: 300, startY: 92 });
     expect(isDragResize(s1.drag)).toBe(true);
   });
 
   it("END_RESIZE with zero delta is no-op", () => {
     const s0 = apply(createInitialState(createTestDoc()), { type: "SELECT", elementId: id0, addToSelection: false });
-    const s1 = apply(s0, { type: "START_RESIZE", handle: "se", startX: 300, startY: 92, pageHeight: 792 });
+    const s1 = apply(s0, { type: "START_RESIZE", handle: "se", startX: 300, startY: 92 });
     const s2 = apply(s1, { type: "END_RESIZE" });
     expect(isDragIdle(s2.drag)).toBe(true);
     expect(canUndo(s2.documentHistory)).toBe(false);

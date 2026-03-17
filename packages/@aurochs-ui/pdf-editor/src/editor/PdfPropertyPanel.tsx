@@ -7,8 +7,8 @@
  * - editor-controls OptionalPropertySection pattern
  */
 
-import { useCallback, type CSSProperties } from "react";
-import type { PdfElement } from "@aurochs/pdf";
+import { useCallback, useMemo, useState, type CSSProperties } from "react";
+import type { PdfElement, PdfTable } from "@aurochs/pdf";
 import type { PageSizeData } from "@aurochs-ui/editor-core/adapter-types";
 import { PositionSection } from "react-editor-ui/sections/PositionSection";
 import { SizeSection } from "react-editor-ui/sections/SizeSection";
@@ -27,6 +27,9 @@ import {
   applyStrokeToGraphicsState,
 } from "./pdf-surface-adapters";
 import { PDF_PAGE_PRESETS, findMatchingPreset } from "./pdf-page-size-adapter";
+import { TableCellGrid, TableDimensionEditor, TableStructureToolbar } from "@aurochs-ui/editor-controls/table";
+import type { CellPosition } from "@aurochs-ui/editor-core/table-selection";
+import { pdfTableOperationAdapter } from "./pdf-table-adapter";
 import type { PdfElementId, PdfElementBounds } from "./types";
 
 // =============================================================================
@@ -49,6 +52,114 @@ export type PdfPropertyPanelProps = {
 // =============================================================================
 
 const containerStyle: CSSProperties = { display: "flex", flexDirection: "column", gap: "0", fontSize: "12px" };
+
+// =============================================================================
+// Table Inspector Sub-component
+// =============================================================================
+
+type PdfTableInspectorProps = {
+  readonly table: PdfTable;
+  readonly elementId: PdfElementId;
+  readonly onUpdateElement?: (elementId: PdfElementId, updater: (el: PdfElement) => PdfElement) => void;
+  readonly disabled?: boolean;
+};
+
+function PdfTableInspector({ table, elementId, onUpdateElement, disabled }: PdfTableInspectorProps) {
+  const [selectedCell, setSelectedCell] = useState<CellPosition | undefined>();
+  const abstractTable = useMemo(() => pdfTableOperationAdapter.toAbstract(table), [table]);
+
+  const updateTable = useCallback(
+    (newTable: PdfTable) => {
+      if (onUpdateElement) {
+        onUpdateElement(elementId, () => newTable as PdfElement);
+      }
+    },
+    [elementId, onUpdateElement],
+  );
+
+  const handleInsertRow = useCallback(
+    (position: "above" | "below") => {
+      if (!selectedCell) { return; }
+      const rowIndex = position === "above" ? selectedCell.row : selectedCell.row + 1;
+      updateTable(pdfTableOperationAdapter.insertRow(table, rowIndex));
+    },
+    [table, selectedCell, updateTable],
+  );
+
+  const handleRemoveRow = useCallback(() => {
+    if (!selectedCell) { return; }
+    updateTable(pdfTableOperationAdapter.removeRow(table, selectedCell.row));
+  }, [table, selectedCell, updateTable]);
+
+  const handleInsertColumn = useCallback(
+    (position: "before" | "after") => {
+      if (!selectedCell) { return; }
+      const colIndex = position === "before" ? selectedCell.col : selectedCell.col + 1;
+      updateTable(pdfTableOperationAdapter.insertColumn(table, colIndex));
+    },
+    [table, selectedCell, updateTable],
+  );
+
+  const handleRemoveColumn = useCallback(() => {
+    if (!selectedCell) { return; }
+    updateTable(pdfTableOperationAdapter.removeColumn(table, selectedCell.col));
+  }, [table, selectedCell, updateTable]);
+
+  const handleSplitCell = useCallback(() => {
+    if (!selectedCell) { return; }
+    updateTable(pdfTableOperationAdapter.splitCell(table, selectedCell.row, selectedCell.col));
+  }, [table, selectedCell, updateTable]);
+
+  const handleColumnWidthChange = useCallback(
+    (colIndex: number, width: number) => {
+      updateTable(pdfTableOperationAdapter.setColumnWidth(table, colIndex, width));
+    },
+    [table, updateTable],
+  );
+
+  const handleRowHeightChange = useCallback(
+    (rowIndex: number, height: number) => {
+      updateTable(pdfTableOperationAdapter.setRowHeight(table, rowIndex, height));
+    },
+    [table, updateTable],
+  );
+
+  return (
+    <>
+      <OptionalPropertySection title="Table Structure" defaultExpanded>
+        <TableStructureToolbar
+          onInsertRow={handleInsertRow}
+          onRemoveRow={handleRemoveRow}
+          onInsertColumn={handleInsertColumn}
+          onRemoveColumn={handleRemoveColumn}
+          onSplitCell={handleSplitCell}
+          hasSelection={selectedCell !== undefined}
+          disabled={disabled}
+        />
+      </OptionalPropertySection>
+
+      <OptionalPropertySection title="Dimensions" defaultExpanded={false}>
+        <TableDimensionEditor
+          columns={abstractTable.columns}
+          rows={abstractTable.rows}
+          onColumnWidthChange={handleColumnWidthChange}
+          onRowHeightChange={handleRowHeightChange}
+          unitLabel="pt"
+          disabled={disabled}
+        />
+      </OptionalPropertySection>
+
+      <OptionalPropertySection title="Cells" defaultExpanded>
+        <TableCellGrid
+          table={abstractTable}
+          selectedCell={selectedCell}
+          onCellSelect={setSelectedCell}
+          disabled={disabled}
+        />
+      </OptionalPropertySection>
+    </>
+  );
+}
 
 // =============================================================================
 // Component
@@ -126,7 +237,7 @@ export function PdfPropertyPanel({ element, elementId, bounds: svgBounds, pageWi
 
   const handlePageSizeChange = useCallback(
     (data: PageSizeData) => {
-      if (!onPageSizeChange) return;
+      if (!onPageSizeChange) { return; }
       const preset = PDF_PAGE_PRESETS.find((p) => p.value === data.preset);
       const w = preset?.width ?? parseFloat(data.width);
       const h = preset?.height ?? parseFloat(data.height);
@@ -224,6 +335,16 @@ export function PdfPropertyPanel({ element, elementId, bounds: svgBounds, pageWi
         )}
         defaultExpanded
       />
+
+      {/* Table editor (when element is a table) */}
+      {element.type === "table" && (
+        <PdfTableInspector
+          table={element}
+          elementId={elementId!}
+          onUpdateElement={onUpdateElement}
+          disabled={!canEdit}
+        />
+      )}
     </div>
   );
 }

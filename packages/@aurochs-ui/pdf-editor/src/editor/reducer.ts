@@ -5,8 +5,7 @@
  * All actions and state transitions are tested independently of React components.
  */
 
-import type { PdfDocument, PdfElement, PdfMatrix } from "@aurochs/pdf";
-import { decomposeMatrix } from "@aurochs/pdf";
+import type { PdfDocument, PdfElement, PdfTable } from "@aurochs/pdf";
 import { createHistory, pushHistory, undoHistory, redoHistory, canUndo, canRedo } from "@aurochs-ui/editor-core/history";
 import { createEmptySelection, createSingleSelection, toggleSelection } from "@aurochs-ui/editor-core/selection";
 import { createClipboardContent, incrementPasteCount } from "@aurochs-ui/editor-core/clipboard";
@@ -59,13 +58,16 @@ export type PdfEditorAction =
   | { readonly type: "START_TEXT_EDIT"; readonly elementId: PdfElementId; readonly text: string; readonly bounds: { x: number; y: number; width: number; height: number } }
   | { readonly type: "COMMIT_TEXT_EDIT"; readonly text: string }
   | { readonly type: "CANCEL_TEXT_EDIT" }
-  | { readonly type: "UPDATE_PAGE_SIZE"; readonly pageIndex: number; readonly width: number; readonly height: number };
+  | { readonly type: "UPDATE_PAGE_SIZE"; readonly pageIndex: number; readonly width: number; readonly height: number }
+  | { readonly type: "ADD_TABLE"; readonly table: PdfTable }
+  | { readonly type: "UPDATE_TABLE"; readonly elementId: PdfElementId; readonly table: PdfTable };
 
 // =============================================================================
 // Helpers
 // =============================================================================
 
 
+/** Resolve selection state after a SELECT action. */
 function resolveSelection(state: PdfEditorState, elementId: PdfElementId, add: boolean) {
   if (add) {
     return toggleSelection<PdfElementId>({ selection: state.selection, id: elementId, primaryFallback: "last" });
@@ -73,17 +75,19 @@ function resolveSelection(state: PdfEditorState, elementId: PdfElementId, add: b
   return createSingleSelection<PdfElementId>(elementId);
 }
 
+/** Collect SVG-space bounds for the given element IDs. */
 export function collectSelectedBounds(doc: PdfDocument, selectedIds: readonly PdfElementId[]): ReadonlyMap<PdfElementId, SimpleBounds> {
   const query = createDocumentQuery(doc);
   const map = new Map<PdfElementId, SimpleBounds>();
   for (const id of selectedIds) {
     const bounds = query.getElementBounds(id);
-    if (!bounds) continue;
+    if (!bounds) { continue; }
     map.set(id, { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height });
   }
   return map;
 }
 
+/** Collect PdfElement instances for the given element IDs. */
 export function collectSelectedElements(doc: PdfDocument, selectedIds: readonly PdfElementId[]): readonly PdfElement[] {
   const query = createDocumentQuery(doc);
   return selectedIds.map((id) => query.getElement(id)).filter((el): el is PdfElement => el !== undefined);
@@ -114,6 +118,7 @@ function applyResizeToDom(doc: PdfDocument, drag: ResizeDragState<PdfElementId>,
 // Initial State
 // =============================================================================
 
+/** Create the initial editor state from a PDF document. */
 export function createInitialState(document: PdfDocument): PdfEditorState {
   return {
     documentHistory: createHistory(document),
@@ -129,6 +134,7 @@ export function createInitialState(document: PdfDocument): PdfEditorState {
 // Reducer
 // =============================================================================
 
+/** Pure reducer for PDF editor state transitions. */
 export function pdfEditorReducer(state: PdfEditorState, action: PdfEditorAction): PdfEditorState {
   switch (action.type) {
     case "SELECT":
@@ -243,6 +249,7 @@ export function pdfEditorReducer(state: PdfEditorState, action: PdfEditorAction)
     case "UPDATE_ROTATE": {
       if (!isDragRotate(state.drag)) { return state; }
       const currentAngle = Math.atan2(action.currentY - state.drag.centerY, action.currentX - state.drag.centerX);
+      // eslint-disable-next-line no-restricted-syntax -- reassigned after snap
       let previewAngleDelta = currentAngle - state.drag.startAngle;
       // Snap total rotation angle to cardinal directions
       const totalDeg = state.drag.initialRotation + (previewAngleDelta * 180) / Math.PI;
@@ -258,6 +265,7 @@ export function pdfEditorReducer(state: PdfEditorState, action: PdfEditorAction)
       if (Math.abs(previewAngleDelta) < 0.001) { return { ...state, drag: createIdleDragState() }; }
       // Apply rotation to each element by recomposing CTM
       const doc = state.documentHistory.present;
+      // eslint-disable-next-line no-restricted-syntax -- accumulator updated in loop
       let rotatedDoc = doc;
       for (const id of shapeIds) {
         rotatedDoc = updateElementInDocument({
@@ -285,6 +293,7 @@ export function pdfEditorReducer(state: PdfEditorState, action: PdfEditorAction)
     case "NUDGE_SELECTED": {
       if (state.selection.selectedIds.length === 0) { return state; }
       const doc = state.documentHistory.present;
+      // eslint-disable-next-line no-restricted-syntax -- accumulator updated in loop
       let nudgedDoc = doc;
       for (const id of state.selection.selectedIds) {
         nudgedDoc = updateElementInDocument({
@@ -351,6 +360,7 @@ export function pdfEditorReducer(state: PdfEditorState, action: PdfEditorAction)
       });
       const updates = calculateAlignment(shapes, action.alignment);
       if (updates.length === 0) { return state; }
+      // eslint-disable-next-line no-restricted-syntax -- accumulator updated in loop
       let newDoc = doc;
       for (const update of updates) {
         const original = shapes.find((s) => s.id === update.id);
@@ -430,6 +440,22 @@ export function pdfEditorReducer(state: PdfEditorState, action: PdfEditorAction)
       const newPage = { ...page, width: action.width, height: action.height };
       const newPages = doc.pages.map((p, i) => i === action.pageIndex ? newPage : p);
       return { ...state, documentHistory: pushHistory(state.documentHistory, { ...doc, pages: newPages }) };
+    }
+
+    case "ADD_TABLE": {
+      const doc = state.documentHistory.present;
+      const page = doc.pages[state.currentPageIndex];
+      if (!page) { return state; }
+      const newElements = [...page.elements, action.table as PdfElement];
+      const newPages = doc.pages.map((p, i) => i === state.currentPageIndex ? { ...p, elements: newElements } : p);
+      const newId = createElementId(state.currentPageIndex, page.elements.length);
+      return { ...state, documentHistory: pushHistory(state.documentHistory, { ...doc, pages: newPages }), selection: createSingleSelection<PdfElementId>(newId) };
+    }
+
+    case "UPDATE_TABLE": {
+      const doc = state.documentHistory.present;
+      const newDoc = updateElementInDocument({ document: doc, elementId: action.elementId, updater: () => action.table as PdfElement });
+      return { ...state, documentHistory: pushHistory(state.documentHistory, newDoc) };
     }
   }
 }
