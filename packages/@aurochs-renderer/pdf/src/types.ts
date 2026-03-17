@@ -8,6 +8,8 @@ export type PdfSvgRenderOptions = Readonly<{
   readonly backgroundColor?: string;
   readonly preserveAspectRatio?: string;
   readonly includeXmlDeclaration?: boolean;
+  /** Element indices to exclude from rendering (for editing overlays). */
+  readonly excludeElementIndices?: ReadonlySet<number>;
 }>;
 
 export type BuildPdfDocumentForRenderArgs = Readonly<{
