@@ -8,7 +8,10 @@
     "@aurochs/pdf": "workspace:*",
     "@aurochs-builder/pdf": "workspace:*",
     "@aurochs-renderer/pdf": "workspace:*",
-    "@aurochs-ui/ui-components": "workspace:*"
+    "@aurochs-ui/editor-core": "workspace:*",
+    "@aurochs-ui/editor-controls": "workspace:*",
+    "@aurochs-ui/ui-components": "workspace:*",
+    "react-editor-ui": "^0.4.0"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",
@@ -17,7 +20,9 @@
   "scripts": {
     "lint": "eslint src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-ui/pdf-editor/src'"
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-ui/pdf-editor/src'",
+    "e2e:dev": "vite --config spec/e2e/vite.config.ts",
+    "e2e:test": "bun run spec/e2e/pdf-editor.e2e.ts"
   },
   "exports": {
     ".": {
@@ -27,6 +32,10 @@
     "./viewer": {
       "types": "./src/viewer/index.ts",
       "default": "./src/viewer/index.ts"
+    },
+    "./editor": {
+      "types": "./src/editor/index.ts",
+      "default": "./src/editor/index.ts"
     }
   }
 }

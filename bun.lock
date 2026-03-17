@@ -9,8 +9,8 @@
         "hono": "^4.11.1",
         "opentype.js": "^1.3.4",
         "pngjs": "^7.0.0",
-        "react": "^19.1.0",
-        "react-dom": "^19.1.0",
+        "react": "^19.2.4",
+        "react-dom": "^19.2.4",
         "react-router-dom": "^7.6.1",
         "zustand": "^5.0.5",
       },
@@ -705,8 +705,11 @@
       "dependencies": {
         "@aurochs-builder/pdf": "workspace:*",
         "@aurochs-renderer/pdf": "workspace:*",
+        "@aurochs-ui/editor-controls": "workspace:*",
+        "@aurochs-ui/editor-core": "workspace:*",
         "@aurochs-ui/ui-components": "workspace:*",
         "@aurochs/pdf": "workspace:*",
+        "react-editor-ui": "^0.4.0",
       },
       "peerDependencies": {
         "react": "^18.0.0 || ^19.0.0",
@@ -730,6 +733,7 @@
         "@aurochs-ui/ui-components": "workspace:*",
         "@aurochs-ui/xlsx-editor": "workspace:*",
         "@aurochs/glyph": "workspace:*",
+        "react-editor-ui": "^0.4.0",
         "react-panel-layout": "^0.6.1",
       },
       "devDependencies": {
@@ -2229,9 +2233,11 @@
 
     "raw-body": ["raw-body@3.0.2", "", { "dependencies": { "bytes": "~3.1.2", "http-errors": "~2.0.1", "iconv-lite": "~0.7.0", "unpipe": "~1.0.0" } }, "sha512-K5zQjDllxWkf7Z5xJdV0/B0WTNqx6vxG70zJE4N0kBs4LovmEYWJzQGxC9bS9RAKu3bgM40lrd5zoLJ12MQ5BA=="],
 
-    "react": ["react@19.2.3", "", {}, ""],
+    "react": ["react@19.2.4", "", {}, "sha512-9nfp2hYpCwOjAN+8TZFGhtWEwgvWHXqESH8qT89AT/lWklpLON22Lc8pEtnpsZz7VmawabSU0gCjnj8aC0euHQ=="],
 
-    "react-dom": ["react-dom@19.2.3", "", { "dependencies": { "scheduler": "^0.27.0" }, "peerDependencies": { "react": "^19.2.3" } }, ""],
+    "react-dom": ["react-dom@19.2.4", "", { "dependencies": { "scheduler": "^0.27.0" }, "peerDependencies": { "react": "^19.2.4" } }, "sha512-AXJdLo8kgMbimY95O2aKQqsz2iWi9jMgKJhRBAxECE4IFxfcazB2LmzloIoibJI3C12IlY20+KFaLv+71bUJeQ=="],
+
+    "react-editor-ui": ["react-editor-ui@0.4.0", "", {}, "sha512-052yuqZtVIE0mrXog6q0OyDECpRmZwbzRV+o1lgXVPmeix2ypW5ZoT7BSJhYJjz8bQhvilXWMmrdsOVqGmfUBw=="],
 
     "react-is": ["react-is@17.0.2", "", {}, "sha512-w2GsyukL62IJnlaff/nRegPQR94C/XXamvMWmSHRJ4y7Ts/4ocGRmTHvOs8PSE6pB3dWOrD/nueuU5sduBsQ4w=="],
 

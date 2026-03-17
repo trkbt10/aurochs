@@ -5,19 +5,20 @@
   "type": "module",
   "sideEffects": false,
   "dependencies": {
-    "@aurochs/glyph": "workspace:*",
     "@aurochs-builder/pptx": "workspace:*",
-    "@aurochs-ui/chart-editor": "workspace:*",
-    "@aurochs-ui/color-editor": "workspace:*",
     "@aurochs-office/chart": "workspace:*",
     "@aurochs-office/pptx": "workspace:*",
     "@aurochs-renderer/pptx": "workspace:*",
+    "@aurochs-ui/chart-editor": "workspace:*",
+    "@aurochs-ui/color-editor": "workspace:*",
     "@aurochs-ui/diagram-editor": "workspace:*",
     "@aurochs-ui/editor-controls": "workspace:*",
     "@aurochs-ui/editor-core": "workspace:*",
     "@aurochs-ui/path-tools": "workspace:*",
     "@aurochs-ui/ui-components": "workspace:*",
     "@aurochs-ui/xlsx-editor": "workspace:*",
+    "@aurochs/glyph": "workspace:*",
+    "react-editor-ui": "^0.4.0",
     "react-panel-layout": "^0.6.1"
   },
   "peerDependencies": {
