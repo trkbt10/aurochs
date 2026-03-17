@@ -57,8 +57,7 @@ export type PdfEditorAction =
   | { readonly type: "DUPLICATE" }
   | { readonly type: "ALIGN"; readonly alignment: AlignmentType }
   | { readonly type: "START_TEXT_EDIT"; readonly elementId: PdfElementId; readonly text: string; readonly bounds: { x: number; y: number; width: number; height: number } }
-  | { readonly type: "UPDATE_TEXT_EDIT"; readonly text: string }
-  | { readonly type: "COMMIT_TEXT_EDIT" }
+  | { readonly type: "COMMIT_TEXT_EDIT"; readonly text: string }
   | { readonly type: "CANCEL_TEXT_EDIT" };
 
 // =============================================================================
@@ -370,15 +369,12 @@ export function pdfEditorReducer(state: PdfEditorState, action: PdfEditorAction)
     }
 
     case "START_TEXT_EDIT":
-      return { ...state, textEdit: { active: true, elementId: action.elementId, text: action.text, bounds: action.bounds } };
-
-    case "UPDATE_TEXT_EDIT":
-      if (!state.textEdit.active) { return state; }
-      return { ...state, textEdit: { ...state.textEdit, text: action.text } };
+      return { ...state, textEdit: { active: true, elementId: action.elementId, initialText: action.text, bounds: action.bounds } };
 
     case "COMMIT_TEXT_EDIT": {
       if (!state.textEdit.active) { return state; }
-      const { elementId, text } = state.textEdit;
+      const { elementId } = state.textEdit;
+      const { text } = action;
       const doc = state.documentHistory.present;
       const newDoc = updateElementInDocument({ document: doc, elementId, updater: (el) => el.type === "text" ? { ...el, text } : el });
       return { ...state, documentHistory: pushHistory(state.documentHistory, newDoc), textEdit: { active: false } };

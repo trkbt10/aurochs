@@ -6,17 +6,16 @@
  * drag-move, resize, text editing, property panel, and undo/redo.
  */
 
-import React, { useCallback, useMemo, useReducer, useRef, useState } from "react";
-import { TextEditInputFrame } from "@aurochs-ui/editor-controls/text-edit";
-import { useTextComposition } from "@aurochs-ui/editor-controls/text-edit";
+import React, { useCallback, useMemo, useReducer, useState } from "react";
 import { ZoomControls, type ZoomMode } from "@aurochs-ui/editor-controls/zoom";
 import { Button } from "@aurochs-ui/ui-components/primitives";
 import { UndoIcon, RedoIcon, DeleteIcon } from "@aurochs-ui/ui-components/icons";
 import { ContextMenu } from "@aurochs-ui/ui-components/context-menu";
 import type { MenuEntry } from "@aurochs-ui/ui-components/context-menu";
 import { InspectorPanelWithTabs, type InspectorTab } from "@aurochs-ui/editor-controls/ui";
-import type { PdfDocument, PdfElement, PdfText } from "@aurochs/pdf";
-import { renderPdfPageToSvg, renderPdfElementToSvg } from "@aurochs-renderer/pdf/svg";
+import type { PdfDocument, PdfElement } from "@aurochs/pdf";
+import { renderPdfPageToSvg } from "@aurochs-renderer/pdf/svg";
+
 import { canUndo, canRedo } from "@aurochs-ui/editor-core/history";
 import type { ResizeHandlePosition } from "@aurochs-ui/editor-core/drag-state";
 import type { AlignmentType } from "@aurochs-ui/editor-core/alignment";
@@ -31,6 +30,7 @@ import { PdfMultiSelectPanel } from "./PdfMultiSelectPanel";
 import type { PdfElementId } from "./types";
 import { parseElementId } from "./types";
 import { createDocumentQuery } from "./pdf-document-query";
+import { PdfTextEditController } from "./text-edit";
 
 const RULER_THICKNESS = 20;
 
@@ -309,34 +309,7 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
 
   const handleContextMenuClose = useCallback(() => setContextMenu(undefined), []);
 
-  // ---- Text edit support (using shared TextEditInputFrame from editor-controls) ----
-
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [composition, setComposition] = useState({ isComposing: false, text: "", startOffset: 0 });
-  const compositionHandlers = useTextComposition({ setComposition, initialCompositionState: { isComposing: false, text: "", startOffset: 0 } });
-
-  const handleTextChange = useCallback(
-    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      dispatch({ type: "UPDATE_TEXT_EDIT", text: e.target.value });
-    },
-    [],
-  );
-
-  const handleTextKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        dispatch({ type: "CANCEL_TEXT_EDIT" });
-      } else if (e.key === "Enter" && !e.shiftKey && !composition.isComposing) {
-        e.preventDefault();
-        dispatch({ type: "COMMIT_TEXT_EDIT" });
-      }
-    },
-    [composition.isComposing],
-  );
-
-
-  // ---- Content SVG (with editing element excluded) and overlay SVG ----
+  // ---- Content SVG (with editing element excluded) ----
 
   const excludeSet = useMemo(() => {
     if (!state.textEdit.active) { return undefined; }
@@ -348,37 +321,27 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
     return renderPdfPageToSvg(currentPage, { excludeElementIndices: excludeSet });
   }, [currentPage, excludeSet]);
 
-  const overlaySvg = useMemo(() => {
-    if (!state.textEdit.active || !currentPage) { return undefined; }
-    const el = query.getElement(state.textEdit.elementId);
-    if (!el || el.type !== "text") { return undefined; }
-    const liveElement: PdfText = { ...el, text: state.textEdit.text };
-    return renderPdfElementToSvg(liveElement, currentPage.height);
-  }, [state.textEdit, currentPage, query]);
+  // ---- Text edit controller (PPTX-style: SVG text + cursor + selection in one component) ----
+  // Delegates text rendering to renderPdfElementToSvg (same SoT as contentSvg)
+  // to guarantee font/position parity between editing and display.
 
-  const textEditFont = useMemo(() => {
+  const textEditElement = useMemo(() => {
     if (!state.textEdit.active) return undefined;
-    return query.getTextFontInfo(state.textEdit.elementId);
+    const el = query.getElement(state.textEdit.elementId);
+    if (!el || el.type !== "text") return undefined;
+    return el;
   }, [state.textEdit, query]);
 
-  const textEditOverlayNode = state.textEdit.active && currentPage ? (
-    <TextEditInputFrame
+  const textEditOverlayNode = state.textEdit.active && currentPage && textEditElement ? (
+    <PdfTextEditController
       bounds={{ ...state.textEdit.bounds, rotation: 0 }}
+      element={textEditElement}
+      pageHeight={currentPage.height}
       canvasWidth={currentPage.width}
       canvasHeight={currentPage.height}
-      textareaRef={textareaRef}
-      value={state.textEdit.text}
-      onChange={handleTextChange}
-      onKeyDown={handleTextKeyDown}
-      onCompositionStart={compositionHandlers.handleCompositionStart}
-      onCompositionUpdate={compositionHandlers.handleCompositionUpdate}
-      onCompositionEnd={compositionHandlers.handleCompositionEnd}
-      showFrameOutline
-      showTextSelection
-      textFont={textEditFont}
-    >
-      <div />
-    </TextEditInputFrame>
+      onComplete={(text) => dispatch({ type: "COMMIT_TEXT_EDIT", text })}
+      onCancel={() => dispatch({ type: "CANCEL_TEXT_EDIT" })}
+    />
   ) : undefined;
 
   // ---- Center content (CanvasArea, same as PresentationEditor) ----
@@ -401,7 +364,6 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
           onDisplayZoomChange={setDisplayZoom}
           showRulers
           contentSvg={contentSvg}
-          overlaySvg={overlaySvg}
           viewportOverlay={textEditOverlayNode}
           isTextEditing={state.textEdit.active}
           onSelect={handleSelect}

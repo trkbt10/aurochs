@@ -129,6 +129,7 @@ function buildContainerStyle({
     backgroundColor: "transparent",
     zIndex: 1000,
     overflow: "visible",
+    pointerEvents: "auto",
   };
 }
 
@@ -163,6 +164,22 @@ export function TextEditInputFrame({
       event.stopPropagation();
     }
   };
+
+  // Sync flatSelection on mouseup — some browsers don't fire 'select' on click-to-collapse.
+  // Use requestAnimationFrame to wait for the browser's selection update.
+  const handleMouseUp: MouseEventHandler<HTMLTextAreaElement> = useCallback(
+    () => {
+      if (showTextSelection) {
+        requestAnimationFrame(() => {
+          const textarea = textareaRef.current;
+          if (textarea) {
+            setFlatSelection({ start: textarea.selectionStart, end: textarea.selectionEnd });
+          }
+        });
+      }
+    },
+    [showTextSelection, textareaRef],
+  );
 
   // --- Flat text selection tracking (internal) ---
   const [flatSelection, setFlatSelection] = useState<{ start: number; end: number }>({ start: 0, end: 0 });
@@ -214,6 +231,7 @@ export function TextEditInputFrame({
         onCompositionUpdate={onCompositionUpdate}
         onCompositionEnd={onCompositionEnd}
         onMouseDown={handleMouseDown}
+        onMouseUp={handleMouseUp}
         onContextMenuCapture={onContextMenuCapture}
         style={HIDDEN_TEXTAREA_STYLE}
         spellCheck={false}

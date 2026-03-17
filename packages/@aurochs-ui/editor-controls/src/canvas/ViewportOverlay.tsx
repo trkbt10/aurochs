@@ -57,7 +57,9 @@ export function ViewportOverlay({
     transformOrigin: "0 0",
     width: slideWidth,
     height: slideHeight,
-    pointerEvents: pointerEvents ? "auto" : "none",
+    // Always "none" on the transform wrapper so it doesn't block SVG click events.
+    // Child elements (e.g., TextEditInputFrame) set pointerEvents:"auto" on themselves.
+    pointerEvents: "none",
   };
 
   return (

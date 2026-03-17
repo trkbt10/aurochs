@@ -42,7 +42,6 @@ export type PdfPageCanvasProps = {
   readonly onDisplayZoomChange?: (zoom: number) => void;
   readonly showRulers?: boolean;
   readonly contentSvg: string;
-  readonly overlaySvg?: string;
   readonly viewportOverlay?: ReactNode;
   readonly isTextEditing?: boolean;
   // --- Selection ---
@@ -81,7 +80,6 @@ export function PdfPageCanvas({
   onDisplayZoomChange,
   showRulers = true,
   contentSvg,
-  overlaySvg,
   viewportOverlay,
   isTextEditing = false,
   onSelect,
@@ -115,13 +113,17 @@ export function PdfPageCanvas({
   const handleItemPointerDown = useCallback(
     (id: string, coords: CanvasPageCoords, e: React.PointerEvent) => {
       if (e.button !== 0) return;
+      // Cancel text editing when clicking a different element
+      if (isTextEditing && onCancelTextEdit) {
+        onCancelTextEdit();
+      }
       const elementId = id as PdfElementId;
       if (!isSelected(selection, elementId)) {
         onSelect(elementId, coords.addToSelection);
       }
       onStartMove(coords.pageX, coords.pageY, coords.clientX, coords.clientY);
     },
-    [selection, onSelect, onStartMove],
+    [selection, onSelect, onStartMove, isTextEditing, onCancelTextEdit],
   );
 
   const handleItemDoubleClick = useCallback(
@@ -234,7 +236,7 @@ export function PdfPageCanvas({
       onDisplayZoomChange={onDisplayZoomChange}
       showRulers={showRulers}
       contentSvg={contentSvg}
-      overlaySvg={overlaySvg}
+
       itemBounds={elementBounds}
       selectedIds={selection.selectedIds}
       primaryId={selection.primaryId}

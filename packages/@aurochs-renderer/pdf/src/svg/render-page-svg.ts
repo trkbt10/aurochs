@@ -279,6 +279,15 @@ function renderText(text: PdfText, pageHeight: number, registry: ClipPathRegistr
     attrs.push('text-orientation="upright"');
   }
 
+  // textLength: enforce PDF-computed text width (SoT) on SVG rendering.
+  // Without this, browser font metrics determine the rendered width independently,
+  // causing divergence between the rendered text and cursor/selection positions
+  // (which use text.width from the PDF parser as the single source of truth).
+  if (text.width > 0 && text.text.length > 1) {
+    attrs.push(`textLength="${formatSvgNumber(text.width)}"`);
+    attrs.push('lengthAdjust="spacing"');
+  }
+
   const textScale = normalizeTextScale(text);
   const transform = buildTextTransform(anchor, textScale);
   if (transform) {

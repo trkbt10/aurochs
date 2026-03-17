@@ -300,13 +300,13 @@ describe("TextEdit state", () => {
       textEdit: {
         active: true,
         elementId: createElementId(0, 0),
-        text: "Hello",
+        initialText: "Hello",
         bounds: { x: 100, y: 72, width: 200, height: 20 },
       },
     };
     expect(activeState.textEdit.active).toBe(true);
     if (activeState.textEdit.active) {
-      expect(activeState.textEdit.text).toBe("Hello");
+      expect(activeState.textEdit.initialText).toBe("Hello");
       expect(activeState.textEdit.elementId).toBe("0:0");
     }
   });

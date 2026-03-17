@@ -283,22 +283,14 @@ describe("reducer: TextEdit", () => {
     const s1 = apply(s0, { type: "START_TEXT_EDIT", elementId: id0, text: "Hello", bounds: { x: 100, y: 72, width: 200, height: 20 } });
     expect(s1.textEdit.active).toBe(true);
     if (s1.textEdit.active) {
-      expect(s1.textEdit.text).toBe("Hello");
+      expect(s1.textEdit.initialText).toBe("Hello");
       expect(s1.textEdit.elementId).toBe(id0);
     }
   });
 
-  it("UPDATE_TEXT_EDIT changes text", () => {
-    const s0 = apply(createInitialState(createTestDoc()), { type: "START_TEXT_EDIT", elementId: id0, text: "Hello", bounds: { x: 100, y: 72, width: 200, height: 20 } });
-    const s1 = apply(s0, { type: "UPDATE_TEXT_EDIT", text: "Hello World" });
-    if (s1.textEdit.active) {
-      expect(s1.textEdit.text).toBe("Hello World");
-    }
-  });
-
   it("COMMIT_TEXT_EDIT saves text to document and deactivates", () => {
-    const s0 = apply(createInitialState(createTestDoc()), { type: "START_TEXT_EDIT", elementId: id0, text: "Changed", bounds: { x: 100, y: 72, width: 200, height: 20 } });
-    const s1 = apply(s0, { type: "COMMIT_TEXT_EDIT" });
+    const s0 = apply(createInitialState(createTestDoc()), { type: "START_TEXT_EDIT", elementId: id0, text: "Hello", bounds: { x: 100, y: 72, width: 200, height: 20 } });
+    const s1 = apply(s0, { type: "COMMIT_TEXT_EDIT", text: "Changed" });
     expect(s1.textEdit.active).toBe(false);
     expect((s1.documentHistory.present.pages[0].elements[0] as PdfText).text).toBe("Changed");
     expect(canUndo(s1.documentHistory)).toBe(true);

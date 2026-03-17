@@ -181,7 +181,7 @@ export type PdfTextEditState =
   | {
       readonly active: true;
       readonly elementId: PdfElementId;
-      readonly text: string;
+      readonly initialText: string;
       readonly bounds: { readonly x: number; readonly y: number; readonly width: number; readonly height: number };
     };
 
