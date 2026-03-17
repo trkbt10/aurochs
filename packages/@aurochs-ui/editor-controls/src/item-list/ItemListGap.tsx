@@ -1,28 +1,29 @@
 /**
- * @file Slide list gap component
+ * @file Item list gap component
  *
- * Gap between slides with:
- * - "+" button for adding new slides (on hover)
+ * Gap between items with:
+ * - "+" button for adding new items (on hover)
  * - Drop indicator for drag-and-drop (when targeted)
  */
 
-import type { SlideListGapProps } from "./types";
+import type { ItemListGapProps } from "./types";
 import { getGapStyle, getAddButtonStyle, getGapDropIndicatorStyle, getGapHoverZoneStyle } from "./styles";
 
 /**
  * Gap component with add button and drop indicator
  */
-export function SlideListGap({
+export function ItemListGap({
   index,
   orientation,
   isHovered,
   isDragTarget,
+  itemLabel,
   onPointerEnter,
   onPointerLeave,
   onClick,
   onDragOver,
   onDrop,
-}: SlideListGapProps) {
+}: ItemListGapProps) {
   return (
     <div
       style={getGapStyle(orientation)}
@@ -45,7 +46,7 @@ export function SlideListGap({
             type="button"
             style={getAddButtonStyle(isHovered, orientation)}
             onClick={onClick}
-            aria-label={`Add slide at position ${index + 1}`}
+            aria-label={`Add ${itemLabel} at position ${index + 1}`}
             tabIndex={isHovered ? 0 : -1}
           >
             +

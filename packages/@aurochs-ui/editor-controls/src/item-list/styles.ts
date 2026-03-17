@@ -1,11 +1,12 @@
 /**
- * @file Slide list styles
+ * @file Item list styles
  *
- * CSS-in-JS style definitions for the slide list component.
+ * CSS-in-JS style definitions for the generic item list component.
+ * Extracted from pptx-editor/slide-list/styles.ts — uses design tokens throughout.
  */
 
 import type { CSSProperties } from "react";
-import type { SlideListOrientation } from "./types";
+import type { ListOrientation } from "./types";
 import { colorTokens, radiusTokens, spacingTokens, fontTokens } from "@aurochs-ui/ui-components/design-tokens";
 
 // =============================================================================
@@ -15,8 +16,8 @@ import { colorTokens, radiusTokens, spacingTokens, fontTokens } from "@aurochs-u
 /** Gap size used for consistent spacing */
 const CONTAINER_GAP = 8;
 
-/** Get container style for slide list based on orientation */
-export function getContainerStyle(orientation: SlideListOrientation): CSSProperties {
+/** Get container style for item list based on orientation */
+export function getContainerStyle(orientation: ListOrientation): CSSProperties {
   return {
     display: "flex",
     flexDirection: orientation === "vertical" ? "column" : "row",
@@ -32,8 +33,8 @@ export function getContainerStyle(orientation: SlideListOrientation): CSSPropert
 // Item wrapper styles
 // =============================================================================
 
-/** Get item wrapper style for slide list based on orientation */
-export function getItemWrapperStyle(orientation: SlideListOrientation): CSSProperties {
+/** Get item wrapper style for item list based on orientation */
+export function getItemWrapperStyle(orientation: ListOrientation): CSSProperties {
   return {
     position: "relative",
     display: "flex",
@@ -45,11 +46,11 @@ export function getItemWrapperStyle(orientation: SlideListOrientation): CSSPrope
 }
 
 // =============================================================================
-// Number badge styles (positioned outside slide)
+// Number badge styles (positioned outside item)
 // =============================================================================
 
-/** Get number badge style for slide list based on orientation */
-export function getNumberBadgeStyle(orientation: SlideListOrientation): CSSProperties {
+/** Get number badge style for item list based on orientation */
+export function getNumberBadgeStyle(orientation: ListOrientation): CSSProperties {
   const base: CSSProperties = {
     fontSize: fontTokens.size.sm,
     fontWeight: fontTokens.weight.medium,
@@ -117,7 +118,7 @@ export function getThumbnailContainerStyle({
     width: "100%",
     height: "auto",
     aspectRatio,
-    // Slide content is white (PowerPoint slides)
+    // Item content is white
     backgroundColor: "#fff",
     borderRadius: radiusTokens.sm,
     boxShadow: selectionRing !== "none" ? `${selectionRing}, ${baseShadow}` : baseShadow,
@@ -192,40 +193,11 @@ export function getDeleteButtonStyle(visible: boolean): CSSProperties {
 }
 
 // =============================================================================
-// Fx button styles
-// =============================================================================
-
-/** Get Fx button style based on visibility */
-export function getFxButtonStyle(visible: boolean): CSSProperties {
-  return {
-    position: "absolute",
-    bottom: spacingTokens.xs,
-    right: spacingTokens.xs,
-    width: "22px",
-    height: "22px",
-    padding: 0,
-    borderRadius: "999px",
-    backgroundColor: "rgba(0, 0, 0, 0.72)",
-    color: colorTokens.overlay.lightText,
-    border: "1px solid rgba(255, 255, 255, 0.12)",
-    cursor: "pointer",
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    lineHeight: 1,
-    opacity: visible ? 1 : 0,
-    pointerEvents: visible ? "auto" : "none",
-    transition: "opacity 0.12s ease, background-color 0.12s ease",
-    zIndex: 10,
-  };
-}
-
-// =============================================================================
 // Gap styles (for add button and drop indicator)
 // =============================================================================
 
-/** Get gap style for slide list based on orientation */
-export function getGapStyle(orientation: SlideListOrientation): CSSProperties {
+/** Get gap style for item list based on orientation */
+export function getGapStyle(orientation: ListOrientation): CSSProperties {
   // Gap component uses zero size - doesn't affect layout
   // CSS gap on container handles all spacing
   // Interactive elements (+ button, drop indicator) use overflow: visible
@@ -254,7 +226,7 @@ export function getGapStyle(orientation: SlideListOrientation): CSSProperties {
 }
 
 /** Get drop indicator style for gap based on orientation */
-export function getGapDropIndicatorStyle(orientation: SlideListOrientation): CSSProperties {
+export function getGapDropIndicatorStyle(orientation: ListOrientation): CSSProperties {
   // Simple line indicator - no layout impact
   if (orientation === "vertical") {
     return {
@@ -286,13 +258,13 @@ export function getGapDropIndicatorStyle(orientation: SlideListOrientation): CSS
 /**
  * Hover zone style for Gap component.
  * Since Gap has height: 0, this provides an invisible clickable area.
- * Positioned exactly on the visual boundary line between slides.
+ * Positioned exactly on the visual boundary line between items.
  *
  * DOM structure places Gap at TOP of its wrapper, but the visual boundary
  * (center of CSS gap) is CONTAINER_GAP/2 pixels ABOVE the Gap's mount position.
  * Button is a child of this zone, centered within it.
  */
-export function getGapHoverZoneStyle(orientation: SlideListOrientation): CSSProperties {
+export function getGapHoverZoneStyle(orientation: ListOrientation): CSSProperties {
   // Hover zone height/width for reliable hover detection
   const hoverSize = CONTAINER_GAP + 8; // 16px
 
@@ -318,8 +290,6 @@ export function getGapHoverZoneStyle(orientation: SlideListOrientation): CSSProp
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      // Debug: uncomment to see hover zone
-      // backgroundColor: "rgba(255, 0, 0, 0.1)",
     };
   }
   return {
@@ -342,7 +312,7 @@ export function getGapHoverZoneStyle(orientation: SlideListOrientation): CSSProp
  * Add button style.
  * Small, subtle button that appears centered in the hover zone.
  */
-export function getAddButtonStyle(visible: boolean, _orientation: SlideListOrientation): CSSProperties {
+export function getAddButtonStyle(visible: boolean, _orientation: ListOrientation): CSSProperties {
   // Button size - compact and unobtrusive
   const size = 18;
 
@@ -376,16 +346,3 @@ export function getAddButtonStyle(visible: boolean, _orientation: SlideListOrien
     flexShrink: 0,
   };
 }
-
-// =============================================================================
-// Hover styles for item
-// =============================================================================
-
-export const itemHoverOverlayStyle: CSSProperties = {
-  position: "absolute",
-  inset: 0,
-  backgroundColor: "rgba(0, 0, 0, 0.02)",
-  pointerEvents: "none",
-  opacity: 0,
-  transition: "opacity 0.15s ease",
-};

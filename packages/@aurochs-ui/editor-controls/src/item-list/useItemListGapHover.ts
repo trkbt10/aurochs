@@ -1,13 +1,13 @@
 /**
- * @file Slide gap hover hook
+ * @file Item list gap hover hook
  *
- * Manages hover state for the "+" button between slides.
+ * Manages hover state for the "+" button between items.
  */
 
 import { useCallback, useState } from "react";
-import type { GapHoverState } from "../types";
+import type { GapHoverState } from "./types";
 
-export type UseSlideGapHoverResult = {
+export type UseItemListGapHoverResult = {
   /** Current gap hover state */
   readonly gapHoverState: GapHoverState;
   /** Handle mouse enter on a gap */
@@ -21,7 +21,7 @@ export type UseSlideGapHoverResult = {
 /**
  * Hook for managing gap hover state
  */
-export function useSlideGapHover(): UseSlideGapHoverResult {
+export function useItemListGapHover(): UseItemListGapHoverResult {
   const [gapHoverState, setGapHoverState] = useState<GapHoverState>({
     hoveredGapIndex: null,
   });
@@ -36,7 +36,7 @@ export function useSlideGapHover(): UseSlideGapHoverResult {
 
   const isGapHovered = useCallback(
     (index: number) => gapHoverState.hoveredGapIndex === index,
-    [gapHoverState.hoveredGapIndex]
+    [gapHoverState.hoveredGapIndex],
   );
 
   return {

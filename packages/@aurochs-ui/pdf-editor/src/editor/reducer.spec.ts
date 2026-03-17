@@ -324,3 +324,252 @@ describe("reducer: UPDATE_ELEMENT", () => {
     expect(canUndo(s1.documentHistory)).toBe(true);
   });
 });
+
+// =============================================================================
+// Page Operations
+// =============================================================================
+
+function createMultiPageDoc(): PdfDocument {
+  const gs = createDefaultGraphicsState();
+  const textA: PdfText = { type: "text", text: "Page1", x: 10, y: 700, width: 100, height: 20, fontName: "Helvetica", fontSize: 14, graphicsState: gs };
+  const textB: PdfText = { type: "text", text: "Page2", x: 10, y: 700, width: 100, height: 20, fontName: "Helvetica", fontSize: 14, graphicsState: gs };
+  const textC: PdfText = { type: "text", text: "Page3", x: 10, y: 700, width: 100, height: 20, fontName: "Helvetica", fontSize: 14, graphicsState: gs };
+  return {
+    pages: [
+      { pageNumber: 1, width: 612, height: 792, elements: [textA] },
+      { pageNumber: 2, width: 612, height: 792, elements: [textB] },
+      { pageNumber: 3, width: 612, height: 792, elements: [textC] },
+    ],
+  };
+}
+
+function getPageTexts(state: PdfEditorState): string[] {
+  return state.documentHistory.present.pages.map(
+    (p) => (p.elements[0] as PdfText | undefined)?.text ?? "(blank)",
+  );
+}
+
+describe("reducer: ADD_PAGE", () => {
+  it("adds blank page after specified index", () => {
+    const s0 = createInitialState(createMultiPageDoc());
+    const s1 = apply(s0, { type: "ADD_PAGE", afterIndex: 0 });
+    const pages = s1.documentHistory.present.pages;
+
+    expect(pages).toHaveLength(4);
+    expect(pages[1].elements).toHaveLength(0); // new blank page
+    expect(s1.currentPageIndex).toBe(1); // navigated to new page
+  });
+
+  it("adds page at start when afterIndex is -1 (gap 0)", () => {
+    const s0 = createInitialState(createMultiPageDoc());
+    const s1 = apply(s0, { type: "ADD_PAGE", afterIndex: -1 });
+    const pages = s1.documentHistory.present.pages;
+
+    expect(pages).toHaveLength(4);
+    expect(pages[0].elements).toHaveLength(0); // new blank page at start
+    expect(s1.currentPageIndex).toBe(0);
+    // Original pages shifted
+    expect(getPageTexts(s1)).toEqual(["(blank)", "Page1", "Page2", "Page3"]);
+  });
+
+  it("adds page at end when afterIndex is last", () => {
+    const s0 = createInitialState(createMultiPageDoc());
+    const s1 = apply(s0, { type: "ADD_PAGE", afterIndex: 2 });
+    const pages = s1.documentHistory.present.pages;
+
+    expect(pages).toHaveLength(4);
+    expect(pages[3].elements).toHaveLength(0);
+    expect(s1.currentPageIndex).toBe(3);
+  });
+
+  it("preserves page dimensions from source", () => {
+    const s0 = createInitialState(createMultiPageDoc());
+    const s1 = apply(s0, { type: "ADD_PAGE", afterIndex: 0 });
+    const newPage = s1.documentHistory.present.pages[1];
+
+    expect(newPage.width).toBe(612);
+    expect(newPage.height).toBe(792);
+  });
+
+  it("pushes history (undoable)", () => {
+    const s0 = createInitialState(createMultiPageDoc());
+    const s1 = apply(s0, { type: "ADD_PAGE", afterIndex: 1 });
+
+    expect(canUndo(s1.documentHistory)).toBe(true);
+  });
+
+  it("clears selection", () => {
+    const s0 = apply(createInitialState(createMultiPageDoc()), { type: "SELECT", elementId: createElementId(0, 0), addToSelection: false });
+    const s1 = apply(s0, { type: "ADD_PAGE", afterIndex: 0 });
+
+    expect(s1.selection.selectedIds).toHaveLength(0);
+  });
+});
+
+describe("reducer: DELETE_PAGES", () => {
+  it("deletes specified page", () => {
+    const s0 = createInitialState(createMultiPageDoc());
+    const s1 = apply(s0, { type: "DELETE_PAGES", pageIndices: [1] });
+
+    expect(s1.documentHistory.present.pages).toHaveLength(2);
+    expect(getPageTexts(s1)).toEqual(["Page1", "Page3"]);
+  });
+
+  it("deletes multiple pages", () => {
+    const s0 = createInitialState(createMultiPageDoc());
+    const s1 = apply(s0, { type: "DELETE_PAGES", pageIndices: [0, 2] });
+
+    expect(s1.documentHistory.present.pages).toHaveLength(1);
+    expect(getPageTexts(s1)).toEqual(["Page2"]);
+  });
+
+  it("keeps at least 1 page", () => {
+    const s0 = createInitialState(createTestDoc()); // single page
+    const s1 = apply(s0, { type: "DELETE_PAGES", pageIndices: [0] });
+
+    // Should not delete the last page
+    expect(s1.documentHistory.present.pages).toHaveLength(1);
+  });
+
+  it("adjusts currentPageIndex when current page is deleted", () => {
+    const s0 = apply(createInitialState(createMultiPageDoc()), { type: "SET_PAGE", pageIndex: 2 });
+    expect(s0.currentPageIndex).toBe(2);
+
+    const s1 = apply(s0, { type: "DELETE_PAGES", pageIndices: [2] });
+    expect(s1.currentPageIndex).toBeLessThan(2);
+    expect(s1.currentPageIndex).toBeLessThanOrEqual(s1.documentHistory.present.pages.length - 1);
+  });
+
+  it("pushes history (undoable)", () => {
+    const s0 = createInitialState(createMultiPageDoc());
+    const s1 = apply(s0, { type: "DELETE_PAGES", pageIndices: [0] });
+
+    expect(canUndo(s1.documentHistory)).toBe(true);
+  });
+});
+
+describe("reducer: DUPLICATE_PAGES", () => {
+  it("duplicates a single page", () => {
+    const s0 = createInitialState(createMultiPageDoc());
+    const s1 = apply(s0, { type: "DUPLICATE_PAGES", pageIndices: [1] });
+    const pages = s1.documentHistory.present.pages;
+
+    expect(pages).toHaveLength(4);
+    expect(getPageTexts(s1)).toEqual(["Page1", "Page2", "Page2", "Page3"]);
+  });
+
+  it("duplicates multiple pages (inserted after last selected)", () => {
+    const s0 = createInitialState(createMultiPageDoc());
+    const s1 = apply(s0, { type: "DUPLICATE_PAGES", pageIndices: [0, 2] });
+    const pages = s1.documentHistory.present.pages;
+
+    expect(pages).toHaveLength(5);
+    // Sorted indices [0, 2] → duplicates inserted after index 2
+    expect(getPageTexts(s1)).toEqual(["Page1", "Page2", "Page3", "Page1", "Page3"]);
+  });
+
+  it("navigates to first duplicated page", () => {
+    const s0 = createInitialState(createMultiPageDoc());
+    const s1 = apply(s0, { type: "DUPLICATE_PAGES", pageIndices: [1] });
+
+    // Duplicate inserted after index 1 → at index 2
+    expect(s1.currentPageIndex).toBe(2);
+  });
+
+  it("pushes history (undoable)", () => {
+    const s0 = createInitialState(createMultiPageDoc());
+    const s1 = apply(s0, { type: "DUPLICATE_PAGES", pageIndices: [0] });
+
+    expect(canUndo(s1.documentHistory)).toBe(true);
+  });
+});
+
+describe("reducer: REORDER_PAGES", () => {
+  it("moves page forward", () => {
+    const s0 = createInitialState(createMultiPageDoc());
+    // Move page 0 to after page 2
+    const s1 = apply(s0, { type: "REORDER_PAGES", pageIndices: [0], toIndex: 2 });
+
+    expect(getPageTexts(s1)).toEqual(["Page2", "Page3", "Page1"]);
+  });
+
+  it("moves page backward", () => {
+    const s0 = createInitialState(createMultiPageDoc());
+    // Move page 2 to position 0
+    const s1 = apply(s0, { type: "REORDER_PAGES", pageIndices: [2], toIndex: 0 });
+
+    expect(getPageTexts(s1)).toEqual(["Page3", "Page1", "Page2"]);
+  });
+
+  it("moves multiple pages", () => {
+    const s0 = createInitialState(createMultiPageDoc());
+    // Move pages 0 and 1 to after page 2
+    const s1 = apply(s0, { type: "REORDER_PAGES", pageIndices: [0, 1], toIndex: 1 });
+
+    expect(getPageTexts(s1)).toEqual(["Page3", "Page1", "Page2"]);
+  });
+
+  it("pushes history (undoable)", () => {
+    const s0 = createInitialState(createMultiPageDoc());
+    const s1 = apply(s0, { type: "REORDER_PAGES", pageIndices: [0], toIndex: 2 });
+
+    expect(canUndo(s1.documentHistory)).toBe(true);
+  });
+
+  it("clears selection", () => {
+    const s0 = apply(createInitialState(createMultiPageDoc()), { type: "SELECT", elementId: createElementId(0, 0), addToSelection: false });
+    const s1 = apply(s0, { type: "REORDER_PAGES", pageIndices: [0], toIndex: 2 });
+
+    expect(s1.selection.selectedIds).toHaveLength(0);
+  });
+});
+
+describe("reducer: Page operations undo/redo", () => {
+  it("undo ADD_PAGE restores original pages", () => {
+    const s0 = createInitialState(createMultiPageDoc());
+    const s1 = apply(s0, { type: "ADD_PAGE", afterIndex: 0 });
+    expect(s1.documentHistory.present.pages).toHaveLength(4);
+
+    const s2 = apply(s1, { type: "UNDO" });
+    expect(s2.documentHistory.present.pages).toHaveLength(3);
+    expect(getPageTexts(s2)).toEqual(["Page1", "Page2", "Page3"]);
+  });
+
+  it("undo DELETE_PAGES restores deleted page", () => {
+    const s0 = createInitialState(createMultiPageDoc());
+    const s1 = apply(s0, { type: "DELETE_PAGES", pageIndices: [1] });
+    expect(s1.documentHistory.present.pages).toHaveLength(2);
+
+    const s2 = apply(s1, { type: "UNDO" });
+    expect(s2.documentHistory.present.pages).toHaveLength(3);
+    expect(getPageTexts(s2)).toEqual(["Page1", "Page2", "Page3"]);
+  });
+
+  it("undo DUPLICATE_PAGES removes duplicated page", () => {
+    const s0 = createInitialState(createMultiPageDoc());
+    const s1 = apply(s0, { type: "DUPLICATE_PAGES", pageIndices: [1] });
+    expect(s1.documentHistory.present.pages).toHaveLength(4);
+
+    const s2 = apply(s1, { type: "UNDO" });
+    expect(s2.documentHistory.present.pages).toHaveLength(3);
+  });
+
+  it("undo REORDER_PAGES restores original order", () => {
+    const s0 = createInitialState(createMultiPageDoc());
+    const s1 = apply(s0, { type: "REORDER_PAGES", pageIndices: [0], toIndex: 2 });
+    expect(getPageTexts(s1)).toEqual(["Page2", "Page3", "Page1"]);
+
+    const s2 = apply(s1, { type: "UNDO" });
+    expect(getPageTexts(s2)).toEqual(["Page1", "Page2", "Page3"]);
+  });
+
+  it("redo after undo restores the operation", () => {
+    const s0 = createInitialState(createMultiPageDoc());
+    const s1 = apply(s0, { type: "DELETE_PAGES", pageIndices: [1] });
+    const s2 = apply(s1, { type: "UNDO" });
+    expect(getPageTexts(s2)).toEqual(["Page1", "Page2", "Page3"]);
+
+    const s3 = apply(s2, { type: "REDO" });
+    expect(getPageTexts(s3)).toEqual(["Page1", "Page3"]);
+  });
+});

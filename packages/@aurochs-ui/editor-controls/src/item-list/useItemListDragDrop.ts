@@ -1,70 +1,72 @@
 /**
- * @file Slide drag-and-drop hook
+ * @file Item list drag-and-drop hook
  *
- * Manages multi-item drag-and-drop for slide reordering.
- * Uses gap-based targeting: indicator appears between slides, not on them.
+ * Manages multi-item drag-and-drop for item reordering.
+ * Uses gap-based targeting: indicator appears between items, not on them.
  */
 
 import { useCallback, useState } from "react";
-import type { SlideId, SlideWithId } from "@aurochs-office/pptx/app";
-import type { SlideDragState, SlideListOrientation } from "../types";
-import { createIdleDragState } from "../types";
+import type { ListItem, ListOrientation } from "./types";
 import {
+  type ListDragState,
   getDraggingIds,
   createDragStartState,
+  createIdleListDragState,
   updateDragOverGap,
   isValidGapDrop,
   calculateTargetIndexFromGap,
   isGapDragTarget,
   calculateGapIndexFromItemDragOver,
-} from "../drag-drop";
+} from "@aurochs-ui/editor-core/list-dnd";
 
-export type UseSlideDragDropOptions = {
-  /** Slides array */
-  readonly slides: readonly SlideWithId[];
-  /** Currently selected slide IDs */
-  readonly selectedIds: readonly SlideId[];
+export type UseItemListDragDropOptions<TItem extends ListItem<TId>, TId = string> = {
+  /** Items array */
+  readonly items: readonly TItem[];
+  /** Currently selected item IDs */
+  readonly selectedIds: readonly TId[];
   /** Scroll orientation */
-  readonly orientation: SlideListOrientation;
-  /** Called when slides are moved */
-  readonly onMoveSlides?: (slideIds: readonly SlideId[], toIndex: number) => void;
+  readonly orientation: ListOrientation;
+  /** Called when items are moved */
+  readonly onMoveItems?: (ids: readonly TId[], toIndex: number) => void;
 };
 
-export type UseSlideDragDropResult = {
+export type UseItemListDragDropResult<TId = string> = {
   /** Current drag state */
-  readonly dragState: SlideDragState;
-  /** Handle drag start for a slide */
-  readonly handleDragStart: (e: React.DragEvent, slideId: SlideId) => void;
-  /** Handle drag over a slide item (calculates target gap) */
+  readonly dragState: ListDragState<TId>;
+  /** Handle drag start for an item */
+  readonly handleDragStart: (e: React.DragEvent, id: TId) => void;
+  /** Handle drag over an item (calculates target gap) */
   readonly handleItemDragOver: (e: React.DragEvent, itemIndex: number) => void;
   /** Handle drag over a gap */
   readonly handleGapDragOver: (e: React.DragEvent, gapIndex: number) => void;
   /** Handle drop on a gap */
   readonly handleGapDrop: (e: React.DragEvent, gapIndex: number) => void;
-  /** Handle drop on a slide item */
+  /** Handle drop on an item */
   readonly handleItemDrop: (e: React.DragEvent, itemIndex: number) => void;
   /** Handle drag end */
   readonly handleDragEnd: () => void;
-  /** Check if a slide is being dragged */
-  readonly isDragging: (slideId: SlideId) => boolean;
+  /** Check if an item is being dragged */
+  readonly isDragging: (id: TId) => boolean;
   /** Check if a gap is the drag target */
   readonly isGapTarget: (gapIndex: number) => boolean;
 };
 
 /**
- * Hook for managing slide drag-and-drop with gap-based targeting
+ * Hook for managing item list drag-and-drop with gap-based targeting
  */
-export function useSlideDragDrop(options: UseSlideDragDropOptions): UseSlideDragDropResult {
-  const { slides, selectedIds, orientation, onMoveSlides } = options;
+export function useItemListDragDrop<TItem extends ListItem<TId>, TId = string>(
+  options: UseItemListDragDropOptions<TItem, TId>,
+): UseItemListDragDropResult<TId> {
+  const { items, selectedIds, orientation, onMoveItems } = options;
 
-  const [dragState, setDragState] = useState<SlideDragState>(createIdleDragState());
+  const [dragState, setDragState] = useState<ListDragState<TId>>(createIdleListDragState<TId>());
 
   const handleDragStart = useCallback(
-    (e: React.DragEvent, slideId: SlideId) => {
-      const draggingIds = getDraggingIds(selectedIds, slideId);
+    (e: React.DragEvent, id: TId) => {
+      const draggingIds = getDraggingIds(selectedIds, id);
 
       e.dataTransfer.effectAllowed = "move";
-      e.dataTransfer.setData("application/slide-ids", JSON.stringify(draggingIds));
+      e.dataTransfer.setData("application/item-ids", JSON.stringify(draggingIds));
 
       setDragState(createDragStartState(draggingIds));
     },
@@ -111,42 +113,42 @@ export function useSlideDragDrop(options: UseSlideDragDropOptions): UseSlideDrag
         itemRect: rect,
       });
 
-      if (!isValidGapDrop(dragState, gapIndex, slides)) {
-        setDragState(createIdleDragState());
+      if (!isValidGapDrop(dragState, gapIndex, items)) {
+        setDragState(createIdleListDragState<TId>());
         return;
       }
 
-      const targetIndex = calculateTargetIndexFromGap(slides, dragState.draggingIds, gapIndex);
+      const targetIndex = calculateTargetIndexFromGap(items, dragState.draggingIds, gapIndex);
 
-      onMoveSlides?.(dragState.draggingIds, targetIndex);
-      setDragState(createIdleDragState());
+      onMoveItems?.(dragState.draggingIds, targetIndex);
+      setDragState(createIdleListDragState<TId>());
     },
-    [orientation, dragState, slides, onMoveSlides],
+    [orientation, dragState, items, onMoveItems],
   );
 
   const handleGapDrop = useCallback(
     (e: React.DragEvent, gapIndex: number) => {
       e.preventDefault();
 
-      if (!isValidGapDrop(dragState, gapIndex, slides)) {
-        setDragState(createIdleDragState());
+      if (!isValidGapDrop(dragState, gapIndex, items)) {
+        setDragState(createIdleListDragState<TId>());
         return;
       }
 
-      const targetIndex = calculateTargetIndexFromGap(slides, dragState.draggingIds, gapIndex);
+      const targetIndex = calculateTargetIndexFromGap(items, dragState.draggingIds, gapIndex);
 
-      onMoveSlides?.(dragState.draggingIds, targetIndex);
-      setDragState(createIdleDragState());
+      onMoveItems?.(dragState.draggingIds, targetIndex);
+      setDragState(createIdleListDragState<TId>());
     },
-    [dragState, slides, onMoveSlides],
+    [dragState, items, onMoveItems],
   );
 
   const handleDragEnd = useCallback(() => {
-    setDragState(createIdleDragState());
+    setDragState(createIdleListDragState<TId>());
   }, []);
 
   const isDragging = useCallback(
-    (slideId: SlideId) => dragState.draggingIds.includes(slideId),
+    (id: TId) => dragState.draggingIds.includes(id),
     [dragState.draggingIds],
   );
 

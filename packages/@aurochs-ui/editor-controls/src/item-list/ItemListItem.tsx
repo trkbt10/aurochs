@@ -1,34 +1,33 @@
 /**
- * @file Slide list item component
+ * @file Item list item component
  *
- * Individual slide thumbnail with selection and delete support.
+ * Individual item thumbnail with selection and delete support.
  * Hover state is managed at the list level to ensure at most one
  * item is hovered at any time.
+ *
+ * Format-specific extras (e.g. transition editor) are injected via
+ * the `renderItemExtras` render prop.
  */
 
-import { memo, useState } from "react";
-import type { SlideListItemProps } from "./types";
-import { SlideNumberBadge } from "./SlideNumberBadge";
-import { TransitionEditor } from "../editors";
-import { FxIcon } from "@aurochs-ui/ui-components/icons";
-import { Popover } from "@aurochs-ui/ui-components/primitives";
+import { memo } from "react";
+import type { ListItem, ItemListItemProps } from "./types";
+import { ItemNumberBadge } from "./ItemNumberBadge";
 import {
   getItemWrapperStyle,
   getThumbnailContainerStyle,
   thumbnailContentStyle,
   thumbnailFallbackStyle,
   getDeleteButtonStyle,
-  getFxButtonStyle,
 } from "./styles";
 
 /**
- * Individual slide item in the list
+ * Individual item in the list
  *
  * Memoized to prevent unnecessary re-renders when hovering other items.
  * Receives stable callbacks and creates its own closures internally.
  */
-export const SlideListItem = memo(function SlideListItem({
-  slideWithId,
+function ItemListItemInner<TItem extends ListItem<TId>, TId = string>({
+  item,
   index,
   aspectRatio,
   orientation,
@@ -40,59 +39,56 @@ export const SlideListItem = memo(function SlideListItem({
   isDragging,
   isAnyDragging,
   isHovered,
+  itemLabel,
   renderThumbnail,
+  renderItemExtras,
   onItemClick,
   onItemContextMenu,
   onItemDelete,
   onItemPointerEnter,
   onItemPointerLeave,
-  onItemTransitionChange,
-  onItemFxOpen,
   onItemDragStart,
   onItemDragOver,
   onItemDrop,
   itemRef,
-}: SlideListItemProps) {
+}: ItemListItemProps<TItem, TId>) {
   const isEditable = mode === "editable";
-  const slideId = slideWithId.id;
-  const [isFxOpen, setIsFxOpen] = useState(false);
+  const id = item.id;
 
   // Show delete button when hovered and not dragging
   const showDeleteButton = isEditable && canDelete && isHovered && !isAnyDragging;
-  const hasTransition = slideWithId.slide.transition !== undefined && slideWithId.slide.transition.type !== "none";
-  const showFxButton = isEditable && !isAnyDragging && (hasTransition || isHovered);
 
   // Create item-specific handlers (closures are fine since component is memoized)
   const handleClick = (e: React.MouseEvent | React.KeyboardEvent) => {
-    onItemClick(slideId, index, e);
+    onItemClick(id, index, e);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
-      onItemClick(slideId, index, e);
+      onItemClick(id, index, e);
     }
   };
 
   const handleContextMenu = (e: React.MouseEvent) => {
-    onItemContextMenu(slideId, e);
+    onItemContextMenu(id, e);
   };
 
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onItemDelete(slideId);
+    onItemDelete(id);
   };
 
   const handlePointerEnter = () => {
-    onItemPointerEnter(slideId);
+    onItemPointerEnter(id);
   };
 
   const handlePointerLeave = () => {
-    onItemPointerLeave(slideId);
+    onItemPointerLeave(id);
   };
 
   const handleDragStart = (e: React.DragEvent) => {
-    onItemDragStart(e, slideId);
+    onItemDragStart(e, id);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -103,33 +99,19 @@ export const SlideListItem = memo(function SlideListItem({
     onItemDrop(e, index);
   };
 
-  const handleFxClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onItemFxOpen?.(slideId, index, e);
-    setIsFxOpen((prev) => !prev);
-  };
-
-  const handleFxOpenChange = (open: boolean) => {
-    setIsFxOpen(open);
-  };
-
-  const popoverContainerStyle: React.CSSProperties = {
-    minWidth: "260px",
-  };
-
   function renderThumbnailContent(): React.ReactNode {
     if (renderThumbnail !== undefined) {
-      return renderThumbnail(slideWithId, index);
+      return renderThumbnail(item, index);
     }
-    return <span style={thumbnailFallbackStyle}>{slideWithId.slide.shapes.length} shapes</span>;
+    return <span style={thumbnailFallbackStyle}>{itemLabel} {index + 1}</span>;
   }
 
   const thumbnailContent = renderThumbnailContent();
 
   return (
     <div ref={itemRef} style={getItemWrapperStyle(orientation)}>
-      {/* Page number outside slide */}
-      <SlideNumberBadge number={index + 1} orientation={orientation} />
+      {/* Number outside item */}
+      <ItemNumberBadge number={index + 1} orientation={orientation} />
 
       {/* Thumbnail wrapper */}
       <div
@@ -161,7 +143,7 @@ export const SlideListItem = memo(function SlideListItem({
           role="button"
           tabIndex={0}
           onKeyDown={handleKeyDown}
-          aria-label={`Slide ${index + 1}`}
+          aria-label={`${itemLabel} ${index + 1}`}
           aria-selected={isSelected || isActive}
         >
           <div style={thumbnailContentStyle}>{thumbnailContent}</div>
@@ -172,51 +154,20 @@ export const SlideListItem = memo(function SlideListItem({
               type="button"
               style={getDeleteButtonStyle(showDeleteButton)}
               onClick={handleDeleteClick}
-              aria-label="Delete slide"
+              aria-label={`Delete ${itemLabel}`}
               tabIndex={showDeleteButton ? 0 : -1}
             >
               ×
             </button>
           )}
 
-          {showFxButton && onItemTransitionChange && (
-            <Popover
-              open={isFxOpen}
-              onOpenChange={handleFxOpenChange}
-              align="center"
-              side="right"
-              showArrow
-              trigger={
-                <button
-                  type="button"
-                  style={getFxButtonStyle(showFxButton)}
-                  onClick={handleFxClick}
-                  aria-label="Scene effects"
-                >
-                  <FxIcon size={12} strokeWidth={2} />
-                </button>
-              }
-            >
-              <div style={popoverContainerStyle}>
-                <div
-                  style={{
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    marginBottom: "8px",
-                    color: "var(--text-primary, #e5e5e5)",
-                  }}
-                >
-                  Scene Effects
-                </div>
-                <TransitionEditor
-                  value={slideWithId.slide.transition}
-                  onChange={(transition) => onItemTransitionChange(slideId, transition)}
-                />
-              </div>
-            </Popover>
-          )}
+          {/* Format-specific extras via render prop */}
+          {renderItemExtras?.(item, index, { isHovered, isAnyDragging })}
         </div>
       </div>
     </div>
   );
-});
+}
+
+// Memoize with a type assertion to preserve generics
+export const ItemListItem = memo(ItemListItemInner) as typeof ItemListItemInner;

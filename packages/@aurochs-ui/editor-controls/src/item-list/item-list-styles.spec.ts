@@ -1,7 +1,8 @@
 /**
- * @file Slide styles tests
+ * @file Item list styles tests
  *
- * Tests for style consistency between editable and readonly modes
+ * Tests for style consistency between editable and readonly modes.
+ * Moved from pptx-editor/slide-list/slide-styles.spec.ts.
  */
 
 import {
@@ -46,7 +47,7 @@ describe("getThumbnailContainerStyle", () => {
       expect(style.boxShadow).toContain("inset");
     });
 
-	    it("has inset box-shadow ring when active (current slide)", () => {
+	    it("has inset box-shadow ring when active (current item)", () => {
 	      const style = getThumbnailContainerStyle({
 	        aspectRatio,
 	        isSelected: false,
@@ -158,7 +159,7 @@ describe("getNumberBadgeStyle", () => {
   });
 
   describe("horizontal orientation", () => {
-    it("has margin for spacing from slide", () => {
+    it("has margin for spacing from item", () => {
       const style = getNumberBadgeStyle("horizontal");
       expect(style.marginBottom).toBeDefined();
     });

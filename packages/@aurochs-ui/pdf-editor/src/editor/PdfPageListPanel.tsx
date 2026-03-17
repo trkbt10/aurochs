@@ -21,6 +21,10 @@ export type PdfPageListPanelProps = {
   readonly pages: readonly PdfPage[];
   readonly currentPageIndex: number;
   readonly onPageSelect: (pageIndex: number) => void;
+  readonly onAddPage?: (atIndex: number) => void;
+  readonly onDeletePages?: (pageIndices: readonly number[]) => void;
+  readonly onDuplicatePages?: (pageIndices: readonly number[]) => void;
+  readonly onMovePages?: (pageIndices: readonly number[], toIndex: number) => void;
 };
 
 type PdfPageItem = {
@@ -57,7 +61,15 @@ function PageThumbnail({ page }: { readonly page: PdfPage }) {
 // =============================================================================
 
 /** Page list panel with thumbnails for the PDF editor. */
-export function PdfPageListPanel({ pages, currentPageIndex, onPageSelect }: PdfPageListPanelProps) {
+export function PdfPageListPanel({
+  pages,
+  currentPageIndex,
+  onPageSelect,
+  onAddPage,
+  onDeletePages,
+  onDuplicatePages,
+  onMovePages,
+}: PdfPageListPanelProps) {
   // Build items with id for the generic ItemList
   const items = useMemo(
     () => pages.map((page, i) => ({ id: i, page })),
@@ -68,17 +80,24 @@ export function PdfPageListPanel({ pages, currentPageIndex, onPageSelect }: PdfP
   const itemWidth = pages[0]?.width ?? PDF_PAGE_SIZES.US_LETTER.width;
   const itemHeight = pages[0]?.height ?? PDF_PAGE_SIZES.US_LETTER.height;
 
+  // Enable editable mode when any operation callback is provided
+  const hasOperations = onAddPage || onDeletePages || onDuplicatePages || onMovePages;
+
   return (
     <ItemList<PdfPageItem, number>
       items={items}
       itemWidth={itemWidth}
       itemHeight={itemHeight}
       orientation="vertical"
-      mode="readonly"
+      mode={hasOperations ? "editable" : "readonly"}
       activeItemId={currentPageIndex}
       itemLabel="Page"
       renderThumbnail={(item) => <PageThumbnail page={item.page} />}
       onItemClick={(id) => onPageSelect(id)}
+      onAddItem={onAddPage}
+      onDeleteItems={onDeletePages}
+      onDuplicateItems={onDuplicatePages}
+      onMoveItems={onMovePages}
     />
   );
 }

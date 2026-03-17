@@ -3,6 +3,7 @@
  *
  * Verifies that editable and readonly modes have consistent layout.
  * The visual appearance should be identical except for interactive elements.
+ * Moved from pptx-editor/slide-list/layout-consistency.spec.ts.
  */
 
 import {
@@ -112,9 +113,9 @@ describe("Visual Parity Checklist", () => {
   it("documents the expected differences between modes", () => {
     /**
      * EXPECTED TO BE IDENTICAL:
-     * - Slide thumbnail sizes
-     * - Spacing between slides (CSS gap)
-     * - Slide number badge position
+     * - Item thumbnail sizes
+     * - Spacing between items (CSS gap)
+     * - Item number badge position
      * - Container padding
      *
      * EXPECTED DIFFERENCES (editable only):

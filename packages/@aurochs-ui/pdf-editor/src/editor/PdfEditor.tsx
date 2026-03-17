@@ -59,6 +59,30 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
     [],
   );
 
+  const handleAddPage = useCallback(
+    (gapIndex: number) => {
+      // ItemList gap index: 0 = before first, N = after Nth
+      // Reducer ADD_PAGE afterIndex: page after which to insert (-1 = insert at start)
+      dispatch({ type: "ADD_PAGE", afterIndex: gapIndex - 1 });
+    },
+    [],
+  );
+
+  const handleDeletePages = useCallback(
+    (pageIndices: readonly number[]) => dispatch({ type: "DELETE_PAGES", pageIndices }),
+    [],
+  );
+
+  const handleDuplicatePages = useCallback(
+    (pageIndices: readonly number[]) => dispatch({ type: "DUPLICATE_PAGES", pageIndices }),
+    [],
+  );
+
+  const handleMovePages = useCallback(
+    (pageIndices: readonly number[], toIndex: number) => dispatch({ type: "REORDER_PAGES", pageIndices, toIndex }),
+    [],
+  );
+
   const query = useMemo(() => createDocumentQuery(document), [document]);
   const currentPage = document.pages[state.currentPageIndex];
 
@@ -149,11 +173,13 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
 
   const [rightTab, setRightTab] = useState("properties");
 
+  const pageHeight = currentPage?.height ?? 792;
+
   const propertiesContent = state.selection.selectedIds.length > 1 ? (
     <PdfMultiSelectPanel
       document={document}
       selectedIds={state.selection.selectedIds}
-      pageHeight={currentPage.height}
+      pageHeight={pageHeight}
       onUpdateElements={handleUpdateSelectedElements}
     />
   ) : (
@@ -161,7 +187,7 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
       element={selectedElement}
       elementId={state.selection.primaryId}
       bounds={state.selection.primaryId ? query.getElementBounds(state.selection.primaryId) : undefined}
-      pageHeight={currentPage.height}
+      pageHeight={pageHeight}
       onUpdateElement={handleUpdateElement}
     />
   );
@@ -202,6 +228,10 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
           pages={document.pages}
           currentPageIndex={state.currentPageIndex}
           onPageSelect={handlePageSelect}
+          onAddPage={handleAddPage}
+          onDeletePages={handleDeletePages}
+          onDuplicatePages={handleDuplicatePages}
+          onMovePages={handleMovePages}
         />
       ),
     },
@@ -331,7 +361,7 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
     return query.getTextFontInfo(state.textEdit.elementId);
   }, [state.textEdit, query]);
 
-  const textEditOverlayNode = state.textEdit.active ? (
+  const textEditOverlayNode = state.textEdit.active && currentPage ? (
     <TextEditInputFrame
       bounds={{ ...state.textEdit.bounds, rotation: 0 }}
       canvasWidth={currentPage.width}

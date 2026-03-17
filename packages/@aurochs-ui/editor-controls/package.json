@@ -71,6 +71,14 @@
     "./list-selection": {
       "types": "./src/list-selection/index.ts",
       "default": "./src/list-selection/index.ts"
+    },
+    "./ui": {
+      "types": "./src/ui/index.ts",
+      "default": "./src/ui/index.ts"
+    },
+    "./item-list": {
+      "types": "./src/item-list/index.ts",
+      "default": "./src/item-list/index.ts"
     }
   }
 }
