@@ -9,7 +9,7 @@ import {
   type PdfPath,
   type PdfText,
 } from "@aurochs/pdf/domain";
-import { decodeText, type FontMappings } from "@aurochs/pdf/domain/font";
+import { decodeText, DEFAULT_FONT_METRICS, type FontMappings } from "@aurochs/pdf/domain/font";
 import type { ParsedElement, ParsedPath, ParsedText } from "@aurochs/pdf/parser/operator/index";
 import { buildPath, builtPathToPdfPath } from "@aurochs/pdf/parser/path/path-builder";
 import { rasterizeSoftMaskedFillPath } from "../../../@aurochs/pdf/src/parser/soft-mask/soft-mask-raster.native";
@@ -261,8 +261,8 @@ function convertText(parsed: ParsedText, fontMappings: FontMappings): PdfText[] 
     const decodedText = decodeRunText({ run, primaryFontKey, fallbackFontKey, fontMappings });
 
     const metrics = fontInfo?.metrics;
-    const ascender = metrics?.ascender ?? 800;
-    const descender = metrics?.descender ?? -200;
+    const ascender = metrics?.ascender ?? DEFAULT_FONT_METRICS.ascender;
+    const descender = metrics?.descender ?? DEFAULT_FONT_METRICS.descender;
 
     const effectiveSize = run.effectiveFontSize;
     const [minX, minY, maxX, maxY] = textRunBounds({

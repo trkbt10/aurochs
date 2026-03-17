@@ -6,3 +6,4 @@
 
 export { useItemSelection, type UseItemSelectionOptions, type UseItemSelectionResult } from "./useItemSelection";
 export { useItemKeyNavigation, type UseItemKeyNavigationOptions, type UseItemKeyNavigationResult, type ListOrientation } from "./useItemKeyNavigation";
+export { useListItemHover, type ListItemHoverState, type UseListItemHoverResult } from "./useListItemHover";

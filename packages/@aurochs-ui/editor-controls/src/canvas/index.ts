@@ -17,3 +17,25 @@ export type { ResizeHandleProps } from "./ResizeHandle";
 
 export { RotateHandle } from "./RotateHandle";
 export type { RotateHandleProps } from "./RotateHandle";
+
+// Canvas interaction hooks
+export type { HitTestBounds, CanvasSize } from "./use-canvas-interaction";
+export { findItemAtPoint, useCanvasCoords, useGlobalDragListeners } from "./use-canvas-interaction";
+
+// Canvas ruler
+export { CanvasRuler, type CanvasRulerProps } from "./CanvasRuler";
+
+// Editor canvas (SoT for both pptx-editor and pdf-editor)
+export {
+  EditorCanvas,
+  type EditorCanvasHandle,
+  type EditorCanvasProps,
+  type EditorCanvasDrag,
+  type EditorCanvasItemBounds,
+  type CanvasPageCoords,
+} from "./EditorCanvas";
+
+// Viewport management (pan/zoom)
+export { useSvgViewport, type UseSvgViewportOptions, type UseSvgViewportResult } from "./use-svg-viewport";
+export { SvgRulers, type SvgRulersProps } from "./SvgRulers";
+export { ViewportOverlay, type ViewportOverlayProps } from "./ViewportOverlay";

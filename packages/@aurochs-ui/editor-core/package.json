@@ -64,6 +64,18 @@
     "./keyboard": {
       "types": "./src/keyboard.ts",
       "default": "./src/keyboard.ts"
+    },
+    "./adapter-types": {
+      "types": "./src/adapter-types.ts",
+      "default": "./src/adapter-types.ts"
+    },
+    "./viewport": {
+      "types": "./src/viewport/index.ts",
+      "default": "./src/viewport/index.ts"
+    },
+    "./list-dnd": {
+      "types": "./src/list-dnd.ts",
+      "default": "./src/list-dnd.ts"
     }
   }
 }

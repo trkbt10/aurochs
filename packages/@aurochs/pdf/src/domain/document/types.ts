@@ -136,6 +136,16 @@ export type PdfDocument = {
  *
  * PDF "user space" default unit is the point: 1 point = 1/72 inch.
  */
+/**
+ * Standard PDF page sizes in points.
+ */
+export const PDF_PAGE_SIZES = {
+  /** US Letter portrait: 8.5 × 11 inches */
+  US_LETTER: { width: 612, height: 792 },
+  /** A4 portrait: 210 × 297 mm */
+  A4: { width: 595.28, height: 841.89 },
+} as const;
+
 export const PDF_UNITS = {
   /**
    * Points per inch (PDF default unit).

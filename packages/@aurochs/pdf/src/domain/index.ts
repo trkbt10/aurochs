@@ -89,7 +89,7 @@ export type { PdfImage } from "./image";
 
 // Document domain
 export type { PdfElement, PdfPage, PdfDocument, PdfEmbeddedFont } from "./document";
-export { PDF_UNITS, isPdfPath, isPdfText, isPdfImage } from "./document";
+export { PDF_UNITS, PDF_PAGE_SIZES, isPdfPath, isPdfText, isPdfImage } from "./document";
 
 // Content stream domain
 export type { PdfTokenType, PdfToken } from "./content-stream";

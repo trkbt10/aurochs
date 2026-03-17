@@ -69,7 +69,8 @@ export type { PdfElement, PdfPage, PdfDocument } from "./domain";
 export { isPdfPath, isPdfText, isPdfImage } from "./domain";
 
 // Constants
-export { PT_TO_PX, PX_TO_PT } from "./domain";
+export { PT_TO_PX, PX_TO_PT, PDF_PAGE_SIZES } from "./domain";
+export { DEFAULT_FONT_METRICS } from "./domain";
 
 // =============================================================================
 // Parser API

@@ -17,6 +17,7 @@ import { buildPdfImageDataUrl } from "./image-data-url";
 import { formatSvgMatrix, formatSvgNumber } from "./number-format";
 import { buildSvgPathData } from "./path-data";
 import { escapeXmlAttr, escapeXmlText } from "./xml-escape";
+import { resolveTextAnchor, type TextAnchor } from "./text-bounds";
 
 type ClipPathRegistry = {
   readonly idsByKey: Map<string, string>;
@@ -155,80 +156,6 @@ function renderPath(path: PdfPath, pageHeight: number, registry: ClipPathRegistr
   return `<path ${attrs.join(" ")}${clipPathRef} />`;
 }
 
-function resolveTextTopY(text: PdfText, pageHeight: number): number {
-  return pageHeight - (text.y + text.height);
-}
-
-type TextAnchor = Readonly<{
-  readonly x: number;
-  readonly y: number;
-  readonly dominantBaseline: "alphabetic" | "text-before-edge";
-  readonly angleDeg: number;
-  readonly fromBaseline: boolean;
-}>;
-
-function resolveTextBaselineAnchor(
-  text: PdfText,
-  pageHeight: number,
-): Readonly<{
-  readonly x: number;
-  readonly y: number;
-  readonly angleDeg: number;
-}> | null {
-  const startX = text.baselineStartX;
-  const startY = text.baselineStartY;
-  const endX = text.baselineEndX;
-  const endY = text.baselineEndY;
-
-  if (
-    startX === undefined ||
-    startY === undefined ||
-    endX === undefined ||
-    endY === undefined ||
-    !Number.isFinite(startX) ||
-    !Number.isFinite(startY) ||
-    !Number.isFinite(endX) ||
-    !Number.isFinite(endY)
-  ) {
-    return null;
-  }
-
-  const dx = endX - startX;
-  const dy = endY - startY;
-  const baselineLength = Math.hypot(dx, dy);
-  if (!Number.isFinite(baselineLength) || baselineLength <= 1e-6) {
-    return null;
-  }
-
-  // PDF uses bottom-left origin, SVG uses top-left. Invert Y for SVG angle.
-  const angleDeg = (Math.atan2(-dy, dx) * 180) / Math.PI;
-  return {
-    x: startX,
-    y: pageHeight - startY,
-    angleDeg,
-  };
-}
-
-function resolveTextAnchor(text: PdfText, pageHeight: number): TextAnchor {
-  const baselineAnchor = resolveTextBaselineAnchor(text, pageHeight);
-  if (baselineAnchor) {
-    return {
-      x: baselineAnchor.x,
-      y: baselineAnchor.y,
-      dominantBaseline: "alphabetic",
-      angleDeg: baselineAnchor.angleDeg,
-      fromBaseline: true,
-    };
-  }
-
-  return {
-    x: text.x,
-    y: resolveTextTopY(text, pageHeight),
-    dominantBaseline: "text-before-edge",
-    angleDeg: 0,
-    fromBaseline: false,
-  };
-}
 
 function isVerticalWritingText(text: PdfText): boolean {
   return text.writingMode === 1;
@@ -412,6 +339,17 @@ function renderImage(image: PdfImage, pageHeight: number, registry: ClipPathRegi
   return imageMarkup;
 }
 
+/**
+ * Render a single PDF element to SVG markup.
+ * Exported for use by editor overlays (e.g., text edit preview).
+ */
+export function renderPdfElementToSvg(element: PdfElement, pageHeight: number): string {
+  const registry = createClipPathRegistry();
+  const content = renderElement(element, pageHeight, registry);
+  const defs = registry.defs.length > 0 ? `<defs>${registry.defs.join("")}</defs>` : "";
+  return defs + content;
+}
+
 function renderElement(element: PdfElement, pageHeight: number, registry: ClipPathRegistry): string {
   if (element.type === "path") {
     return renderPath(element, pageHeight, registry);
@@ -461,8 +399,10 @@ export function renderPdfPageToSvg(page: PdfPage, options: PdfSvgRenderOptions =
     );
   }
 
-  for (const element of page.elements) {
-    const rendered = renderElement(element, page.height, registry);
+  const excludeSet = options.excludeElementIndices;
+  for (let i = 0; i < page.elements.length; i++) {
+    if (excludeSet?.has(i)) { continue; }
+    const rendered = renderElement(page.elements[i], page.height, registry);
     if (rendered.length > 0) {
       bodyParts.push(rendered);
     }
