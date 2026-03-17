@@ -1,7 +1,9 @@
 /**
- * @file Text edit input frame component
+ * @file Text edit input frame adapter
  *
- * Hosts the hidden textarea and positions the text overlay within the shape bounds.
+ * Re-exports the shared TextEditInputFrame from editor-controls/text-edit
+ * with PPTX-specific prop names (slideWidth/slideHeight) mapped to
+ * the canonical props (canvasWidth/canvasHeight).
  */
 
 import type {
@@ -12,14 +14,15 @@ import type {
   MouseEventHandler,
   ReactNode,
   RefObject,
-  CSSProperties,
 } from "react";
-import type { TextEditBounds } from "../input-support/state";
-import { colorTokens } from "@aurochs-ui/ui-components/design-tokens";
+import { TextEditInputFrame as SharedTextEditInputFrame } from "@aurochs-ui/editor-controls/text-edit";
+import type { TextEditBounds } from "@aurochs-ui/editor-core/text-edit";
 
 export type TextEditInputFrameProps = {
   readonly bounds: TextEditBounds;
+  /** Slide width in domain units (mapped to canvasWidth) */
   readonly slideWidth: number;
+  /** Slide height in domain units (mapped to canvasHeight) */
   readonly slideHeight: number;
   readonly textareaRef: RefObject<HTMLTextAreaElement | null>;
   readonly value: string;
@@ -35,111 +38,20 @@ export type TextEditInputFrameProps = {
   readonly children: ReactNode;
 };
 
-const HIDDEN_TEXTAREA_STYLE: CSSProperties = {
-  position: "absolute",
-  left: 0,
-  top: 0,
-  width: "100%",
-  height: "100%",
-  opacity: 0,
-  cursor: "text",
-  resize: "none",
-  border: "none",
-  outline: "none",
-  padding: 0,
-  margin: 0,
-  overflow: "hidden",
-  whiteSpace: "pre-wrap",
-  wordWrap: "break-word",
-  pointerEvents: "auto",
-  caretColor: "transparent",
-  zIndex: 1,
-};
-
-type ContainerStyleInput = {
-  readonly bounds: TextEditBounds;
-  readonly slideWidth: number;
-  readonly slideHeight: number;
-  readonly showFrameOutline: boolean;
-};
-
-function buildContainerStyle({
-  bounds,
-  slideWidth,
-  slideHeight,
-  showFrameOutline,
-}: ContainerStyleInput): CSSProperties {
-  const left = ((bounds.x as number) / slideWidth) * 100;
-  const top = ((bounds.y as number) / slideHeight) * 100;
-  const width = ((bounds.width as number) / slideWidth) * 100;
-  const height = ((bounds.height as number) / slideHeight) * 100;
-
-  return {
-    position: "absolute",
-    left: `${left}%`,
-    top: `${top}%`,
-    width: `${width}%`,
-    height: `${height}%`,
-    transform: bounds.rotation !== 0 ? `rotate(${bounds.rotation}deg)` : undefined,
-    transformOrigin: "center center",
-    boxSizing: "border-box",
-    border: showFrameOutline ? `2px solid ${colorTokens.selection.primary}` : "none",
-    borderRadius: "2px",
-    backgroundColor: "transparent",
-    zIndex: 1000,
-    overflow: "visible",
-  };
-}
-
 /**
- * Text edit input frame that hosts the hidden textarea and overlay content.
+ * PPTX-specific adapter for the shared TextEditInputFrame.
+ * Maps slideWidth/slideHeight to canvasWidth/canvasHeight.
  */
 export function TextEditInputFrame({
-  bounds,
   slideWidth,
   slideHeight,
-  textareaRef,
-  value,
-  onChange,
-  onKeyDown,
-  onSelect,
-  onCompositionStart,
-  onCompositionUpdate,
-  onCompositionEnd,
-  onNonPrimaryMouseDown,
-  onContextMenuCapture,
-  showFrameOutline = true,
-  children,
+  ...rest
 }: TextEditInputFrameProps) {
-  const containerStyle = buildContainerStyle({ bounds, slideWidth, slideHeight, showFrameOutline });
-  const handleMouseDown: MouseEventHandler<HTMLTextAreaElement> = (event) => {
-    if (event.button !== 0) {
-      onNonPrimaryMouseDown?.(event);
-      event.preventDefault();
-      event.stopPropagation();
-    }
-  };
-
   return (
-    <div style={containerStyle}>
-      <textarea
-        ref={textareaRef}
-        value={value}
-        onChange={onChange}
-        onKeyDown={onKeyDown}
-        onSelect={onSelect}
-        onCompositionStart={onCompositionStart}
-        onCompositionUpdate={onCompositionUpdate}
-        onCompositionEnd={onCompositionEnd}
-        onMouseDown={handleMouseDown}
-        onContextMenuCapture={onContextMenuCapture}
-        style={HIDDEN_TEXTAREA_STYLE}
-        spellCheck={false}
-        autoComplete="off"
-        autoCorrect="off"
-        autoCapitalize="off"
-      />
-      {children}
-    </div>
+    <SharedTextEditInputFrame
+      canvasWidth={slideWidth}
+      canvasHeight={slideHeight}
+      {...rest}
+    />
   );
 }

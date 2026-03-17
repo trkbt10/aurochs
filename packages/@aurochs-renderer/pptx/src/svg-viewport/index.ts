@@ -3,6 +3,9 @@
  *
  * Shared utilities for SVG-based canvas viewport management.
  * Used by both the editor and viewer for consistent coordinate handling.
+ *
+ * Note: The canonical SoT for viewport logic is @aurochs-ui/editor-core/viewport.
+ * This module maintains its own copies for the renderer layer (which cannot depend on editor-core).
  */
 
 export type { ViewportTransform, ViewportSize, SlideSize } from "./types";

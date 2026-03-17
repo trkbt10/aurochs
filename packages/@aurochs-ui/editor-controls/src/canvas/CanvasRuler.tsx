@@ -1,22 +1,35 @@
 /**
- * @file Slide ruler component
+ * @file CanvasRuler - Format-agnostic ruler for canvas editors
  *
- * Renders a horizontal or vertical ruler based on slide coordinates.
+ * Renders horizontal or vertical ruler ticks based on canvas coordinates.
+ * Extracted from pptx-editor's SlideRuler for cross-format reuse.
  */
 
 import { useMemo, type CSSProperties } from "react";
-import { colorTokens, fontTokens } from "@aurochs-ui/ui-components/design-tokens";
 
-export type SlideRulerProps = {
+// =============================================================================
+// Types
+// =============================================================================
+
+export type CanvasRulerProps = {
   readonly orientation: "horizontal" | "vertical";
+  /** Ruler length in pixels. */
   readonly length: number;
+  /** Ruler thickness in pixels. */
   readonly thickness: number;
+  /** Current zoom level (1 = 100%). */
   readonly zoom: number;
+  /** Scroll offset in pixels. */
   readonly offsetPx: number;
+  /** Maximum canvas coordinate value. */
   readonly max: number;
   readonly className?: string;
   readonly style?: CSSProperties;
 };
+
+// =============================================================================
+// Tick calculation
+// =============================================================================
 
 const TICK_STEPS = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000];
 
@@ -41,10 +54,12 @@ function isMajorTick(value: number, majorStep: number): boolean {
   return Math.abs(ratio - Math.round(ratio)) < 1e-6;
 }
 
-/**
- * Ruler strip for slide coordinates.
- */
-export function SlideRuler({ orientation, length, thickness, zoom, offsetPx, max, className, style }: SlideRulerProps) {
+// =============================================================================
+// Component
+// =============================================================================
+
+/** Ruler strip for canvas coordinates. */
+export function CanvasRuler({ orientation, length, thickness, zoom, offsetPx, max, className, style }: CanvasRulerProps) {
   const { major, minor } = useMemo(() => getStepForZoom(zoom), [zoom]);
 
   const startValue = Math.max(0, offsetPx / zoom);
@@ -58,19 +73,13 @@ export function SlideRuler({ orientation, length, thickness, zoom, offsetPx, max
 
   const svgStyle: CSSProperties = {
     display: "block",
-    backgroundColor: `var(--bg-secondary, ${colorTokens.background.secondary})`,
-    border: `1px solid var(--border-subtle, ${colorTokens.border.subtle})`,
+    backgroundColor: "var(--bg-secondary, #fafafa)",
+    borderBottom: orientation === "horizontal" ? "1px solid var(--border-subtle, #e0e0e0)" : undefined,
+    borderRight: orientation === "vertical" ? "1px solid var(--border-subtle, #e0e0e0)" : undefined,
     ...style,
   };
 
-  const labelStyle: CSSProperties = {
-    fill: `var(--text-secondary, ${colorTokens.text.secondary})`,
-    fontSize: fontTokens.size.sm,
-    fontFamily: "inherit",
-  };
-
-  const tickColor = `var(--border-strong, ${colorTokens.border.strong})`;
-
+  const tickColor = "var(--border-strong, #ccc)";
   const isHorizontal = orientation === "horizontal";
 
   return (
@@ -82,51 +91,24 @@ export function SlideRuler({ orientation, length, thickness, zoom, offsetPx, max
     >
       {minorTicks.map((value) => {
         const pos = value * zoom - offsetPx;
-        if (isHorizontal) {
-          return (
-            <line
-              key={`minor-${value}`}
-              x1={pos}
-              y1={thickness}
-              x2={pos}
-              y2={thickness - 6}
-              stroke={tickColor}
-              strokeWidth={1}
-            />
-          );
-        }
-        return (
-          <line
-            key={`minor-${value}`}
-            x1={thickness}
-            y1={pos}
-            x2={thickness - 6}
-            y2={pos}
-            stroke={tickColor}
-            strokeWidth={1}
-          />
+        return isHorizontal ? (
+          <line key={`m-${value}`} x1={pos} y1={thickness} x2={pos} y2={thickness - 6} stroke={tickColor} strokeWidth={1} />
+        ) : (
+          <line key={`m-${value}`} x1={thickness} y1={pos} x2={thickness - 6} y2={pos} stroke={tickColor} strokeWidth={1} />
         );
       })}
-
       {majorTicks.map((value) => {
         const pos = value * zoom - offsetPx;
         const label = Math.round(value).toString();
-        if (isHorizontal) {
-          return (
-            <g key={`major-${value}`}>
-              <line x1={pos} y1={thickness} x2={pos} y2={thickness - 10} stroke={tickColor} strokeWidth={1} />
-              <text x={pos + 2} y={thickness - 12} style={labelStyle}>
-                {label}
-              </text>
-            </g>
-          );
-        }
-        return (
-          <g key={`major-${value}`}>
+        return isHorizontal ? (
+          <g key={`M-${value}`}>
+            <line x1={pos} y1={thickness} x2={pos} y2={thickness - 10} stroke={tickColor} strokeWidth={1} />
+            <text x={pos + 2} y={thickness - 12} fill="var(--text-secondary, #888)" fontSize="10" fontFamily="inherit">{label}</text>
+          </g>
+        ) : (
+          <g key={`M-${value}`}>
             <line x1={thickness} y1={pos} x2={thickness - 10} y2={pos} stroke={tickColor} strokeWidth={1} />
-            <text x={2} y={pos + 10} style={labelStyle}>
-              {label}
-            </text>
+            <text x={2} y={pos + 10} fill="var(--text-secondary, #888)" fontSize="10" fontFamily="inherit">{label}</text>
           </g>
         );
       })}

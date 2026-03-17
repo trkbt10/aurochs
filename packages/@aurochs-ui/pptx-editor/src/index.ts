@@ -144,7 +144,7 @@ export { PropertyPanel, type PropertyPanelProps } from "./panels/PropertyPanel";
 export { ShapeToolbar, type ShapeToolbarProps } from "./panels/ShapeToolbar";
 export { LayerPanel, type LayerPanelProps } from "./panels/LayerPanel";
 
-// Slide Editor Sub-components
+// Slide Editor Sub-components (from shared editor-controls/canvas)
 export {
   SelectionBox,
   type SelectionBoxProps,
@@ -153,7 +153,7 @@ export {
   type ResizeHandleProps,
   RotateHandle,
   type RotateHandleProps,
-} from "./selection";
+} from "@aurochs-ui/editor-controls/canvas";
 
 // Shape identity utilities
 export { getShapeId, hasShapeId } from "./shape/identity";
