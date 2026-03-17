@@ -7,6 +7,12 @@
 
 // --- Text run formatting ---
 
+/** Label + value pair for style option dropdowns (underline style, strike style, etc.). */
+export type StyleOption<T extends string = string> = {
+  readonly value: T;
+  readonly label: string;
+};
+
 export type TextFormatting = {
   /** Primary font family name. */
   readonly fontFamily?: string;
@@ -28,6 +34,18 @@ export type TextFormatting = {
   readonly superscript?: boolean;
   /** Subscript toggle. */
   readonly subscript?: boolean;
+  /** Underline style (format-specific value, e.g. "sng"/"dbl" for PPTX, "single"/"double" for DOCX). */
+  readonly underlineStyle?: string;
+  /** Strikethrough style (format-specific value, e.g. "sngStrike"/"dblStrike" for PPTX). */
+  readonly strikethroughStyle?: string;
+  /** Text capitalization: "none" | "small" (small caps) | "all" (all caps). */
+  readonly caps?: "none" | "small" | "all";
+  /** Letter spacing in pixels. */
+  readonly letterSpacing?: number;
+  /** Baseline offset as percentage (-100 to 100). Positive = superscript direction. */
+  readonly baseline?: number;
+  /** Kerning in points. */
+  readonly kerning?: number;
 };
 
 export type TextFormattingFeatures = {
@@ -49,6 +67,14 @@ export type TextFormattingFeatures = {
   readonly showHighlight?: boolean;
   /** Show superscript/subscript controls. Default: false. */
   readonly showSuperSubscript?: boolean;
+  /** Show underline style dropdown instead of simple toggle. Default: false. */
+  readonly showUnderlineStyle?: boolean;
+  /** Show strikethrough style dropdown instead of simple toggle. Default: false. */
+  readonly showStrikeStyle?: boolean;
+  /** Show caps control (none/small-caps/all-caps). Default: false. */
+  readonly showCaps?: boolean;
+  /** Show letter spacing, baseline, and kerning controls. Default: false. */
+  readonly showSpacing?: boolean;
 };
 
 // --- Paragraph formatting ---

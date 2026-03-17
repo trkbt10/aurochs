@@ -1,20 +1,32 @@
 /**
  * @file TextFormattingEditor - Shared text run formatting editor
  *
- * High-level composite editor for character-level text formatting.
- * Format-specific packages provide adapters and slots for custom UI.
- * Layout based on PPTX MixedRunPropertiesEditor.
+ * Uses react-editor-ui sections (FontSection, FontMetricsSection,
+ * CaseTransformSection, PropertySection) to provide the same design
+ * as the original PPTX MixedRunPropertiesEditor. Feature flags control
+ * which sections and controls are visible.
  */
 
 import { useCallback, type CSSProperties, type ReactNode } from "react";
-import { Input, ToggleButton } from "@aurochs-ui/ui-components/primitives";
+import { FontSection } from "react-editor-ui/sections/FontSection";
+import { FontMetricsSection } from "react-editor-ui/sections/FontMetricsSection";
+import { CaseTransformSection } from "react-editor-ui/sections/CaseTransformSection";
+import { PropertySection } from "react-editor-ui/PropertySection";
+import { Input, Select } from "@aurochs-ui/ui-components/primitives";
 import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
-import { BoldIcon, ItalicIcon, UnderlineIcon, StrikethroughIcon, SuperscriptIcon, SubscriptIcon } from "@aurochs-ui/ui-components/icons";
-import { iconTokens, fieldLabelTokens, fieldContainerTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { ColorPickerPopover } from "@aurochs-ui/color-editor";
-import type { TextFormatting, TextFormattingFeatures } from "./types";
+import { FontFamilySelect } from "../font";
+import { useFontOptions } from "../font";
+import type { FontData, FontMetricsData } from "@aurochs-ui/editor-core/adapter-types";
+
+/** Local TextStyle / CaseTransformData matching react-editor-ui's types exactly. */
+type TextStyle = "superscript" | "subscript" | "underline" | "strikethrough";
+type CaseTransformData = {
+  case: "normal" | "small-caps" | "all-caps";
+  styles: TextStyle[];
+};
+import type { TextFormatting, TextFormattingFeatures, StyleOption } from "./types";
 import type { MixedContext } from "../mixed-state";
-import { isMixedField } from "../mixed-state";
 
 // =============================================================================
 // Types
@@ -28,7 +40,7 @@ export type TextFormattingEditorProps = {
   readonly style?: CSSProperties;
   readonly features?: TextFormattingFeatures;
   readonly mixed?: MixedContext;
-  /** Slot: format-specific color picker (replaces default hex input). */
+  /** Slot: format-specific color picker (replaces default ColorPickerPopover). */
   readonly renderColorPicker?: (props: {
     value: string | undefined;
     onChange: (hex: string) => void;
@@ -40,71 +52,112 @@ export type TextFormattingEditorProps = {
     onChange: (hex: string) => void;
     disabled?: boolean;
   }) => ReactNode;
-  /** Slot: format-specific font family selector. */
-  readonly renderFontFamilySelect?: (props: {
-    value: string | undefined;
-    onChange: (family: string) => void;
-    disabled?: boolean;
-    placeholder?: string;
-  }) => ReactNode;
-  /** Slot: format-specific extra controls (PPTX caps, underline styles, spacing, etc.). */
+  /** Slot: format-specific extra controls. */
   readonly renderExtras?: () => ReactNode;
+  /** Options for underline style dropdown. Used when showUnderlineStyle is true. */
+  readonly underlineStyleOptions?: readonly StyleOption[];
+  /** Options for strike style dropdown. Used when showStrikeStyle is true. */
+  readonly strikeStyleOptions?: readonly StyleOption[];
+  /** Extra font families to include in FontFamilySelect (e.g. workbook fonts). */
+  readonly additionalFontFamilies?: readonly string[];
 };
 
 // =============================================================================
-// Styles
+// Default options
 // =============================================================================
 
-const containerStyle: CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  gap: "8px",
-};
+const DEFAULT_UNDERLINE_OPTIONS: readonly StyleOption[] = [
+  { value: "none", label: "None" },
+  { value: "single", label: "Single" },
+  { value: "double", label: "Double" },
+  { value: "heavy", label: "Heavy" },
+  { value: "dotted", label: "Dotted" },
+  { value: "dash", label: "Dash" },
+  { value: "wavy", label: "Wavy" },
+];
 
-const rowStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: "8px",
-};
-
-const separatorStyle: CSSProperties = {
-  height: "1px",
-  backgroundColor: "var(--border-subtle, rgba(255, 255, 255, 0.06))",
-  margin: "4px 0",
-};
+const DEFAULT_STRIKE_OPTIONS: readonly StyleOption[] = [
+  { value: "none", label: "None" },
+  { value: "single", label: "Single" },
+  { value: "double", label: "Double" },
+];
 
 // =============================================================================
-// Helpers
+// Helpers — TextFormatting ↔ react-editor-ui adapter-types
 // =============================================================================
 
-const MIXED_PLACEHOLDER = "Mixed";
-
-function toBareHex(color: string | undefined, fallback: string): string {
-  if (!color) {
-    return fallback;
-  }
-  return color.startsWith("#") ? color.slice(1) : color;
+function toFontData(value: TextFormatting): FontData {
+  return {
+    family: value.fontFamily ?? "",
+    weight: value.bold ? "bold" : "400",
+  };
 }
 
-function buildFontFamilySelect(opts: {
-  renderSlot: TextFormattingEditorProps["renderFontFamilySelect"];
-  value: string | undefined;
-  onChange: (family: string) => void;
-  disabled?: boolean;
-  placeholder: string;
-}): ReactNode {
-  if (opts.renderSlot) {
-    return opts.renderSlot({ value: opts.value, onChange: opts.onChange, disabled: opts.disabled, placeholder: opts.placeholder });
+function fromFontData(data: FontData): Partial<TextFormatting> {
+  return {
+    fontFamily: data.family || undefined,
+    bold: data.weight === "bold" ? true : undefined,
+  };
+}
+
+function toFontMetricsData(value: TextFormatting): FontMetricsData {
+  return {
+    size: value.fontSize !== undefined ? `${value.fontSize} pt` : "",
+    leading: "auto",
+    kerning: value.kerning !== undefined && value.kerning > 0 ? "auto" : "none",
+    tracking: String(value.letterSpacing ?? 0),
+  };
+}
+
+function fromFontMetricsData(data: FontMetricsData): Partial<TextFormatting> {
+  const update: Partial<TextFormatting> = {};
+  if (data.size) {
+    const parsed = parseFloat(data.size);
+    if (!Number.isNaN(parsed) && parsed > 0) {
+      (update as Record<string, unknown>).fontSize = parsed;
+    }
   }
-  return (
-    <Input
-      type="text"
-      value={opts.value ?? ""}
-      onChange={(v) => opts.onChange(String(v))}
-      disabled={opts.disabled}
-      placeholder={opts.placeholder}
-    />
-  );
+  if (data.tracking !== "0" && data.tracking !== "") {
+    const parsed = parseFloat(data.tracking);
+    if (!Number.isNaN(parsed)) {
+      (update as Record<string, unknown>).letterSpacing = parsed === 0 ? undefined : parsed;
+    }
+  }
+  return update;
+}
+
+function capsToCase(caps: TextFormatting["caps"]): CaseTransformData["case"] {
+  if (caps === "small") { return "small-caps"; }
+  if (caps === "all") { return "all-caps"; }
+  return "normal";
+}
+
+function toCaseTransformData(value: TextFormatting): CaseTransformData {
+  const styles: TextStyle[] = [];
+  if (value.underline) { styles.push("underline"); }
+  if (value.strikethrough) { styles.push("strikethrough"); }
+  if (value.superscript) { styles.push("superscript"); }
+  if (value.subscript) { styles.push("subscript"); }
+  return { case: capsToCase(value.caps), styles };
+}
+
+function fromCaseTransformData(data: CaseTransformData): Partial<TextFormatting> {
+  const caps = data.case === "small-caps" ? "small" as const
+    : data.case === "all-caps" ? "all" as const
+    : "none" as const;
+  return {
+    caps,
+    underline: data.styles.includes("underline") || undefined,
+    strikethrough: data.styles.includes("strikethrough") || undefined,
+    superscript: data.styles.includes("superscript") || undefined,
+    subscript: data.styles.includes("subscript") || undefined,
+    italic: undefined, // CaseTransformSection doesn't handle italic
+  };
+}
+
+function toBareHex(color: string | undefined, fallback: string): string {
+  if (!color) { return fallback; }
+  return color.startsWith("#") ? color.slice(1) : color;
 }
 
 function buildColorPicker(opts: {
@@ -134,11 +187,13 @@ function feat(
   return features?.[key] ?? defaultValue;
 }
 
+const MIXED_PLACEHOLDER = "Mixed";
+
 // =============================================================================
 // Component
 // =============================================================================
 
-/** Shared text run formatting editor with slots for format-specific controls. */
+/** Shared text run formatting editor using react-editor-ui sections. */
 export function TextFormattingEditor({
   value,
   onChange,
@@ -149,224 +204,216 @@ export function TextFormattingEditor({
   mixed,
   renderColorPicker,
   renderHighlightPicker,
-  renderFontFamilySelect,
   renderExtras,
+  underlineStyleOptions = DEFAULT_UNDERLINE_OPTIONS,
+  strikeStyleOptions = DEFAULT_STRIKE_OPTIONS,
+  additionalFontFamilies,
 }: TextFormattingEditorProps) {
-  // Font handlers
-  const handleFontFamilyChange = useCallback(
-    (family: string) => {
-      onChange({ fontFamily: family || undefined });
-    },
+  const { fontOptions } = useFontOptions();
+
+  // =========================================================================
+  // react-editor-ui section handlers
+  // =========================================================================
+
+  const handleFontChange = useCallback(
+    (data: FontData) => { onChange(fromFontData(data)); },
     [onChange],
   );
 
-  const handleFontSizeChange = useCallback(
-    (v: string | number) => {
-      const num = typeof v === "number" ? v : parseFloat(v);
-      if (!isNaN(num) && num > 0) {
-        onChange({ fontSize: num });
-      }
-    },
+  const handleFontMetricsChange = useCallback(
+    (data: FontMetricsData) => { onChange(fromFontMetricsData(data)); },
     [onChange],
   );
 
-  // Toggle handlers
-  const handleBoldToggle = useCallback((pressed: boolean) => onChange({ bold: pressed || undefined }), [onChange]);
-
-  const handleItalicToggle = useCallback((pressed: boolean) => onChange({ italic: pressed || undefined }), [onChange]);
-
-  const handleUnderlineToggle = useCallback(
-    (pressed: boolean) => onChange({ underline: pressed || undefined }),
+  const handleCaseTransformChange = useCallback(
+    (data: CaseTransformData) => { onChange(fromCaseTransformData(data)); },
     [onChange],
   );
 
-  const handleStrikethroughToggle = useCallback(
-    (pressed: boolean) => onChange({ strikethrough: pressed || undefined }),
-    [onChange],
-  );
-
+  // =========================================================================
   // Color handlers
-  const handleTextColorChange = useCallback((hex: string) => onChange({ textColor: hex }), [onChange]);
+  // =========================================================================
 
+  const handleTextColorChange = useCallback((hex: string) => onChange({ textColor: hex }), [onChange]);
   const handleHighlightColorChange = useCallback((hex: string) => onChange({ highlightColor: hex }), [onChange]);
 
-  // Super/subscript handlers
-  const handleSuperscriptToggle = useCallback(
-    (pressed: boolean) => {
-      onChange({ superscript: pressed || undefined, subscript: pressed ? undefined : value.subscript });
-    },
-    [onChange, value.subscript],
+  // =========================================================================
+  // Style dropdown handlers (underline/strike detail)
+  // =========================================================================
+
+  const handleUnderlineStyleChange = useCallback(
+    (s: string) => { onChange({ underlineStyle: s, underline: s !== "none" && s !== undefined }); },
+    [onChange],
   );
 
-  const handleSubscriptToggle = useCallback(
-    (pressed: boolean) => {
-      onChange({ subscript: pressed || undefined, superscript: pressed ? undefined : value.superscript });
-    },
-    [onChange, value.superscript],
+  const handleStrikeStyleChange = useCallback(
+    (s: string) => { onChange({ strikethroughStyle: s, strikethrough: s !== "none" && s !== undefined }); },
+    [onChange],
   );
+
+  // =========================================================================
+  // Spacing handlers
+  // =========================================================================
+
+  const handleBaselineChange = useCallback(
+    (v: string | number) => {
+      const num = typeof v === "number" ? v : parseFloat(String(v));
+      if (isNaN(num) || num === 0) { onChange({ baseline: undefined }); }
+      else { onChange({ baseline: Math.max(-100, Math.min(100, num)) }); }
+    },
+    [onChange],
+  );
+
+  const handleKerningChange = useCallback(
+    (v: string | number) => {
+      const num = typeof v === "number" ? v : parseFloat(v);
+      if (!isNaN(num)) { onChange({ kerning: num === 0 ? undefined : num }); }
+    },
+    [onChange],
+  );
+
+  // =========================================================================
+  // Feature flags
+  // =========================================================================
 
   const showFontFamily = feat(features, "showFontFamily");
   const showFontSize = feat(features, "showFontSize");
-  const showBold = feat(features, "showBold");
-  const showItalic = feat(features, "showItalic");
-  const showUnderline = feat(features, "showUnderline");
-  const showStrikethrough = feat(features, "showStrikethrough");
   const showTextColor = feat(features, "showTextColor");
   const showHighlight = feat(features, "showHighlight", false);
   const showSuperSubscript = feat(features, "showSuperSubscript", false);
+  const showUnderlineStyle = feat(features, "showUnderlineStyle", false);
+  const showStrikeStyle = feat(features, "showStrikeStyle", false);
+  const showCaps = feat(features, "showCaps", false);
+  const showSpacing = feat(features, "showSpacing", false);
 
-  const hasToggles = showBold || showItalic || showUnderline || showStrikethrough;
   const hasColorRow = showTextColor || showHighlight;
+  const hasStyleDropdowns = showUnderlineStyle || showStrikeStyle;
+
+  // =========================================================================
+  // Render
+  // =========================================================================
 
   return (
-    <div style={{ ...containerStyle, ...style }} className={className}>
-      {/* Row 1: Font Family + Font Size */}
-      {(showFontFamily || showFontSize) && (
-        <FieldRow>
-          {showFontFamily && (
-            <FieldGroup label="Font" inline labelWidth={fieldLabelTokens.text.font} style={{ flex: 1 }}>
-              {buildFontFamilySelect({
-                renderSlot: renderFontFamilySelect,
-                value: value.fontFamily,
-                onChange: handleFontFamilyChange,
-                disabled,
-                placeholder: isMixedField(mixed, "fontFamily") ? MIXED_PLACEHOLDER : "Font Family",
-              })}
-            </FieldGroup>
-          )}
-          {showFontSize && (
-            <FieldGroup
-              label={isMixedField(mixed, "fontSize") ? "Size (Mixed)" : "Size"}
-              inline
-              labelWidth={isMixedField(mixed, "fontSize") ? fieldLabelTokens.text.sizeMixed : fieldLabelTokens.text.size}
-              style={{ width: isMixedField(mixed, "fontSize") ? fieldContainerTokens.fontSizeMixed : fieldContainerTokens.fontSize }}
-            >
+    <div className={className} style={style}>
+      {/* Font family + weight (react-editor-ui FontSection) */}
+      {showFontFamily && (
+        <FontSection
+          data={toFontData(value)}
+          onChange={handleFontChange}
+          disabled={disabled}
+          fontOptions={fontOptions as unknown as { value: string; label: string }[]}
+        />
+      )}
+
+      {/* Font size, leading, tracking, kerning (react-editor-ui FontMetricsSection) */}
+      {showFontSize && (
+        <FontMetricsSection
+          data={toFontMetricsData(value)}
+          onChange={handleFontMetricsChange}
+          size="sm"
+          disabled={disabled}
+        />
+      )}
+
+      {/* Caps + underline/strike/super/sub toggles (react-editor-ui CaseTransformSection) */}
+      {(showCaps || showSuperSubscript) && (
+        <CaseTransformSection
+          data={toCaseTransformData(value)}
+          onChange={handleCaseTransformChange}
+          size="sm"
+          disabled={disabled}
+        />
+      )}
+
+      {/* Color + Highlight */}
+      {hasColorRow && (
+        <PropertySection title="Color" defaultExpanded>
+          <FieldRow>
+            {showTextColor && (
+              <FieldGroup label="Text" inline labelWidth={40} style={{ flex: 1 }}>
+                {buildColorPicker({ renderSlot: renderColorPicker, color: value.textColor, onChange: handleTextColorChange, disabled, fallbackHex: "000000" })}
+              </FieldGroup>
+            )}
+            {showHighlight && (
+              <FieldGroup label="Highlight" inline labelWidth={60} style={{ flex: 1 }}>
+                {buildColorPicker({ renderSlot: renderHighlightPicker, color: value.highlightColor, onChange: handleHighlightColorChange, disabled, fallbackHex: "FFFF00" })}
+              </FieldGroup>
+            )}
+          </FieldRow>
+        </PropertySection>
+      )}
+
+      {/* Decoration — underline/strike style dropdowns */}
+      {hasStyleDropdowns && (
+        <PropertySection title="Decoration" defaultExpanded>
+          <FieldRow>
+            {showUnderlineStyle && (
+              <FieldGroup label="U̲" inline labelWidth={20} style={{ flex: 1 }}>
+                <Select
+                  value={value.underlineStyle ?? "none"}
+                  onChange={handleUnderlineStyleChange}
+                  options={underlineStyleOptions}
+                  disabled={disabled}
+                />
+              </FieldGroup>
+            )}
+            {showStrikeStyle && (
+              <FieldGroup label="S̶" inline labelWidth={20} style={{ flex: 1 }}>
+                <Select
+                  value={value.strikethroughStyle ?? "none"}
+                  onChange={handleStrikeStyleChange}
+                  options={strikeStyleOptions}
+                  disabled={disabled}
+                />
+              </FieldGroup>
+            )}
+          </FieldRow>
+        </PropertySection>
+      )}
+
+      {/* Spacing — letter spacing + baseline + kerning */}
+      {showSpacing && (
+        <PropertySection title="Spacing" defaultExpanded>
+          <FieldRow>
+            <FieldGroup label="Spacing" inline labelWidth={52} style={{ flex: 1 }}>
               <Input
                 type="number"
-                value={isMixedField(mixed, "fontSize") ? "" : (value.fontSize ?? "")}
-                onChange={handleFontSizeChange}
+                value={value.letterSpacing ?? 0}
+                onChange={(v) => {
+                  const num = typeof v === "number" ? v : parseFloat(v);
+                  if (!isNaN(num)) { onChange({ letterSpacing: num === 0 ? undefined : num }); }
+                }}
                 disabled={disabled}
-                placeholder={isMixedField(mixed, "fontSize") ? MIXED_PLACEHOLDER : "Size"}
-                min={1}
-                max={999}
-                suffix="pt"
+                suffix="px"
               />
             </FieldGroup>
-          )}
-        </FieldRow>
-      )}
-
-      {/* Row 2: B / I / U / S toggles */}
-      {hasToggles && (
-        <div style={rowStyle}>
-          {showBold && (
-            <ToggleButton
-              pressed={isMixedField(mixed, "bold") ? false : (value.bold ?? false)}
-              onChange={handleBoldToggle}
-              label="Bold"
-              ariaLabel={isMixedField(mixed, "bold") ? "Bold (Mixed)" : "Bold"}
-              disabled={disabled}
-              mixed={isMixedField(mixed, "bold")}
-            >
-              <BoldIcon size={iconTokens.size.sm} />
-            </ToggleButton>
-          )}
-          {showItalic && (
-            <ToggleButton
-              pressed={isMixedField(mixed, "italic") ? false : (value.italic ?? false)}
-              onChange={handleItalicToggle}
-              label="Italic"
-              ariaLabel={isMixedField(mixed, "italic") ? "Italic (Mixed)" : "Italic"}
-              disabled={disabled}
-              mixed={isMixedField(mixed, "italic")}
-            >
-              <ItalicIcon size={iconTokens.size.sm} />
-            </ToggleButton>
-          )}
-          {showUnderline && (
-            <ToggleButton
-              pressed={isMixedField(mixed, "underline") ? false : (value.underline ?? false)}
-              onChange={handleUnderlineToggle}
-              label="Underline"
-              ariaLabel={isMixedField(mixed, "underline") ? "Underline (Mixed)" : "Underline"}
-              disabled={disabled}
-              mixed={isMixedField(mixed, "underline")}
-            >
-              <UnderlineIcon size={iconTokens.size.sm} />
-            </ToggleButton>
-          )}
-          {showStrikethrough && (
-            <ToggleButton
-              pressed={isMixedField(mixed, "strikethrough") ? false : (value.strikethrough ?? false)}
-              onChange={handleStrikethroughToggle}
-              label="Strikethrough"
-              ariaLabel={isMixedField(mixed, "strikethrough") ? "Strikethrough (Mixed)" : "Strikethrough"}
-              disabled={disabled}
-              mixed={isMixedField(mixed, "strikethrough")}
-            >
-              <StrikethroughIcon size={iconTokens.size.sm} />
-            </ToggleButton>
-          )}
-        </div>
-      )}
-
-      {/* Separator */}
-      {hasToggles && hasColorRow && <div style={separatorStyle} />}
-
-      {/* Row 3: Color + Highlight */}
-      {hasColorRow && (
-        <FieldRow>
-          {showTextColor && (
-            <FieldGroup
-              label={isMixedField(mixed, "textColor") ? "Color (Mixed)" : "Color"}
-              inline
-              labelWidth={isMixedField(mixed, "textColor") ? fieldLabelTokens.text.colorMixed : fieldLabelTokens.text.color}
-            >
-              {buildColorPicker({ renderSlot: renderColorPicker, color: value.textColor, onChange: handleTextColorChange, disabled, fallbackHex: "000000" })}
+            <FieldGroup label="Base" inline labelWidth={52} style={{ flex: 1 }}>
+              <Input
+                type="number"
+                value={value.baseline ?? 0}
+                onChange={handleBaselineChange}
+                disabled={disabled}
+                suffix="%"
+                min={-100}
+                max={100}
+              />
             </FieldGroup>
-          )}
-          {showHighlight && (
-            <FieldGroup
-              label={isMixedField(mixed, "highlightColor") ? "Hi (Mixed)" : "Highlight"}
-              inline
-              labelWidth={isMixedField(mixed, "highlightColor") ? fieldLabelTokens.text.highlightMixed : fieldLabelTokens.text.highlight}
-            >
-              {buildColorPicker({ renderSlot: renderHighlightPicker, color: value.highlightColor, onChange: handleHighlightColorChange, disabled, fallbackHex: "FFFF00" })}
-            </FieldGroup>
-          )}
-        </FieldRow>
+          </FieldRow>
+          <FieldGroup label="Kerning" inline labelWidth={52}>
+            <Input
+              type="number"
+              value={value.kerning ?? 0}
+              onChange={handleKerningChange}
+              disabled={disabled}
+              suffix="pt"
+              min={0}
+              max={999}
+            />
+          </FieldGroup>
+        </PropertySection>
       )}
 
-      {/* Separator */}
-      {hasColorRow && showSuperSubscript && <div style={separatorStyle} />}
-
-      {/* Row 4: Super/Subscript */}
-      {showSuperSubscript && (
-        <div style={rowStyle}>
-          <ToggleButton
-            pressed={isMixedField(mixed, "superscript") ? false : (value.superscript ?? false)}
-            onChange={handleSuperscriptToggle}
-            label="Superscript"
-            ariaLabel="Superscript"
-            disabled={disabled}
-            mixed={isMixedField(mixed, "superscript")}
-          >
-            <SuperscriptIcon size={iconTokens.size.sm} />
-          </ToggleButton>
-          <ToggleButton
-            pressed={isMixedField(mixed, "subscript") ? false : (value.subscript ?? false)}
-            onChange={handleSubscriptToggle}
-            label="Subscript"
-            ariaLabel="Subscript"
-            disabled={disabled}
-            mixed={isMixedField(mixed, "subscript")}
-          >
-            <SubscriptIcon size={iconTokens.size.sm} />
-          </ToggleButton>
-        </div>
-      )}
-
-      {/* Extras slot: format-specific controls */}
+      {/* Extras slot */}
       {renderExtras?.()}
     </div>
   );

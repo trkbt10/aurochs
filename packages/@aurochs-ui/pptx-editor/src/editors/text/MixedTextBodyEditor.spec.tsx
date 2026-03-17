@@ -93,7 +93,7 @@ function createMixedTextBody(): TextBody {
 
 describe("MixedTextBodyEditor", () => {
   describe("rendering", () => {
-    it("renders run property sections (Font, Color)", () => {
+    it("renders run property sections (Font family, Font weight)", () => {
       const onChange = createCallTracker<[TextBody]>();
       render(<MixedTextBodyEditor value={createSingleRunTextBody()} onChange={onChange.fn} />);
 

@@ -1,8 +1,11 @@
 /**
  * @file TextFormattingEditor tests
+ *
+ * Tests rendering using react-editor-ui sections (FontSection,
+ * FontMetricsSection, CaseTransformSection, PropertySection).
  */
 // @vitest-environment jsdom
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { TextFormattingEditor } from "./TextFormattingEditor";
 import type { TextFormatting } from "./types";
 
@@ -22,30 +25,32 @@ describe("TextFormattingEditor", () => {
     textColor: "#000000",
   };
 
-  it("renders all default controls", () => {
+  beforeEach(() => {
+    const fakeFonts = Object.assign([{ family: "Arial" }], {
+      ready: Promise.resolve(),
+      status: "loaded",
+    });
+    try {
+      Object.defineProperty(document, "fonts", { value: fakeFonts, configurable: true });
+    } catch { /* non-configurable */ }
+  });
+
+  it("renders react-editor-ui sections", () => {
+    const { fn: onChange } = createOnChange();
+    const { container } = render(<TextFormattingEditor value={defaultValue} onChange={onChange} />);
+
+    // FontSection renders "Font" title
+    expect(container.textContent).toContain("Font");
+    // FontMetricsSection renders "Font Metrics" title
+    expect(container.textContent).toContain("Font Metrics");
+  });
+
+  it("renders font family and font weight selects", () => {
     const { fn: onChange } = createOnChange();
     render(<TextFormattingEditor value={defaultValue} onChange={onChange} />);
 
-    expect(screen.getByLabelText("Bold")).toBeDefined();
-    expect(screen.getByLabelText("Italic")).toBeDefined();
-    expect(screen.getByLabelText("Underline")).toBeDefined();
-    expect(screen.getByLabelText("Strikethrough")).toBeDefined();
-  });
-
-  it("emits partial update on bold toggle", () => {
-    const { fn: onChange, calls } = createOnChange();
-    render(<TextFormattingEditor value={defaultValue} onChange={onChange} />);
-
-    fireEvent.click(screen.getByLabelText("Bold"));
-    expect(calls).toContainEqual({ bold: true });
-  });
-
-  it("emits partial update on italic toggle", () => {
-    const { fn: onChange, calls } = createOnChange();
-    render(<TextFormattingEditor value={defaultValue} onChange={onChange} />);
-
-    fireEvent.click(screen.getByLabelText("Italic"));
-    expect(calls).toContainEqual({ italic: true });
+    expect(screen.getByLabelText("Font family")).toBeTruthy();
+    expect(screen.getByLabelText("Font weight")).toBeTruthy();
   });
 
   it("hides highlight when feature disabled", () => {
@@ -54,43 +59,23 @@ describe("TextFormattingEditor", () => {
       <TextFormattingEditor value={defaultValue} onChange={onChange} features={{ showHighlight: false }} />,
     );
 
-    expect(container.querySelector('[aria-label="Highlight"]')).toBeNull();
+    expect(container.textContent).not.toContain("Highlight");
   });
 
   it("shows highlight when feature enabled", () => {
     const { fn: onChange } = createOnChange();
-    render(
+    const { container } = render(
       <TextFormattingEditor value={defaultValue} onChange={onChange} features={{ showHighlight: true }} />,
     );
 
-    // Highlight section should be present (label text)
-    expect(screen.getByText("Highlight")).toBeDefined();
+    expect(container.textContent).toContain("Highlight");
   });
 
-  it("shows mixed indicators", () => {
+  it("renders FontFamilySelect by default", () => {
     const { fn: onChange } = createOnChange();
-    const mixed = { mixedFields: new Set(["bold", "fontSize"]) };
+    render(<TextFormattingEditor value={defaultValue} onChange={onChange} />);
 
-    render(
-      <TextFormattingEditor value={defaultValue} onChange={onChange} mixed={mixed} />,
-    );
-
-    expect(screen.getByLabelText("Bold (Mixed)")).toBeDefined();
-    expect(screen.getByText("Size (Mixed)")).toBeDefined();
-  });
-
-  it("uses custom font family slot when provided", () => {
-    const { fn: onChange } = createOnChange();
-    render(
-      <TextFormattingEditor
-        value={defaultValue}
-        onChange={onChange}
-        renderFontFamilySelect={({ value: v }) => <div data-testid="custom-font">{v}</div>}
-      />,
-    );
-
-    expect(screen.getByTestId("custom-font")).toBeDefined();
-    expect(screen.getByTestId("custom-font").textContent).toBe("Arial");
+    expect(screen.getByText("Font")).toBeDefined();
   });
 
   it("uses custom color picker slot when provided", () => {
@@ -125,46 +110,65 @@ describe("TextFormattingEditor", () => {
       <TextFormattingEditor
         value={defaultValue}
         onChange={onChange}
-        features={{
-          showBold: false,
-          showItalic: false,
-          showUnderline: false,
-          showStrikethrough: false,
-        }}
+        features={{ showFontFamily: false, showFontSize: false }}
       />,
     );
 
-    expect(container.querySelector('[aria-label="Bold"]')).toBeNull();
-    expect(container.querySelector('[aria-label="Italic"]')).toBeNull();
-    expect(container.querySelector('[aria-label="Underline"]')).toBeNull();
-    expect(container.querySelector('[aria-label="Strikethrough"]')).toBeNull();
+    expect(container.querySelector('[aria-label="Font family"]')).toBeNull();
   });
 
-  it("shows super/subscript when enabled", () => {
+  it("shows CaseTransformSection when caps or superSubscript enabled", () => {
     const { fn: onChange } = createOnChange();
-    render(
+    const { container } = render(
       <TextFormattingEditor
         value={defaultValue}
         onChange={onChange}
-        features={{ showSuperSubscript: true }}
+        features={{ showCaps: true, showSuperSubscript: true }}
       />,
     );
 
-    expect(screen.getByLabelText("Superscript")).toBeDefined();
-    expect(screen.getByLabelText("Subscript")).toBeDefined();
+    expect(container.textContent).toContain("Case & Style");
   });
 
-  it("clears subscript when superscript is toggled on", () => {
-    const { fn: onChange, calls } = createOnChange();
+  it("shows super/subscript checkboxes via CaseTransformSection", () => {
+    const { fn: onChange } = createOnChange();
     render(
       <TextFormattingEditor
-        value={{ ...defaultValue, subscript: true }}
+        value={{ ...defaultValue, superscript: true }}
         onChange={onChange}
         features={{ showSuperSubscript: true }}
       />,
     );
 
-    fireEvent.click(screen.getByLabelText("Superscript"));
-    expect(calls).toContainEqual({ superscript: true, subscript: undefined });
+    const superCheckbox = screen.getByRole("checkbox", { name: /superscript/i });
+    expect(superCheckbox).toBeTruthy();
+    expect(superCheckbox.getAttribute("aria-checked")).toBe("true");
+  });
+
+  it("shows Decoration section when underline style enabled", () => {
+    const { fn: onChange } = createOnChange();
+    const { container } = render(
+      <TextFormattingEditor
+        value={{ ...defaultValue, underlineStyle: "single" }}
+        onChange={onChange}
+        features={{ showUnderlineStyle: true }}
+      />,
+    );
+
+    expect(container.textContent).toContain("Decoration");
+  });
+
+  it("shows Spacing section when spacing enabled", () => {
+    const { fn: onChange } = createOnChange();
+    const { container } = render(
+      <TextFormattingEditor
+        value={{ ...defaultValue, letterSpacing: 2, kerning: 1 }}
+        onChange={onChange}
+        features={{ showSpacing: true }}
+      />,
+    );
+
+    expect(container.textContent).toContain("Spacing");
+    expect(container.textContent).toContain("Kerning");
   });
 });

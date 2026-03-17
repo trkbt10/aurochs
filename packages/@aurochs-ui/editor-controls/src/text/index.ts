@@ -6,6 +6,7 @@ export { TextFormattingEditor, type TextFormattingEditorProps } from "./TextForm
 export { ParagraphFormattingEditor, type ParagraphFormattingEditorProps } from "./ParagraphFormattingEditor";
 
 export type {
+  StyleOption,
   TextFormatting,
   TextFormattingFeatures,
   HorizontalAlignment,

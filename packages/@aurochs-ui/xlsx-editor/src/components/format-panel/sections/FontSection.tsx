@@ -1,11 +1,11 @@
 /**
  * @file Font section (format panel)
  *
- * Wraps the shared TextFormattingEditor with XLSX-specific adapter and slots.
+ * Wraps the shared TextFormattingEditor with XLSX-specific adapter.
  */
 
 import { useCallback } from "react";
-import { Accordion, Select, type SelectOption } from "@aurochs-ui/ui-components";
+import { Accordion } from "@aurochs-ui/ui-components";
 import { TextFormattingEditor } from "@aurochs-ui/editor-controls/text";
 import type { TextFormatting } from "@aurochs-ui/editor-controls/text";
 import type { MixedContext } from "@aurochs-ui/editor-controls/mixed-state";
@@ -16,7 +16,8 @@ import { xlsxTextAdapter } from "../../../adapters/editor-controls/xlsx-text-ada
 export type FontSectionProps = {
   readonly disabled: boolean;
   readonly font: XlsxFont;
-  readonly fontNameOptions: readonly SelectOption<string>[];
+  /** Extra font family names to show in the font selector (e.g. workbook fonts). */
+  readonly additionalFontFamilies: readonly string[];
   readonly selectionFormatFlags: MixedContext | undefined;
   readonly onFontChange: (font: XlsxFont) => void;
 };
@@ -53,15 +54,7 @@ export function FontSection(props: FontSectionProps) {
         disabled={props.disabled}
         mixed={props.selectionFormatFlags}
         features={{ showHighlight: false, showSuperSubscript: false }}
-        renderFontFamilySelect={({ value, onChange, disabled, placeholder }) => (
-          <Select
-            value={value ?? ""}
-            options={props.fontNameOptions}
-            disabled={disabled}
-            onChange={onChange}
-            placeholder={placeholder}
-          />
-        )}
+        additionalFontFamilies={props.additionalFontFamilies}
         renderColorPicker={({ value, onChange, disabled }) => (
           <ColorPickerPopover
             value={toBareHex(value)}

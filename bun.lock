@@ -674,6 +674,7 @@
         "@aurochs-ui/color-editor": "workspace:*",
         "@aurochs-ui/editor-core": "workspace:*",
         "@aurochs-ui/ui-components": "workspace:*",
+        "react-editor-ui": "^0.4.0",
         "react-panel-layout": "^0.6.1",
       },
       "peerDependencies": {

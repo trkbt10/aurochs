@@ -30,6 +30,8 @@ export type FontFamilySelectProps = {
   readonly sampleText?: string;
   /** Auto-request local fonts on mount. Default: true. */
   readonly autoRequestLocalFonts?: boolean;
+  /** Extra font families to include (e.g. workbook fonts). Shown in "Additional" group. */
+  readonly additionalFamilies?: readonly string[];
 };
 
 function uniqueFamilies(families: readonly string[]): readonly string[] {
@@ -47,10 +49,12 @@ function uniqueFamilies(families: readonly string[]): readonly string[] {
 function buildOptions({
   loadedFamilies,
   localFontFamilies,
+  additionalFamilies,
   currentValue,
 }: {
   loadedFamilies: readonly string[];
   localFontFamilies: readonly LocalFontFamily[];
+  additionalFamilies: readonly string[];
   currentValue: string;
 }): SearchableSelectOption<FontFamilySelectValue>[] {
   const options: SearchableSelectOption<FontFamilySelectValue>[] = [
@@ -61,6 +65,7 @@ function buildOptions({
   const allFamilyNames = new Set([
     ...loadedFamilies.map((f) => f.trim()),
     ...localFontFamilies.map((f) => f.family.trim()),
+    ...additionalFamilies.map((f) => f.trim()),
   ]);
   const normalizedCurrent = currentValue.trim();
   if (normalizedCurrent !== "" && !allFamilyNames.has(normalizedCurrent)) {
@@ -73,15 +78,23 @@ function buildOptions({
     options.push({ value: family, label: family, group: "Generic", keywords: [family] });
   }
 
+  // Additional families (e.g. workbook fonts, document-embedded fonts from caller)
+  const additionalSet = new Set<string>();
+  for (const family of uniqueFamilies(additionalFamilies)) {
+    additionalSet.add(family.trim());
+    options.push({ value: family, label: family, group: "Additional", keywords: [family] });
+  }
+
   // Document-loaded fonts (web fonts, embedded fonts)
   for (const family of uniqueFamilies(loadedFamilies)) {
+    if (additionalSet.has(family.trim())) { continue; }
     options.push({ value: family, label: family, group: "Document", keywords: [family] });
   }
 
   // Local system fonts (from queryLocalFonts API)
   const loadedSet = new Set(loadedFamilies.map((f) => f.trim()));
   for (const lf of localFontFamilies) {
-    if (loadedSet.has(lf.family.trim())) { continue; }
+    if (loadedSet.has(lf.family.trim()) || additionalSet.has(lf.family.trim())) { continue; }
     options.push({ value: lf.family, label: lf.family, group: "System", keywords: [lf.family, ...lf.styles] });
   }
 
@@ -144,6 +157,7 @@ export function FontFamilySelect({
   searchPlaceholder = "Search fonts...",
   sampleText = "AaBbCc",
   autoRequestLocalFonts = true,
+  additionalFamilies = [],
 }: FontFamilySelectProps) {
   const documentFamilies = useDocumentFontFamilies();
   const { families: localFamilies, requestFonts, status } = useLocalFonts();
@@ -156,8 +170,8 @@ export function FontFamilySelect({
   }, [autoRequestLocalFonts, status, requestFonts]);
 
   const options = useMemo(
-    () => buildOptions({ loadedFamilies: documentFamilies, localFontFamilies: localFamilies, currentValue: value }),
-    [documentFamilies, localFamilies, value],
+    () => buildOptions({ loadedFamilies: documentFamilies, localFontFamilies: localFamilies, additionalFamilies, currentValue: value }),
+    [documentFamilies, localFamilies, additionalFamilies, value],
   );
 
   const handleChange = (next: FontFamilySelectValue) => {

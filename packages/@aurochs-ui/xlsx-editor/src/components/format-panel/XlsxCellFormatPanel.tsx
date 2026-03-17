@@ -5,7 +5,7 @@
  */
 
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import { spacingTokens, fontTokens, colorTokens, type SelectOption } from "@aurochs-ui/ui-components";
+import { spacingTokens, fontTokens, colorTokens } from "@aurochs-ui/ui-components";
 import type { CellAddress, CellRange } from "@aurochs-office/xlsx/domain/cell/address";
 import type { XlsxFont } from "@aurochs-office/xlsx/domain/style/font";
 import type { XlsxFill } from "@aurochs-office/xlsx/domain/style/fill";
@@ -129,7 +129,7 @@ export function XlsxCellFormatPanel({ sheetIndex }: XlsxCellFormatPanelProps) {
     );
   }, [anchorCell, sheet.hyperlinks]);
 
-  const fontNameOptions = useMemo(() => {
+  const additionalFontFamilies = useMemo(() => {
     const names = new Set<string>();
     for (const font of workbook.styles.fonts) {
       names.add(font.name);
@@ -137,7 +137,7 @@ export function XlsxCellFormatPanel({ sheetIndex }: XlsxCellFormatPanelProps) {
     for (const extra of ["Calibri", "Arial", "Times New Roman", "Courier New"]) {
       names.add(extra);
     }
-    return [...names].sort().map<SelectOption<string>>((name) => ({ value: name, label: name }));
+    return [...names].sort();
   }, [workbook.styles.fonts]);
 
   // Number section draft state (XLSX-specific, not migratable to shared editors)
@@ -208,7 +208,7 @@ export function XlsxCellFormatPanel({ sheetIndex }: XlsxCellFormatPanelProps) {
       <FontSection
         disabled={disabled}
         font={currentFont}
-        fontNameOptions={fontNameOptions}
+        additionalFontFamilies={additionalFontFamilies}
         selectionFormatFlags={xlsxSelectionToMixedContext(selectionFormatFlags)}
         onFontChange={applyFont}
       />
