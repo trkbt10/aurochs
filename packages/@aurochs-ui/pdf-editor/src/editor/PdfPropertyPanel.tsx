@@ -7,11 +7,13 @@
  * - editor-controls OptionalPropertySection pattern
  */
 
-import { useCallback, useMemo, type CSSProperties } from "react";
+import { useCallback, type CSSProperties } from "react";
 import type { PdfElement } from "@aurochs/pdf";
+import type { PageSizeData } from "@aurochs-ui/editor-core/adapter-types";
 import { PositionSection } from "react-editor-ui/sections/PositionSection";
 import { SizeSection } from "react-editor-ui/sections/SizeSection";
 import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
+import { PageSizeEditor } from "@aurochs-ui/editor-controls/page";
 import { FillFormattingEditor } from "@aurochs-ui/editor-controls/surface";
 import { OutlineFormattingEditor } from "@aurochs-ui/editor-controls/surface";
 import { TextFormattingEditor } from "@aurochs-ui/editor-controls/text";
@@ -24,6 +26,7 @@ import {
   pdfStrokeToFormatting,
   applyStrokeToGraphicsState,
 } from "./pdf-surface-adapters";
+import { PDF_PAGE_PRESETS, findMatchingPreset } from "./pdf-page-size-adapter";
 import type { PdfElementId, PdfElementBounds } from "./types";
 
 // =============================================================================
@@ -34,8 +37,10 @@ export type PdfPropertyPanelProps = {
   readonly element: PdfElement | undefined;
   readonly elementId: PdfElementId | undefined;
   readonly bounds: PdfElementBounds | undefined;
+  readonly pageWidth: number;
   readonly pageHeight: number;
   readonly onUpdateElement?: (elementId: PdfElementId, updater: (el: PdfElement) => PdfElement) => void;
+  readonly onPageSizeChange?: (width: number, height: number) => void;
   readonly style?: CSSProperties;
 };
 
@@ -44,14 +49,13 @@ export type PdfPropertyPanelProps = {
 // =============================================================================
 
 const containerStyle: CSSProperties = { display: "flex", flexDirection: "column", gap: "0", fontSize: "12px" };
-const emptyStyle: CSSProperties = { padding: "20px", textAlign: "center", color: "var(--text-tertiary, #737373)", fontSize: "13px" };
 
 // =============================================================================
 // Component
 // =============================================================================
 
 /** Property panel for a selected PDF element with editing support. */
-export function PdfPropertyPanel({ element, elementId, bounds: svgBounds, pageHeight, onUpdateElement, style }: PdfPropertyPanelProps) {
+export function PdfPropertyPanel({ element, elementId, bounds: svgBounds, pageWidth, pageHeight, onUpdateElement, onPageSizeChange, style }: PdfPropertyPanelProps) {
   const canEdit = Boolean(elementId && onUpdateElement);
 
   const updateElement = useCallback(
@@ -120,10 +124,40 @@ export function PdfPropertyPanel({ element, elementId, bounds: svgBounds, pageHe
     [updateElement],
   );
 
+  const handlePageSizeChange = useCallback(
+    (data: PageSizeData) => {
+      if (!onPageSizeChange) return;
+      const preset = PDF_PAGE_PRESETS.find((p) => p.value === data.preset);
+      const w = preset?.width ?? parseFloat(data.width);
+      const h = preset?.height ?? parseFloat(data.height);
+      if (!isNaN(w) && !isNaN(h) && w > 0 && h > 0) {
+        onPageSizeChange(w, h);
+      }
+    },
+    [onPageSizeChange],
+  );
+
   if (!element || !svgBounds) {
+    const pageSizeData: PageSizeData = {
+      width: String(pageWidth),
+      height: String(pageHeight),
+      preset: findMatchingPreset(pageWidth, pageHeight),
+    };
+
     return (
       <div style={{ ...containerStyle, ...style }}>
-        <div style={emptyStyle}>Select an element to view properties</div>
+        <OptionalPropertySection title="Page Size" defaultExpanded>
+          <PageSizeEditor
+            data={pageSizeData}
+            onChange={handlePageSizeChange}
+            presets={PDF_PAGE_PRESETS}
+            unitLabel="pt"
+            disabled={!onPageSizeChange}
+            min={1}
+            max={14400}
+            step={1}
+          />
+        </OptionalPropertySection>
       </div>
     );
   }

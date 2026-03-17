@@ -80,6 +80,10 @@
     "./item-list": {
       "types": "./src/item-list/index.ts",
       "default": "./src/item-list/index.ts"
+    },
+    "./page": {
+      "types": "./src/page/index.ts",
+      "default": "./src/page/index.ts"
     }
   }
 }

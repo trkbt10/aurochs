@@ -58,7 +58,8 @@ export type PdfEditorAction =
   | { readonly type: "ALIGN"; readonly alignment: AlignmentType }
   | { readonly type: "START_TEXT_EDIT"; readonly elementId: PdfElementId; readonly text: string; readonly bounds: { x: number; y: number; width: number; height: number } }
   | { readonly type: "COMMIT_TEXT_EDIT"; readonly text: string }
-  | { readonly type: "CANCEL_TEXT_EDIT" };
+  | { readonly type: "CANCEL_TEXT_EDIT" }
+  | { readonly type: "UPDATE_PAGE_SIZE"; readonly pageIndex: number; readonly width: number; readonly height: number };
 
 // =============================================================================
 // Helpers
@@ -420,6 +421,15 @@ export function pdfEditorReducer(state: PdfEditorState, action: PdfEditorAction)
       const newPages = reorderItems(doc.pages, action.pageIndices, action.toIndex);
       const newPageIndex = action.toIndex;
       return { ...state, documentHistory: pushHistory(state.documentHistory, { ...doc, pages: newPages as readonly typeof doc.pages[number][] }), currentPageIndex: Math.min(newPageIndex, newPages.length - 1), selection: createEmptySelection<PdfElementId>() };
+    }
+
+    case "UPDATE_PAGE_SIZE": {
+      const doc = state.documentHistory.present;
+      const page = doc.pages[action.pageIndex];
+      if (!page) { return state; }
+      const newPage = { ...page, width: action.width, height: action.height };
+      const newPages = doc.pages.map((p, i) => i === action.pageIndex ? newPage : p);
+      return { ...state, documentHistory: pushHistory(state.documentHistory, { ...doc, pages: newPages }) };
     }
   }
 }

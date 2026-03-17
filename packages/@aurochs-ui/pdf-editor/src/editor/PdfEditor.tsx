@@ -173,7 +173,13 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
 
   const [rightTab, setRightTab] = useState("properties");
 
+  const pageWidth = currentPage?.width ?? 612;
   const pageHeight = currentPage?.height ?? 792;
+
+  const handlePageSizeChange = useCallback(
+    (width: number, height: number) => dispatch({ type: "UPDATE_PAGE_SIZE", pageIndex: state.currentPageIndex, width, height }),
+    [state.currentPageIndex],
+  );
 
   const propertiesContent = state.selection.selectedIds.length > 1 ? (
     <PdfMultiSelectPanel
@@ -187,8 +193,10 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
       element={selectedElement}
       elementId={state.selection.primaryId}
       bounds={state.selection.primaryId ? query.getElementBounds(state.selection.primaryId) : undefined}
+      pageWidth={pageWidth}
       pageHeight={pageHeight}
       onUpdateElement={handleUpdateElement}
+      onPageSizeChange={handlePageSizeChange}
     />
   );
 

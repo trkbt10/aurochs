@@ -15,11 +15,14 @@ import type { DocxSectionProperties } from "@aurochs-office/docx/domain/section"
 import type { DocxStyleId } from "@aurochs-office/docx/domain/types";
 import type { DocxTable } from "@aurochs-office/docx/domain/table";
 import type { DocxParagraph } from "@aurochs-office/docx/domain/paragraph";
+import type { PageSizeData } from "@aurochs-ui/editor-core/adapter-types";
 import { Button, Select } from "@aurochs-ui/ui-components/primitives";
 import { FieldGroup, Section } from "@aurochs-ui/ui-components/layout";
 import type { SelectOption } from "@aurochs-ui/ui-components/types";
+import { PageSizeEditor } from "@aurochs-ui/editor-controls/page";
 import { useDocumentEditor } from "../context/document/DocumentEditorContext";
 import { getPlainTextFromParagraph } from "../text-edit/cursor";
+import { DOCX_PAGE_PRESETS, docxPageSizeToData, dataToDocxPageSize } from "./docx-page-size-adapter";
 
 // =============================================================================
 // Types
@@ -250,6 +253,20 @@ function SectionPropertiesViewer({ section, onChange, disabled }: SectionPropert
     [onChange, section],
   );
 
+  const pageSizeData = useMemo(() => docxPageSizeToData(section?.pgSz), [section?.pgSz]);
+
+  const handlePageSizeChange = useCallback(
+    (data: PageSizeData) => {
+      const preset = DOCX_PAGE_PRESETS.find((p) => p.value === data.preset);
+      const resolved: PageSizeData = preset
+        ? { width: String(preset.width), height: String(preset.height), preset: data.preset }
+        : data;
+      const pgSz = dataToDocxPageSize(resolved);
+      onChange({ ...(section ?? {}), pgSz });
+    },
+    [onChange, section],
+  );
+
   return (
     <div data-testid="docx-document-info-section" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       <FieldGroup label="Section Break" inline labelWidth={90}>
@@ -260,6 +277,16 @@ function SectionPropertiesViewer({ section, onChange, disabled }: SectionPropert
           disabled={disabled}
         />
       </FieldGroup>
+      <PageSizeEditor
+        data={pageSizeData}
+        onChange={handlePageSizeChange}
+        presets={DOCX_PAGE_PRESETS}
+        unitLabel="twips"
+        disabled={disabled}
+        min={1440}
+        max={31680}
+        step={72}
+      />
     </div>
   );
 }

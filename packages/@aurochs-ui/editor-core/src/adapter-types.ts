@@ -77,3 +77,22 @@ export type SizeData = {
   readonly width: string;
   readonly height: string;
 };
+
+// =============================================================================
+// Page size types
+// =============================================================================
+
+/** Page size preset definition for PageSizeEditor. */
+export type PageSizePreset = {
+  readonly value: string;
+  readonly label: string;
+  readonly width: number;
+  readonly height: number;
+};
+
+/** Page size data for PageSizeEditor. */
+export type PageSizeData = {
+  readonly width: string;
+  readonly height: string;
+  readonly preset: string; // "" = custom
+};
