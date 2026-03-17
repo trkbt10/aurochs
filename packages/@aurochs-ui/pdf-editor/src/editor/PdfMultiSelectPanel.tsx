@@ -7,7 +7,6 @@
 
 import { useCallback, useMemo, type CSSProperties } from "react";
 import type { PdfDocument, PdfElement } from "@aurochs/pdf";
-import { PropertySection } from "react-editor-ui/PropertySection";
 import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { FillFormattingEditor } from "@aurochs-ui/editor-controls/surface";
 import { OutlineFormattingEditor } from "@aurochs-ui/editor-controls/surface";
@@ -128,14 +127,14 @@ export function PdfMultiSelectPanel({ document, selectedIds, pageHeight, onUpdat
       <div style={headerStyle}>{selectedIds.length} elements selected</div>
 
       {combinedBounds && (
-        <PropertySection title="Transform" defaultExpanded>
+        <OptionalPropertySection title="Transform" defaultExpanded>
           <div style={boundsGridStyle}>
             <span style={labelStyle}>X</span><span>{combinedBounds.x.toFixed(1)}</span>
             <span style={labelStyle}>Y</span><span>{combinedBounds.y.toFixed(1)}</span>
             <span style={labelStyle}>W</span><span>{combinedBounds.width.toFixed(1)}</span>
             <span style={labelStyle}>H</span><span>{combinedBounds.height.toFixed(1)}</span>
           </div>
-        </PropertySection>
+        </OptionalPropertySection>
       )}
 
       {allText && (

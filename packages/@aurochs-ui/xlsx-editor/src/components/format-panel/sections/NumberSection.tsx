@@ -4,7 +4,8 @@
  * UI controls for editing number format (built-in numFmtId selection + custom format code helpers).
  */
 
-import { Accordion, Button, FieldGroup, FieldRow, Input, Select, Toggle } from "@aurochs-ui/ui-components";
+import { Button, FieldGroup, FieldRow, Input, Select, Toggle } from "@aurochs-ui/ui-components";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { BUILTIN_FORMAT_OPTIONS } from "../options";
 
 export type NumberSectionProps = {
@@ -33,7 +34,7 @@ export type NumberSectionProps = {
  */
 export function NumberSection(props: NumberSectionProps) {
   return (
-    <Accordion title="Number">
+    <OptionalPropertySection title="Number">
       <FieldGroup label="Built-in">
         <Select
           value={String(props.selectedNumFmtId)}
@@ -96,6 +97,6 @@ export function NumberSection(props: NumberSectionProps) {
           Apply
         </Button>
       </FieldRow>
-    </Accordion>
+    </OptionalPropertySection>
   );
 }

@@ -5,7 +5,8 @@
  * Uses ColorPickerPopover for color selection.
  */
 
-import { Accordion, FieldGroup, FieldRow, Select } from "@aurochs-ui/ui-components";
+import { FieldGroup, FieldRow, Select } from "@aurochs-ui/ui-components";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { ColorPickerPopover } from "@aurochs-ui/color-editor";
 import type { XlsxBorder, XlsxBorderEdge, XlsxBorderStyle } from "@aurochs-office/xlsx/domain/style/border";
 import { rgbHexFromXlsxColor, makeXlsxRgbColor } from "../color-utils";
@@ -58,7 +59,7 @@ export function BorderSection(props: BorderSectionProps) {
   };
 
   return (
-    <Accordion title="Border">
+    <OptionalPropertySection title="Border">
       <FieldGroup label="Left">
         <Select
           value={borderEdgeStyle(border.left)}
@@ -101,6 +102,6 @@ export function BorderSection(props: BorderSectionProps) {
           />
         </FieldGroup>
       </FieldRow>
-    </Accordion>
+    </OptionalPropertySection>
   );
 }

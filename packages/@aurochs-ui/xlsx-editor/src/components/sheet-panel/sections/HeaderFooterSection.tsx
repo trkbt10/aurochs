@@ -6,7 +6,8 @@
  */
 
 import { useCallback, useMemo, type CSSProperties } from "react";
-import { Accordion, Input, Toggle, FieldGroup, FieldRow } from "@aurochs-ui/ui-components";
+import { Input, Toggle, FieldGroup, FieldRow } from "@aurochs-ui/ui-components";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { colorTokens, fontTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 import type { XlsxHeaderFooter } from "@aurochs-office/xlsx/domain/page-setup";
 
@@ -50,7 +51,7 @@ export function HeaderFooterSection({ disabled, headerFooter, onHeaderFooterChan
   );
 
   return (
-    <Accordion title="Header / Footer" defaultExpanded>
+    <OptionalPropertySection title="Header / Footer" defaultExpanded>
       {/* Format codes hint */}
       <div style={hintStyle}>
         Codes: <code>&amp;L</code> left, <code>&amp;C</code> center, <code>&amp;R</code> right,{" "}
@@ -166,6 +167,6 @@ export function HeaderFooterSection({ disabled, headerFooter, onHeaderFooterChan
           </FieldGroup>
         </div>
       )}
-    </Accordion>
+    </OptionalPropertySection>
   );
 }

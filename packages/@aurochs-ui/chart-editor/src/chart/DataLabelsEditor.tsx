@@ -9,7 +9,8 @@
 import { useCallback, type CSSProperties } from "react";
 import { colorTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { Input, Select, Toggle } from "@aurochs-ui/ui-components/primitives";
-import { Accordion, FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
+import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { TextBodyEditor, createDefaultTextBody } from "../text";
 import { ChartShapePropertiesEditor } from "./ChartShapePropertiesEditor";
 import { LayoutEditor } from "./LayoutEditor";
@@ -197,36 +198,36 @@ export function DataLabelsEditor({ value, onChange, disabled, className, style }
       </>
 
       {/* Shape Properties */}
-      <Accordion title="Shape Properties" defaultExpanded={false}>
+      <OptionalPropertySection title="Shape Properties" defaultExpanded={false}>
         <ChartShapePropertiesEditor
           value={value.shapeProperties}
           onChange={handleShapePropertiesChange}
           disabled={disabled}
         />
-      </Accordion>
+      </OptionalPropertySection>
 
       {/* Text Properties */}
-      <Accordion title="Text Properties" defaultExpanded={false}>
+      <OptionalPropertySection title="Text Properties" defaultExpanded={false}>
         <TextBodyEditor
           value={value.textProperties ?? createDefaultTextBody()}
           onChange={handleTextPropertiesChange}
           disabled={disabled}
         />
-      </Accordion>
+      </OptionalPropertySection>
 
       {/* Leader Lines */}
       {value.showLeaderLines && (
-        <Accordion title="Leader Lines" defaultExpanded={false}>
+        <OptionalPropertySection title="Leader Lines" defaultExpanded={false}>
           <ChartShapePropertiesEditor
             value={value.leaderLines?.shapeProperties}
             onChange={handleLeaderLinesChange}
             disabled={disabled}
           />
-        </Accordion>
+        </OptionalPropertySection>
       )}
 
       {/* Individual Data Labels */}
-      <Accordion title={`Data Labels (${value.labels?.length ?? 0})`} defaultExpanded={false}>
+      <OptionalPropertySection title={`Data Labels (${value.labels?.length ?? 0})`} defaultExpanded={false}>
         <>
           <button
             type="button"
@@ -242,16 +243,16 @@ export function DataLabelsEditor({ value, onChange, disabled, className, style }
           </button>
         </>
         {(value.labels ?? []).map((label, index) => (
-          <Accordion key={label.idx} title={`Label ${label.idx}`} defaultExpanded={false}>
+          <OptionalPropertySection key={label.idx} title={`Label ${label.idx}`} defaultExpanded={false}>
             <DataLabelEditor
               value={label}
               onChange={(l) => handleLabelChange(index, l)}
               onRemove={() => handleRemoveLabel(index)}
               disabled={disabled}
             />
-          </Accordion>
+          </OptionalPropertySection>
         ))}
-      </Accordion>
+      </OptionalPropertySection>
     </div>
   );
 }
@@ -396,32 +397,32 @@ function DataLabelEditor({ value, onChange, onRemove, disabled }: DataLabelEdito
       </>
 
       {/* Layout */}
-      <Accordion title="Layout" defaultExpanded={false}>
+      <OptionalPropertySection title="Layout" defaultExpanded={false}>
         <LayoutEditor value={value.layout} onChange={handleLayoutChange} disabled={disabled} />
-      </Accordion>
+      </OptionalPropertySection>
 
       {/* Custom Text */}
-      <Accordion title="Custom Text" defaultExpanded={false}>
+      <OptionalPropertySection title="Custom Text" defaultExpanded={false}>
         <TextBodyEditor value={value.text ?? createDefaultTextBody()} onChange={handleTextChange} disabled={disabled} />
-      </Accordion>
+      </OptionalPropertySection>
 
       {/* Shape Properties */}
-      <Accordion title="Shape Properties" defaultExpanded={false}>
+      <OptionalPropertySection title="Shape Properties" defaultExpanded={false}>
         <ChartShapePropertiesEditor
           value={value.shapeProperties}
           onChange={handleShapePropertiesChange}
           disabled={disabled}
         />
-      </Accordion>
+      </OptionalPropertySection>
 
       {/* Text Properties */}
-      <Accordion title="Text Properties" defaultExpanded={false}>
+      <OptionalPropertySection title="Text Properties" defaultExpanded={false}>
         <TextBodyEditor
           value={value.textProperties ?? createDefaultTextBody()}
           onChange={handleTextPropertiesChange}
           disabled={disabled}
         />
-      </Accordion>
+      </OptionalPropertySection>
 
       <>
         <button

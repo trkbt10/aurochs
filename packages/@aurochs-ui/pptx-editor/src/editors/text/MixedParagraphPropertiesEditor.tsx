@@ -10,7 +10,7 @@ import { TextJustifySection } from "react-editor-ui/sections/TextJustifySection"
 import { ParagraphSpacingSection } from "react-editor-ui/sections/ParagraphSpacingSection";
 import { IndentSection } from "react-editor-ui/sections/IndentSection";
 import { ListSection } from "react-editor-ui/sections/ListSection";
-import { PropertySection } from "react-editor-ui/PropertySection";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { Input, Select, Toggle } from "@aurochs-ui/ui-components/primitives";
 import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
 import { LineSpacingEditor } from "./LineSpacingEditor";
@@ -179,15 +179,17 @@ export function MixedParagraphPropertiesEditor({
   return (
     <div className={className} style={style}>
       {/* Text alignment (react-editor-ui) */}
-      <TextJustifySection
-        data={mixedParagraphToTextJustify(value)}
-        onChange={handleJustifyChange}
-        size="sm"
-        disabled={disabled}
-      />
+      <OptionalPropertySection title="Text Alignment" defaultExpanded>
+        <TextJustifySection
+          data={mixedParagraphToTextJustify(value)}
+          onChange={handleJustifyChange}
+          size="sm"
+          disabled={disabled}
+        />
+      </OptionalPropertySection>
 
       {/* PPTX-specific: Extended alignment (justifyLow, distributed) + Level */}
-      <PropertySection title="Alignment Details" defaultExpanded={false}>
+      <OptionalPropertySection title="Alignment Details" defaultExpanded={false}>
         <FieldRow>
           <FieldGroup label={getLabel(value.alignment, "Align")} inline labelWidth={40} style={{ flex: 1 }}>
             <Select
@@ -210,19 +212,21 @@ export function MixedParagraphPropertiesEditor({
             />
           </FieldGroup>
         </FieldRow>
-      </PropertySection>
+      </OptionalPropertySection>
 
       {/* Space before/after (react-editor-ui) */}
-      <ParagraphSpacingSection
-        data={mixedParagraphToSpacing(value)}
-        onChange={handleSpacingChange}
-        size="sm"
-        disabled={disabled}
-      />
+      <OptionalPropertySection title="Paragraph Spacing" defaultExpanded>
+        <ParagraphSpacingSection
+          data={mixedParagraphToSpacing(value)}
+          onChange={handleSpacingChange}
+          size="sm"
+          disabled={disabled}
+        />
+      </OptionalPropertySection>
 
       {/* PPTX-specific: Line spacing with LineSpacing type */}
       {showSpacing && (
-        <PropertySection title="Line Spacing" defaultExpanded>
+        <OptionalPropertySection title="Line Spacing" defaultExpanded>
           <FieldGroup label={getLabel(value.lineSpacing, "Line")}>
             <LineSpacingEditor
               value={isMixed(value.lineSpacing) ? undefined : lineSpacingValue}
@@ -246,37 +250,41 @@ export function MixedParagraphPropertiesEditor({
               />
             </FieldGroup>
           </FieldRow>
-        </PropertySection>
+        </OptionalPropertySection>
       )}
 
       {/* Indent (react-editor-ui) */}
       {showIndentation && (
-        <IndentSection
-          data={mixedParagraphToIndent(value)}
-          onChange={handleIndentChange}
-          size="sm"
-          disabled={disabled}
-        />
+        <OptionalPropertySection title="Indent" defaultExpanded>
+          <IndentSection
+            data={mixedParagraphToIndent(value)}
+            onChange={handleIndentChange}
+            size="sm"
+            disabled={disabled}
+          />
+        </OptionalPropertySection>
       )}
 
       {/* Bullet/number list (react-editor-ui) */}
-      <ListSection
-        data={mixedParagraphToList(value)}
-        onChange={handleListChange}
-        size="sm"
-        disabled={disabled}
-      />
+      <OptionalPropertySection title="List" defaultExpanded>
+        <ListSection
+          data={mixedParagraphToList(value)}
+          onChange={handleListChange}
+          size="sm"
+          disabled={disabled}
+        />
+      </OptionalPropertySection>
 
       {/* PPTX-specific: RTL */}
       {showDirection && (
-        <PropertySection title="Direction" defaultExpanded={false}>
+        <OptionalPropertySection title="Direction" defaultExpanded={false}>
           <Toggle
             checked={isMixed(value.rtl) ? false : rtlValue}
             onChange={handleRtlChange}
             label={getLabel(value.rtl, "Right-to-Left")}
             disabled={disabled}
           />
-        </PropertySection>
+        </OptionalPropertySection>
       )}
     </div>
   );

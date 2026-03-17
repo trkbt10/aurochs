@@ -12,7 +12,8 @@
 import { useCallback, type CSSProperties } from "react";
 import { colorTokens, spacingTokens, fontTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { Input, Select, Toggle } from "@aurochs-ui/ui-components/primitives";
-import { Accordion, FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
+import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { PercentEditor, DegreesEditor } from "../primitives";
 import { DataLabelsEditor, createDefaultDataLabels } from "./DataLabelsEditor";
 import { ChartShapePropertiesEditor } from "./ChartShapePropertiesEditor";
@@ -357,18 +358,18 @@ export function ChartSeriesEditor({
       </>
 
       {/* Series Text (tx) */}
-      <Accordion title="Series Text" defaultExpanded={false}>
+      <OptionalPropertySection title="Series Text" defaultExpanded={false}>
         <SeriesTextEditor value={value.tx} onChange={handleTxChange} disabled={disabled} />
-      </Accordion>
+      </OptionalPropertySection>
 
       {/* Shape Properties */}
-      <Accordion title="Shape Properties" defaultExpanded={false}>
+      <OptionalPropertySection title="Shape Properties" defaultExpanded={false}>
         <ChartShapePropertiesEditor
           value={value.shapeProperties}
           onChange={handleShapePropertiesChange}
           disabled={disabled}
         />
-      </Accordion>
+      </OptionalPropertySection>
 
       {/* Bar chart specific settings */}
       {isBarChart && (
@@ -642,7 +643,7 @@ export function ChartSeriesEditor({
           </FieldRow>
 
           {/* Custom Split Points */}
-          <Accordion title="Custom Split Points" defaultExpanded={false}>
+          <OptionalPropertySection title="Custom Split Points" defaultExpanded={false}>
             <>
               <FieldRow>
                 <FieldGroup label="Custom Split Indices (comma-separated)" style={{ flex: 1 }}>
@@ -666,15 +667,15 @@ export function ChartSeriesEditor({
                 </FieldGroup>
               </FieldRow>
             </>
-          </Accordion>
+          </OptionalPropertySection>
 
-          <Accordion title="Series Lines" defaultExpanded={false}>
+          <OptionalPropertySection title="Series Lines" defaultExpanded={false}>
             <ChartShapePropertiesEditor
               value={(value as OfPieChartSeries).serLines?.shapeProperties}
               onChange={(sp) => updateOfPieField("serLines", sp ? { shapeProperties: sp } : undefined)}
               disabled={disabled}
             />
-          </Accordion>
+          </OptionalPropertySection>
         </>
       )}
 
@@ -793,58 +794,58 @@ export function ChartSeriesEditor({
           </FieldRow>
 
           {/* Band Formats */}
-          <Accordion title="Band Formats" defaultExpanded={false}>
+          <OptionalPropertySection title="Band Formats" defaultExpanded={false}>
             <BandFormatsEditor
               value={(value as SurfaceChartSeries).bandFormats}
               onChange={(bf) => updateSurfaceField("bandFormats", bf)}
               disabled={disabled}
             />
-          </Accordion>
+          </OptionalPropertySection>
         </>
       )}
 
       {/* Drop Lines (for line, area, stock charts) */}
       {hasDropLines && (
-        <Accordion title="Drop Lines" defaultExpanded={false}>
+        <OptionalPropertySection title="Drop Lines" defaultExpanded={false}>
           <ChartShapePropertiesEditor
             value={(value as LineChartSeries | AreaChartSeries | StockChartSeries).dropLines?.shapeProperties}
             onChange={handleDropLinesChange}
             disabled={disabled}
           />
-        </Accordion>
+        </OptionalPropertySection>
       )}
 
       {/* Hi-Low Lines (for line, stock charts) */}
       {hasHiLowLines && (
-        <Accordion title="Hi-Low Lines" defaultExpanded={false}>
+        <OptionalPropertySection title="Hi-Low Lines" defaultExpanded={false}>
           <ChartShapePropertiesEditor
             value={(value as LineChartSeries | StockChartSeries).hiLowLines?.shapeProperties}
             onChange={handleHiLowLinesChange}
             disabled={disabled}
           />
-        </Accordion>
+        </OptionalPropertySection>
       )}
 
       {/* Up/Down Bars (for line, stock charts) */}
       {hasUpDownBars && (
-        <Accordion title="Up/Down Bars" defaultExpanded={false}>
+        <OptionalPropertySection title="Up/Down Bars" defaultExpanded={false}>
           <UpDownBarsEditor
             value={(value as LineChartSeries | StockChartSeries).upDownBars}
             onChange={handleUpDownBarsChange}
             disabled={disabled}
           />
-        </Accordion>
+        </OptionalPropertySection>
       )}
 
       {/* Data Labels */}
       {showDataLabels && (
-        <Accordion title="Data Labels" defaultExpanded={false}>
+        <OptionalPropertySection title="Data Labels" defaultExpanded={false}>
           <DataLabelsEditor
             value={value.dataLabels ?? createDefaultDataLabels()}
             onChange={(v) => updateField("dataLabels", v)}
             disabled={disabled}
           />
-        </Accordion>
+        </OptionalPropertySection>
       )}
     </div>
   );
@@ -928,21 +929,21 @@ function UpDownBarsEditor({ value, onChange, disabled }: UpDownBarsEditorProps) 
         </FieldRow>
       </>
 
-      <Accordion title="Up Bars" defaultExpanded={false}>
+      <OptionalPropertySection title="Up Bars" defaultExpanded={false}>
         <ChartShapePropertiesEditor
           value={bars.upBars}
           onChange={(sp) => updateField("upBars", sp)}
           disabled={disabled}
         />
-      </Accordion>
+      </OptionalPropertySection>
 
-      <Accordion title="Down Bars" defaultExpanded={false}>
+      <OptionalPropertySection title="Down Bars" defaultExpanded={false}>
         <ChartShapePropertiesEditor
           value={bars.downBars}
           onChange={(sp) => updateField("downBars", sp)}
           disabled={disabled}
         />
-      </Accordion>
+      </OptionalPropertySection>
     </div>
   );
 }
@@ -991,7 +992,7 @@ function BandFormatsEditor({ value, onChange, disabled }: BandFormatsEditorProps
         </button>
       </>
       {bands.map((band, index) => (
-        <Accordion key={band.idx} title={`Band ${band.idx}`} defaultExpanded={false}>
+        <OptionalPropertySection key={band.idx} title={`Band ${band.idx}`} defaultExpanded={false}>
           <>
             <FieldRow>
               <FieldGroup label="Index" style={{ flex: 1 }}>
@@ -1004,13 +1005,13 @@ function BandFormatsEditor({ value, onChange, disabled }: BandFormatsEditorProps
               </FieldGroup>
             </FieldRow>
           </>
-          <Accordion title="Shape Properties" defaultExpanded={false}>
+          <OptionalPropertySection title="Shape Properties" defaultExpanded={false}>
             <ChartShapePropertiesEditor
               value={band.shapeProperties}
               onChange={(sp) => handleBandChange(index, { ...band, shapeProperties: sp })}
               disabled={disabled}
             />
-          </Accordion>
+          </OptionalPropertySection>
           <>
             <button
               type="button"
@@ -1021,7 +1022,7 @@ function BandFormatsEditor({ value, onChange, disabled }: BandFormatsEditorProps
               Remove Band
             </button>
           </>
-        </Accordion>
+        </OptionalPropertySection>
       ))}
     </div>
   );

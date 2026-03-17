@@ -334,6 +334,17 @@ export const editorShellTokens = {
 } as const;
 
 /**
+ * Inspector panel tokens
+ * Design values specific to the property inspector UI
+ */
+export const inspectorTokens = {
+  /** セクション内側の inline 方向パディング — ヘッダーとコンテンツで共有 */
+  sectionPaddingInline: spacingTokens.md,
+  /** セクション内側の block 方向パディング — ヘッダー上下・コンテンツ下で使用 */
+  sectionPaddingBlock: spacingTokens.sm,
+} as const;
+
+/**
  * Combined tokens object for convenience
  */
 export const tokens = {

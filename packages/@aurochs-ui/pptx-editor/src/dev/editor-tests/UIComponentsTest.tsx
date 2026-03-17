@@ -1,11 +1,12 @@
 /**
  * @file UI Components Test
  *
- * Test component for UI primitives (Accordion, FieldGroup).
+ * Test component for UI primitives (OptionalPropertySection, FieldGroup).
  */
 
 import { useState, type CSSProperties } from "react";
-import { Accordion, FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
+import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
 import { Input, Toggle } from "@aurochs-ui/ui-components/primitives";
 
 const cardStyle: CSSProperties = {
@@ -31,23 +32,23 @@ const gridStyle: CSSProperties = {
 };
 
 /**
- * Test component for Accordion and FieldGroup UI components.
+ * Test component for OptionalPropertySection and FieldGroup UI components.
  */
 export function UIComponentsTest() {
   const [accordionExpanded, setAccordionExpanded] = useState(true);
 
   return (
     <div style={gridStyle}>
-      {/* Accordion Test */}
+      {/* OptionalPropertySection Test */}
       <div style={cardStyle}>
-        <h2 style={cardTitleStyle}>Accordion</h2>
+        <h2 style={cardTitleStyle}>Property Section</h2>
 
-        <FieldGroup label="Controlled Accordion">
+        <FieldGroup label="Controlled Section">
           <Toggle checked={accordionExpanded} onChange={setAccordionExpanded} label="Expanded" />
         </FieldGroup>
 
         <div style={{ marginTop: "16px" }}>
-          <Accordion title="Effects Options" expanded={accordionExpanded} onExpandedChange={setAccordionExpanded}>
+          <OptionalPropertySection title="Effects Options" expanded={accordionExpanded} onExpandedChange={setAccordionExpanded}>
             <FieldGroup label="Shadow">
               <Input type="number" value="0" onChange={() => {}} suffix="px" />
             </FieldGroup>
@@ -56,21 +57,21 @@ export function UIComponentsTest() {
                 <Input type="number" value="4" onChange={() => {}} suffix="px" />
               </FieldGroup>
             </div>
-          </Accordion>
+          </OptionalPropertySection>
         </div>
 
         <div style={{ marginTop: "16px" }}>
-          <Accordion title="3D Properties" defaultExpanded={false}>
+          <OptionalPropertySection title="3D Properties" defaultExpanded={false}>
             <p style={{ color: "var(--text-secondary)", fontSize: "13px", margin: 0 }}>
               3D rotation and perspective settings would go here.
             </p>
-          </Accordion>
+          </OptionalPropertySection>
         </div>
 
         <div style={{ marginTop: "16px" }}>
-          <Accordion title="Disabled Accordion" disabled>
+          <OptionalPropertySection title="Disabled Section" disabled>
             <p style={{ margin: 0 }}>This content cannot be toggled.</p>
-          </Accordion>
+          </OptionalPropertySection>
         </div>
       </div>
 

@@ -10,7 +10,7 @@ import type { SlideSize, PresentationFile } from "@aurochs-office/pptx/domain";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import type { SlideLayoutAttributes } from "@aurochs-office/pptx/parser/slide/layout-parser";
 import type { SlideLayoutOption } from "@aurochs-office/pptx/app";
-import { InspectorSection, Accordion } from "@aurochs-ui/ui-components/layout";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { colorTokens, fontTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { LayoutThumbnail, useLayoutThumbnails, type LayoutThumbnailData } from "../../thumbnail";
 
@@ -221,15 +221,15 @@ export function LayoutInfoPanel({
 
   return (
     <div style={containerStyle}>
-      <InspectorSection title="Layouts">
-        <Accordion title={`Available Layouts (${layoutOptions.length})`} defaultExpanded>
+      <OptionalPropertySection title="Layouts" defaultExpanded>
+        <OptionalPropertySection title={`Available Layouts (${layoutOptions.length})`} defaultExpanded>
           <LayoutGrid layouts={layoutThumbnails} currentPath={currentLayoutPath} slideSize={slideSize} />
-        </Accordion>
+        </OptionalPropertySection>
 
-        <Accordion title="Current Layout" defaultExpanded={false}>
+        <OptionalPropertySection title="Current Layout" defaultExpanded={false}>
           <CurrentLayoutContent attributes={layoutAttributes} />
-        </Accordion>
-      </InspectorSection>
+        </OptionalPropertySection>
+      </OptionalPropertySection>
     </div>
   );
 }

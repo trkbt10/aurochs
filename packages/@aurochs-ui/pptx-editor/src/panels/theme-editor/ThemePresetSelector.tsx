@@ -7,7 +7,7 @@
 import { useCallback, type CSSProperties } from "react";
 import type { ThemePreset } from "./types";
 import { THEME_PRESETS } from "./presets";
-import { InspectorSection } from "@aurochs-ui/ui-components/layout";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { colorTokens, fontTokens, spacingTokens, radiusTokens } from "@aurochs-ui/ui-components/design-tokens";
 
 export type ThemePresetSelectorProps = {
@@ -143,7 +143,7 @@ export function ThemePresetSelector({ currentThemeId, onPresetSelect, disabled }
 
   return (
     <div style={containerStyle}>
-      <InspectorSection title="Theme Presets">
+      <OptionalPropertySection title="Theme Presets" defaultExpanded>
         <div style={gridStyle}>
           {THEME_PRESETS.map((preset) => (
             <PresetCard
@@ -155,7 +155,7 @@ export function ThemePresetSelector({ currentThemeId, onPresetSelect, disabled }
             />
           ))}
         </div>
-      </InspectorSection>
+      </OptionalPropertySection>
     </div>
   );
 }

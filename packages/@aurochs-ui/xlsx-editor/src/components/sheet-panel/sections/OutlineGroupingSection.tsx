@@ -5,7 +5,8 @@
  */
 
 import { useCallback, useMemo, type CSSProperties } from "react";
-import { Accordion, Button } from "@aurochs-ui/ui-components";
+import { Button } from "@aurochs-ui/ui-components";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { colorTokens, fontTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 import type { XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
 import type { CellRange } from "@aurochs-office/xlsx/domain/cell/address";
@@ -173,7 +174,7 @@ export function OutlineGroupingSection({
     : "No selection";
 
   return (
-    <Accordion title="Outline Grouping" defaultExpanded={hasAnyGrouping}>
+    <OptionalPropertySection title="Outline Grouping" defaultExpanded={hasAnyGrouping}>
       <div style={descriptionStyle}>
         Group rows or columns to create collapsible sections.
       </div>
@@ -241,6 +242,6 @@ export function OutlineGroupingSection({
           </div>
         </>
       )}
-    </Accordion>
+    </OptionalPropertySection>
   );
 }

@@ -8,7 +8,7 @@
 import type { CSSProperties } from "react";
 import type { ColorContext, ColorScheme } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
-import { InspectorSection, Accordion } from "@aurochs-ui/ui-components/layout";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { colorTokens, fontTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 
 export type ThemeViewerPanelProps = {
@@ -283,19 +283,19 @@ function FontSchemeAccordionContent({ fontScheme }: { fontScheme?: FontScheme })
 export function ThemeViewerPanel({ colorContext, fontScheme }: ThemeViewerPanelProps) {
   return (
     <div style={containerStyle}>
-      <InspectorSection title="Theme">
-        <Accordion title="Color Scheme" defaultExpanded>
+      <OptionalPropertySection title="Theme" defaultExpanded>
+        <OptionalPropertySection title="Color Scheme" defaultExpanded>
           <ColorSchemeSection colorScheme={colorContext.colorScheme} />
-        </Accordion>
+        </OptionalPropertySection>
 
-        <Accordion title="Color Map" defaultExpanded={false}>
+        <OptionalPropertySection title="Color Map" defaultExpanded={false}>
           <ColorMapSection colorMap={colorContext.colorMap} colorScheme={colorContext.colorScheme} />
-        </Accordion>
+        </OptionalPropertySection>
 
-        <Accordion title="Font Scheme" defaultExpanded={false}>
+        <OptionalPropertySection title="Font Scheme" defaultExpanded={false}>
           <FontSchemeAccordionContent fontScheme={fontScheme} />
-        </Accordion>
-      </InspectorSection>
+        </OptionalPropertySection>
+      </OptionalPropertySection>
     </div>
   );
 }

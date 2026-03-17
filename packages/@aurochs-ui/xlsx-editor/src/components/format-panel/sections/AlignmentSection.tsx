@@ -4,7 +4,8 @@
  * UI controls for editing cell alignment and wrap settings in the selection format panel.
  */
 
-import { Accordion, Button, FieldGroup, FieldRow, Select, ToggleButton } from "@aurochs-ui/ui-components";
+import { Button, FieldGroup, FieldRow, Select, ToggleButton } from "@aurochs-ui/ui-components";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import type { XlsxAlignment } from "@aurochs-office/xlsx/domain/style/types";
 import { HORIZONTAL_OPTIONS, VERTICAL_OPTIONS } from "../options";
 import { parseHorizontalAlignment, parseVerticalAlignment } from "../alignment";
@@ -25,7 +26,7 @@ export function AlignmentSection(props: AlignmentSectionProps) {
   const alignment = props.alignment;
 
   return (
-    <Accordion title="Alignment">
+    <OptionalPropertySection title="Alignment">
       <FieldGroup label="Horizontal">
         <Select
           value={alignment?.horizontal ?? ""}
@@ -74,6 +75,6 @@ export function AlignmentSection(props: AlignmentSectionProps) {
           Clear
         </Button>
       </FieldRow>
-    </Accordion>
+    </OptionalPropertySection>
   );
 }

@@ -13,7 +13,7 @@ import type { PresentationFile } from "@aurochs-office/pptx/domain";
 import { discoverMediaPaths } from "@aurochs-office/pptx/app/media-discovery";
 import { toDataUrl, formatSize } from "@aurochs/buffer";
 import { getMimeTypeFromPath } from "@aurochs/files";
-import { InspectorSection, Accordion } from "@aurochs-ui/ui-components/layout";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { ImageIcon, AudioIcon, VideoIcon, FileIcon, AddIcon } from "@aurochs-ui/ui-components/icons";
 import { colorTokens, fontTokens, spacingTokens, iconTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { Button } from "@aurochs-ui/ui-components/primitives/Button";
@@ -334,13 +334,13 @@ function AssetList({ assets, type, title }: { assets: AssetInfo[]; type: AssetIn
   }
 
   return (
-    <Accordion title={`${title} (${filtered.length})`} defaultExpanded>
+    <OptionalPropertySection title={`${title} (${filtered.length})`} defaultExpanded>
       <div style={assetListStyle}>
         {filtered.map((asset) => (
           <AssetItem key={asset.path} asset={asset} />
         ))}
       </div>
-    </Accordion>
+    </OptionalPropertySection>
   );
 }
 
@@ -607,14 +607,14 @@ export function AssetPanel({ presentationFile }: AssetPanelProps) {
 
   return (
     <div style={containerStyle}>
-      <InspectorSection title="Assets">
+      <OptionalPropertySection title="Assets" defaultExpanded>
         <AssetPanelContent
           presentationFile={presentationFile}
           embeddedAssets={embeddedAssets}
           uploadedAssets={uploadedAssets}
           onUpload={handleUpload}
         />
-      </InspectorSection>
+      </OptionalPropertySection>
     </div>
   );
 }

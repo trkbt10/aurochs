@@ -5,7 +5,8 @@
  */
 
 import { useState, useCallback, useMemo, type CSSProperties } from "react";
-import { Accordion, Button, FieldGroup, Input, Select, type SelectOption } from "@aurochs-ui/ui-components";
+import { Button, FieldGroup, Input, Select, type SelectOption } from "@aurochs-ui/ui-components";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { colorTokens, fontTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 import type { XlsxDefinedName } from "@aurochs-office/xlsx/domain/workbook";
 import { formatRange, type CellRange } from "@aurochs-office/xlsx/domain/cell/address";
@@ -142,7 +143,7 @@ export function DefinedNamesSection({
   );
 
   return (
-    <Accordion title="Defined Names" defaultExpanded={hasNames || isAdding}>
+    <OptionalPropertySection title="Defined Names" defaultExpanded={hasNames || isAdding}>
       <div style={descriptionStyle}>
         Create named ranges or formulas for easier reference in formulas.
       </div>
@@ -223,6 +224,6 @@ export function DefinedNamesSection({
           </div>
         </>
       )}
-    </Accordion>
+    </OptionalPropertySection>
   );
 }

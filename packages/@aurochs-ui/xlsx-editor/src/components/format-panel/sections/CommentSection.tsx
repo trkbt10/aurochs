@@ -5,7 +5,8 @@
  */
 
 import { useState, useCallback, useMemo, type CSSProperties } from "react";
-import { Accordion, Input, Button, FieldGroup } from "@aurochs-ui/ui-components";
+import { Input, Button, FieldGroup } from "@aurochs-ui/ui-components";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { colorTokens, fontTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 import type { XlsxComment } from "@aurochs-office/xlsx/domain/comment";
 import type { CellAddress } from "@aurochs-office/xlsx/domain/cell/address";
@@ -94,7 +95,7 @@ export function CommentSection({
   }, [onCommentDelete]);
 
   return (
-    <Accordion title="Comment" defaultExpanded={hasComment}>
+    <OptionalPropertySection title="Comment" defaultExpanded={hasComment}>
       {isEditing ? (
         <>
           <FieldGroup label="Author">
@@ -156,6 +157,6 @@ export function CommentSection({
           </Button>
         </>
       )}
-    </Accordion>
+    </OptionalPropertySection>
   );
 }

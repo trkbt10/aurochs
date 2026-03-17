@@ -11,7 +11,8 @@ import type { DocxBlockContent } from "@aurochs-office/docx/domain/document";
 import type { DocxParagraph, DocxParagraphProperties } from "@aurochs-office/docx/domain/paragraph";
 import type { DocxRunProperties } from "@aurochs-office/docx/domain/run";
 import type { DocxTable, DocxTableCellProperties, DocxTableProperties } from "@aurochs-office/docx/domain/table";
-import { Accordion, spacingTokens, fontTokens, colorTokens } from "@aurochs-ui/ui-components";
+import { spacingTokens, fontTokens, colorTokens } from "@aurochs-ui/ui-components";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { TextFormattingEditor, ParagraphFormattingEditor } from "@aurochs-ui/editor-controls/text";
 import type { TextFormatting, ParagraphFormatting } from "@aurochs-ui/editor-controls/text";
 import type { MixedContext } from "@aurochs-ui/editor-controls/mixed-state";
@@ -270,37 +271,33 @@ function ParagraphInspector({
 
   return (
     <>
-      <Accordion title="Text" defaultExpanded>
-        <TextFormattingEditor
-          value={textFormatting}
-          onChange={handleTextChange}
-          mixed={runMixed}
-          features={{
-            showFontFamily: true,
-            showFontSize: true,
-            showBold: true,
-            showItalic: true,
-            showUnderline: true,
-            showStrikethrough: true,
-            showTextColor: true,
-            showHighlight: true,
-            showSuperSubscript: true,
-          }}
-        />
-      </Accordion>
+      <TextFormattingEditor
+        value={textFormatting}
+        onChange={handleTextChange}
+        mixed={runMixed}
+        features={{
+          showFontFamily: true,
+          showFontSize: true,
+          showBold: true,
+          showItalic: true,
+          showUnderline: true,
+          showStrikethrough: true,
+          showTextColor: true,
+          showHighlight: true,
+          showSuperSubscript: true,
+        }}
+      />
 
-      <Accordion title="Paragraph" defaultExpanded>
-        <ParagraphFormattingEditor
-          value={paragraphFormatting}
-          onChange={handleParagraphChange}
-          features={{
-            showAlignment: true,
-            showIndentation: true,
-            showSpacing: true,
-            showLineSpacing: true,
-          }}
-        />
-      </Accordion>
+      <ParagraphFormattingEditor
+        value={paragraphFormatting}
+        onChange={handleParagraphChange}
+        features={{
+          showAlignment: true,
+          showIndentation: true,
+          showSpacing: true,
+          showLineSpacing: true,
+        }}
+      />
     </>
   );
 }
@@ -331,12 +328,12 @@ function TableInspector({ table, onTablePropertiesChange, onTableCellPropertiesC
 
   return (
     <>
-      <Accordion title="Table" defaultExpanded>
+      <OptionalPropertySection title="Table" defaultExpanded>
         <TablePropertiesEditor value={tableValue} onChange={handleTableChange} />
-      </Accordion>
-      <Accordion title="Cell" defaultExpanded>
+      </OptionalPropertySection>
+      <OptionalPropertySection title="Cell" defaultExpanded>
         <TableCellPropertiesEditor value={cellValue} onChange={handleCellChange} />
-      </Accordion>
+      </OptionalPropertySection>
     </>
   );
 }

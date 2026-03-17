@@ -15,7 +15,8 @@
  */
 
 import { useMemo, useState, type CSSProperties } from "react";
-import { Accordion, Button, Input } from "@aurochs-ui/ui-components";
+import { Button, Input } from "@aurochs-ui/ui-components";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { AddIcon, DeleteIcon } from "@aurochs-ui/ui-components/icons";
 import { colorTokens, spacingTokens, fontTokens, radiusTokens } from "@aurochs-ui/ui-components/design-tokens";
 import type { XlsxStyleSheet, XlsxCellXf, XlsxCellStyle } from "@aurochs-office/xlsx/domain/style/types";
@@ -422,9 +423,9 @@ export function StyleSection({
 
   if (resolvedStyles.length === 0 && !onStyleCreate) {
     return (
-      <Accordion title="Cell Styles" defaultExpanded>
+      <OptionalPropertySection title="Cell Styles" defaultExpanded>
         <div style={emptyMessageStyle}>No styles available</div>
-      </Accordion>
+      </OptionalPropertySection>
     );
   }
 
@@ -451,10 +452,10 @@ export function StyleSection({
   }
 
   return (
-    <Accordion title="Cell Styles" defaultExpanded>
+    <OptionalPropertySection title="Cell Styles" defaultExpanded>
       {renderHeader()}
       {renderCreateForm()}
       {renderContent()}
-    </Accordion>
+    </OptionalPropertySection>
   );
 }

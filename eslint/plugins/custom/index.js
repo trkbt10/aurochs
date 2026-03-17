@@ -17,7 +17,6 @@ import noExportStar from "./rules/no-export-star.js";
 import maxParams from "./rules/max-params.js";
 import noBareRendererImport from "./rules/no-bare-renderer-import.js";
 import noNodeOnlyImport from "./rules/no-node-only-import.js";
-
 export default {
   rules: {
     "ternary-length": ternaryLength,

@@ -11,7 +11,7 @@ import { useCallback, type CSSProperties, type ReactNode } from "react";
 import { FontSection } from "react-editor-ui/sections/FontSection";
 import { FontMetricsSection } from "react-editor-ui/sections/FontMetricsSection";
 import { CaseTransformSection } from "react-editor-ui/sections/CaseTransformSection";
-import { PropertySection } from "react-editor-ui/PropertySection";
+import { OptionalPropertySection } from "../ui/OptionalPropertySection";
 import { Input, Select } from "@aurochs-ui/ui-components/primitives";
 import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
 import { ColorPickerPopover } from "@aurochs-ui/color-editor";
@@ -297,37 +297,43 @@ export function TextFormattingEditor({
     <div className={className} style={style}>
       {/* Font family + weight (react-editor-ui FontSection) */}
       {showFontFamily && (
-        <FontSection
-          data={toFontData(value)}
-          onChange={handleFontChange}
-          disabled={disabled}
-          fontOptions={fontOptions as unknown as { value: string; label: string }[]}
-        />
+        <OptionalPropertySection title="Font" defaultExpanded>
+          <FontSection
+            data={toFontData(value)}
+            onChange={handleFontChange}
+            disabled={disabled}
+            fontOptions={fontOptions as unknown as { value: string; label: string }[]}
+          />
+        </OptionalPropertySection>
       )}
 
       {/* Font size, leading, tracking, kerning (react-editor-ui FontMetricsSection) */}
       {showFontSize && (
-        <FontMetricsSection
-          data={toFontMetricsData(value)}
-          onChange={handleFontMetricsChange}
-          size="sm"
-          disabled={disabled}
-        />
+        <OptionalPropertySection title="Font Metrics" defaultExpanded>
+          <FontMetricsSection
+            data={toFontMetricsData(value)}
+            onChange={handleFontMetricsChange}
+            size="sm"
+            disabled={disabled}
+          />
+        </OptionalPropertySection>
       )}
 
       {/* Caps + underline/strike/super/sub toggles (react-editor-ui CaseTransformSection) */}
       {(showCaps || showSuperSubscript) && (
-        <CaseTransformSection
-          data={toCaseTransformData(value)}
-          onChange={handleCaseTransformChange}
-          size="sm"
-          disabled={disabled}
-        />
+        <OptionalPropertySection title="Case & Style" defaultExpanded>
+          <CaseTransformSection
+            data={toCaseTransformData(value)}
+            onChange={handleCaseTransformChange}
+            size="sm"
+            disabled={disabled}
+          />
+        </OptionalPropertySection>
       )}
 
       {/* Color + Highlight */}
       {hasColorRow && (
-        <PropertySection title="Color" defaultExpanded>
+        <OptionalPropertySection title="Color" defaultExpanded>
           <FieldRow>
             {showTextColor && (
               <FieldGroup label="Text" inline labelWidth={40} style={{ flex: 1 }}>
@@ -340,12 +346,12 @@ export function TextFormattingEditor({
               </FieldGroup>
             )}
           </FieldRow>
-        </PropertySection>
+        </OptionalPropertySection>
       )}
 
       {/* Decoration — underline/strike style dropdowns */}
       {hasStyleDropdowns && (
-        <PropertySection title="Decoration" defaultExpanded>
+        <OptionalPropertySection title="Decoration" defaultExpanded>
           <FieldRow>
             {showUnderlineStyle && (
               <FieldGroup label="U̲" inline labelWidth={20} style={{ flex: 1 }}>
@@ -368,12 +374,12 @@ export function TextFormattingEditor({
               </FieldGroup>
             )}
           </FieldRow>
-        </PropertySection>
+        </OptionalPropertySection>
       )}
 
       {/* Spacing — letter spacing + baseline + kerning */}
       {showSpacing && (
-        <PropertySection title="Spacing" defaultExpanded>
+        <OptionalPropertySection title="Spacing" defaultExpanded>
           <FieldRow>
             <FieldGroup label="Spacing" inline labelWidth={52} style={{ flex: 1 }}>
               <Input
@@ -410,7 +416,7 @@ export function TextFormattingEditor({
               max={999}
             />
           </FieldGroup>
-        </PropertySection>
+        </OptionalPropertySection>
       )}
 
       {/* Extras slot */}

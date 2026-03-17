@@ -5,7 +5,8 @@
  */
 
 import { useState, useCallback, type CSSProperties } from "react";
-import { Accordion, Input, Button, FieldGroup, Select, type SelectOption } from "@aurochs-ui/ui-components";
+import { Input, Button, FieldGroup, Select, type SelectOption } from "@aurochs-ui/ui-components";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { colorTokens, fontTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 import type { XlsxHyperlink } from "@aurochs-office/xlsx/domain/hyperlink";
 import type { CellAddress, CellRange } from "@aurochs-office/xlsx/domain/cell/address";
@@ -123,7 +124,7 @@ export function HyperlinkSection({
   }, [hyperlink]);
 
   return (
-    <Accordion title="Hyperlink" defaultExpanded={hasHyperlink}>
+    <OptionalPropertySection title="Hyperlink" defaultExpanded={hasHyperlink}>
       {isEditing ? (
         <>
           <FieldGroup label="Target Mode">
@@ -224,6 +225,6 @@ export function HyperlinkSection({
           </Button>
         </>
       )}
-    </Accordion>
+    </OptionalPropertySection>
   );
 }

@@ -87,6 +87,7 @@ export default [
         "custom/max-params": ["error", { max: 3 }],
         // Prohibit Node.js-only packages in browser code (must use .node.ts files)
         "custom/no-node-only-import": ["error", { packages: ["pngjs"] }],
+        // Prohibit direct Accordion/PropertySection in inspector panels; use OptionalPropertySection
         // Spread from modular groups
         ...rulesJSDoc,
         ...rulesRestrictedSyntax,

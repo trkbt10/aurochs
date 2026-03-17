@@ -75,7 +75,7 @@ describe("TextFormattingEditor", () => {
     const { fn: onChange } = createOnChange();
     render(<TextFormattingEditor value={defaultValue} onChange={onChange} />);
 
-    expect(screen.getByText("Font")).toBeDefined();
+    expect(screen.getAllByText("Font").length).toBeGreaterThanOrEqual(1);
   });
 
   it("uses custom color picker slot when provided", () => {

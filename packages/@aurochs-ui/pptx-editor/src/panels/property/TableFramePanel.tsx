@@ -6,7 +6,7 @@
 
 import type { GraphicFrame } from "@aurochs-office/pptx/domain/index";
 import type { Table } from "@aurochs-office/pptx/domain/table/types";
-import { Accordion } from "@aurochs-ui/ui-components/layout";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { NonVisualPropertiesEditor, TransformEditor, TableEditor } from "../../editors/index";
 
 // =============================================================================
@@ -44,19 +44,19 @@ export function TableFramePanel({ shape, table, onChange }: TableFramePanelProps
 
   return (
     <>
-      <Accordion title="Identity" defaultExpanded={false}>
+      <OptionalPropertySection title="Identity" defaultExpanded={false}>
         <NonVisualPropertiesEditor value={shape.nonVisual} onChange={(nv) => onChange({ ...shape, nonVisual: nv })} />
-      </Accordion>
+      </OptionalPropertySection>
 
-      <Accordion title="Transform" defaultExpanded={false}>
+      <OptionalPropertySection title="Transform" defaultExpanded={false}>
         {shape.transform && (
           <TransformEditor value={shape.transform} onChange={(transform) => onChange({ ...shape, transform })} />
         )}
-      </Accordion>
+      </OptionalPropertySection>
 
-      <Accordion title="Table" defaultExpanded>
+      <OptionalPropertySection title="Table" defaultExpanded>
         <TableEditor value={table} onChange={handleTableChange} />
-      </Accordion>
+      </OptionalPropertySection>
     </>
   );
 }

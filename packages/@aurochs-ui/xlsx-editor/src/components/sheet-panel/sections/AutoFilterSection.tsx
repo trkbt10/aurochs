@@ -6,7 +6,8 @@
  */
 
 import { useCallback, type CSSProperties } from "react";
-import { Accordion, Button, FieldGroup } from "@aurochs-ui/ui-components";
+import { Button, FieldGroup } from "@aurochs-ui/ui-components";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { colorTokens, fontTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 import type { XlsxAutoFilter } from "@aurochs-office/xlsx/domain/auto-filter";
 import { formatRange, type CellRange } from "@aurochs-office/xlsx/domain/cell/address";
@@ -69,7 +70,7 @@ export function AutoFilterSection({
   const activeFiltersCount = autoFilter?.filterColumns?.filter((c) => c.filter !== undefined).length ?? 0;
 
   return (
-    <Accordion title="Auto Filter" defaultExpanded={hasFilter}>
+    <OptionalPropertySection title="Auto Filter" defaultExpanded={hasFilter}>
       <div style={descriptionStyle}>
         Auto filter adds dropdown filters to column headers for quick data filtering.
       </div>
@@ -125,6 +126,6 @@ export function AutoFilterSection({
           )}
         </>
       )}
-    </Accordion>
+    </OptionalPropertySection>
   );
 }

@@ -8,7 +8,8 @@ import type { CSSProperties } from "react";
 import type { DiagramPoint, DiagramPropertySet } from "@aurochs-office/diagram/domain";
 import type { EditorProps } from "@aurochs-ui/ui-components/types";
 import { colorTokens, radiusTokens, spacingTokens, fontTokens } from "@aurochs-ui/ui-components/design-tokens";
-import { Accordion, FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
+import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { Input, Toggle } from "@aurochs-ui/ui-components/primitives";
 import type { DiagramEditorAdapters } from "./types";
 
@@ -198,21 +199,21 @@ export function DiagramPointEditor<TTextBody, TShapeProperties>({
       </div>
 
       {textBodyAdapter && textBody !== undefined && (
-        <Accordion title="Text Content" defaultExpanded>
+        <OptionalPropertySection title="Text Content" defaultExpanded>
           {textBodyAdapter.renderEditor({
             value: textBody,
             onChange: (next) => onChange({ ...value, textBody: next }),
             disabled,
           })}
-        </Accordion>
+        </OptionalPropertySection>
       )}
 
-      <Accordion title="Properties" defaultExpanded={false}>
+      <OptionalPropertySection title="Properties" defaultExpanded={false}>
         <PropertySetEditor propertySet={value.propertySet} onChange={handlePropertySetChange} disabled={disabled} />
-      </Accordion>
+      </OptionalPropertySection>
 
       {shapePropertiesAdapter && (
-        <Accordion title="Shape Properties" defaultExpanded={false}>
+        <OptionalPropertySection title="Shape Properties" defaultExpanded={false}>
           <Toggle
             checked={shapeProperties !== undefined}
             onChange={handleShapePropertiesToggle}
@@ -225,7 +226,7 @@ export function DiagramPointEditor<TTextBody, TShapeProperties>({
               onChange: (next) => onChange({ ...value, shapeProperties: next }),
               disabled,
             })}
-        </Accordion>
+        </OptionalPropertySection>
       )}
     </div>
   );

@@ -10,7 +10,7 @@ import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import type { SelectionState } from "../../context/slide/state";
 import type { ShapeHierarchyTarget } from "../../shape/hierarchy";
 import { LayerPanel } from "../LayerPanel";
-import { InspectorSection } from "@aurochs-ui/ui-components/layout";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 
 export type LayersTabProps = {
   /** Current slide */
@@ -61,7 +61,7 @@ export function LayersTab({
 }: LayersTabProps) {
   return (
     <div style={containerStyle}>
-      <InspectorSection title="Layers" badge={slide.shapes.length}>
+      <OptionalPropertySection title="Layers" badge={slide.shapes.length} defaultExpanded>
         <LayerPanel
           slide={slide}
           selection={selection}
@@ -74,7 +74,7 @@ export function LayersTab({
           onUpdateShapes={onUpdateShapes}
           onClearSelection={onClearSelection}
         />
-      </InspectorSection>
+      </OptionalPropertySection>
     </div>
   );
 }

@@ -8,7 +8,6 @@
 import type { GrpShape, Shape, GroupTransform } from "@aurochs-office/pptx/domain/index";
 import type { Transform } from "@aurochs-office/pptx/domain/types";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
-import { Accordion } from "@aurochs-ui/ui-components/layout";
 import { FieldGroup } from "@aurochs-ui/ui-components/layout";
 import {
   NonVisualPropertiesEditor,
@@ -212,11 +211,11 @@ export function GrpShapePanel({ shape, onChange, onUngroup, onSelectChild }: Grp
 
   return (
     <>
-      <Accordion title="Identity" defaultExpanded={false}>
+      <OptionalPropertySection title="Identity" defaultExpanded={false}>
         <NonVisualPropertiesEditor value={shape.nonVisual} onChange={(nv) => onChange({ ...shape, nonVisual: nv })} />
-      </Accordion>
+      </OptionalPropertySection>
 
-      <Accordion title="Group Info" defaultExpanded>
+      <OptionalPropertySection title="Group Info" defaultExpanded>
         <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
           {/* Ungroup button */}
           <button
@@ -256,7 +255,7 @@ export function GrpShapePanel({ shape, onChange, onUngroup, onSelectChild }: Grp
             </div>
           </FieldGroup>
         </div>
-      </Accordion>
+      </OptionalPropertySection>
 
       <OptionalPropertySection
         title="Transform"

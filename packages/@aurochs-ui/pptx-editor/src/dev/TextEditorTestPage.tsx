@@ -5,7 +5,8 @@
  */
 
 import { useMemo, useState } from "react";
-import { Accordion, FieldGroup, Panel } from "@aurochs-ui/ui-components/layout";
+import { FieldGroup, Panel } from "@aurochs-ui/ui-components/layout";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import {
   PixelsEditor,
   DegreesEditor,
@@ -356,43 +357,43 @@ export function TextEditorTestPage({ onBack }: TextEditorTestPageProps) {
                 </div>
               </Panel>
               <Panel title="Text Formatting" width="100%">
-                <Accordion title="Character" defaultExpanded>
+                <OptionalPropertySection title="Character" defaultExpanded>
                   <MixedRunPropertiesEditor
                     value={runProperties}
                     onChange={handleApplyRunProperties}
                     showSpacing={true}
                   />
-                </Accordion>
-                <Accordion title="Paragraph" defaultExpanded={false}>
+                </OptionalPropertySection>
+                <OptionalPropertySection title="Paragraph" defaultExpanded={false}>
                   <MixedParagraphPropertiesEditor
                     value={extractedProperties.paragraphProperties}
                     onChange={handleApplyParagraphProperties}
                     showSpacing={true}
                     showIndentation={true}
                   />
-                </Accordion>
-                <Accordion title="Text Fill" defaultExpanded={false}>
+                </OptionalPropertySection>
+                <OptionalPropertySection title="Text Fill" defaultExpanded={false}>
                   <FieldGroup label="Fill">
                     <FillEditor
                       value={fillValue ?? { type: "solidFill", color: createDefaultColor("000000") }}
                       onChange={(value) => handleApplyRunProperties({ fill: value })}
                     />
                   </FieldGroup>
-                </Accordion>
-                <Accordion title="Text Outline" defaultExpanded={false}>
+                </OptionalPropertySection>
+                <OptionalPropertySection title="Text Outline" defaultExpanded={false}>
                   <FieldGroup label="Outline">
                     <LineEditor
                       value={outlineValue ?? createDefaultLine()}
                       onChange={(value) => handleApplyRunProperties({ textOutline: value })}
                     />
                   </FieldGroup>
-                </Accordion>
-                <Accordion title="Text Effects" defaultExpanded={false}>
+                </OptionalPropertySection>
+                <OptionalPropertySection title="Text Effects" defaultExpanded={false}>
                   <EffectsEditor
                     value={effectiveRunProperties?.effects ?? createDefaultEffects()}
                     onChange={(value) => handleApplyRunProperties({ effects: value })}
                   />
-                </Accordion>
+                </OptionalPropertySection>
               </Panel>
             </div>
             <div className="pattern-info">Last commit</div>

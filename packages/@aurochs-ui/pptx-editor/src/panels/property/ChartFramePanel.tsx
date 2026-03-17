@@ -6,7 +6,7 @@
 
 import type { GraphicFrame } from "@aurochs-office/pptx/domain/index";
 import type { Chart } from "@aurochs-office/chart/domain";
-import { Accordion } from "@aurochs-ui/ui-components/layout";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { ChartEditor, ChartEditorAdaptersProvider } from "@aurochs-ui/chart-editor";
 import { pptxChartEditorAdapters } from "../../adapters";
 import { NonVisualPropertiesEditor, TransformEditor } from "../../editors/index";
@@ -46,21 +46,21 @@ export function ChartFramePanel({ shape, chart, onChange, onChartChange }: Chart
 
   return (
     <>
-      <Accordion title="Identity" defaultExpanded={false}>
+      <OptionalPropertySection title="Identity" defaultExpanded={false}>
         <NonVisualPropertiesEditor value={shape.nonVisual} onChange={(nv) => onChange({ ...shape, nonVisual: nv })} />
-      </Accordion>
+      </OptionalPropertySection>
 
-      <Accordion title="Transform" defaultExpanded={false}>
+      <OptionalPropertySection title="Transform" defaultExpanded={false}>
         {shape.transform && (
           <TransformEditor value={shape.transform} onChange={(transform) => onChange({ ...shape, transform })} />
         )}
-      </Accordion>
+      </OptionalPropertySection>
 
-      <Accordion title="Chart" defaultExpanded>
+      <OptionalPropertySection title="Chart" defaultExpanded>
         <ChartEditorAdaptersProvider adapters={pptxChartEditorAdapters}>
           <ChartEditor value={chart} onChange={handleChartChange} />
         </ChartEditorAdaptersProvider>
-      </Accordion>
+      </OptionalPropertySection>
     </>
   );
 }

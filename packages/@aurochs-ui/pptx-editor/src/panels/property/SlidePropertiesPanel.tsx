@@ -8,7 +8,7 @@ import { useCallback, type CSSProperties } from "react";
 import type { SlideSize, PresentationFile } from "@aurochs-office/pptx/domain";
 import type { Background } from "@aurochs-office/pptx/domain/slide/types";
 import type { SlideLayoutAttributes } from "@aurochs-office/pptx/parser/slide/layout-parser";
-import { Accordion } from "@aurochs-ui/ui-components/layout";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import type { SlideLayoutOption } from "@aurochs-office/pptx/app";
 import { BackgroundEditor, SlideLayoutEditor, SlideSizeEditor, createDefaultBackground } from "../../editors/index";
 import { Button } from "@aurochs-ui/ui-components/primitives";
@@ -83,21 +83,21 @@ export function SlidePropertiesPanel({
     <>
       {/* Slide Size - shown first as it's fundamental to the canvas */}
       {slideSize && onSlideSizeChange && (
-        <Accordion title="Slide Size" defaultExpanded>
+        <OptionalPropertySection title="Slide Size" defaultExpanded>
           <SlideSizeEditor value={slideSize} onChange={onSlideSizeChange} />
-        </Accordion>
+        </OptionalPropertySection>
       )}
 
-      <Accordion title="Slide Background" defaultExpanded={!slideSize}>
+      <OptionalPropertySection title="Slide Background" defaultExpanded={!slideSize}>
         <BackgroundContent
           background={background}
           onBackgroundChange={onBackgroundChange}
           onCreateBackground={handleCreateBackground}
           onRemoveBackground={handleRemoveBackground}
         />
-      </Accordion>
+      </OptionalPropertySection>
 
-      <Accordion title="Slide Layout" defaultExpanded={false}>
+      <OptionalPropertySection title="Slide Layout" defaultExpanded={false}>
         <LayoutContent
           layoutAttributes={layoutAttributes}
           layoutPath={layoutPath}
@@ -107,7 +107,7 @@ export function SlidePropertiesPanel({
           slideSize={slideSize}
           presentationFile={presentationFile}
         />
-      </Accordion>
+      </OptionalPropertySection>
     </>
   );
 }

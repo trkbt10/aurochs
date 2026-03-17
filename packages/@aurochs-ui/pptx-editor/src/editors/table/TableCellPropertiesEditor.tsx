@@ -7,7 +7,8 @@
 
 import { useCallback, useState, type CSSProperties } from "react";
 import { Select, Toggle, Input, Button } from "@aurochs-ui/ui-components/primitives";
-import { Accordion, FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
+import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { PixelsEditor } from "../primitives/PixelsEditor";
 import { FillEditor, createNoFill } from "../color/FillEditor";
 import { LineEditor, createDefaultLine } from "../../ui/line";
@@ -329,7 +330,7 @@ export function TableCellPropertiesEditor({
       </FieldRow>
 
       {/* Margins */}
-      <Accordion title="Margins" defaultExpanded={!!value.margins}>
+      <OptionalPropertySection title="Margins" defaultExpanded={!!value.margins}>
         <FieldRow>
           <FieldGroup label="Left" style={fieldStyle}>
             <PixelsEditor
@@ -366,20 +367,20 @@ export function TableCellPropertiesEditor({
             />
           </FieldGroup>
         </FieldRow>
-      </Accordion>
+      </OptionalPropertySection>
 
       {/* Fill */}
-      <Accordion title="Fill" defaultExpanded={!!value.fill}>
+      <OptionalPropertySection title="Fill" defaultExpanded={!!value.fill}>
         <FillEditor
           value={value.fill ?? createNoFill()}
           onChange={(fill) => updateField("fill", fill.type === "noFill" ? undefined : fill)}
           disabled={disabled}
           allowedTypes={["noFill", "solidFill", "gradientFill", "patternFill"]}
         />
-      </Accordion>
+      </OptionalPropertySection>
 
       {/* Borders */}
-      <Accordion title="Borders" defaultExpanded={!!value.borders}>
+      <OptionalPropertySection title="Borders" defaultExpanded={!!value.borders}>
         <FieldGroup label="Border Style">
           <LineEditor value={borderStyle} onChange={setBorderStyle} disabled={disabled} showEnds={false} />
         </FieldGroup>
@@ -394,11 +395,11 @@ export function TableCellPropertiesEditor({
             クリア
           </Button>
         </div>
-      </Accordion>
+      </OptionalPropertySection>
 
       {/* 3D Effects */}
       {showCell3d && (
-        <Accordion title="3D Effects" defaultExpanded={!!value.cell3d}>
+        <OptionalPropertySection title="3D Effects" defaultExpanded={!!value.cell3d}>
           <Toggle
             checked={!!value.cell3d}
             onChange={handleToggle3d}
@@ -416,7 +417,7 @@ export function TableCellPropertiesEditor({
                 />
               </FieldGroup>
 
-              <Accordion title="Bevel" defaultExpanded={!!cell3d.bevel}>
+              <OptionalPropertySection title="Bevel" defaultExpanded={!!cell3d.bevel}>
                 <Toggle
                   checked={!!cell3d.bevel}
                   onChange={(enabled) => {
@@ -470,9 +471,9 @@ export function TableCellPropertiesEditor({
                     </FieldRow>
                   </>
                 )}
-              </Accordion>
+              </OptionalPropertySection>
 
-              <Accordion title="Light Rig" defaultExpanded={!!cell3d.lightRig}>
+              <OptionalPropertySection title="Light Rig" defaultExpanded={!!cell3d.lightRig}>
                 <Toggle
                   checked={!!cell3d.lightRig}
                   onChange={(enabled) => {
@@ -511,15 +512,15 @@ export function TableCellPropertiesEditor({
                     </FieldGroup>
                   </>
                 )}
-              </Accordion>
+              </OptionalPropertySection>
             </>
           )}
-        </Accordion>
+        </OptionalPropertySection>
       )}
 
       {/* Headers (Accessibility) */}
       {showHeaders && (
-        <Accordion title="Headers (Accessibility)" defaultExpanded={!!value.headers}>
+        <OptionalPropertySection title="Headers (Accessibility)" defaultExpanded={!!value.headers}>
           <div style={headerListStyle}>
             {headers.map((header, index) => (
               <div key={index} style={headerItemStyle}>
@@ -539,12 +540,12 @@ export function TableCellPropertiesEditor({
               Add Header
             </Button>
           </div>
-        </Accordion>
+        </OptionalPropertySection>
       )}
 
       {/* Span Options */}
       {showSpanOptions && (
-        <Accordion title="Cell Span" defaultExpanded={!!(value.rowSpan || value.colSpan)}>
+        <OptionalPropertySection title="Cell Span" defaultExpanded={!!(value.rowSpan || value.colSpan)}>
           <FieldRow>
             <FieldGroup label="Row Span" style={fieldStyle}>
               <Input
@@ -569,12 +570,12 @@ export function TableCellPropertiesEditor({
               />
             </FieldGroup>
           </FieldRow>
-        </Accordion>
+        </OptionalPropertySection>
       )}
 
       {/* Merge Options */}
       {showMergeOptions && (
-        <Accordion title="Merge Status" defaultExpanded={!!(value.horizontalMerge || value.verticalMerge)}>
+        <OptionalPropertySection title="Merge Status" defaultExpanded={!!(value.horizontalMerge || value.verticalMerge)}>
           <Toggle
             checked={value.horizontalMerge ?? false}
             onChange={(v) => updateField("horizontalMerge", v || undefined)}
@@ -587,7 +588,7 @@ export function TableCellPropertiesEditor({
             label="Vertical Merge (continuation)"
             disabled={disabled}
           />
-        </Accordion>
+        </OptionalPropertySection>
       )}
     </div>
   );

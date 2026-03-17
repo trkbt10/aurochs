@@ -6,7 +6,8 @@
  */
 
 import { useCallback, useMemo, type CSSProperties } from "react";
-import { Accordion, Toggle, FieldGroup, FieldRow, Button } from "@aurochs-ui/ui-components";
+import { Toggle, FieldGroup, FieldRow, Button } from "@aurochs-ui/ui-components";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { colorTokens, fontTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 import type { XlsxWorkbookProtection } from "@aurochs-office/xlsx/domain/protection";
 
@@ -62,7 +63,7 @@ export function WorkbookProtectionSection({
   }, [onProtectionChange]);
 
   return (
-    <Accordion title="Workbook Protection" defaultExpanded={isProtected}>
+    <OptionalPropertySection title="Workbook Protection" defaultExpanded={isProtected}>
       <div style={descriptionStyle}>
         Protect the workbook structure to prevent adding, deleting, or moving sheets.
       </div>
@@ -104,6 +105,6 @@ export function WorkbookProtectionSection({
           </div>
         </>
       )}
-    </Accordion>
+    </OptionalPropertySection>
   );
 }

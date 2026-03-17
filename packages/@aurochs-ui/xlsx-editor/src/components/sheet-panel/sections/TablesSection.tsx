@@ -5,7 +5,8 @@
  */
 
 import { useState, useCallback, useMemo, type CSSProperties } from "react";
-import { Accordion, Button, FieldGroup, Input, Toggle } from "@aurochs-ui/ui-components";
+import { Button, FieldGroup, Input, Toggle } from "@aurochs-ui/ui-components";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { colorTokens, fontTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 import type { XlsxTable } from "@aurochs-office/xlsx/domain/table/types";
 import { formatRange, type CellRange } from "@aurochs-office/xlsx/domain/cell/address";
@@ -115,7 +116,7 @@ export function TablesSection({
   );
 
   return (
-    <Accordion title="Tables" defaultExpanded={hasTables || isCreating}>
+    <OptionalPropertySection title="Tables" defaultExpanded={hasTables || isCreating}>
       <div style={descriptionStyle}>
         Convert a range of cells into a table for easier data management.
       </div>
@@ -203,6 +204,6 @@ export function TablesSection({
           )}
         </>
       )}
-    </Accordion>
+    </OptionalPropertySection>
   );
 }

@@ -6,7 +6,6 @@
  */
 
 import type { CxnShape } from "@aurochs-office/pptx/domain/index";
-import { Accordion } from "@aurochs-ui/ui-components/layout";
 import { FieldGroup } from "@aurochs-ui/ui-components/layout";
 import { LineEditor, createDefaultLine } from "../../ui/line";
 import {
@@ -128,11 +127,11 @@ export function CxnShapePanel({ shape, onChange }: CxnShapePanelProps) {
 
   return (
     <>
-      <Accordion title="Identity" defaultExpanded={false}>
+      <OptionalPropertySection title="Identity" defaultExpanded={false}>
         <NonVisualPropertiesEditor value={shape.nonVisual} onChange={(nv) => onChange({ ...shape, nonVisual: nv })} />
-      </Accordion>
+      </OptionalPropertySection>
 
-      <Accordion title="Connections" defaultExpanded={false}>
+      <OptionalPropertySection title="Connections" defaultExpanded={false}>
         <FieldGroup label="Connection Points">
           <div
             style={{
@@ -153,7 +152,7 @@ export function CxnShapePanel({ shape, onChange }: CxnShapePanelProps) {
             <ConnectionRow label="End" connection={shape.nonVisual.endConnection} onClear={handleClearEndConnection} />
           </div>
         </FieldGroup>
-      </Accordion>
+      </OptionalPropertySection>
 
       <OptionalPropertySection
         title="Transform"

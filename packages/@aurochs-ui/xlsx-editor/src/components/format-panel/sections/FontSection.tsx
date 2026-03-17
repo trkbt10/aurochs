@@ -5,7 +5,7 @@
  */
 
 import { useCallback } from "react";
-import { Accordion } from "@aurochs-ui/ui-components";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { TextFormattingEditor } from "@aurochs-ui/editor-controls/text";
 import type { TextFormatting } from "@aurochs-ui/editor-controls/text";
 import type { MixedContext } from "@aurochs-ui/editor-controls/mixed-state";
@@ -47,7 +47,7 @@ export function FontSection(props: FontSectionProps) {
   );
 
   return (
-    <Accordion title="Font" defaultExpanded>
+    <OptionalPropertySection title="Font" defaultExpanded>
       <TextFormattingEditor
         value={generic}
         onChange={handleChange}
@@ -63,6 +63,6 @@ export function FontSection(props: FontSectionProps) {
           />
         )}
       />
-    </Accordion>
+    </OptionalPropertySection>
   );
 }

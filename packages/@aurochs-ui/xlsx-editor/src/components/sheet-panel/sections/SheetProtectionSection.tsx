@@ -6,7 +6,8 @@
  */
 
 import { useCallback, useMemo, type CSSProperties } from "react";
-import { Accordion, Toggle, FieldGroup, FieldRow, Button } from "@aurochs-ui/ui-components";
+import { Toggle, FieldGroup, FieldRow, Button } from "@aurochs-ui/ui-components";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { colorTokens, fontTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 import type { XlsxSheetProtection } from "@aurochs-office/xlsx/domain/protection";
 
@@ -76,7 +77,7 @@ export function SheetProtectionSection({
   }, [onProtectionChange]);
 
   return (
-    <Accordion title="Sheet Protection" defaultExpanded={isProtected}>
+    <OptionalPropertySection title="Sheet Protection" defaultExpanded={isProtected}>
       <div style={descriptionStyle}>
         When protected, only allowed operations can be performed on this sheet.
       </div>
@@ -238,6 +239,6 @@ export function SheetProtectionSection({
           </div>
         </>
       )}
-    </Accordion>
+    </OptionalPropertySection>
   );
 }

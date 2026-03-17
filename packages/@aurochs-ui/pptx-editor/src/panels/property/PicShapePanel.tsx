@@ -7,7 +7,6 @@
 
 import type { PicShape } from "@aurochs-office/pptx/domain/index";
 import type { Percent } from "@aurochs-office/drawing-ml/domain/units";
-import { Accordion } from "@aurochs-ui/ui-components/layout";
 import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
 import { Toggle } from "@aurochs-ui/ui-components/primitives";
 import {
@@ -114,13 +113,13 @@ export function PicShapePanel({ shape, onChange }: PicShapePanelProps) {
 
   return (
     <>
-      <Accordion title="Identity" defaultExpanded={false}>
+      <OptionalPropertySection title="Identity" defaultExpanded={false}>
         <NonVisualPropertiesEditor value={shape.nonVisual} onChange={(nv) => onChange({ ...shape, nonVisual: nv })} />
-      </Accordion>
+      </OptionalPropertySection>
 
       {/* Media Info */}
       {hasMediaInfo && (
-        <Accordion title="Media Info" defaultExpanded={false}>
+        <OptionalPropertySection title="Media Info" defaultExpanded={false}>
           <div
             style={{
               padding: "8px 12px",
@@ -188,7 +187,7 @@ export function PicShapePanel({ shape, onChange }: PicShapePanelProps) {
               </div>
             )}
           </div>
-        </Accordion>
+        </OptionalPropertySection>
       )}
 
       <OptionalPropertySection
@@ -200,7 +199,7 @@ export function PicShapePanel({ shape, onChange }: PicShapePanelProps) {
         defaultExpanded
       />
 
-      <Accordion title="Crop (Source Rect)" defaultExpanded={false}>
+      <OptionalPropertySection title="Crop (Source Rect)" defaultExpanded={false}>
         <FieldRow>
           <FieldGroup label="L" inline labelWidth={16} style={{ flex: 1 }}>
             <PercentEditor
@@ -252,7 +251,7 @@ export function PicShapePanel({ shape, onChange }: PicShapePanelProps) {
             label="Rotate"
           />
         </FieldRow>
-      </Accordion>
+      </OptionalPropertySection>
 
       <OptionalPropertySection
         title="Effects"

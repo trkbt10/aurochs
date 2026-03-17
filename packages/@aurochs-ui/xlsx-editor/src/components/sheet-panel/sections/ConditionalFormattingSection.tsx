@@ -6,7 +6,8 @@
  */
 
 import { useState, useCallback, useMemo, type CSSProperties } from "react";
-import { Accordion, Button, FieldGroup, Input, Select, type SelectOption } from "@aurochs-ui/ui-components";
+import { Button, FieldGroup, Input, Select, type SelectOption } from "@aurochs-ui/ui-components";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { colorTokens, fontTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 import type {
   XlsxConditionalFormatting,
@@ -212,7 +213,7 @@ export function ConditionalFormattingSection({
   const needsSecondValue = needsOperator && (draftOperator === "between" || draftOperator === "notBetween");
 
   return (
-    <Accordion title="Conditional Formatting" defaultExpanded={hasFormattings || isAdding}>
+    <OptionalPropertySection title="Conditional Formatting" defaultExpanded={hasFormattings || isAdding}>
       <div style={descriptionStyle}>
         Highlight cells based on their values or formulas.
       </div>
@@ -324,6 +325,6 @@ export function ConditionalFormattingSection({
           )}
         </>
       )}
-    </Accordion>
+    </OptionalPropertySection>
   );
 }

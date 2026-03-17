@@ -5,7 +5,8 @@
  */
 
 import { useState, useCallback, useMemo, type CSSProperties } from "react";
-import { Accordion, Button, FieldGroup, Input, FieldRow } from "@aurochs-ui/ui-components";
+import { Button, FieldGroup, Input, FieldRow } from "@aurochs-ui/ui-components";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { colorTokens, fontTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 import type { XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
 import type { CellRange } from "@aurochs-office/xlsx/domain/cell/address";
@@ -216,7 +217,7 @@ export function RowColumnSizeSection({
     : "No selection";
 
   return (
-    <Accordion title="Row/Column Size" defaultExpanded={false}>
+    <OptionalPropertySection title="Row/Column Size" defaultExpanded={false}>
       <div style={descriptionStyle}>
         Adjust the height of rows and width of columns in the selected range.
       </div>
@@ -308,6 +309,6 @@ export function RowColumnSizeSection({
           </div>
         </>
       )}
-    </Accordion>
+    </OptionalPropertySection>
   );
 }

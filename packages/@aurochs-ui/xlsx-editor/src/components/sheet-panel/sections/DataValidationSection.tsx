@@ -6,7 +6,8 @@
  */
 
 import { useState, useCallback, useMemo, type CSSProperties } from "react";
-import { Accordion, Button, FieldGroup, Input, Select, Toggle, type SelectOption } from "@aurochs-ui/ui-components";
+import { Button, FieldGroup, Input, Select, Toggle, type SelectOption } from "@aurochs-ui/ui-components";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { colorTokens, fontTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 import type {
   XlsxDataValidation,
@@ -186,7 +187,7 @@ export function DataValidationSection({
   const needsSecondFormula = needsOperator && (draftOperator === "between" || draftOperator === "notBetween");
 
   return (
-    <Accordion title="Data Validation" defaultExpanded={hasValidations || isAdding}>
+    <OptionalPropertySection title="Data Validation" defaultExpanded={hasValidations || isAdding}>
       <div style={descriptionStyle}>
         Restrict the type of data or values that users enter into cells.
       </div>
@@ -311,6 +312,6 @@ export function DataValidationSection({
           )}
         </>
       )}
-    </Accordion>
+    </OptionalPropertySection>
   );
 }

@@ -205,14 +205,10 @@ export {
 
 // Layout
 export {
-  Accordion,
-  type AccordionProps,
   FieldGroup,
   type FieldGroupProps,
   FieldRow,
   type FieldRowProps,
-  InspectorSection,
-  type InspectorSectionProps,
   Panel,
   type PanelProps,
   Section,

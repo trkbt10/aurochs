@@ -5,7 +5,8 @@
  */
 
 import { useCallback, type CSSProperties } from "react";
-import { Accordion, FieldGroup } from "@aurochs-ui/ui-components/layout";
+import { FieldGroup } from "@aurochs-ui/ui-components/layout";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { Input } from "@aurochs-ui/ui-components/primitives";
 import { TextBodyEditor, createDefaultTextBody } from "../text/TextBodyEditor";
 import { TableCellPropertiesEditor, createDefaultTableCellProperties } from "./TableCellPropertiesEditor";
@@ -77,15 +78,15 @@ export function TableCellEditor({
       )}
 
       {/* Cell Properties */}
-      <Accordion title="Cell Properties" defaultExpanded>
+      <OptionalPropertySection title="Cell Properties" defaultExpanded>
         <TableCellPropertiesEditor value={value.properties} onChange={handlePropertiesChange} disabled={disabled} />
-      </Accordion>
+      </OptionalPropertySection>
 
       {/* Text Content */}
       {showTextBody && value.textBody && (
-        <Accordion title="Text Content" defaultExpanded>
+        <OptionalPropertySection title="Text Content" defaultExpanded>
           <TextBodyEditor value={value.textBody} onChange={handleTextBodyChange} disabled={disabled} />
-        </Accordion>
+        </OptionalPropertySection>
       )}
     </div>
   );

@@ -12,7 +12,8 @@
 import { useCallback, type CSSProperties } from "react";
 import { spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { Input, Select, Toggle } from "@aurochs-ui/ui-components/primitives";
-import { Accordion, FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
+import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { PercentEditor } from "../primitives";
 import { TextBodyEditor, createDefaultTextBody } from "../text";
 import { ChartShapePropertiesEditor } from "./ChartShapePropertiesEditor";
@@ -336,44 +337,44 @@ export function AxisEditor({ value, onChange, disabled, className, style, adapte
         </>
 
         {/* Title */}
-        <Accordion title="Axis Title" defaultExpanded={false}>
+        <OptionalPropertySection title="Axis Title" defaultExpanded={false}>
           <ChartTitleEditor value={value.title} onChange={handleTitleChange} disabled={disabled} />
-        </Accordion>
+        </OptionalPropertySection>
 
         {/* Gridlines */}
-        <Accordion title="Major Gridlines" defaultExpanded={false}>
+        <OptionalPropertySection title="Major Gridlines" defaultExpanded={false}>
           <ChartShapePropertiesEditor
             value={value.majorGridlines?.shapeProperties}
             onChange={handleMajorGridlinesChange}
             disabled={disabled}
           />
-        </Accordion>
+        </OptionalPropertySection>
 
-        <Accordion title="Minor Gridlines" defaultExpanded={false}>
+        <OptionalPropertySection title="Minor Gridlines" defaultExpanded={false}>
           <ChartShapePropertiesEditor
             value={value.minorGridlines?.shapeProperties}
             onChange={handleMinorGridlinesChange}
             disabled={disabled}
           />
-        </Accordion>
+        </OptionalPropertySection>
 
         {/* Shape Properties */}
-        <Accordion title="Shape Properties" defaultExpanded={false}>
+        <OptionalPropertySection title="Shape Properties" defaultExpanded={false}>
           <ChartShapePropertiesEditor
             value={value.shapeProperties}
             onChange={handleShapePropertiesChange}
             disabled={disabled}
           />
-        </Accordion>
+        </OptionalPropertySection>
 
         {/* Text Properties */}
-        <Accordion title="Text Properties" defaultExpanded={false}>
+        <OptionalPropertySection title="Text Properties" defaultExpanded={false}>
           <TextBodyEditor
             value={value.textProperties ?? createDefaultTextBody()}
             onChange={handleTextPropertiesChange}
             disabled={disabled}
           />
-        </Accordion>
+        </OptionalPropertySection>
 
         {/* Category Axis specific settings */}
         {value.type === "catAx" && (
@@ -500,7 +501,7 @@ export function AxisEditor({ value, onChange, disabled, className, style, adapte
             </FieldRow>
 
             {/* Display Units */}
-            <Accordion title="Display Units" defaultExpanded={false}>
+            <OptionalPropertySection title="Display Units" defaultExpanded={false}>
               <FieldRow>
                 <FieldGroup label="Built-in Unit" style={{ flex: 1 }}>
                   <Select
@@ -519,14 +520,14 @@ export function AxisEditor({ value, onChange, disabled, className, style, adapte
                   />
                 </FieldGroup>
               </FieldRow>
-              <Accordion title="Display Units Label" defaultExpanded={false}>
+              <OptionalPropertySection title="Display Units Label" defaultExpanded={false}>
                 <ChartTitleEditor
                   value={(value as ValueAxis).dispUnits?.dispUnitsLbl}
                   onChange={(title) => handleDispUnitsChange("dispUnitsLbl", title)}
                   disabled={disabled}
                 />
-              </Accordion>
-            </Accordion>
+              </OptionalPropertySection>
+            </OptionalPropertySection>
           </>
         )}
 

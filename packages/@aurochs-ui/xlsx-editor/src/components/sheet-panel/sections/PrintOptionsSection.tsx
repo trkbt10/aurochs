@@ -5,7 +5,8 @@
  */
 
 import { useCallback, useMemo } from "react";
-import { Accordion, Toggle, FieldGroup, FieldRow } from "@aurochs-ui/ui-components";
+import { Toggle, FieldGroup, FieldRow } from "@aurochs-ui/ui-components";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import type { XlsxPrintOptions } from "@aurochs-office/xlsx/domain/page-setup";
 
 export type PrintOptionsSectionProps = {
@@ -28,7 +29,7 @@ export function PrintOptionsSection({ disabled, printOptions, onPrintOptionsChan
   );
 
   return (
-    <Accordion title="Print Options" defaultExpanded={false}>
+    <OptionalPropertySection title="Print Options" defaultExpanded={false}>
       <FieldRow>
         <FieldGroup label="Grid Lines" inline labelWidth={80}>
           <Toggle
@@ -62,6 +63,6 @@ export function PrintOptionsSection({ disabled, printOptions, onPrintOptionsChan
           />
         </FieldGroup>
       </FieldRow>
-    </Accordion>
+    </OptionalPropertySection>
   );
 }

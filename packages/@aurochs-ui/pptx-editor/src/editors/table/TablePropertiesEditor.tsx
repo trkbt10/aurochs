@@ -7,7 +7,8 @@
 
 import { useCallback, type CSSProperties } from "react";
 import { Toggle, Input } from "@aurochs-ui/ui-components/primitives";
-import { Accordion, FieldGroup } from "@aurochs-ui/ui-components/layout";
+import { FieldGroup } from "@aurochs-ui/ui-components/layout";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { FillEditor, createNoFill } from "../color/FillEditor";
 import { EffectsEditor, createDefaultEffects } from "../shape/EffectsEditor";
 import { TableStyleBandsEditor } from "@aurochs-ui/editor-controls/table";
@@ -82,27 +83,27 @@ export function TablePropertiesEditor({
       />
 
       {/* Style Options - uses shared editor */}
-      <Accordion title="Style Options" defaultExpanded>
+      <OptionalPropertySection title="Style Options" defaultExpanded>
         <TableStyleBandsEditor
           value={pptxTableAdapter.toGeneric(value)}
           onChange={handleBandsChange}
           disabled={disabled}
         />
-      </Accordion>
+      </OptionalPropertySection>
 
       {/* Fill */}
-      <Accordion title="Background Fill" defaultExpanded={!!value.fill}>
+      <OptionalPropertySection title="Background Fill" defaultExpanded={!!value.fill}>
         <FillEditor
           value={value.fill ?? createNoFill()}
           onChange={(fill) => updateField("fill", fill.type === "noFill" ? undefined : fill)}
           disabled={disabled}
           allowedTypes={["noFill", "solidFill", "gradientFill", "patternFill"]}
         />
-      </Accordion>
+      </OptionalPropertySection>
 
       {/* Effects */}
       {showEffects && (
-        <Accordion title="Effects" defaultExpanded={!!value.effects}>
+        <OptionalPropertySection title="Effects" defaultExpanded={!!value.effects}>
           <EffectsEditor
             value={value.effects ?? createDefaultEffects()}
             onChange={(effects) => {
@@ -111,7 +112,7 @@ export function TablePropertiesEditor({
             }}
             disabled={disabled}
           />
-        </Accordion>
+        </OptionalPropertySection>
       )}
     </div>
   );

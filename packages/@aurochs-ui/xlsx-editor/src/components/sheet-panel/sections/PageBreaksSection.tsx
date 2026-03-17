@@ -5,7 +5,8 @@
  */
 
 import { useCallback, useMemo, useState, type CSSProperties } from "react";
-import { Accordion, Input, Button, FieldGroup, FieldRow } from "@aurochs-ui/ui-components";
+import { Input, Button, FieldGroup, FieldRow } from "@aurochs-ui/ui-components";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { colorTokens, fontTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 import type { XlsxPageBreaks, XlsxPageBreak } from "@aurochs-office/xlsx/domain/page-breaks";
 
@@ -103,7 +104,7 @@ export function PageBreaksSection({ disabled, pageBreaks, onPageBreaksChange }: 
   );
 
   return (
-    <Accordion title="Page Breaks" defaultExpanded={false}>
+    <OptionalPropertySection title="Page Breaks" defaultExpanded={false}>
       {/* Row Breaks */}
       <div style={subsectionStyle}>
         <div style={subsectionTitleStyle}>Row Breaks (Horizontal)</div>
@@ -169,6 +170,6 @@ export function PageBreaksSection({ disabled, pageBreaks, onPageBreaksChange }: 
           </Button>
         </FieldRow>
       </div>
-    </Accordion>
+    </OptionalPropertySection>
   );
 }

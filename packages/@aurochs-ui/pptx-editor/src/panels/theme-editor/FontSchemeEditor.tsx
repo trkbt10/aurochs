@@ -6,7 +6,7 @@
 
 import { useCallback, type CSSProperties } from "react";
 import type { FontScheme, FontSpec } from "@aurochs-office/ooxml/domain/font-scheme";
-import { InspectorSection, Accordion } from "@aurochs-ui/ui-components/layout";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { Input } from "@aurochs-ui/ui-components/primitives/Input";
 import { colorTokens, fontTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 
@@ -83,7 +83,7 @@ function FontSpecEditor({ title, fontSpec, onChange, disabled }: FontSpecEditorP
   );
 
   return (
-    <Accordion title={title} defaultExpanded>
+    <OptionalPropertySection title={title} defaultExpanded>
       <div style={fontSectionStyle}>
         <div style={fontRowStyle}>
           <span style={fontLabelStyle}>Latin</span>
@@ -116,7 +116,7 @@ function FontSpecEditor({ title, fontSpec, onChange, disabled }: FontSpecEditorP
           />
         </div>
       </div>
-    </Accordion>
+    </OptionalPropertySection>
   );
 }
 
@@ -138,16 +138,16 @@ export function FontSchemeEditor({
   if (!fontScheme) {
     return (
       <div style={containerStyle}>
-        <InspectorSection title="Font Scheme">
+        <OptionalPropertySection title="Font Scheme" defaultExpanded>
           <div style={emptyStateStyle}>No font scheme defined</div>
-        </InspectorSection>
+        </OptionalPropertySection>
       </div>
     );
   }
 
   return (
     <div style={containerStyle}>
-      <InspectorSection title="Font Scheme">
+      <OptionalPropertySection title="Font Scheme" defaultExpanded>
         <FontSpecEditor
           title="Major Font (Headings)"
           fontSpec={fontScheme.majorFont}
@@ -160,7 +160,7 @@ export function FontSchemeEditor({
           onChange={onMinorFontChange}
           disabled={disabled}
         />
-      </InspectorSection>
+      </OptionalPropertySection>
     </div>
   );
 }

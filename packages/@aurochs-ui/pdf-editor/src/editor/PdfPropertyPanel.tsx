@@ -11,10 +11,9 @@ import { useCallback, useMemo, type CSSProperties } from "react";
 import type { PdfElement } from "@aurochs/pdf";
 import { PositionSection } from "react-editor-ui/sections/PositionSection";
 import { SizeSection } from "react-editor-ui/sections/SizeSection";
-import { PropertySection } from "react-editor-ui/PropertySection";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { FillFormattingEditor } from "@aurochs-ui/editor-controls/surface";
 import { OutlineFormattingEditor } from "@aurochs-ui/editor-controls/surface";
-import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { TextFormattingEditor } from "@aurochs-ui/editor-controls/text";
 import type { TextFormatting } from "@aurochs-ui/editor-controls/text";
 import type { FillFormatting, OutlineFormatting } from "@aurochs-ui/editor-controls/surface";
@@ -134,24 +133,20 @@ export function PdfPropertyPanel({ element, elementId, bounds: svgBounds, pageHe
 
   return (
     <div style={{ ...containerStyle, ...style }}>
-      {/* Position (react-editor-ui PositionSection) — all element types */}
-      <PositionSection
-        data={{ x: String(svgBounds.x.toFixed(1)), y: String(svgBounds.y.toFixed(1)) }}
-        onChange={canEdit ? handlePositionChange : noop}
-      />
-
-      {/* Size (react-editor-ui SizeSection) — all element types */}
-      <SizeSection
-        data={{ width: String(svgBounds.width.toFixed(1)), height: String(svgBounds.height.toFixed(1)) }}
-        onChange={canEdit ? handleSizeChange : noop}
-      />
-
-      {/* Rotation (read-only display, editing done via rotate handle) */}
-      {svgBounds.rotation !== 0 && (
-        <PropertySection title="Rotation" defaultExpanded>
-          <div style={{ padding: "4px 12px", fontSize: 11 }}>{svgBounds.rotation.toFixed(1)}&deg;</div>
-        </PropertySection>
-      )}
+      {/* Transform: position, size, rotation */}
+      <OptionalPropertySection title="Transform" defaultExpanded>
+        <PositionSection
+          data={{ x: String(svgBounds.x.toFixed(1)), y: String(svgBounds.y.toFixed(1)) }}
+          onChange={canEdit ? handlePositionChange : noop}
+        />
+        <SizeSection
+          data={{ width: String(svgBounds.width.toFixed(1)), height: String(svgBounds.height.toFixed(1)) }}
+          onChange={canEdit ? handleSizeChange : noop}
+        />
+        {svgBounds.rotation !== 0 && (
+          <div style={{ fontSize: 11 }}>Rotation: {svgBounds.rotation.toFixed(1)}&deg;</div>
+        )}
+      </OptionalPropertySection>
 
       {/* Text formatting (shared TextFormattingEditor) */}
       {element.type === "text" && (
@@ -167,11 +162,9 @@ export function PdfPropertyPanel({ element, elementId, bounds: svgBounds, pageHe
 
       {/* Image dimensions info */}
       {element.type === "image" && (
-        <PropertySection title="Image" defaultExpanded>
-          <div style={{ padding: "8px 0", fontSize: 11 }}>
-            <div>Pixels: {element.width} x {element.height}</div>
-          </div>
-        </PropertySection>
+        <OptionalPropertySection title="Image" defaultExpanded>
+          <div style={{ fontSize: 11 }}>Pixels: {element.width} x {element.height}</div>
+        </OptionalPropertySection>
       )}
 
       {/* Fill (shared FillFormattingEditor via OptionalPropertySection pattern) */}

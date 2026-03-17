@@ -16,6 +16,7 @@ export {
   editorShellTokens,
   fieldLabelTokens,
   fieldContainerTokens,
+  inspectorTokens,
   type Tokens,
   type ColorTokens,
   type ShadowTokens,

@@ -8,7 +8,7 @@ import { useCallback, useState, type CSSProperties, type KeyboardEvent, type Rea
 import type { DiagramDataModel, DiagramPoint, DiagramConnection } from "@aurochs-office/diagram/domain";
 import type { EditorProps } from "@aurochs-ui/ui-components/types";
 import { colorTokens, radiusTokens, spacingTokens, fontTokens } from "@aurochs-ui/ui-components/design-tokens";
-import { Accordion } from "@aurochs-ui/ui-components/layout";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { Button } from "@aurochs-ui/ui-components/primitives";
 import type { DiagramEditorAdapters } from "./types";
 import { extractPlainTextFromTextBody } from "./text-body";
@@ -224,7 +224,7 @@ export function DiagramEditor<TTextBody, TShapeProperties>({
 
   return (
     <div style={{ ...containerStyle, ...style }} className={className}>
-      <Accordion title="Points" defaultExpanded>
+      <OptionalPropertySection title="Points" defaultExpanded>
         <PointGrid
           points={value.points}
           selectedIndex={selectedPointIndex}
@@ -240,20 +240,20 @@ export function DiagramEditor<TTextBody, TShapeProperties>({
             Delete Point
           </Button>
         </div>
-      </Accordion>
+      </OptionalPropertySection>
 
       {selectedPoint && (
-        <Accordion title="Selected Point" defaultExpanded>
+        <OptionalPropertySection title="Selected Point" defaultExpanded>
           <DiagramPointEditor
             value={selectedPoint}
             onChange={handlePointChange}
             disabled={disabled}
             adapters={adapters}
           />
-        </Accordion>
+        </OptionalPropertySection>
       )}
 
-      <Accordion title="Connections" defaultExpanded={false}>
+      <OptionalPropertySection title="Connections" defaultExpanded={false}>
         {connectionsContent}
 
         <div style={buttonRowStyle}>
@@ -261,7 +261,7 @@ export function DiagramEditor<TTextBody, TShapeProperties>({
             Add Connection
           </Button>
         </div>
-      </Accordion>
+      </OptionalPropertySection>
     </div>
   );
 }

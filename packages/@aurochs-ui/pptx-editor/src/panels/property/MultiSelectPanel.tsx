@@ -12,7 +12,7 @@ import type { Transform } from "@aurochs-office/pptx/domain/types";
 import type { Fill, Line } from "@aurochs-office/pptx/domain/color/types";
 import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
 import { type ShapeId } from "@aurochs-office/pptx/domain/types";
-import { Accordion } from "@aurochs-ui/ui-components/layout";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { Input } from "@aurochs-ui/ui-components/primitives";
 import { FillEditor } from "../../editors/color/FillEditor";
 import { LineEditor } from "../../ui/line";
@@ -141,7 +141,7 @@ function MultiTransformSection({
   readonly onTransformChange: (update: Partial<Transform>) => void;
 }) {
   return (
-    <Accordion title="Transform" defaultExpanded>
+    <OptionalPropertySection title="Transform" defaultExpanded>
       <div style={{ display: "flex", flexDirection: "column", gap: "8px", padding: "12px" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
           <MixedInput label="X" value={commonTransform.x} onChange={(x) => onTransformChange({ x: px(x) })} />
@@ -163,7 +163,7 @@ function MultiTransformSection({
           onChange={(rotation) => onTransformChange({ rotation: deg(rotation) })}
         />
       </div>
-    </Accordion>
+    </OptionalPropertySection>
   );
 }
 
@@ -181,7 +181,7 @@ function MultiFillSection({
 
   if (isMixed) {
     return (
-      <Accordion title="Fill" defaultExpanded={false}>
+      <OptionalPropertySection title="Fill" defaultExpanded={false}>
         <div
           style={{
             padding: "16px",
@@ -192,14 +192,14 @@ function MultiFillSection({
         >
           Mixed fill values
         </div>
-      </Accordion>
+      </OptionalPropertySection>
     );
   }
 
   return (
-    <Accordion title="Fill" defaultExpanded={false}>
+    <OptionalPropertySection title="Fill" defaultExpanded={false}>
       <FillEditor value={commonFill} onChange={onFillChange} />
-    </Accordion>
+    </OptionalPropertySection>
   );
 }
 
@@ -217,7 +217,7 @@ function MultiLineSection({
 
   if (isMixed) {
     return (
-      <Accordion title="Line" defaultExpanded={false}>
+      <OptionalPropertySection title="Line" defaultExpanded={false}>
         <div
           style={{
             padding: "16px",
@@ -228,14 +228,14 @@ function MultiLineSection({
         >
           Mixed line values
         </div>
-      </Accordion>
+      </OptionalPropertySection>
     );
   }
 
   return (
-    <Accordion title="Line" defaultExpanded={false}>
+    <OptionalPropertySection title="Line" defaultExpanded={false}>
       <LineEditor value={commonLine} onChange={onLineChange} />
-    </Accordion>
+    </OptionalPropertySection>
   );
 }
 

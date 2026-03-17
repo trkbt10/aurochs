@@ -5,7 +5,8 @@
  */
 
 import { useCallback, useState, type CSSProperties, type KeyboardEvent } from "react";
-import { Accordion, FieldGroup } from "@aurochs-ui/ui-components/layout";
+import { FieldGroup } from "@aurochs-ui/ui-components/layout";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { PixelsEditor } from "../primitives/PixelsEditor";
 import { TablePropertiesEditor, createDefaultTableProperties } from "./TablePropertiesEditor";
 import { TableCellEditor, createDefaultTableCell } from "./TableCellEditor";
@@ -386,12 +387,12 @@ export function TableEditor({ value, onChange, disabled, className, style }: Tab
   return (
     <div style={{ ...containerStyle, ...style }} className={className}>
       {/* Table Properties */}
-      <Accordion title="Table Properties" defaultExpanded={false}>
+      <OptionalPropertySection title="Table Properties" defaultExpanded={false}>
         <TablePropertiesEditor value={value.properties} onChange={handlePropertiesChange} disabled={disabled} />
-      </Accordion>
+      </OptionalPropertySection>
 
       {/* Grid Structure */}
-      <Accordion title="Grid Structure" defaultExpanded={false}>
+      <OptionalPropertySection title="Grid Structure" defaultExpanded={false}>
         <FieldGroup label="Column Widths">
           <ColumnWidthsEditor grid={value.grid} onChange={handleGridChange} disabled={disabled} />
         </FieldGroup>
@@ -400,7 +401,7 @@ export function TableEditor({ value, onChange, disabled, className, style }: Tab
             <RowHeightsEditor rows={value.rows} onChange={handleRowsChange} disabled={disabled} />
           </FieldGroup>
         </div>
-      </Accordion>
+      </OptionalPropertySection>
 
       {/* Cell Grid */}
       <FieldGroup label="Cells">

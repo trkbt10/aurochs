@@ -5,7 +5,7 @@
  */
 
 import { useCallback } from "react";
-import { Accordion } from "@aurochs-ui/ui-components";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { FillFormattingEditor } from "@aurochs-ui/editor-controls/surface";
 import type { FillFormatting } from "@aurochs-ui/editor-controls/surface";
 import { ColorPickerPopover } from "@aurochs-ui/color-editor";
@@ -39,7 +39,7 @@ export function FillSection(props: FillSectionProps) {
   );
 
   return (
-    <Accordion title="Fill" defaultExpanded>
+    <OptionalPropertySection title="Fill" defaultExpanded>
       <FillFormattingEditor
         value={generic}
         onChange={handleChange}
@@ -52,6 +52,6 @@ export function FillSection(props: FillSectionProps) {
           />
         )}
       />
-    </Accordion>
+    </OptionalPropertySection>
   );
 }

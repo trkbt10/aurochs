@@ -10,7 +10,8 @@
 import { useCallback, type CSSProperties } from "react";
 import { colorTokens, spacingTokens, fontTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { Button, Input, Select, Toggle } from "@aurochs-ui/ui-components/primitives";
-import { Accordion, FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
+import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { PercentEditor, DegreesEditor } from "../primitives";
 import { LegendEditor, createDefaultLegend } from "./LegendEditor";
 import { AxisEditor, createDefaultCategoryAxis, createDefaultValueAxis } from "./AxisEditor";
@@ -329,12 +330,12 @@ export function ChartEditor({ value, onChange, disabled, className, style, adapt
         </>
 
         {/* Chart Title */}
-        <Accordion title="Chart Title" defaultExpanded={false}>
+        <OptionalPropertySection title="Chart Title" defaultExpanded={false}>
           <ChartTitleEditor value={value.title} onChange={handleTitleChange} disabled={disabled} />
-        </Accordion>
+        </OptionalPropertySection>
 
         {/* Legend */}
-        <Accordion title="Legend" defaultExpanded={false}>
+        <OptionalPropertySection title="Legend" defaultExpanded={false}>
           {value.legend && <LegendEditor value={value.legend} onChange={handleLegendChange} disabled={disabled} />}
           {!value.legend && (
             <>
@@ -343,25 +344,25 @@ export function ChartEditor({ value, onChange, disabled, className, style, adapt
               </Button>
             </>
           )}
-        </Accordion>
+        </OptionalPropertySection>
 
         {/* View 3D */}
-        <Accordion title="3D View" defaultExpanded={false}>
+        <OptionalPropertySection title="3D View" defaultExpanded={false}>
           <View3DEditor value={value.view3D} onChange={handleView3DChange} disabled={disabled} />
-        </Accordion>
+        </OptionalPropertySection>
 
         {/* Surfaces (Floor, Side Wall, Back Wall) */}
-        <Accordion title="3D Surfaces" defaultExpanded={false}>
-          <Accordion title="Floor" defaultExpanded={false}>
+        <OptionalPropertySection title="3D Surfaces" defaultExpanded={false}>
+          <OptionalPropertySection title="Floor" defaultExpanded={false}>
             <ChartSurfaceEditor value={value.floor} onChange={handleFloorChange} disabled={disabled} />
-          </Accordion>
-          <Accordion title="Side Wall" defaultExpanded={false}>
+          </OptionalPropertySection>
+          <OptionalPropertySection title="Side Wall" defaultExpanded={false}>
             <ChartSurfaceEditor value={value.sideWall} onChange={handleSideWallChange} disabled={disabled} />
-          </Accordion>
-          <Accordion title="Back Wall" defaultExpanded={false}>
+          </OptionalPropertySection>
+          <OptionalPropertySection title="Back Wall" defaultExpanded={false}>
             <ChartSurfaceEditor value={value.backWall} onChange={handleBackWallChange} disabled={disabled} />
-          </Accordion>
-        </Accordion>
+          </OptionalPropertySection>
+        </OptionalPropertySection>
 
         {/* Plot Area */}
         <>
@@ -369,21 +370,21 @@ export function ChartEditor({ value, onChange, disabled, className, style, adapt
             <span style={{ fontWeight: fontTokens.weight.medium }}>Plot Area</span>
           </div>
 
-          <Accordion title="Layout" defaultExpanded={false}>
+          <OptionalPropertySection title="Layout" defaultExpanded={false}>
             <LayoutEditor value={value.plotArea.layout} onChange={handlePlotAreaLayoutChange} disabled={disabled} />
-          </Accordion>
+          </OptionalPropertySection>
 
-          <Accordion title="Shape Properties" defaultExpanded={false}>
+          <OptionalPropertySection title="Shape Properties" defaultExpanded={false}>
             <ChartShapePropertiesEditor
               value={value.plotArea.shapeProperties}
               onChange={handlePlotAreaShapePropertiesChange}
               disabled={disabled}
             />
-          </Accordion>
+          </OptionalPropertySection>
 
-          <Accordion title="Data Table" defaultExpanded={false}>
+          <OptionalPropertySection title="Data Table" defaultExpanded={false}>
             <DataTableEditor value={value.plotArea.dataTable} onChange={handleDataTableChange} disabled={disabled} />
-          </Accordion>
+          </OptionalPropertySection>
         </>
 
         {/* Axes */}
@@ -395,7 +396,7 @@ export function ChartEditor({ value, onChange, disabled, className, style, adapt
             </Button>
           </div>
           {value.plotArea.axes.map((axis, index) => (
-            <Accordion key={axis.id} title={`${axis.type} - ${axis.position}`} defaultExpanded={false}>
+            <OptionalPropertySection key={axis.id} title={`${axis.type} - ${axis.position}`} defaultExpanded={false}>
               <div style={headerRowStyle}>
                 <span />
                 <Button variant="ghost" onClick={() => handleRemoveAxis(index)} disabled={disabled}>
@@ -403,7 +404,7 @@ export function ChartEditor({ value, onChange, disabled, className, style, adapt
                 </Button>
               </div>
               <AxisEditor value={axis} onChange={(a) => handleAxisChange(index, a)} disabled={disabled} />
-            </Accordion>
+            </OptionalPropertySection>
           ))}
         </>
 
@@ -416,7 +417,7 @@ export function ChartEditor({ value, onChange, disabled, className, style, adapt
             </Button>
           </div>
           {value.plotArea.charts.map((chartSeries, index) => (
-            <Accordion
+            <OptionalPropertySection
               key={`${chartSeries.type}-${chartSeries.index}`}
               title={`${chartSeries.type} [${chartSeries.index}]`}
               defaultExpanded={false}
@@ -432,32 +433,32 @@ export function ChartEditor({ value, onChange, disabled, className, style, adapt
                 onChange={(cs) => handleChartSeriesChange(index, cs)}
                 disabled={disabled}
               />
-            </Accordion>
+            </OptionalPropertySection>
           ))}
         </>
 
         {/* Protection */}
-        <Accordion title="Protection" defaultExpanded={false}>
+        <OptionalPropertySection title="Protection" defaultExpanded={false}>
           <ChartProtectionEditor value={value.protection} onChange={handleProtectionChange} disabled={disabled} />
-        </Accordion>
+        </OptionalPropertySection>
 
         {/* Print Settings */}
-        <Accordion title="Print Settings" defaultExpanded={false}>
+        <OptionalPropertySection title="Print Settings" defaultExpanded={false}>
           <PrintSettingsEditor value={value.printSettings} onChange={handlePrintSettingsChange} disabled={disabled} />
-        </Accordion>
+        </OptionalPropertySection>
 
         {/* Pivot Formats */}
-        <Accordion title="Pivot Formats" defaultExpanded={false}>
+        <OptionalPropertySection title="Pivot Formats" defaultExpanded={false}>
           <PivotFormatsEditor value={value.pivotFormats} onChange={handlePivotFormatsChange} disabled={disabled} />
-        </Accordion>
+        </OptionalPropertySection>
 
         {/* Pivot Source */}
-        <Accordion title="Pivot Source" defaultExpanded={false}>
+        <OptionalPropertySection title="Pivot Source" defaultExpanded={false}>
           <PivotSourceEditor value={value.pivotSource} onChange={handlePivotSourceChange} disabled={disabled} />
-        </Accordion>
+        </OptionalPropertySection>
 
         {/* External Data */}
-        <Accordion title="External Data" defaultExpanded={false}>
+        <OptionalPropertySection title="External Data" defaultExpanded={false}>
           <>
             <FieldRow>
               <FieldGroup label="Resource ID" style={{ flex: 1 }}>
@@ -486,7 +487,7 @@ export function ChartEditor({ value, onChange, disabled, className, style, adapt
               </FieldGroup>
             </FieldRow>
           </>
-        </Accordion>
+        </OptionalPropertySection>
 
         {/* User Shapes */}
         <>
@@ -628,21 +629,21 @@ function ChartSurfaceEditor({ value, onChange, disabled }: ChartSurfaceEditorPro
         </FieldRow>
       </>
 
-      <Accordion title="Shape Properties" defaultExpanded={false}>
+      <OptionalPropertySection title="Shape Properties" defaultExpanded={false}>
         <ChartShapePropertiesEditor
           value={surface.shapeProperties}
           onChange={(sp) => updateField("shapeProperties", sp)}
           disabled={disabled}
         />
-      </Accordion>
+      </OptionalPropertySection>
 
-      <Accordion title="Picture Options" defaultExpanded={false}>
+      <OptionalPropertySection title="Picture Options" defaultExpanded={false}>
         <PictureOptionsEditor
           value={surface.pictureOptions}
           onChange={handlePictureOptionsChange}
           disabled={disabled}
         />
-      </Accordion>
+      </OptionalPropertySection>
     </div>
   );
 }
@@ -753,14 +754,14 @@ function PivotFormatsEditor({ value, onChange, disabled }: PivotFormatsEditorPro
         </div>
       </>
       {formats.map((format, index) => (
-        <Accordion key={format.idx} title={`Format ${format.idx}`} defaultExpanded={false}>
+        <OptionalPropertySection key={format.idx} title={`Format ${format.idx}`} defaultExpanded={false}>
           <PivotFormatEditor
             value={format}
             onChange={(f) => handleFormatChange(index, f)}
             onRemove={() => handleRemoveFormat(index)}
             disabled={disabled}
           />
-        </Accordion>
+        </OptionalPropertySection>
       ))}
     </div>
   );
@@ -811,21 +812,21 @@ function PivotFormatEditor({ value, onChange, onRemove, disabled }: PivotFormatE
         </FieldRow>
       </>
 
-      <Accordion title="Shape Properties" defaultExpanded={false}>
+      <OptionalPropertySection title="Shape Properties" defaultExpanded={false}>
         <ChartShapePropertiesEditor
           value={value.shapeProperties}
           onChange={handleShapePropertiesChange}
           disabled={disabled}
         />
-      </Accordion>
+      </OptionalPropertySection>
 
-      <Accordion title="Text Properties" defaultExpanded={false}>
+      <OptionalPropertySection title="Text Properties" defaultExpanded={false}>
         <TextBodyEditor
           value={value.textProperties ?? createDefaultTextBody()}
           onChange={handleTextPropertiesChange}
           disabled={disabled}
         />
-      </Accordion>
+      </OptionalPropertySection>
 
       <>
         <Button variant="ghost" onClick={onRemove} disabled={disabled} style={{ color: `var(--text-danger, ${colorTokens.accent.danger})` }}>
@@ -939,21 +940,21 @@ function DataTableEditor({ value, onChange, disabled }: DataTableEditorProps) {
         </FieldRow>
       </>
 
-      <Accordion title="Shape Properties" defaultExpanded={false}>
+      <OptionalPropertySection title="Shape Properties" defaultExpanded={false}>
         <ChartShapePropertiesEditor
           value={dataTable.shapeProperties}
           onChange={handleShapePropertiesChange}
           disabled={disabled}
         />
-      </Accordion>
+      </OptionalPropertySection>
 
-      <Accordion title="Text Properties" defaultExpanded={false}>
+      <OptionalPropertySection title="Text Properties" defaultExpanded={false}>
         <TextBodyEditor
           value={dataTable.textProperties ?? createDefaultTextBody()}
           onChange={handleTextPropertiesChange}
           disabled={disabled}
         />
-      </Accordion>
+      </OptionalPropertySection>
     </div>
   );
 }
@@ -1058,17 +1059,17 @@ function PrintSettingsEditor({ value, onChange, disabled }: PrintSettingsEditorP
 
   return (
     <div style={containerStyle}>
-      <Accordion title="Page Margins" defaultExpanded={false}>
+      <OptionalPropertySection title="Page Margins" defaultExpanded={false}>
         <PageMarginsEditor value={settings.pageMargins} onChange={handlePageMarginsChange} disabled={disabled} />
-      </Accordion>
+      </OptionalPropertySection>
 
-      <Accordion title="Page Setup" defaultExpanded={false}>
+      <OptionalPropertySection title="Page Setup" defaultExpanded={false}>
         <PageSetupEditor value={settings.pageSetup} onChange={handlePageSetupChange} disabled={disabled} />
-      </Accordion>
+      </OptionalPropertySection>
 
-      <Accordion title="Header/Footer" defaultExpanded={false}>
+      <OptionalPropertySection title="Header/Footer" defaultExpanded={false}>
         <HeaderFooterEditor value={settings.headerFooter} onChange={handleHeaderFooterChange} disabled={disabled} />
-      </Accordion>
+      </OptionalPropertySection>
     </div>
   );
 }

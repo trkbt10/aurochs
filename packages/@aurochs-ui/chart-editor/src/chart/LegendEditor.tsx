@@ -9,7 +9,8 @@
 import { useCallback, type CSSProperties } from "react";
 import { colorTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { Button, Input, Select, Toggle } from "@aurochs-ui/ui-components/primitives";
-import { Accordion, FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
+import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { TextBodyEditor, createDefaultTextBody } from "../text";
 import { ChartShapePropertiesEditor } from "./ChartShapePropertiesEditor";
 import { LayoutEditor } from "./LayoutEditor";
@@ -123,27 +124,27 @@ export function LegendEditor({ value, onChange, disabled, className, style }: Le
       </>
 
       {/* Layout */}
-      <Accordion title="Layout" defaultExpanded={false}>
+      <OptionalPropertySection title="Layout" defaultExpanded={false}>
         <LayoutEditor value={value.layout} onChange={handleLayoutChange} disabled={disabled} />
-      </Accordion>
+      </OptionalPropertySection>
 
       {/* Shape Properties */}
-      <Accordion title="Shape Properties" defaultExpanded={false}>
+      <OptionalPropertySection title="Shape Properties" defaultExpanded={false}>
         <ChartShapePropertiesEditor
           value={value.shapeProperties}
           onChange={handleShapePropertiesChange}
           disabled={disabled}
         />
-      </Accordion>
+      </OptionalPropertySection>
 
       {/* Text Properties */}
-      <Accordion title="Text Properties" defaultExpanded={false}>
+      <OptionalPropertySection title="Text Properties" defaultExpanded={false}>
         <TextBodyEditor
           value={value.textProperties ?? createDefaultTextBody()}
           onChange={handleTextPropertiesChange}
           disabled={disabled}
         />
-      </Accordion>
+      </OptionalPropertySection>
 
       {/* Legend Entries */}
       <>
@@ -154,14 +155,14 @@ export function LegendEditor({ value, onChange, disabled, className, style }: Le
           </Button>
         </div>
         {(value.entries ?? []).map((entry, index) => (
-          <Accordion key={entry.idx} title={`Entry ${entry.idx}`} defaultExpanded={false}>
+          <OptionalPropertySection key={entry.idx} title={`Entry ${entry.idx}`} defaultExpanded={false}>
             <LegendEntryEditor
               value={entry}
               onChange={(e) => handleEntryChange(index, e)}
               onRemove={() => handleRemoveEntry(index)}
               disabled={disabled}
             />
-          </Accordion>
+          </OptionalPropertySection>
         ))}
       </>
     </div>
@@ -209,13 +210,13 @@ function LegendEntryEditor({ value, onChange, onRemove, disabled }: LegendEntryE
         </FieldRow>
       </>
 
-      <Accordion title="Text Properties" defaultExpanded={false}>
+      <OptionalPropertySection title="Text Properties" defaultExpanded={false}>
         <TextBodyEditor
           value={value.textProperties ?? createDefaultTextBody()}
           onChange={handleTextPropertiesChange}
           disabled={disabled}
         />
-      </Accordion>
+      </OptionalPropertySection>
 
       <>
         <Button variant="ghost" onClick={onRemove} disabled={disabled} style={{ color: `var(--text-danger, ${colorTokens.accent.danger})` }}>

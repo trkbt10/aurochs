@@ -5,7 +5,8 @@
  */
 
 import { useCallback, useMemo } from "react";
-import { Accordion, Input, FieldGroup, FieldRow } from "@aurochs-ui/ui-components";
+import { Input, FieldGroup, FieldRow } from "@aurochs-ui/ui-components";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import type { XlsxPageMargins } from "@aurochs-office/xlsx/domain/page-setup";
 
 export type PageMarginsSectionProps = {
@@ -28,7 +29,7 @@ export function PageMarginsSection({ disabled, pageMargins, onPageMarginsChange 
   );
 
   return (
-    <Accordion title="Margins" defaultExpanded={false}>
+    <OptionalPropertySection title="Margins" defaultExpanded={false}>
       <FieldRow>
         <FieldGroup label="Top" inline labelWidth={50}>
           <Input
@@ -103,6 +104,6 @@ export function PageMarginsSection({ disabled, pageMargins, onPageMarginsChange 
           />
         </FieldGroup>
       </FieldRow>
-    </Accordion>
+    </OptionalPropertySection>
   );
 }

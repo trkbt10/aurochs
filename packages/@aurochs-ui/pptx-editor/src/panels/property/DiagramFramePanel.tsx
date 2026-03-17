@@ -7,7 +7,7 @@
 import type { GraphicFrame } from "@aurochs-office/pptx/domain/index";
 import type { DiagramDataModel } from "@aurochs-office/diagram/domain";
 import type { Shape } from "@aurochs-office/pptx/domain/index";
-import { Accordion } from "@aurochs-ui/ui-components/layout";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { DiagramEditor } from "@aurochs-ui/diagram-editor";
 import { pptxDiagramEditorAdapters } from "../../adapters";
 import { NonVisualPropertiesEditor, TransformEditor } from "../../editors/index";
@@ -98,19 +98,19 @@ export function DiagramFramePanel({ shape, onChange, diagramData, onDiagramChang
 
   return (
     <>
-      <Accordion title="Identity" defaultExpanded={false}>
+      <OptionalPropertySection title="Identity" defaultExpanded={false}>
         <NonVisualPropertiesEditor value={shape.nonVisual} onChange={(nv) => onChange({ ...shape, nonVisual: nv })} />
-      </Accordion>
+      </OptionalPropertySection>
 
-      <Accordion title="Transform" defaultExpanded>
+      <OptionalPropertySection title="Transform" defaultExpanded>
         {shape.transform && (
           <TransformEditor value={shape.transform} onChange={(transform) => onChange({ ...shape, transform })} />
         )}
-      </Accordion>
+      </OptionalPropertySection>
 
-      <Accordion title="Diagram" defaultExpanded>
+      <OptionalPropertySection title="Diagram" defaultExpanded>
         {renderDiagramContent()}
-      </Accordion>
+      </OptionalPropertySection>
     </>
   );
 }

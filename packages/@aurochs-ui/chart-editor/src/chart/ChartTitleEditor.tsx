@@ -8,7 +8,8 @@
 import { useCallback, type CSSProperties } from "react";
 import { spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { Toggle } from "@aurochs-ui/ui-components/primitives";
-import { Accordion, FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
+import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { TextBodyEditor, createDefaultTextBody } from "../text";
 import { ChartShapePropertiesEditor } from "./ChartShapePropertiesEditor";
 import { LayoutEditor } from "./LayoutEditor";
@@ -71,25 +72,25 @@ export function ChartTitleEditor({ value, onChange, disabled, className, style, 
           </FieldGroup>
         </FieldRow>
 
-        <Accordion title="Text" defaultExpanded={false}>
+        <OptionalPropertySection title="Text" defaultExpanded={false}>
           <TextBodyEditor
             value={title.textBody ?? createDefaultTextBody()}
             onChange={handleTextBodyChange}
             disabled={disabled}
           />
-        </Accordion>
+        </OptionalPropertySection>
 
-        <Accordion title="Layout" defaultExpanded={false}>
+        <OptionalPropertySection title="Layout" defaultExpanded={false}>
           <LayoutEditor value={title.layout} onChange={handleLayoutChange} disabled={disabled} />
-        </Accordion>
+        </OptionalPropertySection>
 
-        <Accordion title="Shape Properties" defaultExpanded={false}>
+        <OptionalPropertySection title="Shape Properties" defaultExpanded={false}>
           <ChartShapePropertiesEditor
             value={title.shapeProperties}
             onChange={handleShapePropertiesChange}
             disabled={disabled}
           />
-        </Accordion>
+        </OptionalPropertySection>
       </div>
     </ChartEditorAdaptersBoundary>
   );

@@ -5,7 +5,6 @@
  */
 
 import type { SpShape } from "@aurochs-office/pptx/domain/index";
-import { Accordion } from "@aurochs-ui/ui-components/layout";
 import { LineEditor, createDefaultLine } from "../../ui/line";
 import {
   NonVisualPropertiesEditor,
@@ -42,9 +41,9 @@ export function SpShapePanel({ shape, onChange }: SpShapePanelProps) {
 
   return (
     <>
-      <Accordion title="Identity" defaultExpanded={false}>
+      <OptionalPropertySection title="Identity" defaultExpanded={false}>
         <NonVisualPropertiesEditor value={shape.nonVisual} onChange={(nv) => onChange({ ...shape, nonVisual: nv })} />
-      </Accordion>
+      </OptionalPropertySection>
 
       <OptionalPropertySection
         title="Transform"
@@ -88,9 +87,7 @@ export function SpShapePanel({ shape, onChange }: SpShapePanelProps) {
       />
 
       {shape.textBody && (
-        <Accordion title="Text" defaultExpanded={false}>
-          <MixedTextBodyEditor value={shape.textBody} onChange={(textBody) => onChange({ ...shape, textBody })} />
-        </Accordion>
+        <MixedTextBodyEditor value={shape.textBody} onChange={(textBody) => onChange({ ...shape, textBody })} />
       )}
     </>
   );

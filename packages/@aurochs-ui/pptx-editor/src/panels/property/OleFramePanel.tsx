@@ -7,7 +7,7 @@
 import type { ReactNode } from "react";
 import type { GraphicFrame } from "@aurochs-office/pptx/domain/index";
 import type { OleReference } from "@aurochs-office/pptx/domain/shape";
-import { Accordion } from "@aurochs-ui/ui-components/layout";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { NonVisualPropertiesEditor, TransformEditor, OleObjectEditor } from "../../editors/index";
 
 // =============================================================================
@@ -77,19 +77,19 @@ export function OleFramePanel({ shape, onChange }: OleFramePanelProps) {
 
   return (
     <>
-      <Accordion title="Identity" defaultExpanded={false}>
+      <OptionalPropertySection title="Identity" defaultExpanded={false}>
         <NonVisualPropertiesEditor value={shape.nonVisual} onChange={(nv) => onChange({ ...shape, nonVisual: nv })} />
-      </Accordion>
+      </OptionalPropertySection>
 
-      <Accordion title="Transform" defaultExpanded>
+      <OptionalPropertySection title="Transform" defaultExpanded>
         {shape.transform && (
           <TransformEditor value={shape.transform} onChange={(transform) => onChange({ ...shape, transform })} />
         )}
-      </Accordion>
+      </OptionalPropertySection>
 
-      <Accordion title="OLE Object" defaultExpanded>
+      <OptionalPropertySection title="OLE Object" defaultExpanded>
         {oleContent}
-      </Accordion>
+      </OptionalPropertySection>
     </>
   );
 }

@@ -5,7 +5,8 @@
  */
 
 import { useCallback, useMemo } from "react";
-import { Accordion, Select, Input, Toggle, FieldGroup, FieldRow, type SelectOption } from "@aurochs-ui/ui-components";
+import { Select, Input, Toggle, FieldGroup, FieldRow, type SelectOption } from "@aurochs-ui/ui-components";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import type { XlsxPageSetup } from "@aurochs-office/xlsx/domain/page-setup";
 
 export type PageSetupSectionProps = {
@@ -47,7 +48,7 @@ export function PageSetupSection({ disabled, pageSetup, onPageSetupChange }: Pag
   );
 
   return (
-    <Accordion title="Page Setup" defaultExpanded>
+    <OptionalPropertySection title="Page Setup" defaultExpanded>
       <FieldGroup label="Paper Size">
         <Select
           value={String(current.paperSize ?? 9)}
@@ -124,6 +125,6 @@ export function PageSetupSection({ disabled, pageSetup, onPageSetupChange }: Pag
           />
         </FieldGroup>
       </FieldRow>
-    </Accordion>
+    </OptionalPropertySection>
   );
 }

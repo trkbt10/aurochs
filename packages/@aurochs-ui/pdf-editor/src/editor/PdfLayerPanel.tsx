@@ -7,7 +7,7 @@
 
 import { useCallback, useMemo, type PointerEvent as ReactPointerEvent } from "react";
 import type { PdfPage, PdfElement } from "@aurochs/pdf";
-import { InspectorSection } from "@aurochs-ui/ui-components/layout";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { LayerItem } from "react-editor-ui/LayerItem";
 import { TextBoxIcon, PictureIcon, PenIcon } from "@aurochs-ui/ui-components/icons";
 import { iconTokens } from "@aurochs-ui/ui-components/design-tokens";
@@ -77,11 +77,11 @@ export function PdfLayerPanel({
 
   if (!page || page.elements.length === 0) {
     return (
-      <InspectorSection title="Layers" badge={0}>
+      <OptionalPropertySection title="Layers" badge={0} defaultExpanded>
         <div style={{ padding: "24px 16px", textAlign: "center", color: "#888", fontSize: "13px" }}>
           No elements
         </div>
-      </InspectorSection>
+      </OptionalPropertySection>
     );
   }
 
@@ -92,7 +92,7 @@ export function PdfLayerPanel({
   }
 
   return (
-    <InspectorSection title="Layers" badge={page.elements.length}>
+    <OptionalPropertySection title="Layers" badge={page.elements.length} defaultExpanded>
       <div role="tree" aria-label="Layers" onClick={onClearSelection}>
         {reversedIndices.map((actualIndex) => {
           const element = page.elements[actualIndex];
@@ -114,6 +114,6 @@ export function PdfLayerPanel({
           );
         })}
       </div>
-    </InspectorSection>
+    </OptionalPropertySection>
   );
 }

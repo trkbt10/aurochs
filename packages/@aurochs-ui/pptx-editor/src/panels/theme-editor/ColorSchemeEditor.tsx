@@ -8,7 +8,7 @@ import { useCallback, type CSSProperties } from "react";
 import type { ColorScheme } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { SchemeColorName } from "@aurochs-office/drawing-ml/domain/color";
 import { ColorPickerPopover } from "@aurochs-ui/color-editor";
-import { InspectorSection, Accordion } from "@aurochs-ui/ui-components/layout";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { colorTokens, fontTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { COLOR_LABELS } from "./types";
 
@@ -155,8 +155,8 @@ export function ColorSchemeEditor({ colorScheme, onColorChange, disabled }: Colo
 
   return (
     <div style={containerStyle}>
-      <InspectorSection title="Color Scheme">
-        <Accordion title="Base Colors" defaultExpanded>
+      <OptionalPropertySection title="Color Scheme" defaultExpanded>
+        <OptionalPropertySection title="Base Colors" defaultExpanded>
           <div style={colorGridStyle}>
             {baseColors.map((key) => (
               <ColorItem
@@ -169,9 +169,9 @@ export function ColorSchemeEditor({ colorScheme, onColorChange, disabled }: Colo
               />
             ))}
           </div>
-        </Accordion>
+        </OptionalPropertySection>
 
-        <Accordion title="Accent Colors" defaultExpanded>
+        <OptionalPropertySection title="Accent Colors" defaultExpanded>
           <div style={accentGridStyle}>
             {accentColors.map((key) => (
               <ColorItem
@@ -184,9 +184,9 @@ export function ColorSchemeEditor({ colorScheme, onColorChange, disabled }: Colo
               />
             ))}
           </div>
-        </Accordion>
+        </OptionalPropertySection>
 
-        <Accordion title="Hyperlink Colors" defaultExpanded={false}>
+        <OptionalPropertySection title="Hyperlink Colors" defaultExpanded={false}>
           <div style={colorGridStyle}>
             {hyperlinkColors.map((key) => (
               <ColorItem
@@ -199,8 +199,8 @@ export function ColorSchemeEditor({ colorScheme, onColorChange, disabled }: Colo
               />
             ))}
           </div>
-        </Accordion>
-      </InspectorSection>
+        </OptionalPropertySection>
+      </OptionalPropertySection>
     </div>
   );
 }

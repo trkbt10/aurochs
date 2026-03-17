@@ -5,7 +5,8 @@
  */
 
 import { useState, useCallback, useMemo, type CSSProperties } from "react";
-import { Accordion, Button, FieldGroup, Input, FieldRow } from "@aurochs-ui/ui-components";
+import { Button, FieldGroup, Input, FieldRow } from "@aurochs-ui/ui-components";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { colorTokens, fontTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 import type { XlsxPane } from "@aurochs-office/xlsx/domain/workbook";
 import type { CellAddress } from "@aurochs-office/xlsx/domain/cell/address";
@@ -117,7 +118,7 @@ export function FreezePanesSection({
   }, [draftRows, draftCols, onFreezeRowsAndColumns]);
 
   return (
-    <Accordion title="Freeze Panes" defaultExpanded={isFrozen}>
+    <OptionalPropertySection title="Freeze Panes" defaultExpanded={isFrozen}>
       <div style={descriptionStyle}>
         Keep rows or columns visible while scrolling.
       </div>
@@ -189,6 +190,6 @@ export function FreezePanesSection({
           </Button>
         </div>
       )}
-    </Accordion>
+    </OptionalPropertySection>
   );
 }
