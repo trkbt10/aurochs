@@ -145,6 +145,7 @@ export { ShapeToolbar, type ShapeToolbarProps } from "./panels/ShapeToolbar";
 export { LayerPanel, type LayerPanelProps } from "./panels/LayerPanel";
 
 // Slide Editor Sub-components (from shared editor-controls/canvas)
+/* eslint-disable custom/no-cross-package-reexport -- public API re-export for consumer convenience */
 export {
   SelectionBox,
   type SelectionBoxProps,
@@ -154,6 +155,7 @@ export {
   RotateHandle,
   type RotateHandleProps,
 } from "@aurochs-ui/editor-controls/canvas";
+/* eslint-enable custom/no-cross-package-reexport -- end of cross-package re-export block */
 
 // Shape identity utilities
 export { getShapeId, hasShapeId } from "./shape/identity";

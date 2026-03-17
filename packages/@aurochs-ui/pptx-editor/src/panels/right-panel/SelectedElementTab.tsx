@@ -212,36 +212,3 @@ export function SelectedElementTab({
     </div>
   );
 }
-
-/**
- * Get a human-readable label for a shape type.
- */
-function getShapeTypeLabel(shape: Shape): string {
-  switch (shape.type) {
-    case "sp":
-      return "Shape";
-    case "pic":
-      return "Picture";
-    case "cxnSp":
-      return "Connector";
-    case "grpSp":
-      return "Group";
-    case "graphicFrame":
-      switch (shape.content.type) {
-        case "table":
-          return "Table";
-        case "chart":
-          return "Chart";
-        case "diagram":
-          return "Diagram";
-        case "oleObject":
-          return "OLE Object";
-        default:
-          return "Graphic Frame";
-      }
-    case "contentPart":
-      return "Content Part";
-    default:
-      return "Element";
-  }
-}

@@ -1,3 +1,4 @@
+/** @file React component for rendering a single PDF page. */
 import type { CSSProperties } from "react";
 import { useMemo } from "react";
 import type { PdfPage } from "@aurochs/pdf/domain";

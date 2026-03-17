@@ -112,9 +112,7 @@ export function PageSizeEditor({
 
   const width = parseFloat(data.width);
   const height = parseFloat(data.height);
-  const aspectRatioText = !isNaN(width) && !isNaN(height) && height > 0
-    ? getAspectRatioText(width / height)
-    : "—";
+  const aspectRatioText = computeAspectRatioText(width, height);
 
   return (
     <div style={containerStyle}>
@@ -163,18 +161,25 @@ export function PageSizeEditor({
 // Helpers
 // =============================================================================
 
+function computeAspectRatioText(width: number, height: number): string {
+  if (!isNaN(width) && !isNaN(height) && height > 0) {
+    return getAspectRatioText(width / height);
+  }
+  return "—";
+}
+
 /**
  * Get human-readable aspect ratio text.
  */
 function getAspectRatioText(ratio: number): string {
   const tolerance = 0.01;
 
-  if (Math.abs(ratio - 16 / 9) < tolerance) return "16:9";
-  if (Math.abs(ratio - 16 / 10) < tolerance) return "16:10";
-  if (Math.abs(ratio - 4 / 3) < tolerance) return "4:3";
-  if (Math.abs(ratio - 3 / 2) < tolerance) return "3:2";
-  if (Math.abs(ratio - 1) < tolerance) return "1:1";
-  if (Math.abs(ratio - 21 / 9) < tolerance) return "21:9";
+  if (Math.abs(ratio - 16 / 9) < tolerance) {return "16:9";}
+  if (Math.abs(ratio - 16 / 10) < tolerance) {return "16:10";}
+  if (Math.abs(ratio - 4 / 3) < tolerance) {return "4:3";}
+  if (Math.abs(ratio - 3 / 2) < tolerance) {return "3:2";}
+  if (Math.abs(ratio - 1) < tolerance) {return "1:1";}
+  if (Math.abs(ratio - 21 / 9) < tolerance) {return "21:9";}
 
   return ratio.toFixed(2) + ":1";
 }

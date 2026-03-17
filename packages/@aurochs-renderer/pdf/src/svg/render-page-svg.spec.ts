@@ -1,3 +1,4 @@
+/** @file Tests for PDF page SVG rendering. */
 import { Buffer } from "node:buffer";
 import { createDefaultGraphicsState, type PdfGraphicsState, type PdfImage, type PdfPage, type PdfPath, type PdfText } from "@aurochs/pdf/domain";
 import { renderPdfDocumentPageToSvg, renderPdfDocumentToSvgs, renderPdfPageToSvg } from "./render-page-svg";

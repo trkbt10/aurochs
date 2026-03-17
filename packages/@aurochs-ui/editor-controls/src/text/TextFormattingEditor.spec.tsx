@@ -32,7 +32,10 @@ describe("TextFormattingEditor", () => {
     });
     try {
       Object.defineProperty(document, "fonts", { value: fakeFonts, configurable: true });
-    } catch { /* non-configurable */ }
+    } catch (error) {
+      // Property may be non-configurable in some environments
+      if (error instanceof Error) { /* ignore non-configurable property error */ }
+    }
   });
 
   it("renders react-editor-ui sections", () => {

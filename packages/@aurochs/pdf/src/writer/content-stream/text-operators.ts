@@ -24,6 +24,7 @@ function formatNum(value: number): string {
  * Escapes parentheses and backslashes.
  */
 function escapeTextString(text: string): string {
+  // eslint-disable-next-line no-restricted-syntax -- string builder pattern
   let result = "";
   for (let i = 0; i < text.length; i++) {
     const char = text[i];
@@ -44,6 +45,7 @@ function escapeTextString(text: string): string {
  * Convert bytes to hex string for CID font text output.
  */
 function bytesToHex(bytes: Uint8Array): string {
+  // eslint-disable-next-line no-restricted-syntax -- string builder pattern
   let result = "";
   for (let i = 0; i < bytes.length; i++) {
     result += bytes[i].toString(16).padStart(2, "0").toUpperCase();
@@ -77,6 +79,7 @@ function shouldUseHexOutput(
  * Removes leading slash and optionally subset prefix.
  */
 function normalizeFontNameForMatch(name: string, removeSubsetPrefix: boolean): string {
+  // eslint-disable-next-line no-restricted-syntax -- conditionally reassigned
   let clean = name.startsWith("/") ? name.slice(1) : name;
   if (removeSubsetPrefix) {
     const plusIndex = clean.indexOf("+");
@@ -186,7 +189,9 @@ export function serializeText(
 
   // Set text position
   // Use baseline if available, otherwise use bounding box position
+  // eslint-disable-next-line no-restricted-syntax -- branched assignment
   let posX: number;
+  // eslint-disable-next-line no-restricted-syntax -- branched assignment
   let posY: number;
 
   if (text.baselineStartX !== undefined && text.baselineStartY !== undefined) {
@@ -232,7 +237,9 @@ export function serializeTextBatch(
   }
 
   const lines: string[] = [];
+  // eslint-disable-next-line no-restricted-syntax -- accumulator updated in loop
   let currentFont: string | null = null;
+  // eslint-disable-next-line no-restricted-syntax -- accumulator updated in loop
   let currentFontSize: number | null = null;
 
   lines.push("BT");
@@ -247,7 +254,9 @@ export function serializeTextBatch(
     }
 
     // Set position
+    // eslint-disable-next-line no-restricted-syntax -- branched assignment
     let posX: number;
+    // eslint-disable-next-line no-restricted-syntax -- branched assignment
     let posY: number;
 
     if (text.baselineStartX !== undefined && text.baselineStartY !== undefined) {

@@ -11,7 +11,7 @@
  */
 
 import { createDefaultGraphicsState, type PdfDocument, type PdfText } from "@aurochs/pdf";
-import { canUndo, canRedo } from "@aurochs-ui/editor-core/history";
+import { canUndo as _canUndo, canRedo as _canRedo } from "@aurochs-ui/editor-core/history";
 import { pdfEditorReducer, createInitialState } from "./reducer";
 import type { PdfEditorAction } from "./reducer";
 import type { PdfEditorState } from "./types";

@@ -106,13 +106,16 @@ function optimizeMappings(
   const charMappings: [string, string][] = [];
   const rangeMappings: RangeMapping[] = [];
 
+  // eslint-disable-next-line no-restricted-syntax -- loop counter
   let i = 0;
   while (i < entries.length) {
     const [startHex, startUnicode] = entries[i]!;
-    const byteLen = startHex.length / 2;
+    const _byteLen = startHex.length / 2;
 
     // Try to find consecutive range
+    // eslint-disable-next-line no-restricted-syntax -- updated in search loop
     let endIdx = i;
+    // eslint-disable-next-line no-restricted-syntax -- updated in search loop
     let currentUnicode = startUnicode;
 
     while (endIdx + 1 < entries.length) {
@@ -188,6 +191,7 @@ function isConsecutiveUnicode(a: string, b: string): boolean {
  * Convert Unicode string to UTF-16BE hex string.
  */
 function unicodeToUtf16BeHex(str: string): string {
+  // eslint-disable-next-line no-restricted-syntax -- string builder pattern
   let result = "";
 
   for (const char of str) {

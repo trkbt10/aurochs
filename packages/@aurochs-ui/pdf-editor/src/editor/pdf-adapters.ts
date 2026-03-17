@@ -72,7 +72,7 @@ export const PDF_TEXT_FEATURES: TextFormattingFeatures = {
 
 /** Convert PDF element to TextFormatting (for TextFormattingEditor). */
 export function pdfTextToFormatting(element: PdfElement): TextFormatting {
-  if (element.type !== "text") return {};
+  if (element.type !== "text") { return {}; }
   return {
     fontFamily: element.baseFont ?? element.fontName ?? "",
     fontSize: element.fontSize,
@@ -84,12 +84,13 @@ export function pdfTextToFormatting(element: PdfElement): TextFormatting {
 
 /** Apply TextFormatting update to a PDF element. */
 export function applyTextFormattingToPdfElement(element: PdfElement, update: Partial<TextFormatting>): PdfElement {
-  if (element.type !== "text") return element;
+  if (element.type !== "text") { return element; }
+  // eslint-disable-next-line no-restricted-syntax -- accumulator updated per property
   let updated = element;
-  if (update.bold !== undefined) updated = { ...updated, isBold: update.bold || undefined };
-  if (update.italic !== undefined) updated = { ...updated, isItalic: update.italic || undefined };
-  if (update.fontSize !== undefined && update.fontSize > 0) updated = { ...updated, fontSize: update.fontSize };
-  if (update.fontFamily !== undefined) updated = { ...updated, baseFont: update.fontFamily, fontName: update.fontFamily };
+  if (update.bold !== undefined) { updated = { ...updated, isBold: update.bold || undefined }; }
+  if (update.italic !== undefined) { updated = { ...updated, isItalic: update.italic || undefined }; }
+  if (update.fontSize !== undefined && update.fontSize > 0) { updated = { ...updated, fontSize: update.fontSize }; }
+  if (update.fontFamily !== undefined) { updated = { ...updated, baseFont: update.fontFamily, fontName: update.fontFamily }; }
   if (update.textColor !== undefined) {
     const [r, g, b] = hexToRgbComponents(update.textColor);
     updated = { ...updated, graphicsState: { ...updated.graphicsState, fillColor: { colorSpace: "DeviceRGB" as const, components: [r, g, b] } } };

@@ -1,3 +1,4 @@
+/** @file PDF rendering pipeline — parse, build, and render to SVG. */
 import { buildPdf } from "@aurochs-builder/pdf";
 import type { PdfDocument } from "@aurochs/pdf/domain";
 import { renderPdfDocumentPageToSvg, renderPdfDocumentToSvgs } from "./svg";

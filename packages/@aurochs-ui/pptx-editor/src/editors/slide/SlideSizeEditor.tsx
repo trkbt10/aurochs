@@ -58,7 +58,7 @@ const PPTX_PRESETS: readonly PageSizePreset[] = [
  * Delegates to the shared PageSizeEditor with PPTX-specific presets,
  * converting between SlideSize domain type and PageSizeData.
  */
-export function SlideSizeEditor({ value, onChange, disabled, style }: SlideSizeEditorProps) {
+export function SlideSizeEditor({ value, onChange, disabled, style: _style }: SlideSizeEditorProps) {
   const data: PageSizeData = {
     width: String(value.width),
     height: String(value.height),

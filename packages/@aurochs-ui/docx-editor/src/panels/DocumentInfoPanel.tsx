@@ -43,6 +43,17 @@ export type DocumentStats = {
 // Helpers
 // =============================================================================
 
+/** Resolve page size data from a matched preset or pass through raw data. */
+function resolvePageSizeData(
+  preset: (typeof DOCX_PAGE_PRESETS)[number] | undefined,
+  data: PageSizeData,
+): PageSizeData {
+  if (!preset) {
+    return data;
+  }
+  return { width: String(preset.width), height: String(preset.height), preset: data.preset };
+}
+
 function mergeClassName(...parts: readonly (string | undefined)[]): string | undefined {
   const merged = parts.filter((p) => p && p.trim().length > 0).join(" ");
   return merged.length > 0 ? merged : undefined;
@@ -258,9 +269,7 @@ function SectionPropertiesViewer({ section, onChange, disabled }: SectionPropert
   const handlePageSizeChange = useCallback(
     (data: PageSizeData) => {
       const preset = DOCX_PAGE_PRESETS.find((p) => p.value === data.preset);
-      const resolved: PageSizeData = preset
-        ? { width: String(preset.width), height: String(preset.height), preset: data.preset }
-        : data;
+      const resolved: PageSizeData = resolvePageSizeData(preset, data);
       const pgSz = dataToDocxPageSize(resolved);
       onChange({ ...(section ?? {}), pgSz });
     },

@@ -7,7 +7,7 @@
 import { createElement } from "react";
 import { render } from "@testing-library/react";
 import type { DocxDocument } from "@aurochs-office/docx/domain/document";
-import { colorTokens, spacingTokens } from "@aurochs-ui/ui-components";
+import { spacingTokens } from "@aurochs-ui/ui-components";
 import { DocumentEditorProvider } from "../context/document/DocumentEditorContext";
 import { DocumentToolbar } from "./DocumentToolbar";
 

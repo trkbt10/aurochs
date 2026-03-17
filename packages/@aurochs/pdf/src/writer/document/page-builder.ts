@@ -64,6 +64,7 @@ function collectImages(elements: readonly PdfElement[]): PdfImage[] {
 /**
  * Generate content stream operators for a page's elements.
  */
+// eslint-disable-next-line custom/max-params -- legacy API with separate font/image maps
 function generateContentStreamOperators(
   elements: readonly PdfElement[],
   fontMap: ReadonlyMap<string, string>,
@@ -71,6 +72,7 @@ function generateContentStreamOperators(
   embeddedFonts?: readonly PdfEmbeddedFont[]
 ): string {
   const operators: string[] = [];
+  // eslint-disable-next-line no-restricted-syntax -- counter incremented in loop
   let imageIndex = 0;
 
   for (const element of elements) {
@@ -156,6 +158,7 @@ export function buildPage(options: BuildPageOptions): PageBuildResult {
 
   // Build font resource map (name -> resource name)
   const fontResourceMap = new Map<string, string>();
+  // eslint-disable-next-line no-restricted-syntax -- counter incremented in loop
   let fontIndex = 1;
   for (const fontName of usedFontNames) {
     if (fontObjMap.has(fontName)) {
@@ -166,6 +169,7 @@ export function buildPage(options: BuildPageOptions): PageBuildResult {
 
   // Build image resource map (index -> resource name)
   const imageResourceMap = new Map<number, string>();
+  // eslint-disable-next-line no-restricted-syntax -- counter incremented in loop
   let imageIdx = 0;
   for (const _ of images) {
     if (imageObjMap.has(imageIdx)) {

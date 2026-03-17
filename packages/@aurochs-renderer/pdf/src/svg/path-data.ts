@@ -1,3 +1,4 @@
+/** @file Build SVG path data strings from PDF path operations. */
 import type { PdfPath, PdfPathOp, PdfPoint } from "@aurochs/pdf/domain";
 import { formatSvgNumber } from "./number-format";
 
@@ -17,6 +18,7 @@ function rectToPath(rect: Extract<PdfPathOp, { type: "rect" }>, pageHeight: numb
   return `M ${pointToSvgText(p1, pageHeight)} L ${pointToSvgText(p2, pageHeight)} L ${pointToSvgText(p3, pageHeight)} L ${pointToSvgText(p4, pageHeight)} Z`;
 }
 
+/** Convert a PDF path to an SVG path data string, flipping Y coordinates. */
 export function buildSvgPathData(path: PdfPath, pageHeight: number): string {
   const commands: string[] = [];
   const currentPointState: { value: PdfPoint | null } = { value: null };

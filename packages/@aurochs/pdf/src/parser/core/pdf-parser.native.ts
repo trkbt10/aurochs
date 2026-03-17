@@ -3,6 +3,7 @@
  */
 
 import type { PdfDocument, PdfEmbeddedFont, PdfImage } from "../../domain";
+import type { EmbeddedFont } from "../../domain/font/embedded-font";
 import { tokenizeContentStream } from "../../domain/content-stream";
 import { type FontMappings } from "../../domain/font";
 import { createGraphicsStateStack, transformPoint, type PdfBBox, type PdfMatrix } from "../../domain";
@@ -249,8 +250,25 @@ function resolvePagesToParse(requested: readonly number[], pageCount: number): r
   return Array.from({ length: pageCount }, (_, i) => i + 1);
 }
 
+/** Convert embedded font toUnicode data. */
+function buildToUnicode(toUnicode: EmbeddedFont["toUnicode"]): PdfEmbeddedFont["toUnicode"] {
+  if (!toUnicode) { return undefined; }
+  return { byteMapping: toUnicode.byteMapping, sourceCodeByteLengths: toUnicode.sourceCodeByteLengths };
+}
+
+/** Convert embedded font metrics data. */
+function buildMetrics(metrics: EmbeddedFont["metrics"]): PdfEmbeddedFont["metrics"] {
+  if (!metrics) { return undefined; }
+  return {
+    ascender: metrics.ascender,
+    descender: metrics.descender,
+    widths: metrics.widths ?? new Map(),
+    defaultWidth: metrics.defaultWidth ?? 500,
+  };
+}
+
 function buildEmbeddedFonts(
-  embeddedFontsRaw: readonly import("../../domain/font/embedded-font").EmbeddedFont[],
+  embeddedFontsRaw: readonly EmbeddedFont[],
 ): readonly PdfEmbeddedFont[] | undefined {
   if (embeddedFontsRaw.length === 0) {
     return undefined;
@@ -261,16 +279,8 @@ function buildEmbeddedFonts(
     data: f.data,
     mimeType: f.mimeType,
     baseFontName: f.baseFontName,
-    toUnicode: f.toUnicode ? {
-      byteMapping: f.toUnicode.byteMapping,
-      sourceCodeByteLengths: f.toUnicode.sourceCodeByteLengths,
-    } : undefined,
-    metrics: f.metrics ? {
-      ascender: f.metrics.ascender,
-      descender: f.metrics.descender,
-      widths: f.metrics.widths ?? new Map(),
-      defaultWidth: f.metrics.defaultWidth ?? 500,
-    } : undefined,
+    toUnicode: buildToUnicode(f.toUnicode),
+    metrics: buildMetrics(f.metrics),
     ordering: f.ordering,
     codeByteWidth: f.codeByteWidth,
   }));

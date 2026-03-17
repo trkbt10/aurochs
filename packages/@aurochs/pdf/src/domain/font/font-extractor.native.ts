@@ -89,6 +89,13 @@ function extractToUnicodeMap(page: NativePdfPage, fontDict: PdfDict): CMapParseR
   return parseToUnicodeCMap(cmap);
 }
 
+/** Resolve ordering text from a string or name PDF object. */
+function resolveOrderingText(obj: PdfObject): string | null {
+  if (obj.type === "string") { return obj.text; }
+  if (obj.type === "name") { return obj.value; }
+  return null;
+}
+
 /**
  * Extract CID ordering from CIDSystemInfo dictionary.
  */
@@ -115,8 +122,7 @@ function extractCIDOrdering(page: NativePdfPage, fontDict: PdfDict): CIDOrdering
   const orderingObj = resolve(page, dictGet(cidSystemInfo, "Ordering"));
   if (!orderingObj) {return undefined;}
 
-  const ordering = orderingObj.type === "string" ? orderingObj.text :
-                   orderingObj.type === "name" ? orderingObj.value : null;
+  const ordering = resolveOrderingText(orderingObj);
 
   if (!ordering) {return undefined;}
 

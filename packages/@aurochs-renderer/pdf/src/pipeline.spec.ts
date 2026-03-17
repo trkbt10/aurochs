@@ -1,3 +1,4 @@
+/** @file Tests for the PDF rendering pipeline. */
 import { readFileSync } from "node:fs";
 import { getPdfFixturePath } from "@aurochs/pdf/test-utils/pdf-fixtures";
 import { buildPdfDocumentForRender, renderPdfSourcePageToSvg, renderPdfSourceToSvgs } from "./pipeline";

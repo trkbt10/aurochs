@@ -56,11 +56,11 @@ describe("serializePdfStream", () => {
     const streamMarker = new TextEncoder().encode("stream\n");
     const endstreamMarker = new TextEncoder().encode("\nendstream");
 
+    // eslint-disable-next-line no-restricted-syntax -- updated in search loop
     let streamStart = -1;
-    for (let i = 0; i <= result.length - streamMarker.length; i++) {
+    for (let i = 0; i <= result.length - streamMarker.length; i++) {      // eslint-disable-next-line no-restricted-syntax -- flag updated in inner loop
       let match = true;
-      for (let j = 0; j < streamMarker.length; j++) {
-        if (result[i + j] !== streamMarker[j]) {
+      for (let j = 0; j < streamMarker.length; j++) {        if (result[i + j] !== streamMarker[j]) {
           match = false;
           break;
         }
@@ -71,11 +71,11 @@ describe("serializePdfStream", () => {
       }
     }
 
+    // eslint-disable-next-line no-restricted-syntax -- updated in search loop
     let streamEnd = -1;
-    for (let i = result.length - endstreamMarker.length; i >= 0; i--) {
+    for (let i = result.length - endstreamMarker.length; i >= 0; i--) {      // eslint-disable-next-line no-restricted-syntax -- flag updated in inner loop
       let match = true;
-      for (let j = 0; j < endstreamMarker.length; j++) {
-        if (result[i + j] !== endstreamMarker[j]) {
+      for (let j = 0; j < endstreamMarker.length; j++) {        if (result[i + j] !== endstreamMarker[j]) {
           match = false;
           break;
         }

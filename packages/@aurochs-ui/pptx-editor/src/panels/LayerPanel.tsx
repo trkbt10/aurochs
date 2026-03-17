@@ -181,6 +181,15 @@ function getVisibleShapeIds(shapes: readonly Shape[], expandedGroups: ReadonlySe
   return ids;
 }
 
+function getGroupBadge(shape: Shape): ReactNode {
+  if (shape.type !== "grpSp") { return undefined; }
+  return (
+    <span style={{ fontSize: fontTokens.size.xs, color: colorTokens.text.tertiary, backgroundColor: colorTokens.background.tertiary, padding: "1px 4px", borderRadius: "3px" }}>
+      {(shape as GrpShape).children.length}
+    </span>
+  );
+}
+
 function getDropPositionFromEvent(event: DragEvent, isGroup: boolean): "before" | "after" | "inside" {
   const target = event.currentTarget as HTMLElement;
   const rect = target.getBoundingClientRect();
@@ -242,6 +251,7 @@ function ShapeLayerItems({
         const locked = isShapeLocked(shape);
 
         // Map dropTarget to LayerItem dropPosition
+        // eslint-disable-next-line no-restricted-syntax -- mutable for conditional assignment
         let dropPosition: DropPosition = null;
         if (dropTarget?.targetId === shapeId) {
           dropPosition = dropTarget.position;
@@ -270,11 +280,7 @@ function ShapeLayerItems({
               onDragEnd={onDragEnd}
               dropPosition={dropPosition}
               canHaveChildren={isGroup}
-              badge={isGroup ? (
-                <span style={{ fontSize: fontTokens.size.xs, color: colorTokens.text.tertiary, backgroundColor: colorTokens.background.tertiary, padding: "1px 4px", borderRadius: "3px" }}>
-                  {(shape as GrpShape).children.length}
-                </span>
-              ) : undefined}
+              badge={getGroupBadge(shape)}
             />
 
             {/* Render children if expanded */}
@@ -309,6 +315,7 @@ function ShapeLayerItems({
 // Main Component
 // =============================================================================
 
+/** Layer panel displaying shapes in a hierarchical tree view. */
 export function LayerPanel({
   slide,
   selection,
@@ -459,6 +466,7 @@ export function LayerPanel({
   }, []);
 
   const handleDragOver = useCallback(
+    // eslint-disable-next-line custom/max-params -- event handler with shape context
     (shape: Shape, parentId: ShapeId | null, displayIndex: number, e: DragEvent<HTMLDivElement>) => {
       e.stopPropagation();
       e.preventDefault();
@@ -504,6 +512,32 @@ export function LayerPanel({
   const listStyle: CSSProperties = { flex: 1, overflow: "auto", padding: "4px" };
   const emptyStyle: CSSProperties = { padding: "24px 16px", textAlign: "center", color: colorTokens.text.tertiary, fontSize: fontTokens.size.md };
 
+  function renderShapeList(): ReactNode {
+    if (slide.shapes.length === 0) {
+      return <div style={emptyStyle}>No shapes on this slide</div>;
+    }
+    return (
+      <ShapeLayerItems
+        shapes={slide.shapes}
+        depth={0}
+        parentId={null}
+        selectedIds={selectedIds}
+        expandedGroups={expandedGroups}
+        dropTarget={dropTarget}
+        draggingId={draggingId}
+        onPointerDown={handlePointerDown}
+        onToggle={handleToggle}
+        onVisibilityChange={handleVisibilityChange}
+        onLockChange={handleLockChange}
+        onContextMenu={handleContextMenu}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+        onDragEnd={handleDragEnd}
+      />
+    );
+  }
+
   return (
     <div className={className} style={layoutStyle}>
       <div
@@ -513,28 +547,7 @@ export function LayerPanel({
         onClick={() => { setContextMenu(null); onClearSelection(); }}
         onContextMenu={(e) => { if (selectedIds.length > 0) { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY }); } }}
       >
-        {slide.shapes.length === 0 ? (
-          <div style={emptyStyle}>No shapes on this slide</div>
-        ) : (
-          <ShapeLayerItems
-            shapes={slide.shapes}
-            depth={0}
-            parentId={null}
-            selectedIds={selectedIds}
-            expandedGroups={expandedGroups}
-            dropTarget={dropTarget}
-            draggingId={draggingId}
-            onPointerDown={handlePointerDown}
-            onToggle={handleToggle}
-            onVisibilityChange={handleVisibilityChange}
-            onLockChange={handleLockChange}
-            onContextMenu={handleContextMenu}
-            onDragStart={handleDragStart}
-            onDragOver={handleDragOver}
-            onDrop={handleDrop}
-            onDragEnd={handleDragEnd}
-          />
-        )}
+        {renderShapeList()}
       </div>
 
       {contextMenu && (

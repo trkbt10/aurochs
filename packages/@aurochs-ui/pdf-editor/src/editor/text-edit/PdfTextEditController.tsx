@@ -87,7 +87,7 @@ const INITIAL_COMPOSITION: CompositionState = { isComposing: false, text: "", st
 const WORD_CHAR_REGEX = /[\p{L}\p{N}_]/u;
 
 function getWordRange(text: string, offset: number): { start: number; end: number } {
-  if (text.length === 0) return { start: 0, end: 0 };
+  if (text.length === 0) { return { start: 0, end: 0 }; }
   const clamped = Math.max(0, Math.min(offset, text.length - 1));
   const char = text[clamped];
   const isWord = WORD_CHAR_REGEX.test(char);
@@ -116,6 +116,7 @@ function getWordRange(text: string, offset: number): { start: number; end: numbe
 const measureCtxCache = { ctx: null as CanvasRenderingContext2D | null };
 function getCanvasCtx(): CanvasRenderingContext2D | null {
   if (!measureCtxCache.ctx) {
+    // eslint-disable-next-line no-restricted-syntax -- SSR safety: canvas not available server-side
     try { measureCtxCache.ctx = document.createElement("canvas").getContext("2d"); } catch { /* SSR */ }
   }
   return measureCtxCache.ctx;
@@ -170,10 +171,10 @@ function buildCursorContext(args: {
   const ascRatio = args.ascender / (args.ascender - args.descender);
 
   const measureSpanTextWidth = (span: LayoutSpanLike, substring: string): number => {
-    if (!ctx || span.text.length === 0 || substring.length === 0) return 0;
+    if (!ctx || span.text.length === 0 || substring.length === 0) { return 0; }
     ctx.font = fontStr;
     const fullWidth = ctx.measureText(span.text).width;
-    if (fullWidth <= 0) return 0;
+    if (fullWidth <= 0) { return 0; }
     // Scale to span.width (= text.width, the PDF SoT)
     return (ctx.measureText(substring).width / fullWidth) * span.width;
   };
@@ -190,6 +191,7 @@ function buildCursorContext(args: {
 // Component
 // =============================================================================
 
+/** Controller for inline text editing with SVG overlay and hidden textarea. */
 export function PdfTextEditController({
   bounds,
   element,
@@ -263,7 +265,7 @@ export function PdfTextEditController({
 
   const updateCursorPosition = useCallback(() => {
     const textarea = textareaRef.current;
-    if (!textarea) return;
+    if (!textarea) { return; }
     const { selectionStart, selectionEnd } = textarea;
     if (selectionStart !== selectionEnd) {
       const startPos = offsetToCursorPosition(textBody, selectionStart);
@@ -294,7 +296,7 @@ export function PdfTextEditController({
   latestRef.current = { currentText, initialText: initialTextRef.current, onComplete };
   useEffect(() => {
     return () => {
-      if (finishedRef.current) return;
+      if (finishedRef.current) { return; }
       const latest = latestRef.current;
       if (latest.currentText !== latest.initialText) {
         latest.onComplete(latest.currentText);
@@ -311,9 +313,9 @@ export function PdfTextEditController({
   const getOffsetFromPointerEvent = useCallback(
     (event: React.PointerEvent<SVGSVGElement> | React.MouseEvent<SVGSVGElement>): number | null => {
       const svg = svgRef.current;
-      if (!svg) return null;
+      if (!svg) { return null; }
       const matrix = svg.getScreenCTM();
-      if (!matrix) return null;
+      if (!matrix) { return null; }
       const point = svg.createSVGPoint();
       point.x = event.clientX;
       point.y = event.clientY;
@@ -335,7 +337,7 @@ export function PdfTextEditController({
       if (!isPrimaryPointerAction(event)) { event.preventDefault(); return; }
       const textarea = textareaRef.current;
       const offset = getOffsetFromPointerEvent(event);
-      if (!textarea || offset === null) return;
+      if (!textarea || offset === null) { return; }
 
       isDraggingRef.current = true;
       textarea.focus();
@@ -351,10 +353,10 @@ export function PdfTextEditController({
 
   const handleSvgPointerMove = useCallback(
     (event: React.PointerEvent<SVGSVGElement>) => {
-      if (!isDraggingRef.current) return;
+      if (!isDraggingRef.current) { return; }
       const textarea = textareaRef.current;
       const offset = getOffsetFromPointerEvent(event);
-      if (!textarea || offset === null) return;
+      if (!textarea || offset === null) { return; }
       const anchorOffset = dragAnchorRef.current ?? getSelectionAnchor(textarea);
       applySelectionRange({ textarea, anchorOffset, focusOffset: offset });
       updateCursorPosition();
@@ -364,7 +366,7 @@ export function PdfTextEditController({
   );
 
   const handleSvgPointerUp = useCallback((event: React.PointerEvent<SVGSVGElement>) => {
-    if (!isDraggingRef.current) return;
+    if (!isDraggingRef.current) { return; }
     isDraggingRef.current = false;
     dragAnchorRef.current = null;
     event.currentTarget.releasePointerCapture(event.pointerId);
@@ -382,7 +384,7 @@ export function PdfTextEditController({
       if (!isPrimaryMouseAction(event)) { event.preventDefault(); return; }
       const textarea = textareaRef.current;
       const offset = getOffsetFromPointerEvent(event as React.PointerEvent<SVGSVGElement>);
-      if (!textarea || offset === null) return;
+      if (!textarea || offset === null) { return; }
       const range = getWordRange(currentText, offset);
       applySelectionRange({ textarea, anchorOffset: range.start, focusOffset: range.end });
       updateCursorPosition();

@@ -49,21 +49,21 @@ const labelStyle: CSSProperties = { color: "var(--text-tertiary, #999)" };
 // =============================================================================
 
 function getMixedFill(elements: readonly PdfElement[]): FillFormatting | "mixed" {
-  if (elements.length === 0) return { type: "none" };
+  if (elements.length === 0) { return { type: "none" }; }
   const first = pdfFillToFormatting(elements[0].graphicsState);
-  for (let i = 1; i < elements.length; i++) {
-    const current = pdfFillToFormatting(elements[i].graphicsState);
-    if (current.type !== first.type || (current.type === "solid" && first.type === "solid" && current.color !== first.color)) return "mixed";
+  for (const element of elements.slice(1)) {
+    const current = pdfFillToFormatting(element.graphicsState);
+    if (current.type !== first.type || (current.type === "solid" && first.type === "solid" && current.color !== first.color)) { return "mixed"; }
   }
   return first;
 }
 
 function getMixedStroke(elements: readonly PdfElement[]): OutlineFormatting | "mixed" {
-  if (elements.length === 0) return {};
+  if (elements.length === 0) { return {}; }
   const first = pdfStrokeToFormatting(elements[0].graphicsState);
-  for (let i = 1; i < elements.length; i++) {
-    const current = pdfStrokeToFormatting(elements[i].graphicsState);
-    if (current.color !== first.color || current.width !== first.width || current.style !== first.style) return "mixed";
+  for (const element of elements.slice(1)) {
+    const current = pdfStrokeToFormatting(element.graphicsState);
+    if (current.color !== first.color || current.width !== first.width || current.style !== first.style) { return "mixed"; }
   }
   return first;
 }
@@ -73,7 +73,7 @@ function getMixedStroke(elements: readonly PdfElement[]): OutlineFormatting | "m
 // =============================================================================
 
 /** Property panel for multi-selected PDF elements. */
-export function PdfMultiSelectPanel({ document, selectedIds, pageHeight, onUpdateElements, style }: PdfMultiSelectPanelProps) {
+export function PdfMultiSelectPanel({ document, selectedIds, pageHeight: _pageHeight, onUpdateElements, style }: PdfMultiSelectPanelProps) {
   const query = useMemo(() => createDocumentQuery(document), [document]);
   const elements = useMemo(
     () => selectedIds.map((id) => query.getElement(id)).filter((el): el is PdfElement => el !== undefined),
@@ -81,10 +81,11 @@ export function PdfMultiSelectPanel({ document, selectedIds, pageHeight, onUpdat
   );
 
   const combinedBounds = useMemo(() => {
+    // eslint-disable-next-line no-restricted-syntax -- accumulator updated in loop
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for (const id of selectedIds) {
       const b = query.getElementBounds(id);
-      if (!b) continue;
+      if (!b) { continue; }
       minX = Math.min(minX, b.x);
       minY = Math.min(minY, b.y);
       maxX = Math.max(maxX, b.x + b.width);

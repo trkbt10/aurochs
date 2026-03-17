@@ -55,6 +55,42 @@ function isMajorTick(value: number, majorStep: number): boolean {
 }
 
 // =============================================================================
+// Tick rendering
+// =============================================================================
+
+type TickParams = {
+  readonly isHorizontal: boolean;
+  readonly value: number;
+  readonly pos: number;
+  readonly thickness: number;
+  readonly tickColor: string;
+};
+
+function renderMinorTick({ isHorizontal, value, pos, thickness, tickColor }: TickParams) {
+  if (isHorizontal) {
+    return <line key={`m-${value}`} x1={pos} y1={thickness} x2={pos} y2={thickness - 6} stroke={tickColor} strokeWidth={1} />;
+  }
+  return <line key={`m-${value}`} x1={thickness} y1={pos} x2={thickness - 6} y2={pos} stroke={tickColor} strokeWidth={1} />;
+}
+
+function renderMajorTick({ isHorizontal, value, pos, thickness, tickColor, label }: TickParams & { readonly label: string }) {
+  if (isHorizontal) {
+    return (
+      <g key={`M-${value}`}>
+        <line x1={pos} y1={thickness} x2={pos} y2={thickness - 10} stroke={tickColor} strokeWidth={1} />
+        <text x={pos + 2} y={thickness - 12} fill="var(--text-secondary, #888)" fontSize="10" fontFamily="inherit">{label}</text>
+      </g>
+    );
+  }
+  return (
+    <g key={`M-${value}`}>
+      <line x1={thickness} y1={pos} x2={thickness - 10} y2={pos} stroke={tickColor} strokeWidth={1} />
+      <text x={2} y={pos + 10} fill="var(--text-secondary, #888)" fontSize="10" fontFamily="inherit">{label}</text>
+    </g>
+  );
+}
+
+// =============================================================================
 // Component
 // =============================================================================
 
@@ -91,26 +127,12 @@ export function CanvasRuler({ orientation, length, thickness, zoom, offsetPx, ma
     >
       {minorTicks.map((value) => {
         const pos = value * zoom - offsetPx;
-        return isHorizontal ? (
-          <line key={`m-${value}`} x1={pos} y1={thickness} x2={pos} y2={thickness - 6} stroke={tickColor} strokeWidth={1} />
-        ) : (
-          <line key={`m-${value}`} x1={thickness} y1={pos} x2={thickness - 6} y2={pos} stroke={tickColor} strokeWidth={1} />
-        );
+        return renderMinorTick({ isHorizontal, value, pos, thickness, tickColor });
       })}
       {majorTicks.map((value) => {
         const pos = value * zoom - offsetPx;
         const label = Math.round(value).toString();
-        return isHorizontal ? (
-          <g key={`M-${value}`}>
-            <line x1={pos} y1={thickness} x2={pos} y2={thickness - 10} stroke={tickColor} strokeWidth={1} />
-            <text x={pos + 2} y={thickness - 12} fill="var(--text-secondary, #888)" fontSize="10" fontFamily="inherit">{label}</text>
-          </g>
-        ) : (
-          <g key={`M-${value}`}>
-            <line x1={thickness} y1={pos} x2={thickness - 10} y2={pos} stroke={tickColor} strokeWidth={1} />
-            <text x={2} y={pos + 10} fill="var(--text-secondary, #888)" fontSize="10" fontFamily="inherit">{label}</text>
-          </g>
-        );
+        return renderMajorTick({ isHorizontal, value, pos, thickness, tickColor, label });
       })}
     </svg>
   );

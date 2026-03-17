@@ -22,6 +22,7 @@ function encodeAscii(text: string): Uint8Array {
 function concat(...arrays: Uint8Array[]): Uint8Array {
   const totalLength = arrays.reduce((sum, arr) => sum + arr.length, 0);
   const result = new Uint8Array(totalLength);
+  // eslint-disable-next-line no-restricted-syntax -- accumulator updated in loop
   let offset = 0;
   for (const arr of arrays) {
     result.set(arr, offset);
@@ -77,10 +78,10 @@ export function serializePdfNumber(value: number): Uint8Array {
  */
 function needsNameEscape(charCode: number): boolean {
   // Escape: null, non-printable, space, DEL, and #
-  if (charCode === 0x00) return true; // null
-  if (charCode < 0x21) return true; // control chars and space
-  if (charCode > 0x7e) return true; // DEL and high bytes
-  if (charCode === 0x23) return true; // # itself
+  if (charCode === 0x00) { return true; } // null
+  if (charCode < 0x21) { return true; } // control chars and space
+  if (charCode > 0x7e) { return true; } // DEL and high bytes
+  if (charCode === 0x23) { return true; } // # itself
   // PDF delimiters that should be escaped in names
   if (
     charCode === 0x28 || // (
@@ -125,6 +126,7 @@ export function serializePdfName(name: string): Uint8Array {
  * @see ISO 32000-1:2008 Section 7.3.4.2
  */
 function escapeStringLiteral(text: string): string {
+  // eslint-disable-next-line no-restricted-syntax -- string builder pattern
   let result = "";
   for (let i = 0; i < text.length; i++) {
     const char = text[i];

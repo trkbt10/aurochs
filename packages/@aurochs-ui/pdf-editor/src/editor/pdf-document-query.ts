@@ -9,8 +9,8 @@
  * go through this object, ensuring consistency and SoT compliance.
  */
 
-import type { PdfDocument, PdfPage, PdfElement, PdfText } from "@aurochs/pdf";
-import { computeTextSvgBounds, resolveTextFontMetrics } from "@aurochs-renderer/pdf/svg";
+import type { PdfDocument, PdfPage, PdfElement } from "@aurochs/pdf";
+import { resolveTextFontMetrics } from "@aurochs-renderer/pdf/svg";
 import type { PdfElementId, PdfElementBounds } from "./types";
 import { parseElementId, createElementId, elementToSvgBounds } from "./types";
 
@@ -66,7 +66,7 @@ export type PdfDocumentQuery = {
 export function createDocumentQuery(doc: PdfDocument): PdfDocumentQuery {
   const getPage = (pageIndex: number): PdfPage => {
     const page = doc.pages[pageIndex];
-    if (!page) throw new Error(`Page index ${pageIndex} out of bounds (${doc.pages.length} pages)`);
+    if (!page) { throw new Error(`Page index ${pageIndex} out of bounds (${doc.pages.length} pages)`); }
     return page;
   };
 
@@ -82,15 +82,15 @@ export function createDocumentQuery(doc: PdfDocument): PdfDocumentQuery {
   const getElementBounds = (id: PdfElementId): PdfElementBounds | undefined => {
     const { pageIndex, elementIndex } = parseElementId(id);
     const page = doc.pages[pageIndex];
-    if (!page) return undefined;
+    if (!page) { return undefined; }
     const element = page.elements[elementIndex];
-    if (!element) return undefined;
+    if (!element) { return undefined; }
     return elementToSvgBounds({ element, elementIndex, pageIndex, pageHeight: page.height });
   };
 
   const getTextFontInfo = (id: PdfElementId): TextFontInfo | undefined => {
     const el = getElement(id);
-    if (!el || el.type !== "text") return undefined;
+    if (!el || el.type !== "text") { return undefined; }
     const metrics = resolveTextFontMetrics(el);
     return {
       family: el.baseFont ?? el.fontName,
@@ -104,7 +104,7 @@ export function createDocumentQuery(doc: PdfDocument): PdfDocumentQuery {
 
   const getPageElementIds = (pageIndex: number): readonly PdfElementId[] => {
     const page = doc.pages[pageIndex];
-    if (!page) return [];
+    if (!page) { return []; }
     return page.elements.map((_, i) => createElementId(pageIndex, i));
   };
 

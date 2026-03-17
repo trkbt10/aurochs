@@ -1,3 +1,4 @@
+/** @file PDF color to SVG paint conversion utilities. */
 import type { PdfColor } from "@aurochs/pdf/domain";
 import { clamp01, cmykToRgb, grayToRgb, rgbToHex, rgbToRgbBytes } from "@aurochs/pdf/domain/color";
 
@@ -45,6 +46,7 @@ function colorToHex(color: PdfColor): string {
   }
 }
 
+/** Convert a PdfColor and alpha to SVG paint attributes. */
 export function toSvgPaint(color: PdfColor, alpha: number): SvgPaint {
   return {
     color: colorToHex(color),

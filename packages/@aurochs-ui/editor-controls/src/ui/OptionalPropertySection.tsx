@@ -125,6 +125,27 @@ const addButtonContainerStyle: CSSProperties = {
 };
 
 // =============================================================================
+// Helpers
+// =============================================================================
+
+function resolveContent<T>(props: OptionalPropertySectionProps<T>, title: string): ReactNode {
+  if (props.children !== undefined) {
+    return props.children;
+  }
+  const { value, createDefault, onChange, renderEditor } = props as OptionalSectionProps<T>;
+  if (value !== undefined) {
+    return renderEditor(value, onChange);
+  }
+  return (
+    <div style={addButtonContainerStyle}>
+      <Button variant="secondary" size="sm" onClick={() => onChange(createDefault())}>
+        Add {title}
+      </Button>
+    </div>
+  );
+}
+
+// =============================================================================
 // Component
 // =============================================================================
 
@@ -173,21 +194,7 @@ export function OptionalPropertySection<T>(props: OptionalPropertySectionProps<T
   }, [disabled, isControlled, expanded, onExpandedChange]);
 
   // Determine content
-  let content: ReactNode;
-  if (props.children !== undefined) {
-    content = props.children;
-  } else {
-    const { value, createDefault, onChange, renderEditor } = props as OptionalSectionProps<T>;
-    content = value !== undefined ? (
-      renderEditor(value, onChange)
-    ) : (
-      <div style={addButtonContainerStyle}>
-        <Button variant="secondary" size="sm" onClick={() => onChange(createDefault())}>
-          Add {title}
-        </Button>
-      </div>
-    );
-  }
+  const content = resolveContent(props, title);
 
   return (
     <div style={containerStyle}>

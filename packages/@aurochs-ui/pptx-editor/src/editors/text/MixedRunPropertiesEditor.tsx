@@ -80,7 +80,7 @@ export function MixedRunPropertiesEditor({
       }}
       underlineStyleOptions={PPTX_UNDERLINE_OPTIONS}
       strikeStyleOptions={PPTX_STRIKE_OPTIONS}
-      renderColorPicker={({ value: colorHex, onChange: onColorChange, disabled: d }) => (
+      renderColorPicker={({ value: _colorHex, onChange: _onColorChange, disabled: d }) => (
         <ColorEditor
           value={getExtractionValue(value.color) ?? createDefaultColor("000000")}
           onChange={(c) => onChange({ color: c })}
@@ -88,7 +88,7 @@ export function MixedRunPropertiesEditor({
           showTransform={false}
         />
       )}
-      renderHighlightPicker={({ value: highlightHex, onChange: onHighlightChange, disabled: d }) => (
+      renderHighlightPicker={({ value: _highlightHex, onChange: _onHighlightChange, disabled: d }) => (
         <ColorEditor
           value={getExtractionValue(value.highlightColor) ?? createDefaultColor("FFFF00")}
           onChange={(c) => onChange({ highlightColor: c })}

@@ -145,6 +145,7 @@ describe("MixedRunPropertiesEditor", () => {
       );
 
       const selects = container.querySelectorAll("select") as NodeListOf<HTMLSelectElement>;
+      // eslint-disable-next-line no-restricted-syntax -- mutable search result
       let underlineSelect: HTMLSelectElement | null = null;
       for (const select of selects) {
         for (const option of select.querySelectorAll("option")) {
@@ -162,6 +163,7 @@ describe("MixedRunPropertiesEditor", () => {
       );
 
       const selects = container.querySelectorAll("select") as NodeListOf<HTMLSelectElement>;
+      // eslint-disable-next-line no-restricted-syntax -- mutable search result
       let underlineSelect: HTMLSelectElement | null = null;
       for (const select of selects) {
         for (const option of select.querySelectorAll("option")) {

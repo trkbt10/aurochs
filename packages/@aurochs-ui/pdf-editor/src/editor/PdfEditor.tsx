@@ -32,7 +32,7 @@ import { parseElementId } from "./types";
 import { createDocumentQuery } from "./pdf-document-query";
 import { PdfTextEditController } from "./text-edit";
 
-const RULER_THICKNESS = 20;
+const _RULER_THICKNESS = 20;
 
 // =============================================================================
 // Types
@@ -87,7 +87,7 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
   const currentPage = document.pages[state.currentPageIndex];
 
   const selectedElement = useMemo(() => {
-    if (!state.selection.primaryId) return undefined;
+    if (!state.selection.primaryId) { return undefined; }
     return query.getElement(state.selection.primaryId);
   }, [state.selection.primaryId, query]);
 
@@ -100,6 +100,7 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
   const handleClearSelection = useCallback(() => dispatch({ type: "CLEAR_SELECTION" }), []);
 
   const handleStartMove = useCallback(
+    // eslint-disable-next-line custom/max-params -- matches EditorCanvas callback signature
     (startX: number, startY: number, clientX: number, clientY: number) => dispatch({ type: "START_PENDING_MOVE", startX, startY, startClientX: clientX, startClientY: clientY }),
     [],
   );
@@ -157,9 +158,9 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
   const handleDoubleClick = useCallback(
     (elementId: PdfElementId) => {
       const el = query.getElement(elementId);
-      if (el?.type !== "text") return;
+      if (el?.type !== "text") { return; }
       const bounds = query.getElementBounds(elementId);
-      if (!bounds) return;
+      if (!bounds) { return; }
       dispatch({ type: "START_TEXT_EDIT", elementId, text: el.text, bounds: { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height } });
     },
     [query],
@@ -181,24 +182,31 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
     [state.currentPageIndex],
   );
 
-  const propertiesContent = state.selection.selectedIds.length > 1 ? (
-    <PdfMultiSelectPanel
-      document={document}
-      selectedIds={state.selection.selectedIds}
-      pageHeight={pageHeight}
-      onUpdateElements={handleUpdateSelectedElements}
-    />
-  ) : (
-    <PdfPropertyPanel
-      element={selectedElement}
-      elementId={state.selection.primaryId}
-      bounds={state.selection.primaryId ? query.getElementBounds(state.selection.primaryId) : undefined}
-      pageWidth={pageWidth}
-      pageHeight={pageHeight}
-      onUpdateElement={handleUpdateElement}
-      onPageSizeChange={handlePageSizeChange}
-    />
-  );
+  const propertiesContent = renderPropertiesContent();
+
+  function renderPropertiesContent() {
+    if (state.selection.selectedIds.length > 1) {
+      return (
+        <PdfMultiSelectPanel
+          document={document}
+          selectedIds={state.selection.selectedIds}
+          pageHeight={pageHeight}
+          onUpdateElements={handleUpdateSelectedElements}
+        />
+      );
+    }
+    return (
+      <PdfPropertyPanel
+        element={selectedElement}
+        elementId={state.selection.primaryId}
+        bounds={state.selection.primaryId ? query.getElementBounds(state.selection.primaryId) : undefined}
+        pageWidth={pageWidth}
+        pageHeight={pageHeight}
+        onUpdateElement={handleUpdateElement}
+        onPageSizeChange={handlePageSizeChange}
+      />
+    );
+  }
 
   const inspectorTabs: InspectorTab[] = useMemo(() => [
     { id: "properties", label: "Properties", content: propertiesContent },
@@ -334,23 +342,28 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
   // to guarantee font/position parity between editing and display.
 
   const textEditElement = useMemo(() => {
-    if (!state.textEdit.active) return undefined;
+    if (!state.textEdit.active) { return undefined; }
     const el = query.getElement(state.textEdit.elementId);
-    if (!el || el.type !== "text") return undefined;
+    if (!el || el.type !== "text") { return undefined; }
     return el;
   }, [state.textEdit, query]);
 
-  const textEditOverlayNode = state.textEdit.active && currentPage && textEditElement ? (
-    <PdfTextEditController
-      bounds={{ ...state.textEdit.bounds, rotation: 0 }}
-      element={textEditElement}
-      pageHeight={currentPage.height}
-      canvasWidth={currentPage.width}
-      canvasHeight={currentPage.height}
-      onComplete={(text) => dispatch({ type: "COMMIT_TEXT_EDIT", text })}
-      onCancel={() => dispatch({ type: "CANCEL_TEXT_EDIT" })}
-    />
-  ) : undefined;
+  const textEditOverlayNode = renderTextEditOverlay();
+
+  function renderTextEditOverlay() {
+    if (!state.textEdit.active || !currentPage || !textEditElement) { return undefined; }
+    return (
+      <PdfTextEditController
+        bounds={{ ...state.textEdit.bounds, rotation: 0 }}
+        element={textEditElement}
+        pageHeight={currentPage.height}
+        canvasWidth={currentPage.width}
+        canvasHeight={currentPage.height}
+        onComplete={(text) => dispatch({ type: "COMMIT_TEXT_EDIT", text })}
+        onCancel={() => dispatch({ type: "CANCEL_TEXT_EDIT" })}
+      />
+    );
+  }
 
   // ---- Center content (CanvasArea, same as PresentationEditor) ----
 
@@ -360,7 +373,6 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
     if (!currentPage) { return null; }
     return (
       <CanvasArea>
-        {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
         <div onContextMenu={handleContextMenu} style={{ display: "contents" }}>
         <PdfPageCanvas
           page={currentPage}

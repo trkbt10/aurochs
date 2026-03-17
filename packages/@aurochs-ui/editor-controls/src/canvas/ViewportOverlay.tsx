@@ -39,7 +39,7 @@ export function ViewportOverlay({
   slideHeight,
   rulerThickness,
   children,
-  pointerEvents = true,
+  pointerEvents: _pointerEvents = true,
 }: ViewportOverlayProps): ReactElement {
   const containerStyle: CSSProperties = {
     position: "absolute",

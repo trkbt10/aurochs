@@ -187,16 +187,16 @@ export type EditorCanvasProps = {
 
 function extractSvgInnerContent(svgString: string): string {
   const openTagEnd = svgString.indexOf(">");
-  if (openTagEnd === -1) return svgString;
+  if (openTagEnd === -1) {return svgString;}
   const closeTagStart = svgString.lastIndexOf("</svg>");
-  if (closeTagStart === -1) return svgString;
+  if (closeTagStart === -1) {return svgString;}
   return svgString.slice(openTagEnd + 1, closeTagStart);
 }
 
 const DEFAULT_RULER_THICKNESS = 20;
 
 function getRotationTransform(b: EditorCanvasItemBounds): string | undefined {
-  if (!b.rotation) return undefined;
+  if (!b.rotation) {return undefined;}
   return `rotate(${b.rotation}, ${b.x + b.width / 2}, ${b.y + b.height / 2})`;
 }
 
@@ -300,7 +300,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
   // Register wheel handler (non-passive for preventDefault)
   useEffect(() => {
     const svg = svgRef.current;
-    if (!svg) return;
+    if (!svg) {return;}
     svg.addEventListener("wheel", handleWheel, { passive: false });
     return () => svg.removeEventListener("wheel", handleWheel);
   }, [svgRef, handleWheel]);
@@ -309,9 +309,9 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
   const screenToPage = useCallback(
     (clientX: number, clientY: number): { pageX: number; pageY: number } | undefined => {
       const svg = svgRef.current;
-      if (!svg) return undefined;
+      if (!svg) {return undefined;}
       const rect = svg.getBoundingClientRect();
-      if (rect.width === 0 || rect.height === 0) return undefined;
+      if (rect.width === 0 || rect.height === 0) {return undefined;}
       const result = screenToSlideCoords({ clientX, clientY, svgRect: rect, viewport, rulerThickness });
       return { pageX: result.x, pageY: result.y };
     },
@@ -351,7 +351,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
     const result: EditorCanvasItemBounds[] = [];
     for (const id of selectedIds) {
       const b = itemBounds.find((ib) => ib.id === id);
-      if (!b) continue;
+      if (!b) {continue;}
       const preview = applyDragPreview(id, { ...b, rotation: b.rotation ?? 0 }, dragState);
       result.push({ id, x: preview.x, y: preview.y, width: preview.width, height: preview.height, rotation: preview.rotation });
     }
@@ -360,7 +360,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
 
   // --- Compute multi-selection combined bounds ---
   const multiSelectionBounds = useMemo(() => {
-    if (selectedBounds.length <= 1) return undefined;
+    if (selectedBounds.length <= 1) {return undefined;}
     return getCombinedBoundsWithRotation(selectedBounds.map((b) => ({ ...b, rotation: b.rotation ?? 0 })));
   }, [selectedBounds]);
 
@@ -370,7 +370,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
   const makeCoordsFromEvent = useCallback(
     (e: { clientX: number; clientY: number; shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }): CanvasPageCoords | undefined => {
       const page = screenToPage(e.clientX, e.clientY);
-      if (!page) return undefined;
+      if (!page) {return undefined;}
       return {
         ...page,
         clientX: e.clientX,
@@ -385,10 +385,10 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
   // --- Item event handlers ---
   const handleItemPointerDown = useCallback(
     (id: string, e: React.PointerEvent) => {
-      if (!onItemPointerDown) return;
+      if (!onItemPointerDown) {return;}
       e.stopPropagation();
       const coords = makeCoordsFromEvent(e);
-      if (!coords) return;
+      if (!coords) {return;}
       onItemPointerDown(id, coords, e);
 
       // Start global drag tracking if callbacks provided
@@ -401,32 +401,32 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
 
   const handleItemClick = useCallback(
     (id: string, e: React.MouseEvent) => {
-      if (!onItemClick) return;
+      if (!onItemClick) {return;}
       e.stopPropagation();
       const coords = makeCoordsFromEvent(e);
-      if (coords) onItemClick(id, coords, e);
+      if (coords) {onItemClick(id, coords, e);}
     },
     [onItemClick, makeCoordsFromEvent],
   );
 
   const handleItemDoubleClick = useCallback(
     (id: string, e: React.MouseEvent) => {
-      if (!onItemDoubleClick) return;
+      if (!onItemDoubleClick) {return;}
       e.stopPropagation();
       e.preventDefault();
       const coords = makeCoordsFromEvent(e);
-      if (coords) onItemDoubleClick(id, coords, e);
+      if (coords) {onItemDoubleClick(id, coords, e);}
     },
     [onItemDoubleClick, makeCoordsFromEvent],
   );
 
   const handleItemContextMenu = useCallback(
     (id: string, e: React.MouseEvent) => {
-      if (!onItemContextMenu) return;
+      if (!onItemContextMenu) {return;}
       e.preventDefault();
       e.stopPropagation();
       const coords = makeCoordsFromEvent(e);
-      if (coords) onItemContextMenu(id, coords, e);
+      if (coords) {onItemContextMenu(id, coords, e);}
     },
     [onItemContextMenu, makeCoordsFromEvent],
   );
@@ -435,9 +435,9 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
   const handleResizeStart = useCallback(
     (handle: ResizeHandlePosition, e: React.PointerEvent) => {
       e.stopPropagation();
-      if (!onResizeStart) return;
+      if (!onResizeStart) {return;}
       const coords = makeCoordsFromEvent(e);
-      if (!coords) return;
+      if (!coords) {return;}
       onResizeStart(handle, coords, e);
 
       // Start global drag tracking if callbacks provided
@@ -451,9 +451,9 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
   const handleRotateStart = useCallback(
     (e: React.PointerEvent) => {
       e.stopPropagation();
-      if (!onRotateStart) return;
+      if (!onRotateStart) {return;}
       const coords = makeCoordsFromEvent(e);
-      if (!coords) return;
+      if (!coords) {return;}
       onRotateStart(coords, e);
 
       // Start global drag tracking if callbacks provided
@@ -472,10 +472,10 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
         return;
       }
       const target = e.target as HTMLElement | null;
-      if (target?.closest("[data-shape-id]")) return;
-      if (!onCanvasClick) return;
+      if (target?.closest("[data-shape-id]")) {return;}
+      if (!onCanvasClick) {return;}
       const coords = makeCoordsFromEvent(e);
-      if (coords) onCanvasClick(coords, e);
+      if (coords) {onCanvasClick(coords, e);}
     },
     [onCanvasClick, makeCoordsFromEvent],
   );
@@ -488,13 +488,13 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
         return;
       }
 
-      if (e.button !== 0) return;
+      if (e.button !== 0) {return;}
 
       const target = e.target as HTMLElement | null;
-      if (target?.closest("[data-shape-id]")) return;
+      if (target?.closest("[data-shape-id]")) {return;}
 
       const coords = makeCoordsFromEvent(e);
-      if (!coords) return;
+      if (!coords) {return;}
 
       // Notify canvas pointer down (caller may call e.preventDefault() to suppress marquee)
       onCanvasPointerDown?.(coords, e);
@@ -523,7 +523,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
     (m: MarqueeState) => {
       const dx = Math.abs(m.currentX - m.startX);
       const dy = Math.abs(m.currentY - m.startY);
-      if (dx <= 2 && dy <= 2) return;
+      if (dx <= 2 && dy <= 2) {return;}
 
       ignoreNextClickRef.current = true;
 
@@ -586,7 +586,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
   }, [isPanning, handlePanEnd, finalizeMarquee]);
 
   useEffect(() => {
-    if (!marquee && !isPanning) return;
+    if (!marquee && !isPanning) {return;}
 
     const handleCancel = () => {
       marqueeRef.current = null;
@@ -606,11 +606,11 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
 
   // --- Global pointer listeners: item / resize / rotate drag tracking ---
   useEffect(() => {
-    if (!activeTracking) return;
+    if (!activeTracking) {return;}
 
     const handleMove = (e: PointerEvent) => {
       const coords = makeCoordsFromEvent(e);
-      if (!coords) return;
+      if (!coords) {return;}
       switch (activeTracking.type) {
         case "item":
           onItemDragMove?.(coords);
@@ -627,7 +627,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
     const handleUp = (e: PointerEvent) => {
       const coords = makeCoordsFromEvent(e);
       setActiveTracking(null);
-      if (!coords) return;
+      if (!coords) {return;}
       switch (activeTracking.type) {
         case "item":
           onItemDragEnd?.(coords);
@@ -657,7 +657,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
 
   // --- Marquee rect for rendering ---
   const marqueeRect = useMemo(() => {
-    if (!marquee) return null;
+    if (!marquee) {return null;}
     return {
       x: Math.min(marquee.startX, marquee.currentX),
       y: Math.min(marquee.startY, marquee.currentY),

@@ -23,6 +23,7 @@ function isCIDFont(font: PdfEmbeddedFont): boolean {
  * Removes leading slash and optionally subset prefix.
  */
 function normalizeFontName(name: string, removeSubsetPrefix: boolean): string {
+  // eslint-disable-next-line no-restricted-syntax -- conditionally reassigned
   let clean = name.startsWith("/") ? name.slice(1) : name;
   if (removeSubsetPrefix) {
     const plusIndex = clean.indexOf("+");
@@ -121,6 +122,7 @@ export function buildEmbeddedFont(
   const fontFileObjNum = tracker.allocate();
 
   // Determine font file key based on format
+  // eslint-disable-next-line no-restricted-syntax -- assigned in switch
   let fontFileKey: string;
   switch (font.format) {
     case "truetype":
@@ -230,7 +232,9 @@ export function buildType0Font(
                        font.fontFamily.replace(/\s+/g, "");
 
   // Determine font file key based on format
+  // eslint-disable-next-line no-restricted-syntax -- assigned in switch
   let fontFileKey: string;
+  // eslint-disable-next-line no-restricted-syntax -- assigned in switch
   let cidFontSubtype: string;
   switch (font.format) {
     case "truetype":
@@ -326,6 +330,7 @@ export function buildType0Font(
   tracker.set(cidFontObjNum, serializeIndirectObject(cidFontObjNum, 0, cidFontBytes));
 
   // Build ToUnicode CMap stream if available
+  // eslint-disable-next-line no-restricted-syntax -- conditionally assigned
   let toUnicodeObjNum: number | undefined;
   if (font.toUnicode) {
     toUnicodeObjNum = tracker.allocate();
@@ -375,6 +380,7 @@ function buildWidthsArray(widths: ReadonlyMap<number, number>): PdfObject[] {
   const sorted = [...widths.entries()].sort((a, b) => a[0] - b[0]);
 
   const result: PdfObject[] = [];
+  // eslint-disable-next-line no-restricted-syntax -- loop counter
   let i = 0;
 
   while (i < sorted.length) {
@@ -382,6 +388,7 @@ function buildWidthsArray(widths: ReadonlyMap<number, number>): PdfObject[] {
     const widthArray: PdfObject[] = [];
 
     // Find consecutive CIDs
+    // eslint-disable-next-line no-restricted-syntax -- updated in search loop
     let j = i;
     while (j < sorted.length && sorted[j]![0] === startCid + (j - i)) {
       widthArray.push({ type: "number", value: sorted[j]![1] });
@@ -395,6 +402,12 @@ function buildWidthsArray(widths: ReadonlyMap<number, number>): PdfObject[] {
   }
 
   return result;
+}
+
+/** Build the appropriate font object (Type0 for CID, embedded otherwise). */
+function buildFontObject(font: PdfEmbeddedFont, tracker: PdfObjectTracker): number {
+  if (isCIDFont(font)) { return buildType0Font(font, tracker); }
+  return buildEmbeddedFont(font, tracker);
 }
 
 /**
@@ -419,9 +432,7 @@ export function buildFonts(
       const matchingName = findMatchingUsedFontName(font, usedFontNames);
       if (matchingName) {
         // Use Type0 for CID fonts (2-byte encoding or CID ordering)
-        const objNum = isCIDFont(font)
-          ? buildType0Font(font, tracker)
-          : buildEmbeddedFont(font, tracker);
+        const objNum = buildFontObject(font, tracker);
         // Store both the original used name and fontFamily for lookup
         fontMap.set(matchingName, objNum);
         if (matchingName !== font.fontFamily) {

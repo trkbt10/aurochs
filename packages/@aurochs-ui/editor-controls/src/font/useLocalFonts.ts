@@ -36,7 +36,7 @@ export type UseLocalFontsResult = {
 };
 
 declare global {
-  // eslint-disable-next-line @typescript-eslint/consistent-type-definitions, no-restricted-syntax
+  // eslint-disable-next-line @typescript-eslint/consistent-type-definitions, no-restricted-syntax -- interface declaration required for global augmentation
   interface Window {
     queryLocalFonts?: () => Promise<LocalFontData[]>;
   }

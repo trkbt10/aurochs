@@ -1,3 +1,4 @@
+/** @file React component for rendering a full PDF document. */
 import type { CSSProperties } from "react";
 import type { PdfDocument, PdfPage } from "@aurochs/pdf/domain";
 import type { PdfSvgRenderOptions } from "../types";

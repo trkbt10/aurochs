@@ -70,6 +70,7 @@ export type PdfPageCanvasProps = {
 // Component
 // =============================================================================
 
+/** PdfPageCanvas - PDF editor canvas wrapper around EditorCanvas. */
 export function PdfPageCanvas({
   page,
   pageIndex,
@@ -112,7 +113,7 @@ export function PdfPageCanvas({
 
   const handleItemPointerDown = useCallback(
     (id: string, coords: CanvasPageCoords, e: React.PointerEvent) => {
-      if (e.button !== 0) return;
+      if (e.button !== 0) { return; }
       // Cancel text editing when clicking a different element
       if (isTextEditing && onCancelTextEdit) {
         onCancelTextEdit();
@@ -128,7 +129,7 @@ export function PdfPageCanvas({
 
   const handleItemDoubleClick = useCallback(
     (id: string) => {
-      if (onDoubleClick) onDoubleClick(id as PdfElementId);
+      if (onDoubleClick) { onDoubleClick(id as PdfElementId); }
     },
     [onDoubleClick],
   );
@@ -210,13 +211,13 @@ export function PdfPageCanvas({
     (result: { readonly itemIds: readonly string[]; readonly rect: { readonly x: number; readonly y: number; readonly width: number; readonly height: number } }, additive: boolean) => {
       const ids = result.itemIds as readonly PdfElementId[];
       if (ids.length === 0) {
-        if (!additive) onClearSelection();
+        if (!additive) { onClearSelection(); }
         return;
       }
       if (additive) {
         const combined = [...selection.selectedIds];
         for (const id of ids) {
-          if (!combined.includes(id)) combined.push(id);
+          if (!combined.includes(id)) { combined.push(id); }
         }
         onSelectMultiple(combined);
       } else {

@@ -401,6 +401,7 @@ describe("History integration", () => {
 
   it("multiple edits create proper undo stack", () => {
     const doc = createTestDocument();
+    // eslint-disable-next-line no-restricted-syntax -- accumulator updated in loop
     let history = createHistory(doc);
 
     // Edit 1

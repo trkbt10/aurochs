@@ -7,7 +7,7 @@
 
 // @vitest-environment jsdom
 
-import { render, fireEvent } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import type { DocxDocument } from "@aurochs-office/docx/domain/document";
 import type { DocxParagraph } from "@aurochs-office/docx/domain/paragraph";
 import type { DocxTable } from "@aurochs-office/docx/domain/table";

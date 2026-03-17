@@ -209,9 +209,9 @@ export function TextEditInputFrame({
 
   // Auto-focus and select all on mount when flat text selection is enabled
   useEffect(() => {
-    if (!showTextSelection) return;
+    if (!showTextSelection) {return;}
     const textarea = textareaRef.current;
-    if (!textarea) return;
+    if (!textarea) {return;}
     requestAnimationFrame(() => {
       textarea.focus();
       textarea.select();
@@ -263,9 +263,28 @@ const measureCtxCache = { ctx: null as CanvasRenderingContext2D | null };
 
 function getCanvasCtx(): CanvasRenderingContext2D | null {
   if (!measureCtxCache.ctx) {
-    try { measureCtxCache.ctx = document.createElement("canvas").getContext("2d"); } catch { /* SSR */ }
+    try {
+      measureCtxCache.ctx = document.createElement("canvas").getContext("2d");
+    } catch (error) {
+      // SSR: canvas is not available in server-side environments
+      if (error instanceof Error) { measureCtxCache.ctx = null; }
+    }
   }
   return measureCtxCache.ctx;
+}
+
+function computeAscRatio(font?: TextEditInputFrameProps["textFont"]): number {
+  if (font?.ascender != null && font?.descender != null) {
+    return font.ascender / (font.ascender - font.descender);
+  }
+  return DEFAULT_ASCENDER_RATIO;
+}
+
+function buildFontString(font?: TextEditInputFrameProps["textFont"]): string {
+  if (font) {
+    return `${font.style ?? "normal"} ${font.weight ?? "normal"} ${font.size}px ${font.family}`;
+  }
+  return `normal normal ${DEFAULT_CURSOR_CONTEXT.defaultFontSizePt}px sans-serif`;
 }
 
 /**
@@ -275,18 +294,16 @@ function getCanvasCtx(): CanvasRenderingContext2D | null {
  * Baseline position is derived from actual font metrics (ascender/descender)
  * to match the SVG renderer's positioning exactly.
  */
-function buildLayoutResult(
-  text: string,
-  boundsWidth: number,
-  boundsHeight: number,
-  font?: TextEditInputFrameProps["textFont"],
-): LayoutResultLike {
+function buildLayoutResult({ text, boundsWidth, boundsHeight, font }: {
+  readonly text: string;
+  readonly boundsWidth: number;
+  readonly boundsHeight: number;
+  readonly font?: TextEditInputFrameProps["textFont"];
+}): LayoutResultLike {
   const fontSize = font?.size ?? DEFAULT_CURSOR_CONTEXT.defaultFontSizePt;
   // Baseline position within bounds: ascender portion of total height.
   // ascender/descender MUST be provided by the caller (resolved via format-specific SoT).
-  const ascRatio = (font?.ascender != null && font?.descender != null)
-    ? font.ascender / (font.ascender - font.descender)
-    : DEFAULT_ASCENDER_RATIO;
+  const ascRatio = computeAscRatio(font);
   const baselineY = boundsHeight * ascRatio;
 
   const span: LayoutSpanLike = {
@@ -318,23 +335,19 @@ function buildLayoutResult(
  */
 function buildCursorContext(font?: TextEditInputFrameProps["textFont"]): CursorCalculationContext {
   const canvasCtx = getCanvasCtx();
-  const fontStr = font
-    ? `${font.style ?? "normal"} ${font.weight ?? "normal"} ${font.size}px ${font.family}`
-    : `normal normal ${DEFAULT_CURSOR_CONTEXT.defaultFontSizePt}px sans-serif`;
+  const fontStr = buildFontString(font);
 
   const measureSpanTextWidth = (span: LayoutSpanLike, substring: string): number => {
-    if (!canvasCtx || span.text.length === 0 || substring.length === 0) return 0;
+    if (!canvasCtx || span.text.length === 0 || substring.length === 0) {return 0;}
     canvasCtx.font = fontStr;
     const fullWidth = canvasCtx.measureText(span.text).width;
-    if (fullWidth <= 0) return 0;
+    if (fullWidth <= 0) {return 0;}
     // Scale canvas measurement to match span.width (from SVG bounds)
     // This ensures cursor positions are consistent with the rendered text width
     return (canvasCtx.measureText(substring).width / fullWidth) * span.width;
   };
 
-  const cursorAscRatio = (font?.ascender != null && font?.descender != null)
-    ? font.ascender / (font.ascender - font.descender)
-    : DEFAULT_ASCENDER_RATIO;
+  const cursorAscRatio = computeAscRatio(font);
 
   return {
     measureSpanTextWidth,
@@ -342,6 +355,24 @@ function buildCursorContext(font?: TextEditInputFrameProps["textFont"]): CursorC
     ptToPx: 1, // bounds are already in display units
     defaultFontSizePt: font?.size ?? DEFAULT_CURSOR_CONTEXT.defaultFontSizePt,
   };
+}
+
+function computeSelectionRects({ hasRange, selection, textBody, layoutResult, cursorCtx }: {
+  readonly hasRange: boolean;
+  readonly selection: { readonly start: number; readonly end: number };
+  readonly textBody: { readonly paragraphs: readonly { readonly runs: readonly { readonly type: "regular"; readonly text: string }[] }[] };
+  readonly layoutResult: LayoutResultLike;
+  readonly cursorCtx: CursorCalculationContext;
+}): ReturnType<typeof selectionToRects> {
+  if (!hasRange) { return []; }
+  return selectionToRects(
+    {
+      start: offsetToCursorPosition(textBody, Math.min(selection.start, selection.end)),
+      end: offsetToCursorPosition(textBody, Math.max(selection.start, selection.end)),
+    },
+    layoutResult,
+    cursorCtx,
+  );
 }
 
 /**
@@ -363,10 +394,10 @@ function TextSelectionOverlay({
   readonly boundsWidth: number;
   readonly boundsHeight: number;
 }) {
-  if (text.length === 0 || boundsWidth <= 0 || boundsHeight <= 0) return null;
+  if (text.length === 0 || boundsWidth <= 0 || boundsHeight <= 0) {return null;}
 
   const layoutResult = useMemo(
-    () => buildLayoutResult(text, boundsWidth, boundsHeight, textFont),
+    () => buildLayoutResult({ text, boundsWidth, boundsHeight, font: textFont }),
     [text, boundsWidth, boundsHeight, textFont],
   );
 
@@ -381,16 +412,7 @@ function TextSelectionOverlay({
   const caretCoords = cursorPositionToCoordinates(caretPos, layoutResult, cursorCtx);
 
   const hasRange = selection.start !== selection.end;
-  const selRects = hasRange
-    ? selectionToRects(
-        {
-          start: offsetToCursorPosition(textBody, Math.min(selection.start, selection.end)),
-          end: offsetToCursorPosition(textBody, Math.max(selection.start, selection.end)),
-        },
-        layoutResult,
-        cursorCtx,
-      )
-    : [];
+  const selRects = computeSelectionRects({ hasRange, selection, textBody, layoutResult, cursorCtx });
 
   return (
     <div style={overlayContainerStyle}>

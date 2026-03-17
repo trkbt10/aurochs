@@ -1,3 +1,4 @@
+/** @file Shared types for the PDF renderer package. */
 import type { PdfBuildOptions, PdfContextRewriter, PdfParseOptions } from "@aurochs/pdf/parser/core/pdf-parser";
 
 export type PdfBinarySource = Uint8Array | ArrayBuffer;

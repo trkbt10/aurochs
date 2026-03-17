@@ -5,9 +5,8 @@
  * the generic TextFormatting type used by shared editor controls.
  */
 
-import type { RunProperties, UnderlineStyle, StrikeStyle, TextCaps } from "@aurochs-office/pptx/domain/text";
+import type { RunProperties } from "@aurochs-office/pptx/domain/text";
 import type { Color } from "@aurochs-office/drawing-ml/domain/color";
-import type { Points, Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import { pt, px } from "@aurochs-office/drawing-ml/domain/units";
 import type { FormattingAdapter } from "@aurochs-ui/editor-controls/formatting-adapter";
 import type { MixedContext } from "@aurochs-ui/editor-controls/mixed-state";

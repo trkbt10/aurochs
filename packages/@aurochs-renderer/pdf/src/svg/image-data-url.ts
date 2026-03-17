@@ -1,3 +1,4 @@
+/** @file Convert PDF image data to data URLs for SVG embedding. */
 import { toDataUrl } from "@aurochs/buffer";
 import { isJpeg } from "@aurochs/jpeg";
 import { convertToRgba } from "@aurochs/pdf/image/pixel-converter";

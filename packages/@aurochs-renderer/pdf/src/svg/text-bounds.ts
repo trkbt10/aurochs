@@ -10,7 +10,7 @@
  * because both paths use the same computation.
  */
 
-import type { PdfText, PdfTextFontMetrics } from "@aurochs/pdf/domain";
+import type { PdfText } from "@aurochs/pdf/domain";
 import { DEFAULT_FONT_METRICS } from "@aurochs/pdf/domain/font";
 
 // =============================================================================

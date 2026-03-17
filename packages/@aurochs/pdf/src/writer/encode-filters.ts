@@ -33,6 +33,7 @@ export function encodeAscii85(data: Uint8Array): Uint8Array {
     const chunkSize = Math.min(4, remaining);
 
     // Build 32-bit value (big-endian, padded with zeros if needed)
+    // eslint-disable-next-line no-restricted-syntax -- accumulator updated in loop
     let value = 0;
     for (let j = 0; j < 4; j++) {
       value = value * 256 + (j < chunkSize ? data[i + j] : 0);

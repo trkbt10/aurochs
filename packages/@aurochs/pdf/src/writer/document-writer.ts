@@ -25,6 +25,7 @@ function encodeAscii(text: string): Uint8Array {
 function concat(...arrays: Uint8Array[]): Uint8Array {
   const totalLength = arrays.reduce((sum, arr) => sum + arr.length, 0);
   const result = new Uint8Array(totalLength);
+  // eslint-disable-next-line no-restricted-syntax -- accumulator updated in loop
   let offset = 0;
   for (const arr of arrays) {
     result.set(arr, offset);
@@ -100,6 +101,7 @@ function collectAllImages(document: PdfDocument): { page: number; index: number;
   const images: { page: number; index: number; image: PdfImage }[] = [];
 
   for (let pageIdx = 0; pageIdx < document.pages.length; pageIdx++) {
+    // eslint-disable-next-line no-restricted-syntax -- counter incremented in loop
     let imageIdx = 0;
     for (const element of document.pages[pageIdx].elements) {
       if (element.type === "image") {
@@ -163,6 +165,7 @@ export function writePdfDocument(
 
     // Build image map for this page
     const pageImageObjMap = new Map<number, number>();
+    // eslint-disable-next-line no-restricted-syntax -- accumulator updated in loop
     let imageIdx = 0;
     for (const element of page.elements) {
       if (element.type === "image") {
@@ -243,6 +246,7 @@ export function writePdfDocument(
   // Get all entries and calculate offsets
   const entries = tracker.getAll();
   const parts: Uint8Array[] = [header];
+  // eslint-disable-next-line no-restricted-syntax -- accumulator updated in loop
   let currentOffset = header.length;
 
   // Write objects in order and record offsets

@@ -41,7 +41,7 @@ export function useFontOptions(): UseFontOptionsResult {
     if (status === "idle") {
       void requestFonts();
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- intentional one-time request
+  }, []);
 
   const fontOptions = useMemo(() => {
     const seen = new Set<string>();

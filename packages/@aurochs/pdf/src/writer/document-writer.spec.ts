@@ -194,6 +194,7 @@ describe("writePdfDocument", () => {
     // (binary header bytes may cause small offset differences in text vs binary)
     // Check the actual binary position instead
     const xrefBytes = new TextEncoder().encode("xref");
+    // eslint-disable-next-line no-restricted-syntax -- updated in search loop
     let xrefBinaryPos = -1;
     for (let i = 0; i <= result.length - 4; i++) {
       if (
@@ -312,6 +313,7 @@ describe("writePdfDocument", () => {
         const contentText = toText(decompressed);
         // Should contain hex string format <82A0>
         expect(contentText).toContain("<82A0>");
+      // eslint-disable-next-line no-restricted-syntax -- decompression may fail, fallback assertion used
       } catch {
         // If decompression fails, at least verify the font structure is correct
         expect(resultText).toContain("/Subtype /Type0");

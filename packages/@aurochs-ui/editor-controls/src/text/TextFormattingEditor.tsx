@@ -15,7 +15,6 @@ import { OptionalPropertySection } from "../ui/OptionalPropertySection";
 import { Input, Select } from "@aurochs-ui/ui-components/primitives";
 import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
 import { ColorPickerPopover } from "@aurochs-ui/color-editor";
-import { FontFamilySelect } from "../font";
 import { useFontOptions } from "../font";
 import type { FontData, FontMetricsData } from "@aurochs-ui/editor-core/adapter-types";
 
@@ -141,10 +140,14 @@ function toCaseTransformData(value: TextFormatting): CaseTransformData {
   return { case: capsToCase(value.caps), styles };
 }
 
+function caseDataToCaps(caseValue: CaseTransformData["case"]): "small" | "all" | "none" {
+  if (caseValue === "small-caps") { return "small"; }
+  if (caseValue === "all-caps") { return "all"; }
+  return "none";
+}
+
 function fromCaseTransformData(data: CaseTransformData): Partial<TextFormatting> {
-  const caps = data.case === "small-caps" ? "small" as const
-    : data.case === "all-caps" ? "all" as const
-    : "none" as const;
+  const caps = caseDataToCaps(data.case);
   return {
     caps,
     underline: data.styles.includes("underline") || undefined,
@@ -187,7 +190,7 @@ function feat(
   return features?.[key] ?? defaultValue;
 }
 
-const MIXED_PLACEHOLDER = "Mixed";
+const _MIXED_PLACEHOLDER = "Mixed";
 
 // =============================================================================
 // Component
@@ -201,13 +204,13 @@ export function TextFormattingEditor({
   className,
   style,
   features,
-  mixed,
+  mixed: _mixed,
   renderColorPicker,
   renderHighlightPicker,
   renderExtras,
   underlineStyleOptions = DEFAULT_UNDERLINE_OPTIONS,
   strikeStyleOptions = DEFAULT_STRIKE_OPTIONS,
-  additionalFontFamilies,
+  additionalFontFamilies: _additionalFontFamilies,
 }: TextFormattingEditorProps) {
   const { fontOptions } = useFontOptions();
 
@@ -302,6 +305,7 @@ export function TextFormattingEditor({
             data={toFontData(value)}
             onChange={handleFontChange}
             disabled={disabled}
+            // eslint-disable-next-line custom/no-as-outside-guard -- fontOptions type mismatch with react-editor-ui
             fontOptions={fontOptions as unknown as { value: string; label: string }[]}
           />
         </OptionalPropertySection>
