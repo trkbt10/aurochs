@@ -2,13 +2,23 @@
  * @file CxnShape property panel component
  *
  * Displays property editors for CxnShape (connector) elements.
+ * When a property is undefined, shows an "Add" button to initialize it with defaults.
  */
 
 import type { CxnShape } from "@aurochs-office/pptx/domain/index";
 import { Accordion } from "@aurochs-ui/ui-components/layout";
 import { FieldGroup } from "@aurochs-ui/ui-components/layout";
-import { LineEditor } from "../../ui/line";
-import { NonVisualPropertiesEditor, TransformEditor, EffectsEditor, GeometryEditor } from "../../editors/index";
+import { LineEditor, createDefaultLine } from "../../ui/line";
+import {
+  NonVisualPropertiesEditor,
+  TransformEditor,
+  EffectsEditor,
+  GeometryEditor,
+  createDefaultTransform,
+  createDefaultGeometry,
+  createDefaultEffects,
+} from "../../editors/index";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 
 // =============================================================================
 // Types
@@ -97,6 +107,11 @@ function ConnectionRow({
  * - Effects
  */
 export function CxnShapePanel({ shape, onChange }: CxnShapePanelProps) {
+  /** Update shape properties immutably. */
+  function updateProperties(update: Partial<CxnShape["properties"]>) {
+    onChange({ ...shape, properties: { ...shape.properties, ...update } });
+  }
+
   const handleClearStartConnection = () => {
     onChange({
       ...shape,
@@ -140,61 +155,39 @@ export function CxnShapePanel({ shape, onChange }: CxnShapePanelProps) {
         </FieldGroup>
       </Accordion>
 
-      <Accordion title="Transform" defaultExpanded>
-        {shape.properties.transform && (
-          <TransformEditor
-            value={shape.properties.transform}
-            onChange={(transform) =>
-              onChange({
-                ...shape,
-                properties: { ...shape.properties, transform },
-              })
-            }
-          />
-        )}
-      </Accordion>
+      <OptionalPropertySection
+        title="Transform"
+        value={shape.properties.transform}
+        createDefault={createDefaultTransform}
+        onChange={(transform) => updateProperties({ transform })}
+        renderEditor={(v, set) => <TransformEditor value={v} onChange={set} />}
+        defaultExpanded
+      />
 
-      <Accordion title="Geometry" defaultExpanded={false}>
-        {shape.properties.geometry && (
-          <GeometryEditor
-            value={shape.properties.geometry}
-            onChange={(geometry) =>
-              onChange({
-                ...shape,
-                properties: { ...shape.properties, geometry },
-              })
-            }
-          />
-        )}
-      </Accordion>
+      <OptionalPropertySection
+        title="Geometry"
+        value={shape.properties.geometry}
+        createDefault={createDefaultGeometry}
+        onChange={(geometry) => updateProperties({ geometry })}
+        renderEditor={(v, set) => <GeometryEditor value={v} onChange={set} />}
+      />
 
-      <Accordion title="Line Style" defaultExpanded>
-        {shape.properties.line && (
-          <LineEditor
-            value={shape.properties.line}
-            onChange={(line) =>
-              onChange({
-                ...shape,
-                properties: { ...shape.properties, line },
-              })
-            }
-          />
-        )}
-      </Accordion>
+      <OptionalPropertySection
+        title="Line Style"
+        value={shape.properties.line}
+        createDefault={createDefaultLine}
+        onChange={(line) => updateProperties({ line })}
+        renderEditor={(v, set) => <LineEditor value={v} onChange={set} />}
+        defaultExpanded
+      />
 
-      <Accordion title="Effects" defaultExpanded={false}>
-        {shape.properties.effects && (
-          <EffectsEditor
-            value={shape.properties.effects}
-            onChange={(effects) =>
-              onChange({
-                ...shape,
-                properties: { ...shape.properties, effects },
-              })
-            }
-          />
-        )}
-      </Accordion>
+      <OptionalPropertySection
+        title="Effects"
+        value={shape.properties.effects}
+        createDefault={createDefaultEffects}
+        onChange={(effects) => updateProperties({ effects })}
+        renderEditor={(v, set) => <EffectsEditor value={v} onChange={set} />}
+      />
     </>
   );
 }

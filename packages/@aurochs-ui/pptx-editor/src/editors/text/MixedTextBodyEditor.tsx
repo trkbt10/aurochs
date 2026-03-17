@@ -7,7 +7,6 @@
  */
 
 import { useMemo, type CSSProperties } from "react";
-import { Accordion } from "@aurochs-ui/ui-components/layout";
 import { MixedRunPropertiesEditor } from "./MixedRunPropertiesEditor";
 import { MixedParagraphPropertiesEditor } from "./MixedParagraphPropertiesEditor";
 import { extractMixedRunProperties, extractMixedParagraphProperties, mergeRunProperties } from "./mixed-properties";
@@ -44,12 +43,6 @@ const containerStyle: CSSProperties = {
   gap: "0",
 };
 
-const summaryStyle: CSSProperties = {
-  padding: "12px 16px",
-  fontSize: "12px",
-  color: "var(--text-tertiary, #737373)",
-  borderBottom: "1px solid var(--border-subtle, rgba(255, 255, 255, 0.06))",
-};
 
 // =============================================================================
 // Helpers
@@ -122,25 +115,6 @@ function applyParagraphPropertiesToAll(textBody: TextBody, update: Partial<Parag
   return { ...textBody, paragraphs: newParagraphs };
 }
 
-/**
- * Get text content summary
- */
-function getTextSummary(textBody: TextBody): string {
-  const paragraphCount = textBody.paragraphs.length;
-  const charCount = textBody.paragraphs.reduce((total, paragraph) => {
-    return paragraph.runs.reduce((runTotal, run) => {
-      if (run.type === "text" || run.type === "field") {
-        return runTotal + run.text.length;
-      }
-      return runTotal;
-    }, total);
-  }, 0);
-
-  const paraText = paragraphCount === 1 ? "paragraph" : "paragraphs";
-  const charText = charCount === 1 ? "character" : "characters";
-
-  return `${paragraphCount} ${paraText}, ${charCount} ${charText}`;
-}
 
 // =============================================================================
 // Component
@@ -178,9 +152,6 @@ export function MixedTextBodyEditor({
     [allParagraphProperties],
   );
 
-  // Text summary
-  const summary = useMemo(() => getTextSummary(value), [value]);
-
   // Handle run property changes
   const handleRunPropertiesChange = (update: Partial<RunProperties>) => {
     if (disabled) {
@@ -201,29 +172,19 @@ export function MixedTextBodyEditor({
 
   return (
     <div className={className} style={{ ...containerStyle, ...style }}>
-      {/* Text Summary */}
-      <div style={summaryStyle}>{summary}</div>
-
-      {/* Character Properties */}
-      <Accordion title="Character" defaultExpanded>
-        <MixedRunPropertiesEditor
-          value={mixedRunProperties}
-          onChange={handleRunPropertiesChange}
-          disabled={disabled}
-          showSpacing={showCharacterSpacing}
-        />
-      </Accordion>
-
-      {/* Paragraph Properties */}
-      <Accordion title="Paragraph" defaultExpanded={false}>
-        <MixedParagraphPropertiesEditor
-          value={mixedParagraphProperties}
-          onChange={handleParagraphPropertiesChange}
-          disabled={disabled}
-          showSpacing={showParagraphSpacing}
-          showIndentation={showIndentation}
-        />
-      </Accordion>
+      <MixedRunPropertiesEditor
+        value={mixedRunProperties}
+        onChange={handleRunPropertiesChange}
+        disabled={disabled}
+        showSpacing={showCharacterSpacing}
+      />
+      <MixedParagraphPropertiesEditor
+        value={mixedParagraphProperties}
+        onChange={handleParagraphPropertiesChange}
+        disabled={disabled}
+        showSpacing={showParagraphSpacing}
+        showIndentation={showIndentation}
+      />
     </div>
   );
 }

@@ -1,25 +1,35 @@
 /**
  * @file MixedParagraphPropertiesEditor - Editor for paragraph properties with Mixed support
  *
- * Wraps the shared ParagraphFormattingEditor with PPTX-specific adapters and slots.
- * PPTX-specific controls (level, RTL, alignment extras like justifyLow/distributed)
- * go in renderExtras.
+ * Uses react-editor-ui sections (TextJustifySection, ParagraphSpacingSection, IndentSection, ListSection)
+ * supplemented with PPTX-specific controls (level, extended alignment, line spacing, RTL).
  */
 
 import { useCallback, type CSSProperties } from "react";
+import { TextJustifySection } from "react-editor-ui/sections/TextJustifySection";
+import { ParagraphSpacingSection } from "react-editor-ui/sections/ParagraphSpacingSection";
+import { IndentSection } from "react-editor-ui/sections/IndentSection";
+import { ListSection } from "react-editor-ui/sections/ListSection";
+import { PropertySection } from "react-editor-ui/PropertySection";
 import { Input, Select, Toggle } from "@aurochs-ui/ui-components/primitives";
 import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
-import { PixelsEditor } from "../primitives";
 import { LineSpacingEditor } from "./LineSpacingEditor";
-import { ParagraphFormattingEditor } from "@aurochs-ui/editor-controls/text";
-import type { ParagraphFormatting } from "@aurochs-ui/editor-controls/text";
 import type { ParagraphProperties, LineSpacing } from "@aurochs-office/pptx/domain/text";
 import type { TextAlign } from "@aurochs-office/pptx/domain/types";
 import type { SelectOption } from "@aurochs-ui/ui-components/types";
-import { px, type Pixels } from "@aurochs-office/drawing-ml/domain/units";
-import type { MixedParagraphProperties, PropertyExtraction } from "./mixed-properties";
+import type { MixedParagraphProperties } from "./mixed-properties";
 import { getExtractionValue, isMixed } from "./mixed-properties";
-import { pptxMixedParagraphToContext, pptxMixedParagraphToGeneric } from "../../adapters/editor-controls";
+import type { TextJustifyData, ParagraphSpacingData, IndentData, ListData } from "@aurochs-ui/editor-core/adapter-types";
+import {
+  mixedParagraphToTextJustify,
+  textJustifyToParagraphUpdate,
+  mixedParagraphToSpacing,
+  spacingToParagraphUpdate,
+  mixedParagraphToIndent,
+  indentToParagraphUpdate,
+  mixedParagraphToList,
+  listToParagraphUpdate,
+} from "../../adapters/editor-ui/paragraph-adapters";
 
 // =============================================================================
 // Types
@@ -45,10 +55,10 @@ export type MixedParagraphPropertiesEditorProps = {
 };
 
 // =============================================================================
-// Options (PPTX-specific extras: extended alignment)
+// Options (PPTX-specific)
 // =============================================================================
 
-const alignmentOptions: readonly SelectOption<TextAlign>[] = [
+const extendedAlignmentOptions: readonly SelectOption<TextAlign>[] = [
   { value: "left", label: "Left" },
   { value: "center", label: "Center" },
   { value: "right", label: "Right" },
@@ -58,57 +68,17 @@ const alignmentOptions: readonly SelectOption<TextAlign>[] = [
 ];
 
 // =============================================================================
-// Styles
-// =============================================================================
-
-const separatorStyle: CSSProperties = {
-  height: "1px",
-  backgroundColor: "var(--border-subtle, rgba(255, 255, 255, 0.06))",
-  margin: "4px 0",
-};
-
-// =============================================================================
 // Helpers
 // =============================================================================
 
 const MIXED_PLACEHOLDER = "Mixed";
 
-function getLabel(extraction: PropertyExtraction<unknown>, label: string, mixedSuffix = " (M)"): string {
-  if (isMixed(extraction)) {
+/** Get label with mixed suffix */
+function getLabel(extraction: { readonly type: string }, label: string, mixedSuffix = " (M)"): string {
+  if (extraction.type === "mixed") {
     return label + mixedSuffix;
   }
   return label;
-}
-
-function getInputValue<T>(extraction: PropertyExtraction<T>, defaultValue: T): T | string {
-  if (isMixed(extraction)) {
-    return "";
-  }
-  const value = getExtractionValue(extraction);
-  return value !== undefined ? value : defaultValue;
-}
-
-function getPlaceholder<T>(extraction: PropertyExtraction<T>, defaultPlaceholder: string): string {
-  if (isMixed(extraction)) {
-    return MIXED_PLACEHOLDER;
-  }
-  return defaultPlaceholder;
-}
-
-/** Map generic HorizontalAlignment → PPTX TextAlign. */
-function genericAlignToPptx(align: string | undefined): TextAlign | undefined {
-  switch (align) {
-    case "left":
-      return "left";
-    case "center":
-      return "center";
-    case "right":
-      return "right";
-    case "justify":
-      return "justify";
-    default:
-      return undefined;
-  }
 }
 
 // =============================================================================
@@ -117,8 +87,8 @@ function genericAlignToPptx(align: string | undefined): TextAlign | undefined {
 
 /**
  * Editor for paragraph properties with Mixed value support.
- * Uses shared ParagraphFormattingEditor for alignment.
- * PPTX-specific controls (level, extended alignments, spacing, indentation, RTL) in extras.
+ * Uses react-editor-ui sections for common controls, supplemented with
+ * PPTX-specific controls for extended alignment, level, line spacing, and RTL.
  */
 export function MixedParagraphPropertiesEditor({
   value,
@@ -130,50 +100,42 @@ export function MixedParagraphPropertiesEditor({
   showIndentation = true,
   showDirection = true,
 }: MixedParagraphPropertiesEditorProps) {
-  // Convert mixed properties to generic format
-  const generic = pptxMixedParagraphToGeneric(value);
-  const mixedCtx = pptxMixedParagraphToContext(value);
+  // =========================================================================
+  // react-editor-ui section handlers (via adapters)
+  // =========================================================================
 
-  // Handle shared editor onChange (convert generic → PPTX ParagraphProperties)
-  const handleSharedChange = useCallback(
-    (update: Partial<ParagraphFormatting>) => {
-      const parts: Partial<ParagraphProperties>[] = [];
-
-      if ("alignment" in update) {
-        parts.push({ alignment: genericAlignToPptx(update.alignment) });
-      }
-      if ("indentLeft" in update) {
-        parts.push({ marginLeft: update.indentLeft !== undefined ? (px(update.indentLeft) as Pixels) : undefined });
-      }
-      if ("indentRight" in update) {
-        parts.push({ marginRight: update.indentRight !== undefined ? (px(update.indentRight) as Pixels) : undefined });
-      }
-      if ("firstLineIndent" in update) {
-        parts.push({
-          indent: update.firstLineIndent !== undefined ? (px(update.firstLineIndent) as Pixels) : undefined,
-        });
-      }
-      if ("lineSpacing" in update && update.lineSpacing !== undefined) {
-        parts.push({ lineSpacing: { type: "percent", value: update.lineSpacing * 100 } as LineSpacing });
-      }
-
-      onChange(Object.assign({}, ...parts) as Partial<ParagraphProperties>);
-    },
+  const handleJustifyChange = useCallback(
+    (data: TextJustifyData) => { onChange(textJustifyToParagraphUpdate(data)); },
     [onChange],
   );
 
-  // PPTX-specific: extended alignment select (justifyLow, distributed)
-  const handleAlignmentChange = useCallback(
-    (newValue: TextAlign) => {
-      onChange({ alignment: newValue });
-    },
+  const handleSpacingChange = useCallback(
+    (data: ParagraphSpacingData) => { onChange(spacingToParagraphUpdate(data)); },
     [onChange],
   );
 
-  // PPTX-specific: Level
+  const handleIndentChange = useCallback(
+    (data: IndentData) => { onChange(indentToParagraphUpdate(data)); },
+    [onChange],
+  );
+
+  const handleListChange = useCallback(
+    (data: ListData) => { onChange(listToParagraphUpdate(data)); },
+    [onChange],
+  );
+
+  // =========================================================================
+  // PPTX-specific handlers
+  // =========================================================================
+
+  const handleExtendedAlignmentChange = useCallback(
+    (v: TextAlign) => { onChange({ alignment: v }); },
+    [onChange],
+  );
+
   const handleLevelChange = useCallback(
-    (newValue: string | number) => {
-      const num = typeof newValue === "number" ? newValue : parseInt(String(newValue), 10);
+    (v: string | number) => {
+      const num = typeof v === "number" ? v : parseInt(String(v), 10);
       if (isNaN(num)) {
         onChange({ level: 0 });
       } else {
@@ -183,178 +145,139 @@ export function MixedParagraphPropertiesEditor({
     [onChange],
   );
 
-  // PPTX-specific: Indentation (uses Pixels, not points)
-  const handleMarginLeftChange = useCallback(
-    (newValue: Pixels) => {
-      onChange({ marginLeft: newValue === px(0) ? undefined : newValue });
-    },
-    [onChange],
-  );
-
-  const handleMarginRightChange = useCallback(
-    (newValue: Pixels) => {
-      onChange({ marginRight: newValue === px(0) ? undefined : newValue });
-    },
-    [onChange],
-  );
-
-  const handleIndentChange = useCallback(
-    (newValue: Pixels) => {
-      onChange({ indent: newValue === px(0) ? undefined : newValue });
-    },
-    [onChange],
-  );
-
-  // PPTX-specific: Spacing (uses LineSpacing type, not simple multiplier)
   const handleLineSpacingChange = useCallback(
-    (newValue: LineSpacing | undefined) => {
-      onChange({ lineSpacing: newValue });
-    },
+    (v: LineSpacing | undefined) => { onChange({ lineSpacing: v }); },
     [onChange],
   );
 
   const handleSpaceBeforeChange = useCallback(
-    (newValue: LineSpacing | undefined) => {
-      onChange({ spaceBefore: newValue });
-    },
+    (v: LineSpacing | undefined) => { onChange({ spaceBefore: v }); },
     [onChange],
   );
 
   const handleSpaceAfterChange = useCallback(
-    (newValue: LineSpacing | undefined) => {
-      onChange({ spaceAfter: newValue });
-    },
+    (v: LineSpacing | undefined) => { onChange({ spaceAfter: v }); },
     [onChange],
   );
 
-  // PPTX-specific: RTL
   const handleRtlChange = useCallback(
-    (checked: boolean) => {
-      onChange({ rtl: checked || undefined });
-    },
+    (checked: boolean) => { onChange({ rtl: checked || undefined }); },
     [onChange],
   );
 
-  // Display values for PPTX-specific extras
+  // =========================================================================
+  // Render
+  // =========================================================================
+
   const alignmentValue = getExtractionValue(value.alignment) ?? "left";
-  const levelValue = getInputValue(value.level, 0);
-  const marginLeftValue = getExtractionValue(value.marginLeft) ?? px(0);
-  const marginRightValue = getExtractionValue(value.marginRight) ?? px(0);
-  const indentValue = getExtractionValue(value.indent) ?? px(0);
+  const levelValue = isMixed(value.level) ? "" : (getExtractionValue(value.level) ?? 0);
   const lineSpacingValue = getExtractionValue(value.lineSpacing);
   const spaceBeforeValue = getExtractionValue(value.spaceBefore);
   const spaceAfterValue = getExtractionValue(value.spaceAfter);
   const rtlValue = getExtractionValue(value.rtl) ?? false;
 
   return (
-    <ParagraphFormattingEditor
-      value={generic}
-      onChange={handleSharedChange}
-      disabled={disabled}
-      className={className}
-      style={style}
-      features={{ showAlignment: true }}
-      mixed={mixedCtx}
-      renderExtras={() => (
-        <>
-          {/* PPTX-specific: Extended alignment (includes justifyLow, distributed) + Level */}
+    <div className={className} style={style}>
+      {/* Text alignment (react-editor-ui) */}
+      <TextJustifySection
+        data={mixedParagraphToTextJustify(value)}
+        onChange={handleJustifyChange}
+        size="sm"
+        disabled={disabled}
+      />
+
+      {/* PPTX-specific: Extended alignment (justifyLow, distributed) + Level */}
+      <PropertySection title="Alignment Details" defaultExpanded={false}>
+        <FieldRow>
+          <FieldGroup label={getLabel(value.alignment, "Align")} inline labelWidth={40} style={{ flex: 1 }}>
+            <Select
+              value={isMixed(value.alignment) ? "left" : alignmentValue}
+              onChange={handleExtendedAlignmentChange}
+              options={extendedAlignmentOptions}
+              disabled={disabled}
+              placeholder={isMixed(value.alignment) ? MIXED_PLACEHOLDER : undefined}
+            />
+          </FieldGroup>
+          <FieldGroup label={getLabel(value.level, "Level")} inline labelWidth={40} style={{ width: "80px" }}>
+            <Input
+              type="number"
+              value={levelValue}
+              onChange={handleLevelChange}
+              min={0}
+              max={8}
+              disabled={disabled}
+              placeholder={isMixed(value.level) ? MIXED_PLACEHOLDER : "0"}
+            />
+          </FieldGroup>
+        </FieldRow>
+      </PropertySection>
+
+      {/* Space before/after (react-editor-ui) */}
+      <ParagraphSpacingSection
+        data={mixedParagraphToSpacing(value)}
+        onChange={handleSpacingChange}
+        size="sm"
+        disabled={disabled}
+      />
+
+      {/* PPTX-specific: Line spacing with LineSpacing type */}
+      {showSpacing && (
+        <PropertySection title="Line Spacing" defaultExpanded>
+          <FieldGroup label={getLabel(value.lineSpacing, "Line")}>
+            <LineSpacingEditor
+              value={isMixed(value.lineSpacing) ? undefined : lineSpacingValue}
+              onChange={handleLineSpacingChange}
+              disabled={disabled}
+            />
+          </FieldGroup>
           <FieldRow>
-            <FieldGroup label={getLabel(value.alignment, "Align")} inline labelWidth={40} style={{ flex: 1 }}>
-              <Select
-                value={isMixed(value.alignment) ? "left" : alignmentValue}
-                onChange={handleAlignmentChange}
-                options={alignmentOptions}
+            <FieldGroup label={getLabel(value.spaceBefore, "Before")} style={{ flex: 1 }}>
+              <LineSpacingEditor
+                value={isMixed(value.spaceBefore) ? undefined : spaceBeforeValue}
+                onChange={handleSpaceBeforeChange}
                 disabled={disabled}
-                placeholder={isMixed(value.alignment) ? MIXED_PLACEHOLDER : undefined}
               />
             </FieldGroup>
-            <FieldGroup label={getLabel(value.level, "Level")} inline labelWidth={40} style={{ width: "80px" }}>
-              <Input
-                type="number"
-                value={levelValue}
-                onChange={handleLevelChange}
-                min={0}
-                max={8}
+            <FieldGroup label={getLabel(value.spaceAfter, "After")} style={{ flex: 1 }}>
+              <LineSpacingEditor
+                value={isMixed(value.spaceAfter) ? undefined : spaceAfterValue}
+                onChange={handleSpaceAfterChange}
                 disabled={disabled}
-                placeholder={getPlaceholder(value.level, "0")}
               />
             </FieldGroup>
           </FieldRow>
-
-          {/* PPTX-specific: Indentation (Pixels, not points) */}
-          {showIndentation && (
-            <>
-              <div style={separatorStyle} />
-              <FieldRow>
-                <FieldGroup label={getLabel(value.marginLeft, "L Margin")} inline labelWidth={56} style={{ flex: 1 }}>
-                  <PixelsEditor
-                    value={isMixed(value.marginLeft) ? px(0) : marginLeftValue}
-                    onChange={handleMarginLeftChange}
-                    disabled={disabled}
-                  />
-                </FieldGroup>
-                <FieldGroup label={getLabel(value.marginRight, "R Margin")} inline labelWidth={56} style={{ flex: 1 }}>
-                  <PixelsEditor
-                    value={isMixed(value.marginRight) ? px(0) : marginRightValue}
-                    onChange={handleMarginRightChange}
-                    disabled={disabled}
-                  />
-                </FieldGroup>
-              </FieldRow>
-              <FieldGroup label={getLabel(value.indent, "Indent")} inline labelWidth={48}>
-                <PixelsEditor
-                  value={isMixed(value.indent) ? px(0) : indentValue}
-                  onChange={handleIndentChange}
-                  disabled={disabled}
-                />
-              </FieldGroup>
-            </>
-          )}
-
-          {/* PPTX-specific: Spacing (LineSpacing type) */}
-          {showSpacing && (
-            <>
-              <div style={separatorStyle} />
-              <FieldGroup label={getLabel(value.lineSpacing, "Line")}>
-                <LineSpacingEditor
-                  value={isMixed(value.lineSpacing) ? undefined : lineSpacingValue}
-                  onChange={handleLineSpacingChange}
-                  disabled={disabled}
-                />
-              </FieldGroup>
-              <FieldRow>
-                <FieldGroup label={getLabel(value.spaceBefore, "Before")} style={{ flex: 1 }}>
-                  <LineSpacingEditor
-                    value={isMixed(value.spaceBefore) ? undefined : spaceBeforeValue}
-                    onChange={handleSpaceBeforeChange}
-                    disabled={disabled}
-                  />
-                </FieldGroup>
-                <FieldGroup label={getLabel(value.spaceAfter, "After")} style={{ flex: 1 }}>
-                  <LineSpacingEditor
-                    value={isMixed(value.spaceAfter) ? undefined : spaceAfterValue}
-                    onChange={handleSpaceAfterChange}
-                    disabled={disabled}
-                  />
-                </FieldGroup>
-              </FieldRow>
-            </>
-          )}
-
-          {/* PPTX-specific: Direction */}
-          {showDirection && (
-            <>
-              <div style={separatorStyle} />
-              <Toggle
-                checked={isMixed(value.rtl) ? false : rtlValue}
-                onChange={handleRtlChange}
-                label={getLabel(value.rtl, "Right-to-Left")}
-                disabled={disabled}
-              />
-            </>
-          )}
-        </>
+        </PropertySection>
       )}
-    />
+
+      {/* Indent (react-editor-ui) */}
+      {showIndentation && (
+        <IndentSection
+          data={mixedParagraphToIndent(value)}
+          onChange={handleIndentChange}
+          size="sm"
+          disabled={disabled}
+        />
+      )}
+
+      {/* Bullet/number list (react-editor-ui) */}
+      <ListSection
+        data={mixedParagraphToList(value)}
+        onChange={handleListChange}
+        size="sm"
+        disabled={disabled}
+      />
+
+      {/* PPTX-specific: RTL */}
+      {showDirection && (
+        <PropertySection title="Direction" defaultExpanded={false}>
+          <Toggle
+            checked={isMixed(value.rtl) ? false : rtlValue}
+            onChange={handleRtlChange}
+            label={getLabel(value.rtl, "Right-to-Left")}
+            disabled={disabled}
+          />
+        </PropertySection>
+      )}
+    </div>
   );
 }

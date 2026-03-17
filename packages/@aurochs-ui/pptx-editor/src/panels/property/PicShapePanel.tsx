@@ -2,6 +2,7 @@
  * @file PicShape property panel component
  *
  * Displays property editors for PicShape (picture/image) elements.
+ * When a property is undefined, shows an "Add" button to initialize it with defaults.
  */
 
 import type { PicShape } from "@aurochs-office/pptx/domain/index";
@@ -9,7 +10,15 @@ import type { Percent } from "@aurochs-office/drawing-ml/domain/units";
 import { Accordion } from "@aurochs-ui/ui-components/layout";
 import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
 import { Toggle } from "@aurochs-ui/ui-components/primitives";
-import { NonVisualPropertiesEditor, TransformEditor, EffectsEditor, PercentEditor } from "../../editors/index";
+import {
+  NonVisualPropertiesEditor,
+  TransformEditor,
+  EffectsEditor,
+  PercentEditor,
+  createDefaultTransform,
+  createDefaultEffects,
+} from "../../editors/index";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 
 // =============================================================================
 // Types
@@ -77,6 +86,11 @@ function getMediaDescription(shape: PicShape): string {
  * - Effects
  */
 export function PicShapePanel({ shape, onChange }: PicShapePanelProps) {
+  /** Update shape properties immutably. */
+  function updateProperties(update: Partial<PicShape["properties"]>) {
+    onChange({ ...shape, properties: { ...shape.properties, ...update } });
+  }
+
   const handleSourceRectChange = (field: "left" | "top" | "right" | "bottom", value: number) => {
     const currentRect = shape.blipFill.sourceRect ?? {
       left: 0 as Percent,
@@ -177,19 +191,14 @@ export function PicShapePanel({ shape, onChange }: PicShapePanelProps) {
         </Accordion>
       )}
 
-      <Accordion title="Transform" defaultExpanded>
-        {shape.properties.transform && (
-          <TransformEditor
-            value={shape.properties.transform}
-            onChange={(transform) =>
-              onChange({
-                ...shape,
-                properties: { ...shape.properties, transform },
-              })
-            }
-          />
-        )}
-      </Accordion>
+      <OptionalPropertySection
+        title="Transform"
+        value={shape.properties.transform}
+        createDefault={createDefaultTransform}
+        onChange={(transform) => updateProperties({ transform })}
+        renderEditor={(v, set) => <TransformEditor value={v} onChange={set} />}
+        defaultExpanded
+      />
 
       <Accordion title="Crop (Source Rect)" defaultExpanded={false}>
         <FieldRow>
@@ -245,19 +254,13 @@ export function PicShapePanel({ shape, onChange }: PicShapePanelProps) {
         </FieldRow>
       </Accordion>
 
-      <Accordion title="Effects" defaultExpanded={false}>
-        {shape.properties.effects && (
-          <EffectsEditor
-            value={shape.properties.effects}
-            onChange={(effects) =>
-              onChange({
-                ...shape,
-                properties: { ...shape.properties, effects },
-              })
-            }
-          />
-        )}
-      </Accordion>
+      <OptionalPropertySection
+        title="Effects"
+        value={shape.properties.effects}
+        createDefault={createDefaultEffects}
+        onChange={(effects) => updateProperties({ effects })}
+        renderEditor={(v, set) => <EffectsEditor value={v} onChange={set} />}
+      />
     </>
   );
 }

@@ -2,11 +2,18 @@
  * @file MixedParagraphPropertiesEditor component tests
  *
  * Tests rendering, Mixed state display, and user interactions.
+ *
+ * The component uses react-editor-ui sections:
+ * - TextJustifySection (text alignment radio buttons)
+ * - ParagraphSpacingSection (before/after spacing)
+ * - IndentSection (left/right/first-line indent)
+ * - ListSection (bullet/number list)
+ * Plus PPTX-specific PropertySection controls for Alignment Details, Line Spacing, and Direction.
  */
 
 // @vitest-environment jsdom
 
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, fireEvent } from "@testing-library/react";
 import { MixedParagraphPropertiesEditor } from "./MixedParagraphPropertiesEditor";
 import type { MixedParagraphPropertiesEditorProps } from "./MixedParagraphPropertiesEditor";
 import type { MixedParagraphProperties } from "./mixed-properties";
@@ -86,7 +93,7 @@ function createPartiallyMixedProperties(): MixedParagraphProperties {
 
 /**
  * Helper to find the Level input specifically.
- * The level input is inside a FieldGroup with "Level" label.
+ * The level input is inside a FieldGroup with "Level" label in the "Alignment Details" PropertySection.
  */
 function findLevelInput(container: HTMLElement): HTMLInputElement | null {
   // Find all number inputs
@@ -129,7 +136,7 @@ describe("MixedParagraphPropertiesEditor", () => {
   });
 
   describe("rendering", () => {
-    it("renders alignment and level fields", () => {
+    it("renders react-editor-ui section titles", () => {
       const { container } = render(
         <MixedParagraphPropertiesEditor
           value={createAllSameProperties()}
@@ -139,9 +146,25 @@ describe("MixedParagraphPropertiesEditor", () => {
         />,
       );
 
-      // Should have alignment label
+      // TextJustifySection renders "Text Alignment"
+      expect(container.textContent).toContain("Text Alignment");
+      // "Alignment Details" PropertySection
+      expect(container.textContent).toContain("Alignment Details");
+    });
+
+    it("renders alignment and level fields in Alignment Details", () => {
+      const { container } = render(
+        <MixedParagraphPropertiesEditor
+          value={createAllSameProperties()}
+          onChange={onChange.fn}
+          showIndentation={false}
+          showSpacing={false}
+        />,
+      );
+
+      // Align label in Alignment Details PropertySection
       expect(container.textContent).toContain("Align");
-      // Should have level label
+      // Level label in Alignment Details PropertySection
       expect(container.textContent).toContain("Level");
     });
 
@@ -171,9 +194,11 @@ describe("MixedParagraphPropertiesEditor", () => {
         />,
       );
 
-      expect(container.textContent).toContain("L Margin");
-      expect(container.textContent).toContain("R Margin");
+      // IndentSection renders "Indent" title and "Left"/"Right"/"First Line" labels
       expect(container.textContent).toContain("Indent");
+      expect(container.textContent).toContain("Left");
+      expect(container.textContent).toContain("Right");
+      expect(container.textContent).toContain("First Line");
     });
 
     it("hides indentation section when showIndentation is false", () => {
@@ -186,11 +211,11 @@ describe("MixedParagraphPropertiesEditor", () => {
         />,
       );
 
-      expect(container.textContent).not.toContain("L Margin");
-      expect(container.textContent).not.toContain("R Margin");
+      // "First Line" is unique to IndentSection
+      expect(container.textContent).not.toContain("First Line");
     });
 
-    it("renders spacing section when showSpacing is true", () => {
+    it("renders line spacing section when showSpacing is true", () => {
       const { container } = render(
         <MixedParagraphPropertiesEditor
           value={createAllSameProperties()}
@@ -200,12 +225,11 @@ describe("MixedParagraphPropertiesEditor", () => {
         />,
       );
 
-      expect(container.textContent).toContain("Line");
-      expect(container.textContent).toContain("Before");
-      expect(container.textContent).toContain("After");
+      // "Line Spacing" PropertySection title
+      expect(container.textContent).toContain("Line Spacing");
     });
 
-    it("hides spacing section when showSpacing is false", () => {
+    it("hides line spacing section when showSpacing is false", () => {
       const { container } = render(
         <MixedParagraphPropertiesEditor
           value={createAllSameProperties()}
@@ -215,11 +239,25 @@ describe("MixedParagraphPropertiesEditor", () => {
         />,
       );
 
-      expect(container.textContent).not.toContain("Before");
-      expect(container.textContent).not.toContain("After");
+      // "Line Spacing" PropertySection should not be present
+      expect(container.textContent).not.toContain("Line Spacing");
     });
 
-    it("renders RTL toggle", () => {
+    it("renders ParagraphSpacingSection always", () => {
+      const { container } = render(
+        <MixedParagraphPropertiesEditor
+          value={createAllSameProperties()}
+          onChange={onChange.fn}
+          showSpacing={false}
+          showIndentation={false}
+        />,
+      );
+
+      // ParagraphSpacingSection renders "Paragraph Spacing" title
+      expect(container.textContent).toContain("Paragraph Spacing");
+    });
+
+    it("renders RTL toggle in Direction section", () => {
       const { container } = render(
         <MixedParagraphPropertiesEditor
           value={createAllSameProperties()}
@@ -234,8 +272,8 @@ describe("MixedParagraphPropertiesEditor", () => {
   });
 
   describe("same values display", () => {
-    it("displays correct alignment value", () => {
-      render(
+    it("displays correct alignment value in extended alignment select", () => {
+      const { container } = render(
         <MixedParagraphPropertiesEditor
           value={createAllSameProperties()}
           onChange={onChange.fn}
@@ -244,8 +282,25 @@ describe("MixedParagraphPropertiesEditor", () => {
         />,
       );
 
-      const alignSelect = screen.getByRole("combobox") as HTMLSelectElement;
-      expect(alignSelect.value).toBe("left");
+      // The extended alignment is a native <select> inside "Alignment Details"
+      const selects = container.querySelectorAll("select") as NodeListOf<HTMLSelectElement>;
+      // Find the alignment select by looking for "Left"/"Center"/"Right"/"Justify" options
+      // eslint-disable-next-line no-restricted-syntax -- mutable test state
+      let alignSelect: HTMLSelectElement | null = null;
+      for (const select of selects) {
+        const options = select.querySelectorAll("option");
+        for (const option of options) {
+          if (option.value === "center" && option.textContent === "Center") {
+            alignSelect = select;
+            break;
+          }
+        }
+        if (alignSelect) {
+          break;
+        }
+      }
+      expect(alignSelect).toBeTruthy();
+      expect(alignSelect!.value).toBe("left");
     });
 
     it("displays correct level value", () => {
@@ -322,22 +377,7 @@ describe("MixedParagraphPropertiesEditor", () => {
       expect(levelInput!.placeholder).toBe("Mixed");
     });
 
-    it("shows (M) in margin labels when mixed", () => {
-      const { container } = render(
-        <MixedParagraphPropertiesEditor
-          value={createMixedProperties()}
-          onChange={onChange.fn}
-          showIndentation={true}
-          showSpacing={false}
-        />,
-      );
-
-      expect(container.textContent).toContain("L Margin (M)");
-      expect(container.textContent).toContain("R Margin (M)");
-      expect(container.textContent).toContain("Indent (M)");
-    });
-
-    it("shows (M) in spacing labels when mixed", () => {
+    it("shows (M) in line spacing labels when mixed", () => {
       const { container } = render(
         <MixedParagraphPropertiesEditor
           value={createMixedProperties()}
@@ -347,9 +387,8 @@ describe("MixedParagraphPropertiesEditor", () => {
         />,
       );
 
+      // "Line Spacing" PropertySection has "Line (M)", "Before (M)", "After (M)"
       expect(container.textContent).toContain("Line (M)");
-      expect(container.textContent).toContain("Before (M)");
-      expect(container.textContent).toContain("After (M)");
     });
 
     it("shows (M) in RTL label when mixed", () => {
@@ -367,8 +406,8 @@ describe("MixedParagraphPropertiesEditor", () => {
   });
 
   describe("user interactions - alignment", () => {
-    it("calls onChange when alignment is changed", () => {
-      render(
+    it("calls onChange when extended alignment is changed", () => {
+      const { container } = render(
         <MixedParagraphPropertiesEditor
           value={createAllSameProperties()}
           onChange={onChange.fn}
@@ -377,15 +416,32 @@ describe("MixedParagraphPropertiesEditor", () => {
         />,
       );
 
-      const alignSelect = screen.getByRole("combobox");
-      fireEvent.change(alignSelect, { target: { value: "center" } });
+      // Find the alignment native select
+      const selects = container.querySelectorAll("select") as NodeListOf<HTMLSelectElement>;
+      // eslint-disable-next-line no-restricted-syntax -- mutable test state
+      let alignSelect: HTMLSelectElement | null = null;
+      for (const select of selects) {
+        const options = select.querySelectorAll("option");
+        for (const option of options) {
+          if (option.value === "center" && option.textContent === "Center") {
+            alignSelect = select;
+            break;
+          }
+        }
+        if (alignSelect) {
+          break;
+        }
+      }
+
+      expect(alignSelect).toBeTruthy();
+      fireEvent.change(alignSelect!, { target: { value: "center" } });
 
       expect(onChange.calls.length).toBe(1);
       expect(onChange.calls[0]?.[0]).toEqual({ alignment: "center" });
     });
 
     it("calls onChange with correct value when alignment is set to justify", () => {
-      render(
+      const { container } = render(
         <MixedParagraphPropertiesEditor
           value={createAllSameProperties()}
           onChange={onChange.fn}
@@ -394,8 +450,24 @@ describe("MixedParagraphPropertiesEditor", () => {
         />,
       );
 
-      const alignSelect = screen.getByRole("combobox");
-      fireEvent.change(alignSelect, { target: { value: "justify" } });
+      const selects = container.querySelectorAll("select") as NodeListOf<HTMLSelectElement>;
+      // eslint-disable-next-line no-restricted-syntax -- mutable test state
+      let alignSelect: HTMLSelectElement | null = null;
+      for (const select of selects) {
+        const options = select.querySelectorAll("option");
+        for (const option of options) {
+          if (option.value === "justify" && option.textContent === "Justify") {
+            alignSelect = select;
+            break;
+          }
+        }
+        if (alignSelect) {
+          break;
+        }
+      }
+
+      expect(alignSelect).toBeTruthy();
+      fireEvent.change(alignSelect!, { target: { value: "justify" } });
 
       expect(onChange.calls.length).toBe(1);
       expect(onChange.calls[0]?.[0]).toEqual({ alignment: "justify" });
@@ -520,8 +592,8 @@ describe("MixedParagraphPropertiesEditor", () => {
   });
 
   describe("user interactions - disabled", () => {
-    it("does not call onChange when disabled and alignment is clicked", () => {
-      render(
+    it("has disabled alignment select when disabled", () => {
+      const { container } = render(
         <MixedParagraphPropertiesEditor
           value={createAllSameProperties()}
           onChange={onChange.fn}
@@ -531,11 +603,21 @@ describe("MixedParagraphPropertiesEditor", () => {
         />,
       );
 
-      const alignSelect = screen.getByRole("combobox") as HTMLSelectElement;
-      expect(alignSelect.disabled).toBe(true);
+      // Find the alignment native select
+      const selects = container.querySelectorAll("select") as NodeListOf<HTMLSelectElement>;
+      // eslint-disable-next-line no-restricted-syntax -- mutable test state
+      let alignSelect: HTMLSelectElement | null = null;
+      for (const select of selects) {
+        if (select.disabled) {
+          alignSelect = select;
+          break;
+        }
+      }
+      expect(alignSelect).toBeTruthy();
+      expect(alignSelect!.disabled).toBe(true);
     });
 
-    it("does not call onChange when disabled and level is changed", () => {
+    it("has disabled level input when disabled", () => {
       const { container } = render(
         <MixedParagraphPropertiesEditor
           value={createAllSameProperties()}

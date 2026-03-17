@@ -2,13 +2,24 @@
  * @file GrpShape property panel component
  *
  * Displays property editors for GrpShape (group) elements.
+ * When a property is undefined, shows an "Add" button to initialize it with defaults.
  */
 
-import type { GrpShape, Shape } from "@aurochs-office/pptx/domain/index";
+import type { GrpShape, Shape, GroupTransform } from "@aurochs-office/pptx/domain/index";
 import type { Transform } from "@aurochs-office/pptx/domain/types";
+import { px } from "@aurochs-office/drawing-ml/domain/units";
 import { Accordion } from "@aurochs-ui/ui-components/layout";
 import { FieldGroup } from "@aurochs-ui/ui-components/layout";
-import { NonVisualPropertiesEditor, TransformEditor, FillEditor, EffectsEditor } from "../../editors/index";
+import {
+  NonVisualPropertiesEditor,
+  TransformEditor,
+  FillEditor,
+  EffectsEditor,
+  createDefaultTransform,
+  createDefaultSolidFill,
+  createDefaultEffects,
+} from "../../editors/index";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 
 // =============================================================================
 // Types
@@ -24,6 +35,18 @@ export type GrpShapePanelProps = {
 // =============================================================================
 // Helpers
 // =============================================================================
+
+/** Create a default GroupTransform with child offset/extent. */
+function createDefaultGroupTransform(): GroupTransform {
+  const base = createDefaultTransform();
+  return {
+    ...base,
+    childOffsetX: px(0),
+    childOffsetY: px(0),
+    childExtentWidth: base.width,
+    childExtentHeight: base.height,
+  };
+}
 
 /**
  * Get shape type label for display.
@@ -165,27 +188,26 @@ function ChildShapeButton({
  * - Effects
  */
 export function GrpShapePanel({ shape, onChange, onUngroup, onSelectChild }: GrpShapePanelProps) {
-  const baseTransform = extractBaseTransform(shape.properties.transform);
-
-  function mergeTransform(
-    existing: GrpShape["properties"]["transform"],
-    next: Transform,
-  ): GrpShape["properties"]["transform"] {
-    if (!existing) {
-      return undefined;
-    }
-    return { ...existing, ...next };
+  /** Update shape properties immutably. */
+  function updateProperties(update: Partial<GrpShape["properties"]>) {
+    onChange({ ...shape, properties: { ...shape.properties, ...update } });
   }
 
+  const baseTransform = extractBaseTransform(shape.properties.transform);
+
+  /**
+   * Handle transform changes.
+   * When no GroupTransform exists yet, creates a new one from the base Transform.
+   * When one exists, merges the base Transform fields into the existing GroupTransform.
+   */
   const handleTransformChange = (newTransform: Transform) => {
-    const existingGroupTransform = shape.properties.transform;
-    onChange({
-      ...shape,
-      properties: {
-        ...shape.properties,
-        transform: mergeTransform(existingGroupTransform, newTransform),
-      },
-    });
+    const existing = shape.properties.transform;
+    if (existing) {
+      updateProperties({ transform: { ...existing, ...newTransform } });
+    } else {
+      const base = createDefaultGroupTransform();
+      updateProperties({ transform: { ...base, ...newTransform } });
+    }
   };
 
   return (
@@ -236,37 +258,30 @@ export function GrpShapePanel({ shape, onChange, onUngroup, onSelectChild }: Grp
         </div>
       </Accordion>
 
-      <Accordion title="Transform" defaultExpanded>
-        {baseTransform && <TransformEditor value={baseTransform} onChange={handleTransformChange} />}
-      </Accordion>
+      <OptionalPropertySection
+        title="Transform"
+        value={baseTransform}
+        createDefault={createDefaultTransform}
+        onChange={handleTransformChange}
+        renderEditor={(v, set) => <TransformEditor value={v} onChange={set} />}
+        defaultExpanded
+      />
 
-      <Accordion title="Fill" defaultExpanded={false}>
-        {shape.properties.fill && (
-          <FillEditor
-            value={shape.properties.fill}
-            onChange={(fill) =>
-              onChange({
-                ...shape,
-                properties: { ...shape.properties, fill },
-              })
-            }
-          />
-        )}
-      </Accordion>
+      <OptionalPropertySection
+        title="Fill"
+        value={shape.properties.fill}
+        createDefault={createDefaultSolidFill}
+        onChange={(fill) => updateProperties({ fill })}
+        renderEditor={(v, set) => <FillEditor value={v} onChange={set} />}
+      />
 
-      <Accordion title="Effects" defaultExpanded={false}>
-        {shape.properties.effects && (
-          <EffectsEditor
-            value={shape.properties.effects}
-            onChange={(effects) =>
-              onChange({
-                ...shape,
-                properties: { ...shape.properties, effects },
-              })
-            }
-          />
-        )}
-      </Accordion>
+      <OptionalPropertySection
+        title="Effects"
+        value={shape.properties.effects}
+        createDefault={createDefaultEffects}
+        onChange={(effects) => updateProperties({ effects })}
+        renderEditor={(v, set) => <EffectsEditor value={v} onChange={set} />}
+      />
     </>
   );
 }

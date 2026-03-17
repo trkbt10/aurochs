@@ -1,5 +1,9 @@
 /**
  * @file MixedTextBodyEditor component tests
+ *
+ * MixedTextBodyEditor composes MixedRunPropertiesEditor + MixedParagraphPropertiesEditor
+ * without wrapping Accordions or summary. Individual control tests live in the
+ * respective editor spec files (SoT). This file tests the composition/wiring.
  */
 
 // @vitest-environment jsdom
@@ -69,26 +73,14 @@ function createMixedTextBody(): TextBody {
       {
         properties: { alignment: "left" },
         runs: [
-          {
-            type: "text" as const,
-            text: "Bold text",
-            properties: { bold: true, fontSize: 12 as Points },
-          },
-          {
-            type: "text" as const,
-            text: "Normal text",
-            properties: { bold: false, fontSize: 14 as Points },
-          },
+          { type: "text" as const, text: "Bold text", properties: { bold: true, fontSize: 12 as Points } },
+          { type: "text" as const, text: "Normal text", properties: { bold: false, fontSize: 14 as Points } },
         ],
       },
       {
         properties: { alignment: "center" },
         runs: [
-          {
-            type: "text" as const,
-            text: "Second paragraph",
-            properties: { italic: true },
-          },
+          { type: "text" as const, text: "Second paragraph", properties: { italic: true } },
         ],
       },
     ],
@@ -101,115 +93,39 @@ function createMixedTextBody(): TextBody {
 
 describe("MixedTextBodyEditor", () => {
   describe("rendering", () => {
-    it("renders summary with paragraph and character count", () => {
-      const textBody = createSingleRunTextBody();
+    it("renders run property sections (Font, Color)", () => {
       const onChange = createCallTracker<[TextBody]>();
+      render(<MixedTextBodyEditor value={createSingleRunTextBody()} onChange={onChange.fn} />);
 
-      const { container } = render(<MixedTextBodyEditor value={textBody} onChange={onChange.fn} />);
-
-      // Should show "1 paragraph, 11 characters"
-      expect(container.textContent).toContain("1 paragraph");
-      expect(container.textContent).toContain("11 characters");
+      expect(screen.getByLabelText("Font family")).toBeTruthy();
+      expect(screen.getByLabelText("Font weight")).toBeTruthy();
     });
 
-    it("renders plural form for multiple paragraphs", () => {
-      const textBody = createMixedTextBody();
+    it("renders paragraph property sections (Text Alignment)", () => {
       const onChange = createCallTracker<[TextBody]>();
+      render(<MixedTextBodyEditor value={createSingleRunTextBody()} onChange={onChange.fn} />);
 
-      const { container } = render(<MixedTextBodyEditor value={textBody} onChange={onChange.fn} />);
-
-      // Should show "2 paragraphs"
-      expect(container.textContent).toContain("2 paragraphs");
+      expect(screen.getAllByText("Text Alignment").length).toBeGreaterThanOrEqual(1);
     });
 
-    it("renders Character accordion", () => {
-      const textBody = createSingleRunTextBody();
+    it("does not render summary or accordion wrappers", () => {
       const onChange = createCallTracker<[TextBody]>();
+      const { container } = render(<MixedTextBodyEditor value={createSingleRunTextBody()} onChange={onChange.fn} />);
 
-      render(<MixedTextBodyEditor value={textBody} onChange={onChange.fn} />);
-
-      expect(screen.getByText("Character")).toBeTruthy();
-    });
-
-    it("renders Paragraph accordion", () => {
-      const textBody = createSingleRunTextBody();
-      const onChange = createCallTracker<[TextBody]>();
-
-      render(<MixedTextBodyEditor value={textBody} onChange={onChange.fn} />);
-
-      expect(screen.getByText("Paragraph")).toBeTruthy();
-    });
-  });
-
-  describe("same values", () => {
-    it("shows same bold value when all runs are bold", () => {
-      const textBody = createSingleRunTextBody();
-      const onChange = createCallTracker<[TextBody]>();
-
-      render(<MixedTextBodyEditor value={textBody} onChange={onChange.fn} />);
-
-      const boldButton = screen.getByRole("button", { name: /bold/i });
-      expect(boldButton.getAttribute("aria-pressed")).toBe("true");
-    });
-  });
-
-  describe("mixed values", () => {
-    it("shows mixed bold indicator when runs have different bold values", () => {
-      const textBody = createMixedTextBody();
-      const onChange = createCallTracker<[TextBody]>();
-
-      render(<MixedTextBodyEditor value={textBody} onChange={onChange.fn} />);
-
-      const boldButton = screen.getByRole("button", { name: /bold/i });
-      // Mixed state is represented as "mixed" in aria-pressed
-      expect(boldButton.getAttribute("aria-pressed")).toBe("mixed");
-    });
-
-    it("shows mixed font size when runs have different sizes", () => {
-      const textBody = createMixedTextBody();
-      const onChange = createCallTracker<[TextBody]>();
-
-      const { container } = render(<MixedTextBodyEditor value={textBody} onChange={onChange.fn} />);
-
-      // Should show "Size (Mixed)" or similar indicator
-      expect(container.textContent).toContain("Mixed");
+      // No "1 paragraph, 11 characters" summary
+      expect(container.textContent).not.toContain("paragraph,");
+      expect(container.textContent).not.toContain("characters");
+      // No "Character" or "Paragraph" accordion titles
+      expect(screen.queryByText("Character")).toBeNull();
     });
   });
 
   describe("applying properties", () => {
-    it("applies bold to all runs when bold button is clicked", () => {
-      const textBody = createMixedTextBody();
+    it("applies alignment to all paragraphs", () => {
       const onChange = createCallTracker<[TextBody]>();
+      const { container } = render(<MixedTextBodyEditor value={createMixedTextBody()} onChange={onChange.fn} />);
 
-      render(<MixedTextBodyEditor value={textBody} onChange={onChange.fn} />);
-
-      const boldButton = screen.getByRole("button", { name: /bold/i });
-      fireEvent.click(boldButton);
-
-      expect(onChange.calls.length).toBeGreaterThan(0);
-      const newTextBody = onChange.calls[0]![0];
-
-      // All runs should now have bold: true
-      for (const para of newTextBody.paragraphs) {
-        for (const run of para.runs) {
-          if (run.type === "text" || run.type === "field") {
-            expect(run.properties?.bold).toBe(true);
-          }
-        }
-      }
-    });
-
-    it("applies alignment to all paragraphs when alignment is changed", () => {
-      const textBody = createMixedTextBody();
-      const onChange = createCallTracker<[TextBody]>();
-
-      const { container } = render(<MixedTextBodyEditor value={textBody} onChange={onChange.fn} />);
-
-      // Expand Paragraph accordion
-      const paragraphAccordion = screen.getByText("Paragraph");
-      fireEvent.click(paragraphAccordion);
-
-      // Find alignment select
+      // Find alignment select in "Alignment Details" section
       const selects = container.querySelectorAll("select") as NodeListOf<HTMLSelectElement>;
       // eslint-disable-next-line no-restricted-syntax -- mutable test state
       let alignmentSelect: HTMLSelectElement | null = null;
@@ -221,18 +137,13 @@ describe("MixedTextBodyEditor", () => {
             break;
           }
         }
-        if (alignmentSelect) {
-          break;
-        }
+        if (alignmentSelect) { break; }
       }
 
       if (alignmentSelect) {
         fireEvent.change(alignmentSelect, { target: { value: "right" } });
-
         expect(onChange.calls.length).toBeGreaterThan(0);
         const newTextBody = onChange.calls[0]![0];
-
-        // All paragraphs should now have alignment: right
         for (const para of newTextBody.paragraphs) {
           expect(para.properties.alignment).toBe("right");
         }
@@ -241,39 +152,29 @@ describe("MixedTextBodyEditor", () => {
   });
 
   describe("disabled state", () => {
-    it("does not call onChange when disabled", () => {
-      const textBody = createSingleRunTextBody();
+    it("disables font controls when disabled", () => {
       const onChange = createCallTracker<[TextBody]>();
+      render(<MixedTextBodyEditor value={createSingleRunTextBody()} onChange={onChange.fn} disabled />);
 
-      render(<MixedTextBodyEditor value={textBody} onChange={onChange.fn} disabled />);
-
-      const boldButton = screen.getByRole("button", { name: /bold/i });
-      fireEvent.click(boldButton);
-
-      expect(onChange.calls.length).toBe(0);
+      const fontFamily = screen.getByLabelText("Font family") as HTMLButtonElement;
+      expect(fontFamily.disabled).toBe(true);
     });
   });
 
   describe("styling", () => {
     it("applies custom className", () => {
-      const textBody = createSingleRunTextBody();
       const onChange = createCallTracker<[TextBody]>();
-
       const { container } = render(
-        <MixedTextBodyEditor value={textBody} onChange={onChange.fn} className="custom-editor" />,
+        <MixedTextBodyEditor value={createSingleRunTextBody()} onChange={onChange.fn} className="custom" />,
       );
-
-      expect((container.firstChild as HTMLElement).classList.contains("custom-editor")).toBe(true);
+      expect((container.firstChild as HTMLElement).classList.contains("custom")).toBe(true);
     });
 
     it("applies custom style", () => {
-      const textBody = createSingleRunTextBody();
       const onChange = createCallTracker<[TextBody]>();
-
       const { container } = render(
-        <MixedTextBodyEditor value={textBody} onChange={onChange.fn} style={{ backgroundColor: "red" }} />,
+        <MixedTextBodyEditor value={createSingleRunTextBody()} onChange={onChange.fn} style={{ backgroundColor: "red" }} />,
       );
-
       expect((container.firstChild as HTMLElement).style.backgroundColor).toBe("red");
     });
   });

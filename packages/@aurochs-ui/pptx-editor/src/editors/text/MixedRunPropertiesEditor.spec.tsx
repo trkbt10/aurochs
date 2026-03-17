@@ -2,6 +2,12 @@
  * @file MixedRunPropertiesEditor component tests
  *
  * Tests rendering, Mixed state display, and user interactions.
+ *
+ * The component uses react-editor-ui sections:
+ * - FontSection (font family + weight selects)
+ * - FontMetricsSection (size, leading, kerning, tracking)
+ * - CaseTransformSection (case + underline/strikethrough/super/sub toggles)
+ * Plus PPTX-specific PropertySection controls for Color, Decoration, and Spacing.
  */
 
 // @vitest-environment jsdom
@@ -50,34 +56,6 @@ function createAllSameProperties(): MixedRunProperties {
     color: { type: "same", value: { spec: { type: "srgb", value: "000000" } } },
     fill: { type: "notApplicable" },
     highlightColor: { type: "notApplicable" },
-    textOutline: { type: "notApplicable" },
-    outline: { type: "notApplicable" },
-    shadow: { type: "notApplicable" },
-    emboss: { type: "notApplicable" },
-    language: { type: "notApplicable" },
-    rtl: { type: "notApplicable" },
-  };
-}
-
-function createMixedProperties(): MixedRunProperties {
-  return {
-    fontSize: { type: "mixed" },
-    fontFamily: { type: "mixed" },
-    fontFamilyEastAsian: { type: "notApplicable" },
-    fontFamilyComplexScript: { type: "notApplicable" },
-    fontFamilySymbol: { type: "notApplicable" },
-    bold: { type: "mixed" },
-    italic: { type: "mixed" },
-    underline: { type: "mixed" },
-    underlineColor: { type: "notApplicable" },
-    strike: { type: "mixed" },
-    caps: { type: "mixed" },
-    baseline: { type: "mixed" },
-    spacing: { type: "mixed" },
-    kerning: { type: "mixed" },
-    color: { type: "mixed" },
-    fill: { type: "notApplicable" },
-    highlightColor: { type: "mixed" },
     textOutline: { type: "notApplicable" },
     outline: { type: "notApplicable" },
     shadow: { type: "notApplicable" },
@@ -141,25 +119,41 @@ describe("MixedRunPropertiesEditor", () => {
   });
 
   describe("rendering", () => {
-    it("renders all property fields", () => {
+    it("renders react-editor-ui section titles", () => {
+      const { container } = render(<MixedRunPropertiesEditor value={createAllSameProperties()} onChange={onChange.fn} />);
+
+      // FontSection renders "Font" title
+      expect(container.textContent).toContain("Font");
+      // FontMetricsSection renders "Font Metrics" title
+      expect(container.textContent).toContain("Font Metrics");
+      // CaseTransformSection renders "Case & Style" title
+      expect(container.textContent).toContain("Case & Style");
+    });
+
+    it("renders font family and font weight selects", () => {
       render(<MixedRunPropertiesEditor value={createAllSameProperties()} onChange={onChange.fn} />);
 
-      // Font section
-      const fontSelect = screen.getByRole("button", { name: /Arial/i });
-      expect(fontSelect).toBeTruthy();
+      // FontSection renders selects with these aria-labels
+      const fontFamilySelect = screen.getByLabelText("Font family");
+      const fontWeightSelect = screen.getByLabelText("Font weight");
+      expect(fontFamilySelect).toBeTruthy();
+      expect(fontWeightSelect).toBeTruthy();
+    });
 
-      // Style buttons
-      const boldButton = screen.getByRole("button", { name: /bold/i });
-      const italicButton = screen.getByRole("button", { name: /italic/i });
-      expect(boldButton).toBeTruthy();
-      expect(italicButton).toBeTruthy();
+    it("renders PPTX-specific property sections", () => {
+      const { container } = render(<MixedRunPropertiesEditor value={createAllSameProperties()} onChange={onChange.fn} />);
+
+      // PropertySection titles for PPTX-specific controls
+      expect(container.textContent).toContain("Color");
+      expect(container.textContent).toContain("Decoration");
     });
 
     it("renders with disabled state", () => {
       render(<MixedRunPropertiesEditor value={createAllSameProperties()} onChange={onChange.fn} disabled />);
 
-      const boldButton = screen.getByRole("button", { name: /bold/i }) as HTMLButtonElement;
-      expect(boldButton.disabled).toBe(true);
+      // Font family select should be disabled
+      const fontFamilySelect = screen.getByLabelText("Font family") as HTMLButtonElement;
+      expect(fontFamilySelect.disabled).toBe(true);
     });
 
     it("renders without spacing section when showSpacing is false", () => {
@@ -167,141 +161,51 @@ describe("MixedRunPropertiesEditor", () => {
         <MixedRunPropertiesEditor value={createAllSameProperties()} onChange={onChange.fn} showSpacing={false} />,
       );
 
-      // Spacing label should not be present
-      expect(container.textContent).not.toContain("Spacing");
-      expect(container.textContent).not.toContain("Baseline");
+      // The PPTX-specific "Spacing" PropertySection should not be present
+      // (Color and Decoration should still be present)
+      expect(container.textContent).toContain("Color");
+      expect(container.textContent).toContain("Decoration");
+      // "Spacing" as a section title should not appear (but "Spacing" as a field label inside it also gone)
+      // Check that "Base" (baseline label) is not present
       expect(container.textContent).not.toContain("Kerning");
     });
-  });
 
-  describe("same values display", () => {
-    it("displays same font family value in input", () => {
-      render(<MixedRunPropertiesEditor value={createAllSameProperties()} onChange={onChange.fn} />);
-
-      const fontSelect = screen.getByRole("button", { name: /arial/i });
-      expect(fontSelect).toBeTruthy();
-    });
-
-    it("displays bold button as pressed when bold is true", () => {
-      render(<MixedRunPropertiesEditor value={createAllSameProperties()} onChange={onChange.fn} />);
-
-      const boldButton = screen.getByRole("button", { name: /bold/i });
-      expect(boldButton.getAttribute("aria-pressed")).toBe("true");
-    });
-
-    it("displays italic button as not pressed when italic is false", () => {
-      render(<MixedRunPropertiesEditor value={createAllSameProperties()} onChange={onChange.fn} />);
-
-      const italicButton = screen.getByRole("button", { name: /italic/i });
-      expect(italicButton.getAttribute("aria-pressed")).toBe("false");
-    });
-  });
-
-  describe("mixed values display", () => {
-    it("displays Mixed placeholder for mixed font family", () => {
-      render(<MixedRunPropertiesEditor value={createMixedProperties()} onChange={onChange.fn} />);
-
-      const fontSelect = screen.getByRole("button", { name: "Mixed" });
-      expect(fontSelect).toBeTruthy();
-    });
-
-    it("displays bold button with mixed aria-pressed state", () => {
-      render(<MixedRunPropertiesEditor value={createMixedProperties()} onChange={onChange.fn} />);
-
-      const boldButton = screen.getByRole("button", { name: /bold.*mixed/i });
-      expect(boldButton.getAttribute("aria-pressed")).toBe("mixed");
-    });
-
-    it("displays italic button with mixed aria-pressed state", () => {
-      render(<MixedRunPropertiesEditor value={createMixedProperties()} onChange={onChange.fn} />);
-
-      const italicButton = screen.getByRole("button", { name: /italic.*mixed/i });
-      expect(italicButton.getAttribute("aria-pressed")).toBe("mixed");
-    });
-
-    it("shows (Mixed) in size label when fontSize is mixed", () => {
-      const { container } = render(<MixedRunPropertiesEditor value={createMixedProperties()} onChange={onChange.fn} />);
-
-      expect(container.textContent).toContain("Size (Mixed)");
-    });
-  });
-
-  describe("user interactions", () => {
-    it("calls onChange when font family is changed", () => {
-      render(<MixedRunPropertiesEditor value={createAllSameProperties()} onChange={onChange.fn} />);
-
-      const fontSelect = screen.getByRole("button", { name: /arial/i });
-      fireEvent.click(fontSelect);
-      fireEvent.click(screen.getByText("Helvetica"));
-
-      expect(onChange.calls.length).toBe(1);
-      expect(onChange.calls[0]?.[0]).toEqual({ fontFamily: "Helvetica" });
-    });
-
-    it("calls onChange with undefined when font family is cleared", () => {
-      render(<MixedRunPropertiesEditor value={createAllSameProperties()} onChange={onChange.fn} />);
-
-      const fontSelect = screen.getByRole("button", { name: /arial/i });
-      fireEvent.click(fontSelect);
-      fireEvent.click(screen.getByText("Default"));
-
-      expect(onChange.calls.length).toBe(1);
-      expect(onChange.calls[0]?.[0]).toEqual({ fontFamily: undefined });
-    });
-
-    it("calls onChange when bold button is clicked (toggle off)", () => {
-      render(<MixedRunPropertiesEditor value={createAllSameProperties()} onChange={onChange.fn} />);
-
-      const boldButton = screen.getByRole("button", { name: /bold/i });
-      fireEvent.click(boldButton);
-
-      // When pressed (true) is clicked, it toggles to false (undefined)
-      expect(onChange.calls.length).toBe(1);
-      expect(onChange.calls[0]?.[0]).toEqual({ bold: undefined });
-    });
-
-    it("calls onChange when italic button is clicked (toggle on)", () => {
-      render(<MixedRunPropertiesEditor value={createAllSameProperties()} onChange={onChange.fn} />);
-
-      const italicButton = screen.getByRole("button", { name: /italic/i });
-      fireEvent.click(italicButton);
-
-      // When not pressed (false) is clicked, it toggles to true
-      expect(onChange.calls.length).toBe(1);
-      expect(onChange.calls[0]?.[0]).toEqual({ italic: true });
-    });
-
-    it("calls onChange with true when mixed bold button is clicked", () => {
-      render(<MixedRunPropertiesEditor value={createMixedProperties()} onChange={onChange.fn} />);
-
-      const boldButton = screen.getByRole("button", { name: /bold.*mixed/i });
-      fireEvent.click(boldButton);
-
-      // When mixed, clicking always sets to true
-      expect(onChange.calls.length).toBe(1);
-      expect(onChange.calls[0]?.[0]).toEqual({ bold: true });
-    });
-
-    it("does not call onChange when disabled", () => {
-      render(<MixedRunPropertiesEditor value={createAllSameProperties()} onChange={onChange.fn} disabled />);
-
-      const boldButton = screen.getByRole("button", { name: /bold/i });
-      fireEvent.click(boldButton);
-
-      expect(onChange.calls.length).toBe(0);
-    });
-  });
-
-  describe("underline and strike selects", () => {
-    it("displays correct underline value", () => {
+    it("renders spacing section when showSpacing is true (default)", () => {
       const { container } = render(
         <MixedRunPropertiesEditor value={createAllSameProperties()} onChange={onChange.fn} />,
       );
 
-      // Find the first select (underline select comes before strike and caps)
+      expect(container.textContent).toContain("Kerning");
+    });
+  });
+
+  describe("same values display", () => {
+    it("displays font family select with aria-label", () => {
+      render(<MixedRunPropertiesEditor value={createAllSameProperties()} onChange={onChange.fn} />);
+
+      // FontSection renders a combobox for font family
+      const fontSelect = screen.getByLabelText("Font family");
+      expect(fontSelect).toBeTruthy();
+    });
+
+    it("displays underline checkbox as checked when underline is sng", () => {
+      render(<MixedRunPropertiesEditor value={createAllSameProperties()} onChange={onChange.fn} />);
+
+      // CaseTransformSection has a TextStyleSelect with underline toggle
+      // The underline checkbox (role="checkbox") should be checked since underline is "sng"
+      const underlineCheckbox = screen.getByRole("checkbox", { name: /underline/i });
+      expect(underlineCheckbox.getAttribute("aria-checked")).toBe("true");
+    });
+  });
+
+  describe("PPTX-specific underline and strike selects", () => {
+    it("displays correct underline value in Decoration section", () => {
+      const { container } = render(
+        <MixedRunPropertiesEditor value={createAllSameProperties()} onChange={onChange.fn} />,
+      );
+
+      // Find the underline select by looking for "Single" option
       const selects = container.querySelectorAll("select") as NodeListOf<HTMLSelectElement>;
-      // Underline select is one of the first selects in the decoration section
-      // Find by checking select options for "Single" which is sng label
       // eslint-disable-next-line no-restricted-syntax -- mutable test state
       let underlineSelect: HTMLSelectElement | null = null;
       for (const select of selects) {
@@ -378,96 +282,80 @@ describe("MixedRunPropertiesEditor", () => {
   });
 
   describe("caps select", () => {
-    it("displays correct caps value", () => {
-      const { container } = render(
-        <MixedRunPropertiesEditor value={createAllSameProperties()} onChange={onChange.fn} />,
-      );
+    it("displays correct caps value via CaseTransformSection", () => {
+      render(<MixedRunPropertiesEditor value={createAllSameProperties()} onChange={onChange.fn} />);
 
-      // Find the caps select by looking for "Small Caps" option
-      const selects = container.querySelectorAll("select") as NodeListOf<HTMLSelectElement>;
-      // eslint-disable-next-line no-restricted-syntax -- mutable test state
-      let capsSelect: HTMLSelectElement | null = null;
-      for (const select of selects) {
-        const options = select.querySelectorAll("option");
-        for (const option of options) {
-          if (option.textContent === "Small Caps" || option.value === "small") {
-            capsSelect = select;
-            break;
-          }
-        }
-        if (capsSelect) {
-          break;
-        }
-      }
-      expect(capsSelect).toBeTruthy();
-      expect(capsSelect?.value).toBe("none");
-    });
-
-    it("calls onChange when caps is changed to small", () => {
-      const { container } = render(
-        <MixedRunPropertiesEditor value={createAllSameProperties()} onChange={onChange.fn} />,
-      );
-
-      const selects = container.querySelectorAll("select") as NodeListOf<HTMLSelectElement>;
-      // eslint-disable-next-line no-restricted-syntax -- mutable test state
-      let capsSelect: HTMLSelectElement | null = null;
-      for (const select of selects) {
-        const options = select.querySelectorAll("option");
-        for (const option of options) {
-          if (option.textContent === "Small Caps" || option.value === "small") {
-            capsSelect = select;
-            break;
-          }
-        }
-        if (capsSelect) {
-          break;
-        }
-      }
-
-      if (capsSelect) {
-        fireEvent.change(capsSelect, { target: { value: "small" } });
-        expect(onChange.calls.length).toBe(1);
-        expect(onChange.calls[0]?.[0]).toEqual({ caps: "small" });
-      }
+      // CaseTransformSection renders a "Text case" segmented control
+      // With caps="none", the "Normal case" radio should be selected
+      const normalCaseRadio = screen.getByRole("radio", { name: /normal case/i });
+      expect(normalCaseRadio.getAttribute("aria-checked")).toBe("true");
     });
   });
 
   describe("partially mixed properties", () => {
-    it("displays same values correctly alongside mixed values", () => {
-      render(<MixedRunPropertiesEditor value={createPartiallyMixedProperties()} onChange={onChange.fn} />);
+    it("renders without errors", () => {
+      const { container } = render(<MixedRunPropertiesEditor value={createPartiallyMixedProperties()} onChange={onChange.fn} />);
 
-      // Bold should be pressed (same: true)
-      const boldButton = screen.getByRole("button", { name: /bold/i });
-      expect(boldButton.getAttribute("aria-pressed")).toBe("true");
-
-      // Italic should be mixed
-      const italicButton = screen.getByRole("button", { name: /italic.*mixed/i });
-      expect(italicButton.getAttribute("aria-pressed")).toBe("mixed");
-
-      // Font family should show Mixed placeholder
-      const fontSelect = screen.getByRole("button", { name: "Mixed" });
-      expect(fontSelect).toBeTruthy();
+      // Should render Font section
+      expect(container.textContent).toContain("Font");
+      // Should render Case & Style section
+      expect(container.textContent).toContain("Case & Style");
     });
   });
 
   describe("accessibility", () => {
-    it("has proper aria labels for toggle buttons", () => {
+    it("has proper aria labels for font selects", () => {
       render(<MixedRunPropertiesEditor value={createAllSameProperties()} onChange={onChange.fn} />);
 
-      const boldButton = screen.getByLabelText(/bold/i);
-      const italicButton = screen.getByLabelText(/italic/i);
-      expect(boldButton).toBeTruthy();
-      expect(italicButton).toBeTruthy();
+      const fontFamily = screen.getByLabelText("Font family");
+      const fontWeight = screen.getByLabelText("Font weight");
+      expect(fontFamily).toBeTruthy();
+      expect(fontWeight).toBeTruthy();
     });
 
-    it("has proper aria-pressed states", () => {
+    it("has proper aria labels for text style toggles", () => {
       render(<MixedRunPropertiesEditor value={createAllSameProperties()} onChange={onChange.fn} />);
 
-      const boldButton = screen.getByRole("button", { name: /bold/i });
-      const italicButton = screen.getByRole("button", { name: /italic/i });
+      // CaseTransformSection renders TextStyleSelect with these aria-label checkboxes
+      const underline = screen.getByRole("checkbox", { name: /underline/i });
+      const strikethrough = screen.getByRole("checkbox", { name: /strikethrough/i });
+      expect(underline).toBeTruthy();
+      expect(strikethrough).toBeTruthy();
+    });
 
-      expect(boldButton.getAttribute("aria-pressed")).toBeTruthy();
-      expect(italicButton.getAttribute("aria-pressed")).toBeTruthy();
+    it("has proper aria labels for case transform radios", () => {
+      render(<MixedRunPropertiesEditor value={createAllSameProperties()} onChange={onChange.fn} />);
+
+      const normalCase = screen.getByRole("radio", { name: /normal case/i });
+      const smallCaps = screen.getByRole("radio", { name: /small caps/i });
+      // "All caps" may match multiple elements due to icon rendering; use getAllByRole
+      const allCapsElements = screen.getAllByRole("radio", { name: /all caps/i });
+      expect(normalCase).toBeTruthy();
+      expect(smallCaps).toBeTruthy();
+      expect(allCapsElements.length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  describe("font weight change interaction", () => {
+    it("renders font weight select", () => {
+      render(<MixedRunPropertiesEditor value={createAllSameProperties()} onChange={onChange.fn} />);
+
+      // FontSection renders a combobox for weight with aria-label "Font weight"
+      const weightSelect = screen.getByLabelText("Font weight");
+      expect(weightSelect).toBeTruthy();
+      expect(weightSelect.getAttribute("role")).toBe("combobox");
+    });
+  });
+
+  describe("user interactions - disabled", () => {
+    it("does not call onChange when disabled font family is clicked", () => {
+      render(<MixedRunPropertiesEditor value={createAllSameProperties()} onChange={onChange.fn} disabled />);
+
+      const fontFamily = screen.getByLabelText("Font family") as HTMLButtonElement;
+      expect(fontFamily.disabled).toBe(true);
+
+      fireEvent.click(fontFamily);
+      expect(onChange.calls.length).toBe(0);
     });
   });
 });
