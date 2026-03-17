@@ -283,18 +283,16 @@ function FontSchemeAccordionContent({ fontScheme }: { fontScheme?: FontScheme })
 export function ThemeViewerPanel({ colorContext, fontScheme }: ThemeViewerPanelProps) {
   return (
     <div style={containerStyle}>
-      <OptionalPropertySection title="Theme" defaultExpanded>
-        <OptionalPropertySection title="Color Scheme" defaultExpanded>
-          <ColorSchemeSection colorScheme={colorContext.colorScheme} />
-        </OptionalPropertySection>
+      <OptionalPropertySection title="Color Scheme" defaultExpanded>
+        <ColorSchemeSection colorScheme={colorContext.colorScheme} />
+      </OptionalPropertySection>
 
-        <OptionalPropertySection title="Color Map" defaultExpanded={false}>
-          <ColorMapSection colorMap={colorContext.colorMap} colorScheme={colorContext.colorScheme} />
-        </OptionalPropertySection>
+      <OptionalPropertySection title="Color Map" defaultExpanded={false}>
+        <ColorMapSection colorMap={colorContext.colorMap} colorScheme={colorContext.colorScheme} />
+      </OptionalPropertySection>
 
-        <OptionalPropertySection title="Font Scheme" defaultExpanded={false}>
-          <FontSchemeAccordionContent fontScheme={fontScheme} />
-        </OptionalPropertySection>
+      <OptionalPropertySection title="Font Scheme" defaultExpanded={false}>
+        <FontSchemeAccordionContent fontScheme={fontScheme} />
       </OptionalPropertySection>
     </div>
   );

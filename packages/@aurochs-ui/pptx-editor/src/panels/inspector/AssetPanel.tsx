@@ -607,14 +607,12 @@ export function AssetPanel({ presentationFile }: AssetPanelProps) {
 
   return (
     <div style={containerStyle}>
-      <OptionalPropertySection title="Assets" defaultExpanded>
-        <AssetPanelContent
-          presentationFile={presentationFile}
-          embeddedAssets={embeddedAssets}
-          uploadedAssets={uploadedAssets}
-          onUpload={handleUpload}
-        />
-      </OptionalPropertySection>
+      <AssetPanelContent
+        presentationFile={presentationFile}
+        embeddedAssets={embeddedAssets}
+        uploadedAssets={uploadedAssets}
+        onUpload={handleUpload}
+      />
     </div>
   );
 }

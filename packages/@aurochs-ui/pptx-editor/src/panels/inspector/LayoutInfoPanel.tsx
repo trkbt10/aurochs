@@ -221,14 +221,12 @@ export function LayoutInfoPanel({
 
   return (
     <div style={containerStyle}>
-      <OptionalPropertySection title="Layouts" defaultExpanded>
-        <OptionalPropertySection title={`Available Layouts (${layoutOptions.length})`} defaultExpanded>
-          <LayoutGrid layouts={layoutThumbnails} currentPath={currentLayoutPath} slideSize={slideSize} />
-        </OptionalPropertySection>
+      <OptionalPropertySection title={`Available Layouts (${layoutOptions.length})`} defaultExpanded>
+        <LayoutGrid layouts={layoutThumbnails} currentPath={currentLayoutPath} slideSize={slideSize} />
+      </OptionalPropertySection>
 
-        <OptionalPropertySection title="Current Layout" defaultExpanded={false}>
-          <CurrentLayoutContent attributes={layoutAttributes} />
-        </OptionalPropertySection>
+      <OptionalPropertySection title="Current Layout" defaultExpanded={false}>
+        <CurrentLayoutContent attributes={layoutAttributes} />
       </OptionalPropertySection>
     </div>
   );

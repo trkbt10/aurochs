@@ -11,7 +11,6 @@ import type { Background } from "@aurochs-office/pptx/domain/slide/types";
 import type { SlideLayoutAttributes } from "@aurochs-office/pptx/parser/slide/layout-parser";
 import type { SlideLayoutOption } from "@aurochs-office/pptx/app";
 import { SlidePropertiesPanel } from "../property/SlidePropertiesPanel";
-import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 
 export type SlideInfoTabProps = {
   /** Current slide background */
@@ -64,20 +63,18 @@ export function SlideInfoTab({
 }: SlideInfoTabProps) {
   return (
     <div style={containerStyle}>
-      <OptionalPropertySection title="Slide Info" defaultExpanded>
-        <SlidePropertiesPanel
-          background={background}
-          onBackgroundChange={onBackgroundChange}
-          layoutAttributes={layoutAttributes}
-          layoutPath={layoutPath}
-          layoutOptions={layoutOptions}
-          onLayoutAttributesChange={onLayoutAttributesChange}
-          onLayoutChange={onLayoutChange}
-          slideSize={slideSize}
-          onSlideSizeChange={onSlideSizeChange}
-          presentationFile={presentationFile}
-        />
-      </OptionalPropertySection>
+      <SlidePropertiesPanel
+        background={background}
+        onBackgroundChange={onBackgroundChange}
+        layoutAttributes={layoutAttributes}
+        layoutPath={layoutPath}
+        layoutOptions={layoutOptions}
+        onLayoutAttributesChange={onLayoutAttributesChange}
+        onLayoutChange={onLayoutChange}
+        slideSize={slideSize}
+        onSlideSizeChange={onSlideSizeChange}
+        presentationFile={presentationFile}
+      />
     </div>
   );
 }

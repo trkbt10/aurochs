@@ -18,7 +18,6 @@ import { DiagramFramePanel } from "../property/DiagramFramePanel";
 import { OleFramePanel } from "../property/OleFramePanel";
 import { UnknownShapePanel } from "../property/UnknownShapePanel";
 import { TextPropertyPanel } from "../property/TextPropertyPanel";
-import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { useTextEditContext } from "../../context/slide/TextEditContext";
 import { isTextEditActive } from "../../slide/text-edit";
 
@@ -169,9 +168,7 @@ export function SelectedElementTab({
   if (isInTextEditMode) {
     return (
       <div style={containerStyle}>
-        <OptionalPropertySection title="Text Properties" defaultExpanded>
-          <TextPropertyPanel />
-        </OptionalPropertySection>
+        <TextPropertyPanel />
       </div>
     );
   }
@@ -180,14 +177,12 @@ export function SelectedElementTab({
   if (selectedShapes.length === 0) {
     return (
       <div style={containerStyle}>
-        <OptionalPropertySection title="Selection" defaultExpanded>
-          <div style={emptyStateStyle}>
-            <p>No element selected</p>
-            <p style={{ fontSize: "12px", marginTop: "8px", opacity: 0.7 }}>
-              Click on a shape in the canvas or layer panel to see its properties
-            </p>
-          </div>
-        </OptionalPropertySection>
+        <div style={emptyStateStyle}>
+          <p>No element selected</p>
+          <p style={{ fontSize: "12px", marginTop: "8px", opacity: 0.7 }}>
+            Click on a shape in the canvas or layer panel to see its properties
+          </p>
+        </div>
       </div>
     );
   }
@@ -196,9 +191,7 @@ export function SelectedElementTab({
   if (selectedShapes.length > 1) {
     return (
       <div style={containerStyle}>
-        <OptionalPropertySection title={`Selection (${selectedShapes.length})`} defaultExpanded>
-          <MultiSelectPanel shapes={selectedShapes} onShapeChange={onShapeChange} />
-        </OptionalPropertySection>
+        <MultiSelectPanel shapes={selectedShapes} onShapeChange={onShapeChange} />
       </div>
     );
   }
@@ -208,16 +201,14 @@ export function SelectedElementTab({
   if (!shape) {
     return (
       <div style={containerStyle}>
-        <OptionalPropertySection title="Selection" defaultExpanded>
-          <div style={emptyStateStyle}>Shape not found</div>
-        </OptionalPropertySection>
+        <div style={emptyStateStyle}>Shape not found</div>
       </div>
     );
   }
 
   return (
     <div style={containerStyle}>
-      <OptionalPropertySection title={getShapeTypeLabel(shape)} defaultExpanded>{renderShapePanel(shape, shapePanelCtx)}</OptionalPropertySection>
+      {renderShapePanel(shape, shapePanelCtx)}
     </div>
   );
 }

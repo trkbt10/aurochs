@@ -138,29 +138,25 @@ export function FontSchemeEditor({
   if (!fontScheme) {
     return (
       <div style={containerStyle}>
-        <OptionalPropertySection title="Font Scheme" defaultExpanded>
-          <div style={emptyStateStyle}>No font scheme defined</div>
-        </OptionalPropertySection>
+        <div style={emptyStateStyle}>No font scheme defined</div>
       </div>
     );
   }
 
   return (
     <div style={containerStyle}>
-      <OptionalPropertySection title="Font Scheme" defaultExpanded>
-        <FontSpecEditor
-          title="Major Font (Headings)"
-          fontSpec={fontScheme.majorFont}
-          onChange={onMajorFontChange}
-          disabled={disabled}
-        />
-        <FontSpecEditor
-          title="Minor Font (Body)"
-          fontSpec={fontScheme.minorFont}
-          onChange={onMinorFontChange}
-          disabled={disabled}
-        />
-      </OptionalPropertySection>
+      <FontSpecEditor
+        title="Major Font (Headings)"
+        fontSpec={fontScheme.majorFont}
+        onChange={onMajorFontChange}
+        disabled={disabled}
+      />
+      <FontSpecEditor
+        title="Minor Font (Body)"
+        fontSpec={fontScheme.minorFont}
+        onChange={onMinorFontChange}
+        disabled={disabled}
+      />
     </div>
   );
 }

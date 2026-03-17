@@ -155,8 +155,7 @@ export function ColorSchemeEditor({ colorScheme, onColorChange, disabled }: Colo
 
   return (
     <div style={containerStyle}>
-      <OptionalPropertySection title="Color Scheme" defaultExpanded>
-        <OptionalPropertySection title="Base Colors" defaultExpanded>
+      <OptionalPropertySection title="Base Colors" defaultExpanded>
           <div style={colorGridStyle}>
             {baseColors.map((key) => (
               <ColorItem
@@ -199,7 +198,6 @@ export function ColorSchemeEditor({ colorScheme, onColorChange, disabled }: Colo
               />
             ))}
           </div>
-        </OptionalPropertySection>
       </OptionalPropertySection>
     </div>
   );
