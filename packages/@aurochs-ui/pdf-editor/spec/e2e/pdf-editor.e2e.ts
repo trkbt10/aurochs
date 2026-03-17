@@ -591,26 +591,25 @@ async function runAllTests(browser: Browser): Promise<TestResult[]> {
     await page.mouse.click(center.x, center.y);
     await settle();
 
-    // Find SE resize handle — it's a small rect at the bottom-right of selection
+    // Find SE resize handle — small rect with stroke-width=1 and cursor style
     const handlePos = await page.evaluate(() => {
       const svg = document.querySelector("svg");
       if (!svg) return null;
-      // Find rects that look like resize handles (small 8x8 rects with fill and stroke)
       const rects = svg.querySelectorAll("rect");
-      const candidates: Array<{ x: number; y: number; width: number; height: number; cx: number; cy: number }> = [];
+      const candidates: Array<{ cx: number; cy: number }> = [];
       for (const rect of rects) {
-        const width = parseFloat(rect.getAttribute("width") ?? "0");
-        const height = parseFloat(rect.getAttribute("height") ?? "0");
-        const stroke = rect.getAttribute("stroke");
+        const w = parseFloat(rect.getAttribute("width") ?? "0");
+        const sw = rect.getAttribute("stroke-width");
         const fill = rect.getAttribute("fill");
-        // Resize handles: small rects with both fill and stroke, not the selection border
-        if (width > 3 && width < 20 && height > 3 && height < 20 && stroke && fill && fill !== "none") {
+        const cursor = rect.style.cursor;
+        // ResizeHandle: 8x8, stroke-width=1, has fill, has cursor style
+        if (w >= 6 && w <= 12 && sw === "1" && fill && fill !== "none" && cursor) {
           const r = rect.getBoundingClientRect();
-          candidates.push({ x: r.x, y: r.y, width: r.width, height: r.height, cx: r.x + r.width / 2, cy: r.y + r.height / 2 });
+          candidates.push({ cx: r.x + r.width / 2, cy: r.y + r.height / 2 });
         }
       }
       if (candidates.length === 0) return null;
-      // Return the bottom-right-most handle (SE)
+      // SE handle: bottom-right-most
       candidates.sort((a, b) => (b.cx + b.cy) - (a.cx + a.cy));
       return { x: candidates[0].cx, y: candidates[0].cy };
     });
@@ -656,16 +655,15 @@ async function runAllTests(browser: Browser): Promise<TestResult[]> {
     await page.mouse.click(center.x, center.y);
     await settle();
 
-    // Find rotate handle — the circle above the selection
+    // Find rotate handle — circle with cursor=grab
     const rotatePos = await page.evaluate(() => {
       const svg = document.querySelector("svg");
       if (!svg) return null;
-      // Rotate handle is an SVG circle
       const circles = svg.querySelectorAll("circle");
       for (const circle of circles) {
         const r = parseFloat(circle.getAttribute("r") ?? "0");
-        const stroke = circle.getAttribute("stroke");
-        if (r > 2 && r < 10 && stroke) {
+        const cursor = circle.style.cursor;
+        if (r > 2 && r < 10 && cursor === "grab") {
           const rect = circle.getBoundingClientRect();
           return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
         }
