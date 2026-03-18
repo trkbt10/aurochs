@@ -36,6 +36,8 @@ export type DocumentEditorContextValue = {
   readonly textEdit: TextEditState;
   /** Editor mode */
   readonly editorMode: EditorMode;
+  /** Active page index for navigation */
+  readonly activePageIndex: number;
 };
 
 // =============================================================================
@@ -89,6 +91,7 @@ export function DocumentEditorProvider({
   const canRedoValue = canRedo(state.documentHistory);
   const textEdit = state.textEdit;
   const editorMode = state.mode;
+  const activePageIndex = state.activePageIndex;
 
   const value = useMemo<DocumentEditorContextValue>(
     () => ({
@@ -101,8 +104,9 @@ export function DocumentEditorProvider({
       canRedo: canRedoValue,
       textEdit,
       editorMode,
+      activePageIndex,
     }),
-    [state, document, selectedElements, primaryElement, canUndoValue, canRedoValue, textEdit, editorMode],
+    [state, document, selectedElements, primaryElement, canUndoValue, canRedoValue, textEdit, editorMode, activePageIndex],
   );
 
   return <DocumentEditorContext.Provider value={value}>{children}</DocumentEditorContext.Provider>;

@@ -66,6 +66,7 @@ function createContextValue(args: {
     textEdit: createInitialTextEditState(),
     mode: editorMode,
     activeSectionIndex: 0,
+    activePageIndex: 0,
   };
 
   return {

@@ -7,6 +7,7 @@
 import type { DocxDocument } from "@aurochs-office/docx/domain/document";
 import type { DocxParagraph, DocxParagraphProperties } from "@aurochs-office/docx/domain/paragraph";
 import type { DocxRunProperties } from "@aurochs-office/docx/domain/run";
+import type { DocxSectionProperties } from "@aurochs-office/docx/domain/section";
 import type { DocxTableCellProperties, DocxTableProperties } from "@aurochs-office/docx/domain/table";
 import type { UndoRedoHistory } from "@aurochs-ui/editor-core/history";
 import type { DocxSelectionState, DocxDragState, DocxClipboardContent, ElementId, TextPosition, Point } from "../state";
@@ -61,6 +62,8 @@ export type DocxEditorState = {
   readonly mode: EditorMode;
   /** Active section index (for section-specific operations) */
   readonly activeSectionIndex: number;
+  /** Active page index (for page navigation) */
+  readonly activePageIndex: number;
 };
 
 // =============================================================================
@@ -201,6 +204,13 @@ export type DocxEditorAction =
       readonly rows: number;
       readonly cols: number;
     }
+
+  // Page/Section Actions
+  | { readonly type: "SET_ACTIVE_PAGE"; readonly pageIndex: number }
+  | { readonly type: "INSERT_PAGE_BREAK"; readonly contentIndex: number }
+  | { readonly type: "INSERT_SECTION_BREAK"; readonly contentIndex: number; readonly sectPr?: DocxSectionProperties }
+  | { readonly type: "DELETE_SECTION_BREAK"; readonly contentIndex: number }
+  | { readonly type: "UPDATE_SECTION_PROPERTIES"; readonly sectionIndex: number; readonly sectPr: Partial<DocxSectionProperties> }
 
   // Cancel/Reset Actions
   | { readonly type: "CANCEL_DRAG" }

@@ -52,6 +52,7 @@ function createState(document: DocxDocument, selectedIndices: number[] = []): Do
     textEdit: { isEditing: false, editingElementId: undefined, cursorPosition: undefined },
     mode: "editing",
     activeSectionIndex: 0,
+    activePageIndex: 0,
   };
 }
 

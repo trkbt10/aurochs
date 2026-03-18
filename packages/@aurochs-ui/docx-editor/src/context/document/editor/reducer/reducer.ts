@@ -55,6 +55,7 @@ export function createInitialState(document: DocxDocument): DocxEditorState {
     textEdit: createInitialTextEditState(),
     mode: "editing",
     activeSectionIndex: 0,
+    activePageIndex: 0,
   };
 }
 

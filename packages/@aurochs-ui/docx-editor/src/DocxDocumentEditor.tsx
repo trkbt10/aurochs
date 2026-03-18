@@ -7,11 +7,14 @@
 
 import { useMemo, useCallback, type CSSProperties } from "react";
 import type { DocxDocument } from "@aurochs-office/docx/domain/document";
+import type { DocxParagraph } from "@aurochs-office/docx/domain/paragraph";
 import type { ContinuousCursorPosition } from "@aurochs-office/text-layout";
+import { useDocumentLayout } from "@aurochs-renderer/docx/react";
 import { EditorShell, type EditorPanel } from "@aurochs-ui/editor-controls/editor-shell";
 import { DocumentEditorProvider, useDocumentEditor } from "./context/document/DocumentEditorContext";
 import { DocumentToolbar } from "./panels/DocumentToolbar";
 import { SelectedElementPanel } from "./panels/SelectedElementPanel";
+import { DocxPageListPanel } from "./panels/DocxPageListPanel";
 import { ContinuousEditor } from "./text-edit/ContinuousEditor";
 
 // =============================================================================
@@ -61,38 +64,67 @@ const rightPanelContainerStyle: CSSProperties = {
 // =============================================================================
 
 function DocxDocumentEditorInner() {
-  const { document, dispatch } = useDocumentEditor();
+  const { document, dispatch, activePageIndex } = useDocumentEditor();
 
-  // Handle cursor position changes - update selection to match cursor location
+  const paragraphs = useMemo(
+    () => document.body.content.filter((el): el is DocxParagraph => el.type === "paragraph"),
+    [document.body.content],
+  );
+
+  // Compute layout for page list (ContinuousEditor has its own internal layout)
+  const { pagedLayout } = useDocumentLayout({
+    paragraphs,
+    sectPr: document.body.sectPr,
+    numbering: document.numbering,
+    mode: "paged",
+  });
+
   const handleCursorChange = useCallback(
     (position: ContinuousCursorPosition) => {
-      const paragraphIndex = position.paragraphIndex;
-      dispatch({
-        type: "SELECT_ELEMENT",
-        elementId: String(paragraphIndex),
-      });
+      dispatch({ type: "SELECT_ELEMENT", elementId: String(position.paragraphIndex) });
     },
     [dispatch],
   );
 
-  const panels = useMemo<EditorPanel[]>(() => {
-    return [
-      {
-        id: "properties",
-        position: "right",
-        content: (
-          <div style={rightPanelContainerStyle}>
-            <SelectedElementPanel />
-          </div>
-        ),
-        size: "320px",
-        resizable: true,
-        minSize: 280,
-        maxSize: 500,
-        drawerLabel: "Format",
-      },
-    ];
-  }, []);
+  const handlePageSelect = useCallback(
+    (pageIndex: number) => {
+      dispatch({ type: "SET_ACTIVE_PAGE", pageIndex });
+    },
+    [dispatch],
+  );
+
+  const panels = useMemo<EditorPanel[]>(() => [
+    {
+      id: "pages",
+      position: "left" as const,
+      content: (
+        <DocxPageListPanel
+          pages={pagedLayout.pages}
+          currentPageIndex={activePageIndex}
+          onPageSelect={handlePageSelect}
+        />
+      ),
+      size: "200px",
+      resizable: true,
+      minSize: 160,
+      maxSize: 300,
+      drawerLabel: "ページ",
+    },
+    {
+      id: "properties",
+      position: "right" as const,
+      content: (
+        <div style={rightPanelContainerStyle}>
+          <SelectedElementPanel />
+        </div>
+      ),
+      size: "320px",
+      resizable: true,
+      minSize: 280,
+      maxSize: 500,
+      drawerLabel: "Format",
+    },
+  ], [pagedLayout.pages, activePageIndex, handlePageSelect]);
 
   return (
     <EditorShell
@@ -101,7 +133,8 @@ function DocxDocumentEditorInner() {
     >
       <div style={canvasContainerStyle}>
         <ContinuousEditor
-          paragraphs={document.body.content.filter((el) => el.type === "paragraph")}
+          paragraphs={paragraphs}
+          sectPr={document.body.sectPr}
           numbering={document.numbering}
           onCursorChange={handleCursorChange}
         />

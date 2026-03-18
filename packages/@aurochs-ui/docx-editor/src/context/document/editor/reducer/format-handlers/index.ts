@@ -10,6 +10,7 @@ import { paragraphFormatHandlers } from "./paragraph-format";
 import { listFormatHandlers } from "./list-format";
 import { tableFormatHandlers } from "./table-format";
 import { tableStructureHandlers } from "./table-structure";
+import { pageSectionHandlers } from "./page-section";
 
 /**
  * Combined format handlers for all formatting operations.
@@ -20,6 +21,7 @@ export const formatHandlers: HandlerMap = {
   ...listFormatHandlers,
   ...tableFormatHandlers,
   ...tableStructureHandlers,
+  ...pageSectionHandlers,
 };
 
 // Re-export individual handler groups for testing
@@ -28,6 +30,7 @@ export { paragraphFormatHandlers } from "./paragraph-format";
 export { listFormatHandlers } from "./list-format";
 export { tableFormatHandlers } from "./table-format";
 export { tableStructureHandlers } from "./table-structure";
+export { pageSectionHandlers } from "./page-section";
 
 // Re-export helpers for testing
 export {

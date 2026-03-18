@@ -71,6 +71,7 @@ function createContextValue(overrides: Partial<DocumentEditorContextValue>): Doc
     canRedo: overrides.canRedo ?? false,
     textEdit: overrides.textEdit ?? state.textEdit,
     editorMode: overrides.editorMode ?? state.mode,
+    activePageIndex: state.activePageIndex,
   };
 }
 
