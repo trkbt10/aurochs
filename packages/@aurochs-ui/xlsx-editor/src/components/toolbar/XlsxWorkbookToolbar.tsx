@@ -1,26 +1,29 @@
 /**
  * @file XlsxWorkbookToolbar
  *
- * Minimal toolbar: Undo/Redo + active address + formula/value bar.
+ * Toolbar: Undo/Redo + text formatting popover + alignment + cell operations + zoom.
  */
 
-import { useMemo, type CSSProperties } from "react";
+import { useCallback, useMemo, type CSSProperties } from "react";
 import {
-  AlignCenterIcon,
-  AlignLeftIcon,
-  AlignRightIcon,
-  BoldIcon,
-  ItalicIcon,
-  UnderlineIcon,
   Button,
   Input,
-  ToggleButton,
   spacingTokens,
-  iconTokens,
   MergeCellsIcon,
   UnmergeCellsIcon,
 } from "@aurochs-ui/ui-components";
+import { TypeIcon } from "@aurochs-ui/ui-components/icons";
 import { ZoomControls } from "@aurochs-ui/editor-controls/zoom";
+import {
+  UndoRedoGroup,
+  AlignmentGroup,
+  ToolbarPopoverButton,
+  POPOVER_ICON_SIZE,
+  POPOVER_STROKE_WIDTH,
+  type AlignmentValue,
+} from "@aurochs-ui/editor-controls/toolbar";
+import { TextFormattingEditor } from "@aurochs-ui/editor-controls/text";
+import type { TextFormatting } from "@aurochs-ui/editor-controls/text";
 import type { VbaProgramIr } from "@aurochs-office/vba";
 import { indexToColumnLetter, type CellAddress, type CellRange } from "@aurochs-office/xlsx/domain/cell/address";
 import { colIdx } from "@aurochs-office/xlsx/domain/types";
@@ -30,8 +33,8 @@ import { useXlsxWorkbookEditor } from "../../context/workbook/XlsxWorkbookEditor
 import { getCell } from "../../cell/query";
 import { resolveCellStyleDetails } from "../../selectors/cell-style-details";
 import { resolveSelectionFormatFlags } from "../../selectors/selection-format-flags";
-import type { XlsxFont } from "@aurochs-office/xlsx/domain/style/font";
 import type { XlsxAlignment } from "@aurochs-office/xlsx/domain/style/types";
+import { xlsxTextAdapter } from "../../adapters/editor-controls/xlsx-text-adapter";
 
 export type XlsxWorkbookToolbarProps = {
   readonly sheetIndex: number;
@@ -77,17 +80,6 @@ function getTargetRange(params: {
   return undefined;
 }
 
-function toggleFontFlag(font: XlsxFont, flag: "bold" | "italic", pressed: boolean): XlsxFont {
-  if (flag === "bold") {
-    return { ...font, bold: pressed ? true : undefined };
-  }
-  return { ...font, italic: pressed ? true : undefined };
-}
-
-function setUnderline(font: XlsxFont, pressed: boolean): XlsxFont {
-  return { ...font, underline: pressed ? "single" : undefined };
-}
-
 function setHorizontalAlignment(
   baseAlignment: XlsxAlignment | undefined,
   horizontal: XlsxAlignment["horizontal"],
@@ -99,15 +91,12 @@ function clearHorizontalAlignment(baseAlignment: XlsxAlignment | undefined): Xls
   if (!baseAlignment) {
     return null;
   }
-  const { horizontal: removed, ...rest } = baseAlignment;
-  void removed;
+  const { horizontal: _removed, ...rest } = baseAlignment;
   return Object.keys(rest).length === 0 ? null : rest;
 }
 
 /**
  * Workbook toolbar for a single sheet.
- *
- * Provides undo/redo and a simple formula/value bar bound to the current selection.
  */
 export function XlsxWorkbookToolbar({
   sheetIndex,
@@ -155,157 +144,71 @@ export function XlsxWorkbookToolbar({
   const horizontalMixed = selectedHorizontalAlignment?.mixed ?? false;
   const horizontalValue =
     selectedHorizontalAlignment && !selectedHorizontalAlignment.mixed ? selectedHorizontalAlignment.value : undefined;
-  const alignLeftPressed = !horizontalMixed && horizontalValue === "left";
-  const alignCenterPressed = !horizontalMixed && horizontalValue === "center";
-  const alignRightPressed = !horizontalMixed && horizontalValue === "right";
 
+  // Text formatting via adapter
+  const textFormatting = useMemo<TextFormatting>(
+    () => (font ? xlsxTextAdapter.toGeneric(font) : {}),
+    [font],
+  );
+
+  const handleTextFormattingChange = useCallback(
+    (update: Partial<TextFormatting>) => {
+      if (!targetRange || !font) {
+        return;
+      }
+      const updatedFont = xlsxTextAdapter.applyUpdate(font, update);
+      dispatch({ type: "SET_SELECTION_FORMAT", range: targetRange, format: { font: updatedFont } });
+    },
+    [targetRange, font, dispatch],
+  );
+
+  const handleAlignmentChange = (value: AlignmentValue | undefined) => {
+    if (!targetRange) {
+      return;
+    }
+    if (value === undefined) {
+      dispatch({
+        type: "SET_SELECTION_FORMAT",
+        range: targetRange,
+        format: { alignment: clearHorizontalAlignment(baseAlignment) },
+      });
+      return;
+    }
+    dispatch({
+      type: "SET_SELECTION_FORMAT",
+      range: targetRange,
+      format: { alignment: setHorizontalAlignment(baseAlignment, value) },
+    });
+  };
 
   return (
     <div style={barStyle}>
-      <Button size="sm" disabled={!canUndo} onClick={() => dispatch({ type: "UNDO" })}>
-        Undo
-      </Button>
-      <Button size="sm" disabled={!canRedo} onClick={() => dispatch({ type: "REDO" })}>
-        Redo
-      </Button>
+      <UndoRedoGroup
+        canUndo={canUndo}
+        canRedo={canRedo}
+        onUndo={() => dispatch({ type: "UNDO" })}
+        onRedo={() => dispatch({ type: "REDO" })}
+      />
 
-      <ToggleButton
-        label="Bold"
-        ariaLabel="Bold"
-        pressed={font?.bold === true}
-        mixed={selectionFormatFlags?.bold.mixed ?? false}
+      <ToolbarPopoverButton
+        icon={<TypeIcon size={POPOVER_ICON_SIZE} strokeWidth={POPOVER_STROKE_WIDTH} />}
+        label="Text formatting"
         disabled={!toolbarCanFormat}
-        onChange={(pressed) => {
-          if (!targetRange || !font) {
-            return;
-          }
-          dispatch({
-            type: "SET_SELECTION_FORMAT",
-            range: targetRange,
-            format: { font: toggleFontFlag(font, "bold", pressed) },
-          });
-        }}
+        panelWidth={280}
       >
-        <BoldIcon size={iconTokens.size.sm} />
-      </ToggleButton>
-      <ToggleButton
-        label="Italic"
-        ariaLabel="Italic"
-        pressed={font?.italic === true}
-        mixed={selectionFormatFlags?.italic.mixed ?? false}
-        disabled={!toolbarCanFormat}
-        onChange={(pressed) => {
-          if (!targetRange || !font) {
-            return;
-          }
-          dispatch({
-            type: "SET_SELECTION_FORMAT",
-            range: targetRange,
-            format: { font: toggleFontFlag(font, "italic", pressed) },
-          });
-        }}
-      >
-        <ItalicIcon size={iconTokens.size.sm} />
-      </ToggleButton>
-      <ToggleButton
-        label="Underline"
-        ariaLabel="Underline"
-        pressed={font?.underline !== undefined && font.underline !== "none"}
-        mixed={selectionFormatFlags?.underline.mixed ?? false}
-        disabled={!toolbarCanFormat}
-        onChange={(pressed) => {
-          if (!targetRange || !font) {
-            return;
-          }
-          dispatch({ type: "SET_SELECTION_FORMAT", range: targetRange, format: { font: setUnderline(font, pressed) } });
-        }}
-      >
-        <UnderlineIcon size={iconTokens.size.sm} />
-      </ToggleButton>
+        <TextFormattingEditor
+          value={textFormatting}
+          onChange={handleTextFormattingChange}
+          disabled={!toolbarCanFormat}
+        />
+      </ToolbarPopoverButton>
 
-      <ToggleButton
-        label="Align left"
-        ariaLabel="Align left"
-        pressed={alignLeftPressed}
+      <AlignmentGroup
+        value={horizontalValue as AlignmentValue | undefined}
+        onChange={handleAlignmentChange}
         mixed={horizontalMixed}
         disabled={!targetRange || disableInputs}
-        onChange={(pressed) => {
-          if (!targetRange) {
-            return;
-          }
-          if (pressed) {
-            dispatch({
-              type: "SET_SELECTION_FORMAT",
-              range: targetRange,
-              format: { alignment: setHorizontalAlignment(baseAlignment, "left") },
-            });
-            return;
-          }
-          dispatch({
-            type: "SET_SELECTION_FORMAT",
-            range: targetRange,
-            format: { alignment: clearHorizontalAlignment(baseAlignment) },
-          });
-        }}
-      >
-        <AlignLeftIcon size={14} />
-      </ToggleButton>
-
-      <ToggleButton
-        label="Align center"
-        ariaLabel="Align center"
-        pressed={alignCenterPressed}
-        mixed={horizontalMixed}
-        disabled={!targetRange || disableInputs}
-        onChange={(pressed) => {
-          if (!targetRange) {
-            return;
-          }
-          if (pressed) {
-            dispatch({
-              type: "SET_SELECTION_FORMAT",
-              range: targetRange,
-              format: { alignment: setHorizontalAlignment(baseAlignment, "center") },
-            });
-            return;
-          }
-          dispatch({
-            type: "SET_SELECTION_FORMAT",
-            range: targetRange,
-            format: { alignment: clearHorizontalAlignment(baseAlignment) },
-          });
-        }}
-      >
-        <AlignCenterIcon size={14} />
-      </ToggleButton>
-
-      <ToggleButton
-        label="Align right"
-        ariaLabel="Align right"
-        pressed={alignRightPressed}
-        mixed={horizontalMixed}
-        disabled={!targetRange || disableInputs}
-        onChange={(pressed) => {
-          if (!targetRange) {
-            return;
-          }
-          if (pressed) {
-            dispatch({
-              type: "SET_SELECTION_FORMAT",
-              range: targetRange,
-              format: { alignment: setHorizontalAlignment(baseAlignment, "right") },
-            });
-            return;
-          }
-          dispatch({
-            type: "SET_SELECTION_FORMAT",
-            range: targetRange,
-            format: { alignment: clearHorizontalAlignment(baseAlignment) },
-          });
-        }}
-      >
-        <AlignRightIcon size={14} />
-      </ToggleButton>
+      />
 
       <Input value={activeCellText} placeholder="A1" readOnly onChange={() => undefined} style={addressInputStyle} />
 

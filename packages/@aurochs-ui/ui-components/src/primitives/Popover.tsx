@@ -40,6 +40,8 @@ export type PopoverProps = {
   readonly disabled?: boolean;
   /** Additional CSS class */
   readonly className?: string;
+  /** Content padding. Default: spacingTokens.md (12px). Set to "0" to disable. */
+  readonly padding?: string;
 };
 
 const overlayStyle: CSSProperties = {
@@ -48,18 +50,19 @@ const overlayStyle: CSSProperties = {
   zIndex: 999,
 };
 
-const contentStyle: CSSProperties = {
+const contentBaseStyle: CSSProperties = {
   position: "fixed",
   zIndex: 1000,
   backgroundColor: `var(--bg-secondary, ${colorTokens.background.secondary})`,
   borderRadius: `var(--radius-md, ${radiusTokens.md})`,
   border: `1px solid var(--border-primary, ${colorTokens.border.primary})`,
   boxShadow: "0 8px 32px rgba(0, 0, 0, 0.4)",
-  padding: spacingTokens.md,
   maxWidth: "400px",
   maxHeight: "80vh",
   overflow: "auto",
 };
+
+const defaultPadding = spacingTokens.md;
 
 const arrowBorderSize = 8;
 const arrowFillSize = 7;
@@ -180,6 +183,7 @@ export function Popover({
   showArrow = false,
   disabled,
   className,
+  padding,
 }: PopoverProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const isControlled = controlledOpen !== undefined;
@@ -299,7 +303,8 @@ export function Popover({
             <div
               ref={contentRef}
               style={{
-                ...contentStyle,
+                ...contentBaseStyle,
+                padding: padding ?? defaultPadding,
                 top: resolvedPosition.top,
                 left: resolvedPosition.left,
                 visibility: position ? "visible" : "hidden",

@@ -124,6 +124,18 @@ export {
   AlignVerticalJustifyCenter as AlignMiddleIcon,
   AlignVerticalJustifyEnd as AlignBottomIcon,
 
+  // Lists & indentation
+  List as ListIcon,
+  ListOrdered as ListOrderedIcon,
+  IndentIncrease as IndentIncreaseIcon,
+  IndentDecrease as IndentDecreaseIcon,
+
+  // Font / color
+  Type as TypeIcon,
+  Baseline as BaselineIcon,
+  Highlighter as HighlighterIcon,
+  Palette as PaletteIcon,
+
   // Also export LucideIcon type for component props
   type LucideIcon,
   type LucideProps,

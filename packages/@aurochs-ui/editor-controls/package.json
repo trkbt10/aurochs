@@ -84,6 +84,10 @@
     "./page": {
       "types": "./src/page/index.ts",
       "default": "./src/page/index.ts"
+    },
+    "./toolbar": {
+      "types": "./src/toolbar/index.ts",
+      "default": "./src/toolbar/index.ts"
     }
   }
 }

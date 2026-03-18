@@ -11,19 +11,21 @@ import { LinePickerPopover } from "../ui/line/index";
 import { ToolbarButton, TOOLBAR_BUTTON_ICON_SIZE } from "@aurochs-ui/ui-components/primitives/ToolbarButton";
 import { ToolbarSeparator } from "@aurochs-ui/ui-components/primitives/ToolbarSeparator";
 import type { Line, Shape } from "@aurochs-office/pptx/domain/index";
+import type { RunProperties } from "@aurochs-office/pptx/domain/text";
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import {
-  TrashIcon,
-  CopyIcon,
-  UndoIcon,
-  RedoIcon,
   BringToFrontIcon,
   SendToBackIcon,
   BringForwardIcon,
   SendBackwardIcon,
+  TypeIcon,
 } from "@aurochs-ui/ui-components/icons";
 import { iconTokens } from "@aurochs-ui/ui-components/design-tokens";
+import { UndoRedoGroup, DeleteDuplicateGroup, ToolbarPopoverButton, POPOVER_ICON_SIZE, POPOVER_STROKE_WIDTH } from "@aurochs-ui/editor-controls/toolbar";
+import { TextFormattingEditor } from "@aurochs-ui/editor-controls/text";
+import type { TextFormatting } from "@aurochs-ui/editor-controls/text";
+import { pptxTextAdapter, PPTX_UNDERLINE_OPTIONS, PPTX_STRIKE_OPTIONS } from "../adapters/editor-controls/pptx-text-adapter";
 
 // =============================================================================
 // Constants
@@ -96,6 +98,24 @@ function getShapeLine(shape: Shape | undefined): Line | undefined {
   return undefined;
 }
 
+/**
+ * Get first run's properties from a shape's text body.
+ */
+function getShapeRunProperties(shape: Shape | undefined): RunProperties | undefined {
+  if (!shape || shape.type !== "sp" || !shape.textBody) {
+    return undefined;
+  }
+  const firstPara = shape.textBody.paragraphs[0];
+  if (!firstPara) {
+    return undefined;
+  }
+  const firstRun = firstPara.runs.find((r) => r.type === "text");
+  if (!firstRun || firstRun.type !== "text") {
+    return undefined;
+  }
+  return firstRun.properties;
+}
+
 // =============================================================================
 // Component
 // =============================================================================
@@ -127,6 +147,41 @@ export function ShapeToolbar({
 
   // Get line from primary selected shape
   const primaryLine = useMemo(() => getShapeLine(primaryShape), [primaryShape]);
+
+  // Get text formatting from primary selected shape
+  const primaryRunProps = useMemo(() => getShapeRunProperties(primaryShape), [primaryShape]);
+  const hasTextBody = primaryShape?.type === "sp" && primaryShape.textBody !== undefined;
+  const textFormatting = useMemo<TextFormatting>(
+    () => (primaryRunProps ? pptxTextAdapter.toGeneric(primaryRunProps) : {}),
+    [primaryRunProps],
+  );
+
+  const handleTextFormattingChange = useCallback(
+    (update: Partial<TextFormatting>) => {
+      if (!primaryId || !primaryRunProps) {
+        return;
+      }
+      const updatedRunProps = pptxTextAdapter.applyUpdate(primaryRunProps, update);
+      onShapeChange(primaryId, (shape) => {
+        if (shape.type !== "sp" || !shape.textBody) {
+          return shape;
+        }
+        return {
+          ...shape,
+          textBody: {
+            ...shape.textBody,
+            paragraphs: shape.textBody.paragraphs.map((para) => ({
+              ...para,
+              runs: para.runs.map((run) =>
+                run.type === "text" ? { ...run, properties: { ...run.properties, ...updatedRunProps } } : run,
+              ),
+            })),
+          },
+        };
+      });
+    },
+    [primaryId, primaryRunProps, onShapeChange],
+  );
 
   const handleLineChange = useCallback(
     (line: Line) => {
@@ -200,37 +255,15 @@ export function ShapeToolbar({
   return (
     <div className={className} style={containerStyle}>
       {/* Undo/Redo */}
-      <ToolbarButton
-        icon={<UndoIcon size={iconSize} strokeWidth={strokeWidth} />}
-        label="Undo (Ctrl+Z)"
-        onClick={onUndo}
-        disabled={!canUndo}
-        size="sm"
-      />
-      <ToolbarButton
-        icon={<RedoIcon size={iconSize} strokeWidth={strokeWidth} />}
-        label="Redo (Ctrl+Y)"
-        onClick={onRedo}
-        disabled={!canRedo}
-        size="sm"
-      />
+      <UndoRedoGroup canUndo={canUndo} canRedo={canRedo} onUndo={onUndo} onRedo={onRedo} />
 
       <ToolbarSeparator direction={direction} />
 
       {/* Shape operations */}
-      <ToolbarButton
-        icon={<TrashIcon size={iconSize} strokeWidth={strokeWidth} />}
-        label="Delete (Del)"
-        onClick={handleDelete}
+      <DeleteDuplicateGroup
+        onDelete={handleDelete}
+        onDuplicate={handleDuplicate}
         disabled={!hasSelection}
-        size="sm"
-      />
-      <ToolbarButton
-        icon={<CopyIcon size={iconSize} strokeWidth={strokeWidth} />}
-        label="Duplicate (Ctrl+D)"
-        onClick={handleDuplicate}
-        disabled={!hasSelection}
-        size="sm"
       />
 
       <ToolbarSeparator direction={direction} />
@@ -264,6 +297,30 @@ export function ShapeToolbar({
         disabled={!hasSelection || isMultiSelect}
         size="sm"
       />
+
+      {/* Text formatting popover — visible when shape has text */}
+      <ToolbarSeparator direction={direction} />
+      <ToolbarPopoverButton
+        icon={<TypeIcon size={POPOVER_ICON_SIZE} strokeWidth={POPOVER_STROKE_WIDTH} />}
+        label="Text formatting"
+        disabled={!hasTextBody || isMultiSelect}
+        panelWidth={280}
+      >
+        <TextFormattingEditor
+          value={textFormatting}
+          onChange={handleTextFormattingChange}
+          disabled={!hasTextBody || isMultiSelect}
+          features={{
+            showUnderlineStyle: true,
+            showStrikeStyle: true,
+            showHighlight: true,
+            showSuperSubscript: true,
+            showCaps: true,
+          }}
+          underlineStyleOptions={PPTX_UNDERLINE_OPTIONS}
+          strikeStyleOptions={PPTX_STRIKE_OPTIONS}
+        />
+      </ToolbarPopoverButton>
 
       {/* Line style picker - always visible, disabled when no line */}
       <ToolbarSeparator direction={direction} />

@@ -8,8 +8,12 @@
 
 import React, { useCallback, useMemo, useReducer, useState } from "react";
 import { ZoomControls, type ZoomMode } from "@aurochs-ui/editor-controls/zoom";
-import { Button } from "@aurochs-ui/ui-components/primitives";
-import { UndoIcon, RedoIcon, DeleteIcon } from "@aurochs-ui/ui-components/icons";
+import { UndoRedoGroup, DeleteDuplicateGroup, ToolbarPopoverButton, POPOVER_ICON_SIZE, POPOVER_STROKE_WIDTH } from "@aurochs-ui/editor-controls/toolbar";
+import { ToolbarSeparator } from "@aurochs-ui/ui-components/primitives/ToolbarSeparator";
+import { TypeIcon } from "@aurochs-ui/ui-components/icons";
+import { TextFormattingEditor } from "@aurochs-ui/editor-controls/text";
+import type { TextFormatting } from "@aurochs-ui/editor-controls/text";
+import { pdfTextAdapter } from "./pdf-text-adapter";
 import { ContextMenu } from "@aurochs-ui/ui-components/context-menu";
 import type { MenuEntry } from "@aurochs-ui/ui-components/context-menu";
 import { InspectorPanelWithTabs, type InspectorTab } from "@aurochs-ui/editor-controls/ui";
@@ -422,18 +426,68 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
   const canRedoNow = canRedo(state.documentHistory);
   const hasSelection = state.selection.selectedIds.length > 0;
 
+  // Text formatting for selected text element
+  const isTextElement = selectedElement?.type === "text";
+  const textFormatting = useMemo<TextFormatting>(
+    () => (isTextElement ? pdfTextAdapter.toGeneric(selectedElement) : {}),
+    [isTextElement, selectedElement],
+  );
+
+  const handleTextFormattingChange = useCallback(
+    (update: Partial<TextFormatting>) => {
+      if (!state.selection.primaryId || !isTextElement) {
+        return;
+      }
+      const elementId = state.selection.primaryId;
+      dispatch({
+        type: "UPDATE_ELEMENT",
+        elementId,
+        updater: (el) => {
+          if (el.type !== "text") {
+            return el;
+          }
+          return pdfTextAdapter.applyUpdate(el, update);
+        },
+      });
+    },
+    [state.selection.primaryId, isTextElement],
+  );
+
   const toolbar = (
     <div style={{ display: "flex", alignItems: "center", padding: "0 8px", gap: "4px" }}>
-      <Button variant="ghost" size="sm" onClick={() => dispatch({ type: "UNDO" })} disabled={!canUndoNow} aria-label="Undo" title="Undo (⌘Z)">
-        <UndoIcon size={16} />
-      </Button>
-      <Button variant="ghost" size="sm" onClick={() => dispatch({ type: "REDO" })} disabled={!canRedoNow} aria-label="Redo" title="Redo (⌘⇧Z)">
-        <RedoIcon size={16} />
-      </Button>
-      <div style={{ width: "1px", height: "20px", backgroundColor: "var(--border-subtle, #e0e0e0)", margin: "0 4px" }} />
-      <Button variant="ghost" size="sm" onClick={() => dispatch({ type: "DELETE_SELECTED" })} disabled={!hasSelection} aria-label="Delete" title="Delete">
-        <DeleteIcon size={16} />
-      </Button>
+      <UndoRedoGroup
+        canUndo={canUndoNow}
+        canRedo={canRedoNow}
+        onUndo={() => dispatch({ type: "UNDO" })}
+        onRedo={() => dispatch({ type: "REDO" })}
+      />
+      <ToolbarSeparator />
+      <DeleteDuplicateGroup
+        onDelete={() => dispatch({ type: "DELETE_SELECTED" })}
+        disabled={!hasSelection}
+      />
+      <ToolbarSeparator />
+      <ToolbarPopoverButton
+        icon={<TypeIcon size={POPOVER_ICON_SIZE} strokeWidth={POPOVER_STROKE_WIDTH} />}
+        label="Text formatting"
+        disabled={!isTextElement}
+        panelWidth={280}
+      >
+        <TextFormattingEditor
+          value={textFormatting}
+          onChange={handleTextFormattingChange}
+          disabled={!isTextElement}
+          features={{
+            showFontFamily: true,
+            showFontSize: true,
+            showBold: false,
+            showItalic: false,
+            showUnderline: false,
+            showStrikethrough: false,
+            showTextColor: true,
+          }}
+        />
+      </ToolbarPopoverButton>
       <div style={{ flex: 1 }} />
       <ZoomControls
         zoom={displayZoom}

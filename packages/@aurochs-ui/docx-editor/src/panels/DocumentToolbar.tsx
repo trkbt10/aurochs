@@ -2,38 +2,32 @@
  * @file DocumentToolbar
  *
  * Toolbar for common DOCX document editing operations.
+ * Uses shared toolbar groups and ToolbarPopoverButton for text formatting.
  */
 
-import { useCallback, useMemo, type CSSProperties } from "react";
+import { useCallback, useMemo, useState, type CSSProperties } from "react";
 import type { DocxDocument } from "@aurochs-office/docx/domain/document";
 import type { DocxNumberingProperties } from "@aurochs-office/docx/domain/paragraph";
 import type { DocxRunProperties } from "@aurochs-office/docx/domain/run";
 import type { DocxParagraph } from "@aurochs-office/docx/domain/paragraph";
 import type { NumberFormat } from "@aurochs-office/ooxml";
-import { ToggleButton } from "@aurochs-ui/ui-components/primitives";
-import { ToolbarButton, TOOLBAR_BUTTON_ICON_SIZE } from "@aurochs-ui/ui-components/primitives/ToolbarButton";
 import { ToolbarSeparator } from "@aurochs-ui/ui-components/primitives/ToolbarSeparator";
-import { iconTokens } from "@aurochs-ui/ui-components/design-tokens";
+import { TypeIcon } from "@aurochs-ui/ui-components/icons";
 import {
-  AlignCenterIcon,
-  AlignJustifyIcon,
-  AlignLeftIcon,
-  AlignRightIcon,
-  RedoIcon,
-  UndoIcon,
-} from "@aurochs-ui/ui-components/icons";
-import {
-  Bold,
-  IndentDecrease,
-  IndentIncrease,
-  Italic,
-  List,
-  ListOrdered,
-  Strikethrough,
-  Underline,
-} from "lucide-react";
+  UndoRedoGroup,
+  AlignmentGroup,
+  ListIndentGroup,
+  ToolbarPopoverButton,
+  POPOVER_ICON_SIZE,
+  POPOVER_STROKE_WIDTH,
+  type AlignmentValue,
+} from "@aurochs-ui/editor-controls/toolbar";
+import { TextFormattingEditor } from "@aurochs-ui/editor-controls/text";
+import type { TextFormatting } from "@aurochs-ui/editor-controls/text";
+import { ZoomControls } from "@aurochs-ui/editor-controls/zoom";
 import { useDocumentEditor } from "../context/document/DocumentEditorContext";
 import { getRunPropertiesAtPosition } from "../text-edit/text-merge/run-properties";
+import { docxTextAdapter } from "../adapters/editor-controls/docx-text-adapter";
 
 // =============================================================================
 // Types
@@ -147,6 +141,21 @@ function getNumberFormatForParagraph(
   return abstractNum.lvl.find((l) => l.ilvl === ilvl)?.numFmt;
 }
 
+/** Map DOCX "both" ↔ shared "justify" */
+function docxAlignToShared(jc: ParagraphAlignment | undefined): AlignmentValue | undefined {
+  if (jc === "both") {
+    return "justify";
+  }
+  return jc;
+}
+
+function sharedAlignToDocx(value: AlignmentValue): "left" | "center" | "right" | "both" {
+  if (value === "justify") {
+    return "both";
+  }
+  return value;
+}
+
 function useToolbarState(): ToolbarState {
   const { document, selectedElements, state, editorMode } = useDocumentEditor();
   const selection = state.selection;
@@ -195,64 +204,59 @@ function useToolbarState(): ToolbarState {
  */
 export function DocumentToolbar({ className, style }: DocumentToolbarProps) {
   const { dispatch, canUndo, canRedo } = useDocumentEditor();
-  const { hasSelection, canEdit, runProperties, listFormat } = useToolbarState();
+  const { hasSelection, canEdit, runProperties, paragraphAlignment, listFormat } = useToolbarState();
 
-  const isBold = runProperties?.b === true;
-  const isItalic = runProperties?.i === true;
-  const isUnderline = runProperties?.u !== undefined;
-  const isStrikethrough = runProperties?.strike === true;
+  const [zoom, setZoom] = useState(1);
 
   const isBulletList = listFormat === "bullet";
   const isNumberList = typeof listFormat === "string" && listFormat !== "bullet" && listFormat !== "none";
 
   const formatDisabled = !canEdit || !hasSelection;
 
-  const handleUndo = useCallback(() => {
-    dispatch({ type: "UNDO" });
-  }, [dispatch]);
+  const handleUndo = useCallback(() => dispatch({ type: "UNDO" }), [dispatch]);
+  const handleRedo = useCallback(() => dispatch({ type: "REDO" }), [dispatch]);
 
-  const handleRedo = useCallback(() => {
-    dispatch({ type: "REDO" });
-  }, [dispatch]);
+  // Text formatting via adapter → APPLY_RUN_FORMAT
+  const textFormatting = useMemo<TextFormatting>(
+    () => (runProperties ? docxTextAdapter.toGeneric(runProperties) : {}),
+    [runProperties],
+  );
 
-  const handleToggleBold = useCallback(() => {
-    dispatch({ type: "TOGGLE_BOLD" });
-  }, [dispatch]);
-
-  const handleToggleItalic = useCallback(() => {
-    dispatch({ type: "TOGGLE_ITALIC" });
-  }, [dispatch]);
-
-  const handleToggleUnderline = useCallback(() => {
-    dispatch({ type: "TOGGLE_UNDERLINE" });
-  }, [dispatch]);
-
-  const handleToggleStrikethrough = useCallback(() => {
-    dispatch({ type: "TOGGLE_STRIKETHROUGH" });
-  }, [dispatch]);
+  const handleTextFormattingChange = useCallback(
+    (update: Partial<TextFormatting>) => {
+      if (!runProperties) {
+        return;
+      }
+      const updated = docxTextAdapter.applyUpdate(runProperties, update);
+      // Compute diff: only send changed fields
+      const diff: Record<string, unknown> = {};
+      for (const key of Object.keys(updated)) {
+        const k = key as keyof DocxRunProperties;
+        if (updated[k] !== runProperties[k]) {
+          diff[k] = updated[k];
+        }
+      }
+      if (Object.keys(diff).length > 0) {
+        dispatch({ type: "APPLY_RUN_FORMAT", format: diff as Partial<DocxRunProperties> });
+      }
+    },
+    [runProperties, dispatch],
+  );
 
   const handleAlign = useCallback(
-    (alignment: "left" | "center" | "right" | "both") => {
-      dispatch({ type: "SET_PARAGRAPH_ALIGNMENT", alignment });
+    (alignment: AlignmentValue | undefined) => {
+      if (alignment === undefined) {
+        return;
+      }
+      dispatch({ type: "SET_PARAGRAPH_ALIGNMENT", alignment: sharedAlignToDocx(alignment) });
     },
     [dispatch],
   );
 
-  const handleToggleBullet = useCallback(() => {
-    dispatch({ type: "TOGGLE_BULLET_LIST" });
-  }, [dispatch]);
-
-  const handleToggleNumber = useCallback(() => {
-    dispatch({ type: "TOGGLE_NUMBERED_LIST" });
-  }, [dispatch]);
-
-  const handleIncreaseIndent = useCallback(() => {
-    dispatch({ type: "INCREASE_INDENT" });
-  }, [dispatch]);
-
-  const handleDecreaseIndent = useCallback(() => {
-    dispatch({ type: "DECREASE_INDENT" });
-  }, [dispatch]);
+  const handleToggleBullet = useCallback(() => dispatch({ type: "TOGGLE_BULLET_LIST" }), [dispatch]);
+  const handleToggleNumber = useCallback(() => dispatch({ type: "TOGGLE_NUMBERED_LIST" }), [dispatch]);
+  const handleIncreaseIndent = useCallback(() => dispatch({ type: "INCREASE_INDENT" }), [dispatch]);
+  const handleDecreaseIndent = useCallback(() => dispatch({ type: "DECREASE_INDENT" }), [dispatch]);
 
   const containerStyle: CSSProperties = {
     display: "flex",
@@ -263,8 +267,6 @@ export function DocumentToolbar({ className, style }: DocumentToolbarProps) {
   };
 
   const groupStyle: CSSProperties = { display: "flex", alignItems: "center", gap: "var(--spacing-xs)" };
-  const iconSize = TOOLBAR_BUTTON_ICON_SIZE.sm.icon;
-  const strokeWidth = iconTokens.strokeWidth;
 
   const toolbarClassName = useMemo(() => mergeClassName("document-toolbar", className), [className]);
 
@@ -272,99 +274,37 @@ export function DocumentToolbar({ className, style }: DocumentToolbarProps) {
     <div className={toolbarClassName} style={containerStyle}>
       {/* 履歴操作 */}
       <div style={groupStyle}>
-        <ToolbarButton
-          icon={<UndoIcon size={iconSize} strokeWidth={strokeWidth} />}
-          label="Undo (Ctrl+Z)"
-          onClick={handleUndo}
-          disabled={!canUndo}
-          size="sm"
-        />
-        <ToolbarButton
-          icon={<RedoIcon size={iconSize} strokeWidth={strokeWidth} />}
-          label="Redo (Ctrl+Y)"
-          onClick={handleRedo}
-          disabled={!canRedo}
-          size="sm"
-        />
+        <UndoRedoGroup canUndo={canUndo} canRedo={canRedo} onUndo={handleUndo} onRedo={handleRedo} />
       </div>
 
       <ToolbarSeparator />
 
-      {/* テキスト書式 */}
-      <div style={groupStyle}>
-        <ToggleButton
-          label="Bold"
-          pressed={isBold}
+      {/* テキスト書式ポップオーバー */}
+      <ToolbarPopoverButton
+        icon={<TypeIcon size={POPOVER_ICON_SIZE} strokeWidth={POPOVER_STROKE_WIDTH} />}
+        label="Text formatting"
+        disabled={formatDisabled}
+        panelWidth={280}
+      >
+        <TextFormattingEditor
+          value={textFormatting}
+          onChange={handleTextFormattingChange}
           disabled={formatDisabled}
-          onChange={() => {
-            handleToggleBold();
+          features={{
+            showHighlight: true,
           }}
-        >
-          <Bold size={iconSize} strokeWidth={strokeWidth} />
-        </ToggleButton>
-        <ToggleButton
-          label="Italic"
-          pressed={isItalic}
-          disabled={formatDisabled}
-          onChange={() => {
-            handleToggleItalic();
-          }}
-        >
-          <Italic size={iconSize} strokeWidth={strokeWidth} />
-        </ToggleButton>
-        <ToggleButton
-          label="Underline"
-          pressed={isUnderline}
-          disabled={formatDisabled}
-          onChange={() => {
-            handleToggleUnderline();
-          }}
-        >
-          <Underline size={iconSize} strokeWidth={strokeWidth} />
-        </ToggleButton>
-        <ToggleButton
-          label="Strikethrough"
-          pressed={isStrikethrough}
-          disabled={formatDisabled}
-          onChange={() => {
-            handleToggleStrikethrough();
-          }}
-        >
-          <Strikethrough size={iconSize} strokeWidth={strokeWidth} />
-        </ToggleButton>
-      </div>
+        />
+      </ToolbarPopoverButton>
 
       <ToolbarSeparator />
 
       {/* 段落書式 */}
       <div style={groupStyle}>
-        <ToolbarButton
-          icon={<AlignLeftIcon size={iconSize} strokeWidth={strokeWidth} />}
-          label="Align left"
-          onClick={() => handleAlign("left")}
+        <AlignmentGroup
+          value={docxAlignToShared(paragraphAlignment)}
+          onChange={handleAlign}
+          showJustify
           disabled={formatDisabled}
-          size="sm"
-        />
-        <ToolbarButton
-          icon={<AlignCenterIcon size={iconSize} strokeWidth={strokeWidth} />}
-          label="Align center"
-          onClick={() => handleAlign("center")}
-          disabled={formatDisabled}
-          size="sm"
-        />
-        <ToolbarButton
-          icon={<AlignRightIcon size={iconSize} strokeWidth={strokeWidth} />}
-          label="Align right"
-          onClick={() => handleAlign("right")}
-          disabled={formatDisabled}
-          size="sm"
-        />
-        <ToolbarButton
-          icon={<AlignJustifyIcon size={iconSize} strokeWidth={strokeWidth} />}
-          label="Align justify"
-          onClick={() => handleAlign("both")}
-          disabled={formatDisabled}
-          size="sm"
         />
       </div>
 
@@ -372,41 +312,21 @@ export function DocumentToolbar({ className, style }: DocumentToolbarProps) {
 
       {/* リスト */}
       <div style={groupStyle}>
-        <ToggleButton
-          label="Bulleted list"
-          pressed={isBulletList}
+        <ListIndentGroup
+          bullet={{ pressed: isBulletList, onToggle: handleToggleBullet }}
+          numbered={{ pressed: isNumberList, onToggle: handleToggleNumber }}
+          onIncreaseIndent={handleIncreaseIndent}
+          onDecreaseIndent={handleDecreaseIndent}
           disabled={formatDisabled}
-          onChange={() => {
-            handleToggleBullet();
-          }}
-        >
-          <List size={iconSize} strokeWidth={strokeWidth} />
-        </ToggleButton>
-        <ToggleButton
-          label="Numbered list"
-          pressed={isNumberList}
-          disabled={formatDisabled}
-          onChange={() => {
-            handleToggleNumber();
-          }}
-        >
-          <ListOrdered size={iconSize} strokeWidth={strokeWidth} />
-        </ToggleButton>
-        <ToolbarButton
-          icon={<IndentIncrease size={iconSize} strokeWidth={strokeWidth} />}
-          label="Increase indent"
-          onClick={handleIncreaseIndent}
-          disabled={formatDisabled}
-          size="sm"
-        />
-        <ToolbarButton
-          icon={<IndentDecrease size={iconSize} strokeWidth={strokeWidth} />}
-          label="Decrease indent"
-          onClick={handleDecreaseIndent}
-          disabled={formatDisabled}
-          size="sm"
         />
       </div>
+
+      {/* スペーサー + ZoomControls */}
+      <div style={{ flex: 1 }} />
+      <ZoomControls
+        zoom={zoom}
+        onZoomChange={setZoom}
+      />
     </div>
   );
 }

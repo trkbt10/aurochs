@@ -2,11 +2,11 @@
  * @file LinePickerPopover component
  *
  * Adobe/Figma-style line picker that opens in a popover.
- * Provides a visual preview and controls for all line properties.
+ * Uses shared ToolbarPopoverButton as the trigger/popover foundation.
  */
 
-import { type CSSProperties, type ReactNode } from "react";
-import { Popover } from "@aurochs-ui/ui-components/primitives";
+import type { ReactNode } from "react";
+import { ToolbarPopoverButton } from "@aurochs-ui/editor-controls/toolbar";
 import { LineSwatch, type LineSwatchSize } from "./LineSwatch";
 import { LineEditor } from "./LineEditor";
 import type { Line } from "@aurochs-office/pptx/domain/color/types";
@@ -26,18 +26,6 @@ export type LinePickerPopoverProps = {
   readonly showEnds?: boolean;
 };
 
-// =============================================================================
-// Styles
-// =============================================================================
-
-const popoverContentStyle: CSSProperties = {
-  width: "260px",
-};
-
-// =============================================================================
-// Main Component
-// =============================================================================
-
 /**
  * A line picker popover for editing Line values.
  */
@@ -49,17 +37,22 @@ export function LinePickerPopover({
   trigger,
   showEnds = true,
 }: LinePickerPopoverProps) {
-  const triggerElement = trigger ?? <LineSwatch line={value} size={size} disabled={disabled} />;
+  const swatchElement = trigger ?? <LineSwatch line={value} size={size} disabled={disabled} />;
 
   return (
-    <Popover trigger={triggerElement} align="start" side="bottom" disabled={disabled}>
+    <ToolbarPopoverButton
+      icon={swatchElement}
+      label="Line style"
+      disabled={disabled}
+      swatch
+      panelWidth={260}
+    >
       <LineEditor
         value={value}
         onChange={onChange}
         disabled={disabled}
         showEnds={showEnds}
-        style={popoverContentStyle}
       />
-    </Popover>
+    </ToolbarPopoverButton>
   );
 }
