@@ -2,11 +2,18 @@
  * @file Shape mutation
  *
  * Update and modification operations for shapes.
+ * Delegates to generic implementation in editor-controls.
  */
 
 import type { Shape } from "@aurochs-office/pptx/domain";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
-import { hasShapeId } from "./identity";
+import {
+  updateShapeById as genericUpdateShapeById,
+  deleteShapesById as genericDeleteShapesById,
+  reorderShape as genericReorderShape,
+  moveShapeToIndex as genericMoveShapeToIndex,
+  generateShapeId as genericGenerateShapeId,
+} from "@aurochs-ui/editor-controls/shape-editor";
 
 /**
  * Update shape by ID (supports nested groups)
@@ -16,41 +23,14 @@ export function updateShapeById(
   id: ShapeId,
   updater: (shape: Shape) => Shape,
 ): readonly Shape[] {
-  return shapes.map((shape) => {
-    if ("nonVisual" in shape && shape.nonVisual.id === id) {
-      return updater(shape);
-    }
-    if (shape.type === "grpSp") {
-      return {
-        ...shape,
-        children: updateShapeById(shape.children, id, updater),
-      };
-    }
-    return shape;
-  });
+  return genericUpdateShapeById(shapes, id, updater) as readonly Shape[];
 }
 
 /**
  * Delete shapes by IDs
  */
 export function deleteShapesById(shapes: readonly Shape[], ids: readonly ShapeId[]): readonly Shape[] {
-  const idSet = new Set(ids);
-  return shapes
-    .filter((shape) => {
-      if ("nonVisual" in shape) {
-        return !idSet.has(shape.nonVisual.id);
-      }
-      return true;
-    })
-    .map((shape) => {
-      if (shape.type === "grpSp") {
-        return {
-          ...shape,
-          children: deleteShapesById(shape.children, ids),
-        };
-      }
-      return shape;
-    });
+  return genericDeleteShapesById(shapes, ids) as readonly Shape[];
 }
 
 /**
@@ -61,80 +41,17 @@ export function reorderShape(
   id: ShapeId,
   direction: "front" | "back" | "forward" | "backward",
 ): readonly Shape[] {
-  const index = shapes.findIndex((s) => hasShapeId(s) && s.nonVisual.id === id);
-  if (index === -1) {
-    return shapes;
-  }
-
-  const newShapes = [...shapes];
-  const [shape] = newShapes.splice(index, 1);
-
-  switch (direction) {
-    case "front":
-      newShapes.push(shape);
-      break;
-    case "back":
-      newShapes.unshift(shape);
-      break;
-    case "forward":
-      if (index < shapes.length - 1) {
-        newShapes.splice(index + 1, 0, shape);
-      } else {
-        newShapes.push(shape);
-      }
-      break;
-    case "backward":
-      if (index > 0) {
-        newShapes.splice(index - 1, 0, shape);
-      } else {
-        newShapes.unshift(shape);
-      }
-      break;
-  }
-
-  return newShapes;
+  return genericReorderShape(shapes, id, direction) as readonly Shape[];
 }
 
 /**
  * Move shape to specific index
  */
 export function moveShapeToIndex(shapes: readonly Shape[], id: ShapeId, newIndex: number): readonly Shape[] {
-  const currentIndex = shapes.findIndex((s) => hasShapeId(s) && s.nonVisual.id === id);
-  if (currentIndex === -1 || currentIndex === newIndex) {
-    return shapes;
-  }
-
-  const newShapes = [...shapes];
-  const [shape] = newShapes.splice(currentIndex, 1);
-  newShapes.splice(newIndex, 0, shape);
-  return newShapes;
-}
-
-/** Extract numeric ID from a shape, returning 0 if not numeric */
-function extractNumericId(shape: Shape, fallback: number): number {
-  if (!("nonVisual" in shape)) {
-    return fallback;
-  }
-  const numId = parseInt(shape.nonVisual.id, 10);
-  return isNaN(numId) ? fallback : Math.max(fallback, numId);
-}
-
-/**
- * Collect the maximum numeric ID from all shapes (recursively)
- */
-function collectMaxId(shapes: readonly Shape[]): number {
-  return shapes.reduce((maxId, shape) => {
-    const shapeMax = extractNumericId(shape, maxId);
-
-    if (shape.type === "grpSp") {
-      return Math.max(shapeMax, collectMaxId(shape.children));
-    }
-    return shapeMax;
-  }, 0);
+  return genericMoveShapeToIndex(shapes, id, newIndex) as readonly Shape[];
 }
 
 /** Generate a unique shape ID based on existing shapes */
 export function generateShapeId(shapes: readonly Shape[]): ShapeId {
-  const maxId = collectMaxId(shapes);
-  return String(maxId + 1);
+  return genericGenerateShapeId(shapes) as ShapeId;
 }

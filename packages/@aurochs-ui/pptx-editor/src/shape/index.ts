@@ -96,7 +96,6 @@ export type { ShapeRenderData } from "./traverse";
 // =============================================================================
 export { clientToSlideCoords } from "./coords";
 
-
 // =============================================================================
 // Alignment
 // =============================================================================
@@ -115,7 +114,7 @@ export type {
 } from "./alignment";
 
 // =============================================================================
-// Resize
+// Resize (directly from editor-core)
 // =============================================================================
 export {
   calculateAspectDelta,
@@ -134,10 +133,10 @@ export {
   calculateMultiResizeBounds,
   type ResizeBounds,
   type ResizeOptions,
-} from "./resize";
+} from "@aurochs-ui/editor-core/geometry";
 
 // =============================================================================
-// Rotate
+// Rotate (directly from editor-core)
 // =============================================================================
 export {
   normalizeAngle,
@@ -156,7 +155,7 @@ export {
   calculateRotationDelta,
   type Point,
   type RotationResult,
-} from "./rotate";
+} from "@aurochs-ui/editor-core/geometry";
 
 // =============================================================================
 // Render

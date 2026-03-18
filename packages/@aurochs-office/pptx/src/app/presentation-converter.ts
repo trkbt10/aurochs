@@ -9,6 +9,7 @@
 import type { LoadedPresentation } from "./pptx-loader";
 import type { PresentationDocument, SlideWithId } from "./presentation-document";
 import type { Presentation as DomainPresentation, PresentationFile } from "../domain";
+import type { ResourceMap } from "@aurochs-office/opc";
 import type { ColorContext, ColorScheme, ColorMap } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
 import type { ResourceResolver } from "../domain/resource-resolver";
@@ -148,6 +149,72 @@ function createResourceResolverFromFile(file: PresentationFile, apiSlide: ApiSli
     getResourceByType: (relType: string) => {
       return resolveTargetByType(relType);
     },
+  };
+}
+
+/**
+ * Create a ResourceResolver from multiple ResourceMap layers and a PresentationFile.
+ *
+ * Chains resolution through the provided resource maps in order (first match wins).
+ * Used by the layout editor where no ApiSlide is available.
+ *
+ * @param file - PresentationFile for reading binary content
+ * @param resourceMaps - ResourceMap layers to chain (e.g., layout, master, theme)
+ */
+export function createResourceResolverFromMaps(
+  file: PresentationFile,
+  resourceMaps: readonly ResourceMap[],
+): ResourceResolver {
+  const resolveTarget = (id: string): string | undefined => {
+    for (const map of resourceMaps) {
+      const target = map.getTarget(id);
+      if (target !== undefined) return target;
+    }
+    return undefined;
+  };
+
+  const resolveType = (id: string): string | undefined => {
+    for (const map of resourceMaps) {
+      const type = map.getType(id);
+      if (type !== undefined) return type;
+    }
+    return undefined;
+  };
+
+  const resolveTargetByType = (relType: string): string | undefined => {
+    for (const map of resourceMaps) {
+      const target = map.getTargetByType(relType);
+      if (target !== undefined) return target;
+    }
+    return undefined;
+  };
+
+  return {
+    getTarget: resolveTarget,
+    getType: resolveType,
+    resolve: (id: string) => {
+      const target = resolveTarget(id);
+      if (!target) return undefined;
+      const normalizedPath = normalizePptxPath(target);
+      const buffer = file.readBinary(normalizedPath);
+      if (!buffer) return undefined;
+      const mimeType = getMimeTypeFromPath(normalizedPath);
+      if (!mimeType) return undefined;
+      return toDataUrl(buffer, mimeType);
+    },
+    getMimeType: (id: string) => {
+      const target = resolveTarget(id);
+      if (!target) return undefined;
+      return getMimeTypeFromPath(target);
+    },
+    getFilePath: (id: string) => resolveTarget(id),
+    readFile: (path: string) => {
+      const normalizedPath = normalizePptxPath(path);
+      const buffer = file.readBinary(normalizedPath);
+      if (!buffer) return null;
+      return new Uint8Array(buffer);
+    },
+    getResourceByType: (relType: string) => resolveTargetByType(relType),
   };
 }
 

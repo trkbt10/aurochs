@@ -1,8 +1,8 @@
 /**
  * @file Shape bounds
  *
- * Bounding box and geometry operations for shapes.
- * Generic geometry functions are re-exported from @aurochs-ui/editor-core/geometry.
+ * PPTX-specific bounding box operations.
+ * Delegates to editor-controls generic implementation via pptxTransformResolver.
  */
 
 import type { Shape } from "@aurochs-office/pptx/domain";
@@ -10,6 +10,14 @@ import type { Bounds, ShapeId } from "@aurochs-office/pptx/domain/types";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import { getShapeTransform } from "@aurochs-renderer/pptx/svg";
 import { findShapeById } from "./query";
+import { pptxTransformResolver } from "./transform";
+
+import {
+  getShapeBounds as genericGetShapeBounds,
+  getCombinedBounds as genericGetCombinedBounds,
+  collectBoundsForIds as genericCollectBoundsForIds,
+  getCombinedCenter as genericGetCombinedCenter,
+} from "@aurochs-ui/editor-controls/shape-editor";
 
 import type {
   RotatedBoundsInput as CoreRotatedBoundsInput,
@@ -35,7 +43,7 @@ export function getCombinedBoundsWithRotation(inputs: readonly RotatedBoundsInpu
 }
 
 // =============================================================================
-// Core Functions
+// PPTX-typed Functions
 // =============================================================================
 
 /**
@@ -54,86 +62,37 @@ export function getShapeBounds(shape: Shape): Bounds | undefined {
   };
 }
 
-// =============================================================================
-// Combined Bounds Helpers
-// =============================================================================
-
-type Extents = { minX: number; minY: number; maxX: number; maxY: number };
-
-const INITIAL_EXTENTS: Extents = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
-
-function updateExtentsFromBounds(extents: Extents, bounds: Bounds): Extents {
-  return {
-    minX: Math.min(extents.minX, bounds.x as number),
-    minY: Math.min(extents.minY, bounds.y as number),
-    maxX: Math.max(extents.maxX, (bounds.x as number) + (bounds.width as number)),
-    maxY: Math.max(extents.maxY, (bounds.y as number) + (bounds.height as number)),
-  };
-}
-
-function collectShapeBounds(shapes: readonly Shape[]): readonly Bounds[] {
-  return shapes.map(getShapeBounds).filter((b): b is Bounds => b !== undefined);
-}
-
 /**
  * Calculate combined bounding box for multiple shapes (without rotation consideration)
  *
  * @deprecated Use getCombinedBoundsWithRotation for rotation-aware AABB calculation
  */
 export function getCombinedBounds(shapes: readonly Shape[]): Bounds | undefined {
-  const boundsList = collectShapeBounds(shapes);
-  if (boundsList.length === 0) {
-    return undefined;
-  }
-
-  const { minX, minY, maxX, maxY } = boundsList.reduce(updateExtentsFromBounds, INITIAL_EXTENTS);
-
+  const result = genericGetCombinedBounds(shapes, pptxTransformResolver.getTransform);
+  if (!result) return undefined;
   return {
-    x: px(minX),
-    y: px(minY),
-    width: px(maxX - minX),
-    height: px(maxY - minY),
+    x: px(result.x),
+    y: px(result.y),
+    width: px(result.width),
+    height: px(result.height),
   };
 }
 
 /**
  * Collect bounds for specified shape IDs
- * Returns a Map from ShapeId to Bounds for shapes that have valid bounds.
  */
 export function collectBoundsForIds(shapes: readonly Shape[], ids: readonly ShapeId[]): Map<ShapeId, Bounds> {
+  const generic = genericCollectBoundsForIds(shapes, ids, pptxTransformResolver.getTransform);
   const result = new Map<ShapeId, Bounds>();
-  for (const id of ids) {
-    const shape = findShapeById(shapes, id);
-    if (shape) {
-      const bounds = getShapeBounds(shape);
-      if (bounds) {
-        result.set(id, bounds);
-      }
-    }
+  for (const [id, b] of generic) {
+    result.set(id as ShapeId, { x: px(b.x), y: px(b.y), width: px(b.width), height: px(b.height) });
   }
   return result;
-}
-
-function boundsCenter(bounds: Bounds): { x: number; y: number } {
-  return {
-    x: (bounds.x as number) + (bounds.width as number) / 2,
-    y: (bounds.y as number) + (bounds.height as number) / 2,
-  };
 }
 
 /**
  * Calculate combined center point for shapes
  */
 export function getCombinedCenter(boundsMap: Map<ShapeId, Bounds>): { centerX: number; centerY: number } | undefined {
-  if (boundsMap.size === 0) {
-    return undefined;
-  }
-
-  const centers = Array.from(boundsMap.values()).map(boundsCenter);
-  const total = centers.reduce((acc, c) => ({ x: acc.x + c.x, y: acc.y + c.y }), { x: 0, y: 0 });
-
-  return {
-    centerX: total.x / boundsMap.size,
-    centerY: total.y / boundsMap.size,
-  };
+  return genericGetCombinedCenter(boundsMap as ReadonlyMap<string, { x: number; y: number; width: number; height: number }>);
 }

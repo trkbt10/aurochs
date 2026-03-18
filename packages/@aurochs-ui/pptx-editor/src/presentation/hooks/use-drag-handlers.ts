@@ -13,7 +13,7 @@ import type { DragState, SelectionState } from "../../context/slide/state";
 import type { PresentationEditorAction } from "../../context/presentation/editor/types";
 import type { ViewportTransform } from "@aurochs-renderer/pptx/svg-viewport";
 import { screenToSlideCoords } from "@aurochs-renderer/pptx/svg-viewport";
-import { snapValue } from "../../slide-canvas/canvas-controls";
+import { snapValue } from "@aurochs-ui/editor-controls/shape-editor";
 import { isDragThresholdExceeded } from "@aurochs-ui/editor-core/drag-utils";
 
 export type UseDragHandlersParams = {
@@ -189,7 +189,6 @@ export function useDragHandlers({
         rulerThickness,
       });
 
-      // Handle pending states - check threshold and transition to active
       if (drag.type === "pending-move") {
         if (isDragThresholdExceeded({ startX: drag.startClientX, startY: drag.startClientY, currentX: e.clientX, currentY: e.clientY })) {
           dispatch({ type: "CONFIRM_MOVE" });
@@ -211,19 +210,16 @@ export function useDragHandlers({
         return;
       }
 
-      // Handle marquee selection
       if (drag.type === "marquee") {
         dispatch({ type: "UPDATE_MARQUEE", currentX: px(coords.x), currentY: px(coords.y) });
         return;
       }
 
-      // Handle creation drag
       if (drag.type === "create") {
         dispatch({ type: "UPDATE_CREATE_DRAG", currentX: px(coords.x), currentY: px(coords.y) });
         return;
       }
 
-      // Handle active drag states
       if (drag.type === "move") {
         const deltaX = coords.x - (drag.startX as number);
         const deltaY = coords.y - (drag.startY as number);
@@ -243,25 +239,21 @@ export function useDragHandlers({
     };
 
     const handlePointerUp = (): void => {
-      // Handle pending states - end without commit (just selection)
       if (drag.type === "pending-move" || drag.type === "pending-resize" || drag.type === "pending-rotate") {
         dispatch({ type: "END_DRAG" });
         return;
       }
 
-      // Handle marquee selection
       if (drag.type === "marquee") {
         dispatch({ type: "END_MARQUEE" });
         return;
       }
 
-      // Handle creation drag
       if (drag.type === "create") {
         dispatch({ type: "END_CREATE_DRAG" });
         return;
       }
 
-      // Handle active drag states
       dispatch({ type: "COMMIT_DRAG" });
     };
 

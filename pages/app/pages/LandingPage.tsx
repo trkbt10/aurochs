@@ -32,6 +32,8 @@ type Props = {
   readonly onXlsxViewerDemo: () => void;
   readonly onPdfViewerDemo: () => void;
   readonly onPdfEditorDemo: () => void;
+  readonly onPotxEditorDemo: () => void;
+  readonly onPptxSuiteDemo: () => void;
   readonly isLoading?: boolean;
 };
 
@@ -91,6 +93,8 @@ export function LandingPage({
   onXlsxViewerDemo,
   onPdfViewerDemo,
   onPdfEditorDemo,
+  onPotxEditorDemo,
+  onPptxSuiteDemo,
   isLoading,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -344,6 +348,26 @@ export function LandingPage({
                 <button className="demo-card-btn" onClick={onPdfEditorDemo} disabled={isLoading}>
                   <EditIcon size={14} />
                   <span>Edit</span>
+                </button>
+              </div>
+            </div>
+
+            {/* POTX Theme Editor */}
+            <div className={`demo-card ${mounted ? "mounted" : ""}`} style={{ animationDelay: "0.5s" }}>
+              <div className="demo-card-header" style={{ background: "linear-gradient(135deg, #9b59b6, #8e44ad)" }}>
+                <div className="demo-card-info">
+                  <span className="demo-card-title">POTX</span>
+                  <span className="demo-card-subtitle">Theme</span>
+                </div>
+              </div>
+              <div className="demo-card-actions">
+                <button className="demo-card-btn" onClick={onPotxEditorDemo} disabled={isLoading}>
+                  <EditIcon size={14} />
+                  <span>Theme Editor</span>
+                </button>
+                <button className="demo-card-btn" onClick={onPptxSuiteDemo} disabled={isLoading}>
+                  <GridIcon size={14} />
+                  <span>Suite</span>
                 </button>
               </div>
             </div>

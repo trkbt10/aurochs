@@ -1,15 +1,19 @@
 /**
  * @file Shape traversal
  *
- * Utilities for traversing shape trees and collecting data.
+ * PPTX-specific traversal using generic shape-editor implementation.
  */
 
-import type { Shape, GrpShape } from "@aurochs-office/pptx/domain";
+import type { Shape } from "@aurochs-office/pptx/domain";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import { isShapeHidden } from "@aurochs-renderer/pptx/svg";
-import { getAbsoluteBounds } from "./transform";
-import { getShapeId } from "./identity";
+import { pptxTransformResolver } from "./transform";
 import { getFillColor, getStrokeColor, getStrokeWidth } from "./render";
+import {
+  collectShapeRenderData as genericCollectShapeRenderData,
+  type RenderDataResolver,
+} from "@aurochs-ui/editor-controls/shape-editor";
+import { getShapeNodeName } from "@aurochs-ui/editor-controls/shape-editor";
 
 /**
  * Shape render data for canvas display
@@ -31,53 +35,23 @@ export type ShapeRenderData = {
  * Get shape name from nonVisual properties
  */
 export function getShapeName(shape: Shape): string {
-  if ("nonVisual" in shape) {
-    return shape.nonVisual.name ?? "";
-  }
-  return "";
+  return getShapeNodeName(shape);
 }
+
+/**
+ * PPTX render data resolver
+ */
+const pptxRenderResolver: RenderDataResolver = {
+  ...pptxTransformResolver,
+  isHidden: (shape) => isShapeHidden(shape as Shape),
+  getFillColor: (shape) => getFillColor(shape as Shape),
+  getStrokeColor: (shape) => getStrokeColor(shape as Shape),
+  getStrokeWidth: (shape) => getStrokeWidth(shape as Shape),
+};
 
 /**
  * Collect all visible shapes with their render data
  */
 export function collectShapeRenderData(shapes: readonly Shape[]): readonly ShapeRenderData[] {
-  const result: ShapeRenderData[] = [];
-
-  const traverse = (shapeList: readonly Shape[], parentGroups: readonly GrpShape[] = []) => {
-    for (const shape of shapeList) {
-      if (isShapeHidden(shape)) {
-        continue;
-      }
-
-      const id = getShapeId(shape);
-      if (!id) {
-        continue;
-      }
-
-      const bounds = getAbsoluteBounds(shape, parentGroups);
-      if (!bounds) {
-        continue;
-      }
-
-      result.push({
-        id,
-        x: bounds.x,
-        y: bounds.y,
-        width: bounds.width,
-        height: bounds.height,
-        rotation: bounds.rotation,
-        fill: getFillColor(shape),
-        stroke: getStrokeColor(shape),
-        strokeWidth: getStrokeWidth(shape),
-        name: getShapeName(shape),
-      });
-
-      if (shape.type === "grpSp") {
-        traverse(shape.children, [...parentGroups, shape]);
-      }
-    }
-  };
-
-  traverse(shapes);
-  return result;
+  return genericCollectShapeRenderData(shapes, pptxRenderResolver) as readonly ShapeRenderData[];
 }

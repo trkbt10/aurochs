@@ -1,0 +1,34 @@
+{
+  "name": "@aurochs-ui/potx-editor",
+  "version": "0.7.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "dependencies": {
+    "@aurochs-builder/pptx": "workspace:*",
+    "@aurochs-office/pptx": "workspace:*",
+    "@aurochs-renderer/pptx": "workspace:*",
+    "@aurochs-ui/color-editor": "workspace:*",
+    "@aurochs-ui/editor-controls": "workspace:*",
+    "@aurochs-ui/ooxml-components": "workspace:*",
+    "@aurochs-ui/editor-core": "workspace:*",
+    "@aurochs-ui/ui-components": "workspace:*",
+    "react-editor-ui": "^0.4.0",
+    "react-panel-layout": "^0.6.1"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
+  },
+  "scripts": {
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-ui/potx-editor/src'"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  }
+}

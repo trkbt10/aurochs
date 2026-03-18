@@ -8,11 +8,8 @@
 import type { Slide, Shape, TextBody, SlideSize } from "@aurochs-office/pptx/domain";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import type { Pixels, Degrees } from "@aurochs-office/drawing-ml/domain/units";
-import type { PresentationDocument, SlideWithId, SlideId, SlideLayoutBundle } from "@aurochs-office/pptx/app";
+import type { PresentationDocument, SlideWithId, SlideId } from "@aurochs-office/pptx/app";
 import type { ShapeHierarchyTarget } from "../../../shape";
-import type { FontSpec } from "@aurochs-office/ooxml/domain/font-scheme";
-import type { ThemePreset } from "../../../panels/theme-editor/types";
-import type { SchemeColorName } from "@aurochs-office/drawing-ml/domain/color";
 import type { UndoRedoHistory } from "@aurochs-ui/editor-core/history";
 import type {
   SelectionState,
@@ -25,22 +22,6 @@ import type {
 } from "../../slide/state";
 import type { TextEditState } from "../../../slide/text-edit";
 import type { SlideOperationsResult } from "./useSlideOperations";
-
-// =============================================================================
-// Editor Mode Types
-// =============================================================================
-
-/**
- * Editor mode - determines the main editing context
- */
-export type EditorMode = "slide" | "theme" | "layout";
-
-/**
- * Create default slide editor mode
- */
-export function createSlideEditorMode(): EditorMode {
-  return "slide";
-}
 
 // =============================================================================
 // Creation Mode Types
@@ -104,31 +85,6 @@ export function createSelectMode(): CreationMode {
 }
 
 // =============================================================================
-// Layout Editing Types
-// =============================================================================
-
-/**
- * Layout editing state - active when editorMode is "layout"
- *
- * Manages the editing of slide layouts including shape selection,
- * drag operations, and tracking of unsaved changes.
- */
-export type LayoutEditState = {
-  /** Currently selected layout path (e.g., "ppt/slideLayouts/slideLayout1.xml") */
-  readonly activeLayoutPath: string | undefined;
-  /** Loaded layout shapes (parsed from PPTX, EMU coordinates) */
-  readonly layoutShapes: readonly Shape[];
-  /** Layout bundle data (includes master/theme for rendering) */
-  readonly layoutBundle: SlideLayoutBundle | undefined;
-  /** Shape selection within the layout */
-  readonly layoutSelection: SelectionState;
-  /** Drag state for layout shapes */
-  readonly layoutDrag: DragState;
-  /** Dirty flag - indicates unsaved changes */
-  readonly isDirty: boolean;
-};
-
-// =============================================================================
 // Presentation Editor State
 // =============================================================================
 
@@ -157,10 +113,6 @@ export type PresentationEditorState = {
   readonly pathDraw: PathDrawState;
   /** Path editing state (for editing existing paths) */
   readonly pathEdit: PathEditState;
-  /** Current editor mode (slide or theme) */
-  readonly editorMode: EditorMode;
-  /** Layout editing state (active when editorMode is "layout") */
-  readonly layoutEdit: LayoutEditState;
 };
 
 // =============================================================================
@@ -417,68 +369,7 @@ export type PresentationEditorAction =
   | { readonly type: "END_PENCIL_DRAW" }
 
   // Path editing (editing existing paths)
-  | PathEditAction
-
-  // Editor mode
-  | { readonly type: "SET_EDITOR_MODE"; readonly mode: EditorMode }
-
-  // Theme editing
-  | {
-      readonly type: "UPDATE_COLOR_SCHEME";
-      readonly name: SchemeColorName;
-      readonly color: string;
-    }
-  | {
-      readonly type: "UPDATE_FONT_SCHEME";
-      readonly target: "major" | "minor";
-      readonly spec: Partial<FontSpec>;
-    }
-  | {
-      readonly type: "APPLY_THEME_PRESET";
-      readonly preset: ThemePreset;
-    }
-
-  // Layout editing
-  | { readonly type: "SELECT_LAYOUT"; readonly layoutPath: string }
-  | {
-      readonly type: "LOAD_LAYOUT_SHAPES";
-      readonly layoutPath: string;
-      readonly shapes: readonly Shape[];
-      readonly bundle: SlideLayoutBundle;
-    }
-  | {
-      readonly type: "SELECT_LAYOUT_SHAPE";
-      readonly shapeId: ShapeId;
-      readonly addToSelection: boolean;
-      readonly toggle?: boolean;
-    }
-  | {
-      readonly type: "SELECT_MULTIPLE_LAYOUT_SHAPES";
-      readonly shapeIds: readonly ShapeId[];
-      readonly primaryId?: ShapeId;
-    }
-  | { readonly type: "CLEAR_LAYOUT_SHAPE_SELECTION" }
-  | { readonly type: "START_LAYOUT_MOVE"; readonly startX: Pixels; readonly startY: Pixels }
-  | {
-      readonly type: "START_LAYOUT_RESIZE";
-      readonly handle: ResizeHandlePosition;
-      readonly startX: Pixels;
-      readonly startY: Pixels;
-      readonly aspectLocked: boolean;
-    }
-  | { readonly type: "START_LAYOUT_ROTATE"; readonly startX: Pixels; readonly startY: Pixels }
-  | { readonly type: "PREVIEW_LAYOUT_MOVE"; readonly dx: Pixels; readonly dy: Pixels }
-  | { readonly type: "PREVIEW_LAYOUT_RESIZE"; readonly dx: Pixels; readonly dy: Pixels }
-  | { readonly type: "PREVIEW_LAYOUT_ROTATE"; readonly currentAngle: Degrees }
-  | { readonly type: "COMMIT_LAYOUT_DRAG" }
-  | { readonly type: "END_LAYOUT_DRAG" }
-  | { readonly type: "DELETE_LAYOUT_SHAPES"; readonly shapeIds: readonly ShapeId[] }
-  | { readonly type: "ADD_LAYOUT_SHAPE"; readonly shape: Shape }
-  | {
-      readonly type: "UPDATE_LAYOUT_SHAPE";
-      readonly shapeId: ShapeId;
-      readonly updater: (shape: Shape) => Shape;
-    };
+  | PathEditAction;
 
 // =============================================================================
 // Context Value Types
@@ -510,8 +401,6 @@ export type PresentationEditorContextValue = {
   readonly pathDraw: PathDrawState;
   /** Path editing state */
   readonly pathEdit: PathEditState;
-  /** Current editor mode (slide or theme) */
-  readonly editorMode: EditorMode;
   /** Slide operations (async file-level operations) */
   readonly slideOperations: SlideOperationsResult;
 };

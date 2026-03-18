@@ -70,7 +70,7 @@ export function useContextMenuActions({
         dispatch({
           type: "UPDATE_SHAPE",
           shapeId,
-          updater: (shape) =>
+          updater: (shape: Shape) =>
             withUpdatedTransform(shape, {
               x: px(bounds.x),
               y: px(bounds.y),
@@ -90,17 +90,23 @@ export function useContextMenuActions({
       canUngroup,
       canAlign,
       canDistribute,
-      copy: () => dispatch({ type: "COPY" }),
+      copy: () => {
+        dispatch({ type: "COPY" });
+      },
       cut: () => {
         dispatch({ type: "COPY" });
         dispatch({ type: "DELETE_SHAPES", shapeIds: selection.selectedIds });
       },
-      paste: () => dispatch({ type: "PASTE" }),
+      paste: () => {
+        dispatch({ type: "PASTE" });
+      },
       duplicateSelected: () => {
         dispatch({ type: "COPY" });
         dispatch({ type: "PASTE" });
       },
-      deleteSelected: () => dispatch({ type: "DELETE_SHAPES", shapeIds: selection.selectedIds }),
+      deleteSelected: () => {
+        dispatch({ type: "DELETE_SHAPES", shapeIds: selection.selectedIds });
+      },
       bringToFront: () => {
         if (selection.primaryId) {
           dispatch({ type: "REORDER_SHAPE", shapeId: selection.primaryId, direction: "front" });

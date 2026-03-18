@@ -30,3 +30,13 @@ export {
 
 export { generateSlideId, generateSlideRId } from "./slide-id-manager";
 export { addSlideToList, removeSlideFromList, reorderSlideInList } from "./parts/presentation";
+
+// Layout operations (Editor use)
+export {
+  addSlideLayout,
+  deleteSlideLayout,
+  duplicateSlideLayout,
+  type LayoutAddResult,
+  type LayoutRemoveResult,
+  type LayoutDuplicateResult,
+} from "./layout-ops";

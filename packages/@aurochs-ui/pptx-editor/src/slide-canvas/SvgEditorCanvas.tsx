@@ -1,10 +1,10 @@
 /**
  * @file SVG Editor Canvas (PPTX)
  *
- * Thin wrapper around the shared EditorCanvas (editor-controls/canvas).
- * Handles PPTX-specific concerns: SlideRenderer, text editing, pen/path tools,
- * context menus, creation drag, and asset drops. All viewport/marquee/coordinate
- * management is delegated to EditorCanvas.
+ * PPTX-specific wrapper around EditorCanvas.
+ * Uses useCanvasHandlers from ooxml-components for shared interaction patterns.
+ * Adds PPTX-specific concerns: SlideRenderer, text editing, pen/path tools,
+ * context menus, creation drag, and asset drops.
  */
 
 import {
@@ -55,6 +55,7 @@ import type { ViewportTransform } from "@aurochs-ui/editor-core/viewport";
 import { INITIAL_VIEWPORT } from "@aurochs-ui/editor-core/viewport";
 import type { ZoomMode } from "@aurochs-ui/editor-controls/zoom";
 import { ASSET_DRAG_TYPE } from "../panels/inspector/AssetPanel";
+import { useCanvasHandlers } from "@aurochs-ui/ooxml-components";
 
 // =============================================================================
 // Types
@@ -204,7 +205,7 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
   const canvasRef = useRef<EditorCanvasHandle>(null);
   const slideSizeForRenderer = useMemo(() => ({ width, height }), [width, height]);
 
-  // --- Viewport state (tracked for creation drag stroke scaling) ---
+  // --- Viewport state ---
   const [viewport, setViewport] = useState<ViewportTransform>(INITIAL_VIEWPORT);
   const handleViewportChange = useCallback(
     (vp: ViewportTransform) => {
@@ -213,9 +214,6 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
     },
     [onViewportChangeProp],
   );
-
-  // --- Context menu ---
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
 
   // --- Creation drag ---
   const [creationDrag, setCreationDrag] = useState<CreationDrag | null>(null);
@@ -226,71 +224,17 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
   const shapeRenderData = useMemo(() => collectShapeRenderData(slide.shapes), [slide.shapes]);
   const primaryId = selection.selectedIds.length === 1 ? selection.selectedIds[0] : undefined;
 
-  // --- Item events ---
-
-  const handleItemPointerDown = useCallback(
-    (id: string, coords: CanvasPageCoords, e: React.PointerEvent) => {
-      if (e.button !== 0) {return;}
-      e.preventDefault();
-
-      const shapeId = id as ShapeId;
-      if (!selection.selectedIds.includes(shapeId)) {
-        onSelect(shapeId, coords.addToSelection, coords.toggle);
-      }
-
-      if (onStartPendingMove) {
-        onStartPendingMove({
-          startX: coords.pageX,
-          startY: coords.pageY,
-          startClientX: coords.clientX,
-          startClientY: coords.clientY,
-        });
-      } else {
-        onStartMove(coords.pageX, coords.pageY);
-      }
-    },
-    [selection.selectedIds, onSelect, onStartMove, onStartPendingMove],
-  );
-
-  const handleItemClick = useCallback(
-    (id: string, coords: CanvasPageCoords) => {
-      onSelect(id as ShapeId, coords.addToSelection, coords.toggle);
-    },
-    [onSelect],
-  );
-
-  const handleItemDoubleClick = useCallback(
-    (id: string) => {
-      onDoubleClick(id as ShapeId);
-    },
-    [onDoubleClick],
-  );
-
-  const handleItemContextMenu = useCallback(
-    (id: string, coords: CanvasPageCoords) => {
-      const shapeId = id as ShapeId;
-      if (!selection.selectedIds.includes(shapeId)) {
-        onSelect(shapeId, false);
-      }
-      setContextMenu({ x: coords.clientX, y: coords.clientY });
-    },
-    [selection.selectedIds, onSelect],
-  );
-
-  // --- Canvas events ---
-
-  const handleCanvasPointerDown = useCallback(
-    (coords: CanvasPageCoords, e: React.PointerEvent) => {
-      // Cancel text edit on background click
+  // --- PPTX-specific background interaction ---
+  const handleBackgroundPointerDown = useCallback(
+    (coords: CanvasPageCoords, e: React.PointerEvent): boolean => {
       if (isTextEditActive(textEdit)) {
         onTextEditCancel();
-        e.preventDefault(); // suppress marquee
-        return;
+        e.preventDefault();
+        return true;
       }
 
-      // Creation drag (non-path modes)
       if (creationMode && creationMode.type !== "select" && !isPathMode(creationMode)) {
-        e.preventDefault(); // suppress marquee
+        e.preventDefault();
         const next: CreationDrag = {
           startX: coords.pageX,
           startY: coords.pageY,
@@ -300,106 +244,56 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
         creationDragRef.current = next;
         setCreationDrag(next);
         ignoreNextClickRef.current = false;
-        return;
+        return true;
       }
 
-      // Otherwise let EditorCanvas handle marquee
+      return false;
     },
     [creationMode, textEdit, onTextEditCancel],
   );
 
-  const handleCanvasClick = useCallback(
-    (coords: CanvasPageCoords) => {
-      if (ignoreNextClickRef.current) {
-        ignoreNextClickRef.current = false;
-        return;
-      }
+  const handleBackgroundClick = useCallback(() => {
+    if (ignoreNextClickRef.current) {
+      ignoreNextClickRef.current = false;
+      return;
+    }
 
-      if (isTextEditActive(textEdit)) {
-        onTextEditCancel();
-        return;
-      }
+    if (isTextEditActive(textEdit)) {
+      onTextEditCancel();
+      return;
+    }
 
-      if (creationMode && creationMode.type !== "select" && onCreate) {
-        onCreate(coords.pageX, coords.pageY);
-        return;
-      }
+    if (creationMode && creationMode.type !== "select" && onCreate) {
+      onCreate(0, 0);
+      return;
+    }
 
-      onClearSelection();
-    },
-    [textEdit, onTextEditCancel, creationMode, onCreate, onClearSelection],
-  );
+    onClearSelection();
+  }, [textEdit, onTextEditCancel, creationMode, onCreate, onClearSelection]);
 
-  // --- Selection handles ---
-
-  const handleResizeStart = useCallback(
-    (handle: ResizeHandlePosition, coords: CanvasPageCoords, e: React.PointerEvent) => {
-      if (onStartPendingResize) {
-        onStartPendingResize({
-          handle,
-          startX: coords.pageX,
-          startY: coords.pageY,
-          startClientX: coords.clientX,
-          startClientY: coords.clientY,
-          aspectLocked: e.shiftKey,
-        });
-      } else {
-        onStartResize({ handle, startX: coords.pageX, startY: coords.pageY, aspectLocked: e.shiftKey });
-      }
-    },
-    [onStartResize, onStartPendingResize],
-  );
-
-  const handleRotateStart = useCallback(
-    (coords: CanvasPageCoords) => {
-      if (onStartPendingRotate) {
-        onStartPendingRotate({
-          startX: coords.pageX,
-          startY: coords.pageY,
-          startClientX: coords.clientX,
-          startClientY: coords.clientY,
-        });
-      } else {
-        onStartRotate(coords.pageX, coords.pageY);
-      }
-    },
-    [onStartRotate, onStartPendingRotate],
-  );
-
-  // --- Marquee ---
-
-  const handleMarqueeSelect = useCallback(
-    (
-      result: { readonly itemIds: readonly string[]; readonly rect: { readonly x: number; readonly y: number; readonly width: number; readonly height: number } },
-      additive: boolean,
-    ) => {
-      const { itemIds } = result;
-
-      if (itemIds.length === 0) {
-        if (!additive) {onClearSelection();}
-        return;
-      }
-
-      if (additive) {
-        const combinedIds = [...selection.selectedIds];
-        for (const id of itemIds) {
-          if (!combinedIds.includes(id as ShapeId)) {combinedIds.push(id as ShapeId);}
-        }
-        onSelectMultiple(combinedIds);
-      } else {
-        onSelectMultiple(itemIds as readonly ShapeId[]);
-      }
-    },
-    [selection.selectedIds, onSelectMultiple, onClearSelection],
-  );
+  // --- Shared interaction handlers from ooxml-components ---
+  const handlers = useCanvasHandlers({
+    selectedIds: selection.selectedIds,
+    onSelect: onSelect as (id: string, addToSelection: boolean, toggle?: boolean) => void,
+    onSelectMultiple: onSelectMultiple as (ids: readonly string[]) => void,
+    onClearSelection,
+    onStartMove,
+    onStartPendingMove,
+    onStartResize,
+    onStartPendingResize,
+    onStartRotate,
+    onStartPendingRotate,
+    onDoubleClick: onDoubleClick as (id: string) => void,
+    onBackgroundPointerDown: handleBackgroundPointerDown,
+    onBackgroundClick: handleBackgroundClick,
+  });
 
   // --- Creation drag: global listeners ---
-
   const finalizeCreationDrag = useCallback(
     (current: CreationDrag) => {
       const dx = Math.abs(current.currentX - current.startX);
       const dy = Math.abs(current.currentY - current.startY);
-      if (dx <= 2 && dy <= 2) {return;}
+      if (dx <= 2 && dy <= 2) return;
       ignoreNextClickRef.current = true;
       if (onCreateFromDrag) {
         onCreateFromDrag(
@@ -416,11 +310,11 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
   );
 
   useEffect(() => {
-    if (!creationDrag) {return;}
+    if (!creationDrag) return;
 
     const handleMove = (e: PointerEvent) => {
       const page = canvasRef.current?.screenToPage(e.clientX, e.clientY);
-      if (!page) {return;}
+      if (!page) return;
       const next: CreationDrag = { ...creationDragRef.current!, currentX: page.pageX, currentY: page.pageY };
       creationDragRef.current = next;
       setCreationDrag(next);
@@ -430,7 +324,7 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
       const current = creationDragRef.current;
       creationDragRef.current = null;
       setCreationDrag(null);
-      if (current) {finalizeCreationDrag(current);}
+      if (current) finalizeCreationDrag(current);
     };
 
     const handleCancel = () => {
@@ -449,7 +343,7 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
   }, [creationDrag, finalizeCreationDrag]);
 
   const creationRect = useMemo(() => {
-    if (!creationDrag) {return null;}
+    if (!creationDrag) return null;
     return {
       x: Math.min(creationDrag.startX, creationDrag.currentX),
       y: Math.min(creationDrag.startY, creationDrag.currentY),
@@ -459,7 +353,6 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
   }, [creationDrag]);
 
   // --- Asset drop ---
-
   const handleDragOver = useCallback(
     (e: React.DragEvent) => {
       if (e.dataTransfer.types.includes(ASSET_DRAG_TYPE)) {
@@ -473,11 +366,11 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       const assetData = e.dataTransfer.getData(ASSET_DRAG_TYPE);
-      if (!assetData || !onAssetDrop) {return;}
+      if (!assetData || !onAssetDrop) return;
       e.preventDefault();
 
       const page = canvasRef.current?.screenToPage(e.clientX, e.clientY);
-      if (!page) {return;}
+      if (!page) return;
 
       try {
         const parsed = JSON.parse(assetData) as {
@@ -498,8 +391,6 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
           });
         }
       } catch (error: unknown) {
-        // Invalid JSON from drag data - non-parseable asset payloads are expected
-        // when other drag sources are active, so this is a no-op by design.
         if (error instanceof SyntaxError) { /* expected for malformed JSON */ }
       }
     },
@@ -509,9 +400,9 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
   // --- Text edit overlay: click-outside handler ---
   const handleTextEditOverlayPointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
-      if (!isTextEditActive(textEdit)) {return;}
+      if (!isTextEditActive(textEdit)) return;
       const page = canvasRef.current?.screenToPage(e.clientX, e.clientY);
-      if (!page) {return;}
+      if (!page) return;
       const bounds = textEdit.bounds;
       const isInside = isPointInBounds(page.pageX, page.pageY, {
         x: bounds.x as number,
@@ -520,7 +411,7 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
         height: bounds.height as number,
         rotation: bounds.rotation,
       });
-      if (!isInside) {onTextEditCancel();}
+      if (!isInside) onTextEditCancel();
     },
     [textEdit, onTextEditCancel],
   );
@@ -529,7 +420,6 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
   const viewportOverlay = useMemo(() => {
     const elements: React.ReactNode[] = [];
 
-    // Pen tool overlay
     if (creationMode && isPenMode(creationMode) && onPathCommit && onPathCancel) {
       elements.push(
         <PenToolOverlay
@@ -543,10 +433,9 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
       );
     }
 
-    // Path edit overlay
     if (pathEdit && isPathEditEditing(pathEdit) && onPathEditCommit && onPathEditCancel) {
       const editingShape = slide.shapes.find((s) => {
-        if (s.type === "contentPart") {return false;}
+        if (s.type === "contentPart") return false;
         return s.nonVisual.id === pathEdit.shapeId;
       });
       if (editingShape?.type === "sp" && isCustomGeometry(editingShape.properties.geometry)) {
@@ -574,7 +463,6 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
       }
     }
 
-    // Text edit controller
     if (isTextEditActive(textEdit)) {
       elements.push(
         <div key="text-edit" style={{ position: "absolute", inset: 0 }} onPointerDown={handleTextEditOverlayPointerDown}>
@@ -617,10 +505,7 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
     onTextEditSelectionChange,
   ]);
 
-  // --- Enable marquee only in select mode ---
   const enableMarquee = !creationMode || creationMode.type === "select";
-
-  const handleCloseContextMenu = useCallback(() => setContextMenu(null), []);
 
   return (
     <div ref={containerRef} style={containerStyle}>
@@ -642,21 +527,20 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
         isInteracting={drag.type !== "idle"}
         isTextEditing={isTextEditActive(textEdit)}
         showRotateHandle={true}
-        onItemPointerDown={handleItemPointerDown}
-        onItemClick={handleItemClick}
-        onItemDoubleClick={handleItemDoubleClick}
-        onItemContextMenu={handleItemContextMenu}
-        onCanvasPointerDown={handleCanvasPointerDown}
-        onCanvasClick={handleCanvasClick}
-        onResizeStart={handleResizeStart}
-        onRotateStart={handleRotateStart}
+        onItemPointerDown={handlers.handleItemPointerDown}
+        onItemClick={handlers.handleItemClick}
+        onItemDoubleClick={handlers.handleItemDoubleClick}
+        onItemContextMenu={handlers.handleItemContextMenu}
+        onCanvasPointerDown={handlers.handleCanvasPointerDown}
+        onCanvasClick={handlers.handleCanvasClick}
+        onResizeStart={handlers.handleResizeStart}
+        onRotateStart={handlers.handleRotateStart}
         enableMarquee={enableMarquee}
-        onMarqueeSelect={handleMarqueeSelect}
+        onMarqueeSelect={handlers.handleMarqueeSelect}
         viewportOverlay={viewportOverlay}
         onDragOver={handleDragOver}
         onDrop={handleDrop}
       >
-        {/* Slide content */}
         <SlideRenderer
           slide={slide}
           slideSize={slideSizeForRenderer}
@@ -670,7 +554,6 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
           layoutShapes={layoutShapes}
         />
 
-        {/* Creation drag rect */}
         {creationRect && (
           <rect
             x={creationRect.x}
@@ -687,15 +570,14 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
         )}
       </EditorCanvas>
 
-      {/* Context menu */}
-      {contextMenu && (
+      {handlers.contextMenu && (
         <SlideContextMenu
-          x={contextMenu.x}
-          y={contextMenu.y}
+          x={handlers.contextMenu.x}
+          y={handlers.contextMenu.y}
           primaryShape={primaryShape}
           selectedShapes={selectedShapes}
           actions={contextMenuActions}
-          onClose={handleCloseContextMenu}
+          onClose={handlers.closeContextMenu}
         />
       )}
     </div>

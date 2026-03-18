@@ -12,7 +12,7 @@
 
 import { useRef, useMemo, useCallback, useState, useEffect, type CSSProperties, type ReactNode } from "react";
 import type { PivotBehavior } from "react-panel-layout/pivot";
-import type { Shape, RunProperties, ParagraphProperties, TextBody } from "@aurochs-office/pptx/domain";
+import type { Shape, Slide as DomainSlide, RunProperties, ParagraphProperties, TextBody } from "@aurochs-office/pptx/domain";
 import type { ZipFile } from "@aurochs-office/opc";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
@@ -23,8 +23,7 @@ import { SlideThumbnailPanel } from "../panels";
 import { useSlideThumbnails } from "../thumbnail/use-slide-thumbnails";
 import { SlideThumbnailPreview } from "../thumbnail/SlideThumbnailPreview";
 import { CreationToolbar } from "../panels/CreationToolbar";
-import { EditorModePivot } from "../panels/EditorModePivot";
-import type { CreationMode, EditorMode } from "../context/presentation/editor/types";
+import type { CreationMode } from "../context/presentation/editor/types";
 import { createSelectMode } from "../context/presentation/editor/types";
 import type { DrawingPath } from "@aurochs-ui/path-tools";
 import { isCustomGeometry } from "../path-tools/adapters";
@@ -56,7 +55,7 @@ import { buildSlideLayoutOptions } from "@aurochs-office/pptx/app";
 import { createRenderContext, getLayoutNonPlaceholderShapes } from "@aurochs-renderer/pptx";
 import { getSlideLayoutAttributes } from "@aurochs-office/pptx/parser/slide/layout-parser";
 import { RELATIONSHIP_TYPES, createZipAdapter } from "@aurochs-office/pptx/domain";
-import { CanvasControls } from "../slide-canvas/CanvasControls";
+import { CanvasControls } from "@aurochs-ui/editor-controls/shape-editor";
 import type { ZoomMode } from "@aurochs-ui/editor-controls/zoom";
 import { SvgEditorCanvas, type AssetDropData } from "../slide-canvas/SvgEditorCanvas";
 import type { ViewportTransform } from "@aurochs-renderer/pptx/svg-viewport";
@@ -79,10 +78,7 @@ import { EditorShell, CanvasArea, type EditorPanel } from "@aurochs-ui/editor-co
 import { RIGHT_PANEL_TABS, usePivotTabs } from "../layout";
 import { SelectedElementTab, SlideInfoTab, LayersTab } from "../panels/right-panel";
 import { AssetPanel, LayoutInfoPanel, ThemeViewerPanel, InspectorPanelWithTabs } from "../panels/inspector";
-import { ThemeEditorTabs, ThemeEditorCanvas, extractThemeFromPptx } from "../panels/theme-editor";
-import type { ThemePreset } from "../panels/theme-editor/types";
-import type { SchemeColorName } from "@aurochs-office/drawing-ml/domain/color";
-import type { FontSpec } from "@aurochs-office/ooxml/domain/font-scheme";
+import { createInactiveTextEditState } from "../slide/text-edit";
 import { PresentationSlideshow, type SlideshowSlideContent } from "../viewer/PresentationSlideshow";
 import {
   usePanelCallbacks,
@@ -110,6 +106,11 @@ const noSlideStyle: CSSProperties = {
 
 const RULER_THICKNESS = 24;
 
+/** Empty slide for fallback */
+const emptySlide: DomainSlide = {
+  shapes: [],
+};
+
 /**
  * Tab contents grouped into 3 categories.
  */
@@ -119,16 +120,10 @@ type TabContents = {
   readonly resources: ReactNode;
 };
 
-type TabLabelOverrides = {
-  readonly properties?: string;
-  readonly slide?: string;
-  readonly resources?: string;
-};
-
-function buildPivotItems(tabContents: TabContents, labelOverrides?: TabLabelOverrides): PivotBehavior["items"] {
+function buildPivotItems(tabContents: TabContents): PivotBehavior["items"] {
   return RIGHT_PANEL_TABS.map((tab) => ({
     id: tab.id,
-    label: labelOverrides?.[tab.id] ?? tab.label,
+    label: tab.label,
     content: tabContents[tab.id] ?? null,
     cache: true,
   }));
@@ -175,10 +170,8 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
     creationMode,
     textEdit,
     pathEdit,
-    editorMode,
   } = usePresentationEditor();
 
-  // Get the editor resource store for uploaded/created resources
   const editorResourceStore = useEditorResourceStore();
 
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -242,61 +235,6 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
     [dispatch],
   );
 
-  const handleEditorModeChange = useCallback(
-    (mode: EditorMode) => {
-      dispatch({ type: "SET_EDITOR_MODE", mode });
-      // Auto-switch to properties tab when entering theme mode
-      if (mode === "theme") {
-        handleTabChange("properties");
-      }
-    },
-    [dispatch, handleTabChange],
-  );
-
-  // ==========================================================================
-  // Theme editing handlers
-  // ==========================================================================
-
-  const handleColorSchemeChange = useCallback(
-    (name: SchemeColorName, color: string) => {
-      dispatch({ type: "UPDATE_COLOR_SCHEME", name, color });
-    },
-    [dispatch],
-  );
-
-  const handleMajorFontChange = useCallback(
-    (spec: Partial<FontSpec>) => {
-      dispatch({ type: "UPDATE_FONT_SCHEME", target: "major", spec });
-    },
-    [dispatch],
-  );
-
-  const handleMinorFontChange = useCallback(
-    (spec: Partial<FontSpec>) => {
-      dispatch({ type: "UPDATE_FONT_SCHEME", target: "minor", spec });
-    },
-    [dispatch],
-  );
-
-  const handleThemePresetSelect = useCallback(
-    (preset: ThemePreset) => {
-      dispatch({ type: "APPLY_THEME_PRESET", preset });
-    },
-    [dispatch],
-  );
-
-  const handleThemeImport = useCallback(
-    async (file: File) => {
-      const result = await extractThemeFromPptx(file);
-      if (result.success) {
-        dispatch({ type: "APPLY_THEME_PRESET", preset: result.theme });
-      } else {
-        console.error("Theme import failed:", result.error);
-      }
-    },
-    [dispatch],
-  );
-
   const handleCanvasCreate = useCallback(
     (x: number, y: number) => {
       if (creationMode.type === "select") {
@@ -326,7 +264,6 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
 
   const handleAssetDrop = useCallback(
     (x: number, y: number, assetData: AssetDropData) => {
-      // Default size: 200x150 pixels
       const bounds: ShapeBounds = {
         x: px(x),
         y: px(y),
@@ -335,14 +272,11 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
       };
 
       if (assetData.type === "image") {
-        // Create a picture shape at the drop position
         const newShape = createPicShape(generateShapeId(), bounds, assetData.dataUrl);
         dispatch({ type: "CREATE_SHAPE", shape: newShape });
       } else if (assetData.type === "ole") {
-        // Create an OLE object graphic frame
         const oleType = getOleTypeFromFile(assetData.name);
         if (oleType) {
-          // Decode base64 back to ArrayBuffer
           const binaryString = atob(assetData.embedDataBase64);
           const bytes = new Uint8Array(binaryString.length);
           for (let i = 0; i < binaryString.length; i++) {
@@ -804,7 +738,6 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
   // Memoized Tab Content Components (3 combined tabs)
   // ==========================================================================
 
-  // プロパティタブ: 選択要素 + レイヤー
   const propertiesTabContent = useMemo(() => {
     if (!activeSlide || !slide) {
       return <div style={noSlideStyle}>No slide selected</div>;
@@ -846,7 +779,6 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
     canvas.handleSelectMultiple,
   ]);
 
-  // スライドタブ: スライド情報 + レイアウト情報
   const slideTabContent = useMemo(() => {
     if (!activeSlide || !slide) {
       return <div style={noSlideStyle}>No slide selected</div>;
@@ -889,7 +821,6 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
     document.presentationFile,
   ]);
 
-  // リソースタブ: アセット + テーマ
   const resourcesTabContent = useMemo(
     () => (
       <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "auto" }}>
@@ -900,53 +831,11 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
     [document.presentationFile, colorContext, fontScheme],
   );
 
-  // テーマモード用タブコンテンツ
-  const themeEditorTabContent = useMemo(
-    () => (
-      <ThemeEditorTabs
-        colorScheme={colorContext.colorScheme}
-        fontScheme={fontScheme}
-        onColorChange={handleColorSchemeChange}
-        onMajorFontChange={handleMajorFontChange}
-        onMinorFontChange={handleMinorFontChange}
-        onPresetSelect={handleThemePresetSelect}
-      />
-    ),
-    [
-      colorContext.colorScheme,
-      fontScheme,
-      handleColorSchemeChange,
-      handleMajorFontChange,
-      handleMinorFontChange,
-      handleThemePresetSelect,
-    ],
-  );
-
-  // モードに応じたタブコンテンツを選択
-  const tabContents = useMemo<TabContents>(() => {
-    if (editorMode === "theme") {
-      // テーマモード: propertiesタブにテーマエディターを表示
-      return {
-        properties: themeEditorTabContent,
-        slide: slideTabContent,
-        resources: resourcesTabContent,
-      };
-    }
-    // スライドモード: 通常のタブコンテンツ
-    return {
-      properties: propertiesTabContent,
-      slide: slideTabContent,
-      resources: resourcesTabContent,
-    };
-  }, [editorMode, propertiesTabContent, slideTabContent, resourcesTabContent, themeEditorTabContent]);
-
-  // モードに応じたタブラベルのオーバーライド
-  const tabLabelOverrides = useMemo(() => {
-    if (editorMode === "theme") {
-      return { properties: "テーマ" };
-    }
-    return undefined;
-  }, [editorMode]);
+  const tabContents = useMemo<TabContents>(() => ({
+    properties: propertiesTabContent,
+    slide: slideTabContent,
+    resources: resourcesTabContent,
+  }), [propertiesTabContent, slideTabContent, resourcesTabContent]);
 
   // ==========================================================================
   // Memoized Panel Components
@@ -963,7 +852,7 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
     [width, height, renderThumbnail],
   );
 
-  const pivotItems = useMemo(() => buildPivotItems(tabContents, tabLabelOverrides), [tabContents, tabLabelOverrides]);
+  const pivotItems = useMemo(() => buildPivotItems(tabContents), [tabContents]);
 
   const pivotConfig = useMemo<PivotBehavior | undefined>(() => {
     if (!showInspector) {
@@ -990,7 +879,6 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
     return <CreationToolbar mode={creationMode} onModeChange={handleCreationModeChange} appearance="floating" />;
   }, [showToolbar, creationMode, handleCreationModeChange]);
 
-  // Slide editor canvas for slide mode
   const slideEditorCanvasComponent = useMemo(() => {
     if (!activeSlide || !slide) {
       return (
@@ -1004,8 +892,8 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
       <CanvasArea floatingToolbar={floatingToolbar}>
         <SvgEditorCanvas
           ref={canvasRef}
-          slide={slide}
-          slideId={activeSlide.id}
+          slide={slide ?? emptySlide}
+          slideId={activeSlide?.id ?? ""}
           selection={selection}
           drag={drag}
           width={width}
@@ -1056,9 +944,10 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
   }, [
     activeSlide,
     slide,
-    floatingToolbar,
     selection,
     drag,
+    textEdit,
+    floatingToolbar,
     width,
     height,
     primaryShape,
@@ -1073,7 +962,6 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
     editingShapeId,
     layoutShapes,
     creationMode,
-    textEdit,
     canvas,
     handleDoubleClick,
     handleCanvasCreate,
@@ -1102,52 +990,45 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
     }
     return (
       <div style={{ display: "flex", gap: "16px", alignItems: "center", width: "100%" }}>
-        <EditorModePivot mode={editorMode} onModeChange={handleEditorModeChange} />
-        {editorMode === "slide" && (
-          <>
-            <ShapeToolbar
-              canUndo={canUndo}
-              canRedo={canRedo}
-              selectedIds={selection.selectedIds}
-              primaryShape={primaryShape}
-              onUndo={() => dispatch({ type: "UNDO" })}
-              onRedo={() => dispatch({ type: "REDO" })}
-              onDelete={shape.handleDelete}
-              onDuplicate={shape.handleDuplicate}
-              onReorder={shape.handleReorder}
-              onShapeChange={shape.handleShapeChange}
-              direction="horizontal"
-            />
-            <CanvasControls
-              zoomMode={zoomMode}
-              onZoomModeChange={setZoomMode}
-              displayZoom={displayZoom}
-              showRulers={showRulers}
-              onShowRulersChange={setShowRulers}
-              snapEnabled={snapEnabled}
-              onSnapEnabledChange={setSnapEnabled}
-              snapStep={snapStep}
-              onSnapStepChange={setSnapStep}
-            />
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => openPreview(getEditorSlideIndex())}
-              title="Preview slideshow"
-              style={{ marginLeft: "auto" }}
-            >
-              <PlayIcon size={16} />
-              <span style={{ marginLeft: "6px" }}>Preview</span>
-            </Button>
-            <ExportButton fileName="presentation.pptx" />
-          </>
-        )}
+        <ShapeToolbar
+          canUndo={canUndo}
+          canRedo={canRedo}
+          selectedIds={selection.selectedIds}
+          primaryShape={primaryShape}
+          onUndo={() => dispatch({ type: "UNDO" })}
+          onRedo={() => dispatch({ type: "REDO" })}
+          onDelete={shape.handleDelete}
+          onDuplicate={shape.handleDuplicate}
+          onReorder={shape.handleReorder}
+          onShapeChange={shape.handleShapeChange}
+          direction="horizontal"
+        />
+        <CanvasControls
+          zoomMode={zoomMode}
+          onZoomModeChange={setZoomMode}
+          displayZoom={displayZoom}
+          showRulers={showRulers}
+          onShowRulersChange={setShowRulers}
+          snapEnabled={snapEnabled}
+          onSnapEnabledChange={setSnapEnabled}
+          snapStep={snapStep}
+          onSnapStepChange={setSnapStep}
+        />
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => openPreview(getEditorSlideIndex())}
+          title="Preview slideshow"
+          style={{ marginLeft: "auto" }}
+        >
+          <PlayIcon size={16} />
+          <span style={{ marginLeft: "6px" }}>Preview</span>
+        </Button>
+        <ExportButton fileName="presentation.pptx" />
       </div>
     );
   }, [
     showToolbar,
-    editorMode,
-    handleEditorModeChange,
     canUndo,
     canRedo,
     selection.selectedIds,
@@ -1169,13 +1050,8 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
 
   function renderEditorBody() {
     function buildPanels(): EditorPanel[] {
-      if (editorMode === "theme") {
-        return [];
-      }
-
       const result: EditorPanel[] = [];
 
-      // Left panel: thumbnails
       result.push({
         id: "thumbnails",
         position: "left",
@@ -1184,7 +1060,6 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
         scrollable: true,
       });
 
-      // Right panel: inspector
       if (showInspector && inspectorComponent) {
         result.push({
           id: "inspector",
@@ -1197,38 +1072,12 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
       return result;
     }
 
-    function buildCenterContent() {
-      if (editorMode === "theme") {
-        return (
-          <ThemeEditorCanvas
-            colorScheme={colorContext.colorScheme}
-            fontScheme={fontScheme}
-            onColorChange={handleColorSchemeChange}
-            onMajorFontChange={handleMajorFontChange}
-            onMinorFontChange={handleMinorFontChange}
-            onPresetSelect={handleThemePresetSelect}
-            onThemeImport={handleThemeImport}
-            canUndo={canUndo}
-            canRedo={canRedo}
-            onUndo={() => dispatch({ type: "UNDO" })}
-            onRedo={() => dispatch({ type: "REDO" })}
-            presentationFile={document.presentationFile}
-            layoutOptions={layoutOptions}
-            currentLayoutPath={layoutPath}
-            slideSize={{ width, height }}
-            onLayoutSelect={slideCallbacks.handleLayoutChange}
-          />
-        );
-      }
-      return slideEditorCanvasComponent;
-    }
-
     return (
       <EditorShell
         toolbar={toolbarContent}
         panels={buildPanels()}
       >
-        {buildCenterContent()}
+        {slideEditorCanvasComponent}
       </EditorShell>
     );
   }

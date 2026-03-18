@@ -88,6 +88,10 @@
     "./toolbar": {
       "types": "./src/toolbar/index.ts",
       "default": "./src/toolbar/index.ts"
+    },
+    "./shape-editor": {
+      "types": "./src/shape-editor/index.ts",
+      "default": "./src/shape-editor/index.ts"
     }
   }
 }

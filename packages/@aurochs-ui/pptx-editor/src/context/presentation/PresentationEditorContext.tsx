@@ -71,7 +71,6 @@ export function PresentationEditorProvider({
   const textEdit = state.textEdit;
   const pathDraw = state.pathDraw;
   const pathEdit = state.pathEdit;
-  const editorMode = state.editorMode;
 
   // Slide operations hook (async operations)
   const slideOperations = useSlideOperations(state, dispatch);
@@ -90,7 +89,6 @@ export function PresentationEditorProvider({
       textEdit,
       pathDraw,
       pathEdit,
-      editorMode,
       slideOperations,
     }),
     [
@@ -105,7 +103,6 @@ export function PresentationEditorProvider({
       textEdit,
       pathDraw,
       pathEdit,
-      editorMode,
       slideOperations,
     ],
   );

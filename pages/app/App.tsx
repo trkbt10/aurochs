@@ -17,6 +17,8 @@ import { XlsxEditorPage } from "./pages/XlsxEditorPage";
 import { XlsxViewerPage } from "./pages/XlsxViewerPage";
 import { PdfViewerPage } from "./pages/PdfViewerPage";
 import { PdfEditorPage } from "./pages/PdfEditorPage";
+import { PotxEditorPage } from "./pages/PotxEditorPage";
+import { PresentationSuitePage } from "./pages/PresentationSuitePage";
 import { createDefaultGraphicsState, type PdfDocument as PdfDoc } from "@aurochs/pdf";
 import { convertToPresentationDocument, type PresentationDocument } from "@aurochs-office/pptx/app";
 import "./App.css";
@@ -193,6 +195,19 @@ export function App() {
     navigate("/pdf/editor");
   }, [pptx, docx, xlsx, navigate]);
 
+  const handlePotxEditorDemo = useCallback(() => {
+    navigate("/potx/editor");
+  }, [navigate]);
+
+  const handlePptxSuiteDemo = useCallback(() => {
+    setImportedDocument(null);
+    setImportedFileName(null);
+    docx.reset();
+    xlsx.reset();
+    pptx.loadFromUrl(DEMO_PPTX_URL, "demo.pptx");
+    navigate("/pptx/suite");
+  }, [pptx, docx, xlsx, navigate]);
+
   const handleBack = useCallback(() => {
     setImportedDocument(null);
     setImportedFileName(null);
@@ -275,6 +290,8 @@ export function App() {
       onXlsxViewerDemo={handleXlsxViewerDemo}
       onPdfViewerDemo={handlePdfViewerDemo}
       onPdfEditorDemo={handlePdfEditorDemo}
+      onPotxEditorDemo={handlePotxEditorDemo}
+      onPptxSuiteDemo={handlePptxSuiteDemo}
       isLoading={isLoading}
     />
   );
@@ -293,6 +310,8 @@ export function App() {
             onXlsxViewerDemo={handleXlsxViewerDemo}
             onPdfViewerDemo={handlePdfViewerDemo}
             onPdfEditorDemo={handlePdfEditorDemo}
+            onPotxEditorDemo={handlePotxEditorDemo}
+            onPptxSuiteDemo={handlePptxSuiteDemo}
             isLoading
           />
         );
@@ -405,6 +424,21 @@ export function App() {
     );
   };
 
+  const PotxEditorRoute = () => (
+    <PotxEditorPage onBack={handleBack} />
+  );
+
+  const PresentationSuiteRoute = () => {
+    const activeDocument = importedDocument ?? editorDocument;
+    if (!activeDocument) {
+      return <Navigate to="/potx/editor" replace />;
+    }
+    const activeFileName = importedFileName ?? pptx.fileName ?? "presentation";
+    return (
+      <PresentationSuitePage document={activeDocument} fileName={activeFileName} onBack={handleExitEditor} backLabel="Back" />
+    );
+  };
+
   return (
     <Routes>
       <Route path="/" element={<LandingRoute />} />
@@ -417,6 +451,8 @@ export function App() {
       <Route path="/xlsx/editor" element={<XlsxEditorRoute />} />
       <Route path="/pdf/viewer" element={<PdfViewerRoute />} />
       <Route path="/pdf/editor" element={<PdfEditorRoute />} />
+      <Route path="/potx/editor" element={<PotxEditorRoute />} />
+      <Route path="/pptx/suite" element={<PresentationSuiteRoute />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

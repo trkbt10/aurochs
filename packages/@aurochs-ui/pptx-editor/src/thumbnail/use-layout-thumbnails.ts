@@ -1,24 +1,21 @@
 /**
  * @file Hook for layout thumbnail data
  *
- * Loads and caches layout shapes for thumbnail preview.
+ * Uses loadLayoutWithContext from ooxml-components for the actual loading.
  */
 
 import { useMemo } from "react";
 import type { PresentationFile, Shape, SlideSize } from "@aurochs-office/pptx/domain";
 import type { SlideLayoutOption } from "@aurochs-office/pptx/app";
-import { loadSlideLayoutBundle } from "@aurochs-office/pptx/app";
-import { parseShapeTree } from "@aurochs-office/pptx/parser";
-import { getChild } from "@aurochs/xml";
-import { getByPath } from "@aurochs/xml";
+import { loadLayoutWithContext } from "@aurochs-ui/ooxml-components";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 export type LayoutThumbnailData = SlideLayoutOption & {
-  /** Layout shapes for preview */
   readonly shapes: readonly Shape[];
+  readonly svg: string;
 };
 
 export type UseLayoutThumbnailsOptions = {
@@ -31,11 +28,6 @@ export type UseLayoutThumbnailsOptions = {
 // Hook
 // =============================================================================
 
-/**
- * Load layout shapes for thumbnail preview.
- *
- * Returns layout options augmented with parsed shapes.
- */
 export function useLayoutThumbnails(options: UseLayoutThumbnailsOptions): readonly LayoutThumbnailData[] {
   const { presentationFile, layoutOptions, slideSize } = options;
 
@@ -45,39 +37,12 @@ export function useLayoutThumbnails(options: UseLayoutThumbnailsOptions): readon
     }
 
     return layoutOptions.map((option) => {
-      const shapes = loadLayoutShapes(presentationFile, option.value);
+      const result = loadLayoutWithContext(presentationFile, option.value, slideSize);
       return {
         ...option,
-        shapes,
+        shapes: result?.shapes ?? [],
+        svg: result?.svg ?? "",
       };
     });
   }, [presentationFile, layoutOptions, slideSize]);
-}
-
-/**
- * Load shapes from a layout file.
- */
-function loadLayoutShapes(file: PresentationFile, layoutPath: string): readonly Shape[] {
-  try {
-    const bundle = loadSlideLayoutBundle(file, layoutPath);
-    const layoutContent = getByPath(bundle.layout, ["p:sldLayout"]);
-    if (layoutContent === undefined) {
-      return [];
-    }
-
-    const cSld = getChild(layoutContent, "p:cSld");
-    if (cSld === undefined) {
-      return [];
-    }
-
-    const spTree = getChild(cSld, "p:spTree");
-    if (spTree === undefined) {
-      return [];
-    }
-
-    return parseShapeTree({ spTree });
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- error intentionally unused, fallback to empty shapes
-  } catch (error: unknown) {
-    return [];
-  }
 }

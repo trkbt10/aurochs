@@ -13,8 +13,10 @@
     "@aurochs-ui/color-editor": "workspace:*",
     "@aurochs-ui/diagram-editor": "workspace:*",
     "@aurochs-ui/editor-controls": "workspace:*",
+    "@aurochs-ui/ooxml-components": "workspace:*",
     "@aurochs-ui/editor-core": "workspace:*",
     "@aurochs-ui/path-tools": "workspace:*",
+    "@aurochs-ui/potx-editor": "workspace:*",
     "@aurochs-ui/ui-components": "workspace:*",
     "@aurochs-ui/xlsx-editor": "workspace:*",
     "@aurochs/glyph": "workspace:*",
@@ -65,14 +67,6 @@
     "./chart-data": {
       "types": "./src/chart-data/index.ts",
       "default": "./src/chart-data/index.ts"
-    },
-    "./panels/theme-editor": {
-      "types": "./src/panels/theme-editor/index.ts",
-      "default": "./src/panels/theme-editor/index.ts"
-    },
-    "./panels/theme-editor/types": {
-      "types": "./src/panels/theme-editor/types.ts",
-      "default": "./src/panels/theme-editor/types.ts"
     },
     "./viewer/PresentationSlideshow": {
       "types": "./src/viewer/PresentationSlideshow.tsx",

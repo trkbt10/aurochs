@@ -6,13 +6,12 @@
 
 import { useState, useCallback, type CSSProperties } from "react";
 import {
-  ThemeEditorTabs,
-  ThemeEditorCanvas,
   ColorSchemeEditor,
   FontSchemeEditor,
   ThemePresetSelector,
-} from "@aurochs-ui/pptx-editor/panels/theme-editor";
-import type { ThemePreset } from "@aurochs-ui/pptx-editor/panels/theme-editor/types";
+  SampleSlidePreview,
+} from "@aurochs-ui/potx-editor";
+import type { ThemePreset } from "@aurochs-ui/potx-editor";
 import type { ColorScheme } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { SchemeColorName } from "@aurochs-office/drawing-ml/domain/color";
 import type { FontScheme, FontSpec } from "@aurochs-office/ooxml/domain/font-scheme";
@@ -115,18 +114,11 @@ export function ThemeEditorTest() {
 
   return (
     <div style={containerStyle}>
-      {/* Graphical Theme Editor Canvas - Main Feature */}
+      {/* Sample Slide Preview */}
       <div style={sectionStyle}>
-        <h3 style={sectionTitleStyle}>ThemeEditorCanvas (Full Graphical Editor)</h3>
-        <div style={{ height: "600px" }}>
-          <ThemeEditorCanvas
-            colorScheme={colorScheme}
-            fontScheme={fontScheme}
-            onColorChange={handleColorChange}
-            onMajorFontChange={handleMajorFontChange}
-            onMinorFontChange={handleMinorFontChange}
-            onPresetSelect={handlePresetSelect}
-          />
+        <h3 style={sectionTitleStyle}>SampleSlidePreview (Theme Live Preview)</h3>
+        <div style={{ height: "300px" }}>
+          <SampleSlidePreview colorScheme={colorScheme} fontScheme={fontScheme} />
         </div>
       </div>
 
@@ -146,21 +138,6 @@ export function ThemeEditorTest() {
             <h4 style={{ fontSize: "14px", marginBottom: "8px" }}>Font Scheme</h4>
             <div style={stateDisplayStyle}>{JSON.stringify(fontScheme, null, 2)}</div>
           </div>
-        </div>
-      </div>
-
-      {/* Combined Theme Editor Tabs */}
-      <div style={sectionStyle}>
-        <h3 style={sectionTitleStyle}>ThemeEditorTabs (Compact Version)</h3>
-        <div style={{ height: "400px" }}>
-          <ThemeEditorTabs
-            colorScheme={colorScheme}
-            fontScheme={fontScheme}
-            onColorChange={handleColorChange}
-            onMajorFontChange={handleMajorFontChange}
-            onMinorFontChange={handleMinorFontChange}
-            onPresetSelect={handlePresetSelect}
-          />
         </div>
       </div>
 

@@ -6,7 +6,7 @@
 
 import type { PresentationDocument } from "@aurochs-office/pptx/app";
 import type { PresentationEditorState, PresentationEditorAction } from "../types";
-import { createSelectMode, createSlideEditorMode } from "../types";
+import { createSelectMode } from "../types";
 import type { HandlerMap, ActionHandler } from "./handler-types";
 import { createHistory } from "@aurochs-ui/editor-core/history";
 import {
@@ -28,8 +28,6 @@ import { CREATION_HANDLERS } from "./creation-handlers";
 import { TEXT_EDIT_HANDLERS } from "./text-edit-handlers";
 import { PATH_DRAW_HANDLERS } from "./path-draw-handlers";
 import { PATH_EDIT_HANDLERS } from "./path-edit-handlers";
-import { THEME_HANDLERS } from "./theme-handlers";
-import { LAYOUT_HANDLERS } from "./layout-handlers";
 
 /**
  * Combined handler map from all domains
@@ -45,8 +43,6 @@ const ALL_HANDLERS: HandlerMap = {
   ...TEXT_EDIT_HANDLERS,
   ...PATH_DRAW_HANDLERS,
   ...PATH_EDIT_HANDLERS,
-  ...THEME_HANDLERS,
-  ...LAYOUT_HANDLERS,
 };
 
 /**
@@ -64,15 +60,6 @@ export function createPresentationEditorState(document: PresentationDocument): P
     textEdit: createInactiveTextEditState(),
     pathDraw: createIdlePathDrawState(),
     pathEdit: createInactivePathEditState(),
-    editorMode: createSlideEditorMode(),
-    layoutEdit: {
-      activeLayoutPath: undefined,
-      layoutShapes: [],
-      layoutBundle: undefined,
-      layoutSelection: createEmptySelection(),
-      layoutDrag: createIdleDragState(),
-      isDirty: false,
-    },
   };
 }
 
