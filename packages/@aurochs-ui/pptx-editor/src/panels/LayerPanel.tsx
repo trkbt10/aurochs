@@ -57,7 +57,6 @@ export type LayerPanelProps = {
   readonly onUngroup: (shapeId: ShapeId) => void;
   readonly onMoveShape: (shapeId: ShapeId, target: ShapeHierarchyTarget) => void;
   readonly onUpdateShapes: (shapeIds: readonly ShapeId[], updater: (shape: Shape) => Shape) => void;
-  readonly onClearSelection: () => void;
   readonly className?: string;
   readonly style?: CSSProperties;
 };
@@ -75,6 +74,7 @@ type LayerDropTarget = {
 
 const ICON_SIZE = iconTokens.size.sm;
 const ICON_STROKE = iconTokens.strokeWidth;
+
 
 function getShapeIcon(shape: Shape): ReactNode {
   const p = { size: ICON_SIZE, strokeWidth: ICON_STROKE };
@@ -326,7 +326,6 @@ export function LayerPanel({
   onUngroup,
   onMoveShape,
   onUpdateShapes,
-  onClearSelection,
   className,
   style,
 }: LayerPanelProps) {
@@ -544,7 +543,7 @@ export function LayerPanel({
         style={listStyle}
         role="tree"
         aria-label="Layers"
-        onClick={() => { setContextMenu(null); onClearSelection(); }}
+        onClick={() => { setContextMenu(null); }}
         onContextMenu={(e) => { if (selectedIds.length > 0) { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY }); } }}
       >
         {renderShapeList()}

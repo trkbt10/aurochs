@@ -31,8 +31,6 @@ export type LayersTabProps = {
   readonly onMoveShape: (shapeId: ShapeId, target: ShapeHierarchyTarget) => void;
   /** Callback to update multiple shapes */
   readonly onUpdateShapes: (shapeIds: readonly ShapeId[], updater: (shape: Shape) => Shape) => void;
-  /** Callback to clear selection */
-  readonly onClearSelection: () => void;
 };
 
 const containerStyle: CSSProperties = {
@@ -57,7 +55,6 @@ export function LayersTab({
   onUngroup,
   onMoveShape,
   onUpdateShapes,
-  onClearSelection,
 }: LayersTabProps) {
   return (
     <div style={containerStyle}>
@@ -72,7 +69,6 @@ export function LayersTab({
           onUngroup={onUngroup}
           onMoveShape={onMoveShape}
           onUpdateShapes={onUpdateShapes}
-          onClearSelection={onClearSelection}
         />
       </OptionalPropertySection>
     </div>

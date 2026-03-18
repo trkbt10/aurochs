@@ -23,7 +23,6 @@ export type PdfLayerPanelProps = {
   readonly pageIndex: number;
   readonly selectedElementIds: readonly PdfElementId[];
   readonly onSelect: (elementId: PdfElementId, addToSelection: boolean) => void;
-  readonly onClearSelection: () => void;
 };
 
 // =============================================================================
@@ -31,6 +30,7 @@ export type PdfLayerPanelProps = {
 // =============================================================================
 
 const ICON_PROPS = { size: iconTokens.size.sm, strokeWidth: iconTokens.strokeWidth };
+
 
 function getElementLabel(element: PdfElement, index: number): string {
   switch (element.type) {
@@ -65,7 +65,6 @@ export function PdfLayerPanel({
   pageIndex,
   selectedElementIds,
   onSelect,
-  onClearSelection,
 }: PdfLayerPanelProps) {
   const selectedSet = useMemo(() => new Set(selectedElementIds), [selectedElementIds]);
 
@@ -95,7 +94,7 @@ export function PdfLayerPanel({
 
   return (
     <OptionalPropertySection title="Layers" badge={page.elements.length} defaultExpanded>
-      <div role="tree" aria-label="Layers" onClick={onClearSelection}>
+      <div role="tree" aria-label="Layers">
         {reversedIndices.map((actualIndex) => {
           const element = page.elements[actualIndex];
           if (!element) { return null; }

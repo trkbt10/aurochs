@@ -223,7 +223,6 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
           pageIndex={state.currentPageIndex}
           selectedElementIds={state.selection.selectedIds}
           onSelect={handleSelect}
-          onClearSelection={handleClearSelection}
         />
       ),
     },

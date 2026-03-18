@@ -828,7 +828,6 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
           onUngroup={shape.handleUngroup}
           onMoveShape={shape.handleMoveShape}
           onUpdateShapes={shape.handleUpdateShapes}
-          onClearSelection={canvas.handleClearSelection}
         />
       </div>
     );
@@ -845,7 +844,6 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
     shape.handleUpdateShapes,
     canvas.handleSelect,
     canvas.handleSelectMultiple,
-    canvas.handleClearSelection,
   ]);
 
   // スライドタブ: スライド情報 + レイアウト情報
