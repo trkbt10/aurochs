@@ -20,8 +20,6 @@ import {
 /**
  * ECMA-376 Part 2 Relationship Type URIs.
  *
- * Re-exports from @aurochs-office/opc with SCREAMING_CASE aliases for backward compatibility.
- *
  * @see ECMA-376 Part 2, Annex F (Relationship Types)
  * @see ECMA-376 Part 1, Section 13 (PresentationML)
  */

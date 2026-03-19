@@ -6,4 +6,4 @@
  */
 
 // pptx-specific (BlipFill support)
-export { FillEditor, type FillEditorProps, createDefaultSolidFill, createNoFill } from "./FillEditor";
+export { FillEditor, type FillEditorProps } from "./FillEditor";

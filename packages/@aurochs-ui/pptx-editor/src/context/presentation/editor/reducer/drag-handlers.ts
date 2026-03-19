@@ -746,7 +746,7 @@ function handleEndCreateDrag(state: PresentationEditorState): PresentationEditor
  * Drag operation handlers
  */
 export const DRAG_HANDLERS: HandlerMap = {
-  // Legacy handlers (kept for backward compatibility)
+  // Direct drag handlers (skip pending/threshold phase)
   START_MOVE: handleStartMove,
   START_RESIZE: handleStartResize,
   START_ROTATE: handleStartRotate,

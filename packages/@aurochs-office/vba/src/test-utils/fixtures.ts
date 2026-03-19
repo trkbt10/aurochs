@@ -36,7 +36,7 @@ export function resolveFixture(relativePath: string): string {
 }
 
 /**
- * Common fixture paths for convenience.
+ * Common fixture paths.
  */
 export const FIXTURES = {
   SIMPLE_MACRO_XLSM: resolveFixture("SimpleMacro.xlsm"),

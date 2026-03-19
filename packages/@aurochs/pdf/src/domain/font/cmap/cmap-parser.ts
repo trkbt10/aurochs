@@ -37,7 +37,7 @@ export type CMapParseResult = {
   readonly sourceCodeByteLengths: readonly number[];
   /**
    * Legacy byte-width hint used by existing layout code.
-   * Kept as 1|2 for backward compatibility.
+   * Kept as 1|2 for existing layout code.
    */
   readonly codeByteWidth: 1 | 2;
   readonly diagnostics: CMapParseDiagnostics;

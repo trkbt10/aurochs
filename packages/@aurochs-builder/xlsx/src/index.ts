@@ -60,9 +60,6 @@ export {
 // Workbook serialization
 export { serializeWorkbook, serializeSheets, serializeDefinedNames } from "./workbook";
 
-// OPC relationship serialization (re-exported from OPC for convenience)
-export { serializeRelationships, type OpcRelationship as XlsxRelationship } from "@aurochs-office/opc";
-
 // Styles serialization
 export {
   serializeStyleSheet,

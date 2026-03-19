@@ -10,7 +10,8 @@ import type { Fill } from "@aurochs-office/pptx/domain/color/types";
 import type { EditorProps } from "@aurochs-ui/ui-components/types";
 import { FieldGroup } from "@aurochs-ui/ui-components/layout";
 import { Toggle } from "@aurochs-ui/ui-components/primitives";
-import { FillEditor, createDefaultSolidFill } from "../color";
+import { createDefaultSolidFill } from "@aurochs-ui/editor-controls/editors";
+import { FillEditor } from "../color";
 
 export type BackgroundEditorProps = EditorProps<Background> & {
   readonly style?: CSSProperties;

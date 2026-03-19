@@ -106,7 +106,7 @@ export const SPEC_DEFAULT_FONT_SIZE_HALF_POINTS = 20; // 10pt
 
 /**
  * Default font size in points.
- * Derived from SPEC_DEFAULT_FONT_SIZE_HALF_POINTS for convenience.
+ * Derived from SPEC_DEFAULT_FONT_SIZE_HALF_POINTS.
  */
 export const SPEC_DEFAULT_FONT_SIZE_PT = SPEC_DEFAULT_FONT_SIZE_HALF_POINTS / HALF_POINTS_PER_POINT; // 10pt
 

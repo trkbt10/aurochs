@@ -31,7 +31,8 @@ import type { Color } from "@aurochs-office/drawing-ml/domain/color";
 import type { Line, Fill } from "@aurochs-office/pptx/domain/color/types";
 
 import { resolveColor as resolveColorRaw } from "@aurochs-office/drawing-ml/domain/color-resolution";
-import { resolveTextFill, type ResourceResolver } from "@aurochs-office/pptx/parser/text/text-fill";
+import type { ResourceResolverFn } from "@aurochs-office/pptx/domain";
+import { resolveTextFill } from "@aurochs-office/pptx/parser/text/text-fill";
 import { resolveTextEffects } from "@aurochs-office/pptx/parser/text/text-effects";
 import { px, pt, pct } from "@aurochs-office/drawing-ml/domain/units";
 import { DEFAULT_FONT_SIZE_PT } from "@aurochs-office/pptx/domain/defaults";
@@ -197,7 +198,7 @@ type ResolveBulletConfigOptions = {
   readonly fontScheme: FontScheme | undefined;
   readonly textFontFamily: string;
   readonly autoNumberIndex: number;
-  readonly resourceResolver?: ResourceResolver;
+  readonly resourceResolver?: ResourceResolverFn;
 };
 
 function resolveBulletConfig({
@@ -572,7 +573,7 @@ type TextRunToSpanOptions = {
   readonly run: TextRun;
   readonly colorContext: ColorContext;
   readonly fontScheme: FontScheme | undefined;
-  readonly resourceResolver?: ResourceResolver;
+  readonly resourceResolver?: ResourceResolverFn;
 };
 
 function textRunToSpan({ run, colorContext, fontScheme, resourceResolver }: TextRunToSpanOptions): LayoutSpan {
@@ -657,7 +658,7 @@ type ToBulletConfigOptions = {
   readonly fontScheme: FontScheme | undefined;
   readonly textFontFamily: string;
   readonly autoNumberIndex: number;
-  readonly resourceResolver?: ResourceResolver;
+  readonly resourceResolver?: ResourceResolverFn;
 };
 
 function toBulletConfig({
@@ -742,7 +743,7 @@ type ParagraphToInputOptions = {
   readonly colorContext: ColorContext;
   readonly fontScheme: FontScheme | undefined;
   readonly autoNumberIndex: number;
-  readonly resourceResolver?: ResourceResolver;
+  readonly resourceResolver?: ResourceResolverFn;
 };
 
 function paragraphToInput({
@@ -895,7 +896,7 @@ export type ToLayoutInputOptions = {
   /** Optional render options */
   readonly renderOptions?: RenderOptions;
   /** Optional function to resolve resource IDs to data URLs (for picture bullets) */
-  readonly resourceResolver?: ResourceResolver;
+  readonly resourceResolver?: ResourceResolverFn;
 };
 
 /**

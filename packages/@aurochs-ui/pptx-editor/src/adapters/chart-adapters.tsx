@@ -9,7 +9,8 @@ import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
 import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import type { Fill, Line } from "@aurochs-office/pptx/domain/color/types";
 import { FieldGroup } from "@aurochs-ui/ui-components/layout";
-import { FillEditor, createNoFill } from "../editors/color";
+import { createNoFill } from "@aurochs-ui/editor-controls/editors";
+import { FillEditor } from "../editors/color";
 import { TextBodyEditor } from "../editors/text";
 import { LineEditor, createDefaultLine } from "../ui/line";
 

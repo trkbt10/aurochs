@@ -51,8 +51,6 @@ export type SlideFileInfo = {
 /**
  * Content type constants for PPTX files
  *
- * Re-exports from @aurochs-office/opc with SCREAMING_CASE aliases for backward compatibility.
- *
  * @see ECMA-376 Part 1, Section 13.3 (PresentationML Content Types)
  */
 export const CONTENT_TYPES = {

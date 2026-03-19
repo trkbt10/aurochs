@@ -9,8 +9,8 @@ import { useCallback, useState, type CSSProperties } from "react";
 import { Select, Toggle, Input, Button } from "@aurochs-ui/ui-components/primitives";
 import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
 import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
-import { PixelsEditor } from "@aurochs-ui/editor-controls/editors";
-import { FillEditor, createNoFill } from "../color/FillEditor";
+import { PixelsEditor, createNoFill } from "@aurochs-ui/editor-controls/editors";
+import { FillEditor } from "../color/FillEditor";
 import { LineEditor, createDefaultLine } from "../../ui/line";
 import { px, type Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import type {

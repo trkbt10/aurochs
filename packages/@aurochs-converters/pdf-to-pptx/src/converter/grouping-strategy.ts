@@ -150,7 +150,7 @@ function presetToDefaults(preset: PdfGroupingPreset): {
 /**
  * Resolve grouping strategies for PDF → PPTX conversion.
  *
- * `textGroupingFn` is retained for backward compatibility, but must not be
+ * `textGroupingFn` is retained as a shorthand, but must not be
  * specified together with `grouping.text` to avoid ambiguity.
  */
 export function resolvePdfGroupingStrategy(input: {

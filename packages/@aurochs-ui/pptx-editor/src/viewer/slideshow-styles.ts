@@ -237,22 +237,3 @@ export function getHintArrowStyle(side: "left" | "right", visible: boolean, disa
   };
 }
 
-// =============================================================================
-// Deprecated - Kept for backward compatibility during transition
-// =============================================================================
-
-/** @deprecated Use controlsTopBarStyle instead */
-export const controlsTopStyle = controlsTopBarStyle;
-
-/** @deprecated Use controlsBottomBarStyle instead */
-export const controlsProgressStyle = controlsBottomBarStyle;
-
-/** @deprecated Use getControlsWrapperStyle instead */
-export function getControlsStyle(visible: boolean): CSSProperties {
-  return getControlsWrapperStyle(visible);
-}
-
-/** @deprecated Navigation buttons removed - use click zones instead */
-export function getNavButtonStyle(_direction: "prev" | "next", _disabled: boolean): CSSProperties {
-  return { display: "none" };
-}

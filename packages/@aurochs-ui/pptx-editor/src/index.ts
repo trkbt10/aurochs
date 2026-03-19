@@ -37,8 +37,6 @@ export { LineEditor, createDefaultLine, type LineEditorProps } from "./ui/line";
 export {
   // Color (pptx-specific FillEditor with BlipFill)
   FillEditor,
-  createDefaultSolidFill,
-  createNoFill,
   type FillEditorProps,
   // Text
   RunPropertiesEditor,

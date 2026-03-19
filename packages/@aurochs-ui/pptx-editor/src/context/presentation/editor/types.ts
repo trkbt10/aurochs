@@ -212,7 +212,7 @@ export type PresentationEditorAction =
   | { readonly type: "CONFIRM_RESIZE" }
   | { readonly type: "CONFIRM_ROTATE" }
 
-  // Legacy drag operations (kept for backward compatibility, will be removed)
+  // Direct drag operations (skip pending/threshold phase)
   | { readonly type: "START_MOVE"; readonly startX: Pixels; readonly startY: Pixels }
   | {
       readonly type: "START_RESIZE";

@@ -345,7 +345,7 @@ export const inspectorTokens = {
 } as const;
 
 /**
- * Combined tokens object for convenience
+ * Combined tokens object
  */
 export const tokens = {
   color: colorTokens,

@@ -3,7 +3,7 @@
  */
 
 import type { CSSProperties } from "react";
-import { BaseFillEditor, createDefaultSolidFill, createNoFill } from "@aurochs-ui/editor-controls/editors";
+import { BaseFillEditor } from "@aurochs-ui/editor-controls/editors";
 import type { Fill } from "@aurochs-office/pptx/domain/color/types";
 import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
 import type { EditorProps } from "@aurochs-ui/ui-components/types";
@@ -46,5 +46,3 @@ export function FillEditor({ value, onChange, disabled, className, style, allowe
   );
 }
 
-// Re-export factory functions for backward compatibility
-export { createDefaultSolidFill, createNoFill };

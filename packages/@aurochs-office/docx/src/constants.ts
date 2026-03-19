@@ -16,7 +16,7 @@ import {
 } from "@aurochs-office/opc";
 
 // =============================================================================
-// XML Namespaces (re-exports from OPC for backward compatibility)
+// XML Namespaces
 // =============================================================================
 
 /**
@@ -69,9 +69,7 @@ export const NS_CONTENT_TYPES = OPC_NAMESPACES.contentTypes;
 export const NS_PACKAGE_RELATIONSHIPS = OPC_NAMESPACES.relationships;
 
 /**
- * VML namespace (v:) for legacy compatibility.
- *
- * Used for backward compatibility with older documents.
+ * VML namespace (v:) for legacy document support.
  */
 export const NS_VML = VML_NAMESPACES.vml;
 

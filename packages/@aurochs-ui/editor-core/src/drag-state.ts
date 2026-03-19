@@ -8,7 +8,7 @@
 
 import type { ResizeHandlePosition, SimpleBounds } from "./geometry/types";
 
-// Re-export for convenience
+// Re-export from geometry types
 export type { ResizeHandlePosition } from "./geometry/types";
 
 // =============================================================================

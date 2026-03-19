@@ -9,8 +9,6 @@
 // Color editors (pptx-specific: FillEditor with BlipFill support)
 export {
   FillEditor,
-  createDefaultSolidFill,
-  createNoFill,
   type FillEditorProps,
 } from "./color";
 

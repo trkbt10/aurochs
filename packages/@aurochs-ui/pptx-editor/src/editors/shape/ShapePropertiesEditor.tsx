@@ -7,8 +7,8 @@
  */
 
 import { Toggle } from "@aurochs-ui/ui-components/primitives";
-import { TransformEditor, createDefaultTransform } from "@aurochs-ui/editor-controls/editors";
-import { FillEditor, createNoFill } from "../color/FillEditor";
+import { TransformEditor, createDefaultTransform, createNoFill } from "@aurochs-ui/editor-controls/editors";
+import { FillEditor } from "../color/FillEditor";
 import { LineEditor, createDefaultLine } from "../../ui/line";
 import { GeometryEditor, createDefaultGeometry } from "./GeometryEditor";
 import { EffectsEditor, createDefaultEffects } from "./EffectsEditor";

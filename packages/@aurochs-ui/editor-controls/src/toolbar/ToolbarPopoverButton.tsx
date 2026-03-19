@@ -119,6 +119,6 @@ export function ToolbarPopoverButton({
   );
 }
 
-/** Re-export icon constants for convenience (trigger icon sizing). */
+/** Icon constants for popover trigger sizing. */
 export const POPOVER_ICON_SIZE = TOOLBAR_BUTTON_ICON_SIZE.sm.icon;
 export const POPOVER_STROKE_WIDTH = iconTokens.strokeWidth;

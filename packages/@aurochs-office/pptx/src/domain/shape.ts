@@ -19,7 +19,7 @@ import type { FontCollectionIndex, StyleMatrixColumnIndex, ShapeId } from "./sty
 import type { Scene3d, Shape3d } from "./three-d";
 import type { Geometry } from "@aurochs-office/drawing-ml/domain/geometry";
 
-// Re-export geometry types from DrawingML for backward compatibility
+// DrawingML geometry types used by PPTX shapes
 export type {
   PresetShapeType,
   AdjustValue,

@@ -73,7 +73,7 @@ function toUint8Array(content: ArrayBuffer | Uint8Array): Uint8Array {
 /**
  * Load a ZIP package from a buffer.
  *
- * Kept async for backward compatibility with the former JSZip implementation.
+ * Async API — kept for compatibility with callers that await the result.
  */
 export async function loadZipPackage(
   buffer: ArrayBuffer | Uint8Array,

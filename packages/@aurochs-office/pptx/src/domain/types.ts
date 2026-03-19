@@ -50,7 +50,7 @@ export const rId = (value: string): RelationshipId => value as RelationshipId;
 export const hexColor = (value: string): HexColor => value as HexColor;
 
 // =============================================================================
-// Re-exports for backward compatibility
+// Domain type re-exports
 // =============================================================================
 
 // Geometry types

@@ -365,7 +365,7 @@ function renderLineToSvg(
         styleAttrs.push(`fill="#000000"`);
       }
     } else {
-      // Fall back to span.color for backward compatibility
+      // Fall back to span.color
       styleAttrs.push(`fill="${span.color}"`);
     }
 

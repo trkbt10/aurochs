@@ -10,9 +10,6 @@ import type { Geometry, CustomGeometry, GeometryPath } from "@aurochs-office/dra
 import { renderGeometryPathData, scaleCommand } from "./path-commands";
 import { renderPresetGeometryData } from "./preset-shapes";
 
-// Re-export for convenience
-export { renderPresetGeometryData };
-
 /**
  * Render custom geometry to SVG path data with scaling.
  *

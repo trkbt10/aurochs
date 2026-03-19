@@ -14,16 +14,6 @@ import type { ResourceResolverFn } from "../../domain/index";
 import { resolveColor } from "@aurochs-office/drawing-ml/domain/color-resolution";
 
 // =============================================================================
-// Resource Resolver Type (re-exported from domain)
-// =============================================================================
-
-/**
- * Resource resolver function for converting resource IDs to URLs.
- * Re-exported from domain for backward compatibility.
- */
-export type ResourceResolver = ResourceResolverFn;
-
-// =============================================================================
 // Resolution Functions
 // =============================================================================
 
@@ -86,7 +76,7 @@ function computeTileScale(
 export function resolveTextFill(
   fill: Fill | undefined,
   colorContext: ColorContext,
-  resourceResolver?: ResourceResolver,
+  resourceResolver?: ResourceResolverFn,
 ): TextFillConfig | undefined {
   if (fill === undefined) {
     return undefined;

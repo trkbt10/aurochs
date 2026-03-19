@@ -387,7 +387,7 @@ export function createGuideContext(
   context.set("5cd8", 13500000); // 225 degrees
   context.set("7cd8", 18900000); // 315 degrees
 
-  // Left, top, right, bottom for convenience
+  // Left, top, right, bottom bounds
   context.set("l", 0);
   context.set("t", 0);
   context.set("r", width);

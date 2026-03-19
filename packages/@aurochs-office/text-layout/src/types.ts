@@ -15,7 +15,7 @@
 import type { Pixels, Points, Percent } from "@aurochs-office/drawing-ml/domain/units";
 import type { WritingMode as WritingModeType } from "./writing-mode";
 
-// Re-export writing mode types for convenience
+// Writing mode types
 export type {
   WritingMode,
   DirectionalCoords,

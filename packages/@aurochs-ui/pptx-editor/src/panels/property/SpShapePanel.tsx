@@ -14,9 +14,8 @@ import {
   GeometryEditor,
   createDefaultGeometry,
   createDefaultEffects,
-  createDefaultSolidFill,
 } from "../../editors/index";
-import { TransformEditor, createDefaultTransform } from "@aurochs-ui/editor-controls/editors";
+import { TransformEditor, createDefaultTransform, createDefaultSolidFill } from "@aurochs-ui/editor-controls/editors";
 import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 
 // =============================================================================
