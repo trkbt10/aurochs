@@ -37,6 +37,11 @@ export {
   type ColorTransformEditorProps,
   type ColorEditorProps,
   type BaseFillEditorProps,
+  type FillTypeExtension,
+  type ExtensionRenderProps,
   type GradientStopEditorProps,
   type GradientStopsEditorProps,
+  schemeColorNameOptions,
+  schemeColorValueOptions,
+  patternPresetOptions,
 } from "./color";

@@ -21,6 +21,7 @@ import type {
 } from "@aurochs-office/drawing-ml/domain/color";
 import type { SolidFill } from "@aurochs-office/drawing-ml/domain/fill";
 import type { EditorProps, SelectOption } from "@aurochs-ui/ui-components/types";
+import { schemeColorValueOptions } from "./color-options";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
 import { resolveColor } from "@aurochs-office/drawing-ml/domain/color-resolution";
 import { useEditorConfig } from "../../editor-config";
@@ -41,25 +42,7 @@ const colorModeOptions: SelectOption<ColorSpecType>[] = [
   { value: "system", label: "System" },
 ];
 
-const schemeColorOptions: SelectOption[] = [
-  { value: "dk1", label: "Dark 1" },
-  { value: "lt1", label: "Light 1" },
-  { value: "dk2", label: "Dark 2" },
-  { value: "lt2", label: "Light 2" },
-  { value: "accent1", label: "Accent 1" },
-  { value: "accent2", label: "Accent 2" },
-  { value: "accent3", label: "Accent 3" },
-  { value: "accent4", label: "Accent 4" },
-  { value: "accent5", label: "Accent 5" },
-  { value: "accent6", label: "Accent 6" },
-  { value: "hlink", label: "Hyperlink" },
-  { value: "folHlink", label: "Followed Link" },
-  { value: "bg1", label: "Background 1" },
-  { value: "bg2", label: "Background 2" },
-  { value: "tx1", label: "Text 1" },
-  { value: "tx2", label: "Text 2" },
-  { value: "phClr", label: "Placeholder" },
-];
+const schemeColorOptions = schemeColorValueOptions;
 
 const containerStyle: CSSProperties = {
   display: "flex",

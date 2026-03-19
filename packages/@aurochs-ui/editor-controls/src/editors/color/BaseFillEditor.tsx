@@ -1,26 +1,48 @@
 /**
  * @file BaseFillEditor - Editor for BaseFill types (noFill, solidFill, gradientFill, patternFill)
  *
- * Format-agnostic fill editor without image/blipFill support.
- * For image fills, use the format-specific FillEditor (e.g., pptx-editor's FillEditor).
+ * Format-agnostic fill editor. Supports extension via FillTypeExtension for
+ * format-specific fill types (e.g., blipFill in PPTX).
  */
 
-import { useCallback, type CSSProperties } from "react";
+import { useCallback, type CSSProperties, type ReactNode } from "react";
 import { Select } from "@aurochs-ui/ui-components/primitives";
 import { FieldRow } from "@aurochs-ui/ui-components/layout";
 import { FillPickerPopover, ColorPickerPopover } from "@aurochs-ui/color-editor";
-import type { BaseFill, SolidFill, GradientFill, PatternFill, PatternType, LinearGradient, NoFill } from "@aurochs-office/drawing-ml/domain/fill";
-import { PATTERN_PRESETS } from "@aurochs-office/drawing-ml/domain/fill";
+import type { BaseFill, SolidFill, GradientFill, PatternFill, LinearGradient, NoFill } from "@aurochs-office/drawing-ml/domain/fill";
 import { deg } from "@aurochs-office/drawing-ml/domain/units";
 import type { EditorProps, SelectOption } from "@aurochs-ui/ui-components/types";
 import { colorTokens, fontTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { createDefaultColor } from "./ColorEditor";
 import { GradientStopsEditor, createDefaultGradientStops } from "./GradientStopsEditor";
 import { DegreesEditor } from "../primitives/DegreesEditor";
+import { patternPresetOptions } from "./color-options";
 
 // =============================================================================
 // Types
 // =============================================================================
+
+/** Props passed to FillTypeExtension.renderEditor */
+export type ExtensionRenderProps = {
+  readonly value: BaseFill;
+  readonly onChange: (fill: BaseFill) => void;
+  readonly onTypeChange: (type: string) => void;
+  readonly fillTypeOptions: SelectOption<string>[];
+  readonly disabled?: boolean;
+  readonly className?: string;
+  readonly style?: CSSProperties;
+};
+
+/**
+ * Extension descriptor for custom fill types (e.g., blipFill).
+ * Allows format-specific editors to add fill types to BaseFillEditor via composition.
+ */
+export type FillTypeExtension = {
+  readonly typeOption: SelectOption<string>;
+  readonly createDefault: () => BaseFill;
+  readonly renderEditor: (props: ExtensionRenderProps) => ReactNode;
+  readonly renderCompactPreview?: (props: { value: BaseFill; disabled?: boolean }) => ReactNode;
+};
 
 export type BaseFillEditorProps = EditorProps<BaseFill> & {
   readonly style?: CSSProperties;
@@ -28,6 +50,8 @@ export type BaseFillEditorProps = EditorProps<BaseFill> & {
   readonly allowedTypes?: readonly BaseFill["type"][];
   /** Compact mode: single swatch with popover */
   readonly compact?: boolean;
+  /** Custom fill type extensions (e.g., blipFill for PPTX) */
+  readonly extensions?: readonly FillTypeExtension[];
 };
 
 type FillType = BaseFill["type"];
@@ -36,80 +60,24 @@ type FillType = BaseFill["type"];
 // Options
 // =============================================================================
 
-const allFillTypeOptions: SelectOption<FillType>[] = [
+const baseFillTypeOptions: SelectOption<FillType>[] = [
   { value: "noFill", label: "None" },
   { value: "solidFill", label: "Solid" },
   { value: "gradientFill", label: "Gradient" },
   { value: "patternFill", label: "Pattern" },
 ];
 
-const PATTERN_LABELS: Record<PatternType, string> = {
-  pct5: "5%",
-  pct10: "10%",
-  pct20: "20%",
-  pct25: "25%",
-  pct30: "30%",
-  pct40: "40%",
-  pct50: "50%",
-  pct60: "60%",
-  pct70: "70%",
-  pct75: "75%",
-  pct80: "80%",
-  pct90: "90%",
-  horz: "Horizontal",
-  vert: "Vertical",
-  ltHorz: "Light Horz",
-  ltVert: "Light Vert",
-  dkHorz: "Dark Horz",
-  dkVert: "Dark Vert",
-  narHorz: "Narrow Horz",
-  narVert: "Narrow Vert",
-  dashHorz: "Dash Horz",
-  dashVert: "Dash Vert",
-  cross: "Cross",
-  dnDiag: "Down Diag",
-  upDiag: "Up Diag",
-  ltDnDiag: "Lt Down Diag",
-  ltUpDiag: "Lt Up Diag",
-  dkDnDiag: "Dk Down Diag",
-  dkUpDiag: "Dk Up Diag",
-  wdDnDiag: "Wide Down Diag",
-  wdUpDiag: "Wide Up Diag",
-  dashDnDiag: "Dash Down Diag",
-  dashUpDiag: "Dash Up Diag",
-  diagCross: "Diag Cross",
-  smCheck: "Sm Check",
-  lgCheck: "Lg Check",
-  smGrid: "Sm Grid",
-  lgGrid: "Lg Grid",
-  dotGrid: "Dot Grid",
-  smConfetti: "Sm Confetti",
-  lgConfetti: "Lg Confetti",
-  horzBrick: "Horz Brick",
-  diagBrick: "Diag Brick",
-  solidDmnd: "Solid Diamond",
-  openDmnd: "Open Diamond",
-  dotDmnd: "Dot Diamond",
-  plaid: "Plaid",
-  sphere: "Sphere",
-  weave: "Weave",
-  divot: "Divot",
-  shingle: "Shingle",
-  wave: "Wave",
-  trellis: "Trellis",
-  zigZag: "Zig Zag",
-};
-
-const patternPresetOptions: SelectOption<PatternType>[] = PATTERN_PRESETS.map((preset) => ({
-  value: preset,
-  label: PATTERN_LABELS[preset],
-}));
-
 // =============================================================================
 // Utilities
 // =============================================================================
 
-function createDefaultFill(type: FillType): BaseFill {
+function createDefaultFill(type: FillType, extensions?: readonly FillTypeExtension[]): BaseFill {
+  // Check extensions first
+  const ext = extensions?.find((e) => e.typeOption.value === type);
+  if (ext) {
+    return ext.createDefault();
+  }
+
   switch (type) {
     case "noFill":
       return { type: "noFill" };
@@ -136,11 +104,22 @@ function createDefaultFill(type: FillType): BaseFill {
   }
 }
 
-function getFilteredFillOptions(allowedTypes?: readonly BaseFill["type"][]): SelectOption<FillType>[] {
-  if (!allowedTypes) {
-    return allFillTypeOptions;
+function getAllFillTypeOptions(extensions?: readonly FillTypeExtension[]): SelectOption<string>[] {
+  if (!extensions || extensions.length === 0) {
+    return baseFillTypeOptions;
   }
-  return allFillTypeOptions.filter((opt) => allowedTypes.includes(opt.value));
+  return [...baseFillTypeOptions, ...extensions.map((e) => e.typeOption)];
+}
+
+function getFilteredFillOptions(
+  allowedTypes: readonly BaseFill["type"][] | undefined,
+  extensions?: readonly FillTypeExtension[],
+): SelectOption<string>[] {
+  const all = getAllFillTypeOptions(extensions);
+  if (!allowedTypes) {
+    return all;
+  }
+  return all.filter((opt) => allowedTypes.includes(opt.value as FillType));
 }
 
 // =============================================================================
@@ -180,19 +159,25 @@ export function BaseFillEditor({
   style,
   allowedTypes,
   compact = false,
+  extensions,
 }: BaseFillEditorProps) {
-  const fillTypeOptions = getFilteredFillOptions(allowedTypes);
+  const fillTypeOptions = getFilteredFillOptions(allowedTypes, extensions);
 
   // Compact mode: single popover
   if (compact) {
+    // Check if an extension handles compact preview for this fill type
+    const ext = extensions?.find((e) => e.typeOption.value === value.type);
+    if (ext?.renderCompactPreview) {
+      return <>{ext.renderCompactPreview({ value, disabled })}</>;
+    }
     return <FillPickerPopover value={value} onChange={onChange} disabled={disabled} />;
   }
 
   const handleTypeChange = useCallback(
     (newType: string) => {
-      onChange(createDefaultFill(newType as FillType));
+      onChange(createDefaultFill(newType as FillType, extensions));
     },
-    [onChange],
+    [onChange, extensions],
   );
 
   // No Fill
@@ -314,7 +299,25 @@ export function BaseFillEditor({
     );
   }
 
-  // Fallback
+  // Extension types
+  const matchedExtension = extensions?.find((ext) => ext.typeOption.value === value.type);
+  if (matchedExtension) {
+    return (
+      <>
+        {matchedExtension.renderEditor({
+          value,
+          onChange,
+          onTypeChange: handleTypeChange,
+          fillTypeOptions,
+          disabled,
+          className,
+          style,
+        })}
+      </>
+    );
+  }
+
+  // Fallback (groupFill, unknown)
   return (
     <div className={className} style={style}>
       <Select

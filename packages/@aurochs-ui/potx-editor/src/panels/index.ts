@@ -37,4 +37,3 @@ export type {
   ThemeFontScheme,
   ThemePreset,
 } from "./types";
-export { COLOR_LABELS, COLOR_SCHEME_KEYS } from "./types";

@@ -44,8 +44,6 @@ export {
   extractThemeFromPptx,
   exportThemeAsPotx,
   getThemeFileName,
-  COLOR_LABELS,
-  COLOR_SCHEME_KEYS,
 } from "./panels";
 export type {
   ColorSchemeEditorProps,

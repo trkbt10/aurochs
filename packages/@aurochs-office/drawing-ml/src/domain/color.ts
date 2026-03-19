@@ -55,6 +55,49 @@ export type SchemeColorValue =
   | "tx2"
   | "phClr";
 
+/**
+ * Standard color scheme names in display order.
+ * Order matches Office theme editor: base (dk1, lt1, dk2, lt2), accents (1-6), links.
+ * @see ECMA-376 Part 1, Section 20.1.6.2 (CT_ColorScheme)
+ */
+export const SCHEME_COLOR_NAMES: readonly SchemeColorName[] = [
+  "dk1", "lt1", "dk2", "lt2",
+  "accent1", "accent2", "accent3", "accent4", "accent5", "accent6",
+  "hlink", "folHlink",
+] as const;
+
+/**
+ * Human-readable labels for scheme color names (12 theme color slots).
+ * @see ECMA-376 Part 1, Section 20.1.6.2 (CT_ColorScheme)
+ */
+export const SCHEME_COLOR_NAME_LABELS = {
+  dk1: "Dark 1",
+  lt1: "Light 1",
+  dk2: "Dark 2",
+  lt2: "Light 2",
+  accent1: "Accent 1",
+  accent2: "Accent 2",
+  accent3: "Accent 3",
+  accent4: "Accent 4",
+  accent5: "Accent 5",
+  accent6: "Accent 6",
+  hlink: "Hyperlink",
+  folHlink: "Followed Link",
+} as const satisfies Record<SchemeColorName, string>;
+
+/**
+ * Human-readable labels for all scheme color values (17 values including map refs and placeholder).
+ * @see ECMA-376 Part 1, Section 20.1.10.54 (ST_SchemeColorVal)
+ */
+export const SCHEME_COLOR_VALUE_LABELS = {
+  ...SCHEME_COLOR_NAME_LABELS,
+  bg1: "Background 1",
+  bg2: "Background 2",
+  tx1: "Text 1",
+  tx2: "Text 2",
+  phClr: "Placeholder",
+} as const satisfies Record<SchemeColorValue, string>;
+
 // =============================================================================
 // Color Types
 // =============================================================================

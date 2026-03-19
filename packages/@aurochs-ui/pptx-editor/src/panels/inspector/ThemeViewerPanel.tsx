@@ -7,6 +7,7 @@
 
 import type { CSSProperties } from "react";
 import type { ColorContext, ColorScheme } from "@aurochs-office/drawing-ml/domain/color-context";
+import { SCHEME_COLOR_NAMES, SCHEME_COLOR_NAME_LABELS } from "@aurochs-office/drawing-ml/domain/color";
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
 import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { colorTokens, fontTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
@@ -87,37 +88,6 @@ const emptyStateStyle: CSSProperties = {
   fontSize: fontTokens.size.sm,
 };
 
-/** Standard color scheme keys in display order */
-const COLOR_SCHEME_KEYS = [
-  "dk1",
-  "lt1",
-  "dk2",
-  "lt2",
-  "accent1",
-  "accent2",
-  "accent3",
-  "accent4",
-  "accent5",
-  "accent6",
-  "hlink",
-  "folHlink",
-] as const;
-
-/** Human-readable labels for color scheme keys */
-const COLOR_LABELS: Record<string, string> = {
-  dk1: "Dark 1",
-  lt1: "Light 1",
-  dk2: "Dark 2",
-  lt2: "Light 2",
-  accent1: "Accent 1",
-  accent2: "Accent 2",
-  accent3: "Accent 3",
-  accent4: "Accent 4",
-  accent5: "Accent 5",
-  accent6: "Accent 6",
-  hlink: "Hyperlink",
-  folHlink: "Followed",
-};
 
 /**
  * Normalize color value to CSS format with # prefix.
@@ -137,7 +107,7 @@ function ColorSwatch({ colorKey, color }: { colorKey: string; color: string }) {
   return (
     <div style={colorSwatchStyle}>
       <div style={{ ...swatchBoxStyle, backgroundColor: cssColor }} title={`${colorKey}: ${color}`} />
-      <div style={colorLabelStyle}>{COLOR_LABELS[colorKey] ?? colorKey}</div>
+      <div style={colorLabelStyle}>{SCHEME_COLOR_NAME_LABELS[colorKey as keyof typeof SCHEME_COLOR_NAME_LABELS] ?? colorKey}</div>
       <div style={colorValueStyle}>{color.toUpperCase()}</div>
     </div>
   );
@@ -147,7 +117,7 @@ function ColorSwatch({ colorKey, color }: { colorKey: string; color: string }) {
  * Render the color scheme grid.
  */
 function ColorSchemeSection({ colorScheme }: { colorScheme: ColorScheme }) {
-  const colors = COLOR_SCHEME_KEYS.filter((key) => colorScheme[key]).map((key) => ({
+  const colors = SCHEME_COLOR_NAMES.filter((key) => colorScheme[key]).map((key) => ({
     key,
     color: colorScheme[key],
   }));

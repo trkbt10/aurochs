@@ -121,6 +121,67 @@ export const PATTERN_PRESETS = [
 export type PatternType = typeof PATTERN_PRESETS[number];
 
 /**
+ * Human-readable labels for pattern presets.
+ * @see ECMA-376 Part 1, Section 20.1.10.50 (ST_PresetPatternVal)
+ */
+export const PATTERN_LABELS = {
+  pct5: "5%",
+  pct10: "10%",
+  pct20: "20%",
+  pct25: "25%",
+  pct30: "30%",
+  pct40: "40%",
+  pct50: "50%",
+  pct60: "60%",
+  pct70: "70%",
+  pct75: "75%",
+  pct80: "80%",
+  pct90: "90%",
+  horz: "Horizontal",
+  vert: "Vertical",
+  ltHorz: "Light Horz",
+  ltVert: "Light Vert",
+  dkHorz: "Dark Horz",
+  dkVert: "Dark Vert",
+  narHorz: "Narrow Horz",
+  narVert: "Narrow Vert",
+  dashHorz: "Dash Horz",
+  dashVert: "Dash Vert",
+  cross: "Cross",
+  dnDiag: "Down Diag",
+  upDiag: "Up Diag",
+  ltDnDiag: "Lt Down Diag",
+  ltUpDiag: "Lt Up Diag",
+  dkDnDiag: "Dk Down Diag",
+  dkUpDiag: "Dk Up Diag",
+  wdDnDiag: "Wide Down Diag",
+  wdUpDiag: "Wide Up Diag",
+  dashDnDiag: "Dash Down Diag",
+  dashUpDiag: "Dash Up Diag",
+  diagCross: "Diag Cross",
+  smCheck: "Sm Check",
+  lgCheck: "Lg Check",
+  smGrid: "Sm Grid",
+  lgGrid: "Lg Grid",
+  dotGrid: "Dot Grid",
+  smConfetti: "Sm Confetti",
+  lgConfetti: "Lg Confetti",
+  horzBrick: "Horz Brick",
+  diagBrick: "Diag Brick",
+  solidDmnd: "Solid Diamond",
+  openDmnd: "Open Diamond",
+  dotDmnd: "Dot Diamond",
+  plaid: "Plaid",
+  sphere: "Sphere",
+  weave: "Weave",
+  divot: "Divot",
+  shingle: "Shingle",
+  wave: "Wave",
+  trellis: "Trellis",
+  zigZag: "Zig Zag",
+} as const satisfies Record<PatternType, string>;
+
+/**
  * Pattern fill
  * @see ECMA-376 Part 1, Section 20.1.8.47 (pattFill)
  */

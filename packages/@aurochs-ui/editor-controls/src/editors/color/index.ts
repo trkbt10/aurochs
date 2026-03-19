@@ -5,7 +5,14 @@
 export { ColorSpecEditor, type ColorSpecEditorProps, createDefaultSrgbColor } from "./ColorSpecEditor";
 export { ColorTransformEditor, type ColorTransformEditorProps } from "./ColorTransformEditor";
 export { ColorEditor, type ColorEditorProps, createDefaultColor } from "./ColorEditor";
-export { BaseFillEditor, type BaseFillEditorProps, createDefaultSolidFill, createNoFill } from "./BaseFillEditor";
+export {
+  BaseFillEditor,
+  type BaseFillEditorProps,
+  type FillTypeExtension,
+  type ExtensionRenderProps,
+  createDefaultSolidFill,
+  createNoFill,
+} from "./BaseFillEditor";
 export {
   GradientStopEditor,
   type GradientStopEditorProps,
@@ -16,3 +23,4 @@ export {
   type GradientStopsEditorProps,
   createDefaultGradientStops,
 } from "./GradientStopsEditor";
+export { schemeColorNameOptions, schemeColorValueOptions, patternPresetOptions } from "./color-options";

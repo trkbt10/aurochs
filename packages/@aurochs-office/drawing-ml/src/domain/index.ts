@@ -22,6 +22,11 @@ export type {
   ColorTransform,
   Color,
 } from "./color";
+export {
+  SCHEME_COLOR_NAMES,
+  SCHEME_COLOR_NAME_LABELS,
+  SCHEME_COLOR_VALUE_LABELS,
+} from "./color";
 
 // Color context types
 export type { ColorScheme, ColorMap, ColorContext, ColorResolveContext } from "./color-context";
@@ -48,7 +53,7 @@ export type {
   BlipFill,
   BaseFill,
 } from "./fill";
-export { PATTERN_PRESETS } from "./fill";
+export { PATTERN_PRESETS, PATTERN_LABELS } from "./fill";
 
 // Line types
 export type { LineEnd, CustomDash, LineCap, CompoundLine, LineJoin, BaseLine } from "./line";

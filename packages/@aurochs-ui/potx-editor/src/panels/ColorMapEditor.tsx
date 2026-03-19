@@ -11,8 +11,8 @@ import { Select } from "@aurochs-ui/ui-components/primitives";
 import { FieldGroup } from "@aurochs-ui/ui-components/layout";
 import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import type { ColorMapping } from "@aurochs-office/pptx/domain/color/types";
-import type { SelectOption } from "@aurochs-ui/ui-components/types";
 import { spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
+import { schemeColorNameOptions } from "@aurochs-ui/editor-controls/editors";
 
 // =============================================================================
 // Types
@@ -43,20 +43,7 @@ const COLOR_MAP_SLOTS: readonly { key: keyof ColorMapping; label: string }[] = [
   { key: "folHlink", label: "Followed Link" },
 ];
 
-const schemeColorOptions: SelectOption[] = [
-  { value: "dk1", label: "Dark 1" },
-  { value: "lt1", label: "Light 1" },
-  { value: "dk2", label: "Dark 2" },
-  { value: "lt2", label: "Light 2" },
-  { value: "accent1", label: "Accent 1" },
-  { value: "accent2", label: "Accent 2" },
-  { value: "accent3", label: "Accent 3" },
-  { value: "accent4", label: "Accent 4" },
-  { value: "accent5", label: "Accent 5" },
-  { value: "accent6", label: "Accent 6" },
-  { value: "hlink", label: "Hyperlink" },
-  { value: "folHlink", label: "Followed" },
-];
+const schemeColorOptions = schemeColorNameOptions;
 
 /** Default color map per ECMA-376 convention */
 export const DEFAULT_COLOR_MAPPING: ColorMapping = {

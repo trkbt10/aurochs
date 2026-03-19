@@ -13,6 +13,7 @@
 import React, { useCallback, useMemo, type CSSProperties } from "react";
 import type { ColorScheme } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { SchemeColorName } from "@aurochs-office/drawing-ml/domain/color";
+import { SCHEME_COLOR_NAMES, SCHEME_COLOR_NAME_LABELS } from "@aurochs-office/drawing-ml/domain/color";
 import { ColorPickerPopover } from "@aurochs-ui/color-editor";
 import {
   OptionalPropertySection,
@@ -21,7 +22,6 @@ import {
   type EditablePropertyListItem,
 } from "@aurochs-ui/editor-controls/ui";
 import { colorTokens, fontTokens, spacingTokens, radiusTokens } from "@aurochs-ui/ui-components/design-tokens";
-import { COLOR_LABELS, COLOR_SCHEME_KEYS } from "./types";
 
 // =============================================================================
 // Types
@@ -68,15 +68,15 @@ const swatchStyle: CSSProperties = {
 // Helpers
 // =============================================================================
 
-const STANDARD_KEYS = new Set<string>(COLOR_SCHEME_KEYS);
+const STANDARD_KEYS = new Set<string>(SCHEME_COLOR_NAMES);
 
 function normalizeColor(color: string): string {
   return color.startsWith("#") ? color.slice(1) : color;
 }
 
 function getLabel(key: string): string {
-  if (key in COLOR_LABELS) {
-    return COLOR_LABELS[key as SchemeColorName];
+  if (key in SCHEME_COLOR_NAME_LABELS) {
+    return SCHEME_COLOR_NAME_LABELS[key as SchemeColorName];
   }
   return key;
 }
@@ -87,7 +87,7 @@ function getLabel(key: string): string {
  */
 function buildListItems(colorScheme: ColorScheme): readonly EditablePropertyListItem[] {
   const items: EditablePropertyListItem[] = [];
-  for (const key of COLOR_SCHEME_KEYS) {
+  for (const key of SCHEME_COLOR_NAMES) {
     if (key in colorScheme) {
       items.push({ key, label: getLabel(key), renamable: true });
     }
