@@ -89,7 +89,3 @@ export type {
   VerticalAlignment,
 } from "./alignment";
 
-// =============================================================================
-// Render
-// =============================================================================
-export { getFillColor, getStrokeColor, getStrokeWidth } from "./render";

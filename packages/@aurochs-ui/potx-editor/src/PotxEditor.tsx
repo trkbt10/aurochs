@@ -54,13 +54,11 @@ import {
   useLayoutThumbnails,
   loadLayoutWithContext,
   TransitionEditor,
+  getCursorForCreationMode,
 } from "@aurochs-ui/ooxml-components";
 import type { CreationMode } from "@aurochs-ui/ooxml-components";
-import { pptxTransformResolver } from "@aurochs-ui/ooxml-components/pptx-transform";
 import type { SlideTransition } from "@aurochs-office/pptx/domain/transition";
-import { collectShapeRenderData } from "@aurochs-ui/editor-controls/shape-editor";
-import type { RenderDataResolver } from "@aurochs-ui/editor-controls/shape-editor";
-import { isShapeHidden } from "@aurochs-renderer/pptx/svg";
+import { collectPptxShapeRenderData } from "@aurochs-ui/ooxml-components/pptx-render-resolver";
 import type { ZoomMode } from "@aurochs-ui/editor-controls/zoom";
 import type { ViewportTransform } from "@aurochs-ui/editor-core/viewport";
 import { INITIAL_VIEWPORT } from "@aurochs-ui/editor-core/viewport";
@@ -111,11 +109,6 @@ function renderShapePanel(shape: Shape | undefined, onShapeChange: (id: ShapeId,
   return <NoShapeSelected />;
 }
 
-function getCursorForMode(creationMode: CreationMode, isInteracting: boolean): string {
-  if (isInteracting) {return "grabbing";}
-  if (creationMode.type !== "select") {return "crosshair";}
-  return "default";
-}
 
 // =============================================================================
 // Context Menu Items
@@ -127,26 +120,6 @@ function buildContextMenuItems(hasSelection: boolean): readonly MenuEntry[] {
     { id: "delete", label: "Delete", shortcut: "⌫", danger: true },
   ];
 }
-
-// =============================================================================
-// PPTX Render Resolver
-// =============================================================================
-
-function getFillColor(shape: Shape): string | undefined {
-  if (!("properties" in shape)) {return undefined;}
-  const fill = shape.properties.fill;
-  if (!fill || fill.type !== "solidFill") {return "#cccccc";}
-  if (fill.color.spec.type === "srgb") {return `#${fill.color.spec.value}`;}
-  return "#cccccc";
-}
-
-const pptxRenderResolver: RenderDataResolver = {
-  ...pptxTransformResolver,
-  isHidden: (shape) => isShapeHidden(shape as Shape),
-  getFillColor: (shape) => getFillColor(shape as Shape),
-  getStrokeColor: () => undefined,
-  getStrokeWidth: () => 1,
-};
 
 // =============================================================================
 // Theme Name Section
@@ -204,7 +177,7 @@ export function PotxEditor({ presentationFile, slideSize, className }: PotxEdito
   // Shape render data for EditorCanvas hit testing
   const shapeRenderData = useMemo(() => {
     if (layoutEdit.layoutShapes.length === 0) {return [];}
-    return collectShapeRenderData(layoutEdit.layoutShapes, pptxRenderResolver);
+    return collectPptxShapeRenderData(layoutEdit.layoutShapes as readonly Shape[]);
   }, [layoutEdit.layoutShapes]);
 
   // Creation mode
@@ -587,7 +560,7 @@ export function PotxEditor({ presentationFile, slideSize, className }: PotxEdito
 
   const enableMarquee = creationMode.type === "select" && !isTextEditing;
   const isInteracting = layoutEdit.layoutDrag.type !== "idle";
-  const canvasCursor = getCursorForMode(creationMode, isInteracting);
+  const canvasCursor = getCursorForCreationMode(creationMode, isInteracting);
 
   // Floating toolbar (matches pptx-editor placement via CanvasArea)
   const floatingToolbar = useMemo(() => {

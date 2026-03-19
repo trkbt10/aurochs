@@ -32,7 +32,7 @@ export type {
   SmoothingLevel,
   CreationMode,
 } from "./creation-types";
-export { createSelectMode, isSameMode } from "./creation-types";
+export { createSelectMode, isSameMode, getCursorForCreationMode } from "./creation-types";
 
 // Shape factory
 export type { ShapeBounds } from "./shape-factory";

@@ -1,18 +1,12 @@
 /**
  * @file Shape traversal
  *
- * PPTX-specific traversal using generic shape-editor implementation.
+ * PPTX-specific traversal delegating to ooxml-components shared resolver.
  */
 
 import type { Shape } from "@aurochs-office/pptx/domain";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
-import { isShapeHidden } from "@aurochs-renderer/pptx/svg";
-import { pptxTransformResolver } from "@aurochs-ui/ooxml-components/pptx-transform";
-import { getFillColor, getStrokeColor, getStrokeWidth } from "./render";
-import {
-  collectShapeRenderData as genericCollectShapeRenderData,
-  type RenderDataResolver,
-} from "@aurochs-ui/editor-controls/shape-editor";
+import { collectPptxShapeRenderData } from "@aurochs-ui/ooxml-components/pptx-render-resolver";
 
 /**
  * Shape render data for canvas display
@@ -31,19 +25,8 @@ export type ShapeRenderData = {
 };
 
 /**
- * PPTX render data resolver
- */
-const pptxRenderResolver: RenderDataResolver = {
-  ...pptxTransformResolver,
-  isHidden: (shape) => isShapeHidden(shape as Shape),
-  getFillColor: (shape) => getFillColor(shape as Shape),
-  getStrokeColor: (shape) => getStrokeColor(shape as Shape),
-  getStrokeWidth: (shape) => getStrokeWidth(shape as Shape),
-};
-
-/**
  * Collect all visible shapes with their render data
  */
 export function collectShapeRenderData(shapes: readonly Shape[]): readonly ShapeRenderData[] {
-  return genericCollectShapeRenderData(shapes, pptxRenderResolver) as readonly ShapeRenderData[];
+  return collectPptxShapeRenderData(shapes) as readonly ShapeRenderData[];
 }

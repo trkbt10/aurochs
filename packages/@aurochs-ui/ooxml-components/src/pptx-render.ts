@@ -1,7 +1,8 @@
 /**
- * @file Shape render
+ * @file Shape render utilities
  *
- * Rendering-related utilities for shapes (fill, stroke extraction).
+ * PPTX-specific rendering utilities (fill, stroke extraction).
+ * Shared by pptx-editor and potx-editor.
  */
 
 import type { Shape, SpShape, CxnShape } from "@aurochs-office/pptx/domain";
@@ -34,7 +35,6 @@ export function getStrokeColor(shape: Shape): string | undefined {
   if (!("properties" in shape)) {
     return undefined;
   }
-  // Only SpShape and CxnShape have line property
   if (shape.type !== "sp" && shape.type !== "cxnSp") {
     return undefined;
   }
@@ -59,7 +59,6 @@ export function getStrokeWidth(shape: Shape): number {
   if (!("properties" in shape)) {
     return 1;
   }
-  // Only SpShape and CxnShape have line property
   if (shape.type !== "sp" && shape.type !== "cxnSp") {
     return 1;
   }

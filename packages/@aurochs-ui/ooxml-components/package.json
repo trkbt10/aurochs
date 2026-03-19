@@ -36,6 +36,14 @@
     "./pptx-transform": {
       "types": "./src/pptx-transform.ts",
       "default": "./src/pptx-transform.ts"
+    },
+    "./pptx-render": {
+      "types": "./src/pptx-render.ts",
+      "default": "./src/pptx-render.ts"
+    },
+    "./pptx-render-resolver": {
+      "types": "./src/pptx-render-resolver.ts",
+      "default": "./src/pptx-render-resolver.ts"
     }
   }
 }

@@ -110,6 +110,14 @@ function updateLayoutEdit(state: ThemeEditorState, updates: Partial<LayoutEditSt
   };
 }
 
+/** Return textEdit clear patch if text editing is currently active. */
+function exitTextEditIfActive(state: ThemeEditorState): Partial<LayoutEditState> {
+  if (state.layoutEdit.textEdit.type === "inactive") {
+    return {};
+  }
+  return { textEdit: { type: "inactive" } };
+}
+
 function resetLayoutEditForDeletion(): Partial<LayoutEditState> {
   return {
     layoutShapes: [],
@@ -376,18 +384,22 @@ export function themeEditorReducer(state: ThemeEditorState, action: ThemeEditorA
     }
 
     // ---- Creation mode ----
-    case "SET_CREATION_MODE":
+    case "SET_CREATION_MODE": {
+      const textEditClear = action.mode.type !== "select" ? exitTextEditIfActive(state) : {};
       return {
-        ...state,
+        ...updateLayoutEdit(state, textEditClear),
         creationMode: action.mode,
         // Clear selection when switching to a creation tool
         ...clearSelectionForCreationTool(state, action.mode),
       };
+    }
 
     // ---- Layout shape selection ----
     case "SELECT_LAYOUT_SHAPE": {
-      const { layoutSelection } = state.layoutEdit;
+      const { layoutSelection, textEdit } = state.layoutEdit;
       const isAlreadySelected = layoutSelection.selectedIds.includes(action.shapeId);
+      const shouldExitTextEdit = textEdit.type === "active" && textEdit.shapeId !== action.shapeId;
+      const textEditUpdate = shouldExitTextEdit ? { textEdit: { type: "inactive" as const } } : {};
 
       if (action.addToSelection) {
         if (action.toggle && isAlreadySelected) {
@@ -395,6 +407,7 @@ export function themeEditorReducer(state: ThemeEditorState, action: ThemeEditorA
           return updateLayoutEdit(state, {
             layoutSelection: { selectedIds: newSelectedIds, primaryId: newSelectedIds[0] },
             selectionSource: "click",
+            ...textEditUpdate,
           });
         }
         if (isAlreadySelected) {
@@ -402,6 +415,7 @@ export function themeEditorReducer(state: ThemeEditorState, action: ThemeEditorA
           return updateLayoutEdit(state, {
             layoutSelection: { ...layoutSelection, primaryId: action.shapeId },
             selectionSource: "click",
+            ...textEditUpdate,
           });
         }
         return updateLayoutEdit(state, {
@@ -410,11 +424,13 @@ export function themeEditorReducer(state: ThemeEditorState, action: ThemeEditorA
             primaryId: action.shapeId,
           },
           selectionSource: "click",
+          ...textEditUpdate,
         });
       }
       return updateLayoutEdit(state, {
         layoutSelection: { selectedIds: [action.shapeId], primaryId: action.shapeId },
         selectionSource: "click",
+        ...textEditUpdate,
       });
     }
 
@@ -425,15 +441,21 @@ export function themeEditorReducer(state: ThemeEditorState, action: ThemeEditorA
           primaryId: action.primaryId ?? action.shapeIds[0],
         },
         selectionSource: "click",
+        ...exitTextEditIfActive(state),
       });
 
     case "MARQUEE_SELECT_LAYOUT_SHAPES": {
+      const marqueeTextEditClear = exitTextEditIfActive(state);
       if (action.shapeIds.length === 0) {
         if (!action.additive) {
           return updateLayoutEdit(state, {
             layoutSelection: createEmptySelection<ShapeId>(),
             selectionSource: "click",
+            ...marqueeTextEditClear,
           });
+        }
+        if (state.layoutEdit.textEdit.type === "active") {
+          return updateLayoutEdit(state, marqueeTextEditClear);
         }
         return state;
       }
@@ -445,11 +467,13 @@ export function themeEditorReducer(state: ThemeEditorState, action: ThemeEditorA
         return updateLayoutEdit(state, {
           layoutSelection: { selectedIds: combined, primaryId: combined[0] },
           selectionSource: "marquee",
+          ...marqueeTextEditClear,
         });
       }
       return updateLayoutEdit(state, {
         layoutSelection: { selectedIds: action.shapeIds, primaryId: undefined },
         selectionSource: "marquee",
+        ...marqueeTextEditClear,
       });
     }
 
@@ -457,6 +481,7 @@ export function themeEditorReducer(state: ThemeEditorState, action: ThemeEditorA
       return updateLayoutEdit(state, {
         layoutSelection: createEmptySelection<ShapeId>(),
         selectionSource: "click",
+        ...exitTextEditIfActive(state),
       });
 
     // ---- Layout drag start ----
@@ -465,6 +490,7 @@ export function themeEditorReducer(state: ThemeEditorState, action: ThemeEditorA
       if (layoutSelection.selectedIds.length === 0) {return state;}
       const initialBounds = collectLayoutBounds(layoutShapes as Shape[], layoutSelection.selectedIds);
       return updateLayoutEdit(state, {
+        ...exitTextEditIfActive(state),
         layoutDrag: {
           type: "move",
           startX: action.startX,
@@ -486,6 +512,7 @@ export function themeEditorReducer(state: ThemeEditorState, action: ThemeEditorA
       const primaryId = layoutSelection.primaryId ?? selectedIds[0];
       const primaryBounds = initialBoundsMap.get(primaryId);
       return updateLayoutEdit(state, {
+        ...exitTextEditIfActive(state),
         layoutDrag: {
           type: "resize",
           handle: action.handle,
@@ -522,6 +549,7 @@ export function themeEditorReducer(state: ThemeEditorState, action: ThemeEditorA
       const dyAngle = (action.startY as number) - centerResult.centerY;
       const startAngle = deg(Math.atan2(dyAngle, dxAngle) * (180 / Math.PI));
       return updateLayoutEdit(state, {
+        ...exitTextEditIfActive(state),
         layoutDrag: {
           type: "rotate",
           startAngle,
@@ -577,6 +605,7 @@ export function themeEditorReducer(state: ThemeEditorState, action: ThemeEditorA
         shapesHistory: pushHistory(state.layoutEdit.shapesHistory, newShapes),
         layoutSelection: createEmptySelection<ShapeId>(),
         isDirty: true,
+        ...exitTextEditIfActive(state),
       });
     }
 
@@ -673,6 +702,7 @@ export function themeEditorReducer(state: ThemeEditorState, action: ThemeEditorA
         shapesHistory: undoResult,
         layoutShapes: undoResult.present,
         isDirty: true,
+        ...exitTextEditIfActive(state),
       });
     }
 
@@ -683,6 +713,7 @@ export function themeEditorReducer(state: ThemeEditorState, action: ThemeEditorA
         shapesHistory: redoResult,
         layoutShapes: redoResult.present,
         isDirty: true,
+        ...exitTextEditIfActive(state),
       });
     }
   }

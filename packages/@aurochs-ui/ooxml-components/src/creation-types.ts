@@ -88,3 +88,12 @@ export function isSameMode(a: CreationMode, b: CreationMode): boolean {
   // This ensures the button stays active regardless of smoothing level
   return true;
 }
+
+/**
+ * Get cursor style for the current creation mode.
+ */
+export function getCursorForCreationMode(mode: CreationMode, isInteracting: boolean): string {
+  if (isInteracting) {return "grabbing";}
+  if (mode.type !== "select") {return "crosshair";}
+  return "default";
+}
