@@ -7,7 +7,7 @@
 import type { Shape } from "@aurochs-office/pptx/domain";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import { isShapeHidden } from "@aurochs-renderer/pptx/svg";
-import { pptxTransformResolver } from "./transform";
+import { pptxTransformResolver } from "@aurochs-ui/ooxml-components/pptx-transform";
 import { getFillColor, getStrokeColor, getStrokeWidth } from "./render";
 import {
   collectShapeRenderData as genericCollectShapeRenderData,

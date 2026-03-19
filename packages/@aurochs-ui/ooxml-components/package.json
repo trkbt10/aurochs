@@ -5,11 +5,15 @@
   "type": "module",
   "sideEffects": false,
   "dependencies": {
+    "@aurochs-office/drawing-ml": "workspace:*",
+    "@aurochs-office/ooxml": "workspace:*",
     "@aurochs-office/pptx": "workspace:*",
+    "@aurochs-renderer/drawing-ml": "workspace:*",
     "@aurochs-renderer/pptx": "workspace:*",
     "@aurochs-ui/editor-controls": "workspace:*",
     "@aurochs-ui/editor-core": "workspace:*",
-    "@aurochs-ui/ui-components": "workspace:*"
+    "@aurochs-ui/ui-components": "workspace:*",
+    "@aurochs/glyph": "workspace:*"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",
@@ -24,6 +28,14 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./text-edit": {
+      "types": "./src/text-edit/index.ts",
+      "default": "./src/text-edit/index.ts"
+    },
+    "./pptx-transform": {
+      "types": "./src/pptx-transform.ts",
+      "default": "./src/pptx-transform.ts"
     }
   }
 }

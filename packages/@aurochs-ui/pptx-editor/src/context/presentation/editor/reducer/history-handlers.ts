@@ -12,8 +12,8 @@ import { createEmptySelection } from "@aurochs-ui/editor-core/selection";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import { findSlideById } from "../slide";
 import { findShapeById } from "../../../../shape/query";
-import { createInactiveTextEditState } from "../../../../slide/text-edit";
-import type { TextEditState } from "../../../../slide/text-edit";
+import { createInactiveTextEditState } from "@aurochs-ui/ooxml-components/text-edit";
+import type { TextEditState } from "@aurochs-ui/ooxml-components/text-edit";
 
 type SetDocumentAction = Extract<PresentationEditorAction, { type: "SET_DOCUMENT" }>;
 

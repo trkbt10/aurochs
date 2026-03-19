@@ -25,7 +25,7 @@ import { OleFramePanel } from "./property/OleFramePanel";
 import { UnknownShapePanel } from "./property/UnknownShapePanel";
 import { TextPropertyPanel } from "./property/TextPropertyPanel";
 import { useTextEditContext } from "../context/slide/TextEditContext";
-import { isTextEditActive } from "../slide/text-edit";
+import { isTextEditActive } from "@aurochs-ui/ooxml-components/text-edit";
 
 // =============================================================================
 // Types

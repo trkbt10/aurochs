@@ -132,9 +132,6 @@ export { findShapeById, findShapeByIdWithParents, getTopLevelShapeIds } from "./
 // Shape bounds utilities
 export { getShapeBounds, getCombinedBounds } from "./shape/bounds";
 
-// Shape transform utilities
-export { withUpdatedTransform, hasEditableTransform, getAbsoluteBounds } from "./shape/transform";
-
 // Shape capabilities
 export { getShapeCapabilities, type ShapeCapabilities } from "./shape/capabilities";
 

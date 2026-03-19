@@ -22,6 +22,7 @@ export type ColorMapEditorProps = {
   readonly colorMapping: ColorMapping;
   readonly onChange: (mapping: ColorMapping) => void;
   readonly disabled?: boolean;
+  readonly title?: string;
 };
 
 // =============================================================================
@@ -81,7 +82,7 @@ const LABEL_WIDTH = 100;
 /**
  * Color map editor — maps 12 logical color roles to scheme color names.
  */
-export function ColorMapEditor({ colorMapping, onChange, disabled }: ColorMapEditorProps) {
+export function ColorMapEditor({ colorMapping, onChange, disabled, title = "Color Map" }: ColorMapEditorProps) {
   const handleSlotChange = useCallback(
     (key: keyof ColorMapping, value: string) => {
       onChange({ ...colorMapping, [key]: value });
@@ -90,7 +91,7 @@ export function ColorMapEditor({ colorMapping, onChange, disabled }: ColorMapEdi
   );
 
   return (
-    <OptionalPropertySection title="Color Map" defaultExpanded={false}>
+    <OptionalPropertySection title={title} defaultExpanded={false}>
       <div style={contentStyle}>
         {COLOR_MAP_SLOTS.map(({ key, label }) => (
           <FieldGroup key={key} label={label} inline labelWidth={LABEL_WIDTH}>

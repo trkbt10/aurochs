@@ -15,7 +15,7 @@ import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import type { Effects } from "@aurochs-office/pptx/domain/types";
 import type { Fill } from "@aurochs-office/pptx/domain/color/types";
 import { parseBaseFill, parseLine, parseEffects } from "@aurochs-office/drawing-ml/parser";
-import { serializeFill } from "@aurochs-builder/pptx/patcher/serializer/fill";
+import { serializeFill } from "@aurochs-builder/pptx/patcher";
 import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { BaseFillEditor } from "@aurochs-ui/editor-controls/editors";
 import { colorTokens, fontTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";

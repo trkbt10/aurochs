@@ -12,8 +12,8 @@ import { pushHistory } from "@aurochs-ui/editor-core/history";
 import { findShapeById } from "../../../../shape/query";
 import { updateShapeById } from "../../../../shape/mutation";
 import { getShapeTransform } from "@aurochs-renderer/pptx/svg";
-import { createInactiveTextEditState, createActiveTextEditState } from "../../../../slide/text-edit";
-import type { TextEditState } from "../../../../slide/text-edit";
+import { createInactiveTextEditState, createActiveTextEditState } from "@aurochs-ui/ooxml-components/text-edit";
+import type { TextEditState } from "@aurochs-ui/ooxml-components/text-edit";
 
 type EnterTextEditAction = Extract<PresentationEditorAction, { type: "ENTER_TEXT_EDIT" }>;
 // Note: ExitTextEditAction type not needed since handler doesn't use action payload

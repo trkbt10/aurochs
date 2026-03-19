@@ -12,7 +12,7 @@ import type {
   RunProperties,
   ParagraphProperties,
 } from "@aurochs-office/pptx/domain/text";
-import type { CursorPosition, TextSelection } from "../../slide/text-edit";
+import type { CursorPosition, TextSelection } from "@aurochs-ui/ooxml-components/text-edit";
 import { normalizeTextSelection, isSameCursorPosition } from "@aurochs-ui/editor-core/text-edit";
 import {
   extractMixedRunProperties,

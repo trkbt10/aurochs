@@ -13,7 +13,7 @@ import type {
   ParagraphProperties,
   RegularRun,
 } from "@aurochs-office/pptx/domain/text";
-import type { TextSelection } from "./cursor";
+import type { TextSelection } from "@aurochs-ui/ooxml-components/text-edit";
 import { normalizeTextSelection, isSameCursorPosition } from "@aurochs-ui/editor-core/text-edit";
 import { mergeRunProperties, areRunPropertiesEqual } from "../../../editors/text/mixed-properties";
 

@@ -22,21 +22,22 @@ import { EditorResourceProvider, useEditorResourceStore } from "../context/edito
 import { SlideThumbnailPanel } from "../panels";
 import { useSlideThumbnails } from "../thumbnail/use-slide-thumbnails";
 import { SlideThumbnailPreview } from "../thumbnail/SlideThumbnailPreview";
-import { CreationToolbar } from "../panels/CreationToolbar";
-import type { CreationMode } from "../context/presentation/editor/types";
-import { createSelectMode } from "../context/presentation/editor/types";
+import { CreationToolbar, createSelectMode } from "@aurochs-ui/ooxml-components";
+import type { CreationMode } from "@aurochs-ui/ooxml-components";
 import type { DrawingPath } from "@aurochs-ui/path-tools";
 import { isCustomGeometry } from "../path-tools/adapters";
 import {
   createShapeFromMode,
-  getDefaultBoundsForMode,
   createCustomGeometryShape,
+} from "../shape/factory";
+import {
+  getDefaultBoundsForMode,
   generateShapeId,
   createPicShape,
-} from "../shape/factory";
+} from "@aurochs-ui/ooxml-components";
 import { createOleGraphicFrame } from "../graphic-frame/factory";
 import { getOleTypeFromFile } from "@aurochs-builder/pptx/patcher";
-import type { ShapeBounds } from "../shape/creation-bounds";
+import type { ShapeBounds } from "@aurochs-ui/ooxml-components";
 import { drawingPathToCustomGeometry } from "../path-tools/adapters";
 import {
   isTextEditActive,
@@ -48,7 +49,7 @@ import {
   type TextSelection,
   type TextCursorState,
   type SelectionChangeEvent,
-} from "../slide/text-edit";
+} from "@aurochs-ui/ooxml-components/text-edit";
 import { getPlainText } from "@aurochs-ui/editor-core/text-edit";
 import { ShapeToolbar } from "../panels/ShapeToolbar";
 import { buildSlideLayoutOptions } from "@aurochs-office/pptx/app";

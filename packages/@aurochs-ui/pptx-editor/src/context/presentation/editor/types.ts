@@ -20,69 +20,9 @@ import type {
   PathEditState,
   PathEditAction,
 } from "../../slide/state";
-import type { TextEditState } from "../../../slide/text-edit";
+import type { TextEditState } from "@aurochs-ui/ooxml-components/text-edit";
 import type { SlideOperationsResult } from "./useSlideOperations";
-
-// =============================================================================
-// Creation Mode Types
-// =============================================================================
-
-/**
- * Preset shape types for creation
- */
-export type CreationPresetShape =
-  | "rect"
-  | "roundRect"
-  | "ellipse"
-  | "triangle"
-  | "rtTriangle"
-  | "diamond"
-  | "pentagon"
-  | "hexagon"
-  | "star5"
-  | "rightArrow"
-  | "leftArrow"
-  | "upArrow"
-  | "downArrow"
-  | "line";
-
-/**
- * Chart types for creation
- */
-export type CreationChartType = "bar" | "line" | "pie";
-
-/**
- * Diagram types for creation
- */
-export type CreationDiagramType = "process" | "cycle" | "hierarchy" | "relationship";
-
-/**
- * Smoothing level for pencil tool
- */
-export type SmoothingLevel = "low" | "medium" | "high";
-
-/**
- * Creation mode - determines what happens on canvas click/drag
- */
-export type CreationMode =
-  | { readonly type: "select" }
-  | { readonly type: "shape"; readonly preset: CreationPresetShape }
-  | { readonly type: "textbox" }
-  | { readonly type: "picture" }
-  | { readonly type: "connector" }
-  | { readonly type: "table"; readonly rows: number; readonly cols: number }
-  | { readonly type: "chart"; readonly chartType: CreationChartType }
-  | { readonly type: "diagram"; readonly diagramType: CreationDiagramType }
-  | { readonly type: "pen" }
-  | { readonly type: "pencil"; readonly smoothing: SmoothingLevel }
-  | { readonly type: "path-edit" };
-
-/**
- * Create default select mode
- */
-export function createSelectMode(): CreationMode {
-  return { type: "select" };
-}
+import type { CreationMode, SmoothingLevel, CreationChartType, CreationDiagramType } from "@aurochs-ui/ooxml-components";
 
 // =============================================================================
 // Presentation Editor State

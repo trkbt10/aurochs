@@ -19,7 +19,7 @@ import type { PlaceholderContext, MasterStylesInfo } from "@aurochs-office/pptx/
 import { getChild, getByPath } from "@aurochs/xml";
 import { renderSlideSvg } from "@aurochs-renderer/pptx/svg";
 import { createCoreRenderContext } from "@aurochs-renderer/pptx";
-import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
+import type { ColorContext, ColorScheme } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { ResourceResolver as DomainResourceResolver } from "@aurochs-office/pptx/domain/resource-resolver";
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
 
@@ -78,6 +78,13 @@ const DEFAULT_COLOR_MAP: Record<string, string> = {
 // Core Layout Loading
 // =============================================================================
 
+function buildColorContext(colorScheme: ColorScheme | undefined): ColorContext | undefined {
+  if (!colorScheme) {
+    return undefined;
+  }
+  return { colorScheme, colorMap: DEFAULT_COLOR_MAP };
+}
+
 /**
  * Load layout shapes with full context (PlaceholderContext + MasterStylesInfo)
  * and render SVG.
@@ -123,17 +130,10 @@ export function loadLayoutWithContext(
     };
 
     // Parse theme for color context, font scheme, and format scheme
-    let colorContext: ColorContext | undefined;
-    let fontScheme: FontScheme | undefined;
-    let formatScheme;
-    if (bundle.theme) {
-      const parsedTheme = parseTheme(bundle.theme, undefined);
-      colorContext = parsedTheme.colorScheme
-        ? { colorScheme: parsedTheme.colorScheme, colorMap: DEFAULT_COLOR_MAP }
-        : undefined;
-      fontScheme = parsedTheme.fontScheme;
-      formatScheme = parsedTheme.formatScheme;
-    }
+    const parsedTheme = bundle.theme ? parseTheme(bundle.theme, undefined) : undefined;
+    const colorContext = buildColorContext(parsedTheme?.colorScheme);
+    const fontScheme = parsedTheme?.fontScheme;
+    const formatScheme = parsedTheme?.formatScheme;
 
     // Parse shapes with full context
     const shapes = parseShapeTree({
@@ -161,7 +161,8 @@ export function loadLayoutWithContext(
     const result = renderSlideSvg(pseudoSlide, renderCtx);
 
     return { shapes, pseudoSlide, colorContext, fontScheme, resources, slideSize, svg: result.svg };
-  } catch {
+  } catch (error) {
+    console.warn("Failed to load layout:", error);
     return undefined;
   }
 }

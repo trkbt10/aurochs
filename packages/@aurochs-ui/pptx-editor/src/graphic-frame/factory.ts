@@ -7,8 +7,8 @@
 import type { GraphicFrame, Table, TableRow, TableCell, TableColumn } from "@aurochs-office/pptx/domain";
 import type { ShapeId, ResourceId } from "@aurochs-office/pptx/domain/types";
 import { deg, px } from "@aurochs-office/drawing-ml/domain/units";
-import type { CreationChartType, CreationDiagramType } from "../context/presentation/editor/types";
-import type { ShapeBounds } from "../shape/creation-bounds";
+import type { CreationChartType, CreationDiagramType } from "@aurochs-ui/ooxml-components";
+import type { ShapeBounds } from "@aurochs-ui/ooxml-components";
 import { type OleType, OLE_TYPE_MAP } from "@aurochs-builder/pptx/patcher";
 
 // =============================================================================

@@ -44,10 +44,6 @@
       "types": "./src/slide-list/index.ts",
       "default": "./src/slide-list/index.ts"
     },
-    "./slide/text-edit": {
-      "types": "./src/slide/text-edit/index.ts",
-      "default": "./src/slide/text-edit/index.ts"
-    },
     "./slide/text-edit/input-support/run-formatting": {
       "types": "./src/slide/text-edit/input-support/run-formatting.ts",
       "default": "./src/slide/text-edit/input-support/run-formatting.ts"

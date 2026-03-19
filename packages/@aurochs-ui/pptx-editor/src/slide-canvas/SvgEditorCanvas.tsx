@@ -9,7 +9,6 @@
 
 import {
   useCallback,
-  useEffect,
   useMemo,
   useRef,
   useState,
@@ -20,11 +19,10 @@ import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-conte
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
-import { px } from "@aurochs-office/drawing-ml/domain/units";
 import type { SlideId } from "@aurochs-office/pptx/app";
 import type { DragState, SelectionState, ResizeHandlePosition, PathEditState } from "../context/slide/state";
 import { isPathEditEditing } from "../context/slide/state";
-import type { CreationMode } from "../context/presentation/editor/types";
+import type { CreationMode } from "@aurochs-ui/ooxml-components";
 import { isPenMode, isPathMode } from "../context/presentation/editor/types";
 import type { ResourceResolver } from "@aurochs-office/pptx/domain/resource-resolver";
 import type { ResourceStore } from "@aurochs-office/pptx/domain/resource-store";
@@ -34,8 +32,7 @@ import { PenToolOverlay, PathEditOverlay } from "@aurochs-ui/path-tools";
 import { customGeometryToDrawingPath, isCustomGeometry } from "../path-tools/adapters";
 import { collectShapeRenderData } from "../shape/traverse";
 import { isPointInBounds } from "@aurochs-ui/editor-core/geometry";
-import { createBoundsFromDrag } from "../shape/factory";
-import type { ShapeBounds as CreationBounds } from "../shape/creation-bounds";
+import type { ShapeBounds as CreationBounds } from "@aurochs-ui/ooxml-components";
 import { SlideContextMenu, type ContextMenuActions } from "../slide/context-menu/SlideContextMenu";
 import { SlideRenderer } from "@aurochs-renderer/pptx/react";
 import {
@@ -43,19 +40,18 @@ import {
   isTextEditActive,
   type TextEditState,
   type SelectionChangeEvent,
-} from "../slide/text-edit";
+} from "@aurochs-ui/ooxml-components/text-edit";
 import { colorTokens } from "@aurochs-ui/ui-components/design-tokens";
 import {
   EditorCanvas,
   type EditorCanvasHandle,
   type EditorCanvasItemBounds,
-  type CanvasPageCoords,
 } from "@aurochs-ui/editor-controls/canvas";
 import type { ViewportTransform } from "@aurochs-ui/editor-core/viewport";
 import { INITIAL_VIEWPORT } from "@aurochs-ui/editor-core/viewport";
 import type { ZoomMode } from "@aurochs-ui/editor-controls/zoom";
 import { ASSET_DRAG_TYPE } from "../panels/inspector/AssetPanel";
-import { useCanvasHandlers } from "@aurochs-ui/ooxml-components";
+import { useCanvasHandlers, useCreationDrag } from "@aurochs-ui/ooxml-components";
 
 // =============================================================================
 // Types
@@ -137,13 +133,6 @@ export type AssetDropData =
   | { readonly type: "image"; readonly dataUrl: string }
   | { readonly type: "ole"; readonly embedDataBase64: string; readonly extension: string; readonly name: string };
 
-type CreationDrag = {
-  readonly startX: number;
-  readonly startY: number;
-  readonly currentX: number;
-  readonly currentY: number;
-};
-
 // =============================================================================
 // Component
 // =============================================================================
@@ -215,61 +204,21 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
     [onViewportChangeProp],
   );
 
-  // --- Creation drag ---
-  const [creationDrag, setCreationDrag] = useState<CreationDrag | null>(null);
-  const creationDragRef = useRef<CreationDrag | null>(null);
-  const ignoreNextClickRef = useRef(false);
-
   // --- Shape data ---
   const shapeRenderData = useMemo(() => collectShapeRenderData(slide.shapes), [slide.shapes]);
   const primaryId = selection.selectedIds.length === 1 ? selection.selectedIds[0] : undefined;
 
-  // --- PPTX-specific background interaction ---
-  const handleBackgroundPointerDown = useCallback(
-    (coords: CanvasPageCoords, e: React.PointerEvent): boolean => {
-      if (isTextEditActive(textEdit)) {
-        onTextEditCancel();
-        e.preventDefault();
-        return true;
-      }
-
-      if (creationMode && creationMode.type !== "select" && !isPathMode(creationMode)) {
-        e.preventDefault();
-        const next: CreationDrag = {
-          startX: coords.pageX,
-          startY: coords.pageY,
-          currentX: coords.pageX,
-          currentY: coords.pageY,
-        };
-        creationDragRef.current = next;
-        setCreationDrag(next);
-        ignoreNextClickRef.current = false;
-        return true;
-      }
-
-      return false;
-    },
-    [creationMode, textEdit, onTextEditCancel],
-  );
-
-  const handleBackgroundClick = useCallback(() => {
-    if (ignoreNextClickRef.current) {
-      ignoreNextClickRef.current = false;
-      return;
-    }
-
-    if (isTextEditActive(textEdit)) {
-      onTextEditCancel();
-      return;
-    }
-
-    if (creationMode && creationMode.type !== "select" && onCreate) {
-      onCreate(0, 0);
-      return;
-    }
-
-    onClearSelection();
-  }, [textEdit, onTextEditCancel, creationMode, onCreate, onClearSelection]);
+  // --- Creation drag (shared hook) ---
+  const { creationRect, handleBackgroundPointerDown, handleBackgroundClick } = useCreationDrag({
+    creationMode,
+    canvasRef,
+    onCreateFromDrag,
+    isPathMode,
+    isTextEditing: isTextEditActive(textEdit),
+    onTextEditCancel,
+    onClickCreate: onCreate,
+    onClearSelection,
+  });
 
   // --- Shared interaction handlers from ooxml-components ---
   const handlers = useCanvasHandlers({
@@ -287,80 +236,6 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
     onBackgroundPointerDown: handleBackgroundPointerDown,
     onBackgroundClick: handleBackgroundClick,
   });
-
-  // --- Creation drag: global listeners ---
-  const finalizeCreationDrag = useCallback(
-    (current: CreationDrag) => {
-      const dx = Math.abs(current.currentX - current.startX);
-      const dy = Math.abs(current.currentY - current.startY);
-      if (dx <= 2 && dy <= 2) {
-        return;
-      }
-      ignoreNextClickRef.current = true;
-      if (onCreateFromDrag) {
-        onCreateFromDrag(
-          createBoundsFromDrag({
-            startX: px(current.startX),
-            startY: px(current.startY),
-            endX: px(current.currentX),
-            endY: px(current.currentY),
-          }),
-        );
-      }
-    },
-    [onCreateFromDrag],
-  );
-
-  useEffect(() => {
-    if (!creationDrag) {
-      return;
-    }
-
-    const handleMove = (e: PointerEvent) => {
-      const page = canvasRef.current?.screenToPage(e.clientX, e.clientY);
-      if (!page) {
-        return;
-      }
-      const next: CreationDrag = { ...creationDragRef.current!, currentX: page.pageX, currentY: page.pageY };
-      creationDragRef.current = next;
-      setCreationDrag(next);
-    };
-
-    const handleUp = () => {
-      const current = creationDragRef.current;
-      creationDragRef.current = null;
-      setCreationDrag(null);
-      if (current) {
-        finalizeCreationDrag(current);
-      }
-    };
-
-    const handleCancel = () => {
-      creationDragRef.current = null;
-      setCreationDrag(null);
-    };
-
-    window.addEventListener("pointermove", handleMove);
-    window.addEventListener("pointerup", handleUp, { once: true });
-    window.addEventListener("pointercancel", handleCancel, { once: true });
-    return () => {
-      window.removeEventListener("pointermove", handleMove);
-      window.removeEventListener("pointerup", handleUp);
-      window.removeEventListener("pointercancel", handleCancel);
-    };
-  }, [creationDrag, finalizeCreationDrag]);
-
-  const creationRect = useMemo(() => {
-    if (!creationDrag) {
-      return null;
-    }
-    return {
-      x: Math.min(creationDrag.startX, creationDrag.currentX),
-      y: Math.min(creationDrag.startY, creationDrag.currentY),
-      width: Math.abs(creationDrag.currentX - creationDrag.startX),
-      height: Math.abs(creationDrag.currentY - creationDrag.startY),
-    };
-  }, [creationDrag]);
 
   // --- Asset drop ---
   const handleDragOver = useCallback(

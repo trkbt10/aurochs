@@ -124,7 +124,7 @@ export function ThemePresetSelector({ currentThemeId, onPresetSelect, disabled }
 
   return (
     <div style={containerStyle}>
-      <OptionalPropertySection title="Theme Presets" defaultExpanded>
+      <OptionalPropertySection title="Theme Presets" defaultExpanded={false}>
         <div style={gridStyle}>
           {THEME_PRESETS.map((preset) => (
             <PresetCard

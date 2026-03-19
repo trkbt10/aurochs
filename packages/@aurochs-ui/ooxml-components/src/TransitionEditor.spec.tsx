@@ -8,7 +8,7 @@
 
 import type { SlideTransition } from "@aurochs-office/pptx/domain/transition";
 import { render, fireEvent } from "@testing-library/react";
-import { TransitionEditor, createDefaultTransition } from "@aurochs-ui/ooxml-components";
+import { TransitionEditor, createDefaultTransition } from "./TransitionEditor";
 
 describe("TransitionEditor: Transition handling", () => {
   describe("createDefaultTransition", () => {
@@ -115,9 +115,13 @@ describe("TransitionEditor interactions", () => {
       state.lastType = value?.type ?? null;
     };
 
-    const { getByRole, getByText } = render(<TransitionEditor value={undefined} onChange={handleChange} />);
+    const { container, getByText } = render(<TransitionEditor value={undefined} onChange={handleChange} />);
 
-    fireEvent.click(getByRole("button", { name: /none/i }));
+    // Open the dropdown by clicking the trigger button
+    const triggerButton = container.querySelector("button");
+    expect(triggerButton).toBeTruthy();
+    fireEvent.click(triggerButton!);
+
     getByText("Fade");
     const fadeOption = Array.from(document.querySelectorAll("[data-option-index]")).find((node) =>
       node.textContent?.includes("Fade"),
@@ -138,11 +142,14 @@ describe("TransitionEditor interactions", () => {
       state.lastValue = value;
     };
 
-    const { getByRole, getByText } = render(
+    const { container, getByText } = render(
       <TransitionEditor value={{ type: "fade", advanceOnClick: true }} onChange={handleChange} />,
     );
 
-    fireEvent.click(getByRole("button", { name: /fade/i }));
+    // Open the dropdown by clicking the trigger button
+    const triggerButton = container.querySelector("button[type='button']")!;
+    fireEvent.click(triggerButton);
+
     fireEvent.click(getByText("None"));
 
     expect(state.lastValue).toBeUndefined();

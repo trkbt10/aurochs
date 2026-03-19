@@ -14,7 +14,7 @@ import { findSlideById } from "../slide";
 import { pushHistory } from "@aurochs-ui/editor-core/history";
 import { findShapeById } from "../../../../shape/query";
 import { generateShapeId } from "../../../../shape/mutation";
-import { withUpdatedTransform } from "../../../../shape/transform";
+import { withUpdatedTransform } from "@aurochs-ui/ooxml-components/pptx-transform";
 import { getShapeTransform } from "@aurochs-renderer/pptx/svg";
 
 // Note: CopyAction and PasteAction types not needed since handlers don't use action payload

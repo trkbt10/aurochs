@@ -5,10 +5,11 @@
  * Uses editor-controls generic shape utilities for bounds/center calculations.
  */
 
-import type { Shape } from "@aurochs-office/pptx/domain";
+import type { Shape, SpShape } from "@aurochs-office/pptx/domain";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import type { Degrees } from "@aurochs-office/drawing-ml/domain/units";
 import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
+import { getShapeTransform } from "@aurochs-renderer/pptx/svg";
 import type {
   ThemeEditorState,
   ThemeEditorAction,
@@ -21,7 +22,23 @@ import { findShapeById, updateShapeById } from "@aurochs-ui/editor-controls/shap
 import { collectBoundsForIds, getCombinedCenter } from "@aurochs-ui/editor-controls/shape-editor";
 import type { ColorScheme } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
-import { pptxGetTransform, withUpdatedTransform } from "./pptx-transform";
+import { createSelectMode } from "@aurochs-ui/ooxml-components";
+import type { CreationMode } from "@aurochs-ui/ooxml-components";
+import { pptxTransformResolver, withUpdatedTransform } from "@aurochs-ui/ooxml-components/pptx-transform";
+
+// =============================================================================
+// Creation Mode State Transition
+// =============================================================================
+
+function clearSelectionForCreationTool(
+  state: ThemeEditorState,
+  mode: CreationMode,
+): Partial<ThemeEditorState> {
+  if (mode.type === "select") {
+    return {};
+  }
+  return { layoutEdit: { ...state.layoutEdit, layoutSelection: createEmptySelection<ShapeId>() } };
+}
 
 // =============================================================================
 // Initial State
@@ -34,7 +51,9 @@ export function createInitialLayoutEditState(): LayoutEditState {
     layoutShapes: [],
     layoutBundle: undefined,
     layoutSelection: createEmptySelection<ShapeId>(),
+    selectionSource: "click" as const,
     layoutDrag: { type: "idle" },
+    textEdit: { type: "inactive" },
     isDirty: false,
     layouts: [],
     shapesHistory: createHistory<readonly Shape[]>([]),
@@ -72,6 +91,7 @@ export function createInitialThemeEditorState({
     extraColorSchemes: [],
     objectDefaults: undefined,
     masterTextStyles: undefined,
+    creationMode: createSelectMode(),
     layoutEdit: createInitialLayoutEditState(),
   };
 }
@@ -143,7 +163,7 @@ function updateLayoutById(
  * Collect bounds using the generic utility with PPTX transform resolver.
  */
 function collectLayoutBounds(shapes: readonly Shape[], ids: readonly ShapeId[]) {
-  return collectBoundsForIds(shapes, ids, pptxGetTransform);
+  return collectBoundsForIds(shapes, ids, pptxTransformResolver.getTransform);
 }
 
 /**
@@ -214,8 +234,10 @@ export function themeEditorReducer(state: ThemeEditorState, action: ThemeEditorA
     case "APPLY_THEME_PRESET":
       return {
         ...state,
+        themeName: action.preset.name,
         colorScheme: action.preset.colorScheme,
         fontScheme: action.preset.fontScheme,
+        fontSchemeName: action.preset.name,
       };
 
     // ---- Master background & color map ----
@@ -287,7 +309,9 @@ export function themeEditorReducer(state: ThemeEditorState, action: ThemeEditorA
         layoutShapes: [],
         layoutBundle: undefined,
         layoutSelection: createEmptySelection<ShapeId>(),
+        selectionSource: "click",
         layoutDrag: { type: "idle" },
+        textEdit: { type: "inactive" },
         isDirty: false,
         shapesHistory: createHistory<readonly Shape[]>([]),
       });
@@ -301,6 +325,65 @@ export function themeEditorReducer(state: ThemeEditorState, action: ThemeEditorA
         shapesHistory: createHistory(action.shapes),
       });
 
+    // ---- Layout text editing ----
+    case "ENTER_LAYOUT_TEXT_EDIT": {
+      const shape = findShapeById(state.layoutEdit.layoutShapes, action.shapeId) as Shape | undefined;
+      if (!shape || shape.type !== "sp") {return state;}
+      const sp = shape as SpShape;
+      const t = getShapeTransform(sp);
+      if (!t) {return state;}
+      const textBody = sp.textBody ?? {
+        bodyProperties: {},
+        paragraphs: [{ properties: {}, runs: [{ type: "text" as const, text: "" }] }],
+      };
+      return updateLayoutEdit(state, {
+        textEdit: {
+          type: "active",
+          shapeId: action.shapeId,
+          bounds: { x: t.x, y: t.y, width: t.width, height: t.height, rotation: t.rotation as number },
+          initialTextBody: textBody,
+        },
+      });
+    }
+
+    case "EXIT_LAYOUT_TEXT_EDIT":
+      return updateLayoutEdit(state, { textEdit: { type: "inactive" } });
+
+    case "COMMIT_LAYOUT_TEXT_EDIT": {
+      const newShapes = updateShapeById(state.layoutEdit.layoutShapes as Shape[], action.shapeId, (shape) => {
+        if (shape.type !== "sp") {return shape;}
+        return { ...shape, textBody: action.textBody } as Shape;
+      });
+      return updateLayoutEdit(state, {
+        layoutShapes: newShapes,
+        shapesHistory: pushHistory(state.layoutEdit.shapesHistory, newShapes as readonly Shape[]),
+        textEdit: { type: "inactive" },
+        isDirty: true,
+      });
+    }
+
+    // ---- Layout shape placeholder ----
+    case "UPDATE_LAYOUT_SHAPE_PLACEHOLDER": {
+      const newShapes = updateShapeById(state.layoutEdit.layoutShapes as Shape[], action.shapeId, (shape) => {
+        if (shape.type !== "sp") {return shape;}
+        return { ...shape, placeholder: action.placeholder } as Shape;
+      });
+      return updateLayoutEdit(state, {
+        layoutShapes: newShapes,
+        shapesHistory: pushHistory(state.layoutEdit.shapesHistory, newShapes as readonly Shape[]),
+        isDirty: true,
+      });
+    }
+
+    // ---- Creation mode ----
+    case "SET_CREATION_MODE":
+      return {
+        ...state,
+        creationMode: action.mode,
+        // Clear selection when switching to a creation tool
+        ...clearSelectionForCreationTool(state, action.mode),
+      };
+
     // ---- Layout shape selection ----
     case "SELECT_LAYOUT_SHAPE": {
       const { layoutSelection } = state.layoutEdit;
@@ -311,11 +394,14 @@ export function themeEditorReducer(state: ThemeEditorState, action: ThemeEditorA
           const newSelectedIds = layoutSelection.selectedIds.filter((id) => id !== action.shapeId);
           return updateLayoutEdit(state, {
             layoutSelection: { selectedIds: newSelectedIds, primaryId: newSelectedIds[0] },
+            selectionSource: "click",
           });
         }
         if (isAlreadySelected) {
+          // Re-clicking a shape in multi-selection focuses it (changes primaryId + source)
           return updateLayoutEdit(state, {
             layoutSelection: { ...layoutSelection, primaryId: action.shapeId },
+            selectionSource: "click",
           });
         }
         return updateLayoutEdit(state, {
@@ -323,10 +409,12 @@ export function themeEditorReducer(state: ThemeEditorState, action: ThemeEditorA
             selectedIds: [...layoutSelection.selectedIds, action.shapeId],
             primaryId: action.shapeId,
           },
+          selectionSource: "click",
         });
       }
       return updateLayoutEdit(state, {
         layoutSelection: { selectedIds: [action.shapeId], primaryId: action.shapeId },
+        selectionSource: "click",
       });
     }
 
@@ -336,11 +424,39 @@ export function themeEditorReducer(state: ThemeEditorState, action: ThemeEditorA
           selectedIds: action.shapeIds,
           primaryId: action.primaryId ?? action.shapeIds[0],
         },
+        selectionSource: "click",
       });
+
+    case "MARQUEE_SELECT_LAYOUT_SHAPES": {
+      if (action.shapeIds.length === 0) {
+        if (!action.additive) {
+          return updateLayoutEdit(state, {
+            layoutSelection: createEmptySelection<ShapeId>(),
+            selectionSource: "click",
+          });
+        }
+        return state;
+      }
+      if (action.additive) {
+        const combined = [...state.layoutEdit.layoutSelection.selectedIds];
+        for (const id of action.shapeIds) {
+          if (!combined.includes(id)) {combined.push(id);}
+        }
+        return updateLayoutEdit(state, {
+          layoutSelection: { selectedIds: combined, primaryId: combined[0] },
+          selectionSource: "marquee",
+        });
+      }
+      return updateLayoutEdit(state, {
+        layoutSelection: { selectedIds: action.shapeIds, primaryId: undefined },
+        selectionSource: "marquee",
+      });
+    }
 
     case "CLEAR_LAYOUT_SHAPE_SELECTION":
       return updateLayoutEdit(state, {
         layoutSelection: createEmptySelection<ShapeId>(),
+        selectionSource: "click",
       });
 
     // ---- Layout drag start ----
@@ -395,13 +511,13 @@ export function themeEditorReducer(state: ThemeEditorState, action: ThemeEditorA
       if (!centerResult) {return state;}
       const initialRotationsMap = new Map<string, Degrees>();
       for (const id of selectedIds) {
-        const transform = pptxGetTransform(findShapeById(layoutShapes, id)!);
+        const transform = pptxTransformResolver.getTransform(findShapeById(layoutShapes, id)!);
         if (transform) {
           initialRotationsMap.set(id, deg(transform.rotation));
         }
       }
       const primaryId = layoutSelection.primaryId ?? selectedIds[0];
-      const primaryTransform = pptxGetTransform(findShapeById(layoutShapes, primaryId)!);
+      const primaryTransform = pptxTransformResolver.getTransform(findShapeById(layoutShapes, primaryId)!);
       const dxAngle = (action.startX as number) - centerResult.centerX;
       const dyAngle = (action.startY as number) - centerResult.centerY;
       const startAngle = deg(Math.atan2(dyAngle, dxAngle) * (180 / Math.PI));
@@ -467,12 +583,15 @@ export function themeEditorReducer(state: ThemeEditorState, action: ThemeEditorA
     case "ADD_LAYOUT_SHAPE": {
       const newShapes = [...(state.layoutEdit.layoutShapes as Shape[]), action.shape];
       const shapeId = action.shape.type !== "contentPart" ? action.shape.nonVisual.id : undefined;
-      return updateLayoutEdit(state, {
-        layoutShapes: newShapes,
-        shapesHistory: pushHistory(state.layoutEdit.shapesHistory, newShapes),
-        layoutSelection: shapeId ? { selectedIds: [shapeId], primaryId: shapeId } : state.layoutEdit.layoutSelection,
-        isDirty: true,
-      });
+      return {
+        ...updateLayoutEdit(state, {
+          layoutShapes: newShapes,
+          shapesHistory: pushHistory(state.layoutEdit.shapesHistory, newShapes),
+          layoutSelection: shapeId ? { selectedIds: [shapeId], primaryId: shapeId } : state.layoutEdit.layoutSelection,
+          isDirty: true,
+        }),
+        creationMode: createSelectMode(),
+      };
     }
 
     case "UPDATE_LAYOUT_SHAPE": {

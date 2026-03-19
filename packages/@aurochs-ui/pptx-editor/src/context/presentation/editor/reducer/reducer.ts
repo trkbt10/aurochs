@@ -6,7 +6,7 @@
 
 import type { PresentationDocument } from "@aurochs-office/pptx/app";
 import type { PresentationEditorState, PresentationEditorAction } from "../types";
-import { createSelectMode } from "../types";
+import { createSelectMode } from "@aurochs-ui/ooxml-components";
 import type { HandlerMap, ActionHandler } from "./handler-types";
 import { createHistory } from "@aurochs-ui/editor-core/history";
 import { createEmptySelection } from "@aurochs-ui/editor-core/selection";
@@ -16,7 +16,7 @@ import {
   createIdlePathDrawState,
   createInactivePathEditState,
 } from "../../../slide/state";
-import { createInactiveTextEditState } from "../../../../slide/text-edit";
+import { createInactiveTextEditState } from "@aurochs-ui/ooxml-components/text-edit";
 
 // Import all handlers
 import { SLIDE_HANDLERS } from "./slide-handlers";

@@ -11,7 +11,7 @@ import {
   clearRunProperties,
 } from "./run-formatting";
 import type { TextBody, TextRun, Paragraph, RegularRun } from "@aurochs-office/pptx/domain/text";
-import type { TextSelection } from "./cursor";
+import type { TextSelection } from "@aurochs-ui/ooxml-components/text-edit";
 import type { Points } from "@aurochs-office/drawing-ml/domain/units";
 
 // =============================================================================

@@ -12,7 +12,7 @@ import {
   getEffectiveRunPropertiesAtCursor,
 } from "./text-property-extractor";
 import type { TextBody, TextRun, Paragraph } from "@aurochs-office/pptx/domain/text";
-import type { CursorPosition, TextSelection } from "../../slide/text-edit";
+import type { CursorPosition, TextSelection } from "@aurochs-ui/ooxml-components/text-edit";
 import type { Points } from "@aurochs-office/drawing-ml/domain/units";
 
 // =============================================================================

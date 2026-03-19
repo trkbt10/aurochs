@@ -15,7 +15,7 @@ import { createIdleDragState } from "@aurochs-ui/editor-core/drag-state";
 import { findShapeById } from "../../../../shape/query";
 import { updateShapeById } from "../../../../shape/mutation";
 import { getCombinedBounds, collectBoundsForIds, getCombinedCenter } from "../../../../shape/bounds";
-import { withUpdatedTransform } from "../../../../shape/transform";
+import { withUpdatedTransform } from "@aurochs-ui/ooxml-components/pptx-transform";
 import { getShapeTransform } from "@aurochs-renderer/pptx/svg";
 
 type StartMoveAction = Extract<PresentationEditorAction, { type: "START_MOVE" }>;

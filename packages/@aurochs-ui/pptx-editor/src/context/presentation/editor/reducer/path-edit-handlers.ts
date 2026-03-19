@@ -5,7 +5,7 @@
  */
 
 import type { PresentationEditorState, PresentationEditorAction } from "../types";
-import { createSelectMode } from "../types";
+import { createSelectMode } from "@aurochs-ui/ooxml-components";
 import type { HandlerMap, ActionHandler } from "./handler-types";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import type { CustomGeometry, Shape, SpShape } from "@aurochs-office/pptx/domain";

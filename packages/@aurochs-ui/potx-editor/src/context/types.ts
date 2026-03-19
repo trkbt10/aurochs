@@ -5,9 +5,10 @@
  * These are independent of pptx-editor's PresentationEditorState.
  */
 
-import type { Shape, SlideLayoutType, SlideSize } from "@aurochs-office/pptx/domain";
+import type { Shape, SlideLayoutType, SlideSize, Placeholder } from "@aurochs-office/pptx/domain";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import type { Pixels, Degrees } from "@aurochs-office/drawing-ml/domain/units";
+import type { TextBody } from "@aurochs-office/pptx/domain";
 import type { SlideLayoutBundle, SlideLayoutOption } from "@aurochs-office/pptx/app";
 import type { PresentationFile } from "@aurochs-office/pptx/domain";
 import type { ColorScheme } from "@aurochs-office/drawing-ml/domain/color-context";
@@ -19,6 +20,8 @@ import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
 import type { SlideTransition } from "@aurochs-office/pptx/domain/transition";
 import type { ColorMapping, ColorMapOverride } from "@aurochs-office/pptx/domain/color/types";
 import type { CustomColor, ExtraColorScheme, FormatScheme, ObjectDefaults, RawMasterTextStyles } from "@aurochs-office/pptx/domain/theme/types";
+import type { CreationMode } from "@aurochs-ui/ooxml-components";
+import type { TextEditBounds } from "@aurochs-ui/ooxml-components/text-edit";
 import type { ThemePreset } from "../panels/types";
 
 // =============================================================================
@@ -89,18 +92,36 @@ export type RotateDragState = {
 export type LayoutDragState = IdleDragState | MoveDragState | ResizeDragState | RotateDragState;
 
 // =============================================================================
+// Text Edit State (simplified for layout editing)
+// =============================================================================
+
+export type LayoutTextEditState =
+  | { readonly type: "inactive" }
+  | { readonly type: "active"; readonly shapeId: ShapeId; readonly bounds: TextEditBounds; readonly initialTextBody: TextBody };
+
+// =============================================================================
 // Theme Editor State
 // =============================================================================
 
 /**
  * Layout editing state
  */
+/**
+ * How the current selection was created.
+ * - "click": user clicked individual shape(s) — each has distinct identity
+ * - "marquee": user drag-selected a region — shapes are a group
+ */
+export type SelectionSource = "click" | "marquee";
+
 export type LayoutEditState = {
   readonly activeLayoutPath: string | undefined;
   readonly layoutShapes: readonly Shape[];
   readonly layoutBundle: SlideLayoutBundle | undefined;
   readonly layoutSelection: SelectionState<ShapeId>;
+  /** Tracks how the selection was created for contextual UI differences. */
+  readonly selectionSource: SelectionSource;
   readonly layoutDrag: LayoutDragState;
+  readonly textEdit: LayoutTextEditState;
   readonly isDirty: boolean;
   readonly layouts: readonly LayoutListEntry[];
   readonly shapesHistory: UndoRedoHistory<readonly Shape[]>;
@@ -121,6 +142,7 @@ export type ThemeEditorState = {
   readonly masterTextStyles: RawMasterTextStyles | undefined;
   readonly masterBackground: MasterBackgroundState;
   readonly masterColorMapping: ColorMapping;
+  readonly creationMode: CreationMode;
   readonly layoutEdit: LayoutEditState;
 };
 
@@ -184,6 +206,7 @@ export type ThemeEditorAction =
   // Layout shape selection
   | { readonly type: "SELECT_LAYOUT_SHAPE"; readonly shapeId: ShapeId; readonly addToSelection: boolean; readonly toggle?: boolean }
   | { readonly type: "SELECT_MULTIPLE_LAYOUT_SHAPES"; readonly shapeIds: readonly ShapeId[]; readonly primaryId?: ShapeId }
+  | { readonly type: "MARQUEE_SELECT_LAYOUT_SHAPES"; readonly shapeIds: readonly ShapeId[]; readonly additive: boolean }
   | { readonly type: "CLEAR_LAYOUT_SHAPE_SELECTION" }
 
   // Layout shape drag
@@ -195,6 +218,17 @@ export type ThemeEditorAction =
   | { readonly type: "PREVIEW_LAYOUT_ROTATE"; readonly currentAngle: Degrees }
   | { readonly type: "COMMIT_LAYOUT_DRAG" }
   | { readonly type: "END_LAYOUT_DRAG" }
+
+  // Creation mode
+  | { readonly type: "SET_CREATION_MODE"; readonly mode: CreationMode }
+
+  // Layout text editing
+  | { readonly type: "ENTER_LAYOUT_TEXT_EDIT"; readonly shapeId: ShapeId }
+  | { readonly type: "EXIT_LAYOUT_TEXT_EDIT" }
+  | { readonly type: "COMMIT_LAYOUT_TEXT_EDIT"; readonly shapeId: ShapeId; readonly textBody: TextBody }
+
+  // Layout shape placeholder
+  | { readonly type: "UPDATE_LAYOUT_SHAPE_PLACEHOLDER"; readonly shapeId: ShapeId; readonly placeholder: Placeholder | undefined }
 
   // Layout shape mutation
   | { readonly type: "DELETE_LAYOUT_SHAPES"; readonly shapeIds: readonly ShapeId[] }

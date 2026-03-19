@@ -13,8 +13,8 @@ import {
   createSlideEditorState,
   findShapeById,
   PropertyPanel,
-  withUpdatedTransform,
 } from "@aurochs-ui/pptx-editor";
+import { withUpdatedTransform } from "@aurochs-ui/ooxml-components/pptx-transform";
 import { clientToCanvasCoords } from "@aurochs-ui/editor-core/geometry";
 import type { ResizeHandlePosition } from "@aurochs-ui/pptx-editor";
 import type { Slide, Shape } from "@aurochs-office/pptx/domain";

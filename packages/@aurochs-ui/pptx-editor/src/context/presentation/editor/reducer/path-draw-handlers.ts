@@ -5,7 +5,7 @@
  */
 
 import type { PresentationEditorState, PresentationEditorAction } from "../types";
-import { createSelectMode } from "../types";
+import { createSelectMode } from "@aurochs-ui/ooxml-components";
 import type { HandlerMap, ActionHandler } from "./handler-types";
 import {
   createDrawingPathDrawState,
@@ -15,7 +15,8 @@ import {
   isPathDrawPencil,
 } from "../../../slide/state/path-draw";
 import type { PathAnchorPoint, AnchorPointType, CapturedPoint } from "@aurochs-ui/path-tools";
-import { createCustomGeometryShape, generateShapeId } from "../../../../shape/factory";
+import { createCustomGeometryShape } from "../../../../shape/factory";
+import { generateShapeId } from "@aurochs-ui/ooxml-components";
 import { drawingPathToCustomGeometry } from "../../../../path-tools/adapters";
 import { pushHistory } from "@aurochs-ui/editor-core/history";
 

@@ -116,7 +116,7 @@ export function useCanvasHandlers(options: UseCanvasHandlersOptions): CanvasHand
 
   const handleItemPointerDown = useCallback(
     (id: string, coords: CanvasPageCoords, e: React.PointerEvent) => {
-      if (e.button !== 0) return;
+      if (e.button !== 0) { return; }
       e.preventDefault();
 
       if (!selectedIds.includes(id)) {
@@ -165,14 +165,14 @@ export function useCanvasHandlers(options: UseCanvasHandlersOptions): CanvasHand
     (coords: CanvasPageCoords, e: React.PointerEvent) => {
       if (onBackgroundPointerDown) {
         const consumed = onBackgroundPointerDown(coords, e);
-        if (consumed) return;
+        if (consumed) { return; }
       }
     },
     [onBackgroundPointerDown],
   );
 
   const handleCanvasClick = useCallback(
-    (coords: CanvasPageCoords) => {
+    (_coords: CanvasPageCoords) => {
       if (onBackgroundClick) {
         onBackgroundClick();
         return;
@@ -224,14 +224,14 @@ export function useCanvasHandlers(options: UseCanvasHandlersOptions): CanvasHand
       const { itemIds } = result;
 
       if (itemIds.length === 0) {
-        if (!additive) onClearSelection();
+        if (!additive) { onClearSelection(); }
         return;
       }
 
       if (additive) {
         const combinedIds = [...selectedIds];
         for (const id of itemIds) {
-          if (!combinedIds.includes(id)) combinedIds.push(id);
+          if (!combinedIds.includes(id)) { combinedIds.push(id); }
         }
         onSelectMultiple(combinedIds);
       } else {

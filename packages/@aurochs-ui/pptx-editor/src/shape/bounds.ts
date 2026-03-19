@@ -9,7 +9,7 @@ import type { Shape } from "@aurochs-office/pptx/domain";
 import type { Bounds, ShapeId } from "@aurochs-office/pptx/domain/types";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import { getShapeTransform } from "@aurochs-renderer/pptx/svg";
-import { pptxTransformResolver } from "./transform";
+import { pptxTransformResolver } from "@aurochs-ui/ooxml-components/pptx-transform";
 
 import {
   getCombinedBounds as genericGetCombinedBounds,

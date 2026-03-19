@@ -7,10 +7,12 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any, custom/no-as-outside-guard, no-restricted-syntax -- Test file uses flexible typing for mock data */
 import { presentationEditorReducer, createPresentationEditorState } from "./reducer";
-import type { PresentationEditorState, CreationMode } from "../types";
+import type { PresentationEditorState } from "../types";
+import type { CreationMode } from "@aurochs-ui/ooxml-components";
 import type { SpShape } from "@aurochs-office/pptx/domain/shape";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
-import { createShapeFromMode, getDefaultBoundsForMode } from "../../../../shape/factory";
+import { createShapeFromMode } from "../../../../shape/factory";
+import { getDefaultBoundsForMode } from "@aurochs-ui/ooxml-components";
 import { createTestDocument } from "./test-fixtures";
 
 describe("Text Edit and Selection Interaction", () => {

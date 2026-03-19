@@ -9,7 +9,7 @@ import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import type { PresentationDocument, SlideWithId } from "@aurochs-office/pptx/app";
 import type { PresentationEditorState } from "../types";
 import { findSlideById, updateSlide } from "../slide";
-import { createInactiveTextEditState, isTextEditActive, type TextEditState } from "../../../../slide/text-edit";
+import { createInactiveTextEditState, isTextEditActive, type TextEditState } from "@aurochs-ui/ooxml-components/text-edit";
 
 /**
  * Get active slide from state

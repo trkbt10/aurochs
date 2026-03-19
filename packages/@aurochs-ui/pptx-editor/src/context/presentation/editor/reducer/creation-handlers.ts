@@ -6,16 +6,16 @@
 
 import type { Shape } from "@aurochs-office/pptx/domain";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
-import type { PresentationEditorState, PresentationEditorAction, CreationMode } from "../types";
-import { createSelectMode } from "../types";
+import type { PresentationEditorState, PresentationEditorAction } from "../types";
+import type { CreationMode } from "@aurochs-ui/ooxml-components";
+import { createSelectMode } from "@aurochs-ui/ooxml-components";
 import type { SelectionState } from "../../../slide/state";
 import type { HandlerMap } from "./handler-types";
 import { getActiveSlide, updateActiveSlideInDocument } from "./helpers";
 import { pushHistory } from "@aurochs-ui/editor-core/history";
 import { createEmptySelection } from "@aurochs-ui/editor-core/selection";
 import { generateShapeId } from "../../../../shape/mutation";
-import { createPicShape } from "../../../../shape/factory";
-import type { ShapeBounds } from "../../../../shape/creation-bounds";
+import { createPicShape, type ShapeBounds } from "@aurochs-ui/ooxml-components";
 import { createChartGraphicFrame, createDiagramGraphicFrame } from "../../../../graphic-frame/factory";
 
 type SetCreationModeAction = Extract<PresentationEditorAction, { type: "SET_CREATION_MODE" }>;

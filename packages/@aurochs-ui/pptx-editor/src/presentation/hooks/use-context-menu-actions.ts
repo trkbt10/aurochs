@@ -13,7 +13,7 @@ import type { SelectionState } from "../../context/slide/state";
 import type { PresentationEditorState } from "../../context/presentation/editor/types";
 import type { PresentationEditorAction } from "../../context/presentation/editor/types";
 import { isTopLevelShape } from "@aurochs-ui/editor-controls/shape-editor";
-import { withUpdatedTransform } from "../../shape/transform";
+import { withUpdatedTransform } from "@aurochs-ui/ooxml-components/pptx-transform";
 import { calculateAlignedBounds } from "../../shape/alignment";
 
 export type UseContextMenuActionsParams = {

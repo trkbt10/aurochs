@@ -10,8 +10,8 @@ import { px } from "@aurochs-office/drawing-ml/domain/units";
 import { createEmptySelection } from "@aurochs-ui/editor-core/selection";
 import { createIdleDragState } from "@aurochs-ui/editor-core/drag-state";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
-import type { CreationMode } from "../context/presentation/editor/types";
-import type { ShapeBounds } from "../shape/creation-bounds";
+import type { CreationMode } from "@aurochs-ui/ooxml-components";
+import type { ShapeBounds } from "@aurochs-ui/ooxml-components";
 import { SlideCanvas } from "./SlideCanvas";
 
 type CallTracker<Args extends readonly unknown[]> = {

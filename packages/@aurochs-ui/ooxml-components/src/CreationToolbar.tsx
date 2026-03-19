@@ -3,11 +3,13 @@
  *
  * Toolbar for creating new shapes, text boxes, and other elements.
  * Uses lucide-react icons for consistent visual design.
+ * Shared by both pptx-editor and potx-editor.
  */
 
 import { useCallback, useState, type CSSProperties } from "react";
 import type { LucideIcon } from "lucide-react";
-import type { CreationMode } from "../context/presentation/editor/types";
+import type { CreationMode } from "./creation-types";
+import { isSameMode } from "./creation-types";
 import { ToolbarButton, TOOLBAR_BUTTON_ICON_SIZE } from "@aurochs-ui/ui-components/primitives/ToolbarButton";
 import { ToolbarSeparator } from "@aurochs-ui/ui-components/primitives/ToolbarSeparator";
 import { Popover } from "@aurochs-ui/ui-components/primitives/Popover";
@@ -43,6 +45,8 @@ export type CreationToolbarProps = {
   readonly disabled?: boolean;
   /** Visual style */
   readonly appearance?: "panel" | "floating";
+  /** Set of tool IDs to show (omit to show all tools) */
+  readonly visibleTools?: ReadonlySet<string>;
 };
 
 type ToolDefinition = {
@@ -270,27 +274,6 @@ const TOOL_GROUPS: readonly ToolbarGroup[] = [
 // Helper Functions
 // =============================================================================
 
-function isSameMode(a: CreationMode, b: CreationMode): boolean {
-  if (a.type !== b.type) {
-    return false;
-  }
-  if (a.type === "shape" && b.type === "shape") {
-    return a.preset === b.preset;
-  }
-  if (a.type === "table" && b.type === "table") {
-    return a.rows === b.rows && a.cols === b.cols;
-  }
-  if (a.type === "chart" && b.type === "chart") {
-    return a.chartType === b.chartType;
-  }
-  if (a.type === "diagram" && b.type === "diagram") {
-    return a.diagramType === b.diagramType;
-  }
-  // For pencil mode, we only compare the type (smoothing can be different)
-  // This ensures the button stays active regardless of smoothing level
-  return true;
-}
-
 function isPopoverActive(toolId: string, mode: CreationMode): boolean {
   if (toolId === "chart") {
     return mode.type === "chart";
@@ -301,6 +284,16 @@ function isPopoverActive(toolId: string, mode: CreationMode): boolean {
   return false;
 }
 
+function filterTools(tools: readonly ToolDefinition[], visibleTools?: ReadonlySet<string>): readonly ToolDefinition[] {
+  if (!visibleTools) {return tools;}
+  return tools.filter((t) => visibleTools.has(t.id));
+}
+
+function filterPopoverTools(tools: readonly PopoverToolDefinition[], visibleTools?: ReadonlySet<string>): readonly PopoverToolDefinition[] {
+  if (!visibleTools) {return tools;}
+  return tools.filter((t) => visibleTools.has(t.id));
+}
+
 // =============================================================================
 // Component
 // =============================================================================
@@ -308,7 +301,7 @@ function isPopoverActive(toolId: string, mode: CreationMode): boolean {
 /**
  * Toolbar for creating new shapes and elements
  */
-export function CreationToolbar({ mode, onModeChange, disabled = false, appearance = "panel" }: CreationToolbarProps) {
+export function CreationToolbar({ mode, onModeChange, disabled = false, appearance = "panel", visibleTools }: CreationToolbarProps) {
   const [openPopoverId, setOpenPopoverId] = useState<string | null>(null);
 
   const handleClick = useCallback(
@@ -346,10 +339,12 @@ export function CreationToolbar({ mode, onModeChange, disabled = false, appearan
     <div style={appliedStyle}>
       {TOOL_GROUPS.map((group, groupIndex) => {
         if (group.type === "tools") {
+          const filtered = filterTools(group.tools, visibleTools);
+          if (filtered.length === 0) {return null;}
           return (
             <div key={groupIndex} style={groupStyle}>
               {groupIndex > 0 && <ToolbarSeparator style={{ height: "24px" }} />}
-              {group.tools.map((tool) => {
+              {filtered.map((tool) => {
                 const isActive = isSameMode(mode, tool.mode);
                 return (
                   <ToolbarButton
@@ -367,10 +362,12 @@ export function CreationToolbar({ mode, onModeChange, disabled = false, appearan
           );
         }
 
+        const filteredPopover = filterPopoverTools(group.tools, visibleTools);
+        if (filteredPopover.length === 0) {return null;}
         return (
           <div key={groupIndex} style={groupStyle}>
             {groupIndex > 0 && <ToolbarSeparator style={{ height: "24px" }} />}
-            {group.tools.map((tool) => {
+            {filteredPopover.map((tool) => {
               const isActive = isPopoverActive(tool.id, mode);
               const isOpen = openPopoverId === tool.id;
               return (

@@ -22,8 +22,8 @@ import type { Slide, TextBody, TextRun } from "@aurochs-office/pptx/domain";
 import { px, deg, pt, type Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import { SlideRendererSvg } from "@aurochs-renderer/pptx/react";
 import { layoutTextBody, toLayoutInput } from "@aurochs-renderer/pptx/text-layout";
-import { TextEditController } from "@aurochs-ui/pptx-editor/slide/text-edit";
-import type { TextSelection, CursorPosition, SelectionChangeEvent } from "@aurochs-ui/pptx-editor/slide/text-edit";
+import { TextEditController } from "@aurochs-ui/ooxml-components/text-edit";
+import type { TextSelection, CursorPosition, SelectionChangeEvent } from "@aurochs-ui/ooxml-components/text-edit";
 import {
   applyRunPropertiesToSelection,
   applyParagraphPropertiesToSelection,

@@ -4,7 +4,7 @@
 import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
 import type { SpShape, GraphicFrame, GrpShape, CxnShape, ContentPartShape } from "@aurochs-office/pptx/domain/shape";
 import { getShapeTransform } from "@aurochs-renderer/pptx/svg";
-import { withUpdatedTransform, hasEditableTransform } from "./transform";
+import { withUpdatedTransform, hasEditableTransform } from "./pptx-transform";
 
 // =============================================================================
 // Test Fixtures

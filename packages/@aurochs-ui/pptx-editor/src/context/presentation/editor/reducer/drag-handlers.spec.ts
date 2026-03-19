@@ -7,10 +7,12 @@
 
 /* eslint-disable no-restricted-syntax -- Test file uses let for sequential state updates */
 import { presentationEditorReducer, createPresentationEditorState } from "./reducer";
-import type { PresentationEditorState, CreationMode } from "../types";
+import type { PresentationEditorState } from "../types";
+import type { CreationMode } from "@aurochs-ui/ooxml-components";
 import type { Shape } from "@aurochs-office/pptx/domain";
 import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
-import { createShapeFromMode, getDefaultBoundsForMode } from "../../../../shape/factory";
+import { createShapeFromMode } from "../../../../shape/factory";
+import { getDefaultBoundsForMode } from "@aurochs-ui/ooxml-components";
 import { createTestDocument } from "./test-fixtures";
 
 describe("Drag Preview and Commit", () => {
