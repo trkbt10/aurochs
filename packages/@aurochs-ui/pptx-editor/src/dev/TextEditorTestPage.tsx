@@ -7,15 +7,13 @@
 import { useMemo, useState } from "react";
 import { FieldGroup, Panel } from "@aurochs-ui/ui-components/layout";
 import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
+import { PixelsEditor, DegreesEditor, createDefaultColor } from "@aurochs-ui/editor-controls/editors";
 import {
-  PixelsEditor,
-  DegreesEditor,
   MixedRunPropertiesEditor,
   MixedParagraphPropertiesEditor,
   FillEditor,
   LineEditor,
   EffectsEditor,
-  createDefaultColor,
   createDefaultLine,
   createDefaultEffects,
   createDefaultTextBody,

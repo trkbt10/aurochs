@@ -15,7 +15,7 @@ import type { Color, ColorSpec, ColorTransform, SrgbColor, SchemeColor } from "@
 import type { EditorProps, SelectOption } from "@aurochs-ui/ui-components/types";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
 import { resolveColor } from "@aurochs-office/drawing-ml/domain/color-resolution";
-import { useEditorConfig } from "../../context/editor/EditorConfigContext";
+import { useEditorConfig } from "../../editor-config";
 
 export type ColorEditorProps = EditorProps<Color> & {
   readonly style?: CSSProperties;

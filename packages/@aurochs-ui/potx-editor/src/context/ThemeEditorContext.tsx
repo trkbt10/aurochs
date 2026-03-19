@@ -35,11 +35,12 @@ export type ThemeEditorProviderProps = {
   readonly children: React.ReactNode;
 };
 
+/** Provider component that initializes and manages theme editor state. */
 export function ThemeEditorProvider({ initProps, children }: ThemeEditorProviderProps) {
   const [state, dispatch] = useReducer(
     themeEditorReducer,
-    { colorScheme: initProps.colorScheme, fontScheme: initProps.fontScheme },
-    ({ colorScheme, fontScheme }) => createInitialThemeEditorState(colorScheme, fontScheme),
+    initProps,
+    (props) => createInitialThemeEditorState(props),
   );
 
   const value = useMemo<ThemeEditorContextValue>(() => ({
@@ -60,6 +61,7 @@ export function ThemeEditorProvider({ initProps, children }: ThemeEditorProvider
 // Hooks
 // =============================================================================
 
+/** Hook to access the theme editor context; throws if used outside a provider. */
 export function useThemeEditor(): ThemeEditorContextValue {
   const ctx = useContext(ThemeEditorContext);
   if (!ctx) {
@@ -68,6 +70,7 @@ export function useThemeEditor(): ThemeEditorContextValue {
   return ctx;
 }
 
+/** Hook to optionally access the theme editor context; returns undefined if outside a provider. */
 export function useThemeEditorOptional(): ThemeEditorContextValue | undefined {
   return useContext(ThemeEditorContext);
 }

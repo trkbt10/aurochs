@@ -5,6 +5,8 @@
   "type": "module",
   "sideEffects": false,
   "dependencies": {
+    "@aurochs-office/drawing-ml": "workspace:*",
+    "@aurochs-office/ooxml": "workspace:*",
     "@aurochs-ui/color-editor": "workspace:*",
     "@aurochs-ui/editor-core": "workspace:*",
     "@aurochs-ui/ui-components": "workspace:*",
@@ -92,6 +94,14 @@
     "./shape-editor": {
       "types": "./src/shape-editor/index.ts",
       "default": "./src/shape-editor/index.ts"
+    },
+    "./editor-config": {
+      "types": "./src/editor-config/index.ts",
+      "default": "./src/editor-config/index.ts"
+    },
+    "./editors": {
+      "types": "./src/editors/index.ts",
+      "default": "./src/editors/index.ts"
     }
   }
 }

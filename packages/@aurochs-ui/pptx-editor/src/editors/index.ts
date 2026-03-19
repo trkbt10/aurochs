@@ -1,39 +1,17 @@
 /**
  * @file Editors exports
+ *
+ * Only pptx-specific editors.
+ * Shared editors: import from @aurochs-ui/editor-controls/editors
+ * TransitionEditor: import from @aurochs-ui/ooxml-components
  */
 
-// Primitive editors
+// Color editors (pptx-specific: FillEditor with BlipFill support)
 export {
-  PixelsEditor,
-  DegreesEditor,
-  PercentEditor,
-  PointsEditor,
-  TransformEditor,
-  createDefaultTransform,
-  type PixelsEditorProps,
-  type DegreesEditorProps,
-  type PercentEditorProps,
-  type PointsEditorProps,
-  type TransformEditorProps,
-} from "./primitives";
-
-// Color editors
-export {
-  ColorSpecEditor,
-  ColorTransformEditor,
-  ColorEditor,
   FillEditor,
-  GradientStopsEditor,
-  createDefaultSrgbColor,
-  createDefaultColor,
   createDefaultSolidFill,
   createNoFill,
-  createDefaultGradientStops,
-  type ColorSpecEditorProps,
-  type ColorTransformEditorProps,
-  type ColorEditorProps,
   type FillEditorProps,
-  type GradientStopsEditorProps,
 } from "./color";
 
 // Text editors
@@ -104,14 +82,11 @@ export {
 // Slide-level editors
 export {
   BackgroundEditor,
-  TransitionEditor,
   SlideLayoutEditor,
   SlideSizeEditor,
   createDefaultBackground,
-  createDefaultTransition,
   createDefaultSlideSize,
   type BackgroundEditorProps,
-  type TransitionEditorProps,
   type SlideLayoutEditorProps,
   type SlideSizeEditorProps,
 } from "./slide";

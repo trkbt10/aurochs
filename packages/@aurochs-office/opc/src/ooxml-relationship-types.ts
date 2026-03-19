@@ -46,6 +46,8 @@ export const OFFICE_RELATIONSHIP_TYPES = {
   font: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/font",
   /** VBA project relationship */
   vbaProject: "http://schemas.microsoft.com/office/2006/relationships/vbaProject",
+  /** Extended properties relationship */
+  extendedProperties: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties",
 } as const;
 
 // =============================================================================

@@ -2,6 +2,7 @@
  * @file Editor configuration context
  *
  * Provides theme and configuration to editor components without coupling.
+ * Shared between pptx-editor and potx-editor.
  */
 
 import { createContext, useContext, useMemo, type ReactNode } from "react";

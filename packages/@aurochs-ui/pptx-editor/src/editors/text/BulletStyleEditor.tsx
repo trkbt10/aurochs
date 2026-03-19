@@ -7,8 +7,7 @@
 import { useCallback, useState, type CSSProperties } from "react";
 import { Button, Input, Select, Toggle } from "@aurochs-ui/ui-components/primitives";
 import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
-import { PercentEditor, PointsEditor } from "../primitives";
-import { ColorEditor, createDefaultColor } from "../color";
+import { PercentEditor, PointsEditor, ColorEditor, createDefaultColor } from "@aurochs-ui/editor-controls/editors";
 import type { BulletStyle, Bullet, BulletType, AutoNumberBullet, CharBullet } from "@aurochs-office/pptx/domain/text";
 import type { TextTypeface } from "@aurochs-office/pptx/domain/types";
 import type { Color } from "@aurochs-office/drawing-ml/domain/color";

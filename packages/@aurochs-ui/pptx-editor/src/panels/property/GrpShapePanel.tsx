@@ -11,13 +11,12 @@ import { px } from "@aurochs-office/drawing-ml/domain/units";
 import { FieldGroup } from "@aurochs-ui/ui-components/layout";
 import {
   NonVisualPropertiesEditor,
-  TransformEditor,
   FillEditor,
   EffectsEditor,
-  createDefaultTransform,
   createDefaultSolidFill,
   createDefaultEffects,
 } from "../../editors/index";
+import { TransformEditor, createDefaultTransform } from "@aurochs-ui/editor-controls/editors";
 import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 
 // =============================================================================

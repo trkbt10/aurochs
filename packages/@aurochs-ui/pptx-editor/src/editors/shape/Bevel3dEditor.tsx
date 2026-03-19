@@ -7,7 +7,7 @@
 
 import { Select } from "@aurochs-ui/ui-components/primitives";
 import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
-import { PixelsEditor } from "../primitives/PixelsEditor";
+import { PixelsEditor } from "@aurochs-ui/editor-controls/editors";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import type { Bevel3d, BevelPresetType } from "@aurochs-office/pptx/domain";
 import type { EditorProps, SelectOption } from "@aurochs-ui/ui-components/types";

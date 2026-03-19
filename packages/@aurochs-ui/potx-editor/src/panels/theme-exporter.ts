@@ -2,15 +2,30 @@
  * @file Theme exporter - exports theme as POTX file
  *
  * Creates a PowerPoint template (.potx) file from theme data.
- * Uses @aurochs-builder/pptx and @aurochs/xml infrastructure
- * for XML construction instead of raw string templates.
+ * All constants (namespaces, content types, relationship types) are
+ * sourced from @aurochs-office/opc and @aurochs-office/pptx/domain (SoT).
  *
  * @see ECMA-376 Part 1, Section 20.1.6 - Theme Definitions
  */
 
 import type { ThemeColorScheme, ThemeFontScheme } from "./types";
+import type { CustomColor } from "@aurochs-office/pptx/domain/theme/types";
+import type { ColorMapping } from "@aurochs-office/pptx/domain/color/types";
 import { CONTENT_TYPES, RELATIONSHIP_TYPES } from "@aurochs-office/pptx/domain";
-import { createElement, createText, serializeDocument, type XmlDocument } from "@aurochs/xml";
+import {
+  serializeRelationships,
+  serializeContentTypes,
+  STANDARD_CONTENT_TYPE_DEFAULTS,
+  type ContentTypeEntry,
+  type OpcRelationship,
+} from "@aurochs-office/opc";
+import {
+  OFFICE_RELATIONSHIP_TYPES,
+  OFFICE_NAMESPACES,
+  DRAWINGML_NAMESPACES,
+  PRESENTATIONML_NAMESPACES,
+} from "@aurochs-office/opc";
+import { createElement, createText, serializeDocument, type XmlDocument, type XmlElement } from "@aurochs/xml";
 import { createEmptyZipPackage } from "@aurochs/zip";
 
 // =============================================================================
@@ -24,16 +39,31 @@ export type ThemeExportOptions = {
   readonly colorScheme: ThemeColorScheme;
   /** Font scheme (major and minor fonts) */
   readonly fontScheme: ThemeFontScheme;
+  /** Font scheme name (optional, defaults to theme name) */
+  readonly fontSchemeName?: string;
+  /** Custom colors (a:custClrLst) */
+  readonly customColors?: readonly CustomColor[];
+  /** Master slide color mapping */
+  readonly colorMapping?: ColorMapping;
+  /** Format scheme style elements (preserved XmlElement arrays) */
+  readonly formatSchemeElements?: {
+    readonly fillStyles?: readonly XmlElement[];
+    readonly lineStyles?: readonly XmlElement[];
+    readonly effectStyles?: readonly XmlElement[];
+    readonly bgFillStyles?: readonly XmlElement[];
+  };
 };
 
 // =============================================================================
-// Constants
+// Constants (derived from SoT, no hardcoded URIs)
 // =============================================================================
 
-const RELS_XMLNS = "http://schemas.openxmlformats.org/package/2006/relationships";
-const OOXML_OFFICE_DOC_REL = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument";
-const OOXML_EXTENDED_PROPS_REL = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties";
-const OPC_CONTENT_TYPES_XMLNS = "http://schemas.openxmlformats.org/package/2006/content-types";
+/** Standard PresentationML xmlns attributes */
+const PPTX_XMLNS = {
+  "xmlns:p": PRESENTATIONML_NAMESPACES.main,
+  "xmlns:a": DRAWINGML_NAMESPACES.main,
+  "xmlns:r": OFFICE_NAMESPACES.relationships,
+} as const;
 
 /**
  * OOXML specification: ST_SlideMasterId uses values >= 2^31
@@ -47,143 +77,151 @@ const DEFAULT_SLIDE_SIZE = {
   cy: "6858000", // 7.5 inches
 };
 
+/** Default color map per ECMA-376 convention */
+const DEFAULT_COLOR_MAP: ColorMapping = {
+  bg1: "lt1", tx1: "dk1", bg2: "lt2", tx2: "dk2",
+  accent1: "accent1", accent2: "accent2", accent3: "accent3",
+  accent4: "accent4", accent5: "accent5", accent6: "accent6",
+  hlink: "hlink", folHlink: "folHlink",
+};
+
 // =============================================================================
-// XML Element Builders
+// OPC Part Builders (using serializeRelationships / serializeContentTypes)
 // =============================================================================
 
 function buildRootRels(): XmlDocument {
-  return {
-    children: [
-      createElement("Relationships", { xmlns: RELS_XMLNS }, [
-        createElement("Relationship", { Id: "rId1", Type: OOXML_OFFICE_DOC_REL, Target: "ppt/presentation.xml" }),
-        createElement("Relationship", { Id: "rId2", Type: OOXML_EXTENDED_PROPS_REL, Target: "docProps/app.xml" }),
-      ]),
-    ],
-  };
+  const rels: OpcRelationship[] = [
+    { id: "rId1", type: OFFICE_RELATIONSHIP_TYPES.officeDocument, target: "ppt/presentation.xml" },
+    { id: "rId2", type: OFFICE_RELATIONSHIP_TYPES.extendedProperties, target: "docProps/app.xml" },
+  ];
+  return { children: [serializeRelationships(rels)] };
+}
+
+function buildContentTypes(): XmlDocument {
+  const entries: ContentTypeEntry[] = [
+    ...STANDARD_CONTENT_TYPE_DEFAULTS,
+    { kind: "override", partName: "/ppt/presentation.xml", contentType: CONTENT_TYPES.PRESENTATION },
+    { kind: "override", partName: "/ppt/slides/slide1.xml", contentType: CONTENT_TYPES.SLIDE },
+    { kind: "override", partName: "/ppt/slideMasters/slideMaster1.xml", contentType: CONTENT_TYPES.SLIDE_MASTER },
+    { kind: "override", partName: "/ppt/slideLayouts/slideLayout1.xml", contentType: CONTENT_TYPES.SLIDE_LAYOUT },
+    { kind: "override", partName: "/ppt/theme/theme1.xml", contentType: CONTENT_TYPES.THEME },
+  ];
+  return { children: [serializeContentTypes(entries)] };
 }
 
 function buildAppProperties(): XmlDocument {
   return {
     children: [
-      createElement("Properties", { xmlns: "http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" }, [
+      createElement("Properties", { xmlns: OFFICE_NAMESPACES.extendedProperties }, [
         createElement("AppVersion", {}, [createText("16.0")]),
       ]),
     ],
   };
 }
 
-function buildContentTypes(): XmlDocument {
-  return {
-    children: [
-      createElement("Types", { xmlns: OPC_CONTENT_TYPES_XMLNS }, [
-        createElement("Default", { Extension: "rels", ContentType: "application/vnd.openxmlformats-package.relationships+xml" }),
-        createElement("Default", { Extension: "xml", ContentType: "application/xml" }),
-        createElement("Override", { PartName: "/ppt/presentation.xml", ContentType: CONTENT_TYPES.PRESENTATION }),
-        createElement("Override", { PartName: "/ppt/slides/slide1.xml", ContentType: CONTENT_TYPES.SLIDE }),
-        createElement("Override", { PartName: "/ppt/slideMasters/slideMaster1.xml", ContentType: CONTENT_TYPES.SLIDE_MASTER }),
-        createElement("Override", { PartName: "/ppt/slideLayouts/slideLayout1.xml", ContentType: CONTENT_TYPES.SLIDE_LAYOUT }),
-        createElement("Override", { PartName: "/ppt/theme/theme1.xml", ContentType: CONTENT_TYPES.THEME }),
-      ]),
-    ],
-  };
+function buildPresentationRels(): XmlDocument {
+  const rels: OpcRelationship[] = [
+    { id: "rId1", type: RELATIONSHIP_TYPES.SLIDE_MASTER, target: "slideMasters/slideMaster1.xml" },
+    { id: "rId2", type: RELATIONSHIP_TYPES.SLIDE, target: "slides/slide1.xml" },
+  ];
+  return { children: [serializeRelationships(rels)] };
+}
+
+function buildMasterRels(): XmlDocument {
+  const rels: OpcRelationship[] = [
+    { id: "rId1", type: RELATIONSHIP_TYPES.SLIDE_LAYOUT, target: "../slideLayouts/slideLayout1.xml" },
+    { id: "rId2", type: RELATIONSHIP_TYPES.THEME, target: "../theme/theme1.xml" },
+  ];
+  return { children: [serializeRelationships(rels)] };
+}
+
+function buildLayoutRels(): XmlDocument {
+  const rels: OpcRelationship[] = [
+    { id: "rId1", type: RELATIONSHIP_TYPES.SLIDE_MASTER, target: "../slideMasters/slideMaster1.xml" },
+  ];
+  return { children: [serializeRelationships(rels)] };
+}
+
+function buildSlideRels(): XmlDocument {
+  const rels: OpcRelationship[] = [
+    { id: "rId1", type: RELATIONSHIP_TYPES.SLIDE_LAYOUT, target: "../slideLayouts/slideLayout1.xml" },
+  ];
+  return { children: [serializeRelationships(rels)] };
+}
+
+// =============================================================================
+// PresentationML Part Builders
+// =============================================================================
+
+/** Empty group shape properties (required by spTree) */
+function buildEmptyGroupSpPr(): XmlElement {
+  return createElement("p:grpSpPr", {}, [
+    createElement("a:xfrm", {}, [
+      createElement("a:off", { x: "0", y: "0" }),
+      createElement("a:ext", { cx: "0", cy: "0" }),
+      createElement("a:chOff", { x: "0", y: "0" }),
+      createElement("a:chExt", { cx: "0", cy: "0" }),
+    ]),
+  ]);
+}
+
+/** Non-visual group shape properties (required by spTree) */
+function buildNvGrpSpPr(): XmlElement {
+  return createElement("p:nvGrpSpPr", {}, [
+    createElement("p:cNvPr", { id: "1", name: "" }),
+    createElement("p:cNvGrpSpPr"),
+    createElement("p:nvPr"),
+  ]);
 }
 
 function buildPresentation(): XmlDocument {
   return {
     children: [
-      createElement(
-        "p:presentation",
-        {
-          "xmlns:p": "http://schemas.openxmlformats.org/presentationml/2006/main",
-          "xmlns:r": "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
-          "xmlns:a": "http://schemas.openxmlformats.org/drawingml/2006/main",
-        },
-        [
-          createElement("p:sldIdLst", {}, [
-            createElement("p:sldId", { id: "256", "r:id": "rId2" }),
-          ]),
-          createElement("p:sldMasterIdLst", {}, [
-            createElement("p:sldMasterId", { id: SLIDE_MASTER_ID, "r:id": "rId1" }),
-          ]),
-          createElement("p:sldSz", { cx: DEFAULT_SLIDE_SIZE.cx, cy: DEFAULT_SLIDE_SIZE.cy }),
-          createElement("p:defaultTextStyle", {}, [
-            createElement("a:defPPr", {}, [
-              createElement("a:defRPr", { sz: "1800" }),
-            ]),
-          ]),
-        ],
-      ),
-    ],
-  };
-}
-
-function buildPresentationRels(): XmlDocument {
-  return {
-    children: [
-      createElement("Relationships", { xmlns: RELS_XMLNS }, [
-        createElement("Relationship", { Id: "rId1", Type: RELATIONSHIP_TYPES.SLIDE_MASTER, Target: "slideMasters/slideMaster1.xml" }),
-        createElement("Relationship", { Id: "rId2", Type: RELATIONSHIP_TYPES.SLIDE, Target: "slides/slide1.xml" }),
+      createElement("p:presentation", PPTX_XMLNS, [
+        createElement("p:sldIdLst", {}, [
+          createElement("p:sldId", { id: "256", "r:id": "rId2" }),
+        ]),
+        createElement("p:sldMasterIdLst", {}, [
+          createElement("p:sldMasterId", { id: SLIDE_MASTER_ID, "r:id": "rId1" }),
+        ]),
+        createElement("p:sldSz", DEFAULT_SLIDE_SIZE),
+        createElement("p:defaultTextStyle", {}, [
+          createElement("a:defPPr", {}, [createElement("a:defRPr", { sz: "1800" })]),
+        ]),
       ]),
     ],
   };
 }
 
-function buildSlideMaster(): XmlDocument {
+function buildSlideMaster(colorMapping?: ColorMapping): XmlDocument {
+  const clrMap = colorMapping ?? DEFAULT_COLOR_MAP;
   return {
     children: [
-      createElement(
-        "p:sldMaster",
-        {
-          "xmlns:p": "http://schemas.openxmlformats.org/presentationml/2006/main",
-          "xmlns:a": "http://schemas.openxmlformats.org/drawingml/2006/main",
-          "xmlns:r": "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
-        },
-        [
-          createElement("p:cSld", {}, [
-            createElement("p:spTree", {}, [
-              createElement("p:nvGrpSpPr", {}, [
-                createElement("p:cNvPr", { id: "1", name: "" }),
-                createElement("p:cNvGrpSpPr"),
-                createElement("p:nvPr"),
-              ]),
-              createElement("p:grpSpPr"),
-            ]),
-          ]),
-          createElement("p:clrMap", {
-            bg1: "lt1", tx1: "dk1", bg2: "lt2", tx2: "dk2",
-            accent1: "accent1", accent2: "accent2", accent3: "accent3",
-            accent4: "accent4", accent5: "accent5", accent6: "accent6",
-            hlink: "hlink", folHlink: "folHlink",
-          }),
-          createElement("p:sldLayoutIdLst", {}, [
-            createElement("p:sldLayoutId", { id: "2147483649", "r:id": "rId1" }),
-          ]),
-          createElement("p:txStyles", {}, [
-            createElement("p:titleStyle"),
-            createElement("p:bodyStyle"),
-          ]),
-        ],
-      ),
-    ],
-  };
-}
-
-function buildMasterRels(): XmlDocument {
-  return {
-    children: [
-      createElement("Relationships", { xmlns: RELS_XMLNS }, [
-        createElement("Relationship", { Id: "rId1", Type: RELATIONSHIP_TYPES.SLIDE_LAYOUT, Target: "../slideLayouts/slideLayout1.xml" }),
-        createElement("Relationship", { Id: "rId2", Type: RELATIONSHIP_TYPES.THEME, Target: "../theme/theme1.xml" }),
+      createElement("p:sldMaster", PPTX_XMLNS, [
+        createElement("p:cSld", {}, [
+          createElement("p:spTree", {}, [buildNvGrpSpPr(), createElement("p:grpSpPr")]),
+        ]),
+        createElement("p:clrMap", clrMap as Record<string, string>),
+        createElement("p:sldLayoutIdLst", {}, [
+          createElement("p:sldLayoutId", { id: "2147483649", "r:id": "rId1" }),
+        ]),
+        createElement("p:txStyles", {}, [
+          createElement("p:titleStyle"),
+          createElement("p:bodyStyle"),
+        ]),
       ]),
     ],
   };
 }
 
-function buildLayoutRels(): XmlDocument {
+function buildBlankLayout(): XmlDocument {
   return {
     children: [
-      createElement("Relationships", { xmlns: RELS_XMLNS }, [
-        createElement("Relationship", { Id: "rId1", Type: RELATIONSHIP_TYPES.SLIDE_MASTER, Target: "../slideMasters/slideMaster1.xml" }),
+      createElement("p:sldLayout", { ...PPTX_XMLNS, type: "blank", preserve: "1" }, [
+        createElement("p:cSld", { name: "Blank" }, [
+          createElement("p:spTree", {}, [buildNvGrpSpPr(), buildEmptyGroupSpPr()]),
+        ]),
+        createElement("p:clrMapOvr", {}, [createElement("a:masterClrMapping")]),
       ]),
     ],
   };
@@ -192,118 +230,28 @@ function buildLayoutRels(): XmlDocument {
 function buildBlankSlide(): XmlDocument {
   return {
     children: [
-      createElement(
-        "p:sld",
-        {
-          "xmlns:p": "http://schemas.openxmlformats.org/presentationml/2006/main",
-          "xmlns:a": "http://schemas.openxmlformats.org/drawingml/2006/main",
-          "xmlns:r": "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
-        },
-        [
-          createElement("p:cSld", {}, [
-            createElement("p:spTree", {}, [
-              createElement("p:nvGrpSpPr", {}, [
-                createElement("p:cNvPr", { id: "1", name: "" }),
-                createElement("p:cNvGrpSpPr"),
-                createElement("p:nvPr"),
-              ]),
-              createElement("p:grpSpPr", {}, [
-                createElement("a:xfrm", {}, [
-                  createElement("a:off", { x: "0", y: "0" }),
-                  createElement("a:ext", { cx: "0", cy: "0" }),
-                  createElement("a:chOff", { x: "0", y: "0" }),
-                  createElement("a:chExt", { cx: "0", cy: "0" }),
-                ]),
-              ]),
-            ]),
-          ]),
-          createElement("p:clrMapOvr", {}, [createElement("a:masterClrMapping")]),
-        ],
-      ),
-    ],
-  };
-}
-
-function buildBlankLayout(): XmlDocument {
-  return {
-    children: [
-      createElement(
-        "p:sldLayout",
-        {
-          "xmlns:a": "http://schemas.openxmlformats.org/drawingml/2006/main",
-          "xmlns:r": "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
-          "xmlns:p": "http://schemas.openxmlformats.org/presentationml/2006/main",
-          type: "blank",
-          preserve: "1",
-        },
-        [
-          createElement("p:cSld", { name: "Blank" }, [
-            createElement("p:spTree", {}, [
-              createElement("p:nvGrpSpPr", {}, [
-                createElement("p:cNvPr", { id: "1", name: "" }),
-                createElement("p:cNvGrpSpPr"),
-                createElement("p:nvPr"),
-              ]),
-              createElement("p:grpSpPr", {}, [
-                createElement("a:xfrm", {}, [
-                  createElement("a:off", { x: "0", y: "0" }),
-                  createElement("a:ext", { cx: "0", cy: "0" }),
-                  createElement("a:chOff", { x: "0", y: "0" }),
-                  createElement("a:chExt", { cx: "0", cy: "0" }),
-                ]),
-              ]),
-            ]),
-          ]),
-          createElement("p:clrMapOvr", {}, [createElement("a:masterClrMapping")]),
-        ],
-      ),
-    ],
-  };
-}
-
-function buildSlideRels(): XmlDocument {
-  return {
-    children: [
-      createElement("Relationships", { xmlns: RELS_XMLNS }, [
-        createElement("Relationship", { Id: "rId1", Type: RELATIONSHIP_TYPES.SLIDE_LAYOUT, Target: "../slideLayouts/slideLayout1.xml" }),
+      createElement("p:sld", PPTX_XMLNS, [
+        createElement("p:cSld", {}, [
+          createElement("p:spTree", {}, [buildNvGrpSpPr(), buildEmptyGroupSpPr()]),
+        ]),
+        createElement("p:clrMapOvr", {}, [createElement("a:masterClrMapping")]),
       ]),
     ],
   };
 }
 
+// =============================================================================
+// Theme XML Builder
+// =============================================================================
+
 /**
  * Build theme XML with color and font schemes.
- *
- * Constructs the a:theme element tree with a:clrScheme, a:fontScheme,
- * and minimal a:fmtScheme using createElement.
- *
  * @see ECMA-376 Part 1, Section 20.1.6.9 (a:theme)
  */
 function buildTheme(options: ThemeExportOptions): XmlDocument {
-  const { name, colorScheme, fontScheme } = options;
+  const { name, colorScheme, fontScheme, fontSchemeName, customColors, formatSchemeElements } = options;
 
-  const colorChildren = [
-    createElement("a:dk1", {}, [createElement("a:srgbClr", { val: colorScheme.dk1 })]),
-    createElement("a:lt1", {}, [createElement("a:srgbClr", { val: colorScheme.lt1 })]),
-    createElement("a:dk2", {}, [createElement("a:srgbClr", { val: colorScheme.dk2 })]),
-    createElement("a:lt2", {}, [createElement("a:srgbClr", { val: colorScheme.lt2 })]),
-    createElement("a:accent1", {}, [createElement("a:srgbClr", { val: colorScheme.accent1 })]),
-    createElement("a:accent2", {}, [createElement("a:srgbClr", { val: colorScheme.accent2 })]),
-    createElement("a:accent3", {}, [createElement("a:srgbClr", { val: colorScheme.accent3 })]),
-    createElement("a:accent4", {}, [createElement("a:srgbClr", { val: colorScheme.accent4 })]),
-    createElement("a:accent5", {}, [createElement("a:srgbClr", { val: colorScheme.accent5 })]),
-    createElement("a:accent6", {}, [createElement("a:srgbClr", { val: colorScheme.accent6 })]),
-    createElement("a:hlink", {}, [createElement("a:srgbClr", { val: colorScheme.hlink })]),
-    createElement("a:folHlink", {}, [createElement("a:srgbClr", { val: colorScheme.folHlink })]),
-  ];
-
-  function buildFontElement(prefix: string, font: ThemeFontScheme["majorFont"]) {
-    const children = [];
-    if (font.latin) children.push(createElement("a:latin", { typeface: font.latin }));
-    if (font.eastAsian) children.push(createElement("a:ea", { typeface: font.eastAsian }));
-    if (font.complexScript) children.push(createElement("a:cs", { typeface: font.complexScript }));
-    return createElement(`a:${prefix}Font`, {}, children);
-  }
+  const colorChildren = buildColorSchemeChildren(colorScheme);
 
   const placeholderFill = createElement("a:solidFill", {}, [createElement("a:schemeClr", { val: "phClr" })]);
   const placeholderLine = (w: string) => createElement("a:ln", { w }, [
@@ -312,27 +260,82 @@ function buildTheme(options: ThemeExportOptions): XmlDocument {
 
   return {
     children: [
-      createElement("a:theme", { "xmlns:a": "http://schemas.openxmlformats.org/drawingml/2006/main", name }, [
+      createElement("a:theme", { "xmlns:a": DRAWINGML_NAMESPACES.main, name }, [
         createElement("a:themeElements", {}, [
           createElement("a:clrScheme", { name }, colorChildren),
-          createElement("a:fontScheme", { name }, [
+          createElement("a:fontScheme", { name: fontSchemeName || name }, [
             buildFontElement("major", fontScheme.majorFont),
             buildFontElement("minor", fontScheme.minorFont),
           ]),
-          createElement("a:fmtScheme", { name }, [
-            createElement("a:fillStyleLst", {}, [placeholderFill, placeholderFill, placeholderFill]),
-            createElement("a:lnStyleLst", {}, [placeholderLine("6350"), placeholderLine("12700"), placeholderLine("19050")]),
-            createElement("a:effectStyleLst", {}, [
-              createElement("a:effectStyle", {}, [createElement("a:effectLst")]),
-              createElement("a:effectStyle", {}, [createElement("a:effectLst")]),
-              createElement("a:effectStyle", {}, [createElement("a:effectLst")]),
-            ]),
-            createElement("a:bgFillStyleLst", {}, [placeholderFill, placeholderFill, placeholderFill]),
-          ]),
+          buildFormatScheme({ name, elements: formatSchemeElements, placeholderFill, placeholderLine }),
         ]),
+        ...buildCustomColorsList(customColors),
       ]),
     ],
   };
+}
+
+function buildColorSchemeChildren(cs: ThemeColorScheme): XmlElement[] {
+  const slots: readonly (keyof ThemeColorScheme)[] = [
+    "dk1", "lt1", "dk2", "lt2",
+    "accent1", "accent2", "accent3", "accent4", "accent5", "accent6",
+    "hlink", "folHlink",
+  ];
+  return slots.map((key) =>
+    createElement(`a:${key}`, {}, [createElement("a:srgbClr", { val: cs[key] })]),
+  );
+}
+
+function buildFontElement(prefix: string, font: ThemeFontScheme["majorFont"]): XmlElement {
+  const children: XmlElement[] = [];
+  if (font.latin) { children.push(createElement("a:latin", { typeface: font.latin })); }
+  if (font.eastAsian) { children.push(createElement("a:ea", { typeface: font.eastAsian })); }
+  if (font.complexScript) { children.push(createElement("a:cs", { typeface: font.complexScript })); }
+  return createElement(`a:${prefix}Font`, {}, children);
+}
+
+function buildFormatScheme(options: {
+  name: string;
+  elements: ThemeExportOptions["formatSchemeElements"];
+  placeholderFill: XmlElement;
+  placeholderLine: (w: string) => XmlElement;
+}): XmlElement {
+  const { name, elements, placeholderFill, placeholderLine } = options;
+  const fills = elements?.fillStyles ?? [placeholderFill, placeholderFill, placeholderFill];
+  const lines = elements?.lineStyles ?? [placeholderLine("6350"), placeholderLine("12700"), placeholderLine("19050")];
+  const effects = elements?.effectStyles ?? [
+    createElement("a:effectStyle", {}, [createElement("a:effectLst")]),
+    createElement("a:effectStyle", {}, [createElement("a:effectLst")]),
+    createElement("a:effectStyle", {}, [createElement("a:effectLst")]),
+  ];
+  const bgFills = elements?.bgFillStyles ?? [placeholderFill, placeholderFill, placeholderFill];
+
+  return createElement("a:fmtScheme", { name }, [
+    createElement("a:fillStyleLst", {}, [...fills]),
+    createElement("a:lnStyleLst", {}, [...lines]),
+    createElement("a:effectStyleLst", {}, [...effects]),
+    createElement("a:bgFillStyleLst", {}, [...bgFills]),
+  ]);
+}
+
+function serializeCustomColorValue(c: CustomColor): XmlElement {
+  if (c.type === "srgb") {
+    return createElement("a:srgbClr", { val: c.color ?? "000000" });
+  }
+  return createElement("a:sysClr", { val: c.systemColor ?? "windowText" });
+}
+
+function buildCustomColorsList(customColors?: readonly CustomColor[]): XmlElement[] {
+  if (!customColors || customColors.length === 0) {
+    return [];
+  }
+  const colorElements = customColors.map((c) => {
+    const colorEl = serializeCustomColorValue(c);
+    const attrs: Record<string, string> = {};
+    if (c.name) { attrs["name"] = c.name; }
+    return createElement("a:custClr", attrs, [colorEl]);
+  });
+  return [createElement("a:custClrLst", {}, colorElements)];
 }
 
 // =============================================================================
@@ -351,13 +354,10 @@ function writeXml(pkg: ReturnType<typeof createEmptyZipPackage>, path: string, d
  * Export theme as a POTX (PowerPoint Template) file.
  *
  * Creates a minimal POTX containing:
- * - Theme with specified colors and fonts
- * - One slide master with default color map
+ * - Theme with specified colors, fonts, and optional format scheme
+ * - One slide master with color map
  * - One blank slide layout
  * - One blank slide (required by openPresentation)
- *
- * All XML is constructed using createElement/serializeDocument
- * following the @aurochs-builder/pptx pattern.
  *
  * @param options - Theme export options
  * @returns Promise resolving to Blob containing the POTX file
@@ -371,7 +371,7 @@ export async function exportThemeAsPotx(options: ThemeExportOptions): Promise<Bl
   writeXml(pkg, "ppt/presentation.xml", buildPresentation());
   writeXml(pkg, "ppt/_rels/presentation.xml.rels", buildPresentationRels());
   writeXml(pkg, "ppt/theme/theme1.xml", buildTheme(options));
-  writeXml(pkg, "ppt/slideMasters/slideMaster1.xml", buildSlideMaster());
+  writeXml(pkg, "ppt/slideMasters/slideMaster1.xml", buildSlideMaster(options.colorMapping));
   writeXml(pkg, "ppt/slideMasters/_rels/slideMaster1.xml.rels", buildMasterRels());
   writeXml(pkg, "ppt/slideLayouts/slideLayout1.xml", buildBlankLayout());
   writeXml(pkg, "ppt/slideLayouts/_rels/slideLayout1.xml.rels", buildLayoutRels());

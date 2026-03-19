@@ -7,8 +7,7 @@
 
 import { Select, Toggle } from "@aurochs-ui/ui-components/primitives";
 import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
-import { DegreesEditor } from "../primitives/DegreesEditor";
-import { PercentEditor } from "../primitives/PercentEditor";
+import { DegreesEditor, PercentEditor } from "@aurochs-ui/editor-controls/editors";
 import { Rotation3dEditor, createDefaultRotation3d } from "./Rotation3dEditor";
 import { deg, pct } from "@aurochs-office/drawing-ml/domain/units";
 import type { PresetCameraType } from "@aurochs-office/pptx/domain/types";

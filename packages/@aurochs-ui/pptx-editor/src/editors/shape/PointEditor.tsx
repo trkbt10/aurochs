@@ -6,7 +6,7 @@
  */
 
 import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
-import { PixelsEditor } from "../primitives/PixelsEditor";
+import { PixelsEditor } from "@aurochs-ui/editor-controls/editors";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import type { Point } from "@aurochs-office/pptx/domain/types";
 import type { EditorProps } from "@aurochs-ui/ui-components/types";

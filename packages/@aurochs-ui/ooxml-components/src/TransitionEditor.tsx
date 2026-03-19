@@ -13,7 +13,7 @@ import type {
   SearchableSelectOption,
   SearchableSelectItemProps,
 } from "@aurochs-ui/ui-components/primitives/SearchableSelect";
-import { TransitionPreview } from "../../ui/transition-preview";
+import { TransitionPreview } from "./TransitionPreview";
 
 export type TransitionEditorProps = EditorProps<SlideTransition | undefined> & {
   readonly style?: CSSProperties;

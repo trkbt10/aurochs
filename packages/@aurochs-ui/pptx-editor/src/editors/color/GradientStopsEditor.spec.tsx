@@ -8,7 +8,7 @@ import { render, fireEvent } from "@testing-library/react";
 import { useState } from "react";
 import type { GradientStop } from "@aurochs-office/drawing-ml/domain/fill";
 import { pct } from "@aurochs-office/drawing-ml/domain/units";
-import { GradientStopsEditor } from "./GradientStopsEditor";
+import { GradientStopsEditor } from "@aurochs-ui/editor-controls/editors";
 
 function setRect(element: HTMLElement, rect: DOMRect): void {
   Object.defineProperty(element, "getBoundingClientRect", {

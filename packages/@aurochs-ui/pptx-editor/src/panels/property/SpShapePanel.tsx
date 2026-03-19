@@ -8,16 +8,15 @@ import type { SpShape } from "@aurochs-office/pptx/domain/index";
 import { LineEditor, createDefaultLine } from "../../ui/line";
 import {
   NonVisualPropertiesEditor,
-  TransformEditor,
   MixedTextBodyEditor,
   FillEditor,
   EffectsEditor,
   GeometryEditor,
-  createDefaultTransform,
   createDefaultGeometry,
   createDefaultEffects,
   createDefaultSolidFill,
 } from "../../editors/index";
+import { TransformEditor, createDefaultTransform } from "@aurochs-ui/editor-controls/editors";
 import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 
 // =============================================================================

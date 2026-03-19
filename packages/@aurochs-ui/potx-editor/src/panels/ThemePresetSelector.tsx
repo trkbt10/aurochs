@@ -19,8 +19,6 @@ export type ThemePresetSelectorProps = {
 const containerStyle: CSSProperties = {
   display: "flex",
   flexDirection: "column",
-  height: "100%",
-  overflow: "auto",
 };
 
 const gridStyle: CSSProperties = {
@@ -55,17 +53,13 @@ const presetNameStyle: CSSProperties = {
   textAlign: "center",
 };
 
-const colorPaletteStyle: CSSProperties = {
-  display: "flex",
-  gap: "2px",
-  height: "24px",
-  borderRadius: radiusTokens.sm,
+const fontInfoStyle: CSSProperties = {
+  fontSize: fontTokens.size.xs,
+  color: colorTokens.text.secondary,
+  textAlign: "center",
   overflow: "hidden",
-};
-
-const colorSwatchStyle: CSSProperties = {
-  flex: 1,
-  minWidth: 0,
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
 };
 
 const disabledStyle: CSSProperties = {
@@ -81,14 +75,9 @@ type PresetCardProps = {
 };
 
 function PresetCard({ preset, isSelected, onClick, disabled }: PresetCardProps) {
-  const accentColors = [
-    preset.colorScheme.accent1,
-    preset.colorScheme.accent2,
-    preset.colorScheme.accent3,
-    preset.colorScheme.accent4,
-    preset.colorScheme.accent5,
-    preset.colorScheme.accent6,
-  ];
+  const majorLatin = preset.fontScheme.majorFont.latin ?? "";
+  const minorLatin = preset.fontScheme.minorFont.latin ?? "";
+  const fontLabel = majorLatin === minorLatin ? majorLatin : `${majorLatin} / ${minorLatin}`;
 
   const cardStyle: CSSProperties = {
     ...(isSelected ? presetCardSelectedStyle : presetCardStyle),
@@ -109,18 +98,8 @@ function PresetCard({ preset, isSelected, onClick, disabled }: PresetCardProps) 
         }
       }}
     >
-      <div style={colorPaletteStyle}>
-        {accentColors.map((color, index) => (
-          <div
-            key={index}
-            style={{
-              ...colorSwatchStyle,
-              backgroundColor: `#${color}`,
-            }}
-          />
-        ))}
-      </div>
       <div style={presetNameStyle}>{preset.name}</div>
+      {fontLabel && <div style={fontInfoStyle}>{fontLabel}</div>}
     </div>
   );
 }
@@ -129,9 +108,11 @@ function PresetCard({ preset, isSelected, onClick, disabled }: PresetCardProps) 
  * Theme preset selector component.
  *
  * Displays a grid of theme presets with:
- * - Color palette preview (6 accent colors)
  * - Theme name
+ * - Font scheme (majorFont.latin / minorFont.latin)
  * - Selection indicator
+ *
+ * Color details are displayed by ColorSchemeEditor in the Theme tab.
  */
 export function ThemePresetSelector({ currentThemeId, onPresetSelect, disabled }: ThemePresetSelectorProps) {
   const handlePresetClick = useCallback(

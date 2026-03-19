@@ -1,20 +1,9 @@
 /**
  * @file Color editors exports
+ *
+ * Shared editors: import from @aurochs-ui/editor-controls/editors
+ * This module only exports pptx-specific FillEditor (with BlipFill support).
  */
 
-export { ColorSpecEditor, type ColorSpecEditorProps, createDefaultSrgbColor } from "./ColorSpecEditor";
-export { ColorTransformEditor, type ColorTransformEditorProps } from "./ColorTransformEditor";
-export { ColorEditor, type ColorEditorProps, createDefaultColor } from "./ColorEditor";
+// pptx-specific (BlipFill support)
 export { FillEditor, type FillEditorProps, createDefaultSolidFill, createNoFill } from "./FillEditor";
-export {
-  GradientStopEditor,
-  type GradientStopEditorProps,
-  createDefaultGradientStop,
-} from "./GradientStopEditor";
-export {
-  GradientStopsEditor,
-  type GradientStopsEditorProps,
-  createDefaultGradientStops,
-} from "./GradientStopsEditor";
-
-// LineEditor: import directly from "@/pptx-editor/ui/line/LineEditor"

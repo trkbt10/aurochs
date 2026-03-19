@@ -1,38 +1,46 @@
 /**
  * @file Color scheme editor component
  *
- * Editor for the 12 standard theme colors.
+ * Flat list editor for theme colors.
+ *
+ * The 12 standard color slots (dk1, lt1, dk2, lt2, accent1-6, hlink, folHlink) are
+ * defined by ECMA-376 Part 1, Section 20.1.6.2 (CT_ColorScheme) as required children
+ * of a:clrScheme. The grouping into "Base / Accent / Hyperlink" seen in Office UI is
+ * a Microsoft convention, not an ECMA-376 requirement. This editor displays all colors
+ * in a flat list and supports adding, removing, and renaming entries.
  */
 
-import { useCallback, type CSSProperties } from "react";
+import React, { useCallback, useMemo, type CSSProperties } from "react";
 import type { ColorScheme } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { SchemeColorName } from "@aurochs-office/drawing-ml/domain/color";
 import { ColorPickerPopover } from "@aurochs-ui/color-editor";
-import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
-import { colorTokens, fontTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
-import { COLOR_LABELS } from "./types";
+import {
+  OptionalPropertySection,
+  EditablePropertyList,
+  InlineRenameLabel,
+  type EditablePropertyListItem,
+} from "@aurochs-ui/editor-controls/ui";
+import { colorTokens, fontTokens, spacingTokens, radiusTokens } from "@aurochs-ui/ui-components/design-tokens";
+import { COLOR_LABELS, COLOR_SCHEME_KEYS } from "./types";
+
+// =============================================================================
+// Types
+// =============================================================================
 
 export type ColorSchemeEditorProps = {
   readonly colorScheme: ColorScheme;
-  readonly onColorChange: (name: SchemeColorName, color: string) => void;
+  readonly onColorChange: (name: string, color: string) => void;
+  readonly onColorAdd?: (name: string, color: string) => void;
+  readonly onColorRemove?: (name: string) => void;
+  readonly onColorRename?: (oldName: string, newName: string) => void;
   readonly disabled?: boolean;
 };
 
-const containerStyle: CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  height: "100%",
-  overflow: "auto",
-};
+// =============================================================================
+// Styles
+// =============================================================================
 
-const colorGridStyle: CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(2, 1fr)",
-  gap: spacingTokens.md,
-  padding: spacingTokens.sm,
-};
-
-const colorItemStyle: CSSProperties = {
+const colorItemInnerStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
   gap: spacingTokens.sm,
@@ -42,163 +50,144 @@ const colorLabelStyle: CSSProperties = {
   fontSize: fontTokens.size.sm,
   color: colorTokens.text.primary,
   flex: 1,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
 };
 
 const swatchStyle: CSSProperties = {
-  width: "32px",
-  height: "32px",
-  borderRadius: "4px",
+  width: "24px",
+  height: "24px",
+  borderRadius: radiusTokens.sm,
   border: `1px solid var(--border-subtle, ${colorTokens.border.subtle})`,
   cursor: "pointer",
+  flexShrink: 0,
 };
 
-const accentGridStyle: CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(3, 1fr)",
-  gap: spacingTokens.md,
-  padding: spacingTokens.sm,
-};
+// =============================================================================
+// Helpers
+// =============================================================================
 
-const accentItemStyle: CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
-  gap: spacingTokens.xs,
-};
+const STANDARD_KEYS = new Set<string>(COLOR_SCHEME_KEYS);
 
-const accentLabelStyle: CSSProperties = {
-  fontSize: fontTokens.size.xs,
-  color: colorTokens.text.secondary,
-  textAlign: "center",
-};
-
-/**
- * Normalize color value (remove # prefix if present).
- */
 function normalizeColor(color: string): string {
   return color.startsWith("#") ? color.slice(1) : color;
 }
 
-type ColorItemProps = {
-  readonly colorKey: SchemeColorName;
-  readonly color: string;
-  readonly onChange: (color: string) => void;
-  readonly disabled?: boolean;
-  readonly layout: "horizontal" | "vertical";
-};
-
-function ColorItem({ colorKey, color, onChange, disabled, layout }: ColorItemProps) {
-  const normalizedColor = normalizeColor(color);
-
-  if (layout === "vertical") {
-    return (
-      <div style={accentItemStyle}>
-        <ColorPickerPopover
-          value={normalizedColor}
-          onChange={onChange}
-          disabled={disabled}
-          trigger={
-            <div
-              style={{
-                ...swatchStyle,
-                width: "48px",
-                height: "32px",
-                backgroundColor: `#${normalizedColor}`,
-              }}
-            />
-          }
-        />
-        <div style={accentLabelStyle}>{COLOR_LABELS[colorKey]}</div>
-      </div>
-    );
+function getLabel(key: string): string {
+  if (key in COLOR_LABELS) {
+    return COLOR_LABELS[key as SchemeColorName];
   }
-
-  return (
-    <div style={colorItemStyle}>
-      <ColorPickerPopover
-        value={normalizedColor}
-        onChange={onChange}
-        disabled={disabled}
-        trigger={
-          <div
-            style={{
-              ...swatchStyle,
-              backgroundColor: `#${normalizedColor}`,
-            }}
-          />
-        }
-      />
-      <div style={colorLabelStyle}>{COLOR_LABELS[colorKey]}</div>
-    </div>
-  );
+  return key;
 }
 
 /**
- * Color scheme editor component.
- *
- * Allows editing of all 12 theme colors:
- * - Base colors: dk1, lt1, dk2, lt2
- * - Accent colors: accent1-6
- * - Hyperlink colors: hlink, folHlink
+ * Build ordered list of color keys: standard 12 first (in ECMA-376 order),
+ * then any custom keys in insertion order. All entries are removable and renamable.
  */
-export function ColorSchemeEditor({ colorScheme, onColorChange, disabled }: ColorSchemeEditorProps) {
+function buildListItems(colorScheme: ColorScheme): readonly EditablePropertyListItem[] {
+  const items: EditablePropertyListItem[] = [];
+  for (const key of COLOR_SCHEME_KEYS) {
+    if (key in colorScheme) {
+      items.push({ key, label: getLabel(key), renamable: true });
+    }
+  }
+  for (const key of Object.keys(colorScheme)) {
+    if (!STANDARD_KEYS.has(key)) {
+      items.push({ key, label: key, renamable: true });
+    }
+  }
+  return items;
+}
+
+function renderColorLabel(options: {
+  label: string;
+  key: string;
+  onRename: ((oldKey: string, newKey: string) => void) | undefined;
+  disabled?: boolean;
+}): React.ReactNode {
+  if (options.onRename && !options.disabled) {
+    const { key, onRename } = options;
+    return <InlineRenameLabel label={options.label} onRename={(newLabel) => onRename(key, newLabel)} />;
+  }
+  return options.label;
+}
+
+// =============================================================================
+// Component
+// =============================================================================
+
+/**
+ * Color scheme editor — flat list of all theme colors.
+ *
+ * All entries can be renamed (double-click label) and removed.
+ * Standard 12 slots are shown with human-readable labels by default.
+ */
+export function ColorSchemeEditor({
+  colorScheme,
+  onColorChange,
+  onColorAdd,
+  onColorRemove,
+  onColorRename,
+  disabled,
+}: ColorSchemeEditorProps) {
+  const items = useMemo(() => buildListItems(colorScheme), [colorScheme]);
+
   const handleColorChange = useCallback(
-    (name: SchemeColorName) => (color: string) => {
+    (name: string) => (color: string) => {
       onColorChange(name, color);
     },
     [onColorChange],
   );
 
-  const baseColors: SchemeColorName[] = ["dk1", "lt1", "dk2", "lt2"];
-  const accentColors: SchemeColorName[] = ["accent1", "accent2", "accent3", "accent4", "accent5", "accent6"];
-  const hyperlinkColors: SchemeColorName[] = ["hlink", "folHlink"];
+  const handleAdd = useCallback(
+    (name: string) => {
+      onColorAdd?.(name, "000000");
+    },
+    [onColorAdd],
+  );
+
+  const handleRename = useCallback(
+    (oldKey: string, newKey: string) => {
+      onColorRename?.(oldKey, newKey);
+    },
+    [onColorRename],
+  );
+
+  const renderItem = useCallback(
+    (item: EditablePropertyListItem) => {
+      const color = normalizeColor(colorScheme[item.key] ?? "000000");
+      const label = item.label ?? item.key;
+      return (
+        <div style={colorItemInnerStyle}>
+          <ColorPickerPopover
+            value={color}
+            onChange={handleColorChange(item.key)}
+            disabled={disabled}
+            trigger={
+              <div style={{ ...swatchStyle, backgroundColor: `#${color}` }} />
+            }
+          />
+          <div style={colorLabelStyle}>
+            {renderColorLabel({ label, key: item.key, onRename: onColorRename ? handleRename : undefined, disabled })}
+          </div>
+        </div>
+      );
+    },
+    [colorScheme, handleColorChange, handleRename, onColorRename, disabled],
+  );
 
   return (
-    <div style={containerStyle}>
-      <OptionalPropertySection title="Base Colors" defaultExpanded>
-          <div style={colorGridStyle}>
-            {baseColors.map((key) => (
-              <ColorItem
-                key={key}
-                colorKey={key}
-                color={colorScheme[key] ?? "000000"}
-                onChange={handleColorChange(key)}
-                disabled={disabled}
-                layout="horizontal"
-              />
-            ))}
-          </div>
-        </OptionalPropertySection>
-
-        <OptionalPropertySection title="Accent Colors" defaultExpanded>
-          <div style={accentGridStyle}>
-            {accentColors.map((key) => (
-              <ColorItem
-                key={key}
-                colorKey={key}
-                color={colorScheme[key] ?? "000000"}
-                onChange={handleColorChange(key)}
-                disabled={disabled}
-                layout="vertical"
-              />
-            ))}
-          </div>
-        </OptionalPropertySection>
-
-        <OptionalPropertySection title="Hyperlink Colors" defaultExpanded={false}>
-          <div style={colorGridStyle}>
-            {hyperlinkColors.map((key) => (
-              <ColorItem
-                key={key}
-                colorKey={key}
-                color={colorScheme[key] ?? "000000"}
-                onChange={handleColorChange(key)}
-                disabled={disabled}
-                layout="horizontal"
-              />
-            ))}
-          </div>
-      </OptionalPropertySection>
-    </div>
+    <OptionalPropertySection title="Color Scheme" defaultExpanded>
+      <EditablePropertyList
+        items={items}
+        renderItem={renderItem}
+        onAdd={onColorAdd ? handleAdd : undefined}
+        onRemove={onColorRemove}
+        onRename={onColorRename ? handleRename : undefined}
+        disabled={disabled}
+        addPlaceholder="custom1"
+      />
+    </OptionalPropertySection>
   );
 }

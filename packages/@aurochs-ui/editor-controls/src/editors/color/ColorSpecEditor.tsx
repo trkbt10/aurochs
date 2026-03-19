@@ -23,7 +23,7 @@ import type { SolidFill } from "@aurochs-office/drawing-ml/domain/fill";
 import type { EditorProps, SelectOption } from "@aurochs-ui/ui-components/types";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
 import { resolveColor } from "@aurochs-office/drawing-ml/domain/color-resolution";
-import { useEditorConfig } from "../../context/editor/EditorConfigContext";
+import { useEditorConfig } from "../../editor-config";
 
 export type ColorSpecEditorProps = EditorProps<ColorSpec> & {
   readonly style?: CSSProperties;

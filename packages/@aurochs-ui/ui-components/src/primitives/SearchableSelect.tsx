@@ -498,11 +498,14 @@ export function SearchableSelect<T extends string = string>({
     const hasSpaceBelow = spaceBelow >= dropdownHeight;
     const top = hasSpaceBelow ? rect.bottom + 4 : rect.top - dropdownHeight - 4;
 
+    const leftUnclamped = rect.left;
+    const numericWidth = typeof dropdownWidth === "number" ? dropdownWidth : parseFloat(dropdownWidth) || 280;
+    const maxLeft = Math.max(8, window.innerWidth - numericWidth - 8);
     setPosition({
       top: Math.max(8, top),
-      left: Math.max(8, rect.left),
+      left: Math.min(Math.max(8, leftUnclamped), maxLeft),
     });
-  }, [maxHeight]);
+  }, [maxHeight, dropdownWidth]);
 
   // Handle open
   const handleOpen = useCallback(() => {

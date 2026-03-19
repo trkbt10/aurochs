@@ -10,7 +10,7 @@ import type { Fill } from "@aurochs-office/pptx/domain/color/types";
 import type { SolidFill } from "@aurochs-office/drawing-ml/domain/fill";
 import type { FormattingAdapter } from "@aurochs-ui/editor-controls/formatting-adapter";
 import type { FillFormatting } from "@aurochs-ui/editor-controls/surface";
-import { createDefaultColor } from "../../editors/color/ColorEditor";
+import { createDefaultColor } from "@aurochs-ui/editor-controls/editors";
 
 const FILL_LABELS: Record<string, string> = {
   gradientFill: "Gradient",

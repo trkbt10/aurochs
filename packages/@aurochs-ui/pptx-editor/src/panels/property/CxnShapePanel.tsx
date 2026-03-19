@@ -10,13 +10,12 @@ import { FieldGroup } from "@aurochs-ui/ui-components/layout";
 import { LineEditor, createDefaultLine } from "../../ui/line";
 import {
   NonVisualPropertiesEditor,
-  TransformEditor,
   EffectsEditor,
   GeometryEditor,
-  createDefaultTransform,
   createDefaultGeometry,
   createDefaultEffects,
 } from "../../editors/index";
+import { TransformEditor, createDefaultTransform } from "@aurochs-ui/editor-controls/editors";
 import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 
 // =============================================================================

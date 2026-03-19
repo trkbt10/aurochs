@@ -7,7 +7,7 @@
 import { useCallback, type CSSProperties } from "react";
 import { Select } from "@aurochs-ui/ui-components/primitives";
 import { FieldRow } from "@aurochs-ui/ui-components/layout";
-import { PercentEditor, PointsEditor } from "../primitives";
+import { PercentEditor, PointsEditor } from "@aurochs-ui/editor-controls/editors";
 import type { LineSpacing } from "@aurochs-office/pptx/domain/text";
 import type { EditorProps, SelectOption } from "@aurochs-ui/ui-components/types";
 import { pct, pt, type Percent, type Points } from "@aurochs-office/drawing-ml/domain/units";

@@ -9,7 +9,7 @@
 import { useState } from "react";
 import type { SlideWithId, SlideId } from "@aurochs-office/pptx/app";
 import type { SlideTransition } from "@aurochs-office/pptx/domain/transition";
-import { TransitionEditor } from "../editors";
+import { TransitionEditor } from "@aurochs-ui/ooxml-components";
 import { FxIcon } from "@aurochs-ui/ui-components/icons";
 import { Popover } from "@aurochs-ui/ui-components/primitives";
 import { spacingTokens, colorTokens } from "@aurochs-ui/ui-components/design-tokens";

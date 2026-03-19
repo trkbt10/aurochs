@@ -8,7 +8,7 @@
 
 import { Toggle } from "@aurochs-ui/ui-components/primitives";
 import { FieldGroup } from "@aurochs-ui/ui-components/layout";
-import { PixelsEditor } from "../primitives/PixelsEditor";
+import { PixelsEditor } from "@aurochs-ui/editor-controls/editors";
 import { Camera3dEditor, createDefaultCamera3d } from "./Camera3dEditor";
 import { LightRigEditor, createDefaultLightRig } from "./LightRigEditor";
 import { Backdrop3dEditor, createDefaultBackdrop3d } from "./Backdrop3dEditor";

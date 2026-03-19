@@ -5,10 +5,7 @@
 import React from "react";
 import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
 import { Input, Select, Toggle } from "@aurochs-ui/ui-components/primitives";
-import { PixelsEditor } from "../../primitives/PixelsEditor";
-import { DegreesEditor } from "../../primitives/DegreesEditor";
-import { PercentEditor } from "../../primitives/PercentEditor";
-import { ColorEditor, createDefaultColor } from "../../color/ColorEditor";
+import { PixelsEditor, DegreesEditor, PercentEditor, ColorEditor, createDefaultColor } from "@aurochs-ui/editor-controls/editors";
 import { px, deg, pct } from "@aurochs-office/drawing-ml/domain/units";
 import {
   type ShadowEffect,

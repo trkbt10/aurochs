@@ -9,7 +9,8 @@ import type { Chart } from "@aurochs-office/chart/domain";
 import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { ChartEditor, ChartEditorAdaptersProvider } from "@aurochs-ui/chart-editor";
 import { pptxChartEditorAdapters } from "../../adapters";
-import { NonVisualPropertiesEditor, TransformEditor } from "../../editors/index";
+import { NonVisualPropertiesEditor } from "../../editors/index";
+import { TransformEditor } from "@aurochs-ui/editor-controls/editors";
 
 // =============================================================================
 // Types

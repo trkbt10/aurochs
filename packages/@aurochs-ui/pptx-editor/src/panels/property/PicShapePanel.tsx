@@ -11,12 +11,10 @@ import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
 import { Toggle } from "@aurochs-ui/ui-components/primitives";
 import {
   NonVisualPropertiesEditor,
-  TransformEditor,
   EffectsEditor,
-  PercentEditor,
-  createDefaultTransform,
   createDefaultEffects,
 } from "../../editors/index";
+import { TransformEditor, createDefaultTransform, PercentEditor } from "@aurochs-ui/editor-controls/editors";
 import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 
 // =============================================================================

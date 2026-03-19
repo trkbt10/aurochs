@@ -1,54 +1,36 @@
 /**
- * @file FillEditor - Editor for Fill union type
+ * @file BaseFillEditor - Editor for BaseFill types (noFill, solidFill, gradientFill, patternFill)
  *
- * Design principle: NO INTERNAL LABELS.
- * Parent provides semantic context via FieldGroup label.
- * This editor provides the editing UI only.
- * Uses design tokens for consistent styling.
- *
- * Layout: [Swatch] [Type Select] [Type-specific controls]
+ * Format-agnostic fill editor without image/blipFill support.
+ * For image fills, use the format-specific FillEditor (e.g., pptx-editor's FillEditor).
  */
 
-import { useCallback, type CSSProperties, type ChangeEvent } from "react";
-import { Select, Toggle } from "@aurochs-ui/ui-components/primitives";
+import { useCallback, type CSSProperties } from "react";
+import { Select } from "@aurochs-ui/ui-components/primitives";
 import { FieldRow } from "@aurochs-ui/ui-components/layout";
 import { FillPickerPopover, ColorPickerPopover } from "@aurochs-ui/color-editor";
-import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
-import {
-  createDefaultColor,
-  GradientStopsEditor,
-  createDefaultGradientStops,
-  DegreesEditor,
-} from "@aurochs-ui/editor-controls/editors";
-import { colorTokens, fontTokens, radiusTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
-import type {
-  NoFill,
-  SolidFill,
-  GradientFill,
-  PatternFill,
-  PatternType,
-  LinearGradient,
-} from "@aurochs-office/drawing-ml/domain/fill";
+import type { BaseFill, SolidFill, GradientFill, PatternFill, PatternType, LinearGradient, NoFill } from "@aurochs-office/drawing-ml/domain/fill";
 import { PATTERN_PRESETS } from "@aurochs-office/drawing-ml/domain/fill";
-import type { Fill, BlipFill } from "@aurochs-office/pptx/domain/color/types";
 import { deg } from "@aurochs-office/drawing-ml/domain/units";
-import type { ResourceId } from "@aurochs-office/pptx/domain/types";
 import type { EditorProps, SelectOption } from "@aurochs-ui/ui-components/types";
-import { useEditorResourceContext } from "../../context/editor/EditorResourceContext";
+import { colorTokens, fontTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
+import { createDefaultColor } from "./ColorEditor";
+import { GradientStopsEditor, createDefaultGradientStops } from "./GradientStopsEditor";
+import { DegreesEditor } from "../primitives/DegreesEditor";
 
 // =============================================================================
 // Types
 // =============================================================================
 
-export type FillEditorProps = EditorProps<Fill> & {
+export type BaseFillEditorProps = EditorProps<BaseFill> & {
   readonly style?: CSSProperties;
   /** Limit fill types shown */
-  readonly allowedTypes?: readonly Fill["type"][];
+  readonly allowedTypes?: readonly BaseFill["type"][];
   /** Compact mode: single swatch with popover */
   readonly compact?: boolean;
 };
 
-type FillType = Fill["type"];
+type FillType = BaseFill["type"];
 
 // =============================================================================
 // Options
@@ -59,7 +41,6 @@ const allFillTypeOptions: SelectOption<FillType>[] = [
   { value: "solidFill", label: "Solid" },
   { value: "gradientFill", label: "Gradient" },
   { value: "patternFill", label: "Pattern" },
-  { value: "blipFill", label: "Image" },
 ];
 
 const PATTERN_LABELS: Record<PatternType, string> = {
@@ -128,7 +109,7 @@ const patternPresetOptions: SelectOption<PatternType>[] = PATTERN_PRESETS.map((p
 // Utilities
 // =============================================================================
 
-function createDefaultFill(type: FillType): Fill {
+function createDefaultFill(type: FillType): BaseFill {
   switch (type) {
     case "noFill":
       return { type: "noFill" };
@@ -148,19 +129,14 @@ function createDefaultFill(type: FillType): Fill {
         foregroundColor: createDefaultColor("000000"),
         backgroundColor: createDefaultColor("FFFFFF"),
       };
-    case "blipFill":
-      return {
-        type: "blipFill",
-        resourceId: "" as ResourceId,
-        relationshipType: "embed",
-        rotWithShape: true,
-      };
+    case "groupFill":
+      return { type: "groupFill" };
     default:
       return { type: "noFill" };
   }
 }
 
-function getFilteredFillOptions(allowedTypes?: readonly Fill["type"][]): SelectOption<FillType>[] {
+function getFilteredFillOptions(allowedTypes?: readonly BaseFill["type"][]): SelectOption<FillType>[] {
   if (!allowedTypes) {
     return allFillTypeOptions;
   }
@@ -188,43 +164,15 @@ const typeSelectStyle: CSSProperties = {
   flexShrink: 0,
 };
 
-const imageSelectLabelStyle: CSSProperties = {
-  padding: `${spacingTokens.xs} ${spacingTokens.sm}`,
-  fontSize: fontTokens.size.md,
-  backgroundColor: `var(--bg-secondary, ${colorTokens.background.secondary})`,
-  border: `1px solid var(--border-primary, ${colorTokens.border.primary})`,
-  borderRadius: radiusTokens.sm,
-  cursor: "pointer",
-  whiteSpace: "nowrap",
-};
-
-const imagePreviewContainerStyle: CSSProperties = {
-  width: "100%",
-  height: "60px",
-  border: `1px solid var(--border-primary, ${colorTokens.border.primary})`,
-  borderRadius: radiusTokens.sm,
-  overflow: "hidden",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  backgroundColor: `var(--bg-tertiary, ${colorTokens.background.tertiary})`,
-};
-
-const imagePreviewStyle: CSSProperties = {
-  maxWidth: "100%",
-  maxHeight: "100%",
-  objectFit: "contain",
-};
-
 // =============================================================================
 // Component
 // =============================================================================
 
 /**
- * Fill editor without internal labels.
- * Parent wraps with FieldGroup to provide context label.
+ * Base fill editor for format-agnostic fill types.
+ * Supports noFill, solidFill, gradientFill, and patternFill.
  */
-export function FillEditor({
+export function BaseFillEditor({
   value,
   onChange,
   disabled,
@@ -232,26 +180,12 @@ export function FillEditor({
   style,
   allowedTypes,
   compact = false,
-}: FillEditorProps) {
+}: BaseFillEditorProps) {
   const fillTypeOptions = getFilteredFillOptions(allowedTypes);
 
-  // Compact mode: single popover (only for BaseFill-compatible types)
+  // Compact mode: single popover
   if (compact) {
-    // FillPickerPopover only supports BaseFill types (noFill, solidFill, gradientFill, patternFill, groupFill)
-    // BlipFill is PPTX-specific and not supported
-    if (value.type === "blipFill") {
-      // Show a static preview for unsupported types
-      const previewStyle: CSSProperties = {
-        width: "24px",
-        height: "24px",
-        borderRadius: radiusTokens.sm,
-        border: `1px solid var(--border-subtle, ${colorTokens.border.subtle})`,
-        backgroundColor: `var(--bg-tertiary, ${colorTokens.background.tertiary})`,
-        opacity: disabled ? 0.5 : 1,
-      };
-      return <div style={previewStyle} title="Image fill (not editable)" />;
-    }
-    return <FillPickerPopover value={value as BaseFill} onChange={onChange} disabled={disabled} />;
+    return <FillPickerPopover value={value} onChange={onChange} disabled={disabled} />;
   }
 
   const handleTypeChange = useCallback(
@@ -309,7 +243,7 @@ export function FillEditor({
     return (
       <div className={className} style={{ ...containerStyle, ...style }}>
         <div style={rowStyle}>
-          <FillPickerPopover value={value as BaseFill} onChange={onChange} disabled={disabled} />
+          <FillPickerPopover value={value} onChange={onChange} disabled={disabled} />
           <Select
             value={value.type}
             onChange={handleTypeChange}
@@ -380,21 +314,6 @@ export function FillEditor({
     );
   }
 
-  // Blip Fill (Image)
-  if (value.type === "blipFill") {
-    return (
-      <BlipFillEditor
-        value={value as BlipFill}
-        onChange={onChange}
-        onTypeChange={handleTypeChange}
-        fillTypeOptions={fillTypeOptions}
-        disabled={disabled}
-        className={className}
-        style={style}
-      />
-    );
-  }
-
   // Fallback
   return (
     <div className={className} style={style}>
@@ -408,98 +327,6 @@ export function FillEditor({
     </div>
   );
 }
-
-// =============================================================================
-// BlipFillEditor (Image Fill)
-// =============================================================================
-
-type BlipFillEditorProps = {
-  readonly value: BlipFill;
-  readonly onChange: (fill: Fill) => void;
-  readonly onTypeChange: (type: string) => void;
-  readonly fillTypeOptions: SelectOption<FillType>[];
-  readonly disabled?: boolean;
-  readonly className?: string;
-  readonly style?: CSSProperties;
-};
-
-/**
- * Separated component for BlipFill editing.
- * Uses EditorResourceContext to manage uploaded images.
- */
-function BlipFillEditor({
-  value: blipFill,
-  onChange,
-  onTypeChange,
-  fillTypeOptions,
-  disabled,
-  className,
-  style,
-}: BlipFillEditorProps) {
-  const { store, registerUpload } = useEditorResourceContext();
-  const hasImage = blipFill.resourceId !== "";
-
-  // Get the preview URL from resource store
-  const previewUrl = hasImage ? store.toDataUrl(blipFill.resourceId) : undefined;
-
-  const handleFileSelect = useCallback(
-    async (e: ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) {
-        return;
-      }
-
-      // Register the uploaded file to ResourceStore and get the resourceId
-      const resourceId = await registerUpload(file);
-      onChange({
-        ...blipFill,
-        resourceId,
-      });
-    },
-    [blipFill, onChange, registerUpload],
-  );
-
-  return (
-    <div className={className} style={{ ...containerStyle, ...style }}>
-      <div style={rowStyle}>
-        <Select
-          value={blipFill.type}
-          onChange={onTypeChange}
-          options={fillTypeOptions}
-          disabled={disabled}
-          style={typeSelectStyle}
-        />
-        <label style={imageSelectLabelStyle}>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleFileSelect}
-            disabled={disabled}
-            style={{ display: "none" }}
-          />
-          {hasImage ? "Change Image" : "Select Image"}
-        </label>
-        <Toggle
-          checked={blipFill.rotWithShape ?? true}
-          onChange={(checked) => onChange({ ...blipFill, rotWithShape: checked })}
-          disabled={disabled}
-        />
-        <span style={{ fontSize: fontTokens.size.sm, color: `var(--text-tertiary, ${colorTokens.text.tertiary})` }}>
-          Rotate
-        </span>
-      </div>
-      {previewUrl && (
-        <div style={imagePreviewContainerStyle}>
-          <img src={previewUrl} alt="Fill preview" style={imagePreviewStyle} />
-        </div>
-      )}
-    </div>
-  );
-}
-
-// =============================================================================
-// Factory Functions
-// =============================================================================
 
 /**
  * Create a solid fill with the provided hex color.

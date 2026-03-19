@@ -8,7 +8,7 @@
 
 import { useCallback, type CSSProperties } from "react";
 import { TextFormattingEditor } from "@aurochs-ui/editor-controls/text";
-import { ColorEditor, createDefaultColor } from "../color";
+import { ColorEditor, createDefaultColor } from "@aurochs-ui/editor-controls/editors";
 import type { RunProperties } from "@aurochs-office/pptx/domain/text";
 import type { MixedRunProperties } from "./mixed-properties";
 import { getExtractionValue } from "./mixed-properties";

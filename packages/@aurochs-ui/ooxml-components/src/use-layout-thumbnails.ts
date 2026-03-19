@@ -111,8 +111,8 @@ export function loadLayoutWithContext(
     const masterTable = createPlaceholderTable(bundle.masterTables);
     const emptyTable = { byIdx: new Map(), byType: {} };
     const placeholderCtx: PlaceholderContext = {
-      layout: emptyTable as PlaceholderContext["layout"],
-      master: masterTable as unknown as PlaceholderContext["master"],
+      layout: emptyTable,
+      master: masterTable,
     };
 
     // Build MasterStylesInfo for text style inheritance

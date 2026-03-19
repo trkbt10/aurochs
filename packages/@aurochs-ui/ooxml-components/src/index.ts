@@ -20,3 +20,6 @@ export {
   type LayoutThumbnailData,
   type LoadedLayoutData,
 } from "./use-layout-thumbnails";
+
+export { TransitionEditor, createDefaultTransition, type TransitionEditorProps } from "./TransitionEditor";
+export { TransitionPreview, type TransitionPreviewProps } from "./TransitionPreview";

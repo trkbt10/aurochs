@@ -8,7 +8,7 @@
 
 import { Select, Toggle } from "@aurochs-ui/ui-components/primitives";
 import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
-import { PixelsEditor } from "../primitives/PixelsEditor";
+import { PixelsEditor } from "@aurochs-ui/editor-controls/editors";
 import { FillEditor, createNoFill } from "../color/FillEditor";
 import { Bevel3dEditor, createDefaultBevel3d } from "./Bevel3dEditor";
 import { px } from "@aurochs-office/drawing-ml/domain/units";

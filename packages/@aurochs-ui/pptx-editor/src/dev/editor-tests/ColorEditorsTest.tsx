@@ -5,14 +5,9 @@
  */
 
 import { useState, type CSSProperties } from "react";
-import {
-  ColorEditor,
-  FillEditor,
-  LineEditor,
-  createDefaultColor,
-  createDefaultSolidFill,
-  createDefaultLine,
-} from "@aurochs-ui/pptx-editor";
+import { ColorEditor, createDefaultColor } from "@aurochs-ui/editor-controls/editors";
+import { FillEditor, createDefaultSolidFill } from "@aurochs-ui/pptx-editor";
+import { LineEditor, createDefaultLine } from "@aurochs-ui/pptx-editor";
 import type { Color } from "@aurochs-office/drawing-ml/domain/color";
 import type { Fill, Line } from "@aurochs-office/pptx/domain/color/types";
 

@@ -10,7 +10,7 @@ import { Toggle } from "@aurochs-ui/ui-components/primitives";
 import { PixelsEditor } from "./PixelsEditor";
 import { DegreesEditor } from "./DegreesEditor";
 import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
-import type { Transform } from "@aurochs-office/pptx/domain/types";
+import type { Transform } from "@aurochs-office/drawing-ml/domain/geometry";
 import type { EditorProps } from "@aurochs-ui/ui-components/types";
 
 export type TransformEditorProps = EditorProps<Transform> & {

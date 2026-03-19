@@ -8,7 +8,8 @@ import type { ReactNode } from "react";
 import type { GraphicFrame } from "@aurochs-office/pptx/domain/index";
 import type { OleReference } from "@aurochs-office/pptx/domain/shape";
 import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
-import { NonVisualPropertiesEditor, TransformEditor, OleObjectEditor } from "../../editors/index";
+import { NonVisualPropertiesEditor, OleObjectEditor } from "../../editors/index";
+import { TransformEditor } from "@aurochs-ui/editor-controls/editors";
 
 // =============================================================================
 // Types

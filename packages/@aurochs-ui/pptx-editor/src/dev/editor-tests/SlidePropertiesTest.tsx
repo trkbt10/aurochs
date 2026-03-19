@@ -5,12 +5,11 @@
  */
 
 import { useState, type CSSProperties } from "react";
+import { TransitionEditor, createDefaultTransition } from "@aurochs-ui/ooxml-components";
 import {
   BackgroundEditor,
-  TransitionEditor,
   OleObjectEditor,
   createDefaultBackground,
-  createDefaultTransition,
   createDefaultOleReference,
 } from "@aurochs-ui/pptx-editor";
 import type { Background } from "@aurochs-office/pptx/domain/slide/types";

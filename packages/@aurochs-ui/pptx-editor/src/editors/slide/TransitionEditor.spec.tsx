@@ -8,7 +8,7 @@
 
 import type { SlideTransition } from "@aurochs-office/pptx/domain/transition";
 import { render, fireEvent } from "@testing-library/react";
-import { TransitionEditor, createDefaultTransition } from "./TransitionEditor";
+import { TransitionEditor, createDefaultTransition } from "@aurochs-ui/ooxml-components";
 
 describe("TransitionEditor: Transition handling", () => {
   describe("createDefaultTransition", () => {

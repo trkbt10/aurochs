@@ -13,7 +13,6 @@ import {
 } from "@aurochs-ui/potx-editor";
 import type { ThemePreset } from "@aurochs-ui/potx-editor";
 import type { ColorScheme } from "@aurochs-office/drawing-ml/domain/color-context";
-import type { SchemeColorName } from "@aurochs-office/drawing-ml/domain/color";
 import type { FontScheme, FontSpec } from "@aurochs-office/ooxml/domain/font-scheme";
 
 const containerStyle: CSSProperties = {
@@ -85,7 +84,7 @@ export function ThemeEditorTest() {
   const [fontScheme, setFontScheme] = useState<FontScheme>(DEFAULT_FONT_SCHEME);
   const [lastAction, setLastAction] = useState<string>("None");
 
-  const handleColorChange = useCallback((name: SchemeColorName, color: string) => {
+  const handleColorChange = useCallback((name: string, color: string) => {
     setColorScheme((prev) => ({ ...prev, [name]: color }));
     setLastAction(`Color changed: ${name} = #${color}`);
   }, []);

@@ -79,6 +79,11 @@ export default [
         "custom/no-aurochs-builder-import-in-aurochs-office": "error",
         // Prohibit re-exporting from other packages
         "custom/no-cross-package-reexport": "error",
+        // Prevent disabling no-cross-package-reexport via eslint-disable comments
+        "eslint-comments/no-restricted-disable": [
+          "error",
+          "custom/no-cross-package-reexport",
+        ],
         // Prohibit export * from (barrel exports)
         "custom/no-export-star": "error",
         // Prohibit bare @aurochs-renderer/* imports for reorganized packages (must use sub-paths)

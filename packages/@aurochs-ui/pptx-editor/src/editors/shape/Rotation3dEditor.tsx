@@ -6,7 +6,7 @@
  */
 
 import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
-import { DegreesEditor } from "../primitives/DegreesEditor";
+import { DegreesEditor } from "@aurochs-ui/editor-controls/editors";
 import { deg } from "@aurochs-office/drawing-ml/domain/units";
 import type { Rotation3d } from "@aurochs-office/pptx/domain";
 import type { EditorProps } from "@aurochs-ui/ui-components/types";

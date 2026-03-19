@@ -32,7 +32,7 @@ export type PresentationFile = PackageFile;
  */
 export type PlaceholderTable = {
   /** Shapes indexed by p:ph/@idx (xsd:unsignedInt) */
-  readonly byIdx: Map<number, XmlElement>;
+  readonly byIdx: ReadonlyMap<number, XmlElement>;
   /** Shapes indexed by p:ph/@type (ST_PlaceholderType) */
-  readonly byType: Record<string, XmlElement>;
+  readonly byType: Readonly<Record<string, XmlElement>>;
 };

@@ -12,10 +12,13 @@ import type { SlideLayoutBundle, SlideLayoutOption } from "@aurochs-office/pptx/
 import type { PresentationFile } from "@aurochs-office/pptx/domain";
 import type { ColorScheme } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { FontScheme, FontSpec } from "@aurochs-office/ooxml/domain/font-scheme";
-import type { SchemeColorName } from "@aurochs-office/drawing-ml/domain/color";
 import type { UndoRedoHistory } from "@aurochs-ui/editor-core/history";
 import type { SelectionState } from "@aurochs-ui/editor-core/selection";
 import type { ResizeHandlePosition } from "@aurochs-ui/editor-core/drag-state";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
+import type { SlideTransition } from "@aurochs-office/pptx/domain/transition";
+import type { ColorMapping, ColorMapOverride } from "@aurochs-office/pptx/domain/color/types";
+import type { CustomColor, ExtraColorScheme, FormatScheme, ObjectDefaults, RawMasterTextStyles } from "@aurochs-office/pptx/domain/theme/types";
 import type { ThemePreset } from "../panels/types";
 
 // =============================================================================
@@ -33,6 +36,7 @@ export type LayoutListEntry = {
   readonly showMasterShapes?: boolean;
   readonly preserve?: boolean;
   readonly userDrawn?: boolean;
+  readonly overrides?: LayoutOverrides;
 };
 
 // =============================================================================
@@ -106,9 +110,35 @@ export type LayoutEditState = {
  * Complete theme editor state
  */
 export type ThemeEditorState = {
+  readonly themeName: string;
   readonly colorScheme: ColorScheme;
   readonly fontScheme: FontScheme | undefined;
+  readonly fontSchemeName: string;
+  readonly formatScheme: FormatScheme | undefined;
+  readonly customColors: readonly CustomColor[];
+  readonly extraColorSchemes: readonly ExtraColorScheme[];
+  readonly objectDefaults: ObjectDefaults | undefined;
+  readonly masterTextStyles: RawMasterTextStyles | undefined;
+  readonly masterBackground: MasterBackgroundState;
+  readonly masterColorMapping: ColorMapping;
   readonly layoutEdit: LayoutEditState;
+};
+
+/**
+ * Master slide background state
+ */
+export type MasterBackgroundState = {
+  readonly fill?: BaseFill;
+  readonly shadeToTitle?: boolean;
+};
+
+/**
+ * Per-layout override state for background and color map
+ */
+export type LayoutOverrides = {
+  readonly background?: MasterBackgroundState;
+  readonly colorMapOverride?: ColorMapOverride;
+  readonly transition?: SlideTransition;
 };
 
 // =============================================================================
@@ -116,10 +146,36 @@ export type ThemeEditorState = {
 // =============================================================================
 
 export type ThemeEditorAction =
-  // Theme editing
-  | { readonly type: "UPDATE_COLOR_SCHEME"; readonly name: SchemeColorName; readonly color: string }
+  // Theme editing — color scheme
+  | { readonly type: "UPDATE_COLOR_SCHEME"; readonly name: string; readonly color: string }
+  | { readonly type: "ADD_SCHEME_COLOR"; readonly name: string; readonly color: string }
+  | { readonly type: "REMOVE_SCHEME_COLOR"; readonly name: string }
+  | { readonly type: "RENAME_SCHEME_COLOR"; readonly oldName: string; readonly newName: string }
+  // Theme editing — names
+  | { readonly type: "UPDATE_THEME_NAME"; readonly name: string }
+  | { readonly type: "UPDATE_FONT_SCHEME_NAME"; readonly name: string }
+  // Theme editing — font scheme & presets
   | { readonly type: "UPDATE_FONT_SCHEME"; readonly target: "major" | "minor"; readonly spec: Partial<FontSpec> }
   | { readonly type: "APPLY_THEME_PRESET"; readonly preset: ThemePreset }
+  // Theme editing — custom colors
+  | { readonly type: "ADD_CUSTOM_COLOR"; readonly color: CustomColor }
+  | { readonly type: "REMOVE_CUSTOM_COLOR"; readonly index: number }
+  | { readonly type: "UPDATE_CUSTOM_COLOR"; readonly index: number; readonly color: CustomColor }
+  // Theme editing — extra color schemes
+  | { readonly type: "ADD_EXTRA_COLOR_SCHEME"; readonly scheme: ExtraColorScheme }
+  | { readonly type: "REMOVE_EXTRA_COLOR_SCHEME"; readonly index: number }
+  | { readonly type: "UPDATE_EXTRA_COLOR_SCHEME"; readonly index: number; readonly scheme: ExtraColorScheme }
+  // Theme editing — format scheme, object defaults, master text styles
+  | { readonly type: "UPDATE_FORMAT_SCHEME"; readonly formatScheme: FormatScheme }
+  | { readonly type: "UPDATE_OBJECT_DEFAULTS"; readonly objectDefaults: ObjectDefaults }
+  | { readonly type: "UPDATE_MASTER_TEXT_STYLES"; readonly masterTextStyles: RawMasterTextStyles }
+  // Theme editing — master background & color map
+  | { readonly type: "UPDATE_MASTER_BACKGROUND"; readonly background: MasterBackgroundState }
+  | { readonly type: "UPDATE_MASTER_COLOR_MAPPING"; readonly mapping: ColorMapping }
+  // Layout overrides
+  | { readonly type: "UPDATE_LAYOUT_BACKGROUND"; readonly layoutId: string; readonly background: MasterBackgroundState }
+  | { readonly type: "UPDATE_LAYOUT_COLOR_MAP_OVERRIDE"; readonly layoutId: string; readonly override: ColorMapOverride }
+  | { readonly type: "UPDATE_LAYOUT_TRANSITION"; readonly layoutId: string; readonly transition: SlideTransition | undefined }
 
   // Layout selection
   | { readonly type: "SELECT_LAYOUT"; readonly layoutPath: string }
@@ -168,6 +224,8 @@ export type ThemeEditorInitProps = {
   readonly presentationFile?: PresentationFile;
   readonly slideSize: SlideSize;
   readonly layoutOptions: readonly SlideLayoutOption[];
+  readonly themeName?: string;
   readonly colorScheme: ColorScheme;
   readonly fontScheme?: FontScheme;
+  readonly fontSchemeName?: string;
 };

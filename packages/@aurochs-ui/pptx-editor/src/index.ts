@@ -7,7 +7,8 @@
  *
  * @example
  * ```tsx
- * import { TransformEditor, ColorEditor, EditorConfigProvider } from "@aurochs-ui/pptx-editor";
+ * import { TransformEditor, ColorEditor } from "@aurochs-ui/editor-controls/editors";
+ * import { EditorConfigProvider } from "@aurochs-ui/editor-controls/editor-config";
  *
  * function ShapePanel({ shape, onUpdate }) {
  *   return (
@@ -22,40 +23,22 @@
  * ```
  */
 
-// Context - EditorConfig
-export { EditorConfigProvider, useEditorConfig, type EditorConfig } from "./context/editor/EditorConfigContext";
+// Context - EditorConfig: import from @aurochs-ui/editor-controls/editor-config
 
-// UI Color types - consumers should import FillPreview directly from @aurochs-ui/color-editor
+// UI Color types: import FillPreview from @aurochs-ui/color-editor
 
 // UI Line
 export { LineEditor, createDefaultLine, type LineEditorProps } from "./ui/line";
 
-// Editors
+// Shared editors: import from @aurochs-ui/editor-controls/editors
+// TransitionEditor: import from @aurochs-ui/ooxml-components
+
+// PPTX-specific editors
 export {
-  // Primitives
-  PixelsEditor,
-  DegreesEditor,
-  PercentEditor,
-  PointsEditor,
-  TransformEditor,
-  createDefaultTransform,
-  type PixelsEditorProps,
-  type DegreesEditorProps,
-  type PercentEditorProps,
-  type PointsEditorProps,
-  type TransformEditorProps,
-  // Color
-  ColorSpecEditor,
-  ColorTransformEditor,
-  ColorEditor,
+  // Color (pptx-specific FillEditor with BlipFill)
   FillEditor,
-  createDefaultSrgbColor,
-  createDefaultColor,
   createDefaultSolidFill,
   createNoFill,
-  type ColorSpecEditorProps,
-  type ColorTransformEditorProps,
-  type ColorEditorProps,
   type FillEditorProps,
   // Text
   RunPropertiesEditor,
@@ -115,11 +98,8 @@ export {
   type TableEditorProps,
   // Slide-level
   BackgroundEditor,
-  TransitionEditor,
   createDefaultBackground,
-  createDefaultTransition,
   type BackgroundEditorProps,
-  type TransitionEditorProps,
   // OLE object
   OleObjectEditor,
   createDefaultOleReference,
@@ -144,18 +124,7 @@ export { PropertyPanel, type PropertyPanelProps } from "./panels/PropertyPanel";
 export { ShapeToolbar, type ShapeToolbarProps } from "./panels/ShapeToolbar";
 export { LayerPanel, type LayerPanelProps } from "./panels/LayerPanel";
 
-// Slide Editor Sub-components (from shared editor-controls/canvas)
-/* eslint-disable custom/no-cross-package-reexport -- public API re-export for consumer convenience */
-export {
-  SelectionBox,
-  type SelectionBoxProps,
-  type SelectionBoxVariant,
-  ResizeHandle,
-  type ResizeHandleProps,
-  RotateHandle,
-  type RotateHandleProps,
-} from "@aurochs-ui/editor-controls/canvas";
-/* eslint-enable custom/no-cross-package-reexport -- end of cross-package re-export block */
+// Slide Editor Sub-components: import from @aurochs-ui/editor-controls/canvas
 
 // Shape identity utilities
 export { getShapeId, hasShapeId } from "./shape/identity";

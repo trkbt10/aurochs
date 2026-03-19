@@ -124,11 +124,7 @@ function getWorker(): Worker | null {
   }
 }
 
-async function extractGlyphAsync(
-  char: string,
-  fontFamily: string,
-  style: GlyphStyleKey,
-): Promise<GlyphContour> {
+async function extractGlyphAsync(char: string, fontFamily: string, style: GlyphStyleKey): Promise<GlyphContour> {
   // Check cache first
   const cached = getCachedGlyph(fontFamily, char, style);
   if (cached) {
@@ -185,11 +181,7 @@ async function extractGlyphAsync(
   });
 }
 
-async function extractGlyphsAsync(
-  chars: string[],
-  fontFamily: string,
-  style: GlyphStyleKey,
-): Promise<GlyphContour[]> {
+async function extractGlyphsAsync(chars: string[], fontFamily: string, style: GlyphStyleKey): Promise<GlyphContour[]> {
   return Promise.all(chars.map((char) => extractGlyphAsync(char, fontFamily, style)));
 }
 
@@ -207,10 +199,7 @@ export function terminateWorker(): void {
 // =============================================================================
 
 /** Lays out text into positioned glyphs asynchronously using a Web Worker. */
-export async function layoutTextAsync(
-  text: string,
-  config: TextLayoutConfig,
-): Promise<TextLayoutResult> {
+export async function layoutTextAsync(text: string, config: TextLayoutConfig): Promise<TextLayoutResult> {
   if (text.length === 0) {
     return {
       glyphs: [],
