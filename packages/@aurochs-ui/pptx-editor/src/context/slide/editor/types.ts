@@ -10,7 +10,8 @@ import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import { createHistory, type UndoRedoHistory } from "@aurochs-ui/editor-core/history";
 import type { SelectionState, DragState, ClipboardContent, ResizeHandlePosition } from "../state";
-import { createEmptySelection, createIdleDragState } from "../state";
+import { createEmptySelection } from "@aurochs-ui/editor-core/selection";
+import { createIdleDragState } from "@aurochs-ui/editor-core/drag-state";
 
 // =============================================================================
 // Slide Editor State
@@ -36,7 +37,7 @@ export type SlideEditorState = {
 export function createSlideEditorState(slide: Slide): SlideEditorState {
   return {
     slideHistory: createHistory(slide),
-    selection: createEmptySelection(),
+    selection: createEmptySelection<ShapeId>(),
     drag: createIdleDragState(),
     clipboard: undefined,
   };

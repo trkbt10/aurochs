@@ -140,17 +140,22 @@ export default {
     }
 
     /**
-     * Get the callee name from a single-return function body that just
-     * passes through to another function call.
+     * Check if a function is a passthrough wrapper: all parameters are
+     * forwarded as-is to the callee, in the same order, with no extra
+     * arguments and no transformations.
      *
      * Detects:
-     *   function f(x) { return imported(x); }
+     *   function f(x, y) { return imported(x, y); }
      *   const f = (x) => imported(x);
      *   const f = (x) => { return imported(x); }
      *
+     * Does NOT flag:
+     *   function f(spec) { return imported("tag", spec.x); } // args differ
+     *   function f() { return imported(42); }                 // literal arg
+     *
      * Returns the callee Identifier name, or null if not a passthrough.
      */
-    function getPassthroughCallee(body) {
+    function getPassthroughCallee(params, body) {
       if (!body) return null;
 
       let returnArg;
@@ -169,6 +174,19 @@ export default {
       if (returnArg.type !== "CallExpression") return null;
       if (returnArg.callee.type !== "Identifier") return null;
 
+      // Verify arguments are an exact forward of params
+      const args = returnArg.arguments;
+      if (args.length !== params.length) return null;
+
+      for (let i = 0; i < params.length; i++) {
+        const param = params[i];
+        const arg = args[i];
+        // Only simple Identifier params forwarded as Identifier args
+        if (param.type !== "Identifier") return null;
+        if (arg.type !== "Identifier") return null;
+        if (arg.name !== param.name) return null;
+      }
+
       return returnArg.callee.name;
     }
 
@@ -178,7 +196,7 @@ export default {
 
       // export function foo(...) { return imported(...); }
       if (declaration.type === "FunctionDeclaration") {
-        const callee = getPassthroughCallee(declaration.body);
+        const callee = getPassthroughCallee(declaration.params, declaration.body);
         if (!callee) return;
 
         const importInfo = packageImports.get(callee);
@@ -209,7 +227,7 @@ export default {
         )
           continue;
 
-        const callee = getPassthroughCallee(init.body);
+        const callee = getPassthroughCallee(init.params, init.body);
         if (!callee) continue;
 
         const importInfo = packageImports.get(callee);

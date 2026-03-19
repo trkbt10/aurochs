@@ -32,7 +32,8 @@ import {
 } from "./mapping";
 import { parseConditionList, parseTimeCondition } from "./condition";
 import { parseTargetElement } from "./target";
-import { getBoolAttr, parsePositiveFixedPercentage, parsePositivePercentage } from "../primitive";
+import { parsePositivePercentage } from "@aurochs-office/drawing-ml/parser";
+import { getBoolAttr, parsePositiveFixedPercentage } from "../primitive";
 
 /**
  * Parse preset info from common time node.

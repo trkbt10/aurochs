@@ -14,7 +14,9 @@ import type { SelectionState } from "../../../slide/state";
 import type { HandlerMap } from "./handler-types";
 import { deleteSlide, moveSlide, updateSlide, updateSlideEntry } from "../slide";
 import { pushHistory } from "@aurochs-ui/editor-core/history";
-import { createEmptySelection, createIdleDragState } from "../../../slide/state";
+import { createEmptySelection } from "@aurochs-ui/editor-core/selection";
+import { createIdleDragState } from "@aurochs-ui/editor-core/drag-state";
+import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 
 /**
  * Get new active slide ID after deletion
@@ -42,7 +44,7 @@ function getActiveSlideAfterDelete({
  */
 function getSelectionAfterDelete(wasActiveSlideDeleted: boolean, currentSelection: SelectionState): SelectionState {
   if (wasActiveSlideDeleted) {
-    return createEmptySelection();
+    return createEmptySelection<ShapeId>();
   }
   return currentSelection;
 }
@@ -91,7 +93,7 @@ function handleSelectSlide(state: PresentationEditorState, action: SelectSlideAc
   return {
     ...state,
     activeSlideId: action.slideId,
-    shapeSelection: createEmptySelection(),
+    shapeSelection: createEmptySelection<ShapeId>(),
     drag: createIdleDragState(),
   };
 }

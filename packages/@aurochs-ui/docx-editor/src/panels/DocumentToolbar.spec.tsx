@@ -12,7 +12,8 @@ import type { DocxEditorState } from "../context/document/editor/types";
 import { createInitialTextEditState } from "../context/document/editor/types";
 import type { DocxSelectionState } from "../context/document/state";
 import { createHistory } from "@aurochs-ui/editor-core/history";
-import { createCursorSelection, createEmptyDocxSelection, createIdleDragState } from "../context/document/state";
+import { createCursorSelection, createEmptyDocxSelection } from "../context/document/state";
+import { createIdleDragState } from "@aurochs-ui/editor-core/drag-state";
 import { DocumentToolbar } from "./DocumentToolbar";
 
 function createDocumentWithFormattedRun(): DocxDocument {

@@ -28,6 +28,9 @@ export type UseLayoutThumbnailsOptions = {
 // Hook
 // =============================================================================
 
+/**
+ * Load and render SVG thumbnails for all available slide layouts.
+ */
 export function useLayoutThumbnails(options: UseLayoutThumbnailsOptions): readonly LayoutThumbnailData[] {
   const { presentationFile, layoutOptions, slideSize } = options;
 

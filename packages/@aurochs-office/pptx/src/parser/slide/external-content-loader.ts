@@ -39,7 +39,7 @@ import type { ResourceMap } from "@aurochs-office/opc";
 import { RELATIONSHIP_TYPES } from "../../domain/relationships";
 import { getMimeTypeFromPath } from "@aurochs/files";
 import { toDataUrl } from "@aurochs/buffer";
-import { getRelationshipPath, parseRelationships, resolvePartPath } from "../relationships";
+import { getRelationshipPath, parseRelationships, resolvePartPath } from "@aurochs-office/ooxml/parser";
 import { createEmptyResourceMap } from "../../domain/relationships";
 import { findVmlShapeImage, getVmlRelsPath, normalizeVmlImagePath } from "../external/vml-parser";
 import { emfToSvg } from "../external/emf-parser";

@@ -7,13 +7,13 @@
  */
 
 import {
-  addToSelection as addToCoreSelection,
-  createEmptySelection as createEmptyCoreSelection,
+  createEmptySelection,
+  createSingleSelection,
   createMultiSelection as createMultiCoreSelection,
-  createSingleSelection as createSingleCoreSelection,
-  isSelected as isCoreSelected,
+  addToSelection,
   removeFromSelection as removeFromCoreSelection,
   toggleSelection as toggleCoreSelection,
+  isSelected,
 } from "@aurochs-ui/editor-core/selection";
 import type { SelectionState as CoreSelectionState } from "@aurochs-ui/editor-core/selection";
 
@@ -86,20 +86,6 @@ export type DocxSelectionState = {
 // =============================================================================
 
 /**
- * Create an empty element selection.
- */
-export function createEmptyElementSelection(): ElementSelectionState {
-  return createEmptyCoreSelection<ElementId>();
-}
-
-/**
- * Create a single element selection.
- */
-export function createSingleElementSelection(elementId: ElementId): ElementSelectionState {
-  return createSingleCoreSelection(elementId);
-}
-
-/**
  * Create a multi-element selection.
  */
 export function createMultiElementSelection(
@@ -119,13 +105,6 @@ export function createMultiElementSelection(
 // =============================================================================
 // Mutation Functions - Element Selection
 // =============================================================================
-
-/**
- * Add an element to the selection.
- */
-export function addToElementSelection(selection: ElementSelectionState, elementId: ElementId): ElementSelectionState {
-  return addToCoreSelection(selection, elementId);
-}
 
 /**
  * Remove an element from the selection.
@@ -152,23 +131,10 @@ export function toggleElementSelection(selection: ElementSelectionState, element
   });
 }
 
-/**
- * Set selection to a single element, replacing any existing selection.
- */
-export function setElementSelection(elementId: ElementId): ElementSelectionState {
-  return createSingleElementSelection(elementId);
-}
 
 // =============================================================================
 // Query Functions - Element Selection
 // =============================================================================
-
-/**
- * Check if an element is selected.
- */
-export function isElementSelected(selection: ElementSelectionState, elementId: ElementId): boolean {
-  return isCoreSelected(selection, elementId);
-}
 
 /**
  * Check if element selection is empty.
@@ -287,7 +253,7 @@ export function isPositionInTextSelection(selection: TextSelectionState, positio
  */
 export function createEmptyDocxSelection(): DocxSelectionState {
   return {
-    element: createEmptyElementSelection(),
+    element: createEmptySelection<ElementId>(),
     text: createEmptyTextSelection(),
     mode: "element",
   };
@@ -310,7 +276,7 @@ export function switchToElementMode(selection: DocxSelectionState): DocxSelectio
 export function switchToTextMode(selection: DocxSelectionState): DocxSelectionState {
   return {
     ...selection,
-    element: createEmptyElementSelection(),
+    element: createEmptySelection<ElementId>(),
     mode: "text",
   };
 }

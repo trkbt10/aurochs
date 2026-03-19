@@ -17,13 +17,15 @@ import {
 import type { TextBody } from "@aurochs-office/pptx/domain";
 import type { LayoutResult } from "@aurochs-renderer/pptx/text-layout";
 import {
-  offsetToCursorPosition,
   cursorPositionToCoordinates,
   selectionToRects,
-  isSamePosition,
   type CursorPosition,
   type TextSelection,
 } from "../input-support/cursor";
+import {
+  offsetToCursorPosition,
+  isSameCursorPosition,
+} from "@aurochs-ui/editor-core/text-edit";
 import type { CursorState, CompositionState, SelectionChangeEvent } from "./types";
 
 type UseTextEditInputArgs = {
@@ -91,7 +93,7 @@ function areSelectionsEqual(left: TextSelection | undefined, right: TextSelectio
   if (!left || !right) {
     return false;
   }
-  return isSamePosition(left.start, right.start) && isSamePosition(left.end, right.end);
+  return isSameCursorPosition(left.start, right.start) && isSameCursorPosition(left.end, right.end);
 }
 
 /** Hook for managing text input, selection, and save-on-unmount */
@@ -224,7 +226,7 @@ export function useTextEditInput({
       if (onSelectionChange) {
         const lastSelection = lastSelectionRef.current;
         const isSameCursor =
-          lastSelection?.cursorPosition !== undefined && isSamePosition(lastSelection.cursorPosition, cursorPos);
+          lastSelection?.cursorPosition !== undefined && isSameCursorPosition(lastSelection.cursorPosition, cursorPos);
         if (
           !lastSelection ||
           lastSelection.textBody !== currentTextBody ||

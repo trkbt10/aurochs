@@ -58,7 +58,6 @@ export {
   GeometryPath,
   RectPath,
   PathElement,
-  getGeometryPathData,
   TextRenderer,
   type SvgFillProps,
   type FillResult,

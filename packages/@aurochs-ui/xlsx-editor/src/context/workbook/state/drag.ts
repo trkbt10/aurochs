@@ -8,7 +8,6 @@
  */
 
 import type { XlsxDragState } from "../editor/types";
-import { createIdleDragState } from "../editor/types";
 import type { CellAddress, CellRange } from "@aurochs-office/xlsx/domain/cell/address";
 import type { ColIndex, RowIndex } from "@aurochs-office/xlsx/domain/types";
 
@@ -178,13 +177,6 @@ export function calculateColumnResizeWidth(drag: XlsxDragState, currentX: number
   }
   const delta = currentX - drag.startX;
   return Math.max(minWidth, drag.originalWidth + delta);
-}
-
-/**
- * End any drag operation (return to idle)
- */
-export function endDrag(): XlsxDragState {
-  return createIdleDragState();
 }
 
 /**

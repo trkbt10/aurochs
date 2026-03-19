@@ -13,9 +13,9 @@ import {
   createSlideEditorState,
   findShapeById,
   PropertyPanel,
-  clientToSlideCoords,
   withUpdatedTransform,
 } from "@aurochs-ui/pptx-editor";
+import { clientToCanvasCoords } from "@aurochs-ui/editor-core/geometry";
 import type { ResizeHandlePosition } from "@aurochs-ui/pptx-editor";
 import type { Slide, Shape } from "@aurochs-office/pptx/domain";
 import type { SpShape, GrpShape, GraphicFrame, CxnShape } from "@aurochs-office/pptx/domain/shape";
@@ -500,12 +500,12 @@ export function SlideEditorTest() {
       }
 
       const rect = container.getBoundingClientRect();
-      const coords = clientToSlideCoords({
+      const coords = clientToCanvasCoords({
         clientX: e.clientX,
         clientY: e.clientY,
         containerRect: rect,
-        slideWidth: SLIDE_WIDTH,
-        slideHeight: SLIDE_HEIGHT,
+        canvasWidth: SLIDE_WIDTH,
+        canvasHeight: SLIDE_HEIGHT,
       });
 
       if (drag.type === "move") {

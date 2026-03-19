@@ -6,7 +6,8 @@
 
 import type { HandlerMap } from "./handler-types";
 import { clearHistory, redoHistory, undoHistory } from "@aurochs-ui/editor-core/history";
-import { createEmptyDocxSelection, createIdleDragState } from "../../state";
+import { createEmptyDocxSelection } from "../../state";
+import { createIdleDragState } from "@aurochs-ui/editor-core/drag-state";
 import { createInitialTextEditState } from "../types";
 
 // =============================================================================

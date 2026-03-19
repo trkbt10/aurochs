@@ -7,11 +7,13 @@ import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
 import {
   getShapeBounds,
   getCombinedBounds,
-  getCombinedBoundsWithRotation,
   collectBoundsForIds,
   getCombinedCenter,
-  type RotatedBoundsInput,
 } from "./bounds";
+import {
+  getCombinedBoundsWithRotation,
+  type RotatedBoundsInput,
+} from "@aurochs-ui/editor-core/geometry";
 
 // =============================================================================
 // Test Fixtures

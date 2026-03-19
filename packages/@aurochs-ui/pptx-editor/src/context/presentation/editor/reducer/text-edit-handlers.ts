@@ -4,7 +4,6 @@
  * Handlers for text editing operations.
  */
 
-import type { Shape, TextBody } from "@aurochs-office/pptx/domain";
 import type { PresentationEditorState, PresentationEditorAction } from "../types";
 import type { HandlerMap } from "./handler-types";
 import { updateActiveSlideInDocument } from "./helpers";

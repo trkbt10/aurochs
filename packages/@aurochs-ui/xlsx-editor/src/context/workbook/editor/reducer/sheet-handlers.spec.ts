@@ -5,7 +5,8 @@
 import type { XlsxWorkbook, XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
 import { createDefaultStyleSheet } from "@aurochs-office/xlsx/domain/style/types";
 import type { XlsxEditorState, CellEditingState } from "../types";
-import { createEmptyCellSelection, createIdleDragState, createIdleComposition } from "../types";
+import { createEmptyCellSelection, createIdleComposition } from "../types";
+import { createIdleDragState } from "@aurochs-ui/editor-core/drag-state";
 import { colIdx, rowIdx } from "@aurochs-office/xlsx/domain/types";
 import { createHistory, pushHistory } from "@aurochs-ui/editor-core/history";
 import { sheetHandlers } from "./sheet-handlers";

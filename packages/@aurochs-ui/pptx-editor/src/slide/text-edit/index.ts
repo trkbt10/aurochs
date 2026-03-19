@@ -27,15 +27,9 @@ export {
   type TextSelection,
   type CursorCoordinates,
   type SelectionRect,
-  getPlainText,
-  offsetToCursorPosition,
-  cursorPositionToOffset,
   coordinatesToCursorPosition,
   cursorPositionToCoordinates,
   selectionToRects,
-  isSamePosition,
-  isBefore,
-  normalizeSelection,
 } from "./input-support/cursor";
 
 // Text body merge utilities

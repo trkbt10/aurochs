@@ -9,38 +9,13 @@ import type { Shape } from "@aurochs-office/pptx/domain";
 import type { Bounds, ShapeId } from "@aurochs-office/pptx/domain/types";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import { getShapeTransform } from "@aurochs-renderer/pptx/svg";
-import { findShapeById } from "./query";
 import { pptxTransformResolver } from "./transform";
 
 import {
-  getShapeBounds as genericGetShapeBounds,
   getCombinedBounds as genericGetCombinedBounds,
   collectBoundsForIds as genericCollectBoundsForIds,
   getCombinedCenter as genericGetCombinedCenter,
 } from "@aurochs-ui/editor-controls/shape-editor";
-
-import type {
-  RotatedBoundsInput as CoreRotatedBoundsInput,
-  SimpleBounds as CoreSimpleBounds,
-} from "@aurochs-ui/editor-core/geometry";
-import { getCombinedBoundsWithRotation as coreCombinedBoundsWithRotation } from "@aurochs-ui/editor-core/geometry";
-
-/**
- * Input for rotation-aware bounding box calculation
- */
-export type RotatedBoundsInput = CoreRotatedBoundsInput;
-
-/**
- * Simple axis-aligned bounding box
- */
-export type SimpleBounds = CoreSimpleBounds;
-
-/**
- * Calculate combined axis-aligned bounding box considering rotated shapes
- */
-export function getCombinedBoundsWithRotation(inputs: readonly RotatedBoundsInput[]): SimpleBounds | undefined {
-  return coreCombinedBoundsWithRotation(inputs);
-}
 
 // =============================================================================
 // PPTX-typed Functions
@@ -69,7 +44,9 @@ export function getShapeBounds(shape: Shape): Bounds | undefined {
  */
 export function getCombinedBounds(shapes: readonly Shape[]): Bounds | undefined {
   const result = genericGetCombinedBounds(shapes, pptxTransformResolver.getTransform);
-  if (!result) return undefined;
+  if (!result) {
+    return undefined;
+  }
   return {
     x: px(result.x),
     y: px(result.y),

@@ -7,7 +7,7 @@
 import type { Shape, GrpShape, Transform, GroupTransform } from "@aurochs-office/pptx/domain";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import { findShapeByIdWithParents, findShapeById } from "./query";
-import { hasShapeId } from "./identity";
+import { hasShapeId } from "@aurochs-ui/editor-controls/shape-editor";
 import { updateShapeById } from "./mutation";
 import {
   transformChildToSlideCoords,

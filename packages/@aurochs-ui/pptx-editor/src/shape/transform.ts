@@ -6,14 +6,8 @@
  */
 
 import type { Shape, Transform, GrpShape, GroupTransform } from "@aurochs-office/pptx/domain";
-import type { TransformResolver } from "@aurochs-ui/editor-controls/shape-editor";
+import type { GroupShapeNode, TransformResolver } from "@aurochs-ui/editor-controls/shape-editor";
 import { getAbsoluteBounds as genericGetAbsoluteBounds } from "@aurochs-ui/editor-controls/shape-editor";
-
-// =============================================================================
-// Re-export generic type
-// =============================================================================
-
-export type { AbsoluteBounds } from "@aurochs-ui/editor-controls/shape-editor";
 
 // =============================================================================
 // PPTX Transform Resolver
@@ -51,6 +45,13 @@ function toShapeTransform(t: Transform): { x: number; y: number; width: number; 
 }
 
 /**
+ * Type guard: narrow a GroupShapeNode to GrpShape by checking for `properties` and `type`.
+ */
+function isGrpShape(group: GroupShapeNode): group is GroupShapeNode & GrpShape {
+  return "properties" in group && group.type === "grpSp";
+}
+
+/**
  * PPTX-specific transform resolver for use with generic shape-editor utilities.
  */
 export const pptxTransformResolver: TransformResolver = {
@@ -59,9 +60,13 @@ export const pptxTransformResolver: TransformResolver = {
     return t ? toShapeTransform(t) : undefined;
   },
   getGroupTransform(group) {
-    const grp = group as unknown as GrpShape;
-    const t = grp.properties.transform;
-    if (!t) return undefined;
+    if (!isGrpShape(group)) {
+      return undefined;
+    }
+    const t = group.properties.transform;
+    if (!t) {
+      return undefined;
+    }
     return {
       x: t.x as number,
       y: t.y as number,
@@ -96,7 +101,9 @@ export function withUpdatedTransform(shape: Shape, update: Partial<Transform>): 
     case "pic":
     case "cxnSp": {
       const currentTransform = shape.properties.transform;
-      if (!currentTransform) return shape;
+      if (!currentTransform) {
+        return shape;
+      }
       return {
         ...shape,
         properties: {
@@ -108,7 +115,9 @@ export function withUpdatedTransform(shape: Shape, update: Partial<Transform>): 
 
     case "grpSp": {
       const currentTransform = shape.properties.transform;
-      if (!currentTransform) return shape;
+      if (!currentTransform) {
+        return shape;
+      }
       return {
         ...shape,
         properties: {

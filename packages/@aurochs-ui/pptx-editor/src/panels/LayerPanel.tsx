@@ -19,8 +19,9 @@ import {
 import type { Slide, Shape, GrpShape } from "@aurochs-office/pptx/domain/index";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import type { SelectionState } from "../context/slide/state";
-import { getShapeId, hasShapeId } from "../shape/identity";
-import { findShapeById, findShapeByIdWithParents, isTopLevelShape } from "../shape/query";
+import { getShapeId } from "../shape/identity";
+import { hasShapeId, isTopLevelShape } from "@aurochs-ui/editor-controls/shape-editor";
+import { findShapeById, findShapeByIdWithParents } from "../shape/query";
 import type { ShapeHierarchyTarget } from "../shape/hierarchy";
 import { ContextMenu, type MenuEntry } from "@aurochs-ui/ui-components";
 import { LayerItem, type DropPosition } from "react-editor-ui/LayerItem";

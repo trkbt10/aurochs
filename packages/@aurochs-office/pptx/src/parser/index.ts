@@ -68,23 +68,13 @@ export { createEmptyParseContext, createResourceResolver } from "./context";
 // =============================================================================
 
 export {
-  // Integer/Number
-  parseInt32,
-  parseInt32Or,
-  parseFloat64,
-  parseInt64,
-  parseUnsignedInt,
-  parseIndex,
   // Boolean
   parseBoolean,
   parseBooleanOr,
   // EMU (length)
-  parseEmu,
   parseEmuOr,
   parsePositiveEmu,
-  parseCoordinate32Unqualified,
   parseCoordinateUnqualified,
-  parseDrawingElementId,
   parseSlideId,
   parseSlideLayoutId,
   parseSlideMasterId,
@@ -93,17 +83,12 @@ export {
   parsePositiveCoordinate,
   parsePositiveCoordinate32,
   // Angle
-  parseAngle,
   parseAngleOr,
   parsePositiveFixedAngle,
   parseFixedAngle,
   parseFovAngle,
   parseFontCollectionIndex,
   // Percentage
-  parsePercentage,
-  parsePercentage100k,
-  parsePositivePercentage,
-  parseFixedPercentage,
   parsePositiveFixedPercentage,
   // Font size
   parseFontSize,
@@ -152,7 +137,7 @@ export { findColorElement, parseColor, parseColorFromParent } from "./graphics/c
 // Fill Parsing
 // =============================================================================
 
-export { findFillElement, parseFill, parseFillFromParent } from "./graphics/fill-parser";
+export { parseFill, parseFillFromParent } from "./graphics/fill-parser";
 
 // =============================================================================
 // Line Parsing

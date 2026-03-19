@@ -8,10 +8,6 @@
 
 import { createElement, type XmlDocument } from "@aurochs/xml";
 import type { SlideLayoutType } from "@aurochs-office/pptx/domain/slide/types";
-import {
-  applySlideLayoutAttributes,
-  type SlideLayoutAttributes,
-} from "@aurochs-office/pptx/parser/slide/layout-parser";
 
 // =============================================================================
 // Types
@@ -124,18 +120,3 @@ export function serializeSlideLayout(params: SerializeSlideLayoutParams = {}): X
   };
 }
 
-/**
- * Patch existing layout XML attributes.
- *
- * Delegates to `applySlideLayoutAttributes` from the layout parser,
- * which handles attribute updates on p:sldLayout and p:cSld elements.
- *
- * @param layoutDoc - Existing layout XML document
- * @param updates - Attributes to update
- * @returns Updated layout XML document
- *
- * @see applySlideLayoutAttributes
- */
-export function patchSlideLayoutAttributes(layoutDoc: XmlDocument, updates: SlideLayoutAttributes): XmlDocument {
-  return applySlideLayoutAttributes(layoutDoc, updates);
-}

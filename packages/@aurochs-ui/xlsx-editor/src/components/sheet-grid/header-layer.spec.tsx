@@ -7,7 +7,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import type { XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
 import { createSheetLayout } from "../../selectors/sheet-layout";
-import { createIdleDragState } from "../../context/workbook/editor/types";
+import { createIdleDragState } from "@aurochs-ui/editor-core/drag-state";
 import { XlsxSheetGridHeaderLayer } from "./header-layer";
 
 describe("xlsx-editor/components/sheet-grid/header-layer", () => {

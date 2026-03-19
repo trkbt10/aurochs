@@ -6,7 +6,8 @@
 
 import type { HandlerMap } from "./handler-types";
 import type { XlsxEditorAction, XlsxEditorState, CellEditingState } from "../types";
-import { createEmptyCellSelection, createIdleDragState } from "../types";
+import { createEmptyCellSelection } from "../types";
+import { createIdleDragState } from "@aurochs-ui/editor-core/drag-state";
 import { createHistory, pushHistory } from "@aurochs-ui/editor-core/history";
 import { addSheet, deleteSheet, renameSheet, moveSheet, duplicateSheet } from "../../../../sheet/mutation";
 

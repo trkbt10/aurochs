@@ -7,7 +7,9 @@
 import { render, fireEvent } from "@testing-library/react";
 import type { Slide } from "@aurochs-office/pptx/domain";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
-import { createIdleDragState, createEmptySelection } from "../context/slide/state";
+import { createEmptySelection } from "@aurochs-ui/editor-core/selection";
+import { createIdleDragState } from "@aurochs-ui/editor-core/drag-state";
+import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import type { CreationMode } from "../context/presentation/editor/types";
 import type { ShapeBounds } from "../shape/creation-bounds";
 import { SlideCanvas } from "./SlideCanvas";
@@ -78,7 +80,7 @@ function createContextMenuActions() {
 
 function renderSlideCanvas(mode: CreationMode, onCreateFromDrag: (bounds: ShapeBounds) => void) {
   const slide: Slide = { shapes: [] };
-  const selection = createEmptySelection();
+  const selection = createEmptySelection<ShapeId>();
   const drag = createIdleDragState();
 
   const result = render(

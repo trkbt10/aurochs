@@ -15,20 +15,25 @@
 
 import type { XmlElement } from "@aurochs/xml";
 import {
+  parseAngle,
+  parseEmu,
+  parseFixedPercentage,
+  parseFloat64,
+  parseIndex,
   parseInt32,
   parseInt32Or,
-  parseFloat64,
   parseInt64,
+  parsePercentage,
+  parsePercentage100k,
+  parsePositivePercentage,
   parseUnsignedInt,
-  parseIndex,
+} from "@aurochs-office/drawing-ml/parser";
+import {
   parseBoolean,
   parseBooleanOr,
-  parseEmu,
   parseEmuOr,
   parsePositiveEmu,
-  parseCoordinate32Unqualified,
   parseCoordinateUnqualified,
-  parseDrawingElementId,
   parseSlideId,
   parseSlideLayoutId,
   parseSlideMasterId,
@@ -36,15 +41,10 @@ import {
   parseLineWidth,
   parsePositiveCoordinate,
   parsePositiveCoordinate32,
-  parseAngle,
   parseAngleOr,
   parsePositiveFixedAngle,
   parseFixedAngle,
   parseFovAngle,
-  parsePercentage,
-  parsePercentage100k,
-  parsePositivePercentage,
-  parseFixedPercentage,
   parsePositiveFixedPercentage,
   parseBlackWhiteMode,
   parseBlipCompression,
@@ -54,7 +54,6 @@ import {
   parseRectAlignment,
   parseSchemeColorValue,
   parseShapeId,
-  parseStyleMatrixColumnIndex,
   parseTextBulletSizePercent,
   parseTextBulletSize,
   parseTextBulletStartAt,
@@ -73,7 +72,6 @@ import {
   parseAlignV,
   parseRelFromH,
   parseRelFromV,
-  parsePositionOffset,
   parseWrapDistance,
   parseWrapText,
   parseEditAs,
@@ -352,14 +350,14 @@ describe("parsePositiveEmu - Positive EMU (ECMA-376 Section 20.1.10.17)", () => 
   });
 });
 
-describe("parseCoordinate32Unqualified - EMU coordinate (int)", () => {
+describe("parseCoordinate32Unqualified - EMU coordinate (int) - now use parseEmu directly", () => {
   it("parses 32-bit EMU coordinate", () => {
-    expect(parseCoordinate32Unqualified("914400")).toBe(96);
+    expect(parseEmu("914400")).toBe(96);
   });
 
   it("returns undefined for invalid input", () => {
-    expect(parseCoordinate32Unqualified(undefined)).toBeUndefined();
-    expect(parseCoordinate32Unqualified("invalid")).toBeUndefined();
+    expect(parseEmu(undefined)).toBeUndefined();
+    expect(parseEmu("invalid")).toBeUndefined();
   });
 });
 
@@ -374,15 +372,15 @@ describe("parseCoordinateUnqualified - EMU coordinate (long)", () => {
   });
 });
 
-describe("parseDrawingElementId - Drawing element id", () => {
+describe("parseDrawingElementId - Drawing element id - now use parseUnsignedInt directly", () => {
   it("parses unsigned int ids", () => {
-    expect(parseDrawingElementId("1")).toBe(1);
-    expect(parseDrawingElementId("4294967295")).toBe(4294967295);
+    expect(parseUnsignedInt("1")).toBe(1);
+    expect(parseUnsignedInt("4294967295")).toBe(4294967295);
   });
 
   it("returns undefined for invalid ids", () => {
-    expect(parseDrawingElementId(undefined)).toBeUndefined();
-    expect(parseDrawingElementId("-1")).toBeUndefined();
+    expect(parseUnsignedInt(undefined)).toBeUndefined();
+    expect(parseUnsignedInt("-1")).toBeUndefined();
   });
 });
 
@@ -827,15 +825,15 @@ describe("parseShapeId - Shape ID token", () => {
   });
 });
 
-describe("parseStyleMatrixColumnIndex - Style matrix column index", () => {
+describe("parseStyleMatrixColumnIndex - Style matrix column index - now use parseUnsignedInt directly", () => {
   it("parses unsigned int values", () => {
-    expect(parseStyleMatrixColumnIndex("0")).toBe(0);
-    expect(parseStyleMatrixColumnIndex("4294967295")).toBe(4294967295);
+    expect(parseUnsignedInt("0")).toBe(0);
+    expect(parseUnsignedInt("4294967295")).toBe(4294967295);
   });
 
   it("returns undefined for invalid values", () => {
-    expect(parseStyleMatrixColumnIndex(undefined)).toBeUndefined();
-    expect(parseStyleMatrixColumnIndex("-1")).toBeUndefined();
+    expect(parseUnsignedInt(undefined)).toBeUndefined();
+    expect(parseUnsignedInt("-1")).toBeUndefined();
   });
 });
 
@@ -1070,15 +1068,15 @@ describe("parseRelFromV - Vertical relative positioning base", () => {
   });
 });
 
-describe("parsePositionOffset - Absolute position offset (EMU)", () => {
+describe("parsePositionOffset - Absolute position offset (EMU) - now use parseEmu directly", () => {
   it("parses EMU values", () => {
-    expect(parsePositionOffset("914400")).toBeCloseTo(96, 0);
-    expect(parsePositionOffset("0")).toBe(0);
+    expect(parseEmu("914400")).toBeCloseTo(96, 0);
+    expect(parseEmu("0")).toBe(0);
   });
 
   it("returns undefined for invalid values", () => {
-    expect(parsePositionOffset("invalid")).toBeUndefined();
-    expect(parsePositionOffset(undefined)).toBeUndefined();
+    expect(parseEmu("invalid")).toBeUndefined();
+    expect(parseEmu(undefined)).toBeUndefined();
   });
 });
 

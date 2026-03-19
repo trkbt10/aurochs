@@ -11,7 +11,6 @@ import {
   findShapeById as genericFindShapeById,
   findShapeByIdWithParents as genericFindShapeByIdWithParents,
   getTopLevelShapeIds as genericGetTopLevelShapeIds,
-  isTopLevelShape as genericIsTopLevelShape,
 } from "@aurochs-ui/editor-controls/shape-editor";
 
 /**
@@ -46,9 +45,3 @@ export function getTopLevelShapeIds(shapes: readonly Shape[]): readonly ShapeId[
   return genericGetTopLevelShapeIds(shapes) as readonly ShapeId[];
 }
 
-/**
- * Check if shape ID is at top level
- */
-export function isTopLevelShape(shapes: readonly Shape[], id: ShapeId): boolean {
-  return genericIsTopLevelShape(shapes, id);
-}

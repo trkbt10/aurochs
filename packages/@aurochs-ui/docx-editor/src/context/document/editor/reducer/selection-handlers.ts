@@ -9,9 +9,7 @@ import type { TextEditState } from "../types";
 import type { ElementId, ElementSelectionState } from "../../state";
 import {
   createEmptyDocxSelection,
-  createSingleElementSelection,
   createMultiElementSelection,
-  addToElementSelection,
   toggleElementSelection,
   createCursorSelection,
   createRangeSelection,
@@ -21,6 +19,10 @@ import {
   switchToElementMode,
   switchToTextMode,
 } from "../../state";
+import {
+  createSingleSelection,
+  addToSelection as coreAddToSelection,
+} from "@aurochs-ui/editor-core/selection";
 import { createInitialTextEditState } from "../types";
 
 // =============================================================================
@@ -55,9 +57,9 @@ function computeElementSelection({
     return toggleElementSelection(current, elementId);
   }
   if (addToSelection) {
-    return addToElementSelection(current, elementId);
+    return coreAddToSelection(current, elementId);
   }
-  return createSingleElementSelection(elementId);
+  return createSingleSelection(elementId);
 }
 
 // =============================================================================

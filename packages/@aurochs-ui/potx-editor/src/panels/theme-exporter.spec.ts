@@ -5,7 +5,7 @@
  * that aurochs can load back (round-trip).
  */
 
-import { describe, it, expect } from "vitest";
+
 import { exportThemeAsPotx, getThemeFileName } from "./theme-exporter";
 import { OFFICE_THEME } from "./presets/office-themes";
 import { loadPptxFromBuffer, convertToPresentationDocument, buildSlideLayoutOptions } from "@aurochs-office/pptx/app";

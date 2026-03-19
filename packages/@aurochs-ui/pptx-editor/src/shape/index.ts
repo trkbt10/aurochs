@@ -9,7 +9,7 @@
 // =============================================================================
 // Identity
 // =============================================================================
-export { getShapeId, hasShapeId } from "./identity";
+export { getShapeId } from "./identity";
 
 // =============================================================================
 // Query
@@ -18,7 +18,6 @@ export {
   findShapeById,
   findShapeByIdWithParents,
   getTopLevelShapeIds,
-  isTopLevelShape,
 } from "./query";
 
 // =============================================================================
@@ -40,7 +39,6 @@ export {
   withUpdatedTransform,
   hasEditableTransform,
 } from "./transform";
-export type { AbsoluteBounds } from "./transform";
 
 // =============================================================================
 // Bounds
@@ -51,8 +49,6 @@ export {
   collectBoundsForIds,
   getCombinedCenter,
 } from "./bounds";
-export type { RotatedBoundsInput, SimpleBounds } from "./bounds";
-export { getCombinedBoundsWithRotation } from "./bounds";
 
 // =============================================================================
 // Capabilities
@@ -88,74 +84,19 @@ export type { ShapeHierarchyTarget } from "./hierarchy";
 // =============================================================================
 // Traverse
 // =============================================================================
-export { getShapeName, collectShapeRenderData } from "./traverse";
+export { collectShapeRenderData } from "./traverse";
 export type { ShapeRenderData } from "./traverse";
-
-// =============================================================================
-// Coordinates
-// =============================================================================
-export { clientToSlideCoords } from "./coords";
 
 // =============================================================================
 // Alignment
 // =============================================================================
-export {
-  alignHorizontal,
-  alignVertical,
-  distributeHorizontal,
-  distributeVertical,
-  nudgeShapes,
-} from "./alignment";
+export { calculateAlignedBounds } from "./alignment";
 export type {
   ShapeBoundsWithId,
   AlignmentUpdate,
   HorizontalAlignment,
   VerticalAlignment,
 } from "./alignment";
-
-// =============================================================================
-// Resize (directly from editor-core)
-// =============================================================================
-export {
-  calculateAspectDelta,
-  applyMinConstraints,
-  resizeFromNW,
-  resizeFromN,
-  resizeFromNE,
-  resizeFromE,
-  resizeFromSE,
-  resizeFromS,
-  resizeFromSW,
-  resizeFromW,
-  calculateResizeBounds,
-  calculateScaleFactors,
-  calculateRelativePosition,
-  calculateMultiResizeBounds,
-  type ResizeBounds,
-  type ResizeOptions,
-} from "@aurochs-ui/editor-core/geometry";
-
-// =============================================================================
-// Rotate (directly from editor-core)
-// =============================================================================
-export {
-  normalizeAngle,
-  degreesToRadians,
-  radiansToDegrees,
-  calculateAngleFromCenter,
-  DEFAULT_SNAP_ANGLES,
-  DEFAULT_SNAP_THRESHOLD,
-  snapAngle,
-  rotatePointAroundCenter,
-  calculateShapeCenter,
-  getRotatedCorners,
-  getSvgRotationTransform,
-  getSvgRotationTransformForBounds,
-  rotateShapeAroundCenter,
-  calculateRotationDelta,
-  type Point,
-  type RotationResult,
-} from "@aurochs-ui/editor-core/geometry";
 
 // =============================================================================
 // Render

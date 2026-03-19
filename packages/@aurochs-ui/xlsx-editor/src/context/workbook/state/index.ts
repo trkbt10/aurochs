@@ -31,6 +31,5 @@ export {
   calculateRowResizeHeight,
   startColumnResizeDrag,
   calculateColumnResizeWidth,
-  endDrag,
   isDragging,
 } from "./drag";

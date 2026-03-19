@@ -14,7 +14,7 @@ import type {
   RegularRun,
 } from "@aurochs-office/pptx/domain/text";
 import type { TextSelection } from "./cursor";
-import { normalizeSelection, isSamePosition } from "./cursor";
+import { normalizeTextSelection, isSameCursorPosition } from "@aurochs-ui/editor-core/text-edit";
 import { mergeRunProperties, areRunPropertiesEqual } from "../../../editors/text/mixed-properties";
 
 // =============================================================================
@@ -315,7 +315,7 @@ export function applyRunPropertiesToSelection(
   propertyUpdate: Partial<RunProperties>,
 ): TextBody {
   // Handle empty selection
-  if (isSamePosition(selection.start, selection.end)) {
+  if (isSameCursorPosition(selection.start, selection.end)) {
     return textBody;
   }
 
@@ -324,7 +324,7 @@ export function applyRunPropertiesToSelection(
     return textBody;
   }
 
-  const normalized = normalizeSelection(selection);
+  const normalized = normalizeTextSelection(selection);
 
   const newParagraphs = textBody.paragraphs.map((paragraph, pIdx) =>
     processParagraphForFormat({ paragraph, paragraphIndex: pIdx, selection: normalized, propertyUpdate }),

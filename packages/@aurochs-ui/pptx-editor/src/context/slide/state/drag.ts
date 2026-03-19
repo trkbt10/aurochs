@@ -13,10 +13,6 @@ import type {
   PendingResizeDragState as CorePendingResizeDragState,
   ResizeHandlePosition as CoreResizeHandlePosition,
 } from "@aurochs-ui/editor-core/drag-state";
-import {
-  createIdleDragState as createCoreIdleDragState,
-  isDragIdle as isCoreDragIdle,
-} from "@aurochs-ui/editor-core/drag-state";
 
 /**
  * Position of a resize handle on the selection box
@@ -164,20 +160,6 @@ export type DragState =
 // =============================================================================
 // Functions
 // =============================================================================
-
-/**
- * Create idle drag state
- */
-export function createIdleDragState(): IdleDragState {
-  return createCoreIdleDragState();
-}
-
-/**
- * Check if drag state is idle
- */
-export function isDragIdle(drag: DragState): drag is IdleDragState {
-  return isCoreDragIdle(drag);
-}
 
 /**
  * Check if drag state is move

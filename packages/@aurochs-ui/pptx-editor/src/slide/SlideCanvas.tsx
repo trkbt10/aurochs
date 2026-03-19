@@ -26,11 +26,10 @@ import type { ResolvedBackgroundFill, RenderOptions } from "@aurochs-renderer/pp
 import type { DrawingPath } from "@aurochs-ui/path-tools";
 import { PenToolOverlay, PathEditOverlay } from "@aurochs-ui/path-tools";
 import { customGeometryToDrawingPath, isCustomGeometry } from "../path-tools/adapters";
-import { clientToSlideCoords } from "../shape/coords";
+import { clientToCanvasCoords, getCombinedBoundsWithRotation, getSvgRotationTransformForBounds, applyDragPreview } from "@aurochs-ui/editor-core/geometry";
 import { collectShapeRenderData } from "../shape/traverse";
 import { findShapeByIdWithParents } from "../shape/query";
 import { getAbsoluteBounds } from "../shape/transform";
-import { getCombinedBoundsWithRotation, getSvgRotationTransformForBounds, applyDragPreview } from "@aurochs-ui/editor-core/geometry";
 import { createBoundsFromDrag } from "../shape/factory";
 import type { ShapeBounds as CreationBounds } from "../shape/creation-bounds";
 import { SlideContextMenu, type ContextMenuActions } from "./context-menu/SlideContextMenu";
@@ -345,12 +344,12 @@ export function SlideCanvas({
         const svg = e.currentTarget.ownerSVGElement;
         if (svg) {
           const rect = svg.getBoundingClientRect();
-          const coords = clientToSlideCoords({
+          const coords = clientToCanvasCoords({
             clientX: e.clientX,
             clientY: e.clientY,
             containerRect: rect,
-            slideWidth: widthNum,
-            slideHeight: heightNum,
+            canvasWidth: widthNum,
+            canvasHeight: heightNum,
           });
           onCreate(coords.x, coords.y);
           return;
@@ -374,12 +373,12 @@ export function SlideCanvas({
       // If in creation mode and onCreate is provided, create shape at click position
       if (creationMode && creationMode.type !== "select" && onCreate) {
         const rect = e.currentTarget.getBoundingClientRect();
-        const coords = clientToSlideCoords({
+        const coords = clientToCanvasCoords({
           clientX: e.clientX,
           clientY: e.clientY,
           containerRect: rect,
-          slideWidth: widthNum,
-          slideHeight: heightNum,
+          canvasWidth: widthNum,
+          canvasHeight: heightNum,
         });
         onCreate(coords.x, coords.y);
         return;
@@ -403,12 +402,12 @@ export function SlideCanvas({
           return;
         }
         const rect = e.currentTarget.getBoundingClientRect();
-        const coords = clientToSlideCoords({
+        const coords = clientToCanvasCoords({
           clientX: e.clientX,
           clientY: e.clientY,
           containerRect: rect,
-          slideWidth: widthNum,
-          slideHeight: heightNum,
+          canvasWidth: widthNum,
+          canvasHeight: heightNum,
         });
         const nextDrag: CreationDrag = {
           startX: coords.x,
@@ -423,12 +422,12 @@ export function SlideCanvas({
         return;
       }
       const rect = e.currentTarget.getBoundingClientRect();
-      const coords = clientToSlideCoords({
+      const coords = clientToCanvasCoords({
         clientX: e.clientX,
         clientY: e.clientY,
         containerRect: rect,
-        slideWidth: widthNum,
-        slideHeight: heightNum,
+        canvasWidth: widthNum,
+        canvasHeight: heightNum,
       });
       const additive = e.shiftKey || e.metaKey || e.ctrlKey;
       const nextMarquee: MarqueeSelection = {
@@ -531,12 +530,12 @@ export function SlideCanvas({
       if (!rect) {
         return;
       }
-      const coords = clientToSlideCoords({
+      const coords = clientToCanvasCoords({
         clientX: e.clientX,
         clientY: e.clientY,
         containerRect: rect,
-        slideWidth: widthNum,
-        slideHeight: heightNum,
+        canvasWidth: widthNum,
+        canvasHeight: heightNum,
       });
       const nextMarquee: MarqueeSelection = {
         ...current,
@@ -559,12 +558,12 @@ export function SlideCanvas({
       if (!rect) {
         return;
       }
-      const coords = clientToSlideCoords({
+      const coords = clientToCanvasCoords({
         clientX: e.clientX,
         clientY: e.clientY,
         containerRect: rect,
-        slideWidth: widthNum,
-        slideHeight: heightNum,
+        canvasWidth: widthNum,
+        canvasHeight: heightNum,
       });
       const nextDrag: CreationDrag = {
         ...current,
@@ -652,12 +651,12 @@ export function SlideCanvas({
         return;
       }
 
-      const coords = clientToSlideCoords({
+      const coords = clientToCanvasCoords({
         clientX: e.clientX,
         clientY: e.clientY,
         containerRect: rect,
-        slideWidth: widthNum,
-        slideHeight: heightNum,
+        canvasWidth: widthNum,
+        canvasHeight: heightNum,
       });
       onStartMove(coords.x, coords.y);
     },
@@ -671,12 +670,12 @@ export function SlideCanvas({
         return;
       }
 
-      const coords = clientToSlideCoords({
+      const coords = clientToCanvasCoords({
         clientX: e.clientX,
         clientY: e.clientY,
         containerRect: rect,
-        slideWidth: widthNum,
-        slideHeight: heightNum,
+        canvasWidth: widthNum,
+        canvasHeight: heightNum,
       });
       onStartResize({ handle, startX: coords.x, startY: coords.y, aspectLocked: e.shiftKey });
     },
@@ -690,12 +689,12 @@ export function SlideCanvas({
         return;
       }
 
-      const coords = clientToSlideCoords({
+      const coords = clientToCanvasCoords({
         clientX: e.clientX,
         clientY: e.clientY,
         containerRect: rect,
-        slideWidth: widthNum,
-        slideHeight: heightNum,
+        canvasWidth: widthNum,
+        canvasHeight: heightNum,
       });
       onStartRotate(coords.x, coords.y);
     },

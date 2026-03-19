@@ -2,7 +2,8 @@
 import type { ZipPackage } from "@aurochs/zip";
 import { parseXml, serializeDocument } from "@aurochs/xml";
 import { parseContentTypes } from "@aurochs-office/pptx/domain/content-types";
-import { getRelationshipPath, loadRelationships, resolvePartPath } from "@aurochs-office/pptx/parser/relationships";
+import { getRelationshipPath, resolvePartPath } from "@aurochs-office/ooxml/parser";
+import { loadRelationships } from "@aurochs-office/pptx/parser/relationships";
 import { addContentType, removeUnusedContentTypes } from "./content-types-manager";
 import { listRelationships, OFFICE_RELATIONSHIP_TYPES } from "@aurochs-office/opc";
 import {

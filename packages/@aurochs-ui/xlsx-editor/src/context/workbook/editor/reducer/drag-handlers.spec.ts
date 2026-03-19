@@ -9,7 +9,8 @@ import { createDefaultStyleSheet } from "@aurochs-office/xlsx/domain/style/types
 import { parseCellRef, parseRange } from "@aurochs-office/xlsx/domain/cell/address";
 import { colIdx, rowIdx } from "@aurochs-office/xlsx/domain/types";
 import { createHistory } from "@aurochs-ui/editor-core/history";
-import { createEmptyCellSelection, createIdleDragState, type XlsxEditorState } from "../types";
+import { createEmptyCellSelection, type XlsxEditorState } from "../types";
+import { createIdleDragState } from "@aurochs-ui/editor-core/drag-state";
 import { dragHandlers } from "./drag-handlers";
 
 function createTestWorkbook(): XlsxWorkbook {

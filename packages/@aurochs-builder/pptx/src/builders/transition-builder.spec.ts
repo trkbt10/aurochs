@@ -1,6 +1,7 @@
 /** @file Unit tests for transition-builder */
 import { createElement, isXmlElement, type XmlDocument } from "@aurochs/xml";
-import { applySlideTransition, isTransitionType } from "./transition-builder";
+import { applySlideTransition } from "./transition-builder";
+import { isTransitionType } from "@aurochs-builder/pptx/patcher";
 import type { SlideTransitionSpec } from "../types";
 
 function createSlideDoc(withTransition = false): XmlDocument {

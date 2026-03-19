@@ -11,11 +11,6 @@ import { getShapeBounds } from "./bounds";
 import {
   type BoundsWithId,
   type AlignmentUpdate as GenericAlignmentUpdate,
-  alignHorizontal as genericAlignH,
-  alignVertical as genericAlignV,
-  distributeHorizontal as genericDistributeH,
-  distributeVertical as genericDistributeV,
-  nudgeShapes as genericNudge,
   calculateAlignment as genericCalculateAlignment,
 } from "@aurochs-ui/editor-core/alignment";
 
@@ -41,35 +36,6 @@ export type ShapeBoundsWithId = BoundsWithId<ShapeId>;
  * Result of alignment/distribution calculation
  */
 export type AlignmentUpdate = GenericAlignmentUpdate<ShapeId>;
-
-// =============================================================================
-// PPTX-typed Wrappers
-// =============================================================================
-
-/** Align shapes horizontally (left, center, or right) */
-export function alignHorizontal(shapes: readonly ShapeBoundsWithId[], alignment: HorizontalAlignment): readonly AlignmentUpdate[] {
-  return genericAlignH(shapes, alignment);
-}
-
-/** Align shapes vertically (top, middle, or bottom) */
-export function alignVertical(shapes: readonly ShapeBoundsWithId[], alignment: VerticalAlignment): readonly AlignmentUpdate[] {
-  return genericAlignV(shapes, alignment);
-}
-
-/** Distribute shapes evenly along the horizontal axis */
-export function distributeHorizontal(shapes: readonly ShapeBoundsWithId[]): readonly AlignmentUpdate[] {
-  return genericDistributeH(shapes);
-}
-
-/** Distribute shapes evenly along the vertical axis */
-export function distributeVertical(shapes: readonly ShapeBoundsWithId[]): readonly AlignmentUpdate[] {
-  return genericDistributeV(shapes);
-}
-
-/** Nudge shapes by a given delta */
-export function nudgeShapes(shapes: readonly ShapeBoundsWithId[], dx: number, dy: number): readonly AlignmentUpdate[] {
-  return genericNudge(shapes, dx, dy);
-}
 
 // =============================================================================
 // High-level API (PPTX-specific)

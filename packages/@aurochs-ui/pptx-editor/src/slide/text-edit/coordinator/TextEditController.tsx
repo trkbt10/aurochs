@@ -12,12 +12,14 @@ import { useRef, useState, useMemo, useCallback, useEffect } from "react";
 import { toLayoutInput, layoutTextBody } from "@aurochs-renderer/pptx/text-layout";
 import { createLayoutParagraphMeasurer } from "@aurochs-renderer/pptx/react";
 import {
-  getPlainText,
-  cursorPositionToOffset,
   coordinatesToCursorPosition,
-  offsetToCursorPosition,
   getLineRangeForPosition,
 } from "../input-support/cursor";
+import {
+  getPlainText,
+  cursorPositionToOffset,
+  offsetToCursorPosition,
+} from "@aurochs-ui/editor-core/text-edit";
 import { mergeTextIntoBody, extractDefaultRunProperties } from "../input-support/text-body-merge";
 import { colorTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { TextOverlay } from "../text-render/TextOverlay";

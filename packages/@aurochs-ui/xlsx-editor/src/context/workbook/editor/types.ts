@@ -28,7 +28,6 @@ import type { XlsxTable, XlsxTableStyleInfo } from "@aurochs-office/xlsx/domain/
 import type { XlsxDefinedName } from "@aurochs-office/xlsx/domain/workbook";
 import type { UndoRedoHistory as CoreUndoRedoHistory } from "@aurochs-ui/editor-core/history";
 import type { IdleDragState as CoreIdleDragState } from "@aurochs-ui/editor-core/drag-state";
-import { createIdleDragState as createCoreIdleDragState } from "@aurochs-ui/editor-core/drag-state";
 
 // =============================================================================
 // Undo/Redo History (shared with pptx-editor)
@@ -121,13 +120,6 @@ export type XlsxDragState =
   | FillDragState
   | RowResizeDragState
   | ColumnResizeDragState;
-
-/**
- * Create idle drag state
- */
-export function createIdleDragState(): XlsxDragState {
-  return createCoreIdleDragState();
-}
 
 // =============================================================================
 // Clipboard Content

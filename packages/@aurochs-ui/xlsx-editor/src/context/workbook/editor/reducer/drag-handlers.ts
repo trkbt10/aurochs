@@ -18,8 +18,8 @@ import {
   updateFillDrag,
   startRowResizeDrag,
   startColumnResizeDrag,
-  endDrag,
 } from "../../state/drag";
+import { createIdleDragState } from "@aurochs-ui/editor-core/drag-state";
 import { applyAutofillToWorksheet } from "../../../../cell/autofill";
 import { setColumnWidth, setRowHeight } from "../../../../row-col/mutation";
 import { updateWorksheetInWorkbook } from "../../utils/worksheet-updater";
@@ -64,7 +64,7 @@ function handleEndRangeSelect(state: XlsxEditorState): XlsxEditorState {
   const range = { start: drag.startCell, end: drag.currentCell };
   return {
     ...state,
-    drag: endDrag(),
+    drag: createIdleDragState(),
     cellSelection: createRangeSelection(range, drag.startCell),
   };
 }
@@ -100,7 +100,7 @@ function handleCommitFillDrag(state: XlsxEditorState): XlsxEditorState {
   if (sheetIndex === undefined) {
     return {
       ...state,
-      drag: endDrag(),
+      drag: createIdleDragState(),
       cellSelection: createRangeSelection(drag.targetRange),
     };
   }
@@ -116,7 +116,7 @@ function handleCommitFillDrag(state: XlsxEditorState): XlsxEditorState {
   return {
     ...state,
     workbookHistory: pushHistory(state.workbookHistory, updatedWorkbook),
-    drag: endDrag(),
+    drag: createIdleDragState(),
     cellSelection: createRangeSelection(drag.targetRange),
   };
 }
@@ -148,7 +148,7 @@ function handleCommitRowResize(state: XlsxEditorState): XlsxEditorState {
 
   const sheetIndex = state.activeSheetIndex;
   if (sheetIndex === undefined) {
-    return { ...state, drag: endDrag() };
+    return { ...state, drag: createIdleDragState() };
   }
 
   const updatedWorkbook = updateWorksheetInWorkbook(state.workbookHistory.present, sheetIndex, (worksheet) =>
@@ -158,7 +158,7 @@ function handleCommitRowResize(state: XlsxEditorState): XlsxEditorState {
   return {
     ...state,
     workbookHistory: pushHistory(state.workbookHistory, updatedWorkbook),
-    drag: endDrag(),
+    drag: createIdleDragState(),
   };
 }
 
@@ -189,7 +189,7 @@ function handleCommitColumnResize(state: XlsxEditorState): XlsxEditorState {
 
   const sheetIndex = state.activeSheetIndex;
   if (sheetIndex === undefined) {
-    return { ...state, drag: endDrag() };
+    return { ...state, drag: createIdleDragState() };
   }
 
   const updatedWorkbook = updateWorksheetInWorkbook(state.workbookHistory.present, sheetIndex, (worksheet) =>
@@ -199,7 +199,7 @@ function handleCommitColumnResize(state: XlsxEditorState): XlsxEditorState {
   return {
     ...state,
     workbookHistory: pushHistory(state.workbookHistory, updatedWorkbook),
-    drag: endDrag(),
+    drag: createIdleDragState(),
   };
 }
 
@@ -216,5 +216,5 @@ export const dragHandlers: HandlerMap = {
   START_COLUMN_RESIZE: handleStartColumnResize,
   PREVIEW_COLUMN_RESIZE: handlePreviewColumnResize,
   COMMIT_COLUMN_RESIZE: (state) => handleCommitColumnResize(state),
-  END_DRAG: (state) => ({ ...state, drag: endDrag() }),
+  END_DRAG: (state) => ({ ...state, drag: createIdleDragState() }),
 };

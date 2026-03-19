@@ -64,7 +64,7 @@ export { applyComments } from "./comment-builder";
 export { applyNotes } from "./notes-builder";
 
 // Transition builders
-export { applySlideTransition, isTransitionType } from "./transition-builder";
+export { applySlideTransition } from "./transition-builder";
 
 // Theme builders
 export { applyThemeEditsToPackage, applyThemeEditsToThemeXml } from "./theme-builder";

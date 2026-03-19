@@ -9,29 +9,6 @@ import type { ShapeNode } from "./types";
 import type { ShapeTransform } from "./transform";
 import { findShapeById } from "./query";
 
-import type {
-  RotatedBoundsInput as CoreRotatedBoundsInput,
-  SimpleBounds as CoreSimpleBounds,
-} from "@aurochs-ui/editor-core/geometry";
-import { getCombinedBoundsWithRotation as coreCombinedBoundsWithRotation } from "@aurochs-ui/editor-core/geometry";
-
-/**
- * Input for rotation-aware bounding box calculation
- */
-export type RotatedBoundsInput = CoreRotatedBoundsInput;
-
-/**
- * Simple axis-aligned bounding box
- */
-export type SimpleBounds = CoreSimpleBounds;
-
-/**
- * Calculate combined axis-aligned bounding box considering rotated shapes
- */
-export function getCombinedBoundsWithRotation(inputs: readonly RotatedBoundsInput[]): SimpleBounds | undefined {
-  return coreCombinedBoundsWithRotation(inputs);
-}
-
 // =============================================================================
 // Core Functions
 // =============================================================================

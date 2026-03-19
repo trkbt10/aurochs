@@ -7,7 +7,8 @@
 import { getAttr, getChild, type XmlElement } from "@aurochs/xml";
 import type { FontReference, ShapeStyle, StyleReference } from "../../domain";
 import { parseColorFromParent } from "../graphics/color-parser";
-import { parseFontCollectionIndex, parseStyleMatrixColumnIndex } from "../primitive";
+import { parseUnsignedInt } from "@aurochs-office/drawing-ml/parser";
+import { parseFontCollectionIndex } from "../primitive";
 
 /**
  * Parse style reference
@@ -23,7 +24,7 @@ export function parseStyleReference(element: XmlElement | undefined): StyleRefer
     return undefined;
   }
 
-  const idx = parseStyleMatrixColumnIndex(getAttr(element, "idx"));
+  const idx = parseUnsignedInt(getAttr(element, "idx"));
   if (idx === undefined) {
     return undefined;
   }

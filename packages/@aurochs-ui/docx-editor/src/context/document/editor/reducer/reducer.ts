@@ -15,7 +15,8 @@ import { clipboardHandlers } from "./clipboard-handlers";
 import { textEditHandlers } from "./text-edit-handlers";
 import { formatHandlers } from "./format-handlers/index";
 import { documentHandlers } from "./document-handlers";
-import { createEmptyDocxSelection, createIdleDragState } from "../../state";
+import { createEmptyDocxSelection } from "../../state";
+import { createIdleDragState } from "@aurochs-ui/editor-core/drag-state";
 import { createHistory } from "@aurochs-ui/editor-core/history";
 import { createInitialTextEditState } from "../types";
 

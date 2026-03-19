@@ -9,9 +9,10 @@ import type { PresentationEditorState, PresentationEditorAction } from "../types
 import { createSelectMode } from "../types";
 import type { HandlerMap, ActionHandler } from "./handler-types";
 import { createHistory } from "@aurochs-ui/editor-core/history";
+import { createEmptySelection } from "@aurochs-ui/editor-core/selection";
+import { createIdleDragState } from "@aurochs-ui/editor-core/drag-state";
+import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import {
-  createEmptySelection,
-  createIdleDragState,
   createIdlePathDrawState,
   createInactivePathEditState,
 } from "../../../slide/state";
@@ -53,7 +54,7 @@ export function createPresentationEditorState(document: PresentationDocument): P
   return {
     documentHistory: createHistory(document),
     activeSlideId: firstSlideId,
-    shapeSelection: createEmptySelection(),
+    shapeSelection: createEmptySelection<ShapeId>(),
     drag: createIdleDragState(),
     clipboard: undefined,
     creationMode: createSelectMode(),

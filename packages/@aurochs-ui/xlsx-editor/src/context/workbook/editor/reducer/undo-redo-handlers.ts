@@ -7,7 +7,8 @@
 import type { HandlerMap } from "./handler-types";
 import { redoHistory, undoHistory } from "@aurochs-ui/editor-core/history";
 import type { XlsxEditorState } from "../types";
-import { createEmptyCellSelection, createIdleDragState } from "../types";
+import { createEmptyCellSelection } from "../types";
+import { createIdleDragState } from "@aurochs-ui/editor-core/drag-state";
 
 function normalizeActiveSheetIndex(activeSheetIndex: number | undefined, sheetCount: number): number | undefined {
   if (sheetCount <= 0) {

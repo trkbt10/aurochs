@@ -7,10 +7,6 @@
 
 import type { ElementId, TextPosition } from "./selection";
 import type { IdleDragState as CoreIdleDragState } from "@aurochs-ui/editor-core/drag-state";
-import {
-  createIdleDragState as createCoreIdleDragState,
-  isDragIdle as isCoreDragIdle,
-} from "@aurochs-ui/editor-core/drag-state";
 
 // =============================================================================
 // Types
@@ -113,12 +109,6 @@ export type DocxDragState =
 // Factory Functions
 // =============================================================================
 
-/**
- * Create idle drag state.
- */
-export function createIdleDragState(): IdleDragState {
-  return createCoreIdleDragState();
-}
 
 /**
  * Create text selection drag state.
@@ -257,12 +247,6 @@ export function updateImageResizeDrag(
 // Type Guards
 // =============================================================================
 
-/**
- * Check if drag state is idle.
- */
-export function isDragIdle(state: DocxDragState): state is IdleDragState {
-  return isCoreDragIdle(state);
-}
 
 /**
  * Check if drag state is text selection.

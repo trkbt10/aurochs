@@ -6,7 +6,9 @@
 
 import { createSlideEditorState } from "./types";
 import { createHistory, pushHistory, redoHistory, undoHistory } from "@aurochs-ui/editor-core/history";
-import { createEmptySelection, createIdleDragState } from "../state";
+import { createEmptySelection } from "@aurochs-ui/editor-core/selection";
+import { createIdleDragState } from "@aurochs-ui/editor-core/drag-state";
+import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import type { Slide } from "@aurochs-office/pptx/domain";
 
 // =============================================================================
@@ -48,17 +50,17 @@ const createTestSlide = (shapeCount: number = 0): Slide => ({
 
 describe("createEmptySelection", () => {
   it("returns selection with empty selectedIds array", () => {
-    const selection = createEmptySelection();
+    const selection = createEmptySelection<ShapeId>();
     expect(selection.selectedIds).toEqual([]);
   });
 
   it("returns selection with undefined primaryId", () => {
-    const selection = createEmptySelection();
+    const selection = createEmptySelection<ShapeId>();
     expect(selection.primaryId).toBeUndefined();
   });
 
   it("returns readonly selection state", () => {
-    const selection = createEmptySelection();
+    const selection = createEmptySelection<ShapeId>();
     expect(Object.isFrozen(selection.selectedIds) || Array.isArray(selection.selectedIds)).toBe(true);
   });
 });

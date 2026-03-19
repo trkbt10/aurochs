@@ -3,7 +3,8 @@
  */
 
 import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
-import { createIdleDragState, isDragIdle, isDragMove, isDragResize, isDragRotate } from "./drag";
+import { createIdleDragState, isDragIdle } from "@aurochs-ui/editor-core/drag-state";
+import { isDragMove, isDragResize, isDragRotate } from "./drag";
 import type { DragState, MoveDragState, ResizeDragState, RotateDragState } from "./drag";
 
 describe("createIdleDragState", () => {

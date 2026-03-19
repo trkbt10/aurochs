@@ -9,7 +9,8 @@ import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
 import type { SlideEditorState, SlideEditorAction } from "./types";
 import { createHistory, pushHistory, redoHistory, undoHistory } from "@aurochs-ui/editor-core/history";
-import { createEmptySelection, createIdleDragState } from "../state";
+import { createEmptySelection } from "@aurochs-ui/editor-core/selection";
+import { createIdleDragState } from "@aurochs-ui/editor-core/drag-state";
 import { findShapeById } from "../../../shape/query";
 import { updateShapeById, deleteShapesById, reorderShape, generateShapeId } from "../../../shape/mutation";
 import { getShapeBounds, getCombinedBounds, collectBoundsForIds, getCombinedCenter } from "../../../shape/bounds";
@@ -58,7 +59,7 @@ export function slideEditorReducer(state: SlideEditorState, action: SlideEditorA
       return {
         ...state,
         slideHistory: createHistory(action.slide),
-        selection: createEmptySelection(),
+        selection: createEmptySelection<ShapeId>(),
         drag: createIdleDragState(),
       };
 
@@ -211,7 +212,7 @@ export function slideEditorReducer(state: SlideEditorState, action: SlideEditorA
     case "CLEAR_SELECTION":
       return {
         ...state,
-        selection: createEmptySelection(),
+        selection: createEmptySelection<ShapeId>(),
       };
 
     // --- Drag ---

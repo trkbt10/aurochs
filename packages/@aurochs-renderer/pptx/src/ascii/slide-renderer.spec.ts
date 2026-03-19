@@ -3,7 +3,7 @@
  */
 import { renderSlideAscii } from "./slide-renderer";
 import type { AsciiRenderableShape } from "./types";
-import { BOX_CHARS } from "./ascii-canvas";
+import { BOX_CHARS } from "@aurochs-renderer/drawing-ml/ascii";
 
 function shape(overrides: Partial<AsciiRenderableShape> & { name: string; type: string }): AsciiRenderableShape {
   return overrides;

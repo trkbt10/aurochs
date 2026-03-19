@@ -4,8 +4,8 @@
 
 import {
   createEmptyCellSelection,
-  createIdleDragState,
 } from "./types";
+import { createIdleDragState } from "@aurochs-ui/editor-core/drag-state";
 
 describe("createEmptyCellSelection", () => {
   it("creates an empty selection", () => {

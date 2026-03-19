@@ -7,7 +7,6 @@ import type { CellAddress, CellRange } from "@aurochs-office/xlsx/domain/cell/ad
 import {
   calculateColumnResizeWidth,
   calculateRowResizeHeight,
-  endDrag,
   getRangeSelectRange,
   isDragColumnResize,
   isDragFill,
@@ -22,6 +21,7 @@ import {
   updateFillDrag,
   updateRangeSelectDrag,
 } from "./drag";
+import { createIdleDragState as endDrag } from "@aurochs-ui/editor-core/drag-state";
 
 function addr(col: number, row: number): CellAddress {
   return {

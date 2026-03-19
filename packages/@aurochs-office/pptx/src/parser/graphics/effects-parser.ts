@@ -39,9 +39,11 @@ import type {
 } from "../../domain/index";
 import { px, deg, pct } from "@aurochs-office/drawing-ml/domain/units";
 import {
+  parseFixedPercentage,
   parseGlowEffect as parseGlowEffectShared,
   parseInnerShadowEffect as parseInnerShadowEffectShared,
   parseOuterShadowEffect as parseOuterShadowEffectShared,
+  parsePositivePercentage,
   parseReflectionEffect as parseReflectionEffectShared,
   parseSoftEdgeEffect as parseSoftEdgeEffectShared,
 } from "@aurochs-office/drawing-ml/parser";
@@ -52,8 +54,6 @@ import {
   getAngleAttr,
   getBoolAttrOr,
   getEmuAttr,
-  parseFixedPercentage,
-  parsePositivePercentage,
   getPercentAttr,
 } from "../primitive";
 

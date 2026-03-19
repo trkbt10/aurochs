@@ -13,7 +13,7 @@ import type {
   ParagraphProperties,
 } from "@aurochs-office/pptx/domain/text";
 import type { CursorPosition, TextSelection } from "../../slide/text-edit";
-import { normalizeSelection, isSamePosition } from "../../slide/text-edit";
+import { normalizeTextSelection, isSameCursorPosition } from "@aurochs-ui/editor-core/text-edit";
 import {
   extractMixedRunProperties,
   extractMixedParagraphProperties,
@@ -167,7 +167,7 @@ function getRunRangesInParagraph({
  * Get runs that fall within a text selection.
  */
 export function getRunsInSelection(textBody: TextBody, selection: TextSelection): readonly RunRange[] {
-  const normalized = normalizeSelection(selection);
+  const normalized = normalizeTextSelection(selection);
   const { start, end } = normalized;
   const ranges: RunRange[] = [];
 
@@ -204,7 +204,7 @@ export function getRunsInSelection(textBody: TextBody, selection: TextSelection)
  * Get paragraph indices that fall within a text selection.
  */
 export function getParagraphsInSelection(textBody: TextBody, selection: TextSelection): readonly number[] {
-  const normalized = normalizeSelection(selection);
+  const normalized = normalizeTextSelection(selection);
   const { start, end } = normalized;
   const indices: number[] = [];
 
@@ -305,7 +305,7 @@ export function extractPropertiesAtCursor(textBody: TextBody, position: CursorPo
  */
 export function extractPropertiesFromSelection(textBody: TextBody, selection: TextSelection): ExtractedTextProperties {
   // Handle empty selection (cursor only)
-  if (isSamePosition(selection.start, selection.end)) {
+  if (isSameCursorPosition(selection.start, selection.end)) {
     return extractPropertiesAtCursor(textBody, selection.start);
   }
 

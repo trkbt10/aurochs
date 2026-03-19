@@ -12,7 +12,7 @@ import type { SelectionState } from "../../../slide/state";
 import type { HandlerMap } from "./handler-types";
 import { getActiveSlide, updateActiveSlideInDocument } from "./helpers";
 import { pushHistory } from "@aurochs-ui/editor-core/history";
-import { createEmptySelection } from "../../../slide/state";
+import { createEmptySelection } from "@aurochs-ui/editor-core/selection";
 import { generateShapeId } from "../../../../shape/mutation";
 import { createPicShape } from "../../../../shape/factory";
 import type { ShapeBounds } from "../../../../shape/creation-bounds";
@@ -31,7 +31,7 @@ function getSelectionForModeChange(mode: CreationMode, currentSelection: Selecti
   if (mode.type === "select") {
     return currentSelection;
   }
-  return createEmptySelection();
+  return createEmptySelection<ShapeId>();
 }
 
 /**

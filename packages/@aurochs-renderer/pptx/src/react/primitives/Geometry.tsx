@@ -97,16 +97,8 @@ export function RectPath({ width, height, fill, line, className }: RectPathProps
 }
 
 // =============================================================================
-// Utility Functions
+// Utility Types & Components
 // =============================================================================
-
-/**
- * Build SVG path data from geometry.
- * Thin wrapper around the existing geometry renderer.
- */
-export function getGeometryPathData(geometry: Geometry, width: number, height: number): string {
-  return renderGeometryData(geometry, width, height);
-}
 
 /**
  * Props for a standalone path element (without hooks).

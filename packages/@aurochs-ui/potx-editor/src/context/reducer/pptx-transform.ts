@@ -5,7 +5,7 @@
  * used with editor-controls generic shape utilities.
  */
 
-import type { Shape, Transform, GrpShape, GroupTransform } from "@aurochs-office/pptx/domain";
+import type { Shape, Transform } from "@aurochs-office/pptx/domain";
 import type { ShapeNode } from "@aurochs-ui/editor-controls/shape-editor";
 import type { ShapeTransform } from "@aurochs-ui/editor-controls/shape-editor";
 
@@ -32,7 +32,9 @@ function getShapeTransformInternal(shape: Shape): Transform | undefined {
  */
 export function pptxGetTransform(shape: ShapeNode): ShapeTransform | undefined {
   const t = getShapeTransformInternal(shape as Shape);
-  if (!t) return undefined;
+  if (!t) {
+    return undefined;
+  }
   return {
     x: t.x as number,
     y: t.y as number,
@@ -51,7 +53,9 @@ export function withUpdatedTransform(shape: Shape, update: Partial<Transform>): 
     case "pic":
     case "cxnSp": {
       const currentTransform = shape.properties.transform;
-      if (!currentTransform) return shape;
+      if (!currentTransform) {
+        return shape;
+      }
       return {
         ...shape,
         properties: {
@@ -63,7 +67,9 @@ export function withUpdatedTransform(shape: Shape, update: Partial<Transform>): 
 
     case "grpSp": {
       const currentTransform = shape.properties.transform;
-      if (!currentTransform) return shape;
+      if (!currentTransform) {
+        return shape;
+      }
       return {
         ...shape,
         properties: {

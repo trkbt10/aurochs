@@ -9,7 +9,7 @@ import type { Bounds, ShapeId } from "@aurochs-office/pptx/domain/types";
 import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
 import { getCombinedBounds } from "./bounds";
 import { generateShapeId } from "./mutation";
-import { hasShapeId } from "./identity";
+import { hasShapeId } from "@aurochs-ui/editor-controls/shape-editor";
 
 // =============================================================================
 // Coordinate Transform Utilities

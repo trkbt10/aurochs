@@ -17,7 +17,8 @@
  */
 
 import type { XmlElement } from "@aurochs/xml";
-import { findFillElement, parseFill, parseFillFromParent, resolveFillFromStyleReference } from "./fill-parser";
+import { parseFill, parseFillFromParent, resolveFillFromStyleReference } from "./fill-parser";
+import { findFillElement } from "@aurochs-office/drawing-ml/parser";
 import type { StyleReference } from "../../domain/index";
 
 // Helper to create mock XmlElement

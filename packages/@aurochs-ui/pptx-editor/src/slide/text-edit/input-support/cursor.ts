@@ -6,7 +6,6 @@
  * providing PPTX-specific measurement functions via CursorCalculationContext.
  */
 
-import type { TextBody } from "@aurochs-office/pptx/domain";
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import type { LayoutResult } from "@aurochs-renderer/pptx/text-layout";
 import type { PositionedSpan } from "@aurochs-renderer/pptx/text-layout";
@@ -16,16 +15,10 @@ import { getAscenderRatio } from "@aurochs/glyph";
 import {
   type CursorCalculationContext,
   type LayoutSpanLike,
-  normalizeTextSelection,
-  offsetToCursorPosition as genericOffsetToCursorPosition,
-  cursorPositionToOffset as genericCursorPositionToOffset,
-  getPlainText as genericGetPlainText,
   cursorPositionToCoordinates as genericCursorPositionToCoordinates,
   coordinatesToCursorPosition as genericCoordinatesToCursorPosition,
   selectionToRects as genericSelectionToRects,
   getLineTextLength,
-  isSameCursorPosition,
-  isCursorBefore,
 } from "@aurochs-ui/editor-core/text-edit";
 
 // =============================================================================
@@ -85,50 +78,8 @@ const PPTX_CURSOR_CONTEXT: CursorCalculationContext = {
 };
 
 // =============================================================================
-// PPTX-typed Wrappers
+// PPTX-specific Cursor Functions
 // =============================================================================
-
-/**
- * Convert flat character offset to paragraph-relative position.
- */
-export function offsetToCursorPosition(textBody: TextBody, offset: number): CursorPosition {
-  return genericOffsetToCursorPosition(textBody, offset);
-}
-
-/**
- * Convert paragraph-relative position to flat character offset.
- */
-export function cursorPositionToOffset(textBody: TextBody, position: CursorPosition): number {
-  return genericCursorPositionToOffset(textBody, position);
-}
-
-/**
- * Get full plain text from TextBody.
- */
-export function getPlainText(textBody: TextBody): string {
-  return genericGetPlainText(textBody);
-}
-
-/**
- * Check if two cursor positions are equal.
- */
-export function isSamePosition(a: CursorPosition, b: CursorPosition): boolean {
-  return isSameCursorPosition(a, b);
-}
-
-/**
- * Check if cursor position is before another.
- */
-export function isBefore(a: CursorPosition, b: CursorPosition): boolean {
-  return isCursorBefore(a, b);
-}
-
-/**
- * Normalize selection so start is before end.
- */
-export function normalizeSelection(selection: TextSelection): TextSelection {
-  return normalizeTextSelection(selection);
-}
 
 /**
  * Map cursor position to visual coordinates using LayoutResult.

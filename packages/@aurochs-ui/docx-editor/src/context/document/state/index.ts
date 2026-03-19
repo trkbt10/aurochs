@@ -13,14 +13,9 @@ export {
   type TextSelectionState,
   type DocxSelectionState,
   // Element selection
-  createEmptyElementSelection,
-  createSingleElementSelection,
   createMultiElementSelection,
-  addToElementSelection,
   removeFromElementSelection,
   toggleElementSelection,
-  setElementSelection,
-  isElementSelected,
   isElementSelectionEmpty,
   getElementSelectionCount,
   // Text selection
@@ -49,7 +44,6 @@ export {
   type ImageResizeDragState,
   type DocxDragState,
   // Factory functions
-  createIdleDragState,
   createTextSelectDragState,
   createElementMoveDragState,
   createTableResizeDragState,
@@ -60,7 +54,6 @@ export {
   updateTableResizeDrag,
   updateImageResizeDrag,
   // Type guards
-  isDragIdle,
   isDragTextSelect,
   isDragElementMove,
   isDragTableResize,

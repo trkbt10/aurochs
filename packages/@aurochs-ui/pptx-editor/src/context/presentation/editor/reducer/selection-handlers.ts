@@ -8,7 +8,7 @@ import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import type { PresentationEditorState, PresentationEditorAction } from "../types";
 import type { HandlerMap } from "./handler-types";
 import { exitTextEditIfActive, exitTextEditIfDifferentShape } from "./helpers";
-import { createEmptySelection } from "../../../slide/state";
+import { createEmptySelection } from "@aurochs-ui/editor-core/selection";
 
 type SelectShapeAction = Extract<PresentationEditorAction, { type: "SELECT_SHAPE" }>;
 type SelectMultipleShapesAction = Extract<PresentationEditorAction, { type: "SELECT_MULTIPLE_SHAPES" }>;
@@ -97,7 +97,7 @@ function handleClearShapeSelection(state: PresentationEditorState): Presentation
   return {
     ...state,
     textEdit: exitTextEditIfActive(state),
-    shapeSelection: createEmptySelection(),
+    shapeSelection: createEmptySelection<ShapeId>(),
   };
 }
 

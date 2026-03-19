@@ -10,7 +10,7 @@ import { createDefaultStyleSheet } from "@aurochs-office/xlsx/domain/style/types
 import { getCell, getCellValue } from "../../../../cell/query";
 import { createHistory } from "@aurochs-ui/editor-core/history";
 import { createRangeSelection } from "../../state/selection";
-import { createIdleDragState } from "../types";
+import { createIdleDragState } from "@aurochs-ui/editor-core/drag-state";
 import type { XlsxEditorState } from "../types";
 import { clipboardHandlers } from "./clipboard-handlers";
 

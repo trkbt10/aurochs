@@ -6,7 +6,7 @@ import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
 import type { Shape, SpShape } from "@aurochs-office/pptx/domain";
 import { createPresentationEditorState } from "./reducer";
 import { createTestDocument } from "./test-fixtures";
-import { createSingleSelection } from "../../../slide/state";
+import { createSingleSelection } from "@aurochs-ui/editor-core/selection";
 import { CLIPBOARD_HANDLERS } from "./clipboard-handlers";
 import type { PresentationEditorAction } from "../types";
 

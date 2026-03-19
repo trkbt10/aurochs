@@ -10,14 +10,10 @@
 // Selection
 // =============================================================================
 export {
-  createEmptySelection,
-  createSingleSelection,
   createMultiSelection,
   addToSelection,
   removeFromSelection,
   toggleSelection,
-  isSelected,
-  isSelectionEmpty,
 } from "./selection";
 export type { SelectionState } from "./selection";
 
@@ -25,8 +21,6 @@ export type { SelectionState } from "./selection";
 // Drag
 // =============================================================================
 export {
-  createIdleDragState,
-  isDragIdle,
   isDragMove,
   isDragResize,
   isDragRotate,

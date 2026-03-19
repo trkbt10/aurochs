@@ -12,32 +12,6 @@
 // isPointInCanvasArea, isPointInRulerArea, ViewportTransform
 // =============================================================================
 
-import { clientToCanvasCoords } from "@aurochs-ui/editor-core/geometry";
-
-/**
- * Convert client (mouse) coordinates to slide coordinates.
- *
- * @deprecated Use `screenToSlideCoords` from svg-viewport for viewport-aware conversion.
- * This function does not account for pan/zoom transforms.
- */
-export function clientToSlideCoords({
-  clientX,
-  clientY,
-  containerRect,
-  slideWidth,
-  slideHeight,
-}: {
-  clientX: number;
-  clientY: number;
-  containerRect: DOMRect;
-  slideWidth: number;
-  slideHeight: number;
-}): { x: number; y: number } {
-  return clientToCanvasCoords({
-    clientX,
-    clientY,
-    containerRect,
-    canvasWidth: slideWidth,
-    canvasHeight: slideHeight,
-  });
-}
+// For coordinate conversion, import directly from:
+// - "@aurochs-ui/editor-core/geometry" (clientToCanvasCoords)
+// - "@aurochs-renderer/pptx/svg-viewport" (screenToSlideCoords, etc.)

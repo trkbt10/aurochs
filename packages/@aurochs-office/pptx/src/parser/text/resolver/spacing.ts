@@ -10,7 +10,8 @@ import type { XmlElement } from "@aurochs/xml";
 import { getChild } from "@aurochs/xml";
 import type { TextStyleContext, MasterTextStyles } from "../../context";
 import type { LineSpacing } from "../../../domain/text";
-import { parsePercentage100k, parseTextSpacingPoint } from "../../primitive";
+import { parsePercentage100k } from "@aurochs-office/drawing-ml/parser";
+import { parseTextSpacingPoint } from "../../primitive";
 import { TYPE_TO_MASTER_STYLE } from "./constants";
 import { lookupPlaceholder } from "./placeholder";
 

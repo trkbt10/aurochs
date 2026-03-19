@@ -14,7 +14,8 @@ import { createDefaultStyleSheet } from "@aurochs-office/xlsx/domain/style/types
 import { createHistory } from "@aurochs-ui/editor-core/history";
 import { getCellValue } from "../../../../cell/query";
 import type { XlsxEditorAction, XlsxEditorState, CellEditComposition } from "../types";
-import { createEmptyCellSelection, createIdleDragState, createIdleComposition } from "../types";
+import { createEmptyCellSelection, createIdleComposition } from "../types";
+import { createIdleDragState } from "@aurochs-ui/editor-core/drag-state";
 import type { ActionHandler } from "./handler-types";
 import { editingHandlers } from "./editing-handlers";
 

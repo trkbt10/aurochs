@@ -10,7 +10,8 @@ import { createDefaultStyleSheet } from "@aurochs-office/xlsx/domain/style/types
 import { createHistory } from "@aurochs-ui/editor-core/history";
 import { getCellValue, hasCell } from "../../../../cell/query";
 import type { XlsxEditorAction, XlsxEditorState } from "../types";
-import { createEmptyCellSelection, createIdleDragState } from "../types";
+import { createEmptyCellSelection } from "../types";
+import { createIdleDragState } from "@aurochs-ui/editor-core/drag-state";
 import { cellHandlers } from "./cell-handlers";
 
 function addr(col: number, row: number): CellAddress {

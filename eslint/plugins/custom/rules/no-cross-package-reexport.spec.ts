@@ -70,6 +70,42 @@ ruleTester.run("no-cross-package-reexport", rule, {
         }
       `,
     },
+    // Factory function: constructs different arguments (not a passthrough)
+    {
+      code: `
+        import { createElement } from '@aurochs/xml';
+        export function serializeGlow(glow) {
+          return createElement("a:glow", { rad: glow.radius });
+        }
+      `,
+    },
+    // Extra arguments added (not a passthrough)
+    {
+      code: `
+        import { fn } from '@aurochs/utils';
+        export function wrapper(x) {
+          return fn(x, 42);
+        }
+      `,
+    },
+    // Arguments reordered (not a passthrough)
+    {
+      code: `
+        import { fn } from '@aurochs/utils';
+        export function wrapper(a, b) {
+          return fn(b, a);
+        }
+      `,
+    },
+    // Fewer arguments than params (not a passthrough)
+    {
+      code: `
+        import { fn } from '@aurochs/utils';
+        export function wrapper(a, b) {
+          return fn(a);
+        }
+      `,
+    },
   ],
   invalid: [
     // Direct re-export from package

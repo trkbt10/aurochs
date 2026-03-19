@@ -26,15 +26,6 @@ import { parseColor, parseColorFromParent } from "./color-parser";
 import { parseBlipCompression, parseRectAlignment } from "../primitive";
 
 // =============================================================================
-// Shared Entry Points
-// =============================================================================
-
-/** Find fill element in parent element */
-export function findFillElement(parent: XmlElement): XmlElement | undefined {
-  return findOoxmlFillElement(parent);
-}
-
-// =============================================================================
 // PPTX-specific BlipFill parsing
 // =============================================================================
 
@@ -291,7 +282,7 @@ export function parseFillFromParent(parent: XmlElement | undefined): Fill | unde
   if (!parent) {
     return undefined;
   }
-  const fillEl = findFillElement(parent);
+  const fillEl = findOoxmlFillElement(parent);
   return parseFill(fillEl);
 }
 

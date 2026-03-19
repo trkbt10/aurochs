@@ -8,7 +8,8 @@ import type { SlideId, PresentationDocument } from "@aurochs-office/pptx/app";
 import type { PresentationEditorState, PresentationEditorAction } from "../types";
 import type { HandlerMap } from "./handler-types";
 import { pushHistory, redoHistory, undoHistory } from "@aurochs-ui/editor-core/history";
-import { createEmptySelection } from "../../../slide/state";
+import { createEmptySelection } from "@aurochs-ui/editor-core/selection";
+import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import { findSlideById } from "../slide";
 import { findShapeById } from "../../../../shape/query";
 import { createInactiveTextEditState } from "../../../../slide/text-edit";
@@ -66,7 +67,7 @@ function handleUndo(state: PresentationEditorState): PresentationEditorState {
     ...state,
     documentHistory: newHistory,
     activeSlideId: nextActiveSlideId,
-    shapeSelection: createEmptySelection(),
+    shapeSelection: createEmptySelection<ShapeId>(),
     textEdit: nextTextEdit,
   };
 }
@@ -82,7 +83,7 @@ function handleRedo(state: PresentationEditorState): PresentationEditorState {
     ...state,
     documentHistory: newHistory,
     activeSlideId: nextActiveSlideId,
-    shapeSelection: createEmptySelection(),
+    shapeSelection: createEmptySelection<ShapeId>(),
     textEdit: nextTextEdit,
   };
 }

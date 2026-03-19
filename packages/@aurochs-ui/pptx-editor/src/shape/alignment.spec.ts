@@ -9,8 +9,8 @@ import {
   distributeHorizontal,
   distributeVertical,
   nudgeShapes,
-  type ShapeBoundsWithId,
-} from "./alignment";
+} from "@aurochs-ui/editor-core/alignment";
+import type { ShapeBoundsWithId } from "./alignment";
 
 // =============================================================================
 // Test Fixtures

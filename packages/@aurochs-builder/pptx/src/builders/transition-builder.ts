@@ -6,12 +6,10 @@
 
 import { getChild, isXmlElement, type XmlDocument, type XmlElement } from "@aurochs/xml";
 import {
-  isTransitionType as coreIsTransitionType,
   serializeSlideTransition,
   updateDocumentRoot,
 } from "@aurochs-builder/pptx/patcher";
 import type { SlideTransition } from "@aurochs-office/pptx/domain/transition";
-import type { TransitionType } from "@aurochs-office/pptx/domain";
 import type { SlideTransitionSpec } from "../types";
 
 function insertTransitionAfter(root: XmlElement, transition: XmlElement, afterName: string): XmlElement {
@@ -71,9 +69,3 @@ export function applySlideTransition(slideDoc: XmlDocument, transition: SlideTra
   });
 }
 
-/**
- * Check if a string is a valid transition type.
- */
-export function isTransitionType(value: string): value is TransitionType {
-  return coreIsTransitionType(value);
-}

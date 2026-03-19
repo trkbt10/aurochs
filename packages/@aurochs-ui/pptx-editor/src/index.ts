@@ -107,7 +107,6 @@ export {
 // Shape Types (re-export from domain)
 // State Types (from state module)
 export type { SelectionState, ResizeHandlePosition, DragState, ClipboardContent } from "./context/slide/state";
-export { createEmptySelection, createIdleDragState } from "./context/slide/state";
 
 // Slide Editor Types
 export type { SlideEditorState, SlideEditorAction } from "./context/slide/editor/types";
@@ -125,19 +124,16 @@ export { LayerPanel, type LayerPanelProps } from "./panels/LayerPanel";
 // Slide Editor Sub-components: import from @aurochs-ui/editor-controls/canvas
 
 // Shape identity utilities
-export { getShapeId, hasShapeId } from "./shape/identity";
+export { getShapeId } from "./shape/identity";
 
 // Shape query utilities
-export { findShapeById, findShapeByIdWithParents, getTopLevelShapeIds, isTopLevelShape } from "./shape/query";
+export { findShapeById, findShapeByIdWithParents, getTopLevelShapeIds } from "./shape/query";
 
 // Shape bounds utilities
 export { getShapeBounds, getCombinedBounds } from "./shape/bounds";
 
 // Shape transform utilities
-export { withUpdatedTransform, hasEditableTransform, getAbsoluteBounds, type AbsoluteBounds } from "./shape/transform";
-
-// Shape coordinate utilities
-export { clientToSlideCoords } from "./shape/coords";
+export { withUpdatedTransform, hasEditableTransform, getAbsoluteBounds } from "./shape/transform";
 
 // Shape capabilities
 export { getShapeCapabilities, type ShapeCapabilities } from "./shape/capabilities";

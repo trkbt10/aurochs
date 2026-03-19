@@ -8,7 +8,8 @@ import { createDefaultStyleSheet } from "@aurochs-office/xlsx/domain/style/types
 import { colIdx, rowIdx } from "@aurochs-office/xlsx/domain/types";
 import { getCellValue } from "../../../../cell/query";
 import { createHistory, pushHistory } from "@aurochs-ui/editor-core/history";
-import { createEmptyCellSelection, createIdleDragState } from "../types";
+import { createEmptyCellSelection } from "../types";
+import { createIdleDragState } from "@aurochs-ui/editor-core/drag-state";
 import type { XlsxEditorState } from "../types";
 import { createInitialState, xlsxEditorReducer } from "./index";
 

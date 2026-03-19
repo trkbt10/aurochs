@@ -13,7 +13,8 @@ import type { DocxParagraph } from "@aurochs-office/docx/domain/paragraph";
 import type { DocxTable } from "@aurochs-office/docx/domain/table";
 import type { DocumentEditorContextValue } from "../context/document/DocumentEditorContext";
 import { createInitialState } from "../context/document/editor";
-import { createEmptyDocxSelection, createIdleDragState } from "../context/document/state";
+import { createEmptyDocxSelection } from "../context/document/state";
+import { createIdleDragState } from "@aurochs-ui/editor-core/drag-state";
 import { SelectedElementPanel } from "./SelectedElementPanel";
 import { DocumentEditorTestProvider } from "../context/document/DocumentEditorContext";
 

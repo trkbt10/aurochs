@@ -7,11 +7,7 @@
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import type { SelectionState as CoreSelectionState } from "@aurochs-ui/editor-core/selection";
 import {
-  createEmptySelection as createEmptyCoreSelection,
   createMultiSelection as createCoreMultiSelection,
-  createSingleSelection as createCoreSingleSelection,
-  isSelected as isCoreSelected,
-  isSelectionEmpty as isCoreSelectionEmpty,
   removeFromSelection as removeFromCoreSelection,
   toggleSelection as toggleCoreSelection,
 } from "@aurochs-ui/editor-core/selection";
@@ -28,20 +24,6 @@ export type SelectionState = CoreSelectionState<ShapeId>;
 // =============================================================================
 // Functions
 // =============================================================================
-
-/**
- * Create empty selection state
- */
-export function createEmptySelection(): SelectionState {
-  return createEmptyCoreSelection<ShapeId>();
-}
-
-/**
- * Create selection with single shape
- */
-export function createSingleSelection(shapeId: ShapeId): SelectionState {
-  return createCoreSingleSelection(shapeId);
-}
 
 /**
  * Create selection with multiple shapes
@@ -95,16 +77,3 @@ export function toggleSelection(selection: SelectionState, shapeId: ShapeId): Se
   return addToSelection(selection, shapeId);
 }
 
-/**
- * Check if shape is selected
- */
-export function isSelected(selection: SelectionState, shapeId: ShapeId): boolean {
-  return isCoreSelected(selection, shapeId);
-}
-
-/**
- * Check if selection is empty
- */
-export function isSelectionEmpty(selection: SelectionState): boolean {
-  return isCoreSelectionEmpty(selection);
-}

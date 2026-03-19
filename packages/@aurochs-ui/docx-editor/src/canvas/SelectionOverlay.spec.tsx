@@ -10,9 +10,9 @@ import type { DocxSelectionState } from "../context/document/state/selection";
 import type { TextEditState } from "../context/document/editor/types";
 import {
   createEmptyDocxSelection,
-  createSingleElementSelection,
   createMultiElementSelection,
 } from "../context/document/state/selection";
+import { createSingleSelection as createSingleElementSelection } from "@aurochs-ui/editor-core/selection";
 import { SelectionOverlay } from "./SelectionOverlay";
 
 // =============================================================================

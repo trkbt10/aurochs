@@ -42,7 +42,6 @@ import {
   isTextEditActive,
   mergeTextIntoBody,
   extractDefaultRunProperties,
-  getPlainText,
   createActiveStickyFormatting,
   createInitialStickyFormatting,
   type StickyFormattingState,
@@ -50,6 +49,7 @@ import {
   type TextCursorState,
   type SelectionChangeEvent,
 } from "../slide/text-edit";
+import { getPlainText } from "@aurochs-ui/editor-core/text-edit";
 import { ShapeToolbar } from "../panels/ShapeToolbar";
 import { buildSlideLayoutOptions } from "@aurochs-office/pptx/app";
 import { createRenderContext, getLayoutNonPlaceholderShapes } from "@aurochs-renderer/pptx";
@@ -78,7 +78,6 @@ import { EditorShell, CanvasArea, type EditorPanel } from "@aurochs-ui/editor-co
 import { RIGHT_PANEL_TABS, usePivotTabs } from "../layout";
 import { SelectedElementTab, SlideInfoTab, LayersTab } from "../panels/right-panel";
 import { AssetPanel, LayoutInfoPanel, ThemeViewerPanel, InspectorPanelWithTabs } from "../panels/inspector";
-import { createInactiveTextEditState } from "../slide/text-edit";
 import { PresentationSlideshow, type SlideshowSlideContent } from "../viewer/PresentationSlideshow";
 import {
   usePanelCallbacks,

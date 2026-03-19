@@ -7,7 +7,8 @@
 import type { XlsxWorkbook } from "@aurochs-office/xlsx/domain/workbook";
 import { createHistory } from "@aurochs-ui/editor-core/history";
 import type { XlsxEditorState, XlsxEditorAction } from "../types";
-import { createEmptyCellSelection, createIdleDragState } from "../types";
+import { createEmptyCellSelection } from "../types";
+import { createIdleDragState } from "@aurochs-ui/editor-core/drag-state";
 import type { HandlerMap } from "./handler-types";
 import { cellHandlers } from "./cell-handlers";
 import { selectionHandlers } from "./selection-handlers";

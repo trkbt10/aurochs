@@ -293,7 +293,9 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
     (current: CreationDrag) => {
       const dx = Math.abs(current.currentX - current.startX);
       const dy = Math.abs(current.currentY - current.startY);
-      if (dx <= 2 && dy <= 2) return;
+      if (dx <= 2 && dy <= 2) {
+        return;
+      }
       ignoreNextClickRef.current = true;
       if (onCreateFromDrag) {
         onCreateFromDrag(
@@ -310,11 +312,15 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
   );
 
   useEffect(() => {
-    if (!creationDrag) return;
+    if (!creationDrag) {
+      return;
+    }
 
     const handleMove = (e: PointerEvent) => {
       const page = canvasRef.current?.screenToPage(e.clientX, e.clientY);
-      if (!page) return;
+      if (!page) {
+        return;
+      }
       const next: CreationDrag = { ...creationDragRef.current!, currentX: page.pageX, currentY: page.pageY };
       creationDragRef.current = next;
       setCreationDrag(next);
@@ -324,7 +330,9 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
       const current = creationDragRef.current;
       creationDragRef.current = null;
       setCreationDrag(null);
-      if (current) finalizeCreationDrag(current);
+      if (current) {
+        finalizeCreationDrag(current);
+      }
     };
 
     const handleCancel = () => {
@@ -343,7 +351,9 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
   }, [creationDrag, finalizeCreationDrag]);
 
   const creationRect = useMemo(() => {
-    if (!creationDrag) return null;
+    if (!creationDrag) {
+      return null;
+    }
     return {
       x: Math.min(creationDrag.startX, creationDrag.currentX),
       y: Math.min(creationDrag.startY, creationDrag.currentY),
@@ -366,11 +376,15 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       const assetData = e.dataTransfer.getData(ASSET_DRAG_TYPE);
-      if (!assetData || !onAssetDrop) return;
+      if (!assetData || !onAssetDrop) {
+        return;
+      }
       e.preventDefault();
 
       const page = canvasRef.current?.screenToPage(e.clientX, e.clientY);
-      if (!page) return;
+      if (!page) {
+        return;
+      }
 
       try {
         const parsed = JSON.parse(assetData) as {
@@ -400,9 +414,13 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
   // --- Text edit overlay: click-outside handler ---
   const handleTextEditOverlayPointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
-      if (!isTextEditActive(textEdit)) return;
+      if (!isTextEditActive(textEdit)) {
+        return;
+      }
       const page = canvasRef.current?.screenToPage(e.clientX, e.clientY);
-      if (!page) return;
+      if (!page) {
+        return;
+      }
       const bounds = textEdit.bounds;
       const isInside = isPointInBounds(page.pageX, page.pageY, {
         x: bounds.x as number,
@@ -411,7 +429,9 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
         height: bounds.height as number,
         rotation: bounds.rotation,
       });
-      if (!isInside) onTextEditCancel();
+      if (!isInside) {
+        onTextEditCancel();
+      }
     },
     [textEdit, onTextEditCancel],
   );
@@ -435,7 +455,9 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
 
     if (pathEdit && isPathEditEditing(pathEdit) && onPathEditCommit && onPathEditCancel) {
       const editingShape = slide.shapes.find((s) => {
-        if (s.type === "contentPart") return false;
+        if (s.type === "contentPart") {
+          return false;
+        }
         return s.nonVisual.id === pathEdit.shapeId;
       });
       if (editingShape?.type === "sp" && isCustomGeometry(editingShape.properties.geometry)) {

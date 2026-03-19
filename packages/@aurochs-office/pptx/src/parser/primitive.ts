@@ -11,18 +11,16 @@ import type { Degrees, Percent, Pixels, Points } from "@aurochs-office/drawing-m
 import type { SchemeColorValue } from "@aurochs-office/drawing-ml/domain/color";
 import type { BlipCompression } from "@aurochs-office/ooxml/domain/drawing";
 import {
-  parseAngle as parseAngleShared,
-  parseEmu as parseEmuShared,
-  parseFixedPercentage as parseFixedPercentageShared,
-  parseFloat64 as parseFloat64Shared,
-  parseIndex as parseIndexShared,
-  parseInt32 as parseInt32Shared,
-  parseInt32Or as parseInt32OrShared,
-  parseInt64 as parseInt64Shared,
-  parsePercentage as parsePercentageShared,
-  parsePercentage100k as parsePercentage100kShared,
-  parsePositivePercentage as parsePositivePercentageShared,
-  parseUnsignedInt as parseUnsignedIntShared,
+  parseAngle,
+  parseEmu,
+  parseFloat64,
+  parseIndex,
+  parseInt32,
+  parseInt32Or,
+  parseInt64,
+  parsePercentage,
+  parsePercentage100k,
+  parseUnsignedInt,
 } from "@aurochs-office/drawing-ml/parser";
 import type {
   BlackWhiteMode,
@@ -31,7 +29,6 @@ import type {
   OnOffStyleType,
   RectAlignment,
   ShapeId,
-  StyleMatrixColumnIndex,
   TextShapeType,
   AlignH,
   AlignV,
@@ -69,51 +66,9 @@ const ANGLE_UNITS_PER_DEGREE = 60000;
 const PERCENT_1000 = 1000;
 
 // =============================================================================
-// Integer/Number Parsing
+// Integer/Number Parsing (parseInt32, parseInt64, parseUnsignedInt, parseIndex,
+// parseInt32Or, parseFloat64 are imported from @aurochs-office/drawing-ml/parser)
 // =============================================================================
-
-/**
- * Parse integer from string
- */
-export function parseInt32(value: string | undefined): number | undefined {
-  return parseInt32Shared(value);
-}
-
-/**
- * Parse 64-bit integer from string (within JS safe range)
- */
-export function parseInt64(value: string | undefined): number | undefined {
-  return parseInt64Shared(value);
-}
-
-/**
- * Parse unsigned 32-bit integer from string
- */
-export function parseUnsignedInt(value: string | undefined): number | undefined {
-  return parseUnsignedIntShared(value);
-}
-
-/**
- * Parse index (unsigned int)
- * @see ECMA-376 Part 1, Section 19.7.3 (ST_Index)
- */
-export function parseIndex(value: string | undefined): number | undefined {
-  return parseIndexShared(value);
-}
-
-/**
- * Parse integer with default value
- */
-export function parseInt32Or(value: string | undefined, defaultValue: number): number {
-  return parseInt32OrShared(value, defaultValue);
-}
-
-/**
- * Parse float from string
- */
-export function parseFloat64(value: string | undefined): number | undefined {
-  return parseFloat64Shared(value);
-}
 
 // =============================================================================
 // Boolean Parsing
@@ -149,21 +104,9 @@ export function parseBooleanOr(value: string | undefined, defaultValue: boolean)
 // EMU (English Metric Units) Parsing
 // =============================================================================
 
-/**
- * Parse EMU value to pixels
- * @see ECMA-376 Part 1, Section 20.1.10.16 (ST_Coordinate)
- */
-export function parseEmu(value: string | undefined): Pixels | undefined {
-  return parseEmuShared(value);
-}
+// parseEmu is imported from @aurochs-office/drawing-ml/parser
 
-/**
- * Parse coordinate32 (int EMU)
- * @see ECMA-376 Part 1, Section 20.1.10.18 (ST_Coordinate32Unqualified)
- */
-export function parseCoordinate32Unqualified(value: string | undefined): Pixels | undefined {
-  return parseEmu(value);
-}
+// parseCoordinate32Unqualified was a passthrough for parseEmu — use parseEmu directly
 
 /**
  * Parse coordinate (long EMU with bounds)
@@ -180,13 +123,7 @@ export function parseCoordinateUnqualified(value: string | undefined): Pixels | 
   return px(num * EMU_TO_PX);
 }
 
-/**
- * Parse drawing element id (unsigned int)
- * @see ECMA-376 Part 1, Section 20.1.10.21 (ST_DrawingElementId)
- */
-export function parseDrawingElementId(value: string | undefined): number | undefined {
-  return parseUnsignedInt(value);
-}
+// parseDrawingElementId was a passthrough for parseUnsignedInt — use parseUnsignedInt directly
 
 /**
  * Parse slide id (unsigned int with min/max)
@@ -316,13 +253,7 @@ export function parsePositiveEmu(value: string | undefined): Pixels | undefined 
 // Angle Parsing
 // =============================================================================
 
-/**
- * Parse angle to degrees
- * @see ECMA-376 Part 1, Section 20.1.10.3 (ST_Angle)
- */
-export function parseAngle(value: string | undefined): Degrees | undefined {
-  return parseAngleShared(value);
-}
+// parseAngle is imported from @aurochs-office/drawing-ml/parser
 
 /**
  * Parse angle with default value
@@ -378,37 +309,8 @@ export function parseFovAngle(value: string | undefined): Degrees | undefined {
 // Percentage Parsing
 // =============================================================================
 
-/**
- * Parse percentage (1000ths) to 0-100 scale
- * @see ECMA-376 Part 1, Section 20.1.10.40 (ST_Percentage)
- */
-export function parsePercentage(value: string | undefined): Percent | undefined {
-  return parsePercentageShared(value);
-}
-
-/**
- * Parse percentage (100000ths) to 0-100 scale
- * Used for color transforms, etc.
- */
-export function parsePercentage100k(value: string | undefined): Percent | undefined {
-  return parsePercentage100kShared(value);
-}
-
-/**
- * Parse positive percentage
- * @see ECMA-376 Part 1, Section 20.1.10.45 (ST_PositivePercentage)
- */
-export function parsePositivePercentage(value: string | undefined): Percent | undefined {
-  return parsePositivePercentageShared(value);
-}
-
-/**
- * Parse fixed percentage (0-100)
- * @see ECMA-376 Part 1, Section 20.1.10.24 (ST_FixedPercentage)
- */
-export function parseFixedPercentage(value: string | undefined): Percent | undefined {
-  return parseFixedPercentageShared(value);
-}
+// parsePercentage, parsePercentage100k, parsePositivePercentage, parseFixedPercentage
+// are imported from @aurochs-office/drawing-ml/parser
 
 /**
  * Parse positive fixed percentage (0-100%, percent string)
@@ -598,13 +500,7 @@ export function parseShapeId(value: string | undefined): ShapeId | undefined {
   return normalized;
 }
 
-/**
- * Parse style matrix column index (unsigned int)
- * @see ECMA-376 Part 1, Section 20.1.10.57 (ST_StyleMatrixColumnIndex)
- */
-export function parseStyleMatrixColumnIndex(value: string | undefined): StyleMatrixColumnIndex | undefined {
-  return parseUnsignedInt(value);
-}
+// parseStyleMatrixColumnIndex was a passthrough for parseUnsignedInt — use parseUnsignedInt directly
 
 /**
  * Parse text bullet size percent (25%-400%, as percent string or 1000th units)
@@ -950,13 +846,7 @@ export function parseRelFromV(value: string | undefined): RelFromV | undefined {
   }
 }
 
-/**
- * Parse absolute position offset in EMUs
- * @see ECMA-376 Part 1, Section 20.4.3.3 (ST_PositionOffset)
- */
-export function parsePositionOffset(value: string | undefined): Pixels | undefined {
-  return parseEmu(value);
-}
+// parsePositionOffset was a passthrough for parseEmu — use parseEmu directly
 
 /**
  * Parse wrap text location

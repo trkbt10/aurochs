@@ -10,7 +10,7 @@
 import type { ZipPackage } from "@aurochs/zip";
 import { parseXml, serializeDocument } from "@aurochs/xml";
 import { OLE_CONTENT_TYPES, OFFICE_RELATIONSHIP_TYPES } from "@aurochs-office/opc";
-import { getRelationshipPath } from "@aurochs-office/pptx/parser/relationships";
+import { getRelationshipPath } from "@aurochs-office/ooxml/parser";
 import { addContentType } from "./content-types-manager";
 import { addRelationship, ensureRelationshipsDocument, type RelationshipType } from "./relationship-manager";
 

@@ -27,7 +27,8 @@ import { parseCommonBehavior, parseCommonTimeNode } from "./common";
 import { parseKeyframes, parseAnimateValue } from "./keyframe";
 import { parseTargetElement } from "./target";
 import { parseColorValue } from "./color";
-import { parsePercentage, parsePositiveFixedPercentage } from "../primitive";
+import { parsePercentage } from "@aurochs-office/drawing-ml/parser";
+import { parsePositiveFixedPercentage } from "../primitive";
 
 /**
  * Parse animate behavior (p:anim).

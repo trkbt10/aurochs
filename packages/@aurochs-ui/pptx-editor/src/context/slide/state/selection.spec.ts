@@ -5,17 +5,20 @@
 import {
   createEmptySelection,
   createSingleSelection,
+  isSelected,
+  isSelectionEmpty,
+} from "@aurochs-ui/editor-core/selection";
+import {
   createMultiSelection,
   addToSelection,
   removeFromSelection,
   toggleSelection,
-  isSelected,
-  isSelectionEmpty,
 } from "./selection";
+import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 
 describe("createEmptySelection", () => {
   it("creates empty selection", () => {
-    const selection = createEmptySelection();
+    const selection = createEmptySelection<ShapeId>();
     expect(selection.selectedIds).toEqual([]);
     expect(selection.primaryId).toBeUndefined();
   });
@@ -84,7 +87,7 @@ describe("removeFromSelection", () => {
 
 describe("toggleSelection", () => {
   it("adds shape if not selected", () => {
-    const s1 = createEmptySelection();
+    const s1 = createEmptySelection<ShapeId>();
     const s2 = toggleSelection(s1, "shape1");
 
     expect(s2.selectedIds).toEqual(["shape1"]);
@@ -112,7 +115,7 @@ describe("isSelected", () => {
 
 describe("isSelectionEmpty", () => {
   it("returns true for empty selection", () => {
-    const selection = createEmptySelection();
+    const selection = createEmptySelection<ShapeId>();
     expect(isSelectionEmpty(selection)).toBe(true);
   });
 

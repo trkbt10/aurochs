@@ -8,7 +8,8 @@ import type { XlsxWorkbook } from "@aurochs-office/xlsx/domain/workbook";
 import { parseCellRef, parseRange } from "@aurochs-office/xlsx/domain/cell/address";
 import { createDefaultStyleSheet } from "@aurochs-office/xlsx/domain/style/types";
 import { createHistory } from "@aurochs-ui/editor-core/history";
-import { createEmptyCellSelection, createIdleDragState, type XlsxEditorState } from "../types";
+import { createEmptyCellSelection, type XlsxEditorState } from "../types";
+import { createIdleDragState } from "@aurochs-ui/editor-core/drag-state";
 import { selectionHandlers } from "./selection-handlers";
 
 function createTestWorkbook(): XlsxWorkbook {

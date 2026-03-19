@@ -12,7 +12,7 @@ import type { ContextMenuActions } from "../../slide/context-menu/SlideContextMe
 import type { SelectionState } from "../../context/slide/state";
 import type { PresentationEditorState } from "../../context/presentation/editor/types";
 import type { PresentationEditorAction } from "../../context/presentation/editor/types";
-import { isTopLevelShape } from "../../shape/query";
+import { isTopLevelShape } from "@aurochs-ui/editor-controls/shape-editor";
 import { withUpdatedTransform } from "../../shape/transform";
 import { calculateAlignedBounds } from "../../shape/alignment";
 

@@ -11,7 +11,7 @@ import type { PresentationEditorState, PresentationEditorAction } from "../types
 import type { HandlerMap } from "./handler-types";
 import { getActiveSlide, updateActiveSlideInDocument } from "./helpers";
 import { pushHistory } from "@aurochs-ui/editor-core/history";
-import { createIdleDragState } from "../../../slide/state";
+import { createIdleDragState } from "@aurochs-ui/editor-core/drag-state";
 import { findShapeById } from "../../../../shape/query";
 import { updateShapeById } from "../../../../shape/mutation";
 import { getCombinedBounds, collectBoundsForIds, getCombinedCenter } from "../../../../shape/bounds";

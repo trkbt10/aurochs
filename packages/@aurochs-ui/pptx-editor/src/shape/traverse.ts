@@ -13,7 +13,6 @@ import {
   collectShapeRenderData as genericCollectShapeRenderData,
   type RenderDataResolver,
 } from "@aurochs-ui/editor-controls/shape-editor";
-import { getShapeNodeName } from "@aurochs-ui/editor-controls/shape-editor";
 
 /**
  * Shape render data for canvas display
@@ -30,13 +29,6 @@ export type ShapeRenderData = {
   readonly strokeWidth: number;
   readonly name: string;
 };
-
-/**
- * Get shape name from nonVisual properties
- */
-export function getShapeName(shape: Shape): string {
-  return getShapeNodeName(shape);
-}
 
 /**
  * PPTX render data resolver

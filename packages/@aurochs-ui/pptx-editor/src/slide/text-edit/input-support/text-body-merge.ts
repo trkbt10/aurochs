@@ -6,7 +6,7 @@
  */
 
 import type { TextBody, RunProperties, TextRun, ParagraphProperties } from "@aurochs-office/pptx/domain";
-import { getPlainText } from "./cursor";
+import { getPlainText } from "@aurochs-ui/editor-core/text-edit";
 
 type TextCharEntry = {
   readonly char: string;

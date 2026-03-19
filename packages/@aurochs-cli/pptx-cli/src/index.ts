@@ -31,34 +31,6 @@ export {
 } from "./commands/verify";
 export { runPreview, type PreviewData, type PreviewSlide, type PreviewOptions } from "./commands/preview";
 
-// Text extraction - local wrappers over @aurochs-office/pptx utilities
-import {
-  extractTextFromBody as _extractTextFromBody,
-  extractTextFromParagraph as _extractTextFromParagraph,
-  extractTextFromRun as _extractTextFromRun,
-  extractTextFromShape as _extractTextFromShape,
-} from "@aurochs-office/pptx/domain/text-utils";
-import type { TextBody } from "@aurochs-office/pptx/domain/text";
-import type { Paragraph, TextRun } from "@aurochs-office/pptx/domain/text";
-import type { Shape } from "@aurochs-office/pptx/domain/shape";
-
-/** Extract all text from a text body */
-export function extractTextFromBody(textBody: TextBody): string {
-  return _extractTextFromBody(textBody);
-}
-/** Extract text from a single paragraph */
-export function extractTextFromParagraph(paragraph: Paragraph): string {
-  return _extractTextFromParagraph(paragraph);
-}
-/** Extract text from a single run */
-export function extractTextFromRun(run: TextRun): string {
-  return _extractTextFromRun(run);
-}
-/** Extract text from a shape */
-export function extractTextFromShape(shape: Shape): string {
-  return _extractTextFromShape(shape);
-}
-
 // Serializers
 export {
   serializeShape,

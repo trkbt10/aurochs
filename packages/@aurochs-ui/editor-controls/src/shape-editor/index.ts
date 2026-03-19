@@ -61,9 +61,7 @@ export { getAbsoluteBounds } from "./transform";
 // =============================================================================
 // Bounds
 // =============================================================================
-export type { RotatedBoundsInput, SimpleBounds } from "./bounds";
 export {
-  getCombinedBoundsWithRotation,
   getShapeBounds,
   getCombinedBounds,
   collectBoundsForIds,

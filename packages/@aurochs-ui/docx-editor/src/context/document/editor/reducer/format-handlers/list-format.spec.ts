@@ -7,7 +7,8 @@ import type { DocxParagraph } from "@aurochs-office/docx/domain/paragraph";
 import { docxNumId, docxIlvl, twips } from "@aurochs-office/docx/domain/types";
 import type { DocxEditorState } from "../../types";
 import { createHistory } from "@aurochs-ui/editor-core/history";
-import { createEmptyDocxSelection, createIdleDragState } from "../../../state";
+import { createEmptyDocxSelection } from "../../../state";
+import { createIdleDragState } from "@aurochs-ui/editor-core/drag-state";
 import { listFormatHandlers } from "./list-format";
 
 // =============================================================================

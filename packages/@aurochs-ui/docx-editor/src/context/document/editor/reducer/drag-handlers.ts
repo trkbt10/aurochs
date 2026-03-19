@@ -5,8 +5,8 @@
  */
 
 import type { HandlerMap } from "./handler-types";
+import { createIdleDragState } from "@aurochs-ui/editor-core/drag-state";
 import {
-  createIdleDragState,
   createTextSelectDragState,
   createElementMoveDragState,
   updateTextSelectDrag,

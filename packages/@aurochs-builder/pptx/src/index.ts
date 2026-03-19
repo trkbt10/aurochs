@@ -86,7 +86,6 @@ export {
   applyComments,
   applyNotes,
   applySlideTransition,
-  isTransitionType,
   applyThemeEditsToPackage,
   applyThemeEditsToThemeXml,
   applyChartUpdates,

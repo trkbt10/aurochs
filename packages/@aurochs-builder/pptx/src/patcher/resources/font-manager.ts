@@ -17,7 +17,7 @@ import { OFFICE_RELATIONSHIP_TYPES } from "@aurochs-office/opc";
 import { getDocumentRoot, updateDocumentRoot } from "../core/xml-mutator";
 import { addContentType } from "./content-types-manager";
 import { addRelationship, ensureRelationshipsDocument, type RelationshipType } from "./relationship-manager";
-import { getRelationshipPath } from "@aurochs-office/pptx/parser/relationships";
+import { getRelationshipPath } from "@aurochs-office/ooxml/parser";
 
 const FONT_CONTENT_TYPE = "application/x-fontdata";
 const FONT_REL_TYPE: RelationshipType = OFFICE_RELATIONSHIP_TYPES.font;
