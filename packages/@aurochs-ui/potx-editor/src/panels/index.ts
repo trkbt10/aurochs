@@ -28,10 +28,10 @@ export { MasterTextStylesEditor } from "./MasterTextStylesEditor";
 export type { MasterTextStylesEditorProps } from "./MasterTextStylesEditor";
 
 export { THEME_PRESETS, OFFICE_THEME } from "./presets/office-themes";
-export { extractThemeFromPptx } from "./theme-importer";
-export type { ThemeExtractionResult } from "./theme-importer";
-export { exportThemeAsPotx, getThemeFileName } from "./theme-exporter";
-export type { ThemeExportOptions } from "./theme-exporter";
+export { extractThemeFromBuffer } from "@aurochs-office/pptx/app";
+export type { ThemeExtractionResult, ExtractedTheme } from "@aurochs-office/pptx/app";
+export { exportThemeAsPotx, getThemeFileName } from "@aurochs-builder/pptx/builders";
+export type { ThemeExportOptions } from "@aurochs-builder/pptx/builders";
 export type {
   ThemeColorScheme,
   ThemeFontScheme,

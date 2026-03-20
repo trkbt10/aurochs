@@ -41,7 +41,7 @@ export {
   LayoutAttributesSection,
   THEME_PRESETS,
   OFFICE_THEME,
-  extractThemeFromPptx,
+  extractThemeFromBuffer,
   exportThemeAsPotx,
   getThemeFileName,
 } from "./panels";
@@ -52,6 +52,7 @@ export type {
   SampleSlidePreviewProps,
   LayoutAttributesSectionProps,
   ThemeExtractionResult,
+  ExtractedTheme,
   ThemeExportOptions,
   ThemeColorScheme,
   ThemeFontScheme,

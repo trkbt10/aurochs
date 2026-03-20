@@ -69,6 +69,10 @@ export { applySlideTransition } from "./transition-builder";
 // Theme builders
 export { applyThemeEditsToPackage, applyThemeEditsToThemeXml } from "./theme-builder";
 
+// Theme exporter
+export { exportThemeAsPotx, getThemeFileName } from "./theme-exporter";
+export type { ThemeExportOptions } from "./theme-exporter";
+
 // Chart builders
 export { applyChartUpdates } from "./chart-builder";
 

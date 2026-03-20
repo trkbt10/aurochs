@@ -7,6 +7,7 @@
  */
 
 import { createElement, type XmlElement } from "@aurochs/xml";
+import { serializeColor } from "./color";
 import type {
   Timing,
   TimeNode,
@@ -333,15 +334,15 @@ function serializeAnimateColorBehavior(node: AnimateColorBehavior): XmlElement {
 
   const children: XmlElement[] = [serializeCommonBehavior(node)];
 
-  // Color values need proper serialization as srgbClr or similar
+  // Color values serialized via serializeColor (SoT)
   if (node.from !== undefined) {
-    children.push(createElement("p:from", {}, [createElement("a:srgbClr", { val: node.from })]));
+    children.push(createElement("p:from", {}, [serializeColor({ spec: { type: "srgb", value: node.from } })]));
   }
   if (node.to !== undefined) {
-    children.push(createElement("p:to", {}, [createElement("a:srgbClr", { val: node.to })]));
+    children.push(createElement("p:to", {}, [serializeColor({ spec: { type: "srgb", value: node.to } })]));
   }
   if (node.by !== undefined) {
-    children.push(createElement("p:by", {}, [createElement("a:srgbClr", { val: node.by })]));
+    children.push(createElement("p:by", {}, [serializeColor({ spec: { type: "srgb", value: node.by } })]));
   }
 
   return createElement("p:animClr", attrs, children);

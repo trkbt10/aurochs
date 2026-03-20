@@ -15,9 +15,9 @@
  * - a:custClrLst (custom colors: srgb + system)
  */
 
-import { exportThemeAsPotx } from "./theme-exporter";
-import { OFFICE_THEME } from "./presets/office-themes";
 import { loadPptxFromBuffer, convertToPresentationDocument } from "@aurochs-office/pptx/app";
+import { exportThemeAsPotx } from "@aurochs-builder/pptx/builders";
+import { OFFICE_THEME } from "./presets/office-themes";
 import type { ThemeEditorState, ThemeEditorAction } from "../context/types";
 import { themeEditorReducer, createInitialThemeEditorState } from "../context/reducer/index";
 import type { CustomColor } from "@aurochs-office/pptx/domain/theme/types";

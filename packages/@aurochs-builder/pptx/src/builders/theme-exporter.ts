@@ -4,14 +4,37 @@
  * Creates a PowerPoint template (.potx) file from theme data.
  * All constants (namespaces, content types, relationship types) are
  * sourced from @aurochs-office/opc and @aurochs-office/pptx/domain (SoT).
+ * Serialization uses the authoritative serializers from @aurochs-builder/pptx.
+ *
+ * ## ECMA-376 Coverage
+ *
+ * ### a:theme (CT_OfficeStyleSheet §20.1.6.9)
+ * | Element              | §ECMA-376   | Domain Type           | Status |
+ * |----------------------|-------------|-----------------------|--------|
+ * | a:clrScheme          | 20.1.6.2    | ColorScheme           | ✅     |
+ * | a:fontScheme         | 20.1.4.1.18 | FontScheme            | ✅     |
+ * | a:fmtScheme          | 20.1.4.1.14 | FormatScheme          | ✅     |
+ * | a:objectDefaults     | 20.1.6.7    | ObjectDefaults        | ✅     |
+ * | a:extraClrSchemeLst  | 20.1.6.5    | ExtraColorScheme[]    | ✅     |
+ * | a:custClrLst         | 20.1.6.3    | CustomColor[]         | ✅     |
+ *
+ * ### p:sldMaster (CT_SlideMaster §19.3.1.42)
+ * | Element              | §ECMA-376   | Domain Type           | Status |
+ * |----------------------|-------------|-----------------------|--------|
+ * | p:clrMap             | 19.3.1.6    | ColorMapping          | ✅     |
+ * | p:bg                 | 19.3.1.2    | XmlElement (raw)      | ✅     |
+ * | p:txStyles           | 19.3.1.51   | RawMasterTextStyles   | ✅     |
  *
  * @see ECMA-376 Part 1, Section 20.1.6 - Theme Definitions
  */
 
-import type { ThemeColorScheme, ThemeFontScheme } from "./types";
-import type { CustomColor } from "@aurochs-office/pptx/domain/theme/types";
+import type { SchemeColorName, Color } from "@aurochs-office/drawing-ml/domain/color";
+import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
+import type { CustomColor, ExtraColorScheme, ObjectDefaults, RawMasterTextStyles } from "@aurochs-office/pptx/domain/theme/types";
 import type { ColorMapping } from "@aurochs-office/pptx/domain/color/types";
-import { CONTENT_TYPES, RELATIONSHIP_TYPES } from "@aurochs-office/pptx/domain";
+import type { ColorScheme } from "@aurochs-office/drawing-ml/domain/color-context";
+import { CONTENT_TYPES } from "@aurochs-office/pptx/domain";
+import { serializeColor } from "../patcher/serializer/color";
 import {
   serializeRelationships,
   serializeContentTypes,
@@ -27,6 +50,7 @@ import {
 } from "@aurochs-office/opc";
 import { createElement, createText, serializeDocument, type XmlDocument, type XmlElement } from "@aurochs/xml";
 import { createEmptyZipPackage } from "@aurochs/zip";
+import { RELATIONSHIP_TYPES } from "@aurochs-office/pptx/domain/relationships";
 
 // =============================================================================
 // Types
@@ -35,23 +59,31 @@ import { createEmptyZipPackage } from "@aurochs/zip";
 export type ThemeExportOptions = {
   /** Theme name (used in XML and file name) */
   readonly name: string;
-  /** Color scheme (12 scheme colors) */
-  readonly colorScheme: ThemeColorScheme;
+  /** Color scheme (12 scheme colors as hex strings) */
+  readonly colorScheme: Readonly<Record<SchemeColorName, string>>;
   /** Font scheme (major and minor fonts) */
-  readonly fontScheme: ThemeFontScheme;
+  readonly fontScheme: FontScheme;
   /** Font scheme name (optional, defaults to theme name) */
   readonly fontSchemeName?: string;
-  /** Custom colors (a:custClrLst) */
+  /** Custom colors (a:custClrLst) §20.1.6.3 */
   readonly customColors?: readonly CustomColor[];
-  /** Master slide color mapping */
+  /** Master slide color mapping (p:clrMap) §19.3.1.6 */
   readonly colorMapping?: ColorMapping;
-  /** Format scheme style elements (preserved XmlElement arrays) */
+  /** Format scheme style elements (preserved XmlElement arrays) §20.1.4.1.14 */
   readonly formatSchemeElements?: {
     readonly fillStyles?: readonly XmlElement[];
     readonly lineStyles?: readonly XmlElement[];
     readonly effectStyles?: readonly XmlElement[];
     readonly bgFillStyles?: readonly XmlElement[];
   };
+  /** Extra color schemes (a:extraClrSchemeLst) §20.1.6.5 */
+  readonly extraColorSchemes?: readonly ExtraColorScheme[];
+  /** Object defaults (a:objectDefaults) §20.1.6.7 — XmlElement refs preserved from parser */
+  readonly objectDefaults?: ObjectDefaults;
+  /** Master text styles (p:txStyles) §19.3.1.51 — XmlElement refs preserved from parser */
+  readonly masterTextStyles?: RawMasterTextStyles;
+  /** Master background (p:bg) §19.3.1.2 — raw XmlElement preserved from parser */
+  readonly masterBackground?: XmlElement;
 };
 
 // =============================================================================
@@ -85,8 +117,15 @@ const DEFAULT_COLOR_MAP: ColorMapping = {
   hlink: "hlink", folHlink: "folHlink",
 };
 
+/** 12 ECMA-376 scheme color slots in specification order */
+const SCHEME_COLOR_SLOTS: readonly SchemeColorName[] = [
+  "dk1", "lt1", "dk2", "lt2",
+  "accent1", "accent2", "accent3", "accent4", "accent5", "accent6",
+  "hlink", "folHlink",
+];
+
 // =============================================================================
-// OPC Part Builders (using serializeRelationships / serializeContentTypes)
+// OPC Part Builders
 // =============================================================================
 
 function buildRootRels(): XmlDocument {
@@ -153,7 +192,6 @@ function buildSlideRels(): XmlDocument {
 // PresentationML Part Builders
 // =============================================================================
 
-/** Empty group shape properties (required by spTree) */
 function buildEmptyGroupSpPr(): XmlElement {
   return createElement("p:grpSpPr", {}, [
     createElement("a:xfrm", {}, [
@@ -165,7 +203,6 @@ function buildEmptyGroupSpPr(): XmlElement {
   ]);
 }
 
-/** Non-visual group shape properties (required by spTree) */
 function buildNvGrpSpPr(): XmlElement {
   return createElement("p:nvGrpSpPr", {}, [
     createElement("p:cNvPr", { id: "1", name: "" }),
@@ -193,22 +230,39 @@ function buildPresentation(): XmlDocument {
   };
 }
 
-function buildSlideMaster(colorMapping?: ColorMapping): XmlDocument {
-  const clrMap = colorMapping ?? DEFAULT_COLOR_MAP;
+function buildSlideMaster(options: ThemeExportOptions): XmlDocument {
+  const clrMap = options.colorMapping ?? DEFAULT_COLOR_MAP;
+
+  // p:cSld children: optional p:bg, then p:spTree
+  const cSldChildren: XmlElement[] = [];
+
+  // p:bg §19.3.1.2 — raw XmlElement from parser
+  if (options.masterBackground) {
+    cSldChildren.push(options.masterBackground);
+  }
+
+  cSldChildren.push(
+    createElement("p:spTree", {}, [buildNvGrpSpPr(), createElement("p:grpSpPr")]),
+  );
+
+  // p:txStyles §19.3.1.51
+  const txStylesChildren: XmlElement[] = [];
+  const mts = options.masterTextStyles;
+  txStylesChildren.push(mts?.titleStyle ?? createElement("p:titleStyle"));
+  txStylesChildren.push(mts?.bodyStyle ?? createElement("p:bodyStyle"));
+  if (mts?.otherStyle) {
+    txStylesChildren.push(mts.otherStyle);
+  }
+
   return {
     children: [
       createElement("p:sldMaster", PPTX_XMLNS, [
-        createElement("p:cSld", {}, [
-          createElement("p:spTree", {}, [buildNvGrpSpPr(), createElement("p:grpSpPr")]),
-        ]),
+        createElement("p:cSld", {}, cSldChildren),
         createElement("p:clrMap", clrMap as Record<string, string>),
         createElement("p:sldLayoutIdLst", {}, [
           createElement("p:sldLayoutId", { id: "2147483649", "r:id": "rId1" }),
         ]),
-        createElement("p:txStyles", {}, [
-          createElement("p:titleStyle"),
-          createElement("p:bodyStyle"),
-        ]),
+        createElement("p:txStyles", {}, txStylesChildren),
       ]),
     ],
   };
@@ -241,15 +295,12 @@ function buildBlankSlide(): XmlDocument {
 }
 
 // =============================================================================
-// Theme XML Builder
+// Theme XML Builder — §20.1.6.9 (a:theme)
 // =============================================================================
 
-/**
- * Build theme XML with color and font schemes.
- * @see ECMA-376 Part 1, Section 20.1.6.9 (a:theme)
- */
 function buildTheme(options: ThemeExportOptions): XmlDocument {
-  const { name, colorScheme, fontScheme, fontSchemeName, customColors, formatSchemeElements } = options;
+  const { name, colorScheme, fontScheme, fontSchemeName, customColors, formatSchemeElements,
+    extraColorSchemes, objectDefaults } = options;
 
   const colorChildren = buildColorSchemeChildren(colorScheme);
 
@@ -258,41 +309,85 @@ function buildTheme(options: ThemeExportOptions): XmlDocument {
     createElement("a:solidFill", {}, [createElement("a:schemeClr", { val: "phClr" })]),
   ]);
 
+  // a:themeElements children
+  const themeElementsChildren: XmlElement[] = [
+    createElement("a:clrScheme", { name }, colorChildren),
+    createElement("a:fontScheme", { name: fontSchemeName || name }, [
+      buildFontElement("major", fontScheme.majorFont),
+      buildFontElement("minor", fontScheme.minorFont),
+    ]),
+    buildFormatScheme({ name, elements: formatSchemeElements, placeholderFill, placeholderLine }),
+  ];
+
+  // a:objectDefaults §20.1.6.7 — XmlElement refs preserved from parser
+  if (objectDefaults) {
+    const odChildren: XmlElement[] = [];
+    if (objectDefaults.shapeDefault) { odChildren.push(objectDefaults.shapeDefault); }
+    if (objectDefaults.lineDefault) { odChildren.push(objectDefaults.lineDefault); }
+    if (objectDefaults.textDefault) { odChildren.push(objectDefaults.textDefault); }
+    if (odChildren.length > 0) {
+      themeElementsChildren.push(createElement("a:objectDefaults", {}, odChildren));
+    }
+  }
+
+  // a:theme children (after a:themeElements)
+  const themeChildren: XmlElement[] = [
+    createElement("a:themeElements", {}, themeElementsChildren),
+  ];
+
+  // a:extraClrSchemeLst §20.1.6.5
+  if (extraColorSchemes && extraColorSchemes.length > 0) {
+    themeChildren.push(buildExtraColorSchemeList(extraColorSchemes));
+  }
+
+  // a:custClrLst §20.1.6.3
+  themeChildren.push(...buildCustomColorsList(customColors));
+
   return {
     children: [
-      createElement("a:theme", { "xmlns:a": DRAWINGML_NAMESPACES.main, name }, [
-        createElement("a:themeElements", {}, [
-          createElement("a:clrScheme", { name }, colorChildren),
-          createElement("a:fontScheme", { name: fontSchemeName || name }, [
-            buildFontElement("major", fontScheme.majorFont),
-            buildFontElement("minor", fontScheme.minorFont),
-          ]),
-          buildFormatScheme({ name, elements: formatSchemeElements, placeholderFill, placeholderLine }),
-        ]),
-        ...buildCustomColorsList(customColors),
-      ]),
+      createElement("a:theme", { "xmlns:a": DRAWINGML_NAMESPACES.main, name }, themeChildren),
     ],
   };
 }
 
-function buildColorSchemeChildren(cs: ThemeColorScheme): XmlElement[] {
-  const slots: readonly (keyof ThemeColorScheme)[] = [
-    "dk1", "lt1", "dk2", "lt2",
-    "accent1", "accent2", "accent3", "accent4", "accent5", "accent6",
-    "hlink", "folHlink",
-  ];
-  return slots.map((key) =>
-    createElement(`a:${key}`, {}, [createElement("a:srgbClr", { val: cs[key] })]),
+// =============================================================================
+// Color Scheme — §20.1.6.2
+// =============================================================================
+
+/**
+ * Convert a hex string to a Color domain object.
+ * ColorScheme stores resolved hex values — these are always srgb.
+ */
+function hexToColor(hex: string): Color {
+  return { spec: { type: "srgb", value: hex } };
+}
+
+/**
+ * Build 12 color scheme children from hex color values.
+ * ColorScheme is Record<string, string> — resolved hex values from parser.
+ * Uses serializeColor (SoT) for XML generation.
+ */
+function buildColorSchemeChildren(cs: Readonly<Record<SchemeColorName, string>>): XmlElement[] {
+  return SCHEME_COLOR_SLOTS.map((key) =>
+    createElement(`a:${key}`, {}, [serializeColor(hexToColor(cs[key]))]),
   );
 }
 
-function buildFontElement(prefix: string, font: ThemeFontScheme["majorFont"]): XmlElement {
+// =============================================================================
+// Font Scheme — §20.1.4.1.18
+// =============================================================================
+
+function buildFontElement(prefix: string, font: FontScheme["majorFont"]): XmlElement {
   const children: XmlElement[] = [];
   if (font.latin) { children.push(createElement("a:latin", { typeface: font.latin })); }
   if (font.eastAsian) { children.push(createElement("a:ea", { typeface: font.eastAsian })); }
   if (font.complexScript) { children.push(createElement("a:cs", { typeface: font.complexScript })); }
   return createElement(`a:${prefix}Font`, {}, children);
 }
+
+// =============================================================================
+// Format Scheme — §20.1.4.1.14
+// =============================================================================
 
 function buildFormatScheme(options: {
   name: string;
@@ -318,11 +413,44 @@ function buildFormatScheme(options: {
   ]);
 }
 
-function serializeCustomColorValue(c: CustomColor): XmlElement {
+// =============================================================================
+// Extra Color Schemes — §20.1.6.5
+// =============================================================================
+
+function buildExtraColorSchemeList(schemes: readonly ExtraColorScheme[]): XmlElement {
+  return createElement("a:extraClrSchemeLst", {}, schemes.map(buildExtraColorScheme));
+}
+
+function buildExtraColorScheme(scheme: ExtraColorScheme): XmlElement {
+  const clrSchemeAttrs: Record<string, string> = {};
+  if (scheme.name) { clrSchemeAttrs.name = scheme.name; }
+
+  // Build color scheme children using serializeColor (SoT)
+  const colorChildren = SCHEME_COLOR_SLOTS
+    .filter((key) => scheme.colorScheme[key] !== undefined)
+    .map((key) =>
+      createElement(`a:${key}`, {}, [serializeColor(hexToColor(scheme.colorScheme[key]))]),
+    );
+
+  return createElement("a:extraClrScheme", {}, [
+    createElement("a:clrScheme", clrSchemeAttrs, colorChildren),
+    createElement("a:clrMap", scheme.colorMap as Record<string, string>),
+  ]);
+}
+
+// =============================================================================
+// Custom Colors — §20.1.6.3
+// =============================================================================
+
+/**
+ * Convert CustomColor domain type to Color for serialization.
+ * CustomColor and Color both map to EG_ColorChoice (§20.1.2.3) in ECMA-376.
+ */
+function customColorToColor(c: CustomColor): Color {
   if (c.type === "srgb") {
-    return createElement("a:srgbClr", { val: c.color ?? "000000" });
+    return { spec: { type: "srgb", value: c.color ?? "000000" } };
   }
-  return createElement("a:sysClr", { val: c.systemColor ?? "windowText" });
+  return { spec: { type: "system", value: c.systemColor ?? "windowText" } };
 }
 
 function buildCustomColorsList(customColors?: readonly CustomColor[]): XmlElement[] {
@@ -330,7 +458,7 @@ function buildCustomColorsList(customColors?: readonly CustomColor[]): XmlElemen
     return [];
   }
   const colorElements = customColors.map((c) => {
-    const colorEl = serializeCustomColorValue(c);
+    const colorEl = serializeColor(customColorToColor(c));
     const attrs: Record<string, string> = {};
     if (c.name) { attrs["name"] = c.name; }
     return createElement("a:custClr", attrs, [colorEl]);
@@ -353,9 +481,9 @@ function writeXml(pkg: ReturnType<typeof createEmptyZipPackage>, path: string, d
 /**
  * Export theme as a POTX (PowerPoint Template) file.
  *
- * Creates a minimal POTX containing:
- * - Theme with specified colors, fonts, and optional format scheme
- * - One slide master with color map
+ * Creates a minimal POTX containing all ECMA-376 theme elements:
+ * - Theme with colors, fonts, format scheme, object defaults, extra color schemes, custom colors
+ * - One slide master with color map, background, text styles
  * - One blank slide layout
  * - One blank slide (required by openPresentation)
  *
@@ -371,7 +499,7 @@ export async function exportThemeAsPotx(options: ThemeExportOptions): Promise<Bl
   writeXml(pkg, "ppt/presentation.xml", buildPresentation());
   writeXml(pkg, "ppt/_rels/presentation.xml.rels", buildPresentationRels());
   writeXml(pkg, "ppt/theme/theme1.xml", buildTheme(options));
-  writeXml(pkg, "ppt/slideMasters/slideMaster1.xml", buildSlideMaster(options.colorMapping));
+  writeXml(pkg, "ppt/slideMasters/slideMaster1.xml", buildSlideMaster(options));
   writeXml(pkg, "ppt/slideMasters/_rels/slideMaster1.xml.rels", buildMasterRels());
   writeXml(pkg, "ppt/slideLayouts/slideLayout1.xml", buildBlankLayout());
   writeXml(pkg, "ppt/slideLayouts/_rels/slideLayout1.xml.rels", buildLayoutRels());

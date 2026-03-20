@@ -13,7 +13,6 @@ import type { FormatScheme } from "@aurochs-office/pptx/domain/theme/types";
 import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
 import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import type { Effects } from "@aurochs-office/pptx/domain/types";
-import type { Fill } from "@aurochs-office/pptx/domain/color/types";
 import { parseBaseFill, parseLine, parseEffects } from "@aurochs-office/drawing-ml/parser";
 import { serializeFill } from "@aurochs-builder/pptx/patcher";
 import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
@@ -110,7 +109,7 @@ export function FormatSchemeEditor({ formatScheme, onChange, disabled }: FormatS
   const handleFillChange = useCallback(
     (categoryKey: keyof FormatScheme, index: number, fill: BaseFill) => {
       const elements = [...formatScheme[categoryKey]];
-      elements[index] = serializeFill(fill as Fill);
+      elements[index] = serializeFill(fill);
       onChange({ ...formatScheme, [categoryKey]: elements });
     },
     [formatScheme, onChange],

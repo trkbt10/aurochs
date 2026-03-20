@@ -9,7 +9,26 @@
 import type { XmlElement, XmlNode } from "@aurochs/xml";
 import { createElement } from "@aurochs/xml";
 import type { DocxDrawing, DocxInlineDrawing, DocxAnchorDrawing, DocxPositionH, DocxPositionV, DocxWrapType } from "@aurochs-office/docx/domain/drawing";
-import type { DrawingPicture, DrawingExtent, NonVisualDrawingProps } from "@aurochs-office/ooxml/domain/drawing";
+import type { DrawingPicture, DrawingExtent, NonVisualDrawingProps, DrawingTransform } from "@aurochs-office/ooxml/domain/drawing";
+
+/**
+ * Serialize DrawingML transform (a:xfrm) from DrawingTransform domain type.
+ * @see ECMA-376 Part 1, Section 20.1.7.6 (CT_Transform2D)
+ */
+function serializeDrawingXfrm(xfrm: DrawingTransform): XmlElement {
+  const children: XmlNode[] = [];
+  if (xfrm.offX !== undefined && xfrm.offY !== undefined) {
+    children.push(createElement("a:off", { x: String(xfrm.offX), y: String(xfrm.offY) }));
+  }
+  if (xfrm.extCx !== undefined && xfrm.extCy !== undefined) {
+    children.push(createElement("a:ext", { cx: String(xfrm.extCx), cy: String(xfrm.extCy) }));
+  }
+  const attrs: Record<string, string> = {};
+  if (xfrm.rot !== undefined) { attrs.rot = String(xfrm.rot); }
+  if (xfrm.flipH) { attrs.flipH = "1"; }
+  if (xfrm.flipV) { attrs.flipV = "1"; }
+  return createElement("a:xfrm", attrs, children);
+}
 
 // Namespaces
 const NS_A = "http://schemas.openxmlformats.org/drawingml/2006/main";
@@ -93,24 +112,7 @@ function serializePicture(pic: DrawingPicture): XmlElement {
   if (pic.spPr) {
     const spPrChildren: XmlNode[] = [];
     if (pic.spPr.xfrm) {
-      const xfrmChildren: XmlNode[] = [];
-      if (pic.spPr.xfrm.off) {
-        xfrmChildren.push(
-          createElement("a:off", {
-            x: String(pic.spPr.xfrm.off.x),
-            y: String(pic.spPr.xfrm.off.y),
-          })
-        );
-      }
-      if (pic.spPr.xfrm.ext) {
-        xfrmChildren.push(
-          createElement("a:ext", {
-            cx: String(pic.spPr.xfrm.ext.cx),
-            cy: String(pic.spPr.xfrm.ext.cy),
-          })
-        );
-      }
-      spPrChildren.push(createElement("a:xfrm", {}, xfrmChildren));
+      spPrChildren.push(serializeDrawingXfrm(pic.spPr.xfrm));
     }
     // Preset geometry (rectangle)
     spPrChildren.push(

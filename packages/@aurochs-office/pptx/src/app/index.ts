@@ -12,3 +12,5 @@ export { convertToPresentationDocument, createResourceResolverFromMaps } from ".
 export { buildSlideLayoutOptions, loadSlideLayoutBundle } from "./slide-layouts";
 export type { SlideLayoutOption, SlideLayoutBundle } from "./slide-layouts";
 export type { PresentationDocument, SlideWithId, SlideId } from "./presentation-document";
+export { extractThemeFromBuffer } from "./theme-extractor";
+export type { ThemeExtractionResult, ExtractedTheme } from "./theme-extractor";
