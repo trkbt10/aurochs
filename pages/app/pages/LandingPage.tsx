@@ -353,8 +353,9 @@ export function LandingPage({
             </div>
 
             {/* POTX Theme Editor */}
-            <div className={`demo-card ${mounted ? "mounted" : ""}`} style={{ animationDelay: "0.5s" }}>
-              <div className="demo-card-header" style={{ background: "linear-gradient(135deg, #9b59b6, #8e44ad)" }}>
+            <div className="landing-demo-card">
+              <div className="demo-card-header">
+                <span className="demo-card-icon potx">T</span>
                 <div className="demo-card-info">
                   <span className="demo-card-title">POTX</span>
                   <span className="demo-card-subtitle">Theme</span>

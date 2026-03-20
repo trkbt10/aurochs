@@ -9,9 +9,15 @@ import type { ResourceMap } from "@aurochs-office/opc";
 import type { Color } from "@aurochs-office/drawing-ml/domain/color";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
-import type { ResourceRelationshipResolver } from "../domain";
+import type { ResourceRelationshipResolver, RawMasterTextStyles } from "../domain";
 
 export type ResourceResolver = ResourceRelationshipResolver;
+
+/**
+ * Re-export RawMasterTextStyles as MasterTextStyles for parser-layer consumers.
+ * SoT: domain/theme/types.ts
+ */
+export type MasterTextStyles = RawMasterTextStyles;
 
 /**
  * Create a resource resolver from ResourceMap
@@ -53,19 +59,6 @@ export type PlaceholderContext = {
 // =============================================================================
 // Text Style Context
 // =============================================================================
-
-/**
- * Master text styles from slide master (p:txStyles)
- * @see ECMA-376 Part 1, Section 19.3.1.51
- */
-export type MasterTextStyles = {
-  /** Title style (p:titleStyle) */
-  readonly titleStyle: XmlElement | undefined;
-  /** Body style (p:bodyStyle) */
-  readonly bodyStyle: XmlElement | undefined;
-  /** Other style (p:otherStyle) */
-  readonly otherStyle: XmlElement | undefined;
-};
 
 /**
  * Context for resolving text styles.

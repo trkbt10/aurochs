@@ -129,7 +129,6 @@ function createApiSlide(number: number, content: XmlDocument): ApiSlide {
     layoutTables: createMockIndexTables(),
     master: null,
     masterTables: createMockIndexTables(),
-    masterTextStyles: undefined,
     theme: null,
     relationships: createMockResourceMap(),
     layoutRelationships: createMockResourceMap(),

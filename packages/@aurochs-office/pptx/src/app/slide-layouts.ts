@@ -8,12 +8,11 @@
  */
 
 import type { PresentationFile } from "../domain";
-import type { XmlDocument, XmlElement } from "@aurochs/xml";
+import type { XmlDocument } from "@aurochs/xml";
 import type { ResourceMap } from "@aurochs-office/opc";
 import { parseContentTypes } from "../domain/content-types";
-import { getByPath } from "@aurochs/xml";
 import { parseAppVersion } from "./presentation-info";
-import { readXml, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS } from "../parser/slide/xml-reader";
+import { readPart } from "../parser/part-reader";
 import { indexShapeTreeNodes, type IndexTables } from "../parser/slide/shape-tree-indexer";
 import { loadRelationships, findMasterPath, findThemePath } from "../parser/relationships";
 import { createEmptyResourceMap } from "../domain/relationships";
@@ -31,14 +30,13 @@ export type SlideLayoutBundle = {
   readonly layoutRelationships: ResourceMap;
   readonly master: XmlDocument | null;
   readonly masterTables: IndexTables;
-  readonly masterTextStyles: XmlElement | undefined;
   readonly masterRelationships: ResourceMap;
   readonly theme: XmlDocument | null;
   readonly themeRelationships: ResourceMap;
 };
 
 function resolveAppVersion(file: PresentationFile): number {
-  const appXml = readXml(file, "docProps/app.xml", 16, false, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS);
+  const appXml = readPart(file,"docProps/app.xml");
   return parseAppVersion(appXml) ?? 16;
 }
 
@@ -72,7 +70,7 @@ export function buildSlideLayoutOptions(file: PresentationFile): SlideLayoutOpti
   }
 
   const appVersion = resolveAppVersion(file);
-  const contentTypesXml = readXml(file, "[Content_Types].xml", appVersion, false, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS);
+  const contentTypesXml = readPart(file,"[Content_Types].xml", { appVersion });
   if (contentTypesXml === null) {
     throw new Error("Failed to read [Content_Types].xml for slide layout catalog.");
   }
@@ -80,7 +78,7 @@ export function buildSlideLayoutOptions(file: PresentationFile): SlideLayoutOpti
   const contentTypes = parseContentTypes(contentTypesXml);
 
   return contentTypes.slideLayouts.map((layoutPath) => {
-    const layoutXml = readXml(file, layoutPath, appVersion, false, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS);
+    const layoutXml = readPart(file,layoutPath, { appVersion });
     if (layoutXml === null) {
       throw new Error(`Failed to read slide layout XML: ${layoutPath}`);
     }
@@ -115,7 +113,7 @@ export function loadSlideLayoutBundle(file: PresentationFile, layoutPath: string
   }
 
   const appVersion = resolveAppVersion(file);
-  const layout = readXml(file, layoutPath, appVersion, false, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS);
+  const layout = readPart(file,layoutPath, { appVersion });
   if (layout === null) {
     throw new Error(`Failed to read slide layout XML: ${layoutPath}`);
   }
@@ -124,13 +122,12 @@ export function loadSlideLayoutBundle(file: PresentationFile, layoutPath: string
   const layoutTables = indexShapeTreeNodes(layout);
 
   const masterPath = findMasterPath(layoutRelationships);
-  const master = masterPath ? readXml(file, masterPath, appVersion, false, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS) : null;
+  const master = masterPath ? readPart(file,masterPath, { appVersion }) : null;
   const masterRelationships = masterPath ? loadRelationships(file, masterPath) : createEmptyResourceMap();
   const masterTables = indexShapeTreeNodes(master);
-  const masterTextStyles = master ? getByPath(master, ["p:sldMaster", "p:txStyles"]) : undefined;
 
   const themePath = masterPath ? findThemePath(masterRelationships) : undefined;
-  const theme = themePath ? readXml(file, themePath, appVersion, false, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS) : null;
+  const theme = themePath ? readPart(file,themePath, { appVersion }) : null;
   const themeRelationships = themePath ? loadRelationships(file, themePath) : createEmptyResourceMap();
 
   return {
@@ -139,7 +136,6 @@ export function loadSlideLayoutBundle(file: PresentationFile, layoutPath: string
     layoutRelationships,
     master,
     masterTables,
-    masterTextStyles,
     masterRelationships,
     theme,
     themeRelationships,

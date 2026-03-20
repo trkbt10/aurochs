@@ -5,7 +5,7 @@
 import { parseXml, serializeDocument } from "@aurochs/xml";
 import type { ZipPackage } from "@aurochs/zip";
 import { patchTheme } from "@aurochs-builder/pptx/patcher";
-import { parseFontScheme } from "@aurochs-office/pptx/parser/slide/theme-parser";
+import { parseFontScheme } from "@aurochs-office/pptx/parser/theme/theme-parser";
 import type { Color, SchemeColorName } from "@aurochs-office/drawing-ml/domain/color";
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
 import type { ThemeEditSpec, ThemeFontSpec, ThemeSchemeColorName } from "../types";

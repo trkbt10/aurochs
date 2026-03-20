@@ -15,10 +15,9 @@ import {
 } from "../relationships";
 import { RELATIONSHIP_TYPES } from "../../domain/relationships";
 import { createEmptyResourceMap } from "../../domain/relationships";
-import { getByPath } from "@aurochs/xml";
 import { indexShapeTreeNodes } from "./shape-tree-indexer";
 import { transformDiagramNamespace } from "./diagram-transform";
-import { readXml, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS } from "./xml-reader";
+import { readPart } from "../part-reader";
 
 /**
  * Load layout data for a slide
@@ -35,7 +34,7 @@ export function loadLayoutData(file: PresentationFile, relationships: ResourceMa
       layoutRelationships: createEmptyResourceMap(),
     };
   }
-  const layout = readXml(file, layoutPath, 16, false, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS);
+  const layout = readPart(file,layoutPath);
   return {
     layout,
     layoutTables: indexShapeTreeNodes(layout),
@@ -55,15 +54,13 @@ export function loadMasterData(file: PresentationFile, layoutRelationships: Reso
     return {
       master: null,
       masterTables: indexShapeTreeNodes(null),
-      masterTextStyles: undefined,
       masterRelationships: createEmptyResourceMap(),
     };
   }
-  const master = readXml(file, masterPath, 16, false, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS);
+  const master = readPart(file,masterPath);
   return {
     master,
     masterTables: indexShapeTreeNodes(master),
-    masterTextStyles: getByPath(master, ["p:sldMaster", "p:txStyles"]),
     masterRelationships: loadRelationships(file, masterPath),
   };
 }
@@ -83,10 +80,10 @@ export function loadThemeData(file: PresentationFile, masterRelationships: Resou
       themeOverrides: [],
     };
   }
-  const theme = readXml(file, themePath, 16, false, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS);
+  const theme = readPart(file,themePath);
   const themeOverridePaths = masterRelationships.getAllTargetsByType(RELATIONSHIP_TYPES.THEME_OVERRIDE);
   const themeOverrides = themeOverridePaths
-    .map((path) => readXml(file, path, 16, false, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS))
+    .map((path) => readPart(file,path))
     .filter((doc): doc is NonNullable<ThemeData["theme"]> => doc !== null);
   return {
     theme,
@@ -107,7 +104,7 @@ export function loadDiagramData(file: PresentationFile, relationships: ResourceM
     return { diagram: null, diagramRelationships: createEmptyResourceMap() };
   }
 
-  const rawDiagram = readXml(file, diagramPath, 16, false, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS);
+  const rawDiagram = readPart(file,diagramPath);
   if (rawDiagram === null) {
     return { diagram: null, diagramRelationships: createEmptyResourceMap() };
   }

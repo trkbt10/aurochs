@@ -141,7 +141,6 @@ function createMockApiSlide(): ApiSlide {
     themeRelationships: mockResourceMap(),
     layoutTables: mockIndexTables(),
     masterTables: mockIndexTables(),
-    masterTextStyles: undefined,
     diagram: null,
     diagramRelationships: mockResourceMap(),
     timing: undefined,

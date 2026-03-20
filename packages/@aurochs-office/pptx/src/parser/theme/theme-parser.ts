@@ -15,7 +15,6 @@ import type {
   ExtraColorScheme,
   FormatScheme,
   ObjectDefaults,
-  RawMasterTextStyles,
   Theme,
 } from "../../domain/index";
 
@@ -324,30 +323,5 @@ export function parseTheme(themeContent: XmlDocument | null, themeOverrides: rea
     themeManager: getByPath(themeContent, ["a:theme", "a:themeManager"]),
     themeOverrides,
     objectDefaults: parseObjectDefaults(themeContent),
-  };
-}
-
-// =============================================================================
-// Master Text Styles Parsing
-// =============================================================================
-
-/**
- * Parse MasterTextStyles from slide master text styles element.
- *
- * @see ECMA-376 Part 1, Section 19.3.1.51 (p:txStyles)
- */
-export function parseMasterTextStyles(txStyles: XmlElement | undefined): RawMasterTextStyles {
-  if (txStyles === undefined) {
-    return {
-      titleStyle: undefined,
-      bodyStyle: undefined,
-      otherStyle: undefined,
-    };
-  }
-
-  return {
-    titleStyle: getChild(txStyles, "p:titleStyle"),
-    bodyStyle: getChild(txStyles, "p:bodyStyle"),
-    otherStyle: getChild(txStyles, "p:otherStyle"),
   };
 }

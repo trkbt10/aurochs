@@ -16,7 +16,8 @@ import type { ColorMap } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { XmlElement } from "@aurochs/xml";
 import type { PptxBufferInput } from "./pptx-loader";
 import { loadPptxFromBuffer } from "./pptx-loader";
-import { parseTheme, parseColorMap, parseMasterTextStyles } from "../parser/slide/theme-parser";
+import { parseTheme, parseColorMap } from "../parser/theme/theme-parser";
+import { parseSlideMaster } from "../parser/slide/slide-parser";
 import { getByPath, getAttr, getChild } from "@aurochs/xml";
 
 // =============================================================================
@@ -91,9 +92,9 @@ export async function extractThemeFromBuffer(buffer: PptxBufferInput): Promise<T
     const clrMapElement = slide.master ? getByPath(slide.master, ["p:sldMaster", "p:clrMap"]) : undefined;
     const colorMap = parseColorMap(clrMapElement);
 
-    // Extract master text styles §19.3.1.51
-    const txStyles = slide.master ? getByPath(slide.master, ["p:sldMaster", "p:txStyles"]) : undefined;
-    const masterTextStyles = parseMasterTextStyles(txStyles);
+    // Extract master text styles §19.3.1.51 (SoT: parseSlideMaster)
+    const parsedMaster = slide.master ? parseSlideMaster(slide.master) : undefined;
+    const masterTextStyles = parsedMaster?.textStyles ?? { titleStyle: undefined, bodyStyle: undefined, otherStyle: undefined };
 
     // Extract master background §19.3.1.2 — preserve raw XmlElement for lossless round-trip
     const cSld = slide.master ? getByPath(slide.master, ["p:sldMaster", "p:cSld"]) : undefined;

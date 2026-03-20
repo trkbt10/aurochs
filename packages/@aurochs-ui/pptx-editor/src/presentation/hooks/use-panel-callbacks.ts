@@ -327,7 +327,6 @@ export function usePanelCallbacks({ dispatch, document }: UsePanelCallbacksParam
             layoutRelationships: bundle.layoutRelationships,
             master: bundle.master,
             masterTables: bundle.masterTables,
-            masterTextStyles: bundle.masterTextStyles,
             masterRelationships: bundle.masterRelationships,
             theme: bundle.theme,
             themeRelationships: bundle.themeRelationships,

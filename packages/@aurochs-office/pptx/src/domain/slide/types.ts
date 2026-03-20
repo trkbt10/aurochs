@@ -13,7 +13,8 @@ import type { Shape } from "../shape";
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import type { ResourceId, ShapeId } from "../types";
 import type { SlideTransition } from "../transition";
-import type { MasterTextStyles, TextStyleLevels } from "../text-style";
+import type { TextStyleLevels } from "../text-style";
+import type { RawMasterTextStyles } from "../theme/types";
 import type { CustomerData } from "../metadata";
 
 // =============================================================================
@@ -207,7 +208,7 @@ export type SlideMaster = {
   readonly colorMap: ColorMapping;
   readonly slideLayoutIds?: readonly SlideLayoutId[];
   readonly customerData?: readonly CustomerData[];
-  readonly textStyles?: MasterTextStyles;
+  readonly textStyles?: RawMasterTextStyles;
   readonly timing?: SlideTiming;
   readonly transition?: SlideTransition;
   readonly preserve?: boolean;

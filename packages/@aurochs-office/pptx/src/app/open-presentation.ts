@@ -14,7 +14,8 @@ import type { TableStyleList } from "../parser/table/style-parser";
 import { parseSlideSizeFromXml, parseDefaultTextStyle, parseAppVersion } from "./presentation-info";
 import { parseTableStyleList } from "../parser/table/style-parser";
 import { createZipAdapter } from "../domain/zip-adapter";
-import { readXml, getRelationships, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS } from "../parser/slide/xml-reader";
+import { readPart } from "../parser/part-reader";
+import { loadRelationships } from "../parser/relationships";
 import { createSlide } from "./slide-builder";
 import { loadLayoutData, loadMasterData, loadThemeData, loadDiagramData } from "../parser/slide/loader";
 import type { PresentationFile } from "../domain";
@@ -45,13 +46,13 @@ function parseSlide({
   renderOptions,
 }: ParseSlideOptions): Slide {
   // Read slide content
-  const content = readXml(file, slideInfo.path, appVersion, true, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS);
+  const content = readPart(file, slideInfo.path, { appVersion, isSlideContent: true });
   if (content === null) {
     throw new Error(`Failed to read slide: ${slideInfo.path}`);
   }
 
   // Get slide relationships
-  const relationships = getRelationships(file, slideInfo.path, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS);
+  const relationships = loadRelationships(file, slideInfo.path);
 
   // Load layout
   const layoutData = loadLayoutData(file, relationships);
@@ -73,7 +74,6 @@ function parseSlide({
     layoutTables: layoutData.layoutTables,
     master: masterData.master,
     masterTables: masterData.masterTables,
-    masterTextStyles: masterData.masterTextStyles,
     theme: themeData.theme,
     relationships,
     layoutRelationships: layoutData.layoutRelationships,
@@ -98,7 +98,7 @@ function buildSlideFileInfoListFromPresentation(file: PresentationFile, presenta
     throw new Error("ppt/presentation.xml: p:sldIdLst has no p:sldId entries");
   }
 
-  const presentationRels = getRelationships(file, "ppt/presentation.xml", DEFAULT_MARKUP_COMPATIBILITY_OPTIONS);
+  const presentationRels = loadRelationships(file, "ppt/presentation.xml");
 
   return sldIds.map((sldId, index) => {
     const rId = sldId.attrs["r:id"];
@@ -164,16 +164,16 @@ export function openPresentation(file: PresentationFile, options?: PresentationO
   const zipAdapter = createZipAdapter(file);
 
   // Require content types (OPC requirement)
-  if (readXml(file, "[Content_Types].xml", 16, false, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS) === null) {
+  if (readPart(file,"[Content_Types].xml") === null) {
     throw new Error("Failed to read [Content_Types].xml");
   }
 
   // Read app version from app.xml
-  const appXml = readXml(file, "docProps/app.xml", 16, false, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS);
+  const appXml = readPart(file,"docProps/app.xml");
   const appVersion = parseAppVersion(appXml);
 
   // Read presentation.xml for slide size and default text style
-  const presentationXml = readXml(file, "ppt/presentation.xml", 16, false, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS);
+  const presentationXml = readPart(file,"ppt/presentation.xml");
   if (presentationXml === null) {
     throw new Error("Failed to read ppt/presentation.xml");
   }
@@ -184,7 +184,7 @@ export function openPresentation(file: PresentationFile, options?: PresentationO
   const slideFiles = buildSlideFileInfoListFromPresentation(file, presentationXml);
 
   // Read table styles from ppt/tableStyles.xml
-  const tableStylesXml = readXml(file, "ppt/tableStyles.xml", 16, false, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS);
+  const tableStylesXml = readPart(file,"ppt/tableStyles.xml");
   const tableStylesRoot = tableStylesXml ? getByPath(tableStylesXml, ["a:tblStyleLst"]) : undefined;
   const tableStyles = tableStylesRoot ? (parseTableStyleList(tableStylesRoot) ?? null) : null;
 

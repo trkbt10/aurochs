@@ -16,7 +16,7 @@ import type { ResourceResolver } from "../domain/resource-resolver";
 import type { Slide as ApiSlide } from "./types";
 import { parseSlide } from "../parser/slide/slide-parser";
 import { createParseContext } from "../parser/context";
-import { parseColorScheme, parseFontScheme, parseColorMap } from "../parser/slide/theme-parser";
+import { parseColorScheme, parseFontScheme, parseColorMap } from "../parser/theme/theme-parser";
 import { getByPath } from "@aurochs/xml";
 import { createRenderContext } from "@aurochs-renderer/pptx";
 import { getMimeTypeFromPath } from "@aurochs/files";

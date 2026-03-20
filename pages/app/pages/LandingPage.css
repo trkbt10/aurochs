@@ -321,6 +321,7 @@
 .demo-card-icon.docx { background: #2B579A; }
 .demo-card-icon.xlsx { background: #217346; }
 .demo-card-icon.pdf { background: #B30B00; }
+.demo-card-icon.potx { background: #9b59b6; }
 
 .demo-card-info {
   display: flex;

@@ -9,7 +9,8 @@ import type { Slide as ApiSlide } from "@aurochs-office/pptx/app/types";
 import type { SlideContext } from "@aurochs-office/pptx/parser/slide/context";
 import { createSlideContext } from "@aurochs-office/pptx/parser/slide/context";
 import { createPlaceholderTable, createColorMap } from "@aurochs-office/pptx/parser/slide/resource-adapters";
-import { parseTheme, parseMasterTextStyles } from "@aurochs-office/pptx/parser/slide/theme-parser";
+import { parseTheme } from "@aurochs-office/pptx/parser/theme/theme-parser";
+import { parseSlideMaster } from "@aurochs-office/pptx/parser/slide/slide-parser";
 import { getBackgroundFillData } from "@aurochs-office/pptx/parser/slide/background-parser";
 import { parseShapeTree } from "@aurochs-office/pptx/parser";
 import type { XmlElement, XmlDocument } from "@aurochs/xml";
@@ -83,8 +84,10 @@ function buildSlideRenderContext(opts: {
     content: layoutContent as XmlElement | undefined,
   };
 
+  const parsedMaster = parseSlideMaster(apiSlide.master ?? undefined);
+
   const master = {
-    textStyles: parseMasterTextStyles(apiSlide.masterTextStyles as XmlElement | undefined),
+    textStyles: parsedMaster?.textStyles ?? { titleStyle: undefined, bodyStyle: undefined, otherStyle: undefined },
     placeholders: createPlaceholderTable(apiSlide.masterTables),
     colorMap: createColorMap(masterClrMap),
     resources: apiSlide.masterRelationships,

@@ -62,7 +62,6 @@ export function createSlide({
     layoutTables: data.layoutTables,
     master: data.master,
     masterTables: data.masterTables,
-    masterTextStyles: data.masterTextStyles,
     theme: data.theme,
     relationships: data.relationships,
     layoutRelationships: data.layoutRelationships,

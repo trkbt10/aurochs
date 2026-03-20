@@ -9,7 +9,7 @@
 
 import type { PresentationFile } from "../domain";
 import { parseContentTypes } from "../domain/content-types";
-import { readXml, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS } from "../parser/slide/xml-reader";
+import { readPart } from "../parser/part-reader";
 import { loadRelationships } from "../parser/relationships";
 import { RELATIONSHIP_TYPES } from "../domain/relationships";
 import { parseAppVersion } from "./presentation-info";
@@ -44,13 +44,7 @@ export type MediaInfo = {
  */
 export function discoverMediaPaths(file: PresentationFile): readonly string[] {
   const appVersion = resolveAppVersion(file);
-  const contentTypesXml = readXml(
-    file,
-    "[Content_Types].xml",
-    appVersion,
-    false,
-    DEFAULT_MARKUP_COMPATIBILITY_OPTIONS,
-  );
+  const contentTypesXml = readPart(file, "[Content_Types].xml", { appVersion });
 
   if (contentTypesXml === null) {
     return [];
@@ -86,13 +80,7 @@ export function discoverMediaPaths(file: PresentationFile): readonly string[] {
  */
 export function discoverMedia(file: PresentationFile): readonly MediaInfo[] {
   const appVersion = resolveAppVersion(file);
-  const contentTypesXml = readXml(
-    file,
-    "[Content_Types].xml",
-    appVersion,
-    false,
-    DEFAULT_MARKUP_COMPATIBILITY_OPTIONS,
-  );
+  const contentTypesXml = readPart(file, "[Content_Types].xml", { appVersion });
 
   if (contentTypesXml === null) {
     return [];
@@ -125,13 +113,7 @@ export function discoverMedia(file: PresentationFile): readonly MediaInfo[] {
 // =============================================================================
 
 function resolveAppVersion(file: PresentationFile): number {
-  const appXml = readXml(
-    file,
-    "docProps/app.xml",
-    16,
-    false,
-    DEFAULT_MARKUP_COMPATIBILITY_OPTIONS,
-  );
+  const appXml = readPart(file, "docProps/app.xml");
   return parseAppVersion(appXml) ?? 16;
 }
 

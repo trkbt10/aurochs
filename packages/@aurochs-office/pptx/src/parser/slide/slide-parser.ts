@@ -512,6 +512,7 @@ export function parseSlideMaster(content: XmlDocument | undefined, _context?: Pa
   const clrMap = getChild(sldMaster, "p:clrMap");
   const sldLayoutIdLst = getChild(sldMaster, "p:sldLayoutIdLst");
   const transition = getTransitionElement(sldMaster);
+  const txStyles = getChild(sldMaster, "p:txStyles");
 
   return {
     background: parseBackground(bg),
@@ -519,6 +520,13 @@ export function parseSlideMaster(content: XmlDocument | undefined, _context?: Pa
     colorMap: clrMap ? parseColorMapping(clrMap) : {},
     slideLayoutIds: sldLayoutIdLst ? parseSlideLayoutIdList(sldLayoutIdLst) : undefined,
     customerData: parseCustomerDataList(custDataLst),
+    textStyles: txStyles !== undefined
+      ? {
+          titleStyle: getChild(txStyles, "p:titleStyle"),
+          bodyStyle: getChild(txStyles, "p:bodyStyle"),
+          otherStyle: getChild(txStyles, "p:otherStyle"),
+        }
+      : undefined,
     transition: parseTransition(transition),
     preserve: getBoolAttr(sldMaster, "preserve"),
   };

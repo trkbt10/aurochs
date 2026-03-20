@@ -65,9 +65,6 @@ export type Slide = {
   /** Master index tables for shape lookup */
   readonly masterTables: IndexTables;
 
-  /** Master text styles (p:txStyles) */
-  readonly masterTextStyles: XmlNode | undefined;
-
   /** Parsed theme (a:theme) */
   readonly theme: XmlDocument | null;
 

@@ -212,9 +212,9 @@
       "types": "./src/parser/relationships.ts",
       "default": "./src/parser/relationships.ts"
     },
-    "./parser/slide/theme-parser": {
-      "types": "./src/parser/slide/theme-parser.ts",
-      "default": "./src/parser/slide/theme-parser.ts"
+    "./parser/theme/theme-parser": {
+      "types": "./src/parser/theme/theme-parser.ts",
+      "default": "./src/parser/theme/theme-parser.ts"
     },
     "./parser/slide/background-parser": {
       "types": "./src/parser/slide/background-parser.ts",

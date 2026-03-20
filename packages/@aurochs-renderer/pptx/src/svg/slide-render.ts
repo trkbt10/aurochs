@@ -14,7 +14,8 @@ import { getByPath } from "@aurochs/xml";
 import { renderSlideSvgIntegrated } from "../slide-render";
 import { createSlideContext, type SlideContext } from "@aurochs-office/pptx/parser/slide/context";
 import { createPlaceholderTable, createColorMap } from "@aurochs-office/pptx/parser/slide/resource-adapters";
-import { parseTheme, parseMasterTextStyles } from "@aurochs-office/pptx/parser/slide/theme-parser";
+import { parseTheme } from "@aurochs-office/pptx/parser/theme/theme-parser";
+import { parseSlideMaster } from "@aurochs-office/pptx/parser/slide/slide-parser";
 import { DEFAULT_RENDER_OPTIONS } from "../render-options";
 
 /**
@@ -64,8 +65,10 @@ function buildSlideContextFromSlide(slide: Slide): SlideContext {
     content: layoutContent as XmlElement | undefined,
   };
 
+  const parsedMaster = parseSlideMaster(slide.master ?? undefined);
+
   const master = {
-    textStyles: parseMasterTextStyles(slide.masterTextStyles as XmlElement | undefined),
+    textStyles: parsedMaster?.textStyles ?? { titleStyle: undefined, bodyStyle: undefined, otherStyle: undefined },
     placeholders: createPlaceholderTable(slide.masterTables),
     colorMap: createColorMap(masterClrMap),
     resources: slide.masterRelationships,

@@ -4,7 +4,7 @@
 
 import { loadPresentationBundle } from "./loader";
 import { openPresentation } from "@aurochs-office/pptx";
-import { parseTheme } from "@aurochs-office/pptx/parser/slide/theme-parser";
+import { parseTheme } from "@aurochs-office/pptx/parser/theme/theme-parser";
 import { success, error, type Result } from "@aurochs-cli/cli-core";
 
 /**

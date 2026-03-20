@@ -6,7 +6,7 @@
  * pure domain model.
  */
 
-import type { XmlDocument, XmlElement } from "@aurochs/xml";
+import type { XmlDocument } from "@aurochs/xml";
 import type { IndexTables } from "./shape-tree-indexer";
 import type { ResourceMap } from "@aurochs-office/opc";
 
@@ -29,8 +29,6 @@ export type SlideData = {
   master: XmlDocument | null;
   /** Master index tables for shape lookup */
   masterTables: IndexTables;
-  /** Master text styles (p:txStyles) */
-  masterTextStyles: XmlElement | undefined;
   /** Parsed theme (a:theme) */
   theme: XmlDocument | null;
   /** Slide relationships */
@@ -64,7 +62,6 @@ export type LayoutData = {
 export type MasterData = {
   master: XmlDocument | null;
   masterTables: IndexTables;
-  masterTextStyles: XmlElement | undefined;
   masterRelationships: ResourceMap;
 };
 

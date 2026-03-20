@@ -3,7 +3,7 @@
  *
  * Provides adapter functions that wrap IndexTables with consistent interfaces.
  *
- * Theme parsing functions should be imported from ./theme-parser
+ * Theme parsing functions should be imported from ../theme/theme-parser
  *
  * @see ./accessor.ts for type definitions
  */
@@ -12,7 +12,7 @@ import type { ColorMap } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { PlaceholderTable } from "../../domain";
 import type { IndexTables } from "./shape-tree-indexer";
 import type { XmlElement } from "@aurochs/xml";
-import { parseColorMap } from "./theme-parser";
+import { parseColorMap } from "../theme/theme-parser";
 
 // =============================================================================
 // Adapter Functions

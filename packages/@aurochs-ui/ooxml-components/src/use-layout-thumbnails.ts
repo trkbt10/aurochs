@@ -13,7 +13,8 @@ import type { PresentationFile, Shape, SlideSize, Slide } from "@aurochs-office/
 import type { SlideLayoutOption } from "@aurochs-office/pptx/app";
 import { loadSlideLayoutBundle, createResourceResolverFromMaps } from "@aurochs-office/pptx/app";
 import { parseShapeTree } from "@aurochs-office/pptx/parser";
-import { parseTheme, parseMasterTextStyles } from "@aurochs-office/pptx/parser/slide/theme-parser";
+import { parseTheme } from "@aurochs-office/pptx/parser/theme/theme-parser";
+import { parseSlideMaster } from "@aurochs-office/pptx/parser/slide/slide-parser";
 import { createPlaceholderTable } from "@aurochs-office/pptx/parser/slide/resource-adapters";
 import type { PlaceholderContext, MasterStylesInfo } from "@aurochs-office/pptx/parser/context";
 import { getChild, getByPath } from "@aurochs/xml";
@@ -122,10 +123,10 @@ export function loadLayoutWithContext(
       master: masterTable,
     };
 
-    // Build MasterStylesInfo for text style inheritance
-    const masterTextStyles = parseMasterTextStyles(bundle.masterTextStyles ?? undefined);
+    // Build MasterStylesInfo for text style inheritance (SoT: parseSlideMaster)
+    const parsedMaster = parseSlideMaster(bundle.master ?? undefined);
     const masterStylesInfo: MasterStylesInfo = {
-      masterTextStyles,
+      masterTextStyles: parsedMaster?.textStyles,
       defaultTextStyle: undefined,
     };
 
