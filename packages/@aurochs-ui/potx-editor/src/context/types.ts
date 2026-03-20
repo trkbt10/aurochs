@@ -15,13 +15,19 @@ import type { ColorScheme } from "@aurochs-office/drawing-ml/domain/color-contex
 import type { FontScheme, FontSpec } from "@aurochs-office/ooxml/domain/font-scheme";
 import type { UndoRedoHistory } from "@aurochs-ui/editor-core/history";
 import type { SelectionState } from "@aurochs-ui/editor-core/selection";
-import type { ResizeHandlePosition } from "@aurochs-ui/editor-core/drag-state";
+import type {
+  ResizeHandlePosition,
+  IdleDragState,
+  MoveDragState as CoreMoveDragState,
+  ResizeDragState as CoreResizeDragState,
+  RotateDragState as CoreRotateDragState,
+} from "@aurochs-ui/editor-core/drag-state";
 import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
 import type { SlideTransition } from "@aurochs-office/pptx/domain/transition";
 import type { ColorMapping, ColorMapOverride } from "@aurochs-office/pptx/domain/color/types";
 import type { CustomColor, ExtraColorScheme, FormatScheme, ObjectDefaults, RawMasterTextStyles } from "@aurochs-office/pptx/domain/theme/types";
 import type { CreationMode } from "@aurochs-ui/ooxml-components";
-import type { TextEditBounds } from "@aurochs-ui/ooxml-components/text-edit";
+import type { TextEditState } from "@aurochs-ui/ooxml-components/text-edit";
 import type { ThemePreset } from "../panels/types";
 
 // =============================================================================
@@ -43,61 +49,15 @@ export type LayoutListEntry = {
 };
 
 // =============================================================================
-// Drag State (simplified for layout editing)
+// Drag State — specialized from editor-core generics (SoT: @aurochs-ui/editor-core/drag-state)
 // =============================================================================
 
-type PreviewDelta = {
-  readonly dx: Pixels;
-  readonly dy: Pixels;
-};
-
-export type IdleDragState = { readonly type: "idle" };
-
-export type MoveDragState = {
-  readonly type: "move";
-  readonly startX: Pixels;
-  readonly startY: Pixels;
-  readonly shapeIds: readonly ShapeId[];
-  readonly initialBounds: ReadonlyMap<ShapeId, { x: number; y: number; width: number; height: number }>;
-  readonly previewDelta: PreviewDelta;
-};
-
-export type ResizeDragState = {
-  readonly type: "resize";
-  readonly handle: ResizeHandlePosition;
-  readonly startX: Pixels;
-  readonly startY: Pixels;
-  readonly shapeIds: readonly ShapeId[];
-  readonly shapeId: ShapeId;
-  readonly initialBounds: { x: number; y: number; width: number; height: number };
-  readonly initialBoundsMap: ReadonlyMap<ShapeId, { x: number; y: number; width: number; height: number }>;
-  readonly combinedBounds: { x: number; y: number; width: number; height: number };
-  readonly aspectLocked: boolean;
-  readonly previewDelta: PreviewDelta;
-};
-
-export type RotateDragState = {
-  readonly type: "rotate";
-  readonly startAngle: Degrees;
-  readonly shapeIds: readonly ShapeId[];
-  readonly initialRotationsMap: ReadonlyMap<ShapeId, Degrees>;
-  readonly initialBoundsMap: ReadonlyMap<ShapeId, { x: number; y: number; width: number; height: number }>;
-  readonly centerX: Pixels;
-  readonly centerY: Pixels;
-  readonly shapeId: ShapeId;
-  readonly initialRotation: Degrees;
-  readonly previewAngleDelta: Degrees;
-};
-
-export type LayoutDragState = IdleDragState | MoveDragState | ResizeDragState | RotateDragState;
-
-// =============================================================================
-// Text Edit State (simplified for layout editing)
-// =============================================================================
-
-export type LayoutTextEditState =
-  | { readonly type: "inactive" }
-  | { readonly type: "active"; readonly shapeId: ShapeId; readonly bounds: TextEditBounds; readonly initialTextBody: TextBody };
+/** Idle drag state — SoT: @aurochs-ui/editor-core/drag-state */
+export type LayoutIdleDragState = IdleDragState;
+export type LayoutMoveDragState = CoreMoveDragState<ShapeId>;
+export type LayoutResizeDragState = CoreResizeDragState<ShapeId>;
+export type LayoutRotateDragState = CoreRotateDragState<ShapeId>;
+export type LayoutDragState = LayoutIdleDragState | LayoutMoveDragState | LayoutResizeDragState | LayoutRotateDragState;
 
 // =============================================================================
 // Theme Editor State
@@ -121,7 +81,7 @@ export type LayoutEditState = {
   /** Tracks how the selection was created for contextual UI differences. */
   readonly selectionSource: SelectionSource;
   readonly layoutDrag: LayoutDragState;
-  readonly textEdit: LayoutTextEditState;
+  readonly textEdit: TextEditState;
   readonly isDirty: boolean;
   readonly layouts: readonly LayoutListEntry[];
   readonly shapesHistory: UndoRedoHistory<readonly Shape[]>;

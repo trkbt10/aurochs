@@ -36,8 +36,8 @@ import { Input } from "@aurochs-ui/ui-components/primitives/Input";
 import { FieldGroup } from "@aurochs-ui/ui-components/layout";
 import { colorTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { ContextMenu, type MenuEntry } from "@aurochs-ui/ui-components";
-import { TextEditController, mergeTextIntoBody, extractDefaultRunProperties } from "@aurochs-ui/ooxml-components/text-edit";
-import { getPlainText } from "@aurochs-ui/editor-core/text-edit";
+import { TextEditController, useTextEditHandlers } from "@aurochs-ui/ooxml-components/text-edit";
+import { isPointInBounds } from "@aurochs-ui/editor-core/geometry";
 import {
   EditorCanvas,
   type EditorCanvasHandle,
@@ -174,6 +174,15 @@ export function PotxEditor({ presentationFile, slideSize, className }: PotxEdito
     }
   }, [activeLayoutData, layoutEdit.activeLayoutPath, layoutEdit.layoutShapes.length, presentationFile, dispatch]);
 
+  // Derive the rendered slide from reducer state (layoutShapes), not from the static activeLayoutData.
+  // activeLayoutData.pseudoSlide is the original parse result; layoutEdit.layoutShapes is the live edited version.
+  const renderedSlide = useMemo(() => {
+    if (layoutEdit.layoutShapes.length === 0 && activeLayoutData) {
+      return activeLayoutData.pseudoSlide;
+    }
+    return { shapes: layoutEdit.layoutShapes as readonly Shape[] };
+  }, [layoutEdit.layoutShapes, activeLayoutData]);
+
   // Shape render data for EditorCanvas hit testing
   const shapeRenderData = useMemo(() => {
     if (layoutEdit.layoutShapes.length === 0) {return [];}
@@ -231,28 +240,43 @@ export function PotxEditor({ presentationFile, slideSize, className }: PotxEdito
     dispatch({ type: "UPDATE_LAYOUT_SHAPE_PLACEHOLDER", shapeId, placeholder });
   }, [dispatch]);
 
-  // --- Text editing ---
-  const isTextEditing = layoutEdit.textEdit.type === "active";
+  // --- Text editing (shared hook — SoT with pptx-editor) ---
   const textEditState = layoutEdit.textEdit;
-
-  const handleTextEditCommit = useCallback((newText: string) => {
-    if (textEditState.type !== "active") {return;}
-    if (getPlainText(textEditState.initialTextBody) === newText) {
+  const { handleTextEditComplete, handleTextEditCancel, editingShapeId } = useTextEditHandlers({
+    textEditState,
+    onCommit: useCallback((shapeId: ShapeId, textBody) => {
+      dispatch({ type: "COMMIT_LAYOUT_TEXT_EDIT", shapeId, textBody });
+    }, [dispatch]),
+    onExit: useCallback(() => {
       dispatch({ type: "EXIT_LAYOUT_TEXT_EDIT" });
-      return;
-    }
-    const defaultProps = extractDefaultRunProperties(textEditState.initialTextBody);
-    const newBody = mergeTextIntoBody(textEditState.initialTextBody, newText, defaultProps);
-    dispatch({ type: "COMMIT_LAYOUT_TEXT_EDIT", shapeId: textEditState.shapeId, textBody: newBody });
-  }, [dispatch, textEditState]);
-
-  const handleTextEditCancel = useCallback(() => {
-    dispatch({ type: "EXIT_LAYOUT_TEXT_EDIT" });
-  }, [dispatch]);
+    }, [dispatch]),
+  });
+  const isTextEditing = editingShapeId !== undefined;
 
   const handleShapeDoubleClickFromOverlay = useCallback((shapeId: ShapeId) => {
     dispatch({ type: "ENTER_LAYOUT_TEXT_EDIT", shapeId });
   }, [dispatch]);
+
+  // --- Click-outside text edit (same pattern as pptx-editor SvgEditorCanvas) ---
+  const handleTextEditOverlayPointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (!isTextEditing) { return; }
+      const page = canvasRef.current?.screenToPage(e.clientX, e.clientY);
+      if (!page || textEditState.type !== "active") { return; }
+      const bounds = textEditState.bounds;
+      const isInside = isPointInBounds(page.pageX, page.pageY, {
+        x: bounds.x as number,
+        y: bounds.y as number,
+        width: bounds.width as number,
+        height: bounds.height as number,
+        rotation: bounds.rotation,
+      });
+      if (!isInside) {
+        handleTextEditCancel();
+      }
+    },
+    [isTextEditing, textEditState, handleTextEditCancel],
+  );
 
   // --- Keyboard shortcuts ---
   useEffect(() => {
@@ -584,7 +608,7 @@ export function PotxEditor({ presentationFile, slideSize, className }: PotxEdito
           onDoubleClick={handleShapeDoubleClickFromOverlay}
         />
         {textEditState.type === "active" && (
-          <div style={{ position: "absolute", inset: 0 }}>
+          <div style={{ position: "absolute", inset: 0 }} onPointerDown={handleTextEditOverlayPointerDown}>
             <TextEditController
               bounds={textEditState.bounds}
               textBody={textEditState.initialTextBody}
@@ -592,7 +616,7 @@ export function PotxEditor({ presentationFile, slideSize, className }: PotxEdito
               fontScheme={editedFontScheme}
               slideWidth={widthNum}
               slideHeight={heightNum}
-              onComplete={handleTextEditCommit}
+              onComplete={handleTextEditComplete}
               onCancel={handleTextEditCancel}
               showSelectionOverlay={true}
               showFrameOutline={false}
@@ -601,7 +625,7 @@ export function PotxEditor({ presentationFile, slideSize, className }: PotxEdito
         )}
       </>
     );
-  }, [layoutEdit.layoutShapes, layoutEdit.layoutSelection.primaryId, isMultiSelection, handlePlaceholderChange, handleShapeDoubleClickFromOverlay, textEditState, handleTextEditCommit, handleTextEditCancel]);
+  }, [layoutEdit.layoutShapes, layoutEdit.layoutSelection.primaryId, isMultiSelection, handlePlaceholderChange, handleShapeDoubleClickFromOverlay, textEditState, handleTextEditComplete, handleTextEditCancel, handleTextEditOverlayPointerDown]);
 
   const centerContent = useMemo(() => {
     if (!activeLayoutData) {
@@ -642,11 +666,12 @@ export function PotxEditor({ presentationFile, slideSize, className }: PotxEdito
           viewportOverlay={shapeInfoOverlay}
         >
           <SlideRenderer
-            slide={activeLayoutData.pseudoSlide}
+            slide={renderedSlide}
             slideSize={slideSizeForRenderer}
             colorContext={editedColorContext}
             resources={activeLayoutData.resources}
             fontScheme={editedFontScheme}
+            editingShapeId={editingShapeId}
           />
 
           {creationRect && (

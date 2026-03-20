@@ -11,7 +11,8 @@
 
 import type { Shape, SpShape, CxnShape } from "@aurochs-office/pptx/domain";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
-import { px } from "@aurochs-office/drawing-ml/domain/units";
+import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
+import type { Pixels, Degrees } from "@aurochs-office/drawing-ml/domain/units";
 import type { ThemeEditorState, ThemeEditorAction } from "../types";
 import { themeEditorReducer, createInitialThemeEditorState } from "./index";
 import {
@@ -455,6 +456,36 @@ describe("Text editing", () => {
     expect(next.layoutEdit.isDirty).toBe(true);
   });
 
+  it("committed text is the rendering source (layoutShapes is SoT for SlideRenderer)", () => {
+    // This test ensures that after COMMIT_LAYOUT_TEXT_EDIT, layoutShapes contains the updated text.
+    // PotxEditor.tsx must derive its renderedSlide from layoutEdit.layoutShapes (not activeLayoutData.pseudoSlide).
+    const sp = makeSpWithTextBody("render-sot", "Original text");
+    const state = withShapes(withLayout(createBaseState()), [sp]);
+
+    // Enter → commit new text
+    const editing = reduce(state, { type: "ENTER_LAYOUT_TEXT_EDIT", shapeId: "render-sot" as ShapeId });
+    const newTextBody = {
+      bodyProperties: {},
+      paragraphs: [{ properties: {}, runs: [{ type: "text" as const, text: "Modified text" }] }],
+    };
+    const committed = reduce(editing, { type: "COMMIT_LAYOUT_TEXT_EDIT", shapeId: "render-sot" as ShapeId, textBody: newTextBody });
+
+    // layoutShapes (which feeds SlideRenderer) must contain the new text
+    const renderedShapes = committed.layoutEdit.layoutShapes;
+    const renderedShape = renderedShapes[0] as SpShape;
+    expect(renderedShape.textBody!.paragraphs[0].runs[0]).toEqual({ type: "text", text: "Modified text" });
+
+    // textEdit must be inactive (editing overlay removed, SlideRenderer text visible)
+    expect(committed.layoutEdit.textEdit.type).toBe("inactive");
+
+    // Re-entering text edit should show the committed text as initialTextBody
+    const reEdit = reduce(committed, { type: "ENTER_LAYOUT_TEXT_EDIT", shapeId: "render-sot" as ShapeId });
+    expect(reEdit.layoutEdit.textEdit.type).toBe("active");
+    if (reEdit.layoutEdit.textEdit.type === "active") {
+      expect(reEdit.layoutEdit.textEdit.initialTextBody.paragraphs[0].runs[0]).toEqual({ type: "text", text: "Modified text" });
+    }
+  });
+
   it("text edit resets when switching layouts", () => {
     const sp = makeSpWithTextBody("t1", "Hello");
     const state = withShapes(withLayout(createBaseState()), [sp]);
@@ -774,5 +805,531 @@ describe("Full lifecycle", () => {
     expect((u2.layoutEdit.layoutShapes[0] as SpShape).placeholder?.type).toBe("title");
     const u3 = reduce(u2, { type: "UNDO" });
     expect((u3.layoutEdit.layoutShapes[0] as SpShape).placeholder).toBeUndefined();
+  });
+});
+
+// ===========================================================================
+// Drag operations: Move / Resize / Rotate
+// ===========================================================================
+
+describe("Drag operations — move", () => {
+  it("starts move, previews, commits — updates layoutShapes transform", () => {
+    const sp = makeRect("m1");
+    const s0 = withShapes(withLayout(createBaseState()), [sp]);
+    // Select shape first
+    const s1 = reduce(s0, { type: "SELECT_LAYOUT_SHAPE", shapeId: "m1" as ShapeId, addToSelection: false });
+
+    // Start move
+    const s2 = reduce(s1, { type: "START_LAYOUT_MOVE", startX: px(100), startY: px(100) });
+    expect(s2.layoutEdit.layoutDrag.type).toBe("move");
+
+    // Preview move (dx=50, dy=30)
+    const s3 = reduce(s2, { type: "PREVIEW_LAYOUT_MOVE", dx: px(50), dy: px(30) });
+    expect(s3.layoutEdit.layoutDrag.type).toBe("move");
+    if (s3.layoutEdit.layoutDrag.type === "move") {
+      expect(s3.layoutEdit.layoutDrag.previewDelta.dx).toBe(px(50));
+    }
+    // layoutShapes NOT yet modified during preview
+    expect((s3.layoutEdit.layoutShapes[0] as SpShape).properties.transform!.x).toBe(px(100));
+
+    // Commit drag
+    const s4 = reduce(s3, { type: "COMMIT_LAYOUT_DRAG" });
+    expect(s4.layoutEdit.layoutDrag.type).toBe("idle");
+    expect(s4.layoutEdit.isDirty).toBe(true);
+    // Transform updated: x = 100 + 50 = 150, y = 100 + 30 = 130
+    const t = (s4.layoutEdit.layoutShapes[0] as SpShape).properties.transform!;
+    expect(t.x).toBe(px(150));
+    expect(t.y).toBe(px(130));
+    // Width/height unchanged
+    expect(t.width).toBe(px(200));
+    expect(t.height).toBe(px(150));
+  });
+
+  it("move with zero delta does not dirty state", () => {
+    const sp = makeRect("m2");
+    const s0 = withShapes(withLayout(createBaseState()), [sp]);
+    const s1 = reduce(s0, { type: "SELECT_LAYOUT_SHAPE", shapeId: "m2" as ShapeId, addToSelection: false });
+    const s2 = reduce(s1, { type: "START_LAYOUT_MOVE", startX: px(100), startY: px(100) });
+    const s3 = reduce(s2, { type: "PREVIEW_LAYOUT_MOVE", dx: px(0), dy: px(0) });
+    const s4 = reduce(s3, { type: "COMMIT_LAYOUT_DRAG" });
+    expect(s4.layoutEdit.isDirty).toBe(false);
+  });
+
+  it("END_LAYOUT_DRAG resets to idle without modifying shapes", () => {
+    const sp = makeRect("m3");
+    const s0 = withShapes(withLayout(createBaseState()), [sp]);
+    const s1 = reduce(s0, { type: "SELECT_LAYOUT_SHAPE", shapeId: "m3" as ShapeId, addToSelection: false });
+    const s2 = reduce(s1, { type: "START_LAYOUT_MOVE", startX: px(100), startY: px(100) });
+    const s3 = reduce(s2, { type: "PREVIEW_LAYOUT_MOVE", dx: px(999), dy: px(999) });
+    const s4 = reduce(s3, { type: "END_LAYOUT_DRAG" });
+    expect(s4.layoutEdit.layoutDrag.type).toBe("idle");
+    // Shapes unchanged (END cancels)
+    expect((s4.layoutEdit.layoutShapes[0] as SpShape).properties.transform!.x).toBe(px(100));
+  });
+
+  it("multi-shape move applies delta to all selected shapes", () => {
+    const sp1 = makeRect("ms1");
+    const sp2 = makeRect("ms2");
+    const s0 = withShapes(withLayout(createBaseState()), [sp1, sp2]);
+    const s1 = reduce(s0, { type: "SELECT_MULTIPLE_LAYOUT_SHAPES", shapeIds: ["ms1" as ShapeId, "ms2" as ShapeId] });
+    const s2 = reduce(s1, { type: "START_LAYOUT_MOVE", startX: px(100), startY: px(100) });
+    const s3 = reduce(s2, { type: "PREVIEW_LAYOUT_MOVE", dx: px(20), dy: px(10) });
+    const s4 = reduce(s3, { type: "COMMIT_LAYOUT_DRAG" });
+
+    const t1 = (s4.layoutEdit.layoutShapes[0] as SpShape).properties.transform!;
+    const t2 = (s4.layoutEdit.layoutShapes[1] as SpShape).properties.transform!;
+    expect(t1.x).toBe(px(120));
+    expect(t1.y).toBe(px(110));
+    expect(t2.x).toBe(px(120));
+    expect(t2.y).toBe(px(110));
+  });
+
+  it("move exits text edit", () => {
+    const sp = makeSpWithTextBody("te-m", "Hello");
+    const s0 = withShapes(withLayout(createBaseState()), [sp]);
+    const s1 = reduce(s0, { type: "SELECT_LAYOUT_SHAPE", shapeId: "te-m" as ShapeId, addToSelection: false });
+    const s2 = reduce(s1, { type: "ENTER_LAYOUT_TEXT_EDIT", shapeId: "te-m" as ShapeId });
+    expect(s2.layoutEdit.textEdit.type).toBe("active");
+    const s3 = reduce(s2, { type: "START_LAYOUT_MOVE", startX: px(0), startY: px(0) });
+    expect(s3.layoutEdit.textEdit.type).toBe("inactive");
+  });
+});
+
+describe("Drag operations — resize", () => {
+  it("starts resize, previews, commits — updates width/height", () => {
+    const sp = makeRect("r1");
+    const s0 = withShapes(withLayout(createBaseState()), [sp]);
+    const s1 = reduce(s0, { type: "SELECT_LAYOUT_SHAPE", shapeId: "r1" as ShapeId, addToSelection: false });
+
+    const s2 = reduce(s1, {
+      type: "START_LAYOUT_RESIZE",
+      handle: "se" as const,
+      startX: px(300),
+      startY: px(250),
+      aspectLocked: false,
+    });
+    expect(s2.layoutEdit.layoutDrag.type).toBe("resize");
+
+    // Grow by 40x20
+    const s3 = reduce(s2, { type: "PREVIEW_LAYOUT_RESIZE", dx: px(40), dy: px(20) });
+    // Preview does not alter shapes
+    expect((s3.layoutEdit.layoutShapes[0] as SpShape).properties.transform!.width).toBe(px(200));
+
+    const s4 = reduce(s3, { type: "COMMIT_LAYOUT_DRAG" });
+    const t = (s4.layoutEdit.layoutShapes[0] as SpShape).properties.transform!;
+    expect(t.width as number).toBeCloseTo(240, 5);
+    expect(t.height as number).toBeCloseTo(170, 5);
+    expect(s4.layoutEdit.isDirty).toBe(true);
+  });
+
+  it("enforces minimum size of 10px", () => {
+    const sp = makeRect("rmin");
+    const s0 = withShapes(withLayout(createBaseState()), [sp]);
+    const s1 = reduce(s0, { type: "SELECT_LAYOUT_SHAPE", shapeId: "rmin" as ShapeId, addToSelection: false });
+    const s2 = reduce(s1, {
+      type: "START_LAYOUT_RESIZE",
+      handle: "se" as const,
+      startX: px(300),
+      startY: px(250),
+      aspectLocked: false,
+    });
+    // Shrink far below original size
+    const s3 = reduce(s2, { type: "PREVIEW_LAYOUT_RESIZE", dx: px(-999), dy: px(-999) });
+    const s4 = reduce(s3, { type: "COMMIT_LAYOUT_DRAG" });
+    const t = (s4.layoutEdit.layoutShapes[0] as SpShape).properties.transform!;
+    expect((t.width as number)).toBeGreaterThanOrEqual(10);
+    expect((t.height as number)).toBeGreaterThanOrEqual(10);
+  });
+
+  it("resize exits text edit", () => {
+    const sp = makeSpWithTextBody("te-r", "Hello");
+    const s0 = withShapes(withLayout(createBaseState()), [sp]);
+    const s1 = reduce(s0, { type: "SELECT_LAYOUT_SHAPE", shapeId: "te-r" as ShapeId, addToSelection: false });
+    const s2 = reduce(s1, { type: "ENTER_LAYOUT_TEXT_EDIT", shapeId: "te-r" as ShapeId });
+    expect(s2.layoutEdit.textEdit.type).toBe("active");
+    const s3 = reduce(s2, {
+      type: "START_LAYOUT_RESIZE",
+      handle: "se" as const,
+      startX: px(0),
+      startY: px(0),
+      aspectLocked: false,
+    });
+    expect(s3.layoutEdit.textEdit.type).toBe("inactive");
+  });
+});
+
+describe("Drag operations — rotate", () => {
+  it("starts rotate, previews, commits — updates rotation", () => {
+    const sp = makeRect("rot1");
+    const s0 = withShapes(withLayout(createBaseState()), [sp]);
+    const s1 = reduce(s0, { type: "SELECT_LAYOUT_SHAPE", shapeId: "rot1" as ShapeId, addToSelection: false });
+
+    const s2 = reduce(s1, { type: "START_LAYOUT_ROTATE", startX: px(300), startY: px(100) });
+    expect(s2.layoutEdit.layoutDrag.type).toBe("rotate");
+
+    // Simulate angle change
+    if (s2.layoutEdit.layoutDrag.type === "rotate") {
+      const startAngle = s2.layoutEdit.layoutDrag.startAngle;
+      const s3 = reduce(s2, { type: "PREVIEW_LAYOUT_ROTATE", currentAngle: deg((startAngle as number) + 45) });
+      expect(s3.layoutEdit.layoutDrag.type).toBe("rotate");
+      if (s3.layoutEdit.layoutDrag.type === "rotate") {
+        expect(s3.layoutEdit.layoutDrag.previewAngleDelta).toBe(deg(45));
+      }
+
+      const s4 = reduce(s3, { type: "COMMIT_LAYOUT_DRAG" });
+      const t = (s4.layoutEdit.layoutShapes[0] as SpShape).properties.transform!;
+      expect(t.rotation).toBe(deg(45));
+      expect(s4.layoutEdit.isDirty).toBe(true);
+    }
+  });
+
+  it("rotate with zero delta does not dirty state", () => {
+    const sp = makeRect("rot2");
+    const s0 = withShapes(withLayout(createBaseState()), [sp]);
+    const s1 = reduce(s0, { type: "SELECT_LAYOUT_SHAPE", shapeId: "rot2" as ShapeId, addToSelection: false });
+    const s2 = reduce(s1, { type: "START_LAYOUT_ROTATE", startX: px(300), startY: px(100) });
+    if (s2.layoutEdit.layoutDrag.type === "rotate") {
+      const s3 = reduce(s2, { type: "PREVIEW_LAYOUT_ROTATE", currentAngle: s2.layoutEdit.layoutDrag.startAngle });
+      const s4 = reduce(s3, { type: "COMMIT_LAYOUT_DRAG" });
+      expect(s4.layoutEdit.isDirty).toBe(false);
+    }
+  });
+
+  it("rotate exits text edit", () => {
+    const sp = makeSpWithTextBody("te-rot", "Hello");
+    const s0 = withShapes(withLayout(createBaseState()), [sp]);
+    const s1 = reduce(s0, { type: "SELECT_LAYOUT_SHAPE", shapeId: "te-rot" as ShapeId, addToSelection: false });
+    const s2 = reduce(s1, { type: "ENTER_LAYOUT_TEXT_EDIT", shapeId: "te-rot" as ShapeId });
+    expect(s2.layoutEdit.textEdit.type).toBe("active");
+    const s3 = reduce(s2, { type: "START_LAYOUT_ROTATE", startX: px(0), startY: px(0) });
+    expect(s3.layoutEdit.textEdit.type).toBe("inactive");
+  });
+});
+
+// ===========================================================================
+// Rendering SoT contract: every mutation to layoutShapes must be the source
+// that SlideRenderer uses (via renderedSlide = { shapes: layoutEdit.layoutShapes })
+// ===========================================================================
+
+describe("Rendering SoT — all mutations reflect in layoutShapes", () => {
+  it("ADD_LAYOUT_SHAPE: new shape appears in rendering source", () => {
+    const s0 = withShapes(withLayout(createBaseState()), []);
+    const rect = makeRect("add-sot");
+    const s1 = reduce(s0, { type: "ADD_LAYOUT_SHAPE", shape: rect });
+    expect(s1.layoutEdit.layoutShapes).toContain(rect);
+  });
+
+  it("DELETE_LAYOUT_SHAPES: shape removed from rendering source", () => {
+    const sp = makeRect("del-sot");
+    const s0 = withShapes(withLayout(createBaseState()), [sp]);
+    const s1 = reduce(s0, { type: "DELETE_LAYOUT_SHAPES", shapeIds: ["del-sot" as ShapeId] });
+    expect(s1.layoutEdit.layoutShapes).toHaveLength(0);
+  });
+
+  it("COMMIT_LAYOUT_TEXT_EDIT: textBody updated in rendering source", () => {
+    const sp = makeSpWithTextBody("txt-sot", "Before");
+    const s0 = withShapes(withLayout(createBaseState()), [sp]);
+    const s1 = reduce(s0, { type: "ENTER_LAYOUT_TEXT_EDIT", shapeId: "txt-sot" as ShapeId });
+    const newBody = { bodyProperties: {}, paragraphs: [{ properties: {}, runs: [{ type: "text" as const, text: "After" }] }] };
+    const s2 = reduce(s1, { type: "COMMIT_LAYOUT_TEXT_EDIT", shapeId: "txt-sot" as ShapeId, textBody: newBody });
+    const rendered = s2.layoutEdit.layoutShapes[0] as SpShape;
+    expect(rendered.textBody!.paragraphs[0].runs[0]).toEqual({ type: "text", text: "After" });
+  });
+
+  it("UPDATE_LAYOUT_SHAPE_PLACEHOLDER: placeholder updated in rendering source", () => {
+    const sp = makeRect("ph-sot");
+    const s0 = withShapes(withLayout(createBaseState()), [sp]);
+    const s1 = reduce(s0, { type: "UPDATE_LAYOUT_SHAPE_PLACEHOLDER", shapeId: "ph-sot" as ShapeId, placeholder: { type: "title" } });
+    expect((s1.layoutEdit.layoutShapes[0] as SpShape).placeholder?.type).toBe("title");
+  });
+
+  it("UPDATE_LAYOUT_SHAPE: generic updater reflected in rendering source", () => {
+    const sp = makeRect("upd-sot");
+    const s0 = withShapes(withLayout(createBaseState()), [sp]);
+    const s1 = reduce(s0, {
+      type: "UPDATE_LAYOUT_SHAPE",
+      shapeId: "upd-sot" as ShapeId,
+      updater: (shape) => ({ ...shape, textBody: { bodyProperties: {}, paragraphs: [{ properties: {}, runs: [{ type: "text" as const, text: "Generic" }] }] } } as Shape),
+    });
+    const rendered = s1.layoutEdit.layoutShapes[0] as SpShape;
+    expect(rendered.textBody!.paragraphs[0].runs[0]).toEqual({ type: "text", text: "Generic" });
+  });
+
+  it("COMMIT_LAYOUT_DRAG (move): position updated in rendering source", () => {
+    const sp = makeRect("mv-sot");
+    const s0 = withShapes(withLayout(createBaseState()), [sp]);
+    const s1 = reduce(s0, { type: "SELECT_LAYOUT_SHAPE", shapeId: "mv-sot" as ShapeId, addToSelection: false });
+    const s2 = reduce(s1, { type: "START_LAYOUT_MOVE", startX: px(100), startY: px(100) });
+    const s3 = reduce(s2, { type: "PREVIEW_LAYOUT_MOVE", dx: px(25), dy: px(15) });
+    const s4 = reduce(s3, { type: "COMMIT_LAYOUT_DRAG" });
+    const t = (s4.layoutEdit.layoutShapes[0] as SpShape).properties.transform!;
+    expect(t.x).toBe(px(125));
+    expect(t.y).toBe(px(115));
+  });
+
+  it("COMMIT_LAYOUT_DRAG (resize): size updated in rendering source", () => {
+    const sp = makeRect("rs-sot");
+    const s0 = withShapes(withLayout(createBaseState()), [sp]);
+    const s1 = reduce(s0, { type: "SELECT_LAYOUT_SHAPE", shapeId: "rs-sot" as ShapeId, addToSelection: false });
+    const s2 = reduce(s1, { type: "START_LAYOUT_RESIZE", handle: "se", startX: px(300), startY: px(250), aspectLocked: false });
+    const s3 = reduce(s2, { type: "PREVIEW_LAYOUT_RESIZE", dx: px(30), dy: px(20) });
+    const s4 = reduce(s3, { type: "COMMIT_LAYOUT_DRAG" });
+    const t = (s4.layoutEdit.layoutShapes[0] as SpShape).properties.transform!;
+    expect(t.width as number).toBeCloseTo(230, 5);
+    expect(t.height as number).toBeCloseTo(170, 5);
+  });
+
+  it("COMMIT_LAYOUT_DRAG (rotate): rotation updated in rendering source", () => {
+    const sp = makeRect("rt-sot");
+    const s0 = withShapes(withLayout(createBaseState()), [sp]);
+    const s1 = reduce(s0, { type: "SELECT_LAYOUT_SHAPE", shapeId: "rt-sot" as ShapeId, addToSelection: false });
+    const s2 = reduce(s1, { type: "START_LAYOUT_ROTATE", startX: px(300), startY: px(100) });
+    if (s2.layoutEdit.layoutDrag.type === "rotate") {
+      const s3 = reduce(s2, { type: "PREVIEW_LAYOUT_ROTATE", currentAngle: deg((s2.layoutEdit.layoutDrag.startAngle as number) + 90) });
+      const s4 = reduce(s3, { type: "COMMIT_LAYOUT_DRAG" });
+      const t = (s4.layoutEdit.layoutShapes[0] as SpShape).properties.transform!;
+      expect(t.rotation).toBe(deg(90));
+    }
+  });
+
+  it("UNDO after commit: rendering source reverts to previous state", () => {
+    const sp = makeSpWithTextBody("undo-sot", "Original");
+    const s0 = withShapes(withLayout(createBaseState()), [sp]);
+    const s1 = reduce(s0, { type: "ENTER_LAYOUT_TEXT_EDIT", shapeId: "undo-sot" as ShapeId });
+    const s2 = reduce(s1, {
+      type: "COMMIT_LAYOUT_TEXT_EDIT",
+      shapeId: "undo-sot" as ShapeId,
+      textBody: { bodyProperties: {}, paragraphs: [{ properties: {}, runs: [{ type: "text" as const, text: "Changed" }] }] },
+    });
+    expect((s2.layoutEdit.layoutShapes[0] as SpShape).textBody!.paragraphs[0].runs[0]).toEqual({ type: "text", text: "Changed" });
+
+    const s3 = reduce(s2, { type: "UNDO" });
+    expect((s3.layoutEdit.layoutShapes[0] as SpShape).textBody!.paragraphs[0].runs[0]).toEqual({ type: "text", text: "Original" });
+  });
+
+  it("REDO after undo: rendering source restores the change", () => {
+    const sp = makeSpWithTextBody("redo-sot", "Original");
+    const s0 = withShapes(withLayout(createBaseState()), [sp]);
+    const s1 = reduce(s0, { type: "ENTER_LAYOUT_TEXT_EDIT", shapeId: "redo-sot" as ShapeId });
+    const s2 = reduce(s1, {
+      type: "COMMIT_LAYOUT_TEXT_EDIT",
+      shapeId: "redo-sot" as ShapeId,
+      textBody: { bodyProperties: {}, paragraphs: [{ properties: {}, runs: [{ type: "text" as const, text: "Changed" }] }] },
+    });
+    const s3 = reduce(s2, { type: "UNDO" });
+    const s4 = reduce(s3, { type: "REDO" });
+    expect((s4.layoutEdit.layoutShapes[0] as SpShape).textBody!.paragraphs[0].runs[0]).toEqual({ type: "text", text: "Changed" });
+  });
+});
+
+// ===========================================================================
+// Text edit interaction with other operations
+// ===========================================================================
+
+describe("Text edit exits on state-changing operations", () => {
+  function setupTextEditing() {
+    const sp1 = makeSpWithTextBody("te1", "Hello");
+    const sp2 = makeRect("te2");
+    const s0 = withShapes(withLayout(createBaseState()), [sp1, sp2]);
+    const s1 = reduce(s0, { type: "SELECT_LAYOUT_SHAPE", shapeId: "te1" as ShapeId, addToSelection: false });
+    return reduce(s1, { type: "ENTER_LAYOUT_TEXT_EDIT", shapeId: "te1" as ShapeId });
+  }
+
+  it("exits on SELECT_LAYOUT_SHAPE (different shape)", () => {
+    const editing = setupTextEditing();
+    const next = reduce(editing, { type: "SELECT_LAYOUT_SHAPE", shapeId: "te2" as ShapeId, addToSelection: false });
+    expect(next.layoutEdit.textEdit.type).toBe("inactive");
+  });
+
+  it("does NOT exit on SELECT_LAYOUT_SHAPE (same shape)", () => {
+    const editing = setupTextEditing();
+    const next = reduce(editing, { type: "SELECT_LAYOUT_SHAPE", shapeId: "te1" as ShapeId, addToSelection: false });
+    expect(next.layoutEdit.textEdit.type).toBe("active");
+  });
+
+  it("exits on SELECT_MULTIPLE_LAYOUT_SHAPES", () => {
+    const editing = setupTextEditing();
+    const next = reduce(editing, { type: "SELECT_MULTIPLE_LAYOUT_SHAPES", shapeIds: ["te1" as ShapeId, "te2" as ShapeId] });
+    expect(next.layoutEdit.textEdit.type).toBe("inactive");
+  });
+
+  it("exits on MARQUEE_SELECT_LAYOUT_SHAPES", () => {
+    const editing = setupTextEditing();
+    const next = reduce(editing, { type: "MARQUEE_SELECT_LAYOUT_SHAPES", shapeIds: ["te2" as ShapeId], additive: false });
+    expect(next.layoutEdit.textEdit.type).toBe("inactive");
+  });
+
+  it("exits on CLEAR_LAYOUT_SHAPE_SELECTION", () => {
+    const editing = setupTextEditing();
+    const next = reduce(editing, { type: "CLEAR_LAYOUT_SHAPE_SELECTION" });
+    expect(next.layoutEdit.textEdit.type).toBe("inactive");
+  });
+
+  it("exits on SET_CREATION_MODE (non-select)", () => {
+    const editing = setupTextEditing();
+    const next = reduce(editing, { type: "SET_CREATION_MODE", mode: { type: "shape", preset: "rect" } });
+    expect(next.layoutEdit.textEdit.type).toBe("inactive");
+  });
+
+  it("does NOT exit on SET_CREATION_MODE (select)", () => {
+    const editing = setupTextEditing();
+    const next = reduce(editing, { type: "SET_CREATION_MODE", mode: { type: "select" } });
+    expect(next.layoutEdit.textEdit.type).toBe("active");
+  });
+
+  it("exits on DELETE_LAYOUT_SHAPES", () => {
+    const editing = setupTextEditing();
+    const next = reduce(editing, { type: "DELETE_LAYOUT_SHAPES", shapeIds: ["te1" as ShapeId] });
+    expect(next.layoutEdit.textEdit.type).toBe("inactive");
+  });
+
+  it("exits on UNDO", () => {
+    const editing = setupTextEditing();
+    const next = reduce(editing, { type: "UNDO" });
+    expect(next.layoutEdit.textEdit.type).toBe("inactive");
+  });
+
+  it("exits on REDO", () => {
+    const editing = setupTextEditing();
+    const next = reduce(editing, { type: "REDO" });
+    expect(next.layoutEdit.textEdit.type).toBe("inactive");
+  });
+
+  it("exits on SELECT_LAYOUT (switch layout)", () => {
+    const editing = setupTextEditing();
+    const next = reduce(editing, { type: "SELECT_LAYOUT", layoutPath: "other.xml" });
+    expect(next.layoutEdit.textEdit.type).toBe("inactive");
+  });
+});
+
+// ===========================================================================
+// History integrity across all mutation types
+// ===========================================================================
+
+describe("History integrity — undo/redo for all mutation types", () => {
+  it("undo move restores original position", () => {
+    const sp = makeRect("hm");
+    const s0 = withShapes(withLayout(createBaseState()), [sp]);
+    const s1 = reduce(s0, { type: "SELECT_LAYOUT_SHAPE", shapeId: "hm" as ShapeId, addToSelection: false });
+    const s2 = reduce(s1, { type: "START_LAYOUT_MOVE", startX: px(100), startY: px(100) });
+    const s3 = reduce(s2, { type: "PREVIEW_LAYOUT_MOVE", dx: px(50), dy: px(50) });
+    const s4 = reduce(s3, { type: "COMMIT_LAYOUT_DRAG" });
+    expect((s4.layoutEdit.layoutShapes[0] as SpShape).properties.transform!.x).toBe(px(150));
+
+    const s5 = reduce(s4, { type: "UNDO" });
+    expect((s5.layoutEdit.layoutShapes[0] as SpShape).properties.transform!.x).toBe(px(100));
+  });
+
+  it("undo resize restores original dimensions", () => {
+    const sp = makeRect("hr");
+    const s0 = withShapes(withLayout(createBaseState()), [sp]);
+    const s1 = reduce(s0, { type: "SELECT_LAYOUT_SHAPE", shapeId: "hr" as ShapeId, addToSelection: false });
+    const s2 = reduce(s1, { type: "START_LAYOUT_RESIZE", handle: "se", startX: px(300), startY: px(250), aspectLocked: false });
+    const s3 = reduce(s2, { type: "PREVIEW_LAYOUT_RESIZE", dx: px(50), dy: px(50) });
+    const s4 = reduce(s3, { type: "COMMIT_LAYOUT_DRAG" });
+    expect((s4.layoutEdit.layoutShapes[0] as SpShape).properties.transform!.width as number).toBeCloseTo(250, 5);
+
+    const s5 = reduce(s4, { type: "UNDO" });
+    expect((s5.layoutEdit.layoutShapes[0] as SpShape).properties.transform!.width as number).toBeCloseTo(200, 5);
+  });
+
+  it("undo rotate restores original rotation", () => {
+    const sp = makeRect("hrot");
+    const s0 = withShapes(withLayout(createBaseState()), [sp]);
+    const s1 = reduce(s0, { type: "SELECT_LAYOUT_SHAPE", shapeId: "hrot" as ShapeId, addToSelection: false });
+    const s2 = reduce(s1, { type: "START_LAYOUT_ROTATE", startX: px(300), startY: px(100) });
+    if (s2.layoutEdit.layoutDrag.type === "rotate") {
+      const s3 = reduce(s2, { type: "PREVIEW_LAYOUT_ROTATE", currentAngle: deg((s2.layoutEdit.layoutDrag.startAngle as number) + 45) });
+      const s4 = reduce(s3, { type: "COMMIT_LAYOUT_DRAG" });
+      expect((s4.layoutEdit.layoutShapes[0] as SpShape).properties.transform!.rotation).toBe(deg(45));
+      const s5 = reduce(s4, { type: "UNDO" });
+      expect((s5.layoutEdit.layoutShapes[0] as SpShape).properties.transform!.rotation).toBe(deg(0));
+    }
+  });
+
+  it("undo placeholder change restores previous placeholder", () => {
+    const sp = makeRect("hph");
+    const s0 = withShapes(withLayout(createBaseState()), [sp]);
+    const s1 = reduce(s0, { type: "UPDATE_LAYOUT_SHAPE_PLACEHOLDER", shapeId: "hph" as ShapeId, placeholder: { type: "title" } });
+    expect((s1.layoutEdit.layoutShapes[0] as SpShape).placeholder?.type).toBe("title");
+    const s2 = reduce(s1, { type: "UNDO" });
+    expect((s2.layoutEdit.layoutShapes[0] as SpShape).placeholder).toBeUndefined();
+  });
+
+  it("undo delete restores shapes", () => {
+    const sp = makeRect("hdel");
+    const s0 = withShapes(withLayout(createBaseState()), [sp]);
+    const s1 = reduce(s0, { type: "DELETE_LAYOUT_SHAPES", shapeIds: ["hdel" as ShapeId] });
+    expect(s1.layoutEdit.layoutShapes).toHaveLength(0);
+    const s2 = reduce(s1, { type: "UNDO" });
+    expect(s2.layoutEdit.layoutShapes).toHaveLength(1);
+  });
+
+  it("undo add removes shape", () => {
+    const s0 = withShapes(withLayout(createBaseState()), []);
+    const rect = makeRect("hadd");
+    const s1 = reduce(s0, { type: "ADD_LAYOUT_SHAPE", shape: rect });
+    expect(s1.layoutEdit.layoutShapes).toHaveLength(1);
+    const s2 = reduce(s1, { type: "UNDO" });
+    expect(s2.layoutEdit.layoutShapes).toHaveLength(0);
+  });
+
+  it("redo after undo restores the mutation", () => {
+    const sp = makeSpWithTextBody("hredo", "Before");
+    const s0 = withShapes(withLayout(createBaseState()), [sp]);
+    const s1 = reduce(s0, { type: "ENTER_LAYOUT_TEXT_EDIT", shapeId: "hredo" as ShapeId });
+    const s2 = reduce(s1, {
+      type: "COMMIT_LAYOUT_TEXT_EDIT",
+      shapeId: "hredo" as ShapeId,
+      textBody: { bodyProperties: {}, paragraphs: [{ properties: {}, runs: [{ type: "text" as const, text: "After" }] }] },
+    });
+    const s3 = reduce(s2, { type: "UNDO" });
+    expect((s3.layoutEdit.layoutShapes[0] as SpShape).textBody!.paragraphs[0].runs[0]).toEqual({ type: "text", text: "Before" });
+    const s4 = reduce(s3, { type: "REDO" });
+    expect((s4.layoutEdit.layoutShapes[0] as SpShape).textBody!.paragraphs[0].runs[0]).toEqual({ type: "text", text: "After" });
+  });
+
+  it("multiple undo/redo across different operation types", () => {
+    // Create → text edit → placeholder → move → undo all → redo all
+    const sp = makeSpWithTextBody("multi", "Text1");
+    const s0 = withShapes(withLayout(createBaseState()), [sp]);
+
+    // Op 1: text edit
+    const s1 = reduce(s0, { type: "ENTER_LAYOUT_TEXT_EDIT", shapeId: "multi" as ShapeId });
+    const s2 = reduce(s1, {
+      type: "COMMIT_LAYOUT_TEXT_EDIT",
+      shapeId: "multi" as ShapeId,
+      textBody: { bodyProperties: {}, paragraphs: [{ properties: {}, runs: [{ type: "text" as const, text: "Text2" }] }] },
+    });
+
+    // Op 2: placeholder
+    const s3 = reduce(s2, { type: "UPDATE_LAYOUT_SHAPE_PLACEHOLDER", shapeId: "multi" as ShapeId, placeholder: { type: "title" } });
+
+    // Op 3: move
+    const s4 = reduce(reduce(s3, { type: "SELECT_LAYOUT_SHAPE", shapeId: "multi" as ShapeId, addToSelection: false }), { type: "START_LAYOUT_MOVE", startX: px(100), startY: px(100) });
+    const s5 = reduce(s4, { type: "PREVIEW_LAYOUT_MOVE", dx: px(10), dy: px(10) });
+    const s6 = reduce(s5, { type: "COMMIT_LAYOUT_DRAG" });
+
+    // Verify final state
+    const final = s6.layoutEdit.layoutShapes[0] as SpShape;
+    expect(final.textBody!.paragraphs[0].runs[0]).toEqual({ type: "text", text: "Text2" });
+    expect(final.placeholder?.type).toBe("title");
+    expect(final.properties.transform!.x).toBe(px(110));
+
+    // Undo 3 times
+    const u1 = reduce(s6, { type: "UNDO" }); // undo move
+    expect((u1.layoutEdit.layoutShapes[0] as SpShape).properties.transform!.x).toBe(px(100));
+    const u2 = reduce(u1, { type: "UNDO" }); // undo placeholder
+    expect((u2.layoutEdit.layoutShapes[0] as SpShape).placeholder).toBeUndefined();
+    const u3 = reduce(u2, { type: "UNDO" }); // undo text edit
+    expect((u3.layoutEdit.layoutShapes[0] as SpShape).textBody!.paragraphs[0].runs[0]).toEqual({ type: "text", text: "Text1" });
+
+    // Redo 3 times
+    const r1 = reduce(u3, { type: "REDO" });
+    expect((r1.layoutEdit.layoutShapes[0] as SpShape).textBody!.paragraphs[0].runs[0]).toEqual({ type: "text", text: "Text2" });
+    const r2 = reduce(r1, { type: "REDO" });
+    expect((r2.layoutEdit.layoutShapes[0] as SpShape).placeholder?.type).toBe("title");
+    const r3 = reduce(r2, { type: "REDO" });
+    expect((r3.layoutEdit.layoutShapes[0] as SpShape).properties.transform!.x).toBe(px(110));
   });
 });

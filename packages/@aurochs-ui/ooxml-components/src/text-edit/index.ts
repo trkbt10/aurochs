@@ -49,6 +49,13 @@ export type {
   SelectionChangeEvent,
 } from "./coordinator/types";
 
+// Text edit handlers hook (SoT for commit/cancel logic)
+export {
+  useTextEditHandlers,
+  type UseTextEditHandlersOptions,
+  type TextEditHandlers,
+} from "./use-text-edit-handlers";
+
 // Text geometry utilities (shared between cursor and rendering)
 export {
   type TextVisualBounds,

@@ -18,6 +18,7 @@ import { XlsxViewerPage } from "./pages/XlsxViewerPage";
 import { PdfViewerPage } from "./pages/PdfViewerPage";
 import { PdfEditorPage } from "./pages/PdfEditorPage";
 import { PotxEditorPage } from "./pages/PotxEditorPage";
+import { TextEditTestPage } from "@aurochs-ui/potx-editor/dev/TextEditTestPage";
 import { PresentationSuitePage } from "./pages/PresentationSuitePage";
 import { createDefaultGraphicsState, type PdfDocument as PdfDoc } from "@aurochs/pdf";
 import { convertToPresentationDocument, type PresentationDocument } from "@aurochs-office/pptx/app";
@@ -452,6 +453,7 @@ export function App() {
       <Route path="/pdf/viewer" element={<PdfViewerRoute />} />
       <Route path="/pdf/editor" element={<PdfEditorRoute />} />
       <Route path="/potx/editor" element={<PotxEditorRoute />} />
+      <Route path="/potx/editor/dev/text-edit" element={<TextEditTestPage onBack={handleBack} />} />
       <Route path="/pptx/suite" element={<PresentationSuiteRoute />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

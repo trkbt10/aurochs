@@ -29,7 +29,7 @@
  * @see ECMA-376 Part 1, Section 20.1.4.1.18 - CT_FontScheme
  */
 
-import type { FontSpec } from "@aurochs-office/ooxml/domain/font-scheme";
+import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
 import type { SchemeColorName } from "@aurochs-office/drawing-ml/domain/color";
 
 // =============================================================================
@@ -37,36 +37,29 @@ import type { SchemeColorName } from "@aurochs-office/drawing-ml/domain/color";
 // =============================================================================
 
 /**
- * Color scheme for UI display - maps 12 scheme colors to hex values.
+ * Color scheme for UI display — key-constrained specialization of domain ColorScheme.
  *
- * This represents the resolved colors from a:clrScheme for display in the editor.
- * Values are 6-digit hex strings without '#' prefix (e.g., "4472C4").
+ * SoT: domain ColorScheme is `Record<string, string>` (from drawing-ml/domain/color-context).
+ * This type narrows the key to `SchemeColorName` (the 12 standard ECMA-376 slots)
+ * for type safety in theme editor UI and exporter.
  *
  * @see ECMA-376 Part 1, Section 20.1.6.2 (CT_ColorScheme / a:clrScheme)
  */
 export type ThemeColorScheme = Readonly<Record<SchemeColorName, string>>;
 
 // =============================================================================
-// Font Scheme Types
+// Font Scheme — re-export from domain SoT
 // =============================================================================
 
 /**
- * Font scheme for UI display - major and minor font definitions.
+ * Font scheme for theme editing.
  *
- * Maps to a:fontScheme with a:majorFont and a:minorFont children.
- * Each font can specify typefaces for 3 script types:
- * - latin: Western scripts (a:latin)
- * - eastAsian: CJK scripts (a:ea)
- * - complexScript: RTL and complex scripts (a:cs)
+ * SoT: @aurochs-office/ooxml/domain/font-scheme — FontScheme
+ * Re-exported here as ThemeFontScheme for API consistency with ThemeColorScheme.
  *
  * @see ECMA-376 Part 1, Section 20.1.4.1.18 (CT_FontScheme / a:fontScheme)
  */
-export type ThemeFontScheme = {
-  /** Heading font (a:majorFont) */
-  readonly majorFont: FontSpec;
-  /** Body font (a:minorFont) */
-  readonly minorFont: FontSpec;
-};
+export type ThemeFontScheme = FontScheme;
 
 // =============================================================================
 // Theme Preset Types

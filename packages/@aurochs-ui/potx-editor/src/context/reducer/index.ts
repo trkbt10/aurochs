@@ -23,22 +23,8 @@ import { collectBoundsForIds, getCombinedCenter } from "@aurochs-ui/editor-contr
 import type { ColorScheme } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
 import { createSelectMode } from "@aurochs-ui/ooxml-components";
-import type { CreationMode } from "@aurochs-ui/ooxml-components";
 import { pptxTransformResolver, withUpdatedTransform } from "@aurochs-ui/ooxml-components/pptx-transform";
-
-// =============================================================================
-// Creation Mode State Transition
-// =============================================================================
-
-function clearSelectionForCreationTool(
-  state: ThemeEditorState,
-  mode: CreationMode,
-): Partial<ThemeEditorState> {
-  if (mode.type === "select") {
-    return {};
-  }
-  return { layoutEdit: { ...state.layoutEdit, layoutSelection: createEmptySelection<ShapeId>() } };
-}
+import { createInactiveTextEditState, createActiveTextEditState } from "@aurochs-ui/ooxml-components/text-edit";
 
 // =============================================================================
 // Initial State
@@ -53,7 +39,7 @@ export function createInitialLayoutEditState(): LayoutEditState {
     layoutSelection: createEmptySelection<ShapeId>(),
     selectionSource: "click" as const,
     layoutDrag: { type: "idle" },
-    textEdit: { type: "inactive" },
+    textEdit: createInactiveTextEditState(),
     isDirty: false,
     layouts: [],
     shapesHistory: createHistory<readonly Shape[]>([]),
@@ -115,7 +101,7 @@ function exitTextEditIfActive(state: ThemeEditorState): Partial<LayoutEditState>
   if (state.layoutEdit.textEdit.type === "inactive") {
     return {};
   }
-  return { textEdit: { type: "inactive" } };
+  return { textEdit: createInactiveTextEditState() };
 }
 
 function resetLayoutEditForDeletion(): Partial<LayoutEditState> {
@@ -319,7 +305,7 @@ export function themeEditorReducer(state: ThemeEditorState, action: ThemeEditorA
         layoutSelection: createEmptySelection<ShapeId>(),
         selectionSource: "click",
         layoutDrag: { type: "idle" },
-        textEdit: { type: "inactive" },
+        textEdit: createInactiveTextEditState(),
         isDirty: false,
         shapesHistory: createHistory<readonly Shape[]>([]),
       });
@@ -345,17 +331,16 @@ export function themeEditorReducer(state: ThemeEditorState, action: ThemeEditorA
         paragraphs: [{ properties: {}, runs: [{ type: "text" as const, text: "" }] }],
       };
       return updateLayoutEdit(state, {
-        textEdit: {
-          type: "active",
-          shapeId: action.shapeId,
-          bounds: { x: t.x, y: t.y, width: t.width, height: t.height, rotation: t.rotation as number },
-          initialTextBody: textBody,
-        },
+        textEdit: createActiveTextEditState(
+          action.shapeId,
+          { x: t.x, y: t.y, width: t.width, height: t.height, rotation: t.rotation as number },
+          textBody,
+        ),
       });
     }
 
     case "EXIT_LAYOUT_TEXT_EDIT":
-      return updateLayoutEdit(state, { textEdit: { type: "inactive" } });
+      return updateLayoutEdit(state, { textEdit: createInactiveTextEditState() });
 
     case "COMMIT_LAYOUT_TEXT_EDIT": {
       const newShapes = updateShapeById(state.layoutEdit.layoutShapes as Shape[], action.shapeId, (shape) => {
@@ -365,7 +350,7 @@ export function themeEditorReducer(state: ThemeEditorState, action: ThemeEditorA
       return updateLayoutEdit(state, {
         layoutShapes: newShapes,
         shapesHistory: pushHistory(state.layoutEdit.shapesHistory, newShapes as readonly Shape[]),
-        textEdit: { type: "inactive" },
+        textEdit: createInactiveTextEditState(),
         isDirty: true,
       });
     }
@@ -386,11 +371,11 @@ export function themeEditorReducer(state: ThemeEditorState, action: ThemeEditorA
     // ---- Creation mode ----
     case "SET_CREATION_MODE": {
       const textEditClear = action.mode.type !== "select" ? exitTextEditIfActive(state) : {};
+      const selectionClear = action.mode.type !== "select" ? { layoutSelection: createEmptySelection<ShapeId>() } : {};
       return {
-        ...updateLayoutEdit(state, textEditClear),
+        ...state,
         creationMode: action.mode,
-        // Clear selection when switching to a creation tool
-        ...clearSelectionForCreationTool(state, action.mode),
+        layoutEdit: { ...state.layoutEdit, ...textEditClear, ...selectionClear },
       };
     }
 
@@ -399,7 +384,7 @@ export function themeEditorReducer(state: ThemeEditorState, action: ThemeEditorA
       const { layoutSelection, textEdit } = state.layoutEdit;
       const isAlreadySelected = layoutSelection.selectedIds.includes(action.shapeId);
       const shouldExitTextEdit = textEdit.type === "active" && textEdit.shapeId !== action.shapeId;
-      const textEditUpdate = shouldExitTextEdit ? { textEdit: { type: "inactive" as const } } : {};
+      const textEditUpdate = shouldExitTextEdit ? { textEdit: createInactiveTextEditState() } : {};
 
       if (action.addToSelection) {
         if (action.toggle && isAlreadySelected) {

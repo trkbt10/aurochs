@@ -41,8 +41,7 @@ import type { ShapeBounds } from "@aurochs-ui/ooxml-components";
 import { drawingPathToCustomGeometry } from "../path-tools/adapters";
 import {
   isTextEditActive,
-  mergeTextIntoBody,
-  extractDefaultRunProperties,
+  useTextEditHandlers,
   createActiveStickyFormatting,
   createInitialStickyFormatting,
   type StickyFormattingState,
@@ -50,7 +49,6 @@ import {
   type TextCursorState,
   type SelectionChangeEvent,
 } from "@aurochs-ui/ooxml-components/text-edit";
-import { getPlainText } from "@aurochs-ui/editor-core/text-edit";
 import { ShapeToolbar } from "../panels/ShapeToolbar";
 import { buildSlideLayoutOptions } from "@aurochs-office/pptx/app";
 import { createRenderContext, getLayoutNonPlaceholderShapes } from "@aurochs-renderer/pptx";
@@ -321,25 +319,16 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
     [dispatch, activeSlide],
   );
 
-  const handleTextEditComplete = useCallback(
-    (newText: string) => {
-      if (isTextEditActive(textEdit)) {
-        if (getPlainText(textEdit.initialTextBody) === newText) {
-          dispatch({ type: "EXIT_TEXT_EDIT" });
-          return;
-        }
-        const defaultRunProperties = extractDefaultRunProperties(textEdit.initialTextBody);
-        const newTextBody = mergeTextIntoBody(textEdit.initialTextBody, newText, defaultRunProperties);
-        dispatch({ type: "UPDATE_TEXT_BODY", shapeId: textEdit.shapeId, textBody: newTextBody });
-      }
+  // Text edit commit/cancel — shared SoT hook (same as potx-editor)
+  const { handleTextEditComplete, handleTextEditCancel, editingShapeId: textEditShapeId } = useTextEditHandlers({
+    textEditState: textEdit,
+    onCommit: useCallback((shapeId: ShapeId, textBody: TextBody) => {
+      dispatch({ type: "UPDATE_TEXT_BODY", shapeId, textBody });
+    }, [dispatch]),
+    onExit: useCallback(() => {
       dispatch({ type: "EXIT_TEXT_EDIT" });
-    },
-    [dispatch, textEdit],
-  );
-
-  const handleTextEditCancel = useCallback(() => {
-    dispatch({ type: "EXIT_TEXT_EDIT" });
-  }, [dispatch]);
+    }, [dispatch]),
+  });
 
   // ==========================================================================
   // Path tool handlers
@@ -729,7 +718,7 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
     return index === -1 ? 1 : index + 1;
   }, [activeSlide, document.slides]);
 
-  const editingShapeId = isTextEditActive(textEdit) ? textEdit.shapeId : undefined;
+  const editingShapeId = textEditShapeId;
   const rulerThickness = showRulers ? RULER_THICKNESS : 0;
   const colorContext = renderContext?.colorContext ?? document.colorContext;
   const fontScheme = renderContext?.fontScheme ?? document.fontScheme;

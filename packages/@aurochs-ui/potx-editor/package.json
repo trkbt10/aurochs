@@ -31,6 +31,10 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./dev/TextEditTestPage": {
+      "types": "./src/dev/TextEditTestPage.tsx",
+      "default": "./src/dev/TextEditTestPage.tsx"
     }
   }
 }
