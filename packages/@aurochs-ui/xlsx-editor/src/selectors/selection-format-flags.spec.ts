@@ -1,5 +1,5 @@
 /**
- * @file Tests for selection format "mixed" flags
+ * @file Tests for selection format flags
  */
 
 import type { CellAddress, CellRange } from "@aurochs-office/xlsx/domain/cell/address";
@@ -123,7 +123,7 @@ function createSheet(
 }
 
 describe("resolveSelectionFormatFlags", () => {
-  it("returns non-mixed flags when all cells share the same effective format", () => {
+  it("returns uniform flags when all cells share the same effective format", () => {
     const styles = createDemoStyles();
     const sheet = createSheet([
       { col: 1, row: 1, styleId: 0 },
@@ -137,15 +137,16 @@ describe("resolveSelectionFormatFlags", () => {
     });
     expect(flags.tooLarge).toBe(false);
 
-    expect(flags.bold).toEqual({ mixed: false, value: false });
-    expect(flags.italic).toEqual({ mixed: false, value: false });
-    expect(flags.underline).toEqual({ mixed: false, value: false });
-    expect(flags.strikethrough).toEqual({ mixed: false, value: false });
-    expect(flags.wrapText).toEqual({ mixed: false, value: false });
-    expect(flags.horizontal).toEqual({ mixed: false, value: "general" });
+    expect(flags.bold).toBe(false);
+    expect(flags.italic).toBe(false);
+    expect(flags.underline).toBe(false);
+    expect(flags.strikethrough).toBe(false);
+    expect(flags.wrapText).toBe(false);
+    expect(flags.horizontal).toBe("general");
+    expect(flags.vertical).toBe("bottom");
   });
 
-  it("marks bold as mixed when selection contains both bold and non-bold cells", () => {
+  it("returns array for bold when selection contains both bold and non-bold cells", () => {
     const styles = createDemoStyles();
     const sheet = createSheet([
       { col: 1, row: 1, styleId: 0 },
@@ -157,12 +158,12 @@ describe("resolveSelectionFormatFlags", () => {
       styles,
       range: createRange({ startCol: 1, startRow: 1, endCol: 2, endRow: 1 }),
     });
-    expect(flags.bold).toEqual({ mixed: true });
-    expect(flags.italic).toEqual({ mixed: false, value: false });
-    expect(flags.wrapText).toEqual({ mixed: false, value: false });
+    expect(Array.isArray(flags.bold)).toBe(true);
+    expect(flags.italic).toBe(false);
+    expect(flags.wrapText).toBe(false);
   });
 
-  it("marks wrapText as mixed when selection contains both wrap and non-wrap cells", () => {
+  it("returns array for wrapText when selection contains both wrap and non-wrap cells", () => {
     const styles = createDemoStyles();
     const sheet = createSheet([
       { col: 1, row: 1, styleId: 0 },
@@ -174,8 +175,8 @@ describe("resolveSelectionFormatFlags", () => {
       styles,
       range: createRange({ startCol: 1, startRow: 1, endCol: 2, endRow: 1 }),
     });
-    expect(flags.wrapText).toEqual({ mixed: true });
-    expect(flags.bold).toEqual({ mixed: false, value: false });
+    expect(Array.isArray(flags.wrapText)).toBe(true);
+    expect(flags.bold).toBe(false);
   });
 
   it("short-circuits to tooLarge when the selection exceeds maxCellsToAnalyze", () => {
@@ -193,12 +194,13 @@ describe("resolveSelectionFormatFlags", () => {
       maxCellsToAnalyze: 2,
     });
     expect(flags.tooLarge).toBe(true);
-    expect(flags.bold).toEqual({ mixed: true });
-    expect(flags.italic).toEqual({ mixed: true });
-    expect(flags.underline).toEqual({ mixed: true });
-    expect(flags.strikethrough).toEqual({ mixed: true });
-    expect(flags.wrapText).toEqual({ mixed: true });
-    expect(flags.horizontal).toEqual({ mixed: true });
+    expect(Array.isArray(flags.bold)).toBe(true);
+    expect(Array.isArray(flags.italic)).toBe(true);
+    expect(Array.isArray(flags.underline)).toBe(true);
+    expect(Array.isArray(flags.strikethrough)).toBe(true);
+    expect(Array.isArray(flags.wrapText)).toBe(true);
+    expect(Array.isArray(flags.horizontal)).toBe(true);
+    expect(Array.isArray(flags.vertical)).toBe(true);
   });
 
   it("treats column styles as effective styles when rows have no row-level style", () => {
@@ -212,7 +214,7 @@ describe("resolveSelectionFormatFlags", () => {
       styles,
       range: createRange({ startCol: 1, startRow: 1, endCol: 2, endRow: 1 }),
     });
-    expect(flags.bold).toEqual({ mixed: true });
+    expect(Array.isArray(flags.bold)).toBe(true);
   });
 
   it("ignores column styles when all rows in selection have row-level style", () => {
@@ -227,7 +229,7 @@ describe("resolveSelectionFormatFlags", () => {
       styles,
       range: createRange({ startCol: 1, startRow: 1, endCol: 2, endRow: 1 }),
     });
-    expect(flags.bold).toEqual({ mixed: false, value: true });
+    expect(flags.bold).toBe(true);
   });
 
   it("returns horizontal alignment when all cells share the same effective alignment", () => {
@@ -242,10 +244,10 @@ describe("resolveSelectionFormatFlags", () => {
       styles,
       range: createRange({ startCol: 1, startRow: 1, endCol: 2, endRow: 1 }),
     });
-    expect(flags.horizontal).toEqual({ mixed: false, value: "right" });
+    expect(flags.horizontal).toBe("right");
   });
 
-  it("marks horizontal alignment as mixed when the selection contains differing values", () => {
+  it("returns array for horizontal alignment when the selection contains differing values", () => {
     const styles = createDemoStyles();
     const sheet = createSheet([
       { col: 1, row: 1, styleId: 0 }, // general
@@ -257,6 +259,7 @@ describe("resolveSelectionFormatFlags", () => {
       styles,
       range: createRange({ startCol: 1, startRow: 1, endCol: 2, endRow: 1 }),
     });
-    expect(flags.horizontal).toEqual({ mixed: true });
+    expect(Array.isArray(flags.horizontal)).toBe(true);
+    expect(flags.horizontal).toEqual(expect.arrayContaining(["general", "right"]));
   });
 });

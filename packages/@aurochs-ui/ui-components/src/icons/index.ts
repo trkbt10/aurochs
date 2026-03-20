@@ -130,6 +130,9 @@ export {
   IndentIncrease as IndentIncreaseIcon,
   IndentDecrease as IndentDecreaseIcon,
 
+  // Text wrap
+  TextWrap as WrapTextIcon,
+
   // Font / color
   Type as TypeIcon,
   Baseline as BaselineIcon,

@@ -14,8 +14,8 @@ export type ToolbarButtonProps = {
   readonly icon: ReactNode;
   /** Accessible label / tooltip */
   readonly label: string;
-  /** Active/selected state */
-  readonly active?: boolean;
+  /** Active/selected state: `true`/`false` for on/off, `"mixed"` for indeterminate (matches `aria-pressed`). */
+  readonly active?: boolean | "mixed";
   /** Disabled state */
   readonly disabled?: boolean;
   /** Click handler */
@@ -37,7 +37,7 @@ const SIZE_MAP = {
 
 type ButtonStyleInput = {
   readonly size: ToolbarButtonSize;
-  readonly active: boolean;
+  readonly active: boolean | "mixed";
   readonly disabled: boolean;
   readonly hovered: boolean;
 };
@@ -66,6 +66,14 @@ function getButtonStyle({ size, active, disabled, hovered }: ButtonStyleInput): 
       ...base,
       opacity: 0.4,
       cursor: "not-allowed",
+    };
+  }
+
+  if (active === "mixed") {
+    return {
+      ...base,
+      backgroundColor: `var(--bg-hover, ${colorTokens.background.hover})`,
+      color: `var(--text-tertiary, ${colorTokens.text.tertiary})`,
     };
   }
 
@@ -135,6 +143,7 @@ export function ToolbarButton({
       style={{ ...buttonStyle, ...style }}
       title={label}
       disabled={disabled}
+      aria-pressed={active}
       onClick={handleClick}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}

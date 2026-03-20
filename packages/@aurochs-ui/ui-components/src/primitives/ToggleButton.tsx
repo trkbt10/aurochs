@@ -8,7 +8,8 @@ import { useCallback, type CSSProperties, type ReactNode } from "react";
 import { colorTokens, fontTokens, radiusTokens } from "../design-tokens";
 
 export type ToggleButtonProps = {
-  readonly pressed: boolean;
+  /** Toggle state: `true`/`false` for on/off, `"mixed"` for indeterminate (matches `aria-pressed`). */
+  readonly pressed: boolean | "mixed";
   readonly onChange: (pressed: boolean) => void;
   /** Text label (displayed if no children provided, always used for aria-label) */
   readonly label: string;
@@ -16,8 +17,6 @@ export type ToggleButtonProps = {
   readonly disabled?: boolean;
   readonly className?: string;
   readonly style?: CSSProperties;
-  /** Show mixed indicator (for multi-selection with differing values) */
-  readonly mixed?: boolean;
   /** Custom content (icon, etc.) - if provided, replaces label text */
   readonly children?: ReactNode;
 };
@@ -71,19 +70,20 @@ export function ToggleButton({
   disabled,
   className,
   style,
-  mixed,
   children,
 }: ToggleButtonProps) {
+  const isMixed = pressed === "mixed";
+
   const handleClick = useCallback(() => {
     if (!disabled) {
       // When mixed, clicking always sets to true
-      onChange(mixed ? true : !pressed);
+      onChange(isMixed ? true : !pressed);
     }
-  }, [disabled, onChange, pressed, mixed]);
+  }, [disabled, onChange, pressed, isMixed]);
 
   const combinedStyle: CSSProperties = {
     ...baseStyle,
-    ...(mixed ? mixedStyle : pressed ? pressedStyle : {}),
+    ...(isMixed ? mixedStyle : pressed ? pressedStyle : {}),
     ...(disabled ? disabledStyle : {}),
     ...style,
   };
@@ -95,7 +95,7 @@ export function ToggleButton({
       disabled={disabled}
       className={className}
       style={combinedStyle}
-      aria-pressed={mixed ? "mixed" : pressed}
+      aria-pressed={pressed}
       aria-label={ariaLabel ?? label}
     >
       {children ?? label}

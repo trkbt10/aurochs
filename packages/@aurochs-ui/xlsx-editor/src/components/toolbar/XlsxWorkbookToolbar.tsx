@@ -17,10 +17,13 @@ import { ZoomControls } from "@aurochs-ui/editor-controls/zoom";
 import {
   UndoRedoGroup,
   AlignmentGroup,
+  VerticalAlignmentGroup,
+  WrapTextButton,
   ToolbarPopoverButton,
   POPOVER_ICON_SIZE,
   POPOVER_STROKE_WIDTH,
   type AlignmentValue,
+  type VerticalAlignmentValue,
 } from "@aurochs-ui/editor-controls/toolbar";
 import { TextFormattingEditor } from "@aurochs-ui/editor-controls/text";
 import type { TextFormatting } from "@aurochs-ui/editor-controls/text";
@@ -95,6 +98,35 @@ function clearHorizontalAlignment(baseAlignment: XlsxAlignment | undefined): Xls
   return Object.keys(rest).length === 0 ? null : rest;
 }
 
+function setVerticalAlignment(
+  baseAlignment: XlsxAlignment | undefined,
+  vertical: XlsxAlignment["vertical"],
+): XlsxAlignment {
+  return { ...(baseAlignment ?? {}), vertical };
+}
+
+function clearVerticalAlignment(baseAlignment: XlsxAlignment | undefined): XlsxAlignment | null {
+  if (!baseAlignment) {
+    return null;
+  }
+  const { vertical: _removed, ...rest } = baseAlignment;
+  return Object.keys(rest).length === 0 ? null : rest;
+}
+
+function setWrapText(
+  baseAlignment: XlsxAlignment | undefined,
+  wrapText: boolean,
+): XlsxAlignment | null {
+  if (!wrapText) {
+    if (!baseAlignment) {
+      return null;
+    }
+    const { wrapText: _removed, ...rest } = baseAlignment;
+    return Object.keys(rest).length === 0 ? null : rest;
+  }
+  return { ...(baseAlignment ?? {}), wrapText };
+}
+
 /**
  * Workbook toolbar for a single sheet.
  */
@@ -141,9 +173,8 @@ export function XlsxWorkbookToolbar({
   }, [sheet, targetRange, workbook.styles]);
 
   const selectedHorizontalAlignment = selectionFormatFlags?.horizontal;
-  const horizontalMixed = selectedHorizontalAlignment?.mixed ?? false;
-  const horizontalValue =
-    selectedHorizontalAlignment && !selectedHorizontalAlignment.mixed ? selectedHorizontalAlignment.value : undefined;
+  const selectedVerticalAlignment = selectionFormatFlags?.vertical;
+  const selectedWrapText = selectionFormatFlags?.wrapText;
 
   // Text formatting via adapter
   const textFormatting = useMemo<TextFormatting>(
@@ -181,6 +212,36 @@ export function XlsxWorkbookToolbar({
     });
   };
 
+  const handleVerticalAlignmentChange = (value: VerticalAlignmentValue | undefined) => {
+    if (!targetRange) {
+      return;
+    }
+    if (value === undefined) {
+      dispatch({
+        type: "SET_SELECTION_FORMAT",
+        range: targetRange,
+        format: { alignment: clearVerticalAlignment(baseAlignment) },
+      });
+      return;
+    }
+    dispatch({
+      type: "SET_SELECTION_FORMAT",
+      range: targetRange,
+      format: { alignment: setVerticalAlignment(baseAlignment, value) },
+    });
+  };
+
+  const handleWrapTextChange = (pressed: boolean) => {
+    if (!targetRange) {
+      return;
+    }
+    dispatch({
+      type: "SET_SELECTION_FORMAT",
+      range: targetRange,
+      format: { alignment: setWrapText(baseAlignment, pressed) },
+    });
+  };
+
   return (
     <div style={barStyle}>
       <UndoRedoGroup
@@ -204,9 +265,24 @@ export function XlsxWorkbookToolbar({
       </ToolbarPopoverButton>
 
       <AlignmentGroup
-        value={horizontalValue as AlignmentValue | undefined}
+        value={selectedHorizontalAlignment as AlignmentValue | AlignmentValue[] | undefined}
         onChange={handleAlignmentChange}
-        mixed={horizontalMixed}
+        disabled={!targetRange || disableInputs}
+      />
+
+      <VerticalAlignmentGroup
+        value={selectedVerticalAlignment as VerticalAlignmentValue | VerticalAlignmentValue[] | undefined}
+        onChange={handleVerticalAlignmentChange}
+        disabled={!targetRange || disableInputs}
+      />
+
+      <WrapTextButton
+        pressed={
+          Array.isArray(selectedWrapText)
+            ? "mixed"
+            : selectedWrapText === true
+        }
+        onChange={handleWrapTextChange}
         disabled={!targetRange || disableInputs}
       />
 

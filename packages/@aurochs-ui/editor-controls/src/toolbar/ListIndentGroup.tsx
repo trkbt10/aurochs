@@ -2,7 +2,6 @@
  * @file ListIndentGroup - Bullet/Numbered list toggles + Indent increase/decrease
  */
 
-import { ToggleButton } from "@aurochs-ui/ui-components/primitives";
 import { ToolbarButton, TOOLBAR_BUTTON_ICON_SIZE } from "@aurochs-ui/ui-components/primitives/ToolbarButton";
 import { ListIcon, ListOrderedIcon, IndentIncreaseIcon, IndentDecreaseIcon } from "@aurochs-ui/ui-components/icons";
 import { iconTokens } from "@aurochs-ui/ui-components/design-tokens";
@@ -16,24 +15,24 @@ export function ListIndentGroup({ bullet, numbered, onIncreaseIndent, onDecrease
   return (
     <>
       {bullet && (
-        <ToggleButton
+        <ToolbarButton
           label="Bulleted list"
-          pressed={bullet.pressed}
+          icon={<ListIcon size={iconSize} strokeWidth={strokeWidth} />}
+          active={bullet.pressed}
           disabled={isDisabled}
-          onChange={() => bullet.onToggle()}
-        >
-          <ListIcon size={iconSize} strokeWidth={strokeWidth} />
-        </ToggleButton>
+          size="sm"
+          onClick={() => bullet.onToggle()}
+        />
       )}
       {numbered && (
-        <ToggleButton
+        <ToolbarButton
           label="Numbered list"
-          pressed={numbered.pressed}
+          icon={<ListOrderedIcon size={iconSize} strokeWidth={strokeWidth} />}
+          active={numbered.pressed}
           disabled={isDisabled}
-          onChange={() => numbered.onToggle()}
-        >
-          <ListOrderedIcon size={iconSize} strokeWidth={strokeWidth} />
-        </ToggleButton>
+          size="sm"
+          onClick={() => numbered.onToggle()}
+        />
       )}
       {onIncreaseIndent && (
         <ToolbarButton

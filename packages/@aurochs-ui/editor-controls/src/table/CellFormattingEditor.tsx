@@ -6,13 +6,13 @@
  */
 
 import { useCallback, type CSSProperties, type ReactNode } from "react";
-import { ToggleButton, Toggle } from "@aurochs-ui/ui-components/primitives";
+import { Toggle } from "@aurochs-ui/ui-components/primitives";
 import { FieldGroup } from "@aurochs-ui/ui-components/layout";
-import { AlignTopIcon, AlignMiddleIcon, AlignBottomIcon } from "@aurochs-ui/ui-components/icons";
-import { iconTokens, fieldLabelTokens } from "@aurochs-ui/ui-components/design-tokens";
+import { fieldLabelTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { ColorPickerPopover } from "@aurochs-ui/color-editor";
-import type { LucideIcon } from "@aurochs-ui/ui-components/icons";
-import type { CellFormatting, VerticalAlignment, CellFormattingFeatures } from "./types";
+import { VerticalAlignmentGroup } from "../toolbar/VerticalAlignmentGroup";
+import type { VerticalAlignmentValue } from "../toolbar/types";
+import type { CellFormatting, CellFormattingFeatures } from "./types";
 import type { MixedContext } from "../mixed-state";
 import { isMixedField } from "../mixed-state";
 
@@ -95,16 +95,6 @@ function buildBackgroundEditor(opts: {
 }
 
 // =============================================================================
-// Alignment options
-// =============================================================================
-
-const VERTICAL_ALIGNMENTS: readonly { value: VerticalAlignment; label: string; icon: LucideIcon }[] = [
-  { value: "top", label: "Align top", icon: AlignTopIcon },
-  { value: "center", label: "Align center", icon: AlignMiddleIcon },
-  { value: "bottom", label: "Align bottom", icon: AlignBottomIcon },
-];
-
-// =============================================================================
 // Component
 // =============================================================================
 
@@ -126,7 +116,11 @@ export function CellFormattingEditor({
   const showBorders = features?.showBorders !== false;
 
   const handleVerticalAlignmentChange = useCallback(
-    (alignment: VerticalAlignment) => onChange({ verticalAlignment: alignment }),
+    (alignment: VerticalAlignmentValue | undefined) => {
+      if (alignment) {
+        onChange({ verticalAlignment: alignment });
+      }
+    },
     [onChange],
   );
 
@@ -140,19 +134,15 @@ export function CellFormattingEditor({
       {showVerticalAlignment && (
         <FieldGroup label="Vertical Align">
           <div style={rowStyle}>
-            {VERTICAL_ALIGNMENTS.map(({ value: align, label, icon: Icon }) => (
-              <ToggleButton
-                key={align}
-                pressed={!isMixedField(mixed, "verticalAlignment") && value.verticalAlignment === align}
-                onChange={() => handleVerticalAlignmentChange(align)}
-                label={label}
-                ariaLabel={`Align ${align}`}
-                disabled={disabled}
-                mixed={isMixedField(mixed, "verticalAlignment")}
-              >
-                <Icon size={iconTokens.size.sm} />
-              </ToggleButton>
-            ))}
+            <VerticalAlignmentGroup
+              value={
+                isMixedField(mixed, "verticalAlignment")
+                  ? (value.verticalAlignment ? [value.verticalAlignment] : [])
+                  : (value.verticalAlignment as VerticalAlignmentValue | undefined)
+              }
+              onChange={handleVerticalAlignmentChange}
+              disabled={disabled}
+            />
           </div>
         </FieldGroup>
       )}

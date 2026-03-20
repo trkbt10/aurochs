@@ -223,8 +223,9 @@ export function XlsxCellFormatPanel({ sheetIndex }: XlsxCellFormatPanelProps) {
         disabled={disabled}
         alignment={currentAlignment}
         wrapText={{
-          pressed: currentAlignment?.wrapText === true,
-          mixed: selectionFormatFlags?.wrapText.mixed ?? false,
+          pressed: Array.isArray(selectionFormatFlags?.wrapText)
+            ? "mixed" as const
+            : currentAlignment?.wrapText === true,
         }}
         onAlignmentChange={(alignment) => applyAlignment(alignment)}
         onClearAlignment={() =>

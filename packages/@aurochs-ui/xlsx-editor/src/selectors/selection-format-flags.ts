@@ -1,7 +1,8 @@
 /**
  * @file Selection format flags selector
  *
- * Computes "mixed" formatting flags (bold/italic/underline/strike/wrap) for a selected range.
+ * Computes formatting flags for a selected range.
+ * Each flag is `T` when all cells agree, or `T[]` when cells have differing values.
  * This is used to render toolbar/panel states for multi-cell selections.
  */
 
@@ -10,16 +11,14 @@ import type { XlsxAlignment, XlsxStyleSheet } from "@aurochs-office/xlsx/domain/
 import type { XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
 import { resolveMergedCellXfFromStyleId } from "./cell-xf";
 
-export type MixedBoolean = { readonly mixed: false; readonly value: boolean } | { readonly mixed: true };
-export type MixedValue<T> = { readonly mixed: false; readonly value: T } | { readonly mixed: true };
-
 export type SelectionFormatFlags = {
-  readonly bold: MixedBoolean;
-  readonly italic: MixedBoolean;
-  readonly underline: MixedBoolean;
-  readonly strikethrough: MixedBoolean;
-  readonly wrapText: MixedBoolean;
-  readonly horizontal: MixedValue<XlsxAlignment["horizontal"]>;
+  readonly bold: boolean | boolean[];
+  readonly italic: boolean | boolean[];
+  readonly underline: boolean | boolean[];
+  readonly strikethrough: boolean | boolean[];
+  readonly wrapText: boolean | boolean[];
+  readonly horizontal: XlsxAlignment["horizontal"] | XlsxAlignment["horizontal"][];
+  readonly vertical: XlsxAlignment["vertical"] | XlsxAlignment["vertical"][];
   readonly tooLarge: boolean;
 };
 
@@ -30,28 +29,15 @@ type StyleFlags = {
   readonly strikethrough: boolean;
   readonly wrapText: boolean;
   readonly horizontal: XlsxAlignment["horizontal"];
+  readonly vertical: XlsxAlignment["vertical"];
 };
 
-function toMixedBoolean(value: boolean): MixedBoolean {
-  return { mixed: false, value };
-}
-
-function toMixedValue<T>(value: T): MixedValue<T> {
-  return { mixed: false, value };
-}
-
-function mixBoolean(current: MixedBoolean, next: boolean): MixedBoolean {
-  if (current.mixed) {
-    return current;
+/** Accumulate values: single T when uniform, T[] when diverging. */
+function accumulate<T>(current: T | T[], next: T): T | T[] {
+  if (Array.isArray(current)) {
+    return (current as T[]).includes(next) ? current : [...(current as T[]), next];
   }
-  return current.value === next ? current : { mixed: true };
-}
-
-function mixValue<T>(current: MixedValue<T>, next: T): MixedValue<T> {
-  if (current.mixed) {
-    return current;
-  }
-  return current.value === next ? current : { mixed: true };
+  return current === next ? current : [current as T, next];
 }
 
 function getRangeBounds(range: CellRange): {
@@ -158,24 +144,26 @@ export function resolveSelectionFormatFlags(params: {
 
   if (cellCount > maxCells) {
     return {
-      bold: { mixed: true },
-      italic: { mixed: true },
-      underline: { mixed: true },
-      strikethrough: { mixed: true },
-      wrapText: { mixed: true },
-      horizontal: { mixed: true },
+      bold: [],
+      italic: [],
+      underline: [],
+      strikethrough: [],
+      wrapText: [],
+      horizontal: [],
+      vertical: [],
       tooLarge: true,
     };
   }
 
   const accumulator = {
     hasAny: false,
-    bold: toMixedBoolean(false),
-    italic: toMixedBoolean(false),
-    underline: toMixedBoolean(false),
-    strikethrough: toMixedBoolean(false),
-    wrapText: toMixedBoolean(false),
-    horizontal: toMixedValue<XlsxAlignment["horizontal"]>("general"),
+    bold: false as boolean | boolean[],
+    italic: false as boolean | boolean[],
+    underline: false as boolean | boolean[],
+    strikethrough: false as boolean | boolean[],
+    wrapText: false as boolean | boolean[],
+    horizontal: "general" as XlsxAlignment["horizontal"] | XlsxAlignment["horizontal"][],
+    vertical: "bottom" as XlsxAlignment["vertical"] | XlsxAlignment["vertical"][],
   };
 
   const styleFlagsCache = new Map<number, StyleFlags>();
@@ -195,6 +183,7 @@ export function resolveSelectionFormatFlags(params: {
         strikethrough: font.strikethrough === true,
         wrapText: xf.alignment?.wrapText === true,
         horizontal: xf.alignment?.horizontal ?? "general",
+        vertical: xf.alignment?.vertical ?? "bottom",
       };
       return undefinedStyleFlags.value;
     }
@@ -212,6 +201,7 @@ export function resolveSelectionFormatFlags(params: {
       strikethrough: font.strikethrough === true,
       wrapText: xf.alignment?.wrapText === true,
       horizontal: xf.alignment?.horizontal ?? "general",
+      vertical: xf.alignment?.vertical ?? "bottom",
     };
     styleFlagsCache.set(styleIdValue, computed);
     return computed;
@@ -220,21 +210,23 @@ export function resolveSelectionFormatFlags(params: {
   const incorporateStyleFlags = (flags: StyleFlags): void => {
     if (!accumulator.hasAny) {
       accumulator.hasAny = true;
-      accumulator.bold = toMixedBoolean(flags.bold);
-      accumulator.italic = toMixedBoolean(flags.italic);
-      accumulator.underline = toMixedBoolean(flags.underline);
-      accumulator.strikethrough = toMixedBoolean(flags.strikethrough);
-      accumulator.wrapText = toMixedBoolean(flags.wrapText);
-      accumulator.horizontal = toMixedValue(flags.horizontal);
+      accumulator.bold = flags.bold;
+      accumulator.italic = flags.italic;
+      accumulator.underline = flags.underline;
+      accumulator.strikethrough = flags.strikethrough;
+      accumulator.wrapText = flags.wrapText;
+      accumulator.horizontal = flags.horizontal;
+      accumulator.vertical = flags.vertical;
       return;
     }
 
-    accumulator.bold = mixBoolean(accumulator.bold, flags.bold);
-    accumulator.italic = mixBoolean(accumulator.italic, flags.italic);
-    accumulator.underline = mixBoolean(accumulator.underline, flags.underline);
-    accumulator.strikethrough = mixBoolean(accumulator.strikethrough, flags.strikethrough);
-    accumulator.wrapText = mixBoolean(accumulator.wrapText, flags.wrapText);
-    accumulator.horizontal = mixValue(accumulator.horizontal, flags.horizontal);
+    accumulator.bold = accumulate(accumulator.bold, flags.bold);
+    accumulator.italic = accumulate(accumulator.italic, flags.italic);
+    accumulator.underline = accumulate(accumulator.underline, flags.underline);
+    accumulator.strikethrough = accumulate(accumulator.strikethrough, flags.strikethrough);
+    accumulator.wrapText = accumulate(accumulator.wrapText, flags.wrapText);
+    accumulator.horizontal = accumulate(accumulator.horizontal, flags.horizontal);
+    accumulator.vertical = accumulate(accumulator.vertical, flags.vertical);
   };
 
   const incorporateStyleId = (styleIdValue: number | undefined): void => {
@@ -306,6 +298,7 @@ export function resolveSelectionFormatFlags(params: {
     strikethrough: accumulator.strikethrough,
     wrapText: accumulator.wrapText,
     horizontal: accumulator.horizontal,
+    vertical: accumulator.vertical,
     tooLarge: false,
   };
 }

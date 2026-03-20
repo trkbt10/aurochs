@@ -19,10 +19,29 @@ export type UndoRedoGroupProps = {
 export type AlignmentValue = "left" | "center" | "right" | "justify";
 
 export type AlignmentGroupProps = {
-  readonly value: AlignmentValue | undefined;
+  /** Single value when uniform, array when selection contains multiple values. */
+  readonly value: AlignmentValue | AlignmentValue[] | undefined;
   readonly onChange: (alignment: AlignmentValue | undefined) => void;
   readonly showJustify?: boolean;
-  readonly mixed?: boolean;
+  readonly disabled?: boolean;
+};
+
+// --- VerticalAlignment ---
+
+export type VerticalAlignmentValue = "top" | "center" | "bottom";
+
+export type VerticalAlignmentGroupProps = {
+  /** Single value when uniform, array when selection contains multiple values. */
+  readonly value: VerticalAlignmentValue | VerticalAlignmentValue[] | undefined;
+  readonly onChange: (alignment: VerticalAlignmentValue | undefined) => void;
+  readonly disabled?: boolean;
+};
+
+// --- WrapText ---
+
+export type WrapTextButtonProps = {
+  readonly pressed: boolean | "mixed";
+  readonly onChange: (pressed: boolean) => void;
   readonly disabled?: boolean;
 };
 

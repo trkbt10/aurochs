@@ -2,8 +2,7 @@
  * @file AlignmentGroup - Paragraph alignment toggle buttons (L/C/R/J)
  */
 
-import { ToggleButton } from "@aurochs-ui/ui-components/primitives";
-import { TOOLBAR_BUTTON_ICON_SIZE } from "@aurochs-ui/ui-components/primitives/ToolbarButton";
+import { ToolbarButton, TOOLBAR_BUTTON_ICON_SIZE } from "@aurochs-ui/ui-components/primitives/ToolbarButton";
 import { AlignLeftIcon, AlignCenterIcon, AlignRightIcon, AlignJustifyIcon } from "@aurochs-ui/ui-components/icons";
 import { iconTokens } from "@aurochs-ui/ui-components/design-tokens";
 import type { AlignmentGroupProps, AlignmentValue } from "./types";
@@ -23,8 +22,9 @@ const ALIGNMENT_ITEMS: readonly {
   { value: "justify", label: "Align justify", icon: <AlignJustifyIcon size={iconSize} strokeWidth={strokeWidth} />, requiresJustify: true },
 ];
 
-export function AlignmentGroup({ value, onChange, showJustify, mixed, disabled }: AlignmentGroupProps) {
+export function AlignmentGroup({ value, onChange, showJustify, disabled }: AlignmentGroupProps) {
   const isDisabled = disabled ?? false;
+  const isMixed = Array.isArray(value);
   return (
     <>
       {ALIGNMENT_ITEMS.map((item) => {
@@ -32,18 +32,18 @@ export function AlignmentGroup({ value, onChange, showJustify, mixed, disabled }
           return null;
         }
         return (
-          <ToggleButton
+          <ToolbarButton
             key={item.value}
             label={item.label}
-            pressed={!mixed && value === item.value}
-            mixed={mixed}
+            icon={item.icon}
+            active={isMixed ? "mixed" : value === item.value}
             disabled={isDisabled}
-            onChange={(pressed) => {
-              onChange(pressed ? item.value : undefined);
+            size="sm"
+            onClick={() => {
+              const nextPressed = isMixed || value !== item.value;
+              onChange(nextPressed ? item.value : undefined);
             }}
-          >
-            {item.icon}
-          </ToggleButton>
+          />
         );
       })}
     </>

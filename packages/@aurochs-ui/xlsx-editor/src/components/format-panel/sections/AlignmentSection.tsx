@@ -13,7 +13,7 @@ import { parseHorizontalAlignment, parseVerticalAlignment } from "../alignment";
 export type AlignmentSectionProps = {
   readonly disabled: boolean;
   readonly alignment: XlsxAlignment | undefined;
-  readonly wrapText: { readonly pressed: boolean; readonly mixed: boolean };
+  readonly wrapText: { readonly pressed: boolean | "mixed" };
   readonly onAlignmentChange: (alignment: XlsxAlignment) => void;
   readonly onClearAlignment: () => void;
   readonly onWrapTextChange: (wrapText: boolean) => void;
@@ -67,7 +67,6 @@ export function AlignmentSection(props: AlignmentSectionProps) {
         <ToggleButton
           label="Wrap"
           pressed={props.wrapText.pressed}
-          mixed={props.wrapText.mixed}
           disabled={props.disabled}
           onChange={(pressed) => props.onWrapTextChange(pressed)}
         />

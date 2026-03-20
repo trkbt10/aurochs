@@ -8,6 +8,8 @@
 export { UndoRedoGroup } from "./UndoRedoGroup";
 
 export { AlignmentGroup } from "./AlignmentGroup";
+export { VerticalAlignmentGroup } from "./VerticalAlignmentGroup";
+export { WrapTextButton } from "./WrapTextButton";
 export { DeleteDuplicateGroup } from "./DeleteDuplicateGroup";
 export { ListIndentGroup } from "./ListIndentGroup";
 export { ToolbarPopoverButton, POPOVER_ICON_SIZE, POPOVER_STROKE_WIDTH } from "./ToolbarPopoverButton";
@@ -16,6 +18,9 @@ export type {
   UndoRedoGroupProps,
   AlignmentValue,
   AlignmentGroupProps,
+  VerticalAlignmentValue,
+  VerticalAlignmentGroupProps,
+  WrapTextButtonProps,
   DeleteDuplicateGroupProps,
   ListToggle,
   ListIndentGroupProps,

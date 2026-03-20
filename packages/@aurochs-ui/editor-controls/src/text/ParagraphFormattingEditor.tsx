@@ -164,12 +164,11 @@ export function ParagraphFormattingEditor({
             {ALIGNMENTS.map(({ value: align, label, icon: Icon }) => (
               <ToggleButton
                 key={align}
-                pressed={!isMixedField(mixed, "alignment") && value.alignment === align}
+                pressed={isMixedField(mixed, "alignment") ? "mixed" : value.alignment === align}
                 onChange={() => handleAlignmentChange(align)}
                 label={label}
                 ariaLabel={`Align ${align}`}
                 disabled={disabled}
-                mixed={isMixedField(mixed, "alignment")}
               >
                 <Icon size={iconTokens.size.sm} />
               </ToggleButton>

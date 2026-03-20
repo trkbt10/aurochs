@@ -10,23 +10,23 @@ import type { SelectionFormatFlags } from "../../selectors/selection-format-flag
 /**
  * Convert XLSX SelectionFormatFlags to a MixedContext for TextFormattingEditor.
  *
- * Maps the XLSX-specific MixedBoolean flags to a generic set of mixed field names.
+ * Flags that are arrays (multiple differing values) are added as mixed fields.
  */
 export function xlsxSelectionToMixedContext(flags: SelectionFormatFlags | undefined): MixedContext | undefined {
   if (!flags) {
     return undefined;
   }
   const fields = new Set<string>();
-  if (flags.bold.mixed) {
+  if (Array.isArray(flags.bold)) {
     fields.add("bold");
   }
-  if (flags.italic.mixed) {
+  if (Array.isArray(flags.italic)) {
     fields.add("italic");
   }
-  if (flags.underline.mixed) {
+  if (Array.isArray(flags.underline)) {
     fields.add("underline");
   }
-  if (flags.strikethrough.mixed) {
+  if (Array.isArray(flags.strikethrough)) {
     fields.add("strikethrough");
   }
   return fields.size > 0 ? { mixedFields: fields } : undefined;
