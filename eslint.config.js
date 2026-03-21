@@ -92,6 +92,8 @@ export default [
         "custom/max-params": ["error", { max: 3 }],
         // Prohibit Node.js-only packages in browser code (must use .node.ts files)
         "custom/no-node-only-import": ["error", { packages: ["pngjs"] }],
+        // Prohibit trivial type alias re-exports (export type X = ImportedY)
+        "custom/no-type-alias-reexport": "error",
         // Prohibit direct Accordion/PropertySection in inspector panels; use OptionalPropertySection
         // Spread from modular groups
         ...rulesJSDoc,
