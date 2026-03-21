@@ -9,7 +9,8 @@
 
 import type { XmlElement } from "@aurochs/xml";
 import { getAttr, getChild, getChildren, getTextContent, isXmlElement } from "@aurochs/xml";
-import { parseInt32, parseEditAs as parseOoxmlEditAs } from "@aurochs-office/ooxml/parser";
+import { parseInt32 } from "@aurochs-office/drawing-ml/parser";
+import { parseEditAs as parseOoxmlEditAs } from "@aurochs-office/ooxml/parser";
 import type { GroupLocks } from "@aurochs-office/ooxml/domain/drawing/locks";
 import { rowIdx, colIdx } from "../domain/types";
 import type {

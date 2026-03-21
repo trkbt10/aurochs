@@ -43,4 +43,3 @@ export type TextPathResult = {
   readonly decorations: readonly DecorationRect[];
 };
 
-export type { PathCommand };

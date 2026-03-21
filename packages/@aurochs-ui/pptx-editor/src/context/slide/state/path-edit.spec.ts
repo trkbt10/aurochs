@@ -3,7 +3,7 @@
  */
 
 import { px } from "@aurochs-office/drawing-ml/domain/units";
-import type { CustomGeometry } from "@aurochs-office/pptx/domain";
+import type { CustomGeometry } from "@aurochs-office/drawing-ml/domain/geometry";
 import {
   createInactivePathEditState,
   createActivePathEditState,

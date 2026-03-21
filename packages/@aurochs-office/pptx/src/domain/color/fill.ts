@@ -9,7 +9,8 @@
 
 import type { Color } from "@aurochs-office/drawing-ml/domain/color";
 import type { PatternType } from "@aurochs-office/drawing-ml/domain/fill";
-import type { Fill, Line, BlipFill } from "./types";
+import type { BlipFill } from "@aurochs-office/drawing-ml/domain/fill";
+import type { Fill, Line } from "./types";
 import { resolveColor } from "@aurochs-office/drawing-ml/domain/color-resolution";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { ResourceResolverFn } from "../resource-resolver";

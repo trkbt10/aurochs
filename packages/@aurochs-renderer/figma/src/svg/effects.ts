@@ -17,7 +17,6 @@ import {
   type SvgString,
 } from "./primitives";
 
-export type { FigEffect, FigEffectType };
 
 // =============================================================================
 // Filter Bounds Computation

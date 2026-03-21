@@ -51,7 +51,8 @@ import type {
 } from "@aurochs-builder/chart";
 
 // Shape types from @aurochs-office/pptx/domain
-import type { PresetShapeType, PlaceholderType, TransitionType } from "@aurochs-office/pptx/domain";
+import type { PlaceholderType, TransitionType } from "@aurochs-office/pptx/domain";
+import type { PresetShapeType } from "@aurochs-office/drawing-ml/domain/geometry";
 
 // Animation types from @aurochs-builder/pptx/patcher
 import type {

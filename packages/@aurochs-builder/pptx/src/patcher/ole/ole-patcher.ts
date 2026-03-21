@@ -9,7 +9,7 @@
  */
 
 import { createElement, getChild, isXmlElement, findElements, replaceChildByName, setAttribute, updateChildByName, type XmlElement } from "@aurochs/xml";
-import type { Transform } from "@aurochs-office/pptx/domain/geometry";
+import type { Transform } from "@aurochs-office/drawing-ml/domain/geometry";
 import { patchTransformElement } from "../serializer/transform";
 
 export type OleChange =

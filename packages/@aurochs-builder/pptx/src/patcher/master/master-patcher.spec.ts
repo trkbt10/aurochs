@@ -5,7 +5,7 @@
 import { createElement, getChild, type XmlDocument, type XmlElement } from "@aurochs/xml";
 import type { ShapeChange } from "../core/shape-differ";
 import type { ParagraphProperties } from "@aurochs-office/pptx/domain/text";
-import type { Transform } from "@aurochs-office/pptx/domain/geometry";
+import type { Transform } from "@aurochs-office/drawing-ml/domain/geometry";
 import { deg, px } from "@aurochs-office/drawing-ml/domain/units";
 import { patchBodyStyle, patchDefaultTextStyle, patchMasterShapes, patchTitleStyle } from "./master-patcher";
 

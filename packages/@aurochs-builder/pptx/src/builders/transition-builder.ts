@@ -4,10 +4,9 @@
  * This module provides CLI-specific wrappers around the core transition serializer.
  */
 
-import { getChild, isXmlElement, type XmlDocument, type XmlElement } from "@aurochs/xml";
+import { getChild, isXmlElement, updateDocumentRoot, type XmlDocument, type XmlElement } from "@aurochs/xml";
 import {
   serializeSlideTransition,
-  updateDocumentRoot,
 } from "@aurochs-builder/pptx/patcher";
 import type { SlideTransition } from "@aurochs-office/pptx/domain/transition";
 import type { SlideTransitionSpec } from "../types";

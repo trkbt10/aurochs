@@ -20,12 +20,6 @@ export {
 
 // Drawing primitive parsing (returns EMU values)
 export {
-  parseInt32,
-  parseInt64,
-  parseUnsignedInt,
-  parseBoolean,
-  getBoolAttr,
-  getIntAttr,
   parseEmuValue,
   parseCoordinateUnqualified,
   parsePositiveCoordinate,

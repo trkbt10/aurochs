@@ -13,8 +13,7 @@ import type {
 } from "@aurochs-ui/ui-components/primitives/SearchableSelect";
 import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
 import { ShapePreview } from "../../ui/shape-preview";
-import type { Geometry, PresetGeometry, CustomGeometry, TextRect } from "@aurochs-office/pptx/domain/shape";
-import type { AdjustValue } from "@aurochs-office/pptx/domain/types";
+import type { Geometry, PresetGeometry, CustomGeometry, TextRect, AdjustValue } from "@aurochs-office/drawing-ml/domain/geometry";
 import type { EditorProps, SelectOption } from "@aurochs-ui/ui-components/types";
 
 export type GeometryEditorProps = EditorProps<Geometry>;

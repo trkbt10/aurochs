@@ -4,7 +4,7 @@
  * Shared transform calculation logic for both HTML and SVG renderers.
  */
 
-import type { Transform } from "@aurochs-office/pptx/domain/index";
+import type { Transform } from "@aurochs-office/drawing-ml/domain/geometry";
 
 // =============================================================================
 // Transform Data Extraction

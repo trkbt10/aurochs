@@ -8,7 +8,7 @@
  * @see ECMA-376 Part 1, Section 20.1.10.57 (ST_LineEndLength)
  */
 
-import type { LineEnd } from "@aurochs-office/pptx/domain";
+import type { LineEnd } from "@aurochs-office/drawing-ml/domain/line";
 import { generateMarkerId, generateMarkerDef, generateLineMarkers } from "./marker";
 
 // =============================================================================

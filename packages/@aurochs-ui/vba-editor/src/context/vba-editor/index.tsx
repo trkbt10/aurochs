@@ -155,5 +155,3 @@ export type {
 export { INITIAL_SEARCH_STATE } from "./types";
 
 export { vbaEditorReducer, createInitialState } from "./reducer";
-
-export type { ProcedureRange } from "../../utils/procedure-range";

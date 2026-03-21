@@ -127,27 +127,13 @@ export type {
 // Geometry Types
 // =============================================================================
 
-export type {
-  Point,
-  Size,
-  Bounds,
-  EffectExtent,
-  Transform,
-  GroupTransform,
-} from "./geometry";
 
 // =============================================================================
 // Shape Geometry Calculations
 // =============================================================================
 
-export type { GuideContext, ResolvedTextRect, ResolvedConnectionSite, ConnectionSiteLookup } from "./shape-geometry";
+export type { ResolvedTextRect, ResolvedConnectionSite, ConnectionSiteLookup } from "./shape-geometry";
 export {
-  createGuideContext,
-  evaluateGuides,
-  evaluateExpression,
-  angleUnitsToDegrees,
-  degreesToAngleUnits,
-  normalizeAngle,
   calculateTextRect,
   isInsideTextRect,
   applyTextInsets,
@@ -322,15 +308,7 @@ export type {
 export type {
   // PPTX-specific color
   ResolvedColor,
-  // PPTX-specific fill types
-  StretchFill,
-  TileFill,
-  BlipEffects,
-  BlipFill,
   Fill,
-  // Line types
-  LineEnd,
-  CustomDash,
   Line,
   // Color mapping
   ColorMapping,
@@ -401,9 +379,6 @@ export type {
 // =============================================================================
 
 export type {
-  // Preset shape types
-  PresetShapeType,
-  AdjustValue,
   // Shape identity
   NonVisualProperties,
   AudioCdTime,
@@ -414,25 +389,6 @@ export type {
   PlaceholderType,
   PlaceholderSize,
   Placeholder,
-  // Geometry
-  PathCommandType,
-  MoveToCommand,
-  LineToCommand,
-  ArcToCommand,
-  QuadBezierCommand,
-  CubicBezierCommand,
-  CloseCommand,
-  PathCommand,
-  GeometryPath,
-  AdjustHandle,
-  XYAdjustHandle,
-  PolarAdjustHandle,
-  PresetGeometry,
-  CustomGeometry,
-  GeometryGuide,
-  ConnectionSite,
-  TextRect,
-  Geometry,
   // Shape properties
   ShapeProperties,
   GraphicFrameLocks,

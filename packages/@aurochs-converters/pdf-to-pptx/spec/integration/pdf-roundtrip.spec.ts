@@ -19,7 +19,7 @@ import { convertToPresentationDocument, loadPptxFromBuffer } from "@aurochs-offi
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import { getSampleFixturePath } from "@aurochs/pdf/test-utils/pdf-fixtures";
 import type { PresentationDocument } from "@aurochs-office/pptx/app/presentation-document";
-import type { GroupTransform } from "@aurochs-office/pptx/domain/geometry";
+import type { GroupTransform } from "@aurochs-office/drawing-ml/domain/geometry";
 import type {
   Shape,
   SpShape,

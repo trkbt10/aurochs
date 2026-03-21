@@ -21,7 +21,8 @@ import {
   parsePositivePercentage,
 } from "@aurochs-office/drawing-ml/parser";
 import { getAttr, getChild, isXmlElement, type XmlElement } from "@aurochs/xml";
-import type { BlipEffects, BlipFill, Fill, StretchFill, StyleReference, TileFill } from "../../domain/index";
+import type { BlipEffects, BlipFill, StretchFill, TileFill } from "@aurochs-office/drawing-ml/domain/fill";
+import type { Fill, StyleReference } from "../../domain/index";
 import { parseColor, parseColorFromParent } from "./color-parser";
 import { parseBlipCompression, parseRectAlignment } from "../primitive";
 

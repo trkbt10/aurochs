@@ -10,7 +10,8 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { Slide, SlideSize, Shape, SpShape, TextBody, Paragraph, Run, Transform, Fill, Line } from "@aurochs-office/pptx/domain";
+import type { Slide, SlideSize, Shape, SpShape, TextBody, Paragraph, Run, Fill, Line } from "@aurochs-office/pptx/domain";
+import type { Transform } from "@aurochs-office/drawing-ml/domain/geometry";
 import type { PresetGeometry } from "@aurochs-office/drawing-ml/domain/geometry";
 import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
 

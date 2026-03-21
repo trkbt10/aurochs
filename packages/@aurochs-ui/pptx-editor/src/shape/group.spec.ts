@@ -2,7 +2,8 @@
  * @file Unit tests for shape/group.ts
  */
 
-import type { SpShape, GrpShape, Shape, GroupTransform, Transform } from "@aurochs-office/pptx/domain";
+import type { SpShape, GrpShape, Shape } from "@aurochs-office/pptx/domain";
+import type { GroupTransform, Transform } from "@aurochs-office/drawing-ml/domain/geometry";
 import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
 import {
   getScaleFactor,

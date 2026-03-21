@@ -4,8 +4,9 @@
  * Functions for grouping and ungrouping shapes.
  */
 
-import type { Shape, GrpShape, GroupTransform, Transform } from "@aurochs-office/pptx/domain";
-import type { Bounds, ShapeId } from "@aurochs-office/pptx/domain/types";
+import type { Shape, GrpShape } from "@aurochs-office/pptx/domain";
+import type { GroupTransform, Transform, Bounds } from "@aurochs-office/drawing-ml/domain/geometry";
+import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
 import { getCombinedBounds } from "./bounds";
 import { generateShapeId } from "./mutation";

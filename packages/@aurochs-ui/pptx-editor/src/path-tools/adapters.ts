@@ -5,8 +5,8 @@
  * This module bridges the generic @aurochs-ui/path-tools types with PPTX domain types.
  */
 
-import type { Point, PathCommand, GeometryPath, CustomGeometry, Geometry } from "@aurochs-office/pptx/domain";
-import type { Bounds, ShapeId } from "@aurochs-office/pptx/domain/types";
+import type { PathCommand, GeometryPath, CustomGeometry, Geometry, Point, Bounds } from "@aurochs-office/drawing-ml/domain/geometry";
+import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import type {

@@ -1,6 +1,7 @@
 /** @file Line serializer for a:ln element */
 import { createElement, type XmlElement } from "@aurochs/xml";
-import type { CustomDash, Line, LineEnd } from "@aurochs-office/pptx/domain";
+import type { CustomDash, LineEnd } from "@aurochs-office/drawing-ml/domain/line";
+import type { Line } from "@aurochs-office/pptx/domain";
 import { serializeFill } from "./fill";
 import { ooxmlEmu, ooxmlPercent100k } from "@aurochs-office/ooxml/domain/ooxml-units";
 

@@ -6,41 +6,8 @@
  */
 
 import type { Brand } from "@aurochs-office/drawing-ml/domain/units";
-
-// =============================================================================
-// Re-export fill types from drawing-ml
-// =============================================================================
-
-export type {
-  NoFill,
-  SolidFill,
-  GradientFill,
-  PatternFill,
-  GroupFill,
-  BlipFill,
-  BlipEffects,
-  StretchFill,
-  TileFill,
-  RectAlignment,
-  TileFlipMode,
-  BaseFill,
-} from "@aurochs-office/drawing-ml/domain/fill";
-
-// Import for use in this file
-import type { BaseFill, BaseLine } from "@aurochs-office/drawing-ml";
-
-// =============================================================================
-// Re-export line types from drawing-ml
-// =============================================================================
-
-export type {
-  LineEnd,
-  CustomDash,
-  LineCap,
-  CompoundLine,
-  LineJoin,
-  BaseLine,
-} from "@aurochs-office/drawing-ml/domain/line";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 
 // =============================================================================
 // PPTX-specific Color Types

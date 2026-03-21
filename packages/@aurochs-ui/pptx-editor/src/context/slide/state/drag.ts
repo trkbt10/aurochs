@@ -6,7 +6,8 @@
  */
 
 import type { Pixels, Degrees } from "@aurochs-office/drawing-ml/domain/units";
-import type { Bounds, ShapeId } from "@aurochs-office/pptx/domain/types";
+import type { Bounds } from "@aurochs-office/drawing-ml/domain/geometry";
+import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import type {
   IdleDragState as CoreIdleDragState,
   ResizeDragState as CoreResizeDragState,

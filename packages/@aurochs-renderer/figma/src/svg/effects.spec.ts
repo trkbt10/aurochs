@@ -2,6 +2,7 @@
  * @file Effect rendering unit tests
  */
 
+import type { FigEffect } from "@aurochs/fig/types";
 import {
   hasDropShadow,
   getDropShadows,
@@ -16,7 +17,6 @@ import {
   createLayerBlurFilter,
   createCombinedFilter,
   getFilterAttr,
-  type FigEffect,
 } from "./effects";
 import type { FigSvgRenderContext } from "../types";
 

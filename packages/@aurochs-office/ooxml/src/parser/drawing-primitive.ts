@@ -17,26 +17,12 @@ import type { BlackWhiteMode } from "../domain/drawing/content";
 import { emu } from "@aurochs-office/drawing-ml/domain/units";
 
 // =============================================================================
-// Re-export shared primitives from drawing-ml
-// =============================================================================
-
-export {
-  parseInt32,
-  parseInt64,
-  parseUnsignedInt,
-  parseBoolean,
-  getBoolAttr,
-  getIntAttr,
-} from "@aurochs-office/drawing-ml/parser";
-
-// =============================================================================
 // EMU Parsing (returns EMU, not Pixels)
 //
 // These functions differ from drawing-ml's parseEmu() which converts to Pixels.
 // OOXML anchoring/positioning often requires raw EMU values for precise layout.
 // =============================================================================
 
-// Import for internal use
 import { parseInt32, parseInt64, parseUnsignedInt } from "@aurochs-office/drawing-ml/parser";
 
 /**

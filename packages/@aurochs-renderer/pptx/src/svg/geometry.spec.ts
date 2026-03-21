@@ -9,7 +9,7 @@
  */
 
 import { renderGeometryData, renderPresetGeometryData } from "@aurochs-renderer/drawing-ml/svg";
-import type { CustomGeometry, GeometryPath, PresetGeometry } from "@aurochs-office/pptx/domain";
+import type { CustomGeometry, GeometryPath, PresetGeometry } from "@aurochs-office/drawing-ml/domain/geometry";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 
 /**

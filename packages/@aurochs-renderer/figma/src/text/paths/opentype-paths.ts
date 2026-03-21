@@ -5,8 +5,8 @@
  * Both SVG and WebGL backends consume these.
  */
 
-import type { AbstractFont } from "../../font/types";
-import type { PathCommand, PathContour, DecorationRect, TextPathResult } from "./types";
+import type { AbstractFont, PathCommand } from "../../font/types";
+import type { PathContour, DecorationRect, TextPathResult } from "./types";
 import type { TextAlignHorizontal } from "../layout/types";
 import { convertQuadraticsToCubic } from "./bezier";
 

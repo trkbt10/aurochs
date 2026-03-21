@@ -14,10 +14,11 @@ import { GeometryEditor, createDefaultGeometry } from "./GeometryEditor";
 import { EffectsEditor, createDefaultEffects } from "./EffectsEditor";
 import { Scene3dEditor, createDefaultScene3d } from "./Scene3dEditor";
 import { Shape3dEditor, createDefaultShape3d } from "./Shape3dEditor";
-import type { ShapeProperties, Geometry } from "@aurochs-office/pptx/domain/shape";
+import type { ShapeProperties } from "@aurochs-office/pptx/domain/shape";
 import type { Scene3d, Shape3d } from "@aurochs-office/pptx/domain";
 import type { EditorProps } from "@aurochs-ui/ui-components/types";
-import type { Transform, Effects } from "@aurochs-office/pptx/domain/types";
+import type { Geometry, Transform } from "@aurochs-office/drawing-ml/domain/geometry";
+import type { Effects } from "@aurochs-office/pptx/domain/types";
 import type { Fill, Line } from "@aurochs-office/pptx/domain/color/types";
 
 export type ShapePropertiesEditorProps = EditorProps<ShapeProperties> & {

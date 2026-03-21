@@ -10,7 +10,7 @@ import type {
   PathCommand,
 } from "@aurochs-office/pptx/domain/shape";
 import type { TextBody } from "@aurochs-office/pptx/domain/text";
-import type { Transform, GroupTransform } from "@aurochs-office/pptx/domain/geometry";
+import type { Transform, GroupTransform } from "@aurochs-office/drawing-ml/domain/geometry";
 import type { Effects, Line } from "@aurochs-office/pptx/domain";
 import { EMU_PER_PIXEL } from "@aurochs-office/ooxml/domain/ooxml-units";
 import { px, deg, pct } from "@aurochs-office/drawing-ml/domain/units";

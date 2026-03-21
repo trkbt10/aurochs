@@ -8,7 +8,7 @@
 
 import { getChild, isXmlElement, updateDocumentRoot, replaceChildByName, updateChildByName, type XmlDocument, type XmlElement } from "@aurochs/xml";
 import type { PlaceholderType } from "@aurochs-office/pptx/domain/shape";
-import type { Transform } from "@aurochs-office/pptx/domain/geometry";
+import type { Transform } from "@aurochs-office/drawing-ml/domain/geometry";
 import type { ShapeChange } from "../core/shape-differ";
 import { patchTransformElement, serializeTransform } from "../serializer/transform";
 import { patchSlideXml } from "../slide/slide-patcher";

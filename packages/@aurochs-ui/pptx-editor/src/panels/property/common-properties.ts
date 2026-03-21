@@ -6,7 +6,7 @@
  */
 
 import type { Shape } from "@aurochs-office/pptx/domain/index";
-import type { Transform } from "@aurochs-office/pptx/domain/types";
+import type { Transform } from "@aurochs-office/drawing-ml/domain/geometry";
 import type { Fill, Line } from "@aurochs-office/pptx/domain/color/types";
 
 // =============================================================================

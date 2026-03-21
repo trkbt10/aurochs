@@ -19,9 +19,8 @@ import type {
   NonVisualDrawingProps,
   DrawingShapeProperties,
 } from "@aurochs-office/ooxml/domain/drawing";
+import { parseInt32, parseBoolean as parseOoxmlBoolean } from "@aurochs-office/drawing-ml/parser";
 import {
-  parseInt32,
-  parseBoolean as parseOoxmlBoolean,
   parseAlignH,
   parseAlignV,
   parseRelFromH,

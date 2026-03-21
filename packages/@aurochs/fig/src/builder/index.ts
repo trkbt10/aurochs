@@ -120,8 +120,8 @@ export {
   type RoundedRectangleNodeData,
   type BaseShapeNodeData,
   type ArcData,
-  type Stroke,
 } from "./shape";
+export type { Stroke } from "./types";
 
 // Fig file builder (from node/)
 export { FigFileBuilder, createFigFile } from "./node";

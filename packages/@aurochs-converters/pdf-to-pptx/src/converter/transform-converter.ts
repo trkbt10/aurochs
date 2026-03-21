@@ -9,7 +9,7 @@ import type { PdfBBox, PdfMatrix, PdfPoint } from "@aurochs/pdf/domain";
 import { decomposeMatrix } from "@aurochs/pdf/domain/coordinate/matrix";
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import { deg, px } from "@aurochs-office/drawing-ml/domain/units";
-import type { Transform } from "@aurochs-office/pptx/domain/geometry";
+import type { Transform } from "@aurochs-office/drawing-ml/domain/geometry";
 import { PT_TO_PX } from "@aurochs/pdf/domain/constants";
 
 export type ConversionContext = {

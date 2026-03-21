@@ -105,6 +105,14 @@ export default [
       },
     },
 
+    // CLI aggregator: re-exports sub-CLI programs by design
+    {
+      files: ["packages/@aurochs-cli/cli/src/index.ts"],
+      rules: {
+        "custom/no-cross-package-reexport": "off",
+      },
+    },
+
     // Tests-only: allow global test APIs so imports are unnecessary
     {
       files: [

@@ -9,9 +9,9 @@
 // @vitest-environment jsdom
 
 import { render } from "@testing-library/react";
-import type { GraphicFrame as GraphicFrameType, Transform } from "@aurochs-office/pptx/domain";
+import type { GraphicFrame as GraphicFrameType, SlideSize } from "@aurochs-office/pptx/domain";
+import type { Transform } from "@aurochs-office/drawing-ml/domain/geometry";
 import type { Table } from "@aurochs-office/pptx/domain/table/types";
-import type { SlideSize } from "@aurochs-office/pptx/domain";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
 import { createResourceStore, type ResourceStore } from "@aurochs-office/pptx/domain/resource-store";
 import { px, deg } from "@aurochs-office/drawing-ml/domain/units";

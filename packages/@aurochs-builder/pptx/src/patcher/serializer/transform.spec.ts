@@ -3,7 +3,7 @@
  */
 
 import { createElement, getChild, type XmlElement } from "@aurochs/xml";
-import type { Transform } from "@aurochs-office/pptx/domain/geometry";
+import type { Transform } from "@aurochs-office/drawing-ml/domain/geometry";
 import { deg, px } from "@aurochs-office/drawing-ml/domain/units";
 import { patchTransformElement, serializeTransform } from "./transform";
 

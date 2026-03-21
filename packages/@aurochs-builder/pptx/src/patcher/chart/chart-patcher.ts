@@ -7,7 +7,7 @@
 
 import type { XmlDocument, XmlElement } from "@aurochs/xml";
 import { getChild, isXmlElement, replaceChildByName, updateChildByName } from "@aurochs/xml";
-import type { Transform } from "@aurochs-office/pptx/domain/geometry";
+import type { Transform } from "@aurochs-office/drawing-ml/domain/geometry";
 import { patchTransformElement } from "../serializer/transform";
 import type { ChartDataSpec } from "@aurochs-builder/chart";
 import { patchChartData, patchChartStyle, patchChartTitle } from "@aurochs-builder/chart/patcher";

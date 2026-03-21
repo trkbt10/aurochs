@@ -12,7 +12,7 @@ import type {
   MoveToCommand,
   PathCommand,
   PresetGeometry,
-} from "@aurochs-office/pptx/domain/shape";
+} from "@aurochs-office/drawing-ml/domain/geometry";
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import type { ConversionContext } from "./transform-converter";

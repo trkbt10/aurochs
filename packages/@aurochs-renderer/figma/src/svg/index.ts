@@ -36,23 +36,6 @@ export {
 } from "./transform";
 
 export {
-  IDENTITY_MATRIX,
-  isIdentityMatrix,
-  createTranslationMatrix,
-  createScaleMatrix,
-  createRotationMatrix,
-  multiplyMatrices,
-  extractTranslation,
-  extractScale,
-  extractRotation,
-} from "../core/transform";
-
-export {
-  figColorToHex,
-  figColorToRgba,
-} from "../core/color";
-
-export {
   type FillAttrs,
   getFillAttrs,
   hasVisibleFill,

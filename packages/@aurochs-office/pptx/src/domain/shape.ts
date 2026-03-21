@@ -5,11 +5,12 @@
  * @see ECMA-376 Part 1, Section 20.1.9 - DrawingML Shapes
  */
 
-import type { Fill, Line, BlipEffects } from "./color/types";
+import type { Fill, Line } from "./color/types";
+import type { BlipEffects } from "@aurochs-office/drawing-ml/domain/fill";
 import type { Table } from "./table/types";
 import type { TextBody } from "./text";
-import type { Percent, Pixels, Degrees } from "@aurochs-office/drawing-ml/domain/units";
-import type { Point, Transform, GroupTransform } from "./geometry";
+import type { Percent, Pixels } from "@aurochs-office/drawing-ml/domain/units";
+import type { Transform, GroupTransform, Geometry } from "@aurochs-office/drawing-ml/domain/geometry";
 import type { Effects } from "./effects";
 import type { Hyperlink, ResourceId } from "./resource";
 import type { GroupLocks, PictureLocks, ShapeLocks } from "./shape-locks";
@@ -17,32 +18,7 @@ import type { ContentPart } from "./anchor";
 import type { BlipCompression } from "@aurochs-office/ooxml/domain/drawing";
 import type { FontCollectionIndex, StyleMatrixColumnIndex, ShapeId } from "./style-ref";
 import type { Scene3d, Shape3d } from "./three-d";
-import type { Geometry } from "@aurochs-office/drawing-ml/domain/geometry";
 
-// DrawingML geometry types used by PPTX shapes
-export type {
-  PresetShapeType,
-  AdjustValue,
-  PathCommandType,
-  MoveToCommand,
-  LineToCommand,
-  ArcToCommand,
-  QuadBezierCommand,
-  CubicBezierCommand,
-  CloseCommand,
-  PathCommand,
-  PathFillMode,
-  GeometryPath,
-  AdjustHandle,
-  XYAdjustHandle,
-  PolarAdjustHandle,
-  GeometryGuide,
-  ConnectionSite,
-  TextRect,
-  PresetGeometry,
-  CustomGeometry,
-  Geometry,
-} from "@aurochs-office/drawing-ml/domain/geometry";
 
 // =============================================================================
 // Shape Identity Types

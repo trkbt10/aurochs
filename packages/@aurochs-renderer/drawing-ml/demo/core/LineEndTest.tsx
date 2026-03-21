@@ -4,7 +4,8 @@
  * Tests for ECMA-376 line end markers (arrow heads/tails).
  */
 
-import type { Line, LineEnd } from "@aurochs-office/pptx/domain";
+import type { LineEnd } from "@aurochs-office/drawing-ml/domain/line";
+import type { Line } from "@aurochs-office/pptx/domain";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import type { CheckItem } from "../types";
 import { TestSubsection, LineMarkerPreview } from "../components";

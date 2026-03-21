@@ -6,7 +6,7 @@
 
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
-import type { CustomGeometry } from "@aurochs-office/pptx/domain";
+import type { CustomGeometry } from "@aurochs-office/drawing-ml/domain/geometry";
 import type { AnchorPointType } from "@aurochs-ui/path-tools";
 import type { PathPointSelection, PathElementId } from "../../../path-tools/adapters";
 import { createEmptyPathSelection } from "../../../path-tools/adapters";

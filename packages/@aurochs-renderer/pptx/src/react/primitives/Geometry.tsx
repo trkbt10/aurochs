@@ -5,7 +5,8 @@
  * as SVG path elements.
  */
 
-import type { Geometry, Fill, Line } from "@aurochs-office/pptx/domain";
+import type { Fill, Line } from "@aurochs-office/pptx/domain";
+import type { Geometry } from "@aurochs-office/drawing-ml/domain/geometry";
 import { renderGeometryData } from "@aurochs-renderer/drawing-ml/svg";
 import { useFillWithDefs, type SvgFillProps } from "./Fill";
 import { useStroke, type SvgStrokeProps } from "./Stroke";

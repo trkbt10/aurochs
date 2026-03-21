@@ -11,7 +11,7 @@ import { EditorStatusBar } from "@aurochs-ui/ui-components";
 import { VbaEditorProvider, useVbaEditor } from "../context/vba-editor";
 import type { ProjectSearchMatch } from "../context/vba-editor/types";
 import { VbaCodeEditor, type CodeRendererComponent } from "./code-editor";
-import { VbaModuleGroupedList } from "./module-list";
+import { VbaModuleGroupedList } from "./vba-module-list";
 import { VbaEditorToolbar } from "./toolbar";
 import { VbaExecutionPanel, type ExecutionState } from "./execution-panel";
 import { SearchResultsPanel } from "./search";

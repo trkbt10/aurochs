@@ -3,8 +3,8 @@
  */
 
 import { createElement, type XmlElement } from "@aurochs/xml";
-import type { GradientFill, GradientStop, PatternFill } from "@aurochs-office/drawing-ml/domain/fill";
-import type { BlipEffects, BlipFill, Fill, StretchFill, TileFill } from "@aurochs-office/pptx/domain";
+import type { GradientFill, GradientStop, PatternFill, BlipEffects, BlipFill, StretchFill, TileFill } from "@aurochs-office/drawing-ml/domain/fill";
+import type { Fill } from "@aurochs-office/pptx/domain";
 import { serializeColor } from "./color";
 import { ooxmlBool, ooxmlAngleUnits, ooxmlEmu, ooxmlPercent100k } from "@aurochs-office/ooxml/domain/ooxml-units";
 

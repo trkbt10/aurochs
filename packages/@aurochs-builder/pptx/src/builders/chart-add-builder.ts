@@ -5,14 +5,12 @@
  * relationships/content types, and inserts a p:graphicFrame on the slide.
  */
 
-import { createElement, parseXml, serializeDocument, type XmlDocument, type XmlElement } from "@aurochs/xml";
+import { createElement, parseXml, serializeDocument, updateAtPath, updateDocumentRoot, type XmlDocument, type XmlElement } from "@aurochs/xml";
 import {
   addShapeToTree,
   addOverride,
   addRelationship,
   ensureRelationshipsDocument,
-  updateAtPath,
-  updateDocumentRoot,
 } from "@aurochs-builder/pptx/patcher";
 import type { ZipPackage } from "@aurochs/zip";
 import type { Degrees, Pixels } from "@aurochs-office/drawing-ml/domain/units";
@@ -21,7 +19,7 @@ import { patchChartData, patchChartStyle, patchChartTitle } from "@aurochs-build
 import { buildChartSpaceDocument } from "@aurochs-builder/chart";
 import type { ChartAddSpec, ChartDataSpec } from "../types";
 import { patchChartTransform } from "@aurochs-builder/pptx/patcher";
-import type { Transform } from "@aurochs-office/pptx/domain/geometry";
+import type { Transform } from "@aurochs-office/drawing-ml/domain/geometry";
 import { generateShapeId } from "./id-generator";
 import { getSlideRelsPath } from "./rels-utils";
 

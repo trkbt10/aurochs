@@ -4,7 +4,8 @@
  * Moves shapes between groups and top-level while preserving visual position.
  */
 
-import type { Shape, GrpShape, Transform, GroupTransform } from "@aurochs-office/pptx/domain";
+import type { Shape, GrpShape } from "@aurochs-office/pptx/domain";
+import type { Transform, GroupTransform } from "@aurochs-office/drawing-ml/domain/geometry";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import { findShapeByIdWithParents, findShapeById } from "./query";
 import { hasShapeId } from "@aurochs-ui/editor-controls/shape-editor";

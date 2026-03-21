@@ -5,8 +5,8 @@
  * When a property is undefined, shows an "Add" button to initialize it with defaults.
  */
 
-import type { GrpShape, Shape, GroupTransform } from "@aurochs-office/pptx/domain/index";
-import type { Transform } from "@aurochs-office/pptx/domain/types";
+import type { GrpShape, Shape } from "@aurochs-office/pptx/domain/index";
+import type { GroupTransform, Transform } from "@aurochs-office/drawing-ml/domain/geometry";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import { FieldGroup } from "@aurochs-ui/ui-components/layout";
 import {

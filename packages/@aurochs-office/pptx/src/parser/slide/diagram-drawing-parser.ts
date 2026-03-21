@@ -17,7 +17,7 @@
 /* eslint-disable curly -- diagram parser uses guard clauses for readability */
 
 import type { DiagramContent, DiagramReference, Shape } from "../../domain/shape";
-import type { Transform } from "../../domain/types";
+import type { Transform } from "@aurochs-office/drawing-ml/domain/geometry";
 import type { XmlDocument, XmlElement } from "@aurochs/xml";
 import { getAttr, getByPath, getChild, isXmlElement, parseXml } from "@aurochs/xml";
 import { parseShapeTree, parseShapeElement } from "../shape-parser/index";

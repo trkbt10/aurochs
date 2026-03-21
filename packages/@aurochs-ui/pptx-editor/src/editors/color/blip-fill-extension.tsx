@@ -6,8 +6,7 @@
 
 import type { CSSProperties } from "react";
 import type { FillTypeExtension } from "@aurochs-ui/editor-controls/editors";
-import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
-import type { BlipFill } from "@aurochs-office/pptx/domain/color/types";
+import type { BaseFill, BlipFill } from "@aurochs-office/drawing-ml/domain/fill";
 import type { ResourceId } from "@aurochs-office/pptx/domain/types";
 import { colorTokens, radiusTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { BlipFillSection } from "./BlipFillSection";

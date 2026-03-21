@@ -6,7 +6,7 @@
  */
 
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
-import type { Point, Size } from "./geometry";
+import type { Point, Size } from "@aurochs-office/drawing-ml/domain/geometry";
 import type { ResourceId } from "./resource";
 import type { BlackWhiteMode } from "./appearance";
 

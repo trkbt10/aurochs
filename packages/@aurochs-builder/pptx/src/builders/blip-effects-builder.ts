@@ -2,7 +2,7 @@
  * @file Build BlipEffects domain object from BlipEffectSpec
  */
 
-import type { BlipEffects } from "@aurochs-office/pptx/domain/color/types";
+import type { BlipEffects } from "@aurochs-office/drawing-ml/domain/fill";
 import { deg, pct, px } from "@aurochs-office/drawing-ml/domain/units";
 import { buildColor } from "@aurochs-builder/drawing-ml/fill";
 import type { BlipEffectSpec } from "../types";

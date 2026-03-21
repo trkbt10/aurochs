@@ -16,7 +16,7 @@ import { addShapeToTree } from "./shape-tree-patcher";
 import { extractShapeIds, generateShapeId } from "../shape/id-generator";
 import { serializeShape, serializeGeometry } from "../shape/shape-serializer";
 import { applyTextBodyChangeToShape } from "./text-patcher";
-import type { Geometry } from "@aurochs-office/pptx/domain";
+import type { Geometry } from "@aurochs-office/drawing-ml/domain/geometry";
 
 // =============================================================================
 // Main Patching Function

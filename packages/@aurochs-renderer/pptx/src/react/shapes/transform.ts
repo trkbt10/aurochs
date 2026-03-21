@@ -5,7 +5,7 @@
  * from domain Transform objects.
  */
 
-import type { Transform, GroupTransform } from "@aurochs-office/pptx/domain";
+import type { Transform, GroupTransform } from "@aurochs-office/drawing-ml/domain/geometry";
 
 // =============================================================================
 // Transform Building

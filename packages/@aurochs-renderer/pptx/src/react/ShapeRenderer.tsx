@@ -6,7 +6,8 @@
  */
 
 import { memo } from "react";
-import type { Shape, Transform } from "@aurochs-office/pptx/domain";
+import type { Shape } from "@aurochs-office/pptx/domain";
+import type { Transform } from "@aurochs-office/drawing-ml/domain/geometry";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import { SpShapeRenderer, PicShapeRenderer, CxnShapeRenderer, GrpShapeRenderer, GraphicFrameRenderer } from "./shapes";
 

@@ -14,8 +14,6 @@ import {
   ensureRelationshipsDocument,
   serializeGraphicFrame,
   serializeShape as domainToXml,
-  updateAtPath,
-  updateDocumentRoot,
 } from "@aurochs-builder/pptx/patcher";
 import type { ZipPackage } from "@aurochs/zip";
 import type { SpShape, GraphicFrame, PicShape, CxnShape, GrpShape, Shape } from "@aurochs-office/pptx/domain/shape";
@@ -28,7 +26,7 @@ import type {
   CellBorders,
   CellAnchor,
 } from "@aurochs-office/pptx/domain/table/types";
-import type { GroupTransform } from "@aurochs-office/pptx/domain/geometry";
+import type { GroupTransform } from "@aurochs-office/drawing-ml/domain/geometry";
 import type { TextBody } from "@aurochs-office/pptx/domain/text";
 import type { Shape3d } from "@aurochs-office/pptx/domain/three-d";
 import { px, deg, type Pixels } from "@aurochs-office/drawing-ml/domain/units";
@@ -42,7 +40,7 @@ import { buildFill } from "@aurochs-builder/drawing-ml/fill";
 import { buildLine } from "@aurochs-builder/drawing-ml/line";
 import { buildTextBody, collectHyperlinks } from "@aurochs-builder/drawing-ml/text";
 import { buildEffects, buildShape3d } from "@aurochs-builder/drawing-ml/effect";
-import { parseXml, serializeDocument, isXmlElement } from "@aurochs/xml";
+import { parseXml, serializeDocument, isXmlElement, updateAtPath, updateDocumentRoot } from "@aurochs/xml";
 import { buildBlipEffectsFromSpec } from "./blip-effects-builder";
 import { buildCustomGeometryFromSpec } from "./custom-geometry-builder";
 import { buildMediaReferenceFromSpec, detectEmbeddedMediaType } from "./media-embed-builder";

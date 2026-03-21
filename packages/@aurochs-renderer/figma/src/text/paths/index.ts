@@ -7,7 +7,6 @@
 
 // Types
 export type {
-  PathCommand,
   GlyphOutline,
   PathContour,
   DecorationRect,

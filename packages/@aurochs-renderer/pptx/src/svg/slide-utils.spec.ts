@@ -7,7 +7,7 @@
  */
 
 import { buildGroupTransformAttr, buildTransformAttr, createDefsCollector } from "./slide-utils";
-import type { GroupTransform, Transform } from "@aurochs-office/pptx/domain/types";
+import type { GroupTransform, Transform } from "@aurochs-office/drawing-ml/domain/geometry";
 import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
 
 describe("buildGroupTransformAttr", () => {

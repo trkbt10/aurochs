@@ -27,7 +27,7 @@ import type {
   PresetGeometry,
   QuadBezierCommand,
   TextRect,
-} from "../../domain/index";
+} from "@aurochs-office/drawing-ml/domain/geometry";
 import type { Degrees } from "@aurochs-office/drawing-ml/domain/units";
 import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
 import { getAttr, getChild, getChildren, isXmlElement, type XmlElement } from "@aurochs/xml";

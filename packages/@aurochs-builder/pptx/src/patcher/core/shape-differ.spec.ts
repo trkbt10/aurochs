@@ -11,7 +11,7 @@ import type {
   ContentPartShape,
 } from "@aurochs-office/pptx/domain/shape";
 import type { Slide } from "@aurochs-office/pptx/domain/slide/types";
-import type { Transform, GroupTransform } from "@aurochs-office/pptx/domain/geometry";
+import type { Transform, GroupTransform } from "@aurochs-office/drawing-ml/domain/geometry";
 import type { Color } from "@aurochs-office/drawing-ml/domain/color";
 import type { SolidFill } from "@aurochs-office/drawing-ml/domain/fill";
 import type { Fill, Line } from "@aurochs-office/pptx/domain/color/types";

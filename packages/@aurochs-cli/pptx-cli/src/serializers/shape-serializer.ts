@@ -17,11 +17,11 @@ import type {
   ShapeStyle,
 } from "@aurochs-office/pptx/domain/shape";
 import type { Paragraph, TextRun, ParagraphProperties, RunProperties } from "@aurochs-office/pptx/domain/text";
-import type { Transform } from "@aurochs-office/pptx/domain/geometry";
+import type { Transform } from "@aurochs-office/drawing-ml/domain/geometry";
 import type { TableRow, TableCell } from "@aurochs-office/pptx/domain/table/types";
 import type { Fill, Line } from "@aurochs-office/pptx/domain/color/types";
 import type { Color } from "@aurochs-office/drawing-ml/domain/color";
-import type { BlipEffects } from "@aurochs-office/pptx/domain/color/types";
+import type { BlipEffects } from "@aurochs-office/drawing-ml/domain/fill";
 import type { Effects } from "@aurochs-office/pptx/domain/effects";
 import type { Shape3d } from "@aurochs-office/pptx/domain/three-d";
 import {

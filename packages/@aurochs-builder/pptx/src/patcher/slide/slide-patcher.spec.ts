@@ -4,7 +4,7 @@
 
 import { createElement, isXmlElement, getChild, type XmlDocument, type XmlElement } from "@aurochs/xml";
 import type { ShapeChange } from "../core/shape-differ";
-import type { Transform } from "@aurochs-office/pptx/domain/geometry";
+import type { Transform } from "@aurochs-office/drawing-ml/domain/geometry";
 import { EMU_PER_PIXEL } from "@aurochs-office/ooxml/domain/ooxml-units";
 import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
 import type { SpShape } from "@aurochs-office/pptx/domain/shape";

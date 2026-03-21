@@ -14,7 +14,7 @@
  */
 
 import type { Slide, SpShape, PicShape, CxnShape, GrpShape, GraphicFrame } from "@aurochs-office/pptx/domain";
-import type { PresetGeometry } from "@aurochs-office/pptx/domain/shape";
+import type { PresetGeometry } from "@aurochs-office/drawing-ml/domain/geometry";
 import type { Table, TableRow, TableCell } from "@aurochs-office/pptx/domain/table/types";
 import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
 

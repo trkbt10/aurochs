@@ -6,7 +6,7 @@
  * @see docs/plans/pptx-export/phase-3-transform-serializer.md
  */
 
-import type { Transform } from "@aurochs-office/pptx/domain/geometry";
+import type { Transform } from "@aurochs-office/drawing-ml/domain/geometry";
 import { EMU_PER_PIXEL } from "@aurochs-office/ooxml/domain/ooxml-units";
 import { createElement, isXmlElement, type XmlElement, type XmlNode } from "@aurochs/xml";
 

@@ -11,7 +11,7 @@ export {
   VBA_GROUPS,
   VBA_GROUP_IDS,
   type VbaModuleMeta,
-} from "./module-list";
+} from "./vba-module-list";
 export { VbaProcedureDropdown, type VbaProcedureDropdownProps } from "./procedure-dropdown";
 export { VbaEditorToolbar, type VbaEditorToolbarProps } from "./toolbar";
 export { VbaPropertiesPanel, type VbaPropertiesPanelProps } from "./properties-panel";

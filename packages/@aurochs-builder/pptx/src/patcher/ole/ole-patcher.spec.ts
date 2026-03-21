@@ -1,7 +1,7 @@
 /** @file Unit tests for OLE object patching operations */
 import { createElement, getChild, parseXml, type XmlElement } from "@aurochs/xml";
 import { deg, px } from "@aurochs-office/drawing-ml/domain/units";
-import type { Transform } from "@aurochs-office/pptx/domain/geometry";
+import type { Transform } from "@aurochs-office/drawing-ml/domain/geometry";
 import { patchOleObject, type OleChange } from "./ole-patcher";
 
 // ---------------------------------------------------------------------------

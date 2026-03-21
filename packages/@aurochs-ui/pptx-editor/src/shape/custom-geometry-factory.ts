@@ -5,7 +5,8 @@
  * This is pptx-editor-specific and not shared with potx-editor.
  */
 
-import type { SpShape, CustomGeometry } from "@aurochs-office/pptx/domain";
+import type { SpShape } from "@aurochs-office/pptx/domain";
+import type { CustomGeometry } from "@aurochs-office/drawing-ml/domain/geometry";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
 import type { ShapeBounds } from "@aurochs-ui/ooxml-components";

@@ -5,7 +5,7 @@
  * For XML serialization, use serializeCustomGeometry from @aurochs-builder/pptx/patcher.
  */
 
-import type { CustomGeometry, GeometryPath, PathCommand } from "@aurochs-office/pptx/domain/shape";
+import type { CustomGeometry, GeometryPath, PathCommand } from "@aurochs-office/drawing-ml/domain/geometry";
 import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
 import type { CustomGeometrySpec, GeometryPathSpec, PathCommandSpec } from "../types";
 

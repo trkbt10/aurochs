@@ -14,7 +14,7 @@ import {
   PointsEditor,
   createDefaultTransform,
 } from "@aurochs-ui/editor-controls/editors";
-import type { Transform } from "@aurochs-office/pptx/domain/geometry";
+import type { Transform } from "@aurochs-office/drawing-ml/domain/geometry";
 import type { Pixels, Degrees, Percent, Points } from "@aurochs-office/drawing-ml/domain/units";
 import { px, deg, pct, pt } from "@aurochs-office/drawing-ml/domain/units";
 

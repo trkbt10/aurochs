@@ -19,8 +19,8 @@ export {
   useVbaEditor,
   useCurrentProcedure,
   type VbaEditorProviderProps,
-  type ProcedureRange,
 } from "./context/vba-editor";
+export type { ProcedureRange } from "./utils/procedure-range";
 
 export type {
   VbaEditorState,

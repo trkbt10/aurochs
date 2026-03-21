@@ -7,7 +7,8 @@
  * - Shape visibility checks
  */
 
-import type { Shape, Transform, GroupTransform } from "@aurochs-office/pptx/domain";
+import type { Shape } from "@aurochs-office/pptx/domain";
+import type { Transform, GroupTransform } from "@aurochs-office/drawing-ml/domain/geometry";
 
 // =============================================================================
 // SVG Defs Collector

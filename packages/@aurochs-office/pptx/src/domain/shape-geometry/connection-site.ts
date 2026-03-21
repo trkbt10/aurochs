@@ -12,7 +12,7 @@
  * @see ECMA-376 Part 1, Section 20.1.9.6 (cxnLst - Connection Site List)
  */
 
-import type { CustomGeometry, Geometry } from "../shape";
+import type { CustomGeometry, Geometry } from "@aurochs-office/drawing-ml/domain/geometry";
 import type { Degrees, Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import { deg, px } from "@aurochs-office/drawing-ml/domain/units";
 import {

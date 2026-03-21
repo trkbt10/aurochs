@@ -8,7 +8,7 @@
 
 import { createElement, type XmlElement, type XmlNode } from "@aurochs/xml";
 import { ooxmlAngleUnits, ooxmlEmu } from "@aurochs-office/ooxml/domain/ooxml-units";
-import type { CustomGeometry, GeometryPath, PathCommand } from "@aurochs-office/pptx/domain/shape";
+import type { CustomGeometry, GeometryPath, PathCommand } from "@aurochs-office/drawing-ml/domain/geometry";
 
 /**
  * Serialize a move-to command

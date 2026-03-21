@@ -5,7 +5,7 @@
  */
 
 import type { Fill } from "./color/types";
-import type { Point } from "./geometry";
+import type { Point } from "@aurochs-office/drawing-ml/domain/geometry";
 import type { Degrees, Percent, Pixels } from "@aurochs-office/drawing-ml/domain/units";
 
 // =============================================================================

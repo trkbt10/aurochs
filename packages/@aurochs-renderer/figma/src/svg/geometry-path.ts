@@ -5,7 +5,6 @@
 import { decodeBlobToSvgPath, type FigBlob } from "@aurochs/fig/parser";
 import type { FigFillGeometry } from "@aurochs/fig/types";
 
-export type { FigFillGeometry };
 
 type WindingRule = "NONZERO" | "EVENODD" | "ODD";
 

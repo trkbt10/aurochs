@@ -11,7 +11,7 @@
  * @see ECMA-376 Part 1, Section 20.1.9.22 (rect - Shape Text Rectangle)
  */
 
-import type { Geometry, TextRect } from "../shape";
+import type { Geometry, TextRect } from "@aurochs-office/drawing-ml/domain/geometry";
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import {

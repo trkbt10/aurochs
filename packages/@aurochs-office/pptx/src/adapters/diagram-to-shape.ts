@@ -4,7 +4,8 @@ import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
 import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import { deg, px } from "@aurochs-office/drawing-ml/domain/units";
 import type { Fill, Line } from "../domain/color/types";
-import type { SpShape, PresetGeometry } from "../domain/shape";
+import type { PresetGeometry } from "@aurochs-office/drawing-ml/domain/geometry";
+import type { SpShape } from "../domain/shape";
 import type { TextBody } from "../domain/text";
 import { isTextBody } from "../domain/diagram/format-guards";
 

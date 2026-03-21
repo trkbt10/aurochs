@@ -8,15 +8,10 @@ import type {
   CxnShape,
   GraphicFrame,
   NonVisualProperties,
-  Geometry,
-  PresetGeometry,
-  CustomGeometry,
-  GeometryPath,
-  PathCommand,
   ConnectionTarget,
   OleReference,
 } from "@aurochs-office/pptx/domain";
-import type { Transform, GroupTransform } from "@aurochs-office/pptx/domain/geometry";
+import type { Geometry, PresetGeometry, CustomGeometry, GeometryPath, PathCommand, Transform, GroupTransform } from "@aurochs-office/drawing-ml/domain/geometry";
 import type { Table } from "@aurochs-office/pptx/domain/table/types";
 import { serializeTransform } from "../serializer/transform";
 import {

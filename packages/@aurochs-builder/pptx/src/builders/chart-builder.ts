@@ -6,10 +6,8 @@
  * p:graphicFrame element.
  */
 
-import { getByPath, isXmlElement, parseXml, serializeDocument, type XmlDocument, type XmlElement } from "@aurochs/xml";
+import { getByPath, isXmlElement, parseXml, serializeDocument, updateAtPath, updateDocumentRoot, type XmlDocument, type XmlElement } from "@aurochs/xml";
 import {
-  updateDocumentRoot,
-  updateAtPath,
   patchChart,
   patchChartTransform,
   type ChartChange,
@@ -18,7 +16,7 @@ import { listRelationships } from "@aurochs-office/opc";
 import { resolveRelationshipTargetPath } from "@aurochs-office/opc";
 import type { ZipPackage } from "@aurochs/zip";
 import type { ChartUpdateSpec } from "../types";
-import type { Transform } from "@aurochs-office/pptx/domain/geometry";
+import type { Transform } from "@aurochs-office/drawing-ml/domain/geometry";
 import type { Degrees, Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import { getSlideRelsPath } from "./rels-utils";
 

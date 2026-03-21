@@ -15,18 +15,16 @@ import type { WrapPolygon, WrapSquare, WrapThrough, WrapTight, WrapTopAndBottom 
 import type { GraphicFrameLocks, GroupLocks, ConnectorLocks, ContentPartLocks } from "../domain/drawing/locks";
 import type { ContentPart, LinkedTextbox, TextboxInfo, ConnectionTarget } from "../domain/drawing/content";
 import type { DrawingEffectExtent } from "../domain/drawing/extent";
+import { parseBoolean, getBoolAttr, getIntAttr } from "@aurochs-office/drawing-ml/parser";
 import {
   parseAlignH,
   parseAlignV,
   parseEmuValue,
-  parseBoolean,
   parsePositionOffset,
   parseRelFromH,
   parseRelFromV,
   parseWrapDistance,
   parseWrapText,
-  getBoolAttr,
-  getIntAttr,
   parseBlackWhiteMode,
 } from "./drawing-primitive";
 

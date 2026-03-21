@@ -6,7 +6,7 @@
  * @see ECMA-376 Part 1, Section 20.1.7.6 (xfrm)
  */
 
-import type { GroupTransform, Transform } from "../../domain/index";
+import type { GroupTransform, Transform } from "@aurochs-office/drawing-ml/domain/geometry";
 import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
 import { getChild, type XmlElement } from "@aurochs/xml";
 import { getAngleAttr, getBoolAttrOr, getEmuAttrOr } from "../primitive";

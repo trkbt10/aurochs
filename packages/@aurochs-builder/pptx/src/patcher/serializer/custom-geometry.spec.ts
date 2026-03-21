@@ -1,7 +1,7 @@
 /** @file Unit tests for custom geometry serialization */
 import { getChild, getChildren } from "@aurochs/xml";
 import type { Degrees, Pixels } from "@aurochs-office/drawing-ml/domain/units";
-import type { CustomGeometry, GeometryPath, PathCommand } from "@aurochs-office/pptx/domain/shape";
+import type { CustomGeometry, GeometryPath, PathCommand } from "@aurochs-office/drawing-ml/domain/geometry";
 import { serializeCustomGeometry, serializeGeometryPath, serializePathCommand } from "./custom-geometry";
 
 describe("serializePathCommand", () => {

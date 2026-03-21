@@ -7,8 +7,8 @@
  * The enrichment happens in the integration layer, bridging parser and render.
  */
 
+import type { BlipFill } from "@aurochs-office/drawing-ml/domain/fill";
 import type {
-  BlipFill,
   BlipFillProperties,
   Fill,
   GraphicFrame,

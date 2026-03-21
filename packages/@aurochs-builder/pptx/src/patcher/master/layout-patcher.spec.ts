@@ -4,7 +4,7 @@
 
 import { createElement, getChild, type XmlDocument, type XmlElement } from "@aurochs/xml";
 import { deg, px } from "@aurochs-office/drawing-ml/domain/units";
-import type { Transform } from "@aurochs-office/pptx/domain/geometry";
+import type { Transform } from "@aurochs-office/drawing-ml/domain/geometry";
 import type { ShapeChange } from "../core/shape-differ";
 import { patchLayoutPlaceholders, patchLayoutShapes } from "./layout-patcher";
 

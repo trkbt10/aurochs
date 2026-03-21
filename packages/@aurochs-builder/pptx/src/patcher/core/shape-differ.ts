@@ -9,7 +9,7 @@
 
 import type { Shape, SpShape, PicShape, GrpShape, CxnShape, GraphicFrame } from "@aurochs-office/pptx/domain/shape";
 import type { Slide } from "@aurochs-office/pptx/domain/slide/types";
-import type { Transform } from "@aurochs-office/pptx/domain/geometry";
+import type { Transform } from "@aurochs-office/drawing-ml/domain/geometry";
 import type { Fill, Line } from "@aurochs-office/pptx/domain/color/types";
 import type { TextBody } from "@aurochs-office/pptx/domain/text";
 import type { Effects } from "@aurochs-office/pptx/domain/effects";

@@ -13,7 +13,8 @@
 
 import { useMemo, type CSSProperties } from "react";
 import type { GradientFill } from "@aurochs-office/drawing-ml/domain/fill";
-import type { Line, LineEnd } from "@aurochs-office/pptx/domain/color/types";
+import type { LineEnd } from "@aurochs-office/drawing-ml/domain/line";
+import type { Line } from "@aurochs-office/pptx/domain/color/types";
 
 export type LinePreviewProps = {
   /** Line properties to display */

@@ -5,7 +5,8 @@
  * Used by the SVG backend. WebGL tessellates PathCommand arrays directly.
  */
 
-import type { PathCommand, DecorationRect } from "./types";
+import type { PathCommand } from "../../font/types";
+import type { DecorationRect } from "./types";
 
 /**
  * Serialize PathCommand array to SVG path data string

@@ -3,13 +3,13 @@
  */
 
 import { getNodeType } from "@aurochs/fig/parser";
-import type { FigNode, FigVector, FigPaint } from "@aurochs/fig/types";
+import type { FigNode, FigVector, FigPaint, FigFillGeometry } from "@aurochs/fig/types";
 import type { FigSvgRenderContext } from "../../types";
 import { g, rect, clipPath, path, type SvgString, EMPTY_SVG } from "../primitives";
 import { buildTransformAttr } from "../transform";
 import { getFillAttrs, type FillAttrs } from "../fill";
 import { getStrokeAttrs, type StrokeAttrs } from "../stroke";
-import { decodePathsFromGeometry, mapWindingRule, type FigFillGeometry } from "../geometry-path";
+import { decodePathsFromGeometry, mapWindingRule } from "../geometry-path";
 import { buildPathElements } from "../render-paths";
 import { figColorToHex, getPaintType } from "../../core/color";
 import {

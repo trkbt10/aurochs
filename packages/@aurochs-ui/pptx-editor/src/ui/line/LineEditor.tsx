@@ -11,7 +11,8 @@ import { LinePreview } from "./LinePreview";
 import { FillPickerPopover, createDefaultFill } from "@aurochs-ui/color-editor";
 import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
-import type { Line, LineEnd, Fill } from "@aurochs-office/pptx/domain/color/types";
+import type { LineEnd } from "@aurochs-office/drawing-ml/domain/line";
+import type { Line, Fill } from "@aurochs-office/pptx/domain/color/types";
 import type { EditorProps, SelectOption } from "@aurochs-ui/ui-components/types";
 
 // =============================================================================

@@ -21,11 +21,11 @@ import type {
   GraphicFrame,
   Fill,
   Line,
-  Geometry,
   OleReference,
   ChartReference,
   DiagramReference,
 } from "@aurochs-office/pptx/domain";
+import type { Geometry } from "@aurochs-office/drawing-ml/domain/geometry";
 import type { CoreRenderContext } from "../render-context";
 import type { SvgDefsCollector } from "./slide-utils";
 import type { Shape as DomainShape } from "@aurochs-office/pptx/domain";

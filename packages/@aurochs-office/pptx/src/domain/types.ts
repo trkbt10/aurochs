@@ -53,8 +53,6 @@ export const hexColor = (value: string): HexColor => value as HexColor;
 // Domain type re-exports
 // =============================================================================
 
-// Geometry types
-export type { Point, Size, Bounds, EffectExtent, Transform, GroupTransform } from "./geometry";
 
 // Text types
 export type {
@@ -71,8 +69,6 @@ export type {
 // Line types
 export type { LineEndType, LineEndSize, LineCap, LineJoin, CompoundLine, DashStyle } from "./line";
 
-// Shape types
-export type { PresetShapeType, AdjustValue } from "./shape";
 
 // Shape locks
 export type { GroupLocks, ConnectorLocks, PictureLocks, ShapeLocks, ContentPartLocks } from "./shape-locks";

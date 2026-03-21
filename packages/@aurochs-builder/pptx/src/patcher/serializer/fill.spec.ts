@@ -4,7 +4,8 @@
 
 import { getChild, getChildren } from "@aurochs/xml";
 import { deg, pct, px } from "@aurochs-office/drawing-ml/domain/units";
-import type { BlipEffects, Fill } from "@aurochs-office/pptx/domain";
+import type { BlipEffects } from "@aurochs-office/drawing-ml/domain/fill";
+import type { Fill } from "@aurochs-office/pptx/domain";
 import { parseFill } from "@aurochs-office/pptx/parser/graphics/fill-parser";
 import { serializeFill, serializeBlipEffects } from "./fill";
 

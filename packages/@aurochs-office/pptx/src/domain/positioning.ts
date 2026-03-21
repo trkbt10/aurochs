@@ -5,7 +5,7 @@
  */
 
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
-import type { EffectExtent, Point } from "./geometry";
+import type { EffectExtent, Point } from "@aurochs-office/drawing-ml/domain/geometry";
 
 // =============================================================================
 // Alignment Types

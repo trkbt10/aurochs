@@ -24,8 +24,6 @@ export type {
   RoundedRectangleNodeData,
 } from "./types";
 
-// Re-export Stroke from types for backwards compatibility
-export type { Stroke } from "../types";
 
 // Base class (for extension if needed)
 export { BaseShapeBuilder } from "./base";

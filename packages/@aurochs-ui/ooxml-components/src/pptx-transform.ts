@@ -5,7 +5,8 @@
  * Group coordinate calculations delegate to editor-controls generic implementation.
  */
 
-import type { Shape, Transform, GrpShape, GroupTransform } from "@aurochs-office/pptx/domain";
+import type { Shape, GrpShape } from "@aurochs-office/pptx/domain";
+import type { Transform, GroupTransform } from "@aurochs-office/drawing-ml/domain/geometry";
 import type { GroupShapeNode, TransformResolver } from "@aurochs-ui/editor-controls/shape-editor";
 import { getAbsoluteBounds as genericGetAbsoluteBounds } from "@aurochs-ui/editor-controls/shape-editor";
 

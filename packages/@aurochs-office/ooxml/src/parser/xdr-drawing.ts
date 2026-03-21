@@ -20,12 +20,11 @@ import type {
 } from "../domain/drawing/anchor";
 import type { GraphicFrameLocks, GroupLocks, ConnectorLocks } from "../domain/drawing/locks";
 import type { ContentPart } from "../domain/drawing/content";
+import { getBoolAttr, parseUnsignedInt } from "@aurochs-office/drawing-ml/parser";
 import {
-  getBoolAttr,
   parseBlackWhiteMode,
   parseCoordinateUnqualified,
   parsePositiveCoordinate,
-  parseUnsignedInt,
 } from "./drawing-primitive";
 
 // =============================================================================
