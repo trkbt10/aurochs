@@ -21,6 +21,17 @@ export function readXmlPart(pkg: ZipPackage, partPath: string): XmlDocument | nu
 }
 
 /**
+ * Read and parse an XML part, throwing if it doesn't exist.
+ */
+export function readXmlPartOrThrow(pkg: ZipPackage, partPath: string): XmlDocument {
+  const doc = readXmlPart(pkg, partPath);
+  if (doc === null) {
+    throw new Error(`Missing required XML part: ${partPath}`);
+  }
+  return doc;
+}
+
+/**
  * Options for writing an XML part
  */
 export type WriteXmlPartOptions = {
@@ -39,13 +50,6 @@ export function writeXmlPart(pkg: ZipPackage, options: WriteXmlPartOptions): voi
     standalone: options.standalone,
   });
   pkg.writeText(options.partPath, xml);
-}
-
-/**
- * Get the relationships file path for a given part
- */
-export function getRelationshipsPath(partPath: string): string {
-  return partPath.replace(/\/([^/]+)\.xml$/, "/_rels/$1.xml.rels");
 }
 
 /**

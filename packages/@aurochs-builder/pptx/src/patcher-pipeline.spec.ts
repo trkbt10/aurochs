@@ -1,6 +1,6 @@
 /** @file Unit tests for patcher-pipeline */
 import { patchPptx, getPatchData } from "./patcher-pipeline";
-import type { PptxPatchSpec } from "./patch-types";
+import type { PptxPatchSpec } from "./patcher/patch-spec";
 import { parseXml, isXmlElement, isXmlText, type XmlNode } from "@aurochs/xml";
 import { loadZipPackage } from "@aurochs/zip";
 import { zipSync } from "fflate";

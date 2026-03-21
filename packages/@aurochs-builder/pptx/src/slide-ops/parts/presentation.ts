@@ -4,45 +4,13 @@
  * Updates <p:sldIdLst> for slide insert/remove/reorder.
  */
 
-import { createElement, isXmlElement, type XmlDocument, type XmlElement, type XmlNode } from "@aurochs/xml";
-
-// =============================================================================
-// XML Mutator Helpers (inline to avoid circular dependencies)
-// =============================================================================
-
-function getDocumentRoot(doc: XmlDocument): XmlElement | null {
-  const root = doc.children.find(isXmlElement);
-  return root ?? null;
-}
-
-function setChildren(parent: XmlElement, children: readonly (XmlElement | XmlNode)[]): XmlElement {
-  return {
-    ...parent,
-    children,
-  };
-}
-
-function replaceChildByName(parent: XmlElement, name: string, newChild: XmlElement): XmlElement {
-  return {
-    ...parent,
-    children: parent.children.map((child) => (isXmlElement(child) && child.name === name ? newChild : child)),
-  };
-}
-
-function updateDocumentRoot(doc: XmlDocument, updater: (root: XmlElement) => XmlElement): XmlDocument {
-  const rootIndex = doc.children.findIndex(isXmlElement);
-  if (rootIndex === -1) {
-    return doc;
-  }
-
-  const root = doc.children[rootIndex] as XmlElement;
-  const updatedRoot = updater(root);
-
-  return {
-    ...doc,
-    children: doc.children.map((child, i) => (i === rootIndex ? updatedRoot : child)),
-  };
-}
+import { createElement, isXmlElement, type XmlDocument, type XmlElement } from "@aurochs/xml";
+import {
+  getDocumentRoot,
+  setChildren,
+  replaceChildByName,
+  updateDocumentRoot,
+} from "../../patcher/core/xml-mutator";
 
 // =============================================================================
 // Presentation Helpers

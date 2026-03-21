@@ -3,33 +3,12 @@
  */
 
 import {
-  getRelationshipsPath,
   normalizePath,
   getPartDirectory,
   resolvePartPath,
 } from "./zip-utils";
 
 describe("zip-utils", () => {
-  describe("getRelationshipsPath", () => {
-    it("converts slide path to rels path", () => {
-      expect(getRelationshipsPath("ppt/slides/slide1.xml")).toBe(
-        "ppt/slides/_rels/slide1.xml.rels",
-      );
-    });
-
-    it("converts presentation path to rels path", () => {
-      expect(getRelationshipsPath("ppt/presentation.xml")).toBe(
-        "ppt/_rels/presentation.xml.rels",
-      );
-    });
-
-    it("converts document path to rels path", () => {
-      expect(getRelationshipsPath("word/document.xml")).toBe(
-        "word/_rels/document.xml.rels",
-      );
-    });
-  });
-
   describe("normalizePath", () => {
     it("removes leading slash", () => {
       expect(normalizePath("/ppt/slides/slide1.xml")).toBe("ppt/slides/slide1.xml");

@@ -9,7 +9,7 @@ import { buildDocx } from "./builder";
 import { patchDocx } from "./patcher";
 import { loadDocx } from "@aurochs-office/docx";
 import type { DocxBuildSpec } from "./types";
-import type { DocxPatchSpec } from "./patch-types";
+import type { DocxPatchSpec } from "./patch-spec";
 import type { DocxParagraph } from "@aurochs-office/docx/domain/paragraph";
 import type { DocxTable } from "@aurochs-office/docx/domain/table";
 import type { DocxRun } from "@aurochs-office/docx/domain/run";

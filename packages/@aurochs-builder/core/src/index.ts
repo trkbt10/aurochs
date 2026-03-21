@@ -9,7 +9,7 @@
  *
  * @example
  * ```typescript
- * import { createElement, setChildren, conditionalAttrs } from "@aurochs-builder/core";
+ * import { createElement, setChildren, conditionalAttrs, updateDocumentRoot } from "@aurochs-builder/core";
  * import type { BuildResult, BuildContext } from "@aurochs-builder/core";
  * ```
  */
@@ -32,27 +32,40 @@ export type {
   AddElementsResult,
 } from "./types";
 
-// XML building utilities
+// XML element construction
 export {
   createElement,
-  setChildren,
-  addChild,
-  addChildren,
-  setAttrs,
-  removeAttr,
-  findChild,
-  findChildren,
-  updateChild,
-  removeChildren,
   conditionalAttrs,
   conditionalChildren,
 } from "./xml-builder";
 
+// XML immutable update operations (SoT for all builders)
+export {
+  setAttribute,
+  setAttributes,
+  removeAttribute,
+  appendChild,
+  prependChild,
+  insertChildAt,
+  removeChildAt,
+  removeChildren,
+  replaceChildAt,
+  replaceChild,
+  replaceChildByName,
+  setChildren,
+  updateChildByName,
+  findElement,
+  findElements,
+  updateAtPath,
+  updateDocumentRoot,
+  getDocumentRoot,
+} from "./xml-mutator";
+
 // ZIP package utilities
 export {
   readXmlPart,
+  readXmlPartOrThrow,
   writeXmlPart,
-  getRelationshipsPath,
   normalizePath,
   getPartDirectory,
   resolvePartPath,

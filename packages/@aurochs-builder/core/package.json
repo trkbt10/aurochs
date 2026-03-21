@@ -18,6 +18,10 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./xml-mutator": {
+      "types": "./src/xml-mutator.ts",
+      "default": "./src/xml-mutator.ts"
     }
   }
 }

@@ -28,28 +28,24 @@ export {
   updateRangeForItemCount,
 } from "./a1-range";
 
-// XML mutator utilities
+// XML mutator utilities (SoT: @aurochs-builder/core/xml-mutator)
 export {
   appendChild,
   findElement,
   findElements,
-  findShapeById,
   getDocumentRoot,
-  getShapeIds,
   insertChildAt,
   prependChild,
   removeAttribute,
   removeChildAt,
   removeChildren,
-  removeShapeById,
   replaceChild,
   replaceChildAt,
   replaceChildByName,
-  replaceShapeById,
   setAttribute,
   setAttributes,
   setChildren,
   updateAtPath,
   updateChildByName,
   updateDocumentRoot,
-} from "./core/xml-mutator";
+} from "@aurochs-builder/core/xml-mutator";

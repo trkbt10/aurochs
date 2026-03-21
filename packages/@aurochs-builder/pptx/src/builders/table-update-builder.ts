@@ -9,7 +9,7 @@ import { patchTable, patchTableStyleId, type TableChange } from "@aurochs-builde
 import type { TextBody, Paragraph, TextRun, ParagraphProperties } from "@aurochs-office/pptx/domain/text";
 import type { TableColumn, TableRow, TableCell, TableCellProperties } from "@aurochs-office/pptx/domain/table/types";
 import type { Pixels, Points } from "@aurochs-office/drawing-ml/domain/units";
-import { setChildren } from "./xml-utils";
+import { setChildren } from "../patcher/core/xml-mutator";
 import type {
   TableUpdateSpec,
   TableRowAddSpec,

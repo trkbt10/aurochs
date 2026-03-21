@@ -9,7 +9,7 @@ import type { Slide } from "./types";
 import type { SlideSize } from "../domain";
 import type { ZipFile } from "@aurochs-office/opc";
 import type { XmlElement } from "@aurochs/xml";
-import type { SlideData } from "../parser/slide/data-types";
+import type { SlideData } from "../parser/slide/slide-loader";
 import type { RenderOptions } from "@aurochs-renderer/pptx";
 import type { TableStyleList } from "../parser/table/style-parser";
 import { DEFAULT_RENDER_OPTIONS } from "@aurochs-renderer/pptx";

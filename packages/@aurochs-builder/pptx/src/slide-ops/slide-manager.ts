@@ -17,29 +17,16 @@ import {
   getChildren,
   isXmlElement,
   parseXml,
-  serializeDocument,
   type XmlDocument,
   type XmlElement,
-  type XmlNode,
 } from "@aurochs/xml";
+import { setChildren, updateDocumentRoot } from "../patcher/core/xml-mutator";
+import { readXmlOrThrow, writeXml } from "./xml-io";
+import { getRelationshipPath } from "@aurochs-office/ooxml/parser/relationships";
 import { CONTENT_TYPES, RELATIONSHIP_TYPES } from "@aurochs-office/pptx/domain";
 import { createEmptyZipPackage, isBinaryFile, type ZipPackage } from "@aurochs/zip";
 import { addSlideToList, removeSlideFromList, reorderSlideInList } from "./parts/presentation";
 import { generateSlideId, generateSlideRId } from "./slide-id-manager";
-
-/**
- * Get the relationship file path for a given part path.
- * e.g., "ppt/slides/slide1.xml" -> "ppt/slides/_rels/slide1.xml.rels"
- */
-function getRelationshipPath(partPath: string): string {
-  const lastSlash = partPath.lastIndexOf("/");
-  if (lastSlash === -1) {
-    return `_rels/${partPath}.rels`;
-  }
-  const dir = partPath.slice(0, lastSlash);
-  const file = partPath.slice(lastSlash + 1);
-  return `${dir}/_rels/${file}.rels`;
-}
 
 export type SlideAddResult = {
   readonly doc: PresentationDocument;
@@ -91,32 +78,6 @@ const CONTENT_TYPES_PATH = "[Content_Types].xml";
 const RELS_XMLNS = "http://schemas.openxmlformats.org/package/2006/relationships";
 
 // =============================================================================
-// XML Mutator Helpers (inline to avoid external dependencies)
-// =============================================================================
-
-function setChildren(parent: XmlElement, children: readonly (XmlElement | XmlNode)[]): XmlElement {
-  return {
-    ...parent,
-    children,
-  };
-}
-
-function updateDocumentRoot(doc: XmlDocument, updater: (root: XmlElement) => XmlElement): XmlDocument {
-  const rootIndex = doc.children.findIndex(isXmlElement);
-  if (rootIndex === -1) {
-    return doc;
-  }
-
-  const root = doc.children[rootIndex] as XmlElement;
-  const updatedRoot = updater(root);
-
-  return {
-    ...doc,
-    children: doc.children.map((child, i) => (i === rootIndex ? updatedRoot : child)),
-  };
-}
-
-// =============================================================================
 // Presentation File Helpers
 // =============================================================================
 
@@ -150,19 +111,6 @@ function copyPresentationFileToPackage(file: PresentationFile): ZipPackage {
     }
   }
   return pkg;
-}
-
-function readXmlOrThrow(pkg: ZipPackage, path: string): XmlDocument {
-  const text = pkg.readText(path);
-  if (!text) {
-    throw new Error(`SlideManager: missing required xml part: ${path}`);
-  }
-  return parseXml(text);
-}
-
-function writeXml(pkg: ZipPackage, path: string, doc: XmlDocument): void {
-  const xml = serializeDocument(doc, { declaration: true, standalone: true });
-  pkg.writeText(path, xml);
 }
 
 function getSlideEntries(presentationXml: XmlDocument): SlideEntry[] {

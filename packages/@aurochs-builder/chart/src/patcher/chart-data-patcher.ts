@@ -20,7 +20,7 @@ import {
   type XmlNode,
 } from "@aurochs/xml";
 import type { ChartDataSpec, ChartSeriesSpec } from "../types";
-import { findElements, replaceChildByName, setChildren, updateDocumentRoot } from "./core/xml-mutator";
+import { findElements, replaceChildByName, setChildren, updateDocumentRoot } from "@aurochs-builder/core/xml-mutator";
 
 function cloneNode(node: XmlNode): XmlNode {
   if (!isXmlElement(node)) {

@@ -24,7 +24,7 @@ import type {
   SlideRemovePatch,
   SlideDuplicatePatch,
   SlideReorderPatch,
-} from "./patch-types";
+} from "./patcher/patch-spec";
 import type { SlideModSpec } from "./types";
 import {
   applyBackground,

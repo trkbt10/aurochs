@@ -7,7 +7,7 @@
  * NOTE: Parser-specific types have been moved to their proper locations:
  * - IndexTables: parser/slide/shape-tree-indexer.ts
  * - SlideLayoutAttributes: parser/slide/layout-parser.ts
- * - SlideData, LayoutData, etc.: parser/slide/data-types.ts
+ * - SlideData, LayoutData, etc.: parser/slide/slide-loader.ts
  */
 
 // Types

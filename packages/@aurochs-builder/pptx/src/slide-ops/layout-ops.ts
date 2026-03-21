@@ -16,11 +16,12 @@ import {
   getChildren,
   isXmlElement,
   parseXml,
-  serializeDocument,
   type XmlDocument,
   type XmlElement,
-  type XmlNode,
 } from "@aurochs/xml";
+import { setChildren, updateDocumentRoot } from "../patcher/core/xml-mutator";
+import { readXmlOrThrow, writeXml } from "./xml-io";
+import { getRelationshipPath } from "@aurochs-office/ooxml/parser/relationships";
 import { CONTENT_TYPES, RELATIONSHIP_TYPES } from "@aurochs-office/pptx/domain";
 import { createEmptyZipPackage, isBinaryFile, type ZipPackage } from "@aurochs/zip";
 import { serializeSlideLayout } from "../patcher/layout/layout-serializer";
@@ -67,32 +68,6 @@ const RELS_XMLNS = "http://schemas.openxmlformats.org/package/2006/relationships
 const MIN_LAYOUT_ID = 2147483648;
 
 // =============================================================================
-// XML Mutator Helpers
-// =============================================================================
-
-function setChildren(parent: XmlElement, children: readonly (XmlElement | XmlNode)[]): XmlElement {
-  return {
-    ...parent,
-    children,
-  };
-}
-
-function updateDocumentRoot(doc: XmlDocument, updater: (root: XmlElement) => XmlElement): XmlDocument {
-  const rootIndex = doc.children.findIndex(isXmlElement);
-  if (rootIndex === -1) {
-    return doc;
-  }
-
-  const root = doc.children[rootIndex] as XmlElement;
-  const updatedRoot = updater(root);
-
-  return {
-    ...doc,
-    children: doc.children.map((child, i) => (i === rootIndex ? updatedRoot : child)),
-  };
-}
-
-// =============================================================================
 // Presentation File Helpers
 // =============================================================================
 
@@ -128,36 +103,9 @@ function copyPresentationFileToPackage(file: PresentationFile): ZipPackage {
   return pkg;
 }
 
-function readXmlOrThrow(pkg: ZipPackage, path: string): XmlDocument {
-  const text = pkg.readText(path);
-  if (!text) {
-    throw new Error(`LayoutOps: missing required xml part: ${path}`);
-  }
-  return parseXml(text);
-}
-
-function writeXml(pkg: ZipPackage, path: string, doc: XmlDocument): void {
-  const xml = serializeDocument(doc, { declaration: true, standalone: true });
-  pkg.writeText(path, xml);
-}
-
 // =============================================================================
 // Path Helpers
 // =============================================================================
-
-/**
- * Get the relationship file path for a given part path.
- * e.g., "ppt/slideLayouts/slideLayout1.xml" -> "ppt/slideLayouts/_rels/slideLayout1.xml.rels"
- */
-function getRelationshipPath(partPath: string): string {
-  const lastSlash = partPath.lastIndexOf("/");
-  if (lastSlash === -1) {
-    return `_rels/${partPath}.rels`;
-  }
-  const dir = partPath.slice(0, lastSlash);
-  const file = partPath.slice(lastSlash + 1);
-  return `${dir}/_rels/${file}.rels`;
-}
 
 function extractExistingPartNumbers(pkg: ZipPackage, prefixPath: string, basename: string): number[] {
   const escapedPrefix = prefixPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -592,8 +540,8 @@ export function addSlideLayout(doc: PresentationDocument, masterPath?: string): 
   const rId = generateRId(existingRIds);
 
   // Create layout XML and rels
-  writeXml(pkg, layoutPath, serializeSlideLayout({ type: "blank", preserve: true }));
-  writeXml(pkg, getRelationshipPath(layoutPath), buildLayoutRelsXml(resolvedMasterPath));
+  writeXml(pkg,layoutPath, serializeSlideLayout({ type: "blank", preserve: true }));
+  writeXml(pkg,getRelationshipPath(layoutPath), buildLayoutRelsXml(resolvedMasterPath));
 
   // Add relationship in master rels pointing to the new layout
   // Target is relative from ppt/slideMasters/ to ppt/slideLayouts/
@@ -614,9 +562,9 @@ export function addSlideLayout(doc: PresentationDocument, masterPath?: string): 
   );
 
   // Write updated parts
-  writeXml(pkg, resolvedMasterPath, updatedMasterXml);
-  writeXml(pkg, masterRelsPath, updatedMasterRelsXml);
-  writeXml(pkg, CONTENT_TYPES_PATH, updatedContentTypesXml);
+  writeXml(pkg,resolvedMasterPath, updatedMasterXml);
+  writeXml(pkg,masterRelsPath, updatedMasterRelsXml);
+  writeXml(pkg,CONTENT_TYPES_PATH, updatedContentTypesXml);
 
   const updatedDoc: PresentationDocument = {
     ...doc,
@@ -684,9 +632,9 @@ export function deleteSlideLayout(doc: PresentationDocument, layoutPath: string)
   }
 
   // Write updated parts
-  writeXml(pkg, masterPath, updatedMasterXml);
-  writeXml(pkg, masterRelsPath, updatedMasterRelsXml);
-  writeXml(pkg, CONTENT_TYPES_PATH, updatedContentTypesXml);
+  writeXml(pkg,masterPath, updatedMasterXml);
+  writeXml(pkg,masterRelsPath, updatedMasterRelsXml);
+  writeXml(pkg,CONTENT_TYPES_PATH, updatedContentTypesXml);
 
   const updatedDoc: PresentationDocument = {
     ...doc,
@@ -772,9 +720,9 @@ export function duplicateSlideLayout(doc: PresentationDocument, layoutPath: stri
   );
 
   // Write updated parts
-  writeXml(pkg, masterPath, updatedMasterXml);
-  writeXml(pkg, masterRelsPath, updatedMasterRelsXml);
-  writeXml(pkg, CONTENT_TYPES_PATH, updatedContentTypesXml);
+  writeXml(pkg,masterPath, updatedMasterXml);
+  writeXml(pkg,masterRelsPath, updatedMasterRelsXml);
+  writeXml(pkg,CONTENT_TYPES_PATH, updatedContentTypesXml);
 
   const updatedDoc: PresentationDocument = {
     ...doc,

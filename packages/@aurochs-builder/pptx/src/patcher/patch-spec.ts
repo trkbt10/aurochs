@@ -1,17 +1,17 @@
 /**
  * @file PPTX Patch Specification Types
  *
- * Types for patching existing PPTX files. Each patch describes a specific
- * modification to apply to the presentation.
+ * Discriminated union of patch operations for modifying existing PPTX files.
+ * Each variant describes a specific modification to apply to the presentation.
  */
 
-import type { SlideModSpec, ThemeEditSpec } from "./types";
+import type { SlideModSpec, ThemeEditSpec } from "../types";
 import type {
   SlideAddSpec,
   SlideRemoveSpec,
   SlideReorderSpec,
   SlideDuplicateSpec,
-} from "./slide-ops";
+} from "../slide-ops";
 
 // =============================================================================
 // Patch Operations

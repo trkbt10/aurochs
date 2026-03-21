@@ -13,8 +13,8 @@ export { getSlideRelsPath } from "./rels-utils";
 // ID generation
 export { generateShapeId } from "./id-generator";
 
-// XML utilities
-export { setChildren } from "./xml-utils";
+// XML utilities (SoT: patcher/core/xml-mutator)
+export { setChildren } from "../patcher/core/xml-mutator";
 
 // Preset shape mappings
 export { PRESET_MAP } from "./presets";

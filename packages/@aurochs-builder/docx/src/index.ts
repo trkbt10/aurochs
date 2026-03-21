@@ -126,4 +126,4 @@ export { buildDocx, getBuildData } from "./builder";
 export { patchDocx, getPatchData } from "./patcher";
 
 // Patch spec types
-export type { DocxPatch, DocxPatchSpec, DocxPatchData } from "./patch-types";
+export type { DocxPatch, DocxPatchSpec, DocxPatchData } from "./patch-spec";

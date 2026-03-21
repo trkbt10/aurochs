@@ -182,4 +182,4 @@ export type {
   SlideRemovePatch,
   SlideDuplicatePatch,
   SlideReorderPatch,
-} from "./patch-types";
+} from "./patcher/patch-spec";

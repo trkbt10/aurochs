@@ -7,15 +7,15 @@
 import type { ZipPackage } from "@aurochs/zip";
 import {
   parseXml,
-  serializeDocument,
   getByPath,
   getChildren,
   isXmlElement,
   createElement,
   type XmlDocument,
   type XmlElement,
-  type XmlNode,
 } from "@aurochs/xml";
+import { setChildren, updateDocumentRoot } from "../patcher/core/xml-mutator";
+import { readXmlOrThrow, writeXml } from "./xml-io";
 import { PRESENTATIONML_CONTENT_TYPES, PRESENTATIONML_RELATIONSHIP_TYPES } from "@aurochs-office/opc";
 
 const PRESENTATION_XML_PATH = "ppt/presentation.xml";
@@ -93,36 +93,6 @@ type SlideEntry = {
   readonly slideId: number;
   readonly rId: string;
 };
-
-// =============================================================================
-// XML Helpers
-// =============================================================================
-
-function readXmlOrThrow(pkg: ZipPackage, path: string): XmlDocument {
-  const text = pkg.readText(path);
-  if (!text) {
-    throw new Error(`Missing required xml part: ${path}`);
-  }
-  return parseXml(text);
-}
-
-function writeXml(pkg: ZipPackage, path: string, doc: XmlDocument): void {
-  const xml = serializeDocument(doc, { declaration: true, standalone: true });
-  pkg.writeText(path, xml);
-}
-
-function setChildren(element: XmlElement, children: XmlNode[]): XmlElement {
-  return { ...element, children };
-}
-
-function updateDocumentRoot(doc: XmlDocument, updater: (root: XmlElement) => XmlElement): XmlDocument {
-  const root = doc.children.find(isXmlElement);
-  if (!root) {
-    throw new Error("No root element found");
-  }
-  const updated = updater(root);
-  return { children: doc.children.map((c) => (isXmlElement(c) && c === root ? updated : c)) };
-}
 
 // =============================================================================
 // Slide Entry Helpers

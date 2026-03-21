@@ -12,7 +12,7 @@ import { exportDocx } from "@aurochs-office/docx/exporter";
 import type { DocxDocument } from "@aurochs-office/docx/domain/document";
 import type { DocxParagraph } from "@aurochs-office/docx/domain/paragraph";
 import type { DocxBuildSpec } from "./types";
-import type { DocxPatchSpec } from "./patch-types";
+import type { DocxPatchSpec } from "./patch-spec";
 import { extractTextFromBody } from "@aurochs-office/docx/domain/text-utils";
 import { loadZipPackage } from "@aurochs/zip";
 

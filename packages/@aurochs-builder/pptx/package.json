@@ -8,6 +8,7 @@
     "@aurochs/buffer": "workspace:*",
     "@aurochs/xml": "workspace:*",
     "@aurochs/zip": "workspace:*",
+    "@aurochs-builder/core": "workspace:*",
     "@aurochs-builder/drawing-ml": "workspace:*",
     "@aurochs-office/chart": "workspace:*",
     "@aurochs-office/opc": "workspace:*",

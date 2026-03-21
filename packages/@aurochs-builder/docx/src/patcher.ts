@@ -28,7 +28,7 @@ import {
   type OpcRelationship,
   type ContentTypeEntry,
 } from "@aurochs-office/opc";
-import type { DocxPatch, DocxPatchSpec, DocxPatchData } from "./patch-types";
+import type { DocxPatch, DocxPatchSpec, DocxPatchData } from "./patch-spec";
 import { convertBlockContent, convertStylesSpec, convertNumberingSpec, convertSectionSpec, countBlockContentSpecs } from "./spec-converter";
 
 // =============================================================================

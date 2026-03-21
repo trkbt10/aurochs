@@ -1,10 +1,11 @@
 /**
- * @file XML Mutator - Immutable XmlElement update helpers
+ * @file XML Mutator - Immutable XmlElement/XmlDocument update helpers
  *
- * All functions in this module produce new objects without mutating the original.
- * This is required because XmlElement and all its properties are readonly.
+ * All functions produce new objects without mutating the original.
+ * This is the SoT for immutable XML operations across all builder packages.
  *
- * @see src/xml/ast.ts for type definitions
+ * For element construction, see xml-builder.ts.
+ * For format-specific operations (e.g., shape ID lookup), see the respective builder package.
  */
 
 import type { XmlElement, XmlNode, XmlDocument } from "@aurochs/xml";
@@ -16,14 +17,6 @@ import { isXmlElement } from "@aurochs/xml";
 
 /**
  * Set or update an attribute on an element.
- * Returns a new element with the updated attribute.
- *
- * @example
- * ```typescript
- * const updated = setAttribute(element, "id", "123");
- * // element.attrs.id is unchanged
- * // updated.attrs.id === "123"
- * ```
  */
 export function setAttribute(element: XmlElement, name: string, value: string): XmlElement {
   return {
@@ -216,91 +209,6 @@ export function findElements(root: XmlElement, predicate: (el: XmlElement) => bo
   return results;
 }
 
-/**
- * Find a shape element by its ID.
- * Searches for p:cNvPr/@id within p:nvSpPr, p:nvPicPr, p:nvGrpSpPr, etc.
- *
- * @param spTree - The p:spTree element to search in
- * @param shapeId - The shape ID to find
- * @returns The shape element (p:sp, p:pic, p:grpSp, etc.) or null
- */
-export function findShapeById(spTree: XmlElement, shapeId: string): XmlElement | null {
-  for (const child of spTree.children) {
-    if (!isXmlElement(child)) {
-      continue;
-    }
-
-    // Check if this is a shape element (p:sp, p:pic, p:grpSp, p:cxnSp, p:graphicFrame)
-    const shapeTypes = ["p:sp", "p:pic", "p:grpSp", "p:cxnSp", "p:graphicFrame"];
-    if (!shapeTypes.includes(child.name)) {
-      continue;
-    }
-
-    // Find the non-visual properties element
-    const nvPrNames = ["p:nvSpPr", "p:nvPicPr", "p:nvGrpSpPr", "p:nvCxnSpPr", "p:nvGraphicFramePr"];
-
-    for (const nvPrName of nvPrNames) {
-      const nvPr = child.children.find((c): c is XmlElement => isXmlElement(c) && c.name === nvPrName);
-      if (nvPr) {
-        // Find p:cNvPr within nvPr
-        const cNvPr = nvPr.children.find((c): c is XmlElement => isXmlElement(c) && c.name === "p:cNvPr");
-        if (cNvPr && cNvPr.attrs.id === shapeId) {
-          return child;
-        }
-        break;
-      }
-    }
-
-    // Recursively search in group shapes
-    if (child.name === "p:grpSp") {
-      const found = findShapeById(child, shapeId);
-      if (found) {
-        return found;
-      }
-    }
-  }
-
-  return null;
-}
-
-/**
- * Get all shape IDs from a spTree.
- */
-export function getShapeIds(spTree: XmlElement): string[] {
-  const ids: string[] = [];
-
-  for (const child of spTree.children) {
-    if (!isXmlElement(child)) {
-      continue;
-    }
-
-    const shapeTypes = ["p:sp", "p:pic", "p:grpSp", "p:cxnSp", "p:graphicFrame"];
-    if (!shapeTypes.includes(child.name)) {
-      continue;
-    }
-
-    const nvPrNames = ["p:nvSpPr", "p:nvPicPr", "p:nvGrpSpPr", "p:nvCxnSpPr", "p:nvGraphicFramePr"];
-
-    for (const nvPrName of nvPrNames) {
-      const nvPr = child.children.find((c): c is XmlElement => isXmlElement(c) && c.name === nvPrName);
-      if (nvPr) {
-        const cNvPr = nvPr.children.find((c): c is XmlElement => isXmlElement(c) && c.name === "p:cNvPr");
-        if (cNvPr && cNvPr.attrs.id) {
-          ids.push(cNvPr.attrs.id);
-        }
-        break;
-      }
-    }
-
-    // Recursively get IDs from group shapes
-    if (child.name === "p:grpSp") {
-      ids.push(...getShapeIds(child));
-    }
-  }
-
-  return ids;
-}
-
 // =============================================================================
 // Deep Update Operations
 // =============================================================================
@@ -331,95 +239,6 @@ export function updateAtPath(
 
   return {
     ...root,
-    children: newChildren,
-  };
-}
-
-/**
- * Replace a shape in spTree by ID.
- */
-export function replaceShapeById(spTree: XmlElement, shapeId: string, newShape: XmlElement): XmlElement {
-  return {
-    ...spTree,
-    children: spTree.children.map((child) => {
-      if (!isXmlElement(child)) {
-        return child;
-      }
-
-      const shapeTypes = ["p:sp", "p:pic", "p:grpSp", "p:cxnSp", "p:graphicFrame"];
-      if (!shapeTypes.includes(child.name)) {
-        return child;
-      }
-
-      // Check if this shape has the target ID
-      const nvPrNames = ["p:nvSpPr", "p:nvPicPr", "p:nvGrpSpPr", "p:nvCxnSpPr", "p:nvGraphicFramePr"];
-
-      for (const nvPrName of nvPrNames) {
-        const nvPr = child.children.find((c): c is XmlElement => isXmlElement(c) && c.name === nvPrName);
-        if (nvPr) {
-          const cNvPr = nvPr.children.find((c): c is XmlElement => isXmlElement(c) && c.name === "p:cNvPr");
-          if (cNvPr && cNvPr.attrs.id === shapeId) {
-            return newShape;
-          }
-          break;
-        }
-      }
-
-      // Recursively update group shapes
-      if (child.name === "p:grpSp") {
-        return replaceShapeById(child, shapeId, newShape);
-      }
-
-      return child;
-    }),
-  };
-}
-
-/**
- * Remove a shape from spTree by ID.
- */
-export function removeShapeById(spTree: XmlElement, shapeId: string): XmlElement {
-  const newChildren: XmlNode[] = [];
-
-  for (const child of spTree.children) {
-    if (!isXmlElement(child)) {
-      newChildren.push(child);
-      continue;
-    }
-
-    const shapeTypes = ["p:sp", "p:pic", "p:grpSp", "p:cxnSp", "p:graphicFrame"];
-    if (!shapeTypes.includes(child.name)) {
-      newChildren.push(child);
-      continue;
-    }
-
-    // Check if this shape has the target ID
-    const nvPrNames = ["p:nvSpPr", "p:nvPicPr", "p:nvGrpSpPr", "p:nvCxnSpPr", "p:nvGraphicFramePr"];
-
-    const hasTargetId = nvPrNames.some((nvPrName) => {
-      const nvPr = child.children.find((c): c is XmlElement => isXmlElement(c) && c.name === nvPrName);
-      if (!nvPr) {
-        return false;
-      }
-      const cNvPr = nvPr.children.find((c): c is XmlElement => isXmlElement(c) && c.name === "p:cNvPr");
-      return cNvPr && cNvPr.attrs.id === shapeId;
-    });
-
-    if (hasTargetId) {
-      // Skip this child (remove it)
-      continue;
-    }
-
-    // Recursively update group shapes
-    if (child.name === "p:grpSp") {
-      newChildren.push(removeShapeById(child, shapeId));
-    } else {
-      newChildren.push(child);
-    }
-  }
-
-  return {
-    ...spTree,
     children: newChildren,
   };
 }

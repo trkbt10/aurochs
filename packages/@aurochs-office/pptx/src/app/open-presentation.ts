@@ -8,7 +8,7 @@ import type { SlideFileInfo } from "../domain/content-types";
 import type { SlideSize } from "../domain";
 import type { ZipFile } from "@aurochs-office/opc";
 import { getBasename, getByPath, getChildren, type XmlDocument, type XmlElement } from "@aurochs/xml";
-import type { SlideData } from "../parser/slide/data-types";
+import type { SlideData } from "../parser/slide/slide-loader";
 import type { RenderOptions } from "@aurochs-renderer/pptx";
 import type { TableStyleList } from "../parser/table/style-parser";
 import { parseSlideSizeFromXml, parseDefaultTextStyle, parseAppVersion } from "./presentation-info";
@@ -17,7 +17,7 @@ import { createZipAdapter } from "../domain/zip-adapter";
 import { readPart } from "../parser/part-reader";
 import { loadRelationships } from "../parser/relationships";
 import { createSlide } from "./slide-builder";
-import { loadLayoutData, loadMasterData, loadThemeData, loadDiagramData } from "../parser/slide/loader";
+import { loadLayoutData, loadMasterData, loadThemeData, loadDiagramData } from "../parser/slide/slide-loader";
 import type { PresentationFile } from "../domain";
 import { RELATIONSHIP_TYPES } from "../domain/relationships";
 
