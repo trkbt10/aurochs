@@ -16,6 +16,7 @@ import { createInactiveTextEditState } from "@aurochs-ui/ooxml-components/text-e
 import type { TextEditState } from "@aurochs-ui/ooxml-components/text-edit";
 
 type SetDocumentAction = Extract<PresentationEditorAction, { type: "SET_DOCUMENT" }>;
+type ApplyThemeAction = Extract<PresentationEditorAction, { type: "APPLY_THEME" }>;
 
 // Note: UndoAction and RedoAction types not needed since handlers don't use action payload
 
@@ -89,10 +90,40 @@ function handleRedo(state: PresentationEditorState): PresentationEditorState {
 }
 
 /**
+ * Apply a complete theme replacement.
+ *
+ * Updates both the document-level theme data (colorContext, fontScheme)
+ * and all apiSlide.theme XML documents atomically. This ensures
+ * both rendering paths (document fallback and apiSlide renderContext)
+ * reflect the new theme.
+ */
+function handleApplyTheme(state: PresentationEditorState, action: ApplyThemeAction): PresentationEditorState {
+  const doc = state.documentHistory.present;
+  const newSlides = doc.slides.map((slideWithId) => {
+    if (!slideWithId.apiSlide) { return slideWithId; }
+    return {
+      ...slideWithId,
+      apiSlide: { ...slideWithId.apiSlide, theme: action.themeXml },
+    };
+  });
+  const newDoc: PresentationDocument = {
+    ...doc,
+    colorContext: action.colorContext,
+    fontScheme: action.fontScheme,
+    slides: newSlides,
+  };
+  return {
+    ...state,
+    documentHistory: pushHistory(state.documentHistory, newDoc),
+  };
+}
+
+/**
  * History handlers
  */
 export const HISTORY_HANDLERS: HandlerMap = {
   SET_DOCUMENT: handleSetDocument,
+  APPLY_THEME: handleApplyTheme,
   UNDO: handleUndo,
   REDO: handleRedo,
 };

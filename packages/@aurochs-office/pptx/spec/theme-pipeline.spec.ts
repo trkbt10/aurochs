@@ -19,10 +19,11 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { extractThemeFromBuffer } from "../src/app/theme-extractor";
-import { exportThemeAsPotx } from "@aurochs-builder/pptx/builders";
+import { exportThemeAsPotx, buildThemeXml } from "@aurochs-builder/pptx/builders";
 import type { ThemeExportOptions } from "@aurochs-builder/pptx/builders";
 import type { ExtractedTheme } from "../src/app/theme-extractor";
 import type { CustomColor } from "../src/domain/theme/types";
+import { parseTheme } from "../src/parser/theme/theme-parser";
 import type { SchemeColorName } from "@aurochs-office/drawing-ml/domain/color";
 import { EMPTY_FONT_SCHEME } from "@aurochs-office/ooxml/domain/font-scheme";
 
@@ -646,5 +647,29 @@ describe("Theme pipeline: extract → editor-equivalent mapping → export → r
 
     expect(reExtracted.theme.fontScheme.majorFont).toBeDefined();
     expect(reExtracted.theme.fontScheme.minorFont).toBeDefined();
+  });
+});
+
+// =============================================================================
+// buildThemeXml → parseTheme lossless (pptx-editor APPLY_THEME path)
+// =============================================================================
+
+describe("Theme pipeline: buildThemeXml → parseTheme (pptx-editor path)", () => {
+  it("buildThemeXml output parses back to matching Theme", async () => {
+    const buffer = loadFixture("poi-test-data/test-data/slideshow/SampleShow.pptx");
+    const original = await extractThemeFromBuffer(buffer);
+    if (!original.success) { throw new Error(original.error); }
+
+    // Simulate pptx-editor APPLY_THEME: build XML from extracted theme, then parse it back
+    const themeXml = buildThemeXml({ name: original.data.themeName, theme: original.data.theme });
+    const parsed = parseTheme(themeXml, []);
+
+    const slots: SchemeColorName[] = ["dk1", "lt1", "dk2", "lt2", "accent1", "accent2", "accent3", "accent4", "accent5", "accent6", "hlink", "folHlink"];
+    for (const slot of slots) {
+      expect(parsed.colorScheme[slot]).toBe(original.data.theme.colorScheme[slot]);
+    }
+    expect(parsed.fontScheme.majorFont.latin).toBe(original.data.theme.fontScheme.majorFont.latin);
+    expect(parsed.fontScheme.minorFont.latin).toBe(original.data.theme.fontScheme.minorFont.latin);
+    expect(parsed.formatScheme.fillStyles.length).toBe(original.data.theme.formatScheme.fillStyles.length);
   });
 });

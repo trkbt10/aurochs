@@ -30,9 +30,8 @@
 
 import type { SchemeColorName, Color } from "@aurochs-office/drawing-ml/domain/color";
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
-import type { CustomColor, ExtraColorScheme, ObjectDefaults, RawMasterTextStyles } from "@aurochs-office/pptx/domain/theme/types";
+import type { Theme, CustomColor, ExtraColorScheme, FormatScheme, ObjectDefaults, RawMasterTextStyles } from "@aurochs-office/pptx/domain/theme/types";
 import type { ColorMapping } from "@aurochs-office/pptx/domain/color/types";
-import type { ColorScheme } from "@aurochs-office/drawing-ml/domain/color-context";
 import { CONTENT_TYPES } from "@aurochs-office/pptx/domain";
 import { serializeColor } from "../patcher/serializer/color";
 import {
@@ -298,36 +297,47 @@ function buildBlankSlide(): XmlDocument {
 // Theme XML Builder — §20.1.6.9 (a:theme)
 // =============================================================================
 
-function buildTheme(options: ThemeExportOptions): XmlDocument {
-  const { name, colorScheme, fontScheme, fontSchemeName, customColors, formatSchemeElements,
-    extraColorSchemes, objectDefaults } = options;
+/**
+ * Options for building a theme XML document from domain types.
+ */
+export type BuildThemeXmlOptions = {
+  /** Theme name (a:theme@name attribute) */
+  readonly name: string;
+  /** Theme domain object (SoT) */
+  readonly theme: Theme;
+  /** Font scheme name (a:fontScheme@name, defaults to theme name) */
+  readonly fontSchemeName?: string;
+};
 
-  const colorChildren = buildColorSchemeChildren(colorScheme);
+/**
+ * Build a complete a:theme XML document from domain types.
+ *
+ * This is the single authoritative function for constructing theme XML
+ * from the Theme domain type (SoT). Used by both:
+ * - exportThemeAsPotx (POTX file generation)
+ * - pptx-editor APPLY_THEME (live theme replacement)
+ *
+ * @see ECMA-376 Part 1, Section 20.1.6.9 (CT_OfficeStyleSheet)
+ */
+export function buildThemeXml(options: BuildThemeXmlOptions): XmlDocument {
+  const { name, theme, fontSchemeName } = options;
 
-  const placeholderFill = createElement("a:solidFill", {}, [createElement("a:schemeClr", { val: "phClr" })]);
-  const placeholderLine = (w: string) => createElement("a:ln", { w }, [
-    createElement("a:solidFill", {}, [createElement("a:schemeClr", { val: "phClr" })]),
-  ]);
+  const colorChildren = buildColorSchemeChildren(theme.colorScheme as Readonly<Record<SchemeColorName, string>>);
 
-  // a:themeElements children
+  // a:themeElements children (all required per §20.1.6.10)
   const themeElementsChildren: XmlElement[] = [
     createElement("a:clrScheme", { name }, colorChildren),
     createElement("a:fontScheme", { name: fontSchemeName || name }, [
-      buildFontElement("major", fontScheme.majorFont),
-      buildFontElement("minor", fontScheme.minorFont),
+      buildFontElement("major", theme.fontScheme.majorFont),
+      buildFontElement("minor", theme.fontScheme.minorFont),
     ]),
-    buildFormatScheme({ name, elements: formatSchemeElements, placeholderFill, placeholderLine }),
+    buildFormatSchemeFromDomain(name, theme.formatScheme),
   ];
 
-  // a:objectDefaults §20.1.6.7 — XmlElement refs preserved from parser
-  if (objectDefaults) {
-    const odChildren: XmlElement[] = [];
-    if (objectDefaults.shapeDefault) { odChildren.push(objectDefaults.shapeDefault); }
-    if (objectDefaults.lineDefault) { odChildren.push(objectDefaults.lineDefault); }
-    if (objectDefaults.textDefault) { odChildren.push(objectDefaults.textDefault); }
-    if (odChildren.length > 0) {
-      themeElementsChildren.push(createElement("a:objectDefaults", {}, odChildren));
-    }
+  // a:objectDefaults §20.1.6.7 — optional
+  const odChildren = buildObjectDefaultsChildren(theme.objectDefaults);
+  if (odChildren.length > 0) {
+    themeElementsChildren.push(createElement("a:objectDefaults", {}, odChildren));
   }
 
   // a:theme children (after a:themeElements)
@@ -335,18 +345,74 @@ function buildTheme(options: ThemeExportOptions): XmlDocument {
     createElement("a:themeElements", {}, themeElementsChildren),
   ];
 
-  // a:extraClrSchemeLst §20.1.6.5
-  if (extraColorSchemes && extraColorSchemes.length > 0) {
-    themeChildren.push(buildExtraColorSchemeList(extraColorSchemes));
+  // a:extraClrSchemeLst §20.1.6.5 — optional
+  if (theme.extraColorSchemes.length > 0) {
+    themeChildren.push(buildExtraColorSchemeList(theme.extraColorSchemes));
   }
 
-  // a:custClrLst §20.1.6.3
-  themeChildren.push(...buildCustomColorsList(customColors));
+  // a:custClrLst §20.1.6.3 — optional
+  themeChildren.push(...buildCustomColorsList(theme.customColors));
 
   return {
     children: [
       createElement("a:theme", { "xmlns:a": DRAWINGML_NAMESPACES.main, name }, themeChildren),
     ],
+  };
+}
+
+/** Build a:objectDefaults children from domain ObjectDefaults. */
+function buildObjectDefaultsChildren(od: ObjectDefaults): XmlElement[] {
+  const children: XmlElement[] = [];
+  if (od.shapeDefault) { children.push(od.shapeDefault); }
+  if (od.lineDefault) { children.push(od.lineDefault); }
+  if (od.textDefault) { children.push(od.textDefault); }
+  return children;
+}
+
+/** Adapter: build theme XML from ThemeExportOptions (delegates to buildThemeXml). */
+function buildThemeFromExportOptions(options: ThemeExportOptions): XmlDocument {
+  return buildThemeXml({
+    name: options.name,
+    theme: exportOptionsToTheme(options),
+    fontSchemeName: options.fontSchemeName,
+  });
+}
+
+/** Convert ThemeExportOptions to Theme domain type for buildThemeXml. */
+function exportOptionsToTheme(options: ThemeExportOptions): Theme {
+  return {
+    colorScheme: options.colorScheme,
+    fontScheme: options.fontScheme,
+    formatScheme: formatSchemeFromExportOptions(options.formatSchemeElements),
+    customColors: options.customColors ?? [],
+    extraColorSchemes: options.extraColorSchemes ?? [],
+    objectDefaults: options.objectDefaults ?? {},
+    themeOverrides: [],
+  };
+}
+
+function formatSchemeFromExportOptions(fmt: ThemeExportOptions["formatSchemeElements"]): FormatScheme {
+  if (!fmt) { return defaultFormatScheme(); }
+  return {
+    fillStyles: [...fmt.fillStyles ?? []],
+    lineStyles: [...fmt.lineStyles ?? []],
+    effectStyles: [...fmt.effectStyles ?? []],
+    bgFillStyles: [...fmt.bgFillStyles ?? []],
+  };
+}
+
+/** Default format scheme with placeholder elements per ECMA-376 §20.1.4.1.14. */
+function defaultFormatScheme(): FormatScheme {
+  const phFill = createElement("a:solidFill", {}, [createElement("a:schemeClr", { val: "phClr" })]);
+  const phLine = (w: string) => createElement("a:ln", { w }, [
+    createElement("a:solidFill", {}, [createElement("a:schemeClr", { val: "phClr" })]),
+  ]);
+  const phEffect = createElement("a:effectStyle", {}, [createElement("a:effectLst")]);
+  return {
+    fillStyles: [phFill, phFill, phFill],
+    lineStyles: [phLine("6350"), phLine("12700"), phLine("19050")],
+    effectStyles: [phEffect, phEffect, phEffect],
+    bgFillStyles: [phFill, phFill, phFill],
   };
 }
 
@@ -389,27 +455,13 @@ function buildFontElement(prefix: string, font: FontScheme["majorFont"]): XmlEle
 // Format Scheme — §20.1.4.1.14
 // =============================================================================
 
-function buildFormatScheme(options: {
-  name: string;
-  elements: ThemeExportOptions["formatSchemeElements"];
-  placeholderFill: XmlElement;
-  placeholderLine: (w: string) => XmlElement;
-}): XmlElement {
-  const { name, elements, placeholderFill, placeholderLine } = options;
-  const fills = elements?.fillStyles ?? [placeholderFill, placeholderFill, placeholderFill];
-  const lines = elements?.lineStyles ?? [placeholderLine("6350"), placeholderLine("12700"), placeholderLine("19050")];
-  const effects = elements?.effectStyles ?? [
-    createElement("a:effectStyle", {}, [createElement("a:effectLst")]),
-    createElement("a:effectStyle", {}, [createElement("a:effectLst")]),
-    createElement("a:effectStyle", {}, [createElement("a:effectLst")]),
-  ];
-  const bgFills = elements?.bgFillStyles ?? [placeholderFill, placeholderFill, placeholderFill];
-
+/** Build a:fmtScheme from domain FormatScheme (SoT). */
+function buildFormatSchemeFromDomain(name: string, fmt: FormatScheme): XmlElement {
   return createElement("a:fmtScheme", { name }, [
-    createElement("a:fillStyleLst", {}, [...fills]),
-    createElement("a:lnStyleLst", {}, [...lines]),
-    createElement("a:effectStyleLst", {}, [...effects]),
-    createElement("a:bgFillStyleLst", {}, [...bgFills]),
+    createElement("a:fillStyleLst", {}, [...fmt.fillStyles]),
+    createElement("a:lnStyleLst", {}, [...fmt.lineStyles]),
+    createElement("a:effectStyleLst", {}, [...fmt.effectStyles]),
+    createElement("a:bgFillStyleLst", {}, [...fmt.bgFillStyles]),
   ]);
 }
 
@@ -498,7 +550,7 @@ export async function exportThemeAsPotx(options: ThemeExportOptions): Promise<Bl
   writeXml(pkg, "docProps/app.xml", buildAppProperties());
   writeXml(pkg, "ppt/presentation.xml", buildPresentation());
   writeXml(pkg, "ppt/_rels/presentation.xml.rels", buildPresentationRels());
-  writeXml(pkg, "ppt/theme/theme1.xml", buildTheme(options));
+  writeXml(pkg, "ppt/theme/theme1.xml", buildThemeFromExportOptions(options));
   writeXml(pkg, "ppt/slideMasters/slideMaster1.xml", buildSlideMaster(options));
   writeXml(pkg, "ppt/slideMasters/_rels/slideMaster1.xml.rels", buildMasterRels());
   writeXml(pkg, "ppt/slideLayouts/slideLayout1.xml", buildBlankLayout());

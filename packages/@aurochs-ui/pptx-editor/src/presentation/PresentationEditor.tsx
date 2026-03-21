@@ -88,6 +88,11 @@ import { PlayIcon } from "@aurochs-ui/ui-components/icons";
 import { ExportButton } from "./components";
 import { renderSlideSvg } from "@aurochs-renderer/pptx/svg";
 import { createCoreRenderContext } from "@aurochs-renderer/pptx";
+import { ThemeImportExportSection } from "@aurochs-ui/ooxml-components/theme-io";
+import { extractThemeFromBuffer } from "@aurochs-office/pptx/app";
+import { buildThemeXml, exportThemeAsPotx, getThemeFileName } from "@aurochs-builder/pptx/builders";
+import { downloadPresentation } from "@aurochs-office/opc";
+import type { SchemeColorName } from "@aurochs-office/drawing-ml/domain/color";
 
 // =============================================================================
 // Local constants (PPTX-specific, not part of shared EditorShell)
@@ -810,14 +815,34 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
     document.presentationFile,
   ]);
 
+  // Theme import/export callbacks
+  const handleThemeExport = useCallback(async () => {
+    const blob = await exportThemeAsPotx({
+      name: "Theme",
+      colorScheme: document.colorContext.colorScheme as Readonly<Record<SchemeColorName, string>>,
+      fontScheme: document.fontScheme,
+    });
+    await downloadPresentation(blob, getThemeFileName("Theme"));
+  }, [document.colorContext, document.fontScheme]);
+
+  const handleThemeImport = useCallback(async (buffer: ArrayBuffer) => {
+    const result = await extractThemeFromBuffer(buffer);
+    if (!result.success) { throw new Error(result.error); }
+    const { data } = result;
+    const themeXml = buildThemeXml({ name: data.themeName, theme: data.theme });
+    const newColorContext = { colorScheme: data.theme.colorScheme, colorMap: data.colorMap };
+    dispatch({ type: "APPLY_THEME", themeXml, colorContext: newColorContext, fontScheme: data.theme.fontScheme });
+  }, [dispatch]);
+
   const resourcesTabContent = useMemo(
     () => (
       <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "auto" }}>
         <AssetPanel presentationFile={document.presentationFile} />
         <ThemeViewerPanel colorContext={colorContext} fontScheme={fontScheme} />
+        <ThemeImportExportSection onExport={handleThemeExport} onImport={handleThemeImport} />
       </div>
     ),
-    [document.presentationFile, colorContext, fontScheme],
+    [document.presentationFile, colorContext, fontScheme, handleThemeExport, handleThemeImport],
   );
 
   const tabContents = useMemo<TabContents>(() => ({

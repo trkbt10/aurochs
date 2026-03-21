@@ -70,8 +70,8 @@ export { applySlideTransition } from "./transition-builder";
 export { applyThemeEditsToPackage, applyThemeEditsToThemeXml } from "./theme-builder";
 
 // Theme exporter
-export { exportThemeAsPotx, getThemeFileName } from "./theme-exporter";
-export type { ThemeExportOptions } from "./theme-exporter";
+export { exportThemeAsPotx, getThemeFileName, buildThemeXml } from "./theme-exporter";
+export type { ThemeExportOptions, BuildThemeXmlOptions } from "./theme-exporter";
 
 // Chart builders
 export { applyChartUpdates } from "./chart-builder";
