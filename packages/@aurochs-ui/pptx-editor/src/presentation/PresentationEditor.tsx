@@ -817,13 +817,23 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
 
   // Theme import/export callbacks
   const handleThemeExport = useCallback(async () => {
+    if (!document.theme) { return; }
     const blob = await exportThemeAsPotx({
       name: "Theme",
       colorScheme: document.colorContext.colorScheme as Readonly<Record<SchemeColorName, string>>,
-      fontScheme: document.fontScheme,
+      fontScheme: document.theme.fontScheme,
+      formatSchemeElements: {
+        fillStyles: document.theme.formatScheme.fillStyles,
+        lineStyles: document.theme.formatScheme.lineStyles,
+        effectStyles: document.theme.formatScheme.effectStyles,
+        bgFillStyles: document.theme.formatScheme.bgFillStyles,
+      },
+      customColors: document.theme.customColors,
+      extraColorSchemes: document.theme.extraColorSchemes,
+      objectDefaults: document.theme.objectDefaults,
     });
     await downloadPresentation(blob, getThemeFileName("Theme"));
-  }, [document.colorContext, document.fontScheme]);
+  }, [document.theme, document.colorContext]);
 
   const handleThemeImport = useCallback(async (buffer: ArrayBuffer) => {
     const result = await extractThemeFromBuffer(buffer);
@@ -831,7 +841,7 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
     const { data } = result;
     const themeXml = buildThemeXml({ name: data.themeName, theme: data.theme });
     const newColorContext = { colorScheme: data.theme.colorScheme, colorMap: data.colorMap };
-    dispatch({ type: "APPLY_THEME", themeXml, colorContext: newColorContext, fontScheme: data.theme.fontScheme });
+    dispatch({ type: "APPLY_THEME", themeName: data.themeName, theme: data.theme, themeXml, colorContext: newColorContext });
   }, [dispatch]);
 
   const resourcesTabContent = useMemo(

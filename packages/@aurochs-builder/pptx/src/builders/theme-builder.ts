@@ -6,27 +6,12 @@ import { parseXml, serializeDocument } from "@aurochs/xml";
 import type { ZipPackage } from "@aurochs/zip";
 import { patchTheme } from "@aurochs-builder/pptx/patcher";
 import { parseFontScheme } from "@aurochs-office/pptx/parser/theme/theme-parser";
-import type { Color, SchemeColorName } from "@aurochs-office/drawing-ml/domain/color";
+import { SCHEME_COLOR_NAMES, type Color, type SchemeColorName } from "@aurochs-office/drawing-ml/domain/color";
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
-import type { ThemeEditSpec, ThemeFontSpec, ThemeSchemeColorName } from "../types";
+import type { ThemeEditSpec, ThemeFontSpec } from "../types";
 
-const THEME_SCHEME_COLOR_NAMES: readonly ThemeSchemeColorName[] = [
-  "dk1",
-  "lt1",
-  "dk2",
-  "lt2",
-  "accent1",
-  "accent2",
-  "accent3",
-  "accent4",
-  "accent5",
-  "accent6",
-  "hlink",
-  "folHlink",
-];
-
-function isThemeSchemeColorName(value: string): value is ThemeSchemeColorName {
-  return (THEME_SCHEME_COLOR_NAMES as readonly string[]).includes(value);
+function isSchemeColorName(value: string): value is SchemeColorName {
+  return (SCHEME_COLOR_NAMES as readonly string[]).includes(value);
 }
 
 function requireThemePath(theme: ThemeEditSpec): string {
@@ -77,7 +62,7 @@ export function applyThemeEditsToThemeXml(themeXmlText: string, theme: ThemeEdit
   if (hasColorScheme && theme.colorScheme) {
     const scheme: Partial<Record<SchemeColorName, Color>> = {};
     for (const [name, value] of Object.entries(theme.colorScheme)) {
-      if (!isThemeSchemeColorName(name)) {
+      if (!isSchemeColorName(name)) {
         throw new Error(`theme.colorScheme has unsupported key: ${name}`);
       }
       if (!value) {

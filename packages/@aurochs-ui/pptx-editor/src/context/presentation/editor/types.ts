@@ -9,7 +9,7 @@ import type { Slide, Shape, TextBody, SlideSize } from "@aurochs-office/pptx/dom
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import type { Pixels, Degrees } from "@aurochs-office/drawing-ml/domain/units";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
-import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
+import type { Theme } from "@aurochs-office/pptx/domain/theme/types";
 import type { XmlDocument } from "@aurochs/xml";
 import type { PresentationDocument, SlideWithId, SlideId } from "@aurochs-office/pptx/app";
 import type { ShapeHierarchyTarget } from "../../../shape";
@@ -69,8 +69,8 @@ export type PresentationEditorAction =
   // Document mutations
   | { readonly type: "SET_DOCUMENT"; readonly document: PresentationDocument }
   | { readonly type: "SET_SLIDE_SIZE"; readonly slideSize: SlideSize }
-  // Theme replacement (updates document + all apiSlide.theme atomically)
-  | { readonly type: "APPLY_THEME"; readonly themeXml: XmlDocument; readonly colorContext: ColorContext; readonly fontScheme: FontScheme }
+  // Theme replacement (updates document theme SoT + rendering context + all apiSlide.theme atomically)
+  | { readonly type: "APPLY_THEME"; readonly themeName: string; readonly theme: Theme; readonly themeXml: XmlDocument; readonly colorContext: ColorContext }
 
   // Slide management
   // NOTE: ADD_SLIDE and DUPLICATE_SLIDE moved to useSlideOperations hook (async operations)

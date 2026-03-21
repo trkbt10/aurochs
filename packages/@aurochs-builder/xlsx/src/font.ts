@@ -10,8 +10,7 @@
  */
 
 import type { XlsxFont, XlsxColor } from "@aurochs-office/xlsx/domain/style/font";
-import type { XmlElement } from "@aurochs/xml";
-import { createElement } from "@aurochs-builder/core";
+import { createElement, type XmlElement } from "@aurochs/xml";
 
 // =============================================================================
 // Color Serialization

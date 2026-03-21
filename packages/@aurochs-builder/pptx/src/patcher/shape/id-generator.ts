@@ -1,7 +1,7 @@
 /** @file Shape ID and name generation utilities */
 import type { XmlDocument } from "@aurochs/xml";
 import { getChild, isXmlElement } from "@aurochs/xml";
-import { getShapeIds } from "../core/xml-mutator";
+import { getShapeIds } from "../core/shape-ops";
 
 /**
  * スライド内で一意なシェイプIDを生成する

@@ -4,8 +4,7 @@
  * Updates table style references (a:tblPr/a:tableStyleId) on a:tbl.
  */
 
-import { createElement, createText, getChild, isXmlElement, type XmlElement } from "@aurochs/xml";
-import { removeChildren, replaceChildByName, setChildren } from "../core/xml-mutator";
+import { createElement, createText, getChild, isXmlElement, removeChildren, replaceChildByName, setChildren, type XmlElement } from "@aurochs/xml";
 
 function requireTable(tableElement: XmlElement): void {
   if (tableElement.name !== "a:tbl") {

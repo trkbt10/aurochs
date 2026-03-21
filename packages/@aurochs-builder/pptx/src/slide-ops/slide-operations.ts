@@ -13,8 +13,9 @@ import {
   createElement,
   type XmlDocument,
   type XmlElement,
+  setChildren,
+  updateDocumentRoot,
 } from "@aurochs/xml";
-import { setChildren, updateDocumentRoot } from "../patcher/core/xml-mutator";
 import { readXmlOrThrow, writeXml } from "./xml-io";
 import { PRESENTATIONML_CONTENT_TYPES, PRESENTATIONML_RELATIONSHIP_TYPES } from "@aurochs-office/opc";
 

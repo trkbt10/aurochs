@@ -83,7 +83,7 @@ export {
   type BuildSpec,
   type BuildData,
   // Theme types
-  type ThemeSchemeColorName,
+  // ThemeSchemeColorName: use SchemeColorName from @aurochs-office/drawing-ml/domain/color (SoT)
   type ThemeColorSchemeEditSpec,
   type ThemeFontSpec,
   type ThemeFontSchemeEditSpec,

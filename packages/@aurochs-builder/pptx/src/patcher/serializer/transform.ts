@@ -7,7 +7,7 @@
  */
 
 import type { Transform } from "@aurochs-office/pptx/domain/geometry";
-import { EMU_PER_PIXEL } from "@aurochs-office/pptx/domain";
+import { EMU_PER_PIXEL } from "@aurochs-office/ooxml/domain/ooxml-units";
 import { createElement, isXmlElement, type XmlElement, type XmlNode } from "@aurochs/xml";
 
 const ANGLE_UNITS_PER_DEGREE = 60000;

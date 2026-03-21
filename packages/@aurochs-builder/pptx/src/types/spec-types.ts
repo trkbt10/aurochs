@@ -713,27 +713,13 @@ export type BuildData = {
 // Theme Editing Types
 // =============================================================================
 
-/**
- * Theme color scheme slot names (the 12 entries in a:clrScheme)
- */
-export type ThemeSchemeColorName =
-  | "dk1"
-  | "lt1"
-  | "dk2"
-  | "lt2"
-  | "accent1"
-  | "accent2"
-  | "accent3"
-  | "accent4"
-  | "accent5"
-  | "accent6"
-  | "hlink"
-  | "folHlink";
+// ThemeSchemeColorName: use SchemeColorName from @aurochs-office/drawing-ml/domain/color (SoT)
+import type { SchemeColorName } from "@aurochs-office/drawing-ml/domain/color";
 
 /**
  * Color scheme edit - partial updates to a:clrScheme entries using hex colors.
  */
-export type ThemeColorSchemeEditSpec = Partial<Record<ThemeSchemeColorName, string>>;
+export type ThemeColorSchemeEditSpec = Partial<Record<SchemeColorName, string>>;
 
 /**
  * Font spec edit for major/minor fonts

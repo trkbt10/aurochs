@@ -45,11 +45,8 @@ export {
   DEFAULT_TEXT_MARGIN_EMU,
   DEFAULT_MARGIN_LEFT_EMU,
   DEFAULT_INDENT_EMU,
-  EMU_PER_INCH,
-  STANDARD_DPI,
-  EMU_PER_PIXEL,
-  POINTS_PER_INCH,
-  OOXML_PERCENT_FACTOR,
+  // EMU_PER_INCH, STANDARD_DPI, EMU_PER_PIXEL, POINTS_PER_INCH, OOXML_PERCENT_FACTOR:
+  // import from @aurochs-office/ooxml/domain/ooxml-units (SoT)
   DEFAULT_SERVER_ZOOM,
   DEFAULT_FIRST_SLIDE_NUM,
   DEFAULT_SHOW_SPECIAL_PLS_ON_TITLE_SLD,
@@ -61,6 +58,7 @@ export {
   DEFAULT_SAVE_SUBSET_FONTS,
   DEFAULT_AUTO_COMPRESS_PICTURES,
   DEFAULT_BOOKMARK_ID_SEED,
+  DEFAULT_COLOR_SCHEME,
 } from "./defaults";
 
 export { RTL_LANGUAGES } from "./rtl-languages";
@@ -117,9 +115,11 @@ export {
 export type {
   CustomColor,
   ExtraColorScheme,
+  ExtractedTheme,
   ObjectDefaults,
   FormatScheme,
   Theme,
+  ThemeExtractionInput,
   RawMasterTextStyles,
 } from "./theme";
 

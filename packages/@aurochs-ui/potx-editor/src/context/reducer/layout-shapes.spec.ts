@@ -12,7 +12,6 @@
 import type { Shape, SpShape, CxnShape } from "@aurochs-office/pptx/domain";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
-import type { Pixels, Degrees } from "@aurochs-office/drawing-ml/domain/units";
 import type { ThemeEditorState, ThemeEditorAction } from "../types";
 import { themeEditorReducer, createInitialThemeEditorState } from "./index";
 import { EMPTY_FONT_SCHEME } from "@aurochs-office/ooxml/domain/font-scheme";

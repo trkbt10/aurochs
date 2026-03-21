@@ -7,8 +7,7 @@
  * @see ECMA-376 Part 4, Section 18.18.3 (ST_BorderStyle)
  */
 
-import type { XmlElement, XmlNode } from "@aurochs/xml";
-import { createElement } from "@aurochs-builder/core";
+import { createElement, type XmlElement, type XmlNode } from "@aurochs/xml";
 import type { XlsxBorder, XlsxBorderEdge } from "@aurochs-office/xlsx/domain/style/border";
 import type { XlsxColor } from "@aurochs-office/xlsx/domain/style/font";
 

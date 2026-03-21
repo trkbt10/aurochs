@@ -13,10 +13,14 @@ import type { FontScheme, FontSpec } from "@aurochs-office/ooxml/domain/font-sch
 import type {
   CustomColor,
   ExtraColorScheme,
+  ExtractedTheme,
   FormatScheme,
   ObjectDefaults,
+  RawMasterTextStyles,
   Theme,
+  ThemeExtractionInput,
 } from "../../domain/index";
+import { parseSlideMaster } from "../slide/slide-parser";
 
 // =============================================================================
 // Font Scheme Parsing
@@ -324,4 +328,44 @@ export function parseTheme(themeContent: XmlDocument | null, themeOverrides: rea
     themeOverrides,
     objectDefaults: parseObjectDefaults(themeContent),
   };
+}
+
+// =============================================================================
+// Theme Extraction (assembles all theme-related data from raw XML)
+// =============================================================================
+
+const EMPTY_MASTER_TEXT_STYLES: RawMasterTextStyles = {
+  titleStyle: undefined,
+  bodyStyle: undefined,
+  otherStyle: undefined,
+};
+
+/**
+ * Extract complete theme data from raw XML documents.
+ *
+ * This is the SoT entry point for assembling all theme-related data
+ * from a presentation's XML parts. Consumers (app layer, editors)
+ * should use this instead of calling individual parse functions.
+ *
+ * @param input - Raw XML documents (theme, master)
+ * @returns Complete ExtractedTheme or undefined if no theme
+ */
+export function extractThemeData(input: ThemeExtractionInput): ExtractedTheme | undefined {
+  if (input.theme === null) { return undefined; }
+
+  const theme = parseTheme(input.theme, input.themeOverrides);
+
+  const themeRoot = getByPath(input.theme, ["a:theme"]);
+  const themeName = themeRoot ? (getAttr(themeRoot, "name") ?? "") : "";
+
+  const clrMapElement = input.master ? getByPath(input.master, ["p:sldMaster", "p:clrMap"]) : undefined;
+  const colorMap = parseColorMap(clrMapElement);
+
+  const parsedMaster = input.master ? parseSlideMaster(input.master) : undefined;
+  const masterTextStyles = parsedMaster?.textStyles ?? EMPTY_MASTER_TEXT_STYLES;
+
+  const cSld = input.master ? getByPath(input.master, ["p:sldMaster", "p:cSld"]) : undefined;
+  const masterBackground = cSld ? getChild(cSld, "p:bg") : undefined;
+
+  return { themeName, theme, colorMap, masterTextStyles, masterBackground };
 }

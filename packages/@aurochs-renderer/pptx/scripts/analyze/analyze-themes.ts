@@ -11,6 +11,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { parseXml, getChild, getChildren, getAttr } from "@aurochs/xml";
+import { SCHEME_COLOR_NAMES } from "@aurochs-office/drawing-ml/domain/color";
 import { requireFileExists, requirePositionalArg } from "../lib/cli";
 import { loadPptxFile } from "../lib/pptx-loader";
 
@@ -56,21 +57,7 @@ function parseTheme(xml: string, themeName: string): ThemeInfo {
   const colorScheme: Record<string, string> = {};
   const clrScheme = getChild(getChild(getChild(doc, "a:theme"), "a:themeElements"), "a:clrScheme");
   if (clrScheme) {
-    const colorNames = [
-      "dk1",
-      "lt1",
-      "dk2",
-      "lt2",
-      "accent1",
-      "accent2",
-      "accent3",
-      "accent4",
-      "accent5",
-      "accent6",
-      "hlink",
-      "folHlink",
-    ];
-    for (const name of colorNames) {
+    for (const name of SCHEME_COLOR_NAMES) {
       const colorEl = getChild(clrScheme, `a:${name}`);
       if (colorEl) {
         // Try srgbClr first, then sysClr

@@ -4,11 +4,10 @@
  * Updates DrawingML tables (a:tbl) embedded in p:graphicFrame.
  */
 
-import { createElement, getChild, getChildren, isXmlElement, type XmlElement, type XmlNode } from "@aurochs/xml";
+import { createElement, getChild, getChildren, isXmlElement, removeAttribute, replaceChildByName, setAttribute, setChildren, type XmlElement, type XmlNode } from "@aurochs/xml";
 import type { TextBody } from "@aurochs-office/pptx/domain/text";
 import type { TableCell, TableCellProperties, TableColumn, TableRow } from "@aurochs-office/pptx/domain/table/types";
-import { ooxmlEmu } from "@aurochs-builder/core";
-import { removeAttribute, replaceChildByName, setAttribute, setChildren } from "../core/xml-mutator";
+import { ooxmlEmu } from "@aurochs-office/ooxml/domain/ooxml-units";
 import { patchTextBodyElement, serializeDrawingTextBody } from "../serializer/text";
 
 export type TableChange =

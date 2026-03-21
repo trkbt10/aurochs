@@ -6,12 +6,10 @@
  * @see docs/plans/pptx-export/phase-9-master-layout-theme.md
  */
 
-import type { XmlDocument, XmlElement } from "@aurochs/xml";
-import { getChild, isXmlElement } from "@aurochs/xml";
+import { getChild, isXmlElement, updateDocumentRoot, replaceChildByName, updateChildByName, type XmlDocument, type XmlElement } from "@aurochs/xml";
 import type { PlaceholderType } from "@aurochs-office/pptx/domain/shape";
 import type { Transform } from "@aurochs-office/pptx/domain/geometry";
 import type { ShapeChange } from "../core/shape-differ";
-import { updateDocumentRoot, replaceChildByName, updateChildByName } from "../core/xml-mutator";
 import { patchTransformElement, serializeTransform } from "../serializer/transform";
 import { patchSlideXml } from "../slide/slide-patcher";
 

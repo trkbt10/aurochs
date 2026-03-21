@@ -4,13 +4,7 @@
  * Updates <p:sldIdLst> for slide insert/remove/reorder.
  */
 
-import { createElement, isXmlElement, type XmlDocument, type XmlElement } from "@aurochs/xml";
-import {
-  getDocumentRoot,
-  setChildren,
-  replaceChildByName,
-  updateDocumentRoot,
-} from "../../patcher/core/xml-mutator";
+import { createElement, isXmlElement, getDocumentRoot, setChildren, replaceChildByName, updateDocumentRoot, type XmlDocument, type XmlElement } from "@aurochs/xml";
 
 // =============================================================================
 // Presentation Helpers

@@ -5,12 +5,9 @@
  * and round-trip compatibility with getSlideLayoutAttributes.
  */
 
-import { describe, expect, it } from "vitest";
 import {
   getByPath,
   getChild,
-  getChildren,
-  isXmlElement,
   serializeDocument,
   type XmlDocument,
   type XmlElement,

@@ -18,8 +18,9 @@ import {
   parseXml,
   type XmlDocument,
   type XmlElement,
+  setChildren,
+  updateDocumentRoot,
 } from "@aurochs/xml";
-import { setChildren, updateDocumentRoot } from "../patcher/core/xml-mutator";
 import { readXmlOrThrow, writeXml } from "./xml-io";
 import { getRelationshipPath } from "@aurochs-office/ooxml/parser/relationships";
 import { CONTENT_TYPES, RELATIONSHIP_TYPES } from "@aurochs-office/pptx/domain";

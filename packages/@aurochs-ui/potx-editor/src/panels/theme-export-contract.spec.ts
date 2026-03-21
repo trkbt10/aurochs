@@ -30,6 +30,10 @@ function reduce(state: ThemeEditorState, action: ThemeEditorAction): ThemeEditor
   return themeEditorReducer(state, action);
 }
 
+function chain(state: ThemeEditorState, ...actions: readonly ThemeEditorAction[]): ThemeEditorState {
+  return actions.reduce(reduce, state);
+}
+
 function editorState(): ThemeEditorState {
   return createInitialThemeEditorState({
     colorScheme: OFFICE_THEME.colorScheme,
@@ -59,17 +63,18 @@ async function roundTrip(state: ThemeEditorState) {
 
 describe("Export contract: color scheme round-trip", () => {
   it("all 12 scheme colors survive round-trip", async () => {
-    let s = editorState();
-    s = reduce(s, { type: "UPDATE_COLOR_SCHEME", name: "dk1", color: "111111" });
-    s = reduce(s, { type: "UPDATE_COLOR_SCHEME", name: "lt1", color: "EEEEEE" });
-    s = reduce(s, { type: "UPDATE_COLOR_SCHEME", name: "accent1", color: "AA0000" });
-    s = reduce(s, { type: "UPDATE_COLOR_SCHEME", name: "accent2", color: "00AA00" });
-    s = reduce(s, { type: "UPDATE_COLOR_SCHEME", name: "accent3", color: "0000AA" });
-    s = reduce(s, { type: "UPDATE_COLOR_SCHEME", name: "accent4", color: "AAAA00" });
-    s = reduce(s, { type: "UPDATE_COLOR_SCHEME", name: "accent5", color: "AA00AA" });
-    s = reduce(s, { type: "UPDATE_COLOR_SCHEME", name: "accent6", color: "00AAAA" });
-    s = reduce(s, { type: "UPDATE_COLOR_SCHEME", name: "hlink", color: "0000FF" });
-    s = reduce(s, { type: "UPDATE_COLOR_SCHEME", name: "folHlink", color: "FF00FF" });
+    const s = chain(editorState(),
+      { type: "UPDATE_COLOR_SCHEME", name: "dk1", color: "111111" },
+      { type: "UPDATE_COLOR_SCHEME", name: "lt1", color: "EEEEEE" },
+      { type: "UPDATE_COLOR_SCHEME", name: "accent1", color: "AA0000" },
+      { type: "UPDATE_COLOR_SCHEME", name: "accent2", color: "00AA00" },
+      { type: "UPDATE_COLOR_SCHEME", name: "accent3", color: "0000AA" },
+      { type: "UPDATE_COLOR_SCHEME", name: "accent4", color: "AAAA00" },
+      { type: "UPDATE_COLOR_SCHEME", name: "accent5", color: "AA00AA" },
+      { type: "UPDATE_COLOR_SCHEME", name: "accent6", color: "00AAAA" },
+      { type: "UPDATE_COLOR_SCHEME", name: "hlink", color: "0000FF" },
+      { type: "UPDATE_COLOR_SCHEME", name: "folHlink", color: "FF00FF" },
+    );
 
     const doc = await roundTrip(s);
     expect(doc.colorContext.colorScheme.dk1).toBe("111111");
@@ -87,9 +92,10 @@ describe("Export contract: color scheme round-trip", () => {
 
 describe("Export contract: font scheme round-trip", () => {
   it("major and minor latin fonts survive round-trip", async () => {
-    let s = editorState();
-    s = reduce(s, { type: "UPDATE_FONT_SCHEME", target: "major", spec: { latin: "Impact" } });
-    s = reduce(s, { type: "UPDATE_FONT_SCHEME", target: "minor", spec: { latin: "Comic Sans MS" } });
+    const s = chain(editorState(),
+      { type: "UPDATE_FONT_SCHEME", target: "major", spec: { latin: "Impact" } },
+      { type: "UPDATE_FONT_SCHEME", target: "minor", spec: { latin: "Comic Sans MS" } },
+    );
 
     const doc = await roundTrip(s);
     expect(doc.fontScheme.majorFont.latin).toBe("Impact");
@@ -97,9 +103,10 @@ describe("Export contract: font scheme round-trip", () => {
   });
 
   it("eastAsian and complexScript fonts survive round-trip", async () => {
-    let s = editorState();
-    s = reduce(s, { type: "UPDATE_FONT_SCHEME", target: "major", spec: { latin: "Arial", eastAsian: "MS Gothic", complexScript: "Arial" } });
-    s = reduce(s, { type: "UPDATE_FONT_SCHEME", target: "minor", spec: { latin: "Georgia", eastAsian: "MS Mincho" } });
+    const s = chain(editorState(),
+      { type: "UPDATE_FONT_SCHEME", target: "major", spec: { latin: "Arial", eastAsian: "MS Gothic", complexScript: "Arial" } },
+      { type: "UPDATE_FONT_SCHEME", target: "minor", spec: { latin: "Georgia", eastAsian: "MS Mincho" } },
+    );
 
     const doc = await roundTrip(s);
     expect(doc.fontScheme.majorFont.eastAsian).toBe("MS Gothic");
@@ -110,8 +117,7 @@ describe("Export contract: font scheme round-trip", () => {
 
 describe("Export contract: theme preset round-trip", () => {
   it("APPLY_THEME_PRESET colors + fonts survive round-trip", async () => {
-    let s = editorState();
-    s = reduce(s, {
+    const s = reduce(editorState(), {
       type: "APPLY_THEME_PRESET",
       preset: {
         id: "custom", name: "Custom Preset",
@@ -129,16 +135,17 @@ describe("Export contract: theme preset round-trip", () => {
 
 describe("Export contract: custom colors round-trip", () => {
   it("srgb custom colors survive round-trip", async () => {
-    let s = editorState();
     const c1: CustomColor = { type: "srgb", color: "FF8800", name: "Orange" };
     const c2: CustomColor = { type: "srgb", color: "008800" };
-    s = reduce(s, { type: "ADD_CUSTOM_COLOR", color: c1 });
-    s = reduce(s, { type: "ADD_CUSTOM_COLOR", color: c2 });
+    const s = chain(editorState(),
+      { type: "ADD_CUSTOM_COLOR", color: c1 },
+      { type: "ADD_CUSTOM_COLOR", color: c2 },
+    );
 
     const blob = await exportThemeAsPotx({
       name: s.themeName,
       colorScheme: s.colorScheme,
-      fontScheme: s.fontScheme!,
+      fontScheme: s.fontScheme,
       customColors: s.customColors,
     });
 
@@ -151,9 +158,8 @@ describe("Export contract: custom colors round-trip", () => {
 
 describe("Export contract: color mapping round-trip", () => {
   it("custom color mapping is written to master slide", async () => {
-    let s = editorState();
-    s = reduce(s, { type: "UPDATE_MASTER_COLOR_MAPPING", mapping: {
-      ...s.masterColorMapping,
+    const s = reduce(editorState(), { type: "UPDATE_MASTER_COLOR_MAPPING", mapping: {
+      ...editorState().masterColorMapping,
       bg1: "dk1",  // inverted: background uses dark color
       tx1: "lt1",  // text uses light color
     }});
@@ -161,7 +167,7 @@ describe("Export contract: color mapping round-trip", () => {
     const blob = await exportThemeAsPotx({
       name: s.themeName,
       colorScheme: s.colorScheme,
-      fontScheme: s.fontScheme!,
+      fontScheme: s.fontScheme,
       colorMapping: s.masterColorMapping,
     });
 

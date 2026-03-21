@@ -4,12 +4,11 @@
  * Handles updates to existing tables in slides using patcher APIs.
  */
 
-import { type XmlDocument, type XmlElement, getByPath, getChildren, isXmlElement } from "@aurochs/xml";
+import { type XmlDocument, type XmlElement, getByPath, getChildren, isXmlElement, setChildren } from "@aurochs/xml";
 import { patchTable, patchTableStyleId, type TableChange } from "@aurochs-builder/pptx/patcher";
 import type { TextBody, Paragraph, TextRun, ParagraphProperties } from "@aurochs-office/pptx/domain/text";
 import type { TableColumn, TableRow, TableCell, TableCellProperties } from "@aurochs-office/pptx/domain/table/types";
 import type { Pixels, Points } from "@aurochs-office/drawing-ml/domain/units";
-import { setChildren } from "../patcher/core/xml-mutator";
 import type {
   TableUpdateSpec,
   TableRowAddSpec,

@@ -122,3 +122,41 @@ export type RawMasterTextStyles = {
   readonly bodyStyle: XmlElement | undefined;
   readonly otherStyle: XmlElement | undefined;
 };
+
+// =============================================================================
+// Theme Extraction Types
+// =============================================================================
+
+/**
+ * Input for theme extraction from raw XML documents.
+ *
+ * Uses raw XmlDocument inputs (not API Slide) to keep parser layer
+ * free from app layer dependencies.
+ */
+export type ThemeExtractionInput = {
+  /** Theme XML document (a:theme) — null if no theme */
+  readonly theme: XmlDocument | null;
+  /** Theme override documents */
+  readonly themeOverrides: readonly XmlDocument[];
+  /** Slide master XML document (p:sldMaster) — null if no master */
+  readonly master: XmlDocument | null;
+};
+
+/**
+ * Complete extracted theme data.
+ *
+ * Contains all ECMA-376 theme components without information loss.
+ * Produced by parser/theme, consumed by app layer and editors.
+ */
+export type ExtractedTheme = {
+  /** Theme name from a:theme@name attribute */
+  readonly themeName: string;
+  /** Complete parsed theme (colors, fonts, format scheme, custom colors, etc.) */
+  readonly theme: Theme;
+  /** Color mapping from slide master (p:clrMap) §19.3.1.6 */
+  readonly colorMap: ColorMapType;
+  /** Master text styles (p:txStyles) §19.3.1.51 */
+  readonly masterTextStyles: RawMasterTextStyles;
+  /** Master background element (p:bg) §19.3.1.2 — raw XmlElement for lossless round-trip */
+  readonly masterBackground?: XmlElement;
+};

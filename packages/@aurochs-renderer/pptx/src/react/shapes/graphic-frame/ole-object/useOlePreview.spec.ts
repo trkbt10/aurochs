@@ -21,7 +21,7 @@ import type { ResourceResolver } from "@aurochs-office/pptx/domain/resource-reso
 import { createEmptyResourceResolver } from "@aurochs-office/pptx/domain/resource-resolver";
 import type { ResourceStore } from "@aurochs-office/pptx/domain/resource-store";
 import { createEmptyResourceStore } from "@aurochs-office/pptx/domain/resource-store";
-import { EMU_PER_PIXEL } from "@aurochs-office/pptx/domain/defaults";
+import { EMU_PER_PIXEL } from "@aurochs-office/ooxml/domain/ooxml-units";
 
 type RenderDeps = {
   readonly resources?: ResourceResolver;

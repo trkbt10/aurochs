@@ -6,7 +6,7 @@ import { createElement, type XmlElement } from "@aurochs/xml";
 import type { GradientFill, GradientStop, PatternFill } from "@aurochs-office/drawing-ml/domain/fill";
 import type { BlipEffects, BlipFill, Fill, StretchFill, TileFill } from "@aurochs-office/pptx/domain";
 import { serializeColor } from "./color";
-import { ooxmlBool, ooxmlAngleUnits, ooxmlEmu, ooxmlPercent100k } from "@aurochs-builder/core";
+import { ooxmlBool, ooxmlAngleUnits, ooxmlEmu, ooxmlPercent100k } from "@aurochs-office/ooxml/domain/ooxml-units";
 
 /** Serialize a fill to its XML element representation */
 export function serializeFill(fill: Fill): XmlElement {

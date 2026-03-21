@@ -8,9 +8,8 @@
  * - progId updates on p:oleObj (XML-only; binary replacement handled separately)
  */
 
-import { createElement, getChild, isXmlElement, type XmlElement } from "@aurochs/xml";
+import { createElement, getChild, isXmlElement, findElements, replaceChildByName, setAttribute, updateChildByName, type XmlElement } from "@aurochs/xml";
 import type { Transform } from "@aurochs-office/pptx/domain/geometry";
-import { findElements, replaceChildByName, setAttribute, updateChildByName } from "../core/xml-mutator";
 import { patchTransformElement } from "../serializer/transform";
 
 export type OleChange =

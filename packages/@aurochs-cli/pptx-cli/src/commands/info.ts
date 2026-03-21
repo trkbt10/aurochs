@@ -5,7 +5,7 @@
 import { loadPresentationBundle } from "./loader";
 import { openPresentation } from "@aurochs-office/pptx";
 import { success, error, type Result } from "@aurochs-cli/cli-core";
-import { EMU_PER_PIXEL } from "@aurochs-office/pptx/domain";
+import { EMU_PER_PIXEL } from "@aurochs-office/ooxml/domain/ooxml-units";
 
 export type InfoData = {
   readonly slideCount: number;

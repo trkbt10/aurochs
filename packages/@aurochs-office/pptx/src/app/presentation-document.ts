@@ -6,6 +6,7 @@
  */
 
 import type { Slide, Presentation, PresentationFile } from "../domain";
+import type { Theme } from "../domain/theme/types";
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
@@ -70,6 +71,15 @@ export type PresentationDocument = {
   /** Slide dimensions */
   readonly slideWidth: Pixels;
   readonly slideHeight: Pixels;
+
+  // === Theme (SoT) ===
+  /**
+   * Complete theme data — SoT for all theme properties.
+   * Optional because non-PPTX sources (e.g., PDF import) may not have a theme.
+   *
+   * @see ECMA-376 Part 1, Section 20.1.6.9 (CT_OfficeStyleSheet)
+   */
+  readonly theme?: Theme;
 
   // === Rendering Context ===
   /** Color context for resolving theme/scheme colors */

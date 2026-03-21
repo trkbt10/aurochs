@@ -24,8 +24,9 @@ import type { ThemeExportOptions } from "@aurochs-builder/pptx/builders";
 import type { ExtractedTheme } from "../src/app/theme-extractor";
 import type { CustomColor } from "../src/domain/theme/types";
 import { parseTheme } from "../src/parser/theme/theme-parser";
-import type { SchemeColorName } from "@aurochs-office/drawing-ml/domain/color";
+import { SCHEME_COLOR_NAMES, type SchemeColorName } from "@aurochs-office/drawing-ml/domain/color";
 import { EMPTY_FONT_SCHEME } from "@aurochs-office/ooxml/domain/font-scheme";
+import { DEFAULT_COLOR_MAPPING } from "@aurochs-office/pptx/domain/color/types";
 
 const FIXTURES = resolve(__dirname, "../../../../fixtures");
 
@@ -93,12 +94,7 @@ describe("Theme pipeline: extract from real PPTX files", () => {
       expect(typeof themeName).toBe("string");
 
       // All 12 scheme colors must be present
-      const requiredColors: SchemeColorName[] = [
-        "dk1", "lt1", "dk2", "lt2",
-        "accent1", "accent2", "accent3", "accent4", "accent5", "accent6",
-        "hlink", "folHlink",
-      ];
-      for (const color of requiredColors) {
+      for (const color of SCHEME_COLOR_NAMES) {
         expect(theme.colorScheme[color]).toBeDefined();
         expect(typeof theme.colorScheme[color]).toBe("string");
       }
@@ -133,12 +129,7 @@ describe("Theme pipeline: extract → export → re-extract (lossless)", () => {
     const reExtracted = await roundTrip(options);
 
     // Every color slot must match exactly
-    const slots: SchemeColorName[] = [
-      "dk1", "lt1", "dk2", "lt2",
-      "accent1", "accent2", "accent3", "accent4", "accent5", "accent6",
-      "hlink", "folHlink",
-    ];
-    for (const slot of slots) {
+    for (const slot of SCHEME_COLOR_NAMES) {
       expect(reExtracted.theme.colorScheme[slot]).toBe(original.data.theme.colorScheme[slot]);
     }
   });
@@ -397,12 +388,7 @@ describe("Theme pipeline: edit → export → re-extract", () => {
             accent4: "FF9800", accent5: "009688", accent6: "673AB7",
             hlink: "2196F3", folHlink: "9C27B0",
           },
-          colorMap: {
-            bg1: "lt1", tx1: "dk1", bg2: "lt2", tx2: "dk2",
-            accent1: "accent1", accent2: "accent2", accent3: "accent3",
-            accent4: "accent4", accent5: "accent5", accent6: "accent6",
-            hlink: "hlink", folHlink: "folHlink",
-          },
+          colorMap: { ...DEFAULT_COLOR_MAPPING },
         },
       ],
     };
@@ -541,12 +527,7 @@ describe("Theme pipeline: cross-fixture lossless round-trip", () => {
       const options = toExportOptions(original.data);
       const reExtracted = await roundTrip(options);
 
-      const slots: SchemeColorName[] = [
-        "dk1", "lt1", "dk2", "lt2",
-        "accent1", "accent2", "accent3", "accent4", "accent5", "accent6",
-        "hlink", "folHlink",
-      ];
-      for (const slot of slots) {
+      for (const slot of SCHEME_COLOR_NAMES) {
         expect(reExtracted.theme.colorScheme[slot])
           .toBe(original.data.theme.colorScheme[slot]);
       }
@@ -626,8 +607,7 @@ describe("Theme pipeline: extract → editor-equivalent mapping → export → r
     const exportOptions = extractedToExportOptions(original.data);
     const reExtracted = await roundTrip(exportOptions);
 
-    const slots: SchemeColorName[] = ["dk1", "lt1", "dk2", "lt2", "accent1", "accent2", "accent3", "accent4", "accent5", "accent6", "hlink", "folHlink"];
-    for (const slot of slots) {
+    for (const slot of SCHEME_COLOR_NAMES) {
       expect(reExtracted.theme.colorScheme[slot]).toBe(original.data.theme.colorScheme[slot]);
     }
     expect(reExtracted.theme.fontScheme.majorFont.latin).toBe(original.data.theme.fontScheme.majorFont.latin);
@@ -664,8 +644,7 @@ describe("Theme pipeline: buildThemeXml → parseTheme (pptx-editor path)", () =
     const themeXml = buildThemeXml({ name: original.data.themeName, theme: original.data.theme });
     const parsed = parseTheme(themeXml, []);
 
-    const slots: SchemeColorName[] = ["dk1", "lt1", "dk2", "lt2", "accent1", "accent2", "accent3", "accent4", "accent5", "accent6", "hlink", "folHlink"];
-    for (const slot of slots) {
+    for (const slot of SCHEME_COLOR_NAMES) {
       expect(parsed.colorScheme[slot]).toBe(original.data.theme.colorScheme[slot]);
     }
     expect(parsed.fontScheme.majorFont.latin).toBe(original.data.theme.fontScheme.majorFont.latin);

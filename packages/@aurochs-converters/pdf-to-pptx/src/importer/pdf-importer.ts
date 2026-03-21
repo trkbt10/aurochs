@@ -5,6 +5,7 @@
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import type { ResourceResolver } from "@aurochs-office/pptx/domain/resource-resolver";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
+import { DEFAULT_COLOR_MAPPING } from "@aurochs-office/pptx/domain/color/types";
 import type { Presentation } from "@aurochs-office/pptx/domain";
 import type { PresentationDocument, SlideWithId } from "@aurochs-office/pptx/app/presentation-document";
 import type { Slide } from "@aurochs-office/pptx/domain/slide/types";
@@ -537,21 +538,7 @@ export function createDefaultColorContextForPdf(): ColorContext {
       hlink: "0000FF", // Blue
       folHlink: "800080", // Purple
     },
-    colorMap: {
-      // Identity mapping (scheme color names map to themselves)
-      bg1: "lt1",
-      tx1: "dk1",
-      bg2: "lt2",
-      tx2: "dk2",
-      accent1: "accent1",
-      accent2: "accent2",
-      accent3: "accent3",
-      accent4: "accent4",
-      accent5: "accent5",
-      accent6: "accent6",
-      hlink: "hlink",
-      folHlink: "folHlink",
-    },
+    colorMap: { ...DEFAULT_COLOR_MAPPING } as Record<string, string>,
   };
 }
 

@@ -10,7 +10,7 @@ import { useCallback, type CSSProperties } from "react";
 import { Select } from "@aurochs-ui/ui-components/primitives";
 import { FieldGroup } from "@aurochs-ui/ui-components/layout";
 import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
-import type { ColorMapping } from "@aurochs-office/pptx/domain/color/types";
+import { DEFAULT_COLOR_MAPPING, type ColorMapping } from "@aurochs-office/pptx/domain/color/types";
 import { spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { schemeColorNameOptions } from "@aurochs-ui/editor-controls/editors";
 
@@ -46,21 +46,7 @@ const COLOR_MAP_SLOTS: readonly { key: keyof ColorMapping; label: string }[] = [
 
 const schemeColorOptions = schemeColorNameOptions;
 
-/** Default color map per ECMA-376 convention */
-export const DEFAULT_COLOR_MAPPING: ColorMapping = {
-  bg1: "lt1",
-  tx1: "dk1",
-  bg2: "lt2",
-  tx2: "dk2",
-  accent1: "accent1",
-  accent2: "accent2",
-  accent3: "accent3",
-  accent4: "accent4",
-  accent5: "accent5",
-  accent6: "accent6",
-  hlink: "hlink",
-  folHlink: "folHlink",
-};
+// DEFAULT_COLOR_MAPPING: import from @aurochs-office/pptx/domain/color/types (SoT)
 
 // =============================================================================
 // Styles

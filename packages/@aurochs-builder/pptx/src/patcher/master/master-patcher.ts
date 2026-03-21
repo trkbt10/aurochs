@@ -6,10 +6,9 @@
  * @see docs/plans/pptx-export/phase-9-master-layout-theme.md
  */
 
-import { createElement, getChild, type XmlDocument, type XmlElement } from "@aurochs/xml";
+import { createElement, getChild, updateDocumentRoot, replaceChildByName, type XmlDocument, type XmlElement } from "@aurochs/xml";
 import type { ParagraphProperties, TextStyleLevels } from "@aurochs-office/pptx/domain";
 import type { ShapeChange } from "../core/shape-differ";
-import { updateDocumentRoot, replaceChildByName } from "../core/xml-mutator";
 import { patchSlideXml } from "../slide/slide-patcher";
 import { patchTextStyleLevelByNumber, patchTextStyleLevelsElement } from "./default-text-style-patcher";
 

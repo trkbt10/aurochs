@@ -12,9 +12,7 @@
  * @see MS-OFFMACRO2 (Office Macro-Enabled File Format)
  */
 
-import type { XmlElement, XmlNode } from "@aurochs/xml";
-import { parseXml } from "@aurochs/xml";
-import { createElement } from "@aurochs-builder/core";
+import { createElement, parseXml, type XmlElement, type XmlNode } from "@aurochs/xml";
 import { createEmptyZipPackage, isBinaryFile, type ZipPackage } from "@aurochs/zip";
 import {
   serializeWithDeclaration,

@@ -17,9 +17,13 @@
  * - Layout selection state machine
  */
 
+import type { SlideLayoutType } from "@aurochs-office/pptx/domain";
 import type { ThemeEditorState, ThemeEditorAction, LayoutListEntry } from "../types";
 import { themeEditorReducer, createInitialThemeEditorState } from "./index";
-import type { CustomColor, ExtraColorScheme } from "@aurochs-office/pptx/domain/theme/types";
+import type { CustomColor, ExtraColorScheme, FormatScheme, ObjectDefaults, RawMasterTextStyles } from "@aurochs-office/pptx/domain/theme/types";
+import { createElement } from "@aurochs/xml";
+import { SCHEME_COLOR_NAMES } from "@aurochs-office/drawing-ml/domain/color";
+import { DEFAULT_COLOR_MAPPING } from "@aurochs-office/pptx/domain/color/types";
 
 // =============================================================================
 // Helpers
@@ -85,8 +89,7 @@ describe("Color scheme (a:clrScheme)", () => {
 
   it("all 12 standard scheme slots are present", () => {
     const s = base();
-    const required = ["dk1", "lt1", "dk2", "lt2", "accent1", "accent2", "accent3", "accent4", "accent5", "accent6", "hlink", "folHlink"];
-    for (const slot of required) {
+    for (const slot of SCHEME_COLOR_NAMES) {
       expect(s.colorScheme[slot]).toBeDefined();
     }
   });
@@ -224,25 +227,26 @@ describe("Custom colors (a:custClrLst)", () => {
   });
 
   it("ADD_CUSTOM_COLOR multiple times builds list", () => {
-    let s = base();
-    s = reduce(s, { type: "ADD_CUSTOM_COLOR", color: color1 });
-    s = reduce(s, { type: "ADD_CUSTOM_COLOR", color: color2 });
-    s = reduce(s, { type: "ADD_CUSTOM_COLOR", color: color3 });
+    const s = reduce(reduce(reduce(base(),
+      { type: "ADD_CUSTOM_COLOR", color: color1 }),
+      { type: "ADD_CUSTOM_COLOR", color: color2 }),
+      { type: "ADD_CUSTOM_COLOR", color: color3 });
     expect(s.customColors).toHaveLength(3);
   });
 
   it("REMOVE_CUSTOM_COLOR removes by index", () => {
-    let s = base();
-    s = reduce(s, { type: "ADD_CUSTOM_COLOR", color: color1 });
-    s = reduce(s, { type: "ADD_CUSTOM_COLOR", color: color2 });
-    s = reduce(s, { type: "REMOVE_CUSTOM_COLOR", index: 0 });
+    const s = reduce(reduce(reduce(base(),
+      { type: "ADD_CUSTOM_COLOR", color: color1 }),
+      { type: "ADD_CUSTOM_COLOR", color: color2 }),
+      { type: "REMOVE_CUSTOM_COLOR", index: 0 });
     expect(s.customColors).toHaveLength(1);
     expect(s.customColors[0]).toEqual(color2);
   });
 
   it("UPDATE_CUSTOM_COLOR replaces at index", () => {
-    let s = reduce(base(), { type: "ADD_CUSTOM_COLOR", color: color1 });
-    s = reduce(s, { type: "UPDATE_CUSTOM_COLOR", index: 0, color: color2 });
+    const s = reduce(reduce(base(),
+      { type: "ADD_CUSTOM_COLOR", color: color1 }),
+      { type: "UPDATE_CUSTOM_COLOR", index: 0, color: color2 });
     expect(s.customColors[0]).toEqual(color2);
   });
 
@@ -261,7 +265,7 @@ describe("Extra color schemes", () => {
   const scheme: ExtraColorScheme = {
     name: "Extra 1",
     colorScheme: { dk1: "111111", lt1: "EEEEEE", dk2: "222222", lt2: "DDDDDD", accent1: "AA0000", accent2: "00AA00", accent3: "0000AA", accent4: "AA00AA", accent5: "00AAAA", accent6: "AAAA00", hlink: "0000FF", folHlink: "800080" },
-    colorMap: { bg1: "lt1", tx1: "dk1", bg2: "lt2", tx2: "dk2", accent1: "accent1", accent2: "accent2", accent3: "accent3", accent4: "accent4", accent5: "accent5", accent6: "accent6", hlink: "hlink", folHlink: "folHlink" },
+    colorMap: { ...DEFAULT_COLOR_MAPPING },
   };
 
   it("ADD_EXTRA_COLOR_SCHEME appends", () => {
@@ -271,15 +275,17 @@ describe("Extra color schemes", () => {
   });
 
   it("REMOVE_EXTRA_COLOR_SCHEME removes by index", () => {
-    let s = reduce(base(), { type: "ADD_EXTRA_COLOR_SCHEME", scheme });
-    s = reduce(s, { type: "REMOVE_EXTRA_COLOR_SCHEME", index: 0 });
+    const s = reduce(reduce(base(),
+      { type: "ADD_EXTRA_COLOR_SCHEME", scheme }),
+      { type: "REMOVE_EXTRA_COLOR_SCHEME", index: 0 });
     expect(s.extraColorSchemes).toHaveLength(0);
   });
 
   it("UPDATE_EXTRA_COLOR_SCHEME replaces at index", () => {
-    let s = reduce(base(), { type: "ADD_EXTRA_COLOR_SCHEME", scheme });
     const updated = { ...scheme, name: "Updated" };
-    s = reduce(s, { type: "UPDATE_EXTRA_COLOR_SCHEME", index: 0, scheme: updated });
+    const s = reduce(reduce(base(),
+      { type: "ADD_EXTRA_COLOR_SCHEME", scheme }),
+      { type: "UPDATE_EXTRA_COLOR_SCHEME", index: 0, scheme: updated });
     expect(s.extraColorSchemes[0].name).toBe("Updated");
   });
 });
@@ -290,19 +296,19 @@ describe("Extra color schemes", () => {
 
 describe("Format scheme, object defaults, master text styles", () => {
   it("UPDATE_FORMAT_SCHEME sets format scheme", () => {
-    const fs = { lineStyles: [], fillStyles: [], effectStyles: [], bgFillStyles: [] } as any;
+    const fs: FormatScheme = { lineStyles: [], fillStyles: [], effectStyles: [], bgFillStyles: [] };
     const s = reduce(base(), { type: "UPDATE_FORMAT_SCHEME", formatScheme: fs });
     expect(s.formatScheme).toBe(fs);
   });
 
   it("UPDATE_OBJECT_DEFAULTS sets object defaults", () => {
-    const od = { lineDefault: { tag: "test" } } as any;
+    const od: ObjectDefaults = { lineDefault: createElement("a:lnDef") };
     const s = reduce(base(), { type: "UPDATE_OBJECT_DEFAULTS", objectDefaults: od });
     expect(s.objectDefaults).toBe(od);
   });
 
   it("UPDATE_MASTER_TEXT_STYLES sets master text styles", () => {
-    const mts = { titleStyle: { tag: "test" } } as any;
+    const mts: RawMasterTextStyles = { titleStyle: createElement("p:titleStyle"), bodyStyle: undefined, otherStyle: undefined };
     const s = reduce(base(), { type: "UPDATE_MASTER_TEXT_STYLES", masterTextStyles: mts });
     expect(s.masterTextStyles).toBe(mts);
   });
@@ -435,7 +441,7 @@ describe("Layout CRUD", () => {
 
   it("UPDATE_LAYOUT_ATTRIBUTES updates name and type", () => {
     const s0 = withLayouts(base(), layouts);
-    const s1 = reduce(s0, { type: "UPDATE_LAYOUT_ATTRIBUTES", layoutId: "L1", updates: { name: "Custom Title", type: "ctrTitle" as any } });
+    const s1 = reduce(s0, { type: "UPDATE_LAYOUT_ATTRIBUTES", layoutId: "L1", updates: { name: "Custom Title", type: "ctrTitle" as SlideLayoutType } });
     const layout = s1.layoutEdit.layouts.find((l) => l.id === "L1");
     expect(layout?.name).toBe("Custom Title");
     expect(layout?.type).toBe("ctrTitle");

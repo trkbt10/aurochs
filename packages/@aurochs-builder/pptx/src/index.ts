@@ -162,7 +162,6 @@ export {
   type SlideModSpec,
   type BuildSpec,
   type BuildData,
-  type ThemeSchemeColorName,
   type ThemeColorSchemeEditSpec,
   type ThemeFontSpec,
   type ThemeFontSchemeEditSpec,

@@ -12,8 +12,7 @@
  * @see ECMA-376 Part 4, Section 18.8.7 (cellStyle)
  */
 
-import type { XmlElement } from "@aurochs/xml";
-import { createElement } from "@aurochs-builder/core";
+import { createElement, type XmlElement } from "@aurochs/xml";
 import type {
   XlsxStyleSheet,
   XlsxCellXf,

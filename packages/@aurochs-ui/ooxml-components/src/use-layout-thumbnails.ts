@@ -18,6 +18,7 @@ import { parseSlideMaster } from "@aurochs-office/pptx/parser/slide/slide-parser
 import { createPlaceholderTable } from "@aurochs-office/pptx/parser/slide/resource-adapters";
 import type { PlaceholderContext, MasterStylesInfo } from "@aurochs-office/pptx/parser/context";
 import { getChild, getByPath } from "@aurochs/xml";
+import { DEFAULT_COLOR_MAPPING } from "@aurochs-office/pptx/domain/color/types";
 import { renderSlideSvg } from "@aurochs-renderer/pptx/svg";
 import { createCoreRenderContext } from "@aurochs-renderer/pptx";
 import type { ColorContext, ColorScheme } from "@aurochs-office/drawing-ml/domain/color-context";
@@ -59,21 +60,7 @@ export type LoadedLayoutData = {
 // Constants
 // =============================================================================
 
-/** Default color map (identity mapping) */
-const DEFAULT_COLOR_MAP: Record<string, string> = {
-  bg1: "lt1",
-  tx1: "dk1",
-  bg2: "lt2",
-  tx2: "dk2",
-  accent1: "accent1",
-  accent2: "accent2",
-  accent3: "accent3",
-  accent4: "accent4",
-  accent5: "accent5",
-  accent6: "accent6",
-  hlink: "hlink",
-  folHlink: "folHlink",
-};
+// DEFAULT_COLOR_MAPPING: SoT from @aurochs-office/pptx/domain/color/types
 
 // =============================================================================
 // Core Layout Loading
@@ -83,7 +70,7 @@ function buildColorContext(colorScheme: ColorScheme | undefined): ColorContext |
   if (!colorScheme) {
     return undefined;
   }
-  return { colorScheme, colorMap: DEFAULT_COLOR_MAP };
+  return { colorScheme, colorMap: DEFAULT_COLOR_MAPPING as Record<string, string> };
 }
 
 /**

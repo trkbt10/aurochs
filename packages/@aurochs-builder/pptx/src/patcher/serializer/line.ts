@@ -2,7 +2,7 @@
 import { createElement, type XmlElement } from "@aurochs/xml";
 import type { CustomDash, Line, LineEnd } from "@aurochs-office/pptx/domain";
 import { serializeFill } from "./fill";
-import { ooxmlEmu, ooxmlPercent100k } from "@aurochs-builder/core";
+import { ooxmlEmu, ooxmlPercent100k } from "@aurochs-office/ooxml/domain/ooxml-units";
 
 /** Serialize line properties to a:ln element */
 export function serializeLine(line: Line): XmlElement {

@@ -6,10 +6,8 @@
  */
 
 import * as path from "node:path";
-import { createElement, type XmlElement, type XmlDocument } from "@aurochs/xml";
+import { createElement, getChild, isXmlElement, updateDocumentRoot, replaceChildByName, type XmlElement, type XmlDocument } from "@aurochs/xml";
 import { detectImageMimeType, readFileToArrayBuffer, uint8ArrayToArrayBuffer } from "./file-utils";
-import { updateDocumentRoot, replaceChildByName } from "../patcher/core/xml-mutator";
-import { getChild, isXmlElement } from "@aurochs/xml";
 import { serializeFill } from "../patcher/serializer/fill";
 import { addMedia } from "../patcher/resources/media-manager";
 import type { Fill } from "@aurochs-office/pptx/domain/color/types";

@@ -4,36 +4,15 @@
  * Core utilities for change detection and XML mutation.
  */
 
-// XML Mutator
+// Generic XML mutations: import from @aurochs/xml (SoT)
+
+// PresentationML shape operations (PPTX-specific)
 export {
-  // Attribute operations
-  setAttribute,
-  setAttributes,
-  removeAttribute,
-  // Child operations
-  appendChild,
-  prependChild,
-  insertChildAt,
-  removeChildAt,
-  removeChildren,
-  replaceChildAt,
-  replaceChild,
-  replaceChildByName,
-  setChildren,
-  updateChildByName,
-  // Search operations
-  findElement,
-  findElements,
   findShapeById,
   getShapeIds,
-  // Deep update operations
-  updateAtPath,
   replaceShapeById,
   removeShapeById,
-  // Document operations
-  updateDocumentRoot,
-  getDocumentRoot,
-} from "./xml-mutator";
+} from "./shape-ops";
 
 // XML element creation: import directly from "@/xml"
 

@@ -1,6 +1,5 @@
 /** @file Content types manager for [Content_Types].xml manipulation */
-import { createElement, isXmlElement, type XmlDocument, type XmlElement } from "@aurochs/xml";
-import { getDocumentRoot, updateDocumentRoot } from "../core/xml-mutator";
+import { createElement, isXmlElement, getDocumentRoot, updateDocumentRoot, type XmlDocument, type XmlElement } from "@aurochs/xml";
 
 /** Add a default content type for a file extension */
 export function addContentType(contentTypesXml: XmlDocument, extension: string, contentType: string): XmlDocument {

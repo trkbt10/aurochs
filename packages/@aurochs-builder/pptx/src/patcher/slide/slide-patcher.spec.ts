@@ -5,13 +5,13 @@
 import { createElement, isXmlElement, getChild, type XmlDocument, type XmlElement } from "@aurochs/xml";
 import type { ShapeChange } from "../core/shape-differ";
 import type { Transform } from "@aurochs-office/pptx/domain/geometry";
-import { EMU_PER_PIXEL } from "@aurochs-office/pptx/domain";
+import { EMU_PER_PIXEL } from "@aurochs-office/ooxml/domain/ooxml-units";
 import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
 import type { SpShape } from "@aurochs-office/pptx/domain/shape";
 import type { TextBody } from "@aurochs-office/pptx/domain/text";
 import { parseShapeTree } from "@aurochs-office/pptx/parser/shape-parser/index";
 import { patchSlideXml, getSpTree, hasShapes } from "./slide-patcher";
-import { findShapeById } from "../core/xml-mutator";
+import { findShapeById } from "../core/shape-ops";
 
 // =============================================================================
 // Test Helpers

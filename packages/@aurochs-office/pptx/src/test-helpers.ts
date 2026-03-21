@@ -6,8 +6,9 @@
 
 import type { XmlElement } from "@aurochs/xml";
 import type { ColorMap, ColorResolveContext, ColorScheme } from "@aurochs-office/drawing-ml/domain/color-context";
+import { DEFAULT_COLOR_MAPPING } from "@aurochs-office/pptx/domain/color/types";
 import type { SlideContext, ResourceContext } from "./parser/slide/context";
-import type { PlaceholderTable, FormatScheme, RawMasterTextStyles } from "./domain";
+import { DEFAULT_COLOR_SCHEME, type PlaceholderTable, type FormatScheme, type RawMasterTextStyles } from "./domain";
 import type { ResourceMap, ZipFile } from "@aurochs-office/opc";
 import { DEFAULT_RENDER_OPTIONS } from "@aurochs-renderer/pptx";
 
@@ -45,32 +46,14 @@ export function createMockResourceMap(): ResourceMap {
  * Returns identity mapping for common scheme colors.
  */
 export function createMockColorMap(): ColorMap {
-  return {
-    tx1: "dk1",
-    tx2: "dk2",
-    bg1: "lt1",
-    bg2: "lt2",
-  };
+  return { ...DEFAULT_COLOR_MAPPING };
 }
 
 /**
  * Create mock color scheme
  */
 export function createMockColorScheme(): ColorScheme {
-  return {
-    dk1: "000000",
-    lt1: "FFFFFF",
-    dk2: "44546A",
-    lt2: "E7E6E6",
-    accent1: "4472C4",
-    accent2: "ED7D31",
-    accent3: "A5A5A5",
-    accent4: "FFC000",
-    accent5: "5B9BD5",
-    accent6: "70AD47",
-    hlink: "0563C1",
-    folHlink: "954F72",
-  };
+  return { ...DEFAULT_COLOR_SCHEME };
 }
 
 /**

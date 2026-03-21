@@ -20,8 +20,9 @@ import {
   type XmlDocument,
   type XmlElement,
   type XmlNode,
+  setChildren,
+  updateDocumentRoot,
 } from "@aurochs/xml";
-import { setChildren, updateDocumentRoot } from "../core/xml-mutator";
 
 export type DiagramFiles = {
   readonly data: XmlDocument;

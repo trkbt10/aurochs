@@ -29,7 +29,7 @@ import {
   serializeShape3d,
   serializeBlipEffects,
 } from "../serializer";
-import { ooxmlAngleUnits, ooxmlBool, ooxmlEmu, ooxmlPercent100k } from "@aurochs-builder/core";
+import { ooxmlAngleUnits, ooxmlBool, ooxmlEmu, ooxmlPercent100k } from "@aurochs-office/ooxml/domain/ooxml-units";
 
 /**
  * Domain Shape から完全な p:sp 要素を生成する

@@ -3,7 +3,7 @@
  */
 
 import { createElement, getChild, isXmlElement, type XmlElement } from "@aurochs/xml";
-import type { Color } from "@aurochs-office/drawing-ml/domain/color";
+import { SCHEME_COLOR_NAMES, type Color } from "@aurochs-office/drawing-ml/domain/color";
 import { patchSchemeColor } from "./color-scheme-patcher";
 
 function srgb(value: string): Color {
@@ -117,8 +117,7 @@ describe("patchSchemeColor", () => {
   });
 
   it("patches accent6 color on scheme with all 12 colors", () => {
-    const names = ["dk1", "lt1", "dk2", "lt2", "accent1", "accent2", "accent3", "accent4", "accent5", "accent6", "hlink", "folHlink"];
-    const children = names.map((n) =>
+    const children = SCHEME_COLOR_NAMES.map((n) =>
       createElement(`a:${n}`, {}, [createElement("a:srgbClr", { val: "AAAAAA" })]),
     );
     const clrScheme = createElement("a:clrScheme", { name: "Office" }, children);

@@ -3,7 +3,7 @@
  */
 
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
-import { ooxmlEmu } from "@aurochs-builder/core";
+import { ooxmlEmu } from "@aurochs-office/ooxml/domain/ooxml-units";
 import type { PresentationFile } from "@aurochs-office/pptx/domain";
 import { CONTENT_TYPES, RELATIONSHIP_TYPES } from "@aurochs-office/pptx/domain";
 import { createEmptyZipPackage } from "@aurochs/zip";

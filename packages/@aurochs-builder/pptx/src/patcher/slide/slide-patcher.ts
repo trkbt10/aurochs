@@ -7,18 +7,9 @@
  * @see docs/plans/pptx-export/phase-2-diff-detection-patch.md
  */
 
-import type { XmlDocument, XmlElement } from "@aurochs/xml";
-import { isXmlElement, getChild } from "@aurochs/xml";
+import { isXmlElement, getChild, updateDocumentRoot, getDocumentRoot, updateChildByName, replaceChildByName, type XmlDocument, type XmlElement } from "@aurochs/xml";
 import type { ShapeChange, ShapeAdded, PropertyChange } from "../core/shape-differ";
-import {
-  updateDocumentRoot,
-  getDocumentRoot,
-  findShapeById,
-  replaceShapeById,
-  removeShapeById,
-  updateChildByName,
-  replaceChildByName,
-} from "../core/xml-mutator";
+import { findShapeById, replaceShapeById, removeShapeById } from "../core/shape-ops";
 import { serializeEffects, serializeFill, serializeLine } from "../serializer";
 import { patchTransformElement, serializeTransform } from "../serializer/transform";
 import { addShapeToTree } from "./shape-tree-patcher";

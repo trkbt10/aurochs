@@ -100,6 +100,22 @@ export type ColorMapping = {
 };
 
 /**
+ * Default ECMA-376 color mapping.
+ *
+ * Maps abstract color roles (bg1, tx1, etc.) to their conventional
+ * scheme color targets. This is the standard mapping used by Office
+ * when no explicit p:clrMap is specified.
+ *
+ * @see ECMA-376 Part 1, Section 19.3.1.6 (p:clrMap)
+ */
+export const DEFAULT_COLOR_MAPPING: ColorMapping = {
+  bg1: "lt1", tx1: "dk1", bg2: "lt2", tx2: "dk2",
+  accent1: "accent1", accent2: "accent2", accent3: "accent3",
+  accent4: "accent4", accent5: "accent5", accent6: "accent6",
+  hlink: "hlink", folHlink: "folHlink",
+};
+
+/**
  * Color map override
  * @see ECMA-376 Part 1, Section 19.3.1.6 (clrMapOvr)
  */

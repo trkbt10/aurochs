@@ -92,10 +92,9 @@ function handleRedo(state: PresentationEditorState): PresentationEditorState {
 /**
  * Apply a complete theme replacement.
  *
- * Updates both the document-level theme data (colorContext, fontScheme)
- * and all apiSlide.theme XML documents atomically. This ensures
- * both rendering paths (document fallback and apiSlide renderContext)
- * reflect the new theme.
+ * Updates the document-level theme SoT, rendering context (colorContext, fontScheme),
+ * and all apiSlide.theme XML documents atomically. This ensures both rendering paths
+ * (document fallback and apiSlide renderContext) reflect the new theme.
  */
 function handleApplyTheme(state: PresentationEditorState, action: ApplyThemeAction): PresentationEditorState {
   const doc = state.documentHistory.present;
@@ -108,8 +107,9 @@ function handleApplyTheme(state: PresentationEditorState, action: ApplyThemeActi
   });
   const newDoc: PresentationDocument = {
     ...doc,
+    theme: action.theme,
     colorContext: action.colorContext,
-    fontScheme: action.fontScheme,
+    fontScheme: action.theme.fontScheme,
     slides: newSlides,
   };
   return {

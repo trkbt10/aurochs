@@ -80,6 +80,36 @@ export function getXmlText(value: unknown): string | undefined {
 }
 
 // =============================================================================
+// Immutable Mutation
+// =============================================================================
+
+export {
+  // Attribute operations
+  setAttribute,
+  setAttributes,
+  removeAttribute,
+  // Child operations
+  appendChild,
+  prependChild,
+  insertChildAt,
+  removeChildAt,
+  removeChildren,
+  replaceChildAt,
+  replaceChild,
+  replaceChildByName,
+  setChildren,
+  updateChildByName,
+  // Search operations
+  findElement,
+  findElements,
+  // Deep update operations
+  updateAtPath,
+  // Document operations
+  updateDocumentRoot,
+  getDocumentRoot,
+} from "./mutate";
+
+// =============================================================================
 // Parser
 // =============================================================================
 

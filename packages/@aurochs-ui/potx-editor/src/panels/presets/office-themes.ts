@@ -5,27 +5,16 @@
  */
 
 import type { ThemePreset } from "../types";
+import { DEFAULT_COLOR_SCHEME } from "@aurochs-office/pptx/domain";
 
 /**
  * Office default theme preset.
+ * Color scheme from DEFAULT_COLOR_SCHEME (SoT: domain/defaults.ts).
  */
 export const OFFICE_THEME: ThemePreset = {
   id: "office",
   name: "Office",
-  colorScheme: {
-    dk1: "000000",
-    lt1: "FFFFFF",
-    dk2: "44546A",
-    lt2: "E7E6E6",
-    accent1: "4472C4",
-    accent2: "ED7D31",
-    accent3: "A5A5A5",
-    accent4: "FFC000",
-    accent5: "5B9BD5",
-    accent6: "70AD47",
-    hlink: "0563C1",
-    folHlink: "954F72",
-  },
+  colorScheme: DEFAULT_COLOR_SCHEME as ThemePreset["colorScheme"],
   fontScheme: {
     majorFont: { latin: "Calibri Light", eastAsian: undefined, complexScript: undefined },
     minorFont: { latin: "Calibri", eastAsian: undefined, complexScript: undefined },

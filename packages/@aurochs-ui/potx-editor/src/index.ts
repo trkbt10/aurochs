@@ -42,9 +42,6 @@ export {
   LayoutAttributesSection,
   THEME_PRESETS,
   OFFICE_THEME,
-  extractThemeFromBuffer,
-  exportThemeAsPotx,
-  getThemeFileName,
 } from "./panels";
 export type {
   ColorSchemeEditorProps,
@@ -52,10 +49,11 @@ export type {
   ThemePresetSelectorProps,
   SampleSlidePreviewProps,
   LayoutAttributesSectionProps,
-  ThemeExtractionResult,
-  ExtractedTheme,
-  ThemeExportOptions,
   ThemeColorScheme,
   ThemeFontScheme,
   ThemePreset,
 } from "./panels";
+// Theme extraction/export: import directly from SoT packages
+// - extractThemeFromBuffer, ThemeExtractionResult: @aurochs-office/pptx/app
+// - ExtractedTheme, ThemeExtractionInput: @aurochs-office/pptx/domain
+// - exportThemeAsPotx, buildThemeXml, ThemeExportOptions: @aurochs-builder/pptx/builders

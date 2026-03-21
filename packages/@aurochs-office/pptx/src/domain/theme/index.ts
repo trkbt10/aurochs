@@ -16,4 +16,6 @@ export type {
   ColorScheme,
   ColorMap,
   FontScheme,
+  ThemeExtractionInput,
+  ExtractedTheme,
 } from "./types";

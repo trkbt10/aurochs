@@ -10,6 +10,7 @@
 import type { Degrees, Percent, Pixels, Points } from "@aurochs-office/drawing-ml/domain/units";
 import type { SchemeColorValue } from "@aurochs-office/drawing-ml/domain/color";
 import type { BlipCompression } from "@aurochs-office/ooxml/domain/drawing";
+import { EMU_PER_INCH, STANDARD_DPI, POINTS_PER_INCH } from "@aurochs-office/ooxml/domain/ooxml-units";
 import {
   parseAngle,
   parseEmu,
@@ -43,15 +44,6 @@ import { getAttr, getChild, type XmlElement } from "@aurochs/xml";
 // =============================================================================
 // Constants
 // =============================================================================
-
-/** EMU per inch (914400) */
-const EMU_PER_INCH = 914400;
-
-/** Standard display DPI (96) */
-const STANDARD_DPI = 96;
-
-/** Points per inch (72) */
-const POINTS_PER_INCH = 72;
 
 /** EMU to pixels factor */
 const EMU_TO_PX = STANDARD_DPI / EMU_PER_INCH;

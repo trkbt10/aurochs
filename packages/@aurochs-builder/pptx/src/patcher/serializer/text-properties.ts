@@ -21,7 +21,7 @@ import { serializeColor } from "./color";
 import { serializeEffects } from "./effects";
 import { serializeFill } from "./fill";
 import { serializeLine } from "./line";
-import { ooxmlAngleUnits, ooxmlBool, ooxmlEmu, ooxmlPercent1000 } from "@aurochs-builder/core";
+import { ooxmlAngleUnits, ooxmlBool, ooxmlEmu, ooxmlPercent1000 } from "@aurochs-office/ooxml/domain/ooxml-units";
 
 const PT_PER_INCH = 72;
 const PX_PER_INCH = 96;

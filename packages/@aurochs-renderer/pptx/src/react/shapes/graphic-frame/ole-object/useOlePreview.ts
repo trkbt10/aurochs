@@ -8,7 +8,7 @@
 
 import { useMemo } from "react";
 import type { OleReference } from "@aurochs-office/pptx/domain";
-import { EMU_PER_PIXEL } from "@aurochs-office/pptx/domain/defaults";
+import { EMU_PER_PIXEL } from "@aurochs-office/ooxml/domain/ooxml-units";
 import { useRenderContext, useRenderResources, useRenderResourceStore } from "../../../context";
 
 /**

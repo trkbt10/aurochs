@@ -6,7 +6,7 @@
  * Does NOT include graphic-frame factories (table/chart/diagram) which remain in pptx-editor.
  */
 
-import type { SpShape, CxnShape, PicShape, Shape } from "@aurochs-office/pptx/domain";
+import { DEFAULT_COLOR_SCHEME, type SpShape, type CxnShape, type PicShape, type Shape } from "@aurochs-office/pptx/domain";
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import type { ShapeId, ResourceId } from "@aurochs-office/pptx/domain/types";
 import { px, deg, pct } from "@aurochs-office/drawing-ml/domain/units";
@@ -27,8 +27,8 @@ export type ShapeBounds = {
 // Default Values
 // =============================================================================
 
-/** Default fill color (Office blue) */
-const DEFAULT_FILL_COLOR = "4472C4";
+/** Default fill color (Office theme accent1) */
+const DEFAULT_FILL_COLOR = DEFAULT_COLOR_SCHEME.accent1;
 
 /** Default stroke color (darker blue) */
 const DEFAULT_STROKE_COLOR = "2F528F";

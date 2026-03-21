@@ -5,7 +5,7 @@
  */
 
 import { createElement, type XmlElement } from "@aurochs/xml";
-import { ooxmlEmu } from "@aurochs-builder/core";
+import { ooxmlEmu } from "@aurochs-office/ooxml/domain/ooxml-units";
 import type { Shape3d, Bevel3d } from "@aurochs-office/pptx/domain/three-d";
 
 /**

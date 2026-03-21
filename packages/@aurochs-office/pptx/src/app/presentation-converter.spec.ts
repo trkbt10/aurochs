@@ -36,4 +36,17 @@ describe("convertToPresentationDocument", () => {
     expect(typeof doc.fontScheme.majorFont.latin).toBe("string");
     expect(typeof doc.fontScheme.minorFont.latin).toBe("string");
   });
+
+  it("theme SoT is populated from real PPTX", async () => {
+    const buffer = loadFixture("poi-test-data/test-data/slideshow/SampleShow.pptx");
+    const loaded = await loadPptxFromBuffer(buffer);
+    const doc = convertToPresentationDocument(loaded);
+
+    expect(doc.theme).toBeDefined();
+    expect(doc.theme!.colorScheme).toBeDefined();
+    expect(doc.theme!.fontScheme).toBeDefined();
+    expect(doc.theme!.formatScheme).toBeDefined();
+    // fontScheme from theme SoT matches the document-level fontScheme
+    expect(doc.theme!.fontScheme.majorFont.latin).toBe(doc.fontScheme.majorFont.latin);
+  });
 });

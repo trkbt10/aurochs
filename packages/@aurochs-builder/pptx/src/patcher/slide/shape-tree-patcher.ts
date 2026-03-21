@@ -1,7 +1,5 @@
 /** @file Shape tree patching utilities for spTree manipulation */
-import type { XmlElement } from "@aurochs/xml";
-import { isXmlElement } from "@aurochs/xml";
-import { insertChildAt, removeChildAt, replaceChildAt } from "../core/xml-mutator";
+import { isXmlElement, insertChildAt, removeChildAt, replaceChildAt, type XmlElement } from "@aurochs/xml";
 
 /** Resolve the insert index for adding a shape after a given ID */
 function resolveInsertIndex(spTree: XmlElement, afterId: string | undefined): number {

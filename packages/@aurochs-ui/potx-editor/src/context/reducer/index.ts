@@ -22,6 +22,7 @@ import { findShapeById, updateShapeById } from "@aurochs-ui/editor-controls/shap
 import { collectBoundsForIds, getCombinedCenter } from "@aurochs-ui/editor-controls/shape-editor";
 import type { ColorScheme } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
+import { DEFAULT_COLOR_MAPPING } from "@aurochs-office/pptx/domain/color/types";
 import { createSelectMode } from "@aurochs-ui/ooxml-components";
 import { pptxTransformResolver, withUpdatedTransform } from "@aurochs-ui/ooxml-components/pptx-transform";
 import { createInactiveTextEditState, createActiveTextEditState } from "@aurochs-ui/ooxml-components/text-edit";
@@ -67,12 +68,7 @@ export function createInitialThemeEditorState({
     fontScheme,
     fontSchemeName: fontSchemeName ?? "",
     masterBackground: {},
-    masterColorMapping: {
-      bg1: "lt1", tx1: "dk1", bg2: "lt2", tx2: "dk2",
-      accent1: "accent1", accent2: "accent2", accent3: "accent3",
-      accent4: "accent4", accent5: "accent5", accent6: "accent6",
-      hlink: "hlink", folHlink: "folHlink",
-    },
+    masterColorMapping: DEFAULT_COLOR_MAPPING,
     formatScheme: undefined,
     customColors: [],
     extraColorSchemes: [],

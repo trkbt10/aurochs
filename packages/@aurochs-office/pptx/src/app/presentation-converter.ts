@@ -9,68 +9,19 @@
 import type { LoadedPresentation } from "./pptx-loader";
 import type { PresentationDocument, SlideWithId } from "./presentation-document";
 import type { Presentation as DomainPresentation, PresentationFile } from "../domain";
+import type { ExtractedTheme } from "../domain";
 import type { ResourceMap } from "@aurochs-office/opc";
-import type { ColorContext, ColorScheme, ColorMap } from "@aurochs-office/drawing-ml/domain/color-context";
-import { EMPTY_FONT_SCHEME, type FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
+import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
+import { EMPTY_FONT_SCHEME } from "@aurochs-office/ooxml/domain/font-scheme";
 import type { ResourceResolver } from "../domain/resource-resolver";
 import type { Slide as ApiSlide } from "./types";
 import { parseSlide } from "../parser/slide/slide-parser";
 import { createParseContext } from "../parser/context";
-import { parseColorScheme, parseFontScheme, parseColorMap } from "../parser/theme/theme-parser";
-import { getByPath } from "@aurochs/xml";
+import { extractThemeData } from "../parser/theme/theme-parser";
 import { createRenderContext } from "@aurochs-renderer/pptx";
 import { getMimeTypeFromPath } from "@aurochs/files";
 import { createZipAdapter } from "../domain";
 import { toDataUrl } from "@aurochs/buffer";
-
-// =============================================================================
-// Color Context Building
-// =============================================================================
-
-/**
- * Extract ColorScheme from theme XML
- */
-function extractColorScheme(apiSlide: ApiSlide): ColorScheme {
-  if (!apiSlide.theme) {
-    return {};
-  }
-  return parseColorScheme(apiSlide.theme);
-}
-
-/**
- * Extract ColorMap from master XML
- */
-function extractColorMap(apiSlide: ApiSlide): ColorMap {
-  if (!apiSlide.master) {
-    return {};
-  }
-  const clrMapElement = getByPath(apiSlide.master, ["p:sldMaster", "p:clrMap"]);
-  return parseColorMap(clrMapElement);
-}
-
-/**
- * Build ColorContext from API Slide
- */
-function buildColorContext(apiSlide: ApiSlide): ColorContext {
-  return {
-    colorScheme: extractColorScheme(apiSlide),
-    colorMap: extractColorMap(apiSlide),
-  };
-}
-
-// =============================================================================
-// Font Scheme Building
-// =============================================================================
-
-/**
- * Extract FontScheme from theme XML
- */
-function extractFontScheme(apiSlide: ApiSlide): FontScheme {
-  if (!apiSlide.theme) {
-    return EMPTY_FONT_SCHEME;
-  }
-  return parseFontScheme(apiSlide.theme);
-}
 
 // =============================================================================
 // Resource Resolver Building
@@ -168,7 +119,7 @@ export function createResourceResolverFromMaps(
   const resolveTarget = (id: string): string | undefined => {
     for (const map of resourceMaps) {
       const target = map.getTarget(id);
-      if (target !== undefined) return target;
+      if (target !== undefined) { return target; }
     }
     return undefined;
   };
@@ -176,7 +127,7 @@ export function createResourceResolverFromMaps(
   const resolveType = (id: string): string | undefined => {
     for (const map of resourceMaps) {
       const type = map.getType(id);
-      if (type !== undefined) return type;
+      if (type !== undefined) { return type; }
     }
     return undefined;
   };
@@ -184,7 +135,7 @@ export function createResourceResolverFromMaps(
   const resolveTargetByType = (relType: string): string | undefined => {
     for (const map of resourceMaps) {
       const target = map.getTargetByType(relType);
-      if (target !== undefined) return target;
+      if (target !== undefined) { return target; }
     }
     return undefined;
   };
@@ -194,24 +145,24 @@ export function createResourceResolverFromMaps(
     getType: resolveType,
     resolve: (id: string) => {
       const target = resolveTarget(id);
-      if (!target) return undefined;
+      if (!target) { return undefined; }
       const normalizedPath = normalizePptxPath(target);
       const buffer = file.readBinary(normalizedPath);
-      if (!buffer) return undefined;
+      if (!buffer) { return undefined; }
       const mimeType = getMimeTypeFromPath(normalizedPath);
-      if (!mimeType) return undefined;
+      if (!mimeType) { return undefined; }
       return toDataUrl(buffer, mimeType);
     },
     getMimeType: (id: string) => {
       const target = resolveTarget(id);
-      if (!target) return undefined;
+      if (!target) { return undefined; }
       return getMimeTypeFromPath(target);
     },
     getFilePath: (id: string) => resolveTarget(id),
     readFile: (path: string) => {
       const normalizedPath = normalizePptxPath(path);
       const buffer = file.readBinary(normalizedPath);
-      if (!buffer) return null;
+      if (!buffer) { return null; }
       return new Uint8Array(buffer);
     },
     getResourceByType: (relType: string) => resolveTargetByType(relType),
@@ -253,11 +204,11 @@ export function convertToPresentationDocument(loaded: LoadedPresentation): Prese
   // Get first slide to extract theme/master info (shared across presentation)
   const firstApiSlide = slideCount > 0 ? presentation.getSlide(1) : null;
 
-  // Build color context from first slide's theme/master
-  const colorContext = firstApiSlide ? buildColorContext(firstApiSlide) : { colorScheme: {}, colorMap: {} };
-
-  // Build font scheme from first slide's theme
-  const fontScheme = firstApiSlide ? extractFontScheme(firstApiSlide) : EMPTY_FONT_SCHEME;
+  // Extract theme via parser SoT (single parse, no redundant calls)
+  const themeData = extractThemeFromFirstSlide(firstApiSlide);
+  const theme = themeData?.theme;
+  const colorContext = buildColorContextFromThemeData(themeData);
+  const fontScheme = themeData?.theme.fontScheme ?? EMPTY_FONT_SCHEME;
 
   // Build resource resolver from presentation file
   const resources = buildResourceResolver(presentationFile, firstApiSlide);
@@ -296,11 +247,26 @@ export function convertToPresentationDocument(loaded: LoadedPresentation): Prese
     slides,
     slideWidth: slideSize.width,
     slideHeight: slideSize.height,
+    theme,
     colorContext,
     fontScheme,
     resources,
     presentationFile,
   };
+}
+
+function extractThemeFromFirstSlide(firstApiSlide: ApiSlide | null): ExtractedTheme | undefined {
+  if (!firstApiSlide) { return undefined; }
+  return extractThemeData({
+    theme: firstApiSlide.theme,
+    themeOverrides: firstApiSlide.themeOverrides ?? [],
+    master: firstApiSlide.master,
+  });
+}
+
+function buildColorContextFromThemeData(themeData: ExtractedTheme | undefined): ColorContext {
+  if (!themeData) { return { colorScheme: {}, colorMap: {} }; }
+  return { colorScheme: themeData.theme.colorScheme, colorMap: themeData.colorMap };
 }
 
 function buildResourceResolver(file: PresentationFile, firstApiSlide: ApiSlide | null): ResourceResolver {

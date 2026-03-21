@@ -9,7 +9,7 @@
 
 import type { XmlElement } from "@aurochs/xml";
 import { isXmlElement, getChild, getAttr } from "@aurochs/xml";
-import { OOXML_PERCENT_FACTOR } from "../../domain/defaults";
+import { OOXML_PERCENT_FACTOR } from "@aurochs-office/ooxml/domain/ooxml-units";
 import type { ColorResolveContext } from "@aurochs-office/drawing-ml/domain/color-context";
 import {
   toHex,
@@ -47,18 +47,7 @@ export type ColorElementKey = (typeof COLOR_ELEMENT_KEYS)[number];
 // Scheme Color Mapping (ECMA-376 compliant)
 // =============================================================================
 
-/**
- * Default scheme color mapping per ECMA-376.
- * Maps semantic colors (tx1, bg1) to theme color references (dk1, lt1).
- *
- * @see ECMA-376 Part 1, Section 19.3.1.6 (p:clrMap)
- */
-const DEFAULT_SCHEME_MAPPING: Record<string, string> = {
-  tx1: "dk1",
-  tx2: "dk2",
-  bg1: "lt1",
-  bg2: "lt2",
-};
+import { DEFAULT_COLOR_MAPPING } from "@aurochs-office/pptx/domain/color/types";
 
 const MAPPABLE_SCHEME_COLORS = new Set(["tx1", "tx2", "bg1", "bg2"]);
 
@@ -89,7 +78,7 @@ function resolveEffectiveSchemeColor(schmClrName: string, colorCtx: ColorResolve
   }
 
   // Default mapping as final fallback
-  return DEFAULT_SCHEME_MAPPING[schmClrName] ?? schmClrName;
+  return DEFAULT_COLOR_MAPPING[schmClrName as keyof typeof DEFAULT_COLOR_MAPPING] ?? schmClrName;
 }
 
 /**

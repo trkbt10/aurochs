@@ -12,7 +12,8 @@ export { SampleSlidePreview } from "./SampleSlidePreview";
 export type { SampleSlidePreviewProps } from "./SampleSlidePreview";
 export { LayoutAttributesSection } from "./LayoutAttributesSection";
 export type { LayoutAttributesSectionProps } from "./LayoutAttributesSection";
-export { ColorMapEditor, DEFAULT_COLOR_MAPPING } from "./ColorMapEditor";
+export { ColorMapEditor } from "./ColorMapEditor";
+// DEFAULT_COLOR_MAPPING: import from @aurochs-office/pptx/domain/color/types (SoT)
 export type { ColorMapEditorProps } from "./ColorMapEditor";
 export { MasterBackgroundEditor } from "./MasterBackgroundEditor";
 export type { MasterBackgroundEditorProps, BackgroundState } from "./MasterBackgroundEditor";
@@ -28,10 +29,6 @@ export { MasterTextStylesEditor } from "./MasterTextStylesEditor";
 export type { MasterTextStylesEditorProps } from "./MasterTextStylesEditor";
 
 export { THEME_PRESETS, OFFICE_THEME } from "./presets/office-themes";
-export { extractThemeFromBuffer } from "@aurochs-office/pptx/app";
-export type { ThemeExtractionResult, ExtractedTheme } from "@aurochs-office/pptx/app";
-export { exportThemeAsPotx, getThemeFileName } from "@aurochs-builder/pptx/builders";
-export type { ThemeExportOptions } from "@aurochs-builder/pptx/builders";
 export type {
   ThemeColorScheme,
   ThemeFontScheme,

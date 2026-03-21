@@ -17,7 +17,7 @@ import { inferTableFromGroupedText } from "./table-inference";
 import { createPptxTextRunFromPdfText } from "./text-to-shapes";
 import { convertGraphicsStateToStyle, noFill } from "./color-converter";
 import { rgbToHex } from "@aurochs/pdf/domain/color";
-import { EMU_PER_PIXEL } from "@aurochs-office/pptx/domain/defaults";
+import { EMU_PER_PIXEL } from "@aurochs-office/ooxml/domain/ooxml-units";
 
 export type TableConversionOptions = {
   readonly minRows?: number;

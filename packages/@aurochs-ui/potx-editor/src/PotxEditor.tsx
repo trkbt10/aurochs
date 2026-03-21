@@ -107,22 +107,11 @@ function buildThemeExportOptions(s: ThemeEditorState): ThemeExportOptions {
     fontScheme: s.fontScheme,
     fontSchemeName: s.fontSchemeName,
     colorMapping: s.masterColorMapping,
-    formatSchemeElements: buildFormatSchemeElements(s.formatScheme),
+    formatSchemeElements: s.formatScheme,
     customColors: s.customColors,
     extraColorSchemes: s.extraColorSchemes,
     objectDefaults: s.objectDefaults,
     masterTextStyles: s.masterTextStyles,
-  };
-}
-
-/** Extract format scheme element arrays, or undefined if no format scheme. */
-function buildFormatSchemeElements(fmt: FormatScheme | undefined): ThemeExportOptions["formatSchemeElements"] {
-  if (!fmt) { return undefined; }
-  return {
-    fillStyles: fmt.fillStyles,
-    lineStyles: fmt.lineStyles,
-    effectStyles: fmt.effectStyles,
-    bgFillStyles: fmt.bgFillStyles,
   };
 }
 

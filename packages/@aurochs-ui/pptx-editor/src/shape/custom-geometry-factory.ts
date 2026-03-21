@@ -9,9 +9,10 @@ import type { SpShape, CustomGeometry } from "@aurochs-office/pptx/domain";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
 import type { ShapeBounds } from "@aurochs-ui/ooxml-components";
+import { DEFAULT_COLOR_SCHEME } from "@aurochs-office/pptx/domain";
 
-/** Default fill color (Office blue) */
-const DEFAULT_FILL_COLOR = "4472C4";
+/** Default fill color (Office theme accent1) */
+const DEFAULT_FILL_COLOR = DEFAULT_COLOR_SCHEME.accent1;
 
 /** Default stroke color (darker blue) */
 const DEFAULT_STROKE_COLOR = "2F528F";

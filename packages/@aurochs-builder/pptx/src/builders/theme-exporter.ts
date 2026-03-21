@@ -28,10 +28,10 @@
  * @see ECMA-376 Part 1, Section 20.1.6 - Theme Definitions
  */
 
-import type { SchemeColorName, Color } from "@aurochs-office/drawing-ml/domain/color";
+import { SCHEME_COLOR_NAMES, type SchemeColorName, type Color } from "@aurochs-office/drawing-ml/domain/color";
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
 import type { Theme, CustomColor, ExtraColorScheme, FormatScheme, ObjectDefaults, RawMasterTextStyles } from "@aurochs-office/pptx/domain/theme/types";
-import type { ColorMapping } from "@aurochs-office/pptx/domain/color/types";
+import { DEFAULT_COLOR_MAPPING, type ColorMapping } from "@aurochs-office/pptx/domain/color/types";
 import { CONTENT_TYPES } from "@aurochs-office/pptx/domain";
 import { serializeColor } from "../patcher/serializer/color";
 import {
@@ -107,21 +107,6 @@ const DEFAULT_SLIDE_SIZE = {
   cx: "9144000", // 10 inches
   cy: "6858000", // 7.5 inches
 };
-
-/** Default color map per ECMA-376 convention */
-const DEFAULT_COLOR_MAP: ColorMapping = {
-  bg1: "lt1", tx1: "dk1", bg2: "lt2", tx2: "dk2",
-  accent1: "accent1", accent2: "accent2", accent3: "accent3",
-  accent4: "accent4", accent5: "accent5", accent6: "accent6",
-  hlink: "hlink", folHlink: "folHlink",
-};
-
-/** 12 ECMA-376 scheme color slots in specification order */
-const SCHEME_COLOR_SLOTS: readonly SchemeColorName[] = [
-  "dk1", "lt1", "dk2", "lt2",
-  "accent1", "accent2", "accent3", "accent4", "accent5", "accent6",
-  "hlink", "folHlink",
-];
 
 // =============================================================================
 // OPC Part Builders
@@ -230,7 +215,7 @@ function buildPresentation(): XmlDocument {
 }
 
 function buildSlideMaster(options: ThemeExportOptions): XmlDocument {
-  const clrMap = options.colorMapping ?? DEFAULT_COLOR_MAP;
+  const clrMap = options.colorMapping ?? DEFAULT_COLOR_MAPPING;
 
   // p:cSld children: optional p:bg, then p:spTree
   const cSldChildren: XmlElement[] = [];
@@ -434,7 +419,7 @@ function hexToColor(hex: string): Color {
  * Uses serializeColor (SoT) for XML generation.
  */
 function buildColorSchemeChildren(cs: Readonly<Record<SchemeColorName, string>>): XmlElement[] {
-  return SCHEME_COLOR_SLOTS.map((key) =>
+  return SCHEME_COLOR_NAMES.map((key) =>
     createElement(`a:${key}`, {}, [serializeColor(hexToColor(cs[key]))]),
   );
 }
@@ -478,7 +463,7 @@ function buildExtraColorScheme(scheme: ExtraColorScheme): XmlElement {
   if (scheme.name) { clrSchemeAttrs.name = scheme.name; }
 
   // Build color scheme children using serializeColor (SoT)
-  const colorChildren = SCHEME_COLOR_SLOTS
+  const colorChildren = SCHEME_COLOR_NAMES
     .filter((key) => scheme.colorScheme[key] !== undefined)
     .map((key) =>
       createElement(`a:${key}`, {}, [serializeColor(hexToColor(scheme.colorScheme[key]))]),

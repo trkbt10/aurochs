@@ -1,11 +1,10 @@
 /** @file Relationship manager for .rels file manipulation */
-import { createElement, isXmlElement, type XmlDocument } from "@aurochs/xml";
+import { createElement, isXmlElement, getDocumentRoot, updateDocumentRoot, type XmlDocument } from "@aurochs/xml";
 import {
   listRelationships,
   OFFICE_RELATIONSHIP_TYPES,
   PRESENTATIONML_RELATIONSHIP_TYPES,
 } from "@aurochs-office/opc";
-import { getDocumentRoot, updateDocumentRoot } from "../core/xml-mutator";
 import { createRelationshipsDocument, RELATIONSHIPS_XMLNS, type RelationshipTargetMode } from "../parts/relationships";
 
 export type RelationshipType =

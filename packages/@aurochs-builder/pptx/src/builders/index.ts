@@ -13,8 +13,7 @@ export { getSlideRelsPath } from "./rels-utils";
 // ID generation
 export { generateShapeId } from "./id-generator";
 
-// XML utilities (SoT: patcher/core/xml-mutator)
-export { setChildren } from "../patcher/core/xml-mutator";
+// setChildren: import from @aurochs-builder/pptx/patcher (SoT: patcher/core/xml-mutator)
 
 // Preset shape mappings
 export { PRESET_MAP } from "./presets";

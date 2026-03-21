@@ -6,11 +6,10 @@
  * @see docs/plans/pptx-export/phase-9-master-layout-theme.md
  */
 
-import { createElement, getChild, isXmlElement, type XmlDocument, type XmlElement } from "@aurochs/xml";
+import { createElement, getChild, isXmlElement, replaceChildByName, updateDocumentRoot, type XmlDocument, type XmlElement } from "@aurochs/xml";
 import type { Color, SchemeColorName } from "@aurochs-office/drawing-ml/domain/color";
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
 import type { FormatScheme } from "@aurochs-office/pptx/domain/theme/types";
-import { replaceChildByName, updateDocumentRoot } from "../core/xml-mutator";
 import { patchSchemeColor } from "./color-scheme-patcher";
 import { patchMajorFont, patchMinorFont } from "./font-scheme-patcher";
 

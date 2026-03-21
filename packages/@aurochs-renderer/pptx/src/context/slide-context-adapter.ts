@@ -8,8 +8,10 @@
  */
 
 import type { SlideSize, Shape } from "@aurochs-office/pptx/domain";
+import { SCHEME_COLOR_NAMES } from "@aurochs-office/drawing-ml/domain/color";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
+import { DEFAULT_COLOR_MAPPING } from "@aurochs-office/pptx/domain/color/types";
 import type { ResourceResolver } from "@aurochs-office/pptx/domain/resource-resolver";
 import type { SlideContext } from "@aurochs-office/pptx/parser/slide/context";
 import type { CoreRenderContext } from "../render-context";
@@ -82,21 +84,7 @@ function buildColorContext(ctx: SlideContext): ColorContext {
   const overrideMap = ctx.slide.colorMapOverride;
 
   const colorScheme: Record<string, string> = {};
-  const schemeColors = [
-    "dk1",
-    "lt1",
-    "dk2",
-    "lt2",
-    "accent1",
-    "accent2",
-    "accent3",
-    "accent4",
-    "accent5",
-    "accent6",
-    "hlink",
-    "folHlink",
-  ];
-  for (const name of schemeColors) {
+  for (const name of SCHEME_COLOR_NAMES) {
     const value = scheme[name];
     if (value !== undefined) {
       colorScheme[name] = value;
@@ -104,21 +92,8 @@ function buildColorContext(ctx: SlideContext): ColorContext {
   }
 
   const colorMap: Record<string, string> = {};
-  const mappedColors = [
-    "tx1",
-    "tx2",
-    "bg1",
-    "bg2",
-    "accent1",
-    "accent2",
-    "accent3",
-    "accent4",
-    "accent5",
-    "accent6",
-    "hlink",
-    "folHlink",
-  ];
-  for (const name of mappedColors) {
+  const colorMappingKeys = Object.keys(DEFAULT_COLOR_MAPPING);
+  for (const name of colorMappingKeys) {
     if (overrideMap !== undefined) {
       const value = overrideMap[name];
       if (value !== undefined) {

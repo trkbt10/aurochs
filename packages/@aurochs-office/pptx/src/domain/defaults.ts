@@ -113,49 +113,34 @@ export const DEFAULT_MARGIN_LEFT_EMU = 0;
  */
 export const DEFAULT_INDENT_EMU = 0;
 
+// Unit Conversion Constants: import from @aurochs-office/ooxml/domain/ooxml-units (SoT)
+
 // =============================================================================
-// Unit Conversion Constants
+// Office Default Theme Color Scheme
 // =============================================================================
 
 /**
- * EMUs (English Metric Units) per inch.
+ * Default Office theme color scheme.
  *
- * This is the fundamental unit in OOXML for measurements.
+ * These are the 12 standard colors used by the default "Office" theme
+ * in Microsoft PowerPoint. Used as fallback when no theme is loaded.
  *
- * @see ECMA-376-1:2016, Section 20.1.10.16 (ST_Coordinate)
+ * @see ECMA-376 Part 1, Section 20.1.6.2 (CT_ColorScheme)
  */
-export const EMU_PER_INCH = 914400;
-
-/**
- * Standard screen DPI for pixel conversion.
- *
- * While not specified in ECMA-376, 96 DPI is the standard assumption
- * for converting EMU to screen pixels.
- */
-export const STANDARD_DPI = 96;
-
-/**
- * EMUs per pixel at standard 96 DPI.
- *
- * Calculated as: EMU_PER_INCH / STANDARD_DPI = 914400 / 96 = 9525
- */
-export const EMU_PER_PIXEL = EMU_PER_INCH / STANDARD_DPI;
-
-/**
- * Points per inch.
- *
- * Standard typographic measurement.
- */
-export const POINTS_PER_INCH = 72;
-
-/**
- * OOXML percentage to decimal conversion factor.
- *
- * OOXML stores percentages as integers where 100000 = 100%.
- *
- * @see ECMA-376-1:2016, Section 20.1.10.40 (ST_TextSpacingPercentOrPercentString)
- */
-export const OOXML_PERCENT_FACTOR = 100000;
+export const DEFAULT_COLOR_SCHEME: Readonly<Record<string, string>> = {
+  dk1: "000000",
+  lt1: "FFFFFF",
+  dk2: "44546A",
+  lt2: "E7E6E6",
+  accent1: "4472C4",
+  accent2: "ED7D31",
+  accent3: "A5A5A5",
+  accent4: "FFC000",
+  accent5: "5B9BD5",
+  accent6: "70AD47",
+  hlink: "0563C1",
+  folHlink: "954F72",
+};
 
 // =============================================================================
 // Presentation Defaults (Section 19.2)

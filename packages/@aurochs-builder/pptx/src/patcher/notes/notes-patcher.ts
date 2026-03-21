@@ -16,10 +16,10 @@ import {
   serializeDocument,
   type XmlDocument,
   type XmlElement,
+  setChildren,
 } from "@aurochs/xml";
 import type { ZipPackage } from "@aurochs/zip";
 import { PRESENTATIONML_CONTENT_TYPES, PRESENTATIONML_RELATIONSHIP_TYPES } from "@aurochs-office/opc";
-import { setChildren } from "../core/xml-mutator";
 import { addRelationship, ensureRelationshipsDocument, type RelationshipType } from "../resources/relationship-manager";
 import { addOverride } from "../resources/content-types-manager";
 

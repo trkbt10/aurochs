@@ -4,7 +4,7 @@
 
 import { createElement, type XmlElement } from "@aurochs/xml";
 import type { Color, ColorTransform } from "@aurochs-office/drawing-ml/domain/color";
-import { ooxmlAngleUnits, ooxmlPercent100k } from "@aurochs-builder/core";
+import { ooxmlAngleUnits, ooxmlPercent100k } from "@aurochs-office/ooxml/domain/ooxml-units";
 
 /** Serialize a color to its XML element representation */
 export function serializeColor(color: Color): XmlElement {

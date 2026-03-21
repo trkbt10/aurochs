@@ -5,10 +5,10 @@
  * against a minimal in-memory PPTX package.
  */
 
-import { describe, expect, it } from "vitest";
-import { parseXml, getByPath, getChildren, serializeDocument } from "@aurochs/xml";
+import { parseXml, getByPath, getChildren } from "@aurochs/xml";
 import { createEmptyZipPackage } from "@aurochs/zip";
 import type { PresentationDocument } from "@aurochs-office/pptx/app/presentation-document";
+import { EMPTY_FONT_SCHEME } from "@aurochs-office/ooxml/domain/font-scheme";
 import { addSlideLayout, deleteSlideLayout, duplicateSlideLayout } from "./layout-ops";
 
 // =============================================================================
@@ -97,9 +97,18 @@ function createMinimalPptxDoc(): PresentationDocument {
     ].join("\n"),
   );
 
+  const presentationFile = pkg.asPresentationFile();
+  const emptyResolver = { getTarget: () => undefined, getType: () => undefined, resolve: () => undefined, getMimeType: () => undefined, getFilePath: () => undefined, readFile: () => null, getResourceByType: () => undefined };
   return {
-    presentationFile: pkg.asPresentationFile(),
-  } as unknown as PresentationDocument;
+    presentation: { slideSize: { width: 9144000, height: 6858000 } },
+    slides: [],
+    slideWidth: 9144000,
+    slideHeight: 6858000,
+    colorContext: { colorScheme: {}, colorMap: {} },
+    fontScheme: EMPTY_FONT_SCHEME,
+    resources: emptyResolver,
+    presentationFile,
+  } satisfies PresentationDocument;
 }
 
 /** Read and parse XML from the updated doc's presentationFile. */

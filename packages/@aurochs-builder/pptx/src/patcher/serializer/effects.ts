@@ -30,7 +30,7 @@ import type {
 } from "@aurochs-office/pptx/domain";
 import { serializeColor } from "./color";
 import { serializeFill } from "./fill";
-import { ooxmlAngleUnits, ooxmlBool, ooxmlEmu, ooxmlPercent1000, ooxmlPercent100k } from "@aurochs-builder/core";
+import { ooxmlAngleUnits, ooxmlBool, ooxmlEmu, ooxmlPercent1000, ooxmlPercent100k } from "@aurochs-office/ooxml/domain/ooxml-units";
 
 /**
  * Serialize effects to XML element.

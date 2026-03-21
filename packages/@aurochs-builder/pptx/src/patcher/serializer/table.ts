@@ -7,7 +7,7 @@ import type {
   TableProperties,
   CellBorders,
 } from "@aurochs-office/pptx/domain/table/types";
-import { ooxmlBool, ooxmlEmu } from "@aurochs-builder/core";
+import { ooxmlBool, ooxmlEmu } from "@aurochs-office/ooxml/domain/ooxml-units";
 import { serializeFill } from "./fill";
 import { serializeEffects } from "./effects";
 import { serializeDrawingTextBody } from "./text";

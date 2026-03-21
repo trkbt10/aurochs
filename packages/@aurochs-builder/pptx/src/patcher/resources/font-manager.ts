@@ -12,9 +12,8 @@
 
 import type { ZipPackage } from "@aurochs/zip";
 import type { EmbeddedFontData } from "@aurochs-office/pptx/app/presentation-document";
-import { parseXml, serializeDocument, createElement } from "@aurochs/xml";
+import { parseXml, serializeDocument, createElement, getDocumentRoot, updateDocumentRoot } from "@aurochs/xml";
 import { OFFICE_RELATIONSHIP_TYPES } from "@aurochs-office/opc";
-import { getDocumentRoot, updateDocumentRoot } from "../core/xml-mutator";
 import { addContentType } from "./content-types-manager";
 import { addRelationship, ensureRelationshipsDocument, type RelationshipType } from "./relationship-manager";
 import { getRelationshipPath } from "@aurochs-office/ooxml/parser";
