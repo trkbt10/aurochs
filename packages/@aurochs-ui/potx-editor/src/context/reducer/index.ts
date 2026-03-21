@@ -48,7 +48,8 @@ export function createInitialLayoutEditState(): LayoutEditState {
 
 type InitialThemeOptions = {
   readonly colorScheme: ColorScheme;
-  readonly fontScheme?: FontScheme;
+  /** Required per ECMA-376 §20.1.6.10. */
+  readonly fontScheme: FontScheme;
   readonly themeName?: string;
   readonly fontSchemeName?: string;
 };
@@ -214,7 +215,6 @@ export function themeEditorReducer(state: ThemeEditorState, action: ThemeEditorA
     }
 
     case "UPDATE_FONT_SCHEME": {
-      if (!state.fontScheme) {return state;}
       const target = action.target === "major" ? "majorFont" : "minorFont";
       return {
         ...state,
@@ -233,6 +233,24 @@ export function themeEditorReducer(state: ThemeEditorState, action: ThemeEditorA
         fontScheme: action.preset.fontScheme,
         fontSchemeName: action.preset.name,
       };
+
+    case "IMPORT_THEME": {
+      const t = action.theme;
+      return {
+        ...state,
+        themeName: t.themeName,
+        colorScheme: t.colorScheme,
+        fontScheme: t.fontScheme,
+        fontSchemeName: t.fontSchemeName ?? t.themeName,
+        masterColorMapping: t.colorMapping ?? state.masterColorMapping,
+        formatScheme: t.formatScheme ?? state.formatScheme,
+        customColors: t.customColors ?? [],
+        extraColorSchemes: t.extraColorSchemes ?? [],
+        objectDefaults: t.objectDefaults ?? state.objectDefaults,
+        masterTextStyles: t.masterTextStyles ?? state.masterTextStyles,
+        masterBackground: t.masterBackground ?? {},
+      };
+    }
 
     // ---- Master background & color map ----
     case "UPDATE_MASTER_BACKGROUND":

@@ -24,6 +24,7 @@ import type { ThemeExportOptions } from "@aurochs-builder/pptx/builders";
 import type { ExtractedTheme } from "../src/app/theme-extractor";
 import type { CustomColor } from "../src/domain/theme/types";
 import type { SchemeColorName } from "@aurochs-office/drawing-ml/domain/color";
+import { EMPTY_FONT_SCHEME } from "@aurochs-office/ooxml/domain/font-scheme";
 
 const FIXTURES = resolve(__dirname, "../../../../fixtures");
 
@@ -582,4 +583,68 @@ describe("Theme pipeline: cross-fixture lossless round-trip", () => {
         .toBe(original.data.theme.formatScheme.bgFillStyles.length);
     });
   }
+});
+
+// =============================================================================
+// Import→export through editor state (cross-concern round-trip)
+// =============================================================================
+
+describe("Theme pipeline: extract → editor-equivalent mapping → export → re-extract", () => {
+  /**
+   * Simulates the editor import→export path without depending on potx-editor:
+   * ExtractedTheme → (same fields as ImportedThemeData) → ThemeExportOptions → export → re-extract
+   *
+   * This validates the data mapping that PotxEditor.handleThemeImport and buildThemeExportOptions perform.
+   */
+  function extractedToExportOptions(extracted: ExtractedTheme): ThemeExportOptions {
+    return {
+      name: extracted.themeName,
+      colorScheme: extracted.theme.colorScheme as Record<SchemeColorName, string>,
+      fontScheme: extracted.theme.fontScheme,
+      colorMapping: extracted.colorMap as ThemeExportOptions["colorMapping"],
+      formatSchemeElements: {
+        fillStyles: [...extracted.theme.formatScheme.fillStyles],
+        lineStyles: [...extracted.theme.formatScheme.lineStyles],
+        effectStyles: [...extracted.theme.formatScheme.effectStyles],
+        bgFillStyles: [...extracted.theme.formatScheme.bgFillStyles],
+      },
+      customColors: extracted.theme.customColors,
+      extraColorSchemes: extracted.theme.extraColorSchemes,
+      objectDefaults: extracted.theme.objectDefaults,
+      masterTextStyles: extracted.masterTextStyles,
+      masterBackground: extracted.masterBackground,
+    };
+  }
+
+  it("theme survives extract → editor-equivalent mapping → export → re-extract", async () => {
+    const buffer = loadFixture("poi-test-data/test-data/slideshow/SampleShow.pptx");
+    const original = await extractThemeFromBuffer(buffer);
+    if (!original.success) { throw new Error(original.error); }
+
+    // Same mapping path as: extractThemeFromBuffer → ImportedThemeData → ThemeEditorState → ThemeExportOptions
+    const exportOptions = extractedToExportOptions(original.data);
+    const reExtracted = await roundTrip(exportOptions);
+
+    const slots: SchemeColorName[] = ["dk1", "lt1", "dk2", "lt2", "accent1", "accent2", "accent3", "accent4", "accent5", "accent6", "hlink", "folHlink"];
+    for (const slot of slots) {
+      expect(reExtracted.theme.colorScheme[slot]).toBe(original.data.theme.colorScheme[slot]);
+    }
+    expect(reExtracted.theme.fontScheme.majorFont.latin).toBe(original.data.theme.fontScheme.majorFont.latin);
+    expect(reExtracted.theme.fontScheme.minorFont.latin).toBe(original.data.theme.fontScheme.minorFont.latin);
+    expect(reExtracted.themeName).toBe(original.data.themeName);
+    expect(reExtracted.colorMap).toEqual(original.data.colorMap);
+  });
+
+  it("EMPTY_FONT_SCHEME survives export → re-extract round-trip", async () => {
+    const options: ThemeExportOptions = {
+      name: "Empty Font Test",
+      colorScheme: { dk1: "000000", lt1: "FFFFFF", dk2: "333333", lt2: "EEEEEE", accent1: "4472C4", accent2: "ED7D31", accent3: "A5A5A5", accent4: "FFC000", accent5: "5B9BD5", accent6: "70AD47", hlink: "0563C1", folHlink: "954F72" },
+      fontScheme: EMPTY_FONT_SCHEME,
+    };
+
+    const reExtracted = await roundTrip(options);
+
+    expect(reExtracted.theme.fontScheme.majorFont).toBeDefined();
+    expect(reExtracted.theme.fontScheme.minorFont).toBeDefined();
+  });
 });

@@ -15,6 +15,7 @@ import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
 import type { Pixels, Degrees } from "@aurochs-office/drawing-ml/domain/units";
 import type { ThemeEditorState, ThemeEditorAction } from "../types";
 import { themeEditorReducer, createInitialThemeEditorState } from "./index";
+import { EMPTY_FONT_SCHEME } from "@aurochs-office/ooxml/domain/font-scheme";
 import {
   createSpShape,
   createTextBox,
@@ -33,6 +34,7 @@ import type { CreationMode, ShapeBounds } from "@aurochs-ui/ooxml-components";
 function createBaseState(): ThemeEditorState {
   return createInitialThemeEditorState({
     colorScheme: { dk1: "000000", lt1: "FFFFFF", dk2: "333333", lt2: "EEEEEE", accent1: "4472C4", accent2: "ED7D31" },
+    fontScheme: EMPTY_FONT_SCHEME,
   });
 }
 

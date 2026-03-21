@@ -99,21 +99,15 @@ describe("Color scheme (a:clrScheme)", () => {
 describe("Font scheme (a:fontScheme)", () => {
   it("UPDATE_FONT_SCHEME updates major font", () => {
     const s = reduce(base(), { type: "UPDATE_FONT_SCHEME", target: "major", spec: { latin: "Arial Black" } });
-    expect(s.fontScheme?.majorFont.latin).toBe("Arial Black");
-    expect(s.fontScheme?.minorFont.latin).toBe("Calibri");
+    expect(s.fontScheme.majorFont.latin).toBe("Arial Black");
+    expect(s.fontScheme.minorFont.latin).toBe("Calibri");
   });
 
   it("UPDATE_FONT_SCHEME updates minor font", () => {
     const s = reduce(base(), { type: "UPDATE_FONT_SCHEME", target: "minor", spec: { latin: "Georgia", eastAsian: "MS Gothic" } });
-    expect(s.fontScheme?.minorFont.latin).toBe("Georgia");
-    expect(s.fontScheme?.minorFont.eastAsian).toBe("MS Gothic");
-    expect(s.fontScheme?.majorFont.latin).toBe("Calibri Light");
-  });
-
-  it("UPDATE_FONT_SCHEME is no-op when fontScheme is undefined", () => {
-    const s0 = createInitialThemeEditorState({ colorScheme: base().colorScheme });
-    const s1 = reduce(s0, { type: "UPDATE_FONT_SCHEME", target: "major", spec: { latin: "Arial" } });
-    expect(s1.fontScheme).toBeUndefined();
+    expect(s.fontScheme.minorFont.latin).toBe("Georgia");
+    expect(s.fontScheme.minorFont.eastAsian).toBe("MS Gothic");
+    expect(s.fontScheme.majorFont.latin).toBe("Calibri Light");
   });
 
   it("UPDATE_FONT_SCHEME_NAME updates font scheme name", () => {
@@ -142,8 +136,52 @@ describe("Theme names & presets", () => {
     const s = reduce(base(), { type: "APPLY_THEME_PRESET", preset });
     expect(s.themeName).toBe("Preset Theme");
     expect(s.colorScheme.accent1).toBe("112233");
-    expect(s.fontScheme?.majorFont.latin).toBe("Impact");
+    expect(s.fontScheme.majorFont.latin).toBe("Impact");
     expect(s.fontSchemeName).toBe("Preset Theme");
+  });
+});
+
+// ===========================================================================
+// IMPORT_THEME — full theme replacement from .potx import
+// ===========================================================================
+
+describe("IMPORT_THEME", () => {
+  it("replaces all theme fields", () => {
+    const imported = {
+      themeName: "Imported Theme",
+      colorScheme: { dk1: "AAAAAA", lt1: "BBBBBB", dk2: "CCCCCC", lt2: "DDDDDD", accent1: "111111", accent2: "222222", accent3: "333333", accent4: "444444", accent5: "555555", accent6: "666666", hlink: "777777", folHlink: "888888" },
+      fontScheme: { majorFont: { latin: "Impact" }, minorFont: { latin: "Verdana" } },
+      fontSchemeName: "Imported Fonts",
+      colorMapping: { bg1: "dk1", tx1: "lt1", bg2: "dk2", tx2: "lt2", accent1: "accent1", accent2: "accent2", accent3: "accent3", accent4: "accent4", accent5: "accent5", accent6: "accent6", hlink: "hlink", folHlink: "folHlink" },
+    };
+    const s = reduce(base(), { type: "IMPORT_THEME", theme: imported });
+    expect(s.themeName).toBe("Imported Theme");
+    expect(s.colorScheme.dk1).toBe("AAAAAA");
+    expect(s.fontScheme.majorFont.latin).toBe("Impact");
+    expect(s.fontSchemeName).toBe("Imported Fonts");
+    expect(s.masterColorMapping.bg1).toBe("dk1");
+  });
+
+  it("preserves layoutEdit state (isolation)", () => {
+    const s0 = base();
+    const imported = {
+      themeName: "New",
+      colorScheme: s0.colorScheme,
+      fontScheme: s0.fontScheme,
+    };
+    const s1 = reduce(s0, { type: "IMPORT_THEME", theme: imported });
+    expect(s1.layoutEdit).toBe(s0.layoutEdit);
+  });
+
+  it("uses empty defaults for omitted optional fields", () => {
+    const imported = {
+      themeName: "Minimal",
+      colorScheme: base().colorScheme,
+      fontScheme: base().fontScheme,
+    };
+    const s = reduce(base(), { type: "IMPORT_THEME", theme: imported });
+    expect(s.customColors).toEqual([]);
+    expect(s.extraColorSchemes).toEqual([]);
   });
 });
 

@@ -93,7 +93,8 @@ export type LayoutEditState = {
 export type ThemeEditorState = {
   readonly themeName: string;
   readonly colorScheme: ColorScheme;
-  readonly fontScheme: FontScheme | undefined;
+  /** Required per ECMA-376 §20.1.6.10 (CT_BaseStyles). */
+  readonly fontScheme: FontScheme;
   readonly fontSchemeName: string;
   readonly formatScheme: FormatScheme | undefined;
   readonly customColors: readonly CustomColor[];
@@ -124,6 +125,29 @@ export type LayoutOverrides = {
 };
 
 // =============================================================================
+// Imported Theme Data
+// =============================================================================
+
+/**
+ * Data for replacing all theme fields from an imported .potx file.
+ * Maps from ExtractedTheme to editor state fields.
+ */
+export type ImportedThemeData = {
+  readonly themeName: string;
+  readonly colorScheme: ColorScheme;
+  /** Required per ECMA-376 §20.1.6.10. */
+  readonly fontScheme: FontScheme;
+  readonly fontSchemeName?: string;
+  readonly colorMapping?: ColorMapping;
+  readonly formatScheme?: FormatScheme;
+  readonly customColors?: readonly CustomColor[];
+  readonly extraColorSchemes?: readonly ExtraColorScheme[];
+  readonly objectDefaults?: ObjectDefaults;
+  readonly masterTextStyles?: RawMasterTextStyles;
+  readonly masterBackground?: MasterBackgroundState;
+};
+
+// =============================================================================
 // Theme Editor Actions
 // =============================================================================
 
@@ -139,6 +163,8 @@ export type ThemeEditorAction =
   // Theme editing — font scheme & presets
   | { readonly type: "UPDATE_FONT_SCHEME"; readonly target: "major" | "minor"; readonly spec: Partial<FontSpec> }
   | { readonly type: "APPLY_THEME_PRESET"; readonly preset: ThemePreset }
+  // Theme import (full replacement from .potx file)
+  | { readonly type: "IMPORT_THEME"; readonly theme: ImportedThemeData }
   // Theme editing — custom colors
   | { readonly type: "ADD_CUSTOM_COLOR"; readonly color: CustomColor }
   | { readonly type: "REMOVE_CUSTOM_COLOR"; readonly index: number }
@@ -220,6 +246,7 @@ export type ThemeEditorInitProps = {
   readonly layoutOptions: readonly SlideLayoutOption[];
   readonly themeName?: string;
   readonly colorScheme: ColorScheme;
-  readonly fontScheme?: FontScheme;
+  /** Required per ECMA-376 §20.1.6.10. */
+  readonly fontScheme: FontScheme;
   readonly fontSchemeName?: string;
 };

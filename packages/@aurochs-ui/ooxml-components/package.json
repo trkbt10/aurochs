@@ -44,6 +44,10 @@
     "./pptx-render-resolver": {
       "types": "./src/pptx-render-resolver.ts",
       "default": "./src/pptx-render-resolver.ts"
+    },
+    "./theme-io": {
+      "types": "./src/ThemeImportExportSection.tsx",
+      "default": "./src/ThemeImportExportSection.tsx"
     }
   }
 }

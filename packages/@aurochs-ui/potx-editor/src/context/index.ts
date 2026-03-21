@@ -12,4 +12,5 @@ export type {
   LayoutEditState,
   LayoutListEntry,
   LayoutDragState,
+  ImportedThemeData,
 } from "./types";

@@ -2,6 +2,7 @@
  * @file Theme preset selector component
  *
  * Grid of theme presets with color palette previews.
+ * Card styling follows LayoutInfoPanel convention (transparent bg, 2px border, accent tint).
  */
 
 import { useCallback, type CSSProperties } from "react";
@@ -16,6 +17,10 @@ export type ThemePresetSelectorProps = {
   readonly disabled?: boolean;
 };
 
+// =============================================================================
+// Styles — follows LayoutInfoPanel card convention
+// =============================================================================
+
 const containerStyle: CSSProperties = {
   display: "flex",
   flexDirection: "column",
@@ -24,48 +29,70 @@ const containerStyle: CSSProperties = {
 const gridStyle: CSSProperties = {
   display: "grid",
   gridTemplateColumns: "repeat(2, 1fr)",
-  gap: spacingTokens.md,
+  gap: spacingTokens.sm,
   padding: spacingTokens.sm,
 };
 
-const presetCardStyle: CSSProperties = {
+/** Base card: transparent bg, 2px invisible border (reserves space for selected state) */
+const cardBaseStyle: CSSProperties = {
   display: "flex",
   flexDirection: "column",
+  alignItems: "center",
   gap: spacingTokens.xs,
-  padding: spacingTokens.sm,
+  padding: spacingTokens.xs,
   borderRadius: radiusTokens.md,
-  border: `1px solid var(--border-subtle, ${colorTokens.border.subtle})`,
-  backgroundColor: `var(--bg-secondary, ${colorTokens.background.secondary})`,
   cursor: "pointer",
-  transition: "all 150ms ease",
+  transition: "background-color 0.15s ease",
+  border: `2px solid transparent`,
+  backgroundColor: "transparent",
 };
 
-const presetCardSelectedStyle: CSSProperties = {
-  ...presetCardStyle,
+/** Selected card: accent border + accent tint background */
+const cardSelectedStyle: CSSProperties = {
+  ...cardBaseStyle,
+  backgroundColor: `var(--accent-primary, ${colorTokens.accent.primary})20`,
   borderColor: `var(--accent-primary, ${colorTokens.accent.primary})`,
-  borderWidth: "2px",
 };
 
 const presetNameStyle: CSSProperties = {
-  fontSize: fontTokens.size.sm,
-  fontWeight: fontTokens.weight.medium,
-  color: colorTokens.text.primary,
-  textAlign: "center",
-};
-
-const fontInfoStyle: CSSProperties = {
   fontSize: fontTokens.size.xs,
   color: colorTokens.text.secondary,
-  textAlign: "center",
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
+  textAlign: "center",
+  width: "100%",
+  marginTop: spacingTokens.xs,
+};
+
+const paletteRowStyle: CSSProperties = {
+  display: "flex",
+  gap: "1px",
+  width: "100%",
 };
 
 const disabledStyle: CSSProperties = {
   opacity: 0.5,
   cursor: "not-allowed",
 };
+
+// =============================================================================
+// Helpers
+// =============================================================================
+
+/** Accent color keys shown as palette swatches */
+const PALETTE_KEYS = ["accent1", "accent2", "accent3", "accent4", "accent5", "accent6"] as const;
+
+/** Resolve border-radius for first/last swatch in the palette row. */
+function getSwatchRadius(key: string): string | undefined {
+  if (key === "accent1") { return `${radiusTokens.sm} 0 0 ${radiusTokens.sm}`; }
+  if (key === "accent6") { return `0 ${radiusTokens.sm} ${radiusTokens.sm} 0`; }
+  return undefined;
+}
+
+// =============================================================================
+// PresetCard
+// =============================================================================
 
 type PresetCardProps = {
   readonly preset: ThemePreset;
@@ -74,13 +101,10 @@ type PresetCardProps = {
   readonly disabled?: boolean;
 };
 
+/** Single preset card with color palette swatches and theme name. */
 function PresetCard({ preset, isSelected, onClick, disabled }: PresetCardProps) {
-  const majorLatin = preset.fontScheme.majorFont.latin ?? "";
-  const minorLatin = preset.fontScheme.minorFont.latin ?? "";
-  const fontLabel = majorLatin === minorLatin ? majorLatin : `${majorLatin} / ${minorLatin}`;
-
   const cardStyle: CSSProperties = {
-    ...(isSelected ? presetCardSelectedStyle : presetCardStyle),
+    ...(isSelected ? cardSelectedStyle : cardBaseStyle),
     ...(disabled ? disabledStyle : {}),
   };
 
@@ -98,21 +122,35 @@ function PresetCard({ preset, isSelected, onClick, disabled }: PresetCardProps) 
         }
       }}
     >
+      <div style={paletteRowStyle}>
+        {PALETTE_KEYS.map((key) => (
+          <div
+            key={key}
+            style={{
+              flex: 1,
+              height: spacingTokens.lg,
+              backgroundColor: `#${preset.colorScheme[key]}`,
+              borderRadius: getSwatchRadius(key),
+            }}
+          />
+        ))}
+      </div>
       <div style={presetNameStyle}>{preset.name}</div>
-      {fontLabel && <div style={fontInfoStyle}>{fontLabel}</div>}
     </div>
   );
 }
 
+// =============================================================================
+// ThemePresetSelector
+// =============================================================================
+
 /**
  * Theme preset selector component.
  *
- * Displays a grid of theme presets with:
+ * Displays a 2-column grid of theme presets with:
+ * - Color palette swatches (accent1-6)
  * - Theme name
- * - Font scheme (majorFont.latin / minorFont.latin)
- * - Selection indicator
- *
- * Color details are displayed by ColorSchemeEditor in the Theme tab.
+ * - Selection indicator (accent border + tint)
  */
 export function ThemePresetSelector({ currentThemeId, onPresetSelect, disabled }: ThemePresetSelectorProps) {
   const handlePresetClick = useCallback(

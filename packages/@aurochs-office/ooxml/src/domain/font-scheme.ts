@@ -44,6 +44,18 @@ export type FontScheme = {
 };
 
 /**
+ * Empty FontScheme compliant with ECMA-376.
+ *
+ * a:majorFont and a:minorFont are required children of a:fontScheme,
+ * but a:latin, a:ea, a:cs within each are optional (§20.1.4.1.16-17).
+ * Spec-compliant default when no font data is available (e.g., empty presentation).
+ */
+export const EMPTY_FONT_SCHEME: FontScheme = {
+  majorFont: {},
+  minorFont: {},
+};
+
+/**
  * Resolve a font typeface reference to an actual font name.
  *
  * Per ECMA-376 Part 1, Section 20.1.4.1.16-17:

@@ -14,7 +14,12 @@ import { buildSlideLayoutOptions, loadSlideLayoutBundle } from "@aurochs-office/
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import { SlideRenderer } from "@aurochs-renderer/pptx/react";
 import type { ThemePreset } from "./panels/types";
-import type { LayoutListEntry } from "./context/types";
+import type { LayoutListEntry, ImportedThemeData, ThemeEditorState } from "./context/types";
+import type { SchemeColorName } from "@aurochs-office/drawing-ml/domain/color";
+import { ThemeImportExportSection } from "@aurochs-ui/ooxml-components/theme-io";
+import { exportThemeAsPotx, getThemeFileName, type ThemeExportOptions } from "@aurochs-builder/pptx/builders";
+import { extractThemeFromBuffer } from "@aurochs-office/pptx/app";
+import { downloadPresentation } from "@aurochs-office/opc";
 import { useThemeEditor } from "./context/ThemeEditorContext";
 import { ColorSchemeEditor } from "./panels/ColorSchemeEditor";
 import { FontSchemeEditor } from "./panels/FontSchemeEditor";
@@ -93,6 +98,33 @@ const POTX_VISIBLE_TOOLS: ReadonlySet<string> = new Set([
 // =============================================================================
 // Helpers
 // =============================================================================
+
+/** Build ThemeExportOptions from current editor state. */
+function buildThemeExportOptions(s: ThemeEditorState): ThemeExportOptions {
+  return {
+    name: s.themeName,
+    colorScheme: s.colorScheme as Readonly<Record<SchemeColorName, string>>,
+    fontScheme: s.fontScheme,
+    fontSchemeName: s.fontSchemeName,
+    colorMapping: s.masterColorMapping,
+    formatSchemeElements: buildFormatSchemeElements(s.formatScheme),
+    customColors: s.customColors,
+    extraColorSchemes: s.extraColorSchemes,
+    objectDefaults: s.objectDefaults,
+    masterTextStyles: s.masterTextStyles,
+  };
+}
+
+/** Extract format scheme element arrays, or undefined if no format scheme. */
+function buildFormatSchemeElements(fmt: FormatScheme | undefined): ThemeExportOptions["formatSchemeElements"] {
+  if (!fmt) { return undefined; }
+  return {
+    fillStyles: fmt.fillStyles,
+    lineStyles: fmt.lineStyles,
+    effectStyles: fmt.effectStyles,
+    bgFillStyles: fmt.bgFillStyles,
+  };
+}
 
 function getLayoutColorMapping(layout: LayoutListEntry, fallback: ColorMapping): ColorMapping {
   const override = layout.overrides?.colorMapOverride;
@@ -362,6 +394,30 @@ export function PotxEditor({ presentationFile, slideSize, className }: PotxEdito
   const handleThemeNameChange = useCallback((name: string) => dispatch({ type: "UPDATE_THEME_NAME", name }), [dispatch]);
   const handleFontSchemeNameChange = useCallback((name: string) => dispatch({ type: "UPDATE_FONT_SCHEME_NAME", name }), [dispatch]);
 
+  // Theme import/export callbacks
+  const handleThemeExport = useCallback(async () => {
+    const blob = await exportThemeAsPotx(buildThemeExportOptions(state));
+    await downloadPresentation(blob, getThemeFileName(state.themeName));
+  }, [state]);
+
+  const handleThemeImport = useCallback(async (buffer: ArrayBuffer) => {
+    const result = await extractThemeFromBuffer(buffer);
+    if (!result.success) { throw new Error(result.error); }
+    const { data } = result;
+    const imported: ImportedThemeData = {
+      themeName: data.themeName,
+      colorScheme: data.theme.colorScheme,
+      fontScheme: data.theme.fontScheme,
+      colorMapping: data.colorMap as ImportedThemeData["colorMapping"],
+      formatScheme: data.theme.formatScheme,
+      customColors: data.theme.customColors,
+      extraColorSchemes: data.theme.extraColorSchemes,
+      objectDefaults: data.theme.objectDefaults,
+      masterTextStyles: data.masterTextStyles,
+    };
+    dispatch({ type: "IMPORT_THEME", theme: imported });
+  }, [dispatch]);
+
   const activeLayout = useMemo(() => layoutEdit.layouts.find((l) => l.id === layoutEdit.activeLayoutPath), [layoutEdit.layouts, layoutEdit.activeLayoutPath]);
   const handleLayoutNameChange = useCallback((name: string) => {
     if (!layoutEdit.activeLayoutPath) {return;}
@@ -459,11 +515,12 @@ export function PotxEditor({ presentationFile, slideSize, className }: PotxEdito
   const themeTabContent = useMemo(() => (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "auto" }}>
       <ThemeNameSection themeName={themeName} onThemeNameChange={handleThemeNameChange} />
+      <ThemeImportExportSection onExport={handleThemeExport} onImport={handleThemeImport} />
       <ThemePresetSelector onPresetSelect={handlePresetSelect} />
       <ColorSchemeEditor colorScheme={colorScheme} onColorChange={handleColorChange} onColorAdd={handleColorAdd} onColorRemove={handleColorRemove} onColorRename={handleColorRename} />
       <FontSchemeEditor fontScheme={fontScheme} fontSchemeName={fontSchemeName} onMajorFontChange={handleMajorFontChange} onMinorFontChange={handleMinorFontChange} onFontSchemeNameChange={handleFontSchemeNameChange} />
     </div>
-  ), [themeName, colorScheme, fontScheme, fontSchemeName, handleThemeNameChange, handlePresetSelect, handleColorChange, handleColorAdd, handleColorRemove, handleColorRename, handleMajorFontChange, handleMinorFontChange, handleFontSchemeNameChange]);
+  ), [themeName, colorScheme, fontScheme, fontSchemeName, handleThemeNameChange, handleThemeExport, handleThemeImport, handlePresetSelect, handleColorChange, handleColorAdd, handleColorRemove, handleColorRename, handleMajorFontChange, handleMinorFontChange, handleFontSchemeNameChange]);
 
   // Master tab: master-level configuration (background, color mapping, default styles)
   const masterTabContent = useMemo(() => (

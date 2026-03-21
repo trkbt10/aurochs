@@ -43,7 +43,7 @@ async function roundTrip(state: ThemeEditorState) {
   const blob = await exportThemeAsPotx({
     name: state.themeName,
     colorScheme: state.colorScheme,
-    fontScheme: state.fontScheme ? { majorFont: state.fontScheme.majorFont, minorFont: state.fontScheme.minorFont } : { majorFont: { latin: "Calibri Light" }, minorFont: { latin: "Calibri" } },
+    fontScheme: state.fontScheme,
     fontSchemeName: state.fontSchemeName,
     colorMapping: state.masterColorMapping,
     customColors: state.customColors.length > 0 ? state.customColors : undefined,
@@ -92,8 +92,8 @@ describe("Export contract: font scheme round-trip", () => {
     s = reduce(s, { type: "UPDATE_FONT_SCHEME", target: "minor", spec: { latin: "Comic Sans MS" } });
 
     const doc = await roundTrip(s);
-    expect(doc.fontScheme?.majorFont.latin).toBe("Impact");
-    expect(doc.fontScheme?.minorFont.latin).toBe("Comic Sans MS");
+    expect(doc.fontScheme.majorFont.latin).toBe("Impact");
+    expect(doc.fontScheme.minorFont.latin).toBe("Comic Sans MS");
   });
 
   it("eastAsian and complexScript fonts survive round-trip", async () => {
@@ -102,9 +102,9 @@ describe("Export contract: font scheme round-trip", () => {
     s = reduce(s, { type: "UPDATE_FONT_SCHEME", target: "minor", spec: { latin: "Georgia", eastAsian: "MS Mincho" } });
 
     const doc = await roundTrip(s);
-    expect(doc.fontScheme?.majorFont.eastAsian).toBe("MS Gothic");
-    expect(doc.fontScheme?.majorFont.complexScript).toBe("Arial");
-    expect(doc.fontScheme?.minorFont.eastAsian).toBe("MS Mincho");
+    expect(doc.fontScheme.majorFont.eastAsian).toBe("MS Gothic");
+    expect(doc.fontScheme.majorFont.complexScript).toBe("Arial");
+    expect(doc.fontScheme.minorFont.eastAsian).toBe("MS Mincho");
   });
 });
 
@@ -122,8 +122,8 @@ describe("Export contract: theme preset round-trip", () => {
 
     const doc = await roundTrip(s);
     expect(doc.colorContext.colorScheme.accent1).toBe("FACADE");
-    expect(doc.fontScheme?.majorFont.latin).toBe("Trebuchet MS");
-    expect(doc.fontScheme?.minorFont.latin).toBe("Tahoma");
+    expect(doc.fontScheme.majorFont.latin).toBe("Trebuchet MS");
+    expect(doc.fontScheme.minorFont.latin).toBe("Tahoma");
   });
 });
 

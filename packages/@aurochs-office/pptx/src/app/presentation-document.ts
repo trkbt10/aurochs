@@ -74,8 +74,8 @@ export type PresentationDocument = {
   // === Rendering Context ===
   /** Color context for resolving theme/scheme colors */
   readonly colorContext: ColorContext;
-  /** Font scheme for resolving theme fonts (+mj-lt, +mn-lt, etc.) */
-  readonly fontScheme?: FontScheme;
+  /** Font scheme for resolving theme fonts (+mj-lt, +mn-lt, etc.) — required per ECMA-376 §20.1.6.10 */
+  readonly fontScheme: FontScheme;
   /** Resource resolver for images and embedded content */
   readonly resources: ResourceResolver;
 

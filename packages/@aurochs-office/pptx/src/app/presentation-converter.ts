@@ -11,7 +11,7 @@ import type { PresentationDocument, SlideWithId } from "./presentation-document"
 import type { Presentation as DomainPresentation, PresentationFile } from "../domain";
 import type { ResourceMap } from "@aurochs-office/opc";
 import type { ColorContext, ColorScheme, ColorMap } from "@aurochs-office/drawing-ml/domain/color-context";
-import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
+import { EMPTY_FONT_SCHEME, type FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
 import type { ResourceResolver } from "../domain/resource-resolver";
 import type { Slide as ApiSlide } from "./types";
 import { parseSlide } from "../parser/slide/slide-parser";
@@ -65,9 +65,9 @@ function buildColorContext(apiSlide: ApiSlide): ColorContext {
 /**
  * Extract FontScheme from theme XML
  */
-function extractFontScheme(apiSlide: ApiSlide): FontScheme | undefined {
+function extractFontScheme(apiSlide: ApiSlide): FontScheme {
   if (!apiSlide.theme) {
-    return undefined;
+    return EMPTY_FONT_SCHEME;
   }
   return parseFontScheme(apiSlide.theme);
 }
@@ -257,7 +257,7 @@ export function convertToPresentationDocument(loaded: LoadedPresentation): Prese
   const colorContext = firstApiSlide ? buildColorContext(firstApiSlide) : { colorScheme: {}, colorMap: {} };
 
   // Build font scheme from first slide's theme
-  const fontScheme = firstApiSlide ? extractFontScheme(firstApiSlide) : undefined;
+  const fontScheme = firstApiSlide ? extractFontScheme(firstApiSlide) : EMPTY_FONT_SCHEME;
 
   // Build resource resolver from presentation file
   const resources = buildResourceResolver(presentationFile, firstApiSlide);
