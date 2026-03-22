@@ -75,8 +75,6 @@ function buildSlideRenderContext(opts: {
   };
 
   const layoutContent = getByPath(apiSlide.layout, ["p:sldLayout"]);
-  // master content element retained for background-parser's parseBackgroundProperties
-  const masterContent = getByPath(apiSlide.master, ["p:sldMaster"]);
 
   const layout = {
     placeholders: createPlaceholderTable(apiSlide.layoutTables),
@@ -84,7 +82,7 @@ function buildSlideRenderContext(opts: {
     content: layoutContent as XmlElement | undefined,
   };
 
-  // Use parseSlideMaster as SoT for colorMap and textStyles
+  // Use parseSlideMaster as SoT for colorMap, textStyles, and background
   const parsedMaster = parseSlideMaster(apiSlide.master ?? undefined);
 
   const master = {
@@ -92,7 +90,7 @@ function buildSlideRenderContext(opts: {
     placeholders: createPlaceholderTable(apiSlide.masterTables),
     colorMap: parsedMaster?.colorMap ?? {},
     resources: apiSlide.masterRelationships,
-    content: masterContent as XmlElement | undefined,
+    background: parsedMaster?.background,
   };
 
   const theme = parseTheme(apiSlide.theme as XmlDocument, undefined);

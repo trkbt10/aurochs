@@ -20,7 +20,7 @@ import { getChild, getByPath } from "@aurochs/xml";
 import type { RenderOptions } from "@aurochs-renderer/pptx";
 
 // Import domain types from canonical sources
-import type { PlaceholderTable, Theme, ResolvedBlipResource } from "../../domain/index";
+import type { PlaceholderTable, Theme, ResolvedBlipResource, Background } from "../../domain/index";
 import type { MasterTextStyles, TextStyleLevels } from "../../domain/text-style";
 import { TEXT_STYLE_LEVEL_KEYS } from "../../domain/text-style";
 import type { ZipFile, ResourceMap } from "@aurochs-office/opc";
@@ -37,8 +37,8 @@ export type SlideMasterParams = {
   placeholders: PlaceholderTable;
   colorMap: ColorMap;
   resources: ResourceMap;
-  /** Master content element (p:sldMaster) for background lookup */
-  content?: XmlElement;
+  /** Master background — parsed domain type (SoT via parseSlideMaster). */
+  background?: Background;
 };
 
 export type SlideLayoutParams = {

@@ -10,6 +10,7 @@
 import type { XmlElement } from "@aurochs/xml";
 import { getChild } from "@aurochs/xml";
 import type { BackgroundElement, BackgroundParseResult, BackgroundFill } from "../../domain/slide/background";
+import type { Background } from "../../domain/slide/types";
 import type { FillType, GradientFill } from "../graphics/fill-resolver";
 import type { SlideContext } from "./context";
 import { getSolidFill } from "../graphics/color-resolver";
@@ -150,20 +151,8 @@ export function parseBackgroundProperties(ctx: SlideContext): BackgroundParseRes
     }
   }
 
-  // Try master
-  const masterBgPr = getBgPrFromElement(ctx.master.content);
-  if (masterBgPr !== undefined) {
-    return { fill: masterBgPr };
-  }
-  const masterBgRef = getBgRefFromElement(ctx.master.content);
-  if (masterBgRef !== undefined) {
-    const resolved = resolveBgRefToXmlElement(masterBgRef, ctx);
-    if (resolved !== undefined) {
-      const phClr = extractPhClrFromBgRef(masterBgRef, ctx);
-      return { fill: resolved, phClr, fromTheme: true };
-    }
-  }
-
+  // Master background is resolved via parseSlideMaster (SoT) and stored as Background domain type.
+  // Return undefined here; master fallback is handled by getBackgroundFillData using ctx.master.background.
   return undefined;
 }
 
@@ -181,7 +170,8 @@ export function findBackgroundRef(ctx: SlideContext): XmlElement | undefined {
     return layoutBgRef;
   }
 
-  return getBgRefFromElement(ctx.master.content);
+  // Master background is resolved via domain type, not raw XML
+  return undefined;
 }
 
 /**
@@ -408,22 +398,55 @@ const DEFAULT_BACKGROUND_FILL: BackgroundFill = {
  *
  * @see ECMA-376 Part 1, Section 19.3.1.2 (p:bg)
  */
+/**
+ * Convert Background domain type to BackgroundFill for rendering.
+ * Used as master background fallback when slide/layout have no explicit background.
+ *
+ * Resolves Color spec to hex using the slide's color context.
+ */
+function backgroundToFill(bg: Background, ctx: SlideContext): BackgroundFill | undefined {
+  const fill = bg.fill;
+  switch (fill.type) {
+    case "solidFill": {
+      const spec = fill.color.spec;
+      if (spec.type === "srgb") {
+        return { css: `background-color: #${spec.value};`, isSolid: true, color: `#${spec.value}` };
+      }
+      if (spec.type === "scheme") {
+        const colorCtx = ctx.toColorContext();
+        const mapped = colorCtx.colorMap[spec.value] ?? spec.value;
+        const hex = colorCtx.colorScheme[mapped];
+        if (hex) { return { css: `background-color: #${hex};`, isSolid: true, color: `#${hex}` }; }
+      }
+      return undefined;
+    }
+    case "noFill":
+      return { css: "", isSolid: true };
+    default:
+      return undefined;
+  }
+}
+
 export function getBackgroundFillData(ctx: SlideContext): BackgroundFill {
   const bgResult = parseBackgroundProperties(ctx);
 
-  if (bgResult === undefined) {
-    return DEFAULT_BACKGROUND_FILL;
+  if (bgResult !== undefined) {
+    const bgFillType = getFillType(bgResult.fill);
+    const handler = BG_FILL_HANDLERS[bgFillType];
+    const result = handler?.extractData({
+      fill: bgResult.fill,
+      ctx,
+      phClr: bgResult.phClr,
+      fromTheme: bgResult.fromTheme,
+    });
+    if (result) { return result; }
   }
 
-  // Pass bgPr directly to getFillType since it contains the fill elements
-  const bgFillType = getFillType(bgResult.fill);
-  const handler = BG_FILL_HANDLERS[bgFillType];
-  const result = handler?.extractData({
-    fill: bgResult.fill,
-    ctx,
-    phClr: bgResult.phClr,
-    fromTheme: bgResult.fromTheme,
-  });
+  // Fallback: master background from SlideMaster domain type (SoT)
+  if (ctx.master.background) {
+    const masterResult = backgroundToFill(ctx.master.background, ctx);
+    if (masterResult) { return masterResult; }
+  }
 
-  return result ?? DEFAULT_BACKGROUND_FILL;
+  return DEFAULT_BACKGROUND_FILL;
 }

@@ -53,16 +53,13 @@ function buildSlideContextFromSlide(slide: Slide): SlideContext {
   // Get layout content element for background lookup
   const layoutContent = getByPath(slide.layout, ["p:sldLayout"]);
 
-  // master content element retained for background-parser's parseBackgroundProperties
-  const masterContent = getByPath(slide.master, ["p:sldMaster"]);
-
   const layout = {
     placeholders: createPlaceholderTable(slide.layoutTables),
     resources: slide.layoutRelationships,
     content: layoutContent as XmlElement | undefined,
   };
 
-  // Use parseSlideMaster as SoT for colorMap and textStyles
+  // Use parseSlideMaster as SoT for colorMap, textStyles, and background
   const parsedMaster = parseSlideMaster(slide.master ?? undefined);
 
   const master = {
@@ -70,7 +67,7 @@ function buildSlideContextFromSlide(slide: Slide): SlideContext {
     placeholders: createPlaceholderTable(slide.masterTables),
     colorMap: parsedMaster?.colorMap ?? {},
     resources: slide.masterRelationships,
-    content: masterContent as XmlElement | undefined,
+    background: parsedMaster?.background,
   };
 
   const theme = parseTheme(slide.theme, slide.themeOverrides as XmlDocument[]);
