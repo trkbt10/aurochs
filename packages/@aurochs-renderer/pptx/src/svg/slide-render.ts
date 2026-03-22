@@ -38,9 +38,6 @@ export type SvgRenderResult = {
  * @returns SlideContext for use in rendering
  */
 function buildSlideContextFromSlide(slide: Slide): SlideContext {
-  // Extract color map from master
-  const masterClrMap = getByPath(slide.master, ["p:sldMaster", "p:clrMap"]);
-
   // Extract color map override from slide (if present)
   const slideClrMapOvr = getByPath(slide.content, ["p:sld", "p:clrMapOvr", "a:overrideClrMapping"]);
 
@@ -56,7 +53,7 @@ function buildSlideContextFromSlide(slide: Slide): SlideContext {
   // Get layout content element for background lookup
   const layoutContent = getByPath(slide.layout, ["p:sldLayout"]);
 
-  // Get master content element for background lookup
+  // master content element retained for background-parser's parseBackgroundProperties
   const masterContent = getByPath(slide.master, ["p:sldMaster"]);
 
   const layout = {
@@ -65,12 +62,13 @@ function buildSlideContextFromSlide(slide: Slide): SlideContext {
     content: layoutContent as XmlElement | undefined,
   };
 
+  // Use parseSlideMaster as SoT for colorMap and textStyles
   const parsedMaster = parseSlideMaster(slide.master ?? undefined);
 
   const master = {
     textStyles: parsedMaster?.textStyles ?? { titleStyle: undefined, bodyStyle: undefined, otherStyle: undefined },
     placeholders: createPlaceholderTable(slide.masterTables),
-    colorMap: createColorMap(masterClrMap),
+    colorMap: parsedMaster?.colorMap ?? {},
     resources: slide.masterRelationships,
     content: masterContent as XmlElement | undefined,
   };

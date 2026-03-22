@@ -16,6 +16,7 @@ import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
 import type { ShapeProperties } from "../shape";
 import type { BodyProperties } from "../text";
 import type { TextStyleLevels, MasterTextStyles } from "../text-style";
+import type { Background } from "../slide/types";
 
 // =============================================================================
 // Custom Color Types (ECMA-376 Part 1, Section 20.1.4.1.8)
@@ -164,6 +165,6 @@ export type ExtractedTheme = {
   readonly colorMap: ColorMap;
   /** Master text styles (p:txStyles) §19.3.1.51 — domain typed (SoT) */
   readonly masterTextStyles: MasterTextStyles;
-  /** Master background element (p:bg) §19.3.1.2 — raw XmlElement for lossless round-trip */
-  readonly masterBackground?: XmlElement;
+  /** Master background §19.3.1.2 — Background domain type (SoT). Parsed via parseBackground(element, formatScheme). */
+  readonly masterBackground?: Background;
 };

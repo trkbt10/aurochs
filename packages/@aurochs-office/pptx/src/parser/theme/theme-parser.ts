@@ -374,14 +374,11 @@ export function extractThemeData(input: ThemeExtractionInput): ExtractedTheme | 
   const themeRoot = getByPath(input.theme, ["a:theme"]);
   const themeName = themeRoot ? (getAttr(themeRoot, "name") ?? "") : "";
 
-  const clrMapElement = input.master ? getByPath(input.master, ["p:sldMaster", "p:clrMap"]) : undefined;
-  const colorMap = parseColorMap(clrMapElement);
-
-  const parsedMaster = input.master ? parseSlideMaster(input.master) : undefined;
+  // Parse slide master as domain type (SoT for colorMap, textStyles, background)
+  const parsedMaster = input.master ? parseSlideMaster(input.master, theme.formatScheme) : undefined;
+  const colorMap = parsedMaster?.colorMap ?? parseColorMap(undefined);
   const masterTextStyles = parsedMaster?.textStyles ?? EMPTY_MASTER_TEXT_STYLES;
-
-  const cSld = input.master ? getByPath(input.master, ["p:sldMaster", "p:cSld"]) : undefined;
-  const masterBackground = cSld ? getChild(cSld, "p:bg") : undefined;
+  const masterBackground = parsedMaster?.background;
 
   return { themeName, theme, colorMap, masterTextStyles, masterBackground };
 }

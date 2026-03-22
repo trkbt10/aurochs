@@ -194,18 +194,16 @@ describe("IMPORT_THEME", () => {
 // ===========================================================================
 
 describe("Master background & color mapping", () => {
-  it("UPDATE_MASTER_BACKGROUND sets p:bg XmlElement", () => {
-    const bgElement = createElement("p:bg", {}, [
-      createElement("p:bgPr", {}, [createElement("a:solidFill", {}, [createElement("a:srgbClr", { val: "FF0000" })])]),
-    ]);
-    const s = reduce(base(), { type: "UPDATE_MASTER_BACKGROUND", background: bgElement });
-    expect(s.masterBackground).toBe(bgElement);
-    expect(s.masterBackground?.name).toBe("p:bg");
+  it("UPDATE_MASTER_BACKGROUND sets Background domain type", () => {
+    const bg = { fill: { type: "solidFill" as const, color: { spec: { type: "srgb" as const, value: "FF0000" } } } };
+    const s = reduce(base(), { type: "UPDATE_MASTER_BACKGROUND", background: bg });
+    expect(s.masterBackground).toBe(bg);
+    expect(s.masterBackground?.fill.type).toBe("solidFill");
   });
 
   it("UPDATE_MASTER_BACKGROUND clears with undefined", () => {
-    const bgElement = createElement("p:bg", {}, []);
-    const s0 = reduce(base(), { type: "UPDATE_MASTER_BACKGROUND", background: bgElement });
+    const bg = { fill: { type: "solidFill" as const, color: { spec: { type: "srgb" as const, value: "FF0000" } } } };
+    const s0 = reduce(base(), { type: "UPDATE_MASTER_BACKGROUND", background: bg });
     const s1 = reduce(s0, { type: "UPDATE_MASTER_BACKGROUND", background: undefined });
     expect(s1.masterBackground).toBeUndefined();
   });
@@ -506,8 +504,8 @@ describe("State isolation", () => {
   it("master background changes do not affect layoutEdit", () => {
     const s0 = base();
     const layoutBefore = s0.layoutEdit;
-    const bgElement = createElement("p:bg", {}, []);
-    const s1 = reduce(s0, { type: "UPDATE_MASTER_BACKGROUND", background: bgElement });
+    const bg = { fill: { type: "solidFill" as const, color: { spec: { type: "srgb" as const, value: "000000" } } } };
+    const s1 = reduce(s0, { type: "UPDATE_MASTER_BACKGROUND", background: bg });
     expect(s1.layoutEdit).toBe(layoutBefore);
   });
 });

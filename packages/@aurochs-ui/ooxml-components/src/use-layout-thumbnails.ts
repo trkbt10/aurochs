@@ -9,10 +9,10 @@
  */
 
 import { useMemo } from "react";
-import type { Shape, SlideSize, Slide } from "@aurochs-office/pptx/domain";
+import type { Shape, SlideSize, Slide, Background } from "@aurochs-office/pptx/domain";
 import type { PackageFile } from "@aurochs-office/opc";
 import type { SlideLayoutOption } from "@aurochs-office/pptx/app";
-import type { XmlElement, XmlDocument } from "@aurochs/xml";
+import type { XmlDocument } from "@aurochs/xml";
 import { loadSlideLayoutBundle, createResourceResolverFromMaps } from "@aurochs-office/pptx/app";
 import { parseShapeTree, parseBackground } from "@aurochs-office/pptx/parser";
 import { parseTheme } from "@aurochs-office/pptx/parser/theme/theme-parser";
@@ -47,8 +47,8 @@ export type UseLayoutThumbnailsOptions = {
   readonly colorContext?: ColorContext;
   /** Override font scheme from editor state (reflects live theme edits). */
   readonly fontScheme?: FontScheme;
-  /** Master background (p:bg XmlElement) for inheritance when layout has no own background. */
-  readonly masterBackground?: XmlElement;
+  /** Master background (Background domain type) for inheritance when layout has no own background. */
+  readonly masterBackground?: Background;
 };
 
 /**
@@ -83,22 +83,13 @@ function buildColorContext(colorScheme: ColorScheme | undefined): ColorContext |
 }
 
 /**
- * Extract and parse background from bundle's slide master XML.
- * Path: p:sldMaster → p:cSld → p:bg
+ * Extract background from bundle's slide master via parseSlideMaster (SoT).
  */
-function resolveBackgroundFromMasterBundle(master: XmlDocument | null, formatScheme: FormatScheme | undefined) {
+function resolveBackgroundFromMasterBundle(master: XmlDocument | null, formatScheme: FormatScheme | undefined): Background | undefined {
   if (!master) {
     return undefined;
   }
-  const masterSld = getByPath(master, ["p:sldMaster"]);
-  if (!masterSld) {
-    return undefined;
-  }
-  const masterCSld = getChild(masterSld, "p:cSld");
-  if (!masterCSld) {
-    return undefined;
-  }
-  return parseBackground(getChild(masterCSld, "p:bg"), formatScheme);
+  return parseSlideMaster(master, formatScheme)?.background;
 }
 
 /**
@@ -114,8 +105,8 @@ export function loadLayoutWithContext(options: {
   readonly slideSize: SlideSize;
   readonly colorContext?: ColorContext;
   readonly fontScheme?: FontScheme;
-  /** Master background (p:bg XmlElement) — used as fallback when layout has no own background (ECMA-376 §19.3.1.2). */
-  readonly masterBackground?: XmlElement;
+  /** Master background (Background domain type) — fallback when layout has no own background (ECMA-376 §19.3.1.2). */
+  readonly masterBackground?: Background;
 }): LoadedLayoutData | undefined {
   const { file, layoutPath, slideSize } = options;
   try {
@@ -173,10 +164,12 @@ export function loadLayoutWithContext(options: {
     ]);
 
     // Resolve background with ECMA-376 §19.3.1.2 inheritance: layout → master
-    // parseBackground receives formatScheme to resolve p:bgRef theme references (§19.3.1.4)
+    // Layout's own p:bg is parsed with formatScheme for p:bgRef resolution (§19.3.1.4).
+    // masterBackground is already a resolved Background domain type from the editor state.
+    // Bundle master's p:bg is the final fallback.
     const background =
       parseBackground(getChild(cSld, "p:bg"), formatScheme)
-      ?? parseBackground(options.masterBackground, formatScheme)
+      ?? options.masterBackground
       ?? resolveBackgroundFromMasterBundle(bundle.master, formatScheme);
 
     // Render SVG

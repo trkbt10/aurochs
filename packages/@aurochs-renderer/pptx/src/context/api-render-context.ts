@@ -65,7 +65,6 @@ function buildSlideRenderContext(opts: {
   renderOptions: RenderOptions | undefined;
 }): SlideContext {
   const { apiSlide, zip, defaultTextStyle, renderOptions } = opts;
-  const masterClrMap = getByPath(apiSlide.master, ["p:sldMaster", "p:clrMap"]);
   const slideClrMapOvr = getByPath(apiSlide.content, ["p:sld", "p:clrMapOvr", "a:overrideClrMapping"]);
   const slideContent = getByPath(apiSlide.content, ["p:sld"]);
 
@@ -76,6 +75,7 @@ function buildSlideRenderContext(opts: {
   };
 
   const layoutContent = getByPath(apiSlide.layout, ["p:sldLayout"]);
+  // master content element retained for background-parser's parseBackgroundProperties
   const masterContent = getByPath(apiSlide.master, ["p:sldMaster"]);
 
   const layout = {
@@ -84,12 +84,13 @@ function buildSlideRenderContext(opts: {
     content: layoutContent as XmlElement | undefined,
   };
 
+  // Use parseSlideMaster as SoT for colorMap and textStyles
   const parsedMaster = parseSlideMaster(apiSlide.master ?? undefined);
 
   const master = {
     textStyles: parsedMaster?.textStyles ?? { titleStyle: undefined, bodyStyle: undefined, otherStyle: undefined },
     placeholders: createPlaceholderTable(apiSlide.masterTables),
-    colorMap: createColorMap(masterClrMap),
+    colorMap: parsedMaster?.colorMap ?? {},
     resources: apiSlide.masterRelationships,
     content: masterContent as XmlElement | undefined,
   };

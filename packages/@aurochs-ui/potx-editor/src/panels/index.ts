@@ -16,7 +16,7 @@ export { ColorMapEditor } from "./ColorMapEditor";
 // DEFAULT_COLOR_MAPPING: import from @aurochs-office/pptx/domain/color/types (SoT)
 export type { ColorMapEditorProps } from "./ColorMapEditor";
 export { MasterBackgroundEditor } from "./MasterBackgroundEditor";
-export type { MasterBackgroundEditorProps, BackgroundState } from "./MasterBackgroundEditor";
+export type { MasterBackgroundEditorProps } from "./MasterBackgroundEditor";
 export { CustomColorsEditor } from "./CustomColorsEditor";
 export type { CustomColorsEditorProps } from "./CustomColorsEditor";
 export { ExtraColorSchemesEditor } from "./ExtraColorSchemesEditor";

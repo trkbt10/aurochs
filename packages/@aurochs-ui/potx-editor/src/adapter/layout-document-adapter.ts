@@ -33,9 +33,22 @@ export type VirtualDocumentInput = {
   readonly colorContext: ColorContext;
   readonly fontScheme: FontScheme;
   readonly theme?: Theme;
-  readonly resources: ResourceResolver;
+  readonly resources?: ResourceResolver;
   readonly presentationFile?: PackageFile;
 };
+
+/**
+ * Null-object ResourceResolver for virtual documents with no file resources.
+ * All lookups return undefined.
+ */
+const NULL_RESOURCE_RESOLVER: ResourceResolver = {
+  resolve: () => undefined,
+  getMimeType: () => undefined,
+  getTarget: () => undefined,
+  getType: () => undefined,
+  readFile: () => null,
+  getFilePath: () => undefined,
+} as ResourceResolver;
 
 // =============================================================================
 // Conversion
@@ -89,7 +102,7 @@ export function createVirtualDocument(input: VirtualDocumentInput): Presentation
     theme: input.theme,
     colorContext: input.colorContext,
     fontScheme: input.fontScheme,
-    resources: input.resources,
+    resources: input.resources ?? NULL_RESOURCE_RESOLVER,
     presentationFile: input.presentationFile,
   };
 }

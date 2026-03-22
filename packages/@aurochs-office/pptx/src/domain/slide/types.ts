@@ -8,6 +8,7 @@
  */
 
 import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
+import type { ColorMap } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { ColorMapping, ColorMapOverride } from "../color/types";
 import type { Shape } from "../shape";
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
@@ -204,7 +205,7 @@ export type SlideLayoutId = {
 export type SlideMaster = {
   readonly background?: Background;
   readonly shapes: readonly Shape[];
-  readonly colorMap: ColorMapping;
+  readonly colorMap: ColorMap;
   readonly slideLayoutIds?: readonly SlideLayoutId[];
   readonly customerData?: readonly CustomerData[];
   readonly textStyles?: MasterTextStyles;

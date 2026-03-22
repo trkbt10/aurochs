@@ -2,7 +2,7 @@
  * @file MasterBackgroundEditor - Background editor for master/layout slides
  *
  * Uses BaseFillEditor for format-agnostic fill editing.
- * Supports shadeToTitle toggle.
+ * Accepts Background domain type (ECMA-376 §19.3.1.1) directly.
  */
 
 import { useCallback, type CSSProperties } from "react";
@@ -11,20 +11,16 @@ import { FieldGroup } from "@aurochs-ui/ui-components/layout";
 import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { BaseFillEditor } from "@aurochs-ui/editor-controls/editors";
 import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
+import type { Background } from "@aurochs-office/pptx/domain";
 import { spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 
 // =============================================================================
 // Types
 // =============================================================================
 
-export type BackgroundState = {
-  readonly fill?: BaseFill;
-  readonly shadeToTitle?: boolean;
-};
-
 export type MasterBackgroundEditorProps = {
-  readonly background: BackgroundState;
-  readonly onChange: (background: BackgroundState) => void;
+  readonly background: Background | undefined;
+  readonly onChange: (background: Background | undefined) => void;
   readonly disabled?: boolean;
   readonly title?: string;
 };
@@ -56,19 +52,25 @@ export function MasterBackgroundEditor({
 }: MasterBackgroundEditorProps) {
   const handleFillChange = useCallback(
     (fill: BaseFill) => {
-      onChange({ ...background, fill });
+      if (fill.type === "noFill") {
+        onChange(undefined);
+      } else {
+        onChange({ fill, shadeToTitle: background?.shadeToTitle });
+      }
     },
     [background, onChange],
   );
 
   const handleShadeToTitleChange = useCallback(
     (shadeToTitle: boolean) => {
-      onChange({ ...background, shadeToTitle });
+      const fill = background?.fill ?? { type: "noFill" as const };
+      if (fill.type === "noFill") { return; }
+      onChange({ fill, shadeToTitle });
     },
     [background, onChange],
   );
 
-  const fill = background.fill ?? { type: "noFill" as const };
+  const fill: BaseFill = background?.fill ?? { type: "noFill" as const };
 
   return (
     <OptionalPropertySection title={title} defaultExpanded={false}>
@@ -77,7 +79,7 @@ export function MasterBackgroundEditor({
           <BaseFillEditor value={fill} onChange={handleFillChange} disabled={disabled} />
         </FieldGroup>
         <Toggle
-          checked={background.shadeToTitle ?? false}
+          checked={background?.shadeToTitle ?? false}
           onChange={handleShadeToTitleChange}
           label="Shade to title"
           disabled={disabled}

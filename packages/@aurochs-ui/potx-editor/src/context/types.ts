@@ -7,15 +7,13 @@
  * This module only defines theme-level and layout-metadata state.
  */
 
-import type { Shape, SlideLayoutType, SlideSize, Placeholder } from "@aurochs-office/pptx/domain";
+import type { Shape, SlideLayoutType, SlideSize, Placeholder, Background } from "@aurochs-office/pptx/domain";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import type { TextBody } from "@aurochs-office/pptx/domain";
 import type { SlideLayoutBundle, SlideLayoutOption } from "@aurochs-office/pptx/app";
 import type { PackageFile } from "@aurochs-office/opc";
 import type { ColorScheme } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { FontScheme, FontSpec } from "@aurochs-office/ooxml/domain/font-scheme";
-import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
-import type { XmlElement } from "@aurochs/xml";
 import type { SlideTransition } from "@aurochs-office/pptx/domain/transition";
 import type { ColorMapping, ColorMapOverride } from "@aurochs-office/pptx/domain/color/types";
 import type { CustomColor, ExtraColorScheme, FormatScheme, ObjectDefaults } from "@aurochs-office/pptx/domain/theme/types";
@@ -75,28 +73,20 @@ export type ThemeEditorState = {
   readonly objectDefaults: ObjectDefaults | undefined;
   readonly masterTextStyles: MasterTextStyles | undefined;
   /**
-   * Master background element (p:bg) §19.3.1.2 — raw XmlElement as SoT.
-   * Preserved losslessly from parser for round-trip fidelity.
-   * UI components convert to BaseFill for display/editing.
+   * Master background §19.3.1.2 — Background domain type as SoT.
+   * Parsed from XmlElement via parseBackground(element, formatScheme) on import.
+   * Serialized back to XML only on export.
    */
-  readonly masterBackground: XmlElement | undefined;
+  readonly masterBackground: Background | undefined;
   readonly masterColorMapping: ColorMapping;
   readonly layoutEdit: LayoutEditState;
-};
-
-/**
- * Master slide background state
- */
-export type MasterBackgroundState = {
-  readonly fill?: BaseFill;
-  readonly shadeToTitle?: boolean;
 };
 
 /**
  * Per-layout override state for background and color map
  */
 export type LayoutOverrides = {
-  readonly background?: MasterBackgroundState;
+  readonly background?: Background;
   readonly colorMapOverride?: ColorMapOverride;
   readonly transition?: SlideTransition;
 };
@@ -121,8 +111,8 @@ export type ImportedThemeData = {
   readonly extraColorSchemes?: readonly ExtraColorScheme[];
   readonly objectDefaults?: ObjectDefaults;
   readonly masterTextStyles?: MasterTextStyles;
-  /** Master background (p:bg) §19.3.1.2 — raw XmlElement for lossless round-trip. */
-  readonly masterBackground?: XmlElement;
+  /** Master background §19.3.1.2 — Background domain type (parsed by extractThemeFromBuffer). */
+  readonly masterBackground?: Background;
 };
 
 // =============================================================================
@@ -156,10 +146,10 @@ export type ThemeEditorAction =
   | { readonly type: "UPDATE_OBJECT_DEFAULTS"; readonly objectDefaults: ObjectDefaults }
   | { readonly type: "UPDATE_MASTER_TEXT_STYLES"; readonly masterTextStyles: MasterTextStyles }
   // Theme editing — master background & color map
-  | { readonly type: "UPDATE_MASTER_BACKGROUND"; readonly background: XmlElement | undefined }
+  | { readonly type: "UPDATE_MASTER_BACKGROUND"; readonly background: Background | undefined }
   | { readonly type: "UPDATE_MASTER_COLOR_MAPPING"; readonly mapping: ColorMapping }
   // Layout overrides
-  | { readonly type: "UPDATE_LAYOUT_BACKGROUND"; readonly layoutId: string; readonly background: MasterBackgroundState }
+  | { readonly type: "UPDATE_LAYOUT_BACKGROUND"; readonly layoutId: string; readonly background: Background | undefined }
   | { readonly type: "UPDATE_LAYOUT_COLOR_MAP_OVERRIDE"; readonly layoutId: string; readonly override: ColorMapOverride }
   | { readonly type: "UPDATE_LAYOUT_TRANSITION"; readonly layoutId: string; readonly transition: SlideTransition | undefined }
 

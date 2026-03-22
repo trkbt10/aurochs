@@ -22,6 +22,7 @@ import type {
   TransitionType,
 } from "../../domain/index";
 import { getAttr, getByPath, getChild, getChildren, type XmlDocument, type XmlElement } from "@aurochs/xml";
+import type { ColorMap } from "@aurochs-office/drawing-ml/domain/color-context";
 import { parseFill, parseFillFromParent } from "../graphics/fill-parser";
 import type { FormatScheme } from "../../domain/theme/types";
 import { parseShapeTree } from "../shape-parser/index";
@@ -377,23 +378,18 @@ function getAdvanceAfter(element: XmlElement): number | undefined {
 // =============================================================================
 
 /**
- * Parse color mapping
+ * Parse color mapping from p:clrMap attributes to ColorMap.
+ *
+ * @see ECMA-376 Part 1, Section 19.3.1.6 (p:clrMap)
  */
-function parseColorMapping(element: XmlElement): ColorMapping {
-  return {
-    bg1: getAttr(element, "bg1"),
-    tx1: getAttr(element, "tx1"),
-    bg2: getAttr(element, "bg2"),
-    tx2: getAttr(element, "tx2"),
-    accent1: getAttr(element, "accent1"),
-    accent2: getAttr(element, "accent2"),
-    accent3: getAttr(element, "accent3"),
-    accent4: getAttr(element, "accent4"),
-    accent5: getAttr(element, "accent5"),
-    accent6: getAttr(element, "accent6"),
-    hlink: getAttr(element, "hlink"),
-    folHlink: getAttr(element, "folHlink"),
-  };
+function parseColorMapping(element: XmlElement): ColorMap {
+  const map: Record<string, string> = {};
+  for (const [key, value] of Object.entries(element.attrs)) {
+    if (value !== undefined) {
+      map[key] = value;
+    }
+  }
+  return map;
 }
 
 /**
@@ -544,8 +540,7 @@ export function parseSlideLayoutIdList(element: XmlElement): SlideLayoutId[] {
  * Parse slide master document
  * @see ECMA-376 Part 1, Section 19.3.1.41
  */
-export function parseSlideMaster(content: XmlDocument | undefined, _context?: ParseContext): SlideMaster | undefined {
-  void _context;
+export function parseSlideMaster(content: XmlDocument | undefined, formatScheme?: FormatScheme): SlideMaster | undefined {
   if (!content) {
     return undefined;
   }
@@ -569,7 +564,7 @@ export function parseSlideMaster(content: XmlDocument | undefined, _context?: Pa
   const txStyles = getChild(sldMaster, "p:txStyles");
 
   return {
-    background: parseBackground(bg),
+    background: parseBackground(bg, formatScheme),
     shapes: parseShapeTree({ spTree }),
     colorMap: clrMap ? parseColorMapping(clrMap) : {},
     slideLayoutIds: sldLayoutIdLst ? parseSlideLayoutIdList(sldLayoutIdLst) : undefined,

@@ -8,7 +8,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Shape, Placeholder, Slide } from "@aurochs-office/pptx/domain";
+import type { Shape, Placeholder, Slide, Background } from "@aurochs-office/pptx/domain";
 import type { FontSpec } from "@aurochs-office/ooxml/domain/font-scheme";
 import type { SlideSize, SlideLayoutType } from "@aurochs-office/pptx/domain";
 import type { PackageFile } from "@aurochs-office/opc";
@@ -30,11 +30,7 @@ import { FontSchemeEditor } from "./panels/FontSchemeEditor";
 import { ThemePresetSelector } from "./panels/ThemePresetSelector";
 import { LayoutAttributesSection } from "./panels/LayoutAttributesSection";
 import { LayoutShapePanel, NoShapeSelected } from "./panels/LayoutShapePanel";
-import { MasterBackgroundEditor, type BackgroundState } from "./panels/MasterBackgroundEditor";
-import { getChild, createElement } from "@aurochs/xml";
-import type { XmlElement } from "@aurochs/xml";
-import { parseBaseFillFromParent } from "@aurochs-office/drawing-ml/parser";
-import { serializeFill } from "@aurochs-builder/pptx/patcher";
+import { MasterBackgroundEditor } from "./panels/MasterBackgroundEditor";
 import { ColorMapEditor } from "./panels/ColorMapEditor";
 import { CustomColorsEditor } from "./panels/CustomColorsEditor";
 import { ExtraColorSchemesEditor } from "./panels/ExtraColorSchemesEditor";
@@ -82,7 +78,6 @@ import {
 import type { PresentationEditorAction } from "@aurochs-ui/pptx-editor";
 import { createVirtualDocument, type VirtualDocumentInput } from "./adapter/layout-document-adapter";
 import { useThemeDocumentSync } from "./adapter/use-theme-document-sync";
-import type { ResourceResolver } from "@aurochs-office/pptx/domain/resource-resolver";
 
 // =============================================================================
 // Types
@@ -110,44 +105,15 @@ const POTX_VISIBLE_TOOLS: ReadonlySet<string> = new Set([
   "rightArrow", "textbox", "connector",
 ]);
 
-const EMPTY_RESOURCE_RESOLVER: ResourceResolver = {
-  resolve: () => undefined,
-  getMimeType: () => undefined,
-  getTarget: () => undefined,
-  readFile: () => undefined,
-  getFilePath: () => undefined,
-} as unknown as ResourceResolver;
-
 // =============================================================================
 // Helpers
 // =============================================================================
-
-function bgXmlToBackgroundState(bgElement: XmlElement | undefined): BackgroundState {
-  if (!bgElement) { return {}; }
-  const bgPr = getChild(bgElement, "p:bgPr");
-  if (!bgPr) { return {}; }
-  const fill = parseBaseFillFromParent(bgPr);
-  return fill ? { fill } : {};
-}
-
-function backgroundStateToXml(bg: BackgroundState): XmlElement | undefined {
-  if (!bg.fill || bg.fill.type === "noFill") { return undefined; }
-  const fillXml = serializeFill(bg.fill);
-  const bgPr = createElement("p:bgPr", {}, [fillXml]);
-  return createElement("p:bg", {}, [bgPr]);
-}
-
-function layoutOverridesToBackground(overrides: LayoutListEntry["overrides"]) {
-  const fill = overrides?.background?.fill;
-  if (!fill) { return undefined; }
-  return { fill, shadeToTitle: overrides?.background?.shadeToTitle };
-}
 
 function buildThemeExportOptions(s: ThemeEditorState, slideSize?: SlideSize): ThemeExportOptions {
   const layouts: LayoutExportEntry[] = s.layoutEdit.layouts.map((l) => ({
     name: l.name, type: l.type, matchingName: l.matchingName,
     showMasterShapes: l.showMasterShapes, preserve: l.preserve, userDrawn: l.userDrawn,
-    background: layoutOverridesToBackground(l.overrides),
+    background: l.overrides?.background,
     colorMapOverride: l.overrides?.colorMapOverride, transition: l.overrides?.transition,
   }));
   return {
@@ -168,10 +134,7 @@ function buildOverridesFromEntry(entry: SlideLayoutEntry): LayoutListEntry["over
   const clr = entry.colorMapOverride;
   const trans = entry.transition;
   if (!bg && !clr && !trans) { return undefined; }
-  return {
-    background: bg ? { fill: bg.fill, shadeToTitle: bg.shadeToTitle } : undefined,
-    colorMapOverride: clr, transition: trans,
-  };
+  return { background: bg, colorMapOverride: clr, transition: trans };
 }
 
 function getLayoutColorMapping(layout: LayoutListEntry, fallback: ColorMapping): ColorMapping {
@@ -246,10 +209,10 @@ export function PotxEditor({ presentationFile, slideSize, className, onPackageFi
   // Build virtual PresentationDocument
   const virtualDocument = useMemo(() => {
     const effectiveSlideSize = slideSize ?? { width: px(960), height: px(540) };
-    const resources = allLayoutData[0]?.data.resources ?? EMPTY_RESOURCE_RESOLVER;
     return createVirtualDocument({
       layouts: allLayoutData, slideSize: effectiveSlideSize,
-      colorContext: masterColorContext, fontScheme, resources, presentationFile,
+      colorContext: masterColorContext, fontScheme,
+      resources: allLayoutData[0]?.data.resources, presentationFile,
     });
   }, [allLayoutData, slideSize, masterColorContext, fontScheme, presentationFile]);
 
@@ -492,8 +455,8 @@ function PotxEditorContent({
     if (!layoutEdit.activeLayoutPath) { return; }
     themeDispatch({ type: "UPDATE_LAYOUT_ATTRIBUTES", layoutId: layoutEdit.activeLayoutPath, updates: { matchingName } });
   }, [themeDispatch, layoutEdit.activeLayoutPath]);
-  const handleMasterBackgroundChange = useCallback((background: BackgroundState) => {
-    themeDispatch({ type: "UPDATE_MASTER_BACKGROUND", background: backgroundStateToXml(background) });
+  const handleMasterBackgroundChange = useCallback((background: Background | undefined) => {
+    themeDispatch({ type: "UPDATE_MASTER_BACKGROUND", background });
   }, [themeDispatch]);
   const handleMasterColorMappingChange = useCallback((mapping: ColorMapping) => {
     themeDispatch({ type: "UPDATE_MASTER_COLOR_MAPPING", mapping });
@@ -505,7 +468,7 @@ function PotxEditorContent({
   const handleRemoveExtraScheme = useCallback((index: number) => themeDispatch({ type: "REMOVE_EXTRA_COLOR_SCHEME", index }), [themeDispatch]);
   const handleUpdateExtraScheme = useCallback((index: number, scheme: ExtraColorScheme) => themeDispatch({ type: "UPDATE_EXTRA_COLOR_SCHEME", index, scheme }), [themeDispatch]);
   const handleFormatSchemeChange = useCallback((formatScheme: FormatScheme) => themeDispatch({ type: "UPDATE_FORMAT_SCHEME", formatScheme }), [themeDispatch]);
-  const handleLayoutBackgroundChange = useCallback((background: BackgroundState) => {
+  const handleLayoutBackgroundChange = useCallback((background: Background | undefined) => {
     if (!layoutEdit.activeLayoutPath) { return; }
     themeDispatch({ type: "UPDATE_LAYOUT_BACKGROUND", layoutId: layoutEdit.activeLayoutPath, background });
   }, [themeDispatch, layoutEdit.activeLayoutPath]);
@@ -578,11 +541,9 @@ function PotxEditorContent({
     </div>
   ), [themeName, colorScheme, fontScheme, fontSchemeName, handleThemeNameChange, handleThemeExport, handleThemeImport, handlePresetSelect, handleColorChange, handleColorAdd, handleColorRemove, handleColorRename, handleMajorFontChange, handleMinorFontChange, handleFontSchemeNameChange]);
 
-  const masterBgState = useMemo(() => bgXmlToBackgroundState(state.masterBackground), [state.masterBackground]);
-
   const masterTabContent = useMemo(() => (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "auto" }}>
-      <MasterBackgroundEditor background={masterBgState} onChange={handleMasterBackgroundChange} title="Master Background" />
+      <MasterBackgroundEditor background={state.masterBackground} onChange={handleMasterBackgroundChange} title="Master Background" />
       <ColorMapEditor colorMapping={state.masterColorMapping} onChange={handleMasterColorMappingChange} />
       <MasterTextStylesEditor masterTextStyles={state.masterTextStyles} onChange={(mts) => themeDispatch({ type: "UPDATE_MASTER_TEXT_STYLES", masterTextStyles: mts })} />
       <ObjectDefaultsEditor objectDefaults={state.objectDefaults} onChange={(od) => themeDispatch({ type: "UPDATE_OBJECT_DEFAULTS", objectDefaults: od })} />
@@ -590,7 +551,7 @@ function PotxEditorContent({
       <CustomColorsEditor customColors={state.customColors} onAdd={handleAddCustomColor} onRemove={handleRemoveCustomColor} onUpdate={handleUpdateCustomColor} />
       <ExtraColorSchemesEditor extraColorSchemes={state.extraColorSchemes} onAdd={handleAddExtraScheme} onRemove={handleRemoveExtraScheme} onUpdate={handleUpdateExtraScheme} />
     </div>
-  ), [masterBgState, state.masterColorMapping, state.masterTextStyles, state.objectDefaults, state.formatScheme, state.customColors, state.extraColorSchemes, themeDispatch, handleMasterBackgroundChange, handleMasterColorMappingChange, handleFormatSchemeChange, handleAddCustomColor, handleRemoveCustomColor, handleUpdateCustomColor, handleAddExtraScheme, handleRemoveExtraScheme, handleUpdateExtraScheme]);
+  ), [state.masterBackground, state.masterColorMapping, state.masterTextStyles, state.objectDefaults, state.formatScheme, state.customColors, state.extraColorSchemes, themeDispatch, handleMasterBackgroundChange, handleMasterColorMappingChange, handleFormatSchemeChange, handleAddCustomColor, handleRemoveCustomColor, handleUpdateCustomColor, handleAddExtraScheme, handleRemoveExtraScheme, handleUpdateExtraScheme]);
 
   const layoutTabContent = useMemo(() => {
     if (!activeLayout) {
@@ -602,7 +563,7 @@ function PotxEditorContent({
           showMasterShapes={activeLayout.showMasterShapes} preserve={activeLayout.preserve} userDrawn={activeLayout.userDrawn}
           onLayoutNameChange={handleLayoutNameChange} onLayoutTypeChange={handleLayoutTypeChange} onMatchingNameChange={handleMatchingNameChange}
         />
-        <MasterBackgroundEditor background={activeLayout.overrides?.background ?? {}} onChange={handleLayoutBackgroundChange} title="Layout Background" />
+        <MasterBackgroundEditor background={activeLayout.overrides?.background} onChange={handleLayoutBackgroundChange} title="Layout Background" />
         <ColorMapEditor colorMapping={getLayoutColorMapping(activeLayout, state.masterColorMapping)} onChange={handleLayoutColorMapOverrideChange} title="Color Map Override" />
         <OptionalPropertySection title="Transition" defaultExpanded={false}>
           <TransitionEditor value={activeLayout.overrides?.transition} onChange={handleLayoutTransitionChange} />

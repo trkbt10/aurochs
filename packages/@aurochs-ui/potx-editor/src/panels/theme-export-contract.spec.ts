@@ -32,7 +32,8 @@ import { themeEditorReducer, createInitialThemeEditorState } from "../context/re
 import type { CustomColor, ExtraColorScheme, FormatScheme, ObjectDefaults } from "@aurochs-office/pptx/domain/theme/types";
 import type { MasterTextStyles } from "@aurochs-office/pptx/domain/text-style";
 import { createElement } from "@aurochs/xml";
-import { pt } from "@aurochs-office/drawing-ml/domain/units";
+import type { Background } from "@aurochs-office/pptx/domain";
+import { pt, pct } from "@aurochs-office/drawing-ml/domain/units";
 import { DEFAULT_COLOR_MAPPING } from "@aurochs-office/pptx/domain/color/types";
 
 // =============================================================================
@@ -321,30 +322,28 @@ describe("Export contract: master text styles round-trip", () => {
 
 describe("Export contract: master background round-trip", () => {
   it("solid fill master background survives round-trip", async () => {
-    const bgElement = createElement("p:bg", {}, [
-      createElement("p:bgPr", {}, [
-        createElement("a:solidFill", {}, [createElement("a:srgbClr", { val: "4472C4" })]),
-      ]),
-    ]);
-    const s = reduce(editorState(), { type: "UPDATE_MASTER_BACKGROUND", background: bgElement });
+    const bg: Background = {
+      fill: { type: "solidFill", color: { spec: { type: "srgb", value: "4472C4" } } },
+    };
+    const s = reduce(editorState(), { type: "UPDATE_MASTER_BACKGROUND", background: bg });
 
     const { data } = await roundTripExtract(s);
     expect(data.masterBackground).toBeDefined();
-    expect(data.masterBackground?.name).toBe("p:bg");
+    expect(data.masterBackground?.fill).toBeDefined();
   });
 
   it("gradient fill master background survives round-trip", async () => {
-    const bgElement = createElement("p:bg", {}, [
-      createElement("p:bgPr", {}, [
-        createElement("a:gradFill", {}, [
-          createElement("a:gsLst", {}, [
-            createElement("a:gs", { pos: "0" }, [createElement("a:srgbClr", { val: "FF0000" })]),
-            createElement("a:gs", { pos: "100000" }, [createElement("a:srgbClr", { val: "0000FF" })]),
-          ]),
-        ]),
-      ]),
-    ]);
-    const s = reduce(editorState(), { type: "UPDATE_MASTER_BACKGROUND", background: bgElement });
+    const bg: Background = {
+      fill: {
+        type: "gradientFill",
+        stops: [
+          { position: pct(0), color: { spec: { type: "srgb", value: "FF0000" } } },
+          { position: pct(100000), color: { spec: { type: "srgb", value: "0000FF" } } },
+        ],
+        rotWithShape: false,
+      },
+    };
+    const s = reduce(editorState(), { type: "UPDATE_MASTER_BACKGROUND", background: bg });
 
     const { data } = await roundTripExtract(s);
     expect(data.masterBackground).toBeDefined();
@@ -442,11 +441,9 @@ describe("Export contract: combined full-state round-trip", () => {
       },
       colorMap: { ...DEFAULT_COLOR_MAPPING },
     };
-    const bgElement = createElement("p:bg", {}, [
-      createElement("p:bgPr", {}, [
-        createElement("a:solidFill", {}, [createElement("a:srgbClr", { val: "FACADE" })]),
-      ]),
-    ]);
+    const bg: Background = {
+      fill: { type: "solidFill", color: { spec: { type: "srgb", value: "FACADE" } } },
+    };
     const mts: MasterTextStyles = {
       titleStyle: { level1: { paragraphProperties: { alignment: "left" } } },
       bodyStyle: undefined,
@@ -461,7 +458,7 @@ describe("Export contract: combined full-state round-trip", () => {
       { type: "UPDATE_MASTER_COLOR_MAPPING", mapping: { ...editorState().masterColorMapping, bg1: "dk1" } },
       { type: "ADD_CUSTOM_COLOR", color: c1 },
       { type: "ADD_EXTRA_COLOR_SCHEME", scheme: extra },
-      { type: "UPDATE_MASTER_BACKGROUND", background: bgElement },
+      { type: "UPDATE_MASTER_BACKGROUND", background: bg },
       { type: "UPDATE_MASTER_TEXT_STYLES", masterTextStyles: mts },
     );
 

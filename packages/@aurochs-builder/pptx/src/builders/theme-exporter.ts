@@ -22,7 +22,7 @@
  * | Element              | §ECMA-376   | Domain Type           | Status |
  * |----------------------|-------------|-----------------------|--------|
  * | p:clrMap             | 19.3.1.6    | ColorMapping          | ✅     |
- * | p:bg                 | 19.3.1.2    | XmlElement (raw)      | ✅     |
+ * | p:bg                 | 19.3.1.2    | Background            | ✅     |
  * | p:txStyles           | 19.3.1.51   | RawMasterTextStyles   | ✅     |
  *
  * @see ECMA-376 Part 1, Section 20.1.6 - Theme Definitions
@@ -90,8 +90,8 @@ export type ThemeExportOptions = {
   /** Master text styles (p:txStyles) §19.3.1.51 — XmlElement refs preserved from parser */
   /** Master text styles (p:txStyles) §19.3.1.51 — domain typed (SoT) */
   readonly masterTextStyles?: MasterTextStyles;
-  /** Master background (p:bg) §19.3.1.2 — raw XmlElement preserved from parser */
-  readonly masterBackground?: XmlElement;
+  /** Master background §19.3.1.2 — Background domain type. Serialized to p:bg XmlElement on export. */
+  readonly masterBackground?: Background;
   /** Slide layouts with per-layout overrides (§19.3.1.39). If omitted, a single blank layout is generated. */
   readonly layouts?: readonly LayoutExportEntry[];
   /** Slide size in pixels (§19.2.1.36 p:sldSz). If omitted, uses standard 16:9 (960×540px). */
@@ -262,9 +262,12 @@ function buildSlideMaster(options: ThemeExportOptions, layoutCount: number): Xml
   // p:cSld children: optional p:bg, then p:spTree
   const cSldChildren: XmlElement[] = [];
 
-  // p:bg §19.3.1.2 — raw XmlElement from parser
+  // p:bg §19.3.1.2 — serialize Background domain type to XML
   if (options.masterBackground) {
-    cSldChildren.push(options.masterBackground);
+    const fillXml = serializeFill(options.masterBackground.fill);
+    const bgPrAttrs: Record<string, string> = {};
+    if (options.masterBackground.shadeToTitle) { bgPrAttrs.shadeToTitle = "1"; }
+    cSldChildren.push(createElement("p:bg", {}, [createElement("p:bgPr", bgPrAttrs, [fillXml])]));
   }
 
   cSldChildren.push(
