@@ -70,6 +70,8 @@ const entries = {
   "xlsx/renderer/mermaid/index": resolve(__dirname, "../../@aurochs-renderer/xlsx/src/mermaid/index.ts"),
   // XLSX Builder
   "xlsx/builder/index": resolve(__dirname, "../../@aurochs-builder/xlsx/src/index.ts"),
+  // XLSX Patcher
+  "xlsx/patcher/index": resolve(__dirname, "../../@aurochs-builder/xlsx/src/patcher.ts"),
   // XLSX Viewer
   "xlsx/viewer/index": resolve(__dirname, "../../@aurochs-ui/xlsx-editor/src/viewer/index.ts"),
 

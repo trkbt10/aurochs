@@ -1,10 +1,12 @@
 /**
  * @file XLSX Workbook Patcher
  *
- * Updates embedded Excel workbook (xlsx) data.
- * Used for synchronizing chart data changes to embedded workbooks.
+ * Updates embedded Excel workbook (xlsx) data with cell values and drawing/media patches.
+ * Used for synchronizing chart data changes to embedded workbooks and injecting
+ * drawing content (images) into existing workbook templates.
  *
  * @see ECMA-376 Part 4 (SpreadsheetML)
+ * @see ECMA-376 Part 4, Section 20.5 (SpreadsheetML Drawing)
  */
 
 import {
@@ -19,10 +21,25 @@ import {
   type XmlNode,
 } from "@aurochs/xml";
 import { serializeDocument } from "@aurochs/xml";
+import { appendChild, replaceChildByName } from "@aurochs/xml";
 import type { ZipPackage } from "@aurochs/zip";
-import type { Workbook, WorkbookSheet } from "./workbook-parser";
-import { indexToColumnLetter } from "./domain/cell/address";
-import { colIdx } from "./domain/types";
+import type { Workbook, WorkbookSheet } from "@aurochs-office/xlsx/workbook-parser";
+import { indexToColumnLetter } from "@aurochs-office/xlsx/domain/cell/address";
+import { colIdx } from "@aurochs-office/xlsx/domain/types";
+import { serializeDrawing } from "./drawing";
+import type { MediaPart } from "./exporter";
+import type { XlsxDrawing } from "@aurochs-office/xlsx/domain/drawing/types";
+import {
+  OFFICE_RELATIONSHIP_TYPES,
+  DRAWINGML_CONTENT_TYPES,
+  serializeRelationships,
+  serializeContentTypes,
+  serializeWithDeclaration,
+  parseContentTypes,
+  contentTypesToEntries,
+  type OpcRelationship,
+  type ContentTypeEntry,
+} from "@aurochs-office/opc";
 
 // =============================================================================
 // Types
@@ -50,6 +67,10 @@ export type SheetUpdate = {
   readonly cells: readonly CellUpdate[];
   /** If provided, update the sheet dimension (e.g., "A1:B10") */
   readonly dimension?: string;
+  /** Optional drawing to inject into the sheet */
+  readonly drawing?: XlsxDrawing;
+  /** Optional media parts keyed by drawing relationship ID (XlsxPicture.blipRelId) */
+  readonly media?: ReadonlyMap<string, MediaPart>;
 };
 
 /**
@@ -69,7 +90,7 @@ export type WorkbookPatchResult = {
 // =============================================================================
 
 /**
- * Patch a workbook with cell updates.
+ * Patch a workbook with cell updates and optional drawing/media patches.
  *
  * @param workbook - Parsed workbook
  * @param updates - Sheet updates to apply
@@ -102,6 +123,12 @@ export async function patchWorkbook(workbook: Workbook, updates: readonly SheetU
 
     // Patch the sheet XML
     patchSheetXml({ pkg, sheet, cells: update.cells, sharedStrings, dimension: update.dimension });
+
+    // Patch drawing/media if present
+    if (update.drawing) {
+      patchDrawing({ pkg, sheet, drawing: update.drawing, media: update.media });
+    }
+
     updatedSheets.push(update.sheetName);
   }
 
@@ -119,6 +146,10 @@ export async function patchWorkbook(workbook: Workbook, updates: readonly SheetU
     newSharedStrings,
   };
 }
+
+// =============================================================================
+// Sheet Root Element Detection
+// =============================================================================
 
 /**
  * Supported sheet root element names.
@@ -146,6 +177,10 @@ function findSheetRootElement(sheetXml: ReturnType<typeof parseXml>): XmlElement
   }
   return null;
 }
+
+// =============================================================================
+// Sheet XML Patching
+// =============================================================================
 
 /**
  * Patch a single sheet's XML with cell updates.
@@ -182,20 +217,318 @@ function patchSheetXml(params: {
   // Apply cell updates
   const updatedSheetData = applyCellUpdates(sheetDataEl, cells, sharedStrings);
 
-  // Replace sheetData in sheet
-  const newChildren = updatedSheet.children.map((child) => {
-    if (isXmlElement(child) && child.name === "sheetData") {
-      return updatedSheetData;
-    }
-    return child;
-  });
-
-  const finalSheet = createElement(updatedSheet.name, updatedSheet.attrs, newChildren);
+  // Replace sheetData in sheet using replaceChildByName
+  const finalSheet = replaceChildByName(updatedSheet, "sheetData", updatedSheetData);
 
   // Serialize and write back
   const serialized = serializeDocument({ children: [finalSheet] }, { declaration: true, standalone: true });
   pkg.writeText(sheet.xmlPath, serialized);
 }
+
+// =============================================================================
+// Drawing / Media Patching
+// =============================================================================
+
+/**
+ * Patch a sheet with drawing and media content.
+ *
+ * Follows the same OPC pattern as the exporter:
+ * 1. Serialize drawing XML to xl/drawings/drawingN.xml
+ * 2. Write media binaries to xl/media/
+ * 3. Create drawing relationships (drawing → media)
+ * 4. Create sheet relationships (sheet → drawing)
+ * 5. Ensure sheet XML has <drawing r:id="..."/> element
+ * 6. Update [Content_Types].xml for drawing override and media defaults
+ *
+ * @see ECMA-376 Part 4, Section 20.5 (SpreadsheetML Drawing)
+ */
+function patchDrawing(params: {
+  readonly pkg: ZipPackage;
+  readonly sheet: WorkbookSheet;
+  readonly drawing: XlsxDrawing;
+  readonly media?: ReadonlyMap<string, MediaPart>;
+}): void {
+  const { pkg, sheet, drawing, media } = params;
+
+  // Determine sheet index from xmlPath (e.g., "xl/worksheets/sheet1.xml" → 1)
+  const sheetIndex = extractSheetIndex(sheet.xmlPath);
+  const drawingPartPath = `xl/drawings/drawing${sheetIndex}.xml`;
+  const sheetPartPath = sheet.xmlPath;
+
+  // 1. Serialize drawing XML
+  const drawingXml = serializeDrawing(drawing);
+  pkg.writeText(drawingPartPath, serializeWithDeclaration(drawingXml));
+
+  // 2. Collect blipRelIds and write media, build drawing relationships
+  const drawingRelationships: OpcRelationship[] = [];
+  const mediaDefaultExtensions = new Map<string, string>();
+
+  const blipRelIds = collectBlipRelIds(drawing);
+  let mediaCounter = 0;
+
+  for (const relId of blipRelIds) {
+    const mediaPart = media?.get(relId);
+    if (!mediaPart) {
+      continue;
+    }
+
+    mediaCounter++;
+    const ext = inferExtensionFromContentType(mediaPart.contentType);
+    const mediaPartPath = `xl/media/image_s${sheetIndex}_${mediaCounter}.${ext}`;
+
+    // Write media binary
+    pkg.writeBinary(mediaPartPath, mediaPart.data);
+
+    // Build drawing → media relationship
+    drawingRelationships.push({
+      id: relId,
+      type: OFFICE_RELATIONSHIP_TYPES.image,
+      target: buildRelativeTarget(drawingPartPath, mediaPartPath),
+    });
+
+    mediaDefaultExtensions.set(ext, mediaPart.contentType);
+  }
+
+  // 3. Write drawing relationships
+  if (drawingRelationships.length > 0) {
+    const drawingRelsXml = serializeRelationships(drawingRelationships);
+    pkg.writeText(relsPathFor(drawingPartPath), serializeWithDeclaration(drawingRelsXml));
+  }
+
+  // 4. Create sheet → drawing relationship
+  const drawingRelId = `rId_drawing${sheetIndex}`;
+  const sheetDrawingRel: OpcRelationship = {
+    id: drawingRelId,
+    type: OFFICE_RELATIONSHIP_TYPES.drawing,
+    target: buildRelativeTarget(sheetPartPath, drawingPartPath),
+  };
+
+  // Read existing sheet rels or create new
+  const sheetRelsPath = relsPathFor(sheetPartPath);
+  const existingSheetRelsText = pkg.readText(sheetRelsPath);
+  const sheetRels: OpcRelationship[] = existingSheetRelsText
+    ? parseExistingRelationships(existingSheetRelsText)
+    : [];
+  sheetRels.push(sheetDrawingRel);
+
+  const sheetRelsXml = serializeRelationships(sheetRels);
+  pkg.writeText(sheetRelsPath, serializeWithDeclaration(sheetRelsXml));
+
+  // 5. Ensure sheet XML has <drawing r:id="..."/> element
+  ensureDrawingElement(pkg, sheetPartPath, drawingRelId);
+
+  // 6. Update [Content_Types].xml
+  updateContentTypesForDrawing(pkg, drawingPartPath, mediaDefaultExtensions);
+}
+
+/**
+ * Extract sheet index from xmlPath (e.g., "xl/worksheets/sheet1.xml" → 1).
+ */
+function extractSheetIndex(xmlPath: string): number {
+  const match = xmlPath.match(/sheet(\d+)\.xml$/);
+  if (!match) {
+    throw new Error(`extractSheetIndex: cannot parse sheet index from "${xmlPath}"`);
+  }
+  return parseInt(match[1], 10);
+}
+
+/**
+ * Collect all blipRelIds from a drawing's anchors (recursively for groups).
+ */
+function collectBlipRelIds(drawing: XlsxDrawing): string[] {
+  const relIds: string[] = [];
+  for (const anchor of drawing.anchors) {
+    if (anchor.content) {
+      collectContentRelIds(anchor.content, relIds);
+    }
+  }
+  return relIds;
+}
+
+function collectContentRelIds(
+  content: import("@aurochs-office/xlsx/domain/drawing/types").XlsxDrawingContent,
+  relIds: string[],
+): void {
+  switch (content.type) {
+    case "picture":
+      if (content.blipRelId) {
+        relIds.push(content.blipRelId);
+      }
+      break;
+    case "groupShape":
+      for (const child of content.children) {
+        collectContentRelIds(child, relIds);
+      }
+      break;
+  }
+}
+
+/**
+ * Infer file extension from MIME content type.
+ */
+function inferExtensionFromContentType(contentType: string): string {
+  switch (contentType) {
+    case "image/png": return "png";
+    case "image/jpeg": return "jpeg";
+    case "image/gif": return "gif";
+    case "image/bmp": return "bmp";
+    case "image/tiff": return "tiff";
+    case "image/svg+xml": return "svg";
+    case "image/webp": return "webp";
+    default: return "bin";
+  }
+}
+
+/**
+ * Compute OPC relationship file path for a given part.
+ *
+ * @see ECMA-376 Part 2, Section 9.2 (Relationship Part Naming)
+ */
+function relsPathFor(partPath: string): string {
+  const lastSlash = partPath.lastIndexOf("/");
+  const dir = partPath.substring(0, lastSlash);
+  const filename = partPath.substring(lastSlash + 1);
+  return `${dir}/_rels/${filename}.rels`;
+}
+
+/**
+ * Build a relative target path from source to target within the package.
+ */
+function buildRelativeTarget(sourcePart: string, targetPart: string): string {
+  const sourceDir = sourcePart.substring(0, sourcePart.lastIndexOf("/"));
+  const targetDir = targetPart.substring(0, targetPart.lastIndexOf("/"));
+  const targetFile = targetPart.substring(targetPart.lastIndexOf("/") + 1);
+
+  if (sourceDir === targetDir) {
+    return targetFile;
+  }
+
+  // Count common prefix depth
+  const sourceParts = sourceDir.split("/");
+  const targetParts = targetDir.split("/");
+  let common = 0;
+  while (common < sourceParts.length && common < targetParts.length && sourceParts[common] === targetParts[common]) {
+    common++;
+  }
+
+  const ups = sourceParts.length - common;
+  const downs = targetParts.slice(common);
+  return [...Array(ups).fill(".."), ...downs, targetFile].join("/");
+}
+
+/**
+ * Parse existing OPC relationships from XML text.
+ */
+function parseExistingRelationships(xmlText: string): OpcRelationship[] {
+  const doc = parseXml(xmlText);
+  const rootEl = getByPath(doc, ["Relationships"]);
+  if (!rootEl) {
+    return [];
+  }
+  const rels: OpcRelationship[] = [];
+  for (const child of rootEl.children) {
+    if (isXmlElement(child) && child.name === "Relationship") {
+      const id = child.attrs["Id"];
+      const type = child.attrs["Type"];
+      const target = child.attrs["Target"];
+      if (id && type && target) {
+        const rel: OpcRelationship = { id, type, target };
+        const targetMode = child.attrs["TargetMode"];
+        if (targetMode === "External") {
+          rels.push({ ...rel, targetMode: "External" as const });
+        } else {
+          rels.push(rel);
+        }
+      }
+    }
+  }
+  return rels;
+}
+
+/**
+ * Ensure the sheet XML has a <drawing r:id="..."/> element.
+ *
+ * If the sheet already has a <drawing> element, replace it.
+ * Otherwise, append it after the last known child element.
+ */
+function ensureDrawingElement(pkg: ZipPackage, sheetPath: string, drawingRelId: string): void {
+  const sheetText = pkg.readText(sheetPath);
+  if (!sheetText) {
+    return;
+  }
+
+  const sheetXml = parseXml(sheetText);
+  const sheetRootEl = findSheetRootElement(sheetXml);
+  if (!sheetRootEl) {
+    return;
+  }
+
+  const RELATIONSHIPS_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+  const drawingEl = createElement("drawing", { "r:id": drawingRelId, "xmlns:r": RELATIONSHIPS_NS });
+
+  const existingDrawing = getChild(sheetRootEl, "drawing");
+  let updatedRoot: XmlElement;
+  if (existingDrawing) {
+    updatedRoot = replaceChildByName(sheetRootEl, "drawing", drawingEl);
+  } else {
+    updatedRoot = appendChild(sheetRootEl, drawingEl);
+  }
+
+  const serialized = serializeDocument({ children: [updatedRoot] }, { declaration: true, standalone: true });
+  pkg.writeText(sheetPath, serialized);
+}
+
+/**
+ * Update [Content_Types].xml with drawing override and media extension defaults.
+ */
+function updateContentTypesForDrawing(
+  pkg: ZipPackage,
+  drawingPartPath: string,
+  mediaDefaultExtensions: ReadonlyMap<string, string>,
+): void {
+  const contentTypesText = pkg.readText("[Content_Types].xml");
+  if (!contentTypesText) {
+    return;
+  }
+
+  const contentTypesDoc = parseXml(contentTypesText);
+  const parsed = parseContentTypes(contentTypesDoc);
+  const entries = contentTypesToEntries(parsed);
+
+  // Add drawing override if not already present
+  const drawingOverridePartName = `/${drawingPartPath}`;
+  const hasDrawingOverride = entries.some(
+    (e) => e.kind === "override" && e.partName === drawingOverridePartName,
+  );
+  if (!hasDrawingOverride) {
+    entries.push({
+      kind: "override",
+      partName: drawingOverridePartName,
+      contentType: DRAWINGML_CONTENT_TYPES.drawing,
+    });
+  }
+
+  // Add media extension defaults if not already present
+  for (const [extension, contentType] of mediaDefaultExtensions) {
+    const hasDefault = entries.some(
+      (e) => e.kind === "default" && e.extension === extension,
+    );
+    if (!hasDefault) {
+      entries.push({
+        kind: "default",
+        extension,
+        contentType,
+      });
+    }
+  }
+
+  const contentTypesXml = serializeContentTypes(entries);
+  pkg.writeText("[Content_Types].xml", serializeWithDeclaration(contentTypesXml));
+}
+
+// =============================================================================
+// Dimension and SheetData Helpers
+// =============================================================================
 
 /**
  * Update the dimension element in worksheet.
@@ -203,8 +536,8 @@ function patchSheetXml(params: {
 function updateDimension(worksheet: XmlElement, dimension: string): XmlElement {
   const dimEl = getChild(worksheet, "dimension");
   if (dimEl) {
-    // Update existing
-    return replaceChild(worksheet, "dimension", createElement("dimension", { ref: dimension }));
+    // Update existing using replaceChildByName
+    return replaceChildByName(worksheet, "dimension", createElement("dimension", { ref: dimension }));
   }
   // Add dimension after sheetViews or at start
   return insertChildAfter(worksheet, "sheetViews", createElement("dimension", { ref: dimension }));
@@ -219,7 +552,7 @@ function ensureSheetDataElement(worksheet: XmlElement): {
     return { worksheet, sheetData: existing };
   }
   const sheetData = createElement("sheetData", {}, []);
-  const updatedWorksheet = appendChildElement(worksheet, sheetData);
+  const updatedWorksheet = appendChild(worksheet, sheetData);
   return { worksheet: updatedWorksheet, sheetData };
 }
 
@@ -358,20 +691,12 @@ function patchSharedStringsXml(pkg: ZipPackage, sharedStrings: readonly string[]
 // Helper Functions
 // =============================================================================
 
-function replaceChild(parent: XmlElement, childName: string, newChild: XmlElement): XmlElement {
-  const newChildren = parent.children.map((child) => {
-    if (isXmlElement(child) && child.name === childName) {
-      return newChild;
-    }
-    return child;
-  });
-  return createElement(parent.name, parent.attrs, newChildren);
-}
-
-function appendChildElement(parent: XmlElement, child: XmlElement): XmlElement {
-  return createElement(parent.name, parent.attrs, [...parent.children, child]);
-}
-
+/**
+ * Insert a child element after a named sibling.
+ * If the named sibling is not found, prepend the child.
+ *
+ * Note: No exact equivalent exists in @aurochs/xml/mutate, so this is kept as-is.
+ */
 function insertChildAfter(parent: XmlElement, afterName: string, child: XmlElement): XmlElement {
   const reduced = parent.children.reduce(
     (acc, existing): { readonly children: readonly XmlNode[]; readonly inserted: boolean } => {
@@ -424,9 +749,6 @@ export async function updateChartDataInWorkbook(params: {
   const { workbook, sheetName, categories, seriesData, headerRow = 1, seriesNames } = params;
   const cells: CellUpdate[] = [];
   const startRow = headerRow + 1;
-
-  // Write category header (optional)
-  // cells.push({ col: "A", row: headerRow, value: "Category" });
 
   // Write series names to header row
   if (seriesNames) {

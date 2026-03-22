@@ -1,7 +1,8 @@
 /**
  * @file XLSX Module
  *
- * Utilities for parsing and patching embedded Excel workbooks (xlsx).
+ * Utilities for parsing embedded Excel workbooks (xlsx).
+ * Patcher operations are in @aurochs-builder/xlsx/patcher.
  *
  * @see ECMA-376 Part 4 (SpreadsheetML)
  */
@@ -16,14 +17,6 @@ export {
   type WorkbookRow,
   type WorkbookCell,
 } from "./workbook-parser";
-
-export {
-  patchWorkbook,
-  updateChartDataInWorkbook,
-  type CellUpdate,
-  type SheetUpdate,
-  type WorkbookPatchResult,
-} from "./workbook-patcher";
 
 // Text extraction utilities
 export {
