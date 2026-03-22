@@ -16,10 +16,7 @@ import { CLIP_STENCIL_BIT } from "./stencil-fill";
  * so only pixels inside the clip shape are rendered.
  */
 export function beginStencilClip(
-  gl: WebGLRenderingContext,
-  clip: ClipShape,
-  positionBuffer: WebGLBuffer,
-  drawVertices: (vertices: Float32Array) => void
+  { gl, clip, _positionBuffer, drawVertices }: { gl: WebGLRenderingContext; clip: ClipShape; _positionBuffer: WebGLBuffer; drawVertices: (vertices: Float32Array) => void; }
 ): void {
   gl.enable(gl.STENCIL_TEST);
   gl.clear(gl.STENCIL_BUFFER_BIT);
@@ -31,14 +28,14 @@ export function beginStencilClip(
 
   gl.colorMask(false, false, false, false);
 
-  let vertices: Float32Array;
+  const verticesRef = { value: undefined as Float32Array | undefined };
   if (clip.type === "rect") {
-    vertices = generateRectVertices(clip.width, clip.height, clip.cornerRadius);
+    verticesRef.value = generateRectVertices(clip.width, clip.height, clip.cornerRadius);
   } else {
-    vertices = tessellateContours(clip.contours);
+    verticesRef.value = tessellateContours(clip.contours);
   }
 
-  drawVertices(vertices);
+  drawVertices(verticesRef.value);
 
   gl.colorMask(true, true, true, true);
   gl.stencilMask(0xff);

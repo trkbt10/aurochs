@@ -14,7 +14,7 @@ import type { InventoryData } from "../commands/inventory";
 import type { TablesData } from "../commands/tables";
 import type { ImagesData } from "../commands/images";
 import type { DiffData } from "../commands/diff";
-import type { PptxPptxPatchData } from "@aurochs-builder/pptx";
+import type { PptxPatchData } from "@aurochs-builder/pptx";
 
 function getSlideFlags(slide: SlideListItem): string[] {
   const flags: string[] = [];

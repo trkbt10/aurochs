@@ -66,9 +66,9 @@ import type {
 // --- Alignment ---
 
 function convertAlignment(align: DocAlignment | undefined): ParagraphAlignment | undefined {
-  if (!align) return undefined;
-  if (align === "justify") return "both";
-  if (align === "distribute") return "distribute";
+  if (!align) {return undefined;}
+  if (align === "justify") {return "both";}
+  if (align === "distribute") {return "distribute";}
   return align;
 }
 
@@ -119,7 +119,7 @@ const HIGHLIGHT_COLOR_MAP: Record<string, DocxHighlightColor> = {
 };
 
 function convertHighlight(color: string | undefined): DocxHighlightColor | undefined {
-  if (!color) return undefined;
+  if (!color) {return undefined;}
   return HIGHLIGHT_COLOR_MAP[color.toUpperCase()];
 }
 
@@ -261,11 +261,15 @@ function convertLineNumbering(ln: DocLineNumbering): DocxLineNumbering {
 // --- Vertical alignment ---
 
 function convertVerticalAlign(va: "top" | "center" | "bottom" | "justified"): DocxVerticalJc {
-  if (va === "justified") return "both";
+  if (va === "justified") {return "both";}
   return va;
 }
 
 // --- Run properties ---
+
+function buildUnderlineProp(style: UnderlineStyle, color: string | undefined): { u: { val: UnderlineStyle; color?: string } } {
+  return { u: { val: style, ...(color ? { color } : {}) } };
+}
 
 function convertRunProperties(run: DocTextRun): DocxRunProperties | undefined {
   const rFonts: DocxRunFonts = {
@@ -281,9 +285,7 @@ function convertRunProperties(run: DocTextRun): DocxRunProperties | undefined {
   const props: DocxRunProperties = {
     ...(run.bold ? { b: true, bCs: true } : {}),
     ...(run.italic ? { i: true, iCs: true } : {}),
-    ...(underlineStyle
-      ? { u: { val: underlineStyle, ...(run.underlineColor ? { color: run.underlineColor } : {}) } }
-      : {}),
+    ...(underlineStyle ? buildUnderlineProp(underlineStyle, run.underlineColor) : {}),
     ...(run.strike ? { strike: true } : {}),
     ...(run.dstrike ? { dstrike: true } : {}),
     ...(run.caps ? { caps: true } : {}),
@@ -319,23 +321,152 @@ function convertRun(run: DocTextRun): DocxRun {
 
 // --- Paragraph properties ---
 
+function resolveFirstLineIndent(indent: number): { firstLine?: ReturnType<typeof twips>; hanging?: ReturnType<typeof twips> } {
+  if (indent >= 0) {
+    return { firstLine: twips(indent) };
+  }
+  return { hanging: twips(-indent) };
+}
+
+function buildParagraphIndent(para: DocParagraph): DocxParagraphIndent {
+  return {
+    ...(para.indentLeft !== undefined ? { left: twips(para.indentLeft) } : {}),
+    ...(para.indentRight !== undefined ? { right: twips(para.indentRight) } : {}),
+    ...(para.firstLineIndent !== undefined ? resolveFirstLineIndent(para.firstLineIndent) : {}),
+  };
+}
+
+function resolveLineSpacingProps(ls: DocParagraph["lineSpacing"]): { line: number; lineRule: "auto" | "exact" } | Record<string, never> {
+  if (!ls) { return {}; }
+  if (ls.multi) { return { line: ls.value, lineRule: "auto" }; }
+  return { line: ls.value, lineRule: "exact" };
+}
+
+function buildParagraphSpacing(para: DocParagraph): DocxParagraphSpacing {
+  return {
+    ...(para.spaceBefore !== undefined ? { before: twips(para.spaceBefore) } : {}),
+    ...(para.spaceAfter !== undefined ? { after: twips(para.spaceAfter) } : {}),
+    ...resolveLineSpacingProps(para.lineSpacing),
+    ...(para.spaceBeforeAuto ? { beforeAutospacing: true } : {}),
+    ...(para.spaceAfterAuto ? { afterAutospacing: true } : {}),
+  };
+}
+
+function resolveOutlineLevel(level: number | undefined): DocxOutlineLevel | undefined {
+  const OUTLINE_LEVELS: readonly DocxOutlineLevel[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+  if (level !== undefined && level >= 0 && level <= 9) { return OUTLINE_LEVELS[level]; }
+  return undefined;
+}
+
+function buildCellProperties(
+  cell: DocTableCell,
+  tcBorders: DocxCellBorders | undefined,
+  cellShd: DocxShading | undefined,
+): DocxTableCellProperties | undefined {
+  const hasCellProps =
+    cell.width !== undefined ||
+    cell.verticalMerge !== undefined ||
+    cell.verticalAlign !== undefined ||
+    cell.horizontalMerge !== undefined ||
+    tcBorders !== undefined ||
+    cellShd !== undefined;
+
+  if (!hasCellProps) { return undefined; }
+  return {
+    ...(cell.width !== undefined ? { tcW: { value: cell.width, type: "dxa" as const } } : {}),
+    ...(cell.verticalMerge ? { vMerge: cell.verticalMerge } : {}),
+    ...(cell.verticalAlign ? { vAlign: cell.verticalAlign } : {}),
+    ...(cell.horizontalMerge ? { hMerge: cell.horizontalMerge } : {}),
+    ...(tcBorders ? { tcBorders } : {}),
+    ...(cellShd ? { shd: cellShd } : {}),
+  };
+}
+
+function buildRowProperties(row: DocTableRow): DocxTableRowProperties | undefined {
+  const hasRowProps = row.height !== undefined || row.header;
+  if (!hasRowProps) { return undefined; }
+  return {
+    ...(row.height !== undefined ? { trHeight: { val: twips(row.height), hRule: "atLeast" as const } } : {}),
+    ...(row.header ? { tblHeader: true } : {}),
+  };
+}
+
+function buildPageSize(section: DocSection): DocxPageSize | undefined {
+  const has = section.pageWidth !== undefined || section.pageHeight !== undefined || section.orientation !== undefined;
+  if (!has) { return undefined; }
+  return {
+    w: twips(section.pageWidth ?? 12240),
+    h: twips(section.pageHeight ?? 15840),
+    ...(section.orientation ? { orient: section.orientation } : {}),
+  };
+}
+
+function buildPageMargins(section: DocSection): DocxPageMargins | undefined {
+  const has =
+    section.marginTop !== undefined ||
+    section.marginBottom !== undefined ||
+    section.marginLeft !== undefined ||
+    section.marginRight !== undefined;
+  if (!has) { return undefined; }
+  return {
+    top: twips(section.marginTop ?? 1440),
+    right: twips(section.marginRight ?? 1440),
+    bottom: twips(section.marginBottom ?? 1440),
+    left: twips(section.marginLeft ?? 1440),
+    ...(section.gutter !== undefined ? { gutter: twips(section.gutter) } : {}),
+    ...(section.headerDistance !== undefined ? { header: twips(section.headerDistance) } : {}),
+    ...(section.footerDistance !== undefined ? { footer: twips(section.footerDistance) } : {}),
+  };
+}
+
+function buildColumns(section: DocSection): DocxColumns | undefined {
+  const has = section.columns !== undefined || section.columnSpacing !== undefined;
+  if (!has) { return undefined; }
+  return {
+    ...(section.columns !== undefined ? { num: section.columns } : {}),
+    ...(section.columnSpacing !== undefined ? { space: twips(section.columnSpacing) } : {}),
+  };
+}
+
+function buildPageNumberType(section: DocSection): DocxPageNumberType | undefined {
+  const has = section.pageNumberFormat !== undefined || section.pageNumberStart !== undefined;
+  if (!has) { return undefined; }
+  return {
+    ...(section.pageNumberFormat ? { fmt: section.pageNumberFormat } : {}),
+    ...(section.pageNumberStart !== undefined ? { start: section.pageNumberStart } : {}),
+  };
+}
+
+function resolveIndent(hasIndent: boolean, para: DocParagraph): DocxParagraphIndent | undefined {
+  if (!hasIndent) { return undefined; }
+  return buildParagraphIndent(para);
+}
+
+function resolveSpacing(hasSpacing: boolean | undefined, para: DocParagraph): DocxParagraphSpacing | undefined {
+  if (!hasSpacing) { return undefined; }
+  return buildParagraphSpacing(para);
+}
+
+function resolveNumbering(hasNumPr: boolean, para: DocParagraph): DocxNumberingProperties | undefined {
+  if (!hasNumPr || para.listIndex === undefined) { return undefined; }
+  return {
+    numId: docxNumId(para.listIndex),
+    ...(para.listLevel !== undefined ? { ilvl: docxIlvl(para.listLevel) } : {}),
+  };
+}
+
+function resolveCellShading(backgroundColor: string | undefined): DocxShading | undefined {
+  if (!backgroundColor) { return undefined; }
+  return { val: "clear", fill: backgroundColor };
+}
+
 function convertParagraphProperties(para: DocParagraph): DocxParagraphProperties | undefined {
   const jc = convertAlignment(para.alignment);
 
   // Indentation
   const hasIndent =
     para.indentLeft !== undefined || para.indentRight !== undefined || para.firstLineIndent !== undefined;
-  const ind: DocxParagraphIndent | undefined = hasIndent
-    ? {
-        ...(para.indentLeft !== undefined ? { left: twips(para.indentLeft) } : {}),
-        ...(para.indentRight !== undefined ? { right: twips(para.indentRight) } : {}),
-        ...(para.firstLineIndent !== undefined
-          ? para.firstLineIndent >= 0
-            ? { firstLine: twips(para.firstLineIndent) }
-            : { hanging: twips(-para.firstLineIndent) }
-          : {}),
-      }
-    : undefined;
+  const ind = resolveIndent(hasIndent, para);
 
   // Spacing
   const hasSpacing =
@@ -344,35 +475,14 @@ function convertParagraphProperties(para: DocParagraph): DocxParagraphProperties
     para.lineSpacing !== undefined ||
     para.spaceBeforeAuto ||
     para.spaceAfterAuto;
-  const spacing: DocxParagraphSpacing | undefined = hasSpacing
-    ? {
-        ...(para.spaceBefore !== undefined ? { before: twips(para.spaceBefore) } : {}),
-        ...(para.spaceAfter !== undefined ? { after: twips(para.spaceAfter) } : {}),
-        ...(para.lineSpacing
-          ? para.lineSpacing.multi
-            ? { line: para.lineSpacing.value, lineRule: "auto" as const }
-            : { line: para.lineSpacing.value, lineRule: "exact" as const }
-          : {}),
-        ...(para.spaceBeforeAuto ? { beforeAutospacing: true } : {}),
-        ...(para.spaceAfterAuto ? { afterAutospacing: true } : {}),
-      }
-    : undefined;
+  const spacing = resolveSpacing(hasSpacing, para);
 
   // Numbering
   const hasNumPr = para.listIndex !== undefined;
-  const numPr: DocxNumberingProperties | undefined = hasNumPr
-    ? {
-        numId: docxNumId(para.listIndex!),
-        ...(para.listLevel !== undefined ? { ilvl: docxIlvl(para.listLevel) } : {}),
-      }
-    : undefined;
+  const numPr = resolveNumbering(hasNumPr, para);
 
   // Outline level
-  const OUTLINE_LEVELS: readonly DocxOutlineLevel[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-  const outlineLvl: DocxOutlineLevel | undefined =
-    para.outlineLevel !== undefined && para.outlineLevel >= 0 && para.outlineLevel <= 9
-      ? OUTLINE_LEVELS[para.outlineLevel]
-      : undefined;
+  const outlineLvl = resolveOutlineLevel(para.outlineLevel);
 
   // Borders
   const pBdr = para.borders ? convertParagraphBorders(para.borders) : undefined;
@@ -416,28 +526,9 @@ function convertParagraph(para: DocParagraph): DocxParagraph {
 
 function convertTableCell(cell: DocTableCell, rowBorders?: DocTableBorders): DocxTableCell {
   const tcBorders = rowBorders ? convertTableBorders(rowBorders) : undefined;
-  const cellShd: DocxShading | undefined = cell.backgroundColor
-    ? { val: "clear", fill: cell.backgroundColor }
-    : undefined;
+  const cellShd = resolveCellShading(cell.backgroundColor);
 
-  const hasCellProps =
-    cell.width !== undefined ||
-    cell.verticalMerge !== undefined ||
-    cell.verticalAlign !== undefined ||
-    cell.horizontalMerge !== undefined ||
-    tcBorders !== undefined ||
-    cellShd !== undefined;
-
-  const properties: DocxTableCellProperties | undefined = hasCellProps
-    ? {
-        ...(cell.width !== undefined ? { tcW: { value: cell.width, type: "dxa" as const } } : {}),
-        ...(cell.verticalMerge ? { vMerge: cell.verticalMerge } : {}),
-        ...(cell.verticalAlign ? { vAlign: cell.verticalAlign } : {}),
-        ...(cell.horizontalMerge ? { hMerge: cell.horizontalMerge } : {}),
-        ...(tcBorders ? { tcBorders } : {}),
-        ...(cellShd ? { shd: cellShd } : {}),
-      }
-    : undefined;
+  const properties = buildCellProperties(cell, tcBorders, cellShd);
 
   return {
     type: "tableCell",
@@ -447,13 +538,7 @@ function convertTableCell(cell: DocTableCell, rowBorders?: DocTableBorders): Doc
 }
 
 function convertTableRow(row: DocTableRow): DocxTableRow {
-  const hasRowProps = row.height !== undefined || row.header;
-  const properties: DocxTableRowProperties | undefined = hasRowProps
-    ? {
-        ...(row.height !== undefined ? { trHeight: { val: twips(row.height), hRule: "atLeast" as const } } : {}),
-        ...(row.header ? { tblHeader: true } : {}),
-      }
-    : undefined;
+  const properties = buildRowProperties(row);
 
   return {
     type: "tableRow",
@@ -472,40 +557,9 @@ function convertTable(table: DocTable): DocxTable {
 // --- Section properties ---
 
 function convertSectionProperties(section: DocSection): DocxSectionProperties {
-  const hasPgSz =
-    section.pageWidth !== undefined || section.pageHeight !== undefined || section.orientation !== undefined;
-  const pgSz: DocxPageSize | undefined = hasPgSz
-    ? {
-        w: twips(section.pageWidth ?? 12240),
-        h: twips(section.pageHeight ?? 15840),
-        ...(section.orientation ? { orient: section.orientation } : {}),
-      }
-    : undefined;
-
-  const hasPgMar =
-    section.marginTop !== undefined ||
-    section.marginBottom !== undefined ||
-    section.marginLeft !== undefined ||
-    section.marginRight !== undefined;
-  const pgMar: DocxPageMargins | undefined = hasPgMar
-    ? {
-        top: twips(section.marginTop ?? 1440),
-        right: twips(section.marginRight ?? 1440),
-        bottom: twips(section.marginBottom ?? 1440),
-        left: twips(section.marginLeft ?? 1440),
-        ...(section.gutter !== undefined ? { gutter: twips(section.gutter) } : {}),
-        ...(section.headerDistance !== undefined ? { header: twips(section.headerDistance) } : {}),
-        ...(section.footerDistance !== undefined ? { footer: twips(section.footerDistance) } : {}),
-      }
-    : undefined;
-
-  const hasCols = section.columns !== undefined || section.columnSpacing !== undefined;
-  const cols: DocxColumns | undefined = hasCols
-    ? {
-        ...(section.columns !== undefined ? { num: section.columns } : {}),
-        ...(section.columnSpacing !== undefined ? { space: twips(section.columnSpacing) } : {}),
-      }
-    : undefined;
+  const pgSz = buildPageSize(section);
+  const pgMar = buildPageMargins(section);
+  const cols = buildColumns(section);
 
   const breakType = section.breakType ? SECTION_BREAK_MAP[section.breakType] : undefined;
 
@@ -513,13 +567,7 @@ function convertSectionProperties(section: DocSection): DocxSectionProperties {
   const lnNumType = section.lineNumbering ? convertLineNumbering(section.lineNumbering) : undefined;
 
   // Page numbering
-  const hasPgNumType = section.pageNumberFormat !== undefined || section.pageNumberStart !== undefined;
-  const pgNumType: DocxPageNumberType | undefined = hasPgNumType
-    ? {
-        ...(section.pageNumberFormat ? { fmt: section.pageNumberFormat } : {}),
-        ...(section.pageNumberStart !== undefined ? { start: section.pageNumberStart } : {}),
-      }
-    : undefined;
+  const pgNumType = buildPageNumberType(section);
 
   // Vertical alignment
   const vAlign = section.verticalAlign ? convertVerticalAlign(section.verticalAlign) : undefined;

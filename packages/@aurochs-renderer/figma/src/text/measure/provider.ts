@@ -5,6 +5,17 @@
 import type { FontMetrics } from "../../font/index";
 import type { MeasurementProvider, FontSpec, TextMeasurement } from "./types";
 
+/** Compute cap height from actual bounding box ascent, or undefined if not available */
+function computeCapHeight(
+  actualBoundingBoxAscent: number | undefined,
+  fontSize: number
+): number | undefined {
+  if (actualBoundingBoxAscent) {
+    return (actualBoundingBoxAscent / fontSize) * 1000;
+  }
+  return undefined;
+}
+
 /**
  * Minimal interface for canvas context text measurement
  */
@@ -14,224 +25,201 @@ type TextMeasureContext = {
 };
 
 /**
- * Canvas-based measurement provider
+ * Build CSS font string from font spec
+ */
+function buildFontString(font: FontSpec): string {
+  const style = font.fontStyle ?? "normal";
+  const weight = font.fontWeight ?? 400;
+  const size = font.fontSize;
+  const family = font.fontFamily;
+
+  return `${style} ${weight} ${size}px ${family}`;
+}
+
+/**
+ * Adjust width for letter spacing
+ */
+function adjustForLetterSpacing(
+  baseWidth: number,
+  charCount: number,
+  letterSpacing?: number
+): number {
+  if (!letterSpacing || charCount <= 1) {
+    return baseWidth;
+  }
+  // Letter spacing is applied between characters (n-1 times for n characters)
+  return baseWidth + letterSpacing * (charCount - 1);
+}
+
+/**
+ * Create a Canvas-based measurement provider
  *
  * Uses the Canvas 2D API for text measurement.
  * Works in browser and Node.js (with canvas package).
  */
-export class CanvasMeasurementProvider implements MeasurementProvider {
-  private context: TextMeasureContext | null = null;
+export function createCanvasMeasurementProvider(): MeasurementProvider {
+  const contextRef = { value: null as TextMeasureContext | null };
 
-  /**
-   * Get or create a canvas context for measurement
-   */
-  private getContext(): TextMeasureContext {
-    if (this.context) {
-      return this.context;
+  function getContext(): TextMeasureContext {
+    if (contextRef.value) {
+      return contextRef.value;
     }
 
     if (typeof document !== "undefined") {
       // Browser environment
       const canvas = document.createElement("canvas");
-      this.context = canvas.getContext("2d");
+      contextRef.value = canvas.getContext("2d");
     } else if (typeof OffscreenCanvas !== "undefined") {
       // Web Worker or modern environment with OffscreenCanvas
       const canvas = new OffscreenCanvas(1, 1);
-      this.context = canvas.getContext("2d");
+      contextRef.value = canvas.getContext("2d");
     }
 
-    if (!this.context) {
+    if (!contextRef.value) {
       throw new Error(
         "Canvas context not available. " +
           "Use a different measurement provider in non-browser environments."
       );
     }
 
-    return this.context;
+    return contextRef.value;
   }
 
-  /**
-   * Build CSS font string from font spec
-   */
-  private buildFontString(font: FontSpec): string {
-    const style = font.fontStyle ?? "normal";
-    const weight = font.fontWeight ?? 400;
-    const size = font.fontSize;
-    const family = font.fontFamily;
+  return {
+    measureText(text: string, font: FontSpec): TextMeasurement {
+      const ctx = getContext();
+      ctx.font = buildFontString(font);
 
-    return `${style} ${weight} ${size}px ${family}`;
-  }
+      const metrics = ctx.measureText(text);
 
-  /**
-   * Measure text with given font specification
-   */
-  measureText(text: string, font: FontSpec): TextMeasurement {
-    const ctx = this.getContext();
-    ctx.font = this.buildFontString(font);
+      const width = adjustForLetterSpacing(
+        metrics.width,
+        text.length,
+        font.letterSpacing
+      );
+      const ascent =
+        metrics.fontBoundingBoxAscent ??
+        metrics.actualBoundingBoxAscent ??
+        font.fontSize * 0.8;
+      const descent =
+        metrics.fontBoundingBoxDescent ??
+        metrics.actualBoundingBoxDescent ??
+        font.fontSize * 0.2;
 
-    const metrics = ctx.measureText(text);
+      return {
+        width,
+        height: ascent + descent,
+        ascent,
+        descent,
+      };
+    },
 
-    // Canvas TextMetrics provides various metrics
-    // Note: Some properties may not be available in older browsers
-    const width = this.adjustForLetterSpacing(
-      metrics.width,
-      text.length,
-      font.letterSpacing
-    );
-    const ascent =
-      metrics.fontBoundingBoxAscent ??
-      metrics.actualBoundingBoxAscent ??
-      font.fontSize * 0.8;
-    const descent =
-      metrics.fontBoundingBoxDescent ??
-      metrics.actualBoundingBoxDescent ??
-      font.fontSize * 0.2;
+    measureCharWidths(text: string, font: FontSpec): readonly number[] {
+      const ctx = getContext();
+      ctx.font = buildFontString(font);
 
-    return {
-      width,
-      height: ascent + descent,
-      ascent,
-      descent,
-    };
-  }
+      const widths: number[] = [];
+      const letterSpacing = font.letterSpacing ?? 0;
 
-  /**
-   * Adjust width for letter spacing
-   */
-  private adjustForLetterSpacing(
-    baseWidth: number,
-    charCount: number,
-    letterSpacing?: number
-  ): number {
-    if (!letterSpacing || charCount <= 1) {
-      return baseWidth;
-    }
-    // Letter spacing is applied between characters (n-1 times for n characters)
-    return baseWidth + letterSpacing * (charCount - 1);
-  }
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        const charWidth = ctx.measureText(char).width;
+        widths.push(i < text.length - 1 ? charWidth + letterSpacing : charWidth);
+      }
 
-  /**
-   * Measure individual character widths
-   */
-  measureCharWidths(text: string, font: FontSpec): readonly number[] {
-    const ctx = this.getContext();
-    ctx.font = this.buildFontString(font);
+      return widths;
+    },
 
-    const widths: number[] = [];
-    const letterSpacing = font.letterSpacing ?? 0;
+    getFontMetrics(font: FontSpec): FontMetrics {
+      const ctx = getContext();
+      ctx.font = buildFontString(font);
 
-    for (let i = 0; i < text.length; i++) {
-      const char = text[i];
-      const charWidth = ctx.measureText(char).width;
-      // Add letter spacing for all but the last character
-      widths.push(i < text.length - 1 ? charWidth + letterSpacing : charWidth);
-    }
+      const metrics = ctx.measureText("Xg");
 
-    return widths;
-  }
+      const ascender =
+        metrics.fontBoundingBoxAscent ??
+        metrics.actualBoundingBoxAscent ??
+        font.fontSize * 0.8;
+      const descender =
+        metrics.fontBoundingBoxDescent ??
+        metrics.actualBoundingBoxDescent ??
+        font.fontSize * 0.2;
 
-  /**
-   * Get font metrics
-   */
-  getFontMetrics(font: FontSpec): FontMetrics {
-    const ctx = this.getContext();
-    ctx.font = this.buildFontString(font);
-
-    // Measure a reference string to get metrics
-    const metrics = ctx.measureText("Xg");
-
-    const ascender =
-      metrics.fontBoundingBoxAscent ??
-      metrics.actualBoundingBoxAscent ??
-      font.fontSize * 0.8;
-    const descender =
-      metrics.fontBoundingBoxDescent ??
-      metrics.actualBoundingBoxDescent ??
-      font.fontSize * 0.2;
-
-    return {
-      unitsPerEm: 1000, // Canvas doesn't provide this, use standard value
-      ascender: (ascender / font.fontSize) * 1000,
-      descender: -(descender / font.fontSize) * 1000, // Negative for descender
-      lineGap: 0, // Canvas doesn't provide line gap
-      capHeight: metrics.actualBoundingBoxAscent
-        ? (metrics.actualBoundingBoxAscent / font.fontSize) * 1000
-        : undefined,
-    };
-  }
+      return {
+        unitsPerEm: 1000,
+        ascender: (ascender / font.fontSize) * 1000,
+        descender: -(descender / font.fontSize) * 1000,
+        lineGap: 0,
+        capHeight: computeCapHeight(metrics.actualBoundingBoxAscent, font.fontSize),
+      };
+    },
+  };
 }
 
 /**
- * Fallback measurement provider for environments without Canvas
+ * Average character width ratios for different font categories
+ */
+const WIDTH_RATIOS: Record<string, number> = {
+  monospace: 0.6,
+  serif: 0.5,
+  "sans-serif": 0.5,
+  default: 0.5,
+};
+
+/**
+ * Detect font category from font family string
+ */
+function detectCategory(fontFamily: string): string {
+  const lower = fontFamily.toLowerCase();
+  if (lower.includes("mono") || lower.includes("courier")) {
+    return "monospace";
+  }
+  if (lower.includes("serif") && !lower.includes("sans")) {
+    return "serif";
+  }
+  return "default";
+}
+
+/**
+ * Create a fallback measurement provider for environments without Canvas
  *
  * Uses estimated character widths based on font metrics.
  * Less accurate but works everywhere.
  */
-export class FallbackMeasurementProvider implements MeasurementProvider {
-  /**
-   * Average character width ratios for different font categories
-   */
-  private static readonly WIDTH_RATIOS: Record<string, number> = {
-    monospace: 0.6, // Fixed-width fonts
-    serif: 0.5, // Variable-width serif fonts
-    "sans-serif": 0.5, // Variable-width sans-serif fonts
-    default: 0.5,
+export function createFallbackMeasurementProvider(): MeasurementProvider {
+  return {
+    measureText(text: string, font: FontSpec): TextMeasurement {
+      const category = detectCategory(font.fontFamily);
+      const widthRatio = WIDTH_RATIOS[category];
+
+      const widthRef = { value: text.length * font.fontSize * widthRatio };
+
+      if (font.letterSpacing && text.length > 1) {
+        widthRef.value += font.letterSpacing * (text.length - 1);
+      }
+
+      const ascent = font.fontSize * 0.8;
+      const descent = font.fontSize * 0.2;
+
+      return {
+        width: widthRef.value,
+        height: ascent + descent,
+        ascent,
+        descent,
+      };
+    },
+
+    measureCharWidths(text: string, font: FontSpec): readonly number[] {
+      const category = detectCategory(font.fontFamily);
+      const widthRatio = WIDTH_RATIOS[category];
+      const charWidth = font.fontSize * widthRatio;
+      const letterSpacing = font.letterSpacing ?? 0;
+
+      return Array.from(text).map((_, i) =>
+        i < text.length - 1 ? charWidth + letterSpacing : charWidth
+      );
+    },
   };
-
-  /**
-   * Detect font category from font family string
-   */
-  private detectCategory(fontFamily: string): string {
-    const lower = fontFamily.toLowerCase();
-    if (lower.includes("mono") || lower.includes("courier")) {
-      return "monospace";
-    }
-    if (lower.includes("serif") && !lower.includes("sans")) {
-      return "serif";
-    }
-    return "default";
-  }
-
-  /**
-   * Measure text with given font specification
-   */
-  measureText(text: string, font: FontSpec): TextMeasurement {
-    const category = this.detectCategory(font.fontFamily);
-    const widthRatio = FallbackMeasurementProvider.WIDTH_RATIOS[category];
-
-    // Estimate width based on character count and average width
-    let width = text.length * font.fontSize * widthRatio;
-
-    // Add letter spacing
-    if (font.letterSpacing && text.length > 1) {
-      width += font.letterSpacing * (text.length - 1);
-    }
-
-    // Estimate height based on font size
-    const ascent = font.fontSize * 0.8;
-    const descent = font.fontSize * 0.2;
-
-    return {
-      width,
-      height: ascent + descent,
-      ascent,
-      descent,
-    };
-  }
-
-  /**
-   * Measure individual character widths (estimated)
-   */
-  measureCharWidths(text: string, font: FontSpec): readonly number[] {
-    const category = this.detectCategory(font.fontFamily);
-    const widthRatio = FallbackMeasurementProvider.WIDTH_RATIOS[category];
-    const charWidth = font.fontSize * widthRatio;
-    const letterSpacing = font.letterSpacing ?? 0;
-
-    return Array.from(text).map((_, i) =>
-      i < text.length - 1 ? charWidth + letterSpacing : charWidth
-    );
-  }
 }
 
 /**
@@ -244,15 +232,15 @@ export function createMeasurementProvider(): MeasurementProvider {
     typeof OffscreenCanvas !== "undefined"
   ) {
     try {
-      const provider = new CanvasMeasurementProvider();
+      const provider = createCanvasMeasurementProvider();
       // Test if it works
       provider.measureText("test", { fontFamily: "sans-serif", fontSize: 12 });
       return provider;
-    } catch {
-      // Fall through to fallback
+    } catch (error) {
+      console.debug("Fall through to fallback" + ":", error);
     }
   }
 
   // Use fallback provider
-  return new FallbackMeasurementProvider();
+  return createFallbackMeasurementProvider();
 }

@@ -151,10 +151,7 @@ function svgToPng(svg: string, width?: number): Buffer {
 }
 
 function compareSvgs(
-  actualSvg: string,
-  renderedSvg: string,
-  frameName: string,
-  options: { threshold?: number; maxDiffPercent?: number; saveDiff?: boolean } = {},
+  { actualSvg, renderedSvg, frameName, options = {} }: { actualSvg: string; renderedSvg: string; frameName: string; options?: { threshold?: number; maxDiffPercent?: number; saveDiff?: boolean }; }
 ): CompareResult {
   const { threshold = 0.1, maxDiffPercent = 5.0, saveDiff = false } = options;
 
@@ -163,7 +160,7 @@ function compareSvgs(
 
   // Render at same width as actual for fair comparison
   const renderedPngBuffer = svgToPng(renderedSvg, actual.width);
-  let rendered = PNG.sync.read(renderedPngBuffer);
+  const renderedRef = { value: PNG.sync.read(renderedPngBuffer) };
 
   if (saveDiff) {
     ensureDirs();
@@ -173,26 +170,26 @@ function compareSvgs(
   }
 
   // Resize if dimensions don't match
-  if (rendered.width !== actual.width || rendered.height !== actual.height) {
+  if (renderedRef.value.width !== actual.width || renderedRef.value.height !== actual.height) {
     const resized = new PNG({ width: actual.width, height: actual.height });
     for (let y = 0; y < actual.height; y++) {
-      const sy = Math.floor((y / actual.height) * rendered.height);
+      const sy = Math.floor((y / actual.height) * renderedRef.value.height);
       for (let x = 0; x < actual.width; x++) {
-        const sx = Math.floor((x / actual.width) * rendered.width);
-        const srcIdx = (sy * rendered.width + sx) * 4;
+        const sx = Math.floor((x / actual.width) * renderedRef.value.width);
+        const srcIdx = (sy * renderedRef.value.width + sx) * 4;
         const dstIdx = (y * actual.width + x) * 4;
-        resized.data[dstIdx] = rendered.data[srcIdx];
-        resized.data[dstIdx + 1] = rendered.data[srcIdx + 1];
-        resized.data[dstIdx + 2] = rendered.data[srcIdx + 2];
-        resized.data[dstIdx + 3] = rendered.data[srcIdx + 3];
+        resized.data[dstIdx] = renderedRef.value.data[srcIdx];
+        resized.data[dstIdx + 1] = renderedRef.value.data[srcIdx + 1];
+        resized.data[dstIdx + 2] = renderedRef.value.data[srcIdx + 2];
+        resized.data[dstIdx + 3] = renderedRef.value.data[srcIdx + 3];
       }
     }
-    rendered = resized;
+    renderedRef.value = resized;
   }
 
   const diff = new PNG({ width: actual.width, height: actual.height });
 
-  const diffPixels = pixelmatch(actual.data, rendered.data, diff.data, actual.width, actual.height, {
+  const diffPixels = pixelmatch(actual.data, renderedRef.value.data, diff.data, actual.width, actual.height, {
     threshold,
     includeAA: false,
   });
@@ -230,10 +227,10 @@ type ParsedData = {
   nodeMap: ReadonlyMap<string, FigNode>;
 };
 
-let parsedDataCache: ParsedData | null = null;
+const parsedDataCache: ParsedData | null = null;
 
 async function loadFigFile(): Promise<ParsedData> {
-  if (parsedDataCache) return parsedDataCache;
+  if (parsedDataCache) {return parsedDataCache;}
 
   if (!fs.existsSync(FIG_FILE)) {
     throw new Error(
@@ -302,7 +299,7 @@ describe("Symbol Resolution", () => {
   // --------------------------------------------------------------------------
 
   it("fixture has 3 canvases with expected symbols and frames", async () => {
-    if (!fs.existsSync(FIG_FILE)) return;
+    if (!fs.existsSync(FIG_FILE)) {return;}
     const data = await loadFigFile();
 
     expect(data.canvases.length).toBe(5);
@@ -335,7 +332,7 @@ describe("Symbol Resolution", () => {
   // --------------------------------------------------------------------------
 
   it("preResolveSymbols generates cache without circular dependency warnings", async () => {
-    if (!fs.existsSync(FIG_FILE)) return;
+    if (!fs.existsSync(FIG_FILE)) {return;}
     const data = await loadFigFile();
 
     const warnings: string[] = [];
@@ -353,10 +350,10 @@ describe("Symbol Resolution", () => {
   // --------------------------------------------------------------------------
 
   it("all canvases render without unresolved SYMBOL warnings", { timeout: 60_000 }, async () => {
-    if (!fs.existsSync(FIG_FILE)) return;
+    if (!fs.existsSync(FIG_FILE)) {return;}
     const data = await loadFigFile();
 
-    let totalUnresolved = 0;
+    const totalUnresolvedRef = { value: 0 };
     for (const canvas of data.canvases) {
       const result = await renderCanvas(canvas, {
         blobs: data.blobs,
@@ -369,11 +366,11 @@ describe("Symbol Resolution", () => {
         for (const w of unresolvedWarnings.slice(0, 3)) {
           console.log(`  - ${w}`);
         }
-        totalUnresolved += unresolvedWarnings.length;
+        totalUnresolvedRef.value += unresolvedWarnings.length;
       }
     }
     console.log(`Total unresolved across all canvases: ${totalUnresolved}`);
-    expect(totalUnresolved).toBe(0);
+    expect(totalUnresolvedRef.value).toBe(0);
   });
 
   // --------------------------------------------------------------------------
@@ -460,17 +457,17 @@ describe("Symbol Resolution", () => {
   // --------------------------------------------------------------------------
 
   it("summary of all frames", { timeout: 120_000 }, async () => {
-    if (!fs.existsSync(FIG_FILE)) return;
+    if (!fs.existsSync(FIG_FILE)) {return;}
     const data = await loadFigFile();
 
     const results: CompareResult[] = [];
 
     for (const [frameName] of Object.entries(TEST_FRAMES)) {
       const layer = data.layers.get(frameName);
-      if (!layer) continue;
+      if (!layer) {continue;}
 
       const actualPath = path.join(ACTUAL_DIR, `${frameName}.svg`);
-      if (!fs.existsSync(actualPath)) continue;
+      if (!fs.existsSync(actualPath)) {continue;}
 
       const wrapperCanvas: FigNode = {
         type: "CANVAS",
@@ -499,22 +496,22 @@ describe("Symbol Resolution", () => {
     console.log("Frame".padEnd(28) + "Diff %".padStart(10) + "  Status");
     console.log("-".repeat(50));
 
-    let passed = 0;
-    let failed = 0;
-    let totalDiff = 0;
+    const passedRef = { value: 0 };
+    const failedRef = { value: 0 };
+    const totalDiffRef = { value: 0 };
 
     for (const r of results) {
       const status = r.diffPercent < 10 ? "PASS" : "FAIL";
-      if (r.diffPercent < 10) passed++;
-      else failed++;
-      totalDiff += r.diffPercent;
+      if (r.diffPercent < 10) {passedRef.value++;}
+      else {failedRef.value++;}
+      totalDiffRef.value += r.diffPercent;
       console.log(r.frameName.padEnd(28) + `${r.diffPercent.toFixed(2)}%`.padStart(10) + `  ${status}`);
     }
 
-    const avgDiff = results.length > 0 ? totalDiff / results.length : 0;
+    const avgDiff = results.length > 0 ? totalDiffRef.value / results.length : 0;
     console.log("-".repeat(50));
     console.log(`Total: ${results.length} frames, ${passed} pass, ${failed} fail, avg ${avgDiff.toFixed(2)}% diff`);
 
-    expect(failed).toBe(0);
+    expect(failedRef.value).toBe(0);
   });
 });

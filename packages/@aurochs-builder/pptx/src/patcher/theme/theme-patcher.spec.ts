@@ -2,6 +2,7 @@
 import { createElement, getChild, type XmlDocument, type XmlElement } from "@aurochs/xml";
 import type { Color } from "@aurochs-office/drawing-ml/domain/color";
 import type { FormatScheme } from "@aurochs-office/pptx/domain/theme/types";
+import { px } from "@aurochs-office/drawing-ml/domain/units";
 import { patchTheme, type ThemeChange } from "./theme-patcher";
 
 function doc(root: XmlElement): XmlDocument {
@@ -50,7 +51,7 @@ describe("patchTheme", () => {
 
     const newFmt: FormatScheme = {
       fillStyles: [{ type: "solidFill", color: { spec: { type: "srgb", value: "FF0000" } } }],
-      lineStyles: [{ width: 1 as any, cap: "flat", compound: "sng", alignment: "ctr", fill: { type: "noFill" }, dash: "solid", join: "round" }],
+      lineStyles: [{ width: px(1), cap: "flat", compound: "sng", alignment: "ctr", fill: { type: "noFill" }, dash: "solid", join: "round" }],
       effectStyles: [undefined],
       bgFillStyles: [{ type: "noFill" }],
     };
@@ -229,7 +230,7 @@ describe("patchTheme", () => {
 
     const newFmt: FormatScheme = {
       fillStyles: [{ type: "gradientFill", stops: [], rotWithShape: true }],
-      lineStyles: [{ width: 1 as any, cap: "flat", compound: "sng", alignment: "ctr", fill: { type: "noFill" }, dash: "solid", join: "round" }],
+      lineStyles: [{ width: px(1), cap: "flat", compound: "sng", alignment: "ctr", fill: { type: "noFill" }, dash: "solid", join: "round" }],
       effectStyles: [undefined],
       bgFillStyles: [{ type: "noFill" }],
     };
@@ -305,7 +306,7 @@ describe("patchTheme", () => {
 
     const newFmt: FormatScheme = {
       fillStyles: [{ type: "solidFill", color: { spec: { type: "scheme", value: "phClr" } } }],
-      lineStyles: [{ width: 1 as any, cap: "flat", compound: "sng", alignment: "ctr", fill: { type: "noFill" }, dash: "solid", join: "round" }],
+      lineStyles: [{ width: px(1), cap: "flat", compound: "sng", alignment: "ctr", fill: { type: "noFill" }, dash: "solid", join: "round" }],
       effectStyles: [undefined],
       bgFillStyles: [{ type: "noFill" }],
     };

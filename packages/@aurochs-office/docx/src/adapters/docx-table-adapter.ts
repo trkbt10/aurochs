@@ -304,14 +304,20 @@ function convertTableCell(params: {
 // =============================================================================
 
 /**
+ * Parameters for converting a DOCX table row.
+ */
+type ConvertTableRowParams = {
+  readonly row: DocxTableRow;
+  readonly tableProps: DocxTableProperties | undefined;
+  readonly tableShading: string | undefined;
+  readonly context: TableConversionContext;
+};
+
+/**
  * Convert a DOCX table row to layout input.
  */
-function convertTableRow(
-  row: DocxTableRow,
-  tableProps: DocxTableProperties | undefined,
-  tableShading: string | undefined,
-  context: TableConversionContext,
-): LayoutTableRowInput {
+function convertTableRow(params: ConvertTableRowParams): LayoutTableRowInput {
+  const { row, tableProps, tableShading, context } = params;
   const rowProps = row.properties;
 
   // Convert cells
@@ -388,7 +394,7 @@ export function tableToLayoutInput(params: {
   const tableShading = props?.shd?.fill;
 
   // Convert rows
-  const rows: LayoutTableRowInput[] = table.rows.map((row) => convertTableRow(row, props, tableShading, context));
+  const rows: LayoutTableRowInput[] = table.rows.map((row) => convertTableRow({ row, tableProps: props, tableShading, context }));
 
   // Get table width
   const width = convertTableWidth(props?.tblW, containerWidth);

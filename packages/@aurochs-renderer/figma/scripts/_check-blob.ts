@@ -1,48 +1,48 @@
+/** @file Blob inspection script */
 /**
  * Compare glyph blob format: real Figma .fig vs our generated .fig
  * Checks: close commands, contour separation, winding direction
  */
 import * as fs from "node:fs";
-import { parseFigFile, buildNodeTree, findNodesByType, type FigBlob } from "@aurochs/fig/parser";
+import { parseFigFile, buildNodeTree, findNodesByType } from "@aurochs/fig/parser";
+import type { FigBlob } from "@aurochs/fig/parser";
 
-// Decode blob commands
-function decodeBlob(
-  blob: FigBlob,
-): { type: string; x?: number; y?: number; x1?: number; y1?: number; x2?: number; y2?: number }[] {
+type PathCmd = { type: string; x?: number; y?: number; x1?: number; y1?: number; x2?: number; y2?: number };
+
+/** Decode blob binary data into path commands */
+function decodeBlob(blob: FigBlob): PathCmd[] {
   const bytes = blob.bytes instanceof Uint8Array ? blob.bytes : new Uint8Array(blob.bytes);
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  const commands: any[] = [];
-  let offset = 0;
+  const commands: PathCmd[] = [];
+  const offsetRef = { value: 0 };
 
   function readF32(): number {
-    const v = view.getFloat32(offset, true);
-    offset += 4;
+    const v = view.getFloat32(offsetRef.value, true);
+    offsetRef.value += 4;
     return v;
   }
 
-  while (offset < bytes.length) {
-    const cmd = bytes[offset];
-    offset++;
-    if (cmd === 0x00) break; // end marker
+  while (offsetRef.value < bytes.length) {
+    const cmd = bytes[offsetRef.value];
+    offsetRef.value++;
+    if (cmd === 0x00) {break;}
     switch (cmd) {
-      case 0x01: // MOVE_TO
+      case 0x01:
         commands.push({ type: "M", x: readF32(), y: readF32() });
         break;
-      case 0x02: // LINE_TO
+      case 0x02:
         commands.push({ type: "L", x: readF32(), y: readF32() });
         break;
-      case 0x04: // CUBIC_TO
+      case 0x04: {
         commands.push({
           type: "C",
-          x1: readF32(),
-          y1: readF32(),
-          x2: readF32(),
-          y2: readF32(),
-          x: readF32(),
-          y: readF32(),
+          x1: readF32(), y1: readF32(),
+          x2: readF32(), y2: readF32(),
+          x: readF32(), y: readF32(),
         });
         break;
-      case 0x06: // CLOSE
+      }
+      case 0x06:
         commands.push({ type: "Z" });
         break;
       default:
@@ -53,45 +53,46 @@ function decodeBlob(
   return commands;
 }
 
-function computeContourArea(commands: { type: string; x?: number; y?: number }[]): number {
-  // Shoelace formula on the linearized points
+/** Compute contour area using the Shoelace formula */
+function computeContourArea(commands: PathCmd[]): number {
   const points: [number, number][] = [];
   for (const cmd of commands) {
     if (cmd.type === "M" || cmd.type === "L") {
       points.push([cmd.x!, cmd.y!]);
     } else if (cmd.type === "C") {
-      points.push([cmd.x!, cmd.y!]); // Use endpoint only for rough area
+      points.push([cmd.x!, cmd.y!]);
     }
   }
-  if (points.length < 3) return 0;
-  let area = 0;
-  for (let i = 0; i < points.length; i++) {
+  if (points.length < 3) {return 0;}
+  const areaRef = { value: 0 };
+  for (const [i, pt] of points.entries()) {
     const j = (i + 1) % points.length;
-    area += points[i][0] * points[j][1];
-    area -= points[j][0] * points[i][1];
+    areaRef.value += pt[0] * points[j][1];
+    areaRef.value -= points[j][0] * pt[1];
   }
-  return area / 2;
+  return areaRef.value / 2;
 }
 
-function splitContours(commands: any[]): any[][] {
-  const contours: any[][] = [];
-  let current: any[] = [];
+/** Split command array into individual contours */
+function splitContours(commands: PathCmd[]): PathCmd[][] {
+  const contours: PathCmd[][] = [];
+  const currentRef = { value: [] as PathCmd[] };
   for (const cmd of commands) {
-    current.push(cmd);
+    currentRef.value.push(cmd);
     if (cmd.type === "Z") {
-      contours.push(current);
-      current = [];
-    } else if (cmd.type === "M" && current.length > 1) {
-      // M starts new contour if previous didn't have Z
-      const m = current.pop()!;
-      contours.push(current);
-      current = [m];
+      contours.push(currentRef.value);
+      currentRef.value = [];
+    } else if (cmd.type === "M" && currentRef.value.length > 1) {
+      const m = currentRef.value.pop()!;
+      contours.push(currentRef.value);
+      currentRef.value = [m];
     }
   }
-  if (current.length > 0) contours.push(current);
+  if (currentRef.value.length > 0) {contours.push(currentRef.value);}
   return contours;
 }
 
+/** Analyze a .fig file and print blob details */
 async function analyzeFile(filepath: string, label: string) {
   console.log(`\n${"=".repeat(60)}`);
   console.log(`${label}: ${filepath}`);
@@ -101,35 +102,36 @@ async function analyzeFile(filepath: string, label: string) {
   const parsed = await parseFigFile(new Uint8Array(data));
   const { roots } = buildNodeTree(parsed.nodeChanges);
 
-  // Find TEXT nodes
   const canvases = findNodesByType(roots, "CANVAS");
-  let textNodesFound = 0;
+  const textCountRef = { value: 0 };
 
   for (const canvas of canvases) {
-    for (const frame of (canvas as any).children || []) {
-      for (const child of (frame as any).children || []) {
-        const nd = child as any;
-        if (nd.type?.name !== "TEXT") continue;
-        const dtd = nd.derivedTextData;
-        if (!dtd?.glyphs?.length) continue;
+    for (const frame of canvas.children ?? []) {
+      for (const child of frame.children ?? []) {
+        const nd = child as Record<string, unknown>;
+        const nodeType = nd.type as { name?: string } | undefined;
+        if (nodeType?.name !== "TEXT") {continue;}
+        const dtd = nd.derivedTextData as { glyphs?: Array<{ commandsBlob: number; firstCharacter: number; fontSize: number }> } | undefined;
+        if (!dtd?.glyphs?.length) {continue;}
 
-        textNodesFound++;
-        if (textNodesFound > 2) continue; // Only first 2 text nodes
+        textCountRef.value++;
+        if (textCountRef.value > 2) {continue;}
 
-        console.log(`\n  TEXT "${nd.name}" (${nd.textData?.characters || nd.characters || "?"}):`);
+        const td = nd.textData as { characters?: string } | undefined;
+        const chars = td?.characters ?? (nd.characters as string | undefined) ?? "?";
+        console.log(`\n  TEXT "${nd.name}" (${chars}):`);
         console.log(`    glyphs: ${dtd.glyphs.length}`);
 
-        // Analyze first glyph with a multi-contour blob
         for (const glyph of dtd.glyphs.slice(0, 5)) {
           const blobIdx = glyph.commandsBlob;
-          if (blobIdx >= parsed.blobs.length) continue;
+          if (blobIdx >= parsed.blobs.length) {continue;}
           const blob = parsed.blobs[blobIdx];
           const commands = decodeBlob(blob);
 
           const moveCount = commands.filter((c) => c.type === "M").length;
           const closeCount = commands.filter((c) => c.type === "Z").length;
 
-          if (moveCount < 2 && closeCount < 2) continue; // Skip single-contour glyphs
+          if (moveCount < 2 && closeCount < 2) {continue;}
 
           console.log(`\n    Glyph blob[${blobIdx}] (char=${glyph.firstCharacter}, fontSize=${glyph.fontSize}):`);
           console.log(`      Total commands: ${commands.length}`);
@@ -137,19 +139,17 @@ async function analyzeFile(filepath: string, label: string) {
             `      M count: ${moveCount}, Z count: ${closeCount}, L count: ${commands.filter((c) => c.type === "L").length}, C count: ${commands.filter((c) => c.type === "C").length}`,
           );
 
-          // Split and analyze contours
           const contours = splitContours(commands);
-          for (let i = 0; i < contours.length; i++) {
-            const area = computeContourArea(contours[i]);
-            const cmds = contours[i].length;
-            const hasZ = contours[i].some((c: any) => c.type === "Z");
-            const first = contours[i][0];
+          for (const [i, contour] of contours.entries()) {
+            const area = computeContourArea(contour);
+            const cmds = contour.length;
+            const hasZ = contour.some((c) => c.type === "Z");
+            const first = contour[0];
             console.log(
               `      Contour ${i}: ${cmds} cmds, area=${area.toFixed(6)}, ${area > 0 ? "CCW" : "CW"}, hasZ=${hasZ}, starts=(${first.x?.toFixed(4)},${first.y?.toFixed(4)})`,
             );
           }
 
-          // Show first few raw commands
           console.log(
             `      First 5 commands: ${commands
               .slice(0, 5)
@@ -163,18 +163,16 @@ async function analyzeFile(filepath: string, label: string) {
               .join(" ")}`,
           );
 
-          break; // Only first multi-contour glyph
+          break;
         }
       }
     }
   }
 }
 
-// Analyze real Figma file
 const twitterFig = "packages/@aurochs-renderer/figma/fixtures/twitter-ui/twitter_ui.fig";
 if (fs.existsSync(twitterFig)) {
   await analyzeFile(twitterFig, "REAL FIGMA FILE");
 }
 
-// Analyze our generated file
 await analyzeFile("packages/@aurochs-renderer/figma/fixtures/text-webgl/text-webgl.fig", "OUR GENERATED FILE");

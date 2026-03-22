@@ -26,7 +26,7 @@ export function parseColorSchemeAtom(record: PptRecord): ColorScheme {
   }
 
   function readColor(offset: number): string {
-    if (offset + 3 > record.data.byteLength) return "000000";
+    if (offset + 3 > record.data.byteLength) {return "000000";}
     const r = record.data[offset];
     const g = record.data[offset + 1];
     const b = record.data[offset + 2];

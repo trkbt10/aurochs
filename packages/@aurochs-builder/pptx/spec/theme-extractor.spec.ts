@@ -7,10 +7,10 @@
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { extractThemeFromBuffer } from "./theme-extractor";
-import { exportThemeAsPotx } from "@aurochs-builder/pptx/builders";
+import { extractThemeFromBuffer } from "@aurochs-office/pptx/app/theme-extractor";
+import { exportThemeAsPotx } from "../src/builders";
 
-const FIXTURES = resolve(__dirname, "../../../../../fixtures");
+const FIXTURES = resolve(__dirname, "../../../../fixtures");
 
 function loadFixture(relativePath: string): Uint8Array {
   return readFileSync(resolve(FIXTURES, relativePath));
@@ -22,7 +22,7 @@ describe("extractThemeFromBuffer", () => {
     const result = await extractThemeFromBuffer(buffer);
 
     expect(result.success).toBe(true);
-    if (!result.success) return;
+    if (!result.success) {return;}
 
     const { theme, colorMap } = result.data;
 
@@ -51,7 +51,7 @@ describe("extractThemeFromBuffer", () => {
     const result = await extractThemeFromBuffer(buffer);
 
     expect(result.success).toBe(true);
-    if (!result.success) return;
+    if (!result.success) {return;}
 
     expect(typeof result.data.themeName).toBe("string");
     expect(result.data.themeName.length).toBeGreaterThan(0);
@@ -80,7 +80,7 @@ describe("extractThemeFromBuffer", () => {
     // Extract
     const result = await extractThemeFromBuffer(buffer);
     expect(result.success).toBe(true);
-    if (!result.success) return;
+    if (!result.success) {return;}
 
     const { theme, themeName } = result.data;
     expect(themeName).toBe("RoundTrip Test");

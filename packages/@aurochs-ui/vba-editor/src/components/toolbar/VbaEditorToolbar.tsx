@@ -30,6 +30,14 @@ const toolbarStyle: CSSProperties = {
 // Component
 // =============================================================================
 
+
+
+
+
+
+/**
+ * VBA editor toolbar with procedure navigation.
+ */
 export function VbaEditorToolbar({ style }: VbaEditorToolbarProps): ReactNode {
   return (
     <div style={{ ...toolbarStyle, ...style }}>

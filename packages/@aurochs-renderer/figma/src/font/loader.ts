@@ -14,7 +14,7 @@ import type { FontLoadOptions, LoadedFont } from "./types";
  * - Node.js: Load from filesystem (system fonts or bundled fonts)
  * - Browser: Load from Local Font Access API or bundled fonts
  */
-export interface FontLoader {
+export type FontLoader = {
   /**
    * Load a font matching the given options
    *

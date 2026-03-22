@@ -8,8 +8,19 @@
  * 3. Canvas 2D fallback (uploaded as texture) - for missing fonts
  */
 
-import type { TextNode, AffineMatrix, Color, PathContour } from "../scene-graph/types";
+import type { TextNode, Color, PathContour } from "../scene-graph/types";
 import { tessellateContours } from "./tessellation";
+
+/** Tessellate decoration contours or return empty array if none */
+function tessellateDecorationsOrEmpty(
+  contours: readonly PathContour[] | undefined,
+  tolerance: number
+): Float32Array {
+  if (contours) {
+    return tessellateContours(contours, tolerance, true);
+  }
+  return new Float32Array(0);
+}
 
 /**
  * Result of text tessellation
@@ -42,9 +53,7 @@ export function tessellateTextNode(
 
   // Figma glyph blobs use PostScript/CFF winding convention (invertWinding=true)
   const glyphVertices = tessellateContours(node.glyphContours, tolerance, true);
-  const decorationVertices = node.decorationContours
-    ? tessellateContours(node.decorationContours, tolerance, true)
-    : new Float32Array(0);
+  const decorationVertices = tessellateDecorationsOrEmpty(node.decorationContours, tolerance);
 
   return {
     glyphVertices,
@@ -62,28 +71,28 @@ function wrapLine(
   text: string,
   maxWidth: number,
 ): string[] {
-  if (maxWidth <= 0) return [text];
+  if (maxWidth <= 0) {return [text];}
 
   const measured = ctx.measureText(text);
-  if (measured.width <= maxWidth) return [text];
+  if (measured.width <= maxWidth) {return [text];}
 
   const words = text.split(/(\s+)/);
   const lines: string[] = [];
-  let currentLine = "";
+  const currentLineRef = { value: "" };
 
   for (const word of words) {
-    const testLine = currentLine + word;
+    const testLine = currentLineRef.value + word;
     const testWidth = ctx.measureText(testLine).width;
 
-    if (testWidth > maxWidth && currentLine.length > 0) {
-      lines.push(currentLine);
-      currentLine = word.trimStart();
+    if (testWidth > maxWidth && currentLineRef.value.length > 0) {
+      lines.push(currentLineRef.value);
+      currentLineRef.value = word.trimStart();
     } else {
-      currentLine = testLine;
+      currentLineRef.value = testLine;
     }
   }
-  if (currentLine.length > 0) {
-    lines.push(currentLine);
+  if (currentLineRef.value.length > 0) {
+    lines.push(currentLineRef.value);
   }
 
   return lines.length > 0 ? lines : [text];
@@ -101,10 +110,10 @@ function wrapLine(
 export function renderFallbackTextToCanvas(
   node: TextNode
 ): HTMLCanvasElement | null {
-  if (!node.fallbackText) return null;
+  if (!node.fallbackText) {return null;}
 
   const fb = node.fallbackText;
-  if (fb.lines.length === 0) return null;
+  if (fb.lines.length === 0) {return null;}
 
   const canvas = document.createElement("canvas");
   const hasSize = node.width > 0 && node.height > 0;
@@ -113,19 +122,19 @@ export function renderFallbackTextToCanvas(
     canvas.width = Math.ceil(node.width);
     canvas.height = Math.ceil(node.height);
   } else {
-    let maxX = 0;
-    let maxY = 0;
+    const maxXRef = { value: 0 };
+    const maxYRef = { value: 0 };
     for (const line of fb.lines) {
-      maxX = Math.max(maxX, line.x + fb.fontSize * line.text.length * 0.6);
-      maxY = Math.max(maxY, line.y + fb.fontSize);
+      maxXRef.value = Math.max(maxXRef.value, line.x + fb.fontSize * line.text.length * 0.6);
+      maxYRef.value = Math.max(maxYRef.value, line.y + fb.fontSize);
     }
     const padding = fb.fontSize * 0.5;
-    canvas.width = Math.ceil(maxX + padding);
-    canvas.height = Math.ceil(maxY + padding);
+    canvas.width = Math.ceil(maxXRef.value + padding);
+    canvas.height = Math.ceil(maxYRef.value + padding);
   }
 
   const ctx = canvas.getContext("2d");
-  if (!ctx) return null;
+  if (!ctx) {return null;}
 
   // Set font properties
   const fontStyle = fb.fontStyle ?? "normal";
@@ -156,19 +165,19 @@ export function renderFallbackTextToCanvas(
 
   // Render each line, with word wrapping if the node has a fixed width
   const lineHeight = fb.lineHeight;
-  let currentY = fb.lines[0]?.y ?? fb.fontSize;
+  const currentYRef = { value: fb.lines[0]?.y ?? fb.fontSize };
 
   for (const line of fb.lines) {
     if (hasSize && canvas.width > 0) {
       // Word-wrap within the text box width
       const wrappedLines = wrapLine(ctx, line.text, canvas.width - line.x);
       for (const wrappedText of wrappedLines) {
-        ctx.fillText(wrappedText, line.x, currentY);
-        currentY += lineHeight;
+        ctx.fillText(wrappedText, line.x, currentYRef.value);
+        currentYRef.value += lineHeight;
       }
     } else {
       ctx.fillText(line.text, line.x, line.y);
-      currentY = line.y + lineHeight;
+      currentYRef.value = line.y + lineHeight;
     }
   }
 

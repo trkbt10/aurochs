@@ -18,13 +18,14 @@ import { CONSTRAINT_TYPE_VALUES } from "../constants/layout";
  * @param constraintValue  Numeric constraint value (from CONSTRAINT_TYPE_VALUES)
  * @returns New position and dimension for this axis
  */
-export function resolveConstraintAxis(
-  origPos: number,
-  origDim: number,
-  parentOrigDim: number,
-  parentNewDim: number,
-  constraintValue: number,
-): { pos: number; dim: number } {
+export function resolveConstraintAxis(params: {
+  origPos: number;
+  origDim: number;
+  parentOrigDim: number;
+  parentNewDim: number;
+  constraintValue: number;
+}): { pos: number; dim: number } {
+  const { origPos, origDim, parentOrigDim, parentNewDim, constraintValue } = params;
   const delta = parentNewDim - parentOrigDim;
   switch (constraintValue) {
     case CONSTRAINT_TYPE_VALUES.MIN:
@@ -39,7 +40,7 @@ export function resolveConstraintAxis(
       return { pos: leftMargin, dim: Math.max(0, parentNewDim - leftMargin - rightMargin) };
     }
     case CONSTRAINT_TYPE_VALUES.SCALE: {
-      if (parentOrigDim === 0) return { pos: origPos, dim: origDim };
+      if (parentOrigDim === 0) {return { pos: origPos, dim: origDim };}
       const ratio = parentNewDim / parentOrigDim;
       return { pos: origPos * ratio, dim: origDim * ratio };
     }

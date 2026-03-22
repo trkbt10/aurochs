@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+/** @file Tests for effective symbol ID extraction */
 import { extractSymbolIDPair, getEffectiveSymbolID } from "./effective-symbol-id";
 
 describe("extractSymbolIDPair", () => {

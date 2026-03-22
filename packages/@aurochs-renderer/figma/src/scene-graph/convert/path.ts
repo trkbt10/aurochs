@@ -57,13 +57,13 @@ function mapWindingRule(rule: unknown): "nonzero" | "evenodd" {
 export function parseSvgPathD(d: string): PathCommand[] {
   const commands: PathCommand[] = [];
   const re = /([MLHVCQZ])\s*((?:[^MLHVCQZ]*)?)/gi;
-  let match: RegExpExecArray | null;
-  let currentX = 0;
-  let currentY = 0;
+  const matchRef = { value: undefined as RegExpExecArray | null | undefined };
+  const currentXRef = { value: 0 };
+  const currentYRef = { value: 0 };
 
-  while ((match = re.exec(d)) !== null) {
-    const type = match[1].toUpperCase();
-    const args = match[2]
+  while ((matchRef.value = re.exec(d)) !== null) {
+    const type = matchRef.value[1].toUpperCase();
+    const args = matchRef.value[2]
       .trim()
       .split(/[\s,]+/)
       .filter(Boolean)
@@ -71,45 +71,45 @@ export function parseSvgPathD(d: string): PathCommand[] {
 
     switch (type) {
       case "M":
-        currentX = args[0];
-        currentY = args[1];
-        commands.push({ type: "M", x: currentX, y: currentY });
+        currentXRef.value = args[0];
+        currentYRef.value = args[1];
+        commands.push({ type: "M", x: currentXRef.value, y: currentYRef.value });
         break;
       case "L":
-        currentX = args[0];
-        currentY = args[1];
-        commands.push({ type: "L", x: currentX, y: currentY });
+        currentXRef.value = args[0];
+        currentYRef.value = args[1];
+        commands.push({ type: "L", x: currentXRef.value, y: currentYRef.value });
         break;
       case "H":
-        currentX = args[0];
-        commands.push({ type: "L", x: currentX, y: currentY });
+        currentXRef.value = args[0];
+        commands.push({ type: "L", x: currentXRef.value, y: currentYRef.value });
         break;
       case "V":
-        currentY = args[0];
-        commands.push({ type: "L", x: currentX, y: currentY });
+        currentYRef.value = args[0];
+        commands.push({ type: "L", x: currentXRef.value, y: currentYRef.value });
         break;
       case "C":
-        currentX = args[4];
-        currentY = args[5];
+        currentXRef.value = args[4];
+        currentYRef.value = args[5];
         commands.push({
           type: "C",
           x1: args[0],
           y1: args[1],
           x2: args[2],
           y2: args[3],
-          x: currentX,
-          y: currentY,
+          x: currentXRef.value,
+          y: currentYRef.value,
         });
         break;
       case "Q":
-        currentX = args[2];
-        currentY = args[3];
+        currentXRef.value = args[2];
+        currentYRef.value = args[3];
         commands.push({
           type: "Q",
           x1: args[0],
           y1: args[1],
-          x: currentX,
-          y: currentY,
+          x: currentXRef.value,
+          y: currentYRef.value,
         });
         break;
       case "Z":
@@ -136,13 +136,13 @@ export function decodeGeometryToContours(
 
   for (const geom of fillGeometry) {
     const blobIndex = geom.commandsBlob;
-    if (blobIndex === undefined || blobIndex >= blobs.length) continue;
+    if (blobIndex === undefined || blobIndex >= blobs.length) {continue;}
 
     const blob = blobs[blobIndex];
-    if (!blob) continue;
+    if (!blob) {continue;}
 
     const figCommands = decodePathCommands(blob);
-    if (figCommands.length === 0) continue;
+    if (figCommands.length === 0) {continue;}
 
     const commands = figCommands.map(convertFigPathCommand);
     const windingRule = mapWindingRule(geom.windingRule);

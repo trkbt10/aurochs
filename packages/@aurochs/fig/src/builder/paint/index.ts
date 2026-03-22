@@ -21,10 +21,10 @@ export type {
 } from "./types";
 
 // Builders
-export { SolidPaintBuilder, solidPaint, solidPaintHex } from "./solid";
-export { LinearGradientBuilder, linearGradient } from "./linear-gradient";
-export { RadialGradientBuilder, radialGradient } from "./radial-gradient";
-export { AngularGradientBuilder, angularGradient } from "./angular-gradient";
-export { DiamondGradientBuilder, diamondGradient } from "./diamond-gradient";
-export { ImagePaintBuilder, imagePaint } from "./image";
-export { StrokeBuilder, stroke } from "./stroke";
+export { type SolidPaintBuilder, solidPaint, solidPaintHex } from "./solid";
+export { type LinearGradientBuilder, linearGradient } from "./linear-gradient";
+export { type RadialGradientBuilder, radialGradient } from "./radial-gradient";
+export { type AngularGradientBuilder, angularGradient } from "./angular-gradient";
+export { type DiamondGradientBuilder, diamondGradient } from "./diamond-gradient";
+export { type ImagePaintBuilder, imagePaint } from "./image";
+export { type StrokeBuilder, stroke } from "./stroke";

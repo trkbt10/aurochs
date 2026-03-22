@@ -156,7 +156,7 @@ function getScaleMode(paint: FigImagePaint): string {
   const paintData = paint as Record<string, unknown>;
   if (paintData.imageScaleMode) {
     const mode = paintData.imageScaleMode;
-    if (typeof mode === "string") return mode;
+    if (typeof mode === "string") {return mode;}
     if (typeof mode === "object" && mode && "name" in mode) {
       return (mode as { name: string }).name;
     }
@@ -217,10 +217,10 @@ export function convertPaintToFill(paint: FigPaint, images: ReadonlyMap<string, 
     case "IMAGE": {
       const imagePaint = paint as FigImagePaint;
       const imageRef = getImageRef(imagePaint);
-      if (!imageRef) return null;
+      if (!imageRef) {return null;}
 
       const figImage = images.get(imageRef);
-      if (!figImage) return null;
+      if (!figImage) {return null;}
 
       return {
         type: "image",

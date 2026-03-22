@@ -2,10 +2,10 @@
  * @file PPT parser entry point
  */
 
-import { CfbFormatError, openCfb, type CfbWarning } from "@aurochs-office/cfb";
+import { openCfb, type CfbWarning } from "@aurochs-office/cfb";
 import type { ZipPackage } from "@aurochs/zip";
 import type { PptParseContext, PptParseMode } from "./parse-context";
-import { isStrict, warnOrThrow } from "./parse-context";
+import { isStrict } from "./parse-context";
 import type { PptWarningSink, PptWarning } from "./warnings";
 import { createPptWarningCollector } from "./warnings";
 import { parsePptDocumentStream } from "./stream/ppt-stream";
@@ -26,7 +26,7 @@ export type ParsePptResult = {
 };
 
 function createCfbWarningSink(warn?: PptWarningSink) {
-  if (!warn) return undefined;
+  if (!warn) {return undefined;}
   return (warning: CfbWarning): void => {
     const base = {
       where: `CFB:${warning.where}`,
@@ -44,7 +44,7 @@ function createCfbWarningSink(warn?: PptWarningSink) {
       MINISTREAM_TRUNCATED: "CFB_MINISTREAM_TRUNCATED",
     };
     const code = codeMapping[warning.code] as PptWarning["code"] | undefined;
-    if (code) warn({ code, ...base });
+    if (code) {warn({ code, ...base });}
   };
 }
 
@@ -52,11 +52,16 @@ function createContext(options?: ParsePptOptions): PptParseContext {
   return { mode: options?.mode ?? "strict", ...(options?.onWarning ? { warn: options.onWarning } : {}) };
 }
 
+/** Handle error from stream read attempt by returning undefined. */
+function handleStreamReadError(_error: unknown): undefined {
+  return undefined;
+}
+
 function readStreamSafe(cfb: ReturnType<typeof openCfb>, path: string[]): Uint8Array | undefined {
   try {
     return cfb.readStream(path);
-  } catch {
-    return undefined;
+  } catch (error) {
+    return handleStreamReadError(error);
   }
 }
 

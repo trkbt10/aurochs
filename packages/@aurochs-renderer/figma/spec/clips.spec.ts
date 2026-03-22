@@ -11,7 +11,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, it, expect, beforeAll } from "vitest";
 import { renderSceneGraphToSvg } from "../src/svg/scene-renderer";
 import {
   type FixtureData,
@@ -53,10 +52,10 @@ const FRAME_NAMES = [
 // Data Loading
 // =============================================================================
 
-let cachedData: FixtureData | null = null;
+const cachedData: FixtureData | null = null;
 
 async function loadFixtures() {
-  if (cachedData) return cachedData;
+  if (cachedData) {return cachedData;}
   cachedData = await loadFigFixture(FIG_FILE);
   return cachedData;
 }
@@ -112,10 +111,10 @@ describe("Clip rendering (SVG renderer vs Figma export)", () => {
 
     for (const frameName of FRAME_NAMES) {
       const frame = data.frames.get(frameName);
-      if (!frame) continue;
+      if (!frame) {continue;}
 
       const actualPath = path.join(ACTUAL_DIR, `${frameName}.svg`);
-      if (!fs.existsSync(actualPath)) continue;
+      if (!fs.existsSync(actualPath)) {continue;}
 
       const sceneGraph = buildFrameSceneGraph(frame, data);
       const renderedSvg = renderSceneGraphToSvg(sceneGraph) as string;
@@ -128,10 +127,10 @@ describe("Clip rendering (SVG renderer vs Figma export)", () => {
     }
 
     console.log("\n=== Clip Rendering: Figma vs SVG Renderer ===");
-    let total = 0;
+    const totalRef = { value: 0 };
     for (const r of results) {
       console.log(`  ${r.frameName}: ${r.diffPercent.toFixed(1)}%`);
-      total += r.diffPercent;
+      totalRef.value += r.diffPercent;
     }
     if (results.length > 0) {
       console.log(`  Average: ${(total / results.length).toFixed(1)}%`);

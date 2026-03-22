@@ -32,6 +32,17 @@ function isSameAddress(a: CellAddress, b: CellAddress): boolean {
   return a.row === b.row && a.col === b.col;
 }
 
+function resolveComments(
+  existing: readonly XlsxComment[],
+  existingIndex: number,
+  comment: XlsxComment,
+): readonly XlsxComment[] {
+  if (existingIndex >= 0) {
+    return existing.map((c, idx) => (idx === existingIndex ? comment : c));
+  }
+  return [...existing, comment];
+}
+
 /**
  * Add or update a comment for a cell
  */
@@ -47,14 +58,7 @@ export function setComment(
   // Check if comment already exists for this cell
   const existingIndex = existing.findIndex((c) => isSameAddress(c.address, comment.address));
 
-  let newComments: readonly XlsxComment[];
-  if (existingIndex >= 0) {
-    // Update existing comment
-    newComments = existing.map((c, idx) => (idx === existingIndex ? comment : c));
-  } else {
-    // Add new comment
-    newComments = [...existing, comment];
-  }
+  const newComments = resolveComments(existing, existingIndex, comment);
 
   return updateSheet(workbook, sheetIndex, { comments: newComments });
 }

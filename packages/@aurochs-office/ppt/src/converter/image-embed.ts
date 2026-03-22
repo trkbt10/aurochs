@@ -31,26 +31,27 @@ export type ImageEmbedResult = {
  * Write all images used by a slide into the PPTX package
  * and return relationship info.
  */
-export function embedSlideImages(
-  pkg: ZipPackage,
-  images: readonly PptEmbeddedImage[],
-  usedImageIndices: ReadonlySet<number>,
-  slideIndex: number,
-  startRId: number,
-): ImageEmbedResult {
+export function embedSlideImages(options: {
+  pkg: ZipPackage;
+  images: readonly PptEmbeddedImage[];
+  usedImageIndices: ReadonlySet<number>;
+  slideIndex: number;
+  startRId: number;
+}): ImageEmbedResult {
+  const { pkg, images, usedImageIndices, slideIndex, startRId } = options;
   const imageMap = new Map<number, { rId: string; mediaPath: string }>();
   const extensions = new Set<string>();
-  let rIdCounter = startRId;
+  const rIdRef = { value: startRId };
 
   for (const idx of usedImageIndices) {
     const image = images.find((img) => img.index === idx);
-    if (!image) continue;
+    if (!image) {continue;}
 
     const ext = contentTypeToExtension(image.contentType);
     extensions.add(ext);
 
     const mediaPath = `ppt/media/image${slideIndex}_${idx}.${ext}`;
-    const rId = `rId${rIdCounter++}`;
+    const rId = `rId${rIdRef.value++}`;
 
     // Write image data to ZIP (copy to plain ArrayBuffer to avoid SharedArrayBuffer issues)
     const buf = new Uint8Array(image.data.byteLength);

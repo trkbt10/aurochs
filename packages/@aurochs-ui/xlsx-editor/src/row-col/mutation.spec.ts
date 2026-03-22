@@ -347,15 +347,15 @@ describe("xlsx-editor/row-col/mutation", () => {
   });
 
   it("groupRows caps outline level at 7", () => {
-    let worksheet = createWorksheet(
+    const wsRef = { value: createWorksheet(
       new Map([[1, [cellAt(1, 1, { type: "string", value: "A1" })]]]),
-    );
+    ) };
 
     for (let i = 0; i < 10; i++) {
-      worksheet = groupRows(worksheet, rowIdx(1), 1);
+      wsRef.value = groupRows(wsRef.value, rowIdx(1), 1);
     }
 
-    expect(worksheet.rows[0]?.outlineLevel).toBe(7);
+    expect(wsRef.value.rows[0]?.outlineLevel).toBe(7);
   });
 
   it("ungroupRows decreases outline level on rows", () => {
@@ -418,15 +418,15 @@ describe("xlsx-editor/row-col/mutation", () => {
   });
 
   it("groupColumns caps outline level at 7", () => {
-    let worksheet = createWorksheet(
+    const wsRef = { value: createWorksheet(
       new Map([[1, [cellAt(1, 1, { type: "string", value: "A1" })]]]),
-    );
+    ) };
 
     for (let i = 0; i < 10; i++) {
-      worksheet = groupColumns(worksheet, colIdx(1), 1);
+      wsRef.value = groupColumns(wsRef.value, colIdx(1), 1);
     }
 
-    const colDef = worksheet.columns?.find((c) => c.min <= colIdx(1) && c.max >= colIdx(1));
+    const colDef = wsRef.value.columns?.find((c) => c.min <= colIdx(1) && c.max >= colIdx(1));
     expect(colDef?.outlineLevel).toBe(7);
   });
 

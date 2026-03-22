@@ -34,7 +34,7 @@ export {
 } from "./primitives";
 
 // SVG context
-export type { DefsCollector, SvgRenderContext, SvgRenderContextConfig } from "./context";
+export type { DefsCollector, SvgRenderContext } from "./context";
 export { createDefsCollector, createSvgRenderContext, createEmptySvgRenderContext } from "./context";
 
 // SVG fill rendering

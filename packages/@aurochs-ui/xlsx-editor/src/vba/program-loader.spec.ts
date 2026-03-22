@@ -2,7 +2,6 @@
  * @file VBA Program Loader Tests
  */
 
-import { describe, it, expect, vi } from "vitest";
 import type { ZipPackage } from "@aurochs/zip";
 import { loadVbaProgramFromPackage, hasVbaProject } from "./program-loader";
 
@@ -85,7 +84,9 @@ describe("loadVbaProgramFromPackage", () => {
   });
 
   it("should return undefined and log warning for invalid vbaProject.bin content", () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warnCalls: unknown[][] = [];
+    const originalWarn = console.warn;
+    console.warn = (...args: unknown[]) => { warnCalls.push(args); };
 
     const pkg = createMockZipPackage({
       hasVbaProject: true,
@@ -95,11 +96,10 @@ describe("loadVbaProgramFromPackage", () => {
     const result = loadVbaProgramFromPackage(pkg);
 
     expect(result).toBeUndefined();
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining("Failed to parse vbaProject.bin:"),
-      expect.any(String)
-    );
+    expect(warnCalls.length).toBeGreaterThan(0);
+    const firstCall = warnCalls[0];
+    expect(typeof firstCall[0] === "string" && firstCall[0].includes("Failed to parse vbaProject.bin:")).toBe(true);
 
-    warnSpy.mockRestore();
+    console.warn = originalWarn;
   });
 });

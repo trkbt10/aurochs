@@ -36,12 +36,12 @@ async function generateComponentFixtures(): Promise<void> {
   const docID = figFile.addDocument("Components");
   const canvasID = figFile.addCanvas(docID, "Components Canvas");
 
-  let nextID = 10;
+  const nextIDRef = { value: 10 };
 
   // ==========================================================================
   // Symbol 1: Basic Button Component
   // ==========================================================================
-  const buttonSymbolID = nextID++;
+  const buttonSymbolID = nextIDRef.value++;
   figFile.addSymbol(
     symbolNode(buttonSymbolID, canvasID)
       .name("Button")
@@ -59,7 +59,7 @@ async function generateComponentFixtures(): Promise<void> {
   );
 
   // Button background rect
-  const buttonBgID = nextID++;
+  const buttonBgID = nextIDRef.value++;
   figFile.addRoundedRectangle(
     roundedRectNode(buttonBgID, buttonSymbolID)
       .name("bg")
@@ -71,7 +71,7 @@ async function generateComponentFixtures(): Promise<void> {
   );
 
   // Button text
-  const buttonTextID = nextID++;
+  const buttonTextID = nextIDRef.value++;
   figFile.addTextNode(
     textNode(buttonTextID, buttonSymbolID)
       .name("label")
@@ -87,7 +87,7 @@ async function generateComponentFixtures(): Promise<void> {
   // ==========================================================================
   // Frame 1: Single Instance
   // ==========================================================================
-  const frame1ID = nextID++;
+  const frame1ID = nextIDRef.value++;
   figFile.addFrame(
     frameNode(frame1ID, canvasID)
       .name("instance-single")
@@ -99,7 +99,7 @@ async function generateComponentFixtures(): Promise<void> {
       .build(),
   );
 
-  const instance1ID = nextID++;
+  const instance1ID = nextIDRef.value++;
   figFile.addInstance(
     instanceNode(instance1ID, frame1ID, buttonSymbolID).name("Button Instance").size(120, 40).position(20, 20).build(),
   );
@@ -107,7 +107,7 @@ async function generateComponentFixtures(): Promise<void> {
   // ==========================================================================
   // Frame 2: Multiple Instances
   // ==========================================================================
-  const frame2ID = nextID++;
+  const frame2ID = nextIDRef.value++;
   figFile.addFrame(
     frameNode(frame2ID, canvasID)
       .name("instance-multi")
@@ -123,7 +123,7 @@ async function generateComponentFixtures(): Promise<void> {
   );
 
   for (let i = 0; i < 3; i++) {
-    const instanceID = nextID++;
+    const instanceID = nextIDRef.value++;
     figFile.addInstance(
       instanceNode(instanceID, frame2ID, buttonSymbolID)
         .name(`Button ${i + 1}`)
@@ -136,7 +136,7 @@ async function generateComponentFixtures(): Promise<void> {
   // ==========================================================================
   // Frame 3: Instance with Override
   // ==========================================================================
-  const frame3ID = nextID++;
+  const frame3ID = nextIDRef.value++;
   figFile.addFrame(
     frameNode(frame3ID, canvasID)
       .name("instance-override-fill")
@@ -152,13 +152,13 @@ async function generateComponentFixtures(): Promise<void> {
   );
 
   // Original color instance
-  const overrideInstance1ID = nextID++;
+  const overrideInstance1ID = nextIDRef.value++;
   figFile.addInstance(
     instanceNode(overrideInstance1ID, frame3ID, buttonSymbolID).name("Original").size(120, 40).position(20, 20).build(),
   );
 
   // Red override instance
-  const overrideInstance2ID = nextID++;
+  const overrideInstance2ID = nextIDRef.value++;
   figFile.addInstance(
     instanceNode(overrideInstance2ID, frame3ID, buttonSymbolID)
       .name("Red Override")
@@ -171,7 +171,7 @@ async function generateComponentFixtures(): Promise<void> {
   // ==========================================================================
   // Symbol 2: Card Component (for nesting)
   // ==========================================================================
-  const cardSymbolID = nextID++;
+  const cardSymbolID = nextIDRef.value++;
   figFile.addSymbol(
     symbolNode(cardSymbolID, canvasID)
       .name("Card")
@@ -187,7 +187,7 @@ async function generateComponentFixtures(): Promise<void> {
   );
 
   // Card title
-  const cardTitleID = nextID++;
+  const cardTitleID = nextIDRef.value++;
   figFile.addTextNode(
     textNode(cardTitleID, cardSymbolID)
       .name("title")
@@ -201,7 +201,7 @@ async function generateComponentFixtures(): Promise<void> {
   );
 
   // Nested button instance inside card symbol
-  const nestedButtonID = nextID++;
+  const nestedButtonID = nextIDRef.value++;
   figFile.addInstance(
     instanceNode(nestedButtonID, cardSymbolID, buttonSymbolID).name("action").size(120, 40).position(16, 44).build(),
   );
@@ -209,7 +209,7 @@ async function generateComponentFixtures(): Promise<void> {
   // ==========================================================================
   // Frame 4: Nested Components
   // ==========================================================================
-  const frame4ID = nextID++;
+  const frame4ID = nextIDRef.value++;
   figFile.addFrame(
     frameNode(frame4ID, canvasID)
       .name("instance-nested")
@@ -221,7 +221,7 @@ async function generateComponentFixtures(): Promise<void> {
       .build(),
   );
 
-  const cardInstanceID = nextID++;
+  const cardInstanceID = nextIDRef.value++;
   figFile.addInstance(
     instanceNode(cardInstanceID, frame4ID, cardSymbolID).name("Card Instance").size(180, 100).position(20, 20).build(),
   );
@@ -229,7 +229,7 @@ async function generateComponentFixtures(): Promise<void> {
   // ==========================================================================
   // Frame 5: Instances in Auto-Layout
   // ==========================================================================
-  const frame5ID = nextID++;
+  const frame5ID = nextIDRef.value++;
   figFile.addFrame(
     frameNode(frame5ID, canvasID)
       .name("instance-in-autolayout")
@@ -247,7 +247,7 @@ async function generateComponentFixtures(): Promise<void> {
   );
 
   for (let i = 0; i < 3; i++) {
-    const alInstanceID = nextID++;
+    const alInstanceID = nextIDRef.value++;
     figFile.addInstance(
       instanceNode(alInstanceID, frame5ID, buttonSymbolID)
         .name(`Action ${i + 1}`)
@@ -261,7 +261,7 @@ async function generateComponentFixtures(): Promise<void> {
   // ==========================================================================
   // Symbol 3: Simple Icon Component
   // ==========================================================================
-  const iconSymbolID = nextID++;
+  const iconSymbolID = nextIDRef.value++;
   figFile.addSymbol(
     symbolNode(iconSymbolID, canvasID)
       .name("Icon")
@@ -276,7 +276,7 @@ async function generateComponentFixtures(): Promise<void> {
   // ==========================================================================
   // Frame 6: Multiple Icon Instances
   // ==========================================================================
-  const frame6ID = nextID++;
+  const frame6ID = nextIDRef.value++;
   figFile.addFrame(
     frameNode(frame6ID, canvasID)
       .name("instance-icons")
@@ -294,7 +294,7 @@ async function generateComponentFixtures(): Promise<void> {
   );
 
   for (let i = 0; i < 5; i++) {
-    const iconInstanceID = nextID++;
+    const iconInstanceID = nextIDRef.value++;
     figFile.addInstance(
       instanceNode(iconInstanceID, frame6ID, iconSymbolID)
         .name(`icon-${i + 1}`)

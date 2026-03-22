@@ -5,7 +5,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, it, expect, beforeAll } from "vitest";
 import { Resvg } from "@resvg/resvg-js";
 import pixelmatch from "pixelmatch";
 import { PNG } from "pngjs";
@@ -48,38 +47,40 @@ function svgToPng(svg: string): Buffer {
 /**
  * Font loader that uses the official Inter font
  */
-class OfficialInterFontLoader implements FontLoader {
-  private font: ReturnType<typeof parseFont> | null = null;
+function createOfficialInterFontLoader(): FontLoader {
+  const fontRef = { value: null as ReturnType<typeof parseFont> | null };
 
-  async loadFont(options: FontLoadOptions): Promise<LoadedFont | undefined> {
-    if (!this.font) {
-      if (!fs.existsSync(OFFICIAL_INTER_PATH)) {
-        console.log("Official Inter font not found at:", OFFICIAL_INTER_PATH);
-        return undefined;
+  return {
+    async loadFont(options: FontLoadOptions): Promise<LoadedFont | undefined> {
+      if (!fontRef.value) {
+        if (!fs.existsSync(OFFICIAL_INTER_PATH)) {
+          console.log("Official Inter font not found at:", OFFICIAL_INTER_PATH);
+          return undefined;
+        }
+        const data = fs.readFileSync(OFFICIAL_INTER_PATH);
+        fontRef.value = parseFont(data.buffer as ArrayBuffer);
       }
-      const data = fs.readFileSync(OFFICIAL_INTER_PATH);
-      this.font = parseFont(data.buffer as ArrayBuffer);
-    }
 
-    return {
-      font: this.font,
-      family: "Inter",
-      weight: options.weight ?? 400,
-      style: options.style ?? "normal",
-    };
-  }
+      return {
+        font: fontRef.value,
+        family: "Inter",
+        weight: options.weight ?? 400,
+        style: options.style ?? "normal",
+      };
+    },
 
-  async isFontAvailable(family: string): Promise<boolean> {
-    return family.toLowerCase() === "inter";
-  }
+    async isFontAvailable(family: string): Promise<boolean> {
+      return family.toLowerCase() === "inter";
+    },
+  };
 }
 
-let parsedData: ParsedData | null = null;
-let fontLoader: OfficialInterFontLoader | null = null;
+const parsedDataRef = { value: null as ParsedData | null };
+const fontLoaderRef = { value: null as FontLoader | null };
 
-async function setup(): Promise<{ data: ParsedData; fontLoader: OfficialInterFontLoader }> {
-  if (parsedData && fontLoader) {
-    return { data: parsedData, fontLoader };
+async function setup(): Promise<{ data: ParsedData; fontLoader: FontLoader }> {
+  if (parsedDataRef.value && fontLoaderRef.value) {
+    return { data: parsedDataRef.value, fontLoader: fontLoaderRef.value };
   }
 
   const fileData = fs.readFileSync(FIG_FILE);
@@ -105,38 +106,38 @@ async function setup(): Promise<{ data: ParsedData; fontLoader: OfficialInterFon
     }
   }
 
-  parsedData = { frames, blobs: parsed.blobs };
-  fontLoader = new OfficialInterFontLoader();
+  parsedDataRef.value = { frames, blobs: parsed.blobs };
+  fontLoaderRef.value = createOfficialInterFontLoader();
 
-  return { data: parsedData, fontLoader };
+  return { data: parsedDataRef.value, fontLoader: fontLoaderRef.value };
 }
 
 describe("Official Inter font tests", () => {
-  let data: ParsedData;
-  let loader: OfficialInterFontLoader;
+  const dataRef = { value: undefined as ParsedData | undefined };
+  const loaderRef = { value: undefined as FontLoader | undefined };
 
   beforeAll(async () => {
     const result = await setup();
-    data = result.data;
-    loader = result.fontLoader;
+    dataRef.value = result.data;
+    loaderRef.value = result.fontLoader;
   });
 
   it("tests size-64 with official Inter font", async () => {
-    const frame = data.frames.get("size-64");
+    const frame = dataRef.value.frames.get("size-64");
     expect(frame).toBeDefined();
-    if (!frame || !frame.textNode) return;
+    if (!frame || !frame.textNode) {return;}
 
     const actualPath = path.join(ACTUAL_SVG_DIR, "size-64.svg");
-    if (!fs.existsSync(actualPath)) return;
+    if (!fs.existsSync(actualPath)) {return;}
 
     const ctx = createFigSvgRenderContext({
       canvasSize: { width: frame.size.width, height: frame.size.height },
-      blobs: data.blobs,
+      blobs: dataRef.value.blobs,
     });
 
     const pathCtx: PathRenderContext = {
       ...ctx,
-      fontLoader: loader,
+      fontLoader: loaderRef.value,
     };
 
     const pathSvg = await renderTextNodeAsPath(frame.textNode, pathCtx);
@@ -170,21 +171,21 @@ ${pathSvg}
   });
 
   it("tests LEFT-TOP with official Inter font", async () => {
-    const frame = data.frames.get("LEFT-TOP");
+    const frame = dataRef.value.frames.get("LEFT-TOP");
     expect(frame).toBeDefined();
-    if (!frame || !frame.textNode) return;
+    if (!frame || !frame.textNode) {return;}
 
     const actualPath = path.join(ACTUAL_SVG_DIR, "LEFT-TOP.svg");
-    if (!fs.existsSync(actualPath)) return;
+    if (!fs.existsSync(actualPath)) {return;}
 
     const ctx = createFigSvgRenderContext({
       canvasSize: { width: frame.size.width, height: frame.size.height },
-      blobs: data.blobs,
+      blobs: dataRef.value.blobs,
     });
 
     const pathCtx: PathRenderContext = {
       ...ctx,
-      fontLoader: loader,
+      fontLoader: loaderRef.value,
     };
 
     const pathSvg = await renderTextNodeAsPath(frame.textNode, pathCtx);
@@ -218,21 +219,21 @@ ${pathSvg}
   });
 
   it("tests 2-lines with official Inter font", async () => {
-    const frame = data.frames.get("2-lines");
+    const frame = dataRef.value.frames.get("2-lines");
     expect(frame).toBeDefined();
-    if (!frame || !frame.textNode) return;
+    if (!frame || !frame.textNode) {return;}
 
     const actualPath = path.join(ACTUAL_SVG_DIR, "2-lines.svg");
-    if (!fs.existsSync(actualPath)) return;
+    if (!fs.existsSync(actualPath)) {return;}
 
     const ctx = createFigSvgRenderContext({
       canvasSize: { width: frame.size.width, height: frame.size.height },
-      blobs: data.blobs,
+      blobs: dataRef.value.blobs,
     });
 
     const pathCtx: PathRenderContext = {
       ...ctx,
-      fontLoader: loader,
+      fontLoader: loaderRef.value,
     };
 
     const pathSvg = await renderTextNodeAsPath(frame.textNode, pathCtx);

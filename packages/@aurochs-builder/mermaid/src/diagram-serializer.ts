@@ -21,21 +21,18 @@ function inferDirection(shapes: readonly DiagramShapeInput[]): "TD" | "LR" {
   }
 
   // Compute bounding box of all shapes
-  let minX = Infinity;
-  let maxX = -Infinity;
-  let minY = Infinity;
-  let maxY = -Infinity;
+  const bounds = { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity };
 
   for (const s of withBounds) {
     const b = s.bounds!;
-    minX = Math.min(minX, b.x);
-    maxX = Math.max(maxX, b.x + b.width);
-    minY = Math.min(minY, b.y);
-    maxY = Math.max(maxY, b.y + b.height);
+    bounds.minX = Math.min(bounds.minX, b.x);
+    bounds.maxX = Math.max(bounds.maxX, b.x + b.width);
+    bounds.minY = Math.min(bounds.minY, b.y);
+    bounds.maxY = Math.max(bounds.maxY, b.y + b.height);
   }
 
-  const spanX = maxX - minX;
-  const spanY = maxY - minY;
+  const spanX = bounds.maxX - bounds.minX;
+  const spanY = bounds.maxY - bounds.minY;
 
   return spanY >= spanX ? "TD" : "LR";
 }

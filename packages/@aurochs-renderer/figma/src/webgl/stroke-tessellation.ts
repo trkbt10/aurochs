@@ -24,15 +24,15 @@ import { flattenPathCommands, triangulate } from "./tessellation";
  */
 function thickenPolyline(points: readonly number[], halfWidth: number): Float32Array {
   const n = points.length >> 1;
-  if (n < 2) return new Float32Array(0);
+  if (n < 2) {return new Float32Array(0);}
 
   // Compute per-vertex normals (averaged from adjacent segments)
   const normals: number[] = [];
 
   for (let i = 0; i < n; i++) {
-    let nx = 0;
-    let ny = 0;
-    let count = 0;
+    const nxRef = { value: 0 };
+    const nyRef = { value: 0 };
+    const countRef = { value: 0 };
 
     // Previous segment normal
     if (i > 0) {
@@ -40,9 +40,9 @@ function thickenPolyline(points: readonly number[], halfWidth: number): Float32A
       const dy = points[i * 2 + 1] - points[(i - 1) * 2 + 1];
       const len = Math.sqrt(dx * dx + dy * dy);
       if (len > 0) {
-        nx += -dy / len;
-        ny += dx / len;
-        count++;
+        nxRef.value += -dy / len;
+        nyRef.value += dx / len;
+        countRef.value++;
       }
     }
 
@@ -52,24 +52,24 @@ function thickenPolyline(points: readonly number[], halfWidth: number): Float32A
       const dy = points[(i + 1) * 2 + 1] - points[i * 2 + 1];
       const len = Math.sqrt(dx * dx + dy * dy);
       if (len > 0) {
-        nx += -dy / len;
-        ny += dx / len;
-        count++;
+        nxRef.value += -dy / len;
+        nyRef.value += dx / len;
+        countRef.value++;
       }
     }
 
-    if (count > 0) {
-      nx /= count;
-      ny /= count;
+    if (countRef.value > 0) {
+      nxRef.value /= countRef.value;
+      nyRef.value /= countRef.value;
       // Normalize the averaged normal
-      const nlen = Math.sqrt(nx * nx + ny * ny);
+      const nlen = Math.sqrt(nxRef.value * nxRef.value + nyRef.value * nyRef.value);
       if (nlen > 0) {
-        nx /= nlen;
-        ny /= nlen;
+        nxRef.value /= nlen;
+        nyRef.value /= nlen;
       }
     }
 
-    normals.push(nx, ny);
+    normals.push(nxRef.value, nyRef.value);
   }
 
   // Generate quads (2 triangles each)
@@ -119,18 +119,15 @@ function thickenPolyline(points: readonly number[], halfWidth: number): Float32A
  * @returns Float32Array of triangle vertices
  */
 export function tessellateRectStroke(
-  w: number,
-  h: number,
-  cornerRadius: number,
-  strokeWidth: number
+  { w, h, cornerRadius, strokeWidth }: { w: number; h: number; cornerRadius: number; strokeWidth: number; }
 ): Float32Array {
   const hw = strokeWidth / 2;
 
   if (!cornerRadius || cornerRadius <= 0) {
     // Simple rectangle: generate outer and inner rect, triangulate the ring
     return tessellateRing(
-      rectPoints(w + hw * 2, h + hw * 2, -hw, -hw),
-      rectPoints(w - hw * 2, h - hw * 2, hw, hw)
+      rectPoints({ w: w + hw * 2, h: h + hw * 2, offX: -hw, offY: -hw }),
+      rectPoints({ w: w - hw * 2, h: h - hw * 2, offX: hw, offY: hw })
     );
   }
 
@@ -145,13 +142,13 @@ export function tessellateRectStroke(
 
   if (innerW <= 0 || innerH <= 0) {
     // Stroke is thicker than the shape, just fill the outer
-    const outer = roundedRectPoints(outerW, outerH, outerR, -hw, -hw, segments);
+    const outer = roundedRectPoints({ w: outerW, h: outerH, r: outerR, offX: -hw, offY: -hw, segments });
     const indices = triangulate(outer);
     return indicesToVertices(outer, indices);
   }
 
-  const outer = roundedRectPoints(outerW, outerH, outerR, -hw, -hw, segments);
-  const inner = roundedRectPoints(innerW, innerH, innerR, hw, hw, segments);
+  const outer = roundedRectPoints({ w: outerW, h: outerH, r: outerR, offX: -hw, offY: -hw, segments });
+  const inner = roundedRectPoints({ w: innerW, h: innerH, r: innerR, offX: hw, offY: hw, segments });
   return tessellateRing(outer, inner);
 }
 
@@ -163,12 +160,7 @@ export function tessellateRectStroke(
  * Tessellate an ellipse stroke as outer ring minus inner ring.
  */
 export function tessellateEllipseStroke(
-  cx: number,
-  cy: number,
-  rx: number,
-  ry: number,
-  strokeWidth: number,
-  segments: number = 64
+  { cx, cy, rx, ry, strokeWidth, segments = 64 }: { cx: number; cy: number; rx: number; ry: number; strokeWidth: number; segments?: number; }
 ): Float32Array {
   const hw = strokeWidth / 2;
   const outerRx = rx + hw;
@@ -178,13 +170,13 @@ export function tessellateEllipseStroke(
 
   if (innerRx <= 0 || innerRy <= 0) {
     // Stroke fills the entire ellipse
-    const outer = ellipsePoints(cx, cy, outerRx, outerRy, segments);
+    const outer = ellipsePoints({ cx, cy, rx: outerRx, ry: outerRy, segments });
     const indices = triangulate(outer);
     return indicesToVertices(outer, indices);
   }
 
-  const outer = ellipsePoints(cx, cy, outerRx, outerRy, segments);
-  const inner = ellipsePoints(cx, cy, innerRx, innerRy, segments);
+  const outer = ellipsePoints({ cx, cy, rx: outerRx, ry: outerRy, segments });
+  const inner = ellipsePoints({ cx, cy, rx: innerRx, ry: innerRy, segments });
   return tessellateRing(outer, inner);
 }
 
@@ -202,26 +194,26 @@ export function tessellatePathStroke(
 ): Float32Array {
   const halfWidth = strokeWidth / 2;
   const allVertices: Float32Array[] = [];
-  let totalLength = 0;
+  const totalLengthRef = { value: 0 };
 
   for (const contour of contours) {
     const flatCoords = flattenPathCommands(contour.commands, tolerance);
-    if (flatCoords.length < 4) continue;
+    if (flatCoords.length < 4) {continue;}
 
     const vertices = thickenPolyline(flatCoords, halfWidth);
     if (vertices.length > 0) {
       allVertices.push(vertices);
-      totalLength += vertices.length;
+      totalLengthRef.value += vertices.length;
     }
   }
 
-  if (allVertices.length === 0) return new Float32Array(0);
+  if (allVertices.length === 0) {return new Float32Array(0);}
 
-  const result = new Float32Array(totalLength);
-  let offset = 0;
+  const result = new Float32Array(totalLengthRef.value);
+  const offsetRef = { value: 0 };
   for (const vertices of allVertices) {
-    result.set(vertices, offset);
-    offset += vertices.length;
+    result.set(vertices, offsetRef.value);
+    offsetRef.value += vertices.length;
   }
   return result;
 }
@@ -230,7 +222,9 @@ export function tessellatePathStroke(
 // Helpers
 // =============================================================================
 
-function rectPoints(w: number, h: number, offX: number, offY: number): number[] {
+function rectPoints(
+  { w, h, offX, offY }: { w: number; h: number; offX: number; offY: number; }
+): number[] {
   return [
     offX, offY,
     offX + w, offY,
@@ -240,12 +234,7 @@ function rectPoints(w: number, h: number, offX: number, offY: number): number[] 
 }
 
 function roundedRectPoints(
-  w: number,
-  h: number,
-  r: number,
-  offX: number,
-  offY: number,
-  segments: number
+  { w, h, r, offX, offY, segments }: { w: number; h: number; r: number; offX: number; offY: number; segments: number; }
 ): number[] {
   const cr = Math.min(r, w / 2, h / 2);
   const points: number[] = [];
@@ -289,7 +278,9 @@ function roundedRectPoints(
   return points;
 }
 
-function ellipsePoints(cx: number, cy: number, rx: number, ry: number, segments: number): number[] {
+function ellipsePoints(
+  { cx, cy, rx, ry, segments }: { cx: number; cy: number; rx: number; ry: number; segments: number; }
+): number[] {
   const points: number[] = [];
   for (let i = 0; i < segments; i++) {
     const angle = (2 * Math.PI * i) / segments;

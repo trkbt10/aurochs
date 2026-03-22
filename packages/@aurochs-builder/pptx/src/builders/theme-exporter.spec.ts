@@ -10,7 +10,7 @@ import type { Theme } from "@aurochs-office/pptx/domain/theme/types";
 import { buildThemeXml } from "./theme-exporter";
 import { getByPath, getAttr, getChild, isXmlElement } from "@aurochs/xml";
 import { EMPTY_FONT_SCHEME } from "@aurochs-office/ooxml/domain/font-scheme";
-import { createElement } from "@aurochs/xml";
+import { px } from "@aurochs-office/drawing-ml/domain/units";
 
 function minimalTheme(): Theme {
   return {
@@ -23,7 +23,7 @@ function minimalTheme(): Theme {
     fontScheme: { majorFont: { latin: "Calibri Light" }, minorFont: { latin: "Calibri" } },
     formatScheme: {
       fillStyles: [{ type: "solidFill", color: { spec: { type: "scheme", value: "phClr" } } }],
-      lineStyles: [{ width: 0.5 as any, cap: "flat", compound: "sng", alignment: "ctr", fill: { type: "solidFill", color: { spec: { type: "scheme", value: "phClr" } } }, dash: "solid", join: "round" }],
+      lineStyles: [{ width: px(0.5), cap: "flat", compound: "sng", alignment: "ctr", fill: { type: "solidFill", color: { spec: { type: "scheme", value: "phClr" } } }, dash: "solid", join: "round" }],
       effectStyles: [undefined],
       bgFillStyles: [{ type: "solidFill", color: { spec: { type: "scheme", value: "phClr" } } }],
     },

@@ -12,6 +12,34 @@ import type { FontLoader } from "../../font/loader";
 import type { FontLoadOptions, LoadedFont } from "../../font/types";
 import { CJK_FALLBACK_FONTS } from "../../font/helpers";
 
+type FontNameRecord = Record<string, { en?: string } | undefined>;
+
+/** Type guard to treat opentype.js names as a generic record for accessing non-standard properties */
+function isNameRecord(names: unknown): names is FontNameRecord {
+  return typeof names === "object" && names !== null;
+}
+
+/** Convert font names object to a generic record for non-standard property access */
+function toNameRecord(names: unknown): FontNameRecord {
+  if (isNameRecord(names)) {
+    return names;
+  }
+  return {};
+}
+
+/** Type guard to treat parsed font as LoadedFont type */
+function isLoadedFontType(font: unknown): font is LoadedFont["font"] {
+  return typeof font === "object" && font !== null;
+}
+
+/** Convert parsed opentype font to LoadedFont font type */
+function toLoadedFontType(font: unknown): LoadedFont["font"] {
+  if (isLoadedFontType(font)) {
+    return font;
+  }
+  throw new Error("Invalid font data");
+}
+
 /**
  * Font file metadata from scanning
  */
@@ -57,15 +85,15 @@ function getSystemFontDirs(): readonly string[] {
  */
 function getWeightFromName(name: string): number {
   const lower = name.toLowerCase();
-  if (lower.includes("thin") || lower.includes("hairline")) return 100;
-  if (lower.includes("extralight") || lower.includes("ultralight")) return 200;
-  if (lower.includes("light")) return 300;
-  if (lower.includes("regular") || lower.includes("normal") || lower.includes("book")) return 400;
-  if (lower.includes("medium")) return 500;
-  if (lower.includes("semibold") || lower.includes("demibold")) return 600;
-  if (lower.includes("extrabold") || lower.includes("ultrabold")) return 800;
-  if (lower.includes("bold")) return 700;
-  if (lower.includes("black") || lower.includes("heavy")) return 900;
+  if (lower.includes("thin") || lower.includes("hairline")) {return 100;}
+  if (lower.includes("extralight") || lower.includes("ultralight")) {return 200;}
+  if (lower.includes("light")) {return 300;}
+  if (lower.includes("regular") || lower.includes("normal") || lower.includes("book")) {return 400;}
+  if (lower.includes("medium")) {return 500;}
+  if (lower.includes("semibold") || lower.includes("demibold")) {return 600;}
+  if (lower.includes("extrabold") || lower.includes("ultrabold")) {return 800;}
+  if (lower.includes("bold")) {return 700;}
+  if (lower.includes("black") || lower.includes("heavy")) {return 900;}
   return 400;
 }
 
@@ -74,8 +102,8 @@ function getWeightFromName(name: string): number {
  */
 function getStyleFromName(name: string): "normal" | "italic" | "oblique" {
   const lower = name.toLowerCase();
-  if (lower.includes("italic")) return "italic";
-  if (lower.includes("oblique")) return "oblique";
+  if (lower.includes("italic")) {return "italic";}
+  if (lower.includes("oblique")) {return "oblique";}
   return "normal";
 }
 
@@ -86,131 +114,141 @@ function weightDistance(requested: number, actual: number): number {
   return Math.abs(requested - actual);
 }
 
+/** Node font loader with additional capabilities */
+export type NodeFontLoaderInstance = FontLoader & {
+  /** List available font families */
+  listFontFamilies(): Promise<readonly string[]>;
+  /** Add a custom font file */
+  addFontFile(fontPath: string): Promise<void>;
+  /** Load a fallback font for CJK characters */
+  loadFallbackFont(options: FontLoadOptions): Promise<LoadedFont | undefined>;
+};
+
 /**
- * Node.js font loader using system fonts
+ * Check if file is a font file
+ *
+ * Note: .ttc (TrueType Collection) files are NOT supported by opentype.js
+ * so they are excluded. This affects CJK fallback on macOS which uses TTC files
+ * for Hiragino and other system fonts. Consider installing @fontsource CJK
+ * font packages for CJK support.
  */
-export class NodeFontLoader implements FontLoader {
-  private fontIndex: Map<string, FontFileInfo[]> | null = null;
-  private indexPromise: Promise<void> | null = null;
-  private customFontDirs: readonly string[];
+function isFontFile(filename: string): boolean {
+  const ext = path.extname(filename).toLowerCase();
+  return [".ttf", ".otf", ".woff", ".woff2"].includes(ext);
+}
 
-  constructor(options?: { fontDirs?: readonly string[] }) {
-    this.customFontDirs = options?.fontDirs ?? [];
+/**
+ * Get font info from a font file
+ */
+async function getFontInfo(fontPath: string): Promise<FontFileInfo | null> {
+  try {
+    const data = fs.readFileSync(fontPath);
+    const font = parseFont(data.buffer as ArrayBuffer);
+
+    // Get font family name - try standard name first, fall back to preferredFamily
+    const names = toNameRecord(font.names);
+    const family = font.names.fontFamily?.en ?? names.preferredFamily?.en ?? "";
+    const subfamily = font.names.fontSubfamily?.en ?? "";
+    const postscriptName = font.names.postScriptName?.en;
+
+    if (!family) {return null;}
+
+    return {
+      path: fontPath,
+      family,
+      weight: getWeightFromName(subfamily || family),
+      style: getStyleFromName(subfamily || family),
+      postscriptName,
+    };
+  } catch (error) {
+    console.debug("Caught error:", error);
+    return null;
   }
+}
 
-  /**
-   * Get all font directories to search
-   */
-  private getFontDirs(): readonly string[] {
-    return [...this.customFontDirs, ...getSystemFontDirs()];
+/** Attempt to index a single font file, silently skipping on failure */
+async function tryIndexFontFile(
+  fullPath: string,
+  index: Map<string, FontFileInfo[]>
+): Promise<void> {
+  try {
+    const info = await getFontInfo(fullPath);
+    if (info) {
+      const familyLower = info.family.toLowerCase();
+      const existing = index.get(familyLower) ?? [];
+      index.set(familyLower, [...existing, info]);
+    }
+  } catch (error) {
+    console.debug("Skip unreadable fonts" + ":", error);
   }
+}
 
-  /**
-   * Index fonts from a directory (recursive)
-   */
-  private async indexDirectory(
-    dir: string,
-    index: Map<string, FontFileInfo[]>
-  ): Promise<void> {
-    if (!fs.existsSync(dir)) return;
+/**
+ * Index fonts from a directory (recursive)
+ */
+async function indexDirectory(
+  dir: string,
+  index: Map<string, FontFileInfo[]>
+): Promise<void> {
+  if (!fs.existsSync(dir)) {return;}
 
-    try {
-      const entries = fs.readdirSync(dir, { withFileTypes: true });
+  try {
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
 
-      for (const entry of entries) {
-        const fullPath = path.join(dir, entry.name);
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name);
 
-        if (entry.isDirectory()) {
-          await this.indexDirectory(fullPath, index);
-        } else if (this.isFontFile(entry.name)) {
-          try {
-            const info = await this.getFontInfo(fullPath);
-            if (info) {
-              const familyLower = info.family.toLowerCase();
-              const existing = index.get(familyLower) ?? [];
-              index.set(familyLower, [...existing, info]);
-            }
-          } catch {
-            // Skip unreadable fonts
-          }
-        }
+      if (entry.isDirectory()) {
+        await indexDirectory(fullPath, index);
+      } else if (isFontFile(entry.name)) {
+        await tryIndexFontFile(fullPath, index);
       }
-    } catch {
-      // Skip unreadable directories
     }
+  } catch (error) {
+    console.debug("Skip unreadable directories" + ":", error);
+  }
+}
+
+/**
+ * Create a Node.js font loader with default settings
+ */
+export function createNodeFontLoader(
+  options?: { fontDirs?: readonly string[] }
+): NodeFontLoaderInstance {
+  const customFontDirs = options?.fontDirs ?? [];
+  const fontIndexRef = { value: null as Map<string, FontFileInfo[]> | null };
+  const indexPromiseRef = { value: null as Promise<void> | null };
+
+  function getFontDirs(): readonly string[] {
+    return [...customFontDirs, ...getSystemFontDirs()];
   }
 
-  /**
-   * Check if file is a font file
-   *
-   * Note: .ttc (TrueType Collection) files are NOT supported by opentype.js
-   * so they are excluded. This affects CJK fallback on macOS which uses TTC files
-   * for Hiragino and other system fonts. Consider installing @fontsource CJK
-   * font packages for CJK support.
-   */
-  private isFontFile(filename: string): boolean {
-    const ext = path.extname(filename).toLowerCase();
-    return [".ttf", ".otf", ".woff", ".woff2"].includes(ext);
-  }
+  async function buildFontIndex(): Promise<void> {
+    const index = new Map<string, FontFileInfo[]>();
+    const dirs = getFontDirs();
 
-  /**
-   * Get font info from a font file
-   */
-  private async getFontInfo(fontPath: string): Promise<FontFileInfo | null> {
-    try {
-      const data = fs.readFileSync(fontPath);
-      const font = parseFont(data.buffer as ArrayBuffer);
-
-      // Get font family name - try standard name first, fall back to preferredFamily
-      const names = font.names as unknown as Record<string, { en?: string } | undefined>;
-      const family = font.names.fontFamily?.en ?? names.preferredFamily?.en ?? "";
-      const subfamily = font.names.fontSubfamily?.en ?? "";
-      const postscriptName = font.names.postScriptName?.en;
-
-      if (!family) return null;
-
-      return {
-        path: fontPath,
-        family,
-        weight: getWeightFromName(subfamily || family),
-        style: getStyleFromName(subfamily || family),
-        postscriptName,
-      };
-    } catch {
-      return null;
-    }
-  }
-
-  /**
-   * Build font index (lazy, once)
-   */
-  private async ensureIndex(): Promise<Map<string, FontFileInfo[]>> {
-    if (this.fontIndex) {
-      return this.fontIndex;
+    for (const dir of dirs) {
+      await indexDirectory(dir, index);
     }
 
-    if (!this.indexPromise) {
-      this.indexPromise = (async () => {
-        const index = new Map<string, FontFileInfo[]>();
-        const dirs = this.getFontDirs();
-
-        for (const dir of dirs) {
-          await this.indexDirectory(dir, index);
-        }
-
-        this.fontIndex = index;
-      })();
-    }
-
-    await this.indexPromise;
-    return this.fontIndex!;
+    fontIndexRef.value = index;
   }
 
-  /**
-   * Load a font matching the given options
-   */
-  async loadFont(options: FontLoadOptions): Promise<LoadedFont | undefined> {
-    const index = await this.ensureIndex();
+  async function ensureIndex(): Promise<Map<string, FontFileInfo[]>> {
+    if (fontIndexRef.value) {
+      return fontIndexRef.value;
+    }
+
+    if (!indexPromiseRef.value) {
+      indexPromiseRef.value = buildFontIndex();
+    }
+
+    await indexPromiseRef.value;
+    return fontIndexRef.value!;
+  }
+
+  async function loadFont(options: FontLoadOptions): Promise<LoadedFont | undefined> {
+    const index = await ensureIndex();
     const familyLower = options.family.toLowerCase();
     const variants = index.get(familyLower);
 
@@ -227,24 +265,24 @@ export class NodeFontLoader implements FontLoader {
       // Prefer latin subset (most common use case)
       const aIsLatin = a.path.includes("-latin-") ? 0 : 1;
       const bIsLatin = b.path.includes("-latin-") ? 0 : 1;
-      if (aIsLatin !== bIsLatin) return aIsLatin - bIsLatin;
+      if (aIsLatin !== bIsLatin) {return aIsLatin - bIsLatin;}
 
       // Style match is secondary
       const aStyleMatch = a.style === targetStyle ? 0 : 1;
       const bStyleMatch = b.style === targetStyle ? 0 : 1;
-      if (aStyleMatch !== bStyleMatch) return aStyleMatch - bStyleMatch;
+      if (aStyleMatch !== bStyleMatch) {return aStyleMatch - bStyleMatch;}
 
       // Weight distance is tertiary
       return weightDistance(targetWeight, a.weight) - weightDistance(targetWeight, b.weight);
     });
 
     const bestMatch = sorted[0];
-    if (!bestMatch) return undefined;
+    if (!bestMatch) {return undefined;}
 
     // Load the font
     try {
       const data = fs.readFileSync(bestMatch.path);
-      const font = parseFont(data.buffer as ArrayBuffer) as unknown as LoadedFont["font"];
+      const font = toLoadedFontType(parseFont(data.buffer as ArrayBuffer));
 
       return {
         font,
@@ -253,73 +291,55 @@ export class NodeFontLoader implements FontLoader {
         style: bestMatch.style,
         postscriptName: bestMatch.postscriptName,
       };
-    } catch {
+    } catch (error) {
+      console.debug("Caught error:", error);
       return undefined;
     }
   }
 
-  /**
-   * Check if a font is available
-   */
-  async isFontAvailable(family: string): Promise<boolean> {
-    const index = await this.ensureIndex();
-    return index.has(family.toLowerCase());
-  }
+  return {
+    loadFont,
 
-  /**
-   * List available font families
-   */
-  async listFontFamilies(): Promise<readonly string[]> {
-    const index = await this.ensureIndex();
-    // Return original family names (from first variant of each family)
-    return Array.from(index.values()).map((variants) => variants[0].family);
-  }
+    async isFontAvailable(family: string): Promise<boolean> {
+      const index = await ensureIndex();
+      return index.has(family.toLowerCase());
+    },
 
-  /**
-   * Add a custom font file
-   */
-  async addFontFile(fontPath: string): Promise<void> {
-    const index = await this.ensureIndex();
-    const info = await this.getFontInfo(fontPath);
+    async listFontFamilies(): Promise<readonly string[]> {
+      const index = await ensureIndex();
+      // Return original family names (from first variant of each family)
+      return Array.from(index.values()).map((variants) => variants[0].family);
+    },
 
-    if (info) {
-      const familyLower = info.family.toLowerCase();
-      const existing = index.get(familyLower) ?? [];
-      index.set(familyLower, [...existing, info]);
-    }
-  }
+    async addFontFile(fontPath: string): Promise<void> {
+      const index = await ensureIndex();
+      const info = await getFontInfo(fontPath);
 
-  /**
-   * Load a fallback font for CJK characters
-   *
-   * Tries CJK fallback fonts in order until one is found.
-   */
-  async loadFallbackFont(options: FontLoadOptions): Promise<LoadedFont | undefined> {
-    const platform = process.platform as keyof typeof CJK_FALLBACK_FONTS;
-    const fallbackFonts = CJK_FALLBACK_FONTS[platform] ?? [];
-
-    for (const family of fallbackFonts) {
-      const font = await this.loadFont({
-        family,
-        weight: options.weight,
-        style: options.style,
-      });
-      if (font) {
-        return font;
+      if (info) {
+        const familyLower = info.family.toLowerCase();
+        const existing = index.get(familyLower) ?? [];
+        index.set(familyLower, [...existing, info]);
       }
-    }
+    },
 
-    return undefined;
-  }
-}
+    async loadFallbackFont(options: FontLoadOptions): Promise<LoadedFont | undefined> {
+      const platform = process.platform as keyof typeof CJK_FALLBACK_FONTS;
+      const fallbackFonts = CJK_FALLBACK_FONTS[platform] ?? [];
 
-/**
- * Create a Node.js font loader with default settings
- */
-export function createNodeFontLoader(
-  options?: { fontDirs?: readonly string[] }
-): FontLoader {
-  return new NodeFontLoader(options);
+      for (const family of fallbackFonts) {
+        const font = await loadFont({
+          family,
+          weight: options.weight,
+          style: options.style,
+        });
+        if (font) {
+          return font;
+        }
+      }
+
+      return undefined;
+    },
+  };
 }
 
 /**
@@ -327,7 +347,7 @@ export function createNodeFontLoader(
  *
  * Automatically scans node_modules/@fontsource for installed font packages.
  */
-export function createNodeFontLoaderWithFontsource(): FontLoader {
+export function createNodeFontLoaderWithFontsource(): NodeFontLoaderInstance {
   const fontsourceDirs: string[] = [];
 
   // Look for @fontsource packages in node_modules
@@ -341,10 +361,10 @@ export function createNodeFontLoaderWithFontsource(): FontLoader {
           fontsourceDirs.push(filesDir);
         }
       }
-    } catch {
-      // Ignore errors
+    } catch (error) {
+      console.debug("Fontsource directory scan error:", error);
     }
   }
 
-  return new NodeFontLoader({ fontDirs: fontsourceDirs });
+  return createNodeFontLoader({ fontDirs: fontsourceDirs });
 }

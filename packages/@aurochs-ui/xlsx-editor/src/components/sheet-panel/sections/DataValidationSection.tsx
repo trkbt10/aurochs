@@ -192,7 +192,13 @@ export function DataValidationSection({
         Restrict the type of data or values that users enter into cells.
       </div>
 
-      {isAdding && selectedRange ? (
+      {renderValidationContent()}
+    </OptionalPropertySection>
+  );
+
+  function renderValidationContent() {
+    if (isAdding && selectedRange) {
+      return (
         <>
           <FieldGroup label="Range">
             <div style={{ fontSize: fontTokens.size.md }}>{formatRange(selectedRange)}</div>
@@ -267,9 +273,11 @@ export function DataValidationSection({
             </Button>
           </div>
         </>
-      ) : (
-        <>
-          {currentValidation && (
+      );
+    }
+    return (
+      <>
+        {currentValidation && (
             <div style={validationItemStyle}>
               <div style={validationLabelStyle}>Current cell has validation:</div>
               <div style={validationRangeStyle}>
@@ -311,7 +319,8 @@ export function DataValidationSection({
             </div>
           )}
         </>
-      )}
-    </OptionalPropertySection>
-  );
+    );
+  }
+
+  return null;
 }

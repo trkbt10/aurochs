@@ -2,7 +2,7 @@
  * @file Path-based text rendering tests
  */
 import { createNodeFontLoader } from "../../../font-drivers/node";
-import { CachingFontLoader } from "../../../font";
+import { createCachingFontLoader, type CachingFontLoader } from "../../../font";
 import {
   renderTextNodeAsPath,
   getFontMetricsFromFont,
@@ -13,16 +13,16 @@ import type { FigNode } from "@aurochs/fig/types";
 import type { FigBlob } from "@aurochs/fig/parser";
 
 describe("path-render", () => {
-  let fontLoader: CachingFontLoader;
+  const fontLoaderRef = { value: undefined as CachingFontLoader | undefined };
 
   beforeAll(() => {
     const nodeLoader = createNodeFontLoader();
-    fontLoader = new CachingFontLoader(nodeLoader);
+    fontLoaderRef.value = createCachingFontLoader(nodeLoader);
   });
 
   describe("createNodeFontLoader", () => {
     it("finds Inter font (macOS system font)", async () => {
-      const available = await fontLoader.isFontAvailable("Inter");
+      const available = await fontLoaderRef.value.isFontAvailable("Inter");
       // Inter may or may not be available depending on system
       expect(typeof available).toBe("boolean");
     });
@@ -30,7 +30,7 @@ describe("path-render", () => {
     it("finds common system fonts", async () => {
       // Test common fonts that should be on most systems
       const commonFonts = ["Arial", "Helvetica", "Times New Roman"];
-      const results = await Promise.all(commonFonts.map((f) => fontLoader.isFontAvailable(f)));
+      const results = await Promise.all(commonFonts.map((f) => fontLoaderRef.value.isFontAvailable(f)));
       // At least one should be available
       expect(results.some(Boolean)).toBe(true);
     });
@@ -48,7 +48,7 @@ describe("path-render", () => {
         textAlignHorizontal: { value: 0, name: "LEFT" },
         textAlignVertical: { value: 0, name: "TOP" },
         fillPaints: [{ type: { value: 0, name: "SOLID" }, color: { r: 0, g: 0, b: 0, a: 1 }, opacity: 1 }],
-      } as unknown as FigNode;
+      } as FigNode;
 
       const ctx: PathRenderContext = {
         canvasSize: { width: 100, height: 30 },
@@ -56,7 +56,7 @@ describe("path-render", () => {
         images: new Map(),
         defs: { add: () => {}, generateId: () => "", getAll: () => [], hasAny: () => false },
         showHiddenNodes: false,
-        fontLoader,
+        fontLoader: fontLoaderRef.value,
       };
 
       const result = await renderTextNodeAsPath(node, ctx);
@@ -78,7 +78,7 @@ describe("path-render", () => {
         name: "test",
         characters: "",
         fontSize: 16,
-      } as unknown as FigNode;
+      } as FigNode;
 
       const ctx: PathRenderContext = {
         canvasSize: { width: 100, height: 30 },
@@ -86,7 +86,7 @@ describe("path-render", () => {
         images: new Map(),
         defs: { add: () => {}, generateId: () => "", getAll: () => [], hasAny: () => false },
         showHiddenNodes: false,
-        fontLoader,
+        fontLoader: fontLoaderRef.value,
       };
 
       const result = await renderTextNodeAsPath(node, ctx);
@@ -96,7 +96,7 @@ describe("path-render", () => {
 
   describe("getFontMetricsFromFont", () => {
     it("extracts metrics from loaded font", async () => {
-      const loaded = await fontLoader.loadFont({ family: "Inter" });
+      const loaded = await fontLoaderRef.value.loadFont({ family: "Inter" });
 
       if (loaded) {
         const metrics = getFontMetricsFromFont(loaded.font);
@@ -111,7 +111,7 @@ describe("path-render", () => {
 
   describe("calculateBaselineOffset", () => {
     it("calculates offset for TOP alignment", async () => {
-      const loaded = await fontLoader.loadFont({ family: "Inter" });
+      const loaded = await fontLoaderRef.value.loadFont({ family: "Inter" });
 
       if (loaded) {
         const offset = calculateBaselineOffset(loaded.font, 16, "TOP");
@@ -123,7 +123,7 @@ describe("path-render", () => {
     });
 
     it("calculates different offsets for different alignments", async () => {
-      const loaded = await fontLoader.loadFont({ family: "Inter" });
+      const loaded = await fontLoaderRef.value.loadFont({ family: "Inter" });
 
       if (loaded) {
         const top = calculateBaselineOffset(loaded.font, 16, "TOP");

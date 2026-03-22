@@ -56,7 +56,7 @@ export function base64ToArrayBuffer(base64: string): ArrayBuffer {
   const byteLength = (base64Length * 3) / 4 - paddingLength;
 
   const bytes = new Uint8Array(byteLength);
-  let byteIndex = 0;
+  const idx = { value: 0 };
 
   for (let i = 0; i < base64Length; i += 4) {
     const a = BASE64_LOOKUP[base64.charCodeAt(i)];
@@ -64,12 +64,12 @@ export function base64ToArrayBuffer(base64: string): ArrayBuffer {
     const c = BASE64_LOOKUP[base64.charCodeAt(i + 2)];
     const d = BASE64_LOOKUP[base64.charCodeAt(i + 3)];
 
-    bytes[byteIndex++] = (a << 2) | (b >> 4);
-    if (byteIndex < byteLength) {
-      bytes[byteIndex++] = ((b & 15) << 4) | (c >> 2);
+    bytes[idx.value++] = (a << 2) | (b >> 4);
+    if (idx.value < byteLength) {
+      bytes[idx.value++] = ((b & 15) << 4) | (c >> 2);
     }
-    if (byteIndex < byteLength) {
-      bytes[byteIndex++] = ((c & 3) << 6) | d;
+    if (idx.value < byteLength) {
+      bytes[idx.value++] = ((c & 3) << 6) | d;
     }
   }
 

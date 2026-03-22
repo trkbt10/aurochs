@@ -111,6 +111,12 @@ function ClearIcon(): ReactNode {
 // Component
 // =============================================================================
 
+
+
+
+
+
+/** Text input for filtering lists with clear button */
 export function FilterInput({
   value,
   onChange,

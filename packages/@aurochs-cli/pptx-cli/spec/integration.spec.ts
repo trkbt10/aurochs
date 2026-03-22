@@ -30,8 +30,8 @@ async function isLibreOfficeAvailable(): Promise<boolean> {
   try {
     await access(LIBREOFFICE_PATH);
     return true;
-  } catch (_err: unknown) {
-    void _err; // Expected: file may not exist
+  } catch (error) {
+    console.debug("LibreOffice not available:", error);
     return false;
   }
 }
@@ -80,8 +80,8 @@ describe("PPTX CLI Integration Tests", () => {
     // Cleanup output directory
     try {
       await rm(TEST_OUTPUT_DIR, { recursive: true, force: true });
-    } catch (_err: unknown) {
-      void _err; // Ignore cleanup errors
+    } catch (error) {
+      console.debug("Cleanup error:", error);
     }
   });
 

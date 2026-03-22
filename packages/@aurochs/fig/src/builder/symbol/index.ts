@@ -8,5 +8,5 @@
 export type { SymbolNodeData, InstanceNodeData } from "./types";
 
 // Builders
-export { SymbolNodeBuilder, symbolNode } from "./symbol";
-export { InstanceNodeBuilder, instanceNode } from "./instance";
+export { type SymbolNodeBuilder, symbolNode } from "./symbol";
+export { type InstanceNodeBuilder, instanceNode } from "./instance";

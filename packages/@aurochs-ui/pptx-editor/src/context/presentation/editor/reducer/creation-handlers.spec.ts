@@ -9,7 +9,6 @@ import { presentationEditorReducer, createPresentationEditorState } from "./redu
 import type { PresentationEditorState } from "../types";
 import type { CreationMode } from "@aurochs-ui/ooxml-components";
 import type { SpShape } from "@aurochs-office/pptx/domain/shape";
-import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import { createShapeFromMode } from "@aurochs-ui/pptx-slide-canvas/shape/factory";
 import { getDefaultBoundsForMode } from "@aurochs-ui/ooxml-components";

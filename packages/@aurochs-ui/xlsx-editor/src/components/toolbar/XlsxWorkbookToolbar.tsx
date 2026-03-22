@@ -127,6 +127,13 @@ function setWrapText(
   return { ...(baseAlignment ?? {}), wrapText };
 }
 
+function resolveWrapPressed(wrapText: boolean | boolean[] | undefined): "mixed" | boolean {
+  if (Array.isArray(wrapText)) {
+    return "mixed";
+  }
+  return wrapText === true;
+}
+
 /**
  * Workbook toolbar for a single sheet.
  */
@@ -277,11 +284,7 @@ export function XlsxWorkbookToolbar({
       />
 
       <WrapTextButton
-        pressed={
-          Array.isArray(selectedWrapText)
-            ? "mixed"
-            : selectedWrapText === true
-        }
+        pressed={resolveWrapPressed(selectedWrapText)}
         onChange={handleWrapTextChange}
         disabled={!targetRange || disableInputs}
       />

@@ -2,7 +2,7 @@
  * @file Unit tests for FrameNodeBuilder
  */
 
-import { frameNode, FrameNodeBuilder } from "./frame";
+import { frameNode } from "./frame";
 
 describe("FrameNodeBuilder", () => {
   it("creates basic frame with defaults", () => {
@@ -192,8 +192,10 @@ describe("FrameNodeBuilder", () => {
 });
 
 describe("Factory function", () => {
-  it("frameNode returns FrameNodeBuilder", () => {
+  it("frameNode returns builder with expected methods", () => {
     const builder = frameNode(1, 0);
-    expect(builder).toBeInstanceOf(FrameNodeBuilder);
+    expect(typeof builder.name).toBe("function");
+    expect(typeof builder.size).toBe("function");
+    expect(typeof builder.build).toBe("function");
   });
 });

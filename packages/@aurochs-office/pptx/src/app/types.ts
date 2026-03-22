@@ -3,7 +3,7 @@
  * Types for the presentation reader API
  */
 
-import type { XmlDocument, XmlNode } from "@aurochs/xml";
+import type { XmlDocument } from "@aurochs/xml";
 import type { IndexTables } from "../parser/slide/shape-tree-indexer";
 import type { SlideSize, SlideTransition } from "../domain";
 import type { ResourceMap, ZipFile } from "@aurochs-office/opc";

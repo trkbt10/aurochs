@@ -53,8 +53,7 @@ function collectTable(
   tapPropsMap?: ReadonlyMap<number, TapProps>,
 ): { table: DocTable; endIndex: number } {
   const rows: DocTableRow[] = [];
-  let currentCellParagraphs: DocParagraph[] = [];
-  let currentRowCells: DocTableCell[] = [];
+  const state = { cellParagraphs: [] as DocParagraph[], rowCells: [] as DocTableCell[] };
   // eslint-disable-next-line no-restricted-syntax -- index tracking
   let i = startIndex;
 
@@ -62,29 +61,29 @@ function collectTable(
     const para = paragraphs[i];
 
     // Stop at non-table paragraph
-    if (!para.inTable) break;
+    if (!para.inTable) {break;}
 
     // Skip deeper-nested table paragraphs (handled by outer table consumer)
     const depth = para.tableDepth ?? 1;
     if (depth > 1) {
       // Nested table paragraph — include as content of current cell
-      currentCellParagraphs.push(stripTableFlags(para));
+      state.cellParagraphs.push(stripTableFlags(para));
       i++;
       continue;
     }
 
     if (para.isRowEnd) {
       // Row-end marker (TTP) — finalize the current cell and row
-      if (currentCellParagraphs.length > 0) {
-        currentRowCells.push({ paragraphs: currentCellParagraphs });
-        currentCellParagraphs = [];
+      if (state.cellParagraphs.length > 0) {
+        state.rowCells.push({ paragraphs: state.cellParagraphs });
+        state.cellParagraphs = [];
       }
 
       // Apply TAP properties from row-end paragraph
       const tapProps = tapPropsMap?.get(i);
-      const row = buildRow(currentRowCells, tapProps);
+      const row = buildRow(state.rowCells, tapProps);
       rows.push(row);
-      currentRowCells = [];
+      state.rowCells = [];
       i++;
       continue;
     }
@@ -93,23 +92,23 @@ function collectTable(
     const text = getCombinedText(para);
     if (text.includes("\x07")) {
       // Cell boundary — this paragraph ends the cell
-      currentCellParagraphs.push(stripTableFlags(para));
-      currentRowCells.push({ paragraphs: currentCellParagraphs });
-      currentCellParagraphs = [];
+      state.cellParagraphs.push(stripTableFlags(para));
+      state.rowCells.push({ paragraphs: state.cellParagraphs });
+      state.cellParagraphs = [];
     } else {
       // Regular paragraph within a cell
-      currentCellParagraphs.push(stripTableFlags(para));
+      state.cellParagraphs.push(stripTableFlags(para));
     }
 
     i++;
   }
 
   // Handle unclosed cells/rows
-  if (currentCellParagraphs.length > 0) {
-    currentRowCells.push({ paragraphs: currentCellParagraphs });
+  if (state.cellParagraphs.length > 0) {
+    state.rowCells.push({ paragraphs: state.cellParagraphs });
   }
-  if (currentRowCells.length > 0) {
-    rows.push({ cells: currentRowCells });
+  if (state.rowCells.length > 0) {
+    rows.push({ cells: state.rowCells });
   }
 
   return { table: { rows }, endIndex: i };
@@ -132,7 +131,7 @@ function buildRow(cells: readonly DocTableCell[], tapProps: TapProps | undefined
       || verticalMerge !== undefined || horizontalMerge !== undefined
       || backgroundColor !== undefined;
 
-    if (!hasChanges) return cell;
+    if (!hasChanges) {return cell;}
 
     return {
       ...cell,
@@ -161,7 +160,7 @@ function stripTableFlags(para: DocParagraph): DocParagraph {
   const { inTable: _1, isRowEnd: _2, tableDepth: _3, ...rest } = para;
   // Clean cell marks from run text
   const runs = para.runs.map((run) => {
-    const cleaned = run.text.replace(/\x07/g, "");
+    const cleaned = run.text.replaceAll(String.fromCharCode(7), "");
     return cleaned === run.text ? run : { ...run, text: cleaned };
   });
   return { ...rest, runs };

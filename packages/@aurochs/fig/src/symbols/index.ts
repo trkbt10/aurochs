@@ -1,3 +1,4 @@
+/** @file Symbol resolution utilities */
 export {
   extractSymbolIDPair,
   getEffectiveSymbolID,

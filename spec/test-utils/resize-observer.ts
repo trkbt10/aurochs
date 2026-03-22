@@ -8,38 +8,35 @@ type MockObserverEntry = {
 };
 
 const observers: MockObserverEntry[] = [];
-let originalResizeObserver: typeof ResizeObserver | undefined;
-let isInstalled = false;
-
-class MockResizeObserver implements ResizeObserver {
-  public readonly callback: ResizeObserverCallback;
-
-  public constructor(callback: ResizeObserverCallback) {
-    this.callback = callback;
-    observers.push({ callback, observer: this });
-  }
-
-  public observe(): void {
-    // No-op for tests.
-  }
-
-  public unobserve(): void {
-    // No-op for tests.
-  }
-
-  public disconnect(): void {
-    // No-op for tests.
-  }
-}
+const mockState = { originalResizeObserver: undefined as typeof ResizeObserver | undefined, isInstalled: false };
 
 /** Install a mock ResizeObserver on globalThis for tests. */
 export function installResizeObserverMock(): void {
-  if (isInstalled) {
+  if (mockState.isInstalled) {
     return;
   }
-  originalResizeObserver = globalThis.ResizeObserver;
-  globalThis.ResizeObserver = MockResizeObserver as typeof ResizeObserver;
-  isInstalled = true;
+  mockState.originalResizeObserver = globalThis.ResizeObserver;
+
+  /** Type guard to cast mock constructor context to ResizeObserver. */
+  function toResizeObserver(value: unknown): value is ResizeObserver {
+    return typeof value === "object" && value !== null;
+  }
+
+  function MockResizeObserver(
+    this: Record<string, unknown>,
+    callback: ResizeObserverCallback,
+  ): void {
+    this.callback = callback;
+    if (toResizeObserver(this)) {
+      observers.push({ callback, observer: this });
+    }
+  }
+  MockResizeObserver.prototype.observe = function observe(): void { /* no-op */ };
+  MockResizeObserver.prototype.unobserve = function unobserve(): void { /* no-op */ };
+  MockResizeObserver.prototype.disconnect = function disconnect(): void { /* no-op */ };
+
+  Object.defineProperty(globalThis, "ResizeObserver", { value: MockResizeObserver, writable: true });
+  mockState.isInstalled = true;
 }
 
 /** Clear recorded ResizeObserver instances. */
@@ -49,14 +46,14 @@ export function resetResizeObserverMock(): void {
 
 /** Restore the original ResizeObserver after tests. */
 export function restoreResizeObserverMock(): void {
-  if (!isInstalled) {
+  if (!mockState.isInstalled) {
     return;
   }
-  if (originalResizeObserver) {
-    globalThis.ResizeObserver = originalResizeObserver;
+  if (mockState.originalResizeObserver) {
+    globalThis.ResizeObserver = mockState.originalResizeObserver;
   }
   observers.length = 0;
-  isInstalled = false;
+  mockState.isInstalled = false;
 }
 
 /** Trigger callbacks on all registered ResizeObserver instances. */

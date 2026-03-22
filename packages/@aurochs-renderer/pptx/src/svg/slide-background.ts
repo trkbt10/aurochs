@@ -11,7 +11,7 @@
 
 import type { Background, SlideSize } from "@aurochs-office/pptx/domain";
 import type { CoreRenderContext } from "../render-context";
-import type { ResolvedBackgroundFill } from "../background-fill";
+import type { ResolvedBackgroundFill } from "@aurochs-office/drawing-ml/domain/background-fill";
 import type { SvgDefsCollector } from "./slide-utils";
 import { renderFillToSvgDef, renderFillToSvgStyle } from "./fill";
 import { ooxmlAngleToSvgLinearGradient, getRadialGradientCoords } from "./gradient-utils";

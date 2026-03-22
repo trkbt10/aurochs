@@ -58,8 +58,6 @@ import type { PresetShapeType } from "@aurochs-office/drawing-ml/domain/geometry
 import type {
   AnimationTrigger,
   AnimationDirection,
-  SimpleCommentSpec,
-  SimpleNotesSpec,
 } from "@aurochs-builder/pptx/patcher";
 
 // =============================================================================
@@ -560,7 +558,29 @@ export type AnimationSpec = {
 // Comment & Notes Types (re-exported from patcher)
 // =============================================================================
 
-export type { SimpleCommentSpec, SimpleNotesSpec } from "@aurochs-builder/pptx/patcher";
+/**
+ * Simple comment specification for adding comments.
+ */
+export type SimpleCommentSpec = {
+  /** Author name */
+  readonly authorName: string;
+  /** Author initials (optional) */
+  readonly authorInitials?: string;
+  /** Comment text */
+  readonly text: string;
+  /** Position x in pixels (optional) */
+  readonly x?: number;
+  /** Position y in pixels (optional) */
+  readonly y?: number;
+};
+
+/**
+ * Simple notes specification.
+ */
+export type SimpleNotesSpec = {
+  /** Notes text (plain text) */
+  readonly text: string;
+};
 
 // =============================================================================
 // SmartArt/Diagram Types

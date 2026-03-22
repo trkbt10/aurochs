@@ -2,23 +2,19 @@
  * @file Debug test to investigate exact font metrics
  */
 
-import * as fs from "node:fs";
-import * as path from "node:path";
-import { describe, it, expect, beforeAll } from "vitest";
-import { parse as parseFont } from "opentype.js";
 import { createNodeFontLoaderWithFontsource } from "../src/font-drivers/node";
-import { CachingFontLoader } from "../src/font";
+import { createCachingFontLoader, type CachingFontLoader } from "../src/font";
 
 describe("Font metrics investigation", () => {
-  let fontLoader: CachingFontLoader;
+  const fontLoaderRef = { value: undefined as CachingFontLoader | undefined };
 
   beforeAll(async () => {
     const baseLoader = createNodeFontLoaderWithFontsource();
-    fontLoader = new CachingFontLoader(baseLoader);
+    fontLoaderRef.value = createCachingFontLoader(baseLoader);
   });
 
   it("analyzes Inter font metrics in detail", async () => {
-    const loadedFont = await fontLoader.loadFont({
+    const loadedFont = await fontLoaderRef.value.loadFont({
       family: "Inter",
       weight: 400,
     });
@@ -124,12 +120,12 @@ describe("Font metrics investigation", () => {
   });
 
   it("compares different line height formulas", async () => {
-    const loadedFont = await fontLoader.loadFont({
+    const loadedFont = await fontLoaderRef.value.loadFont({
       family: "Inter",
       weight: 400,
     });
 
-    if (!loadedFont) return;
+    if (!loadedFont) {return;}
 
     const font = loadedFont.font;
     const os2 = font.tables.os2 as Record<string, number> | undefined;

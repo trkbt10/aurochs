@@ -63,7 +63,7 @@ export function useGroupedListDragDrop<TMeta = unknown>({
   const handleDragStart = useCallback(
     (itemId: GroupedListItemId, e: React.DragEvent) => {
       const item = items.find((i) => i.id === itemId);
-      if (!item) return;
+      if (!item) {return;}
 
       e.dataTransfer.effectAllowed = "move";
       e.dataTransfer.setData("text/plain", itemId);
@@ -80,10 +80,10 @@ export function useGroupedListDragDrop<TMeta = unknown>({
 
   const handleDragOver = useCallback(
     (itemId: GroupedListItemId, e: React.DragEvent) => {
-      if (dragState.type !== "dragging") return;
+      if (dragState.type !== "dragging") {return;}
 
       const targetItem = items.find((i) => i.id === itemId);
-      if (!targetItem) return;
+      if (!targetItem) {return;}
 
       // Only allow drag within the same group
       if (targetItem.groupId !== dragState.dragGroupId) {
@@ -109,7 +109,7 @@ export function useGroupedListDragDrop<TMeta = unknown>({
     (itemId: GroupedListItemId, e: React.DragEvent) => {
       e.preventDefault();
 
-      if (dragState.type !== "dragging") return;
+      if (dragState.type !== "dragging") {return;}
 
       const targetItem = items.find((i) => i.id === itemId);
       if (!targetItem || targetItem.groupId !== dragState.dragGroupId) {
@@ -147,11 +147,11 @@ export function useGroupedListDragDrop<TMeta = unknown>({
 
   const getDropTargetPosition = useCallback(
     (itemId: GroupedListItemId): DropTargetPosition => {
-      if (dragState.type !== "dragging") return undefined;
-      if (dragState.dragItemId === itemId) return undefined;
+      if (dragState.type !== "dragging") {return undefined;}
+      if (dragState.dragItemId === itemId) {return undefined;}
 
       const item = items.find((i) => i.id === itemId);
-      if (!item || item.groupId !== dragState.dragGroupId) return undefined;
+      if (!item || item.groupId !== dragState.dragGroupId) {return undefined;}
 
       const groupItems = getGroupItems(item.groupId);
       const itemIndex = groupItems.findIndex((i) => i.id === itemId);

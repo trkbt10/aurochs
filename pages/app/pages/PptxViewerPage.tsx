@@ -20,7 +20,7 @@ type Props = {
 };
 
 /** Presentation viewer with thumbnails and slide navigation. */
-export function PptxViewerPage({ presentation, fileName, onBack, onStartSlideshow, onStartEditor }: Props) {
+export function PptxViewerPage({ presentation, fileName, onBack, onStartSlideshow: _onStartSlideshow, onStartEditor: _onStartEditor }: Props) {
   const { presentation: pres } = presentation;
   const totalSlides = pres.count;
   const slideSize = pres.size;

@@ -148,12 +148,12 @@ export function parseOfficeArtFOPT(record: PptRecord): Map<number, ShapeProperty
 
   // Parse complex data that follows the fixed entries
   // Complex properties have isComplex=true and value = byte length of their data
-  let complexOffset = fixedSize;
+  const complexPos = { value: fixedSize };
   for (const [, prop] of properties) {
-    if (prop.isComplex && prop.value > 0 && complexOffset + prop.value <= record.data.byteLength) {
-      const complexData = record.data.slice(complexOffset, complexOffset + prop.value);
+    if (prop.isComplex && prop.value > 0 && complexPos.value + prop.value <= record.data.byteLength) {
+      const complexData = record.data.slice(complexPos.value, complexPos.value + prop.value);
       properties.set(prop.id, { ...prop, complexData });
-      complexOffset += prop.value;
+      complexPos.value += prop.value;
     }
   }
 

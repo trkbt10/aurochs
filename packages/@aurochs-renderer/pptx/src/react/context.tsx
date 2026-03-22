@@ -15,7 +15,7 @@ import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import type { CoreRenderContext } from "../render-context";
 import type { RenderOptions } from "../render-options";
 import { DEFAULT_RENDER_OPTIONS } from "../render-options";
-import type { ResolvedBackgroundFill } from "../background-fill";
+import type { ResolvedBackgroundFill } from "@aurochs-office/drawing-ml/domain/background-fill";
 import type { ResourceResolver } from "@aurochs-office/pptx/domain/resource-resolver";
 import { createEmptyResourceResolver } from "@aurochs-office/pptx/domain/resource-resolver";
 import type { ResourceStore } from "@aurochs-office/pptx/domain/resource-store";

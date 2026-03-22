@@ -72,6 +72,17 @@ const animationIndicatorStyle: CSSProperties = {
   animation: "pulse 2s ease-in-out infinite",
 };
 
+
+
+
+
+
+
+
+
+
+
+/** Slide position indicator. */
 export function SlideIndicator({ current, total, variant = "dark", showAnimation = false, className }: Props) {
   if (variant === "dark") {
     return (

@@ -57,6 +57,16 @@ const emptyStyle: CSSProperties = {
   color: `var(--text-tertiary, ${colorTokens.text.tertiary})`,
 };
 
+function resolveWrapTextPressed(
+  wrapText: boolean | boolean[] | undefined,
+  currentWrapText: boolean | undefined,
+): "mixed" | boolean {
+  if (Array.isArray(wrapText)) {
+    return "mixed" as const;
+  }
+  return currentWrapText === true;
+}
+
 function getTargetRange(params: {
   readonly activeCell: CellAddress | undefined;
   readonly selectedRange: CellRange | undefined;
@@ -223,9 +233,7 @@ export function XlsxCellFormatPanel({ sheetIndex }: XlsxCellFormatPanelProps) {
         disabled={disabled}
         alignment={currentAlignment}
         wrapText={{
-          pressed: Array.isArray(selectionFormatFlags?.wrapText)
-            ? "mixed" as const
-            : currentAlignment?.wrapText === true,
+          pressed: resolveWrapTextPressed(selectionFormatFlags?.wrapText, currentAlignment?.wrapText),
         }}
         onAlignmentChange={(alignment) => applyAlignment(alignment)}
         onClearAlignment={() =>

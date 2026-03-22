@@ -56,7 +56,7 @@ export function createProgram(): Command {
     .action(async (file: string) => {
       const mode = program.opts().output as OutputMode;
       const result = await runInfo(file);
-      output(result, mode, formatInfoPretty);
+      output({ result, mode, prettyFormatter: formatInfoPretty });
     });
 
   program
@@ -66,7 +66,7 @@ export function createProgram(): Command {
     .action(async (file: string) => {
       const mode = program.opts().output as OutputMode;
       const result = await runList(file);
-      output(result, mode, formatListPretty);
+      output({ result, mode, prettyFormatter: formatListPretty });
     });
 
   program
@@ -83,7 +83,7 @@ export function createProgram(): Command {
         return;
       }
       const result = await runShow(file, sectionNumber);
-      output(result, mode, formatShowPretty);
+      output({ result, mode, prettyFormatter: formatShowPretty });
     });
 
   program
@@ -94,7 +94,7 @@ export function createProgram(): Command {
     .action(async (file: string, options: { sections?: string }) => {
       const mode = program.opts().output as OutputMode;
       const result = await runExtract(file, options);
-      output(result, mode, formatExtractPretty);
+      output({ result, mode, prettyFormatter: formatExtractPretty });
     });
 
   program
@@ -104,7 +104,7 @@ export function createProgram(): Command {
     .action(async (spec: string) => {
       const mode = program.opts().output as OutputMode;
       const result = await runBuild(spec);
-      output(result, mode, formatBuildPretty);
+      output({ result, mode, prettyFormatter: formatBuildPretty });
     });
 
   program
@@ -114,7 +114,7 @@ export function createProgram(): Command {
     .action(async (spec: string) => {
       const mode = program.opts().output as OutputMode;
       const result = await runPatch(spec);
-      output(result, mode, formatPatchPretty);
+      output({ result, mode, prettyFormatter: formatPatchPretty });
     });
 
   program
@@ -125,7 +125,7 @@ export function createProgram(): Command {
     .action(async (specPath: string, options: { tag?: string }) => {
       const mode = program.opts().output as OutputMode;
       const result = await runVerify(specPath, options);
-      output(result, mode, formatVerifyPretty);
+      output({ result, mode, prettyFormatter: formatVerifyPretty });
     });
 
   program
@@ -137,7 +137,7 @@ export function createProgram(): Command {
     .action(async (file: string, options: { type?: string; all?: boolean }) => {
       const mode = program.opts().output as OutputMode;
       const result = await runStyles(file, options);
-      output(result, mode, formatStylesPretty);
+      output({ result, mode, prettyFormatter: formatStylesPretty });
     });
 
   program
@@ -147,7 +147,7 @@ export function createProgram(): Command {
     .action(async (file: string) => {
       const mode = program.opts().output as OutputMode;
       const result = await runNumbering(file);
-      output(result, mode, formatNumberingPretty);
+      output({ result, mode, prettyFormatter: formatNumberingPretty });
     });
 
   program
@@ -157,7 +157,7 @@ export function createProgram(): Command {
     .action(async (file: string) => {
       const mode = program.opts().output as OutputMode;
       const result = await runHeadersFooters(file);
-      output(result, mode, formatHeadersFootersPretty);
+      output({ result, mode, prettyFormatter: formatHeadersFootersPretty });
     });
 
   program
@@ -167,7 +167,7 @@ export function createProgram(): Command {
     .action(async (file: string) => {
       const mode = program.opts().output as OutputMode;
       const result = await runTables(file);
-      output(result, mode, formatTablesPretty);
+      output({ result, mode, prettyFormatter: formatTablesPretty });
     });
 
   program
@@ -177,7 +177,7 @@ export function createProgram(): Command {
     .action(async (file: string) => {
       const mode = program.opts().output as OutputMode;
       const result = await runComments(file);
-      output(result, mode, formatCommentsPretty);
+      output({ result, mode, prettyFormatter: formatCommentsPretty });
     });
 
   program
@@ -187,7 +187,7 @@ export function createProgram(): Command {
     .action(async (file: string) => {
       const mode = program.opts().output as OutputMode;
       const result = await runImages(file);
-      output(result, mode, formatImagesPretty);
+      output({ result, mode, prettyFormatter: formatImagesPretty });
     });
 
   program
@@ -199,7 +199,7 @@ export function createProgram(): Command {
       const mode = program.opts().output as OutputMode;
       const maxLevel = options.maxLevel ? parseInt(options.maxLevel, 10) : undefined;
       const result = await runToc(file, { maxLevel });
-      output(result, mode, formatTocPretty);
+      output({ result, mode, prettyFormatter: formatTocPretty });
     });
 
   program
@@ -225,7 +225,7 @@ export function createProgram(): Command {
         return;
       }
       const result = await runPreview(file, sectionNumber, { format, width });
-      output(result, mode, formatPreviewPretty, formatPreviewMermaid);
+      output({ result, mode, prettyFormatter: formatPreviewPretty, mermaidFormatter: formatPreviewMermaid });
     });
 
   return program;

@@ -46,10 +46,10 @@ type ParsedData = {
   nodeMap: ReadonlyMap<string, FigNode>;
 };
 
-let parsedDataCache: ParsedData | null = null;
+const parsedDataCache: ParsedData | null = null;
 
 async function loadFigFile(): Promise<ParsedData> {
-  if (parsedDataCache) return parsedDataCache;
+  if (parsedDataCache) {return parsedDataCache;}
 
   const data = fs.readFileSync(FIG_FILE);
   const parsed = await parseFigFile(new Uint8Array(data));
@@ -106,11 +106,11 @@ function extractRectPositions(svg: string): Array<{ id: string; x: number; y: nu
   const results: Array<{ id: string; x: number; y: number; width: number; height: number }> = [];
   // Match all rects (with or without id)
   const rectRegex = /<rect[^>]*>/g;
-  let match;
-  let index = 0;
+  const matchRef = { value: undefined as RegExpExecArray | null | undefined };
+  const indexRef = { value: 0 };
 
-  while ((match = rectRegex.exec(svg)) !== null) {
-    const rectStr = match[0];
+  while ((matchRef.value = rectRegex.exec(svg)) !== null) {
+    const rectStr = matchRef.value[0];
 
     // Skip background rects (first rect or rects that fill the whole viewBox)
     const wMatch = rectStr.match(/\bwidth="([^"]*)"/);
@@ -125,18 +125,18 @@ function extractRectPositions(svg: string): Array<{ id: string; x: number; y: nu
     // Get position from x/y attributes
     const xMatch = rectStr.match(/\bx="([^"]*)"/);
     const yMatch = rectStr.match(/\by="([^"]*)"/);
-    let x = parseFloat(xMatch?.[1] ?? "0");
-    let y = parseFloat(yMatch?.[1] ?? "0");
+    const xRef = { value: parseFloat(xMatch?.[1] ?? "0") };
+    const yRef = { value: parseFloat(yMatch?.[1] ?? "0") };
 
     // Check for transform="matrix(1, 0, 0, 1, tx, ty)"
     const transformMatch = rectStr.match(/transform="matrix\(1,\s*0,\s*0,\s*1,\s*([\d.-]+),\s*([\d.-]+)\)"/);
     if (transformMatch) {
-      x += parseFloat(transformMatch[1]);
-      y += parseFloat(transformMatch[2]);
+      xRef.value += parseFloat(transformMatch[1]);
+      yRef.value += parseFloat(transformMatch[2]);
     }
 
-    results.push({ id, x, y, width, height });
-    index++;
+    results.push({ id, x: xRef.value, y: yRef.value, width, height });
+    indexRef.value++;
   }
 
   return results;
@@ -220,13 +220,13 @@ describe("AutoLayout Rendering", () => {
       console.log(`Content rects: actual=${actualContent.length}, rendered=${renderedContent.length}`);
 
       // Show differences if any
-      let allMatch = true;
+      const allMatchRef = { value: true };
       for (let i = 0; i < Math.max(actualContent.length, renderedContent.length); i++) {
         const a = actualContent[i];
         const r = renderedContent[i];
         if (!a || !r) {
           console.log(`  [${i}] MISSING: actual=${a ? "yes" : "no"}, rendered=${r ? "yes" : "no"}`);
-          allMatch = false;
+          allMatchRef.value = false;
         } else {
           const posMatch = Math.abs(a.x - r.x) < 1 && Math.abs(a.y - r.y) < 1;
           const sizeMatch = Math.abs(a.width - r.width) < 1 && Math.abs(a.height - r.height) < 1;
@@ -234,11 +234,11 @@ describe("AutoLayout Rendering", () => {
             console.log(
               `  [${i}] DIFF: actual=(${a.x},${a.y} ${a.width}x${a.height}), rendered=(${r.x},${r.y} ${r.width}x${r.height})`,
             );
-            allMatch = false;
+            allMatchRef.value = false;
           }
         }
       }
-      if (allMatch) {
+      if (allMatchRef.value) {
         console.log(`  All ${actualContent.length} positions match ✓`);
       }
 

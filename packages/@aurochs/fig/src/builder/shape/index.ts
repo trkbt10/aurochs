@@ -25,14 +25,14 @@ export type {
 } from "./types";
 
 
-// Base class (for extension if needed)
-export { BaseShapeBuilder } from "./base";
+// Base types
+export type { BaseShapeBuilderMethods } from "./base";
 
 // Builders
-export { EllipseNodeBuilder, ellipseNode } from "./ellipse";
-export { LineNodeBuilder, lineNode } from "./line";
-export { StarNodeBuilder, starNode } from "./star";
-export { PolygonNodeBuilder, polygonNode } from "./polygon";
-export { VectorNodeBuilder, vectorNode } from "./vector";
-export { RectangleNodeBuilder, rectNode } from "./rectangle";
-export { RoundedRectangleNodeBuilder, roundedRectNode } from "./rounded-rectangle";
+export { type EllipseNodeBuilder, ellipseNode } from "./ellipse";
+export { type LineNodeBuilder, lineNode } from "./line";
+export { type StarNodeBuilder, starNode } from "./star";
+export { type PolygonNodeBuilder, polygonNode } from "./polygon";
+export { type VectorNodeBuilder, vectorNode } from "./vector";
+export { type RectangleNodeBuilder, rectNode } from "./rectangle";
+export { type RoundedRectangleNodeBuilder, roundedRectNode } from "./rounded-rectangle";

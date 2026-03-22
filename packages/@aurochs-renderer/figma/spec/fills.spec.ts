@@ -57,10 +57,10 @@ type ParsedData = {
   nodeMap: ReadonlyMap<string, FigNode>;
 };
 
-let parsedDataCache: ParsedData | null = null;
+const parsedDataCache: ParsedData | null = null;
 
 async function loadFigFile(): Promise<ParsedData> {
-  if (parsedDataCache) return parsedDataCache;
+  if (parsedDataCache) {return parsedDataCache;}
 
   if (!fs.existsSync(FIG_FILE)) {
     throw new Error(
@@ -138,8 +138,8 @@ describe("Fill Rendering", () => {
   beforeAll(async () => {
     try {
       await loadFigFile();
-    } catch {
-      console.log("Skipping fill tests - fixture file not found");
+    } catch (error) {
+      console.log("Skipping tests:", error instanceof Error ? error.message : "fixture file not found");
     }
 
     if (WRITE_SNAPSHOTS && !fs.existsSync(SNAPSHOTS_DIR)) {
@@ -166,13 +166,13 @@ describe("Fill Rendering", () => {
       const actualPath = path.join(ACTUAL_DIR, fileName);
       const hasActual = fs.existsSync(actualPath);
 
-      let actualSize = layer.size;
-      let actualFillInfo = { solidFills: [], gradientDefs: 0, strokeColors: [], strokeWidths: [], dashArrays: [] };
+      const actualSizeRef = { value: layer.size };
+      const actualFillInfoRef = { value: { solidFills: [], gradientDefs: 0, strokeColors: [], strokeWidths: [], dashArrays: [] } };
 
       if (hasActual) {
         const actualSvg = fs.readFileSync(actualPath, "utf-8");
-        actualSize = getSvgSize(actualSvg);
-        actualFillInfo = extractFillInfo(actualSvg);
+        actualSizeRef.value = getSvgSize(actualSvg);
+        actualFillInfoRef.value = extractFillInfo(actualSvg);
       }
 
       // Render
@@ -183,8 +183,8 @@ describe("Fill Rendering", () => {
       };
 
       const result = await renderCanvas(wrapperCanvas, {
-        width: actualSize.width,
-        height: actualSize.height,
+        width: actualSizeRef.value.width,
+        height: actualSizeRef.value.height,
         blobs: data.blobs,
         images: data.images,
         symbolMap: data.nodeMap,

@@ -9,7 +9,6 @@
 
 import type { Shape, SlideLayoutType, SlideSize, Placeholder, Background } from "@aurochs-office/pptx/domain";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
-import type { TextBody } from "@aurochs-office/pptx/domain";
 import type { SlideLayoutBundle, SlideLayoutOption } from "@aurochs-office/pptx/app";
 import type { PackageFile } from "@aurochs-office/opc";
 import type { ColorScheme } from "@aurochs-office/drawing-ml/domain/color-context";

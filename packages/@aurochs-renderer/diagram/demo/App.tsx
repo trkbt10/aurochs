@@ -5,7 +5,7 @@
  */
 
 import { useState, useMemo } from "react";
-import { diagramCatalog, type DiagramSample } from "./fixtures";
+import { diagramCatalog } from "./fixtures";
 import { DiagramCard } from "./components/DiagramCard";
 
 type CategoryFilter = "all" | "list" | "process" | "cycle" | "hierarchy" | "relationship";
@@ -86,6 +86,9 @@ const CATEGORIES: { id: CategoryFilter; label: string }[] = [
   { id: "relationship", label: "Relationship" },
 ];
 
+/**
+ * Main diagram demo app component - displays a filterable catalog of SmartArt diagrams.
+ */
 export function App() {
   const [filter, setFilter] = useState<CategoryFilter>("all");
   const [selectedDiagram, setSelectedDiagram] = useState<string | null>(null);

@@ -1,5 +1,5 @@
 /**
- * Theme analysis and test case generation tool.
+ * @file Theme analysis and test case generation tool.
  *
  * Usage: bun run scripts/analyze/analyze-themes.ts <pptx-path> <output-path>
  *
@@ -10,7 +10,7 @@
  */
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { parseXml, getChild, getChildren, getAttr } from "@aurochs/xml";
+import { parseXml, getChild, getChildren, getAttr, type XmlElement } from "@aurochs/xml";
 import { SCHEME_COLOR_NAMES } from "@aurochs-office/drawing-ml/domain/color";
 import { requireFileExists, requirePositionalArg } from "../lib/cli";
 import { loadPptxFile } from "../lib/pptx-loader";
@@ -96,34 +96,28 @@ function parseTheme(xml: string, themeName: string): ThemeInfo {
 
   // Format scheme
   const fmtScheme = getChild(getChild(getChild(doc, "a:theme"), "a:themeElements"), "a:fmtScheme");
-  let fillStyleCount = 0;
-  let lineStyleCount = 0;
-  let effectStyleCount = 0;
-
-  if (fmtScheme) {
-    const fillStyleLst = getChild(fmtScheme, "a:fillStyleLst");
-    const lnStyleLst = getChild(fmtScheme, "a:lnStyleLst");
-    const effectStyleLst = getChild(fmtScheme, "a:effectStyleLst");
-    if (fillStyleLst) {
-      fillStyleCount = getChildren(fillStyleLst).length;
-    }
-    if (lnStyleLst) {
-      lineStyleCount = getChildren(lnStyleLst).length;
-    }
-    if (effectStyleLst) {
-      effectStyleCount = getChildren(effectStyleLst).length;
-    }
-  }
+  const formatScheme = parseFormatSchemeCounts(fmtScheme);
 
   return {
     name: themeName,
     colorScheme,
     fontScheme: { majorFont, minorFont },
-    formatScheme: {
-      fillStyleCount,
-      lineStyleCount,
-      effectStyleCount,
-    },
+    formatScheme,
+  };
+}
+
+/** Parse format scheme style counts */
+function parseFormatSchemeCounts(fmtScheme: XmlElement | undefined): { fillStyleCount: number; lineStyleCount: number; effectStyleCount: number } {
+  if (!fmtScheme) {
+    return { fillStyleCount: 0, lineStyleCount: 0, effectStyleCount: 0 };
+  }
+  const fillStyleLst = getChild(fmtScheme, "a:fillStyleLst");
+  const lnStyleLst = getChild(fmtScheme, "a:lnStyleLst");
+  const effectStyleLst = getChild(fmtScheme, "a:effectStyleLst");
+  return {
+    fillStyleCount: fillStyleLst ? getChildren(fillStyleLst).length : 0,
+    lineStyleCount: lnStyleLst ? getChildren(lnStyleLst).length : 0,
+    effectStyleCount: effectStyleLst ? getChildren(effectStyleLst).length : 0,
   };
 }
 
@@ -145,9 +139,10 @@ function parseRels(xml: string): Record<string, { type: string; target: string }
 function extractSchemeColorsUsed(xml: string): string[] {
   const pattern = /<a:schemeClr[^>]*val="([^"]*)"[^>]*\/?>/g;
   const colors: Set<string> = new Set();
-  let match;
-  while ((match = pattern.exec(xml)) !== null) {
-    colors.add(match[1]);
+  const match = { value: pattern.exec(xml) };
+  while (match.value !== null) {
+    colors.add(match.value[1]);
+    match.value = pattern.exec(xml);
   }
   return [...colors];
 }
@@ -155,9 +150,10 @@ function extractSchemeColorsUsed(xml: string): string[] {
 function extractFontRefsUsed(xml: string): string[] {
   const pattern = /typeface="(\+[^"]+)"/g;
   const refs: Set<string> = new Set();
-  let match;
-  while ((match = pattern.exec(xml)) !== null) {
-    refs.add(match[1]);
+  const match = { value: pattern.exec(xml) };
+  while (match.value !== null) {
+    refs.add(match.value[1]);
+    match.value = pattern.exec(xml);
   }
   return [...refs];
 }
@@ -221,13 +217,7 @@ async function analyzeThemes(pptxPath: string): Promise<AnalysisResult> {
     const slideRels = parseRels(slideRelsText);
 
     // Find layout reference
-    let layoutRef = "";
-    for (const [, rel] of Object.entries(slideRels)) {
-      if (rel.type.includes("slideLayout")) {
-        layoutRef = rel.target.replace("../slideLayouts/", "");
-        break;
-      }
-    }
+    const layoutRef = findLayoutRef(slideRels);
 
     const masterRef = layoutToMaster[layoutRef] || "";
     const themeRef = masterToTheme[masterRef] || "";
@@ -243,6 +233,16 @@ async function analyzeThemes(pptxPath: string): Promise<AnalysisResult> {
   }
 
   return { themes, slides, masterToTheme, layoutToMaster };
+}
+
+/** Find the layout reference from slide relationships */
+function findLayoutRef(slideRels: Record<string, { type: string; target: string }>): string {
+  for (const [, rel] of Object.entries(slideRels)) {
+    if (rel.type.includes("slideLayout")) {
+      return rel.target.replace("../slideLayouts/", "");
+    }
+  }
+  return "";
 }
 
 function generateTestData(result: AnalysisResult): string {

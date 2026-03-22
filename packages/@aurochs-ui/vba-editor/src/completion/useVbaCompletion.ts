@@ -4,9 +4,9 @@
  * State management for IntelliSense completion.
  */
 
-import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import type { VbaProcedure } from "@aurochs-office/vba";
-import type { CompletionState, CompletionItem, CompletionContext } from "./types";
+import type { CompletionState } from "./types";
 import { INITIAL_COMPLETION_STATE } from "./types";
 import {
   detectCompletionContext,
@@ -194,14 +194,8 @@ export function useVbaCompletion(args: UseVbaCompletionArgs): UseVbaCompletionRe
         return prev;
       }
 
-      let newIndex = prev.highlightedIndex + delta;
-
-      // Wrap around
-      if (newIndex < 0) {
-        newIndex = prev.items.length - 1;
-      } else if (newIndex >= prev.items.length) {
-        newIndex = 0;
-      }
+      const raw = prev.highlightedIndex + delta;
+      const newIndex = raw < 0 ? prev.items.length - 1 : (raw >= prev.items.length ? 0 : raw);
 
       return {
         ...prev,

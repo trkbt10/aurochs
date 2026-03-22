@@ -7,7 +7,7 @@
 import { getAttr, getChild, type XmlElement } from "@aurochs/xml";
 import type { ConnectionTarget, CxnShape } from "../../domain";
 import { resolveFillFromStyleReference } from "../graphics/fill-parser";
-import type { FormatScheme } from "../context";
+import type { FormatScheme } from "../../domain/theme/types";
 import { getIntAttr } from "../primitive";
 import { parseNonVisualProperties } from "./non-visual";
 import { parseShapeProperties } from "./properties";

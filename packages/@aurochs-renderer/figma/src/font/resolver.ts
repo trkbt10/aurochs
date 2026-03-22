@@ -29,69 +29,36 @@ const DEFAULT_CONFIG: Required<FontResolverConfig> = {
  * Resolves Figma font references to CSS font stacks with appropriate
  * fallbacks based on font availability and mappings.
  */
-export class FontResolver {
-  private readonly config: Required<FontResolverConfig>;
-  private readonly cache = new Map<string, ResolvedFont>();
-
-  constructor(config?: FontResolverConfig) {
-    this.config = {
-      fontMappings: config?.fontMappings ?? DEFAULT_CONFIG.fontMappings,
-      defaultFallbacks: config?.defaultFallbacks ?? DEFAULT_CONFIG.defaultFallbacks,
-      availabilityChecker: config?.availabilityChecker ?? DEFAULT_CONFIG.availabilityChecker,
-    };
+/** Resolve an availability check that may be synchronous or async */
+async function resolveAvailability(result: boolean | Promise<boolean>): Promise<boolean> {
+  if (typeof result === "boolean") {
+    return result;
   }
+  return result;
+}
 
-  /**
-   * Resolve a Figma font reference to CSS font properties
-   *
-   * @param fontRef - Figma font reference
-   * @returns Resolved font information
-   */
-  resolve(fontRef: FigmaFontRef): ResolvedFont {
-    const cacheKey = `${fontRef.family}|${fontRef.style}`;
-    const cached = this.cache.get(cacheKey);
-    if (cached) {
-      return cached;
-    }
+/** Font resolver instance */
+export type FontResolverInstance = {
+  /** Resolve a Figma font reference to CSS font properties */
+  resolve(fontRef: FigmaFontRef): ResolvedFont;
+  /** Resolve a Figma font reference asynchronously */
+  resolveAsync(fontRef: FigmaFontRef): Promise<ResolvedFont>;
+  /** Clear the resolution cache */
+  clearCache(): void;
+};
 
-    const resolved = this.doResolve(fontRef);
-    this.cache.set(cacheKey, resolved);
-    return resolved;
-  }
+/** Resolves Figma font names to CSS font stacks with fallbacks */
+export function createFontResolver(config?: FontResolverConfig): FontResolverInstance {
+  const resolvedConfig: Required<FontResolverConfig> = {
+    fontMappings: config?.fontMappings ?? DEFAULT_CONFIG.fontMappings,
+    defaultFallbacks: config?.defaultFallbacks ?? DEFAULT_CONFIG.defaultFallbacks,
+    availabilityChecker: config?.availabilityChecker ?? DEFAULT_CONFIG.availabilityChecker,
+  };
+  const cache = new Map<string, ResolvedFont>();
 
-  /**
-   * Resolve a Figma font reference (internal implementation)
-   */
-  private doResolve(fontRef: FigmaFontRef): ResolvedFont {
-    const { family, style } = fontRef;
-
-    // Detect weight and style from Figma style string
-    const fontWeight = detectWeight(style) ?? FONT_WEIGHTS.REGULAR;
-    const fontStyle = detectStyle(style);
-
-    // Build fallback chain
-    const fallbackChain = this.buildFallbackChain(family);
-    const isExactMatch = this.checkAvailability(family);
-
-    // Build CSS font-family string
-    const fontFamily = this.buildFontFamilyString(fallbackChain);
-
-    return {
-      fontFamily,
-      fontWeight,
-      fontStyle,
-      isExactMatch,
-      source: fontRef,
-      fallbackChain,
-    };
-  }
-
-  /**
-   * Build fallback chain for a font family
-   */
-  private buildFallbackChain(family: string): readonly string[] {
+  function buildFallbackChain(family: string): readonly string[] {
     // Check custom mappings first
-    const mapped = this.config.fontMappings.get(family);
+    const mapped = resolvedConfig.fontMappings.get(family);
     if (mapped) {
       return mapped;
     }
@@ -107,11 +74,8 @@ export class FontResolver {
     return [family, ...genericFallbacks];
   }
 
-  /**
-   * Check if a font family is available
-   */
-  private checkAvailability(family: string): boolean {
-    const result = this.config.availabilityChecker.isAvailable(family);
+  function checkAvailability(family: string): boolean {
+    const result = resolvedConfig.availabilityChecker.isAvailable(family);
     // Handle both sync and async (for sync, Promise.resolve wraps it)
     if (typeof result === "boolean") {
       return result;
@@ -121,42 +85,7 @@ export class FontResolver {
     return true;
   }
 
-  /**
-   * Resolve a Figma font reference asynchronously
-   *
-   * Use this when font availability needs to be checked asynchronously
-   * (e.g., with CSS Font Loading API)
-   */
-  async resolveAsync(fontRef: FigmaFontRef): Promise<ResolvedFont> {
-    const { family, style } = fontRef;
-
-    const fontWeight = detectWeight(style) ?? FONT_WEIGHTS.REGULAR;
-    const fontStyle = detectStyle(style);
-    const fallbackChain = this.buildFallbackChain(family);
-
-    // Check availability asynchronously
-    const availabilityResult = this.config.availabilityChecker.isAvailable(family);
-    const isExactMatch =
-      typeof availabilityResult === "boolean"
-        ? availabilityResult
-        : await availabilityResult;
-
-    const fontFamily = this.buildFontFamilyString(fallbackChain);
-
-    return {
-      fontFamily,
-      fontWeight,
-      fontStyle,
-      isExactMatch,
-      source: fontRef,
-      fallbackChain,
-    };
-  }
-
-  /**
-   * Build CSS font-family string from fallback chain
-   */
-  private buildFontFamilyString(chain: readonly string[]): string {
+  function buildFontFamilyString(chain: readonly string[]): string {
     return chain
       .map((f) => {
         // Don't quote generic family names
@@ -172,12 +101,70 @@ export class FontResolver {
       .join(", ");
   }
 
-  /**
-   * Clear the resolution cache
-   */
-  clearCache(): void {
-    this.cache.clear();
+  function doResolve(fontRef: FigmaFontRef): ResolvedFont {
+    const { family, style } = fontRef;
+
+    // Detect weight and style from Figma style string
+    const fontWeight = detectWeight(style) ?? FONT_WEIGHTS.REGULAR;
+    const fontStyle = detectStyle(style);
+
+    // Build fallback chain
+    const fallbackChain = buildFallbackChain(family);
+    const isExactMatch = checkAvailability(family);
+
+    // Build CSS font-family string
+    const fontFamily = buildFontFamilyString(fallbackChain);
+
+    return {
+      fontFamily,
+      fontWeight,
+      fontStyle,
+      isExactMatch,
+      source: fontRef,
+      fallbackChain,
+    };
   }
+
+  return {
+    resolve(fontRef: FigmaFontRef): ResolvedFont {
+      const cacheKey = `${fontRef.family}|${fontRef.style}`;
+      const cached = cache.get(cacheKey);
+      if (cached) {
+        return cached;
+      }
+
+      const resolved = doResolve(fontRef);
+      cache.set(cacheKey, resolved);
+      return resolved;
+    },
+
+    async resolveAsync(fontRef: FigmaFontRef): Promise<ResolvedFont> {
+      const { family, style } = fontRef;
+
+      const fontWeight = detectWeight(style) ?? FONT_WEIGHTS.REGULAR;
+      const fontStyle = detectStyle(style);
+      const fallbackChain = buildFallbackChain(family);
+
+      // Check availability asynchronously
+      const availabilityResult = resolvedConfig.availabilityChecker.isAvailable(family);
+      const isExactMatch = await resolveAvailability(availabilityResult);
+
+      const fontFamily = buildFontFamilyString(fallbackChain);
+
+      return {
+        fontFamily,
+        fontWeight,
+        fontStyle,
+        isExactMatch,
+        source: fontRef,
+        fallbackChain,
+      };
+    },
+
+    clearCache(): void {
+      cache.clear();
+    },
+  };
 }
 
 /**
@@ -204,13 +191,6 @@ const GENERIC_FAMILIES = new Set([
  */
 function isGenericFamily(family: string): boolean {
   return GENERIC_FAMILIES.has(family);
-}
-
-/**
- * Create a default font resolver
- */
-export function createFontResolver(config?: FontResolverConfig): FontResolver {
-  return new FontResolver(config);
 }
 
 /**

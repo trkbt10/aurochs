@@ -4,6 +4,7 @@
  * Provides VBA keywords for completion.
  */
 
+import type { VbaProcedure } from "@aurochs-office/vba";
 import type { CompletionProvider, CompletionItem, CompletionContext } from "../types";
 import {
   VBA_KEYWORDS_ARRAY,
@@ -49,7 +50,7 @@ export const keywordProvider: CompletionProvider = {
   provideCompletions(
     context: CompletionContext,
     _source: string,
-    _procedures: readonly import("@aurochs-office/vba").VbaProcedure[],
+    _procedures: readonly VbaProcedure[],
   ): readonly CompletionItem[] {
     // Don't provide keywords after "."
     if (context.trigger === "dot") {

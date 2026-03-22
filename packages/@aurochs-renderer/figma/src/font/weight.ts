@@ -105,18 +105,18 @@ export function detectWeight(style: string | undefined): FontWeight | undefined 
  */
 export function normalizeWeight(weight: number): FontWeight {
   const weights = Object.values(FONT_WEIGHTS);
-  let closest: FontWeight = FONT_WEIGHTS.REGULAR;
-  let minDiff = Math.abs(weight - closest);
+  const closestRef = { value: FONT_WEIGHTS.REGULAR as FontWeight };
+  const minDiffRef = { value: Math.abs(weight - closestRef.value) };
 
   for (const w of weights) {
     const diff = Math.abs(weight - w);
-    if (diff < minDiff) {
-      minDiff = diff;
-      closest = w as FontWeight;
+    if (diff < minDiffRef.value) {
+      minDiffRef.value = diff;
+      closestRef.value = w as FontWeight;
     }
   }
 
-  return closest;
+  return closestRef.value;
 }
 
 /**

@@ -4,7 +4,7 @@
  * Tests for search/replace action handlers.
  */
 
-import { describe, expect, it } from "vitest";
+// Test globals (describe/it/expect) provided by vitest runner
 import {
   handleOpenSearch,
   handleCloseSearch,
@@ -62,23 +62,23 @@ function createTestState(
 function createMatches(source: string, query: string): SearchMatch[] {
   const matches: SearchMatch[] = [];
   const lines = source.split("\n");
-  let offset = 0;
+  const offset = { value: 0 };
 
   for (let lineNum = 0; lineNum < lines.length; lineNum++) {
     const line = lines[lineNum];
-    let idx = 0;
-    while ((idx = line.indexOf(query, idx)) !== -1) {
+    const idx = { value: 0 };
+    while ((idx.value = line.indexOf(query, idx.value)) !== -1) {
       matches.push({
-        startOffset: offset + idx,
-        endOffset: offset + idx + query.length,
+        startOffset: offset.value + idx.value,
+        endOffset: offset.value + idx.value + query.length,
         line: lineNum + 1,
-        startColumn: idx + 1,
-        endColumn: idx + query.length + 1,
+        startColumn: idx.value + 1,
+        endColumn: idx.value + query.length + 1,
         text: query,
       });
-      idx += 1;
+      idx.value += 1;
     }
-    offset += line.length + 1; // +1 for newline
+    offset.value += line.length + 1; // +1 for newline
   }
   return matches;
 }

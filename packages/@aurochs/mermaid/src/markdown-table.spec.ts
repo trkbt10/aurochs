@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+/** @file Markdown table renderer tests */
 import { renderMarkdownTable } from "./markdown-table";
 
 describe("renderMarkdownTable", () => {

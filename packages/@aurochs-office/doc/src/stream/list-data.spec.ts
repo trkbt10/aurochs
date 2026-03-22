@@ -112,7 +112,7 @@ function buildPlfLfo(overrides: Array<{
 
   // LFOLVL entries (after all LFOs)
   for (const ov of overrides) {
-    if (!ov.lfolvls) continue;
+    if (!ov.lfolvls) {continue;}
     for (const lfolvl of ov.lfolvls) {
       // iStartAt (4B)
       pushInt32(bytes, lfolvl.iStartAt ?? 0);

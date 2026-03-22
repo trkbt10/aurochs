@@ -1,7 +1,7 @@
+/** @file Layer listing tests */
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
-import { it } from "vitest";
 import { parseFigFile, buildNodeTree, findNodesByType, getNodeType } from "@aurochs/fig/parser";
 import type { FigNode } from "@aurochs/fig/types";
 
@@ -50,14 +50,14 @@ it("list layers", { timeout: 30_000 }, async () => {
   const canvases = findNodesByType(roots, "CANVAS");
   for (const canvas of canvases) {
     const cd = canvas as Record<string, unknown>;
-    if (cd.internalOnly) continue;
+    if (cd.internalOnly) {continue;}
     walkAll(canvas, "", 0);
   }
 
   // List children of Examples canvas using includes match
   console.log("\n=== Examples canvas - full listing (3 levels) ===");
   for (const canvas of canvases) {
-    if (!(canvas.name ?? "").includes("Examples")) continue;
+    if (!(canvas.name ?? "").includes("Examples")) {continue;}
     console.log(`Canvas name: [${canvas.name}] (length=${(canvas.name ?? "").length})`);
     for (const child of canvas.children ?? []) {
       const nd = child as Record<string, unknown>;
@@ -95,7 +95,9 @@ it("list layers", { timeout: 30_000 }, async () => {
   // Note: The 50:XXXXX format in the ID hints at Figma node GUIDs
 
   // Use includes-based matching for canvas names (they have special chars/spaces)
-  function listAllNodes(node: FigNode, indent: string, maxDepth: number, depth: number) {
+  function listAllNodes(
+    { node, indent, maxDepth, depth }: { node: FigNode; indent: string; maxDepth: number; depth: number; }
+  ) {
     const nd = node as Record<string, unknown>;
     const size = nd.size as { x?: number; y?: number } | undefined;
     const type = getNodeType(node);
@@ -111,7 +113,7 @@ it("list layers", { timeout: 30_000 }, async () => {
 
   console.log("\n=== Detailed: Action Sheets canvas ===");
   for (const canvas of canvases) {
-    if (!(canvas.name ?? "").includes("Action Sheets")) continue;
+    if (!(canvas.name ?? "").includes("Action Sheets")) {continue;}
     console.log(`Canvas: [${JSON.stringify(canvas.name)}]`);
     for (const child of canvas.children ?? []) {
       listAllNodes(child, "  ", 5, 0);
@@ -120,7 +122,7 @@ it("list layers", { timeout: 30_000 }, async () => {
 
   console.log("\n=== Detailed: Activity Views canvas ===");
   for (const canvas of canvases) {
-    if (!(canvas.name ?? "").includes("Activity Views")) continue;
+    if (!(canvas.name ?? "").includes("Activity Views")) {continue;}
     console.log(`Canvas: [${JSON.stringify(canvas.name)}]`);
     for (const child of canvas.children ?? []) {
       listAllNodes(child, "  ", 4, 0);
@@ -129,7 +131,7 @@ it("list layers", { timeout: 30_000 }, async () => {
 
   console.log("\n=== Detailed: Pickers canvas ===");
   for (const canvas of canvases) {
-    if (!(canvas.name ?? "").includes("Pickers")) continue;
+    if (!(canvas.name ?? "").includes("Pickers")) {continue;}
     console.log(`Canvas: [${JSON.stringify(canvas.name)}]`);
     for (const child of canvas.children ?? []) {
       listAllNodes(child, "  ", 4, 0);

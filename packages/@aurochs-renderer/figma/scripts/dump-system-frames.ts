@@ -1,3 +1,4 @@
+/** @file System frames dump script */
 /**
  * Render each top-level frame in the System canvas and save as SVG.
  * Used to visually inspect element alignment issues.
@@ -22,10 +23,10 @@ async function main() {
   // Find canvases
   const canvases: FigNode[] = [];
   function findCanvases(node: FigNode) {
-    if (getNodeType(node) === "CANVAS") canvases.push(node);
-    for (const c of node.children ?? []) findCanvases(c);
+    if (getNodeType(node) === "CANVAS") {canvases.push(node);}
+    for (const c of node.children ?? []) {findCanvases(c);}
   }
-  for (const r of roots) findCanvases(r);
+  for (const r of roots) {findCanvases(r);}
 
   console.log(`Found ${canvases.length} canvases:`);
   for (const c of canvases) {
@@ -56,11 +57,11 @@ async function main() {
   // Render each top-level frame individually
   for (const frame of topFrames) {
     const type = getNodeType(frame);
-    if (type !== "FRAME" && type !== "SECTION" && type !== "SYMBOL" && type !== "INSTANCE") continue;
+    if (type !== "FRAME" && type !== "SECTION" && type !== "SYMBOL" && type !== "INSTANCE") {continue;}
 
     const nd = frame as Record<string, unknown>;
     const size = nd.size as { x: number; y: number } | undefined;
-    if (!size) continue;
+    if (!size) {continue;}
 
     const safeName = (frame.name ?? "unnamed").replace(/[^a-zA-Z0-9-_]/g, "_");
 

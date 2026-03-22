@@ -63,6 +63,27 @@ export type RenderedFixture = {
 };
 
 /**
+ * Compute the initial Y position for table layout based on paged paragraph layout.
+ */
+function computeInitialTableY(pagedLayout: { pages: readonly PageLayout[] }, defaultY: number): number {
+  if (pagedLayout.pages.length === 0) {
+    return defaultY;
+  }
+  const firstPage = pagedLayout.pages[0];
+  if (firstPage === undefined || firstPage.paragraphs.length === 0) {
+    return defaultY;
+  }
+  const lastParaOnPage = firstPage.paragraphs[firstPage.paragraphs.length - 1];
+  if (lastParaOnPage === undefined) {
+    return defaultY;
+  }
+  const paraHeight = lastParaOnPage.lines.reduce((sum, line) => sum + (line.height as number), 0);
+  const firstLine = lastParaOnPage.lines[0];
+  const paraY = firstLine !== undefined ? (firstLine.y as number) : defaultY;
+  return paraY + paraHeight + 12; // 12px spacing after paragraph
+}
+
+/**
  * Load a DOCX fixture file and render it to SVG.
  *
  * @param fixturePath - Path to .docx file relative to the calling spec file
@@ -109,25 +130,9 @@ export async function loadAndRender(fixturePath: string, callerUrl: string): Pro
 
   // Layout tables
   const tableLayouts: LayoutTableResult[] = [];
-  let tableY = pageConfig.marginTop as number;
+  const initialTableY = computeInitialTableY(pagedLayout, pageConfig.marginTop as number);
 
-  // Calculate Y position after paragraphs from the paged layout
-  if (pagedLayout.pages.length > 0) {
-    const firstPage = pagedLayout.pages[0];
-    if (firstPage !== undefined && firstPage.paragraphs.length > 0) {
-      // Get the last paragraph on the first page
-      const lastParaOnPage = firstPage.paragraphs[firstPage.paragraphs.length - 1];
-      if (lastParaOnPage !== undefined) {
-        // Calculate paragraph total height from its lines
-        const paraHeight = lastParaOnPage.lines.reduce((sum, line) => sum + (line.height as number), 0);
-        // Get the Y from the first line (paragraph Y)
-        const firstLine = lastParaOnPage.lines[0];
-        const paraY = firstLine !== undefined ? (firstLine.y as number) : tableY;
-        tableY = paraY + paraHeight + 12; // 12px spacing after paragraph
-      }
-    }
-  }
-
+  const tableYRef = { value: initialTableY };
   for (const table of tables) {
     const tableInput = tableToLayoutInput({
       table,
@@ -137,10 +142,10 @@ export async function loadAndRender(fixturePath: string, callerUrl: string): Pro
     });
     const tableLayout = layoutTable(tableInput, {
       availableWidth: contentWidth,
-      startY: px(tableY),
+      startY: px(tableYRef.value),
     });
     tableLayouts.push(tableLayout);
-    tableY = (tableLayout.y as number) + (tableLayout.height as number) + 12;
+    tableYRef.value = (tableLayout.y as number) + (tableLayout.height as number) + 12;
   }
 
   // Resolve headers and footers for each page

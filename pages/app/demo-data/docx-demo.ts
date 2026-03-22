@@ -51,6 +51,17 @@ function createDemoNumbering(): DocxNumbering {
   return { abstractNum: [decimalAbstract, bulletAbstract], num: [decimalNum, bulletNum] };
 }
 
+
+
+
+
+
+
+
+
+
+
+/** Create demo DOCX paragraphs with numbering. */
 export function createDemoParagraphsAndNumbering(): { paragraphs: DocxParagraph[]; numbering: DocxNumbering } {
   return {
     paragraphs: [

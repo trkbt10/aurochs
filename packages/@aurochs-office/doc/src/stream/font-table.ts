@@ -21,7 +21,7 @@ export type FontEntry = {
 
 /** Parse the SttbfFfn (font table) from the table stream. */
 export function parseFontTable(tableStream: Uint8Array, fc: number, lcb: number): readonly FontEntry[] {
-  if (lcb === 0) return [];
+  if (lcb === 0) {return [];}
 
   if (fc + lcb > tableStream.length) {
     throw new Error(`Font table extends beyond table stream: ${fc} + ${lcb} > ${tableStream.length}`);
@@ -44,7 +44,7 @@ export function parseFontTable(tableStream: Uint8Array, fc: number, lcb: number)
   let offset = fc + 6;
 
   for (let i = 0; i < cData; i++) {
-    if (offset + 2 > fc + lcb) break;
+    if (offset + 2 > fc + lcb) {break;}
 
     // Each entry starts with cbData (2B, in bytes = data length including FFN)
     const cbData = view.getUint16(offset, true);
@@ -102,21 +102,21 @@ export function parseFontTable(tableStream: Uint8Array, fc: number, lcb: number)
  * For shorter FFN entries (older formats), the name may start earlier.
  */
 function extractFontName(ffnData: Uint8Array): string | undefined {
-  if (ffnData.length < 2) return undefined;
+  if (ffnData.length < 2) {return undefined;}
 
   // Try standard offset (40 bytes into FFN, which is 39 after cbFfnM1)
   const nameOffset = 40;
 
   if (ffnData.length > nameOffset) {
     const name = readUtf16NullTerminated(ffnData, nameOffset);
-    if (name) return name;
+    if (name) {return name;}
   }
 
   // Fallback: try offset 6+10=16 (minimal FFN: after panose, no font signature)
   const minNameOffset = 16;
   if (ffnData.length > minNameOffset) {
     const name = readUtf16NullTerminated(ffnData, minNameOffset);
-    if (name) return name;
+    if (name) {return name;}
   }
 
   return undefined;
@@ -129,11 +129,11 @@ function readUtf16NullTerminated(data: Uint8Array, offset: number): string | und
 
   for (let i = offset; i + 1 < data.length; i += 2) {
     const ch = view.getUint16(i, true);
-    if (ch === 0) break;
+    if (ch === 0) {break;}
     chars.push(ch);
   }
 
-  if (chars.length === 0) return undefined;
+  if (chars.length === 0) {return undefined;}
   return String.fromCharCode(...chars);
 }
 

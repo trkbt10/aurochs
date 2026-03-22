@@ -16,10 +16,22 @@ import type { PptRecord } from "../records/types";
 import { RT } from "../records/record-types";
 import { readPptRecord, RECORD_HEADER_SIZE } from "../records/record-reader";
 import { parsePptRecordTree } from "../records/container-parser";
-import { findChildByType, findChildrenByType } from "../records/record-iterator";
+import { findChildrenByType } from "../records/record-iterator";
 import { parseSlidePersistAtom, type SlidePersistAtomData } from "../records/atoms/slide";
 import type { PptParseContext } from "../parse-context";
 import { warnOrThrow } from "../parse-context";
+
+/** Swallow optional record parsing error (notes, masters). */
+function handleOptionalRecordError(_error: unknown): void {
+  // Intentionally swallowed: these records are optional
+}
+
+function resolveFirstUserEditOffset(currentUserStream: Uint8Array | undefined, docStream: Uint8Array): number {
+  if (currentUserStream && currentUserStream.length > 0) {
+    return parseCurrentUserStream(currentUserStream);
+  }
+  return findLastUserEditAtom(docStream);
+}
 
 export type PptStreamParseResult = {
   readonly documentRecord: PptRecord;
@@ -63,26 +75,25 @@ function buildPersistDirectory(
   ctx: PptParseContext,
 ): { persistDir: Map<number, number>; docPersistIdRef: number } {
   const persistDir = new Map<number, number>();
-  let docPersistIdRef = 1;
-  let currentOffset = firstUserEditOffset;
+  const state = { docPersistIdRef: 1, currentOffset: firstUserEditOffset };
   const visited = new Set<number>();
 
-  while (currentOffset !== 0 && !visited.has(currentOffset)) {
-    visited.add(currentOffset);
+  while (state.currentOffset !== 0 && !visited.has(state.currentOffset)) {
+    visited.add(state.currentOffset);
 
-    if (currentOffset + RECORD_HEADER_SIZE > docStream.length) {
+    if (state.currentOffset + RECORD_HEADER_SIZE > docStream.length) {
       warnOrThrow(ctx,
-        { code: "PPT_PERSIST_OFFSET_INVALID", where: "buildPersistDirectory", message: `UserEditAtom offset ${currentOffset} out of range` },
-        new Error(`UserEditAtom offset ${currentOffset} out of range`),
+        { code: "PPT_PERSIST_OFFSET_INVALID", where: "buildPersistDirectory", message: `UserEditAtom offset ${state.currentOffset} out of range` },
+        new Error(`UserEditAtom offset ${state.currentOffset} out of range`),
       );
       break;
     }
 
-    const userEditRecord = readPptRecord(docStream, currentOffset);
+    const userEditRecord = readPptRecord(docStream, state.currentOffset);
     if (userEditRecord.recType !== RT.UserEditAtom) {
       warnOrThrow(ctx,
-        { code: "PPT_PERSIST_OFFSET_INVALID", where: "buildPersistDirectory", message: `Expected UserEditAtom at offset ${currentOffset}, got 0x${userEditRecord.recType.toString(16)}` },
-        new Error(`Expected UserEditAtom at offset ${currentOffset}`),
+        { code: "PPT_PERSIST_OFFSET_INVALID", where: "buildPersistDirectory", message: `Expected UserEditAtom at offset ${state.currentOffset}, got 0x${userEditRecord.recType.toString(16)}` },
+        new Error(`Expected UserEditAtom at offset ${state.currentOffset}`),
       );
       break;
     }
@@ -99,7 +110,7 @@ function buildPersistDirectory(
     //   u32: persistIdSeed
     const offsetLastEdit = ueView.getUint32(8, true);
     const offsetPersistDir = ueView.getUint32(12, true);
-    docPersistIdRef = ueView.getUint32(16, true);
+    state.docPersistIdRef = ueView.getUint32(16, true);
 
     // Read PersistDirectoryAtom
     if (offsetPersistDir + RECORD_HEADER_SIZE <= docStream.length) {
@@ -109,10 +120,10 @@ function buildPersistDirectory(
       }
     }
 
-    currentOffset = offsetLastEdit;
+    state.currentOffset = offsetLastEdit;
   }
 
-  return { persistDir, docPersistIdRef };
+  return { persistDir, docPersistIdRef: state.docPersistIdRef };
 }
 
 /**
@@ -122,15 +133,15 @@ function buildPersistDirectory(
  */
 function parsePersistDirectoryEntries(record: PptRecord, target: Map<number, number>): void {
   const view = new DataView(record.data.buffer, record.data.byteOffset, record.data.byteLength);
-  let offset = 0;
+  const pos = { value: 0 };
 
-  while (offset + 4 <= record.data.byteLength) {
-    const packed = view.getUint32(offset, true); offset += 4;
+  while (pos.value + 4 <= record.data.byteLength) {
+    const packed = view.getUint32(pos.value, true); pos.value += 4;
     const startPersistId = packed & 0x000FFFFF;
     const count = (packed >> 20) & 0x0FFF;
 
-    for (let i = 0; i < count && offset + 4 <= record.data.byteLength; i++) {
-      const streamOffset = view.getUint32(offset, true); offset += 4;
+    for (let i = 0; i < count && pos.value + 4 <= record.data.byteLength; i++) {
+      const streamOffset = view.getUint32(pos.value, true); pos.value += 4;
       // Only set if not already set (earlier edits have priority in reverse walk,
       // but we walk forward, so later sets override)
       target.set(startPersistId + i, streamOffset);
@@ -147,14 +158,7 @@ export function parsePptDocumentStream(
   ctx: PptParseContext,
 ): PptStreamParseResult {
   // Step 1: Find the last UserEditAtom
-  let firstUserEditOffset: number;
-
-  if (currentUserStream && currentUserStream.length > 0) {
-    firstUserEditOffset = parseCurrentUserStream(currentUserStream);
-  } else {
-    // Fallback: scan from end of document stream for UserEditAtom
-    firstUserEditOffset = findLastUserEditAtom(docStream);
-  }
+  const firstUserEditOffset = resolveFirstUserEditOffset(currentUserStream, docStream);
 
   // Step 2: Build persist directory
   const { persistDir, docPersistIdRef } = buildPersistDirectory(docStream, firstUserEditOffset, ctx);
@@ -216,12 +220,12 @@ export function parsePptDocumentStream(
   const noteRecords: PptRecord[] = [];
   for (const np of notesPersists) {
     const notesOffset = persistDir.get(np.persistIdRef);
-    if (notesOffset === undefined) continue;
+    if (notesOffset === undefined) {continue;}
     try {
       const notesRecord = parsePptRecordTree(docStream, notesOffset);
       noteRecords.push(notesRecord);
-    } catch {
-      // Notes are optional, skip on error
+    } catch (error) {
+      handleOptionalRecordError(error);
     }
   }
 
@@ -229,14 +233,14 @@ export function parsePptDocumentStream(
   const masterRecords: PptRecord[] = [];
   // Masters are found by scanning the persist directory for MainMasterContainer records
   for (const [, offset] of persistDir) {
-    if (offset + RECORD_HEADER_SIZE > docStream.length) continue;
+    if (offset + RECORD_HEADER_SIZE > docStream.length) {continue;}
     try {
       const rec = readPptRecord(docStream, offset);
       if (rec.recType === RT.MainMasterContainer) {
         masterRecords.push(parsePptRecordTree(docStream, offset));
       }
-    } catch {
-      // Skip invalid entries
+    } catch (error) {
+      handleOptionalRecordError(error);
     }
   }
 
@@ -259,8 +263,8 @@ function findLastUserEditAtom(docStream: Uint8Array): number {
       if (record.recType === RT.UserEditAtom && record.recLen >= 20 && record.recLen <= 32) {
         return offset;
       }
-    } catch {
-      // Keep scanning
+    } catch (error) {
+      handleOptionalRecordError(error);
     }
   }
   throw new Error("Could not find UserEditAtom in PowerPoint Document stream");

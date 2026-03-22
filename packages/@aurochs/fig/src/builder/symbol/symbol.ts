@@ -14,198 +14,121 @@ import {
   type StackAlign,
 } from "../../constants";
 
-export class SymbolNodeBuilder {
-  private _localID: number;
-  private _parentID: number;
-  private _name: string;
-  private _width: number;
-  private _height: number;
-  private _x: number;
-  private _y: number;
-  private _fillColor: Color;
-  private _clipsContent: boolean;
-  private _cornerRadius?: number;
-  private _visible: boolean;
-  private _opacity: number;
-  private _exportSettings: ExportSettings[] = [];
+/** Symbol node builder instance */
+export type SymbolNodeBuilder = {
+  name: (name: string) => SymbolNodeBuilder;
+  size: (width: number, height: number) => SymbolNodeBuilder;
+  position: (x: number, y: number) => SymbolNodeBuilder;
+  background: (c: Color) => SymbolNodeBuilder;
+  clipsContent: (clips: boolean) => SymbolNodeBuilder;
+  cornerRadius: (radius: number) => SymbolNodeBuilder;
+  visible: (v: boolean) => SymbolNodeBuilder;
+  opacity: (o: number) => SymbolNodeBuilder;
+  autoLayout: (mode: StackMode) => SymbolNodeBuilder;
+  gap: (spacing: number) => SymbolNodeBuilder;
+  padding: (value: number | StackPadding) => SymbolNodeBuilder;
+  primaryAlign: (align: StackAlign) => SymbolNodeBuilder;
+  counterAlign: (align: StackAlign) => SymbolNodeBuilder;
+  contentAlign: (align: StackAlign) => SymbolNodeBuilder;
+  wrap: (enabled?: boolean) => SymbolNodeBuilder;
+  counterGap: (spacing: number) => SymbolNodeBuilder;
+  reverseZIndex: (enabled?: boolean) => SymbolNodeBuilder;
+  addExportSettings: (settings: ExportSettings) => SymbolNodeBuilder;
+  exportAsSVG: () => SymbolNodeBuilder;
+  build: () => SymbolNodeData;
+};
 
-  // AutoLayout - frame level
-  private _stackMode?: StackMode;
-  private _stackSpacing?: number;
-  private _stackPadding?: StackPadding;
-  private _stackPrimaryAlignItems?: StackAlign;
-  private _stackCounterAlignItems?: StackAlign;
-  private _stackPrimaryAlignContent?: StackAlign;
-  private _stackWrap?: boolean;
-  private _stackCounterSpacing?: number;
-  private _itemReverseZIndex?: boolean;
+/** Create a symbol node builder */
+function createSymbolNodeBuilder(localID: number, parentID: number): SymbolNodeBuilder {
+  const state = {
+    name: "Component",
+    width: 200,
+    height: 100,
+    x: 0,
+    y: 0,
+    fillColor: { r: 1, g: 1, b: 1, a: 1 } as Color,
+    clipsContent: true,
+    cornerRadius: undefined as number | undefined,
+    visible: true,
+    opacity: 1,
+    exportSettings: [] as ExportSettings[],
+    stackMode: undefined as StackMode | undefined,
+    stackSpacing: undefined as number | undefined,
+    stackPadding: undefined as StackPadding | undefined,
+    stackPrimaryAlignItems: undefined as StackAlign | undefined,
+    stackCounterAlignItems: undefined as StackAlign | undefined,
+    stackPrimaryAlignContent: undefined as StackAlign | undefined,
+    stackWrap: undefined as boolean | undefined,
+    stackCounterSpacing: undefined as number | undefined,
+    itemReverseZIndex: undefined as boolean | undefined,
+  };
 
-  constructor(localID: number, parentID: number) {
-    this._localID = localID;
-    this._parentID = parentID;
-    this._name = "Component";
-    this._width = 200;
-    this._height = 100;
-    this._x = 0;
-    this._y = 0;
-    this._fillColor = { r: 1, g: 1, b: 1, a: 1 };
-    this._clipsContent = true;
-    this._visible = true;
-    this._opacity = 1;
-  }
+  const builder: SymbolNodeBuilder = {
+    name(n: string) { state.name = n; return builder; },
+    size(width: number, height: number) { state.width = width; state.height = height; return builder; },
+    position(x: number, y: number) { state.x = x; state.y = y; return builder; },
+    background(c: Color) { state.fillColor = c; return builder; },
+    clipsContent(clips: boolean) { state.clipsContent = clips; return builder; },
+    cornerRadius(radius: number) { state.cornerRadius = radius; return builder; },
+    visible(v: boolean) { state.visible = v; return builder; },
+    opacity(o: number) { state.opacity = o; return builder; },
+    autoLayout(mode: StackMode) { state.stackMode = mode; return builder; },
+    gap(spacing: number) { state.stackSpacing = spacing; return builder; },
+    padding(value: number | StackPadding) {
+      if (typeof value === "number") {
+        state.stackPadding = { top: value, right: value, bottom: value, left: value };
+      } else {
+        state.stackPadding = value;
+      }
+      return builder;
+    },
+    primaryAlign(align: StackAlign) { state.stackPrimaryAlignItems = align; return builder; },
+    counterAlign(align: StackAlign) { state.stackCounterAlignItems = align; return builder; },
+    contentAlign(align: StackAlign) { state.stackPrimaryAlignContent = align; return builder; },
+    wrap(enabled: boolean = true) {
+      state.stackWrap = enabled;
+      if (enabled && !state.stackMode) {
+        state.stackMode = "WRAP";
+      }
+      return builder;
+    },
+    counterGap(spacing: number) { state.stackCounterSpacing = spacing; return builder; },
+    reverseZIndex(enabled: boolean = true) { state.itemReverseZIndex = enabled; return builder; },
+    addExportSettings(settings: ExportSettings) { state.exportSettings.push(settings); return builder; },
+    exportAsSVG() { state.exportSettings.push(DEFAULT_SVG_EXPORT_SETTINGS); return builder; },
 
-  name(name: string): this {
-    this._name = name;
-    return this;
-  }
+    build(): SymbolNodeData {
+      return {
+        localID,
+        parentID,
+        name: state.name,
+        size: { x: state.width, y: state.height },
+        transform: { m00: 1, m01: 0, m02: state.x, m10: 0, m11: 1, m12: state.y },
+        fillPaints: [{ type: { value: 0, name: "SOLID" }, color: state.fillColor, opacity: 1, visible: true, blendMode: { value: 1, name: "NORMAL" } }],
+        visible: state.visible,
+        opacity: state.opacity,
+        clipsContent: state.clipsContent,
+        cornerRadius: state.cornerRadius,
+        exportSettings: state.exportSettings.length > 0 ? state.exportSettings : undefined,
+        stackMode: toEnumValue(state.stackMode, STACK_MODE_VALUES),
+        stackSpacing: state.stackSpacing,
+        stackPadding: state.stackPadding,
+        stackPrimaryAlignItems: toEnumValue(state.stackPrimaryAlignItems, STACK_ALIGN_VALUES),
+        stackCounterAlignItems: toEnumValue(state.stackCounterAlignItems, STACK_ALIGN_VALUES),
+        stackPrimaryAlignContent: toEnumValue(state.stackPrimaryAlignContent, STACK_ALIGN_VALUES),
+        stackWrap: state.stackWrap,
+        stackCounterSpacing: state.stackCounterSpacing,
+        itemReverseZIndex: state.itemReverseZIndex,
+      };
+    },
+  };
 
-  size(width: number, height: number): this {
-    this._width = width;
-    this._height = height;
-    return this;
-  }
-
-  position(x: number, y: number): this {
-    this._x = x;
-    this._y = y;
-    return this;
-  }
-
-  background(c: Color): this {
-    this._fillColor = c;
-    return this;
-  }
-
-  clipsContent(clips: boolean): this {
-    this._clipsContent = clips;
-    return this;
-  }
-
-  cornerRadius(radius: number): this {
-    this._cornerRadius = radius;
-    return this;
-  }
-
-  visible(v: boolean): this {
-    this._visible = v;
-    return this;
-  }
-
-  opacity(o: number): this {
-    this._opacity = o;
-    return this;
-  }
-
-  // AutoLayout Methods
-  autoLayout(mode: StackMode): this {
-    this._stackMode = mode;
-    return this;
-  }
-
-  gap(spacing: number): this {
-    this._stackSpacing = spacing;
-    return this;
-  }
-
-  padding(value: number | StackPadding): this {
-    if (typeof value === "number") {
-      this._stackPadding = { top: value, right: value, bottom: value, left: value };
-    } else {
-      this._stackPadding = value;
-    }
-    return this;
-  }
-
-  primaryAlign(align: StackAlign): this {
-    this._stackPrimaryAlignItems = align;
-    return this;
-  }
-
-  counterAlign(align: StackAlign): this {
-    this._stackCounterAlignItems = align;
-    return this;
-  }
-
-  contentAlign(align: StackAlign): this {
-    this._stackPrimaryAlignContent = align;
-    return this;
-  }
-
-  wrap(enabled: boolean = true): this {
-    this._stackWrap = enabled;
-    if (enabled && !this._stackMode) {
-      this._stackMode = "WRAP";
-    }
-    return this;
-  }
-
-  counterGap(spacing: number): this {
-    this._stackCounterSpacing = spacing;
-    return this;
-  }
-
-  reverseZIndex(enabled: boolean = true): this {
-    this._itemReverseZIndex = enabled;
-    return this;
-  }
-
-  // Export Settings
-  addExportSettings(settings: ExportSettings): this {
-    this._exportSettings.push(settings);
-    return this;
-  }
-
-  exportAsSVG(): this {
-    this._exportSettings.push(DEFAULT_SVG_EXPORT_SETTINGS);
-    return this;
-  }
-
-  build(): SymbolNodeData {
-    return {
-      localID: this._localID,
-      parentID: this._parentID,
-      name: this._name,
-      size: { x: this._width, y: this._height },
-      transform: {
-        m00: 1,
-        m01: 0,
-        m02: this._x,
-        m10: 0,
-        m11: 1,
-        m12: this._y,
-      },
-      fillPaints: [
-        {
-          type: { value: 0, name: "SOLID" },
-          color: this._fillColor,
-          opacity: 1,
-          visible: true,
-          blendMode: { value: 1, name: "NORMAL" },
-        },
-      ],
-      visible: this._visible,
-      opacity: this._opacity,
-      clipsContent: this._clipsContent,
-      cornerRadius: this._cornerRadius,
-      exportSettings: this._exportSettings.length > 0 ? this._exportSettings : undefined,
-
-      // AutoLayout
-      stackMode: toEnumValue(this._stackMode, STACK_MODE_VALUES),
-      stackSpacing: this._stackSpacing,
-      stackPadding: this._stackPadding,
-      stackPrimaryAlignItems: toEnumValue(this._stackPrimaryAlignItems, STACK_ALIGN_VALUES),
-      stackCounterAlignItems: toEnumValue(this._stackCounterAlignItems, STACK_ALIGN_VALUES),
-      stackPrimaryAlignContent: toEnumValue(this._stackPrimaryAlignContent, STACK_ALIGN_VALUES),
-      stackWrap: this._stackWrap,
-      stackCounterSpacing: this._stackCounterSpacing,
-      itemReverseZIndex: this._itemReverseZIndex,
-    };
-  }
+  return builder;
 }
 
 /**
  * Create a new Symbol (component definition) builder
  */
 export function symbolNode(localID: number, parentID: number): SymbolNodeBuilder {
-  return new SymbolNodeBuilder(localID, parentID);
+  return createSymbolNodeBuilder(localID, parentID);
 }

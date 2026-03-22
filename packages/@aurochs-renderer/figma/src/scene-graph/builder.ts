@@ -33,6 +33,17 @@ import { convertStrokeToSceneStroke } from "./convert/stroke";
 import { convertEffectsToScene } from "./convert/effects";
 import { decodeGeometryToContours, convertVectorPathsToContours } from "./convert/path";
 import { convertTextNode } from "./convert/text";
+import type { Fill } from "./types";
+
+/** Select fill paints based on whether stroke geometry is being used */
+function selectPaintsForFills(
+  isStrokeGeometry: boolean,
+  paints: { strokePaints: unknown; fillPaints: unknown },
+  images: ReadonlyMap<string, unknown>
+): Fill[] {
+  const source = isStrokeGeometry ? paints.strokePaints : paints.fillPaints;
+  return convertPaintsToFills(source, images);
+}
 
 // =============================================================================
 // Build Context
@@ -71,8 +82,8 @@ type BuildContext = {
 
 function getNodeTypeName(node: FigNode): string {
   const type = node.type;
-  if (!type) return "UNKNOWN";
-  if (typeof type === "string") return type;
+  if (!type) {return "UNKNOWN";}
+  if (typeof type === "string") {return type;}
   if (typeof type === "object" && "name" in type) {
     return (type as { name: string }).name;
   }
@@ -100,7 +111,7 @@ const IDENTITY: AffineMatrix = { m00: 1, m01: 0, m02: 0, m10: 0, m11: 1, m12: 0 
 function convertTransform(
   matrix: { m00?: number; m01?: number; m02?: number; m10?: number; m11?: number; m12?: number } | undefined,
 ): AffineMatrix {
-  if (!matrix) return IDENTITY;
+  if (!matrix) {return IDENTITY;}
   return {
     m00: matrix.m00 ?? 1,
     m01: matrix.m01 ?? 0,
@@ -124,7 +135,7 @@ function extractUniformCornerRadius(node: FigNode): number | undefined {
   const radii = node.rectangleCornerRadii;
   if (radii && radii.length === 4) {
     const allSame = radii[0] === radii[1] && radii[1] === radii[2] && radii[2] === radii[3];
-    if (allSame) return radii[0] || undefined;
+    if (allSame) {return radii[0] || undefined;}
     const avg = (radii[0] + radii[1] + radii[2] + radii[3]) / 4;
     return avg || undefined;
   }
@@ -251,22 +262,20 @@ function buildVectorNode(node: FigNode, ctx: BuildContext): PathNode {
   const nodeData = node as Record<string, unknown>;
   const vectorPaths = nodeData.vectorPaths as readonly { data: string; windingRule?: unknown }[] | undefined;
 
-  let contours = convertVectorPathsToContours(vectorPaths);
-  let isStrokeGeometry = false;
-  if (contours.length === 0) {
-    contours = decodeGeometryToContours(fillGeometry, ctx.blobs);
+  const contoursRef = { value: convertVectorPathsToContours(vectorPaths) };
+  const isStrokeGeometryRef = { value: false };
+  if (contoursRef.value.length === 0) {
+    contoursRef.value = decodeGeometryToContours(fillGeometry, ctx.blobs);
   }
-  if (contours.length === 0) {
-    contours = decodeGeometryToContours(strokeGeometry, ctx.blobs);
-    isStrokeGeometry = contours.length > 0;
+  if (contoursRef.value.length === 0) {
+    contoursRef.value = decodeGeometryToContours(strokeGeometry, ctx.blobs);
+    isStrokeGeometryRef.value = contoursRef.value.length > 0;
   }
 
   // strokeGeometry is Figma's pre-expanded outline of a stroke.
   // It should be *filled* with the stroke colour, not stroked again.
-  const fills = isStrokeGeometry
-    ? convertPaintsToFills(strokePaints, ctx.images)
-    : convertPaintsToFills(fillPaints, ctx.images);
-  const stroke = isStrokeGeometry ? undefined : convertStrokeToSceneStroke(strokePaints, strokeWeight);
+  const fills = selectPaintsForFills(isStrokeGeometryRef.value, { strokePaints, fillPaints }, ctx.images);
+  const stroke = isStrokeGeometryRef.value ? undefined : convertStrokeToSceneStroke(strokePaints, strokeWeight);
 
   return {
     type: "path",
@@ -276,7 +285,7 @@ function buildVectorNode(node: FigNode, ctx: BuildContext): PathNode {
     opacity: base.opacity,
     visible: base.visible,
     effects: convertEffectsToScene(effects),
-    contours,
+    contours: contoursRef.value,
     fills,
     stroke,
   };

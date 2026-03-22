@@ -4,6 +4,7 @@
  * Provides VBA built-in functions for completion.
  */
 
+import type { VbaProcedure } from "@aurochs-office/vba";
 import type { CompletionProvider, CompletionItem, CompletionContext } from "../types";
 import { VBA_BUILTINS_ARRAY } from "../../components/code-editor/code/syntax-highlight";
 
@@ -170,7 +171,7 @@ export const builtinProvider: CompletionProvider = {
   provideCompletions(
     context: CompletionContext,
     _source: string,
-    _procedures: readonly import("@aurochs-office/vba").VbaProcedure[],
+    _procedures: readonly VbaProcedure[],
   ): readonly CompletionItem[] {
     // Don't provide builtins after "."
     if (context.trigger === "dot") {

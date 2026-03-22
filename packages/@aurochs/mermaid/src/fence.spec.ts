@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+/** @file Mermaid fence function tests */
 import { wrapInMermaidFence } from "./fence";
 
 describe("wrapInMermaidFence", () => {

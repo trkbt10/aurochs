@@ -402,7 +402,7 @@ type CreatePatternParams = {
  * Create a pattern element from an image
  */
 function createPatternFromImage(params: CreatePatternParams): string {
-  const { figImage, paint, ctx, elementSize } = params;
+  const { figImage, paint: _paint, ctx, elementSize: _elementSize } = params;
   const id = ctx.defs.generateId("img");
 
   // Convert image data to base64 data URI
@@ -461,7 +461,7 @@ function getScaleMode(paint: FigImagePaint): ScaleMode | undefined {
 /**
  * Get SVG preserveAspectRatio from Figma scale mode
  */
-function getPreserveAspectRatio(paint: FigImagePaint): string {
+function _getPreserveAspectRatio(paint: FigImagePaint): string {
   const scaleMode = getScaleMode(paint);
 
   switch (scaleMode) {

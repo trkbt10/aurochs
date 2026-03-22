@@ -50,7 +50,7 @@ export function createProgram(): Command {
     .action(async (file: string) => {
       const mode = program.opts().output as OutputMode;
       const result = await runInfo(file);
-      output(result, mode, formatInfoPretty);
+      output({ result, mode, prettyFormatter: formatInfoPretty });
     });
 
   program
@@ -60,7 +60,7 @@ export function createProgram(): Command {
     .action(async (file: string) => {
       const mode = program.opts().output as OutputMode;
       const result = await runList(file);
-      output(result, mode, formatListPretty);
+      output({ result, mode, prettyFormatter: formatListPretty });
     });
 
   program
@@ -77,7 +77,7 @@ export function createProgram(): Command {
         return;
       }
       const result = await runShow(file, slideNumber);
-      output(result, mode, formatShowPretty);
+      output({ result, mode, prettyFormatter: formatShowPretty });
     });
 
   program
@@ -88,7 +88,7 @@ export function createProgram(): Command {
     .action(async (file: string, options: { slides?: string }) => {
       const mode = program.opts().output as OutputMode;
       const result = await runExtract(file, options);
-      output(result, mode, formatExtractPretty);
+      output({ result, mode, prettyFormatter: formatExtractPretty });
     });
 
   program
@@ -98,7 +98,7 @@ export function createProgram(): Command {
     .action(async (file: string) => {
       const mode = program.opts().output as OutputMode;
       const result = await runTheme(file);
-      output(result, mode, formatThemePretty);
+      output({ result, mode, prettyFormatter: formatThemePretty });
     });
 
   program
@@ -108,7 +108,7 @@ export function createProgram(): Command {
     .action(async (spec: string) => {
       const mode = program.opts().output as OutputMode;
       const result = await runBuild(spec);
-      output(result, mode, formatBuildPretty);
+      output({ result, mode, prettyFormatter: formatBuildPretty });
     });
 
   program
@@ -118,7 +118,7 @@ export function createProgram(): Command {
     .action(async (spec: string) => {
       const mode = program.opts().output as OutputMode;
       const result = await runPatch(spec);
-      output(result, mode, formatPatchPretty);
+      output({ result, mode, prettyFormatter: formatPatchPretty });
     });
 
   program
@@ -129,7 +129,7 @@ export function createProgram(): Command {
     .action(async (specPath: string, options: { tag?: string }) => {
       const mode = program.opts().output as OutputMode;
       const result = await runVerify(specPath, options);
-      output(result, mode, formatVerifyPretty);
+      output({ result, mode, prettyFormatter: formatVerifyPretty });
     });
 
   program
@@ -170,7 +170,7 @@ export function createProgram(): Command {
           return;
         }
         const result = await runPreview(file, slideNumber, { format, width, border: options.border });
-        output(result, mode, formatPreviewPretty, formatPreviewMermaid);
+        output({ result, mode, prettyFormatter: formatPreviewPretty, mermaidFormatter: formatPreviewMermaid });
       },
     );
 
@@ -181,7 +181,7 @@ export function createProgram(): Command {
     .action(async (file: string) => {
       const mode = program.opts().output as OutputMode;
       const result = await runInventory(file);
-      output(result, mode, formatInventoryPretty);
+      output({ result, mode, prettyFormatter: formatInventoryPretty });
     });
 
   program
@@ -192,7 +192,7 @@ export function createProgram(): Command {
     .action(async (file: string, options: { slides?: string }) => {
       const mode = program.opts().output as OutputMode;
       const result = await runTables(file, options);
-      output(result, mode, formatTablesPretty);
+      output({ result, mode, prettyFormatter: formatTablesPretty });
     });
 
   program
@@ -203,7 +203,7 @@ export function createProgram(): Command {
     .action(async (file: string, options: { slides?: string }) => {
       const mode = program.opts().output as OutputMode;
       const result = await runImages(file, options);
-      output(result, mode, formatImagesPretty);
+      output({ result, mode, prettyFormatter: formatImagesPretty });
     });
 
   program
@@ -214,7 +214,7 @@ export function createProgram(): Command {
     .action(async (fileA: string, fileB: string) => {
       const mode = program.opts().output as OutputMode;
       const result = await runDiff(fileA, fileB);
-      output(result, mode, formatDiffPretty);
+      output({ result, mode, prettyFormatter: formatDiffPretty });
     });
 
   return program;

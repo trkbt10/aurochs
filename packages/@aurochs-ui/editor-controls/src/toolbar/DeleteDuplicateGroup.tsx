@@ -10,6 +10,12 @@ import type { DeleteDuplicateGroupProps } from "./types";
 const iconSize = TOOLBAR_BUTTON_ICON_SIZE.sm.icon;
 const strokeWidth = iconTokens.strokeWidth;
 
+
+
+
+
+
+/** Delete and duplicate action button group */
 export function DeleteDuplicateGroup({ onDelete, onDuplicate, disabled }: DeleteDuplicateGroupProps) {
   const isDisabled = disabled ?? false;
   return (

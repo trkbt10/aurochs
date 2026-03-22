@@ -2,7 +2,7 @@
  * @file Extracts DocDocument domain model from parsed .doc streams
  */
 
-import type { DocDocument, DocParagraph, DocTextRun, DocSection, DocImage } from "./domain/types";
+import type { DocDocument, DocParagraph, DocTextRun, DocSection, DocImage, DocNote, DocComment } from "./domain/types";
 import type { DocParseContext } from "./parse-context";
 import { warnOrThrow } from "./parse-context";
 import type { Fib } from "./stream/fib";
@@ -16,7 +16,7 @@ import { parseListDefinitions, parseListOverrides } from "./stream/list-data";
 import { extractChpProps, chpPropsToRunProps, cpToFc, findChpxAtFc, getAllChpxRunsInRange } from "./extractor/chp-extractor";
 import { extractPapProps, findRawPapxAtFc, type PapProps } from "./extractor/pap-extractor";
 import { extractTapProps, type TapProps } from "./extractor/tap-extractor";
-import { parsePlcfSed, parseSepx, sepPropsToSection, type SectionDescriptor } from "./extractor/sep-extractor";
+import { parsePlcfSed, parseSepx, sepPropsToSection } from "./extractor/sep-extractor";
 import { extractTables } from "./extractor/table-extractor";
 import { parsePlcfFld, extractFields, extractFormFields, extractHyperlinks } from "./extractor/field-extractor";
 import { parsePlcfTxbxTxt, extractTextboxes } from "./extractor/textbox-extractor";
@@ -88,9 +88,8 @@ export function extractDocDocument(options: ExtractDocOptions): DocDocument {
   const papCache = new Map<number, readonly PapxRun[]>();
 
   // Build paragraphs with formatting and track CP positions
-  const { paragraphs, paragraphCps, tapPropsMap } = buildParagraphs(
+  const { paragraphs, paragraphCps, tapPropsMap } = buildParagraphs({
     textParagraphs,
-    rawText,
     pieces,
     wordDocStream,
     chpBinTable,
@@ -99,13 +98,13 @@ export function extractDocDocument(options: ExtractDocOptions): DocDocument {
     chpCache,
     papCache,
     styleResolver,
-  );
+  });
 
   // --- Tables: group table paragraphs into DocTable objects ---
   const content = extractTables(paragraphs, tapPropsMap);
 
   // --- Sections ---
-  const sections = extractSections(fib, tableStream, wordDocStream, paragraphs, paragraphCps);
+  const sections = extractSections({ fib, tableStream, wordDocStream, paragraphs, paragraphCps });
 
   // --- Fields and hyperlinks ---
   const fldMarkers = tryParse(() => parsePlcfFld(tableStream, fib.fcPlcfFldMom, fib.lcbPlcfFldMom)) ?? [];
@@ -114,9 +113,9 @@ export function extractDocDocument(options: ExtractDocOptions): DocDocument {
 
   // --- Inline images ---
   const blipStore = tryParse(() => parseBStoreContainer(tableStream, fib.fcDggInfo, fib.lcbDggInfo)) ?? [];
-  const images = extractInlineImages(
+  const images = extractInlineImages({
     rawText, pieces, wordDocStream, chpBinTable, chpCache, dataStream, blipStore,
-  );
+  });
 
   // --- Shape anchors ---
   const shapeAnchors = tryParse(() => parsePlcSpaMom(tableStream, fib.fcPlcSpaMom, fib.lcbPlcSpaMom)) ?? [];
@@ -126,30 +125,28 @@ export function extractDocDocument(options: ExtractDocOptions): DocDocument {
   const fullText = tryBuildFullText(wordDocStream, fib, pieces);
 
   // Build formatted paragraph builder for sub-documents
-  const subdocBuilder = createSubdocParagraphBuilder(
+  const subdocBuilder = createSubdocParagraphBuilder({
     fullText, pieces, wordDocStream, chpBinTable, papBinTable,
     fontLookup, chpCache, papCache, styleResolver,
-  );
+  });
 
   // Headers/Footers
   const hddCps = tryParse(() => parsePlcfHdd(tableStream, fib.fcPlcfHdd, fib.lcbPlcfHdd)) ?? [];
   const hdrTextStart = fib.ccpText + fib.ccpFtn;
-  const { headers, footers } = extractHeadersFooters(hddCps, fullText, hdrTextStart, subdocBuilder);
+  const { headers, footers } = extractHeadersFooters({ hddCps, fullText, hdrTextStart, buildParagraphs: subdocBuilder });
 
   // Footnotes
-  const ftnRefResult = tryParse(() => parseNotePosPlc(tableStream, fib.fcPlcffndRef, fib.lcbPlcffndRef, 0)) ?? { refCps: [], textCps: [] };
+  const ftnRefResult = tryParse(() => parseNotePosPlc({ tableStream, fc: fib.fcPlcffndRef, lcb: fib.lcbPlcffndRef, dataSize: 0 })) ?? { refCps: [], textCps: [] };
   const ftnTextCps = tryParse(() => parseNoteTextPlc(tableStream, fib.fcPlcffndTxt, fib.lcbPlcffndTxt)) ?? [];
-  const footnotes = fib.ccpFtn > 0
-    ? extractNotes(ftnRefResult.refCps, ftnTextCps, fullText, fib.ccpText, subdocBuilder)
-    : [];
+  const footnotes = extractFootnotes({ fib, refCps: ftnRefResult.refCps, textCps: ftnTextCps, fullText, subdocBuilder });
 
   // Endnotes
-  const endRefResult = tryParse(() => parseNotePosPlc(tableStream, fib.fcPlcfendRef, fib.lcbPlcfendRef, 0)) ?? { refCps: [], textCps: [] };
+  const endRefResult = tryParse(() => parseNotePosPlc({ tableStream, fc: fib.fcPlcfendRef, lcb: fib.lcbPlcfendRef, dataSize: 0 })) ?? { refCps: [], textCps: [] };
   const endTextCps = tryParse(() => parseNoteTextPlc(tableStream, fib.fcPlcfendTxt, fib.lcbPlcfendTxt)) ?? [];
   const endnoteTextStart = fib.ccpText + fib.ccpFtn + fib.ccpHdd + fib.ccpAtn;
-  const endnotes = fib.ccpEdn > 0
-    ? extractNotes(endRefResult.refCps, endTextCps, fullText, endnoteTextStart, subdocBuilder)
-    : [];
+  const endnotes = extractEndnotes({
+    fib, refCps: endRefResult.refCps, textCps: endTextCps, fullText, endnoteTextStart, subdocBuilder,
+  });
 
   // Comments
   const commentRefs = tryParse(() => parseCommentRefs(tableStream, fib.fcPlcfandRef, fib.lcbPlcfandRef)) ?? [];
@@ -160,13 +157,11 @@ export function extractDocDocument(options: ExtractDocOptions): DocDocument {
   // Annotation bookmarks (comment range)
   const atnBkmkStarts = tryParse(() => parseBookmarkStarts(tableStream, fib.fcPlcfAtnBkf, fib.lcbPlcfAtnBkf)) ?? [];
   const atnBkmkEndCps = tryParse(() => parseBookmarkEnds(tableStream, fib.fcPlcfAtnBkl, fib.lcbPlcfAtnBkl)) ?? [];
-  const atnBookmarks = atnBkmkStarts.length > 0
-    ? { starts: atnBkmkStarts, endCps: atnBkmkEndCps }
-    : undefined;
+  const atnBookmarks = resolveAnnotationBookmarks(atnBkmkStarts, atnBkmkEndCps);
 
-  const comments = fib.ccpAtn > 0
-    ? extractComments(commentRefs, commentTextCps, commentAuthors, fullText, commentTextStart, subdocBuilder, atnBookmarks)
-    : [];
+  const comments = extractDocComments({
+    fib, refs: commentRefs, textCps: commentTextCps, authors: commentAuthors, fullText, commentTextStart, subdocBuilder, atnBookmarks,
+  });
 
   // Bookmarks
   const bkmkNames = tryParse(() => parseBookmarkNames(tableStream, fib.fcSttbfBkmk, fib.lcbSttbfBkmk)) ?? [];
@@ -180,9 +175,7 @@ export function extractDocDocument(options: ExtractDocOptions): DocDocument {
   // Textboxes
   const txbxTextStart = fib.ccpText + fib.ccpFtn + fib.ccpHdd + fib.ccpAtn + fib.ccpEdn;
   const txbxTextCps = tryParse(() => parsePlcfTxbxTxt(tableStream, fib.fcPlcfTxbxTxt, fib.lcbPlcfTxbxTxt)) ?? [];
-  const textboxes = fib.ccpTxbx > 0
-    ? extractTextboxes(txbxTextCps, fullText, txbxTextStart, subdocBuilder)
-    : [];
+  const textboxes = extractDocTextboxes({ fib, txbxTextCps, fullText, txbxTextStart, subdocBuilder });
 
   // Only include content if there are tables (otherwise it's just paragraphs)
   const hasTables = content.some((item) => "rows" in item);
@@ -210,62 +203,39 @@ export function extractDocDocument(options: ExtractDocOptions): DocDocument {
   };
 }
 
-function buildParagraphs(
-  textParagraphs: readonly string[],
-  _rawText: string,
-  pieces: readonly PieceDescriptor[],
-  wordDocStream: Uint8Array,
-  chpBinTable: BinTable | undefined,
-  papBinTable: BinTable | undefined,
-  fontLookup: ReadonlyMap<number, string>,
-  chpCache: Map<number, readonly ChpxRun[]>,
-  papCache: Map<number, readonly PapxRun[]>,
-  styleResolver: StyleResolver,
-): { paragraphs: readonly DocParagraph[]; paragraphCps: readonly number[]; tapPropsMap: ReadonlyMap<number, TapProps> } {
+type BuildParagraphsOptions = {
+  readonly textParagraphs: readonly string[];
+  readonly pieces: readonly PieceDescriptor[];
+  readonly wordDocStream: Uint8Array;
+  readonly chpBinTable: BinTable | undefined;
+  readonly papBinTable: BinTable | undefined;
+  readonly fontLookup: ReadonlyMap<number, string>;
+  readonly chpCache: Map<number, readonly ChpxRun[]>;
+  readonly papCache: Map<number, readonly PapxRun[]>;
+  readonly styleResolver: StyleResolver;
+};
+
+function buildParagraphs(options: BuildParagraphsOptions): { paragraphs: readonly DocParagraph[]; paragraphCps: readonly number[]; tapPropsMap: ReadonlyMap<number, TapProps> } {
+  const { textParagraphs, pieces, wordDocStream, chpBinTable, papBinTable, fontLookup, chpCache, papCache, styleResolver } = options;
   const paragraphs: DocParagraph[] = [];
   const paragraphCps: number[] = [];
   const tapPropsMap = new Map<number, TapProps>();
-  // eslint-disable-next-line no-restricted-syntax -- CP tracking
-  let cpOffset = 0;
+  const cpCounter = { value: 0 };
 
   for (const text of textParagraphs) {
-    const paraStartCp = cpOffset;
+    const paraStartCp = cpCounter.value;
     paragraphCps.push(paraStartCp);
 
     // Get paragraph properties from PAPX with style inheritance
-    let papProps: PapProps = {};
-    let istd: number | undefined;
-    if (papBinTable) {
-      const fc = cpToFc(paraStartCp, pieces);
-      if (fc !== undefined) {
-        const rawRun = findRawPapxAtFc(fc, papBinTable, wordDocStream, papCache);
-        if (rawRun) {
-          istd = rawRun.istd;
-          // Resolve style inheritance: style SPRMs (base→derived) + direct SPRMs
-          const stylePapSprms = istd !== undefined
-            ? styleResolver.getParagraphSprms(istd)
-            : [];
-          const allSprms = stylePapSprms.length > 0
-            ? [...stylePapSprms, ...rawRun.sprms]
-            : rawRun.sprms;
-          papProps = extractPapProps(allSprms, rawRun.istd);
-
-          // For row-end (TTP) paragraphs, extract TAP properties
-          if (papProps.isRowEnd) {
-            const tapProps = extractTapProps(rawRun.sprms);
-            if (Object.keys(tapProps).length > 0) {
-              tapPropsMap.set(paragraphs.length, tapProps);
-            }
-          }
-        }
-      }
-    }
+    const { papProps, istd } = resolvePapPropsForParagraph({
+      paraStartCp, pieces, wordDocStream, papBinTable, papCache, styleResolver, tapPropsMap, paragraphIndex: paragraphs.length,
+    });
 
     // Build runs with character properties (with style inheritance)
-    const styleChpSprms = istd !== undefined
-      ? styleResolver.getCharacterSprms(istd)
-      : [];
-    const runs = buildRuns(text, paraStartCp, pieces, wordDocStream, chpBinTable, fontLookup, chpCache, styleChpSprms);
+    const styleChpSprms = resolveStyleChpSprms(istd, styleResolver);
+    const runs = buildRuns({
+      text, paraStartCp, pieces, wordDocStream, chpBinTable, fontLookup, chpCache, styleChpSprms,
+    });
 
     const para: DocParagraph = {
       runs,
@@ -297,10 +267,138 @@ function buildParagraphs(
     paragraphs.push(para);
 
     // Advance CP: text length + 1 for the \r paragraph mark
-    cpOffset += text.length + 1;
+    cpCounter.value += text.length + 1;
   }
 
   return { paragraphs, paragraphCps, tapPropsMap };
+}
+
+/** Swallow error and return undefined for optional parsing operations. */
+function handleSwallowedError(_error: unknown): undefined {
+  return undefined;
+}
+
+function mergeSprmArrays(styleSprms: readonly Sprm[], directSprms: readonly Sprm[]): readonly Sprm[] {
+  if (styleSprms.length > 0) { return [...styleSprms, ...directSprms]; }
+  return directSprms;
+}
+
+function resolveStyleChpSprms(istd: number | undefined, styleResolver: StyleResolver): readonly Sprm[] {
+  if (istd === undefined) { return []; }
+  return styleResolver.getCharacterSprms(istd);
+}
+
+type ResolvePapPropsResult = { papProps: PapProps; istd: number | undefined };
+
+function resolvePapPropsForParagraph(ctx: {
+  paraStartCp: number;
+  pieces: readonly PieceDescriptor[];
+  wordDocStream: Uint8Array;
+  papBinTable: BinTable | undefined;
+  papCache: Map<number, readonly PapxRun[]>;
+  styleResolver: StyleResolver;
+  tapPropsMap: Map<number, TapProps>;
+  paragraphIndex: number;
+}): ResolvePapPropsResult {
+  if (!ctx.papBinTable) { return { papProps: {}, istd: undefined }; }
+  const fc = cpToFc(ctx.paraStartCp, ctx.pieces);
+  if (fc === undefined) { return { papProps: {}, istd: undefined }; }
+  const rawRun = findRawPapxAtFc({ fc, papBinTable: ctx.papBinTable, wordDocStream: ctx.wordDocStream, cache: ctx.papCache });
+  if (!rawRun) { return { papProps: {}, istd: undefined }; }
+  const istd = rawRun.istd;
+  const stylePapSprms = istd !== undefined ? ctx.styleResolver.getParagraphSprms(istd) : [];
+  const allSprms = stylePapSprms.length > 0 ? [...stylePapSprms, ...rawRun.sprms] : rawRun.sprms;
+  const papProps = extractPapProps(allSprms, rawRun.istd);
+  // For row-end (TTP) paragraphs, extract TAP properties
+  if (papProps.isRowEnd) {
+    const tapProps = extractTapProps(rawRun.sprms);
+    if (Object.keys(tapProps).length > 0) {
+      ctx.tapPropsMap.set(ctx.paragraphIndex, tapProps);
+    }
+  }
+  return { papProps, istd };
+}
+
+function resolvePapPropsForSubdoc(ctx: {
+  paraGlobalCp: number;
+  pieces: readonly PieceDescriptor[];
+  wordDocStream: Uint8Array;
+  papBinTable: BinTable | undefined;
+  papCache: Map<number, readonly PapxRun[]>;
+  styleResolver: StyleResolver;
+}): ResolvePapPropsResult {
+  const { paraGlobalCp, pieces, wordDocStream, papBinTable, papCache, styleResolver } = ctx;
+  if (!papBinTable) { return { papProps: {}, istd: undefined }; }
+  const fc = cpToFc(paraGlobalCp, pieces);
+  if (fc === undefined) { return { papProps: {}, istd: undefined }; }
+  const rawRun = findRawPapxAtFc({ fc, papBinTable, wordDocStream, cache: papCache });
+  if (!rawRun) { return { papProps: {}, istd: undefined }; }
+  const istd = rawRun.istd;
+  const stylePapSprms = istd !== undefined ? styleResolver.getParagraphSprms(istd) : [];
+  const allSprms = stylePapSprms.length > 0 ? [...stylePapSprms, ...rawRun.sprms] : rawRun.sprms;
+  const papProps = extractPapProps(allSprms, rawRun.istd);
+  return { papProps, istd };
+}
+
+function extractFootnotes(ctx: {
+  fib: Fib;
+  refCps: readonly number[];
+  textCps: readonly number[];
+  fullText: string;
+  subdocBuilder: SubdocParagraphBuilder;
+}): readonly DocNote[] {
+  if (ctx.fib.ccpFtn <= 0) { return []; }
+  return extractNotes({ refCps: ctx.refCps, textCps: ctx.textCps, fullText: ctx.fullText, noteTextStart: ctx.fib.ccpText, buildParagraphsOpt: ctx.subdocBuilder });
+}
+
+function extractEndnotes(ctx: {
+  fib: Fib;
+  refCps: readonly number[];
+  textCps: readonly number[];
+  fullText: string;
+  endnoteTextStart: number;
+  subdocBuilder: SubdocParagraphBuilder;
+}): readonly DocNote[] {
+  if (ctx.fib.ccpEdn <= 0) { return []; }
+  return extractNotes({ refCps: ctx.refCps, textCps: ctx.textCps, fullText: ctx.fullText, noteTextStart: ctx.endnoteTextStart, buildParagraphsOpt: ctx.subdocBuilder });
+}
+
+function resolveAnnotationBookmarks(
+  atnBkmkStarts: readonly { cp: number; ibkl: number }[],
+  atnBkmkEndCps: readonly number[],
+): { readonly starts: readonly { cp: number; ibkl: number }[]; readonly endCps: readonly number[] } | undefined {
+  if (atnBkmkStarts.length <= 0) { return undefined; }
+  return { starts: atnBkmkStarts, endCps: atnBkmkEndCps };
+}
+
+type AtnBookmarks = { readonly starts: readonly { cp: number; ibkl: number }[]; readonly endCps: readonly number[] };
+
+function extractDocComments(ctx: {
+  fib: Fib;
+  refs: readonly { cpRef: number; authorIndex: number }[];
+  textCps: readonly number[];
+  authors: readonly string[];
+  fullText: string;
+  commentTextStart: number;
+  subdocBuilder: SubdocParagraphBuilder;
+  atnBookmarks: AtnBookmarks | undefined;
+}): readonly DocComment[] {
+  if (ctx.fib.ccpAtn <= 0) { return []; }
+  return extractComments({
+    refs: ctx.refs, textCps: ctx.textCps, authors: ctx.authors, fullText: ctx.fullText,
+    commentTextStart: ctx.commentTextStart, buildParagraphsFn: ctx.subdocBuilder, atnBookmarks: ctx.atnBookmarks,
+  });
+}
+
+function extractDocTextboxes(ctx: {
+  fib: Fib;
+  txbxTextCps: readonly number[];
+  fullText: string;
+  txbxTextStart: number;
+  subdocBuilder: SubdocParagraphBuilder;
+}): readonly ReturnType<typeof extractTextboxes> {
+  if (ctx.fib.ccpTxbx <= 0) { return []; }
+  return extractTextboxes({ textCps: ctx.txbxTextCps, fullText: ctx.fullText, txbxTextStart: ctx.txbxTextStart, buildParagraphs: ctx.subdocBuilder });
 }
 
 /**
@@ -333,20 +431,23 @@ function pieceFcToCp(fc: number, piece: PieceDescriptor): number {
  * Collect CHP run boundary split points within a paragraph's CP range.
  * Returns sorted, unique offsets relative to paraStartCp (always includes 0 and text.length).
  */
-function collectChpBoundaries(
-  paraStartCp: number,
-  paraEndCp: number,
-  pieces: readonly PieceDescriptor[],
-  chpBinTable: BinTable,
-  wordDocStream: Uint8Array,
-  chpCache: Map<number, readonly ChpxRun[]>,
-): readonly number[] {
+type CollectChpBoundariesOptions = {
+  readonly paraStartCp: number;
+  readonly paraEndCp: number;
+  readonly pieces: readonly PieceDescriptor[];
+  readonly chpBinTable: BinTable;
+  readonly wordDocStream: Uint8Array;
+  readonly chpCache: Map<number, readonly ChpxRun[]>;
+};
+
+function collectChpBoundaries(options: CollectChpBoundariesOptions): readonly number[] {
+  const { paraStartCp, paraEndCp, pieces, chpBinTable, wordDocStream, chpCache } = options;
   const boundaries = new Set<number>();
   boundaries.add(0);
   boundaries.add(paraEndCp - paraStartCp);
 
   for (const piece of pieces) {
-    if (piece.cpStart >= paraEndCp || piece.cpEnd <= paraStartCp) continue;
+    if (piece.cpStart >= paraEndCp || piece.cpEnd <= paraStartCp) {continue;}
 
     // Piece boundary within the paragraph
     if (piece.cpStart > paraStartCp) {
@@ -362,7 +463,7 @@ function collectChpBoundaries(
     const fcB = pieceCpToFc(cpB, piece);
 
     // Get all CHP runs overlapping this FC range
-    const chpxRuns = getAllChpxRunsInRange(fcA, fcB, chpBinTable, wordDocStream, chpCache);
+    const chpxRuns = getAllChpxRunsInRange({ fcStart: fcA, fcEnd: fcB, chpBinTable, wordDocStream, cache: chpCache });
 
     for (const run of chpxRuns) {
       // Convert CHP FC boundaries to CP offsets within the paragraph
@@ -384,16 +485,19 @@ function collectChpBoundaries(
   return [...boundaries].sort((a, b) => a - b);
 }
 
-function buildRuns(
-  text: string,
-  paraStartCp: number,
-  pieces: readonly PieceDescriptor[],
-  wordDocStream: Uint8Array,
-  chpBinTable: BinTable | undefined,
-  fontLookup: ReadonlyMap<number, string>,
-  chpCache: Map<number, readonly ChpxRun[]>,
-  styleChpSprms: readonly Sprm[],
-): readonly DocTextRun[] {
+type BuildRunsOptions = {
+  readonly text: string;
+  readonly paraStartCp: number;
+  readonly pieces: readonly PieceDescriptor[];
+  readonly wordDocStream: Uint8Array;
+  readonly chpBinTable: BinTable | undefined;
+  readonly fontLookup: ReadonlyMap<number, string>;
+  readonly chpCache: Map<number, readonly ChpxRun[]>;
+  readonly styleChpSprms: readonly Sprm[];
+};
+
+function buildRuns(options: BuildRunsOptions): readonly DocTextRun[] {
+  const { text, paraStartCp, pieces, wordDocStream, chpBinTable, fontLookup, chpCache, styleChpSprms } = options;
   if (!chpBinTable || text.length === 0) {
     return [{ text }];
   }
@@ -401,14 +505,14 @@ function buildRuns(
   const paraEndCp = paraStartCp + text.length;
 
   // Collect all CHP boundary split points within the paragraph
-  const boundaries = collectChpBoundaries(paraStartCp, paraEndCp, pieces, chpBinTable, wordDocStream, chpCache);
+  const boundaries = collectChpBoundaries({ paraStartCp, paraEndCp, pieces, chpBinTable, wordDocStream, chpCache });
 
   // Build a DocTextRun for each chunk between consecutive boundaries
   const runs: DocTextRun[] = [];
   for (let i = 0; i < boundaries.length - 1; i++) {
     const startOffset = boundaries[i];
     const endOffset = boundaries[i + 1];
-    if (startOffset >= endOffset) continue;
+    if (startOffset >= endOffset) {continue;}
 
     const runText = text.substring(startOffset, endOffset);
     const runCp = paraStartCp + startOffset;
@@ -420,16 +524,14 @@ function buildRuns(
       continue;
     }
 
-    const directSprms = findChpxAtFc(fc, chpBinTable, wordDocStream, chpCache);
+    const directSprms = findChpxAtFc({ fc, chpBinTable, wordDocStream, cache: chpCache });
     if (directSprms.length === 0 && styleChpSprms.length === 0) {
       runs.push({ text: runText });
       continue;
     }
 
     // Merge style character SPRMs + direct SPRMs (direct overrides style)
-    const allChpSprms = styleChpSprms.length > 0
-      ? [...styleChpSprms, ...directSprms]
-      : directSprms;
+    const allChpSprms = mergeSprmArrays(styleChpSprms, directSprms);
     const chpProps = extractChpProps(allChpSprms);
     const runProps = chpPropsToRunProps(chpProps, fontLookup);
 
@@ -443,19 +545,21 @@ function buildRuns(
   return runs.length > 0 ? runs : [{ text }];
 }
 
-function extractSections(
-  fib: Fib,
-  tableStream: Uint8Array,
-  wordDocStream: Uint8Array,
-  paragraphs: readonly DocParagraph[],
-  paragraphCps: readonly number[],
-): readonly DocSection[] {
+type ExtractSectionsOptions = {
+  readonly fib: Fib;
+  readonly tableStream: Uint8Array;
+  readonly wordDocStream: Uint8Array;
+  readonly paragraphs: readonly DocParagraph[];
+  readonly paragraphCps: readonly number[];
+};
+
+function extractSections(options: ExtractSectionsOptions): readonly DocSection[] {
+  const { fib, tableStream, wordDocStream, paragraphs, paragraphCps } = options;
   const seds = tryParse(() => parsePlcfSed(tableStream, fib.fcPlcfSed, fib.lcbPlcfSed)) ?? [];
-  if (seds.length === 0) return [];
+  if (seds.length === 0) {return [];}
 
   const sections: DocSection[] = [];
-  // eslint-disable-next-line no-restricted-syntax -- section boundary tracking
-  let paraIdx = 0;
+  const paraIdxRef = { value: 0 };
 
   for (let i = 0; i < seds.length; i++) {
     const sed = seds[i];
@@ -467,10 +571,10 @@ function extractSections(
     const isLast = i === seds.length - 1;
     const sectionParas: DocParagraph[] = [];
 
-    while (paraIdx < paragraphs.length) {
-      if (isLast || paragraphCps[paraIdx] < sed.cpEnd) {
-        sectionParas.push(paragraphs[paraIdx]);
-        paraIdx++;
+    while (paraIdxRef.value < paragraphs.length) {
+      if (isLast || paragraphCps[paraIdxRef.value] < sed.cpEnd) {
+        sectionParas.push(paragraphs[paraIdxRef.value]);
+        paraIdxRef.value++;
       } else {
         break;
       }
@@ -515,49 +619,42 @@ function tryBuildFullText(
   pieces: readonly PieceDescriptor[],
 ): string {
   const totalCcp = fib.ccpText + fib.ccpFtn + fib.ccpHdd + fib.ccpAtn + fib.ccpEdn + fib.ccpTxbx + fib.ccpHdrTxbx;
-  try {
-    return extractText(wordDocStream, pieces, totalCcp);
-  } catch {
-    // Fall back to just main text
-    try {
-      return extractText(wordDocStream, pieces, fib.ccpText);
-    } catch {
-      return "";
-    }
-  }
+  const fullResult = tryParse(() => extractText(wordDocStream, pieces, totalCcp));
+  if (fullResult !== undefined) { return fullResult; }
+  // Fall back to just main text
+  const mainResult = tryParse(() => extractText(wordDocStream, pieces, fib.ccpText));
+  return mainResult ?? "";
 }
 
 /**
  * Extract inline images by scanning for \x01 special characters in text.
  * For each \x01 with fSpecial=true and picLocation, reads PIC from Data Stream.
  */
-function extractInlineImages(
-  rawText: string,
-  pieces: readonly PieceDescriptor[],
-  wordDocStream: Uint8Array,
-  chpBinTable: BinTable | undefined,
-  chpCache: Map<number, readonly ChpxRun[]>,
-  dataStream: Uint8Array | undefined,
-  blipStore: readonly BlipEntry[],
-): readonly DocImage[] {
-  if (!chpBinTable) return [];
+type ExtractInlineImagesOptions = {
+  readonly rawText: string;
+  readonly pieces: readonly PieceDescriptor[];
+  readonly wordDocStream: Uint8Array;
+  readonly chpBinTable: BinTable | undefined;
+  readonly chpCache: Map<number, readonly ChpxRun[]>;
+  readonly dataStream: Uint8Array | undefined;
+  readonly blipStore: readonly BlipEntry[];
+};
+
+function extractInlineImages(options: ExtractInlineImagesOptions): readonly DocImage[] {
+  const { rawText, pieces, wordDocStream, chpBinTable, chpCache, dataStream, blipStore } = options;
+  if (!chpBinTable) {return [];}
 
   // The image stream is the Data stream if available, otherwise the WordDocument stream
   const imageStream = dataStream ?? wordDocStream;
   const images: DocImage[] = [];
 
-  // eslint-disable-next-line no-restricted-syntax -- CP tracking
-  let cp = 0;
-  for (const ch of rawText) {
-    if (ch === "\x01") {
-      const image = tryExtractImageAtCp(cp, pieces, wordDocStream, chpBinTable, chpCache, imageStream, blipStore);
+  for (let cp = 0; cp < rawText.length; cp++) {
+    if (rawText[cp] === "\x01") {
+      const image = tryExtractImageAtCp({ cp, pieces, wordDocStream, chpBinTable, chpCache, imageStream, blipStore });
       if (image) {
         images.push(image);
       }
     }
-    cp++;
-    // Stop at main text boundary (don't scan sub-documents)
-    if (cp >= rawText.length) break;
   }
 
   return images;
@@ -567,26 +664,29 @@ function extractInlineImages(
  * Try to extract an image at the given CP position.
  * Returns DocImage if the CP has fSpecial=true, picLocation, and valid PIC data.
  */
-function tryExtractImageAtCp(
-  cp: number,
-  pieces: readonly PieceDescriptor[],
-  wordDocStream: Uint8Array,
-  chpBinTable: BinTable,
-  chpCache: Map<number, readonly ChpxRun[]>,
-  imageStream: Uint8Array,
-  blipStore: readonly BlipEntry[],
-): DocImage | undefined {
-  const fc = cpToFc(cp, pieces);
-  if (fc === undefined) return undefined;
+type TryExtractImageAtCpOptions = {
+  readonly cp: number;
+  readonly pieces: readonly PieceDescriptor[];
+  readonly wordDocStream: Uint8Array;
+  readonly chpBinTable: BinTable;
+  readonly chpCache: Map<number, readonly ChpxRun[]>;
+  readonly imageStream: Uint8Array;
+  readonly blipStore: readonly BlipEntry[];
+};
 
-  const sprms = findChpxAtFc(fc, chpBinTable, wordDocStream, chpCache);
+function tryExtractImageAtCp(options: TryExtractImageAtCpOptions): DocImage | undefined {
+  const { cp, pieces, wordDocStream, chpBinTable, chpCache, imageStream, blipStore } = options;
+  const fc = cpToFc(cp, pieces);
+  if (fc === undefined) {return undefined;}
+
+  const sprms = findChpxAtFc({ fc, chpBinTable, wordDocStream, cache: chpCache });
   const chpProps = extractChpProps(sprms);
 
-  if (!chpProps.fSpecial) return undefined;
-  if (chpProps.picLocation === undefined) return undefined;
+  if (!chpProps.fSpecial) {return undefined;}
+  if (chpProps.picLocation === undefined) {return undefined;}
 
   const pic = tryParse(() => parsePicStructure(imageStream, chpProps.picLocation!, blipStore));
-  if (!pic) return undefined;
+  if (!pic) {return undefined;}
 
   const { widthEmu, heightEmu } = picToDisplayEmu(pic);
   const isOle = chpProps.fObj === true && chpProps.fOle2 === true;
@@ -606,8 +706,8 @@ function tryExtractImageAtCp(
 function tryParse<T>(fn: () => T): T | undefined {
   try {
     return fn();
-  } catch {
-    return undefined;
+  } catch (error: unknown) {
+    return handleSwallowedError(error);
   }
 }
 
@@ -615,59 +715,44 @@ function tryParse<T>(fn: () => T): T | undefined {
  * Create a SubdocParagraphBuilder that applies CHP/PAP formatting to sub-document text.
  * Sub-document CPs are global positions in the full document text (main + footnotes + headers + ...).
  */
-function createSubdocParagraphBuilder(
-  fullText: string,
-  pieces: readonly PieceDescriptor[],
-  wordDocStream: Uint8Array,
-  chpBinTable: BinTable | undefined,
-  papBinTable: BinTable | undefined,
-  fontLookup: ReadonlyMap<number, string>,
-  chpCache: Map<number, readonly ChpxRun[]>,
-  papCache: Map<number, readonly PapxRun[]>,
-  styleResolver: StyleResolver,
-): SubdocParagraphBuilder {
+type CreateSubdocParagraphBuilderOptions = {
+  readonly fullText: string;
+  readonly pieces: readonly PieceDescriptor[];
+  readonly wordDocStream: Uint8Array;
+  readonly chpBinTable: BinTable | undefined;
+  readonly papBinTable: BinTable | undefined;
+  readonly fontLookup: ReadonlyMap<number, string>;
+  readonly chpCache: Map<number, readonly ChpxRun[]>;
+  readonly papCache: Map<number, readonly PapxRun[]>;
+  readonly styleResolver: StyleResolver;
+};
+
+function createSubdocParagraphBuilder(options: CreateSubdocParagraphBuilderOptions): SubdocParagraphBuilder {
+  const { fullText, pieces, wordDocStream, chpBinTable, papBinTable, fontLookup, chpCache, papCache, styleResolver } = options;
   return (globalCpStart: number, globalCpEnd: number): readonly DocParagraph[] => {
-    if (globalCpStart >= globalCpEnd) return [];
+    if (globalCpStart >= globalCpEnd) {return [];}
     const text = fullText.substring(globalCpStart, Math.min(globalCpEnd, fullText.length));
-    if (!text.trim()) return [];
+    if (!text.trim()) {return [];}
 
     const parts = text.split("\r");
     const paragraphs: DocParagraph[] = [];
-    // eslint-disable-next-line no-restricted-syntax -- CP tracking
-    let cpOffset = 0;
+    const cpCounter = { value: 0 };
 
     for (const partText of parts) {
       if (partText.length > 0) {
-        const paraGlobalCp = globalCpStart + cpOffset;
+        const paraGlobalCp = globalCpStart + cpCounter.value;
 
         // Get paragraph properties via PAP pipeline
-        let papProps: PapProps = {};
-        let istd: number | undefined;
-        if (papBinTable) {
-          const fc = cpToFc(paraGlobalCp, pieces);
-          if (fc !== undefined) {
-            const rawRun = findRawPapxAtFc(fc, papBinTable, wordDocStream, papCache);
-            if (rawRun) {
-              istd = rawRun.istd;
-              const stylePapSprms = istd !== undefined
-                ? styleResolver.getParagraphSprms(istd)
-                : [];
-              const allSprms = stylePapSprms.length > 0
-                ? [...stylePapSprms, ...rawRun.sprms]
-                : rawRun.sprms;
-              papProps = extractPapProps(allSprms, rawRun.istd);
-            }
-          }
-        }
+        const { papProps, istd } = resolvePapPropsForSubdoc({
+          paraGlobalCp, pieces, wordDocStream, papBinTable, papCache, styleResolver,
+        });
 
         // Build character runs via CHP pipeline
-        const styleChpSprms = istd !== undefined
-          ? styleResolver.getCharacterSprms(istd)
-          : [];
-        const runs = buildRuns(
-          partText, paraGlobalCp, pieces, wordDocStream,
+        const styleChpSprms = resolveStyleChpSprms(istd, styleResolver);
+        const runs = buildRuns({
+          text: partText, paraStartCp: paraGlobalCp, pieces, wordDocStream,
           chpBinTable, fontLookup, chpCache, styleChpSprms,
-        );
+        });
 
         paragraphs.push({
           runs,
@@ -686,7 +771,7 @@ function createSubdocParagraphBuilder(
           ...(papProps.spaceAfterAuto ? { spaceAfterAuto: papProps.spaceAfterAuto } : {}),
         });
       }
-      cpOffset += partText.length + 1; // +1 for \r
+      cpCounter.value += partText.length + 1; // +1 for \r
     }
 
     return paragraphs;

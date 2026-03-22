@@ -22,19 +22,5 @@ export {
   type AddAnimationsResult,
   type AddCommentsResult,
   type SetSpeakerNotesResult,
-  type SlideModInput,
-  type ShapeSpec,
 } from "./presentation-session";
 
-// Builder types re-exported for MCP consumers
-export type {
-  ImageSpec,
-  ConnectorSpec,
-  TableSpec,
-  GroupSpec,
-  TableUpdateSpec,
-  SlideTransitionSpec,
-  AnimationSpec,
-  SimpleCommentSpec,
-  SimpleNotesSpec,
-} from "@aurochs-builder/pptx";

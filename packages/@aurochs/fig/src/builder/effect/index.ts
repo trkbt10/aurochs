@@ -17,10 +17,10 @@ export type {
 } from "./types";
 
 // Builders
-export { DropShadowBuilder, dropShadow } from "./drop-shadow";
-export { InnerShadowBuilder, innerShadow } from "./inner-shadow";
-export { LayerBlurBuilder, layerBlur } from "./layer-blur";
-export { BackgroundBlurBuilder, backgroundBlur } from "./background-blur";
+export { type DropShadowBuilder, dropShadow } from "./drop-shadow";
+export { type InnerShadowBuilder, innerShadow } from "./inner-shadow";
+export { type LayerBlurBuilder, layerBlur } from "./layer-blur";
+export { type BackgroundBlurBuilder, backgroundBlur } from "./background-blur";
 
 // Utility
 import type { EffectData } from "./types";

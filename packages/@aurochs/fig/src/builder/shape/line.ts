@@ -2,43 +2,43 @@
  * @file Line node builder
  */
 
-import { BaseShapeBuilder } from "./base";
+import { createBaseShapeState, attachBaseShapeMethods, buildBaseData, type BaseShapeBuilderMethods } from "./base";
 import type { LineNodeData } from "./types";
 import { SHAPE_NODE_TYPES } from "../../constants";
 
-export class LineNodeBuilder extends BaseShapeBuilder<LineNodeData> {
-  constructor(localID: number, parentID: number) {
-    super(localID, parentID);
-    this._name = "Line";
-    // Lines typically have no fill
-    this._fillColor = undefined;
-    // Default stroke
-    this._strokeColor = { r: 0, g: 0, b: 0, a: 1 };
-    this._strokeWeight = 1;
-    // Line width is length, height is stroke weight representation
-    this._height = 0;
-  }
+/** Line node builder instance */
+export type LineNodeBuilder = BaseShapeBuilderMethods<LineNodeBuilder> & {
+  length: (len: number) => LineNodeBuilder;
+  build: () => LineNodeData;
+};
 
-  /**
-   * Set line length
-   */
-  length(len: number): this {
-    this._width = len;
-    return this;
-  }
+/** Create a line node builder */
+function createLineNodeBuilder(localID: number, parentID: number): LineNodeBuilder {
+  const state = createBaseShapeState(localID, parentID);
+  state.name = "Line";
+  state.fillColor = undefined;
+  state.strokeColor = { r: 0, g: 0, b: 0, a: 1 };
+  state.strokeWeight = 1;
+  state.height = 0;
 
-  build(): LineNodeData {
-    const base = this.buildBaseData();
-    return {
-      ...base,
-      nodeType: SHAPE_NODE_TYPES.LINE,
-    };
-  }
+  const builder = {} as LineNodeBuilder;
+  Object.assign(builder, attachBaseShapeMethods(state, builder), {
+    /** Set line length */
+    length(len: number) {
+      state.width = len;
+      return builder;
+    },
+    build(): LineNodeData {
+      return { ...buildBaseData(state), nodeType: SHAPE_NODE_TYPES.LINE };
+    },
+  });
+
+  return builder;
 }
 
 /**
  * Create a new Line node builder
  */
 export function lineNode(localID: number, parentID: number): LineNodeBuilder {
-  return new LineNodeBuilder(localID, parentID);
+  return createLineNodeBuilder(localID, parentID);
 }

@@ -3,19 +3,19 @@ import { parsePicStructure, picToDisplayEmu, type PicData } from "./picture-extr
 import { OA_RT, OFFICEART_HEADER_SIZE } from "../stream/officeart-reader";
 
 /** Build an OfficeArt record as raw bytes. */
-function buildRawRecord(
-  recVer: number,
-  recInstance: number,
-  recType: number,
-  data: Uint8Array,
-): Uint8Array {
-  const buf = new Uint8Array(OFFICEART_HEADER_SIZE + data.length);
+function buildRawRecord(options: {
+  recVer: number;
+  recInstance: number;
+  recType: number;
+  data: Uint8Array;
+}): Uint8Array {
+  const buf = new Uint8Array(OFFICEART_HEADER_SIZE + options.data.length);
   const view = new DataView(buf.buffer);
-  const verAndInstance = (recVer & 0x0f) | ((recInstance & 0x0fff) << 4);
+  const verAndInstance = (options.recVer & 0x0f) | ((options.recInstance & 0x0fff) << 4);
   view.setUint16(0, verAndInstance, true);
-  view.setUint16(2, recType, true);
-  view.setUint32(4, data.length, true);
-  buf.set(data, OFFICEART_HEADER_SIZE);
+  view.setUint16(2, options.recType, true);
+  view.setUint32(4, options.data.length, true);
+  buf.set(options.data, OFFICEART_HEADER_SIZE);
   return buf;
 }
 
@@ -40,7 +40,7 @@ function buildPicWithBlip(options: {
   const blipContent = new Uint8Array(blipHeader.length + options.imageData.length);
   blipContent.set(blipHeader, 0);
   blipContent.set(options.imageData, blipHeader.length);
-  const blipRecord = buildRawRecord(0, options.blipInstance, options.blipRecType, blipContent);
+  const blipRecord = buildRawRecord({ recVer: 0, recInstance: options.blipInstance, recType: options.blipRecType, data: blipContent });
 
   const lcb = cbHeader + blipRecord.length;
   const pic = new Uint8Array(lcb);
@@ -192,17 +192,17 @@ describe("parsePicStructure", () => {
     const foptView = new DataView(foptData.buffer);
     foptView.setUint16(0, 0x0104, true); // propId = pib
     foptView.setUint32(2, 1, true);       // value = 1 (blipId)
-    const foptRecord = buildRawRecord(0x03, propCount, OA_RT.FOPT, foptData);
+    const foptRecord = buildRawRecord({ recVer: 0x03, recInstance: propCount, recType: OA_RT.FOPT, data: foptData });
 
     // Build FSP record
     const fspData = new Uint8Array(8);
-    const fspRecord = buildRawRecord(0x02, 0, OA_RT.FSP, fspData);
+    const fspRecord = buildRawRecord({ recVer: 0x02, recInstance: 0, recType: OA_RT.FSP, data: fspData });
 
     // Build SpContainer with FSP + FOPT
     const spChildren = new Uint8Array(fspRecord.length + foptRecord.length);
     spChildren.set(fspRecord, 0);
     spChildren.set(foptRecord, fspRecord.length);
-    const spContainer = buildRawRecord(0x0f, 0, OA_RT.SpContainer, spChildren);
+    const spContainer = buildRawRecord({ recVer: 0x0f, recInstance: 0, recType: OA_RT.SpContainer, data: spChildren });
 
     // Build PIC structure
     const lcb = cbHeader + spContainer.length;

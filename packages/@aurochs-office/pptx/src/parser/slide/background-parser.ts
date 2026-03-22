@@ -11,6 +11,7 @@ import type { XmlElement } from "@aurochs/xml";
 import { getChild } from "@aurochs/xml";
 import type { BackgroundFill } from "../../domain/slide/background";
 import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
+import type { ColorSpec } from "@aurochs-office/drawing-ml/domain/color";
 
 // =============================================================================
 // Parse Intermediate Types (parser-internal, not domain types)
@@ -55,7 +56,6 @@ export type BackgroundParseResult = {
    */
   readonly fromTheme?: boolean;
 };
-import type { Background } from "../../domain/slide/types";
 import type { FillType, GradientFill } from "../graphics/fill-resolver";
 import type { SlideContext } from "./context";
 import { getSolidFill } from "../graphics/color-resolver";
@@ -208,6 +208,12 @@ function resolveBackground(ctx: SlideContext): BackgroundResolution | undefined 
   return undefined;
 }
 
+
+
+
+
+
+/** Parse background properties from slide context, returning XML-based result if available */
 export function parseBackgroundProperties(ctx: SlideContext): BackgroundParseResult | undefined {
   const resolution = resolveBackground(ctx);
   if (!resolution) { return undefined; }
@@ -434,6 +440,19 @@ const PIC_FILL_BG_HANDLER: BackgroundFillHandler = {
   },
 };
 
+/** Convert a fill-to-rect to LTRB numeric object */
+function convertFillToRect(rect: { left: number; top: number; right: number; bottom: number } | undefined): { l: number; t: number; r: number; b: number } | undefined {
+  if (!rect) {
+    return undefined;
+  }
+  return {
+    l: rect.left as number,
+    t: rect.top as number,
+    r: rect.right as number,
+    b: rect.bottom as number,
+  };
+}
+
 /** Background fill handlers indexed by fill type */
 const BG_FILL_HANDLERS: Record<string, BackgroundFillHandler> = {
   SOLID_FILL: SOLID_FILL_BG_HANDLER,
@@ -484,12 +503,7 @@ function backgroundToFill(bg: { fill: BaseFill }, ctx: SlideContext, phClr?: str
         rot: angle as number,
         type: gradType,
         pathShadeType: fill.path?.path,
-        fillToRect: fill.path?.fillToRect ? {
-          l: fill.path.fillToRect.left as number,
-          t: fill.path.fillToRect.top as number,
-          r: fill.path.fillToRect.right as number,
-          b: fill.path.fillToRect.bottom as number,
-        } : undefined,
+        fillToRect: convertFillToRect(fill.path?.fillToRect),
       };
       const gradientCSS = generateGradientCSS(gradResult);
       const sortedColors = [...resolvedColors].sort((a, b) => parseInt(a.pos, 10) - parseInt(b.pos, 10));
@@ -509,7 +523,8 @@ function backgroundToFill(bg: { fill: BaseFill }, ctx: SlideContext, phClr?: str
   }
 }
 
-function resolveColorSpec(spec: import("@aurochs-office/drawing-ml/domain/color").ColorSpec, ctx: SlideContext, phClr?: string): string | undefined {
+/** Resolve a color spec to a hex string */
+function resolveColorSpec(spec: ColorSpec, ctx: SlideContext, phClr?: string): string | undefined {
   if (spec.type === "scheme" && spec.value === "phClr" && phClr) {
     return phClr;
   }
@@ -524,6 +539,12 @@ function resolveColorSpec(spec: import("@aurochs-office/drawing-ml/domain/color"
   return undefined;
 }
 
+
+
+
+
+
+/** Resolve background fill data from slide/layout/master hierarchy */
 export function getBackgroundFillData(ctx: SlideContext): BackgroundFill {
   const resolution = resolveBackground(ctx);
 

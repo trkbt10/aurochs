@@ -48,10 +48,10 @@ export {
 // Effect builders (from effect/)
 export {
   // Builders
-  DropShadowBuilder,
-  InnerShadowBuilder,
-  LayerBlurBuilder,
-  BackgroundBlurBuilder,
+  type DropShadowBuilder,
+  type InnerShadowBuilder,
+  type LayerBlurBuilder,
+  type BackgroundBlurBuilder,
   // Factory functions
   dropShadow,
   innerShadow,
@@ -68,13 +68,13 @@ export {
 // Paint builders (from paint/)
 export {
   // Builders
-  SolidPaintBuilder,
-  LinearGradientBuilder,
-  RadialGradientBuilder,
-  AngularGradientBuilder,
-  DiamondGradientBuilder,
-  ImagePaintBuilder,
-  StrokeBuilder,
+  type SolidPaintBuilder,
+  type LinearGradientBuilder,
+  type RadialGradientBuilder,
+  type AngularGradientBuilder,
+  type DiamondGradientBuilder,
+  type ImagePaintBuilder,
+  type StrokeBuilder,
   // Factory functions
   solidPaint,
   solidPaintHex,
@@ -143,7 +143,7 @@ export {
 
 // Blob encoder (for fillGeometry/strokeGeometry)
 export {
-  BlobBuilder,
+  createBlobBuilder,
   createRectBlob,
   createRoundedRectBlob,
   createEllipseBlob,

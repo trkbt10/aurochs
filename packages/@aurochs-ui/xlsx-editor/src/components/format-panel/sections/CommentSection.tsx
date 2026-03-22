@@ -4,7 +4,7 @@
  * UI for viewing and editing cell comments.
  */
 
-import { useState, useCallback, useMemo, type CSSProperties } from "react";
+import { useState, useCallback, type CSSProperties } from "react";
 import { Input, Button, FieldGroup } from "@aurochs-ui/ui-components";
 import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { colorTokens, fontTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
@@ -94,9 +94,9 @@ export function CommentSection({
     setDraftAuthor("");
   }, [onCommentDelete]);
 
-  return (
-    <OptionalPropertySection title="Comment" defaultExpanded={hasComment}>
-      {isEditing ? (
+  const renderContent = () => {
+    if (isEditing) {
+      return (
         <>
           <FieldGroup label="Author">
             <Input
@@ -130,7 +130,10 @@ export function CommentSection({
             )}
           </div>
         </>
-      ) : hasComment ? (
+      );
+    }
+    if (hasComment) {
+      return (
         <>
           {comment.author && (
             <div style={{ fontSize: fontTokens.size.sm, color: colorTokens.text.secondary, marginBottom: spacingTokens.xs }}>
@@ -149,14 +152,21 @@ export function CommentSection({
             </Button>
           </div>
         </>
-      ) : (
-        <>
-          <div style={noCommentStyle}>No comment on this cell</div>
-          <Button size="sm" disabled={disabled} onClick={handleStartEdit}>
-            Add Comment
-          </Button>
-        </>
-      )}
+      );
+    }
+    return (
+      <>
+        <div style={noCommentStyle}>No comment on this cell</div>
+        <Button size="sm" disabled={disabled} onClick={handleStartEdit}>
+          Add Comment
+        </Button>
+      </>
+    );
+  };
+
+  return (
+    <OptionalPropertySection title="Comment" defaultExpanded={hasComment}>
+      {renderContent()}
     </OptionalPropertySection>
   );
 }

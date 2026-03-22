@@ -1,3 +1,6 @@
+/**
+ * @file Re-exports for layout document adapter
+ */
 export {
   createVirtualDocument,
   layoutToSlideWithId,

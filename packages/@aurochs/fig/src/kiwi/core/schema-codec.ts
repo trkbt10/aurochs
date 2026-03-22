@@ -13,9 +13,6 @@ export type DecodeSchemaOptions = {
   readonly format: KiwiFormat;
 };
 
-/**
- * Decode a Kiwi schema from buffer.
- */
 /** Get string reader for format */
 function getStringReader(buffer: ByteBuffer, format: KiwiFormat): () => string {
   if (format === "standard") {
@@ -24,6 +21,12 @@ function getStringReader(buffer: ByteBuffer, format: KiwiFormat): () => string {
   return () => buffer.readNullString();
 }
 
+
+
+
+
+
+/** Decode a Kiwi schema from a byte buffer */
 export function decodeSchemaFromBuffer(options: DecodeSchemaOptions): KiwiSchema {
   const { buffer, format } = options;
   const readString = getStringReader(buffer, format);

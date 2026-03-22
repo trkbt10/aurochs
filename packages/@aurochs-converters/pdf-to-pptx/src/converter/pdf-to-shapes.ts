@@ -375,8 +375,7 @@ function collectLikelyTextOutlinePathIndices(args: {
       continue;
     }
 
-    let overlapTextCount = 0;
-    let overlapAreaSum = 0;
+    const overlapAccum = { textCount: 0, areaSum: 0 };
     for (const text of nonEmptyTexts) {
       const overlap = rectOverlapArea({
         ax0: x0,
@@ -391,9 +390,11 @@ function collectLikelyTextOutlinePathIndices(args: {
       if (overlap <= 0) {
         continue;
       }
-      overlapTextCount += 1;
-      overlapAreaSum += overlap;
+      overlapAccum.textCount += 1;
+      overlapAccum.areaSum += overlap;
     }
+    const overlapTextCount = overlapAccum.textCount;
+    const overlapAreaSum = overlapAccum.areaSum;
 
     const overlapRatio = overlapAreaSum / pathArea;
     const blackFill = isNearBlackRgb(path);

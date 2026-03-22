@@ -51,8 +51,6 @@ export {
 // Types from background-fill
 // =============================================================================
 
-export type { ResolvedBackgroundFill } from "./background-fill";
-
 export { toResolvedBackgroundFill } from "./background-fill";
 
 // =============================================================================

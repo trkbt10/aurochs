@@ -38,7 +38,7 @@ function createMockContext(): { ctx: FigSvgRenderContext; data: MockContextData 
       },
       add: (def: string) => mutableDefs.push(def),
     },
-  } as unknown as FigSvgRenderContext;
+  } as FigSvgRenderContext;
 
   return { ctx, data };
 }

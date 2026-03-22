@@ -2,7 +2,6 @@
  * @file Unit tests for symbol pre-resolver
  */
 
-import { describe, it, expect } from "vitest";
 import type { FigNode, FigNodeType, KiwiEnumValue } from "@aurochs/fig/types";
 import { buildSymbolDependencyGraph, preResolveSymbols } from "./symbol-pre-resolver";
 
@@ -69,7 +68,9 @@ function makeInstanceTopLevel(localID: number, symbolLocalID: number, name?: str
 }
 
 /** Create a SYMBOL node with a specific sessionID (for testing sessionID mismatch) */
-function makeSymbolWithSession(sessionID: number, localID: number, children: FigNode[], name?: string): FigNode {
+function makeSymbolWithSession(
+  { sessionID, localID, children, name}: { sessionID: number; localID: number; children: FigNode[]; name?: string; }
+): FigNode {
   return {
     guid: { sessionID, localID },
     phase: PHASE_CREATED,
@@ -80,7 +81,9 @@ function makeSymbolWithSession(sessionID: number, localID: number, children: Fig
 }
 
 /** Create an INSTANCE that references a symbolID with a different sessionID */
-function makeInstanceMismatch(localID: number, refSessionID: number, symbolLocalID: number, name?: string): FigNode {
+function makeInstanceMismatch(
+  { localID, refSessionID, symbolLocalID, name}: { localID: number; refSessionID: number; symbolLocalID: number; name?: string; }
+): FigNode {
   return makeNode(localID, "INSTANCE", {
     name: name ?? `Instance-${localID}`,
     symbolData: { symbolID: { sessionID: refSessionID, localID: symbolLocalID } },
@@ -335,8 +338,8 @@ describe("preResolveSymbols", () => {
 
   it("resolves INSTANCE despite sessionID mismatch (localID fallback)", () => {
     // SYMBOL has sessionID=0, INSTANCE references sessionID=1
-    const symB = makeSymbolWithSession(0, 20, [makeRect(21, "InnerRect")], "SymbolB");
-    const symA = makeSymbolWithSession(0, 10, [makeInstanceMismatch(11, 1, 20)], "SymbolA");
+    const symB = makeSymbolWithSession({ sessionID: 0, localID: 20, children: [makeRect(21, "InnerRect")], name: "SymbolB" });
+    const symA = makeSymbolWithSession({ sessionID: 0, localID: 10, children: [makeInstanceMismatch(11, 1, 20)], name: "SymbolA" });
     const symbolMap = new Map([
       ["0:10", symA],
       ["0:20", symB],

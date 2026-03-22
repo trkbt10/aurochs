@@ -28,12 +28,12 @@ export const app = new App(
   { autoResize: false },
 );
 
-let connected = false;
+const connectionState = { connected: false };
 
 /** Connect to host (idempotent). Call after setting handlers. */
 export function connectApp(): void {
-  if (connected) return;
-  connected = true;
+  if (connectionState.connected) {return;}
+  connectionState.connected = true;
   app.connect().catch((err) => {
     console.error("MCP connect failed:", err);
   });

@@ -14,12 +14,12 @@
  * - window.deleteSelectedShapes() → void
  */
 
-import { StrictMode, useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { StrictMode, useEffect, useMemo, useCallback, useRef } from "react";
 import { createRoot } from "react-dom/client";
-import type { Shape, Slide, TextBody } from "@aurochs-office/pptx/domain";
+import type { Shape, TextBody } from "@aurochs-office/pptx/domain";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import type { PresentationDocument } from "@aurochs-office/pptx/app";
-import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
+import { px } from "@aurochs-office/drawing-ml/domain/units";
 import { EMPTY_FONT_SCHEME } from "@aurochs-office/ooxml/domain/font-scheme";
 import {
   PresentationEditorProvider,
@@ -54,6 +54,32 @@ import {
 // =============================================================================
 
 type ShapeBoundsResult = { x: number; y: number; width: number; height: number; rotation: number };
+
+/** Resolve creation mode from type and optional preset */
+function resolveCreationMode(type: string, preset: string | undefined): CreationMode {
+  if (preset) {
+    return { type: type as "shape", preset: preset as "rect" };
+  }
+  return { type: type as "textbox" };
+}
+
+/** Add a shape to the canvas and return its ID */
+function addShapeToCanvas(
+  { type, preset, x, y, dispatch }: {
+    type: string;
+    preset: string | undefined;
+    x: number;
+    y: number;
+    dispatch: (action: PresentationEditorAction) => void;
+  },
+): string | null {
+  const mode: CreationMode = resolveCreationMode(type, preset);
+  const bounds = getDefaultBoundsForMode(mode, px(x), px(y));
+  const shape = createShapeFromMode(mode, bounds);
+  if (!shape) {return null;}
+  dispatch({ type: "CREATE_SHAPE", shape });
+  return "nonVisual" in shape ? shape.nonVisual.id : null;
+}
 
 type HarnessWindow = Window & {
   getShapeIds: () => string[];
@@ -93,7 +119,7 @@ function createTestShapes(): Shape[] {
   for (const cfg of SHAPE_CONFIGS) {
     const bounds = getDefaultBoundsForMode(cfg.mode, px(cfg.cx), px(cfg.cy));
     const shape = createShapeFromMode(cfg.mode, bounds);
-    if (shape) shapes.push(shape);
+    if (shape) {shapes.push(shape);}
   }
   return shapes;
 }
@@ -185,7 +211,7 @@ function EditorHarness() {
 
   // Text edit overlay
   const viewportOverlay = useMemo(() => {
-    if (!isTextEditActive(textEditState)) return undefined;
+    if (!isTextEditActive(textEditState)) {return undefined;}
     return (
       <TextEditController
         bounds={textEditState.bounds}
@@ -217,9 +243,9 @@ function EditorHarness() {
 
     harnessWindow.getShapeBounds = (id: string) => {
       const shape = slide.shapes.find((s) => "nonVisual" in s && s.nonVisual.id === id);
-      if (!shape) return null;
+      if (!shape) {return null;}
       const t = getShapeTransform(shape);
-      if (!t) return null;
+      if (!t) {return null;}
       return {
         x: t.x as number, y: t.y as number,
         width: t.width as number, height: t.height as number,
@@ -236,15 +262,9 @@ function EditorHarness() {
       shapeId: textEditState.type === "active" ? textEditState.shapeId : undefined,
     });
 
-    harnessWindow.addShape = (type: string, preset?: string, x = 480, y = 270) => {
-      const mode: CreationMode = preset
-        ? { type: type as "shape", preset: preset as "rect" }
-        : { type: type as "textbox" };
-      const bounds = getDefaultBoundsForMode(mode, px(x), px(y));
-      const shape = createShapeFromMode(mode, bounds);
-      if (!shape) return null;
-      dispatch({ type: "CREATE_SHAPE", shape });
-      return "nonVisual" in shape ? shape.nonVisual.id : null;
+    harnessWindow.addShape = (...args) => {
+      const [type, preset, x, y] = args;
+      return addShapeToCanvas({ type, preset, x: x ?? 480, y: y ?? 270, dispatch });
     };
 
     harnessWindow.deleteSelectedShapes = () => {

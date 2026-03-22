@@ -2,7 +2,7 @@
  * @file Unit tests for TextNodeBuilder
  */
 
-import { textNode, TextNodeBuilder } from "./text";
+import { textNode } from "./text";
 
 describe("TextNodeBuilder", () => {
   it("creates basic text node with defaults", () => {
@@ -77,8 +77,10 @@ describe("TextNodeBuilder", () => {
 });
 
 describe("Factory function", () => {
-  it("textNode returns TextNodeBuilder", () => {
+  it("textNode returns builder with expected methods", () => {
     const builder = textNode(1, 0);
-    expect(builder).toBeInstanceOf(TextNodeBuilder);
+    expect(typeof builder.text).toBe("function");
+    expect(typeof builder.fontSize).toBe("function");
+    expect(typeof builder.build).toBe("function");
   });
 });

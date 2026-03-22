@@ -11,6 +11,12 @@
 
 export type SceneNodeId = string & { readonly __brand: "SceneNodeId" };
 
+
+
+
+
+
+/** Create a unique node identifier string */
 export function createNodeId(id: string): SceneNodeId {
   return id as SceneNodeId;
 }

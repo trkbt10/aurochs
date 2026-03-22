@@ -28,7 +28,7 @@ export function createFramebuffer(
   height: number
 ): Framebuffer {
   const fbo = gl.createFramebuffer();
-  if (!fbo) throw new Error("Failed to create framebuffer");
+  if (!fbo) {throw new Error("Failed to create framebuffer");}
 
   const texture = gl.createTexture();
   if (!texture) {
@@ -73,7 +73,7 @@ export function createFramebufferWithStencil(
   height: number
 ): Framebuffer {
   const fbo = gl.createFramebuffer();
-  if (!fbo) throw new Error("Failed to create framebuffer");
+  if (!fbo) {throw new Error("Failed to create framebuffer");}
 
   const texture = gl.createTexture();
   if (!texture) {

@@ -48,10 +48,10 @@ type ParsedData = {
   nodeMap: ReadonlyMap<string, FigNode>;
 };
 
-let parsedDataCache: ParsedData | null = null;
+const parsedDataCache: ParsedData | null = null;
 
 async function loadFigFile(): Promise<ParsedData> {
-  if (parsedDataCache) return parsedDataCache;
+  if (parsedDataCache) {return parsedDataCache;}
 
   if (!fs.existsSync(FIG_FILE)) {
     throw new Error(
@@ -95,7 +95,7 @@ async function loadFigFile(): Promise<ParsedData> {
 }
 
 /** Count instances in SVG (by looking for pattern) */
-function countInstances(svg: string): number {
+function _countInstances(svg: string): number {
   // Instances are typically rendered as groups
   // Count main content groups (excluding defs and clip paths)
   const groupMatches = svg.match(/<g[^>]*>/g) || [];
@@ -133,8 +133,8 @@ describe("Component Rendering", () => {
   beforeAll(async () => {
     try {
       await loadFigFile();
-    } catch {
-      console.log("Skipping component tests - fixture file not found");
+    } catch (error) {
+      console.log("Skipping tests:", error instanceof Error ? error.message : "fixture file not found");
     }
 
     if (WRITE_SNAPSHOTS && !fs.existsSync(SNAPSHOTS_DIR)) {
@@ -161,13 +161,13 @@ describe("Component Rendering", () => {
       const actualPath = path.join(ACTUAL_DIR, fileName);
       const hasActual = fs.existsSync(actualPath);
 
-      let actualSize = layer.size;
-      let actualCounts = { rects: 0, texts: 0, groups: 0, clipPaths: 0 };
+      const actualSizeRef = { value: layer.size };
+      const actualCountsRef = { value: { rects: 0, texts: 0, groups: 0, clipPaths: 0 } };
 
       if (hasActual) {
         const actualSvg = fs.readFileSync(actualPath, "utf-8");
-        actualSize = getSvgSize(actualSvg);
-        actualCounts = extractElementCounts(actualSvg);
+        actualSizeRef.value = getSvgSize(actualSvg);
+        actualCountsRef.value = extractElementCounts(actualSvg);
       }
 
       // Render with symbolMap to resolve instances
@@ -178,8 +178,8 @@ describe("Component Rendering", () => {
       };
 
       const result = await renderCanvas(wrapperCanvas, {
-        width: actualSize.width,
-        height: actualSize.height,
+        width: actualSizeRef.value.width,
+        height: actualSizeRef.value.height,
         blobs: data.blobs,
         images: data.images,
         symbolMap: data.nodeMap,
@@ -299,16 +299,16 @@ describe("Symbol Resolution", () => {
     console.log(`Total nodes in map: ${data.nodeMap.size}`);
 
     // Find symbols in nodeMap
-    let symbolCount = 0;
+    const symbolCountRef = { value: 0 };
     for (const [key, node] of data.nodeMap) {
       const nodeType = getNodeType(node);
       if (nodeType === "SYMBOL") {
-        symbolCount++;
+        symbolCountRef.value++;
         console.log(`  Found symbol: ${node.name} (key: ${key})`);
       }
     }
 
     console.log(`Total symbols found: ${symbolCount}`);
-    expect(symbolCount).toBe(data.symbols.size);
+    expect(symbolCountRef.value).toBe(data.symbols.size);
   });
 });

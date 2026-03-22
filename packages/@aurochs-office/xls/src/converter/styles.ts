@@ -18,6 +18,27 @@ import { convertXlsXfToXlsxFill } from "./fills";
 import { buildXlsxIndexedColorsFromXlsPalette } from "./indexed-colors";
 import { convertXlsStylesToXlsxCellStyles } from "./cell-styles";
 
+/**
+ * Parameters for resolving XLSX cell styles.
+ */
+type ResolveXlsxCellStylesParams = {
+  readonly xls: XlsWorkbook;
+  readonly styleXfIndexToCellStyleXfId: Map<number, number>;
+  readonly ctx: XlsParseContext;
+  readonly stylesBase: XlsxStyleSheet;
+};
+
+/**
+ * Resolve XLSX cell styles from XLS styles, falling back to base defaults when no XLS styles exist.
+ */
+function resolveXlsxCellStyles(params: ResolveXlsxCellStylesParams): XlsxStyleSheet["cellStyles"] {
+  const { xls, styleXfIndexToCellStyleXfId, ctx, stylesBase } = params;
+  if (xls.styles.length > 0) {
+    return convertXlsStylesToXlsxCellStyles(xls, styleXfIndexToCellStyleXfId, ctx);
+  }
+  return stylesBase.cellStyles;
+}
+
 export type XlsStyleConversionResult = {
   readonly styles: XlsxStyleSheet;
   readonly xfIndexToStyleId: readonly (ReturnType<typeof styleId> | undefined)[];
@@ -315,10 +336,7 @@ export function convertXlsStylesToXlsxStyles(
     xfIndexToStyleId[xfIndex] = styleId(newIndex);
   }
 
-  const xlsxCellStyles =
-    xls.styles.length > 0
-      ? convertXlsStylesToXlsxCellStyles(xls, styleXfIndexToCellStyleXfId, ctx)
-      : stylesBase.cellStyles;
+  const xlsxCellStyles = resolveXlsxCellStyles({ xls, styleXfIndexToCellStyleXfId, ctx, stylesBase });
 
   const styles: XlsxStyleSheet = {
     ...stylesBase,

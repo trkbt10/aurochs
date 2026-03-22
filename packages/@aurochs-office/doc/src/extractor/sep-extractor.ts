@@ -16,13 +16,13 @@ export type SectionDescriptor = {
 
 /** Parse PlcfSed from the table stream. */
 export function parsePlcfSed(tableStream: Uint8Array, fc: number, lcb: number): readonly SectionDescriptor[] {
-  if (lcb === 0) return [];
-  if (fc + lcb > tableStream.length) return [];
+  if (lcb === 0) {return [];}
+  if (fc + lcb > tableStream.length) {return [];}
 
   // PlcfSed: CP array (n+1 × 4B) + Sed array (n × 12B)
   // size = (n+1)*4 + n*12 = 4 + 16*n → n = (lcb - 4) / 16
   const n = (lcb - 4) / 16;
-  if (!Number.isInteger(n) || n <= 0) return [];
+  if (!Number.isInteger(n) || n <= 0) {return [];}
 
   const view = new DataView(tableStream.buffer, tableStream.byteOffset, tableStream.byteLength);
   const results: SectionDescriptor[] = [];
@@ -125,21 +125,21 @@ function applySepSprm(props: SepProps, sprm: Sprm): void {
     // Line numbering
     case SPRM_SEP.SLnc: {
       const lnc = sprmUint8(sprm);
-      if (!props.lineNumbering) props.lineNumbering = {};
+      if (!props.lineNumbering) {props.lineNumbering = {};}
       const restart: "perPage" | "perSection" | "continuous" = lnc === 1 ? "perSection" : lnc === 2 ? "continuous" : "perPage";
       props.lineNumbering = { ...props.lineNumbering, restart };
       break;
     }
     case SPRM_SEP.SNLnnMod:
-      if (!props.lineNumbering) props.lineNumbering = {};
+      if (!props.lineNumbering) {props.lineNumbering = {};}
       props.lineNumbering = { ...props.lineNumbering, countBy: sprmUint16(sprm) };
       break;
     case SPRM_SEP.SDxaLnn:
-      if (!props.lineNumbering) props.lineNumbering = {};
+      if (!props.lineNumbering) {props.lineNumbering = {};}
       props.lineNumbering = { ...props.lineNumbering, distance: sprmInt16(sprm) };
       break;
     case SPRM_SEP.SLnnMin:
-      if (!props.lineNumbering) props.lineNumbering = {};
+      if (!props.lineNumbering) {props.lineNumbering = {};}
       props.lineNumbering = { ...props.lineNumbering, start: sprmUint16(sprm) };
       break;
     // Page numbering
@@ -170,12 +170,12 @@ function applySepSprm(props: SepProps, sprm: Sprm): void {
  * SEPX: cb(2B) + grpprl(cb bytes)
  */
 export function parseSepx(wordDocStream: Uint8Array, fcSepx: number): SepProps {
-  if (fcSepx < 0 || fcSepx === -1) return {};
-  if (fcSepx + 2 > wordDocStream.length) return {};
+  if (fcSepx < 0 || fcSepx === -1) {return {};}
+  if (fcSepx + 2 > wordDocStream.length) {return {};}
 
   const view = new DataView(wordDocStream.buffer, wordDocStream.byteOffset, wordDocStream.byteLength);
   const cb = view.getUint16(fcSepx, true);
-  if (cb === 0 || fcSepx + 2 + cb > wordDocStream.length) return {};
+  if (cb === 0 || fcSepx + 2 + cb > wordDocStream.length) {return {};}
 
   const grpprl = wordDocStream.subarray(fcSepx + 2, fcSepx + 2 + cb);
   const sprms = parseGrpprl(grpprl);

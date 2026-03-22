@@ -10,12 +10,10 @@ type RenderConfig = {
   scrollLeft?: number;
 };
 
-declare global {
-  interface Window {
-    renderWorkbook: (json: string, config: RenderConfig) => Promise<void>;
-    waitForRender: () => Promise<void>;
-    __renderComplete?: boolean;
-  }
-}
+type XlsxHarnessWindow = Window & {
+  renderWorkbook: (json: string, config: RenderConfig) => Promise<void>;
+  waitForRender: () => Promise<void>;
+  __renderComplete?: boolean;
+};
 
-export {};
+export type { XlsxHarnessWindow, RenderConfig };

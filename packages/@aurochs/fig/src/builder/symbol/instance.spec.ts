@@ -2,7 +2,7 @@
  * @file Unit tests for InstanceNodeBuilder
  */
 
-import { instanceNode, InstanceNodeBuilder } from "./instance";
+import { instanceNode } from "./instance";
 
 describe("InstanceNodeBuilder", () => {
   it("creates basic instance with number symbolID", () => {
@@ -120,8 +120,10 @@ describe("InstanceNodeBuilder", () => {
 });
 
 describe("Factory function", () => {
-  it("instanceNode returns InstanceNodeBuilder", () => {
+  it("instanceNode returns builder with expected methods", () => {
     const builder = instanceNode(2, 0, 1);
-    expect(builder).toBeInstanceOf(InstanceNodeBuilder);
+    expect(typeof builder.name).toBe("function");
+    expect(typeof builder.size).toBe("function");
+    expect(typeof builder.build).toBe("function");
   });
 });

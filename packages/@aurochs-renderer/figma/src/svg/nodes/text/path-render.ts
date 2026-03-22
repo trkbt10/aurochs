@@ -34,55 +34,51 @@ function needsTextWrapping(props: ExtractedTextProps): boolean {
  * Break text into lines based on width using opentype.js font metrics
  */
 function breakTextWithFont(
-  text: string,
-  font: AbstractFont,
-  fontSize: number,
-  maxWidth: number,
-  letterSpacing?: number,
+  { text, font, fontSize, maxWidth, letterSpacing}: { text: string; font: AbstractFont; fontSize: number; maxWidth: number; letterSpacing?: number; }
 ): readonly string[] {
   const scale = fontSize / font.unitsPerEm;
   const spacing = letterSpacing ?? 0;
   const lines: string[] = [];
-  let currentLine = "";
-  let currentWidth = 0;
+  const currentLineRef = { value: "" };
+  const currentWidthRef = { value: 0 };
 
   const words = text.split(/(\s+)/); // Keep whitespace as separate items
 
   for (const word of words) {
     // Calculate word width
-    let wordWidth = 0;
+    const wordWidthRef = { value: 0 };
     for (let i = 0; i < word.length; i++) {
       const glyph = font.charToGlyph(word[i]);
       const advanceWidth = glyph.advanceWidth ?? 0;
-      wordWidth += advanceWidth * scale;
+      wordWidthRef.value += advanceWidth * scale;
       if (i < word.length - 1) {
-        wordWidth += spacing;
+        wordWidthRef.value += spacing;
       }
     }
 
     // Check if adding this word would exceed max width
-    if (currentLine && currentWidth + wordWidth > maxWidth) {
+    if (currentLineRef.value && currentWidthRef.value + wordWidthRef.value > maxWidth) {
       // Start new line
-      lines.push(currentLine.trimEnd());
-      currentLine = word.trimStart();
+      lines.push(currentLineRef.value.trimEnd());
+      currentLineRef.value = word.trimStart();
       // Recalculate width for trimmed word
-      currentWidth = 0;
-      for (let i = 0; i < currentLine.length; i++) {
-        const glyph = font.charToGlyph(currentLine[i]);
+      currentWidthRef.value = 0;
+      for (let i = 0; i < currentLineRef.value.length; i++) {
+        const glyph = font.charToGlyph(currentLineRef.value[i]);
         const advanceWidth = glyph.advanceWidth ?? 0;
-        currentWidth += advanceWidth * scale;
-        if (i < currentLine.length - 1) {
-          currentWidth += spacing;
+        currentWidthRef.value += advanceWidth * scale;
+        if (i < currentLineRef.value.length - 1) {
+          currentWidthRef.value += spacing;
         }
       }
     } else {
-      currentLine += word;
-      currentWidth += wordWidth;
+      currentLineRef.value += word;
+      currentWidthRef.value += wordWidthRef.value;
     }
   }
 
-  if (currentLine) {
-    lines.push(currentLine.trimEnd());
+  if (currentLineRef.value) {
+    lines.push(currentLineRef.value.trimEnd());
   }
 
   return lines.length > 0 ? lines : [""];
@@ -108,7 +104,7 @@ function getTextLinesForPath(props: ExtractedTextProps, font: AbstractFont): rea
       continue;
     }
 
-    const brokenLines = breakTextWithFont(explicitLine, font, props.fontSize, maxWidth, props.letterSpacing);
+    const brokenLines = breakTextWithFont({ text: explicitLine, font, fontSize: props.fontSize, maxWidth, letterSpacing: props.letterSpacing });
 
     for (const line of brokenLines) {
       allLines.push(line);
@@ -145,9 +141,9 @@ export async function renderTextNodeAsPath(node: FigNode, ctx: PathRenderContext
   }
 
   // Try to load a fallback font for CJK characters
-  let fallbackFont: LoadedFont | undefined;
+  const fallbackFontRef = { value: undefined as LoadedFont | undefined | undefined };
   if (ctx.fontLoader.loadFallbackFont) {
-    fallbackFont = await ctx.fontLoader.loadFallbackFont({
+    fallbackFontRef.value = await ctx.fontLoader.loadFallbackFont({
       family: props.fontFamily,
       weight: props.fontWeight,
       style: props.fontStyle === "italic" ? "italic" : "normal",
@@ -192,13 +188,13 @@ export async function renderTextNodeAsPath(node: FigNode, ctx: PathRenderContext
 
   for (let i = 0; i < lines.length; i++) {
     const lineText = lines[i];
-    if (!lineText) continue;
+    if (!lineText) {continue;}
 
     const y = baseY + i * lineHeight;
     const linePath = renderLineAsPathWithFallback(
       lineText,
       font,
-      fallbackFont?.font,
+      fallbackFontRef.value?.font,
       props.fontSize,
       x,
       y,
@@ -287,37 +283,37 @@ function segmentTextByFont(
   }
 
   const segments: TextSegment[] = [];
-  let currentText = "";
-  let currentUseFallback = false;
+  const currentTextRef = { value: "" };
+  const currentUseFallbackRef = { value: false };
 
   for (const char of text) {
     const needsFallback = isCJKCharacter(char) && !fontHasGlyph(primaryFont, char);
 
-    if (segments.length === 0 && currentText === "") {
+    if (segments.length === 0 && currentTextRef.value === "") {
       // First character
-      currentUseFallback = needsFallback;
-      currentText = char;
-    } else if (needsFallback === currentUseFallback) {
+      currentUseFallbackRef.value = needsFallback;
+      currentTextRef.value = char;
+    } else if (needsFallback === currentUseFallbackRef.value) {
       // Same font as current segment
-      currentText += char;
+      currentTextRef.value += char;
     } else {
       // Different font - save current segment and start new one
       segments.push({
-        text: currentText,
-        font: currentUseFallback ? fallbackFont : primaryFont,
-        useFallback: currentUseFallback,
+        text: currentTextRef.value,
+        font: currentUseFallbackRef.value ? fallbackFont : primaryFont,
+        useFallback: currentUseFallbackRef.value,
       });
-      currentText = char;
-      currentUseFallback = needsFallback;
+      currentTextRef.value = char;
+      currentUseFallbackRef.value = needsFallback;
     }
   }
 
   // Add final segment
-  if (currentText) {
+  if (currentTextRef.value) {
     segments.push({
-      text: currentText,
-      font: currentUseFallback ? fallbackFont : primaryFont,
-      useFallback: currentUseFallback,
+      text: currentTextRef.value,
+      font: currentUseFallbackRef.value ? fallbackFont : primaryFont,
+      useFallback: currentUseFallbackRef.value,
     });
   }
 
@@ -327,55 +323,51 @@ function segmentTextByFont(
 /**
  * Calculate width of a text segment
  */
-function calculateSegmentWidth(text: string, font: AbstractFont, fontSize: number, letterSpacing?: number): number {
+function calculateSegmentWidth(
+  { text, font, fontSize, letterSpacing}: { text: string; font: AbstractFont; fontSize: number; letterSpacing?: number; }
+): number {
   const scale = fontSize / font.unitsPerEm;
-  let width = 0;
+  const widthRef = { value: 0 };
   for (let i = 0; i < text.length; i++) {
     const glyph = font.charToGlyph(text[i]);
     const advanceWidth = glyph.advanceWidth ?? 0;
-    width += advanceWidth * scale;
+    widthRef.value += advanceWidth * scale;
     if (letterSpacing && i < text.length - 1) {
-      width += letterSpacing;
+      widthRef.value += letterSpacing;
     }
   }
-  return width;
+  return widthRef.value;
 }
 
 /**
  * Render a single line of text as SVG path data
  */
-function renderLineAsPath(
-  text: string,
-  font: AbstractFont,
-  fontSize: number,
-  x: number,
-  y: number,
-  align: "LEFT" | "CENTER" | "RIGHT" | "JUSTIFIED",
-  letterSpacing?: number,
+function _renderLineAsPath(
+  { text, font, fontSize, x, y, align, letterSpacing}: { text: string; font: AbstractFont; fontSize: number; x: number; y: number; align: "LEFT" | "CENTER" | "RIGHT" | "JUSTIFIED"; letterSpacing?: number; }
 ): string | null {
   const scale = fontSize / font.unitsPerEm;
 
   // Calculate text width for alignment
-  let totalWidth = 0;
+  const totalWidthRef3 = { value: 0 };
   for (let i = 0; i < text.length; i++) {
     const glyph = font.charToGlyph(text[i]);
     const advanceWidth = glyph.advanceWidth ?? 0;
-    totalWidth += advanceWidth * scale;
+    totalWidthRef3.value += advanceWidth * scale;
     if (letterSpacing && i < text.length - 1) {
-      totalWidth += letterSpacing;
+      totalWidthRef3.value += letterSpacing;
     }
   }
 
   // Adjust x for alignment
-  let adjustedX = x;
+  const adjustedXRef2 = { value: x };
   if (align === "CENTER") {
-    adjustedX = x - totalWidth / 2;
+    adjustedXRef2.value = x - totalWidthRef3.value / 2;
   } else if (align === "RIGHT") {
-    adjustedX = x - totalWidth;
+    adjustedXRef2.value = x - totalWidthRef3.value;
   }
 
   // Convert text to path
-  const openTypePath = font.getPath(text, adjustedX, y, fontSize, {
+  const openTypePath = font.getPath(text, adjustedXRef2.value, y, fontSize, {
     letterSpacing: letterSpacing ?? 0,
   });
 
@@ -389,14 +381,7 @@ function renderLineAsPath(
  * Render a single line of text as SVG path data with font fallback
  */
 function renderLineAsPathWithFallback(
-  text: string,
-  primaryFont: AbstractFont,
-  fallbackFont: AbstractFont | undefined,
-  fontSize: number,
-  x: number,
-  y: number,
-  align: "LEFT" | "CENTER" | "RIGHT" | "JUSTIFIED",
-  letterSpacing?: number,
+  { text, primaryFont, fallbackFont, fontSize, x, y, align, letterSpacing}: { text: string; primaryFont: AbstractFont; fallbackFont: AbstractFont | undefined; fontSize: number; x: number; y: number; align: "LEFT" | "CENTER" | "RIGHT" | "JUSTIFIED"; letterSpacing?: number; }
 ): string | null {
   const segments = segmentTextByFont(text, primaryFont, fallbackFont);
 
@@ -405,25 +390,25 @@ function renderLineAsPathWithFallback(
   }
 
   // Calculate total width for alignment
-  let totalWidth = 0;
+  const totalWidthRef2 = { value: 0 };
   for (const segment of segments) {
-    totalWidth += calculateSegmentWidth(segment.text, segment.font, fontSize, letterSpacing);
+    totalWidthRef2.value += calculateSegmentWidth({ text: segment.text, font: segment.font, fontSize, letterSpacing });
   }
 
   // Adjust starting X for alignment
-  let adjustedX = x;
+  const adjustedXRef = { value: x };
   if (align === "CENTER") {
-    adjustedX = x - totalWidth / 2;
+    adjustedXRef.value = x - totalWidthRef2.value / 2;
   } else if (align === "RIGHT") {
-    adjustedX = x - totalWidth;
+    adjustedXRef.value = x - totalWidthRef2.value;
   }
 
   // Render each segment
   const paths: string[] = [];
-  let currentX = adjustedX;
+  const currentXRef2 = { value: adjustedXRef.value };
 
   for (const segment of segments) {
-    const openTypePath = segment.font.getPath(segment.text, currentX, y, fontSize, {
+    const openTypePath = segment.font.getPath(segment.text, currentXRef2.value, y, fontSize, {
       letterSpacing: letterSpacing ?? 0,
     });
 
@@ -433,7 +418,7 @@ function renderLineAsPathWithFallback(
     }
 
     // Move to next position
-    currentX += calculateSegmentWidth(segment.text, segment.font, fontSize, letterSpacing);
+    currentXRef2.value += calculateSegmentWidth({ text: segment.text, font: segment.font, fontSize, letterSpacing });
   }
 
   return paths.join("") || null;
@@ -446,13 +431,7 @@ function renderLineAsPathWithFallback(
  * The underline thickness and position are calculated based on font metrics.
  */
 function renderUnderlinePath(
-  text: string,
-  font: AbstractFont,
-  fontSize: number,
-  x: number,
-  y: number,
-  align: "LEFT" | "CENTER" | "RIGHT" | "JUSTIFIED",
-  letterSpacing?: number,
+  { text, font, fontSize, x, y, align, letterSpacing}: { text: string; font: AbstractFont; fontSize: number; x: number; y: number; align: "LEFT" | "CENTER" | "RIGHT" | "JUSTIFIED"; letterSpacing?: number; }
 ): string | null {
   if (!text.trim()) {
     return null;
@@ -461,13 +440,13 @@ function renderUnderlinePath(
   const scale = fontSize / font.unitsPerEm;
 
   // Calculate text width for the underline
-  let totalWidth = 0;
+  const totalWidthRef = { value: 0 };
   for (let i = 0; i < text.length; i++) {
     const glyph = font.charToGlyph(text[i]);
     const advanceWidth = glyph.advanceWidth ?? 0;
-    totalWidth += advanceWidth * scale;
+    totalWidthRef.value += advanceWidth * scale;
     if (letterSpacing && i < text.length - 1) {
-      totalWidth += letterSpacing;
+      totalWidthRef.value += letterSpacing;
     }
   }
 
@@ -481,11 +460,11 @@ function renderUnderlinePath(
   const round = (n: number) => Math.round(n * 10000) / 10000;
 
   // Calculate underline X position based on alignment
-  let underlineX = x;
+  const underlineXRef = { value: x };
   if (align === "CENTER") {
-    underlineX = x - totalWidth / 2;
+    underlineXRef.value = x - totalWidthRef.value / 2;
   } else if (align === "RIGHT") {
-    underlineX = x - totalWidth;
+    underlineXRef.value = x - totalWidthRef.value;
   }
 
   // Calculate underline Y position (below baseline)
@@ -493,7 +472,7 @@ function renderUnderlinePath(
 
   // Create rectangle path for underline
   // M x y H (x+width) V (y+height) H x V y Z
-  return `M${round(underlineX)} ${round(underlineY)}H${round(underlineX + totalWidth)}V${round(underlineY + underlineThickness)}H${round(underlineX)}V${round(underlineY)}Z`;
+  return `M${round(underlineXRef.value)} ${round(underlineY)}H${round(underlineXRef.value + totalWidthRef.value)}V${round(underlineY + underlineThickness)}H${round(underlineXRef.value)}V${round(underlineY)}Z`;
 }
 
 /**
@@ -520,8 +499,8 @@ function convertQuadraticToCubic(
   precision: number,
 ): string {
   const parts: string[] = [];
-  let currentX = 0;
-  let currentY = 0;
+  const currentXRef = { value: 0 };
+  const currentYRef = { value: 0 };
 
   const round = (n: number) => {
     const factor = Math.pow(10, precision);
@@ -531,22 +510,22 @@ function convertQuadraticToCubic(
   for (const cmd of path.commands) {
     switch (cmd.type) {
       case "M":
-        currentX = cmd.x ?? 0;
-        currentY = cmd.y ?? 0;
-        parts.push(`M${round(currentX)} ${round(currentY)}`);
+        currentXRef.value = cmd.x ?? 0;
+        currentYRef.value = cmd.y ?? 0;
+        parts.push(`M${round(currentXRef.value)} ${round(currentYRef.value)}`);
         break;
 
       case "L":
-        currentX = cmd.x ?? 0;
-        currentY = cmd.y ?? 0;
-        parts.push(`L${round(currentX)} ${round(currentY)}`);
+        currentXRef.value = cmd.x ?? 0;
+        currentYRef.value = cmd.y ?? 0;
+        parts.push(`L${round(currentXRef.value)} ${round(currentYRef.value)}`);
         break;
 
       case "Q": {
         // Convert quadratic to cubic
         // P0 = current point, P1 = (x1, y1), P2 = (x, y)
-        const p0x = currentX;
-        const p0y = currentY;
+        const p0x = currentXRef.value;
+        const p0y = currentYRef.value;
         const p1x = cmd.x1 ?? 0;
         const p1y = cmd.y1 ?? 0;
         const p2x = cmd.x ?? 0;
@@ -562,8 +541,8 @@ function convertQuadraticToCubic(
 
         parts.push(`C${round(cp1x)} ${round(cp1y)} ${round(cp2x)} ${round(cp2y)} ${round(p2x)} ${round(p2y)}`);
 
-        currentX = p2x;
-        currentY = p2y;
+        currentXRef.value = p2x;
+        currentYRef.value = p2y;
         break;
       }
 
@@ -572,8 +551,8 @@ function convertQuadraticToCubic(
         parts.push(
           `C${round(cmd.x1 ?? 0)} ${round(cmd.y1 ?? 0)} ${round(cmd.x2 ?? 0)} ${round(cmd.y2 ?? 0)} ${round(cmd.x ?? 0)} ${round(cmd.y ?? 0)}`,
         );
-        currentX = cmd.x ?? 0;
-        currentY = cmd.y ?? 0;
+        currentXRef.value = cmd.x ?? 0;
+        currentYRef.value = cmd.y ?? 0;
         break;
 
       case "Z":

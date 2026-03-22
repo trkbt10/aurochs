@@ -11,7 +11,6 @@ import {
   TrashIcon,
   EditIcon,
   AddIcon,
-  CloseIcon,
 } from "@aurochs-ui/ui-components/icons";
 import type { ComponentEntry, Story } from "../types";
 

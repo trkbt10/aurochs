@@ -6,7 +6,8 @@
 
 import { getChild, isXmlElement, type XmlElement } from "@aurochs/xml";
 import type { GrpShape, Shape, GroupLocks } from "../../domain";
-import type { PlaceholderContext, MasterStylesInfo, FormatScheme } from "../context";
+import type { PlaceholderContext, MasterStylesInfo } from "../context";
+import type { FormatScheme } from "../../domain/theme/types";
 import { parseNonVisualProperties } from "./non-visual";
 import { parseGroupShapeProperties } from "./properties";
 import { getBoolAttr } from "../primitive";

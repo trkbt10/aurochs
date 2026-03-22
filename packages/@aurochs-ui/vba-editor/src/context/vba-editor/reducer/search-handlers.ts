@@ -4,8 +4,7 @@
  * Handlers for search/replace actions.
  */
 
-import type { VbaEditorState, VbaEditorAction, SearchState, SearchMatch } from "../types";
-import { INITIAL_SEARCH_STATE } from "../types";
+import type { VbaEditorState, VbaEditorAction, SearchMatch } from "../types";
 import { pushHistory } from "@aurochs-ui/editor-core/history";
 
 // =============================================================================
@@ -113,15 +112,23 @@ export const handleSetSearchMode: ActionHandler<
 // Match Handlers
 // =============================================================================
 
+/**
+ * Compute the new match index after updating matches.
+ */
+function computeNewMatchIndex(currentIndex: number, newMatchCount: number): number {
+  if (newMatchCount > 0 && currentIndex === -1) {
+    return 0;
+  }
+  if (currentIndex >= newMatchCount) {
+    return newMatchCount - 1;
+  }
+  return currentIndex;
+}
+
 export const handleUpdateMatches: ActionHandler<
   Extract<VbaEditorAction, { type: "UPDATE_MATCHES" }>
 > = (state, action) => {
-  const newIndex =
-    action.matches.length > 0 && state.search.currentMatchIndex === -1
-      ? 0
-      : state.search.currentMatchIndex >= action.matches.length
-        ? action.matches.length - 1
-        : state.search.currentMatchIndex;
+  const newIndex = computeNewMatchIndex(state.search.currentMatchIndex, action.matches.length);
 
   return {
     ...state,
@@ -146,6 +153,16 @@ export const handleUpdateProjectMatches: ActionHandler<
   };
 };
 
+/**
+ * Navigate to the next or previous match index with wrapping.
+ */
+function navigateMatchIndex(current: number, total: number, direction: "next" | "previous"): number {
+  if (direction === "next") {
+    return current < total - 1 ? current + 1 : 0;
+  }
+  return current > 0 ? current - 1 : total - 1;
+}
+
 export const handleNavigateMatch: ActionHandler<
   Extract<VbaEditorAction, { type: "NAVIGATE_MATCH" }>
 > = (state, action) => {
@@ -154,12 +171,7 @@ export const handleNavigateMatch: ActionHandler<
     return state;
   }
 
-  let newIndex: number;
-  if (action.direction === "next") {
-    newIndex = currentMatchIndex < matches.length - 1 ? currentMatchIndex + 1 : 0;
-  } else {
-    newIndex = currentMatchIndex > 0 ? currentMatchIndex - 1 : matches.length - 1;
-  }
+  const newIndex = navigateMatchIndex(currentMatchIndex, matches.length, action.direction);
 
   return {
     ...state,
@@ -262,12 +274,7 @@ export const handleReplaceCurrent: ActionHandler<
   }
 
   // Adjust current index
-  const newIndex =
-    newMatches.length === 0
-      ? -1
-      : currentMatchIndex >= newMatches.length
-        ? newMatches.length - 1
-        : currentMatchIndex;
+  const newIndex = computeNewMatchIndex(currentMatchIndex, newMatches.length);
 
   return {
     ...state,
@@ -301,12 +308,12 @@ export const handleReplaceAll: ActionHandler<
 
   // Replace all matches from end to start to preserve offsets
   const sortedMatches = [...matches].sort((a, b) => b.startOffset - a.startOffset);
-  let newSource = source;
+  const newSource = { value: source };
   for (const match of sortedMatches) {
-    newSource =
-      newSource.slice(0, match.startOffset) +
+    newSource.value =
+      newSource.value.slice(0, match.startOffset) +
       replaceText +
-      newSource.slice(match.endOffset);
+      newSource.value.slice(match.endOffset);
   }
 
   // Update source map
@@ -314,7 +321,7 @@ export const handleReplaceAll: ActionHandler<
   const lastMatch = matches[matches.length - 1];
   const finalCursorOffset = lastMatch.startOffset + replaceText.length;
   newSourceMap.set(activeModuleName, {
-    source: newSource,
+    source: newSource.value,
     cursorOffset: finalCursorOffset,
   });
 

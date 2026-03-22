@@ -63,6 +63,12 @@ const styles = {
   },
 };
 
+
+
+
+
+
+/** Navigation sidebar listing categories and features */
 export function Sidebar({ categories, activeCategory, activeFeature, onNavigate }: Props) {
   return (
     <aside style={styles.sidebar}>

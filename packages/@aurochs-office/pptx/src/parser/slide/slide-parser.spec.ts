@@ -17,6 +17,7 @@
 
 import type { XmlElement, XmlDocument } from "@aurochs/xml";
 import type { FormatScheme } from "../../domain/theme/types";
+import { pct, deg } from "@aurochs-office/drawing-ml/domain/units";
 import {
   parseBackground,
   parseTransition,
@@ -128,10 +129,10 @@ describe("parseBackground - p:bg (ECMA-376 Section 19.3.1.1)", () => {
       bgFillStyles: [{
         type: "gradientFill",
         stops: [
-          { position: 0 as any, color: { spec: { type: "scheme", value: "phClr" } } },
-          { position: 100000 as any, color: { spec: { type: "srgb", value: "FFFFFF" } } },
+          { position: pct(0), color: { spec: { type: "scheme", value: "phClr" } } },
+          { position: pct(100000), color: { spec: { type: "srgb", value: "FFFFFF" } } },
         ],
-        linear: { angle: 90 as any, scaled: false },
+        linear: { angle: deg(90), scaled: false },
         rotWithShape: true,
       }],
       lineStyles: [],

@@ -2,7 +2,7 @@
  * @file Slide XML generation
  */
 
-import type { PptSlide, PptShape } from "../domain/types";
+import type { PptSlide } from "../domain/types";
 import { buildShapeXml, resetShapeIdCounter } from "./shape-xml";
 
 /**

@@ -14,12 +14,12 @@ import { createClosedContextMenu } from "../types";
 
 export type UseGroupedListContextMenuReturn = {
   readonly menuState: GroupedListContextMenuState;
-  readonly openMenu: (
-    x: number,
-    y: number,
-    itemId: GroupedListItemId | null,
-    groupId: GroupedListGroupId | null
-  ) => void;
+  readonly openMenu: (params: {
+    x: number;
+    y: number;
+    itemId: GroupedListItemId | null;
+    groupId: GroupedListGroupId | null;
+  }) => void;
   readonly closeMenu: () => void;
 };
 
@@ -32,12 +32,12 @@ export function useGroupedListContextMenu(): UseGroupedListContextMenuReturn {
   );
 
   const openMenu = useCallback(
-    (
-      x: number,
-      y: number,
-      itemId: GroupedListItemId | null,
-      groupId: GroupedListGroupId | null
-    ) => {
+    ({ x, y, itemId, groupId }: {
+      x: number;
+      y: number;
+      itemId: GroupedListItemId | null;
+      groupId: GroupedListGroupId | null;
+    }) => {
       setMenuState({
         type: "open",
         x,

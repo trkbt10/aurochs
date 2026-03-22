@@ -1,59 +1,69 @@
+/** @file Deep blob structure inspection script */
 /**
  * Use the ACTUAL blob decoder to compare real Figma glyph blobs vs ours
  */
 import * as fs from "node:fs";
-import { parseFigFile, buildNodeTree, type FigBlob, decodePathCommands } from "@aurochs/fig/parser";
+import { parseFigFile, buildNodeTree, decodePathCommands } from "@aurochs/fig/parser";
+import type { FigNode } from "@aurochs/fig/types";
 
-function walkNodes(node: any, found: any[], maxNodes: number) {
-  if (found.length >= maxNodes) return;
-  const type = node.type?.name || node.type;
+type PathCmd = { type: string; x?: number; y?: number };
+type GlyphInfo = { name: string; text: string; glyphs: Array<{ commandsBlob: number; firstCharacter: number }> };
+
+/** Walk nodes to find TEXT nodes with glyph data */
+function walkNodes(node: FigNode, found: GlyphInfo[], maxNodes: number) {
+  if (found.length >= maxNodes) {return;}
+  const type = node.type?.name;
   if (type === "TEXT") {
-    const dtd = node.derivedTextData;
+    const dtd = (node as Record<string, unknown>).derivedTextData as { glyphs?: Array<{ commandsBlob: number; firstCharacter: number }> } | undefined;
     if (dtd?.glyphs?.length) {
-      const chars = node.textData?.characters || node.characters || "?";
-      found.push({ name: node.name, text: chars, glyphs: dtd.glyphs });
+      const td = (node as Record<string, unknown>).textData as { characters?: string } | undefined;
+      const chars = td?.characters ?? "?";
+      found.push({ name: node.name ?? "?", text: chars, glyphs: dtd.glyphs });
     }
   }
-  for (const child of node.children || []) {
+  for (const child of node.children ?? []) {
     walkNodes(child, found, maxNodes);
   }
 }
 
-function computeSignedArea(cmds: any[]): number {
+/** Compute the signed area of a set of path commands */
+function computeSignedArea(cmds: PathCmd[]): number {
   const pts: [number, number][] = [];
   for (const c of cmds) {
     if (c.x !== undefined && c.y !== undefined) {
       pts.push([c.x, c.y]);
     }
   }
-  if (pts.length < 3) return 0;
-  let area = 0;
-  for (let i = 0; i < pts.length; i++) {
+  if (pts.length < 3) {return 0;}
+  const areaRef = { value: 0 };
+  for (const [i, pt] of pts.entries()) {
     const j = (i + 1) % pts.length;
-    area += pts[i][0] * pts[j][1];
-    area -= pts[j][0] * pts[i][1];
+    areaRef.value += pt[0] * pts[j][1];
+    areaRef.value -= pts[j][0] * pt[1];
   }
-  return area / 2;
+  return areaRef.value / 2;
 }
 
-function splitContours(commands: any[]): any[][] {
-  const contours: any[][] = [];
-  let current: any[] = [];
+/** Split a command array into contours at M/Z boundaries */
+function splitContours(commands: PathCmd[]): PathCmd[][] {
+  const contours: PathCmd[][] = [];
+  const currentRef = { value: [] as PathCmd[] };
   for (const cmd of commands) {
-    if (cmd.type === "M" && current.length > 0) {
-      contours.push(current);
-      current = [];
+    if (cmd.type === "M" && currentRef.value.length > 0) {
+      contours.push(currentRef.value);
+      currentRef.value = [];
     }
-    current.push(cmd);
+    currentRef.value.push(cmd);
     if (cmd.type === "Z") {
-      contours.push(current);
-      current = [];
+      contours.push(currentRef.value);
+      currentRef.value = [];
     }
   }
-  if (current.length > 0) contours.push(current);
+  if (currentRef.value.length > 0) {contours.push(currentRef.value);}
   return contours;
 }
 
+/** Analyze a .fig file and print glyph blob details */
 async function analyzeFile(filepath: string, label: string) {
   console.log(`\n${"=".repeat(60)}`);
   console.log(`${label}`);
@@ -63,36 +73,34 @@ async function analyzeFile(filepath: string, label: string) {
   const parsed = await parseFigFile(new Uint8Array(data));
   const { roots } = buildNodeTree(parsed.nodeChanges);
 
-  const found: any[] = [];
+  const found: GlyphInfo[] = [];
   for (const root of roots) {
     walkNodes(root, found, 3);
   }
 
   for (const f of found) {
-    const chars = f.text as string;
+    const chars = f.text;
     console.log(`\n  TEXT "${f.name}" = "${chars.slice(0, 40)}" (${f.glyphs.length} glyphs):`);
 
     const seen = new Set<number>();
-    for (let gi = 0; gi < f.glyphs.length; gi++) {
-      const glyph = f.glyphs[gi];
+    for (const glyph of f.glyphs) {
       const blobIdx = glyph.commandsBlob;
-      if (seen.has(blobIdx)) continue;
+      if (seen.has(blobIdx)) {continue;}
       seen.add(blobIdx);
-      if (blobIdx >= parsed.blobs.length) continue;
+      if (blobIdx >= parsed.blobs.length) {continue;}
 
       const charIdx = glyph.firstCharacter;
       const char = charIdx < chars.length ? chars[charIdx] : "?";
 
       const blob = parsed.blobs[blobIdx];
-      const cmds = decodePathCommands(blob);
+      const cmds = decodePathCommands(blob) as PathCmd[];
 
-      if (cmds.length === 0) continue; // Skip empty/whitespace
+      if (cmds.length === 0) {continue;}
 
       const mCount = cmds.filter((c) => c.type === "M").length;
       const zCount = cmds.filter((c) => c.type === "Z").length;
 
-      // Only show multi-contour glyphs (holes) and a few single-contour for comparison
-      if (mCount < 2 && seen.size > 3) continue;
+      if (mCount < 2 && seen.size > 3) {continue;}
 
       const contours = splitContours(cmds);
       const typeSeq = cmds.map((c) => c.type).join("");
@@ -102,13 +110,13 @@ async function analyzeFile(filepath: string, label: string) {
       );
       console.log(`      types: ${typeSeq}`);
 
-      for (let ci = 0; ci < contours.length; ci++) {
-        const area = computeSignedArea(contours[ci]);
-        const hasZ = contours[ci].some((c: any) => c.type === "Z");
-        console.log(`      contour[${ci}]: ${contours[ci].length} cmds, area=${area.toFixed(6)}, hasZ=${hasZ}`);
+      for (const [ci, contour] of contours.entries()) {
+        const area = computeSignedArea(contour);
+        const hasZ = contour.some((c) => c.type === "Z");
+        console.log(`      contour[${ci}]: ${contour.length} cmds, area=${area.toFixed(6)}, hasZ=${hasZ}`);
       }
 
-      if (seen.size >= 8) break;
+      if (seen.size >= 8) {break;}
     }
   }
 }

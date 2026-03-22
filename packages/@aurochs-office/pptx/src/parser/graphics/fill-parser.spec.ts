@@ -21,6 +21,7 @@ import { parseFill, parseFillFromParent, resolveFillFromStyleReference } from ".
 import { findFillElement } from "@aurochs-office/drawing-ml/parser";
 import type { StyleReference } from "../../domain/index";
 import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
+import { pct } from "@aurochs-office/drawing-ml/domain/units";
 
 // Helper to create mock XmlElement
 function el(name: string, attrs: Record<string, string> = {}, children: XmlElement[] = []): XmlElement {
@@ -708,8 +709,8 @@ describe("resolveFillFromStyleReference", () => {
     const gradFill: BaseFill = {
       type: "gradientFill",
       stops: [
-        { position: 0 as any, color: { spec: { type: "scheme", value: "phClr" } } },
-        { position: 100000 as any, color: { spec: { type: "scheme", value: "phClr" } } },
+        { position: pct(0), color: { spec: { type: "scheme", value: "phClr" } } },
+        { position: pct(100000), color: { spec: { type: "scheme", value: "phClr" } } },
       ],
       rotWithShape: true,
     };

@@ -38,6 +38,12 @@ import { PlayerDisplay } from "./PlayerDisplay";
 import { getContainerStyle } from "./player-styles";
 import { colorTokens, spacingTokens } from "../design-tokens";
 
+/** Get secondary text color based on variant */
+function getSecondaryTextColor(variant: PlayerVariant): string {
+  if (variant === "floating") {return colorTokens.overlay.lightTextSecondary;}
+  return colorTokens.text.secondary;
+}
+
 // =============================================================================
 // Types
 // =============================================================================
@@ -155,10 +161,7 @@ export function Player({
 
     const errorDetailStyle: CSSProperties = {
       fontSize: "11px",
-      color:
-        variant === "floating"
-          ? colorTokens.overlay.lightTextSecondary
-          : colorTokens.text.secondary,
+      color: getSecondaryTextColor(variant),
       margin: 0,
       overflow: "hidden",
       textOverflow: "ellipsis",

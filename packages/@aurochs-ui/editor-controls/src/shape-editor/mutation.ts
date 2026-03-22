@@ -6,7 +6,6 @@
 
 import type { ShapeNode, IdentifiableShape } from "./types";
 import { isIdentifiable, isGroupShape } from "./types";
-import { hasShapeId } from "./identity";
 
 /**
  * Update shape by ID (supports nested groups).

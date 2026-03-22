@@ -7,7 +7,6 @@
 
 // State Types
 export type { SelectionState, DragState, ClipboardContent } from "./context/slide/state";
-export type { ResizeHandlePosition } from "@aurochs-ui/editor-core/drag-state";
 
 // Slide Editor Types
 export type { SlideEditorState, SlideEditorAction } from "./context/slide/editor/types";

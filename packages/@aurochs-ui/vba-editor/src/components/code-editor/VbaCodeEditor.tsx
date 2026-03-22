@@ -35,6 +35,7 @@ import {
 import { useCodeKeyHandlers } from "./code/use-code-key-handlers";
 import { useFontMetrics } from "./element/use-font-metrics";
 import { useLineIndex } from "./line/use-line-index";
+import type { SearchMatch } from "../../context/vba-editor/types";
 import { SearchBar } from "../search";
 import { useSearchIntegration } from "../../hooks/use-search";
 import { useVbaCompletion } from "../../completion";
@@ -62,13 +63,13 @@ function findLineColumnFallback(
   currentLines: readonly string[],
   offset: number
 ): { line: number; column: number } {
-  let remaining = offset;
+  const remaining = { value: offset };
   for (const [i, lineText] of currentLines.entries()) {
     const len = lineText.length;
-    if (remaining <= len) {
-      return { line: i + 1, column: remaining + 1 };
+    if (remaining.value <= len) {
+      return { line: i + 1, column: remaining.value + 1 };
     }
-    remaining -= len + 1;
+    remaining.value -= len + 1;
   }
   const lastLine = currentLines[currentLines.length - 1];
   return { line: currentLines.length, column: (lastLine?.length ?? 0) + 1 };
@@ -96,25 +97,28 @@ function lineColumnToOffset(
   line: number,
   column: number
 ): number {
-  let offset = 0;
+  const offset = { value: 0 };
   for (let i = 0; i < line - 1 && i < lines.length; i++) {
-    offset += lines[i].length + 1; // +1 for newline
+    offset.value += lines[i].length + 1; // +1 for newline
   }
   const lineText = lines[line - 1] ?? "";
-  offset += Math.min(column - 1, lineText.length);
-  return offset;
+  offset.value += Math.min(column - 1, lineText.length);
+  return offset.value;
 }
+
+type CoordinatesToPositionOptions = {
+  readonly x: number;
+  readonly y: number;
+  readonly scrollTop: number;
+  readonly lines: readonly string[];
+  readonly measureText: ((text: string) => number) | undefined;
+};
 
 /**
  * Convert click coordinates to line/column position.
  */
-function coordinatesToPosition(
-  x: number,
-  y: number,
-  scrollTop: number,
-  lines: readonly string[],
-  measureText: ((text: string) => number) | undefined,
-): { line: number; column: number } {
+function coordinatesToPosition(options: CoordinatesToPositionOptions): { line: number; column: number } {
+  const { x, y, scrollTop, lines, measureText } = options;
   // Adjust for scroll
   const adjustedY = y + scrollTop;
 
@@ -134,31 +138,38 @@ function coordinatesToPosition(
   }
 
   // Find column by measuring text widths
-  let column = 1;
-  if (measureText) {
-    // Binary search for the closest column
-    let low = 0;
-    let high = lineText.length;
-    while (low < high) {
-      const mid = Math.floor((low + high + 1) / 2);
-      const width = measureText(lineText.slice(0, mid));
-      if (width <= codeX) {
-        low = mid;
-      } else {
-        high = mid - 1;
-      }
-    }
-    column = low + 1;
-  } else {
-    // Fallback: estimate using average character width
-    const avgCharWidth = 7.8;
-    column = Math.max(1, Math.round(codeX / avgCharWidth) + 1);
-  }
+  const column = findColumnFromX(codeX, lineText, measureText);
 
   // Clamp column to line length + 1
-  column = Math.min(column, lineText.length + 1);
+  return { line, column: Math.min(column, lineText.length + 1) };
+}
 
-  return { line, column };
+/**
+ * Find column position from X coordinate.
+ */
+function findColumnFromX(
+  codeX: number,
+  lineText: string,
+  measureText: ((text: string) => number) | undefined,
+): number {
+  if (measureText) {
+    // Binary search for the closest column
+    const low = { value: 0 };
+    const high = { value: lineText.length };
+    while (low.value < high.value) {
+      const mid = Math.floor((low.value + high.value + 1) / 2);
+      const width = measureText(lineText.slice(0, mid));
+      if (width <= codeX) {
+        low.value = mid;
+      } else {
+        high.value = mid - 1;
+      }
+    }
+    return low.value + 1;
+  }
+  // Fallback: estimate using average character width
+  const avgCharWidth = 7.8;
+  return Math.max(1, Math.round(codeX / avgCharWidth) + 1);
 }
 
 // =============================================================================
@@ -223,7 +234,7 @@ export function VbaCodeEditor({
 }: VbaCodeEditorProps): ReactNode {
   const { activeModuleSource, activeModule, dispatch, canUndo, canRedo, pendingCursorOffset, state } =
     useVbaEditor();
-  const { search, selection: stateSelection } = state;
+  const { search } = state;
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -240,7 +251,7 @@ export function VbaCodeEditor({
   const tokenCache = useModuleTokenCache(activeModule?.name);
 
   // Measure actual font metrics from container
-  const { lineHeight, measureText } = useFontMetrics(containerRef);
+  const { measureText } = useFontMetrics(containerRef);
 
   // Line index for efficient offset-to-line conversion
   const lineIndex = useLineIndex(activeModuleSource ?? "");
@@ -261,7 +272,7 @@ export function VbaCodeEditor({
 
   // Search integration
   const handleMatchesUpdate = useCallback(
-    (matches: readonly import("../../context/vba-editor/types").SearchMatch[]) => {
+    (matches: readonly SearchMatch[]) => {
       dispatch({ type: "UPDATE_MATCHES", matches });
     },
     [dispatch],
@@ -283,7 +294,7 @@ export function VbaCodeEditor({
 
   const handleCompletionSourceUpdate = useCallback(
     (newSource: string, newCursorOffset: number) => {
-      if (!activeModule?.name) return;
+      if (!activeModule?.name) {return;}
       dispatch({
         type: "UPDATE_MODULE_SOURCE",
         moduleName: activeModule.name,
@@ -489,16 +500,16 @@ export function VbaCodeEditor({
   const handleCodePointerDown = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
       // Only handle primary pointer (left mouse or touch)
-      if (!event.isPrimary) return;
+      if (!event.isPrimary) {return;}
 
       const codeArea = codeAreaRef.current;
-      if (!codeArea) return;
+      if (!codeArea) {return;}
 
       const rect = codeArea.getBoundingClientRect();
       const x = event.clientX - rect.left;
       const y = event.clientY - rect.top;
 
-      const pos = coordinatesToPosition(x, y, codeArea.scrollTop, lines, measureText);
+      const pos = coordinatesToPosition({ x, y, scrollTop: codeArea.scrollTop, lines, measureText });
 
       // Start drag selection
       dragStartRef.current = pos;
@@ -535,16 +546,16 @@ export function VbaCodeEditor({
 
   const handleCodePointerMove = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
-      if (!isDragging || !dragStartRef.current || !event.isPrimary) return;
+      if (!isDragging || !dragStartRef.current || !event.isPrimary) {return;}
 
       const codeArea = codeAreaRef.current;
-      if (!codeArea) return;
+      if (!codeArea) {return;}
 
       const rect = codeArea.getBoundingClientRect();
       const x = event.clientX - rect.left;
       const y = event.clientY - rect.top;
 
-      const endPos = coordinatesToPosition(x, y, codeArea.scrollTop, lines, measureText);
+      const endPos = coordinatesToPosition({ x, y, scrollTop: codeArea.scrollTop, lines, measureText });
       const startPos = dragStartRef.current;
 
       // Determine selection direction
@@ -595,7 +606,7 @@ export function VbaCodeEditor({
 
   const handleCodePointerUp = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
-      if (!event.isPrimary) return;
+      if (!event.isPrimary) {return;}
       setIsDragging(false);
       dragStartRef.current = null;
       (event.target as HTMLElement).releasePointerCapture(event.pointerId);
@@ -700,7 +711,7 @@ export function VbaCodeEditor({
 
   // Completion popup position (based on cursor line/column)
   const completionPosition = useMemo(() => {
-    if (!cursorState.visible) return { x: 0, y: 0 };
+    if (!cursorState.visible) {return { x: 0, y: 0 };}
     // Estimate position: line number width + column offset
     const x = LINE_NUMBER_WIDTH + (cursorState.column - 1) * 7.8; // approx char width
     const y = (cursorState.line - 1) * LINE_HEIGHT + LINE_HEIGHT + 4;

@@ -1,5 +1,5 @@
 /**
- * Compare multi-line text rendering between ECMA-376 and LibreOffice dialects
+ * @file Compare multi-line text rendering between ECMA-376 and LibreOffice dialects
  *
  * Usage: bun run scripts/compare/compare-multiline.ts <pptx-path> <slide-number>
  */
@@ -35,11 +35,11 @@ async function main() {
   console.log("Text element count - ECMA:", ecmaPositions.length, "LO:", loPositions.length);
 
   // Find differences
-  let diffCount = 0;
+  const diffCount = { value: 0 };
   for (let i = 0; i < Math.min(ecmaPositions.length, loPositions.length); i++) {
     const diff = Math.abs(ecmaPositions[i] - loPositions[i]);
     if (diff > 0.1) {
-      diffCount++;
+      diffCount.value++;
       console.log(
         "  Line " +
           i +
@@ -53,13 +53,13 @@ async function main() {
     }
   }
 
-  if (diffCount === 0) {
+  if (diffCount.value === 0) {
     console.log("\nNo Y position differences found.");
     console.log("This means:");
     console.log("  1. No multi-line paragraphs with percentage line spacing, OR");
     console.log("  2. Line spacing uses 'points' mode, not 'percent' mode");
   } else {
-    console.log("\nFound " + diffCount + " position differences");
+    console.log("\nFound " + diffCount.value + " position differences");
   }
 }
 

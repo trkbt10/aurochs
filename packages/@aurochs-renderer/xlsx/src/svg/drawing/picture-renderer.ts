@@ -63,15 +63,7 @@ export function renderPicture(options: RenderPictureOptions): string {
   }
 
   // Resolve image source
-  let href: string | undefined;
-
-  if (picture.imagePath) {
-    // Already resolved path (data URI or path)
-    href = picture.imagePath;
-  } else if (picture.blipRelId && resolveImage) {
-    // Resolve from relationship
-    href = resolveImage(picture.blipRelId);
-  }
+  const href = picture.imagePath ?? (picture.blipRelId && resolveImage ? resolveImage(picture.blipRelId) : undefined);
 
   if (!href) {
     warnings?.add(`Image not found: ${picture.nvPicPr.name || picture.blipRelId || "unknown"}`);

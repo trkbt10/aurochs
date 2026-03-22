@@ -54,7 +54,7 @@ describe("extractHeadersFooters", () => {
     const fullText = "OddHeader\r";
     const hdrTextStart = 0;
 
-    const { headers, footers } = extractHeadersFooters(hddCps, fullText, hdrTextStart);
+    const { headers, footers } = extractHeadersFooters({ hddCps, fullText, hdrTextStart });
     expect(headers).toHaveLength(1);
     expect(headers[0].type).toBe("odd");
     expect(headers[0].content[0].runs[0].text).toBe("OddHeader");
@@ -74,7 +74,7 @@ describe("extractHeadersFooters", () => {
       10, 10, 10, 10, 10, 10, 10,
     ];
 
-    const { headers } = extractHeadersFooters(hddCps, fullText, 0);
+    const { headers } = extractHeadersFooters({ hddCps, fullText, hdrTextStart: 0 });
     // Both sections should have the odd header (section 2 inherits)
     expect(headers).toHaveLength(2);
     expect(headers[0].type).toBe("odd");
@@ -93,7 +93,7 @@ describe("extractHeadersFooters", () => {
       11, 11, 22, 22, 22, 22, 22,
     ];
 
-    const { headers } = extractHeadersFooters(hddCps, fullText, 0);
+    const { headers } = extractHeadersFooters({ hddCps, fullText, hdrTextStart: 0 });
     expect(headers).toHaveLength(2);
     expect(headers[0].content[0].runs[0].text).toBe("HeaderSec1");
     expect(headers[1].content[0].runs[0].text).toBe("HeaderSec2");
@@ -123,19 +123,17 @@ describe("parseBookmarkNames", () => {
     view.setUint16(4, 0, true);
 
     // Entry 1
-    let offset = 6;
-    view.setUint16(offset, name1.length, true);
-    offset += 2;
+    const entry1Offset = 6;
+    view.setUint16(entry1Offset, name1.length, true);
     for (let i = 0; i < name1.length; i++) {
-      view.setUint16(offset + i * 2, name1.charCodeAt(i), true);
+      view.setUint16(entry1Offset + 2 + i * 2, name1.charCodeAt(i), true);
     }
-    offset += name1.length * 2;
 
     // Entry 2
-    view.setUint16(offset, name2.length, true);
-    offset += 2;
+    const entry2Offset = entry1Offset + 2 + name1.length * 2;
+    view.setUint16(entry2Offset, name2.length, true);
     for (let i = 0; i < name2.length; i++) {
-      view.setUint16(offset + i * 2, name2.charCodeAt(i), true);
+      view.setUint16(entry2Offset + 2 + i * 2, name2.charCodeAt(i), true);
     }
 
     const names = parseBookmarkNames(data, 0, totalSize);
@@ -164,7 +162,7 @@ describe("extractNotes", () => {
     const refCps = [5, 15]; // 1 note, reference at cp 5
     const textCps = [0, 10]; // Note text at offset 0..10
     const fullText = "NoteText\r ";
-    const notes = extractNotes(refCps, textCps, fullText, 0);
+    const notes = extractNotes({ refCps, textCps, fullText, noteTextStart: 0 });
 
     expect(notes).toHaveLength(1);
     expect(notes[0].cpRef).toBe(5);
@@ -179,7 +177,7 @@ describe("extractNotes", () => {
       { runs: [{ text: `formatted[${cpStart}-${cpEnd}]`, bold: true }] },
     ];
 
-    const notes = extractNotes(refCps, textCps, fullText, 100, builder);
+    const notes = extractNotes({ refCps, textCps, fullText, noteTextStart: 100, buildParagraphsOpt: builder });
     expect(notes).toHaveLength(1);
     expect(notes[0].content[0].runs[0].text).toBe("formatted[100-110]");
     expect(notes[0].content[0].runs[0].bold).toBe(true);
@@ -200,7 +198,7 @@ describe("extractHeadersFooters with builder", () => {
       return [{ runs: [{ text: "FormattedHeader", bold: true }] }];
     };
 
-    const { headers } = extractHeadersFooters(hddCps, fullText, 50, builder);
+    const { headers } = extractHeadersFooters({ hddCps, fullText, hdrTextStart: 50, buildParagraphs: builder });
     expect(headers).toHaveLength(1);
     expect(headers[0].content[0].runs[0].text).toBe("FormattedHeader");
     expect(headers[0].content[0].runs[0].bold).toBe(true);
@@ -221,7 +219,7 @@ describe("extractComments with builder", () => {
       { runs: [{ text: `comment[${cpStart}-${cpEnd}]`, italic: true }] },
     ];
 
-    const comments = extractComments(refs, textCps, authors, fullText, 200, builder);
+    const comments = extractComments({ refs, textCps, authors, fullText, commentTextStart: 200, buildParagraphsFn: builder });
     expect(comments).toHaveLength(1);
     expect(comments[0].content[0].runs[0].text).toBe("comment[200-210]");
     expect(comments[0].content[0].runs[0].italic).toBe(true);
@@ -247,7 +245,7 @@ describe("extractComments with annotation bookmarks", () => {
       endCps: [15, 55],
     };
 
-    const comments = extractComments(refs, textCps, authors, fullText, 0, undefined, atnBookmarks);
+    const comments = extractComments({ refs, textCps, authors, fullText, commentTextStart: 0, atnBookmarks });
     expect(comments).toHaveLength(2);
     expect(comments[0].cpStart).toBe(5);
     expect(comments[0].cpEnd).toBe(15);
@@ -261,7 +259,7 @@ describe("extractComments with annotation bookmarks", () => {
     const authors = ["Bob"];
     const fullText = "Text\r";
 
-    const comments = extractComments(refs, textCps, authors, fullText, 0);
+    const comments = extractComments({ refs, textCps, authors, fullText, commentTextStart: 0 });
     expect(comments).toHaveLength(1);
     expect(comments[0].cpStart).toBe(10);
     expect(comments[0].cpEnd).toBe(10);
@@ -278,7 +276,7 @@ describe("extractComments with annotation bookmarks", () => {
       endCps: [10],
     };
 
-    const comments = extractComments(refs, textCps, authors, fullText, 0, undefined, atnBookmarks);
+    const comments = extractComments({ refs, textCps, authors, fullText, commentTextStart: 0, atnBookmarks });
     expect(comments[0].cpStart).toBe(3);
     expect(comments[0].cpEnd).toBe(3); // Falls back to cpStart
   });

@@ -483,22 +483,22 @@ function createCellFormattingWorkbook(): XlsxWorkbook {
     { numFmtId: numFmtId(0), fontId: fontId(boldFontIdx), fillId: fillId(yellowFillIdx), borderId: borderId(thinBorderIdx), applyFont: true, applyFill: true, applyBorder: true }, // 10: Combined
   ];
 
-  function styledCell(col: ColIndex, row: RowIndex, text: string, style: number): XlsxCell {
-    return { address: addr(col, row), value: { type: "string", value: text }, styleId: styleId(style) };
+  function styledCell(params: { col: ColIndex; row: RowIndex; text: string; style: number }): XlsxCell {
+    return { address: addr(params.col, params.row), value: { type: "string", value: params.text }, styleId: styleId(params.style) };
   }
 
   const rows: XlsxRow[] = [
     { rowNumber: rowIdx(1), cells: [textCell(colIdx(1), rowIdx(1), "Style"), textCell(colIdx(2), rowIdx(1), "Example")] },
-    { rowNumber: rowIdx(2), cells: [textCell(colIdx(1), rowIdx(2), "Bold"), styledCell(colIdx(2), rowIdx(2), "Bold Text", 1)] },
-    { rowNumber: rowIdx(3), cells: [textCell(colIdx(1), rowIdx(3), "Red"), styledCell(colIdx(2), rowIdx(3), "Red Text", 2)] },
-    { rowNumber: rowIdx(4), cells: [textCell(colIdx(1), rowIdx(4), "Large"), styledCell(colIdx(2), rowIdx(4), "Large Text", 3)] },
-    { rowNumber: rowIdx(5), cells: [textCell(colIdx(1), rowIdx(5), "Italic"), styledCell(colIdx(2), rowIdx(5), "Italic Text", 4)] },
-    { rowNumber: rowIdx(6), cells: [textCell(colIdx(1), rowIdx(6), "Yellow Fill"), styledCell(colIdx(2), rowIdx(6), "Yellow BG", 5)] },
-    { rowNumber: rowIdx(7), cells: [textCell(colIdx(1), rowIdx(7), "Green Fill"), styledCell(colIdx(2), rowIdx(7), "Green BG", 6)] },
-    { rowNumber: rowIdx(8), cells: [textCell(colIdx(1), rowIdx(8), "Blue Fill"), styledCell(colIdx(2), rowIdx(8), "Blue BG", 7)] },
-    { rowNumber: rowIdx(9), cells: [textCell(colIdx(1), rowIdx(9), "Thin Border"), styledCell(colIdx(2), rowIdx(9), "Bordered", 8)] },
-    { rowNumber: rowIdx(10), cells: [textCell(colIdx(1), rowIdx(10), "Thick Border"), styledCell(colIdx(2), rowIdx(10), "Thick", 9)] },
-    { rowNumber: rowIdx(11), cells: [textCell(colIdx(1), rowIdx(11), "Combined"), styledCell(colIdx(2), rowIdx(11), "Bold+Yellow+Border", 10)] },
+    { rowNumber: rowIdx(2), cells: [textCell(colIdx(1), rowIdx(2), "Bold"), styledCell({ col: colIdx(2), row: rowIdx(2), text: "Bold Text", style: 1 })] },
+    { rowNumber: rowIdx(3), cells: [textCell(colIdx(1), rowIdx(3), "Red"), styledCell({ col: colIdx(2), row: rowIdx(3), text: "Red Text", style: 2 })] },
+    { rowNumber: rowIdx(4), cells: [textCell(colIdx(1), rowIdx(4), "Large"), styledCell({ col: colIdx(2), row: rowIdx(4), text: "Large Text", style: 3 })] },
+    { rowNumber: rowIdx(5), cells: [textCell(colIdx(1), rowIdx(5), "Italic"), styledCell({ col: colIdx(2), row: rowIdx(5), text: "Italic Text", style: 4 })] },
+    { rowNumber: rowIdx(6), cells: [textCell(colIdx(1), rowIdx(6), "Yellow Fill"), styledCell({ col: colIdx(2), row: rowIdx(6), text: "Yellow BG", style: 5 })] },
+    { rowNumber: rowIdx(7), cells: [textCell(colIdx(1), rowIdx(7), "Green Fill"), styledCell({ col: colIdx(2), row: rowIdx(7), text: "Green BG", style: 6 })] },
+    { rowNumber: rowIdx(8), cells: [textCell(colIdx(1), rowIdx(8), "Blue Fill"), styledCell({ col: colIdx(2), row: rowIdx(8), text: "Blue BG", style: 7 })] },
+    { rowNumber: rowIdx(9), cells: [textCell(colIdx(1), rowIdx(9), "Thin Border"), styledCell({ col: colIdx(2), row: rowIdx(9), text: "Bordered", style: 8 })] },
+    { rowNumber: rowIdx(10), cells: [textCell(colIdx(1), rowIdx(10), "Thick Border"), styledCell({ col: colIdx(2), row: rowIdx(10), text: "Thick", style: 9 })] },
+    { rowNumber: rowIdx(11), cells: [textCell(colIdx(1), rowIdx(11), "Combined"), styledCell({ col: colIdx(2), row: rowIdx(11), text: "Bold+Yellow+Border", style: 10 })] },
   ];
 
   const sheet: XlsxWorksheet = {
@@ -531,10 +531,10 @@ function createMergeCellsWorkbook(): XlsxWorkbook {
   const styles = createDefaultStyleSheet();
 
   // Helper to create cell range for merge
-  function mergeRange(startCol: ColIndex, startRow: RowIndex, endCol: ColIndex, endRow: RowIndex) {
+  function mergeRange(params: { startCol: ColIndex; startRow: RowIndex; endCol: ColIndex; endRow: RowIndex }) {
     return {
-      start: addr(startCol, startRow),
-      end: addr(endCol, endRow),
+      start: addr(params.startCol, params.startRow),
+      end: addr(params.endCol, params.endRow),
     };
   }
 
@@ -565,9 +565,9 @@ function createMergeCellsWorkbook(): XlsxWorkbook {
     ],
     rows,
     mergeCells: [
-      mergeRange(colIdx(1), rowIdx(1), colIdx(4), rowIdx(1)), // A1:D1 - Horizontal merge
-      mergeRange(colIdx(1), rowIdx(3), colIdx(1), rowIdx(4)), // A3:A4 - Vertical merge
-      mergeRange(colIdx(2), rowIdx(6), colIdx(3), rowIdx(7)), // B6:C7 - 2x2 merge
+      mergeRange({ startCol: colIdx(1), startRow: rowIdx(1), endCol: colIdx(4), endRow: rowIdx(1) }), // A1:D1 - Horizontal merge
+      mergeRange({ startCol: colIdx(1), startRow: rowIdx(3), endCol: colIdx(1), endRow: rowIdx(4) }), // A3:A4 - Vertical merge
+      mergeRange({ startCol: colIdx(2), startRow: rowIdx(6), endCol: colIdx(3), endRow: rowIdx(7) }), // B6:C7 - 2x2 merge
     ],
     xmlPath: "xl/worksheets/sheet1.xml",
   };
@@ -605,18 +605,18 @@ function createNumberFormatsWorkbook(): XlsxWorkbook {
     { numFmtId: numFmtId(168), fontId: fontId(0), fillId: fillId(0), borderId: borderId(0), applyNumberFormat: true }, // 5: 3 decimals
   ];
 
-  function numStyledCell(col: ColIndex, row: RowIndex, num: number, style: number): XlsxCell {
-    return { address: addr(col, row), value: { type: "number", value: num }, styleId: styleId(style) };
+  function numStyledCell(params: { col: ColIndex; row: RowIndex; num: number; style: number }): XlsxCell {
+    return { address: addr(params.col, params.row), value: { type: "number", value: params.num }, styleId: styleId(params.style) };
   }
 
   const rows: XlsxRow[] = [
     { rowNumber: rowIdx(1), cells: [textCell(colIdx(1), rowIdx(1), "Format"), textCell(colIdx(2), rowIdx(1), "Value"), textCell(colIdx(3), rowIdx(1), "Formatted")] },
     { rowNumber: rowIdx(2), cells: [textCell(colIdx(1), rowIdx(2), "Default"), numCell(colIdx(2), rowIdx(2), 1234567.89), numCell(colIdx(3), rowIdx(2), 1234567.89)] },
-    { rowNumber: rowIdx(3), cells: [textCell(colIdx(1), rowIdx(3), "Thousands"), numCell(colIdx(2), rowIdx(3), 1234567.89), numStyledCell(colIdx(3), rowIdx(3), 1234567.89, 1)] },
-    { rowNumber: rowIdx(4), cells: [textCell(colIdx(1), rowIdx(4), "Percentage"), numCell(colIdx(2), rowIdx(4), 0.1234), numStyledCell(colIdx(3), rowIdx(4), 0.1234, 2)] },
-    { rowNumber: rowIdx(5), cells: [textCell(colIdx(1), rowIdx(5), "Currency"), numCell(colIdx(2), rowIdx(5), 1234.56), numStyledCell(colIdx(3), rowIdx(5), 1234.56, 3)] },
-    { rowNumber: rowIdx(6), cells: [textCell(colIdx(1), rowIdx(6), "Date"), numCell(colIdx(2), rowIdx(6), 45302), numStyledCell(colIdx(3), rowIdx(6), 45302, 4)] }, // 2024-01-15
-    { rowNumber: rowIdx(7), cells: [textCell(colIdx(1), rowIdx(7), "3 Decimals"), numCell(colIdx(2), rowIdx(7), 3.14159), numStyledCell(colIdx(3), rowIdx(7), 3.14159, 5)] },
+    { rowNumber: rowIdx(3), cells: [textCell(colIdx(1), rowIdx(3), "Thousands"), numCell(colIdx(2), rowIdx(3), 1234567.89), numStyledCell({ col: colIdx(3), row: rowIdx(3), num: 1234567.89, style: 1 })] },
+    { rowNumber: rowIdx(4), cells: [textCell(colIdx(1), rowIdx(4), "Percentage"), numCell(colIdx(2), rowIdx(4), 0.1234), numStyledCell({ col: colIdx(3), row: rowIdx(4), num: 0.1234, style: 2 })] },
+    { rowNumber: rowIdx(5), cells: [textCell(colIdx(1), rowIdx(5), "Currency"), numCell(colIdx(2), rowIdx(5), 1234.56), numStyledCell({ col: colIdx(3), row: rowIdx(5), num: 1234.56, style: 3 })] },
+    { rowNumber: rowIdx(6), cells: [textCell(colIdx(1), rowIdx(6), "Date"), numCell(colIdx(2), rowIdx(6), 45302), numStyledCell({ col: colIdx(3), row: rowIdx(6), num: 45302, style: 4 })] }, // 2024-01-15
+    { rowNumber: rowIdx(7), cells: [textCell(colIdx(1), rowIdx(7), "3 Decimals"), numCell(colIdx(2), rowIdx(7), 3.14159), numStyledCell({ col: colIdx(3), row: rowIdx(7), num: 3.14159, style: 5 })] },
   ];
 
   const sheet: XlsxWorksheet = {
@@ -661,19 +661,19 @@ function createTextAlignmentWorkbook(): XlsxWorkbook {
     { numFmtId: numFmtId(0), fontId: fontId(0), fillId: fillId(0), borderId: borderId(0), applyAlignment: true, alignment: { wrapText: true } }, // 7: Wrap
   ];
 
-  function alignedCell(col: ColIndex, row: RowIndex, text: string, style: number): XlsxCell {
-    return { address: addr(col, row), value: { type: "string", value: text }, styleId: styleId(style) };
+  function alignedCell(params: { col: ColIndex; row: RowIndex; text: string; style: number }): XlsxCell {
+    return { address: addr(params.col, params.row), value: { type: "string", value: params.text }, styleId: styleId(params.style) };
   }
 
   const rows: XlsxRow[] = [
     { rowNumber: rowIdx(1), cells: [textCell(colIdx(1), rowIdx(1), "Alignment"), textCell(colIdx(2), rowIdx(1), "Example")] },
-    { rowNumber: rowIdx(2), cells: [textCell(colIdx(1), rowIdx(2), "Left"), alignedCell(colIdx(2), rowIdx(2), "Left aligned", 1)] },
-    { rowNumber: rowIdx(3), cells: [textCell(colIdx(1), rowIdx(3), "Center"), alignedCell(colIdx(2), rowIdx(3), "Center aligned", 2)] },
-    { rowNumber: rowIdx(4), cells: [textCell(colIdx(1), rowIdx(4), "Right"), alignedCell(colIdx(2), rowIdx(4), "Right aligned", 3)] },
-    { rowNumber: rowIdx(5), height: 40, customHeight: true, cells: [textCell(colIdx(1), rowIdx(5), "Top"), alignedCell(colIdx(2), rowIdx(5), "Top", 4)] },
-    { rowNumber: rowIdx(6), height: 40, customHeight: true, cells: [textCell(colIdx(1), rowIdx(6), "Middle"), alignedCell(colIdx(2), rowIdx(6), "Middle", 5)] },
-    { rowNumber: rowIdx(7), height: 40, customHeight: true, cells: [textCell(colIdx(1), rowIdx(7), "Bottom"), alignedCell(colIdx(2), rowIdx(7), "Bottom", 6)] },
-    { rowNumber: rowIdx(8), height: 60, customHeight: true, cells: [textCell(colIdx(1), rowIdx(8), "Wrap Text"), alignedCell(colIdx(2), rowIdx(8), "This is a long text that should wrap to multiple lines", 7)] },
+    { rowNumber: rowIdx(2), cells: [textCell(colIdx(1), rowIdx(2), "Left"), alignedCell({ col: colIdx(2), row: rowIdx(2), text: "Left aligned", style: 1 })] },
+    { rowNumber: rowIdx(3), cells: [textCell(colIdx(1), rowIdx(3), "Center"), alignedCell({ col: colIdx(2), row: rowIdx(3), text: "Center aligned", style: 2 })] },
+    { rowNumber: rowIdx(4), cells: [textCell(colIdx(1), rowIdx(4), "Right"), alignedCell({ col: colIdx(2), row: rowIdx(4), text: "Right aligned", style: 3 })] },
+    { rowNumber: rowIdx(5), height: 40, customHeight: true, cells: [textCell(colIdx(1), rowIdx(5), "Top"), alignedCell({ col: colIdx(2), row: rowIdx(5), text: "Top", style: 4 })] },
+    { rowNumber: rowIdx(6), height: 40, customHeight: true, cells: [textCell(colIdx(1), rowIdx(6), "Middle"), alignedCell({ col: colIdx(2), row: rowIdx(6), text: "Middle", style: 5 })] },
+    { rowNumber: rowIdx(7), height: 40, customHeight: true, cells: [textCell(colIdx(1), rowIdx(7), "Bottom"), alignedCell({ col: colIdx(2), row: rowIdx(7), text: "Bottom", style: 6 })] },
+    { rowNumber: rowIdx(8), height: 60, customHeight: true, cells: [textCell(colIdx(1), rowIdx(8), "Wrap Text"), alignedCell({ col: colIdx(2), row: rowIdx(8), text: "This is a long text that should wrap to multiple lines", style: 7 })] },
   ];
 
   const sheet: XlsxWorksheet = {

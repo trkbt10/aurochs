@@ -6,7 +6,7 @@
  */
 
 export {
-  NodeFontLoader,
   createNodeFontLoader,
   createNodeFontLoaderWithFontsource,
+  type NodeFontLoaderInstance,
 } from "./node-loader";

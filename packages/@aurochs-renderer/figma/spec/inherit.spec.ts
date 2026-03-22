@@ -14,7 +14,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, it, expect, beforeAll } from "vitest";
 import { Resvg } from "@resvg/resvg-js";
 import pixelmatch from "pixelmatch";
 import { PNG } from "pngjs";
@@ -97,29 +96,41 @@ function svgToPng(svg: string, width?: number): Buffer {
   return Buffer.from(pngData.asPng());
 }
 
-function comparePngs(a: Buffer, b: Buffer, frameName: string, diffPath?: string): CompareResult {
-  const imgA = PNG.sync.read(a);
-  let imgB = PNG.sync.read(b);
+/** List SVG file basenames from a directory, or empty array if directory doesn't exist */
+function listActualSvgFiles(dir: string): string[] {
+  if (!fs.existsSync(dir)) {
+    return [];
+  }
+  return fs.readdirSync(dir)
+    .filter((f) => f.endsWith(".svg"))
+    .map((f) => f.replace(".svg", ""));
+}
 
-  if (imgB.width !== imgA.width || imgB.height !== imgA.height) {
+function comparePngs(
+  { a, b, frameName, diffPath}: { a: Buffer; b: Buffer; frameName: string; diffPath?: string; }
+): CompareResult {
+  const imgA = PNG.sync.read(a);
+  const imgBRef = { value: PNG.sync.read(b) };
+
+  if (imgBRef.value.width !== imgA.width || imgBRef.value.height !== imgA.height) {
     const resized = new PNG({ width: imgA.width, height: imgA.height });
     for (let y = 0; y < imgA.height; y++) {
-      const sy = Math.floor((y / imgA.height) * imgB.height);
+      const sy = Math.floor((y / imgA.height) * imgBRef.value.height);
       for (let x = 0; x < imgA.width; x++) {
-        const sx = Math.floor((x / imgA.width) * imgB.width);
-        const srcIdx = (sy * imgB.width + sx) * 4;
+        const sx = Math.floor((x / imgA.width) * imgBRef.value.width);
+        const srcIdx = (sy * imgBRef.value.width + sx) * 4;
         const dstIdx = (y * imgA.width + x) * 4;
-        resized.data[dstIdx] = imgB.data[srcIdx];
-        resized.data[dstIdx + 1] = imgB.data[srcIdx + 1];
-        resized.data[dstIdx + 2] = imgB.data[srcIdx + 2];
-        resized.data[dstIdx + 3] = imgB.data[srcIdx + 3];
+        resized.data[dstIdx] = imgBRef.value.data[srcIdx];
+        resized.data[dstIdx + 1] = imgBRef.value.data[srcIdx + 1];
+        resized.data[dstIdx + 2] = imgBRef.value.data[srcIdx + 2];
+        resized.data[dstIdx + 3] = imgBRef.value.data[srcIdx + 3];
       }
     }
-    imgB = resized;
+    imgBRef.value = resized;
   }
 
   const diff = new PNG({ width: imgA.width, height: imgA.height });
-  const diffPixels = pixelmatch(imgA.data, imgB.data, diff.data, imgA.width, imgA.height, {
+  const diffPixels = pixelmatch(imgA.data, imgBRef.value.data, diff.data, imgA.width, imgA.height, {
     threshold: 0.1,
     includeAA: false,
   });
@@ -145,10 +156,10 @@ function safeName(name: string): string {
 // Data Loading
 // =============================================================================
 
-let parsedDataCache: ParsedData | null = null;
+const parsedDataCache: ParsedData | null = null;
 
 async function loadFigFile(): Promise<ParsedData> {
-  if (parsedDataCache) return parsedDataCache;
+  if (parsedDataCache) {return parsedDataCache;}
 
   if (!fs.existsSync(FIG_FILE)) {
     throw new Error(`Fixture file not found: ${FIG_FILE}`);
@@ -162,7 +173,7 @@ async function loadFigFile(): Promise<ParsedData> {
 
   const layers = new Map<string, LayerInfo>();
   for (const canvas of canvases) {
-    if ((canvas as Record<string, unknown>).internalOnly) continue;
+    if ((canvas as Record<string, unknown>).internalOnly) {continue;}
     for (const child of canvas.children ?? []) {
       const name = child.name ?? "unnamed";
       const nodeData = child as Record<string, unknown>;
@@ -241,7 +252,7 @@ describe("Inherit Fixture Debug", () => {
     }
 
     for (const canvas of data.canvases) {
-      if ((canvas as Record<string, unknown>).internalOnly) continue;
+      if ((canvas as Record<string, unknown>).internalOnly) {continue;}
       countNodeTypes(canvas.children ?? []);
     }
 
@@ -268,8 +279,8 @@ describe("Inherit Visual Regression", () => {
   beforeAll(async () => {
     try {
       await loadFigFile();
-    } catch {
-      console.log("Skipping inherit tests - fixture file not found");
+    } catch (error) {
+      console.log("Skipping tests:", error instanceof Error ? error.message : "fixture file not found");
     }
     ensureDirs([SNAPSHOTS_DIR, OUTPUT_DIR, DIFF_DIR]);
   });
@@ -281,12 +292,7 @@ describe("Inherit Visual Regression", () => {
     }
 
     const data = await loadFigFile();
-    const actualFiles = fs.existsSync(ACTUAL_DIR)
-      ? fs
-          .readdirSync(ACTUAL_DIR)
-          .filter((f) => f.endsWith(".svg"))
-          .map((f) => f.replace(".svg", ""))
-      : [];
+    const actualFiles = listActualSvgFiles(ACTUAL_DIR);
 
     console.log(`\nLayers: ${data.layers.size}, Actual SVGs: ${actualFiles.length}`);
     console.log(`Layers: ${[...data.layers.keys()].join(", ")}`);

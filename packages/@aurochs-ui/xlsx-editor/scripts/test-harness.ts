@@ -5,6 +5,7 @@
 import * as path from "node:path";
 import { createServer } from "vite";
 import puppeteer from "puppeteer";
+import reactPlugin from "@vitejs/plugin-react";
 
 async function main() {
   const harnessRoot = path.resolve(__dirname, "../spec/visual-harness");
@@ -16,8 +17,7 @@ async function main() {
     root: harnessRoot,
     server: { port, strictPort: false },
     plugins: [
-      // @ts-expect-error -- dynamic import
-      (await import("@vitejs/plugin-react")).default(),
+      reactPlugin(),
     ],
     resolve: {
       alias: {
@@ -58,7 +58,8 @@ async function main() {
   try {
     await page.waitForFunction(() => document.title === "ready", { timeout: 10000 });
     console.log("Harness ready!");
-  } catch {
+  } catch (error) {
+    console.log("Timeout waiting for ready signal:", error instanceof Error ? error.message : String(error));
     console.log("Harness did not signal ready within 10s");
     console.log("\n--- Console logs ---");
     for (const log of logs) {

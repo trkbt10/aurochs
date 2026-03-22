@@ -26,11 +26,11 @@ const FIXTURES_DIR = import.meta.dirname;
 // =============================================================================
 
 function isPlaceholderSp(node: XmlNode): boolean {
-  if (typeof node === "string" || node.name !== "p:sp") return false;
+  if (typeof node === "string" || node.name !== "p:sp") {return false;}
   const nvSpPr = getChild(node, "p:nvSpPr");
-  if (!nvSpPr) return false;
+  if (!nvSpPr) {return false;}
   const nvPr = getChild(nvSpPr, "p:nvPr");
-  if (!nvPr) return false;
+  if (!nvPr) {return false;}
   return getChild(nvPr, "p:ph") !== undefined;
 }
 
@@ -51,28 +51,30 @@ async function createCleanTemplateBuffer(): Promise<ArrayBuffer> {
     const apiSlide = presentation.getSlide(i);
     const slidePath = `ppt/slides/${apiSlide.filename}.xml`;
     const xmlText = zipPackage.readText(slidePath);
-    if (!xmlText) continue;
+    if (!xmlText) {continue;}
 
     const doc = parseXml(xmlText);
     const sld = getByPath(doc, ["p:sld"]);
-    if (!sld) continue;
+    if (!sld) {continue;}
     const cSld = getChild(sld, "p:cSld");
-    if (!cSld) continue;
+    if (!cSld) {continue;}
     const spTree = getChild(cSld, "p:spTree");
-    if (!spTree) continue;
+    if (!spTree) {continue;}
 
     const cleanSpTree: XmlElement = {
       ...spTree,
       children: spTree.children.filter((child) => !isPlaceholderSp(child)),
     };
 
+    const replaceSlideChild = (c: (typeof doc.children)[number]) => {
+      if (typeof c !== "string" && c.name === "p:sld") {
+        return replaceChild(sld, "p:cSld", replaceChild(cSld, "p:spTree", cleanSpTree));
+      }
+      return c;
+    };
     const newDoc = {
       ...doc,
-      children: doc.children.map((c) =>
-        typeof c !== "string" && c.name === "p:sld"
-          ? replaceChild(sld, "p:cSld", replaceChild(cSld, "p:spTree", cleanSpTree))
-          : c,
-      ),
+      children: doc.children.map(replaceSlideChild),
     };
     zipPackage.writeText(slidePath, serializeDocument(newDoc));
   }
@@ -256,6 +258,12 @@ async function buildFixture(def: FixtureDef, cleanBuffer: ArrayBuffer): Promise<
   return path;
 }
 
+
+
+
+
+
+/** Generate all preview test fixtures and write to disk. */
 export async function generateAllFixtures(): Promise<ReadonlyMap<string, string>> {
   await mkdir(FIXTURES_DIR, { recursive: true });
   const cleanBuffer = await createCleanTemplateBuffer();

@@ -4,8 +4,6 @@
  * Tests that generated XLSX files are valid by re-exporting through LibreOffice
  * and verifying the round-tripped data matches the original.
  */
-
-import { describe, it, expect, beforeAll } from "vitest";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
@@ -25,7 +23,8 @@ function isLibreOfficeAvailable(): boolean {
   try {
     execSync(`${LIBREOFFICE_PATH} --version`, { stdio: "pipe" });
     return true;
-  } catch {
+  } catch (error) {
+    console.debug("LibreOffice not available:", error);
     return false;
   }
 }

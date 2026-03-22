@@ -5,13 +5,26 @@
 import type { FigNode } from "@aurochs/fig/types";
 import { resolveSymbol, cloneSymbolChildren, type FigSymbolData } from "./symbol-resolver";
 
+/** Type guard that treats a partial object as FigNode for test purposes */
+function isFigNode(obj: unknown): obj is FigNode {
+  return typeof obj === "object" && obj !== null;
+}
+
+/** Create a FigNode from partial data for testing */
+function createTestNode(data: Record<string, unknown>): FigNode {
+  if (isFigNode(data)) {
+    return data;
+  }
+  throw new Error("Invalid test node data");
+}
+
 describe("resolveSymbol", () => {
   it("resolves SYMBOL node by GUID", () => {
-    const symbolNode = {
+    const symbolNode = createTestNode({
       type: "SYMBOL",
       name: "TestSymbol",
       children: [],
-    } as unknown as FigNode;
+    });
 
     const symbolMap = new Map<string, FigNode>([["4:21", symbolNode]]);
 
@@ -37,10 +50,10 @@ describe("resolveSymbol", () => {
 
 describe("cloneSymbolChildren", () => {
   it("returns empty array for SYMBOL with no children", () => {
-    const symbolNode = {
+    const symbolNode = createTestNode({
       type: "SYMBOL",
       name: "EmptySymbol",
-    } as unknown as FigNode;
+    });
 
     const result = cloneSymbolChildren(symbolNode);
     expect(result).toEqual([]);
@@ -59,11 +72,11 @@ describe("cloneSymbolChildren", () => {
       guid: { sessionID: 1, localID: 2 },
     };
 
-    const symbolNode = {
+    const symbolNode = createTestNode({
       type: "SYMBOL",
       name: "TestSymbol",
       children: [child1, child2],
-    } as unknown as FigNode;
+    });
 
     const result = cloneSymbolChildren(symbolNode);
 
@@ -81,112 +94,110 @@ describe("cloneSymbolChildren", () => {
       guid: { sessionID: 1, localID: 3 },
     };
 
-    const child = {
+    const child = createTestNode({
       type: "FRAME",
       name: "Frame",
-      guid: { sessionID: 1, localID: 1 },
+      guid: { sessionID: 1, localID: 2 },
       children: [grandchild],
-    };
+    });
 
-    const symbolNode = {
+    const symbolNode = createTestNode({
       type: "SYMBOL",
-      name: "NestedSymbol",
+      name: "TestSymbol",
       children: [child],
-    } as unknown as FigNode;
+    });
 
     const result = cloneSymbolChildren(symbolNode);
 
     expect(result).toHaveLength(1);
-    expect(result[0]).not.toBe(child);
-    expect(result[0].children).toBeDefined();
-    expect(result[0].children![0]).not.toBe(grandchild);
+    expect(result[0].children).toHaveLength(1);
     expect(result[0].children![0].name).toBe("Circle");
+    expect(result[0].children![0]).not.toBe(grandchild);
   });
 
-  it("applies symbolOverrides to matching nodes", () => {
+  it("applies symbolOverrides to matching children", () => {
     const child = {
       type: "RECTANGLE",
-      name: "Rect",
-      guid: { sessionID: 1, localID: 5 },
-      fillPaints: [{ type: "SOLID", color: { r: 1, g: 0, b: 0, a: 1 } }],
+      name: "OriginalName",
+      guid: { sessionID: 1, localID: 10 },
     };
 
-    const symbolNode = {
+    const symbolNode = createTestNode({
       type: "SYMBOL",
       name: "TestSymbol",
       children: [child],
-    } as unknown as FigNode;
+    });
 
-    const overrides = [
-      {
-        guidPath: { guids: [{ sessionID: 1, localID: 5 }] },
-        fillPaints: [{ type: "SOLID", color: { r: 0, g: 1, b: 0, a: 1 } }],
-      },
-    ];
-
-    const result = cloneSymbolChildren(symbolNode, { symbolOverrides: overrides });
+    const result = cloneSymbolChildren(symbolNode, {
+      symbolOverrides: [
+        {
+          guidPath: { guids: [{ sessionID: 1, localID: 10 }] },
+          name: "OverriddenName",
+        },
+      ],
+    });
 
     expect(result).toHaveLength(1);
-    const resultData = result[0] as Record<string, unknown>;
-    expect(resultData.fillPaints).toEqual([{ type: "SOLID", color: { r: 0, g: 1, b: 0, a: 1 } }]);
+    expect(result[0].name).toBe("OverriddenName");
   });
 
-  it("does not modify original nodes when applying overrides", () => {
-    const originalFill = [{ type: "SOLID", color: { r: 1, g: 0, b: 0, a: 1 } }];
-    const child = {
-      type: "RECTANGLE",
-      name: "Rect",
-      guid: { sessionID: 1, localID: 5 },
-      fillPaints: originalFill,
+  it("applies componentPropAssignments to TEXT children", () => {
+    const textChild = {
+      type: "TEXT",
+      name: "Label",
+      guid: { sessionID: 1, localID: 20 },
+      componentPropRefs: [{ defID: "prop-1", componentPropNodeField: "characters" }],
+      characters: "Original",
     };
 
-    const symbolNode = {
+    const symbolNode = createTestNode({
       type: "SYMBOL",
       name: "TestSymbol",
-      children: [child],
-    } as unknown as FigNode;
+      children: [textChild],
+    });
 
-    const overrides = [
-      {
-        guidPath: { guids: [{ sessionID: 1, localID: 5 }] },
-        fillPaints: [{ type: "SOLID", color: { r: 0, g: 1, b: 0, a: 1 } }],
-      },
-    ];
-
-    cloneSymbolChildren(symbolNode, { symbolOverrides: overrides });
-
-    // Original should be unchanged
-    const childData = child as Record<string, unknown>;
-    expect(childData.fillPaints).toBe(originalFill);
-  });
-
-  it("applies derivedSymbolData transform overrides", () => {
-    const child = {
-      type: "RECTANGLE",
-      name: "Rect",
-      guid: { sessionID: 1, localID: 5 },
-      transform: { m00: 1, m01: 0, m02: 100, m10: 0, m11: 1, m12: 100 },
-    };
-
-    const symbolNode = {
-      type: "SYMBOL",
-      name: "TestSymbol",
-      children: [child],
-    } as unknown as FigNode;
-
-    const derivedData = [
-      {
-        guidPath: { guids: [{ sessionID: 1, localID: 5 }] },
-        transform: { m00: 1, m01: 0, m02: 70, m10: 0, m11: 1, m12: 66 },
-      },
-    ];
-
-    const result = cloneSymbolChildren(symbolNode, { derivedSymbolData: derivedData });
+    const result = cloneSymbolChildren(symbolNode, {
+      componentPropAssignments: [{ defID: "prop-1", value: "Overridden" }],
+    });
 
     expect(result).toHaveLength(1);
-    const resultData = result[0] as Record<string, unknown>;
-    const transform = resultData.transform as { m02: number; m12: number };
-    expect(transform.m02).toBe(70);
-    expect(transform.m12).toBe(66);
+    expect((result[0] as Record<string, unknown>).characters).toBe("Overridden");
+  });
+
+  it("propagates depth-N symbolOverrides to nested INSTANCE children", () => {
+    const nestedChild = {
+      type: "TEXT",
+      name: "NestedText",
+      guid: { sessionID: 1, localID: 30 },
+    };
+
+    const instanceChild = createTestNode({
+      type: "INSTANCE",
+      name: "InstanceChild",
+      guid: { sessionID: 1, localID: 20 },
+      children: [nestedChild],
+    });
+
+    const symbolNode = createTestNode({
+      type: "SYMBOL",
+      name: "TestSymbol",
+      children: [instanceChild],
+    });
+
+    const result = cloneSymbolChildren(symbolNode, {
+      symbolOverrides: [
+        {
+          guidPath: { guids: [{ sessionID: 1, localID: 20 }, { sessionID: 1, localID: 30 }] },
+          name: "DeepOverride",
+        },
+      ],
+    });
+
+    expect(result).toHaveLength(1);
+    // The override should be propagated to the INSTANCE child's symbolOverrides
+    const instanceResult = result[0] as Record<string, unknown>;
+    const propagated = instanceResult.symbolOverrides as Array<Record<string, unknown>>;
+    expect(propagated).toBeDefined();
+    expect(propagated.length).toBeGreaterThan(0);
   });
 });

@@ -2,11 +2,10 @@
  * @file Font resolution tests
  */
 
-import { describe, it, expect } from "vitest";
-import { detectWeight, normalizeWeight, getWeightName, FONT_WEIGHTS } from "./weight";
+import { detectWeight, normalizeWeight, getWeightName } from "./weight";
 import { detectStyle, isItalic, isOblique, isSlanted } from "./style";
 import { detectFontCategory, getDefaultFallbacks, COMMON_FONT_MAPPINGS } from "./mappings";
-import { FontResolver, createFontResolver } from "./resolver";
+import { createFontResolver } from "./resolver";
 
 describe("weight detection", () => {
   it("detects common weight names", () => {
@@ -236,7 +235,7 @@ describe("FontResolver", () => {
       ["MyBrandFont", ["MyBrandFont", "Helvetica", "sans-serif"]],
     ]);
 
-    const resolver = new FontResolver({
+    const resolver = createFontResolver({
       fontMappings: customMappings,
     });
 

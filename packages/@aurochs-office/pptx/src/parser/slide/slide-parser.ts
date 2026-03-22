@@ -9,7 +9,6 @@
 import type {
   Background,
   ColorMapOverride,
-  ColorMapping,
   CustomerData,
   HandoutMaster,
   NotesMaster,
@@ -30,6 +29,7 @@ import { processAlternateContent } from "../shape-parser/alternate-content";
 import { getBoolAttr, getBoolAttrOr, parseSlideLayoutId } from "../primitive";
 import type { ParseContext } from "../context";
 import { parseTextStyleLevels } from "../text/text-style-levels";
+import type { MasterTextStyles } from "../../domain/text-style";
 
 // =============================================================================
 // Background Parsing
@@ -533,6 +533,18 @@ export function parseSlideLayoutIdList(element: XmlElement): SlideLayoutId[] {
   }));
 }
 
+/** Parse master text styles (titleStyle, bodyStyle, otherStyle) from txStyles element */
+function parseMasterTextStyles(txStyles: XmlElement | undefined): MasterTextStyles | undefined {
+  if (txStyles === undefined) {
+    return undefined;
+  }
+  return {
+    titleStyle: parseTextStyleLevels(getChild(txStyles, "p:titleStyle")),
+    bodyStyle: parseTextStyleLevels(getChild(txStyles, "p:bodyStyle")),
+    otherStyle: parseTextStyleLevels(getChild(txStyles, "p:otherStyle")),
+  };
+}
+
 /**
  * Parse slide master document
  * @see ECMA-376 Part 1, Section 19.3.1.41
@@ -566,13 +578,7 @@ export function parseSlideMaster(content: XmlDocument | undefined, formatScheme?
     colorMap: clrMap ? parseColorMapping(clrMap) : {},
     slideLayoutIds: sldLayoutIdLst ? parseSlideLayoutIdList(sldLayoutIdLst) : undefined,
     customerData: parseCustomerDataList(custDataLst),
-    textStyles: txStyles !== undefined
-      ? {
-          titleStyle: parseTextStyleLevels(getChild(txStyles, "p:titleStyle")),
-          bodyStyle: parseTextStyleLevels(getChild(txStyles, "p:bodyStyle")),
-          otherStyle: parseTextStyleLevels(getChild(txStyles, "p:otherStyle")),
-        }
-      : undefined,
+    textStyles: parseMasterTextStyles(txStyles),
     transition: parseTransition(transition),
     preserve: getBoolAttr(sldMaster, "preserve"),
   };

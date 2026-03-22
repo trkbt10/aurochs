@@ -32,20 +32,20 @@ function parseTDefTable(sprm: Sprm): readonly number[] | undefined {
   //   rgdxaCenter[itcMac+1] — int16 array of cell boundary x-positions
   //   rgtc[itcMac] — TC structure array (20B each, cell properties)
   const data = sprm.operand;
-  if (data.length < 3) return undefined;
+  if (data.length < 3) {return undefined;}
 
   const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
   // For variable-length SPRMs (spra=6), the operand includes the size prefix
   const _cb = view.getUint16(0, true);
   const itcMac = data[2];
 
-  if (itcMac === 0 || itcMac > 64) return undefined;
+  if (itcMac === 0 || itcMac > 64) {return undefined;}
 
   // rgdxaCenter: (itcMac + 1) × int16 values
   const cellWidths: number[] = [];
   const centerOffset = 3;
 
-  if (centerOffset + (itcMac + 1) * 2 > data.length) return undefined;
+  if (centerOffset + (itcMac + 1) * 2 > data.length) {return undefined;}
 
   const centers: number[] = [];
   for (let i = 0; i <= itcMac; i++) {
@@ -79,10 +79,10 @@ function parseTVertAlign(sprm: Sprm): ReadonlyArray<"top" | "center" | "bottom" 
   // spra=6 with 1-byte size prefix: operand = cb(1B) + data(cb bytes)
   // data = array of vertAlign values, one per cell: 0=top, 1=center, 2=bottom
   const data = sprm.operand;
-  if (data.length < 2) return undefined;
+  if (data.length < 2) {return undefined;}
 
   const cb = data[0];
-  if (cb === 0) return undefined;
+  if (cb === 0) {return undefined;}
 
   const result: Array<"top" | "center" | "bottom" | undefined> = [];
   for (let i = 1; i < 1 + cb && i < data.length; i++) {
@@ -115,7 +115,7 @@ function parseTVertMerge(
   // Sets vertical merge for a single cell at index itc
   // flags: 0=none, 1=continue, 3=restart
   const data = sprm.operand;
-  if (data.length < 3) return existing ?? [];
+  if (data.length < 3) {return existing ?? [];}
 
   const _cb = data[0];
   const itc = data[1];
@@ -148,12 +148,12 @@ function parseTMerge(
   // 2B operand: itcFirst(1B) + itcLim(1B)
   // Merges cells [itcFirst, itcLim)
   const data = sprm.operand;
-  if (data.length < 2) return existing ?? [];
+  if (data.length < 2) {return existing ?? [];}
 
   const itcFirst = data[0];
   const itcLim = data[1];
 
-  if (itcFirst >= itcLim) return existing ?? [];
+  if (itcFirst >= itcLim) {return existing ?? [];}
 
   const result: Array<"restart" | "continue" | undefined> = existing ? [...existing] : [];
 
@@ -176,7 +176,7 @@ function parseTTableBorders(sprm: Sprm): DocTableBorders | undefined {
   // Variable-length with 1-byte size prefix: cb(1B) + 6 × BRC80 (4B each) = 24B data
   // Order: top, left, bottom, right, insideH, insideV
   const data = sprm.operand;
-  if (data.length < 1 + 24) return undefined;
+  if (data.length < 1 + 24) {return undefined;}
 
   const top = parseBrc80(data, 1);
   const left = parseBrc80(data, 5);
@@ -202,10 +202,10 @@ function parseTTableBorders(sprm: Sprm): DocTableBorders | undefined {
 function parseTDefTableShd(sprm: Sprm): readonly (string | undefined)[] | undefined {
   // Variable-length with 1-byte size prefix: cb(1B) + SHD[] (each 10B: cvFore(4B) + cvBack(4B) + ipat(2B))
   const data = sprm.operand;
-  if (data.length < 1) return undefined;
+  if (data.length < 1) {return undefined;}
 
   const cb = data[0];
-  if (cb < 10) return undefined;
+  if (cb < 10) {return undefined;}
 
   const count = Math.floor(cb / 10);
   const result: Array<string | undefined> = [];
@@ -224,57 +224,63 @@ function parseTDefTableShd(sprm: Sprm): readonly (string | undefined)[] | undefi
 
 /** Extract table properties from SPRMs (TAP SPRMs in a row-end PAPX grpprl). */
 export function extractTapProps(sprms: readonly Sprm[]): TapProps {
-  let rowHeight: number | undefined;
-  let isHeader: boolean | undefined;
-  let cellWidths: readonly number[] | undefined;
-  let alignment: "left" | "center" | "right" | undefined;
-  let verticalAlign: ReadonlyArray<"top" | "center" | "bottom" | undefined> | undefined;
-  let verticalMerge: ReadonlyArray<"restart" | "continue" | undefined> | undefined;
-  let horizontalMerge: ReadonlyArray<"restart" | "continue" | undefined> | undefined;
-  let borders: DocTableBorders | undefined;
-  let cellShading: readonly (string | undefined)[] | undefined;
+  const acc: {
+    rowHeight: number | undefined;
+    isHeader: boolean | undefined;
+    cellWidths: readonly number[] | undefined;
+    alignment: "left" | "center" | "right" | undefined;
+    verticalAlign: ReadonlyArray<"top" | "center" | "bottom" | undefined> | undefined;
+    verticalMerge: ReadonlyArray<"restart" | "continue" | undefined> | undefined;
+    horizontalMerge: ReadonlyArray<"restart" | "continue" | undefined> | undefined;
+    borders: DocTableBorders | undefined;
+    cellShading: readonly (string | undefined)[] | undefined;
+  } = {
+    rowHeight: undefined, isHeader: undefined, cellWidths: undefined, alignment: undefined,
+    verticalAlign: undefined, verticalMerge: undefined, horizontalMerge: undefined,
+    borders: undefined, cellShading: undefined,
+  };
 
   for (const sprm of sprms) {
     switch (sprm.opcode.raw) {
       case SPRM_TAP.TDyaRowHeight:
-        rowHeight = sprmInt16(sprm);
+        acc.rowHeight = sprmInt16(sprm);
         break;
       case SPRM_TAP.TTableHeader:
-        isHeader = sprmUint8(sprm) !== 0;
+        acc.isHeader = sprmUint8(sprm) !== 0;
         break;
       case SPRM_TAP.TDefTable:
-        cellWidths = parseTDefTable(sprm);
+        acc.cellWidths = parseTDefTable(sprm);
         break;
       case SPRM_TAP.TJc:
-        alignment = tapJcToAlignment(sprmUint16(sprm));
+        acc.alignment = tapJcToAlignment(sprmUint16(sprm));
         break;
       case SPRM_TAP.TVertAlign:
-        verticalAlign = parseTVertAlign(sprm);
+        acc.verticalAlign = parseTVertAlign(sprm);
         break;
       case SPRM_TAP.TVertMerge:
-        verticalMerge = parseTVertMerge(sprm, verticalMerge);
+        acc.verticalMerge = parseTVertMerge(sprm, acc.verticalMerge);
         break;
       case SPRM_TAP.TMerge:
-        horizontalMerge = parseTMerge(sprm, horizontalMerge);
+        acc.horizontalMerge = parseTMerge(sprm, acc.horizontalMerge);
         break;
       case SPRM_TAP.TTableBorders:
-        borders = parseTTableBorders(sprm);
+        acc.borders = parseTTableBorders(sprm);
         break;
       case SPRM_TAP.TDefTableShd:
-        cellShading = parseTDefTableShd(sprm);
+        acc.cellShading = parseTDefTableShd(sprm);
         break;
     }
   }
 
   return {
-    ...(rowHeight !== undefined ? { rowHeight } : {}),
-    ...(isHeader !== undefined ? { isHeader } : {}),
-    ...(cellWidths !== undefined ? { cellWidths } : {}),
-    ...(alignment !== undefined ? { alignment } : {}),
-    ...(verticalAlign !== undefined ? { verticalAlign } : {}),
-    ...(verticalMerge !== undefined ? { verticalMerge } : {}),
-    ...(horizontalMerge !== undefined ? { horizontalMerge } : {}),
-    ...(borders !== undefined ? { borders } : {}),
-    ...(cellShading !== undefined ? { cellShading } : {}),
+    ...(acc.rowHeight !== undefined ? { rowHeight: acc.rowHeight } : {}),
+    ...(acc.isHeader !== undefined ? { isHeader: acc.isHeader } : {}),
+    ...(acc.cellWidths !== undefined ? { cellWidths: acc.cellWidths } : {}),
+    ...(acc.alignment !== undefined ? { alignment: acc.alignment } : {}),
+    ...(acc.verticalAlign !== undefined ? { verticalAlign: acc.verticalAlign } : {}),
+    ...(acc.verticalMerge !== undefined ? { verticalMerge: acc.verticalMerge } : {}),
+    ...(acc.horizontalMerge !== undefined ? { horizontalMerge: acc.horizontalMerge } : {}),
+    ...(acc.borders !== undefined ? { borders: acc.borders } : {}),
+    ...(acc.cellShading !== undefined ? { cellShading: acc.cellShading } : {}),
   };
 }

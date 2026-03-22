@@ -416,7 +416,7 @@ async function generateShapeFixtures(): Promise<void> {
   const MARGIN = 50;
 
   // Track next available IDs
-  let nextID = 10;
+  const nextIDRef = { value: 10 };
 
   // Add each shape frame
   SHAPE_FRAMES.forEach((frameData, index) => {
@@ -430,7 +430,7 @@ async function generateShapeFixtures(): Promise<void> {
     const frameY = MARGIN + row * (maxFrameHeight + GRID_GAP);
 
     // Create parent frame
-    const frameID = nextID++;
+    const frameID = nextIDRef.value++;
     const bgColor = hexToColor(frameData.background);
 
     figFile.addFrame(
@@ -446,7 +446,7 @@ async function generateShapeFixtures(): Promise<void> {
 
     // Add children
     for (const child of frameData.children) {
-      const childID = nextID++;
+      const childID = nextIDRef.value++;
       const fill = rgbToColor(child.fill ?? { r: 0.8, g: 0.8, b: 0.8 });
 
       switch (child.type) {

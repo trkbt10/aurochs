@@ -33,6 +33,29 @@ function isGuid(v: unknown): v is FigGuid {
   return v != null && typeof v === "object" && "sessionID" in v;
 }
 
+/** Resolve a GUID field from either symbolData or nodeData */
+function resolveGuid(
+  symbolData: Record<string, unknown> | undefined,
+  nodeData: Record<string, unknown>,
+  field: string,
+): FigGuid | undefined {
+  if (symbolData && isGuid(symbolData[field])) {
+    return symbolData[field] as FigGuid;
+  }
+  if (isGuid(nodeData[field])) {
+    return nodeData[field] as FigGuid;
+  }
+  return undefined;
+}
+
+/** Build a SymbolIDPair from symbolID and optional overriddenSymbolID */
+function buildSymbolIDPair(symbolID: FigGuid, overriddenSymbolID: FigGuid | undefined): SymbolIDPair {
+  if (overriddenSymbolID) {
+    return { symbolID, overriddenSymbolID };
+  }
+  return { symbolID };
+}
+
 // =============================================================================
 // Public API
 // =============================================================================
@@ -48,28 +71,14 @@ export function extractSymbolIDPair(
 ): SymbolIDPair | undefined {
   // --- symbolID ---
   const symbolData = nodeData.symbolData as Record<string, unknown> | undefined;
-  let symbolID: FigGuid | undefined;
+  const symbolID = resolveGuid(symbolData, nodeData, "symbolID");
 
-  if (symbolData && isGuid(symbolData.symbolID)) {
-    symbolID = symbolData.symbolID as FigGuid;
-  } else if (isGuid(nodeData.symbolID)) {
-    symbolID = nodeData.symbolID as FigGuid;
-  }
-
-  if (!symbolID) return undefined;
+  if (!symbolID) {return undefined;}
 
   // --- overriddenSymbolID ---
-  let overriddenSymbolID: FigGuid | undefined;
+  const overriddenSymbolID = resolveGuid(symbolData, nodeData, "overriddenSymbolID");
 
-  if (symbolData && isGuid(symbolData.overriddenSymbolID)) {
-    overriddenSymbolID = symbolData.overriddenSymbolID as FigGuid;
-  } else if (isGuid(nodeData.overriddenSymbolID)) {
-    overriddenSymbolID = nodeData.overriddenSymbolID as FigGuid;
-  }
-
-  return overriddenSymbolID
-    ? { symbolID, overriddenSymbolID }
-    : { symbolID };
+  return buildSymbolIDPair(symbolID, overriddenSymbolID);
 }
 
 /**
@@ -84,6 +93,6 @@ export function getEffectiveSymbolID(
   nodeData: Record<string, unknown>,
 ): FigGuid | undefined {
   const pair = extractSymbolIDPair(nodeData);
-  if (!pair) return undefined;
+  if (!pair) {return undefined;}
   return pair.overriddenSymbolID ?? pair.symbolID;
 }

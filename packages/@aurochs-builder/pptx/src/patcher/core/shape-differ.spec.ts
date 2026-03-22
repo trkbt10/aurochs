@@ -14,8 +14,6 @@ import type { Slide } from "@aurochs-office/pptx/domain/slide/types";
 import type { Transform, GroupTransform } from "@aurochs-office/drawing-ml/domain/geometry";
 import type { Color } from "@aurochs-office/drawing-ml/domain/color";
 import type { SolidFill } from "@aurochs-office/drawing-ml/domain/fill";
-import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
-import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import type { TextBody, Paragraph, TextRun } from "@aurochs-office/pptx/domain/text";
 import type { Effects } from "@aurochs-office/pptx/domain/effects";
 import { px, deg } from "@aurochs-office/drawing-ml/domain/units";

@@ -97,6 +97,13 @@ const emptyStateStyle: CSSProperties = {
   color: "var(--text-secondary)",
 };
 
+function formatRunMessage(time: string, changes: number): string {
+  if (changes > 0) {
+    return `${time}ms · ${changes} change${changes !== 1 ? "s" : ""}`;
+  }
+  return `${time}ms`;
+}
+
 // =============================================================================
 // Component
 // =============================================================================
@@ -161,10 +168,7 @@ export function VbaDialog({
         if (result.ok) {
           const time = result.durationMs.toFixed(1);
           const changes = result.mutations.length;
-          const message =
-            changes > 0
-              ? `${time}ms · ${changes} change${changes !== 1 ? "s" : ""}`
-              : `${time}ms`;
+          const message = formatRunMessage(time, changes);
           setRunStatus({ state: "success", message });
 
           // Apply mutations
@@ -216,6 +220,24 @@ export function VbaDialog({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [open, handleClose]);
 
+  const renderDialogContent = () => {
+    if (editedProgram) {
+      return (
+        <div style={editorContainerStyle}>
+          <VbaEditor
+            program={editedProgram}
+            onProgramChange={handleProgramChange}
+            Renderer={SvgCodeRenderer}
+            style={{ width: "100%", height: "100%" }}
+            onRun={handleRun}
+            runStatus={runStatus}
+          />
+        </div>
+      );
+    }
+    return <div style={emptyStateStyle}>No VBA program loaded</div>;
+  };
+
   if (!open) {
     return null;
   }
@@ -230,20 +252,7 @@ export function VbaDialog({
         </div>
 
         {/* Content */}
-        {editedProgram ? (
-          <div style={editorContainerStyle}>
-            <VbaEditor
-              program={editedProgram}
-              onProgramChange={handleProgramChange}
-              Renderer={SvgCodeRenderer}
-              style={{ width: "100%", height: "100%" }}
-              onRun={handleRun}
-              runStatus={runStatus}
-            />
-          </div>
-        ) : (
-          <div style={emptyStateStyle}>No VBA program loaded</div>
-        )}
+        {renderDialogContent()}
       </div>
     </div>,
     document.body

@@ -21,11 +21,12 @@ import {
   determineSlideSize,
   type SlideSize,
 } from "./slide-builder";
-import { createBlankPptxPresentationFile } from "./pptx-template";
+import { createBlankPptxPackageFile } from "./pptx-template";
 import type { PdfEmbeddedFont } from "@aurochs/pdf/domain";
 import { generateFontFaceStyle } from "@aurochs/pdf/domain/font/font-css-generator";
 import type { EmbeddedFontData } from "@aurochs-office/pptx/app/presentation-document";
 import type { PdfGroupingStrategyOptions } from "../converter/grouping-strategy";
+import { EMPTY_FONT_SCHEME } from "@aurochs-office/ooxml/domain/font-scheme";
 
 const DEFAULT_GROUPING: PdfGroupingStrategyOptions = { preset: "auto" } as const;
 const DISPLAY_NORMALIZATION_OUT_OF_PAGE_RATIO = 0.2;
@@ -138,7 +139,7 @@ export async function importPdf(
   }
 
   const slidesWithIds = createSlidesWithIds(slides);
-  const templateFile = createBlankPptxPresentationFile(slidesWithIds.length, slideSize);
+  const templateFile = createBlankPptxPackageFile(slidesWithIds.length, slideSize);
   const templatePresentation = openPresentation(templateFile);
   const slidesWithApi = slidesWithIds.map((slideWithId, index) => ({
     ...slideWithId,
@@ -231,29 +232,27 @@ async function normalizeParsedPagesForDisplayIfNeeded(pdfDoc: PdfDocument, pdfBy
         return page;
       }
 
-      let textIndex = 0;
-      let pathIndex = 0;
-      let imageIndex = 0;
+      const idx = { text: 0, path: 0, image: 0 };
       const elements = page.elements.map((element) => {
         if (element.type === "text") {
-          const next = normalized.texts[textIndex];
-          textIndex += 1;
+          const next = normalized.texts[idx.text];
+          idx.text += 1;
           if (!next) {
             throw new Error(`normalizePageElementsForDisplay text index overflow at page ${page.pageNumber}`);
           }
           return next;
         }
         if (element.type === "path") {
-          const next = normalized.paths[pathIndex];
-          pathIndex += 1;
+          const next = normalized.paths[idx.path];
+          idx.path += 1;
           if (!next) {
             throw new Error(`normalizePageElementsForDisplay path index overflow at page ${page.pageNumber}`);
           }
           return next;
         }
         if (element.type === "image") {
-          const next = normalized.images[imageIndex];
-          imageIndex += 1;
+          const next = normalized.images[idx.image];
+          idx.image += 1;
           if (!next) {
             throw new Error(`normalizePageElementsForDisplay image index overflow at page ${page.pageNumber}`);
           }
@@ -407,6 +406,7 @@ function createPresentationDocument(
     slideWidth: slideSize.width,
     slideHeight: slideSize.height,
     colorContext: createDefaultColorContextForPdf(),
+    fontScheme: EMPTY_FONT_SCHEME,
     resources: createDataUrlResourceResolver(),
     embeddedFonts,
     embeddedFontCss,

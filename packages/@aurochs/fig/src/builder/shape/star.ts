@@ -2,54 +2,52 @@
  * @file Star node builder
  */
 
-import { BaseShapeBuilder } from "./base";
+import { createBaseShapeState, attachBaseShapeMethods, buildBaseData, type BaseShapeBuilderMethods } from "./base";
 import type { StarNodeData } from "./types";
 import { SHAPE_NODE_TYPES } from "../../constants";
 
-export class StarNodeBuilder extends BaseShapeBuilder<StarNodeData> {
-  private _pointCount: number;
-  private _starInnerRadius: number;
+/** Star node builder instance */
+export type StarNodeBuilder = BaseShapeBuilderMethods<StarNodeBuilder> & {
+  points: (count: number) => StarNodeBuilder;
+  innerRadius: (ratio: number) => StarNodeBuilder;
+  build: () => StarNodeData;
+};
 
-  constructor(localID: number, parentID: number) {
-    super(localID, parentID);
-    this._name = "Star";
-    this._pointCount = 5;
-    this._starInnerRadius = 0.382; // Golden ratio default
-    // Default fill
-    this._fillColor = { r: 1, g: 0.8, b: 0, a: 1 }; // Yellow/gold
-  }
+/** Create a star node builder */
+function createStarNodeBuilder(localID: number, parentID: number): StarNodeBuilder {
+  const state = createBaseShapeState(localID, parentID);
+  state.name = "Star";
+  state.fillColor = { r: 1, g: 0.8, b: 0, a: 1 };
+  const extra = { pointCount: 5, starInnerRadius: 0.382 };
 
-  /**
-   * Set number of points
-   */
-  points(count: number): this {
-    this._pointCount = Math.max(3, Math.round(count));
-    return this;
-  }
+  const builder = {} as StarNodeBuilder;
+  Object.assign(builder, attachBaseShapeMethods(state, builder), {
+    /** Set number of points */
+    points(count: number) {
+      extra.pointCount = Math.max(3, Math.round(count));
+      return builder;
+    },
+    /** Set inner radius ratio (0-1, lower = sharper points) */
+    innerRadius(ratio: number) {
+      extra.starInnerRadius = Math.max(0, Math.min(1, ratio));
+      return builder;
+    },
+    build(): StarNodeData {
+      return {
+        ...buildBaseData(state),
+        nodeType: SHAPE_NODE_TYPES.STAR,
+        pointCount: extra.pointCount,
+        starInnerRadius: extra.starInnerRadius,
+      };
+    },
+  });
 
-  /**
-   * Set inner radius ratio
-   * @param ratio Inner radius ratio (0-1, lower = sharper points)
-   */
-  innerRadius(ratio: number): this {
-    this._starInnerRadius = Math.max(0, Math.min(1, ratio));
-    return this;
-  }
-
-  build(): StarNodeData {
-    const base = this.buildBaseData();
-    return {
-      ...base,
-      nodeType: SHAPE_NODE_TYPES.STAR,
-      pointCount: this._pointCount,
-      starInnerRadius: this._starInnerRadius,
-    };
-  }
+  return builder;
 }
 
 /**
  * Create a new Star node builder
  */
 export function starNode(localID: number, parentID: number): StarNodeBuilder {
-  return new StarNodeBuilder(localID, parentID);
+  return createStarNodeBuilder(localID, parentID);
 }

@@ -2,18 +2,34 @@
  * @file Shape XML generation for PPTX slides
  */
 
-import type { PptShape, PptFill, PptLine, PptTransform, PptTable } from "../domain/types";
+import type { PptShape, PptFill, PptLine, PptTransform, PptTable, PptPicture, PptTextBody } from "../domain/types";
 import { buildTextBodyXml } from "./text-xml";
 import { escapeXml } from "./presentation-xml";
 
-let _shapeIdCounter = 2; // Start at 2 (1 is reserved for group container)
+const _shapeIdCounter = { value: 2 }; // Start at 2 (1 is reserved for group container)
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/** Reset the shape ID counter for a new slide. */
 export function resetShapeIdCounter(): void {
-  _shapeIdCounter = 2;
+  _shapeIdCounter.value = 2;
 }
 
 function nextShapeId(): number {
-  return _shapeIdCounter++;
+  return _shapeIdCounter.value++;
 }
 
 /**
@@ -75,12 +91,7 @@ function buildPictureXml(shape: PptShape, imageRefs?: Map<number, string>): stri
   );
 
   // BlipFill with crop
-  let blipFill = `<p:blipFill><a:blip r:embed="${rId}"/>`;
-  if (shape.picture && hasCrop(shape.picture)) {
-    const p = shape.picture;
-    blipFill += `<a:srcRect l="${pct(p.cropLeft)}" t="${pct(p.cropTop)}" r="${pct(p.cropRight)}" b="${pct(p.cropBottom)}"/>`;
-  }
-  blipFill += `<a:stretch><a:fillRect/></a:stretch></p:blipFill>`;
+  const blipFill = buildBlipFillXml(rId, shape.picture);
 
   const spPr = buildTransformXml(shape.transform) + `<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>`;
 
@@ -134,7 +145,7 @@ function buildConnectorXml(shape: PptShape): string {
 }
 
 function buildTableXml(shape: PptShape): string {
-  if (!shape.table) return buildSpShapeXml({ ...shape, type: "shape" });
+  if (!shape.table) {return buildSpShapeXml({ ...shape, type: "shape" });}
 
   const id = nextShapeId();
   const name = shape.name ?? `Table ${id}`;
@@ -166,12 +177,10 @@ function buildTableContentXml(table: PptTable): string {
   const rows = table.rows.map(row => {
     const cells = row.cells.map(cell => {
       const attrs: string[] = [];
-      if (cell.colSpan && cell.colSpan > 1) attrs.push(`gridSpan="${cell.colSpan}"`);
-      if (cell.rowSpan && cell.rowSpan > 1) attrs.push(`rowSpan="${cell.rowSpan}"`);
+      if (cell.colSpan && cell.colSpan > 1) {attrs.push(`gridSpan="${cell.colSpan}"`);}
+      if (cell.rowSpan && cell.rowSpan > 1) {attrs.push(`rowSpan="${cell.rowSpan}"`);}
 
-      const txBody = cell.text
-        ? buildTextBodyXml(cell.text)
-        : `<p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:endParaRPr lang="en-US"/></a:p></p:txBody>`;
+      const txBody = buildCellTextBody(cell.text);
 
       const tcPr = cell.fill ? `<a:tcPr>${buildFillXml(cell.fill)}</a:tcPr>` : `<a:tcPr/>`;
 
@@ -211,8 +220,8 @@ function buildTransformXml(t: PptTransform): string {
   if (t.rotation && t.rotation !== 0) {
     attrs.push(`rot="${Math.round(t.rotation * 60000)}"`);
   }
-  if (t.flipH) attrs.push(`flipH="1"`);
-  if (t.flipV) attrs.push(`flipV="1"`);
+  if (t.flipH) {attrs.push(`flipH="1"`);}
+  if (t.flipV) {attrs.push(`flipV="1"`);}
 
   return (
     `<a:xfrm${attrs.length > 0 ? " " + attrs.join(" ") : ""}>` +
@@ -262,11 +271,26 @@ function buildLineXml(line: PptLine): string {
   return `<a:ln ${attrs.join(" ")}>${children.join("")}</a:ln>`;
 }
 
+function buildBlipFillXml(rId: string, picture?: PptPicture): string {
+  const cropXml = buildCropXml(picture);
+  return `<p:blipFill><a:blip r:embed="${rId}"/>${cropXml}<a:stretch><a:fillRect/></a:stretch></p:blipFill>`;
+}
+
+function buildCropXml(picture?: PptPicture): string {
+  if (!picture || !hasCrop(picture)) { return ""; }
+  return `<a:srcRect l="${pct(picture.cropLeft)}" t="${pct(picture.cropTop)}" r="${pct(picture.cropRight)}" b="${pct(picture.cropBottom)}"/>`;
+}
+
+function buildCellTextBody(text: PptTextBody | undefined): string {
+  if (text) { return buildTextBodyXml(text); }
+  return `<p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:endParaRPr lang="en-US"/></a:p></p:txBody>`;
+}
+
 function hasCrop(p: { cropLeft?: number; cropTop?: number; cropRight?: number; cropBottom?: number }): boolean {
   return !!(p.cropLeft || p.cropTop || p.cropRight || p.cropBottom);
 }
 
 function pct(value?: number): string {
-  if (!value) return "0";
+  if (!value) {return "0";}
   return String(Math.round(value * 100000));
 }

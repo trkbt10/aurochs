@@ -9,7 +9,6 @@
  */
 
 import type { Color, Paint } from "../types";
-import { NODE_TYPE_VALUES } from "../../constants";
 
 export type BooleanOperationType = "UNION" | "SUBTRACT" | "INTERSECT" | "EXCLUDE";
 
@@ -40,143 +39,91 @@ export type BooleanOperationNodeData = {
   readonly opacity: number;
 };
 
-export class BooleanOperationNodeBuilder {
-  private _localID: number;
-  private _parentID: number;
-  private _name: string;
-  private _operation: BooleanOperationType;
-  private _width?: number;
-  private _height?: number;
-  private _x: number;
-  private _y: number;
-  private _fillColor?: Color;
-  private _visible: boolean;
-  private _opacity: number;
+/** Boolean operation node builder instance */
+export type BooleanOperationNodeBuilder = {
+  name: (name: string) => BooleanOperationNodeBuilder;
+  operation: (op: BooleanOperationType) => BooleanOperationNodeBuilder;
+  union: () => BooleanOperationNodeBuilder;
+  subtract: () => BooleanOperationNodeBuilder;
+  intersect: () => BooleanOperationNodeBuilder;
+  exclude: () => BooleanOperationNodeBuilder;
+  size: (width: number, height: number) => BooleanOperationNodeBuilder;
+  position: (x: number, y: number) => BooleanOperationNodeBuilder;
+  fill: (color: Color) => BooleanOperationNodeBuilder;
+  visible: (v: boolean) => BooleanOperationNodeBuilder;
+  opacity: (o: number) => BooleanOperationNodeBuilder;
+  build: () => BooleanOperationNodeData;
+};
 
-  constructor(localID: number, parentID: number) {
-    this._localID = localID;
-    this._parentID = parentID;
-    this._name = "Boolean";
-    this._operation = "UNION";
-    this._x = 0;
-    this._y = 0;
-    this._visible = true;
-    this._opacity = 1;
+/** Build fill paints from color */
+function buildBooleanFillPaints(fillColor: Color | undefined): readonly Paint[] | undefined {
+  if (!fillColor) {
+    return undefined;
   }
+  return [{ type: { value: 0, name: "SOLID" }, color: fillColor, opacity: 1, visible: true, blendMode: { value: 1, name: "NORMAL" } }];
+}
 
-  name(name: string): this {
-    this._name = name;
-    return this;
+/** Build size from optional dimensions */
+function buildBooleanSize(width: number | undefined, height: number | undefined): { x: number; y: number } | undefined {
+  if (width !== undefined && height !== undefined) {
+    return { x: width, y: height };
   }
+  return undefined;
+}
 
-  /**
-   * Set the boolean operation type
-   */
-  operation(op: BooleanOperationType): this {
-    this._operation = op;
-    return this;
-  }
+/** Create a boolean operation node builder */
+function createBooleanOperationNodeBuilder(localID: number, parentID: number): BooleanOperationNodeBuilder {
+  const state = {
+    name: "Boolean",
+    operation: "UNION" as BooleanOperationType,
+    width: undefined as number | undefined,
+    height: undefined as number | undefined,
+    x: 0,
+    y: 0,
+    fillColor: undefined as Color | undefined,
+    visible: true,
+    opacity: 1,
+  };
 
-  /**
-   * Alias for operation("UNION")
-   */
-  union(): this {
-    return this.operation("UNION");
-  }
+  const builder: BooleanOperationNodeBuilder = {
+    name(n: string) { state.name = n; return builder; },
+    /** Set the boolean operation type */
+    operation(op: BooleanOperationType) { state.operation = op; return builder; },
+    /** Alias for operation("UNION") */
+    union() { return builder.operation("UNION"); },
+    /** Alias for operation("SUBTRACT") */
+    subtract() { return builder.operation("SUBTRACT"); },
+    /** Alias for operation("INTERSECT") */
+    intersect() { return builder.operation("INTERSECT"); },
+    /** Alias for operation("EXCLUDE") */
+    exclude() { return builder.operation("EXCLUDE"); },
+    size(width: number, height: number) { state.width = width; state.height = height; return builder; },
+    position(x: number, y: number) { state.x = x; state.y = y; return builder; },
+    fill(color: Color) { state.fillColor = color; return builder; },
+    visible(v: boolean) { state.visible = v; return builder; },
+    opacity(o: number) { state.opacity = o; return builder; },
 
-  /**
-   * Alias for operation("SUBTRACT")
-   */
-  subtract(): this {
-    return this.operation("SUBTRACT");
-  }
+    build(): BooleanOperationNodeData {
+      return {
+        localID,
+        parentID,
+        name: state.name,
+        booleanOperation: { value: BOOLEAN_OPERATION_TYPE_VALUES[state.operation], name: state.operation },
+        size: buildBooleanSize(state.width, state.height),
+        transform: { m00: 1, m01: 0, m02: state.x, m10: 0, m11: 1, m12: state.y },
+        fillPaints: buildBooleanFillPaints(state.fillColor),
+        visible: state.visible,
+        opacity: state.opacity,
+      };
+    },
+  };
 
-  /**
-   * Alias for operation("INTERSECT")
-   */
-  intersect(): this {
-    return this.operation("INTERSECT");
-  }
-
-  /**
-   * Alias for operation("EXCLUDE")
-   */
-  exclude(): this {
-    return this.operation("EXCLUDE");
-  }
-
-  size(width: number, height: number): this {
-    this._width = width;
-    this._height = height;
-    return this;
-  }
-
-  position(x: number, y: number): this {
-    this._x = x;
-    this._y = y;
-    return this;
-  }
-
-  fill(color: Color): this {
-    this._fillColor = color;
-    return this;
-  }
-
-  visible(v: boolean): this {
-    this._visible = v;
-    return this;
-  }
-
-  opacity(o: number): this {
-    this._opacity = o;
-    return this;
-  }
-
-  private buildFillPaints(): readonly Paint[] | undefined {
-    if (!this._fillColor) {
-      return undefined;
-    }
-    return [
-      {
-        type: { value: 0, name: "SOLID" },
-        color: this._fillColor,
-        opacity: 1,
-        visible: true,
-        blendMode: { value: 1, name: "NORMAL" },
-      },
-    ];
-  }
-
-  build(): BooleanOperationNodeData {
-    return {
-      localID: this._localID,
-      parentID: this._parentID,
-      name: this._name,
-      booleanOperation: {
-        value: BOOLEAN_OPERATION_TYPE_VALUES[this._operation],
-        name: this._operation,
-      },
-      size: this._width !== undefined && this._height !== undefined
-        ? { x: this._width, y: this._height }
-        : undefined,
-      transform: {
-        m00: 1,
-        m01: 0,
-        m02: this._x,
-        m10: 0,
-        m11: 1,
-        m12: this._y,
-      },
-      fillPaints: this.buildFillPaints(),
-      visible: this._visible,
-      opacity: this._opacity,
-    };
-  }
+  return builder;
 }
 
 /**
  * Create a new Boolean operation node builder
  */
 export function booleanNode(localID: number, parentID: number): BooleanOperationNodeBuilder {
-  return new BooleanOperationNodeBuilder(localID, parentID);
+  return createBooleanOperationNodeBuilder(localID, parentID);
 }

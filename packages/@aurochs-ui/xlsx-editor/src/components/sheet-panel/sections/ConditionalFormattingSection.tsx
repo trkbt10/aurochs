@@ -119,6 +119,14 @@ function getRuleTypeLabel(rule: XlsxConditionalFormattingRule): string {
   }
 }
 
+function resolveRuleText(ruleType: string, value: string): string | undefined {
+  const textTypes = ["containsText", "notContainsText", "beginsWith", "endsWith"];
+  if (textTypes.includes(ruleType)) {
+    return value;
+  }
+  return undefined;
+}
+
 /**
  * Conditional formatting settings section.
  */
@@ -186,9 +194,7 @@ export function ConditionalFormattingSection({
       type: draftRuleType as XlsxStandardRule["type"],
       operator: draftRuleType === "cellIs" ? draftOperator : undefined,
       formulas,
-      text: ["containsText", "notContainsText", "beginsWith", "endsWith"].includes(draftRuleType)
-        ? draftValue1
-        : undefined,
+      text: resolveRuleText(draftRuleType, draftValue1),
       priority: 1,
     };
 
@@ -218,7 +224,13 @@ export function ConditionalFormattingSection({
         Highlight cells based on their values or formulas.
       </div>
 
-      {isAdding && selectedRange ? (
+      {renderFormattingContent()}
+    </OptionalPropertySection>
+  );
+
+  function renderFormattingContent() {
+    if (isAdding && selectedRange) {
+      return (
         <>
           <FieldGroup label="Range">
             <div style={{ fontSize: fontTokens.size.md }}>{formatRange(selectedRange)}</div>
@@ -277,9 +289,11 @@ export function ConditionalFormattingSection({
             </Button>
           </div>
         </>
-      ) : (
-        <>
-          {currentFormatting && (
+      );
+    }
+    return (
+      <>
+        {currentFormatting && (
             <div style={ruleItemStyle}>
               <div style={ruleLabelStyle}>Rules on current selection:</div>
               {currentFormatting.rules.map((rule, idx) => (
@@ -324,7 +338,8 @@ export function ConditionalFormattingSection({
             </div>
           )}
         </>
-      )}
-    </OptionalPropertySection>
-  );
+    );
+  }
+
+  return null;
 }

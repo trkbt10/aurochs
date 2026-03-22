@@ -4,7 +4,7 @@
 
 import { useRef, useEffect } from "react";
 import type { SceneGraph } from "../../src/scene-graph/types";
-import { WebGLFigmaRenderer } from "../../src/webgl/renderer";
+import { createWebGLFigmaRenderer, type WebGLFigmaRendererInstance } from "../../src/webgl/renderer";
 
 type Props = {
   readonly sceneGraph: SceneGraph | null;
@@ -12,19 +12,25 @@ type Props = {
   readonly height: number;
 };
 
+
+
+
+
+
+/** WebGL canvas that renders a SceneGraph */
 export function WebGLCanvas({ sceneGraph, width, height }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const rendererRef = useRef<WebGLFigmaRenderer | null>(null);
+  const rendererRef = useRef<WebGLFigmaRendererInstance | null>(null);
 
   // Single effect: init renderer + render scene graph + cleanup
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || !sceneGraph) return;
+    if (!canvas || !sceneGraph) {return;}
 
     // Create renderer (gets a new GL context each time canvas changes)
     if (!rendererRef.current) {
       try {
-        rendererRef.current = new WebGLFigmaRenderer({
+        rendererRef.current = createWebGLFigmaRenderer({
           canvas,
           antialias: true,
           backgroundColor: { r: 1, g: 1, b: 1, a: 1 },
@@ -36,14 +42,7 @@ export function WebGLCanvas({ sceneGraph, width, height }: Props) {
     }
 
     const renderer = rendererRef.current;
-    (async () => {
-      try {
-        await renderer.prepareScene(sceneGraph);
-        renderer.render(sceneGraph);
-      } catch (e) {
-        console.error("WebGL render error:", e);
-      }
-    })();
+    renderSceneAsync(renderer, sceneGraph);
   }, [sceneGraph, width, height]);
 
   // Cleanup on unmount
@@ -64,4 +63,14 @@ export function WebGLCanvas({ sceneGraph, width, height }: Props) {
       }}
     />
   );
+}
+
+/** Prepare and render a scene graph asynchronously */
+async function renderSceneAsync(renderer: WebGLFigmaRenderer, sceneGraph: SceneGraph) {
+  try {
+    await renderer.prepareScene(sceneGraph);
+    renderer.render(sceneGraph);
+  } catch (e) {
+    console.error("WebGL render error:", e);
+  }
 }

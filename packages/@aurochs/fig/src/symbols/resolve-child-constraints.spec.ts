@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+/** @file Tests for child constraint resolution */
 import { getConstraintValue, resolveChildConstraints } from "./resolve-child-constraints";
 import { CONSTRAINT_TYPE_VALUES } from "../constants/layout";
 

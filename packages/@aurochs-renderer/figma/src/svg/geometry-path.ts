@@ -28,6 +28,12 @@ function getGeometryWindingRule(geom: FigFillGeometry): WindingRule | undefined 
   return rule.name as WindingRule;
 }
 
+
+
+
+
+
+/** Decode path data from Figma geometry blobs */
 export function decodePathsFromGeometry(
   fillGeometry: readonly FigFillGeometry[],
   blobs: readonly FigBlob[],
@@ -52,6 +58,12 @@ export function decodePathsFromGeometry(
   return paths;
 }
 
+
+
+
+
+
+/** Map Figma winding rule to SVG fill-rule attribute */
 export function mapWindingRule(rule: WindingRule | undefined): "nonzero" | "evenodd" | undefined {
   switch (rule) {
     case "NONZERO":

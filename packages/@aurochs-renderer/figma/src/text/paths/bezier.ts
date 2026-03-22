@@ -22,26 +22,26 @@ export function convertQuadraticsToCubic(
   commands: readonly PathCommand[]
 ): PathCommand[] {
   const result: PathCommand[] = [];
-  let currentX = 0;
-  let currentY = 0;
+  const currentXRef = { value: 0 };
+  const currentYRef = { value: 0 };
 
   for (const cmd of commands) {
     switch (cmd.type) {
       case "M":
-        currentX = cmd.x ?? 0;
-        currentY = cmd.y ?? 0;
+        currentXRef.value = cmd.x ?? 0;
+        currentYRef.value = cmd.y ?? 0;
         result.push(cmd);
         break;
 
       case "L":
-        currentX = cmd.x ?? 0;
-        currentY = cmd.y ?? 0;
+        currentXRef.value = cmd.x ?? 0;
+        currentYRef.value = cmd.y ?? 0;
         result.push(cmd);
         break;
 
       case "Q": {
-        const p0x = currentX;
-        const p0y = currentY;
+        const p0x = currentXRef.value;
+        const p0y = currentYRef.value;
         const p1x = cmd.x1 ?? 0;
         const p1y = cmd.y1 ?? 0;
         const p2x = cmd.x ?? 0;
@@ -63,14 +63,14 @@ export function convertQuadraticsToCubic(
           y: p2y,
         });
 
-        currentX = p2x;
-        currentY = p2y;
+        currentXRef.value = p2x;
+        currentYRef.value = p2y;
         break;
       }
 
       case "C":
-        currentX = cmd.x ?? 0;
-        currentY = cmd.y ?? 0;
+        currentXRef.value = cmd.x ?? 0;
+        currentYRef.value = cmd.y ?? 0;
         result.push(cmd);
         break;
 

@@ -2,14 +2,14 @@
  * @file Tests for XML Lexer
  */
 
-import { XmlLexer, type Token, TokenType } from "./lexer";
+import { createXmlLexer, type Token, TokenType } from "./lexer";
 
 describe("XmlLexer", () => {
   function tokenize(input: string): Token[] {
-    const lexer = new XmlLexer(input);
+    const lexer = createXmlLexer(input);
     const tokens: Token[] = [];
     for (
-      // eslint-disable-next-line no-restricted-syntax -- loop variable pattern
+       
       let token = lexer.nextToken();
       token.type !== TokenType.EOF;
       token = lexer.nextToken()

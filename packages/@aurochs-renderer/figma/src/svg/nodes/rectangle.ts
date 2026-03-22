@@ -26,14 +26,14 @@ import {
  * Build fill attrs from stroke paints (for strokeGeometry).
  */
 function strokePaintsToFillAttrs(paints: readonly FigPaint[] | undefined): FillAttrs {
-  if (!paints || paints.length === 0) return { fill: "none" };
+  if (!paints || paints.length === 0) {return { fill: "none" };}
   const visible = paints.find((p) => p.visible !== false);
-  if (!visible) return { fill: "none" };
+  if (!visible) {return { fill: "none" };}
   if (getPaintType(visible) === "SOLID") {
     const solid = visible as FigPaint & { color: { r: number; g: number; b: number; a: number } };
     const hex = figColorToHex(solid.color);
     const opacity = visible.opacity ?? 1;
-    if (opacity < 1) return { fill: hex, "fill-opacity": opacity };
+    if (opacity < 1) {return { fill: hex, "fill-opacity": opacity };}
     return { fill: hex };
   }
   return { fill: "#000000" };
@@ -69,19 +69,19 @@ export function renderRectangleNode(node: FigNode, ctx: FigSvgRenderContext): Sv
   if (geometry && geometry.length > 0) {
     const paths = decodePathsFromGeometry(geometry, ctx.blobs);
     if (paths.length > 0) {
-      let fillAttrs: FillAttrs;
-      let strokeAttrs: StrokeAttrs;
+      const fillAttrsRef = { value: undefined as FillAttrs | undefined };
+      const strokeAttrsRef = { value: undefined as StrokeAttrs | undefined };
       if (isStrokeGeometry) {
-        fillAttrs = strokePaintsToFillAttrs(strokePaints);
-        strokeAttrs = {};
+        fillAttrsRef.value = strokePaintsToFillAttrs(strokePaints);
+        strokeAttrsRef.value = {};
       } else {
-        fillAttrs = baseFillAttrs;
-        strokeAttrs = baseStrokeAttrs;
+        fillAttrsRef.value = baseFillAttrs;
+        strokeAttrsRef.value = baseStrokeAttrs;
       }
       return renderPaths({
         paths,
-        fillAttrs,
-        strokeAttrs,
+        fillAttrs: fillAttrsRef.value,
+        strokeAttrs: strokeAttrsRef.value,
         transform: transformStr,
         opacity,
         filter: filterAttr,

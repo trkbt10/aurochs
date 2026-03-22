@@ -20,7 +20,7 @@ const DEFAULT_ASCENDER_RATIO = 0.96875;
  * @returns X position for text element
  */
 export function getAlignedX(align: TextAlignHorizontal, width: number | undefined): number {
-  if (!width) return 0;
+  if (!width) {return 0;}
   switch (align) {
     case "CENTER":
       return width / 2;
@@ -99,11 +99,7 @@ export function getAlignedYWithMetrics(options: AlignYOptions): number {
  * @deprecated Use getAlignedYWithMetrics() for accurate font-aware positioning
  */
 export function getAlignedY(
-  align: TextAlignVertical,
-  height: number | undefined,
-  fontSize: number,
-  lineCount: number,
-  lineHeight: number
+  { align, height, fontSize, lineCount, lineHeight }: { align: TextAlignVertical; height: number | undefined; fontSize: number; lineCount: number; lineHeight: number; }
 ): number {
   return getAlignedYWithMetrics({
     align,

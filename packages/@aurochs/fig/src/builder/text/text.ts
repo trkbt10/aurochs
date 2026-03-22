@@ -44,200 +44,119 @@ export const DEFAULT_AUTO_RESIZE = {
   name: "WIDTH_AND_HEIGHT" as TextAutoResize,
 };
 
-export class TextNodeBuilder {
-  private _localID: number;
-  private _parentID: number;
-  private _name: string;
-  private _characters: string;
-  private _fontSize: number;
-  private _fontFamily: string;
-  private _fontStyle: string;
-  private _width: number;
-  private _height: number;
-  private _x: number;
-  private _y: number;
-  private _textAlignH?: TextAlignHorizontal;
-  private _textAlignV?: TextAlignVertical;
-  private _autoResize: TextAutoResize;
-  private _decoration?: TextDecoration;
-  private _textCase?: TextCase;
-  private _lineHeight: { value: number; unit: NumberUnits };
-  private _letterSpacing: { value: number; unit: NumberUnits };
-  private _fillColor: Color;
-  private _visible: boolean;
-  private _opacity: number;
-  private _derivedTextData?: DerivedTextNodeData;
+/** Text node builder instance */
+export type TextNodeBuilder = {
+  name: (name: string) => TextNodeBuilder;
+  text: (characters: string) => TextNodeBuilder;
+  fontSize: (size: number) => TextNodeBuilder;
+  font: (family: string, style?: string) => TextNodeBuilder;
+  size: (width: number, height: number) => TextNodeBuilder;
+  position: (x: number, y: number) => TextNodeBuilder;
+  alignHorizontal: (align: TextAlignHorizontal) => TextNodeBuilder;
+  alignVertical: (align: TextAlignVertical) => TextNodeBuilder;
+  autoResize: (mode: TextAutoResize) => TextNodeBuilder;
+  decoration: (deco: TextDecoration) => TextNodeBuilder;
+  textCase: (tc: TextCase) => TextNodeBuilder;
+  lineHeight: (value: number, unit?: NumberUnits) => TextNodeBuilder;
+  letterSpacing: (value: number, unit?: NumberUnits) => TextNodeBuilder;
+  color: (c: Color) => TextNodeBuilder;
+  visible: (v: boolean) => TextNodeBuilder;
+  opacity: (o: number) => TextNodeBuilder;
+  derivedTextData: (data: DerivedTextNodeData) => TextNodeBuilder;
+  build: () => TextNodeData;
+};
 
-  constructor(localID: number, parentID: number) {
-    this._localID = localID;
-    this._parentID = parentID;
-    this._name = "Text";
-    this._characters = "";
-    this._fontSize = 12;
-    this._fontFamily = "Inter";
-    this._fontStyle = "Regular";
-    this._width = 100;
-    this._height = 50;
-    this._x = 0;
-    this._y = 0;
-    this._fillColor = { r: 0, g: 0, b: 0, a: 1 };
-    this._visible = true;
-    this._opacity = 1;
-    // Figma defaults (Auto)
-    this._lineHeight = { value: 100, unit: "PERCENT" };
-    this._letterSpacing = { value: 0, unit: "PERCENT" };
-    this._autoResize = "WIDTH_AND_HEIGHT";
-  }
+/** Create a text node builder */
+function createTextNodeBuilder(localID: number, parentID: number): TextNodeBuilder {
+  const state = {
+    name: "Text",
+    characters: "",
+    fontSize: 12,
+    fontFamily: "Inter",
+    fontStyle: "Regular",
+    width: 100,
+    height: 50,
+    x: 0,
+    y: 0,
+    textAlignH: undefined as TextAlignHorizontal | undefined,
+    textAlignV: undefined as TextAlignVertical | undefined,
+    autoResize: "WIDTH_AND_HEIGHT" as TextAutoResize,
+    decoration: undefined as TextDecoration | undefined,
+    textCase: undefined as TextCase | undefined,
+    lineHeight: { value: 100, unit: "PERCENT" as NumberUnits },
+    letterSpacing: { value: 0, unit: "PERCENT" as NumberUnits },
+    fillColor: { r: 0, g: 0, b: 0, a: 1 } as Color,
+    visible: true,
+    opacity: 1,
+    derivedTextData: undefined as DerivedTextNodeData | undefined,
+  };
 
-  name(name: string): this {
-    this._name = name;
-    return this;
-  }
+  const builder: TextNodeBuilder = {
+    name(n: string) { state.name = n; return builder; },
+    text(characters: string) { state.characters = characters; return builder; },
+    fontSize(size: number) { state.fontSize = size; return builder; },
+    font(family: string, style: string = "Regular") { state.fontFamily = family; state.fontStyle = style; return builder; },
+    size(width: number, height: number) { state.width = width; state.height = height; return builder; },
+    position(x: number, y: number) { state.x = x; state.y = y; return builder; },
+    alignHorizontal(align: TextAlignHorizontal) { state.textAlignH = align; return builder; },
+    alignVertical(align: TextAlignVertical) { state.textAlignV = align; return builder; },
+    autoResize(mode: TextAutoResize) { state.autoResize = mode; return builder; },
+    decoration(deco: TextDecoration) { state.decoration = deco; return builder; },
+    textCase(tc: TextCase) { state.textCase = tc; return builder; },
+    lineHeight(value: number, unit: NumberUnits = "PIXELS") { state.lineHeight = { value, unit }; return builder; },
+    letterSpacing(value: number, unit: NumberUnits = "PERCENT") { state.letterSpacing = { value, unit }; return builder; },
+    color(c: Color) { state.fillColor = c; return builder; },
+    visible(v: boolean) { state.visible = v; return builder; },
+    opacity(o: number) { state.opacity = o; return builder; },
+    derivedTextData(data: DerivedTextNodeData) { state.derivedTextData = data; return builder; },
 
-  text(characters: string): this {
-    this._characters = characters;
-    return this;
-  }
-
-  fontSize(size: number): this {
-    this._fontSize = size;
-    return this;
-  }
-
-  font(family: string, style: string = "Regular"): this {
-    this._fontFamily = family;
-    this._fontStyle = style;
-    return this;
-  }
-
-  size(width: number, height: number): this {
-    this._width = width;
-    this._height = height;
-    return this;
-  }
-
-  position(x: number, y: number): this {
-    this._x = x;
-    this._y = y;
-    return this;
-  }
-
-  alignHorizontal(align: TextAlignHorizontal): this {
-    this._textAlignH = align;
-    return this;
-  }
-
-  alignVertical(align: TextAlignVertical): this {
-    this._textAlignV = align;
-    return this;
-  }
-
-  autoResize(mode: TextAutoResize): this {
-    this._autoResize = mode;
-    return this;
-  }
-
-  decoration(deco: TextDecoration): this {
-    this._decoration = deco;
-    return this;
-  }
-
-  textCase(tc: TextCase): this {
-    this._textCase = tc;
-    return this;
-  }
-
-  lineHeight(value: number, unit: NumberUnits = "PIXELS"): this {
-    this._lineHeight = { value, unit };
-    return this;
-  }
-
-  letterSpacing(value: number, unit: NumberUnits = "PERCENT"): this {
-    this._letterSpacing = { value, unit };
-    return this;
-  }
-
-  color(c: Color): this {
-    this._fillColor = c;
-    return this;
-  }
-
-  visible(v: boolean): this {
-    this._visible = v;
-    return this;
-  }
-
-  opacity(o: number): this {
-    this._opacity = o;
-    return this;
-  }
-
-  derivedTextData(data: DerivedTextNodeData): this {
-    this._derivedTextData = data;
-    return this;
-  }
-
-  build(): TextNodeData {
-    return {
-      localID: this._localID,
-      parentID: this._parentID,
-      name: this._name,
-      characters: this._characters,
-      fontSize: this._fontSize,
-      fontName: {
-        family: this._fontFamily,
-        style: this._fontStyle,
-        postscript: `${this._fontFamily}-${this._fontStyle}`.replace(/\s+/g, ""),
-      },
-      size: { x: this._width, y: this._height },
-      transform: {
-        m00: 1,
-        m01: 0,
-        m02: this._x,
-        m10: 0,
-        m11: 1,
-        m12: this._y,
-      },
-      textAlignHorizontal: toEnumValue(this._textAlignH, TEXT_ALIGN_H_VALUES),
-      textAlignVertical: toEnumValue(this._textAlignV, TEXT_ALIGN_V_VALUES),
-      // Always include these with defaults (Figma's "Auto")
-      textAutoResize: { value: TEXT_AUTO_RESIZE_VALUES[this._autoResize], name: this._autoResize },
-      textDecoration: toEnumValue(this._decoration, TEXT_DECORATION_VALUES),
-      textCase: toEnumValue(this._textCase, TEXT_CASE_VALUES),
-      // Always include lineHeight and letterSpacing (defaults = Figma's "Auto")
-      lineHeight: {
-        value: this._lineHeight.value,
-        units: {
-          value: NUMBER_UNITS_VALUES[this._lineHeight.unit],
-          name: this._lineHeight.unit,
+    build(): TextNodeData {
+      return {
+        localID,
+        parentID,
+        name: state.name,
+        characters: state.characters,
+        fontSize: state.fontSize,
+        fontName: {
+          family: state.fontFamily,
+          style: state.fontStyle,
+          postscript: `${state.fontFamily}-${state.fontStyle}`.replace(/\s+/g, ""),
         },
-      },
-      letterSpacing: {
-        value: this._letterSpacing.value,
-        units: {
-          value: NUMBER_UNITS_VALUES[this._letterSpacing.unit],
-          name: this._letterSpacing.unit,
+        size: { x: state.width, y: state.height },
+        transform: { m00: 1, m01: 0, m02: state.x, m10: 0, m11: 1, m12: state.y },
+        textAlignHorizontal: toEnumValue(state.textAlignH, TEXT_ALIGN_H_VALUES),
+        textAlignVertical: toEnumValue(state.textAlignV, TEXT_ALIGN_V_VALUES),
+        textAutoResize: { value: TEXT_AUTO_RESIZE_VALUES[state.autoResize], name: state.autoResize },
+        textDecoration: toEnumValue(state.decoration, TEXT_DECORATION_VALUES),
+        textCase: toEnumValue(state.textCase, TEXT_CASE_VALUES),
+        lineHeight: {
+          value: state.lineHeight.value,
+          units: { value: NUMBER_UNITS_VALUES[state.lineHeight.unit], name: state.lineHeight.unit },
         },
-      },
-      fillPaints: [
-        {
+        letterSpacing: {
+          value: state.letterSpacing.value,
+          units: { value: NUMBER_UNITS_VALUES[state.letterSpacing.unit], name: state.letterSpacing.unit },
+        },
+        fillPaints: [{
           type: { value: 0, name: "SOLID" },
-          color: this._fillColor,
+          color: state.fillColor,
           opacity: 1,
           visible: true,
           blendMode: { value: 1, name: "NORMAL" },
-        },
-      ],
-      visible: this._visible,
-      opacity: this._opacity,
-      derivedTextData: this._derivedTextData,
-    };
-  }
+        }],
+        visible: state.visible,
+        opacity: state.opacity,
+        derivedTextData: state.derivedTextData,
+      };
+    },
+  };
+
+  return builder;
 }
 
 /**
  * Create a new Text node builder
  */
 export function textNode(localID: number, parentID: number): TextNodeBuilder {
-  return new TextNodeBuilder(localID, parentID);
+  return createTextNodeBuilder(localID, parentID);
 }

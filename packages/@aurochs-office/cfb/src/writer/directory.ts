@@ -18,7 +18,7 @@ const ENTRY_TYPE_ROOT = 0x05;
 /**
  * Directory entry color (for red-black tree).
  */
-const COLOR_RED = 0x00;
+const _COLOR_RED = 0x00;
 const COLOR_BLACK = 0x01;
 
 /**
@@ -48,6 +48,16 @@ function encodeUtf16le(str: string): Uint8Array {
 }
 
 /**
+ * Resolve entry type string to CFB type code.
+ */
+function resolveEntryTypeCode(type: DirectoryEntryData["type"]): number {
+  if (type === "root") { return ENTRY_TYPE_ROOT; }
+  if (type === "storage") { return ENTRY_TYPE_STORAGE; }
+  if (type === "stream") { return ENTRY_TYPE_STREAM; }
+  return ENTRY_TYPE_UNUSED;
+}
+
+/**
  * Serialize a directory entry to a 128-byte block.
  */
 export function serializeDirectoryEntry(entry: DirectoryEntryData): Uint8Array {
@@ -67,8 +77,7 @@ export function serializeDirectoryEntry(entry: DirectoryEntryData): Uint8Array {
   view.setUint16(64, nameSizeBytes, true);
 
   // Object Type (offset 66, 1 byte)
-  const typeCode =
-    entry.type === "root" ? ENTRY_TYPE_ROOT : entry.type === "storage" ? ENTRY_TYPE_STORAGE : entry.type === "stream" ? ENTRY_TYPE_STREAM : ENTRY_TYPE_UNUSED;
+  const typeCode = resolveEntryTypeCode(entry.type);
   view.setUint8(66, typeCode);
 
   // Color Flag (offset 67, 1 byte) - always BLACK for simplicity

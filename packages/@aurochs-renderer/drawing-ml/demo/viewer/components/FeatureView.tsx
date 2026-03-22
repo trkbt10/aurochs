@@ -24,6 +24,12 @@ const styles = {
   },
 };
 
+
+
+
+
+
+/** Feature view component that renders the selected feature demo */
 export function FeatureView({ feature, FeatureComponent }: Props) {
   if (!feature || !FeatureComponent) {
     return (

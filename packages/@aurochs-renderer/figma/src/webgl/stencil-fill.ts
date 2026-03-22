@@ -60,42 +60,42 @@ export function prepareFanTriangles(
   // First pass: flatten all contours and compute bounds
   type FlatContour = { coords: number[] };
   const flatContours: FlatContour[] = [];
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
-  let hasPoints = false;
+  const minXRef = { value: Infinity };
+  const minYRef = { value: Infinity };
+  const maxXRef = { value: -Infinity };
+  const maxYRef = { value: -Infinity };
+  const hasPointsRef = { value: false };
 
   for (const contour of contours) {
     const coords = flattenPathCommands(contour.commands, tolerance);
-    if (coords.length < 6) continue; // Need at least 3 points
+    if (coords.length < 6) {continue;} // Need at least 3 points
 
     for (let i = 0; i < coords.length; i += 2) {
       const x = coords[i];
       const y = coords[i + 1];
-      if (x < minX) minX = x;
-      if (x > maxX) maxX = x;
-      if (y < minY) minY = y;
-      if (y > maxY) maxY = y;
-      hasPoints = true;
+      if (x < minXRef.value) {minXRef.value = x;}
+      if (x > maxXRef.value) {maxXRef.value = x;}
+      if (y < minYRef.value) {minYRef.value = y;}
+      if (y > maxYRef.value) {maxYRef.value = y;}
+      hasPointsRef.value = true;
     }
 
     flatContours.push({ coords });
   }
 
-  if (!hasPoints || flatContours.length === 0) return null;
+  if (!hasPointsRef.value || flatContours.length === 0) {return null;}
 
   // Second pass: create fan triangles
   const allTriangles: number[] = [];
 
   // For nonzero: use a single anchor outside all contours
-  const anchorX = singleAnchor ? minX - 1 : 0;
-  const anchorY = singleAnchor ? minY - 1 : 0;
+  const anchorX = singleAnchor ? minXRef.value - 1 : 0;
+  const anchorY = singleAnchor ? minYRef.value - 1 : 0;
 
   // Include anchor in bounds so coverQuad cleanup covers all stencil writes
   if (singleAnchor) {
-    minX = anchorX;
-    minY = anchorY;
+    minXRef.value = anchorX;
+    minYRef.value = anchorY;
   }
 
   for (const fc of flatContours) {
@@ -131,11 +131,11 @@ export function prepareFanTriangles(
     }
   }
 
-  if (allTriangles.length === 0) return null;
+  if (allTriangles.length === 0) {return null;}
 
   return {
     fanVertices: new Float32Array(allTriangles),
-    bounds: { minX, minY, maxX, maxY },
+    bounds: { minX: minXRef.value, minY: minYRef.value, maxX: maxXRef.value, maxY: maxYRef.value },
   };
 }
 

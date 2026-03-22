@@ -11,9 +11,9 @@ import {
   SHAPE_PROP,
   type ShapeFlags, type ShapeProperty,
 } from "../records/atoms/shape";
-import { resolveColor, type ColorScheme, DEFAULT_COLOR_SCHEME } from "../records/atoms/color";
+import { resolveColor, type ColorScheme } from "../records/atoms/color";
 import { extractTextBodies } from "./text-extractor";
-import { extractTextHyperlinkRanges, type HyperlinkMap } from "./hyperlink-extractor";
+import { extractTextHyperlinkRanges, type HyperlinkMap, type TextHyperlinkRange } from "./hyperlink-extractor";
 import { isTableGroup, extractTable } from "./table-extractor";
 import type {
   PptShape, PptTransform, PptFill, PptLine, PptPicture,
@@ -29,49 +29,45 @@ const MASTER_UNIT_TO_EMU = 914400 / 576;
  * In PPT, the OfficeArtDgContainer is wrapped inside a PPDrawing container (0x040C):
  * SlideContainer → PPDrawing → OfficeArtDgContainer → OfficeArtSpgrContainer → shapes
  */
-export function extractShapes(
-  slideRecord: PptRecord,
-  fonts: readonly string[],
-  colorScheme: ColorScheme,
-  hyperlinkMap?: HyperlinkMap,
-): readonly PptShape[] {
+export function extractShapes(options: {
+  slideRecord: PptRecord;
+  fonts: readonly string[];
+  colorScheme: ColorScheme;
+  hyperlinkMap?: HyperlinkMap;
+}): readonly PptShape[] {
+  const { slideRecord, fonts, colorScheme, hyperlinkMap } = options;
   const children = slideRecord.children ?? [];
 
   // OfficeArtDgContainer may be nested inside PPDrawing (0x040C) or be a direct child
-  let dgContainer = findChildByType(children, RT.OfficeArtDgContainer);
-  if (!dgContainer) {
-    const ppDrawing = findChildByType(children, RT.PPDrawing);
-    if (ppDrawing) {
-      dgContainer = findChildByType(ppDrawing.children ?? [], RT.OfficeArtDgContainer);
-    }
-  }
-  if (!dgContainer) return [];
+  const dgContainer = findDgContainer(children);
+  if (!dgContainer) {return [];}
 
   // Find the shape group container
   const spgrContainer = findChildByType(dgContainer.children ?? [], RT.OfficeArtSpgrContainer);
-  if (!spgrContainer) return [];
+  if (!spgrContainer) {return [];}
 
-  return extractShapesFromGroup(spgrContainer, fonts, colorScheme, hyperlinkMap);
+  return extractShapesFromGroup({ container: spgrContainer, fonts, colorScheme, hyperlinkMap });
 }
 
-function extractShapesFromGroup(
-  container: PptRecord,
-  fonts: readonly string[],
-  colorScheme: ColorScheme,
-  hyperlinkMap?: HyperlinkMap,
-): readonly PptShape[] {
+function extractShapesFromGroup(options: {
+  container: PptRecord;
+  fonts: readonly string[];
+  colorScheme: ColorScheme;
+  hyperlinkMap?: HyperlinkMap;
+}): readonly PptShape[] {
+  const { container, fonts, colorScheme, hyperlinkMap } = options;
   const shapes: PptShape[] = [];
   const children = container.children ?? [];
 
   for (const child of children) {
     if (child.recType === RT.OfficeArtSpContainer) {
-      const shape = extractSingleShape(child, fonts, colorScheme, hyperlinkMap);
-      if (shape) shapes.push(shape);
+      const shape = extractSingleShape({ spContainer: child, fonts, colorScheme, hyperlinkMap });
+      if (shape) {shapes.push(shape);}
     } else if (child.recType === RT.OfficeArtSpgrContainer) {
       // Check if this group is a table
       const tertiaryProps = isTableGroup(child);
       if (tertiaryProps) {
-        const table = extractTable(child, tertiaryProps, fonts, colorScheme);
+        const table = extractTable({ groupContainer: child, tertiaryProps, fonts, colorScheme });
         if (table) {
           const transform = extractGroupTransform(child);
           shapes.push({
@@ -84,7 +80,7 @@ function extractShapesFromGroup(
       }
 
       // Regular nested group
-      const groupShapes = extractShapesFromGroup(child, fonts, colorScheme, hyperlinkMap);
+      const groupShapes = extractShapesFromGroup({ container: child, fonts, colorScheme, hyperlinkMap });
       if (groupShapes.length > 0) {
         const transform = extractGroupTransform(child);
         shapes.push({
@@ -99,21 +95,22 @@ function extractShapesFromGroup(
   return shapes;
 }
 
-function extractSingleShape(
-  spContainer: PptRecord,
-  fonts: readonly string[],
-  colorScheme: ColorScheme,
-  hyperlinkMap?: HyperlinkMap,
-): PptShape | undefined {
+function extractSingleShape(options: {
+  spContainer: PptRecord;
+  fonts: readonly string[];
+  colorScheme: ColorScheme;
+  hyperlinkMap?: HyperlinkMap;
+}): PptShape | undefined {
+  const { spContainer, fonts, colorScheme, hyperlinkMap } = options;
   const children = spContainer.children ?? [];
 
   // Parse FSP (shape type + flags)
   const fspRecord = findChildByType(children, RT.OfficeArtFSP);
-  if (!fspRecord) return undefined;
+  if (!fspRecord) {return undefined;}
   const fsp = parseOfficeArtFSP(fspRecord);
 
   // Skip deleted shapes and the patriarch shape
-  if (fsp.isDeleted || fsp.isPatriarch) return undefined;
+  if (fsp.isDeleted || fsp.isPatriarch) {return undefined;}
 
   // Parse FOPT (shape properties)
   const foptRecord = findChildByType(children, RT.OfficeArtFOPT);
@@ -123,16 +120,7 @@ function extractSingleShape(
   const anchorRecord = findChildByType(children, RT.OfficeArtClientAnchor);
   const childAnchorRecord = findChildByType(children, RT.OfficeArtChildAnchor);
 
-  let transform: PptTransform;
-  if (anchorRecord) {
-    const anchor = parseClientAnchor(anchorRecord);
-    transform = anchorToTransform(anchor.left, anchor.top, anchor.right, anchor.bottom, fsp, props);
-  } else if (childAnchorRecord) {
-    const anchor = parseChildAnchor(childAnchorRecord);
-    transform = childAnchorToTransform(anchor.left, anchor.top, anchor.right, anchor.bottom, fsp, props);
-  } else {
-    transform = defaultTransform();
-  }
+  const transform = resolveTransform({ anchorRecord, childAnchorRecord, fsp, props });
 
   // Determine shape type
   const msospt = fspRecord.recInstance;
@@ -146,35 +134,13 @@ function extractSingleShape(
 
   // Extract text
   const clientTextboxRecord = findChildByType(children, RT.OfficeArtClientTextbox);
-  let textBody: PptTextBody | undefined;
-  if (clientTextboxRecord?.children) {
-    const bodies = extractTextBodies(clientTextboxRecord.children, fonts, colorScheme);
-    if (bodies.length > 0) {
-      textBody = bodies[0];
-      // Apply text hyperlinks if available
-      if (hyperlinkMap && hyperlinkMap.size > 0) {
-        const ranges = extractTextHyperlinkRanges(clientTextboxRecord.children);
-        if (ranges.length > 0) {
-          textBody = applyHyperlinksToTextBody(textBody, ranges, hyperlinkMap);
-        }
-      }
-    }
-  }
+  const textBody = extractShapeTextBody({ clientTextboxRecord, fonts, colorScheme, hyperlinkMap });
 
   // Extract picture reference
-  let picture: PptPicture | undefined;
-  const blipId = getShapeProp(props, SHAPE_PROP.BLIP_ID);
-  if (blipId !== undefined) {
-    picture = {
-      pictureIndex: blipId - 1, // BLIP ID is 1-based
-      ...(extractCrop(props)),
-    };
-  }
+  const picture = extractPictureRef(props);
 
   // Determine type
-  let type: PptShape["type"] = "shape";
-  if (picture) type = "picture";
-  else if (fsp.isConnector || msospt === 20 || (msospt >= 32 && msospt <= 40)) type = "connector";
+  const type = resolveShapeType(picture, fsp, msospt);
 
   return {
     type,
@@ -187,11 +153,12 @@ function extractSingleShape(
   };
 }
 
-function anchorToTransform(
-  left: number, top: number, right: number, bottom: number,
-  fsp: ShapeFlags,
-  props: Map<number, ShapeProperty>,
-): PptTransform {
+function anchorToTransform(options: {
+  left: number; top: number; right: number; bottom: number;
+  fsp: ShapeFlags;
+  props: Map<number, ShapeProperty>;
+}): PptTransform {
+  const { left, top, right, bottom, fsp, props } = options;
   // ClientAnchor coordinates are in master units or EMU depending on recInstance
   // We'll convert master units to EMU
   const scale = MASTER_UNIT_TO_EMU;
@@ -211,11 +178,12 @@ function anchorToTransform(
   };
 }
 
-function childAnchorToTransform(
-  left: number, top: number, right: number, bottom: number,
-  fsp: ShapeFlags,
-  props: Map<number, ShapeProperty>,
-): PptTransform {
+function childAnchorToTransform(options: {
+  left: number; top: number; right: number; bottom: number;
+  fsp: ShapeFlags;
+  props: Map<number, ShapeProperty>;
+}): PptTransform {
+  const { left, top, right, bottom, fsp, props } = options;
   // ChildAnchor coordinates are already in EMU
   const rotation = extractRotation(props);
   return {
@@ -229,9 +197,63 @@ function childAnchorToTransform(
   };
 }
 
+function findDgContainer(children: readonly PptRecord[]): PptRecord | undefined {
+  const direct = findChildByType(children, RT.OfficeArtDgContainer);
+  if (direct) { return direct; }
+  const ppDrawing = findChildByType(children, RT.PPDrawing);
+  if (!ppDrawing) { return undefined; }
+  return findChildByType(ppDrawing.children ?? [], RT.OfficeArtDgContainer);
+}
+
+function resolveTransform(ctx: {
+  anchorRecord: PptRecord | undefined;
+  childAnchorRecord: PptRecord | undefined;
+  fsp: ShapeFlags;
+  props: Map<number, ShapeProperty>;
+}): PptTransform {
+  const { anchorRecord, childAnchorRecord, fsp, props } = ctx;
+  if (anchorRecord) {
+    const anchor = parseClientAnchor(anchorRecord);
+    return anchorToTransform({ left: anchor.left, top: anchor.top, right: anchor.right, bottom: anchor.bottom, fsp, props });
+  }
+  if (childAnchorRecord) {
+    const anchor = parseChildAnchor(childAnchorRecord);
+    return childAnchorToTransform({ left: anchor.left, top: anchor.top, right: anchor.right, bottom: anchor.bottom, fsp, props });
+  }
+  return defaultTransform();
+}
+
+function extractShapeTextBody(ctx: {
+  clientTextboxRecord: PptRecord | undefined;
+  fonts: readonly string[];
+  colorScheme: ColorScheme;
+  hyperlinkMap?: HyperlinkMap;
+}): PptTextBody | undefined {
+  if (!ctx.clientTextboxRecord?.children) { return undefined; }
+  const bodies = extractTextBodies(ctx.clientTextboxRecord.children, ctx.fonts, ctx.colorScheme);
+  if (bodies.length === 0) { return undefined; }
+  const body = bodies[0];
+  if (!ctx.hyperlinkMap || ctx.hyperlinkMap.size === 0) { return body; }
+  const ranges = extractTextHyperlinkRanges(ctx.clientTextboxRecord.children);
+  if (ranges.length === 0) { return body; }
+  return applyHyperlinksToTextBody(body, ranges, ctx.hyperlinkMap);
+}
+
+function extractPictureRef(props: Map<number, ShapeProperty>): PptPicture | undefined {
+  const blipId = getShapeProp(props, SHAPE_PROP.BLIP_ID);
+  if (blipId === undefined) { return undefined; }
+  return { pictureIndex: blipId - 1, ...(extractCrop(props)) };
+}
+
+function resolveShapeType(picture: PptPicture | undefined, fsp: ShapeFlags, msospt: number): PptShape["type"] {
+  if (picture) { return "picture"; }
+  if (fsp.isConnector || msospt === 20 || (msospt >= 32 && msospt <= 40)) { return "connector"; }
+  return "shape";
+}
+
 function extractRotation(props: Map<number, ShapeProperty>): number {
   const raw = getShapeProp(props, SHAPE_PROP.ROTATION);
-  if (raw === undefined) return 0;
+  if (raw === undefined) {return 0;}
   // Rotation is stored as a fixed-point 16.16 value in degrees
   return (raw >> 16) + (raw & 0xFFFF) / 65536;
 }
@@ -272,7 +294,7 @@ function extractLine(props: Map<number, ShapeProperty>, colorScheme: ColorScheme
   const lineWidth = getShapeProp(props, SHAPE_PROP.LINE_WIDTH);
   const lineDash = getShapeProp(props, SHAPE_PROP.LINE_DASH_STYLE);
 
-  if (lineColor === undefined && lineWidth === undefined) return undefined;
+  if (lineColor === undefined && lineWidth === undefined) {return undefined;}
 
   return {
     widthEmu: lineWidth ?? 9525, // Default: 0.75pt = 9525 EMU
@@ -315,11 +337,11 @@ function extractGroupTransform(groupContainer: PptRecord): PptTransform | undefi
   const children = groupContainer.children ?? [];
   // First SpContainer in group is the patriarch
   const spContainers = findChildrenByType(children, RT.OfficeArtSpContainer);
-  if (spContainers.length === 0) return undefined;
+  if (spContainers.length === 0) {return undefined;}
 
   const patriarch = spContainers[0];
   const anchor = findChildByType(patriarch.children ?? [], RT.OfficeArtClientAnchor);
-  if (!anchor) return undefined;
+  if (!anchor) {return undefined;}
 
   const a = parseClientAnchor(anchor);
   const scale = MASTER_UNIT_TO_EMU;
@@ -343,18 +365,18 @@ function defaultTransform(): PptTransform {
  */
 function applyHyperlinksToTextBody(
   textBody: PptTextBody,
-  ranges: readonly import("./hyperlink-extractor").TextHyperlinkRange[],
+  ranges: readonly TextHyperlinkRange[],
   hyperlinkMap: HyperlinkMap,
 ): PptTextBody {
   // Flatten all text to get absolute character positions per paragraph
   const newParagraphs = [];
-  let charPos = 0;
+  const charPosRef = { value: 0 };
 
   for (const para of textBody.paragraphs) {
     const newRuns = [];
     for (const run of para.runs) {
-      const runStart = charPos;
-      const runEnd = charPos + run.text.length;
+      const runStart = charPosRef.value;
+      const runEnd = charPosRef.value + run.text.length;
 
       // Find overlapping hyperlink ranges
       const overlapping = ranges.filter(r => r.begin < runEnd && r.end > runStart);
@@ -363,14 +385,14 @@ function applyHyperlinksToTextBody(
         newRuns.push(run);
       } else {
         // Split run at hyperlink boundaries
-        let pos = 0;
+        const posRef = { value: 0 };
         for (const range of overlapping) {
           const relStart = Math.max(0, range.begin - runStart);
           const relEnd = Math.min(run.text.length, range.end - runStart);
 
           // Text before this hyperlink
-          if (relStart > pos) {
-            newRuns.push({ text: run.text.substring(pos, relStart), properties: run.properties });
+          if (relStart > posRef.value) {
+            newRuns.push({ text: run.text.substring(posRef.value, relStart), properties: run.properties });
           }
 
           // Hyperlinked text
@@ -384,20 +406,20 @@ function applyHyperlinksToTextBody(
             newRuns.push({ text: run.text.substring(relStart, relEnd), properties: run.properties });
           }
 
-          pos = relEnd;
+          posRef.value = relEnd;
         }
 
         // Remaining text after last hyperlink
-        if (pos < run.text.length) {
-          newRuns.push({ text: run.text.substring(pos), properties: run.properties });
+        if (posRef.value < run.text.length) {
+          newRuns.push({ text: run.text.substring(posRef.value), properties: run.properties });
         }
       }
 
-      charPos += run.text.length;
+      charPosRef.value += run.text.length;
     }
 
     newParagraphs.push({ ...para, runs: newRuns });
-    charPos += 1; // CR separator between paragraphs
+    charPosRef.value += 1; // CR separator between paragraphs
   }
 
   return { ...textBody, paragraphs: newParagraphs };

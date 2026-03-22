@@ -7,7 +7,7 @@ export type { TextNodeData, DerivedTextNodeData, DerivedGlyphData, DerivedBaseli
 
 // Builder
 export {
-  TextNodeBuilder,
+  type TextNodeBuilder,
   textNode,
   DEFAULT_LINE_HEIGHT,
   DEFAULT_LETTER_SPACING,

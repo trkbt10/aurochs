@@ -21,9 +21,9 @@ export type SubdocParagraphBuilder = (globalCpStart: number, globalCpEnd: number
  * Used for sub-document text ranges.
  */
 export function textRangeToParagraphs(rawText: string, cpStart: number, cpEnd: number): readonly DocParagraph[] {
-  if (cpStart >= cpEnd) return [];
+  if (cpStart >= cpEnd) {return [];}
   const text = rawText.substring(cpStart, Math.min(cpEnd, rawText.length));
-  if (!text.trim()) return [];
+  if (!text.trim()) {return [];}
 
   const parts = text.split("\r").filter((p) => p.length > 0);
   return parts.map((t) => ({
@@ -39,11 +39,11 @@ export function textRangeToParagraphs(rawText: string, cpStart: number, cpEnd: n
  * size = (n+1) × 4B
  */
 export function parsePlcfHdd(tableStream: Uint8Array, fc: number, lcb: number): readonly number[] {
-  if (lcb === 0) return [];
-  if (fc + lcb > tableStream.length) return [];
+  if (lcb === 0) {return [];}
+  if (fc + lcb > tableStream.length) {return [];}
 
   const n = lcb / 4;
-  if (!Number.isInteger(n)) return [];
+  if (!Number.isInteger(n)) {return [];}
 
   const view = new DataView(tableStream.buffer, tableStream.byteOffset, tableStream.byteLength);
   const cps: number[] = [];
@@ -66,16 +66,38 @@ export function parsePlcfHdd(tableStream: Uint8Array, fc: number, lcb: number): 
  *   [0] even header, [1] odd header, [2] even footer, [3] odd footer,
  *   [4] first header, [5] first footer
  */
-export function extractHeadersFooters(
-  hddCps: readonly number[],
-  fullText: string,
-  hdrTextStart: number,
-  buildParagraphs?: SubdocParagraphBuilder,
-): { headers: readonly DocHeaderFooter[]; footers: readonly DocHeaderFooter[] } {
+/** Resolve content for a single header/footer story slot. */
+function resolveStoryContent(ctx: {
+  cpStart: number;
+  cpEnd: number;
+  hdrTextStart: number;
+  builder: SubdocParagraphBuilder;
+  lastSeen: Map<string, readonly DocParagraph[]>;
+  key: string;
+}): readonly DocParagraph[] | undefined {
+  const { cpStart, cpEnd, hdrTextStart, builder, lastSeen, key } = ctx;
+  if (cpStart < cpEnd) {
+    const built = builder(hdrTextStart + cpStart, hdrTextStart + cpEnd);
+    if (built.length > 0) {
+      lastSeen.set(key, built);
+      return built;
+    }
+  }
+  return lastSeen.get(key);
+}
+
+/** Extract headers and footers from PlcfHdd CPs and full document text. */
+export function extractHeadersFooters(options: {
+  hddCps: readonly number[];
+  fullText: string;
+  hdrTextStart: number;
+  buildParagraphs?: SubdocParagraphBuilder;
+}): { headers: readonly DocHeaderFooter[]; footers: readonly DocHeaderFooter[] } {
+  const { hddCps, fullText, hdrTextStart, buildParagraphs } = options;
   const headers: DocHeaderFooter[] = [];
   const footers: DocHeaderFooter[] = [];
 
-  if (hddCps.length < 12) return { headers, footers };
+  if (hddCps.length < 12) {return { headers, footers };}
 
   const builder = buildParagraphs ?? ((s: number, e: number) => textRangeToParagraphs(fullText, s, e));
 
@@ -103,25 +125,11 @@ export function extractHeadersFooters(
       const slot = storySlots[i];
       const key = `${slot.isHeader ? "header" : "footer"}:${slot.type}`;
 
-      let content: readonly DocParagraph[] | undefined;
+      const builtContent = resolveStoryContent({ cpStart, cpEnd, hdrTextStart, builder, lastSeen, key });
 
-      if (cpStart < cpEnd) {
-        content = builder(hdrTextStart + cpStart, hdrTextStart + cpEnd);
-        if (content.length > 0) {
-          lastSeen.set(key, content);
-        } else {
-          content = undefined;
-        }
-      }
+      if (!builtContent || builtContent.length === 0) {continue;}
 
-      // If empty, inherit from previous section
-      if (!content) {
-        content = lastSeen.get(key);
-      }
-
-      if (!content || content.length === 0) continue;
-
-      const entry: DocHeaderFooter = { type: slot.type, content };
+      const entry: DocHeaderFooter = { type: slot.type, content: builtContent };
       if (slot.isHeader) {
         headers.push(entry);
       } else {
@@ -152,7 +160,7 @@ export function detectNoteReferenceMarks(
   mainText: string,
   refCps: readonly number[],
 ): readonly { cp: number; noteIndex: number }[] {
-  if (refCps.length < 2) return []; // Need at least 2 CPs (n+1 boundary format)
+  if (refCps.length < 2) {return [];} // Need at least 2 CPs (n+1 boundary format)
 
   // Build a set of reference CPs (excluding the final boundary CP)
   const refCpSet = new Map<number, number>(); // CP → index
@@ -180,16 +188,17 @@ export function detectNoteReferenceMarks(
  * Parse PlcffndRef or PlcfendRef (note reference positions).
  * Structure: CP array (n+1 × 4B) + data entries
  */
-export function parseNotePosPlc(tableStream: Uint8Array, fc: number, lcb: number, dataSize: number): {
+export function parseNotePosPlc(options: { tableStream: Uint8Array; fc: number; lcb: number; dataSize: number }): {
   readonly refCps: readonly number[];
   readonly textCps: readonly number[];
 } {
-  if (lcb === 0) return { refCps: [], textCps: [] };
-  if (fc + lcb > tableStream.length) return { refCps: [], textCps: [] };
+  const { tableStream, fc, lcb, dataSize } = options;
+  if (lcb === 0) {return { refCps: [], textCps: [] };}
+  if (fc + lcb > tableStream.length) {return { refCps: [], textCps: [] };}
 
   // n = (lcb - 4) / (4 + dataSize)
   const n = (lcb - 4) / (4 + dataSize);
-  if (!Number.isInteger(n) || n <= 0) return { refCps: [], textCps: [] };
+  if (!Number.isInteger(n) || n <= 0) {return { refCps: [], textCps: [] };}
 
   const view = new DataView(tableStream.buffer, tableStream.byteOffset, tableStream.byteLength);
   const refCps: number[] = [];
@@ -203,12 +212,12 @@ export function parseNotePosPlc(tableStream: Uint8Array, fc: number, lcb: number
 
 /** Parse note text positions (PlcffndTxt / PlcfendTxt). */
 export function parseNoteTextPlc(tableStream: Uint8Array, fc: number, lcb: number): readonly number[] {
-  if (lcb === 0) return [];
-  if (fc + lcb > tableStream.length) return [];
+  if (lcb === 0) {return [];}
+  if (fc + lcb > tableStream.length) {return [];}
 
   // Just CP array (no data part, or minimal data)
   const n = lcb / 4;
-  if (!Number.isInteger(n) || n <= 0) return [];
+  if (!Number.isInteger(n) || n <= 0) {return [];}
 
   const view = new DataView(tableStream.buffer, tableStream.byteOffset, tableStream.byteLength);
   const cps: number[] = [];
@@ -221,14 +230,15 @@ export function parseNoteTextPlc(tableStream: Uint8Array, fc: number, lcb: numbe
 }
 
 /** Extract footnotes or endnotes. */
-export function extractNotes(
-  refCps: readonly number[],
-  textCps: readonly number[],
-  fullText: string,
-  noteTextStart: number,
-  buildParagraphs?: SubdocParagraphBuilder,
-): readonly DocNote[] {
-  const builder = buildParagraphs ?? ((s: number, e: number) => textRangeToParagraphs(fullText, s, e));
+export function extractNotes(options: {
+  refCps: readonly number[];
+  textCps: readonly number[];
+  fullText: string;
+  noteTextStart: number;
+  buildParagraphsOpt?: SubdocParagraphBuilder;
+}): readonly DocNote[] {
+  const { refCps, textCps, fullText, noteTextStart, buildParagraphsOpt } = options;
+  const builder = buildParagraphsOpt ?? ((s: number, e: number) => textRangeToParagraphs(fullText, s, e));
   const notes: DocNote[] = [];
 
   // refCps has n+1 entries (boundaries), textCps has n+1 entries
@@ -257,12 +267,12 @@ export function parseCommentRefs(
   fc: number,
   lcb: number,
 ): readonly { cpRef: number; authorIndex: number }[] {
-  if (lcb === 0) return [];
-  if (fc + lcb > tableStream.length) return [];
+  if (lcb === 0) {return [];}
+  if (fc + lcb > tableStream.length) {return [];}
 
   // ATRD is 30 bytes
   const n = (lcb - 4) / (4 + 30);
-  if (!Number.isInteger(n) || n <= 0) return [];
+  if (!Number.isInteger(n) || n <= 0) {return [];}
 
   const view = new DataView(tableStream.buffer, tableStream.byteOffset, tableStream.byteLength);
   const results: Array<{ cpRef: number; authorIndex: number }> = [];
@@ -281,24 +291,23 @@ export function parseCommentRefs(
 
 /** Parse comment author names (grpXstAtnOwners). */
 export function parseCommentAuthors(tableStream: Uint8Array, fc: number, lcb: number): readonly string[] {
-  if (lcb === 0) return [];
-  if (fc + lcb > tableStream.length) return [];
+  if (lcb === 0) {return [];}
+  if (fc + lcb > tableStream.length) {return [];}
 
   const authors: string[] = [];
-  // eslint-disable-next-line no-restricted-syntax -- sequential read
-  let offset = fc;
+  const pos = { value: fc };
   const end = fc + lcb;
 
-  while (offset + 2 <= end) {
+  while (pos.value + 2 <= end) {
     const view = new DataView(tableStream.buffer, tableStream.byteOffset, tableStream.byteLength);
-    const cch = view.getUint16(offset, true);
-    offset += 2;
+    const cch = view.getUint16(pos.value, true);
+    pos.value += 2;
 
-    if (cch === 0 || offset + cch * 2 > end) break;
+    if (cch === 0 || pos.value + cch * 2 > end) {break;}
 
-    const nameBytes = tableStream.subarray(offset, offset + cch * 2);
+    const nameBytes = tableStream.subarray(pos.value, pos.value + cch * 2);
     authors.push(new TextDecoder("utf-16le").decode(nameBytes));
-    offset += cch * 2 + 2; // +2 for null terminator
+    pos.value += cch * 2 + 2; // +2 for null terminator
   }
 
   return authors;
@@ -310,19 +319,20 @@ export function parseCommentAuthors(tableStream: Uint8Array, fc: number, lcb: nu
  * When annotation bookmarks (atnBookmarks) are provided, cpStart/cpEnd are set
  * from the bookmark range. Otherwise they fall back to cpRef (reference point only).
  */
-export function extractComments(
-  refs: readonly { cpRef: number; authorIndex: number }[],
-  textCps: readonly number[],
-  authors: readonly string[],
-  fullText: string,
-  commentTextStart: number,
-  buildParagraphs?: SubdocParagraphBuilder,
+export function extractComments(options: {
+  refs: readonly { cpRef: number; authorIndex: number }[];
+  textCps: readonly number[];
+  authors: readonly string[];
+  fullText: string;
+  commentTextStart: number;
+  buildParagraphsFn?: SubdocParagraphBuilder;
   atnBookmarks?: {
     readonly starts: readonly { cp: number; ibkl: number }[];
     readonly endCps: readonly number[];
-  },
-): readonly DocComment[] {
-  const builder = buildParagraphs ?? ((s: number, e: number) => textRangeToParagraphs(fullText, s, e));
+  };
+}): readonly DocComment[] {
+  const { refs, textCps, authors, fullText, commentTextStart, buildParagraphsFn, atnBookmarks } = options;
+  const builder = buildParagraphsFn ?? ((s: number, e: number) => textRangeToParagraphs(fullText, s, e));
   const comments: DocComment[] = [];
 
   const count = Math.min(refs.length, textCps.length - 1);
@@ -335,15 +345,7 @@ export function extractComments(
     const author = authors[ref.authorIndex] ?? `Author ${ref.authorIndex}`;
 
     // Use annotation bookmarks for comment range when available
-    let rangeCpStart = ref.cpRef;
-    let rangeCpEnd = ref.cpRef;
-    if (atnBookmarks && i < atnBookmarks.starts.length) {
-      rangeCpStart = atnBookmarks.starts[i].cp;
-      const ibkl = atnBookmarks.starts[i].ibkl;
-      rangeCpEnd = ibkl < atnBookmarks.endCps.length
-        ? atnBookmarks.endCps[ibkl]
-        : rangeCpStart;
-    }
+    const { rangeCpStart, rangeCpEnd } = resolveCommentRange(ref.cpRef, atnBookmarks, i);
 
     comments.push({
       author,
@@ -356,39 +358,52 @@ export function extractComments(
   return comments;
 }
 
+function resolveCommentRange(
+  cpRef: number,
+  atnBookmarks: { readonly starts: readonly { cp: number; ibkl: number }[]; readonly endCps: readonly number[] } | undefined,
+  index: number,
+): { rangeCpStart: number; rangeCpEnd: number } {
+  if (!atnBookmarks || index >= atnBookmarks.starts.length) {
+    return { rangeCpStart: cpRef, rangeCpEnd: cpRef };
+  }
+  const rangeCpStart = atnBookmarks.starts[index].cp;
+  const ibkl = atnBookmarks.starts[index].ibkl;
+  const rangeCpEnd = ibkl < atnBookmarks.endCps.length ? atnBookmarks.endCps[ibkl] : rangeCpStart;
+  return { rangeCpStart, rangeCpEnd };
+}
+
 // --- Bookmarks ---
 
 /** Parse bookmark names (SttbfBkmk). */
 export function parseBookmarkNames(tableStream: Uint8Array, fc: number, lcb: number): readonly string[] {
-  if (lcb === 0) return [];
-  if (fc + lcb > tableStream.length) return [];
+  if (lcb === 0) {return [];}
+  if (fc + lcb > tableStream.length) {return [];}
 
   const view = new DataView(tableStream.buffer, tableStream.byteOffset, tableStream.byteLength);
 
   // STTB: fExtend(2B) + cData(2B) + cbExtra(2B) + entries
   const fExtend = view.getUint16(fc, true);
-  if (fExtend !== 0xffff) return []; // Non-extended not supported
+  if (fExtend !== 0xffff) {return [];} // Non-extended not supported
 
   const cData = view.getUint16(fc + 2, true);
   const cbExtra = view.getUint16(fc + 4, true);
 
   const names: string[] = [];
-  // eslint-disable-next-line no-restricted-syntax -- sequential read
-  let offset = fc + 6;
+  const pos = { value: fc + 6 };
 
   for (let i = 0; i < cData; i++) {
-    if (offset + 2 > fc + lcb) break;
+    if (pos.value + 2 > fc + lcb) {break;}
 
-    const cch = view.getUint16(offset, true);
-    offset += 2;
+    const cch = view.getUint16(pos.value, true);
+    pos.value += 2;
 
-    if (cch > 0 && offset + cch * 2 <= fc + lcb) {
-      const nameBytes = tableStream.subarray(offset, offset + cch * 2);
+    if (cch > 0 && pos.value + cch * 2 <= fc + lcb) {
+      const nameBytes = tableStream.subarray(pos.value, pos.value + cch * 2);
       names.push(new TextDecoder("utf-16le").decode(nameBytes));
-      offset += cch * 2;
+      pos.value += cch * 2;
     }
 
-    offset += cbExtra;
+    pos.value += cbExtra;
   }
 
   return names;
@@ -400,12 +415,12 @@ export function parseBookmarkStarts(
   fc: number,
   lcb: number,
 ): readonly { cp: number; ibkl: number }[] {
-  if (lcb === 0) return [];
-  if (fc + lcb > tableStream.length) return [];
+  if (lcb === 0) {return [];}
+  if (fc + lcb > tableStream.length) {return [];}
 
   // PlcfBkf: CPs (n+1 × 4B) + BKF entries (n × 4B, first 2B = ibkl)
   const n = (lcb - 4) / (4 + 4);
-  if (!Number.isInteger(n) || n <= 0) return [];
+  if (!Number.isInteger(n) || n <= 0) {return [];}
 
   const view = new DataView(tableStream.buffer, tableStream.byteOffset, tableStream.byteLength);
   const results: Array<{ cp: number; ibkl: number }> = [];
@@ -422,13 +437,13 @@ export function parseBookmarkStarts(
 
 /** Parse bookmark end positions (PlcfBkl). */
 export function parseBookmarkEnds(tableStream: Uint8Array, fc: number, lcb: number): readonly number[] {
-  if (lcb === 0) return [];
-  if (fc + lcb > tableStream.length) return [];
+  if (lcb === 0) {return [];}
+  if (fc + lcb > tableStream.length) {return [];}
 
   // PlcfBkl: just CPs (n+1 × 4B), no data
   // But actually it's n+1 CPs where n is from PlcfBkf
   const count = lcb / 4;
-  if (!Number.isInteger(count)) return [];
+  if (!Number.isInteger(count)) {return [];}
 
   const view = new DataView(tableStream.buffer, tableStream.byteOffset, tableStream.byteLength);
   const cps: number[] = [];

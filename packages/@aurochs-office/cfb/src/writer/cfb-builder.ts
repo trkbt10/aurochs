@@ -72,21 +72,23 @@ export function createCfbBuilder(): CfbBuilder {
   };
 
   function ensureStorage(path: readonly string[]): TreeNode {
-    let current = root;
+    const current = { value: root };
     for (const segment of path) {
-      let child = current.children.get(segment.toUpperCase());
-      if (!child) {
-        child = {
+      const existing = current.value.children.get(segment.toUpperCase());
+      if (existing) {
+        current.value = existing;
+      } else {
+        const child: TreeNode = {
           name: segment,
           type: "storage",
           data: null,
           children: new Map(),
         };
-        current.children.set(segment.toUpperCase(), child);
+        current.value.children.set(segment.toUpperCase(), child);
+        current.value = child;
       }
-      current = child;
     }
-    return current;
+    return current.value;
   }
 
   return {
@@ -136,10 +138,10 @@ export function createCfbBuilder(): CfbBuilder {
       const firstDirSector = fatBuilder.allocateChain(dirSectorCount);
 
       // Allocate mini stream sectors (root entry stream)
-      let miniStreamStartSector = ENDOFCHAIN;
+      const miniStreamStartSector = { value: ENDOFCHAIN };
       if (miniStream.length > 0) {
         const miniStreamSectorCount = Math.ceil(miniStream.length / SECTOR_SIZE);
-        miniStreamStartSector = fatBuilder.allocateChain(miniStreamSectorCount);
+        miniStreamStartSector.value = fatBuilder.allocateChain(miniStreamSectorCount);
       }
 
       // Allocate sectors for regular streams (>= 4096 bytes)
@@ -151,33 +153,33 @@ export function createCfbBuilder(): CfbBuilder {
       }
 
       // Build MiniFAT if we have mini stream
-      let miniFatBytes: Uint8Array = new Uint8Array(0);
-      let firstMiniFatSector = ENDOFCHAIN;
-      let numberOfMiniFatSectors = 0;
+      const miniFatBytes: { value: Uint8Array } = { value: new Uint8Array(0) };
+      const firstMiniFatSector = { value: ENDOFCHAIN };
+      const numberOfMiniFatSectors = { value: 0 };
 
       if (miniStream.length > 0) {
         const miniFat = buildMiniFat(miniStreamMap, miniStream.length);
         const serialized = serializeMiniFat(miniFat, SECTOR_SIZE);
-        miniFatBytes = serialized;
-        numberOfMiniFatSectors = miniFatBytes.length / SECTOR_SIZE;
-        if (numberOfMiniFatSectors > 0) {
-          firstMiniFatSector = fatBuilder.allocateChain(numberOfMiniFatSectors);
+        miniFatBytes.value = serialized;
+        numberOfMiniFatSectors.value = miniFatBytes.value.length / SECTOR_SIZE;
+        if (numberOfMiniFatSectors.value > 0) {
+          firstMiniFatSector.value = fatBuilder.allocateChain(numberOfMiniFatSectors.value);
         }
       }
 
       // Calculate FAT sectors needed (iteratively since FAT includes itself)
-      let fatSectorCount = 0;
-      let prevFatSectorCount = -1;
-      while (fatSectorCount !== prevFatSectorCount) {
-        prevFatSectorCount = fatSectorCount;
-        const totalSectors = fatBuilder.getSectorCount() + fatSectorCount;
+      const fatSectorCount = { value: 0 };
+      const prevFatSectorCount = { value: -1 };
+      while (fatSectorCount.value !== prevFatSectorCount.value) {
+        prevFatSectorCount.value = fatSectorCount.value;
+        const totalSectors = fatBuilder.getSectorCount() + fatSectorCount.value;
         const entriesPerSector = SECTOR_SIZE / 4;
-        fatSectorCount = Math.ceil(totalSectors / entriesPerSector);
+        fatSectorCount.value = Math.ceil(totalSectors / entriesPerSector);
       }
 
       // Mark FAT sectors in FAT
       const fatStartSector = fatBuilder.getSectorCount();
-      for (let i = 0; i < fatSectorCount; i++) {
+      for (let i = 0; i < fatSectorCount.value; i++) {
         fatBuilder.markFatSector(fatStartSector + i);
       }
 
@@ -187,7 +189,7 @@ export function createCfbBuilder(): CfbBuilder {
           // Root entry - holds mini stream
           return {
             ...entry,
-            startingSector: miniStreamStartSector,
+            startingSector: miniStreamStartSector.value,
             streamSize: BigInt(miniStream.length),
           };
         }
@@ -217,16 +219,16 @@ export function createCfbBuilder(): CfbBuilder {
 
       // Build DIFAT
       const difatEntries: number[] = [];
-      for (let i = 0; i < fatSectorCount; i++) {
+      for (let i = 0; i < fatSectorCount.value; i++) {
         difatEntries.push(fatStartSector + i);
       }
 
       // Build header
       const header = serializeCfbHeader({
-        numberOfFatSectors: fatSectorCount,
+        numberOfFatSectors: fatSectorCount.value,
         firstDirectorySector: firstDirSector,
-        firstMiniFatSector,
-        numberOfMiniFatSectors,
+        firstMiniFatSector: firstMiniFatSector.value,
+        numberOfMiniFatSectors: numberOfMiniFatSectors.value,
         firstDifatSector: ENDOFCHAIN,
         numberOfDifatSectors: 0,
         difatEntries,
@@ -243,34 +245,34 @@ export function createCfbBuilder(): CfbBuilder {
       result.set(header, 0);
 
       // Copy sectors in allocation order
-      let offset = header.length;
+      const offset = { value: header.length };
 
       // Directory sectors
-      result.set(dirBytes, offset);
-      offset += dirBytes.length;
+      result.set(dirBytes, offset.value);
+      offset.value += dirBytes.length;
 
       // Mini stream sectors
       if (miniStream.length > 0) {
         const paddedMiniStream = padToSectorBoundary(miniStream, SECTOR_SIZE);
-        result.set(paddedMiniStream, offset);
-        offset += paddedMiniStream.length;
+        result.set(paddedMiniStream, offset.value);
+        offset.value += paddedMiniStream.length;
       }
 
       // Regular stream sectors
       for (const { data } of regularStreamList) {
         const paddedData = padToSectorBoundary(data, SECTOR_SIZE);
-        result.set(paddedData, offset);
-        offset += paddedData.length;
+        result.set(paddedData, offset.value);
+        offset.value += paddedData.length;
       }
 
       // MiniFAT sectors
-      if (miniFatBytes.length > 0) {
-        result.set(miniFatBytes, offset);
-        offset += miniFatBytes.length;
+      if (miniFatBytes.value.length > 0) {
+        result.set(miniFatBytes.value, offset.value);
+        offset.value += miniFatBytes.value.length;
       }
 
       // FAT sectors
-      result.set(fatBytes, offset);
+      result.set(fatBytes, offset.value);
 
       return result;
     },
@@ -402,11 +404,11 @@ function classifyStreams(
   const miniChunks: Uint8Array[] = [];
   const miniStreamMap = new Map<number, MiniStreamInfo>();
   const regularStreamList: Array<{ index: number; data: Uint8Array }> = [];
-  let miniOffset = 0;
+  const miniOffset = { value: 0 };
 
   for (let i = 0; i < entries.length; i++) {
     const data = streamDataByIndex.get(i);
-    if (!data) continue;
+    if (!data) {continue;}
 
     // Empty streams don't need sector allocation
     if (data.length === 0) {
@@ -416,7 +418,7 @@ function classifyStreams(
 
     if (data.length < MINI_STREAM_CUTOFF) {
       // Small stream goes to mini stream
-      const miniSectorStart = Math.floor(miniOffset / MINI_SECTOR_SIZE);
+      const miniSectorStart = Math.floor(miniOffset.value / MINI_SECTOR_SIZE);
       const paddedSize = Math.ceil(data.length / MINI_SECTOR_SIZE) * MINI_SECTOR_SIZE;
 
       const paddedData = new Uint8Array(paddedSize);
@@ -424,7 +426,7 @@ function classifyStreams(
       miniChunks.push(paddedData);
 
       miniStreamMap.set(i, { data, miniSectorStart });
-      miniOffset += paddedSize;
+      miniOffset.value += paddedSize;
     } else {
       // Large stream
       regularStreamList.push({ index: i, data });
@@ -434,10 +436,10 @@ function classifyStreams(
   // Concatenate mini stream chunks
   const totalMiniSize = miniChunks.reduce((sum, chunk) => sum + chunk.length, 0);
   const miniStream = new Uint8Array(totalMiniSize);
-  let offset = 0;
+  const concatOffset = { value: 0 };
   for (const chunk of miniChunks) {
-    miniStream.set(chunk, offset);
-    offset += chunk.length;
+    miniStream.set(chunk, concatOffset.value);
+    concatOffset.value += chunk.length;
   }
 
   return { miniStream, miniStreamMap, regularStreamList };

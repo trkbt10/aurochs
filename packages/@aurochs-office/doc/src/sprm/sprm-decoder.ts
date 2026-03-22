@@ -52,7 +52,8 @@ export function decodeSprmOpcode(raw: number): SprmOpcode {
 const VARIABLE_2BYTE_SIZE_SPRMS = new Set([0xd608, 0xc615]);
 
 /** Get the operand size for a SPRM based on its spra value. */
-export function getOperandSize(spra: number, raw: number, data: Uint8Array, offset: number): number {
+export function getOperandSize(options: { spra: number; raw: number; data: Uint8Array; offset: number }): number {
+  const { spra, raw, data, offset } = options;
   switch (spra) {
     case 0:
       return 1; // ToggleOperand
@@ -69,7 +70,7 @@ export function getOperandSize(spra: number, raw: number, data: Uint8Array, offs
     case 6: {
       // Variable-length: first byte (or 2 bytes for exceptions) is size
       if (VARIABLE_2BYTE_SIZE_SPRMS.has(raw)) {
-        if (offset >= data.length) return 0;
+        if (offset >= data.length) {return 0;}
         const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
         return offset + 1 < data.length ? view.getUint16(offset, true) + 2 : 0;
       }
@@ -95,7 +96,7 @@ export function parseGrpprl(data: Uint8Array): readonly Sprm[] {
     const opcode = decodeSprmOpcode(raw);
     offset += 2;
 
-    const operandSize = getOperandSize(opcode.spra, raw, data, offset);
+    const operandSize = getOperandSize({ spra: opcode.spra, raw, data, offset });
     if (operandSize <= 0 || offset + operandSize > data.length) {
       break;
     }

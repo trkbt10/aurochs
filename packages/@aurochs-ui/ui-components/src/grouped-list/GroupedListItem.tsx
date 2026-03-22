@@ -106,6 +106,14 @@ function getItemStyle(
   };
 }
 
+/** Get hover background style when applicable */
+function getHoverStyle(isHovered: boolean, isActive: boolean, isAnyDragging: boolean): CSSProperties {
+  if (isHovered && !isActive && !isAnyDragging) {
+    return { backgroundColor: `var(--bg-secondary, ${colorTokens.background.secondary})` };
+  }
+  return {};
+}
+
 /**
  * Individual item in a grouped list.
  */
@@ -230,9 +238,7 @@ export function GroupedListItem<TMeta = unknown>({
 
   const itemStyle = getItemStyle(isActive, isDragging, dropTargetPosition);
 
-  const hoverStyle: CSSProperties = isHovered && !isActive && !isAnyDragging
-    ? { backgroundColor: `var(--bg-secondary, ${colorTokens.background.secondary})` }
-    : {};
+  const hoverStyle: CSSProperties = getHoverStyle(isHovered, isActive, isAnyDragging);
 
   return (
     <div
@@ -254,7 +260,7 @@ export function GroupedListItem<TMeta = unknown>({
       data-item-id={item.id}
     >
       {item.icon && <span style={iconStyle}>{item.icon}</span>}
-      {isEditing ? (
+      {isEditing && (
         <input
           ref={inputRef}
           type="text"
@@ -265,7 +271,8 @@ export function GroupedListItem<TMeta = unknown>({
           style={inputStyle}
           onClick={(e) => e.stopPropagation()}
         />
-      ) : (
+      )}
+      {!isEditing && (
         <span style={labelStyle} title={item.label}>
           {item.label}
         </span>

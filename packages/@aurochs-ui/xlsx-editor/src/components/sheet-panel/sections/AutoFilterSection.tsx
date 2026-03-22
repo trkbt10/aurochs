@@ -69,13 +69,16 @@ export function AutoFilterSection({
   const filterColumnCount = autoFilter?.filterColumns?.length ?? 0;
   const activeFiltersCount = autoFilter?.filterColumns?.filter((c) => c.filter !== undefined).length ?? 0;
 
-  return (
-    <OptionalPropertySection title="Auto Filter" defaultExpanded={hasFilter}>
-      <div style={descriptionStyle}>
-        Auto filter adds dropdown filters to column headers for quick data filtering.
-      </div>
+  const renderFilterStatus = () => {
+    if (activeFiltersCount > 0) {
+      return `${activeFiltersCount} column(s) with active filters`;
+    }
+    return `${filterColumnCount} filterable column(s)`;
+  };
 
-      {hasFilter ? (
+  const renderContent = () => {
+    if (hasFilter) {
+      return (
         <>
           <FieldGroup label="Filter Range">
             <div style={statusStyle}>{formatRange(autoFilter.ref)}</div>
@@ -83,9 +86,7 @@ export function AutoFilterSection({
 
           {filterColumnCount > 0 && (
             <div style={infoStyle}>
-              {activeFiltersCount > 0
-                ? `${activeFiltersCount} column(s) with active filters`
-                : `${filterColumnCount} filterable column(s)`}
+              {renderFilterStatus()}
             </div>
           )}
 
@@ -106,26 +107,35 @@ export function AutoFilterSection({
             )}
           </div>
         </>
-      ) : (
+      );
+    }
+    if (selectedRange) {
+      return (
         <>
-          {selectedRange ? (
-            <>
-              <div style={statusStyle}>
-                Apply auto filter to: {formatRange(selectedRange)}
-              </div>
-              <div style={buttonRowStyle}>
-                <Button size="sm" disabled={disabled} onClick={handleApplyFilter}>
-                  Apply Auto Filter
-                </Button>
-              </div>
-            </>
-          ) : (
-            <div style={{ ...descriptionStyle, fontStyle: "italic" }}>
-              Select a range to apply auto filter.
-            </div>
-          )}
+          <div style={statusStyle}>
+            Apply auto filter to: {formatRange(selectedRange)}
+          </div>
+          <div style={buttonRowStyle}>
+            <Button size="sm" disabled={disabled} onClick={handleApplyFilter}>
+              Apply Auto Filter
+            </Button>
+          </div>
         </>
-      )}
+      );
+    }
+    return (
+      <div style={{ ...descriptionStyle, fontStyle: "italic" }}>
+        Select a range to apply auto filter.
+      </div>
+    );
+  };
+
+  return (
+    <OptionalPropertySection title="Auto Filter" defaultExpanded={hasFilter}>
+      <div style={descriptionStyle}>
+        Auto filter adds dropdown filters to column headers for quick data filtering.
+      </div>
+      {renderContent()}
     </OptionalPropertySection>
   );
 }

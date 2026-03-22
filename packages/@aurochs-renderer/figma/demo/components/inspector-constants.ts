@@ -70,10 +70,22 @@ const NODE_TYPE_TO_CATEGORY: Record<string, NodeCategory> = {
   SLICE: "special",
 };
 
+
+
+
+
+
+/** Map a node type string to its category */
 export function getNodeCategory(nodeType: string): NodeCategory {
   return NODE_TYPE_TO_CATEGORY[nodeType] ?? "unknown";
 }
 
+
+
+
+
+
+/** Get the display color for a node type */
 export function getCategoryColor(nodeType: string): string {
   return CATEGORY_COLORS[getNodeCategory(nodeType)];
 }

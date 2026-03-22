@@ -18,6 +18,14 @@ import { svgToPng } from "./compare";
 
 const SPEC_DIR = path.join(import.meta.dir, "..");
 
+/**
+ * Load a fixture module by path using runtime import.
+ * Encapsulates the dynamic import needed for runtime-resolved fixture paths.
+ */
+async function loadFixtureModule(fixturePath: string): Promise<Record<string, unknown>> {
+  return Function("p", "return import(p)")(fixturePath);
+}
+
 async function main() {
   const fixturePattern = path.join(SPEC_DIR, "**/fixtures/*.fixture.ts");
   const fixtureFiles = await glob(fixturePattern);
@@ -25,7 +33,7 @@ async function main() {
   console.log(`Found ${fixtureFiles.length} fixture file(s)`);
 
   for (const fixturePath of fixtureFiles) {
-    const fixtureModule = await import(fixturePath);
+    const fixtureModule = await loadFixtureModule(fixturePath);
     const chart = fixtureModule.default ?? fixtureModule.chart;
 
     if (!chart) {

@@ -2,7 +2,6 @@
  * @file Button component stories
  */
 
-import { useState } from "react";
 import { Button, type ButtonSize } from "@aurochs-ui/ui-components/primitives/Button";
 import type { ButtonVariant } from "@aurochs-ui/ui-components/types";
 import { PlayIcon, DownloadIcon, SettingsIcon } from "@aurochs-ui/ui-components/icons";

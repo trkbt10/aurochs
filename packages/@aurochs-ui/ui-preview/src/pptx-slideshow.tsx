@@ -115,11 +115,17 @@ const SAMPLE_SLIDES: SampleSlide[] = [
   },
 ];
 
+/** Build the subtitle SVG element if present */
+function buildSubtitleSvg(slide: SampleSlide): string {
+  if (!slide.subtitle) {return "";}
+  return `<text x="50%" y="58%" text-anchor="middle" font-family="system-ui, sans-serif" font-size="24" fill="${slide.textColor}" opacity="0.8">${slide.subtitle}</text>`;
+}
+
 function createSlideSvg(slide: SampleSlide): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SLIDE_SIZE.width} ${SLIDE_SIZE.height}">
     <rect width="100%" height="100%" fill="${slide.background}" />
     <text x="50%" y="45%" text-anchor="middle" font-family="system-ui, sans-serif" font-size="48" font-weight="bold" fill="${slide.textColor}">${slide.title}</text>
-    ${slide.subtitle ? `<text x="50%" y="58%" text-anchor="middle" font-family="system-ui, sans-serif" font-size="24" fill="${slide.textColor}" opacity="0.8">${slide.subtitle}</text>` : ""}
+    ${buildSubtitleSvg(slide)}
   </svg>`;
 }
 

@@ -24,7 +24,7 @@ import type { XlsxAutoFilter } from "@aurochs-office/xlsx/domain/auto-filter";
 import type { XlsxDataValidation } from "@aurochs-office/xlsx/domain/data-validation";
 import type { XlsxConditionalFormatting } from "@aurochs-office/xlsx/domain/conditional-formatting";
 import type { XlsxPane } from "@aurochs-office/xlsx/domain/workbook";
-import type { XlsxTable, XlsxTableStyleInfo } from "@aurochs-office/xlsx/domain/table/types";
+import type { XlsxTableStyleInfo } from "@aurochs-office/xlsx/domain/table/types";
 import type { XlsxDefinedName } from "@aurochs-office/xlsx/domain/workbook";
 import type { UndoRedoHistory as CoreUndoRedoHistory } from "@aurochs-ui/editor-core/history";
 import type { IdleDragState as CoreIdleDragState } from "@aurochs-ui/editor-core/drag-state";

@@ -37,6 +37,63 @@ import type {
 // Primitive Parsing
 // =============================================================================
 
+/** Parse connector locks from cxnSpLocks element */
+function parseConnectorLocks(parent: XmlElement): ConnectorLocks | undefined {
+  const el = getChild(parent, "a:cxnSpLocks") ?? getChild(parent, "cxnSpLocks");
+  if (!el) {
+    return undefined;
+  }
+  return {
+    noGrp: parseBoolAttr(el, "noGrp"),
+    noSelect: parseBoolAttr(el, "noSelect"),
+    noRot: parseBoolAttr(el, "noRot"),
+    noChangeAspect: parseBoolAttr(el, "noChangeAspect"),
+    noMove: parseBoolAttr(el, "noMove"),
+    noResize: parseBoolAttr(el, "noResize"),
+    noEditPoints: parseBoolAttr(el, "noEditPoints"),
+    noAdjustHandles: parseBoolAttr(el, "noAdjustHandles"),
+    noChangeArrowheads: parseBoolAttr(el, "noChangeArrowheads"),
+    noChangeShapeType: parseBoolAttr(el, "noChangeShapeType"),
+  };
+}
+
+/** Parse a connection target (start or end) from cNvCxnSpPr */
+function parseConnectionTarget(parent: XmlElement, name: string, fallback: string): ConnectionTarget | undefined {
+  const el = getChild(parent, name) ?? getChild(parent, fallback);
+  if (!el) {
+    return undefined;
+  }
+  return {
+    shapeId: getAttr(el, "id") ?? "",
+    siteIndex: parseInt32(getAttr(el, "idx")) ?? 0,
+  };
+}
+
+/** Parse connector locks and connection targets from cNvCxnSpPr element */
+function parseConnectionInfo(cNvCxnSpPr: XmlElement | undefined): {
+  connectorLocks: ConnectorLocks | undefined;
+  startConnection: ConnectionTarget | undefined;
+  endConnection: ConnectionTarget | undefined;
+} {
+  if (!cNvCxnSpPr) {
+    return { connectorLocks: undefined, startConnection: undefined, endConnection: undefined };
+  }
+
+  const connectorLocks = parseConnectorLocks(cNvCxnSpPr);
+  const startConnection = parseConnectionTarget(cNvCxnSpPr, "a:stCxn", "stCxn");
+  const endConnection = parseConnectionTarget(cNvCxnSpPr, "a:endCxn", "endCxn");
+
+  return { connectorLocks, startConnection, endConnection };
+}
+
+/** Get child element with namespace fallback, returning undefined if parent is undefined */
+function getChildWithFallback(parent: XmlElement | undefined, name: string, fallback: string): XmlElement | undefined {
+  if (!parent) {
+    return undefined;
+  }
+  return getChild(parent, name) ?? getChild(parent, fallback);
+}
+
 /**
  * Parse a cell anchor offset (from/to element).
  */
@@ -172,47 +229,10 @@ function parseConnectionShape(cxnSpElement: XmlElement): XlsxConnectionShape {
   const cNvPr = nvCxnSpPr ? (getChild(nvCxnSpPr, "xdr:cNvPr") ?? getChild(nvCxnSpPr, "cNvPr")) : undefined;
 
   // xdr:nvCxnSpPr/xdr:cNvCxnSpPr - connector locks and connections
-  const cNvCxnSpPr = nvCxnSpPr
-    ? (getChild(nvCxnSpPr, "xdr:cNvCxnSpPr") ?? getChild(nvCxnSpPr, "cNvCxnSpPr"))
-    : undefined;
+  const cNvCxnSpPr = getChildWithFallback(nvCxnSpPr, "xdr:cNvCxnSpPr", "cNvCxnSpPr");
 
-  let connectorLocks: ConnectorLocks | undefined;
-  let startConnection: ConnectionTarget | undefined;
-  let endConnection: ConnectionTarget | undefined;
-
-  if (cNvCxnSpPr) {
-    const cxnSpLocksEl = getChild(cNvCxnSpPr, "a:cxnSpLocks") ?? getChild(cNvCxnSpPr, "cxnSpLocks");
-    if (cxnSpLocksEl) {
-      connectorLocks = {
-        noGrp: parseBoolAttr(cxnSpLocksEl, "noGrp"),
-        noSelect: parseBoolAttr(cxnSpLocksEl, "noSelect"),
-        noRot: parseBoolAttr(cxnSpLocksEl, "noRot"),
-        noChangeAspect: parseBoolAttr(cxnSpLocksEl, "noChangeAspect"),
-        noMove: parseBoolAttr(cxnSpLocksEl, "noMove"),
-        noResize: parseBoolAttr(cxnSpLocksEl, "noResize"),
-        noEditPoints: parseBoolAttr(cxnSpLocksEl, "noEditPoints"),
-        noAdjustHandles: parseBoolAttr(cxnSpLocksEl, "noAdjustHandles"),
-        noChangeArrowheads: parseBoolAttr(cxnSpLocksEl, "noChangeArrowheads"),
-        noChangeShapeType: parseBoolAttr(cxnSpLocksEl, "noChangeShapeType"),
-      };
-    }
-
-    const stCxnEl = getChild(cNvCxnSpPr, "a:stCxn") ?? getChild(cNvCxnSpPr, "stCxn");
-    if (stCxnEl) {
-      startConnection = {
-        shapeId: getAttr(stCxnEl, "id") ?? "",
-        siteIndex: parseInt32(getAttr(stCxnEl, "idx")) ?? 0,
-      };
-    }
-
-    const endCxnEl = getChild(cNvCxnSpPr, "a:endCxn") ?? getChild(cNvCxnSpPr, "endCxn");
-    if (endCxnEl) {
-      endConnection = {
-        shapeId: getAttr(endCxnEl, "id") ?? "",
-        siteIndex: parseInt32(getAttr(endCxnEl, "idx")) ?? 0,
-      };
-    }
-  }
+  const connectionInfo = parseConnectionInfo(cNvCxnSpPr);
+  const { connectorLocks, startConnection, endConnection } = connectionInfo;
 
   // xdr:spPr/a:prstGeom
   const spPr = getChild(cxnSpElement, "xdr:spPr") ?? getChild(cxnSpElement, "spPr");
@@ -360,12 +380,8 @@ function parseGroupShape(
   // xdr:nvGrpSpPr
   const nvGrpSpPr = getChild(grpSpElement, "xdr:nvGrpSpPr") ?? getChild(grpSpElement, "nvGrpSpPr");
   const cNvPr = nvGrpSpPr ? (getChild(nvGrpSpPr, "xdr:cNvPr") ?? getChild(nvGrpSpPr, "cNvPr")) : undefined;
-  const cNvGrpSpPr = nvGrpSpPr
-    ? (getChild(nvGrpSpPr, "xdr:cNvGrpSpPr") ?? getChild(nvGrpSpPr, "cNvGrpSpPr"))
-    : undefined;
-  const grpSpLocks = cNvGrpSpPr
-    ? (getChild(cNvGrpSpPr, "a:grpSpLocks") ?? getChild(cNvGrpSpPr, "grpSpLocks"))
-    : undefined;
+  const cNvGrpSpPr = getChildWithFallback(nvGrpSpPr, "xdr:cNvGrpSpPr", "cNvGrpSpPr");
+  const grpSpLocks = getChildWithFallback(cNvGrpSpPr, "a:grpSpLocks", "grpSpLocks");
 
   // xdr:grpSpPr
   const grpSpPr = getChild(grpSpElement, "xdr:grpSpPr") ?? getChild(grpSpElement, "grpSpPr");

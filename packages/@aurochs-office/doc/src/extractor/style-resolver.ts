@@ -45,13 +45,13 @@ export function createStyleResolver(
     // Walk basedOn chain, collecting style indices from base to derived
     const chain: number[] = [];
     const visited = new Set<number>();
-    let current: number | undefined = styleIndex;
+    const current = { value: styleIndex as number | undefined };
 
-    while (current !== undefined && !visited.has(current)) {
-      visited.add(current);
-      chain.push(current);
-      const style = styleByIndex.get(current);
-      current = style?.basedOn;
+    while (current.value !== undefined && !visited.has(current.value)) {
+      visited.add(current.value);
+      chain.push(current.value);
+      const style = styleByIndex.get(current.value);
+      current.value = style?.basedOn;
     }
 
     // Reverse so base is first, most derived is last
@@ -61,7 +61,7 @@ export function createStyleResolver(
 
   function getParagraphSprms(styleIndex: number): readonly Sprm[] {
     const cached = papCache.get(styleIndex);
-    if (cached) return cached;
+    if (cached) {return cached;}
 
     const chain = resolveChain(styleIndex);
     const allSprms: Sprm[] = [];
@@ -78,7 +78,7 @@ export function createStyleResolver(
 
   function getCharacterSprms(styleIndex: number): readonly Sprm[] {
     const cached = chpCache.get(styleIndex);
-    if (cached) return cached;
+    if (cached) {return cached;}
 
     const chain = resolveChain(styleIndex);
     const allSprms: Sprm[] = [];

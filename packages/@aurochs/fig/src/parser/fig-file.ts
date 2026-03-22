@@ -123,6 +123,20 @@ function getMimeTypeFromExt(filename: string): string {
 }
 
 /**
+ * Find canvas data from the ZIP package by checking known filenames
+ */
+function findCanvasData(zipPackage: { readBinary: (name: string) => ArrayBuffer | null }): Uint8Array | null {
+  const canvasNames = ["canvas.fig", "thumbnail.fig"];
+  for (const name of canvasNames) {
+    const content = zipPackage.readBinary(name);
+    if (content) {
+      return new Uint8Array(content);
+    }
+  }
+  return null;
+}
+
+/**
  * Extract canvas.fig and images from a Figma ZIP file
  */
 async function extractFromZip(data: Uint8Array): Promise<ZipExtractResult> {
@@ -130,16 +144,7 @@ async function extractFromZip(data: Uint8Array): Promise<ZipExtractResult> {
   const files = zipPackage.listFiles();
 
   // Find canvas file
-  const canvasNames = ["canvas.fig", "thumbnail.fig"];
-  let canvasData: Uint8Array | null = null;
-
-  for (const name of canvasNames) {
-    const content = zipPackage.readBinary(name);
-    if (content) {
-      canvasData = new Uint8Array(content);
-      break;
-    }
-  }
+  const canvasData = findCanvasData(zipPackage);
 
   if (!canvasData) {
     throw new Error(`Could not find canvas.fig in ZIP. Available files: ${files.join(", ")}`);
@@ -155,10 +160,8 @@ async function extractFromZip(data: Uint8Array): Promise<ZipExtractResult> {
         const ref = file.substring(7);
         const data = new Uint8Array(imageData);
         // Try content-based detection first, then fallback to extension
-        let mimeType = getMimeTypeFromContent(data);
-        if (mimeType === "application/octet-stream") {
-          mimeType = getMimeTypeFromExt(file);
-        }
+        const contentMime = getMimeTypeFromContent(data);
+        const mimeType = contentMime === "application/octet-stream" ? getMimeTypeFromExt(file) : contentMime;
         images.set(ref, {
           ref,
           data,

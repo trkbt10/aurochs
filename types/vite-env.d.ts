@@ -51,9 +51,23 @@ declare module "jsdom" {
   
   
   
-  export class JSDOM {
-    constructor(html?: string, options?: unknown);
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  /** JSDOM instance type. */
+  export type JSDOMInstance = {
     readonly window: Window;
-  }
+  };
+  /** JSDOM constructor type. */
+  export type JSDOMConstructor = new (html?: string, options?: unknown) => JSDOMInstance;
+  /** JSDOM constructor. */
+  export const JSDOM: JSDOMConstructor;
 }
 

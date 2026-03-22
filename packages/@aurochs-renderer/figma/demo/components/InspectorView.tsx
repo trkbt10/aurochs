@@ -123,6 +123,12 @@ const viewStyles = {
   },
 };
 
+
+
+
+
+
+/** Inspector view with node tree and overlay */
 export function InspectorView({ frameNode, frameWidth, frameHeight, showHiddenNodes, svgHtml, isRendering }: Props) {
   const viewportRef = useRef<HTMLDivElement>(null);
 
@@ -163,10 +169,10 @@ export function InspectorView({ frameNode, frameWidth, frameHeight, showHiddenNo
   // Track Space key for pan mode
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === "Space") spaceHeldRef.current = true;
+      if (e.code === "Space") {spaceHeldRef.current = true;}
     };
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.code === "Space") spaceHeldRef.current = false;
+      if (e.code === "Space") {spaceHeldRef.current = false;}
     };
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
@@ -179,7 +185,7 @@ export function InspectorView({ frameNode, frameWidth, frameHeight, showHiddenNo
   // Wheel zoom (passive: false to allow preventDefault)
   useEffect(() => {
     const el = viewportRef.current;
-    if (!el) return;
+    if (!el) {return;}
 
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
@@ -216,7 +222,7 @@ export function InspectorView({ frameNode, frameWidth, frameHeight, showHiddenNo
   // Pan drag (mouse move/up on window)
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      if (!isDraggingRef.current) return;
+      if (!isDraggingRef.current) {return;}
 
       const dx = e.clientX - dragStartRef.current.x;
       const dy = e.clientY - dragStartRef.current.y;
@@ -319,11 +325,7 @@ export function InspectorView({ frameNode, frameWidth, frameHeight, showHiddenNo
           {/* Transform layer */}
           <div style={transformStyle}>
             {/* Rendered SVG preview */}
-            {isRendering ? (
-              <div style={viewStyles.emptyState}>Rendering...</div>
-            ) : (
-              <div style={viewStyles.svgContainer} dangerouslySetInnerHTML={{ __html: svgHtml }} />
-            )}
+            {renderSvgPreview(isRendering, svgHtml)}
 
             {/* Inspector overlay (stacked on top) */}
             <InspectorOverlay
@@ -376,4 +378,12 @@ export function InspectorView({ frameNode, frameWidth, frameHeight, showHiddenNo
       </div>
     </div>
   );
+}
+
+/** Render SVG preview or loading state */
+function renderSvgPreview(isRendering: boolean, svgHtml: string) {
+  if (isRendering) {
+    return <div style={viewStyles.emptyState}>Rendering...</div>;
+  }
+  return <div style={viewStyles.svgContainer} dangerouslySetInnerHTML={{ __html: svgHtml }} />;
 }

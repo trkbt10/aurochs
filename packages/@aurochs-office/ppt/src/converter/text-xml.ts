@@ -108,10 +108,10 @@ function buildRunProperties(run: PptTextRun): string {
 
   attrs.push(`lang="en-US"`);
 
-  if (p.bold) attrs.push(`b="1"`);
-  if (p.italic) attrs.push(`i="1"`);
-  if (p.underline) attrs.push(`u="sng"`);
-  if (p.strikethrough) attrs.push(`strike="sngStrike"`);
+  if (p.bold) {attrs.push(`b="1"`);}
+  if (p.italic) {attrs.push(`i="1"`);}
+  if (p.underline) {attrs.push(`u="sng"`);}
+  if (p.strikethrough) {attrs.push(`strike="sngStrike"`);}
   if (p.fontSize !== undefined) {
     // Font size in OOXML is in hundredths of a point
     attrs.push(`sz="${Math.round(p.fontSize * 100)}"`);

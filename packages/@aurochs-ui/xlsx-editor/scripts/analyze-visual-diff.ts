@@ -12,7 +12,7 @@ import pixelmatch from "pixelmatch";
 const fixturesDir = path.resolve(__dirname, "../fixtures/visual");
 const baselineDir = path.join(fixturesDir, "baseline");
 const outputDir = path.join(fixturesDir, "__output__");
-const diffDir = path.join(fixturesDir, "__diff__");
+const _diffDir = path.join(fixturesDir, "__diff__");
 
 type DiffAnalysis = {
   name: string;
@@ -34,15 +34,16 @@ type DiffAnalysis = {
   };
 };
 
-function analyzeRegion(
-  imgA: PNG,
-  imgB: PNG,
-  x: number,
-  y: number,
-  w: number,
-  h: number
-): { diffPixels: number; totalPixels: number; percent: number } {
-  let diffPixels = 0;
+function analyzeRegion(params: {
+  imgA: PNG;
+  imgB: PNG;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}): { diffPixels: number; totalPixels: number; percent: number } {
+  const { imgA, imgB, x, y, w, h } = params;
+  const diffPixelsRef = { value: 0 };
   const totalPixels = w * h;
 
   for (let py = y; py < y + h && py < imgA.height; py++) {
@@ -54,22 +55,20 @@ function analyzeRegion(
       // Simple color distance
       const dist = Math.abs(r1 - r2) + Math.abs(g1 - g2) + Math.abs(b1 - b2);
       if (dist > 30) { // Threshold for "different"
-        diffPixels++;
+        diffPixelsRef.value++;
       }
     }
   }
 
   return {
-    diffPixels,
+    diffPixels: diffPixelsRef.value,
     totalPixels,
-    percent: (diffPixels / totalPixels) * 100,
+    percent: (diffPixelsRef.value / totalPixels) * 100,
   };
 }
 
 function analyzeColors(imgA: PNG, imgB: PNG): { backgroundDiff: number; textDiff: number; borderDiff: number } {
-  let backgroundDiff = 0;
-  let textDiff = 0;
-  let borderDiff = 0;
+  const counters = { backgroundDiff: 0, textDiff: 0, borderDiff: 0 };
 
   for (let y = 0; y < imgA.height; y++) {
     for (let x = 0; x < imgA.width; x++) {
@@ -78,7 +77,7 @@ function analyzeColors(imgA: PNG, imgB: PNG): { backgroundDiff: number; textDiff
       const r2 = imgB.data[idx], g2 = imgB.data[idx + 1], b2 = imgB.data[idx + 2];
 
       const dist = Math.abs(r1 - r2) + Math.abs(g1 - g2) + Math.abs(b1 - b2);
-      if (dist < 10) continue; // Skip matching pixels
+      if (dist < 10) {continue;} // Skip matching pixels
 
       // Categorize by color
       const avgA = (r1 + g1 + b1) / 3;
@@ -86,18 +85,18 @@ function analyzeColors(imgA: PNG, imgB: PNG): { backgroundDiff: number; textDiff
 
       if (avgA > 240 || avgB > 240) {
         // Near white - background
-        backgroundDiff++;
+        counters.backgroundDiff++;
       } else if (avgA < 50 || avgB < 50) {
         // Near black - text
-        textDiff++;
+        counters.textDiff++;
       } else {
         // Mid-tones - likely borders/gridlines
-        borderDiff++;
+        counters.borderDiff++;
       }
     }
   }
 
-  return { backgroundDiff, textDiff, borderDiff };
+  return counters;
 }
 
 function analyzeDiff(name: string): DiffAnalysis | null {
@@ -137,10 +136,10 @@ function analyzeDiff(name: string): DiffAnalysis | null {
   const headerWidth = 56;  // Row header
 
   const regions = {
-    topHeader: analyzeRegion(outputImg, baselineImg, headerWidth, 0, w - headerWidth, headerHeight),
-    leftHeader: analyzeRegion(outputImg, baselineImg, 0, headerHeight, headerWidth, h - headerHeight),
-    content: analyzeRegion(outputImg, baselineImg, headerWidth, headerHeight, w - headerWidth, h - headerHeight),
-    corner: analyzeRegion(outputImg, baselineImg, 0, 0, headerWidth, headerHeight),
+    topHeader: analyzeRegion({ imgA: outputImg, imgB: baselineImg, x: headerWidth, y: 0, w: w - headerWidth, h: headerHeight }),
+    leftHeader: analyzeRegion({ imgA: outputImg, imgB: baselineImg, x: 0, y: headerHeight, w: headerWidth, h: h - headerHeight }),
+    content: analyzeRegion({ imgA: outputImg, imgB: baselineImg, x: headerWidth, y: headerHeight, w: w - headerWidth, h: h - headerHeight }),
+    corner: analyzeRegion({ imgA: outputImg, imgB: baselineImg, x: 0, y: 0, w: headerWidth, h: headerHeight }),
   };
 
   const colors = analyzeColors(outputImg, baselineImg);
@@ -216,7 +215,7 @@ function main() {
   console.log("");
 
   const issues: { id: number; category: string; description: string; affectedTests: string[]; impact: string }[] = [];
-  let issueId = 1;
+  const issueIdRef = { value: 1 };
 
   // Check for header-related issues
   const headerIssues = results.filter(r =>
@@ -224,7 +223,7 @@ function main() {
   );
   if (headerIssues.length > 0) {
     issues.push({
-      id: issueId++,
+      id: issueIdRef.value++,
       category: "Headers",
       description: "Row/column headers differ from LibreOffice (LibreOffice PDF doesn't include headers)",
       affectedTests: headerIssues.map(r => r.name),
@@ -236,7 +235,7 @@ function main() {
   const contentIssues = results.filter(r => r.regions.content.percent > 0.5);
   if (contentIssues.length > 0) {
     issues.push({
-      id: issueId++,
+      id: issueIdRef.value++,
       category: "Cell Content",
       description: "Cell content rendering differs (fonts, spacing, alignment)",
       affectedTests: contentIssues.map(r => r.name),
@@ -248,7 +247,7 @@ function main() {
   const bgIssues = results.filter(r => r.colors.backgroundDiff > 1000);
   if (bgIssues.length > 0) {
     issues.push({
-      id: issueId++,
+      id: issueIdRef.value++,
       category: "Background",
       description: "Background color or gridlines differ",
       affectedTests: bgIssues.map(r => r.name),

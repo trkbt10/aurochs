@@ -38,6 +38,15 @@ export type Token = {
 };
 
 /**
+ * XML Lexer interface.
+ * Tokenizes XML input string into a stream of tokens.
+ */
+export type XmlLexer = {
+  /** Get the next token from the input. */
+  readonly nextToken: () => Token;
+};
+
+/**
  * XML entity decoder.
  */
 function decodeEntities(text: string): string {
@@ -77,103 +86,82 @@ function isWhitespace(char: string): boolean {
 /**
  * Lexer state enum for tracking parsing context.
  */
-const enum LexerState {
-  Content,
-  InsideTag,
-}
+const CONTENT = 0;
+const INSIDE_TAG = 1;
 
 /**
- * XML Lexer class.
- * Tokenizes XML input string into a stream of tokens.
+ * Create a new XML lexer for the given input.
+ *
+ * @param input - XML string to tokenize
+ * @returns Lexer object with nextToken method
  */
-export class XmlLexer {
-  private readonly input: string;
-  private pos: number = 0;
-  private state: LexerState = LexerState.Content;
+export function createXmlLexer(input: string): XmlLexer {
+  const pos = { value: 0 };
+  const state = { value: CONTENT };
 
-  constructor(input: string) {
-    this.input = input;
+  /**
+   * Skip whitespace characters.
+   */
+  function skipWhitespace(): void {
+    while (pos.value < input.length && isWhitespace(input[pos.value])) {
+      pos.value++;
+    }
   }
 
   /**
-   * Get the next token from the input.
+   * Peek at next non-whitespace character without advancing position.
    */
-  nextToken(): Token {
-    if (this.pos >= this.input.length) {
-      return { type: TokenType.EOF, value: "", pos: this.pos };
-    }
-
-    if (this.state === LexerState.InsideTag) {
-      return this.readInsideTag();
-    }
-
-    return this.readContent();
+  function peekNextNonWhitespace(): string {
+    const remaining = input.slice(pos.value);
+    const match = remaining.match(/^\s*/);
+    const skipCount = match?.[0].length ?? 0;
+    return input[pos.value + skipCount] ?? "";
   }
 
   /**
-   * Read tokens when in content state (between tags).
+   * Read a quoted attribute value.
    */
-  private readContent(): Token {
-    const char = this.input[this.pos];
+  function readAttributeValue(quote: string): Token {
+    const startPos = pos.value;
+    pos.value++; // Skip opening quote
 
-    if (char === "<") {
-      return this.readTagStart();
-    }
+    const endPos = input.indexOf(quote, pos.value);
+    const value = endPos === -1 ? input.slice(pos.value) : input.slice(pos.value, endPos);
+    pos.value = endPos === -1 ? input.length : endPos + 1;
 
-    return this.readText();
+    return { type: TokenType.ATTR_VALUE, value: decodeEntities(value), pos: startPos };
   }
 
   /**
-   * Read the start of a tag or special construct.
+   * Read a name (tag name or attribute name).
    */
-  private readTagStart(): Token {
-    const startPos = this.pos;
+  function readName(): Token {
+    const startPos = pos.value;
 
-    // Check for end tag </
-    if (this.input[this.pos + 1] === "/") {
-      this.pos += 2;
-      this.state = LexerState.InsideTag;
-      return { type: TokenType.TAG_OPEN_END, value: "</", pos: startPos };
+    while (pos.value < input.length && isNameChar(input[pos.value])) {
+      pos.value++;
+    }
+    const name = input.slice(startPos, pos.value);
+
+    // Determine if this is a tag name or attribute name
+    // If there's an = after skipping whitespace, it's attr name
+    // Otherwise it's tag name
+    const nextNonWs = peekNextNonWhitespace();
+    if (nextNonWs === "=") {
+      return { type: TokenType.ATTR_NAME, value: name, pos: startPos };
     }
 
-    // Check for comment <!--
-    if (
-      this.input[this.pos + 1] === "!" &&
-      this.input[this.pos + 2] === "-" &&
-      this.input[this.pos + 3] === "-"
-    ) {
-      return this.readComment();
-    }
-
-    // Check for CDATA <![CDATA[
-    if (this.input.slice(this.pos + 1, this.pos + 9) === "![CDATA[") {
-      return this.readCData();
-    }
-
-    // Check for DOCTYPE <!DOCTYPE
-    if (this.input[this.pos + 1] === "!") {
-      return this.readDocType();
-    }
-
-    // Check for declaration <?
-    if (this.input[this.pos + 1] === "?") {
-      return this.readDeclaration();
-    }
-
-    // Regular start tag <
-    this.pos++;
-    this.state = LexerState.InsideTag;
-    return { type: TokenType.TAG_OPEN, value: "<", pos: startPos };
+    return { type: TokenType.TAG_NAME, value: name, pos: startPos };
   }
 
   /**
    * Read text content until next tag.
    */
-  private readText(): Token {
-    const startPos = this.pos;
-    const endPos = this.input.indexOf("<", this.pos);
-    const text = endPos === -1 ? this.input.slice(this.pos) : this.input.slice(this.pos, endPos);
-    this.pos = endPos === -1 ? this.input.length : endPos;
+  function readText(): Token {
+    const startPos = pos.value;
+    const endPos = input.indexOf("<", pos.value);
+    const text = endPos === -1 ? input.slice(pos.value) : input.slice(pos.value, endPos);
+    pos.value = endPos === -1 ? input.length : endPos;
 
     return { type: TokenType.TEXT, value: decodeEntities(text), pos: startPos };
   }
@@ -181,184 +169,200 @@ export class XmlLexer {
   /**
    * Read XML comment <!-- ... -->.
    */
-  private readComment(): Token {
-    const startPos = this.pos;
-    this.pos += 4; // Skip <!--
+  function readComment(): Token {
+    const startPos = pos.value;
+    pos.value += 4; // Skip <!--
 
-    const endIndex = this.input.indexOf("-->", this.pos);
+    const endIndex = input.indexOf("-->", pos.value);
     if (endIndex === -1) {
-      const content = this.input.slice(this.pos);
-      this.pos = this.input.length;
+      const content = input.slice(pos.value);
+      pos.value = input.length;
       return { type: TokenType.COMMENT, value: content, pos: startPos };
     }
 
-    const content = this.input.slice(this.pos, endIndex);
-    this.pos = endIndex + 3;
+    const content = input.slice(pos.value, endIndex);
+    pos.value = endIndex + 3;
     return { type: TokenType.COMMENT, value: content, pos: startPos };
   }
 
   /**
    * Read CDATA section <![CDATA[ ... ]]>.
    */
-  private readCData(): Token {
-    const startPos = this.pos;
-    this.pos += 9; // Skip <![CDATA[
+  function readCData(): Token {
+    const startPos = pos.value;
+    pos.value += 9; // Skip <![CDATA[
 
-    const endIndex = this.input.indexOf("]]>", this.pos);
+    const endIndex = input.indexOf("]]>", pos.value);
     if (endIndex === -1) {
-      const content = this.input.slice(this.pos);
-      this.pos = this.input.length;
+      const content = input.slice(pos.value);
+      pos.value = input.length;
       return { type: TokenType.CDATA, value: content, pos: startPos };
     }
 
-    const content = this.input.slice(this.pos, endIndex);
-    this.pos = endIndex + 3;
+    const content = input.slice(pos.value, endIndex);
+    pos.value = endIndex + 3;
     return { type: TokenType.CDATA, value: content, pos: startPos };
   }
 
   /**
    * Read DOCTYPE declaration <!DOCTYPE ...>.
    */
-  private readDocType(): Token {
-    const startPos = this.pos;
-    this.pos += 2; // Skip <!
+  function readDocType(): Token {
+    const startPos = pos.value;
+    pos.value += 2; // Skip <!
 
-    const endIndex = this.input.indexOf(">", this.pos);
+    const endIndex = input.indexOf(">", pos.value);
     if (endIndex === -1) {
-      const content = this.input.slice(this.pos);
-      this.pos = this.input.length;
+      const content = input.slice(pos.value);
+      pos.value = input.length;
       return { type: TokenType.DOCTYPE, value: content, pos: startPos };
     }
 
-    const content = this.input.slice(this.pos, endIndex);
-    this.pos = endIndex + 1;
+    const content = input.slice(pos.value, endIndex);
+    pos.value = endIndex + 1;
     return { type: TokenType.DOCTYPE, value: content, pos: startPos };
   }
 
   /**
    * Read XML declaration <?xml ...?>.
    */
-  private readDeclaration(): Token {
-    const startPos = this.pos;
-    this.pos += 2; // Skip <?
+  function readDeclaration(): Token {
+    const startPos = pos.value;
+    pos.value += 2; // Skip <?
 
-    const endIndex = this.input.indexOf("?>", this.pos);
+    const endIndex = input.indexOf("?>", pos.value);
     if (endIndex === -1) {
-      const content = this.input.slice(this.pos);
-      this.pos = this.input.length;
+      const content = input.slice(pos.value);
+      pos.value = input.length;
       return { type: TokenType.DECLARATION, value: content.trim(), pos: startPos };
     }
 
-    const content = this.input.slice(this.pos, endIndex);
-    this.pos = endIndex + 2;
+    const content = input.slice(pos.value, endIndex);
+    pos.value = endIndex + 2;
     return { type: TokenType.DECLARATION, value: content.trim(), pos: startPos };
+  }
+
+  /**
+   * Read the start of a tag or special construct.
+   */
+  function readTagStart(): Token {
+    const startPos = pos.value;
+
+    // Check for end tag </
+    if (input[pos.value + 1] === "/") {
+      pos.value += 2;
+      state.value = INSIDE_TAG;
+      return { type: TokenType.TAG_OPEN_END, value: "</", pos: startPos };
+    }
+
+    // Check for comment <!--
+    if (
+      input[pos.value + 1] === "!" &&
+      input[pos.value + 2] === "-" &&
+      input[pos.value + 3] === "-"
+    ) {
+      return readComment();
+    }
+
+    // Check for CDATA <![CDATA[
+    if (input.slice(pos.value + 1, pos.value + 9) === "![CDATA[") {
+      return readCData();
+    }
+
+    // Check for DOCTYPE <!DOCTYPE
+    if (input[pos.value + 1] === "!") {
+      return readDocType();
+    }
+
+    // Check for declaration <?
+    if (input[pos.value + 1] === "?") {
+      return readDeclaration();
+    }
+
+    // Regular start tag <
+    pos.value++;
+    state.value = INSIDE_TAG;
+    return { type: TokenType.TAG_OPEN, value: "<", pos: startPos };
+  }
+
+  /**
+   * Read tokens when in content state (between tags).
+   */
+  function readContent(): Token {
+    const char = input[pos.value];
+
+    if (char === "<") {
+      return readTagStart();
+    }
+
+    return readText();
   }
 
   /**
    * Read tokens when inside a tag.
    */
-  private readInsideTag(): Token {
-    this.skipWhitespace();
+  function readInsideTag(): Token {
+    skipWhitespace();
 
-    if (this.pos >= this.input.length) {
-      return { type: TokenType.EOF, value: "", pos: this.pos };
+    if (pos.value >= input.length) {
+      return { type: TokenType.EOF, value: "", pos: pos.value };
     }
 
-    const char = this.input[this.pos];
+    const char = input[pos.value];
 
     // Self-closing />
-    if (char === "/" && this.input[this.pos + 1] === ">") {
-      const startPos = this.pos;
-      this.pos += 2;
-      this.state = LexerState.Content;
+    if (char === "/" && input[pos.value + 1] === ">") {
+      const startPos = pos.value;
+      pos.value += 2;
+      state.value = CONTENT;
       return { type: TokenType.TAG_SELF_CLOSE, value: "/>", pos: startPos };
     }
 
     // Tag close >
     if (char === ">") {
-      const startPos = this.pos;
-      this.pos++;
-      this.state = LexerState.Content;
+      const startPos = pos.value;
+      pos.value++;
+      state.value = CONTENT;
       return { type: TokenType.TAG_CLOSE, value: ">", pos: startPos };
     }
 
     // Equals sign
     if (char === "=") {
-      const startPos = this.pos;
-      this.pos++;
+      const startPos = pos.value;
+      pos.value++;
       return { type: TokenType.ATTR_EQ, value: "=", pos: startPos };
     }
 
     // Quoted attribute value
     if (char === '"' || char === "'") {
-      return this.readAttributeValue(char);
+      return readAttributeValue(char);
     }
 
     // Name (tag name or attribute name)
     if (isNameChar(char)) {
-      return this.readName();
+      return readName();
     }
 
     // Skip unknown character
-    this.pos++;
-    return this.readInsideTag();
+    pos.value++;
+    return readInsideTag();
   }
 
   /**
-   * Skip whitespace characters.
+   * Get the next token from the input.
    */
-  private skipWhitespace(): void {
-    while (this.pos < this.input.length && isWhitespace(this.input[this.pos])) {
-      this.pos++;
-    }
-  }
-
-  /**
-   * Read a name (tag name or attribute name).
-   */
-  private readName(): Token {
-    const startPos = this.pos;
-
-    while (this.pos < this.input.length && isNameChar(this.input[this.pos])) {
-      this.pos++;
-    }
-    const name = this.input.slice(startPos, this.pos);
-
-    // Determine if this is a tag name or attribute name
-    // If we just entered the tag, it's a tag name
-    // Otherwise, it's an attribute name
-    const nextNonWhitespace = this.peekNextNonWhitespace();
-    if (nextNonWhitespace === "=") {
-      return { type: TokenType.ATTR_NAME, value: name, pos: startPos };
+  function nextToken(): Token {
+    if (pos.value >= input.length) {
+      return { type: TokenType.EOF, value: "", pos: pos.value };
     }
 
-    // Check if previous token context suggests this is an attr name
-    // For simplicity: if there's an = after skipping whitespace, it's attr name
-    // Otherwise it's tag name
-    return { type: TokenType.TAG_NAME, value: name, pos: startPos };
+    if (state.value === INSIDE_TAG) {
+      return readInsideTag();
+    }
+
+    return readContent();
   }
 
-  /**
-   * Peek at next non-whitespace character without advancing position.
-   */
-  private peekNextNonWhitespace(): string {
-    const remaining = this.input.slice(this.pos);
-    const match = remaining.match(/^\s*/);
-    const skipCount = match?.[0].length ?? 0;
-    return this.input[this.pos + skipCount] ?? "";
-  }
-
-  /**
-   * Read a quoted attribute value.
-   */
-  private readAttributeValue(quote: string): Token {
-    const startPos = this.pos;
-    this.pos++; // Skip opening quote
-
-    const endPos = this.input.indexOf(quote, this.pos);
-    const value = endPos === -1 ? this.input.slice(this.pos) : this.input.slice(this.pos, endPos);
-    this.pos = endPos === -1 ? this.input.length : endPos + 1;
-
-    return { type: TokenType.ATTR_VALUE, value: decodeEntities(value), pos: startPos };
-  }
+  return { nextToken };
 }
+

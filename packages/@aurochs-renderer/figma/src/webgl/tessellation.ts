@@ -12,24 +12,28 @@ import type { PathContour, PathCommand } from "../scene-graph/types";
 // Bezier Flattening
 // =============================================================================
 
+/** Parameters for flattening a cubic bezier curve */
+type CubicBezierParams = {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  x3: number;
+  y3: number;
+  tolerance: number;
+  points: number[];
+};
+
 /**
  * Flatten a cubic bezier curve into line segments
  *
  * Uses De Casteljau subdivision with adaptive tolerance.
  * Produces enough segments for visual quality while minimizing vertex count.
  */
-function flattenCubicBezier(
-  x0: number,
-  y0: number,
-  x1: number,
-  y1: number,
-  x2: number,
-  y2: number,
-  x3: number,
-  y3: number,
-  tolerance: number,
-  points: number[]
-): void {
+function flattenCubicBezier(params: CubicBezierParams): void {
+  const { x0, y0, x1, y1, x2, y2, x3, y3, tolerance, points } = params;
   // Check if the curve is flat enough (all control points close to line)
   const dx = x3 - x0;
   const dy = y3 - y0;
@@ -57,29 +61,33 @@ function flattenCubicBezier(
   const x0123 = (x012 + x123) * 0.5;
   const y0123 = (y012 + y123) * 0.5;
 
-  flattenCubicBezier(x0, y0, x01, y01, x012, y012, x0123, y0123, tolerance, points);
-  flattenCubicBezier(x0123, y0123, x123, y123, x23, y23, x3, y3, tolerance, points);
+  flattenCubicBezier({ x0, y0, x1: x01, y1: y01, x2: x012, y2: y012, x3: x0123, y3: y0123, tolerance, points });
+  flattenCubicBezier({ x0: x0123, y0: y0123, x1: x123, y1: y123, x2: x23, y2: y23, x3, y3, tolerance, points });
 }
+
+/** Parameters for flattening a quadratic bezier curve */
+type QuadBezierParams = {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  tolerance: number;
+  points: number[];
+};
 
 /**
  * Flatten a quadratic bezier curve into line segments
  */
-function flattenQuadBezier(
-  x0: number,
-  y0: number,
-  x1: number,
-  y1: number,
-  x2: number,
-  y2: number,
-  tolerance: number,
-  points: number[]
-): void {
+function flattenQuadBezier(params: QuadBezierParams): void {
+  const { x0, y0, x1, y1, x2, y2, tolerance, points } = params;
   // Convert to cubic and flatten
   const cx1 = x0 + (2 / 3) * (x1 - x0);
   const cy1 = y0 + (2 / 3) * (y1 - y0);
   const cx2 = x2 + (2 / 3) * (x1 - x2);
   const cy2 = y2 + (2 / 3) * (y1 - y2);
-  flattenCubicBezier(x0, y0, cx1, cy1, cx2, cy2, x2, y2, tolerance, points);
+  flattenCubicBezier({ x0, y0, x1: cx1, y1: cy1, x2: cx2, y2: cy2, x3: x2, y3: y2, tolerance, points });
 }
 
 // =============================================================================
@@ -98,65 +106,65 @@ export function flattenPathCommands(
   tolerance: number = 0.25
 ): number[] {
   const points: number[] = [];
-  let currentX = 0;
-  let currentY = 0;
-  let startX = 0;
-  let startY = 0;
+  const currentXRef = { value: 0 };
+  const currentYRef = { value: 0 };
+  const startXRef = { value: 0 };
+  const startYRef = { value: 0 };
 
   for (const cmd of commands) {
     switch (cmd.type) {
       case "M":
-        currentX = cmd.x;
-        currentY = cmd.y;
-        startX = currentX;
-        startY = currentY;
-        points.push(currentX, currentY);
+        currentXRef.value = cmd.x;
+        currentYRef.value = cmd.y;
+        startXRef.value = currentXRef.value;
+        startYRef.value = currentYRef.value;
+        points.push(currentXRef.value, currentYRef.value);
         break;
 
       case "L":
-        currentX = cmd.x;
-        currentY = cmd.y;
-        points.push(currentX, currentY);
+        currentXRef.value = cmd.x;
+        currentYRef.value = cmd.y;
+        points.push(currentXRef.value, currentYRef.value);
         break;
 
       case "C":
-        flattenCubicBezier(
-          currentX,
-          currentY,
-          cmd.x1,
-          cmd.y1,
-          cmd.x2,
-          cmd.y2,
-          cmd.x,
-          cmd.y,
+        flattenCubicBezier({
+          x0: currentXRef.value,
+          y0: currentYRef.value,
+          x1: cmd.x1,
+          y1: cmd.y1,
+          x2: cmd.x2,
+          y2: cmd.y2,
+          x3: cmd.x,
+          y3: cmd.y,
           tolerance,
-          points
-        );
-        currentX = cmd.x;
-        currentY = cmd.y;
+          points,
+        });
+        currentXRef.value = cmd.x;
+        currentYRef.value = cmd.y;
         break;
 
       case "Q":
-        flattenQuadBezier(
-          currentX,
-          currentY,
-          cmd.x1,
-          cmd.y1,
-          cmd.x,
-          cmd.y,
+        flattenQuadBezier({
+          x0: currentXRef.value,
+          y0: currentYRef.value,
+          x1: cmd.x1,
+          y1: cmd.y1,
+          x2: cmd.x,
+          y2: cmd.y,
           tolerance,
-          points
-        );
-        currentX = cmd.x;
-        currentY = cmd.y;
+          points,
+        });
+        currentXRef.value = cmd.x;
+        currentYRef.value = cmd.y;
         break;
 
       case "Z":
-        if (currentX !== startX || currentY !== startY) {
-          points.push(startX, startY);
+        if (currentXRef.value !== startXRef.value || currentYRef.value !== startYRef.value) {
+          points.push(startXRef.value, startYRef.value);
         }
-        currentX = startX;
-        currentY = startY;
+        currentXRef.value = startXRef.value;
+        currentYRef.value = startYRef.value;
         break;
     }
   }
@@ -180,7 +188,7 @@ export function triangulate(
   holeIndices?: readonly number[]
 ): number[] {
   const n = coords.length >> 1;
-  if (n < 3) return [];
+  if (n < 3) {return [];}
 
   return earcut(coords as number[], holeIndices as number[] | undefined, 2);
 }
@@ -195,11 +203,11 @@ export function triangulate(
  */
 function signedArea(coords: readonly number[]): number {
   const n = coords.length >> 1;
-  let area = 0;
+  const areaRef = { value: 0 };
   for (let i = 0, j = n - 1; i < n; j = i++) {
-    area += (coords[j * 2] - coords[i * 2]) * (coords[j * 2 + 1] + coords[i * 2 + 1]);
+    areaRef.value += (coords[j * 2] - coords[i * 2]) * (coords[j * 2 + 1] + coords[i * 2 + 1]);
   }
-  return area;
+  return areaRef.value;
 }
 
 /**
@@ -246,42 +254,51 @@ export function tessellateContour(
  *   convention by majority vote. Necessary for font glyph data where different
  *   fonts may use TrueType (CW=outer) or PostScript/CFF (CCW=outer) conventions.
  */
+
+type FlatContour = { coords: number[]; area: number };
+
+/** Determine whether outer contours have negative signed area */
+function resolveOuterIsNegative(autoDetectWinding: boolean, flatContours: FlatContour[]): boolean {
+  if (!autoDetectWinding) {
+    return true; // default: TrueType convention
+  }
+  const negativeCountRef = { value: 0 };
+  const positiveCountRef = { value: 0 };
+  for (const fc of flatContours) {
+    if (fc.area < 0) {negativeCountRef.value++;}
+    else if (fc.area > 0) {positiveCountRef.value++;}
+  }
+  return negativeCountRef.value >= positiveCountRef.value;
+}
+
+/**
+ * Tessellate path contours into triangles for WebGL rendering.
+ *
+ * Groups outer contours with their holes for correct triangulation.
+ */
 export function tessellateContours(
   contours: readonly PathContour[],
   tolerance: number = 0.25,
   autoDetectWinding: boolean = false
 ): Float32Array {
-  if (contours.length === 0) return new Float32Array(0);
+  if (contours.length === 0) {return new Float32Array(0);}
 
   // Flatten all contours and compute signed areas
-  type FlatContour = { coords: number[]; area: number };
   const flatContours: FlatContour[] = [];
-
   for (const contour of contours) {
     const coords = flattenPathCommands(contour.commands, tolerance);
-    if (coords.length < 6) continue;
+    if (coords.length < 6) {continue;}
     flatContours.push({ coords, area: signedArea(coords) });
   }
 
-  if (flatContours.length === 0) return new Float32Array(0);
+  if (flatContours.length === 0) {return new Float32Array(0);}
 
   // Determine which sign represents "outer" contours
   // Default: negative signed area = outer (TrueType CW convention)
   // When autoDetectWinding: use majority sign to detect the convention.
   // The majority of contours in text are outers (simple glyphs without holes),
   // so the dominant sign indicates the outer convention.
-  let outerIsNegative = true; // default: TrueType convention
-
-  if (autoDetectWinding) {
-    let negativeCount = 0;
-    let positiveCount = 0;
-    for (const fc of flatContours) {
-      if (fc.area < 0) negativeCount++;
-      else if (fc.area > 0) positiveCount++;
-    }
-    // The majority sign is used for outers
-    outerIsNegative = negativeCount >= positiveCount;
-  }
+  const outerIsNegative = resolveOuterIsNegative(autoDetectWinding, flatContours);
 
   // Classify as outer / hole and compute bounding boxes
   type ClassifiedContour = {
@@ -291,19 +308,19 @@ export function tessellateContours(
     minX: number; minY: number; maxX: number; maxY: number;
   };
   const classifiedContours: ClassifiedContour[] = flatContours.map((fc) => {
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    const boundsRef = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
     for (let i = 0; i < fc.coords.length; i += 2) {
       const x = fc.coords[i], y = fc.coords[i + 1];
-      if (x < minX) minX = x;
-      if (x > maxX) maxX = x;
-      if (y < minY) minY = y;
-      if (y > maxY) maxY = y;
+      if (x < boundsRef.minX) {boundsRef.minX = x;}
+      if (x > boundsRef.maxX) {boundsRef.maxX = x;}
+      if (y < boundsRef.minY) {boundsRef.minY = y;}
+      if (y > boundsRef.maxY) {boundsRef.maxY = y;}
     }
     return {
       coords: fc.coords,
       isHole: outerIsNegative ? fc.area > 0 : fc.area < 0,
       absArea: Math.abs(fc.area),
-      minX, minY, maxX, maxY,
+      minX: boundsRef.minX, minY: boundsRef.minY, maxX: boundsRef.maxX, maxY: boundsRef.maxY,
     };
   });
 
@@ -318,28 +335,28 @@ export function tessellateContours(
 
   for (const hole of holes) {
     // Find the smallest containing outer by bounding box
-    let bestIdx = -1;
-    let bestArea = Infinity;
+    const bestIdxRef = { value: -1 };
+    const bestAreaRef = { value: Infinity };
     const hCx = (hole.minX + hole.maxX) / 2;
     const hCy = (hole.minY + hole.maxY) / 2;
     for (let i = 0; i < outers.length; i++) {
       const o = outers[i];
       if (hCx >= o.minX && hCx <= o.maxX && hCy >= o.minY && hCy <= o.maxY) {
-        if (o.absArea < bestArea) {
-          bestArea = o.absArea;
-          bestIdx = i;
+        if (o.absArea < bestAreaRef.value) {
+          bestAreaRef.value = o.absArea;
+          bestIdxRef.value = i;
         }
       }
     }
-    if (bestIdx >= 0) {
-      groups[bestIdx].holes.push(hole.coords);
+    if (bestIdxRef.value >= 0) {
+      groups[bestIdxRef.value].holes.push(hole.coords);
     }
     // Holes not contained by any outer are dropped
   }
 
   // Tessellate each group
   const allVertices: Float32Array[] = [];
-  let totalLength = 0;
+  const totalLengthRef = { value: 0 };
 
   for (const group of groups) {
     const combined: number[] = [...group.outer];
@@ -360,14 +377,14 @@ export function tessellateContours(
     }
 
     allVertices.push(vertices);
-    totalLength += vertices.length;
+    totalLengthRef.value += vertices.length;
   }
 
-  const result = new Float32Array(totalLength);
-  let offset = 0;
+  const result = new Float32Array(totalLengthRef.value);
+  const offsetRef = { value: 0 };
   for (const vertices of allVertices) {
-    result.set(vertices, offset);
-    offset += vertices.length;
+    result.set(vertices, offsetRef.value);
+    offsetRef.value += vertices.length;
   }
 
   return result;
@@ -443,15 +460,20 @@ export function generateRectVertices(
   return vertices;
 }
 
+/** Parameters for generating ellipse vertices */
+type EllipseVerticesParams = {
+  cx: number;
+  cy: number;
+  rx: number;
+  ry: number;
+  segments?: number;
+};
+
 /**
  * Generate ellipse vertices (triangle fan)
  */
 export function generateEllipseVertices(
-  cx: number,
-  cy: number,
-  rx: number,
-  ry: number,
-  segments: number = 64
+  { cx, cy, rx, ry, segments = 64 }: EllipseVerticesParams
 ): Float32Array {
   // Triangle fan from center
   const vertices = new Float32Array(segments * 6);

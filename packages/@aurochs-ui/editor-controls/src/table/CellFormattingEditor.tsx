@@ -74,6 +74,17 @@ function toBareHex(color: string | undefined, fallback: string): string {
   return color.startsWith("#") ? color.slice(1) : color;
 }
 
+/** Resolve vertical alignment value accounting for mixed state */
+function resolveVerticalAlignmentValue(
+  mixed: MixedContext | undefined,
+  alignment: VerticalAlignmentValue | undefined,
+): VerticalAlignmentValue | VerticalAlignmentValue[] | undefined {
+  if (isMixedField(mixed, "verticalAlignment")) {
+    return alignment ? [alignment] : [];
+  }
+  return alignment;
+}
+
 function buildBackgroundEditor(opts: {
   renderSlot: CellFormattingEditorProps["renderBackgroundEditor"];
   color: string | undefined;
@@ -135,11 +146,7 @@ export function CellFormattingEditor({
         <FieldGroup label="Vertical Align">
           <div style={rowStyle}>
             <VerticalAlignmentGroup
-              value={
-                isMixedField(mixed, "verticalAlignment")
-                  ? (value.verticalAlignment ? [value.verticalAlignment] : [])
-                  : (value.verticalAlignment as VerticalAlignmentValue | undefined)
-              }
+              value={resolveVerticalAlignmentValue(mixed, value.verticalAlignment)}
               onChange={handleVerticalAlignmentChange}
               disabled={disabled}
             />

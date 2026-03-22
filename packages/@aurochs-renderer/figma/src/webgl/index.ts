@@ -5,7 +5,7 @@
  */
 
 // Main renderer
-export { WebGLFigmaRenderer, type WebGLRendererOptions } from "./renderer";
+export { createWebGLFigmaRenderer, type WebGLFigmaRendererInstance, type WebGLRendererOptions } from "./renderer";
 
 // Tessellation
 export {
@@ -37,7 +37,7 @@ export {
 } from "./text-renderer";
 
 // Texture cache
-export { TextureCache, type TextureEntry } from "./texture-cache";
+export { createTextureCache, type TextureCache, type TextureEntry } from "./texture-cache";
 
 // Framebuffer
 export {
@@ -48,7 +48,7 @@ export {
 } from "./framebuffer";
 
 // Effects
-export { EffectsRenderer } from "./effects-renderer";
+export { createEffectsRenderer, type EffectsRendererInstance } from "./effects-renderer";
 
 // Clipping & masking
 export { beginStencilClip, endStencilClip } from "./clip-mask";
@@ -61,4 +61,4 @@ export {
 } from "./stroke-tessellation";
 
 // Scene state (incremental updates)
-export { SceneState, type NodeGPUState } from "./scene-state";
+export { createSceneState, type SceneStateInstance, type NodeGPUState } from "./scene-state";

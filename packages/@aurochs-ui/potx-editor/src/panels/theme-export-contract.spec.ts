@@ -31,9 +31,8 @@ import type { ThemeEditorState, ThemeEditorAction } from "../context/types";
 import { themeEditorReducer, createInitialThemeEditorState } from "../context/reducer/index";
 import type { CustomColor, ExtraColorScheme, FormatScheme, ObjectDefaults } from "@aurochs-office/pptx/domain/theme/types";
 import type { MasterTextStyles } from "@aurochs-office/pptx/domain/text-style";
-import { createElement } from "@aurochs/xml";
 import type { Background } from "@aurochs-office/pptx/domain";
-import { pt, pct } from "@aurochs-office/drawing-ml/domain/units";
+import { pt, pct, px } from "@aurochs-office/drawing-ml/domain/units";
 import { DEFAULT_COLOR_MAPPING } from "@aurochs-office/pptx/domain/color/types";
 
 // =============================================================================
@@ -266,7 +265,7 @@ describe("Export contract: format scheme round-trip", () => {
   it("format scheme elements survive round-trip", async () => {
     const fs: FormatScheme = {
       fillStyles: [{ type: "solidFill", color: { spec: { type: "srgb", value: "FF0000" } } }],
-      lineStyles: [{ width: 1 as any, cap: "flat", compound: "sng", alignment: "ctr", fill: { type: "solidFill", color: { spec: { type: "scheme", value: "phClr" } } }, dash: "solid", join: "round" }],
+      lineStyles: [{ width: px(1), cap: "flat", compound: "sng", alignment: "ctr", fill: { type: "solidFill", color: { spec: { type: "scheme", value: "phClr" } } }, dash: "solid", join: "round" }],
       effectStyles: [undefined],
       bgFillStyles: [{ type: "solidFill", color: { spec: { type: "srgb", value: "0000FF" } } }],
     };

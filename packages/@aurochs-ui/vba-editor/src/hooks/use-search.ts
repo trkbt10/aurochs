@@ -4,7 +4,7 @@
  * Provides incremental search functionality with regex support.
  */
 
-import { useMemo, useCallback, useEffect } from "react";
+import { useMemo, useEffect } from "react";
 import type { SearchMatch, SearchOptions } from "../context/vba-editor/types";
 
 // =============================================================================
@@ -47,18 +47,18 @@ export function buildLineIndex(text: string): LineIndex {
   return {
     getLineAtOffset(offset: number) {
       // Binary search for line
-      let low = 0;
-      let high = lineStarts.length - 1;
-      while (low < high) {
-        const mid = Math.ceil((low + high) / 2);
+      const low = { value: 0 };
+      const high = { value: lineStarts.length - 1 };
+      while (low.value < high.value) {
+        const mid = Math.ceil((low.value + high.value) / 2);
         if (lineStarts[mid] <= offset) {
-          low = mid;
+          low.value = mid;
         } else {
-          high = mid - 1;
+          high.value = mid - 1;
         }
       }
-      const line = low + 1; // 1-based
-      const column = offset - lineStarts[low] + 1; // 1-based
+      const line = low.value + 1; // 1-based
+      const column = offset - lineStarts[low.value] + 1; // 1-based
       return { line, column };
     },
     getOffset(line: number, column: number) {
@@ -92,34 +92,29 @@ export function findMatches(
   }
 
   // Build regex from query
-  let pattern: string;
-  try {
-    pattern = options.useRegex ? query : escapeRegExp(query);
-  } catch {
-    // Invalid regex
-    return [];
-  }
-
+  // Build regex from query - invalid patterns return empty results
+  const pattern = options.useRegex ? query : escapeRegExp(query);
   const flags = options.caseSensitive ? "g" : "gi";
+  const fullPattern = options.wholeWord ? `\\b${pattern}\\b` : pattern;
 
-  let regex: RegExp;
+  const regex = { value: null as RegExp | null };
   try {
-    regex = new RegExp(
-      options.wholeWord ? `\\b${pattern}\\b` : pattern,
-      flags,
-    );
-  } catch {
-    // Invalid regex pattern
+    regex.value = new RegExp(fullPattern, flags);
+  } catch (error: unknown) {
+    // Invalid regex pattern (e.g., unclosed brackets) - return empty matches
+    if (error instanceof SyntaxError) {
+      return [];
+    }
     return [];
   }
 
   const lineIndex = buildLineIndex(text);
   const matches: SearchMatch[] = [];
-  let match: RegExpExecArray | null;
+  const match = { value: null as RegExpExecArray | null };
 
-  while ((match = regex.exec(text)) !== null) {
-    const startOffset = match.index;
-    const endOffset = startOffset + match[0].length;
+  while ((match.value = regex.value!.exec(text)) !== null) {
+    const startOffset = match.value.index;
+    const endOffset = startOffset + match.value[0].length;
     const startPos = lineIndex.getLineAtOffset(startOffset);
     const endPos = lineIndex.getLineAtOffset(endOffset);
 
@@ -128,13 +123,13 @@ export function findMatches(
       endOffset,
       line: startPos.line,
       startColumn: startPos.column,
-      endColumn: startPos.line === endPos.line ? endPos.column : startPos.column + match[0].length,
-      text: match[0],
+      endColumn: startPos.line === endPos.line ? endPos.column : startPos.column + match.value[0].length,
+      text: match.value[0],
     });
 
     // Prevent infinite loop on zero-width matches
-    if (match[0].length === 0) {
-      regex.lastIndex++;
+    if (match.value[0].length === 0) {
+      regex.value!.lastIndex++;
     }
 
     // Safety limit

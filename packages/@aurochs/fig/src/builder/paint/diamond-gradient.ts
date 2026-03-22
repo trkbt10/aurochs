@@ -9,84 +9,93 @@ import {
   type BlendMode,
 } from "../../constants";
 
-export class DiamondGradientBuilder {
-  private _stops: GradientStop[];
-  private _centerX: number;
-  private _centerY: number;
-  private _size: number;
-  private _opacity: number;
-  private _visible: boolean;
-  private _blendMode: BlendMode;
+/** Diamond gradient builder instance */
+export type DiamondGradientBuilder = {
+  stops: (stops: GradientStop[]) => DiamondGradientBuilder;
+  addStop: (stop: GradientStop) => DiamondGradientBuilder;
+  center: (x: number, y: number) => DiamondGradientBuilder;
+  size: (s: number) => DiamondGradientBuilder;
+  opacity: (value: number) => DiamondGradientBuilder;
+  visible: (value: boolean) => DiamondGradientBuilder;
+  blendMode: (mode: BlendMode) => DiamondGradientBuilder;
+  build: () => GradientPaint;
+};
 
-  constructor() {
-    this._stops = [
+/** Create a diamond gradient builder */
+function createDiamondGradientBuilder(): DiamondGradientBuilder {
+  const state = {
+    stops: [
       { color: { r: 1, g: 1, b: 1, a: 1 }, position: 0 },
       { color: { r: 0, g: 0, b: 0, a: 1 }, position: 1 },
-    ];
-    this._centerX = 0.5;
-    this._centerY = 0.5;
-    this._size = 0.5;
-    this._opacity = 1;
-    this._visible = true;
-    this._blendMode = "NORMAL";
-  }
+    ] as GradientStop[],
+    centerX: 0.5,
+    centerY: 0.5,
+    size: 0.5,
+    opacity: 1,
+    visible: true,
+    blendMode: "NORMAL" as BlendMode,
+  };
 
-  stops(stops: GradientStop[]): this {
-    this._stops = stops;
-    return this;
-  }
+  const builder: DiamondGradientBuilder = {
+    stops(stops: GradientStop[]) {
+      state.stops = stops;
+      return builder;
+    },
 
-  addStop(stop: GradientStop): this {
-    this._stops.push(stop);
-    this._stops.sort((a, b) => a.position - b.position);
-    return this;
-  }
+    addStop(stop: GradientStop) {
+      state.stops.push(stop);
+      state.stops.sort((a, b) => a.position - b.position);
+      return builder;
+    },
 
-  center(x: number, y: number): this {
-    this._centerX = x;
-    this._centerY = y;
-    return this;
-  }
+    center(x: number, y: number) {
+      state.centerX = x;
+      state.centerY = y;
+      return builder;
+    },
 
-  size(s: number): this {
-    this._size = s;
-    return this;
-  }
+    size(s: number) {
+      state.size = s;
+      return builder;
+    },
 
-  opacity(value: number): this {
-    this._opacity = Math.max(0, Math.min(1, value));
-    return this;
-  }
+    opacity(value: number) {
+      state.opacity = Math.max(0, Math.min(1, value));
+      return builder;
+    },
 
-  visible(value: boolean): this {
-    this._visible = value;
-    return this;
-  }
+    visible(value: boolean) {
+      state.visible = value;
+      return builder;
+    },
 
-  blendMode(mode: BlendMode): this {
-    this._blendMode = mode;
-    return this;
-  }
+    blendMode(mode: BlendMode) {
+      state.blendMode = mode;
+      return builder;
+    },
 
-  build(): GradientPaint {
-    return {
-      type: { value: PAINT_TYPE_VALUES.GRADIENT_DIAMOND, name: "GRADIENT_DIAMOND" },
-      opacity: this._opacity,
-      visible: this._visible,
-      blendMode: { value: BLEND_MODE_VALUES[this._blendMode], name: this._blendMode },
-      gradientStops: this._stops,
-      gradientHandlePositions: [
-        { x: this._centerX, y: this._centerY },
-        { x: this._centerX + this._size, y: this._centerY },
-        { x: this._centerX, y: this._centerY + this._size },
-      ],
-    };
-  }
+    build(): GradientPaint {
+      return {
+        type: { value: PAINT_TYPE_VALUES.GRADIENT_DIAMOND, name: "GRADIENT_DIAMOND" },
+        opacity: state.opacity,
+        visible: state.visible,
+        blendMode: { value: BLEND_MODE_VALUES[state.blendMode], name: state.blendMode },
+        gradientStops: state.stops,
+        gradientHandlePositions: [
+          { x: state.centerX, y: state.centerY },
+          { x: state.centerX + state.size, y: state.centerY },
+          { x: state.centerX, y: state.centerY + state.size },
+        ],
+      };
+    },
+  };
+
+  return builder;
 }
 
 /**
  * Create a diamond gradient paint
  */
 export function diamondGradient(): DiamondGradientBuilder {
-  return new DiamondGradientBuilder();
+  return createDiamondGradientBuilder();
 }

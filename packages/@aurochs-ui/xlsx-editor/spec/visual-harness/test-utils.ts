@@ -9,6 +9,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import pixelmatch from "pixelmatch";
 import { PNG } from "pngjs";
+import reactPlugin from "@vitejs/plugin-react";
 import { createServer, type ViteDevServer } from "vite";
 import puppeteer, { type Browser, type Page } from "puppeteer";
 import type { XlsxWorkbook } from "@aurochs-office/xlsx/domain/workbook";
@@ -42,6 +43,12 @@ export type CaptureConfig = {
 // File Utilities
 // =============================================================================
 
+
+
+
+
+
+/** Ensure all directories exist, creating them recursively if needed */
 export function ensureDirs(dirs: string[]): void {
   for (const dir of dirs) {
     if (!fs.existsSync(dir)) {
@@ -50,6 +57,12 @@ export function ensureDirs(dirs: string[]): void {
   }
 }
 
+
+
+
+
+
+/** Convert a name to a safe filename by replacing invalid characters */
 export function safeName(name: string): string {
   return name.replace(/[^a-zA-Z0-9-_]/g, "_");
 }
@@ -58,6 +71,19 @@ export function safeName(name: string): string {
 // Image Comparison
 // =============================================================================
 
+function resolveComparisonRegion(params: {
+  contentOnly: boolean;
+  headerLeft: number;
+  headerTop: number;
+  width: number;
+  height: number;
+}): { x: number; y: number; w: number; h: number } {
+  if (params.contentOnly) {
+    return { x: params.headerLeft, y: params.headerTop, w: params.width - params.headerLeft, h: params.height - params.headerTop };
+  }
+  return { x: 0, y: 0, w: params.width, h: params.height };
+}
+
 /**
  * Compare two PNG buffers and return diff statistics.
  * Optionally writes a diff image to the specified path.
@@ -65,35 +91,36 @@ export function safeName(name: string): string {
  * @param options.contentOnly - If true, only compare the cell content area (exclude headers)
  * @param options.headerOffset - Offset for headers { top, left }
  */
-export function comparePngs(
-  actual: Buffer,
-  baseline: Buffer,
-  name: string,
-  diffPath?: string,
+export function comparePngs(params: {
+  actual: Buffer;
+  baseline: Buffer;
+  name: string;
+  diffPath?: string;
   options?: {
     contentOnly?: boolean;
     headerOffset?: { top: number; left: number };
-  }
-): CompareResult {
+  };
+}): CompareResult {
+  const { actual, baseline, name, diffPath, options } = params;
   const imgA = PNG.sync.read(actual);
-  let imgB = PNG.sync.read(baseline);
+  const imgBRef = { value: PNG.sync.read(baseline) };
 
   // Resize if dimensions don't match (use nearest-neighbor scaling)
-  if (imgB.width !== imgA.width || imgB.height !== imgA.height) {
+  if (imgBRef.value.width !== imgA.width || imgBRef.value.height !== imgA.height) {
     const resized = new PNG({ width: imgA.width, height: imgA.height });
     for (let y = 0; y < imgA.height; y++) {
-      const sy = Math.floor((y / imgA.height) * imgB.height);
+      const sy = Math.floor((y / imgA.height) * imgBRef.value.height);
       for (let x = 0; x < imgA.width; x++) {
-        const sx = Math.floor((x / imgA.width) * imgB.width);
-        const srcIdx = (sy * imgB.width + sx) * 4;
+        const sx = Math.floor((x / imgA.width) * imgBRef.value.width);
+        const srcIdx = (sy * imgBRef.value.width + sx) * 4;
         const dstIdx = (y * imgA.width + x) * 4;
-        resized.data[dstIdx] = imgB.data[srcIdx];
-        resized.data[dstIdx + 1] = imgB.data[srcIdx + 1];
-        resized.data[dstIdx + 2] = imgB.data[srcIdx + 2];
-        resized.data[dstIdx + 3] = imgB.data[srcIdx + 3];
+        resized.data[dstIdx] = imgBRef.value.data[srcIdx];
+        resized.data[dstIdx + 1] = imgBRef.value.data[srcIdx + 1];
+        resized.data[dstIdx + 2] = imgBRef.value.data[srcIdx + 2];
+        resized.data[dstIdx + 3] = imgBRef.value.data[srcIdx + 3];
       }
     }
-    imgB = resized;
+    imgBRef.value = resized;
   }
 
   // Determine comparison region
@@ -101,36 +128,26 @@ export function comparePngs(
   const headerTop = options?.headerOffset?.top ?? 22;  // Default col header height
   const headerLeft = options?.headerOffset?.left ?? 56; // Default row header width
 
-  let regionX = 0;
-  let regionY = 0;
-  let regionW = imgA.width;
-  let regionH = imgA.height;
-
-  if (contentOnly) {
-    regionX = headerLeft;
-    regionY = headerTop;
-    regionW = imgA.width - headerLeft;
-    regionH = imgA.height - headerTop;
-  }
+  const region = resolveComparisonRegion({ contentOnly, headerLeft, headerTop, width: imgA.width, height: imgA.height });
 
   // Extract region from both images
-  const extractRegion = (img: PNG, x: number, y: number, w: number, h: number): PNG => {
-    const region = new PNG({ width: w, height: h });
-    for (let py = 0; py < h; py++) {
-      for (let px = 0; px < w; px++) {
-        const srcIdx = ((y + py) * img.width + (x + px)) * 4;
-        const dstIdx = (py * w + px) * 4;
-        region.data[dstIdx] = img.data[srcIdx];
-        region.data[dstIdx + 1] = img.data[srcIdx + 1];
-        region.data[dstIdx + 2] = img.data[srcIdx + 2];
-        region.data[dstIdx + 3] = img.data[srcIdx + 3];
+  const extractRegion = (img: PNG, r: { x: number; y: number; w: number; h: number }): PNG => {
+    const regionPng = new PNG({ width: r.w, height: r.h });
+    for (let py = 0; py < r.h; py++) {
+      for (let px = 0; px < r.w; px++) {
+        const srcIdx = ((r.y + py) * img.width + (r.x + px)) * 4;
+        const dstIdx = (py * r.w + px) * 4;
+        regionPng.data[dstIdx] = img.data[srcIdx];
+        regionPng.data[dstIdx + 1] = img.data[srcIdx + 1];
+        regionPng.data[dstIdx + 2] = img.data[srcIdx + 2];
+        regionPng.data[dstIdx + 3] = img.data[srcIdx + 3];
       }
     }
-    return region;
+    return regionPng;
   };
 
-  const regionA = contentOnly ? extractRegion(imgA, regionX, regionY, regionW, regionH) : imgA;
-  const regionB = contentOnly ? extractRegion(imgB, regionX, regionY, regionW, regionH) : imgB;
+  const regionA = contentOnly ? extractRegion(imgA, region) : imgA;
+  const regionB = contentOnly ? extractRegion(imgBRef.value, region) : imgBRef.value;
 
   const diff = new PNG({ width: regionA.width, height: regionA.height });
   const diffPixels = pixelmatch(regionA.data, regionB.data, diff.data, regionA.width, regionA.height, {
@@ -172,8 +189,7 @@ export async function startHarness(): Promise<XlsxHarness> {
       strictPort: false, // Try next port if occupied
     },
     plugins: [
-      // @ts-expect-error -- dynamic import
-      (await import("@vitejs/plugin-react")).default(),
+      reactPlugin(),
     ],
     resolve: {
       alias: {
@@ -313,7 +329,13 @@ export async function captureWorkbookScrolled(
 // Fixture Paths
 // =============================================================================
 
-export function getFixturePaths(fixtureName: string) {
+
+
+
+
+
+/** Get file paths for visual regression test fixtures */
+export function getFixturePaths(_fixtureName: string) {
   // __dirname is spec/visual-harness, so go up two levels to package root
   const fixturesDir = path.resolve(__dirname, "../../fixtures/visual");
   return {
@@ -330,6 +352,12 @@ export function getFixturePaths(fixtureName: string) {
 // Summary Printing
 // =============================================================================
 
+
+
+
+
+
+/** Print a summary table of visual regression comparison results */
 export function printSummary(results: CompareResult[]): void {
   console.log("\n=== XLSX Visual Regression Summary ===\n");
 

@@ -46,6 +46,12 @@ const styles = {
   },
 };
 
+
+
+
+
+
+/** Root application component for the DrawingML feature viewer */
 export function App() {
   const defaultRoute = getDefaultRoute();
   const [activeCategory, setActiveCategory] = useState<Category>(defaultRoute.category);

@@ -36,6 +36,22 @@ export type SlideRelationship = {
   readonly targetMode?: string;
 };
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/** Build [Content_Types].xml for the PPTX package. */
 export function buildContentTypesXml(
   slideCount: number,
   options?: { hasNotes?: readonly boolean[]; imageExtensions?: readonly string[]; hasCharts?: readonly number[] },
@@ -72,12 +88,12 @@ export function buildContentTypesXml(
   ];
 
   const imageExts = new Set(options?.imageExtensions ?? []);
-  if (imageExts.has("png")) defaultExtensions.push(`<Default Extension="png" ContentType="image/png"/>`);
-  if (imageExts.has("jpeg") || imageExts.has("jpg")) defaultExtensions.push(`<Default Extension="jpeg" ContentType="image/jpeg"/>`);
-  if (imageExts.has("emf")) defaultExtensions.push(`<Default Extension="emf" ContentType="image/x-emf"/>`);
-  if (imageExts.has("wmf")) defaultExtensions.push(`<Default Extension="wmf" ContentType="image/x-wmf"/>`);
-  if (imageExts.has("bmp")) defaultExtensions.push(`<Default Extension="bmp" ContentType="image/bmp"/>`);
-  if (imageExts.has("tiff")) defaultExtensions.push(`<Default Extension="tiff" ContentType="image/tiff"/>`);
+  if (imageExts.has("png")) {defaultExtensions.push(`<Default Extension="png" ContentType="image/png"/>`);}
+  if (imageExts.has("jpeg") || imageExts.has("jpg")) {defaultExtensions.push(`<Default Extension="jpeg" ContentType="image/jpeg"/>`);}
+  if (imageExts.has("emf")) {defaultExtensions.push(`<Default Extension="emf" ContentType="image/x-emf"/>`);}
+  if (imageExts.has("wmf")) {defaultExtensions.push(`<Default Extension="wmf" ContentType="image/x-wmf"/>`);}
+  if (imageExts.has("bmp")) {defaultExtensions.push(`<Default Extension="bmp" ContentType="image/bmp"/>`);}
+  if (imageExts.has("tiff")) {defaultExtensions.push(`<Default Extension="tiff" ContentType="image/tiff"/>`);}
 
   return (
     `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
@@ -88,6 +104,22 @@ export function buildContentTypesXml(
   );
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/** Build the main presentation.xml. */
 export function buildPresentationXml(slideCount: number, slideSize: PptSlideSize): string {
   const sldIds: string[] = [];
   for (let i = 1; i <= slideCount; i++) {
@@ -110,6 +142,22 @@ export function buildPresentationXml(slideCount: number, slideSize: PptSlideSize
   );
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/** Build the presentation relationships XML. */
 export function buildPresentationRelsXml(slideCount: number): string {
   const rels: string[] = [];
 
@@ -122,6 +170,22 @@ export function buildPresentationRelsXml(slideCount: number): string {
   return wrapRelationships(rels);
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/** Build slide relationships XML. */
 export function buildSlideRelsXml(extraRels?: readonly SlideRelationship[]): string {
   const rels: string[] = [];
   rels.push(`<Relationship Id="rId1" Type="${RT_SLIDE_LAYOUT}" Target="../slideLayouts/slideLayout1.xml"/>`);
@@ -136,18 +200,66 @@ export function buildSlideRelsXml(extraRels?: readonly SlideRelationship[]): str
   return wrapRelationships(rels);
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/** Build slide layout relationships XML. */
 export function buildLayoutRelsXml(): string {
   return wrapRelationships([
     `<Relationship Id="rId1" Type="${RT_SLIDE_MASTER}" Target="../slideMasters/slideMaster1.xml"/>`,
   ]);
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/** Build slide master relationships XML. */
 export function buildMasterRelsXml(): string {
   return wrapRelationships([
     `<Relationship Id="rId1" Type="${RT_THEME}" Target="../theme/theme1.xml"/>`,
   ]);
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/** Build notes slide XML. */
 export function buildNotesSlideXml(text: string): string {
   const escapedText = escapeXml(text);
   return (
@@ -168,6 +280,22 @@ export function buildNotesSlideXml(text: string): string {
   );
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/** Build notes slide relationships XML. */
 export function buildNotesRelsXml(slideIndex: number): string {
   return wrapRelationships([
     `<Relationship Id="rId1" Type="${RT_SLIDE}" Target="../slides/slide${slideIndex}.xml"/>`,
@@ -183,6 +311,22 @@ function wrapRelationships(rels: readonly string[]): string {
   );
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/** Escape special XML characters. */
 export function escapeXml(s: string): string {
   return s
     .replace(/&/g, "&amp;")

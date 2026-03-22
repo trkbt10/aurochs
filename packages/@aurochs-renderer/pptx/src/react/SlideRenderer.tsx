@@ -10,7 +10,7 @@ import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-conte
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import type { RenderOptions } from "../render-options";
-import type { ResolvedBackgroundFill } from "../background-fill";
+import type { ResolvedBackgroundFill } from "@aurochs-office/drawing-ml/domain/background-fill";
 import type { ResourceResolver } from "@aurochs-office/pptx/domain/resource-resolver";
 import type { ResourceStore } from "@aurochs-office/pptx/domain/resource-store";
 import { RenderProvider, useRenderContext } from "./context";

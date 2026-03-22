@@ -8,9 +8,9 @@
  *   bun packages/@aurochs-renderer/figma/scripts/generate-snapshots.ts text-comprehensive
  */
 
-import * as fs from "fs";
-import * as path from "path";
-import { parseFigFile, buildNodeTree, findNodesByType, getNodeType, type FigBlob } from "@aurochs/fig/parser";
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { parseFigFile, buildNodeTree, findNodesByType, getNodeType } from "@aurochs/fig/parser";
 import type { FigNode } from "@aurochs/fig/types";
 import { renderCanvas } from "../src/svg/renderer";
 
@@ -31,7 +31,7 @@ function getNodeGuid(node: FigNode): FigGuid | undefined {
 
 function sanitizeFilename(name: string): string {
   return name
-    .replace(/[^a-zA-Z0-9_\-]/g, "-")
+    .replace(/[^a-zA-Z0-9_-]/g, "-")
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "")
     .substring(0, 50);
@@ -46,16 +46,16 @@ function findFigFile(scopeDir: string, scope: string): string | null {
 
   // First try exact match
   const exactMatch = files.find((f) => f === `${scope}.fig`);
-  if (exactMatch) return path.join(scopeDir, exactMatch);
+  if (exactMatch) {return path.join(scopeDir, exactMatch);}
 
   // Try with underscore variant (e.g., twitter-ui -> twitter_ui.fig)
   const underscoreScope = scope.replace(/-/g, "_");
   const underscoreMatch = files.find((f) => f === `${underscoreScope}.fig`);
-  if (underscoreMatch) return path.join(scopeDir, underscoreMatch);
+  if (underscoreMatch) {return path.join(scopeDir, underscoreMatch);}
 
   // Try any .fig file
   const anyFig = files.find((f) => f.endsWith(".fig"));
-  if (anyFig) return path.join(scopeDir, anyFig);
+  if (anyFig) {return path.join(scopeDir, anyFig);}
 
   return null;
 }

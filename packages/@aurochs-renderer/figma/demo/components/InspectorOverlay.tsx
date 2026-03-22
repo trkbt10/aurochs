@@ -41,9 +41,7 @@ function collectBoxes(node: FigNode, parentTransform: FigMatrix, showHiddenNodes
 
   const nodeType = getNodeType(node);
   const nodeData = node as Record<string, unknown>;
-  const transform = nodeData.transform
-    ? multiplyMatrices(parentTransform, nodeData.transform as FigMatrix)
-    : parentTransform;
+  const transform = resolveTransform(nodeData, parentTransform);
 
   const size = nodeData.size as { x?: number; y?: number } | undefined;
   const boxes: BoxInfo[] = [];
@@ -66,6 +64,20 @@ function collectBoxes(node: FigNode, parentTransform: FigMatrix, showHiddenNodes
   return boxes;
 }
 
+
+
+
+
+
+/** Resolve effective transform by combining parent and node transforms */
+function resolveTransform(nodeData: Record<string, unknown>, parentTransform: FigMatrix): FigMatrix {
+  if (nodeData.transform) {
+    return multiplyMatrices(parentTransform, nodeData.transform as FigMatrix);
+  }
+  return parentTransform;
+}
+
+/** Overlay for highlighting inspected nodes */
 export function InspectorOverlay({
   frameNode,
   frameWidth,
@@ -132,10 +144,10 @@ export function InspectorOverlay({
 export function getRootNormalizationTransform(frameNode: FigNode): FigMatrix {
   const nodeData = frameNode as Record<string, unknown>;
   const transform = nodeData.transform as FigMatrix | undefined;
-  if (!transform) return IDENTITY_MATRIX;
+  if (!transform) {return IDENTITY_MATRIX;}
   const offsetX = transform.m02 ?? 0;
   const offsetY = transform.m12 ?? 0;
-  if (offsetX === 0 && offsetY === 0) return IDENTITY_MATRIX;
+  if (offsetX === 0 && offsetY === 0) {return IDENTITY_MATRIX;}
   return createTranslationMatrix(-offsetX, -offsetY);
 }
 

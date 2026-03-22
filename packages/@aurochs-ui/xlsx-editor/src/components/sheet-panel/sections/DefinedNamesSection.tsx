@@ -65,7 +65,7 @@ const scopeStyle: CSSProperties = {
  */
 export function DefinedNamesSection({
   disabled,
-  sheetIndex,
+  sheetIndex: _sheetIndex,
   sheetNames,
   definedNames,
   selectedRange,
@@ -148,7 +148,13 @@ export function DefinedNamesSection({
         Create named ranges or formulas for easier reference in formulas.
       </div>
 
-      {isAdding ? (
+      {renderDefinedNameContent()}
+    </OptionalPropertySection>
+  );
+
+  function renderDefinedNameContent() {
+    if (isAdding) {
+      return (
         <>
           <FieldGroup label="Name">
             <Input
@@ -192,9 +198,11 @@ export function DefinedNamesSection({
             </Button>
           </div>
         </>
-      ) : (
-        <>
-          {hasNames && (
+      );
+    }
+    return (
+      <>
+        {hasNames && (
             <div style={{ marginBottom: spacingTokens.sm }}>
               {definedNames.map((dn) => (
                 <div key={`${dn.name}-${dn.localSheetId ?? "wb"}`} style={nameItemStyle}>
@@ -223,7 +231,8 @@ export function DefinedNamesSection({
             </Button>
           </div>
         </>
-      )}
-    </OptionalPropertySection>
-  );
+    );
+  }
+
+  return null;
 }

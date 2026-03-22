@@ -4,11 +4,10 @@
  * Orchestrates VBA macro execution with Excel host adapter.
  */
 
-import type { VbaProgramIr, VbaModule, VbaRuntimeValue } from "@aurochs-office/vba";
+import type { VbaProgramIr, VbaModule } from "@aurochs-office/vba";
 import { VbaRuntimeError, parseVbaProcedureBody } from "@aurochs-office/vba";
 import { createVbaExecutionContext, createVbaRuntime } from "@aurochs-office/vba/runtime";
 import type { XlsxWorkbook } from "@aurochs-office/xlsx/domain/workbook";
-import type { CellValue } from "@aurochs-office/xlsx/domain/cell/types";
 import {
   createExcelAdapterState,
   createExcelHostAdapter,
@@ -129,8 +128,6 @@ export function executeVbaProcedure(params: ExecuteVbaProcedureParams): Executio
       durationMs,
     };
   } catch (error) {
-    const durationMs = performance.now() - startTime;
-
     if (error instanceof VbaRuntimeError) {
       return {
         ok: false,
@@ -180,14 +177,13 @@ function extractProcedureBody(sourceCode: string, procedureName: string): string
   const lines = sourceCode.split(/\r?\n/);
   const lowerProcName = procedureName.toLowerCase();
 
-  let inProcedure = false;
-  let braceDepth = 0;
+  const parseState = { inProcedure: false, braceDepth: 0 };
   const bodyLines: string[] = [];
 
   for (const line of lines) {
     const trimmed = line.trim().toLowerCase();
 
-    if (!inProcedure) {
+    if (!parseState.inProcedure) {
       // Look for procedure start
       const subMatch = trimmed.match(/^(public\s+|private\s+)?sub\s+(\w+)/);
       const funcMatch = trimmed.match(/^(public\s+|private\s+)?function\s+(\w+)/);
@@ -195,23 +191,23 @@ function extractProcedureBody(sourceCode: string, procedureName: string): string
 
       const matchedName = subMatch?.[2] || funcMatch?.[2] || propMatch?.[3];
       if (matchedName?.toLowerCase() === lowerProcName) {
-        inProcedure = true;
-        braceDepth = 1;
+        parseState.inProcedure = true;
+        parseState.braceDepth = 1;
         continue; // Skip the declaration line
       }
     } else {
       // Check for nested blocks
       if (/^(if|for|do|while|select|with)\b/.test(trimmed) && !trimmed.includes("then") && !trimmed.includes("end")) {
-        braceDepth++;
+        parseState.braceDepth++;
       } else if (/^(if\b.*\bthen\b)/.test(trimmed) && !/\bthen\s+\S/.test(trimmed)) {
         // Multi-line If (has Then at end but nothing after)
-        braceDepth++;
+        parseState.braceDepth++;
       }
 
       // Check for end statements
       if (/^end\s+(sub|function|property|if|for|select|with)\b/.test(trimmed)) {
-        braceDepth--;
-        if (braceDepth === 0) {
+        parseState.braceDepth--;
+        if (parseState.braceDepth === 0) {
           // End of procedure
           break;
         }

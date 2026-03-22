@@ -16,7 +16,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { renderSceneGraphToSvg } from "../src/svg/scene-renderer";
 import {
   type FixtureData,
@@ -62,10 +61,10 @@ const MAX_BASELINE_DIFF_PERCENT = 2;
 // Data Loading
 // =============================================================================
 
-let cachedData: FixtureData | null = null;
+const cachedData: FixtureData | null = null;
 
 async function loadFixtures() {
-  if (cachedData) return cachedData;
+  if (cachedData) {return cachedData;}
   cachedData = await loadFigFixture(FIG_FILE, "Twitter");
   return cachedData;
 }
@@ -75,22 +74,22 @@ async function loadFixtures() {
 // =============================================================================
 
 describe("WebGL visual regression", () => {
-  let harness: WebGLHarness;
+  const harnessRef = { value: undefined as WebGLHarness | undefined };
 
   beforeAll(async () => {
     ensureDirs([OUTPUT_DIR, DIFF_DIR, BASELINE_DIR]);
-    harness = await startHarness(path.resolve(__dirname, "webgl-harness/vite.config.ts"));
+    harnessRef.value = await startHarness(path.resolve(__dirname, "webgl-harness/vite.config.ts"));
   }, 30000);
 
   afterAll(async () => {
-    await stopHarness(harness);
+    await stopHarness(harnessRef.value);
   });
 
   it("loads fixtures and harness", async () => {
     const data = await loadFixtures();
     expect(data.frames.size).toBeGreaterThan(0);
 
-    const title = await harness.page.title();
+    const title = await harnessRef.value.page.title();
     expect(title).toBe("ready");
   });
 
@@ -111,7 +110,7 @@ describe("WebGL visual regression", () => {
         const svgPng = svgToPng(svgString, frame.width);
 
         // WebGL actual: render via Puppeteer
-        const webglPng = await captureWebGL(harness.page, sceneGraph);
+        const webglPng = await captureWebGL(harnessRef.value.page, sceneGraph);
 
         // Save outputs
         const safe = safeName(frameName);
@@ -138,7 +137,7 @@ describe("WebGL visual regression", () => {
         }
 
         const sceneGraph = buildFrameSceneGraph(frame, data);
-        const webglPng = await captureWebGL(harness.page, sceneGraph);
+        const webglPng = await captureWebGL(harnessRef.value.page, sceneGraph);
 
         const safe = safeName(frameName);
         const baselinePath = path.join(BASELINE_DIR, `${safe}.png`);
@@ -166,12 +165,12 @@ describe("WebGL visual regression", () => {
 
     for (const frameName of TEST_FRAMES) {
       const frame = data.frames.get(frameName);
-      if (!frame) continue;
+      if (!frame) {continue;}
 
       const sceneGraph = buildFrameSceneGraph(frame, data);
       const svgString = renderSceneGraphToSvg(sceneGraph) as string;
       const svgPng = svgToPng(svgString, frame.width);
-      const webglPng = await captureWebGL(harness.page, sceneGraph);
+      const webglPng = await captureWebGL(harnessRef.value.page, sceneGraph);
 
       results.push(comparePngs(svgPng, webglPng, frameName));
     }

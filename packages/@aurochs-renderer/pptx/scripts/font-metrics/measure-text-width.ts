@@ -35,16 +35,12 @@ type TextAnalysis = {
 
 function findTextLines(png: PNG): TextLine[] {
   const lines: TextLine[] = [];
-  let inText = false;
-  let currentLine: { rows: number[]; startXs: number[]; endXs: number[] } = {
-    rows: [],
-    startXs: [],
-    endXs: [],
-  };
+  const inText = { value: false };
+  const currentLine = { value: { rows: [] as number[], startXs: [] as number[], endXs: [] as number[] } };
 
   for (let y = 0; y < png.height; y++) {
-    let firstX = -1;
-    let lastX = -1;
+    const firstX = { value: -1 };
+    const lastX = { value: -1 };
 
     for (let x = 0; x < png.width; x++) {
       const idx = (y * png.width + x) * 4;
@@ -53,31 +49,31 @@ function findTextLines(png: PNG): TextLine[] {
       const b = png.data[idx + 2];
 
       if (r < 250 || g < 250 || b < 250) {
-        if (firstX === -1) {firstX = x;}
-        lastX = x;
+        if (firstX.value === -1) {firstX.value = x;}
+        lastX.value = x;
       }
     }
 
-    const hasText = firstX !== -1;
+    const hasText = firstX.value !== -1;
 
-    if (hasText && !inText) {
-      inText = true;
-      currentLine = { rows: [y], startXs: [firstX], endXs: [lastX] };
-    } else if (hasText && inText) {
-      currentLine.rows.push(y);
-      currentLine.startXs.push(firstX);
-      currentLine.endXs.push(lastX);
-    } else if (!hasText && inText) {
-      if (currentLine.rows.length > 5) {
-        const midIdx = Math.floor(currentLine.rows.length / 2);
+    if (hasText && !inText.value) {
+      inText.value = true;
+      currentLine.value = { rows: [y], startXs: [firstX.value], endXs: [lastX.value] };
+    } else if (hasText && inText.value) {
+      currentLine.value.rows.push(y);
+      currentLine.value.startXs.push(firstX.value);
+      currentLine.value.endXs.push(lastX.value);
+    } else if (!hasText && inText.value) {
+      if (currentLine.value.rows.length > 5) {
+        const midIdx = Math.floor(currentLine.value.rows.length / 2);
         lines.push({
-          row: currentLine.rows[midIdx],
-          startX: currentLine.startXs[midIdx],
-          endX: currentLine.endXs[midIdx],
-          width: currentLine.endXs[midIdx] - currentLine.startXs[midIdx],
+          row: currentLine.value.rows[midIdx],
+          startX: currentLine.value.startXs[midIdx],
+          endX: currentLine.value.endXs[midIdx],
+          width: currentLine.value.endXs[midIdx] - currentLine.value.startXs[midIdx],
         });
       }
-      inText = false;
+      inText.value = false;
     }
   }
 
@@ -133,18 +129,18 @@ function printAnalysis(analysis: TextAnalysis): void {
   );
   console.log("-----|----------------|--------------|-----------|----------|-------");
 
-  let totalWidthDiffPct = 0;
+  const totalWidthDiffPct = { value: 0 };
 
   for (let i = 0; i < analysis.lines.length; i++) {
     const line = analysis.lines[i];
-    totalWidthDiffPct += line.widthDiffPercent;
+    totalWidthDiffPct.value += line.widthDiffPercent;
 
     console.log(
       `  ${i + 1}  |      ${line.baseline.width.toString().padStart(4)}      |     ${line.output.width.toString().padStart(4)}     |   ${line.widthDiff.toString().padStart(4)}    |  ${line.widthDiffPercent.toFixed(1).padStart(5)}%  |  ${line.yDiff.toString().padStart(3)}`,
     );
   }
 
-  const avgWidthDiffPct = totalWidthDiffPct / analysis.lines.length;
+  const avgWidthDiffPct = totalWidthDiffPct.value / analysis.lines.length;
   console.log("-----|----------------|--------------|-----------|----------|-------");
   console.log(
     `Average width diff: ${avgWidthDiffPct.toFixed(1)}%`,

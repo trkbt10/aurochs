@@ -45,6 +45,26 @@ type LineHighlight = {
   readonly type: HighlightType;
 };
 
+/**
+ * Resolve start/end columns for a highlight on a specific line.
+ */
+function resolveHighlightColumns(
+  lineNumber: number,
+  lineLength: number,
+  h: HighlightRange,
+): { startCol: number; endCol: number } {
+  if (lineNumber === h.startLine && lineNumber === h.endLine) {
+    return { startCol: h.startColumn, endCol: h.endColumn };
+  }
+  if (lineNumber === h.startLine) {
+    return { startCol: h.startColumn, endCol: lineLength + 1 };
+  }
+  if (lineNumber === h.endLine) {
+    return { startCol: 1, endCol: h.endColumn };
+  }
+  return { startCol: 1, endCol: lineLength + 1 };
+}
+
 function getLineHighlights(
   lineNumber: number,
   lineLength: number,
@@ -57,23 +77,7 @@ function getLineHighlights(
       continue;
     }
 
-    let startCol: number;
-    let endCol: number;
-
-    if (lineNumber === h.startLine && lineNumber === h.endLine) {
-      startCol = h.startColumn;
-      endCol = h.endColumn;
-    } else if (lineNumber === h.startLine) {
-      startCol = h.startColumn;
-      endCol = lineLength + 1;
-    } else if (lineNumber === h.endLine) {
-      startCol = 1;
-      endCol = h.endColumn;
-    } else {
-      startCol = 1;
-      endCol = lineLength + 1;
-    }
-
+    const { startCol, endCol } = resolveHighlightColumns(lineNumber, lineLength, h);
     result.push({ startColumn: startCol, endColumn: endCol, type: h.type });
   }
 
@@ -169,15 +173,18 @@ function drawLineNumber(
   ctx.textAlign = "left"; // Reset
 }
 
+type DrawHighlightOptions = {
+  readonly context: DrawContext;
+  readonly highlight: LineHighlight;
+  readonly lineIndex: number;
+  readonly lineText: string;
+};
+
 /**
  * Draw a highlight rect.
  */
-function drawHighlight(
-  context: DrawContext,
-  highlight: LineHighlight,
-  lineIndex: number,
-  lineText: string,
-): void {
+function drawHighlight(options: DrawHighlightOptions): void {
+  const { context, highlight, lineIndex, lineText } = options;
   const { ctx, lineHeight, charWidth } = context;
   const y = lineIndex * lineHeight;
 
@@ -194,16 +201,19 @@ function drawHighlight(
   ctx.fill();
 }
 
+type DrawCursorOptions = {
+  readonly context: DrawContext;
+  readonly column: number;
+  readonly lineIndex: number;
+  readonly lineText: string;
+  readonly blinking: boolean;
+};
+
 /**
  * Draw cursor.
  */
-function drawCursor(
-  context: DrawContext,
-  column: number,
-  lineIndex: number,
-  lineText: string,
-  blinking: boolean,
-): void {
+function drawCursor(options: DrawCursorOptions): void {
+  const { context, column, lineIndex, lineText, blinking } = options;
   const { ctx, lineHeight } = context;
   const x = getColumnX(context, lineText, column);
   const y = lineIndex * lineHeight;
@@ -219,15 +229,18 @@ function drawCursor(
   ctx.fillRect(x, y, 2, lineHeight);
 }
 
+type DrawTokenOptions = {
+  readonly context: DrawContext;
+  readonly token: Token;
+  readonly lineIndex: number;
+  readonly lineText: string;
+};
+
 /**
  * Draw a single token on the canvas.
  */
-function drawToken(
-  context: DrawContext,
-  token: Token,
-  lineIndex: number,
-  lineText: string,
-): void {
+function drawToken(options: DrawTokenOptions): void {
+  const { context, token, lineIndex, lineText } = options;
   if (token.type === "whitespace") {
     return;
   }
@@ -297,7 +310,7 @@ export const CanvasCodeRenderer = memo(function CanvasCodeRenderer({
 
   // Check if cursor is on a visible line
   const cursorOnLine = useMemo(() => {
-    if (!cursor?.visible) return undefined;
+    if (!cursor?.visible) {return undefined;}
     if (cursor.line < visibleRange.start + 1 || cursor.line > visibleRange.end) {
       return undefined;
     }
@@ -362,17 +375,17 @@ export const CanvasCodeRenderer = memo(function CanvasCodeRenderer({
       // 2. Draw highlights
       const lineHighlights = lineHighlightsMap.get(lineNumber) ?? [];
       for (const highlight of lineHighlights) {
-        drawHighlight(drawContext, highlight, lineIndex, lineText);
+        drawHighlight({ context: drawContext, highlight, lineIndex, lineText });
       }
 
       // 3. Draw tokens
       for (const token of tokens) {
-        drawToken(drawContext, token, lineIndex, lineText);
+        drawToken({ context: drawContext, token, lineIndex, lineText });
       }
 
       // 4. Draw cursor
       if (cursorOnLine === lineNumber && cursor) {
-        drawCursor(drawContext, cursor.column, lineIndex, lineText, cursor.blinking);
+        drawCursor({ context: drawContext, column: cursor.column, lineIndex, lineText, blinking: cursor.blinking });
       }
     }
   }, [

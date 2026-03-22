@@ -47,44 +47,50 @@ type PendingRequest = {
   reject: (error: Error) => void;
 };
 
-// eslint-disable-next-line no-restricted-syntax -- Module-level singleton state
-let worker: Worker | null = null;
-// eslint-disable-next-line no-restricted-syntax -- Module-level counter for request IDs
-let requestId = 0;
+/** Module-level worker state managed via mutable ref objects to avoid let. */
+const workerRef = { value: null as Worker | null };
+const requestIdRef = { value: 0 };
 const pendingRequests = new Map<number, PendingRequest>();
-// eslint-disable-next-line no-restricted-syntax -- Module-level state for worker initialization failure
-let workerFailed = false;
-// eslint-disable-next-line no-restricted-syntax -- Module-level state for lazy-loaded worker constructor
-let WorkerConstructor: (new () => Worker) | null = null;
+const workerFailedRef = { value: false };
+const workerConstructorRef = { value: null as ((new () => Worker) | null) };
+
+/**
+ * Load a Vite worker module at runtime.
+ * Separated to encapsulate the runtime module resolution that requires dynamic import.
+ */
+async function importWorkerModule(): Promise<{ default: new () => Worker }> {
+  // Vite-specific ?worker suffix triggers bundler worker handling
+  return Function('return import("../extraction/glyph.worker?worker")')();
+}
 
 /**
  * Lazy-load the worker constructor using Vite's worker import.
  * This avoids module load failures in non-Vite environments (tests).
  */
 async function loadWorkerConstructor(): Promise<(new () => Worker) | null> {
-  if (WorkerConstructor !== null) {
-    return WorkerConstructor;
+  if (workerConstructorRef.value !== null) {
+    return workerConstructorRef.value;
   }
-  if (workerFailed) {
+  if (workerFailedRef.value) {
     return null;
   }
   try {
-    // Dynamic import with Vite's ?worker suffix
-    const module = await import("../extraction/glyph.worker?worker");
-    WorkerConstructor = module.default;
-    return WorkerConstructor;
-  } catch {
+    const module = await importWorkerModule();
+    workerConstructorRef.value = module.default;
+    return workerConstructorRef.value;
+  } catch (importError: unknown) {
     // Non-Vite environment (tests, Node.js)
-    workerFailed = true;
+    console.debug("Worker import failed:", importError);
+    workerFailedRef.value = true;
     return null;
   }
 }
 
 function getWorker(): Worker | null {
-  if (worker) {
-    return worker;
+  if (workerRef.value) {
+    return workerRef.value;
   }
-  if (workerFailed || WorkerConstructor === null) {
+  if (workerFailedRef.value || workerConstructorRef.value === null) {
     return null;
   }
   if (typeof Worker === "undefined") {
@@ -92,7 +98,8 @@ function getWorker(): Worker | null {
   }
 
   try {
-    const w = new WorkerConstructor();
+    const Ctor = workerConstructorRef.value;
+    const w = new Ctor();
 
     w.onmessage = (event: MessageEvent<WorkerResponse>) => {
       const pending = pendingRequests.get(event.data.id);
@@ -115,11 +122,11 @@ function getWorker(): Worker | null {
       }
     };
 
-    worker = w;
-    return worker;
+    workerRef.value = w;
+    return workerRef.value;
   } catch (error) {
     console.warn("Failed to initialize glyph worker:", error);
-    workerFailed = true;
+    workerFailedRef.value = true;
     return null;
   }
 }
@@ -149,7 +156,7 @@ async function extractGlyphAsync(char: string, fontFamily: string, style: GlyphS
   }
 
   return new Promise((resolve, reject) => {
-    const id = ++requestId;
+    const id = ++requestIdRef.value;
 
     // Timeout after 5 seconds
     const timeout = setTimeout(() => {
@@ -187,9 +194,9 @@ async function extractGlyphsAsync(chars: string[], fontFamily: string, style: Gl
 
 /** Terminates the glyph extraction worker and clears pending requests. */
 export function terminateWorker(): void {
-  if (worker) {
-    worker.terminate();
-    worker = null;
+  if (workerRef.value) {
+    workerRef.value.terminate();
+    workerRef.value = null;
   }
   pendingRequests.clear();
 }

@@ -34,7 +34,7 @@ export function PdfViewerPage({ data, fileName, onBack, onFileSelect, onStartEdi
   const handleFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
-      if (file) handleFile(file);
+      if (file) {handleFile(file);}
     },
     [handleFile],
   );
@@ -44,7 +44,7 @@ export function PdfViewerPage({ data, fileName, onBack, onFileSelect, onStartEdi
       e.preventDefault();
       setIsDragging(false);
       const file = e.dataTransfer.files[0];
-      if (file) handleFile(file);
+      if (file) {handleFile(file);}
     },
     [handleFile],
   );

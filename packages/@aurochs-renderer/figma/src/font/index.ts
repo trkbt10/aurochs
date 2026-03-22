@@ -67,13 +67,13 @@ export {
 // Font Resolver
 // =============================================================================
 
-export { FontResolver, createFontResolver, createBrowserAvailabilityChecker } from "./resolver";
+export { createFontResolver, createBrowserAvailabilityChecker, type FontResolverInstance } from "./resolver";
 
 // =============================================================================
 // Font Cache
 // =============================================================================
 
-export { FontCache, CachingFontLoader } from "./cache";
+export { createFontCache, type FontCache, createCachingFontLoader, type CachingFontLoader } from "./cache";
 
 // =============================================================================
 // Helpers

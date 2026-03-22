@@ -138,7 +138,7 @@ function VbaEditorInner({
 
   // Compute selection character count
   const selectionInfo = useMemo(() => {
-    if (!selection) return undefined;
+    if (!selection) {return undefined;}
     // Simple estimation - actual character count would need source text
     const lines = selection.endLine - selection.startLine;
     return { lines, characters: 0 }; // Characters computed in context if needed

@@ -2,39 +2,28 @@
  * @file IntersectionObserver mock utilities for tests
  */
 
-let isInstalled = false;
-
-class MockIntersectionObserver implements IntersectionObserver {
-  public readonly root: Element | Document | null = null;
-  public readonly rootMargin: string = "0px";
-  public readonly thresholds: ReadonlyArray<number> = [0];
-
-  public constructor(_callback: IntersectionObserverCallback, _options?: IntersectionObserverInit) {
-    // No-op for tests.
-  }
-
-  public observe(): void {
-    // No-op for tests.
-  }
-
-  public unobserve(): void {
-    // No-op for tests.
-  }
-
-  public disconnect(): void {
-    // No-op for tests.
-  }
-
-  public takeRecords(): IntersectionObserverEntry[] {
-    return [];
-  }
-}
+const installState = { isInstalled: false };
 
 /** Install a mock IntersectionObserver on globalThis for tests. */
 export function installIntersectionObserverMock(): void {
-  if (isInstalled) {
+  if (installState.isInstalled) {
     return;
   }
-  globalThis.IntersectionObserver = MockIntersectionObserver as unknown as typeof IntersectionObserver;
-  isInstalled = true;
+
+  function MockIntersectionObserver(
+    this: Record<string, unknown>,
+    _callback: IntersectionObserverCallback,
+    _options?: IntersectionObserverInit,
+  ): void {
+    this.root = null;
+    this.rootMargin = "0px";
+    this.thresholds = [0];
+  }
+  MockIntersectionObserver.prototype.observe = function observe(): void { /* no-op */ };
+  MockIntersectionObserver.prototype.unobserve = function unobserve(): void { /* no-op */ };
+  MockIntersectionObserver.prototype.disconnect = function disconnect(): void { /* no-op */ };
+  MockIntersectionObserver.prototype.takeRecords = function takeRecords(): IntersectionObserverEntry[] { return []; };
+
+  Object.defineProperty(globalThis, "IntersectionObserver", { value: MockIntersectionObserver, writable: true });
+  installState.isInstalled = true;
 }

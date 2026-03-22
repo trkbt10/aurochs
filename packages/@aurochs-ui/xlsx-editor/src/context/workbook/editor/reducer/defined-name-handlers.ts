@@ -28,7 +28,8 @@ function handleAddDefinedName(
       ...state,
       workbookHistory: pushHistory(state.workbookHistory, newWorkbook),
     };
-  } catch {
+  } catch (error) {
+    if (error instanceof Error) { console.debug(error.message); }
     // Name already exists
     return state;
   }
@@ -40,17 +41,18 @@ function handleUpdateDefinedName(
 ): XlsxEditorState {
   const currentWorkbook = state.workbookHistory.present;
   try {
-    const newWorkbook = updateDefinedName(
-      currentWorkbook,
-      action.oldName,
-      action.oldLocalSheetId,
-      action.definedName,
-    );
+    const newWorkbook = updateDefinedName({
+      workbook: currentWorkbook,
+      oldName: action.oldName,
+      oldLocalSheetId: action.oldLocalSheetId,
+      updatedName: action.definedName,
+    });
     return {
       ...state,
       workbookHistory: pushHistory(state.workbookHistory, newWorkbook),
     };
-  } catch {
+  } catch (error) {
+    if (error instanceof Error) { console.debug(error.message); }
     // Name conflict
     return state;
   }

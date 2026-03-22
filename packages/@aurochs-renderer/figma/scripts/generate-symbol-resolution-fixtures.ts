@@ -53,7 +53,7 @@ const DARK_BG: Color = { r: 0.11, g: 0.11, b: 0.118, a: 1 };
 // ID allocator
 // =============================================================================
 
-let nextID = 100;
+const nextID = 100;
 function id(): number {
   return nextID++;
 }
@@ -273,8 +273,8 @@ async function generate(): Promise<void> {
 
   // --- Canvas 1: Test Frames ---
 
-  let frameX = 50;
-  let frameY = 50;
+  const frameXRef = { value: 50 };
+  const frameYRef = { value: 50 };
 
   // 1. button-inherit: Instance of ButtonBase (inherits blue fill + 12px radius)
   const f_btn_inherit = id();
@@ -282,7 +282,7 @@ async function generate(): Promise<void> {
     frameNode(f_btn_inherit, canvas1)
       .name("button-inherit")
       .size(140, 64)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(WHITE)
       .clipsContent(true)
       .exportAsSVG()
@@ -292,7 +292,7 @@ async function generate(): Promise<void> {
     instanceNode(id(), f_btn_inherit, buttonBaseID).name("ButtonBase").size(120, 44).position(10, 10).build(),
   );
 
-  frameX += 170;
+  frameXRef.value += 170;
 
   // 2. button-override: Two buttons — original blue vs overridden green
   const f_btn_override = id();
@@ -300,7 +300,7 @@ async function generate(): Promise<void> {
     frameNode(f_btn_override, canvas1)
       .name("button-override")
       .size(280, 64)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(WHITE)
       .clipsContent(true)
       .exportAsSVG()
@@ -318,7 +318,7 @@ async function generate(): Promise<void> {
       .build(),
   );
 
-  frameX += 310;
+  frameXRef.value += 310;
 
   // 3. card-with-header: Card instance — 3-level nesting (Card > CardHeader/CardBody > content)
   const f_card = id();
@@ -326,7 +326,7 @@ async function generate(): Promise<void> {
     frameNode(f_card, canvas1)
       .name("card-with-header")
       .size(300, 220)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(IOS_GRAY_BG)
       .clipsContent(true)
       .exportAsSVG()
@@ -335,8 +335,8 @@ async function generate(): Promise<void> {
   figFile.addInstance(instanceNode(id(), f_card, cardID).name("Card").size(280, 200).position(10, 10).build());
 
   // Row 2
-  frameX = 50;
-  frameY += 250;
+  frameXRef.value = 50;
+  frameYRef.value += 250;
 
   // 4. card-resized: Card at smaller size (240x160 instead of 280x200)
   const f_card_small = id();
@@ -344,7 +344,7 @@ async function generate(): Promise<void> {
     frameNode(f_card_small, canvas1)
       .name("card-resized")
       .size(260, 180)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(IOS_GRAY_BG)
       .clipsContent(true)
       .exportAsSVG()
@@ -354,7 +354,7 @@ async function generate(): Promise<void> {
     instanceNode(id(), f_card_small, cardID).name("Card-small").size(240, 160).position(10, 10).build(),
   );
 
-  frameX += 290;
+  frameXRef.value += 290;
 
   // 5. icon-badge-nesting: IconWithBadge — 2-level nesting, badge outside icon
   const f_icon_badge = id();
@@ -362,7 +362,7 @@ async function generate(): Promise<void> {
     frameNode(f_icon_badge, canvas1)
       .name("icon-badge-nesting")
       .size(52, 52)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(WHITE)
       .clipsContent(false) // no clip so badge is visible
       .exportAsSVG()
@@ -372,7 +372,7 @@ async function generate(): Promise<void> {
     instanceNode(id(), f_icon_badge, iconBadgeID).name("IconWithBadge").size(32, 32).position(10, 10).build(),
   );
 
-  frameX += 80;
+  frameXRef.value += 80;
 
   // 6. navbar-full: NavBar instance — 4-level nesting (NavBar > NavItem > IconWithBadge > Icon+Badge)
   const f_navbar = id();
@@ -380,7 +380,7 @@ async function generate(): Promise<void> {
     frameNode(f_navbar, canvas1)
       .name("navbar-full")
       .size(340, 84)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(IOS_GRAY_BG)
       .clipsContent(true)
       .exportAsSVG()
@@ -388,7 +388,7 @@ async function generate(): Promise<void> {
   );
   figFile.addInstance(instanceNode(id(), f_navbar, navBarID).name("NavBar").size(320, 64).position(10, 10).build());
 
-  frameX += 370;
+  frameXRef.value += 370;
 
   // 7. navbar-resized: NavBar at wider size (400x64)
   const f_navbar_wide = id();
@@ -396,7 +396,7 @@ async function generate(): Promise<void> {
     frameNode(f_navbar_wide, canvas1)
       .name("navbar-resized")
       .size(420, 84)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(IOS_GRAY_BG)
       .clipsContent(true)
       .exportAsSVG()
@@ -407,8 +407,8 @@ async function generate(): Promise<void> {
   );
 
   // Row 3
-  frameX = 50;
-  frameY += 120;
+  frameXRef.value = 50;
+  frameYRef.value += 120;
 
   // 8. multi-button-sizes: 3 ButtonBase instances at different sizes
   const f_multi_btn = id();
@@ -416,7 +416,7 @@ async function generate(): Promise<void> {
     frameNode(f_multi_btn, canvas1)
       .name("multi-button-sizes")
       .size(400, 80)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(WHITE)
       .clipsContent(true)
       .exportAsSVG()
@@ -582,8 +582,8 @@ async function generate(): Promise<void> {
 
   // --- Canvas 2: Test Frames ---
 
-  frameX = 50;
-  frameY = 50;
+  frameXRef.value = 50;
+  frameYRef.value = 50;
 
   // 9. avatar-clip: AvatarFrame — fully rounded clip on overflowing content
   const f_avatar = id();
@@ -591,7 +591,7 @@ async function generate(): Promise<void> {
     frameNode(f_avatar, canvas2)
       .name("avatar-clip")
       .size(84, 84)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(WHITE)
       .clipsContent(true)
       .exportAsSVG()
@@ -601,7 +601,7 @@ async function generate(): Promise<void> {
     instanceNode(id(), f_avatar, avatarFrameID).name("AvatarFrame").size(64, 64).position(10, 10).build(),
   );
 
-  frameX += 120;
+  frameXRef.value += 120;
 
   // 10. avatar-small: AvatarFrame at 40x40 (smaller, tighter clip)
   const f_avatar_sm = id();
@@ -609,7 +609,7 @@ async function generate(): Promise<void> {
     frameNode(f_avatar_sm, canvas2)
       .name("avatar-small")
       .size(60, 60)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(WHITE)
       .clipsContent(true)
       .exportAsSVG()
@@ -619,7 +619,7 @@ async function generate(): Promise<void> {
     instanceNode(id(), f_avatar_sm, avatarFrameID).name("AvatarFrame-sm").size(40, 40).position(10, 10).build(),
   );
 
-  frameX += 90;
+  frameXRef.value += 90;
 
   // 11. rounded-container-clip: RoundedContainer with overflowing children
   const f_rounded = id();
@@ -627,7 +627,7 @@ async function generate(): Promise<void> {
     frameNode(f_rounded, canvas2)
       .name("rounded-container-clip")
       .size(220, 140)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(WHITE)
       .clipsContent(true)
       .exportAsSVG()
@@ -637,7 +637,7 @@ async function generate(): Promise<void> {
     instanceNode(id(), f_rounded, roundedContainerID).name("RoundedContainer").size(200, 120).position(10, 10).build(),
   );
 
-  frameX += 250;
+  frameXRef.value += 250;
 
   // 12. mixed-clip-corners: MixedClipFrame — corner rects clipped by rounded frame
   const f_mixed = id();
@@ -645,7 +645,7 @@ async function generate(): Promise<void> {
     frameNode(f_mixed, canvas2)
       .name("mixed-clip-corners")
       .size(220, 160)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(IOS_GRAY_BG)
       .clipsContent(true)
       .exportAsSVG()
@@ -656,8 +656,8 @@ async function generate(): Promise<void> {
   );
 
   // Row 2
-  frameX = 50;
-  frameY += 200;
+  frameXRef.value = 50;
+  frameYRef.value += 200;
 
   // 13. nested-rounded-clip: NestedRoundedOuter — 2-level rounded clip chain
   const f_nested_round = id();
@@ -665,7 +665,7 @@ async function generate(): Promise<void> {
     frameNode(f_nested_round, canvas2)
       .name("nested-rounded-clip")
       .size(260, 180)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(WHITE)
       .clipsContent(true)
       .exportAsSVG()
@@ -679,7 +679,7 @@ async function generate(): Promise<void> {
       .build(),
   );
 
-  frameX += 290;
+  frameXRef.value += 290;
 
   // 14. clip-chain-3level: ClipChain — 3-level nested clip (dark bg > white > gray > content)
   const f_clip_chain = id();
@@ -687,7 +687,7 @@ async function generate(): Promise<void> {
     frameNode(f_clip_chain, canvas2)
       .name("clip-chain-3level")
       .size(300, 200)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(WHITE)
       .clipsContent(true)
       .exportAsSVG()
@@ -697,7 +697,7 @@ async function generate(): Promise<void> {
     instanceNode(id(), f_clip_chain, clipChainID).name("ClipChain").size(280, 180).position(10, 10).build(),
   );
 
-  frameX += 330;
+  frameXRef.value += 330;
 
   // 15. clip-chain-resized: ClipChain at smaller size
   const f_clip_chain_sm = id();
@@ -705,7 +705,7 @@ async function generate(): Promise<void> {
     frameNode(f_clip_chain_sm, canvas2)
       .name("clip-chain-resized")
       .size(240, 160)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(WHITE)
       .clipsContent(true)
       .exportAsSVG()
@@ -716,8 +716,8 @@ async function generate(): Promise<void> {
   );
 
   // Row 3
-  frameX = 50;
-  frameY += 230;
+  frameXRef.value = 50;
+  frameYRef.value += 230;
 
   // 16. avatar-row: 3 avatars in a row (with badge on each)
   const f_avatar_row = id();
@@ -725,7 +725,7 @@ async function generate(): Promise<void> {
     frameNode(f_avatar_row, canvas2)
       .name("avatar-row")
       .size(260, 84)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(WHITE)
       .clipsContent(true)
       .exportAsSVG()
@@ -880,8 +880,8 @@ async function generate(): Promise<void> {
 
   // --- Canvas 3: Test Frames ---
 
-  frameX = 50;
-  frameY = 50;
+  frameXRef.value = 50;
+  frameYRef.value = 50;
 
   // 17. depth-2: L2-Pair — 2-level nesting
   const f_d2 = id();
@@ -889,7 +889,7 @@ async function generate(): Promise<void> {
     frameNode(f_d2, canvas3)
       .name("depth-2")
       .size(200, 88)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(WHITE)
       .clipsContent(true)
       .exportAsSVG()
@@ -897,7 +897,7 @@ async function generate(): Promise<void> {
   );
   figFile.addInstance(instanceNode(id(), f_d2, level2ID).name("L2-Pair").size(180, 68).position(10, 10).build());
 
-  frameX += 230;
+  frameXRef.value += 230;
 
   // 18. depth-3: L3-Decorated — 3-level nesting
   const f_d3 = id();
@@ -905,7 +905,7 @@ async function generate(): Promise<void> {
     frameNode(f_d3, canvas3)
       .name("depth-3")
       .size(240, 128)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(WHITE)
       .clipsContent(true)
       .exportAsSVG()
@@ -913,7 +913,7 @@ async function generate(): Promise<void> {
   );
   figFile.addInstance(instanceNode(id(), f_d3, level3ID).name("L3-Decorated").size(220, 108).position(10, 10).build());
 
-  frameX += 270;
+  frameXRef.value += 270;
 
   // 19. depth-4: L4-WithBadge — 4-level nesting
   const f_d4 = id();
@@ -921,7 +921,7 @@ async function generate(): Promise<void> {
     frameNode(f_d4, canvas3)
       .name("depth-4")
       .size(280, 160)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(WHITE)
       .clipsContent(true)
       .exportAsSVG()
@@ -930,8 +930,8 @@ async function generate(): Promise<void> {
   figFile.addInstance(instanceNode(id(), f_d4, level4ID).name("L4-WithBadge").size(260, 140).position(10, 10).build());
 
   // Row 2
-  frameX = 50;
-  frameY += 190;
+  frameXRef.value = 50;
+  frameYRef.value += 190;
 
   // 20. depth-5: L5-Complete — full 5-level nesting chain
   const f_d5 = id();
@@ -939,7 +939,7 @@ async function generate(): Promise<void> {
     frameNode(f_d5, canvas3)
       .name("depth-5")
       .size(320, 200)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(IOS_GRAY_BG)
       .clipsContent(true)
       .exportAsSVG()
@@ -947,7 +947,7 @@ async function generate(): Promise<void> {
   );
   figFile.addInstance(instanceNode(id(), f_d5, level5ID).name("L5-Complete").size(300, 180).position(10, 10).build());
 
-  frameX += 350;
+  frameXRef.value += 350;
 
   // 21. depth-5-resized: L5-Complete at smaller size
   const f_d5_sm = id();
@@ -955,7 +955,7 @@ async function generate(): Promise<void> {
     frameNode(f_d5_sm, canvas3)
       .name("depth-5-resized")
       .size(260, 160)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(IOS_GRAY_BG)
       .clipsContent(true)
       .exportAsSVG()
@@ -964,8 +964,8 @@ async function generate(): Promise<void> {
   figFile.addInstance(instanceNode(id(), f_d5_sm, level5ID).name("L5-small").size(240, 140).position(10, 10).build());
 
   // Row 3
-  frameX = 50;
-  frameY += 230;
+  frameXRef.value = 50;
+  frameYRef.value += 230;
 
   // 22. cross-canvas-ref: CrossCanvas — symbol instances from different canvases
   const f_cross = id();
@@ -973,7 +973,7 @@ async function generate(): Promise<void> {
     frameNode(f_cross, canvas3)
       .name("cross-canvas-ref")
       .size(180, 120)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(WHITE)
       .clipsContent(true)
       .exportAsSVG()
@@ -983,7 +983,7 @@ async function generate(): Promise<void> {
     instanceNode(id(), f_cross, crossCanvasID).name("CrossCanvas").size(160, 100).position(10, 10).build(),
   );
 
-  frameX += 210;
+  frameXRef.value += 210;
 
   // 23. depth-override: L4 with different override at depth
   const f_d_override = id();
@@ -991,7 +991,7 @@ async function generate(): Promise<void> {
     frameNode(f_d_override, canvas3)
       .name("depth-override")
       .size(280, 160)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(WHITE)
       .clipsContent(true)
       .exportAsSVG()
@@ -1006,7 +1006,7 @@ async function generate(): Promise<void> {
       .build(),
   );
 
-  frameX += 310;
+  frameXRef.value += 310;
 
   // 24. multi-depth-mixed: Mix of different nesting depths in one frame
   const f_multi_depth = id();
@@ -1014,7 +1014,7 @@ async function generate(): Promise<void> {
     frameNode(f_multi_depth, canvas3)
       .name("multi-depth-mixed")
       .size(380, 200)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(IOS_GRAY_BG)
       .clipsContent(true)
       .exportAsSVG()
@@ -1030,8 +1030,8 @@ async function generate(): Promise<void> {
   figFile.addInstance(instanceNode(id(), f_multi_depth, level4ID).name("L4").size(360, 60).position(10, 136).build());
 
   // Row 4
-  frameX = 50;
-  frameY += 230;
+  frameXRef.value = 50;
+  frameYRef.value += 230;
 
   // 25. effect-inherit: EffectBox symbol with shadow effect
   const effectBoxID = id();
@@ -1062,7 +1062,7 @@ async function generate(): Promise<void> {
     frameNode(f_effect, canvas3)
       .name("effect-inherit")
       .size(140, 100)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(WHITE)
       .clipsContent(true)
       .exportAsSVG()
@@ -1072,7 +1072,7 @@ async function generate(): Promise<void> {
     instanceNode(id(), f_effect, effectBoxID).name("EffectBox").size(120, 80).position(10, 10).build(),
   );
 
-  frameX += 170;
+  frameXRef.value += 170;
 
   // 26. opacity-chain: Nested instances with different opacities
   const f_opacity = id();
@@ -1080,7 +1080,7 @@ async function generate(): Promise<void> {
     frameNode(f_opacity, canvas3)
       .name("opacity-chain")
       .size(280, 100)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(WHITE)
       .clipsContent(true)
       .exportAsSVG()
@@ -1215,8 +1215,8 @@ async function generate(): Promise<void> {
 
   // --- Canvas 4: Test Frames ---
 
-  frameX = 50;
-  frameY = 50;
+  frameXRef.value = 50;
+  frameYRef.value = 50;
 
   // 27. constraint-stretch-full: STRETCH on both axes (inset:0 behavior)
   const f_stretch_full = id();
@@ -1224,7 +1224,7 @@ async function generate(): Promise<void> {
     frameNode(f_stretch_full, canvas4)
       .name("constraint-stretch-full")
       .size(320, 200)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(IOS_GRAY_BG)
       .clipsContent(true)
       .exportAsSVG()
@@ -1238,7 +1238,7 @@ async function generate(): Promise<void> {
       .build(),
   );
 
-  frameX += 350;
+  frameXRef.value += 350;
 
   // 28. constraint-no-resize: Same size as symbol (baseline — no constraint adjustment)
   const f_no_resize = id();
@@ -1246,7 +1246,7 @@ async function generate(): Promise<void> {
     frameNode(f_no_resize, canvas4)
       .name("constraint-no-resize")
       .size(220, 140)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(IOS_GRAY_BG)
       .clipsContent(true)
       .exportAsSVG()
@@ -1261,8 +1261,8 @@ async function generate(): Promise<void> {
   );
 
   // Row 2
-  frameX = 50;
-  frameY += 230;
+  frameXRef.value = 50;
+  frameYRef.value += 230;
 
   // 29. constraint-mixed: Mixed constraints (MIN, MAX, CENTER, STRETCH) at larger size
   const f_mixed_constraint = id();
@@ -1270,7 +1270,7 @@ async function generate(): Promise<void> {
     frameNode(f_mixed_constraint, canvas4)
       .name("constraint-mixed")
       .size(340, 200)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(WHITE)
       .clipsContent(true)
       .exportAsSVG()
@@ -1284,7 +1284,7 @@ async function generate(): Promise<void> {
       .build(),
   );
 
-  frameX += 370;
+  frameXRef.value += 370;
 
   // 30. constraint-mixed-shrink: Same mixed constraints at smaller size
   const f_mixed_shrink = id();
@@ -1292,7 +1292,7 @@ async function generate(): Promise<void> {
     frameNode(f_mixed_shrink, canvas4)
       .name("constraint-mixed-shrink")
       .size(180, 100)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(WHITE)
       .clipsContent(true)
       .exportAsSVG()
@@ -1307,8 +1307,8 @@ async function generate(): Promise<void> {
   );
 
   // Row 3
-  frameX = 50;
-  frameY += 230;
+  frameXRef.value = 50;
+  frameYRef.value += 230;
 
   // 31. constraint-scale: SCALE constraint on both axes
   const f_scale = id();
@@ -1316,7 +1316,7 @@ async function generate(): Promise<void> {
     frameNode(f_scale, canvas4)
       .name("constraint-scale")
       .size(320, 200)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(IOS_GRAY_BG)
       .clipsContent(true)
       .exportAsSVG()
@@ -1409,8 +1409,8 @@ async function generate(): Promise<void> {
 
   // --- Canvas 5: Test Frames ---
 
-  frameX = 50;
-  frameY = 50;
+  frameXRef.value = 50;
+  frameYRef.value = 50;
 
   // 32. variant-default: Instance referencing ButtonDefault directly (no override)
   const f_var_default = id();
@@ -1418,7 +1418,7 @@ async function generate(): Promise<void> {
     frameNode(f_var_default, canvas5)
       .name("variant-default")
       .size(140, 64)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(WHITE)
       .clipsContent(true)
       .exportAsSVG()
@@ -1428,7 +1428,7 @@ async function generate(): Promise<void> {
     instanceNode(id(), f_var_default, buttonDefaultID).name("ButtonDefault").size(120, 44).position(10, 10).build(),
   );
 
-  frameX += 170;
+  frameXRef.value += 170;
 
   // 33. variant-override: Instance with overriddenSymbolID pointing to ButtonActive
   const f_var_override = id();
@@ -1436,7 +1436,7 @@ async function generate(): Promise<void> {
     frameNode(f_var_override, canvas5)
       .name("variant-override")
       .size(140, 64)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(WHITE)
       .clipsContent(true)
       .exportAsSVG()
@@ -1451,7 +1451,7 @@ async function generate(): Promise<void> {
       .build(),
   );
 
-  frameX += 170;
+  frameXRef.value += 170;
 
   // 34. variant-all-states: All 3 variants side by side
   const f_var_all = id();
@@ -1459,7 +1459,7 @@ async function generate(): Promise<void> {
     frameNode(f_var_all, canvas5)
       .name("variant-all-states")
       .size(420, 64)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(WHITE)
       .clipsContent(true)
       .exportAsSVG()

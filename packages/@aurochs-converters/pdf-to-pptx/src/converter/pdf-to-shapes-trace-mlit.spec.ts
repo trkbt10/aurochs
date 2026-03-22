@@ -41,19 +41,19 @@ function computeTextOverlapStats(path: PdfPath, texts: readonly PdfText[]): { ov
     return { overlapRatio: 0, overlapCount: 0 };
   }
 
-  let overlapCount = 0;
+  const counter = { overlapCount: 0 };
   const overlapArea = texts.reduce((sum, text) => {
     const ox0 = Math.max(x0, text.x);
     const oy0 = Math.max(y0, text.y);
     const ox1 = Math.min(x1, text.x + text.width);
     const oy1 = Math.min(y1, text.y + text.height);
     if (ox1 > ox0 && oy1 > oy0) {
-      overlapCount += 1;
+      counter.overlapCount += 1;
       return sum + (ox1 - ox0) * (oy1 - oy0);
     }
     return sum;
   }, 0);
-  return { overlapRatio: overlapArea / pathArea, overlapCount };
+  return { overlapRatio: overlapArea / pathArea, overlapCount: counter.overlapCount };
 }
 
 function computeTextOverlapRatio(path: PdfPath, texts: readonly PdfText[]): number {

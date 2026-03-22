@@ -59,7 +59,7 @@ export const OA_RT = {
  * Returns undefined if there isn't enough data for a complete header.
  */
 export function readOfficeArtRecord(data: Uint8Array, offset: number): OfficeArtRecord | undefined {
-  if (offset + OFFICEART_HEADER_SIZE > data.length) return undefined;
+  if (offset + OFFICEART_HEADER_SIZE > data.length) {return undefined;}
 
   const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
   const verAndInstance = view.getUint16(offset, true);
@@ -87,14 +87,14 @@ export function iterateOfficeArtRecords(
 ): readonly OfficeArtRecord[] {
   const records: OfficeArtRecord[] = [];
   const limit = Math.min(end, data.length);
-  let pos = offset;
+  const pos = { value: offset };
 
-  while (pos + OFFICEART_HEADER_SIZE <= limit) {
-    const record = readOfficeArtRecord(data, pos);
-    if (!record) break;
+  while (pos.value + OFFICEART_HEADER_SIZE <= limit) {
+    const record = readOfficeArtRecord(data, pos.value);
+    if (!record) {break;}
 
     records.push(record);
-    pos += OFFICEART_HEADER_SIZE + record.recLen;
+    pos.value += OFFICEART_HEADER_SIZE + record.recLen;
   }
 
   return records;
@@ -107,7 +107,7 @@ export function isContainerRecord(record: OfficeArtRecord): boolean {
 
 /** Find the first child record with the given type within a container record. */
 export function findChildRecord(container: OfficeArtRecord, recType: number): OfficeArtRecord | undefined {
-  if (!isContainerRecord(container)) return undefined;
+  if (!isContainerRecord(container)) {return undefined;}
   const children = iterateOfficeArtRecords(container.data, 0, container.data.length);
   return children.find((r) => r.recType === recType);
 }

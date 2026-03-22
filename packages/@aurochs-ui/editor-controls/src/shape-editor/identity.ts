@@ -4,7 +4,7 @@
  * ID-related operations for shapes, independent of PPTX types.
  */
 
-import type { ShapeNode, IdentifiableShape } from "./types";
+import type { ShapeNode } from "./types";
 import { isIdentifiable } from "./types";
 
 export { isIdentifiable as hasShapeId };

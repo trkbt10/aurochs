@@ -6,18 +6,16 @@
  * and returns a PNG data URL of the canvas.
  */
 
-import type { SceneGraph, SceneNode } from "../../src/scene-graph/types";
-import { WebGLFigmaRenderer } from "../../src/webgl/renderer";
+import type { SceneGraph } from "../../src/scene-graph/types";
+import { createWebGLFigmaRenderer, type WebGLFigmaRendererInstance } from "../../src/webgl/renderer";
 
-declare global {
-  interface Window {
-    renderSceneGraph: (json: string) => Promise<string>;
-  }
-}
+type WindowWithRenderSceneGraph = Window & {
+  renderSceneGraph: (json: string) => Promise<string>;
+};
 
 const canvas = document.getElementById("canvas") as HTMLCanvasElement;
 
-let renderer: WebGLFigmaRenderer | null = null;
+const renderer: WebGLFigmaRendererInstance | null = null;
 
 /**
  * Restore Uint8Array fields that were base64-encoded for JSON transport.
@@ -49,11 +47,23 @@ function restoreUint8Arrays(node: Record<string, unknown>): void {
   }
 }
 
-window.renderSceneGraph = async (json: string): Promise<string> => {
+/** Type guard that extends window to include the render function */
+function isRenderableWindow(w: unknown): w is WindowWithRenderSceneGraph {
+  return typeof w === "object" && w !== null;
+}
+
+/** Type guard for converting parsed JSON to a record for Uint8Array restoration */
+function isRecord(obj: unknown): obj is Record<string, unknown> {
+  return typeof obj === "object" && obj !== null;
+}
+
+if (isRenderableWindow(window)) {
+  window.renderSceneGraph = async (json: string): Promise<string> => {
   const sceneGraph = JSON.parse(json) as SceneGraph;
 
   // Restore Uint8Array fields from base64
-  restoreUint8Arrays(sceneGraph as unknown as Record<string, unknown>);
+  const sceneRecord = isRecord(sceneGraph) ? sceneGraph : {};
+  restoreUint8Arrays(sceneRecord);
 
   canvas.width = sceneGraph.width;
   canvas.height = sceneGraph.height;
@@ -61,7 +71,7 @@ window.renderSceneGraph = async (json: string): Promise<string> => {
   canvas.style.height = `${sceneGraph.height}px`;
 
   if (!renderer) {
-    renderer = new WebGLFigmaRenderer({
+    renderer = createWebGLFigmaRenderer({
       canvas,
       pixelRatio: 1,
       antialias: true,
@@ -73,7 +83,8 @@ window.renderSceneGraph = async (json: string): Promise<string> => {
   renderer.render(sceneGraph);
 
   return canvas.toDataURL("image/png");
-};
+  };
+}
 
 // Signal readiness
 document.title = "ready";

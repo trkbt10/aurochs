@@ -1,3 +1,4 @@
+/** @file System alignment diagnostic script */
 /**
  * Diagnose element alignment in the System canvas.
  * Renders individual sub-frames and dumps diagnostic info about
@@ -40,9 +41,9 @@ function dumpTree(node: FigNode, depth: number = 0, maxDepth: number = 3): void 
   const hasCPA = !!(nd.componentPropAssignments as unknown[])?.length;
   const hasSO = !!(nd.symbolOverrides as unknown[])?.length;
   const flags: string[] = [];
-  if (hasOverrides) flags.push(`DSD:${(nd.derivedSymbolData as unknown[]).length}`);
-  if (hasCPA) flags.push(`CPA:${(nd.componentPropAssignments as unknown[]).length}`);
-  if (hasSO) flags.push(`SO:${(nd.symbolOverrides as unknown[]).length}`);
+  if (hasOverrides) {flags.push(`DSD:${(nd.derivedSymbolData as unknown[]).length}`);}
+  if (hasCPA) {flags.push(`CPA:${(nd.componentPropAssignments as unknown[]).length}`);}
+  if (hasSO) {flags.push(`SO:${(nd.symbolOverrides as unknown[]).length}`);}
 
   const tx = transform ? `pos(${transform[0]?.[2]?.toFixed(0)},${transform[1]?.[2]?.toFixed(0)})` : "";
   const sz = size ? `${Math.round(size.x)}x${Math.round(size.y)}` : "";
@@ -67,10 +68,10 @@ async function main() {
   // Find System canvas
   const canvases: FigNode[] = [];
   function findCanvases(node: FigNode) {
-    if (getNodeType(node) === "CANVAS") canvases.push(node);
-    for (const c of node.children ?? []) findCanvases(c);
+    if (getNodeType(node) === "CANVAS") {canvases.push(node);}
+    for (const c of node.children ?? []) {findCanvases(c);}
   }
-  for (const r of roots) findCanvases(r);
+  for (const r of roots) {findCanvases(r);}
 
   const systemCanvas = canvases.find((c) => c.name?.includes("System"));
   if (!systemCanvas) {
@@ -104,10 +105,10 @@ async function main() {
 
   for (const frame of targetFrames) {
     const type = getNodeType(frame);
-    if (type !== "FRAME" && type !== "SECTION" && type !== "SYMBOL" && type !== "INSTANCE") continue;
+    if (type !== "FRAME" && type !== "SECTION" && type !== "SYMBOL" && type !== "INSTANCE") {continue;}
 
     const size = getSize(frame);
-    if (!size) continue;
+    if (!size) {continue;}
 
     const safeName = (frame.name ?? "unnamed").replace(/[^a-zA-Z0-9-_]/g, "_");
 

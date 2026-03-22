@@ -8,6 +8,5 @@ export { runShow, type ShowData, type BlockContentJson, type TableJson, type Tab
 export { runExtract, type ExtractData, type ExtractOptions, type SectionTextItem } from "./extract";
 export { runBuild } from "./build";
 export { runPatch } from "./patch";
-export type { DocxPatchData } from "@aurochs-builder/docx";
 export { runVerify, type VerifyData, type VerifyOptions, type TestCaseSpec, type TestCaseResult, type Assertion, type ExpectedDocument } from "./verify";
 export { runPreview, type PreviewData, type PreviewSection, type PreviewOptions, type PreviewFormat } from "./preview";

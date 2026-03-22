@@ -13,7 +13,8 @@ import { parseShapeProperties } from "./properties";
 import { parseShapeStyle } from "./style";
 import { getBlipFillElement } from "./alternate-content";
 import { resolveEffectsFromStyleReference } from "../graphics/effects-parser";
-import type { FormatScheme, ResourceContext } from "../context";
+import type { ResourceContext } from "../context";
+import type { FormatScheme } from "../../domain/theme/types";
 import type { ResourceStore } from "../../domain/resource-store";
 
 /**

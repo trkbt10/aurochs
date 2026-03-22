@@ -100,8 +100,8 @@ export function App(): ReactElement {
           try {
             const data = JSON.parse(block.text);
             setLastAction(data.message || null);
-          } catch {
-            // Content may not be JSON
+          } catch (parseError: unknown) {
+            console.debug("Content is not JSON:", parseError);
           }
         }
       }

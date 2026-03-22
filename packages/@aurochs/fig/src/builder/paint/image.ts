@@ -11,82 +11,89 @@ import {
   type ScaleMode,
 } from "../../constants";
 
-export class ImagePaintBuilder {
-  private _imageRef: string;
-  private _scaleMode: ScaleMode;
-  private _opacity: number;
-  private _visible: boolean;
-  private _blendMode: BlendMode;
-  private _rotation: number;
-  private _scalingFactor: number;
-  private _filters: ImagePaint["filters"];
+/** Image paint builder instance */
+export type ImagePaintBuilder = {
+  scaleMode: (mode: ScaleMode) => ImagePaintBuilder;
+  rotation: (degrees: number) => ImagePaintBuilder;
+  scale: (factor: number) => ImagePaintBuilder;
+  filters: (filters: NonNullable<ImagePaint["filters"]>) => ImagePaintBuilder;
+  opacity: (value: number) => ImagePaintBuilder;
+  visible: (value: boolean) => ImagePaintBuilder;
+  blendMode: (mode: BlendMode) => ImagePaintBuilder;
+  build: () => ImagePaint;
+};
 
-  constructor(imageRef: string) {
-    this._imageRef = imageRef;
-    this._scaleMode = "FILL";
-    this._opacity = 1;
-    this._visible = true;
-    this._blendMode = "NORMAL";
-    this._rotation = 0;
-    this._scalingFactor = 1;
-  }
+/** Create an image paint builder */
+function createImagePaintBuilder(imageRef: string): ImagePaintBuilder {
+  const state = {
+    imageRef,
+    scaleMode: "FILL" as ScaleMode,
+    opacity: 1,
+    visible: true,
+    blendMode: "NORMAL" as BlendMode,
+    rotation: 0,
+    scalingFactor: 1,
+    filters: undefined as ImagePaint["filters"],
+  };
 
-  scaleMode(mode: ScaleMode): this {
-    this._scaleMode = mode;
-    return this;
-  }
+  const builder: ImagePaintBuilder = {
+    scaleMode(mode: ScaleMode) {
+      state.scaleMode = mode;
+      return builder;
+    },
 
-  rotation(degrees: number): this {
-    this._rotation = degrees;
-    return this;
-  }
+    rotation(degrees: number) {
+      state.rotation = degrees;
+      return builder;
+    },
 
-  scale(factor: number): this {
-    this._scalingFactor = factor;
-    return this;
-  }
+    scale(factor: number) {
+      state.scalingFactor = factor;
+      return builder;
+    },
 
-  /**
-   * Set image filters
-   */
-  filters(filters: NonNullable<ImagePaint["filters"]>): this {
-    this._filters = filters;
-    return this;
-  }
+    /** Set image filters */
+    filters(filters: NonNullable<ImagePaint["filters"]>) {
+      state.filters = filters;
+      return builder;
+    },
 
-  opacity(value: number): this {
-    this._opacity = Math.max(0, Math.min(1, value));
-    return this;
-  }
+    opacity(value: number) {
+      state.opacity = Math.max(0, Math.min(1, value));
+      return builder;
+    },
 
-  visible(value: boolean): this {
-    this._visible = value;
-    return this;
-  }
+    visible(value: boolean) {
+      state.visible = value;
+      return builder;
+    },
 
-  blendMode(mode: BlendMode): this {
-    this._blendMode = mode;
-    return this;
-  }
+    blendMode(mode: BlendMode) {
+      state.blendMode = mode;
+      return builder;
+    },
 
-  build(): ImagePaint {
-    return {
-      type: { value: PAINT_TYPE_VALUES.IMAGE, name: "IMAGE" },
-      opacity: this._opacity,
-      visible: this._visible,
-      blendMode: { value: BLEND_MODE_VALUES[this._blendMode], name: this._blendMode },
-      imageRef: this._imageRef,
-      scaleMode: { value: SCALE_MODE_VALUES[this._scaleMode], name: this._scaleMode },
-      rotation: this._rotation !== 0 ? this._rotation : undefined,
-      scalingFactor: this._scalingFactor !== 1 ? this._scalingFactor : undefined,
-      filters: this._filters,
-    };
-  }
+    build(): ImagePaint {
+      return {
+        type: { value: PAINT_TYPE_VALUES.IMAGE, name: "IMAGE" },
+        opacity: state.opacity,
+        visible: state.visible,
+        blendMode: { value: BLEND_MODE_VALUES[state.blendMode], name: state.blendMode },
+        imageRef: state.imageRef,
+        scaleMode: { value: SCALE_MODE_VALUES[state.scaleMode], name: state.scaleMode },
+        rotation: state.rotation !== 0 ? state.rotation : undefined,
+        scalingFactor: state.scalingFactor !== 1 ? state.scalingFactor : undefined,
+        filters: state.filters,
+      };
+    },
+  };
+
+  return builder;
 }
 
 /**
  * Create an image paint
  */
 export function imagePaint(imageRef: string): ImagePaintBuilder {
-  return new ImagePaintBuilder(imageRef);
+  return createImagePaintBuilder(imageRef);
 }

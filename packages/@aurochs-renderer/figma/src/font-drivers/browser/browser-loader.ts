@@ -36,12 +36,9 @@ type FontData = {
   blob(): Promise<Blob>;
 };
 
-declare global {
-  // eslint-disable-next-line @typescript-eslint/consistent-type-definitions -- global augmentation requires interface
-  interface Window {
-    queryLocalFonts?: (options?: { postscriptNames?: string[] }) => Promise<FontData[]>;
-  }
-}
+type WindowWithLocalFonts = Window & {
+  queryLocalFonts?: (options?: { postscriptNames?: string[] }) => Promise<FontData[]>;
+};
 
 /**
  * Get font weight from font style name
@@ -100,35 +97,60 @@ function weightDistance(requested: number, actual: number): number {
 }
 
 /**
- * Browser font loader using Local Font Access API
+ * Check if Local Font Access API is available
+ */
+export function isBrowserFontLoaderSupported(): boolean {
+  return typeof window !== "undefined" && "queryLocalFonts" in window;
+}
+
+/** Browser font loader with permission tracking */
+export type BrowserFontLoaderInstance = FontLoader & {
+  /** Check if permission has been granted */
+  hasPermission(): boolean;
+  /** List available font families */
+  listFontFamilies(): Promise<readonly string[]>;
+  /** Load a fallback font for CJK characters */
+  loadFallbackFont(options: FontLoadOptions): Promise<LoadedFont | undefined>;
+};
+
+/**
+ * Detect platform from user agent
+ */
+function detectPlatform(): "darwin" | "win32" | "linux" {
+  if (typeof navigator === "undefined") {
+    return "darwin";
+  }
+
+  const ua = navigator.userAgent.toLowerCase();
+  if (ua.includes("mac")) {
+    return "darwin";
+  }
+  if (ua.includes("win")) {
+    return "win32";
+  }
+  return "linux";
+}
+
+/**
+ * Create a browser font loader using Local Font Access API
  *
  * Requires user permission to access local fonts. The browser will
  * prompt the user when queryLocalFonts() is first called.
  */
-export class BrowserFontLoader implements FontLoader {
-  private fontIndex: Map<string, FontData[]> | null = null;
-  private indexPromise: Promise<void> | null = null;
-  private permissionGranted = false;
+export function createBrowserFontLoader(): BrowserFontLoaderInstance {
+  const fontIndexRef = { value: null as Map<string, FontData[]> | null };
+  const indexPromiseRef = { value: null as Promise<void> | null };
+  const permissionGrantedRef = { value: false };
 
-  /**
-   * Check if Local Font Access API is available
-   */
-  static isSupported(): boolean {
-    return typeof window !== "undefined" && "queryLocalFonts" in window;
-  }
-
-  /**
-   * Build font index from system fonts
-   */
-  private async buildFontIndex(): Promise<void> {
-    if (!BrowserFontLoader.isSupported()) {
-      this.fontIndex = new Map();
+  async function buildFontIndex(): Promise<void> {
+    if (!isBrowserFontLoaderSupported()) {
+      fontIndexRef.value = new Map();
       return;
     }
 
     try {
-      const fonts = await window.queryLocalFonts!();
-      this.permissionGranted = true;
+      const fonts = await (window as WindowWithLocalFonts).queryLocalFonts!();
+      permissionGrantedRef.value = true;
 
       // Index by family name (lowercase)
       const index = new Map<string, FontData[]>();
@@ -138,34 +160,28 @@ export class BrowserFontLoader implements FontLoader {
         index.set(familyLower, [...existing, font]);
       }
 
-      this.fontIndex = index;
-    } catch {
-      // Permission denied or API error - intentionally ignored
-      this.fontIndex = new Map();
+      fontIndexRef.value = index;
+    } catch (error) {
+      console.debug("Font access API error:", error);
+      fontIndexRef.value = new Map();
     }
   }
 
-  /**
-   * Request permission and build font index
-   */
-  private async ensureIndex(): Promise<Map<string, FontData[]>> {
-    if (this.fontIndex) {
-      return this.fontIndex;
+  async function ensureIndex(): Promise<Map<string, FontData[]>> {
+    if (fontIndexRef.value) {
+      return fontIndexRef.value;
     }
 
-    if (!this.indexPromise) {
-      this.indexPromise = this.buildFontIndex();
+    if (!indexPromiseRef.value) {
+      indexPromiseRef.value = buildFontIndex();
     }
 
-    await this.indexPromise;
-    return this.fontIndex!;
+    await indexPromiseRef.value;
+    return fontIndexRef.value!;
   }
 
-  /**
-   * Load a font matching the given options
-   */
-  async loadFont(options: FontLoadOptions): Promise<LoadedFont | undefined> {
-    const index = await this.ensureIndex();
+  async function loadFont(options: FontLoadOptions): Promise<LoadedFont | undefined> {
+    const index = await ensureIndex();
     const familyLower = options.family.toLowerCase();
     const variants = index.get(familyLower);
 
@@ -213,18 +229,15 @@ export class BrowserFontLoader implements FontLoader {
         style: getFontStyleFromName(bestMatch.style),
         postscriptName: bestMatch.postscriptName,
       };
-    } catch {
-      // Font loading failed - intentionally ignored
+    } catch (error) {
+      console.debug("Font loading failed - intentionally ignored" + ":", error);
       return undefined;
     }
   }
 
-  /**
-   * Check if a font is available
-   */
-  async isFontAvailable(family: string): Promise<boolean> {
+  async function isFontAvailable(family: string): Promise<boolean> {
     // First try Local Font Access API
-    const index = await this.ensureIndex();
+    const index = await ensureIndex();
     if (index.has(family.toLowerCase())) {
       return true;
     }
@@ -237,25 +250,19 @@ export class BrowserFontLoader implements FontLoader {
     return false;
   }
 
-  /**
-   * List available font families
-   */
-  async listFontFamilies(): Promise<readonly string[]> {
-    const index = await this.ensureIndex();
+  async function listFontFamilies(): Promise<readonly string[]> {
+    const index = await ensureIndex();
     // Return original family names (from first variant of each family)
     return Array.from(index.values()).map((variants) => variants[0].family);
   }
 
-  /**
-   * Load a fallback font for CJK characters
-   */
-  async loadFallbackFont(options: FontLoadOptions): Promise<LoadedFont | undefined> {
+  async function loadFallbackFont(options: FontLoadOptions): Promise<LoadedFont | undefined> {
     // Detect platform (best effort in browser)
     const platform = detectPlatform();
     const fallbackFonts = CJK_FALLBACK_FONTS[platform] ?? CJK_FALLBACK_FONTS.darwin;
 
     for (const family of fallbackFonts) {
-      const font = await this.loadFont({
+      const font = await loadFont({
         family,
         weight: options.weight,
         style: options.style,
@@ -268,35 +275,13 @@ export class BrowserFontLoader implements FontLoader {
     return undefined;
   }
 
-  /**
-   * Check if permission has been granted
-   */
-  hasPermission(): boolean {
-    return this.permissionGranted;
-  }
-}
-
-/**
- * Detect platform from user agent
- */
-function detectPlatform(): "darwin" | "win32" | "linux" {
-  if (typeof navigator === "undefined") {
-    return "darwin";
-  }
-
-  const ua = navigator.userAgent.toLowerCase();
-  if (ua.includes("mac")) {
-    return "darwin";
-  }
-  if (ua.includes("win")) {
-    return "win32";
-  }
-  return "linux";
-}
-
-/**
- * Create a browser font loader
- */
-export function createBrowserFontLoader(): FontLoader {
-  return new BrowserFontLoader();
+  return {
+    loadFont,
+    isFontAvailable,
+    listFontFamilies,
+    loadFallbackFont,
+    hasPermission(): boolean {
+      return permissionGrantedRef.value;
+    },
+  };
 }

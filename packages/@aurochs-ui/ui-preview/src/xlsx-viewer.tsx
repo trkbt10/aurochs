@@ -204,45 +204,53 @@ function App() {
   }, []);
 
   const tabItems: TabItem<ViewerMode>[] = useMemo(
-    () => [
-      {
-        id: "full",
-        label: "WorkbookViewer",
-        content: workbook ? (
-          <div style={viewerContainerStyle}>
-            <div style={{ width: "100%", height: "100%" }}>
-              <WorkbookViewer
-                workbook={workbook}
-                showSheetTabs
-                showToolbar
-                showZoom
-                showGridlines
-                showHeaders
-              />
+    () => {
+      if (!workbook) {
+        return [
+          { id: "full" as const, label: "WorkbookViewer", content: null },
+          { id: "embeddable" as const, label: "EmbeddableSheet", content: null },
+        ];
+      }
+      return [
+        {
+          id: "full" as const,
+          label: "WorkbookViewer",
+          content: (
+            <div style={viewerContainerStyle}>
+              <div style={{ width: "100%", height: "100%" }}>
+                <WorkbookViewer
+                  workbook={workbook}
+                  showSheetTabs
+                  showToolbar
+                  showZoom
+                  showGridlines
+                  showHeaders
+                />
+              </div>
+              <div style={componentInfoStyle}>WorkbookViewer component</div>
             </div>
-            <div style={componentInfoStyle}>WorkbookViewer component</div>
-          </div>
-        ) : null,
-      },
-      {
-        id: "embeddable",
-        label: "EmbeddableSheet",
-        content: workbook ? (
-          <div style={viewerContainerStyle}>
-            <div style={{ maxWidth: "800px", width: "100%", height: "500px" }}>
-              <EmbeddableSheet
-                workbook={workbook}
-                showSheetTabs
-                showSheetIndicator
-                showZoom
-                maxHeight="500px"
-              />
+          ),
+        },
+        {
+          id: "embeddable" as const,
+          label: "EmbeddableSheet",
+          content: (
+            <div style={viewerContainerStyle}>
+              <div style={{ maxWidth: "800px", width: "100%", height: "500px" }}>
+                <EmbeddableSheet
+                  workbook={workbook}
+                  showSheetTabs
+                  showSheetIndicator
+                  showZoom
+                  maxHeight="500px"
+                />
+              </div>
+              <div style={componentInfoStyle}>EmbeddableSheet component</div>
             </div>
-            <div style={componentInfoStyle}>EmbeddableSheet component</div>
-          </div>
-        ) : null,
-      },
-    ],
+          ),
+        },
+      ];
+    },
     [workbook],
   );
 

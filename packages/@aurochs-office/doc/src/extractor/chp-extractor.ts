@@ -135,7 +135,7 @@ function applyChpSprm(props: ChpProps, sprm: Sprm): void {
     case SPRM_CHP.CIco: {
       const ico = sprmUint8(sprm);
       const rgb = ICO_COLORS[ico];
-      if (rgb) props.color = rgb;
+      if (rgb) {props.color = rgb;}
       break;
     }
     case SPRM_CHP.CIss: {
@@ -147,7 +147,7 @@ function applyChpSprm(props: ChpProps, sprm: Sprm): void {
     case SPRM_CHP.CHighlight: {
       const ico = sprmUint8(sprm);
       const rgb = ICO_COLORS[ico];
-      if (rgb) props.highlight = rgb;
+      if (rgb) {props.highlight = rgb;}
       break;
     }
     case SPRM_CHP.CHps:
@@ -275,6 +275,11 @@ export function fcToCp(fc: number, pieces: readonly PieceDescriptor[]): number |
   return undefined;
 }
 
+/** Swallow FKP parsing error and return empty runs. */
+function handleSwallowedChpError(_error: unknown): readonly ChpxRun[] {
+  return [];
+}
+
 /** Cached FKP page data to avoid re-parsing. */
 type FkpCache = Map<number, readonly ChpxRun[]>;
 
@@ -284,30 +289,30 @@ function getCachedChpRuns(
   wordDocStream: Uint8Array,
   cache: FkpCache,
 ): readonly ChpxRun[] {
-  let runs = cache.get(pageNum);
-  if (!runs) {
-    try {
-      runs = parseChpFkp(wordDocStream, pageNum);
-    } catch {
-      return [];
-    }
-    cache.set(pageNum, runs);
+  const cached = cache.get(pageNum);
+  if (cached) { return cached; }
+  try {
+    const parsed = parseChpFkp(wordDocStream, pageNum);
+    cache.set(pageNum, parsed);
+    return parsed;
+  } catch (error: unknown) {
+    return handleSwallowedChpError(error);
   }
-  return runs;
 }
 
 /**
  * Find character properties for a given FC.
  * Uses BinTable → FKP → CHPX pipeline.
  */
-export function findChpxAtFc(
-  fc: number,
-  chpBinTable: BinTable,
-  wordDocStream: Uint8Array,
-  cache: FkpCache,
-): readonly Sprm[] {
+export function findChpxAtFc(options: {
+  fc: number;
+  chpBinTable: BinTable;
+  wordDocStream: Uint8Array;
+  cache: FkpCache;
+}): readonly Sprm[] {
+  const { fc, chpBinTable, wordDocStream, cache } = options;
   const pageNum = findFkpPage(chpBinTable, fc);
-  if (pageNum === undefined) return [];
+  if (pageNum === undefined) {return [];}
 
   const runs = getCachedChpRuns(pageNum, wordDocStream, cache);
 
@@ -326,24 +331,25 @@ export function findChpxAtFc(
  * Walks BinTable entries to find all FKP pages covering the range,
  * then collects all overlapping runs from those pages.
  */
-export function getAllChpxRunsInRange(
-  fcStart: number,
-  fcEnd: number,
-  chpBinTable: BinTable,
-  wordDocStream: Uint8Array,
-  cache: FkpCache,
-): readonly ChpxRun[] {
-  if (fcStart >= fcEnd) return [];
+export function getAllChpxRunsInRange(options: {
+  fcStart: number;
+  fcEnd: number;
+  chpBinTable: BinTable;
+  wordDocStream: Uint8Array;
+  cache: FkpCache;
+}): readonly ChpxRun[] {
+  const { fcStart, fcEnd, chpBinTable, wordDocStream, cache } = options;
+  if (fcStart >= fcEnd) {return [];}
 
   // Find all BinTable entries overlapping [fcStart, fcEnd)
   const result: ChpxRun[] = [];
   for (const entry of chpBinTable.entries) {
-    if (entry.fcStart >= fcEnd) break; // entries are sorted by FC
-    if (entry.fcEnd <= fcStart) continue;
+    if (entry.fcStart >= fcEnd) {break;} // entries are sorted by FC
+    if (entry.fcEnd <= fcStart) {continue;}
 
     const runs = getCachedChpRuns(entry.pageNumber, wordDocStream, cache);
     for (const run of runs) {
-      if (run.fcStart >= fcEnd) break;
+      if (run.fcStart >= fcEnd) {break;}
       if (run.fcEnd > fcStart) {
         result.push(run);
       }

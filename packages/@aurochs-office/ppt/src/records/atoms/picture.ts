@@ -10,6 +10,11 @@
 import type { PptRecord } from "../types";
 import { RT } from "../record-types";
 
+function resolveBlipHeaderSize(recInstance: number, info: { headerSize1: number; headerSize2: number }): number {
+  if (recInstance & 0x01) { return info.headerSize2; }
+  return info.headerSize1;
+}
+
 export type BlipData = {
   readonly contentType: string;
   readonly data: Uint8Array;
@@ -49,9 +54,7 @@ export function parseBlipRecord(record: PptRecord): BlipData {
   // For JPEG/PNG/DIB/TIFF: instance 0x46A (1 UID), 0x6E0/0x6E2 (2 UIDs)
   // For EMF/WMF/PICT: instance 0x3D4/0x216/0x542 (1 UID), +1 (2 UIDs)
   // The header size difference is 16 bytes (one additional 16-byte UID)
-  const headerSize = (record.recInstance & 0x01)
-    ? info.headerSize2
-    : info.headerSize1;
+  const headerSize = resolveBlipHeaderSize(record.recInstance, info);
 
   // For metafiles (EMF/WMF/PICT), there's additional compression info
   // but for now we skip the header and take the rest as raw data

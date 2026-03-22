@@ -7,8 +7,6 @@
 
 import type { Bounds } from "@aurochs-renderer/drawing-ml/ascii";
 
-export type { Bounds };
-
 export type AsciiTableContent = {
   readonly type: "table";
   readonly table: {

@@ -43,13 +43,13 @@ export const BRC_TYPE_MAP: readonly (DocBorderStyle | undefined)[] = [
  * Returns undefined for auto color (all zeros) or cvAuto (0xFF000000).
  */
 export function colorrefToHex(data: Uint8Array, offset: number): string | undefined {
-  if (offset + 4 > data.length) return undefined;
+  if (offset + 4 > data.length) {return undefined;}
   const r = data[offset];
   const g = data[offset + 1];
   const b = data[offset + 2];
   // Skip all-zero (transparent/auto) and 0xFF flag byte (cvAuto)
-  if (r === 0 && g === 0 && b === 0) return undefined;
-  if (data[offset + 3] === 0xff) return undefined;
+  if (r === 0 && g === 0 && b === 0) {return undefined;}
+  if (data[offset + 3] === 0xff) {return undefined;}
   return (
     r.toString(16).padStart(2, "0") +
     g.toString(16).padStart(2, "0") +
@@ -63,13 +63,13 @@ export function colorrefToHex(data: Uint8Array, offset: number): string | undefi
  * Layout: dptLineWidth(1B) + brcType(1B) + ico(1B) + dptSpace(5bits)+flags(3bits)
  */
 export function parseBrc80(data: Uint8Array, offset: number): DocBorder | undefined {
-  if (offset + 4 > data.length) return undefined;
+  if (offset + 4 > data.length) {return undefined;}
 
   const dptLineWidth = data[offset];
   const brcType = data[offset + 1];
   const ico = data[offset + 2];
 
-  if (brcType === 0 && dptLineWidth === 0) return undefined;
+  if (brcType === 0 && dptLineWidth === 0) {return undefined;}
 
   const style = brcType < BRC_TYPE_MAP.length ? BRC_TYPE_MAP[brcType] : undefined;
   const color = ico < ICO_COLORS.length ? ICO_COLORS[ico] : undefined;
@@ -87,13 +87,13 @@ export function parseBrc80(data: Uint8Array, offset: number): DocBorder | undefi
  * Layout: cv(4B COLORREF) + dptLineWidth(1B) + brcType(1B) + dptSpace(5bits)+flags(11bits)
  */
 export function parseBrc(data: Uint8Array, offset: number): DocBorder | undefined {
-  if (offset + 8 > data.length) return undefined;
+  if (offset + 8 > data.length) {return undefined;}
 
   const color = colorrefToHex(data, offset);
   const dptLineWidth = data[offset + 4];
   const brcType = data[offset + 5];
 
-  if (brcType === 0 && dptLineWidth === 0 && !color) return undefined;
+  if (brcType === 0 && dptLineWidth === 0 && !color) {return undefined;}
 
   const style = brcType < BRC_TYPE_MAP.length ? BRC_TYPE_MAP[brcType] : undefined;
 

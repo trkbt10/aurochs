@@ -13,9 +13,9 @@
  *   2. Create LibreOffice baselines (see script output for instructions)
  */
 
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import type { Page } from "puppeteer";
 import type { XlsxWorkbook } from "@aurochs-office/xlsx/domain/workbook";
 import {
   startHarness,
@@ -82,11 +82,39 @@ const TEST_CASES: TestCase[] = [
 ];
 
 // =============================================================================
+// Helpers
+// =============================================================================
+
+async function captureTestCase(params: {
+  page: Page;
+  workbook: XlsxWorkbook;
+  config: { width: number; height: number; sheetIndex: number };
+  testCase: TestCase;
+}): Promise<Buffer> {
+  const { page, workbook, config, testCase } = params;
+  if (testCase.scrolled) {
+    return captureWorkbookScrolled(page, workbook, {
+      ...config,
+      scrollTop: testCase.scrolled.scrollTop,
+      scrollLeft: testCase.scrolled.scrollLeft,
+    });
+  }
+  return captureWorkbook(page, workbook, config);
+}
+
+function formatTestName(testCase: TestCase): string {
+  if (testCase.scrolled) {
+    return `${testCase.name} (scrolled to ${testCase.scrolled.scrollTop},${testCase.scrolled.scrollLeft})`;
+  }
+  return testCase.name;
+}
+
+// =============================================================================
 // Test Suite
 // =============================================================================
 
 describe("XLSX Visual Regression", () => {
-  let harness: XlsxHarness | null = null;
+  const harnessRef = { value: null as XlsxHarness | null };
   const results: CompareResult[] = [];
   // __dirname is spec/, so go up one level to package root
   const fixturesDir = path.resolve(__dirname, "../fixtures/visual");
@@ -98,12 +126,12 @@ describe("XLSX Visual Regression", () => {
     ensureDirs([paths.baselineDir, paths.outputDir, paths.diffDir]);
 
     // Start the test harness
-    harness = await startHarness();
+    harnessRef.value = await startHarness();
   }, 30000); // 30s timeout for startup
 
   afterAll(async () => {
-    if (harness) {
-      await stopHarness(harness);
+    if (harnessRef.value) {
+      await stopHarness(harnessRef.value);
     }
 
     // Print summary
@@ -112,14 +140,13 @@ describe("XLSX Visual Regression", () => {
 
   // Run tests for each case
   for (const testCase of TEST_CASES) {
-    const testName = testCase.scrolled
-      ? `${testCase.name} (scrolled to ${testCase.scrolled.scrollTop},${testCase.scrolled.scrollLeft})`
-      : testCase.name;
+    const testName = formatTestName(testCase);
 
     it(`should render ${testName} correctly`, async () => {
-      if (!harness) {
+      if (!harnessRef.value) {
         throw new Error("Harness not initialized");
       }
+      const harness = harnessRef.value;
 
       const paths = getFixturePaths(testCase.name);
 
@@ -144,13 +171,7 @@ describe("XLSX Visual Regression", () => {
         sheetIndex: testCase.sheetIndex,
       };
 
-      const actual = testCase.scrolled
-        ? await captureWorkbookScrolled(harness.page, workbook, {
-            ...config,
-            scrollTop: testCase.scrolled.scrollTop,
-            scrollLeft: testCase.scrolled.scrollLeft,
-          })
-        : await captureWorkbook(harness.page, workbook, config);
+      const actual = await captureTestCase({ page: harness.page, workbook, config, testCase });
 
       // Save actual output
       const outputPath = paths.outputPath(testCase.name);
@@ -161,7 +182,7 @@ describe("XLSX Visual Regression", () => {
 
       // Compare full image (self-comparison baseline)
       const diffPath = paths.diffPath(testCase.name);
-      const result = comparePngs(actual, baseline, testCase.name, diffPath);
+      const result = comparePngs({ actual, baseline, name: testCase.name, diffPath });
       results.push(result);
 
       // Assert
@@ -175,7 +196,7 @@ describe("XLSX Visual Regression", () => {
 // =============================================================================
 
 describe("XLSX Visual Self-Comparison", () => {
-  let harness: XlsxHarness | null = null;
+  const harnessRef2 = { value: null as XlsxHarness | null };
   // __dirname is spec/, so go up one level to package root
   const fixturesDir = path.resolve(__dirname, "../fixtures/visual");
   const jsonDir = path.join(fixturesDir, "json");
@@ -187,17 +208,17 @@ describe("XLSX Visual Self-Comparison", () => {
       return;
     }
 
-    harness = await startHarness();
+    harnessRef2.value = await startHarness();
   }, 30000);
 
   afterAll(async () => {
-    if (harness) {
-      await stopHarness(harness);
+    if (harnessRef2.value) {
+      await stopHarness(harnessRef2.value);
     }
   });
 
   it("should produce consistent output across renders", async () => {
-    if (!harness) {
+    if (!harnessRef2.value) {
       console.warn("Skipping: harness not initialized");
       return;
     }
@@ -217,11 +238,12 @@ describe("XLSX Visual Self-Comparison", () => {
     };
 
     // Capture twice
+    const harness = harnessRef2.value;
     const first = await captureWorkbook(harness.page, workbook, config);
     const second = await captureWorkbook(harness.page, workbook, config);
 
     // Compare - should be identical
-    const result = comparePngs(first, second, "self-comparison");
+    const result = comparePngs({ actual: first, baseline: second, name: "self-comparison" });
 
     expect(result.diffPercent).toBe(0);
   }, 15000);

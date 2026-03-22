@@ -10,6 +10,12 @@ import type { UndoRedoGroupProps } from "./types";
 const iconSize = TOOLBAR_BUTTON_ICON_SIZE.sm.icon;
 const strokeWidth = iconTokens.strokeWidth;
 
+
+
+
+
+
+/** Undo/redo action button group */
 export function UndoRedoGroup({ canUndo, canRedo, onUndo, onRedo, disabled }: UndoRedoGroupProps) {
   return (
     <>

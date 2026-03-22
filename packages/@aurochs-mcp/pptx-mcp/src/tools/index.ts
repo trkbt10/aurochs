@@ -11,8 +11,8 @@ import { z } from "zod";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 /** Pre-read blank template at module init — the only file I/O this module performs. */
 const BLANK_TEMPLATE = new Uint8Array(readFileSync(join(__dirname, "..", "..", "templates", "blank.pptx")));
+import type { PresentationSession } from "@aurochs-cli/pptx-cli/core";
 import type {
-  PresentationSession,
   ShapeSpec,
   SlideModInput,
   TableUpdateSpec,
@@ -20,7 +20,7 @@ import type {
   AnimationSpec,
   SimpleCommentSpec,
   SimpleNotesSpec,
-} from "@aurochs-cli/pptx-cli/core";
+} from "@aurochs-builder/pptx";
 
 // =============================================================================
 // Zod Schemas

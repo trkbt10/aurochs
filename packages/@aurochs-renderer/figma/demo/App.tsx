@@ -6,6 +6,7 @@ import { useState, useCallback } from "react";
 import { FileDropZone } from "./components/FileDropZone";
 import { FigPreview } from "./components/FigPreview";
 import type { ParsedFigFile } from "@aurochs/fig/parser";
+import { parseFigFile } from "@aurochs/fig/parser";
 
 const styles = {
   app: {
@@ -38,6 +39,12 @@ const styles = {
   },
 };
 
+
+
+
+
+
+/** Main demo application component */
 export function App() {
   const [parsedFile, setParsedFile] = useState<ParsedFigFile | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -51,8 +58,6 @@ export function App() {
       const buffer = await file.arrayBuffer();
       const data = new Uint8Array(buffer);
 
-      // Dynamic import to avoid loading parsing code until needed
-      const { parseFigFile } = await import("@aurochs/fig/parser");
       const parsed = await parseFigFile(data);
 
       setParsedFile(parsed);
@@ -77,15 +82,27 @@ export function App() {
       </header>
 
       <main style={styles.main}>
-        {!parsedFile ? (
-          <>
-            <FileDropZone onFile={handleFile} isLoading={isLoading} />
-            {error && <div style={styles.error}>{error}</div>}
-          </>
-        ) : (
-          <FigPreview parsedFile={parsedFile} onClose={handleClose} />
-        )}
+        {renderMainContent({ parsedFile, handleFile, isLoading, error, handleClose })}
       </main>
     </div>
   );
+}
+
+/** Render the main content area based on whether a file is loaded */
+function renderMainContent({ parsedFile, handleFile, isLoading, error, handleClose }: {
+  parsedFile: ParsedFigFile | null;
+  handleFile: (file: File) => Promise<void>;
+  isLoading: boolean;
+  error: string | null;
+  handleClose: () => void;
+}) {
+  if (!parsedFile) {
+    return (
+      <>
+        <FileDropZone onFile={handleFile} isLoading={isLoading} />
+        {error && <div style={styles.error}>{error}</div>}
+      </>
+    );
+  }
+  return <FigPreview parsedFile={parsedFile} onClose={handleClose} />;
 }

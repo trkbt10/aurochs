@@ -1,3 +1,4 @@
+/** @file PDF import React hook with state management */
 import { useCallback, useState } from "react";
 import {
   importPdfFromFile,
@@ -52,6 +53,17 @@ function toPdfImportError(args: {
   return new PdfImportErrorCtor(message, code);
 }
 
+
+
+
+
+
+
+
+
+
+
+/** Hook for importing PDF files and managing import state. */
 function usePdfImport(deps: Partial<PdfImportDeps> = {}): UsePdfImportReturn {
   const {
     importPdfFromFile: importPdfFromFileImpl = importPdfFromFile,

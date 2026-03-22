@@ -69,27 +69,27 @@ export function resolveChildConstraints(
     | undefined;
   const size = child.size as { x?: number; y?: number } | undefined;
 
-  if (!transform || !size) return null;
+  if (!transform || !size) {return null;}
 
   const origX = transform.m02 ?? 0;
   const origY = transform.m12 ?? 0;
   const origW = size.x ?? 0;
   const origH = size.y ?? 0;
 
-  const hResult = resolveConstraintAxis(
-    origX,
-    origW,
-    parentOrigSize.x,
-    parentNewSize.x,
-    hVal,
-  );
-  const vResult = resolveConstraintAxis(
-    origY,
-    origH,
-    parentOrigSize.y,
-    parentNewSize.y,
-    vVal,
-  );
+  const hResult = resolveConstraintAxis({
+    origPos: origX,
+    origDim: origW,
+    parentOrigDim: parentOrigSize.x,
+    parentNewDim: parentNewSize.x,
+    constraintValue: hVal,
+  });
+  const vResult = resolveConstraintAxis({
+    origPos: origY,
+    origDim: origH,
+    parentOrigDim: parentOrigSize.y,
+    parentNewDim: parentNewSize.y,
+    constraintValue: vVal,
+  });
 
   return {
     posX: hResult.pos,

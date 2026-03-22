@@ -7,7 +7,7 @@
  * @see ECMA-376 Part 1, Section 20.1.6.7 (objectDefaults)
  */
 
-import { useCallback, type CSSProperties } from "react";
+import { useCallback, type CSSProperties, type ReactNode } from "react";
 import type { ObjectDefaults, ObjectDefaultProperties } from "@aurochs-office/pptx/domain/theme/types";
 import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
 import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
@@ -70,6 +70,32 @@ const infoStyle: CSSProperties = {
 };
 
 // =============================================================================
+// Helpers
+// =============================================================================
+
+/** Render fill editor or placeholder for a default entry */
+function renderFillContent(
+  { fill, key, handleFillChange, disabled }: {
+    fill: BaseFill | undefined;
+    key: keyof ObjectDefaults;
+    handleFillChange: (k: keyof ObjectDefaults, f: BaseFill) => void;
+    disabled: boolean | undefined;
+  },
+): ReactNode {
+  if (fill !== undefined) {
+    return (
+      <BaseFillEditor
+        value={fill}
+        onChange={(f) => handleFillChange(key, f)}
+        disabled={disabled}
+        compact
+      />
+    );
+  }
+  return <span style={infoStyle}>No fill defined</span>;
+}
+
+// =============================================================================
 // Component
 // =============================================================================
 
@@ -109,16 +135,7 @@ export function ObjectDefaultsEditor({ objectDefaults, onChange, disabled }: Obj
             <div key={key}>
               <div style={sectionLabelStyle}>{label}</div>
               <div style={sectionContainerStyle}>
-                {fill !== undefined ? (
-                  <BaseFillEditor
-                    value={fill}
-                    onChange={(f) => handleFillChange(key, f)}
-                    disabled={disabled}
-                    compact
-                  />
-                ) : (
-                  <span style={infoStyle}>No fill defined</span>
-                )}
+                {renderFillContent({ fill, key, handleFillChange, disabled })}
               </div>
             </div>
           );

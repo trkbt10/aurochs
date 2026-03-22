@@ -30,12 +30,12 @@ export function parseContainerChildren(
   endOffset: number,
 ): readonly PptRecord[] {
   const children: PptRecord[] = [];
-  let pos = startOffset;
+  const posRef = { value: startOffset };
 
-  while (pos + RECORD_HEADER_SIZE <= endOffset) {
-    const child = parsePptRecordTree(bytes, pos);
+  while (posRef.value + RECORD_HEADER_SIZE <= endOffset) {
+    const child = parsePptRecordTree(bytes, posRef.value);
     children.push(child);
-    pos += RECORD_HEADER_SIZE + child.recLen;
+    posRef.value += RECORD_HEADER_SIZE + child.recLen;
   }
 
   return children;

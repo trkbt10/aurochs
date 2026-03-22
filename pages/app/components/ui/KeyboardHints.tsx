@@ -105,6 +105,17 @@ function Kbd({ children, variant }: { children: ReactNode; variant: Variant }) {
 
 
 
+
+
+
+
+
+
+
+
+
+
+/** Keyboard shortcut hints display. */
 export function KeyboardHints({ hints, variant = "dark", className }: Props) {
   return (
     <div style={containerStyles[variant]} className={className}>

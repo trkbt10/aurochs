@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Generate test PPTX files for vertical text (縦書き) visual regression tests.
+ * @file Generate test PPTX files for vertical text visual regression tests.
  *
  * Test cases are organized by category:
  * 1. Basic Vertical Text - single paragraph, simple text

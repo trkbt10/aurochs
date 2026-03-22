@@ -224,7 +224,7 @@ function processLayoutContent(
   dataNodes: readonly DiagramTreeNode[],
   context: ForEachContext,
 ): DiagramTreeNode[] {
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- Reassigned as forEach elements filter the node list
   let result: DiagramTreeNode[] = [...dataNodes];
 
   // Process forEach elements
@@ -327,9 +327,9 @@ function createLayoutShapeResultFromLayoutNode(
 
   // Determine shape type from layoutDef or defaults
   const shapeSpec = layoutDef?.shape;
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- Conditionally overridden by shapeSpec.type below
   let shapeType: PresetShapeType = config.defaultShapeType ?? "rect";
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- Set to true when shape type is "none"
   let isHidden = false;
 
   if (shapeSpec?.type) {
@@ -405,13 +405,13 @@ function calculateTotalBounds(shapes: readonly LayoutShapeResult[], defaultBound
     return defaultBounds;
   }
 
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- Accumulated across shape transforms
   let minX = Infinity;
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- Accumulated across shape transforms
   let minY = Infinity;
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- Accumulated across shape transforms
   let maxX = -Infinity;
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- Accumulated across shape transforms
   let maxY = -Infinity;
 
   for (const shape of shapes) {

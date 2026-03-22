@@ -82,6 +82,12 @@ const styles = {
   },
 };
 
+
+
+
+
+
+/** File drop zone for .fig file upload */
 export function FileDropZone({ onFile, isLoading }: Props) {
   const [isDragging, setIsDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -109,7 +115,7 @@ export function FileDropZone({ onFile, isLoading }: Props) {
       e.stopPropagation();
       setIsDragging(false);
 
-      if (isLoading) return;
+      if (isLoading) {return;}
 
       const files = e.dataTransfer.files;
       if (files.length > 0) {
@@ -165,20 +171,7 @@ export function FileDropZone({ onFile, isLoading }: Props) {
         onDrop={handleDrop}
         onClick={handleClick}
       >
-        {isLoading ? (
-          <>
-            <div style={styles.spinner} />
-            <div style={styles.title}>Parsing file...</div>
-          </>
-        ) : (
-          <>
-            <div style={styles.icon}>📁</div>
-            <div style={styles.title}>
-              {isDragging ? "Drop your .fig file here" : "Drag & drop a .fig file"}
-            </div>
-            <div style={styles.subtitle}>or click to browse</div>
-          </>
-        )}
+        {renderDropContent(isLoading, isDragging)}
       </div>
       <input
         ref={inputRef}
@@ -188,5 +181,26 @@ export function FileDropZone({ onFile, isLoading }: Props) {
         onChange={handleInputChange}
       />
     </div>
+  );
+}
+
+/** Render the drop zone content based on loading state */
+function renderDropContent(isLoading: boolean, isDragging: boolean) {
+  if (isLoading) {
+    return (
+      <>
+        <div style={styles.spinner} />
+        <div style={styles.title}>Parsing file...</div>
+      </>
+    );
+  }
+  return (
+    <>
+      <div style={styles.icon}>📁</div>
+      <div style={styles.title}>
+        {isDragging ? "Drop your .fig file here" : "Drag & drop a .fig file"}
+      </div>
+      <div style={styles.subtitle}>or click to browse</div>
+    </>
   );
 }

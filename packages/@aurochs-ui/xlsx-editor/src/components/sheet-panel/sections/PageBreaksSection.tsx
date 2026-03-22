@@ -63,9 +63,31 @@ export function PageBreaksSection({ disabled, pageBreaks, onPageBreaksChange }: 
   const [newRowBreak, setNewRowBreak] = useState<number>(1);
   const [newColBreak, setNewColBreak] = useState<number>(1);
 
+  const renderBreakList = (params: {
+    breaks: readonly XlsxPageBreak[];
+    emptyText: string;
+    label: string;
+    onRemove: (id: number) => void;
+  }) => {
+    const { breaks, emptyText, label, onRemove } = params;
+    if (breaks.length === 0) {
+      return <div style={emptyStyle}>{emptyText}</div>;
+    }
+    return (
+      <div style={breakListStyle}>
+        {breaks.map((b) => (
+          <div key={b.id} style={breakItemStyle}>
+            <span style={{ flex: 1 }}>{label} {b.id}</span>
+            <Button size="sm" disabled={disabled} onClick={() => onRemove(b.id)}>×</Button>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   const addRowBreak = useCallback(() => {
     const existing = current.rowBreaks.some((b) => b.id === newRowBreak);
-    if (existing) return;
+    if (existing) {return;}
     const newBreak: XlsxPageBreak = { id: newRowBreak, manual: true };
     onPageBreaksChange({
       ...current,
@@ -85,7 +107,7 @@ export function PageBreaksSection({ disabled, pageBreaks, onPageBreaksChange }: 
 
   const addColBreak = useCallback(() => {
     const existing = current.colBreaks.some((b) => b.id === newColBreak);
-    if (existing) return;
+    if (existing) {return;}
     const newBreak: XlsxPageBreak = { id: newColBreak, manual: true };
     onPageBreaksChange({
       ...current,
@@ -108,20 +130,7 @@ export function PageBreaksSection({ disabled, pageBreaks, onPageBreaksChange }: 
       {/* Row Breaks */}
       <div style={subsectionStyle}>
         <div style={subsectionTitleStyle}>Row Breaks (Horizontal)</div>
-        {current.rowBreaks.length === 0 ? (
-          <div style={emptyStyle}>No row breaks</div>
-        ) : (
-          <div style={breakListStyle}>
-            {current.rowBreaks.map((b) => (
-              <div key={b.id} style={breakItemStyle}>
-                <span style={{ flex: 1 }}>After row {b.id}</span>
-                <Button size="sm" disabled={disabled} onClick={() => removeRowBreak(b.id)}>
-                  ×
-                </Button>
-              </div>
-            ))}
-          </div>
-        )}
+        {renderBreakList({ breaks: current.rowBreaks, emptyText: "No row breaks", label: "After row", onRemove: removeRowBreak })}
         <FieldRow>
           <FieldGroup label="Add after row" inline labelWidth={90}>
             <Input
@@ -141,20 +150,7 @@ export function PageBreaksSection({ disabled, pageBreaks, onPageBreaksChange }: 
       {/* Column Breaks */}
       <div style={{ ...subsectionStyle, borderTop: `1px solid ${colorTokens.border.subtle}`, paddingTop: spacingTokens.sm }}>
         <div style={subsectionTitleStyle}>Column Breaks (Vertical)</div>
-        {current.colBreaks.length === 0 ? (
-          <div style={emptyStyle}>No column breaks</div>
-        ) : (
-          <div style={breakListStyle}>
-            {current.colBreaks.map((b) => (
-              <div key={b.id} style={breakItemStyle}>
-                <span style={{ flex: 1 }}>After column {b.id}</span>
-                <Button size="sm" disabled={disabled} onClick={() => removeColBreak(b.id)}>
-                  ×
-                </Button>
-              </div>
-            ))}
-          </div>
-        )}
+        {renderBreakList({ breaks: current.colBreaks, emptyText: "No column breaks", label: "After column", onRemove: removeColBreak })}
         <FieldRow>
           <FieldGroup label="Add after col" inline labelWidth={90}>
             <Input

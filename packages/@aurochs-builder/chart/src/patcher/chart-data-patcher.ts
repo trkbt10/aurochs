@@ -208,26 +208,26 @@ export function patchSeriesData(seriesElement: XmlElement, series: ChartSeriesSp
     throw new Error(`patchSeriesData: expected c:ser, got ${seriesElement.name}`);
   }
 
-  let next = seriesElement;
+  const ref = { value: seriesElement };
 
   // Ensure idx / order are present (preserve when existing, but force to numeric string)
-  if (getChild(next, "c:idx")) {
-    next = setOrAddSimpleValChild(next, "c:idx", getChild(next, "c:idx")?.attrs.val ?? "0");
+  if (getChild(ref.value, "c:idx")) {
+    ref.value = setOrAddSimpleValChild(ref.value, "c:idx", getChild(ref.value, "c:idx")?.attrs.val ?? "0");
   }
-  if (getChild(next, "c:order")) {
-    next = setOrAddSimpleValChild(next, "c:order", getChild(next, "c:order")?.attrs.val ?? "0");
+  if (getChild(ref.value, "c:order")) {
+    ref.value = setOrAddSimpleValChild(ref.value, "c:order", getChild(ref.value, "c:order")?.attrs.val ?? "0");
   }
 
-  next = patchOrCreateChildWithUpdater({
-    parent: next,
+  ref.value = patchOrCreateChildWithUpdater({
+    parent: ref.value,
     name: "c:tx",
     updater: (tx) => patchSeriesName(tx, series.name),
     create: () => createElement("c:tx", {}, [createElement("c:v", {}, [createText(series.name)])]),
   });
 
   // Values (categories are patched separately in patchChartData)
-  next = patchOrCreateChildWithUpdater({
-    parent: next,
+  ref.value = patchOrCreateChildWithUpdater({
+    parent: ref.value,
     name: "c:val",
     updater: (val) => patchValuesElement(val, series.values),
     create: () =>
@@ -239,14 +239,14 @@ export function patchSeriesData(seriesElement: XmlElement, series: ChartSeriesSp
       ]),
   });
 
-  return next;
+  return ref.value;
 }
 
 function setSeriesIndex(ser: XmlElement, index: number): XmlElement {
-  let next = ser;
-  next = setOrAddSimpleValChild(next, "c:idx", String(index));
-  next = setOrAddSimpleValChild(next, "c:order", String(index));
-  return next;
+  const ref = { value: ser };
+  ref.value = setOrAddSimpleValChild(ref.value, "c:idx", String(index));
+  ref.value = setOrAddSimpleValChild(ref.value, "c:order", String(index));
+  return ref.value;
 }
 
 function ensureSeriesCount(seriesContainer: XmlElement, desiredCount: number): XmlElement {
@@ -283,13 +283,13 @@ function patchContainerSeries(container: XmlElement, data: ChartDataSpec): XmlEl
   });
 
   // Replace all c:ser in order, preserve other children
-  let seriesIndex = 0;
+  const seriesIdx = { value: 0 };
   const nextChildren = next.children.map((child) => {
     if (!isXmlElement(child) || child.name !== "c:ser") {
       return child;
     }
-    const replacement = patchedSeries[seriesIndex];
-    seriesIndex += 1;
+    const replacement = patchedSeries[seriesIdx.value];
+    seriesIdx.value += 1;
     return replacement ?? child;
   });
 

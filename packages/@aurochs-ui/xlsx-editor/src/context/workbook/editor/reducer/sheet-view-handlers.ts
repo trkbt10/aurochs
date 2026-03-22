@@ -62,12 +62,12 @@ function handleFreezeRowsAndColumns(
   action: FreezeRowsAndColumnsAction,
 ): XlsxEditorState {
   const currentWorkbook = state.workbookHistory.present;
-  const newWorkbook = freezeRowsAndColumns(
-    currentWorkbook,
-    action.sheetIndex,
-    action.rowCount,
-    action.colCount,
-  );
+  const newWorkbook = freezeRowsAndColumns({
+    workbook: currentWorkbook,
+    sheetIndex: action.sheetIndex,
+    rowCount: action.rowCount,
+    colCount: action.colCount,
+  });
   return {
     ...state,
     workbookHistory: pushHistory(state.workbookHistory, newWorkbook),

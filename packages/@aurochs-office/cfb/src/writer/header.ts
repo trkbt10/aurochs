@@ -5,7 +5,7 @@
  * @see MS-CFB 2.2 (Compound File Header)
  */
 
-import { CFB_SIGNATURE, CFB_HEADER_SIZE, ENDOFCHAIN, FREESECT } from "../constants";
+import { CFB_SIGNATURE, CFB_HEADER_SIZE, FREESECT } from "../constants";
 
 /**
  * Header configuration for building.

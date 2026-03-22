@@ -174,7 +174,7 @@ function GridLayers({
     for (let row0 = rowRange.start; row0 <= rowRange.end; row0++) {
       const row1 = row0 + 1;
       const height = layout.rows.getSizePx(row0);
-      if (height <= 0) continue;
+      if (height <= 0) {continue;}
 
       for (let col0 = colRange.start; col0 <= colRange.end; col0++) {
         const col1 = col0 + 1;
@@ -183,7 +183,7 @@ function GridLayers({
 
         if (merge) {
           const isOrigin = (address.col as number) === merge.minCol && (address.row as number) === merge.minRow;
-          if (!isOrigin) continue;
+          if (!isOrigin) {continue;}
 
           const originAddress = merge.origin;
           const cell = getCell(sheet, originAddress);
@@ -204,7 +204,7 @@ function GridLayers({
           const bottomPx = layout.rows.getBoundaryOffsetPx(merge.maxRow);
           const width = Math.max(0, rightPx - leftPx);
           const mergedHeight = Math.max(0, bottomPx - topPx);
-          if (width <= 0 || mergedHeight <= 0) continue;
+          if (width <= 0 || mergedHeight <= 0) {continue;}
 
           nodes.push(
             <div
@@ -237,8 +237,8 @@ function GridLayers({
         });
         const cellRenderStyle = resolveCellRenderStyle({ styles: workbook.styles, sheet, address, cell });
         const width = layout.cols.getSizePx(col0);
-        if (width <= 0) continue;
-        if (text === "" && Object.keys(cellRenderStyle).length === 0) continue;
+        if (width <= 0) {continue;}
+        if (text === "" && Object.keys(cellRenderStyle).length === 0) {continue;}
 
         nodes.push(
           <div
@@ -262,7 +262,7 @@ function GridLayers({
   }, [colRange, rowRange, layout, sheet, workbook.styles, sheetIndex, formulaEvaluator, normalizedMerges]);
 
   const gridlineNodes = useMemo(() => {
-    if (!showGridlines) return null;
+    if (!showGridlines) {return null;}
     const nodes: React.ReactNode[] = [];
 
     // Horizontal gridlines
@@ -303,7 +303,7 @@ function GridLayers({
   }, [showGridlines, colRange, rowRange, layout]);
 
   const headerNodes = useMemo(() => {
-    if (!showHeaders) return null;
+    if (!showHeaders) {return null;}
 
     const colHeaders: React.ReactNode[] = [];
     const rowHeaders: React.ReactNode[] = [];
@@ -311,7 +311,7 @@ function GridLayers({
     // Column headers (A, B, C...)
     for (let col0 = colRange.start; col0 <= colRange.end; col0++) {
       const width = layout.cols.getSizePx(col0);
-      if (width <= 0) continue;
+      if (width <= 0) {continue;}
       colHeaders.push(
         <div
           key={`col-${col0}`}
@@ -332,7 +332,7 @@ function GridLayers({
     // Row headers (1, 2, 3...)
     for (let row0 = rowRange.start; row0 <= rowRange.end; row0++) {
       const height = layout.rows.getSizePx(row0);
-      if (height <= 0) continue;
+      if (height <= 0) {continue;}
       rowHeaders.push(
         <div
           key={`row-${row0}`}
@@ -459,7 +459,7 @@ export function ReadonlySheetGrid({
 
   const normalizedMerges = useMemo(() => {
     const merges = sheet.mergeCells ?? [];
-    if (merges.length === 0) return [];
+    if (merges.length === 0) {return [];}
     return merges.map((m) => normalizeMergeRange(m));
   }, [sheet.mergeCells]);
 

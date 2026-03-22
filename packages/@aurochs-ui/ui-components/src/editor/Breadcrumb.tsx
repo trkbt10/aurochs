@@ -98,6 +98,12 @@ function DefaultSeparator(): ReactNode {
 // Component
 // =============================================================================
 
+
+
+
+
+
+/** Breadcrumb navigation component */
 export function Breadcrumb({
   items,
   onItemClick,

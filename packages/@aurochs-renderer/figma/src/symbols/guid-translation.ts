@@ -20,7 +20,7 @@ import type { FigSymbolOverride } from "./symbol-resolver";
 /** Override GUID string → SYMBOL descendant GUID string */
 export type GuidTranslationMap = ReadonlyMap<string, string>;
 
-interface DescendantInfo {
+type DescendantInfo = {
   guid: FigGuid;
   guidStr: string;
   nodeType: string;
@@ -74,7 +74,7 @@ function collectDescendantInfo(nodes: readonly FigNode[]): DescendantInfo[] {
 function collectOverrideGuids(...overrideSets: (readonly FigSymbolOverride[] | undefined)[]): Map<string, FigGuid> {
   const map = new Map<string, FigGuid>();
   for (const overrides of overrideSets) {
-    if (!overrides) continue;
+    if (!overrides) {continue;}
     for (const entry of overrides) {
       const firstGuid = entry.guidPath?.guids?.[0];
       if (firstGuid) {
@@ -100,24 +100,24 @@ function detectTypeHints(...overrideSets: (readonly FigSymbolOverride[] | undefi
   const guidInfo = new Map<string, { depth1Keys: Set<string>; hasChildren: boolean }>();
 
   for (const overrides of overrideSets) {
-    if (!overrides) continue;
+    if (!overrides) {continue;}
     for (const entry of overrides) {
       const firstGuid = entry.guidPath?.guids?.[0];
-      if (!firstGuid) continue;
+      if (!firstGuid) {continue;}
       const key = guidToString(firstGuid);
-      let info = guidInfo.get(key);
-      if (!info) {
-        info = { depth1Keys: new Set(), hasChildren: false };
-        guidInfo.set(key, info);
+      const infoRef = { value: guidInfo.get(key) };
+      if (!infoRef.value) {
+        infoRef.value = { depth1Keys: new Set(), hasChildren: false };
+        guidInfo.set(key, infoRef.value);
       }
       const depth = entry.guidPath.guids.length;
       if (depth === 1) {
         for (const k of Object.keys(entry)) {
-          if (k !== "guidPath") info.depth1Keys.add(k);
+          if (k !== "guidPath") {infoRef.value.depth1Keys.add(k);}
         }
       }
       if (depth > 1) {
-        info.hasChildren = true;
+        infoRef.value.hasChildren = true;
       }
     }
   }
@@ -148,12 +148,12 @@ function extractOverrideSizes(
 ): Map<string, { x: number; y: number }> {
   const sizes = new Map<string, { x: number; y: number }>();
   for (const overrides of overrideSets) {
-    if (!overrides) continue;
+    if (!overrides) {continue;}
     for (const entry of overrides) {
       const guids = entry.guidPath?.guids;
-      if (!guids || guids.length !== 1) continue;
+      if (!guids || guids.length !== 1) {continue;}
       const size = (entry as Record<string, unknown>).size as { x: number; y: number } | undefined;
-      if (!size) continue;
+      if (!size) {continue;}
       const key = guidToString(guids[0]);
       if (!sizes.has(key)) {
         sizes.set(key, { x: size.x, y: size.y });
@@ -197,15 +197,15 @@ export function buildGuidTranslationMap(
   symbolOverrides: readonly FigSymbolOverride[] | undefined,
 ): GuidTranslationMap {
   const descendants = collectDescendantInfo(symbolDescendants);
-  if (descendants.length === 0) return new Map();
+  if (descendants.length === 0) {return new Map();}
 
   const overrideGuids = collectOverrideGuids(derivedSymbolData, symbolOverrides);
-  if (overrideGuids.size === 0) return new Map();
+  if (overrideGuids.size === 0) {return new Map();}
 
   // Check if override GUIDs already match descendants — no translation needed
   const descendantSet = new Set(descendants.map((d) => d.guidStr));
   const allMatch = [...overrideGuids.keys()].every((key) => descendantSet.has(key));
-  if (allMatch) return new Map();
+  if (allMatch) {return new Map();}
 
   // Build localID lookup: localID → descendant GUID string
   const localIdToDescendant = new Map<number, string>();
@@ -218,12 +218,12 @@ export function buildGuidTranslationMap(
   // Group override GUIDs by sessionID
   const bySession = new Map<number, FigGuid[]>();
   for (const guid of overrideGuids.values()) {
-    let arr = bySession.get(guid.sessionID);
-    if (!arr) {
-      arr = [];
-      bySession.set(guid.sessionID, arr);
+    const arrRef4 = { value: bySession.get(guid.sessionID) };
+    if (!arrRef4.value) {
+      arrRef4.value = [];
+      bySession.set(guid.sessionID, arrRef4.value);
     }
-    arr.push(guid);
+    arrRef4.value.push(guid);
   }
 
   const result = new Map<string, string>();
@@ -241,7 +241,7 @@ export function buildGuidTranslationMap(
   }
 
   for (const [, guids] of bySession) {
-    if (guids.length < 3) continue;
+    if (guids.length < 3) {continue;}
 
     const offsetCounts = new Map<number, number>();
     for (const overrideGuid of guids) {
@@ -252,41 +252,41 @@ export function buildGuidTranslationMap(
     }
 
     // Collect all offsets with the highest count
-    let bestCount = 0;
+    const bestCountRef = { value: 0 };
     for (const count of offsetCounts.values()) {
-      if (count > bestCount) bestCount = count;
+      if (count > bestCountRef.value) {bestCountRef.value = count;}
     }
 
     const tiedOffsets: number[] = [];
     for (const [offset, count] of offsetCounts) {
-      if (count === bestCount) tiedOffsets.push(offset);
+      if (count === bestCountRef.value) {tiedOffsets.push(offset);}
     }
 
     // If tied, use type-compatibility tiebreaker
-    let bestOffset = tiedOffsets[0];
+    const bestOffsetRef = { value: tiedOffsets[0] };
     if (tiedOffsets.length > 1) {
-      let bestTypeScore = -1;
+      const bestTypeScoreRef = { value: -1 };
       for (const offset of tiedOffsets) {
-        let typeScore = 0;
+        const typeScoreRef = { value: 0 };
         for (const overrideGuid of guids) {
           const targetLocalID = overrideGuid.localID - offset;
           const descInfo = localIdToDescInfo.get(targetLocalID);
-          if (!descInfo) continue;
+          if (!descInfo) {continue;}
           const hint = typeHints.get(guidToString(overrideGuid));
-          if (hint === "TEXT" && descInfo.nodeType === "TEXT") typeScore++;
-          else if (hint === "INSTANCE" && descInfo.nodeType === "INSTANCE") typeScore++;
+          if (hint === "TEXT" && descInfo.nodeType === "TEXT") {typeScoreRef.value++;}
+          else if (hint === "INSTANCE" && descInfo.nodeType === "INSTANCE") {typeScoreRef.value++;}
           else if (hint === "CONTAINER" && (descInfo.nodeType === "FRAME" || descInfo.nodeType === "INSTANCE"))
-            typeScore++;
+            {typeScoreRef.value++;}
         }
-        if (typeScore > bestTypeScore) {
-          bestTypeScore = typeScore;
-          bestOffset = offset;
+        if (typeScoreRef.value > bestTypeScoreRef.value) {
+          bestTypeScoreRef.value = typeScoreRef.value;
+          bestOffsetRef.value = offset;
         }
       }
     }
 
     for (const overrideGuid of guids) {
-      const targetLocalID = overrideGuid.localID - bestOffset;
+      const targetLocalID = overrideGuid.localID - bestOffsetRef.value;
       const descendantGuidStr = localIdToDescendant.get(targetLocalID);
       if (descendantGuidStr) {
         result.set(guidToString(overrideGuid), descendantGuidStr);
@@ -310,10 +310,10 @@ export function buildGuidTranslationMap(
     const toRemove: string[] = [];
     for (const [overrideGuidStr, descGuidStr] of result) {
       const dsdSize = overrideSizes.get(overrideGuidStr);
-      if (!dsdSize) continue;
+      if (!dsdSize) {continue;}
 
       const desc = descByGuidStr.get(descGuidStr);
-      if (!desc?.size) continue;
+      if (!desc?.size) {continue;}
 
       // Check if sizes grossly mismatch (more than 50% difference on either axis)
       const widthRatio = Math.max(dsdSize.x, desc.size.x) / Math.max(1, Math.min(dsdSize.x, desc.size.x));
@@ -333,16 +333,16 @@ export function buildGuidTranslationMap(
   // map remaining typed GUIDs to unclaimed descendants of the same type
   // using sorted localID order.
   for (const [, guids] of bySession) {
-    if (guids.length < 3) continue;
+    if (guids.length < 3) {continue;}
     const unmapped = guids.filter((g) => !result.has(guidToString(g)));
-    if (unmapped.length === 0) continue;
+    if (unmapped.length === 0) {continue;}
 
     // Handle remaining unmapped GUIDs by type (TEXT, INSTANCE)
     const phase1Targets = new Set(result.values());
 
     for (const targetType of ["TEXT", "INSTANCE"] as const) {
       const typedUnmapped = unmapped.filter((g) => typeHints.get(guidToString(g)) === targetType);
-      if (typedUnmapped.length === 0) continue;
+      if (typedUnmapped.length === 0) {continue;}
 
       const descendantType = targetType === "TEXT" ? "TEXT" : "INSTANCE";
       const typedDescendants = descendants.filter((d) => d.nodeType === descendantType);
@@ -370,7 +370,7 @@ export function buildGuidTranslationMap(
     // Collect ALL unmapped override GUIDs that have a depth-1 size
     const unmappedWithSize: { guid: FigGuid; guidStr: string; size: { x: number; y: number } }[] = [];
     for (const [guidStr, guid] of overrideGuids) {
-      if (result.has(guidStr)) continue;
+      if (result.has(guidStr)) {continue;}
       const size = overrideSizes.get(guidStr);
       if (size) {
         unmappedWithSize.push({ guid, guidStr, size });
@@ -382,24 +382,24 @@ export function buildGuidTranslationMap(
       const bySizeKey = new Map<string, typeof unmappedWithSize>();
       for (const entry of unmappedWithSize) {
         const key = `${Math.round(entry.size.x)}x${Math.round(entry.size.y)}`;
-        let arr = bySizeKey.get(key);
-        if (!arr) {
-          arr = [];
-          bySizeKey.set(key, arr);
+        const arrRef3 = { value: bySizeKey.get(key) };
+        if (!arrRef3.value) {
+          arrRef3.value = [];
+          bySizeKey.set(key, arrRef3.value);
         }
-        arr.push(entry);
+        arrRef3.value.push(entry);
       }
 
       // For each size group, find unclaimed descendants with matching original size
       for (const [sizeKey, group] of bySizeKey) {
         const matchingDescs = descendants.filter((d) => {
-          if (claimed.has(d.guidStr)) return false;
-          if (!d.size) return false;
+          if (claimed.has(d.guidStr)) {return false;}
+          if (!d.size) {return false;}
           const descKey = `${Math.round(d.size.x)}x${Math.round(d.size.y)}`;
           return descKey === sizeKey;
         });
 
-        if (matchingDescs.length === 0) continue;
+        if (matchingDescs.length === 0) {continue;}
 
         // Match by sorted localID order within the size group
         const sortedGroup = [...group].sort((a, b) => a.guid.localID - b.guid.localID);
@@ -423,49 +423,49 @@ export function buildGuidTranslationMap(
   // Group descendants by type
   const descendantsByType = new Map<string, DescendantInfo[]>();
   for (const d of descendants) {
-    let arr = descendantsByType.get(d.nodeType);
-    if (!arr) {
-      arr = [];
-      descendantsByType.set(d.nodeType, arr);
+    const arrRef2 = { value: descendantsByType.get(d.nodeType) };
+    if (!arrRef2.value) {
+      arrRef2.value = [];
+      descendantsByType.set(d.nodeType, arrRef2.value);
     }
-    arr.push(d);
+    arrRef2.value.push(d);
   }
 
   for (const [, guids] of bySession) {
-    if (guids.length >= 3) continue;
+    if (guids.length >= 3) {continue;}
 
     // Group this session's GUIDs by type hint
     const byHint = new Map<string, FigGuid[]>();
     for (const guid of guids) {
       const guidStr = guidToString(guid);
-      if (result.has(guidStr)) continue; // already mapped
+      if (result.has(guidStr)) {continue;} // already mapped
       const hint = typeHints.get(guidStr) ?? "UNKNOWN";
-      let arr = byHint.get(hint);
-      if (!arr) {
-        arr = [];
-        byHint.set(hint, arr);
+      const arrRef = { value: byHint.get(hint) };
+      if (!arrRef.value) {
+        arrRef.value = [];
+        byHint.set(hint, arrRef.value);
       }
-      arr.push(guid);
+      arrRef.value.push(guid);
     }
 
     for (const [hint, hintGuids] of byHint) {
       // Get candidate descendants matching the type hint
-      let allCandidates: DescendantInfo[];
+      const allCandidatesRef = { value: undefined as DescendantInfo[] | undefined };
       if (hint === "TEXT") {
-        allCandidates = descendantsByType.get("TEXT") ?? [];
+        allCandidatesRef.value = descendantsByType.get("TEXT") ?? [];
       } else if (hint === "INSTANCE") {
-        allCandidates = descendantsByType.get("INSTANCE") ?? [];
+        allCandidatesRef.value = descendantsByType.get("INSTANCE") ?? [];
       } else if (hint === "CONTAINER") {
-        allCandidates = [...(descendantsByType.get("FRAME") ?? []), ...(descendantsByType.get("INSTANCE") ?? [])];
+        allCandidatesRef.value = [...(descendantsByType.get("FRAME") ?? []), ...(descendantsByType.get("INSTANCE") ?? [])];
       } else {
-        allCandidates = descendants;
+        allCandidatesRef.value = descendants;
       }
 
-      if (allCandidates.length === 0) continue;
+      if (allCandidatesRef.value.length === 0) {continue;}
 
       // Prefer descendants NOT already claimed by Phase 1
-      const unclaimed = allCandidates.filter((c) => !phase1Targets.has(c.guidStr));
-      const candidates = unclaimed.length >= hintGuids.length ? unclaimed : allCandidates;
+      const unclaimed = allCandidatesRef.value.filter((c) => !phase1Targets.has(c.guidStr));
+      const candidates = unclaimed.length >= hintGuids.length ? unclaimed : allCandidatesRef.value;
 
       // Sort both override GUIDs and candidates by localID, match positionally
       const sortedGuids = [...hintGuids].sort((a, b) => a.localID - b.localID);
@@ -492,10 +492,10 @@ export function buildGuidTranslationMap(
  */
 function collectOverriddenSymbolIDGuids(overrides: readonly FigSymbolOverride[] | undefined): Set<string> {
   const guids = new Set<string>();
-  if (!overrides) return guids;
+  if (!overrides) {return guids;}
   for (const entry of overrides) {
     const firstGuid = entry.guidPath?.guids?.[0];
-    if (!firstGuid) continue;
+    if (!firstGuid) {continue;}
     if ((entry as Record<string, unknown>).overriddenSymbolID !== undefined) {
       guids.add(guidToString(firstGuid));
     }
@@ -511,14 +511,11 @@ function collectOverriddenSymbolIDGuids(overrides: readonly FigSymbolOverride[] 
  * algorithm swaps them. This function detects such swaps using semantic
  * evidence (overriddenSymbolID targets should be visible) and corrects them.
  */
-function fixAdjacentSiblingSwaps(
-  result: Map<string, string>,
-  descendants: DescendantInfo[],
-  localIdToDescInfo: Map<number, DescendantInfo>,
-  symbolOverrides: readonly FigSymbolOverride[] | undefined,
+function _fixAdjacentSiblingSwaps(
+  { result, descendants, localIdToDescInfo, symbolOverrides }: { result: Map<string, string>; descendants: DescendantInfo[]; localIdToDescInfo: Map<number, DescendantInfo>; symbolOverrides: readonly FigSymbolOverride[] | undefined; }
 ): void {
   const overriddenGuids = collectOverriddenSymbolIDGuids(symbolOverrides);
-  if (overriddenGuids.size === 0) return;
+  if (overriddenGuids.size === 0) {return;}
 
   // Build descendant guidStr → DescendantInfo lookup
   const descByGuidStr = new Map<string, DescendantInfo>();
@@ -534,19 +531,19 @@ function fixAdjacentSiblingSwaps(
 
   for (const overGuidStr of overriddenGuids) {
     const descGuidStr = result.get(overGuidStr);
-    if (!descGuidStr) continue;
+    if (!descGuidStr) {continue;}
 
     const descInfo = descByGuidStr.get(descGuidStr);
-    if (!descInfo || descInfo.visible !== false) continue;
+    if (!descInfo || descInfo.visible !== false) {continue;}
 
     // This variant-switching override targets a hidden descendant — likely wrong.
     // Look for an adjacent descendant (±1 localID) that is visible + same type.
     for (const delta of [-1, 1]) {
       const adjLocalID = descInfo.guid.localID + delta;
       const adjDescInfo = localIdToDescInfo.get(adjLocalID);
-      if (!adjDescInfo) continue;
-      if (adjDescInfo.nodeType !== descInfo.nodeType) continue;
-      if (adjDescInfo.visible === false) continue;
+      if (!adjDescInfo) {continue;}
+      if (adjDescInfo.nodeType !== descInfo.nodeType) {continue;}
+      if (adjDescInfo.visible === false) {continue;}
 
       // Found a visible adjacent sibling — swap the mappings.
       const adjOverGuidStr = reverseMap.get(adjDescInfo.guidStr);
@@ -576,15 +573,15 @@ export function translateOverrides(
   overrides: readonly FigSymbolOverride[],
   translationMap: GuidTranslationMap,
 ): readonly FigSymbolOverride[] {
-  if (translationMap.size === 0) return overrides;
+  if (translationMap.size === 0) {return overrides;}
 
   return overrides.map((entry) => {
     const guids = entry.guidPath?.guids;
-    if (!guids || guids.length === 0) return entry;
+    if (!guids || guids.length === 0) {return entry;}
 
     const firstGuidStr = guidToString(guids[0]);
     const mapped = translationMap.get(firstGuidStr);
-    if (!mapped) return entry;
+    if (!mapped) {return entry;}
 
     const mappedGuid = parseGuidString(mapped);
     return {

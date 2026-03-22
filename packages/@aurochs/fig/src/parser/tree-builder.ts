@@ -16,7 +16,7 @@ export type FigGuid = {
  * Convert GUID to string key
  */
 export function guidToString(guid: FigGuid | undefined): string {
-  if (!guid) return "";
+  if (!guid) {return "";}
   return `${guid.sessionID}:${guid.localID}`;
 }
 

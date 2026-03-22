@@ -105,23 +105,27 @@ export function freezeColumns(
   return setFreezePane(workbook, sheetIndex, pane);
 }
 
+function resolveColLetter(colCount: number): string {
+  if (colCount > 0) { return String.fromCharCode(64 + colCount + 1); }
+  return "A";
+}
+
 /**
  * Freeze both rows and columns
  */
-export function freezeRowsAndColumns(
-  workbook: XlsxWorkbook,
-  sheetIndex: number,
-  rowCount: number,
-  colCount: number,
-): XlsxWorkbook {
+export function freezeRowsAndColumns(params: {
+  workbook: XlsxWorkbook;
+  sheetIndex: number;
+  rowCount: number;
+  colCount: number;
+}): XlsxWorkbook {
+  const { workbook, sheetIndex, rowCount, colCount } = params;
   if (rowCount <= 0 && colCount <= 0) {
     return setFreezePane(workbook, sheetIndex, undefined);
   }
 
   // Convert column count to letter
-  const colLetter = colCount > 0
-    ? String.fromCharCode(64 + colCount + 1)
-    : "A";
+  const colLetter = resolveColLetter(colCount);
   const row = rowCount > 0 ? rowCount + 1 : 1;
 
   const pane: XlsxPane = {

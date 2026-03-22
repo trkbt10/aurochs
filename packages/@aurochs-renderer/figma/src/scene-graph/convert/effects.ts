@@ -11,7 +11,7 @@ import { figColorToSceneColor } from "./fill";
  */
 function getEffectTypeName(effect: FigEffect): string {
   const type = effect.type;
-  if (typeof type === "string") return type;
+  if (typeof type === "string") {return type;}
   if (type && typeof type === "object" && "name" in type) {
     return (type as { name: string }).name;
   }
@@ -31,7 +31,7 @@ export function convertEffectsToScene(effects: readonly FigEffect[] | undefined)
   const result: Effect[] = [];
 
   for (const effect of effects) {
-    if (effect.visible === false) continue;
+    if (effect.visible === false) {continue;}
 
     const typeName = getEffectTypeName(effect);
 

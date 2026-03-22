@@ -5,7 +5,6 @@
  * subprocess, pipes JSON-RPC messages, and validates response consistency.
  */
 
-import { describe, it, expect } from "bun:test";
 import { readFileSync, readdirSync, mkdtempSync, rmSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
@@ -126,6 +125,47 @@ function assertResponse(
 // Scenario runner
 // ---------------------------------------------------------------------------
 
+/**
+ * Parse a single JSON line from stdout, ignoring non-JSON.
+ */
+function tryParseJsonLine(part: string, responses: Map<number, JsonRpcResponse>): void {
+  try {
+    const msg = JSON.parse(part) as JsonRpcResponse;
+    if (msg.id !== undefined) {
+      responses.set(msg.id as number, msg);
+    }
+  } catch (parseError: unknown) {
+    console.debug("Non-JSON line:", parseError);
+  }
+}
+
+/**
+ * Read stdout stream in background, parse newline-delimited JSON.
+ */
+async function readStdoutLoop(params: {
+  readonly reader: ReadableStreamDefaultReader<Uint8Array>;
+  readonly decoder: TextDecoder;
+  readonly buf: { value: string };
+  readonly responses: Map<number, JsonRpcResponse>;
+}): Promise<void> {
+  const { reader, decoder, buf, responses } = params;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {break;}
+      buf.value += decoder.decode(value, { stream: true });
+      const parts = buf.value.split("\n");
+      buf.value = parts.pop()!;
+      for (const part of parts) {
+        if (!part.trim()) {continue;}
+        tryParseJsonLine(part, responses);
+      }
+    }
+  } catch (streamError: unknown) {
+    console.debug("Stream closed:", streamError);
+  }
+}
+
 async function runScenario(scenarioPath: string): Promise<void> {
   const lines = readFileSync(scenarioPath, "utf-8").trim().split("\n");
   const meta: ScenarioMeta = JSON.parse(lines[0]!);
@@ -149,36 +189,13 @@ async function runScenario(scenarioPath: string): Promise<void> {
   });
 
   const responses = new Map<number, JsonRpcResponse>();
-  let responseBuffer = "";
+  const buf = { value: "" };
 
   // Read stdout in background, parse newline-delimited JSON
   const reader = (proc.stdout as ReadableStream<Uint8Array>).getReader();
   const decoder = new TextDecoder();
 
-  const readLoop = (async () => {
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        responseBuffer += decoder.decode(value, { stream: true });
-        const parts = responseBuffer.split("\n");
-        responseBuffer = parts.pop()!;
-        for (const part of parts) {
-          if (!part.trim()) continue;
-          try {
-            const msg = JSON.parse(part) as JsonRpcResponse;
-            if (msg.id !== undefined) {
-              responses.set(msg.id as number, msg);
-            }
-          } catch {
-            // Ignore non-JSON lines
-          }
-        }
-      }
-    } catch {
-      // Stream closed
-    }
-  })();
+  const readLoop = readStdoutLoop({ reader, decoder, buf, responses });
 
   const timeout = meta._meta.timeout ?? 30000;
 

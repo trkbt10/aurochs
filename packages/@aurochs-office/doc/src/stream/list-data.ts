@@ -12,12 +12,12 @@ import type { DocListDefinition, DocListLevel, DocListLevelOverride, DocListOver
 
 /** Parse PlfLst from the table stream. */
 export function parseListDefinitions(tableStream: Uint8Array, fc: number, lcb: number): readonly DocListDefinition[] {
-  if (lcb === 0) return [];
-  if (fc + lcb > tableStream.length) return [];
+  if (lcb === 0) {return [];}
+  if (fc + lcb > tableStream.length) {return [];}
 
   const view = new DataView(tableStream.buffer, tableStream.byteOffset, tableStream.byteLength);
   const cLst = view.getInt16(fc, true);
-  if (cLst <= 0) return [];
+  if (cLst <= 0) {return [];}
 
   // Parse LSTF entries (28 bytes each)
   const lstfs: Array<{ lsid: number; simpleList: boolean; levelCount: number }> = [];
@@ -25,7 +25,7 @@ export function parseListDefinitions(tableStream: Uint8Array, fc: number, lcb: n
   let offset = fc + 2;
 
   for (let i = 0; i < cLst; i++) {
-    if (offset + 28 > fc + lcb) break;
+    if (offset + 28 > fc + lcb) {break;}
 
     const lsid = view.getInt32(offset, true);
     const flags = tableStream[offset + 26];
@@ -41,10 +41,10 @@ export function parseListDefinitions(tableStream: Uint8Array, fc: number, lcb: n
   for (const lstf of lstfs) {
     const levels: DocListLevel[] = [];
     for (let lvl = 0; lvl < lstf.levelCount; lvl++) {
-      if (offset + 28 > fc + lcb) break;
+      if (offset + 28 > fc + lcb) {break;}
 
       const level = parseLvl(tableStream, offset, fc + lcb);
-      if (!level) break;
+      if (!level) {break;}
 
       levels.push(level.level);
       offset = level.nextOffset;
@@ -60,12 +60,27 @@ export function parseListDefinitions(tableStream: Uint8Array, fc: number, lcb: n
   return definitions;
 }
 
+/**
+ * Read XST text from a buffer at the given position.
+ */
+function readXstText(options: { data: Uint8Array; view: DataView; pos: number; end: number }): string {
+  const { data, view, pos, end } = options;
+  if (pos + 2 > end) { return ""; }
+  const cch = view.getUint16(pos, true);
+  const textStart = pos + 2;
+  if (cch > 0 && textStart + cch * 2 <= end) {
+    const textBytes = data.subarray(textStart, textStart + cch * 2);
+    return new TextDecoder("utf-16le").decode(textBytes);
+  }
+  return "";
+}
+
 function parseLvl(
   data: Uint8Array,
   offset: number,
   end: number,
 ): { level: DocListLevel; nextOffset: number } | undefined {
-  if (offset + 28 > end) return undefined;
+  if (offset + 28 > end) {return undefined;}
 
   const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
 
@@ -83,13 +98,11 @@ function parseLvl(
   let pos = offset + 28 + cbGrpprlPapx + cbGrpprlChpx;
 
   // xst: cch(2B) + UTF-16LE string
-  let text = "";
+  const text = readXstText({ data, view, pos, end });
   if (pos + 2 <= end) {
     const cch = view.getUint16(pos, true);
     pos += 2;
     if (cch > 0 && pos + cch * 2 <= end) {
-      const textBytes = data.subarray(pos, pos + cch * 2);
-      text = new TextDecoder("utf-16le").decode(textBytes);
       pos += cch * 2;
     }
   }
@@ -108,12 +121,12 @@ function parseLvl(
 
 /** Parse PlfLfo from the table stream. */
 export function parseListOverrides(tableStream: Uint8Array, fc: number, lcb: number): readonly DocListOverride[] {
-  if (lcb === 0) return [];
-  if (fc + lcb > tableStream.length) return [];
+  if (lcb === 0) {return [];}
+  if (fc + lcb > tableStream.length) {return [];}
 
   const view = new DataView(tableStream.buffer, tableStream.byteOffset, tableStream.byteLength);
   const cLfo = view.getInt32(fc, true);
-  if (cLfo <= 0) return [];
+  if (cLfo <= 0) {return [];}
 
   // First pass: read all LFO entries (16 bytes each), collecting lsid and clfolvl
   const lfoEntries: Array<{ lsid: number; clfolvl: number }> = [];
@@ -121,7 +134,7 @@ export function parseListOverrides(tableStream: Uint8Array, fc: number, lcb: num
   let offset = fc + 4;
 
   for (let i = 0; i < cLfo; i++) {
-    if (offset + 16 > fc + lcb) break;
+    if (offset + 16 > fc + lcb) {break;}
 
     const lsid = view.getInt32(offset, true);
     // clfolvl is at offset +8 within the LFO structure (4B)
@@ -141,10 +154,10 @@ export function parseListOverrides(tableStream: Uint8Array, fc: number, lcb: num
 
     const levelOverrides: DocListLevelOverride[] = [];
     for (let j = 0; j < entry.clfolvl; j++) {
-      if (offset + 8 > fc + lcb) break;
+      if (offset + 8 > fc + lcb) {break;}
 
       const lfolvl = parseLfolvl(tableStream, offset, fc + lcb);
-      if (!lfolvl) break;
+      if (!lfolvl) {break;}
 
       levelOverrides.push(lfolvl.override);
       offset = lfolvl.nextOffset;
@@ -171,7 +184,7 @@ function parseLfolvl(
   offset: number,
   end: number,
 ): { override: DocListLevelOverride; nextOffset: number } | undefined {
-  if (offset + 8 > end) return undefined;
+  if (offset + 8 > end) {return undefined;}
 
   const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
   const iStartAt = view.getInt32(offset, true);

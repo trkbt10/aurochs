@@ -264,6 +264,24 @@ const rectIou = (a: MaskRect, b: MaskRect): number => {
   return union > 0 ? overlap / union : 0;
 };
 
+function resolveAlignedX(params: {
+  readonly alignment: string;
+  readonly cellX: number;
+  readonly cellWidth: number;
+  readonly insetX: number;
+  readonly width: number;
+  readonly defaultX: number;
+}): number {
+  const { alignment, cellX, cellWidth, insetX, width, defaultX } = params;
+  if (alignment === "center") {
+    return cellX + (cellWidth - width) / 2;
+  }
+  if (alignment === "right") {
+    return cellX + cellWidth - insetX - width;
+  }
+  return defaultX;
+}
+
 function collectSlideTextRegionRects(slide: Slide): readonly MaskRect[] {
   const collectApproxTableTextRects = (shape: Extract<Shape, { type: "graphicFrame" }>): readonly MaskRect[] => {
     if (shape.content.type !== "table") {
@@ -275,7 +293,7 @@ function collectSlideTextRegionRects(slide: Slide): readonly MaskRect[] {
       return [];
     }
 
-    let longParagraphCount = 0;
+    const longParagraphCounter = { value: 0 };
     for (const row of table.rows) {
       for (const cell of row.cells) {
         for (const paragraph of cell.textBody?.paragraphs ?? []) {
@@ -285,7 +303,7 @@ function collectSlideTextRegionRects(slide: Slide): readonly MaskRect[] {
             .join("")
             .trim();
           if (text.length >= 70) {
-            longParagraphCount += 1;
+            longParagraphCounter.value += 1;
           }
         }
       }
@@ -293,7 +311,7 @@ function collectSlideTextRegionRects(slide: Slide): readonly MaskRect[] {
 
     // Complex data tables tend to produce noisy approximations. Keep table text masks only
     // for flow-like dense text sections (few columns + multiple long rows).
-    const isFlowLikeDenseTable = columns.length <= 2 && table.rows.length >= 5 && longParagraphCount >= 2;
+    const isFlowLikeDenseTable = columns.length <= 2 && table.rows.length >= 5 && longParagraphCounter.value >= 2;
     if (!isFlowLikeDenseTable) {
       return [];
     }
@@ -313,16 +331,16 @@ function collectSlideTextRegionRects(slide: Slide): readonly MaskRect[] {
     };
 
     const rects: MaskRect[] = [];
-    let yOffset = 0;
+    const cursor = { yOffset: 0, xOffset: 0, colIndex: 0 };
     for (const row of table.rows) {
       const rowHeight = Number(row.height ?? 0);
-      let xOffset = 0;
-      let colIndex = 0;
+      cursor.xOffset = 0;
+      cursor.colIndex = 0;
       for (const cell of row.cells) {
         const span = Math.max(1, cell.properties?.colSpan ?? 1);
-        const cellWidth = columns.slice(colIndex, colIndex + span).reduce((sum, width) => sum + width, 0);
-        const cellX = Number(shape.transform.x as number) + xOffset;
-        const cellY = Number(shape.transform.y as number) + yOffset;
+        const cellWidth = columns.slice(cursor.colIndex, cursor.colIndex + span).reduce((sum, width) => sum + width, 0);
+        const cellX = Number(shape.transform.x as number) + cursor.xOffset;
+        const cellY = Number(shape.transform.y as number) + cursor.yOffset;
         const paragraphs = cell.textBody?.paragraphs ?? [];
         const textParagraphs = paragraphs
           .map((paragraph) => {
@@ -347,8 +365,7 @@ function collectSlideTextRegionRects(slide: Slide): readonly MaskRect[] {
 
         const insetX = Math.min(4, Math.max(1.5, cellWidth * 0.03));
         const insetY = Math.min(3, Math.max(1, rowHeight * 0.07));
-        let lineCursorY = cellY + insetY;
-        let verticalCursorX = cellX + insetX;
+        const cellCursor = { lineCursorY: cellY + insetY, verticalCursorX: cellX + insetX };
         for (const paragraph of textParagraphs) {
           const maxWidth = Math.max(1, cellWidth - insetX * 2);
           const maxHeight = Math.max(1, rowHeight - insetY * 2);
@@ -362,18 +379,13 @@ function collectSlideTextRegionRects(slide: Slide): readonly MaskRect[] {
             const width = Math.min(maxWidth, Math.max(paragraph.fontPx * 0.85, paragraph.fontPx * 1.1));
             const height = Math.min(maxHeight, Math.max(paragraph.fontPx, paragraph.text.length * paragraph.fontPx * 0.95));
 
-            let x = verticalCursorX;
-            if (paragraph.alignment === "center") {
-              x = cellX + (cellWidth - width) / 2;
-            } else if (paragraph.alignment === "right") {
-              x = cellX + cellWidth - insetX - width;
-            }
+            const x = resolveAlignedX({ alignment: paragraph.alignment, cellX, cellWidth, insetX, width, defaultX: cellCursor.verticalCursorX });
             const y = cellY + insetY;
             rects.push({ x, y, width, height });
 
-            verticalCursorX += width + Math.max(0.5, paragraph.fontPx * 0.08);
-            if (verticalCursorX >= cellX + cellWidth - insetX) {
-              verticalCursorX = cellX + insetX;
+            cellCursor.verticalCursorX += width + Math.max(0.5, paragraph.fontPx * 0.08);
+            if (cellCursor.verticalCursorX >= cellX + cellWidth - insetX) {
+              cellCursor.verticalCursorX = cellX + insetX;
             }
             continue;
           }
@@ -386,20 +398,15 @@ function collectSlideTextRegionRects(slide: Slide): readonly MaskRect[] {
               width: Math.max(1, cellWidth),
               height: Math.max(1, rowHeight),
             });
-            lineCursorY = cellY + rowHeight;
+            cellCursor.lineCursorY = cellY + rowHeight;
             break;
           }
 
           const estimatedLineCount = Math.max(1, Math.ceil(horizontalRawWidth / maxWidth));
           const width = estimatedLineCount > 1 ? maxWidth : Math.min(maxWidth, horizontalRawWidth);
-          let x = cellX + insetX;
-          if (paragraph.alignment === "center") {
-            x = cellX + (cellWidth - width) / 2;
-          } else if (paragraph.alignment === "right") {
-            x = cellX + cellWidth - insetX - width;
-          }
+          const x = resolveAlignedX({ alignment: paragraph.alignment, cellX, cellWidth, insetX, width, defaultX: cellX + insetX });
 
-          const remainingHeight = Math.max(0, cellY + rowHeight - insetY - lineCursorY);
+          const remainingHeight = Math.max(0, cellY + rowHeight - insetY - cellCursor.lineCursorY);
           const occupiedHeight = Math.min(remainingHeight, Math.max(lineHeight, lineHeight * estimatedLineCount));
           if (occupiedHeight <= 0) {
             break;
@@ -407,20 +414,20 @@ function collectSlideTextRegionRects(slide: Slide): readonly MaskRect[] {
 
           rects.push({
             x,
-            y: lineCursorY,
+            y: cellCursor.lineCursorY,
             width,
             height: Math.min(occupiedHeight, maxHeight),
           });
-          lineCursorY += occupiedHeight + Math.max(0.5, paragraph.fontPx * 0.1);
-          if (lineCursorY >= cellY + rowHeight - insetY) {
+          cellCursor.lineCursorY += occupiedHeight + Math.max(0.5, paragraph.fontPx * 0.1);
+          if (cellCursor.lineCursorY >= cellY + rowHeight - insetY) {
             break;
           }
         }
 
-        xOffset += cellWidth;
-        colIndex += span;
+        cursor.xOffset += cellWidth;
+        cursor.colIndex += span;
       }
-      yOffset += rowHeight;
+      cursor.yOffset += rowHeight;
     }
     return rects;
   };
@@ -543,6 +550,61 @@ function assertTextElementConversion(args: {
   }
 }
 
+async function normalizePdfPage(params: {
+  readonly pdfBytes: Uint8Array;
+  readonly rawPdfPage: PdfPage;
+  readonly pageNumber: number;
+}): Promise<PdfPage> {
+  const { pdfBytes, rawPdfPage, pageNumber } = params;
+  const texts = rawPdfPage.elements.filter((element): element is PdfText => element.type === "text");
+  const paths = rawPdfPage.elements.filter((element): element is PdfPath => element.type === "path");
+  const images = rawPdfPage.elements.filter((element) => element.type === "image");
+  const normalized = await normalizePageElementsForDisplay({
+    pdfBytes,
+    pageNumber,
+    pageWidth: rawPdfPage.width,
+    pageHeight: rawPdfPage.height,
+    texts,
+    paths,
+    images,
+  });
+  if (!normalized.applied) {
+    return rawPdfPage;
+  }
+
+  const idx = { text: 0, path: 0, image: 0 };
+  return {
+    ...rawPdfPage,
+    elements: rawPdfPage.elements.map((element) => {
+      if (element.type === "text") {
+        const next = normalized.texts[idx.text];
+        idx.text += 1;
+        if (!next) {
+          throw new Error(`normalized.texts index overflow at page ${pageNumber}`);
+        }
+        return next;
+      }
+      if (element.type === "path") {
+        const next = normalized.paths[idx.path];
+        idx.path += 1;
+        if (!next) {
+          throw new Error(`normalized.paths index overflow at page ${pageNumber}`);
+        }
+        return next;
+      }
+      if (element.type === "image") {
+        const next = normalized.images[idx.image];
+        idx.image += 1;
+        if (!next) {
+          throw new Error(`normalized.images index overflow at page ${pageNumber}`);
+        }
+        return next;
+      }
+      return element;
+    }),
+  };
+}
+
 async function renderImportedPdfPage(args: {
   readonly pdfPath: string;
   readonly pageNumber: number;
@@ -554,57 +616,7 @@ async function renderImportedPdfPage(args: {
   if (!rawPdfPage) {
     throw new Error(`Expected parsed PDF page ${pageNumber}`);
   }
-  const normalizedPage = await (async (): Promise<PdfPage> => {
-    const texts = rawPdfPage.elements.filter((element): element is PdfText => element.type === "text");
-    const paths = rawPdfPage.elements.filter((element): element is PdfPath => element.type === "path");
-    const images = rawPdfPage.elements.filter((element) => element.type === "image");
-    const normalized = await normalizePageElementsForDisplay({
-      pdfBytes,
-      pageNumber,
-      pageWidth: rawPdfPage.width,
-      pageHeight: rawPdfPage.height,
-      texts,
-      paths,
-      images,
-    });
-    if (!normalized.applied) {
-      return rawPdfPage;
-    }
-
-    let textIndex = 0;
-    let pathIndex = 0;
-    let imageIndex = 0;
-    return {
-      ...rawPdfPage,
-      elements: rawPdfPage.elements.map((element) => {
-        if (element.type === "text") {
-          const next = normalized.texts[textIndex];
-          textIndex += 1;
-          if (!next) {
-            throw new Error(`normalized.texts index overflow at page ${pageNumber}`);
-          }
-          return next;
-        }
-        if (element.type === "path") {
-          const next = normalized.paths[pathIndex];
-          pathIndex += 1;
-          if (!next) {
-            throw new Error(`normalized.paths index overflow at page ${pageNumber}`);
-          }
-          return next;
-        }
-        if (element.type === "image") {
-          const next = normalized.images[imageIndex];
-          imageIndex += 1;
-          if (!next) {
-            throw new Error(`normalized.images index overflow at page ${pageNumber}`);
-          }
-          return next;
-        }
-        return element;
-      }),
-    };
-  })();
+  const normalizedPage = await normalizePdfPage({ pdfBytes, rawPdfPage, pageNumber });
 
   const { document } = await importPdf(pdfBytes, {
     pages: [pageNumber],

@@ -25,10 +25,7 @@ export type SvgTextAttrs = Parameters<typeof text>[0];
  * @returns Attributes for SVG text element
  */
 export function buildTextAttrs(
-  props: ExtractedTextProps,
-  fillColor: string,
-  fillOpacity: number,
-  lineCount: number
+  { props, fillColor, fillOpacity, lineCount }: { props: ExtractedTextProps; fillColor: string; fillOpacity: number; lineCount: number; }
 ): SvgTextAttrs {
   const textAnchor = getTextAnchor(props.textAlignHorizontal);
   const x = getAlignedX(props.textAlignHorizontal, props.size?.width);

@@ -38,7 +38,6 @@ import {
   parseContentTypes,
   contentTypesToEntries,
   type OpcRelationship,
-  type ContentTypeEntry,
 } from "@aurochs-office/opc";
 
 // =============================================================================
@@ -335,7 +334,7 @@ function patchDrawing(params: {
   const mediaDefaultExtensions = new Map<string, string>();
 
   const blipRelIds = collectBlipRelIds(drawing);
-  let mediaCounter = 0;
+  const mediaCounter = { value: 0 };
 
   for (const relId of blipRelIds) {
     const mediaPart = media?.get(relId);
@@ -343,9 +342,9 @@ function patchDrawing(params: {
       continue;
     }
 
-    mediaCounter++;
+    mediaCounter.value++;
     const ext = inferExtensionFromContentType(mediaPart.contentType);
-    const mediaPartPath = `xl/media/image_s${sheetIndex}_${mediaCounter}.${ext}`;
+    const mediaPartPath = `xl/media/image_s${sheetIndex}_${mediaCounter.value}.${ext}`;
 
     // Write media binary
     pkg.writeBinary(mediaPartPath, mediaPart.data);
@@ -377,9 +376,7 @@ function patchDrawing(params: {
   // Read existing sheet rels or create new
   const sheetRelsPath = relsPathFor(sheetPartPath);
   const existingSheetRelsText = pkg.readText(sheetRelsPath);
-  const sheetRels: OpcRelationship[] = existingSheetRelsText
-    ? parseExistingRelationships(existingSheetRelsText)
-    : [];
+  const sheetRels: OpcRelationship[] = existingSheetRelsText ? parseExistingRelationships(existingSheetRelsText) : [];
   sheetRels.push(sheetDrawingRel);
 
   const sheetRelsXml = serializeRelationships(sheetRels);
@@ -477,13 +474,13 @@ function buildRelativeTarget(sourcePart: string, targetPart: string): string {
   // Count common prefix depth
   const sourceParts = sourceDir.split("/");
   const targetParts = targetDir.split("/");
-  let common = 0;
-  while (common < sourceParts.length && common < targetParts.length && sourceParts[common] === targetParts[common]) {
-    common++;
+  const common = { value: 0 };
+  while (common.value < sourceParts.length && common.value < targetParts.length && sourceParts[common.value] === targetParts[common.value]) {
+    common.value++;
   }
 
-  const ups = sourceParts.length - common;
-  const downs = targetParts.slice(common);
+  const ups = sourceParts.length - common.value;
+  const downs = targetParts.slice(common.value);
   return [...Array(ups).fill(".."), ...downs, targetFile].join("/");
 }
 
@@ -522,6 +519,16 @@ function parseExistingRelationships(xmlText: string): OpcRelationship[] {
  * If the sheet already has a <drawing> element, replace it.
  * Otherwise, append it after the last known child element.
  */
+/**
+ * Replace existing drawing element or append a new one.
+ */
+function replaceOrAppendDrawing(root: XmlElement, drawingEl: XmlElement, existing: XmlElement | undefined): XmlElement {
+  if (existing) {
+    return replaceChildByName(root, "drawing", drawingEl);
+  }
+  return appendChild(root, drawingEl);
+}
+
 function ensureDrawingElement(pkg: ZipPackage, sheetPath: string, drawingRelId: string): void {
   const sheetText = pkg.readText(sheetPath);
   if (!sheetText) {
@@ -538,12 +545,7 @@ function ensureDrawingElement(pkg: ZipPackage, sheetPath: string, drawingRelId: 
   const drawingEl = createElement("drawing", { "r:id": drawingRelId, "xmlns:r": RELATIONSHIPS_NS });
 
   const existingDrawing = getChild(sheetRootEl, "drawing");
-  let updatedRoot: XmlElement;
-  if (existingDrawing) {
-    updatedRoot = replaceChildByName(sheetRootEl, "drawing", drawingEl);
-  } else {
-    updatedRoot = appendChild(sheetRootEl, drawingEl);
-  }
+  const updatedRoot = replaceOrAppendDrawing(sheetRootEl, drawingEl, existingDrawing);
 
   const serialized = serializeDocument({ children: [updatedRoot] }, { declaration: true, standalone: true });
   pkg.writeText(sheetPath, serialized);

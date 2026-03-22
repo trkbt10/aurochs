@@ -3,10 +3,9 @@
  */
 
 import * as path from "node:path";
-import { describe, it, expect, beforeAll } from "vitest";
 import { parse as parseFont } from "opentype.js";
 import * as fs from "node:fs";
-import { OpentypeMeasurementProvider, getAscenderRatioAsync } from "./opentype-provider";
+import { createOpentypeMeasurementProvider, type OpentypeMeasurementProviderInstance } from "./opentype-provider";
 import type { FontLoader, LoadedFont, FontLoadOptions } from "../../font/index";
 
 // Path to Inter font from @fontsource/inter
@@ -18,65 +17,65 @@ const INTER_FONT_PATH = path.resolve(
 /**
  * Simple font loader that loads from a fixed path
  */
-class TestFontLoader implements FontLoader {
-  private font: LoadedFont | null = null;
+function createTestFontLoader(fontPath: string): FontLoader {
+  const fontRef = { value: null as LoadedFont | null };
 
-  constructor(private fontPath: string) {}
+  return {
+    async loadFont(_options: FontLoadOptions): Promise<LoadedFont | undefined> {
+      if (!fs.existsSync(fontPath)) {
+        return undefined;
+      }
 
-  async loadFont(options: FontLoadOptions): Promise<LoadedFont | undefined> {
-    if (!fs.existsSync(this.fontPath)) {
-      return undefined;
-    }
+      if (!fontRef.value) {
+        const data = fs.readFileSync(fontPath);
+        const parsed = parseFont(data.buffer as ArrayBuffer);
 
-    if (!this.font) {
-      const data = fs.readFileSync(this.fontPath);
-      const font = parseFont(data.buffer as ArrayBuffer);
+        fontRef.value = {
+          font: parsed,
+          family: "Inter",
+          weight: 400,
+          style: "normal",
+        };
+      }
 
-      this.font = {
-        font,
-        family: "Inter",
-        weight: 400,
-        style: "normal",
-      };
-    }
+      return fontRef.value;
+    },
 
-    return this.font;
-  }
-
-  async isFontAvailable(family: string): Promise<boolean> {
-    return family.toLowerCase() === "inter" && fs.existsSync(this.fontPath);
-  }
+    async isFontAvailable(family: string): Promise<boolean> {
+      return family.toLowerCase() === "inter" && fs.existsSync(fontPath);
+    },
+  };
 }
 
 describe("OpentypeMeasurementProvider", () => {
-  let provider: OpentypeMeasurementProvider;
-  let fontAvailable: boolean;
+  const providerRef = { value: undefined as OpentypeMeasurementProviderInstance | undefined };
+  const fontAvailableRef = { value: undefined as boolean | undefined };
 
   beforeAll(async () => {
-    const loader = new TestFontLoader(INTER_FONT_PATH);
-    provider = new OpentypeMeasurementProvider(loader);
-    fontAvailable = await loader.isFontAvailable("Inter");
+    const loader = createTestFontLoader(INTER_FONT_PATH);
+    providerRef.value = createOpentypeMeasurementProvider(loader);
+    fontAvailableRef.value = await loader.isFontAvailable("Inter");
 
-    if (fontAvailable) {
+    if (fontAvailableRef.value) {
       // Preload the font
-      await provider.preloadFont({ fontFamily: "Inter", fontSize: 16 });
+      await providerRef.value.preloadFont({ fontFamily: "Inter", fontSize: 16 });
     }
   });
 
   it("loads Inter font from @fontsource/inter", () => {
-    console.log(`Inter font available: ${fontAvailable}`);
+    console.log(`Inter font available: ${fontAvailableRef.value}`);
     console.log(`Font path: ${INTER_FONT_PATH}`);
     console.log(`File exists: ${fs.existsSync(INTER_FONT_PATH)}`);
-    expect(fontAvailable || !fs.existsSync(INTER_FONT_PATH)).toBe(true);
+    expect(fontAvailableRef.value || !fs.existsSync(INTER_FONT_PATH)).toBe(true);
   });
 
   it("gets accurate font metrics", async function() {
-    if (!fontAvailable) {
+    if (!fontAvailableRef.value) {
       console.log("Skipping: Inter font not available");
       return;
     }
 
-    const metrics = provider.getFontMetrics({ fontFamily: "Inter", fontSize: 16 });
+    const metrics = providerRef.value.getFontMetrics({ fontFamily: "Inter", fontSize: 16 });
 
     console.log("Inter font metrics:", {
       unitsPerEm: metrics.unitsPerEm,
@@ -91,12 +90,12 @@ describe("OpentypeMeasurementProvider", () => {
   });
 
   it("calculates correct ascender ratio", async function() {
-    if (!fontAvailable) {
+    if (!fontAvailableRef.value) {
       console.log("Skipping: Inter font not available");
       return;
     }
 
-    const ratio = provider.getAscenderRatio({ fontFamily: "Inter", fontSize: 16 });
+    const ratio = providerRef.value.getAscenderRatio({ fontFamily: "Inter", fontSize: 16 });
 
     console.log(`Inter ascender ratio: ${ratio}`);
 
@@ -106,12 +105,12 @@ describe("OpentypeMeasurementProvider", () => {
   });
 
   it("measures text width accurately", async function() {
-    if (!fontAvailable) {
+    if (!fontAvailableRef.value) {
       console.log("Skipping: Inter font not available");
       return;
     }
 
-    const measurement = provider.measureText("Hello", {
+    const measurement = providerRef.value.measureText("Hello", {
       fontFamily: "Inter",
       fontSize: 16,
     });
@@ -125,12 +124,12 @@ describe("OpentypeMeasurementProvider", () => {
   });
 
   it("measures character widths", async function() {
-    if (!fontAvailable) {
+    if (!fontAvailableRef.value) {
       console.log("Skipping: Inter font not available");
       return;
     }
 
-    const widths = provider.measureCharWidths("ABC", {
+    const widths = providerRef.value.measureCharWidths("ABC", {
       fontFamily: "Inter",
       fontSize: 16,
     });

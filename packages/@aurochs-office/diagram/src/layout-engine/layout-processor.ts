@@ -300,7 +300,7 @@ function processForEachElement(
   }
 
   // Select nodes based on axis
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- Filtered progressively by pointType and count
   let selectedNodes = selectNodesByAxis(currentNode, forEach.axis);
 
   // Filter by point type
@@ -788,12 +788,12 @@ function applyIterationParams(
   const maxCount = count?.[0] ?? nodes.length;
 
   const result: DiagramTreeNode[] = [];
-  let collected = 0;
+  const collected = { value: 0 };
 
-  for (let i = startIndex; i < nodes.length && collected < maxCount; i += stepValue) {
+  for (let i = startIndex; i < nodes.length && collected.value < maxCount; i += stepValue) {
     if (i >= 0) {
       result.push(nodes[i]);
-      collected++;
+      collected.value++;
     }
   }
 

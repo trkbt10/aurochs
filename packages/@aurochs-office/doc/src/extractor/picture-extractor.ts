@@ -62,19 +62,19 @@ export function parsePicStructure(
   offset: number,
   blipStore?: readonly BlipEntry[],
 ): PicData | undefined {
-  if (offset + 6 > dataStream.length) return undefined;
+  if (offset + 6 > dataStream.length) {return undefined;}
 
   const view = new DataView(dataStream.buffer, dataStream.byteOffset, dataStream.byteLength);
 
   const lcb = view.getInt32(offset, true);
-  if (lcb <= 0) return undefined;
+  if (lcb <= 0) {return undefined;}
 
   const cbHeader = view.getUint16(offset + 4, true);
-  if (cbHeader < MIN_CB_HEADER) return undefined;
+  if (cbHeader < MIN_CB_HEADER) {return undefined;}
 
   // PIC header fields (after lcb(4B) + cbHeader(2B) + mfp(6B) + bm(14B))
   const hdrBase = offset + 4 + 2 + 6 + 14; // = offset + 26
-  if (hdrBase + 16 > dataStream.length) return undefined;
+  if (hdrBase + 16 > dataStream.length) {return undefined;}
 
   const dxaGoal = view.getUint16(hdrBase, true);
   const dyaGoal = view.getUint16(hdrBase + 2, true);
@@ -87,11 +87,11 @@ export function parsePicStructure(
 
   // OfficeArt data starts after the PIC header
   const oaStart = offset + cbHeader;
-  if (oaStart >= dataStream.length) return undefined;
+  if (oaStart >= dataStream.length) {return undefined;}
 
   // Try to read OfficeArt record(s) after the PIC header
-  const imageResult = extractImageFromOfficeArt(dataStream, oaStart, offset + lcb, blipStore);
-  if (!imageResult) return undefined;
+  const imageResult = extractImageFromOfficeArt({ data: dataStream, offset: oaStart, end: offset + lcb, blipStore });
+  if (!imageResult) {return undefined;}
 
   return {
     widthTwips: dxaGoal,
@@ -114,14 +114,15 @@ export function parsePicStructure(
  * 1. Direct BLIP record → parse directly
  * 2. SpContainer → find FOPT → get blipId → resolve from BStoreContainer
  */
-function extractImageFromOfficeArt(
-  data: Uint8Array,
-  offset: number,
-  end: number,
-  blipStore?: readonly BlipEntry[],
-): { contentType: string; data: Uint8Array } | undefined {
+function extractImageFromOfficeArt(options: {
+  data: Uint8Array;
+  offset: number;
+  end: number;
+  blipStore?: readonly BlipEntry[];
+}): { contentType: string; data: Uint8Array } | undefined {
+  const { data, offset, end, blipStore } = options;
   const record = readOfficeArtRecord(data, offset);
-  if (!record) return undefined;
+  if (!record) {return undefined;}
 
   // Case 1: Direct BLIP record
   if (isBlipType(record.recType)) {
@@ -189,7 +190,7 @@ function extractImageFromSpContainer(
 function extractBlipIdFromFopt(foptRecord: { recInstance: number; data: Uint8Array }): number | undefined {
   const propCount = foptRecord.recInstance;
   const data = foptRecord.data;
-  if (data.length < propCount * 6) return undefined;
+  if (data.length < propCount * 6) {return undefined;}
 
   const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
 

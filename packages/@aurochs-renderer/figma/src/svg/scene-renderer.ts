@@ -4,7 +4,6 @@
  * Renders a SceneGraph to an SVG string. This is an alternative to the existing
  * direct renderer (renderer.ts) that works through the scene graph intermediate layer.
  */
-
 import type {
   SceneGraph,
   SceneNode,
@@ -16,10 +15,6 @@ import type {
   TextNode,
   ImageNode,
   Fill,
-  SolidFill,
-  LinearGradientFill,
-  RadialGradientFill,
-  ImageFill,
   Stroke,
   Effect,
   AffineMatrix,
@@ -47,22 +42,18 @@ import {
   feOffset,
   feBlend,
   feComposite,
-  unsafeSvg,
   type SvgString,
   EMPTY_SVG,
 } from "./primitives";
-
 // =============================================================================
 // Render Context
 // =============================================================================
-
 type SvgDefsCollector = {
   items: SvgString[];
   counter: number;
   generateId(prefix: string): string;
   add(def: SvgString): void;
 };
-
 function createDefsCollector(): SvgDefsCollector {
   const collector: SvgDefsCollector = {
     items: [],
@@ -76,10 +67,19 @@ function createDefsCollector(): SvgDefsCollector {
   };
   return collector;
 }
-
 // =============================================================================
 // Color & Fill Rendering
 // =============================================================================
+/** Build fill attrs with optional fill-opacity for non-opaque fills */
+function buildFillAttrs(
+  fillValue: string,
+  opacity: number
+): Record<string, string | number | undefined> {
+  if (opacity < 1) {
+    return { fill: fillValue, "fill-opacity": opacity };
+  }
+  return { fill: fillValue };
+}
 
 function colorToHex(c: Color): string {
   const r = Math.round(c.r * 255)
@@ -93,14 +93,12 @@ function colorToHex(c: Color): string {
     .padStart(2, "0");
   return `#${r}${g}${b}`;
 }
-
 function renderFill(fill: Fill, defsCol: SvgDefsCollector): { fill: string; "fill-opacity"?: number } {
   switch (fill.type) {
     case "solid": {
       const hex = colorToHex(fill.color);
       return fill.opacity < 1 ? { fill: hex, "fill-opacity": fill.opacity } : { fill: hex };
     }
-
     case "linear-gradient": {
       const id = defsCol.generateId("lg");
       const stops = fill.stops.map((s) =>
@@ -122,11 +120,8 @@ function renderFill(fill: Fill, defsCol: SvgDefsCollector): { fill: string; "fil
           ...stops
         )
       );
-      return fill.opacity < 1
-        ? { fill: `url(#${id})`, "fill-opacity": fill.opacity }
-        : { fill: `url(#${id})` };
+      return buildFillAttrs(`url(#${id})`, fill.opacity);
     }
-
     case "radial-gradient": {
       const id = defsCol.generateId("rg");
       const stops = fill.stops.map((s) =>
@@ -147,16 +142,12 @@ function renderFill(fill: Fill, defsCol: SvgDefsCollector): { fill: string; "fil
           ...stops
         )
       );
-      return fill.opacity < 1
-        ? { fill: `url(#${id})`, "fill-opacity": fill.opacity }
-        : { fill: `url(#${id})` };
+      return buildFillAttrs(`url(#${id})`, fill.opacity);
     }
-
     case "image": {
       const id = defsCol.generateId("img");
       const base64 = uint8ArrayToBase64(fill.data);
       const dataUri = `data:${fill.mimeType};base64,${base64}`;
-
       if (fill.width && fill.height) {
         defsCol.add(
           pattern(
@@ -172,22 +163,17 @@ function renderFill(fill: Fill, defsCol: SvgDefsCollector): { fill: string; "fil
           )
         );
       }
-      return fill.opacity < 1
-        ? { fill: `url(#${id})`, "fill-opacity": fill.opacity }
-        : { fill: `url(#${id})` };
+      return buildFillAttrs(`url(#${id})`, fill.opacity);
     }
   }
 }
-
 function uint8ArrayToBase64(bytes: Uint8Array): string {
   const binary = Array.from(bytes, (byte) => String.fromCharCode(byte)).join("");
   return btoa(binary);
 }
-
 // =============================================================================
 // Stroke Rendering
 // =============================================================================
-
 function renderStrokeAttrs(stroke: Stroke): Record<string, string | number | undefined> {
   return {
     stroke: colorToHex(stroke.color),
@@ -198,18 +184,14 @@ function renderStrokeAttrs(stroke: Stroke): Record<string, string | number | und
     "stroke-dasharray": stroke.dashPattern?.join(" "),
   };
 }
-
 // =============================================================================
 // Effects Rendering
 // =============================================================================
-
 function renderEffectsFilter(effects: readonly Effect[], defsCol: SvgDefsCollector): string | undefined {
-  if (effects.length === 0) return undefined;
-
+  if (effects.length === 0) {return undefined;}
   const id = defsCol.generateId("filter");
   const primitives: SvgString[] = [];
-  let shapeEstablished = false;
-
+  const shapeEstablishedRef = { value: false };
   for (const effect of effects) {
     switch (effect.type) {
       case "drop-shadow": {
@@ -226,19 +208,18 @@ function renderEffectsFilter(effects: readonly Effect[], defsCol: SvgDefsCollect
           feBlend({ mode: "normal", in2: "BackgroundImageFix" }),
           feBlend({ mode: "normal", in: "SourceGraphic", in2: "effect", result: "shape" })
         );
-        shapeEstablished = true;
+        shapeEstablishedRef.value = true;
         break;
       }
-
       case "inner-shadow": {
         const stdDev = effect.radius / 2;
         // Establish "shape" base if not set by a preceding drop shadow
-        if (!shapeEstablished) {
+        if (!shapeEstablishedRef.value) {
           primitives.push(
             feFlood({ "flood-opacity": 0, result: "BackgroundImageFix" }),
             feBlend({ mode: "normal", in: "SourceGraphic", in2: "BackgroundImageFix", result: "shape" })
           );
-          shapeEstablished = true;
+          shapeEstablishedRef.value = true;
         }
         // Figma-standard inner shadow filter:
         // 1. Binarize source alpha (×127 clamps to 1.0)
@@ -260,7 +241,6 @@ function renderEffectsFilter(effects: readonly Effect[], defsCol: SvgDefsCollect
         );
         break;
       }
-
       case "layer-blur": {
         const stdDev = effect.radius / 2;
         primitives.push(
@@ -270,17 +250,13 @@ function renderEffectsFilter(effects: readonly Effect[], defsCol: SvgDefsCollect
       }
     }
   }
-
-  if (primitives.length === 0) return undefined;
-
+  if (primitives.length === 0) {return undefined;}
   defsCol.add(filter({ id }, ...primitives));
   return `url(#${id})`;
 }
-
 // =============================================================================
 // Transform
 // =============================================================================
-
 function matrixToSvgTransform(m: AffineMatrix): string | undefined {
   // Check identity (with tolerance for floating point)
   if (
@@ -296,11 +272,9 @@ function matrixToSvgTransform(m: AffineMatrix): string | undefined {
   // SVG matrix(a, b, c, d, e, f) = matrix(m00, m10, m01, m11, m02, m12)
   return `matrix(${m.m00},${m.m10},${m.m01},${m.m11},${m.m02},${m.m12})`;
 }
-
 // =============================================================================
 // Path Serialization
 // =============================================================================
-
 function contourToSvgD(contour: PathContour): string {
   return contour.commands
     .map((cmd) => {
@@ -319,19 +293,15 @@ function contourToSvgD(contour: PathContour): string {
     })
     .join("");
 }
-
 // =============================================================================
 // Node Renderers
 // =============================================================================
-
 function renderGroupNode(node: GroupNode, defsCol: SvgDefsCollector): SvgString {
   const children = node.children.map((child) => renderNode(child, defsCol));
   const transformStr = matrixToSvgTransform(node.transform);
-
   if (!transformStr && node.opacity >= 1 && children.length === 1) {
     return children[0];
   }
-
   return g(
     {
       transform: transformStr,
@@ -340,7 +310,6 @@ function renderGroupNode(node: GroupNode, defsCol: SvgDefsCollector): SvgString 
     ...children
   );
 }
-
 /**
  * Clamp corner radius to ensure circular corners (Figma behaviour).
  * SVG clamps rx/ry independently; Figma uses min(width, height) / 2.
@@ -350,23 +319,19 @@ function clampRadius(
   width: number,
   height: number,
 ): number | undefined {
-  if (!radius || radius <= 0) return undefined;
+  if (!radius || radius <= 0) {return undefined;}
   return Math.min(radius, Math.min(width, height) / 2);
 }
-
 function renderFrameNode(node: FrameNode, defsCol: SvgDefsCollector): SvgString {
   const elements: SvgString[] = [];
   const transformStr = matrixToSvgTransform(node.transform);
   const filterAttr = renderEffectsFilter(node.effects, defsCol);
-
   const clampedRadius = clampRadius(node.cornerRadius, node.width, node.height);
-
   // Background fill
   if (node.fills.length > 0) {
     const fill = node.fills[node.fills.length - 1];
     const fillAttrs = renderFill(fill, defsCol);
     const strokeAttrs = node.stroke ? renderStrokeAttrs(node.stroke) : {};
-
     elements.push(
       rect({
         x: 0,
@@ -380,10 +345,8 @@ function renderFrameNode(node: FrameNode, defsCol: SvgDefsCollector): SvgString 
       } as Parameters<typeof rect>[0])
     );
   }
-
   // Children (with optional clipping)
   const childElements = node.children.map((child) => renderNode(child, defsCol));
-
   if (node.clipsContent && childElements.length > 0) {
     const clipId = defsCol.generateId("clip");
     defsCol.add(
@@ -405,27 +368,38 @@ function renderFrameNode(node: FrameNode, defsCol: SvgDefsCollector): SvgString 
   } else {
     elements.push(...childElements);
   }
-
   const wrapperAttrs: Record<string, string | number | undefined> = {
     transform: transformStr,
     opacity: node.opacity < 1 ? node.opacity : undefined,
     filter: filterAttr,
   };
-
   return g(wrapperAttrs, ...elements);
+}
+/** Build defs section from collected definitions */
+function buildDefsSection(defsCol: SvgDefsCollector): SvgString {
+  if (defsCol.items.length > 0) {
+    return defs(...defsCol.items);
+  }
+  return EMPTY_SVG;
+}
+
+/** Resolve fill attributes from the top fill, or 'none' if no fills */
+function resolveFillAttrs(
+  fills: readonly Fill[],
+  defsCollector: SvgDefsCollector
+): Record<string, string | number | undefined> {
+  if (fills.length > 0) {
+    return renderFill(fills[fills.length - 1], defsCollector);
+  }
+  return { fill: "none" };
 }
 
 function renderRectNode(node: RectNode, defsCol: SvgDefsCollector): SvgString {
   const transformStr = matrixToSvgTransform(node.transform);
   const filterAttr = renderEffectsFilter(node.effects, defsCol);
-
-  const fillAttrs = node.fills.length > 0
-    ? renderFill(node.fills[node.fills.length - 1], defsCol)
-    : { fill: "none" };
+  const fillAttrs = resolveFillAttrs(node.fills, defsCol);
   const strokeAttrs = node.stroke ? renderStrokeAttrs(node.stroke) : {};
-
   const rectClampedRadius = clampRadius(node.cornerRadius, node.width, node.height);
-
   const rectEl = rect({
     x: 0,
     y: 0,
@@ -436,7 +410,6 @@ function renderRectNode(node: RectNode, defsCol: SvgDefsCollector): SvgString {
     ...fillAttrs,
     ...strokeAttrs,
   } as Parameters<typeof rect>[0]);
-
   if (transformStr || node.opacity < 1 || filterAttr) {
     return g(
       {
@@ -447,19 +420,13 @@ function renderRectNode(node: RectNode, defsCol: SvgDefsCollector): SvgString {
       rectEl
     );
   }
-
   return rectEl;
 }
-
 function renderEllipseNode(node: EllipseNode, defsCol: SvgDefsCollector): SvgString {
   const transformStr = matrixToSvgTransform(node.transform);
   const filterAttr = renderEffectsFilter(node.effects, defsCol);
-
-  const fillAttrs = node.fills.length > 0
-    ? renderFill(node.fills[node.fills.length - 1], defsCol)
-    : { fill: "none" };
+  const fillAttrs = resolveFillAttrs(node.fills, defsCol);
   const strokeAttrs = node.stroke ? renderStrokeAttrs(node.stroke) : {};
-
   const ellipseEl = ellipse({
     cx: node.cx,
     cy: node.cy,
@@ -468,7 +435,6 @@ function renderEllipseNode(node: EllipseNode, defsCol: SvgDefsCollector): SvgStr
     ...fillAttrs,
     ...strokeAttrs,
   } as Parameters<typeof ellipse>[0]);
-
   if (transformStr || node.opacity < 1 || filterAttr) {
     return g(
       {
@@ -479,19 +445,13 @@ function renderEllipseNode(node: EllipseNode, defsCol: SvgDefsCollector): SvgStr
       ellipseEl
     );
   }
-
   return ellipseEl;
 }
-
 function renderPathNode(node: PathNode, defsCol: SvgDefsCollector): SvgString {
   const transformStr = matrixToSvgTransform(node.transform);
   const filterAttr = renderEffectsFilter(node.effects, defsCol);
-
-  const fillAttrs = node.fills.length > 0
-    ? renderFill(node.fills[node.fills.length - 1], defsCol)
-    : { fill: "none" };
+  const fillAttrs = resolveFillAttrs(node.fills, defsCol);
   const strokeAttrs = node.stroke ? renderStrokeAttrs(node.stroke) : {};
-
   const pathElements: SvgString[] = node.contours.map((contour) =>
     path({
       d: contourToSvgD(contour),
@@ -500,13 +460,10 @@ function renderPathNode(node: PathNode, defsCol: SvgDefsCollector): SvgString {
       ...strokeAttrs,
     } as Parameters<typeof path>[0])
   );
-
   if (pathElements.length === 0) {
     return EMPTY_SVG;
   }
-
   const needsWrapper = transformStr || node.opacity < 1 || filterAttr || pathElements.length > 1;
-
   if (needsWrapper) {
     return g(
       {
@@ -517,15 +474,12 @@ function renderPathNode(node: PathNode, defsCol: SvgDefsCollector): SvgString {
       ...pathElements
     );
   }
-
   return pathElements[0];
 }
-
-function renderTextNode(node: TextNode, defsCol: SvgDefsCollector): SvgString {
+function renderTextNode(node: TextNode, _defsCol: SvgDefsCollector): SvgString {
   const transformStr = matrixToSvgTransform(node.transform);
   const fillColor = colorToHex(node.fill.color);
   const fillOpacity = node.fill.opacity;
-
   // If we have glyph contours, render as paths
   if (node.glyphContours && node.glyphContours.length > 0) {
     const allD: string[] = [];
@@ -537,13 +491,11 @@ function renderTextNode(node: TextNode, defsCol: SvgDefsCollector): SvgString {
         allD.push(contourToSvgD(contour));
       }
     }
-
     const pathEl = path({
       d: allD.join(""),
       fill: fillColor,
       "fill-opacity": fillOpacity < 1 ? fillOpacity : undefined,
     });
-
     if (transformStr || node.opacity < 1) {
       return g(
         {
@@ -553,15 +505,12 @@ function renderTextNode(node: TextNode, defsCol: SvgDefsCollector): SvgString {
         pathEl
       );
     }
-
     return pathEl;
   }
-
   // Fallback: render as <text> elements
   if (!node.fallbackText) {
     return EMPTY_SVG;
   }
-
   const fb = node.fallbackText;
   const textAnchor = fb.textAnchor !== "start" ? fb.textAnchor : undefined;
   const textElements: SvgString[] = fb.lines.map((line) =>
@@ -581,11 +530,9 @@ function renderTextNode(node: TextNode, defsCol: SvgDefsCollector): SvgString {
       line.text
     )
   );
-
   if (textElements.length === 0) {
     return EMPTY_SVG;
   }
-
   if (transformStr || node.opacity < 1 || textElements.length > 1) {
     return g(
       {
@@ -595,20 +542,16 @@ function renderTextNode(node: TextNode, defsCol: SvgDefsCollector): SvgString {
       ...textElements
     );
   }
-
   return textElements[0];
 }
-
 function renderImageNode(_node: ImageNode, _defsCol: SvgDefsCollector): SvgString {
   // TODO: Implement image node rendering
   return EMPTY_SVG;
 }
-
 function renderNode(node: SceneNode, defsCol: SvgDefsCollector): SvgString {
   if (!node.visible) {
     return EMPTY_SVG;
   }
-
   switch (node.type) {
     case "group":
       return renderGroupNode(node, defsCol);
@@ -626,11 +569,9 @@ function renderNode(node: SceneNode, defsCol: SvgDefsCollector): SvgString {
       return renderImageNode(node, defsCol);
   }
 }
-
 // =============================================================================
 // Public API
 // =============================================================================
-
 /**
  * Render a scene graph to SVG string
  *
@@ -639,17 +580,12 @@ function renderNode(node: SceneNode, defsCol: SvgDefsCollector): SvgString {
  */
 export function renderSceneGraphToSvg(sceneGraph: SceneGraph): SvgString {
   const defsCol = createDefsCollector();
-
   // Render all root children
   const children = sceneGraph.root.children.map((child) =>
     renderNode(child, defsCol)
   );
-
   // Build defs section
-  const defsSection = defsCol.items.length > 0
-    ? defs(...defsCol.items)
-    : EMPTY_SVG;
-
+  const defsSection = buildDefsSection(defsCol);
   return svg(
     {
       width: sceneGraph.width,

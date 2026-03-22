@@ -40,10 +40,10 @@ export function applyConstraintsToChildren(
     const resolution = resolveChildConstraints(child as Record<string, unknown>, symbolSize, instanceSize);
 
     // No transform/size — skip
-    if (!resolution) return child;
+    if (!resolution) {return child;}
 
     // Nothing changed — skip
-    if (!resolution.posChanged && !resolution.sizeChanged) return child;
+    if (!resolution.posChanged && !resolution.sizeChanged) {return child;}
 
     const result: Record<string, unknown> = {
       ...child,
@@ -82,7 +82,7 @@ export function applyConstraintsToChildren(
 function isDerivedDataApplicable(derivedSymbolData: FigDerivedSymbolData, children: readonly FigNode[]): boolean {
   return derivedSymbolData.some((entry) => {
     const firstGuid = entry.guidPath?.guids?.[0];
-    if (!firstGuid) return false;
+    if (!firstGuid) {return false;}
     const key = `${firstGuid.sessionID}:${firstGuid.localID}`;
     return children.some((child) => {
       const cg = (child as Record<string, unknown>).guid as { sessionID: number; localID: number } | undefined;
@@ -101,9 +101,9 @@ function isDerivedDataApplicable(derivedSymbolData: FigDerivedSymbolData, childr
 function clearDerivedGeometry(derivedSymbolData: FigDerivedSymbolData, children: readonly FigNode[]): Set<string> {
   const matched = new Set<string>();
   for (const entry of derivedSymbolData) {
-    if (!entry.size) continue;
+    if (!entry.size) {continue;}
     const targetGuid = entry.guidPath?.guids?.[entry.guidPath.guids.length - 1];
-    if (!targetGuid) continue;
+    if (!targetGuid) {continue;}
     const targetKey = `${targetGuid.sessionID}:${targetGuid.localID}`;
     for (const child of children) {
       const cg = (child as Record<string, unknown>).guid as { sessionID: number; localID: number } | undefined;
@@ -143,10 +143,7 @@ export type InstanceLayoutResult = {
  * @param derivedSymbolData  Pre-computed layout data (may be orphaned)
  */
 export function resolveInstanceLayout(
-  children: readonly FigNode[],
-  symbolSize: { x: number; y: number },
-  instanceSize: { x: number; y: number },
-  derivedSymbolData: FigDerivedSymbolData | undefined,
+  { children, symbolSize, instanceSize, derivedSymbolData }: { children: readonly FigNode[]; symbolSize: { x: number; y: number }; instanceSize: { x: number; y: number }; derivedSymbolData: FigDerivedSymbolData | undefined; }
 ): InstanceLayoutResult {
   // Strategy 1: derivedSymbolData with valid GUIDs
   if (derivedSymbolData && derivedSymbolData.length > 0) {
@@ -157,7 +154,7 @@ export function resolveInstanceLayout(
       // covered by dsd. This handles partial GUID translation where some
       // dsd entries couldn't be mapped to children (e.g. non-contiguous
       // session GUIDs that majority-vote can't resolve).
-      const supplemented = supplementConstraints(children, symbolSize, instanceSize, coveredGuids);
+      const supplemented = supplementConstraints({ children, symbolSize, instanceSize, coveredGuids });
 
       return { children: supplemented, sizeApplied: true };
     }
@@ -190,10 +187,7 @@ export function resolveInstanceLayout(
  * pre-computed layout values.
  */
 function supplementConstraints(
-  children: readonly FigNode[],
-  symbolSize: { x: number; y: number },
-  instanceSize: { x: number; y: number },
-  coveredGuids: Set<string>,
+  { children, symbolSize, instanceSize, coveredGuids }: { children: readonly FigNode[]; symbolSize: { x: number; y: number }; instanceSize: { x: number; y: number }; coveredGuids: Set<string>; }
 ): readonly FigNode[] {
   return children.map((child) => {
     const nd = child as Record<string, unknown>;
@@ -201,7 +195,7 @@ function supplementConstraints(
     const guidKey = cg ? `${cg.sessionID}:${cg.localID}` : undefined;
 
     // Skip children already handled by dsd
-    if (guidKey && coveredGuids.has(guidKey)) return child;
+    if (guidKey && coveredGuids.has(guidKey)) {return child;}
 
     // Skip children without constraints
     if (
@@ -212,8 +206,8 @@ function supplementConstraints(
     }
 
     const resolution = resolveChildConstraints(nd, symbolSize, instanceSize);
-    if (!resolution) return child;
-    if (!resolution.posChanged && !resolution.sizeChanged) return child;
+    if (!resolution) {return child;}
+    if (!resolution.posChanged && !resolution.sizeChanged) {return child;}
 
     const result: Record<string, unknown> = {
       ...child,

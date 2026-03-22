@@ -72,6 +72,17 @@ export type LoadedFigFile = {
 // Helper Functions
 // =============================================================================
 
+/**
+ * Resolve schema bytes for roundtrip: re-encode or use original
+ */
+function resolveSchemaBytes(loaded: LoadedFigFile, reencode: boolean): Uint8Array {
+  if (reencode) {
+    const encodedSchema = encodeFigSchema(loaded.schema);
+    return compressDeflateRaw(encodedSchema);
+  }
+  return loaded.compressedSchema;
+}
+
 function isZipFile(data: Uint8Array): boolean {
   if (data.length < 4) {
     return false;
@@ -321,15 +332,7 @@ export async function saveFigFile(loaded: LoadedFigFile, options?: SaveFigOption
   dataChunk.set(compressedMessage, 4);
 
   // Determine which schema bytes to use
-  let schemaBytes: Uint8Array;
-  if (options?.reencodeSchema) {
-    // Re-encode schema for verification/testing
-    const encodedSchema = encodeFigSchema(loaded.schema);
-    schemaBytes = compressDeflateRaw(encodedSchema);
-  } else {
-    // Use original compressed schema for Figma compatibility
-    schemaBytes = loaded.compressedSchema;
-  }
+  const schemaBytes = resolveSchemaBytes(loaded, options?.reencodeSchema ?? false);
 
   // Build canvas.fig
   const header = buildFigHeader(schemaBytes.length, loaded.version);

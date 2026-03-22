@@ -10,6 +10,17 @@ type IconProps = {
   className?: string;
 };
 
+
+
+
+
+
+
+
+
+
+
+/** GitHub brand icon. */
 export function GitHubIcon({ size = 16, className }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
@@ -18,6 +29,17 @@ export function GitHubIcon({ size = 16, className }: IconProps) {
   );
 }
 
+
+
+
+
+
+
+
+
+
+
+/** Application logo icon. */
 export function LogoIcon({ size = 24, className }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>

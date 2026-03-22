@@ -1,5 +1,5 @@
 /**
- * PPTX Structure Analysis Tool
+ * @file PPTX Structure Analysis Tool
  *
  * Analyzes PPTX file structure including slides, layouts, masters, and themes.
  *
@@ -79,9 +79,9 @@ function extractShapeInfo(xml: string): ShapeInfo[] {
 
   // Match p:sp elements (simplified regex)
   const spPattern = /<p:sp[^>]*>([\s\S]*?)<\/p:sp>/g;
-  let match;
-  while ((match = spPattern.exec(xml)) !== null) {
-    const content = match[1];
+  const match = { value: spPattern.exec(xml) };
+  while (match.value !== null) {
+    const content = match.value[1];
     const idMatch = content.match(/id="(\d+)"/);
     const nameMatch = content.match(/name="([^"]+)"/);
     const hasGeometry = content.includes("<a:prstGeom") || content.includes("<a:custGeom");
@@ -94,6 +94,7 @@ function extractShapeInfo(xml: string): ShapeInfo[] {
       hasGeometry,
       isPlaceholder,
     });
+    match.value = spPattern.exec(xml);
   }
 
   return shapes;

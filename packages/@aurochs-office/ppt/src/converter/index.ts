@@ -55,7 +55,7 @@ export function convertPptToPptx(ppt: PptPresentation, _ctx: PptParseContext): P
 
     // Embed images for this slide
     const usedIndices = collectUsedImageIndices(slide.shapes);
-    const embedResult = embedSlideImages(pkg, ppt.images, usedIndices, slideIdx, 2);
+    const embedResult = embedSlideImages({ pkg, images: ppt.images, usedImageIndices: usedIndices, slideIndex: slideIdx, startRId: 2 });
     for (const ext of embedResult.extensions) {
       allImageExtensions.add(ext);
     }
@@ -69,7 +69,7 @@ export function convertPptToPptx(ppt: PptPresentation, _ctx: PptParseContext): P
     // Collect hyperlinks
     const hyperlinkRels: SlideRelationship[] = [];
     const hyperlinkMap = new Map<string, string>();
-    collectHyperlinks(slide, hyperlinkMap, hyperlinkRels, embedResult.imageMap.size + 2);
+    collectHyperlinks({ slide, hyperlinkMap, rels: hyperlinkRels, startRId: embedResult.imageMap.size + 2 });
 
     // Build relationships
     const extraRels: SlideRelationship[] = [...buildImageRelationships(embedResult.imageMap), ...hyperlinkRels];
@@ -114,20 +114,21 @@ export function convertPptToPptx(ppt: PptPresentation, _ctx: PptParseContext): P
 /**
  * Collect hyperlinks from all shapes in a slide.
  */
-function collectHyperlinks(
-  slide: PptSlide,
-  hyperlinkMap: Map<string, string>,
-  rels: SlideRelationship[],
-  startRId: number,
-): void {
-  let rIdCounter = startRId;
+function collectHyperlinks(options: {
+  slide: PptSlide;
+  hyperlinkMap: Map<string, string>;
+  rels: SlideRelationship[];
+  startRId: number;
+}): void {
+  const { slide, hyperlinkMap, rels } = options;
+  const rIdRef = { value: options.startRId };
 
   function walkShape(shape: PptPresentation["slides"][number]["shapes"][number]): void {
     if (shape.textBody) {
       for (const para of shape.textBody.paragraphs) {
         for (const run of para.runs) {
           if (run.properties.hyperlink && !hyperlinkMap.has(run.properties.hyperlink)) {
-            const rId = `rId${rIdCounter++}`;
+            const rId = `rId${rIdRef.value++}`;
             hyperlinkMap.set(run.properties.hyperlink, rId);
             rels.push({
               id: rId,

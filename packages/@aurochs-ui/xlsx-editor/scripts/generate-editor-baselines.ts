@@ -12,13 +12,14 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { XlsxWorkbook } from "@aurochs-office/xlsx/domain/workbook";
+import type { Page } from "puppeteer";
+import type { CaptureConfig } from "../spec/visual-harness/test-utils";
 import {
   startHarness,
   stopHarness,
   captureWorkbook,
   captureWorkbookScrolled,
   ensureDirs,
-  getFixturePaths,
   safeName,
 } from "../spec/visual-harness/test-utils";
 
@@ -49,6 +50,23 @@ const TEST_CASES: TestCase[] = [
   { name: "frozen-cols_scrolled", jsonFile: "frozen-cols.json", sheetIndex: 0, scrolled: { scrollTop: 0, scrollLeft: 300 } },
 ];
 
+async function captureScreenshot(params: {
+  page: Page;
+  workbook: XlsxWorkbook;
+  config: CaptureConfig;
+  testCase: TestCase;
+}): Promise<Buffer> {
+  const { page, workbook, config, testCase } = params;
+  if (testCase.scrolled) {
+    return captureWorkbookScrolled(page, workbook, {
+      ...config,
+      scrollTop: testCase.scrolled.scrollTop,
+      scrollLeft: testCase.scrolled.scrollLeft,
+    });
+  }
+  return captureWorkbook(page, workbook, config);
+}
+
 async function main() {
   const fixturesDir = path.resolve(__dirname, "../fixtures/visual");
   const jsonDir = path.join(fixturesDir, "json");
@@ -70,14 +88,13 @@ async function main() {
   const harness = await startHarness();
   console.log("Harness ready.\n");
 
-  let generated = 0;
-  let failed = 0;
+  const stats = { generated: 0, failed: 0 };
 
   for (const testCase of TEST_CASES) {
     const jsonPath = path.join(jsonDir, testCase.jsonFile);
     if (!fs.existsSync(jsonPath)) {
       console.log(`  Skipping ${testCase.name}: ${testCase.jsonFile} not found`);
-      failed++;
+      stats.failed++;
       continue;
     }
 
@@ -90,25 +107,15 @@ async function main() {
     };
 
     try {
-      let screenshot: Buffer;
-
-      if (testCase.scrolled) {
-        screenshot = await captureWorkbookScrolled(harness.page, workbook, {
-          ...config,
-          scrollTop: testCase.scrolled.scrollTop,
-          scrollLeft: testCase.scrolled.scrollLeft,
-        });
-      } else {
-        screenshot = await captureWorkbook(harness.page, workbook, config);
-      }
+      const screenshot = await captureScreenshot({ page: harness.page, workbook, config, testCase });
 
       const baselinePath = path.join(baselineDir, `${safeName(testCase.name)}.png`);
       fs.writeFileSync(baselinePath, screenshot);
       console.log(`  Created: ${testCase.name}.png`);
-      generated++;
+      stats.generated++;
     } catch (err) {
       console.error(`  Failed: ${testCase.name} - ${(err as Error).message}`);
-      failed++;
+      stats.failed++;
     }
   }
 
@@ -120,8 +127,8 @@ async function main() {
 BASELINE GENERATION COMPLETE
 ========================================
 
-Generated: ${generated} baselines
-Failed: ${failed}
+Generated: ${stats.generated} baselines
+Failed: ${stats.failed}
 
 Baselines saved to: ${baselineDir}
 

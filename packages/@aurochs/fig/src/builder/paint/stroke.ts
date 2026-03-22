@@ -16,104 +16,114 @@ import {
   type StrokeAlign,
 } from "../../constants";
 
-export class StrokeBuilder {
-  private _color: Color;
-  private _weight: number;
-  private _cap: StrokeCap;
-  private _join: StrokeJoin;
-  private _align: StrokeAlign;
-  private _dashPattern?: number[];
-  private _miterLimit: number;
-  private _opacity: number;
-  private _visible: boolean;
-  private _blendMode: BlendMode;
+/** Stroke builder instance */
+export type StrokeBuilder = {
+  color: (c: Color) => StrokeBuilder;
+  weight: (w: number) => StrokeBuilder;
+  cap: (c: StrokeCap) => StrokeBuilder;
+  join: (j: StrokeJoin) => StrokeBuilder;
+  align: (a: StrokeAlign) => StrokeBuilder;
+  dash: (pattern: number[]) => StrokeBuilder;
+  miterLimit: (limit: number) => StrokeBuilder;
+  opacity: (value: number) => StrokeBuilder;
+  visible: (value: boolean) => StrokeBuilder;
+  blendMode: (mode: BlendMode) => StrokeBuilder;
+  build: () => StrokeData;
+};
 
-  constructor(color: Color = { r: 0, g: 0, b: 0, a: 1 }) {
-    this._color = color;
-    this._weight = 1;
-    this._cap = "NONE";
-    this._join = "MITER";
-    this._align = "CENTER";
-    this._miterLimit = 4;
-    this._opacity = 1;
-    this._visible = true;
-    this._blendMode = "NORMAL";
-  }
+/** Create a stroke builder */
+function createStrokeBuilder(color: Color = { r: 0, g: 0, b: 0, a: 1 }): StrokeBuilder {
+  const state = {
+    color,
+    weight: 1,
+    cap: "NONE" as StrokeCap,
+    join: "MITER" as StrokeJoin,
+    align: "CENTER" as StrokeAlign,
+    dashPattern: undefined as number[] | undefined,
+    miterLimit: 4,
+    opacity: 1,
+    visible: true,
+    blendMode: "NORMAL" as BlendMode,
+  };
 
-  color(c: Color): this {
-    this._color = c;
-    return this;
-  }
+  const builder: StrokeBuilder = {
+    color(c: Color) {
+      state.color = c;
+      return builder;
+    },
 
-  weight(w: number): this {
-    this._weight = w;
-    return this;
-  }
+    weight(w: number) {
+      state.weight = w;
+      return builder;
+    },
 
-  cap(c: StrokeCap): this {
-    this._cap = c;
-    return this;
-  }
+    cap(c: StrokeCap) {
+      state.cap = c;
+      return builder;
+    },
 
-  join(j: StrokeJoin): this {
-    this._join = j;
-    return this;
-  }
+    join(j: StrokeJoin) {
+      state.join = j;
+      return builder;
+    },
 
-  align(a: StrokeAlign): this {
-    this._align = a;
-    return this;
-  }
+    align(a: StrokeAlign) {
+      state.align = a;
+      return builder;
+    },
 
-  dash(pattern: number[]): this {
-    this._dashPattern = pattern;
-    return this;
-  }
+    dash(pattern: number[]) {
+      state.dashPattern = pattern;
+      return builder;
+    },
 
-  miterLimit(limit: number): this {
-    this._miterLimit = limit;
-    return this;
-  }
+    miterLimit(limit: number) {
+      state.miterLimit = limit;
+      return builder;
+    },
 
-  opacity(value: number): this {
-    this._opacity = Math.max(0, Math.min(1, value));
-    return this;
-  }
+    opacity(value: number) {
+      state.opacity = Math.max(0, Math.min(1, value));
+      return builder;
+    },
 
-  visible(value: boolean): this {
-    this._visible = value;
-    return this;
-  }
+    visible(value: boolean) {
+      state.visible = value;
+      return builder;
+    },
 
-  blendMode(mode: BlendMode): this {
-    this._blendMode = mode;
-    return this;
-  }
+    blendMode(mode: BlendMode) {
+      state.blendMode = mode;
+      return builder;
+    },
 
-  build(): StrokeData {
-    const paint: Stroke = {
-      type: { value: PAINT_TYPE_VALUES.SOLID, name: "SOLID" },
-      color: this._color,
-      opacity: this._opacity,
-      visible: this._visible,
-      blendMode: { value: BLEND_MODE_VALUES[this._blendMode], name: this._blendMode },
-    };
+    build(): StrokeData {
+      const paint: Stroke = {
+        type: { value: PAINT_TYPE_VALUES.SOLID, name: "SOLID" },
+        color: state.color,
+        opacity: state.opacity,
+        visible: state.visible,
+        blendMode: { value: BLEND_MODE_VALUES[state.blendMode], name: state.blendMode },
+      };
 
-    return {
-      paints: [paint],
-      weight: this._weight,
-      cap: { value: STROKE_CAP_VALUES[this._cap], name: this._cap },
-      join: { value: STROKE_JOIN_VALUES[this._join], name: this._join },
-      align: { value: STROKE_ALIGN_VALUES[this._align], name: this._align },
-      dashPattern: this._dashPattern,
-      miterLimit: this._miterLimit !== 4 ? this._miterLimit : undefined,
-    };
-  }
+      return {
+        paints: [paint],
+        weight: state.weight,
+        cap: { value: STROKE_CAP_VALUES[state.cap], name: state.cap },
+        join: { value: STROKE_JOIN_VALUES[state.join], name: state.join },
+        align: { value: STROKE_ALIGN_VALUES[state.align], name: state.align },
+        dashPattern: state.dashPattern,
+        miterLimit: state.miterLimit !== 4 ? state.miterLimit : undefined,
+      };
+    },
+  };
+
+  return builder;
 }
 
 /**
  * Create a stroke
  */
 export function stroke(color?: Color): StrokeBuilder {
-  return new StrokeBuilder(color);
+  return createStrokeBuilder(color);
 }

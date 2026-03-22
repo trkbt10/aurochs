@@ -26,8 +26,6 @@ export type ShapeGenerationResult = {
   readonly treeResult: DiagramTreeBuildResult;
 };
 
-export type { ShapeGenerationConfig };
-
 export type GenerateDiagramShapesOptions = {
   readonly dataModel: DiagramDataModel;
   readonly layoutDefinition: DiagramLayoutDefinition | undefined;

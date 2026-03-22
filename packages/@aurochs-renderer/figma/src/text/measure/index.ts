@@ -26,8 +26,8 @@ export type {
 
 // Measurement provider
 export {
-  CanvasMeasurementProvider,
-  FallbackMeasurementProvider,
+  createCanvasMeasurementProvider,
+  createFallbackMeasurementProvider,
   createMeasurementProvider,
 } from "./provider";
 
@@ -41,11 +41,12 @@ export {
 } from "./line-break";
 
 // Main measurer
-export { TextMeasurer, createTextMeasurer } from "./measurer";
+export { createTextMeasurer, type TextMeasurerInstance } from "./measurer";
 
 // OpenType.js provider (for accurate font metrics)
 export {
-  OpentypeMeasurementProvider,
+  createOpentypeMeasurementProvider,
+  type OpentypeMeasurementProviderInstance,
   measureTextAsync,
   getAscenderRatioAsync,
 } from "./opentype-provider";

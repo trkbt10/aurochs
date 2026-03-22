@@ -7,7 +7,7 @@
  * @see ECMA-376 Part 1, Section 20.1.2.3 - Color Types
  */
 
-import type { Color, ColorTransform } from "./color";
+import type { Color, ColorSpec, ColorTransform } from "./color";
 import type { ColorContext } from "./color-context";
 import { applySrgbGamma, applySrgbInvGamma, hexToRgb, hslToRgb, rgbToHex, rgbToHsl } from "@aurochs/color";
 
@@ -256,6 +256,37 @@ function hslToHex(h: number, s: number, l: number): string {
 // =============================================================================
 
 /**
+ * Resolve a ColorSpec to its base hex color value (before transforms).
+ */
+function resolveBaseColor(spec: ColorSpec, context?: ColorContext): string | undefined {
+  switch (spec.type) {
+    case "srgb":
+      return spec.value;
+
+    case "scheme": {
+      // Look up scheme color in theme
+      const schemeVal = spec.value;
+      // First check color map for mapping
+      const mappedColor = context?.colorMap[schemeVal] ?? schemeVal;
+      // Then look up in color scheme
+      return context?.colorScheme[mappedColor];
+    }
+
+    case "system":
+      // Use lastColor if available, otherwise fallback
+      return spec.lastColor ?? SYSTEM_COLOR_FALLBACKS[spec.value];
+
+    case "preset":
+      return PRESET_COLORS[spec.value];
+
+    case "hsl":
+      // Convert HSL to RGB
+      return hslToHex(spec.hue, spec.saturation, spec.luminance);
+  }
+  return undefined;
+}
+
+/**
  * Resolve color to hex string
  *
  * @param color - Color domain object
@@ -269,37 +300,7 @@ export function resolveColor(color: Color | undefined, context?: ColorContext): 
     return undefined;
   }
 
-  let baseColor: string | undefined;
-
-  switch (color.spec.type) {
-    case "srgb":
-      baseColor = color.spec.value;
-      break;
-
-    case "scheme": {
-      // Look up scheme color in theme
-      const schemeVal = color.spec.value;
-      // First check color map for mapping
-      const mappedColor = context?.colorMap[schemeVal] ?? schemeVal;
-      // Then look up in color scheme
-      baseColor = context?.colorScheme[mappedColor];
-      break;
-    }
-
-    case "system":
-      // Use lastColor if available, otherwise fallback
-      baseColor = color.spec.lastColor ?? SYSTEM_COLOR_FALLBACKS[color.spec.value];
-      break;
-
-    case "preset":
-      baseColor = PRESET_COLORS[color.spec.value];
-      break;
-
-    case "hsl":
-      // Convert HSL to RGB
-      baseColor = hslToHex(color.spec.hue, color.spec.saturation, color.spec.luminance);
-      break;
-  }
+  const baseColor = resolveBaseColor(color.spec, context);
 
   if (!baseColor) {
     return undefined;
@@ -307,7 +308,7 @@ export function resolveColor(color: Color | undefined, context?: ColorContext): 
 
   // Apply transforms
   if (color.transform) {
-    baseColor = applyColorTransforms(baseColor, color.transform);
+    return applyColorTransforms(baseColor, color.transform);
   }
 
   return baseColor;
@@ -316,6 +317,178 @@ export function resolveColor(color: Color | undefined, context?: ColorContext): 
 // =============================================================================
 // Color Transform Utilities
 // =============================================================================
+
+/**
+ * Compute transformed hue value from base hue and transform parameters.
+ */
+function computeHue(baseHue: number, transform: ColorTransform): number {
+  const ref = { value: transform.hue !== undefined ? transform.hue : baseHue };
+  if (transform.hueMod !== undefined) {
+    ref.value = (ref.value * transform.hueMod) / 100;
+  }
+  if (transform.hueOff !== undefined) {
+    ref.value = (ref.value + transform.hueOff) % 360;
+  }
+  return ref.value;
+}
+
+/**
+ * Compute transformed saturation value from base saturation and transform parameters.
+ */
+function computeSaturation(baseSat: number, transform: ColorTransform): number {
+  const ref = { value: transform.sat !== undefined ? transform.sat : baseSat * 100 };
+  if (transform.satMod !== undefined) {
+    ref.value = (ref.value * transform.satMod) / 100;
+  }
+  if (transform.satOff !== undefined) {
+    ref.value = Math.max(0, Math.min(100, ref.value + transform.satOff));
+  }
+  return ref.value;
+}
+
+/**
+ * Compute transformed luminance value from base luminance and transform parameters.
+ */
+function computeLuminance(baseLum: number, transform: ColorTransform): number {
+  const ref = { value: transform.lum !== undefined ? transform.lum : baseLum * 100 };
+  if (transform.lumMod !== undefined) {
+    ref.value = (ref.value * transform.lumMod) / 100;
+  }
+  if (transform.lumOff !== undefined) {
+    ref.value = Math.max(0, Math.min(100, ref.value + transform.lumOff));
+  }
+  return ref.value;
+}
+
+/**
+ * Apply RGB channel transforms (gamma, channel overrides, shade, tint, etc.)
+ * to an intermediate hex color.
+ */
+function applyRgbTransforms(hex: string, transform: ColorTransform): string {
+  const steps: ((input: string) => string)[] = [];
+
+  if (transform.gamma) {
+    steps.push((input) => {
+      const c = hexToRgb(input);
+      return rgbToHex(applySrgbGamma(c.r), applySrgbGamma(c.g), applySrgbGamma(c.b)).toUpperCase();
+    });
+  }
+
+  if (transform.invGamma) {
+    steps.push((input) => {
+      const c = hexToRgb(input);
+      return rgbToHex(applySrgbInvGamma(c.r), applySrgbInvGamma(c.g), applySrgbInvGamma(c.b)).toUpperCase();
+    });
+  }
+
+  if (transform.green !== undefined) {
+    const green = Math.max(0, Math.min(100, transform.green)) / 100;
+    steps.push((input) => {
+      const c = hexToRgb(input);
+      return rgbToHex(c.r, Math.round(255 * green), c.b).toUpperCase();
+    });
+  }
+
+  if (transform.greenMod !== undefined) {
+    const greenMod = transform.greenMod / 100;
+    steps.push((input) => {
+      const c = hexToRgb(input);
+      return rgbToHex(c.r, Math.round(c.g * greenMod), c.b).toUpperCase();
+    });
+  }
+
+  if (transform.greenOff !== undefined) {
+    const greenOff = transform.greenOff / 100;
+    steps.push((input) => {
+      const c = hexToRgb(input);
+      return rgbToHex(c.r, c.g + 255 * greenOff, c.b).toUpperCase();
+    });
+  }
+
+  if (transform.redMod !== undefined) {
+    const redMod = transform.redMod / 100;
+    steps.push((input) => {
+      const c = hexToRgb(input);
+      return rgbToHex(Math.round(c.r * redMod), c.g, c.b).toUpperCase();
+    });
+  }
+
+  if (transform.redOff !== undefined) {
+    const redOff = transform.redOff / 100;
+    steps.push((input) => {
+      const c = hexToRgb(input);
+      return rgbToHex(c.r + 255 * redOff, c.g, c.b).toUpperCase();
+    });
+  }
+
+  if (transform.blueMod !== undefined) {
+    const blueMod = transform.blueMod / 100;
+    steps.push((input) => {
+      const c = hexToRgb(input);
+      return rgbToHex(c.r, c.g, Math.round(c.b * blueMod)).toUpperCase();
+    });
+  }
+
+  if (transform.blueOff !== undefined) {
+    const blueOff = transform.blueOff / 100;
+    steps.push((input) => {
+      const c = hexToRgb(input);
+      return rgbToHex(c.r, c.g, c.b + 255 * blueOff).toUpperCase();
+    });
+  }
+
+  // Apply shade/tint in RGB space per MS-ODRAWXML spec
+  // shade: "A 10% shade is 10% of the input color combined with 90% black"
+  if (transform.shade !== undefined) {
+    const shadeVal = transform.shade / 100;
+    steps.push((input) => {
+      const c = hexToRgb(input);
+      return rgbToHex(Math.round(c.r * shadeVal), Math.round(c.g * shadeVal), Math.round(c.b * shadeVal)).toUpperCase();
+    });
+  }
+
+  // tint: "A 10% tint is 10% of the input color combined with 90% white"
+  if (transform.tint !== undefined) {
+    const tintVal = transform.tint / 100;
+    steps.push((input) => {
+      const c = hexToRgb(input);
+      return rgbToHex(
+        Math.round(c.r + (255 - c.r) * (1 - tintVal)),
+        Math.round(c.g + (255 - c.g) * (1 - tintVal)),
+        Math.round(c.b + (255 - c.b) * (1 - tintVal)),
+      ).toUpperCase();
+    });
+  }
+
+  return steps.reduce((current, step) => step(current), hex);
+}
+
+/**
+ * Apply terminal color transforms (complement, inverse, grayscale).
+ * Returns the final result or undefined if no terminal transform applies.
+ */
+function applyTerminalTransform(hex: string, transform: ColorTransform): string | undefined {
+  // Complement
+  if (transform.comp) {
+    const c = hexToRgb(hex);
+    return rgbToHex(255 - c.r, 255 - c.g, 255 - c.b).toUpperCase();
+  }
+
+  // Inverse
+  if (transform.inv) {
+    const c = hexToRgb(hex);
+    return rgbToHex(255 - c.r, 255 - c.g, 255 - c.b).toUpperCase();
+  }
+
+  // Grayscale
+  if (transform.gray) {
+    const c = hexToRgb(hex);
+    const gray = Math.round(0.299 * c.r + 0.587 * c.g + 0.114 * c.b);
+    return rgbToHex(gray, gray, gray).toUpperCase();
+  }
+
+  return undefined;
+}
 
 /**
  * Apply color transforms to a hex color.
@@ -338,144 +511,16 @@ function applyColorTransforms(hex: string, transform: ColorTransform): string {
   const hslBase = rgbToHsl(r, g, b);
 
   // Apply HSL transforms
-  const computedHue = (() => {
-    // eslint-disable-next-line no-restricted-syntax
-    let h = hslBase.h;
-    if (transform.hue !== undefined) {
-      h = transform.hue;
-    }
-    if (transform.hueMod !== undefined) {
-      h = (h * transform.hueMod) / 100;
-    }
-    if (transform.hueOff !== undefined) {
-      h = (h + transform.hueOff) % 360;
-    }
-    return h;
-  })();
-
-  const computedSat = (() => {
-    // eslint-disable-next-line no-restricted-syntax
-    let s = hslBase.s * 100;
-    if (transform.sat !== undefined) {
-      s = transform.sat;
-    }
-    if (transform.satMod !== undefined) {
-      s = (s * transform.satMod) / 100;
-    }
-    if (transform.satOff !== undefined) {
-      s = Math.max(0, Math.min(100, s + transform.satOff));
-    }
-    return s;
-  })();
-
-  const computedLum = (() => {
-    // eslint-disable-next-line no-restricted-syntax
-    let l = hslBase.l * 100;
-    if (transform.lum !== undefined) {
-      l = transform.lum;
-    }
-    if (transform.lumMod !== undefined) {
-      l = (l * transform.lumMod) / 100;
-    }
-    if (transform.lumOff !== undefined) {
-      l = Math.max(0, Math.min(100, l + transform.lumOff));
-    }
-    return l;
-  })();
+  const computedH = computeHue(hslBase.h, transform);
+  const computedS = computeSaturation(hslBase.s, transform);
+  const computedL = computeLuminance(hslBase.l, transform);
 
   // Convert back to RGB after HSL transforms
-  // eslint-disable-next-line no-restricted-syntax
-  let result = hslToHex(computedHue, computedSat, computedLum);
+  const afterHsl = hslToHex(computedH, computedS, computedL);
 
-  if (transform.gamma) {
-    const c = hexToRgb(result);
-    result = rgbToHex(applySrgbGamma(c.r), applySrgbGamma(c.g), applySrgbGamma(c.b)).toUpperCase();
-  }
+  // Apply RGB channel transforms
+  const afterRgb = applyRgbTransforms(afterHsl, transform);
 
-  if (transform.invGamma) {
-    const c = hexToRgb(result);
-    result = rgbToHex(applySrgbInvGamma(c.r), applySrgbInvGamma(c.g), applySrgbInvGamma(c.b)).toUpperCase();
-  }
-
-  if (transform.green !== undefined) {
-    const green = Math.max(0, Math.min(100, transform.green)) / 100;
-    const c = hexToRgb(result);
-    result = rgbToHex(c.r, Math.round(255 * green), c.b).toUpperCase();
-  }
-
-  if (transform.greenMod !== undefined) {
-    const greenMod = transform.greenMod / 100;
-    const c = hexToRgb(result);
-    result = rgbToHex(c.r, Math.round(c.g * greenMod), c.b).toUpperCase();
-  }
-
-  if (transform.greenOff !== undefined) {
-    const greenOff = transform.greenOff / 100;
-    const c = hexToRgb(result);
-    result = rgbToHex(c.r, c.g + 255 * greenOff, c.b).toUpperCase();
-  }
-
-  if (transform.redMod !== undefined) {
-    const redMod = transform.redMod / 100;
-    const c = hexToRgb(result);
-    result = rgbToHex(Math.round(c.r * redMod), c.g, c.b).toUpperCase();
-  }
-
-  if (transform.redOff !== undefined) {
-    const redOff = transform.redOff / 100;
-    const c = hexToRgb(result);
-    result = rgbToHex(c.r + 255 * redOff, c.g, c.b).toUpperCase();
-  }
-
-  if (transform.blueMod !== undefined) {
-    const blueMod = transform.blueMod / 100;
-    const c = hexToRgb(result);
-    result = rgbToHex(c.r, c.g, Math.round(c.b * blueMod)).toUpperCase();
-  }
-
-  if (transform.blueOff !== undefined) {
-    const blueOff = transform.blueOff / 100;
-    const c = hexToRgb(result);
-    result = rgbToHex(c.r, c.g, c.b + 255 * blueOff).toUpperCase();
-  }
-
-  // Apply shade/tint in RGB space per MS-ODRAWXML spec
-  // shade: "A 10% shade is 10% of the input color combined with 90% black"
-  if (transform.shade !== undefined) {
-    const shadeVal = transform.shade / 100;
-    const c = hexToRgb(result);
-    result = rgbToHex(Math.round(c.r * shadeVal), Math.round(c.g * shadeVal), Math.round(c.b * shadeVal)).toUpperCase();
-  }
-
-  // tint: "A 10% tint is 10% of the input color combined with 90% white"
-  if (transform.tint !== undefined) {
-    const tintVal = transform.tint / 100;
-    const c = hexToRgb(result);
-    result = rgbToHex(
-      Math.round(c.r + (255 - c.r) * (1 - tintVal)),
-      Math.round(c.g + (255 - c.g) * (1 - tintVal)),
-      Math.round(c.b + (255 - c.b) * (1 - tintVal)),
-    ).toUpperCase();
-  }
-
-  // Complement
-  if (transform.comp) {
-    const c = hexToRgb(result);
-    return rgbToHex(255 - c.r, 255 - c.g, 255 - c.b).toUpperCase();
-  }
-
-  // Inverse
-  if (transform.inv) {
-    const c = hexToRgb(result);
-    return rgbToHex(255 - c.r, 255 - c.g, 255 - c.b).toUpperCase();
-  }
-
-  // Grayscale
-  if (transform.gray) {
-    const c = hexToRgb(result);
-    const gray = Math.round(0.299 * c.r + 0.587 * c.g + 0.114 * c.b);
-    return rgbToHex(gray, gray, gray).toUpperCase();
-  }
-
-  return result;
+  // Apply terminal transforms (complement, inverse, grayscale)
+  return applyTerminalTransform(afterRgb, transform) ?? afterRgb;
 }

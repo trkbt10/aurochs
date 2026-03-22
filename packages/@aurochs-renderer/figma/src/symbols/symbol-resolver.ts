@@ -85,7 +85,7 @@ export function resolveSymbol(symbolData: FigSymbolData, symbolMap: ReadonlyMap<
 export function resolveSymbolByGuid(symbolID: FigGuid, symbolMap: ReadonlyMap<string, FigNode>): FigNode | undefined {
   const exactKey = guidToString(symbolID);
   const exact = symbolMap.get(exactKey);
-  if (exact) return exact;
+  if (exact) {return exact;}
 
   // Fallback: search by localID suffix
   const localIdSuffix = `:${symbolID.localID}`;
@@ -107,7 +107,7 @@ export function resolveSymbolGuidStr(
 ): { node: FigNode; guidStr: string } | undefined {
   const exactKey = guidToString(symbolID);
   const exact = symbolMap.get(exactKey);
-  if (exact) return { node: exact, guidStr: exactKey };
+  if (exact) {return { node: exact, guidStr: exactKey };}
 
   const localIdSuffix = `:${symbolID.localID}`;
   for (const [key, node] of symbolMap) {
@@ -268,7 +268,7 @@ function applyComponentPropAssignments(
   assignments: readonly ComponentPropAssignment[],
   textOverrideGuids?: Set<string>,
 ): void {
-  if (assignments.length === 0) return;
+  if (assignments.length === 0) {return;}
 
   // Build defID → assignment map
   const assignMap = new Map<string, ComponentPropAssignment>();
@@ -378,35 +378,35 @@ function cleanupStaleDerivedTextData(nodes: FigNode[], cpaGuids: Set<string>): v
 function expandContainersToFitChildren(nodes: FigNode[]): void {
   for (const node of nodes) {
     const children = node.children as FigNode[] | undefined;
-    if (!children?.length) continue;
+    if (!children?.length) {continue;}
 
     // Skip INSTANCE nodes: their children come from pre-resolution and
     // haven't been properly sized yet. Nested INSTANCE resolution during
     // rendering (resolveInstance) will handle the correct sizing.
-    if (getNodeType(node) === "INSTANCE") continue;
+    if (getNodeType(node) === "INSTANCE") {continue;}
 
     // Recurse first (bottom-up)
     expandContainersToFitChildren(children);
 
     const nd = node as Record<string, unknown>;
     const nodeSize = nd.size as { x: number; y: number } | undefined;
-    if (!nodeSize) continue;
+    if (!nodeSize) {continue;}
 
-    let maxChildWidth = 0;
-    let maxChildHeight = 0;
+    const maxChildWidthRef = { value: 0 };
+    const maxChildHeightRef = { value: 0 };
     for (const child of children) {
       const cd = child as Record<string, unknown>;
       const childSize = cd.size as { x: number; y: number } | undefined;
       if (childSize) {
-        maxChildWidth = Math.max(maxChildWidth, childSize.x);
-        maxChildHeight = Math.max(maxChildHeight, childSize.y);
+        maxChildWidthRef.value = Math.max(maxChildWidthRef.value, childSize.x);
+        maxChildHeightRef.value = Math.max(maxChildHeightRef.value, childSize.y);
       }
     }
 
-    if (maxChildWidth > nodeSize.x || maxChildHeight > nodeSize.y) {
+    if (maxChildWidthRef.value > nodeSize.x || maxChildHeightRef.value > nodeSize.y) {
       nd.size = {
-        x: Math.max(nodeSize.x, maxChildWidth),
-        y: Math.max(nodeSize.y, maxChildHeight),
+        x: Math.max(nodeSize.x, maxChildWidthRef.value),
+        y: Math.max(nodeSize.y, maxChildHeightRef.value),
       };
     }
   }
@@ -433,7 +433,7 @@ function applyOverrides(nodes: FigNode[], overrides: readonly FigSymbolOverride[
 
   for (const override of overrides) {
     const guids = override.guidPath?.guids;
-    if (!guids || guids.length === 0) continue;
+    if (!guids || guids.length === 0) {continue;}
 
     if (guids.length === 1) {
       const key = guidToString(guids[0]);
@@ -451,12 +451,12 @@ function applyOverrides(nodes: FigNode[], overrides: readonly FigSymbolOverride[
         ...override,
         guidPath: { guids: guids.slice(1) },
       };
-      let arr = nestedMap.get(firstKey);
-      if (!arr) {
-        arr = [];
-        nestedMap.set(firstKey, arr);
+      const arrRef = { value: nestedMap.get(firstKey) };
+      if (!arrRef.value) {
+        arrRef.value = [];
+        nestedMap.set(firstKey, arrRef.value);
       }
-      arr.push(shortened);
+      arrRef.value.push(shortened);
     }
   }
 
@@ -471,7 +471,7 @@ function applyOverrides(nodes: FigNode[], overrides: readonly FigSymbolOverride[
       const direct = directMap.get(guidStr);
       if (direct) {
         for (const [key, value] of Object.entries(direct)) {
-          if (key === "guidPath") continue;
+          if (key === "guidPath") {continue;}
           if (key === "componentPropAssignments") {
             // Merge CPA arrays: existing entries + override entries.
             // Override entries with the same defID take precedence.

@@ -1,4 +1,6 @@
-import { describe, it, expect } from "vitest";
+/**
+ * @file Tests for domain-to-input conversion utilities
+ */
 import type { Color } from "./color";
 import type { SolidFill, GradientFill, PatternFill, BlipFill, NoFill, GroupFill } from "./fill";
 import type { Percent, Degrees } from "./units";

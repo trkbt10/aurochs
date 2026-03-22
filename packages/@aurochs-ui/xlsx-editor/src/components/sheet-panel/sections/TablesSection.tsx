@@ -121,7 +121,13 @@ export function TablesSection({
         Convert a range of cells into a table for easier data management.
       </div>
 
-      {isCreating && selectedRange ? (
+      {renderTableContent()}
+    </OptionalPropertySection>
+  );
+
+  function renderTableContent() {
+    if (isCreating && selectedRange) {
+      return (
         <>
           <FieldGroup label="Range">
             <div style={{ fontSize: fontTokens.size.md }}>{formatRange(selectedRange)}</div>
@@ -154,9 +160,11 @@ export function TablesSection({
             </Button>
           </div>
         </>
-      ) : (
-        <>
-          {currentTable && (
+      );
+    }
+    return (
+      <>
+        {currentTable && (
             <div style={tableItemStyle}>
               <div style={tableNameStyle}>{currentTable.name}</div>
               <div style={tableRangeStyle}>
@@ -203,7 +211,6 @@ export function TablesSection({
             </div>
           )}
         </>
-      )}
-    </OptionalPropertySection>
-  );
+    );
+  }
 }

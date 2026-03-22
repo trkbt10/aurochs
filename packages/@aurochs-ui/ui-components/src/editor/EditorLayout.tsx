@@ -7,7 +7,7 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import type { CSSProperties, ReactNode, MouseEvent as ReactMouseEvent } from "react";
-import { colorTokens, spacingTokens } from "../design-tokens";
+import { colorTokens } from "../design-tokens";
 
 // =============================================================================
 // Types
@@ -128,13 +128,16 @@ const horizontalResizerStyle: CSSProperties = {
 
 type ResizeDirection = "horizontal" | "vertical";
 
+/** Hook for drag-to-resize panel behavior */
 function useResizer(
-  direction: ResizeDirection,
-  initialValue: number,
-  min: number,
-  max: number,
-  onChange?: (value: number) => void,
-  invert: boolean = false
+  { direction, initialValue, min, max, onChange, invert = false }: {
+    direction: ResizeDirection;
+    initialValue: number;
+    min: number;
+    max: number;
+    onChange?: (value: number) => void;
+    invert?: boolean;
+  },
 ): {
   value: number;
   isResizing: boolean;
@@ -147,10 +150,8 @@ function useResizer(
 
   const handleMouseMove = useCallback(
     (e: globalThis.MouseEvent) => {
-      const delta =
-        direction === "horizontal"
-          ? e.clientX - startPosRef.current
-          : e.clientY - startPosRef.current;
+      const pos = direction === "horizontal" ? e.clientX : e.clientY;
+      const delta = pos - startPosRef.current;
 
       const adjustedDelta = invert ? -delta : delta;
       const newValue = Math.min(max, Math.max(min, startValueRef.current + adjustedDelta));
@@ -198,6 +199,12 @@ function useResizer(
 // Component
 // =============================================================================
 
+
+
+
+
+
+/** IDE-style layout with resizable navigator, editor, inspector, and console panels */
 export function EditorLayout({
   navigator,
   editor,
@@ -220,31 +227,31 @@ export function EditorLayout({
   onConsoleHeightChange,
   style,
 }: EditorLayoutProps): ReactNode {
-  const navResizer = useResizer(
-    "horizontal",
-    navigatorWidth,
-    minNavigatorWidth,
-    maxNavigatorWidth,
-    onNavigatorWidthChange
-  );
+  const navResizer = useResizer({
+    direction: "horizontal",
+    initialValue: navigatorWidth,
+    min: minNavigatorWidth,
+    max: maxNavigatorWidth,
+    onChange: onNavigatorWidthChange,
+  });
 
-  const inspResizer = useResizer(
-    "horizontal",
-    inspectorWidth,
-    minInspectorWidth,
-    maxInspectorWidth,
-    onInspectorWidthChange,
-    true
-  );
+  const inspResizer = useResizer({
+    direction: "horizontal",
+    initialValue: inspectorWidth,
+    min: minInspectorWidth,
+    max: maxInspectorWidth,
+    onChange: onInspectorWidthChange,
+    invert: true,
+  });
 
-  const consoleResizer = useResizer(
-    "vertical",
-    consoleHeight,
-    minConsoleHeight,
-    maxConsoleHeight,
-    onConsoleHeightChange,
-    true
-  );
+  const consoleResizer = useResizer({
+    direction: "vertical",
+    initialValue: consoleHeight,
+    min: minConsoleHeight,
+    max: maxConsoleHeight,
+    onChange: onConsoleHeightChange,
+    invert: true,
+  });
 
   const resizerHoverColor = colorTokens.accent.primary;
 

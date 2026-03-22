@@ -255,7 +255,8 @@ export function resolveEmbeddedXlsxPath(chartRelsXml: string): string | undefine
     }
 
     return undefined;
-  } catch {
+  } catch (err: unknown) {
+    console.debug("Failed to parse chart relationships XML:", err);
     return undefined;
   }
 }

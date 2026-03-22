@@ -206,59 +206,59 @@ export function detectParameterContext(
   procedures: readonly VbaProcedure[],
 ): ParameterHint | undefined {
   // Scan backward to find unmatched "("
-  let parenDepth = 0;
-  let funcEnd = -1;
+  const parenDepth = { value: 0 };
+  const funcEnd = { value: -1 };
 
   for (let i = cursorOffset - 1; i >= 0; i--) {
     const char = source[i];
 
     if (char === ")") {
-      parenDepth++;
+      parenDepth.value++;
     } else if (char === "(") {
-      if (parenDepth === 0) {
-        funcEnd = i;
+      if (parenDepth.value === 0) {
+        funcEnd.value = i;
         break;
       }
-      parenDepth--;
+      parenDepth.value--;
     }
   }
 
-  if (funcEnd === -1) {
+  if (funcEnd.value === -1) {
     return undefined;
   }
 
   // Extract function name before "("
-  let funcStart = funcEnd - 1;
-  while (funcStart >= 0 && /\s/.test(source[funcStart])) {
-    funcStart--;
+  const funcStart = { value: funcEnd.value - 1 };
+  while (funcStart.value >= 0 && /\s/.test(source[funcStart.value])) {
+    funcStart.value--;
   }
-  while (funcStart >= 0 && /[a-zA-Z0-9_]/.test(source[funcStart])) {
-    funcStart--;
+  while (funcStart.value >= 0 && /[a-zA-Z0-9_]/.test(source[funcStart.value])) {
+    funcStart.value--;
   }
-  funcStart++;
+  funcStart.value++;
 
-  const functionName = source.slice(funcStart, funcEnd).trim();
+  const functionName = source.slice(funcStart.value, funcEnd.value).trim();
   if (!functionName) {
     return undefined;
   }
 
   // Count commas to determine active parameter
-  let activeParameter = 0;
-  parenDepth = 0;
-  let inString = false;
+  const activeParameter = { value: 0 };
+  parenDepth.value = 0;
+  const inString = { value: false };
 
-  for (let i = funcEnd + 1; i < cursorOffset; i++) {
+  for (let i = funcEnd.value + 1; i < cursorOffset; i++) {
     const char = source[i];
 
     if (char === '"') {
-      inString = !inString;
-    } else if (!inString) {
+      inString.value = !inString.value;
+    } else if (!inString.value) {
       if (char === "(") {
-        parenDepth++;
+        parenDepth.value++;
       } else if (char === ")") {
-        parenDepth--;
-      } else if (char === "," && parenDepth === 0) {
-        activeParameter++;
+        parenDepth.value--;
+      } else if (char === "," && parenDepth.value === 0) {
+        activeParameter.value++;
       }
     }
   }
@@ -270,7 +270,7 @@ export function detectParameterContext(
       functionName,
       signature: formatBuiltinSignature(functionName, builtin),
       parameters: builtin.params,
-      activeParameter,
+      activeParameter: activeParameter.value,
       returnType: builtin.returnType,
     };
   }
@@ -288,7 +288,7 @@ export function detectParameterContext(
         type: typeNameToString(p.type),
         isOptional: p.isOptional,
       })),
-      activeParameter,
+      activeParameter: activeParameter.value,
       returnType: typeNameToString(proc.returnType),
     };
   }
@@ -306,14 +306,8 @@ export function detectParameterContext(
 function formatBuiltinSignature(name: string, sig: BuiltinSignature): string {
   const params = sig.params
     .map((p) => {
-      let s = p.name;
-      if (p.type) {
-        s += ` As ${p.type}`;
-      }
-      if (p.isOptional) {
-        s = `[${s}]`;
-      }
-      return s;
+      const base = p.type ? `${p.name} As ${p.type}` : p.name;
+      return p.isOptional ? `[${base}]` : base;
     })
     .join(", ");
 
@@ -322,28 +316,30 @@ function formatBuiltinSignature(name: string, sig: BuiltinSignature): string {
 }
 
 /**
+ * Map procedure type to keyword prefix.
+ */
+function procedureTypeToPrefix(procType: string): string {
+  if (procType === "function") {
+    return "Function";
+  }
+  if (procType === "sub") {
+    return "Sub";
+  }
+  return "Property";
+}
+
+/**
  * Format procedure signature for display.
  */
 function formatProcedureSignature(proc: VbaProcedure): string {
   const params = proc.parameters
     .map((p) => {
-      let s = p.name;
-      if (p.type) {
-        s += ` As ${p.type}`;
-      }
-      if (p.isOptional) {
-        s = `[${s}]`;
-      }
-      return s;
+      const base = p.type ? `${p.name} As ${p.type}` : p.name;
+      return p.isOptional ? `[${base}]` : base;
     })
     .join(", ");
 
-  const prefix =
-    proc.type === "function"
-      ? "Function"
-      : proc.type === "sub"
-        ? "Sub"
-        : "Property";
+  const prefix = procedureTypeToPrefix(proc.type);
   const returnType = proc.returnType ? ` As ${proc.returnType}` : "";
 
   return `${prefix} ${proc.name}(${params})${returnType}`;

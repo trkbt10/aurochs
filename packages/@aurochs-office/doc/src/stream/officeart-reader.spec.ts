@@ -10,26 +10,26 @@ import {
 } from "./officeart-reader";
 
 /** Build a minimal OfficeArt record header + data. */
-function buildRecord(
-  recVer: number,
-  recInstance: number,
-  recType: number,
-  data: Uint8Array,
-): Uint8Array {
-  const buf = new Uint8Array(OFFICEART_HEADER_SIZE + data.length);
+function buildRecord(options: {
+  recVer: number;
+  recInstance: number;
+  recType: number;
+  data: Uint8Array;
+}): Uint8Array {
+  const buf = new Uint8Array(OFFICEART_HEADER_SIZE + options.data.length);
   const view = new DataView(buf.buffer);
-  const verAndInstance = (recVer & 0x0f) | ((recInstance & 0x0fff) << 4);
+  const verAndInstance = (options.recVer & 0x0f) | ((options.recInstance & 0x0fff) << 4);
   view.setUint16(0, verAndInstance, true);
-  view.setUint16(2, recType, true);
-  view.setUint32(4, data.length, true);
-  buf.set(data, OFFICEART_HEADER_SIZE);
+  view.setUint16(2, options.recType, true);
+  view.setUint32(4, options.data.length, true);
+  buf.set(options.data, OFFICEART_HEADER_SIZE);
   return buf;
 }
 
 describe("readOfficeArtRecord", () => {
   it("reads a simple record", () => {
     const data = new Uint8Array([0x01, 0x02, 0x03]);
-    const buf = buildRecord(0x02, 0x00, 0xf00a, data);
+    const buf = buildRecord({ recVer: 0x02, recInstance: 0x00, recType: 0xf00a, data: data });
     const record = readOfficeArtRecord(buf, 0);
 
     expect(record).toBeDefined();
@@ -42,7 +42,7 @@ describe("readOfficeArtRecord", () => {
 
   it("reads recInstance from upper 12 bits of verAndInstance", () => {
     // verAndInstance = 0x1234 → recVer=4, recInstance=0x123
-    const buf = buildRecord(0x04, 0x123, 0xf00b, new Uint8Array(0));
+    const buf = buildRecord({ recVer: 0x04, recInstance: 0x123, recType: 0xf00b, data: new Uint8Array(0) });
     const record = readOfficeArtRecord(buf, 0);
 
     expect(record!.recVer).toBe(0x04);
@@ -55,13 +55,13 @@ describe("readOfficeArtRecord", () => {
   });
 
   it("returns undefined when offset exceeds data", () => {
-    const buf = buildRecord(0, 0, 0xf00a, new Uint8Array(4));
+    const buf = buildRecord({ recVer: 0, recInstance: 0, recType: 0xf00a, data: new Uint8Array(4) });
     expect(readOfficeArtRecord(buf, buf.length)).toBeUndefined();
   });
 
   it("reads record at non-zero offset", () => {
     const padding = new Uint8Array(10);
-    const rec = buildRecord(0x01, 0, 0xf008, new Uint8Array([0xaa, 0xbb]));
+    const rec = buildRecord({ recVer: 0x01, recInstance: 0, recType: 0xf008, data: new Uint8Array([0xaa, 0xbb]) });
     const combined = new Uint8Array(padding.length + rec.length);
     combined.set(padding, 0);
     combined.set(rec, padding.length);
@@ -91,8 +91,8 @@ describe("readOfficeArtRecord", () => {
 
 describe("iterateOfficeArtRecords", () => {
   it("iterates multiple records", () => {
-    const rec1 = buildRecord(0, 0, 0xf009, new Uint8Array([0x01]));
-    const rec2 = buildRecord(0, 0, 0xf00a, new Uint8Array([0x02, 0x03]));
+    const rec1 = buildRecord({ recVer: 0, recInstance: 0, recType: 0xf009, data: new Uint8Array([0x01]) });
+    const rec2 = buildRecord({ recVer: 0, recInstance: 0, recType: 0xf00a, data: new Uint8Array([0x02, 0x03]) });
     const combined = new Uint8Array(rec1.length + rec2.length);
     combined.set(rec1, 0);
     combined.set(rec2, rec1.length);
@@ -104,13 +104,13 @@ describe("iterateOfficeArtRecords", () => {
   });
 
   it("returns empty for empty range", () => {
-    const buf = buildRecord(0, 0, 0xf00a, new Uint8Array(4));
+    const buf = buildRecord({ recVer: 0, recInstance: 0, recType: 0xf00a, data: new Uint8Array(4) });
     expect(iterateOfficeArtRecords(buf, 0, 0)).toEqual([]);
   });
 
   it("stops at end boundary", () => {
-    const rec1 = buildRecord(0, 0, 0xf009, new Uint8Array(2));
-    const rec2 = buildRecord(0, 0, 0xf00a, new Uint8Array(2));
+    const rec1 = buildRecord({ recVer: 0, recInstance: 0, recType: 0xf009, data: new Uint8Array(2) });
+    const rec2 = buildRecord({ recVer: 0, recInstance: 0, recType: 0xf00a, data: new Uint8Array(2) });
     const combined = new Uint8Array(rec1.length + rec2.length);
     combined.set(rec1, 0);
     combined.set(rec2, rec1.length);
@@ -124,13 +124,13 @@ describe("iterateOfficeArtRecords", () => {
 
 describe("isContainerRecord", () => {
   it("returns true for recVer=0x0F", () => {
-    const buf = buildRecord(0x0f, 0, 0xf000, new Uint8Array(0));
+    const buf = buildRecord({ recVer: 0x0f, recInstance: 0, recType: 0xf000, data: new Uint8Array(0) });
     const record = readOfficeArtRecord(buf, 0)!;
     expect(isContainerRecord(record)).toBe(true);
   });
 
   it("returns false for non-container", () => {
-    const buf = buildRecord(0x02, 0, 0xf00a, new Uint8Array(0));
+    const buf = buildRecord({ recVer: 0x02, recInstance: 0, recType: 0xf00a, data: new Uint8Array(0) });
     const record = readOfficeArtRecord(buf, 0)!;
     expect(isContainerRecord(record)).toBe(false);
   });
@@ -139,13 +139,13 @@ describe("isContainerRecord", () => {
 describe("findChildRecord", () => {
   it("finds child record by type within container", () => {
     // Build a container (recVer=0x0F) with two child records
-    const child1 = buildRecord(0x02, 0, 0xf009, new Uint8Array([0xaa]));
-    const child2 = buildRecord(0x02, 0, 0xf00a, new Uint8Array([0xbb]));
+    const child1 = buildRecord({ recVer: 0x02, recInstance: 0, recType: 0xf009, data: new Uint8Array([0xaa]) });
+    const child2 = buildRecord({ recVer: 0x02, recInstance: 0, recType: 0xf00a, data: new Uint8Array([0xbb]) });
     const childData = new Uint8Array(child1.length + child2.length);
     childData.set(child1, 0);
     childData.set(child2, child1.length);
 
-    const container = buildRecord(0x0f, 0, 0xf000, childData);
+    const container = buildRecord({ recVer: 0x0f, recInstance: 0, recType: 0xf000, data: childData });
     const containerRec = readOfficeArtRecord(container, 0)!;
 
     const found = findChildRecord(containerRec, OA_RT.FSP);
@@ -155,14 +155,14 @@ describe("findChildRecord", () => {
   });
 
   it("returns undefined for non-container", () => {
-    const buf = buildRecord(0x02, 0, 0xf00a, new Uint8Array(4));
+    const buf = buildRecord({ recVer: 0x02, recInstance: 0, recType: 0xf00a, data: new Uint8Array(4) });
     const record = readOfficeArtRecord(buf, 0)!;
     expect(findChildRecord(record, 0xf00a)).toBeUndefined();
   });
 
   it("returns undefined when type not found", () => {
-    const child = buildRecord(0x02, 0, 0xf009, new Uint8Array(2));
-    const container = buildRecord(0x0f, 0, 0xf000, child);
+    const child = buildRecord({ recVer: 0x02, recInstance: 0, recType: 0xf009, data: new Uint8Array(2) });
+    const container = buildRecord({ recVer: 0x0f, recInstance: 0, recType: 0xf000, data: child });
     const containerRec = readOfficeArtRecord(container, 0)!;
 
     expect(findChildRecord(containerRec, 0xf00a)).toBeUndefined();

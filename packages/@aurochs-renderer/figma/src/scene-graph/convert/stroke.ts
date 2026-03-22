@@ -14,8 +14,8 @@ import { figColorToSceneColor } from "./fill";
  * We use the maximum value for SVG/WebGL rendering.
  */
 function resolveStrokeWeight(strokeWeight: FigStrokeWeight | undefined): number {
-  if (strokeWeight === undefined) return 0;
-  if (typeof strokeWeight === "number") return strokeWeight;
+  if (strokeWeight === undefined) {return 0;}
+  if (typeof strokeWeight === "number") {return strokeWeight;}
   // Per-side weights - use max
   const w = strokeWeight as { top?: number; right?: number; bottom?: number; left?: number };
   return Math.max(w.top ?? 0, w.right ?? 0, w.bottom ?? 0, w.left ?? 0);
@@ -66,26 +66,26 @@ export function convertStrokeToSceneStroke(
   },
 ): Stroke | undefined {
   const width = resolveStrokeWeight(strokeWeight);
-  if (width === 0) return undefined;
+  if (width === 0) {return undefined;}
 
-  if (!paints || paints.length === 0) return undefined;
+  if (!paints || paints.length === 0) {return undefined;}
 
   const firstVisible = paints.find((p) => p.visible !== false);
-  if (!firstVisible) return undefined;
+  if (!firstVisible) {return undefined;}
 
   const paintType = getPaintType(firstVisible);
-  let color: { r: number; g: number; b: number; a: number };
+  const colorRef = { value: undefined as { r: number; g: number; b: number; a: number } | undefined };
 
   if (paintType === "SOLID") {
     const solidPaint = firstVisible as FigPaint & { color: FigColor };
-    color = figColorToSceneColor(solidPaint.color);
+    colorRef.value = figColorToSceneColor(solidPaint.color);
   } else {
     // Gradient strokes fall back to black
-    color = { r: 0, g: 0, b: 0, a: 1 };
+    colorRef.value = { r: 0, g: 0, b: 0, a: 1 };
   }
 
   return {
-    color,
+    color: colorRef.value,
     width,
     opacity: firstVisible.opacity ?? 1,
     linecap: mapStrokeCap(options?.strokeCap),

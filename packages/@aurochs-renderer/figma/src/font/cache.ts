@@ -5,114 +5,106 @@
 import type { FontLoader } from "./loader";
 import type { FontLoadOptions, LoadedFont } from "./types";
 
-/**
- * Font cache for loaded fonts
- */
-export class FontCache {
-  private cache = new Map<string, LoadedFont>();
+/** Font cache for loaded fonts */
+export type FontCache = {
+  /** Get cached font */
+  get(options: FontLoadOptions): LoadedFont | undefined;
+  /** Set cached font */
+  set(options: FontLoadOptions, font: LoadedFont): void;
+  /** Check if font is cached */
+  has(options: FontLoadOptions): boolean;
+  /** Clear cache */
+  clear(): void;
+  /** Get cache size */
+  readonly size: number;
+};
 
-  /**
-   * Generate cache key from font options
-   */
-  private getCacheKey(options: FontLoadOptions): string {
-    return `${options.family}:${options.weight ?? 400}:${options.style ?? "normal"}`;
-  }
-
-  /**
-   * Get cached font
-   */
-  get(options: FontLoadOptions): LoadedFont | undefined {
-    return this.cache.get(this.getCacheKey(options));
-  }
-
-  /**
-   * Set cached font
-   */
-  set(options: FontLoadOptions, font: LoadedFont): void {
-    this.cache.set(this.getCacheKey(options), font);
-  }
-
-  /**
-   * Check if font is cached
-   */
-  has(options: FontLoadOptions): boolean {
-    return this.cache.has(this.getCacheKey(options));
-  }
-
-  /**
-   * Clear cache
-   */
-  clear(): void {
-    this.cache.clear();
-  }
-
-  /**
-   * Get cache size
-   */
-  get size(): number {
-    return this.cache.size;
-  }
+/** Generate cache key from font load options */
+function getCacheKey(options: FontLoadOptions): string {
+  return `${options.family}:${options.weight ?? 400}:${options.style ?? "normal"}`;
 }
 
-/**
- * Caching wrapper for font loaders
- */
-export class CachingFontLoader implements FontLoader {
-  private cache = new FontCache();
-  private fallbackCache = new FontCache();
+/** Create a font cache */
+export function createFontCache(): FontCache {
+  const cache = new Map<string, LoadedFont>();
 
-  constructor(private readonly innerLoader: FontLoader) {}
+  return {
+    get(options) {
+      return cache.get(getCacheKey(options));
+    },
+    set(options, font) {
+      cache.set(getCacheKey(options), font);
+    },
+    has(options) {
+      return cache.has(getCacheKey(options));
+    },
+    clear() {
+      cache.clear();
+    },
+    get size() {
+      return cache.size;
+    },
+  };
+}
 
-  async loadFont(options: FontLoadOptions): Promise<LoadedFont | undefined> {
-    const cached = this.cache.get(options);
-    if (cached) {
-      return cached;
-    }
+/** Caching wrapper for font loaders */
+export type CachingFontLoader = FontLoader & {
+  /** Clear the font cache */
+  clearCache(): void;
+};
 
-    const font = await this.innerLoader.loadFont(options);
-    if (font) {
-      this.cache.set(options, font);
-    }
+/** Create a caching wrapper for a font loader */
+export function createCachingFontLoader(innerLoader: FontLoader): CachingFontLoader {
+  const fontCache = createFontCache();
+  const fallbackCache = createFontCache();
 
-    return font;
-  }
-
-  async isFontAvailable(family: string): Promise<boolean> {
-    return this.innerLoader.isFontAvailable(family);
-  }
-
-  async listFontFamilies(): Promise<readonly string[]> {
-    if (this.innerLoader.listFontFamilies) {
-      return this.innerLoader.listFontFamilies();
-    }
-    return [];
-  }
-
-  async loadFallbackFont(options: FontLoadOptions): Promise<LoadedFont | undefined> {
-    // Check if we have a cached fallback
-    const fallbackKey = { family: "__CJK_FALLBACK__", weight: options.weight, style: options.style };
-    const cached = this.fallbackCache.get(fallbackKey);
-    if (cached) {
-      return cached;
-    }
-
-    // Try to load a fallback font from inner loader
-    if (this.innerLoader.loadFallbackFont) {
-      const font = await this.innerLoader.loadFallbackFont(options);
-      if (font) {
-        this.fallbackCache.set(fallbackKey, font);
+  return {
+    async loadFont(options) {
+      const cached = fontCache.get(options);
+      if (cached) {
+        return cached;
       }
+
+      const font = await innerLoader.loadFont(options);
+      if (font) {
+        fontCache.set(options, font);
+      }
+
       return font;
-    }
+    },
 
-    return undefined;
-  }
+    async isFontAvailable(family) {
+      return innerLoader.isFontAvailable(family);
+    },
 
-  /**
-   * Clear the font cache
-   */
-  clearCache(): void {
-    this.cache.clear();
-    this.fallbackCache.clear();
-  }
+    async listFontFamilies() {
+      if (innerLoader.listFontFamilies) {
+        return innerLoader.listFontFamilies();
+      }
+      return [];
+    },
+
+    async loadFallbackFont(options) {
+      const fallbackKey = { family: "__CJK_FALLBACK__", weight: options.weight, style: options.style };
+      const cached = fallbackCache.get(fallbackKey);
+      if (cached) {
+        return cached;
+      }
+
+      if (innerLoader.loadFallbackFont) {
+        const font = await innerLoader.loadFallbackFont(options);
+        if (font) {
+          fallbackCache.set(fallbackKey, font);
+        }
+        return font;
+      }
+
+      return undefined;
+    },
+
+    clearCache() {
+      fontCache.clear();
+      fallbackCache.clear();
+    },
+  };
 }

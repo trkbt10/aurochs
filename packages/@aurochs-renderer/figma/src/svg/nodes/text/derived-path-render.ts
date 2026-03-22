@@ -7,7 +7,7 @@
  */
 
 import type { FigNode } from "@aurochs/fig/types";
-import { decodeBlobToSvgPath, decodePathCommands, type FigBlob, type PathCommand } from "@aurochs/fig/parser";
+import { decodePathCommands, type FigBlob, type PathCommand } from "@aurochs/fig/parser";
 import type { FigSvgRenderContext } from "../../../types";
 import { path, g, type SvgString, EMPTY_SVG } from "../../primitives";
 import { buildTransformAttr } from "../../transform";
@@ -101,10 +101,7 @@ export type DerivedPathRenderContext = FigSvgRenderContext & {
  * uses rounded baseline values for better pixel alignment.
  */
 function transformPathCommands(
-  commands: readonly PathCommand[],
-  position: { x: number; y: number },
-  fontSize: number,
-  precision: number = 5,
+  { commands, position, fontSize, precision = 5 }: { commands: readonly PathCommand[]; position: { x: number; y: number }; fontSize: number; precision?: number; }
 ): string {
   const parts: string[] = [];
 
@@ -195,7 +192,7 @@ function renderGlyphPath(glyph: DerivedGlyph, blobs: readonly FigBlob[], precisi
   }
 
   // Transform to screen coordinates
-  return transformPathCommands(commands, glyph.position, glyph.fontSize, precision);
+  return transformPathCommands({ commands, position: glyph.position, fontSize: glyph.fontSize, precision });
 }
 
 /**

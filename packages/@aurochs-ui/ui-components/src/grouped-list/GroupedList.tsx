@@ -120,15 +120,14 @@ export function GroupedList<TMeta = unknown>({
   const handleItemContextMenu = useCallback(
     (itemId: GroupedListItemId, e: React.MouseEvent) => {
       const item = items.find((i) => i.id === itemId);
-      const group = item ? groups.find((g) => g.id === item.groupId) : null;
-      openMenu(e.clientX, e.clientY, itemId, item?.groupId ?? null);
+      openMenu({ x: e.clientX, y: e.clientY, itemId, groupId: item?.groupId ?? null });
     },
-    [items, groups, openMenu]
+    [items, openMenu]
   );
 
   const handleGroupContextMenu = useCallback(
     (groupId: GroupedListGroupId, e: React.MouseEvent) => {
-      openMenu(e.clientX, e.clientY, null, groupId);
+      openMenu({ x: e.clientX, y: e.clientY, itemId: null, groupId });
     },
     [openMenu]
   );
@@ -166,7 +165,7 @@ export function GroupedList<TMeta = unknown>({
   const handleDragStart = useCallback(
     (itemId: GroupedListItemId, e: React.DragEvent) => {
       const item = items.find((i) => i.id === itemId);
-      if (!item) return;
+      if (!item) {return;}
 
       e.dataTransfer.effectAllowed = "move";
       e.dataTransfer.setData("text/plain", itemId);
@@ -181,11 +180,11 @@ export function GroupedList<TMeta = unknown>({
   );
 
   const handleDragOver = useCallback(
-    (itemId: GroupedListItemId, e: React.DragEvent) => {
-      if (dragState.type !== "dragging") return;
+    (itemId: GroupedListItemId, _e: React.DragEvent) => {
+      if (dragState.type !== "dragging") {return;}
 
       const targetItem = items.find((i) => i.id === itemId);
-      if (!targetItem || targetItem.groupId !== dragState.dragGroupId) return;
+      if (!targetItem || targetItem.groupId !== dragState.dragGroupId) {return;}
 
       // Find index of target item within its group
       const groupItems = groupedItems.get(targetItem.groupId) ?? [];
@@ -200,7 +199,7 @@ export function GroupedList<TMeta = unknown>({
 
   const handleDrop = useCallback(
     (itemId: GroupedListItemId, _e: React.DragEvent) => {
-      if (dragState.type !== "dragging") return;
+      if (dragState.type !== "dragging") {return;}
 
       const targetItem = items.find((i) => i.id === itemId);
       if (!targetItem || targetItem.groupId !== dragState.dragGroupId) {
@@ -231,9 +230,9 @@ export function GroupedList<TMeta = unknown>({
   // Context menu action handler
   const handleMenuAction = useCallback(
     (actionId: string) => {
-      if (menuState.type !== "open") return;
+      if (menuState.type !== "open") {return;}
 
-      const { itemId, groupId } = menuState;
+      const { itemId } = menuState;
 
       switch (actionId) {
         case "rename":
@@ -265,11 +264,11 @@ export function GroupedList<TMeta = unknown>({
   // Get drop target position for an item
   const getDropTargetPosition = useCallback(
     (itemId: GroupedListItemId): DropTargetPosition => {
-      if (dragState.type !== "dragging") return undefined;
-      if (dragState.dragItemId === itemId) return undefined;
+      if (dragState.type !== "dragging") {return undefined;}
+      if (dragState.dragItemId === itemId) {return undefined;}
 
       const item = items.find((i) => i.id === itemId);
-      if (!item || item.groupId !== dragState.dragGroupId) return undefined;
+      if (!item || item.groupId !== dragState.dragGroupId) {return undefined;}
 
       const groupItems = groupedItems.get(item.groupId) ?? [];
       const itemIndex = groupItems.findIndex((i) => i.id === itemId);
@@ -288,7 +287,7 @@ export function GroupedList<TMeta = unknown>({
 
   // Build context menu items
   const contextMenuItems = useMemo(() => {
-    if (menuState.type !== "open") return [];
+    if (menuState.type !== "open") {return [];}
 
     const { itemId, groupId } = menuState;
     const item = itemId ? items.find((i) => i.id === itemId) ?? null : null;
@@ -310,7 +309,7 @@ export function GroupedList<TMeta = unknown>({
     <div className={className} style={{ ...containerStyle, ...style }}>
       {sortedGroups.map((group) => {
         const groupItems = groupedItems.get(group.id) ?? [];
-        if (groupItems.length === 0) return null;
+        if (groupItems.length === 0) {return null;}
 
         return (
           <GroupedListGroup

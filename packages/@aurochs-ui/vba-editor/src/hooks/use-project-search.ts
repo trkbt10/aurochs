@@ -4,14 +4,14 @@
  * Search across all modules in the VBA project.
  */
 
-import { useMemo, useCallback, useEffect } from "react";
+import { useMemo, useEffect } from "react";
 import type { VbaProgramIr } from "@aurochs-office/vba";
 import type {
   ProjectSearchMatch,
   SearchOptions,
   ModifiedSourceMap,
 } from "../context/vba-editor/types";
-import { findMatches, buildLineIndex } from "./use-search";
+import { findMatches } from "./use-search";
 
 // =============================================================================
 // Types
@@ -60,7 +60,7 @@ export function useProjectSearch(args: UseProjectSearchArgs): UseProjectSearchRe
     }
 
     const results = new Map<string, ProjectSearchMatch[]>();
-    let total = 0;
+    const total = { value: 0 };
 
     for (const module of program.modules) {
       // Get source (modified or original)
@@ -78,11 +78,11 @@ export function useProjectSearch(args: UseProjectSearchArgs): UseProjectSearchRe
         }));
 
         results.set(module.name, projectMatches);
-        total += matches.length;
+        total.value += matches.length;
       }
     }
 
-    return { projectMatches: results, totalCount: total };
+    return { projectMatches: results, totalCount: total.value };
   }, [program, query, options, isOpen, modifiedSourceMap]);
 
   // Notify parent of changes

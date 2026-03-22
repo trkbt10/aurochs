@@ -4,10 +4,16 @@
  * Tests that Player is fully controlled and reflects external state.
  */
 
-import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { Player } from "./Player";
 import type { PlayerMedia, PlayerAction } from "./types";
+
+/** Create a fake callback that tracks call count */
+function createFakeCallback(): { (): void; callCount: number } {
+  const fn = (() => { fn.callCount++; }) as { (): void; callCount: number };
+  fn.callCount = 0;
+  return fn;
+}
 
 describe("Player", () => {
   const defaultMedia: PlayerMedia = {
@@ -112,17 +118,17 @@ describe("Player", () => {
 
   describe("callbacks", () => {
     it("calls onPlay when play button clicked", () => {
-      const onPlay = vi.fn();
+      const onPlay = createFakeCallback();
       render(
         <Player state="idle" media={defaultMedia} onPlay={onPlay} variant="panel" />
       );
 
       fireEvent.click(screen.getByRole("button", { name: "Play" }));
-      expect(onPlay).toHaveBeenCalledTimes(1);
+      expect(onPlay.callCount).toBe(1);
     });
 
     it("calls onPause when pause button clicked", () => {
-      const onPause = vi.fn();
+      const onPause = createFakeCallback();
       render(
         <Player
           state="playing"
@@ -135,11 +141,11 @@ describe("Player", () => {
       );
 
       fireEvent.click(screen.getByRole("button", { name: "Pause" }));
-      expect(onPause).toHaveBeenCalledTimes(1);
+      expect(onPause.callCount).toBe(1);
     });
 
     it("calls onStop when stop button clicked", () => {
-      const onStop = vi.fn();
+      const onStop = createFakeCallback();
       render(
         <Player
           state="playing"
@@ -151,11 +157,11 @@ describe("Player", () => {
       );
 
       fireEvent.click(screen.getByRole("button", { name: "Stop" }));
-      expect(onStop).toHaveBeenCalledTimes(1);
+      expect(onStop.callCount).toBe(1);
     });
 
     it("calls onPlay for resume in paused state", () => {
-      const onPlay = vi.fn();
+      const onPlay = createFakeCallback();
       render(
         <Player
           state="paused"
@@ -168,17 +174,17 @@ describe("Player", () => {
       );
 
       fireEvent.click(screen.getByRole("button", { name: "Resume" }));
-      expect(onPlay).toHaveBeenCalledTimes(1);
+      expect(onPlay.callCount).toBe(1);
     });
 
     it("calls onPlay for replay in completed state", () => {
-      const onPlay = vi.fn();
+      const onPlay = createFakeCallback();
       render(
         <Player state="completed" media={defaultMedia} onPlay={onPlay} variant="panel" />
       );
 
       fireEvent.click(screen.getByRole("button", { name: "Replay" }));
-      expect(onPlay).toHaveBeenCalledTimes(1);
+      expect(onPlay.callCount).toBe(1);
     });
   });
 
@@ -236,13 +242,13 @@ describe("Player", () => {
         id: "prev",
         icon: <span data-testid="prev-icon">P</span>,
         label: "Previous",
-        onClick: vi.fn(),
+        onClick: createFakeCallback(),
       };
       const rightAction: PlayerAction = {
         id: "next",
         icon: <span data-testid="next-icon">N</span>,
         label: "Next",
-        onClick: vi.fn(),
+        onClick: createFakeCallback(),
       };
 
       render(
@@ -260,7 +266,7 @@ describe("Player", () => {
     });
 
     it("calls custom action onClick", () => {
-      const onClick = vi.fn();
+      const onClick = createFakeCallback();
       const action: PlayerAction = {
         id: "custom",
         icon: <span>C</span>,
@@ -278,7 +284,7 @@ describe("Player", () => {
       );
 
       fireEvent.click(screen.getByRole("button", { name: "Custom Action" }));
-      expect(onClick).toHaveBeenCalledTimes(1);
+      expect(onClick.callCount).toBe(1);
     });
   });
 

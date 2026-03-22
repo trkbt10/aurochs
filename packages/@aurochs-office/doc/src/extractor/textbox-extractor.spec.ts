@@ -38,7 +38,7 @@ describe("parsePlcfTxbxTxt", () => {
 
 describe("extractTextboxes", () => {
   it("returns empty for fewer than 2 CPs", () => {
-    expect(extractTextboxes([0], "hello", 0)).toEqual([]);
+    expect(extractTextboxes({ textCps: [0], fullText: "hello", txbxTextStart: 0 })).toEqual([]);
   });
 
   it("extracts textbox content from text ranges", () => {
@@ -47,7 +47,7 @@ describe("extractTextboxes", () => {
     // Textbox text starts at offset 10 (after "main text\r")
     // CP 0..18 → chars 10..28 = "Textbox 1 content\r"
     // CP 18..33 → chars 28..43 = "Textbox 2 here\r"
-    const textboxes = extractTextboxes([0, 18, 33], text, 10);
+    const textboxes = extractTextboxes({ textCps: [0, 18, 33], fullText: text, txbxTextStart: 10 });
     expect(textboxes).toHaveLength(2);
     expect(textboxes[0].index).toBe(0);
     expect(textboxes[0].content[0].runs[0].text).toBe("Textbox 1 content");
@@ -57,7 +57,7 @@ describe("extractTextboxes", () => {
 
   it("skips empty textbox ranges", () => {
     const text = "Content\rNext\r";
-    const textboxes = extractTextboxes([0, 0, 8], text, 0);
+    const textboxes = extractTextboxes({ textCps: [0, 0, 8], fullText: text, txbxTextStart: 0 });
     // First range 0..0 is empty, second range 0..8 has content
     expect(textboxes).toHaveLength(1);
     expect(textboxes[0].index).toBe(1);
@@ -65,7 +65,7 @@ describe("extractTextboxes", () => {
 
   it("uses custom paragraph builder", () => {
     const builder = (s: number, e: number) => [{ runs: [{ text: `[${s}-${e}]` }] }];
-    const textboxes = extractTextboxes([0, 10], "x".repeat(20), 5, builder);
+    const textboxes = extractTextboxes({ textCps: [0, 10], fullText: "x".repeat(20), txbxTextStart: 5, buildParagraphs: builder });
     expect(textboxes).toHaveLength(1);
     expect(textboxes[0].content[0].runs[0].text).toBe("[5-15]");
   });

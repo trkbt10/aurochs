@@ -41,7 +41,7 @@ export const SPREADSHEET_FORMAT_DESCRIPTIONS: Record<SpreadsheetFormat, string> 
  */
 export function detectSpreadsheetFormat(fileName: string): SpreadsheetFormat {
   const lower = fileName.toLowerCase();
-  if (lower.endsWith(".xlsm")) return "xlsm";
+  if (lower.endsWith(".xlsm")) {return "xlsm";}
   return "xlsx";
 }
 
@@ -118,9 +118,9 @@ export const PRESENTATION_FORMAT_DESCRIPTIONS: Record<PresentationFormat, string
  */
 export function detectPresentationFormat(fileName: string): PresentationFormat {
   const lower = fileName.toLowerCase();
-  if (lower.endsWith(".pptm")) return "pptm";
-  if (lower.endsWith(".ppsm")) return "ppsm";
-  if (lower.endsWith(".ppsx")) return "ppsx";
+  if (lower.endsWith(".pptm")) {return "pptm";}
+  if (lower.endsWith(".ppsm")) {return "ppsm";}
+  if (lower.endsWith(".ppsx")) {return "ppsx";}
   return "pptx";
 }
 
@@ -193,7 +193,7 @@ export const DOCUMENT_FORMAT_DESCRIPTIONS: Record<DocumentFormat, string> = {
  */
 export function detectDocumentFormat(fileName: string): DocumentFormat {
   const lower = fileName.toLowerCase();
-  if (lower.endsWith(".docm")) return "docm";
+  if (lower.endsWith(".docm")) {return "docm";}
   return "docx";
 }
 

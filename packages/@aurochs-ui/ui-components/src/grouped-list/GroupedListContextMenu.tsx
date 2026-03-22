@@ -39,9 +39,9 @@ export function GroupedListContextMenu({
   onClose,
 }: GroupedListContextMenuProps) {
   const menuItems = useMemo<readonly MenuEntry[]>(() => {
-    if (menuState.type !== "open") return [];
+    if (menuState.type !== "open") {return [];}
 
-    const { itemId, groupId } = menuState;
+    const { itemId } = menuState;
     const result: MenuEntry[] = [];
 
     // Build "New" submenu for groups that allow creation

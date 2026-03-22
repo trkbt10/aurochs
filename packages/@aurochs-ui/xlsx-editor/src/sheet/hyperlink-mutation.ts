@@ -46,6 +46,17 @@ function isSameRange(a: CellRange, b: CellRange): boolean {
   );
 }
 
+function resolveHyperlinks(
+  existing: readonly XlsxHyperlink[],
+  existingIndex: number,
+  hyperlink: XlsxHyperlink,
+): readonly XlsxHyperlink[] {
+  if (existingIndex >= 0) {
+    return existing.map((h, idx) => (idx === existingIndex ? hyperlink : h));
+  }
+  return [...existing, hyperlink];
+}
+
 /**
  * Set or update a hyperlink for a cell/range
  */
@@ -61,14 +72,7 @@ export function setHyperlink(
   // Check if hyperlink already exists for this range
   const existingIndex = existing.findIndex((h) => isSameRange(h.ref, hyperlink.ref));
 
-  let newHyperlinks: readonly XlsxHyperlink[];
-  if (existingIndex >= 0) {
-    // Update existing hyperlink
-    newHyperlinks = existing.map((h, idx) => (idx === existingIndex ? hyperlink : h));
-  } else {
-    // Add new hyperlink
-    newHyperlinks = [...existing, hyperlink];
-  }
+  const newHyperlinks = resolveHyperlinks(existing, existingIndex, hyperlink);
 
   return updateSheet(workbook, sheetIndex, { hyperlinks: newHyperlinks });
 }

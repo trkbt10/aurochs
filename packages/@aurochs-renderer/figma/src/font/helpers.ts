@@ -36,7 +36,7 @@ export function fontHasGlyph(font: AbstractFont, char: string): boolean {
  */
 export function isCJKCharacter(char: string): boolean {
   const code = char.codePointAt(0);
-  if (code === undefined) return false;
+  if (code === undefined) {return false;}
 
   return (
     // CJK Unified Ideographs

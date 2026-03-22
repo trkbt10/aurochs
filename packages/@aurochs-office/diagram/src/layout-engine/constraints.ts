@@ -236,13 +236,13 @@ export function applyConstraints(
   constraints: readonly DiagramConstraint[],
   context: ConstraintContext
 ): ConstraintResult {
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- Accumulated through constraint loop iterations
   let x = node.x;
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- Accumulated through constraint loop iterations
   let y = node.y;
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- Accumulated through constraint loop iterations
   let width = node.width;
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- Accumulated through constraint loop iterations
   let height = node.height;
 
   // Resolve and apply each constraint
@@ -670,7 +670,7 @@ export function applyRules(
 
     if (currentValue === undefined) {continue;}
 
-    // eslint-disable-next-line no-restricted-syntax
+    // eslint-disable-next-line no-restricted-syntax -- Mutated by factor/offset application below
     let newValue = currentValue;
 
     // Apply factor

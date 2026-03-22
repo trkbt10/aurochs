@@ -127,13 +127,13 @@ function extractSvgStats(content: string): {
   const rectRegex =
     /<rect[^>]*(?:x="(\d+(?:\.\d+)?)")?[^>]*(?:y="(\d+(?:\.\d+)?)")?[^>]*width="(\d+(?:\.\d+)?)"[^>]*height="(\d+(?:\.\d+)?)"/g;
   const rectPositions: Array<{ x: number; y: number; width: number; height: number }> = [];
-  let match;
-  while ((match = rectRegex.exec(content)) !== null) {
+  const matchRef = { value: undefined as RegExpExecArray | null | undefined };
+  while ((matchRef.value = rectRegex.exec(content)) !== null) {
     rectPositions.push({
-      x: parseFloat(match[1] ?? "0"),
-      y: parseFloat(match[2] ?? "0"),
-      width: parseFloat(match[3]),
-      height: parseFloat(match[4]),
+      x: parseFloat(matchRef.value[1] ?? "0"),
+      y: parseFloat(matchRef.value[2] ?? "0"),
+      width: parseFloat(matchRef.value[3]),
+      height: parseFloat(matchRef.value[4]),
     });
   }
 

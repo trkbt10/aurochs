@@ -404,13 +404,16 @@ function generateTimingXml(animations: ShapeAnimation[]): string {
   </p:timing>`;
 }
 
+/** Format shape fill XML element */
+function formatShapeFill(fill: string | undefined): string {
+  if (fill) {
+    return `<a:solidFill><a:srgbClr val="${fill}"/></a:solidFill>`;
+  }
+  return `<a:solidFill><a:schemeClr val="accent1"/></a:solidFill>`;
+}
+
 function generateShapeXml(shape: ShapeConfig): string {
-  const fill = (() => {
-    if (shape.fill) {
-      return `<a:solidFill><a:srgbClr val="${shape.fill}"/></a:solidFill>`;
-    }
-    return `<a:solidFill><a:schemeClr val="accent1"/></a:solidFill>`;
-  })();
+  const fill = formatShapeFill(shape.fill);
 
   return `<p:sp>
         <p:nvSpPr>

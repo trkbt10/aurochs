@@ -12,21 +12,21 @@ import puppeteer, { type Browser, type Page } from "puppeteer";
  * Declared globally so page.evaluate callbacks can access these without casts.
  */
 declare global {
-  // eslint-disable-next-line no-var -- global augmentation requires var
+   
   var getShapeIds: () => string[];
-  // eslint-disable-next-line no-var
+   
   var getShapeBounds: (id: string) => ShapeBounds | null;
-  // eslint-disable-next-line no-var
+   
   var getSelectedIds: () => string[];
-  // eslint-disable-next-line no-var
+   
   var getDragType: () => string;
-  // eslint-disable-next-line no-var
+   
   var getShapeCount: () => number;
-  // eslint-disable-next-line no-var
+   
   var getTextEditState: () => { active: boolean; shapeId: string | undefined };
-  // eslint-disable-next-line no-var
+   
   var addShape: (type: string, preset?: string, x?: number, y?: number) => string | null;
-  // eslint-disable-next-line no-var
+   
   var deleteSelectedShapes: () => void;
 }
 
@@ -122,7 +122,7 @@ export async function getDragType(page: Page): Promise<string> {
  */
 export async function getHitAreaScreenBox(page: Page, id: string) {
   const el = await page.$(`rect[data-shape-id="${id}"]`);
-  if (!el) return null;
+  if (!el) {return null;}
   return el.boundingBox();
 }
 
@@ -131,7 +131,7 @@ export async function getHitAreaScreenBox(page: Page, id: string) {
  */
 export async function clickShape(page: Page, id: string): Promise<void> {
   const box = await getHitAreaScreenBox(page, id);
-  if (!box) throw new Error(`Shape ${id} not found in DOM`);
+  if (!box) {throw new Error(`Shape ${id} not found in DOM`);}
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
   await new Promise((r) => setTimeout(r, 200));
 }
@@ -140,14 +140,10 @@ export async function clickShape(page: Page, id: string): Promise<void> {
  * Drag a shape from its center by (dx, dy) pixels on screen
  */
 export async function dragShape(
-  page: Page,
-  id: string,
-  dx: number,
-  dy: number,
-  steps = 10,
+  { page, id, dx, dy, steps = 10 }: { page: Page; id: string; dx: number; dy: number; steps?: number },
 ): Promise<void> {
   const box = await getHitAreaScreenBox(page, id);
-  if (!box) throw new Error(`Shape ${id} not found in DOM`);
+  if (!box) {throw new Error(`Shape ${id} not found in DOM`);}
 
   const startX = box.x + box.width / 2;
   const startY = box.y + box.height / 2;
@@ -181,14 +177,13 @@ export async function getTextEditState(page: Page): Promise<{ active: boolean; s
 /**
  * Add a shape programmatically, returns the new shape ID
  */
-export async function addShape(page: Page, type: string, preset?: string, x?: number, y?: number): Promise<string | null> {
+export async function addShape(
+  { page, type, preset, x, y }: { page: Page; type: string; preset?: string; x?: number; y?: number },
+): Promise<string | null> {
   return page.evaluate(
-    (t: string, p: string | undefined, cx: number | undefined, cy: number | undefined) =>
+    ({ t, p, cx, cy }: { t: string; p: string | undefined; cx: number | undefined; cy: number | undefined }) =>
       window.addShape(t, p, cx, cy),
-    type,
-    preset,
-    x,
-    y,
+    { t: type, p: preset, cx: x, cy: y },
   );
 }
 

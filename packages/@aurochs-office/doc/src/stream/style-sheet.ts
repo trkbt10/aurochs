@@ -33,14 +33,14 @@ export type StyleSheetData = {
 /** Parse the STSH (style sheet) from the table stream. */
 export function parseStyleSheet(tableStream: Uint8Array, fc: number, lcb: number): StyleSheetData {
   const emptyResult: StyleSheetData = { styles: [], upxMap: new Map() };
-  if (lcb === 0) return emptyResult;
-  if (fc + lcb > tableStream.length) return emptyResult;
+  if (lcb === 0) {return emptyResult;}
+  if (fc + lcb > tableStream.length) {return emptyResult;}
 
   const view = new DataView(tableStream.buffer, tableStream.byteOffset, tableStream.byteLength);
 
   // STSHI header size
   const cbStshi = view.getUint16(fc, true);
-  if (cbStshi < 4) return emptyResult;
+  if (cbStshi < 4) {return emptyResult;}
 
   // STSHI header fields
   const cstd = view.getUint16(fc + 2, true);
@@ -53,7 +53,7 @@ export function parseStyleSheet(tableStream: Uint8Array, fc: number, lcb: number
   const upxMap = new Map<number, StyleUpxEntry>();
 
   for (let i = 0; i < cstd; i++) {
-    if (offset + 2 > fc + lcb) break;
+    if (offset + 2 > fc + lcb) {break;}
 
     const cbStd = view.getUint16(offset, true);
     offset += 2;
@@ -64,9 +64,9 @@ export function parseStyleSheet(tableStream: Uint8Array, fc: number, lcb: number
       continue;
     }
 
-    if (offset + cbStd > fc + lcb) break;
+    if (offset + cbStd > fc + lcb) {break;}
 
-    const { style, upx } = parseStd(tableStream, offset, cbStd, cbSTDBaseInFile, i);
+    const { style, upx } = parseStd({ data: tableStream, offset, cbStd, cbSTDBaseInFile, index: i });
     styles.push(style);
     if (upx) {
       upxMap.set(i, upx);
@@ -93,13 +93,45 @@ function sgcToType(sgc: number): DocStyleType {
   }
 }
 
-function parseStd(
-  data: Uint8Array,
-  offset: number,
-  cbStd: number,
-  cbSTDBaseInFile: number,
-  index: number,
-): { style: DocStyle; upx?: StyleUpxEntry } {
+/**
+ * Parse STD word 2 for cupx and istdNext.
+ */
+function parseWord2(view: DataView, offset: number, cbStd: number): { istdNext: number | undefined; cupx: number } {
+  if (cbStd < 6) { return { istdNext: undefined, cupx: 0 }; }
+  const word2 = view.getUint16(offset + 4, true);
+  return { cupx: word2 & 0x000f, istdNext: (word2 >> 4) & 0x0fff };
+}
+
+/**
+ * Parse the style name (xstzName) from STD data.
+ */
+function parseStyleName(options: { data: Uint8Array; view: DataView; nameOffset: number; stdEnd: number }): { name: string | undefined; cch: number } {
+  const { data, view, nameOffset, stdEnd } = options;
+  if (nameOffset + 2 > stdEnd) { return { name: undefined, cch: 0 }; }
+  const cch = view.getUint16(nameOffset, true);
+  if (cch > 0 && nameOffset + 2 + cch * 2 <= stdEnd) {
+    const nameBytes = data.subarray(nameOffset + 2, nameOffset + 2 + cch * 2);
+    return { name: new TextDecoder("utf-16le").decode(nameBytes), cch };
+  }
+  return { name: undefined, cch };
+}
+
+/**
+ * Compute the byte size of the xstzName field.
+ */
+function computeNameDataSize(nameOffset: number, stdEnd: number, cch: number): number {
+  if (nameOffset + 2 <= stdEnd) { return 2 + cch * 2 + 2; }
+  return 0;
+}
+
+function parseStd(options: {
+  data: Uint8Array;
+  offset: number;
+  cbStd: number;
+  cbSTDBaseInFile: number;
+  index: number;
+}): { style: DocStyle; upx?: StyleUpxEntry } {
+  const { data, offset, cbStd, cbSTDBaseInFile, index } = options;
   const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
   const stdEnd = offset + cbStd;
 
@@ -117,26 +149,11 @@ function parseStd(
   const istdBase = (word1 >> 4) & 0x0fff;
 
   // STD word 2: cupx(4bit) + istdNext(12bit)
-  let istdNext: number | undefined;
-  let cupx = 0;
-  if (cbStd >= 6) {
-    const word2 = view.getUint16(offset + 4, true);
-    cupx = word2 & 0x000f;
-    istdNext = (word2 >> 4) & 0x0fff;
-  }
+  const { istdNext, cupx } = parseWord2(view, offset, cbStd);
 
   // Style name: after cbSTDBaseInFile bytes from the STD start
-  let name: string | undefined;
-  let cch = 0;
   const nameOffset = offset + cbSTDBaseInFile;
-  if (nameOffset + 2 <= stdEnd) {
-    // xstzName: cch(2B) + UTF-16LE string + null(2B)
-    cch = view.getUint16(nameOffset, true);
-    if (cch > 0 && nameOffset + 2 + cch * 2 <= stdEnd) {
-      const nameBytes = data.subarray(nameOffset + 2, nameOffset + 2 + cch * 2);
-      name = new TextDecoder("utf-16le").decode(nameBytes);
-    }
-  }
+  const { name, cch } = parseStyleName({ data, view, nameOffset, stdEnd });
 
   const style: DocStyle = {
     index,
@@ -148,31 +165,36 @@ function parseStd(
 
   // Parse UPX array after name
   // xstzName = cch(2B) + chars(cch*2B) + null(2B)
-  const nameDataSize = nameOffset + 2 <= stdEnd ? 2 + cch * 2 + 2 : 0;
+  const nameDataSize = computeNameDataSize(nameOffset, stdEnd, cch);
   const upxStart = nameOffset + nameDataSize;
-  const upx = cupx > 0 && upxStart < stdEnd
-    ? parseUpxArray(data, upxStart, stdEnd, cupx, sgc)
-    : undefined;
+  const upx = resolveUpxArray({ cupx, upxStart, stdEnd, data, sgc });
 
   return { style, upx };
 }
 
 /** Parse UPX array from STD body. */
-function parseUpxArray(
-  data: Uint8Array,
-  start: number,
-  end: number,
-  cupx: number,
-  sgc: number,
-): StyleUpxEntry | undefined {
-  let paragraphSprms: readonly Sprm[] = [];
-  let characterSprms: readonly Sprm[] = [];
+function resolveUpxArray(ctx: { cupx: number; upxStart: number; stdEnd: number; data: Uint8Array; sgc: number }): StyleUpxEntry | undefined {
+  const { cupx, upxStart, stdEnd, data, sgc } = ctx;
+  if (cupx <= 0 || upxStart >= stdEnd) { return undefined; }
+  return parseUpxArray({ data, start: upxStart, end: stdEnd, cupx, sgc });
+}
+
+function parseUpxArray(options: {
+  data: Uint8Array;
+  start: number;
+  end: number;
+  cupx: number;
+  sgc: number;
+}): StyleUpxEntry | undefined {
+  const { data, start, end, cupx, sgc } = options;
+  const paragraphSprms = { value: [] as readonly Sprm[] };
+  const characterSprms = { value: [] as readonly Sprm[] };
 
   // eslint-disable-next-line no-restricted-syntax -- sequential UPX read
   let pos = start;
 
   for (let u = 0; u < cupx; u++) {
-    if (pos + 2 > end) break;
+    if (pos + 2 > end) {break;}
 
     const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
     const cbUpx = view.getUint16(pos, true);
@@ -181,7 +203,7 @@ function parseUpxArray(
     if (cbUpx === 0 || pos + cbUpx > end) {
       pos += cbUpx;
       // Align to even boundary
-      if (cbUpx % 2 !== 0) pos++;
+      if (cbUpx % 2 !== 0) {pos++;}
       continue;
     }
 
@@ -191,13 +213,13 @@ function parseUpxArray(
         // PAPX: istd(2B) + grpprl
         const grpprlData = data.subarray(pos + 2, pos + cbUpx);
         if (grpprlData.length > 0) {
-          paragraphSprms = parseGrpprl(grpprlData);
+          paragraphSprms.value = parseGrpprl(grpprlData);
         }
       } else if (u === 1) {
         // CHPX: grpprl
         const grpprlData = data.subarray(pos, pos + cbUpx);
         if (grpprlData.length > 0) {
-          characterSprms = parseGrpprl(grpprlData);
+          characterSprms.value = parseGrpprl(grpprlData);
         }
       }
     } else if (sgc === 2) {
@@ -205,19 +227,19 @@ function parseUpxArray(
       if (u === 0) {
         const grpprlData = data.subarray(pos, pos + cbUpx);
         if (grpprlData.length > 0) {
-          characterSprms = parseGrpprl(grpprlData);
+          characterSprms.value = parseGrpprl(grpprlData);
         }
       }
     }
 
     pos += cbUpx;
     // Align to even boundary
-    if (cbUpx % 2 !== 0) pos++;
+    if (cbUpx % 2 !== 0) {pos++;}
   }
 
-  if (paragraphSprms.length === 0 && characterSprms.length === 0) {
+  if (paragraphSprms.value.length === 0 && characterSprms.value.length === 0) {
     return undefined;
   }
 
-  return { paragraphSprms, characterSprms };
+  return { paragraphSprms: paragraphSprms.value, characterSprms: characterSprms.value };
 }

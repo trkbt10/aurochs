@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+/** @file Mermaid escape function tests */
 import { escapeMermaidLabel, sanitizeNodeId } from "./escape";
 
 describe("escapeMermaidLabel", () => {

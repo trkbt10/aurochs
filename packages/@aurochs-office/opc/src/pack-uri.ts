@@ -49,7 +49,7 @@ function normalizePackageIriForComparison(packageIri: string): string | null {
     const hostname = url.hostname.toLowerCase();
     const username = url.username;
     const password = url.password;
-    // eslint-disable-next-line no-restricted-syntax
+    // eslint-disable-next-line no-restricted-syntax -- Conditionally cleared for default ports
     let port = url.port;
     if ((scheme === "http:" && port === "80") || (scheme === "https:" && port === "443")) {
       port = "";
@@ -57,7 +57,11 @@ function normalizePackageIriForComparison(packageIri: string): string | null {
     const auth = username ? `${username}${password ? `:${password}` : ""}@` : "";
     const portPart = port ? `:${port}` : "";
     return `${scheme}//${auth}${hostname}${portPart}${url.pathname}${url.search}${url.hash}`;
-  } catch {
+  } catch (error: unknown) {
+    // Invalid URL format — not a valid package IRI
+    if (error instanceof TypeError || error instanceof URIError) {
+      return null;
+    }
     return null;
   }
 }

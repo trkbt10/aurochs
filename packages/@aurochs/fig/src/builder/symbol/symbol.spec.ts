@@ -2,7 +2,7 @@
  * @file Unit tests for SymbolNodeBuilder
  */
 
-import { symbolNode, SymbolNodeBuilder } from "./symbol";
+import { symbolNode } from "./symbol";
 
 describe("SymbolNodeBuilder", () => {
   it("creates basic symbol with defaults", () => {
@@ -113,8 +113,10 @@ describe("SymbolNodeBuilder", () => {
 });
 
 describe("Factory function", () => {
-  it("symbolNode returns SymbolNodeBuilder", () => {
+  it("symbolNode returns builder with expected methods", () => {
     const builder = symbolNode(1, 0);
-    expect(builder).toBeInstanceOf(SymbolNodeBuilder);
+    expect(typeof builder.name).toBe("function");
+    expect(typeof builder.size).toBe("function");
+    expect(typeof builder.build).toBe("function");
   });
 });

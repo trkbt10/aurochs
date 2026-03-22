@@ -14,7 +14,7 @@
 
 /* eslint-disable no-restricted-syntax -- Test file uses let for sequential state updates */
 
-import { describe, it, expect, beforeEach } from "vitest";
+// Test globals (describe, it, expect, beforeEach) injected by the runner
 import {
   presentationEditorReducer,
   createPresentationEditorState,
@@ -50,7 +50,7 @@ function getShapeById(state: PresentationEditorState, id: ShapeId): Shape | unde
 }
 
 function shapeId(shape: Shape): ShapeId {
-  if (!("nonVisual" in shape)) throw new Error("Shape missing nonVisual");
+  if (!("nonVisual" in shape)) {throw new Error("Shape missing nonVisual");}
   return shape.nonVisual.id;
 }
 

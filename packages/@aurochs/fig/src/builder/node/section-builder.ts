@@ -5,9 +5,6 @@
  * They help organize frames on a canvas and have a distinct background color.
  */
 
-import type { Color } from "../types";
-import { NODE_TYPE_VALUES } from "../../constants";
-
 export type SectionNodeData = {
   readonly localID: number;
   readonly parentID: number;
@@ -26,90 +23,66 @@ export type SectionNodeData = {
   readonly opacity: number;
 };
 
-export class SectionNodeBuilder {
-  private _localID: number;
-  private _parentID: number;
-  private _name: string;
-  private _width: number;
-  private _height: number;
-  private _x: number;
-  private _y: number;
-  private _contentsHidden: boolean;
-  private _visible: boolean;
-  private _opacity: number;
+/** Section node builder instance */
+export type SectionNodeBuilder = {
+  name: (name: string) => SectionNodeBuilder;
+  size: (width: number, height: number) => SectionNodeBuilder;
+  position: (x: number, y: number) => SectionNodeBuilder;
+  contentsHidden: (hidden?: boolean) => SectionNodeBuilder;
+  visible: (v: boolean) => SectionNodeBuilder;
+  opacity: (o: number) => SectionNodeBuilder;
+  build: () => SectionNodeData;
+};
 
-  constructor(localID: number, parentID: number) {
-    this._localID = localID;
-    this._parentID = parentID;
-    this._name = "Section";
-    this._width = 800;
-    this._height = 600;
-    this._x = 0;
-    this._y = 0;
-    this._contentsHidden = false;
-    this._visible = true;
-    this._opacity = 1;
-  }
+/** Create a section node builder */
+function createSectionNodeBuilder(localID: number, parentID: number): SectionNodeBuilder {
+  const state = {
+    name: "Section",
+    width: 800,
+    height: 600,
+    x: 0,
+    y: 0,
+    contentsHidden: false,
+    visible: true,
+    opacity: 1,
+  };
 
-  name(name: string): this {
-    this._name = name;
-    return this;
-  }
+  const builder: SectionNodeBuilder = {
+    name(n: string) { state.name = n; return builder; },
+    size(width: number, height: number) { state.width = width; state.height = height; return builder; },
+    position(x: number, y: number) { state.x = x; state.y = y; return builder; },
+    /** Hide or show the section contents */
+    contentsHidden(hidden: boolean = true) { state.contentsHidden = hidden; return builder; },
+    visible(v: boolean) { state.visible = v; return builder; },
+    opacity(o: number) { state.opacity = o; return builder; },
 
-  size(width: number, height: number): this {
-    this._width = width;
-    this._height = height;
-    return this;
-  }
+    build(): SectionNodeData {
+      return {
+        localID,
+        parentID,
+        name: state.name,
+        size: { x: state.width, y: state.height },
+        transform: {
+          m00: 1,
+          m01: 0,
+          m02: state.x,
+          m10: 0,
+          m11: 1,
+          m12: state.y,
+        },
+        sectionContentsHidden: state.contentsHidden || undefined,
+        visible: state.visible,
+        opacity: state.opacity,
+      };
+    },
+  };
 
-  position(x: number, y: number): this {
-    this._x = x;
-    this._y = y;
-    return this;
-  }
-
-  /**
-   * Hide or show the section contents
-   */
-  contentsHidden(hidden: boolean = true): this {
-    this._contentsHidden = hidden;
-    return this;
-  }
-
-  visible(v: boolean): this {
-    this._visible = v;
-    return this;
-  }
-
-  opacity(o: number): this {
-    this._opacity = o;
-    return this;
-  }
-
-  build(): SectionNodeData {
-    return {
-      localID: this._localID,
-      parentID: this._parentID,
-      name: this._name,
-      size: { x: this._width, y: this._height },
-      transform: {
-        m00: 1,
-        m01: 0,
-        m02: this._x,
-        m10: 0,
-        m11: 1,
-        m12: this._y,
-      },
-      sectionContentsHidden: this._contentsHidden || undefined,
-      visible: this._visible,
-      opacity: this._opacity,
-    };
-  }
+  return builder;
 }
 
 /**
  * Create a new Section node builder
  */
 export function sectionNode(localID: number, parentID: number): SectionNodeBuilder {
-  return new SectionNodeBuilder(localID, parentID);
+  return createSectionNodeBuilder(localID, parentID);
 }

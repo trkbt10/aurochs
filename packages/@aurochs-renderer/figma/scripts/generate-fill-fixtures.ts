@@ -23,7 +23,6 @@ import {
   solidPaint,
   linearGradient,
   radialGradient,
-  stroke,
   type Paint,
   type GradientPaint,
 } from "@aurochs/fig/builder";
@@ -411,7 +410,7 @@ async function generateFillFixtures(): Promise<void> {
   const GRID_GAP = 30;
   const MARGIN = 50;
 
-  let nextID = 10;
+  const nextIDRef = { value: 10 };
 
   // Add each fill frame
   FILL_FRAMES.forEach((frameData, index) => {
@@ -423,7 +422,7 @@ async function generateFillFixtures(): Promise<void> {
     const frameX = MARGIN + col * (maxFrameWidth + GRID_GAP);
     const frameY = MARGIN + row * (maxFrameHeight + GRID_GAP);
 
-    const frameID = nextID++;
+    const frameID = nextIDRef.value++;
     const bgColor = hexToRgb(frameData.background);
 
     figFile.addFrame(
@@ -439,7 +438,7 @@ async function generateFillFixtures(): Promise<void> {
 
     // Add children
     for (const child of frameData.children) {
-      const childID = nextID++;
+      const childID = nextIDRef.value++;
 
       if (child.shape === "rect") {
         const builder = roundedRectNode(childID, frameID)

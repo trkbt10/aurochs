@@ -289,6 +289,24 @@ export const handleCreateModule: ActionHandler<
   };
 };
 
+type SelectReplacementOptions = {
+  readonly activeModuleName: string | undefined;
+  readonly deletedName: string;
+  readonly remainingModules: readonly VbaModule[];
+  readonly deletedIndex: number;
+};
+
+/**
+ * Select a replacement module after deletion.
+ */
+function selectReplacementModule(options: SelectReplacementOptions): string | undefined {
+  const { activeModuleName, deletedName, remainingModules, deletedIndex } = options;
+  if (activeModuleName !== deletedName) {
+    return activeModuleName;
+  }
+  return remainingModules[Math.max(0, deletedIndex - 1)]?.name ?? remainingModules[0]?.name;
+}
+
 export const handleDeleteModule: ActionHandler<
   Extract<VbaEditorAction, { type: "DELETE_MODULE" }>
 > = (state, action) => {
@@ -314,12 +332,12 @@ export const handleDeleteModule: ActionHandler<
   );
 
   // If deleted module was active, select another
-  let newActiveModuleName = state.activeModuleName;
-  if (state.activeModuleName === action.moduleName) {
-    // Select previous module, or first module, or undefined
-    newActiveModuleName =
-      newModules[Math.max(0, moduleIndex - 1)]?.name ?? newModules[0]?.name;
-  }
+  const newActiveModuleName = selectReplacementModule({
+    activeModuleName: state.activeModuleName,
+    deletedName: action.moduleName,
+    remainingModules: newModules,
+    deletedIndex: moduleIndex,
+  });
 
   // Clean up modified source for deleted module
   const newSourceMap = new Map(state.sourceHistory.present);
@@ -386,10 +404,8 @@ export const handleRenameModule: ActionHandler<
   }
 
   // Update active module name if renamed
-  const newActiveModuleName =
-    state.activeModuleName === action.oldName
-      ? action.newName
-      : state.activeModuleName;
+  const wasActive = state.activeModuleName === action.oldName;
+  const newActiveModuleName = wasActive ? action.newName : state.activeModuleName;
 
   return {
     ...state,

@@ -15,7 +15,16 @@ import {
   type PlayerAction,
 } from "@aurochs-ui/ui-components/player";
 import { SkipForwardIcon, SkipBackIcon } from "@aurochs-ui/ui-components/icons";
+import type { ReactNode } from "react";
 import type { ComponentEntry, Story } from "../types";
+
+/** Build a single-item action list when enabled, empty otherwise */
+function buildActionList(
+  { show, id, icon, label }: { show: boolean; id: string; icon: ReactNode; label: string },
+): PlayerAction[] {
+  if (!show) {return [];}
+  return [{ id, icon, label, onClick: () => {} }];
+}
 
 // =============================================================================
 // Interactive Story - Simulates External State
@@ -38,7 +47,7 @@ function InteractivePlayer({ variant, pausable, showActions }: InteractiveProps)
 
   // Simulate async execution
   useEffect(() => {
-    if (state !== "playing") return;
+    if (state !== "playing") {return;}
 
     const interval = setInterval(() => {
       setProgress((p) => {
@@ -68,13 +77,9 @@ function InteractivePlayer({ variant, pausable, showActions }: InteractiveProps)
     setProgress(0);
   }, []);
 
-  const leftActions: PlayerAction[] = showActions
-    ? [{ id: "prev", icon: <SkipBackIcon size={18} />, label: "Previous", onClick: () => {} }]
-    : [];
+  const leftActions: PlayerAction[] = buildActionList({ show: showActions, id: "prev", icon: <SkipBackIcon size={18} />, label: "Previous" });
 
-  const rightActions: PlayerAction[] = showActions
-    ? [{ id: "next", icon: <SkipForwardIcon size={18} />, label: "Next", onClick: () => {} }]
-    : [];
+  const rightActions: PlayerAction[] = buildActionList({ show: showActions, id: "next", icon: <SkipForwardIcon size={18} />, label: "Next" });
 
   return (
     <div>

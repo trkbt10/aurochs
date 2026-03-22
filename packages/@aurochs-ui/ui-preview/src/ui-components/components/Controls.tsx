@@ -4,7 +4,7 @@
 
 import type { CSSProperties, ReactNode } from "react";
 import { colorTokens } from "@aurochs-ui/ui-components/design-tokens";
-import type { ControlDef, ControlType } from "../types";
+import type { ControlDef } from "../types";
 
 // =============================================================================
 // Styles
@@ -76,10 +76,12 @@ export type ControlsProps = {
 // =============================================================================
 
 function renderControl(
-  key: string,
-  def: ControlDef<unknown>,
-  value: unknown,
-  onChange: (key: string, value: unknown) => void
+  { key, def, value, onChange }: {
+    key: string;
+    def: ControlDef<unknown>;
+    value: unknown;
+    onChange: (key: string, value: unknown) => void;
+  },
 ): ReactNode {
   const control = def.control;
 
@@ -160,6 +162,17 @@ function renderControl(
 // Component
 // =============================================================================
 
+
+
+
+
+
+
+
+
+
+
+/** Panel rendering interactive controls for story props */
 export function Controls({ controls, values, onChange }: ControlsProps): ReactNode {
   const keys = Object.keys(controls);
 
@@ -173,12 +186,12 @@ export function Controls({ controls, values, onChange }: ControlsProps): ReactNo
 
       {keys.map((key) => {
         const def = controls[key];
-        if (!def) return null;
+        if (!def) {return null;}
 
         return (
           <div key={key} style={rowStyle}>
             <span style={labelStyle}>{def.label}</span>
-            {renderControl(key, def, values[key], onChange)}
+            {renderControl({ key, def, value: values[key], onChange })}
           </div>
         );
       })}

@@ -4,12 +4,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { ParsedFigFile } from "@aurochs/fig/parser";
-import { buildNodeTree, findNodesByType, getNodeType } from "@aurochs/fig/parser";
+import { buildNodeTree, findNodesByType } from "@aurochs/fig/parser";
 import type { FigNode } from "@aurochs/fig/types";
 import { preResolveSymbols } from "../../src/symbols/symbol-pre-resolver";
 import { renderCanvas } from "../../src/svg/renderer";
-import { BrowserFontLoader } from "../../src/font-drivers/browser";
-import { CachingFontLoader } from "../../src/font";
+import { createBrowserFontLoader, isBrowserFontLoaderSupported } from "../../src/font-drivers/browser";
+import { createCachingFontLoader } from "../../src/font";
 import { buildSceneGraph } from "../../src/scene-graph/builder";
 import { InspectorView } from "./InspectorView";
 import { WebGLCanvas } from "./WebGLCanvas";
@@ -218,15 +218,21 @@ const styles = {
 };
 
 // Create a singleton font loader instance
-const browserFontLoader = new BrowserFontLoader();
-const fontLoader = new CachingFontLoader(browserFontLoader);
+const browserFontLoader = createBrowserFontLoader();
+const fontLoader = createCachingFontLoader(browserFontLoader);
 
+
+
+
+
+
+/** Figma file preview with SVG/WebGL rendering modes */
 export function FigPreview({ parsedFile, onClose }: Props) {
   const [selectedCanvasIndex, setSelectedCanvasIndex] = useState(0);
   const [selectedFrameIndex, setSelectedFrameIndex] = useState(0);
   const [showHiddenNodes, setShowHiddenNodes] = useState(false);
   const [fontAccessGranted, setFontAccessGranted] = useState(false);
-  const [fontAccessSupported] = useState(() => BrowserFontLoader.isSupported());
+  const [fontAccessSupported] = useState(() => isBrowserFontLoaderSupported());
   const [renderResult, setRenderResult] = useState<{ svg: string; warnings: readonly string[] }>({
     svg: "",
     warnings: [],
@@ -236,7 +242,7 @@ export function FigPreview({ parsedFile, onClose }: Props) {
   const [rendererMode, setRendererMode] = useState<RendererMode>("svg");
 
   // Build node tree and extract canvas/frame info
-  const { canvases, nodeCount, typeCount, symbolMap, resolvedSymbolCache, symbolResolveWarnings } = useMemo(() => {
+  const { canvases, nodeCount, symbolMap, resolvedSymbolCache, symbolResolveWarnings } = useMemo(() => {
     const { roots, nodeMap } = buildNodeTree(parsedFile.nodeChanges);
     const canvasNodes = findNodesByType(roots, "CANVAS");
 
@@ -265,7 +271,6 @@ export function FigPreview({ parsedFile, onClose }: Props) {
     return {
       canvases,
       nodeCount: parsedFile.nodeChanges.length,
-      typeCount: countNodeTypes(parsedFile.nodeChanges),
       symbolMap: nodeMap,
       resolvedSymbolCache,
       symbolResolveWarnings: warnings,
@@ -282,7 +287,7 @@ export function FigPreview({ parsedFile, onClose }: Props) {
 
   // Build scene graph for WebGL mode
   const sceneGraph = useMemo(() => {
-    if (rendererMode !== "webgl" || !currentFrame) return null;
+    if (rendererMode !== "webgl" || !currentFrame) {return null;}
     try {
       // Normalize root transform to (0,0) — same as renderCanvas does for SVG
       const node = currentFrame.node;
@@ -309,7 +314,7 @@ export function FigPreview({ parsedFile, onClose }: Props) {
       return;
     }
 
-    let cancelled = false;
+    const cancelRef = { value: false };
     setIsRendering(true);
 
     renderCanvas(
@@ -325,14 +330,14 @@ export function FigPreview({ parsedFile, onClose }: Props) {
         fontLoader: fontAccessGranted ? fontLoader : undefined,
       },
     ).then((result) => {
-      if (!cancelled) {
+      if (!cancelRef.value) {
         setRenderResult(result);
         setIsRendering(false);
       }
     });
 
     return () => {
-      cancelled = true;
+      cancelRef.value = true;
     };
   }, [currentFrame, parsedFile.blobs, parsedFile.images, showHiddenNodes, fontAccessGranted]);
 
@@ -342,8 +347,9 @@ export function FigPreview({ parsedFile, onClose }: Props) {
       // Calling listFontFamilies will trigger permission prompt
       await fontLoader.isFontAvailable("Arial");
       setFontAccessGranted(browserFontLoader.hasPermission());
-    } catch {
+    } catch (error) {
       // Permission denied or error
+      console.debug("Font access denied:", error);
       setFontAccessGranted(false);
     }
   };
@@ -462,103 +468,132 @@ export function FigPreview({ parsedFile, onClose }: Props) {
           </label>
 
           {/* Font Access Button */}
-          {fontAccessSupported &&
-            (fontAccessGranted ? (
-              <span style={{ ...styles.selectorLabel, color: "#22c55e" }}>Local fonts enabled</span>
-            ) : (
-              <button
-                style={{
-                  ...styles.closeButton,
-                  background: "#6366f1",
-                }}
-                onClick={handleRequestFontAccess}
-              >
-                Enable Local Fonts
-              </button>
-            ))}
+          {fontAccessSupported && renderFontAccessButton(fontAccessGranted, handleRequestFontAccess)}
         </div>
       )}
 
       {/* Content */}
       <div style={styles.content}>
-        {inspectorEnabled && rendererMode === "svg" && currentFrame ? (
-          <InspectorView
-            frameNode={currentFrame.node}
-            frameWidth={currentFrame.width}
-            frameHeight={currentFrame.height}
-            showHiddenNodes={showHiddenNodes}
-            svgHtml={renderResult.svg}
-            isRendering={isRendering}
-          />
-        ) : (
-          <>
-            {/* Preview */}
-            <div style={styles.preview}>
-              {rendererMode === "webgl" ? (
-                currentFrame ? (
-                  <WebGLCanvas sceneGraph={sceneGraph} width={currentFrame.width} height={currentFrame.height} />
-                ) : (
-                  <div style={styles.emptyState}>No frames found in this file</div>
-                )
-              ) : isRendering ? (
-                <div style={styles.emptyState}>Rendering...</div>
-              ) : currentFrame ? (
-                <div style={styles.svgContainer} dangerouslySetInnerHTML={{ __html: renderResult.svg }} />
-              ) : (
-                <div style={styles.emptyState}>No frames found in this file</div>
-              )}
-            </div>
-
-            {/* Sidebar */}
-            <div style={styles.sidebar}>
-              {/* Frame List */}
-              {currentCanvas && currentCanvas.frames.length > 0 && (
-                <div style={styles.frameList}>
-                  <div style={styles.frameListTitle}>Frames in "{currentCanvas.name}"</div>
-                  {currentCanvas.frames.map((frame, index) => (
-                    <div
-                      key={index}
-                      style={{
-                        ...styles.frameItem,
-                        ...(index === selectedFrameIndex ? styles.frameItemActive : {}),
-                      }}
-                      onClick={() => setSelectedFrameIndex(index)}
-                    >
-                      <div style={styles.frameName}>{frame.name}</div>
-                      <div style={styles.frameSize}>
-                        {frame.width} × {frame.height}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Warnings */}
-              {combinedWarnings.length > 0 && (
-                <div style={styles.warnings}>
-                  <div style={styles.warningsTitle}>Render Warnings</div>
-                  {combinedWarnings.slice(0, 10).map((warning, index) => (
-                    <div key={index} style={styles.warning}>
-                      {warning}
-                    </div>
-                  ))}
-                  {combinedWarnings.length > 10 && (
-                    <div style={styles.warning}>...and {combinedWarnings.length - 10} more</div>
-                  )}
-                </div>
-              )}
-            </div>
-          </>
-        )}
+        {renderContentArea({
+          inspectorEnabled,
+          rendererMode,
+          currentFrame,
+          showHiddenNodes,
+          renderResult,
+          isRendering,
+          sceneGraph,
+          currentCanvas,
+          selectedFrameIndex,
+          setSelectedFrameIndex,
+          combinedWarnings,
+        })}
       </div>
     </div>
   );
 }
 
-/**
- * Count unique node types
- */
-function countNodeTypes(nodes: readonly FigNode[]): number {
-  const types = new Set(nodes.map((n) => getNodeType(n)));
-  return types.size;
+/** Render font access button or enabled indicator */
+function renderFontAccessButton(fontAccessGranted: boolean, onRequest: () => void) {
+  if (fontAccessGranted) {
+    return <span style={{ ...styles.selectorLabel, color: "#22c55e" }}>Local fonts enabled</span>;
+  }
+  return (
+    <button
+      style={{ ...styles.closeButton, background: "#6366f1" }}
+      onClick={onRequest}
+    >
+      Enable Local Fonts
+    </button>
+  );
+}
+
+import type { SceneGraph } from "../../src/scene-graph/types";
+
+/** Render the preview area content based on renderer mode */
+function renderPreviewContent({ rendererMode, currentFrame, sceneGraph, isRendering, renderResult }: {
+  rendererMode: RendererMode;
+  currentFrame: FrameInfo | undefined;
+  sceneGraph: SceneGraph | null;
+  isRendering: boolean;
+  renderResult: { svg: string };
+}) {
+  if (rendererMode === "webgl") {
+    if (currentFrame) {
+      return <WebGLCanvas sceneGraph={sceneGraph} width={currentFrame.width} height={currentFrame.height} />;
+    }
+    return <div style={styles.emptyState}>No frames found in this file</div>;
+  }
+  if (isRendering) {
+    return <div style={styles.emptyState}>Rendering...</div>;
+  }
+  if (currentFrame) {
+    return <div style={styles.svgContainer} dangerouslySetInnerHTML={{ __html: renderResult.svg }} />;
+  }
+  return <div style={styles.emptyState}>No frames found in this file</div>;
+}
+
+/** Render the main content area with inspector or preview+sidebar */
+function renderContentArea({ inspectorEnabled, rendererMode, currentFrame, showHiddenNodes, renderResult, isRendering, sceneGraph, currentCanvas, selectedFrameIndex, setSelectedFrameIndex, combinedWarnings }: {
+  inspectorEnabled: boolean;
+  rendererMode: RendererMode;
+  currentFrame: FrameInfo | undefined;
+  showHiddenNodes: boolean;
+  renderResult: { svg: string; warnings: readonly string[] };
+  isRendering: boolean;
+  sceneGraph: SceneGraph | null;
+  currentCanvas: CanvasInfo | undefined;
+  selectedFrameIndex: number;
+  setSelectedFrameIndex: (index: number) => void;
+  combinedWarnings: string[];
+}) {
+  if (inspectorEnabled && rendererMode === "svg" && currentFrame) {
+    return (
+      <InspectorView
+        frameNode={currentFrame.node}
+        frameWidth={currentFrame.width}
+        frameHeight={currentFrame.height}
+        showHiddenNodes={showHiddenNodes}
+        svgHtml={renderResult.svg}
+        isRendering={isRendering}
+      />
+    );
+  }
+  return (
+    <>
+      <div style={styles.preview}>
+        {renderPreviewContent({ rendererMode, currentFrame, sceneGraph, isRendering, renderResult })}
+      </div>
+      <div style={styles.sidebar}>
+        {currentCanvas && currentCanvas.frames.length > 0 && (
+          <div style={styles.frameList}>
+            <div style={styles.frameListTitle}>Frames in &quot;{currentCanvas.name}&quot;</div>
+            {currentCanvas.frames.map((frame, index) => (
+              <div
+                key={index}
+                style={{
+                  ...styles.frameItem,
+                  ...(index === selectedFrameIndex ? styles.frameItemActive : {}),
+                }}
+                onClick={() => setSelectedFrameIndex(index)}
+              >
+                <div style={styles.frameName}>{frame.name}</div>
+                <div style={styles.frameSize}>{frame.width} x {frame.height}</div>
+              </div>
+            ))}
+          </div>
+        )}
+        {combinedWarnings.length > 0 && (
+          <div style={styles.warnings}>
+            <div style={styles.warningsTitle}>Render Warnings</div>
+            {combinedWarnings.slice(0, 10).map((warning, index) => (
+              <div key={index} style={styles.warning}>{warning}</div>
+            ))}
+            {combinedWarnings.length > 10 && (
+              <div style={styles.warning}>...and {combinedWarnings.length - 10} more</div>
+            )}
+          </div>
+        )}
+      </div>
+    </>
+  );
 }

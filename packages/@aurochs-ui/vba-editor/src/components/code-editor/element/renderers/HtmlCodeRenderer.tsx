@@ -53,6 +53,26 @@ type LineHighlight = {
 };
 
 /**
+ * Resolve start/end columns for a highlight on a specific line.
+ */
+function resolveHighlightColumns(
+  lineNumber: number,
+  lineLength: number,
+  h: HighlightRange,
+): { startCol: number; endCol: number } {
+  if (lineNumber === h.startLine && lineNumber === h.endLine) {
+    return { startCol: h.startColumn, endCol: h.endColumn };
+  }
+  if (lineNumber === h.startLine) {
+    return { startCol: h.startColumn, endCol: lineLength + 1 };
+  }
+  if (lineNumber === h.endLine) {
+    return { startCol: 1, endCol: h.endColumn };
+  }
+  return { startCol: 1, endCol: lineLength + 1 };
+}
+
+/**
  * Get highlights for a specific line.
  */
 function getLineHighlights(
@@ -68,27 +88,7 @@ function getLineHighlights(
       continue;
     }
 
-    let startCol: number;
-    let endCol: number;
-
-    if (lineNumber === h.startLine && lineNumber === h.endLine) {
-      // Single line highlight
-      startCol = h.startColumn;
-      endCol = h.endColumn;
-    } else if (lineNumber === h.startLine) {
-      // Start of multi-line
-      startCol = h.startColumn;
-      endCol = lineLength + 1;
-    } else if (lineNumber === h.endLine) {
-      // End of multi-line
-      startCol = 1;
-      endCol = h.endColumn;
-    } else {
-      // Middle of multi-line
-      startCol = 1;
-      endCol = lineLength + 1;
-    }
-
+    const { startCol, endCol } = resolveHighlightColumns(lineNumber, lineLength, h);
     result.push({
       startColumn: startCol,
       endColumn: endCol,
@@ -118,6 +118,43 @@ type TokenSegment = {
 };
 
 /**
+ * Find the active highlight type at a given column.
+ */
+function findActiveHighlight(col: number, highlights: readonly LineHighlight[]): HighlightType | undefined {
+  const result = { value: undefined as HighlightType | undefined };
+  for (const h of highlights) {
+    if (col >= h.startColumn && col < h.endColumn) {
+      result.value = h.type;
+    }
+  }
+  return result.value;
+}
+
+type FindSegmentEndOptions = {
+  readonly col: number;
+  readonly tokenStart: number;
+  readonly tokenLength: number;
+  readonly highlights: readonly LineHighlight[];
+};
+
+/**
+ * Find where the current segment ends based on highlight boundaries.
+ */
+function findSegmentEnd(options: FindSegmentEndOptions): number {
+  const { col, tokenStart, tokenLength, highlights } = options;
+  const segmentEnd = { value: tokenLength };
+  for (const h of highlights) {
+    if (h.startColumn > col && h.startColumn < tokenStart + segmentEnd.value) {
+      segmentEnd.value = h.startColumn - tokenStart;
+    }
+    if (h.endColumn > col && h.endColumn < tokenStart + segmentEnd.value) {
+      segmentEnd.value = h.endColumn - tokenStart;
+    }
+  }
+  return segmentEnd.value;
+}
+
+/**
  * Split tokens by highlight boundaries.
  */
 function splitTokensByHighlights(
@@ -132,65 +169,77 @@ function splitTokensByHighlights(
   }
 
   const segments: TokenSegment[] = [];
-  let currentCol = 1; // 1-based column position
+  const currentCol = { value: 1 }; // 1-based column position
 
   for (const token of tokens) {
-    const tokenStart = currentCol;
-    const tokenEnd = currentCol + token.text.length;
-    let pos = 0;
+    const tokenStart = currentCol.value;
+    const tokenEnd = currentCol.value + token.text.length;
+    const pos = { value: 0 };
 
-    while (pos < token.text.length) {
-      const col = tokenStart + pos;
+    while (pos.value < token.text.length) {
+      const col = tokenStart + pos.value;
 
       // Find highest priority highlight at this position
-      let activeHighlight: HighlightType | undefined;
-      for (const h of highlights) {
-        if (col >= h.startColumn && col < h.endColumn) {
-          activeHighlight = h.type;
-        }
-      }
+      const activeHighlight = findActiveHighlight(col, highlights);
 
       // Find how far this segment extends
-      let segmentEnd = token.text.length;
-      for (const h of highlights) {
-        if (h.startColumn > col && h.startColumn < tokenStart + segmentEnd) {
-          segmentEnd = h.startColumn - tokenStart;
-        }
-        if (h.endColumn > col && h.endColumn < tokenStart + segmentEnd) {
-          segmentEnd = h.endColumn - tokenStart;
-        }
-      }
+      const segmentEnd = findSegmentEnd({ col, tokenStart, tokenLength: token.text.length, highlights });
 
       segments.push({
-        text: token.text.slice(pos, segmentEnd),
+        text: token.text.slice(pos.value, segmentEnd),
         tokenType: token.type,
         highlightType: activeHighlight,
       });
 
-      pos = segmentEnd;
+      pos.value = segmentEnd;
     }
 
-    currentCol = tokenEnd;
+    currentCol.value = tokenEnd;
   }
 
   return segments;
 }
 
 /**
+ * Get token style unless whitespace.
+ */
+function getSegmentTokenStyle(tokenType: TokenSegment["tokenType"]): CSSProperties | undefined {
+  if (tokenType === "whitespace") {
+    return undefined;
+  }
+  return getTokenStyleCss(tokenType);
+}
+
+/**
+ * Get highlight style if highlight type is set.
+ */
+function getSegmentHighlightStyle(highlightType: HighlightType | undefined): CSSProperties | undefined {
+  if (!highlightType) {
+    return undefined;
+  }
+  return HIGHLIGHT_STYLES[highlightType];
+}
+
+/**
+ * Merge token and highlight styles.
+ */
+function mergeSegmentStyles(
+  tokenStyle: CSSProperties | undefined,
+  highlightStyle: CSSProperties | undefined,
+): CSSProperties | undefined {
+  if (tokenStyle || highlightStyle) {
+    return { ...tokenStyle, ...highlightStyle };
+  }
+  return undefined;
+}
+
+/**
  * Render a token segment.
  */
 function renderSegment(segment: TokenSegment, key: number): ReactNode {
-  const tokenStyle = segment.tokenType === "whitespace"
-    ? undefined
-    : getTokenStyleCss(segment.tokenType);
-
-  const highlightStyle = segment.highlightType
-    ? HIGHLIGHT_STYLES[segment.highlightType]
-    : undefined;
-
-  const style = tokenStyle || highlightStyle
-    ? { ...tokenStyle, ...highlightStyle }
-    : undefined;
+  const tokenStyle = getSegmentTokenStyle(segment.tokenType);
+  const highlightStyle = getSegmentHighlightStyle(segment.highlightType);
+  const style = mergeSegmentStyles(tokenStyle, highlightStyle);
 
   return (
     <span key={key} style={style}>
@@ -288,7 +337,7 @@ export const HtmlCodeRenderer = memo(function HtmlCodeRenderer({
   lineNumberWidth = DEFAULT_LINE_NUMBER_WIDTH,
   highlights = [],
   cursor,
-  measureText,
+  measureText: _measureText,
 }: CodeRendererProps): ReactNode {
   // Pre-compute line highlights for visible range
   const lineHighlightsMap = useMemo(() => {
@@ -306,7 +355,7 @@ export const HtmlCodeRenderer = memo(function HtmlCodeRenderer({
 
   // Check if cursor is on a visible line
   const cursorOnLine = useMemo(() => {
-    if (!cursor?.visible) return undefined;
+    if (!cursor?.visible) {return undefined;}
     if (cursor.line < visibleRange.start + 1 || cursor.line > visibleRange.end) {
       return undefined;
     }
@@ -325,9 +374,7 @@ export const HtmlCodeRenderer = memo(function HtmlCodeRenderer({
         const lineText = lines[lineIndex] ?? "";
         const tokens = tokenCache.getTokens(lineText);
         const lineHighlights = lineHighlightsMap.get(lineNumber) ?? [];
-        const lineCursor = cursorOnLine === lineNumber
-          ? { column: cursor!.column, blinking: cursor!.blinking }
-          : undefined;
+        const lineCursor = buildLineCursor(cursorOnLine, lineNumber, cursor);
 
         return (
           <Line

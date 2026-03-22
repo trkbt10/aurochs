@@ -7,14 +7,13 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, it, expect, beforeAll } from "vitest";
 import { Resvg } from "@resvg/resvg-js";
 import pixelmatch from "pixelmatch";
 import { PNG } from "pngjs";
 import { parseFigFile, buildNodeTree, findNodesByType, type FigBlob } from "@aurochs/fig/parser";
 import type { FigNode } from "@aurochs/fig/types";
 import { createNodeFontLoaderWithFontsource } from "../src/font-drivers/node";
-import { CachingFontLoader } from "../src/font";
+import { createCachingFontLoader, type CachingFontLoader } from "../src/font";
 import { renderTextNodeAsPath, type PathRenderContext } from "../src/svg/nodes/text/path-render";
 import { createFigSvgRenderContext } from "../src/svg/context";
 
@@ -46,28 +45,28 @@ function svgToPng(svg: string): Buffer {
 
 function comparePngs(actual: Buffer, rendered: Buffer): { diffPercent: number } {
   const actualPng = PNG.sync.read(actual);
-  let renderedPng = PNG.sync.read(rendered);
+  const renderedPngRef = { value: PNG.sync.read(rendered) };
 
   // Resize if needed
-  if (renderedPng.width !== actualPng.width || renderedPng.height !== actualPng.height) {
+  if (renderedPngRef.value.width !== actualPng.width || renderedPngRef.value.height !== actualPng.height) {
     const resized = new PNG({ width: actualPng.width, height: actualPng.height });
     for (let y = 0; y < actualPng.height; y++) {
-      const sy = Math.floor((y / actualPng.height) * renderedPng.height);
+      const sy = Math.floor((y / actualPng.height) * renderedPngRef.value.height);
       for (let x = 0; x < actualPng.width; x++) {
-        const sx = Math.floor((x / actualPng.width) * renderedPng.width);
-        const srcIdx = (sy * renderedPng.width + sx) * 4;
+        const sx = Math.floor((x / actualPng.width) * renderedPngRef.value.width);
+        const srcIdx = (sy * renderedPngRef.value.width + sx) * 4;
         const dstIdx = (y * actualPng.width + x) * 4;
-        resized.data[dstIdx] = renderedPng.data[srcIdx];
-        resized.data[dstIdx + 1] = renderedPng.data[srcIdx + 1];
-        resized.data[dstIdx + 2] = renderedPng.data[srcIdx + 2];
-        resized.data[dstIdx + 3] = renderedPng.data[srcIdx + 3];
+        resized.data[dstIdx] = renderedPngRef.value.data[srcIdx];
+        resized.data[dstIdx + 1] = renderedPngRef.value.data[srcIdx + 1];
+        resized.data[dstIdx + 2] = renderedPngRef.value.data[srcIdx + 2];
+        resized.data[dstIdx + 3] = renderedPngRef.value.data[srcIdx + 3];
       }
     }
-    renderedPng = resized;
+    renderedPngRef.value = resized;
   }
 
   const diff = new PNG({ width: actualPng.width, height: actualPng.height });
-  const diffPixels = pixelmatch(actualPng.data, renderedPng.data, diff.data, actualPng.width, actualPng.height, {
+  const diffPixels = pixelmatch(actualPng.data, renderedPngRef.value.data, diff.data, actualPng.width, actualPng.height, {
     threshold: 0.1,
     includeAA: false,
   });
@@ -76,10 +75,10 @@ function comparePngs(actual: Buffer, rendered: Buffer): { diffPercent: number } 
   return { diffPercent: (diffPixels / totalPixels) * 100 };
 }
 
-let parsedData: ParsedData | null = null;
-let fontLoader: CachingFontLoader | null = null;
+const parsedData: ParsedData | null = null;
+const fontLoader: createCachingFontLoader | null = null;
 
-async function setup(): Promise<{ data: ParsedData; fontLoader: CachingFontLoader }> {
+async function setup(): Promise<{ data: ParsedData; fontLoader: createCachingFontLoader }> {
   if (parsedData && fontLoader) {
     return { data: parsedData, fontLoader };
   }
@@ -113,7 +112,7 @@ async function setup(): Promise<{ data: ParsedData; fontLoader: CachingFontLoade
 
   // Create font loader with fontsource fonts
   const baseLoader = createNodeFontLoaderWithFontsource();
-  fontLoader = new CachingFontLoader(baseLoader);
+  fontLoader = createCachingFontLoader(baseLoader);
 
   // Preload Inter font
   await fontLoader.loadFont({ family: "Inter", weight: 400 });
@@ -122,19 +121,19 @@ async function setup(): Promise<{ data: ParsedData; fontLoader: CachingFontLoade
 }
 
 describe("Path-based text rendering", () => {
-  let data: ParsedData;
-  let loader: CachingFontLoader;
+  const dataRef = { value: undefined as ParsedData | undefined };
+  const loaderRef = { value: undefined as CachingFontLoader | undefined };
 
   beforeAll(async () => {
     const result = await setup();
-    data = result.data;
-    loader = result.fontLoader;
+    dataRef.value = result.data;
+    loaderRef.value = result.fontLoader;
   });
 
   it("renders LEFT-TOP with path-based approach", async () => {
-    const frame = data.frames.get("LEFT-TOP");
+    const frame = dataRef.value.frames.get("LEFT-TOP");
     expect(frame).toBeDefined();
-    if (!frame || !frame.textNode) return;
+    if (!frame || !frame.textNode) {return;}
 
     // Check if actual SVG exists
     const actualPath = path.join(ACTUAL_SVG_DIR, "LEFT-TOP.svg");
@@ -146,12 +145,12 @@ describe("Path-based text rendering", () => {
     // Create render context
     const ctx = createFigSvgRenderContext({
       canvasSize: { width: frame.size.width, height: frame.size.height },
-      blobs: data.blobs,
+      blobs: dataRef.value.blobs,
     });
 
     const pathCtx: PathRenderContext = {
       ...ctx,
-      fontLoader: loader,
+      fontLoader: loaderRef.value,
     };
 
     // Render text as path
@@ -180,21 +179,21 @@ ${pathSvg}
   });
 
   it("compares text-based vs path-based for size-64", async () => {
-    const frame = data.frames.get("size-64");
+    const frame = dataRef.value.frames.get("size-64");
     expect(frame).toBeDefined();
-    if (!frame || !frame.textNode) return;
+    if (!frame || !frame.textNode) {return;}
 
     const actualPath = path.join(ACTUAL_SVG_DIR, "size-64.svg");
-    if (!fs.existsSync(actualPath)) return;
+    if (!fs.existsSync(actualPath)) {return;}
 
     const ctx = createFigSvgRenderContext({
       canvasSize: { width: frame.size.width, height: frame.size.height },
-      blobs: data.blobs,
+      blobs: dataRef.value.blobs,
     });
 
     const pathCtx: PathRenderContext = {
       ...ctx,
-      fontLoader: loader,
+      fontLoader: loaderRef.value,
     };
 
     const pathSvg = await renderTextNodeAsPath(frame.textNode, pathCtx);
@@ -231,7 +230,7 @@ ${pathSvg}
 
   for (const frameName of alignmentFrames) {
     it(`renders ${frameName} with path-based approach`, async () => {
-      const frame = data.frames.get(frameName);
+      const frame = dataRef.value.frames.get(frameName);
       if (!frame || !frame.textNode) {
         console.log(`Skipping ${frameName}: frame or textNode not found`);
         return;
@@ -245,12 +244,12 @@ ${pathSvg}
 
       const ctx = createFigSvgRenderContext({
         canvasSize: { width: frame.size.width, height: frame.size.height },
-        blobs: data.blobs,
+        blobs: dataRef.value.blobs,
       });
 
       const pathCtx: PathRenderContext = {
         ...ctx,
-        fontLoader: loader,
+        fontLoader: loaderRef.value,
       };
 
       const pathSvg = await renderTextNodeAsPath(frame.textNode, pathCtx);
@@ -278,7 +277,7 @@ ${pathSvg}
 
   for (const frameName of sizeFrames) {
     it(`renders ${frameName} with path-based approach`, async () => {
-      const frame = data.frames.get(frameName);
+      const frame = dataRef.value.frames.get(frameName);
       if (!frame || !frame.textNode) {
         console.log(`Skipping ${frameName}: frame or textNode not found`);
         return;
@@ -292,12 +291,12 @@ ${pathSvg}
 
       const ctx = createFigSvgRenderContext({
         canvasSize: { width: frame.size.width, height: frame.size.height },
-        blobs: data.blobs,
+        blobs: dataRef.value.blobs,
       });
 
       const pathCtx: PathRenderContext = {
         ...ctx,
-        fontLoader: loader,
+        fontLoader: loaderRef.value,
       };
 
       const pathSvg = await renderTextNodeAsPath(frame.textNode, pathCtx);

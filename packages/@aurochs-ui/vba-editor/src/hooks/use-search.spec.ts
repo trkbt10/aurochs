@@ -2,7 +2,7 @@
  * @file Search Logic Tests
  */
 
-import { describe, it, expect } from "vitest";
+// Test globals (describe/it/expect) provided by vitest runner
 import { findMatches, buildLineIndex } from "./use-search";
 
 describe("buildLineIndex", () => {

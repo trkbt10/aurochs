@@ -5,7 +5,7 @@
  * Both SVG and WebGL backends consume these.
  */
 
-import type { AbstractFont, PathCommand } from "../../font/types";
+import type { AbstractFont } from "../../font/types";
 import type { PathContour, DecorationRect, TextPathResult } from "./types";
 import type { TextAlignHorizontal } from "../layout/types";
 import { convertQuadraticsToCubic } from "./bezier";
@@ -14,23 +14,20 @@ import { convertQuadraticsToCubic } from "./bezier";
  * Calculate width of text using font metrics
  */
 export function calculateTextWidth(
-  text: string,
-  font: AbstractFont,
-  fontSize: number,
-  letterSpacing?: number
+  { text, font, fontSize, letterSpacing}: { text: string; font: AbstractFont; fontSize: number; letterSpacing?: number; }
 ): number {
   const scale = fontSize / font.unitsPerEm;
   const spacing = letterSpacing ?? 0;
-  let width = 0;
+  const widthRef = { value: 0 };
   for (let i = 0; i < text.length; i++) {
     const glyph = font.charToGlyph(text[i]);
     const advanceWidth = glyph.advanceWidth ?? 0;
-    width += advanceWidth * scale;
+    widthRef.value += advanceWidth * scale;
     if (i < text.length - 1) {
-      width += spacing;
+      widthRef.value += spacing;
     }
   }
-  return width;
+  return widthRef.value;
 }
 
 /**
@@ -64,15 +61,9 @@ function getAlignmentOffset(
  * @returns Path contour with all glyphs combined, or null if empty
  */
 export function extractLinePathCommands(
-  text: string,
-  font: AbstractFont,
-  fontSize: number,
-  x: number,
-  y: number,
-  align: TextAlignHorizontal,
-  letterSpacing?: number
+  { text, font, fontSize, x, y, align, letterSpacing}: { text: string; font: AbstractFont; fontSize: number; x: number; y: number; align: TextAlignHorizontal; letterSpacing?: number; }
 ): PathContour | null {
-  const totalWidth = calculateTextWidth(text, font, fontSize, letterSpacing);
+  const totalWidth = calculateTextWidth({ text, font, fontSize, letterSpacing });
   const adjustedX = getAlignmentOffset(align, totalWidth, x);
 
   const fontPath = font.getPath(text, adjustedX, y, fontSize, {
@@ -94,19 +85,13 @@ export function extractLinePathCommands(
  * with thickness of approximately fontSize * 0.068.
  */
 export function createUnderlineRect(
-  text: string,
-  font: AbstractFont,
-  fontSize: number,
-  x: number,
-  y: number,
-  align: TextAlignHorizontal,
-  letterSpacing?: number
+  { text, font, fontSize, x, y, align, letterSpacing}: { text: string; font: AbstractFont; fontSize: number; x: number; y: number; align: TextAlignHorizontal; letterSpacing?: number; }
 ): DecorationRect | null {
   if (!text.trim()) {
     return null;
   }
 
-  const totalWidth = calculateTextWidth(text, font, fontSize, letterSpacing);
+  const totalWidth = calculateTextWidth({ text, font, fontSize, letterSpacing });
   const adjustedX = getAlignmentOffset(align, totalWidth, x);
 
   const underlineOffset = fontSize * 0.19;
@@ -135,22 +120,14 @@ export function createUnderlineRect(
  * @returns TextPathResult with glyph contours and decorations
  */
 export function extractTextPathData(
-  lines: readonly string[],
-  font: AbstractFont,
-  fontSize: number,
-  x: number,
-  baseY: number,
-  lineHeight: number,
-  align: TextAlignHorizontal,
-  letterSpacing?: number,
-  textDecoration?: "NONE" | "UNDERLINE" | "STRIKETHROUGH"
+  { lines, font, fontSize, x, baseY, lineHeight, align, letterSpacing, textDecoration }: { lines: readonly string[]; font: AbstractFont; fontSize: number; x: number; baseY: number; lineHeight: number; align: TextAlignHorizontal; letterSpacing?: number; textDecoration?: "NONE" | "UNDERLINE" | "STRIKETHROUGH"; }
 ): TextPathResult {
   const glyphContours: PathContour[] = [];
   const decorations: DecorationRect[] = [];
 
   for (let i = 0; i < lines.length; i++) {
     const lineText = lines[i];
-    if (!lineText) continue;
+    if (!lineText) {continue;}
 
     const y = baseY + i * lineHeight;
     const contour = extractLinePathCommands(

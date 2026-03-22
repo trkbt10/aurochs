@@ -56,6 +56,35 @@ function escapeXmlAttr(str: string): string {
     .replace(/'/g, "&#39;");
 }
 
+/** Render preset geometry path, falling back to rectangle on failure */
+function renderShapeGeometryPath(options: {
+  preset: string;
+  width: number;
+  height: number;
+  warnings: Set<string> | undefined;
+}): string {
+  const { preset, width, height, warnings } = options;
+  try {
+    const presetGeom = {
+      type: "preset" as const,
+      preset: mapToPresetShapeType(preset),
+      adjustValues: [],
+    };
+    return renderPresetGeometryData(presetGeom, width, height);
+  } catch (error: unknown) {
+    // Unsupported preset geometry — fall back to rectangle
+    if (error instanceof Error) {
+      warnings?.add(`Shape preset "${preset}" not supported, using rectangle fallback`);
+    }
+    const rectGeom = {
+      type: "preset" as const,
+      preset: "rect" as PresetShapeType,
+      adjustValues: [],
+    };
+    return renderPresetGeometryData(rectGeom, width, height);
+  }
+}
+
 /**
  * Render a shape element to SVG.
  *
@@ -77,24 +106,7 @@ export function renderShape(options: RenderShapeOptions): string {
   const preset = shape.prstGeom ?? "rect";
 
   // Generate geometry path using shared DrawingML renderer
-  let path: string;
-  try {
-    const presetGeom = {
-      type: "preset" as const,
-      preset: mapToPresetShapeType(preset),
-      adjustValues: [], // TODO: Support adjust values from shape properties
-    };
-    path = renderPresetGeometryData(presetGeom, width, height);
-  } catch {
-    // Fallback to rectangle for unsupported presets
-    warnings?.add(`Shape preset "${preset}" not supported, using rectangle fallback`);
-    const rectGeom = {
-      type: "preset" as const,
-      preset: "rect" as PresetShapeType,
-      adjustValues: [],
-    };
-    path = renderPresetGeometryData(rectGeom, width, height);
-  }
+  const path = renderShapeGeometryPath({ preset, width, height, warnings });
 
   // Default styling
   const fill = "#D9D9D9";

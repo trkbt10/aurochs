@@ -6,4 +6,4 @@
 export type { ExportSettings, FrameNodeData } from "./types";
 
 // Builder
-export { FrameNodeBuilder, frameNode, DEFAULT_SVG_EXPORT_SETTINGS } from "./frame";
+export { type FrameNodeBuilder, frameNode, DEFAULT_SVG_EXPORT_SETTINGS } from "./frame";

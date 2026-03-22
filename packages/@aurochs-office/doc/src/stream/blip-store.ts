@@ -16,7 +16,6 @@ import {
   findChildRecord,
   isBlipType,
   OA_RT,
-  OFFICEART_HEADER_SIZE,
 } from "./officeart-reader";
 
 /** An extracted BLIP (image) entry from the BStoreContainer. */
@@ -56,7 +55,7 @@ export function parseBlipData(
   data: Uint8Array,
 ): { contentType: string; data: Uint8Array } | undefined {
   const info = BLIP_INFO[recType];
-  if (!info) return undefined;
+  if (!info) {return undefined;}
 
   // recInstance bit 0 determines UID count: odd = 2 UIDs, even = 1 UID
   const headerSize = (recInstance & 0x01) ? info.headerSize2 : info.headerSize1;
@@ -84,31 +83,31 @@ export function parseBStoreContainer(
   fcDggInfo: number,
   lcbDggInfo: number,
 ): readonly BlipEntry[] {
-  if (lcbDggInfo === 0) return [];
+  if (lcbDggInfo === 0) {return [];}
 
   // Read the DggContainer record
   const dggContainer = readOfficeArtRecord(tableStream, fcDggInfo);
-  if (!dggContainer || dggContainer.recType !== OA_RT.DggContainer) return [];
-  if (!isContainerRecord(dggContainer)) return [];
+  if (!dggContainer || dggContainer.recType !== OA_RT.DggContainer) {return [];}
+  if (!isContainerRecord(dggContainer)) {return [];}
 
   // Find BStoreContainer within DggContainer
   const bStoreContainer = findChildRecord(dggContainer, OA_RT.BStoreContainer);
-  if (!bStoreContainer) return [];
+  if (!bStoreContainer) {return [];}
 
   // Iterate BStoreEntry records
   const entries = iterateOfficeArtRecords(bStoreContainer.data, 0, bStoreContainer.data.length);
   const blips: BlipEntry[] = [];
-  let index = 1; // 1-based
+  const index = { value: 1 }; // 1-based
 
   for (const entry of entries) {
-    if (entry.recType !== OA_RT.BStoreEntry) continue;
+    if (entry.recType !== OA_RT.BStoreEntry) {continue;}
 
     // BStoreEntry: 44-byte FBSE header + embedded BLIP record
     const blipEntry = extractBlipFromBStoreEntry(entry.data, entry.recInstance);
     if (blipEntry) {
-      blips.push({ index, ...blipEntry });
+      blips.push({ index: index.value, ...blipEntry });
     }
-    index++;
+    index.value++;
   }
 
   return blips;
@@ -122,13 +121,13 @@ function extractBlipFromBStoreEntry(
   data: Uint8Array,
   _entryInstance: number,
 ): { contentType: string; data: Uint8Array } | undefined {
-  if (data.length <= FBSE_HEADER_SIZE) return undefined;
+  if (data.length <= FBSE_HEADER_SIZE) {return undefined;}
 
   // Read the embedded BLIP record after the FBSE header
   const blipRecord = readOfficeArtRecord(data, FBSE_HEADER_SIZE);
-  if (!blipRecord) return undefined;
+  if (!blipRecord) {return undefined;}
 
-  if (!isBlipType(blipRecord.recType)) return undefined;
+  if (!isBlipType(blipRecord.recType)) {return undefined;}
 
   return parseBlipData(blipRecord.recType, blipRecord.recInstance, blipRecord.data);
 }

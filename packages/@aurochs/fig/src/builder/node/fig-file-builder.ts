@@ -41,59 +41,61 @@ import {
 import { resolveChildConstraints } from "../../symbols/resolve-child-constraints";
 import { getEffectiveSymbolID } from "../../symbols/effective-symbol-id";
 
-export class FigFileBuilder {
-  private schema: KiwiSchema;
-  private nodes: Record<string, unknown>[];
-  private blobs: Array<{ bytes: number[] }>;
-  private nextLocalID: number;
-  private structuralSessionID: number;  // For DOCUMENT, CANVAS (always 0)
-  private contentSessionID: number;     // For FRAME, shapes, etc. (always 1)
-  private nodeSessionIDs: Map<number, number>;  // Track sessionID for each localID
-  private childCountPerParent: Map<number, number>;  // Track child count per parent for position
 
-  constructor() {
-    // Use the actual Figma schema extracted from a working file
-    this.schema = figmaSchemaJson as KiwiSchema;
-    this.nodes = [];
-    this.blobs = [];
-    this.nextLocalID = 0;
-    // Figma uses different sessionIDs for structural vs content nodes
-    this.structuralSessionID = 0;  // DOCUMENT, CANVAS
-    this.contentSessionID = 1;     // FRAME, shapes, text, etc.
-    this.nodeSessionIDs = new Map();
-    this.childCountPerParent = new Map();
-  }
+
+
+
+
+
+
+
+
+
+
+/** Builder for complete .fig files */
+export type FigFileBuilder = ReturnType<typeof _createFigFileBuilder>;
+
+/** Internal factory for FigFileBuilder */
+function _createFigFileBuilder() {
+  const schema = figmaSchemaJson as KiwiSchema;
+  const nodes: Record<string, unknown>[] = [];
+  const blobs: Array<{ bytes: number[] }> = [];
+  const nextLocalIDRef = { value: 0 };
+  const structuralSessionID = 0;
+  const contentSessionID = 1;
+  const nodeSessionIDs = new Map<number, number>();
+  const childCountPerParent = new Map<number, number>();
 
   /**
    * Add a blob and return its index
    */
-  addBlob(blob: { bytes: number[] }): number {
-    const index = this.blobs.length;
-    this.blobs.push(blob);
+  function addBlob(blob: { bytes: number[] }): number {
+    const index = blobs.length;
+    blobs.push(blob);
     return index;
   }
 
   /**
    * Get the blobs array
    */
-  getBlobs(): ReadonlyArray<{ bytes: number[] }> {
-    return this.blobs;
+  function getBlobs(): ReadonlyArray<{ bytes: number[] }> {
+    return blobs;
   }
 
   /**
    * Get the next available local ID
    */
-  getNextID(): number {
-    return this.nextLocalID++;
+  function getNextID(): number {
+    return nextLocalIDRef.value++;
   }
 
   /**
    * Add a DOCUMENT node
    */
-  addDocument(name: string = "Document"): number {
-    const localID = this.getNextID();
-    this.nodeSessionIDs.set(localID, this.structuralSessionID);
-    const node = this.createStructuralNodeChange({
+  function addDocument(name: string = "Document"): number {
+    const localID = getNextID();
+    nodeSessionIDs.set(localID, structuralSessionID);
+    const node = createStructuralNodeChange({
       localID,
       parentID: -1,
       type: NODE_TYPE_VALUES.DOCUMENT,
@@ -105,17 +107,17 @@ export class FigFileBuilder {
     node.strokeAlign = { value: 0, name: "CENTER" };
     node.strokeJoin = { value: 1, name: "BEVEL" };
     node.documentColorProfile = { value: 1, name: "SRGB" };
-    this.nodes.push(node);
+    nodes.push(node);
     return localID;
   }
 
   /**
    * Add a CANVAS (page) node
    */
-  addCanvas(parentID: number, name: string = "Page 1"): number {
-    const localID = this.getNextID();
-    this.nodeSessionIDs.set(localID, this.structuralSessionID);
-    const node = this.createStructuralNodeChange({
+  function addCanvas(parentID: number, name: string = "Page 1"): number {
+    const localID = getNextID();
+    nodeSessionIDs.set(localID, structuralSessionID);
+    const node = createStructuralNodeChange({
       localID,
       parentID,
       type: NODE_TYPE_VALUES.CANVAS,
@@ -129,7 +131,7 @@ export class FigFileBuilder {
     node.strokeJoin = { value: 1, name: "BEVEL" };
     node.backgroundColor = { r: 0.9607843160629272, g: 0.9607843160629272, b: 0.9607843160629272, a: 1 };
     node.backgroundEnabled = true;
-    this.nodes.push(node);
+    nodes.push(node);
     return localID;
   }
 
@@ -137,14 +139,14 @@ export class FigFileBuilder {
    * Add an Internal Only Canvas (required for Figma compatibility)
    * This is a hidden canvas that Figma uses internally.
    */
-  addInternalCanvas(parentID: number): number {
-    const localID = this.getNextID();
-    this.nodeSessionIDs.set(localID, this.structuralSessionID);
+  function addInternalCanvas(parentID: number): number {
+    const localID = getNextID();
+    nodeSessionIDs.set(localID, structuralSessionID);
     const node: Record<string, unknown> = {
-      guid: { sessionID: this.structuralSessionID, localID },
+      guid: { sessionID: structuralSessionID, localID },
       phase: { value: 0, name: "CREATED" },
       parentIndex: {
-        guid: { sessionID: this.structuralSessionID, localID: parentID },
+        guid: { sessionID: structuralSessionID, localID: parentID },
         position: "~", // Fixed position at end
       },
       type: { value: NODE_TYPE_VALUES.CANVAS, name: "CANVAS" },
@@ -157,23 +159,23 @@ export class FigFileBuilder {
       strokeJoin: { value: 1, name: "BEVEL" },
       internalOnly: true,
     };
-    this.nodes.push(node);
+    nodes.push(node);
     return localID;
   }
 
   /**
    * Add a FRAME node (with AutoLayout support)
    */
-  addFrame(data: FrameNodeData): number {
+  function addFrame(data: FrameNodeData): number {
     // Content nodes reuse localID from data (user provides it)
     // Register the node's sessionID
-    this.nodeSessionIDs.set(data.localID, this.contentSessionID);
+    nodeSessionIDs.set(data.localID, contentSessionID);
 
     // Generate fill geometry blob for the frame
     const blobBytes = encodeRectangleBlob(data.size?.x ?? 100, data.size?.y ?? 100);
-    const blobIndex = this.addBlob({ bytes: blobBytes });
+    const blobIndex = addBlob({ bytes: blobBytes });
 
-    const node = this.createNodeChange({
+    const node = createNodeChange({
       localID: data.localID,
       parentID: data.parentID,
       type: NODE_TYPE_VALUES.FRAME,
@@ -213,15 +215,15 @@ export class FigFileBuilder {
       commandsBlob: blobIndex,
       styleID: 0,
     }];
-    this.nodes.push(node);
+    nodes.push(node);
     return data.localID;
   }
 
   /**
    * Add a SYMBOL node (component definition, with AutoLayout support)
    */
-  addSymbol(data: SymbolNodeData): number {
-    const node = this.createNodeChange({
+  function addSymbol(data: SymbolNodeData): number {
+    const node = createNodeChange({
       localID: data.localID,
       parentID: data.parentID,
       type: NODE_TYPE_VALUES.SYMBOL,
@@ -244,15 +246,15 @@ export class FigFileBuilder {
       stackCounterSpacing: data.stackCounterSpacing,
       itemReverseZIndex: data.itemReverseZIndex,
     });
-    this.nodes.push(node);
+    nodes.push(node);
     return data.localID;
   }
 
   /**
    * Add an INSTANCE node (component instance)
    */
-  addInstance(data: InstanceNodeData): number {
-    const node = this.createNodeChange({
+  function addInstance(data: InstanceNodeData): number {
+    const node = createNodeChange({
       localID: data.localID,
       parentID: data.parentID,
       type: NODE_TYPE_VALUES.INSTANCE,
@@ -273,7 +275,7 @@ export class FigFileBuilder {
       horizontalConstraint: data.horizontalConstraint,
       verticalConstraint: data.verticalConstraint,
     });
-    this.nodes.push(node);
+    nodes.push(node);
     return data.localID;
   }
 
@@ -284,8 +286,8 @@ export class FigFileBuilder {
   /**
    * Add a GROUP node
    */
-  addGroup(data: GroupNodeData): number {
-    const node = this.createNodeChange({
+  function addGroup(data: GroupNodeData): number {
+    const node = createNodeChange({
       localID: data.localID,
       parentID: data.parentID,
       type: NODE_TYPE_VALUES.GROUP,
@@ -295,7 +297,7 @@ export class FigFileBuilder {
       visible: data.visible,
       opacity: data.opacity,
     });
-    this.nodes.push(node);
+    nodes.push(node);
     return data.localID;
   }
 
@@ -306,14 +308,14 @@ export class FigFileBuilder {
    * fillPaints, strokePaints, fillGeometry, cornerRadius, frameMaskDisabled.
    * Without these, Figma import fails with "Internal error during import".
    */
-  addSection(data: SectionNodeData): number {
+  function addSection(data: SectionNodeData): number {
     // Section needs a fill geometry blob (like FRAME)
     const w = data.size.x;
     const h = data.size.y;
     const blobBytes = encodeRoundedRectangleBlob(w, h, 2);
-    const blobIndex = this.addBlob({ bytes: blobBytes });
+    const blobIndex = addBlob({ bytes: blobBytes });
 
-    const node = this.createNodeChange({
+    const node = createNodeChange({
       localID: data.localID,
       parentID: data.parentID,
       type: NODE_TYPE_VALUES.SECTION,
@@ -355,15 +357,15 @@ export class FigFileBuilder {
     if (data.sectionContentsHidden) {
       node.sectionContentsHidden = data.sectionContentsHidden;
     }
-    this.nodes.push(node);
+    nodes.push(node);
     return data.localID;
   }
 
   /**
    * Add a BOOLEAN_OPERATION node
    */
-  addBooleanOperation(data: BooleanOperationNodeData): number {
-    const node = this.createNodeChange({
+  function addBooleanOperation(data: BooleanOperationNodeData): number {
+    const node = createNodeChange({
       localID: data.localID,
       parentID: data.parentID,
       type: NODE_TYPE_VALUES.BOOLEAN_OPERATION,
@@ -376,15 +378,15 @@ export class FigFileBuilder {
     });
     // Add boolean operation specific field
     (node as Record<string, unknown>).booleanOperation = data.booleanOperation;
-    this.nodes.push(node);
+    nodes.push(node);
     return data.localID;
   }
 
   /**
    * Add a TEXT node
    */
-  addTextNode(data: TextNodeData): number {
-    const node = this.createNodeChange({
+  function addTextNode(data: TextNodeData): number {
+    const node = createNodeChange({
       localID: data.localID,
       parentID: data.parentID,
       type: NODE_TYPE_VALUES.TEXT,
@@ -411,7 +413,7 @@ export class FigFileBuilder {
     if (data.derivedTextData) {
       (node as Record<string, unknown>).derivedTextData = data.derivedTextData;
     }
-    this.nodes.push(node);
+    nodes.push(node);
     return data.localID;
   }
 
@@ -422,14 +424,14 @@ export class FigFileBuilder {
   /**
    * Add an ELLIPSE node
    */
-  addEllipse(data: EllipseNodeData): number {
+  function addEllipse(data: EllipseNodeData): number {
     // Generate fill geometry blob
     const width = data.size?.x ?? 100;
     const height = data.size?.y ?? 100;
     const blobBytes = encodeEllipseBlob(width, height);
-    const blobIndex = this.addBlob({ bytes: blobBytes });
+    const blobIndex = addBlob({ bytes: blobBytes });
 
-    const node = this.createNodeChange({
+    const node = createNodeChange({
       localID: data.localID,
       parentID: data.parentID,
       type: SHAPE_NODE_TYPES.ELLIPSE,
@@ -459,15 +461,15 @@ export class FigFileBuilder {
       commandsBlob: blobIndex,
       styleID: 0,
     }];
-    this.nodes.push(node);
+    nodes.push(node);
     return data.localID;
   }
 
   /**
    * Add a LINE node
    */
-  addLine(data: LineNodeData): number {
-    const node = this.createNodeChange({
+  function addLine(data: LineNodeData): number {
+    const node = createNodeChange({
       localID: data.localID,
       parentID: data.parentID,
       type: SHAPE_NODE_TYPES.LINE,
@@ -490,15 +492,15 @@ export class FigFileBuilder {
       verticalConstraint: data.verticalConstraint,
       effects: data.effects,
     });
-    this.nodes.push(node);
+    nodes.push(node);
     return data.localID;
   }
 
   /**
    * Add a STAR node
    */
-  addStar(data: StarNodeData): number {
-    const node = this.createNodeChange({
+  function addStar(data: StarNodeData): number {
+    const node = createNodeChange({
       localID: data.localID,
       parentID: data.parentID,
       type: SHAPE_NODE_TYPES.STAR,
@@ -523,15 +525,15 @@ export class FigFileBuilder {
       verticalConstraint: data.verticalConstraint,
       effects: data.effects,
     });
-    this.nodes.push(node);
+    nodes.push(node);
     return data.localID;
   }
 
   /**
    * Add a REGULAR_POLYGON node
    */
-  addPolygon(data: PolygonNodeData): number {
-    const node = this.createNodeChange({
+  function addPolygon(data: PolygonNodeData): number {
+    const node = createNodeChange({
       localID: data.localID,
       parentID: data.parentID,
       type: SHAPE_NODE_TYPES.REGULAR_POLYGON,
@@ -555,15 +557,15 @@ export class FigFileBuilder {
       verticalConstraint: data.verticalConstraint,
       effects: data.effects,
     });
-    this.nodes.push(node);
+    nodes.push(node);
     return data.localID;
   }
 
   /**
    * Add a VECTOR node
    */
-  addVector(data: VectorNodeData): number {
-    const node = this.createNodeChange({
+  function addVector(data: VectorNodeData): number {
+    const node = createNodeChange({
       localID: data.localID,
       parentID: data.parentID,
       type: SHAPE_NODE_TYPES.VECTOR,
@@ -588,21 +590,21 @@ export class FigFileBuilder {
       verticalConstraint: data.verticalConstraint,
       effects: data.effects,
     });
-    this.nodes.push(node);
+    nodes.push(node);
     return data.localID;
   }
 
   /**
    * Add a RECTANGLE node (basic rectangle without corner radius)
    */
-  addRectangle(data: RectangleNodeData): number {
+  function addRectangle(data: RectangleNodeData): number {
     // Generate fill geometry blob
     const width = data.size?.x ?? 100;
     const height = data.size?.y ?? 100;
     const blobBytes = encodeRectangleBlob(width, height);
-    const blobIndex = this.addBlob({ bytes: blobBytes });
+    const blobIndex = addBlob({ bytes: blobBytes });
 
-    const node = this.createNodeChange({
+    const node = createNodeChange({
       localID: data.localID,
       parentID: data.parentID,
       type: SHAPE_NODE_TYPES.RECTANGLE,
@@ -631,22 +633,22 @@ export class FigFileBuilder {
       commandsBlob: blobIndex,
       styleID: 0,
     }];
-    this.nodes.push(node);
+    nodes.push(node);
     return data.localID;
   }
 
   /**
    * Add a ROUNDED_RECTANGLE node
    */
-  addRoundedRectangle(data: RoundedRectangleNodeData): number {
+  function addRoundedRectangle(data: RoundedRectangleNodeData): number {
     // Generate fill geometry blob
     const width = data.size?.x ?? 100;
     const height = data.size?.y ?? 100;
     const radius = data.cornerRadius ?? 0;
     const blobBytes = encodeRoundedRectangleBlob(width, height, radius);
-    const blobIndex = this.addBlob({ bytes: blobBytes });
+    const blobIndex = addBlob({ bytes: blobBytes });
 
-    const node = this.createNodeChange({
+    const node = createNodeChange({
       localID: data.localID,
       parentID: data.parentID,
       type: SHAPE_NODE_TYPES.ROUNDED_RECTANGLE,
@@ -677,7 +679,7 @@ export class FigFileBuilder {
       commandsBlob: blobIndex,
       styleID: 0,
     }];
-    this.nodes.push(node);
+    nodes.push(node);
     return data.localID;
   }
 
@@ -685,16 +687,16 @@ export class FigFileBuilder {
    * Create a NodeChange record for structural nodes (DOCUMENT, CANVAS)
    * These use structuralSessionID (0) for both guid and parentIndex
    */
-  private createStructuralNodeChange(data: {
+  function createStructuralNodeChange(data: {
     localID: number;
     parentID: number;
     type: number;
     name: string;
   }): Record<string, unknown> {
-    const typeName = this.getTypeName(data.type);
+    const typeName = getTypeName(data.type);
 
     const node: Record<string, unknown> = {
-      guid: { sessionID: this.structuralSessionID, localID: data.localID },
+      guid: { sessionID: structuralSessionID, localID: data.localID },
       phase: { value: 0, name: "CREATED" },
       type: { value: data.type, name: typeName },
       name: data.name,
@@ -705,8 +707,8 @@ export class FigFileBuilder {
     // Parent index (also uses structuralSessionID)
     if (data.parentID >= 0) {
       node.parentIndex = {
-        guid: { sessionID: this.structuralSessionID, localID: data.parentID },
-        position: this.generatePosition(data.parentID),
+        guid: { sessionID: structuralSessionID, localID: data.parentID },
+        position: generatePosition(data.parentID),
       };
     }
 
@@ -717,7 +719,7 @@ export class FigFileBuilder {
    * Create a NodeChange record for content nodes (FRAME, shapes, text, etc.)
    * These use contentSessionID (1) for guid, structuralSessionID (0) for parent reference
    */
-  private createNodeChange(data: {
+  function createNodeChange(data: {
     localID: number;
     parentID: number;
     type: number;
@@ -798,14 +800,14 @@ export class FigFileBuilder {
     // Effects
     effects?: readonly EffectData[];
   }): Record<string, unknown> {
-    const typeName = this.getTypeName(data.type);
+    const typeName = getTypeName(data.type);
 
     // Register this content node with contentSessionID
-    this.nodeSessionIDs.set(data.localID, this.contentSessionID);
+    nodeSessionIDs.set(data.localID, contentSessionID);
 
     // Content nodes use contentSessionID (1) for their own guid
     const node: Record<string, unknown> = {
-      guid: { sessionID: this.contentSessionID, localID: data.localID },
+      guid: { sessionID: contentSessionID, localID: data.localID },
       phase: { value: 0, name: "CREATED" },
       type: { value: data.type, name: typeName },
       name: data.name,
@@ -815,10 +817,10 @@ export class FigFileBuilder {
 
     // Parent index - look up the parent's actual sessionID
     if (data.parentID >= 0) {
-      const parentSessionID = this.nodeSessionIDs.get(data.parentID) ?? this.structuralSessionID;
+      const parentSessionID = nodeSessionIDs.get(data.parentID) ?? structuralSessionID;
       node.parentIndex = {
         guid: { sessionID: parentSessionID, localID: data.parentID },
-        position: this.generatePosition(data.parentID),
+        position: generatePosition(data.parentID),
       };
     }
 
@@ -990,16 +992,16 @@ export class FigFileBuilder {
     return node;
   }
 
-  private generatePosition(parentID: number): string {
+  function generatePosition(parentID: number): string {
     // Figma uses a fractional index system per parent
     // "!" for first child, then ASCII incrementing ("\"", "#", "$", etc.)
-    const count = this.childCountPerParent.get(parentID) ?? 0;
-    this.childCountPerParent.set(parentID, count + 1);
+    const count = childCountPerParent.get(parentID) ?? 0;
+    childCountPerParent.set(parentID, count + 1);
     const base = 33; // ASCII '!'
     return String.fromCharCode(base + (count % 93));
   }
 
-  private getTypeName(type: number): string {
+  function getTypeName(type: number): string {
     // Reverse lookup from NODE_TYPE_VALUES
     for (const [name, value] of Object.entries(NODE_TYPE_VALUES)) {
       if (value === type) {
@@ -1019,10 +1021,10 @@ export class FigFileBuilder {
    *
    * Called automatically by buildRaw/buildRawAsync before serialization.
    */
-  private computeDerivedSymbolData(): void {
+  function computeDerivedSymbolData(): void {
     // Index: localID → node
     const nodeByLocalID = new Map<number, Record<string, unknown>>();
-    for (const node of this.nodes) {
+    for (const node of nodes) {
       const guid = node.guid as { sessionID: number; localID: number } | undefined;
       if (guid) {
         nodeByLocalID.set(guid.localID, node);
@@ -1031,39 +1033,39 @@ export class FigFileBuilder {
 
     // Index: parentLocalID → child nodes
     const childrenByParent = new Map<number, Record<string, unknown>[]>();
-    for (const node of this.nodes) {
+    for (const node of nodes) {
       const pi = node.parentIndex as { guid: { localID: number } } | undefined;
       if (pi) {
         const parentID = pi.guid.localID;
-        let list = childrenByParent.get(parentID);
-        if (!list) {
-          list = [];
-          childrenByParent.set(parentID, list);
+        const existing = childrenByParent.get(parentID);
+        if (!existing) {
+          childrenByParent.set(parentID, [node]);
+        } else {
+          existing.push(node);
         }
-        list.push(node);
       }
     }
 
-    for (const node of this.nodes) {
+    for (const node of nodes) {
       const nodeType = node.type as { value: number } | undefined;
-      if (nodeType?.value !== NODE_TYPE_VALUES.INSTANCE) continue;
+      if (nodeType?.value !== NODE_TYPE_VALUES.INSTANCE) {continue;}
 
       const effectiveID = getEffectiveSymbolID(node);
-      if (!effectiveID) continue;
+      if (!effectiveID) {continue;}
 
       const symNode = nodeByLocalID.get(effectiveID.localID);
-      if (!symNode) continue;
+      if (!symNode) {continue;}
 
       const instSize = node.size as { x: number; y: number } | undefined;
       const symSize = symNode.size as { x: number; y: number } | undefined;
-      if (!instSize || !symSize) continue;
-      if (instSize.x === symSize.x && instSize.y === symSize.y) continue;
+      if (!instSize || !symSize) {continue;}
+      if (instSize.x === symSize.x && instSize.y === symSize.y) {continue;}
 
       const derived: Record<string, unknown>[] = [];
-      this.computeDerivedRecursive(
-        effectiveID.localID, symSize, instSize,
-        [], derived, nodeByLocalID, childrenByParent, 0,
-      );
+      computeDerivedRecursive({
+        symbolLocalID: effectiveID.localID, symSize, instSize,
+        guidPrefix: [], derived, nodeByLocalID, childrenByParent, depth: 0,
+      });
 
       if (derived.length > 0) {
         node.derivedSymbolData = derived;
@@ -1076,26 +1078,27 @@ export class FigFileBuilder {
    * When a child INSTANCE is resized, recurse into its referenced symbol to
    * generate multi-level guidPath entries.
    */
-  private computeDerivedRecursive(
-    symbolLocalID: number,
-    symSize: { x: number; y: number },
-    instSize: { x: number; y: number },
-    guidPrefix: { sessionID: number; localID: number }[],
-    derived: Record<string, unknown>[],
-    nodeByLocalID: Map<number, Record<string, unknown>>,
-    childrenByParent: Map<number, Record<string, unknown>[]>,
-    depth: number,
-  ): void {
-    if (depth > 8) return; // prevent infinite recursion
+  function computeDerivedRecursive(params: {
+    symbolLocalID: number;
+    symSize: { x: number; y: number };
+    instSize: { x: number; y: number };
+    guidPrefix: { sessionID: number; localID: number }[];
+    derived: Record<string, unknown>[];
+    nodeByLocalID: Map<number, Record<string, unknown>>;
+    childrenByParent: Map<number, Record<string, unknown>[]>;
+    depth: number;
+  }): void {
+    const { symbolLocalID, symSize, instSize, guidPrefix, derived, nodeByLocalID, childrenByParent, depth } = params;
+    if (depth > 8) {return;} // prevent infinite recursion
 
     const symChildren = childrenByParent.get(symbolLocalID) ?? [];
 
     for (const child of symChildren) {
       const childGuid = child.guid as { sessionID: number; localID: number } | undefined;
-      if (!childGuid) continue;
+      if (!childGuid) {continue;}
 
       const resolution = resolveChildConstraints(child, symSize, instSize);
-      if (!resolution) continue;
+      if (!resolution) {continue;}
 
       if (resolution.posChanged || resolution.sizeChanged) {
         const childTransform = child.transform as { m00: number; m01: number; m02: number; m10: number; m11: number; m12: number };
@@ -1122,14 +1125,14 @@ export class FigFileBuilder {
           if (childSymNode) {
             const childSymSize = childSymNode.size as { x: number; y: number } | undefined;
             if (childSymSize) {
-              this.computeDerivedRecursive(
-                childSymID.localID,
-                childSymSize,
-                { x: resolution.dimX, y: resolution.dimY },
-                [...guidPrefix, childGuid],
+              computeDerivedRecursive({
+                symbolLocalID: childSymID.localID,
+                symSize: childSymSize,
+                instSize: { x: resolution.dimX, y: resolution.dimY },
+                guidPrefix: [...guidPrefix, childGuid],
                 derived, nodeByLocalID, childrenByParent,
-                depth + 1,
-              );
+                depth: depth + 1,
+              });
             }
           }
         }
@@ -1143,23 +1146,23 @@ export class FigFileBuilder {
    * Note: This uses deflate-raw compression. For Figma compatibility,
    * use buildRawAsync() which uses zstd compression.
    */
-  buildRaw(): Uint8Array {
-    this.computeDerivedSymbolData();
+  function buildRaw(): Uint8Array {
+    computeDerivedSymbolData();
     // Encode schema
-    const schemaData = encodeFigSchema(this.schema);
+    const schemaData = encodeFigSchema(schema);
     const compressedSchema = deflateRaw(schemaData);
 
     // Encode message using streaming encoder
-    const encoder = new StreamingFigEncoder({ schema: this.schema });
+    const encoder = new StreamingFigEncoder({ schema: schema });
 
     encoder.writeHeader({
       type: { value: 1 },
-      sessionID: this.structuralSessionID,
+      sessionID: structuralSessionID,
       ackID: 0,
-      blobs: this.blobs,
+      blobs: blobs,
     });
 
-    for (const node of this.nodes) {
+    for (const node of nodes) {
       encoder.writeNodeChange(node);
     }
 
@@ -1189,24 +1192,24 @@ export class FigFileBuilder {
    * Build the raw fig-kiwi data with zstd compression (async).
    * This is the format that Figma expects.
    */
-  async buildRawAsync(): Promise<Uint8Array> {
-    this.computeDerivedSymbolData();
+  async function buildRawAsync(): Promise<Uint8Array> {
+    computeDerivedSymbolData();
 
     // Encode schema
-    const schemaData = encodeFigSchema(this.schema);
+    const schemaData = encodeFigSchema(schema);
     const compressedSchema = deflateRaw(schemaData);
 
     // Encode message using streaming encoder
-    const encoder = new StreamingFigEncoder({ schema: this.schema });
+    const encoder = new StreamingFigEncoder({ schema: schema });
 
     encoder.writeHeader({
       type: { value: 1 },
-      sessionID: this.structuralSessionID,
+      sessionID: structuralSessionID,
       ackID: 0,
-      blobs: this.blobs,
+      blobs: blobs,
     });
 
-    for (const node of this.nodes) {
+    for (const node of nodes) {
       encoder.writeNodeChange(node);
     }
 
@@ -1239,10 +1242,10 @@ export class FigFileBuilder {
    *
    * @deprecated Use buildAsync() instead for ZIP-wrapped format
    */
-  build(): Uint8Array {
+  function build(): Uint8Array {
     // For backwards compatibility, return raw format
     // Users should use buildAsync() for ZIP-wrapped format
-    return this.buildRaw();
+    return buildRaw();
   }
 
   /**
@@ -1252,10 +1255,10 @@ export class FigFileBuilder {
    * @param options - Optional build options
    * @param options.fileName - File name for meta.json
    */
-  async buildAsync(options?: {
+  async function buildAsync(options?: {
     fileName?: string;
   }): Promise<Uint8Array> {
-    const rawData = await this.buildRawAsync();
+    const rawData = await buildRawAsync();
 
     // Create ZIP package with canvas.fig inside
     const zip = createEmptyZipPackage();
@@ -1282,6 +1285,33 @@ export class FigFileBuilder {
     const buffer = await zip.toArrayBuffer({ compressionLevel: 6 });
     return new Uint8Array(buffer);
   }
+
+  return {
+    addBlob,
+    getBlobs,
+    getNextID,
+    addDocument,
+    addCanvas,
+    addInternalCanvas,
+    addFrame,
+    addSymbol,
+    addInstance,
+    addGroup,
+    addSection,
+    addBooleanOperation,
+    addTextNode,
+    addEllipse,
+    addLine,
+    addStar,
+    addPolygon,
+    addVector,
+    addRectangle,
+    addRoundedRectangle,
+    buildRaw,
+    buildRawAsync,
+    build,
+    buildAsync,
+  };
 }
 
 /**
@@ -1319,5 +1349,5 @@ function generatePlaceholderThumbnail(): Uint8Array {
  * Create a new FigFileBuilder instance
  */
 export function createFigFile(): FigFileBuilder {
-  return new FigFileBuilder();
+  return _createFigFileBuilder();
 }

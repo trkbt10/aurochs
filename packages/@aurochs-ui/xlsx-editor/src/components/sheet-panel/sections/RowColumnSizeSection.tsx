@@ -76,6 +76,18 @@ function getColumnWidth(sheet: XlsxWorksheet, colIndex: ColIndex): number | unde
   return colDef?.width;
 }
 
+function formatRowLabel(range: { start: number; end: number; count: number } | null): string {
+  if (!range) { return "No selection"; }
+  if (range.count === 1) { return `Row ${range.start + 1}`; }
+  return `Rows ${range.start + 1}-${range.end + 1}`;
+}
+
+function formatColLabel(range: { start: number; end: number; count: number } | null): string {
+  if (!range) { return "No selection"; }
+  if (range.count === 1) { return `Column ${String.fromCharCode(65 + range.start)}`; }
+  return `Columns ${String.fromCharCode(65 + range.start)}-${String.fromCharCode(65 + range.end)}`;
+}
+
 /**
  * Row/Column Size adjustment section.
  */
@@ -97,7 +109,7 @@ export function RowColumnSizeSection({
 
   // Calculate selected row and column ranges
   const selectedRowRange = useMemo(() => {
-    if (!selectedRange) return null;
+    if (!selectedRange) {return null;}
     return {
       start: selectedRange.start.row,
       end: selectedRange.end.row,
@@ -106,7 +118,7 @@ export function RowColumnSizeSection({
   }, [selectedRange]);
 
   const selectedColRange = useMemo(() => {
-    if (!selectedRange) return null;
+    if (!selectedRange) {return null;}
     return {
       start: selectedRange.start.col,
       end: selectedRange.end.col,
@@ -116,40 +128,40 @@ export function RowColumnSizeSection({
 
   // Get current row height (for single row selection)
   const currentRowHeight = useMemo(() => {
-    if (!selectedRowRange || selectedRowRange.count !== 1) return undefined;
+    if (!selectedRowRange || selectedRowRange.count !== 1) {return undefined;}
     return getRowHeight(sheet, rowIdx(selectedRowRange.start));
   }, [sheet, selectedRowRange]);
 
   // Get current column width (for single column selection)
   const currentColWidth = useMemo(() => {
-    if (!selectedColRange || selectedColRange.count !== 1) return undefined;
+    if (!selectedColRange || selectedColRange.count !== 1) {return undefined;}
     return getColumnWidth(sheet, colIdx(selectedColRange.start));
   }, [sheet, selectedColRange]);
 
   // Check if any selected rows are hidden
   const hasHiddenRows = useMemo(() => {
-    if (!selectedRowRange) return false;
+    if (!selectedRowRange) {return false;}
     for (let i = selectedRowRange.start; i <= selectedRowRange.end; i++) {
       const row = sheet.rows.find((r) => r.rowNumber === rowIdx(i));
-      if (row?.hidden) return true;
+      if (row?.hidden) {return true;}
     }
     return false;
   }, [sheet, selectedRowRange]);
 
   // Check if any selected columns are hidden
   const hasHiddenCols = useMemo(() => {
-    if (!selectedColRange) return false;
+    if (!selectedColRange) {return false;}
     for (let i = selectedColRange.start; i <= selectedColRange.end; i++) {
       const colDef = sheet.columns?.find((c) => c.min <= colIdx(i) && c.max >= colIdx(i));
-      if (colDef?.hidden) return true;
+      if (colDef?.hidden) {return true;}
     }
     return false;
   }, [sheet, selectedColRange]);
 
   const handleApplyRowHeight = useCallback(() => {
-    if (!selectedRowRange) return;
+    if (!selectedRowRange) {return;}
     const height = parseFloat(draftRowHeight);
-    if (isNaN(height) || height < 0) return;
+    if (isNaN(height) || height < 0) {return;}
 
     for (let i = selectedRowRange.start; i <= selectedRowRange.end; i++) {
       onSetRowHeight(rowIdx(i), height);
@@ -158,9 +170,9 @@ export function RowColumnSizeSection({
   }, [selectedRowRange, draftRowHeight, onSetRowHeight]);
 
   const handleApplyColWidth = useCallback(() => {
-    if (!selectedColRange) return;
+    if (!selectedColRange) {return;}
     const width = parseFloat(draftColWidth);
-    if (isNaN(width) || width < 0) return;
+    if (isNaN(width) || width < 0) {return;}
 
     for (let i = selectedColRange.start; i <= selectedColRange.end; i++) {
       onSetColumnWidth(colIdx(i), width);
@@ -169,27 +181,27 @@ export function RowColumnSizeSection({
   }, [selectedColRange, draftColWidth, onSetColumnWidth]);
 
   const handleHideRows = useCallback(() => {
-    if (!selectedRowRange) return;
+    if (!selectedRowRange) {return;}
     onHideRows(rowIdx(selectedRowRange.start), selectedRowRange.count);
   }, [selectedRowRange, onHideRows]);
 
   const handleUnhideRows = useCallback(() => {
-    if (!selectedRowRange) return;
+    if (!selectedRowRange) {return;}
     onUnhideRows(rowIdx(selectedRowRange.start), selectedRowRange.count);
   }, [selectedRowRange, onUnhideRows]);
 
   const handleHideColumns = useCallback(() => {
-    if (!selectedColRange) return;
+    if (!selectedColRange) {return;}
     onHideColumns(colIdx(selectedColRange.start), selectedColRange.count);
   }, [selectedColRange, onHideColumns]);
 
   const handleUnhideColumns = useCallback(() => {
-    if (!selectedColRange) return;
+    if (!selectedColRange) {return;}
     onUnhideColumns(colIdx(selectedColRange.start), selectedColRange.count);
   }, [selectedColRange, onUnhideColumns]);
 
   const handleAutoFitRowHeight = useCallback(() => {
-    if (!selectedRowRange) return;
+    if (!selectedRowRange) {return;}
     // Auto-fit sets to default height
     for (let i = selectedRowRange.start; i <= selectedRowRange.end; i++) {
       onSetRowHeight(rowIdx(i), DEFAULT_ROW_HEIGHT);
@@ -197,24 +209,15 @@ export function RowColumnSizeSection({
   }, [selectedRowRange, onSetRowHeight]);
 
   const handleAutoFitColWidth = useCallback(() => {
-    if (!selectedColRange) return;
+    if (!selectedColRange) {return;}
     // Auto-fit sets to default width
     for (let i = selectedColRange.start; i <= selectedColRange.end; i++) {
       onSetColumnWidth(colIdx(i), DEFAULT_COLUMN_WIDTH);
     }
   }, [selectedColRange, onSetColumnWidth]);
 
-  const rowLabel = selectedRowRange
-    ? selectedRowRange.count === 1
-      ? `Row ${selectedRowRange.start + 1}`
-      : `Rows ${selectedRowRange.start + 1}-${selectedRowRange.end + 1}`
-    : "No selection";
-
-  const colLabel = selectedColRange
-    ? selectedColRange.count === 1
-      ? `Column ${String.fromCharCode(65 + selectedColRange.start)}`
-      : `Columns ${String.fromCharCode(65 + selectedColRange.start)}-${String.fromCharCode(65 + selectedColRange.end)}`
-    : "No selection";
+  const rowLabel = formatRowLabel(selectedRowRange);
+  const colLabel = formatColLabel(selectedColRange);
 
   return (
     <OptionalPropertySection title="Row/Column Size" defaultExpanded={false}>

@@ -93,6 +93,17 @@ export type SidebarProps = {
 // Component
 // =============================================================================
 
+
+
+
+
+
+
+
+
+
+
+/** Navigation sidebar listing components and stories */
 export function Sidebar({
   catalog,
   selectedComponent,

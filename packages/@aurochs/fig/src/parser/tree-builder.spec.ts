@@ -35,22 +35,20 @@ function createTestNode(options: TestNodeOptions): FigNode {
 
 // Create a test node without type (for edge case testing)
 function createNodeWithoutType(guid: FigGuid): FigNode {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const node: any = {
+  const node = {
     guid,
     phase: { value: 0, name: "CREATED" },
-  };
+  } as FigNode;
   return node;
 }
 
 // Create a test node with legacy string type (for backwards compat testing)
 function createLegacyStringTypeNode(stringType: string, guid: FigGuid): FigNode {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const node: any = {
+  const node = {
     type: stringType,
     guid,
     phase: { value: 0, name: "CREATED" },
-  };
+  } as FigNode;
   return node;
 }
 

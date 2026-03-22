@@ -117,7 +117,6 @@ export type SetSpeakerNotesResult = {
   readonly applied: boolean;
 };
 
-export type { SlideModInput, ShapeSpec } from "@aurochs-builder/pptx";
 
 // =============================================================================
 // Session

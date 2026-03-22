@@ -7,7 +7,6 @@
  */
 
 import type { Shape } from "@aurochs-office/pptx/domain";
-import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import type {
   ThemeEditorState,
   ThemeEditorAction,
@@ -17,7 +16,7 @@ import type {
 import type { ColorScheme } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
 import { DEFAULT_COLOR_MAPPING } from "@aurochs-office/pptx/domain/color/types";
-import { findShapeById, updateShapeById } from "@aurochs-ui/editor-controls/shape-editor";
+import { updateShapeById } from "@aurochs-ui/editor-controls/shape-editor";
 
 // =============================================================================
 // Initial State

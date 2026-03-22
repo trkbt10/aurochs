@@ -18,71 +18,80 @@ export type FigBlob = {
 };
 
 /**
+ * Blob builder state
+ */
+type BlobBuilderState = {
+  readonly data: number[];
+};
+
+/**
+ * Write a float32 value in little-endian format to the data array
+ */
+function writeFloat32(state: BlobBuilderState, value: number): void {
+  const buffer = new ArrayBuffer(4);
+  const view = new DataView(buffer);
+  view.setFloat32(0, value, true); // little-endian
+  const bytes = new Uint8Array(buffer);
+  for (const byte of bytes) {
+    state.data.push(byte);
+  }
+}
+
+/**
  * Builder for creating geometry blobs
  */
-export class BlobBuilder {
-  private data: number[] = [];
+export function createBlobBuilder(): {
+  moveTo: (x: number, y: number) => ReturnType<typeof createBlobBuilder>;
+  lineTo: (x: number, y: number) => ReturnType<typeof createBlobBuilder>;
+  cubicTo: (params: { cp1x: number; cp1y: number; cp2x: number; cp2y: number; x: number; y: number }) => ReturnType<typeof createBlobBuilder>;
+  close: () => ReturnType<typeof createBlobBuilder>;
+  build: () => FigBlob;
+} {
+  const state: BlobBuilderState = { data: [] };
 
-  private writeFloat32(value: number): void {
-    const buffer = new ArrayBuffer(4);
-    const view = new DataView(buffer);
-    view.setFloat32(0, value, true); // little-endian
-    const bytes = new Uint8Array(buffer);
-    for (let i = 0; i < 4; i++) {
-      this.data.push(bytes[i]);
-    }
-  }
+  const builder = {
+    /** Move to absolute position */
+    moveTo(x: number, y: number) {
+      state.data.push(CMD_MOVE_TO);
+      writeFloat32(state, x);
+      writeFloat32(state, y);
+      return builder;
+    },
 
-  /**
-   * Move to absolute position
-   */
-  moveTo(x: number, y: number): this {
-    this.data.push(CMD_MOVE_TO);
-    this.writeFloat32(x);
-    this.writeFloat32(y);
-    return this;
-  }
+    /** Line to absolute position */
+    lineTo(x: number, y: number) {
+      state.data.push(CMD_LINE_TO);
+      writeFloat32(state, x);
+      writeFloat32(state, y);
+      return builder;
+    },
 
-  /**
-   * Line to absolute position
-   */
-  lineTo(x: number, y: number): this {
-    this.data.push(CMD_LINE_TO);
-    this.writeFloat32(x);
-    this.writeFloat32(y);
-    return this;
-  }
+    /** Cubic bezier curve */
+    cubicTo({ cp1x, cp1y, cp2x, cp2y, x, y }: { cp1x: number; cp1y: number; cp2x: number; cp2y: number; x: number; y: number }) {
+      state.data.push(CMD_CUBIC_TO);
+      writeFloat32(state, cp1x);
+      writeFloat32(state, cp1y);
+      writeFloat32(state, cp2x);
+      writeFloat32(state, cp2y);
+      writeFloat32(state, x);
+      writeFloat32(state, y);
+      return builder;
+    },
 
-  /**
-   * Cubic bezier curve
-   */
-  cubicTo(cp1x: number, cp1y: number, cp2x: number, cp2y: number, x: number, y: number): this {
-    this.data.push(CMD_CUBIC_TO);
-    this.writeFloat32(cp1x);
-    this.writeFloat32(cp1y);
-    this.writeFloat32(cp2x);
-    this.writeFloat32(cp2y);
-    this.writeFloat32(x);
-    this.writeFloat32(y);
-    return this;
-  }
+    /** Close path */
+    close() {
+      state.data.push(CMD_CLOSE);
+      return builder;
+    },
 
-  /**
-   * Close path
-   */
-  close(): this {
-    this.data.push(CMD_CLOSE);
-    return this;
-  }
+    /** Build the blob */
+    build(): FigBlob {
+      const result = [...state.data, 0x00];
+      return { bytes: result };
+    },
+  };
 
-  /**
-   * Build the blob
-   */
-  build(): FigBlob {
-    // Add end marker (zero byte)
-    const result = [...this.data, 0x00];
-    return { bytes: result };
-  }
+  return builder;
 }
 
 /**
@@ -90,7 +99,7 @@ export class BlobBuilder {
  * Note: Uses lineTo back to origin instead of close command to match Figma's format
  */
 export function createRectBlob(width: number, height: number): FigBlob {
-  return new BlobBuilder()
+  return createBlobBuilder()
     .moveTo(0, 0)
     .lineTo(width, 0)
     .lineTo(width, height)
@@ -114,7 +123,7 @@ export function createRoundedRectBlob(
   const k = 0.5522847498; // 4/3 * (sqrt(2) - 1)
   const c = r * k;
 
-  const builder = new BlobBuilder();
+  const builder = createBlobBuilder();
 
   // Start at top-left, after corner
   builder.moveTo(r, 0);
@@ -123,25 +132,25 @@ export function createRoundedRectBlob(
   builder.lineTo(width - r, 0);
 
   // Top-right corner
-  builder.cubicTo(width - r + c, 0, width, r - c, width, r);
+  builder.cubicTo({ cp1x: width - r + c, cp1y: 0, cp2x: width, cp2y: r - c, x: width, y: r });
 
   // Right edge
   builder.lineTo(width, height - r);
 
   // Bottom-right corner
-  builder.cubicTo(width, height - r + c, width - r + c, height, width - r, height);
+  builder.cubicTo({ cp1x: width, cp1y: height - r + c, cp2x: width - r + c, cp2y: height, x: width - r, y: height });
 
   // Bottom edge
   builder.lineTo(r, height);
 
   // Bottom-left corner
-  builder.cubicTo(r - c, height, 0, height - r + c, 0, height - r);
+  builder.cubicTo({ cp1x: r - c, cp1y: height, cp2x: 0, cp2y: height - r + c, x: 0, y: height - r });
 
   // Left edge
   builder.lineTo(0, r);
 
   // Top-left corner
-  builder.cubicTo(0, r - c, r - c, 0, r, 0);
+  builder.cubicTo({ cp1x: 0, cp1y: r - c, cp2x: r - c, cp2y: 0, x: r, y: 0 });
 
   builder.close();
 
@@ -160,22 +169,22 @@ export function createEllipseBlob(width: number, height: number): FigBlob {
   const cx = rx * k;
   const cy = ry * k;
 
-  const builder = new BlobBuilder();
+  const builder = createBlobBuilder();
 
   // Start at right-center
   builder.moveTo(width, ry);
 
   // Bottom-right quadrant
-  builder.cubicTo(width, ry + cy, rx + cx, height, rx, height);
+  builder.cubicTo({ cp1x: width, cp1y: ry + cy, cp2x: rx + cx, cp2y: height, x: rx, y: height });
 
   // Bottom-left quadrant
-  builder.cubicTo(rx - cx, height, 0, ry + cy, 0, ry);
+  builder.cubicTo({ cp1x: rx - cx, cp1y: height, cp2x: 0, cp2y: ry + cy, x: 0, y: ry });
 
   // Top-left quadrant
-  builder.cubicTo(0, ry - cy, rx - cx, 0, rx, 0);
+  builder.cubicTo({ cp1x: 0, cp1y: ry - cy, cp2x: rx - cx, cp2y: 0, x: rx, y: 0 });
 
   // Top-right quadrant (returns to start point)
-  builder.cubicTo(rx + cx, 0, width, ry - cy, width, ry);
+  builder.cubicTo({ cp1x: rx + cx, cp1y: 0, cp2x: width, cp2y: ry - cy, x: width, y: ry });
 
   // Note: No close command - Figma paths don't use explicit close
   return builder.build();

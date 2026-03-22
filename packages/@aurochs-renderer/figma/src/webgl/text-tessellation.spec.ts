@@ -50,11 +50,11 @@ function makeTextNode(overrides: Partial<TextNode> = {}): TextNode {
  */
 function signedArea(coords: readonly number[]): number {
   const n = coords.length >> 1;
-  let area = 0;
+  const areaRef = { value: 0 };
   for (let i = 0, j = n - 1; i < n; j = i++) {
-    area += (coords[j * 2] - coords[i * 2]) * (coords[j * 2 + 1] + coords[i * 2 + 1]);
+    areaRef.value += (coords[j * 2] - coords[i * 2]) * (coords[j * 2 + 1] + coords[i * 2 + 1]);
   }
-  return area;
+  return areaRef.value;
 }
 
 /**
@@ -63,7 +63,9 @@ function signedArea(coords: readonly number[]): number {
  *
  * This matches how font CW outers look after Y-flip.
  */
-function outerRect(x: number, y: number, w: number, h: number): PathContour {
+function outerRect(
+  { x, y, w, h }: { x: number; y: number; w: number; h: number; }
+): PathContour {
   return {
     commands: [
       { type: "M", x, y: y + h },         // bottom-left
@@ -80,7 +82,9 @@ function outerRect(x: number, y: number, w: number, h: number): PathContour {
  * Create a rectangular hole contour.
  * Goes visually CW in screen-space (right → down → left → up) = positive signedArea = HOLE.
  */
-function holeRect(x: number, y: number, w: number, h: number): PathContour {
+function holeRect(
+  { x, y, w, h }: { x: number; y: number; w: number; h: number; }
+): PathContour {
   return {
     commands: [
       { type: "M", x, y },
@@ -140,14 +144,7 @@ function holeCircle(cx: number, cy: number, r: number): PathContour {
  * Screen space (Y-down): font CW → screen CCW (negative area → OUTER) ✓
  */
 function simulateYFlippedRect(
-  posX: number,
-  baselineY: number,
-  normX: number,
-  normY: number,
-  normW: number,
-  normH: number,
-  fontSize: number,
-  cwInFontSpace: boolean
+  { posX, baselineY, normX, normY, normW, normH, fontSize, cwInFontSpace }: { posX: number; baselineY: number; normX: number; normY: number; normW: number; normH: number; fontSize: number; cwInFontSpace: boolean; }
 ): PathContour {
   const x0 = posX + normX * fontSize;
   const y0 = baselineY - normY * fontSize;
@@ -214,13 +211,13 @@ describe("Text tessellation pipeline", () => {
 
   describe("simple contour tessellation", () => {
     it("tessellates a single outer rect", () => {
-      const contour = outerRect(10, 20, 5, 12);
+      const contour = outerRect({ x: 10, y: 20, w: 5, h: 12 });
       const vertices = tessellateContour(contour);
       expect(vertices.length).toBe(12); // 2 triangles × 6 coords
     });
 
     it("tessellates a single hole rect (earcut handles any winding)", () => {
-      const contour = holeRect(10, 20, 5, 12);
+      const contour = holeRect({ x: 10, y: 20, w: 5, h: 12 });
       const vertices = tessellateContour(contour);
       expect(vertices.length).toBe(12);
     });
@@ -239,7 +236,7 @@ describe("Text tessellation pipeline", () => {
     });
 
     it("handles very small glyph (sub-pixel)", () => {
-      const contour = outerRect(100, 200, 0.1, 0.2);
+      const contour = outerRect({ x: 100, y: 200, w: 0.1, h: 0.2 });
       const vertices = tessellateContour(contour);
       expect(vertices.length).toBe(12);
     });
@@ -252,13 +249,13 @@ describe("Text tessellation pipeline", () => {
   describe("multi-contour tessellation (glyph-like)", () => {
     it("tessellates multiple simple glyphs (like 'Hi')", () => {
       // 'H' = 3 outer rects
-      const hLeft = outerRect(0, 0, 3, 16);
-      const hRight = outerRect(10, 0, 3, 16);
-      const hCross = outerRect(3, 6, 7, 3);
+      const hLeft = outerRect({ x: 0, y: 0, w: 3, h: 16 });
+      const hRight = outerRect({ x: 10, y: 0, w: 3, h: 16 });
+      const hCross = outerRect({ x: 3, y: 6, w: 7, h: 3 });
 
       // 'i' = 2 outer rects
-      const iStem = outerRect(17, 4, 3, 12);
-      const iDot = outerRect(17, 0, 3, 3);
+      const iStem = outerRect({ x: 17, y: 4, w: 3, h: 12 });
+      const iDot = outerRect({ x: 17, y: 0, w: 3, h: 3 });
 
       const vertices = tessellateContours([hLeft, hRight, hCross, iStem, iDot]);
       // 5 rectangles × 2 triangles × 6 coords = 60 coords
@@ -282,10 +279,10 @@ describe("Text tessellation pipeline", () => {
 
     it("tessellates 'lol' with mixed outer + hole glyphs", () => {
       const contours: PathContour[] = [
-        outerRect(0, 0, 5, 14),    // 'l' at x=0
-        outerRect(8, 0, 6, 14),    // 'o' outer at x=8
-        holeRect(9, 3, 4, 8),      // 'o' hole
-        outerRect(17, 0, 5, 14),   // 'l' at x=17
+        outerRect({ x: 0, y: 0, w: 5, h: 14 }),    // 'l' at x=0
+        outerRect({ x: 8, y: 0, w: 6, h: 14 }),    // 'o' outer at x=8
+        holeRect({ x: 9, y: 3, w: 4, h: 8 }),      // 'o' hole
+        outerRect({ x: 17, y: 0, w: 5, h: 14 }),   // 'l' at x=17
       ];
 
       const vertices = tessellateContours(contours);
@@ -303,29 +300,29 @@ describe("Text tessellation pipeline", () => {
 
   describe("winding direction after Y-axis flip", () => {
     it("classifies font CW outer correctly after Y-flip", () => {
-      const contour = simulateYFlippedRect(100, 200, 0, 0, 0.5, 0.7, 16, true);
+      const contour = simulateYFlippedRect({ posX: 100, baselineY: 200, normX: 0, normY: 0, normW: 0.5, normH: 0.7, fontSize: 16, cwInFontSpace: true });
       const coords = flattenPathCommands(contour.commands);
       const area = signedArea(coords);
       expect(area).toBeLessThan(0); // OUTER
     });
 
     it("classifies font CCW hole correctly after Y-flip", () => {
-      const contour = simulateYFlippedRect(100, 200, 0.1, 0.1, 0.3, 0.5, 16, false);
+      const contour = simulateYFlippedRect({ posX: 100, baselineY: 200, normX: 0.1, normY: 0.1, normW: 0.3, normH: 0.5, fontSize: 16, cwInFontSpace: false });
       const coords = flattenPathCommands(contour.commands);
       const area = signedArea(coords);
       expect(area).toBeGreaterThan(0); // HOLE
     });
 
     it("tessellates Y-flipped outer + hole correctly", () => {
-      const outer = simulateYFlippedRect(100, 200, 0, 0, 1, 1, 16, true);
-      const hole = simulateYFlippedRect(100, 200, 0.2, 0.2, 0.6, 0.6, 16, false);
+      const outer = simulateYFlippedRect({ posX: 100, baselineY: 200, normX: 0, normY: 0, normW: 1, normH: 1, fontSize: 16, cwInFontSpace: true });
+      const hole = simulateYFlippedRect({ posX: 100, baselineY: 200, normX: 0.2, normY: 0.2, normW: 0.6, normH: 0.6, fontSize: 16, cwInFontSpace: false });
 
       const vertices = tessellateContours([outer, hole]);
       expect(vertices.length).toBeGreaterThan(12); // ring topology
     });
 
     it("tessellates a single Y-flipped outer (no hole)", () => {
-      const outer = simulateYFlippedRect(50, 100, 0, 0, 0.4, 0.8, 14, true);
+      const outer = simulateYFlippedRect({ posX: 50, baselineY: 100, normX: 0, normY: 0, normW: 0.4, normH: 0.8, fontSize: 14, cwInFontSpace: true });
 
       const vertices = tessellateContours([outer]);
       expect(vertices.length).toBe(12); // 2 triangles
@@ -421,9 +418,9 @@ describe("Text tessellation pipeline", () => {
 
     it("tessellates a node with glyph contours", () => {
       const contours: PathContour[] = [
-        outerRect(0, 0, 5, 14),   // 'l'
-        outerRect(8, 4, 5, 10),   // 'i' stem
-        outerRect(8, 0, 5, 3),    // 'i' dot
+        outerRect({ x: 0, y: 0, w: 5, h: 14 }),   // 'l'
+        outerRect({ x: 8, y: 4, w: 5, h: 10 }),   // 'i' stem
+        outerRect({ x: 8, y: 0, w: 5, h: 3 }),    // 'i' dot
       ];
 
       const node = makeTextNode({ glyphContours: contours });
@@ -437,8 +434,8 @@ describe("Text tessellation pipeline", () => {
     });
 
     it("includes decoration vertices when present", () => {
-      const glyphs: PathContour[] = [outerRect(0, 0, 40, 12)];
-      const decorations: PathContour[] = [outerRect(0, 14, 40, 1)];
+      const glyphs: PathContour[] = [outerRect({ x: 0, y: 0, w: 40, h: 12 })];
+      const decorations: PathContour[] = [outerRect({ x: 0, y: 14, w: 40, h: 1 })];
 
       const node = makeTextNode({
         glyphContours: glyphs,
@@ -453,7 +450,7 @@ describe("Text tessellation pipeline", () => {
 
     it("preserves fill color and opacity", () => {
       const node = makeTextNode({
-        glyphContours: [outerRect(0, 0, 10, 10)],
+        glyphContours: [outerRect({ x: 0, y: 0, w: 10, h: 10 })],
         fill: { color: { r: 1, g: 0, b: 0, a: 1 }, opacity: 0.5 },
       });
       const result = tessellateTextNode(node);
@@ -498,8 +495,8 @@ describe("Text tessellation pipeline", () => {
     it("ALL-holes scenario: orphan holes are silently dropped", () => {
       // If a font produces all contours with "hole" winding, tessellateContours
       // drops them all as orphan holes → empty output → text disappears
-      const hole1 = holeRect(0, 0, 10, 10);
-      const hole2 = holeRect(20, 0, 10, 10);
+      const hole1 = holeRect({ x: 0, y: 0, w: 10, h: 10 });
+      const hole2 = holeRect({ x: 20, y: 0, w: 10, h: 10 });
 
       const vertices = tessellateContours([hole1, hole2]);
       // Both positive signedArea → both holes → orphan → dropped
@@ -508,14 +505,14 @@ describe("Text tessellation pipeline", () => {
 
     it("single contour with wrong winding is still tessellated by tessellateContour", () => {
       // tessellateContour (singular) doesn't classify winding - it just tessellates
-      const hole = holeRect(0, 0, 10, 10);
+      const hole = holeRect({ x: 0, y: 0, w: 10, h: 10 });
       const vertices = tessellateContour(hole);
       expect(vertices.length).toBe(12); // works fine individually
     });
 
     it("but tessellateContours (plural) drops it as orphan hole", () => {
       // tessellateContours classifies by winding → single hole is orphan → dropped
-      const hole = holeRect(0, 0, 10, 10);
+      const hole = holeRect({ x: 0, y: 0, w: 10, h: 10 });
       const vertices = tessellateContours([hole]);
       expect(vertices.length).toBe(0); // dropped!
     });
@@ -530,8 +527,8 @@ describe("Text tessellation pipeline", () => {
       // All contours have positive area (PostScript/CFF)
       // With autoDetectWinding=true, they should be classified as outers
       const contours: PathContour[] = [
-        holeRect(0, 0, 10, 10),   // positive area (would be "hole" without auto-detect)
-        holeRect(15, 0, 10, 10),  // positive area
+        holeRect({ x: 0, y: 0, w: 10, h: 10 }),   // positive area (would be "hole" without auto-detect)
+        holeRect({ x: 15, y: 0, w: 10, h: 10 }),  // positive area
       ];
 
       // Without auto-detect: both classified as holes → dropped
@@ -546,8 +543,8 @@ describe("Text tessellation pipeline", () => {
     it("auto-detects TrueType convention (negative area = outer)", () => {
       // All contours have negative area (TrueType)
       const contours: PathContour[] = [
-        outerRect(0, 0, 10, 10),
-        outerRect(15, 0, 10, 10),
+        outerRect({ x: 0, y: 0, w: 10, h: 10 }),
+        outerRect({ x: 15, y: 0, w: 10, h: 10 }),
       ];
 
       // Both with and without auto-detect should work
@@ -562,9 +559,9 @@ describe("Text tessellation pipeline", () => {
       // PostScript: outer=positive, hole=negative (opposite of TrueType)
       // 'O' + 'l' glyphs: 2 positive outers + 1 negative hole → majority positive
       const contours: PathContour[] = [
-        holeRect(0, 0, 20, 20),   // positive area = outer in PostScript ('O' outer)
-        outerRect(5, 5, 10, 10),  // negative area = hole in PostScript ('O' hole)
-        holeRect(25, 0, 5, 20),   // positive area = outer in PostScript ('l')
+        holeRect({ x: 0, y: 0, w: 20, h: 20 }),   // positive area = outer in PostScript ('O' outer)
+        outerRect({ x: 5, y: 5, w: 10, h: 10 }),  // negative area = hole in PostScript ('O' hole)
+        holeRect({ x: 25, y: 0, w: 5, h: 20 }),   // positive area = outer in PostScript ('l')
       ];
 
       // With auto-detect: 2 positive vs 1 negative → positive = outer
@@ -586,10 +583,10 @@ describe("Text tessellation pipeline", () => {
     it("handles mixed convention where majority determines outer", () => {
       // 3 PostScript outers (positive) + 1 PostScript hole (negative)
       const contours: PathContour[] = [
-        holeRect(0, 0, 10, 10),    // positive = outer (PostScript)
-        outerRect(3, 3, 4, 4),     // negative = hole (PostScript)
-        holeRect(20, 0, 10, 10),   // positive = outer
-        holeRect(40, 0, 10, 10),   // positive = outer
+        holeRect({ x: 0, y: 0, w: 10, h: 10 }),    // positive = outer (PostScript)
+        outerRect({ x: 3, y: 3, w: 4, h: 4 }),     // negative = hole (PostScript)
+        holeRect({ x: 20, y: 0, w: 10, h: 10 }),   // positive = outer
+        holeRect({ x: 40, y: 0, w: 10, h: 10 }),   // positive = outer
       ];
 
       const vertices = tessellateContours(contours, 0.25, true);

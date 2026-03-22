@@ -37,15 +37,15 @@ export function parsePlcSpaMom(
   fc: number,
   lcb: number,
 ): readonly DocShapeAnchor[] {
-  if (lcb === 0) return [];
+  if (lcb === 0) {return [];}
 
   // PlcSpaMom: CPs[n+1] + FSPAs[n]
   // Total = (n+1)*4 + n*26
   // lcb = 4*(n+1) + 26*n = 4n + 4 + 26n = 30n + 4
   // n = (lcb - 4) / 30
   const n = (lcb - 4) / 30;
-  if (n <= 0 || !Number.isInteger(n)) return [];
-  if (fc + lcb > tableStream.length) return [];
+  if (n <= 0 || !Number.isInteger(n)) {return [];}
+  if (fc + lcb > tableStream.length) {return [];}
 
   const view = new DataView(tableStream.buffer, tableStream.byteOffset, tableStream.byteLength);
   const cpArrayEnd = fc + (n + 1) * 4;
@@ -55,7 +55,7 @@ export function parsePlcSpaMom(
     const cp = view.getInt32(fc + i * 4, true);
     const fspaOffset = cpArrayEnd + i * FSPA_SIZE;
 
-    if (fspaOffset + FSPA_SIZE > tableStream.length) break;
+    if (fspaOffset + FSPA_SIZE > tableStream.length) {break;}
 
     const spid = view.getInt32(fspaOffset, true);
     const xaLeft = view.getInt32(fspaOffset + 4, true);

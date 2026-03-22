@@ -9,104 +9,105 @@ import {
   type BlendMode,
 } from "../../constants";
 
-export class RadialGradientBuilder {
-  private _stops: GradientStop[];
-  private _centerX: number;
-  private _centerY: number;
-  private _radiusX: number;
-  private _radiusY: number;
-  private _opacity: number;
-  private _visible: boolean;
-  private _blendMode: BlendMode;
+/** Radial gradient builder instance */
+export type RadialGradientBuilder = {
+  stops: (stops: GradientStop[]) => RadialGradientBuilder;
+  addStop: (stop: GradientStop) => RadialGradientBuilder;
+  center: (x: number, y: number) => RadialGradientBuilder;
+  radius: (r: number) => RadialGradientBuilder;
+  ellipticalRadius: (rx: number, ry: number) => RadialGradientBuilder;
+  opacity: (value: number) => RadialGradientBuilder;
+  visible: (value: boolean) => RadialGradientBuilder;
+  blendMode: (mode: BlendMode) => RadialGradientBuilder;
+  build: () => GradientPaint;
+};
 
-  constructor() {
-    this._stops = [
+/** Create a radial gradient builder */
+function createRadialGradientBuilder(): RadialGradientBuilder {
+  const state = {
+    stops: [
       { color: { r: 1, g: 1, b: 1, a: 1 }, position: 0 },
       { color: { r: 0, g: 0, b: 0, a: 1 }, position: 1 },
-    ];
-    this._centerX = 0.5;
-    this._centerY = 0.5;
-    this._radiusX = 0.5;
-    this._radiusY = 0.5;
-    this._opacity = 1;
-    this._visible = true;
-    this._blendMode = "NORMAL";
-  }
+    ] as GradientStop[],
+    centerX: 0.5,
+    centerY: 0.5,
+    radiusX: 0.5,
+    radiusY: 0.5,
+    opacity: 1,
+    visible: true,
+    blendMode: "NORMAL" as BlendMode,
+  };
 
-  stops(stops: GradientStop[]): this {
-    this._stops = stops;
-    return this;
-  }
+  const builder: RadialGradientBuilder = {
+    stops(stops: GradientStop[]) {
+      state.stops = stops;
+      return builder;
+    },
 
-  addStop(stop: GradientStop): this {
-    this._stops.push(stop);
-    this._stops.sort((a, b) => a.position - b.position);
-    return this;
-  }
+    addStop(stop: GradientStop) {
+      state.stops.push(stop);
+      state.stops.sort((a, b) => a.position - b.position);
+      return builder;
+    },
 
-  /**
-   * Set center position (0-1 coordinates)
-   */
-  center(x: number, y: number): this {
-    this._centerX = x;
-    this._centerY = y;
-    return this;
-  }
+    /** Set center position (0-1 coordinates) */
+    center(x: number, y: number) {
+      state.centerX = x;
+      state.centerY = y;
+      return builder;
+    },
 
-  /**
-   * Set radius (0-1, relative to element size)
-   */
-  radius(r: number): this {
-    this._radiusX = r;
-    this._radiusY = r;
-    return this;
-  }
+    /** Set radius (0-1, relative to element size) */
+    radius(r: number) {
+      state.radiusX = r;
+      state.radiusY = r;
+      return builder;
+    },
 
-  /**
-   * Set elliptical radius
-   */
-  ellipticalRadius(rx: number, ry: number): this {
-    this._radiusX = rx;
-    this._radiusY = ry;
-    return this;
-  }
+    /** Set elliptical radius */
+    ellipticalRadius(rx: number, ry: number) {
+      state.radiusX = rx;
+      state.radiusY = ry;
+      return builder;
+    },
 
-  opacity(value: number): this {
-    this._opacity = Math.max(0, Math.min(1, value));
-    return this;
-  }
+    opacity(value: number) {
+      state.opacity = Math.max(0, Math.min(1, value));
+      return builder;
+    },
 
-  visible(value: boolean): this {
-    this._visible = value;
-    return this;
-  }
+    visible(value: boolean) {
+      state.visible = value;
+      return builder;
+    },
 
-  blendMode(mode: BlendMode): this {
-    this._blendMode = mode;
-    return this;
-  }
+    blendMode(mode: BlendMode) {
+      state.blendMode = mode;
+      return builder;
+    },
 
-  build(): GradientPaint {
-    // Figma uses 3 handle positions for radial gradients:
-    // [0] = center, [1] = edge point 1, [2] = edge point 2 (for elliptical)
-    return {
-      type: { value: PAINT_TYPE_VALUES.GRADIENT_RADIAL, name: "GRADIENT_RADIAL" },
-      opacity: this._opacity,
-      visible: this._visible,
-      blendMode: { value: BLEND_MODE_VALUES[this._blendMode], name: this._blendMode },
-      gradientStops: this._stops,
-      gradientHandlePositions: [
-        { x: this._centerX, y: this._centerY },
-        { x: this._centerX + this._radiusX, y: this._centerY },
-        { x: this._centerX, y: this._centerY + this._radiusY },
-      ],
-    };
-  }
+    build(): GradientPaint {
+      return {
+        type: { value: PAINT_TYPE_VALUES.GRADIENT_RADIAL, name: "GRADIENT_RADIAL" },
+        opacity: state.opacity,
+        visible: state.visible,
+        blendMode: { value: BLEND_MODE_VALUES[state.blendMode], name: state.blendMode },
+        gradientStops: state.stops,
+        gradientHandlePositions: [
+          { x: state.centerX, y: state.centerY },
+          { x: state.centerX + state.radiusX, y: state.centerY },
+          { x: state.centerX, y: state.centerY + state.radiusY },
+        ],
+      };
+    },
+  };
+
+  return builder;
 }
 
 /**
  * Create a radial gradient paint
  */
 export function radialGradient(): RadialGradientBuilder {
-  return new RadialGradientBuilder();
+  return createRadialGradientBuilder();
 }

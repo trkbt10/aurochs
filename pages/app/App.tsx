@@ -244,7 +244,7 @@ export function App() {
 
   // Convert presentation to editor document
   const editorDocument = useMemo(() => {
-    if (!pptx.presentation) return null;
+    if (!pptx.presentation) {return null;}
     try {
       return convertToPresentationDocument(pptx.presentation);
     } catch (e) {
@@ -333,7 +333,7 @@ export function App() {
 
   const PptxSlideshowRoute = () => {
     const { slideNumber } = useParams<{ slideNumber: string }>();
-    if (!pptx.presentation) return <Navigate to="/" replace />;
+    if (!pptx.presentation) {return <Navigate to="/" replace />;}
     const startSlide = Math.max(1, Number.parseInt(slideNumber ?? "1", 10) || 1);
     return <PptxSlideshowPage presentation={pptx.presentation} startSlide={startSlide} onExit={handleExitSlideshow} />;
   };

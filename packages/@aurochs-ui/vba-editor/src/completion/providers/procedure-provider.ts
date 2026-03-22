@@ -17,14 +17,8 @@ import type { CompletionProvider, CompletionItem, CompletionContext } from "../t
 function formatSignature(proc: VbaProcedure): string {
   const params = proc.parameters
     .map((p) => {
-      let sig = p.name;
-      if (p.type) {
-        sig += ` As ${p.type}`;
-      }
-      if (p.isOptional) {
-        sig = `[${sig}]`;
-      }
-      return sig;
+      const base = p.type ? `${p.name} As ${p.type}` : p.name;
+      return p.isOptional ? `[${base}]` : base;
     })
     .join(", ");
 

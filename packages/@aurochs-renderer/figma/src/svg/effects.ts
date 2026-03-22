@@ -31,23 +31,23 @@ function computeShadowFilterBounds(
   shadows: readonly FigEffect[],
   bounds: { x: number; y: number; width: number; height: number },
 ): { x: number; y: number; width: number; height: number } {
-  let minX = bounds.x;
-  let minY = bounds.y;
-  let maxX = bounds.x + bounds.width;
-  let maxY = bounds.y + bounds.height;
+  const minXRef = { value: bounds.x };
+  const minYRef = { value: bounds.y };
+  const maxXRef = { value: bounds.x + bounds.width };
+  const maxYRef = { value: bounds.y + bounds.height };
 
   for (const shadow of shadows) {
     const offsetX = shadow.offset?.x ?? 0;
     const offsetY = shadow.offset?.y ?? 0;
     const blurExpansion = shadow.radius ?? 0; // 2 * stdDeviation = 2 * (radius / 2) = radius
 
-    minX = Math.min(minX, bounds.x + offsetX - blurExpansion);
-    minY = Math.min(minY, bounds.y + offsetY - blurExpansion);
-    maxX = Math.max(maxX, bounds.x + bounds.width + offsetX + blurExpansion);
-    maxY = Math.max(maxY, bounds.y + bounds.height + offsetY + blurExpansion);
+    minXRef.value = Math.min(minXRef.value, bounds.x + offsetX - blurExpansion);
+    minYRef.value = Math.min(minYRef.value, bounds.y + offsetY - blurExpansion);
+    maxXRef.value = Math.max(maxXRef.value, bounds.x + bounds.width + offsetX + blurExpansion);
+    maxYRef.value = Math.max(maxYRef.value, bounds.y + bounds.height + offsetY + blurExpansion);
   }
 
-  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+  return { x: minXRef.value, y: minYRef.value, width: maxXRef.value - minXRef.value, height: maxYRef.value - minYRef.value };
 }
 
 // =============================================================================
@@ -444,26 +444,26 @@ export function createCombinedFilter(
   const filterBounds = computeShadowFilterBounds(allEffects, bounds);
 
   const primitives: SvgString[] = [];
-  let lastResult = "SourceGraphic";
+  const lastResultRef = { value: "SourceGraphic" };
 
   // Apply layer blur first (if present)
   if (layerBlur && (layerBlur.radius ?? 0) > 0) {
     const stdDeviation = (layerBlur.radius ?? 0) / 2;
     primitives.push(
       feGaussianBlur({
-        in: lastResult,
+        in: lastResultRef.value,
         stdDeviation,
         result: "layerBlur",
       }),
     );
-    lastResult = "layerBlur";
+    lastResultRef.value = "layerBlur";
   }
 
   // Apply drop shadows
   if (dropShadows.length > 0) {
     primitives.push(feFlood({ "flood-opacity": 0, result: "BackgroundImageFix" }));
 
-    let shadowResult = "BackgroundImageFix";
+    const shadowResultRef = { value: "BackgroundImageFix" };
     dropShadows.forEach((shadow, i) => {
       const effectNum = i + 1;
       const currentResult = "effect" + effectNum + "_dropShadow";
@@ -499,23 +499,23 @@ export function createCombinedFilter(
       primitives.push(
         feBlend({
           mode: "normal",
-          in2: shadowResult,
+          in2: shadowResultRef.value,
           result: currentResult,
         }),
       );
 
-      shadowResult = currentResult;
+      shadowResultRef.value = currentResult;
     });
 
     primitives.push(
       feBlend({
         mode: "normal",
-        in: lastResult,
-        in2: shadowResult,
+        in: lastResultRef.value,
+        in2: shadowResultRef.value,
         result: "dropShadowResult",
       }),
     );
-    lastResult = "dropShadowResult";
+    lastResultRef.value = "dropShadowResult";
   }
 
   // Apply inner shadows
@@ -575,12 +575,12 @@ export function createCombinedFilter(
         feBlend({
           mode: "normal",
           in: prefix + "inner",
-          in2: lastResult,
+          in2: lastResultRef.value,
           result: prefix + "result",
         }),
       );
 
-      lastResult = prefix + "result";
+      lastResultRef.value = prefix + "result";
     });
   }
 

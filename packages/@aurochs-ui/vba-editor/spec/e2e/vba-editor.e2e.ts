@@ -93,14 +93,14 @@ async function getCursorElement(page: Page): Promise<{ x: number; y: number } | 
       if (textarea) {
         const lines = textarea.value.split("\n");
         const pos = textarea.selectionStart;
-        let remaining = pos;
-        let lineIdx = 0;
+        const remaining = { value: pos };
+        const lineIdx = { value: 0 };
         for (let i = 0; i < lines.length; i++) {
-          if (remaining <= lines[i].length) {
-            lineIdx = i;
+          if (remaining.value <= lines[i].length) {
+            lineIdx.value = i;
             break;
           }
-          remaining -= lines[i].length + 1;
+          remaining.value -= lines[i].length + 1;
         }
         // Approximate position: charWidth ~7.8px, lineHeight 21px
         const lineHeight = 21;
@@ -108,8 +108,8 @@ async function getCursorElement(page: Page): Promise<{ x: number; y: number } | 
         const padding = 8;
         const lineNumberWidth = 48;
         return {
-          x: lineNumberWidth + padding + remaining * charWidth,
-          y: lineIdx * lineHeight,
+          x: lineNumberWidth + padding + remaining.value * charWidth,
+          y: lineIdx.value * lineHeight,
         };
       }
     }
@@ -165,7 +165,7 @@ async function getCharacterPosition(
   return page.evaluate(
     (li, ci) => {
       const textarea = document.querySelector("textarea");
-      if (!textarea) return null;
+      if (!textarea) {return null;}
 
       // Constants matching VbaCodeEditor
       const lineHeight = 21;
@@ -174,7 +174,7 @@ async function getCharacterPosition(
 
       // Get line text from textarea
       const lines = textarea.value.split("\n");
-      if (li >= lines.length) return null;
+      if (li >= lines.length) {return null;}
 
       const lineText = lines[li];
       const textBeforeCursor = lineText.substring(0, ci);
@@ -182,7 +182,7 @@ async function getCharacterPosition(
       // Measure text width
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
-      if (!ctx) return null;
+      if (!ctx) {return null;}
 
       ctx.font = "13px 'Consolas', 'Monaco', 'Courier New', monospace";
       const charWidth = ctx.measureText(textBeforeCursor).width;
@@ -202,6 +202,24 @@ async function getCharacterPosition(
 // =============================================================================
 
 type TestResult = { name: string; passed: boolean; error?: string };
+
+/** Build error message only on failure, returning undefined on success. */
+function failureMessage(passed: boolean, message: string): string | undefined {
+  if (passed) {
+    return undefined;
+  }
+  return message;
+}
+
+/** Build error description for cursor alignment test. */
+function buildCursorAlignError(
+  cursor: { x: number; y: number } | null,
+  expectedPos: { x: number; y: number } | null,
+): string {
+  const xDiff = cursor && expectedPos ? String(Math.abs(cursor.x - expectedPos.x)) : "N/A";
+  const yDiff = cursor && expectedPos ? String(Math.abs(cursor.y - expectedPos.y)) : "N/A";
+  return `Cursor: ${JSON.stringify(cursor)}, Expected: ${JSON.stringify(expectedPos)}, Diff: x=${xDiff}, y=${yDiff}`;
+}
 
 async function runTestsForRenderer(
   browser: Browser,
@@ -253,9 +271,7 @@ async function runTestsForRenderer(
     results.push({
       name: testName,
       passed,
-      error: passed
-        ? undefined
-        : `Selection rect count: ${rectCount}, text selection: ${selection.start}-${selection.end}`,
+      error: failureMessage(passed, `Selection rect count: ${rectCount}, text selection: ${selection.start}-${selection.end}`),
     });
     await page.close();
   }
@@ -270,7 +286,7 @@ async function runTestsForRenderer(
 
     const selectionStyle = await page.evaluate(() => {
       const textarea = document.querySelector("textarea");
-      if (!textarea) return null;
+      if (!textarea) {return null;}
       const style = window.getComputedStyle(textarea, "::selection");
       return { background: style.backgroundColor };
     });
@@ -310,7 +326,7 @@ async function runTestsForRenderer(
     // Move cursor to end of first line
     const firstLineLength = await page.evaluate(() => {
       const textarea = document.querySelector("textarea");
-      if (!textarea) return 0;
+      if (!textarea) {return 0;}
       const lines = textarea.value.split("\n");
       return lines[0]?.length ?? 0;
     });
@@ -330,9 +346,7 @@ async function runTestsForRenderer(
     results.push({
       name: testName,
       passed,
-      error: passed
-        ? undefined
-        : `Cursor1: ${JSON.stringify(cursor1)}, Cursor2: ${JSON.stringify(cursor2)}`,
+      error: failureMessage(passed, `Cursor1: ${JSON.stringify(cursor1)}, Cursor2: ${JSON.stringify(cursor2)}`),
     });
     await page.close();
   }
@@ -371,12 +385,11 @@ async function runTestsForRenderer(
       Math.abs(cursor.x - expectedPos.x) <= tolerance &&
       Math.abs(cursor.y - expectedPos.y) <= tolerance;
 
+    const cursorAlignError = buildCursorAlignError(cursor, expectedPos);
     results.push({
       name: testName,
       passed,
-      error: passed
-        ? undefined
-        : `Cursor: ${JSON.stringify(cursor)}, Expected: ${JSON.stringify(expectedPos)}, Diff: x=${cursor && expectedPos ? Math.abs(cursor.x - expectedPos.x) : "N/A"}, y=${cursor && expectedPos ? Math.abs(cursor.y - expectedPos.y) : "N/A"}`,
+      error: failureMessage(passed, cursorAlignError),
     });
     await page.close();
   }
@@ -412,9 +425,7 @@ async function runTestsForRenderer(
     results.push({
       name: testName,
       passed,
-      error: passed
-        ? undefined
-        : `Initial len: ${initialValue.length}, Modified len: ${modifiedValue.length}, Undone len: ${undoneValue.length}`,
+      error: failureMessage(passed, `Initial len: ${initialValue.length}, Modified len: ${modifiedValue.length}, Undone len: ${undoneValue.length}`),
     });
     await page.close();
   }
@@ -475,9 +486,7 @@ async function runTestsForRenderer(
     results.push({
       name: testName,
       passed,
-      error: passed
-        ? undefined
-        : `Before length: ${valueBefore.length}, After length: ${valueAfter.length}`,
+      error: failureMessage(passed, `Before length: ${valueBefore.length}, After length: ${valueAfter.length}`),
     });
     await page.close();
   }
@@ -500,9 +509,7 @@ async function runTestsForRenderer(
     results.push({
       name: testName,
       passed,
-      error: passed
-        ? undefined
-        : `Missing CJK text - JP: ${hasJapanese}, KR: ${hasKorean}, CN: ${hasChinese}`,
+      error: failureMessage(passed, `Missing CJK text - JP: ${hasJapanese}, KR: ${hasKorean}, CN: ${hasChinese}`),
     });
     await page.close();
   }
@@ -538,7 +545,7 @@ async function runTestsForRenderer(
 
     const scrollInfo = await page.evaluate(() => {
       const textarea = document.querySelector("textarea");
-      if (!textarea) return null;
+      if (!textarea) {return null;}
       const lines = textarea.value.split("\n").length;
       return {
         lineCount: lines,
@@ -552,9 +559,7 @@ async function runTestsForRenderer(
     results.push({
       name: testName,
       passed,
-      error: passed
-        ? undefined
-        : `lines: ${scrollInfo?.lineCount}, scrollHeight: ${scrollInfo?.scrollHeight}, clientHeight: ${scrollInfo?.clientHeight}`,
+      error: failureMessage(passed, `lines: ${scrollInfo?.lineCount}, scrollHeight: ${scrollInfo?.scrollHeight}, clientHeight: ${scrollInfo?.clientHeight}`),
     });
     await page.close();
   }

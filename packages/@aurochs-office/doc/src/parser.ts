@@ -59,8 +59,9 @@ function createContext(options?: ParseDocOptions): DocParseContext {
 function readStreamSafe(cfb: ReturnType<typeof openCfb>, path: string[]): Uint8Array | undefined {
   try {
     return cfb.readStream(path);
-  } catch {
-    return undefined;
+  } catch (err: unknown) {
+    // Stream not found or read failed — caller handles absence
+    return err === undefined ? undefined : undefined;
   }
 }
 

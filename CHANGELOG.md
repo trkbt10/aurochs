@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-03-22
+
+### Added
+
+- PPTX editor packages: slide canvas, viewer, and editor components
+- PPTX viewer with swipe navigation and keyboard controls for slide navigation
+- PPTX theme editing capabilities and slide color mapping
+- PPTX image placement support in slide editor
+- XLSX domain and builder exports to npm package
+- XLSX workbook patcher moved to `@aurochs-builder/xlsx` with drawing support
+- Drawing serialization and export functionality
+- Font scheme handling with `EMPTY_FONT_SCHEME` (ECMA-376 §20.1.6.10)
+- Theme XML generation (`buildThemeXml`) with round-trip tests
+- AssetPanel sharing and centralized theme/layout UI components
+- Custom ESLint rules: `no-type-alias-reexport`, `no-cross-package-reexport`
+- PDF editor page with canvas, viewport, and text editing support
+- Unified editor infrastructure: `editor-controls`, `editor-core` packages
+- Unified text formatting, table operations, and page size editing across PPTX/PDF/DOCX editors
+
+### Changed
+
+- Replaced `XmlElement` with domain types in FormatScheme and defaultTextStyle
+- Background handling refactored to use parsed domain types
+- Theme import/export enforces single source of truth with OOXML serialization
+- Text alignment UI components unified, mixed prop anti-pattern eliminated
+- Inspector sections unified to `OptionalPropertySection`
+- Font resolution replaced Google Fonts catalog with Local Font Access API
+- All lint errors and warnings resolved (2500+ issues fixed across 455 files)
+
+### Removed
+
+- Line editing components from pptx-editors package
+- `xml-utils` consolidated into XML mutation logic
+- `masterTextStyles` removed from slide-related structures
+
 ## [0.7.0] - 2026-03-13
 
 ### Added
@@ -159,7 +194,8 @@ Project inception.
 - Text body and paragraph rendering
 - Theme and style support
 
-[Unreleased]: https://github.com/trkbt10/aurochs/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/trkbt10/aurochs/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/trkbt10/aurochs/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/trkbt10/aurochs/compare/v0.6.4...v0.7.0
 [0.6.4]: https://github.com/trkbt10/aurochs/compare/v0.6.0...v0.6.4
 [0.6.0]: https://github.com/trkbt10/aurochs/compare/v0.5.0...v0.6.0

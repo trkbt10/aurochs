@@ -26,6 +26,17 @@ function createNormalFormula(expression: string): Formula {
   return { type: "normal", expression };
 }
 
+
+
+
+
+
+
+
+
+
+
+/** Create a demo XLSX workbook with sample data. */
 export function createDemoWorkbook(): XlsxWorkbook {
   const styles = createDefaultStyleSheet();
 

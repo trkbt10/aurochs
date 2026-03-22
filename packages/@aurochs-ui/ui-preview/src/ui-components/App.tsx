@@ -66,6 +66,17 @@ function updateUrl(component: string, story: string): void {
 // Component
 // =============================================================================
 
+
+
+
+
+
+
+
+
+
+
+/** Root application component for the UI preview */
 export function App(): ReactNode {
   const initial = useMemo(() => getInitialSelection(), []);
   const [selectedComponent, setSelectedComponent] = useState<string | null>(initial.component);
@@ -79,7 +90,7 @@ export function App(): ReactNode {
 
   // Find current story
   const currentStory = useMemo((): Story | null => {
-    if (!selectedComponent || !selectedStory) return null;
+    if (!selectedComponent || !selectedStory) {return null;}
 
     for (const category of catalog) {
       const component = category.components.find((c) => c.name === selectedComponent);

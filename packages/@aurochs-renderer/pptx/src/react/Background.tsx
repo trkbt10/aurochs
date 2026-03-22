@@ -8,7 +8,7 @@
 
 import type { ReactNode } from "react";
 import type { Background as BackgroundType, SlideSize } from "@aurochs-office/pptx/domain";
-import type { ResolvedBackgroundFill } from "../background-fill";
+import type { ResolvedBackgroundFill } from "@aurochs-office/drawing-ml/domain/background-fill";
 import { useRenderContext, useRenderResourceStore } from "./context";
 import { useSvgDefs } from "./hooks/useSvgDefs";
 import { resolveFill } from "@aurochs-office/pptx/domain/color/fill";

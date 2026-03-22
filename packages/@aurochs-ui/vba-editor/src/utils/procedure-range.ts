@@ -24,11 +24,13 @@ export function findProcedureRanges(source: string): ProcedureRange[] {
   const ranges: ProcedureRange[] = [];
   const lines = source.split("\n");
 
-  let currentProc: {
-    name: string;
-    type: "sub" | "function";
-    startLine: number;
-  } | null = null;
+  const currentProc: {
+    value: {
+      name: string;
+      type: "sub" | "function";
+      startLine: number;
+    } | null;
+  } = { value: null };
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
@@ -39,7 +41,7 @@ export function findProcedureRanges(source: string): ProcedureRange[] {
       /^(Public\s+|Private\s+)?(Sub|Function)\s+(\w+)/i
     );
     if (startMatch) {
-      currentProc = {
+      currentProc.value = {
         name: startMatch[3],
         type: startMatch[2].toLowerCase() as "sub" | "function",
         startLine: lineNum,
@@ -47,9 +49,9 @@ export function findProcedureRanges(source: string): ProcedureRange[] {
     }
 
     // Detect End Sub/Function
-    if (currentProc && /^End\s+(Sub|Function)/i.test(line)) {
-      ranges.push({ ...currentProc, endLine: lineNum });
-      currentProc = null;
+    if (currentProc.value && /^End\s+(Sub|Function)/i.test(line)) {
+      ranges.push({ ...currentProc.value, endLine: lineNum });
+      currentProc.value = null;
     }
   }
 

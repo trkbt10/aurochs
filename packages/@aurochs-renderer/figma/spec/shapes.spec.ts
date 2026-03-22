@@ -63,10 +63,10 @@ type ParsedData = {
   nodeMap: ReadonlyMap<string, FigNode>;
 };
 
-let parsedDataCache: ParsedData | null = null;
+const parsedDataCache: ParsedData | null = null;
 
 async function loadFigFile(): Promise<ParsedData> {
-  if (parsedDataCache) return parsedDataCache;
+  if (parsedDataCache) {return parsedDataCache;}
 
   if (!fs.existsSync(FIG_FILE)) {
     throw new Error(
@@ -145,8 +145,8 @@ describe("Shape Rendering", () => {
   beforeAll(async () => {
     try {
       await loadFigFile();
-    } catch {
-      console.log("Skipping shape tests - fixture file not found");
+    } catch (error) {
+      console.log("Skipping tests:", error instanceof Error ? error.message : "fixture file not found");
     }
 
     if (WRITE_SNAPSHOTS && !fs.existsSync(SNAPSHOTS_DIR)) {
@@ -173,13 +173,13 @@ describe("Shape Rendering", () => {
       const actualPath = path.join(ACTUAL_DIR, fileName);
       const hasActual = fs.existsSync(actualPath);
 
-      let actualSize = layer.size;
-      let actualShapes = { ellipses: 0, lines: 0, paths: 0, polygons: 0, rects: 0, circles: 0, total: 0 };
+      const actualSizeRef = { value: layer.size };
+      const actualShapesRef = { value: { ellipses: 0, lines: 0, paths: 0, polygons: 0, rects: 0, circles: 0, total: 0 } };
 
       if (hasActual) {
         const actualSvg = fs.readFileSync(actualPath, "utf-8");
-        actualSize = getSvgSize(actualSvg);
-        actualShapes = extractShapeElements(actualSvg);
+        actualSizeRef.value = getSvgSize(actualSvg);
+        actualShapesRef.value = extractShapeElements(actualSvg);
       }
 
       // Render
@@ -190,8 +190,8 @@ describe("Shape Rendering", () => {
       };
 
       const result = await renderCanvas(wrapperCanvas, {
-        width: actualSize.width,
-        height: actualSize.height,
+        width: actualSizeRef.value.width,
+        height: actualSizeRef.value.height,
         blobs: data.blobs,
         images: data.images,
         symbolMap: data.nodeMap,

@@ -24,7 +24,8 @@ import type {
   DiagramLayoutDefinition,
   DiagramStyleDefinition,
 } from "@aurochs-office/diagram/domain";
-import { generateDiagramShapes, type ShapeGenerationConfig } from "../../domain/diagram/layout-engine";
+import type { ShapeGenerationConfig } from "@aurochs-office/diagram/layout-engine";
+import { generateDiagramShapes } from "../../domain/diagram/layout-engine";
 import { parseXml } from "@aurochs/xml";
 import { parseChart } from "@aurochs-office/chart/parser";
 import { parseDiagramDrawing } from "./diagram-drawing-parser";

@@ -14,7 +14,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import opentype from "opentype.js";
-import { createFigFile, frameNode, textNode, roundedRectNode, ellipseNode, type FigBlob } from "@aurochs/fig/builder";
+import { createFigFile, frameNode, textNode, roundedRectNode, ellipseNode } from "@aurochs/fig/builder";
 import {
   generateTextGlyphs,
   generateMultilineTextGlyphs,
@@ -110,14 +110,14 @@ async function generateTextFixtures(): Promise<void> {
   const canvasID = figFile.addCanvas(docID, "Text Canvas");
   figFile.addInternalCanvas(docID);
 
-  let nextID = 10;
-  const id = () => nextID++;
+  const nextIDRef = { value: 10 };
+  const id = () => nextIDRef.value++;
 
   // Grid layout
   const GRID_COLS = 4;
   const GRID_GAP = 30;
   const MARGIN = 50;
-  let frameIndex = 0;
+  const frameIndex = 0;
 
   function gridPos() {
     const col = frameIndex % GRID_COLS;

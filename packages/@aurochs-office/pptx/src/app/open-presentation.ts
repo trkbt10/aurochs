@@ -7,7 +7,7 @@ import type { Presentation, Slide, SlideInfo, ListOptions, PresentationOptions }
 import type { SlideFileInfo } from "../domain/content-types";
 import type { SlideSize } from "../domain";
 import type { ZipFile } from "@aurochs-office/opc";
-import { getBasename, getByPath, getChildren, type XmlDocument, type XmlElement } from "@aurochs/xml";
+import { getBasename, getByPath, getChildren, type XmlDocument } from "@aurochs/xml";
 import type { SlideData } from "../parser/slide/slide-loader";
 import type { RenderOptions } from "@aurochs-renderer/pptx";
 import type { TableStyleList } from "../parser/table/style-parser";

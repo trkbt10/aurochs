@@ -8,12 +8,9 @@
 
 import {
   createEmptySelection,
-  createSingleSelection,
   createMultiSelection as createMultiCoreSelection,
-  addToSelection,
   removeFromSelection as removeFromCoreSelection,
   toggleSelection as toggleCoreSelection,
-  isSelected,
 } from "@aurochs-ui/editor-core/selection";
 import type { SelectionState as CoreSelectionState } from "@aurochs-ui/editor-core/selection";
 

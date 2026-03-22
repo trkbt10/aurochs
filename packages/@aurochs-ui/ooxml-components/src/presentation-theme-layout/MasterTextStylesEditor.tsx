@@ -6,7 +6,7 @@
  * @see ECMA-376 Part 1, Section 19.3.1.12 (txStyles)
  */
 
-import { useCallback, type CSSProperties } from "react";
+import { useCallback, type CSSProperties, type ReactNode } from "react";
 import type { MasterTextStyles, TextStyleLevels, TextLevelStyle } from "@aurochs-office/pptx/domain/text-style";
 import { TEXT_STYLE_LEVEL_KEYS } from "@aurochs-office/pptx/domain/text-style";
 import type { TextAlign, RunProperties, ParagraphProperties } from "@aurochs-office/pptx/domain/text";
@@ -130,6 +130,27 @@ const statusStyle: CSSProperties = {
 };
 
 // =============================================================================
+// Helpers
+// =============================================================================
+
+/** Count defined levels in a text style levels object */
+function countDefinedLevels(levels: TextStyleLevels | undefined): number {
+  if (!levels) {
+    return 0;
+  }
+  return TEXT_STYLE_LEVEL_KEYS.slice(1).filter((k) => levels[k] !== undefined).length;
+}
+
+/** Render the status label for a text style section */
+function renderLevelStatus(levels: TextStyleLevels | undefined, definedCount: number): ReactNode {
+  if (levels) {
+    const suffix = definedCount !== 1 ? "s" : "";
+    return <span style={statusStyle}>{` — ${definedCount} level${suffix}`}</span>;
+  }
+  return <span style={statusStyle}> — not defined</span>;
+}
+
+// =============================================================================
 // Component
 // =============================================================================
 
@@ -154,19 +175,13 @@ export function MasterTextStylesEditor({ masterTextStyles, onChange, disabled }:
       <div style={contentStyle}>
         {STYLE_ENTRIES.map(({ key, label }) => {
           const levels = masterTextStyles?.[key];
-          const definedCount = levels
-            ? TEXT_STYLE_LEVEL_KEYS.slice(1).filter((k) => levels[k] !== undefined).length
-            : 0;
+          const definedCount = countDefinedLevels(levels);
 
           return (
             <div key={key}>
               <div style={sectionLabelStyle}>
                 {label}
-                {levels ? (
-                  <span style={statusStyle}>{` — ${definedCount} level${definedCount !== 1 ? "s" : ""}`}</span>
-                ) : (
-                  <span style={statusStyle}> — not defined</span>
-                )}
+                {renderLevelStatus(levels, definedCount)}
               </div>
               {levels !== undefined && (
                 <div style={sectionContainerStyle}>

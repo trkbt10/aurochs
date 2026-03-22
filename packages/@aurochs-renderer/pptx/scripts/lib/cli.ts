@@ -1,3 +1,6 @@
+/**
+ * @file CLI utility helpers for PPTX renderer scripts
+ */
 import { existsSync } from "node:fs";
 
 
@@ -30,6 +33,17 @@ import { existsSync } from "node:fs";
 
 
 
+
+
+
+
+
+
+
+
+
+
+/** Create an error with usage information */
 export function usageError(message: string, usage: string): Error {
   return new Error(`${message}\n\nUsage:\n  ${usage}`);
 }
@@ -64,6 +78,17 @@ export function usageError(message: string, usage: string): Error {
 
 
 
+
+
+
+
+
+
+
+
+
+
+/** Require a positional CLI argument, throwing with usage on missing */
 export function requirePositionalArg({
   args,
   index,
@@ -112,6 +137,17 @@ export function requirePositionalArg({
 
 
 
+
+
+
+
+
+
+
+
+
+
+/** Parse an optional integer CLI argument */
 export function optionalIntArg(value: string | undefined, name: string, usage: string): number | undefined {
   if (value === undefined) {
     return undefined;
@@ -153,6 +189,17 @@ export function optionalIntArg(value: string | undefined, name: string, usage: s
 
 
 
+
+
+
+
+
+
+
+
+
+
+/** Require an integer CLI argument, throwing with usage on missing */
 export function requireIntArg(value: string | undefined, name: string, usage: string): number {
   const parsed = optionalIntArg(value, name, usage);
   if (parsed === undefined) {
@@ -191,6 +238,17 @@ export function requireIntArg(value: string | undefined, name: string, usage: st
 
 
 
+
+
+
+
+
+
+
+
+
+
+/** Assert that a file exists, throwing with usage on missing */
 export function requireFileExists(filePath: string, usage: string): void {
   if (!existsSync(filePath)) {
     throw usageError(`File not found: ${filePath}`, usage);

@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+/** @file Stroke tessellation tests */
 import {
   tessellateRectStroke,
   tessellateEllipseStroke,
@@ -8,20 +8,20 @@ import type { PathContour } from "../scene-graph/types";
 
 describe("tessellateRectStroke", () => {
   it("produces triangles for a simple rectangle", () => {
-    const verts = tessellateRectStroke(100, 80, 0, 2);
+    const verts = tessellateRectStroke({ w: 100, h: 80, cornerRadius: 0, strokeWidth: 2 });
     // Should produce non-empty triangle data (multiples of 6 floats = 3 vertices * 2 coords)
     expect(verts.length).toBeGreaterThan(0);
     expect(verts.length % 6).toBe(0);
   });
 
   it("produces triangles for a rounded rectangle", () => {
-    const verts = tessellateRectStroke(100, 80, 10, 2);
+    const verts = tessellateRectStroke({ w: 100, h: 80, cornerRadius: 10, strokeWidth: 2 });
     expect(verts.length).toBeGreaterThan(0);
     expect(verts.length % 6).toBe(0);
   });
 
   it("handles zero stroke width", () => {
-    const verts = tessellateRectStroke(100, 80, 0, 0);
+    const verts = tessellateRectStroke({ w: 100, h: 80, cornerRadius: 0, strokeWidth: 0 });
     // Zero-width stroke should produce degenerate (empty or zero-area) geometry
     // Inner rect equals outer rect, so the ring has no area
     expect(verts.length).toBe(0);
@@ -29,7 +29,7 @@ describe("tessellateRectStroke", () => {
 
   it("handles stroke wider than shape", () => {
     // Stroke width 200 > shape width 100 → inner rect has negative dimensions
-    const verts = tessellateRectStroke(100, 80, 0, 200);
+    const verts = tessellateRectStroke({ w: 100, h: 80, cornerRadius: 0, strokeWidth: 200 });
     // Should still produce geometry (fills the outer shape)
     expect(verts.length).toBeGreaterThan(0);
   });
@@ -39,7 +39,7 @@ describe("tessellateRectStroke", () => {
     const h = 80;
     const sw = 4;
     const hw = sw / 2;
-    const verts = tessellateRectStroke(w, h, 0, sw);
+    const verts = tessellateRectStroke({ w, h, cornerRadius: 0, strokeWidth: sw });
 
     for (let i = 0; i < verts.length; i += 2) {
       expect(verts[i]).toBeGreaterThanOrEqual(-hw - 0.01);
@@ -52,19 +52,19 @@ describe("tessellateRectStroke", () => {
 
 describe("tessellateEllipseStroke", () => {
   it("produces triangles for an ellipse stroke", () => {
-    const verts = tessellateEllipseStroke(50, 40, 30, 20, 2);
+    const verts = tessellateEllipseStroke({ cx: 50, cy: 40, rx: 30, ry: 20, strokeWidth: 2 });
     expect(verts.length).toBeGreaterThan(0);
     expect(verts.length % 6).toBe(0);
   });
 
   it("handles zero stroke width", () => {
-    const verts = tessellateEllipseStroke(50, 40, 30, 20, 0);
+    const verts = tessellateEllipseStroke({ cx: 50, cy: 40, rx: 30, ry: 20, strokeWidth: 0 });
     expect(verts.length).toBe(0);
   });
 
   it("handles stroke wider than ellipse radii", () => {
     // Stroke width 100 > rx=30 → inner radii become 0
-    const verts = tessellateEllipseStroke(50, 40, 30, 20, 100);
+    const verts = tessellateEllipseStroke({ cx: 50, cy: 40, rx: 30, ry: 20, strokeWidth: 100 });
     expect(verts.length).toBeGreaterThan(0);
   });
 });

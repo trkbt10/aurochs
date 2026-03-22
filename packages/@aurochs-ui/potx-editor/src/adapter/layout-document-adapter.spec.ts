@@ -5,7 +5,6 @@
  * for consumption by PresentationEditorProvider.
  */
 
-import { describe, it, expect } from "vitest";
 import { createVirtualDocument, layoutToSlideWithId } from "./layout-document-adapter";
 import type { LoadedLayoutData } from "@aurochs-ui/ooxml-components";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
@@ -45,9 +44,10 @@ function createMockResourceResolver(): ResourceResolver {
     resolve: () => undefined,
     getMimeType: () => undefined,
     getTarget: () => undefined,
-    readFile: () => undefined,
+    getType: () => undefined,
+    readFile: () => null,
     getFilePath: () => undefined,
-  } as unknown as ResourceResolver;
+  };
 }
 
 const SLIDE_SIZE: SlideSize = { width: px(960), height: px(540) };

@@ -45,6 +45,26 @@ type LineHighlight = {
   readonly type: HighlightType;
 };
 
+/**
+ * Resolve start/end columns for a highlight on a specific line.
+ */
+function resolveHighlightColumns(
+  lineNumber: number,
+  lineLength: number,
+  h: HighlightRange,
+): { startCol: number; endCol: number } {
+  if (lineNumber === h.startLine && lineNumber === h.endLine) {
+    return { startCol: h.startColumn, endCol: h.endColumn };
+  }
+  if (lineNumber === h.startLine) {
+    return { startCol: h.startColumn, endCol: lineLength + 1 };
+  }
+  if (lineNumber === h.endLine) {
+    return { startCol: 1, endCol: h.endColumn };
+  }
+  return { startCol: 1, endCol: lineLength + 1 };
+}
+
 function getLineHighlights(
   lineNumber: number,
   lineLength: number,
@@ -57,23 +77,7 @@ function getLineHighlights(
       continue;
     }
 
-    let startCol: number;
-    let endCol: number;
-
-    if (lineNumber === h.startLine && lineNumber === h.endLine) {
-      startCol = h.startColumn;
-      endCol = h.endColumn;
-    } else if (lineNumber === h.startLine) {
-      startCol = h.startColumn;
-      endCol = lineLength + 1;
-    } else if (lineNumber === h.endLine) {
-      startCol = 1;
-      endCol = h.endColumn;
-    } else {
-      startCol = 1;
-      endCol = lineLength + 1;
-    }
-
+    const { startCol, endCol } = resolveHighlightColumns(lineNumber, lineLength, h);
     result.push({ startColumn: startCol, endColumn: endCol, type: h.type });
   }
 
@@ -226,6 +230,48 @@ type SvgLineProps = {
   readonly measureText?: (text: string) => number;
 };
 
+type RenderSvgTokensOptions = {
+  readonly tokens: readonly Token[];
+  readonly xOffset: number;
+  readonly charWidth: number;
+  readonly lineText: string;
+  readonly measureText?: (text: string) => number;
+};
+
+/**
+ * Render token elements for SVG text.
+ */
+function renderSvgTokens(options: RenderSvgTokensOptions): ReactNode {
+  const { tokens, xOffset, charWidth, lineText, measureText } = options;
+  if (tokens.length === 0) {
+    return <tspan fill="transparent">{"\u00A0"}</tspan>;
+  }
+  return tokens.map((token, i) => (
+    <SvgToken
+      key={i}
+      token={token}
+      xOffset={xOffset}
+      charWidth={charWidth}
+      lineText={lineText}
+      measureText={measureText}
+    />
+  ));
+}
+
+/**
+ * Build cursor state for a specific line.
+ */
+function buildLineCursorSvg(
+  cursorOnLine: number | undefined,
+  lineNumber: number,
+  cursor: CodeRendererProps["cursor"],
+): { column: number; blinking: boolean } | undefined {
+  if (cursorOnLine !== lineNumber || !cursor) {
+    return undefined;
+  }
+  return { column: cursor.column, blinking: cursor.blinking };
+}
+
 const SvgLine = memo(function SvgLine({
   lineNumber,
   tokens,
@@ -273,20 +319,7 @@ const SvgLine = memo(function SvgLine({
 
       {/* Code tokens */}
       <text x={codeXOffset} y={textY} fontFamily={FONT_FAMILY} fontSize={FONT_SIZE}>
-        {tokens.length === 0 ? (
-          <tspan fill="transparent">{"\u00A0"}</tspan>
-        ) : (
-          tokens.map((token, i) => (
-            <SvgToken
-              key={i}
-              token={token}
-              xOffset={codeXOffset}
-              charWidth={charWidth}
-              lineText={lineText}
-              measureText={measureText}
-            />
-          ))
-        )}
+        {renderSvgTokens({ tokens, xOffset: codeXOffset, charWidth, lineText, measureText })}
       </text>
 
       {/* Cursor */}
@@ -350,7 +383,7 @@ export const SvgCodeRenderer = memo(function SvgCodeRenderer({
 
   // Check if cursor is on a visible line
   const cursorOnLine = useMemo(() => {
-    if (!cursor?.visible) return undefined;
+    if (!cursor?.visible) {return undefined;}
     if (cursor.line < visibleRange.start + 1 || cursor.line > visibleRange.end) {
       return undefined;
     }
@@ -374,9 +407,7 @@ export const SvgCodeRenderer = memo(function SvgCodeRenderer({
           const lineText = lines[lineIndex] ?? "";
           const tokens = tokenCache.getTokens(lineText);
           const lineHighlights = lineHighlightsMap.get(lineNumber) ?? [];
-          const lineCursor = cursorOnLine === lineNumber
-            ? { column: cursor!.column, blinking: cursor!.blinking }
-            : undefined;
+          const lineCursor = buildLineCursorSvg(cursorOnLine, lineNumber, cursor);
 
           return (
             <SvgLine

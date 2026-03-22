@@ -6,7 +6,6 @@ import {
   sprmToggle,
   sprmUint8,
   sprmUint16,
-  sprmUint32,
   colorRefToHex,
   SPRM_CHP,
   SPRM_PAP,
@@ -58,33 +57,33 @@ describe("getOperandSize", () => {
   const dummy = new Uint8Array(10);
 
   it("returns 1 for spra=0 (toggle)", () => {
-    expect(getOperandSize(0, 0, dummy, 0)).toBe(1);
+    expect(getOperandSize({ spra: 0, raw: 0, data: dummy, offset: 0 })).toBe(1);
   });
 
   it("returns 1 for spra=1", () => {
-    expect(getOperandSize(1, 0, dummy, 0)).toBe(1);
+    expect(getOperandSize({ spra: 1, raw: 0, data: dummy, offset: 0 })).toBe(1);
   });
 
   it("returns 2 for spra=2", () => {
-    expect(getOperandSize(2, 0, dummy, 0)).toBe(2);
+    expect(getOperandSize({ spra: 2, raw: 0, data: dummy, offset: 0 })).toBe(2);
   });
 
   it("returns 4 for spra=3", () => {
-    expect(getOperandSize(3, 0, dummy, 0)).toBe(4);
+    expect(getOperandSize({ spra: 3, raw: 0, data: dummy, offset: 0 })).toBe(4);
   });
 
   it("returns 3 for spra=7", () => {
-    expect(getOperandSize(7, 0, dummy, 0)).toBe(3);
+    expect(getOperandSize({ spra: 7, raw: 0, data: dummy, offset: 0 })).toBe(3);
   });
 
   it("handles variable-length (spra=6) with 1-byte size", () => {
     const data = new Uint8Array([5, 0, 0, 0, 0, 0]);
-    expect(getOperandSize(6, 0x0000, data, 0)).toBe(6); // 5 + 1 (size byte)
+    expect(getOperandSize({ spra: 6, raw: 0x0000, data, offset: 0 })).toBe(6); // 5 + 1 (size byte)
   });
 
   it("handles variable-length (spra=6) with 2-byte size for sprmTDefTable", () => {
     const data = new Uint8Array([10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
-    expect(getOperandSize(6, 0xd608, data, 0)).toBe(12); // 10 + 2 (2-byte size)
+    expect(getOperandSize({ spra: 6, raw: 0xd608, data, offset: 0 })).toBe(12); // 10 + 2 (2-byte size)
   });
 });
 

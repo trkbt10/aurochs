@@ -5,6 +5,7 @@
  * Extracts variables from Dim, ReDim, Const, For, and procedure parameters.
  */
 
+import type { VbaProcedure } from "@aurochs-office/vba";
 import type { CompletionProvider, CompletionItem, CompletionContext } from "../types";
 
 // =============================================================================
@@ -28,14 +29,14 @@ function extractVariables(source: string): readonly CompletionItem[] {
   const dimPattern =
     /\b(?:Dim|ReDim|Const|Static|Public|Private)\s+([a-zA-Z_][a-zA-Z0-9_]*(?:\s*\([^)]*\))?(?:\s*,\s*[a-zA-Z_][a-zA-Z0-9_]*(?:\s*\([^)]*\))?)*)/gi;
 
-  let match: RegExpExecArray | null;
-  while ((match = dimPattern.exec(source)) !== null) {
-    const declaration = match[1];
+  const match = { value: null as RegExpExecArray | null };
+  while ((match.value = dimPattern.exec(source)) !== null) {
+    const declaration = match.value[1];
     // Split by comma and extract variable names
     const varPattern = /([a-zA-Z_][a-zA-Z0-9_]*)/g;
-    let varMatch: RegExpExecArray | null;
-    while ((varMatch = varPattern.exec(declaration)) !== null) {
-      const name = varMatch[1];
+    const varMatch = { value: null as RegExpExecArray | null };
+    while ((varMatch.value = varPattern.exec(declaration)) !== null) {
+      const name = varMatch.value[1];
       if (!seen.has(name.toLowerCase())) {
         seen.add(name.toLowerCase());
         variables.push({
@@ -52,8 +53,8 @@ function extractVariables(source: string): readonly CompletionItem[] {
   //   For i = 1 To 10
   //   For Each item In collection
   const forPattern = /\bFor\s+(?:Each\s+)?([a-zA-Z_][a-zA-Z0-9_]*)/gi;
-  while ((match = forPattern.exec(source)) !== null) {
-    const name = match[1];
+  while ((match.value = forPattern.exec(source)) !== null) {
+    const name = match.value[1];
     if (!seen.has(name.toLowerCase())) {
       seen.add(name.toLowerCase());
       variables.push({
@@ -70,14 +71,14 @@ function extractVariables(source: string): readonly CompletionItem[] {
   //   Function Calc(a, b As Double) As Double
   const procPattern =
     /\b(?:Sub|Function|Property\s+(?:Get|Let|Set))\s+[a-zA-Z_][a-zA-Z0-9_]*\s*\(([^)]*)\)/gi;
-  while ((match = procPattern.exec(source)) !== null) {
-    const params = match[1];
+  while ((match.value = procPattern.exec(source)) !== null) {
+    const params = match.value[1];
     if (params.trim()) {
       // Extract parameter names
       const paramPattern = /(?:Optional\s+)?(?:ByVal\s+|ByRef\s+)?([a-zA-Z_][a-zA-Z0-9_]*)/gi;
-      let paramMatch: RegExpExecArray | null;
-      while ((paramMatch = paramPattern.exec(params)) !== null) {
-        const name = paramMatch[1];
+      const paramMatch = { value: null as RegExpExecArray | null };
+      while ((paramMatch.value = paramPattern.exec(params)) !== null) {
+        const name = paramMatch.value[1];
         // Skip keywords
         if (!/^(Optional|ByVal|ByRef|ParamArray|As)$/i.test(name)) {
           if (!seen.has(name.toLowerCase())) {
@@ -111,7 +112,7 @@ export const variableProvider: CompletionProvider = {
   provideCompletions(
     context: CompletionContext,
     source: string,
-    _procedures: readonly import("@aurochs-office/vba").VbaProcedure[],
+    _procedures: readonly VbaProcedure[],
   ): readonly CompletionItem[] {
     // Don't provide variables after "."
     if (context.trigger === "dot") {

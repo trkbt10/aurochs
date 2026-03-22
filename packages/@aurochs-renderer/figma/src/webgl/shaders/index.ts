@@ -84,34 +84,34 @@ function createProgram(
  *
  * Lazily compiles and caches shader programs.
  */
-export class ShaderCache {
-  private gl: WebGLRenderingContext;
-  private programs: Map<ShaderProgramName, WebGLProgram> = new Map();
+/** Shader program cache interface */
+export type ShaderCache = {
+  /** Get (or compile) a shader program by name */
+  get(name: ShaderProgramName): WebGLProgram;
+  /** Dispose all cached programs */
+  dispose(): void;
+};
 
-  constructor(gl: WebGLRenderingContext) {
-    this.gl = gl;
-  }
+/** Create a shader cache that lazily compiles and caches shader programs */
+export function createShaderCache(gl: WebGLRenderingContext): ShaderCache {
+  const programs = new Map<ShaderProgramName, WebGLProgram>();
 
-  /**
-   * Get (or compile) a shader program by name
-   */
-  get(name: ShaderProgramName): WebGLProgram {
-    let program = this.programs.get(name);
-    if (!program) {
-      const sources = SHADER_SOURCES[name];
-      program = createProgram(this.gl, sources.vertex, sources.fragment);
-      this.programs.set(name, program);
-    }
-    return program;
-  }
+  return {
+    get(name) {
+      const programRef = { value: programs.get(name) };
+      if (!programRef.value) {
+        const sources = SHADER_SOURCES[name];
+        programRef.value = createProgram(gl, sources.vertex, sources.fragment);
+        programs.set(name, programRef.value);
+      }
+      return programRef.value;
+    },
 
-  /**
-   * Dispose all cached programs
-   */
-  dispose(): void {
-    for (const program of this.programs.values()) {
-      this.gl.deleteProgram(program);
-    }
-    this.programs.clear();
-  }
+    dispose() {
+      for (const program of programs.values()) {
+        gl.deleteProgram(program);
+      }
+      programs.clear();
+    },
+  };
 }

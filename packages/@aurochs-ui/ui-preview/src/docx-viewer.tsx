@@ -89,7 +89,7 @@ function createMockPage(
   height: Pixels,
 ): PageLayout {
   const paragraphs: LayoutParagraphResult[] = [];
-  let currentY = 72; // 1 inch top margin
+  const yPos = { value: 72 }; // 1 inch top margin
 
   // Title (only on first page)
   if (pageIndex === 0) {
@@ -97,15 +97,15 @@ function createMockPage(
       bold: true,
       fontSize: pt(24),
     });
-    paragraphs.push(createMockParagraph([createMockLine([titleSpan], px(currentY))]));
-    currentY += 48;
+    paragraphs.push(createMockParagraph([createMockLine([titleSpan], px(yPos.value))]));
+    yPos.value += 48;
 
     // Subtitle
     const subtitleSpan = createMockSpan("Demonstrating the DocumentViewer and EmbeddableDocument components", px(0), {
       fontSize: pt(11),
     });
-    paragraphs.push(createMockParagraph([createMockLine([subtitleSpan], px(currentY))]));
-    currentY += 32;
+    paragraphs.push(createMockParagraph([createMockLine([subtitleSpan], px(yPos.value))]));
+    yPos.value += 32;
   }
 
   // Page header
@@ -113,8 +113,8 @@ function createMockPage(
     bold: true,
     fontSize: pt(16),
   });
-  paragraphs.push(createMockParagraph([createMockLine([headerSpan], px(currentY))]));
-  currentY += 32;
+  paragraphs.push(createMockParagraph([createMockLine([headerSpan], px(yPos.value))]));
+  yPos.value += 32;
 
   // Content paragraphs
   const contentLines = [
@@ -131,12 +131,12 @@ function createMockPage(
 
   for (const line of contentLines) {
     if (line === "") {
-      currentY += 12;
+      yPos.value += 12;
       continue;
     }
     const span = createMockSpan(line, px(0), { fontSize: pt(11) });
-    paragraphs.push(createMockParagraph([createMockLine([span], px(currentY))]));
-    currentY += 20;
+    paragraphs.push(createMockParagraph([createMockLine([span], px(yPos.value))]));
+    yPos.value += 20;
   }
 
   return {

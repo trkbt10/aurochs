@@ -18,12 +18,12 @@
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { extractThemeFromBuffer } from "../src/app/theme-extractor";
-import { exportThemeAsPotx, buildThemeXml } from "@aurochs-builder/pptx/builders";
-import type { ThemeExportOptions } from "@aurochs-builder/pptx/builders";
-import type { ExtractedTheme } from "../src/app/theme-extractor";
-import type { CustomColor } from "../src/domain/theme/types";
-import { parseTheme } from "../src/parser/theme/theme-parser";
+import { extractThemeFromBuffer } from "@aurochs-office/pptx/app/theme-extractor";
+import { exportThemeAsPotx, buildThemeXml } from "../src/builders";
+import type { ThemeExportOptions } from "../src/builders";
+import type { ExtractedTheme } from "@aurochs-office/pptx/app/theme-extractor";
+import type { CustomColor } from "@aurochs-office/pptx/domain/theme/types";
+import { parseTheme } from "@aurochs-office/pptx/parser/theme/theme-parser";
 import { SCHEME_COLOR_NAMES, type SchemeColorName } from "@aurochs-office/drawing-ml/domain/color";
 import { EMPTY_FONT_SCHEME } from "@aurochs-office/ooxml/domain/font-scheme";
 import { DEFAULT_COLOR_MAPPING } from "@aurochs-office/pptx/domain/color/types";
@@ -81,7 +81,7 @@ describe("Theme pipeline: extract from real PPTX files", () => {
       const result = await extractThemeFromBuffer(buffer);
 
       expect(result.success).toBe(true);
-      if (!result.success) return;
+      if (!result.success) {return;}
 
       const { theme, colorMap, themeName } = result.data;
 
@@ -118,7 +118,7 @@ describe("Theme pipeline: extract → export → re-extract (lossless)", () => {
   it("preserves color scheme through full pipeline", async () => {
     const buffer = loadFixture("poi-test-data/test-data/slideshow/SampleShow.pptx");
     const original = await extractThemeFromBuffer(buffer);
-    if (!original.success) throw new Error(original.error);
+    if (!original.success) {throw new Error(original.error);}
 
     const options = toExportOptions(original.data);
     const reExtracted = await roundTrip(options);
@@ -132,7 +132,7 @@ describe("Theme pipeline: extract → export → re-extract (lossless)", () => {
   it("preserves font scheme through full pipeline", async () => {
     const buffer = loadFixture("poi-test-data/test-data/slideshow/SampleShow.pptx");
     const original = await extractThemeFromBuffer(buffer);
-    if (!original.success) throw new Error(original.error);
+    if (!original.success) {throw new Error(original.error);}
 
     const options = toExportOptions(original.data);
     const reExtracted = await roundTrip(options);
@@ -152,7 +152,7 @@ describe("Theme pipeline: extract → export → re-extract (lossless)", () => {
   it("preserves format scheme style count through full pipeline", async () => {
     const buffer = loadFixture("poi-test-data/test-data/slideshow/SampleShow.pptx");
     const original = await extractThemeFromBuffer(buffer);
-    if (!original.success) throw new Error(original.error);
+    if (!original.success) {throw new Error(original.error);}
 
     const options = toExportOptions(original.data);
     const reExtracted = await roundTrip(options);
@@ -171,7 +171,7 @@ describe("Theme pipeline: extract → export → re-extract (lossless)", () => {
   it("preserves theme name through full pipeline", async () => {
     const buffer = loadFixture("poi-test-data/test-data/slideshow/SampleShow.pptx");
     const original = await extractThemeFromBuffer(buffer);
-    if (!original.success) throw new Error(original.error);
+    if (!original.success) {throw new Error(original.error);}
 
     const options = toExportOptions(original.data);
     const reExtracted = await roundTrip(options);
@@ -182,7 +182,7 @@ describe("Theme pipeline: extract → export → re-extract (lossless)", () => {
   it("preserves color mapping through full pipeline", async () => {
     const buffer = loadFixture("poi-test-data/test-data/slideshow/SampleShow.pptx");
     const original = await extractThemeFromBuffer(buffer);
-    if (!original.success) throw new Error(original.error);
+    if (!original.success) {throw new Error(original.error);}
 
     const options = toExportOptions(original.data);
     const reExtracted = await roundTrip(options);
@@ -333,7 +333,7 @@ describe("Theme pipeline: edit → export → re-extract", () => {
     // First extract a real theme to get real format scheme elements
     const buffer = loadFixture("poi-test-data/test-data/slideshow/SampleShow.pptx");
     const original = await extractThemeFromBuffer(buffer);
-    if (!original.success) throw new Error(original.error);
+    if (!original.success) {throw new Error(original.error);}
 
     const edited: ThemeExportOptions = {
       ...baseOptions,
@@ -406,7 +406,7 @@ describe("Theme pipeline: edit → export → re-extract", () => {
     // Extract real object defaults from a fixture
     const buffer = loadFixture("poi-test-data/test-data/slideshow/SampleShow.pptx");
     const original = await extractThemeFromBuffer(buffer);
-    if (!original.success) throw new Error(original.error);
+    if (!original.success) {throw new Error(original.error);}
 
     // Only test if the fixture has object defaults
     const od = original.data.theme.objectDefaults;
@@ -428,7 +428,7 @@ describe("Theme pipeline: edit → export → re-extract", () => {
     // Extract real master text styles from a fixture
     const buffer = loadFixture("poi-test-data/test-data/slideshow/SampleShow.pptx");
     const original = await extractThemeFromBuffer(buffer);
-    if (!original.success) throw new Error(original.error);
+    if (!original.success) {throw new Error(original.error);}
 
     const options = toExportOptions(original.data);
     const reExtracted = await roundTrip(options);
@@ -444,7 +444,7 @@ describe("Theme pipeline: edit → export → re-extract", () => {
     // Extract from backgrounds fixture which has master backgrounds
     const buffer = loadFixture("poi-test-data/test-data/slideshow/backgrounds.pptx");
     const original = await extractThemeFromBuffer(buffer);
-    if (!original.success) throw new Error(original.error);
+    if (!original.success) {throw new Error(original.error);}
 
     if (!original.data.masterBackground) {
       // No master background in fixture — skip
@@ -517,7 +517,7 @@ describe("Theme pipeline: cross-fixture lossless round-trip", () => {
     it(`${name}: all 12 color slots survive round-trip`, async () => {
       const buffer = loadFixture(fixture);
       const original = await extractThemeFromBuffer(buffer);
-      if (!original.success) throw new Error(original.error);
+      if (!original.success) {throw new Error(original.error);}
 
       const options = toExportOptions(original.data);
       const reExtracted = await roundTrip(options);
@@ -531,7 +531,7 @@ describe("Theme pipeline: cross-fixture lossless round-trip", () => {
     it(`${name}: font scheme survives round-trip`, async () => {
       const buffer = loadFixture(fixture);
       const original = await extractThemeFromBuffer(buffer);
-      if (!original.success) throw new Error(original.error);
+      if (!original.success) {throw new Error(original.error);}
 
       const options = toExportOptions(original.data);
       const reExtracted = await roundTrip(options);
@@ -545,7 +545,7 @@ describe("Theme pipeline: cross-fixture lossless round-trip", () => {
     it(`${name}: format scheme style counts survive round-trip`, async () => {
       const buffer = loadFixture(fixture);
       const original = await extractThemeFromBuffer(buffer);
-      if (!original.success) throw new Error(original.error);
+      if (!original.success) {throw new Error(original.error);}
 
       const options = toExportOptions(original.data);
       const reExtracted = await roundTrip(options);

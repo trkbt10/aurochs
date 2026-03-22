@@ -52,11 +52,11 @@ export function renderPaths(params: {
 
   const opacityAttr = opacity !== undefined && opacity < 1 ? opacity : undefined;
 
-  let result: SvgString;
+  const resultRef = { value: undefined as SvgString | undefined };
 
   if (paths.length === 1) {
     const { data, windingRule } = paths[0];
-    result = path({
+    resultRef.value = path({
       d: data,
       "fill-rule": mapWindingRule(windingRule),
       transform: transform || undefined,
@@ -66,7 +66,7 @@ export function renderPaths(params: {
     });
   } else {
     const elements = buildPathElements(paths, fillAttrs, strokeAttrs);
-    result = g(
+    resultRef.value = g(
       {
         transform: transform || undefined,
         opacity: opacityAttr,
@@ -76,7 +76,7 @@ export function renderPaths(params: {
   }
 
   if (filter) {
-    return g({ filter }, result);
+    return g({ filter }, resultRef.value);
   }
-  return result;
+  return resultRef.value;
 }

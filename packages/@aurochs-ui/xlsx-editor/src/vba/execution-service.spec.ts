@@ -2,11 +2,9 @@
  * @file VBA Execution Service Tests
  */
 
-import { describe, it, expect } from "vitest";
 import type { VbaProgramIr } from "@aurochs-office/vba";
 import type { XlsxWorkbook } from "@aurochs-office/xlsx/domain/workbook";
 import { createDefaultStyleSheet } from "@aurochs-office/xlsx/domain/style/types";
-import { rowIdx } from "@aurochs-office/xlsx/domain/types";
 import { executeVbaProcedure } from "./execution-service";
 
 // =============================================================================

@@ -3,7 +3,7 @@
  */
 
 import { linearGradient } from "./linear-gradient";
-import { PAINT_TYPE_VALUES, BLEND_MODE_VALUES } from "../../constants";
+import { PAINT_TYPE_VALUES } from "../../constants";
 
 describe("LinearGradientBuilder", () => {
   it("creates linear gradient with defaults", () => {

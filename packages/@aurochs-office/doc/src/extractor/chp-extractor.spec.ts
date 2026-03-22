@@ -226,7 +226,7 @@ describe("getAllChpxRunsInRange", () => {
     };
     const cache = new Map<number, readonly ChpxRun[]>();
 
-    const runs = getAllChpxRunsInRange(100, 120, binTable, wordDocStream, cache);
+    const runs = getAllChpxRunsInRange({ fcStart: 100, fcEnd: 120, chpBinTable: binTable, wordDocStream: wordDocStream, cache: cache });
     expect(runs).toHaveLength(2);
     expect(runs[0].fcStart).toBe(100);
     expect(runs[0].fcEnd).toBe(110);
@@ -244,7 +244,7 @@ describe("getAllChpxRunsInRange", () => {
     const cache = new Map<number, readonly ChpxRun[]>();
 
     // Only request FC [105, 115) - overlaps both runs
-    const runs = getAllChpxRunsInRange(105, 115, binTable, wordDocStream, cache);
+    const runs = getAllChpxRunsInRange({ fcStart: 105, fcEnd: 115, chpBinTable: binTable, wordDocStream: wordDocStream, cache: cache });
     expect(runs).toHaveLength(2);
   });
 
@@ -255,7 +255,7 @@ describe("getAllChpxRunsInRange", () => {
     };
     const cache = new Map<number, readonly ChpxRun[]>();
 
-    const runs = getAllChpxRunsInRange(200, 300, binTable, wordDocStream, cache);
+    const runs = getAllChpxRunsInRange({ fcStart: 200, fcEnd: 300, chpBinTable: binTable, wordDocStream: wordDocStream, cache: cache });
     expect(runs).toHaveLength(0);
   });
 
@@ -266,7 +266,7 @@ describe("getAllChpxRunsInRange", () => {
     };
     const cache = new Map<number, readonly ChpxRun[]>();
 
-    const runs = getAllChpxRunsInRange(110, 110, binTable, wordDocStream, cache);
+    const runs = getAllChpxRunsInRange({ fcStart: 110, fcEnd: 110, chpBinTable: binTable, wordDocStream: wordDocStream, cache: cache });
     expect(runs).toHaveLength(0);
   });
 
@@ -277,11 +277,11 @@ describe("getAllChpxRunsInRange", () => {
     };
     const cache = new Map<number, readonly ChpxRun[]>();
 
-    getAllChpxRunsInRange(100, 120, binTable, wordDocStream, cache);
+    getAllChpxRunsInRange({ fcStart: 100, fcEnd: 120, chpBinTable: binTable, wordDocStream: wordDocStream, cache: cache });
     expect(cache.has(0)).toBe(true);
 
     // Second call should use cache (same result)
-    const runs = getAllChpxRunsInRange(100, 120, binTable, wordDocStream, cache);
+    const runs = getAllChpxRunsInRange({ fcStart: 100, fcEnd: 120, chpBinTable: binTable, wordDocStream: wordDocStream, cache: cache });
     expect(runs).toHaveLength(2);
   });
 });

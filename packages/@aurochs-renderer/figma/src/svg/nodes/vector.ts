@@ -76,15 +76,15 @@ function resolvePaths(sources: PathSources): PathResolution {
  * It must be *filled* with the stroke colour instead of being stroked.
  */
 function strokePaintsToFillAttrs(paints: readonly FigPaint[] | undefined): FillAttrs {
-  if (!paints || paints.length === 0) return { fill: "none" };
+  if (!paints || paints.length === 0) {return { fill: "none" };}
   const visible = paints.find((p) => p.visible !== false);
-  if (!visible) return { fill: "none" };
+  if (!visible) {return { fill: "none" };}
 
   if (getPaintType(visible) === "SOLID") {
     const solid = visible as FigPaint & { color: { r: number; g: number; b: number; a: number } };
     const hex = figColorToHex(solid.color);
     const opacity = visible.opacity ?? 1;
-    if (opacity < 1) return { fill: hex, "fill-opacity": opacity };
+    if (opacity < 1) {return { fill: hex, "fill-opacity": opacity };}
     return { fill: hex };
   }
   return { fill: "#000000" };
@@ -112,23 +112,23 @@ export function renderVectorNode(node: FigNode, ctx: FigSvgRenderContext): SvgSt
     return EMPTY_SVG;
   }
 
-  let fillAttrs: FillAttrs;
-  let strokeAttrs: StrokeAttrs;
+  const fillAttrsRef = { value: undefined as FillAttrs | undefined };
+  const strokeAttrsRef = { value: undefined as StrokeAttrs | undefined };
 
   if (isStrokeGeometry) {
     // strokeGeometry paths are pre-expanded outlines — fill them with stroke
     // colour and do NOT apply an additional stroke.
-    fillAttrs = strokePaintsToFillAttrs(strokePaints);
-    strokeAttrs = {};
+    fillAttrsRef.value = strokePaintsToFillAttrs(strokePaints);
+    strokeAttrsRef.value = {};
   } else {
-    fillAttrs = getFillAttrs(fillPaints, ctx);
-    strokeAttrs = getStrokeAttrs({ paints: strokePaints, strokeWeight });
+    fillAttrsRef.value = getFillAttrs(fillPaints, ctx);
+    strokeAttrsRef.value = getStrokeAttrs({ paints: strokePaints, strokeWeight });
   }
 
   return renderPaths({
     paths: pathsToRender,
-    fillAttrs,
-    strokeAttrs,
+    fillAttrs: fillAttrsRef.value,
+    strokeAttrs: strokeAttrsRef.value,
     transform: transformStr,
     opacity,
   });

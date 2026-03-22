@@ -20,6 +20,12 @@ const VERTICAL_ALIGNMENT_ITEMS: readonly {
   { value: "bottom", label: "Align bottom", icon: <AlignBottomIcon size={iconSize} strokeWidth={strokeWidth} /> },
 ];
 
+
+
+
+
+
+/** Vertical text alignment toggle button group */
 export function VerticalAlignmentGroup({ value, onChange, disabled }: VerticalAlignmentGroupProps) {
   const isDisabled = disabled ?? false;
   const isMixed = Array.isArray(value);

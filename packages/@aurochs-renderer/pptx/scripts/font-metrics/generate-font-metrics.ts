@@ -23,30 +23,38 @@ type FontMetricsConfig = {
   charWidths?: Record<string, number>;
 };
 
+/** Build character widths code block for font metrics file */
+function buildCharWidthsCode(charWidths: Record<string, number> | undefined, displayName: string): string {
+  if (!charWidths || Object.keys(charWidths).length === 0) {
+    return "";
+  }
+  const entries = Object.entries(charWidths)
+    .map(([char, width]) => {
+      const charStr = char === '"' ? '\\"' : char === "\\" ? "\\\\" : char;
+      return `    "${charStr}": ${width.toFixed(2)},`;
+    })
+    .join("\n");
+  return `
+    // ${displayName}-specific character widths (measured)
+${entries}`;
+}
+
+/** Format ascender ratio code line */
+function formatAscenderCode(ascenderRatio: number | undefined): string {
+  if (ascenderRatio === undefined) {
+    return "";
+  }
+  return `  ascenderRatio: ${ascenderRatio.toFixed(2)},`;
+}
+
 function generateFontMetricsFile(config: FontMetricsConfig): string {
   const { fontName, latinAverage, cjkAverage, ascenderRatio, charWidths } = config;
   const constantName = `${fontName.toUpperCase().replace(/[^A-Z0-9]/g, "_")}_METRICS`;
   const displayName = fontName.charAt(0).toUpperCase() + fontName.slice(1);
 
-  let charWidthsCode = "";
-  if (charWidths && Object.keys(charWidths).length > 0) {
-    const entries = Object.entries(charWidths)
-      .map(([char, width]) => {
-        const charStr = char === '"' ? '\\"' : char === "\\" ? "\\\\" : char;
-        return `    "${charStr}": ${width.toFixed(2)},`;
-      })
-      .join("\n");
-    charWidthsCode = `
-    // ${displayName}-specific character widths (measured)
-${entries}`;
-  }
+  const charWidthsCode = buildCharWidthsCode(charWidths, displayName);
 
-  const ascenderCode = (() => {
-    if (ascenderRatio === undefined) {
-      return "";
-    }
-    return `  ascenderRatio: ${ascenderRatio.toFixed(2)},`;
-  })();
+  const ascenderCode = formatAscenderCode(ascenderRatio);
 
   return `/**
  * @file ${displayName} font metrics
@@ -107,6 +115,23 @@ function updateFontsIndex(fontName: string): void {
   }
 }
 
+/** Parse CLI options from args array */
+function parseCliOptions(optArgs: string[]): { cjkAverage: number; ascenderRatio: number | undefined; dryRun: boolean } {
+  const result = { cjkAverage: 1.0, ascenderRatio: undefined as number | undefined, dryRun: false };
+  for (let i = 0; i < optArgs.length; i++) {
+    if (optArgs[i] === "--ascender" && optArgs[i + 1]) {
+      result.ascenderRatio = parseFloat(optArgs[i + 1]);
+      i++;
+    } else if (optArgs[i] === "--cjk" && optArgs[i + 1]) {
+      result.cjkAverage = parseFloat(optArgs[i + 1]);
+      i++;
+    } else if (optArgs[i] === "--dry-run") {
+      result.dryRun = true;
+    }
+  }
+  return result;
+}
+
 // Parse arguments
 const args = process.argv.slice(2);
 
@@ -133,32 +158,18 @@ if (isNaN(latinAverage) || latinAverage <= 0 || latinAverage > 2) {
 }
 
 // Parse options
-let cjkAverage = 1.0;
-let ascenderRatio: number | undefined;
-let dryRun = false;
-
-for (let i = 2; i < args.length; i++) {
-  if (args[i] === "--ascender" && args[i + 1]) {
-    ascenderRatio = parseFloat(args[i + 1]);
-    i++;
-  } else if (args[i] === "--cjk" && args[i + 1]) {
-    cjkAverage = parseFloat(args[i + 1]);
-    i++;
-  } else if (args[i] === "--dry-run") {
-    dryRun = true;
-  }
-}
+const parsedOptions = parseCliOptions(args.slice(2));
 
 const config: FontMetricsConfig = {
   fontName,
   latinAverage,
-  cjkAverage,
-  ascenderRatio,
+  cjkAverage: parsedOptions.cjkAverage,
+  ascenderRatio: parsedOptions.ascenderRatio,
 };
 
 const content = generateFontMetricsFile(config);
 
-if (dryRun) {
+if (parsedOptions.dryRun) {
   console.log("=== Generated content (dry run) ===");
   console.log(content);
 } else {

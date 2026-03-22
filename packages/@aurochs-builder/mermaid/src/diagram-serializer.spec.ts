@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+/** @file Diagram serializer tests */
 import { serializeDiagramToMermaid } from "./diagram-serializer";
 
 describe("serializeDiagramToMermaid", () => {

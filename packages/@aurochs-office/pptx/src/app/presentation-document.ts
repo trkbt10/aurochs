@@ -12,7 +12,7 @@ import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
 import type { ResourceResolver } from "../domain/resource-resolver";
-import type { ResolvedBackgroundFill } from "@aurochs-renderer/pptx";
+import type { ResolvedBackgroundFill } from "@aurochs-office/drawing-ml/domain/background-fill";
 import type { Slide as ApiSlide } from "./types";
 
 /**

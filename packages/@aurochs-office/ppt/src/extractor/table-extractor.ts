@@ -20,6 +20,17 @@ import { extractTextBodies } from "./text-extractor";
 import type { ColorScheme } from "../records/atoms/color";
 import type { PptTable, PptTableRow, PptTableCell, PptTextBody } from "../domain/types";
 
+function extractCellTextBodyFromRecord(
+  clientTextbox: PptRecord | undefined,
+  fonts: readonly string[],
+  colorScheme: ColorScheme,
+): PptTextBody | undefined {
+  if (!clientTextbox?.children) { return undefined; }
+  const bodies = extractTextBodies(clientTextbox.children, fonts, colorScheme);
+  if (bodies.length > 0) { return bodies[0]; }
+  return undefined;
+}
+
 /** PPT master unit to EMU conversion factor */
 const MASTER_UNIT_TO_EMU = 914400 / 576;
 
@@ -44,15 +55,15 @@ export function isTableGroup(groupContainer: PptRecord): Map<number, ShapeProper
 
   // First child is the patriarch shape
   const spContainers = findChildrenByType(children, RT.OfficeArtSpContainer);
-  if (spContainers.length === 0) return undefined;
+  if (spContainers.length === 0) {return undefined;}
 
   const patriarch = spContainers[0];
   const tertiaryFOPT = findChildByType(patriarch.children ?? [], RT.OfficeArtTertiaryFOPT);
-  if (!tertiaryFOPT) return undefined;
+  if (!tertiaryFOPT) {return undefined;}
 
   const props = parseOfficeArtFOPT(tertiaryFOPT);
   const tableFlag = props.get(TABLE_FLAG);
-  if (!tableFlag || tableFlag.value !== 1) return undefined;
+  if (!tableFlag || tableFlag.value !== 1) {return undefined;}
 
   return props;
 }
@@ -60,15 +71,16 @@ export function isTableGroup(groupContainer: PptRecord): Map<number, ShapeProper
 /**
  * Extract table structure from a group that has been identified as a table.
  */
-export function extractTable(
-  groupContainer: PptRecord,
-  tertiaryProps: Map<number, ShapeProperty>,
-  fonts: readonly string[],
-  colorScheme: ColorScheme,
-): PptTable | undefined {
+export function extractTable(options: {
+  groupContainer: PptRecord;
+  tertiaryProps: Map<number, ShapeProperty>;
+  fonts: readonly string[];
+  colorScheme: ColorScheme;
+}): PptTable | undefined {
+  const { groupContainer, tertiaryProps, fonts, colorScheme } = options;
   // Parse table layout metadata
   const layoutProp = tertiaryProps.get(TABLE_LAYOUT);
-  if (!layoutProp?.complexData || layoutProp.complexData.byteLength < 6) return undefined;
+  if (!layoutProp?.complexData || layoutProp.complexData.byteLength < 6) {return undefined;}
 
   const layoutView = new DataView(
     layoutProp.complexData.buffer,
@@ -76,7 +88,7 @@ export function extractTable(
     layoutProp.complexData.byteLength,
   );
   const nRows = layoutView.getUint16(0, true);
-  const nCols = layoutView.getUint16(2, true);
+  const _nCols = layoutView.getUint16(2, true);
   // Skip flags at offset 4
 
   // Parse row heights (i32 values starting at offset 6)
@@ -90,40 +102,36 @@ export function extractTable(
   const cells: CellInfo[] = [];
 
   for (const child of children) {
-    if (child.recType !== RT.OfficeArtSpContainer) continue;
+    if (child.recType !== RT.OfficeArtSpContainer) {continue;}
     const childChildren = child.children ?? [];
 
     const fsp = findChildByType(childChildren, RT.OfficeArtFSP);
-    if (!fsp) continue;
+    if (!fsp) {continue;}
     const flags = parseOfficeArtFSP(fsp);
-    if (flags.isPatriarch) continue;
+    if (flags.isPatriarch) {continue;}
 
     // Only rectangle shapes are cells (msospt=1), skip lines (msospt=20)
-    if (fsp.recInstance === 20) continue;
+    if (fsp.recInstance === 20) {continue;}
 
     const anchor = findChildByType(childChildren, RT.OfficeArtChildAnchor);
-    if (!anchor) continue;
+    if (!anchor) {continue;}
 
     const a = parseChildAnchor(anchor);
 
     // Extract text
-    let textBody: PptTextBody | undefined;
     const clientTextbox = findChildByType(childChildren, RT.OfficeArtClientTextbox);
-    if (clientTextbox?.children) {
-      const bodies = extractTextBodies(clientTextbox.children, fonts, colorScheme);
-      if (bodies.length > 0) textBody = bodies[0];
-    }
+    const textBody = extractCellTextBodyFromRecord(clientTextbox, fonts, colorScheme);
 
     cells.push({ left: a.left, top: a.top, right: a.right, bottom: a.bottom, textBody });
   }
 
-  if (cells.length === 0) return undefined;
+  if (cells.length === 0) {return undefined;}
 
   // Derive grid lines from cell anchors
   const colBounds = deriveGridLines(cells.map(c => c.left), cells.map(c => c.right));
   const rowBounds = deriveGridLines(cells.map(c => c.top), cells.map(c => c.bottom));
 
-  if (colBounds.length < 2 || rowBounds.length < 2) return undefined;
+  if (colBounds.length < 2 || rowBounds.length < 2) {return undefined;}
 
   const actualNCols = colBounds.length - 1;
   const actualNRows = rowBounds.length - 1;
@@ -145,7 +153,7 @@ export function extractTable(
     const colEnd = findGridIndex(colBounds, cell.right);
     const rowEnd = findGridIndex(rowBounds, cell.bottom);
 
-    if (col < 0 || row < 0 || colEnd < 0 || rowEnd < 0) continue;
+    if (col < 0 || row < 0 || colEnd < 0 || rowEnd < 0) {continue;}
 
     const colSpan = colEnd - col;
     const rowSpan = rowEnd - row;
@@ -178,8 +186,8 @@ export function extractTable(
  */
 function deriveGridLines(starts: number[], ends: number[]): number[] {
   const positions = new Set<number>();
-  for (const s of starts) positions.add(s);
-  for (const e of ends) positions.add(e);
+  for (const s of starts) {positions.add(s);}
+  for (const e of ends) {positions.add(e);}
   return Array.from(positions).sort((a, b) => a - b);
 }
 
@@ -188,14 +196,13 @@ function deriveGridLines(starts: number[], ends: number[]): number[] {
  */
 function findGridIndex(gridLines: number[], position: number): number {
   // Find the nearest grid line
-  let minDist = Infinity;
-  let bestIdx = -1;
+  const result = { minDist: Infinity, bestIdx: -1 };
   for (let i = 0; i < gridLines.length; i++) {
     const dist = Math.abs(gridLines[i] - position);
-    if (dist < minDist) {
-      minDist = dist;
-      bestIdx = i;
+    if (dist < result.minDist) {
+      result.minDist = dist;
+      result.bestIdx = i;
     }
   }
-  return bestIdx;
+  return result.bestIdx;
 }

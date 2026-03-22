@@ -14,12 +14,12 @@ export function* iterateRecords(
   endOffset?: number,
 ): Generator<PptRecord> {
   const end = endOffset ?? bytes.length;
-  let pos = startOffset;
+  const posRef = { value: startOffset };
 
-  while (pos + RECORD_HEADER_SIZE <= end) {
-    const record = readPptRecord(bytes, pos);
+  while (posRef.value + RECORD_HEADER_SIZE <= end) {
+    const record = readPptRecord(bytes, posRef.value);
     yield record;
-    pos += RECORD_HEADER_SIZE + record.recLen;
+    posRef.value += RECORD_HEADER_SIZE + record.recLen;
   }
 }
 

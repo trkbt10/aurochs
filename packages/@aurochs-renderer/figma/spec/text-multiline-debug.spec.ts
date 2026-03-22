@@ -5,14 +5,13 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, it, expect, beforeAll } from "vitest";
 import { Resvg } from "@resvg/resvg-js";
 import pixelmatch from "pixelmatch";
 import { PNG } from "pngjs";
 import { parseFigFile, buildNodeTree, findNodesByType, type FigBlob } from "@aurochs/fig/parser";
 import type { FigNode } from "@aurochs/fig/types";
 import { createNodeFontLoaderWithFontsource } from "../src/font-drivers/node";
-import { CachingFontLoader } from "../src/font";
+import { createCachingFontLoader, type CachingFontLoader } from "../src/font";
 import { renderTextNodeAsPath, type PathRenderContext } from "../src/svg/nodes/text/path-render";
 import { createFigSvgRenderContext } from "../src/svg/context";
 import { extractTextProps } from "../src/text/layout/extract-props";
@@ -50,10 +49,10 @@ function svgToPng(svg: string): Buffer {
   return Buffer.from(resvg.render().asPng());
 }
 
-let parsedData: ParsedData | null = null;
-let fontLoader: CachingFontLoader | null = null;
+const parsedData: ParsedData | null = null;
+const fontLoader: createCachingFontLoader | null = null;
 
-async function setup(): Promise<{ data: ParsedData; fontLoader: CachingFontLoader }> {
+async function setup(): Promise<{ data: ParsedData; fontLoader: createCachingFontLoader }> {
   if (parsedData && fontLoader) {
     return { data: parsedData, fontLoader };
   }
@@ -84,27 +83,27 @@ async function setup(): Promise<{ data: ParsedData; fontLoader: CachingFontLoade
   parsedData = { frames, blobs: parsed.blobs };
 
   const baseLoader = createNodeFontLoaderWithFontsource();
-  fontLoader = new CachingFontLoader(baseLoader);
+  fontLoader = createCachingFontLoader(baseLoader);
   await fontLoader.loadFont({ family: "Inter", weight: 400 });
 
   return { data: parsedData, fontLoader };
 }
 
 describe("Multi-line text debugging", () => {
-  let data: ParsedData;
-  let loader: CachingFontLoader;
+  const dataRef = { value: undefined as ParsedData | undefined };
+  const loaderRef = { value: undefined as CachingFontLoader | undefined };
 
   beforeAll(async () => {
     const result = await setup();
-    data = result.data;
-    loader = result.fontLoader;
+    dataRef.value = result.data;
+    loaderRef.value = result.fontLoader;
     ensureDebugDir();
   });
 
   it("analyzes size-64 in detail", async () => {
-    const frame = data.frames.get("size-64");
+    const frame = dataRef.value.frames.get("size-64");
     expect(frame).toBeDefined();
-    if (!frame || !frame.textNode) return;
+    if (!frame || !frame.textNode) {return;}
 
     // Extract text props
     const props = extractTextProps(frame.textNode);
@@ -176,12 +175,12 @@ describe("Multi-line text debugging", () => {
     // Render with our path-based approach
     const ctx = createFigSvgRenderContext({
       canvasSize: { width: frame.size.width, height: frame.size.height },
-      blobs: data.blobs,
+      blobs: dataRef.value.blobs,
     });
 
     const pathCtx: PathRenderContext = {
       ...ctx,
-      fontLoader: loader,
+      fontLoader: loaderRef.value,
     };
 
     const pathSvg = await renderTextNodeAsPath(frame.textNode, pathCtx);
@@ -238,7 +237,7 @@ ${pathSvg}
   });
 
   it("analyzes 2-lines frame", async () => {
-    const frame = data.frames.get("2-lines");
+    const frame = dataRef.value.frames.get("2-lines");
     if (!frame || !frame.textNode) {
       console.log("2-lines frame not found");
       return;
@@ -261,12 +260,12 @@ ${pathSvg}
 
     const ctx = createFigSvgRenderContext({
       canvasSize: { width: frame.size.width, height: frame.size.height },
-      blobs: data.blobs,
+      blobs: dataRef.value.blobs,
     });
 
     const pathCtx: PathRenderContext = {
       ...ctx,
-      fontLoader: loader,
+      fontLoader: loaderRef.value,
     };
 
     const pathSvg = await renderTextNodeAsPath(frame.textNode, pathCtx);

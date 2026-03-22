@@ -13,17 +13,13 @@
 
 // @vitest-environment jsdom
 
-/* eslint-disable @typescript-eslint/no-explicit-any, custom/no-as-outside-guard, no-restricted-syntax -- Test file */
+/* eslint-disable custom/no-as-outside-guard, no-restricted-syntax -- Test file */
 
-import { describe, it, expect, beforeEach } from "vitest";
 import { render } from "@testing-library/react";
-import type { Shape, GraphicFrame, Slide } from "@aurochs-office/pptx/domain";
-import type { SpShape } from "@aurochs-office/pptx/domain/shape";
+import type { Shape } from "@aurochs-office/pptx/domain";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import type { CreationMode } from "@aurochs-ui/ooxml-components";
 import { getDefaultBoundsForMode } from "@aurochs-ui/ooxml-components";
-import { createEmptySelection } from "@aurochs-ui/editor-core/selection";
-import { createIdleDragState } from "@aurochs-ui/editor-core/drag-state";
 import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
 import {
   presentationEditorReducer,
@@ -37,9 +33,6 @@ import { createShapeFromMode } from "../src/shape/factory";
 import { createTestDocument } from "../src/context/presentation/editor/reducer/test-fixtures";
 import { collectShapeRenderData } from "../src/shape/traverse";
 import { SlideCanvas } from "../src/slide/SlideCanvas";
-import { applyDragPreview } from "@aurochs-ui/editor-core/geometry";
-import { findShapeByIdWithParents } from "../src/shape/query";
-import { getAbsoluteBounds } from "@aurochs-ui/ooxml-components/pptx-transform";
 
 // =============================================================================
 // Helpers
@@ -57,7 +50,7 @@ function getActiveSlide(state: PresentationEditorState) {
 }
 
 function shapeId(shape: Shape): ShapeId {
-  if (!("nonVisual" in shape)) throw new Error("Shape missing nonVisual");
+  if (!("nonVisual" in shape)) {throw new Error("Shape missing nonVisual");}
   return shape.nonVisual.id;
 }
 
@@ -92,6 +85,12 @@ function createContextMenuActions() {
   };
 }
 
+/** Find a shape by nonVisual.id, or undefined if not found or id is undefined */
+function findShapeByNonVisualId(shapes: Shape[], id: string | undefined): Shape | undefined {
+  if (!id) {return undefined;}
+  return shapes.find((s) => "nonVisual" in s && s.nonVisual.id === id);
+}
+
 /**
  * Render the SlideCanvas with the given editor state and return query helpers.
  */
@@ -103,11 +102,9 @@ function renderCanvas(state: PresentationEditorState) {
   const selectedShapes: Shape[] = [];
   for (const id of state.shapeSelection.selectedIds) {
     const shape = slide.shapes.find((s) => "nonVisual" in s && s.nonVisual.id === id);
-    if (shape) selectedShapes.push(shape);
+    if (shape) {selectedShapes.push(shape);}
   }
-  const primaryShape = state.shapeSelection.primaryId
-    ? slide.shapes.find((s) => "nonVisual" in s && s.nonVisual.id === state.shapeSelection.primaryId)
-    : undefined;
+  const primaryShape = findShapeByNonVisualId(slide.shapes, state.shapeSelection.primaryId);
 
   const result = render(
     <SlideCanvas
@@ -354,7 +351,6 @@ describe("Slide Editing E2E - UI Rendering", () => {
 
         // Get initial shape transform for angle calculation
         const activeSlide = getActiveSlide(state)!;
-        const shape = activeSlide.slide.shapes.find((s) => "nonVisual" in s && s.nonVisual.id === id)!;
         const renderData = collectShapeRenderData(activeSlide.slide.shapes);
         const shapeData = renderData.find((r) => r.id === id)!;
         const centerX = shapeData.x + shapeData.width / 2;

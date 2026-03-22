@@ -63,13 +63,13 @@ export function FrozenPanesLayer({
 }: FrozenPanesLayerProps) {
   // Calculate frozen dimensions
   const frozenRowsHeight = useMemo(() => {
-    if (frozenRowCount === 0) return 0;
+    if (frozenRowCount === 0) {return 0;}
     // Use getBoundaryOffsetPx to get the offset at the boundary (end of frozen rows)
     return layout.rows.getBoundaryOffsetPx(frozenRowCount);
   }, [frozenRowCount, layout.rows]);
 
   const frozenColsWidth = useMemo(() => {
-    if (frozenColCount === 0) return 0;
+    if (frozenColCount === 0) {return 0;}
     // Use getBoundaryOffsetPx to get the offset at the boundary (end of frozen cols)
     return layout.cols.getBoundaryOffsetPx(frozenColCount);
   }, [frozenColCount, layout.cols]);

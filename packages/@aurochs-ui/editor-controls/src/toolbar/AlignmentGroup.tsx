@@ -22,6 +22,12 @@ const ALIGNMENT_ITEMS: readonly {
   { value: "justify", label: "Align justify", icon: <AlignJustifyIcon size={iconSize} strokeWidth={strokeWidth} />, requiresJustify: true },
 ];
 
+
+
+
+
+
+/** Horizontal text alignment toggle button group */
 export function AlignmentGroup({ value, onChange, showJustify, disabled }: AlignmentGroupProps) {
   const isDisabled = disabled ?? false;
   const isMixed = Array.isArray(value);

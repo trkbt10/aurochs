@@ -2,7 +2,7 @@
  * @file Project Search Hook Tests
  */
 
-import { describe, expect, it } from "vitest";
+// Test globals (describe/it/expect) provided by vitest runner
 import { getModuleMatches, getAllMatches } from "./use-project-search";
 import type { ProjectSearchMatch } from "../context/vba-editor/types";
 

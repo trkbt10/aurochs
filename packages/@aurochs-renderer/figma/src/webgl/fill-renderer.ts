@@ -36,14 +36,25 @@ function matrixToGLUniform(m: AffineMatrix, pixelRatio: number): Float32Array {
 // Solid Color
 // =============================================================================
 
+
+
+
+
+
+/** Parameters for drawing a solid color fill */
+export type SolidFillParams = {
+  ctx: GLContext;
+  vertices: Float32Array;
+  color: Color;
+  transform: AffineMatrix;
+  opacity: number;
+};
+
+/** Draw a solid color fill using WebGL */
 export function drawSolidFill(
-  ctx: GLContext,
-  vertices: Float32Array,
-  color: Color,
-  transform: AffineMatrix,
-  opacity: number
+  { ctx, vertices, color, transform, opacity }: SolidFillParams
 ): void {
-  if (vertices.length === 0 || opacity <= 0) return;
+  if (vertices.length === 0 || opacity <= 0) {return;}
 
   const { gl, shaders, positionBuffer, width, height, pixelRatio } = ctx;
   const program = shaders.get("flat");
@@ -81,15 +92,26 @@ export function drawSolidFill(
 // Linear Gradient
 // =============================================================================
 
+
+
+
+
+
+/** Parameters for drawing a linear gradient fill */
+export type LinearGradientFillParams = {
+  ctx: GLContext;
+  vertices: Float32Array;
+  fill: Extract<Fill, { type: "linear-gradient" }>;
+  transform: AffineMatrix;
+  opacity: number;
+  elementSize: { width: number; height: number };
+};
+
+/** Draw a linear gradient fill using WebGL */
 export function drawLinearGradientFill(
-  ctx: GLContext,
-  vertices: Float32Array,
-  fill: Extract<Fill, { type: "linear-gradient" }>,
-  transform: AffineMatrix,
-  opacity: number,
-  elementSize: { width: number; height: number }
+  { ctx, vertices, fill, transform, opacity, elementSize }: LinearGradientFillParams
 ): void {
-  if (vertices.length === 0 || opacity <= 0) return;
+  if (vertices.length === 0 || opacity <= 0) {return;}
 
   const { gl, shaders, positionBuffer, width, height, pixelRatio } = ctx;
   const program = shaders.get("linearGradient");
@@ -160,15 +182,26 @@ export function drawLinearGradientFill(
 // Radial Gradient
 // =============================================================================
 
+
+
+
+
+
+/** Parameters for drawing a radial gradient fill */
+export type RadialGradientFillParams = {
+  ctx: GLContext;
+  vertices: Float32Array;
+  fill: Extract<Fill, { type: "radial-gradient" }>;
+  transform: AffineMatrix;
+  opacity: number;
+  elementSize: { width: number; height: number };
+};
+
+/** Draw a radial gradient fill using WebGL */
 export function drawRadialGradientFill(
-  ctx: GLContext,
-  vertices: Float32Array,
-  fill: Extract<Fill, { type: "radial-gradient" }>,
-  transform: AffineMatrix,
-  opacity: number,
-  elementSize: { width: number; height: number }
+  { ctx, vertices, fill, transform, opacity, elementSize }: RadialGradientFillParams
 ): void {
-  if (vertices.length === 0 || opacity <= 0) return;
+  if (vertices.length === 0 || opacity <= 0) {return;}
 
   const { gl, shaders, positionBuffer, width, height, pixelRatio } = ctx;
   const program = shaders.get("radialGradient");
@@ -222,16 +255,27 @@ export type ImageFillOptions = {
   readonly scaleMode?: string;
 };
 
+
+
+
+
+
+/** Parameters for drawing an image fill */
+export type ImageFillDrawParams = {
+  ctx: GLContext;
+  vertices: Float32Array;
+  texture: WebGLTexture;
+  transform: AffineMatrix;
+  opacity: number;
+  elementSize: { width: number; height: number };
+  options?: ImageFillOptions;
+};
+
+/** Draw an image fill using WebGL */
 export function drawImageFill(
-  ctx: GLContext,
-  vertices: Float32Array,
-  texture: WebGLTexture,
-  transform: AffineMatrix,
-  opacity: number,
-  elementSize: { width: number; height: number },
-  options?: ImageFillOptions
+  { ctx, vertices, texture, transform, opacity, elementSize, options }: ImageFillDrawParams
 ): void {
-  if (vertices.length === 0 || opacity <= 0) return;
+  if (vertices.length === 0 || opacity <= 0) {return;}
 
   const { gl, shaders, positionBuffer, width, height, pixelRatio } = ctx;
   const program = shaders.get("textured");
@@ -261,13 +305,13 @@ export function drawImageFill(
   gl.uniform1i(gl.getUniformLocation(program, "u_texture"), 0);
 
   // Compute UV scale/offset based on scaleMode
-  const { texScale, texOffset } = computeImageUV(
-    elementSize.width,
-    elementSize.height,
-    options?.imageWidth ?? elementSize.width,
-    options?.imageHeight ?? elementSize.height,
-    options?.scaleMode ?? "STRETCH"
-  );
+  const { texScale, texOffset } = computeImageUV({
+    elementW: elementSize.width,
+    elementH: elementSize.height,
+    imageW: options?.imageWidth ?? elementSize.width,
+    imageH: options?.imageHeight ?? elementSize.height,
+    scaleMode: options?.scaleMode ?? "STRETCH",
+  });
 
   gl.uniform2f(
     gl.getUniformLocation(program, "u_texScale"),
@@ -294,12 +338,18 @@ export function drawImageFill(
  * - FILL: image is scaled to cover element, maintaining aspect ratio, then center-cropped
  * - FIT: image is scaled to fit within element, maintaining aspect ratio, centered
  */
+/** Parameters for computing image UV mapping */
+type ImageUVParams = {
+  elementW: number;
+  elementH: number;
+  imageW: number;
+  imageH: number;
+  scaleMode: string;
+};
+
+/** Compute UV scale and offset for image fills */
 function computeImageUV(
-  elementW: number,
-  elementH: number,
-  imageW: number,
-  imageH: number,
-  scaleMode: string
+  { elementW, elementH, imageW, imageH, scaleMode }: ImageUVParams
 ): { texScale: { x: number; y: number }; texOffset: { x: number; y: number } } {
   if (scaleMode === "FILL" && imageW > 0 && imageH > 0) {
     const imageAR = imageW / imageH;

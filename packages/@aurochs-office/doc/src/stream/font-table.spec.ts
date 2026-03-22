@@ -42,7 +42,7 @@ function buildSttbfFfn(fontNames: string[]): Uint8Array {
   view.setUint16(2, fontNames.length, true); // cData
   view.setUint16(4, 0, true); // cbExtra
 
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- sequential write offset
   let offset = headerSize;
   for (const entry of entries) {
     data.set(entry, offset);

@@ -34,6 +34,8 @@ export default [
       "*.config.ts",
       "eslint/**",
       ".*/**",
+      "**/coverage/**",
+      "tmp/**",
     ],
   },
 

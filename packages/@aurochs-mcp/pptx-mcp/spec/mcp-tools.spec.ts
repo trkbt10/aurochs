@@ -12,6 +12,8 @@ import { tmpdir } from "node:os";
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
 import { createServer } from "../src/server";
+import { coerceShapeSpec } from "../src/tools/index";
+import type { ShapeSpec } from "@aurochs-builder/pptx";
 
 const execAsync = promisify(exec);
 
@@ -38,8 +40,8 @@ async function isLibreOfficeAvailable(): Promise<boolean> {
   try {
     await access(LIBREOFFICE_PATH);
     return true;
-  } catch (_err: unknown) {
-    void _err;
+  } catch (error: unknown) {
+    console.debug("LibreOffice not available:", error);
     return false;
   }
 }
@@ -72,8 +74,8 @@ describe("MCP Server Integration Tests", () => {
   afterAll(async () => {
     try {
       await rm(TEST_OUTPUT_DIR, { recursive: true, force: true });
-    } catch (_err: unknown) {
-      void _err;
+    } catch (error: unknown) {
+      console.debug("Cleanup error:", error);
     }
   });
 
@@ -899,7 +901,7 @@ describe("MCP Server Integration Tests", () => {
       await session.load(TEMPLATE_PATH);
 
       // Simulate MCP tool: coerce then pass
-      const { coerceShapeSpec } = await import("../src/tools/index");
+      // coerceShapeSpec imported at top level
 
       // The shape as LLM sends it (TextRunSpec[] without runs wrapper)
       const rawShape = {
@@ -924,7 +926,7 @@ describe("MCP Server Integration Tests", () => {
       expect(textArr[1]).toHaveProperty("runs");
 
       // Should work with session
-      const result = await session.addShape(1, coerced as any);
+      const result = await session.addShape(1, coerced as Record<string, unknown> as ShapeSpec);
       expect(result.shapeId).toBeDefined();
 
       const { svg } = session.renderSlide(1);

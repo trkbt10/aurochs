@@ -28,25 +28,13 @@ export function extractPptPresentation(
   const docChildren = parsed.documentRecord.children ?? [];
   const documentAtomRecord = findChildByType(docChildren, RT.DocumentAtom);
 
-  let slideSize: PptSlideSize;
-  if (documentAtomRecord) {
-    const docAtom = parseDocumentAtom(documentAtomRecord);
-    slideSize = {
-      widthEmu: docAtom.slideSizeXEmu,
-      heightEmu: docAtom.slideSizeYEmu,
-    };
-  } else {
-    // Default 16:9 slide size
-    slideSize = { widthEmu: 12192000, heightEmu: 6858000 };
-  }
+  const slideSize = resolveSlideSizeFromAtom(documentAtomRecord);
 
   // Extract fonts from FontCollection
   const fonts = extractFonts(docChildren);
 
   // Extract master color scheme
-  const masterColorScheme = parsed.masterRecords.length > 0
-    ? extractColorScheme(parsed.masterRecords[0])
-    : DEFAULT_COLOR_SCHEME;
+  const masterColorScheme = resolveMasterColorScheme(parsed.masterRecords);
 
   // Extract document-level hyperlink map
   const hyperlinkMap = extractHyperlinkMap(parsed.documentRecord);
@@ -56,7 +44,7 @@ export function extractPptPresentation(
   for (let i = 0; i < parsed.slideRecords.length; i++) {
     const slideRecord = parsed.slideRecords[i];
     try {
-      const slide = extractSlide(slideRecord, fonts, masterColorScheme, hyperlinkMap, parsed.noteRecords[i]);
+      const slide = extractSlide({ slideRecord, fonts, masterColorScheme, hyperlinkMap, notesRecord: parsed.noteRecords[i] });
       slides.push(slide);
     } catch (err) {
       warnOrThrow(ctx,
@@ -71,29 +59,38 @@ export function extractPptPresentation(
   return { slideSize, slides, images };
 }
 
-function extractSlide(
-  slideRecord: PptRecord,
-  fonts: readonly string[],
-  masterColorScheme: ColorScheme,
-  hyperlinkMap: HyperlinkMap,
-  notesRecord?: PptRecord,
-): PptSlide {
+function extractSlide(options: {
+  slideRecord: PptRecord;
+  fonts: readonly string[];
+  masterColorScheme: ColorScheme;
+  hyperlinkMap: HyperlinkMap;
+  notesRecord?: PptRecord;
+}): PptSlide {
+  const { slideRecord, fonts, masterColorScheme, hyperlinkMap, notesRecord } = options;
   // Use slide's own color scheme if available, otherwise master's
   const colorScheme = extractColorScheme(slideRecord) ?? masterColorScheme;
 
   // Extract shapes
-  const shapes = extractShapes(slideRecord, fonts, colorScheme, hyperlinkMap);
+  const shapes = extractShapes({ slideRecord, fonts, colorScheme, hyperlinkMap });
 
   // Extract notes text
-  let notes: string | undefined;
-  if (notesRecord) {
-    notes = extractNotesText(notesRecord, fonts, colorScheme);
-  }
+  const notes = notesRecord ? extractNotesText(notesRecord, fonts, colorScheme) : undefined;
 
   return {
     shapes,
     ...(notes ? { notes } : {}),
   };
+}
+
+function resolveSlideSizeFromAtom(atomRecord: PptRecord | undefined): PptSlideSize {
+  if (!atomRecord) { return { widthEmu: 12192000, heightEmu: 6858000 }; }
+  const docAtom = parseDocumentAtom(atomRecord);
+  return { widthEmu: docAtom.slideSizeXEmu, heightEmu: docAtom.slideSizeYEmu };
+}
+
+function resolveMasterColorScheme(masterRecords: readonly PptRecord[]): ColorScheme {
+  if (masterRecords.length > 0) { return extractColorScheme(masterRecords[0]) ?? DEFAULT_COLOR_SCHEME; }
+  return DEFAULT_COLOR_SCHEME;
 }
 
 /**
@@ -104,10 +101,10 @@ function extractFonts(docChildren: readonly PptRecord[]): readonly string[] {
 
   // Find Environment container → FontCollection
   const envContainer = findChildByType(docChildren, RT.Environment);
-  if (!envContainer) return fonts;
+  if (!envContainer) {return fonts;}
 
   const fontCollection = findChildByType(envContainer.children ?? [], RT.FontCollection);
-  if (!fontCollection) return fonts;
+  if (!fontCollection) {return fonts;}
 
   // FontCollection contains FontEntityAtom records
   const fontEntities = findChildrenByType(fontCollection.children ?? [], RT.FontEntityAtom);
@@ -130,14 +127,14 @@ function extractNotesText(
   colorScheme: ColorScheme,
 ): string | undefined {
   // Extract shapes from the notes record (same traversal as slides: PPDrawing → shapes)
-  const shapes = extractShapes(notesRecord, fonts, colorScheme);
+  const shapes = extractShapes({ slideRecord: notesRecord, fonts, colorScheme });
 
   const textParts: string[] = [];
   for (const shape of shapes) {
-    if (!shape.textBody) continue;
+    if (!shape.textBody) {continue;}
     for (const para of shape.textBody.paragraphs) {
       const text = para.runs.map(r => r.text).join("");
-      if (text.length > 0) textParts.push(text);
+      if (text.length > 0) {textParts.push(text);}
     }
   }
 

@@ -25,19 +25,19 @@ export type FatBuilder = {
  * Create a FAT builder.
  */
 export function createFatBuilder(initialCapacity = 128): FatBuilder {
-  let entries = new Uint32Array(initialCapacity);
-  let allocatedCount = 0;
+  const entries = { value: new Uint32Array(initialCapacity) };
+  const allocatedCount = { value: 0 };
 
   // Initialize all entries as free
-  entries.fill(FREESECT);
+  entries.value.fill(FREESECT);
 
   function ensureCapacity(needed: number): void {
-    if (needed > entries.length) {
-      const newCapacity = Math.max(entries.length * 2, needed);
+    if (needed > entries.value.length) {
+      const newCapacity = Math.max(entries.value.length * 2, needed);
       const newEntries = new Uint32Array(newCapacity);
       newEntries.fill(FREESECT);
-      newEntries.set(entries);
-      entries = newEntries;
+      newEntries.set(entries.value);
+      entries.value = newEntries;
     }
   }
 
@@ -47,37 +47,37 @@ export function createFatBuilder(initialCapacity = 128): FatBuilder {
         return ENDOFCHAIN;
       }
 
-      const startSector = allocatedCount;
-      ensureCapacity(allocatedCount + sectorCount);
+      const startSector = allocatedCount.value;
+      ensureCapacity(allocatedCount.value + sectorCount);
 
       // Create chain
       for (let i = 0; i < sectorCount; i++) {
         const currentSector = startSector + i;
         if (i === sectorCount - 1) {
-          entries[currentSector] = ENDOFCHAIN;
+          entries.value[currentSector] = ENDOFCHAIN;
         } else {
-          entries[currentSector] = currentSector + 1;
+          entries.value[currentSector] = currentSector + 1;
         }
       }
 
-      allocatedCount += sectorCount;
+      allocatedCount.value += sectorCount;
       return startSector;
     },
 
     markFatSector(sector: number): void {
       ensureCapacity(sector + 1);
-      entries[sector] = FATSECT;
-      if (sector >= allocatedCount) {
-        allocatedCount = sector + 1;
+      entries.value[sector] = FATSECT;
+      if (sector >= allocatedCount.value) {
+        allocatedCount.value = sector + 1;
       }
     },
 
     getEntries(): Uint32Array {
-      return entries.subarray(0, allocatedCount);
+      return entries.value.subarray(0, allocatedCount.value);
     },
 
     getSectorCount(): number {
-      return allocatedCount;
+      return allocatedCount.value;
     },
   };
 }

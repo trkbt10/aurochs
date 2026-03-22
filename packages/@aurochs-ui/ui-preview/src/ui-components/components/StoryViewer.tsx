@@ -76,10 +76,21 @@ export type StoryViewerProps = {
 // Component
 // =============================================================================
 
+
+
+
+
+
+
+
+
+
+
+/** Renders a single story with its controls panel */
 export function StoryViewer({ story, componentName }: StoryViewerProps): ReactNode {
   // Initialize props from controls
   const initialProps = useMemo(() => {
-    if (!story?.controls) return {};
+    if (!story?.controls) {return {};}
 
     const props: Record<string, unknown> = { ...story.defaultProps };
     for (const [key, def] of Object.entries(story.controls)) {

@@ -13,7 +13,7 @@ import type { ResourceStore } from "@aurochs-office/pptx/domain/resource-store";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import type { RenderOptions } from "./render-options";
 import { DEFAULT_RENDER_OPTIONS } from "./render-options";
-import type { ResolvedBackgroundFill } from "./background-fill";
+import type { ResolvedBackgroundFill } from "@aurochs-office/drawing-ml/domain/background-fill";
 import type { WarningCollector } from "@aurochs-office/ooxml";
 import { createWarningCollector } from "@aurochs-office/ooxml";
 import type { TableStyleList } from "@aurochs-office/pptx/parser/table/style-parser";

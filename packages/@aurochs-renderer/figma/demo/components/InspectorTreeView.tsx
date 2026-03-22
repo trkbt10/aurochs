@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FigNode } from "@aurochs/fig/types";
 import { guidToString, getNodeType } from "@aurochs/fig/parser";
-import { getCategoryColor, getNodeCategory, CATEGORY_COLORS } from "./inspector-constants";
+import { getCategoryColor } from "./inspector-constants";
 
 type Props = {
   readonly rootNode: FigNode;
@@ -114,8 +114,8 @@ function TreeNode({
   const isHidden = node.visible === false;
 
   const visibleChildren = useMemo(() => {
-    if (!node.children) return [];
-    if (showHiddenNodes) return node.children;
+    if (!node.children) {return [];}
+    if (showHiddenNodes) {return node.children;}
     return node.children.filter((c) => c.visible !== false);
   }, [node.children, showHiddenNodes]);
 
@@ -140,7 +140,7 @@ function TreeNode({
           style={treeStyles.toggle}
           onClick={(e) => {
             e.stopPropagation();
-            if (hasChildren) onToggle(nodeId);
+            if (hasChildren) {onToggle(nodeId);}
           }}
         >
           {hasChildren ? (isExpanded ? "\u25BE" : "\u25B8") : ""}
@@ -193,6 +193,12 @@ function TreeNode({
   );
 }
 
+
+
+
+
+
+/** Hierarchical tree view for inspecting Figma node structure */
 export function InspectorTreeView({
   rootNode,
   highlightedNodeId,
@@ -212,7 +218,7 @@ export function InspectorTreeView({
 
   // Auto-scroll highlighted node into view
   useEffect(() => {
-    if (!highlightedNodeId || !containerRef.current) return;
+    if (!highlightedNodeId || !containerRef.current) {return;}
     const el = containerRef.current.querySelector(`[data-node-id="${highlightedNodeId}"]`);
     if (el) {
       el.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -221,21 +227,21 @@ export function InspectorTreeView({
 
   // Expand ancestors of highlighted node so it's visible
   useEffect(() => {
-    if (!highlightedNodeId) return;
+    if (!highlightedNodeId) {return;}
 
     const ancestorIds = findAncestorIds(rootNode, highlightedNodeId);
-    if (ancestorIds.length === 0) return;
+    if (ancestorIds.length === 0) {return;}
 
     setExpandedNodes((prev) => {
       const next = new Set(prev);
-      let changed = false;
+      const changedRef = { value: false };
       for (const id of ancestorIds) {
         if (!next.has(id)) {
           next.add(id);
-          changed = true;
+          changedRef.value = true;
         }
       }
-      return changed ? next : prev;
+      return changedRef.value ? next : prev;
     });
   }, [highlightedNodeId, rootNode]);
 
@@ -276,7 +282,7 @@ function findAncestorIds(root: FigNode, targetId: string): string[] {
 
   function dfs(node: FigNode): boolean {
     const nodeId = guidToString(node.guid);
-    if (nodeId === targetId) return true;
+    if (nodeId === targetId) {return true;}
 
     for (const child of node.children ?? []) {
       if (dfs(child)) {

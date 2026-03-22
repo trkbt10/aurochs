@@ -54,19 +54,19 @@ function isInsideStringOrComment(
   }
 
   // Check for string literal (count quotes before offset)
-  let inString = false;
+  const inString = { value: false };
   for (let i = 0; i < line.length && lineStart + i < offset; i++) {
     if (line[i] === '"') {
       if (i + 1 < line.length && line[i + 1] === '"') {
         // Escaped quote
         i++;
       } else {
-        inString = !inString;
+        inString.value = !inString.value;
       }
     }
   }
 
-  return inString;
+  return inString.value;
 }
 
 /**
@@ -84,17 +84,17 @@ function getLineColumn(
   source: string,
   offset: number,
 ): { line: number; column: number } {
-  let line = 1;
-  let lastNewline = -1;
+  const line = { value: 1 };
+  const lastNewline = { value: -1 };
 
   for (let i = 0; i < offset; i++) {
     if (source[i] === "\n") {
-      line++;
-      lastNewline = i;
+      line.value++;
+      lastNewline.value = i;
     }
   }
 
-  return { line, column: offset - lastNewline };
+  return { line: line.value, column: offset - lastNewline.value };
 }
 
 /**
@@ -104,16 +104,16 @@ function extractPrefix(
   source: string,
   offset: number,
 ): { prefix: string; prefixStartOffset: number } {
-  let start = offset;
+  const start = { value: offset };
 
   // Scan backward for identifier characters
-  while (start > 0 && /[a-zA-Z0-9_]/.test(source[start - 1])) {
-    start--;
+  while (start.value > 0 && /[a-zA-Z0-9_]/.test(source[start.value - 1])) {
+    start.value--;
   }
 
   return {
-    prefix: source.slice(start, offset),
-    prefixStartOffset: start,
+    prefix: source.slice(start.value, offset),
+    prefixStartOffset: start.value,
   };
 }
 
@@ -130,29 +130,29 @@ function checkDotTrigger(
   }
 
   // Skip whitespace before prefix
-  let pos = prefixStartOffset - 1;
-  while (pos > 0 && /\s/.test(source[pos])) {
-    pos--;
+  const pos = { value: prefixStartOffset - 1 };
+  while (pos.value > 0 && /\s/.test(source[pos.value])) {
+    pos.value--;
   }
 
-  if (source[pos] !== ".") {
+  if (source[pos.value] !== ".") {
     return { isDot: false };
   }
 
   // Extract object name before "."
-  let objectEnd = pos;
-  pos--;
+  const objectEnd = pos.value;
+  pos.value--;
 
-  while (pos > 0 && /\s/.test(source[pos])) {
-    pos--;
+  while (pos.value > 0 && /\s/.test(source[pos.value])) {
+    pos.value--;
   }
 
-  let objectStart = pos;
-  while (objectStart > 0 && /[a-zA-Z0-9_]/.test(source[objectStart - 1])) {
-    objectStart--;
+  const objectStart = { value: pos.value };
+  while (objectStart.value > 0 && /[a-zA-Z0-9_]/.test(source[objectStart.value - 1])) {
+    objectStart.value--;
   }
 
-  const objectName = source.slice(objectStart, objectEnd).trim();
+  const objectName = source.slice(objectStart.value, objectEnd).trim();
 
   return {
     isDot: true,

@@ -4,9 +4,7 @@
  * Common functions for loading .fig fixtures, rendering SVG/WebGL,
  * and comparing output images via pixelmatch.
  */
-
 import * as fs from "node:fs";
-import * as path from "node:path";
 import { Resvg } from "@resvg/resvg-js";
 import pixelmatch from "pixelmatch";
 import { PNG } from "pngjs";
@@ -15,44 +13,37 @@ import puppeteer, { type Browser, type Page } from "puppeteer";
 import { parseFigFile, buildNodeTree, findNodesByType, type FigBlob, type FigImage } from "@aurochs/fig/parser";
 import type { FigNode } from "@aurochs/fig/types";
 import { buildSceneGraph } from "../../src/scene-graph/builder";
-import { renderSceneGraphToSvg } from "../../src/svg/scene-renderer";
 import type { SceneGraph } from "../../src/scene-graph/types";
-
 // =============================================================================
 // Types
 // =============================================================================
-
 export type FrameInfo = {
   name: string;
   node: FigNode;
   width: number;
   height: number;
 };
-
 export type CompareResult = {
   frameName: string;
   diffPercent: number;
   diffPixels: number;
   totalPixels: number;
 };
-
 export type FixtureData = {
   frames: Map<string, FrameInfo>;
   blobs: readonly FigBlob[];
   images: ReadonlyMap<string, FigImage>;
   nodeMap: ReadonlyMap<string, FigNode>;
 };
-
 export type WebGLHarness = {
   server: ViteDevServer;
   browser: Browser;
   page: Page;
 };
-
 // =============================================================================
 // File Utilities
 // =============================================================================
-
+/** Ensure directories exist, creating them if necessary */
 export function ensureDirs(dirs: string[]): void {
   for (const dir of dirs) {
     if (!fs.existsSync(dir)) {
@@ -60,15 +51,14 @@ export function ensureDirs(dirs: string[]): void {
     }
   }
 }
-
+/** Convert a frame name to a safe filename */
 export function safeName(name: string): string {
   return name.replace(/[^a-zA-Z0-9-_]/g, "_");
 }
-
 // =============================================================================
 // SVG Rendering
 // =============================================================================
-
+/** Convert SVG string to PNG buffer using resvg */
 export function svgToPng(svg: string, width?: number): Buffer {
   const opts: {
     fitTo?: { mode: "width"; value: number };
@@ -87,43 +77,40 @@ export function svgToPng(svg: string, width?: number): Buffer {
   const pngData = resvg.render();
   return Buffer.from(pngData.asPng());
 }
-
 // =============================================================================
 // Image Comparison
 // =============================================================================
-
-export function comparePngs(a: Buffer, b: Buffer, frameName: string, diffPath?: string): CompareResult {
+/** Compare two PNG buffers and return difference percentage */
+export function comparePngs(
+  { a, b, frameName, diffPath}: { a: Buffer; b: Buffer; frameName: string; diffPath?: string; }
+): CompareResult {
   const imgA = PNG.sync.read(a);
-  let imgB = PNG.sync.read(b);
-
+  const imgBRef = { value: PNG.sync.read(b) };
   // Resize if dimensions don't match
-  if (imgB.width !== imgA.width || imgB.height !== imgA.height) {
+  if (imgBRef.value.width !== imgA.width || imgBRef.value.height !== imgA.height) {
     const resized = new PNG({ width: imgA.width, height: imgA.height });
     for (let y = 0; y < imgA.height; y++) {
-      const sy = Math.floor((y / imgA.height) * imgB.height);
+      const sy = Math.floor((y / imgA.height) * imgBRef.value.height);
       for (let x = 0; x < imgA.width; x++) {
-        const sx = Math.floor((x / imgA.width) * imgB.width);
-        const srcIdx = (sy * imgB.width + sx) * 4;
+        const sx = Math.floor((x / imgA.width) * imgBRef.value.width);
+        const srcIdx = (sy * imgBRef.value.width + sx) * 4;
         const dstIdx = (y * imgA.width + x) * 4;
-        resized.data[dstIdx] = imgB.data[srcIdx];
-        resized.data[dstIdx + 1] = imgB.data[srcIdx + 1];
-        resized.data[dstIdx + 2] = imgB.data[srcIdx + 2];
-        resized.data[dstIdx + 3] = imgB.data[srcIdx + 3];
+        resized.data[dstIdx] = imgBRef.value.data[srcIdx];
+        resized.data[dstIdx + 1] = imgBRef.value.data[srcIdx + 1];
+        resized.data[dstIdx + 2] = imgBRef.value.data[srcIdx + 2];
+        resized.data[dstIdx + 3] = imgBRef.value.data[srcIdx + 3];
       }
     }
-    imgB = resized;
+    imgBRef.value = resized;
   }
-
   const diff = new PNG({ width: imgA.width, height: imgA.height });
-  const diffPixels = pixelmatch(imgA.data, imgB.data, diff.data, imgA.width, imgA.height, {
+  const diffPixels = pixelmatch(imgA.data, imgBRef.value.data, diff.data, imgA.width, imgA.height, {
     threshold: 0.1,
     includeAA: false,
   });
-
   if (diffPath && diffPixels > 0) {
     fs.writeFileSync(diffPath, PNG.sync.write(diff));
   }
-
   const totalPixels = imgA.width * imgA.height;
   return {
     frameName,
@@ -132,25 +119,21 @@ export function comparePngs(a: Buffer, b: Buffer, frameName: string, diffPath?: 
     totalPixels,
   };
 }
-
 // =============================================================================
 // Node Normalization
 // =============================================================================
-
 /**
  * Normalize root frame transform to (0,0) for consistent rendering
  */
 export function normalizeRootNode(node: FigNode): FigNode {
   const nodeData = node as Record<string, unknown>;
   const transform = nodeData.transform as { m02?: number; m12?: number } | undefined;
-  if (!transform) return node;
+  if (!transform) {return node;}
   return { ...node, transform: { ...transform, m02: 0, m12: 0 } } as FigNode;
 }
-
 // =============================================================================
 // Fixture Loading
 // =============================================================================
-
 /**
  * Load and parse a .fig fixture file into frames.
  *
@@ -161,12 +144,9 @@ export async function loadFigFixture(figPath: string, canvasFilter?: string): Pr
   const data = fs.readFileSync(figPath);
   const parsed = await parseFigFile(new Uint8Array(data));
   const { roots, nodeMap } = buildNodeTree(parsed.nodeChanges);
-
   const frames = new Map<string, FrameInfo>();
-
   const canvases = findNodesByType(roots, "CANVAS");
   const targetCanvases = canvasFilter ? canvases.filter((c) => c.name === canvasFilter) : canvases;
-
   for (const canvas of targetCanvases) {
     for (const child of canvas.children ?? []) {
       const name = child.name ?? "unnamed";
@@ -180,10 +160,8 @@ export async function loadFigFixture(figPath: string, canvasFilter?: string): Pr
       });
     }
   }
-
   return { frames, blobs: parsed.blobs, images: parsed.images, nodeMap };
 }
-
 /**
  * Build a SceneGraph from a single frame
  */
@@ -197,11 +175,9 @@ export function buildFrameSceneGraph(frame: FrameInfo, data: FixtureData): Scene
     showHiddenNodes: false,
   });
 }
-
 // =============================================================================
 // WebGL Capture
 // =============================================================================
-
 /**
  * JSON replacer that converts Uint8Array to `{ __base64: "..." }` for transport
  */
@@ -211,7 +187,6 @@ function uint8ArrayReplacer(_key: string, value: unknown): unknown {
   }
   return value;
 }
-
 /**
  * Capture WebGL-rendered output from a SceneGraph via Puppeteer
  */
@@ -223,11 +198,9 @@ export async function captureWebGL(page: Page, sceneGraph: SceneGraph): Promise<
   const base64 = dataUrl.replace(/^data:image\/png;base64,/, "");
   return Buffer.from(base64, "base64");
 }
-
 // =============================================================================
 // Harness Lifecycle
 // =============================================================================
-
 /**
  * Start the WebGL test harness (Vite dev server + Puppeteer browser)
  */
@@ -242,7 +215,6 @@ export async function startHarness(harnessConfigPath: string): Promise<WebGLHarn
     throw new Error("Failed to get server address");
   }
   const serverUrl = `http://localhost:${(address as { port: number }).port}`;
-
   const browser = await puppeteer.launch({
     headless: true,
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
@@ -252,10 +224,8 @@ export async function startHarness(harnessConfigPath: string): Promise<WebGLHarn
   await page.waitForFunction(() => document.title === "ready", {
     timeout: 15000,
   });
-
   return { server, browser, page };
 }
-
 /**
  * Stop the WebGL test harness
  */
@@ -263,25 +233,20 @@ export async function stopHarness(harness: WebGLHarness): Promise<void> {
   await harness.browser?.close();
   await harness.server?.close();
 }
-
 // =============================================================================
 // Summary Printing
 // =============================================================================
-
 /**
  * Print a categorized summary of comparison results
  */
 export function printCategorySummary(title: string, categoryResults: Map<string, CompareResult[]>): void {
   console.log(`\n=== ${title} ===\n`);
-
   const allResults: CompareResult[] = [];
-
   for (const [category, results] of categoryResults) {
-    if (results.length === 0) continue;
+    if (results.length === 0) {continue;}
     const avg = results.reduce((sum, r) => sum + r.diffPercent, 0) / results.length;
     const max = Math.max(...results.map((r) => r.diffPercent));
     const min = Math.min(...results.map((r) => r.diffPercent));
-
     console.log(`  ${category}:`);
     console.log(`    avg=${avg.toFixed(1)}%  min=${min.toFixed(1)}%  max=${max.toFixed(1)}%`);
     for (const r of results) {
@@ -289,7 +254,6 @@ export function printCategorySummary(title: string, categoryResults: Map<string,
     }
     allResults.push(...results);
   }
-
   if (allResults.length > 0) {
     const overallAvg = allResults.reduce((sum, r) => sum + r.diffPercent, 0) / allResults.length;
     console.log(`\n  Overall: ${allResults.length} frames, avg=${overallAvg.toFixed(1)}%`);

@@ -7,7 +7,6 @@
 import type { XlsxWorkbook } from "@aurochs-office/xlsx/domain/workbook";
 import type { XlsxTable } from "@aurochs-office/xlsx/domain/table/types";
 import type { CellRange } from "@aurochs-office/xlsx/domain/cell/address";
-import { formatRange } from "@aurochs-office/xlsx/domain/cell/address";
 
 function rangesOverlap(a: CellRange, b: CellRange): boolean {
   return !(
@@ -23,11 +22,11 @@ function rangesOverlap(a: CellRange, b: CellRange): boolean {
  */
 function generateTableName(existingTables: readonly XlsxTable[]): string {
   const existingNames = new Set(existingTables.map((t) => t.name));
-  let i = 1;
-  while (existingNames.has(`Table${i}`)) {
-    i++;
+  const counter = { value: 1 };
+  while (existingNames.has(`Table${counter.value}`)) {
+    counter.value++;
   }
-  return `Table${i}`;
+  return `Table${counter.value}`;
 }
 
 /**
@@ -35,11 +34,11 @@ function generateTableName(existingTables: readonly XlsxTable[]): string {
  */
 function generateTableId(existingTables: readonly XlsxTable[]): number {
   const existingIds = new Set(existingTables.map((t) => t.id));
-  let id = 1;
-  while (existingIds.has(id)) {
-    id++;
+  const idRef = { value: 1 };
+  while (existingIds.has(idRef.value)) {
+    idRef.value++;
   }
-  return id;
+  return idRef.value;
 }
 
 /**
@@ -57,16 +56,13 @@ function generateColumnNames(colCount: number): readonly { id: number; name: str
 /**
  * Create a new table from a cell range
  */
-export function createTable(
-  workbook: XlsxWorkbook,
-  sheetIndex: number,
-  range: CellRange,
-  options?: {
-    readonly name?: string;
-    readonly hasHeaderRow?: boolean;
-    readonly hasTotalsRow?: boolean;
-  },
-): XlsxWorkbook {
+export function createTable(params: {
+  workbook: XlsxWorkbook;
+  sheetIndex: number;
+  range: CellRange;
+  options?: { name?: string; hasHeaderRow?: boolean; hasTotalsRow?: boolean };
+}): XlsxWorkbook {
+  const { workbook, sheetIndex, range, options } = params;
   const existingTables = workbook.tables ?? [];
 
   // Check for overlapping tables

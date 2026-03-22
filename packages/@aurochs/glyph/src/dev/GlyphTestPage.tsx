@@ -182,6 +182,32 @@ function PathDetails({ glyph }: { glyph: GlyphContour }) {
 // Main Component
 // =============================================================================
 
+
+
+
+
+
+
+
+
+
+
+/**
+ * Render glyph card content - either the glyph display or an error.
+ */
+function renderGlyphCard(glyph: GlyphContour | null, char: string, error: string | null): ReactElement {
+  if (glyph) {
+    return <GlyphDisplay glyph={glyph} scale={2} />;
+  }
+  return (
+    <div className="glyph-error">
+      <div className="error-char">{char}</div>
+      <div className="error-msg">{error}</div>
+    </div>
+  );
+}
+
+/** Glyph test page for interactive font rendering exploration. */
 export function GlyphTestPage({ onBack }: GlyphTestPageProps) {
   const [inputText, setInputText] = useState(DEFAULT_CHARS);
   const [fontFamily, setFontFamily] = useState(DEFAULT_FONT);
@@ -323,17 +349,7 @@ export function GlyphTestPage({ onBack }: GlyphTestPageProps) {
       {/* Glyph Grid */}
       <div className="glyph-grid">
         {glyphs.map(({ char, glyph, error }) => {
-          let cardContent: ReactElement;
-          if (glyph) {
-            cardContent = <GlyphDisplay glyph={glyph} scale={2} />;
-          } else {
-            cardContent = (
-              <div className="glyph-error">
-                <div className="error-char">{char}</div>
-                <div className="error-msg">{error}</div>
-              </div>
-            );
-          }
+          const cardContent: ReactElement = renderGlyphCard(glyph, char, error);
 
           return (
             <div

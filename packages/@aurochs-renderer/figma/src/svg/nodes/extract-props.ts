@@ -23,6 +23,12 @@ export type BaseProps = {
   readonly visible: boolean;
 };
 
+
+
+
+
+
+/** Extract base node properties (name, type, visibility) */
 export function extractBaseProps(node: FigNode): BaseProps {
   return {
     transform: node.transform,
@@ -37,6 +43,12 @@ export type SizeProps = {
   readonly size: FigVector;
 };
 
+
+
+
+
+
+/** Extract size and transform properties from a node */
 export function extractSizeProps(node: FigNode, fallback?: FigVector): SizeProps {
   return {
     size: node.size ?? fallback ?? { x: 100, y: 100 },
@@ -51,6 +63,12 @@ export type PaintProps = {
   readonly strokeWeight: FigStrokeWeight | undefined;
 };
 
+
+
+
+
+
+/** Extract fill and stroke paint properties */
 export function extractPaintProps(node: FigNode): PaintProps {
   return {
     fillPaints: node.fillPaints,
@@ -66,6 +84,12 @@ export type GeometryProps = {
   readonly strokeGeometry: readonly FigFillGeometry[] | undefined;
 };
 
+
+
+
+
+
+/** Extract fill and stroke geometry from a node */
 export function extractGeometryProps(node: FigNode): GeometryProps {
   return {
     fillGeometry: node.fillGeometry,
@@ -79,6 +103,12 @@ export type EffectsProps = {
   readonly effects: readonly FigEffect[] | undefined;
 };
 
+
+
+
+
+
+/** Extract visual effects (shadow, blur) from a node */
 export function extractEffectsProps(node: FigNode): EffectsProps {
   return {
     effects: node.effects,
@@ -126,7 +156,7 @@ export function resolveCornerRadius(node: FigNode, size: FigVector): ResolvedCor
 }
 
 function clamp(radius: number | undefined, maxRadius: number): ResolvedCornerRadius {
-  if (!radius || radius <= 0) return { rx: undefined, ry: undefined };
+  if (!radius || radius <= 0) {return { rx: undefined, ry: undefined };}
   const clamped = Math.min(radius, maxRadius);
   return { rx: clamped, ry: clamped };
 }

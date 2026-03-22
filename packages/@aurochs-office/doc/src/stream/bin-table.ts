@@ -26,7 +26,7 @@ export type BinTable = {
 
 /** Parse a PlcBte structure from the table stream. */
 export function parseBinTable(tableStream: Uint8Array, fc: number, lcb: number): BinTable {
-  if (lcb === 0) return { entries: [] };
+  if (lcb === 0) {return { entries: [] };}
 
   if (fc + lcb > tableStream.length) {
     throw new Error(`BinTable extends beyond table stream: ${fc} + ${lcb} > ${tableStream.length}`);
@@ -53,7 +53,7 @@ export function parseBinTable(tableStream: Uint8Array, fc: number, lcb: number):
 /** Find the FKP page number for a given FC using binary search. */
 export function findFkpPage(binTable: BinTable, targetFc: number): number | undefined {
   const { entries } = binTable;
-  if (entries.length === 0) return undefined;
+  if (entries.length === 0) {return undefined;}
 
   // Binary search for the entry containing targetFc
   // eslint-disable-next-line no-restricted-syntax -- binary search

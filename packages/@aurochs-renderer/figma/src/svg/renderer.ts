@@ -38,6 +38,17 @@ import type { FontLoader } from "../font";
 // Transform Normalization
 // =============================================================================
 
+/** Apply GUID translation to overrides if translation map is non-empty */
+function translateOverridesIfNeeded<T>(
+  translationMap: ReadonlyMap<string, string>,
+  overrides: T | undefined
+): T | undefined {
+  if (translationMap.size > 0 && overrides) {
+    return translateOverrides(overrides, translationMap) as T;
+  }
+  return overrides;
+}
+
 /**
  * Get the root frame's transform offset (translation component)
  */
@@ -320,10 +331,7 @@ function mergeSymbolProperties(instanceNode: FigNode, symbolNode: FigNode): FigN
  * Resolve children and inherited properties for INSTANCE nodes
  */
 function resolveInstance(
-  node: FigNode,
-  nodeType: string,
-  ctx: FigSvgRenderContext,
-  warnings: string[],
+  { node, nodeType, ctx, warnings }: { node: FigNode; nodeType: string; ctx: FigSvgRenderContext; warnings: string[]; }
 ): InstanceResolution {
   if (nodeType !== "INSTANCE") {
     return { node, children: node.children ?? [] };
@@ -372,14 +380,8 @@ function resolveInstance(
     rawDerivedSymbolData,
     rawSymbolOverrides,
   );
-  const symbolOverrides =
-    translationMap.size > 0 && rawSymbolOverrides
-      ? translateOverrides(rawSymbolOverrides, translationMap)
-      : rawSymbolOverrides;
-  const derivedSymbolData =
-    translationMap.size > 0 && rawDerivedSymbolData
-      ? (translateOverrides(rawDerivedSymbolData, translationMap) as FigDerivedSymbolData)
-      : rawDerivedSymbolData;
+  const symbolOverrides = translateOverridesIfNeeded(translationMap, rawSymbolOverrides);
+  const derivedSymbolData = translateOverridesIfNeeded(translationMap, rawDerivedSymbolData) as FigDerivedSymbolData;
 
   // Collect component property assignments for text overrides etc.
   const componentPropAssignments = collectComponentPropAssignments(nodeRecord);
@@ -396,16 +398,16 @@ function resolveInstance(
   const symbolSize = symNode.size;
   const isResized = instanceSize && symbolSize && (instanceSize.x !== symbolSize.x || instanceSize.y !== symbolSize.y);
 
-  let resolvedChildren = children;
+  const resolvedChildrenRef = { value: children };
   if (isResized) {
-    const layout = resolveInstanceLayout(children, symbolSize!, instanceSize!, derivedSymbolData);
-    resolvedChildren = layout.children;
+    const layout = resolveInstanceLayout({ children, symbolSize: symbolSize!, instanceSize: instanceSize!, derivedSymbolData });
+    resolvedChildrenRef.value = layout.children;
     if (layout.sizeApplied) {
       (mergedNode as Record<string, unknown>).size = instanceSize;
     }
   }
 
-  return { node: mergedNode, children: resolvedChildren };
+  return { node: mergedNode, children: resolvedChildrenRef.value };
 }
 
 const FIGMA_BLEND_MODE_TO_CSS: Record<string, string> = {
@@ -431,7 +433,7 @@ const FIGMA_BLEND_MODE_TO_CSS: Record<string, string> = {
 function getBlendModeCss(node: FigNode): string | undefined {
   const bm = (node as Record<string, unknown>).blendMode as { value: number; name: string } | string | undefined;
   const name = typeof bm === "string" ? bm : bm?.name;
-  if (!name) return undefined;
+  if (!name) {return undefined;}
   return FIGMA_BLEND_MODE_TO_CSS[name];
 }
 
@@ -451,19 +453,19 @@ async function renderNode(node: FigNode, ctx: FigSvgRenderContext, warnings: str
   }
 
   // For INSTANCE nodes, resolve children from SYMBOL and inherit properties
-  const resolution = resolveInstance(node, nodeType, ctx, warnings);
+  const resolution = resolveInstance({ node, nodeType, ctx, warnings });
   const resolvedNode = resolution.node;
   const resolvedChildren = resolution.children;
   const renderedChildren = await renderChildrenWithMasks(resolvedChildren, ctx, warnings);
 
-  let content: SvgString;
+  const contentRef = { value: undefined as SvgString | undefined };
   switch (nodeType) {
     case "DOCUMENT":
-      content = g({}, ...renderedChildren);
+      contentRef.value = g({}, ...renderedChildren);
       break;
 
     case "CANVAS":
-      content = g({}, ...renderedChildren);
+      contentRef.value = g({}, ...renderedChildren);
       break;
 
     case "FRAME":
@@ -472,28 +474,28 @@ async function renderNode(node: FigNode, ctx: FigSvgRenderContext, warnings: str
     case "COMPONENT_SET":
     case "INSTANCE":
     case "SYMBOL":
-      content = renderFrameNode(resolvedNode, ctx, renderedChildren);
+      contentRef.value = renderFrameNode(resolvedNode, ctx, renderedChildren);
       break;
 
     case "GROUP":
     case "BOOLEAN_OPERATION":
-      content = renderGroupNode(node, ctx, renderedChildren);
+      contentRef.value = renderGroupNode(node, ctx, renderedChildren);
       break;
 
     case "RECTANGLE":
     case "ROUNDED_RECTANGLE":
-      content = renderRectangleNode(node, ctx);
+      contentRef.value = renderRectangleNode(node, ctx);
       break;
 
     case "ELLIPSE":
-      content = renderEllipseNode(node, ctx);
+      contentRef.value = renderEllipseNode(node, ctx);
       break;
 
     case "VECTOR":
     case "LINE":
     case "STAR":
     case "REGULAR_POLYGON":
-      content = renderVectorNode(node, ctx);
+      contentRef.value = renderVectorNode(node, ctx);
       break;
 
     case "TEXT":
@@ -503,7 +505,7 @@ async function renderNode(node: FigNode, ctx: FigSvgRenderContext, warnings: str
           ...ctx,
           blobs: ctx.blobs,
         };
-        content = renderTextNodeFromDerivedData(node, derivedCtx);
+        contentRef.value = renderTextNodeFromDerivedData(node, derivedCtx);
         break;
       }
       // Fallback to opentype.js path rendering if fontLoader is available
@@ -512,28 +514,28 @@ async function renderNode(node: FigNode, ctx: FigSvgRenderContext, warnings: str
           ...ctx,
           fontLoader: ctx.fontLoader,
         };
-        content = await renderTextNodeAsPath(node, pathCtx);
+        contentRef.value = await renderTextNodeAsPath(node, pathCtx);
         break;
       }
-      content = renderTextNode(node, ctx);
+      contentRef.value = renderTextNode(node, ctx);
       break;
 
     default:
       if (renderedChildren.length > 0) {
-        content = g({}, ...renderedChildren);
+        contentRef.value = g({}, ...renderedChildren);
         break;
       }
       warnings.push(`Unknown node type: ${nodeType}`);
-      content = EMPTY_SVG;
+      contentRef.value = EMPTY_SVG;
       break;
   }
 
   // Apply node-level blend mode as CSS mix-blend-mode
   const blendModeCss = getBlendModeCss(node);
   if (blendModeCss) {
-    return g({ style: `mix-blend-mode:${blendModeCss}` }, content);
+    return g({ style: `mix-blend-mode:${blendModeCss}` }, contentRef.value);
   }
-  return content;
+  return contentRef.value;
 }
 
 /**
@@ -570,8 +572,8 @@ async function renderChildrenWithMasks(
   warnings: string[],
 ): Promise<readonly SvgString[]> {
   const result: SvgString[] = [];
-  let currentMaskId: string | null = null;
-  let maskedContent: SvgString[] = [];
+  const currentMaskIdRef = { value: null as string | null };
+  const maskedContentRef = { value: [] as SvgString[] };
 
   for (const child of children) {
     if (child.visible === false && !ctx.showHiddenNodes) {
@@ -580,9 +582,9 @@ async function renderChildrenWithMasks(
 
     if (isMaskNode(child)) {
       // Flush existing masked content
-      if (currentMaskId && maskedContent.length > 0) {
-        result.push(g({ mask: `url(#${currentMaskId})` }, ...maskedContent));
-        maskedContent = [];
+      if (currentMaskIdRef.value && maskedContentRef.value.length > 0) {
+        result.push(g({ mask: `url(#${currentMaskIdRef.value})` }, ...maskedContentRef.value));
+        maskedContentRef.value = [];
       }
 
       const maskContent = await renderNode(child, ctx, warnings);
@@ -590,13 +592,13 @@ async function renderChildrenWithMasks(
         const maskId = ctx.defs.generateId("mask");
         const maskDef = mask({ id: maskId, style: "mask-type:luminance" }, g({ fill: "white" }, maskContent));
         ctx.defs.add(maskDef);
-        currentMaskId = maskId;
+        currentMaskIdRef.value = maskId;
       }
     } else {
       const rendered = await renderNode(child, ctx, warnings);
       if (rendered !== EMPTY_SVG) {
-        if (currentMaskId) {
-          maskedContent.push(rendered);
+        if (currentMaskIdRef.value) {
+          maskedContentRef.value.push(rendered);
         } else {
           result.push(rendered);
         }
@@ -605,8 +607,8 @@ async function renderChildrenWithMasks(
   }
 
   // Final flush
-  if (currentMaskId && maskedContent.length > 0) {
-    result.push(g({ mask: `url(#${currentMaskId})` }, ...maskedContent));
+  if (currentMaskIdRef.value && maskedContentRef.value.length > 0) {
+    result.push(g({ mask: `url(#${currentMaskIdRef.value})` }, ...maskedContentRef.value));
   }
 
   return result;

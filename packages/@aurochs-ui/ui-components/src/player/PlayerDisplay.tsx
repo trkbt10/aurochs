@@ -77,11 +77,8 @@ export function PlayerDisplay({ media, variant }: PlayerDisplayProps): ReactNode
       <div style={textContainerStyle}>
         {/* Title row with optional status */}
         <div style={titleRowStyle}>
-          {isStringTitle ? (
-            <p style={{ ...titleStyle, ...titleWrapperStyle }}>{media.title}</p>
-          ) : (
-            <div style={titleWrapperStyle}>{media.title}</div>
-          )}
+          {isStringTitle && <p style={{ ...titleStyle, ...titleWrapperStyle }}>{media.title}</p>}
+          {!isStringTitle && <div style={titleWrapperStyle}>{media.title}</div>}
           {media.status && <span style={statusStyle}>{media.status}</span>}
         </div>
         {media.subtitle && <p style={subtitleStyle}>{media.subtitle}</p>}

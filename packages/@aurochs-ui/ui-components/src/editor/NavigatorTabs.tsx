@@ -42,6 +42,13 @@ const containerStyle: CSSProperties = {
   borderBottom: `1px solid ${colorTokens.border.subtle}`,
 };
 
+/** Get text color for a tab button based on active/disabled state */
+function getTabButtonColor(isActive: boolean, isDisabled: boolean): string {
+  if (isActive) {return colorTokens.text.primary;}
+  if (isDisabled) {return colorTokens.text.tertiary;}
+  return colorTokens.text.secondary;
+}
+
 const getTabButtonStyle = (
   isActive: boolean,
   isDisabled: boolean,
@@ -55,11 +62,7 @@ const getTabButtonStyle = (
   border: "none",
   borderRadius: "4px",
   background: isActive ? colorTokens.background.tertiary : "transparent",
-  color: isActive
-    ? colorTokens.text.primary
-    : isDisabled
-      ? colorTokens.text.tertiary
-      : colorTokens.text.secondary,
+  color: getTabButtonColor(isActive, isDisabled),
   cursor: isDisabled ? "not-allowed" : "pointer",
   transition: "background-color 0.15s, color 0.15s",
   opacity: isDisabled ? 0.5 : 1,
@@ -75,6 +78,12 @@ const iconWrapperStyle: CSSProperties = {
 // Component
 // =============================================================================
 
+
+
+
+
+
+/** Tab bar for switching between navigator panels */
 export function NavigatorTabs({
   tabs,
   activeTabId,

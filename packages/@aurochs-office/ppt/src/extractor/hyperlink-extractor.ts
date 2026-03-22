@@ -24,7 +24,7 @@ export function extractHyperlinkMap(documentRecord: PptRecord): HyperlinkMap {
 
   // Find ExObjListContainer
   const exObjList = findChildByType(docChildren, RT.ExObjListContainer);
-  if (!exObjList) return map;
+  if (!exObjList) {return map;}
 
   // Find all ExternalHyperlinkContainer records
   const hyperlinkContainers = findChildrenByType(exObjList.children ?? [], RT.ExternalHyperlinkContainer);
@@ -34,7 +34,7 @@ export function extractHyperlinkMap(documentRecord: PptRecord): HyperlinkMap {
 
     // Parse ExternalHyperlinkAtom → get exHyperlinkId
     const atom = findChildByType(children, RT.ExternalHyperlinkAtom);
-    if (!atom || atom.data.byteLength < 4) continue;
+    if (!atom || atom.data.byteLength < 4) {continue;}
 
     const view = new DataView(atom.data.buffer, atom.data.byteOffset, atom.data.byteLength);
     const exHyperlinkId = view.getUint32(0, true);
@@ -70,32 +70,20 @@ export type TextHyperlinkRange = {
  */
 export function extractTextHyperlinkRanges(textboxChildren: readonly PptRecord[]): readonly TextHyperlinkRange[] {
   const ranges: TextHyperlinkRange[] = [];
-  let i = 0;
+  const idx = { value: 0 };
 
-  while (i < textboxChildren.length) {
-    const rec = textboxChildren[i];
+  while (idx.value < textboxChildren.length) {
+    const rec = textboxChildren[idx.value];
 
     if (rec.recType === RT.InteractiveInfoAtom) {
       // InteractiveInfoAtom (0x0FF2) with ver=15 is a container wrapping InteractiveInfoInstance
-      const instance = rec.children
-        ? findChildByType(rec.children, RT.InteractiveInfoInstance)
-        : undefined;
+      const instance = findInteractiveInfoInstance(rec);
 
-      let exHyperlinkIdRef: number | undefined;
-
-      if (instance && instance.data.byteLength >= 4) {
-        // InteractiveInfoInstance payload: u32 soundIdRef, u32 exHyperlinkIdRef, u8 action, ...
-        const view = new DataView(instance.data.buffer, instance.data.byteOffset, instance.data.byteLength);
-        exHyperlinkIdRef = view.getUint32(4, true);
-      } else if (!rec.children && rec.data.byteLength >= 8) {
-        // Non-container version: direct atom data
-        const view = new DataView(rec.data.buffer, rec.data.byteOffset, rec.data.byteLength);
-        exHyperlinkIdRef = view.getUint32(4, true);
-      }
+      const exHyperlinkIdRef = resolveExHyperlinkId(rec, instance);
 
       if (exHyperlinkIdRef !== undefined && exHyperlinkIdRef !== 0) {
         // Look for the following TxInteractiveInfoAtom
-        const nextIdx = i + 1;
+        const nextIdx = idx.value + 1;
         if (nextIdx < textboxChildren.length && textboxChildren[nextIdx].recType === RT.TxInteractiveInfoAtom) {
           const txRec = textboxChildren[nextIdx];
           if (txRec.data.byteLength >= 8) {
@@ -104,23 +92,40 @@ export function extractTextHyperlinkRanges(textboxChildren: readonly PptRecord[]
             const end = txView.getUint32(4, true);
             ranges.push({ begin, end, exHyperlinkIdRef });
           }
-          i = nextIdx + 1;
+          idx.value = nextIdx + 1;
           continue;
         }
       }
     }
 
-    i++;
+    idx.value++;
   }
 
   return ranges.sort((a, b) => a.begin - b.begin);
+}
+
+function findInteractiveInfoInstance(rec: PptRecord): PptRecord | undefined {
+  if (!rec.children) { return undefined; }
+  return findChildByType(rec.children, RT.InteractiveInfoInstance);
+}
+
+function resolveExHyperlinkId(rec: PptRecord, instance: PptRecord | undefined): number | undefined {
+  if (instance && instance.data.byteLength >= 4) {
+    const view = new DataView(instance.data.buffer, instance.data.byteOffset, instance.data.byteLength);
+    return view.getUint32(4, true);
+  }
+  if (!rec.children && rec.data.byteLength >= 8) {
+    const view = new DataView(rec.data.buffer, rec.data.byteOffset, rec.data.byteLength);
+    return view.getUint32(4, true);
+  }
+  return undefined;
 }
 
 function decodeUtf16Le(data: Uint8Array): string {
   const chars: string[] = [];
   for (let i = 0; i + 1 < data.length; i += 2) {
     const code = data[i] | (data[i + 1] << 8);
-    if (code === 0) break;
+    if (code === 0) {break;}
     chars.push(String.fromCharCode(code));
   }
   return chars.join("");

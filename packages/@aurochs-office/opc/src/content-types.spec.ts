@@ -2,7 +2,7 @@
  * @file Content types parsing and macro format detection tests
  */
 
-import { describe, expect, it } from "vitest";
+
 import { parseXml } from "@aurochs/xml";
 import {
   MACRO_ENABLED_CONTENT_TYPES,

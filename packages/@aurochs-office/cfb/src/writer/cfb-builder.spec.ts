@@ -2,7 +2,7 @@
  * @file CFB Builder tests
  */
 
-import { describe, it, expect } from "bun:test";
+// test globals (describe, it, expect) are injected by the test runner
 import { createCfbBuilder } from "./cfb-builder";
 import { openCfb } from "../index";
 

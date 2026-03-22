@@ -297,13 +297,13 @@ export function mergeBounds(...bounds: LayoutBounds[]): LayoutBounds {
     return { x: 0, y: 0, width: 0, height: 0 };
   }
 
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- Accumulated across node positions
   let minX = Infinity;
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- Accumulated across node positions
   let minY = Infinity;
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- Accumulated across node positions
   let maxX = -Infinity;
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- Accumulated across node positions
   let maxY = -Infinity;
 
   for (const b of bounds) {

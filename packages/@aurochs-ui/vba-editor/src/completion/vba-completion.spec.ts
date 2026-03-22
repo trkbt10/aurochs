@@ -2,7 +2,7 @@
  * @file VBA Completion Logic Tests
  */
 
-import { describe, it, expect } from "vitest";
+// Test globals (describe/it/expect) provided by vitest runner
 import {
   detectCompletionContext,
   collectCompletions,

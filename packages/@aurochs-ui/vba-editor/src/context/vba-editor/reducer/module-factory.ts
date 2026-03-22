@@ -110,13 +110,11 @@ export function generateUniqueModuleName(
   prefix: string,
   existingNames: readonly string[]
 ): string {
-  let index = 1;
-  let name = `${prefix}${index}`;
-  while (existingNames.includes(name)) {
-    index++;
-    name = `${prefix}${index}`;
+  const index = { value: 1 };
+  while (existingNames.includes(`${prefix}${index.value}`)) {
+    index.value++;
   }
-  return name;
+  return `${prefix}${index.value}`;
 }
 
 /**

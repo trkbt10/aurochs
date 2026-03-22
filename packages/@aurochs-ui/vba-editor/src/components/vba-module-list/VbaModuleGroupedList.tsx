@@ -7,7 +7,6 @@
  */
 
 import { useCallback, useMemo, useState, type CSSProperties, type ReactNode } from "react";
-import type { VbaModuleType } from "@aurochs-office/vba";
 import {
   GroupedList,
   FilterInput,
@@ -48,6 +47,14 @@ const listContainerStyle: CSSProperties = {
   overflow: "auto",
 };
 
+
+
+
+
+
+/**
+ * VBA module list component with grouping, filtering, and editing.
+ */
 export function VbaModuleGroupedList({
   style,
 }: VbaModuleGroupedListProps): ReactNode {

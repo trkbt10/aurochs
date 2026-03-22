@@ -13,7 +13,7 @@
  * Base shape node - any element in a shape tree.
  * All shapes have a `type` discriminator.
  */
-export interface ShapeNode {
+export type ShapeNode = {
   readonly type: string;
 }
 
@@ -21,16 +21,16 @@ export interface ShapeNode {
  * A shape that can be identified by a string ID.
  * Most shapes in valid documents have nonVisual with an id.
  */
-export interface IdentifiableShape extends ShapeNode {
+export type IdentifiableShape = {
   readonly nonVisual: { readonly id: string; readonly name?: string };
-}
+} & ShapeNode
 
 /**
  * A shape that can contain child shapes (group shape).
  */
-export interface GroupShapeNode extends IdentifiableShape {
+export type GroupShapeNode = {
   readonly children: readonly ShapeNode[];
-}
+} & IdentifiableShape
 
 /**
  * Array of shape nodes (top-level or within a group).

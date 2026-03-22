@@ -1,5 +1,5 @@
 /**
- * Visual regression analysis for PPTX rendering
+ * @file Visual regression analysis for PPTX rendering
  *
  * Usage: bun run scripts/analyze/analyze-visual-regression.ts <pptx-path> <snapshot-name>
  *
@@ -11,6 +11,23 @@ import { renderSlideToSvg } from "@aurochs-renderer/pptx/svg";
 import { compareWithDetails, generateCompareReport, printCompareReport } from "../../spec/visual-regression/compare";
 import { requireFileExists, requirePositionalArg } from "../lib/cli";
 import { loadPptxFile } from "../lib/pptx-loader";
+
+/** Categorize diff percentage into a human-readable quality label */
+function categorizeDiff(diffPercent: number): string {
+  if (diffPercent < 1) {
+    return "✓ Excellent (<1%)";
+  }
+  if (diffPercent < 5) {
+    return "○ Good (1-5%)";
+  }
+  if (diffPercent < 20) {
+    return "△ Minor issues (5-20%)";
+  }
+  if (diffPercent < 50) {
+    return "▲ Significant (20-50%)";
+  }
+  return "✗ Major issues (>50%)";
+}
 
 async function analyzeVisualRegression(pptxPath: string, snapshotName: string) {
   const { presentationFile } = await loadPptxFile(pptxPath);
@@ -42,18 +59,7 @@ async function analyzeVisualRegression(pptxPath: string, snapshotName: string) {
       results.push(result);
 
       // Categorize diff percentage
-      let category: string;
-      if (result.diffPercent < 1) {
-        category = "✓ Excellent (<1%)";
-      } else if (result.diffPercent < 5) {
-        category = "○ Good (1-5%)";
-      } else if (result.diffPercent < 20) {
-        category = "△ Minor issues (5-20%)";
-      } else if (result.diffPercent < 50) {
-        category = "▲ Significant (20-50%)";
-      } else {
-        category = "✗ Major issues (>50%)";
-      }
+      const category = categorizeDiff(result.diffPercent);
 
       console.log(`Slide ${i.toString().padStart(2)}: ${result.diffPercent.toFixed(2).padStart(6)}% - ${category}`);
 

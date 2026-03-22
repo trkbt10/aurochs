@@ -10,13 +10,24 @@ import { createRoot } from "react-dom/client";
 import type { XlsxWorkbook } from "@aurochs-office/xlsx/domain/workbook";
 import { XlsxWorkbookEditor } from "../../src";
 
-declare global {
-  interface Window {
-    renderWorkbook: (json: string, config: RenderConfig) => Promise<void>;
-    waitForRender: () => Promise<void>;
-    __renderComplete?: boolean;
-  }
+type HarnessWindow = Window & {
+  renderWorkbook: (json: string, config: RenderConfig) => Promise<void>;
+  waitForRender: () => Promise<void>;
+  __renderComplete?: boolean;
+};
+
+function isHarnessWindow(w: Window): w is HarnessWindow {
+  return typeof w === "object" && w !== null;
 }
+
+function getHarnessWindow(): HarnessWindow {
+  if (!isHarnessWindow(window)) {
+    throw new Error("Window does not satisfy HarnessWindow");
+  }
+  return window;
+}
+
+const harnessWindow = getHarnessWindow();
 
 type RenderConfig = {
   width: number;
@@ -44,7 +55,7 @@ function Root() {
   useEffect(() => {
     const handler = (e: CustomEvent<{ workbook: XlsxWorkbook; config: RenderConfig }>) => {
       // Reset render complete flag
-      window.__renderComplete = false;
+      harnessWindow.__renderComplete = false;
       setAppState((prev) => ({
         workbook: e.detail.workbook,
         config: e.detail.config,
@@ -64,7 +75,7 @@ function Root() {
       // Small delay to ensure React has finished rendering
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          window.__renderComplete = true;
+          harnessWindow.__renderComplete = true;
         });
       });
     }
@@ -104,7 +115,7 @@ function Root() {
 }
 
 // Global render function called by Puppeteer
-window.renderWorkbook = async (json: string, config: RenderConfig): Promise<void> => {
+harnessWindow.renderWorkbook = async (json: string, config: RenderConfig): Promise<void> => {
   const workbook = JSON.parse(json) as XlsxWorkbook;
 
   // Update state via a custom event
@@ -116,10 +127,10 @@ window.renderWorkbook = async (json: string, config: RenderConfig): Promise<void
 };
 
 // Wait for render to complete
-window.waitForRender = async (): Promise<void> => {
+harnessWindow.waitForRender = async (): Promise<void> => {
   return new Promise((resolve) => {
     const check = () => {
-      if (window.__renderComplete) {
+      if (harnessWindow.__renderComplete) {
         resolve();
       } else {
         requestAnimationFrame(check);

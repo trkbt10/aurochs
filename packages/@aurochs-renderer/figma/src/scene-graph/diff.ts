@@ -53,15 +53,15 @@ export type SceneGraphDiff = {
  * Check if two values are shallowly equal
  */
 function shallowEqual(a: unknown, b: unknown): boolean {
-  if (a === b) return true;
-  if (a == null || b == null) return a === b;
-  if (typeof a !== typeof b) return false;
+  if (a === b) {return true;}
+  if (a == null || b == null) {return a === b;}
+  if (typeof a !== typeof b) {return false;}
 
-  if (typeof a !== "object") return a === b;
+  if (typeof a !== "object") {return a === b;}
 
   // For arrays, compare length and elements
   if (Array.isArray(a) && Array.isArray(b)) {
-    if (a.length !== b.length) return false;
+    if (a.length !== b.length) {return false;}
     return a.every((v, i) => v === b[i]);
   }
 
@@ -70,7 +70,7 @@ function shallowEqual(a: unknown, b: unknown): boolean {
   const bObj = b as Record<string, unknown>;
   const aKeys = Object.keys(aObj);
   const bKeys = Object.keys(bObj);
-  if (aKeys.length !== bKeys.length) return false;
+  if (aKeys.length !== bKeys.length) {return false;}
   return aKeys.every((key) => aObj[key] === bObj[key]);
 }
 
@@ -94,31 +94,31 @@ function compareNodeProperties(prev: SceneNode, next: SceneNode): Partial<SceneN
   }
 
   const changes: Record<string, unknown> = {};
-  let hasChanges = false;
+  const hasChangesRef = { value: false };
 
   // Compare all properties except id, type, and children
   const nextObj = next as Record<string, unknown>;
   const prevObj = prev as Record<string, unknown>;
 
   for (const key of Object.keys(nextObj)) {
-    if (key === "id" || key === "type" || key === "children") continue;
+    if (key === "id" || key === "type" || key === "children") {continue;}
 
     if (!shallowEqual(prevObj[key], nextObj[key])) {
       changes[key] = nextObj[key];
-      hasChanges = true;
+      hasChangesRef.value = true;
     }
   }
 
   // Check for removed properties
   for (const key of Object.keys(prevObj)) {
-    if (key === "id" || key === "type" || key === "children") continue;
+    if (key === "id" || key === "type" || key === "children") {continue;}
     if (!(key in nextObj)) {
       changes[key] = undefined;
-      hasChanges = true;
+      hasChangesRef.value = true;
     }
   }
 
-  return hasChanges ? (changes as Partial<SceneNode>) : null;
+  return hasChangesRef.value ? (changes as Partial<SceneNode>) : null;
 }
 
 // =============================================================================
@@ -129,10 +129,7 @@ function compareNodeProperties(prev: SceneNode, next: SceneNode): Partial<SceneN
  * Diff two arrays of children with stable ID matching
  */
 function diffChildren(
-  parentId: SceneNodeId,
-  prevChildren: readonly SceneNode[],
-  nextChildren: readonly SceneNode[],
-  ops: DiffOp[]
+  { parentId, prevChildren, nextChildren, ops }: { parentId: SceneNodeId; prevChildren: readonly SceneNode[]; nextChildren: readonly SceneNode[]; ops: DiffOp[]; }
 ): void {
   // Build index maps by ID
   const prevById = new Map<string, { node: SceneNode; index: number }>();
@@ -195,7 +192,7 @@ function diffChildren(
       const nextChildChildren = getChildren(nextChild);
 
       if (prevChildChildren && nextChildChildren) {
-        diffChildren(nextChild.id, prevChildChildren, nextChildChildren, ops);
+        diffChildren({ parentId: nextChild.id, prevChildren: prevChildChildren, nextChildren: nextChildChildren, ops });
       }
     }
   }

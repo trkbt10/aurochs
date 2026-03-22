@@ -61,7 +61,7 @@ export function createProgram(): Command {
     .action(async (file: string) => {
       const mode = program.opts().output as OutputMode;
       const result = await runInfo(file);
-      output(result, mode, formatInfoPretty);
+      output({ result, mode, prettyFormatter: formatInfoPretty });
     });
 
   program
@@ -71,7 +71,7 @@ export function createProgram(): Command {
     .action(async (file: string) => {
       const mode = program.opts().output as OutputMode;
       const result = await runList(file);
-      output(result, mode, formatListPretty);
+      output({ result, mode, prettyFormatter: formatListPretty });
     });
 
   program
@@ -83,7 +83,7 @@ export function createProgram(): Command {
     .action(async (file: string, sheet: string, options: { range?: string }) => {
       const mode = program.opts().output as OutputMode;
       const result = await runShow(file, sheet, options);
-      output(result, mode, formatShowPretty);
+      output({ result, mode, prettyFormatter: formatShowPretty });
     });
 
   program
@@ -96,7 +96,7 @@ export function createProgram(): Command {
       const mode = program.opts().output as OutputMode;
       const format = options.format === "json" ? "json" : "csv";
       const result = await runExtract(file, { sheet: options.sheet, format });
-      output(result, mode, formatExtractPretty);
+      output({ result, mode, prettyFormatter: formatExtractPretty });
     });
 
   program
@@ -106,7 +106,7 @@ export function createProgram(): Command {
     .action(async (spec: string) => {
       const mode = program.opts().output as OutputMode;
       const result = await runBuild(spec);
-      output(result, mode, formatBuildPretty);
+      output({ result, mode, prettyFormatter: formatBuildPretty });
     });
 
   program
@@ -117,7 +117,7 @@ export function createProgram(): Command {
     .action(async (specPath: string, options: { tag?: string }) => {
       const mode = program.opts().output as OutputMode;
       const result = await runVerify(specPath, options);
-      output(result, mode, formatVerifyPretty);
+      output({ result, mode, prettyFormatter: formatVerifyPretty });
     });
 
   program
@@ -128,7 +128,7 @@ export function createProgram(): Command {
     .action(async (file: string, options: { richText?: boolean }) => {
       const mode = program.opts().output as OutputMode;
       const result = await runStrings(file, { richText: options.richText });
-      output(result, mode, formatStringsPretty);
+      output({ result, mode, prettyFormatter: formatStringsPretty });
     });
 
   program
@@ -140,7 +140,7 @@ export function createProgram(): Command {
     .action(async (file: string, options: { sheet?: string; evaluate?: boolean }) => {
       const mode = program.opts().output as OutputMode;
       const result = await runFormulas(file, { sheet: options.sheet, evaluate: options.evaluate });
-      output(result, mode, formatFormulasPretty);
+      output({ result, mode, prettyFormatter: formatFormulasPretty });
     });
 
   program
@@ -150,7 +150,7 @@ export function createProgram(): Command {
     .action(async (file: string) => {
       const mode = program.opts().output as OutputMode;
       const result = await runNames(file);
-      output(result, mode, formatNamesPretty);
+      output({ result, mode, prettyFormatter: formatNamesPretty });
     });
 
   program
@@ -160,7 +160,7 @@ export function createProgram(): Command {
     .action(async (file: string) => {
       const mode = program.opts().output as OutputMode;
       const result = await runTables(file);
-      output(result, mode, formatTablesPretty);
+      output({ result, mode, prettyFormatter: formatTablesPretty });
     });
 
   program
@@ -171,7 +171,7 @@ export function createProgram(): Command {
     .action(async (file: string, options: { sheet?: string }) => {
       const mode = program.opts().output as OutputMode;
       const result = await runComments(file, options);
-      output(result, mode, formatCommentsPretty);
+      output({ result, mode, prettyFormatter: formatCommentsPretty });
     });
 
   program
@@ -182,7 +182,7 @@ export function createProgram(): Command {
     .action(async (file: string, options: { sheet?: string }) => {
       const mode = program.opts().output as OutputMode;
       const result = await runAutofilter(file, options);
-      output(result, mode, formatAutofilterPretty);
+      output({ result, mode, prettyFormatter: formatAutofilterPretty });
     });
 
   program
@@ -193,7 +193,7 @@ export function createProgram(): Command {
     .action(async (file: string, options: { sheet?: string }) => {
       const mode = program.opts().output as OutputMode;
       const result = await runValidation(file, options);
-      output(result, mode, formatValidationPretty);
+      output({ result, mode, prettyFormatter: formatValidationPretty });
     });
 
   program
@@ -204,7 +204,7 @@ export function createProgram(): Command {
     .action(async (file: string, options: { sheet?: string }) => {
       const mode = program.opts().output as OutputMode;
       const result = await runConditional(file, options);
-      output(result, mode, formatConditionalPretty);
+      output({ result, mode, prettyFormatter: formatConditionalPretty });
     });
 
   program
@@ -215,7 +215,7 @@ export function createProgram(): Command {
     .action(async (file: string, options: { sheet?: string }) => {
       const mode = program.opts().output as OutputMode;
       const result = await runHyperlinks(file, options);
-      output(result, mode, formatHyperlinksPretty);
+      output({ result, mode, prettyFormatter: formatHyperlinksPretty });
     });
 
   program
@@ -226,7 +226,7 @@ export function createProgram(): Command {
     .action(async (file: string, options: { section?: string }) => {
       const mode = program.opts().output as OutputMode;
       const result = await runStyles(file, options);
-      output(result, mode, formatStylesPretty);
+      output({ result, mode, prettyFormatter: formatStylesPretty });
     });
 
   program
@@ -247,7 +247,7 @@ export function createProgram(): Command {
         return;
       }
       const result = await runPreview(file, sheet, { format, width, range: options.range });
-      output(result, mode, formatPreviewPretty, formatPreviewMermaid);
+      output({ result, mode, prettyFormatter: formatPreviewPretty, mermaidFormatter: formatPreviewMermaid });
     });
 
   return program;

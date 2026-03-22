@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+/** @file Chart serializer tests */
 import { serializeChartToMermaid } from "./chart-serializer";
 
 describe("serializeChartToMermaid", () => {

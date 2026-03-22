@@ -25,15 +25,18 @@ function handleCreateTable(
 ): XlsxEditorState {
   const currentWorkbook = state.workbookHistory.present;
   try {
-    const newWorkbook = createTable(currentWorkbook, action.sheetIndex, action.range, {
-      name: action.name,
-      hasHeaderRow: action.hasHeaderRow,
+    const newWorkbook = createTable({
+      workbook: currentWorkbook,
+      sheetIndex: action.sheetIndex,
+      range: action.range,
+      options: { name: action.name, hasHeaderRow: action.hasHeaderRow },
     });
     return {
       ...state,
       workbookHistory: pushHistory(state.workbookHistory, newWorkbook),
     };
-  } catch {
+  } catch (error) {
+    if (error instanceof Error) { console.debug(error.message); }
     // Table creation failed (e.g., overlapping tables)
     return state;
   }

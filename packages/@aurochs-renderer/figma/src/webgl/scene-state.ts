@@ -5,18 +5,16 @@
  * (tessellated vertices, fill info, transforms). Supports incremental
  * updates via applyDiff() to avoid full re-tessellation on every frame.
  */
-
 import type {
   SceneGraph,
   SceneNode,
   SceneNodeId,
   GroupNode,
   FrameNode,
-  RectNode,
   EllipseNode,
   PathNode,
+  PathContour,
   TextNode,
-  ImageNode,
   AffineMatrix,
   Fill,
   Color,
@@ -30,10 +28,30 @@ import {
   tessellateContours,
 } from "./tessellation";
 
+/** Resolve cornerRadius from a changes object or fall back to existing value */
+function resolveCornerRadius(
+  changes: Record<string, unknown>,
+  fallback: number | undefined
+): number | undefined {
+  if ("cornerRadius" in changes) {
+    return changes.cornerRadius as number | undefined;
+  }
+  return fallback;
+}
+
+/** Tessellate contours if they exist and are non-empty, otherwise return null */
+function tessellateContoursOrNull(
+  contours: readonly PathContour[] | undefined
+): Float32Array | null {
+  if (contours && contours.length > 0) {
+    return tessellateContours(contours);
+  }
+  return null;
+}
+
 // =============================================================================
 // Node GPU State
 // =============================================================================
-
 export type NodeGPUState = {
   readonly id: SceneNodeId;
   readonly type: SceneNode["type"];
@@ -64,11 +82,9 @@ export type NodeGPUState = {
   height: number;
   cornerRadius: number | undefined;
 };
-
 // =============================================================================
 // Scene State
 // =============================================================================
-
 /**
  * Manages GPU-ready state for the entire scene graph.
  *
@@ -76,101 +92,31 @@ export type NodeGPUState = {
  * 1. Full build: `buildFromScene(scene)` — processes entire scene graph
  * 2. Incremental: `applyDiff(diff)` — applies only changed nodes
  */
-export class SceneState {
-  private nodes = new Map<SceneNodeId, NodeGPUState>();
-  private rootId: SceneNodeId | null = null;
-  private sceneWidth = 0;
-  private sceneHeight = 0;
+/** Scene state instance */
+export type SceneStateInstance = {
+  buildFromScene(scene: SceneGraph): void;
+  applyDiff(diff: SceneGraphDiff): void;
+  getNode(id: SceneNodeId): NodeGPUState | undefined;
+  getRootId(): SceneNodeId | null;
+  getSceneSize(): { width: number; height: number };
+  getDrawList(): NodeGPUState[];
+  getNodeIds(): SceneNodeId[];
+};
 
-  /**
-   * Build GPU state from a complete scene graph (initial render)
-   */
-  buildFromScene(scene: SceneGraph): void {
-    this.nodes.clear();
-    this.sceneWidth = scene.width;
-    this.sceneHeight = scene.height;
-    this.rootId = scene.root.id;
-    this.processNode(scene.root);
-  }
+/**
+ * Create a scene state manager for GPU-ready data.
+ *
+ * Supports two modes of operation:
+ * 1. Full build: `buildFromScene(scene)` -- processes entire scene graph
+ * 2. Incremental: `applyDiff(diff)` -- applies only changed nodes
+ */
+export function createSceneState(): SceneStateInstance {
+  const nodes = new Map<SceneNodeId, NodeGPUState>();
+  const rootIdRef = { value: null as SceneNodeId | null };
+  const sceneWidthRef = { value: 0 };
+  const sceneHeightRef = { value: 0 };
 
-  /**
-   * Apply a diff to incrementally update the scene state
-   */
-  applyDiff(diff: SceneGraphDiff): void {
-    for (const op of diff.ops) {
-      switch (op.type) {
-        case "add":
-          this.applyAdd(op);
-          break;
-        case "remove":
-          this.applyRemove(op);
-          break;
-        case "update":
-          this.applyUpdate(op);
-          break;
-        case "reorder":
-          this.applyReorder(op);
-          break;
-      }
-    }
-  }
-
-  /**
-   * Get a node's GPU state by ID
-   */
-  getNode(id: SceneNodeId): NodeGPUState | undefined {
-    return this.nodes.get(id);
-  }
-
-  /**
-   * Get the root node ID
-   */
-  getRootId(): SceneNodeId | null {
-    return this.rootId;
-  }
-
-  /**
-   * Get scene dimensions
-   */
-  getSceneSize(): { width: number; height: number } {
-    return { width: this.sceneWidth, height: this.sceneHeight };
-  }
-
-  /**
-   * Produce a depth-first ordered draw list from the scene tree
-   */
-  getDrawList(): NodeGPUState[] {
-    if (!this.rootId) return [];
-    const list: NodeGPUState[] = [];
-    this.collectDrawList(this.rootId, list);
-    return list;
-  }
-
-  /**
-   * Get all managed node IDs
-   */
-  getNodeIds(): SceneNodeId[] {
-    return [...this.nodes.keys()];
-  }
-
-  // ===========================================================================
-  // Internal: Building
-  // ===========================================================================
-
-  private processNode(node: SceneNode): void {
-    const state = this.createNodeState(node);
-    this.nodes.set(node.id, state);
-
-    // Process children for container nodes
-    if (node.type === "group" || node.type === "frame") {
-      const children = (node as GroupNode | FrameNode).children;
-      for (const child of children) {
-        this.processNode(child);
-      }
-    }
-  }
-
-  private createNodeState(node: SceneNode): NodeGPUState {
+  function createNodeState(node: SceneNode): NodeGPUState {
     const base: NodeGPUState = {
       id: node.id,
       type: node.type,
@@ -194,12 +140,10 @@ export class SceneState {
       height: 0,
       cornerRadius: undefined,
     };
-
     switch (node.type) {
       case "group":
         base.childIds = node.children.map((c) => c.id);
         break;
-
       case "frame":
         base.childIds = node.children.map((c) => c.id);
         base.width = node.width;
@@ -211,7 +155,6 @@ export class SceneState {
           base.vertices = generateRectVertices(node.width, node.height, node.cornerRadius);
         }
         break;
-
       case "rect":
         base.width = node.width;
         base.height = node.height;
@@ -221,21 +164,18 @@ export class SceneState {
           base.vertices = generateRectVertices(node.width, node.height, node.cornerRadius);
         }
         break;
-
       case "ellipse":
         if (node.fills.length > 0) {
           base.fill = node.fills[node.fills.length - 1];
-          base.vertices = generateEllipseVertices(node.cx, node.cy, node.rx, node.ry);
+          base.vertices = generateEllipseVertices({ cx: node.cx, cy: node.cy, rx: node.rx, ry: node.ry });
         }
         break;
-
       case "path":
         if (node.contours.length > 0 && node.fills.length > 0) {
           base.fill = node.fills[node.fills.length - 1];
           base.vertices = tessellateContours(node.contours);
         }
         break;
-
       case "text":
         base.textFillColor = node.fill.color;
         base.textFillOpacity = node.fill.opacity;
@@ -243,7 +183,6 @@ export class SceneState {
           base.vertices = tessellateContours(node.glyphContours);
         }
         break;
-
       case "image":
         base.width = node.width;
         base.height = node.height;
@@ -254,126 +193,30 @@ export class SceneState {
         base.imageHeight = node.height;
         break;
     }
-
     return base;
   }
 
-  // ===========================================================================
-  // Internal: Diff Application
-  // ===========================================================================
-
-  private applyAdd(op: Extract<DiffOp, { type: "add" }>): void {
-    // Recursively add the new node and its children
-    this.processNode(op.node);
-
-    // Insert into parent's child list
-    const parent = this.nodes.get(op.parentId);
-    if (parent) {
-      const childIds = [...parent.childIds];
-      childIds.splice(op.index, 0, op.node.id);
-      parent.childIds = childIds;
+  function processNode(node: SceneNode): void {
+    const state = createNodeState(node);
+    nodes.set(node.id, state);
+    if (node.type === "group" || node.type === "frame") {
+      const children = (node as GroupNode | FrameNode).children;
+      for (const child of children) {
+        processNode(child);
+      }
     }
   }
 
-  private applyRemove(op: Extract<DiffOp, { type: "remove" }>): void {
-    // Remove from parent's child list
-    const parent = this.nodes.get(op.parentId);
-    if (parent) {
-      parent.childIds = parent.childIds.filter((id) => id !== op.nodeId);
-    }
-
-    // Recursively remove the node and its children
-    this.removeNodeRecursive(op.nodeId);
-  }
-
-  private applyUpdate(op: Extract<DiffOp, { type: "update" }>): void {
-    const state = this.nodes.get(op.nodeId);
-    if (!state) return;
-
-    const changes = op.changes as Record<string, unknown>;
-
-    // Apply property changes
-    if ("transform" in changes) {
-      state.transform = changes.transform as AffineMatrix;
-    }
-    if ("opacity" in changes) {
-      state.opacity = changes.opacity as number;
-    }
-    if ("visible" in changes) {
-      state.visible = changes.visible as boolean;
-    }
-    if ("effects" in changes) {
-      (state as { effects: readonly Effect[] }).effects = changes.effects as readonly Effect[];
-    }
-    if ("clip" in changes) {
-      state.clip = changes.clip as ClipShape | undefined;
-    }
-
-    // Geometry changes require re-tessellation
-    const needsRetessellation = this.checkGeometryChange(state, changes);
-    if (needsRetessellation) {
-      this.retessellate(state, changes);
-    }
-
-    // Fill changes
-    if ("fills" in changes) {
-      const fills = changes.fills as readonly Fill[];
-      state.fill = fills.length > 0 ? fills[fills.length - 1] : null;
-    }
-
-    // Text-specific changes
-    if ("fill" in changes && state.type === "text") {
-      const fill = changes.fill as { color: Color; opacity: number };
-      state.textFillColor = fill.color;
-      state.textFillOpacity = fill.opacity;
-    }
-    if ("glyphContours" in changes) {
-      const contours = changes.glyphContours as TextNode["glyphContours"];
-      state.vertices = contours && contours.length > 0
-        ? tessellateContours(contours)
-        : null;
-    }
-
-    // Image changes
-    if ("imageRef" in changes) {
-      state.imageRef = changes.imageRef as string;
-    }
-    if ("data" in changes) {
-      state.imageData = changes.data as Uint8Array;
-    }
-
-    // Frame-specific
-    if ("clipsContent" in changes) {
-      state.clipsContent = changes.clipsContent as boolean;
-    }
-  }
-
-  private applyReorder(op: Extract<DiffOp, { type: "reorder" }>): void {
-    const parent = this.nodes.get(op.parentId);
-    if (!parent) return;
-
-    const childIds = parent.childIds.filter((id) => id !== op.nodeId);
-    childIds.splice(op.newIndex, 0, op.nodeId);
-    parent.childIds = childIds;
-  }
-
-  // ===========================================================================
-  // Internal: Helpers
-  // ===========================================================================
-
-  private removeNodeRecursive(id: SceneNodeId): void {
-    const state = this.nodes.get(id);
-    if (!state) return;
-
-    // Remove children first
+  function removeNodeRecursive(id: SceneNodeId): void {
+    const state = nodes.get(id);
+    if (!state) {return;}
     for (const childId of state.childIds) {
-      this.removeNodeRecursive(childId);
+      removeNodeRecursive(childId);
     }
-
-    this.nodes.delete(id);
+    nodes.delete(id);
   }
 
-  private checkGeometryChange(
+  function checkGeometryChange(
     state: NodeGPUState,
     changes: Record<string, unknown>
   ): boolean {
@@ -390,35 +233,32 @@ export class SceneState {
     }
   }
 
-  private retessellate(
+  function retessellate(
     state: NodeGPUState,
     changes: Record<string, unknown>
   ): void {
     switch (state.type) {
       case "rect":
       case "frame": {
-        const width = (changes.width as number | undefined) ?? state.width;
-        const height = (changes.height as number | undefined) ?? state.height;
-        const cornerRadius = "cornerRadius" in changes
-          ? (changes.cornerRadius as number | undefined)
-          : state.cornerRadius;
-        state.width = width;
-        state.height = height;
+        const w = (changes.width as number | undefined) ?? state.width;
+        const h = (changes.height as number | undefined) ?? state.height;
+        const cornerRadius = resolveCornerRadius(changes, state.cornerRadius);
+        state.width = w;
+        state.height = h;
         state.cornerRadius = cornerRadius;
         if (state.fill) {
-          state.vertices = generateRectVertices(width, height, cornerRadius);
+          state.vertices = generateRectVertices(w, h, cornerRadius);
         }
         break;
       }
       case "ellipse": {
-        // Re-tessellate with new dimensions
         const node = changes as Partial<EllipseNode>;
         const cx = node.cx ?? 0;
         const cy = node.cy ?? 0;
         const rx = node.rx ?? 0;
         const ry = node.ry ?? 0;
         if (state.fill) {
-          state.vertices = generateEllipseVertices(cx, cy, rx, ry);
+          state.vertices = generateEllipseVertices({ cx, cy, rx, ry });
         }
         break;
       }
@@ -432,15 +272,137 @@ export class SceneState {
     }
   }
 
-  private collectDrawList(nodeId: SceneNodeId, list: NodeGPUState[]): void {
-    const state = this.nodes.get(nodeId);
-    if (!state || !state.visible) return;
-
+  function collectDrawList(nodeId: SceneNodeId, list: NodeGPUState[]): void {
+    const state = nodes.get(nodeId);
+    if (!state || !state.visible) {return;}
     list.push(state);
-
-    // Recurse into children
     for (const childId of state.childIds) {
-      this.collectDrawList(childId, list);
+      collectDrawList(childId, list);
     }
   }
+
+  function applyAdd(op: Extract<DiffOp, { type: "add" }>): void {
+    processNode(op.node);
+    const parent = nodes.get(op.parentId);
+    if (parent) {
+      const childIds = [...parent.childIds];
+      childIds.splice(op.index, 0, op.node.id);
+      parent.childIds = childIds;
+    }
+  }
+
+  function applyRemove(op: Extract<DiffOp, { type: "remove" }>): void {
+    const parent = nodes.get(op.parentId);
+    if (parent) {
+      parent.childIds = parent.childIds.filter((id) => id !== op.nodeId);
+    }
+    removeNodeRecursive(op.nodeId);
+  }
+
+  function applyUpdate(op: Extract<DiffOp, { type: "update" }>): void {
+    const state = nodes.get(op.nodeId);
+    if (!state) {return;}
+    const changes = op.changes as Record<string, unknown>;
+    if ("transform" in changes) {
+      state.transform = changes.transform as AffineMatrix;
+    }
+    if ("opacity" in changes) {
+      state.opacity = changes.opacity as number;
+    }
+    if ("visible" in changes) {
+      state.visible = changes.visible as boolean;
+    }
+    if ("effects" in changes) {
+      (state as { effects: readonly Effect[] }).effects = changes.effects as readonly Effect[];
+    }
+    if ("clip" in changes) {
+      state.clip = changes.clip as ClipShape | undefined;
+    }
+    const needsRetessellation = checkGeometryChange(state, changes);
+    if (needsRetessellation) {
+      retessellate(state, changes);
+    }
+    if ("fills" in changes) {
+      const fills = changes.fills as readonly Fill[];
+      state.fill = fills.length > 0 ? fills[fills.length - 1] : null;
+    }
+    if ("fill" in changes && state.type === "text") {
+      const fill = changes.fill as { color: Color; opacity: number };
+      state.textFillColor = fill.color;
+      state.textFillOpacity = fill.opacity;
+    }
+    if ("glyphContours" in changes) {
+      const contours = changes.glyphContours as TextNode["glyphContours"];
+      state.vertices = tessellateContoursOrNull(contours);
+    }
+    if ("imageRef" in changes) {
+      state.imageRef = changes.imageRef as string;
+    }
+    if ("data" in changes) {
+      state.imageData = changes.data as Uint8Array;
+    }
+    if ("clipsContent" in changes) {
+      state.clipsContent = changes.clipsContent as boolean;
+    }
+  }
+
+  function applyReorder(op: Extract<DiffOp, { type: "reorder" }>): void {
+    const parent = nodes.get(op.parentId);
+    if (!parent) {return;}
+    const childIds = parent.childIds.filter((id) => id !== op.nodeId);
+    childIds.splice(op.newIndex, 0, op.nodeId);
+    parent.childIds = childIds;
+  }
+
+  return {
+    buildFromScene(scene: SceneGraph): void {
+      nodes.clear();
+      sceneWidthRef.value = scene.width;
+      sceneHeightRef.value = scene.height;
+      rootIdRef.value = scene.root.id;
+      processNode(scene.root);
+    },
+
+    applyDiff(diff: SceneGraphDiff): void {
+      for (const op of diff.ops) {
+        switch (op.type) {
+          case "add":
+            applyAdd(op);
+            break;
+          case "remove":
+            applyRemove(op);
+            break;
+          case "update":
+            applyUpdate(op);
+            break;
+          case "reorder":
+            applyReorder(op);
+            break;
+        }
+      }
+    },
+
+    getNode(id: SceneNodeId): NodeGPUState | undefined {
+      return nodes.get(id);
+    },
+
+    getRootId(): SceneNodeId | null {
+      return rootIdRef.value;
+    },
+
+    getSceneSize(): { width: number; height: number } {
+      return { width: sceneWidthRef.value, height: sceneHeightRef.value };
+    },
+
+    getDrawList(): NodeGPUState[] {
+      if (!rootIdRef.value) {return [];}
+      const list: NodeGPUState[] = [];
+      collectDrawList(rootIdRef.value, list);
+      return list;
+    },
+
+    getNodeIds(): SceneNodeId[] {
+      return [...nodes.keys()];
+    },
+  };
 }

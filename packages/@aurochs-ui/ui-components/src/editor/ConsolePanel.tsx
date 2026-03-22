@@ -176,10 +176,27 @@ function formatTimestamp(date: Date): string {
   });
 }
 
+/** Get background color for a console message based on its type */
+function getMessageBackgroundColor(type: ConsoleMessageType): string {
+  if (type === "error") {
+    return `${colorTokens.accent.danger}10`;
+  }
+  if (type === "warning") {
+    return `${WARNING_COLOR}10`;
+  }
+  return "transparent";
+}
+
 // =============================================================================
 // Component
 // =============================================================================
 
+
+
+
+
+
+/** Console output panel with message list and clear button */
 export function ConsolePanel({
   messages,
   title = "Console",
@@ -231,20 +248,14 @@ export function ConsolePanel({
 
       {/* Content */}
       <div ref={contentRef} style={contentStyle}>
-        {messages.length === 0 ? (
-          <div style={emptyStyle}>No output</div>
-        ) : (
+        {messages.length === 0 && <div style={emptyStyle}>No output</div>}
+        {messages.length > 0 &&
           messages.map((msg) => (
             <div
               key={msg.id}
               style={{
                 ...messageStyle,
-                backgroundColor:
-                  msg.type === "error"
-                    ? `${colorTokens.accent.danger}10`
-                    : msg.type === "warning"
-                      ? `${WARNING_COLOR}10`
-                      : "transparent",
+                backgroundColor: getMessageBackgroundColor(msg.type),
               }}
             >
               {/* Icon */}
@@ -263,8 +274,7 @@ export function ConsolePanel({
               {/* Text */}
               <span style={{ ...textStyle, color: TYPE_COLORS[msg.type] }}>{msg.text}</span>
             </div>
-          ))
-        )}
+          ))}
       </div>
     </div>
   );

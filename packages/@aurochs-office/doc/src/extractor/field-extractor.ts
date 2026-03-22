@@ -21,13 +21,13 @@ type FieldMarker = {
 
 /** Parse PlcfFld from the table stream. */
 export function parsePlcfFld(tableStream: Uint8Array, fc: number, lcb: number): readonly FieldMarker[] {
-  if (lcb === 0) return [];
-  if (fc + lcb > tableStream.length) return [];
+  if (lcb === 0) {return [];}
+  if (fc + lcb > tableStream.length) {return [];}
 
   // PlcfFld: (n+1) CPs (4B each) + n Fld entries (2B each)
   // size = (n+1)*4 + n*2 = 4 + 6*n → n = (lcb - 4) / 6
   const n = (lcb - 4) / 6;
-  if (!Number.isInteger(n) || n <= 0) return [];
+  if (!Number.isInteger(n) || n <= 0) {return [];}
 
   const view = new DataView(tableStream.buffer, tableStream.byteOffset, tableStream.byteLength);
   const markers: FieldMarker[] = [];
@@ -57,24 +57,7 @@ export function extractFields(markers: readonly FieldMarker[], rawText: string):
     }
 
     // Find separator and end
-    let sepIndex = -1;
-    let endIndex = -1;
-    // eslint-disable-next-line no-restricted-syntax -- nested search
-    let depth = 1;
-
-    for (let j = i + 1; j < markers.length; j++) {
-      if (markers[j].ch === 0x13) {
-        depth++;
-      } else if (markers[j].ch === 0x15) {
-        depth--;
-        if (depth === 0) {
-          endIndex = j;
-          break;
-        }
-      } else if (markers[j].ch === 0x14 && depth === 1) {
-        sepIndex = j;
-      }
-    }
+    const { sepIndex, endIndex } = findFieldBoundaries(markers, i);
 
     if (endIndex === -1) {
       i++;
@@ -89,9 +72,7 @@ export function extractFields(markers: readonly FieldMarker[], rawText: string):
     const instruction = safeSubstring(rawText, cpBegin + 1, instrEnd).trim();
 
     // Extract result text (between separator and end)
-    const result = sepIndex !== -1
-      ? safeSubstring(rawText, markers[sepIndex].cp + 1, cpEnd).trim()
-      : "";
+    const result = extractFieldResult({ sepIndex, markers, rawText, cpEnd });
 
     // Determine field type from instruction
     const spaceIdx = instruction.indexOf(" ");
@@ -103,6 +84,33 @@ export function extractFields(markers: readonly FieldMarker[], rawText: string):
   }
 
   return fields;
+}
+
+function findFieldBoundaries(markers: readonly FieldMarker[], startIdx: number): { sepIndex: number; endIndex: number } {
+  const result = { sepIndex: -1, endIndex: -1 };
+  const depthRef = { value: 1 };
+
+  for (let j = startIdx + 1; j < markers.length; j++) {
+    if (markers[j].ch === 0x13) {
+      depthRef.value++;
+    } else if (markers[j].ch === 0x15) {
+      depthRef.value--;
+      if (depthRef.value === 0) {
+        result.endIndex = j;
+        break;
+      }
+    } else if (markers[j].ch === 0x14 && depthRef.value === 1) {
+      result.sepIndex = j;
+    }
+  }
+
+  return result;
+}
+
+function extractFieldResult(options: { sepIndex: number; markers: readonly FieldMarker[]; rawText: string; cpEnd: number }): string {
+  const { sepIndex, markers, rawText, cpEnd } = options;
+  if (sepIndex === -1) { return ""; }
+  return safeSubstring(rawText, markers[sepIndex].cp + 1, cpEnd).trim();
 }
 
 function safeSubstring(text: string, start: number, end: number): string {
@@ -148,7 +156,7 @@ export function extractFormFields(fields: readonly DocField[]): readonly DocForm
 function parseFormFieldName(instruction: string): { name?: string } {
   // Form field name may appear after the type keyword, e.g. "FORMTEXT Text1"
   const match = /^FORM(?:TEXT|CHECKBOX|DROPDOWN)\s+(\S+)/i.exec(instruction);
-  if (match) return { name: match[1] };
+  if (match) {return { name: match[1] };}
   return {};
 }
 
@@ -157,7 +165,7 @@ export function extractHyperlinks(fields: readonly DocField[]): readonly DocHype
   const links: DocHyperlink[] = [];
 
   for (const field of fields) {
-    if (field.type !== "HYPERLINK") continue;
+    if (field.type !== "HYPERLINK") {continue;}
 
     const instr = field.instruction;
     // Parse: HYPERLINK "url" [\l "bookmark"]

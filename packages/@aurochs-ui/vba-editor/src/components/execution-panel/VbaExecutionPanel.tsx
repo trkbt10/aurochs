@@ -14,7 +14,6 @@ import {
   ToolbarButton,
   PlayIcon,
   StopIcon,
-  TrashIcon,
   ConsolePanel,
   type ConsoleMessage,
 } from "@aurochs-ui/ui-components";
@@ -98,6 +97,43 @@ const emptyTargetStyle: CSSProperties = {
 // Component
 // =============================================================================
 
+
+
+
+
+
+/**
+ * Render the target procedure section.
+ */
+function renderTargetSection(targetName: string | null): ReactNode {
+  if (targetName) {
+    return (
+      <div style={targetStyle}>
+        <span style={targetLabelStyle}>Target:</span>
+        {targetName}
+      </div>
+    );
+  }
+  return (
+    <div style={emptyTargetStyle}>
+      Select a Sub procedure to run
+    </div>
+  );
+}
+
+/**
+ * Build the target procedure name for execution display.
+ */
+function buildTargetName(moduleName: string | undefined, procedureName: string | undefined): string | null {
+  if (moduleName && procedureName) {
+    return `${moduleName}.${procedureName}`;
+  }
+  return null;
+}
+
+/**
+ * VBA execution panel with run/stop controls and console output.
+ */
 export function VbaExecutionPanel({
   onRun,
   onStop,
@@ -109,10 +145,7 @@ export function VbaExecutionPanel({
   const [messages, setMessages] = useState<ConsoleMessage[]>([]);
 
   // Build target name
-  const targetName =
-    activeModule && currentProcedure
-      ? `${activeModule.name}.${currentProcedure.name}`
-      : null;
+  const targetName = buildTargetName(activeModule?.name, currentProcedure?.name);
 
   const canRun =
     onRun &&
@@ -157,22 +190,6 @@ export function VbaExecutionPanel({
     setMessages([]);
   }, []);
 
-  // Add message helper (can be exposed via ref or context if needed)
-  const addMessage = useCallback(
-    (type: ConsoleMessage["type"], text: string) => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `${Date.now()}-${Math.random()}`,
-          type,
-          text,
-          timestamp: new Date(),
-        },
-      ]);
-    },
-    []
-  );
-
   return (
     <div style={{ ...containerStyle, ...style }}>
       {/* Header with controls */}
@@ -199,16 +216,7 @@ export function VbaExecutionPanel({
       </div>
 
       {/* Target procedure */}
-      {targetName ? (
-        <div style={targetStyle}>
-          <span style={targetLabelStyle}>Target:</span>
-          {targetName}
-        </div>
-      ) : (
-        <div style={emptyTargetStyle}>
-          Select a Sub procedure to run
-        </div>
-      )}
+      {renderTargetSection(targetName)}
 
       {/* Console output */}
       <div style={consoleContainerStyle}>

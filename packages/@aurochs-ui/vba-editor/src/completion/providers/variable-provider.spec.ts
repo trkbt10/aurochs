@@ -4,7 +4,7 @@
  * Tests for variable extraction from VBA source code.
  */
 
-import { describe, expect, it } from "vitest";
+// Test globals (describe/it/expect) provided by vitest runner
 import { variableProvider } from "./variable-provider";
 import type { CompletionContext } from "../types";
 

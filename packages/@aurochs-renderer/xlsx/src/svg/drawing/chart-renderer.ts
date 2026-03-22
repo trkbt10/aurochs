@@ -198,6 +198,25 @@ function createDefaultFillResolver(): FillResolver {
  * @param options - Render options
  * @returns SVG string for the chart
  */
+
+/** Resolve a chart from a chart frame using path or relationship ID */
+function resolveChartFromFrame(
+  chartFrame: XlsxChartFrame,
+  resolveChart: ((pathOrRelId: string) => Chart | undefined) | undefined,
+): Chart | undefined {
+  if (!resolveChart) {
+    return undefined;
+  }
+  if (chartFrame.chartPath) {
+    return resolveChart(chartFrame.chartPath);
+  }
+  if (chartFrame.chartRelId) {
+    return resolveChart(chartFrame.chartRelId);
+  }
+  return undefined;
+}
+
+/** Render a chart frame to SVG */
 export function renderChartFrame(options: RenderChartFrameOptions): string {
   const { chartFrame, bounds, resolveChart, warnings } = options;
 
@@ -207,13 +226,7 @@ export function renderChartFrame(options: RenderChartFrameOptions): string {
   }
 
   // Resolve chart
-  let chart: Chart | undefined;
-
-  if (chartFrame.chartPath && resolveChart) {
-    chart = resolveChart(chartFrame.chartPath);
-  } else if (chartFrame.chartRelId && resolveChart) {
-    chart = resolveChart(chartFrame.chartRelId);
-  }
+  const chart = resolveChartFromFrame(chartFrame, resolveChart);
 
   if (!chart) {
     warnings?.add(`Chart not found: ${chartFrame.nvGraphicFramePr.name || chartFrame.chartRelId || "unknown"}`);

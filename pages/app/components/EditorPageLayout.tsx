@@ -49,6 +49,17 @@ const defaultEditorContainerStyle: CSSProperties = {
   flexDirection: "column",
 };
 
+
+
+
+
+
+
+
+
+
+
+/** Full-page layout for format-specific editor views. */
 export function EditorPageLayout({
   fileName,
   onBack,

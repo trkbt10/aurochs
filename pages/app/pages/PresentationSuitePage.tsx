@@ -21,6 +21,17 @@ type Props = {
   readonly backLabel?: string;
 };
 
+
+
+
+
+
+
+
+
+
+
+/** Presentation suite page with editor and viewer modes. */
 export function PresentationSuitePage({ document, fileName, onBack, backLabel }: Props) {
   const layoutOptions = useMemo(
     () => document.presentationFile ? buildSlideLayoutOptions(document.presentationFile) : [],

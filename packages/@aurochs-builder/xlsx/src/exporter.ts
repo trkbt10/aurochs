@@ -14,6 +14,7 @@
 
 import { createElement, parseXml, type XmlElement, type XmlNode } from "@aurochs/xml";
 import { createEmptyZipPackage, isBinaryFile, type ZipPackage } from "@aurochs/zip";
+import type { XlsxDrawingAnchor, XlsxDrawingContent } from "@aurochs-office/xlsx/domain/drawing/types";
 import {
   serializeWithDeclaration,
   serializeRelationships as serializeOpcRelationships,
@@ -21,7 +22,6 @@ import {
   STANDARD_CONTENT_TYPE_DEFAULTS,
   createRelationshipIdGenerator,
   parseContentTypes,
-  contentTypesToEntries,
   listRelationships,
   VBA_PROJECT_RELATIONSHIP_TYPE,
   XL_MACROSHEET_RELATIONSHIP_TYPE,
@@ -46,6 +46,16 @@ import { serializeDrawing } from "./drawing";
  * Alias for SpreadsheetML content types (from OPC).
  */
 const XLSX_CONTENT_TYPES = SPREADSHEETML_CONTENT_TYPES;
+
+/**
+ * Determine workbook content type based on macro-enabled flag.
+ */
+function resolveWorkbookContentType(isMacroEnabled: boolean): string {
+  if (isMacroEnabled) {
+    return XLSX_CONTENT_TYPES.workbookMacroEnabled;
+  }
+  return XLSX_CONTENT_TYPES.workbook;
+}
 
 // =============================================================================
 // Export Options
@@ -206,9 +216,7 @@ export function generateContentTypes(
   const isMacroEnabled =
     sourceWorkbookContentType === XLSX_CONTENT_TYPES.workbookMacroEnabled ||
     sourceWorkbookContentType === XLSX_CONTENT_TYPES.workbookMacroEnabledTemplate;
-  const workbookContentType = isMacroEnabled
-    ? XLSX_CONTENT_TYPES.workbookMacroEnabled
-    : XLSX_CONTENT_TYPES.workbook;
+  const workbookContentType = resolveWorkbookContentType(isMacroEnabled);
 
   const entries: ContentTypeEntry[] = [
     // Standard defaults (rels, xml)
@@ -349,7 +357,7 @@ export function generateWorkbookRels(
 
   // Helper to get next available ID
   const getNextId = (): string => {
-    // eslint-disable-next-line no-constant-condition -- generator loop
+     
     while (true) {
       const id = nextId();
       if (!usedIds.has(id)) {
@@ -476,7 +484,7 @@ const REGENERATED_FILE_PATTERNS = [
 function isRegeneratedFile(path: string): boolean {
   for (const pattern of REGENERATED_FILE_PATTERNS) {
     if (typeof pattern === "string") {
-      if (path === pattern) return true;
+      if (path === pattern) {return true;}
     } else if (pattern.test(path)) {
       return true;
     }
@@ -588,20 +596,20 @@ function buildRelativeTarget(sourcePart: string, targetPart: string): string {
   // Count common prefix depth
   const sourceParts = sourceDir.split("/");
   const targetParts = targetDir.split("/");
-  let common = 0;
-  while (common < sourceParts.length && common < targetParts.length && sourceParts[common] === targetParts[common]) {
-    common++;
+  const common = { value: 0 };
+  while (common.value < sourceParts.length && common.value < targetParts.length && sourceParts[common.value] === targetParts[common.value]) {
+    common.value++;
   }
 
-  const ups = sourceParts.length - common;
-  const downs = targetParts.slice(common);
+  const ups = sourceParts.length - common.value;
+  const downs = targetParts.slice(common.value);
   return [...Array(ups).fill(".."), ...downs, targetFile].join("/");
 }
 
 /**
  * Collect all blipRelIds from a drawing's anchors (recursively for groups).
  */
-function collectBlipRelIds(anchors: readonly import("@aurochs-office/xlsx/domain/drawing/types").XlsxDrawingAnchor[]): string[] {
+function collectBlipRelIds(anchors: readonly XlsxDrawingAnchor[]): string[] {
   const relIds: string[] = [];
   for (const anchor of anchors) {
     if (anchor.content) {
@@ -612,7 +620,7 @@ function collectBlipRelIds(anchors: readonly import("@aurochs-office/xlsx/domain
 }
 
 function collectContentRelIds(
-  content: import("@aurochs-office/xlsx/domain/drawing/types").XlsxDrawingContent,
+  content: XlsxDrawingContent,
   relIds: string[],
 ): void {
   switch (content.type) {
@@ -661,7 +669,7 @@ function buildDrawingExportPlan(
     const sheetMediaMap = sheetMedia?.get(i);
 
     const blipRelIds = collectBlipRelIds(sheet.drawing.anchors);
-    let mediaCounter = 0;
+    const mediaCounter = { value: 0 };
 
     for (const relId of blipRelIds) {
       const mediaPart = sheetMediaMap?.get(relId);
@@ -669,9 +677,9 @@ function buildDrawingExportPlan(
         continue;
       }
 
-      mediaCounter++;
+      mediaCounter.value++;
       const ext = inferExtensionFromContentType(mediaPart.contentType);
-      const mediaPartPath = `xl/media/image_s${sheetIndex}_${mediaCounter}.${ext}`;
+      const mediaPartPath = `xl/media/image_s${sheetIndex}_${mediaCounter.value}.${ext}`;
 
       mediaEntries.push({
         relId,
@@ -732,6 +740,21 @@ function buildDrawingExportPlan(
   return { drawingParts, additionalContentTypes };
 }
 
+/**
+ * Parse source content types if available from a source package.
+ */
+function parseSourceContentTypes(sourcePackage: ZipPackage | undefined): ParsedContentTypes | undefined {
+  if (!sourcePackage) {
+    return undefined;
+  }
+  const contentTypesXml = sourcePackage.readText("[Content_Types].xml");
+  if (!contentTypesXml) {
+    return undefined;
+  }
+  const contentTypesDoc = parseXml(contentTypesXml);
+  return parseContentTypes(contentTypesDoc);
+}
+
 // =============================================================================
 // Main Export Function
 // =============================================================================
@@ -783,14 +806,7 @@ export async function exportXlsx(
   const pkg = createEmptyZipPackage();
 
   // 0. Parse source content types for preservation (if pass-through mode)
-  let sourceContentTypes: ParsedContentTypes | undefined;
-  if (sourcePackage) {
-    const contentTypesXml = sourcePackage.readText("[Content_Types].xml");
-    if (contentTypesXml) {
-      const contentTypesDoc = parseXml(contentTypesXml);
-      sourceContentTypes = parseContentTypes(contentTypesDoc);
-    }
-  }
+  const sourceContentTypes = parseSourceContentTypes(sourcePackage);
 
   // 1. Copy source files (if pass-through mode)
   if (sourcePackage) {

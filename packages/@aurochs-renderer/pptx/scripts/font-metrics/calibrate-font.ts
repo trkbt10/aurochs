@@ -30,8 +30,8 @@ type LineData = {
 };
 
 function findTextWidth(png: PNG, row: number): { startX: number; endX: number; width: number } {
-  let startX = -1;
-  let endX = -1;
+  const startX = { value: -1 };
+  const endX = { value: -1 };
 
   for (let x = 0; x < png.width; x++) {
     const idx = (row * png.width + x) * 4;
@@ -40,21 +40,21 @@ function findTextWidth(png: PNG, row: number): { startX: number; endX: number; w
     const b = png.data[idx + 2];
 
     if (r < 250 || g < 250 || b < 250) {
-      if (startX === -1) {startX = x;}
-      endX = x;
+      if (startX.value === -1) {startX.value = x;}
+      endX.value = x;
     }
   }
 
-  return { startX, endX, width: endX - startX };
+  return { startX: startX.value, endX: endX.value, width: endX.value - startX.value };
 }
 
 function findTextRows(png: PNG): number[] {
   const rows: number[] = [];
-  let inText = false;
-  let textRows: number[] = [];
+  const inText = { value: false };
+  const textRows = { value: [] as number[] };
 
   for (let y = 0; y < png.height; y++) {
-    let hasText = false;
+    const hasText = { value: false };
 
     for (let x = 0; x < png.width; x++) {
       const idx = (y * png.width + x) * 4;
@@ -63,21 +63,21 @@ function findTextRows(png: PNG): number[] {
       const b = png.data[idx + 2];
 
       if (r < 250 || g < 250 || b < 250) {
-        hasText = true;
+        hasText.value = true;
         break;
       }
     }
 
-    if (hasText && !inText) {
-      inText = true;
-      textRows = [y];
-    } else if (hasText && inText) {
-      textRows.push(y);
-    } else if (!hasText && inText) {
-      if (textRows.length > 5) {
-        rows.push(textRows[Math.floor(textRows.length / 2)]);
+    if (hasText.value && !inText.value) {
+      inText.value = true;
+      textRows.value = [y];
+    } else if (hasText.value && inText.value) {
+      textRows.value.push(y);
+    } else if (!hasText.value && inText.value) {
+      if (textRows.value.length > 5) {
+        rows.push(textRows.value[Math.floor(textRows.value.length / 2)]);
       }
-      inText = false;
+      inText.value = false;
     }
   }
 

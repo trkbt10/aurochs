@@ -6,6 +6,7 @@
  */
 
 import { unzipSync } from "fflate";
+import { readFileSync } from "node:fs";
 import { decompress, detectCompression } from "../compression";
 
 export type FieldInfo = {
@@ -26,19 +27,39 @@ export type MessageAnalysis = {
 };
 
 function readVarUint(data: Uint8Array, offset: number): [number, number] {
-  let value = 0;
-  let shift = 0;
-  let pos = offset;
+  const state = { value: 0, shift: 0, pos: offset };
 
-  while (pos < data.length) {
-    const byte = data[pos];
-    value |= (byte & 0x7f) << shift;
-    pos++;
-    if ((byte & 0x80) === 0) break;
-    shift += 7;
+  while (state.pos < data.length) {
+    const byte = data[state.pos];
+    state.value |= (byte & 0x7f) << state.shift;
+    state.pos++;
+    if ((byte & 0x80) === 0) {break;}
+    state.shift += 7;
   }
 
-  return [value, pos];
+  return [state.value, state.pos];
+}
+
+/**
+ * Skip bytes heuristically to find the next field ID marker
+ */
+function skipToNextField(data: Uint8Array, startOffset: number): number {
+  const cursor = { value: startOffset };
+  const maxSkip = 1000;
+  for (const _ of Array(maxSkip).keys()) {
+    if (cursor.value >= data.length) {break;}
+    const byte = data[cursor.value];
+    // Check if this looks like a field ID marker
+    if (byte > 0 && byte < 30) {
+      // Check if next byte(s) don't have continuation bit for a reasonable value
+      const nextByte = data[cursor.value + 1] ?? 0;
+      if ((nextByte & 0x80) === 0 || nextByte === 0) {
+        break;
+      }
+    }
+    cursor.value++;
+  }
+  return cursor.value;
 }
 
 /**
@@ -50,15 +71,13 @@ export function analyzeMessageData(compressedData: Uint8Array): MessageAnalysis 
   const data = decompress(compressedData, compressionType);
 
   const fields: FieldInfo[] = [];
-  let offset = 0;
-  let nodeChangesFieldId: number | null = null;
-  let nodeChangesOffset: number | null = null;
-  let nodeChangesCount: number | null = null;
+  const cursor = { value: 0 };
+  const nodeChangesInfo = { fieldId: null as number | null, offset: null as number | null, count: null as number | null };
 
   // Parse field IDs and raw bytes
-  while (offset < data.length) {
-    const fieldOffset = offset;
-    const [fieldId, newOffset] = readVarUint(data, offset);
+  while (cursor.value < data.length) {
+    const fieldOffset = cursor.value;
+    const [fieldId, newOffset] = readVarUint(data, cursor.value);
 
     if (fieldId === 0) {
       // End marker
@@ -74,37 +93,25 @@ export function analyzeMessageData(compressedData: Uint8Array): MessageAnalysis 
       rawBytes,
     });
 
-    offset = newOffset;
+    cursor.value = newOffset;
 
     // Field ID 4 is typically nodeChanges in Message type
     if (fieldId === 4) {
-      nodeChangesFieldId = fieldId;
-      nodeChangesOffset = offset;
-      const [count, _countEnd] = readVarUint(data, offset);
-      nodeChangesCount = count;
+      nodeChangesInfo.fieldId = fieldId;
+      nodeChangesInfo.offset = cursor.value;
+      const [count, _countEnd] = readVarUint(data, cursor.value);
+      nodeChangesInfo.count = count;
       // Skip to end of nodeChanges (we can't fully parse without schema)
       break;
     }
 
     // Skip field value heuristically
     // Look for next byte that could be a valid field ID (1-30)
-    let skipped = 0;
-    while (offset < data.length && skipped < 1000) {
-      const byte = data[offset];
-      // Check if this looks like a field ID marker
-      if (byte > 0 && byte < 30) {
-        // Check if next byte(s) don't have continuation bit for a reasonable value
-        const nextByte = data[offset + 1] ?? 0;
-        if ((nextByte & 0x80) === 0 || nextByte === 0) {
-          break;
-        }
-      }
-      offset++;
-      skipped++;
-    }
+    const skipResult = skipToNextField(data, cursor.value);
+    cursor.value = skipResult;
 
     // Safety limit
-    if (fields.length > 20) break;
+    if (fields.length > 20) {break;}
   }
 
   return {
@@ -113,26 +120,31 @@ export function analyzeMessageData(compressedData: Uint8Array): MessageAnalysis 
     decompressedSize: data.length,
     firstBytes: Array.from(data.slice(0, 64)),
     fields,
-    nodeChangesFieldId,
-    nodeChangesOffset,
-    nodeChangesCount,
+    nodeChangesFieldId: nodeChangesInfo.fieldId,
+    nodeChangesOffset: nodeChangesInfo.offset,
+    nodeChangesCount: nodeChangesInfo.count,
   };
+}
+
+/**
+ * Extract canvas data from a .fig file, handling ZIP wrapping
+ */
+function extractCanvasFromFig(figData: Uint8Array): Uint8Array {
+  if (figData[0] === 0x50 && figData[1] === 0x4b) {
+    const files = unzipSync(figData);
+    if (!files["canvas.fig"]) {
+      throw new Error("ZIP doesn't contain canvas.fig");
+    }
+    return files["canvas.fig"];
+  }
+  return figData;
 }
 
 /**
  * Extract message data from a .fig file
  */
 export function extractMessageFromFig(figData: Uint8Array): Uint8Array {
-  let canvasData = figData;
-
-  // Handle ZIP format
-  if (figData[0] === 0x50 && figData[1] === 0x4b) {
-    const files = unzipSync(figData);
-    if (!files["canvas.fig"]) {
-      throw new Error("ZIP doesn't contain canvas.fig");
-    }
-    canvasData = files["canvas.fig"];
-  }
+  const canvasData = extractCanvasFromFig(figData);
 
   // Parse header
   const view = new DataView(canvasData.buffer, canvasData.byteOffset, canvasData.byteLength);
@@ -161,10 +173,8 @@ export async function compareMessageFormats(
   workingPath: string,
   generatedPath: string
 ): Promise<void> {
-  const fs = await import("node:fs");
-
-  const workingData = new Uint8Array(fs.readFileSync(workingPath));
-  const generatedData = new Uint8Array(fs.readFileSync(generatedPath));
+  const workingData = new Uint8Array(readFileSync(workingPath));
+  const generatedData = new Uint8Array(readFileSync(generatedPath));
 
   const working = analyzeMessageFormat(workingData);
   const generated = analyzeMessageFormat(generatedData);
@@ -204,11 +214,7 @@ export async function compareMessageFormats(
   }
 
   // Compare first bytes
-  let byteDiffs = 0;
-  for (let i = 0; i < Math.min(working.firstBytes.length, generated.firstBytes.length); i++) {
-    if (working.firstBytes[i] !== generated.firstBytes[i]) {
-      byteDiffs++;
-    }
-  }
+  const minFirstLen = Math.min(working.firstBytes.length, generated.firstBytes.length);
+  const byteDiffs = working.firstBytes.slice(0, minFirstLen).filter((b, i) => b !== generated.firstBytes[i]).length;
   console.log(`Byte differences in first 64: ${byteDiffs}`);
 }

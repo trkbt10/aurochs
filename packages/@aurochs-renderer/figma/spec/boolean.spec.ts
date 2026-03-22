@@ -1,7 +1,6 @@
 /**
  * @file Boolean operation (BOOLEAN_OPERATION node type) rendering tests
  */
-
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -9,19 +8,16 @@ import {
   parseFigFile,
   buildNodeTree,
   findNodesByType,
-  getNodeType,
   type FigBlob,
   type FigImage,
 } from "@aurochs/fig/parser";
 import type { FigNode } from "@aurochs/fig/types";
 import { renderCanvas } from "../src/svg/renderer";
-
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FIXTURES_DIR = path.join(__dirname, "../fixtures/boolean");
 const ACTUAL_DIR = path.join(FIXTURES_DIR, "actual");
 const SNAPSHOTS_DIR = path.join(FIXTURES_DIR, "snapshots");
 const FIG_FILE = path.join(FIXTURES_DIR, "boolean.fig");
-
 const LAYER_FILE_MAP: Record<string, string> = {
   "bool-union": "bool-union.svg",
   "bool-subtract": "bool-subtract.svg",
@@ -32,13 +28,11 @@ const LAYER_FILE_MAP: Record<string, string> = {
   "bool-donut": "bool-donut.svg",
   "bool-operation-method": "bool-operation-method.svg",
 };
-
 type LayerInfo = {
   name: string;
   node: FigNode;
   size: { width: number; height: number };
 };
-
 type ParsedData = {
   canvases: readonly FigNode[];
   layers: Map<string, LayerInfo>;
@@ -46,21 +40,16 @@ type ParsedData = {
   images: ReadonlyMap<string, FigImage>;
   nodeMap: ReadonlyMap<string, FigNode>;
 };
-
-let parsedDataCache: ParsedData | null = null;
-
+const parsedDataCache: ParsedData | null = null;
 async function loadFigFile(): Promise<ParsedData> {
-  if (parsedDataCache) return parsedDataCache;
-
+  if (parsedDataCache) {return parsedDataCache;}
   if (!fs.existsSync(FIG_FILE)) {
     throw new Error(`Fixture file not found: ${FIG_FILE}`);
   }
-
   const data = fs.readFileSync(FIG_FILE);
   const parsed = await parseFigFile(new Uint8Array(data));
   const { roots, nodeMap } = buildNodeTree(parsed.nodeChanges);
   const canvases = findNodesByType(roots, "CANVAS");
-
   const layers = new Map<string, LayerInfo>();
   for (const canvas of canvases) {
     for (const child of canvas.children ?? []) {
@@ -74,11 +63,9 @@ async function loadFigFile(): Promise<ParsedData> {
       });
     }
   }
-
   parsedDataCache = { canvases, layers, blobs: parsed.blobs, images: parsed.images, nodeMap };
   return parsedDataCache;
 }
-
 function extractShapeElements(svg: string) {
   const paths = (svg.match(/<path/g) || []).length;
   const rects = (svg.match(/<rect/g) || []).length;
@@ -86,13 +73,11 @@ function extractShapeElements(svg: string) {
   const circles = (svg.match(/<circle/g) || []).length;
   return { paths, rects, ellipses, circles, total: paths + rects + ellipses + circles };
 }
-
 function getSvgSize(svg: string) {
   const w = svg.match(/width="(\d+)"/);
   const h = svg.match(/height="(\d+)"/);
   return { width: parseInt(w?.[1] ?? "100"), height: parseInt(h?.[1] ?? "100") };
 }
-
 describe("Boolean Operation Rendering", () => {
   beforeAll(async () => {
     await loadFigFile();
@@ -100,46 +85,37 @@ describe("Boolean Operation Rendering", () => {
       fs.mkdirSync(SNAPSHOTS_DIR, { recursive: true });
     }
   });
-
   for (const [layerName, fileName] of Object.entries(LAYER_FILE_MAP)) {
     it(`renders "${layerName}" with correct structure`, async () => {
       const data = await loadFigFile();
       const layer = data.layers.get(layerName);
-
       if (!layer) {
         console.log(`SKIP: Layer "${layerName}" not found. Available: ${[...data.layers.keys()].join(", ")}`);
         return;
       }
-
       const actualPath = path.join(ACTUAL_DIR, fileName);
       const hasActual = fs.existsSync(actualPath);
-      let actualSize = layer.size;
-      let actualShapes = { paths: 0, rects: 0, ellipses: 0, circles: 0, total: 0 };
-
+      const actualSizeRef = { value: layer.size };
+      const actualShapesRef = { value: { paths: 0, rects: 0, ellipses: 0, circles: 0, total: 0 } };
       if (hasActual) {
         const actualSvg = fs.readFileSync(actualPath, "utf-8");
-        actualSize = getSvgSize(actualSvg);
-        actualShapes = extractShapeElements(actualSvg);
+        actualSizeRef.value = getSvgSize(actualSvg);
+        actualShapesRef.value = extractShapeElements(actualSvg);
       }
-
       const wrapperCanvas: FigNode = {
         type: "CANVAS",
         name: layerName,
         children: [layer.node],
       };
-
       const result = await renderCanvas(wrapperCanvas, {
-        width: actualSize.width,
-        height: actualSize.height,
+        width: actualSizeRef.value.width,
+        height: actualSizeRef.value.height,
         blobs: data.blobs,
         images: data.images,
         symbolMap: data.nodeMap,
       });
-
       fs.writeFileSync(path.join(SNAPSHOTS_DIR, fileName), result.svg);
-
       const rendered = extractShapeElements(result.svg);
-
       console.log(`\n=== ${layerName} ===`);
       console.log(`Size: ${actualSize.width}x${actualSize.height}`);
       if (hasActual) {
@@ -149,7 +125,6 @@ describe("Boolean Operation Rendering", () => {
       if (result.warnings.length > 0) {
         console.log(`Warnings: ${result.warnings.slice(0, 3).join("; ")}`);
       }
-
       expect(result.svg).toContain("<svg");
       expect(result.svg).toContain("</svg>");
       expect(rendered.total).toBeGreaterThan(0);

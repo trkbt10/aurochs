@@ -233,62 +233,71 @@ function App() {
   );
 
   const tabItems: TabItem<ViewerMode>[] = useMemo(
-    () => [
-      {
-        id: "embeddable",
-        label: "Embeddable",
-        content: loaded ? (
-          <div style={viewerContainerStyle}>
-            <div style={{ maxWidth: "800px", width: "100%" }}>
-              <EmbeddableSlide
-                slideCount={loaded.slides.length}
-                slideSize={loaded.slideSize}
-                getSlideContent={getSvg}
-                initialSlide={currentSlide}
-                showNavigation
-                showIndicator
-                showProgress
-              />
+    () => {
+      if (!loaded) {
+        return [
+          { id: "embeddable" as const, label: "Embeddable", content: null },
+          { id: "slideshare" as const, label: "SlideShare", content: null },
+          { id: "slideshow" as const, label: "Slideshow", content: null },
+        ];
+      }
+      return [
+        {
+          id: "embeddable" as const,
+          label: "Embeddable",
+          content: (
+            <div style={viewerContainerStyle}>
+              <div style={{ maxWidth: "800px", width: "100%" }}>
+                <EmbeddableSlide
+                  slideCount={loaded.slides.length}
+                  slideSize={loaded.slideSize}
+                  getSlideContent={getSvg}
+                  initialSlide={currentSlide}
+                  showNavigation
+                  showIndicator
+                  showProgress
+                />
+              </div>
+              <div style={slideInfoStyle}>EmbeddableSlide component</div>
             </div>
-            <div style={slideInfoStyle}>EmbeddableSlide component</div>
-          </div>
-        ) : null,
-      },
-      {
-        id: "slideshare",
-        label: "SlideShare",
-        content: loaded ? (
-          <div style={viewerContainerStyle}>
-            <div style={{ maxWidth: "900px", width: "100%", height: "100%", maxHeight: "600px" }}>
-              <SlideShareViewer
-                slideCount={loaded.slides.length}
-                slideSize={loaded.slideSize}
-                getSlideContent={getSvg}
-                initialSlide={currentSlide}
-              />
+          ),
+        },
+        {
+          id: "slideshare" as const,
+          label: "SlideShare",
+          content: (
+            <div style={viewerContainerStyle}>
+              <div style={{ maxWidth: "900px", width: "100%", height: "100%", maxHeight: "600px" }}>
+                <SlideShareViewer
+                  slideCount={loaded.slides.length}
+                  slideSize={loaded.slideSize}
+                  getSlideContent={getSvg}
+                  initialSlide={currentSlide}
+                />
+              </div>
+              <div style={slideInfoStyle}>SlideShareViewer component</div>
             </div>
-            <div style={slideInfoStyle}>SlideShareViewer component</div>
-          </div>
-        ) : null,
-      },
-      {
-        id: "slideshow",
-        label: "Slideshow",
-        content: loaded ? (
-          <div style={viewerContainerStyle}>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: spacingTokens.lg }}>
-              <p style={{ color: colorTokens.text.secondary, fontSize: "14px" }}>
-                Click the button below to start the fullscreen slideshow
-              </p>
-              <Button variant="primary" onClick={() => setIsSlideshowOpen(true)}>
-                Start Slideshow
-              </Button>
+          ),
+        },
+        {
+          id: "slideshow" as const,
+          label: "Slideshow",
+          content: (
+            <div style={viewerContainerStyle}>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: spacingTokens.lg }}>
+                <p style={{ color: colorTokens.text.secondary, fontSize: "14px" }}>
+                  Click the button below to start the fullscreen slideshow
+                </p>
+                <Button variant="primary" onClick={() => setIsSlideshowOpen(true)}>
+                  Start Slideshow
+                </Button>
+              </div>
+              <div style={slideInfoStyle}>PresentationSlideshow component</div>
             </div>
-            <div style={slideInfoStyle}>PresentationSlideshow component</div>
-          </div>
-        ) : null,
-      },
-    ],
+          ),
+        },
+      ];
+    },
     [loaded, currentSlide, getSvg],
   );
 

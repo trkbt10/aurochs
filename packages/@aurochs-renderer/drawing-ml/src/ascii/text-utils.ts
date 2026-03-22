@@ -18,48 +18,48 @@ export function wrapText(text: string, width: number): readonly string[] {
     }
 
     const words = paragraph.split(/\s+/);
-    let currentLine = "";
+    const currentLine = { value: "" };
 
     for (const word of words) {
       if (word.length === 0) {
         continue;
       }
 
-      if (currentLine.length === 0) {
+      if (currentLine.value.length === 0) {
         // First word on the line — force it even if too long
         if (word.length > width) {
           // Break long words
           for (let i = 0; i < word.length; i += width) {
             lines.push(word.substring(i, i + width));
           }
-          currentLine = "";
+          currentLine.value = "";
           // If the last chunk is a full line, reset
           if (lines.length > 0 && lines[lines.length - 1]!.length < width) {
-            currentLine = lines.pop()!;
+            currentLine.value = lines.pop()!;
           }
         } else {
-          currentLine = word;
+          currentLine.value = word;
         }
-      } else if (currentLine.length + 1 + word.length <= width) {
-        currentLine += " " + word;
+      } else if (currentLine.value.length + 1 + word.length <= width) {
+        currentLine.value += " " + word;
       } else {
-        lines.push(currentLine);
+        lines.push(currentLine.value);
         if (word.length > width) {
           for (let i = 0; i < word.length; i += width) {
             lines.push(word.substring(i, i + width));
           }
-          currentLine = "";
+          currentLine.value = "";
           if (lines.length > 0 && lines[lines.length - 1]!.length < width) {
-            currentLine = lines.pop()!;
+            currentLine.value = lines.pop()!;
           }
         } else {
-          currentLine = word;
+          currentLine.value = word;
         }
       }
     }
 
-    if (currentLine.length > 0) {
-      lines.push(currentLine);
+    if (currentLine.value.length > 0) {
+      lines.push(currentLine.value);
     }
   }
 

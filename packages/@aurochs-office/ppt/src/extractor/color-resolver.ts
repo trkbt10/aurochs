@@ -4,7 +4,7 @@
 
 import type { PptRecord } from "../records/types";
 import { RT } from "../records/record-types";
-import { findChildByType, findChildrenByType } from "../records/record-iterator";
+import { findChildByType } from "../records/record-iterator";
 import { parseColorSchemeAtom, DEFAULT_COLOR_SCHEME, type ColorScheme } from "../records/atoms/color";
 
 /**
@@ -26,13 +26,13 @@ export function extractColorScheme(record: PptRecord): ColorScheme {
 function findColorSchemeInTree(records: readonly PptRecord[]): PptRecord | undefined {
   // Direct child
   const direct = findChildByType(records, RT.ColorSchemeAtom);
-  if (direct) return direct;
+  if (direct) {return direct;}
 
   // Search in nested containers (depth 1)
   for (const rec of records) {
     if (rec.children) {
       const nested = findChildByType(rec.children, RT.ColorSchemeAtom);
-      if (nested) return nested;
+      if (nested) {return nested;}
     }
   }
 

@@ -1,5 +1,5 @@
 /**
- * Detailed slide comparison tool
+ * @file Detailed slide comparison tool
  *
  * Compares specific elements between our SVG output and PPTX source
  * to identify rendering differences.
@@ -29,47 +29,63 @@ function extractSvgElements(svg: string): ElementInfo[] {
   // Extract text elements
   const textPattern =
     /<text[^>]*x="([^"]+)"[^>]*y="([^"]+)"[^>]*font-size="([^"]+)"[^>]*font-family="([^"]+)"[^>]*fill="([^"]+)"[^>]*>([^<]*)<\/text>/g;
-  let match;
-  while ((match = textPattern.exec(svg)) !== null) {
+  const match = { value: textPattern.exec(svg) };
+  while (match.value !== null) {
     elements.push({
       type: "text",
-      x: parseFloat(match[1]),
-      y: parseFloat(match[2]),
+      x: parseFloat(match.value[1]),
+      y: parseFloat(match.value[2]),
       width: 0,
       height: 0,
-      fontSize: parseFloat(match[3]),
-      fontFamily: match[4],
-      fill: match[5],
-      text: match[6],
+      fontSize: parseFloat(match.value[3]),
+      fontFamily: match.value[4],
+      fill: match.value[5],
+      text: match.value[6],
     });
+    match.value = textPattern.exec(svg);
   }
 
   // Extract rect/path fills
   const rectPattern = /<(?:rect|path)[^>]*fill="([^"]+)"[^>]*>/g;
-  while ((match = rectPattern.exec(svg)) !== null) {
-    if (match[1] !== "none") {
+  const rectMatch = { value: rectPattern.exec(svg) };
+  while (rectMatch.value !== null) {
+    if (rectMatch.value[1] !== "none") {
       elements.push({
         type: "shape",
         x: 0,
         y: 0,
         width: 0,
         height: 0,
-        fill: match[1],
+        fill: rectMatch.value[1],
       });
     }
+    rectMatch.value = rectPattern.exec(svg);
   }
 
   // Extract transform groups
   const transformPattern = /transform="translate\(([^,]+),\s*([^)]+)\)"/g;
   const transforms: { x: number; y: number }[] = [];
-  while ((match = transformPattern.exec(svg)) !== null) {
+  const trMatch = { value: transformPattern.exec(svg) };
+  while (trMatch.value !== null) {
     transforms.push({
-      x: parseFloat(match[1]),
-      y: parseFloat(match[2]),
+      x: parseFloat(trMatch.value[1]),
+      y: parseFloat(trMatch.value[2]),
     });
+    trMatch.value = transformPattern.exec(svg);
   }
 
   return elements;
+}
+
+/** Extract all regex matches from input, mapping each match with the given transform */
+function extractRegexMatches<T>(pattern: RegExp, input: string, transform: (m: RegExpExecArray) => T): T[] {
+  const results: T[] = [];
+  const m = { value: pattern.exec(input) };
+  while (m.value !== null) {
+    results.push(transform(m.value));
+    m.value = pattern.exec(input);
+  }
+  return results;
 }
 
 async function main() {
@@ -120,27 +136,14 @@ async function main() {
     console.log("-".repeat(40));
 
     // Extract key values from PPTX
-    const szPattern = /sz="(\d+)"/g;
-    const fontSizes: number[] = [];
-    let match;
-    while ((match = szPattern.exec(slideXml)) !== null) {
-      fontSizes.push(parseInt(match[1], 10) / 100); // 1/100 pt to pt
-    }
+    const fontSizes = extractRegexMatches(/sz="(\d+)"/g, slideXml, (m) => parseInt(m[1], 10) / 100);
     console.log(`Font sizes (pt): ${fontSizes.join(", ")}`);
 
     // Extract colors
-    const srgbPattern = /<a:srgbClr val="([^"]+)"\/>/g;
-    const colors: string[] = [];
-    while ((match = srgbPattern.exec(slideXml)) !== null) {
-      colors.push(`#${match[1]}`);
-    }
+    const colors = extractRegexMatches(/<a:srgbClr val="([^"]+)"\/>/g, slideXml, (m) => `#${m[1]}`);
     console.log(`sRGB Colors: ${colors.join(", ")}`);
 
-    const schemeClrPattern = /<a:schemeClr val="([^"]+)"[^/]*\/>/g;
-    const schemeColors: string[] = [];
-    while ((match = schemeClrPattern.exec(slideXml)) !== null) {
-      schemeColors.push(match[1]);
-    }
+    const schemeColors = extractRegexMatches(/<a:schemeClr val="([^"]+)"[^/]*\/>/g, slideXml, (m) => m[1]);
     console.log(`Scheme Colors: ${schemeColors.join(", ")}`);
   }
 

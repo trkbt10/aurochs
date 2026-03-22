@@ -69,10 +69,7 @@ function collectInstanceDependencies(node: FigNode, deps: Set<string>, symbolMap
  * to prevent infinite recursion from circular dependencies.
  */
 function deepCloneWithExpansion(
-  node: FigNode,
-  cache: Map<string, FigNode>,
-  symbolMap: ReadonlyMap<string, FigNode>,
-  expanding: Set<string>,
+  { node, cache, symbolMap, expanding }: { node: FigNode; cache: Map<string, FigNode>; symbolMap: ReadonlyMap<string, FigNode>; expanding: Set<string>; }
 ): FigNode {
   const nodeType = getNodeType(node);
 
@@ -98,17 +95,14 @@ function deepCloneWithExpansion(
       }
     }
     // No resolvable SYMBOL or circular — clone as-is
-    return clonePlain(node, cache, symbolMap, expanding);
+    return clonePlain({ node, cache, symbolMap, expanding });
   }
 
-  return clonePlain(node, cache, symbolMap, expanding);
+  return clonePlain({ node, cache, symbolMap, expanding });
 }
 
 function clonePlain(
-  node: FigNode,
-  cache: Map<string, FigNode>,
-  symbolMap: ReadonlyMap<string, FigNode>,
-  expanding: Set<string>,
+  { node, cache, symbolMap, expanding }: { node: FigNode; cache: Map<string, FigNode>; symbolMap: ReadonlyMap<string, FigNode>; expanding: Set<string>; }
 ): FigNode {
   const children = node.children;
   if (!children || children.length === 0) {
@@ -137,7 +131,7 @@ export function buildSymbolDependencyGraph(symbolMap: ReadonlyMap<string, FigNod
   // 1. Identify all SYMBOLs and collect their dependencies
   for (const [guidStr, node] of symbolMap) {
     const nodeType = getNodeType(node);
-    if (nodeType !== "SYMBOL" && nodeType !== "COMPONENT" && nodeType !== "COMPONENT_SET") continue;
+    if (nodeType !== "SYMBOL" && nodeType !== "COMPONENT" && nodeType !== "COMPONENT_SET") {continue;}
     allSymbolIds.add(guidStr);
     const deps = new Set<string>();
     // Only scan children, not the SYMBOL/COMPONENT node itself
@@ -247,10 +241,10 @@ export function preResolveSymbols(
 
   for (const symbolId of graph.resolveOrder) {
     const originalSymbol = symbolMap.get(symbolId);
-    if (!originalSymbol) continue;
+    if (!originalSymbol) {continue;}
 
     // Deep clone the SYMBOL, expanding nested INSTANCEs from already-resolved cache
-    const resolved = deepCloneWithExpansion(originalSymbol, cache, symbolMap, new Set());
+    const resolved = deepCloneWithExpansion({ node: originalSymbol, cache, symbolMap, expanding: new Set() });
     cache.set(symbolId, resolved);
   }
 

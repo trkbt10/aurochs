@@ -206,6 +206,51 @@ function ModuleResultGroup({
 // Search Results Panel
 // =============================================================================
 
+type RenderResultsListOptions = {
+  readonly hasResults: boolean;
+  readonly query: string;
+  readonly sortedModuleNames: readonly string[];
+  readonly projectMatches: ReadonlyMap<string, readonly ProjectSearchMatch[]>;
+  readonly expandedModules: Set<string>;
+  readonly handleToggleModule: (moduleName: string) => void;
+  readonly handleMatchClick: (moduleName: string, match: ProjectSearchMatch) => void;
+  readonly selectedMatchKey: string | undefined;
+};
+
+/**
+ * Render the results list content.
+ */
+function renderResultsList(options: RenderResultsListOptions): ReactNode {
+  const {
+    hasResults, query, sortedModuleNames, projectMatches,
+    expandedModules, handleToggleModule, handleMatchClick, selectedMatchKey,
+  } = options;
+  if (!hasResults) {
+    return (
+      <div className={styles.noResults}>
+        {query ? "No results found" : "Enter a search term"}
+      </div>
+    );
+  }
+  return sortedModuleNames.map((moduleName) => {
+    const matches = projectMatches.get(moduleName);
+    if (!matches) {
+      return null;
+    }
+    return (
+      <ModuleResultGroup
+        key={moduleName}
+        moduleName={moduleName}
+        matches={matches}
+        isExpanded={expandedModules.has(moduleName)}
+        onToggle={() => handleToggleModule(moduleName)}
+        onMatchClick={(match) => handleMatchClick(moduleName, match)}
+        selectedMatchKey={selectedMatchKey}
+      />
+    );
+  });
+}
+
 /**
  * Search Results Panel.
  *
@@ -329,28 +374,16 @@ export function SearchResultsPanel({
 
       {/* Results */}
       <div className={styles.results}>
-        {!hasResults ? (
-          <div className={styles.noResults}>
-            {search.query ? "No results found" : "Enter a search term"}
-          </div>
-        ) : (
-          sortedModuleNames.map((moduleName) => {
-            const matches = search.projectMatches.get(moduleName);
-            if (!matches) return null;
-
-            return (
-              <ModuleResultGroup
-                key={moduleName}
-                moduleName={moduleName}
-                matches={matches}
-                isExpanded={expandedModules.has(moduleName)}
-                onToggle={() => handleToggleModule(moduleName)}
-                onMatchClick={(match) => handleMatchClick(moduleName, match)}
-                selectedMatchKey={selectedMatchKey}
-              />
-            );
-          })
-        )}
+        {renderResultsList({
+          hasResults,
+          query: search.query,
+          sortedModuleNames,
+          projectMatches: search.projectMatches,
+          expandedModules,
+          handleToggleModule,
+          handleMatchClick,
+          selectedMatchKey,
+        })}
       </div>
     </div>
   );

@@ -38,21 +38,21 @@ export type GlyphGenResult = {
  */
 function encodeGlyphBlob(glyph: Glyph, unitsPerEm: number): FigBlob | null {
   const commands = glyph.path.commands;
-  if (!commands || commands.length === 0) return null;
+  if (!commands || commands.length === 0) {return null;}
 
   // Figma glyph blobs: leading 0x00 byte, NO close (Z) commands,
   // contours separated by M only. Matches real Figma .fig format.
   const data: number[] = [0x00]; // leading header byte
   const s = 1 / unitsPerEm;
 
-  let curX = 0;
-  let curY = 0;
+  const curX = 0;
+  const curY = 0;
 
   function writeFloat32(value: number): void {
     const buf = new ArrayBuffer(4);
     new DataView(buf).setFloat32(0, value, true);
     const bytes = new Uint8Array(buf);
-    for (let i = 0; i < 4; i++) data.push(bytes[i]);
+    for (let i = 0; i < 4; i++) {data.push(bytes[i]);}
   }
 
   for (const cmd of commands as PathCommand[]) {
@@ -139,7 +139,7 @@ export function generateTextGlyphs(params: {
 }): GlyphGenResult {
   const { text, font, fontSize, baselineX, baselineY, letterSpacing = 0 } = params;
   const unitsPerEm = font.unitsPerEm;
-  const scale = fontSize / unitsPerEm;
+  const _scale = fontSize / unitsPerEm;
 
   const glyphs: GlyphRecord[] = [];
   const blobs: FigBlob[] = [];
@@ -147,7 +147,7 @@ export function generateTextGlyphs(params: {
   // Cache: glyph index → blob array index (for deduplication)
   const blobCache = new Map<number, number>();
 
-  let curX = baselineX;
+  const curXRef = { value: baselineX };
 
   for (let i = 0; i < text.length; i++) {
     const char = text[i];
@@ -155,39 +155,39 @@ export function generateTextGlyphs(params: {
     const advanceWidth = (glyph.advanceWidth ?? 0) / unitsPerEm;
 
     // Skip whitespace glyphs (no outline) but still advance position
-    let blobIndex: number;
+    const blobIndexRef = { value: undefined as number | undefined };
     const cachedIndex = blobCache.get(glyph.index);
 
     if (cachedIndex !== undefined) {
-      blobIndex = cachedIndex;
+      blobIndexRef.value = cachedIndex;
     } else {
       const blob = encodeGlyphBlob(glyph, unitsPerEm);
       if (blob && blob.bytes.length > 1) {
         // Has actual path data (more than just the 0x00 terminator)
-        blobIndex = blobs.length;
+        blobIndexRef.value = blobs.length;
         blobs.push(blob);
-        blobCache.set(glyph.index, blobIndex);
+        blobCache.set(glyph.index, blobIndexRef.value);
       } else {
         // Space or empty glyph - advance but no blob
-        curX += advanceWidth * fontSize + (i < text.length - 1 ? letterSpacing : 0);
+        curXRef.value += advanceWidth * fontSize + (i < text.length - 1 ? letterSpacing : 0);
         continue;
       }
     }
 
     glyphs.push({
-      commandsBlob: blobIndex,
-      position: { x: curX, y: baselineY },
+      commandsBlob: blobIndexRef.value,
+      position: { x: curXRef.value, y: baselineY },
       styleID: 0,
       fontSize,
       firstCharacter: i,
       advance: advanceWidth,
     });
 
-    curX += advanceWidth * fontSize + (i < text.length - 1 ? letterSpacing : 0);
+    curXRef.value += advanceWidth * fontSize + (i < text.length - 1 ? letterSpacing : 0);
   }
 
   // Compute text width for this line
-  const textWidth = curX - baselineX;
+  const textWidth = curXRef.value - baselineX;
 
   // Compute baseline data for this single line
   const lineAscent = (font.ascender / unitsPerEm) * fontSize;
@@ -238,8 +238,8 @@ export function generateMultilineTextGlyphs(params: {
   const allBlobs: FigBlob[] = [];
   const allBaselines: DerivedBaselineData[] = [];
 
-  let charOffset = 0;
-  let maxWidth = 0;
+  const charOffsetRef = { value: 0 };
+  const maxWidthRef = { value: 0 };
 
   for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
     const lineText = lines[lineIdx];
@@ -265,7 +265,7 @@ export function generateMultilineTextGlyphs(params: {
       allGlyphs.push({
         ...glyph,
         commandsBlob: indexMap.get(glyph.commandsBlob) ?? glyph.commandsBlob,
-        firstCharacter: glyph.firstCharacter + charOffset,
+        firstCharacter: glyph.firstCharacter + charOffsetRef.value,
       });
     }
 
@@ -273,17 +273,17 @@ export function generateMultilineTextGlyphs(params: {
     for (const baseline of result.baselines) {
       allBaselines.push({
         ...baseline,
-        firstCharacter: baseline.firstCharacter + charOffset,
-        endCharacter: baseline.endCharacter + charOffset,
+        firstCharacter: baseline.firstCharacter + charOffsetRef.value,
+        endCharacter: baseline.endCharacter + charOffsetRef.value,
       });
-      if (baseline.width > maxWidth) maxWidth = baseline.width;
+      if (baseline.width > maxWidthRef.value) {maxWidthRef.value = baseline.width;}
     }
 
-    charOffset += lineText.length + 1; // +1 for \n
+    charOffsetRef.value += lineText.length + 1; // +1 for \n
   }
 
   const totalHeight = lines.length * lineHeight;
-  const layoutSize = { x: maxWidth, y: totalHeight };
+  const layoutSize = { x: maxWidthRef.value, y: totalHeight };
 
   return { glyphs: allGlyphs, blobs: allBlobs, baselines: allBaselines, layoutSize };
 }
@@ -302,16 +302,16 @@ export function computeTextWidth(params: {
   const { text, font, fontSize, letterSpacing = 0 } = params;
   const unitsPerEm = font.unitsPerEm;
 
-  let width = 0;
+  const widthRef = { value: 0 };
   for (let i = 0; i < text.length; i++) {
     const glyph = font.charToGlyph(text[i]);
     const advanceWidth = (glyph.advanceWidth ?? 0) / unitsPerEm;
-    width += advanceWidth * fontSize;
+    widthRef.value += advanceWidth * fontSize;
     if (i < text.length - 1) {
-      width += letterSpacing;
+      widthRef.value += letterSpacing;
     }
   }
-  return width;
+  return widthRef.value;
 }
 
 /**

@@ -17,7 +17,7 @@ import type { SlideContext } from "@aurochs-office/pptx/parser/slide/context";
 import type { CoreRenderContext } from "../render-context";
 import type { RenderOptions } from "../render-options";
 import { DEFAULT_RENDER_OPTIONS } from "../render-options";
-import type { ResolvedBackgroundFill } from "../background-fill";
+import type { ResolvedBackgroundFill } from "@aurochs-office/drawing-ml/domain/background-fill";
 import { createWarningCollector } from "@aurochs-office/ooxml";
 import { getMimeTypeFromPath } from "@aurochs/files";
 import { toDataUrl } from "@aurochs/buffer";

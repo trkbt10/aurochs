@@ -30,48 +30,49 @@ function updateSheet(
 /**
  * Set row height
  */
-export function setRowHeight(
-  workbook: XlsxWorkbook,
-  sheetIndex: number,
-  rowIndex: RowIndex,
-  height: number,
-): XlsxWorkbook {
+export function setRowHeight(params: {
+  workbook: XlsxWorkbook;
+  sheetIndex: number;
+  rowIndex: RowIndex;
+  height: number;
+}): XlsxWorkbook {
+  const { workbook, sheetIndex, rowIndex, height } = params;
   assertValidSheetIndex(workbook, sheetIndex);
   const sheet = workbook.sheets[sheetIndex];
 
   // Find existing row or create update
   const existingRowIdx = sheet.rows.findIndex((r) => r.rowNumber === rowIndex);
 
-  let newRows: readonly XlsxRow[];
-  if (existingRowIdx >= 0) {
-    // Update existing row
-    newRows = sheet.rows.map((row, idx) =>
-      idx === existingRowIdx
-        ? { ...row, height, customHeight: true }
-        : row,
-    );
-  } else {
-    // Create new row entry with the specified height
-    const newRow: XlsxRow = {
-      rowNumber: rowIndex,
-      cells: [],
-      height,
-      customHeight: true,
-    };
-    // Insert in sorted position
-    const insertIdx = sheet.rows.findIndex((r) => r.rowNumber > rowIndex);
-    if (insertIdx === -1) {
-      newRows = [...sheet.rows, newRow];
-    } else {
-      newRows = [
-        ...sheet.rows.slice(0, insertIdx),
-        newRow,
-        ...sheet.rows.slice(insertIdx),
-      ];
-    }
-  }
+  const newRows = buildRowsWithHeight({ rows: sheet.rows, existingRowIdx, rowIndex, height });
 
   return updateSheet(workbook, sheetIndex, { rows: newRows });
+}
+
+function buildRowsWithHeight(params: {
+  rows: readonly XlsxRow[];
+  existingRowIdx: number;
+  rowIndex: RowIndex;
+  height: number;
+}): readonly XlsxRow[] {
+  const { rows, existingRowIdx, rowIndex, height } = params;
+  if (existingRowIdx >= 0) {
+    return rows.map((row, idx) =>
+      idx === existingRowIdx ? { ...row, height, customHeight: true } : row,
+    );
+  }
+  const newRow: XlsxRow = { rowNumber: rowIndex, cells: [], height, customHeight: true };
+  const insertIdx = rows.findIndex((r) => r.rowNumber > rowIndex);
+  if (insertIdx === -1) {
+    return [...rows, newRow];
+  }
+  return [...rows.slice(0, insertIdx), newRow, ...rows.slice(insertIdx)];
+}
+
+function clearRowHeightForRow(row: XlsxRow, targetRowIndex: RowIndex): XlsxRow {
+  if (row.rowNumber === targetRowIndex) {
+    return { ...row, height: undefined, customHeight: undefined };
+  }
+  return row;
 }
 
 /**
@@ -85,11 +86,7 @@ export function clearRowHeight(
   assertValidSheetIndex(workbook, sheetIndex);
   const sheet = workbook.sheets[sheetIndex];
 
-  const newRows = sheet.rows.map((row) =>
-    row.rowNumber === rowIndex
-      ? { ...row, height: undefined, customHeight: undefined }
-      : row,
-  );
+  const newRows = sheet.rows.map((row) => clearRowHeightForRow(row, rowIndex));
 
   return updateSheet(workbook, sheetIndex, { rows: newRows });
 }
@@ -97,12 +94,13 @@ export function clearRowHeight(
 /**
  * Set column width
  */
-export function setColumnWidth(
-  workbook: XlsxWorkbook,
-  sheetIndex: number,
-  colIndex: ColIndex,
-  width: number,
-): XlsxWorkbook {
+export function setColumnWidth(params: {
+  workbook: XlsxWorkbook;
+  sheetIndex: number;
+  colIndex: ColIndex;
+  width: number;
+}): XlsxWorkbook {
+  const { workbook, sheetIndex, colIndex, width } = params;
   assertValidSheetIndex(workbook, sheetIndex);
   const sheet = workbook.sheets[sheetIndex];
   const columns = sheet.columns ?? [];
@@ -112,61 +110,48 @@ export function setColumnWidth(
     (c) => c.min <= colIndex && c.max >= colIndex,
   );
 
-  let newColumns: readonly XlsxColumnDef[];
+  const newColumns = buildColumnsWithWidth({ columns, existingDefIdx, colIndex, width });
+
+  return updateSheet(workbook, sheetIndex, { columns: newColumns });
+}
+
+function buildColumnsWithWidth(params: {
+  columns: readonly XlsxColumnDef[];
+  existingDefIdx: number;
+  colIndex: ColIndex;
+  width: number;
+}): readonly XlsxColumnDef[] {
+  const { columns, existingDefIdx, colIndex, width } = params;
   if (existingDefIdx >= 0) {
     const existingDef = columns[existingDefIdx];
     if (existingDef.min === colIndex && existingDef.max === colIndex) {
-      // Exact match - just update width
-      newColumns = columns.map((col, idx) =>
+      return columns.map((col, idx) =>
         idx === existingDefIdx ? { ...col, width } : col,
       );
-    } else {
-      // Need to split the range
-      const before: XlsxColumnDef[] = [];
-      const after: XlsxColumnDef[] = [];
-
-      if (existingDef.min < colIndex) {
-        before.push({ ...existingDef, max: (colIndex - 1) as ColIndex });
-      }
-      if (existingDef.max > colIndex) {
-        after.push({ ...existingDef, min: (colIndex + 1) as ColIndex });
-      }
-
-      const newDef: XlsxColumnDef = {
-        min: colIndex,
-        max: colIndex,
-        width,
-      };
-
-      newColumns = [
-        ...columns.slice(0, existingDefIdx),
-        ...before,
-        newDef,
-        ...after,
-        ...columns.slice(existingDefIdx + 1),
-      ];
     }
-  } else {
-    // Create new column def
-    const newDef: XlsxColumnDef = {
-      min: colIndex,
-      max: colIndex,
-      width,
-    };
-    // Insert in sorted position
-    const insertIdx = columns.findIndex((c) => c.min > colIndex);
-    if (insertIdx === -1) {
-      newColumns = [...columns, newDef];
-    } else {
-      newColumns = [
-        ...columns.slice(0, insertIdx),
-        newDef,
-        ...columns.slice(insertIdx),
-      ];
+    const before: XlsxColumnDef[] = [];
+    const after: XlsxColumnDef[] = [];
+    if (existingDef.min < colIndex) {
+      before.push({ ...existingDef, max: (colIndex - 1) as ColIndex });
     }
+    if (existingDef.max > colIndex) {
+      after.push({ ...existingDef, min: (colIndex + 1) as ColIndex });
+    }
+    const newDef: XlsxColumnDef = { min: colIndex, max: colIndex, width };
+    return [
+      ...columns.slice(0, existingDefIdx),
+      ...before,
+      newDef,
+      ...after,
+      ...columns.slice(existingDefIdx + 1),
+    ];
   }
-
-  return updateSheet(workbook, sheetIndex, { columns: newColumns });
+  const newDef: XlsxColumnDef = { min: colIndex, max: colIndex, width };
+  const insertIdx = columns.findIndex((c) => c.min > colIndex);
+  if (insertIdx === -1) {
+    return [...columns, newDef];
+  }
+  return [...columns.slice(0, insertIdx), newDef, ...columns.slice(insertIdx)];
 }
 
 /**

@@ -7,13 +7,31 @@
 
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import type { TextBody } from "@aurochs-office/pptx/domain";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import { createActiveTextEditState, createInactiveTextEditState } from "./input-support/state";
 import { useTextEditHandlers } from "./use-text-edit-handlers";
+
+// =============================================================================
+// Fake callback tracker
+// =============================================================================
+
+type CallTracker<Args extends unknown[] = unknown[]> = {
+  (...args: Args): void;
+  readonly calls: Args[];
+};
+
+/** Create a fake callback that records its calls */
+function createFakeCallback<Args extends unknown[] = unknown[]>(): CallTracker<Args> {
+  const calls: Args[] = [];
+  const fn = ((...args: Args) => {
+    calls.push(args);
+  }) as CallTracker<Args>;
+  Object.defineProperty(fn, "calls", { get: () => calls });
+  return fn;
+}
 
 // =============================================================================
 // Helpers
@@ -37,8 +55,8 @@ describe("useTextEditHandlers", () => {
     const { result } = renderHook(() =>
       useTextEditHandlers({
         textEditState: createInactiveTextEditState(),
-        onCommit: vi.fn(),
-        onExit: vi.fn(),
+        onCommit: createFakeCallback(),
+        onExit: createFakeCallback(),
       }),
     );
     expect(result.current.editingShapeId).toBeUndefined();
@@ -49,16 +67,16 @@ describe("useTextEditHandlers", () => {
     const { result } = renderHook(() =>
       useTextEditHandlers({
         textEditState: state,
-        onCommit: vi.fn(),
-        onExit: vi.fn(),
+        onCommit: createFakeCallback(),
+        onExit: createFakeCallback(),
       }),
     );
     expect(result.current.editingShapeId).toBe("shape-1");
   });
 
   it("handleTextEditCancel calls onExit without onCommit", () => {
-    const onCommit = vi.fn();
-    const onExit = vi.fn();
+    const onCommit = createFakeCallback();
+    const onExit = createFakeCallback();
     const state = createActiveTextEditState("shape-1" as ShapeId, BOUNDS, makeTextBody("Hello"));
     const { result } = renderHook(() =>
       useTextEditHandlers({ textEditState: state, onCommit, onExit }),
@@ -66,13 +84,13 @@ describe("useTextEditHandlers", () => {
 
     act(() => result.current.handleTextEditCancel());
 
-    expect(onExit).toHaveBeenCalledTimes(1);
-    expect(onCommit).not.toHaveBeenCalled();
+    expect(onExit.calls).toHaveLength(1);
+    expect(onCommit.calls).toHaveLength(0);
   });
 
   it("handleTextEditComplete with unchanged text calls onExit only", () => {
-    const onCommit = vi.fn();
-    const onExit = vi.fn();
+    const onCommit = createFakeCallback();
+    const onExit = createFakeCallback();
     const state = createActiveTextEditState("shape-1" as ShapeId, BOUNDS, makeTextBody("Hello"));
     const { result } = renderHook(() =>
       useTextEditHandlers({ textEditState: state, onCommit, onExit }),
@@ -80,13 +98,13 @@ describe("useTextEditHandlers", () => {
 
     act(() => result.current.handleTextEditComplete("Hello"));
 
-    expect(onExit).toHaveBeenCalledTimes(1);
-    expect(onCommit).not.toHaveBeenCalled();
+    expect(onExit.calls).toHaveLength(1);
+    expect(onCommit.calls).toHaveLength(0);
   });
 
   it("handleTextEditComplete with changed text calls onCommit then onExit", () => {
-    const onCommit = vi.fn();
-    const onExit = vi.fn();
+    const onCommit = createFakeCallback();
+    const onExit = createFakeCallback();
     const state = createActiveTextEditState("shape-1" as ShapeId, BOUNDS, makeTextBody("Hello"));
     const { result } = renderHook(() =>
       useTextEditHandlers({ textEditState: state, onCommit, onExit }),
@@ -94,8 +112,9 @@ describe("useTextEditHandlers", () => {
 
     act(() => result.current.handleTextEditComplete("Updated"));
 
-    expect(onCommit).toHaveBeenCalledTimes(1);
-    expect(onCommit).toHaveBeenCalledWith("shape-1", expect.objectContaining({
+    expect(onCommit.calls).toHaveLength(1);
+    expect(onCommit.calls[0][0]).toBe("shape-1");
+    expect(onCommit.calls[0][1]).toEqual(expect.objectContaining({
       paragraphs: expect.arrayContaining([
         expect.objectContaining({
           runs: expect.arrayContaining([
@@ -104,12 +123,12 @@ describe("useTextEditHandlers", () => {
         }),
       ]),
     }));
-    expect(onExit).toHaveBeenCalledTimes(1);
+    expect(onExit.calls).toHaveLength(1);
   });
 
   it("handleTextEditComplete when inactive still calls onExit", () => {
-    const onCommit = vi.fn();
-    const onExit = vi.fn();
+    const onCommit = createFakeCallback();
+    const onExit = createFakeCallback();
     const { result } = renderHook(() =>
       useTextEditHandlers({
         textEditState: createInactiveTextEditState(),
@@ -120,7 +139,7 @@ describe("useTextEditHandlers", () => {
 
     act(() => result.current.handleTextEditComplete("Anything"));
 
-    expect(onCommit).not.toHaveBeenCalled();
-    expect(onExit).toHaveBeenCalledTimes(1);
+    expect(onCommit.calls).toHaveLength(0);
+    expect(onExit.calls).toHaveLength(1);
   });
 });

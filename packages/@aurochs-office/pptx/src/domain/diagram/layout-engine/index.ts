@@ -6,4 +6,4 @@
  * by adapting `LayoutShapeResult` into PPTX `SpShape`.
  */
 
-export { generateDiagramShapes, type ShapeGenerationResult, type ShapeGenerationConfig } from "./shape-generator";
+export { generateDiagramShapes, type ShapeGenerationResult } from "./shape-generator";

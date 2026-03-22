@@ -9,50 +9,58 @@ import {
   type BlendMode,
 } from "../../constants";
 
-export class SolidPaintBuilder {
-  private _color: Color;
-  private _opacity: number;
-  private _visible: boolean;
-  private _blendMode: BlendMode;
+/** Solid paint builder instance */
+export type SolidPaintBuilder = {
+  opacity: (value: number) => SolidPaintBuilder;
+  visible: (value: boolean) => SolidPaintBuilder;
+  blendMode: (mode: BlendMode) => SolidPaintBuilder;
+  build: () => Paint;
+};
 
-  constructor(color: Color) {
-    this._color = color;
-    this._opacity = 1;
-    this._visible = true;
-    this._blendMode = "NORMAL";
-  }
+/** Create a solid paint builder with given color */
+function createSolidPaintBuilder(color: Color): SolidPaintBuilder {
+  const state = {
+    color,
+    opacity: 1,
+    visible: true,
+    blendMode: "NORMAL" as BlendMode,
+  };
 
-  opacity(value: number): this {
-    this._opacity = Math.max(0, Math.min(1, value));
-    return this;
-  }
+  const builder: SolidPaintBuilder = {
+    opacity(value: number) {
+      state.opacity = Math.max(0, Math.min(1, value));
+      return builder;
+    },
 
-  visible(value: boolean): this {
-    this._visible = value;
-    return this;
-  }
+    visible(value: boolean) {
+      state.visible = value;
+      return builder;
+    },
 
-  blendMode(mode: BlendMode): this {
-    this._blendMode = mode;
-    return this;
-  }
+    blendMode(mode: BlendMode) {
+      state.blendMode = mode;
+      return builder;
+    },
 
-  build(): Paint {
-    return {
-      type: { value: PAINT_TYPE_VALUES.SOLID, name: "SOLID" },
-      color: this._color,
-      opacity: this._opacity,
-      visible: this._visible,
-      blendMode: { value: BLEND_MODE_VALUES[this._blendMode], name: this._blendMode },
-    };
-  }
+    build(): Paint {
+      return {
+        type: { value: PAINT_TYPE_VALUES.SOLID, name: "SOLID" },
+        color: state.color,
+        opacity: state.opacity,
+        visible: state.visible,
+        blendMode: { value: BLEND_MODE_VALUES[state.blendMode], name: state.blendMode },
+      };
+    },
+  };
+
+  return builder;
 }
 
 /**
  * Create a solid color paint
  */
 export function solidPaint(color: Color): SolidPaintBuilder {
-  return new SolidPaintBuilder(color);
+  return createSolidPaintBuilder(color);
 }
 
 /**
@@ -61,9 +69,9 @@ export function solidPaint(color: Color): SolidPaintBuilder {
 export function solidPaintHex(hex: string): SolidPaintBuilder {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   if (!result) {
-    return new SolidPaintBuilder({ r: 0, g: 0, b: 0, a: 1 });
+    return createSolidPaintBuilder({ r: 0, g: 0, b: 0, a: 1 });
   }
-  return new SolidPaintBuilder({
+  return createSolidPaintBuilder({
     r: parseInt(result[1], 16) / 255,
     g: parseInt(result[2], 16) / 255,
     b: parseInt(result[3], 16) / 255,

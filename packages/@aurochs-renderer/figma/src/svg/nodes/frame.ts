@@ -8,7 +8,7 @@ import type { FigSvgRenderContext } from "../../types";
 import { g, rect, clipPath, path, type SvgString, EMPTY_SVG } from "../primitives";
 import { buildTransformAttr } from "../transform";
 import { getFillAttrs, type FillAttrs } from "../fill";
-import { getStrokeAttrs, type StrokeAttrs } from "../stroke";
+import { getStrokeAttrs } from "../stroke";
 import { decodePathsFromGeometry, mapWindingRule } from "../geometry-path";
 import { buildPathElements } from "../render-paths";
 import { figColorToHex, getPaintType } from "../../core/color";
@@ -22,12 +22,12 @@ import {
 
 function resolveClipsContent(node: FigNode): boolean {
   // Explicit clipsContent (set by mergeSymbolProperties or API clients)
-  if (node.clipsContent === true) return true;
-  if (node.clipsContent === false) return false;
+  if (node.clipsContent === true) {return true;}
+  if (node.clipsContent === false) {return false;}
 
   // Kiwi schema field: frameMaskDisabled (inverted meaning)
-  if (node.frameMaskDisabled === true) return false;
-  if (node.frameMaskDisabled === false) return true;
+  if (node.frameMaskDisabled === true) {return false;}
+  if (node.frameMaskDisabled === false) {return true;}
 
   // Default based on node type
   const nodeType = getNodeType(node);
@@ -44,25 +44,21 @@ function resolveClipsContent(node: FigNode): boolean {
  * Build fill attrs from stroke paints (for strokeGeometry).
  */
 function strokePaintsToFillAttrs(paints: readonly FigPaint[] | undefined): FillAttrs {
-  if (!paints || paints.length === 0) return { fill: "none" };
+  if (!paints || paints.length === 0) {return { fill: "none" };}
   const visible = paints.find((p) => p.visible !== false);
-  if (!visible) return { fill: "none" };
+  if (!visible) {return { fill: "none" };}
   if (getPaintType(visible) === "SOLID") {
     const solid = visible as FigPaint & { color: { r: number; g: number; b: number; a: number } };
     const hex = figColorToHex(solid.color);
     const opacity = visible.opacity ?? 1;
-    if (opacity < 1) return { fill: hex, "fill-opacity": opacity };
+    if (opacity < 1) {return { fill: hex, "fill-opacity": opacity };}
     return { fill: hex };
   }
   return { fill: "#000000" };
 }
 
 function buildClipShapes(
-  geometry: readonly FigFillGeometry[] | undefined,
-  ctx: FigSvgRenderContext,
-  size: FigVector,
-  rx: number | undefined,
-  ry: number | undefined,
+  { geometry, ctx, size, rx, ry }: { geometry: readonly FigFillGeometry[] | undefined; ctx: FigSvgRenderContext; size: FigVector; rx: number | undefined; ry: number | undefined; }
 ): readonly SvgString[] {
   if (geometry) {
     const paths = decodePathsFromGeometry(geometry, ctx.blobs);
@@ -161,7 +157,7 @@ export function renderFrameNode(
       // Create clip path
       const clipId = ctx.defs.generateId("clip");
       const clipGeometry = decodedFillPaths.length > 0 ? fillGeometry : strokeGeometry;
-      const clipShapes = buildClipShapes(clipGeometry, ctx, size, rx, ry);
+      const clipShapes = buildClipShapes({ geometry: clipGeometry, ctx, size, rx, ry });
       const clipDef = clipPath({ id: clipId }, ...clipShapes);
       ctx.defs.add(clipDef);
 

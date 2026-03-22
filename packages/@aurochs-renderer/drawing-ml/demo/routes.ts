@@ -57,15 +57,33 @@ export const categories: readonly CategoryRoute[] = [
   },
 ];
 
+
+
+
+
+
+/** Find a category route by its identifier */
 export function findCategory(categoryId: string): CategoryRoute | undefined {
   return categories.find((c) => c.id === categoryId);
 }
 
+
+
+
+
+
+/** Find a feature route within a category */
 export function findFeature(categoryId: string, featureId: string): FeatureRoute | undefined {
   const category = findCategory(categoryId);
   return category?.features.find((f) => f.id === featureId);
 }
 
+
+
+
+
+
+/** Get the default route for initial navigation */
 export function getDefaultRoute(): { category: Category; feature: string } {
   const category = categories[0];
   return { category: category.id, feature: category.features[0].id };

@@ -65,15 +65,14 @@ export type SvgRenderContext = CoreRenderContext & {
   readonly defs: DefsCollector;
 };
 
-import type { CoreRenderContextConfig as SvgRenderContextConfig } from "../render-context";
-export type { SvgRenderContextConfig };
+import type { CoreRenderContextConfig } from "../render-context";
 
 /**
  * Create an SVG render context.
  *
  * Extends CoreRenderContext with SVG-specific DefsCollector.
  */
-export function createSvgRenderContext(config: SvgRenderContextConfig): SvgRenderContext {
+export function createSvgRenderContext(config: CoreRenderContextConfig): SvgRenderContext {
   const coreCtx = createCoreRenderContext(config);
   return {
     ...coreCtx,

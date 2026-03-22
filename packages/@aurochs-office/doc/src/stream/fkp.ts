@@ -12,6 +12,15 @@
 
 import { parseGrpprl, type Sprm } from "../sprm/sprm-decoder";
 
+/**
+ * Extract grpprl data from PAP FKP, returning empty array for zero-length.
+ */
+function extractGrpprlData(options: { grpprlSize: number; page: Uint8Array; realOffset: number; totalSize: number }): Uint8Array {
+  const { grpprlSize, page, realOffset, totalSize } = options;
+  if (grpprlSize > 0) { return page.subarray(realOffset + 3, realOffset + 1 + totalSize); }
+  return new Uint8Array(0);
+}
+
 /** A character property run from a CHP-FKP page. */
 export type ChpxRun = {
   /** Start FC */
@@ -57,7 +66,7 @@ export function parseChpFkp(wordDocStream: Uint8Array, pageNumber: number): read
   const view = new DataView(page.buffer, page.byteOffset, page.byteLength);
 
   const crun = page[511];
-  if (crun === 0) return [];
+  if (crun === 0) {return [];}
 
   const runs: ChpxRun[] = [];
   const rgfcOffset = 0;
@@ -116,7 +125,7 @@ export function parsePapFkp(wordDocStream: Uint8Array, pageNumber: number): read
   const view = new DataView(page.buffer, page.byteOffset, page.byteLength);
 
   const crun = page[511];
-  if (crun === 0) return [];
+  if (crun === 0) {return [];}
 
   const runs: PapxRun[] = [];
   const rgfcOffset = 0;
@@ -165,9 +174,7 @@ export function parsePapFkp(wordDocStream: Uint8Array, pageNumber: number): read
       const papxView = new DataView(page.buffer, page.byteOffset + realOffset + 1, totalSize);
       const istd = papxView.getUint16(0, true);
       const grpprlSize = totalSize - 2;
-      const grpprlData = grpprlSize > 0
-        ? page.subarray(realOffset + 3, realOffset + 1 + totalSize)
-        : new Uint8Array(0);
+      const grpprlData = extractGrpprlData({ grpprlSize, page, realOffset, totalSize });
       runs.push({ fcStart, fcEnd, istd, sprms: parseGrpprl(grpprlData) });
     }
   }

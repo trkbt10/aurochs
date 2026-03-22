@@ -116,22 +116,22 @@ export function parseStyleTextPropAtom(record: PptRecord, textLength: number): S
   }
 
   const view = new DataView(record.data.buffer, record.data.byteOffset, record.data.byteLength);
-  let offset = 0;
+  const pos = { value: 0 };
 
-  function u16(): number { const v = view.getUint16(offset, true); offset += 2; return v; }
-  function s16(): number { const v = view.getInt16(offset, true); offset += 2; return v; }
-  function u32(): number { const v = view.getUint32(offset, true); offset += 4; return v; }
-  function canRead(n: number): boolean { return offset + n <= record.data.byteLength; }
+  function u16(): number { const v = view.getUint16(pos.value, true); pos.value += 2; return v; }
+  function s16(): number { const v = view.getInt16(pos.value, true); pos.value += 2; return v; }
+  function u32(): number { const v = view.getUint32(pos.value, true); pos.value += 4; return v; }
+  function canRead(n: number): boolean { return pos.value + n <= record.data.byteLength; }
 
   // Parse paragraph runs
   const paragraphRuns: ParagraphStyleRun[] = [];
-  let totalParagraphChars = 0;
+  const paraTotal = { value: 0 };
 
-  while (totalParagraphChars < textLength && canRead(4)) {
+  while (paraTotal.value < textLength && canRead(4)) {
     const charCount = u32();
-    totalParagraphChars += charCount;
+    paraTotal.value += charCount;
 
-    if (!canRead(2)) break;
+    if (!canRead(2)) {break;}
     const indent = u16();
 
     if (!canRead(4)) { paragraphRuns.push({ charCount, indent }); break; }
@@ -140,39 +140,39 @@ export function parseStyleTextPropAtom(record: PptRecord, textLength: number): S
     const run: Record<string, number | boolean | undefined> = { charCount, indent };
 
     // Paragraph properties in FIXED read order per [MS-PPT]:
-    if ((mask & 0x000F) && canRead(2)) run.bulletFlags = u16();
-    if ((mask & 0x0080) && canRead(4)) run.bulletColor = u32(); // before bulletChar!
-    if ((mask & 0x0010) && canRead(2)) run.bulletChar = u16();
-    if ((mask & 0x0020) && canRead(2)) run.bulletFontRef = u16();
-    if ((mask & 0x0040) && canRead(2)) run.bulletSize = u16();
-    if ((mask & 0x0800) && canRead(2)) run.alignment = u16();
-    if ((mask & 0x1000) && canRead(2)) run.lineSpacing = s16();
-    if ((mask & 0x2000) && canRead(2)) run.spaceBefore = s16();
-    if ((mask & 0x4000) && canRead(2)) run.spaceAfter = s16();
-    if ((mask & 0x0100) && canRead(2)) run.leftMargin = u16();
+    if ((mask & 0x000F) && canRead(2)) {run.bulletFlags = u16();}
+    if ((mask & 0x0080) && canRead(4)) {run.bulletColor = u32();} // before bulletChar!
+    if ((mask & 0x0010) && canRead(2)) {run.bulletChar = u16();}
+    if ((mask & 0x0020) && canRead(2)) {run.bulletFontRef = u16();}
+    if ((mask & 0x0040) && canRead(2)) {run.bulletSize = u16();}
+    if ((mask & 0x0800) && canRead(2)) {run.alignment = u16();}
+    if ((mask & 0x1000) && canRead(2)) {run.lineSpacing = s16();}
+    if ((mask & 0x2000) && canRead(2)) {run.spaceBefore = s16();}
+    if ((mask & 0x4000) && canRead(2)) {run.spaceAfter = s16();}
+    if ((mask & 0x0100) && canRead(2)) {run.leftMargin = u16();}
     if ((mask & 0x0400) && canRead(2)) { /* indent/bulletOffset - skip */ u16(); }
-    if ((mask & 0x8000) && canRead(2)) run.defaultTabSize = u16();
+    if ((mask & 0x8000) && canRead(2)) {run.defaultTabSize = u16();}
     // tabStops (variable length)
     if ((mask & 0x100000) && canRead(2)) {
       const count = u16();
       // Each tab stop is 4 bytes (position u16 + type u16)
       const skipBytes = count * 4;
-      if (canRead(skipBytes)) offset += skipBytes;
+      if (canRead(skipBytes)) {offset += skipBytes;}
     }
     if ((mask & 0x10000) && canRead(2)) { /* fontAlign */ u16(); }
     if ((mask & 0xE0000) && canRead(2)) { /* wrapFlags (charWrap + wordWrap + overflow) */ u16(); }
     if ((mask & 0x200000) && canRead(2)) { /* textDirection */ u16(); }
 
-    paragraphRuns.push(run as unknown as ParagraphStyleRun);
+    paragraphRuns.push(buildParagraphStyleRun(run));
   }
 
   // Parse character runs
   const characterRuns: CharacterStyleRun[] = [];
-  let totalCharChars = 0;
+  const charTotal = { value: 0 };
 
-  while (totalCharChars < textLength && canRead(4)) {
+  while (charTotal.value < textLength && canRead(4)) {
     const charCount = u32();
-    totalCharChars += charCount;
+    charTotal.value += charCount;
 
     if (!canRead(4)) { characterRuns.push({ charCount }); break; }
     const mask = u32();
@@ -189,12 +189,12 @@ export function parseStyleTextPropAtom(record: PptRecord, textLength: number): S
       run.strikethrough = !!(flags & 0x0200);
     }
     // 2. Font references and size/color in POI order
-    if ((mask & 0x10000) && canRead(2)) run.fontRef = u16();          // typeface (bit 16)
+    if ((mask & 0x10000) && canRead(2)) {run.fontRef = u16();}          // typeface (bit 16)
     if ((mask & 0x200000) && canRead(2)) { /* oldEATypeface */ u16(); }   // bit 21
     if ((mask & 0x400000) && canRead(2)) { /* ansiTypeface */ u16(); }    // bit 22
     if ((mask & 0x800000) && canRead(2)) { /* symbolTypeface */ u16(); }  // bit 23
-    if ((mask & 0x20000) && canRead(2)) run.fontSize = u16();         // size (bit 17)
-    if ((mask & 0x40000) && canRead(4)) run.color = u32();            // color (bit 18)
+    if ((mask & 0x20000) && canRead(2)) {run.fontSize = u16();}         // size (bit 17)
+    if ((mask & 0x40000) && canRead(4)) {run.color = u32();}            // color (bit 18)
     if ((mask & 0x80000) && canRead(2)) { /* position */ u16(); }         // bit 19
     // pp10ext (bit 20)
     if ((mask & 0x100000) && canRead(2)) { /* pp10ext */ u16(); }
@@ -205,10 +205,41 @@ export function parseStyleTextPropAtom(record: PptRecord, textLength: number): S
     // pp11ext (bit 26)
     if ((mask & 0x4000000) && canRead(2)) { /* pp11ext */ u16(); }
 
-    characterRuns.push(run as unknown as CharacterStyleRun);
+    characterRuns.push(buildCharacterStyleRun(run));
   }
 
   return { paragraphRuns, characterRuns };
+}
+
+function buildParagraphStyleRun(run: Record<string, number | boolean | undefined>): ParagraphStyleRun {
+  return {
+    charCount: run.charCount as number,
+    ...(run.indent !== undefined ? { indent: run.indent as number } : {}),
+    ...(run.alignment !== undefined ? { alignment: run.alignment as number } : {}),
+    ...(run.bulletFlags !== undefined ? { bulletFlags: run.bulletFlags as number } : {}),
+    ...(run.bulletChar !== undefined ? { bulletChar: run.bulletChar as number } : {}),
+    ...(run.bulletFontRef !== undefined ? { bulletFontRef: run.bulletFontRef as number } : {}),
+    ...(run.bulletSize !== undefined ? { bulletSize: run.bulletSize as number } : {}),
+    ...(run.bulletColor !== undefined ? { bulletColor: run.bulletColor as number } : {}),
+    ...(run.lineSpacing !== undefined ? { lineSpacing: run.lineSpacing as number } : {}),
+    ...(run.spaceBefore !== undefined ? { spaceBefore: run.spaceBefore as number } : {}),
+    ...(run.spaceAfter !== undefined ? { spaceAfter: run.spaceAfter as number } : {}),
+    ...(run.leftMargin !== undefined ? { leftMargin: run.leftMargin as number } : {}),
+    ...(run.defaultTabSize !== undefined ? { defaultTabSize: run.defaultTabSize as number } : {}),
+  };
+}
+
+function buildCharacterStyleRun(run: Record<string, number | boolean | undefined>): CharacterStyleRun {
+  return {
+    charCount: run.charCount as number,
+    ...(run.bold !== undefined ? { bold: run.bold as boolean } : {}),
+    ...(run.italic !== undefined ? { italic: run.italic as boolean } : {}),
+    ...(run.underline !== undefined ? { underline: run.underline as boolean } : {}),
+    ...(run.strikethrough !== undefined ? { strikethrough: run.strikethrough as boolean } : {}),
+    ...(run.fontSize !== undefined ? { fontSize: run.fontSize as number } : {}),
+    ...(run.fontRef !== undefined ? { fontRef: run.fontRef as number } : {}),
+    ...(run.color !== undefined ? { color: run.color as number } : {}),
+  };
 }
 
 // =========================================================================
@@ -228,17 +259,22 @@ export function parseFontEntityAtom(record: PptRecord): FontEntityAtomData {
     throw new Error(`Expected FontEntityAtom (0x0FB7), got 0x${record.recType.toString(16)}`);
   }
   // Font name is stored as 64 bytes of UTF-16LE, null-terminated
-  const nameEnd = Math.min(64, record.data.byteLength);
-  let name = "";
-  for (let i = 0; i + 1 < nameEnd; i += 2) {
-    const code = record.data[i] | (record.data[i + 1] << 8);
-    if (code === 0) break;
-    name += String.fromCharCode(code);
-  }
+  const name = decodeFontName(record.data);
 
   const charset = record.data.byteLength > 64 ? record.data[64] : 0;
   const flags = record.data.byteLength > 65 ? record.data[65] : 0;
   const pitchAndFamily = record.data.byteLength > 66 ? record.data[66] : 0;
 
   return { name, charset, flags, pitchAndFamily };
+}
+
+function decodeFontName(data: Uint8Array): string {
+  const nameEnd = Math.min(64, data.byteLength);
+  const chars: string[] = [];
+  for (let i = 0; i + 1 < nameEnd; i += 2) {
+    const code = data[i] | (data[i + 1] << 8);
+    if (code === 0) {break;}
+    chars.push(String.fromCharCode(code));
+  }
+  return chars.join("");
 }

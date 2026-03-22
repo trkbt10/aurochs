@@ -6,7 +6,7 @@
  */
 
 import type { ShapeNode, GroupShapeNode } from "./types";
-import type { TransformResolver, AbsoluteBounds } from "./transform";
+import type { TransformResolver } from "./transform";
 import { isIdentifiable, isGroupShape, getShapeName } from "./types";
 import { getAbsoluteBounds } from "./transform";
 

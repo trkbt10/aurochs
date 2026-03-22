@@ -7,16 +7,19 @@ import { formatJson } from "./json-output";
 
 export type OutputMode = "json" | "pretty" | "mermaid";
 
+type OutputOptions<T> = {
+  readonly result: Result<T>;
+  readonly mode: OutputMode;
+  readonly prettyFormatter: (data: T) => string;
+  readonly mermaidFormatter?: (data: T) => string;
+};
+
 /**
  * Output a result to the console.
  * Handles JSON, pretty, and mermaid output modes.
  */
-export function output<T>(
-  result: Result<T>,
-  mode: OutputMode,
-  prettyFormatter: (data: T) => string,
-  mermaidFormatter?: (data: T) => string,
-): void {
+export function output<T>(options: OutputOptions<T>): void {
+  const { result, mode, prettyFormatter, mermaidFormatter } = options;
   if (mode === "json") {
     console.log(formatJson(result));
   } else {

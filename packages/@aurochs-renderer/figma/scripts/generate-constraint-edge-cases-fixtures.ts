@@ -39,7 +39,7 @@ const IOS_GRAY_BG: Color = { r: 0.949, g: 0.949, b: 0.969, a: 1 };
 // ID allocator
 // =============================================================================
 
-let nextID = 100;
+const nextID = 100;
 function id(): number {
   return nextID++;
 }
@@ -109,8 +109,8 @@ async function generate(): Promise<void> {
 
   // --- Canvas 1: Test Frames ---
 
-  let frameX = 50;
-  let frameY = 50;
+  const frameXRef = { value: 50 };
+  const frameYRef = { value: 50 };
 
   // 1. nested-stretch-grow: NestOuter enlarged → inner instance stretches → inner rect cascades
   const f_nested_grow = id();
@@ -118,7 +118,7 @@ async function generate(): Promise<void> {
     frameNode(f_nested_grow, canvas1)
       .name("nested-stretch-grow")
       .size(420, 300)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(WHITE)
       .clipsContent(true)
       .exportAsSVG()
@@ -132,7 +132,7 @@ async function generate(): Promise<void> {
       .build(),
   );
 
-  frameX += 450;
+  frameXRef.value += 450;
 
   // 2. nested-stretch-shrink: NestOuter shrunk
   const f_nested_shrink = id();
@@ -140,7 +140,7 @@ async function generate(): Promise<void> {
     frameNode(f_nested_shrink, canvas1)
       .name("nested-stretch-shrink")
       .size(220, 160)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(WHITE)
       .clipsContent(true)
       .exportAsSVG()
@@ -154,8 +154,8 @@ async function generate(): Promise<void> {
       .build(),
   );
 
-  frameX = 50;
-  frameY += 330;
+  frameXRef.value = 50;
+  frameYRef.value += 330;
 
   // 3. nested-same-size: NestOuter at original size (baseline)
   const f_nested_same = id();
@@ -163,7 +163,7 @@ async function generate(): Promise<void> {
     frameNode(f_nested_same, canvas1)
       .name("nested-same-size")
       .size(320, 220)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(WHITE)
       .clipsContent(true)
       .exportAsSVG()
@@ -236,8 +236,8 @@ async function generate(): Promise<void> {
 
   // --- Canvas 2: Test Frames ---
 
-  frameX = 50;
-  frameY = 50;
+  frameXRef.value = 50;
+  frameYRef.value = 50;
 
   // 4. variant-resize-default: VarBtnDefault at wider size (constraints applied)
   const f_var_resize_default = id();
@@ -245,7 +245,7 @@ async function generate(): Promise<void> {
     frameNode(f_var_resize_default, canvas2)
       .name("variant-resize-default")
       .size(220, 80)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(WHITE)
       .clipsContent(true)
       .exportAsSVG()
@@ -259,7 +259,7 @@ async function generate(): Promise<void> {
       .build(),
   );
 
-  frameX += 250;
+  frameXRef.value += 250;
 
   // 5. variant-resize-override: overriddenSymbolID to VarBtnActive + resize
   const f_var_resize_override = id();
@@ -267,7 +267,7 @@ async function generate(): Promise<void> {
     frameNode(f_var_resize_override, canvas2)
       .name("variant-resize-override")
       .size(220, 80)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(WHITE)
       .clipsContent(true)
       .exportAsSVG()
@@ -282,8 +282,8 @@ async function generate(): Promise<void> {
       .build(),
   );
 
-  frameX = 50;
-  frameY += 110;
+  frameXRef.value = 50;
+  frameYRef.value += 110;
 
   // 6. variant-resize-both: Side by side — default and overridden, both resized
   const f_var_both = id();
@@ -291,7 +291,7 @@ async function generate(): Promise<void> {
     frameNode(f_var_both, canvas2)
       .name("variant-resize-both")
       .size(440, 80)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(IOS_GRAY_BG)
       .clipsContent(true)
       .exportAsSVG()
@@ -380,8 +380,8 @@ async function generate(): Promise<void> {
 
   // --- Canvas 3: Test Frames ---
 
-  frameX = 50;
-  frameY = 50;
+  frameXRef.value = 50;
+  frameYRef.value = 50;
 
   // 7. ellipse-center-stretch-grow: EllipseBox enlarged
   const f_ell_grow = id();
@@ -389,7 +389,7 @@ async function generate(): Promise<void> {
     frameNode(f_ell_grow, canvas3)
       .name("ellipse-center-stretch-grow")
       .size(320, 200)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(IOS_GRAY_BG)
       .clipsContent(true)
       .exportAsSVG()
@@ -403,7 +403,7 @@ async function generate(): Promise<void> {
       .build(),
   );
 
-  frameX += 350;
+  frameXRef.value += 350;
 
   // 8. ellipse-center-stretch-shrink: EllipseBox shrunk
   const f_ell_shrink = id();
@@ -411,7 +411,7 @@ async function generate(): Promise<void> {
     frameNode(f_ell_shrink, canvas3)
       .name("ellipse-center-stretch-shrink")
       .size(180, 120)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(IOS_GRAY_BG)
       .clipsContent(true)
       .exportAsSVG()
@@ -425,8 +425,8 @@ async function generate(): Promise<void> {
       .build(),
   );
 
-  frameX = 50;
-  frameY += 230;
+  frameXRef.value = 50;
+  frameYRef.value += 230;
 
   // 9. ellipse-scale: EllipseScaleBox at 1.5x
   const f_ell_scale = id();
@@ -434,7 +434,7 @@ async function generate(): Promise<void> {
     frameNode(f_ell_scale, canvas3)
       .name("ellipse-scale")
       .size(320, 200)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(WHITE)
       .clipsContent(true)
       .exportAsSVG()
@@ -448,7 +448,7 @@ async function generate(): Promise<void> {
       .build(),
   );
 
-  frameX += 350;
+  frameXRef.value += 350;
 
   // 10. ellipse-same-size: EllipseBox at original size (baseline)
   const f_ell_same = id();
@@ -456,7 +456,7 @@ async function generate(): Promise<void> {
     frameNode(f_ell_same, canvas3)
       .name("ellipse-same-size")
       .size(220, 140)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(WHITE)
       .clipsContent(true)
       .exportAsSVG()
@@ -566,8 +566,8 @@ async function generate(): Promise<void> {
 
   // --- Canvas 4: Test Frames ---
 
-  frameX = 50;
-  frameY = 50;
+  frameXRef.value = 50;
+  frameYRef.value = 50;
 
   // 11. asym-stretch-grow: AsymBox grown
   const f_asym_grow = id();
@@ -575,7 +575,7 @@ async function generate(): Promise<void> {
     frameNode(f_asym_grow, canvas4)
       .name("asym-stretch-grow")
       .size(340, 220)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(IOS_GRAY_BG)
       .clipsContent(true)
       .exportAsSVG()
@@ -589,7 +589,7 @@ async function generate(): Promise<void> {
       .build(),
   );
 
-  frameX += 370;
+  frameXRef.value += 370;
 
   // 12. asym-stretch-shrink: AsymBox shrunk
   const f_asym_shrink = id();
@@ -597,7 +597,7 @@ async function generate(): Promise<void> {
     frameNode(f_asym_shrink, canvas4)
       .name("asym-stretch-shrink")
       .size(140, 100)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(IOS_GRAY_BG)
       .clipsContent(true)
       .exportAsSVG()
@@ -612,8 +612,8 @@ async function generate(): Promise<void> {
   );
 
   // Row 2
-  frameX = 50;
-  frameY += 250;
+  frameXRef.value = 50;
+  frameYRef.value += 250;
 
   // 13. asym-wide-grow: AsymBoxWide grown
   const f_wide_grow = id();
@@ -621,7 +621,7 @@ async function generate(): Promise<void> {
     frameNode(f_wide_grow, canvas4)
       .name("asym-wide-grow")
       .size(420, 160)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(WHITE)
       .clipsContent(true)
       .exportAsSVG()
@@ -635,7 +635,7 @@ async function generate(): Promise<void> {
       .build(),
   );
 
-  frameX += 450;
+  frameXRef.value += 450;
 
   // 14. asym-wide-shrink: AsymBoxWide shrunk
   const f_wide_shrink = id();
@@ -643,7 +643,7 @@ async function generate(): Promise<void> {
     frameNode(f_wide_shrink, canvas4)
       .name("asym-wide-shrink")
       .size(220, 80)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(WHITE)
       .clipsContent(true)
       .exportAsSVG()
@@ -658,8 +658,8 @@ async function generate(): Promise<void> {
   );
 
   // Row 3
-  frameX = 50;
-  frameY += 190;
+  frameXRef.value = 50;
+  frameYRef.value += 190;
 
   // 15. asym-multi-grow: AsymMultiChild grown (two children with inverse margins)
   const f_multi_grow = id();
@@ -667,7 +667,7 @@ async function generate(): Promise<void> {
     frameNode(f_multi_grow, canvas4)
       .name("asym-multi-grow")
       .size(380, 200)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(IOS_GRAY_BG)
       .clipsContent(true)
       .exportAsSVG()
@@ -681,7 +681,7 @@ async function generate(): Promise<void> {
       .build(),
   );
 
-  frameX += 410;
+  frameXRef.value += 410;
 
   // 16. asym-multi-shrink: AsymMultiChild shrunk
   const f_multi_shrink = id();
@@ -689,7 +689,7 @@ async function generate(): Promise<void> {
     frameNode(f_multi_shrink, canvas4)
       .name("asym-multi-shrink")
       .size(200, 120)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(IOS_GRAY_BG)
       .clipsContent(true)
       .exportAsSVG()
@@ -704,8 +704,8 @@ async function generate(): Promise<void> {
   );
 
   // Row 4
-  frameX = 50;
-  frameY += 230;
+  frameXRef.value = 50;
+  frameYRef.value += 230;
 
   // 17. asym-same-size: AsymBox at original size (baseline)
   const f_asym_same = id();
@@ -713,7 +713,7 @@ async function generate(): Promise<void> {
     frameNode(f_asym_same, canvas4)
       .name("asym-same-size")
       .size(220, 140)
-      .position(frameX, frameY)
+      .position(frameXRef.value, frameYRef.value)
       .background(WHITE)
       .clipsContent(true)
       .exportAsSVG()

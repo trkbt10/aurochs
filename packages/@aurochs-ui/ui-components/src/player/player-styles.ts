@@ -9,6 +9,22 @@ import { colorTokens, spacingTokens, radiusTokens, shadowTokens } from "../desig
 import type { PlayerVariant, MainButtonMode, PlayerState } from "./types";
 
 // =============================================================================
+// Helpers
+// =============================================================================
+
+/** Get secondary color for the variant */
+function variantSecondaryColor(variant: PlayerVariant): string {
+  if (variant === "floating") {return colorTokens.overlay.lightTextSecondary;}
+  return colorTokens.text.secondary;
+}
+
+/** Get tertiary color for the variant */
+function variantTertiaryColor(variant: PlayerVariant): string {
+  if (variant === "floating") {return colorTokens.overlay.lightTextSecondary;}
+  return colorTokens.text.tertiary;
+}
+
+// =============================================================================
 // Constants
 // =============================================================================
 
@@ -54,6 +70,17 @@ const panelContainerStyle: CSSProperties = {
   borderRadius: radiusTokens.md,
 };
 
+
+
+
+
+
+
+
+
+
+
+/** Get Container style based on player variant */
 export function getContainerStyle(variant: PlayerVariant): CSSProperties {
   switch (variant) {
     case "floating":
@@ -117,10 +144,32 @@ const lightActionButtonStyle: CSSProperties = {
   color: colorTokens.text.primary,
 };
 
+
+
+
+
+
+
+
+
+
+
+/** Get PlayButton style based on player variant */
 export function getPlayButtonStyle(variant: PlayerVariant): CSSProperties {
   return variant === "floating" ? floatingPlayButtonStyle : lightPlayButtonStyle;
 }
 
+
+
+
+
+
+
+
+
+
+
+/** Get ActionButton style based on player variant */
 export function getActionButtonStyle(variant: PlayerVariant): CSSProperties {
   return variant === "floating" ? floatingActionButtonStyle : lightActionButtonStyle;
 }
@@ -155,6 +204,17 @@ const lightDisplayStyle: CSSProperties = {
   minWidth: 0,
 };
 
+
+
+
+
+
+
+
+
+
+
+/** Get Display style based on player variant */
 export function getDisplayStyle(variant: PlayerVariant): CSSProperties {
   return variant === "floating" ? floatingDisplayStyle : lightDisplayStyle;
 }
@@ -173,10 +233,32 @@ const lightTextStyle: CSSProperties = {
   minWidth: 0,
 };
 
+
+
+
+
+
+
+
+
+
+
+/** Get TextContainer style based on player variant */
 export function getTextContainerStyle(variant: PlayerVariant): CSSProperties {
   return variant === "floating" ? floatingTextStyle : lightTextStyle;
 }
 
+
+
+
+
+
+
+
+
+
+
+/** Get Title style based on player variant */
 export function getTitleStyle(variant: PlayerVariant): CSSProperties {
   const base: CSSProperties = {
     fontSize: "13px",
@@ -194,6 +276,17 @@ export function getTitleStyle(variant: PlayerVariant): CSSProperties {
   };
 }
 
+
+
+
+
+
+
+
+
+
+
+/** Get Subtitle style based on player variant */
 export function getSubtitleStyle(variant: PlayerVariant): CSSProperties {
   const base: CSSProperties = {
     fontSize: "11px",
@@ -205,15 +298,20 @@ export function getSubtitleStyle(variant: PlayerVariant): CSSProperties {
     whiteSpace: "nowrap",
   };
 
-  return {
-    ...base,
-    color:
-      variant === "floating"
-        ? colorTokens.overlay.lightTextSecondary
-        : colorTokens.text.secondary,
-  };
+  return { ...base, color: variantSecondaryColor(variant) };
 }
 
+
+
+
+
+
+
+
+
+
+
+/** Get Status style based on player variant */
 export function getStatusStyle(variant: PlayerVariant): CSSProperties {
   const base: CSSProperties = {
     fontSize: "12px",
@@ -224,13 +322,7 @@ export function getStatusStyle(variant: PlayerVariant): CSSProperties {
     flexShrink: 0,
   };
 
-  return {
-    ...base,
-    color:
-      variant === "floating"
-        ? colorTokens.overlay.lightTextSecondary
-        : colorTokens.text.tertiary,
-  };
+  return { ...base, color: variantTertiaryColor(variant) };
 }
 
 // =============================================================================
@@ -248,6 +340,17 @@ export const thumbnailContainerStyle: CSSProperties = {
   justifyContent: "center",
 };
 
+
+
+
+
+
+
+
+
+
+
+/** Get ThumbnailBackground style based on player variant */
 export function getThumbnailBackgroundStyle(variant: PlayerVariant): CSSProperties {
   return {
     background:
@@ -272,7 +375,7 @@ export const controlsContainerStyle: CSSProperties = {
 /**
  * Get color style for main button based on mode and state.
  */
-export function getMainButtonColorStyle(mode: MainButtonMode, state: PlayerState): CSSProperties {
+export function getMainButtonColorStyle(mode: MainButtonMode, _state: PlayerState): CSSProperties {
   switch (mode) {
     case "play":
     case "resume":

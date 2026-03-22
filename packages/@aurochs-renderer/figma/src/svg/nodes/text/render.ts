@@ -17,7 +17,7 @@ import type { FontSpec } from "../../../text/measure/types";
 /**
  * Shared measurement provider instance
  */
-let measurementProvider: ReturnType<typeof createMeasurementProvider> | null = null;
+const measurementProvider: ReturnType<typeof createMeasurementProvider> | null = null;
 
 function getMeasurementProvider() {
   if (!measurementProvider) {
@@ -72,12 +72,10 @@ function getTextLines(props: ExtractedTextProps): readonly string[] {
     }
 
     // Measure character widths
-    const charWidths = provider.measureCharWidths
-      ? provider.measureCharWidths(explicitLine, fontSpec)
-      : estimateCharWidths(explicitLine, props.fontSize, props.letterSpacing);
+    const charWidths = measureOrEstimateCharWidths(provider, { line: explicitLine, fontSpec, fontSize: props.fontSize, letterSpacing: props.letterSpacing });
 
     // Break line if needed
-    const brokenLines = breakLines(explicitLine, charWidths, maxWidth, "auto");
+    const brokenLines = breakLines({ text: explicitLine, charWidths, maxWidth, mode: "auto" });
 
     for (const line of brokenLines) {
       allLines.push(line.text);
@@ -85,6 +83,17 @@ function getTextLines(props: ExtractedTextProps): readonly string[] {
   }
 
   return allLines;
+}
+
+/** Measure character widths using provider or fall back to estimation */
+function measureOrEstimateCharWidths(
+  provider: ReturnType<typeof createMeasurementProvider>,
+  { line, fontSpec, fontSize, letterSpacing }: { line: string; fontSpec: FontSpec; fontSize: number; letterSpacing?: number; }
+): readonly number[] {
+  if (provider.measureCharWidths) {
+    return provider.measureCharWidths(line, fontSpec);
+  }
+  return estimateCharWidths(line, fontSize, letterSpacing);
 }
 
 /**
@@ -119,24 +128,21 @@ export function renderTextNode(node: FigNode, _ctx: FigSvgRenderContext): SvgStr
 
   // Get lines (with text wrapping applied if needed)
   const lines = getTextLines(props);
-  const textAttrs = buildTextAttrs(props, fillColor, fillOpacity, lines.length);
+  const textAttrs = buildTextAttrs({ props, fillColor, fillOpacity, lineCount: lines.length });
   const baseY = textAttrs.y as number;
 
   if (lines.length === 1) {
-    return renderSingleLine(lines[0], textAttrs, transformStr, props.opacity);
+    return renderSingleLine({ content: lines[0], textAttrs, transformStr, opacity: props.opacity });
   }
 
-  return renderMultiLine(lines, textAttrs, baseY, props.lineHeight, transformStr, props.opacity);
+  return renderMultiLine({ lines, textAttrs, baseY, lineHeight: props.lineHeight, transformStr, opacity: props.opacity });
 }
 
 /**
  * Render single-line text
  */
 function renderSingleLine(
-  content: string,
-  textAttrs: Parameters<typeof text>[0],
-  transformStr: string | undefined,
-  opacity: number,
+  { content, textAttrs, transformStr, opacity }: { content: string; textAttrs: Parameters<typeof text>[0]; transformStr: string | undefined; opacity: number; }
 ): SvgString {
   const textEl = text(textAttrs, content);
 
@@ -157,12 +163,7 @@ function renderSingleLine(
  * Render multi-line text
  */
 function renderMultiLine(
-  lines: readonly string[],
-  textAttrs: Parameters<typeof text>[0],
-  baseY: number,
-  lineHeight: number,
-  transformStr: string | undefined,
-  opacity: number,
+  { lines, textAttrs, baseY, lineHeight, transformStr, opacity }: { lines: readonly string[]; textAttrs: Parameters<typeof text>[0]; baseY: number; lineHeight: number; transformStr: string | undefined; opacity: number; }
 ): SvgString {
   const textElements: SvgString[] = lines.map((lineText, i) =>
     text(

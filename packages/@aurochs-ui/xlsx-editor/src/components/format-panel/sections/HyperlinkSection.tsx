@@ -123,9 +123,9 @@ export function HyperlinkSection({
     }
   }, [hyperlink]);
 
-  return (
-    <OptionalPropertySection title="Hyperlink" defaultExpanded={hasHyperlink}>
-      {isEditing ? (
+  const renderContent = () => {
+    if (isEditing) {
+      return (
         <>
           <FieldGroup label="Target Mode">
             <Select
@@ -187,7 +187,10 @@ export function HyperlinkSection({
             )}
           </div>
         </>
-      ) : hasHyperlink ? (
+      );
+    }
+    if (hasHyperlink) {
+      return (
         <>
           <div style={linkDisplayStyle}>
             <span
@@ -217,14 +220,21 @@ export function HyperlinkSection({
             </Button>
           </div>
         </>
-      ) : (
-        <>
-          <div style={noHyperlinkStyle}>No hyperlink on this cell</div>
-          <Button size="sm" disabled={disabled} onClick={handleStartEdit}>
-            Add Hyperlink
-          </Button>
-        </>
-      )}
+      );
+    }
+    return (
+      <>
+        <div style={noHyperlinkStyle}>No hyperlink on this cell</div>
+        <Button size="sm" disabled={disabled} onClick={handleStartEdit}>
+          Add Hyperlink
+        </Button>
+      </>
+    );
+  };
+
+  return (
+    <OptionalPropertySection title="Hyperlink" defaultExpanded={hasHyperlink}>
+      {renderContent()}
     </OptionalPropertySection>
   );
 }

@@ -10,6 +10,12 @@ import type { ListIndentGroupProps } from "./types";
 const iconSize = TOOLBAR_BUTTON_ICON_SIZE.sm.icon;
 const strokeWidth = iconTokens.strokeWidth;
 
+
+
+
+
+
+/** List type and indent level control button group */
 export function ListIndentGroup({ bullet, numbered, onIncreaseIndent, onDecreaseIndent, disabled }: ListIndentGroupProps) {
   const isDisabled = disabled ?? false;
   return (

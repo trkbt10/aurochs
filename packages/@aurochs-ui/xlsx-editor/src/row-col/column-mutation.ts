@@ -154,15 +154,15 @@ export function groupColumns(worksheet: XlsxWorksheet, startCol: ColIndex, count
   const start = toColNumber(startCol);
   const indices = Array.from({ length: count }, (_, i) => colIdx(start + i));
 
-  let columns = worksheet.columns;
+  const columnsRef = { value: worksheet.columns };
   for (const col of indices) {
-    const currentDef = columns?.find((c) => c.min <= col && c.max >= col);
+    const currentDef = columnsRef.value?.find((c) => c.min <= col && c.max >= col);
     const currentLevel = currentDef?.outlineLevel ?? 0;
     const newLevel = Math.min(currentLevel + 1, 7);
-    columns = applyColumnOverride(columns, col, { outlineLevel: newLevel });
+    columnsRef.value = applyColumnOverride(columnsRef.value, col, { outlineLevel: newLevel });
   }
 
-  return { ...worksheet, columns };
+  return { ...worksheet, columns: columnsRef.value };
 }
 
 /**
@@ -179,15 +179,15 @@ export function ungroupColumns(worksheet: XlsxWorksheet, startCol: ColIndex, cou
   const start = toColNumber(startCol);
   const indices = Array.from({ length: count }, (_, i) => colIdx(start + i));
 
-  let columns = worksheet.columns;
+  const columnsRef = { value: worksheet.columns };
   for (const col of indices) {
-    const currentDef = columns?.find((c) => c.min <= col && c.max >= col);
+    const currentDef = columnsRef.value?.find((c) => c.min <= col && c.max >= col);
     const currentLevel = currentDef?.outlineLevel ?? 0;
     const newLevel = Math.max(currentLevel - 1, 0);
-    columns = applyColumnOverride(columns, col, { outlineLevel: newLevel === 0 ? undefined : newLevel });
+    columnsRef.value = applyColumnOverride(columnsRef.value, col, { outlineLevel: newLevel === 0 ? undefined : newLevel });
   }
 
-  return { ...worksheet, columns };
+  return { ...worksheet, columns: columnsRef.value };
 }
 
 /**

@@ -32,12 +32,13 @@ export function addDefinedName(
 /**
  * Update a defined name
  */
-export function updateDefinedName(
-  workbook: XlsxWorkbook,
-  oldName: string,
-  oldLocalSheetId: number | undefined,
-  updatedName: XlsxDefinedName,
-): XlsxWorkbook {
+export function updateDefinedName(params: {
+  workbook: XlsxWorkbook;
+  oldName: string;
+  oldLocalSheetId: number | undefined;
+  updatedName: XlsxDefinedName;
+}): XlsxWorkbook {
+  const { workbook, oldName, oldLocalSheetId, updatedName } = params;
   const existingNames = workbook.definedNames ?? [];
 
   // If renaming, check for duplicates

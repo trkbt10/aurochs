@@ -2,7 +2,7 @@
  * @file Procedure Range Tests
  */
 
-import { describe, expect, it } from "vitest";
+// Test globals (describe/it/expect) provided by vitest runner
 import { findProcedureRanges, getProcedureAtLine } from "./procedure-range";
 
 describe("findProcedureRanges", () => {

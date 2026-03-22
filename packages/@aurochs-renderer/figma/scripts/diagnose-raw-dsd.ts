@@ -1,3 +1,4 @@
+/** @file Raw DSD diagnostic script */
 /**
  * Dump RAW derivedSymbolData entries for a specific INSTANCE.
  * Shows the original override GUIDs and their properties before translation.
@@ -53,10 +54,10 @@ async function main() {
   // Find System canvas
   const canvases: FigNode[] = [];
   function findCanvases(node: FigNode) {
-    if (getNodeType(node) === "CANVAS") canvases.push(node);
-    for (const c of node.children ?? []) findCanvases(c);
+    if (getNodeType(node) === "CANVAS") {canvases.push(node);}
+    for (const c of node.children ?? []) {findCanvases(c);}
   }
-  for (const r of roots) findCanvases(r);
+  for (const r of roots) {findCanvases(r);}
 
   const systemCanvas = canvases.find((c) => c.name?.includes("System"));
   if (!systemCanvas) {
@@ -91,12 +92,12 @@ async function main() {
       const firstGuid = entry.guidPath?.guids?.[0];
       if (firstGuid) {
         const s = firstGuid.sessionID;
-        let arr = bySession.get(s);
-        if (!arr) {
-          arr = [];
-          bySession.set(s, arr);
+        const arrRef = { value: bySession.get(s) };
+        if (!arrRef.value) {
+          arrRef.value = [];
+          bySession.set(s, arrRef.value);
         }
-        arr.push(entry);
+        arrRef.value.push(entry);
       }
     }
 

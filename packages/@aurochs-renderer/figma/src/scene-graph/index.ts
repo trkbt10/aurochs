@@ -60,4 +60,15 @@ export {
 } from "./diff";
 
 // Converters
-export * as convert from "./convert";
+export {
+  figColorToSceneColor,
+  convertPaintToFill,
+  convertPaintsToFills,
+  convertStrokeToSceneStroke,
+  convertEffectsToScene,
+  parseSvgPathD,
+  decodeGeometryToContours,
+  convertVectorPathsToContours,
+  convertTextNode,
+  type TextConversionResult,
+} from "./convert";

@@ -8,6 +8,7 @@
 import { inflateRaw } from "pako";
 import { decompress as zstdDecompress } from "fzstd";
 import { unzipSync } from "fflate";
+import { readFileSync } from "node:fs";
 
 export type ChunkComparison = {
   name: string;
@@ -85,46 +86,45 @@ function decompressChunk(data: Uint8Array): Uint8Array {
 }
 
 function getCompressionType(data: Uint8Array): string {
-  if (isZstd(data)) return "zstd";
+  if (isZstd(data)) {return "zstd";}
   return "deflate-raw";
 }
 
 function readVarUint(data: Uint8Array, offset: number): [number, number] {
-  let value = 0;
-  let shift = 0;
-  let pos = offset;
+  const state = { value: 0, shift: 0, pos: offset };
 
-  while (pos < data.length) {
-    const byte = data[pos];
-    value |= (byte & 0x7f) << shift;
-    pos++;
-    if ((byte & 0x80) === 0) break;
-    shift += 7;
+  while (state.pos < data.length) {
+    const byte = data[state.pos];
+    state.value |= (byte & 0x7f) << state.shift;
+    state.pos++;
+    if ((byte & 0x80) === 0) {break;}
+    state.shift += 7;
   }
 
-  return [value, pos];
+  return [state.value, state.pos];
 }
 
 function extractMessageFieldOrder(data: Uint8Array): number[] {
   const fields: number[] = [];
-  let offset = 0;
+  const cursor = { value: 0 };
 
   // Read field IDs until we hit 0 or run out of data
-  for (let i = 0; i < 50 && offset < data.length; i++) {
-    const [fieldId, newOffset] = readVarUint(data, offset);
-    if (fieldId === 0) break;
+  for (const _ of Array(50).keys()) {
+    if (cursor.value >= data.length) {break;}
+    const [fieldId, newOffset] = readVarUint(data, cursor.value);
+    if (fieldId === 0) {break;}
     fields.push(fieldId);
-    offset = newOffset;
+    cursor.value = newOffset;
 
     // Skip field value (we don't know the exact type, but we can skip bytes)
     // This is a heuristic - we look for the next valid field ID pattern
-    while (offset < data.length) {
-      const nextByte = data[offset];
+    while (cursor.value < data.length) {
+      const nextByte = data[cursor.value];
       // If this looks like a small field ID (1-20), it might be the next field
-      if (nextByte > 0 && nextByte < 30 && (data[offset + 1] ?? 0) < 0x80) {
+      if (nextByte > 0 && nextByte < 30 && (data[cursor.value + 1] ?? 0) < 0x80) {
         break;
       }
-      offset++;
+      cursor.value++;
     }
   }
 
@@ -136,16 +136,15 @@ function compareBytes(
   generated: Uint8Array,
   maxSamples: number = 10
 ): { firstDiff: number | null; count: number; samples: Array<{ offset: number; working: number; generated: number }> } {
-  let firstDiff: number | null = null;
-  let count = 0;
+  const result = { firstDiff: null as number | null, count: 0 };
   const samples: Array<{ offset: number; working: number; generated: number }> = [];
 
   const minLen = Math.min(working.length, generated.length);
 
-  for (let i = 0; i < minLen; i++) {
+  for (const i of Array.from({ length: minLen }, (_, k) => k)) {
     if (working[i] !== generated[i]) {
-      if (firstDiff === null) firstDiff = i;
-      count++;
+      if (result.firstDiff === null) {result.firstDiff = i;}
+      result.count++;
       if (samples.length < maxSamples) {
         samples.push({ offset: i, working: working[i], generated: generated[i] });
       }
@@ -153,9 +152,26 @@ function compareBytes(
   }
 
   // Count extra bytes in longer array as differences
-  count += Math.abs(working.length - generated.length);
+  result.count += Math.abs(working.length - generated.length);
 
-  return { firstDiff, count, samples };
+  return { firstDiff: result.firstDiff, count: result.count, samples };
+}
+
+/**
+ * Safely decompress a pair of chunks, pushing error to issues on failure
+ */
+function safeDecompressPair(params: {
+  working: Uint8Array;
+  generated: Uint8Array;
+  label: string;
+  issues: string[];
+}): { working: Uint8Array; generated: Uint8Array } {
+  try {
+    return { working: decompressChunk(params.working), generated: decompressChunk(params.generated) };
+  } catch (error) {
+    params.issues.push(`${params.label} decompression failed: ${error}`);
+    return { working: new Uint8Array(0), generated: new Uint8Array(0) };
+  }
 }
 
 /**
@@ -199,17 +215,9 @@ export async function compareFigFiles(
   const wSchemaCompressed = workingCanvas.slice(16, 16 + wSchemaSize);
   const gSchemaCompressed = generatedCanvas.slice(16, 16 + gSchemaSize);
 
-  let wSchemaDecompressed: Uint8Array;
-  let gSchemaDecompressed: Uint8Array;
-
-  try {
-    wSchemaDecompressed = decompressChunk(wSchemaCompressed);
-    gSchemaDecompressed = decompressChunk(gSchemaCompressed);
-  } catch (e) {
-    issues.push(`Schema decompression failed: ${e}`);
-    wSchemaDecompressed = new Uint8Array(0);
-    gSchemaDecompressed = new Uint8Array(0);
-  }
+  const schemaDecomp = safeDecompressPair({ working: wSchemaCompressed, generated: gSchemaCompressed, label: "Schema", issues });
+  const wSchemaDecompressed = schemaDecomp.working;
+  const gSchemaDecompressed = schemaDecomp.generated;
 
   const schemaDiff = compareBytes(wSchemaDecompressed, gSchemaDecompressed);
 
@@ -248,17 +256,9 @@ export async function compareFigFiles(
     issues.push(`Message compression mismatch: working='${wMsgCompression}', generated='${gMsgCompression}'`);
   }
 
-  let wMsgDecompressed: Uint8Array;
-  let gMsgDecompressed: Uint8Array;
-
-  try {
-    wMsgDecompressed = decompressChunk(wMsgCompressed);
-    gMsgDecompressed = decompressChunk(gMsgCompressed);
-  } catch (e) {
-    issues.push(`Message decompression failed: ${e}`);
-    wMsgDecompressed = new Uint8Array(0);
-    gMsgDecompressed = new Uint8Array(0);
-  }
+  const msgDecomp = safeDecompressPair({ working: wMsgCompressed, generated: gMsgCompressed, label: "Message", issues });
+  const wMsgDecompressed = msgDecomp.working;
+  const gMsgDecompressed = msgDecomp.generated;
 
   const messageDiff = compareBytes(wMsgDecompressed, gMsgDecompressed);
 
@@ -312,10 +312,8 @@ export async function runComparison(
   workingPath: string,
   generatedPath: string
 ): Promise<ComparisonResult> {
-  const fs = await import("node:fs");
-
-  const workingData = new Uint8Array(fs.readFileSync(workingPath));
-  const generatedData = new Uint8Array(fs.readFileSync(generatedPath));
+  const workingData = new Uint8Array(readFileSync(workingPath));
+  const generatedData = new Uint8Array(readFileSync(generatedPath));
 
   const result = await compareFigFiles(workingData, generatedData);
 

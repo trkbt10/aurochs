@@ -2,62 +2,67 @@
  * @file Vector node builder
  */
 
-import { BaseShapeBuilder } from "./base";
+import { createBaseShapeState, attachBaseShapeMethods, buildBaseData, type BaseShapeBuilderMethods } from "./base";
 import type { VectorNodeData } from "./types";
 import { SHAPE_NODE_TYPES, WINDING_RULE_VALUES, type WindingRule } from "../../constants";
 
-export class VectorNodeBuilder extends BaseShapeBuilder<VectorNodeData> {
-  private _windingRule: WindingRule;
-  private _vectorNetworkBlob?: number;
+/** Vector node builder instance */
+export type VectorNodeBuilder = BaseShapeBuilderMethods<VectorNodeBuilder> & {
+  windingRule: (rule: WindingRule) => VectorNodeBuilder;
+  vectorNetworkBlob: (blobIndex: number) => VectorNodeBuilder;
+  build: () => VectorNodeData;
+};
 
-  constructor(localID: number, parentID: number) {
-    super(localID, parentID);
-    this._name = "Vector";
-    this._windingRule = "NONZERO";
-    // Default fill
-    this._fillColor = { r: 0.5, g: 0.5, b: 0.5, a: 1 };
+/** Build vector data from extra state */
+function buildVectorData(
+  extra: { vectorNetworkBlob?: number },
+  state: { width: number; height: number },
+): VectorNodeData["vectorData"] {
+  if (extra.vectorNetworkBlob === undefined) {
+    return undefined;
   }
+  return {
+    vectorNetworkBlob: extra.vectorNetworkBlob,
+    normalizedSize: { x: state.width, y: state.height },
+  };
+}
 
-  /**
-   * Set winding rule for path filling
-   */
-  windingRule(rule: WindingRule): this {
-    this._windingRule = rule;
-    return this;
-  }
+/** Create a vector node builder */
+function createVectorNodeBuilder(localID: number, parentID: number): VectorNodeBuilder {
+  const state = createBaseShapeState(localID, parentID);
+  state.name = "Vector";
+  state.fillColor = { r: 0.5, g: 0.5, b: 0.5, a: 1 };
+  const extra = { windingRule: "NONZERO" as WindingRule, vectorNetworkBlob: undefined as number | undefined };
 
-  /**
-   * Set vector network blob reference
-   * (Used for complex vector data stored in blobs)
-   */
-  vectorNetworkBlob(blobIndex: number): this {
-    this._vectorNetworkBlob = blobIndex;
-    return this;
-  }
+  const builder = {} as VectorNodeBuilder;
+  Object.assign(builder, attachBaseShapeMethods(state, builder), {
+    /** Set winding rule for path filling */
+    windingRule(rule: WindingRule) {
+      extra.windingRule = rule;
+      return builder;
+    },
+    /** Set vector network blob reference */
+    vectorNetworkBlob(blobIndex: number) {
+      extra.vectorNetworkBlob = blobIndex;
+      return builder;
+    },
+    build(): VectorNodeData {
+      const vectorData = buildVectorData(extra, state);
+      return {
+        ...buildBaseData(state),
+        nodeType: SHAPE_NODE_TYPES.VECTOR,
+        vectorData,
+        handleMirroring: { value: WINDING_RULE_VALUES[extra.windingRule], name: extra.windingRule },
+      };
+    },
+  });
 
-  private buildVectorData(): VectorNodeData["vectorData"] {
-    if (this._vectorNetworkBlob === undefined) {
-      return undefined;
-    }
-    return {
-      vectorNetworkBlob: this._vectorNetworkBlob,
-      normalizedSize: { x: this._width, y: this._height },
-    };
-  }
-
-  build(): VectorNodeData {
-    return {
-      ...this.buildBaseData(),
-      nodeType: SHAPE_NODE_TYPES.VECTOR,
-      vectorData: this.buildVectorData(),
-      handleMirroring: { value: WINDING_RULE_VALUES[this._windingRule], name: this._windingRule },
-    };
-  }
+  return builder;
 }
 
 /**
  * Create a new Vector node builder
  */
 export function vectorNode(localID: number, parentID: number): VectorNodeBuilder {
-  return new VectorNodeBuilder(localID, parentID);
+  return createVectorNodeBuilder(localID, parentID);
 }

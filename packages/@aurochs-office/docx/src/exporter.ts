@@ -28,7 +28,7 @@ import {
   type ContentTypeEntry,
   type ParsedContentTypes,
 } from "@aurochs-office/opc";
-import type { DocxDocument, DocxHeader, DocxFooter } from "./domain/document";
+import type { DocxDocument } from "./domain/document";
 import type { DocxRelId } from "./domain/types";
 import { serializeDocument } from "./serializer/document";
 import { serializeStyles } from "./serializer/styles";
@@ -58,9 +58,24 @@ const IMAGE_CONTENT_TYPES: Record<string, string> = {
 };
 
 /**
- * Options for content types generation.
+ * Resolve the document content type based on source content types.
+ * Preserves macroEnabled content type if the source had it.
  */
-type GenerateContentTypesOptions = {
+function resolveDocumentContentType(sourceContentTypes?: ParsedContentTypes): string {
+  const sourceDocumentContentType = sourceContentTypes?.overrides.get("/word/document.xml");
+  if (sourceDocumentContentType === CONTENT_TYPES.documentMacroEnabled) {
+    return CONTENT_TYPES.documentMacroEnabled;
+  }
+  return CONTENT_TYPES.document;
+}
+
+/**
+ * Parameters for content types generation.
+ */
+type GenerateContentTypesParams = {
+  readonly document: DocxDocument;
+  readonly headerFooterPaths: { headers: string[]; footers: string[] };
+  readonly media?: readonly MediaFile[];
   /**
    * Parsed content types from source package.
    * Used to preserve macro-related content types.
@@ -68,21 +83,12 @@ type GenerateContentTypesOptions = {
   readonly sourceContentTypes?: ParsedContentTypes;
 };
 
-function generateContentTypes(
-  document: DocxDocument,
-  headerFooterPaths: { headers: string[]; footers: string[] },
-  media?: readonly MediaFile[],
-  options: GenerateContentTypesOptions = {},
-): XmlElement {
-  const { sourceContentTypes } = options;
+function generateContentTypes(params: GenerateContentTypesParams): XmlElement {
+  const { document, headerFooterPaths, media, sourceContentTypes } = params;
 
   // Determine main document content type
   // Preserve macroEnabled if source had it
-  const sourceDocumentContentType = sourceContentTypes?.overrides.get("/word/document.xml");
-  const isMacroEnabled = sourceDocumentContentType === CONTENT_TYPES.documentMacroEnabled;
-  const documentContentType = isMacroEnabled
-    ? CONTENT_TYPES.documentMacroEnabled
-    : CONTENT_TYPES.document;
+  const documentContentType = resolveDocumentContentType(sourceContentTypes);
 
   const entries: ContentTypeEntry[] = [
     // Standard defaults (rels, xml)
@@ -175,22 +181,25 @@ function generateRootRels(): XmlElement {
 // =============================================================================
 
 /**
- * Options for document relationships generation.
+ * Relationship types that should be preserved from source (macro-related).
  */
-type GenerateDocumentRelsOptions = {
+const PRESERVE_RELATIONSHIP_TYPES = new Set([
+  VBA_PROJECT_RELATIONSHIP_TYPE,
+]);
+
+/**
+ * Parameters for document relationships generation.
+ */
+type GenerateDocumentRelsParams = {
+  readonly document: DocxDocument;
+  readonly headerFooterRels: { headers: Map<DocxRelId, string>; footers: Map<DocxRelId, string> };
+  readonly media?: readonly MediaFile[];
   /**
    * Source package to read existing relationships from.
    * Used to preserve macro-related relationships (vbaProject).
    */
   readonly sourcePackage?: ZipPackage;
 };
-
-/**
- * Relationship types that should be preserved from source (macro-related).
- */
-const PRESERVE_RELATIONSHIP_TYPES = new Set([
-  VBA_PROJECT_RELATIONSHIP_TYPE,
-]);
 
 /**
  * Generate word/_rels/document.xml.rels element.
@@ -201,13 +210,8 @@ const PRESERVE_RELATIONSHIP_TYPES = new Set([
  * @see ECMA-376 Part 2, Section 9.2 (Relationships)
  * @see MS-OFFMACRO2 Section 2.2.1.4 (vbaProject relationship)
  */
-function generateDocumentRels(
-  document: DocxDocument,
-  headerFooterRels: { headers: Map<DocxRelId, string>; footers: Map<DocxRelId, string> },
-  media?: readonly MediaFile[],
-  options: GenerateDocumentRelsOptions = {},
-): XmlElement {
-  const { sourcePackage } = options;
+function generateDocumentRels(params: GenerateDocumentRelsParams): XmlElement {
+  const { document, headerFooterRels, media, sourcePackage } = params;
 
   const relationships: OpcRelationship[] = [];
   const usedIds = new Set<string>();
@@ -215,7 +219,7 @@ function generateDocumentRels(
 
   // Helper to get next available ID
   const getNextId = (): string => {
-    // eslint-disable-next-line no-constant-condition -- generator loop
+     
     while (true) {
       const id = nextId();
       if (!usedIds.has(id)) {
@@ -383,7 +387,7 @@ const REGENERATED_FILE_PATTERNS = [
 function isRegeneratedFile(path: string): boolean {
   for (const pattern of REGENERATED_FILE_PATTERNS) {
     if (typeof pattern === "string") {
-      if (path === pattern || path.startsWith(pattern)) return true;
+      if (path === pattern || path.startsWith(pattern)) {return true;}
     } else if (pattern.test(path)) {
       return true;
     }
@@ -415,6 +419,22 @@ function copySourcePackageFiles(source: ZipPackage, dest: ZipPackage): void {
       }
     }
   }
+}
+
+/**
+ * Extract parsed content types from a source package.
+ * Returns undefined if no source package or no content types found.
+ */
+function extractSourceContentTypes(sourcePackage?: ZipPackage): ParsedContentTypes | undefined {
+  if (!sourcePackage) {
+    return undefined;
+  }
+  const contentTypesXml = sourcePackage.readText("[Content_Types].xml");
+  if (!contentTypesXml) {
+    return undefined;
+  }
+  const contentTypesDoc = parseXml(contentTypesXml);
+  return parseContentTypes(contentTypesDoc);
 }
 
 // =============================================================================
@@ -465,14 +485,7 @@ export async function exportDocx(document: DocxDocument, options: ExportDocxOpti
   const pkg = createEmptyZipPackage();
 
   // 0. Parse source content types for preservation (if pass-through mode)
-  let sourceContentTypes: ParsedContentTypes | undefined;
-  if (sourcePackage) {
-    const contentTypesXml = sourcePackage.readText("[Content_Types].xml");
-    if (contentTypesXml) {
-      const contentTypesDoc = parseXml(contentTypesXml);
-      sourceContentTypes = parseContentTypes(contentTypesDoc);
-    }
-  }
+  const sourceContentTypes = extractSourceContentTypes(sourcePackage);
 
   // 1. Copy source files (if pass-through mode)
   if (sourcePackage) {
@@ -504,30 +517,26 @@ export async function exportDocx(document: DocxDocument, options: ExportDocxOpti
 
   // 5. Generate headers (if present)
   if (document.headers) {
-    let headerIndex = 1;
-    for (const [rId, header] of document.headers) {
-      const filename = `header${headerIndex}.xml`;
+    Array.from(document.headers.entries()).forEach(([rId, header], i) => {
+      const filename = `header${i + 1}.xml`;
       const path = `word/${filename}`;
       const headerXml = serializeHeader(header);
       pkg.writeText(path, serializeWithDeclaration(headerXml));
       headerFooterPaths.headers.push(path);
       headerFooterRels.headers.set(rId, filename);
-      headerIndex++;
-    }
+    });
   }
 
   // 6. Generate footers (if present)
   if (document.footers) {
-    let footerIndex = 1;
-    for (const [rId, footer] of document.footers) {
-      const filename = `footer${footerIndex}.xml`;
+    Array.from(document.footers.entries()).forEach(([rId, footer], i) => {
+      const filename = `footer${i + 1}.xml`;
       const path = `word/${filename}`;
       const footerXml = serializeFooter(footer);
       pkg.writeText(path, serializeWithDeclaration(footerXml));
       headerFooterPaths.footers.push(path);
       headerFooterRels.footers.set(rId, filename);
-      footerIndex++;
-    }
+    });
   }
 
   // 7. Write media files (if present)
@@ -550,7 +559,7 @@ export async function exportDocx(document: DocxDocument, options: ExportDocxOpti
   }
 
   // 8. Generate word/_rels/document.xml.rels (preserve macro relationships)
-  const documentRelsXml = generateDocumentRels(document, headerFooterRels, media, { sourcePackage });
+  const documentRelsXml = generateDocumentRels({ document, headerFooterRels, media, sourcePackage });
   pkg.writeText("word/_rels/document.xml.rels", serializeWithDeclaration(documentRelsXml));
 
   // 9. Generate _rels/.rels
@@ -558,7 +567,7 @@ export async function exportDocx(document: DocxDocument, options: ExportDocxOpti
   pkg.writeText("_rels/.rels", serializeWithDeclaration(rootRelsXml));
 
   // 10. Generate [Content_Types].xml (preserve macro content types)
-  const contentTypesXml = generateContentTypes(document, headerFooterPaths, media, { sourceContentTypes });
+  const contentTypesXml = generateContentTypes({ document, headerFooterPaths, media, sourceContentTypes });
   pkg.writeText("[Content_Types].xml", serializeWithDeclaration(contentTypesXml));
 
   // 11. Write ZIP package

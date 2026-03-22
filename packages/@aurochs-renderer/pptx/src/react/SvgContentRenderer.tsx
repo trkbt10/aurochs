@@ -54,16 +54,16 @@ export type SvgContentRendererProps = {
 function normalizeForScaling(svg: string): string {
   // Replace width="..." and height="..." (numeric or percentage) with 100%
   // Preserves viewBox which controls the actual aspect ratio
-  let result = svg.replace(/(<svg[^>]*)\s+width=["'][^"']*["']/, "$1 width=\"100%\"");
-  result = result.replace(/(<svg[^>]*)\s+height=["'][^"']*["']/, "$1 height=\"100%\"");
+  const result = { value: svg.replace(/(<svg[^>]*)\s+width=["'][^"']*["']/, "$1 width=\"100%\"") };
+  result.value = result.value.replace(/(<svg[^>]*)\s+height=["'][^"']*["']/, "$1 height=\"100%\"");
 
   // Add preserveAspectRatio if not present (defaults to xMidYMid meet per SVG spec,
   // but being explicit ensures consistent behavior)
-  if (!result.includes("preserveAspectRatio")) {
-    result = result.replace(/(<svg[^>]*)>/, '$1 preserveAspectRatio="xMidYMid meet">');
+  if (!result.value.includes("preserveAspectRatio")) {
+    result.value = result.value.replace(/(<svg[^>]*)>/, '$1 preserveAspectRatio="xMidYMid meet">');
   }
 
-  return result;
+  return result.value;
 }
 
 // =============================================================================

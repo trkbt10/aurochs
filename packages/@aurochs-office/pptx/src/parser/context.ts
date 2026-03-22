@@ -12,6 +12,7 @@ import { DEFAULT_COLOR_MAPPING } from "@aurochs-office/pptx/domain/color/types";
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
 import type { ResourceRelationshipResolver } from "../domain";
 import type { MasterTextStyles, TextStyleLevels } from "../domain/text-style";
+import type { FormatScheme } from "../domain/theme/types";
 
 /**
  * Create a resource resolver from ResourceMap
@@ -108,9 +109,6 @@ export type MasterStylesInfo = {
   readonly defaultTextStyle: TextStyleLevels | undefined;
 };
 
-// FormatScheme re-exported from canonical domain definition
-import type { FormatScheme } from "../domain/theme/types";
-export type { FormatScheme };
 
 /**
  * Complete parse context for slide parsing

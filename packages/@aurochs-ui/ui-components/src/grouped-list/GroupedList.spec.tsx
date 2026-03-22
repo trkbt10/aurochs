@@ -14,6 +14,13 @@ import { render, fireEvent, waitFor } from "@testing-library/react";
 import type { GroupedListItemData, GroupedListGroupData } from "./index";
 import { GroupedList } from "./GroupedList";
 
+/** Create a fake DataTransfer for drag-drop testing */
+function createFakeDataTransfer(getData: () => string): DataTransfer {
+  const dt = new DataTransfer();
+  Object.defineProperty(dt, "getData", { value: getData });
+  return dt;
+}
+
 // =============================================================================
 // Test Fixtures
 // =============================================================================
@@ -51,11 +58,6 @@ function findBackdrop(): HTMLDivElement | null {
   return match ?? null;
 }
 
-function createDragEvent(type: string, dataTransfer: DataTransfer): React.DragEvent {
-  const event = new Event(type, { bubbles: true, cancelable: true }) as unknown as React.DragEvent;
-  Object.defineProperty(event, "dataTransfer", { value: dataTransfer });
-  return event;
-}
 
 // =============================================================================
 // Tests
@@ -362,7 +364,7 @@ describe("GroupedList", () => {
     });
 
     it("respects initialCollapsedGroups", () => {
-      const { container, getByText } = render(
+      const { container } = render(
         <GroupedList
           items={mockItems}
           groups={mockGroups}
@@ -422,12 +424,7 @@ describe("GroupedList", () => {
       }
 
       // Create mock DataTransfer
-      const dataTransfer = {
-        effectAllowed: "none" as const,
-        dropEffect: "none" as const,
-        setData: () => {},
-        getData: () => "item1",
-      } as unknown as DataTransfer;
+      const dataTransfer = createFakeDataTransfer(() => "item1");
 
       // Simulate drag start
       fireEvent.dragStart(item1, { dataTransfer });
@@ -461,12 +458,7 @@ describe("GroupedList", () => {
         throw new Error("Items not found");
       }
 
-      const dataTransfer = {
-        effectAllowed: "none" as const,
-        dropEffect: "none" as const,
-        setData: () => {},
-        getData: () => "item1",
-      } as unknown as DataTransfer;
+      const dataTransfer = createFakeDataTransfer(() => "item1");
 
       fireEvent.dragStart(item1, { dataTransfer });
       fireEvent.dragOver(item3, { dataTransfer });
@@ -495,12 +487,7 @@ describe("GroupedList", () => {
         throw new Error("Item not found");
       }
 
-      const dataTransfer = {
-        effectAllowed: "none" as const,
-        dropEffect: "none" as const,
-        setData: () => {},
-        getData: () => "item1",
-      } as unknown as DataTransfer;
+      const dataTransfer = createFakeDataTransfer(() => "item1");
 
       // Drop on self
       fireEvent.dragStart(item1, { dataTransfer });
@@ -512,7 +499,7 @@ describe("GroupedList", () => {
     });
 
     it("resets drag state on dragEnd", async () => {
-      const { getByText, container } = render(
+      const { getByText } = render(
         <GroupedList items={mockItems} groups={mockGroups} mode="editable" />
       );
 
@@ -522,12 +509,7 @@ describe("GroupedList", () => {
         throw new Error("Item not found");
       }
 
-      const dataTransfer = {
-        effectAllowed: "none" as const,
-        dropEffect: "none" as const,
-        setData: () => {},
-        getData: () => "item1",
-      } as unknown as DataTransfer;
+      const dataTransfer = createFakeDataTransfer(() => "item1");
 
       fireEvent.dragStart(item1, { dataTransfer });
 

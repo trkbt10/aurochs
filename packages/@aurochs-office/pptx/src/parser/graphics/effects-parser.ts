@@ -517,27 +517,6 @@ export function parseEffects(spPr: XmlElement | undefined): Effects | undefined 
 }
 
 /**
- * Parse effects with optional phClr override.
- */
-function parseEffectsWithOverride(spPr: XmlElement | undefined, overrideColor?: Color): Effects | undefined {
-  if (!spPr) {
-    return undefined;
-  }
-
-  const effectLst = getChild(spPr, "a:effectLst");
-  if (effectLst) {
-    return parseEffectList(effectLst, overrideColor, "effectLst");
-  }
-
-  const effectDag = getChild(spPr, "a:effectDag");
-  if (effectDag) {
-    return parseEffectList(effectDag, overrideColor, "effectDag");
-  }
-
-  return undefined;
-}
-
-/**
  * Parse effect list
  * @param containerKind - Original container type for round-trip fidelity
  */

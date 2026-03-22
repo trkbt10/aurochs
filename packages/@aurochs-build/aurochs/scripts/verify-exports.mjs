@@ -1,6 +1,7 @@
 #!/usr/bin/env node
+/* global console, process -- Node.js globals for .mjs script */
 /**
- * Verify that all package exports can be imported successfully.
+ * @file Verify that all package exports can be imported successfully.
  *
  * Usage: node scripts/verify-exports.mjs
  *
@@ -38,7 +39,7 @@ async function main() {
     const importPath = resolve(publishDir, exportConfig.import);
 
     try {
-      const module = await import(importPath);
+      const module = await Function("p", "return import(p)")(importPath);
       const exportNames = Object.keys(module);
 
       if (exportNames.length === 0) {
@@ -66,8 +67,8 @@ async function main() {
   const err = results.filter((r) => r.status === "error").length;
   console.log(`Total: ${results.length}`);
   console.log(`  Passed: ${ok}`);
-  if (warn > 0) console.log(`  Warnings: ${warn}`);
-  if (err > 0) console.log(`  Failed: ${err}`);
+  if (warn > 0) {console.log(`  Warnings: ${warn}`);}
+  if (err > 0) {console.log(`  Failed: ${err}`);}
 
   if (err > 0) {
     process.exit(1);

@@ -47,7 +47,7 @@ export function createProgram(): Command {
     .action(async (file: string) => {
       const mode = program.opts().output as OutputMode;
       const result = await runInfo(file);
-      output(result, mode, formatInfoPretty);
+      output({ result, mode, prettyFormatter: formatInfoPretty });
     });
 
   program
@@ -57,7 +57,7 @@ export function createProgram(): Command {
     .action(async (file: string) => {
       const mode = program.opts().output as OutputMode;
       const result = await runList(file);
-      output(result, mode, formatListPretty);
+      output({ result, mode, prettyFormatter: formatListPretty });
     });
 
   program
@@ -72,7 +72,7 @@ export function createProgram(): Command {
       }
       const mode = program.opts().output as OutputMode;
       const result = await runShow(file, pageNumber);
-      output(result, mode, formatShowPretty);
+      output({ result, mode, prettyFormatter: formatShowPretty });
     });
 
   program
@@ -83,7 +83,7 @@ export function createProgram(): Command {
     .action(async (file: string, options: { pages?: string }) => {
       const mode = program.opts().output as OutputMode;
       const result = await runExtract(file, options);
-      output(result, mode, formatExtractPretty);
+      output({ result, mode, prettyFormatter: formatExtractPretty });
     });
 
   program
@@ -93,7 +93,7 @@ export function createProgram(): Command {
     .action(async (spec: string) => {
       const mode = program.opts().output as OutputMode;
       const result = await runBuild(spec);
-      output(result, mode, formatBuildPretty);
+      output({ result, mode, prettyFormatter: formatBuildPretty });
     });
 
   program
@@ -103,7 +103,7 @@ export function createProgram(): Command {
     .action(async (spec: string) => {
       const mode = program.opts().output as OutputMode;
       const result = await runWrite(spec);
-      output(result, mode, formatWritePretty);
+      output({ result, mode, prettyFormatter: formatWritePretty });
     });
 
   program
@@ -135,7 +135,7 @@ export function createProgram(): Command {
           height,
           backgroundColor: options.background,
         });
-        output(result, mode, formatPreviewPretty);
+        output({ result, mode, prettyFormatter: formatPreviewPretty });
       },
     );
 

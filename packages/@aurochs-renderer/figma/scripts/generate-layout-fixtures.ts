@@ -8,8 +8,8 @@
  * Usage: bun packages/@aurochs-renderer/figma/scripts/generate-layout-fixtures.ts
  */
 
-import * as fs from "fs";
-import * as path from "path";
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import { loadFigFile, saveFigFile } from "@aurochs/fig/builder";
 import type { FigNode } from "@aurochs/fig/types";
 
@@ -21,7 +21,7 @@ const OUTPUT_FILE = path.join(FIXTURES_DIR, "layouts.fig");
 // Node Creation Helpers
 // =============================================================================
 
-let nextLocalID = 100;
+const nextLocalID = 100;
 const sessionID = 0;
 
 function getNextID(): number {
@@ -40,7 +40,9 @@ function createEnumValue(value: number, name: string) {
   return { value, name };
 }
 
-function createSolidPaint(r: number, g: number, b: number, a: number = 1) {
+function createSolidPaint(
+  { r, g, b, a = 1 }: { r: number; g: number; b: number; a?: number; }
+) {
   return [
     {
       type: { value: 0, name: "SOLID" },
@@ -408,19 +410,19 @@ async function generateLayoutFixtures() {
   console.log(`Template: ${loaded.nodeChanges.length} nodes, ${loaded.schema.definitions.length} schema definitions\n`);
 
   // Get document and canvas IDs from template
-  let docID = 0;
-  let canvasID = 1;
+  const docIDRef = { value: 0 };
+  const canvasIDRef = { value: 1 };
 
   for (const node of loaded.nodeChanges) {
     const d = node as Record<string, unknown>;
     const type = d.type as { name: string };
     const guid = d.guid as { sessionID: number; localID: number };
 
-    if (type?.name === "DOCUMENT" && docID === 0) {
-      docID = guid.localID;
+    if (type?.name === "DOCUMENT" && docIDRef.value === 0) {
+      docIDRef.value = guid.localID;
     }
-    if (type?.name === "CANVAS" && canvasID === 1 && guid.sessionID === 0) {
-      canvasID = guid.localID;
+    if (type?.name === "CANVAS" && canvasIDRef.value === 1 && guid.sessionID === 0) {
+      canvasIDRef.value = guid.localID;
     }
   }
 
@@ -429,7 +431,7 @@ async function generateLayoutFixtures() {
 
   // Add DOCUMENT
   loaded.nodeChanges.push({
-    guid: createGUID(docID),
+    guid: createGUID(docIDRef.value),
     phase: createEnumValue(0, "CREATED"),
     type: createEnumValue(1, "DOCUMENT"),
     name: "Layout Tests",
@@ -443,7 +445,7 @@ async function generateLayoutFixtures() {
 
   // Add CANVAS
   loaded.nodeChanges.push({
-    guid: createGUID(canvasID),
+    guid: createGUID(canvasIDRef.value),
     phase: createEnumValue(0, "CREATED"),
     type: createEnumValue(2, "CANVAS"),
     name: "AutoLayout Tests",
@@ -457,7 +459,7 @@ async function generateLayoutFixtures() {
     backgroundColor: { r: 0.95, g: 0.95, b: 0.95, a: 1 },
     backgroundEnabled: true,
     parentIndex: {
-      guid: createGUID(docID),
+      guid: createGUID(docIDRef.value),
       position: "!",
     },
   } as FigNode);
@@ -480,7 +482,7 @@ async function generateLayoutFixtures() {
     loaded.nodeChanges.push(
       createFrameNode({
         localID: frameID,
-        parentID: canvasID,
+        parentID: canvasIDRef.value,
         name: testCase.name,
         x,
         y,

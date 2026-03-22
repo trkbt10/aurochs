@@ -13,6 +13,7 @@ import {
   type PdfImportOptions,
   type PdfImportResult,
 } from "@aurochs-converters/pdf-to-pptx/importer/pdf-importer";
+import { EMPTY_FONT_SCHEME } from "@aurochs-office/ooxml/domain/font-scheme";
 import { usePdfImport } from "./usePdfImport";
 
 type ImporterDeps = Parameters<typeof usePdfImport>[0];
@@ -24,6 +25,7 @@ function createDocumentFixture(): PresentationDocument {
     slideWidth: px(1000),
     slideHeight: px(750),
     colorContext: { colorScheme: {}, colorMap: {} },
+    fontScheme: EMPTY_FONT_SCHEME,
     resources: createEmptyResourceResolver(),
   };
 }
@@ -40,23 +42,25 @@ describe("usePdfImport", () => {
   const importPdfFromFileCalls: Array<readonly [File, PdfImportOptions | undefined]> = [];
   const importPdfFromUrlCalls: Array<readonly [string, PdfImportOptions | undefined]> = [];
 
-  let importPdfFromFileBehavior: ((file: File, options?: PdfImportOptions) => Promise<PdfImportResult>) | undefined;
-  let importPdfFromUrlBehavior: ((url: string, options?: PdfImportOptions) => Promise<PdfImportResult>) | undefined;
+  const behavior = {
+    importPdfFromFile: undefined as ((file: File, options?: PdfImportOptions) => Promise<PdfImportResult>) | undefined,
+    importPdfFromUrl: undefined as ((url: string, options?: PdfImportOptions) => Promise<PdfImportResult>) | undefined,
+  };
 
   const deps: ImporterDeps = {
     importPdfFromFile: async (file, options) => {
       importPdfFromFileCalls.push([file, options]);
-      if (!importPdfFromFileBehavior) {
+      if (!behavior.importPdfFromFile) {
         throw new Error("importPdfFromFile not configured");
       }
-      return importPdfFromFileBehavior(file, options);
+      return behavior.importPdfFromFile(file, options);
     },
     importPdfFromUrl: async (url, options) => {
       importPdfFromUrlCalls.push([url, options]);
-      if (!importPdfFromUrlBehavior) {
+      if (!behavior.importPdfFromUrl) {
         throw new Error("importPdfFromUrl not configured");
       }
-      return importPdfFromUrlBehavior(url, options);
+      return behavior.importPdfFromUrl(url, options);
     },
     PdfImportError,
   };
@@ -68,10 +72,10 @@ describe("usePdfImport", () => {
   beforeEach(() => {
     importPdfFromFileCalls.length = 0;
     importPdfFromUrlCalls.length = 0;
-    importPdfFromFileBehavior = async () => {
+    behavior.importPdfFromFile = async () => {
       throw new Error("importPdfFromFile not configured");
     };
-    importPdfFromUrlBehavior = async () => {
+    behavior.importPdfFromUrl = async () => {
       throw new Error("importPdfFromUrl not configured");
     };
   });
@@ -90,14 +94,14 @@ describe("usePdfImport", () => {
   it("imports from file successfully", async () => {
     const document = createDocumentFixture();
     const importerResult = createImportResultFixture(document);
-    importPdfFromFileBehavior = async () => importerResult;
+    behavior.importPdfFromFile = async () => importerResult;
 
     const { result } = renderHook(() => usePdfImport(deps));
     const file = new File([new Uint8Array([1, 2, 3])], "test.pdf", { type: "application/pdf" });
 
-    let promise: Promise<PresentationDocument | null> | undefined;
+    const promiseRef = { value: undefined as Promise<PresentationDocument | null> | undefined };
     act(() => {
-      promise = result.current.importFromFile(file);
+      promiseRef.value = result.current.importFromFile(file);
     });
 
     expect(result.current.state.status).toBe("loading");
@@ -107,19 +111,19 @@ describe("usePdfImport", () => {
     await waitFor(() => expect(result.current.state.status).toBe("success"));
     expect(result.current.state.result).toBe(importerResult);
     expect(importPdfFromFileCalls).toContainEqual([file, undefined]);
-    await expect(promise).resolves.toBe(document);
+    await expect(promiseRef.value).resolves.toBe(document);
   });
 
   it("imports from url successfully", async () => {
     const document = createDocumentFixture();
     const importerResult = createImportResultFixture(document);
-    importPdfFromUrlBehavior = async () => importerResult;
+    behavior.importPdfFromUrl = async () => importerResult;
 
     const { result } = renderHook(() => usePdfImport(deps));
 
-    let promise: Promise<PresentationDocument | null> | undefined;
+    const urlPromiseRef = { value: undefined as Promise<PresentationDocument | null> | undefined };
     act(() => {
-      promise = result.current.importFromUrl("https://example.com/test.pdf");
+      urlPromiseRef.value = result.current.importFromUrl("https://example.com/test.pdf");
     });
 
     expect(result.current.state.status).toBe("loading");
@@ -127,11 +131,11 @@ describe("usePdfImport", () => {
     await waitFor(() => expect(result.current.state.status).toBe("success"));
     expect(result.current.state.result).toBe(importerResult);
     expect(importPdfFromUrlCalls).toContainEqual(["https://example.com/test.pdf", undefined]);
-    await expect(promise).resolves.toBe(document);
+    await expect(urlPromiseRef.value).resolves.toBe(document);
   });
 
   it("sets error state for file import failures", async () => {
-    importPdfFromFileBehavior = async () => {
+    behavior.importPdfFromFile = async () => {
       throw new Error("boom");
     };
 
@@ -149,7 +153,7 @@ describe("usePdfImport", () => {
   });
 
   it("sets error state for url import failures", async () => {
-    importPdfFromUrlBehavior = async () => {
+    behavior.importPdfFromUrl = async () => {
       throw new Error("boom");
     };
 
@@ -166,7 +170,7 @@ describe("usePdfImport", () => {
   });
 
   it("resets state", async () => {
-    importPdfFromFileBehavior = async () => {
+    behavior.importPdfFromFile = async () => {
       throw new PdfImportError("invalid", "INVALID_PDF");
     };
 

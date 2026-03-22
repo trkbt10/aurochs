@@ -3,19 +3,19 @@ import { parseBStoreContainer, parseBlipData } from "./blip-store";
 import { OA_RT, OFFICEART_HEADER_SIZE } from "./officeart-reader";
 
 /** Build an OfficeArt record as raw bytes. */
-function buildRawRecord(
-  recVer: number,
-  recInstance: number,
-  recType: number,
-  data: Uint8Array,
-): Uint8Array {
-  const buf = new Uint8Array(OFFICEART_HEADER_SIZE + data.length);
+function buildRawRecord(options: {
+  recVer: number;
+  recInstance: number;
+  recType: number;
+  data: Uint8Array;
+}): Uint8Array {
+  const buf = new Uint8Array(OFFICEART_HEADER_SIZE + options.data.length);
   const view = new DataView(buf.buffer);
-  const verAndInstance = (recVer & 0x0f) | ((recInstance & 0x0fff) << 4);
+  const verAndInstance = (options.recVer & 0x0f) | ((options.recInstance & 0x0fff) << 4);
   view.setUint16(0, verAndInstance, true);
-  view.setUint16(2, recType, true);
-  view.setUint32(4, data.length, true);
-  buf.set(data, OFFICEART_HEADER_SIZE);
+  view.setUint16(2, options.recType, true);
+  view.setUint32(4, options.data.length, true);
+  buf.set(options.data, OFFICEART_HEADER_SIZE);
   return buf;
 }
 
@@ -36,7 +36,7 @@ function buildBStoreEntry(
   imageData: Uint8Array,
 ): Uint8Array {
   const blipContent = buildBlipData(imageData);
-  const blipRecord = buildRawRecord(0, blipInstance, blipRecType, blipContent);
+  const blipRecord = buildRawRecord({ recVer: 0, recInstance: blipInstance, recType: blipRecType, data: blipContent });
   // 44-byte FBSE header (zero-filled for test) + BLIP record
   const fbseHeader = new Uint8Array(44);
   const entryData = new Uint8Array(fbseHeader.length + blipRecord.length);
@@ -50,29 +50,29 @@ function buildDggInfo(bstoreEntries: Uint8Array[]): Uint8Array {
   // Build BStoreEntry records
   const entryRecords: Uint8Array[] = [];
   for (const entryData of bstoreEntries) {
-    entryRecords.push(buildRawRecord(0x02, 0, OA_RT.BStoreEntry, entryData));
+    entryRecords.push(buildRawRecord({ recVer: 0x02, recInstance: 0, recType: OA_RT.BStoreEntry, data: entryData }));
   }
 
   // Concatenate all entry records
   const totalEntryLen = entryRecords.reduce((sum, r) => sum + r.length, 0);
   const entriesData = new Uint8Array(totalEntryLen);
-  let offset = 0;
+  const writeOffset = { value: 0 };
   for (const rec of entryRecords) {
-    entriesData.set(rec, offset);
-    offset += rec.length;
+    entriesData.set(rec, writeOffset.value);
+    writeOffset.value += rec.length;
   }
 
   // Build BStoreContainer
-  const bstoreContainer = buildRawRecord(0x0f, bstoreEntries.length, OA_RT.BStoreContainer, entriesData);
+  const bstoreContainer = buildRawRecord({ recVer: 0x0f, recInstance: bstoreEntries.length, recType: OA_RT.BStoreContainer, data: entriesData });
 
   // Build FDGG (minimal, 16 bytes)
-  const fdgg = buildRawRecord(0x00, 0, OA_RT.FDGG, new Uint8Array(16));
+  const fdgg = buildRawRecord({ recVer: 0x00, recInstance: 0, recType: OA_RT.FDGG, data: new Uint8Array(16) });
 
   // Build DggContainer
   const dggChildren = new Uint8Array(fdgg.length + bstoreContainer.length);
   dggChildren.set(fdgg, 0);
   dggChildren.set(bstoreContainer, fdgg.length);
-  const dggContainer = buildRawRecord(0x0f, 0, OA_RT.DggContainer, dggChildren);
+  const dggContainer = buildRawRecord({ recVer: 0x0f, recInstance: 0, recType: OA_RT.DggContainer, data: dggChildren });
 
   return dggContainer;
 }
@@ -171,8 +171,8 @@ describe("parseBStoreContainer", () => {
 
   it("returns empty for DggInfo without BStoreContainer", () => {
     // DggContainer with only FDGG, no BStoreContainer
-    const fdgg = buildRawRecord(0x00, 0, OA_RT.FDGG, new Uint8Array(16));
-    const dggContainer = buildRawRecord(0x0f, 0, OA_RT.DggContainer, fdgg);
+    const fdgg = buildRawRecord({ recVer: 0x00, recInstance: 0, recType: OA_RT.FDGG, data: new Uint8Array(16) });
+    const dggContainer = buildRawRecord({ recVer: 0x0f, recInstance: 0, recType: OA_RT.DggContainer, data: fdgg });
 
     const blips = parseBStoreContainer(dggContainer, 0, dggContainer.length);
     expect(blips).toEqual([]);
@@ -180,7 +180,7 @@ describe("parseBStoreContainer", () => {
 
   it("returns empty for non-DggContainer at offset", () => {
     // Put a random non-container record at the offset
-    const buf = buildRawRecord(0x02, 0, OA_RT.FSP, new Uint8Array(10));
+    const buf = buildRawRecord({ recVer: 0x02, recInstance: 0, recType: OA_RT.FSP, data: new Uint8Array(10) });
     expect(parseBStoreContainer(buf, 0, buf.length)).toEqual([]);
   });
 });

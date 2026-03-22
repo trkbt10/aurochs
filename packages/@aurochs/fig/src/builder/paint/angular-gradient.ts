@@ -9,17 +9,22 @@ import {
   type BlendMode,
 } from "../../constants";
 
-export class AngularGradientBuilder {
-  private _stops: GradientStop[];
-  private _centerX: number;
-  private _centerY: number;
-  private _rotation: number; // degrees
-  private _opacity: number;
-  private _visible: boolean;
-  private _blendMode: BlendMode;
+/** Angular gradient builder instance */
+export type AngularGradientBuilder = {
+  stops: (stops: GradientStop[]) => AngularGradientBuilder;
+  addStop: (stop: GradientStop) => AngularGradientBuilder;
+  center: (x: number, y: number) => AngularGradientBuilder;
+  rotation: (degrees: number) => AngularGradientBuilder;
+  opacity: (value: number) => AngularGradientBuilder;
+  visible: (value: boolean) => AngularGradientBuilder;
+  blendMode: (mode: BlendMode) => AngularGradientBuilder;
+  build: () => GradientPaint;
+};
 
-  constructor() {
-    this._stops = [
+/** Create an angular gradient builder */
+function createAngularGradientBuilder(): AngularGradientBuilder {
+  const state = {
+    stops: [
       { color: { r: 1, g: 0, b: 0, a: 1 }, position: 0 },
       { color: { r: 1, g: 1, b: 0, a: 1 }, position: 0.17 },
       { color: { r: 0, g: 1, b: 0, a: 1 }, position: 0.33 },
@@ -27,79 +32,81 @@ export class AngularGradientBuilder {
       { color: { r: 0, g: 0, b: 1, a: 1 }, position: 0.67 },
       { color: { r: 1, g: 0, b: 1, a: 1 }, position: 0.83 },
       { color: { r: 1, g: 0, b: 0, a: 1 }, position: 1 },
-    ];
-    this._centerX = 0.5;
-    this._centerY = 0.5;
-    this._rotation = 0;
-    this._opacity = 1;
-    this._visible = true;
-    this._blendMode = "NORMAL";
-  }
+    ] as GradientStop[],
+    centerX: 0.5,
+    centerY: 0.5,
+    rotation: 0,
+    opacity: 1,
+    visible: true,
+    blendMode: "NORMAL" as BlendMode,
+  };
 
-  stops(stops: GradientStop[]): this {
-    this._stops = stops;
-    return this;
-  }
+  const builder: AngularGradientBuilder = {
+    stops(stops: GradientStop[]) {
+      state.stops = stops;
+      return builder;
+    },
 
-  addStop(stop: GradientStop): this {
-    this._stops.push(stop);
-    this._stops.sort((a, b) => a.position - b.position);
-    return this;
-  }
+    addStop(stop: GradientStop) {
+      state.stops.push(stop);
+      state.stops.sort((a, b) => a.position - b.position);
+      return builder;
+    },
 
-  center(x: number, y: number): this {
-    this._centerX = x;
-    this._centerY = y;
-    return this;
-  }
+    center(x: number, y: number) {
+      state.centerX = x;
+      state.centerY = y;
+      return builder;
+    },
 
-  /**
-   * Set rotation in degrees
-   */
-  rotation(degrees: number): this {
-    this._rotation = degrees;
-    return this;
-  }
+    /** Set rotation in degrees */
+    rotation(degrees: number) {
+      state.rotation = degrees;
+      return builder;
+    },
 
-  opacity(value: number): this {
-    this._opacity = Math.max(0, Math.min(1, value));
-    return this;
-  }
+    opacity(value: number) {
+      state.opacity = Math.max(0, Math.min(1, value));
+      return builder;
+    },
 
-  visible(value: boolean): this {
-    this._visible = value;
-    return this;
-  }
+    visible(value: boolean) {
+      state.visible = value;
+      return builder;
+    },
 
-  blendMode(mode: BlendMode): this {
-    this._blendMode = mode;
-    return this;
-  }
+    blendMode(mode: BlendMode) {
+      state.blendMode = mode;
+      return builder;
+    },
 
-  build(): GradientPaint {
-    const rad = (this._rotation * Math.PI) / 180;
-    const cos = Math.cos(rad);
-    const sin = Math.sin(rad);
-    const radius = 0.5;
+    build(): GradientPaint {
+      const rad = (state.rotation * Math.PI) / 180;
+      const cos = Math.cos(rad);
+      const sin = Math.sin(rad);
+      const radius = 0.5;
 
-    return {
-      type: { value: PAINT_TYPE_VALUES.GRADIENT_ANGULAR, name: "GRADIENT_ANGULAR" },
-      opacity: this._opacity,
-      visible: this._visible,
-      blendMode: { value: BLEND_MODE_VALUES[this._blendMode], name: this._blendMode },
-      gradientStops: this._stops,
-      gradientHandlePositions: [
-        { x: this._centerX, y: this._centerY },
-        { x: this._centerX + cos * radius, y: this._centerY + sin * radius },
-        { x: this._centerX - sin * radius, y: this._centerY + cos * radius },
-      ],
-    };
-  }
+      return {
+        type: { value: PAINT_TYPE_VALUES.GRADIENT_ANGULAR, name: "GRADIENT_ANGULAR" },
+        opacity: state.opacity,
+        visible: state.visible,
+        blendMode: { value: BLEND_MODE_VALUES[state.blendMode], name: state.blendMode },
+        gradientStops: state.stops,
+        gradientHandlePositions: [
+          { x: state.centerX, y: state.centerY },
+          { x: state.centerX + cos * radius, y: state.centerY + sin * radius },
+          { x: state.centerX - sin * radius, y: state.centerY + cos * radius },
+        ],
+      };
+    },
+  };
+
+  return builder;
 }
 
 /**
  * Create an angular (conic) gradient paint
  */
 export function angularGradient(): AngularGradientBuilder {
-  return new AngularGradientBuilder();
+  return createAngularGradientBuilder();
 }

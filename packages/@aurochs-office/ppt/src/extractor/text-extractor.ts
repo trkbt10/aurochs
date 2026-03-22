@@ -4,13 +4,13 @@
 
 import type { PptRecord } from "../records/types";
 import { RT } from "../records/record-types";
-import { findChildByType, findChildrenByType } from "../records/record-iterator";
+
 import {
-  parseTextHeaderAtom, decodeTextCharsAtom, decodeTextBytesAtom,
-  parseStyleTextPropAtom, parseFontEntityAtom,
+  decodeTextCharsAtom, decodeTextBytesAtom,
+  parseStyleTextPropAtom,
   type ParagraphStyleRun, type CharacterStyleRun,
 } from "../records/atoms/text";
-import { resolveColor, type ColorScheme, DEFAULT_COLOR_SCHEME } from "../records/atoms/color";
+import { resolveColor, type ColorScheme } from "../records/atoms/color";
 import type { PptTextBody, PptTextParagraph, PptTextRun, PptBullet } from "../domain/types";
 
 /**
@@ -23,127 +23,125 @@ export function extractTextBodies(
   colorScheme: ColorScheme,
 ): readonly PptTextBody[] {
   const bodies: PptTextBody[] = [];
-  let i = 0;
+  const idx = { value: 0 };
 
-  while (i < children.length) {
-    const rec = children[i];
+  while (idx.value < children.length) {
+    const rec = children[idx.value];
 
     if (rec.recType === RT.TextHeaderAtom) {
-      const { textBody, consumed } = extractOneTextBody(children, i, fonts, colorScheme);
+      const { textBody, consumed } = extractOneTextBody({ children, startIndex: idx.value, fonts, colorScheme });
       if (textBody) {
         bodies.push(textBody);
       }
-      i += consumed;
+      idx.value += consumed;
     } else {
-      i++;
+      idx.value++;
     }
   }
 
   return bodies;
 }
 
-function extractOneTextBody(
-  children: readonly PptRecord[],
-  startIndex: number,
-  fonts: readonly string[],
-  colorScheme: ColorScheme,
-): { textBody: PptTextBody | undefined; consumed: number } {
-  let idx = startIndex + 1; // skip TextHeaderAtom
-  let rawText: string | undefined;
-  let styleRecord: PptRecord | undefined;
+function extractOneTextBody(options: {
+  children: readonly PptRecord[];
+  startIndex: number;
+  fonts: readonly string[];
+  colorScheme: ColorScheme;
+}): { textBody: PptTextBody | undefined; consumed: number } {
+  const { children, startIndex, fonts, colorScheme } = options;
+  const state = { idx: startIndex + 1, rawText: undefined as string | undefined, styleRecord: undefined as PptRecord | undefined };
 
   // Look for the text and style records that follow
-  while (idx < children.length) {
-    const rec = children[idx];
+  while (state.idx < children.length) {
+    const rec = children[state.idx];
     if (rec.recType === RT.TextCharsAtom) {
-      rawText = decodeTextCharsAtom(rec);
-      idx++;
+      state.rawText = decodeTextCharsAtom(rec);
+      state.idx++;
     } else if (rec.recType === RT.TextBytesAtom) {
-      rawText = decodeTextBytesAtom(rec);
-      idx++;
+      state.rawText = decodeTextBytesAtom(rec);
+      state.idx++;
     } else if (rec.recType === RT.StyleTextPropAtom) {
-      styleRecord = rec;
-      idx++;
+      state.styleRecord = rec;
+      state.idx++;
     } else if (rec.recType === RT.TextHeaderAtom) {
       // Next text block starts
       break;
     } else {
-      idx++;
+      state.idx++;
       // Skip other records between text atoms (e.g., TextSpecialInfoAtom, TextRulerAtom)
-      if (rec.recType === RT.TextHeaderAtom) break;
+      if (rec.recType === RT.TextHeaderAtom) {break;}
     }
   }
 
-  if (rawText === undefined) {
-    return { textBody: undefined, consumed: idx - startIndex };
+  if (state.rawText === undefined) {
+    return { textBody: undefined, consumed: state.idx - startIndex };
   }
 
-  const textLength = rawText.length;
-  let paragraphRuns: readonly ParagraphStyleRun[] = [];
-  let characterRuns: readonly CharacterStyleRun[] = [];
+  const { paragraphRuns, characterRuns } = resolveStyleRuns(state.styleRecord, state.rawText.length);
 
-  if (styleRecord) {
-    const styleData = parseStyleTextPropAtom(styleRecord, textLength);
-    paragraphRuns = styleData.paragraphRuns;
-    characterRuns = styleData.characterRuns;
-  }
-
-  const paragraphs = buildParagraphs(rawText, paragraphRuns, characterRuns, fonts, colorScheme);
+  const paragraphs = buildParagraphs({ rawText: state.rawText, paragraphRuns, characterRuns, fonts, colorScheme });
 
   return {
     textBody: { paragraphs },
-    consumed: idx - startIndex,
+    consumed: state.idx - startIndex,
   };
 }
 
-function buildParagraphs(
-  rawText: string,
-  paragraphRuns: readonly ParagraphStyleRun[],
-  characterRuns: readonly CharacterStyleRun[],
-  fonts: readonly string[],
-  colorScheme: ColorScheme,
-): readonly PptTextParagraph[] {
+function resolveStyleRuns(
+  styleRecord: PptRecord | undefined,
+  textLength: number,
+): { paragraphRuns: readonly ParagraphStyleRun[]; characterRuns: readonly CharacterStyleRun[] } {
+  if (!styleRecord) { return { paragraphRuns: [], characterRuns: [] }; }
+  const styleData = parseStyleTextPropAtom(styleRecord, textLength);
+  return { paragraphRuns: styleData.paragraphRuns, characterRuns: styleData.characterRuns };
+}
+
+function buildParagraphs(options: {
+  rawText: string;
+  paragraphRuns: readonly ParagraphStyleRun[];
+  characterRuns: readonly CharacterStyleRun[];
+  fonts: readonly string[];
+  colorScheme: ColorScheme;
+}): readonly PptTextParagraph[] {
+  const { rawText, paragraphRuns, characterRuns, fonts, colorScheme } = options;
   // Split text into lines (PPT uses CR as paragraph separator)
   const lines = rawText.split("\r");
   const paragraphs: PptTextParagraph[] = [];
 
   // Track character position for style run matching
-  let charPos = 0;
-  let paraRunIdx = 0;
-  let charRunIdx = 0;
-  let charRunOffset = 0;
+  const runState = { paraRunIdx: 0, charRunIdx: 0, charRunOffset: 0 };
 
   for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
     const lineText = lines[lineIdx];
     // Account for CR separator (1 char) except for the last line
-    const lineLength = lineText.length + (lineIdx < lines.length - 1 ? 1 : 0);
+    const _lineLength = lineText.length + (lineIdx < lines.length - 1 ? 1 : 0);
 
     // Get paragraph style
-    const paraStyle = paragraphRuns[paraRunIdx];
+    const paraStyle = paragraphRuns[runState.paraRunIdx];
 
     // Build runs for this paragraph
     const runs: PptTextRun[] = [];
-    let linePos = 0;
+    const linePosRef = { value: 0 };
 
-    while (linePos < lineText.length) {
-      const charStyle = characterRuns[charRunIdx];
-      const remainingInRun = charStyle ? (charStyle.charCount - charRunOffset) : lineText.length;
-      const charsToTake = Math.min(remainingInRun, lineText.length - linePos);
+    while (linePosRef.value < lineText.length) {
+      const charStyle = characterRuns[runState.charRunIdx];
+      const remainingInRun = charStyle ? (charStyle.charCount - runState.charRunOffset) : lineText.length;
+      const charsToTake = Math.min(remainingInRun, lineText.length - linePosRef.value);
 
       if (charsToTake > 0) {
-        const text = lineText.substring(linePos, linePos + charsToTake);
+        const text = lineText.substring(linePosRef.value, linePosRef.value + charsToTake);
         runs.push({
           text,
           properties: buildRunProperties(charStyle, fonts, colorScheme),
         });
       }
 
-      linePos += charsToTake;
-      charRunOffset += charsToTake;
+      linePosRef.value += charsToTake;
+      runState.charRunOffset += charsToTake;
 
-      if (charStyle && charRunOffset >= charStyle.charCount) {
-        charRunIdx++;
-        charRunOffset = 0;
+      if (charStyle && runState.charRunOffset >= charStyle.charCount) {
+        runState.charRunIdx++;
+        runState.charRunOffset = 0;
       }
     }
 
@@ -167,17 +165,16 @@ function buildParagraphs(
 
     paragraphs.push(paragraph);
 
-    // Advance character position past this line + CR
-    charPos += lineLength;
-    charRunOffset += (lineIdx < lines.length - 1 ? 1 : 0); // CR character
-    if (characterRuns[charRunIdx] && charRunOffset >= characterRuns[charRunIdx].charCount) {
-      charRunIdx++;
-      charRunOffset = 0;
+    // Advance character run past this line + CR
+    runState.charRunOffset += (lineIdx < lines.length - 1 ? 1 : 0); // CR character
+    if (characterRuns[runState.charRunIdx] && runState.charRunOffset >= characterRuns[runState.charRunIdx].charCount) {
+      runState.charRunIdx++;
+      runState.charRunOffset = 0;
     }
 
     // Advance paragraph run
     if (paraStyle) {
-      paraRunIdx++;
+      runState.paraRunIdx++;
     }
   }
 
@@ -189,7 +186,7 @@ function buildRunProperties(
   fonts: readonly string[],
   colorScheme: ColorScheme,
 ): PptTextRun["properties"] {
-  if (!charStyle) return {};
+  if (!charStyle) {return {};}
 
   return {
     ...(charStyle.bold ? { bold: true } : {}),
@@ -218,8 +215,8 @@ function alignmentToString(alignment: number): PptTextParagraph["alignment"] {
  * use `leftMargin` instead (288 EMU per level step).
  */
 function deriveLevel(paraStyle: ParagraphStyleRun | undefined): number {
-  if (!paraStyle) return 0;
-  if (paraStyle.indent !== undefined && paraStyle.indent > 0) return paraStyle.indent;
+  if (!paraStyle) {return 0;}
+  if (paraStyle.indent !== undefined && paraStyle.indent > 0) {return paraStyle.indent;}
   if (paraStyle.leftMargin !== undefined && paraStyle.leftMargin > 0) {
     // Typical leftMargin step is 228600 EMU (0.25 inch) or 285750 (≈288 in some PPTs)
     // Use 228600 as base step (most common). Round to nearest level.
@@ -229,9 +226,9 @@ function deriveLevel(paraStyle: ParagraphStyleRun | undefined): number {
 }
 
 function buildBullet(paraStyle: ParagraphStyleRun): PptBullet | undefined {
-  if (!paraStyle.bulletFlags) return undefined;
+  if (!paraStyle.bulletFlags) {return undefined;}
   const hasBullet = !!(paraStyle.bulletFlags & 0x0F);
-  if (!hasBullet) return { type: "none" };
+  if (!hasBullet) {return { type: "none" };}
 
   if (paraStyle.bulletChar !== undefined) {
     return { type: "char", char: String.fromCharCode(paraStyle.bulletChar) };

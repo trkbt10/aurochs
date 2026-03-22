@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Generate test PPTX files for font spacing visual regression tests.
+ * @file Generate test PPTX files for font spacing visual regression tests.
  *
  * Test cases are organized by category:
  * 1. Character Spacing (a:spc) - ECMA-376 21.1.2.3.9

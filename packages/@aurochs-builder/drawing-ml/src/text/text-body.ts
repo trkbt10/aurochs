@@ -195,6 +195,16 @@ function buildHyperlink(spec: HyperlinkInput): Hyperlink {
 }
 
 /**
+ * Resolve vertical position to baseline percentage value.
+ */
+function resolveBaseline(position: string | undefined): number | undefined {
+  if (!position || position === "normal") {
+    return undefined;
+  }
+  return VERTICAL_POSITION_MAP[position];
+}
+
+/**
  * Build run properties from spec
  */
 function buildRunProperties(spec: TextRunInput): RunProperties | undefined {
@@ -202,10 +212,7 @@ function buildRunProperties(spec: TextRunInput): RunProperties | undefined {
     spec.underline && spec.underline !== "none" ? (UNDERLINE_MAP[spec.underline] ?? spec.underline) : undefined;
   const strike = spec.strikethrough && spec.strikethrough !== "noStrike" ? STRIKE_MAP[spec.strikethrough] : undefined;
   const caps = spec.caps && spec.caps !== "none" ? spec.caps : undefined;
-  const baseline =
-    spec.verticalPosition && spec.verticalPosition !== "normal"
-      ? VERTICAL_POSITION_MAP[spec.verticalPosition]
-      : undefined;
+  const baseline = resolveBaseline(spec.verticalPosition);
 
   const properties: RunProperties = {
     ...(spec.bold !== undefined && { bold: spec.bold }),
@@ -242,7 +249,7 @@ export function buildTextRun(spec: TextRunInput): TextRun {
  * Build bullet style from spec
  */
 function buildBulletStyle(spec: TextParagraphInput["bullet"]): BulletStyle | undefined {
-  if (spec === undefined || spec.type === "none") return undefined;
+  if (spec === undefined || spec.type === "none") {return undefined;}
   if (spec.type === "char") {
     return {
       bullet: { type: "char", char: spec.char ?? "•" },
@@ -268,10 +275,11 @@ function buildBulletStyle(spec: TextParagraphInput["bullet"]): BulletStyle | und
  * Point values are stored in actual points (the serializer converts to centipoints).
  */
 function buildLineSpacing(spec: TextParagraphInput["lineSpacing"]): LineSpacing | undefined {
-  if (spec === undefined) return undefined;
-  return spec.type === "percent"
-    ? { type: "percent", value: spec.value * 1000 }
-    : { type: "points", value: spec.value };
+  if (spec === undefined) {return undefined;}
+  if (spec.type === "percent") {
+    return { type: "percent", value: spec.value * 1000 };
+  }
+  return { type: "points", value: spec.value };
 }
 
 /**
@@ -307,7 +315,7 @@ function isRichText(text: TextInput): text is RichTextInput {
  * Build body properties from spec
  */
 function buildBodyProperties(spec?: TextBodyPropertiesInput): BodyProperties {
-  if (!spec) return {};
+  if (!spec) {return {};}
 
   const hasInsets =
     spec.insetLeft !== undefined ||

@@ -5,6 +5,7 @@
  * to ensure structural compatibility with Figma.
  */
 
+import { readFileSync } from "node:fs";
 import { parseFigFile } from "../parser";
 import type { FigNode } from "../types";
 
@@ -256,10 +257,8 @@ export async function runValidation(
   generatedPath: string,
   referencePath: string
 ): Promise<boolean> {
-  const fs = await import("node:fs");
-
-  const generatedData = new Uint8Array(fs.readFileSync(generatedPath));
-  const referenceData = new Uint8Array(fs.readFileSync(referencePath));
+  const generatedData = new Uint8Array(readFileSync(generatedPath));
+  const referenceData = new Uint8Array(readFileSync(referencePath));
 
   const result = await validateFigFile(generatedData, referenceData);
 

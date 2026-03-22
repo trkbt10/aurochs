@@ -10,6 +10,17 @@ import { computeTextLayout } from "../../text/layout/compute-layout";
 import { extractDerivedTextPathData, hasDerivedGlyphs, type DerivedTextData } from "../../text/paths/derived-paths";
 import type { PathContour, Color, FallbackTextData } from "../types";
 
+/** Map Figma text decoration value to scene graph text decoration string */
+function mapTextDecoration(decoration: string | undefined): "underline" | "strikethrough" | undefined {
+  if (decoration === "UNDERLINE") {
+    return "underline";
+  }
+  if (decoration === "STRIKETHROUGH") {
+    return "strikethrough";
+  }
+  return undefined;
+}
+
 /**
  * Convert text path contours from text/paths format to scene graph format
  */
@@ -148,12 +159,7 @@ export function convertTextNode(node: FigNode, blobs: readonly FigBlob[]): TextC
       letterSpacing: props.letterSpacing,
       lineHeight: layout.lineHeight,
       textAnchor: getTextAnchor(props.textAlignHorizontal),
-      textDecoration:
-        props.textDecoration === "UNDERLINE"
-          ? "underline"
-          : props.textDecoration === "STRIKETHROUGH"
-            ? "strikethrough"
-            : undefined,
+      textDecoration: mapTextDecoration(props.textDecoration),
     };
 
     return {
@@ -180,12 +186,7 @@ export function convertTextNode(node: FigNode, blobs: readonly FigBlob[]): TextC
     letterSpacing: props.letterSpacing,
     lineHeight: layout.lineHeight,
     textAnchor: getTextAnchor(props.textAlignHorizontal),
-    textDecoration:
-      props.textDecoration === "UNDERLINE"
-        ? "underline"
-        : props.textDecoration === "STRIKETHROUGH"
-          ? "strikethrough"
-          : undefined,
+    textDecoration: mapTextDecoration(props.textDecoration),
   };
 
   return {

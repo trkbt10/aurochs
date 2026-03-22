@@ -80,6 +80,12 @@ const leftSectionStyle: CSSProperties = {
 // Component
 // =============================================================================
 
+
+
+
+
+
+/** Status bar showing cursor position, encoding, and language info */
 export function EditorStatusBar({
   cursor,
   selection,

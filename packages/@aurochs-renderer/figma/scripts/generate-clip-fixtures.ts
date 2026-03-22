@@ -52,14 +52,14 @@ async function generateClipFixtures(): Promise<void> {
   const canvasID = figFile.addCanvas(docID, "Clips Canvas");
   figFile.addInternalCanvas(docID);
 
-  let nextID = 10;
-  const id = () => nextID++;
+  const nextIDRef = { value: 10 };
+  const id = () => nextIDRef.value++;
 
   // Grid layout
   const GRID_COLS = 4;
   const GRID_GAP = 30;
   const MARGIN = 50;
-  let frameIndex = 0;
+  const frameIndex = 0;
 
   function gridPos() {
     const col = frameIndex % GRID_COLS;

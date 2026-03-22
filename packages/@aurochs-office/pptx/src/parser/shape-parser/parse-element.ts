@@ -8,7 +8,8 @@
 
 import { getAttr, getChild, getChildren, isXmlElement, type XmlElement } from "@aurochs/xml";
 import type { Shape } from "../../domain";
-import type { PlaceholderContext, MasterStylesInfo, FormatScheme, ResourceContext } from "../context";
+import type { PlaceholderContext, MasterStylesInfo, ResourceContext } from "../context";
+import type { FormatScheme } from "../../domain/theme/types";
 
 import { parseSpShape } from "./sp";
 import { parsePicShape } from "./pic";

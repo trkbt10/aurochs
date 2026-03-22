@@ -50,12 +50,23 @@ async function findChrome(): Promise<string> {
     "/Applications/Chromium.app/Contents/MacOS/Chromium",
     process.env.CHROME_PATH,
   ].filter(Boolean) as string[];
-  for (const p of paths) { if (fs.existsSync(p)) return p; }
+  for (const p of paths) { if (fs.existsSync(p)) {return p;} }
   throw new Error("Chrome not found. Set CHROME_PATH environment variable.");
 }
 
 async function settle(ms = SETTLE): Promise<void> {
   await new Promise((r) => setTimeout(r, ms));
+}
+
+/**
+ * Format an error message for font property mismatches in visual tests.
+ */
+function formatFontMismatchError(
+  displayFont: Record<string, unknown>,
+  editFont: Record<string, unknown>,
+  viewBoxes: string[],
+): string {
+  return `display=${JSON.stringify(displayFont)}, edit=${JSON.stringify(editFont)}, viewBoxes=${JSON.stringify(viewBoxes)}`;
 }
 
 // =============================================================================
@@ -83,7 +94,7 @@ async function getShapeHitAreas(page: Page): Promise<Map<string, Rect>> {
 async function getShapeCenter(page: Page, shapeId: string): Promise<{ x: number; y: number }> {
   const areas = await getShapeHitAreas(page);
   const rect = areas.get(shapeId);
-  if (!rect) throw new Error(`Shape ${shapeId} not found`);
+  if (!rect) {throw new Error(`Shape ${shapeId} not found`);}
   return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
 }
 
@@ -91,7 +102,7 @@ async function hasSelectionBox(page: Page): Promise<boolean> {
   return page.evaluate(() => {
     const rects = document.querySelectorAll("rect");
     for (const rect of rects) {
-      if (rect.getAttribute("stroke") === "#0066ff" && rect.getAttribute("fill") === "none" && rect.getAttribute("stroke-width") === "2") return true;
+      if (rect.getAttribute("stroke") === "#0066ff" && rect.getAttribute("fill") === "none" && rect.getAttribute("stroke-width") === "2") {return true;}
     }
     return false;
   });
@@ -99,13 +110,9 @@ async function hasSelectionBox(page: Page): Promise<boolean> {
 
 async function countSelectionBoxes(page: Page): Promise<number> {
   return page.evaluate(() => {
-    const rects = document.querySelectorAll("rect");
-    // eslint-disable-next-line no-restricted-syntax
-    let count = 0;
-    for (const rect of rects) {
-      if (rect.getAttribute("stroke") === "#0066ff" && rect.getAttribute("fill") === "none" && rect.getAttribute("stroke-width") === "2") count++;
-    }
-    return count;
+    return Array.from(document.querySelectorAll("rect")).filter((rect) =>
+      rect.getAttribute("stroke") === "#0066ff" && rect.getAttribute("fill") === "none" && rect.getAttribute("stroke-width") === "2"
+    ).length;
   });
 }
 
@@ -133,7 +140,7 @@ async function getShapeCount(page: Page): Promise<number> {
  * both inside the ViewportOverlay. Look for an SVG with viewBox "0 0 W H" that
  * contains a <line> (caret) or <rect fill-opacity="0.3"> (selection).
  */
-function findControllerSvgQuery(): string {
+function _findControllerSvgQuery(): string {
   // The controller SVG has viewBox="0 0 612 792" and is at z-index 1001
   return "svg[style*='z-index: 1001'], svg[style*='zIndex']";
 }
@@ -145,18 +152,20 @@ function findControllerSvgQuery(): string {
  */
 async function getCaretPixelX(page: Page): Promise<{ caretX: number; svgX: number; svgWidth: number } | null> {
   return page.evaluate(() => {
-    const allSvgs = document.querySelectorAll("svg");
-    for (const svg of allSvgs) {
-      if (!svg.style.zIndex || parseInt(svg.style.zIndex) < 1000) continue;
-      // Use the hit target rect as reference (the text bounds area)
-      let hitRect: DOMRect | null = null;
+    function findHitRect(svg: SVGSVGElement): DOMRect | null {
       for (const rect of svg.querySelectorAll("rect")) {
         if (rect.getAttribute("fill") === "transparent" && rect.getAttribute("pointer-events") === "all") {
-          hitRect = rect.getBoundingClientRect();
-          break;
+          return rect.getBoundingClientRect();
         }
       }
-      if (!hitRect) continue;
+      return null;
+    }
+    const allSvgs = document.querySelectorAll("svg");
+    for (const svg of allSvgs) {
+      if (!svg.style.zIndex || parseInt(svg.style.zIndex) < 1000) {continue;}
+      // Use the hit target rect as reference (the text bounds area)
+      const hitRect = findHitRect(svg);
+      if (!hitRect) {continue;}
       const lines = svg.querySelectorAll("line");
       for (const line of lines) {
         const sw = parseFloat(line.getAttribute("stroke-width") ?? "0");
@@ -173,15 +182,15 @@ async function getCaretPixelX(page: Page): Promise<{ caretX: number; svgX: numbe
 /** Get caret position as a ratio (0.0 = left edge, 1.0 = right edge of SVG). */
 async function getCaretRatio(page: Page): Promise<number | null> {
   const info = await getCaretPixelX(page);
-  if (!info || info.svgWidth === 0) return null;
+  if (!info || info.svgWidth === 0) {return null;}
   return (info.caretX - info.svgX) / info.svgWidth;
 }
 
 /** Find the controller SVG (z-index >= 1000). */
-function findControllerSvg(doc: Document): SVGSVGElement | null {
+function _findControllerSvg(doc: Document): SVGSVGElement | null {
   const allSvgs = doc.querySelectorAll("svg");
   for (const svg of allSvgs) {
-    if (svg.style.zIndex && parseInt(svg.style.zIndex) >= 1000) return svg;
+    if (svg.style.zIndex && parseInt(svg.style.zIndex) >= 1000) {return svg;}
   }
   return null;
 }
@@ -189,17 +198,19 @@ function findControllerSvg(doc: Document): SVGSVGElement | null {
 /** Get the selection highlight rect as start/end ratios relative to the text bounds hit target. */
 async function getSelectionHighlightRatio(page: Page): Promise<{ startRatio: number; endRatio: number } | null> {
   return page.evaluate(() => {
-    const allSvgs = document.querySelectorAll("svg");
-    for (const svg of allSvgs) {
-      if (!svg.style.zIndex || parseInt(svg.style.zIndex) < 1000) continue;
-      let hitRect: DOMRect | null = null;
+    function findHitRect(svg: SVGSVGElement): DOMRect | null {
       for (const rect of svg.querySelectorAll("rect")) {
         if (rect.getAttribute("fill") === "transparent" && rect.getAttribute("pointer-events") === "all") {
-          hitRect = rect.getBoundingClientRect();
-          break;
+          return rect.getBoundingClientRect();
         }
       }
-      if (!hitRect) continue;
+      return null;
+    }
+    const allSvgs = document.querySelectorAll("svg");
+    for (const svg of allSvgs) {
+      if (!svg.style.zIndex || parseInt(svg.style.zIndex) < 1000) {continue;}
+      const hitRect = findHitRect(svg);
+      if (!hitRect) {continue;}
       for (const rect of svg.querySelectorAll("rect")) {
         if (rect.getAttribute("fill-opacity") === "0.3") {
           const r = rect.getBoundingClientRect();
@@ -222,7 +233,7 @@ async function getTextEditSvgRect(page: Page): Promise<Rect | null> {
   return page.evaluate(() => {
     const allSvgs = document.querySelectorAll("svg");
     for (const svg of allSvgs) {
-      if (!svg.style.zIndex || parseInt(svg.style.zIndex) < 1000) continue;
+      if (!svg.style.zIndex || parseInt(svg.style.zIndex) < 1000) {continue;}
       // The hit target rect has pointerEvents="all" and fill="transparent"
       for (const rect of svg.querySelectorAll("rect")) {
         if (rect.getAttribute("fill") === "transparent" && rect.getAttribute("pointer-events") === "all") {
@@ -238,12 +249,12 @@ async function getTextEditSvgRect(page: Page): Promise<Rect | null> {
 /** Get the SVG <text> content inside the controller SVG. */
 async function getRenderedSvgText(page: Page): Promise<string | null> {
   return page.evaluate(() => {
-    if (!document.querySelector("textarea")) return null;
+    if (!document.querySelector("textarea")) {return null;}
     const allSvgs = document.querySelectorAll("svg");
     for (const svg of allSvgs) {
       if (svg.style.zIndex && parseInt(svg.style.zIndex) >= 1000) {
         const text = svg.querySelector("text");
-        if (text) return text.textContent ?? null;
+        if (text) {return text.textContent ?? null;}
       }
     }
     return null;
@@ -253,7 +264,7 @@ async function getRenderedSvgText(page: Page): Promise<string | null> {
 /** Click at a ratio (0.0–1.0) within the text edit SVG. */
 async function clickAtRatio(page: Page, ratio: number): Promise<void> {
   const rect = await getTextEditSvgRect(page);
-  if (!rect) return;
+  if (!rect) {return;}
   await page.mouse.click(rect.x + rect.width * ratio, rect.y + rect.height / 2);
   await settle(200);
 }
@@ -352,7 +363,7 @@ async function runAllTests(browser: Browser): Promise<TestResult[]> {
     await settle(100);
     const homeInfo = await getCaretPixelX(page);
 
-    for (const _ of [1, 2, 3, 4, 5]) await page.keyboard.press("ArrowRight");
+    for (const _ of [1, 2, 3, 4, 5]) {await page.keyboard.press("ArrowRight");}
     await settle(200);
     const midInfo = await getCaretPixelX(page);
     const sel = await getTextareaSelection(page);
@@ -494,7 +505,7 @@ async function runAllTests(browser: Browser): Promise<TestResult[]> {
       // Find the contentSvg text element for shape 0:0 — it's inside the canvas SVG
       const svgs = document.querySelectorAll("svg");
       for (const svg of svgs) {
-        if (!svg.style.backgroundColor) continue;
+        if (!svg.style.backgroundColor) {continue;}
         const texts = svg.querySelectorAll("text");
         for (const text of texts) {
           if (text.textContent?.includes("Hello World")) {
@@ -519,9 +530,9 @@ async function runAllTests(browser: Browser): Promise<TestResult[]> {
     const editFont = await page.evaluate(() => {
       const allSvgs = document.querySelectorAll("svg");
       for (const svg of allSvgs) {
-        if (!svg.style.zIndex || parseInt(svg.style.zIndex) < 1000) continue;
+        if (!svg.style.zIndex || parseInt(svg.style.zIndex) < 1000) {continue;}
         const text = svg.querySelector("text");
-        if (!text) continue;
+        if (!text) {continue;}
         return {
           fontFamily: text.getAttribute("font-family"),
           fontSize: text.getAttribute("font-size"),
@@ -532,13 +543,6 @@ async function runAllTests(browser: Browser): Promise<TestResult[]> {
         };
       }
       return null;
-    });
-
-    // Also compare pixel bounding box to ensure scale parity
-    const displayBbox = await page.evaluate(() => {
-      // Re-check display — it should still be in the main canvas (excludeSet removes it, but
-      // we captured it before entering edit). Use a second text element as reference.
-      return null; // We'll compare viewBox instead
     });
 
     // Compare viewBox of both parent SVGs
@@ -565,11 +569,8 @@ async function runAllTests(browser: Browser): Promise<TestResult[]> {
       // viewBox must match to ensure same scaling
       const viewBoxMatch = viewBoxes.length >= 1 && viewBoxes.every(vb => vb === viewBoxes[0]);
       const passed = familyMatch && sizeMatch && weightMatch && styleMatch && baselineMatch && viewBoxMatch;
-      test({
-        name,
-        passed,
-        error: passed ? undefined : `display=${JSON.stringify(displayFont)}, edit=${JSON.stringify(editFont)}, viewBoxes=${JSON.stringify(viewBoxes)}`,
-      });
+      const errorMessage = formatFontMismatchError(displayFont, editFont, viewBoxes);
+      test({ name, passed, error: passed ? undefined : errorMessage });
     }
     await page.close();
   }
@@ -616,7 +617,7 @@ async function runAllTests(browser: Browser): Promise<TestResult[]> {
     const page = await freshPage();
     await enterTextEdit(page, "0:0");
     const target = await getCanvasBackgroundClickTarget(page);
-    if (target) await page.mouse.click(target.x, target.y);
+    if (target) {await page.mouse.click(target.x, target.y);}
     await settle();
     test({ name, passed: !(await isTextEditing(page)) });
     await page.close();
@@ -738,7 +739,7 @@ async function runAllTests(browser: Browser): Promise<TestResult[]> {
           candidates.push({ cx: r.x + r.width / 2, cy: r.y + r.height / 2 });
         }
       }
-      if (candidates.length === 0) return null;
+      if (candidates.length === 0) {return null;}
       candidates.sort((a, b) => (b.cx + b.cy) - (a.cx + a.cy));
       return { x: candidates[0].cx, y: candidates[0].cy };
     });
@@ -865,7 +866,7 @@ async function runAllTests(browser: Browser): Promise<TestResult[]> {
     await page.mouse.click(center.x, center.y);
     await settle();
     const target = await getCanvasBackgroundClickTarget(page);
-    if (target) await page.mouse.click(target.x, target.y);
+    if (target) {await page.mouse.click(target.x, target.y);}
     await settle();
     test({ name, passed: !(await hasSelectionBox(page)) });
     await page.close();
@@ -928,6 +929,33 @@ async function runAllTests(browser: Browser): Promise<TestResult[]> {
   return results;
 }
 
+/**
+ * Run all tests and ensure browser/server cleanup even on failure.
+ */
+async function runTestsWithCleanup(browser: Browser, server: ViteDevServer): Promise<TestResult[]> {
+  try {
+    return await runAllTests(browser);
+  } finally {
+    await browser.close();
+    await server.close();
+  }
+}
+
+/**
+ * Print test results summary and exit with error code if any failures.
+ */
+function printTestResults(allResults: TestResult[]): void {
+  console.log("\n=== PDF Editor E2E Test Results ===\n");
+  const passed = allResults.filter((r) => r.passed).length;
+  const failed = allResults.length - passed;
+  for (const r of allResults) {
+    if (r.passed) { console.log(`  ✓ ${r.name}`); }
+    else { console.log(`  ✗ ${r.name}`); if (r.error) {console.log(`    ${r.error}`);} }
+  }
+  console.log(`\nTotal: ${passed} passed, ${failed} failed out of ${allResults.length}`);
+  if (failed > 0) {process.exit(1);}
+}
+
 // =============================================================================
 // Main Runner
 // =============================================================================
@@ -945,26 +973,8 @@ async function runTests() {
   const executablePath = await findChrome();
   const browser: Browser = await puppeteer.launch({ executablePath, headless: true });
 
-  // eslint-disable-next-line no-restricted-syntax
-  let allResults: TestResult[] = [];
-  try {
-    allResults = await runAllTests(browser);
-  } finally {
-    await browser.close();
-    await server.close();
-  }
-
-  console.log("\n=== PDF Editor E2E Test Results ===\n");
-  // eslint-disable-next-line no-restricted-syntax
-  let passed = 0;
-  // eslint-disable-next-line no-restricted-syntax
-  let failed = 0;
-  for (const r of allResults) {
-    if (r.passed) { console.log(`  ✓ ${r.name}`); passed++; }
-    else { console.log(`  ✗ ${r.name}`); if (r.error) console.log(`    ${r.error}`); failed++; }
-  }
-  console.log(`\nTotal: ${passed} passed, ${failed} failed out of ${allResults.length}`);
-  if (failed > 0) process.exit(1);
+  const allResults = await runTestsWithCleanup(browser, server);
+  printTestResults(allResults);
 }
 
 runTests().catch((err) => { console.error(err); process.exit(1); });

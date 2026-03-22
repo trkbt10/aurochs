@@ -48,7 +48,7 @@ export type ComponentEntry = {
   /** Component description */
   readonly description?: string;
   /** Stories for this component */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Story props vary per component
   readonly stories: readonly Story<any>[];
 };
 

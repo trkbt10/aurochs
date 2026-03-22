@@ -11,7 +11,6 @@
 import { useCallback, useEffect } from "react";
 import type {
   GroupedListItemId,
-  GroupedListGroupId,
   GroupedListItem,
   GroupedListGroup,
   GroupedListMode,
@@ -27,6 +26,15 @@ export type UseGroupedListKeyboardOptions<TMeta = unknown> = {
   readonly onStartRename: (itemId: GroupedListItemId) => void;
   readonly onItemDelete: (itemId: GroupedListItemId) => void;
 };
+
+/** Find the index of the active item in the sorted list, or -1 if not found */
+function findActiveIndex<TMeta>(
+  sortedItems: readonly GroupedListItem<TMeta>[],
+  activeItemId: GroupedListItemId | undefined,
+): number {
+  if (!activeItemId) {return -1;}
+  return sortedItems.findIndex((i) => i.id === activeItemId);
+}
 
 /**
  * Hook for keyboard navigation.
@@ -63,9 +71,7 @@ export function useGroupedListKeyboard<TMeta = unknown>({
       }
 
       const sortedItems = getSortedItems();
-      const activeIndex = activeItemId
-        ? sortedItems.findIndex((i) => i.id === activeItemId)
-        : -1;
+      const activeIndex = findActiveIndex(sortedItems, activeItemId);
 
       switch (e.key) {
         case "ArrowDown": {
@@ -139,7 +145,7 @@ export function useGroupedListKeyboard<TMeta = unknown>({
 
   useEffect(() => {
     const container = containerRef.current;
-    if (!container) return;
+    if (!container) {return;}
 
     container.addEventListener("keydown", handleKeyDown);
     return () => container.removeEventListener("keydown", handleKeyDown);

@@ -1,5 +1,5 @@
 /**
- * Syncs version from root package.json to publish packages.
+ * @file Syncs version from root package.json to publish packages.
  * Run this after `changeset version` to keep publish packages in sync.
  */
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
@@ -9,18 +9,18 @@ import { fileURLToPath } from "node:url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "../..");
 
-interface PackageJson {
+type PackageJson = {
   name: string;
   version: string;
   [key: string]: unknown;
 }
 
-interface PluginJson {
+type PluginJson = {
   version: string;
   [key: string]: unknown;
 }
 
-interface MarketplaceJson {
+type MarketplaceJson = {
   metadata: { version: string; [key: string]: unknown };
   plugins: Array<{ version: string; [key: string]: unknown }>;
   [key: string]: unknown;
@@ -76,18 +76,18 @@ function main(): void {
   const marketplacePath = join(ROOT, ".claude-plugin/marketplace.json");
   if (existsSync(marketplacePath)) {
     const marketplace = readJson<MarketplaceJson>(marketplacePath);
-    let updated = false;
+    const updateState = { changed: false };
     if (marketplace.metadata.version !== version) {
       marketplace.metadata.version = version;
-      updated = true;
+      updateState.changed = true;
     }
     for (const pl of marketplace.plugins) {
       if (pl.version !== version) {
         pl.version = version;
-        updated = true;
+        updateState.changed = true;
       }
     }
-    if (updated) {
+    if (updateState.changed) {
       writeJson(marketplacePath, marketplace);
       console.log(`  Updated: .claude-plugin/marketplace.json`);
     }

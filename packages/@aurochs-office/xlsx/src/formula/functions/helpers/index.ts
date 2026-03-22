@@ -137,8 +137,6 @@ export const discountSeries = (rate: number, cashflows: number[]): number => {
 export const calculatePayment = calculatePaymentInternal;
 export const calculateInterestPayment = calculateInterestPaymentInternal;
 
-export type { ErrorValue } from "../../../domain/cell/types";
-
 export const createFormulaError = (code: ErrorValue, message?: string) => {
   return createFormulaErrorInternal(code, message);
 };

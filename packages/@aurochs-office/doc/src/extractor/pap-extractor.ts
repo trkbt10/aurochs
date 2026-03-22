@@ -200,10 +200,10 @@ function parseShd80(sprm: Sprm): DocShading | undefined {
   const icoBack = (val >> 5) & 0x1f;
   const ipat = (val >> 10) & 0x3f;
   // Shd80Nil: icoFore=0x1F, icoBack=0x1F, ipat=0x3F
-  if (icoFore === 0x1f && icoBack === 0x1f && ipat === 0x3f) return undefined;
+  if (icoFore === 0x1f && icoBack === 0x1f && ipat === 0x3f) {return undefined;}
   const foreColor = icoFore < ICO_COLORS.length ? ICO_COLORS[icoFore] : undefined;
   const backColor = icoBack < ICO_COLORS.length ? ICO_COLORS[icoBack] : undefined;
-  if (!foreColor && !backColor && ipat === 0) return undefined;
+  if (!foreColor && !backColor && ipat === 0) {return undefined;}
   return {
     ...(foreColor ? { foreColor } : {}),
     ...(backColor ? { backColor } : {}),
@@ -216,12 +216,12 @@ function parseShd80(sprm: Sprm): DocShading | undefined {
  */
 function parseShd(sprm: Sprm): DocShading | undefined {
   const data = sprm.operand;
-  if (data.length < 11) return undefined; // 1 + 4 + 4 + 2
+  if (data.length < 11) {return undefined;} // 1 + 4 + 4 + 2
   const foreColor = colorrefToHex(data, 1);
   const backColor = colorrefToHex(data, 5);
   const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
   const ipat = view.getUint16(9, true);
-  if (!foreColor && !backColor && ipat === 0) return undefined;
+  if (!foreColor && !backColor && ipat === 0) {return undefined;}
   return {
     ...(foreColor ? { foreColor } : {}),
     ...(backColor ? { backColor } : {}),
@@ -246,14 +246,14 @@ const TAB_TLC_MAP: readonly (DocTabLeader | undefined)[] = [
  */
 function parseChgTabsPapx(sprm: Sprm): DocTabStop[] | undefined {
   const data = sprm.operand;
-  if (data.length < 3) return undefined;
+  if (data.length < 3) {return undefined;}
   // operand starts with cb(2B), then itbdMac(1B)
   const itbdMac = data[2];
-  if (itbdMac === 0) return undefined;
+  if (itbdMac === 0) {return undefined;}
   // rgdxaTab: itbdMac × 2B int16 positions, starting at offset 3
   const positionsOffset = 3;
   const tbdOffset = positionsOffset + itbdMac * 2;
-  if (tbdOffset + itbdMac > data.length) return undefined;
+  if (tbdOffset + itbdMac > data.length) {return undefined;}
 
   const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
   const tabs: DocTabStop[] = [];
@@ -276,7 +276,7 @@ function parseChgTabsPapx(sprm: Sprm): DocTabStop[] | undefined {
 }
 
 function setBorder(props: PapProps, side: keyof DocParagraphBorders, border: DocBorder | undefined): void {
-  if (!border) return;
+  if (!border) {return;}
   if (!props.borders) {
     props.borders = {};
   }
@@ -296,36 +296,48 @@ export function extractPapProps(sprms: readonly Sprm[], istd: number): PapProps 
 type PapFkpCache = Map<number, readonly PapxRun[]>;
 
 /** Find paragraph properties for a given FC. */
-export function findPapxAtFc(
-  fc: number,
-  papBinTable: BinTable,
-  wordDocStream: Uint8Array,
-  cache: PapFkpCache,
-): PapProps {
-  const run = findRawPapxAtFc(fc, papBinTable, wordDocStream, cache);
-  if (!run) return {};
+export function findPapxAtFc(options: {
+  fc: number;
+  papBinTable: BinTable;
+  wordDocStream: Uint8Array;
+  cache: PapFkpCache;
+}): PapProps {
+  const run = findRawPapxAtFc(options);
+  if (!run) {return {};}
   return extractPapProps(run.sprms, run.istd);
 }
 
-/** Find raw PapxRun for a given FC. Returns the full run including raw SPRMs. */
-export function findRawPapxAtFc(
-  fc: number,
-  papBinTable: BinTable,
-  wordDocStream: Uint8Array,
-  cache: PapFkpCache,
-): PapxRun | undefined {
-  const pageNum = findFkpPage(papBinTable, fc);
-  if (pageNum === undefined) return undefined;
+/** Swallow PAP FKP parsing error and return undefined. */
+function handleSwallowedPapError(_error: unknown): undefined {
+  return undefined;
+}
 
-  let runs = cache.get(pageNum);
-  if (!runs) {
-    try {
-      runs = parsePapFkp(wordDocStream, pageNum);
-    } catch {
-      return undefined;
-    }
-    cache.set(pageNum, runs);
+/** Try to parse PAP FKP page, returning undefined on failure. */
+function tryParsePapFkp(wordDocStream: Uint8Array, pageNum: number, cache: PapFkpCache): readonly PapxRun[] | undefined {
+  try {
+    const parsed = parsePapFkp(wordDocStream, pageNum);
+    cache.set(pageNum, parsed);
+    return parsed;
+  } catch (error: unknown) {
+    return handleSwallowedPapError(error);
   }
+}
+
+/** Find raw PapxRun for a given FC. Returns the full run including raw SPRMs. */
+export function findRawPapxAtFc(options: {
+  fc: number;
+  papBinTable: BinTable;
+  wordDocStream: Uint8Array;
+  cache: PapFkpCache;
+}): PapxRun | undefined {
+  const { fc, papBinTable, wordDocStream, cache } = options;
+  const pageNum = findFkpPage(papBinTable, fc);
+  if (pageNum === undefined) {return undefined;}
+
+  const cached = cache.get(pageNum);
+  const runs = cached ?? tryParsePapFkp(wordDocStream, pageNum, cache);
+
+  if (!runs) { return undefined; }
 
   for (const run of runs) {
     if (fc >= run.fcStart && fc < run.fcEnd) {

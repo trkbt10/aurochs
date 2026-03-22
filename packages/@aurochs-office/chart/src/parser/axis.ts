@@ -88,6 +88,16 @@ export function parseDisplayUnits(dispUnitsEl: XmlElement | undefined):
 }
 
 /**
+ * Parse gridlines element into ChartLines.
+ */
+function parseGridlines(el: XmlElement | undefined): { shapeProperties: ReturnType<typeof parseChartShapeProperties> } | undefined {
+  if (!el) {
+    return undefined;
+  }
+  return { shapeProperties: parseChartShapeProperties(getChild(el, "c:spPr")) };
+}
+
+/**
  * Parse base axis properties common to all axis types
  *
  * Parses c:txPr (text properties) for axis label styling.
@@ -112,6 +122,9 @@ export function parseAxisBase(axElement: XmlElement): Omit<CategoryAxis, "type">
   const minorGridlinesEl = getChild(axElement, "c:minorGridlines");
   const txPrEl = getChild(axElement, "c:txPr");
 
+  const majorGridlines = parseGridlines(majorGridlinesEl);
+  const minorGridlines = parseGridlines(minorGridlinesEl);
+
   return {
     id: axIdEl ? (getIntAttr(axIdEl, "val") ?? 0) : 0,
     position: (getAttr(axPosEl, "val") as AxisPosition) ?? "b",
@@ -123,12 +136,8 @@ export function parseAxisBase(axElement: XmlElement): Omit<CategoryAxis, "type">
     crossAxisId: crossAxEl ? (getIntAttr(crossAxEl, "val") ?? 0) : 0,
     crosses: getAttr(crossesEl, "val") as "autoZero" | "max" | "min" | undefined,
     crossesAt: crossesAtEl ? getFloatAttr(crossesAtEl, "val") : undefined,
-    majorGridlines: majorGridlinesEl
-      ? { shapeProperties: parseChartShapeProperties(getChild(majorGridlinesEl, "c:spPr")) }
-      : undefined,
-    minorGridlines: minorGridlinesEl
-      ? { shapeProperties: parseChartShapeProperties(getChild(minorGridlinesEl, "c:spPr")) }
-      : undefined,
+    majorGridlines,
+    minorGridlines,
     shapeProperties: parseChartShapeProperties(getChild(axElement, "c:spPr")),
     textProperties: txPrEl ? parseTextBody(txPrEl) : undefined,
   };

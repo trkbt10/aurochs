@@ -43,6 +43,23 @@ function buildStretchFill(): StretchFill {
 // =============================================================================
 
 /**
+ * Build source rectangle from optional spec.
+ */
+function buildSourceRect(
+  rect: BlipFillInput["sourceRect"],
+): { left: ReturnType<typeof pct>; top: ReturnType<typeof pct>; right: ReturnType<typeof pct>; bottom: ReturnType<typeof pct> } | undefined {
+  if (!rect) {
+    return undefined;
+  }
+  return {
+    left: pct(rect.left),
+    top: pct(rect.top),
+    right: pct(rect.right),
+    bottom: pct(rect.bottom),
+  };
+}
+
+/**
  * Build a blip fill from specification.
  *
  * A blip fill represents an image fill, where an image is used to fill
@@ -53,14 +70,7 @@ function buildStretchFill(): StretchFill {
  */
 export function buildBlipFill(spec: BlipFillInput): BlipFill {
   const hasTile = spec.tile !== undefined;
-  const sourceRect = spec.sourceRect
-    ? {
-        left: pct(spec.sourceRect.left),
-        top: pct(spec.sourceRect.top),
-        right: pct(spec.sourceRect.right),
-        bottom: pct(spec.sourceRect.bottom),
-      }
-    : undefined;
+  const sourceRect = buildSourceRect(spec.sourceRect);
 
   return {
     type: "blipFill",
