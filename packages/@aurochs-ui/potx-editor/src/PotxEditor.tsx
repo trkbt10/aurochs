@@ -2,15 +2,16 @@
  * @file PotxEditor - PowerPoint Template Editor
  *
  * Main component for editing POTX (PowerPoint template) files.
- * Uses shared components: ItemList, LayoutThumbnail, EditorCanvas, SlideRenderer.
+ * Uses PresentationEditorProvider from pptx-editor for canvas interaction
+ * (selection, drag, text editing, undo/redo, creation mode).
+ * Theme-level state (colors, fonts, backgrounds) managed by ThemeEditorContext.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Shape, Placeholder, Background } from "@aurochs-office/pptx/domain";
+import type { Shape, Placeholder, Slide } from "@aurochs-office/pptx/domain";
 import type { FontSpec } from "@aurochs-office/ooxml/domain/font-scheme";
 import type { SlideSize, SlideLayoutType } from "@aurochs-office/pptx/domain";
 import type { PackageFile } from "@aurochs-office/opc";
-import { parseBackground } from "@aurochs-office/pptx/parser";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import { buildSlideLayoutOptions, buildSlideLayoutEntries, loadSlideLayoutBundle } from "@aurochs-office/pptx/app";
 import type { SlideLayoutEntry } from "@aurochs-office/pptx/app";
@@ -68,14 +69,20 @@ import {
   TransitionEditor,
   getCursorForCreationMode,
 } from "@aurochs-ui/ooxml-components";
-import type { CreationMode } from "@aurochs-ui/ooxml-components";
 import type { SlideTransition } from "@aurochs-office/pptx/domain/transition";
 import { collectPptxShapeRenderData } from "@aurochs-ui/ooxml-components/pptx-render-resolver";
 import type { ZoomMode } from "@aurochs-ui/editor-controls/zoom";
 import type { ViewportTransform } from "@aurochs-ui/editor-core/viewport";
 import { INITIAL_VIEWPORT } from "@aurochs-ui/editor-core/viewport";
-import { isInputTarget, isPlatformMac, getModKey } from "@aurochs-ui/editor-core/keyboard";
 import { ShapeInfoOverlay } from "./panels/ShapeInfoOverlay";
+import {
+  PresentationEditorProvider,
+  usePresentationEditor,
+} from "@aurochs-ui/pptx-editor";
+import type { PresentationEditorAction } from "@aurochs-ui/pptx-editor";
+import { createVirtualDocument, type VirtualDocumentInput } from "./adapter/layout-document-adapter";
+import { useThemeDocumentSync } from "./adapter/use-theme-document-sync";
+import type { ResourceResolver } from "@aurochs-office/pptx/domain/resource-resolver";
 
 // =============================================================================
 // Types
@@ -103,17 +110,18 @@ const POTX_VISIBLE_TOOLS: ReadonlySet<string> = new Set([
   "rightArrow", "textbox", "connector",
 ]);
 
+const EMPTY_RESOURCE_RESOLVER: ResourceResolver = {
+  resolve: () => undefined,
+  getMimeType: () => undefined,
+  getTarget: () => undefined,
+  readFile: () => undefined,
+  getFilePath: () => undefined,
+} as unknown as ResourceResolver;
+
 // =============================================================================
 // Helpers
 // =============================================================================
 
-/**
- * Convert p:bg XmlElement → BackgroundState for UI display.
- * Handles p:bgPr (explicit fill). p:bgRef (theme reference) is preserved
- * in SoT but cannot be displayed as BaseFill without theme context.
- *
- * @see ECMA-376 §19.3.1.2 (p:bg), §19.3.1.3 (p:bgPr)
- */
 function bgXmlToBackgroundState(bgElement: XmlElement | undefined): BackgroundState {
   if (!bgElement) { return {}; }
   const bgPr = getChild(bgElement, "p:bgPr");
@@ -122,11 +130,6 @@ function bgXmlToBackgroundState(bgElement: XmlElement | undefined): BackgroundSt
   return fill ? { fill } : {};
 }
 
-/**
- * Convert BackgroundState → p:bg XmlElement for SoT storage.
- *
- * @see ECMA-376 §19.3.1.2 (p:bg), §19.3.1.3 (p:bgPr)
- */
 function backgroundStateToXml(bg: BackgroundState): XmlElement | undefined {
   if (!bg.fill || bg.fill.type === "noFill") { return undefined; }
   const fillXml = serializeFill(bg.fill);
@@ -134,45 +137,32 @@ function backgroundStateToXml(bg: BackgroundState): XmlElement | undefined {
   return createElement("p:bg", {}, [bgPr]);
 }
 
-/** Convert LayoutOverrides background to Background domain type for export. */
-function layoutOverridesToBackground(overrides: LayoutListEntry["overrides"]): Background | undefined {
+function layoutOverridesToBackground(overrides: LayoutListEntry["overrides"]) {
   const fill = overrides?.background?.fill;
   if (!fill) { return undefined; }
   return { fill, shadeToTitle: overrides?.background?.shadeToTitle };
 }
 
-/** Build ThemeExportOptions from current editor state. */
 function buildThemeExportOptions(s: ThemeEditorState, slideSize?: SlideSize): ThemeExportOptions {
   const layouts: LayoutExportEntry[] = s.layoutEdit.layouts.map((l) => ({
-    name: l.name,
-    type: l.type,
-    matchingName: l.matchingName,
-    showMasterShapes: l.showMasterShapes,
-    preserve: l.preserve,
-    userDrawn: l.userDrawn,
+    name: l.name, type: l.type, matchingName: l.matchingName,
+    showMasterShapes: l.showMasterShapes, preserve: l.preserve, userDrawn: l.userDrawn,
     background: layoutOverridesToBackground(l.overrides),
-    colorMapOverride: l.overrides?.colorMapOverride,
-    transition: l.overrides?.transition,
+    colorMapOverride: l.overrides?.colorMapOverride, transition: l.overrides?.transition,
   }));
-
   return {
     name: s.themeName,
     colorScheme: s.colorScheme as Readonly<Record<SchemeColorName, string>>,
-    fontScheme: s.fontScheme,
-    fontSchemeName: s.fontSchemeName,
-    colorMapping: s.masterColorMapping,
-    formatSchemeElements: s.formatScheme,
-    customColors: s.customColors,
-    extraColorSchemes: s.extraColorSchemes,
-    objectDefaults: s.objectDefaults,
-    masterTextStyles: s.masterTextStyles,
+    fontScheme: s.fontScheme, fontSchemeName: s.fontSchemeName,
+    colorMapping: s.masterColorMapping, formatSchemeElements: s.formatScheme,
+    customColors: s.customColors, extraColorSchemes: s.extraColorSchemes,
+    objectDefaults: s.objectDefaults, masterTextStyles: s.masterTextStyles,
     masterBackground: s.masterBackground,
     layouts: layouts.length > 0 ? layouts : undefined,
     slideSize: slideSize ? { width: slideSize.width as number, height: slideSize.height as number } : undefined,
   };
 }
 
-/** Convert SlideLayoutEntry parsed data to LayoutOverrides for editor state. */
 function buildOverridesFromEntry(entry: SlideLayoutEntry): LayoutListEntry["overrides"] {
   const bg = entry.background;
   const clr = entry.colorMapOverride;
@@ -180,41 +170,25 @@ function buildOverridesFromEntry(entry: SlideLayoutEntry): LayoutListEntry["over
   if (!bg && !clr && !trans) { return undefined; }
   return {
     background: bg ? { fill: bg.fill, shadeToTitle: bg.shadeToTitle } : undefined,
-    colorMapOverride: clr,
-    transition: trans,
+    colorMapOverride: clr, transition: trans,
   };
 }
 
 function getLayoutColorMapping(layout: LayoutListEntry, fallback: ColorMapping): ColorMapping {
   const override = layout.overrides?.colorMapOverride;
-  if (override?.type === "override") {
-    return override.mappings;
-  }
+  if (override?.type === "override") { return override.mappings; }
   return fallback;
 }
 
-function renderShapePanel(shape: Shape | undefined, onShapeChange: (id: ShapeId, updater: (s: Shape) => Shape) => void): React.ReactNode {
-  if (shape) {
-    return <LayoutShapePanel shape={shape} onShapeChange={onShapeChange} />;
-  }
+function renderShapePanel(shape: Shape | undefined, onShapeChange: (id: ShapeId, updater: (s: Shape) => Shape) => void) {
+  if (shape) { return <LayoutShapePanel shape={shape} onShapeChange={onShapeChange} />; }
   return <NoShapeSelected />;
 }
 
-
-// =============================================================================
-// Context Menu Items
-// =============================================================================
-
 function buildContextMenuItems(hasSelection: boolean): readonly MenuEntry[] {
-  if (!hasSelection) {return [];}
-  return [
-    { id: "delete", label: "Delete", shortcut: "⌫", danger: true },
-  ];
+  if (!hasSelection) { return []; }
+  return [{ id: "delete", label: "Delete", shortcut: "⌫", danger: true }];
 }
-
-// =============================================================================
-// Theme Name Section
-// =============================================================================
 
 function ThemeNameSection({ themeName, onThemeNameChange }: { readonly themeName: string; readonly onThemeNameChange: (name: string) => void }) {
   const handleChange = useCallback((value: string | number) => onThemeNameChange(String(value)), [onThemeNameChange]);
@@ -228,96 +202,173 @@ function ThemeNameSection({ themeName, onThemeNameChange }: { readonly themeName
 }
 
 // =============================================================================
-// Component
+// Outer Component — wraps PresentationEditorProvider
 // =============================================================================
 
-/** Main editor component for editing POTX (PowerPoint template) files. */
 export function PotxEditor({ presentationFile, slideSize, className, onPackageFileChange }: PotxEditorProps) {
-  const { state, dispatch } = useThemeEditor();
-  const { themeName, colorScheme, fontScheme, fontSchemeName, layoutEdit, creationMode } = state;
+  const { state, dispatch: themeDispatch } = useThemeEditor();
+  const { colorScheme, fontScheme, layoutEdit } = state;
+
+  // Init layout list from file
+  useEffect(() => {
+    if (!presentationFile) { return; }
+    const entries = buildSlideLayoutEntries(presentationFile);
+    const layouts: LayoutListEntry[] = entries.map((entry) => ({
+      id: entry.value, name: entry.label, type: entry.type,
+      matchingName: entry.matchingName, showMasterShapes: entry.showMasterShapes,
+      preserve: entry.preserve, userDrawn: entry.userDrawn,
+      overrides: buildOverridesFromEntry(entry),
+    }));
+    themeDispatch({ type: "INIT_LAYOUT_LIST", layouts });
+    if (layouts.length > 0) {
+      themeDispatch({ type: "SELECT_LAYOUT", layoutPath: layouts[0].id });
+    }
+  }, [presentationFile, themeDispatch]);
+
+  // Master-level color context
+  const masterColorContext = useMemo(() =>
+    ({ colorScheme, colorMap: state.masterColorMapping as Record<string, string> }),
+    [colorScheme, state.masterColorMapping],
+  );
+
+  // Load all layouts for virtual document
+  const allLayoutData = useMemo(() => {
+    if (!presentationFile || !slideSize) { return []; }
+    return layoutEdit.layouts.map((layout) => {
+      const data = loadLayoutWithContext({
+        file: presentationFile, layoutPath: layout.id, slideSize,
+        colorContext: masterColorContext, fontScheme, masterBackground: state.masterBackground,
+      });
+      return data ? { id: layout.id, data } : undefined;
+    }).filter((x): x is NonNullable<typeof x> => x !== undefined);
+  }, [presentationFile, slideSize, layoutEdit.layouts, masterColorContext, fontScheme, state.masterBackground]);
+
+  // Build virtual PresentationDocument
+  const virtualDocument = useMemo(() => {
+    const effectiveSlideSize = slideSize ?? { width: px(960), height: px(540) };
+    const resources = allLayoutData[0]?.data.resources ?? EMPTY_RESOURCE_RESOLVER;
+    return createVirtualDocument({
+      layouts: allLayoutData, slideSize: effectiveSlideSize,
+      colorContext: masterColorContext, fontScheme, resources, presentationFile,
+    });
+  }, [allLayoutData, slideSize, masterColorContext, fontScheme, presentationFile]);
+
+  return (
+    <PresentationEditorProvider initialDocument={virtualDocument}>
+      <PotxEditorContent
+        state={state}
+        themeDispatch={themeDispatch}
+        presentationFile={presentationFile}
+        slideSize={slideSize}
+        className={className}
+        onPackageFileChange={onPackageFileChange}
+        masterColorContext={masterColorContext}
+        virtualDocument={virtualDocument}
+        allLayoutData={allLayoutData}
+      />
+    </PresentationEditorProvider>
+  );
+}
+
+// =============================================================================
+// Inner Component — consumes both contexts
+// =============================================================================
+
+type PotxEditorContentProps = {
+  readonly state: ThemeEditorState;
+  readonly themeDispatch: (action: import("./context/types").ThemeEditorAction) => void;
+  readonly presentationFile?: PackageFile;
+  readonly slideSize?: SlideSize;
+  readonly className?: string;
+  readonly onPackageFileChange?: (file: PackageFile, slideSize: SlideSize) => void;
+  readonly masterColorContext: { colorScheme: Record<string, string>; colorMap: Record<string, string> };
+  readonly virtualDocument: import("@aurochs-office/pptx/app").PresentationDocument;
+  readonly allLayoutData: readonly { id: string; data: import("@aurochs-ui/ooxml-components").LoadedLayoutData }[];
+};
+
+function PotxEditorContent({
+  state, themeDispatch, presentationFile, slideSize, className, onPackageFileChange,
+  masterColorContext, virtualDocument, allLayoutData,
+}: PotxEditorContentProps) {
+  const { themeName, colorScheme, fontScheme, fontSchemeName, layoutEdit } = state;
+
+  // pptx-editor context for canvas state
+  const {
+    state: presState,
+    dispatch: presDispatch,
+    document: presDocument,
+    activeSlide,
+    selectedShapes,
+    primaryShape,
+    creationMode,
+    textEdit: textEditState,
+  } = usePresentationEditor();
+
   const canvasRef = useRef<EditorCanvasHandle>(null);
   const [viewport, setViewport] = useState<ViewportTransform>(INITIAL_VIEWPORT);
 
-  // Init layout list — extract full ECMA-376 §19.3.1.39 metadata from each layout
+  // Sync theme changes → PresentationEditorContext
+  const handleLayoutShapesChange = useCallback((layoutId: string, shapes: readonly Shape[]) => {
+    themeDispatch({ type: "SYNC_LAYOUT_SHAPES", layoutId, shapes });
+  }, [themeDispatch]);
+
+  useThemeDocumentSync({
+    virtualDocument,
+    presentationDispatch: presDispatch,
+    currentDocument: presDocument,
+    onLayoutShapesChange: handleLayoutShapesChange,
+    activeSlideId: presState.activeSlideId,
+  });
+
+  // Sync layout selection to PresentationEditorContext
   useEffect(() => {
-    if (!presentationFile) {return;}
-    const entries = buildSlideLayoutEntries(presentationFile);
-    const layouts: LayoutListEntry[] = entries.map((entry) => ({
-      id: entry.value,
-      name: entry.label,
-      type: entry.type,
-      matchingName: entry.matchingName,
-      showMasterShapes: entry.showMasterShapes,
-      preserve: entry.preserve,
-      userDrawn: entry.userDrawn,
-      overrides: buildOverridesFromEntry(entry),
-    }));
-    dispatch({ type: "INIT_LAYOUT_LIST", layouts });
-    if (layouts.length > 0) {
-      dispatch({ type: "SELECT_LAYOUT", layoutPath: layouts[0].id });
+    if (layoutEdit.activeLayoutPath && layoutEdit.activeLayoutPath !== presState.activeSlideId) {
+      presDispatch({ type: "SELECT_SLIDE", slideId: layoutEdit.activeLayoutPath });
     }
-  }, [presentationFile, dispatch]);
+  }, [layoutEdit.activeLayoutPath, presState.activeSlideId, presDispatch]);
 
-  // Load layout shapes when selection changes
-  const activeLayoutData = useMemo(() => {
-    if (!presentationFile || !slideSize || !layoutEdit.activeLayoutPath) {return undefined;}
-    return loadLayoutWithContext({ file: presentationFile, layoutPath: layoutEdit.activeLayoutPath, slideSize });
-  }, [presentationFile, slideSize, layoutEdit.activeLayoutPath]);
+  // Load shapes into theme state when layout changes
+  const activeLayoutData = useMemo(
+    () => allLayoutData.find((d) => d.id === layoutEdit.activeLayoutPath)?.data,
+    [allLayoutData, layoutEdit.activeLayoutPath],
+  );
 
-  // Load shapes into state when layout changes
   useEffect(() => {
-    if (!activeLayoutData || !layoutEdit.activeLayoutPath) {return;}
-    if (layoutEdit.layoutShapes.length > 0) {return;} // already loaded
+    if (!activeLayoutData || !layoutEdit.activeLayoutPath) { return; }
+    if (layoutEdit.layoutShapes.length > 0) { return; }
     const bundle = presentationFile ? loadSlideLayoutBundle(presentationFile, layoutEdit.activeLayoutPath) : undefined;
     if (bundle) {
-      dispatch({ type: "LOAD_LAYOUT_SHAPES", layoutPath: layoutEdit.activeLayoutPath, shapes: activeLayoutData.shapes, bundle });
+      themeDispatch({ type: "LOAD_LAYOUT_SHAPES", layoutPath: layoutEdit.activeLayoutPath, shapes: activeLayoutData.shapes, bundle });
     }
-  }, [activeLayoutData, layoutEdit.activeLayoutPath, layoutEdit.layoutShapes.length, presentationFile, dispatch]);
+  }, [activeLayoutData, layoutEdit.activeLayoutPath, layoutEdit.layoutShapes.length, presentationFile, themeDispatch]);
 
-  // Resolve effective background: layout background > master background (ECMA-376 §19.3.1.2)
-  const effectiveBackground = useMemo((): Background | undefined => {
-    const currentLayout = layoutEdit.layouts.find((l) => l.id === layoutEdit.activeLayoutPath);
-    const layoutBg = currentLayout?.overrides?.background;
-    if (layoutBg?.fill) {
-      return { fill: layoutBg.fill, shadeToTitle: layoutBg.shadeToTitle };
-    }
-    return parseBackground(state.masterBackground);
-  }, [layoutEdit.layouts, layoutEdit.activeLayoutPath, state.masterBackground]);
-
-  // Derive the rendered slide from reducer state (layoutShapes), not from the static activeLayoutData.
-  // activeLayoutData.pseudoSlide is the original parse result; layoutEdit.layoutShapes is the live edited version.
-  const renderedSlide = useMemo(() => {
-    if (layoutEdit.layoutShapes.length === 0 && activeLayoutData) {
-      const slide = activeLayoutData.pseudoSlide;
-      if (slide.background) { return slide; }
-      return { ...slide, background: effectiveBackground };
-    }
-    return { shapes: layoutEdit.layoutShapes as readonly Shape[], background: effectiveBackground };
-  }, [layoutEdit.layoutShapes, activeLayoutData, effectiveBackground]);
+  // Rendered slide from PresentationEditorContext (SoT for canvas)
+  const renderedSlide = useMemo((): Slide => {
+    if (activeSlide) { return activeSlide.slide; }
+    return { shapes: [] };
+  }, [activeSlide]);
 
   // Shape render data for EditorCanvas hit testing
   const shapeRenderData = useMemo(() => {
-    if (layoutEdit.layoutShapes.length === 0) {return [];}
-    return collectPptxShapeRenderData(layoutEdit.layoutShapes as readonly Shape[]);
-  }, [layoutEdit.layoutShapes]);
+    return collectPptxShapeRenderData(renderedSlide.shapes as readonly Shape[]);
+  }, [renderedSlide.shapes]);
 
-  // Creation mode
-  const handleCreationModeChange = useCallback((mode: CreationMode) => {
-    dispatch({ type: "SET_CREATION_MODE", mode });
-  }, [dispatch]);
+  // --- Creation mode ---
+  const handleCreationModeChange = useCallback((mode: import("@aurochs-ui/ooxml-components").CreationMode) => {
+    presDispatch({ type: "SET_CREATION_MODE", mode });
+  }, [presDispatch]);
 
   const handleCanvasCreateFromDrag = useCallback((bounds: Parameters<typeof createShapeFromMode>[1]) => {
     const shape = createShapeFromMode(creationMode, bounds);
     if (shape) {
-      dispatch({ type: "ADD_LAYOUT_SHAPE", shape });
+      presDispatch({ type: "CREATE_SHAPE", shape });
     }
-  }, [creationMode, dispatch]);
+  }, [creationMode, presDispatch]);
 
   const handleClearSelection = useCallback(() => {
-    dispatch({ type: "CLEAR_LAYOUT_SHAPE_SELECTION" });
-  }, [dispatch]);
+    presDispatch({ type: "CLEAR_SHAPE_SELECTION" });
+  }, [presDispatch]);
 
-  // Creation drag hook
   const { creationRect, handleBackgroundPointerDown, handleBackgroundClick } = useCreationDrag({
     creationMode,
     canvasRef,
@@ -325,51 +376,50 @@ export function PotxEditor({ presentationFile, slideSize, className, onPackageFi
     onClearSelection: handleClearSelection,
   });
 
-  // Canvas handlers (shared via ooxml-components)
+  // --- Canvas handlers (dispatch to PresentationEditorContext) ---
   const handlers = useCanvasHandlers({
-    selectedIds: layoutEdit.layoutSelection.selectedIds,
-    onSelect: (id, addToSelection, toggle) => dispatch({ type: "SELECT_LAYOUT_SHAPE", shapeId: id as ShapeId, addToSelection, toggle }),
-    onSelectMultiple: (ids) => dispatch({ type: "SELECT_MULTIPLE_LAYOUT_SHAPES", shapeIds: ids as readonly ShapeId[] }),
+    selectedIds: presState.shapeSelection.selectedIds,
+    onSelect: (id, addToSelection, toggle) => presDispatch({ type: "SELECT_SHAPE", shapeId: id as ShapeId, addToSelection, toggle }),
+    onSelectMultiple: (ids) => presDispatch({ type: "SELECT_MULTIPLE_SHAPES", shapeIds: ids as readonly ShapeId[] }),
     onClearSelection: handleClearSelection,
-    onStartMove: (startX, startY) => dispatch({ type: "START_LAYOUT_MOVE", startX: px(startX), startY: px(startY) }),
-    onStartResize: ({ handle, startX, startY, aspectLocked }) => dispatch({ type: "START_LAYOUT_RESIZE", handle, startX: px(startX), startY: px(startY), aspectLocked }),
-    onStartRotate: (startX, startY) => dispatch({ type: "START_LAYOUT_ROTATE", startX: px(startX), startY: px(startY) }),
-    onDoubleClick: (id) => dispatch({ type: "ENTER_LAYOUT_TEXT_EDIT", shapeId: id as ShapeId }),
+    onStartMove: (startX, startY) => presDispatch({ type: "START_MOVE", startX: px(startX), startY: px(startY) }),
+    onStartResize: ({ handle, startX, startY, aspectLocked }) => presDispatch({ type: "START_RESIZE", handle, startX: px(startX), startY: px(startY), aspectLocked }),
+    onStartRotate: (startX, startY) => presDispatch({ type: "START_ROTATE", startX: px(startX), startY: px(startY) }),
+    onDoubleClick: (id) => presDispatch({ type: "ENTER_TEXT_EDIT", shapeId: id as ShapeId }),
     onBackgroundPointerDown: handleBackgroundPointerDown,
     onBackgroundClick: handleBackgroundClick,
   });
 
-  // --- Marquee selection (tracks source as "marquee") ---
   const handleMarqueeSelect = useCallback(
     (result: { readonly itemIds: readonly string[] }, additive: boolean) => {
-      dispatch({ type: "MARQUEE_SELECT_LAYOUT_SHAPES", shapeIds: result.itemIds as readonly ShapeId[], additive });
+      presDispatch({ type: "SELECT_MULTIPLE_SHAPES", shapeIds: result.itemIds as readonly ShapeId[] });
     },
-    [dispatch],
+    [presDispatch],
   );
 
-  // --- Placeholder change ---
+  // --- Placeholder change (potx-specific, dispatched to theme context) ---
   const handlePlaceholderChange = useCallback((shapeId: ShapeId, placeholder: Placeholder | undefined) => {
-    dispatch({ type: "UPDATE_LAYOUT_SHAPE_PLACEHOLDER", shapeId, placeholder });
-  }, [dispatch]);
+    themeDispatch({ type: "UPDATE_LAYOUT_SHAPE_PLACEHOLDER", shapeId, placeholder });
+  }, [themeDispatch]);
 
-  // --- Text editing (shared hook — SoT with pptx-editor) ---
-  const textEditState = layoutEdit.textEdit;
+  // --- Text editing (from PresentationEditorContext) ---
   const { handleTextEditComplete, handleTextEditCancel, editingShapeId } = useTextEditHandlers({
     textEditState,
     onCommit: useCallback((shapeId: ShapeId, textBody) => {
-      dispatch({ type: "COMMIT_LAYOUT_TEXT_EDIT", shapeId, textBody });
-    }, [dispatch]),
+      presDispatch({ type: "UPDATE_SHAPE", shapeId, updater: (s) => s.type === "sp" && s.textBody ? { ...s, textBody } : s });
+      presDispatch({ type: "EXIT_TEXT_EDIT" } as PresentationEditorAction);
+    }, [presDispatch]),
     onExit: useCallback(() => {
-      dispatch({ type: "EXIT_LAYOUT_TEXT_EDIT" });
-    }, [dispatch]),
+      presDispatch({ type: "EXIT_TEXT_EDIT" } as PresentationEditorAction);
+    }, [presDispatch]),
   });
   const isTextEditing = editingShapeId !== undefined;
 
   const handleShapeDoubleClickFromOverlay = useCallback((shapeId: ShapeId) => {
-    dispatch({ type: "ENTER_LAYOUT_TEXT_EDIT", shapeId });
-  }, [dispatch]);
+    presDispatch({ type: "ENTER_TEXT_EDIT", shapeId });
+  }, [presDispatch]);
 
-  // --- Click-outside text edit (same pattern as pptx-editor SvgEditorCanvas) ---
+  // --- Click-outside text edit ---
   const handleTextEditOverlayPointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
       if (!isTextEditing) { return; }
@@ -377,104 +427,38 @@ export function PotxEditor({ presentationFile, slideSize, className, onPackageFi
       if (!page || textEditState.type !== "active") { return; }
       const bounds = textEditState.bounds;
       const isInside = isPointInBounds(page.pageX, page.pageY, {
-        x: bounds.x as number,
-        y: bounds.y as number,
-        width: bounds.width as number,
-        height: bounds.height as number,
-        rotation: bounds.rotation,
+        x: bounds.x as number, y: bounds.y as number,
+        width: bounds.width as number, height: bounds.height as number, rotation: bounds.rotation,
       });
-      if (!isInside) {
-        handleTextEditCancel();
-      }
+      if (!isInside) { handleTextEditCancel(); }
     },
     [isTextEditing, textEditState, handleTextEditCancel],
   );
 
-  // --- Keyboard shortcuts ---
-  useEffect(() => {
-    const isMac = isPlatformMac();
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (isInputTarget(e.target)) {return;}
-      const mod = getModKey(e, isMac);
-
-      // Delete / Backspace
-      if (e.key === "Delete" || e.key === "Backspace") {
-        if (layoutEdit.layoutSelection.selectedIds.length > 0) {
-          e.preventDefault();
-          dispatch({ type: "DELETE_LAYOUT_SHAPES", shapeIds: layoutEdit.layoutSelection.selectedIds });
-        }
-        return;
-      }
-
-      // Escape → exit text edit / return to select mode / clear selection
-      if (e.key === "Escape") {
-        if (isTextEditing) {
-          e.preventDefault();
-          dispatch({ type: "EXIT_LAYOUT_TEXT_EDIT" });
-        } else if (creationMode.type !== "select") {
-          e.preventDefault();
-          dispatch({ type: "SET_CREATION_MODE", mode: createSelectMode() });
-        } else if (layoutEdit.layoutSelection.selectedIds.length > 0) {
-          e.preventDefault();
-          dispatch({ type: "CLEAR_LAYOUT_SHAPE_SELECTION" });
-        }
-        return;
-      }
-
-      // Undo / Redo
-      if (mod && e.key === "z" && !e.shiftKey) {
-        e.preventDefault();
-        dispatch({ type: "UNDO" });
-        return;
-      }
-      if (mod && (e.key === "y" || (e.key === "z" && e.shiftKey))) {
-        e.preventDefault();
-        dispatch({ type: "REDO" });
-        return;
-      }
-
-      // Select All
-      if (mod && e.key === "a") {
-        e.preventDefault();
-        const allIds = layoutEdit.layoutShapes
-          .filter((s): s is Shape & { nonVisual: { id: ShapeId } } => "nonVisual" in s)
-          .map((s) => s.nonVisual.id);
-        if (allIds.length > 0) {
-          dispatch({ type: "SELECT_MULTIPLE_LAYOUT_SHAPES", shapeIds: allIds });
-        }
-        return;
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [dispatch, creationMode, layoutEdit.layoutSelection.selectedIds, layoutEdit.layoutShapes, isTextEditing]);
-
   // --- Context menu ---
   const handleContextMenuAction = useCallback((actionId: string) => {
     if (actionId === "delete") {
-      dispatch({ type: "DELETE_LAYOUT_SHAPES", shapeIds: layoutEdit.layoutSelection.selectedIds });
+      presDispatch({ type: "DELETE_SHAPES", shapeIds: presState.shapeSelection.selectedIds });
     }
     handlers.closeContextMenu();
-  }, [dispatch, layoutEdit.layoutSelection.selectedIds, handlers]);
+  }, [presDispatch, presState.shapeSelection.selectedIds, handlers]);
 
   const contextMenuItems = useMemo(
-    () => buildContextMenuItems(layoutEdit.layoutSelection.selectedIds.length > 0),
-    [layoutEdit.layoutSelection.selectedIds.length],
+    () => buildContextMenuItems(presState.shapeSelection.selectedIds.length > 0),
+    [presState.shapeSelection.selectedIds.length],
   );
 
-  // Theme callbacks
-  const handleColorChange = useCallback((name: string, color: string) => dispatch({ type: "UPDATE_COLOR_SCHEME", name, color }), [dispatch]);
-  const handleColorAdd = useCallback((name: string, color: string) => dispatch({ type: "ADD_SCHEME_COLOR", name, color }), [dispatch]);
-  const handleColorRemove = useCallback((name: string) => dispatch({ type: "REMOVE_SCHEME_COLOR", name }), [dispatch]);
-  const handleColorRename = useCallback((oldName: string, newName: string) => dispatch({ type: "RENAME_SCHEME_COLOR", oldName, newName }), [dispatch]);
-  const handleMajorFontChange = useCallback((spec: Partial<FontSpec>) => dispatch({ type: "UPDATE_FONT_SCHEME", target: "major", spec }), [dispatch]);
-  const handleMinorFontChange = useCallback((spec: Partial<FontSpec>) => dispatch({ type: "UPDATE_FONT_SCHEME", target: "minor", spec }), [dispatch]);
-  const handlePresetSelect = useCallback((preset: ThemePreset) => dispatch({ type: "APPLY_THEME_PRESET", preset }), [dispatch]);
-  const handleThemeNameChange = useCallback((name: string) => dispatch({ type: "UPDATE_THEME_NAME", name }), [dispatch]);
-  const handleFontSchemeNameChange = useCallback((name: string) => dispatch({ type: "UPDATE_FONT_SCHEME_NAME", name }), [dispatch]);
+  // === Theme callbacks (dispatch to ThemeEditorContext) ===
+  const handleColorChange = useCallback((name: string, color: string) => themeDispatch({ type: "UPDATE_COLOR_SCHEME", name, color }), [themeDispatch]);
+  const handleColorAdd = useCallback((name: string, color: string) => themeDispatch({ type: "ADD_SCHEME_COLOR", name, color }), [themeDispatch]);
+  const handleColorRemove = useCallback((name: string) => themeDispatch({ type: "REMOVE_SCHEME_COLOR", name }), [themeDispatch]);
+  const handleColorRename = useCallback((oldName: string, newName: string) => themeDispatch({ type: "RENAME_SCHEME_COLOR", oldName, newName }), [themeDispatch]);
+  const handleMajorFontChange = useCallback((spec: Partial<FontSpec>) => themeDispatch({ type: "UPDATE_FONT_SCHEME", target: "major", spec }), [themeDispatch]);
+  const handleMinorFontChange = useCallback((spec: Partial<FontSpec>) => themeDispatch({ type: "UPDATE_FONT_SCHEME", target: "minor", spec }), [themeDispatch]);
+  const handlePresetSelect = useCallback((preset: ThemePreset) => themeDispatch({ type: "APPLY_THEME_PRESET", preset }), [themeDispatch]);
+  const handleThemeNameChange = useCallback((name: string) => themeDispatch({ type: "UPDATE_THEME_NAME", name }), [themeDispatch]);
+  const handleFontSchemeNameChange = useCallback((name: string) => themeDispatch({ type: "UPDATE_FONT_SCHEME_NAME", name }), [themeDispatch]);
 
-  // Theme import/export callbacks
   const handleThemeExport = useCallback(async () => {
     const blob = await exportThemeAsPotx(buildThemeExportOptions(state, slideSize));
     await downloadPresentation(blob, getThemeFileName(state.themeName));
@@ -485,99 +469,71 @@ export function PotxEditor({ presentationFile, slideSize, className, onPackageFi
     if (!result.success) { throw new Error(result.error); }
     const { data } = result;
     const imported: ImportedThemeData = {
-      themeName: data.themeName,
-      colorScheme: data.theme.colorScheme,
-      fontScheme: data.theme.fontScheme,
-      colorMapping: data.colorMap as ImportedThemeData["colorMapping"],
-      formatScheme: data.theme.formatScheme,
-      customColors: data.theme.customColors,
-      extraColorSchemes: data.theme.extraColorSchemes,
-      objectDefaults: data.theme.objectDefaults,
-      masterTextStyles: data.masterTextStyles,
-      masterBackground: data.masterBackground,
+      themeName: data.themeName, colorScheme: data.theme.colorScheme, fontScheme: data.theme.fontScheme,
+      colorMapping: data.colorMap as ImportedThemeData["colorMapping"], formatScheme: data.theme.formatScheme,
+      customColors: data.theme.customColors, extraColorSchemes: data.theme.extraColorSchemes,
+      objectDefaults: data.theme.objectDefaults, masterTextStyles: data.masterTextStyles, masterBackground: data.masterBackground,
     };
-    dispatch({ type: "IMPORT_THEME", theme: imported });
+    themeDispatch({ type: "IMPORT_THEME", theme: imported });
     onPackageFileChange?.(result.presentationFile, result.slideSize);
-  }, [dispatch, onPackageFileChange]);
+  }, [themeDispatch, onPackageFileChange]);
 
+  // === Layout metadata callbacks ===
   const activeLayout = useMemo(() => layoutEdit.layouts.find((l) => l.id === layoutEdit.activeLayoutPath), [layoutEdit.layouts, layoutEdit.activeLayoutPath]);
   const handleLayoutNameChange = useCallback((name: string) => {
-    if (!layoutEdit.activeLayoutPath) {return;}
-    dispatch({ type: "UPDATE_LAYOUT_ATTRIBUTES", layoutId: layoutEdit.activeLayoutPath, updates: { name } });
-  }, [dispatch, layoutEdit.activeLayoutPath]);
+    if (!layoutEdit.activeLayoutPath) { return; }
+    themeDispatch({ type: "UPDATE_LAYOUT_ATTRIBUTES", layoutId: layoutEdit.activeLayoutPath, updates: { name } });
+  }, [themeDispatch, layoutEdit.activeLayoutPath]);
   const handleLayoutTypeChange = useCallback((type: string) => {
-    if (!layoutEdit.activeLayoutPath) {return;}
-    dispatch({ type: "UPDATE_LAYOUT_ATTRIBUTES", layoutId: layoutEdit.activeLayoutPath, updates: { type: type as SlideLayoutType } });
-  }, [dispatch, layoutEdit.activeLayoutPath]);
+    if (!layoutEdit.activeLayoutPath) { return; }
+    themeDispatch({ type: "UPDATE_LAYOUT_ATTRIBUTES", layoutId: layoutEdit.activeLayoutPath, updates: { type: type as SlideLayoutType } });
+  }, [themeDispatch, layoutEdit.activeLayoutPath]);
   const handleMatchingNameChange = useCallback((matchingName: string) => {
-    if (!layoutEdit.activeLayoutPath) {return;}
-    dispatch({ type: "UPDATE_LAYOUT_ATTRIBUTES", layoutId: layoutEdit.activeLayoutPath, updates: { matchingName } });
-  }, [dispatch, layoutEdit.activeLayoutPath]);
-
-  // Master background & color map callbacks
+    if (!layoutEdit.activeLayoutPath) { return; }
+    themeDispatch({ type: "UPDATE_LAYOUT_ATTRIBUTES", layoutId: layoutEdit.activeLayoutPath, updates: { matchingName } });
+  }, [themeDispatch, layoutEdit.activeLayoutPath]);
   const handleMasterBackgroundChange = useCallback((background: BackgroundState) => {
-    dispatch({ type: "UPDATE_MASTER_BACKGROUND", background: backgroundStateToXml(background) });
-  }, [dispatch]);
+    themeDispatch({ type: "UPDATE_MASTER_BACKGROUND", background: backgroundStateToXml(background) });
+  }, [themeDispatch]);
   const handleMasterColorMappingChange = useCallback((mapping: ColorMapping) => {
-    dispatch({ type: "UPDATE_MASTER_COLOR_MAPPING", mapping });
-  }, [dispatch]);
-  // Custom colors & extra color schemes
-  const handleAddCustomColor = useCallback((color: CustomColor) => {
-    dispatch({ type: "ADD_CUSTOM_COLOR", color });
-  }, [dispatch]);
-  const handleRemoveCustomColor = useCallback((index: number) => {
-    dispatch({ type: "REMOVE_CUSTOM_COLOR", index });
-  }, [dispatch]);
-  const handleUpdateCustomColor = useCallback((index: number, color: CustomColor) => {
-    dispatch({ type: "UPDATE_CUSTOM_COLOR", index, color });
-  }, [dispatch]);
-  const handleAddExtraScheme = useCallback((scheme: ExtraColorScheme) => {
-    dispatch({ type: "ADD_EXTRA_COLOR_SCHEME", scheme });
-  }, [dispatch]);
-  const handleRemoveExtraScheme = useCallback((index: number) => {
-    dispatch({ type: "REMOVE_EXTRA_COLOR_SCHEME", index });
-  }, [dispatch]);
-  const handleUpdateExtraScheme = useCallback((index: number, scheme: ExtraColorScheme) => {
-    dispatch({ type: "UPDATE_EXTRA_COLOR_SCHEME", index, scheme });
-  }, [dispatch]);
-  const handleFormatSchemeChange = useCallback((formatScheme: FormatScheme) => {
-    dispatch({ type: "UPDATE_FORMAT_SCHEME", formatScheme });
-  }, [dispatch]);
+    themeDispatch({ type: "UPDATE_MASTER_COLOR_MAPPING", mapping });
+  }, [themeDispatch]);
+  const handleAddCustomColor = useCallback((color: CustomColor) => themeDispatch({ type: "ADD_CUSTOM_COLOR", color }), [themeDispatch]);
+  const handleRemoveCustomColor = useCallback((index: number) => themeDispatch({ type: "REMOVE_CUSTOM_COLOR", index }), [themeDispatch]);
+  const handleUpdateCustomColor = useCallback((index: number, color: CustomColor) => themeDispatch({ type: "UPDATE_CUSTOM_COLOR", index, color }), [themeDispatch]);
+  const handleAddExtraScheme = useCallback((scheme: ExtraColorScheme) => themeDispatch({ type: "ADD_EXTRA_COLOR_SCHEME", scheme }), [themeDispatch]);
+  const handleRemoveExtraScheme = useCallback((index: number) => themeDispatch({ type: "REMOVE_EXTRA_COLOR_SCHEME", index }), [themeDispatch]);
+  const handleUpdateExtraScheme = useCallback((index: number, scheme: ExtraColorScheme) => themeDispatch({ type: "UPDATE_EXTRA_COLOR_SCHEME", index, scheme }), [themeDispatch]);
+  const handleFormatSchemeChange = useCallback((formatScheme: FormatScheme) => themeDispatch({ type: "UPDATE_FORMAT_SCHEME", formatScheme }), [themeDispatch]);
   const handleLayoutBackgroundChange = useCallback((background: BackgroundState) => {
-    if (!layoutEdit.activeLayoutPath) {return;}
-    dispatch({ type: "UPDATE_LAYOUT_BACKGROUND", layoutId: layoutEdit.activeLayoutPath, background });
-  }, [dispatch, layoutEdit.activeLayoutPath]);
+    if (!layoutEdit.activeLayoutPath) { return; }
+    themeDispatch({ type: "UPDATE_LAYOUT_BACKGROUND", layoutId: layoutEdit.activeLayoutPath, background });
+  }, [themeDispatch, layoutEdit.activeLayoutPath]);
   const handleLayoutColorMapOverrideChange = useCallback((mapping: ColorMapping) => {
-    if (!layoutEdit.activeLayoutPath) {return;}
-    dispatch({ type: "UPDATE_LAYOUT_COLOR_MAP_OVERRIDE", layoutId: layoutEdit.activeLayoutPath, override: { type: "override", mappings: mapping } });
-  }, [dispatch, layoutEdit.activeLayoutPath]);
+    if (!layoutEdit.activeLayoutPath) { return; }
+    themeDispatch({ type: "UPDATE_LAYOUT_COLOR_MAP_OVERRIDE", layoutId: layoutEdit.activeLayoutPath, override: { type: "override", mappings: mapping } });
+  }, [themeDispatch, layoutEdit.activeLayoutPath]);
   const handleLayoutTransitionChange = useCallback((transition: SlideTransition | undefined) => {
-    if (!layoutEdit.activeLayoutPath) {return;}
-    dispatch({ type: "UPDATE_LAYOUT_TRANSITION", layoutId: layoutEdit.activeLayoutPath, transition });
-  }, [dispatch, layoutEdit.activeLayoutPath]);
+    if (!layoutEdit.activeLayoutPath) { return; }
+    themeDispatch({ type: "UPDATE_LAYOUT_TRANSITION", layoutId: layoutEdit.activeLayoutPath, transition });
+  }, [themeDispatch, layoutEdit.activeLayoutPath]);
 
-  // Layout CRUD
+  // === Layout CRUD ===
   const handleAddLayout = useCallback(() => {
     const newId = `ppt/slideLayouts/slideLayout${Date.now()}.xml`;
-    dispatch({ type: "ADD_LAYOUT", layout: { id: newId, name: "New Layout", type: "blank" } });
-  }, [dispatch]);
-  // Layout thumbnails — use master-level color context (not layout-specific overrides)
-  const masterColorContext = useMemo(() =>
-    ({ colorScheme, colorMap: state.masterColorMapping as Record<string, string> }),
-    [colorScheme, state.masterColorMapping],
-  );
+    themeDispatch({ type: "ADD_LAYOUT", layout: { id: newId, name: "New Layout", type: "blank" } });
+  }, [themeDispatch]);
 
+  // === Thumbnails ===
   const layoutOptions = useMemo(() => {
-    if (!presentationFile) {return [];}
+    if (!presentationFile) { return []; }
     return buildSlideLayoutOptions(presentationFile);
   }, [presentationFile]);
 
   const thumbnailData = useLayoutThumbnails({
-    presentationFile,
-    layoutOptions,
+    presentationFile, layoutOptions,
     slideSize: slideSize ?? { width: px(960), height: px(540) },
-    colorContext: masterColorContext,
-    fontScheme,
+    colorContext: masterColorContext, fontScheme, masterBackground: state.masterBackground,
   });
 
   const layoutItems: readonly LayoutListItem[] = useMemo(() => {
@@ -598,13 +554,20 @@ export function PotxEditor({ presentationFile, slideSize, className, onPackageFi
   }, [slideSize]);
 
   const handleItemClick = useCallback((layoutPath: string) => {
-    dispatch({ type: "SELECT_LAYOUT", layoutPath });
-  }, [dispatch]);
+    themeDispatch({ type: "SELECT_LAYOUT", layoutPath });
+  }, [themeDispatch]);
 
-  // Right panel tabs
+  // === Shape property panel ===
+  const handleShapeChange = useCallback(
+    (shapeId: ShapeId, updater: (shape: Shape) => Shape) => {
+      presDispatch({ type: "UPDATE_SHAPE", shapeId, updater });
+    },
+    [presDispatch],
+  );
+
+  // === Right panel tabs ===
   const [activeTab, setActiveTab] = useState("theme");
 
-  // Theme tab: brand identity (palette + fonts) + presets as a starting-point action
   const themeTabContent = useMemo(() => (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "auto" }}>
       <ThemeNameSection themeName={themeName} onThemeNameChange={handleThemeNameChange} />
@@ -615,37 +578,19 @@ export function PotxEditor({ presentationFile, slideSize, className, onPackageFi
     </div>
   ), [themeName, colorScheme, fontScheme, fontSchemeName, handleThemeNameChange, handleThemeExport, handleThemeImport, handlePresetSelect, handleColorChange, handleColorAdd, handleColorRemove, handleColorRename, handleMajorFontChange, handleMinorFontChange, handleFontSchemeNameChange]);
 
-  // Master background: convert XmlElement SoT → BackgroundState for UI
   const masterBgState = useMemo(() => bgXmlToBackgroundState(state.masterBackground), [state.masterBackground]);
 
-  // Master tab: master-level configuration (background, color mapping, default styles)
   const masterTabContent = useMemo(() => (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "auto" }}>
       <MasterBackgroundEditor background={masterBgState} onChange={handleMasterBackgroundChange} title="Master Background" />
       <ColorMapEditor colorMapping={state.masterColorMapping} onChange={handleMasterColorMappingChange} />
-      <MasterTextStylesEditor masterTextStyles={state.masterTextStyles} onChange={(mts) => dispatch({ type: "UPDATE_MASTER_TEXT_STYLES", masterTextStyles: mts })} />
-      <ObjectDefaultsEditor objectDefaults={state.objectDefaults} onChange={(od) => dispatch({ type: "UPDATE_OBJECT_DEFAULTS", objectDefaults: od })} />
-      {state.formatScheme && (
-        <FormatSchemeEditor formatScheme={state.formatScheme} onChange={handleFormatSchemeChange} />
-      )}
+      <MasterTextStylesEditor masterTextStyles={state.masterTextStyles} onChange={(mts) => themeDispatch({ type: "UPDATE_MASTER_TEXT_STYLES", masterTextStyles: mts })} />
+      <ObjectDefaultsEditor objectDefaults={state.objectDefaults} onChange={(od) => themeDispatch({ type: "UPDATE_OBJECT_DEFAULTS", objectDefaults: od })} />
+      {state.formatScheme && <FormatSchemeEditor formatScheme={state.formatScheme} onChange={handleFormatSchemeChange} />}
       <CustomColorsEditor customColors={state.customColors} onAdd={handleAddCustomColor} onRemove={handleRemoveCustomColor} onUpdate={handleUpdateCustomColor} />
       <ExtraColorSchemesEditor extraColorSchemes={state.extraColorSchemes} onAdd={handleAddExtraScheme} onRemove={handleRemoveExtraScheme} onUpdate={handleUpdateExtraScheme} />
     </div>
-  ), [masterBgState, state.masterColorMapping, state.masterTextStyles, state.objectDefaults, state.formatScheme, state.customColors, state.extraColorSchemes, dispatch, handleMasterBackgroundChange, handleMasterColorMappingChange, handleFormatSchemeChange, handleAddCustomColor, handleRemoveCustomColor, handleUpdateCustomColor, handleAddExtraScheme, handleRemoveExtraScheme, handleUpdateExtraScheme]);
-
-  // Selected shape for Layout tab
-  const selectedShape = useMemo(() => {
-    const primaryId = layoutEdit.layoutSelection.primaryId;
-    if (!primaryId) {return undefined;}
-    return layoutEdit.layoutShapes.find((s) => "nonVisual" in s && s.nonVisual.id === primaryId);
-  }, [layoutEdit.layoutSelection.primaryId, layoutEdit.layoutShapes]);
-
-  const handleShapeChange = useCallback(
-    (shapeId: ShapeId, updater: (shape: Shape) => Shape) => {
-      dispatch({ type: "UPDATE_LAYOUT_SHAPE", shapeId, updater });
-    },
-    [dispatch],
-  );
+  ), [masterBgState, state.masterColorMapping, state.masterTextStyles, state.objectDefaults, state.formatScheme, state.customColors, state.extraColorSchemes, themeDispatch, handleMasterBackgroundChange, handleMasterColorMappingChange, handleFormatSchemeChange, handleAddCustomColor, handleRemoveCustomColor, handleUpdateCustomColor, handleAddExtraScheme, handleRemoveExtraScheme, handleUpdateExtraScheme]);
 
   const layoutTabContent = useMemo(() => {
     if (!activeLayout) {
@@ -653,34 +598,19 @@ export function PotxEditor({ presentationFile, slideSize, className, onPackageFi
     }
     return (
       <>
-        <LayoutAttributesSection
-          layoutName={activeLayout.name}
-          layoutType={activeLayout.type}
-          matchingName={activeLayout.matchingName}
-          showMasterShapes={activeLayout.showMasterShapes}
-          preserve={activeLayout.preserve}
-          userDrawn={activeLayout.userDrawn}
-          onLayoutNameChange={handleLayoutNameChange}
-          onLayoutTypeChange={handleLayoutTypeChange}
-          onMatchingNameChange={handleMatchingNameChange}
+        <LayoutAttributesSection layoutName={activeLayout.name} layoutType={activeLayout.type} matchingName={activeLayout.matchingName}
+          showMasterShapes={activeLayout.showMasterShapes} preserve={activeLayout.preserve} userDrawn={activeLayout.userDrawn}
+          onLayoutNameChange={handleLayoutNameChange} onLayoutTypeChange={handleLayoutTypeChange} onMatchingNameChange={handleMatchingNameChange}
         />
-        <MasterBackgroundEditor
-          background={activeLayout.overrides?.background ?? {}}
-          onChange={handleLayoutBackgroundChange}
-          title="Layout Background"
-        />
-        <ColorMapEditor
-          colorMapping={getLayoutColorMapping(activeLayout, state.masterColorMapping)}
-          onChange={handleLayoutColorMapOverrideChange}
-          title="Color Map Override"
-        />
+        <MasterBackgroundEditor background={activeLayout.overrides?.background ?? {}} onChange={handleLayoutBackgroundChange} title="Layout Background" />
+        <ColorMapEditor colorMapping={getLayoutColorMapping(activeLayout, state.masterColorMapping)} onChange={handleLayoutColorMapOverrideChange} title="Color Map Override" />
         <OptionalPropertySection title="Transition" defaultExpanded={false}>
           <TransitionEditor value={activeLayout.overrides?.transition} onChange={handleLayoutTransitionChange} />
         </OptionalPropertySection>
-        {renderShapePanel(selectedShape, handleShapeChange)}
+        {renderShapePanel(primaryShape, handleShapeChange)}
       </>
     );
-  }, [activeLayout, state.masterColorMapping, handleLayoutNameChange, handleLayoutTypeChange, handleMatchingNameChange, handleLayoutBackgroundChange, handleLayoutColorMapOverrideChange, handleLayoutTransitionChange, selectedShape, handleShapeChange]);
+  }, [activeLayout, state.masterColorMapping, handleLayoutNameChange, handleLayoutTypeChange, handleMatchingNameChange, handleLayoutBackgroundChange, handleLayoutColorMapOverrideChange, handleLayoutTransitionChange, primaryShape, handleShapeChange]);
 
   const inspectorTabs = useMemo<readonly InspectorTab[]>(() => [
     { id: "theme", label: "Theme", content: themeTabContent },
@@ -692,124 +622,87 @@ export function PotxEditor({ presentationFile, slideSize, className, onPackageFi
     <InspectorPanelWithTabs tabs={inspectorTabs} activeTabId={activeTab} onActiveTabChange={setActiveTab} />
   ), [inspectorTabs, activeTab]);
 
-  // Left panel - ItemList with LayoutThumbnail + CRUD
+  // === Left panel ===
   const handleDeleteLayouts = useCallback((ids: readonly string[]) => {
-    for (const id of ids) {dispatch({ type: "DELETE_LAYOUT", layoutId: id });}
-  }, [dispatch]);
+    for (const id of ids) { themeDispatch({ type: "DELETE_LAYOUT", layoutId: id }); }
+  }, [themeDispatch]);
   const handleDuplicateLayouts = useCallback((ids: readonly string[]) => {
-    for (const id of ids) {dispatch({ type: "DUPLICATE_LAYOUT", layoutId: id });}
-  }, [dispatch]);
+    for (const id of ids) { themeDispatch({ type: "DUPLICATE_LAYOUT", layoutId: id }); }
+  }, [themeDispatch]);
 
   const leftPanel = useMemo(() => (
     <ItemList<LayoutListItem, string>
-      items={layoutItems}
-      itemWidth={itemWidth}
-      itemHeight={itemHeight}
-      orientation="vertical"
-      mode="editable"
-      activeItemId={layoutEdit.activeLayoutPath}
-      itemLabel="Layout"
-      renderThumbnail={renderThumbnail}
-      onItemClick={handleItemClick}
-      onAddItem={handleAddLayout}
-      onDeleteItems={handleDeleteLayouts}
-      onDuplicateItems={handleDuplicateLayouts}
+      items={layoutItems} itemWidth={itemWidth} itemHeight={itemHeight}
+      orientation="vertical" mode="editable"
+      activeItemId={layoutEdit.activeLayoutPath} itemLabel="Layout"
+      renderThumbnail={renderThumbnail} onItemClick={handleItemClick}
+      onAddItem={handleAddLayout} onDeleteItems={handleDeleteLayouts} onDuplicateItems={handleDuplicateLayouts}
     />
   ), [layoutItems, itemWidth, itemHeight, layoutEdit.activeLayoutPath, renderThumbnail, handleItemClick, handleAddLayout, handleDeleteLayouts, handleDuplicateLayouts]);
 
-  // Center - EditorCanvas with SlideRenderer
+  // === Center canvas ===
   const widthNum = slideSize ? (slideSize.width as number) : 960;
   const heightNum = slideSize ? (slideSize.height as number) : 540;
   const slideSizeForRenderer = useMemo(() => slideSize ?? { width: px(960), height: px(540) }, [slideSize]);
 
-  // Build color context from edited state, applying layout-level colorMapOverride if present (ECMA-376 §19.3.1.7)
   const editedColorContext = useMemo(() => {
     const currentLayout = layoutEdit.layouts.find((l) => l.id === layoutEdit.activeLayoutPath);
-    const effectiveColorMap = getLayoutColorMapping(
-      currentLayout ?? { id: "", name: "", type: "blank" },
-      state.masterColorMapping,
-    );
+    const effectiveColorMap = getLayoutColorMapping(currentLayout ?? { id: "", name: "", type: "blank" }, state.masterColorMapping);
     return { colorScheme, colorMap: effectiveColorMap as Record<string, string> };
   }, [colorScheme, state.masterColorMapping, layoutEdit.layouts, layoutEdit.activeLayoutPath]);
 
-  const editedFontScheme = useMemo(() => {
-    return fontScheme;
-  }, [fontScheme]);
-
-  const handleViewportChange = useCallback((vp: ViewportTransform) => {
-    setViewport(vp);
-  }, []);
-
+  const handleViewportChange = useCallback((vp: ViewportTransform) => setViewport(vp), []);
   const enableMarquee = creationMode.type === "select" && !isTextEditing;
-  const isInteracting = layoutEdit.layoutDrag.type !== "idle";
+  const isInteracting = presState.drag.type !== "idle";
   const canvasCursor = getCursorForCreationMode(creationMode, isInteracting);
 
-  // Floating toolbar (matches pptx-editor placement via CanvasArea)
   const floatingToolbar = useMemo(() => {
-    if (!activeLayoutData) {return undefined;}
+    if (!activeLayoutData) { return undefined; }
     return <CreationToolbar mode={creationMode} onModeChange={handleCreationModeChange} appearance="floating" visibleTools={POTX_VISIBLE_TOOLS} />;
   }, [activeLayoutData, creationMode, handleCreationModeChange]);
 
-  // Shape info overlay (badge on primary shape only + text edit)
-  // Marquee selection = group context, badge suppressed until user clicks to focus a specific shape.
-  // Multi-click selection (shift+click) = each shape was individually chosen, show badge on primary.
-  const isMultiSelection = layoutEdit.layoutSelection.selectedIds.length > 1 && layoutEdit.selectionSource === "marquee";
+  // Shape info overlay (potx-specific: placeholder badge)
   const shapeInfoOverlay = useMemo(() => {
-    if (layoutEdit.layoutShapes.length === 0) {return undefined;}
+    if (renderedSlide.shapes.length === 0) { return undefined; }
     return (
       <>
         <ShapeInfoOverlay
-          shapes={layoutEdit.layoutShapes as Shape[]}
-          primaryId={layoutEdit.layoutSelection.primaryId}
-          isMultiSelection={isMultiSelection}
+          shapes={renderedSlide.shapes as Shape[]}
+          primaryId={presState.shapeSelection.primaryId}
+          isMultiSelection={presState.shapeSelection.selectedIds.length > 1}
           onPlaceholderChange={handlePlaceholderChange}
           onDoubleClick={handleShapeDoubleClickFromOverlay}
         />
         {textEditState.type === "active" && (
           <div style={{ position: "absolute", inset: 0 }} onPointerDown={handleTextEditOverlayPointerDown}>
             <TextEditController
-              bounds={textEditState.bounds}
-              textBody={textEditState.initialTextBody}
-              colorContext={editedColorContext}
-              fontScheme={editedFontScheme}
-              slideWidth={widthNum}
-              slideHeight={heightNum}
-              onComplete={handleTextEditComplete}
-              onCancel={handleTextEditCancel}
-              showSelectionOverlay={true}
-              showFrameOutline={false}
+              bounds={textEditState.bounds} textBody={textEditState.initialTextBody}
+              colorContext={editedColorContext} fontScheme={fontScheme}
+              slideWidth={widthNum} slideHeight={heightNum}
+              onComplete={handleTextEditComplete} onCancel={handleTextEditCancel}
+              showSelectionOverlay={true} showFrameOutline={false}
             />
           </div>
         )}
       </>
     );
-  }, [layoutEdit.layoutShapes, layoutEdit.layoutSelection.primaryId, isMultiSelection, handlePlaceholderChange, handleShapeDoubleClickFromOverlay, textEditState, handleTextEditComplete, handleTextEditCancel, handleTextEditOverlayPointerDown]);
+  }, [renderedSlide.shapes, presState.shapeSelection, handlePlaceholderChange, handleShapeDoubleClickFromOverlay, textEditState, handleTextEditComplete, handleTextEditCancel, handleTextEditOverlayPointerDown, editedColorContext, fontScheme, widthNum, heightNum]);
 
   const centerContent = useMemo(() => {
     if (!activeLayoutData) {
-      return (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#999" }}>
-          Select a layout
-        </div>
-      );
+      return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#999" }}>Select a layout</div>;
     }
-
     return (
       <CanvasArea floatingToolbar={floatingToolbar}>
         <EditorCanvas
-          ref={canvasRef}
-          canvasWidth={widthNum}
-          canvasHeight={heightNum}
-          zoomMode={"fit" as ZoomMode}
-          onZoomModeChange={() => {}}
-          onViewportChange={handleViewportChange}
+          ref={canvasRef} canvasWidth={widthNum} canvasHeight={heightNum}
+          zoomMode={"fit" as ZoomMode} onZoomModeChange={() => {}} onViewportChange={handleViewportChange}
           cursor={canvasCursor}
           itemBounds={shapeRenderData as readonly EditorCanvasItemBounds[]}
-          selectedIds={layoutEdit.layoutSelection.selectedIds}
-          primaryId={layoutEdit.layoutSelection.primaryId}
-          drag={layoutEdit.layoutDrag}
-          isInteracting={isInteracting}
-          isTextEditing={isTextEditing}
+          selectedIds={presState.shapeSelection.selectedIds}
+          primaryId={presState.shapeSelection.primaryId}
+          drag={presState.drag}
+          isInteracting={isInteracting} isTextEditing={isTextEditing}
           showRotateHandle={!isTextEditing}
           onItemPointerDown={handlers.handleItemPointerDown}
           onItemClick={handlers.handleItemClick}
@@ -824,22 +717,15 @@ export function PotxEditor({ presentationFile, slideSize, className, onPackageFi
           viewportOverlay={shapeInfoOverlay}
         >
           <SlideRenderer
-            slide={renderedSlide}
-            slideSize={slideSizeForRenderer}
-            colorContext={editedColorContext}
-            resources={activeLayoutData.resources}
-            fontScheme={editedFontScheme}
-            editingShapeId={editingShapeId}
+            slide={renderedSlide} slideSize={slideSizeForRenderer}
+            colorContext={editedColorContext} resources={activeLayoutData.resources}
+            fontScheme={fontScheme} editingShapeId={editingShapeId}
           />
-
           {creationRect && (
             <rect
-              x={creationRect.x}
-              y={creationRect.y}
-              width={creationRect.width}
-              height={creationRect.height}
-              fill={colorTokens.selection.primary}
-              fillOpacity={0.08}
+              x={creationRect.x} y={creationRect.y}
+              width={creationRect.width} height={creationRect.height}
+              fill={colorTokens.selection.primary} fillOpacity={0.08}
               stroke={colorTokens.selection.primary}
               strokeWidth={1 / viewport.scale}
               strokeDasharray={`${4 / viewport.scale} ${3 / viewport.scale}`}
@@ -847,19 +733,13 @@ export function PotxEditor({ presentationFile, slideSize, className, onPackageFi
             />
           )}
         </EditorCanvas>
-
         {handlers.contextMenu && contextMenuItems.length > 0 && (
-          <ContextMenu
-            x={handlers.contextMenu.x}
-            y={handlers.contextMenu.y}
-            items={contextMenuItems}
-            onAction={handleContextMenuAction}
-            onClose={handlers.closeContextMenu}
-          />
+          <ContextMenu x={handlers.contextMenu.x} y={handlers.contextMenu.y}
+            items={contextMenuItems} onAction={handleContextMenuAction} onClose={handlers.closeContextMenu} />
         )}
       </CanvasArea>
     );
-  }, [activeLayoutData, floatingToolbar, widthNum, heightNum, shapeRenderData, layoutEdit.layoutSelection, layoutEdit.layoutDrag, handlers, slideSizeForRenderer, editedColorContext, editedFontScheme, enableMarquee, isInteracting, isTextEditing, canvasCursor, creationRect, viewport.scale, handleViewportChange, contextMenuItems, handleContextMenuAction, shapeInfoOverlay]);
+  }, [activeLayoutData, floatingToolbar, widthNum, heightNum, shapeRenderData, presState.shapeSelection, presState.drag, handlers, slideSizeForRenderer, editedColorContext, fontScheme, enableMarquee, isInteracting, isTextEditing, canvasCursor, creationRect, viewport.scale, handleViewportChange, contextMenuItems, handleContextMenuAction, shapeInfoOverlay, renderedSlide, editingShapeId]);
 
   const panels = useMemo<EditorPanel[]>(() => [
     { id: "layouts", content: leftPanel, position: "left", size: "180px" },

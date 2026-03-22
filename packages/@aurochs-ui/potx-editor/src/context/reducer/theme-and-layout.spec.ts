@@ -142,7 +142,6 @@ describe("Theme names & presets", () => {
     expect(s.themeName).toBe("Preset Theme");
     expect(s.colorScheme.accent1).toBe("112233");
     expect(s.fontScheme.majorFont.latin).toBe("Impact");
-    expect(s.fontSchemeName).toBe("Preset Theme");
   });
 });
 
@@ -381,10 +380,11 @@ describe("Layout CRUD", () => {
     { id: "L3", name: "Blank", type: "blank" },
   ];
 
-  it("INIT_LAYOUT_LIST sets layouts and activates first", () => {
+  it("INIT_LAYOUT_LIST sets layouts (does not auto-select)", () => {
     const s = withLayouts(base(), layouts);
     expect(s.layoutEdit.layouts).toHaveLength(3);
-    expect(s.layoutEdit.activeLayoutPath).toBe("L1");
+    // Auto-selection is handled by the UI layer (PotxEditor), not the reducer
+    expect(s.layoutEdit.activeLayoutPath).toBeUndefined();
   });
 
   it("SELECT_LAYOUT switches active and resets state", () => {
@@ -392,15 +392,15 @@ describe("Layout CRUD", () => {
     const s1 = reduce(s0, { type: "SELECT_LAYOUT", layoutPath: "L2" });
     expect(s1.layoutEdit.activeLayoutPath).toBe("L2");
     expect(s1.layoutEdit.layoutShapes).toHaveLength(0);
-    expect(s1.layoutEdit.textEdit.type).toBe("inactive");
+    expect(s1.layoutEdit.isDirty).toBe(false);
   });
 
-  it("ADD_LAYOUT appends and activates new layout", () => {
+  it("ADD_LAYOUT appends layout", () => {
     const s0 = withLayouts(base(), layouts);
     const newLayout: LayoutListEntry = { id: "L4", name: "New Layout", type: "blank" };
     const s1 = reduce(s0, { type: "ADD_LAYOUT", layout: newLayout });
     expect(s1.layoutEdit.layouts).toHaveLength(4);
-    expect(s1.layoutEdit.activeLayoutPath).toBe("L4");
+    expect(s1.layoutEdit.layouts[3].id).toBe("L4");
   });
 
   it("ADD_LAYOUT at specific index", () => {
@@ -421,10 +421,11 @@ describe("Layout CRUD", () => {
     expect(s1.layoutEdit.activeLayoutPath).not.toBe("L2");
   });
 
-  it("DELETE_LAYOUT is no-op when only 1 layout remains", () => {
+  it("DELETE_LAYOUT removes the last layout", () => {
     const s0 = withLayouts(base(), [layouts[0]]);
     const s1 = reduce(s0, { type: "DELETE_LAYOUT", layoutId: "L1" });
-    expect(s1.layoutEdit.layouts).toHaveLength(1);
+    expect(s1.layoutEdit.layouts).toHaveLength(0);
+    expect(s1.layoutEdit.activeLayoutPath).toBeUndefined();
   });
 
   it("DUPLICATE_LAYOUT creates copy with new ID", () => {
@@ -435,7 +436,8 @@ describe("Layout CRUD", () => {
     expect(dupe.name).toContain("(Copy)");
     expect(dupe.type).toBe("obj");
     expect(dupe.id).not.toBe("L2");
-    expect(s1.layoutEdit.activeLayoutPath).toBe(dupe.id);
+    // Active layout is not auto-changed by DUPLICATE_LAYOUT
+    // UI layer handles selection
   });
 
   it("REORDER_LAYOUTS moves layout to new position", () => {

@@ -13,6 +13,7 @@ import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import type { PresentationDocument } from "@aurochs-office/pptx/app";
 import { loadPptxFromUrl, convertToPresentationDocument, buildSlideLayoutOptions } from "@aurochs-office/pptx/app";
 import { ThemeEditorProvider, useThemeEditor } from "../context";
+import { usePresentationEditorOptional } from "@aurochs-ui/pptx-editor";
 import { PotxEditor } from "../PotxEditor";
 
 // =============================================================================
@@ -30,7 +31,8 @@ type Props = {
 function TextEditStateInspector() {
   const { state } = useThemeEditor();
   const { layoutEdit } = state;
-  const textEdit = layoutEdit.textEdit;
+  const presCtx = usePresentationEditorOptional();
+  const textEdit = presCtx?.textEdit ?? { type: "inactive" as const };
 
   const editingShapeId = textEdit.type === "active" ? textEdit.shapeId : undefined;
 
@@ -68,7 +70,7 @@ function TextEditStateInspector() {
 
       <div style={fieldStyle}>
         <span style={labelStyle}>Selected shapes:</span>
-        <code style={valueStyle}>{layoutEdit.layoutSelection.selectedIds.length}</code>
+        <code style={valueStyle}>{presCtx?.state.shapeSelection.selectedIds.length ?? 0}</code>
       </div>
 
       <div style={fieldStyle}>

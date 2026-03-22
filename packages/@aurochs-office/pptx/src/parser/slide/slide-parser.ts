@@ -22,7 +22,8 @@ import type {
   TransitionType,
 } from "../../domain/index";
 import { getAttr, getByPath, getChild, getChildren, type XmlDocument, type XmlElement } from "@aurochs/xml";
-import { parseFillFromParent } from "../graphics/fill-parser";
+import { parseFill, parseFillFromParent } from "../graphics/fill-parser";
+import type { FormatScheme } from "../../domain/theme/types";
 import { parseShapeTree } from "../shape-parser/index";
 import { processAlternateContent } from "../shape-parser/alternate-content";
 import { getBoolAttr, getBoolAttrOr, parseSlideLayoutId } from "../primitive";
@@ -34,15 +35,73 @@ import { parseTextStyleLevels } from "../text/text-style-levels";
 // =============================================================================
 
 /**
- * Parse background (p:bg)
- * @see ECMA-376 Part 1, Section 19.3.1.1
+ * Resolve p:bgRef to a fill using FormatScheme.
+ *
+ * Per ECMA-376 Part 1, Section 19.3.1.4 (p:bgRef):
+ * - idx 1-999: use a:fillStyleLst[idx-1]
+ * - idx 1001+: use a:bgFillStyleLst[idx-1001]
+ *
+ * The child color element of p:bgRef (if any) replaces phClr in the resolved style.
  */
-export function parseBackground(element: XmlElement | undefined): Background | undefined {
+function resolveBgRef(bgRef: XmlElement, formatScheme: FormatScheme): Background | undefined {
+  const idxStr = bgRef.attrs?.idx;
+  if (idxStr === undefined) {
+    return undefined;
+  }
+  const idx = parseInt(idxStr, 10);
+  if (Number.isNaN(idx) || idx < 1) {
+    return undefined;
+  }
+
+  const styles = idx >= 1001 ? formatScheme.bgFillStyles : formatScheme.fillStyles;
+  const styleIndex = idx >= 1001 ? idx - 1001 : idx - 1;
+  if (styleIndex < 0 || styleIndex >= styles.length) {
+    return undefined;
+  }
+
+  const styleFill = parseFill(styles[styleIndex]);
+  if (!styleFill) {
+    return undefined;
+  }
+
+  // p:bgRef child color overrides phClr in the resolved style
+  const phClrFill = parseFillFromParent(bgRef);
+  if (phClrFill && phClrFill.type === "solidFill" && styleFill.type === "gradientFill") {
+    return {
+      fill: {
+        ...styleFill,
+        stops: styleFill.stops.map((stop) => {
+          if (stop.color.spec.type === "scheme" && stop.color.spec.value === "phClr") {
+            return { ...stop, color: phClrFill.color };
+          }
+          return stop;
+        }),
+      },
+    };
+  }
+  if (phClrFill && phClrFill.type === "solidFill" && styleFill.type === "solidFill") {
+    return { fill: phClrFill };
+  }
+
+  return { fill: styleFill };
+}
+
+/**
+ * Parse background (p:bg)
+ *
+ * When formatScheme is provided, p:bgRef idx references are resolved
+ * against FormatScheme.fillStyles / bgFillStyles (SoT).
+ * Without formatScheme, p:bgRef falls back to parsing child fill elements directly.
+ *
+ * @see ECMA-376 Part 1, Section 19.3.1.1 (p:bg)
+ * @see ECMA-376 Part 1, Section 19.3.1.4 (p:bgRef)
+ */
+export function parseBackground(element: XmlElement | undefined, formatScheme?: FormatScheme): Background | undefined {
   if (!element) {
     return undefined;
   }
 
-  // Check for background properties
+  // p:bgPr — explicit background properties
   const bgPr = getChild(element, "p:bgPr");
   if (bgPr) {
     const fill = parseFillFromParent(bgPr);
@@ -54,15 +113,10 @@ export function parseBackground(element: XmlElement | undefined): Background | u
     }
   }
 
-  // Check for background reference (uses theme)
+  // p:bgRef — theme style reference (ECMA-376 §19.3.1.4)
   const bgRef = getChild(element, "p:bgRef");
-  if (bgRef) {
-    // bgRef refers to theme fill - requires context
-    // For now, try to get fill directly
-    const fill = parseFillFromParent(bgRef);
-    if (fill) {
-      return { fill };
-    }
+  if (bgRef && formatScheme) {
+    return resolveBgRef(bgRef, formatScheme);
   }
 
   return undefined;

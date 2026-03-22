@@ -82,13 +82,82 @@ describe("parseBackground - p:bg (ECMA-376 Section 19.3.1.1)", () => {
     expect(result?.fill?.type).toBe("gradientFill");
   });
 
-  it("parses background reference (p:bgRef)", () => {
+  it("returns undefined for p:bgRef without formatScheme", () => {
     const bg = el("p:bg", {}, [el("p:bgRef", { idx: "1001" }, [el("a:schemeClr", { val: "accent1" })])]);
     const result = parseBackground(bg);
 
-    // bgRef needs theme context, but should still try to parse fill
-    // May return undefined if no direct fill is available
-    expect(result === undefined || result?.fill !== undefined).toBe(true);
+    // p:bgRef requires FormatScheme to resolve — returns undefined without it
+    expect(result).toBeUndefined();
+  });
+
+  it("resolves p:bgRef idx 1001+ against bgFillStyles", () => {
+    const bg = el("p:bg", {}, [el("p:bgRef", { idx: "1001" })]);
+    const formatScheme = {
+      fillStyles: [],
+      bgFillStyles: [el("a:solidFill", {}, [el("a:srgbClr", { val: "0000FF" })])],
+      lineStyles: [],
+      effectStyles: [],
+    };
+    const result = parseBackground(bg, formatScheme);
+
+    expect(result).toBeDefined();
+    expect(result!.fill.type).toBe("solidFill");
+  });
+
+  it("resolves p:bgRef idx 1-999 against fillStyles", () => {
+    const bg = el("p:bg", {}, [el("p:bgRef", { idx: "1" })]);
+    const formatScheme = {
+      fillStyles: [el("a:solidFill", {}, [el("a:srgbClr", { val: "00FF00" })])],
+      bgFillStyles: [],
+      lineStyles: [],
+      effectStyles: [],
+    };
+    const result = parseBackground(bg, formatScheme);
+
+    expect(result).toBeDefined();
+    expect(result!.fill.type).toBe("solidFill");
+  });
+
+  it("resolves p:bgRef with phClr override on gradient fill", () => {
+    const bg = el("p:bg", {}, [
+      el("p:bgRef", { idx: "1001" }, [el("a:solidFill", {}, [el("a:srgbClr", { val: "FF0000" })])]),
+    ]);
+    const formatScheme = {
+      fillStyles: [],
+      bgFillStyles: [
+        el("a:gradFill", {}, [
+          el("a:gsLst", {}, [
+            el("a:gs", { pos: "0" }, [el("a:schemeClr", { val: "phClr" })]),
+            el("a:gs", { pos: "100000" }, [el("a:srgbClr", { val: "FFFFFF" })]),
+          ]),
+          el("a:lin", { ang: "5400000" }),
+        ]),
+      ],
+      lineStyles: [],
+      effectStyles: [],
+    };
+    const result = parseBackground(bg, formatScheme);
+
+    expect(result).toBeDefined();
+    expect(result!.fill.type).toBe("gradientFill");
+    if (result!.fill.type === "gradientFill") {
+      // The phClr stop should be overridden with the bgRef's color
+      const firstStop = result!.fill.stops[0];
+      expect(firstStop.color.spec.type).toBe("srgb");
+    }
+  });
+
+  it("returns undefined for p:bgRef with out-of-range idx", () => {
+    const bg = el("p:bg", {}, [el("p:bgRef", { idx: "1005" })]);
+    const formatScheme = {
+      fillStyles: [],
+      bgFillStyles: [el("a:solidFill", {}, [el("a:srgbClr", { val: "0000FF" })])],
+      lineStyles: [],
+      effectStyles: [],
+    };
+    const result = parseBackground(bg, formatScheme);
+
+    expect(result).toBeUndefined();
   });
 
   it("returns undefined for empty background", () => {

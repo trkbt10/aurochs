@@ -27,7 +27,6 @@ export type {
   ThemeEditorInitProps,
   LayoutEditState,
   LayoutListEntry,
-  LayoutDragState,
   ImportedThemeData,
 } from "./context";
 

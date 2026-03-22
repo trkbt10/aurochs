@@ -1,13 +1,14 @@
 /**
  * @file Theme editor context
  *
- * React context provider for the potx-editor theme/layout editing state.
+ * React context provider for theme-level state (color scheme, fonts, master background, etc.).
+ * Canvas interaction state (selection, drag, undo/redo) is managed by
+ * PresentationEditorProvider from pptx-editor.
  */
 
 import { createContext, useContext, useReducer, useMemo } from "react";
 import type { ThemeEditorState, ThemeEditorAction, ThemeEditorInitProps } from "./types";
 import { themeEditorReducer, createInitialThemeEditorState } from "./reducer";
-import { canUndo as canUndoHistory, canRedo as canRedoHistory } from "@aurochs-ui/editor-core/history";
 
 // =============================================================================
 // Context Type
@@ -16,8 +17,6 @@ import { canUndo as canUndoHistory, canRedo as canRedoHistory } from "@aurochs-u
 export type ThemeEditorContextValue = {
   readonly state: ThemeEditorState;
   readonly dispatch: (action: ThemeEditorAction) => void;
-  readonly canUndo: boolean;
-  readonly canRedo: boolean;
 };
 
 // =============================================================================
@@ -46,8 +45,6 @@ export function ThemeEditorProvider({ initProps, children }: ThemeEditorProvider
   const value = useMemo<ThemeEditorContextValue>(() => ({
     state,
     dispatch,
-    canUndo: canUndoHistory(state.layoutEdit.shapesHistory),
-    canRedo: canRedoHistory(state.layoutEdit.shapesHistory),
   }), [state, dispatch]);
 
   return (
