@@ -13,7 +13,7 @@
 import type { XmlElement, XmlNode } from "@aurochs/xml";
 import type { XlsxWorksheet, XlsxRow, XlsxColumnDef, XlsxSheetView, XlsxPane, XlsxSelection } from "@aurochs-office/xlsx/domain/workbook";
 import type { CellRange } from "@aurochs-office/xlsx/domain/cell/address";
-import type { XlsxColor } from "@aurochs-office/xlsx/domain/style/font";
+import type { XlsxColor } from "@aurochs-office/xlsx/domain/style/color";
 import type { XlsxSheetProtection } from "@aurochs-office/xlsx/domain/protection";
 import type { XlsxAutoFilter, XlsxFilterColumn, XlsxFilterType, XlsxSortState } from "@aurochs-office/xlsx/domain/auto-filter";
 import type {

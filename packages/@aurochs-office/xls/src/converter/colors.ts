@@ -2,7 +2,7 @@
  * @file XLS color mapping utilities
  */
 
-import type { XlsxColor } from "@aurochs-office/xlsx/domain/style/font";
+import type { XlsxColor } from "@aurochs-office/xlsx/domain/style/color";
 
 /** Convert an XLS color index into an XLSX color reference. */
 export function convertXlsColorIndexToXlsxColor(colorIndex: number): XlsxColor {

@@ -28,6 +28,10 @@ export const SPREADSHEETML_CONTENT_TYPES = {
   workbook: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml",
   /** Macro-enabled workbook (xlsm) */
   workbookMacroEnabled: "application/vnd.ms-excel.sheet.macroEnabled.main+xml",
+  /** Template workbook (xltx) */
+  workbookTemplate: "application/vnd.openxmlformats-officedocument.spreadsheetml.template.main+xml",
+  /** Macro-enabled template workbook (xltm) */
+  workbookMacroEnabledTemplate: "application/vnd.ms-excel.template.macroEnabled.main+xml",
   /** Worksheet */
   worksheet: "application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml",
   /** Styles */

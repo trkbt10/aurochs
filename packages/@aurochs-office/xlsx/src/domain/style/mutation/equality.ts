@@ -6,13 +6,12 @@
  */
 
 import type { XlsxBorder, XlsxBorderEdge } from "../border";
-import type { XlsxFill, XlsxColor as XlsxFillColor } from "../fill";
-import type { XlsxFont, XlsxColor as XlsxFontColor } from "../font";
+import type { XlsxColor } from "../color";
+import type { XlsxFill } from "../fill";
+import type { XlsxFont } from "../font";
 import type { XlsxAlignment, XlsxCellXf } from "../types";
 
-type XlsxColorLike = XlsxFontColor | XlsxFillColor;
-
-const isEqualColor = (left: XlsxColorLike | undefined, right: XlsxColorLike | undefined): boolean => {
+const isEqualColor = (left: XlsxColor | undefined, right: XlsxColor | undefined): boolean => {
   if (left === right) {
     return true;
   }

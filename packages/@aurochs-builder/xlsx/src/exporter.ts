@@ -199,9 +199,13 @@ export function generateContentTypes(
   const { sourceContentTypes, additionalEntries } = options;
 
   // Determine main workbook content type
-  // Preserve macroEnabled if source had it
+  // Preserve macroEnabled if source had it (including macro-enabled templates)
+  // Template content types (xltx/xltm) are normalized to sheet content types (xlsx/xlsm)
+  // because the output is always a workbook, not a template
   const sourceWorkbookContentType = sourceContentTypes?.overrides.get("/xl/workbook.xml");
-  const isMacroEnabled = sourceWorkbookContentType === XLSX_CONTENT_TYPES.workbookMacroEnabled;
+  const isMacroEnabled =
+    sourceWorkbookContentType === XLSX_CONTENT_TYPES.workbookMacroEnabled ||
+    sourceWorkbookContentType === XLSX_CONTENT_TYPES.workbookMacroEnabledTemplate;
   const workbookContentType = isMacroEnabled
     ? XLSX_CONTENT_TYPES.workbookMacroEnabled
     : XLSX_CONTENT_TYPES.workbook;

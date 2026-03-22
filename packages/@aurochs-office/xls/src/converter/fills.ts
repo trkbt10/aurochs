@@ -3,7 +3,7 @@
  */
 
 import type { XlsxFill, XlsxPatternType } from "@aurochs-office/xlsx/domain/style/fill";
-import type { XlsxColor } from "@aurochs-office/xlsx/domain/style/font";
+import type { XlsxColor } from "@aurochs-office/xlsx/domain/style/color";
 import type { XlsXf } from "../domain/types";
 import type { XlsParseContext } from "../parse-context";
 import { warnOrThrow } from "../parse-context";

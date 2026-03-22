@@ -8,7 +8,7 @@
  * @see MS-XLSX Extension Part
  */
 
-import type { XlsxColor } from "./style/font";
+import type { XlsxColor } from "./style/color";
 
 /**
  * Individual sparkline definition.

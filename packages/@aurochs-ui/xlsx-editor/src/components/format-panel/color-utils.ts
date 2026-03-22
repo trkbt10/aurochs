@@ -5,8 +5,7 @@
  * (ARGB stored as `rgb="AARRGGBB"`).
  */
 
-import type { XlsxColor as XlsxFontColor } from "@aurochs-office/xlsx/domain/style/font";
-import type { XlsxColor as XlsxFillColor } from "@aurochs-office/xlsx/domain/style/fill";
+import type { XlsxColor } from "@aurochs-office/xlsx/domain/style/color";
 
 /**
  * Normalize a user-entered RGB hex string to `RRGGBB` (uppercase), or return `undefined` if invalid/empty.
@@ -26,7 +25,7 @@ export function normalizeRgbHexInput(input: string): string | undefined {
 /**
  * Extract `RRGGBB` from a SpreadsheetML rgb color (`AARRGGBB`), or return `undefined` for non-rgb/invalid.
  */
-export function rgbHexFromXlsxColor(color: XlsxFontColor | XlsxFillColor | undefined): string | undefined {
+export function rgbHexFromXlsxColor(color: XlsxColor | undefined): string | undefined {
   if (!color) {
     return undefined;
   }
@@ -43,7 +42,7 @@ export function rgbHexFromXlsxColor(color: XlsxFontColor | XlsxFillColor | undef
 /**
  * Create a SpreadsheetML rgb color object from `RRGGBB`, using full alpha (`FF`).
  */
-export function makeXlsxRgbColor(hex: string): XlsxFontColor & XlsxFillColor {
+export function makeXlsxRgbColor(hex: string): XlsxColor {
   if (!/^[0-9A-F]{6}$/u.test(hex)) {
     throw new Error(`Expected RRGGBB hex color: ${hex}`);
   }

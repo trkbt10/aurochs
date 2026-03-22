@@ -10,7 +10,8 @@
  * @see ECMA-376 Part 4, Section 18.8.8 (fonts)
  */
 
-import type { XlsxFont, XlsxColor, UnderlineStyle } from "../../domain/style/font";
+import type { XlsxColor } from "../../domain/style/color";
+import type { XlsxFont, UnderlineStyle } from "../../domain/style/font";
 import { parseBooleanAttr, parseFloatAttr, parseIntAttr } from "../primitive";
 import type { XmlElement } from "@aurochs/xml";
 import { getChild, getChildren, getAttr } from "@aurochs/xml";

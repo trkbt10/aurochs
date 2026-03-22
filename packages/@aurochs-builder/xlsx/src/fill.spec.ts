@@ -5,7 +5,8 @@
  */
 
 import { serializeElement } from "@aurochs/xml";
-import type { XlsxFill, XlsxPatternFill, XlsxGradientFill, XlsxColor } from "@aurochs-office/xlsx/domain/style/fill";
+import type { XlsxColor } from "@aurochs-office/xlsx/domain/style/color";
+import type { XlsxFill, XlsxPatternFill, XlsxGradientFill } from "@aurochs-office/xlsx/domain/style/fill";
 import {
   serializeColor,
   serializeFill,

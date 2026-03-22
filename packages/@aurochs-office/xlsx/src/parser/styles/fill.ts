@@ -14,9 +14,9 @@ import type {
   XlsxPatternFill,
   XlsxGradientFill,
   XlsxGradientStop,
-  XlsxColor,
   XlsxPatternType,
 } from "../../domain/style/fill";
+import type { XlsxColor } from "../../domain/style/color";
 import { parseFloatAttr, parseIntAttr } from "../primitive";
 import type { XmlElement } from "@aurochs/xml";
 import { getAttr, getChild, getChildren } from "@aurochs/xml";

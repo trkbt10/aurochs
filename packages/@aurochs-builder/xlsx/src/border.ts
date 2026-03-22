@@ -9,7 +9,7 @@
 
 import { createElement, type XmlElement, type XmlNode } from "@aurochs/xml";
 import type { XlsxBorder, XlsxBorderEdge } from "@aurochs-office/xlsx/domain/style/border";
-import type { XlsxColor } from "@aurochs-office/xlsx/domain/style/font";
+import type { XlsxColor } from "@aurochs-office/xlsx/domain/style/color";
 
 // =============================================================================
 // Helper Functions

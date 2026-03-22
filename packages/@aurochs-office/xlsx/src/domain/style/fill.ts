@@ -11,26 +11,7 @@
  * @see ECMA-376 Part 4, Section 18.18.55 (Pattern Types)
  */
 
-// =============================================================================
-// XLSX Color Types
-// =============================================================================
-
-/**
- * XLSX Color specification
- *
- * SpreadsheetML uses a different color model than DrawingML:
- * - rgb: AARRGGBB format (8 characters with alpha)
- * - theme: Theme color index with optional tint
- * - indexed: Legacy indexed color (0-63)
- * - auto: Automatic color (system default)
- *
- * @see ECMA-376 Part 4, Section 18.8.9 (color)
- */
-export type XlsxColor =
-  | { readonly type: "rgb"; readonly value: string }
-  | { readonly type: "theme"; readonly theme: number; readonly tint?: number }
-  | { readonly type: "indexed"; readonly index: number }
-  | { readonly type: "auto" };
+import type { XlsxColor } from "./color";
 
 // =============================================================================
 // Pattern Types

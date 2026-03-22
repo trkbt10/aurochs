@@ -8,7 +8,7 @@
  */
 
 import type { CellRange } from "./cell/address";
-import type { XlsxColor } from "./style/font";
+import type { XlsxColor } from "./style/color";
 
 // =============================================================================
 // Conditional Value Object (cfvo)

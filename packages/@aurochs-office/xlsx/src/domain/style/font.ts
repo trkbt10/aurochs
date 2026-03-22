@@ -8,27 +8,7 @@
  * @see ECMA-376 Part 4, Section 18.8.9 (color)
  */
 
-// =============================================================================
-// XlsxColor Type
-// =============================================================================
-
-/**
- * SpreadsheetML color specification
- *
- * Colors in SpreadsheetML can be specified in multiple ways:
- * - RGB: Direct AARRGGBB hex value
- * - Theme: Reference to theme color with optional tint
- * - Indexed: Reference to legacy indexed color palette
- * - Auto: Automatic color (system-dependent)
- *
- * @see ECMA-376 Part 4, Section 18.8.9 (color)
- * @see ECMA-376 Part 4, Section 18.8.3 (CT_Color)
- */
-export type XlsxColor =
-  | { readonly type: "rgb"; readonly value: string }
-  | { readonly type: "theme"; readonly theme: number; readonly tint?: number }
-  | { readonly type: "indexed"; readonly index: number }
-  | { readonly type: "auto" };
+import type { XlsxColor } from "./color";
 
 // =============================================================================
 // UnderlineStyle Type

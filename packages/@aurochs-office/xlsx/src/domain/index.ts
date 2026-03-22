@@ -21,7 +21,8 @@ export type { Formula } from "./cell/formula";
 
 // Style types
 export type { XlsxStyleSheet, XlsxCellXf, XlsxCellStyle, XlsxAlignment, XlsxProtection } from "./style/types";
-export type { XlsxFont, XlsxColor } from "./style/font";
+export type { XlsxColor } from "./style/color";
+export type { XlsxFont } from "./style/font";
 export type { XlsxFill, XlsxPatternFill } from "./style/fill";
 export type { XlsxBorder, XlsxBorderEdge } from "./style/border";
 export type { XlsxNumberFormat } from "./style/number-format";

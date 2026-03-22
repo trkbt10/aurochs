@@ -4,7 +4,7 @@
 
 import { getChild, getChildren } from "@aurochs/xml";
 import type { XlsxBorder, XlsxBorderEdge } from "@aurochs-office/xlsx/domain/style/border";
-import type { XlsxColor } from "@aurochs-office/xlsx/domain/style/font";
+import type { XlsxColor } from "@aurochs-office/xlsx/domain/style/color";
 import { serializeBorder, serializeBorders, serializeBorderEdge } from "./border";
 
 describe("serializeBorderEdge", () => {

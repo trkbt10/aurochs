@@ -13,7 +13,8 @@
 import type { XlsxFill } from "./fill";
 import type { XlsxBorder } from "./border";
 import type { XlsxNumberFormat } from "./number-format";
-import type { XlsxColor, UnderlineStyle } from "./font";
+import type { XlsxColor } from "./color";
+import type { UnderlineStyle } from "./font";
 
 export type XlsxDxfFont = {
   readonly name?: string;

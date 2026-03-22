@@ -12,7 +12,7 @@
  * @see ECMA-376 Part 4, Section 18.4.4 (r - Rich Text Run)
  */
 
-import type { XlsxColor } from "../domain/style/font";
+import type { XlsxColor } from "../domain/style/color";
 import type { XmlElement } from "@aurochs/xml";
 import { getChild, getChildren, getTextContent, getAttr } from "@aurochs/xml";
 

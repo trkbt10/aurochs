@@ -18,7 +18,7 @@ import type { XlsxConditionalFormatting } from "./conditional-formatting";
 import type { XlsxComment } from "./comment";
 import type { XlsxHyperlink } from "./hyperlink";
 import type { XlsxDateSystem } from "./date-system";
-import type { XlsxColor } from "./style/font";
+import type { XlsxColor } from "./style/color";
 import type { XlsxDataValidation } from "./data-validation";
 import type { XlsxAutoFilter } from "./auto-filter";
 import type { XlsxPageSetup, XlsxPageMargins, XlsxHeaderFooter, XlsxPrintOptions } from "./page-setup";

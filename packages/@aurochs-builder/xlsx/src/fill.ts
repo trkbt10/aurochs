@@ -9,12 +9,12 @@
  * @see ECMA-376 Part 4, Section 18.8.24 (gradientFill)
  */
 
+import type { XlsxColor } from "@aurochs-office/xlsx/domain/style/color";
 import type {
   XlsxFill,
   XlsxPatternFill,
   XlsxGradientFill,
   XlsxGradientStop,
-  XlsxColor,
 } from "@aurochs-office/xlsx/domain/style/fill";
 import type { XmlElement } from "@aurochs/xml";
 

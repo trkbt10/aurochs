@@ -6,7 +6,8 @@
  */
 
 import { serializeElement } from "@aurochs/xml";
-import type { XlsxFont, XlsxColor } from "@aurochs-office/xlsx/domain/style/font";
+import type { XlsxColor } from "@aurochs-office/xlsx/domain/style/color";
+import type { XlsxFont } from "@aurochs-office/xlsx/domain/style/font";
 import { serializeColor, serializeFont, serializeFonts } from "./font";
 
 /**

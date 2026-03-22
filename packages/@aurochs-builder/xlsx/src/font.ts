@@ -9,7 +9,8 @@
  * @see ECMA-376 Part 4, Section 18.8.8 (fonts)
  */
 
-import type { XlsxFont, XlsxColor } from "@aurochs-office/xlsx/domain/style/font";
+import type { XlsxColor } from "@aurochs-office/xlsx/domain/style/color";
+import type { XlsxFont } from "@aurochs-office/xlsx/domain/style/font";
 import { createElement, type XmlElement } from "@aurochs/xml";
 
 // =============================================================================

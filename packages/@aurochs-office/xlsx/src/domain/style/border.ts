@@ -11,7 +11,7 @@
  * @see ECMA-376 Part 4, Section 18.18.3 (ST_BorderStyle)
  */
 
-import type { XlsxColor } from "./font";
+import type { XlsxColor } from "./color";
 
 // =============================================================================
 // XlsxBorderStyle Type

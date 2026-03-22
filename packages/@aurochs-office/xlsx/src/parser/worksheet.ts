@@ -28,7 +28,7 @@ import type { XlsxHyperlink } from "../domain/hyperlink";
 import type { CellRange } from "../domain/cell/address";
 import { parseCellRef, parseRange } from "../domain/cell/address";
 import type { Cell } from "../domain/cell/types";
-import type { XlsxColor } from "../domain/style/font";
+import type { XlsxColor } from "../domain/style/color";
 import type { XlsxDataValidation } from "../domain/data-validation";
 import type {
   XlsxAutoFilter,

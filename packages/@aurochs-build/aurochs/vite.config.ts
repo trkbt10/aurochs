@@ -41,10 +41,17 @@ const entries = {
   // DOCX Viewer
   "docx/viewer/index": resolve(__dirname, "../../@aurochs-ui/docx-editor/src/viewer/index.ts"),
 
-  // XLSX Domain
+  // XLSX Domain (types + constructors)
   "xlsx/domain/index": resolve(__dirname, "../../@aurochs-office/xlsx/src/domain/index.ts"),
-  // XLSX Parser
+  // XLSX Domain Style (type-only — ensures .d.ts generation for color, font, fill, border)
+  "xlsx/domain/style/color": resolve(__dirname, "../../@aurochs-office/xlsx/src/domain/style/color.ts"),
+  "xlsx/domain/style/font": resolve(__dirname, "../../@aurochs-office/xlsx/src/domain/style/font.ts"),
+  "xlsx/domain/style/fill": resolve(__dirname, "../../@aurochs-office/xlsx/src/domain/style/fill.ts"),
+  "xlsx/domain/style/border": resolve(__dirname, "../../@aurochs-office/xlsx/src/domain/style/border.ts"),
+  // XLSX Parser (simple - for chart data)
   "xlsx/parser/index": resolve(__dirname, "../../@aurochs-office/xlsx/src/index.ts"),
+  // XLSX Parser (full domain model)
+  "xlsx/parser/full/index": resolve(__dirname, "../../@aurochs-office/xlsx/src/parser/index.ts"),
   // XLSX Extract
   "xlsx/extract/index": resolve(__dirname, "../../@aurochs-office/xlsx/src/extract/index.ts"),
   // XLSX Renderer
@@ -55,6 +62,9 @@ const entries = {
   "xlsx/builder/index": resolve(__dirname, "../../@aurochs-builder/xlsx/src/index.ts"),
   // XLSX Viewer
   "xlsx/viewer/index": resolve(__dirname, "../../@aurochs-ui/xlsx-editor/src/viewer/index.ts"),
+
+  // ZIP Utilities
+  "zip/index": resolve(__dirname, "../../@aurochs/zip/src/index.ts"),
 
   // PDF Parser
   "pdf/parser/index": resolve(__dirname, "../../@aurochs/pdf/src/index.ts"),
@@ -76,6 +86,7 @@ export default defineConfig({
     dts({
       outDir: resolve(__dirname, "../../../publish/aurochs/dist"),
       tsconfigPath: resolve(__dirname, "../../../tsconfig.json"),
+      entryRoot: resolve(__dirname, "../.."),
       include: [
         // PPTX
         resolve(__dirname, "../../@aurochs-office/pptx/src/**"),
@@ -94,13 +105,20 @@ export default defineConfig({
         resolve(__dirname, "../../@aurochs-renderer/docx/src/react/**"),
         resolve(__dirname, "../../@aurochs-renderer/docx/src/render-options*"),
         resolve(__dirname, "../../@aurochs-ui/docx-editor/src/viewer/**"),
-        // XLSX
+        // XLSX (domain + style + drawing subdirectories explicitly)
         resolve(__dirname, "../../@aurochs-office/xlsx/src/**"),
+        resolve(__dirname, "../../@aurochs-office/xlsx/src/domain/**"),
+        resolve(__dirname, "../../@aurochs-office/xlsx/src/domain/style/**"),
+        resolve(__dirname, "../../@aurochs-office/xlsx/src/domain/cell/**"),
+        resolve(__dirname, "../../@aurochs-office/xlsx/src/domain/drawing/**"),
+        resolve(__dirname, "../../@aurochs-office/xlsx/src/parser/**"),
         resolve(__dirname, "../../@aurochs-renderer/xlsx/src/svg/**"),
         resolve(__dirname, "../../@aurochs-renderer/xlsx/src/ascii/**"),
         resolve(__dirname, "../../@aurochs-renderer/xlsx/src/mermaid/**"),
         resolve(__dirname, "../../@aurochs-builder/xlsx/src/**"),
         resolve(__dirname, "../../@aurochs-ui/xlsx-editor/src/viewer/**"),
+        // ZIP
+        resolve(__dirname, "../../@aurochs/zip/src/**"),
         // PDF
         resolve(__dirname, "../../@aurochs/pdf/src/**"),
         resolve(__dirname, "../../@aurochs-builder/pdf/src/**"),
