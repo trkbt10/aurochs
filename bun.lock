@@ -781,6 +781,9 @@
         "@aurochs-ui/ooxml-components": "workspace:*",
         "@aurochs-ui/path-tools": "workspace:*",
         "@aurochs-ui/potx-editor": "workspace:*",
+        "@aurochs-ui/pptx-editors": "workspace:*",
+        "@aurochs-ui/pptx-slide-canvas": "workspace:*",
+        "@aurochs-ui/pptx-viewer": "workspace:*",
         "@aurochs-ui/ui-components": "workspace:*",
         "@aurochs-ui/xlsx-editor": "workspace:*",
         "@aurochs/glyph": "workspace:*",
@@ -790,6 +793,68 @@
       "devDependencies": {
         "puppeteer-core": "^24.37.2",
         "vite": "^7.3.1",
+      },
+      "peerDependencies": {
+        "react": "^18.0.0 || ^19.0.0",
+        "react-dom": "^18.0.0 || ^19.0.0",
+      },
+    },
+    "packages/@aurochs-ui/pptx-editors": {
+      "name": "@aurochs-ui/pptx-editors",
+      "version": "0.7.0",
+      "dependencies": {
+        "@aurochs-office/drawing-ml": "workspace:*",
+        "@aurochs-office/pptx": "workspace:*",
+        "@aurochs-office/xlsx": "workspace:*",
+        "@aurochs-renderer/drawing-ml": "workspace:*",
+        "@aurochs-ui/chart-editor": "workspace:*",
+        "@aurochs-ui/color-editor": "workspace:*",
+        "@aurochs-ui/diagram-editor": "workspace:*",
+        "@aurochs-ui/editor-controls": "workspace:*",
+        "@aurochs-ui/editor-core": "workspace:*",
+        "@aurochs-ui/ooxml-components": "workspace:*",
+        "@aurochs-ui/ui-components": "workspace:*",
+        "@aurochs-ui/xlsx-editor": "workspace:*",
+        "react-editor-ui": "^0.4.0",
+      },
+      "peerDependencies": {
+        "react": "^18.0.0 || ^19.0.0",
+        "react-dom": "^18.0.0 || ^19.0.0",
+      },
+    },
+    "packages/@aurochs-ui/pptx-slide-canvas": {
+      "name": "@aurochs-ui/pptx-slide-canvas",
+      "version": "0.7.0",
+      "dependencies": {
+        "@aurochs-builder/pptx": "workspace:*",
+        "@aurochs-office/drawing-ml": "workspace:*",
+        "@aurochs-office/ooxml": "workspace:*",
+        "@aurochs-office/pptx": "workspace:*",
+        "@aurochs-renderer/pptx": "workspace:*",
+        "@aurochs-ui/editor-controls": "workspace:*",
+        "@aurochs-ui/editor-core": "workspace:*",
+        "@aurochs-ui/ooxml-components": "workspace:*",
+        "@aurochs-ui/path-tools": "workspace:*",
+        "@aurochs-ui/pptx-editors": "workspace:*",
+        "@aurochs-ui/ui-components": "workspace:*",
+        "@aurochs/glyph": "workspace:*",
+      },
+      "peerDependencies": {
+        "react": "^18.0.0 || ^19.0.0",
+        "react-dom": "^18.0.0 || ^19.0.0",
+      },
+    },
+    "packages/@aurochs-ui/pptx-viewer": {
+      "name": "@aurochs-ui/pptx-viewer",
+      "version": "0.7.0",
+      "dependencies": {
+        "@aurochs-office/drawing-ml": "workspace:*",
+        "@aurochs-office/pptx": "workspace:*",
+        "@aurochs-renderer/pptx": "workspace:*",
+        "@aurochs-ui/editor-controls": "workspace:*",
+        "@aurochs-ui/editor-core": "workspace:*",
+        "@aurochs-ui/ooxml-components": "workspace:*",
+        "@aurochs-ui/ui-components": "workspace:*",
       },
       "peerDependencies": {
         "react": "^18.0.0 || ^19.0.0",
@@ -837,6 +902,7 @@
         "@aurochs-ui/docx-editor": "workspace:*",
         "@aurochs-ui/editor-controls": "workspace:*",
         "@aurochs-ui/pptx-editor": "workspace:*",
+        "@aurochs-ui/pptx-viewer": "workspace:*",
         "@aurochs-ui/ui-components": "workspace:*",
         "@aurochs-ui/vba-editor": "workspace:*",
         "@aurochs-ui/xlsx-editor": "workspace:*",
@@ -1080,6 +1146,12 @@
     "@aurochs-ui/potx-editor": ["@aurochs-ui/potx-editor@workspace:packages/@aurochs-ui/potx-editor"],
 
     "@aurochs-ui/pptx-editor": ["@aurochs-ui/pptx-editor@workspace:packages/@aurochs-ui/pptx-editor"],
+
+    "@aurochs-ui/pptx-editors": ["@aurochs-ui/pptx-editors@workspace:packages/@aurochs-ui/pptx-editors"],
+
+    "@aurochs-ui/pptx-slide-canvas": ["@aurochs-ui/pptx-slide-canvas@workspace:packages/@aurochs-ui/pptx-slide-canvas"],
+
+    "@aurochs-ui/pptx-viewer": ["@aurochs-ui/pptx-viewer@workspace:packages/@aurochs-ui/pptx-viewer"],
 
     "@aurochs-ui/presentation-suite": ["@aurochs-ui/presentation-suite@workspace:packages/@aurochs-ui/presentation-suite"],
 
