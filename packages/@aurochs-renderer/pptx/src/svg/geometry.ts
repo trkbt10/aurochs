@@ -13,7 +13,8 @@ import { path } from "./primitives";
 import { renderFillToStyle, renderLineToStyle } from "./fill";
 import { generateLineMarkers, type MarkerCollection } from "./marker";
 import { resolveFill, formatRgba } from "@aurochs-office/pptx/domain/color/fill";
-import type { Fill, Line } from "@aurochs-office/pptx/domain";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
 
 // Import shared geometry rendering from drawing-ml
@@ -33,8 +34,8 @@ export function renderGeometryPath({
   transform,
 }: {
   geomPath: GeometryPath;
-  fill: Fill | undefined;
-  line: Line | undefined;
+  fill: BaseFill | undefined;
+  line: BaseLine | undefined;
   transform?: Transform;
 }): HtmlString {
   const d = renderGeometryPathData(geomPath);
@@ -66,7 +67,7 @@ export function renderGeometryPath({
 /**
  * Extract stroke color from line fill.
  */
-function getStrokeColorFromLine(line: Line, colorContext?: ColorContext): string {
+function getStrokeColorFromLine(line: BaseLine, colorContext?: ColorContext): string {
   if (line.fill.type !== "solidFill") {
     return "#000000";
   }
@@ -81,7 +82,7 @@ function getStrokeColorFromLine(line: Line, colorContext?: ColorContext): string
  * Generate markers for a line if it has headEnd or tailEnd.
  */
 function generateMarkersForLine(
-  line: Line | undefined,
+  line: BaseLine | undefined,
   strokeStyle: { strokeWidth: number } | undefined,
   colorContext?: ColorContext,
 ): MarkerCollection {
@@ -131,8 +132,8 @@ export function renderGeometryPathWithMarkers({
   transform,
 }: {
   geomPath: GeometryPath;
-  fill: Fill | undefined;
-  line: Line | undefined;
+  fill: BaseFill | undefined;
+  line: BaseLine | undefined;
   colorContext?: ColorContext;
   transform?: Transform;
 }): GeometryPathWithMarkersResult {

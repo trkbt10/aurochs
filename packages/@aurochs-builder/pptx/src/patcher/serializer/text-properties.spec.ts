@@ -4,7 +4,8 @@ import { deg, pct, pt, px } from "@aurochs-office/drawing-ml/domain/units";
 import type { BodyProperties } from "@aurochs-office/pptx/domain/text";
 import type { BulletStyle, ParagraphProperties, RunProperties } from "@aurochs-office/pptx/domain/text";
 import type { Effects } from "@aurochs-office/pptx/domain/effects";
-import type { Fill, Line } from "@aurochs-office/pptx/domain/color/types";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import type { Color } from "@aurochs-office/drawing-ml/domain/color";
 import {
   serializeBodyProperties,
@@ -565,7 +566,7 @@ describe("serializeRunProperties", () => {
   });
 
   it("serializes fill property", () => {
-    const fill: Fill = { type: "noFill" };
+    const fill: BaseFill = { type: "noFill" };
     const el = serializeRunProperties({ fill });
     const noFill = getChild(el, "a:noFill");
     expect(noFill).toBeDefined();
@@ -578,7 +579,7 @@ describe("serializeRunProperties", () => {
   });
 
   it("serializes text outline via serializeLine", () => {
-    const line: Line = {
+    const line: BaseLine = {
       width: px(2),
       cap: "flat",
       compound: "sng",
@@ -683,7 +684,7 @@ describe("serializeRunProperties", () => {
   });
 
   it("serializes underlineLine as a:uLn (renamed)", () => {
-    const uLine: Line = {
+    const uLine: BaseLine = {
       width: px(1),
       cap: "flat",
       compound: "sng",
@@ -699,7 +700,7 @@ describe("serializeRunProperties", () => {
   });
 
   it("serializes underlineFill as a:uFill child", () => {
-    const uFill: Fill = { type: "solidFill", color: srgbRed };
+    const uFill: BaseFill = { type: "solidFill", color: srgbRed };
     const el = serializeRunProperties({ underlineFill: uFill });
     const uFillEl = getChild(el, "a:uFill");
     expect(uFillEl).toBeDefined();
@@ -708,7 +709,7 @@ describe("serializeRunProperties", () => {
   });
 
   it("does not emit best-effort a:uLn when underlineLine is also present", () => {
-    const uLine: Line = {
+    const uLine: BaseLine = {
       width: px(1),
       cap: "flat",
       compound: "sng",

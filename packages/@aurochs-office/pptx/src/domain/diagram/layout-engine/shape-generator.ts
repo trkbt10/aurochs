@@ -13,7 +13,7 @@ import type {
 } from "@aurochs-office/diagram/domain";
 import {
   generateDiagramLayoutResults,
-  type ShapeGenerationConfig as DiagramShapeGenerationConfig,
+  type ShapeGenerationConfig,
   type LayoutBounds,
 } from "@aurochs-office/diagram/layout-engine";
 import type { SpShape } from "../../shape";
@@ -26,7 +26,7 @@ export type ShapeGenerationResult = {
   readonly treeResult: DiagramTreeBuildResult;
 };
 
-export type ShapeGenerationConfig = DiagramShapeGenerationConfig;
+export type { ShapeGenerationConfig };
 
 export type GenerateDiagramShapesOptions = {
   readonly dataModel: DiagramDataModel;

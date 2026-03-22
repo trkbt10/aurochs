@@ -20,10 +20,12 @@
 import type { SlideLayoutType } from "@aurochs-office/pptx/domain";
 import type { ThemeEditorState, ThemeEditorAction, LayoutListEntry } from "../types";
 import { themeEditorReducer, createInitialThemeEditorState } from "./index";
-import type { CustomColor, ExtraColorScheme, FormatScheme, ObjectDefaults, RawMasterTextStyles } from "@aurochs-office/pptx/domain/theme/types";
+import type { CustomColor, ExtraColorScheme, FormatScheme, ObjectDefaults } from "@aurochs-office/pptx/domain/theme/types";
+import type { MasterTextStyles } from "@aurochs-office/pptx/domain/text-style";
 import { createElement } from "@aurochs/xml";
 import { SCHEME_COLOR_NAMES } from "@aurochs-office/drawing-ml/domain/color";
 import { DEFAULT_COLOR_MAPPING } from "@aurochs-office/pptx/domain/color/types";
+import type { ThemePreset, ThemeColorScheme } from "../../panels/types";
 
 // =============================================================================
 // Helpers
@@ -130,10 +132,10 @@ describe("Theme names & presets", () => {
   });
 
   it("APPLY_THEME_PRESET replaces colors, fonts, and names", () => {
-    const preset = {
+    const preset: ThemePreset = {
       id: "test",
       name: "Preset Theme",
-      colorScheme: { ...base().colorScheme, accent1: "112233" },
+      colorScheme: { ...base().colorScheme, accent1: "112233" } as ThemeColorScheme,
       fontScheme: { majorFont: { latin: "Impact" }, minorFont: { latin: "Verdana" } },
     };
     const s = reduce(base(), { type: "APPLY_THEME_PRESET", preset });
@@ -193,14 +195,20 @@ describe("IMPORT_THEME", () => {
 // ===========================================================================
 
 describe("Master background & color mapping", () => {
-  it("UPDATE_MASTER_BACKGROUND sets fill", () => {
-    const s = reduce(base(), { type: "UPDATE_MASTER_BACKGROUND", background: { fill: { type: "solidFill", color: { type: "srgb", value: "FF0000" } } } });
-    expect(s.masterBackground.fill?.type).toBe("solidFill");
+  it("UPDATE_MASTER_BACKGROUND sets p:bg XmlElement", () => {
+    const bgElement = createElement("p:bg", {}, [
+      createElement("p:bgPr", {}, [createElement("a:solidFill", {}, [createElement("a:srgbClr", { val: "FF0000" })])]),
+    ]);
+    const s = reduce(base(), { type: "UPDATE_MASTER_BACKGROUND", background: bgElement });
+    expect(s.masterBackground).toBe(bgElement);
+    expect(s.masterBackground?.name).toBe("p:bg");
   });
 
-  it("UPDATE_MASTER_BACKGROUND sets shadeToTitle", () => {
-    const s = reduce(base(), { type: "UPDATE_MASTER_BACKGROUND", background: { shadeToTitle: true } });
-    expect(s.masterBackground.shadeToTitle).toBe(true);
+  it("UPDATE_MASTER_BACKGROUND clears with undefined", () => {
+    const bgElement = createElement("p:bg", {}, []);
+    const s0 = reduce(base(), { type: "UPDATE_MASTER_BACKGROUND", background: bgElement });
+    const s1 = reduce(s0, { type: "UPDATE_MASTER_BACKGROUND", background: undefined });
+    expect(s1.masterBackground).toBeUndefined();
   });
 
   it("UPDATE_MASTER_COLOR_MAPPING updates full mapping", () => {
@@ -302,13 +310,13 @@ describe("Format scheme, object defaults, master text styles", () => {
   });
 
   it("UPDATE_OBJECT_DEFAULTS sets object defaults", () => {
-    const od: ObjectDefaults = { lineDefault: createElement("a:lnDef") };
+    const od: ObjectDefaults = { lineDefault: { shapeProperties: { fill: { type: "solidFill", color: { spec: { type: "srgb", value: "000000" } } } } } };
     const s = reduce(base(), { type: "UPDATE_OBJECT_DEFAULTS", objectDefaults: od });
     expect(s.objectDefaults).toBe(od);
   });
 
   it("UPDATE_MASTER_TEXT_STYLES sets master text styles", () => {
-    const mts: RawMasterTextStyles = { titleStyle: createElement("p:titleStyle"), bodyStyle: undefined, otherStyle: undefined };
+    const mts: MasterTextStyles = { titleStyle: { level1: { paragraphProperties: { alignment: "center" } } }, bodyStyle: undefined, otherStyle: undefined };
     const s = reduce(base(), { type: "UPDATE_MASTER_TEXT_STYLES", masterTextStyles: mts });
     expect(s.masterTextStyles).toBe(mts);
   });
@@ -326,7 +334,7 @@ describe("Layout overrides", () => {
 
   it("UPDATE_LAYOUT_BACKGROUND sets per-layout background", () => {
     const s0 = withLayouts(base(), layouts);
-    const s1 = reduce(s0, { type: "UPDATE_LAYOUT_BACKGROUND", layoutId: "layout1", background: { fill: { type: "solidFill", color: { type: "srgb", value: "0000FF" } } } });
+    const s1 = reduce(s0, { type: "UPDATE_LAYOUT_BACKGROUND", layoutId: "layout1", background: { fill: { type: "solidFill", color: { spec: { type: "srgb", value: "0000FF" } } } } });
     const layout = s1.layoutEdit.layouts.find((l) => l.id === "layout1");
     expect(layout?.overrides?.background?.fill?.type).toBe("solidFill");
     // Other layout unchanged
@@ -496,7 +504,8 @@ describe("State isolation", () => {
   it("master background changes do not affect layoutEdit", () => {
     const s0 = base();
     const layoutBefore = s0.layoutEdit;
-    const s1 = reduce(s0, { type: "UPDATE_MASTER_BACKGROUND", background: { shadeToTitle: true } });
+    const bgElement = createElement("p:bg", {}, []);
+    const s1 = reduce(s0, { type: "UPDATE_MASTER_BACKGROUND", background: bgElement });
     expect(s1.layoutEdit).toBe(layoutBefore);
   });
 });

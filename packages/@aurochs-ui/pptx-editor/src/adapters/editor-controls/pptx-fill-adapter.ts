@@ -1,12 +1,12 @@
 /**
  * @file PPTX fill formatting adapter
  *
- * Converts between PPTX Fill and the generic FillFormatting type.
+ * Converts between PPTX BaseFill and the generic FillFormatting type.
  * Only none/solid are first-class in the generic type;
  * gradient/pattern/image are represented as "other".
  */
 
-import type { Fill } from "@aurochs-office/pptx/domain/color/types";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
 import type { SolidFill } from "@aurochs-office/drawing-ml/domain/fill";
 import type { FormattingAdapter } from "@aurochs-ui/editor-controls/formatting-adapter";
 import type { FillFormatting } from "@aurochs-ui/editor-controls/surface";
@@ -18,8 +18,8 @@ const FILL_LABELS: Record<string, string> = {
   blipFill: "Image",
 };
 
-export const pptxFillAdapter: FormattingAdapter<Fill, FillFormatting> = {
-  toGeneric(value: Fill): FillFormatting {
+export const pptxFillAdapter: FormattingAdapter<BaseFill, FillFormatting> = {
+  toGeneric(value: BaseFill): FillFormatting {
     if (value.type === "noFill") {
       return { type: "none" };
     }
@@ -31,7 +31,7 @@ export const pptxFillAdapter: FormattingAdapter<Fill, FillFormatting> = {
     return { type: "other", label: FILL_LABELS[value.type] ?? value.type };
   },
 
-  applyUpdate(current: Fill, update: Partial<FillFormatting>): Fill {
+  applyUpdate(current: BaseFill, update: Partial<FillFormatting>): BaseFill {
     if (!update.type) {
       return current;
     }

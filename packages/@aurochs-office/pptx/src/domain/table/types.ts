@@ -4,7 +4,8 @@
  * @see ECMA-376 Part 1, Section 21.1.3 - DrawingML Tables
  */
 
-import type { Fill, Line } from "../color/types";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import type { TextBody } from "../text";
 import type { BevelPresetType } from "../three-d";
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
@@ -43,7 +44,7 @@ export type TableProperties = {
   readonly lastCol?: boolean;
   readonly bandRow?: boolean;
   readonly bandCol?: boolean;
-  readonly fill?: Fill;
+  readonly fill?: BaseFill;
   readonly effects?: Effects;
   readonly tableStyleId?: string;
 };
@@ -124,7 +125,7 @@ export type TableCellProperties = {
   readonly anchorCenter?: boolean;
   readonly horzOverflow?: CellHorzOverflow;
   readonly verticalType?: CellVerticalType;
-  readonly fill?: Fill;
+  readonly fill?: BaseFill;
   readonly borders?: CellBorders;
   readonly cell3d?: Cell3d;
   readonly headers?: readonly string[];
@@ -139,14 +140,14 @@ export type TableCellProperties = {
  * @see ECMA-376 Part 1, Section 21.1.3.4-8 (lnL/lnR/lnT/lnB/lnTlToBr/lnBlToTr)
  */
 export type CellBorders = {
-  readonly left?: Line;
-  readonly right?: Line;
-  readonly top?: Line;
-  readonly bottom?: Line;
-  readonly insideH?: Line;
-  readonly insideV?: Line;
-  readonly tlToBr?: Line; // Top-left to bottom-right diagonal
-  readonly blToTr?: Line; // Bottom-left to top-right diagonal
+  readonly left?: BaseLine;
+  readonly right?: BaseLine;
+  readonly top?: BaseLine;
+  readonly bottom?: BaseLine;
+  readonly insideH?: BaseLine;
+  readonly insideV?: BaseLine;
+  readonly tlToBr?: BaseLine; // Top-left to bottom-right diagonal
+  readonly blToTr?: BaseLine; // Bottom-left to top-right diagonal
 };
 
 // =============================================================================
@@ -160,7 +161,7 @@ export type CellBorders = {
 export type TableStyle = {
   readonly id: string;
   readonly name?: string;
-  readonly tblBg?: Fill;
+  readonly tblBg?: BaseFill;
   readonly wholeTbl?: TablePartStyle;
   readonly band1H?: TablePartStyle;
   readonly band2H?: TablePartStyle;
@@ -181,10 +182,10 @@ export type TableStyle = {
  * @see ECMA-376 Part 1, Section 21.1.3.12 (tableStylePart)
  */
 export type TablePartStyle = {
-  readonly fill?: Fill;
+  readonly fill?: BaseFill;
   readonly fillReference?: {
     readonly index: StyleMatrixColumnIndex;
-    readonly color?: Fill;
+    readonly color?: BaseFill;
   };
   readonly cell3d?: Cell3d;
   readonly borders?: CellBorders;
@@ -215,6 +216,6 @@ export type Cell3d = {
 export type TableTextProperties = {
   readonly fontReference?: {
     readonly index: FontCollectionIndex;
-    readonly color?: Fill;
+    readonly color?: BaseFill;
   };
 };

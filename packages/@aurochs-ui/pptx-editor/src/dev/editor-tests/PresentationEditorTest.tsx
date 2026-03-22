@@ -10,17 +10,18 @@ import { PresentationEditor } from "@aurochs-ui/pptx-editor";
 import type { PresentationDocument, SlideWithId } from "@aurochs-office/pptx/app";
 import type { Slide, Presentation } from "@aurochs-office/pptx/domain";
 import type { SpShape, GrpShape, GraphicFrame } from "@aurochs-office/pptx/domain/shape";
-import type { Line } from "@aurochs-office/pptx/domain/color/types";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import type { Table, TableRow, TableCell } from "@aurochs-office/pptx/domain/table/types";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { ResourceResolver } from "@aurochs-office/pptx/domain/resource-resolver";
 import { px, deg, pt } from "@aurochs-office/drawing-ml/domain/units";
+import { EMPTY_FONT_SCHEME } from "@aurochs-office/ooxml/domain/font-scheme";
 
 // =============================================================================
 // Fixture Helpers
 // =============================================================================
 
-function createLine(color: string, widthVal = 2): Line {
+function createLine(color: string, widthVal = 2): BaseLine {
   return {
     width: px(widthVal),
     cap: "flat",
@@ -482,6 +483,7 @@ const createTestDocument = (): PresentationDocument => {
     slideHeight: px(SLIDE_HEIGHT),
     colorContext: defaultColorContext,
     resources: emptyResourceResolver,
+    fontScheme: EMPTY_FONT_SCHEME,
   };
 };
 

@@ -28,7 +28,8 @@ import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-conte
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
 import { resolveThemeFont } from "@aurochs-office/ooxml/domain/font-scheme";
 import type { Color } from "@aurochs-office/drawing-ml/domain/color";
-import type { Line, Fill } from "@aurochs-office/pptx/domain/color/types";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 
 import { resolveColor as resolveColorRaw } from "@aurochs-office/drawing-ml/domain/color-resolution";
 import type { ResourceResolverFn } from "@aurochs-office/pptx/domain";
@@ -107,7 +108,7 @@ function resolveTextTransform(caps: RunProperties["caps"] | undefined): "none" |
   return "none";
 }
 
-function resolveLineCap(cap: Line["cap"]): TextOutlineConfig["cap"] {
+function resolveLineCap(cap: BaseLine["cap"]): TextOutlineConfig["cap"] {
   switch (cap) {
     case "round":
       return "round";
@@ -119,7 +120,7 @@ function resolveLineCap(cap: Line["cap"]): TextOutlineConfig["cap"] {
   }
 }
 
-function resolveLineJoin(join: Line["join"]): TextOutlineConfig["join"] {
+function resolveLineJoin(join: BaseLine["join"]): TextOutlineConfig["join"] {
   switch (join) {
     case "bevel":
       return "bevel";
@@ -508,7 +509,7 @@ function resolveColor(color: Color | undefined, colorContext: ColorContext): str
  *
  * @see ECMA-376 Part 1, Section 20.1.8 (Fill Properties)
  */
-function resolveFillColor(fill: Fill, colorContext: ColorContext): string | undefined {
+function resolveFillColor(fill: BaseFill, colorContext: ColorContext): string | undefined {
   switch (fill.type) {
     case "solidFill":
       return resolveColor(fill.color, colorContext);
@@ -530,7 +531,7 @@ function resolveFillColor(fill: Fill, colorContext: ColorContext): string | unde
  *
  * @see ECMA-376 Part 1, Section 20.1.2.2.24 (a:ln)
  */
-function toTextOutlineConfig(line: Line | undefined, colorContext: ColorContext): TextOutlineConfig | undefined {
+function toTextOutlineConfig(line: BaseLine | undefined, colorContext: ColorContext): TextOutlineConfig | undefined {
   if (line === undefined) {
     return undefined;
   }

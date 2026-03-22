@@ -7,7 +7,8 @@
 import { toTextBoxConfig, toLayoutInput } from "./adapter";
 import type { TextBody, Paragraph, RunProperties, BulletStyle } from "@aurochs-office/pptx/domain/text";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
-import type { Line, Fill } from "@aurochs-office/pptx/domain/color/types";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import { px, pt, deg, pct } from "@aurochs-office/drawing-ml/domain/units";
 
 // =============================================================================
@@ -99,11 +100,11 @@ function createColorContext(): ColorContext {
  * @see ECMA-376 Part 1, Section 20.1.2.2.24 (a:ln)
  */
 function createLine(overrides: {
-  fill: Fill;
+  fill: BaseFill;
   width?: ReturnType<typeof px>;
-  cap?: Line["cap"];
-  join?: Line["join"];
-}): Line {
+  cap?: BaseLine["cap"];
+  join?: BaseLine["join"];
+}): BaseLine {
   return {
     width: overrides.width ?? px(1),
     fill: overrides.fill,

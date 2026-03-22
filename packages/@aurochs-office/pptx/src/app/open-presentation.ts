@@ -18,14 +18,14 @@ import { readPart } from "../parser/part-reader";
 import { loadRelationships } from "../parser/relationships";
 import { createSlide } from "./slide-builder";
 import { loadLayoutData, loadMasterData, loadThemeData, loadDiagramData } from "../parser/slide/slide-loader";
-import type { PresentationFile } from "../domain";
+import type { PackageFile } from "@aurochs-office/opc";
 import { RELATIONSHIP_TYPES } from "../domain/relationships";
 
 /**
  * Parse a slide from file
  */
 type ParseSlideOptions = {
-  readonly file: PresentationFile;
+  readonly file: PackageFile;
   readonly slideInfo: SlideFileInfo;
   readonly appVersion: number;
   readonly zipAdapter: ZipFile;
@@ -87,7 +87,7 @@ function parseSlide({
   return createSlide({ data, zip: zipAdapter, defaultTextStyle, tableStyles, slideSize, renderOptions });
 }
 
-function buildSlideFileInfoListFromPresentation(file: PresentationFile, presentationXml: XmlDocument): SlideFileInfo[] {
+function buildSlideFileInfoListFromPresentation(file: PackageFile, presentationXml: XmlDocument): SlideFileInfo[] {
   const sldIdLst = getByPath(presentationXml, ["p:presentation", "p:sldIdLst"]);
   if (!sldIdLst) {
     throw new Error("ppt/presentation.xml is missing p:sldIdLst (required for slide order)");
@@ -127,8 +127,8 @@ function buildSlideFileInfoListFromPresentation(file: PresentationFile, presenta
 }
 
 /**
- * Create a Presentation instance from a PresentationFile
- * @param file - A PresentationFile implementation (e.g., from fflate, pako, or filesystem)
+ * Create a Presentation instance from a PackageFile
+ * @param file - A PackageFile implementation (e.g., from fflate, pako, or filesystem)
  * @param options - Optional presentation options (e.g., render dialect)
  * @returns A Presentation object for accessing slides and metadata
  * @throws Error if the file is not a valid PPTX or cannot be read
@@ -136,10 +136,10 @@ function buildSlideFileInfoListFromPresentation(file: PresentationFile, presenta
  * @example
  * ```typescript
  * import { openPresentation } from "web-pptx";
- * import { createPresentationFile } from "web-pptx/fflate";
+ * import { createPackageFile } from "web-pptx/fflate";
  * import { renderSlideToSvg } from "@aurochs-renderer/pptx/svg";
  *
- * const file = createPresentationFile(pptxBuffer);
+ * const file = createPackageFile(pptxBuffer);
  * const presentation = openPresentation(file);
  *
  * console.log(`${presentation.count} slides, ${presentation.size.width}x${presentation.size.height}`);
@@ -159,7 +159,7 @@ function buildSlideFileInfoListFromPresentation(file: PresentationFile, presenta
  * });
  * ```
  */
-export function openPresentation(file: PresentationFile, options?: PresentationOptions): Presentation {
+export function openPresentation(file: PackageFile, options?: PresentationOptions): Presentation {
   const renderOptions = options?.renderOptions;
   const zipAdapter = createZipAdapter(file);
 

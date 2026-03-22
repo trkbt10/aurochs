@@ -37,7 +37,6 @@ export {
 // Drag state
 export {
   type Point,
-  type IdleDragState,
   type TextSelectDragState,
   type ElementMoveDragState,
   type TableResizeDragState,

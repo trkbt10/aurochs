@@ -2,9 +2,6 @@
  * @file PPTX Parser - Public API
  */
 
-// File abstraction (allows any ZIP library)
-export type { PresentationFile } from "./domain";
-
 // Presentation reader API (from app layer)
 export { openPresentation } from "./app";
 export type { Presentation, Slide, SlideInfo, ListOptions, PresentationOptions } from "./app/types";

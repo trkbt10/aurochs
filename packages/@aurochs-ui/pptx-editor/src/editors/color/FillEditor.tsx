@@ -4,7 +4,6 @@
 
 import type { CSSProperties } from "react";
 import { BaseFillEditor } from "@aurochs-ui/editor-controls/editors";
-import type { Fill } from "@aurochs-office/pptx/domain/color/types";
 import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
 import type { EditorProps } from "@aurochs-ui/ui-components/types";
 import { blipFillExtension } from "./blip-fill-extension";
@@ -13,10 +12,10 @@ import { blipFillExtension } from "./blip-fill-extension";
 // Types
 // =============================================================================
 
-export type FillEditorProps = EditorProps<Fill> & {
+export type FillEditorProps = EditorProps<BaseFill> & {
   readonly style?: CSSProperties;
   /** Limit fill types shown */
-  readonly allowedTypes?: readonly Fill["type"][];
+  readonly allowedTypes?: readonly BaseFill["type"][];
   /** Compact mode: single swatch with popover */
   readonly compact?: boolean;
 };
@@ -34,8 +33,8 @@ const extensions = [blipFillExtension];
 export function FillEditor({ value, onChange, disabled, className, style, allowedTypes, compact }: FillEditorProps) {
   return (
     <BaseFillEditor
-      value={value as BaseFill}
-      onChange={onChange as (fill: BaseFill) => void}
+      value={value}
+      onChange={onChange}
       disabled={disabled}
       className={className}
       style={style}

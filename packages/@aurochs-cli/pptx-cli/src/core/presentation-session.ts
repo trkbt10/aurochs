@@ -23,8 +23,8 @@ import {
   applyAnimations,
   applyComments,
   applyNotes,
-  type SlideModInput as BuilderSlideModInput,
-  type ShapeSpec as BuilderShapeSpec,
+  type SlideModInput,
+  type ShapeSpec,
   type ImageSpec,
   type ConnectorSpec,
   type TableSpec,
@@ -32,8 +32,8 @@ import {
   type TableUpdateSpec,
   type SlideTransitionSpec,
   type AnimationSpec,
-  type CommentSpec,
-  type NotesSpec,
+  type SimpleCommentSpec,
+  type SimpleNotesSpec,
   type ThemeEditSpec,
 } from "@aurochs-builder/pptx";
 import { renderSlideSvg, createRenderContext, createEmptySlideSvg } from "@aurochs-renderer/pptx";
@@ -117,10 +117,7 @@ export type SetSpeakerNotesResult = {
   readonly applied: boolean;
 };
 
-/** Slide modification input specification */
-export type SlideModInput = BuilderSlideModInput;
-/** Shape specification */
-export type ShapeSpec = BuilderShapeSpec;
+export type { SlideModInput, ShapeSpec } from "@aurochs-builder/pptx";
 
 // =============================================================================
 // Session
@@ -158,9 +155,9 @@ export type PresentationSession = {
   /** Add animations to a slide */
   readonly addAnimations: (slideNumber: number, specs: readonly AnimationSpec[]) => Promise<AddAnimationsResult>;
   /** Add comments to a slide */
-  readonly addComments: (slideNumber: number, specs: readonly CommentSpec[]) => Promise<AddCommentsResult>;
+  readonly addComments: (slideNumber: number, specs: readonly SimpleCommentSpec[]) => Promise<AddCommentsResult>;
   /** Set speaker notes */
-  readonly setSpeakerNotes: (slideNumber: number, spec: NotesSpec) => Promise<SetSpeakerNotesResult>;
+  readonly setSpeakerNotes: (slideNumber: number, spec: SimpleNotesSpec) => Promise<SetSpeakerNotesResult>;
   /** Apply theme edits */
   readonly applyTheme: (theme: ThemeEditSpec) => void;
   /** Render a slide to SVG */
@@ -473,7 +470,7 @@ export function createPresentationSession(): PresentationSession {
       return { animationsAdded: result.added };
     },
 
-    async addComments(slideNumber: number, specs: readonly CommentSpec[]): Promise<AddCommentsResult> {
+    async addComments(slideNumber: number, specs: readonly SimpleCommentSpec[]): Promise<AddCommentsResult> {
       if (!state.zipPackage || !state.presentation) {
         throw new Error("No active session");
       }
@@ -490,7 +487,7 @@ export function createPresentationSession(): PresentationSession {
       return { commentsAdded: specs.length };
     },
 
-    async setSpeakerNotes(slideNumber: number, spec: NotesSpec): Promise<SetSpeakerNotesResult> {
+    async setSpeakerNotes(slideNumber: number, spec: SimpleNotesSpec): Promise<SetSpeakerNotesResult> {
       if (!state.zipPackage || !state.presentation) {
         throw new Error("No active session");
       }

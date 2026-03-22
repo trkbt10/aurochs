@@ -8,7 +8,8 @@
 
 import type { LoadedPresentation } from "./pptx-loader";
 import type { PresentationDocument, SlideWithId } from "./presentation-document";
-import type { Presentation as DomainPresentation, PresentationFile } from "../domain";
+import type { Presentation as DomainPresentation } from "../domain";
+import type { PackageFile } from "@aurochs-office/opc";
 import type { ExtractedTheme } from "../domain";
 import type { ResourceMap } from "@aurochs-office/opc";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
@@ -32,7 +33,7 @@ import { toDataUrl } from "@aurochs/buffer";
  *
  * This allows the editor to resolve image and embedded resource references.
  */
-function createResourceResolverFromFile(file: PresentationFile, apiSlide: ApiSlide): ResourceResolver {
+function createResourceResolverFromFile(file: PackageFile, apiSlide: ApiSlide): ResourceResolver {
   const resolveTarget = (id: string): string | undefined =>
     apiSlide.relationships.getTarget(id) ??
     apiSlide.layoutRelationships.getTarget(id) ??
@@ -104,16 +105,16 @@ function createResourceResolverFromFile(file: PresentationFile, apiSlide: ApiSli
 }
 
 /**
- * Create a ResourceResolver from multiple ResourceMap layers and a PresentationFile.
+ * Create a ResourceResolver from multiple ResourceMap layers and a PackageFile.
  *
  * Chains resolution through the provided resource maps in order (first match wins).
  * Used by the layout editor where no ApiSlide is available.
  *
- * @param file - PresentationFile for reading binary content
+ * @param file - PackageFile for reading binary content
  * @param resourceMaps - ResourceMap layers to chain (e.g., layout, master, theme)
  */
 export function createResourceResolverFromMaps(
-  file: PresentationFile,
+  file: PackageFile,
   resourceMaps: readonly ResourceMap[],
 ): ResourceResolver {
   const resolveTarget = (id: string): string | undefined => {
@@ -269,7 +270,7 @@ function buildColorContextFromThemeData(themeData: ExtractedTheme | undefined): 
   return { colorScheme: themeData.theme.colorScheme, colorMap: themeData.colorMap };
 }
 
-function buildResourceResolver(file: PresentationFile, firstApiSlide: ApiSlide | null): ResourceResolver {
+function buildResourceResolver(file: PackageFile, firstApiSlide: ApiSlide | null): ResourceResolver {
   if (!firstApiSlide) {
     return createEmptyResourceResolver();
   }

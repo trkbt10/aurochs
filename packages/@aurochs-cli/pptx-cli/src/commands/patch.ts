@@ -8,12 +8,10 @@ import { success, error, type Result } from "@aurochs-cli/cli-core";
 import { patchPptx, getPatchData } from "@aurochs-builder/pptx";
 import type { PptxPatchSpec, PptxPatchData } from "@aurochs-builder/pptx";
 
-export type PatchData = PptxPatchData;
-
 /**
  * Patch an existing PPTX file from JSON specification.
  */
-export async function runPatch(specPath: string): Promise<Result<PatchData>> {
+export async function runPatch(specPath: string): Promise<Result<PptxPatchData>> {
   try {
     const specJson = await fs.readFile(specPath, "utf-8");
     const spec: PptxPatchSpec = JSON.parse(specJson);

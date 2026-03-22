@@ -5,6 +5,16 @@
  * Using named exports ensures tree-shaking works correctly.
  */
 
+import { MousePointer2 } from "lucide-react";
+
+/**
+ * Icon component type — derived from the actual icon value in this module,
+ * not from lucide-react's LucideIcon type directly.
+ * This avoids type resolution issues when lucide-react resolves to
+ * different paths in the bun module cache.
+ */
+export type IconComponent = typeof MousePointer2;
+
 export {
   // Selection
   MousePointer2 as SelectIcon,
@@ -138,10 +148,4 @@ export {
   Baseline as BaselineIcon,
   Highlighter as HighlighterIcon,
   Palette as PaletteIcon,
-
-  // Also export LucideIcon type for component props
-  type LucideIcon,
-  type LucideProps,
 } from "lucide-react";
-
-// Note: iconTokens available from design-tokens module directly

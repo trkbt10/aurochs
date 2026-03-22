@@ -7,7 +7,8 @@ import { grayToRgb, cmykToRgb, rgbToHex, clamp01, toByte } from "@aurochs/pdf/do
 import type { Color } from "@aurochs-office/drawing-ml/domain/color";
 import { pct, px } from "@aurochs-office/drawing-ml/domain/units";
 import type { DashStyle, LineCap, LineJoin } from "@aurochs-office/pptx/domain/line";
-import type { Fill, Line } from "@aurochs-office/pptx/domain/color/types";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 
 /**
  * PDF色をPPTX Colorに変換
@@ -132,7 +133,7 @@ function convertCmykToSrgb(components: readonly number[]): Color {
 /**
  * PDF塗りつぶし色をPPTX Fillに変換
  */
-export function convertFill(pdfColor: PdfColor, alpha: number = 1): Fill {
+export function convertFill(pdfColor: PdfColor, alpha: number = 1): BaseFill {
   const baseColor = convertColor(pdfColor);
   const a = clamp01(alpha);
 
@@ -147,7 +148,7 @@ export function convertFill(pdfColor: PdfColor, alpha: number = 1): Fill {
 /**
  * 塗りつぶしなしを示すFill
  */
-export function noFill(): Fill {
+export function noFill(): BaseFill {
   return { type: "noFill" };
 }
 
@@ -172,7 +173,7 @@ export function convertLine({
   readonly dashPhase: number;
   readonly alpha?: number;
   readonly widthScale?: number;
-}): Line {
+}): BaseLine {
   if (!Number.isFinite(widthScale) || widthScale <= 0) {
     throw new Error(`Invalid widthScale: ${widthScale}`);
   }
@@ -247,8 +248,8 @@ export function convertGraphicsStateToStyle(
   graphicsState: PdfGraphicsState,
   paintOp: "stroke" | "fill" | "fillStroke",
   options: { readonly lineWidthScale?: number } = {},
-): { fill: Fill | undefined; line: Line | undefined } {
-  const style: { fill: Fill | undefined; line: Line | undefined } = { fill: undefined, line: undefined };
+): { fill: BaseFill | undefined; line: BaseLine | undefined } {
+  const style: { fill: BaseFill | undefined; line: BaseLine | undefined } = { fill: undefined, line: undefined };
   const softMaskAlpha = graphicsState.softMaskAlpha ?? 1;
   const lineWidthScale = options.lineWidthScale ?? 1;
 

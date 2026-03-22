@@ -14,11 +14,11 @@
 import { useMemo, type CSSProperties } from "react";
 import type { GradientFill } from "@aurochs-office/drawing-ml/domain/fill";
 import type { LineEnd } from "@aurochs-office/drawing-ml/domain/line";
-import type { Line } from "@aurochs-office/pptx/domain/color/types";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 
 export type LinePreviewProps = {
   /** Line properties to display */
-  readonly line: Line;
+  readonly line: BaseLine;
   /** Preview width in pixels */
   readonly width?: number;
   /** Preview height in pixels */
@@ -70,7 +70,7 @@ function getDashArray(dash: string, width: number): string {
   return patterns[dash] ?? "none";
 }
 
-function getStrokeColor(line: Line): string {
+function getStrokeColor(line: BaseLine): string {
   if (line.fill.type === "noFill") {
     return "transparent";
   }
@@ -88,7 +88,7 @@ function getStrokeColor(line: Line): string {
   return "#888888";
 }
 
-function isGradientFill(line: Line): line is Line & { fill: GradientFill } {
+function isGradientFill(line: BaseLine): line is BaseLine & { fill: GradientFill } {
   return line.fill.type === "gradientFill";
 }
 
@@ -99,7 +99,7 @@ function getHexFromColor(color: { spec: { type: string; value?: string } }): str
   return "888888";
 }
 
-function getLineCap(cap: Line["cap"]): "butt" | "round" | "square" {
+function getLineCap(cap: BaseLine["cap"]): "butt" | "round" | "square" {
   switch (cap) {
     case "round":
       return "round";
@@ -110,7 +110,7 @@ function getLineCap(cap: Line["cap"]): "butt" | "round" | "square" {
   }
 }
 
-function getLineJoin(join: Line["join"]): "miter" | "round" | "bevel" {
+function getLineJoin(join: BaseLine["join"]): "miter" | "round" | "bevel" {
   switch (join) {
     case "round":
       return "round";

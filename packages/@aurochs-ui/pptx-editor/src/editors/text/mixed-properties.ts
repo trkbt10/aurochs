@@ -17,7 +17,8 @@ import type {
   TextTypeface,
 } from "@aurochs-office/pptx/domain/text";
 import type { Color } from "@aurochs-office/drawing-ml/domain/color";
-import type { Fill, Line } from "@aurochs-office/pptx/domain/color/types";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import type { Pixels, Points } from "@aurochs-office/drawing-ml/domain/units";
 
 // =============================================================================
@@ -66,11 +67,11 @@ export type MixedRunProperties = {
 
   // Color properties
   readonly color: PropertyExtraction<Color>;
-  readonly fill: PropertyExtraction<Fill>;
+  readonly fill: PropertyExtraction<BaseFill>;
   readonly highlightColor: PropertyExtraction<Color>;
 
   // Outline properties
-  readonly textOutline: PropertyExtraction<Line>;
+  readonly textOutline: PropertyExtraction<BaseLine>;
   readonly outline: PropertyExtraction<boolean>;
   readonly shadow: PropertyExtraction<boolean>;
   readonly emboss: PropertyExtraction<boolean>;

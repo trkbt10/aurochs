@@ -5,7 +5,8 @@
  */
 
 import { useCallback, type CSSProperties } from "react";
-import type { SlideSize, PresentationFile } from "@aurochs-office/pptx/domain";
+import type { SlideSize } from "@aurochs-office/pptx/domain";
+import type { PackageFile } from "@aurochs-office/opc";
 import type { Background } from "@aurochs-office/pptx/domain/slide/types";
 import type { SlideLayoutAttributes } from "@aurochs-office/pptx/parser/slide/layout-parser";
 import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
@@ -27,7 +28,7 @@ export type SlidePropertiesPanelProps = {
   readonly onLayoutChange: (layoutPath: string) => void;
   readonly slideSize?: SlideSize;
   readonly onSlideSizeChange?: (size: SlideSize) => void;
-  readonly presentationFile?: PresentationFile;
+  readonly presentationFile?: PackageFile;
 };
 
 // =============================================================================
@@ -158,7 +159,7 @@ type LayoutContentProps = {
   readonly onLayoutAttributesChange: (attrs: SlideLayoutAttributes) => void;
   readonly onLayoutChange: (layoutPath: string) => void;
   readonly slideSize?: SlideSize;
-  readonly presentationFile?: PresentationFile;
+  readonly presentationFile?: PackageFile;
 };
 
 const noLayoutStyle: CSSProperties = {

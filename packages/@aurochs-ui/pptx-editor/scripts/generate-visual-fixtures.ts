@@ -10,7 +10,9 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { Slide, SlideSize, Shape, SpShape, TextBody, Paragraph, Run, Fill, Line } from "@aurochs-office/pptx/domain";
+import type { Slide, SlideSize, Shape, SpShape, TextBody, Paragraph, Run } from "@aurochs-office/pptx/domain";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import type { Transform } from "@aurochs-office/drawing-ml/domain/geometry";
 import type { PresetGeometry } from "@aurochs-office/drawing-ml/domain/geometry";
 import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
@@ -68,7 +70,7 @@ function createSolidFill(color: string) {
 /**
  * Create a line (stroke) with solid color
  */
-function createLine(options: { color: string; width: number }): Line {
+function createLine(options: { color: string; width: number }): BaseLine {
   return {
     width: px(options.width),
     cap: "flat",
@@ -77,7 +79,7 @@ function createLine(options: { color: string; width: number }): Line {
     fill: createSolidFill(options.color),
     dash: "solid",
     join: "round",
-  } as Line;
+  } as BaseLine;
 }
 
 function createOptionalTextBody(text?: string): TextBody | undefined {
@@ -133,7 +135,7 @@ function createRectangleShape(options: {
     properties: {
       transform: createTransform(options),
       geometry: createPresetGeometry("rect"),
-      fill: options.fill ? createSolidFill(options.fill.color) as Fill : undefined,
+      fill: options.fill ? createSolidFill(options.fill.color) as BaseFill : undefined,
       line: options.stroke ? createLine(options.stroke) : undefined,
     },
     textBody: createOptionalTextBody(options.text),
@@ -159,7 +161,7 @@ function createEllipseShape(options: {
     properties: {
       transform: createTransform(options),
       geometry: createPresetGeometry("ellipse"),
-      fill: options.fill ? createSolidFill(options.fill.color) as Fill : undefined,
+      fill: options.fill ? createSolidFill(options.fill.color) as BaseFill : undefined,
       line: options.stroke ? createLine(options.stroke) : undefined,
     },
   };

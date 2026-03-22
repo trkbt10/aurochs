@@ -6,13 +6,13 @@
  */
 
 import { useCallback, useMemo, type CSSProperties } from "react";
-import type { Line } from "@aurochs-office/pptx/domain/color/types";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 
 export type LineSwatchSize = "sm" | "md" | "lg";
 
 export type LineSwatchProps = {
   /** Line properties to display */
-  readonly line: Line;
+  readonly line: BaseLine;
   /** Size variant */
   readonly size?: LineSwatchSize;
   /** Click handler for interactive swatches */
@@ -37,7 +37,7 @@ const sizeMap: Record<LineSwatchSize, number> = {
 // Utility Functions
 // =============================================================================
 
-function getStrokeColor(line: Line): string {
+function getStrokeColor(line: BaseLine): string {
   if (line.fill.type === "noFill") {
     return "transparent";
   }

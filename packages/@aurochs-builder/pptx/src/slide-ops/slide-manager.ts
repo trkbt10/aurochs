@@ -10,7 +10,7 @@
 
 import type { PresentationDocument, SlideWithId } from "@aurochs-office/pptx/app/presentation-document";
 import type { Slide } from "@aurochs-office/pptx/domain/slide/types";
-import type { PresentationFile } from "@aurochs-office/pptx/domain/opc";
+import type { PackageFile } from "@aurochs-office/opc";
 import {
   createElement,
   getByPath,
@@ -82,19 +82,19 @@ const RELS_XMLNS = "http://schemas.openxmlformats.org/package/2006/relationships
 // Presentation File Helpers
 // =============================================================================
 
-function requirePresentationFile(doc: PresentationDocument): PresentationFile {
+function requirePackageFile(doc: PresentationDocument): PackageFile {
   if (!doc.presentationFile) {
     throw new Error("SlideManager: PresentationDocument must have a presentationFile");
   }
   if (!doc.presentationFile.listFiles) {
-    throw new Error("SlideManager: PresentationFile must implement listFiles() (load via pptx-loader ZipPackage)");
+    throw new Error("SlideManager: PackageFile must implement listFiles() (load via pptx-loader ZipPackage)");
   }
   return doc.presentationFile;
 }
 
-function copyPresentationFileToPackage(file: PresentationFile): ZipPackage {
+function copyPackageFileToPackage(file: PackageFile): ZipPackage {
   if (!file.listFiles) {
-    throw new Error("PresentationFile must implement listFiles() to copy into a ZipPackage");
+    throw new Error("PackageFile must implement listFiles() to copy into a ZipPackage");
   }
 
   const pkg = createEmptyZipPackage();
@@ -477,8 +477,8 @@ export async function addSlide(
   layoutPath: string,
   position?: number,
 ): Promise<SlideAddResult> {
-  const file = requirePresentationFile(doc);
-  const pkg = copyPresentationFileToPackage(file);
+  const file = requirePackageFile(doc);
+  const pkg = copyPackageFileToPackage(file);
 
   requireSlideLayoutPath(pkg, layoutPath);
 
@@ -558,12 +558,12 @@ function removeSlideNotesParts(
  * Remove a slide (by current slide order index).
  */
 export function removeSlide(doc: PresentationDocument, slideIndex: number): SlideRemoveResult {
-  const file = requirePresentationFile(doc);
+  const file = requirePackageFile(doc);
   if (!Number.isInteger(slideIndex) || slideIndex < 0 || slideIndex >= doc.slides.length) {
     throw new Error(`SlideManager: invalid slideIndex: ${slideIndex}`);
   }
 
-  const pkg = copyPresentationFileToPackage(file);
+  const pkg = copyPackageFileToPackage(file);
 
   const presentationXml = readXmlOrThrow(pkg, PRESENTATION_XML_PATH);
   const presentationRelsXml = readXmlOrThrow(pkg, PRESENTATION_RELS_PATH);
@@ -625,7 +625,7 @@ export function removeSlide(doc: PresentationDocument, slideIndex: number): Slid
  * Reorder slides by moving one slide from `fromIndex` to `toIndex`.
  */
 export function reorderSlide(doc: PresentationDocument, fromIndex: number, toIndex: number): SlideReorderResult {
-  const file = requirePresentationFile(doc);
+  const file = requirePackageFile(doc);
   if (!Number.isInteger(fromIndex) || !Number.isInteger(toIndex)) {
     throw new Error(`SlideManager: indices must be integers (from=${fromIndex}, to=${toIndex})`);
   }
@@ -639,7 +639,7 @@ export function reorderSlide(doc: PresentationDocument, fromIndex: number, toInd
     return { doc, fromIndex, toIndex };
   }
 
-  const pkg = copyPresentationFileToPackage(file);
+  const pkg = copyPackageFileToPackage(file);
 
   const presentationXml = readXmlOrThrow(pkg, PRESENTATION_XML_PATH);
   const slideEntries = getSlideEntries(presentationXml);
@@ -721,12 +721,12 @@ function addNotesOverrideIfNeeded(contentTypesXml: XmlDocument, notesSlidePath: 
  * If the source slide has notes, also duplicates the notes slide and updates targets.
  */
 export async function duplicateSlide(doc: PresentationDocument, slideIndex: number): Promise<SlideDuplicateResult> {
-  const file = requirePresentationFile(doc);
+  const file = requirePackageFile(doc);
   if (!Number.isInteger(slideIndex) || slideIndex < 0 || slideIndex >= doc.slides.length) {
     throw new Error(`SlideManager: invalid slideIndex: ${slideIndex}`);
   }
 
-  const pkg = copyPresentationFileToPackage(file);
+  const pkg = copyPackageFileToPackage(file);
 
   const presentationXml = readXmlOrThrow(pkg, PRESENTATION_XML_PATH);
   const presentationRelsXml = readXmlOrThrow(pkg, PRESENTATION_RELS_PATH);

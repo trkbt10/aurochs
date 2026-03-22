@@ -7,6 +7,7 @@
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import type { Slide } from "@aurochs-office/pptx/domain";
 import type { PresentationDocument, SlideWithId } from "@aurochs-office/pptx/app";
+import { EMPTY_FONT_SCHEME } from "@aurochs-office/ooxml/domain/font-scheme";
 import { generateSlideId, findSlideById, getSlideIndex, updateSlide, updateSlideEntry } from "./slide";
 
 // NOTE: addSlide, duplicateSlide, deleteSlide, moveSlide require presentationFile
@@ -39,6 +40,7 @@ function createTestDocument(slideCount = 3): PresentationDocument {
       readFile: () => null,
       getResourceByType: () => undefined,
     },
+    fontScheme: EMPTY_FONT_SCHEME,
   };
 }
 

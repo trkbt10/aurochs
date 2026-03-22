@@ -1,18 +1,17 @@
 /**
- * @file ZipFile adapter for PresentationFile
- * Creates a ZipFile interface adapter from PresentationFile
+ * @file ZipFile adapter for PackageFile
+ * Creates a ZipFile interface adapter from PackageFile
  */
 
-import type { PresentationFile } from "./opc";
-import type { ZipFile } from "@aurochs-office/opc";
+import type { PackageFile, ZipFile } from "@aurochs-office/opc";
 
 /**
- * Create a ZipFile adapter from PresentationFile
- * This allows existing code that expects ZipFile to work with PresentationFile
- * @param file - The PresentationFile to wrap
+ * Create a ZipFile adapter from PackageFile
+ * This allows existing code that expects ZipFile to work with PackageFile
+ * @param file - The PackageFile to wrap
  * @returns A ZipFile-compatible adapter
  */
-export function createZipAdapter(file: PresentationFile): ZipFile {
+export function createZipAdapter(file: PackageFile): ZipFile {
   return {
     file(filePath: string) {
       if (!file.exists(filePath)) {
@@ -37,7 +36,7 @@ export function createZipAdapter(file: PresentationFile): ZipFile {
     },
     load(): ZipFile {
       // Not supported in this adapter
-      throw new Error("ZipFile.load() is not supported in PresentationFile adapter");
+      throw new Error("ZipFile.load() is not supported in PackageFile adapter");
     },
   };
 }

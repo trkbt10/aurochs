@@ -19,7 +19,8 @@ import type {
 import type { Paragraph, TextRun, ParagraphProperties, RunProperties } from "@aurochs-office/pptx/domain/text";
 import type { Transform } from "@aurochs-office/drawing-ml/domain/geometry";
 import type { TableRow, TableCell } from "@aurochs-office/pptx/domain/table/types";
-import type { Fill, Line } from "@aurochs-office/pptx/domain/color/types";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import type { Color } from "@aurochs-office/drawing-ml/domain/color";
 import type { BlipEffects } from "@aurochs-office/drawing-ml/domain/fill";
 import type { Effects } from "@aurochs-office/pptx/domain/effects";
@@ -566,7 +567,7 @@ function serializeBlipEffects(effects: BlipEffects | undefined): BlipEffectsJson
   return Object.keys(result).length > 0 ? result : undefined;
 }
 
-function serializeFill(fill: Fill | undefined): FillJson | undefined {
+function serializeFill(fill: BaseFill | undefined): FillJson | undefined {
   if (!fill) {
     return undefined;
   }
@@ -588,7 +589,7 @@ function serializeFill(fill: Fill | undefined): FillJson | undefined {
   }
 }
 
-function serializeLine(line: Line | undefined): LineJson | undefined {
+function serializeLine(line: BaseLine | undefined): LineJson | undefined {
   if (!line) {
     return undefined;
   }

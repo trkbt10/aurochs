@@ -8,12 +8,10 @@ import { success, error, type Result } from "@aurochs-cli/cli-core";
 import { patchDocx, getPatchData } from "@aurochs-builder/docx";
 import type { DocxPatchSpec, DocxPatchData } from "@aurochs-builder/docx";
 
-export type PatchData = DocxPatchData;
-
 /**
  * Patch an existing DOCX file from JSON specification.
  */
-export async function runPatch(specPath: string): Promise<Result<PatchData>> {
+export async function runPatch(specPath: string): Promise<Result<DocxPatchData>> {
   try {
     const specJson = await fs.readFile(specPath, "utf-8");
     const spec: DocxPatchSpec = JSON.parse(specJson);

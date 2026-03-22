@@ -32,9 +32,7 @@ export {
   isDragPending,
 } from "./drag";
 export type {
-  ResizeHandlePosition,
   PreviewDelta,
-  IdleDragState,
   MoveDragState,
   ResizeDragState,
   RotateDragState,

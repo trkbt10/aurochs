@@ -3,17 +3,16 @@ import type { LayoutShapeResult } from "@aurochs-office/diagram/domain/layout-sh
 import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
 import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import { deg, px } from "@aurochs-office/drawing-ml/domain/units";
-import type { Fill, Line } from "../domain/color/types";
 import type { PresetGeometry } from "@aurochs-office/drawing-ml/domain/geometry";
 import type { SpShape } from "../domain/shape";
 import type { TextBody } from "../domain/text";
 import { isTextBody } from "../domain/diagram/format-guards";
 
 /**
- * Convert a BaseFill (from diagram) to PPTX Fill.
+ * Convert a BaseFill (from diagram) to PPTX-compatible fill.
  * Note: BlipFill from diagrams is not supported (diagrams don't typically use blip fills).
  */
-function toFill(fill: BaseFill | undefined): Fill | undefined {
+function toFill(fill: BaseFill | undefined): BaseFill | undefined {
   if (!fill) {
     return undefined;
   }
@@ -21,14 +20,14 @@ function toFill(fill: BaseFill | undefined): Fill | undefined {
   if (fill.type === "blipFill") {
     return undefined;
   }
-  return fill as Fill;
+  return fill;
 }
 
 /**
- * Convert a BaseLine (from diagram) to PPTX Line.
+ * Convert a BaseLine (from diagram) to PPTX-compatible line.
  * Note: BlipFill in line.fill from diagrams is not supported.
  */
-function toLine(line: BaseLine | undefined): Line | undefined {
+function toLine(line: BaseLine | undefined): BaseLine | undefined {
   if (!line) {
     return undefined;
   }
@@ -36,10 +35,10 @@ function toLine(line: BaseLine | undefined): Line | undefined {
   if (line.fill.type === "blipFill") {
     return undefined;
   }
-  return line as Line;
+  return line;
 }
 
-function applyStyleFillToTextBody(textBody: TextBody, textFill: Fill): TextBody {
+function applyStyleFillToTextBody(textBody: TextBody, textFill: BaseFill): TextBody {
   const updatedParagraphs = textBody.paragraphs.map((paragraph) => {
     if (!paragraph.runs) {
       return paragraph;

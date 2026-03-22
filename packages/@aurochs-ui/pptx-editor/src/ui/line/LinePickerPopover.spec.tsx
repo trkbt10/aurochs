@@ -5,14 +5,14 @@
 // @vitest-environment jsdom
 
 import { render, fireEvent } from "@testing-library/react";
-import type { Line } from "@aurochs-office/pptx/domain/color/types";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import { LinePickerPopover } from "./LinePickerPopover";
 import { createDefaultLine } from "./LineEditor";
 
 describe("LinePickerPopover", () => {
   it("opens and updates line width via slider", () => {
-    const state: { lastLine: Line | null } = { lastLine: null };
-    const handleChange = (line: Line) => {
+    const state: { lastLine: BaseLine | null } = { lastLine: null };
+    const handleChange = (line: BaseLine) => {
       state.lastLine = line;
     };
 

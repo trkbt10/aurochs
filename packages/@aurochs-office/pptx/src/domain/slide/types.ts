@@ -7,14 +7,13 @@
  * @see ECMA-376 Part 1, Section 19.3 - Presentation ML
  */
 
-import type { Fill } from "../color/types";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
 import type { ColorMapping, ColorMapOverride } from "../color/types";
 import type { Shape } from "../shape";
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import type { ResourceId, ShapeId } from "../types";
 import type { SlideTransition } from "../transition";
-import type { TextStyleLevels } from "../text-style";
-import type { RawMasterTextStyles } from "../theme/types";
+import type { MasterTextStyles, TextStyleLevels } from "../text-style";
 import type { CustomerData } from "../metadata";
 
 // =============================================================================
@@ -62,7 +61,7 @@ export type SlideSizeType =
  * @see ECMA-376 Part 1, Section 19.3.1.1 (bg)
  */
 export type Background = {
-  readonly fill: Fill;
+  readonly fill: BaseFill;
   readonly shadeToTitle?: boolean;
 };
 
@@ -208,7 +207,7 @@ export type SlideMaster = {
   readonly colorMap: ColorMapping;
   readonly slideLayoutIds?: readonly SlideLayoutId[];
   readonly customerData?: readonly CustomerData[];
-  readonly textStyles?: RawMasterTextStyles;
+  readonly textStyles?: MasterTextStyles;
   readonly timing?: SlideTiming;
   readonly transition?: SlideTransition;
   readonly preserve?: boolean;

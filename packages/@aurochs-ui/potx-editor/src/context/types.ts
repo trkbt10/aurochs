@@ -10,7 +10,7 @@ import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import type { Pixels, Degrees } from "@aurochs-office/drawing-ml/domain/units";
 import type { TextBody } from "@aurochs-office/pptx/domain";
 import type { SlideLayoutBundle, SlideLayoutOption } from "@aurochs-office/pptx/app";
-import type { PresentationFile } from "@aurochs-office/pptx/domain";
+import type { PackageFile } from "@aurochs-office/opc";
 import type { ColorScheme } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { FontScheme, FontSpec } from "@aurochs-office/ooxml/domain/font-scheme";
 import type { UndoRedoHistory } from "@aurochs-ui/editor-core/history";
@@ -23,9 +23,11 @@ import type {
   RotateDragState as CoreRotateDragState,
 } from "@aurochs-ui/editor-core/drag-state";
 import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
+import type { XmlElement } from "@aurochs/xml";
 import type { SlideTransition } from "@aurochs-office/pptx/domain/transition";
 import type { ColorMapping, ColorMapOverride } from "@aurochs-office/pptx/domain/color/types";
-import type { CustomColor, ExtraColorScheme, FormatScheme, ObjectDefaults, RawMasterTextStyles } from "@aurochs-office/pptx/domain/theme/types";
+import type { CustomColor, ExtraColorScheme, FormatScheme, ObjectDefaults } from "@aurochs-office/pptx/domain/theme/types";
+import type { MasterTextStyles } from "@aurochs-office/pptx/domain/text-style";
 import type { CreationMode } from "@aurochs-ui/ooxml-components";
 import type { TextEditState } from "@aurochs-ui/ooxml-components/text-edit";
 import type { ThemePreset } from "../panels/types";
@@ -52,12 +54,10 @@ export type LayoutListEntry = {
 // Drag State — specialized from editor-core generics (SoT: @aurochs-ui/editor-core/drag-state)
 // =============================================================================
 
-/** Idle drag state — SoT: @aurochs-ui/editor-core/drag-state */
-export type LayoutIdleDragState = IdleDragState;
 export type LayoutMoveDragState = CoreMoveDragState<ShapeId>;
 export type LayoutResizeDragState = CoreResizeDragState<ShapeId>;
 export type LayoutRotateDragState = CoreRotateDragState<ShapeId>;
-export type LayoutDragState = LayoutIdleDragState | LayoutMoveDragState | LayoutResizeDragState | LayoutRotateDragState;
+export type LayoutDragState = IdleDragState | LayoutMoveDragState | LayoutResizeDragState | LayoutRotateDragState;
 
 // =============================================================================
 // Theme Editor State
@@ -100,8 +100,13 @@ export type ThemeEditorState = {
   readonly customColors: readonly CustomColor[];
   readonly extraColorSchemes: readonly ExtraColorScheme[];
   readonly objectDefaults: ObjectDefaults | undefined;
-  readonly masterTextStyles: RawMasterTextStyles | undefined;
-  readonly masterBackground: MasterBackgroundState;
+  readonly masterTextStyles: MasterTextStyles | undefined;
+  /**
+   * Master background element (p:bg) §19.3.1.2 — raw XmlElement as SoT.
+   * Preserved losslessly from parser for round-trip fidelity.
+   * UI components convert to BaseFill for display/editing.
+   */
+  readonly masterBackground: XmlElement | undefined;
   readonly masterColorMapping: ColorMapping;
   readonly creationMode: CreationMode;
   readonly layoutEdit: LayoutEditState;
@@ -143,8 +148,9 @@ export type ImportedThemeData = {
   readonly customColors?: readonly CustomColor[];
   readonly extraColorSchemes?: readonly ExtraColorScheme[];
   readonly objectDefaults?: ObjectDefaults;
-  readonly masterTextStyles?: RawMasterTextStyles;
-  readonly masterBackground?: MasterBackgroundState;
+  readonly masterTextStyles?: MasterTextStyles;
+  /** Master background (p:bg) §19.3.1.2 — raw XmlElement for lossless round-trip. */
+  readonly masterBackground?: XmlElement;
 };
 
 // =============================================================================
@@ -176,9 +182,9 @@ export type ThemeEditorAction =
   // Theme editing — format scheme, object defaults, master text styles
   | { readonly type: "UPDATE_FORMAT_SCHEME"; readonly formatScheme: FormatScheme }
   | { readonly type: "UPDATE_OBJECT_DEFAULTS"; readonly objectDefaults: ObjectDefaults }
-  | { readonly type: "UPDATE_MASTER_TEXT_STYLES"; readonly masterTextStyles: RawMasterTextStyles }
+  | { readonly type: "UPDATE_MASTER_TEXT_STYLES"; readonly masterTextStyles: MasterTextStyles }
   // Theme editing — master background & color map
-  | { readonly type: "UPDATE_MASTER_BACKGROUND"; readonly background: MasterBackgroundState }
+  | { readonly type: "UPDATE_MASTER_BACKGROUND"; readonly background: XmlElement | undefined }
   | { readonly type: "UPDATE_MASTER_COLOR_MAPPING"; readonly mapping: ColorMapping }
   // Layout overrides
   | { readonly type: "UPDATE_LAYOUT_BACKGROUND"; readonly layoutId: string; readonly background: MasterBackgroundState }
@@ -241,7 +247,7 @@ export type ThemeEditorAction =
  * Props for initializing the theme editor
  */
 export type ThemeEditorInitProps = {
-  readonly presentationFile?: PresentationFile;
+  readonly presentationFile?: PackageFile;
   readonly slideSize: SlideSize;
   readonly layoutOptions: readonly SlideLayoutOption[];
   readonly themeName?: string;

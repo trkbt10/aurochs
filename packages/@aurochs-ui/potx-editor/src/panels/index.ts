@@ -31,6 +31,5 @@ export type { MasterTextStylesEditorProps } from "./MasterTextStylesEditor";
 export { THEME_PRESETS, OFFICE_THEME } from "./presets/office-themes";
 export type {
   ThemeColorScheme,
-  ThemeFontScheme,
   ThemePreset,
 } from "./types";

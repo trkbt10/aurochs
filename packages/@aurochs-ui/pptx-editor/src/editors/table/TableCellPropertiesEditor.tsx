@@ -23,7 +23,7 @@ import type {
   Cell3d,
 } from "@aurochs-office/pptx/domain/table/types";
 import type { BevelPresetType } from "@aurochs-office/pptx/domain";
-import type { Line } from "@aurochs-office/pptx/domain/color/types";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import type { PresetMaterialType, LightRigType, LightRigDirection } from "@aurochs-office/pptx/domain/types";
 import type { EditorProps, SelectOption } from "@aurochs-ui/ui-components/types";
 
@@ -191,7 +191,7 @@ export function TableCellPropertiesEditor({
   showHeaders = true,
 }: TableCellPropertiesEditorProps) {
   // Border style state for "apply" buttons
-  const [borderStyle, setBorderStyle] = useState<Line>(createDefaultLine());
+  const [borderStyle, setBorderStyle] = useState<BaseLine>(createDefaultLine());
 
   const updateField = useCallback(
     <K extends keyof TableCellProperties>(field: K, newValue: TableCellProperties[K]) => {

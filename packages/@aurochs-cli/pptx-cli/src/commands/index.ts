@@ -8,7 +8,8 @@ export { runShow, type ShowData } from "./show";
 export { runExtract, type ExtractData, type ExtractOptions, type SlideTextItem } from "./extract";
 export { runTheme, type ThemeData, type FontSchemeJson, type ColorSchemeJson, type FormatSchemeJson } from "./theme";
 export { runBuild } from "./build";
-export { runPatch, type PatchData } from "./patch";
+export { runPatch } from "./patch";
+export type { PptxPatchData } from "@aurochs-builder/pptx";
 export {
   runVerify,
   type VerifyData,

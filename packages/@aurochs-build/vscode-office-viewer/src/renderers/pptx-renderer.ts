@@ -5,7 +5,8 @@
  * using the existing rendering pipeline.
  */
 
-import { openPresentation, type PresentationFile } from "@aurochs-office/pptx";
+import { openPresentation } from "@aurochs-office/pptx";
+import type { PackageFile } from "@aurochs-office/opc";
 import { createZipAdapter } from "@aurochs-office/pptx/domain";
 import { loadPptxBundleFromBuffer } from "@aurochs-office/pptx/app/pptx-loader";
 import { createRenderContext } from "@aurochs-renderer/pptx";
@@ -26,9 +27,9 @@ export async function renderPptxSlides(data: Uint8Array): Promise<PptxRenderResu
 }
 
 /**
- * Render slides from a PresentationFile (used by both PPTX and PPT paths).
+ * Render slides from a PackageFile (used by both PPTX and PPT paths).
  */
-export function renderPptxSlidesFromFile(presentationFile: PresentationFile): PptxRenderResult {
+export function renderPptxSlidesFromFile(presentationFile: PackageFile): PptxRenderResult {
   const presentation = openPresentation(presentationFile);
   const zipFile = createZipAdapter(presentationFile);
 

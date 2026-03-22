@@ -10,7 +10,8 @@ import type { CSSProperties } from "react";
 import { LinePickerPopover } from "../ui/line/index";
 import { ToolbarButton, TOOLBAR_BUTTON_ICON_SIZE } from "@aurochs-ui/ui-components/primitives/ToolbarButton";
 import { ToolbarSeparator } from "@aurochs-ui/ui-components/primitives/ToolbarSeparator";
-import type { Line, Shape } from "@aurochs-office/pptx/domain/index";
+import type { Shape } from "@aurochs-office/pptx/domain/index";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import type { RunProperties } from "@aurochs-office/pptx/domain/text";
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
@@ -32,7 +33,7 @@ import { pptxTextAdapter, PPTX_UNDERLINE_OPTIONS, PPTX_STRIKE_OPTIONS } from "..
 // =============================================================================
 
 // Default line for display when no line is available
-const defaultLine: Line = {
+const defaultLine: BaseLine = {
   width: 1 as Pixels,
   cap: "flat",
   compound: "sng",
@@ -88,7 +89,7 @@ export type ShapeToolbarProps = {
 /**
  * Get line property from a shape if it exists.
  */
-function getShapeLine(shape: Shape | undefined): Line | undefined {
+function getShapeLine(shape: Shape | undefined): BaseLine | undefined {
   if (!shape) {
     return undefined;
   }
@@ -184,7 +185,7 @@ export function ShapeToolbar({
   );
 
   const handleLineChange = useCallback(
-    (line: Line) => {
+    (line: BaseLine) => {
       if (!primaryId) {
         return;
       }

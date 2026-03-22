@@ -9,7 +9,7 @@
  */
 
 import type { PresentationDocument } from "@aurochs-office/pptx/app/presentation-document";
-import type { PresentationFile } from "@aurochs-office/pptx/domain/opc";
+import type { PackageFile } from "@aurochs-office/opc";
 import {
   createElement,
   getByPath,
@@ -72,19 +72,19 @@ const MIN_LAYOUT_ID = 2147483648;
 // Presentation File Helpers
 // =============================================================================
 
-function requirePresentationFile(doc: PresentationDocument): PresentationFile {
+function requirePackageFile(doc: PresentationDocument): PackageFile {
   if (!doc.presentationFile) {
     throw new Error("LayoutOps: PresentationDocument must have a presentationFile");
   }
   if (!doc.presentationFile.listFiles) {
-    throw new Error("LayoutOps: PresentationFile must implement listFiles() (load via pptx-loader ZipPackage)");
+    throw new Error("LayoutOps: PackageFile must implement listFiles() (load via pptx-loader ZipPackage)");
   }
   return doc.presentationFile;
 }
 
-function copyPresentationFileToPackage(file: PresentationFile): ZipPackage {
+function copyPackageFileToPackage(file: PackageFile): ZipPackage {
   if (!file.listFiles) {
-    throw new Error("PresentationFile must implement listFiles() to copy into a ZipPackage");
+    throw new Error("PackageFile must implement listFiles() to copy into a ZipPackage");
   }
 
   const pkg = createEmptyZipPackage();
@@ -513,8 +513,8 @@ function buildLayoutRelsXml(masterPath: string): XmlDocument {
  * @returns Result with updated document and layout metadata
  */
 export function addSlideLayout(doc: PresentationDocument, masterPath?: string): LayoutAddResult {
-  const file = requirePresentationFile(doc);
-  const pkg = copyPresentationFileToPackage(file);
+  const file = requirePackageFile(doc);
+  const pkg = copyPackageFileToPackage(file);
 
   const resolvedMasterPath = masterPath ?? findDefaultMasterPath(pkg);
   if (!pkg.exists(resolvedMasterPath)) {
@@ -586,12 +586,12 @@ export function addSlideLayout(doc: PresentationDocument, masterPath?: string): 
  * @returns Result with updated document and removed layout metadata
  */
 export function deleteSlideLayout(doc: PresentationDocument, layoutPath: string): LayoutRemoveResult {
-  const file = requirePresentationFile(doc);
+  const file = requirePackageFile(doc);
   if (!layoutPath || !layoutPath.startsWith("ppt/")) {
     throw new Error(`LayoutOps: invalid layoutPath: ${layoutPath}`);
   }
 
-  const pkg = copyPresentationFileToPackage(file);
+  const pkg = copyPackageFileToPackage(file);
   if (!pkg.exists(layoutPath)) {
     throw new Error(`LayoutOps: layout does not exist: ${layoutPath}`);
   }
@@ -656,12 +656,12 @@ export function deleteSlideLayout(doc: PresentationDocument, layoutPath: string)
  * @returns Result with updated document and new layout metadata
  */
 export function duplicateSlideLayout(doc: PresentationDocument, layoutPath: string): LayoutDuplicateResult {
-  const file = requirePresentationFile(doc);
+  const file = requirePackageFile(doc);
   if (!layoutPath || !layoutPath.startsWith("ppt/")) {
     throw new Error(`LayoutOps: invalid layoutPath: ${layoutPath}`);
   }
 
-  const pkg = copyPresentationFileToPackage(file);
+  const pkg = copyPackageFileToPackage(file);
   if (!pkg.exists(layoutPath)) {
     throw new Error(`LayoutOps: layout does not exist: ${layoutPath}`);
   }

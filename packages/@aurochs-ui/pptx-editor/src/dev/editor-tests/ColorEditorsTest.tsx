@@ -9,7 +9,8 @@ import { ColorEditor, createDefaultColor, createDefaultSolidFill } from "@auroch
 import { FillEditor } from "@aurochs-ui/pptx-editor";
 import { LineEditor, createDefaultLine } from "@aurochs-ui/pptx-editor";
 import type { Color } from "@aurochs-office/drawing-ml/domain/color";
-import type { Fill, Line } from "@aurochs-office/pptx/domain/color/types";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 
 const cardStyle: CSSProperties = {
   backgroundColor: "var(--bg-secondary)",
@@ -50,8 +51,8 @@ const gridStyle: CSSProperties = {
  */
 export function ColorEditorsTest() {
   const [color, setColor] = useState<Color>(createDefaultColor("0070f3"));
-  const [fill, setFill] = useState<Fill>(createDefaultSolidFill("ff0080"));
-  const [line, setLine] = useState<Line>(createDefaultLine());
+  const [fill, setFill] = useState<BaseFill>(createDefaultSolidFill("ff0080"));
+  const [line, setLine] = useState<BaseLine>(createDefaultLine());
 
   return (
     <div style={gridStyle}>

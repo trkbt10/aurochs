@@ -11,7 +11,7 @@ import type {
   Geometry,
   GeometryPath,
   ConnectionSite,
-} from "@aurochs-office/pptx/domain/shape";
+} from "@aurochs-office/drawing-ml/domain/geometry";
 import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
 
 // =============================================================================

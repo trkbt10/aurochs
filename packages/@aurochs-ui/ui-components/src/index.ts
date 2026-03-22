@@ -122,8 +122,7 @@ export {
   UploadIcon,
   VideoIcon,
   VisibleIcon,
-  type LucideIcon,
-  type LucideProps,
+  type IconComponent,
 } from "./icons";
 
 // Primitives

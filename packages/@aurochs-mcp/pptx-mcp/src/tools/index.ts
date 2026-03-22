@@ -18,8 +18,8 @@ import type {
   TableUpdateSpec,
   SlideTransitionSpec,
   AnimationSpec,
-  CommentSpec,
-  NotesSpec,
+  SimpleCommentSpec,
+  SimpleNotesSpec,
 } from "@aurochs-cli/pptx-cli/core";
 
 // =============================================================================
@@ -778,7 +778,7 @@ export function registerTools(server: McpServer, session: PresentationSession): 
       }
       const { slide_number, comments } = args;
       try {
-        const specs: readonly CommentSpec[] = comments.map((c) => ({
+        const specs: readonly SimpleCommentSpec[] = comments.map((c) => ({
           authorName: c.author_name,
           authorInitials: c.author_initials,
           text: c.text,
@@ -812,7 +812,7 @@ export function registerTools(server: McpServer, session: PresentationSession): 
       }
       const { slide_number, notes } = args;
       try {
-        const spec: NotesSpec = { text: notes.text };
+        const spec: SimpleNotesSpec = { text: notes.text };
         const result = await session.setSpeakerNotes(slide_number, spec);
         return {
           content: [{ type: "text" as const, text: JSON.stringify({ success: true, applied: result.applied }) }],

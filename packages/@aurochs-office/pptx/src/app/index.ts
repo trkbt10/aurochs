@@ -9,8 +9,8 @@ export type { Presentation, Slide, SlideInfo, ListOptions, PresentationOptions }
 export { loadPptxFromBuffer, loadPptxFromFile, loadPptxFromUrl } from "./pptx-loader";
 export type { LoadedPresentation } from "./pptx-loader";
 export { convertToPresentationDocument, createResourceResolverFromMaps } from "./presentation-converter";
-export { buildSlideLayoutOptions, loadSlideLayoutBundle } from "./slide-layouts";
-export type { SlideLayoutOption, SlideLayoutBundle } from "./slide-layouts";
+export { buildSlideLayoutOptions, buildSlideLayoutEntries, loadSlideLayoutBundle } from "./slide-layouts";
+export type { SlideLayoutOption, SlideLayoutEntry, SlideLayoutBundle } from "./slide-layouts";
 export type { PresentationDocument, SlideWithId, SlideId } from "./presentation-document";
 export { extractThemeFromBuffer } from "./theme-extractor";
 export type { ThemeExtractionResult } from "./theme-extractor";

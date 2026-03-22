@@ -6,7 +6,8 @@
  */
 
 import { useMemo, type CSSProperties } from "react";
-import type { SlideSize, PresentationFile } from "@aurochs-office/pptx/domain";
+import type { SlideSize } from "@aurochs-office/pptx/domain";
+import type { PackageFile } from "@aurochs-office/opc";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import type { SlideLayoutAttributes } from "@aurochs-office/pptx/parser/slide/layout-parser";
 import type { SlideLayoutOption } from "@aurochs-office/pptx/app";
@@ -24,7 +25,7 @@ export type LayoutInfoPanelProps = {
   /** Slide size for preview */
   readonly slideSize?: SlideSize;
   /** Presentation file for loading layout shapes */
-  readonly presentationFile?: PresentationFile;
+  readonly presentationFile?: PackageFile;
 };
 
 const containerStyle: CSSProperties = {

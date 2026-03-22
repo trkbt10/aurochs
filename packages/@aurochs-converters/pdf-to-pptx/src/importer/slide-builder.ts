@@ -3,7 +3,7 @@
  */
 
 import type { PdfPage } from "@aurochs/pdf/domain";
-import type { Fill } from "@aurochs-office/pptx/domain/color/types";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
 import type { Slide, Background } from "@aurochs-office/pptx/domain/slide/types";
 import type { SpShape } from "@aurochs-office/pptx/domain/shape";
 import type { SlideId, SlideWithId } from "@aurochs-office/pptx/app/presentation-document";
@@ -51,7 +51,7 @@ function buildSlideBackground(options: SlideBuilderOptions): Background | undefi
  * 背景を作成
  */
 function createBackground(color: { readonly r: number; readonly g: number; readonly b: number }): Background {
-  const fill: Fill = {
+  const fill: BaseFill = {
     type: "solidFill",
     color: {
       spec: {

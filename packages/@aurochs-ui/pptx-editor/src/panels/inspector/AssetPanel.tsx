@@ -9,7 +9,7 @@
  */
 
 import { useMemo, useState, useRef, useCallback, type CSSProperties } from "react";
-import type { PresentationFile } from "@aurochs-office/pptx/domain";
+import type { PackageFile } from "@aurochs-office/opc";
 import { discoverMediaPaths } from "@aurochs-office/pptx/app/media-discovery";
 import { toDataUrl, formatSize } from "@aurochs/buffer";
 import { getMimeTypeFromPath } from "@aurochs/files";
@@ -20,7 +20,7 @@ import { Button } from "@aurochs-ui/ui-components/primitives/Button";
 
 export type AssetPanelProps = {
   /** Presentation file for reading asset content */
-  readonly presentationFile?: PresentationFile;
+  readonly presentationFile?: PackageFile;
 };
 
 const containerStyle: CSSProperties = {
@@ -194,7 +194,7 @@ const ASSET_TYPE_ICONS = {
  * Read asset data from presentation file.
  */
 function readAssetData(
-  presentationFile: PresentationFile,
+  presentationFile: PackageFile,
   path: string,
   type: AssetInfo["type"],
 ): { size?: number; dataUrl?: string } {
@@ -216,7 +216,7 @@ function readAssetData(
 /**
  * Build asset info from discovered media paths.
  */
-function buildAssetInfo(presentationFile: PresentationFile, mediaPaths: readonly string[]): AssetInfo[] {
+function buildAssetInfo(presentationFile: PackageFile, mediaPaths: readonly string[]): AssetInfo[] {
   return mediaPaths.map((path) => {
     const name = path.split("/").pop() ?? path;
     const extension = name.split(".").pop()?.toLowerCase() ?? "";
@@ -556,7 +556,7 @@ function AssetPanelContent({
   uploadedAssets,
   onUpload,
 }: {
-  presentationFile?: PresentationFile;
+  presentationFile?: PackageFile;
   embeddedAssets: AssetInfo[];
   uploadedAssets: AssetInfo[];
   onUpload: (assets: AssetInfo[]) => void;

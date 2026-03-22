@@ -2,12 +2,13 @@
  * @file PPTX-specific shape style hook
  *
  * Wraps the format-agnostic useShapeStyle from drawing-ml
- * to accept PPTX-specific Fill and Line types.
+ * to accept PPTX-specific BaseFill and Line types.
  *
  * @see ECMA-376 Part 1, Section 19.3.1.44 (spPr)
  */
 
-import type { Fill, Line } from "@aurochs-office/pptx/domain";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import type { Effects } from "@aurochs-office/pptx/domain/effects";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
 import {
@@ -27,14 +28,14 @@ import type { ResourceResolverFn } from "@aurochs-office/pptx/domain/resource-re
 /**
  * PPTX-specific shape style input properties
  *
- * Accepts PPTX Fill and Line types directly.
+ * Accepts PPTX BaseFill and Line types directly.
  * These are resolved internally using the render context.
  */
 export type PptxShapeStyleInput = {
   /** PPTX fill (solidFill, gradientFill, etc.) */
-  readonly fill?: Fill;
+  readonly fill?: BaseFill;
   /** PPTX line/stroke */
-  readonly line?: Line;
+  readonly line?: BaseLine;
   /** Effects definition */
   readonly effects?: Effects;
   /** Shape width in pixels (for pattern fills) */
@@ -51,7 +52,7 @@ export type PptxShapeStyleInput = {
  * Resolve fill if defined.
  */
 function resolveFillIfDefined(
-  fill: Fill | undefined,
+  fill: BaseFill | undefined,
   colorContext: ColorContext | undefined,
   resourceResolver: ResourceResolverFn,
 ) {
@@ -64,7 +65,7 @@ function resolveFillIfDefined(
 /**
  * Resolve line if defined.
  */
-function resolveLineIfDefined(line: Line | undefined, colorContext: ColorContext | undefined) {
+function resolveLineIfDefined(line: BaseLine | undefined, colorContext: ColorContext | undefined) {
   if (line === undefined) {
     return undefined;
   }
@@ -120,7 +121,7 @@ function convertResolvedLine(pptxLine: PptxResolvedLine): OoxmlResolvedLine {
 /**
  * PPTX-specific hook for shape styling.
  *
- * Accepts PPTX Fill and Line types directly and resolves them
+ * Accepts PPTX BaseFill and Line types directly and resolves them
  * using the render context before passing to the format-agnostic hook.
  *
  * @example

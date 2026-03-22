@@ -7,6 +7,7 @@ export { runList, type ListData, type SectionListItem } from "./list";
 export { runShow, type ShowData, type BlockContentJson, type TableJson, type TableRowJson, type TableCellJson } from "./show";
 export { runExtract, type ExtractData, type ExtractOptions, type SectionTextItem } from "./extract";
 export { runBuild } from "./build";
-export { runPatch, type PatchData } from "./patch";
+export { runPatch } from "./patch";
+export type { DocxPatchData } from "@aurochs-builder/docx";
 export { runVerify, type VerifyData, type VerifyOptions, type TestCaseSpec, type TestCaseResult, type Assertion, type ExpectedDocument } from "./verify";
 export { runPreview, type PreviewData, type PreviewSection, type PreviewOptions, type PreviewFormat } from "./preview";

@@ -5,7 +5,8 @@
  * PPTX presentation data, including rendering context dependencies.
  */
 
-import type { Slide, Presentation, PresentationFile } from "../domain";
+import type { Slide, Presentation } from "../domain";
+import type { PackageFile } from "@aurochs-office/opc";
 import type { Theme } from "../domain/theme/types";
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
@@ -93,7 +94,7 @@ export type PresentationDocument = {
    * Presentation file for PPTX resources.
    * Used to build SlideRenderContext for proper rendering after edits.
    */
-  readonly presentationFile?: PresentationFile;
+  readonly presentationFile?: PackageFile;
 
   // === Embedded Fonts (from PDF import) ===
   /**

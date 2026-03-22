@@ -12,14 +12,14 @@ import { FillPickerPopover, createDefaultFill } from "@aurochs-ui/color-editor";
 import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import type { LineEnd } from "@aurochs-office/drawing-ml/domain/line";
-import type { Line, Fill } from "@aurochs-office/pptx/domain/color/types";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import type { EditorProps, SelectOption } from "@aurochs-ui/ui-components/types";
 
 // =============================================================================
 // Types
 // =============================================================================
 
-export type LineEditorProps = EditorProps<Line> & {
+export type LineEditorProps = EditorProps<BaseLine> & {
   readonly style?: CSSProperties;
   /** Show line ends section */
   readonly showEnds?: boolean;
@@ -31,19 +31,19 @@ export type LineEditorProps = EditorProps<Line> & {
 // Options
 // =============================================================================
 
-const capOptions: SelectOption<Line["cap"]>[] = [
+const capOptions: SelectOption<BaseLine["cap"]>[] = [
   { value: "flat", label: "Flat" },
   { value: "round", label: "Round" },
   { value: "square", label: "Square" },
 ];
 
-const joinOptions: SelectOption<Line["join"]>[] = [
+const joinOptions: SelectOption<BaseLine["join"]>[] = [
   { value: "round", label: "Round" },
   { value: "bevel", label: "Bevel" },
   { value: "miter", label: "Miter" },
 ];
 
-const compoundOptions: SelectOption<Line["compound"]>[] = [
+const compoundOptions: SelectOption<BaseLine["compound"]>[] = [
   { value: "sng", label: "Single" },
   { value: "dbl", label: "Double" },
   { value: "thickThin", label: "Thick-Thin" },
@@ -260,7 +260,7 @@ export function LineEditor({
   const [endsExpanded, setEndsExpanded] = useState(false);
 
   const updateField = useCallback(
-    <K extends keyof Line>(field: K, newValue: Line[K]) => {
+    <K extends keyof BaseLine>(field: K, newValue: BaseLine[K]) => {
       onChange({ ...value, [field]: newValue });
     },
     [value, onChange],
@@ -275,8 +275,7 @@ export function LineEditor({
 
   const handleFillChange = useCallback(
     (fill: BaseFill) => {
-      // BaseFill is compatible with Fill for stroke purposes
-      onChange({ ...value, fill: fill as Fill });
+      onChange({ ...value, fill });
     },
     [value, onChange],
   );
@@ -323,7 +322,7 @@ export function LineEditor({
           <span style={labelStyle}>Cap</span>
           <Select
             value={value.cap}
-            onChange={(v) => updateField("cap", v as Line["cap"])}
+            onChange={(v) => updateField("cap", v as BaseLine["cap"])}
             options={capOptions}
             disabled={disabled}
           />
@@ -335,7 +334,7 @@ export function LineEditor({
           <span style={labelStyle}>Compound</span>
           <Select
             value={value.compound}
-            onChange={(v) => updateField("compound", v as Line["compound"])}
+            onChange={(v) => updateField("compound", v as BaseLine["compound"])}
             options={compoundOptions}
             disabled={disabled}
           />
@@ -344,7 +343,7 @@ export function LineEditor({
           <span style={labelStyle}>Join</span>
           <Select
             value={value.join}
-            onChange={(v) => updateField("join", v as Line["join"])}
+            onChange={(v) => updateField("join", v as BaseLine["join"])}
             options={joinOptions}
             disabled={disabled}
           />
@@ -394,7 +393,7 @@ export function LineEditor({
 /**
  * Create a default line
  */
-export function createDefaultLine(): Line {
+export function createDefaultLine(): BaseLine {
   return {
     width: px(1),
     cap: "flat",

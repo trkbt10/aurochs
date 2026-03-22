@@ -1,7 +1,7 @@
 /** @file Table serializer tests */
 import { getChild, getChildren, getTextContent } from "@aurochs/xml";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
-import type { Line } from "@aurochs-office/pptx/domain";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import type {
   Table,
   TableCell,
@@ -16,7 +16,7 @@ import { serializeDrawingTable } from "./table";
 
 const EMU_PER_PIXEL = 9525;
 
-function makeLine(): Line {
+function makeLine(): BaseLine {
   return {
     width: px(1),
     cap: "flat",

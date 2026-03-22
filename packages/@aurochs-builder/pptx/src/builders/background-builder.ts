@@ -10,7 +10,7 @@ import { createElement, getChild, isXmlElement, updateDocumentRoot, replaceChild
 import { detectImageMimeType, readFileToArrayBuffer, uint8ArrayToArrayBuffer } from "./file-utils";
 import { serializeFill } from "../patcher/serializer/fill";
 import { addMedia } from "../patcher/resources/media-manager";
-import type { Fill } from "@aurochs-office/pptx/domain/color/types";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
 import type { ZipPackage } from "@aurochs/zip";
 import type { Degrees, Percent } from "@aurochs-office/drawing-ml/domain/units";
 import type { BackgroundFillSpec, BackgroundGradientSpec, BackgroundImageSpec } from "../types";
@@ -20,7 +20,7 @@ import { buildColor } from "@aurochs-builder/drawing-ml/fill";
  * Build a Fill from a non-image BackgroundFillSpec.
  * Image backgrounds require async handling via applyImageBackground.
  */
-function buildBackgroundFill(spec: Exclude<BackgroundFillSpec, BackgroundImageSpec>): Fill {
+function buildBackgroundFill(spec: Exclude<BackgroundFillSpec, BackgroundImageSpec>): BaseFill {
   if (typeof spec === "string") {
     // Solid fill from hex color
     return {
@@ -45,7 +45,7 @@ function buildBackgroundFill(spec: Exclude<BackgroundFillSpec, BackgroundImageSp
 /**
  * Build gradient fill for background
  */
-function buildGradientFill(spec: BackgroundGradientSpec): Fill {
+function buildGradientFill(spec: BackgroundGradientSpec): BaseFill {
   const stops = spec.stops.map((stop) => ({
     position: (stop.position * 1000) as Percent, // Convert 0-100 to 0-100000
     color: buildColor(stop.color),
@@ -65,7 +65,7 @@ function buildGradientFill(spec: BackgroundGradientSpec): Fill {
 /**
  * Build background XML element from Fill
  */
-function buildBackgroundElement(fill: Fill): XmlElement {
+function buildBackgroundElement(fill: BaseFill): XmlElement {
   const fillXml = serializeFill(fill);
 
   // Create p:bgPr element with the fill

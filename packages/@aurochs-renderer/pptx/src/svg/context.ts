@@ -5,7 +5,7 @@
  */
 
 import { px } from "@aurochs-office/drawing-ml/domain/units";
-import type { CoreRenderContext, CoreRenderContextConfig } from "../render-context";
+import type { CoreRenderContext } from "../render-context";
 import { createCoreRenderContext } from "../render-context";
 
 // =============================================================================
@@ -65,11 +65,8 @@ export type SvgRenderContext = CoreRenderContext & {
   readonly defs: DefsCollector;
 };
 
-/**
- * Configuration for creating SVG render context.
- * Uses the unified CoreRenderContextConfig.
- */
-export type SvgRenderContextConfig = CoreRenderContextConfig;
+import type { CoreRenderContextConfig as SvgRenderContextConfig } from "../render-context";
+export type { SvgRenderContextConfig };
 
 /**
  * Create an SVG render context.

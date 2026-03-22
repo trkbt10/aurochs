@@ -8,6 +8,7 @@ import { loadPptxFile } from "../../scripts/lib/pptx-loader";
 import { resolveRepoPath } from "../test-utils/repo-paths";
 import { parseXml, getChild, getByPath } from "@aurochs/xml";
 import { parseSlide } from "@aurochs-office/pptx/parser/slide/slide-parser";
+import { parseTextStyleLevels } from "@aurochs-office/pptx/parser/text/text-style-levels";
 import { openPresentation } from "@aurochs-office/pptx";
 import { renderSlideToSvg } from "../svg";
 import type { ParseContext } from "@aurochs-office/pptx/parser/context";
@@ -37,7 +38,7 @@ describe("text-centering-and-color", () => {
         master: { byIdx: new Map(), byType: {} },
       },
       masterStylesInfo: {
-        masterTextStyles: { titleStyle: undefined, bodyStyle: undefined, otherStyle: undefined },
+        masterTextStyles: {},
         defaultTextStyle: undefined,
       },
       slideResources: { getTarget: () => undefined, getType: () => undefined },
@@ -108,7 +109,11 @@ describe("text-centering-and-color", () => {
         master: { byIdx: new Map(), byType: {} },
       },
       masterStylesInfo: {
-        masterTextStyles: { titleStyle, bodyStyle, otherStyle },
+        masterTextStyles: {
+          titleStyle: parseTextStyleLevels(titleStyle),
+          bodyStyle: parseTextStyleLevels(bodyStyle),
+          otherStyle: parseTextStyleLevels(otherStyle),
+        },
         defaultTextStyle: undefined,
       },
       slideResources: { getTarget: () => undefined, getType: () => undefined },

@@ -7,7 +7,7 @@
  * @see ECMA-376 Part 2, Section 9.3 (Relationships)
  */
 
-import type { PresentationFile } from "../domain";
+import type { PackageFile } from "@aurochs-office/opc";
 import { parseContentTypes } from "../domain/content-types";
 import { readPart } from "../parser/part-reader";
 import { loadRelationships } from "../parser/relationships";
@@ -42,7 +42,7 @@ export type MediaInfo = {
  * @param file - Presentation file
  * @returns Array of discovered media paths (deduplicated)
  */
-export function discoverMediaPaths(file: PresentationFile): readonly string[] {
+export function discoverMediaPaths(file: PackageFile): readonly string[] {
   const appVersion = resolveAppVersion(file);
   const contentTypesXml = readPart(file, "[Content_Types].xml", { appVersion });
 
@@ -78,7 +78,7 @@ export function discoverMediaPaths(file: PresentationFile): readonly string[] {
  * @param file - Presentation file
  * @returns Array of MediaInfo objects
  */
-export function discoverMedia(file: PresentationFile): readonly MediaInfo[] {
+export function discoverMedia(file: PackageFile): readonly MediaInfo[] {
   const appVersion = resolveAppVersion(file);
   const contentTypesXml = readPart(file, "[Content_Types].xml", { appVersion });
 
@@ -112,7 +112,7 @@ export function discoverMedia(file: PresentationFile): readonly MediaInfo[] {
 // Helpers
 // =============================================================================
 
-function resolveAppVersion(file: PresentationFile): number {
+function resolveAppVersion(file: PackageFile): number {
   const appXml = readPart(file, "docProps/app.xml");
   return parseAppVersion(appXml) ?? 16;
 }
@@ -123,7 +123,7 @@ function resolveAppVersion(file: PresentationFile): number {
  * Uses loadRelationships which handles RFC 3986 path resolution.
  */
 function collectMediaFromRelationships(
-  file: PresentationFile,
+  file: PackageFile,
   partPath: string,
   mediaPaths: Set<string>,
 ): void {
@@ -146,7 +146,7 @@ function collectMediaFromRelationships(
  * Uses loadRelationships which handles RFC 3986 path resolution.
  */
 function collectMediaInfoFromRelationships(
-  file: PresentationFile,
+  file: PackageFile,
   partPath: string,
   mediaMap: Map<string, MediaInfo>,
 ): void {

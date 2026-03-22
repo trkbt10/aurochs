@@ -2,13 +2,13 @@
  * @file LineMarkerPreview component for displaying line marker previews
  */
 
-import type { Line } from "@aurochs-office/pptx/domain";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import { useShapeStyle } from "@aurochs-renderer/pptx/react";
 
 /**
  * Line with markers preview
  */
-export function LineMarkerPreview({ line, label }: { line: Line; label: string }) {
+export function LineMarkerPreview({ line, label }: { line: BaseLine; label: string }) {
   const style = useShapeStyle({
     fill: { type: "noFill" },
     line,

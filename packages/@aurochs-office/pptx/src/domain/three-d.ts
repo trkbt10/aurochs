@@ -4,7 +4,7 @@
  * @see ECMA-376 Part 1, Section 20.1.5 - 3D Rendering
  */
 
-import type { Fill } from "./color/types";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
 import type { Point } from "@aurochs-office/drawing-ml/domain/geometry";
 import type { Degrees, Percent, Pixels } from "@aurochs-office/drawing-ml/domain/units";
 
@@ -254,9 +254,9 @@ export type Shape3d = {
   /** Preset material type (prstMaterial) - default "warmMatte" */
   readonly preset?: PresetMaterialType;
   /** Extrusion color (extrusionClr) */
-  readonly extrusionColor?: Fill;
+  readonly extrusionColor?: BaseFill;
   /** Contour color (contourClr) */
-  readonly contourColor?: Fill;
+  readonly contourColor?: BaseFill;
   /** Top bevel (bevelT) - front face bevel @see ECMA-376 bevelT */
   readonly bevelTop?: Bevel3d;
   /** Bottom bevel (bevelB) - back face bevel @see ECMA-376 bevelB */

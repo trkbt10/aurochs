@@ -7,6 +7,8 @@
 import type { Slide, Presentation } from "@aurochs-office/pptx/domain";
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
+import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
+import { EMPTY_FONT_SCHEME } from "@aurochs-office/ooxml/domain/font-scheme";
 import type { ResourceResolver } from "@aurochs-office/pptx/domain/resource-resolver";
 import type { PresentationDocument, SlideWithId } from "@aurochs-office/pptx/app";
 
@@ -48,6 +50,7 @@ export function createDocumentFromPresentation({
   slideHeight,
   colorContext = EMPTY_COLOR_CONTEXT,
   resources = EMPTY_RESOURCE_RESOLVER,
+  fontScheme = EMPTY_FONT_SCHEME,
 }: {
   presentation: Presentation;
   slides: readonly Slide[];
@@ -55,6 +58,7 @@ export function createDocumentFromPresentation({
   slideHeight: Pixels;
   colorContext?: ColorContext;
   resources?: ResourceResolver;
+  fontScheme?: FontScheme;
 }): PresentationDocument {
   return {
     presentation,
@@ -63,6 +67,7 @@ export function createDocumentFromPresentation({
     slideHeight,
     colorContext,
     resources,
+    fontScheme,
   };
 }
 
@@ -79,5 +84,6 @@ export function createEmptyDocument(slideWidth: Pixels, slideHeight: Pixels): Pr
     slideHeight,
     colorContext: EMPTY_COLOR_CONTEXT,
     resources: EMPTY_RESOURCE_RESOLVER,
+    fontScheme: EMPTY_FONT_SCHEME,
   };
 }

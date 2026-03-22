@@ -2,7 +2,8 @@
  * @file CombinedPreview component for displaying combined shape previews
  */
 
-import type { Fill, Line } from "@aurochs-office/pptx/domain";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import type { Effects } from "@aurochs-office/pptx/domain/effects";
 import { useShapeStyle } from "@aurochs-renderer/pptx/react";
 
@@ -15,8 +16,8 @@ export function CombinedPreview({
   effects,
   label,
 }: {
-  fill: Fill;
-  line?: Line;
+  fill: BaseFill;
+  line?: BaseLine;
   effects?: Effects;
   label: string;
 }) {

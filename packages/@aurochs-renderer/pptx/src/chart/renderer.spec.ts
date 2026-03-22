@@ -7,7 +7,8 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { openPresentation, type PresentationFile } from "@aurochs-office/pptx";
+import { openPresentation } from "@aurochs-office/pptx";
+import type { PackageFile } from "@aurochs-office/opc";
 import { renderChart } from "./index";
 import type {
   Chart,
@@ -31,7 +32,7 @@ import { renderSlideToSvg } from "../svg";
 const AASCU_FIXTURE = resolveRepoPath(
   "fixtures/poi-test-data/test-data/slideshow/aascu.org_workarea_downloadasset.aspx_id=5864.pptx",
 );
-const presentationState: { file?: PresentationFile } = {};
+const presentationState: { file?: PackageFile } = {};
 
 describe("Chart rendering - ECMA-376 compliance", () => {
   beforeAll(async () => {
@@ -54,7 +55,7 @@ describe("Chart rendering - ECMA-376 compliance", () => {
      * - Bars should extend from zero line (up for positive, down for negative)
      */
     it("renders a [Chart] placeholder when chart data is not in ResourceStore", () => {
-      const presentation = openPresentation(getPresentationFile());
+      const presentation = openPresentation(getPackageFile());
       const slide = presentation.getSlide(8);
       const svg = renderSlideToSvg(slide).svg;
 
@@ -64,7 +65,7 @@ describe("Chart rendering - ECMA-376 compliance", () => {
   });
 });
 
-function getPresentationFile(): PresentationFile {
+function getPackageFile(): PackageFile {
   if (!presentationState.file) {
     throw new Error("Presentation fixture was not loaded.");
   }

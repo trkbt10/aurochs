@@ -80,7 +80,6 @@ export {
 // =============================================================================
 
 export type {
-  PresentationFile,
   PlaceholderTable,
 } from "./opc";
 
@@ -117,6 +116,7 @@ export type {
   ExtraColorScheme,
   ExtractedTheme,
   ObjectDefaults,
+  ObjectDefaultProperties,
   FormatScheme,
   Theme,
   ThemeExtractionInput,
@@ -192,7 +192,6 @@ export type {
   PositionV,
   WrapPolygon,
   WrapText,
-  WrapDistance,
   WrapSquare,
   WrapThrough,
   WrapTight,
@@ -308,8 +307,6 @@ export type {
 export type {
   // PPTX-specific color
   ResolvedColor,
-  Fill,
-  Line,
   // Color mapping
   ColorMapping,
   ColorMapOverride,
@@ -373,6 +370,8 @@ export type {
   TextStyleLevels,
   TextLevelStyle,
 } from "./text-style";
+
+export { TEXT_STYLE_LEVEL_KEYS } from "./text-style";
 
 // =============================================================================
 // Shape Types

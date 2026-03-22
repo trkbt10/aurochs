@@ -5,7 +5,8 @@
  */
 
 import { useMemo } from "react";
-import type { PresentationFile, Shape, SlideSize } from "@aurochs-office/pptx/domain";
+import type { Shape, SlideSize } from "@aurochs-office/pptx/domain";
+import type { PackageFile } from "@aurochs-office/opc";
 import type { SlideLayoutOption } from "@aurochs-office/pptx/app";
 import { loadLayoutWithContext } from "@aurochs-ui/ooxml-components";
 
@@ -19,7 +20,7 @@ export type LayoutThumbnailData = SlideLayoutOption & {
 };
 
 export type UseLayoutThumbnailsOptions = {
-  readonly presentationFile: PresentationFile | undefined;
+  readonly presentationFile: PackageFile | undefined;
   readonly layoutOptions: readonly SlideLayoutOption[];
   readonly slideSize: SlideSize;
 };
@@ -40,7 +41,7 @@ export function useLayoutThumbnails(options: UseLayoutThumbnailsOptions): readon
     }
 
     return layoutOptions.map((option) => {
-      const result = loadLayoutWithContext(presentationFile, option.value, slideSize);
+      const result = loadLayoutWithContext({ file: presentationFile, layoutPath: option.value, slideSize });
       return {
         ...option,
         shapes: result?.shapes ?? [],

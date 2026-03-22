@@ -19,12 +19,12 @@ import type {
   GrpShape,
   CxnShape,
   GraphicFrame,
-  Fill,
-  Line,
   OleReference,
   ChartReference,
   DiagramReference,
 } from "@aurochs-office/pptx/domain";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import type { Geometry } from "@aurochs-office/drawing-ml/domain/geometry";
 import type { CoreRenderContext } from "../render-context";
 import type { SvgDefsCollector } from "./slide-utils";
@@ -139,7 +139,7 @@ function renderFillAttrs({
   w,
   h,
 }: {
-  fill: Fill | undefined;
+  fill: BaseFill | undefined;
   ctx: CoreRenderContext;
   defsCollector: SvgDefsCollector;
   w?: number;
@@ -176,7 +176,7 @@ function renderFillAttrs({
 /**
  * Render stroke attributes for SVG
  */
-function renderStrokeAttrs(line: Line | undefined, ctx: CoreRenderContext): string {
+function renderStrokeAttrs(line: BaseLine | undefined, ctx: CoreRenderContext): string {
   if (line === undefined || line.fill.type === "noFill") {
     return "";
   }
@@ -460,7 +460,7 @@ function renderGroupSvg({
  *
  * @see ECMA-376 Part 1, Section 20.1.2.2.24
  */
-function resolveConnectorStrokeColor(line: Line | undefined, ctx: CoreRenderContext): string {
+function resolveConnectorStrokeColor(line: BaseLine | undefined, ctx: CoreRenderContext): string {
   if (!line || !line.fill || line.fill.type !== "solidFill") {
     return "#000000";
   }

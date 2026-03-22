@@ -5,13 +5,13 @@
 import { getChild, getChildren } from "@aurochs/xml";
 import { deg, pct, px } from "@aurochs-office/drawing-ml/domain/units";
 import type { BlipEffects } from "@aurochs-office/drawing-ml/domain/fill";
-import type { Fill } from "@aurochs-office/pptx/domain";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
 import { parseFill } from "@aurochs-office/pptx/parser/graphics/fill-parser";
 import { serializeFill, serializeBlipEffects } from "./fill";
 
 describe("serializeFill", () => {
   it("serializes solidFill", () => {
-    const fill: Fill = {
+    const fill: BaseFill = {
       type: "solidFill",
       color: { spec: { type: "srgb", value: "FF0000" } },
     };
@@ -22,13 +22,13 @@ describe("serializeFill", () => {
   });
 
   it("serializes noFill", () => {
-    const fill: Fill = { type: "noFill" };
+    const fill: BaseFill = { type: "noFill" };
     const el = serializeFill(fill);
     expect(el.name).toBe("a:noFill");
   });
 
   it("serializes gradFill (linear)", () => {
-    const fill: Fill = {
+    const fill: BaseFill = {
       type: "gradientFill",
       rotWithShape: true,
       stops: [
@@ -51,7 +51,7 @@ describe("serializeFill", () => {
   });
 
   it("serializes gradFill (path/circle)", () => {
-    const fill: Fill = {
+    const fill: BaseFill = {
       type: "gradientFill",
       rotWithShape: false,
       stops: [
@@ -68,7 +68,7 @@ describe("serializeFill", () => {
   });
 
   it("serializes pattFill", () => {
-    const fill: Fill = {
+    const fill: BaseFill = {
       type: "patternFill",
       preset: "pct10",
       foregroundColor: { spec: { type: "srgb", value: "000000" } },
@@ -83,7 +83,7 @@ describe("serializeFill", () => {
   });
 
   it("serializes blipFill", () => {
-    const fill: Fill = {
+    const fill: BaseFill = {
       type: "blipFill",
       resourceId: "rId2",
       relationshipType: "embed",
@@ -110,7 +110,7 @@ describe("serializeFill", () => {
   });
 
   it("serializes blipFill with r:link", () => {
-    const fill: Fill = {
+    const fill: BaseFill = {
       type: "blipFill",
       resourceId: "rId2",
       relationshipType: "link",
@@ -124,7 +124,7 @@ describe("serializeFill", () => {
   });
 
   it("throws for blipFill with data: resourceId (Phase 7 required)", () => {
-    const fill: Fill = {
+    const fill: BaseFill = {
       type: "blipFill",
       resourceId: "data:image/png;base64,AA==",
       relationshipType: "embed",
@@ -135,13 +135,13 @@ describe("serializeFill", () => {
   });
 
   it("serializes grpFill", () => {
-    const fill: Fill = { type: "groupFill" };
+    const fill: BaseFill = { type: "groupFill" };
     const el = serializeFill(fill);
     expect(el.name).toBe("a:grpFill");
   });
 
   it("round-trips through parser (blipFill with stretch)", () => {
-    const fill: Fill = {
+    const fill: BaseFill = {
       type: "blipFill",
       resourceId: "rId2",
       relationshipType: "embed",
@@ -155,7 +155,7 @@ describe("serializeFill", () => {
   });
 
   it("serializes gradFill with tileRect", () => {
-    const fill: Fill = {
+    const fill: BaseFill = {
       type: "gradientFill",
       rotWithShape: true,
       stops: [
@@ -176,7 +176,7 @@ describe("serializeFill", () => {
   });
 
   it("serializes gradFill path with fillToRect", () => {
-    const fill: Fill = {
+    const fill: BaseFill = {
       type: "gradientFill",
       rotWithShape: true,
       stops: [
@@ -202,7 +202,7 @@ describe("serializeFill", () => {
   });
 
   it("serializes blipFill with compressionState", () => {
-    const fill: Fill = {
+    const fill: BaseFill = {
       type: "blipFill",
       resourceId: "rId3",
       relationshipType: "embed",
@@ -217,7 +217,7 @@ describe("serializeFill", () => {
   });
 
   it("serializes blipFill with dpi", () => {
-    const fill: Fill = {
+    const fill: BaseFill = {
       type: "blipFill",
       resourceId: "rId3",
       relationshipType: "embed",
@@ -230,7 +230,7 @@ describe("serializeFill", () => {
   });
 
   it("serializes blipFill stretch with fillRect", () => {
-    const fill: Fill = {
+    const fill: BaseFill = {
       type: "blipFill",
       resourceId: "rId2",
       relationshipType: "embed",
@@ -252,7 +252,7 @@ describe("serializeFill", () => {
   });
 
   it("serializes blipFill stretch without fillRect as empty element", () => {
-    const fill: Fill = {
+    const fill: BaseFill = {
       type: "blipFill",
       resourceId: "rId2",
       relationshipType: "embed",

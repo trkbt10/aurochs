@@ -9,14 +9,13 @@
 
 import type { XmlDocument, XmlElement } from "@aurochs/xml";
 import type {
-  ColorScheme as ColorSchemeType,
-  ColorMap as ColorMapType,
+  ColorScheme,
+  ColorMap,
 } from "@aurochs-office/drawing-ml/domain/color-context";
-import type { FontScheme as FontSchemeType } from "@aurochs-office/ooxml/domain/font-scheme";
-
-export type ColorScheme = ColorSchemeType;
-export type ColorMap = ColorMapType;
-export type FontScheme = FontSchemeType;
+import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
+import type { ShapeProperties } from "../shape";
+import type { BodyProperties } from "../text";
+import type { TextStyleLevels, MasterTextStyles } from "../text-style";
 
 // =============================================================================
 // Custom Color Types (ECMA-376 Part 1, Section 20.1.4.1.8)
@@ -45,8 +44,8 @@ export type CustomColor = {
  */
 export type ExtraColorScheme = {
   readonly name?: string;
-  readonly colorScheme: ColorSchemeType;
-  readonly colorMap: ColorMapType;
+  readonly colorScheme: ColorScheme;
+  readonly colorMap: ColorMap;
 };
 
 // =============================================================================
@@ -54,14 +53,28 @@ export type ExtraColorScheme = {
 // =============================================================================
 
 /**
+ * Properties for a single object default (a:spDef, a:lnDef, a:txDef).
+ *
+ * Each default contains shape properties (a:spPr), body properties (a:bodyPr),
+ * and list style (a:lstStyle) — all as domain types for full editing.
+ *
+ * @see ECMA-376 Part 1, Section 20.1.6.7 (a:objectDefaults)
+ */
+export type ObjectDefaultProperties = {
+  readonly shapeProperties?: ShapeProperties;
+  readonly bodyProperties?: BodyProperties;
+  readonly textStyleLevels?: TextStyleLevels;
+};
+
+/**
  * Object defaults from theme.
  *
  * @see ECMA-376 Part 1, Section 20.1.6.7 (a:objectDefaults)
  */
 export type ObjectDefaults = {
-  readonly lineDefault?: XmlElement;
-  readonly shapeDefault?: XmlElement;
-  readonly textDefault?: XmlElement;
+  readonly lineDefault?: ObjectDefaultProperties;
+  readonly shapeDefault?: ObjectDefaultProperties;
+  readonly textDefault?: ObjectDefaultProperties;
 };
 
 // =============================================================================
@@ -96,8 +109,8 @@ export type FormatScheme = {
  * @see ECMA-376 Part 1, Section 20.1.6.9 (a:theme)
  */
 export type Theme = {
-  readonly fontScheme: FontSchemeType;
-  readonly colorScheme: ColorSchemeType;
+  readonly fontScheme: FontScheme;
+  readonly colorScheme: ColorScheme;
   readonly formatScheme: FormatScheme;
   readonly customColors: readonly CustomColor[];
   readonly extraColorSchemes: readonly ExtraColorScheme[];
@@ -107,15 +120,9 @@ export type Theme = {
   readonly objectDefaults: ObjectDefaults;
 };
 
-// =============================================================================
-// Raw Master Text Styles (ECMA-376 Part 1, Section 19.3.1.51)
-// =============================================================================
-
 /**
- * Raw master text styles from slide master (XmlElement references).
- * This is the raw form before conversion to domain MasterTextStyles.
- *
- * @see ECMA-376 Part 1, Section 19.3.1.51 (p:txStyles)
+ * @deprecated Use MasterTextStyles from domain/text-style.ts instead.
+ * Kept temporarily for backward compatibility during migration.
  */
 export type RawMasterTextStyles = {
   readonly titleStyle: XmlElement | undefined;
@@ -154,9 +161,9 @@ export type ExtractedTheme = {
   /** Complete parsed theme (colors, fonts, format scheme, custom colors, etc.) */
   readonly theme: Theme;
   /** Color mapping from slide master (p:clrMap) §19.3.1.6 */
-  readonly colorMap: ColorMapType;
-  /** Master text styles (p:txStyles) §19.3.1.51 */
-  readonly masterTextStyles: RawMasterTextStyles;
+  readonly colorMap: ColorMap;
+  /** Master text styles (p:txStyles) §19.3.1.51 — domain typed (SoT) */
+  readonly masterTextStyles: MasterTextStyles;
   /** Master background element (p:bg) §19.3.1.2 — raw XmlElement for lossless round-trip */
   readonly masterBackground?: XmlElement;
 };

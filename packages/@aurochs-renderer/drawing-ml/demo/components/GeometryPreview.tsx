@@ -2,7 +2,7 @@
  * @file GeometryPreview component for displaying geometry shape previews
  */
 
-import type { Fill } from "@aurochs-office/pptx/domain";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
 import { useShapeStyle } from "@aurochs-renderer/pptx/react";
 
 /**
@@ -14,7 +14,7 @@ export function GeometryPreview({
   label,
 }: {
   shape: "rect" | "ellipse" | "roundRect" | "triangle" | "diamond";
-  fill: Fill;
+  fill: BaseFill;
   label: string;
 }) {
   const style = useShapeStyle({ fill, width: 80, height: 60 });

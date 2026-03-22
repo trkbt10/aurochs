@@ -6,7 +6,8 @@
  */
 
 import type { CSSProperties } from "react";
-import type { SlideSize, PresentationFile } from "@aurochs-office/pptx/domain";
+import type { SlideSize } from "@aurochs-office/pptx/domain";
+import type { PackageFile } from "@aurochs-office/opc";
 import type { Background } from "@aurochs-office/pptx/domain/slide/types";
 import type { SlideLayoutAttributes } from "@aurochs-office/pptx/parser/slide/layout-parser";
 import type { SlideLayoutOption } from "@aurochs-office/pptx/app";
@@ -32,7 +33,7 @@ export type SlideInfoTabProps = {
   /** Callback when slide size changes */
   readonly onSlideSizeChange?: (size: SlideSize) => void;
   /** Presentation file for loading layout shapes */
-  readonly presentationFile?: PresentationFile;
+  readonly presentationFile?: PackageFile;
 };
 
 const containerStyle: CSSProperties = {

@@ -117,7 +117,6 @@ export {
 } from "./geometry/coords";
 
 export type {
-  DragPreviewBounds,
   MoveDragPreviewInput,
   ResizeDragPreviewInput,
   RotateDragPreviewInput,

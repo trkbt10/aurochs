@@ -12,7 +12,6 @@ import type {
   DiagramExtension,
   DiagramPoint,
   DiagramPropertySet,
-  DiagramPrSetCustVal,
   DiagramAnimLvlStr,
   DiagramAnimOneStr,
   DiagramArrowheadStyle,
@@ -47,6 +46,7 @@ import type {
 } from "../../domain/types";
 import type { XmlDocument, XmlElement } from "@aurochs/xml";
 import { getAttr, getByPath, getChild, getChildren, isXmlElement } from "@aurochs/xml";
+import type { Percent } from "@aurochs-office/drawing-ml/domain/units";
 import { getBoolAttr, getIntAttr, parsePercentage } from "@aurochs-office/drawing-ml/parser";
 
 export type DiagramDataModelParseOptions = {
@@ -156,7 +156,7 @@ function parsePropertySet(element: XmlElement | undefined): DiagramPropertySet |
   };
 }
 
-function parsePrSetCustVal(value: string | undefined): DiagramPrSetCustVal | undefined {
+function parsePrSetCustVal(value: string | undefined): Percent | undefined {
   return parsePercentage(value);
 }
 

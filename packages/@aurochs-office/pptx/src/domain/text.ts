@@ -5,7 +5,8 @@
  */
 
 import type { Color } from "@aurochs-office/drawing-ml/domain/color";
-import type { Fill, Line } from "./color/types";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import type { Effects } from "./effects";
 import type { Hyperlink, HyperlinkSound } from "./resource";
 import type { Scene3d, Shape3d } from "./three-d";
@@ -415,8 +416,8 @@ export type RunProperties = {
   readonly italic?: boolean;
   readonly underline?: UnderlineStyle;
   readonly underlineColor?: Color;
-  readonly underlineFill?: Fill;
-  readonly underlineLine?: Line;
+  readonly underlineFill?: BaseFill;
+  readonly underlineLine?: BaseLine;
   readonly underlineLineFollowText?: boolean;
   readonly underlineFillFollowText?: boolean;
   readonly strike?: StrikeStyle;
@@ -426,10 +427,10 @@ export type RunProperties = {
   readonly kerning?: Points; // Minimum font size for kerning
   readonly color?: Color;
   /** Text fill (gradFill, blipFill, pattFill, noFill, grpFill) @see ECMA-376 20.1.8 */
-  readonly fill?: Fill;
+  readonly fill?: BaseFill;
   readonly highlightColor?: Color;
   /** Text outline (stroke) @see ECMA-376 20.1.2.2.24 */
-  readonly textOutline?: Line;
+  readonly textOutline?: BaseLine;
   /** Text effects (shadow, glow, etc.) @see ECMA-376 20.1.8.25 */
   readonly effects?: Effects;
   readonly outline?: boolean;

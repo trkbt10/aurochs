@@ -13,7 +13,6 @@ export {
   type ElementId,
   type ElementMoveDragState,
   type ElementSelectionState,
-  type IdleDragState,
   type ImageResizeDragState,
   type ParagraphClipboardContent,
   type Point,

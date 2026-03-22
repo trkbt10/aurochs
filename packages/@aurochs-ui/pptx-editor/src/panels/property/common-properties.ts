@@ -7,7 +7,8 @@
 
 import type { Shape } from "@aurochs-office/pptx/domain/index";
 import type { Transform } from "@aurochs-office/drawing-ml/domain/geometry";
-import type { Fill, Line } from "@aurochs-office/pptx/domain/color/types";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 
 // =============================================================================
 // Types
@@ -155,8 +156,8 @@ export function getCommonTransform(shapes: readonly Shape[]): CommonTransform {
 /**
  * Extract common fill from sp/cxnSp shapes.
  */
-export function getCommonFill(shapes: readonly Shape[]): CommonValue<Fill> {
-  const fills: Fill[] = [];
+export function getCommonFill(shapes: readonly Shape[]): CommonValue<BaseFill> {
+  const fills: BaseFill[] = [];
 
   for (const shape of shapes) {
     if (shape.type === "sp" || shape.type === "cxnSp") {
@@ -178,8 +179,8 @@ export function getCommonFill(shapes: readonly Shape[]): CommonValue<Fill> {
 /**
  * Extract common line properties from sp/cxnSp shapes.
  */
-export function getCommonLine(shapes: readonly Shape[]): CommonValue<Line> {
-  const lines: Line[] = [];
+export function getCommonLine(shapes: readonly Shape[]): CommonValue<BaseLine> {
+  const lines: BaseLine[] = [];
 
   for (const shape of shapes) {
     if (shape.type === "sp" || shape.type === "cxnSp") {
@@ -266,7 +267,7 @@ export function applyTransformToShape(shape: Shape, update: Partial<Transform>):
 /**
  * Apply fill change to a shape (sp/cxnSp only).
  */
-export function applyFillToShape(shape: Shape, fill: Fill): Shape {
+export function applyFillToShape(shape: Shape, fill: BaseFill): Shape {
   if (shape.type !== "sp" && shape.type !== "cxnSp") {
     return shape;
   }
@@ -283,7 +284,7 @@ export function applyFillToShape(shape: Shape, fill: Fill): Shape {
 /**
  * Apply line change to a shape (sp/cxnSp only).
  */
-export function applyLineToShape(shape: Shape, line: Line): Shape {
+export function applyLineToShape(shape: Shape, line: BaseLine): Shape {
   if (shape.type !== "sp" && shape.type !== "cxnSp") {
     return shape;
   }

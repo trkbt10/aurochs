@@ -13,12 +13,6 @@ import { normalizeAngle } from "./rotate";
 // =============================================================================
 
 /**
- * Bounds with rotation for drag preview.
- * Same structure as RotatedBoundsInput but mutable for intermediate results.
- */
-export type DragPreviewBounds = RotatedBoundsInput;
-
-/**
  * Move drag state subset needed for preview calculation.
  */
 export type MoveDragPreviewInput<TId = string> = {
@@ -118,9 +112,9 @@ export function calculateResizedDimensions({
  */
 export function applyMovePreview<TId>(
   id: TId,
-  baseBounds: DragPreviewBounds,
+  baseBounds: RotatedBoundsInput,
   drag: MoveDragPreviewInput<TId>,
-): DragPreviewBounds {
+): RotatedBoundsInput {
   if (!drag.shapeIds.includes(id)) {
     return baseBounds;
   }
@@ -142,9 +136,9 @@ export function applyMovePreview<TId>(
  */
 export function applyResizePreview<TId>(
   id: TId,
-  baseBounds: DragPreviewBounds,
+  baseBounds: RotatedBoundsInput,
   drag: ResizeDragPreviewInput<TId>,
-): DragPreviewBounds {
+): RotatedBoundsInput {
   if (!drag.shapeIds.includes(id)) {
     return baseBounds;
   }
@@ -193,9 +187,9 @@ export function applyResizePreview<TId>(
  */
 export function applyRotatePreview<TId>(
   id: TId,
-  baseBounds: DragPreviewBounds,
+  baseBounds: RotatedBoundsInput,
   drag: RotateDragPreviewInput<TId>,
-): DragPreviewBounds {
+): RotatedBoundsInput {
   if (!drag.shapeIds.includes(id)) {
     return baseBounds;
   }
@@ -218,14 +212,14 @@ export function applyRotatePreview<TId>(
  */
 export function applyDragPreview<TId>(
   id: TId,
-  baseBounds: DragPreviewBounds,
+  baseBounds: RotatedBoundsInput,
   drag: { readonly type: string } & (
     | MoveDragPreviewInput<TId>
     | ResizeDragPreviewInput<TId>
     | RotateDragPreviewInput<TId>
     | { readonly type: string }
   ),
-): DragPreviewBounds {
+): RotatedBoundsInput {
   switch (drag.type) {
     case "move":
       return applyMovePreview(id, baseBounds, drag as MoveDragPreviewInput<TId>);

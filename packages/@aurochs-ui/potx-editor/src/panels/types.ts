@@ -9,7 +9,7 @@
  * | ECMA-376 Element | Editor Type | Description |
  * |------------------|-------------|-------------|
  * | a:clrScheme      | ThemeColorScheme | 12 scheme colors (dk1, lt1, etc.) |
- * | a:fontScheme     | ThemeFontScheme | Major/minor fonts with 3 scripts |
+ * | a:fontScheme     | FontScheme | Major/minor fonts with 3 scripts |
  * | a:fmtScheme      | (not editable) | Fill/line/effect styles |
  *
  * ## Color Scheme Slots (a:clrScheme children)
@@ -48,20 +48,6 @@ import type { SchemeColorName } from "@aurochs-office/drawing-ml/domain/color";
 export type ThemeColorScheme = Readonly<Record<SchemeColorName, string>>;
 
 // =============================================================================
-// Font Scheme — re-export from domain SoT
-// =============================================================================
-
-/**
- * Font scheme for theme editing.
- *
- * SoT: @aurochs-office/ooxml/domain/font-scheme — FontScheme
- * Re-exported here as ThemeFontScheme for API consistency with ThemeColorScheme.
- *
- * @see ECMA-376 Part 1, Section 20.1.4.1.18 (CT_FontScheme / a:fontScheme)
- */
-export type ThemeFontScheme = FontScheme;
-
-// =============================================================================
 // Theme Preset Types
 // =============================================================================
 
@@ -79,6 +65,6 @@ export type ThemePreset = {
   /** Color scheme values */
   readonly colorScheme: ThemeColorScheme;
   /** Font scheme values */
-  readonly fontScheme: ThemeFontScheme;
+  readonly fontScheme: FontScheme;
 };
 

@@ -5,10 +5,9 @@
  * Structurally compatible with ShapeJson from pptx-cli.
  */
 
-import type { Bounds as _Bounds } from "@aurochs-renderer/drawing-ml/ascii";
+import type { Bounds } from "@aurochs-renderer/drawing-ml/ascii";
 
-/** Coordinate bounds for positioning shapes on the canvas */
-export type Bounds = _Bounds;
+export type { Bounds };
 
 export type AsciiTableContent = {
   readonly type: "table";

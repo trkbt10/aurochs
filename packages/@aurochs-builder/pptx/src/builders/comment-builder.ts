@@ -6,7 +6,7 @@
 
 import type { ZipPackage } from "@aurochs/zip";
 import { addCommentToSlide } from "@aurochs-builder/pptx/patcher";
-import type { CommentSpec } from "../types";
+import type { SimpleCommentSpec } from "../types";
 
 /**
  * Apply comments to a slide.
@@ -15,7 +15,7 @@ import type { CommentSpec } from "../types";
  * @param slidePath - Path to the slide XML
  * @param specs - Comment specifications
  */
-export function applyComments(pkg: ZipPackage, slidePath: string, specs: readonly CommentSpec[]): void {
+export function applyComments(pkg: ZipPackage, slidePath: string, specs: readonly SimpleCommentSpec[]): void {
   for (const spec of specs) {
     addCommentToSlide(pkg, slidePath, {
       authorName: spec.authorName,

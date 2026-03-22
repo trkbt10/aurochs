@@ -7,6 +7,7 @@
 import type { Slide } from "@aurochs-office/pptx/domain";
 import type { PresentationDocument } from "@aurochs-office/pptx/app";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
+import { EMPTY_FONT_SCHEME } from "@aurochs-office/ooxml/domain/font-scheme";
 
 /**
  * Create an empty slide for testing
@@ -36,5 +37,6 @@ export function createTestDocument(): PresentationDocument {
       readFile: () => null,
       getResourceByType: () => undefined,
     },
+    fontScheme: EMPTY_FONT_SCHEME,
   };
 }

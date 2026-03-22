@@ -4,7 +4,7 @@
  * Provides utilities and components for rendering stroke/line styles.
  */
 
-import type { Line } from "@aurochs-office/pptx/domain";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
 import { resolveLine, getDashArrayPattern } from "@aurochs-office/pptx/domain/color/fill";
 import { useRenderContext } from "../context";
@@ -93,7 +93,7 @@ function resolvedLineToProps(line: ReturnType<typeof resolveLine>): SvgStrokePro
  * @param line - Domain line object
  * @returns SVG stroke props or undefined if no stroke
  */
-export function useStroke(line: Line | undefined): SvgStrokeProps | undefined {
+export function useStroke(line: BaseLine | undefined): SvgStrokeProps | undefined {
   const { colorContext } = useRenderContext();
 
   if (line === undefined || line.fill.type === "noFill") {
@@ -107,7 +107,7 @@ export function useStroke(line: Line | undefined): SvgStrokeProps | undefined {
 /**
  * Resolve line to stroke props without context (for external use).
  */
-export function resolveStrokeForReact(line: Line | undefined, colorContext?: ColorContext): SvgStrokeProps | undefined {
+export function resolveStrokeForReact(line: BaseLine | undefined, colorContext?: ColorContext): SvgStrokeProps | undefined {
   if (line === undefined || line.fill.type === "noFill") {
     return undefined;
   }

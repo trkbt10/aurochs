@@ -38,8 +38,8 @@ import {
   getErrorTypeNumber as getErrorTypeNumberInternal,
   isNAError as isNAErrorInternal,
   isFormulaError as isFormulaErrorInternal,
-  type FormulaErrorCode,
 } from "./errors";
+import type { ErrorValue } from "../../../domain/cell/types";
 
 export type { EvalResult, FormulaFunctionHelpers } from "./types";
 
@@ -137,17 +137,17 @@ export const discountSeries = (rate: number, cashflows: number[]): number => {
 export const calculatePayment = calculatePaymentInternal;
 export const calculateInterestPayment = calculateInterestPaymentInternal;
 
-export { type FormulaErrorCode } from "./errors";
+export type { ErrorValue } from "../../../domain/cell/types";
 
-export const createFormulaError = (code: FormulaErrorCode, message?: string) => {
+export const createFormulaError = (code: ErrorValue, message?: string) => {
   return createFormulaErrorInternal(code, message);
 };
 
-export const getErrorCode = (error: unknown): FormulaErrorCode => {
+export const getErrorCode = (error: unknown): ErrorValue => {
   return getErrorCodeFromError(error);
 };
 
-export const getErrorTypeNumber = (code: FormulaErrorCode): number => {
+export const getErrorTypeNumber = (code: ErrorValue): number => {
   return getErrorTypeNumberInternal(code);
 };
 

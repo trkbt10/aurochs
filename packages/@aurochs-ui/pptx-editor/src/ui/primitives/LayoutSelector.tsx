@@ -7,7 +7,8 @@
 import { type CSSProperties, useCallback, useState, useRef, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
-import type { SlideSize, PresentationFile, Shape } from "@aurochs-office/pptx/domain";
+import type { SlideSize, Shape } from "@aurochs-office/pptx/domain";
+import type { PackageFile } from "@aurochs-office/opc";
 import type { SlideLayoutOption } from "@aurochs-office/pptx/app";
 import { LayoutThumbnail, useLayoutThumbnails } from "../../thumbnail";
 import { colorTokens, fontTokens, radiusTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
@@ -26,7 +27,7 @@ export type LayoutSelectorProps = {
   /** Slide size for preview */
   readonly slideSize?: SlideSize;
   /** Presentation file for loading layout shapes */
-  readonly presentationFile?: PresentationFile;
+  readonly presentationFile?: PackageFile;
   /** Disabled state */
   readonly disabled?: boolean;
   /** CSS class */

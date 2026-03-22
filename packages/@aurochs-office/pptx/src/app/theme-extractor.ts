@@ -11,16 +11,28 @@
  * @see ECMA-376 Part 2, Section 9.3 - Relationships
  */
 
-import type { ExtractedTheme } from "../domain";
+import type { ExtractedTheme, SlideSize } from "../domain";
+import type { PackageFile } from "@aurochs-office/opc";
 import type { PptxBufferInput } from "./pptx-loader";
 import { loadPptxFromBuffer } from "./pptx-loader";
 import { extractThemeData } from "../parser/theme/theme-parser";
 
 /**
  * Result of theme extraction.
+ *
+ * On success, returns the extracted theme data along with presentation-level
+ * properties needed to correctly initialize an editor:
+ * - presentationFile: for layout enumeration and shape loading
+ * - slideSize: from p:sldSz (ECMA-376 §19.2.1.36)
  */
 export type ThemeExtractionResult =
-  | { readonly success: true; readonly data: ExtractedTheme }
+  | {
+      readonly success: true;
+      readonly data: ExtractedTheme;
+      readonly presentationFile: PackageFile;
+      /** Slide size parsed from p:sldSz (ECMA-376 §19.2.1.36). */
+      readonly slideSize: SlideSize;
+    }
   | { readonly success: false; readonly error: string };
 
 // =============================================================================
@@ -59,7 +71,12 @@ export async function extractThemeFromBuffer(buffer: PptxBufferInput): Promise<T
       return { success: false, error: "No theme found in presentation" };
     }
 
-    return { success: true, data };
+    return {
+      success: true,
+      data,
+      presentationFile: loaded.presentationFile,
+      slideSize: presentation.size,
+    };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     return { success: false, error: `Failed to extract theme: ${message}` };

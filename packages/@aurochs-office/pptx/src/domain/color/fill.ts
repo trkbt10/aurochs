@@ -10,7 +10,8 @@
 import type { Color } from "@aurochs-office/drawing-ml/domain/color";
 import type { PatternType } from "@aurochs-office/drawing-ml/domain/fill";
 import type { BlipFill } from "@aurochs-office/drawing-ml/domain/fill";
-import type { Fill, Line } from "./types";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import { resolveColor } from "@aurochs-office/drawing-ml/domain/color-resolution";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { ResourceResolverFn } from "../resource-resolver";
@@ -124,7 +125,7 @@ export type ResolvedFill =
   | ResolvedGradientFill
   | ResolvedImageFill
   | ResolvedPatternFill
-  | { readonly type: "unresolved"; readonly originalType: Fill["type"] };
+  | { readonly type: "unresolved"; readonly originalType: BaseFill["type"] };
 
 /**
  * Resolve a blipFill to an image fill using the provided resource resolver.
@@ -171,7 +172,7 @@ export function resolveBlipFill(fill: BlipFill, resourceResolver?: ResourceResol
  * @param resourceResolver - Optional resource resolver for blipFill resolution
  */
 export function resolveFill(
-  fill: Fill,
+  fill: BaseFill,
   colorContext?: ColorContext,
   resourceResolver?: ResourceResolverFn,
 ): ResolvedFill {
@@ -295,7 +296,7 @@ export type ResolvedLine = {
 /**
  * Resolve a domain Line to format-agnostic representation
  */
-export function resolveLine(line: Line, colorContext?: ColorContext): ResolvedLine {
+export function resolveLine(line: BaseLine, colorContext?: ColorContext): ResolvedLine {
   const fill = resolveFill(line.fill, colorContext);
   const isCustomDash = typeof line.dash !== "string";
   const dashStyle: DashStyle = isCustomDash ? "custom" : line.dash;

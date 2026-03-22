@@ -6,7 +6,7 @@
 
 import type { CSSProperties } from "react";
 import type { Background } from "@aurochs-office/pptx/domain/slide/types";
-import type { Fill } from "@aurochs-office/pptx/domain/color/types";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
 import type { EditorProps } from "@aurochs-ui/ui-components/types";
 import { FieldGroup } from "@aurochs-ui/ui-components/layout";
 import { Toggle } from "@aurochs-ui/ui-components/primitives";
@@ -39,7 +39,7 @@ const containerStyle: CSSProperties = {
  * - Toggle shadeToTitle
  */
 export function BackgroundEditor({ value, onChange, disabled, className, style }: BackgroundEditorProps) {
-  const handleFillChange = (fill: Fill) => {
+  const handleFillChange = (fill: BaseFill) => {
     onChange({ ...value, fill });
   };
 

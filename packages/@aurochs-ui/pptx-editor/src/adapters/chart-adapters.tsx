@@ -7,7 +7,6 @@
 import type { ChartEditorAdapters } from "@aurochs-ui/chart-editor";
 import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
 import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
-import type { Fill, Line } from "@aurochs-office/pptx/domain/color/types";
 import { FieldGroup } from "@aurochs-ui/ui-components/layout";
 import { createNoFill } from "@aurochs-ui/editor-controls/editors";
 import { FillEditor } from "../editors/color";
@@ -16,11 +15,11 @@ import { LineEditor, createDefaultLine } from "../ui/line";
 
 const baseFillTypes = ["noFill", "solidFill", "gradientFill", "patternFill", "groupFill"] as const;
 
-function isBaseFill(fill: Fill): fill is BaseFill {
+function isBaseFill(fill: BaseFill): fill is BaseFill {
   return fill.type !== "blipFill";
 }
 
-function toBaseLine(line: Line): BaseLine {
+function toBaseLine(line: BaseLine): BaseLine {
   if (!isBaseFill(line.fill)) {
     throw new Error("Chart shapeProperties.line.fill must not be blipFill");
   }

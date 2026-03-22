@@ -7,7 +7,7 @@
  */
 
 import { useCallback, useState, type CSSProperties } from "react";
-import type { LucideIcon } from "lucide-react";
+import type { IconComponent } from "@aurochs-ui/ui-components/icons";
 import type { CreationMode } from "./creation-types";
 import { isSameMode } from "./creation-types";
 import { ToolbarButton, TOOLBAR_BUTTON_ICON_SIZE } from "@aurochs-ui/ui-components/primitives/ToolbarButton";
@@ -51,7 +51,7 @@ export type CreationToolbarProps = {
 
 type ToolDefinition = {
   readonly id: string;
-  readonly icon: LucideIcon;
+  readonly icon: IconComponent;
   readonly label: string;
   readonly mode: CreationMode;
 };
@@ -64,7 +64,7 @@ type PopoverOption = {
 
 type PopoverToolDefinition = {
   readonly id: string;
-  readonly icon: LucideIcon;
+  readonly icon: IconComponent;
   readonly label: string;
   readonly defaultMode: CreationMode;
   readonly options: readonly PopoverOption[];

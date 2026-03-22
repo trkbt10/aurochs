@@ -53,9 +53,9 @@ describe("parseObjectDefaults", () => {
     const doc = parseXml(themeXml);
     const result = parseObjectDefaults(doc);
 
-    expect(result.lineDefault?.name).toBe("a:lnDef");
-    expect(result.shapeDefault?.name).toBe("a:spDef");
-    expect(result.textDefault?.name).toBe("a:txDef");
+    expect(result.lineDefault).toBeDefined();
+    expect(result.shapeDefault).toBeDefined();
+    expect(result.textDefault).toBeDefined();
   });
 });
 

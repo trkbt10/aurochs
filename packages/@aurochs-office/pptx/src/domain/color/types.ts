@@ -6,8 +6,6 @@
  */
 
 import type { Brand } from "@aurochs-office/drawing-ml/domain/units";
-import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
-import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 
 // =============================================================================
 // PPTX-specific Color Types
@@ -26,22 +24,6 @@ export type ResolvedColor = Brand<string, "ResolvedColor">;
  * Create a ResolvedColor from a hex string.
  */
 export const color = (value: string): ResolvedColor => value as ResolvedColor;
-
-// =============================================================================
-// PPTX Fill and Line Unions (same as Base types)
-// =============================================================================
-
-/**
- * Union of all fill types for PPTX
- * Uses BaseFill from drawing-ml directly
- */
-export type Fill = BaseFill;
-
-/**
- * Line properties for PPTX
- * Uses BaseLine from drawing-ml directly
- */
-export type Line = BaseLine;
 
 // =============================================================================
 // Color Mapping Types

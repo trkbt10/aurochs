@@ -83,7 +83,6 @@ export type {
   PositionV,
   WrapPolygon,
   WrapText,
-  WrapDistance,
   WrapSquare,
   WrapThrough,
   WrapTight,

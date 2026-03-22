@@ -64,7 +64,6 @@ export {
 
 // Drag preview
 export type {
-  DragPreviewBounds,
   MoveDragPreviewInput,
   ResizeDragPreviewInput,
   RotateDragPreviewInput,

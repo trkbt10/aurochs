@@ -7,7 +7,7 @@ import type { ListData } from "../commands/list";
 import type { ShowData } from "../commands/show";
 import type { ExtractData } from "../commands/extract";
 import type { DocxBuildData } from "@aurochs-builder/docx";
-import type { PatchData } from "../commands/patch";
+import type { DocxDocxPatchData } from "@aurochs-builder/docx";
 import type { VerifyData } from "../commands/verify";
 import type { StylesData } from "../commands/styles";
 import type { NumberingData } from "../commands/numbering";
@@ -153,7 +153,7 @@ export function formatBuildPretty(data: DocxBuildData): string {
 /**
  * Format patch result for pretty display.
  */
-export function formatPatchPretty(data: PatchData): string {
+export function formatPatchPretty(data: DocxPatchData): string {
   const lines = [
     `Source: ${data.sourcePath}`,
     `Output: ${data.outputPath}`,

@@ -4,9 +4,8 @@
 
 import type { ErrorValue } from "../../../domain/cell/types";
 
-export type FormulaErrorCode = ErrorValue;
 
-const ERROR_TYPE_NUMBER_MAP: Record<FormulaErrorCode, number> = {
+const ERROR_TYPE_NUMBER_MAP: Record<ErrorValue, number> = {
   "#NULL!": 1,
   "#DIV/0!": 2,
   "#VALUE!": 3,
@@ -24,17 +23,17 @@ const ERROR_TYPE_NUMBER_MAP: Record<FormulaErrorCode, number> = {
  * semantics; callers can map it back to a cell error value.
  */
 export class FormulaError extends Error {
-  constructor(readonly code: FormulaErrorCode, message?: string) {
+  constructor(readonly code: ErrorValue, message?: string) {
     super(message ?? code);
     this.name = "FormulaError";
   }
 }
 
-export const createFormulaError = (code: FormulaErrorCode, message?: string): FormulaError => {
+export const createFormulaError = (code: ErrorValue, message?: string): FormulaError => {
   return new FormulaError(code, message);
 };
 
-const messagePatterns: Array<{ pattern: RegExp; code: FormulaErrorCode }> = [
+const messagePatterns: Array<{ pattern: RegExp; code: ErrorValue }> = [
   { pattern: /#null!?/iu, code: "#NULL!" },
   { pattern: /#div[^a-z0-9]*0!?/iu, code: "#DIV/0!" },
   { pattern: /#value!?/iu, code: "#VALUE!" },
@@ -62,7 +61,7 @@ const normaliseMessage = (error: unknown): string => {
   return String(error).trim();
 };
 
-export const getErrorCodeFromError = (error: unknown): FormulaErrorCode => {
+export const getErrorCodeFromError = (error: unknown): ErrorValue => {
   if (error instanceof FormulaError) {
     return error.code;
   }
@@ -81,7 +80,7 @@ export const getErrorCodeFromError = (error: unknown): FormulaErrorCode => {
   return "#VALUE!";
 };
 
-export const getErrorTypeNumber = (code: FormulaErrorCode): number => {
+export const getErrorTypeNumber = (code: ErrorValue): number => {
   return ERROR_TYPE_NUMBER_MAP[code];
 };
 

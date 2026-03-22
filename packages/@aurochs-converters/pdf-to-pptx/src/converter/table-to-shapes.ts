@@ -8,7 +8,8 @@ import type { Table, TableCell, TableRow } from "@aurochs-office/pptx/domain/tab
 import type { Paragraph, TextBody, TextRun } from "@aurochs-office/pptx/domain/text";
 import type { Pixels, Points } from "@aurochs-office/drawing-ml/domain/units";
 import { deg, pt, px } from "@aurochs-office/drawing-ml/domain/units";
-import type { Fill, Line } from "@aurochs-office/pptx/domain/color/types";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import type { ConversionContext } from "./transform-converter";
 import { convertBBox, convertPoint, convertSize } from "./transform-converter";
 import type { GroupedText } from "@aurochs/pdf/services/block-segmentation";
@@ -30,11 +31,11 @@ export type TableDecorationAnalysis = {
   /** Page path indices that are replaced by table borders/fills. */
   readonly consumedPathIndices: readonly number[];
   /** Vertical boundary styles (length = colCount + 1) */
-  readonly verticalBorders: readonly (Line | undefined)[];
+  readonly verticalBorders: readonly (BaseLine | undefined)[];
   /** Horizontal boundary styles (length = rowCount + 1) */
-  readonly horizontalBorders: readonly (Line | undefined)[];
+  readonly horizontalBorders: readonly (BaseLine | undefined)[];
   /** Explicit cell fills keyed by `${rowIdx},${colIdx}` */
-  readonly cellFills: ReadonlyMap<string, Fill>;
+  readonly cellFills: ReadonlyMap<string, BaseFill>;
 };
 
 type ComputeCellBordersArgs = {
@@ -55,7 +56,7 @@ function computeCellBorders({
   colSpan,
   rowCount,
   colCount,
-}: ComputeCellBordersArgs): { top?: Line; left?: Line; right?: Line; bottom?: Line } | undefined {
+}: ComputeCellBordersArgs): { top?: BaseLine; left?: BaseLine; right?: BaseLine; bottom?: BaseLine } | undefined {
   if (!decoration) {
     return undefined;
   }
@@ -266,7 +267,7 @@ function nearestIndex(xs: readonly number[], value: number): { index: number; di
   return { index: bestIdx, dist: bestDist };
 }
 
-function isNearWhiteFill(fill: Fill): boolean {
+function isNearWhiteFill(fill: BaseFill): boolean {
   if (fill.type !== "solidFill") {
     return false;
   }
@@ -278,7 +279,7 @@ function isNearWhiteFill(fill: Fill): boolean {
   return v === "FFFFFF" || v === rgbToHex(255, 255, 255);
 }
 
-function lineFromFill(fill: Fill, thicknessPdf: number, context: ConversionContext): Line {
+function lineFromFill(fill: BaseFill, thicknessPdf: number, context: ConversionContext): BaseLine {
   const widthScale = Math.min(context.scaleX, context.scaleY);
   const rawPx = thicknessPdf * widthScale;
   return {
@@ -322,13 +323,13 @@ export function analyzeTableDecorationFromPaths(
     y1: inferred.bounds.y + inferred.bounds.height + pad,
   };
 
-  const horizontalBorders: Array<Line | undefined> = Array.from({ length: rowCount + 1 }, () => undefined);
-  const verticalBorders: Array<Line | undefined> = Array.from({ length: colCount + 1 }, () => undefined);
+  const horizontalBorders: Array<BaseLine | undefined> = Array.from({ length: rowCount + 1 }, () => undefined);
+  const verticalBorders: Array<BaseLine | undefined> = Array.from({ length: colCount + 1 }, () => undefined);
 
   type PathStats = { matched: number; matchedArea: number; total: number; totalArea: number };
   const pathStats = new Map<number, PathStats>();
 
-  const cellFills = new Map<string, Fill>();
+  const cellFills = new Map<string, BaseFill>();
   const cellFillScore = new Map<string, number>();
 
   // Allow thick rules (e.g. double borders between adjacent tables), but still
@@ -349,7 +350,7 @@ export function analyzeTableDecorationFromPaths(
   // especially for dense grids. Clamp border widths to a minimum in slide pixels.
   const minBorderPx = 0.35;
 
-  const normalizeBorderLine = (ln: Line): Line => {
+  const normalizeBorderLine = (ln: BaseLine): BaseLine => {
     const w = ln.width as number;
     if (!Number.isFinite(w) || w <= 0) {
       return { ...ln, width: px(minBorderPx) };
@@ -530,7 +531,7 @@ export function analyzeTableDecorationFromPaths(
       };
       const segmentBoxes = resolveSegmentBoxes();
 
-      const resolveRuleLineForSegments = (): Line | undefined => {
+      const resolveRuleLineForSegments = (): BaseLine | undefined => {
         if (line) {
           return normalizeBorderLine(line);
         }
@@ -578,7 +579,7 @@ export function analyzeTableDecorationFromPaths(
           }
         }
       } else if (isHRule0 || isVRule0) {
-        const resolveRuleLine = (): Line | undefined => {
+        const resolveRuleLine = (): BaseLine | undefined => {
           if (line) {
             return normalizeBorderLine(line);
           }
@@ -1056,7 +1057,7 @@ function buildTableFromInference(
     ci: number;
     rowSpan: number;
     colSpan: number;
-  }): Fill => {
+  }): BaseFill => {
     if (!decoration) {
       return noFill();
     }
@@ -1112,13 +1113,13 @@ function buildTableFromInference(
 
       const borders = computeCellBorders({ decoration, ri, ci, rowSpan, colSpan, rowCount, colCount });
 
-      const resolveFillForCell = (): Fill => {
+      const resolveFillForCell = (): BaseFill => {
         if (seg) {
           return resolveMergedCellFill({ ri, ci, rowSpan, colSpan });
         }
         return decoration?.cellFills.get(`${ri},${ci}`) ?? noFill();
       };
-      const fill: Fill = resolveFillForCell();
+      const fill: BaseFill = resolveFillForCell();
 
       if (!seg) {
         cells.push({

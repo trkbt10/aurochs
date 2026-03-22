@@ -1,14 +1,14 @@
 /**
  * @file PPTX part reader
  *
- * Reads OPC part entries from a PresentationFile and returns
+ * Reads OPC part entries from a PackageFile and returns
  * parsed, Markup Compatibility-processed XmlDocuments.
  *
  * @see ECMA-376 Part 2 (Open Packaging Conventions)
  * @see ECMA-376 Part 3, Section 10 (Markup Compatibility)
  */
 
-import type { PresentationFile } from "../domain";
+import type { PackageFile } from "@aurochs-office/opc";
 import type { XmlDocument } from "@aurochs/xml";
 import { stripCdata, parseXml, applyMarkupCompatibility, type MarkupCompatibilityOptions } from "@aurochs/xml";
 
@@ -36,7 +36,7 @@ function processContent(text: string, appVersion: number, isSlideContent: boolea
 }
 
 /**
- * Read and parse an OPC part from a PresentationFile.
+ * Read and parse an OPC part from a PackageFile.
  *
  * Pipeline: file.readText → CDATA strip (if legacy) → parseXml → applyMarkupCompatibility
  *
@@ -46,7 +46,7 @@ function processContent(text: string, appVersion: number, isSlideContent: boolea
  * @returns Parsed and MC-processed XmlDocument, or null if the part doesn't exist
  */
 export function readPart(
-  file: PresentationFile,
+  file: PackageFile,
   path: string,
   options?: { appVersion?: number; isSlideContent?: boolean },
 ): XmlDocument | null {

@@ -57,7 +57,6 @@ export type {
   ParseContext,
   PlaceholderContext,
   PlaceholderTables,
-  ResourceResolver,
   TextStyleContext,
 } from "./context";
 

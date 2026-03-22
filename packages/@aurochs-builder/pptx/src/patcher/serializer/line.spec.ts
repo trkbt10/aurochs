@@ -4,13 +4,13 @@
 
 import { getChild, getChildren } from "@aurochs/xml";
 import { deg, pct, px } from "@aurochs-office/drawing-ml/domain/units";
-import type { Line } from "@aurochs-office/pptx/domain";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import { parseLine } from "@aurochs-office/pptx/parser/graphics/line-parser";
 import { serializeLine } from "./line";
 
 describe("serializeLine", () => {
   it("serializes width and fill", () => {
-    const line: Line = {
+    const line: BaseLine = {
       width: px(2),
       cap: "flat",
       compound: "sng",
@@ -27,7 +27,7 @@ describe("serializeLine", () => {
   });
 
   it("serializes dash style (preset)", () => {
-    const line: Line = {
+    const line: BaseLine = {
       width: px(1),
       cap: "flat",
       compound: "sng",
@@ -42,7 +42,7 @@ describe("serializeLine", () => {
   });
 
   it("serializes cap style", () => {
-    const line: Line = {
+    const line: BaseLine = {
       width: px(1),
       cap: "square",
       compound: "sng",
@@ -57,7 +57,7 @@ describe("serializeLine", () => {
   });
 
   it("serializes compound type", () => {
-    const line: Line = {
+    const line: BaseLine = {
       width: px(1),
       cap: "flat",
       compound: "dbl",
@@ -72,7 +72,7 @@ describe("serializeLine", () => {
   });
 
   it("serializes join style and miter limit", () => {
-    const line: Line = {
+    const line: BaseLine = {
       width: px(1),
       cap: "flat",
       compound: "sng",
@@ -88,7 +88,7 @@ describe("serializeLine", () => {
   });
 
   it("round-trips through parser", () => {
-    const line: Line = {
+    const line: BaseLine = {
       width: px(2),
       cap: "round",
       compound: "dbl",
@@ -104,7 +104,7 @@ describe("serializeLine", () => {
   });
 
   it("serializes cap round as rnd", () => {
-    const line: Line = {
+    const line: BaseLine = {
       width: px(1),
       cap: "round",
       compound: "sng",
@@ -119,7 +119,7 @@ describe("serializeLine", () => {
   });
 
   it("serializes custom dash pattern", () => {
-    const line: Line = {
+    const line: BaseLine = {
       width: px(1),
       cap: "flat",
       compound: "sng",
@@ -146,7 +146,7 @@ describe("serializeLine", () => {
   });
 
   it("serializes headEnd", () => {
-    const line: Line = {
+    const line: BaseLine = {
       width: px(1),
       cap: "flat",
       compound: "sng",
@@ -166,7 +166,7 @@ describe("serializeLine", () => {
   });
 
   it("serializes tailEnd", () => {
-    const line: Line = {
+    const line: BaseLine = {
       width: px(1),
       cap: "flat",
       compound: "sng",
@@ -186,7 +186,7 @@ describe("serializeLine", () => {
   });
 
   it("serializes both headEnd and tailEnd", () => {
-    const line: Line = {
+    const line: BaseLine = {
       width: px(1),
       cap: "flat",
       compound: "sng",
@@ -208,7 +208,7 @@ describe("serializeLine", () => {
   });
 
   it("serializes join bevel", () => {
-    const line: Line = {
+    const line: BaseLine = {
       width: px(1),
       cap: "flat",
       compound: "sng",
@@ -225,7 +225,7 @@ describe("serializeLine", () => {
   });
 
   it("serializes join miter without miterLimit", () => {
-    const line: Line = {
+    const line: BaseLine = {
       width: px(1),
       cap: "flat",
       compound: "sng",
@@ -242,7 +242,7 @@ describe("serializeLine", () => {
   });
 
   it("serializes line with noFill", () => {
-    const line: Line = {
+    const line: BaseLine = {
       width: px(1),
       cap: "flat",
       compound: "sng",
@@ -258,7 +258,7 @@ describe("serializeLine", () => {
   });
 
   it("serializes line with gradient fill", () => {
-    const line: Line = {
+    const line: BaseLine = {
       width: px(1),
       cap: "flat",
       compound: "sng",

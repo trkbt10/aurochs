@@ -7,7 +7,7 @@
 // @vitest-environment jsdom
 
 import type { SolidFill, GradientFill, NoFill, GradientStop } from "@aurochs-office/drawing-ml/domain/fill";
-import type { Fill } from "@aurochs-office/pptx/domain/color/types";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
 import { pct, deg } from "@aurochs-office/drawing-ml/domain/units";
 import { render, fireEvent } from "@testing-library/react";
 import { FillEditor } from "./FillEditor";
@@ -88,7 +88,7 @@ describe("FillEditor: Fill type handling", () => {
 
   describe("Type discrimination", () => {
     it("correctly identifies solid fill", () => {
-      const fill: Fill = {
+      const fill: BaseFill = {
         type: "solidFill",
         color: { spec: { type: "srgb", value: "000000" } },
       };
@@ -99,7 +99,7 @@ describe("FillEditor: Fill type handling", () => {
     });
 
     it("correctly identifies gradient fill", () => {
-      const fill: Fill = {
+      const fill: BaseFill = {
         type: "gradientFill",
         stops: [],
         rotWithShape: false,
@@ -111,7 +111,7 @@ describe("FillEditor: Fill type handling", () => {
     });
 
     it("correctly identifies no fill", () => {
-      const fill: Fill = {
+      const fill: BaseFill = {
         type: "noFill",
       };
 
@@ -121,8 +121,8 @@ describe("FillEditor: Fill type handling", () => {
 
   describe("FillEditor interactions", () => {
     it("updates fill type from the selector", () => {
-      const state: { lastFill: Fill | null } = { lastFill: null };
-      const handleChange = (fill: Fill) => {
+      const state: { lastFill: BaseFill | null } = { lastFill: null };
+      const handleChange = (fill: BaseFill) => {
         state.lastFill = fill;
       };
 

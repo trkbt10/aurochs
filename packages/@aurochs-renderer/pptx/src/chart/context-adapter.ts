@@ -5,7 +5,6 @@
 import type { ChartRenderContext, FillResolver, ResolvedFill, ResolvedTextStyle } from "@aurochs-renderer/chart/svg";
 import type { GenericTextBody } from "@aurochs-renderer/chart/svg";
 import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
-import type { Fill } from "@aurochs-office/pptx/domain/color/types";
 import { resolveColor } from "@aurochs-office/drawing-ml/domain/color-resolution";
 import { resolveThemeFont } from "@aurochs-office/ooxml/domain/font-scheme";
 import { resolveFill } from "@aurochs-office/pptx/domain/color/fill";
@@ -41,7 +40,7 @@ function resolveFillForChartRender(fill: BaseFill, ctx: CoreRenderContext): Reso
   if (fill.type === "blipFill") {
     return { type: "unresolved", originalType: "blipFill" };
   }
-  const resolved = resolveFill(fill as Fill, ctx.colorContext, ctx.resources.resolve);
+  const resolved = resolveFill(fill as BaseFill, ctx.colorContext, ctx.resources.resolve);
   switch (resolved.type) {
     case "none":
       return { type: "none" };

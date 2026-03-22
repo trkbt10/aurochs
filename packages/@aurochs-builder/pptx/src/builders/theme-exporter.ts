@@ -30,8 +30,16 @@
 
 import { SCHEME_COLOR_NAMES, type SchemeColorName, type Color } from "@aurochs-office/drawing-ml/domain/color";
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
-import type { Theme, CustomColor, ExtraColorScheme, FormatScheme, ObjectDefaults, RawMasterTextStyles } from "@aurochs-office/pptx/domain/theme/types";
-import { DEFAULT_COLOR_MAPPING, type ColorMapping } from "@aurochs-office/pptx/domain/color/types";
+import type { Theme, CustomColor, ExtraColorScheme, FormatScheme, ObjectDefaults, ObjectDefaultProperties } from "@aurochs-office/pptx/domain/theme/types";
+import type { MasterTextStyles } from "@aurochs-office/pptx/domain/text-style";
+import type { TextStyleLevels, TextLevelStyle } from "@aurochs-office/pptx/domain/text-style";
+import { TEXT_STYLE_LEVEL_KEYS } from "@aurochs-office/pptx/domain/text-style";
+import { DEFAULT_COLOR_MAPPING, type ColorMapping, type ColorMapOverride } from "@aurochs-office/pptx/domain/color/types";
+import type { Background, SlideLayoutType } from "@aurochs-office/pptx/domain";
+import type { SlideTransition } from "@aurochs-office/pptx/domain/transition";
+import { serializeFill } from "../patcher/serializer/fill";
+import { serializeLine } from "../patcher/serializer/line";
+import { serializeBodyProperties, serializeParagraphProperties, serializeRunProperties } from "../patcher/serializer/text-properties";
 import { CONTENT_TYPES } from "@aurochs-office/pptx/domain";
 import { serializeColor } from "../patcher/serializer/color";
 import {
@@ -80,9 +88,29 @@ export type ThemeExportOptions = {
   /** Object defaults (a:objectDefaults) §20.1.6.7 — XmlElement refs preserved from parser */
   readonly objectDefaults?: ObjectDefaults;
   /** Master text styles (p:txStyles) §19.3.1.51 — XmlElement refs preserved from parser */
-  readonly masterTextStyles?: RawMasterTextStyles;
+  /** Master text styles (p:txStyles) §19.3.1.51 — domain typed (SoT) */
+  readonly masterTextStyles?: MasterTextStyles;
   /** Master background (p:bg) §19.3.1.2 — raw XmlElement preserved from parser */
   readonly masterBackground?: XmlElement;
+  /** Slide layouts with per-layout overrides (§19.3.1.39). If omitted, a single blank layout is generated. */
+  readonly layouts?: readonly LayoutExportEntry[];
+  /** Slide size in pixels (§19.2.1.36 p:sldSz). If omitted, uses standard 16:9 (960×540px). */
+  readonly slideSize?: { readonly width: number; readonly height: number };
+};
+
+/**
+ * Per-layout export data (ECMA-376 §19.3.1.39 p:sldLayout).
+ */
+export type LayoutExportEntry = {
+  readonly name: string;
+  readonly type: SlideLayoutType;
+  readonly matchingName?: string;
+  readonly showMasterShapes?: boolean;
+  readonly preserve?: boolean;
+  readonly userDrawn?: boolean;
+  readonly background?: Background;
+  readonly colorMapOverride?: ColorMapOverride;
+  readonly transition?: SlideTransition;
 };
 
 // =============================================================================
@@ -103,10 +131,13 @@ const PPTX_XMLNS = {
 const SLIDE_MASTER_ID = "2147483648";
 
 /** Default slide size (standard 16:9) in EMUs */
-const DEFAULT_SLIDE_SIZE = {
+const DEFAULT_SLIDE_SIZE_EMU = {
   cx: "9144000", // 10 inches
   cy: "6858000", // 7.5 inches
 };
+
+/** EMUs per inch (ECMA-376 §20.1.10.16) */
+const PX_TO_EMU = 914400 / 96;
 
 // =============================================================================
 // OPC Part Builders
@@ -120,15 +151,17 @@ function buildRootRels(): XmlDocument {
   return { children: [serializeRelationships(rels)] };
 }
 
-function buildContentTypes(): XmlDocument {
+function buildContentTypes(layoutCount: number): XmlDocument {
   const entries: ContentTypeEntry[] = [
     ...STANDARD_CONTENT_TYPE_DEFAULTS,
     { kind: "override", partName: "/ppt/presentation.xml", contentType: CONTENT_TYPES.PRESENTATION },
     { kind: "override", partName: "/ppt/slides/slide1.xml", contentType: CONTENT_TYPES.SLIDE },
     { kind: "override", partName: "/ppt/slideMasters/slideMaster1.xml", contentType: CONTENT_TYPES.SLIDE_MASTER },
-    { kind: "override", partName: "/ppt/slideLayouts/slideLayout1.xml", contentType: CONTENT_TYPES.SLIDE_LAYOUT },
     { kind: "override", partName: "/ppt/theme/theme1.xml", contentType: CONTENT_TYPES.THEME },
   ];
+  for (let i = 1; i <= layoutCount; i++) {
+    entries.push({ kind: "override", partName: `/ppt/slideLayouts/slideLayout${i}.xml`, contentType: CONTENT_TYPES.SLIDE_LAYOUT });
+  }
   return { children: [serializeContentTypes(entries)] };
 }
 
@@ -150,11 +183,12 @@ function buildPresentationRels(): XmlDocument {
   return { children: [serializeRelationships(rels)] };
 }
 
-function buildMasterRels(): XmlDocument {
-  const rels: OpcRelationship[] = [
-    { id: "rId1", type: RELATIONSHIP_TYPES.SLIDE_LAYOUT, target: "../slideLayouts/slideLayout1.xml" },
-    { id: "rId2", type: RELATIONSHIP_TYPES.THEME, target: "../theme/theme1.xml" },
-  ];
+function buildMasterRels(layoutCount: number): XmlDocument {
+  const rels: OpcRelationship[] = [];
+  for (let i = 1; i <= layoutCount; i++) {
+    rels.push({ id: `rId${i}`, type: RELATIONSHIP_TYPES.SLIDE_LAYOUT, target: `../slideLayouts/slideLayout${i}.xml` });
+  }
+  rels.push({ id: `rId${layoutCount + 1}`, type: RELATIONSHIP_TYPES.THEME, target: "../theme/theme1.xml" });
   return { children: [serializeRelationships(rels)] };
 }
 
@@ -195,7 +229,15 @@ function buildNvGrpSpPr(): XmlElement {
   ]);
 }
 
-function buildPresentation(): XmlDocument {
+function slideSizeToEmu(slideSize?: { readonly width: number; readonly height: number }): Record<string, string> {
+  if (!slideSize) { return DEFAULT_SLIDE_SIZE_EMU; }
+  return {
+    cx: String(Math.round(slideSize.width * PX_TO_EMU)),
+    cy: String(Math.round(slideSize.height * PX_TO_EMU)),
+  };
+}
+
+function buildPresentation(slideSize?: { readonly width: number; readonly height: number }): XmlDocument {
   return {
     children: [
       createElement("p:presentation", PPTX_XMLNS, [
@@ -205,7 +247,7 @@ function buildPresentation(): XmlDocument {
         createElement("p:sldMasterIdLst", {}, [
           createElement("p:sldMasterId", { id: SLIDE_MASTER_ID, "r:id": "rId1" }),
         ]),
-        createElement("p:sldSz", DEFAULT_SLIDE_SIZE),
+        createElement("p:sldSz", slideSizeToEmu(slideSize)),
         createElement("p:defaultTextStyle", {}, [
           createElement("a:defPPr", {}, [createElement("a:defRPr", { sz: "1800" })]),
         ]),
@@ -214,7 +256,7 @@ function buildPresentation(): XmlDocument {
   };
 }
 
-function buildSlideMaster(options: ThemeExportOptions): XmlDocument {
+function buildSlideMaster(options: ThemeExportOptions, layoutCount: number): XmlDocument {
   const clrMap = options.colorMapping ?? DEFAULT_COLOR_MAPPING;
 
   // p:cSld children: optional p:bg, then p:spTree
@@ -229,13 +271,13 @@ function buildSlideMaster(options: ThemeExportOptions): XmlDocument {
     createElement("p:spTree", {}, [buildNvGrpSpPr(), createElement("p:grpSpPr")]),
   );
 
-  // p:txStyles §19.3.1.51
+  // p:txStyles §19.3.1.51 — serialize domain MasterTextStyles to XML
   const txStylesChildren: XmlElement[] = [];
   const mts = options.masterTextStyles;
-  txStylesChildren.push(mts?.titleStyle ?? createElement("p:titleStyle"));
-  txStylesChildren.push(mts?.bodyStyle ?? createElement("p:bodyStyle"));
+  txStylesChildren.push(mts?.titleStyle ? serializeTextStyleLevelsElement("p:titleStyle", mts.titleStyle) : createElement("p:titleStyle"));
+  txStylesChildren.push(mts?.bodyStyle ? serializeTextStyleLevelsElement("p:bodyStyle", mts.bodyStyle) : createElement("p:bodyStyle"));
   if (mts?.otherStyle) {
-    txStylesChildren.push(mts.otherStyle);
+    txStylesChildren.push(serializeTextStyleLevelsElement("p:otherStyle", mts.otherStyle));
   }
 
   return {
@@ -243,26 +285,51 @@ function buildSlideMaster(options: ThemeExportOptions): XmlDocument {
       createElement("p:sldMaster", PPTX_XMLNS, [
         createElement("p:cSld", {}, cSldChildren),
         createElement("p:clrMap", clrMap as Record<string, string>),
-        createElement("p:sldLayoutIdLst", {}, [
-          createElement("p:sldLayoutId", { id: "2147483649", "r:id": "rId1" }),
-        ]),
+        createElement("p:sldLayoutIdLst", {},
+          Array.from({ length: layoutCount }, (_, i) =>
+            createElement("p:sldLayoutId", { id: String(2147483649 + i), "r:id": `rId${i + 1}` }),
+          ),
+        ),
         createElement("p:txStyles", {}, txStylesChildren),
       ]),
     ],
   };
 }
 
-function buildBlankLayout(): XmlDocument {
-  return {
-    children: [
-      createElement("p:sldLayout", { ...PPTX_XMLNS, type: "blank", preserve: "1" }, [
-        createElement("p:cSld", { name: "Blank" }, [
-          createElement("p:spTree", {}, [buildNvGrpSpPr(), buildEmptyGroupSpPr()]),
-        ]),
-        createElement("p:clrMapOvr", {}, [createElement("a:masterClrMapping")]),
-      ]),
-    ],
-  };
+/** Build a slide layout document from export data (ECMA-376 §19.3.1.39). */
+function buildLayoutDocument(entry: LayoutExportEntry): XmlDocument {
+  const attrs: Record<string, string> = { ...PPTX_XMLNS, type: entry.type };
+  if (entry.matchingName) { attrs.matchingName = entry.matchingName; }
+  if (entry.showMasterShapes === false) { attrs.showMasterSp = "0"; }
+  if (entry.preserve) { attrs.preserve = "1"; }
+  if (entry.userDrawn) { attrs.userDrawn = "1"; }
+
+  // p:cSld children: optional p:bg, then p:spTree
+  const cSldChildren: XmlElement[] = [];
+  if (entry.background) {
+    const fillXml = serializeFill(entry.background.fill);
+    const bgPrAttrs: Record<string, string> = {};
+    if (entry.background.shadeToTitle) { bgPrAttrs.shadeToTitle = "1"; }
+    cSldChildren.push(createElement("p:bg", {}, [createElement("p:bgPr", bgPrAttrs, [fillXml])]));
+  }
+  cSldChildren.push(createElement("p:spTree", {}, [buildNvGrpSpPr(), buildEmptyGroupSpPr()]));
+
+  const sldLayoutChildren: XmlElement[] = [
+    createElement("p:cSld", { name: entry.name }, cSldChildren),
+  ];
+
+  // p:clrMapOvr §19.3.1.7
+  if (entry.colorMapOverride?.type === "override") {
+    sldLayoutChildren.push(
+      createElement("p:clrMapOvr", {}, [createElement("a:overrideClrMapping", entry.colorMapOverride.mappings as Record<string, string>)]),
+    );
+  } else {
+    sldLayoutChildren.push(
+      createElement("p:clrMapOvr", {}, [createElement("a:masterClrMapping")]),
+    );
+  }
+
+  return { children: [createElement("p:sldLayout", attrs, sldLayoutChildren)] };
 }
 
 function buildBlankSlide(): XmlDocument {
@@ -345,13 +412,72 @@ export function buildThemeXml(options: BuildThemeXmlOptions): XmlDocument {
   };
 }
 
+/** Serialize ObjectDefaultProperties to a:spDef/a:lnDef/a:txDef element. */
+function serializeObjectDefaultElement(name: string, props: ObjectDefaultProperties): XmlElement {
+  const children: XmlElement[] = [];
+  if (props.shapeProperties) {
+    const spPrChildren: XmlElement[] = [];
+    if (props.shapeProperties.fill) { spPrChildren.push(serializeFill(props.shapeProperties.fill)); }
+    if (props.shapeProperties.line) { spPrChildren.push(serializeLine(props.shapeProperties.line)); }
+    children.push(createElement("a:spPr", {}, spPrChildren));
+  }
+  if (props.bodyProperties) { children.push(serializeBodyProperties(props.bodyProperties)); }
+  if (props.textStyleLevels) { children.push(serializeTextStyleLevelsElement("a:lstStyle", props.textStyleLevels)); }
+  return createElement(name, {}, children);
+}
+
 /** Build a:objectDefaults children from domain ObjectDefaults. */
 function buildObjectDefaultsChildren(od: ObjectDefaults): XmlElement[] {
   const children: XmlElement[] = [];
-  if (od.shapeDefault) { children.push(od.shapeDefault); }
-  if (od.lineDefault) { children.push(od.lineDefault); }
-  if (od.textDefault) { children.push(od.textDefault); }
+  if (od.shapeDefault) { children.push(serializeObjectDefaultElement("a:spDef", od.shapeDefault)); }
+  if (od.lineDefault) { children.push(serializeObjectDefaultElement("a:lnDef", od.lineDefault)); }
+  if (od.textDefault) { children.push(serializeObjectDefaultElement("a:txDef", od.textDefault)); }
   return children;
+}
+
+// =============================================================================
+// Text Style Levels Serialization
+// =============================================================================
+
+const LEVEL_ELEMENT_NAMES = [
+  "a:defPPr", "a:lvl1pPr", "a:lvl2pPr", "a:lvl3pPr", "a:lvl4pPr",
+  "a:lvl5pPr", "a:lvl6pPr", "a:lvl7pPr", "a:lvl8pPr", "a:lvl9pPr",
+] as const;
+
+const LEVEL_KEYS = TEXT_STYLE_LEVEL_KEYS;
+
+/** Serialize TextLevelStyle to a paragraph-level XmlElement (a:lvlNpPr). */
+function serializeTextLevelStyleElement(name: string, level: TextLevelStyle): XmlElement {
+  const pPr = level.paragraphProperties ? serializeParagraphProperties(level.paragraphProperties) : undefined;
+  const defRPr = level.defaultRunProperties ? serializeRunProperties(level.defaultRunProperties) : undefined;
+
+  // Start from serialized pPr (has all paragraph attributes/children), add defRPr
+  if (pPr) {
+    const children = [...pPr.children];
+    if (defRPr) {
+      children.push({ ...defRPr, name: "a:defRPr" });
+    }
+    return { ...pPr, name, children };
+  }
+
+  // No paragraph properties, just defRPr
+  if (defRPr) {
+    return createElement(name, {}, [{ ...defRPr, name: "a:defRPr" }]);
+  }
+
+  return createElement(name);
+}
+
+/** Serialize TextStyleLevels to a named container element (p:titleStyle, a:lstStyle, etc.). */
+function serializeTextStyleLevelsElement(containerName: string, levels: TextStyleLevels): XmlElement {
+  const children: XmlElement[] = [];
+  for (let i = 0; i < LEVEL_KEYS.length; i++) {
+    const level = levels[LEVEL_KEYS[i]];
+    if (level) {
+      children.push(serializeTextLevelStyleElement(LEVEL_ELEMENT_NAMES[i], level));
+    }
+  }
+  return createElement(containerName, {}, children);
 }
 
 /** Adapter: build theme XML from ThemeExportOptions (delegates to buildThemeXml). */
@@ -529,17 +655,23 @@ function writeXml(pkg: ReturnType<typeof createEmptyZipPackage>, path: string, d
  */
 export async function exportThemeAsPotx(options: ThemeExportOptions): Promise<Blob> {
   const pkg = createEmptyZipPackage();
+  const layouts = options.layouts ?? [{ name: "Blank", type: "blank" as SlideLayoutType, preserve: true }];
+  const layoutCount = layouts.length;
 
   writeXml(pkg, "_rels/.rels", buildRootRels());
-  writeXml(pkg, "[Content_Types].xml", buildContentTypes());
+  writeXml(pkg, "[Content_Types].xml", buildContentTypes(layoutCount));
   writeXml(pkg, "docProps/app.xml", buildAppProperties());
-  writeXml(pkg, "ppt/presentation.xml", buildPresentation());
+  writeXml(pkg, "ppt/presentation.xml", buildPresentation(options.slideSize));
   writeXml(pkg, "ppt/_rels/presentation.xml.rels", buildPresentationRels());
   writeXml(pkg, "ppt/theme/theme1.xml", buildThemeFromExportOptions(options));
-  writeXml(pkg, "ppt/slideMasters/slideMaster1.xml", buildSlideMaster(options));
-  writeXml(pkg, "ppt/slideMasters/_rels/slideMaster1.xml.rels", buildMasterRels());
-  writeXml(pkg, "ppt/slideLayouts/slideLayout1.xml", buildBlankLayout());
-  writeXml(pkg, "ppt/slideLayouts/_rels/slideLayout1.xml.rels", buildLayoutRels());
+  writeXml(pkg, "ppt/slideMasters/slideMaster1.xml", buildSlideMaster(options, layoutCount));
+  writeXml(pkg, "ppt/slideMasters/_rels/slideMaster1.xml.rels", buildMasterRels(layoutCount));
+
+  for (let i = 0; i < layoutCount; i++) {
+    writeXml(pkg, `ppt/slideLayouts/slideLayout${i + 1}.xml`, buildLayoutDocument(layouts[i]));
+    writeXml(pkg, `ppt/slideLayouts/_rels/slideLayout${i + 1}.xml.rels`, buildLayoutRels());
+  }
+
   writeXml(pkg, "ppt/slides/slide1.xml", buildBlankSlide());
   writeXml(pkg, "ppt/slides/_rels/slide1.xml.rels", buildSlideRels());
 

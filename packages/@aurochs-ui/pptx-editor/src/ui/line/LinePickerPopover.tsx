@@ -9,13 +9,13 @@ import type { ReactNode } from "react";
 import { ToolbarPopoverButton } from "@aurochs-ui/editor-controls/toolbar";
 import { LineSwatch, type LineSwatchSize } from "./LineSwatch";
 import { LineEditor } from "./LineEditor";
-import type { Line } from "@aurochs-office/pptx/domain/color/types";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 
 export type LinePickerPopoverProps = {
   /** Current line value */
-  readonly value: Line;
+  readonly value: BaseLine;
   /** Called when line changes */
-  readonly onChange: (line: Line) => void;
+  readonly onChange: (line: BaseLine) => void;
   /** Size of the trigger swatch */
   readonly size?: LineSwatchSize;
   /** Disable interaction */

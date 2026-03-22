@@ -5,7 +5,8 @@
  * as SVG path elements.
  */
 
-import type { Fill, Line } from "@aurochs-office/pptx/domain";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import type { Geometry } from "@aurochs-office/drawing-ml/domain/geometry";
 import { renderGeometryData } from "@aurochs-renderer/drawing-ml/svg";
 import { useFillWithDefs, type SvgFillProps } from "./Fill";
@@ -26,9 +27,9 @@ type GeometryPathProps = {
   /** Shape height in pixels */
   readonly height: number;
   /** Fill style */
-  readonly fill?: Fill;
+  readonly fill?: BaseFill;
   /** Line (stroke) style */
-  readonly line?: Line;
+  readonly line?: BaseLine;
   /** Additional className */
   readonly className?: string;
 };
@@ -42,9 +43,9 @@ type RectPathProps = {
   /** Shape height in pixels */
   readonly height: number;
   /** Fill style */
-  readonly fill?: Fill;
+  readonly fill?: BaseFill;
   /** Line (stroke) style */
-  readonly line?: Line;
+  readonly line?: BaseLine;
   /** Additional className */
   readonly className?: string;
 };

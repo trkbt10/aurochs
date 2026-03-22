@@ -51,8 +51,8 @@ import type {
   SlideTransitionSpec,
   AnimationSpec,
   // Comment / Notes types
-  CommentSpec,
-  NotesSpec,
+  SimpleCommentSpec,
+  SimpleNotesSpec,
   // SmartArt types
   DiagramNodeTextUpdateSpec,
   DiagramNodeAddSpec,
@@ -444,11 +444,11 @@ export const COMMENT_SPEC_FIELDS = {
   text: "addComments",
   x: "addComments",
   y: "addComments",
-} satisfies Record<keyof CommentSpec, string>;
+} satisfies Record<keyof SimpleCommentSpec, string>;
 
 export const NOTES_SPEC_FIELDS = {
   text: "Speaker notes",
-} satisfies Record<keyof NotesSpec, string>;
+} satisfies Record<keyof SimpleNotesSpec, string>;
 
 // ---------------------------------------------------------------------------
 // SmartArt / Diagram types (union variants)
@@ -712,8 +712,8 @@ export const ALL_REGISTRIES = [
   ["SlideTransitionSpec", SLIDE_TRANSITION_SPEC_FIELDS],
   ["AnimationSpec", ANIMATION_SPEC_FIELDS],
   // Comment / Notes
-  ["CommentSpec", COMMENT_SPEC_FIELDS],
-  ["NotesSpec", NOTES_SPEC_FIELDS],
+  ["SimpleCommentSpec", COMMENT_SPEC_FIELDS],
+  ["SimpleNotesSpec", NOTES_SPEC_FIELDS],
   // SmartArt / Diagram variants
   ["DiagramNodeTextUpdateSpec", DIAGRAM_NODE_TEXT_UPDATE_SPEC_FIELDS],
   ["DiagramNodeAddSpec", DIAGRAM_NODE_ADD_SPEC_FIELDS],

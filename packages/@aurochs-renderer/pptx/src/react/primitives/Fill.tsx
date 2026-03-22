@@ -6,7 +6,7 @@
  */
 
 import type { ReactNode } from "react";
-import type { Fill } from "@aurochs-office/pptx/domain";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
 import {
   resolveFill,
@@ -202,7 +202,7 @@ export type FillWithDefsResult = {
  * @param height - Shape height (needed for image patterns)
  * @returns SVG fill props and optional def element
  */
-export function useFillWithDefs(fill: Fill | undefined, width?: number, height?: number): FillWithDefsResult {
+export function useFillWithDefs(fill: BaseFill | undefined, width?: number, height?: number): FillWithDefsResult {
   const { colorContext } = useRenderContext();
   const resources = useRenderResources();
   const resourceStore = useRenderResourceStore();
@@ -243,7 +243,7 @@ export function useFillWithDefs(fill: Fill | undefined, width?: number, height?:
  * @returns SVG fill props
  * @deprecated Use useFillWithDefs instead and render defElement directly
  */
-export function useFill(fill: Fill | undefined, width?: number, height?: number): SvgFillProps {
+export function useFill(fill: BaseFill | undefined, width?: number, height?: number): SvgFillProps {
   const { colorContext } = useRenderContext();
   const resources = useRenderResources();
   const resourceStore = useRenderResourceStore();
@@ -296,7 +296,7 @@ export function resolveFillForReact({
   height,
   resourceResolver,
 }: {
-  fill: Fill | undefined;
+  fill: BaseFill | undefined;
   colorContext: ColorContext | undefined;
   getNextId: (prefix: string) => string;
   width?: number;

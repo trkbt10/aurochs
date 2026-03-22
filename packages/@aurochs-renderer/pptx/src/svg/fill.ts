@@ -4,7 +4,8 @@
  * Converts Fill and Line domain objects to SVG styles.
  */
 
-import type { Fill, Line } from "@aurochs-office/pptx/domain";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
 import {
   getDashArrayPattern,
@@ -113,7 +114,7 @@ function resolvedFillToSvgFill(fill: ResolvedFill, patternIdPrefix?: string): Fi
 /**
  * Render fill to style object
  */
-export function renderFillToStyle(fill: Fill, colorContext?: ColorContext): FillStyle {
+export function renderFillToStyle(fill: BaseFill, colorContext?: ColorContext): FillStyle {
   const resolved = resolveFill(fill, colorContext);
   return resolvedFillToSvgFill(resolved);
 }
@@ -150,7 +151,7 @@ function resolvedLineToSvgStyle(line: ResolvedLine): LineStyle {
 /**
  * Render line to style object
  */
-export function renderLineToStyle(line: Line, colorContext?: ColorContext): LineStyle {
+export function renderLineToStyle(line: BaseLine, colorContext?: ColorContext): LineStyle {
   const resolved = resolveLine(line, colorContext);
   return resolvedLineToSvgStyle(resolved);
 }
@@ -162,7 +163,7 @@ export function renderLineToStyle(line: Line, colorContext?: ColorContext): Line
 /**
  * Render fill to SVG fill attribute value (without gradients)
  */
-export function renderFillToSvgStyle(fill: Fill, colorContext?: ColorContext): string {
+export function renderFillToSvgStyle(fill: BaseFill, colorContext?: ColorContext): string {
   const resolved = resolveFill(fill, colorContext);
 
   switch (resolved.type) {
@@ -213,7 +214,7 @@ function resolvedGradientToSvgDef(fill: ResolvedGradientFill, gradientId: string
  * Render gradient fill to SVG gradient definition
  * Returns undefined if fill is not a gradient
  */
-export function renderFillToSvgDef(fill: Fill, gradientId: string, colorContext?: ColorContext): string | undefined {
+export function renderFillToSvgDef(fill: BaseFill, gradientId: string, colorContext?: ColorContext): string | undefined {
   const resolved = resolveFill(fill, colorContext);
 
   if (resolved.type !== "gradient") {
@@ -258,7 +259,7 @@ export function renderImageFillToSvgDef({
 /**
  * Check if fill is an image fill that needs a pattern definition
  */
-export function isImageFill(fill: Fill, colorContext?: ColorContext, resourceResolver?: ResourceResolverFn): boolean {
+export function isImageFill(fill: BaseFill, colorContext?: ColorContext, resourceResolver?: ResourceResolverFn): boolean {
   const resolved = resolveFill(fill, colorContext, resourceResolver);
   return resolved.type === "image";
 }
@@ -271,7 +272,7 @@ export function isImageFill(fill: Fill, colorContext?: ColorContext, resourceRes
  * @param resourceResolver - Optional resource resolver for blipFill resolution
  */
 export function getResolvedImageFill(
-  fill: Fill,
+  fill: BaseFill,
   colorContext?: ColorContext,
   resourceResolver?: ResourceResolverFn,
 ): ResolvedImageFill | undefined {

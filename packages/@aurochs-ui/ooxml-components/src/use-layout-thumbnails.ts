@@ -9,10 +9,11 @@
  */
 
 import { useMemo } from "react";
-import type { PresentationFile, Shape, SlideSize, Slide } from "@aurochs-office/pptx/domain";
+import type { Shape, SlideSize, Slide } from "@aurochs-office/pptx/domain";
+import type { PackageFile } from "@aurochs-office/opc";
 import type { SlideLayoutOption } from "@aurochs-office/pptx/app";
 import { loadSlideLayoutBundle, createResourceResolverFromMaps } from "@aurochs-office/pptx/app";
-import { parseShapeTree } from "@aurochs-office/pptx/parser";
+import { parseShapeTree, parseBackground } from "@aurochs-office/pptx/parser";
 import { parseTheme } from "@aurochs-office/pptx/parser/theme/theme-parser";
 import { parseSlideMaster } from "@aurochs-office/pptx/parser/slide/slide-parser";
 import { createPlaceholderTable } from "@aurochs-office/pptx/parser/slide/resource-adapters";
@@ -37,9 +38,13 @@ export type LayoutThumbnailData = SlideLayoutOption & {
 };
 
 export type UseLayoutThumbnailsOptions = {
-  readonly presentationFile: PresentationFile | undefined;
+  readonly presentationFile: PackageFile | undefined;
   readonly layoutOptions: readonly SlideLayoutOption[];
   readonly slideSize: SlideSize;
+  /** Override color context from editor state (reflects live theme edits). */
+  readonly colorContext?: ColorContext;
+  /** Override font scheme from editor state (reflects live theme edits). */
+  readonly fontScheme?: FontScheme;
 };
 
 /**
@@ -80,11 +85,14 @@ function buildColorContext(colorScheme: ColorScheme | undefined): ColorContext |
  * This is the single source of truth for layout loading across
  * thumbnails and the editor canvas.
  */
-export function loadLayoutWithContext(
-  file: PresentationFile,
-  layoutPath: string,
-  slideSize: SlideSize,
-): LoadedLayoutData | undefined {
+export function loadLayoutWithContext(options: {
+  readonly file: PackageFile;
+  readonly layoutPath: string;
+  readonly slideSize: SlideSize;
+  readonly colorContext?: ColorContext;
+  readonly fontScheme?: FontScheme;
+}): LoadedLayoutData | undefined {
+  const { file, layoutPath, slideSize } = options;
   try {
     const bundle = loadSlideLayoutBundle(file, layoutPath);
     const layoutContent = getByPath(bundle.layout, ["p:sldLayout"]);
@@ -118,9 +126,10 @@ export function loadLayoutWithContext(
     };
 
     // Parse theme for color context, font scheme, and format scheme
+    // Override with editor state values if provided (for live theme preview)
     const parsedTheme = bundle.theme ? parseTheme(bundle.theme, undefined) : undefined;
-    const colorContext = buildColorContext(parsedTheme?.colorScheme);
-    const fontScheme = parsedTheme?.fontScheme;
+    const colorContext = options.colorContext ?? buildColorContext(parsedTheme?.colorScheme);
+    const fontScheme = options.fontScheme ?? parsedTheme?.fontScheme;
     const formatScheme = parsedTheme?.formatScheme;
 
     // Parse shapes with full context
@@ -138,8 +147,12 @@ export function loadLayoutWithContext(
       bundle.themeRelationships,
     ]);
 
+    // Parse layout background (ECMA-376 §19.3.1.2)
+    const bg = getChild(cSld, "p:bg");
+    const background = parseBackground(bg);
+
     // Render SVG
-    const pseudoSlide: Slide = { shapes };
+    const pseudoSlide: Slide = { shapes, background };
     const renderCtx = createCoreRenderContext({
       slideSize,
       colorContext,
@@ -165,7 +178,7 @@ export function loadLayoutWithContext(
  * Returns layout options augmented with parsed shapes and SVG strings.
  */
 export function useLayoutThumbnails(options: UseLayoutThumbnailsOptions): readonly LayoutThumbnailData[] {
-  const { presentationFile, layoutOptions, slideSize } = options;
+  const { presentationFile, layoutOptions, slideSize, colorContext, fontScheme } = options;
 
   return useMemo(() => {
     if (!presentationFile) {
@@ -173,12 +186,12 @@ export function useLayoutThumbnails(options: UseLayoutThumbnailsOptions): readon
     }
 
     return layoutOptions.map((option) => {
-      const result = loadLayoutWithContext(presentationFile, option.value, slideSize);
+      const result = loadLayoutWithContext({ file: presentationFile, layoutPath: option.value, slideSize, colorContext, fontScheme });
       return {
         ...option,
         shapes: result?.shapes ?? [],
         svg: result?.svg ?? "",
       };
     });
-  }, [presentationFile, layoutOptions, slideSize]);
+  }, [presentationFile, layoutOptions, slideSize, colorContext, fontScheme]);
 }

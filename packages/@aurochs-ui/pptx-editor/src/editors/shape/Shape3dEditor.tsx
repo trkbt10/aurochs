@@ -14,7 +14,7 @@ import { Bevel3dEditor, createDefaultBevel3d } from "./Bevel3dEditor";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import type { PresetMaterialType } from "@aurochs-office/pptx/domain/types";
 import type { Shape3d } from "@aurochs-office/pptx/domain";
-import type { Fill } from "@aurochs-office/pptx/domain/color/types";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
 import type { EditorProps, SelectOption } from "@aurochs-ui/ui-components/types";
 
 export type Shape3dEditorProps = EditorProps<Shape3d>;
@@ -120,7 +120,7 @@ export function Shape3dEditor({ value, onChange, disabled }: Shape3dEditorProps)
       {value.extrusionColor && (
         <FillEditor
           value={value.extrusionColor}
-          onChange={(extrusionColor: Fill) => onChange({ ...value, extrusionColor })}
+          onChange={(extrusionColor: BaseFill) => onChange({ ...value, extrusionColor })}
           disabled={disabled}
         />
       )}
@@ -143,7 +143,7 @@ export function Shape3dEditor({ value, onChange, disabled }: Shape3dEditorProps)
       {value.contourColor && (
         <FillEditor
           value={value.contourColor}
-          onChange={(contourColor: Fill) => onChange({ ...value, contourColor })}
+          onChange={(contourColor: BaseFill) => onChange({ ...value, contourColor })}
           disabled={disabled}
         />
       )}

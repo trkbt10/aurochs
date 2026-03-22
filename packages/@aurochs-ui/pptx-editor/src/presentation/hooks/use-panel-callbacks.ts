@@ -13,7 +13,7 @@ import {
 } from "@aurochs-office/pptx/parser/slide/layout-parser";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
-import type { ResizeHandlePosition } from "../../context/slide/state";
+import type { ResizeHandlePosition } from "@aurochs-ui/editor-core/drag-state";
 import type { PresentationEditorAction } from "../../context/presentation/editor/types";
 import type { PresentationDocument } from "@aurochs-office/pptx/app";
 import { loadSlideLayoutBundle } from "@aurochs-office/pptx/app";

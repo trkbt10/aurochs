@@ -10,30 +10,18 @@ import {
   parseLine as parseOoxmlLine,
   getLineFromProperties as getOoxmlLineFromProperties,
 } from "@aurochs-office/drawing-ml/parser";
-import type { Fill, Line } from "../../domain/index";
 import type { XmlElement } from "@aurochs/xml";
 
-function convertBaseLineToPptxLine(line: BaseLine): Line | undefined {
+function convertBaseLineToPptxLine(line: BaseLine): BaseLine | undefined {
   // Skip if fill is blipFill type (not typically used in lines)
   if (line.fill.type === "blipFill") {
     return undefined;
   }
-  return {
-    width: line.width,
-    cap: line.cap,
-    compound: line.compound,
-    alignment: line.alignment,
-    fill: line.fill as Fill,
-    dash: line.dash,
-    headEnd: line.headEnd,
-    tailEnd: line.tailEnd,
-    join: line.join,
-    miterLimit: line.miterLimit,
-  };
+  return line;
 }
 
 /** Parse line properties from XML element */
-export function parseLine(element: XmlElement | undefined): Line | undefined {
+export function parseLine(element: XmlElement | undefined): BaseLine | undefined {
   const parsed = parseOoxmlLine(element);
   if (!parsed) {
     return undefined;
@@ -42,7 +30,7 @@ export function parseLine(element: XmlElement | undefined): Line | undefined {
 }
 
 /** Get line properties from shape properties element */
-export function getLineFromProperties(spPr: XmlElement | undefined): Line | undefined {
+export function getLineFromProperties(spPr: XmlElement | undefined): BaseLine | undefined {
   const parsed = getOoxmlLineFromProperties(spPr);
   if (!parsed) {
     return undefined;

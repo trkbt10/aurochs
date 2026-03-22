@@ -6,7 +6,9 @@
 
 import type { XmlElement } from "@aurochs/xml";
 import { getChild } from "@aurochs/xml";
-import type { TextStyleContext, MasterTextStyles } from "../../context";
+import type { TextStyleContext } from "../../context";
+import type { MasterTextStyles } from "../../../domain/text-style";
+import { TEXT_STYLE_LEVEL_KEYS } from "../../../domain/text-style";
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import { parseTextIndent, parseTextMargin } from "../../primitive";
 import { TYPE_TO_MASTER_STYLE } from "./constants";
@@ -80,6 +82,20 @@ function getMarginFromPlaceholder(
 /**
  * Get margin/indent from master text styles.
  */
+/**
+ * Map XML attribute name to ParagraphProperties key.
+ */
+function marginAttrToPropertyKey(attrName: "marL" | "marR" | "indent"): "marginLeft" | "marginRight" | "indent" {
+  switch (attrName) {
+    case "marL":
+      return "marginLeft";
+    case "marR":
+      return "marginRight";
+    case "indent":
+      return "indent";
+  }
+}
+
 function getMarginFromMasterTextStyles({
   masterTextStyles,
   placeholderType,
@@ -95,14 +111,15 @@ function getMarginFromMasterTextStyles({
     return undefined;
   }
 
-  const style = masterTextStyles[styleKey];
-  if (style === undefined) {
+  const levels = masterTextStyles[styleKey];
+  if (levels === undefined) {
     return undefined;
   }
 
-  const lvlpPr = `a:lvl${lvl}pPr`;
-  const pPr = getChild(style, lvlpPr);
-  return getMarginFromPPr(pPr, attrName);
+  const levelKey = TEXT_STYLE_LEVEL_KEYS[lvl];
+  const level = levels[levelKey];
+  const propKey = marginAttrToPropertyKey(attrName);
+  return level?.paragraphProperties?.[propKey];
 }
 
 /**

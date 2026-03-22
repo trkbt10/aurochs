@@ -8,7 +8,9 @@
 
 import type { XmlElement } from "@aurochs/xml";
 import { getChild } from "@aurochs/xml";
-import type { TextStyleContext, MasterTextStyles } from "../../context";
+import type { TextStyleContext } from "../../context";
+import type { MasterTextStyles } from "../../../domain/text-style";
+import { TEXT_STYLE_LEVEL_KEYS } from "../../../domain/text-style";
 import type { LineSpacing } from "../../../domain/text";
 import { parsePercentage100k } from "@aurochs-office/drawing-ml/parser";
 import { parseTextSpacingPoint } from "../../primitive";
@@ -115,6 +117,20 @@ function getSpacingFromPlaceholder(
 /**
  * Get spacing from master text styles.
  */
+/**
+ * Map XML spacing type to ParagraphProperties key.
+ */
+function spacingTypeToPropertyKey(spacingType: "a:spcBef" | "a:spcAft" | "a:lnSpc"): "spaceBefore" | "spaceAfter" | "lineSpacing" {
+  switch (spacingType) {
+    case "a:spcBef":
+      return "spaceBefore";
+    case "a:spcAft":
+      return "spaceAfter";
+    case "a:lnSpc":
+      return "lineSpacing";
+  }
+}
+
 function getSpacingFromMasterTextStyles({
   masterTextStyles,
   placeholderType,
@@ -130,14 +146,15 @@ function getSpacingFromMasterTextStyles({
     return undefined;
   }
 
-  const style = masterTextStyles[styleKey];
-  if (style === undefined) {
+  const levels = masterTextStyles[styleKey];
+  if (levels === undefined) {
     return undefined;
   }
 
-  const lvlpPr = `a:lvl${lvl}pPr`;
-  const pPr = getChild(style, lvlpPr);
-  return getSpacingFromPPr(pPr, spacingType);
+  const levelKey = TEXT_STYLE_LEVEL_KEYS[lvl];
+  const level = levels[levelKey];
+  const propKey = spacingTypeToPropertyKey(spacingType);
+  return level?.paragraphProperties?.[propKey];
 }
 
 /**

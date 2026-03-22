@@ -10,18 +10,13 @@ import { loadNativePdfDocumentForParser } from "./native-load";
 import {
   createPdfBuildContext,
   parsePdfSourceNative,
-  type PdfBuildContext as NativePdfBuildContext,
-  type PdfBuildOptions as NativePdfBuildOptions,
-  type PdfParseOptions as NativePdfParseOptions,
-  type PdfParsedDocument as NativePdfParsedDocument,
-  type PdfParsedPage as NativePdfParsedPage,
+  type PdfBuildContext,
+  type PdfBuildOptions,
+  type PdfParseOptions,
+  type PdfParsedDocument,
 } from "./pdf-parser.native";
 
-export type PdfParseOptions = NativePdfParseOptions;
-export type PdfBuildOptions = NativePdfBuildOptions;
-export type PdfParsedPage = NativePdfParsedPage;
-export type PdfParsedDocument = NativePdfParsedDocument;
-export type PdfBuildContext = NativePdfBuildContext;
+export type { PdfParseOptions, PdfBuildOptions, PdfParsedPage, PdfParsedDocument, PdfBuildContext } from "./pdf-parser.native";
 export type PdfParserOptions = PdfParseOptions & PdfBuildOptions;
 
 

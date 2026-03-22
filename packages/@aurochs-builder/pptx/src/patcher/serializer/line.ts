@@ -1,12 +1,12 @@
 /** @file Line serializer for a:ln element */
 import { createElement, type XmlElement } from "@aurochs/xml";
 import type { CustomDash, LineEnd } from "@aurochs-office/drawing-ml/domain/line";
-import type { Line } from "@aurochs-office/pptx/domain";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import { serializeFill } from "./fill";
 import { ooxmlEmu, ooxmlPercent100k } from "@aurochs-office/ooxml/domain/ooxml-units";
 
 /** Serialize line properties to a:ln element */
-export function serializeLine(line: Line): XmlElement {
+export function serializeLine(line: BaseLine): XmlElement {
   const attrs: Record<string, string> = {
     w: ooxmlEmu(line.width),
     cap: serializeLineCap(line.cap),
@@ -28,7 +28,7 @@ export function serializeLine(line: Line): XmlElement {
   return createElement("a:ln", attrs, children);
 }
 
-function serializeLineCap(cap: Line["cap"]): string {
+function serializeLineCap(cap: BaseLine["cap"]): string {
   switch (cap) {
     case "flat":
       return "flat";
@@ -64,7 +64,7 @@ function serializeLineEnd(name: "a:headEnd" | "a:tailEnd", end: LineEnd): XmlEle
   });
 }
 
-function serializeLineJoin(line: Line): XmlElement {
+function serializeLineJoin(line: BaseLine): XmlElement {
   switch (line.join) {
     case "bevel":
       return createElement("a:bevel");

@@ -66,8 +66,8 @@ export {
   type AnimationClassSpec,
   type AnimationSpec,
   // Comment/Notes types
-  type CommentSpec,
-  type NotesSpec,
+  type SimpleCommentSpec,
+  type SimpleNotesSpec,
   // Diagram types
   type DiagramNodeTextUpdateSpec,
   type DiagramNodeAddSpec,

@@ -11,7 +11,8 @@ import type {
 } from "@aurochs-office/pptx/domain/shape";
 import type { TextBody } from "@aurochs-office/pptx/domain/text";
 import type { Transform, GroupTransform } from "@aurochs-office/drawing-ml/domain/geometry";
-import type { Effects, Line } from "@aurochs-office/pptx/domain";
+import type { Effects } from "@aurochs-office/pptx/domain";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import { EMU_PER_PIXEL } from "@aurochs-office/ooxml/domain/ooxml-units";
 import { px, deg, pct } from "@aurochs-office/drawing-ml/domain/units";
 import {
@@ -186,7 +187,7 @@ describe("serializeSpShape", () => {
   });
 
   it("includes fill, line, effects, and shape3d in spPr", () => {
-    const line: Line = {
+    const line: BaseLine = {
       width: px(2),
       cap: "flat",
       compound: "sng",

@@ -2,13 +2,13 @@
  * @file TransformPreview component for displaying transform previews
  */
 
-import type { Fill } from "@aurochs-office/pptx/domain";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
 import { useShapeStyle } from "@aurochs-renderer/pptx/react";
 
 /**
  * Transform preview showing rotation/flip effects
  */
-export function TransformPreview({ transform, fill, label }: { transform: string; fill?: Fill; label: string }) {
+export function TransformPreview({ transform, fill, label }: { transform: string; fill?: BaseFill; label: string }) {
   const style = useShapeStyle({
     fill: fill ?? { type: "solidFill", color: { spec: { type: "scheme", value: "accent1" } } },
     width: 60,

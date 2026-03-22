@@ -11,7 +11,7 @@
  */
 
 import type { XmlDocument } from "@aurochs/xml";
-import type { PresentationFile } from "../../domain";
+import type { PackageFile } from "@aurochs-office/opc";
 import type { ResourceMap } from "@aurochs-office/opc";
 import type { IndexTables } from "./shape-tree-indexer";
 import {
@@ -104,7 +104,7 @@ export type DiagramData = {
  * @param file - The presentation file
  * @param relationships - Slide relationships to find layout reference
  */
-export function loadLayoutData(file: PresentationFile, relationships: ResourceMap): LayoutData {
+export function loadLayoutData(file: PackageFile, relationships: ResourceMap): LayoutData {
   const layoutPath = findLayoutPath(relationships);
   if (layoutPath === undefined) {
     return {
@@ -126,7 +126,7 @@ export function loadLayoutData(file: PresentationFile, relationships: ResourceMa
  * @param file - The presentation file
  * @param layoutRelationships - Layout relationships to find master reference
  */
-export function loadMasterData(file: PresentationFile, layoutRelationships: ResourceMap): MasterData {
+export function loadMasterData(file: PackageFile, layoutRelationships: ResourceMap): MasterData {
   const masterPath = findMasterPath(layoutRelationships);
   if (masterPath === undefined) {
     return {
@@ -148,7 +148,7 @@ export function loadMasterData(file: PresentationFile, layoutRelationships: Reso
  * @param file - The presentation file
  * @param masterRelationships - Master relationships to find theme reference
  */
-export function loadThemeData(file: PresentationFile, masterRelationships: ResourceMap): ThemeData {
+export function loadThemeData(file: PackageFile, masterRelationships: ResourceMap): ThemeData {
   const themePath = findThemePath(masterRelationships);
   if (themePath === undefined) {
     return {
@@ -174,7 +174,7 @@ export function loadThemeData(file: PresentationFile, masterRelationships: Resou
  * @param file - The presentation file
  * @param relationships - Slide relationships to find diagram reference
  */
-export function loadDiagramData(file: PresentationFile, relationships: ResourceMap): DiagramData {
+export function loadDiagramData(file: PackageFile, relationships: ResourceMap): DiagramData {
   const diagramPath = findDiagramDrawingPath(relationships);
   if (diagramPath === undefined) {
     return { diagram: null, diagramRelationships: createEmptyResourceMap() };

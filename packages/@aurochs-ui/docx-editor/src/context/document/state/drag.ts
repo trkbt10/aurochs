@@ -6,7 +6,7 @@
  */
 
 import type { ElementId, TextPosition } from "./selection";
-import type { IdleDragState as CoreIdleDragState } from "@aurochs-ui/editor-core/drag-state";
+import type { IdleDragState } from "@aurochs-ui/editor-core/drag-state";
 
 // =============================================================================
 // Types
@@ -19,11 +19,6 @@ export type Point = {
   readonly x: number;
   readonly y: number;
 };
-
-/**
- * Idle drag state (no drag in progress).
- */
-export type IdleDragState = CoreIdleDragState;
 
 /**
  * Text selection drag state.

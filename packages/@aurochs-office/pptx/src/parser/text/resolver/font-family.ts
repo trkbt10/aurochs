@@ -7,7 +7,9 @@
 
 import type { XmlElement } from "@aurochs/xml";
 import { getChild, getByPath } from "@aurochs/xml";
-import type { TextStyleContext, MasterTextStyles } from "../../context";
+import type { TextStyleContext } from "../../context";
+import type { MasterTextStyles } from "../../../domain/text-style";
+import { TEXT_STYLE_LEVEL_KEYS } from "../../../domain/text-style";
 import { TYPE_TO_MASTER_STYLE } from "./constants";
 import { lookupPlaceholder } from "./placeholder";
 
@@ -92,14 +94,34 @@ function getFontFamilyFromMasterTextStyles(
     return undefined;
   }
 
-  const style = masterTextStyles[styleKey];
-  if (style === undefined) {
+  const levels = masterTextStyles[styleKey];
+  if (levels === undefined) {
     return undefined;
   }
 
-  const lvlpPr = `a:lvl${lvl}pPr`;
-  const defRPr = getByPath(style, [lvlpPr, "a:defRPr"]);
-  return getFontFamilyFromRPr(defRPr);
+  const levelKey = TEXT_STYLE_LEVEL_KEYS[lvl];
+  const level = levels[levelKey];
+  const rp = level?.defaultRunProperties;
+  if (rp === undefined) {
+    return undefined;
+  }
+
+  // Return undefined if no font family is specified
+  if (
+    rp.fontFamily === undefined &&
+    rp.fontFamilyEastAsian === undefined &&
+    rp.fontFamilyComplexScript === undefined &&
+    rp.fontFamilySymbol === undefined
+  ) {
+    return undefined;
+  }
+
+  return {
+    latin: rp.fontFamily,
+    eastAsian: rp.fontFamilyEastAsian,
+    complexScript: rp.fontFamilyComplexScript,
+    symbol: rp.fontFamilySymbol,
+  };
 }
 
 /**

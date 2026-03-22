@@ -19,7 +19,8 @@ import type { Scene3d, Shape3d } from "@aurochs-office/pptx/domain";
 import type { EditorProps } from "@aurochs-ui/ui-components/types";
 import type { Geometry, Transform } from "@aurochs-office/drawing-ml/domain/geometry";
 import type { Effects } from "@aurochs-office/pptx/domain/types";
-import type { Fill, Line } from "@aurochs-office/pptx/domain/color/types";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 
 export type ShapePropertiesEditorProps = EditorProps<ShapeProperties> & {
   readonly showTransform?: boolean;
@@ -55,11 +56,11 @@ export function ShapePropertiesEditor({
     onChange({ ...value, geometry });
   };
 
-  const handleFillChange = (fill: Fill) => {
+  const handleFillChange = (fill: BaseFill) => {
     onChange({ ...value, fill });
   };
 
-  const handleLineChange = (line: Line) => {
+  const handleLineChange = (line: BaseLine) => {
     onChange({ ...value, line });
   };
 

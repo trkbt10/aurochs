@@ -35,6 +35,17 @@ export type TextStyleLevels = {
 };
 
 /**
+ * All level keys of TextStyleLevels in order (defaultStyle, level1..level9).
+ *
+ * SoT for iterating text style levels — corresponds 1:1 to the XML element
+ * names a:defPPr, a:lvl1pPr..a:lvl9pPr.
+ */
+export const TEXT_STYLE_LEVEL_KEYS: readonly (keyof TextStyleLevels)[] = [
+  "defaultStyle", "level1", "level2", "level3", "level4",
+  "level5", "level6", "level7", "level8", "level9",
+];
+
+/**
  * Master text styles
  * @see ECMA-376 Part 1, Section 19.3.1.47 (txStyles)
  */

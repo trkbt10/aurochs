@@ -5,7 +5,7 @@
  */
 
 import type { LineEnd } from "@aurochs-office/drawing-ml/domain/line";
-import type { Line } from "@aurochs-office/pptx/domain";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import type { CheckItem } from "../types";
 import { TestSubsection, LineMarkerPreview } from "../components";
@@ -13,7 +13,7 @@ import { TestSubsection, LineMarkerPreview } from "../components";
 /**
  * Helper to create a line with specific head/tail ends
  */
-function createLineWithEnds(headEnd?: LineEnd, tailEnd?: LineEnd, width = 2): Line {
+function createLineWithEnds(headEnd?: LineEnd, tailEnd?: LineEnd, width = 2): BaseLine {
   return {
     fill: { type: "solidFill", color: { spec: { type: "scheme", value: "lt1" } } },
     width: px(width),

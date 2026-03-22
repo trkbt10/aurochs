@@ -7,7 +7,9 @@
 
 import type { XmlElement } from "@aurochs/xml";
 import { getChild, getByPath } from "@aurochs/xml";
-import type { TextStyleContext, MasterTextStyles } from "../../context";
+import type { TextStyleContext } from "../../context";
+import type { MasterTextStyles } from "../../../domain/text-style";
+import { TEXT_STYLE_LEVEL_KEYS } from "../../../domain/text-style";
 import type { Color } from "@aurochs-office/drawing-ml/domain/color";
 import { parseColorFromParent } from "../../graphics/color-parser";
 import { TYPE_TO_MASTER_STYLE } from "./constants";
@@ -68,14 +70,14 @@ function getColorFromMasterTextStyles(
     return undefined;
   }
 
-  const style = masterTextStyles[styleKey];
-  if (style === undefined) {
+  const levels = masterTextStyles[styleKey];
+  if (levels === undefined) {
     return undefined;
   }
 
-  const lvlpPr = `a:lvl${lvl}pPr`;
-  const defRPr = getByPath(style, [lvlpPr, "a:defRPr"]);
-  return getColorFromRPr(defRPr);
+  const levelKey = TEXT_STYLE_LEVEL_KEYS[lvl];
+  const level = levels[levelKey];
+  return level?.defaultRunProperties?.color;
 }
 
 /**

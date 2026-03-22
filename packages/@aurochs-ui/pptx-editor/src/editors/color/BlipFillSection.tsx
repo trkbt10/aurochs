@@ -7,7 +7,7 @@
 import { useCallback, type CSSProperties, type ChangeEvent } from "react";
 import { Select, Toggle } from "@aurochs-ui/ui-components/primitives";
 import type { BlipFill } from "@aurochs-office/drawing-ml/domain/fill";
-import type { Fill } from "@aurochs-office/pptx/domain/color/types";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
 import { colorTokens, fontTokens, radiusTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 import type { SelectOption } from "@aurochs-ui/ui-components/types";
 import { useEditorResourceContext } from "../../context/editor/EditorResourceContext";
@@ -67,7 +67,7 @@ const imagePreviewStyle: CSSProperties = {
 
 export type BlipFillSectionProps = {
   readonly value: BlipFill;
-  readonly onChange: (fill: Fill) => void;
+  readonly onChange: (fill: BaseFill) => void;
   readonly onTypeChange: (type: string) => void;
   readonly fillTypeOptions: SelectOption<string>[];
   readonly disabled?: boolean;

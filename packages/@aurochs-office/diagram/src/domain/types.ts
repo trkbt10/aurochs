@@ -323,15 +323,15 @@ export type DiagramPropertySet = {
   readonly customFlipVertical?: boolean;
   readonly customSizeX?: number;
   readonly customSizeY?: number;
-  readonly customScaleX?: DiagramPrSetCustVal;
-  readonly customScaleY?: DiagramPrSetCustVal;
+  readonly customScaleX?: Percent;
+  readonly customScaleY?: Percent;
   readonly customText?: boolean;
-  readonly customLinearFactorX?: DiagramPrSetCustVal;
-  readonly customLinearFactorY?: DiagramPrSetCustVal;
-  readonly customLinearFactorNeighborX?: DiagramPrSetCustVal;
-  readonly customLinearFactorNeighborY?: DiagramPrSetCustVal;
-  readonly customRadiusScale?: DiagramPrSetCustVal;
-  readonly customRadiusScaleInclude?: DiagramPrSetCustVal;
+  readonly customLinearFactorX?: Percent;
+  readonly customLinearFactorY?: Percent;
+  readonly customLinearFactorNeighborX?: Percent;
+  readonly customLinearFactorNeighborY?: Percent;
+  readonly customRadiusScale?: Percent;
+  readonly customRadiusScaleInclude?: Percent;
   readonly placeholder?: boolean;
   readonly placeholderText?: string;
   readonly presentationAssocId?: string;
@@ -543,7 +543,6 @@ export type DiagramTextDirection = "fromB" | "fromT";
 
 export type DiagramVerticalAlignment = "b" | "mid" | "none" | "t";
 
-export type DiagramPrSetCustVal = Percent;
 
 export type DiagramPresentationOf = {
   readonly axis?: DiagramAxisTypes;

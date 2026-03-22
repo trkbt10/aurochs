@@ -12,7 +12,8 @@
 
 import type { PresentationDocument, SlideWithId } from "@aurochs-office/pptx/app";
 import type { Slide as ApiSlide } from "@aurochs-office/pptx/app";
-import type { GraphicFrame, PresentationFile, Slide } from "@aurochs-office/pptx/domain";
+import type { GraphicFrame, Slide } from "@aurochs-office/pptx/domain";
+import type { PackageFile } from "@aurochs-office/opc";
 import type { ResourceId } from "@aurochs-office/pptx/domain";
 import type { XmlDocument } from "@aurochs/xml";
 import { serializeDocument } from "@aurochs/xml";
@@ -161,7 +162,7 @@ export async function exportPptx(
   }
 
   // Create a ZipPackage and copy all files from source
-  const pkg = copyPresentationFileToPackage(doc.presentationFile);
+  const pkg = copyPackageFileToPackage(doc.presentationFile);
 
   // Embed fonts if present (from PDF import)
   if (doc.embeddedFonts && doc.embeddedFonts.length > 0) {
@@ -259,7 +260,7 @@ export async function exportPptxAsBuffer(
     throw new Error("PresentationDocument must have a presentationFile for export");
   }
 
-  const pkg = copyPresentationFileToPackage(doc.presentationFile);
+  const pkg = copyPackageFileToPackage(doc.presentationFile);
 
   // Embed fonts if present (from PDF import)
   if (doc.embeddedFonts && doc.embeddedFonts.length > 0) {
@@ -342,16 +343,16 @@ export async function exportPptxAsBuffer(
 // =============================================================================
 
 /**
- * Copy all files from PresentationFile to a new ZipPackage.
+ * Copy all files from PackageFile to a new ZipPackage.
  *
  * This creates a new package with all the original content,
  * which can then be modified before export.
  */
-function copyPresentationFileToPackage(file: PresentationFile): ZipPackage {
+function copyPackageFileToPackage(file: PackageFile): ZipPackage {
   // Require listFiles() for proper export
   if (!file.listFiles) {
     throw new Error(
-      "PresentationFile must implement listFiles() for export. " +
+      "PackageFile must implement listFiles() for export. " +
         "Ensure the file was loaded using loadPptxFromBuffer or similar.",
     );
   }

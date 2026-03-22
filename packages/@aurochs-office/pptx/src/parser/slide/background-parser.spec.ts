@@ -4,7 +4,9 @@
 
 import type { XmlElement } from "@aurochs/xml";
 import { DEFAULT_RENDER_OPTIONS } from "@aurochs-renderer/pptx";
-import type { Theme, RawMasterTextStyles, ColorMap } from "../../domain/theme/types";
+import type { Theme } from "../../domain/theme/types";
+import type { MasterTextStyles } from "../../domain/text-style";
+import type { ColorMap } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { PlaceholderTable } from "../../domain/opc";
 import type { ResourceMap, ZipFile } from "@aurochs-office/opc";
 import type { SlideContext } from "./context";
@@ -39,11 +41,7 @@ const EMPTY_PLACEHOLDERS: PlaceholderTable = {
   byType: {},
 };
 
-const EMPTY_TEXT_STYLES: RawMasterTextStyles = {
-  titleStyle: undefined,
-  bodyStyle: undefined,
-  otherStyle: undefined,
-};
+const EMPTY_TEXT_STYLES: MasterTextStyles = {};
 
 function createTheme(params: { fillStyles: readonly XmlElement[]; bgFillStyles: readonly XmlElement[] }): Theme {
   return {

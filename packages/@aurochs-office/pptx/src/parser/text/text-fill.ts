@@ -7,7 +7,7 @@
  */
 
 import type { Color } from "@aurochs-office/drawing-ml/domain/color";
-import type { Fill } from "../../domain/color/types";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { TextFillConfig } from "@aurochs-office/drawing-ml/domain/text-fill";
 import type { ResourceResolverFn } from "../../domain/index";
@@ -41,7 +41,7 @@ function resolveColorToHex(color: Color | undefined, colorContext: ColorContext)
 /**
  * Resolve radial center from gradient fill.
  */
-function resolveRadialCenter(fill: Fill, isRadial: boolean): { cx: number; cy: number } | undefined {
+function resolveRadialCenter(fill: BaseFill, isRadial: boolean): { cx: number; cy: number } | undefined {
   if (!isRadial || fill.type !== "gradientFill" || !fill.path?.fillToRect) {
     return undefined;
   }
@@ -74,7 +74,7 @@ function computeTileScale(
  * @see ECMA-376 Part 1, Section 20.1.8 (Fill Properties)
  */
 export function resolveTextFill(
-  fill: Fill | undefined,
+  fill: BaseFill | undefined,
   colorContext: ColorContext,
   resourceResolver?: ResourceResolverFn,
 ): TextFillConfig | undefined {

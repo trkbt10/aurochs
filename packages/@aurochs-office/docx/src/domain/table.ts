@@ -96,12 +96,6 @@ export type DocxCellBorders = {
 // Table Cell Properties
 // =============================================================================
 
-/**
- * Table cell width.
- *
- * @see ECMA-376 Part 1, Section 17.4.72 (tcW)
- */
-export type DocxCellWidth = TableWidth;
 
 /**
  * Table cell properties.
@@ -110,7 +104,7 @@ export type DocxCellWidth = TableWidth;
  */
 export type DocxTableCellProperties = {
   /** Cell width */
-  readonly tcW?: DocxCellWidth;
+  readonly tcW?: TableWidth;
   /** Grid columns spanned */
   readonly gridSpan?: GridSpan;
   /** Horizontal merge */

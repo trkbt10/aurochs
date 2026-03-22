@@ -6,7 +6,7 @@
 
 import type { ZipPackage } from "@aurochs/zip";
 import { setSlideNotes } from "@aurochs-builder/pptx/patcher";
-import type { NotesSpec } from "../types";
+import type { SimpleNotesSpec } from "../types";
 
 /**
  * Apply speaker notes to a slide.
@@ -15,7 +15,7 @@ import type { NotesSpec } from "../types";
  * @param slidePath - Path to the slide XML
  * @param spec - Notes specification
  */
-export function applyNotes(pkg: ZipPackage, slidePath: string, spec: NotesSpec): void {
+export function applyNotes(pkg: ZipPackage, slidePath: string, spec: SimpleNotesSpec): void {
   setSlideNotes(pkg, slidePath, {
     text: spec.text,
   });

@@ -10,7 +10,8 @@
 import type { Shape, SpShape, PicShape, GrpShape, CxnShape, GraphicFrame } from "@aurochs-office/pptx/domain/shape";
 import type { Slide } from "@aurochs-office/pptx/domain/slide/types";
 import type { Transform } from "@aurochs-office/drawing-ml/domain/geometry";
-import type { Fill, Line } from "@aurochs-office/pptx/domain/color/types";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import type { TextBody } from "@aurochs-office/pptx/domain/text";
 import type { Effects } from "@aurochs-office/pptx/domain/effects";
 
@@ -84,14 +85,14 @@ export type TransformChange = {
 
 export type FillChange = {
   readonly property: "fill";
-  readonly oldValue: Fill | undefined;
-  readonly newValue: Fill | undefined;
+  readonly oldValue: BaseFill | undefined;
+  readonly newValue: BaseFill | undefined;
 };
 
 export type LineChange = {
   readonly property: "line";
-  readonly oldValue: Line | undefined;
-  readonly newValue: Line | undefined;
+  readonly oldValue: BaseLine | undefined;
+  readonly newValue: BaseLine | undefined;
 };
 
 export type TextBodyChange = {
@@ -522,7 +523,7 @@ export function isTransformEqual(a: Transform | undefined, b: Transform | undefi
  * Compare two Fill values for equality.
  * Uses deep comparison for complex fill types.
  */
-export function isFillEqual(a: Fill | undefined, b: Fill | undefined): boolean {
+export function isFillEqual(a: BaseFill | undefined, b: BaseFill | undefined): boolean {
   if (a === b) {
     return true;
   }
@@ -536,7 +537,7 @@ export function isFillEqual(a: Fill | undefined, b: Fill | undefined): boolean {
 /**
  * Compare two Line values for equality.
  */
-export function isLineEqual(a: Line | undefined, b: Line | undefined): boolean {
+export function isLineEqual(a: BaseLine | undefined, b: BaseLine | undefined): boolean {
   if (a === b) {
     return true;
   }

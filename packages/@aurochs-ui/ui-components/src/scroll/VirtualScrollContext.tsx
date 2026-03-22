@@ -5,9 +5,7 @@
 import { createContext, useContext, type ReactNode } from "react";
 import type { UseVirtualScrollReturn } from "./useVirtualScroll";
 
-export type VirtualScrollContextValue = UseVirtualScrollReturn;
-
-const VirtualScrollContext = createContext<VirtualScrollContextValue | null>(null);
+const VirtualScrollContext = createContext<UseVirtualScrollReturn | null>(null);
 
 /**
  * Provider for sharing virtual scroll state with descendants.
@@ -16,7 +14,7 @@ export function VirtualScrollProvider({
   value,
   children,
 }: {
-  readonly value: VirtualScrollContextValue;
+  readonly value: UseVirtualScrollReturn;
   readonly children: ReactNode;
 }) {
   return (
@@ -29,7 +27,7 @@ export function VirtualScrollProvider({
 /**
  * Read the current virtual scroll state from context.
  */
-export function useVirtualScrollContext(): VirtualScrollContextValue {
+export function useVirtualScrollContext(): UseVirtualScrollReturn {
   const value = useContext(VirtualScrollContext);
   if (!value) {
     throw new Error("useVirtualScrollContext must be used within VirtualScrollProvider");

@@ -522,9 +522,9 @@ export function parseSlideMaster(content: XmlDocument | undefined, _context?: Pa
     customerData: parseCustomerDataList(custDataLst),
     textStyles: txStyles !== undefined
       ? {
-          titleStyle: getChild(txStyles, "p:titleStyle"),
-          bodyStyle: getChild(txStyles, "p:bodyStyle"),
-          otherStyle: getChild(txStyles, "p:otherStyle"),
+          titleStyle: parseTextStyleLevels(getChild(txStyles, "p:titleStyle")),
+          bodyStyle: parseTextStyleLevels(getChild(txStyles, "p:bodyStyle")),
+          otherStyle: parseTextStyleLevels(getChild(txStyles, "p:otherStyle")),
         }
       : undefined,
     transition: parseTransition(transition),

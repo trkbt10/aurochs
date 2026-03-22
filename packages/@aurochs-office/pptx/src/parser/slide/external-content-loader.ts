@@ -8,9 +8,9 @@
  */
 
 import type { BlipFill } from "@aurochs-office/drawing-ml/domain/fill";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
 import type {
   BlipFillProperties,
-  Fill,
   GraphicFrame,
   OleReference,
   PicShape,
@@ -531,7 +531,7 @@ function resolveBlipFill({
   resources,
   baseDir,
   fileReader,
-}: { readonly fill: BlipFill } & DiagramResourceResolverContext): Fill {
+}: { readonly fill: BlipFill } & DiagramResourceResolverContext): BaseFill {
   const resolved = resolveResourceToDataUrl({ resourceId: fill.resourceId, resources, baseDir, fileReader });
 
   if (resolved === undefined) {

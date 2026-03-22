@@ -2,13 +2,13 @@
  * @file LinePreview component for displaying line style previews
  */
 
-import type { Line } from "@aurochs-office/pptx/domain";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import { useShapeStyle } from "@aurochs-renderer/pptx/react";
 
 /**
  * Line preview with stroke styles
  */
-export function LinePreview({ line, label }: { line: Line; label: string }) {
+export function LinePreview({ line, label }: { line: BaseLine; label: string }) {
   const style = useShapeStyle({
     fill: { type: "noFill" },
     line,

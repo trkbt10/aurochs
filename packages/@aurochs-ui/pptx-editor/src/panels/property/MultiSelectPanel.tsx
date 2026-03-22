@@ -9,7 +9,8 @@ import { useMemo, useCallback, type CSSProperties } from "react";
 import { colorTokens } from "@aurochs-ui/ui-components/design-tokens";
 import type { Shape } from "@aurochs-office/pptx/domain/index";
 import type { Transform } from "@aurochs-office/drawing-ml/domain/geometry";
-import type { Fill, Line } from "@aurochs-office/pptx/domain/color/types";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
 import { type ShapeId } from "@aurochs-office/pptx/domain/types";
 import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
@@ -174,8 +175,8 @@ function MultiFillSection({
   commonFill,
   onFillChange,
 }: {
-  readonly commonFill: CommonValue<Fill>;
-  readonly onFillChange: (fill: Fill) => void;
+  readonly commonFill: CommonValue<BaseFill>;
+  readonly onFillChange: (fill: BaseFill) => void;
 }) {
   const isMixed = commonFill === undefined;
 
@@ -210,8 +211,8 @@ function MultiLineSection({
   commonLine,
   onLineChange,
 }: {
-  readonly commonLine: CommonValue<Line>;
-  readonly onLineChange: (line: Line) => void;
+  readonly commonLine: CommonValue<BaseLine>;
+  readonly onLineChange: (line: BaseLine) => void;
 }) {
   const isMixed = commonLine === undefined;
 
@@ -278,7 +279,7 @@ export function MultiSelectPanel({ shapes, onShapeChange }: MultiSelectPanelProp
 
   // Apply fill change to all shapes
   const handleFillChange = useCallback(
-    (fill: Fill) => {
+    (fill: BaseFill) => {
       for (const shape of shapes) {
         const id = getShapeId(shape);
         if (id) {
@@ -291,7 +292,7 @@ export function MultiSelectPanel({ shapes, onShapeChange }: MultiSelectPanelProp
 
   // Apply line change to all shapes
   const handleLineChange = useCallback(
-    (line: Line) => {
+    (line: BaseLine) => {
       for (const shape of shapes) {
         const id = getShapeId(shape);
         if (id) {

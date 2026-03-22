@@ -557,24 +557,10 @@ export type AnimationSpec = {
 };
 
 // =============================================================================
-// Comment Types (alias)
+// Comment & Notes Types (re-exported from patcher)
 // =============================================================================
 
-/**
- * Comment specification for adding to slides.
- * Alias for SimpleCommentSpec from @aurochs-builder/pptx/patcher.
- */
-export type CommentSpec = SimpleCommentSpec;
-
-// =============================================================================
-// Notes Types (alias)
-// =============================================================================
-
-/**
- * Speaker notes specification.
- * Alias for SimpleNotesSpec from @aurochs-builder/pptx/patcher.
- */
-export type NotesSpec = SimpleNotesSpec;
+export type { SimpleCommentSpec, SimpleNotesSpec } from "@aurochs-builder/pptx/patcher";
 
 // =============================================================================
 // SmartArt/Diagram Types
@@ -663,9 +649,9 @@ export type SlideModSpec = {
   /** Add animations to shapes on this slide */
   readonly addAnimations?: readonly AnimationSpec[];
   /** Add comments to this slide */
-  readonly addComments?: readonly CommentSpec[];
+  readonly addComments?: readonly SimpleCommentSpec[];
   /** Set speaker notes for this slide */
-  readonly speakerNotes?: NotesSpec;
+  readonly speakerNotes?: SimpleNotesSpec;
   /** Update SmartArt diagrams on this slide */
   readonly updateSmartArt?: readonly SmartArtUpdateSpec[];
 };

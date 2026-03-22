@@ -9,7 +9,7 @@ import { Input, ToggleButton } from "@aurochs-ui/ui-components/primitives";
 import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
 import { AlignLeftIcon, AlignCenterIcon, AlignRightIcon, AlignJustifyIcon } from "@aurochs-ui/ui-components/icons";
 import { iconTokens, fieldLabelTokens } from "@aurochs-ui/ui-components/design-tokens";
-import type { LucideIcon } from "@aurochs-ui/ui-components/icons";
+import type { IconComponent } from "@aurochs-ui/ui-components/icons";
 import type { ParagraphFormatting, HorizontalAlignment, ParagraphFormattingFeatures } from "./types";
 import type { MixedContext } from "../mixed-state";
 import { isMixedField } from "../mixed-state";
@@ -58,7 +58,7 @@ const separatorStyle: CSSProperties = {
 
 const MIXED_PLACEHOLDER = "Mixed";
 
-const ALIGNMENTS: readonly { value: HorizontalAlignment; label: string; icon: LucideIcon }[] = [
+const ALIGNMENTS: readonly { value: HorizontalAlignment; label: string; icon: IconComponent }[] = [
   { value: "left", label: "Align left", icon: AlignLeftIcon },
   { value: "center", label: "Align center", icon: AlignCenterIcon },
   { value: "right", label: "Align right", icon: AlignRightIcon },

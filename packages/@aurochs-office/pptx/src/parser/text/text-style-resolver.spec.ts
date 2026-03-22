@@ -23,6 +23,11 @@ import {
   resolveBulletStyle,
 } from "./text-style-resolver";
 import type { TextStyleContext, PlaceholderTables } from "../context";
+import type { TextStyleLevels, TextLevelStyle } from "../../domain/text-style";
+import type { ParagraphProperties, RunProperties } from "../../domain/text";
+import { pt } from "@aurochs-office/drawing-ml/domain/units";
+import type { Percent } from "@aurochs-office/drawing-ml/domain/units";
+import type { Color } from "@aurochs-office/drawing-ml/domain/color";
 
 // =============================================================================
 // Test Helpers
@@ -102,17 +107,82 @@ function placeholderWithStyle(level: number, centipoints: number): XmlElement {
 }
 
 /**
- * Create master text style with font size at given level
+ * Map 1-based level number to TextStyleLevels key.
  */
-function masterStyleWithSize(level: number, centipoints: number): XmlElement {
-  return xml(`
-    <p:bodyStyle xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                 xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-      <a:lvl${level}pPr>
-        <a:defRPr sz="${centipoints}"/>
-      </a:lvl${level}pPr>
-    </p:bodyStyle>
-  `);
+function levelKeyOf(level: number): keyof TextStyleLevels {
+  const keys: (keyof TextStyleLevels)[] = [
+    "defaultStyle", "level1", "level2", "level3", "level4",
+    "level5", "level6", "level7", "level8", "level9",
+  ];
+  return keys[level];
+}
+
+/**
+ * Create TextStyleLevels with a single level having a font size.
+ */
+function levelsWithSize(level: number, centipoints: number): TextStyleLevels {
+  const key = levelKeyOf(level);
+  return {
+    [key]: {
+      defaultRunProperties: { fontSize: pt(centipoints / 100) },
+    },
+  };
+}
+
+/**
+ * Create TextStyleLevels with a single level having an alignment.
+ */
+function levelsWithAlignment(level: number, alignment: ParagraphProperties["alignment"]): TextStyleLevels {
+  const key = levelKeyOf(level);
+  return {
+    [key]: {
+      paragraphProperties: { alignment },
+    },
+  };
+}
+
+/**
+ * Create TextStyleLevels with a single level having a color.
+ */
+function levelsWithColor(level: number, color: Color): TextStyleLevels {
+  const key = levelKeyOf(level);
+  return {
+    [key]: {
+      defaultRunProperties: { color },
+    },
+  };
+}
+
+/**
+ * Create TextStyleLevels with a single level having font families.
+ */
+function levelsWithFont(level: number, rp: RunProperties): TextStyleLevels {
+  const key = levelKeyOf(level);
+  return {
+    [key]: {
+      defaultRunProperties: rp,
+    },
+  };
+}
+
+/**
+ * Create TextStyleLevels with a single level having paragraph properties.
+ */
+function levelsWithParagraph(level: number, pp: ParagraphProperties): TextStyleLevels {
+  const key = levelKeyOf(level);
+  return {
+    [key]: {
+      paragraphProperties: pp,
+    },
+  };
+}
+
+/**
+ * Create TextStyleLevels with a full TextLevelStyle at a given level.
+ */
+function levelsWithStyle(level: number, style: TextLevelStyle): TextStyleLevels {
+  const key = levelKeyOf(level);
+  return { [key]: style };
 }
 
 // =============================================================================
@@ -241,13 +311,10 @@ describe("resolveFontSize", () => {
 
   describe("master text styles (priority 5)", () => {
     it("uses sz from master bodyStyle for body placeholder", () => {
-      const bodyStyle = masterStyleWithSize(1, 1900); // 19 points
       const ctx = createContext({
         placeholderType: "body",
         masterTextStyles: {
-          titleStyle: undefined,
-          bodyStyle,
-          otherStyle: undefined,
+          bodyStyle: levelsWithSize(1, 1900),
         },
       });
 
@@ -256,13 +323,10 @@ describe("resolveFontSize", () => {
     });
 
     it("uses sz from master titleStyle for title placeholder", () => {
-      const titleStyle = masterStyleWithSize(1, 4400); // 44 points
       const ctx = createContext({
         placeholderType: "title",
         masterTextStyles: {
-          titleStyle,
-          bodyStyle: undefined,
-          otherStyle: undefined,
+          titleStyle: levelsWithSize(1, 4400),
         },
       });
 
@@ -271,13 +335,10 @@ describe("resolveFontSize", () => {
     });
 
     it("uses sz from master titleStyle for ctrTitle placeholder", () => {
-      const titleStyle = masterStyleWithSize(1, 5400); // 54 points
       const ctx = createContext({
         placeholderType: "ctrTitle",
         masterTextStyles: {
-          titleStyle,
-          bodyStyle: undefined,
-          otherStyle: undefined,
+          titleStyle: levelsWithSize(1, 5400),
         },
       });
 
@@ -286,13 +347,10 @@ describe("resolveFontSize", () => {
     });
 
     it("uses sz from master otherStyle for sldNum placeholder", () => {
-      const otherStyle = masterStyleWithSize(1, 1200); // 12 points
       const ctx = createContext({
         placeholderType: "sldNum",
         masterTextStyles: {
-          titleStyle: undefined,
-          bodyStyle: undefined,
-          otherStyle,
+          otherStyle: levelsWithSize(1, 1200),
         },
       });
 
@@ -417,18 +475,10 @@ describe("resolveAlignment", () => {
 
   describe("master text styles (priority 5)", () => {
     it("uses alignment from master bodyStyle", () => {
-      const bodyStyle = xml(`
-        <p:bodyStyle xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                     xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-          <a:lvl1pPr algn="just"/>
-        </p:bodyStyle>
-      `);
       const ctx = createContext({
         placeholderType: "body",
         masterTextStyles: {
-          titleStyle: undefined,
-          bodyStyle,
-          otherStyle: undefined,
+          bodyStyle: levelsWithAlignment(1, "justify"),
         },
       });
 
@@ -437,18 +487,10 @@ describe("resolveAlignment", () => {
     });
 
     it("uses alignment from master titleStyle for title", () => {
-      const titleStyle = xml(`
-        <p:titleStyle xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                      xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-          <a:lvl1pPr algn="ctr"/>
-        </p:titleStyle>
-      `);
       const ctx = createContext({
         placeholderType: "title",
         masterTextStyles: {
-          titleStyle,
-          bodyStyle: undefined,
-          otherStyle: undefined,
+          titleStyle: levelsWithAlignment(1, "center"),
         },
       });
 
@@ -553,24 +595,10 @@ describe("resolveTextColor", () => {
 
   describe("master text styles (priority 5)", () => {
     it("uses color from master bodyStyle", () => {
-      const bodyStyle = xml(`
-        <p:bodyStyle xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                     xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-          <a:lvl1pPr>
-            <a:defRPr>
-              <a:solidFill>
-                <a:schemeClr val="tx1"/>
-              </a:solidFill>
-            </a:defRPr>
-          </a:lvl1pPr>
-        </p:bodyStyle>
-      `);
       const ctx = createContext({
         placeholderType: "body",
         masterTextStyles: {
-          titleStyle: undefined,
-          bodyStyle,
-          otherStyle: undefined,
+          bodyStyle: levelsWithColor(1, { spec: { type: "scheme", value: "tx1" } }),
         },
       });
 
@@ -708,28 +736,22 @@ describe("resolveDefRPr", () => {
   });
 
   describe("master text styles (priority 4)", () => {
-    it("returns defRPr from master bodyStyle", () => {
-      const bodyStyle = xml(`
-        <p:bodyStyle xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                     xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-          <a:lvl1pPr>
-            <a:defRPr sz="1600" i="1"/>
-          </a:lvl1pPr>
-        </p:bodyStyle>
-      `);
+    it("skips master text styles (domain-typed, cannot return XmlElement)", () => {
+      // Master text styles are now domain-typed (MasterTextStyles) and cannot
+      // be returned as XmlElement. resolveDefRPr skips this step.
+      // Callers should use the dedicated resolvers (resolveFontSize, etc.).
       const ctx = createContext({
         placeholderType: "body",
         masterTextStyles: {
-          titleStyle: undefined,
-          bodyStyle,
-          otherStyle: undefined,
+          bodyStyle: levelsWithStyle(1, {
+            defaultRunProperties: { fontSize: pt(16) },
+          }),
         },
       });
 
       const result = resolveDefRPr(undefined, 0, ctx);
-      expect(result).toBeDefined();
-      expect(result?.attrs?.sz).toBe("1600");
-      expect(result?.attrs?.i).toBe("1");
+      // Returns undefined because master text styles step is skipped
+      expect(result).toBeUndefined();
     });
   });
 });
@@ -888,23 +910,13 @@ describe("resolveFontFamily", () => {
 
   describe("master text styles (priority 5)", () => {
     it("uses font from master bodyStyle", () => {
-      const bodyStyle = xml(`
-        <p:bodyStyle xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                     xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-          <a:lvl1pPr>
-            <a:defRPr>
-              <a:latin typeface="Verdana"/>
-              <a:ea typeface="MS PGothic"/>
-            </a:defRPr>
-          </a:lvl1pPr>
-        </p:bodyStyle>
-      `);
       const ctx = createContext({
         placeholderType: "body",
         masterTextStyles: {
-          titleStyle: undefined,
-          bodyStyle,
-          otherStyle: undefined,
+          bodyStyle: levelsWithFont(1, {
+            fontFamily: "Verdana",
+            fontFamilyEastAsian: "MS PGothic",
+          }),
         },
       });
 
@@ -914,22 +926,12 @@ describe("resolveFontFamily", () => {
     });
 
     it("uses font from master titleStyle for title placeholder", () => {
-      const titleStyle = xml(`
-        <p:titleStyle xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                      xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-          <a:lvl1pPr>
-            <a:defRPr>
-              <a:latin typeface="Impact"/>
-            </a:defRPr>
-          </a:lvl1pPr>
-        </p:titleStyle>
-      `);
       const ctx = createContext({
         placeholderType: "title",
         masterTextStyles: {
-          titleStyle,
-          bodyStyle: undefined,
-          otherStyle: undefined,
+          titleStyle: levelsWithFont(1, {
+            fontFamily: "Impact",
+          }),
         },
       });
 
@@ -1050,21 +1052,17 @@ describe("resolveBulletStyle", () => {
 
     it("direct buNone overrides inherited buChar", () => {
       // Master style defines buChar
-      const bodyStyle = xml(`
-        <p:bodyStyle xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                     xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-          <a:lvl1pPr>
-            <a:buChar char="•"/>
-          </a:lvl1pPr>
-        </p:bodyStyle>
-      `);
-
       const ctx = createContext({
         placeholderType: "body",
         masterTextStyles: {
-          titleStyle: undefined,
-          bodyStyle: bodyStyle,
-          otherStyle: undefined,
+          bodyStyle: levelsWithParagraph(1, {
+            bulletStyle: {
+              bullet: { type: "char", char: "•" },
+              colorFollowText: false,
+              sizeFollowText: false,
+              fontFollowText: false,
+            },
+          }),
         },
       });
 
@@ -1104,15 +1102,6 @@ describe("resolveBulletStyle", () => {
       `);
 
       // Master bodyStyle has buChar (bullet)
-      const bodyStyle = xml(`
-        <p:bodyStyle xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                     xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-          <a:lvl1pPr>
-            <a:buChar char="•"/>
-          </a:lvl1pPr>
-        </p:bodyStyle>
-      `);
-
       // Context with idx-based lookup (no placeholderType, only idx)
       const ctx = createContext({
         placeholderType: undefined, // No type - must use idx lookup
@@ -1122,9 +1111,14 @@ describe("resolveBulletStyle", () => {
           byType: {},
         },
         masterTextStyles: {
-          titleStyle: undefined,
-          bodyStyle: bodyStyle,
-          otherStyle: undefined,
+          bodyStyle: levelsWithParagraph(1, {
+            bulletStyle: {
+              bullet: { type: "char", char: "•" },
+              colorFollowText: false,
+              sizeFollowText: false,
+              fontFollowText: false,
+            },
+          }),
         },
       });
 
@@ -1139,22 +1133,18 @@ describe("resolveBulletStyle", () => {
 
   describe("ECMA-376 21.1.2.4.6 - a:buFont (Bullet Font)", () => {
     it("inherits buFont from master text styles", () => {
-      const bodyStyle = xml(`
-        <p:bodyStyle xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                     xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-          <a:lvl1pPr>
-            <a:buFont typeface="Wingdings"/>
-            <a:buChar char=""/>
-          </a:lvl1pPr>
-        </p:bodyStyle>
-      `);
-
       const ctx = createContext({
         placeholderType: "body",
         masterTextStyles: {
-          titleStyle: undefined,
-          bodyStyle: bodyStyle,
-          otherStyle: undefined,
+          bodyStyle: levelsWithParagraph(1, {
+            bulletStyle: {
+              bullet: { type: "char", char: "\uF076" },
+              font: "Wingdings",
+              colorFollowText: false,
+              sizeFollowText: false,
+              fontFollowText: false,
+            },
+          }),
         },
       });
 
@@ -1167,22 +1157,18 @@ describe("resolveBulletStyle", () => {
     });
 
     it("direct buFont overrides inherited buFont", () => {
-      const bodyStyle = xml(`
-        <p:bodyStyle xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                     xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-          <a:lvl1pPr>
-            <a:buFont typeface="Wingdings"/>
-            <a:buChar char=""/>
-          </a:lvl1pPr>
-        </p:bodyStyle>
-      `);
-
       const ctx = createContext({
         placeholderType: "body",
         masterTextStyles: {
-          titleStyle: undefined,
-          bodyStyle: bodyStyle,
-          otherStyle: undefined,
+          bodyStyle: levelsWithParagraph(1, {
+            bulletStyle: {
+              bullet: { type: "char", char: "\uF076" },
+              font: "Wingdings",
+              colorFollowText: false,
+              sizeFollowText: false,
+              fontFollowText: false,
+            },
+          }),
         },
       });
 
@@ -1251,24 +1237,18 @@ describe("resolveBulletStyle", () => {
     });
 
     it("inherits buClr from master text styles", () => {
-      const bodyStyle = xml(`
-        <p:bodyStyle xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                     xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-          <a:lvl1pPr>
-            <a:buClr>
-              <a:srgbClr val="00FF00"/>
-            </a:buClr>
-            <a:buChar char="•"/>
-          </a:lvl1pPr>
-        </p:bodyStyle>
-      `);
-
       const ctx = createContext({
         placeholderType: "body",
         masterTextStyles: {
-          titleStyle: undefined,
-          bodyStyle: bodyStyle,
-          otherStyle: undefined,
+          bodyStyle: levelsWithParagraph(1, {
+            bulletStyle: {
+              bullet: { type: "char", char: "•" },
+              color: { spec: { type: "srgb", value: "00FF00" } },
+              colorFollowText: false,
+              sizeFollowText: false,
+              fontFollowText: false,
+            },
+          }),
         },
       });
 
@@ -1338,22 +1318,18 @@ describe("resolveBulletStyle", () => {
     });
 
     it("inherits buSzPct from master text styles", () => {
-      const bodyStyle = xml(`
-        <p:bodyStyle xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                     xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-          <a:lvl1pPr>
-            <a:buSzPct val="80000"/>
-            <a:buChar char="•"/>
-          </a:lvl1pPr>
-        </p:bodyStyle>
-      `);
-
       const ctx = createContext({
         placeholderType: "body",
         masterTextStyles: {
-          titleStyle: undefined,
-          bodyStyle: bodyStyle,
-          otherStyle: undefined,
+          bodyStyle: levelsWithParagraph(1, {
+            bulletStyle: {
+              bullet: { type: "char", char: "•" },
+              sizePercent: 80 as Percent,
+              colorFollowText: false,
+              sizeFollowText: false,
+              fontFollowText: false,
+            },
+          }),
         },
       });
 
@@ -1366,25 +1342,19 @@ describe("resolveBulletStyle", () => {
   describe("Inheritance Chain", () => {
     it("follows ECMA-376 inheritance: direct > local > layout > master > masterStyles > default", () => {
       // Setup: masterTextStyles defines bullet with font "Wingdings"
-      const bodyStyle = xml(`
-        <p:bodyStyle xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                     xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-          <a:lvl1pPr>
-            <a:buFont typeface="Wingdings"/>
-            <a:buClr>
-              <a:srgbClr val="0000FF"/>
-            </a:buClr>
-            <a:buChar char=""/>
-          </a:lvl1pPr>
-        </p:bodyStyle>
-      `);
-
       const ctx = createContext({
         placeholderType: "body",
         masterTextStyles: {
-          titleStyle: undefined,
-          bodyStyle: bodyStyle,
-          otherStyle: undefined,
+          bodyStyle: levelsWithParagraph(1, {
+            bulletStyle: {
+              bullet: { type: "char", char: "\uF076" },
+              font: "Wingdings",
+              color: { spec: { type: "srgb", value: "0000FF" } },
+              colorFollowText: false,
+              sizeFollowText: false,
+              fontFollowText: false,
+            },
+          }),
         },
       });
 
@@ -1556,21 +1526,6 @@ describe("resolveBulletStyle", () => {
 
   describe("Mixed Properties Inheritance", () => {
     it("inherits different properties from different sources", () => {
-      // Master provides font and color
-      const bodyStyle = xml(`
-        <p:bodyStyle xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                     xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-          <a:lvl1pPr>
-            <a:buFont typeface="Wingdings"/>
-            <a:buClr>
-              <a:srgbClr val="FF0000"/>
-            </a:buClr>
-            <a:buSzPct val="100000"/>
-            <a:buChar char=""/>
-          </a:lvl1pPr>
-        </p:bodyStyle>
-      `);
-
       // Layout provides size
       const layoutPlaceholder = xml(`
         <p:sp xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
@@ -1585,6 +1540,7 @@ describe("resolveBulletStyle", () => {
         </p:sp>
       `);
 
+      // Master provides font, color, size, and character
       const ctx = createContext({
         placeholderType: "body",
         layoutPlaceholders: {
@@ -1592,9 +1548,17 @@ describe("resolveBulletStyle", () => {
           byType: { body: layoutPlaceholder },
         },
         masterTextStyles: {
-          titleStyle: undefined,
-          bodyStyle: bodyStyle,
-          otherStyle: undefined,
+          bodyStyle: levelsWithParagraph(1, {
+            bulletStyle: {
+              bullet: { type: "char", char: "\uF076" },
+              font: "Wingdings",
+              color: { spec: { type: "srgb", value: "FF0000" } },
+              sizePercent: 100 as Percent,
+              colorFollowText: false,
+              sizeFollowText: false,
+              fontFollowText: false,
+            },
+          }),
         },
       });
 

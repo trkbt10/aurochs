@@ -10,12 +10,10 @@ export type {
   CustomColor,
   ExtraColorScheme,
   ObjectDefaults,
+  ObjectDefaultProperties,
   FormatScheme,
   Theme,
   RawMasterTextStyles,
-  ColorScheme,
-  ColorMap,
-  FontScheme,
   ThemeExtractionInput,
   ExtractedTheme,
 } from "./types";

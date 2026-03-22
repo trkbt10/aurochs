@@ -4,7 +4,7 @@
  * Tests for ECMA-376 shape geometries and transforms.
  */
 
-import type { Fill } from "@aurochs-office/pptx/domain";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import type { CheckItem } from "../types";
 import { TestSubsection, GeometryPreview, PresetShapePreview, TransformPreview } from "../components";
@@ -192,12 +192,12 @@ export function ShapesTest() {
     { label: "Flip V", status: "pass" },
   ];
 
-  const accentFill: Fill = { type: "solidFill", color: { spec: { type: "scheme", value: "accent1" } } };
-  const accent2Fill: Fill = { type: "solidFill", color: { spec: { type: "scheme", value: "accent2" } } };
-  const accent3Fill: Fill = { type: "solidFill", color: { spec: { type: "scheme", value: "accent3" } } };
-  const accent4Fill: Fill = { type: "solidFill", color: { spec: { type: "scheme", value: "accent4" } } };
-  const accent5Fill: Fill = { type: "solidFill", color: { spec: { type: "scheme", value: "accent5" } } };
-  const accent6Fill: Fill = { type: "solidFill", color: { spec: { type: "scheme", value: "accent6" } } };
+  const accentFill: BaseFill = { type: "solidFill", color: { spec: { type: "scheme", value: "accent1" } } };
+  const accent2Fill: BaseFill = { type: "solidFill", color: { spec: { type: "scheme", value: "accent2" } } };
+  const accent3Fill: BaseFill = { type: "solidFill", color: { spec: { type: "scheme", value: "accent3" } } };
+  const accent4Fill: BaseFill = { type: "solidFill", color: { spec: { type: "scheme", value: "accent4" } } };
+  const accent5Fill: BaseFill = { type: "solidFill", color: { spec: { type: "scheme", value: "accent5" } } };
+  const accent6Fill: BaseFill = { type: "solidFill", color: { spec: { type: "scheme", value: "accent6" } } };
 
   return (
     <div className="test-section">

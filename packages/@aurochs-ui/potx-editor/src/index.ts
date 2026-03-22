@@ -50,7 +50,6 @@ export type {
   SampleSlidePreviewProps,
   LayoutAttributesSectionProps,
   ThemeColorScheme,
-  ThemeFontScheme,
   ThemePreset,
 } from "./panels";
 // Theme extraction/export: import directly from SoT packages

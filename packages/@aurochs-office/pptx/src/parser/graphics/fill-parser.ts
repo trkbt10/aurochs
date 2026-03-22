@@ -22,7 +22,8 @@ import {
 } from "@aurochs-office/drawing-ml/parser";
 import { getAttr, getChild, isXmlElement, type XmlElement } from "@aurochs/xml";
 import type { BlipEffects, BlipFill, StretchFill, TileFill } from "@aurochs-office/drawing-ml/domain/fill";
-import type { Fill, StyleReference } from "../../domain/index";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
+import type { StyleReference } from "../../domain/index";
 import { parseColor, parseColorFromParent } from "./color-parser";
 import { parseBlipCompression, parseRectAlignment } from "../primitive";
 
@@ -261,7 +262,7 @@ function parseBlipFill(element: XmlElement): BlipFill | undefined {
 // =============================================================================
 
 /** Parse fill from XML element including PPTX-specific BlipFill */
-export function parseFill(element: XmlElement | undefined): Fill | undefined {
+export function parseFill(element: XmlElement | undefined): BaseFill | undefined {
   if (!element) {
     return undefined;
   }
@@ -279,7 +280,7 @@ export function parseFill(element: XmlElement | undefined): Fill | undefined {
 }
 
 /** Parse fill from parent element by finding fill child */
-export function parseFillFromParent(parent: XmlElement | undefined): Fill | undefined {
+export function parseFillFromParent(parent: XmlElement | undefined): BaseFill | undefined {
   if (!parent) {
     return undefined;
   }
@@ -295,7 +296,7 @@ export function parseFillFromParent(parent: XmlElement | undefined): Fill | unde
 export function resolveFillFromStyleReference(
   fillRef: StyleReference | undefined,
   fillStyles: readonly XmlElement[],
-): Fill | undefined {
+): BaseFill | undefined {
   if (!fillRef || fillRef.index === 0) {
     return undefined;
   }
@@ -326,7 +327,7 @@ function resolveFillStyleIndex(index: number): number {
   return index - 1;
 }
 
-function applyColorOverride(fill: Fill, overrideColor: Fill): Fill {
+function applyColorOverride(fill: BaseFill, overrideColor: BaseFill): BaseFill {
   if (fill.type === "solidFill" && overrideColor.type === "solidFill") {
     return {
       type: "solidFill",

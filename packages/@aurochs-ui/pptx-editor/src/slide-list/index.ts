@@ -10,7 +10,5 @@ export { SlideList } from "./SlideList";
 // Types
 export type {
   SlideListProps,
-  SlideListOrientation,
-  SlideListMode,
   SlideSelectionState,
 } from "./types";

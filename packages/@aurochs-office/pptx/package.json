@@ -124,6 +124,10 @@
       "types": "./src/domain/text.ts",
       "default": "./src/domain/text.ts"
     },
+    "./domain/text-style": {
+      "types": "./src/domain/text-style.ts",
+      "default": "./src/domain/text-style.ts"
+    },
     "./domain/three-d": {
       "types": "./src/domain/three-d.ts",
       "default": "./src/domain/three-d.ts"

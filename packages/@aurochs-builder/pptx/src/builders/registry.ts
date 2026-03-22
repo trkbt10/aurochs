@@ -32,7 +32,7 @@ import type { Shape3d } from "@aurochs-office/pptx/domain/three-d";
 import { px, deg, type Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import type { ShapeSpec, ImageSpec, ConnectorSpec, GroupSpec, TableSpec, TableCellSpec } from "../types";
 import type { TextSpec } from "@aurochs-builder/drawing-ml";
-import type { Line } from "@aurochs-office/pptx/domain/color/types";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import { contentToTextBody } from "./table-update-builder";
 import { PRESET_MAP } from "./presets";
 import { generateShapeId } from "./id-generator";
@@ -450,9 +450,8 @@ function mapVerticalAlignment(va: "top" | "middle" | "bottom"): CellAnchor {
   return va;
 }
 
-function buildCellBorder(color: string, width: number): Line {
-  // eslint-disable-next-line custom/no-as-outside-guard -- drawing-ml Line is structurally compatible with pptx Line
-  return buildLine(color, width) as unknown as Line;
+function buildCellBorder(color: string, width: number): BaseLine {
+  return buildLine(color, width);
 }
 
 function buildCellBorders(color: string, width: number): CellBorders {

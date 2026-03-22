@@ -18,8 +18,8 @@ import type {
   ChartAddSpec,
   ChartUpdateSpec,
   AnimationSpec,
-  CommentSpec,
-  NotesSpec,
+  SimpleCommentSpec,
+  SimpleNotesSpec,
   SmartArtUpdateSpec,
   SlideTransitionSpec,
 } from "../types/spec-types";
@@ -58,8 +58,8 @@ export type SlideModInput = {
   readonly addCharts?: readonly ChartAddSpec[];
   readonly updateCharts?: readonly ChartUpdateSpec[];
   readonly addAnimations?: readonly AnimationSpec[];
-  readonly addComments?: readonly CommentSpec[];
-  readonly speakerNotes?: NotesSpec;
+  readonly addComments?: readonly SimpleCommentSpec[];
+  readonly speakerNotes?: SimpleNotesSpec;
   readonly updateSmartArt?: readonly SmartArtUpdateSpec[];
   readonly transition?: SlideTransitionSpec;
 };

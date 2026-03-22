@@ -2,6 +2,10 @@
  * @file Font scheme editor component
  *
  * Editor for theme fonts (major and minor).
+ * Uses a single OptionalPropertySection with sub-labels,
+ * matching the FormatSchemeEditor / ColorSchemeEditor pattern.
+ *
+ * @see ECMA-376 Part 1, Section 20.1.4.1.18 (CT_FontScheme / a:fontScheme)
  */
 
 import { useCallback, type CSSProperties } from "react";
@@ -21,16 +25,21 @@ export type FontSchemeEditorProps = {
   readonly disabled?: boolean;
 };
 
-const containerStyle: CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-};
+// =============================================================================
+// Styles
+// =============================================================================
 
 const sectionContentStyle: CSSProperties = {
   display: "flex",
   flexDirection: "column",
   gap: spacingTokens.sm,
   padding: spacingTokens.sm,
+};
+
+const sectionLabelStyle: CSSProperties = {
+  fontSize: fontTokens.size.xs,
+  color: colorTokens.text.tertiary,
+  marginBottom: spacingTokens.xs,
 };
 
 const emptyStateStyle: CSSProperties = {
@@ -42,75 +51,74 @@ const emptyStateStyle: CSSProperties = {
 
 const LABEL_WIDTH = 100;
 
-type FontSpecEditorProps = {
-  readonly title: string;
+// =============================================================================
+// FontSpec Fields
+// =============================================================================
+
+type FontSpecFieldsProps = {
   readonly fontSpec?: FontSpec;
   readonly onChange: (spec: Partial<FontSpec>) => void;
   readonly disabled?: boolean;
 };
 
-function FontSpecEditor({ title, fontSpec, onChange, disabled }: FontSpecEditorProps) {
+/** Renders Latin / East Asian / Complex Script fields as plain content (no wrapping section). */
+function FontSpecFields({ fontSpec, onChange, disabled }: FontSpecFieldsProps) {
   const handleLatinChange = useCallback(
-    (value: string | undefined) => {
-      onChange({ latin: value || undefined });
-    },
+    (value: string | undefined) => { onChange({ latin: value || undefined }); },
     [onChange],
   );
-
   const handleEastAsianChange = useCallback(
-    (value: string | undefined) => {
-      onChange({ eastAsian: value || undefined });
-    },
+    (value: string | undefined) => { onChange({ eastAsian: value || undefined }); },
     [onChange],
   );
-
   const handleComplexScriptChange = useCallback(
-    (value: string | undefined) => {
-      onChange({ complexScript: value || undefined });
-    },
+    (value: string | undefined) => { onChange({ complexScript: value || undefined }); },
     [onChange],
   );
 
   return (
-    <OptionalPropertySection title={title} defaultExpanded>
-      <div style={sectionContentStyle}>
-        <FieldGroup label="Latin" inline labelWidth={LABEL_WIDTH}>
-          <FontFamilySelect
-            value={fontSpec?.latin ?? ""}
-            onChange={handleLatinChange}
-            placeholder="e.g., Calibri"
-            disabled={disabled}
-          />
-        </FieldGroup>
-        <FieldGroup label="East Asian" inline labelWidth={LABEL_WIDTH}>
-          <FontFamilySelect
-            value={fontSpec?.eastAsian ?? ""}
-            onChange={handleEastAsianChange}
-            placeholder="e.g., MS Gothic"
-            disabled={disabled}
-          />
-        </FieldGroup>
-        <FieldGroup label="Complex Script" inline labelWidth={LABEL_WIDTH}>
-          <FontFamilySelect
-            value={fontSpec?.complexScript ?? ""}
-            onChange={handleComplexScriptChange}
-            placeholder="e.g., Arial"
-            disabled={disabled}
-          />
-        </FieldGroup>
-      </div>
-    </OptionalPropertySection>
+    <>
+      <FieldGroup label="Latin" inline labelWidth={LABEL_WIDTH}>
+        <FontFamilySelect
+          value={fontSpec?.latin ?? ""}
+          onChange={handleLatinChange}
+          placeholder="e.g., Calibri"
+          disabled={disabled}
+        />
+      </FieldGroup>
+      <FieldGroup label="East Asian" inline labelWidth={LABEL_WIDTH}>
+        <FontFamilySelect
+          value={fontSpec?.eastAsian ?? ""}
+          onChange={handleEastAsianChange}
+          placeholder="e.g., MS Gothic"
+          disabled={disabled}
+        />
+      </FieldGroup>
+      <FieldGroup label="Complex Script" inline labelWidth={LABEL_WIDTH}>
+        <FontFamilySelect
+          value={fontSpec?.complexScript ?? ""}
+          onChange={handleComplexScriptChange}
+          placeholder="e.g., Arial"
+          disabled={disabled}
+        />
+      </FieldGroup>
+    </>
   );
 }
+
+// =============================================================================
+// Component
+// =============================================================================
 
 /**
  * Font scheme editor component.
  *
- * Allows editing of:
- * - Major font (headings/titles)
- * - Minor font (body text)
+ * Single OptionalPropertySection wrapping:
+ * - Scheme name field
+ * - Major font (headings) fields with section label
+ * - Minor font (body) fields with section label
  *
- * Each font has three script types: Latin, East Asian, Complex Script.
+ * @see ECMA-376 Part 1, Section 20.1.4.1.18 (CT_FontScheme)
  */
 export function FontSchemeEditor({
   fontScheme,
@@ -126,36 +134,24 @@ export function FontSchemeEditor({
   );
 
   if (!fontScheme) {
-    return (
-      <div style={containerStyle}>
-        <div style={emptyStateStyle}>No font scheme defined</div>
-      </div>
-    );
+    return <div style={emptyStateStyle}>No font scheme defined</div>;
   }
 
   return (
-    <div style={containerStyle}>
-      {onFontSchemeNameChange && (
-        <OptionalPropertySection title="Font Scheme" defaultExpanded>
-          <div style={sectionContentStyle}>
-            <FieldGroup label="Name" inline labelWidth={LABEL_WIDTH}>
-              <Input value={fontSchemeName ?? ""} onChange={handleNameChange} placeholder="Font scheme name" disabled={disabled} />
-            </FieldGroup>
-          </div>
-        </OptionalPropertySection>
-      )}
-      <FontSpecEditor
-        title="Major Font (Headings)"
-        fontSpec={fontScheme.majorFont}
-        onChange={onMajorFontChange}
-        disabled={disabled}
-      />
-      <FontSpecEditor
-        title="Minor Font (Body)"
-        fontSpec={fontScheme.minorFont}
-        onChange={onMinorFontChange}
-        disabled={disabled}
-      />
-    </div>
+    <OptionalPropertySection title="Font Scheme" defaultExpanded>
+      <div style={sectionContentStyle}>
+        {onFontSchemeNameChange && (
+          <FieldGroup label="Name" inline labelWidth={LABEL_WIDTH}>
+            <Input value={fontSchemeName ?? ""} onChange={handleNameChange} placeholder="Font scheme name" disabled={disabled} />
+          </FieldGroup>
+        )}
+
+        <div style={sectionLabelStyle}>Major Font (Headings)</div>
+        <FontSpecFields fontSpec={fontScheme.majorFont} onChange={onMajorFontChange} disabled={disabled} />
+
+        <div style={sectionLabelStyle}>Minor Font (Body)</div>
+        <FontSpecFields fontSpec={fontScheme.minorFont} onChange={onMinorFontChange} disabled={disabled} />
+      </div>
+    </OptionalPropertySection>
   );
 }

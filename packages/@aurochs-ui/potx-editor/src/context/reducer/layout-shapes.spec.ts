@@ -990,7 +990,7 @@ describe("Drag operations — rotate", () => {
     const s1 = reduce(s0, { type: "SELECT_LAYOUT_SHAPE", shapeId: "rot2" as ShapeId, addToSelection: false });
     const s2 = reduce(s1, { type: "START_LAYOUT_ROTATE", startX: px(300), startY: px(100) });
     if (s2.layoutEdit.layoutDrag.type === "rotate") {
-      const s3 = reduce(s2, { type: "PREVIEW_LAYOUT_ROTATE", currentAngle: s2.layoutEdit.layoutDrag.startAngle });
+      const s3 = reduce(s2, { type: "PREVIEW_LAYOUT_ROTATE", currentAngle: deg(s2.layoutEdit.layoutDrag.startAngle) });
       const s4 = reduce(s3, { type: "COMMIT_LAYOUT_DRAG" });
       expect(s4.layoutEdit.isDirty).toBe(false);
     }

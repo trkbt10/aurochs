@@ -18,7 +18,8 @@ export {
 } from "./commands/show";
 export { runExtract, type ExtractData, type ExtractOptions, type SectionTextItem } from "./commands/extract";
 export { runBuild } from "./commands/build";
-export { runPatch, type PatchData } from "./commands/patch";
+export { runPatch } from "./commands/patch";
+export type { DocxPatchData } from "@aurochs-builder/docx";
 export {
   runVerify,
   type VerifyData,

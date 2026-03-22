@@ -95,11 +95,6 @@ export type WrapPolygon = {
  */
 export type WrapText = "bothSides" | "left" | "right" | "largest";
 
-/**
- * Wrap distance from text (EMUs -> pixels)
- * @see ECMA-376 Part 1, Section 20.4.3.6 (ST_WrapDistance)
- */
-export type WrapDistance = Pixels;
 
 /**
  * Square wrapping specification
@@ -107,10 +102,10 @@ export type WrapDistance = Pixels;
  */
 export type WrapSquare = {
   readonly wrapText: WrapText;
-  readonly distTop?: WrapDistance;
-  readonly distBottom?: WrapDistance;
-  readonly distLeft?: WrapDistance;
-  readonly distRight?: WrapDistance;
+  readonly distTop?: Pixels;
+  readonly distBottom?: Pixels;
+  readonly distLeft?: Pixels;
+  readonly distRight?: Pixels;
   readonly effectExtent?: EffectExtent;
 };
 
@@ -120,8 +115,8 @@ export type WrapSquare = {
  */
 export type WrapThrough = {
   readonly wrapText: WrapText;
-  readonly distLeft?: WrapDistance;
-  readonly distRight?: WrapDistance;
+  readonly distLeft?: Pixels;
+  readonly distRight?: Pixels;
   readonly polygon: WrapPolygon;
 };
 
@@ -131,8 +126,8 @@ export type WrapThrough = {
  */
 export type WrapTight = {
   readonly wrapText: WrapText;
-  readonly distLeft?: WrapDistance;
-  readonly distRight?: WrapDistance;
+  readonly distLeft?: Pixels;
+  readonly distRight?: Pixels;
   readonly polygon: WrapPolygon;
 };
 
@@ -141,6 +136,6 @@ export type WrapTight = {
  * @see ECMA-376 Part 1, Section 20.4.2.20 (wrapTopAndBottom)
  */
 export type WrapTopAndBottom = {
-  readonly distTop?: WrapDistance;
-  readonly distBottom?: WrapDistance;
+  readonly distTop?: Pixels;
+  readonly distBottom?: Pixels;
 };

@@ -8,13 +8,13 @@ import {
   applyRotatePreview,
   applyDragPreview,
   calculateResizedDimensions,
-  type DragPreviewBounds,
   type MoveDragPreviewInput,
   type ResizeDragPreviewInput,
   type RotateDragPreviewInput,
 } from "./drag-preview";
+import type { RotatedBoundsInput } from "./types";
 
-const baseBounds: DragPreviewBounds = { x: 100, y: 100, width: 200, height: 100, rotation: 0 };
+const baseBounds: RotatedBoundsInput = { x: 100, y: 100, width: 200, height: 100, rotation: 0 };
 
 // =============================================================================
 // applyMovePreview

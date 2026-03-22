@@ -116,7 +116,6 @@ export type {
   DocxTableBorderEdge,
   DocxTableBorders,
   DocxCellBorders,
-  DocxCellWidth,
   DocxTableCellProperties,
   DocxTableCell,
   DocxRowHeight,

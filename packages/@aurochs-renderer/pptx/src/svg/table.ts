@@ -7,7 +7,8 @@
  * @see ECMA-376 Part 1, Section 21.1.3 - DrawingML Tables
  */
 
-import type { Fill, Line } from "@aurochs-office/pptx/domain/color/types";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import type {
   Table,
   TableCell,
@@ -157,7 +158,7 @@ function getApplicablePartStyles(style: TableStyle, ctx: CellPositionContext): r
  * Resolve cell fill from table style parts.
  * Later parts in the array have higher priority.
  */
-function resolveFillFromParts(parts: readonly TablePartStyle[]): Fill | undefined {
+function resolveFillFromParts(parts: readonly TablePartStyle[]): BaseFill | undefined {
   // Iterate in reverse to get highest priority first
   for (let i = parts.length - 1; i >= 0; i--) {
     const part = parts[i];
@@ -174,10 +175,10 @@ function resolveFillFromParts(parts: readonly TablePartStyle[]): Fill | undefine
  * Resolved borders from table style parts
  */
 type ResolvedBorders = {
-  readonly insideH?: Line;
-  readonly insideV?: Line;
-  readonly tlToBr?: Line;
-  readonly blToTr?: Line;
+  readonly insideH?: BaseLine;
+  readonly insideV?: BaseLine;
+  readonly tlToBr?: BaseLine;
+  readonly blToTr?: BaseLine;
 };
 
 /**

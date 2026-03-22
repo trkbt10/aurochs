@@ -6,7 +6,7 @@
 
 import type { Degrees, Percent, Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import type { Color } from "@aurochs-office/drawing-ml/domain/color";
-import type { Fill } from "./color/types";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
 import type { FillEffectType } from "./appearance";
 
 // =============================================================================
@@ -284,7 +284,7 @@ export type FillOverlayEffect = {
    * When present, contains the actual fill definition inside a:fillOverlay.
    * This allows round-trip fidelity when exporting.
    */
-  readonly fill?: Fill;
+  readonly fill?: BaseFill;
 };
 
 /**

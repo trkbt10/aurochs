@@ -6,18 +6,21 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Shape, Placeholder } from "@aurochs-office/pptx/domain";
+import type { Shape, Placeholder, Background } from "@aurochs-office/pptx/domain";
 import type { FontSpec } from "@aurochs-office/ooxml/domain/font-scheme";
-import type { PresentationFile, SlideSize, SlideLayoutType } from "@aurochs-office/pptx/domain";
+import type { SlideSize, SlideLayoutType } from "@aurochs-office/pptx/domain";
+import type { PackageFile } from "@aurochs-office/opc";
+import { parseBackground } from "@aurochs-office/pptx/parser";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
-import { buildSlideLayoutOptions, loadSlideLayoutBundle } from "@aurochs-office/pptx/app";
+import { buildSlideLayoutOptions, buildSlideLayoutEntries, loadSlideLayoutBundle } from "@aurochs-office/pptx/app";
+import type { SlideLayoutEntry } from "@aurochs-office/pptx/app";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import { SlideRenderer } from "@aurochs-renderer/pptx/react";
 import type { ThemePreset } from "./panels/types";
 import type { LayoutListEntry, ImportedThemeData, ThemeEditorState } from "./context/types";
 import type { SchemeColorName } from "@aurochs-office/drawing-ml/domain/color";
 import { ThemeImportExportSection } from "@aurochs-ui/ooxml-components/theme-io";
-import { exportThemeAsPotx, getThemeFileName, type ThemeExportOptions } from "@aurochs-builder/pptx/builders";
+import { exportThemeAsPotx, getThemeFileName, type ThemeExportOptions, type LayoutExportEntry } from "@aurochs-builder/pptx/builders";
 import { extractThemeFromBuffer } from "@aurochs-office/pptx/app";
 import { downloadPresentation } from "@aurochs-office/opc";
 import { useThemeEditor } from "./context/ThemeEditorContext";
@@ -27,6 +30,10 @@ import { ThemePresetSelector } from "./panels/ThemePresetSelector";
 import { LayoutAttributesSection } from "./panels/LayoutAttributesSection";
 import { LayoutShapePanel, NoShapeSelected } from "./panels/LayoutShapePanel";
 import { MasterBackgroundEditor, type BackgroundState } from "./panels/MasterBackgroundEditor";
+import { getChild, createElement } from "@aurochs/xml";
+import type { XmlElement } from "@aurochs/xml";
+import { parseBaseFillFromParent } from "@aurochs-office/drawing-ml/parser";
+import { serializeFill } from "@aurochs-builder/pptx/patcher";
 import { ColorMapEditor } from "./panels/ColorMapEditor";
 import { CustomColorsEditor } from "./panels/CustomColorsEditor";
 import { ExtraColorSchemesEditor } from "./panels/ExtraColorSchemesEditor";
@@ -75,9 +82,10 @@ import { ShapeInfoOverlay } from "./panels/ShapeInfoOverlay";
 // =============================================================================
 
 export type PotxEditorProps = {
-  readonly presentationFile?: PresentationFile;
+  readonly presentationFile?: PackageFile;
   readonly slideSize?: SlideSize;
   readonly className?: string;
+  readonly onPackageFileChange?: (file: PackageFile, slideSize: SlideSize) => void;
 };
 
 type LayoutListItem = ListItem<string> & {
@@ -99,8 +107,54 @@ const POTX_VISIBLE_TOOLS: ReadonlySet<string> = new Set([
 // Helpers
 // =============================================================================
 
+/**
+ * Convert p:bg XmlElement → BackgroundState for UI display.
+ * Handles p:bgPr (explicit fill). p:bgRef (theme reference) is preserved
+ * in SoT but cannot be displayed as BaseFill without theme context.
+ *
+ * @see ECMA-376 §19.3.1.2 (p:bg), §19.3.1.3 (p:bgPr)
+ */
+function bgXmlToBackgroundState(bgElement: XmlElement | undefined): BackgroundState {
+  if (!bgElement) { return {}; }
+  const bgPr = getChild(bgElement, "p:bgPr");
+  if (!bgPr) { return {}; }
+  const fill = parseBaseFillFromParent(bgPr);
+  return fill ? { fill } : {};
+}
+
+/**
+ * Convert BackgroundState → p:bg XmlElement for SoT storage.
+ *
+ * @see ECMA-376 §19.3.1.2 (p:bg), §19.3.1.3 (p:bgPr)
+ */
+function backgroundStateToXml(bg: BackgroundState): XmlElement | undefined {
+  if (!bg.fill || bg.fill.type === "noFill") { return undefined; }
+  const fillXml = serializeFill(bg.fill);
+  const bgPr = createElement("p:bgPr", {}, [fillXml]);
+  return createElement("p:bg", {}, [bgPr]);
+}
+
+/** Convert LayoutOverrides background to Background domain type for export. */
+function layoutOverridesToBackground(overrides: LayoutListEntry["overrides"]): Background | undefined {
+  const fill = overrides?.background?.fill;
+  if (!fill) { return undefined; }
+  return { fill, shadeToTitle: overrides?.background?.shadeToTitle };
+}
+
 /** Build ThemeExportOptions from current editor state. */
-function buildThemeExportOptions(s: ThemeEditorState): ThemeExportOptions {
+function buildThemeExportOptions(s: ThemeEditorState, slideSize?: SlideSize): ThemeExportOptions {
+  const layouts: LayoutExportEntry[] = s.layoutEdit.layouts.map((l) => ({
+    name: l.name,
+    type: l.type,
+    matchingName: l.matchingName,
+    showMasterShapes: l.showMasterShapes,
+    preserve: l.preserve,
+    userDrawn: l.userDrawn,
+    background: layoutOverridesToBackground(l.overrides),
+    colorMapOverride: l.overrides?.colorMapOverride,
+    transition: l.overrides?.transition,
+  }));
+
   return {
     name: s.themeName,
     colorScheme: s.colorScheme as Readonly<Record<SchemeColorName, string>>,
@@ -112,6 +166,22 @@ function buildThemeExportOptions(s: ThemeEditorState): ThemeExportOptions {
     extraColorSchemes: s.extraColorSchemes,
     objectDefaults: s.objectDefaults,
     masterTextStyles: s.masterTextStyles,
+    masterBackground: s.masterBackground,
+    layouts: layouts.length > 0 ? layouts : undefined,
+    slideSize: slideSize ? { width: slideSize.width as number, height: slideSize.height as number } : undefined,
+  };
+}
+
+/** Convert SlideLayoutEntry parsed data to LayoutOverrides for editor state. */
+function buildOverridesFromEntry(entry: SlideLayoutEntry): LayoutListEntry["overrides"] {
+  const bg = entry.background;
+  const clr = entry.colorMapOverride;
+  const trans = entry.transition;
+  if (!bg && !clr && !trans) { return undefined; }
+  return {
+    background: bg ? { fill: bg.fill, shadeToTitle: bg.shadeToTitle } : undefined,
+    colorMapOverride: clr,
+    transition: trans,
   };
 }
 
@@ -162,17 +232,26 @@ function ThemeNameSection({ themeName, onThemeNameChange }: { readonly themeName
 // =============================================================================
 
 /** Main editor component for editing POTX (PowerPoint template) files. */
-export function PotxEditor({ presentationFile, slideSize, className }: PotxEditorProps) {
+export function PotxEditor({ presentationFile, slideSize, className, onPackageFileChange }: PotxEditorProps) {
   const { state, dispatch } = useThemeEditor();
   const { themeName, colorScheme, fontScheme, fontSchemeName, layoutEdit, creationMode } = state;
   const canvasRef = useRef<EditorCanvasHandle>(null);
   const [viewport, setViewport] = useState<ViewportTransform>(INITIAL_VIEWPORT);
 
-  // Init layout list
+  // Init layout list — extract full ECMA-376 §19.3.1.39 metadata from each layout
   useEffect(() => {
     if (!presentationFile) {return;}
-    const options = buildSlideLayoutOptions(presentationFile);
-    const layouts = options.map((opt) => ({ id: opt.value, name: opt.label, type: "blank" as const }));
+    const entries = buildSlideLayoutEntries(presentationFile);
+    const layouts: LayoutListEntry[] = entries.map((entry) => ({
+      id: entry.value,
+      name: entry.label,
+      type: entry.type,
+      matchingName: entry.matchingName,
+      showMasterShapes: entry.showMasterShapes,
+      preserve: entry.preserve,
+      userDrawn: entry.userDrawn,
+      overrides: buildOverridesFromEntry(entry),
+    }));
     dispatch({ type: "INIT_LAYOUT_LIST", layouts });
     if (layouts.length > 0) {
       dispatch({ type: "SELECT_LAYOUT", layoutPath: layouts[0].id });
@@ -182,7 +261,7 @@ export function PotxEditor({ presentationFile, slideSize, className }: PotxEdito
   // Load layout shapes when selection changes
   const activeLayoutData = useMemo(() => {
     if (!presentationFile || !slideSize || !layoutEdit.activeLayoutPath) {return undefined;}
-    return loadLayoutWithContext(presentationFile, layoutEdit.activeLayoutPath, slideSize);
+    return loadLayoutWithContext({ file: presentationFile, layoutPath: layoutEdit.activeLayoutPath, slideSize });
   }, [presentationFile, slideSize, layoutEdit.activeLayoutPath]);
 
   // Load shapes into state when layout changes
@@ -195,14 +274,26 @@ export function PotxEditor({ presentationFile, slideSize, className }: PotxEdito
     }
   }, [activeLayoutData, layoutEdit.activeLayoutPath, layoutEdit.layoutShapes.length, presentationFile, dispatch]);
 
+  // Resolve effective background: layout background > master background (ECMA-376 §19.3.1.2)
+  const effectiveBackground = useMemo((): Background | undefined => {
+    const currentLayout = layoutEdit.layouts.find((l) => l.id === layoutEdit.activeLayoutPath);
+    const layoutBg = currentLayout?.overrides?.background;
+    if (layoutBg?.fill) {
+      return { fill: layoutBg.fill, shadeToTitle: layoutBg.shadeToTitle };
+    }
+    return parseBackground(state.masterBackground);
+  }, [layoutEdit.layouts, layoutEdit.activeLayoutPath, state.masterBackground]);
+
   // Derive the rendered slide from reducer state (layoutShapes), not from the static activeLayoutData.
   // activeLayoutData.pseudoSlide is the original parse result; layoutEdit.layoutShapes is the live edited version.
   const renderedSlide = useMemo(() => {
     if (layoutEdit.layoutShapes.length === 0 && activeLayoutData) {
-      return activeLayoutData.pseudoSlide;
+      const slide = activeLayoutData.pseudoSlide;
+      if (slide.background) { return slide; }
+      return { ...slide, background: effectiveBackground };
     }
-    return { shapes: layoutEdit.layoutShapes as readonly Shape[] };
-  }, [layoutEdit.layoutShapes, activeLayoutData]);
+    return { shapes: layoutEdit.layoutShapes as readonly Shape[], background: effectiveBackground };
+  }, [layoutEdit.layoutShapes, activeLayoutData, effectiveBackground]);
 
   // Shape render data for EditorCanvas hit testing
   const shapeRenderData = useMemo(() => {
@@ -385,9 +476,9 @@ export function PotxEditor({ presentationFile, slideSize, className }: PotxEdito
 
   // Theme import/export callbacks
   const handleThemeExport = useCallback(async () => {
-    const blob = await exportThemeAsPotx(buildThemeExportOptions(state));
+    const blob = await exportThemeAsPotx(buildThemeExportOptions(state, slideSize));
     await downloadPresentation(blob, getThemeFileName(state.themeName));
-  }, [state]);
+  }, [state, slideSize]);
 
   const handleThemeImport = useCallback(async (buffer: ArrayBuffer) => {
     const result = await extractThemeFromBuffer(buffer);
@@ -403,9 +494,11 @@ export function PotxEditor({ presentationFile, slideSize, className }: PotxEdito
       extraColorSchemes: data.theme.extraColorSchemes,
       objectDefaults: data.theme.objectDefaults,
       masterTextStyles: data.masterTextStyles,
+      masterBackground: data.masterBackground,
     };
     dispatch({ type: "IMPORT_THEME", theme: imported });
-  }, [dispatch]);
+    onPackageFileChange?.(result.presentationFile, result.slideSize);
+  }, [dispatch, onPackageFileChange]);
 
   const activeLayout = useMemo(() => layoutEdit.layouts.find((l) => l.id === layoutEdit.activeLayoutPath), [layoutEdit.layouts, layoutEdit.activeLayoutPath]);
   const handleLayoutNameChange = useCallback((name: string) => {
@@ -423,7 +516,7 @@ export function PotxEditor({ presentationFile, slideSize, className }: PotxEdito
 
   // Master background & color map callbacks
   const handleMasterBackgroundChange = useCallback((background: BackgroundState) => {
-    dispatch({ type: "UPDATE_MASTER_BACKGROUND", background });
+    dispatch({ type: "UPDATE_MASTER_BACKGROUND", background: backgroundStateToXml(background) });
   }, [dispatch]);
   const handleMasterColorMappingChange = useCallback((mapping: ColorMapping) => {
     dispatch({ type: "UPDATE_MASTER_COLOR_MAPPING", mapping });
@@ -468,13 +561,24 @@ export function PotxEditor({ presentationFile, slideSize, className }: PotxEdito
     const newId = `ppt/slideLayouts/slideLayout${Date.now()}.xml`;
     dispatch({ type: "ADD_LAYOUT", layout: { id: newId, name: "New Layout", type: "blank" } });
   }, [dispatch]);
-  // Layout thumbnails
+  // Layout thumbnails — use master-level color context (not layout-specific overrides)
+  const masterColorContext = useMemo(() =>
+    ({ colorScheme, colorMap: state.masterColorMapping as Record<string, string> }),
+    [colorScheme, state.masterColorMapping],
+  );
+
   const layoutOptions = useMemo(() => {
     if (!presentationFile) {return [];}
     return buildSlideLayoutOptions(presentationFile);
   }, [presentationFile]);
 
-  const thumbnailData = useLayoutThumbnails({ presentationFile, layoutOptions, slideSize: slideSize ?? { width: px(960), height: px(540) } });
+  const thumbnailData = useLayoutThumbnails({
+    presentationFile,
+    layoutOptions,
+    slideSize: slideSize ?? { width: px(960), height: px(540) },
+    colorContext: masterColorContext,
+    fontScheme,
+  });
 
   const layoutItems: readonly LayoutListItem[] = useMemo(() => {
     if (thumbnailData.length > 0) {
@@ -511,10 +615,13 @@ export function PotxEditor({ presentationFile, slideSize, className }: PotxEdito
     </div>
   ), [themeName, colorScheme, fontScheme, fontSchemeName, handleThemeNameChange, handleThemeExport, handleThemeImport, handlePresetSelect, handleColorChange, handleColorAdd, handleColorRemove, handleColorRename, handleMajorFontChange, handleMinorFontChange, handleFontSchemeNameChange]);
 
+  // Master background: convert XmlElement SoT → BackgroundState for UI
+  const masterBgState = useMemo(() => bgXmlToBackgroundState(state.masterBackground), [state.masterBackground]);
+
   // Master tab: master-level configuration (background, color mapping, default styles)
   const masterTabContent = useMemo(() => (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "auto" }}>
-      <MasterBackgroundEditor background={state.masterBackground} onChange={handleMasterBackgroundChange} title="Master Background" />
+      <MasterBackgroundEditor background={masterBgState} onChange={handleMasterBackgroundChange} title="Master Background" />
       <ColorMapEditor colorMapping={state.masterColorMapping} onChange={handleMasterColorMappingChange} />
       <MasterTextStylesEditor masterTextStyles={state.masterTextStyles} onChange={(mts) => dispatch({ type: "UPDATE_MASTER_TEXT_STYLES", masterTextStyles: mts })} />
       <ObjectDefaultsEditor objectDefaults={state.objectDefaults} onChange={(od) => dispatch({ type: "UPDATE_OBJECT_DEFAULTS", objectDefaults: od })} />
@@ -524,7 +631,7 @@ export function PotxEditor({ presentationFile, slideSize, className }: PotxEdito
       <CustomColorsEditor customColors={state.customColors} onAdd={handleAddCustomColor} onRemove={handleRemoveCustomColor} onUpdate={handleUpdateCustomColor} />
       <ExtraColorSchemesEditor extraColorSchemes={state.extraColorSchemes} onAdd={handleAddExtraScheme} onRemove={handleRemoveExtraScheme} onUpdate={handleUpdateExtraScheme} />
     </div>
-  ), [state.masterBackground, state.masterColorMapping, state.masterTextStyles, state.objectDefaults, state.formatScheme, state.customColors, state.extraColorSchemes, dispatch, handleMasterBackgroundChange, handleMasterColorMappingChange, handleFormatSchemeChange, handleAddCustomColor, handleRemoveCustomColor, handleUpdateCustomColor, handleAddExtraScheme, handleRemoveExtraScheme, handleUpdateExtraScheme]);
+  ), [masterBgState, state.masterColorMapping, state.masterTextStyles, state.objectDefaults, state.formatScheme, state.customColors, state.extraColorSchemes, dispatch, handleMasterBackgroundChange, handleMasterColorMappingChange, handleFormatSchemeChange, handleAddCustomColor, handleRemoveCustomColor, handleUpdateCustomColor, handleAddExtraScheme, handleRemoveExtraScheme, handleUpdateExtraScheme]);
 
   // Selected shape for Layout tab
   const selectedShape = useMemo(() => {
@@ -615,10 +722,15 @@ export function PotxEditor({ presentationFile, slideSize, className }: PotxEdito
   const heightNum = slideSize ? (slideSize.height as number) : 540;
   const slideSizeForRenderer = useMemo(() => slideSize ?? { width: px(960), height: px(540) }, [slideSize]);
 
-  // Build color context and font scheme from edited state so the preview reflects changes
+  // Build color context from edited state, applying layout-level colorMapOverride if present (ECMA-376 §19.3.1.7)
   const editedColorContext = useMemo(() => {
-    return { colorScheme, colorMap: state.masterColorMapping as Record<string, string> };
-  }, [colorScheme, state.masterColorMapping]);
+    const currentLayout = layoutEdit.layouts.find((l) => l.id === layoutEdit.activeLayoutPath);
+    const effectiveColorMap = getLayoutColorMapping(
+      currentLayout ?? { id: "", name: "", type: "blank" },
+      state.masterColorMapping,
+    );
+    return { colorScheme, colorMap: effectiveColorMap as Record<string, string> };
+  }, [colorScheme, state.masterColorMapping, layoutEdit.layouts, layoutEdit.activeLayoutPath]);
 
   const editedFontScheme = useMemo(() => {
     return fontScheme;

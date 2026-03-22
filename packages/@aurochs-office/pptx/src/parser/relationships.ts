@@ -8,7 +8,7 @@
  * @see RFC 3986, Section 5.2 (Relative Resolution)
  */
 
-import type { PresentationFile } from "../domain/opc";
+import type { PackageFile } from "@aurochs-office/opc";
 import type { ResourceMap } from "@aurochs-office/opc";
 import { RELATIONSHIP_TYPES, createEmptyResourceMap } from "../domain/relationships";
 import {
@@ -32,7 +32,7 @@ import {
  *
  * @see ECMA-376 Part 2, Section 9.3 (Relationships)
  */
-export function loadRelationships(file: PresentationFile, partPath: string): ResourceMap {
+export function loadRelationships(file: PackageFile, partPath: string): ResourceMap {
   const relsPath = getRelationshipPathShared(partPath);
   const relsText = file.readText(relsPath);
   if (relsText === null) {

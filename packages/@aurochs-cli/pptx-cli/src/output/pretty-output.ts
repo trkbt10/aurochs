@@ -14,7 +14,7 @@ import type { InventoryData } from "../commands/inventory";
 import type { TablesData } from "../commands/tables";
 import type { ImagesData } from "../commands/images";
 import type { DiffData } from "../commands/diff";
-import type { PatchData } from "../commands/patch";
+import type { PptxPptxPatchData } from "@aurochs-builder/pptx";
 
 function getSlideFlags(slide: SlideListItem): string[] {
   const flags: string[] = [];
@@ -393,7 +393,7 @@ export function formatDiffPretty(data: DiffData): string {
 /**
  * Format patch result for human-readable output.
  */
-export function formatPatchPretty(data: PatchData): string {
+export function formatPatchPretty(data: PptxPatchData): string {
   const lines: string[] = [];
   lines.push(`Source: ${data.sourcePath}`);
   lines.push(`Output: ${data.outputPath}`);

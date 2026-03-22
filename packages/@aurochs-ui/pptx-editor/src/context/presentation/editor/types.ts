@@ -18,11 +18,11 @@ import type {
   SelectionState,
   DragState,
   ClipboardContent,
-  ResizeHandlePosition,
   PathDrawState,
   PathEditState,
   PathEditAction,
 } from "../../slide/state";
+import type { ResizeHandlePosition } from "@aurochs-ui/editor-core/drag-state";
 import type { TextEditState } from "@aurochs-ui/ooxml-components/text-edit";
 import type { SlideOperationsResult } from "./useSlideOperations";
 import type { CreationMode, SmoothingLevel, CreationChartType, CreationDiagramType } from "@aurochs-ui/ooxml-components";

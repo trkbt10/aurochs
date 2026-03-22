@@ -4,7 +4,8 @@
  * Tests for ECMA-376 line/stroke styles.
  */
 
-import type { Line, LineCap, DashStyle } from "@aurochs-office/pptx/domain";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
+import type { LineCap, DashStyle } from "@aurochs-office/pptx/domain";
 import { px, pct } from "@aurochs-office/drawing-ml/domain/units";
 import type { CheckItem } from "../types";
 import { TestSubsection, LinePreview } from "../components";
@@ -41,7 +42,7 @@ export function LineTest() {
     { label: "Triple (tri)", status: "pending" },
   ];
 
-  const baseLine = (overrides: Partial<Line>): Line => ({
+  const baseLine = (overrides: Partial<BaseLine>): BaseLine => ({
     fill: { type: "solidFill", color: { spec: { type: "scheme", value: "lt1" } } },
     width: px(3),
     compound: "sng",

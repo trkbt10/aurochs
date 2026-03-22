@@ -16,11 +16,15 @@ import type {
   ExtractedTheme,
   FormatScheme,
   ObjectDefaults,
-  RawMasterTextStyles,
+  ObjectDefaultProperties,
   Theme,
   ThemeExtractionInput,
 } from "../../domain/index";
+import type { MasterTextStyles } from "../../domain/text-style";
 import { parseSlideMaster } from "../slide/slide-parser";
+import { parseShapeProperties } from "../shape-parser/properties";
+import { parseBodyProperties } from "../text/text-parser";
+import { parseTextStyleLevels } from "../text/text-style-levels";
 
 // =============================================================================
 // Font Scheme Parsing
@@ -205,10 +209,26 @@ export function parseObjectDefaults(themeContent: XmlDocument | null): ObjectDef
   }
 
   return {
-    lineDefault: getChild(objectDefaults, "a:lnDef"),
-    shapeDefault: getChild(objectDefaults, "a:spDef"),
-    textDefault: getChild(objectDefaults, "a:txDef"),
+    lineDefault: parseObjectDefaultElement(getChild(objectDefaults, "a:lnDef")),
+    shapeDefault: parseObjectDefaultElement(getChild(objectDefaults, "a:spDef")),
+    textDefault: parseObjectDefaultElement(getChild(objectDefaults, "a:txDef")),
   };
+}
+
+/** Parse a single object default element (a:spDef/a:lnDef/a:txDef) into domain type. */
+function parseObjectDefaultElement(el: XmlElement | undefined): ObjectDefaultProperties | undefined {
+  if (!el) { return undefined; }
+  const spPr = getChild(el, "a:spPr");
+  const bodyPr = getChild(el, "a:bodyPr");
+  const lstStyle = getChild(el, "a:lstStyle");
+  const props: ObjectDefaultProperties = {
+    shapeProperties: parseShapeProperties(spPr),
+    bodyProperties: bodyPr ? parseBodyProperties(bodyPr) : undefined,
+    textStyleLevels: parseTextStyleLevels(lstStyle),
+  };
+  // Return undefined if empty
+  if (!props.shapeProperties && !props.bodyProperties && !props.textStyleLevels) { return undefined; }
+  return props;
 }
 
 // =============================================================================
@@ -334,11 +354,7 @@ export function parseTheme(themeContent: XmlDocument | null, themeOverrides: rea
 // Theme Extraction (assembles all theme-related data from raw XML)
 // =============================================================================
 
-const EMPTY_MASTER_TEXT_STYLES: RawMasterTextStyles = {
-  titleStyle: undefined,
-  bodyStyle: undefined,
-  otherStyle: undefined,
-};
+const EMPTY_MASTER_TEXT_STYLES: MasterTextStyles = {};
 
 /**
  * Extract complete theme data from raw XML documents.

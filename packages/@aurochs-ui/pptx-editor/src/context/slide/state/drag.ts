@@ -9,25 +9,14 @@ import type { Pixels, Degrees } from "@aurochs-office/drawing-ml/domain/units";
 import type { Bounds } from "@aurochs-office/drawing-ml/domain/geometry";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import type {
-  IdleDragState as CoreIdleDragState,
+  IdleDragState,
   ResizeDragState as CoreResizeDragState,
   PendingResizeDragState as CorePendingResizeDragState,
-  ResizeHandlePosition as CoreResizeHandlePosition,
 } from "@aurochs-ui/editor-core/drag-state";
-
-/**
- * Position of a resize handle on the selection box
- */
-export type ResizeHandlePosition = CoreResizeHandlePosition;
 
 // =============================================================================
 // PPTX-specialized Types (using branded Pixels/Degrees/ShapeId)
 // =============================================================================
-
-/**
- * Idle state - no drag operation in progress
- */
-export type IdleDragState = CoreIdleDragState;
 
 /**
  * Preview delta for move/resize operations

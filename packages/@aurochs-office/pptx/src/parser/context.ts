@@ -10,20 +10,13 @@ import { SCHEME_COLOR_NAMES, type Color } from "@aurochs-office/drawing-ml/domai
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
 import { DEFAULT_COLOR_MAPPING } from "@aurochs-office/pptx/domain/color/types";
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
-import type { ResourceRelationshipResolver, RawMasterTextStyles } from "../domain";
-
-export type ResourceResolver = ResourceRelationshipResolver;
-
-/**
- * Re-export RawMasterTextStyles as MasterTextStyles for parser-layer consumers.
- * SoT: domain/theme/types.ts
- */
-export type MasterTextStyles = RawMasterTextStyles;
+import type { ResourceRelationshipResolver } from "../domain";
+import type { MasterTextStyles } from "../domain/text-style";
 
 /**
  * Create a resource resolver from ResourceMap
  */
-export function createResourceResolver(resources: ResourceMap): ResourceResolver {
+export function createResourceResolver(resources: ResourceMap): ResourceRelationshipResolver {
   return {
     getTarget: (id: string) => resources.getTarget(id),
     getType: (id: string) => resources.getType(id),
@@ -142,13 +135,13 @@ export type ParseContext = {
   readonly masterStylesInfo: MasterStylesInfo;
 
   /** Resource resolver for the current slide */
-  readonly slideResources: ResourceResolver;
+  readonly slideResources: ResourceRelationshipResolver;
 
   /** Resource resolver for the layout */
-  readonly layoutResources: ResourceResolver;
+  readonly layoutResources: ResourceRelationshipResolver;
 
   /** Resource resolver for the master */
-  readonly masterResources: ResourceResolver;
+  readonly masterResources: ResourceRelationshipResolver;
 
   /** Theme content for resolving theme-based colors/fonts */
   readonly themeContent: XmlDocument | undefined;
@@ -177,7 +170,7 @@ export type MinimalParseContext = {
  * Create an empty parse context for testing
  */
 export function createEmptyParseContext(): ParseContext {
-  const emptyResolver: ResourceResolver = {
+  const emptyResolver: ResourceRelationshipResolver = {
     getTarget: () => undefined,
     getType: () => undefined,
   };

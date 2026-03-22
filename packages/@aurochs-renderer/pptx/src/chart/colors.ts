@@ -7,14 +7,14 @@
  */
 
 import type { ChartShapeProperties } from "@aurochs-office/chart/domain";
-import type { Fill } from "@aurochs-office/pptx/domain/color/types";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
 import type { CoreRenderContext } from "../render-context";
 import { resolveFill } from "@aurochs-office/pptx/domain/color/fill";
 
 /**
  * Convert BaseFill from chart to PPTX Fill (skipping blip fills which have different structures).
  */
-function toFill(fill: ChartShapeProperties["fill"]): Fill | undefined {
+function toFill(fill: ChartShapeProperties["fill"]): BaseFill | undefined {
   if (!fill) {
     return undefined;
   }
@@ -22,7 +22,7 @@ function toFill(fill: ChartShapeProperties["fill"]): Fill | undefined {
   if (fill.type === "blipFill") {
     return undefined;
   }
-  return fill as Fill;
+  return fill as BaseFill;
 }
 
 /**

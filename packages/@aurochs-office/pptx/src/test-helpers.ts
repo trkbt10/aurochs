@@ -8,7 +8,8 @@ import type { XmlElement } from "@aurochs/xml";
 import type { ColorMap, ColorResolveContext, ColorScheme } from "@aurochs-office/drawing-ml/domain/color-context";
 import { DEFAULT_COLOR_MAPPING } from "@aurochs-office/pptx/domain/color/types";
 import type { SlideContext, ResourceContext } from "./parser/slide/context";
-import { DEFAULT_COLOR_SCHEME, type PlaceholderTable, type FormatScheme, type RawMasterTextStyles } from "./domain";
+import { DEFAULT_COLOR_SCHEME, type PlaceholderTable, type FormatScheme } from "./domain";
+import type { MasterTextStyles } from "./domain/text-style";
 import type { ResourceMap, ZipFile } from "@aurochs-office/opc";
 import { DEFAULT_RENDER_OPTIONS } from "@aurochs-renderer/pptx";
 
@@ -71,7 +72,7 @@ export function createMockFormatScheme(): FormatScheme {
 /**
  * Create mock master text styles
  */
-export function createMockMasterTextStyles(): RawMasterTextStyles {
+export function createMockMasterTextStyles(): MasterTextStyles {
   return {
     titleStyle: undefined,
     bodyStyle: undefined,

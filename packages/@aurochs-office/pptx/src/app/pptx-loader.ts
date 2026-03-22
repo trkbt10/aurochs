@@ -10,7 +10,7 @@
 
 import { loadZipPackage, type ZipPackage } from "@aurochs/zip";
 import { openPresentation } from "./open-presentation";
-import type { PresentationFile } from "../domain";
+import type { PackageFile } from "@aurochs-office/opc";
 
 // =============================================================================
 // Types
@@ -23,7 +23,7 @@ export type LoadedPresentation = {
   /** Parsed presentation data */
   readonly presentation: ReturnType<typeof openPresentation>;
   /** File access interface for the loaded package */
-  readonly presentationFile: PresentationFile;
+  readonly presentationFile: PackageFile;
 };
 
 /**
@@ -34,7 +34,7 @@ export type PptxFileBundle = {
   /** The underlying ZIP package (supports both read and write) */
   readonly zipPackage: ZipPackage;
   /** File access interface (read-only view) */
-  readonly presentationFile: PresentationFile;
+  readonly presentationFile: PackageFile;
 };
 
 /**

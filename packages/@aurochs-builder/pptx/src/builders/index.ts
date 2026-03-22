@@ -70,7 +70,7 @@ export { applyThemeEditsToPackage, applyThemeEditsToThemeXml } from "./theme-bui
 
 // Theme exporter
 export { exportThemeAsPotx, getThemeFileName, buildThemeXml } from "./theme-exporter";
-export type { ThemeExportOptions, BuildThemeXmlOptions } from "./theme-exporter";
+export type { ThemeExportOptions, LayoutExportEntry, BuildThemeXmlOptions } from "./theme-exporter";
 
 // Chart builders
 export { applyChartUpdates } from "./chart-builder";

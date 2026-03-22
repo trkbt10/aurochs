@@ -4,7 +4,7 @@
  * @see ECMA-376 Part 1, Section 19.3.1.51 (p:txStyles)
  */
 
-import type { MasterTextStyles } from "../../context";
+import type { MasterTextStyles } from "../../../domain/text-style";
 
 /**
  * Mapping from placeholder type to master text style key.

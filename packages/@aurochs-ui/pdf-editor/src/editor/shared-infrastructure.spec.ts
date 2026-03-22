@@ -30,7 +30,7 @@ import type { MoveDragState } from "@aurochs-ui/editor-core/drag-state";
 
 // ---- editor-core/geometry (same module as pptx-editor) ----
 import { isPointInBounds, applyMovePreview } from "@aurochs-ui/editor-core/geometry";
-import type { DragPreviewBounds } from "@aurochs-ui/editor-core/geometry";
+import type { RotatedBoundsInput } from "@aurochs-ui/editor-core/geometry";
 
 // ---- PDF-specific types ----
 import type { PdfElementId } from "./types";
@@ -169,7 +169,7 @@ describe("editor-core/drag-state with PDF elements", () => {
     const doc = createTestDoc();
     const bounds = elementToSvgBounds({ element: doc.pages[0].elements[0], elementIndex: 0, pageIndex: 0, pageHeight: 792 });
 
-    const baseBounds: DragPreviewBounds = { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height, rotation: 0 };
+    const baseBounds: RotatedBoundsInput = { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height, rotation: 0 };
     const drag: MoveDragState<PdfElementId> = {
       type: "move",
       startX: bounds.x,

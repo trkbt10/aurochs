@@ -4,14 +4,14 @@
  * Provides minimal PPTX XML structures and helper functions for testing.
  */
 
-import type { PresentationFile } from "../domain";
+import type { PackageFile } from "@aurochs-office/opc";
 
 /**
- * Create a fake PresentationFile for testing
+ * Create a fake PackageFile for testing
  */
-export function createFakePresentationFile(
+export function createFakePackageFile(
   files: Record<string, string | ArrayBuffer>,
-): PresentationFile {
+): PackageFile {
   return {
     readText(path: string): string | null {
       const content = files[path];
@@ -187,8 +187,8 @@ export const APP_XML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 /**
  * Create a minimal fake presentation file for testing
  */
-export function createMinimalFakePresentationFile(): PresentationFile {
-  return createFakePresentationFile({
+export function createMinimalFakePackageFile(): PackageFile {
+  return createFakePackageFile({
     "[Content_Types].xml": MINIMAL_CONTENT_TYPES,
     "ppt/presentation.xml": MINIMAL_PRESENTATION,
     "ppt/_rels/presentation.xml.rels": MINIMAL_PRESENTATION_RELS,

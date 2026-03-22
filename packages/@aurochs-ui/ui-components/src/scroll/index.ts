@@ -9,5 +9,4 @@ export { useVirtualScroll } from "./useVirtualScroll";
 export type { UseVirtualScrollOptions, UseVirtualScrollReturn, ViewportRect } from "./useVirtualScroll";
 
 export { VirtualScrollProvider, useVirtualScrollContext } from "./VirtualScrollContext";
-export type { VirtualScrollContextValue } from "./VirtualScrollContext";
 

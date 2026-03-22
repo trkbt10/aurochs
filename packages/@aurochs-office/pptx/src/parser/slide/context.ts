@@ -20,7 +20,9 @@ import { getChild, getByPath } from "@aurochs/xml";
 import type { RenderOptions } from "@aurochs-renderer/pptx";
 
 // Import domain types from canonical sources
-import type { PlaceholderTable, Theme, RawMasterTextStyles, ResolvedBlipResource } from "../../domain/index";
+import type { PlaceholderTable, Theme, ResolvedBlipResource } from "../../domain/index";
+import type { MasterTextStyles, TextStyleLevels } from "../../domain/text-style";
+import { TEXT_STYLE_LEVEL_KEYS } from "../../domain/text-style";
 import type { ZipFile, ResourceMap } from "@aurochs-office/opc";
 import type { TableStyleList } from "../table/style-parser";
 import type { ColorMap, ColorResolveContext } from "@aurochs-office/drawing-ml/domain/color-context";
@@ -31,7 +33,7 @@ import { getMimeType } from "@aurochs/files";
 // =============================================================================
 
 export type SlideMasterParams = {
-  textStyles: RawMasterTextStyles;
+  textStyles: MasterTextStyles;
   placeholders: PlaceholderTable;
   colorMap: ColorMap;
   resources: ResourceMap;
@@ -91,7 +93,7 @@ export type PresentationContext = {
  * @see ECMA-376 Part 1, Section 19.3.1.36 (p:ph) - Placeholder element
  * @see ECMA-376 Part 1, Section 19.7.10 (ST_PlaceholderType) - All 16 placeholder types
  */
-const TYPE_TO_MASTER_STYLE: Record<string, keyof RawMasterTextStyles> = {
+const TYPE_TO_MASTER_STYLE: Record<string, keyof MasterTextStyles> = {
   // Title placeholders → titleStyle
   ctrTitle: "titleStyle",
   title: "titleStyle",
@@ -140,6 +142,8 @@ export type ParagraphContext = {
  */
 export function createParagraphContext(shape: ShapeContext, lvl: number): ParagraphContext {
   const lvlpPr = `a:lvl${lvl}pPr`;
+  // Map paragraph level (1-9) to domain TextStyleLevels key
+  const levelKey = TEXT_STYLE_LEVEL_KEYS[lvl] as keyof TextStyleLevels | undefined;
 
   return {
     lvl,
@@ -174,17 +178,11 @@ export function createParagraphContext(shape: ShapeContext, lvl: number): Paragr
         }
       }
 
-      // 4. Master text styles
-      const masterStyleKey = TYPE_TO_MASTER_STYLE[shape.type];
-      if (masterStyleKey !== undefined) {
-        const masterStyle = shape.slide.master.textStyles[masterStyleKey];
-        if (masterStyle !== undefined) {
-          const defRPr = getByPath(masterStyle, [lvlpPr, "a:defRPr"]);
-          if (defRPr !== undefined) {
-            return defRPr;
-          }
-        }
-      }
+      // 4. Master text styles (domain type — skipped for XML return type)
+      // master.textStyles is now MasterTextStyles (domain typed). The resolved
+      // RunProperties is accessible via masterStyle[levelKey]?.defaultRunProperties
+      // but cannot be returned as XmlElement. This step is currently unreachable
+      // in production (ParagraphContext is only used in tests).
 
       // 5. Default text style
       const defaultTextStyle = shape.slide.presentation.defaultTextStyle;
@@ -222,17 +220,8 @@ export function createParagraphContext(shape: ShapeContext, lvl: number): Paragr
         }
       }
 
-      // 4. Master text styles
-      const masterStyleKey = TYPE_TO_MASTER_STYLE[shape.type];
-      if (masterStyleKey !== undefined) {
-        const masterStyle = shape.slide.master.textStyles[masterStyleKey];
-        if (masterStyle !== undefined) {
-          const pPr = getChild(masterStyle, lvlpPr);
-          if (pPr !== undefined) {
-            return pPr;
-          }
-        }
-      }
+      // 4. Master text styles (domain type — skipped for XML return type)
+      // See getDefRPr step 4 comment above.
 
       // 5. Default text style
       const defaultTextStyle = shape.slide.presentation.defaultTextStyle;
@@ -542,7 +531,7 @@ export type BackgroundContext = {
  * @see ECMA-376 Part 1, Section 19.2.1.8 (p:defaultTextStyle)
  */
 export type TextStyleContext = {
-  readonly masterTextStyles: RawMasterTextStyles;
+  readonly masterTextStyles: MasterTextStyles;
   readonly defaultTextStyle: XmlElement | null;
   readonly placeholders: PlaceholderContext;
 };

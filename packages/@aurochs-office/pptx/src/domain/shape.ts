@@ -5,7 +5,8 @@
  * @see ECMA-376 Part 1, Section 20.1.9 - DrawingML Shapes
  */
 
-import type { Fill, Line } from "./color/types";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import type { BlipEffects } from "@aurochs-office/drawing-ml/domain/fill";
 import type { Table } from "./table/types";
 import type { TextBody } from "./text";
@@ -136,8 +137,8 @@ export type Placeholder = {
 export type ShapeProperties = {
   readonly transform?: Transform;
   readonly geometry?: Geometry;
-  readonly fill?: Fill;
-  readonly line?: Line;
+  readonly fill?: BaseFill;
+  readonly line?: BaseLine;
   readonly effects?: Effects;
   readonly scene3d?: Scene3d;
   readonly shape3d?: Shape3d;
@@ -195,7 +196,7 @@ export type ShapeStyle = {
  */
 export type StyleReference = {
   readonly index: StyleMatrixColumnIndex;
-  readonly color?: Fill;
+  readonly color?: BaseFill;
 };
 
 /**
@@ -204,7 +205,7 @@ export type StyleReference = {
  */
 export type FontReference = {
   readonly index: FontCollectionIndex;
-  readonly color?: Fill;
+  readonly color?: BaseFill;
 };
 
 /**
@@ -277,7 +278,7 @@ export type GrpShape = {
  */
 export type GroupShapeProperties = {
   readonly transform?: GroupTransform;
-  readonly fill?: Fill;
+  readonly fill?: BaseFill;
   readonly effects?: Effects;
   readonly scene3d?: Scene3d;
 };

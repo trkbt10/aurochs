@@ -5,13 +5,13 @@
 // @vitest-environment jsdom
 
 import { render, fireEvent } from "@testing-library/react";
-import type { Line } from "@aurochs-office/pptx/domain/color/types";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import { LineEditor, createDefaultLine } from "./LineEditor";
 
 describe("LineEditor", () => {
   it("updates line width from the slider", () => {
-    const calls: { last?: Line } = {};
-    const handleChange = (line: Line) => {
+    const calls: { last?: BaseLine } = {};
+    const handleChange = (line: BaseLine) => {
       calls.last = line;
     };
 
@@ -23,8 +23,8 @@ describe("LineEditor", () => {
   });
 
   it("updates line dash via select", () => {
-    const calls: { last?: Line } = {};
-    const handleChange = (line: Line) => {
+    const calls: { last?: BaseLine } = {};
+    const handleChange = (line: BaseLine) => {
       calls.last = line;
     };
 

@@ -67,7 +67,7 @@ export function createInitialThemeEditorState({
     colorScheme,
     fontScheme,
     fontSchemeName: fontSchemeName ?? "",
-    masterBackground: {},
+    masterBackground: undefined,
     masterColorMapping: DEFAULT_COLOR_MAPPING,
     formatScheme: undefined,
     customColors: [],
@@ -244,7 +244,7 @@ export function themeEditorReducer(state: ThemeEditorState, action: ThemeEditorA
         extraColorSchemes: t.extraColorSchemes ?? [],
         objectDefaults: t.objectDefaults ?? state.objectDefaults,
         masterTextStyles: t.masterTextStyles ?? state.masterTextStyles,
-        masterBackground: t.masterBackground ?? {},
+        masterBackground: t.masterBackground ?? state.masterBackground,
       };
     }
 

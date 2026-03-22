@@ -4,7 +4,7 @@
 
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import { ooxmlEmu } from "@aurochs-office/ooxml/domain/ooxml-units";
-import type { PresentationFile } from "@aurochs-office/pptx/domain";
+import type { PackageFile } from "@aurochs-office/opc";
 import { CONTENT_TYPES, RELATIONSHIP_TYPES } from "@aurochs-office/pptx/domain";
 import { createEmptyZipPackage } from "@aurochs/zip";
 
@@ -124,13 +124,13 @@ const BLANK_SLIDE_XML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
   </p:cSld>
 </p:sld>`;
 
-/** Create a minimal blank PPTX `PresentationFile` with the given slide count/size. */
-export function createBlankPptxPresentationFile(slideCount: number, slideSize: BlankPptxSlideSize): PresentationFile {
+/** Create a minimal blank PPTX `PackageFile` with the given slide count/size. */
+export function createBlankPptxPackageFile(slideCount: number, slideSize: BlankPptxSlideSize): PackageFile {
   if (!Number.isInteger(slideCount) || slideCount < 1) {
-    throw new Error(`createBlankPptxPresentationFile: invalid slideCount: ${slideCount}`);
+    throw new Error(`createBlankPptxPackageFile: invalid slideCount: ${slideCount}`);
   }
   if (!slideSize) {
-    throw new Error("createBlankPptxPresentationFile: slideSize is required");
+    throw new Error("createBlankPptxPackageFile: slideSize is required");
   }
 
   const pkg = createEmptyZipPackage();

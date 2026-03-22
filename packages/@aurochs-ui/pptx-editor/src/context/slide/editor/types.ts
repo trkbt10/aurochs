@@ -9,7 +9,8 @@ import type { Slide, Shape } from "@aurochs-office/pptx/domain";
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import { createHistory, type UndoRedoHistory } from "@aurochs-ui/editor-core/history";
-import type { SelectionState, DragState, ClipboardContent, ResizeHandlePosition } from "../state";
+import type { SelectionState, DragState, ClipboardContent } from "../state";
+import type { ResizeHandlePosition } from "@aurochs-ui/editor-core/drag-state";
 import { createEmptySelection } from "@aurochs-ui/editor-core/selection";
 import { createIdleDragState } from "@aurochs-ui/editor-core/drag-state";
 

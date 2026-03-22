@@ -3,7 +3,8 @@
  */
 
 import { useCallback } from "react";
-import type { SlideSize, PresentationFile } from "@aurochs-office/pptx/domain";
+import type { SlideSize } from "@aurochs-office/pptx/domain";
+import type { PackageFile } from "@aurochs-office/opc";
 import type { SlideLayoutType } from "@aurochs-office/pptx/domain/slide/types";
 import type { SlideLayoutAttributes } from "@aurochs-office/pptx/parser/slide/layout-parser";
 import type { SlideLayoutOption } from "@aurochs-office/pptx/app";
@@ -18,7 +19,7 @@ export type SlideLayoutEditorProps = EditorProps<SlideLayoutAttributes> & {
   readonly layoutOptions: readonly SlideLayoutOption[];
   readonly onLayoutChange: (layoutPath: string) => void;
   readonly slideSize?: SlideSize;
-  readonly presentationFile?: PresentationFile;
+  readonly presentationFile?: PackageFile;
 };
 
 type OptionalBooleanValue = "" | "true" | "false";

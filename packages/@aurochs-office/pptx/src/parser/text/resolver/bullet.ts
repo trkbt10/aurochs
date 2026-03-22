@@ -6,7 +6,9 @@
 
 import type { XmlElement } from "@aurochs/xml";
 import { getChild } from "@aurochs/xml";
-import type { TextStyleContext, MasterTextStyles } from "../../context";
+import type { TextStyleContext } from "../../context";
+import type { MasterTextStyles } from "../../../domain/text-style";
+import { TEXT_STYLE_LEVEL_KEYS } from "../../../domain/text-style";
 import type { Points, Percent } from "@aurochs-office/drawing-ml/domain/units";
 import { pt } from "@aurochs-office/drawing-ml/domain/units";
 import type { Bullet, BulletStyle } from "../../../domain/text";
@@ -176,6 +178,55 @@ function getBulletPropertiesFromPlaceholder(
 /**
  * Get bullet properties from master text styles.
  */
+/**
+ * Convert domain BulletStyle to BulletProperties for merge compatibility.
+ */
+function bulletStyleToBulletProperties(bulletStyle: BulletStyle): BulletProperties {
+  const result: Partial<BulletProperties> = {};
+
+  // Bullet type
+  switch (bulletStyle.bullet.type) {
+    case "none":
+      (result as { none?: boolean }).none = true;
+      break;
+    case "char":
+      (result as { char?: string }).char = bulletStyle.bullet.char;
+      break;
+    case "auto":
+      (result as { autoNumType?: string }).autoNumType = bulletStyle.bullet.scheme;
+      (result as { autoNumStartAt?: number }).autoNumStartAt = bulletStyle.bullet.startAt;
+      break;
+    case "blip":
+      (result as { blipResourceId?: string }).blipResourceId = bulletStyle.bullet.resourceId;
+      break;
+  }
+
+  // Font
+  if (bulletStyle.fontFollowText) {
+    (result as { fontFollowText?: boolean }).fontFollowText = true;
+  } else if (bulletStyle.font !== undefined) {
+    (result as { font?: string }).font = bulletStyle.font;
+  }
+
+  // Color
+  if (bulletStyle.colorFollowText) {
+    (result as { colorFollowText?: boolean }).colorFollowText = true;
+  } else if (bulletStyle.color !== undefined) {
+    (result as { color?: Color }).color = bulletStyle.color;
+  }
+
+  // Size
+  if (bulletStyle.sizeFollowText) {
+    (result as { sizeFollowText?: boolean }).sizeFollowText = true;
+  } else if (bulletStyle.sizePercent !== undefined) {
+    (result as { sizePercent?: Percent }).sizePercent = bulletStyle.sizePercent;
+  } else if (bulletStyle.sizePoints !== undefined) {
+    (result as { sizePoints?: Points }).sizePoints = bulletStyle.sizePoints;
+  }
+
+  return result as BulletProperties;
+}
+
 function getBulletPropertiesFromMasterTextStyles(
   masterTextStyles: MasterTextStyles | undefined,
   placeholderType: string | undefined,
@@ -190,14 +241,19 @@ function getBulletPropertiesFromMasterTextStyles(
     return undefined;
   }
 
-  const style = masterTextStyles[styleKey];
-  if (style === undefined) {
+  const levels = masterTextStyles[styleKey];
+  if (levels === undefined) {
     return undefined;
   }
 
-  const lvlpPr = `a:lvl${lvl}pPr`;
-  const pPr = getChild(style, lvlpPr);
-  return getBulletPropertiesFromPPr(pPr);
+  const levelKey = TEXT_STYLE_LEVEL_KEYS[lvl];
+  const level = levels[levelKey];
+  const bulletStyle = level?.paragraphProperties?.bulletStyle;
+  if (bulletStyle === undefined) {
+    return undefined;
+  }
+
+  return bulletStyleToBulletProperties(bulletStyle);
 }
 
 /**

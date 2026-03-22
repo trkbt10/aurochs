@@ -8,18 +8,6 @@
  */
 
 import type { XmlElement } from "@aurochs/xml";
-import type { PackageFile } from "@aurochs-office/opc";
-
-// =============================================================================
-// Presentation File Abstraction
-// =============================================================================
-
-/**
- * Abstract type for reading presentation files.
- * Users can implement this with any ZIP library (fflate, pako, etc.)
- * or even a filesystem-based implementation for extracted archives.
- */
-export type PresentationFile = PackageFile;
 
 // =============================================================================
 // Placeholder Types (ECMA-376 Part 1, Section 19.3.1.36)

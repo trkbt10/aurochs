@@ -7,7 +7,9 @@
 
 import type { XmlElement } from "@aurochs/xml";
 import { getChild, getByPath } from "@aurochs/xml";
-import type { TextStyleContext, MasterTextStyles } from "../../context";
+import type { TextStyleContext } from "../../context";
+import type { MasterTextStyles } from "../../../domain/text-style";
+import { TEXT_STYLE_LEVEL_KEYS } from "../../../domain/text-style";
 import type { Points } from "@aurochs-office/drawing-ml/domain/units";
 import { pt } from "@aurochs-office/drawing-ml/domain/units";
 import { DEFAULT_FONT_SIZE_PT, FONT_SIZE_CENTIPOINTS_TO_PT } from "../../../domain/defaults";
@@ -79,14 +81,14 @@ function getFontSizeFromMasterTextStyles(
     return undefined;
   }
 
-  const style = masterTextStyles[styleKey];
-  if (style === undefined) {
+  const levels = masterTextStyles[styleKey];
+  if (levels === undefined) {
     return undefined;
   }
 
-  const lvlpPr = `a:lvl${lvl}pPr`;
-  const defRPr = getByPath(style, [lvlpPr, "a:defRPr"]);
-  return getFontSizeFromRPr(defRPr);
+  const levelKey = TEXT_STYLE_LEVEL_KEYS[lvl];
+  const level = levels[levelKey];
+  return level?.defaultRunProperties?.fontSize;
 }
 
 /**
@@ -203,19 +205,11 @@ export function resolveDefRPr(
     }
   }
 
-  // 4. Master text styles
-  if (ctx.masterTextStyles !== undefined && ctx.placeholderType !== undefined) {
-    const styleKey = TYPE_TO_MASTER_STYLE[ctx.placeholderType];
-    if (styleKey !== undefined) {
-      const style = ctx.masterTextStyles[styleKey];
-      if (style !== undefined) {
-        const defRPr = getByPath(style, [lvlpPr, "a:defRPr"]);
-        if (defRPr !== undefined) {
-          return defRPr;
-        }
-      }
-    }
-  }
+  // 4. Master text styles (domain-typed — cannot return as XmlElement, skipped)
+  // Master text styles are now MasterTextStyles (domain objects). The resolved
+  // RunProperties is accessible via levels[levelKey]?.defaultRunProperties
+  // but cannot be returned as XmlElement. Callers needing master text style
+  // resolution should use the dedicated resolvers (resolveFontSize, etc.).
 
   // 5. Default text style
   if (ctx.defaultTextStyle !== undefined) {

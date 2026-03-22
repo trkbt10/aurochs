@@ -10,9 +10,6 @@ import type { SlideTransition } from "@aurochs-office/pptx/domain/transition";
 import type { ItemSelectionState } from "@aurochs-ui/editor-core/item-selection";
 import type { ListOrientation, ListMode } from "@aurochs-ui/editor-controls/item-list";
 
-// Re-export generic types with slide-specific aliases for backward compat
-export type SlideListOrientation = ListOrientation;
-export type SlideListMode = ListMode;
 export type SlideSelectionState = ItemSelectionState<SlideId>;
 
 /**
@@ -26,9 +23,9 @@ export type SlideListProps = {
   /** Slide height for aspect ratio calculation */
   readonly slideHeight: number;
   /** Scroll orientation (default: vertical) */
-  readonly orientation?: SlideListOrientation;
+  readonly orientation?: ListOrientation;
   /** Editor mode (default: readonly) */
-  readonly mode?: SlideListMode;
+  readonly mode?: ListMode;
   /** Currently selected slide IDs (controlled) */
   readonly selectedIds?: readonly SlideId[];
   /** Currently active slide ID (for navigation highlight) */

@@ -2,7 +2,8 @@
  * @file PresetShapePreview component for displaying preset shape previews
  */
 
-import type { Fill, Line } from "@aurochs-office/pptx/domain";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import { useShapeStyle } from "@aurochs-renderer/pptx/react";
 
 /**
@@ -18,8 +19,8 @@ export function PresetShapePreview({
   height = 70,
 }: {
   pathData: string;
-  fill?: Fill;
-  line?: Line;
+  fill?: BaseFill;
+  line?: BaseLine;
   label: string;
   viewBox?: string;
   width?: number;
