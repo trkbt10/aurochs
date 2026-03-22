@@ -25,20 +25,20 @@ import { SlideThumbnailPreview } from "../thumbnail/SlideThumbnailPreview";
 import { CreationToolbar, createSelectMode } from "@aurochs-ui/ooxml-components";
 import type { CreationMode } from "@aurochs-ui/ooxml-components";
 import type { DrawingPath } from "@aurochs-ui/path-tools";
-import { isCustomGeometry } from "../path-tools/adapters";
+import { isCustomGeometry } from "@aurochs-ui/pptx-slide-canvas/path-tools/adapters";
 import {
   createShapeFromMode,
   createCustomGeometryShape,
-} from "../shape/factory";
+} from "@aurochs-ui/pptx-slide-canvas/shape/factory";
 import {
   getDefaultBoundsForMode,
   generateShapeId,
   createPicShape,
 } from "@aurochs-ui/ooxml-components";
-import { createOleGraphicFrame } from "../graphic-frame/factory";
+import { createOleGraphicFrame } from "@aurochs-ui/pptx-slide-canvas/graphic-frame/factory";
 import { getOleTypeFromFile } from "@aurochs-builder/pptx/patcher";
 import type { ShapeBounds } from "@aurochs-ui/ooxml-components";
-import { drawingPathToCustomGeometry } from "../path-tools/adapters";
+import { drawingPathToCustomGeometry } from "@aurochs-ui/pptx-slide-canvas/path-tools/adapters";
 import {
   isTextEditActive,
   useTextEditHandlers,
@@ -56,9 +56,9 @@ import { getSlideLayoutAttributes } from "@aurochs-office/pptx/parser/slide/layo
 import { RELATIONSHIP_TYPES, createZipAdapter } from "@aurochs-office/pptx/domain";
 import { CanvasControls } from "@aurochs-ui/editor-controls/shape-editor";
 import type { ZoomMode } from "@aurochs-ui/editor-controls/zoom";
-import { SvgEditorCanvas, type AssetDropData } from "../slide-canvas/SvgEditorCanvas";
+import { SvgEditorCanvas, type AssetDropData } from "@aurochs-ui/pptx-slide-canvas/slide-canvas/SvgEditorCanvas";
 import type { ViewportTransform } from "@aurochs-renderer/pptx/svg-viewport";
-import { TextEditContextProvider, useTextEditContextValue } from "../context/slide/TextEditContext";
+import { TextEditContextProvider, useTextEditContextValue } from "@aurochs-ui/pptx-slide-canvas/context/slide/TextEditContext";
 import {
   PresentationPreviewProvider,
   usePresentationPreview,
@@ -68,18 +68,18 @@ import {
   type TextSelectionContext,
   getParagraphsInSelection,
   getSelectionForCursor,
-} from "../editors/text/text-property-extractor";
+} from "@aurochs-ui/pptx-editors/text/text-property-extractor";
 import {
   applyRunPropertiesToSelection,
   applyParagraphPropertiesToSelection,
-} from "../slide/text-edit/input-support/run-formatting";
+} from "@aurochs-ui/pptx-slide-canvas/slide/text-edit/input-support/run-formatting";
 import { EditorShell, CanvasArea, type EditorPanel } from "@aurochs-ui/editor-controls/editor-shell";
 import { RIGHT_PANEL_TABS, usePivotTabs } from "../layout";
 import { SelectedElementTab, SlideInfoTab, LayersTab } from "../panels/right-panel";
 import { InspectorPanelWithTabs } from "../panels/inspector";
 import { AssetPanel } from "@aurochs-ui/ooxml-components/opc-embedded-assets";
 import { ThemeSchemeEditorsSection, type ThemePreset } from "@aurochs-ui/ooxml-components/presentation-theme-layout";
-import { PresentationSlideshow, type SlideshowSlideContent } from "../viewer/PresentationSlideshow";
+import { PresentationSlideshow, type SlideshowSlideContent } from "@aurochs-ui/pptx-viewer/PresentationSlideshow";
 import {
   usePanelCallbacks,
   useContextMenuActions,
@@ -98,7 +98,7 @@ import type { SchemeColorName } from "@aurochs-office/drawing-ml/domain/color";
 import type { Theme } from "@aurochs-office/pptx/domain/theme/types";
 import type { FontSpec } from "@aurochs-office/ooxml/domain/font-scheme";
 import { resolveEditingTheme } from "./resolve-editing-theme";
-import { slideColorMappingForEditor } from "../slide/color-mapping-for-editor";
+import { slideColorMappingForEditor } from "@aurochs-ui/pptx-slide-canvas/slide/color-mapping-for-editor";
 
 // =============================================================================
 // Local constants (PPTX-specific, not part of shared EditorShell)

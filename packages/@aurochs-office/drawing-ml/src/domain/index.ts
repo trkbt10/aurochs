@@ -104,6 +104,63 @@ export type {
   TextEffectsConfig,
 } from "./text-effects";
 
+// Input specification types (simplified external representations for construction)
+export type {
+  // Color input
+  ThemeColorInput,
+  ColorInput,
+  // Fill input
+  GradientStopInput,
+  GradientFillInput,
+  PatternFillInput,
+  SolidFillInput,
+  ThemeFillInput,
+  BlipCompressionState,
+  BlipFillInput,
+  FillInput,
+  // Line input
+  LineEndType,
+  LineEndSize,
+  LineEndInput,
+  DashStyle,
+  LineInput,
+  // Effect input
+  ShadowEffectInput,
+  GlowEffectInput,
+  SoftEdgeEffectInput,
+  ReflectionEffectInput,
+  EffectsInput,
+  // 3D input
+  BevelPresetType,
+  PresetMaterialType,
+  BevelInput,
+  Shape3dInput,
+  // Text input
+  TextAlign,
+  TextAnchor,
+  TextVerticalType,
+  UnderlineStyle,
+  StrikeStyle,
+  TextCaps,
+  TextVerticalPosition,
+  BulletType,
+  BulletInput,
+  TextOutlineInput,
+  TextEffectInput,
+  HyperlinkInput,
+  TextRunInput,
+  LineSpacingInput,
+  TextParagraphInput,
+  RichTextInput,
+  TextInput,
+  TextWrapping,
+  TextBodyPropertiesInput,
+} from "./spec";
+export { isThemeColorInput } from "./spec";
+
+// Domain → Input conversions
+export { colorToInput, fillToInput } from "./domain-to-input";
+
 // Geometry types and functions
 export type {
   Point,

@@ -1,6 +1,6 @@
 /** @file Unit tests for text-body builder */
 import { buildTextRun, buildParagraph, buildTextBody, collectHyperlinks } from "./text-body";
-import type { TextParagraphSpec } from "../types";
+import type { TextParagraphInput } from "@aurochs-office/drawing-ml/domain/spec";
 
 describe("buildTextRun", () => {
   it("returns text-only run when no formatting", () => {
@@ -166,7 +166,7 @@ describe("buildTextBody", () => {
   });
 
   it("builds rich text as multiple paragraphs", () => {
-    const specs: TextParagraphSpec[] = [
+    const specs: TextParagraphInput[] = [
       { runs: [{ text: "A" }] },
       { runs: [{ text: "B" }] },
     ];

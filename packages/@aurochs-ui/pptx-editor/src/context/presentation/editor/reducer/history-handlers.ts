@@ -11,7 +11,7 @@ import { pushHistory, redoHistory, undoHistory } from "@aurochs-ui/editor-core/h
 import { createEmptySelection } from "@aurochs-ui/editor-core/selection";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import { findSlideById } from "../slide";
-import { findShapeById } from "../../../../shape/query";
+import { findShapeById } from "@aurochs-ui/pptx-slide-canvas/shape/query";
 import { createInactiveTextEditState } from "@aurochs-ui/ooxml-components/text-edit";
 import type { TextEditState } from "@aurochs-ui/ooxml-components/text-edit";
 

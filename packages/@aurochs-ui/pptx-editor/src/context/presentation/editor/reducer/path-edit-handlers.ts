@@ -22,9 +22,9 @@ import {
   startMovingHandle,
   updateMovingHandle,
   returnToActiveState,
-} from "../../../slide/state";
-import type { PathPointSelection } from "../../../../path-tools/adapters";
-import { togglePointInSelection, addPointToSelection, createEmptyPathSelection } from "../../../../path-tools/adapters";
+} from "@aurochs-ui/pptx-slide-canvas/context/slide/state";
+import type { PathPointSelection } from "@aurochs-ui/pptx-slide-canvas/path-tools/adapters";
+import { togglePointInSelection, addPointToSelection, createEmptyPathSelection } from "@aurochs-ui/pptx-slide-canvas/path-tools/adapters";
 
 // =============================================================================
 // Helper Functions

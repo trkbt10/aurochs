@@ -10,7 +10,7 @@ import type { SlideTransition } from "@aurochs-office/pptx/domain/transition";
 import type { SlideId, SlideWithId } from "@aurochs-office/pptx/app";
 import { RELATIONSHIP_TYPES } from "@aurochs-office/pptx/domain";
 import { usePresentationEditor } from "../context/presentation/PresentationEditorContext";
-import { SlideList } from "../slide-list";
+import { SlideList } from "@aurochs-ui/pptx-viewer/slide-list";
 import { colorTokens } from "@aurochs-ui/ui-components/design-tokens";
 
 // =============================================================================

@@ -136,15 +136,22 @@ function replaceTextContent(opts: TextReplaceOptions, value: string): string | u
   return idx !== -1 ? value.slice(0, idx) + opts.replace + value.slice(idx + opts.search.length) : undefined;
 }
 
-function replaceChildrenText(
-  opts: TextReplaceOptions,
-  children: readonly XmlNode[],
-  isTextField: boolean,
-): { newChildren: XmlNode[]; changed: boolean } {
+/**
+ * Recursively walk an XML tree and replace text within `<a:t>` elements.
+ * Returns the (possibly new) node and whether any replacement was made.
+ * Immutable: produces new nodes when changes occur.
+ */
+function replaceTextInNode(opts: TextReplaceOptions, node: XmlNode): { node: XmlNode; changed: boolean } {
+  if (isXmlText(node) || !isXmlElement(node)) {
+    return { node, changed: false };
+  }
+
+  const isTextField = node.name === "a:t";
   const newChildren: XmlNode[] = [];
   // eslint-disable-next-line no-restricted-syntax -- mutable flag tracking across children
   let changed = false;
-  for (const child of children) {
+
+  for (const child of node.children) {
     if (isTextField && isXmlText(child)) {
       const replaced = replaceTextContent(opts, child.value);
       if (replaced !== undefined) {
@@ -154,37 +161,16 @@ function replaceChildrenText(
         newChildren.push(child);
       }
     } else {
-      const childChanged = replaceTextInXmlNode(opts, child);
-      changed = changed || childChanged;
-      newChildren.push(child);
+      const result = replaceTextInNode(opts, child);
+      changed = changed || result.changed;
+      newChildren.push(result.node);
     }
   }
-  return { newChildren, changed };
-}
 
-/**
- * Recursively walk an XML tree and replace text within `<a:t>` elements.
- * Returns true if any replacement was made.
- */
-function replaceTextInXmlNode(opts: TextReplaceOptions, node: XmlNode): boolean {
-  if (isXmlText(node)) {
-    return false;
+  if (!changed) {
+    return { node, changed: false };
   }
-
-  if (!isXmlElement(node)) {
-    return false;
-  }
-
-  // a:t is the text element in DrawingML
-  const isTextField = node.name === "a:t";
-
-  const { newChildren, changed } = replaceChildrenText(opts, node.children, isTextField);
-
-  if (changed) {
-    (node as { children: XmlNode[] }).children = newChildren;
-  }
-
-  return changed;
+  return { node: { ...node, children: newChildren }, changed: true };
 }
 
 /**
@@ -229,10 +215,12 @@ function applyTextReplaceToSlide(
 
   const doc = parseXml(xml);
   // Must process all children (not short-circuit) since multiple text nodes may need replacing
-  const changed = doc.children.map((child) => replaceTextInXmlNode(opts, child)).some(Boolean);
+  const results = doc.children.map((child) => replaceTextInNode(opts, child));
+  const changed = results.some((r) => r.changed);
 
   if (changed) {
-    const updatedXml = serializeDocument(doc, { declaration: true, standalone: true });
+    const updatedDoc = { ...doc, children: results.map((r) => r.node) };
+    const updatedXml = serializeDocument(updatedDoc, { declaration: true, standalone: true });
     zipPackage.writeText(slidePath, updatedXml);
   }
   return changed;

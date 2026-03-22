@@ -10,13 +10,13 @@ import type { SolidFill } from "@aurochs-office/drawing-ml/domain/fill";
 import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import type { Effects } from "@aurochs-office/drawing-ml/domain/effects";
 import type {
-  TextSpec,
-  TextParagraphSpec,
-  TextRunSpec,
-  TextBodyPropertiesSpec,
-  HyperlinkSpec,
-  RichTextSpec,
-} from "../types";
+  TextInput,
+  TextParagraphInput,
+  TextRunInput,
+  TextBodyPropertiesInput,
+  HyperlinkInput,
+  RichTextInput,
+} from "@aurochs-office/drawing-ml/domain/spec";
 import { buildSolidFill } from "../fill/solid-fill";
 import { buildLine } from "../line/line-properties";
 import { buildEffects } from "../effect/effects";
@@ -187,7 +187,7 @@ export type HyperlinkInfo = {
 /**
  * Build hyperlink domain object from spec using placeholder ID
  */
-function buildHyperlink(spec: HyperlinkSpec): Hyperlink {
+function buildHyperlink(spec: HyperlinkInput): Hyperlink {
   return {
     id: spec.url, // Placeholder - URL stored here, will be replaced with rId
     tooltip: spec.tooltip,
@@ -197,7 +197,7 @@ function buildHyperlink(spec: HyperlinkSpec): Hyperlink {
 /**
  * Build run properties from spec
  */
-function buildRunProperties(spec: TextRunSpec): RunProperties | undefined {
+function buildRunProperties(spec: TextRunInput): RunProperties | undefined {
   const underline =
     spec.underline && spec.underline !== "none" ? (UNDERLINE_MAP[spec.underline] ?? spec.underline) : undefined;
   const strike = spec.strikethrough && spec.strikethrough !== "noStrike" ? STRIKE_MAP[spec.strikethrough] : undefined;
@@ -229,7 +229,7 @@ function buildRunProperties(spec: TextRunSpec): RunProperties | undefined {
 /**
  * Build a text run from spec
  */
-export function buildTextRun(spec: TextRunSpec): TextRun {
+export function buildTextRun(spec: TextRunInput): TextRun {
   const properties = buildRunProperties(spec);
   return {
     type: "text",
@@ -241,7 +241,7 @@ export function buildTextRun(spec: TextRunSpec): TextRun {
 /**
  * Build bullet style from spec
  */
-function buildBulletStyle(spec: TextParagraphSpec["bullet"]): BulletStyle | undefined {
+function buildBulletStyle(spec: TextParagraphInput["bullet"]): BulletStyle | undefined {
   if (spec === undefined || spec.type === "none") return undefined;
   if (spec.type === "char") {
     return {
@@ -267,7 +267,7 @@ function buildBulletStyle(spec: TextParagraphSpec["bullet"]): BulletStyle | unde
  * Percent values are stored as thousandths (150% → 150000).
  * Point values are stored in actual points (the serializer converts to centipoints).
  */
-function buildLineSpacing(spec: TextParagraphSpec["lineSpacing"]): LineSpacing | undefined {
+function buildLineSpacing(spec: TextParagraphInput["lineSpacing"]): LineSpacing | undefined {
   if (spec === undefined) return undefined;
   return spec.type === "percent"
     ? { type: "percent", value: spec.value * 1000 }
@@ -277,7 +277,7 @@ function buildLineSpacing(spec: TextParagraphSpec["lineSpacing"]): LineSpacing |
 /**
  * Build a paragraph from spec
  */
-export function buildParagraph(spec: TextParagraphSpec): Paragraph {
+export function buildParagraph(spec: TextParagraphInput): Paragraph {
   const runs = spec.runs.map(buildTextRun);
   const bulletStyle = buildBulletStyle(spec.bullet);
   const lineSpacing = buildLineSpacing(spec.lineSpacing);
@@ -299,14 +299,14 @@ export function buildParagraph(spec: TextParagraphSpec): Paragraph {
 /**
  * Check if text spec is rich text (array of paragraphs)
  */
-function isRichText(text: TextSpec): text is RichTextSpec {
+function isRichText(text: TextInput): text is RichTextInput {
   return Array.isArray(text);
 }
 
 /**
  * Build body properties from spec
  */
-function buildBodyProperties(spec?: TextBodyPropertiesSpec): BodyProperties {
+function buildBodyProperties(spec?: TextBodyPropertiesInput): BodyProperties {
   if (!spec) return {};
 
   const hasInsets =
@@ -334,7 +334,7 @@ function buildBodyProperties(spec?: TextBodyPropertiesSpec): BodyProperties {
 /**
  * Build a text body object from simple string or rich text spec
  */
-export function buildTextBody(text: TextSpec, bodyPropertiesSpec?: TextBodyPropertiesSpec): TextBody {
+export function buildTextBody(text: TextInput, bodyPropertiesSpec?: TextBodyPropertiesInput): TextBody {
   const bodyProperties = buildBodyProperties(bodyPropertiesSpec);
 
   if (isRichText(text)) {
@@ -352,9 +352,9 @@ export function buildTextBody(text: TextSpec, bodyPropertiesSpec?: TextBodyPrope
 }
 
 /**
- * Collect all hyperlink URLs from a TextSpec
+ * Collect all hyperlink URLs from a TextInput
  */
-export function collectHyperlinks(text: TextSpec): HyperlinkInfo[] {
+export function collectHyperlinks(text: TextInput): HyperlinkInfo[] {
   const hyperlinks: HyperlinkInfo[] = [];
 
   if (!isRichText(text)) {

@@ -23,118 +23,14 @@
  * ```
  */
 
-// Context - EditorConfig: import from @aurochs-ui/editor-controls/editor-config
-
-// UI Color types: import FillPreview from @aurochs-ui/color-editor
-
-// UI Line
-export { LineEditor, createDefaultLine, type LineEditorProps } from "./ui/line";
-
+// PPTX-specific editors: import directly from @aurochs-ui/pptx-editors
+// Slide canvas, state, shape utilities: import directly from @aurochs-ui/pptx-slide-canvas
 // Shared editors: import from @aurochs-ui/editor-controls/editors
-// TransitionEditor: @aurochs-ui/ooxml-components/presentation-theme-layout
 
-// PPTX-specific editors
-export {
-  // Color (pptx-specific FillEditor with BlipFill)
-  FillEditor,
-  type FillEditorProps,
-  // Text
-  RunPropertiesEditor,
-  LineSpacingEditor,
-  BulletStyleEditor,
-  ParagraphPropertiesEditor,
-  TextBodyEditor,
-  MixedTextBodyEditor,
-  MixedRunPropertiesEditor,
-  MixedParagraphPropertiesEditor,
-  createDefaultRunProperties,
-  createDefaultLineSpacing,
-  createDefaultBulletStyle,
-  createDefaultParagraphProperties,
-  createDefaultTextBody,
-  type RunPropertiesEditorProps,
-  type LineSpacingEditorProps,
-  type BulletStyleEditorProps,
-  type ParagraphPropertiesEditorProps,
-  type TextBodyEditorProps,
-  type MixedTextBodyEditorProps,
-  type MixedRunPropertiesEditorProps,
-  type MixedParagraphPropertiesEditorProps,
-  // Shape
-  NonVisualPropertiesEditor,
-  EffectsEditor,
-  GeometryEditor,
-  ShapePropertiesEditor,
-  createDefaultNonVisualProperties,
-  createDefaultEffects,
-  createDefaultGeometry,
-  createDefaultShapeProperties,
-  type NonVisualPropertiesEditorProps,
-  type EffectsEditorProps,
-  type GeometryEditorProps,
-  type ShapePropertiesEditorProps,
-  // Table
-  TableCellPropertiesEditor,
-  TableCellEditor,
-  TablePropertiesEditor,
-  TableEditor,
-  createDefaultCellBorders,
-  createAllEdgeBorders,
-  createDefaultCell3d,
-  createDefaultBevel,
-  createDefaultLightRig,
-  createDefaultCellMargins,
-  createDefaultTableCellProperties,
-  createDefaultTableCell,
-  createEmptyTableCell,
-  createDefaultTableProperties,
-  createDefaultTable,
-  createTable,
-  type TableCellPropertiesEditorProps,
-  type TableCellEditorProps,
-  type TablePropertiesEditorProps,
-  type TableEditorProps,
-  // Slide-level
-  BackgroundEditor,
-  createDefaultBackground,
-  type BackgroundEditorProps,
-  // OLE object
-  OleObjectEditor,
-  createDefaultOleReference,
-  type OleObjectEditorProps,
-} from "./editors";
-
-// Shape Types (re-export from domain)
-// State Types (from state module)
-export type { SelectionState, DragState, ClipboardContent } from "./context/slide/state";
-export type { ResizeHandlePosition } from "@aurochs-ui/editor-core/drag-state";
-
-// Slide Editor Types
-export type { SlideEditorState, SlideEditorAction } from "./context/slide/editor/types";
-export { createSlideEditorState } from "./context/slide/editor/types";
-
-// Slide Editor Reducer
-export { slideEditorReducer } from "./context/slide/editor/reducer";
-
-// Slide Editor Components
-export { SlideCanvas, type SlideCanvasProps } from "./slide/SlideCanvas";
+// Panels (remain in pptx-editor — they compose canvas + editors)
 export { PropertyPanel, type PropertyPanelProps } from "./panels/PropertyPanel";
 export { ShapeToolbar, type ShapeToolbarProps } from "./panels/ShapeToolbar";
 export { LayerPanel, type LayerPanelProps } from "./panels/LayerPanel";
-
-// Slide Editor Sub-components: import from @aurochs-ui/editor-controls/canvas
-
-// Shape identity utilities
-export { getShapeId } from "./shape/identity";
-
-// Shape query utilities
-export { findShapeById, findShapeByIdWithParents, getTopLevelShapeIds } from "./shape/query";
-
-// Shape bounds utilities
-export { getShapeBounds, getCombinedBounds } from "./shape/bounds";
-
-// Shape capabilities
-export { getShapeCapabilities, type ShapeCapabilities } from "./shape/capabilities";
 
 // Presentation Editor Types
 export type {
@@ -181,52 +77,5 @@ export {
   type UseKeyboardShortcutsParams,
 } from "./presentation/hooks";
 
-// Context Menu Types
-export type { ContextMenuActions } from "./slide/context-menu/SlideContextMenu";
-
-// Viewer Components and Hooks
-export {
-  // Hooks
-  useSlideNavigation,
-  useViewerKeyboard,
-  useSlideshowMode,
-  // Primitive Components
-  SlideIndicator,
-  ProgressBar,
-  KeyboardHints,
-  NavigationControls,
-  SlidePreview,
-  ViewerControls,
-  // Composite Components
-  PresentationSlideshow,
-  PresentationViewer,
-  EmbeddableSlide,
-  SlideShareViewer,
-  // Types - Hooks
-  type UseSlideNavigationOptions,
-  type SlideNavigationResult,
-  type ViewerKeyboardActions,
-  type UseSlideshowModeOptions,
-  type SlideshowModeResult,
-  // Types - Primitives
-  type SlideIndicatorProps,
-  type SlideIndicatorVariant,
-  type ProgressBarProps,
-  type ProgressBarVariant,
-  type KeyboardHintsProps,
-  type KeyboardHintsVariant,
-  type KeyboardHint,
-  type NavigationControlsProps,
-  type NavigationControlsVariant,
-  type SlidePreviewProps,
-  type ViewerControlsProps,
-  type ControlAction,
-  type NavigationState,
-  type PositionState,
-  // Types - Composites
-  type PresentationSlideshowProps,
-  type SlideshowSlideContent,
-  type PresentationViewerProps,
-  type EmbeddableSlideProps,
-  type SlideShareViewerProps,
-} from "./viewer";
+// Context Menu Types: import directly from @aurochs-ui/pptx-slide-canvas
+// Viewer Components and Hooks: import directly from @aurochs-ui/pptx-viewer

@@ -13,7 +13,7 @@ import { PlayIcon } from "@aurochs-ui/ui-components/icons";
 import {
   PresentationSlideshow,
   type SlideshowSlideContent,
-} from "@aurochs-ui/pptx-editor";
+} from "@aurochs-ui/pptx-viewer";
 import type { SlideSize, SlideTransition, TransitionType } from "@aurochs-office/pptx/domain";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 

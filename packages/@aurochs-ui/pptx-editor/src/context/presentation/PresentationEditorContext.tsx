@@ -10,7 +10,7 @@ import type { PresentationDocument } from "@aurochs-office/pptx/app";
 import type { PresentationEditorContextValue } from "./editor/types";
 import { presentationEditorReducer, createPresentationEditorState } from "./editor/reducer/reducer";
 import { findSlideById } from "./editor/slide";
-import { findShapeById } from "../../shape/query";
+import { findShapeById } from "@aurochs-ui/pptx-slide-canvas/shape/query";
 import { useSlideOperations } from "./editor/useSlideOperations";
 
 // =============================================================================

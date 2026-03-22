@@ -17,7 +17,7 @@ import {
   SlideShareViewer,
   PresentationSlideshow,
   type SlideshowSlideContent,
-} from "@aurochs-ui/pptx-editor";
+} from "@aurochs-ui/pptx-viewer";
 import { loadPptxFromFile, type LoadedPresentation } from "@aurochs-office/pptx/app/pptx-loader";
 import type { Slide } from "@aurochs-office/pptx/app/types";
 import { renderSlideToSvg } from "@aurochs-renderer/pptx/svg";

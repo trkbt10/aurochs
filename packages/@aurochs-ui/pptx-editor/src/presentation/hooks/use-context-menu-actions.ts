@@ -8,13 +8,13 @@ import { useMemo, useCallback } from "react";
 import type { Slide, Shape } from "@aurochs-office/pptx/domain";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
-import type { ContextMenuActions } from "../../slide/context-menu/SlideContextMenu";
-import type { SelectionState } from "../../context/slide/state";
+import type { ContextMenuActions } from "@aurochs-ui/pptx-slide-canvas";
+import type { SelectionState } from "@aurochs-ui/pptx-slide-canvas/context/slide/state";
 import type { PresentationEditorState } from "../../context/presentation/editor/types";
 import type { PresentationEditorAction } from "../../context/presentation/editor/types";
 import { isTopLevelShape } from "@aurochs-ui/editor-controls/shape-editor";
 import { withUpdatedTransform } from "@aurochs-ui/ooxml-components/pptx-transform";
-import { calculateAlignedBounds } from "../../shape/alignment";
+import { calculateAlignedBounds } from "@aurochs-ui/pptx-slide-canvas/shape/alignment";
 
 export type UseContextMenuActionsParams = {
   readonly dispatch: (action: PresentationEditorAction) => void;

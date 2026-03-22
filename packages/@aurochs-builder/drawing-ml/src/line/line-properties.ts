@@ -5,7 +5,7 @@
 import type { BaseLine, LineEnd } from "@aurochs-office/drawing-ml/domain/line";
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import type { LineCap, LineJoin, CompoundLine } from "@aurochs-office/drawing-ml/domain/line";
-import type { ColorSpec, LineEndSpec, DashStyle } from "../types";
+import type { ColorInput, LineEndInput, DashStyle } from "@aurochs-office/drawing-ml/domain/spec";
 import { buildColor } from "../fill/solid-fill";
 
 /**
@@ -32,7 +32,7 @@ const LINE_END_SIZE_MAP: Record<string, LineEnd["width"]> = {
 /**
  * Build a line end object
  */
-export function buildLineEnd(spec: LineEndSpec): LineEnd {
+export function buildLineEnd(spec: LineEndInput): LineEnd {
   return {
     type: LINE_END_TYPE_MAP[spec.type] ?? "none",
     width: LINE_END_SIZE_MAP[spec.width ?? "med"] ?? "med",
@@ -51,8 +51,8 @@ export function buildLine(
     cap?: LineCap;
     join?: LineJoin;
     compound?: CompoundLine;
-    headEnd?: LineEndSpec;
-    tailEnd?: LineEndSpec;
+    headEnd?: LineEndInput;
+    tailEnd?: LineEndInput;
   },
 ): BaseLine {
   return {
@@ -72,18 +72,18 @@ export function buildLine(
 }
 
 /**
- * Build a line object with ColorSpec support (hex or theme color)
+ * Build a line object with ColorInput support (hex or theme color)
  */
 export function buildLineFromSpec(
-  lineColor: ColorSpec,
+  lineColor: ColorInput,
   lineWidth: number,
   options?: {
     dash?: DashStyle;
     cap?: LineCap;
     join?: LineJoin;
     compound?: CompoundLine;
-    headEnd?: LineEndSpec;
-    tailEnd?: LineEndSpec;
+    headEnd?: LineEndInput;
+    tailEnd?: LineEndInput;
   },
 ): BaseLine {
   return {

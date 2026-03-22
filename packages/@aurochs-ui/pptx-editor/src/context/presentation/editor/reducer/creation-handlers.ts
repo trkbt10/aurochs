@@ -9,14 +9,14 @@ import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import type { PresentationEditorState, PresentationEditorAction } from "../types";
 import type { CreationMode } from "@aurochs-ui/ooxml-components";
 import { createSelectMode } from "@aurochs-ui/ooxml-components";
-import type { SelectionState } from "../../../slide/state";
+import type { SelectionState } from "@aurochs-ui/pptx-slide-canvas/context/slide/state";
 import type { HandlerMap } from "./handler-types";
 import { getActiveSlide, updateActiveSlideInDocument } from "./helpers";
 import { pushHistory } from "@aurochs-ui/editor-core/history";
 import { createEmptySelection } from "@aurochs-ui/editor-core/selection";
-import { generateShapeId } from "../../../../shape/mutation";
+import { generateShapeId } from "@aurochs-ui/pptx-slide-canvas/shape/mutation";
 import { createPicShape, type ShapeBounds } from "@aurochs-ui/ooxml-components";
-import { createChartGraphicFrame, createDiagramGraphicFrame } from "../../../../graphic-frame/factory";
+import { createChartGraphicFrame, createDiagramGraphicFrame } from "@aurochs-ui/pptx-slide-canvas/graphic-frame/factory";
 
 type SetCreationModeAction = Extract<PresentationEditorAction, { type: "SET_CREATION_MODE" }>;
 type CreateShapeAction = Extract<PresentationEditorAction, { type: "CREATE_SHAPE" }>;

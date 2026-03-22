@@ -31,7 +31,7 @@ import type { TextBody } from "@aurochs-office/pptx/domain/text";
 import type { Shape3d } from "@aurochs-office/pptx/domain/three-d";
 import { px, deg, type Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import type { ShapeSpec, ImageSpec, ConnectorSpec, GroupSpec, TableSpec, TableCellSpec } from "../types";
-import type { TextSpec } from "@aurochs-builder/drawing-ml";
+import type { TextInput } from "@aurochs-office/drawing-ml/domain/spec";
 import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import { contentToTextBody } from "./table-update-builder";
 import { PRESET_MAP } from "./presets";
@@ -158,7 +158,7 @@ function buildSpShape(spec: ShapeSpec, id: string): SpShape {
 /**
  * Register hyperlink URLs and get rIds
  */
-function registerHyperlinks(text: TextSpec | undefined, ctx: BuildContext): Map<string, string> {
+function registerHyperlinks(text: TextInput | undefined, ctx: BuildContext): Map<string, string> {
   const urlToRid = new Map<string, string>();
 
   if (!text) {

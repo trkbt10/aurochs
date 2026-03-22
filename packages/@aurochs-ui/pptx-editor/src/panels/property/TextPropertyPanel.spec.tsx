@@ -10,8 +10,8 @@
 
 import { render, screen } from "@testing-library/react";
 import { TextPropertyPanel } from "./TextPropertyPanel";
-import { TextEditContextProvider } from "../../context/slide/TextEditContext";
-import type { TextEditContextValue } from "../../context/slide/TextEditContext";
+import { TextEditContextProvider } from "@aurochs-ui/pptx-slide-canvas/context/slide/TextEditContext";
+import type { TextEditContextValue } from "@aurochs-ui/pptx-slide-canvas/context/slide/TextEditContext";
 import type { TextBody } from "@aurochs-office/pptx/domain/text";
 
 // =============================================================================

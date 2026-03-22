@@ -1,0 +1,100 @@
+{
+  "name": "@aurochs-ui/pptx-slide-canvas",
+  "version": "0.7.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "dependencies": {
+    "@aurochs-builder/pptx": "workspace:*",
+    "@aurochs-office/drawing-ml": "workspace:*",
+    "@aurochs-office/ooxml": "workspace:*",
+    "@aurochs-office/pptx": "workspace:*",
+    "@aurochs-renderer/pptx": "workspace:*",
+    "@aurochs-ui/editor-controls": "workspace:*",
+    "@aurochs-ui/editor-core": "workspace:*",
+    "@aurochs-ui/ooxml-components": "workspace:*",
+    "@aurochs-ui/path-tools": "workspace:*",
+    "@aurochs-ui/pptx-editors": "workspace:*",
+    "@aurochs-ui/ui-components": "workspace:*",
+    "@aurochs/glyph": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
+  },
+  "scripts": {
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-ui/pptx-slide-canvas/src'"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./slide/text-edit/input-support/run-formatting": {
+      "types": "./src/slide/text-edit/input-support/run-formatting.ts",
+      "default": "./src/slide/text-edit/input-support/run-formatting.ts"
+    },
+    "./slide-canvas/SvgEditorCanvas": {
+      "types": "./src/slide-canvas/SvgEditorCanvas.tsx",
+      "default": "./src/slide-canvas/SvgEditorCanvas.tsx"
+    },
+    "./context/slide/TextEditContext": {
+      "types": "./src/context/slide/TextEditContext.tsx",
+      "default": "./src/context/slide/TextEditContext.tsx"
+    },
+    "./context/slide/state": {
+      "types": "./src/context/slide/state/index.ts",
+      "default": "./src/context/slide/state/index.ts"
+    },
+    "./context/slide/state/path-draw": {
+      "types": "./src/context/slide/state/path-draw.ts",
+      "default": "./src/context/slide/state/path-draw.ts"
+    },
+    "./shape/factory": {
+      "types": "./src/shape/factory.ts",
+      "default": "./src/shape/factory.ts"
+    },
+    "./shape/hierarchy": {
+      "types": "./src/shape/hierarchy.ts",
+      "default": "./src/shape/hierarchy.ts"
+    },
+    "./shape/query": {
+      "types": "./src/shape/query.ts",
+      "default": "./src/shape/query.ts"
+    },
+    "./shape/mutation": {
+      "types": "./src/shape/mutation.ts",
+      "default": "./src/shape/mutation.ts"
+    },
+    "./shape/bounds": {
+      "types": "./src/shape/bounds.ts",
+      "default": "./src/shape/bounds.ts"
+    },
+    "./shape/group": {
+      "types": "./src/shape/group.ts",
+      "default": "./src/shape/group.ts"
+    },
+    "./shape/identity": {
+      "types": "./src/shape/identity.ts",
+      "default": "./src/shape/identity.ts"
+    },
+    "./shape/alignment": {
+      "types": "./src/shape/alignment.ts",
+      "default": "./src/shape/alignment.ts"
+    },
+    "./graphic-frame/factory": {
+      "types": "./src/graphic-frame/factory.ts",
+      "default": "./src/graphic-frame/factory.ts"
+    },
+    "./path-tools/adapters": {
+      "types": "./src/path-tools/adapters.ts",
+      "default": "./src/path-tools/adapters.ts"
+    },
+    "./slide/color-mapping-for-editor": {
+      "types": "./src/slide/color-mapping-for-editor.ts",
+      "default": "./src/slide/color-mapping-for-editor.ts"
+    }
+  }
+}

@@ -25,8 +25,14 @@ const entries = {
   "pptx/renderer/react/index": resolve(__dirname, "../../@aurochs-renderer/pptx/src/react/index.ts"),
   "pptx/renderer/animation/index": resolve(__dirname, "../../@aurochs-renderer/pptx/src/animation/index.ts"),
   "pptx/renderer/render-options/index": resolve(__dirname, "../../@aurochs-renderer/pptx/src/render-options.ts"),
-  // PPTX Viewer
-  "pptx/viewer/index": resolve(__dirname, "../../@aurochs-ui/pptx-editor/src/viewer/index.ts"),
+  // PPTX Builder
+  "pptx/builder/index": resolve(__dirname, "../../@aurochs-builder/pptx/src/index.ts"),
+  // PPTX Editors (from @aurochs-ui/pptx-editors)
+  "pptx/editors/index": resolve(__dirname, "../../@aurochs-ui/pptx-editors/src/index.ts"),
+  // PPTX Slide Canvas (from @aurochs-ui/pptx-slide-canvas)
+  "pptx/slide-canvas/index": resolve(__dirname, "../../@aurochs-ui/pptx-slide-canvas/src/index.ts"),
+  // PPTX Viewer (from @aurochs-ui/pptx-viewer)
+  "pptx/viewer/index": resolve(__dirname, "../../@aurochs-ui/pptx-viewer/src/index.ts"),
 
   // DOCX Parser
   "docx/parser/index": resolve(__dirname, "../../@aurochs-office/docx/src/index.ts"),
@@ -96,7 +102,13 @@ export default defineConfig({
         resolve(__dirname, "../../@aurochs-renderer/pptx/src/react/**"),
         resolve(__dirname, "../../@aurochs-renderer/pptx/src/animation/**"),
         resolve(__dirname, "../../@aurochs-renderer/pptx/src/render-options*"),
-        resolve(__dirname, "../../@aurochs-ui/pptx-editor/src/viewer/**"),
+        resolve(__dirname, "../../@aurochs-builder/pptx/src/**"),
+        resolve(__dirname, "../../@aurochs-builder/drawing-ml/src/**"),
+        resolve(__dirname, "../../@aurochs-builder/core/src/**"),
+        resolve(__dirname, "../../@aurochs-builder/chart/src/**"),
+        resolve(__dirname, "../../@aurochs-ui/pptx-editors/src/**"),
+        resolve(__dirname, "../../@aurochs-ui/pptx-slide-canvas/src/**"),
+        resolve(__dirname, "../../@aurochs-ui/pptx-viewer/src/**"),
         // DOCX
         resolve(__dirname, "../../@aurochs-office/docx/src/**"),
         resolve(__dirname, "../../@aurochs-renderer/docx/src/svg/**"),

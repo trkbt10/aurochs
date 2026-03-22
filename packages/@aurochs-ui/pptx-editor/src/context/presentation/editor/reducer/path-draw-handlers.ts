@@ -13,11 +13,11 @@ import {
   createPencilDrawingState,
   isPathDrawDrawing,
   isPathDrawPencil,
-} from "../../../slide/state/path-draw";
+} from "@aurochs-ui/pptx-slide-canvas/context/slide/state/path-draw";
 import type { PathAnchorPoint, AnchorPointType, CapturedPoint } from "@aurochs-ui/path-tools";
-import { createCustomGeometryShape } from "../../../../shape/factory";
+import { createCustomGeometryShape } from "@aurochs-ui/pptx-slide-canvas/shape/factory";
 import { generateShapeId } from "@aurochs-ui/ooxml-components";
-import { drawingPathToCustomGeometry } from "../../../../path-tools/adapters";
+import { drawingPathToCustomGeometry } from "@aurochs-ui/pptx-slide-canvas/path-tools/adapters";
 import { pushHistory } from "@aurochs-ui/editor-core/history";
 
 // =============================================================================

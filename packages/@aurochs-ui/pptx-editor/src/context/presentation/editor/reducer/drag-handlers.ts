@@ -12,9 +12,9 @@ import type { HandlerMap } from "./handler-types";
 import { getActiveSlide, updateActiveSlideInDocument } from "./helpers";
 import { pushHistory } from "@aurochs-ui/editor-core/history";
 import { createIdleDragState } from "@aurochs-ui/editor-core/drag-state";
-import { findShapeById } from "../../../../shape/query";
-import { updateShapeById } from "../../../../shape/mutation";
-import { getCombinedBounds, collectBoundsForIds, getCombinedCenter } from "../../../../shape/bounds";
+import { findShapeById } from "@aurochs-ui/pptx-slide-canvas/shape/query";
+import { updateShapeById } from "@aurochs-ui/pptx-slide-canvas/shape/mutation";
+import { getCombinedBounds, collectBoundsForIds, getCombinedCenter } from "@aurochs-ui/pptx-slide-canvas/shape/bounds";
 import { withUpdatedTransform } from "@aurochs-ui/ooxml-components/pptx-transform";
 import { getShapeTransform } from "@aurochs-renderer/pptx/svg";
 

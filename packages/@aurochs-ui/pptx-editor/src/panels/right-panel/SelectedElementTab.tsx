@@ -18,7 +18,7 @@ import { DiagramFramePanel } from "../property/DiagramFramePanel";
 import { OleFramePanel } from "../property/OleFramePanel";
 import { UnknownShapePanel } from "../property/UnknownShapePanel";
 import { TextPropertyPanel } from "../property/TextPropertyPanel";
-import { useTextEditContext } from "../../context/slide/TextEditContext";
+import { useTextEditContext } from "@aurochs-ui/pptx-slide-canvas/context/slide/TextEditContext";
 import { isTextEditActive } from "@aurochs-ui/ooxml-components/text-edit";
 
 export type SelectedElementTabProps = {

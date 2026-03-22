@@ -7,7 +7,7 @@ import type { CustomGeometry } from "@aurochs-office/drawing-ml/domain/geometry"
 import { createPresentationEditorState } from "./reducer";
 import { createTestDocument } from "./test-fixtures";
 import { PATH_EDIT_HANDLERS } from "./path-edit-handlers";
-import { createActivePathEditState } from "../../../slide/state";
+import { createActivePathEditState } from "@aurochs-ui/pptx-slide-canvas/context/slide/state";
 import type { PresentationEditorAction } from "../types";
 
 const createMinimalGeometry = (): CustomGeometry => ({

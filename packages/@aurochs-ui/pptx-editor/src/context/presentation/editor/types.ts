@@ -21,7 +21,7 @@ import type {
   PathDrawState,
   PathEditState,
   PathEditAction,
-} from "../../slide/state";
+} from "@aurochs-ui/pptx-slide-canvas/context/slide/state";
 import type { ResizeHandlePosition } from "@aurochs-ui/editor-core/drag-state";
 import type { TextEditState } from "@aurochs-ui/ooxml-components/text-edit";
 import type { SlideOperationsResult } from "./useSlideOperations";

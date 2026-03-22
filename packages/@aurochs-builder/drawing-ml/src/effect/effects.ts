@@ -10,12 +10,12 @@ import type {
   SoftEdgeEffect,
 } from "@aurochs-office/drawing-ml/domain/effects";
 import { px, deg, pct } from "@aurochs-office/drawing-ml/domain/units";
-import type { EffectsSpec, ReflectionEffectSpec } from "../types";
+import type { EffectsInput, ReflectionEffectInput } from "@aurochs-office/drawing-ml/domain/spec";
 
 /**
  * Build reflection effect from spec
  */
-function buildReflection(spec: ReflectionEffectSpec): ReflectionEffect {
+function buildReflection(spec: ReflectionEffectInput): ReflectionEffect {
   return {
     blurRadius: px(spec.blurRadius ?? 0),
     startOpacity: pct((spec.startOpacity ?? 100) * 1000),
@@ -33,7 +33,7 @@ function buildReflection(spec: ReflectionEffectSpec): ReflectionEffect {
 /**
  * Build effects object from spec
  */
-export function buildEffects(spec: EffectsSpec): Effects {
+export function buildEffects(spec: EffectsInput): Effects {
   return {
     ...(spec.shadow && {
       shadow: {

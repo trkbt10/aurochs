@@ -7,8 +7,8 @@
 import type { CSSProperties } from "react";
 import type { Slide, Shape } from "@aurochs-office/pptx/domain/index";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
-import type { SelectionState } from "../../context/slide/state";
-import type { ShapeHierarchyTarget } from "../../shape/hierarchy";
+import type { SelectionState } from "@aurochs-ui/pptx-slide-canvas/context/slide/state";
+import type { ShapeHierarchyTarget } from "@aurochs-ui/pptx-slide-canvas/shape/hierarchy";
 import { LayerPanel } from "../LayerPanel";
 import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 

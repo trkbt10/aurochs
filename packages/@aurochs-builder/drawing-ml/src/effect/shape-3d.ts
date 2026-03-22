@@ -4,7 +4,7 @@
 
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
-import type { Shape3dSpec, BevelSpec } from "../types";
+import type { Shape3dInput, BevelInput } from "@aurochs-office/drawing-ml/domain/spec";
 
 /**
  * 3D bevel domain type
@@ -28,7 +28,7 @@ export type Shape3d = {
 /**
  * Build 3D bevel from spec
  */
-export function buildBevel(spec: BevelSpec): Bevel3d {
+export function buildBevel(spec: BevelInput): Bevel3d {
   return {
     preset: spec.preset ?? "circle",
     width: px(spec.width ?? 8),
@@ -39,7 +39,7 @@ export function buildBevel(spec: BevelSpec): Bevel3d {
 /**
  * Build 3D shape properties from spec
  */
-export function buildShape3d(spec: Shape3dSpec): Shape3d {
+export function buildShape3d(spec: Shape3dInput): Shape3d {
   return {
     ...(spec.bevelTop && { bevelTop: buildBevel(spec.bevelTop) }),
     ...(spec.bevelBottom && { bevelBottom: buildBevel(spec.bevelBottom) }),

@@ -53,7 +53,7 @@ export {
 } from "./slide-ops";
 
 // Builders
-// For fill builders (buildColor, buildFill, buildGradientFill, etc.),
+// For fill builders (buildColor, buildFill, colorToSpec, fillToSpec, etc.),
 // import directly from @aurochs-builder/drawing-ml/fill
 // For line builders (buildLine, buildLineEnd, buildLineFromSpec),
 // import directly from @aurochs-builder/drawing-ml/line

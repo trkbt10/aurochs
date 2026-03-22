@@ -26,7 +26,7 @@ import { iconTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { UndoRedoGroup, DeleteDuplicateGroup, ToolbarPopoverButton, POPOVER_ICON_SIZE, POPOVER_STROKE_WIDTH } from "@aurochs-ui/editor-controls/toolbar";
 import { TextFormattingEditor } from "@aurochs-ui/editor-controls/text";
 import type { TextFormatting } from "@aurochs-ui/editor-controls/text";
-import { pptxTextAdapter, PPTX_UNDERLINE_OPTIONS, PPTX_STRIKE_OPTIONS } from "../adapters/editor-controls/pptx-text-adapter";
+import { pptxTextAdapter, PPTX_UNDERLINE_OPTIONS, PPTX_STRIKE_OPTIONS } from "@aurochs-ui/pptx-editors/adapters/editor-controls";
 
 // =============================================================================
 // Constants

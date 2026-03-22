@@ -19,8 +19,8 @@ import type { ResizeHandlePosition } from "@aurochs-ui/editor-core/drag-state";
 import type { PresentationEditorAction } from "../../context/presentation/editor/types";
 import type { PresentationDocument } from "@aurochs-office/pptx/app";
 import { loadSlideLayoutBundle } from "@aurochs-office/pptx/app";
-import { updateShapeById } from "../../shape/mutation";
-import type { ShapeHierarchyTarget } from "../../shape/hierarchy";
+import { updateShapeById } from "@aurochs-ui/pptx-slide-canvas/shape/mutation";
+import type { ShapeHierarchyTarget } from "@aurochs-ui/pptx-slide-canvas/shape/hierarchy";
 
 export type UsePanelCallbacksParams = {
   readonly dispatch: (action: PresentationEditorAction) => void;

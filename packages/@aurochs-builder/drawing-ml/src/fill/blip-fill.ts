@@ -8,7 +8,7 @@
 
 import type { BlipFill, TileFill, StretchFill } from "@aurochs-office/drawing-ml/domain/fill";
 import { pct, px } from "@aurochs-office/drawing-ml/domain/units";
-import type { BlipFillSpec } from "../types";
+import type { BlipFillInput } from "@aurochs-office/drawing-ml/domain/spec";
 
 // =============================================================================
 // Helper Functions
@@ -17,7 +17,7 @@ import type { BlipFillSpec } from "../types";
 /**
  * Build tile fill from tile spec.
  */
-function buildTileFill(tile: BlipFillSpec["tile"]): TileFill | undefined {
+function buildTileFill(tile: BlipFillInput["tile"]): TileFill | undefined {
   if (tile === undefined) {
     return undefined;
   }
@@ -51,7 +51,7 @@ function buildStretchFill(): StretchFill {
  * @param spec - Blip fill specification
  * @returns BlipFill object
  */
-export function buildBlipFill(spec: BlipFillSpec): BlipFill {
+export function buildBlipFill(spec: BlipFillInput): BlipFill {
   const hasTile = spec.tile !== undefined;
   const sourceRect = spec.sourceRect
     ? {
@@ -112,7 +112,7 @@ export function buildCroppedBlipFill(
  */
 export function buildTiledBlipFill(
   resourceId: string,
-  tile: BlipFillSpec["tile"],
+  tile: BlipFillInput["tile"],
 ): BlipFill {
   return buildBlipFill({
     resourceId,

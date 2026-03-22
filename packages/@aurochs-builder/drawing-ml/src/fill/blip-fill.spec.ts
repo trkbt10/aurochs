@@ -4,12 +4,12 @@
 
 import { buildBlipFill, buildSimpleBlipFill, buildCroppedBlipFill, buildTiledBlipFill } from "./blip-fill";
 import { pct, px } from "@aurochs-office/drawing-ml/domain/units";
-import type { BlipFillSpec } from "../types";
+import type { BlipFillInput } from "@aurochs-office/drawing-ml/domain/spec";
 
 describe("blip fill builder", () => {
   describe("buildBlipFill", () => {
     it("creates a blip fill with resourceId", () => {
-      const spec: BlipFillSpec = {
+      const spec: BlipFillInput = {
         resourceId: "rId1",
       };
 
@@ -22,7 +22,7 @@ describe("blip fill builder", () => {
     });
 
     it("creates a blip fill with source rectangle", () => {
-      const spec: BlipFillSpec = {
+      const spec: BlipFillInput = {
         resourceId: "rId1",
         sourceRect: { left: 10, top: 20, right: 10, bottom: 20 },
       };
@@ -38,7 +38,7 @@ describe("blip fill builder", () => {
     });
 
     it("creates a blip fill with tile mode", () => {
-      const spec: BlipFillSpec = {
+      const spec: BlipFillInput = {
         resourceId: "rId1",
         tile: {
           flip: "xy",
@@ -59,7 +59,7 @@ describe("blip fill builder", () => {
     });
 
     it("includes optional properties", () => {
-      const spec: BlipFillSpec = {
+      const spec: BlipFillInput = {
         resourceId: "rId1",
         dpi: 300,
         rotWithShape: true,

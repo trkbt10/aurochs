@@ -5,7 +5,7 @@
 import type { Color, ColorTransform } from "@aurochs-office/drawing-ml/domain/color";
 import type { SolidFill } from "@aurochs-office/drawing-ml/domain/fill";
 import type { Percent } from "@aurochs-office/drawing-ml/domain/units";
-import type { ColorSpec, ThemeColorSpec } from "../types";
+import type { ColorInput, ThemeColorInput } from "@aurochs-office/drawing-ml/domain/spec";
 
 /**
  * Strip leading "#" from hex color strings.
@@ -16,9 +16,9 @@ function stripHash(hex: string): string {
 }
 
 /**
- * Build a Color object from ColorSpec
+ * Build a Color object from ColorInput
  */
-export function buildColor(colorSpec: ColorSpec): Color {
+export function buildColor(colorSpec: ColorInput): Color {
   if (typeof colorSpec === "string") {
     // Hex color - strip leading "#" for internal representation
     return { spec: { type: "srgb", value: stripHash(colorSpec) } };
@@ -49,9 +49,9 @@ export function buildSolidFill(hexColor: string): SolidFill {
 }
 
 /**
- * Build a solid fill object from ColorSpec (hex or theme)
+ * Build a solid fill object from ColorInput (hex or theme)
  */
-export function buildSolidFillFromSpec(colorSpec: ColorSpec): SolidFill {
+export function buildSolidFillFromSpec(colorSpec: ColorInput): SolidFill {
   return {
     type: "solidFill",
     color: buildColor(colorSpec),
@@ -62,18 +62,18 @@ export function buildSolidFillFromSpec(colorSpec: ColorSpec): SolidFill {
  * Build a theme fill object
  */
 export function buildThemeFill(spec: {
-  readonly theme: ThemeColorSpec["theme"];
+  readonly theme: ThemeColorInput["theme"];
   readonly lumMod?: number;
   readonly lumOff?: number;
   readonly tint?: number;
   readonly shade?: number;
 }): SolidFill {
-  const themeColorSpec: ThemeColorSpec = {
+  const themeColorInput: ThemeColorInput = {
     theme: spec.theme,
     lumMod: spec.lumMod,
     lumOff: spec.lumOff,
     tint: spec.tint,
     shade: spec.shade,
   };
-  return buildSolidFillFromSpec(themeColorSpec);
+  return buildSolidFillFromSpec(themeColorInput);
 }

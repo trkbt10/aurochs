@@ -9,7 +9,7 @@ import { useCallback, useEffect, type RefObject } from "react";
 import type { Slide } from "@aurochs-office/pptx/domain";
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
-import type { DragState, SelectionState } from "../../context/slide/state";
+import type { DragState, SelectionState } from "@aurochs-ui/pptx-slide-canvas/context/slide/state";
 import type { PresentationEditorAction } from "../../context/presentation/editor/types";
 import type { ViewportTransform } from "@aurochs-renderer/pptx/svg-viewport";
 import { screenToSlideCoords } from "@aurochs-renderer/pptx/svg-viewport";

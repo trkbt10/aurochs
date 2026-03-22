@@ -15,7 +15,7 @@ import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import {
   createIdlePathDrawState,
   createInactivePathEditState,
-} from "../../../slide/state";
+} from "@aurochs-ui/pptx-slide-canvas/context/slide/state";
 import { createInactiveTextEditState } from "@aurochs-ui/ooxml-components/text-edit";
 
 // Import all handlers

@@ -3,8 +3,8 @@
  */
 
 import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
-import type { FillSpec, SolidFillSpec, GradientFillSpec, PatternFillSpec, ThemeFillSpec, BlipFillSpec } from "../types";
-import { isThemeColor } from "../types";
+import type { FillInput, SolidFillInput, GradientFillInput, PatternFillInput, ThemeFillInput, BlipFillInput } from "@aurochs-office/drawing-ml/domain/spec";
+import { isThemeColorInput } from "@aurochs-office/drawing-ml/domain/spec";
 import { buildSolidFill, buildSolidFillFromSpec, buildThemeFill } from "./solid-fill";
 import { buildGradientFill } from "./gradient-fill";
 import { buildPatternFill } from "./pattern-fill";
@@ -16,17 +16,19 @@ export { buildGradientFill } from "./gradient-fill";
 export { buildPatternFill } from "./pattern-fill";
 export { buildBlipFill, buildSimpleBlipFill, buildCroppedBlipFill, buildTiledBlipFill } from "./blip-fill";
 
+// Domain → Input conversions: import from @aurochs-office/drawing-ml/domain (colorToInput, fillToInput)
+
 /**
  * Check if a fill spec is a blip fill
  */
-function isBlipFillSpec(spec: FillSpec): spec is BlipFillSpec {
+function isBlipFillInput(spec: FillInput): spec is BlipFillInput {
   return typeof spec === "object" && "resourceId" in spec;
 }
 
 /**
- * Build a fill object from FillSpec
+ * Build a fill object from FillInput
  */
-export function buildFill(fillSpec: FillSpec): BaseFill | undefined {
+export function buildFill(fillSpec: FillInput): BaseFill | undefined {
   if (typeof fillSpec === "string") {
     if (fillSpec === "none") {
       return undefined;
@@ -35,24 +37,24 @@ export function buildFill(fillSpec: FillSpec): BaseFill | undefined {
   }
 
   // Handle blip fill (which has resourceId but no type property)
-  if (isBlipFillSpec(fillSpec)) {
+  if (isBlipFillInput(fillSpec)) {
     return buildBlipFill(fillSpec);
   }
 
   switch (fillSpec.type) {
     case "solid": {
-      const solidSpec = fillSpec as SolidFillSpec;
-      if (isThemeColor(solidSpec.color)) {
+      const solidSpec = fillSpec as SolidFillInput;
+      if (isThemeColorInput(solidSpec.color)) {
         return buildSolidFillFromSpec(solidSpec.color);
       }
       return buildSolidFill(solidSpec.color);
     }
     case "gradient":
-      return buildGradientFill(fillSpec as GradientFillSpec);
+      return buildGradientFill(fillSpec as GradientFillInput);
     case "pattern":
-      return buildPatternFill(fillSpec as PatternFillSpec);
+      return buildPatternFill(fillSpec as PatternFillInput);
     case "theme":
-      return buildThemeFill(fillSpec as ThemeFillSpec);
+      return buildThemeFill(fillSpec as ThemeFillInput);
     default:
       return undefined;
   }

@@ -19,6 +19,7 @@
     "@aurochs-ui/editor-controls": "workspace:*",
     "@aurochs-ui/docx-editor": "workspace:*",
     "@aurochs-ui/pptx-editor": "workspace:*",
+    "@aurochs-ui/pptx-viewer": "workspace:*",
     "@aurochs-ui/xlsx-editor": "workspace:*",
     "@aurochs-ui/vba-editor": "workspace:*",
     "@aurochs-office/vba": "workspace:*",

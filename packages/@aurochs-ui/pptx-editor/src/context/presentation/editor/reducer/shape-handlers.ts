@@ -7,13 +7,13 @@
 import type { Shape } from "@aurochs-office/pptx/domain";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import type { PresentationEditorState, PresentationEditorAction } from "../types";
-import type { SelectionState } from "../../../slide/state";
+import type { SelectionState } from "@aurochs-ui/pptx-slide-canvas/context/slide/state";
 import type { HandlerMap } from "./handler-types";
 import { getActiveSlide, updateActiveSlideInDocument, getPrimaryIdAfterDeletion } from "./helpers";
 import { pushHistory } from "@aurochs-ui/editor-core/history";
-import { updateShapeById, deleteShapesById, reorderShape } from "../../../../shape/mutation";
-import { ungroupShape, groupShapes } from "../../../../shape/group";
-import { moveShapeInHierarchy } from "../../../../shape/hierarchy";
+import { updateShapeById, deleteShapesById, reorderShape } from "@aurochs-ui/pptx-slide-canvas/shape/mutation";
+import { ungroupShape, groupShapes } from "@aurochs-ui/pptx-slide-canvas/shape/group";
+import { moveShapeInHierarchy } from "@aurochs-ui/pptx-slide-canvas/shape/hierarchy";
 
 type UpdateActiveSlideAction = Extract<PresentationEditorAction, { type: "UPDATE_ACTIVE_SLIDE" }>;
 type UpdateShapeAction = Extract<PresentationEditorAction, { type: "UPDATE_SHAPE" }>;

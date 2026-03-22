@@ -14,26 +14,26 @@
  */
 
 // =============================================================================
-// Imports from @aurochs-builder/drawing-ml (shared DrawingML types)
+// Imports from @aurochs-office/drawing-ml (DrawingML SoT)
 // =============================================================================
 
 import type {
-  // Color types
-  ColorSpec,
-  // Fill types
-  FillSpec,
-  GradientStopSpec,
-  // Line types
-  LineEndSpec,
+  // Color input
+  ColorInput,
+  // Fill input
+  FillInput,
+  GradientStopInput,
+  // Line input
+  LineEndInput,
   DashStyle,
-  // Effect types
-  EffectsSpec,
-  // 3D types
-  Shape3dSpec,
-  // Text types
-  TextSpec,
-  TextBodyPropertiesSpec,
-} from "@aurochs-builder/drawing-ml";
+  // Effect input
+  EffectsInput,
+  // 3D input
+  Shape3dInput,
+  // Text input
+  TextInput,
+  TextBodyPropertiesInput,
+} from "@aurochs-office/drawing-ml/domain/spec";
 import type { LineCap, LineJoin, CompoundLine } from "@aurochs-office/drawing-ml/domain/line";
 
 // =============================================================================
@@ -87,15 +87,15 @@ export type ShapeSpec = {
    */
   readonly customGeometry?: CustomGeometrySpec;
   // Text - can be simple string or rich text paragraphs
-  readonly text?: TextSpec;
+  readonly text?: TextInput;
   // Text body properties (vertical alignment, orientation, margins)
-  readonly textBody?: TextBodyPropertiesSpec;
+  readonly textBody?: TextBodyPropertiesInput;
   // Transform properties
   readonly rotation?: number; // degrees 0-360
   readonly flipH?: boolean;
   readonly flipV?: boolean;
   // Fill - can be hex string or structured fill spec
-  readonly fill?: FillSpec;
+  readonly fill?: FillInput;
   // Line properties
   readonly lineColor?: string;
   readonly lineWidth?: number;
@@ -103,12 +103,12 @@ export type ShapeSpec = {
   readonly lineCap?: LineCap;
   readonly lineJoin?: LineJoin;
   readonly lineCompound?: CompoundLine;
-  readonly lineHeadEnd?: LineEndSpec;
-  readonly lineTailEnd?: LineEndSpec;
+  readonly lineHeadEnd?: LineEndInput;
+  readonly lineTailEnd?: LineEndInput;
   // Effects
-  readonly effects?: EffectsSpec;
+  readonly effects?: EffectsInput;
   // 3D properties
-  readonly shape3d?: Shape3dSpec;
+  readonly shape3d?: Shape3dInput;
 };
 
 // =============================================================================
@@ -176,7 +176,7 @@ export type BlipEffectSpec = {
   /** Convert to grayscale */
   readonly grayscale?: boolean;
   /** Duotone effect with two colors */
-  readonly duotone?: { readonly colors: readonly [ColorSpec, ColorSpec] };
+  readonly duotone?: { readonly colors: readonly [ColorInput, ColorInput] };
   /** Tint effect (hue in degrees, amount 0-100) */
   readonly tint?: { readonly hue: number; readonly amount: number };
   /** Luminance adjustment (brightness and contrast -100 to 100) */
@@ -192,9 +192,9 @@ export type BlipEffectSpec = {
   /** Bi-level effect (threshold 0-100) */
   readonly biLevel?: { readonly threshold: number };
   /** Color change effect */
-  readonly colorChange?: { readonly from: ColorSpec; readonly to: ColorSpec; readonly useAlpha?: boolean };
+  readonly colorChange?: { readonly from: ColorInput; readonly to: ColorInput; readonly useAlpha?: boolean };
   /** Color replace effect */
-  readonly colorReplace?: { readonly color: ColorSpec };
+  readonly colorReplace?: { readonly color: ColorInput };
 };
 
 /**
@@ -480,7 +480,7 @@ export type BackgroundSolidSpec = {
  */
 export type BackgroundGradientSpec = {
   readonly type: "gradient";
-  readonly stops: readonly GradientStopSpec[];
+  readonly stops: readonly GradientStopInput[];
   readonly angle?: number; // degrees for linear gradient
 };
 

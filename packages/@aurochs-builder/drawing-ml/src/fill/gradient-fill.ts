@@ -4,13 +4,13 @@
 
 import type { GradientFill } from "@aurochs-office/drawing-ml/domain/fill";
 import type { Degrees, Percent } from "@aurochs-office/drawing-ml/domain/units";
-import type { GradientFillSpec } from "../types";
+import type { GradientFillInput } from "@aurochs-office/drawing-ml/domain/spec";
 import { buildColor } from "./solid-fill";
 
 /**
  * Build a gradient fill object
  */
-export function buildGradientFill(spec: GradientFillSpec): GradientFill {
+export function buildGradientFill(spec: GradientFillInput): GradientFill {
   const stops = spec.stops.map((stop) => ({
     position: (stop.position * 1000) as Percent, // Convert 0-100 to 0-100000
     color: buildColor(stop.color),

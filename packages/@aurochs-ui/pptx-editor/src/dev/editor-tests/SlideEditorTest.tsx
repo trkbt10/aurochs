@@ -12,11 +12,11 @@ import {
   slideEditorReducer,
   createSlideEditorState,
   findShapeById,
-  PropertyPanel,
-} from "@aurochs-ui/pptx-editor";
+  type ResizeHandlePosition,
+} from "@aurochs-ui/pptx-slide-canvas";
+import { PropertyPanel } from "@aurochs-ui/pptx-editor";
 import { withUpdatedTransform } from "@aurochs-ui/ooxml-components/pptx-transform";
 import { clientToCanvasCoords } from "@aurochs-ui/editor-core/geometry";
-import type { ResizeHandlePosition } from "@aurochs-ui/pptx-editor";
 import type { Slide, Shape } from "@aurochs-office/pptx/domain";
 import type { SpShape, GrpShape, GraphicFrame, CxnShape } from "@aurochs-office/pptx/domain/shape";
 import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";

@@ -17,6 +17,9 @@
     "@aurochs-ui/editor-core": "workspace:*",
     "@aurochs-ui/path-tools": "workspace:*",
     "@aurochs-ui/potx-editor": "workspace:*",
+    "@aurochs-ui/pptx-editors": "workspace:*",
+    "@aurochs-ui/pptx-slide-canvas": "workspace:*",
+    "@aurochs-ui/pptx-viewer": "workspace:*",
     "@aurochs-ui/ui-components": "workspace:*",
     "@aurochs-ui/xlsx-editor": "workspace:*",
     "@aurochs/glyph": "workspace:*",
@@ -40,46 +43,6 @@
       "types": "./src/index.ts",
       "default": "./src/index.ts"
     },
-    "./slide-list": {
-      "types": "./src/slide-list/index.ts",
-      "default": "./src/slide-list/index.ts"
-    },
-    "./slide/text-edit/input-support/run-formatting": {
-      "types": "./src/slide/text-edit/input-support/run-formatting.ts",
-      "default": "./src/slide/text-edit/input-support/run-formatting.ts"
-    },
-    "./editors/text/text-property-extractor": {
-      "types": "./src/editors/text/text-property-extractor.ts",
-      "default": "./src/editors/text/text-property-extractor.ts"
-    },
-    "./editors/text/mixed-properties": {
-      "types": "./src/editors/text/mixed-properties.ts",
-      "default": "./src/editors/text/mixed-properties.ts"
-    },
-    "./adapters": {
-      "types": "./src/adapters/index.ts",
-      "default": "./src/adapters/index.ts"
-    },
-    "./chart-data": {
-      "types": "./src/chart-data/index.ts",
-      "default": "./src/chart-data/index.ts"
-    },
-    "./viewer/PresentationSlideshow": {
-      "types": "./src/viewer/PresentationSlideshow.tsx",
-      "default": "./src/viewer/PresentationSlideshow.tsx"
-    },
-    "./viewer/PresentationViewer": {
-      "types": "./src/viewer/PresentationViewer.tsx",
-      "default": "./src/viewer/PresentationViewer.tsx"
-    },
-    "./viewer/EmbeddableSlide": {
-      "types": "./src/viewer/EmbeddableSlide.tsx",
-      "default": "./src/viewer/EmbeddableSlide.tsx"
-    },
-    "./viewer/SlideShareViewer": {
-      "types": "./src/viewer/SlideShareViewer.tsx",
-      "default": "./src/viewer/SlideShareViewer.tsx"
-    }
   },
   "devDependencies": {
     "puppeteer-core": "^24.37.2",

@@ -1,0 +1,51 @@
+{
+  "name": "@aurochs-ui/pptx-viewer",
+  "version": "0.7.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "dependencies": {
+    "@aurochs-office/drawing-ml": "workspace:*",
+    "@aurochs-office/pptx": "workspace:*",
+    "@aurochs-renderer/pptx": "workspace:*",
+    "@aurochs-ui/editor-controls": "workspace:*",
+    "@aurochs-ui/editor-core": "workspace:*",
+    "@aurochs-ui/ooxml-components": "workspace:*",
+    "@aurochs-ui/ui-components": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
+  },
+  "scripts": {
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-ui/pptx-viewer/src'"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./slide-list": {
+      "types": "./src/slide-list/index.ts",
+      "default": "./src/slide-list/index.ts"
+    },
+    "./PresentationSlideshow": {
+      "types": "./src/PresentationSlideshow.tsx",
+      "default": "./src/PresentationSlideshow.tsx"
+    },
+    "./PresentationViewer": {
+      "types": "./src/PresentationViewer.tsx",
+      "default": "./src/PresentationViewer.tsx"
+    },
+    "./EmbeddableSlide": {
+      "types": "./src/EmbeddableSlide.tsx",
+      "default": "./src/EmbeddableSlide.tsx"
+    },
+    "./SlideShareViewer": {
+      "types": "./src/SlideShareViewer.tsx",
+      "default": "./src/SlideShareViewer.tsx"
+    }
+  }
+}

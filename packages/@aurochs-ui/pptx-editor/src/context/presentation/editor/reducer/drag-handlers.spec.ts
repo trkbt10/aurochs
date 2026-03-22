@@ -12,7 +12,7 @@ import type { CreationMode } from "@aurochs-ui/ooxml-components";
 import type { Shape } from "@aurochs-office/pptx/domain";
 import type { SpShape } from "@aurochs-office/pptx/domain/shape";
 import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
-import { createShapeFromMode } from "../../../../shape/factory";
+import { createShapeFromMode } from "@aurochs-ui/pptx-slide-canvas/shape/factory";
 import { getDefaultBoundsForMode } from "@aurochs-ui/ooxml-components";
 import { getShapeTransform } from "@aurochs-renderer/pptx/svg";
 import { createTestDocument } from "./test-fixtures";

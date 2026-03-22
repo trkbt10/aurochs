@@ -7,7 +7,7 @@
 import { useEffect } from "react";
 import type { Slide, Shape } from "@aurochs-office/pptx/domain";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
-import type { SelectionState } from "../../context/slide/state";
+import type { SelectionState } from "@aurochs-ui/pptx-slide-canvas/context/slide/state";
 import type { PresentationEditorAction } from "../../context/presentation/editor/types";
 import { isInputTarget, getModKey, isPlatformMac, processShortcutHandlers } from "@aurochs-ui/editor-core/keyboard";
 

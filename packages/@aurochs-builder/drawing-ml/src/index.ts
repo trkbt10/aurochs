@@ -14,55 +14,7 @@
  * ```
  */
 
-// Types - spec types for building DrawingML elements
-export {
-  isThemeColor,
-  type ThemeColorSpec,
-  type ColorSpec,
-  type GradientStopSpec,
-  type GradientFillSpec,
-  type PatternFillSpec,
-  type SolidFillSpec,
-  type ThemeFillSpec,
-  type BlipFillSpec,
-  type TileFlipMode,
-  type TileRectAlignment,
-  type BlipCompressionState,
-  type FillSpec,
-  type LineEndType,
-  type LineEndSize,
-  type LineEndSpec,
-  type DashStyle,
-  type LineSpec,
-  type ShadowEffectSpec,
-  type GlowEffectSpec,
-  type SoftEdgeEffectSpec,
-  type ReflectionEffectSpec,
-  type EffectsSpec,
-  type BevelPresetType,
-  type PresetMaterialType,
-  type BevelSpec,
-  type Shape3dSpec,
-  type TextAlign,
-  type TextAnchor,
-  type TextVerticalType,
-  type UnderlineStyle,
-  type StrikeStyle,
-  type TextCaps,
-  type TextVerticalPosition,
-  type BulletType,
-  type BulletSpec,
-  type TextOutlineSpec,
-  type TextEffectSpec,
-  type HyperlinkSpec,
-  type TextRunSpec,
-  type LineSpacingSpec,
-  type TextParagraphSpec,
-  type RichTextSpec,
-  type TextSpec,
-  type TextWrapping,
-  type TextBodyPropertiesSpec,
-} from "./types";
+// Input spec types: import directly from @aurochs-office/drawing-ml/domain/spec
 
 // Fill builders
 export {

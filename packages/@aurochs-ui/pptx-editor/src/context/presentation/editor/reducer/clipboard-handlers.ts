@@ -12,8 +12,8 @@ import type { HandlerMap } from "./handler-types";
 import { getActiveSlide, updateActiveSlideInDocument } from "./helpers";
 import { findSlideById } from "../slide";
 import { pushHistory } from "@aurochs-ui/editor-core/history";
-import { findShapeById } from "../../../../shape/query";
-import { generateShapeId } from "../../../../shape/mutation";
+import { findShapeById } from "@aurochs-ui/pptx-slide-canvas/shape/query";
+import { generateShapeId } from "@aurochs-ui/pptx-slide-canvas/shape/mutation";
 import { withUpdatedTransform } from "@aurochs-ui/ooxml-components/pptx-transform";
 import { getShapeTransform } from "@aurochs-renderer/pptx/svg";
 
