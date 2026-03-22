@@ -6,7 +6,7 @@
 
 import { useCallback } from "react";
 import type { LoadedPresentation } from "@aurochs-office/pptx/app";
-import { PresentationSlideshow } from "@aurochs-ui/pptx-editor";
+import { PresentationSlideshow } from "@aurochs-ui/pptx-viewer";
 import { renderSlideToSvg } from "@aurochs-renderer/pptx/svg";
 
 type Props = {

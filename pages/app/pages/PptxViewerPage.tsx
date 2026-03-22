@@ -8,7 +8,7 @@
 import { useCallback } from "react";
 import type { LoadedPresentation } from "@aurochs-office/pptx/app";
 import { renderSlideToSvg } from "@aurochs-renderer/pptx/svg";
-import { SlideShareViewer, type SlideshowSlideContent } from "@aurochs-ui/pptx-editor";
+import { SlideShareViewer, type SlideshowSlideContent } from "@aurochs-ui/pptx-viewer";
 import { useLazySvgCache } from "@aurochs-renderer/pptx/react";
 
 type Props = {
