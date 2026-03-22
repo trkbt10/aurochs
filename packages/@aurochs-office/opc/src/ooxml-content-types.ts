@@ -118,6 +118,8 @@ export const DRAWINGML_CONTENT_TYPES = {
   theme: "application/vnd.openxmlformats-officedocument.theme+xml",
   /** Chart */
   chart: "application/vnd.openxmlformats-officedocument.drawingml.chart+xml",
+  /** Drawing (SpreadsheetML / WordprocessingML) */
+  drawing: "application/vnd.openxmlformats-officedocument.drawing+xml",
 } as const;
 
 // =============================================================================

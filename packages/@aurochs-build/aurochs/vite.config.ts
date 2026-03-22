@@ -41,6 +41,8 @@ const entries = {
   // DOCX Viewer
   "docx/viewer/index": resolve(__dirname, "../../@aurochs-ui/docx-editor/src/viewer/index.ts"),
 
+  // XLSX Domain
+  "xlsx/domain/index": resolve(__dirname, "../../@aurochs-office/xlsx/src/domain/index.ts"),
   // XLSX Parser
   "xlsx/parser/index": resolve(__dirname, "../../@aurochs-office/xlsx/src/index.ts"),
   // XLSX Extract
@@ -49,6 +51,8 @@ const entries = {
   "xlsx/renderer/svg/index": resolve(__dirname, "../../@aurochs-renderer/xlsx/src/svg/index.ts"),
   "xlsx/renderer/ascii/index": resolve(__dirname, "../../@aurochs-renderer/xlsx/src/ascii/index.ts"),
   "xlsx/renderer/mermaid/index": resolve(__dirname, "../../@aurochs-renderer/xlsx/src/mermaid/index.ts"),
+  // XLSX Builder
+  "xlsx/builder/index": resolve(__dirname, "../../@aurochs-builder/xlsx/src/index.ts"),
   // XLSX Viewer
   "xlsx/viewer/index": resolve(__dirname, "../../@aurochs-ui/xlsx-editor/src/viewer/index.ts"),
 
@@ -95,6 +99,7 @@ export default defineConfig({
         resolve(__dirname, "../../@aurochs-renderer/xlsx/src/svg/**"),
         resolve(__dirname, "../../@aurochs-renderer/xlsx/src/ascii/**"),
         resolve(__dirname, "../../@aurochs-renderer/xlsx/src/mermaid/**"),
+        resolve(__dirname, "../../@aurochs-builder/xlsx/src/**"),
         resolve(__dirname, "../../@aurochs-ui/xlsx-editor/src/viewer/**"),
         // PDF
         resolve(__dirname, "../../@aurochs/pdf/src/**"),

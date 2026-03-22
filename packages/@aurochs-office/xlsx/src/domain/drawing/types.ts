@@ -8,7 +8,8 @@
  */
 
 import type { RowIndex, ColIndex } from "../types";
-import type { GroupLocks } from "@aurochs-office/ooxml/domain/drawing/locks";
+import type { GroupLocks, ConnectorLocks } from "@aurochs-office/ooxml/domain/drawing/locks";
+import type { ConnectionTarget } from "@aurochs-office/ooxml/domain/drawing/content";
 
 // =============================================================================
 // Cell Anchor Types
@@ -167,9 +168,30 @@ export type XlsxGroupShape = {
 };
 
 /**
- * Content that can be placed in a drawing anchor.
+ * A connection shape (connector line) in a drawing.
+ *
+ * @see ECMA-376 Part 4, Section 20.5.2.13 (cxnSp)
  */
-export type XlsxDrawingContent = XlsxPicture | XlsxShape | XlsxChartFrame | XlsxGroupShape;
+export type XlsxConnectionShape = {
+  readonly type: "connectionShape";
+  /** Non-visual properties */
+  readonly nvCxnSpPr: XlsxNonVisualProperties;
+  /** Connector locking properties */
+  readonly connectorLocks?: ConnectorLocks;
+  /** Preset geometry type (line, straightConnector1, etc.) */
+  readonly prstGeom?: string;
+  /** Start connection target */
+  readonly startConnection?: ConnectionTarget;
+  /** End connection target */
+  readonly endConnection?: ConnectionTarget;
+};
+
+/**
+ * Content that can be placed in a drawing anchor.
+ *
+ * @see ECMA-376 Part 4, Section 20.5 (EG_ObjectChoices)
+ */
+export type XlsxDrawingContent = XlsxPicture | XlsxShape | XlsxChartFrame | XlsxGroupShape | XlsxConnectionShape;
 
 // =============================================================================
 // Anchor Types

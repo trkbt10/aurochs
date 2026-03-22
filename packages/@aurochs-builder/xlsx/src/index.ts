@@ -94,4 +94,8 @@ export {
   generateWorkbookRels,
   generateSharedStrings,
   type ExportXlsxOptions,
+  type MediaPart,
 } from "./exporter";
+
+// Drawing serialization
+export { serializeDrawing } from "./drawing";

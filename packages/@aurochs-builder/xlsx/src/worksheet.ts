@@ -935,15 +935,19 @@ export function serializeColBreaks(breaks: readonly XlsxPageBreak[]): XmlElement
  *
  * @see ECMA-376 Part 4, Section 18.3.1.99 (worksheet)
  */
-export function serializeWorksheet(worksheet: XlsxWorksheet, sharedStrings: SharedStringTable): XmlElement {
+export function serializeWorksheet(
+  worksheet: XlsxWorksheet,
+  sharedStrings: SharedStringTable,
+  drawingRelId?: string,
+): XmlElement {
   const children: XmlNode[] = [];
   const wsAttrs: Record<string, string> = {
     xmlns: SPREADSHEETML_NS,
   };
 
-  // Add r namespace if hyperlinks with relationship IDs exist
+  // Add r namespace if hyperlinks with relationship IDs or drawing reference exist
   const hasRelHyperlinks = worksheet.hyperlinks?.some((h) => h.relationshipId);
-  if (hasRelHyperlinks) {
+  if (hasRelHyperlinks || drawingRelId) {
     wsAttrs["xmlns:r"] = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
   }
 
@@ -1003,7 +1007,12 @@ export function serializeWorksheet(worksheet: XlsxWorksheet, sharedStrings: Shar
     children.push(serializeHyperlinks(worksheet.hyperlinks));
   }
 
-  // 13. printOptions
+  // 13. drawing (ECMA-376 Part 4, Section 18.3.1.36)
+  if (drawingRelId) {
+    children.push({ type: "element", name: "drawing", attrs: { "r:id": drawingRelId }, children: [] });
+  }
+
+  // 14. printOptions
   if (worksheet.printOptions) {
     children.push(serializePrintOptions(worksheet.printOptions));
   }

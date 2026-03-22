@@ -11,7 +11,8 @@ import type { XmlElement } from "@aurochs/xml";
 import { getAttr, getChild, getChildren, getTextContent, isXmlElement } from "@aurochs/xml";
 import { parseInt32 } from "@aurochs-office/drawing-ml/parser";
 import { parseEditAs as parseOoxmlEditAs } from "@aurochs-office/ooxml/parser";
-import type { GroupLocks } from "@aurochs-office/ooxml/domain/drawing/locks";
+import type { GroupLocks, ConnectorLocks } from "@aurochs-office/ooxml/domain/drawing/locks";
+import type { ConnectionTarget } from "@aurochs-office/ooxml/domain/drawing/content";
 import { rowIdx, colIdx } from "../domain/types";
 import type {
   XlsxDrawing,
@@ -29,6 +30,7 @@ import type {
   XlsxChartFrame,
   XlsxGroupShape,
   XlsxGroupTransform,
+  XlsxConnectionShape,
 } from "../domain/drawing/types";
 
 // =============================================================================
@@ -156,6 +158,74 @@ function parseShape(spElement: XmlElement): XlsxShape {
     nvSpPr: parseNonVisualProperties(cNvPr),
     ...(prstGeomType && { prstGeom: prstGeomType }),
     ...(txBodyText && { txBody: txBodyText }),
+  };
+}
+
+/**
+ * Parse a connection shape element.
+ *
+ * @see ECMA-376 Part 4, Section 20.5.2.13 (cxnSp)
+ */
+function parseConnectionShape(cxnSpElement: XmlElement): XlsxConnectionShape {
+  // xdr:nvCxnSpPr/xdr:cNvPr
+  const nvCxnSpPr = getChild(cxnSpElement, "xdr:nvCxnSpPr") ?? getChild(cxnSpElement, "nvCxnSpPr");
+  const cNvPr = nvCxnSpPr ? (getChild(nvCxnSpPr, "xdr:cNvPr") ?? getChild(nvCxnSpPr, "cNvPr")) : undefined;
+
+  // xdr:nvCxnSpPr/xdr:cNvCxnSpPr - connector locks and connections
+  const cNvCxnSpPr = nvCxnSpPr
+    ? (getChild(nvCxnSpPr, "xdr:cNvCxnSpPr") ?? getChild(nvCxnSpPr, "cNvCxnSpPr"))
+    : undefined;
+
+  let connectorLocks: ConnectorLocks | undefined;
+  let startConnection: ConnectionTarget | undefined;
+  let endConnection: ConnectionTarget | undefined;
+
+  if (cNvCxnSpPr) {
+    const cxnSpLocksEl = getChild(cNvCxnSpPr, "a:cxnSpLocks") ?? getChild(cNvCxnSpPr, "cxnSpLocks");
+    if (cxnSpLocksEl) {
+      connectorLocks = {
+        noGrp: parseBoolAttr(cxnSpLocksEl, "noGrp"),
+        noSelect: parseBoolAttr(cxnSpLocksEl, "noSelect"),
+        noRot: parseBoolAttr(cxnSpLocksEl, "noRot"),
+        noChangeAspect: parseBoolAttr(cxnSpLocksEl, "noChangeAspect"),
+        noMove: parseBoolAttr(cxnSpLocksEl, "noMove"),
+        noResize: parseBoolAttr(cxnSpLocksEl, "noResize"),
+        noEditPoints: parseBoolAttr(cxnSpLocksEl, "noEditPoints"),
+        noAdjustHandles: parseBoolAttr(cxnSpLocksEl, "noAdjustHandles"),
+        noChangeArrowheads: parseBoolAttr(cxnSpLocksEl, "noChangeArrowheads"),
+        noChangeShapeType: parseBoolAttr(cxnSpLocksEl, "noChangeShapeType"),
+      };
+    }
+
+    const stCxnEl = getChild(cNvCxnSpPr, "a:stCxn") ?? getChild(cNvCxnSpPr, "stCxn");
+    if (stCxnEl) {
+      startConnection = {
+        shapeId: getAttr(stCxnEl, "id") ?? "",
+        siteIndex: parseInt32(getAttr(stCxnEl, "idx")) ?? 0,
+      };
+    }
+
+    const endCxnEl = getChild(cNvCxnSpPr, "a:endCxn") ?? getChild(cNvCxnSpPr, "endCxn");
+    if (endCxnEl) {
+      endConnection = {
+        shapeId: getAttr(endCxnEl, "id") ?? "",
+        siteIndex: parseInt32(getAttr(endCxnEl, "idx")) ?? 0,
+      };
+    }
+  }
+
+  // xdr:spPr/a:prstGeom
+  const spPr = getChild(cxnSpElement, "xdr:spPr") ?? getChild(cxnSpElement, "spPr");
+  const prstGeom = spPr ? (getChild(spPr, "a:prstGeom") ?? getChild(spPr, "prstGeom")) : undefined;
+  const prstGeomType = prstGeom ? getAttr(prstGeom, "prst") : undefined;
+
+  return {
+    type: "connectionShape",
+    nvCxnSpPr: parseNonVisualProperties(cNvPr),
+    ...(connectorLocks && { connectorLocks }),
+    ...(prstGeomType && { prstGeom: prstGeomType }),
+    ...(startConnection && { startConnection }),
+    ...(endConnection && { endConnection }),
   };
 }
 
@@ -347,6 +417,11 @@ function parseDrawingContentFromElement(element: XmlElement): XlsxDrawingContent
     return parseGraphicFrame(element);
   }
 
+  // Connection shape
+  if (name === "xdr:cxnSp" || name === "cxnSp") {
+    return parseConnectionShape(element);
+  }
+
   // Group shape (recursive)
   if (name === "xdr:grpSp" || name === "grpSp") {
     return parseGroupShape(element, parseDrawingContentFromElement);
@@ -375,6 +450,12 @@ function parseDrawingContent(anchorElement: XmlElement): XlsxDrawingContent | un
   const graphicFrameEl = getChild(anchorElement, "xdr:graphicFrame") ?? getChild(anchorElement, "graphicFrame");
   if (graphicFrameEl) {
     return parseGraphicFrame(graphicFrameEl);
+  }
+
+  // Check for connection shape
+  const cxnSpEl = getChild(anchorElement, "xdr:cxnSp") ?? getChild(anchorElement, "cxnSp");
+  if (cxnSpEl) {
+    return parseConnectionShape(cxnSpEl);
   }
 
   // Check for group shape

@@ -29,12 +29,14 @@ import {
   SPREADSHEETML_RELATIONSHIP_TYPES,
   SPREADSHEETML_NAMESPACES,
   OFFICE_RELATIONSHIP_TYPES,
+  DRAWINGML_CONTENT_TYPES,
   type OpcRelationship,
   type ContentTypeEntry,
   type ParsedContentTypes,
 } from "@aurochs-office/opc";
 import type { XlsxWorkbook } from "@aurochs-office/xlsx/domain/workbook";
 import { serializeWorkbook, serializeStyleSheet, serializeWorksheet, type SharedStringTable } from "./index";
+import { serializeDrawing } from "./drawing";
 
 // =============================================================================
 // Constants
@@ -50,6 +52,18 @@ const XLSX_CONTENT_TYPES = SPREADSHEETML_CONTENT_TYPES;
 // =============================================================================
 
 /**
+ * OPC media part. Referenced via relationships in drawings.
+ *
+ * @see ECMA-376 Part 2 (OPC - Open Packaging Conventions)
+ */
+export type MediaPart = {
+  /** Media binary data */
+  readonly data: Uint8Array;
+  /** MIME content type (e.g., "image/png", "image/jpeg") */
+  readonly contentType: string;
+};
+
+/**
  * Options for XLSX export.
  */
 export type ExportXlsxOptions = {
@@ -61,6 +75,16 @@ export type ExportXlsxOptions = {
    * This enables macro preservation for xlsm files.
    */
   readonly sourcePackage?: ZipPackage;
+
+  /**
+   * Per-sheet media parts for drawings.
+   * Key: sheet index (0-based)
+   * Value: Map of drawing relationship ID (XlsxPicture.blipRelId) to MediaPart
+   *
+   * The exporter generates OPC-compliant media file paths,
+   * drawing relationships, and content type registrations.
+   */
+  readonly sheetMedia?: ReadonlyMap<number, ReadonlyMap<string, MediaPart>>;
 };
 
 /**
@@ -149,6 +173,10 @@ type GenerateContentTypesOptions = {
    * Used to preserve macro-related content types.
    */
   readonly sourceContentTypes?: ParsedContentTypes;
+  /**
+   * Additional content type entries (e.g., from drawings, media).
+   */
+  readonly additionalEntries?: readonly ContentTypeEntry[];
 };
 
 /**
@@ -168,7 +196,7 @@ export function generateContentTypes(
   workbook: XlsxWorkbook,
   options: GenerateContentTypesOptions = {},
 ): XmlElement {
-  const { sourceContentTypes } = options;
+  const { sourceContentTypes, additionalEntries } = options;
 
   // Determine main workbook content type
   // Preserve macroEnabled if source had it
@@ -216,6 +244,28 @@ export function generateContentTypes(
     for (const [partName, contentType] of sourceContentTypes.overrides) {
       if (!generatedPartNames.has(partName)) {
         entries.push({ kind: "override", partName, contentType });
+      }
+    }
+  }
+
+  // Append additional entries (drawings, media, etc.)
+  if (additionalEntries) {
+    for (const entry of additionalEntries) {
+      // Avoid duplicates
+      if (entry.kind === "default") {
+        const hasDefault = entries.some(
+          (e) => e.kind === "default" && e.extension === entry.extension,
+        );
+        if (!hasDefault) {
+          entries.push(entry);
+        }
+      } else {
+        const hasOverride = entries.some(
+          (e) => e.kind === "override" && (e as { partName: string }).partName === entry.partName,
+        );
+        if (!hasOverride) {
+          entries.push(entry);
+        }
       }
     }
   }
@@ -457,6 +507,228 @@ function copySourcePackageFiles(source: ZipPackage, dest: ZipPackage): void {
 }
 
 // =============================================================================
+// Drawing Export Plan
+// =============================================================================
+
+/**
+ * A media entry to be written to the package.
+ */
+type MediaEntry = {
+  readonly relId: string;
+  readonly partPath: string;
+  readonly data: Uint8Array;
+  readonly contentType: string;
+};
+
+/**
+ * Drawing export information for a single sheet.
+ */
+type DrawingPartPlan = {
+  readonly sheetIndex: number;
+  readonly drawingPartPath: string;
+  readonly drawingXml: XmlElement;
+  readonly mediaEntries: readonly MediaEntry[];
+  readonly drawingRelationships: readonly OpcRelationship[];
+  readonly sheetDrawingRelationship: OpcRelationship;
+  readonly drawingRelId: string;
+};
+
+/**
+ * Complete drawing export plan.
+ */
+type DrawingExportPlan = {
+  readonly drawingParts: readonly DrawingPartPlan[];
+  readonly additionalContentTypes: readonly ContentTypeEntry[];
+};
+
+/**
+ * Infer file extension from MIME content type.
+ */
+function inferExtensionFromContentType(contentType: string): string {
+  switch (contentType) {
+    case "image/png": return "png";
+    case "image/jpeg": return "jpeg";
+    case "image/gif": return "gif";
+    case "image/bmp": return "bmp";
+    case "image/tiff": return "tiff";
+    case "image/svg+xml": return "svg";
+    case "image/webp": return "webp";
+    default: return "bin";
+  }
+}
+
+/**
+ * Compute OPC relationship file path for a given part.
+ *
+ * @see ECMA-376 Part 2, Section 9.2 (Relationship Part Naming)
+ */
+function relsPathFor(partPath: string): string {
+  const lastSlash = partPath.lastIndexOf("/");
+  const dir = partPath.substring(0, lastSlash);
+  const filename = partPath.substring(lastSlash + 1);
+  return `${dir}/_rels/${filename}.rels`;
+}
+
+/**
+ * Build a relative target path from source to target within the package.
+ */
+function buildRelativeTarget(sourcePart: string, targetPart: string): string {
+  const sourceDir = sourcePart.substring(0, sourcePart.lastIndexOf("/"));
+  const targetDir = targetPart.substring(0, targetPart.lastIndexOf("/"));
+  const targetFile = targetPart.substring(targetPart.lastIndexOf("/") + 1);
+
+  if (sourceDir === targetDir) {
+    return targetFile;
+  }
+
+  // Count common prefix depth
+  const sourceParts = sourceDir.split("/");
+  const targetParts = targetDir.split("/");
+  let common = 0;
+  while (common < sourceParts.length && common < targetParts.length && sourceParts[common] === targetParts[common]) {
+    common++;
+  }
+
+  const ups = sourceParts.length - common;
+  const downs = targetParts.slice(common);
+  return [...Array(ups).fill(".."), ...downs, targetFile].join("/");
+}
+
+/**
+ * Collect all blipRelIds from a drawing's anchors (recursively for groups).
+ */
+function collectBlipRelIds(anchors: readonly import("@aurochs-office/xlsx/domain/drawing/types").XlsxDrawingAnchor[]): string[] {
+  const relIds: string[] = [];
+  for (const anchor of anchors) {
+    if (anchor.content) {
+      collectContentRelIds(anchor.content, relIds);
+    }
+  }
+  return relIds;
+}
+
+function collectContentRelIds(
+  content: import("@aurochs-office/xlsx/domain/drawing/types").XlsxDrawingContent,
+  relIds: string[],
+): void {
+  switch (content.type) {
+    case "picture":
+      if (content.blipRelId) {
+        relIds.push(content.blipRelId);
+      }
+      break;
+    case "groupShape":
+      for (const child of content.children) {
+        collectContentRelIds(child, relIds);
+      }
+      break;
+  }
+}
+
+/**
+ * Build the complete drawing export plan from workbook domain objects.
+ *
+ * This function constructs all OPC objects (relationships, content types, paths)
+ * without writing anything. The exporter then writes the plan to the package.
+ */
+function buildDrawingExportPlan(
+  workbook: XlsxWorkbook,
+  sheetMedia?: ReadonlyMap<number, ReadonlyMap<string, MediaPart>>,
+): DrawingExportPlan {
+  const drawingParts: DrawingPartPlan[] = [];
+  const mediaDefaultExtensions = new Map<string, string>(); // extension → contentType
+
+  for (let i = 0; i < workbook.sheets.length; i++) {
+    const sheet = workbook.sheets[i];
+    if (!sheet.drawing || sheet.drawing.anchors.length === 0) {
+      continue;
+    }
+
+    const sheetIndex = i + 1; // 1-based
+    const drawingPartPath = `xl/drawings/drawing${sheetIndex}.xml`;
+    const sheetPartPath = `xl/worksheets/sheet${sheetIndex}.xml`;
+
+    // Serialize drawing XML
+    const drawingXml = serializeDrawing(sheet.drawing);
+
+    // Collect media entries
+    const mediaEntries: MediaEntry[] = [];
+    const drawingRelationships: OpcRelationship[] = [];
+    const sheetMediaMap = sheetMedia?.get(i);
+
+    const blipRelIds = collectBlipRelIds(sheet.drawing.anchors);
+    let mediaCounter = 0;
+
+    for (const relId of blipRelIds) {
+      const mediaPart = sheetMediaMap?.get(relId);
+      if (!mediaPart) {
+        continue;
+      }
+
+      mediaCounter++;
+      const ext = inferExtensionFromContentType(mediaPart.contentType);
+      const mediaPartPath = `xl/media/image_s${sheetIndex}_${mediaCounter}.${ext}`;
+
+      mediaEntries.push({
+        relId,
+        partPath: mediaPartPath,
+        data: mediaPart.data,
+        contentType: mediaPart.contentType,
+      });
+
+      drawingRelationships.push({
+        id: relId,
+        type: OFFICE_RELATIONSHIP_TYPES.image,
+        target: buildRelativeTarget(drawingPartPath, mediaPartPath),
+      });
+
+      mediaDefaultExtensions.set(ext, mediaPart.contentType);
+    }
+
+    // Drawing relationship from worksheet
+    const drawingRelId = `rId_drawing${sheetIndex}`;
+    const sheetDrawingRelationship: OpcRelationship = {
+      id: drawingRelId,
+      type: OFFICE_RELATIONSHIP_TYPES.drawing,
+      target: buildRelativeTarget(sheetPartPath, drawingPartPath),
+    };
+
+    drawingParts.push({
+      sheetIndex,
+      drawingPartPath,
+      drawingXml,
+      mediaEntries,
+      drawingRelationships,
+      sheetDrawingRelationship,
+      drawingRelId,
+    });
+  }
+
+  // Build additional content types
+  const additionalContentTypes: ContentTypeEntry[] = [];
+
+  // Drawing part overrides
+  for (const part of drawingParts) {
+    additionalContentTypes.push({
+      kind: "override",
+      partName: `/${part.drawingPartPath}`,
+      contentType: DRAWINGML_CONTENT_TYPES.drawing,
+    });
+  }
+
+  // Media extension defaults
+  for (const [extension, contentType] of mediaDefaultExtensions) {
+    additionalContentTypes.push({
+      kind: "default",
+      extension,
+      contentType,
+    });
+  }
+
+  return { drawingParts, additionalContentTypes };
+}
+
+// =============================================================================
 // Main Export Function
 // =============================================================================
 
@@ -533,23 +805,63 @@ export async function exportXlsx(
   const stylesXml = serializeStyleSheet(workbook.styles);
   pkg.writeText("xl/styles.xml", serializeWithDeclaration(stylesXml));
 
-  // 5. Generate each xl/worksheets/sheet*.xml (and per-sheet rels for hyperlinks)
+  // 5. Build drawing export plan
+  const drawingPlan = buildDrawingExportPlan(workbook, options.sheetMedia);
+  const drawingRelIdBySheet = new Map<number, string>();
+  for (const part of drawingPlan.drawingParts) {
+    drawingRelIdBySheet.set(part.sheetIndex, part.drawingRelId);
+  }
+
+  // 5.1. Generate each xl/worksheets/sheet*.xml (and per-sheet rels)
   for (let i = 0; i < workbook.sheets.length; i++) {
     const sheet = workbook.sheets[i];
-    const worksheetXml = serializeWorksheet(sheet, sharedStringsBuilder);
-    pkg.writeText(`xl/worksheets/sheet${i + 1}.xml`, serializeWithDeclaration(worksheetXml));
+    const sheetIndex = i + 1;
+    const drawingRelId = drawingRelIdBySheet.get(sheetIndex);
+    const worksheetXml = serializeWorksheet(sheet, sharedStringsBuilder, drawingRelId);
+    pkg.writeText(`xl/worksheets/sheet${sheetIndex}.xml`, serializeWithDeclaration(worksheetXml));
 
-    // Generate per-sheet relationships for external hyperlinks
+    // Collect per-sheet relationships (hyperlinks + drawing)
+    const sheetRels: OpcRelationship[] = [];
+
+    // External hyperlinks
     const externalHyperlinks = sheet.hyperlinks?.filter((h) => h.relationshipId && h.target);
     if (externalHyperlinks && externalHyperlinks.length > 0) {
-      const sheetRels: OpcRelationship[] = externalHyperlinks.map((h) => ({
-        id: h.relationshipId!,
-        type: XLSX_RELATIONSHIP_TYPES.hyperlink,
-        target: h.target!,
-        targetMode: "External" as const,
-      }));
+      for (const h of externalHyperlinks) {
+        sheetRels.push({
+          id: h.relationshipId!,
+          type: XLSX_RELATIONSHIP_TYPES.hyperlink,
+          target: h.target!,
+          targetMode: "External" as const,
+        });
+      }
+    }
+
+    // Drawing relationship
+    const drawingPart = drawingPlan.drawingParts.find((p) => p.sheetIndex === sheetIndex);
+    if (drawingPart) {
+      sheetRels.push(drawingPart.sheetDrawingRelationship);
+    }
+
+    if (sheetRels.length > 0) {
       const sheetRelsXml = serializeOpcRelationships(sheetRels);
-      pkg.writeText(`xl/worksheets/_rels/sheet${i + 1}.xml.rels`, serializeWithDeclaration(sheetRelsXml));
+      pkg.writeText(`xl/worksheets/_rels/sheet${sheetIndex}.xml.rels`, serializeWithDeclaration(sheetRelsXml));
+    }
+  }
+
+  // 5.2. Write drawing parts and media files
+  for (const part of drawingPlan.drawingParts) {
+    // Drawing XML
+    pkg.writeText(part.drawingPartPath, serializeWithDeclaration(part.drawingXml));
+
+    // Media files
+    for (const media of part.mediaEntries) {
+      pkg.writeBinary(media.partPath, media.data);
+    }
+
+    // Drawing relationships
+    if (part.drawingRelationships.length > 0) {
+      const drawingRelsXml = serializeOpcRelationships(part.drawingRelationships);
+      pkg.writeText(relsPathFor(part.drawingPartPath), serializeWithDeclaration(drawingRelsXml));
     }
   }
 
@@ -567,7 +879,10 @@ export async function exportXlsx(
   pkg.writeText("_rels/.rels", serializeWithDeclaration(rootRelsXml));
 
   // 9. Generate [Content_Types].xml (preserve macro content types)
-  const contentTypesXml = generateContentTypes(workbook, { sourceContentTypes });
+  const contentTypesXml = generateContentTypes(workbook, {
+    sourceContentTypes,
+    additionalEntries: drawingPlan.additionalContentTypes,
+  });
   pkg.writeText("[Content_Types].xml", serializeWithDeclaration(contentTypesXml));
 
   // 10. Write ZIP package
