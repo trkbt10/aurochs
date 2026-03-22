@@ -98,6 +98,14 @@
       "types": "./dist/@aurochs-renderer/pdf/src/react/index.d.ts",
       "import": "./dist/pdf/renderer/react/index.js"
     },
+    "./xlsx/domain": {
+      "types": "./dist/@aurochs-office/xlsx/src/domain/index.d.ts",
+      "import": "./dist/xlsx/domain/index.js"
+    },
+    "./xlsx/builder": {
+      "types": "./dist/@aurochs-builder/xlsx/src/index.d.ts",
+      "import": "./dist/xlsx/builder/index.js"
+    },
     "./xlsx/parser": {
       "types": "./dist/@aurochs-office/xlsx/src/index.d.ts",
       "import": "./dist/xlsx/parser/index.js"
