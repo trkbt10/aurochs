@@ -238,7 +238,7 @@ export function LandingPage({
           </h1>
 
           <p className="landing-desc">
-            View and edit PowerPoint, Word, and Excel files client-side.
+            View and edit .pptx, .docx, and .xlsx files client-side.
             <br />
             Your files never leave your device.
           </p>
@@ -273,8 +273,8 @@ export function LandingPage({
               <div className="demo-card-header">
                 <span className="demo-card-icon pptx">P</span>
                 <div className="demo-card-info">
-                  <span className="demo-card-title">PowerPoint</span>
-                  <span className="demo-card-subtitle">Presentations</span>
+                  <span className="demo-card-title">.pptx</span>
+                  <span className="demo-card-subtitle">Editor</span>
                 </div>
               </div>
               <div className="demo-card-actions">
@@ -294,8 +294,8 @@ export function LandingPage({
               <div className="demo-card-header">
                 <span className="demo-card-icon docx">W</span>
                 <div className="demo-card-info">
-                  <span className="demo-card-title">Word</span>
-                  <span className="demo-card-subtitle">Documents</span>
+                  <span className="demo-card-title">.docx</span>
+                  <span className="demo-card-subtitle">Editor</span>
                 </div>
               </div>
               <div className="demo-card-actions">
@@ -315,8 +315,8 @@ export function LandingPage({
               <div className="demo-card-header">
                 <span className="demo-card-icon xlsx">X</span>
                 <div className="demo-card-info">
-                  <span className="demo-card-title">Excel</span>
-                  <span className="demo-card-subtitle">Spreadsheets</span>
+                  <span className="demo-card-title">.xlsx</span>
+                  <span className="demo-card-subtitle">Editor</span>
                 </div>
               </div>
               <div className="demo-card-actions">
@@ -336,8 +336,8 @@ export function LandingPage({
               <div className="demo-card-header">
                 <span className="demo-card-icon pdf">A</span>
                 <div className="demo-card-info">
-                  <span className="demo-card-title">PDF</span>
-                  <span className="demo-card-subtitle">Documents</span>
+                  <span className="demo-card-title">.pdf</span>
+                  <span className="demo-card-subtitle">Editor</span>
                 </div>
               </div>
               <div className="demo-card-actions">
