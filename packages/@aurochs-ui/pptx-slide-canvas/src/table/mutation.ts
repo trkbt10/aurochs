@@ -7,7 +7,7 @@
 
 import type { Table, TableRow, TableColumn } from "@aurochs-office/pptx/domain/table/types";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
-import { createDefaultTableCell } from "@aurochs-ui/pptx-editors";
+import { createDefaultTableCell } from "@aurochs-ui/ooxml-components/drawing-ml";
 import type { CellRange } from "@aurochs-ui/editor-core/table-operations";
 
 // =============================================================================

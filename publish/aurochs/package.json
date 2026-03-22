@@ -10,6 +10,14 @@
     "dist"
   ],
   "exports": {
+    "./drawing-ml/domain": {
+      "types": "./dist/@aurochs-office/drawing-ml/src/domain/index.d.ts",
+      "import": "./dist/drawing-ml/domain/index.js"
+    },
+    "./drawing-ml/editors": {
+      "types": "./dist/@aurochs-ui/ooxml-components/src/drawing-ml/index.d.ts",
+      "import": "./dist/drawing-ml/editors/index.js"
+    },
     "./pptx/parser": {
       "types": "./dist/@aurochs-office/pptx/src/index.d.ts",
       "import": "./dist/pptx/parser/index.js"
@@ -46,9 +54,9 @@
       "types": "./dist/@aurochs-builder/pptx/src/index.d.ts",
       "import": "./dist/pptx/builder/index.js"
     },
-    "./pptx/editors": {
-      "types": "./dist/@aurochs-ui/pptx-editors/src/index.d.ts",
-      "import": "./dist/pptx/editors/index.js"
+    "./pptx/slide-editors": {
+      "types": "./dist/@aurochs-ui/ooxml-components/src/pptx-slide/index.d.ts",
+      "import": "./dist/pptx/slide-editors/index.js"
     },
     "./pptx/slide-canvas": {
       "types": "./dist/@aurochs-ui/pptx-slide-canvas/src/index.d.ts",

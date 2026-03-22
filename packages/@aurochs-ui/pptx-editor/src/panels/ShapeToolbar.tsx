@@ -7,7 +7,7 @@
 
 import { useCallback, useMemo } from "react";
 import type { CSSProperties } from "react";
-import { LinePickerPopover } from "../ui/line/index";
+import { LinePickerPopover } from "@aurochs-ui/ooxml-components/drawing-ml/line";
 import { ToolbarButton, TOOLBAR_BUTTON_ICON_SIZE } from "@aurochs-ui/ui-components/primitives/ToolbarButton";
 import { ToolbarSeparator } from "@aurochs-ui/ui-components/primitives/ToolbarSeparator";
 import type { Shape } from "@aurochs-office/pptx/domain/index";
@@ -26,7 +26,7 @@ import { iconTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { UndoRedoGroup, DeleteDuplicateGroup, ToolbarPopoverButton, POPOVER_ICON_SIZE, POPOVER_STROKE_WIDTH } from "@aurochs-ui/editor-controls/toolbar";
 import { TextFormattingEditor } from "@aurochs-ui/editor-controls/text";
 import type { TextFormatting } from "@aurochs-ui/editor-controls/text";
-import { pptxTextAdapter, PPTX_UNDERLINE_OPTIONS, PPTX_STRIKE_OPTIONS } from "@aurochs-ui/pptx-editors/adapters/editor-controls";
+import { pptxTextAdapter, PPTX_UNDERLINE_OPTIONS, PPTX_STRIKE_OPTIONS } from "@aurochs-ui/ooxml-components/adapters/pptx";
 
 // =============================================================================
 // Constants

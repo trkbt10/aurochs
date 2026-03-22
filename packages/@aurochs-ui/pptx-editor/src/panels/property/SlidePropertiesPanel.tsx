@@ -13,7 +13,7 @@ import type { SlideTransition } from "@aurochs-office/pptx/domain/transition";
 import type { ColorMapping } from "@aurochs-office/pptx/domain/color/types";
 import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import type { SlideLayoutOption } from "@aurochs-office/pptx/app";
-import { BackgroundEditor, createDefaultBackground } from "../../editors/index";
+import { BackgroundEditor, createDefaultBackground } from "@aurochs-ui/ooxml-components/pptx-slide";
 import {
   LayoutInfoPanel,
   type ColorMapEditorProps,

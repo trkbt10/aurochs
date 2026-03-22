@@ -10,7 +10,7 @@ import type { Shape } from "@aurochs-office/pptx/domain/index";
 import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { DiagramEditor } from "@aurochs-ui/diagram-editor";
 import { pptxDiagramEditorAdapters } from "../../adapters";
-import { NonVisualPropertiesEditor } from "../../editors/index";
+import { NonVisualPropertiesEditor } from "@aurochs-ui/ooxml-components/drawing-ml";
 import { TransformEditor } from "@aurochs-ui/editor-controls/editors";
 
 // =============================================================================

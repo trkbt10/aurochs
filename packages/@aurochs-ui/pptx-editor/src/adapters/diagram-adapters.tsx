@@ -7,8 +7,8 @@
 import type { DiagramEditorAdapters } from "@aurochs-ui/diagram-editor";
 import type { TextBody } from "@aurochs-office/pptx/domain/text";
 import type { ShapeProperties } from "@aurochs-office/pptx/domain/shape";
-import { TextBodyEditor } from "@aurochs-ui/pptx-editors";
-import { ShapePropertiesEditor, createDefaultShapeProperties } from "@aurochs-ui/pptx-editors";
+import { TextBodyEditor } from "@aurochs-ui/ooxml-components/drawing-ml";
+import { ShapePropertiesEditor, createDefaultShapeProperties } from "@aurochs-ui/ooxml-components/drawing-ml";
 
 export const pptxDiagramEditorAdapters: DiagramEditorAdapters<TextBody, ShapeProperties> = {
   textBody: {

@@ -13,7 +13,7 @@ import {
   NonVisualPropertiesEditor,
   EffectsEditor,
   createDefaultEffects,
-} from "../../editors/index";
+} from "@aurochs-ui/ooxml-components/drawing-ml";
 import { TransformEditor, createDefaultTransform, PercentEditor } from "@aurochs-ui/editor-controls/editors";
 import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 

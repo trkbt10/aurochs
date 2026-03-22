@@ -9,9 +9,9 @@ import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
 import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import { FieldGroup } from "@aurochs-ui/ui-components/layout";
 import { createNoFill } from "@aurochs-ui/editor-controls/editors";
-import { FillEditor } from "@aurochs-ui/pptx-editors";
-import { TextBodyEditor } from "@aurochs-ui/pptx-editors";
-import { LineEditor, createDefaultLine } from "../ui/line";
+import { FillEditor } from "@aurochs-ui/ooxml-components/drawing-ml";
+import { TextBodyEditor } from "@aurochs-ui/ooxml-components/drawing-ml";
+import { LineEditor, createDefaultLine } from "@aurochs-ui/ooxml-components/drawing-ml/line";
 
 const baseFillTypes = ["noFill", "solidFill", "gradientFill", "patternFill", "groupFill"] as const;
 

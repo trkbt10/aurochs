@@ -5,7 +5,7 @@
 import { insertRow, removeRow, insertColumn, removeColumn, setColumnWidth, setRowHeight, mergeCells, splitCell } from "./mutation";
 import type { Table } from "@aurochs-office/pptx/domain/table/types";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
-import { createDefaultTableCellProperties } from "@aurochs-ui/pptx-editors";
+import { createDefaultTableCellProperties } from "@aurochs-ui/ooxml-components/drawing-ml";
 
 function createTestTable(rows: number = 2, cols: number = 3): Table {
   return {

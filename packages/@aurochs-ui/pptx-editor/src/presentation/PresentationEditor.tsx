@@ -18,7 +18,7 @@ import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import type { PresentationDocument, SlideWithId } from "@aurochs-office/pptx/app";
 import { PresentationEditorProvider, usePresentationEditor } from "../context/presentation/PresentationEditorContext";
-import { EditorResourceProvider, useEditorResourceStore } from "../context/editor/EditorResourceContext";
+import { EditorResourceProvider, useEditorResourceStore } from "@aurochs-ui/ooxml-components/drawing-ml/EditorResourceContext";
 import { SlideThumbnailPanel } from "../panels";
 import { useSlideThumbnails } from "../thumbnail/use-slide-thumbnails";
 import { SlideThumbnailPreview } from "../thumbnail/SlideThumbnailPreview";
@@ -68,7 +68,7 @@ import {
   type TextSelectionContext,
   getParagraphsInSelection,
   getSelectionForCursor,
-} from "@aurochs-ui/pptx-editors/text/text-property-extractor";
+} from "@aurochs-ui/ooxml-components/drawing-ml/text/text-property-extractor";
 import {
   applyRunPropertiesToSelection,
   applyParagraphPropertiesToSelection,

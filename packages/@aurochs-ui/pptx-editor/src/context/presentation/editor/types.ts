@@ -12,7 +12,7 @@ import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-conte
 import type { Theme } from "@aurochs-office/pptx/domain/theme/types";
 import type { XmlDocument } from "@aurochs/xml";
 import type { PresentationDocument, SlideWithId, SlideId } from "@aurochs-office/pptx/app";
-import type { ShapeHierarchyTarget } from "../../../shape";
+import type { ShapeHierarchyTarget } from "@aurochs-ui/pptx-slide-canvas/shape/hierarchy";
 import type { UndoRedoHistory } from "@aurochs-ui/editor-core/history";
 import type {
   SelectionState,

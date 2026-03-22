@@ -15,8 +15,8 @@ import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
 import { type ShapeId } from "@aurochs-office/pptx/domain/types";
 import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { Input } from "@aurochs-ui/ui-components/primitives";
-import { FillEditor } from "../../editors/color/FillEditor";
-import { LineEditor } from "../../ui/line";
+import { FillEditor } from "@aurochs-ui/ooxml-components/drawing-ml";
+import { LineEditor } from "@aurochs-ui/ooxml-components/drawing-ml/line";
 import {
   analyzeShapeTypes,
   getCommonTransform,

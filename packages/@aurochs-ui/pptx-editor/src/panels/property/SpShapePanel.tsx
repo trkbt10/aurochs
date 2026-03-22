@@ -5,7 +5,7 @@
  */
 
 import type { SpShape } from "@aurochs-office/pptx/domain/index";
-import { LineEditor, createDefaultLine } from "../../ui/line";
+import { LineEditor, createDefaultLine } from "@aurochs-ui/ooxml-components/drawing-ml/line";
 import {
   NonVisualPropertiesEditor,
   MixedTextBodyEditor,
@@ -14,7 +14,7 @@ import {
   GeometryEditor,
   createDefaultGeometry,
   createDefaultEffects,
-} from "../../editors/index";
+} from "@aurochs-ui/ooxml-components/drawing-ml";
 import { TransformEditor, createDefaultTransform, createDefaultSolidFill } from "@aurochs-ui/editor-controls/editors";
 import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 

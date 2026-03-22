@@ -7,14 +7,14 @@
 
 import type { CxnShape } from "@aurochs-office/pptx/domain/index";
 import { FieldGroup } from "@aurochs-ui/ui-components/layout";
-import { LineEditor, createDefaultLine } from "../../ui/line";
+import { LineEditor, createDefaultLine } from "@aurochs-ui/ooxml-components/drawing-ml/line";
 import {
   NonVisualPropertiesEditor,
   EffectsEditor,
   GeometryEditor,
   createDefaultGeometry,
   createDefaultEffects,
-} from "../../editors/index";
+} from "@aurochs-ui/ooxml-components/drawing-ml";
 import { TransformEditor, createDefaultTransform } from "@aurochs-ui/editor-controls/editors";
 import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 

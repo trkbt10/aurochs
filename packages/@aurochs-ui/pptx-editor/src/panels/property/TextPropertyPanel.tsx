@@ -9,10 +9,10 @@ import { useMemo, useCallback, type CSSProperties } from "react";
 import type { RunProperties, ParagraphProperties } from "@aurochs-office/pptx/domain/text";
 import { useTextEditContext } from "@aurochs-ui/pptx-slide-canvas/context/slide/TextEditContext";
 import type { TextEditContextValue } from "@aurochs-ui/pptx-slide-canvas/context/slide/TextEditContext";
-import type { MixedRunProperties, MixedParagraphProperties } from "../../editors/text/mixed-properties";
-import { extractTextProperties } from "../../editors/text/text-property-extractor";
-import { MixedRunPropertiesEditor } from "../../editors/text/MixedRunPropertiesEditor";
-import { MixedParagraphPropertiesEditor } from "../../editors/text/MixedParagraphPropertiesEditor";
+import type { MixedRunProperties, MixedParagraphProperties } from "@aurochs-ui/ooxml-components/drawing-ml/text/mixed-properties";
+import { extractTextProperties } from "@aurochs-ui/ooxml-components/drawing-ml/text/text-property-extractor";
+import { MixedRunPropertiesEditor } from "@aurochs-ui/ooxml-components/drawing-ml";
+import { MixedParagraphPropertiesEditor } from "@aurochs-ui/ooxml-components/drawing-ml";
 
 // =============================================================================
 // Types

@@ -7,7 +7,7 @@
 import type { GraphicFrame } from "@aurochs-office/pptx/domain/index";
 import type { Table } from "@aurochs-office/pptx/domain/table/types";
 import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
-import { NonVisualPropertiesEditor, TableEditor } from "../../editors/index";
+import { NonVisualPropertiesEditor, TableEditor } from "@aurochs-ui/ooxml-components/drawing-ml";
 import { TransformEditor } from "@aurochs-ui/editor-controls/editors";
 
 // =============================================================================

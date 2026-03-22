@@ -25,10 +25,14 @@ const entries = {
   "pptx/renderer/react/index": resolve(__dirname, "../../@aurochs-renderer/pptx/src/react/index.ts"),
   "pptx/renderer/animation/index": resolve(__dirname, "../../@aurochs-renderer/pptx/src/animation/index.ts"),
   "pptx/renderer/render-options/index": resolve(__dirname, "../../@aurochs-renderer/pptx/src/render-options.ts"),
+  // DrawingML Domain (shared types, input specs, conversions)
+  "drawing-ml/domain/index": resolve(__dirname, "../../@aurochs-office/drawing-ml/src/domain/index.ts"),
   // PPTX Builder
   "pptx/builder/index": resolve(__dirname, "../../@aurochs-builder/pptx/src/index.ts"),
-  // PPTX Editors (from @aurochs-ui/pptx-editors)
-  "pptx/editors/index": resolve(__dirname, "../../@aurochs-ui/pptx-editors/src/index.ts"),
+  // DrawingML element editors (from @aurochs-ui/ooxml-components/drawing-ml)
+  "drawing-ml/editors/index": resolve(__dirname, "../../@aurochs-ui/ooxml-components/src/drawing-ml/index.ts"),
+  // PPTX slide-level editors (from @aurochs-ui/ooxml-components/pptx-slide)
+  "pptx/slide-editors/index": resolve(__dirname, "../../@aurochs-ui/ooxml-components/src/pptx-slide/index.ts"),
   // PPTX Slide Canvas (from @aurochs-ui/pptx-slide-canvas)
   "pptx/slide-canvas/index": resolve(__dirname, "../../@aurochs-ui/pptx-slide-canvas/src/index.ts"),
   // PPTX Viewer (from @aurochs-ui/pptx-viewer)
@@ -103,10 +107,11 @@ export default defineConfig({
         resolve(__dirname, "../../@aurochs-renderer/pptx/src/animation/**"),
         resolve(__dirname, "../../@aurochs-renderer/pptx/src/render-options*"),
         resolve(__dirname, "../../@aurochs-builder/pptx/src/**"),
+        resolve(__dirname, "../../@aurochs-office/drawing-ml/src/domain/**"),
         resolve(__dirname, "../../@aurochs-builder/drawing-ml/src/**"),
         resolve(__dirname, "../../@aurochs-builder/core/src/**"),
         resolve(__dirname, "../../@aurochs-builder/chart/src/**"),
-        resolve(__dirname, "../../@aurochs-ui/pptx-editors/src/**"),
+        resolve(__dirname, "../../@aurochs-ui/ooxml-components/src/**"),
         resolve(__dirname, "../../@aurochs-ui/pptx-slide-canvas/src/**"),
         resolve(__dirname, "../../@aurochs-ui/pptx-viewer/src/**"),
         // DOCX

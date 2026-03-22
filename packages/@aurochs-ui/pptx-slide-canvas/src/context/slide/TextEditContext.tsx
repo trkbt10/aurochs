@@ -8,7 +8,7 @@
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 import type { TextBody, RunProperties, ParagraphProperties } from "@aurochs-office/pptx/domain";
 import type { TextEditState, StickyFormattingState, TextCursorState } from "@aurochs-ui/ooxml-components/text-edit";
-import type { TextSelectionContext } from "@aurochs-ui/pptx-editors/text/text-property-extractor";
+import type { TextSelectionContext } from "@aurochs-ui/ooxml-components/drawing-ml/text/text-property-extractor";
 
 // =============================================================================
 // Types

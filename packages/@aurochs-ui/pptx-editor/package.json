@@ -17,7 +17,6 @@
     "@aurochs-ui/editor-core": "workspace:*",
     "@aurochs-ui/path-tools": "workspace:*",
     "@aurochs-ui/potx-editor": "workspace:*",
-    "@aurochs-ui/pptx-editors": "workspace:*",
     "@aurochs-ui/pptx-slide-canvas": "workspace:*",
     "@aurochs-ui/pptx-viewer": "workspace:*",
     "@aurochs-ui/ui-components": "workspace:*",

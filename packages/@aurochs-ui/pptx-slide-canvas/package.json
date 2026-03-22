@@ -14,7 +14,6 @@
     "@aurochs-ui/editor-core": "workspace:*",
     "@aurochs-ui/ooxml-components": "workspace:*",
     "@aurochs-ui/path-tools": "workspace:*",
-    "@aurochs-ui/pptx-editors": "workspace:*",
     "@aurochs-ui/ui-components": "workspace:*",
     "@aurochs/glyph": "workspace:*"
   },

@@ -13,11 +13,16 @@
     "@aurochs-office/pptx": "workspace:*",
     "@aurochs-renderer/drawing-ml": "workspace:*",
     "@aurochs-renderer/pptx": "workspace:*",
+    "@aurochs-office/xlsx": "workspace:*",
+    "@aurochs-ui/chart-editor": "workspace:*",
     "@aurochs-ui/color-editor": "workspace:*",
+    "@aurochs-ui/diagram-editor": "workspace:*",
     "@aurochs-ui/editor-controls": "workspace:*",
     "@aurochs-ui/editor-core": "workspace:*",
     "@aurochs-ui/ui-components": "workspace:*",
-    "@aurochs/glyph": "workspace:*"
+    "@aurochs-ui/xlsx-editor": "workspace:*",
+    "@aurochs/glyph": "workspace:*",
+    "react-editor-ui": "^0.4.0"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",
@@ -72,6 +77,38 @@
     "./opc-embedded-assets": {
       "types": "./src/opc-embedded-assets/index.ts",
       "default": "./src/opc-embedded-assets/index.ts"
+    },
+    "./drawing-ml": {
+      "types": "./src/drawing-ml/index.ts",
+      "default": "./src/drawing-ml/index.ts"
+    },
+    "./drawing-ml/line": {
+      "types": "./src/drawing-ml/line/index.ts",
+      "default": "./src/drawing-ml/line/index.ts"
+    },
+    "./drawing-ml/text/text-property-extractor": {
+      "types": "./src/drawing-ml/text/text-property-extractor.ts",
+      "default": "./src/drawing-ml/text/text-property-extractor.ts"
+    },
+    "./drawing-ml/text/mixed-properties": {
+      "types": "./src/drawing-ml/text/mixed-properties.ts",
+      "default": "./src/drawing-ml/text/mixed-properties.ts"
+    },
+    "./pptx-slide": {
+      "types": "./src/pptx-slide/index.ts",
+      "default": "./src/pptx-slide/index.ts"
+    },
+    "./adapters/pptx": {
+      "types": "./src/adapters/pptx/index.ts",
+      "default": "./src/adapters/pptx/index.ts"
+    },
+    "./drawing-ml/EditorResourceContext": {
+      "types": "./src/drawing-ml/EditorResourceContext.tsx",
+      "default": "./src/drawing-ml/EditorResourceContext.tsx"
+    },
+    "./chart-data": {
+      "types": "./src/chart-data/index.ts",
+      "default": "./src/chart-data/index.ts"
     }
   }
 }

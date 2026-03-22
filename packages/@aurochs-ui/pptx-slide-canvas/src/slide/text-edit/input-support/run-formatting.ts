@@ -15,7 +15,7 @@ import type {
 } from "@aurochs-office/pptx/domain/text";
 import type { TextSelection } from "@aurochs-ui/ooxml-components/text-edit";
 import { normalizeTextSelection, isSameCursorPosition } from "@aurochs-ui/editor-core/text-edit";
-import { mergeRunProperties, areRunPropertiesEqual } from "@aurochs-ui/pptx-editors/text/mixed-properties";
+import { mergeRunProperties, areRunPropertiesEqual } from "@aurochs-ui/ooxml-components/drawing-ml/text/mixed-properties";
 
 // =============================================================================
 // Types
