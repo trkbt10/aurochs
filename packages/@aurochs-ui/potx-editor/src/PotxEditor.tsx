@@ -120,7 +120,7 @@ function buildThemeExportOptions(s: ThemeEditorState, slideSize?: SlideSize): Th
     name: s.themeName,
     colorScheme: s.colorScheme as Readonly<Record<SchemeColorName, string>>,
     fontScheme: s.fontScheme, fontSchemeName: s.fontSchemeName,
-    colorMapping: s.masterColorMapping, formatSchemeElements: s.formatScheme,
+    colorMapping: s.masterColorMapping, formatScheme: s.formatScheme,
     customColors: s.customColors, extraColorSchemes: s.extraColorSchemes,
     objectDefaults: s.objectDefaults, masterTextStyles: s.masterTextStyles,
     masterBackground: s.masterBackground,

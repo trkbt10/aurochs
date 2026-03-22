@@ -3,11 +3,13 @@
  * Parses presentation.xml and app.xml for presentation metadata
  */
 
-import type { XmlDocument, XmlElement } from "@aurochs/xml";
+import type { XmlDocument } from "@aurochs/xml";
 import { getByPath, getTextByPath } from "@aurochs/xml";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import type { SlideSize } from "../domain";
 import { SLIDE_FACTOR } from "../domain/unit-conversion";
+import type { TextStyleLevels } from "../domain/text-style";
+import { parseTextStyleLevels } from "../parser/text/text-style-levels";
 
 /** Default slide size (16:9 aspect ratio at 96 DPI) */
 const DEFAULT_SLIDE_SIZE: SlideSize = { width: px(960), height: px(540) };
@@ -38,12 +40,14 @@ export function parseSlideSizeFromXml(presentationXml: XmlDocument | null): Slid
 }
 
 /**
- * Parse default text style from presentation XML
+ * Parse default text style from presentation XML.
+ * Returns parsed TextStyleLevels domain type.
+ *
  * ECMA-376: p:presentation/p:defaultTextStyle contains default text formatting
  * @param presentationXml - Parsed presentation.xml
- * @returns Default text style node or null
+ * @returns Default text style levels or null
  */
-export function parseDefaultTextStyle(presentationXml: XmlDocument | null): XmlElement | null {
+export function parseDefaultTextStyle(presentationXml: XmlDocument | null): TextStyleLevels | null {
   if (presentationXml === null) {
     return null;
   }
@@ -51,7 +55,7 @@ export function parseDefaultTextStyle(presentationXml: XmlDocument | null): XmlE
   if (node === undefined) {
     return null;
   }
-  return node;
+  return parseTextStyleLevels(node) ?? null;
 }
 
 /**

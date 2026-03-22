@@ -5,6 +5,7 @@
 import type { XmlElement } from "@aurochs/xml";
 import { DEFAULT_RENDER_OPTIONS } from "@aurochs-renderer/pptx";
 import type { Theme } from "../../domain/theme/types";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
 import type { MasterTextStyles } from "../../domain/text-style";
 import type { ColorMap } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { PlaceholderTable } from "../../domain/opc";
@@ -14,7 +15,7 @@ import {
   getBackgroundElement,
   getBgPrFromElement,
   getBgRefFromElement,
-  resolveBgRefToXmlElement,
+  resolveBgRefToFill,
 } from "./background-parser";
 
 function el(name: string, attrs: Record<string, string> = {}, children: XmlElement[] = []): XmlElement {
@@ -43,7 +44,7 @@ const EMPTY_PLACEHOLDERS: PlaceholderTable = {
 
 const EMPTY_TEXT_STYLES: MasterTextStyles = {};
 
-function createTheme(params: { fillStyles: readonly XmlElement[]; bgFillStyles: readonly XmlElement[] }): Theme {
+function createTheme(params: { fillStyles: readonly BaseFill[]; bgFillStyles: readonly BaseFill[] }): Theme {
   return {
     fontScheme: { majorFont: {}, minorFont: {} },
     colorScheme: {},
@@ -149,30 +150,29 @@ describe("getBgPrFromElement / getBgRefFromElement", () => {
   });
 });
 
-describe("resolveBgRefToXmlElement", () => {
-  it("resolves idx 1-999 to formatScheme.fillStyles[idx-1]", () => {
-    const fill0 = el("a:solidFill");
-    const fill1 = el("a:gradFill");
-    const ctx = createSlideContextForBgRef(createTheme({ fillStyles: [fill0, fill1], bgFillStyles: [] }));
+describe("resolveBgRefToFill", () => {
+  const solidRed: BaseFill = { type: "solidFill", color: { spec: { type: "srgb", value: "FF0000" } } };
+  const solidBlue: BaseFill = { type: "solidFill", color: { spec: { type: "srgb", value: "0000FF" } } };
 
-    expect(resolveBgRefToXmlElement(el("p:bgRef", { idx: "1" }), ctx)).toBe(fill0);
-    expect(resolveBgRefToXmlElement(el("p:bgRef", { idx: "2" }), ctx)).toBe(fill1);
+  it("resolves idx 1-999 to formatScheme.fillStyles[idx-1]", () => {
+    const ctx = createSlideContextForBgRef(createTheme({ fillStyles: [solidRed, solidBlue], bgFillStyles: [] }));
+
+    expect(resolveBgRefToFill(el("p:bgRef", { idx: "1" }), ctx)).toBe(solidRed);
+    expect(resolveBgRefToFill(el("p:bgRef", { idx: "2" }), ctx)).toBe(solidBlue);
   });
 
   it("resolves idx 1001+ to formatScheme.bgFillStyles[idx-1001]", () => {
-    const bgFill0 = el("a:solidFill");
-    const bgFill1 = el("a:gradFill");
-    const ctx = createSlideContextForBgRef(createTheme({ fillStyles: [], bgFillStyles: [bgFill0, bgFill1] }));
+    const ctx = createSlideContextForBgRef(createTheme({ fillStyles: [], bgFillStyles: [solidRed, solidBlue] }));
 
-    expect(resolveBgRefToXmlElement(el("p:bgRef", { idx: "1001" }), ctx)).toBe(bgFill0);
-    expect(resolveBgRefToXmlElement(el("p:bgRef", { idx: "1002" }), ctx)).toBe(bgFill1);
+    expect(resolveBgRefToFill(el("p:bgRef", { idx: "1001" }), ctx)).toBe(solidRed);
+    expect(resolveBgRefToFill(el("p:bgRef", { idx: "1002" }), ctx)).toBe(solidBlue);
   });
 
   it("returns undefined for missing or invalid idx", () => {
     const ctx = createSlideContextForBgRef(createTheme({ fillStyles: [], bgFillStyles: [] }));
 
-    expect(resolveBgRefToXmlElement(el("p:bgRef"), ctx)).toBeUndefined();
-    expect(resolveBgRefToXmlElement(el("p:bgRef", { idx: "0" }), ctx)).toBeUndefined();
-    expect(resolveBgRefToXmlElement(el("p:bgRef", { idx: "abc" }), ctx)).toBeUndefined();
+    expect(resolveBgRefToFill(el("p:bgRef"), ctx)).toBeUndefined();
+    expect(resolveBgRefToFill(el("p:bgRef", { idx: "0" }), ctx)).toBeUndefined();
+    expect(resolveBgRefToFill(el("p:bgRef", { idx: "abc" }), ctx)).toBeUndefined();
   });
 });

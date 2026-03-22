@@ -49,10 +49,10 @@ describe("patchTheme", () => {
     const themeXml = createMinimalThemeXml();
 
     const newFmt: FormatScheme = {
-      fillStyles: [createElement("a:solidFill", {}, [createElement("a:srgbClr", { val: "FF0000" })])],
-      lineStyles: [createElement("a:ln", { w: "12700" }, [])],
-      effectStyles: [createElement("a:effectStyle", {}, [createElement("a:effectLst")])],
-      bgFillStyles: [createElement("a:noFill", {}, [])],
+      fillStyles: [{ type: "solidFill", color: { spec: { type: "srgb", value: "FF0000" } } }],
+      lineStyles: [{ width: 1 as any, cap: "flat", compound: "sng", alignment: "ctr", fill: { type: "noFill" }, dash: "solid", join: "round" }],
+      effectStyles: [undefined],
+      bgFillStyles: [{ type: "noFill" }],
     };
 
     const updated = patchTheme(themeXml, [
@@ -228,10 +228,10 @@ describe("patchTheme", () => {
     );
 
     const newFmt: FormatScheme = {
-      fillStyles: [createElement("a:gradFill", {}, [])],
-      lineStyles: [createElement("a:ln", {}, [])],
-      effectStyles: [createElement("a:effectStyle", {}, [])],
-      bgFillStyles: [createElement("a:noFill", {}, [])],
+      fillStyles: [{ type: "gradientFill", stops: [], rotWithShape: true }],
+      lineStyles: [{ width: 1 as any, cap: "flat", compound: "sng", alignment: "ctr", fill: { type: "noFill" }, dash: "solid", join: "round" }],
+      effectStyles: [undefined],
+      bgFillStyles: [{ type: "noFill" }],
     };
 
     const updated = patchTheme(themeXml, [{ type: "formatScheme", scheme: newFmt }]);
@@ -304,10 +304,10 @@ describe("patchTheme", () => {
     );
 
     const newFmt: FormatScheme = {
-      fillStyles: [createElement("a:solidFill", {}, [])],
-      lineStyles: [createElement("a:ln", {}, [])],
-      effectStyles: [createElement("a:effectStyle", {}, [])],
-      bgFillStyles: [createElement("a:noFill", {}, [])],
+      fillStyles: [{ type: "solidFill", color: { spec: { type: "scheme", value: "phClr" } } }],
+      lineStyles: [{ width: 1 as any, cap: "flat", compound: "sng", alignment: "ctr", fill: { type: "noFill" }, dash: "solid", join: "round" }],
+      effectStyles: [undefined],
+      bgFillStyles: [{ type: "noFill" }],
     };
 
     const updated = patchTheme(themeXml, [{ type: "formatScheme", scheme: newFmt }]);

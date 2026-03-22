@@ -9,7 +9,7 @@ import type { XmlElement } from "@aurochs/xml";
 import { getChild, getByPath } from "@aurochs/xml";
 import type { TextStyleContext } from "../../context";
 import type { MasterTextStyles } from "../../../domain/text-style";
-import { TEXT_STYLE_LEVEL_KEYS } from "../../../domain/text-style";
+import { TEXT_STYLE_LEVEL_KEYS, getTextLevelByNumber } from "../../../domain/text-style";
 import type { Points } from "@aurochs-office/drawing-ml/domain/units";
 import { pt } from "@aurochs-office/drawing-ml/domain/units";
 import { DEFAULT_FONT_SIZE_PT, FONT_SIZE_CENTIPOINTS_TO_PT } from "../../../domain/defaults";
@@ -147,9 +147,8 @@ export function resolveFontSize(
 
   // 6. Default text style
   if (ctx.defaultTextStyle !== undefined) {
-    const lvlpPr = `a:lvl${lvlKey}pPr`;
-    const defRPr = getByPath(ctx.defaultTextStyle, [lvlpPr, "a:defRPr"]);
-    const defaultSz = getFontSizeFromRPr(defRPr);
+    const levelStyle = getTextLevelByNumber(ctx.defaultTextStyle, lvlKey);
+    const defaultSz = levelStyle?.defaultRunProperties?.fontSize;
     if (defaultSz !== undefined) {
       return defaultSz;
     }
@@ -211,10 +210,8 @@ export function resolveDefRPr(
   // but cannot be returned as XmlElement. Callers needing master text style
   // resolution should use the dedicated resolvers (resolveFontSize, etc.).
 
-  // 5. Default text style
-  if (ctx.defaultTextStyle !== undefined) {
-    return getByPath(ctx.defaultTextStyle, [lvlpPr, "a:defRPr"]);
-  }
+  // 5. Default text style is now domain-typed (TextStyleLevels).
+  // Callers needing default text style properties should use specific resolvers directly.
 
   return undefined;
 }

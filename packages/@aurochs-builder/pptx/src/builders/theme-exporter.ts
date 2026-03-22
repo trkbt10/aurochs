@@ -23,12 +23,16 @@
  * |----------------------|-------------|-----------------------|--------|
  * | p:clrMap             | 19.3.1.6    | ColorMapping          | ✅     |
  * | p:bg                 | 19.3.1.2    | Background            | ✅     |
- * | p:txStyles           | 19.3.1.51   | RawMasterTextStyles   | ✅     |
+ * | p:txStyles           | 19.3.1.51   | MasterTextStyles      | ✅     |
  *
  * @see ECMA-376 Part 1, Section 20.1.6 - Theme Definitions
  */
 
 import { SCHEME_COLOR_NAMES, type SchemeColorName, type Color } from "@aurochs-office/drawing-ml/domain/color";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
+import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
+import { px } from "@aurochs-office/drawing-ml/domain/units";
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
 import type { Theme, CustomColor, ExtraColorScheme, FormatScheme, ObjectDefaults, ObjectDefaultProperties } from "@aurochs-office/pptx/domain/theme/types";
 import type { MasterTextStyles } from "@aurochs-office/pptx/domain/text-style";
@@ -39,6 +43,7 @@ import type { Background, SlideLayoutType } from "@aurochs-office/pptx/domain";
 import type { SlideTransition } from "@aurochs-office/pptx/domain/transition";
 import { serializeFill } from "../patcher/serializer/fill";
 import { serializeLine } from "../patcher/serializer/line";
+import { serializeEffects } from "../patcher/serializer/effects";
 import { serializeBodyProperties, serializeParagraphProperties, serializeRunProperties } from "../patcher/serializer/text-properties";
 import { CONTENT_TYPES } from "@aurochs-office/pptx/domain";
 import { serializeColor } from "../patcher/serializer/color";
@@ -76,13 +81,8 @@ export type ThemeExportOptions = {
   readonly customColors?: readonly CustomColor[];
   /** Master slide color mapping (p:clrMap) §19.3.1.6 */
   readonly colorMapping?: ColorMapping;
-  /** Format scheme style elements (preserved XmlElement arrays) §20.1.4.1.14 */
-  readonly formatSchemeElements?: {
-    readonly fillStyles?: readonly XmlElement[];
-    readonly lineStyles?: readonly XmlElement[];
-    readonly effectStyles?: readonly XmlElement[];
-    readonly bgFillStyles?: readonly XmlElement[];
-  };
+  /** Format scheme (domain typed) §20.1.4.1.14 */
+  readonly formatScheme?: FormatScheme;
   /** Extra color schemes (a:extraClrSchemeLst) §20.1.6.5 */
   readonly extraColorSchemes?: readonly ExtraColorScheme[];
   /** Object defaults (a:objectDefaults) §20.1.6.7 — XmlElement refs preserved from parser */
@@ -497,7 +497,7 @@ function exportOptionsToTheme(options: ThemeExportOptions): Theme {
   return {
     colorScheme: options.colorScheme,
     fontScheme: options.fontScheme,
-    formatScheme: formatSchemeFromExportOptions(options.formatSchemeElements),
+    formatScheme: options.formatScheme ?? defaultFormatScheme(),
     customColors: options.customColors ?? [],
     extraColorSchemes: options.extraColorSchemes ?? [],
     objectDefaults: options.objectDefaults ?? {},
@@ -505,27 +505,22 @@ function exportOptionsToTheme(options: ThemeExportOptions): Theme {
   };
 }
 
-function formatSchemeFromExportOptions(fmt: ThemeExportOptions["formatSchemeElements"]): FormatScheme {
-  if (!fmt) { return defaultFormatScheme(); }
-  return {
-    fillStyles: [...fmt.fillStyles ?? []],
-    lineStyles: [...fmt.lineStyles ?? []],
-    effectStyles: [...fmt.effectStyles ?? []],
-    bgFillStyles: [...fmt.bgFillStyles ?? []],
-  };
-}
-
-/** Default format scheme with placeholder elements per ECMA-376 §20.1.4.1.14. */
+/** Default format scheme with placeholder fills per ECMA-376 §20.1.4.1.14. */
 function defaultFormatScheme(): FormatScheme {
-  const phFill = createElement("a:solidFill", {}, [createElement("a:schemeClr", { val: "phClr" })]);
-  const phLine = (w: string) => createElement("a:ln", { w }, [
-    createElement("a:solidFill", {}, [createElement("a:schemeClr", { val: "phClr" })]),
-  ]);
-  const phEffect = createElement("a:effectStyle", {}, [createElement("a:effectLst")]);
+  const phFill: BaseFill = { type: "solidFill", color: { spec: { type: "scheme", value: "phClr" } } };
+  const phLine = (w: number): BaseLine => ({
+    width: px(w) as Pixels,
+    cap: "flat",
+    compound: "sng",
+    alignment: "ctr",
+    fill: { type: "solidFill", color: { spec: { type: "scheme", value: "phClr" } } },
+    dash: "solid",
+    join: "round",
+  });
   return {
     fillStyles: [phFill, phFill, phFill],
-    lineStyles: [phLine("6350"), phLine("12700"), phLine("19050")],
-    effectStyles: [phEffect, phEffect, phEffect],
+    lineStyles: [phLine(0.5), phLine(1), phLine(1.5)],
+    effectStyles: [undefined, undefined, undefined],
     bgFillStyles: [phFill, phFill, phFill],
   };
 }
@@ -569,13 +564,18 @@ function buildFontElement(prefix: string, font: FontScheme["majorFont"]): XmlEle
 // Format Scheme — §20.1.4.1.14
 // =============================================================================
 
-/** Build a:fmtScheme from domain FormatScheme (SoT). */
+/** Build a:fmtScheme from domain FormatScheme (SoT). Serializes domain types back to XML. */
 function buildFormatSchemeFromDomain(name: string, fmt: FormatScheme): XmlElement {
+  const effectStyleElements = fmt.effectStyles.map((e) => {
+    const effectChild = e ? serializeEffects(e) : null;
+    return createElement("a:effectStyle", {}, effectChild ? [effectChild] : [createElement("a:effectLst")]);
+  });
+
   return createElement("a:fmtScheme", { name }, [
-    createElement("a:fillStyleLst", {}, [...fmt.fillStyles]),
-    createElement("a:lnStyleLst", {}, [...fmt.lineStyles]),
-    createElement("a:effectStyleLst", {}, [...fmt.effectStyles]),
-    createElement("a:bgFillStyleLst", {}, [...fmt.bgFillStyles]),
+    createElement("a:fillStyleLst", {}, fmt.fillStyles.map(serializeFill)),
+    createElement("a:lnStyleLst", {}, fmt.lineStyles.map(serializeLine)),
+    createElement("a:effectStyleLst", {}, effectStyleElements),
+    createElement("a:bgFillStyleLst", {}, fmt.bgFillStyles.map(serializeFill)),
   ]);
 }
 

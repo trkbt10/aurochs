@@ -9,7 +9,7 @@ import type { XmlElement } from "@aurochs/xml";
 import { getChild, getByPath } from "@aurochs/xml";
 import type { TextStyleContext } from "../../context";
 import type { MasterTextStyles } from "../../../domain/text-style";
-import { TEXT_STYLE_LEVEL_KEYS } from "../../../domain/text-style";
+import { TEXT_STYLE_LEVEL_KEYS, getTextLevelByNumber } from "../../../domain/text-style";
 import type { Color } from "@aurochs-office/drawing-ml/domain/color";
 import { parseColorFromParent } from "../../graphics/color-parser";
 import { TYPE_TO_MASTER_STYLE } from "./constants";
@@ -153,9 +153,8 @@ export function resolveTextColor(
 
   // 7. Default text style
   if (ctx.defaultTextStyle !== undefined) {
-    const lvlpPr = `a:lvl${lvlKey}pPr`;
-    const defRPr = getByPath(ctx.defaultTextStyle, [lvlpPr, "a:defRPr"]);
-    const defaultColor = getColorFromRPr(defRPr);
+    const levelStyle = getTextLevelByNumber(ctx.defaultTextStyle, lvlKey);
+    const defaultColor = levelStyle?.defaultRunProperties?.color;
     if (defaultColor !== undefined) {
       return defaultColor;
     }

@@ -10,6 +10,7 @@ import type { ResourceMap, ZipFile } from "@aurochs-office/opc";
 import type { Timing } from "../domain/animation";
 import type { RenderOptions } from "@aurochs-renderer/pptx";
 import type { TableStyleList } from "../parser/table/style-parser";
+import type { TextStyleLevels } from "../domain/text-style";
 
 /**
  * Options for opening a presentation
@@ -113,10 +114,10 @@ export type Slide = {
   readonly zip: ZipFile;
 
   /**
-   * Default text style from presentation.xml.
+   * Default text style from presentation.xml (domain typed).
    * Provides fallback text styling for slides.
    */
-  readonly defaultTextStyle: XmlNode | null;
+  readonly defaultTextStyle: TextStyleLevels | null;
 
   /**
    * Table styles from ppt/tableStyles.xml.
@@ -153,8 +154,8 @@ export type Presentation = {
   /** PowerPoint application version */
   readonly appVersion: number | null;
 
-  /** Default text style from presentation.xml */
-  readonly defaultTextStyle: XmlNode | null;
+  /** Default text style from presentation.xml (domain typed) */
+  readonly defaultTextStyle: TextStyleLevels | null;
 
   /** Table styles from ppt/tableStyles.xml */
   readonly tableStyles: TableStyleList | null;

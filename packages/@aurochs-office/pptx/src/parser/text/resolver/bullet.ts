@@ -7,8 +7,8 @@
 import type { XmlElement } from "@aurochs/xml";
 import { getChild } from "@aurochs/xml";
 import type { TextStyleContext } from "../../context";
-import type { MasterTextStyles } from "../../../domain/text-style";
-import { TEXT_STYLE_LEVEL_KEYS } from "../../../domain/text-style";
+import type { MasterTextStyles, TextStyleLevels } from "../../../domain/text-style";
+import { TEXT_STYLE_LEVEL_KEYS, getTextLevelByNumber } from "../../../domain/text-style";
 import type { Points, Percent } from "@aurochs-office/drawing-ml/domain/units";
 import { pt } from "@aurochs-office/drawing-ml/domain/units";
 import type { Bullet, BulletStyle } from "../../../domain/text";
@@ -433,15 +433,18 @@ function resolveContextBulletProps(
 }
 
 function resolveDefaultBulletProps(
-  defaultTextStyle: XmlElement | undefined,
+  defaultTextStyle: TextStyleLevels | undefined,
   lvlKey: number,
 ): BulletProperties | undefined {
   if (defaultTextStyle === undefined) {
     return undefined;
   }
-  const lvlpPr = `a:lvl${lvlKey}pPr`;
-  const pPr = getChild(defaultTextStyle, lvlpPr);
-  return getBulletPropertiesFromPPr(pPr);
+  const levelStyle = getTextLevelByNumber(defaultTextStyle, lvlKey);
+  const bulletStyle = levelStyle?.paragraphProperties?.bulletStyle;
+  if (bulletStyle === undefined) {
+    return undefined;
+  }
+  return bulletStyleToBulletProperties(bulletStyle);
 }
 
 function resolveBullet(merged: BulletProperties): Bullet | undefined {

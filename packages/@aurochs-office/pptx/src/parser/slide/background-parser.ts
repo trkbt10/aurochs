@@ -9,7 +9,52 @@
 
 import type { XmlElement } from "@aurochs/xml";
 import { getChild } from "@aurochs/xml";
-import type { BackgroundElement, BackgroundParseResult, BackgroundFill } from "../../domain/slide/background";
+import type { BackgroundFill } from "../../domain/slide/background";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
+
+// =============================================================================
+// Parse Intermediate Types (parser-internal, not domain types)
+// =============================================================================
+
+/**
+ * Background element result from p:bg
+ *
+ * Represents the parsed background element containing either
+ * background properties (bgPr) or background reference (bgRef).
+ */
+export type BackgroundElement = {
+  /** Background properties element (p:bgPr) */
+  readonly bgPr?: XmlElement;
+  /** Background reference element (p:bgRef) */
+  readonly bgRef?: XmlElement;
+};
+
+/**
+ * Result of parsing background properties
+ *
+ * Contains the fill element and optional placeholder color
+ * for theme-based backgrounds.
+ */
+export type BackgroundParseResult = {
+  /**
+   * Fill element (XmlElement containing a:solidFill, a:gradFill, a:blipFill, etc.)
+   */
+  readonly fill: XmlElement;
+  /**
+   * Placeholder color resolved from p:bgRef child element.
+   * This is the hex color (without #) to substitute for phClr in theme styles.
+   *
+   * @see ECMA-376 Part 1, Section 19.3.1.4 (p:bgRef)
+   */
+  readonly phClr?: string;
+  /**
+   * Whether the fill came from a theme style (via bgRef).
+   * When true, blipFill rIds should be resolved from theme resources.
+   *
+   * @see ECMA-376 Part 1, Section 20.1.4.1.7 (a:bgFillStyleLst)
+   */
+  readonly fromTheme?: boolean;
+};
 import type { Background } from "../../domain/slide/types";
 import type { FillType, GradientFill } from "../graphics/fill-resolver";
 import type { SlideContext } from "./context";
@@ -83,7 +128,7 @@ export function getBgRefFromElement(element: XmlElement | undefined): XmlElement
  * @see ECMA-376 Part 1, Section 19.3.1.4 (p:bgRef)
  * @see ECMA-376 Part 1, Section 20.1.4.1.7 (a:bgFillStyleLst)
  */
-export function resolveBgRefToXmlElement(bgRef: XmlElement, ctx: SlideContext): XmlElement | undefined {
+export function resolveBgRefToFill(bgRef: XmlElement, ctx: SlideContext): BaseFill | undefined {
   const idxAttr = bgRef.attrs?.idx;
   if (idxAttr === undefined) {
     return undefined;
@@ -122,37 +167,52 @@ export function extractPhClrFromBgRef(bgRef: XmlElement, ctx: SlideContext): str
  *
  * @see ECMA-376 Part 1, Section 19.3.1.2 (p:bg)
  */
-export function parseBackgroundProperties(ctx: SlideContext): BackgroundParseResult | undefined {
+/**
+ * Result of background resolution — either inline XML (bgPr) or domain fill (bgRef).
+ */
+type BackgroundResolution =
+  | { readonly kind: "xml"; readonly result: BackgroundParseResult }
+  | { readonly kind: "domain"; readonly fill: BaseFill; readonly phClr?: string };
+
+function resolveBackground(ctx: SlideContext): BackgroundResolution | undefined {
   // Try slide first
   const slideBgPr = getBgPrFromElement(ctx.slide.content);
   if (slideBgPr !== undefined) {
-    return { fill: slideBgPr };
+    return { kind: "xml", result: { fill: slideBgPr } };
   }
   const slideBgRef = getBgRefFromElement(ctx.slide.content);
   if (slideBgRef !== undefined) {
-    const resolved = resolveBgRefToXmlElement(slideBgRef, ctx);
+    const resolved = resolveBgRefToFill(slideBgRef, ctx);
     if (resolved !== undefined) {
       const phClr = extractPhClrFromBgRef(slideBgRef, ctx);
-      return { fill: resolved, phClr, fromTheme: true };
+      return { kind: "domain", fill: resolved, phClr };
     }
   }
 
   // Try layout
   const layoutBgPr = getBgPrFromElement(ctx.layout.content);
   if (layoutBgPr !== undefined) {
-    return { fill: layoutBgPr };
+    return { kind: "xml", result: { fill: layoutBgPr } };
   }
   const layoutBgRef = getBgRefFromElement(ctx.layout.content);
   if (layoutBgRef !== undefined) {
-    const resolved = resolveBgRefToXmlElement(layoutBgRef, ctx);
+    const resolved = resolveBgRefToFill(layoutBgRef, ctx);
     if (resolved !== undefined) {
       const phClr = extractPhClrFromBgRef(layoutBgRef, ctx);
-      return { fill: resolved, phClr, fromTheme: true };
+      return { kind: "domain", fill: resolved, phClr };
     }
   }
 
   // Master background is resolved via parseSlideMaster (SoT) and stored as Background domain type.
   // Return undefined here; master fallback is handled by getBackgroundFillData using ctx.master.background.
+  return undefined;
+}
+
+export function parseBackgroundProperties(ctx: SlideContext): BackgroundParseResult | undefined {
+  const resolution = resolveBackground(ctx);
+  if (!resolution) { return undefined; }
+  if (resolution.kind === "xml") { return resolution.result; }
+  // bgRef resolution no longer returns BackgroundParseResult — handled in getBackgroundFillData
   return undefined;
 }
 
@@ -404,21 +464,43 @@ const DEFAULT_BACKGROUND_FILL: BackgroundFill = {
  *
  * Resolves Color spec to hex using the slide's color context.
  */
-function backgroundToFill(bg: Background, ctx: SlideContext): BackgroundFill | undefined {
+function backgroundToFill(bg: { fill: BaseFill }, ctx: SlideContext, phClr?: string): BackgroundFill | undefined {
   const fill = bg.fill;
   switch (fill.type) {
     case "solidFill": {
-      const spec = fill.color.spec;
-      if (spec.type === "srgb") {
-        return { css: `background-color: #${spec.value};`, isSolid: true, color: `#${spec.value}` };
-      }
-      if (spec.type === "scheme") {
-        const colorCtx = ctx.toColorContext();
-        const mapped = colorCtx.colorMap[spec.value] ?? spec.value;
-        const hex = colorCtx.colorScheme[mapped];
-        if (hex) { return { css: `background-color: #${hex};`, isSolid: true, color: `#${hex}` }; }
-      }
+      const hex = resolveColorSpec(fill.color.spec, ctx, phClr);
+      if (hex) { return { css: `background-color: #${hex};`, isSolid: true, color: `#${hex}` }; }
       return undefined;
+    }
+    case "gradientFill": {
+      const resolvedColors = fill.stops.map((stop) => {
+        const hex = resolveColorSpec(stop.color.spec, ctx, phClr);
+        return { pos: String(stop.position), color: hex ?? "000000" };
+      });
+      const angle = fill.linear?.angle ?? 0;
+      const gradType = fill.path ? "path" as const : "linear" as const;
+      const gradResult: GradientFill = {
+        color: resolvedColors,
+        rot: angle as number,
+        type: gradType,
+        pathShadeType: fill.path?.path,
+        fillToRect: fill.path?.fillToRect ? {
+          l: fill.path.fillToRect.left as number,
+          t: fill.path.fillToRect.top as number,
+          r: fill.path.fillToRect.right as number,
+          b: fill.path.fillToRect.bottom as number,
+        } : undefined,
+      };
+      const gradientCSS = generateGradientCSS(gradResult);
+      const sortedColors = [...resolvedColors].sort((a, b) => parseInt(a.pos, 10) - parseInt(b.pos, 10));
+      const gradientData = {
+        angle: gradResult.rot,
+        type: gradType,
+        pathShadeType: gradType === "path" ? gradResult.pathShadeType : undefined,
+        fillToRect: gradType === "path" ? gradResult.fillToRect : undefined,
+        stops: sortedColors.map((c) => ({ position: parseInt(c.pos, 10) / 1000, color: c.color })),
+      };
+      return { css: `background: ${gradientCSS};`, isSolid: false, gradient: gradientCSS, gradientData };
     }
     case "noFill":
       return { css: "", isSolid: true };
@@ -427,19 +509,42 @@ function backgroundToFill(bg: Background, ctx: SlideContext): BackgroundFill | u
   }
 }
 
-export function getBackgroundFillData(ctx: SlideContext): BackgroundFill {
-  const bgResult = parseBackgroundProperties(ctx);
+function resolveColorSpec(spec: import("@aurochs-office/drawing-ml/domain/color").ColorSpec, ctx: SlideContext, phClr?: string): string | undefined {
+  if (spec.type === "scheme" && spec.value === "phClr" && phClr) {
+    return phClr;
+  }
+  if (spec.type === "srgb") {
+    return spec.value;
+  }
+  if (spec.type === "scheme") {
+    const colorCtx = ctx.toColorContext();
+    const mapped = colorCtx.colorMap[spec.value] ?? spec.value;
+    return colorCtx.colorScheme[mapped];
+  }
+  return undefined;
+}
 
-  if (bgResult !== undefined) {
-    const bgFillType = getFillType(bgResult.fill);
-    const handler = BG_FILL_HANDLERS[bgFillType];
-    const result = handler?.extractData({
-      fill: bgResult.fill,
-      ctx,
-      phClr: bgResult.phClr,
-      fromTheme: bgResult.fromTheme,
-    });
-    if (result) { return result; }
+export function getBackgroundFillData(ctx: SlideContext): BackgroundFill {
+  const resolution = resolveBackground(ctx);
+
+  if (resolution) {
+    if (resolution.kind === "domain") {
+      // bgRef path: fill is already a domain type (BaseFill from FormatScheme)
+      const domainResult = baseFillToBackgroundFill(resolution.fill, ctx, resolution.phClr);
+      if (domainResult) { return domainResult; }
+    } else {
+      // bgPr path: fill is raw XML, use existing handlers
+      const bgResult = resolution.result;
+      const bgFillType = getFillType(bgResult.fill);
+      const handler = BG_FILL_HANDLERS[bgFillType];
+      const result = handler?.extractData({
+        fill: bgResult.fill,
+        ctx,
+        phClr: bgResult.phClr,
+        fromTheme: bgResult.fromTheme,
+      });
+      if (result) { return result; }
+    }
   }
 
   // Fallback: master background from SlideMaster domain type (SoT)
@@ -449,4 +554,12 @@ export function getBackgroundFillData(ctx: SlideContext): BackgroundFill {
   }
 
   return DEFAULT_BACKGROUND_FILL;
+}
+
+/**
+ * Convert a BaseFill domain type to BackgroundFill for rendering.
+ * Used for bgRef resolution where the fill comes from FormatScheme (pre-parsed).
+ */
+function baseFillToBackgroundFill(fill: BaseFill, ctx: SlideContext, phClr?: string): BackgroundFill | undefined {
+  return backgroundToFill({ fill }, ctx, phClr);
 }

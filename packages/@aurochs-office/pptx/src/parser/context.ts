@@ -11,7 +11,7 @@ import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-conte
 import { DEFAULT_COLOR_MAPPING } from "@aurochs-office/pptx/domain/color/types";
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
 import type { ResourceRelationshipResolver } from "../domain";
-import type { MasterTextStyles } from "../domain/text-style";
+import type { MasterTextStyles, TextStyleLevels } from "../domain/text-style";
 
 /**
  * Create a resource resolver from ResourceMap
@@ -77,8 +77,8 @@ export type TextStyleContext = {
   readonly masterPlaceholders: PlaceholderTables;
   /** Master text styles from slide master */
   readonly masterTextStyles: MasterTextStyles | undefined;
-  /** Default text style from presentation.xml */
-  readonly defaultTextStyle: XmlElement | undefined;
+  /** Default text style from presentation.xml (domain typed) */
+  readonly defaultTextStyle: TextStyleLevels | undefined;
   /**
    * Default text color from shape style (p:style/a:fontRef).
    *
@@ -104,22 +104,13 @@ export type TextStyleContext = {
 export type MasterStylesInfo = {
   /** Master text styles from slide master */
   readonly masterTextStyles: MasterTextStyles | undefined;
-  /** Default text style from presentation.xml */
-  readonly defaultTextStyle: XmlElement | undefined;
+  /** Default text style from presentation.xml (domain typed) */
+  readonly defaultTextStyle: TextStyleLevels | undefined;
 };
 
-/**
- * Theme format scheme for style reference resolution
- * @see ECMA-376 Part 1, Section 20.1.4.1.14 (a:fmtScheme)
- */
-export type FormatScheme = {
-  /** Fill styles from a:fillStyleLst (indexed 1-based) */
-  readonly fillStyles: readonly XmlElement[];
-  /** Line styles from a:lnStyleLst (indexed 1-based) */
-  readonly lineStyles: readonly XmlElement[];
-  /** Effect styles from a:effectStyleLst (indexed 1-based) */
-  readonly effectStyles: readonly XmlElement[];
-};
+// FormatScheme re-exported from canonical domain definition
+import type { FormatScheme } from "../domain/theme/types";
+export type { FormatScheme };
 
 /**
  * Complete parse context for slide parsing
@@ -251,11 +242,7 @@ export function createParseContext(ctx: SlideContext): ParseContext {
       getType: (id) => ctx.master.resources.getType(id),
     },
     themeContent: undefined,
-    formatScheme: {
-      fillStyles: formatScheme.fillStyles,
-      lineStyles: formatScheme.lineStyles,
-      effectStyles: formatScheme.effectStyles,
-    },
+    formatScheme,
     fontScheme: {
       majorFont: {
         latin: fontScheme.majorFont.latin,

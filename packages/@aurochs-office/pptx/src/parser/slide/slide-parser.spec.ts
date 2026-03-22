@@ -16,6 +16,7 @@
  */
 
 import type { XmlElement, XmlDocument } from "@aurochs/xml";
+import type { FormatScheme } from "../../domain/theme/types";
 import {
   parseBackground,
   parseTransition,
@@ -92,9 +93,9 @@ describe("parseBackground - p:bg (ECMA-376 Section 19.3.1.1)", () => {
 
   it("resolves p:bgRef idx 1001+ against bgFillStyles", () => {
     const bg = el("p:bg", {}, [el("p:bgRef", { idx: "1001" })]);
-    const formatScheme = {
+    const formatScheme: FormatScheme = {
       fillStyles: [],
-      bgFillStyles: [el("a:solidFill", {}, [el("a:srgbClr", { val: "0000FF" })])],
+      bgFillStyles: [{ type: "solidFill", color: { spec: { type: "srgb", value: "0000FF" } } }],
       lineStyles: [],
       effectStyles: [],
     };
@@ -106,8 +107,8 @@ describe("parseBackground - p:bg (ECMA-376 Section 19.3.1.1)", () => {
 
   it("resolves p:bgRef idx 1-999 against fillStyles", () => {
     const bg = el("p:bg", {}, [el("p:bgRef", { idx: "1" })]);
-    const formatScheme = {
-      fillStyles: [el("a:solidFill", {}, [el("a:srgbClr", { val: "00FF00" })])],
+    const formatScheme: FormatScheme = {
+      fillStyles: [{ type: "solidFill", color: { spec: { type: "srgb", value: "00FF00" } } }],
       bgFillStyles: [],
       lineStyles: [],
       effectStyles: [],
@@ -122,17 +123,17 @@ describe("parseBackground - p:bg (ECMA-376 Section 19.3.1.1)", () => {
     const bg = el("p:bg", {}, [
       el("p:bgRef", { idx: "1001" }, [el("a:solidFill", {}, [el("a:srgbClr", { val: "FF0000" })])]),
     ]);
-    const formatScheme = {
+    const formatScheme: FormatScheme = {
       fillStyles: [],
-      bgFillStyles: [
-        el("a:gradFill", {}, [
-          el("a:gsLst", {}, [
-            el("a:gs", { pos: "0" }, [el("a:schemeClr", { val: "phClr" })]),
-            el("a:gs", { pos: "100000" }, [el("a:srgbClr", { val: "FFFFFF" })]),
-          ]),
-          el("a:lin", { ang: "5400000" }),
-        ]),
-      ],
+      bgFillStyles: [{
+        type: "gradientFill",
+        stops: [
+          { position: 0 as any, color: { spec: { type: "scheme", value: "phClr" } } },
+          { position: 100000 as any, color: { spec: { type: "srgb", value: "FFFFFF" } } },
+        ],
+        linear: { angle: 90 as any, scaled: false },
+        rotWithShape: true,
+      }],
       lineStyles: [],
       effectStyles: [],
     };
@@ -149,9 +150,9 @@ describe("parseBackground - p:bg (ECMA-376 Section 19.3.1.1)", () => {
 
   it("returns undefined for p:bgRef with out-of-range idx", () => {
     const bg = el("p:bg", {}, [el("p:bgRef", { idx: "1005" })]);
-    const formatScheme = {
+    const formatScheme: FormatScheme = {
       fillStyles: [],
-      bgFillStyles: [el("a:solidFill", {}, [el("a:srgbClr", { val: "0000FF" })])],
+      bgFillStyles: [{ type: "solidFill", color: { spec: { type: "srgb", value: "0000FF" } } }],
       lineStyles: [],
       effectStyles: [],
     };

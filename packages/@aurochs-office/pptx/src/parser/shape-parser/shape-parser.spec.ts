@@ -471,13 +471,16 @@ describe("parseShapeElement - p:sp (ECMA-376 Section 19.3.1.43)", () => {
       const formatScheme = {
         lineStyles: [],
         fillStyles: [],
-        effectStyles: [
-          el("a:effectStyle", {}, [
-            el("a:effectLst", {}, [
-              el("a:outerShdw", { blurRad: "0", dist: "0", dir: "0" }, [el("a:schemeClr", { val: "phClr" })]),
-            ]),
-          ]),
-        ],
+        effectStyles: [{
+          shadow: {
+            type: "outer" as const,
+            blurRadius: 0,
+            distance: 0,
+            direction: 0,
+            color: { spec: { type: "scheme" as const, value: "phClr" } },
+          },
+        }],
+        bgFillStyles: [],
       };
       const result = parseShapeElement(sp, formatScheme);
 
@@ -485,7 +488,6 @@ describe("parseShapeElement - p:sp (ECMA-376 Section 19.3.1.43)", () => {
         // Color is resolved from phClr (placeholder color) to the effectRef color (FF0000)
         expect(result.properties.effects?.shadow?.color).toEqual({
           spec: { type: "srgb", value: "FF0000" },
-          transform: undefined,
         });
       }
     });

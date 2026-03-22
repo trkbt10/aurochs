@@ -292,10 +292,10 @@ export function parseFillFromParent(parent: XmlElement | undefined): BaseFill | 
 // Style Reference
 // =============================================================================
 
-/** Resolve fill from style reference using theme fill styles */
+/** Resolve fill from style reference using theme fill styles (pre-parsed domain types) */
 export function resolveFillFromStyleReference(
   fillRef: StyleReference | undefined,
-  fillStyles: readonly XmlElement[],
+  fillStyles: readonly BaseFill[],
 ): BaseFill | undefined {
   if (!fillRef || fillRef.index === 0) {
     return undefined;
@@ -307,17 +307,13 @@ export function resolveFillFromStyleReference(
     return undefined;
   }
 
-  const styleElement = fillStyles[styleIndex];
-  const parsedFill = parseFill(styleElement);
-  if (!parsedFill) {
-    return undefined;
-  }
+  const fill = fillStyles[styleIndex];
 
   if (fillRef.color) {
-    return applyColorOverride(parsedFill, fillRef.color);
+    return applyColorOverride(fill, fillRef.color);
   }
 
-  return parsedFill;
+  return fill;
 }
 
 function resolveFillStyleIndex(index: number): number {

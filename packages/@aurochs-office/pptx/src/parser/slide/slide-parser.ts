@@ -23,7 +23,7 @@ import type {
 } from "../../domain/index";
 import { getAttr, getByPath, getChild, getChildren, type XmlDocument, type XmlElement } from "@aurochs/xml";
 import type { ColorMap } from "@aurochs-office/drawing-ml/domain/color-context";
-import { parseFill, parseFillFromParent } from "../graphics/fill-parser";
+import { parseFillFromParent } from "../graphics/fill-parser";
 import type { FormatScheme } from "../../domain/theme/types";
 import { parseShapeTree } from "../shape-parser/index";
 import { processAlternateContent } from "../shape-parser/alternate-content";
@@ -60,10 +60,7 @@ function resolveBgRef(bgRef: XmlElement, formatScheme: FormatScheme): Background
     return undefined;
   }
 
-  const styleFill = parseFill(styles[styleIndex]);
-  if (!styleFill) {
-    return undefined;
-  }
+  const styleFill = styles[styleIndex];
 
   // p:bgRef child color overrides phClr in the resolved style
   const phClrFill = parseFillFromParent(bgRef);

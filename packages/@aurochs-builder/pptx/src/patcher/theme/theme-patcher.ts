@@ -10,6 +10,9 @@ import { createElement, getChild, isXmlElement, replaceChildByName, updateDocume
 import type { Color, SchemeColorName } from "@aurochs-office/drawing-ml/domain/color";
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
 import type { FormatScheme } from "@aurochs-office/pptx/domain/theme/types";
+import { serializeFill } from "../serializer/fill";
+import { serializeLine } from "../serializer/line";
+import { serializeEffects } from "../serializer/effects";
 import { patchSchemeColor } from "./color-scheme-patcher";
 import { patchMajorFont, patchMinorFont } from "./font-scheme-patcher";
 
@@ -60,21 +63,30 @@ function patchFormatSchemeElement(fmtScheme: XmlElement, scheme: FormatScheme): 
     };
   };
 
+  // Serialize domain types to XmlElement for patching
+  const fillElements = scheme.fillStyles.map(serializeFill);
+  const lineElements = scheme.lineStyles.map(serializeLine);
+  const effectElements = scheme.effectStyles.map((e) => {
+    const effectChild = e ? serializeEffects(e) : null;
+    return createElement("a:effectStyle", {}, effectChild ? [effectChild] : [createElement("a:effectLst")]);
+  });
+  const bgFillElements = scheme.bgFillStyles.map(serializeFill);
+
   const withFill = upsertChildBeforeExtLst(
     fmtScheme,
     "a:fillStyleLst",
-    buildStyleList("a:fillStyleLst", scheme.fillStyles),
+    buildStyleList("a:fillStyleLst", fillElements),
   );
-  const withLine = upsertChildBeforeExtLst(withFill, "a:lnStyleLst", buildStyleList("a:lnStyleLst", scheme.lineStyles));
+  const withLine = upsertChildBeforeExtLst(withFill, "a:lnStyleLst", buildStyleList("a:lnStyleLst", lineElements));
   const withEffect = upsertChildBeforeExtLst(
     withLine,
     "a:effectStyleLst",
-    buildStyleList("a:effectStyleLst", scheme.effectStyles),
+    buildStyleList("a:effectStyleLst", effectElements),
   );
   return upsertChildBeforeExtLst(
     withEffect,
     "a:bgFillStyleLst",
-    buildStyleList("a:bgFillStyleLst", scheme.bgFillStyles),
+    buildStyleList("a:bgFillStyleLst", bgFillElements),
   );
 }
 

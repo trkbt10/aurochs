@@ -822,12 +822,7 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
       name: "Theme",
       colorScheme: document.colorContext.colorScheme as Readonly<Record<SchemeColorName, string>>,
       fontScheme: document.theme.fontScheme,
-      formatSchemeElements: {
-        fillStyles: document.theme.formatScheme.fillStyles,
-        lineStyles: document.theme.formatScheme.lineStyles,
-        effectStyles: document.theme.formatScheme.effectStyles,
-        bgFillStyles: document.theme.formatScheme.bgFillStyles,
-      },
+      formatScheme: document.theme.formatScheme,
       customColors: document.theme.customColors,
       extraColorSchemes: document.theme.extraColorSchemes,
       objectDefaults: document.theme.objectDefaults,

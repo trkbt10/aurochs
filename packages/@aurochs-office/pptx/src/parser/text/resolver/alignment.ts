@@ -8,7 +8,7 @@ import type { XmlElement } from "@aurochs/xml";
 import { getChild } from "@aurochs/xml";
 import type { TextStyleContext } from "../../context";
 import type { MasterTextStyles } from "../../../domain/text-style";
-import { TEXT_STYLE_LEVEL_KEYS } from "../../../domain/text-style";
+import { TEXT_STYLE_LEVEL_KEYS, getTextLevelByNumber } from "../../../domain/text-style";
 import { TYPE_TO_MASTER_STYLE } from "./constants";
 import { lookupPlaceholder } from "./placeholder";
 
@@ -171,9 +171,8 @@ export function resolveAlignment(
 
   // 6. Default text style
   if (ctx.defaultTextStyle !== undefined) {
-    const lvlpPr = `a:lvl${lvlKey}pPr`;
-    const pPr = getChild(ctx.defaultTextStyle, lvlpPr);
-    const defaultAlgn = getAlignmentFromPPr(pPr);
+    const levelStyle = getTextLevelByNumber(ctx.defaultTextStyle, lvlKey);
+    const defaultAlgn = levelStyle?.paragraphProperties?.alignment;
     if (defaultAlgn !== undefined) {
       return defaultAlgn;
     }

@@ -361,14 +361,11 @@ describe("resolveFontSize", () => {
 
   describe("default text style (priority 6)", () => {
     it("uses sz from defaultTextStyle", () => {
-      const defaultTextStyle = xml(`
-        <p:defaultTextStyle xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                           xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-          <a:lvl1pPr>
-            <a:defRPr sz="1700"/>
-          </a:lvl1pPr>
-        </p:defaultTextStyle>
-      `);
+      const defaultTextStyle: TextStyleLevels = {
+        level1: {
+          defaultRunProperties: { fontSize: pt(17) },
+        },
+      };
       const ctx = createContext({
         defaultTextStyle,
       });
@@ -942,16 +939,11 @@ describe("resolveFontFamily", () => {
 
   describe("default text style (priority 6)", () => {
     it("uses font from defaultTextStyle", () => {
-      const defaultTextStyle = xml(`
-        <p:defaultTextStyle xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                           xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-          <a:lvl1pPr>
-            <a:defRPr>
-              <a:latin typeface="Consolas"/>
-            </a:defRPr>
-          </a:lvl1pPr>
-        </p:defaultTextStyle>
-      `);
+      const defaultTextStyle: TextStyleLevels = {
+        level1: {
+          defaultRunProperties: { fontFamily: "Consolas" },
+        },
+      };
       const ctx = createContext({
         defaultTextStyle,
       });
@@ -1502,24 +1494,28 @@ describe("resolveBulletStyle", () => {
     });
 
     it("resolves bullet from default text style", () => {
-      const defaultTextStyle = xml(`
-        <p:defaultTextStyle xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                            xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-          <a:lvl1pPr>
-            <a:buChar char="–"/>
-          </a:lvl1pPr>
-        </p:defaultTextStyle>
-      `);
+      const defaultTextStyle: TextStyleLevels = {
+        level1: {
+          paragraphProperties: {
+            bulletStyle: {
+              bullet: { type: "char", char: "\u2013" },
+              colorFollowText: false,
+              sizeFollowText: false,
+              fontFollowText: false,
+            },
+          },
+        },
+      };
 
       const ctx = createContext({
-        defaultTextStyle: defaultTextStyle,
+        defaultTextStyle,
       });
 
       const result = resolveBulletStyle(undefined, undefined, 0, ctx);
 
       expect(result?.bullet.type).toBe("char");
       if (result?.bullet.type === "char") {
-        expect(result.bullet.char).toBe("–");
+        expect(result.bullet.char).toBe("\u2013");
       }
     });
   });

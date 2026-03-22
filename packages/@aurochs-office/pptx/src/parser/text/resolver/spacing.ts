@@ -10,7 +10,7 @@ import type { XmlElement } from "@aurochs/xml";
 import { getChild } from "@aurochs/xml";
 import type { TextStyleContext } from "../../context";
 import type { MasterTextStyles } from "../../../domain/text-style";
-import { TEXT_STYLE_LEVEL_KEYS } from "../../../domain/text-style";
+import { TEXT_STYLE_LEVEL_KEYS, getTextLevelByNumber } from "../../../domain/text-style";
 import type { LineSpacing } from "../../../domain/text";
 import { parsePercentage100k } from "@aurochs-office/drawing-ml/parser";
 import { parseTextSpacingPoint } from "../../primitive";
@@ -233,11 +233,14 @@ function resolveSpacing({
 
   // 6. Default text style
   if (ctx.defaultTextStyle !== undefined) {
-    const lvlpPr = `a:lvl${lvlKey}pPr`;
-    const pPr = getChild(ctx.defaultTextStyle, lvlpPr);
-    const defaultSpacing = getSpacingFromPPr(pPr, spacingType);
-    if (defaultSpacing !== undefined) {
-      return defaultSpacing;
+    const levelStyle = getTextLevelByNumber(ctx.defaultTextStyle, lvlKey);
+    if (levelStyle?.paragraphProperties) {
+      const pp = levelStyle.paragraphProperties;
+      const propKey = spacingTypeToPropertyKey(spacingType);
+      const defaultSpacing = pp[propKey];
+      if (defaultSpacing !== undefined) {
+        return defaultSpacing;
+      }
     }
   }
 

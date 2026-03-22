@@ -56,7 +56,7 @@ export type SlideParams = {
 
 export type PresentationContext = {
   theme: Theme;
-  defaultTextStyle: XmlElement | null;
+  defaultTextStyle: TextStyleLevels | null;
   zip: ZipFile;
   renderOptions: RenderOptions;
   /**
@@ -184,11 +184,8 @@ export function createParagraphContext(shape: ShapeContext, lvl: number): Paragr
       // but cannot be returned as XmlElement. This step is currently unreachable
       // in production (ParagraphContext is only used in tests).
 
-      // 5. Default text style
-      const defaultTextStyle = shape.slide.presentation.defaultTextStyle;
-      if (defaultTextStyle !== null) {
-        return getByPath(defaultTextStyle, [lvlpPr, "a:defRPr"]);
-      }
+      // 5. Default text style is now domain-typed (TextStyleLevels).
+      // Resolution happens in individual resolvers (font-size, color, etc.).
 
       return undefined;
     },
@@ -223,11 +220,8 @@ export function createParagraphContext(shape: ShapeContext, lvl: number): Paragr
       // 4. Master text styles (domain type — skipped for XML return type)
       // See getDefRPr step 4 comment above.
 
-      // 5. Default text style
-      const defaultTextStyle = shape.slide.presentation.defaultTextStyle;
-      if (defaultTextStyle !== null) {
-        return getChild(defaultTextStyle, lvlpPr);
-      }
+      // 5. Default text style is now domain-typed (TextStyleLevels).
+      // Resolution happens in individual resolvers (alignment, spacing, etc.).
 
       return undefined;
     },
@@ -532,7 +526,7 @@ export type BackgroundContext = {
  */
 export type TextStyleContext = {
   readonly masterTextStyles: MasterTextStyles;
-  readonly defaultTextStyle: XmlElement | null;
+  readonly defaultTextStyle: TextStyleLevels | null;
   readonly placeholders: PlaceholderContext;
 };
 

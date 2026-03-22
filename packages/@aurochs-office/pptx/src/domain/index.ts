@@ -120,7 +120,6 @@ export type {
   FormatScheme,
   Theme,
   ThemeExtractionInput,
-  RawMasterTextStyles,
 } from "./theme";
 
 // =============================================================================

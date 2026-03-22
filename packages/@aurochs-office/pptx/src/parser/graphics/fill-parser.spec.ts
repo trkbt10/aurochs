@@ -20,6 +20,7 @@ import type { XmlElement } from "@aurochs/xml";
 import { parseFill, parseFillFromParent, resolveFillFromStyleReference } from "./fill-parser";
 import { findFillElement } from "@aurochs-office/drawing-ml/parser";
 import type { StyleReference } from "../../domain/index";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
 
 // Helper to create mock XmlElement
 function el(name: string, attrs: Record<string, string> = {}, children: XmlElement[] = []): XmlElement {
@@ -701,65 +702,47 @@ describe("parseFillFromParent - Convenience function", () => {
 
 describe("resolveFillFromStyleReference", () => {
   describe("ECMA-376 20.1.4.2.10 (a:fillRef)", () => {
+    const phClrSolid: BaseFill = { type: "solidFill", color: { spec: { type: "scheme", value: "phClr" } } };
+    const redSolid: BaseFill = { type: "solidFill", color: { spec: { type: "srgb", value: "FF0000" } } };
+    const lt1Solid: BaseFill = { type: "solidFill", color: { spec: { type: "scheme", value: "lt1" } } };
+    const gradFill: BaseFill = {
+      type: "gradientFill",
+      stops: [
+        { position: 0 as any, color: { spec: { type: "scheme", value: "phClr" } } },
+        { position: 100000 as any, color: { spec: { type: "scheme", value: "phClr" } } },
+      ],
+      rotWithShape: true,
+    };
+
     it("should return undefined for fillRef with index 0", () => {
       const fillRef: StyleReference = { index: 0 };
-      const fillStyles = [el("a:solidFill")];
-
-      const result = resolveFillFromStyleReference(fillRef, fillStyles);
-
+      const result = resolveFillFromStyleReference(fillRef, [phClrSolid]);
       expect(result).toBeUndefined();
     });
 
     it("should resolve solidFill from fillStyleLst (idx=1 -> index 0)", () => {
       const fillRef: StyleReference = { index: 1 };
-      const fillStyles = [el("a:solidFill", {}, [el("a:schemeClr", { val: "phClr" })])];
-
-      const result = resolveFillFromStyleReference(fillRef, fillStyles);
-
+      const result = resolveFillFromStyleReference(fillRef, [phClrSolid]);
       expect(result).toBeDefined();
       expect(result?.type).toBe("solidFill");
     });
 
     it("should resolve fillRef with idx=2 to second fill style", () => {
       const fillRef: StyleReference = { index: 2 };
-      const fillStyles = [
-        el("a:solidFill", {}, [el("a:schemeClr", { val: "lt1" })]),
-        el("a:gradFill", {}, [
-          el("a:gsLst", {}, [
-            el("a:gs", { pos: "0" }, [el("a:schemeClr", { val: "phClr" })]),
-            el("a:gs", { pos: "100000" }, [el("a:schemeClr", { val: "phClr" })]),
-          ]),
-        ]),
-        el("a:gradFill", {}, [
-          el("a:gsLst", {}, [
-            el("a:gs", { pos: "0" }, [el("a:schemeClr", { val: "phClr" })]),
-            el("a:gs", { pos: "100000" }, [el("a:schemeClr", { val: "phClr" })]),
-          ]),
-        ]),
-      ];
-
-      const result = resolveFillFromStyleReference(fillRef, fillStyles);
-
+      const result = resolveFillFromStyleReference(fillRef, [lt1Solid, gradFill, gradFill]);
       expect(result).toBeDefined();
       expect(result?.type).toBe("gradientFill");
     });
 
     it("should return undefined for out-of-range index", () => {
       const fillRef: StyleReference = { index: 10 };
-      const fillStyles = [el("a:solidFill")];
-
-      const result = resolveFillFromStyleReference(fillRef, fillStyles);
-
+      const result = resolveFillFromStyleReference(fillRef, [phClrSolid]);
       expect(result).toBeUndefined();
     });
 
     it("should handle background fill index (idx >= 1001)", () => {
       const fillRef: StyleReference = { index: 1001 };
-      const fillStyles = [el("a:solidFill", {}, [el("a:srgbClr", { val: "FF0000" })])];
-
-      const result = resolveFillFromStyleReference(fillRef, fillStyles);
-
-      // idx 1001 -> index 0 in bgFillStyleLst (or fallback to fillStyleLst)
+      const result = resolveFillFromStyleReference(fillRef, [redSolid]);
       expect(result).toBeDefined();
       expect(result?.type).toBe("solidFill");
     });
@@ -772,10 +755,7 @@ describe("resolveFillFromStyleReference", () => {
           color: { spec: { type: "scheme", value: "accent1" } },
         },
       };
-      const fillStyles = [el("a:solidFill", {}, [el("a:schemeClr", { val: "phClr" })])];
-
-      const result = resolveFillFromStyleReference(fillRef, fillStyles);
-
+      const result = resolveFillFromStyleReference(fillRef, [phClrSolid]);
       expect(result).toBeDefined();
       expect(result?.type).toBe("solidFill");
       if (result?.type === "solidFill") {

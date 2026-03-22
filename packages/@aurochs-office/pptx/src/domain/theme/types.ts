@@ -2,20 +2,23 @@
  * @file Theme types for PPTX processing
  *
  * Types representing theme elements from slide masters and templates.
- * These types retain references to XmlElement for deferred parsing.
+ * All fields use parsed domain types (SoT) — no raw XmlElement storage.
  *
  * @see ECMA-376 Part 1, Section 20.1.6 (Theme)
  */
 
-import type { XmlDocument, XmlElement } from "@aurochs/xml";
+import type { XmlDocument } from "@aurochs/xml";
 import type {
   ColorScheme,
   ColorMap,
 } from "@aurochs-office/drawing-ml/domain/color-context";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
 import type { ShapeProperties } from "../shape";
 import type { BodyProperties } from "../text";
 import type { TextStyleLevels, MasterTextStyles } from "../text-style";
+import type { Effects } from "../effects";
 import type { Background } from "../slide/types";
 
 // =============================================================================
@@ -88,16 +91,16 @@ export type ObjectDefaults = {
  * @see ECMA-376 Part 1, Section 20.1.4.1.14 (a:fmtScheme)
  */
 export type FormatScheme = {
-  readonly lineStyles: readonly XmlElement[];
-  readonly fillStyles: readonly XmlElement[];
-  readonly effectStyles: readonly XmlElement[];
+  readonly lineStyles: readonly BaseLine[];
+  readonly fillStyles: readonly BaseFill[];
+  readonly effectStyles: readonly (Effects | undefined)[];
   /**
    * Background fill styles (a:bgFillStyleLst).
    * Used by p:bgRef with idx >= 1001.
    *
    * @see ECMA-376 Part 1, Section 20.1.4.1.7 (a:bgFillStyleLst)
    */
-  readonly bgFillStyles: readonly XmlElement[];
+  readonly bgFillStyles: readonly BaseFill[];
 };
 
 // =============================================================================
@@ -115,21 +118,10 @@ export type Theme = {
   readonly formatScheme: FormatScheme;
   readonly customColors: readonly CustomColor[];
   readonly extraColorSchemes: readonly ExtraColorScheme[];
-  readonly themeElements?: XmlElement;
-  readonly themeManager?: XmlElement;
   readonly themeOverrides: readonly XmlDocument[];
   readonly objectDefaults: ObjectDefaults;
 };
 
-/**
- * @deprecated Use MasterTextStyles from domain/text-style.ts instead.
- * Kept temporarily for backward compatibility during migration.
- */
-export type RawMasterTextStyles = {
-  readonly titleStyle: XmlElement | undefined;
-  readonly bodyStyle: XmlElement | undefined;
-  readonly otherStyle: XmlElement | undefined;
-};
 
 // =============================================================================
 // Theme Extraction Types

@@ -42,12 +42,7 @@ function toExportOptions(extracted: ExtractedTheme): ThemeExportOptions {
     fontScheme: extracted.theme.fontScheme,
     colorMapping: extracted.colorMap as ThemeExportOptions["colorMapping"],
     customColors: extracted.theme.customColors,
-    formatSchemeElements: {
-      fillStyles: [...extracted.theme.formatScheme.fillStyles],
-      lineStyles: [...extracted.theme.formatScheme.lineStyles],
-      effectStyles: [...extracted.theme.formatScheme.effectStyles],
-      bgFillStyles: [...extracted.theme.formatScheme.bgFillStyles],
-    },
+    formatScheme: extracted.theme.formatScheme,
     extraColorSchemes: extracted.theme.extraColorSchemes,
     objectDefaults: extracted.theme.objectDefaults,
     masterTextStyles: extracted.masterTextStyles,

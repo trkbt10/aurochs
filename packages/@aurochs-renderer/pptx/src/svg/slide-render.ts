@@ -74,7 +74,7 @@ function buildSlideContextFromSlide(slide: Slide): SlideContext {
 
   const presentation = {
     theme,
-    defaultTextStyle: slide.defaultTextStyle as XmlElement | null,
+    defaultTextStyle: slide.defaultTextStyle,
     zip: slide.zip,
     renderOptions: slide.renderOptions ?? DEFAULT_RENDER_OPTIONS,
     themeResources: slide.themeRelationships,

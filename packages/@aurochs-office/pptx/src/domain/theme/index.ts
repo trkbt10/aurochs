@@ -13,7 +13,6 @@ export type {
   ObjectDefaultProperties,
   FormatScheme,
   Theme,
-  RawMasterTextStyles,
   ThemeExtractionInput,
   ExtractedTheme,
 } from "./types";

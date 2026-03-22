@@ -692,12 +692,13 @@ function parseEffectList(
 
 /**
  * Resolve effects from style reference (a:effectRef).
+ * Uses pre-parsed Effects domain types from FormatScheme.
  *
  * @see ECMA-376 Part 1, Section 20.1.4.2.8 (a:effectRef)
  */
 export function resolveEffectsFromStyleReference(
   effectRef: StyleReference | undefined,
-  effectStyles: readonly XmlElement[],
+  effectStyles: readonly (Effects | undefined)[],
 ): Effects | undefined {
   if (!effectRef || effectRef.index === 0) {
     return undefined;
@@ -708,7 +709,33 @@ export function resolveEffectsFromStyleReference(
     return undefined;
   }
 
-  const overrideColor = effectRef.color?.type === "solidFill" ? effectRef.color.color : undefined;
+  const effects = effectStyles[styleIndex];
+  if (!effects) {
+    return undefined;
+  }
 
-  return parseEffectsWithOverride(effectStyles[styleIndex], overrideColor);
+  const overrideColor = effectRef.color?.type === "solidFill" ? effectRef.color.color : undefined;
+  if (!overrideColor) {
+    return effects;
+  }
+
+  return applyEffectColorOverride(effects, overrideColor);
+}
+
+/**
+ * Apply phClr color override to pre-parsed effects.
+ * Replaces any scheme color with value "phClr" with the override color.
+ */
+function applyEffectColorOverride(effects: Effects, overrideColor: Color): Effects {
+  const result = { ...effects };
+
+  if (result.shadow?.color?.spec.type === "scheme" && result.shadow.color.spec.value === "phClr") {
+    result.shadow = { ...result.shadow, color: overrideColor };
+  }
+
+  if (result.glow?.color?.spec.type === "scheme" && result.glow.color.spec.value === "phClr") {
+    result.glow = { ...result.glow, color: overrideColor };
+  }
+
+  return result as Effects;
 }

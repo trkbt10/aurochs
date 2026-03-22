@@ -1,57 +1,13 @@
 /**
  * @file DrawingML background type definitions
  *
- * Types for background parsing and rendering in DrawingML.
+ * Render output types for background resolution in DrawingML.
+ * Parse intermediate types (BackgroundElement, BackgroundParseResult) are
+ * defined in parser/slide/background-parser.ts where they are consumed.
  *
  * @see ECMA-376 Part 1, Section 19.3.1.2 (p:bg)
  * @see ECMA-376 Part 1, Section 19.3.1.4 (p:bgRef)
  */
-
-import type { XmlElement } from "@aurochs/xml";
-
-// =============================================================================
-// Parse Result Types
-// =============================================================================
-
-/**
- * Background element result from p:bg
- *
- * Represents the parsed background element containing either
- * background properties (bgPr) or background reference (bgRef).
- */
-export type BackgroundElement = {
-  /** Background properties element (p:bgPr) */
-  readonly bgPr?: XmlElement;
-  /** Background reference element (p:bgRef) */
-  readonly bgRef?: XmlElement;
-};
-
-/**
- * Result of parsing background properties
- *
- * Contains the fill element and optional placeholder color
- * for theme-based backgrounds.
- */
-export type BackgroundParseResult = {
-  /**
-   * Fill element (XmlElement containing a:solidFill, a:gradFill, a:blipFill, etc.)
-   */
-  readonly fill: XmlElement;
-  /**
-   * Placeholder color resolved from p:bgRef child element.
-   * This is the hex color (without #) to substitute for phClr in theme styles.
-   *
-   * @see ECMA-376 Part 1, Section 19.3.1.4 (p:bgRef)
-   */
-  readonly phClr?: string;
-  /**
-   * Whether the fill came from a theme style (via bgRef).
-   * When true, blipFill rIds should be resolved from theme resources.
-   *
-   * @see ECMA-376 Part 1, Section 20.1.4.1.7 (a:bgFillStyleLst)
-   */
-  readonly fromTheme?: boolean;
-};
 
 // =============================================================================
 // Render Output Types

@@ -69,7 +69,7 @@ function buildExportOptions(s: ThemeEditorState): ThemeExportOptions {
     masterBackground: s.masterBackground,
     masterTextStyles: s.masterTextStyles,
     objectDefaults: s.objectDefaults,
-    formatSchemeElements: s.formatScheme,
+    formatScheme: s.formatScheme,
     extraColorSchemes: s.extraColorSchemes.length > 0 ? s.extraColorSchemes : undefined,
   };
 }
@@ -265,10 +265,10 @@ describe("Export contract: extra color schemes round-trip", () => {
 describe("Export contract: format scheme round-trip", () => {
   it("format scheme elements survive round-trip", async () => {
     const fs: FormatScheme = {
-      fillStyles: [createElement("a:solidFill", {}, [createElement("a:srgbClr", { val: "FF0000" })])],
-      lineStyles: [createElement("a:ln", { w: "12700" })],
-      effectStyles: [createElement("a:effectLst")],
-      bgFillStyles: [createElement("a:solidFill", {}, [createElement("a:srgbClr", { val: "0000FF" })])],
+      fillStyles: [{ type: "solidFill", color: { spec: { type: "srgb", value: "FF0000" } } }],
+      lineStyles: [{ width: 1 as any, cap: "flat", compound: "sng", alignment: "ctr", fill: { type: "solidFill", color: { spec: { type: "scheme", value: "phClr" } } }, dash: "solid", join: "round" }],
+      effectStyles: [undefined],
+      bgFillStyles: [{ type: "solidFill", color: { spec: { type: "srgb", value: "0000FF" } } }],
     };
     const s = reduce(editorState(), { type: "UPDATE_FORMAT_SCHEME", formatScheme: fs });
 

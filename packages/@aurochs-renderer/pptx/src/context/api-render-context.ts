@@ -16,6 +16,7 @@ import { parseShapeTree } from "@aurochs-office/pptx/parser";
 import type { XmlElement, XmlDocument } from "@aurochs/xml";
 import { getByPath, getChild } from "@aurochs/xml";
 import type { SlideSize, Shape, SpShape } from "@aurochs-office/pptx/domain";
+import type { TextStyleLevels } from "@aurochs-office/pptx/domain/text-style";
 import type { ZipFile } from "@aurochs-office/opc";
 import type { CoreRenderContext } from "../render-context";
 import type { RenderOptions } from "../render-options";
@@ -49,7 +50,7 @@ export type CreateRenderContextOptions = {
   readonly apiSlide: ApiSlide;
   readonly zip: ZipFile;
   readonly slideSize: SlideSize;
-  readonly defaultTextStyle?: XmlElement | null;
+  readonly defaultTextStyle?: TextStyleLevels | null;
   readonly renderOptions?: RenderOptions;
 };
 
@@ -61,7 +62,7 @@ export type CreateRenderContextOptions = {
 function buildSlideRenderContext(opts: {
   apiSlide: ApiSlide;
   zip: ZipFile;
-  defaultTextStyle: XmlElement | null;
+  defaultTextStyle: TextStyleLevels | null;
   renderOptions: RenderOptions | undefined;
 }): SlideContext {
   const { apiSlide, zip, defaultTextStyle, renderOptions } = opts;

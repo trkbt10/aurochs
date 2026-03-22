@@ -25,6 +25,9 @@ import { parseSlideMaster } from "../slide/slide-parser";
 import { parseShapeProperties } from "../shape-parser/properties";
 import { parseBodyProperties } from "../text/text-parser";
 import { parseTextStyleLevels } from "../text/text-style-levels";
+import { parseFill } from "../graphics/fill-parser";
+import { parseLine } from "../graphics/line-parser";
+import { parseEffects } from "../graphics/effects-parser";
 
 // =============================================================================
 // Font Scheme Parsing
@@ -180,11 +183,16 @@ export function parseFormatScheme(themeContent: XmlDocument | null): FormatSchem
   const effectStyleLst = getChild(fmtScheme, "a:effectStyleLst");
   const bgFillStyleLst = getChild(fmtScheme, "a:bgFillStyleLst");
 
+  const lineElements = lnStyleLst !== undefined ? getChildren(lnStyleLst, "a:ln") : [];
+  const fillElements = fillStyleLst !== undefined ? filterElementChildren(fillStyleLst.children) : [];
+  const effectElements = effectStyleLst !== undefined ? getChildren(effectStyleLst, "a:effectStyle") : [];
+  const bgFillElements = bgFillStyleLst !== undefined ? filterElementChildren(bgFillStyleLst.children) : [];
+
   return {
-    lineStyles: lnStyleLst !== undefined ? getChildren(lnStyleLst, "a:ln") : [],
-    fillStyles: fillStyleLst !== undefined ? filterElementChildren(fillStyleLst.children) : [],
-    effectStyles: effectStyleLst !== undefined ? getChildren(effectStyleLst, "a:effectStyle") : [],
-    bgFillStyles: bgFillStyleLst !== undefined ? filterElementChildren(bgFillStyleLst.children) : [],
+    lineStyles: lineElements.map((el) => parseLine(el)).filter((l): l is NonNullable<typeof l> => l !== undefined),
+    fillStyles: fillElements.map((el) => parseFill(el)).filter((f): f is NonNullable<typeof f> => f !== undefined),
+    effectStyles: effectElements.map((el) => parseEffects(el)),
+    bgFillStyles: bgFillElements.map((el) => parseFill(el)).filter((f): f is NonNullable<typeof f> => f !== undefined),
   };
 }
 
@@ -343,8 +351,6 @@ export function parseTheme(themeContent: XmlDocument | null, themeOverrides: rea
     formatScheme: parseFormatScheme(themeContent),
     customColors: parseCustomColorList(themeContent),
     extraColorSchemes: parseExtraColorSchemes(themeContent),
-    themeElements: getByPath(themeContent, ["a:theme", "a:themeElements"]),
-    themeManager: getByPath(themeContent, ["a:theme", "a:themeManager"]),
     themeOverrides,
     objectDefaults: parseObjectDefaults(themeContent),
   };

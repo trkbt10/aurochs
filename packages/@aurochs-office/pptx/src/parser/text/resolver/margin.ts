@@ -8,7 +8,7 @@ import type { XmlElement } from "@aurochs/xml";
 import { getChild } from "@aurochs/xml";
 import type { TextStyleContext } from "../../context";
 import type { MasterTextStyles } from "../../../domain/text-style";
-import { TEXT_STYLE_LEVEL_KEYS } from "../../../domain/text-style";
+import { TEXT_STYLE_LEVEL_KEYS, getTextLevelByNumber } from "../../../domain/text-style";
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import { parseTextIndent, parseTextMargin } from "../../primitive";
 import { TYPE_TO_MASTER_STYLE } from "./constants";
@@ -190,11 +190,14 @@ function resolveMargin({ directPPr, localLstStyle, lvl, ctx, attrName }: Resolve
 
   // 6. Default text style
   if (ctx.defaultTextStyle !== undefined) {
-    const lvlpPr = `a:lvl${lvlKey}pPr`;
-    const pPr = getChild(ctx.defaultTextStyle, lvlpPr);
-    const defaultMargin = getMarginFromPPr(pPr, attrName);
-    if (defaultMargin !== undefined) {
-      return defaultMargin;
+    const levelStyle = getTextLevelByNumber(ctx.defaultTextStyle, lvlKey);
+    if (levelStyle?.paragraphProperties) {
+      const pp = levelStyle.paragraphProperties;
+      const propKey = marginAttrToPropertyKey(attrName);
+      const defaultMargin = pp[propKey];
+      if (defaultMargin !== undefined) {
+        return defaultMargin;
+      }
     }
   }
 

@@ -2,19 +2,16 @@
  * @file FormatSchemeEditor - Editor for format scheme (a:fmtScheme)
  *
  * Displays 4 style categories × 3 levels (subtle/moderate/intense).
- * Bridges XmlElement ⇄ domain types using drawing-ml parsers and pptx serializers.
+ * FormatScheme now stores parsed domain types directly — no XML bridging needed.
  *
  * @see ECMA-376 Part 1, Section 20.1.4.1.14 (fmtScheme)
  */
 
 import { useCallback, type CSSProperties } from "react";
-import type { XmlElement } from "@aurochs/xml";
 import type { FormatScheme } from "@aurochs-office/pptx/domain/theme/types";
 import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
 import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import type { Effects } from "@aurochs-office/pptx/domain/types";
-import { parseBaseFill, parseLine, parseEffects } from "@aurochs-office/drawing-ml/parser";
-import { serializeFill } from "@aurochs-builder/pptx/patcher";
 import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { BaseFillEditor } from "@aurochs-ui/editor-controls/editors";
 import { colorTokens, fontTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
@@ -90,14 +87,6 @@ function getActiveEffectNames(effects: Effects): readonly string[] {
   return names;
 }
 
-function parseFillFromElement(el: XmlElement): BaseFill {
-  return parseBaseFill(el) ?? { type: "noFill" };
-}
-
-function parseLineFromElement(el: XmlElement): BaseLine {
-  return parseLine(el) ?? { width: 1, fill: { type: "noFill" }, cap: "flat", compound: "sng", alignment: "ctr", dash: "solid", join: "round" } as BaseLine;
-}
-
 // =============================================================================
 // Component
 // =============================================================================
@@ -107,9 +96,9 @@ function parseLineFromElement(el: XmlElement): BaseLine {
  */
 export function FormatSchemeEditor({ formatScheme, onChange, disabled }: FormatSchemeEditorProps) {
   const handleFillChange = useCallback(
-    (categoryKey: keyof FormatScheme, index: number, fill: BaseFill) => {
+    (categoryKey: "fillStyles" | "bgFillStyles", index: number, fill: BaseFill) => {
       const elements = [...formatScheme[categoryKey]];
-      elements[index] = serializeFill(fill);
+      elements[index] = fill;
       onChange({ ...formatScheme, [categoryKey]: elements });
     },
     [formatScheme, onChange],
@@ -123,7 +112,7 @@ export function FormatSchemeEditor({ formatScheme, onChange, disabled }: FormatS
             key={key}
             categoryKey={key}
             label={label}
-            elements={formatScheme[key]}
+            formatScheme={formatScheme}
             onFillChange={handleFillChange}
             disabled={disabled}
           />
@@ -140,12 +129,13 @@ export function FormatSchemeEditor({ formatScheme, onChange, disabled }: FormatS
 type FormatStyleSectionProps = {
   readonly categoryKey: keyof FormatScheme;
   readonly label: string;
-  readonly elements: readonly XmlElement[];
-  readonly onFillChange: (key: keyof FormatScheme, index: number, fill: BaseFill) => void;
+  readonly formatScheme: FormatScheme;
+  readonly onFillChange: (key: "fillStyles" | "bgFillStyles", index: number, fill: BaseFill) => void;
   readonly disabled?: boolean;
 };
 
-function FormatStyleSection({ categoryKey, label, elements, onFillChange, disabled }: FormatStyleSectionProps) {
+function FormatStyleSection({ categoryKey, label, formatScheme, onFillChange, disabled }: FormatStyleSectionProps) {
+  const elements = formatScheme[categoryKey];
   if (elements.length === 0) {
     return (
       <div>
@@ -164,13 +154,13 @@ function FormatStyleSection({ categoryKey, label, elements, onFillChange, disabl
         const levelLabel = LEVEL_LABELS[i] ?? `Level ${i + 1}`;
 
         if (isFillCategory) {
-          const fill = parseFillFromElement(el);
+          const fill = el as BaseFill;
           return (
             <div key={i} style={levelContainerStyle}>
               <div style={levelLabelStyle}>{levelLabel}</div>
               <BaseFillEditor
                 value={fill}
-                onChange={(newFill) => onFillChange(categoryKey, i, newFill)}
+                onChange={(newFill) => onFillChange(categoryKey as "fillStyles" | "bgFillStyles", i, newFill)}
                 disabled={disabled}
                 compact
               />
@@ -179,17 +169,17 @@ function FormatStyleSection({ categoryKey, label, elements, onFillChange, disabl
         }
 
         if (categoryKey === "lineStyles") {
-          const line = parseLineFromElement(el);
+          const line = el as BaseLine;
           const dashLabel = typeof line.dash === "string" ? line.dash : "custom";
           return (
             <div key={i} style={levelContainerStyle}>
-              <div style={levelLabelStyle}>{levelLabel} — {line.width}px {dashLabel}</div>
+              <div style={levelLabelStyle}>{levelLabel} — {line.width as number}px {dashLabel}</div>
             </div>
           );
         }
 
         // effectStyles — show summary
-        const effects = parseEffects(el);
+        const effects = el as Effects | undefined;
         const effectNames = effects ? getActiveEffectNames(effects) : [];
         return (
           <div key={i} style={levelContainerStyle}>

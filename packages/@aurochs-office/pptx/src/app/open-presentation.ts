@@ -11,6 +11,7 @@ import { getBasename, getByPath, getChildren, type XmlDocument, type XmlElement 
 import type { SlideData } from "../parser/slide/slide-loader";
 import type { RenderOptions } from "@aurochs-renderer/pptx";
 import type { TableStyleList } from "../parser/table/style-parser";
+import type { TextStyleLevels } from "../domain/text-style";
 import { parseSlideSizeFromXml, parseDefaultTextStyle, parseAppVersion } from "./presentation-info";
 import { parseTableStyleList } from "../parser/table/style-parser";
 import { createZipAdapter } from "../domain/zip-adapter";
@@ -29,7 +30,7 @@ type ParseSlideOptions = {
   readonly slideInfo: SlideFileInfo;
   readonly appVersion: number;
   readonly zipAdapter: ZipFile;
-  readonly defaultTextStyle: XmlElement | null;
+  readonly defaultTextStyle: TextStyleLevels | null;
   readonly tableStyles: TableStyleList | null;
   readonly slideSize: SlideSize;
   readonly renderOptions?: RenderOptions;

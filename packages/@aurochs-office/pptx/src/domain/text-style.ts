@@ -46,6 +46,16 @@ export const TEXT_STYLE_LEVEL_KEYS: readonly (keyof TextStyleLevels)[] = [
 ];
 
 /**
+ * Look up a text level style by 1-based level number.
+ * lvlKey 1 → level1, lvlKey 2 → level2, etc.
+ *
+ * Corresponds to XML element a:lvl{N}pPr.
+ */
+export function getTextLevelByNumber(levels: TextStyleLevels, lvlKey: number): TextLevelStyle | undefined {
+  return levels[TEXT_STYLE_LEVEL_KEYS[lvlKey]];
+}
+
+/**
  * Master text styles
  * @see ECMA-376 Part 1, Section 19.3.1.47 (txStyles)
  */
