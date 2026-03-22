@@ -42,8 +42,20 @@
       "types": "./dist/@aurochs-renderer/pptx/src/render-options.d.ts",
       "import": "./dist/pptx/renderer/render-options/index.js"
     },
+    "./pptx/builder": {
+      "types": "./dist/@aurochs-builder/pptx/src/index.d.ts",
+      "import": "./dist/pptx/builder/index.js"
+    },
+    "./pptx/editors": {
+      "types": "./dist/@aurochs-ui/pptx-editors/src/index.d.ts",
+      "import": "./dist/pptx/editors/index.js"
+    },
+    "./pptx/slide-canvas": {
+      "types": "./dist/@aurochs-ui/pptx-slide-canvas/src/index.d.ts",
+      "import": "./dist/pptx/slide-canvas/index.js"
+    },
     "./pptx/viewer": {
-      "types": "./dist/@aurochs-ui/pptx-editor/src/viewer/index.d.ts",
+      "types": "./dist/@aurochs-ui/pptx-viewer/src/index.d.ts",
       "import": "./dist/pptx/viewer/index.js"
     },
     "./docx/parser": {
