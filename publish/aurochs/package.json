@@ -126,10 +126,6 @@
       "types": "./dist/@aurochs-builder/xlsx/src/index.d.ts",
       "import": "./dist/xlsx/builder/index.js"
     },
-    "./xlsx/patcher": {
-      "types": "./dist/@aurochs-builder/xlsx/src/patcher.d.ts",
-      "import": "./dist/xlsx/patcher/index.js"
-    },
     "./xlsx/parser/full": {
       "types": "./dist/@aurochs-office/xlsx/src/parser/index.d.ts",
       "import": "./dist/xlsx/parser/full/index.js"

@@ -100,3 +100,12 @@ export {
 // Drawing serialization
 export { serializeDrawing } from "./drawing";
 
+// Patcher
+export {
+  patchWorkbook,
+  updateChartDataInWorkbook,
+  type CellUpdate,
+  type SheetUpdate,
+  type WorkbookPatchResult,
+} from "./patcher";
+
