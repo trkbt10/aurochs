@@ -1,12 +1,16 @@
 /**
- * @file SlideLayoutEditor — p:sldLayout メタデータ編集（PPTX スライド / POTX レイアウト共通）
+ * @file SlideLayoutEditor — p:sldLayout metadata (shared by PPTX slides and POTX layouts)
  *
- * PPTX 向けはドロップダウン付きレイアウトピッカー（`LayoutSelector`）を表示。
- * POTX では左パネルでレイアウトを選ぶため `showLayoutPicker={false}` で属性フォームのみにする。
+ * PPTX: show the layout dropdown (`LayoutSelector`) by default.
+ * POTX: use `showInlineLayoutPicker` for the same thumbnail grid in-panel, or hide both pickers when the left rail is the only switcher.
  */
 
 import { useCallback } from "react";
+import { px } from "@aurochs-office/drawing-ml/domain/units";
 import type { SlideSize } from "@aurochs-office/pptx/domain";
+import type { Background } from "@aurochs-office/pptx/domain";
+import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
+import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
 import type { PackageFile } from "@aurochs-office/opc";
 import type { SlideLayoutType } from "@aurochs-office/pptx/domain/slide/types";
 import type { SlideLayoutAttributes } from "@aurochs-office/pptx/parser/slide/layout-parser";
@@ -17,6 +21,7 @@ import { Input } from "@aurochs-ui/ui-components/primitives/Input";
 import { Select } from "@aurochs-ui/ui-components/primitives/Select";
 import {
   SLIDE_LAYOUT_OPTIONAL_BOOLEAN_SELECT_OPTIONS,
+  SLIDE_LAYOUT_TYPE_LABELS,
   slideLayoutOptionalBooleanToSelectValue,
   slideLayoutSelectValueToOptionalBoolean,
   slideLayoutTrimmedOptionalString,
@@ -24,6 +29,8 @@ import {
   type SlideLayoutOptionalBooleanSelectValue,
 } from "./slide-layout-metadata";
 import { LayoutSelector } from "./LayoutSelector";
+import { LayoutThumbnailPickerGrid } from "./LayoutThumbnailPickerGrid";
+import { useLayoutThumbnails } from "./use-layout-thumbnails";
 
 type MasterSpFieldsProps = {
   readonly attrs: SlideLayoutAttributes;
@@ -76,9 +83,30 @@ function LayoutMasterSpFields({ attrs, disabled, includePhAnim, onFieldChange }:
   );
 }
 
+const DEFAULT_SLIDE_SIZE: SlideSize = { width: px(9144000 / 914.4), height: px(6858000 / 914.4) };
+
+function layoutTypeBaseHint(showLayoutPartPickers: boolean): string {
+  if (showLayoutPartPickers) {
+    return "ST_SlideLayoutType (schema). The layout part is the slide layout file — pick it above.";
+  }
+  return "ST_SlideLayoutType (schema).";
+}
+
+function layoutTypeFieldHint(type: SlideLayoutType | undefined, baseHint: string): string {
+  if (type === undefined) {
+    return baseHint;
+  }
+  return `${baseHint} (${SLIDE_LAYOUT_TYPE_LABELS[type]}).`;
+}
+
 export type SlideLayoutEditorProps = EditorProps<SlideLayoutAttributes> & {
   /** When true (default), show `LayoutSelector` for switching layout part (PPTX slide). */
   readonly showLayoutPicker?: boolean;
+  /**
+   * When true, show an always-visible thumbnail grid for choosing the layout part (POTX layout tab).
+   * Uses the same previews as the dropdown; theme overrides apply when the optional preview props are set.
+   */
+  readonly showInlineLayoutPicker?: boolean;
   /** When false, hide “Show Master Placeholder Animations” (POTX export path may not round-trip yet). */
   readonly includeShowMasterPhAnimField?: boolean;
   readonly layoutPath?: string;
@@ -86,6 +114,10 @@ export type SlideLayoutEditorProps = EditorProps<SlideLayoutAttributes> & {
   readonly onLayoutChange: (layoutPath: string) => void;
   readonly slideSize?: SlideSize;
   readonly presentationFile?: PackageFile;
+  /** Optional theme overrides for layout thumbnails (POTX master / theme state). */
+  readonly layoutPreviewColorContext?: ColorContext;
+  readonly layoutPreviewFontScheme?: FontScheme;
+  readonly layoutPreviewMasterBackground?: Background;
 };
 
 /**
@@ -97,14 +129,29 @@ export function SlideLayoutEditor({
   disabled,
   className,
   showLayoutPicker = true,
+  showInlineLayoutPicker = false,
   includeShowMasterPhAnimField = true,
   layoutPath,
   layoutOptions,
   onLayoutChange,
   slideSize,
   presentationFile,
+  layoutPreviewColorContext,
+  layoutPreviewFontScheme,
+  layoutPreviewMasterBackground,
 }: SlideLayoutEditorProps) {
   const attrs = value ?? {};
+  const slideSizeResolved = slideSize ?? DEFAULT_SLIDE_SIZE;
+  const layoutThumbnails = useLayoutThumbnails({
+    presentationFile,
+    layoutOptions,
+    slideSize: slideSizeResolved,
+    colorContext: layoutPreviewColorContext,
+    fontScheme: layoutPreviewFontScheme,
+    masterBackground: layoutPreviewMasterBackground,
+  });
+  const hasSourceLayouts = layoutOptions.length > 0;
+  const layoutTypeHint = layoutTypeBaseHint(showLayoutPicker || showInlineLayoutPicker);
 
   const handleFieldChange = useCallback(
     <K extends keyof SlideLayoutAttributes>(field: K, nextValue: SlideLayoutAttributes[K]) => {
@@ -129,16 +176,29 @@ export function SlideLayoutEditor({
         <FieldGroup label="Layout">
           <LayoutSelector
             value={layoutPath}
-            options={layoutOptions}
+            layouts={layoutThumbnails}
+            hasSourceOptions={hasSourceLayouts}
             onChange={handleLayoutSelect}
-            slideSize={slideSize}
-            presentationFile={presentationFile}
-            disabled={disabled || layoutOptions.length === 0}
+            slideSize={slideSizeResolved}
+            disabled={disabled || !hasSourceLayouts}
+          />
+        </FieldGroup>
+      )}
+      {showInlineLayoutPicker && (
+        <FieldGroup label="Layout parts">
+          <LayoutThumbnailPickerGrid
+            layouts={layoutThumbnails}
+            selectedPath={layoutPath}
+            slideSize={slideSizeResolved}
+            variant="inspector"
+            onSelect={handleLayoutSelect}
+            disabled={disabled || !hasSourceLayouts}
+            hasSourceOptions={hasSourceLayouts}
           />
         </FieldGroup>
       )}
 
-      <FieldGroup label="Layout Type">
+      <FieldGroup label="Layout Type" hint={layoutTypeFieldHint(attrs.type, layoutTypeHint)}>
         <Select
           value={(attrs.type ?? "") as string}
           onChange={(next) => handleFieldChange("type", (next || undefined) as SlideLayoutType | undefined)}

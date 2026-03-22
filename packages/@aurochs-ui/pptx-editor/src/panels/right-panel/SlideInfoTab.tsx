@@ -11,6 +11,8 @@ import type { PackageFile } from "@aurochs-office/opc";
 import type { Background } from "@aurochs-office/pptx/domain/slide/types";
 import type { SlideLayoutAttributes } from "@aurochs-office/pptx/parser/slide/layout-parser";
 import type { SlideLayoutOption } from "@aurochs-office/pptx/app";
+import type { SlideTransition } from "@aurochs-office/pptx/domain/transition";
+import type { ColorMapping } from "@aurochs-office/pptx/domain/color/types";
 import { SlidePropertiesPanel } from "../property/SlidePropertiesPanel";
 
 export type SlideInfoTabProps = {
@@ -34,6 +36,11 @@ export type SlideInfoTabProps = {
   readonly onSlideSizeChange?: (size: SlideSize) => void;
   /** Presentation file for loading layout shapes */
   readonly presentationFile?: PackageFile;
+  readonly colorMapping?: ColorMapping;
+  readonly onColorMapChange?: (mappings: ColorMapping) => void;
+  readonly slideTransition?: SlideTransition;
+  readonly onSlideTransitionChange?: (transition: SlideTransition | undefined) => void;
+  readonly showLayoutCatalog?: boolean;
 };
 
 const containerStyle: CSSProperties = {
@@ -48,7 +55,7 @@ const containerStyle: CSSProperties = {
  *
  * Displays slide-level settings within the right panel pivot tabs:
  * - Slide background editor
- * - Slide layout selector and editor
+ * - Slide layout selector and editor (via `SlidePropertiesPanel`, including optional layout catalog)
  */
 export function SlideInfoTab({
   background,
@@ -61,6 +68,11 @@ export function SlideInfoTab({
   slideSize,
   onSlideSizeChange,
   presentationFile,
+  colorMapping,
+  onColorMapChange,
+  slideTransition,
+  onSlideTransitionChange,
+  showLayoutCatalog,
 }: SlideInfoTabProps) {
   return (
     <div style={containerStyle}>
@@ -75,6 +87,11 @@ export function SlideInfoTab({
         slideSize={slideSize}
         onSlideSizeChange={onSlideSizeChange}
         presentationFile={presentationFile}
+        colorMapping={colorMapping}
+        onColorMapChange={onColorMapChange}
+        slideTransition={slideTransition}
+        onSlideTransitionChange={onSlideTransitionChange}
+        showLayoutCatalog={showLayoutCatalog}
       />
     </div>
   );

@@ -9,7 +9,7 @@
 // @vitest-environment jsdom
 
 describe("CreationToolbar", () => {
-  it("tests are in @aurochs-ui/ooxml-components/src/CreationToolbar.spec.tsx", () => {
+  it("tests are in @aurochs-ui/ooxml-components (presentation-slide-creation; see shape-factory / creation-types specs)", () => {
     expect(true).toBe(true);
   });
 });

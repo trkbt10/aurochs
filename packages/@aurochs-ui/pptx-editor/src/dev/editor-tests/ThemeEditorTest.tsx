@@ -6,9 +6,7 @@
 
 import { useState, useCallback, type CSSProperties } from "react";
 import {
-  ColorSchemeEditor,
-  FontSchemeEditor,
-  ThemePresetSelector,
+  ThemeSchemeEditorsSection,
   SampleSlidePreview,
   type ThemePreset,
 } from "@aurochs-ui/ooxml-components/presentation-theme-layout";
@@ -140,31 +138,19 @@ export function ThemeEditorTest() {
         </div>
       </div>
 
-      {/* Individual Components */}
-      <div style={rowStyle}>
-        <div style={{ ...sectionStyle, ...columnStyle }}>
-          <h3 style={sectionTitleStyle}>ColorSchemeEditor</h3>
-          <div style={{ height: "350px", overflow: "auto" }}>
-            <ColorSchemeEditor colorScheme={colorScheme} onColorChange={handleColorChange} />
-          </div>
-        </div>
-
-        <div style={{ ...sectionStyle, ...columnStyle }}>
-          <h3 style={sectionTitleStyle}>FontSchemeEditor</h3>
-          <div style={{ height: "350px", overflow: "auto" }}>
-            <FontSchemeEditor
-              fontScheme={fontScheme}
-              onMajorFontChange={handleMajorFontChange}
-              onMinorFontChange={handleMinorFontChange}
-            />
-          </div>
-        </div>
-
-        <div style={{ ...sectionStyle, ...columnStyle }}>
-          <h3 style={sectionTitleStyle}>ThemePresetSelector</h3>
-          <div style={{ height: "350px", overflow: "auto" }}>
-            <ThemePresetSelector onPresetSelect={handlePresetSelect} />
-          </div>
+      {/* Combined SoT (same block as POTX Theme tab) */}
+      <div style={sectionStyle}>
+        <h3 style={sectionTitleStyle}>ThemeSchemeEditorsSection (preset + colors + fonts)</h3>
+        <div style={{ maxHeight: "520px", overflow: "auto" }}>
+          <ThemeSchemeEditorsSection
+            presetSelector={{ onPresetSelect: handlePresetSelect }}
+            colorScheme={{ colorScheme, onColorChange: handleColorChange }}
+            fontScheme={{
+              fontScheme,
+              onMajorFontChange: handleMajorFontChange,
+              onMinorFontChange: handleMinorFontChange,
+            }}
+          />
         </div>
       </div>
     </div>

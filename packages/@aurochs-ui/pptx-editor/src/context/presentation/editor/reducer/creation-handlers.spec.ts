@@ -4,11 +4,12 @@
  * Tests for SET_CREATION_MODE, CREATE_SHAPE actions and shape factory.
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any, custom/no-as-outside-guard, no-restricted-syntax -- Test file uses flexible typing for mock data */
+/* eslint-disable no-restricted-syntax -- Test file uses let for sequential state updates */
 import { presentationEditorReducer, createPresentationEditorState } from "./reducer";
 import type { PresentationEditorState } from "../types";
 import type { CreationMode } from "@aurochs-ui/ooxml-components";
 import type { SpShape } from "@aurochs-office/pptx/domain/shape";
+import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import { createShapeFromMode } from "../../../../shape/factory";
 import { getDefaultBoundsForMode } from "@aurochs-ui/ooxml-components";
@@ -32,16 +33,20 @@ describe("SET_CREATION_MODE", () => {
   });
 
   it("should clear selection when entering creation mode", () => {
-    const stateWithSelection = {
-      ...initialState,
-      shapeSelection: {
-        selectedIds: ["shape-1" as any],
-        primaryId: "shape-1" as any,
-      },
-    };
+    // Create a real shape so selection is valid
+    const mode: CreationMode = { type: "shape", preset: "rect" };
+    const bounds = getDefaultBoundsForMode(mode, px(100), px(100));
+    const shape = createShapeFromMode(mode, bounds)!;
+    const stateWithShape = presentationEditorReducer(initialState, {
+      type: "CREATE_SHAPE",
+      shape,
+    });
 
-    const shapeMode: CreationMode = { type: "shape", preset: "rect" };
-    const newState = presentationEditorReducer(stateWithSelection, {
+    // Shape is selected after creation
+    expect(stateWithShape.shapeSelection.selectedIds).toHaveLength(1);
+
+    const shapeMode: CreationMode = { type: "shape", preset: "ellipse" };
+    const newState = presentationEditorReducer(stateWithShape, {
       type: "SET_CREATION_MODE",
       mode: shapeMode,
     });
@@ -50,16 +55,19 @@ describe("SET_CREATION_MODE", () => {
   });
 
   it("should preserve selection when returning to select mode", () => {
-    const stateWithSelection = {
-      ...initialState,
-      shapeSelection: {
-        selectedIds: ["shape-1" as any],
-        primaryId: "shape-1" as any,
-      },
-    };
+    // Create a real shape so selection is valid
+    const mode: CreationMode = { type: "shape", preset: "rect" };
+    const bounds = getDefaultBoundsForMode(mode, px(100), px(100));
+    const shape = createShapeFromMode(mode, bounds)!;
+    const stateWithShape = presentationEditorReducer(initialState, {
+      type: "CREATE_SHAPE",
+      shape,
+    });
+
+    expect(stateWithShape.shapeSelection.selectedIds).toHaveLength(1);
 
     const selectMode: CreationMode = { type: "select" };
-    const newState = presentationEditorReducer(stateWithSelection, {
+    const newState = presentationEditorReducer(stateWithShape, {
       type: "SET_CREATION_MODE",
       mode: selectMode,
     });

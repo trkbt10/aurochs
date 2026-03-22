@@ -7,6 +7,8 @@
 import { useCallback } from "react";
 import type { Shape, SlideSize } from "@aurochs-office/pptx/domain";
 import type { Background } from "@aurochs-office/pptx/domain/slide/types";
+import type { SlideTransition } from "@aurochs-office/pptx/domain/transition";
+import type { ColorMapping } from "@aurochs-office/pptx/domain/color/types";
 import {
   applySlideLayoutAttributes,
   type SlideLayoutAttributes,
@@ -75,6 +77,8 @@ export type SlideCallbacks = {
   readonly handleLayoutAttributesChange: (attributes: SlideLayoutAttributes) => void;
   readonly handleLayoutChange: (layoutTargetPath: string) => void;
   readonly handleSlideSizeChange: (slideSize: SlideSize) => void;
+  readonly handleSlideTransitionChange: (transition: SlideTransition | undefined) => void;
+  readonly handleSlideColorMapChange: (mappings: ColorMapping) => void;
 };
 
 export type UsePanelCallbacksResult = {
@@ -350,6 +354,29 @@ export function usePanelCallbacks({ dispatch, document }: UsePanelCallbacksParam
     [dispatch],
   );
 
+  const handleSlideTransitionChange = useCallback(
+    (transition: SlideTransition | undefined): void => {
+      dispatch({
+        type: "UPDATE_ACTIVE_SLIDE",
+        updater: (s) => ({ ...s, transition }),
+      });
+    },
+    [dispatch],
+  );
+
+  const handleSlideColorMapChange = useCallback(
+    (mappings: ColorMapping): void => {
+      dispatch({
+        type: "UPDATE_ACTIVE_SLIDE",
+        updater: (s) => ({
+          ...s,
+          colorMapOverride: { type: "override" as const, mappings },
+        }),
+      });
+    },
+    [dispatch],
+  );
+
   return {
     canvas: {
       handleSelect,
@@ -377,6 +404,8 @@ export function usePanelCallbacks({ dispatch, document }: UsePanelCallbacksParam
       handleLayoutAttributesChange,
       handleLayoutChange,
       handleSlideSizeChange,
+      handleSlideTransitionChange,
+      handleSlideColorMapChange,
     },
   };
 }

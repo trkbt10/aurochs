@@ -14,11 +14,16 @@ import type { SlideSize } from "@aurochs-office/pptx/domain";
 import type { SlideLayoutAttributes } from "@aurochs-office/pptx/parser/slide/layout-parser";
 import type { PackageFile } from "@aurochs-office/opc";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
-import { buildSlideLayoutOptions, buildSlideLayoutEntries, loadSlideLayoutBundle } from "@aurochs-office/pptx/app";
-import type { SlideLayoutEntry } from "@aurochs-office/pptx/app";
+import {
+  buildSlideLayoutOptions,
+  buildSlideLayoutEntries,
+  loadSlideLayoutBundle,
+  type PresentationDocument,
+  type SlideLayoutEntry,
+} from "@aurochs-office/pptx/app";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import { SlideRenderer } from "@aurochs-renderer/pptx/react";
-import type { LayoutListEntry, ImportedThemeData, ThemeEditorState } from "./context/types";
+import type { LayoutListEntry, ImportedThemeData, ThemeEditorAction, ThemeEditorState } from "./context/types";
 import type { SchemeColorName } from "@aurochs-office/drawing-ml/domain/color";
 import { ThemeImportExportSection } from "@aurochs-ui/ooxml-components/theme-io";
 import { ThemeNameSection } from "@aurochs-ui/ooxml-components";
@@ -29,9 +34,7 @@ import { useThemeEditor } from "./context/ThemeEditorContext";
 import { LayoutShapePanel, NoShapeSelected, ShapeInfoOverlay } from "./panels";
 import type { ThemePreset } from "@aurochs-ui/ooxml-components/presentation-theme-layout";
 import {
-  ColorSchemeEditor,
-  FontSchemeEditor,
-  ThemePresetSelector,
+  ThemeSchemeEditorsSection,
   MasterBackgroundEditor,
   ColorMapEditor,
   CustomColorsEditor,
@@ -39,12 +42,14 @@ import {
   FormatSchemeEditor,
   ObjectDefaultsEditor,
   MasterTextStylesEditor,
+  LAYOUT_CHROME_COLOR_MAP_OVERRIDE_TITLE,
+  SlideLayoutChromeEditors,
 } from "@aurochs-ui/ooxml-components/presentation-theme-layout";
 import { AssetPanel } from "@aurochs-ui/ooxml-components/opc-embedded-assets";
 import type { ColorMapping } from "@aurochs-office/pptx/domain/color/types";
 import type { CustomColor, ExtraColorScheme, FormatScheme } from "@aurochs-office/pptx/domain/theme/types";
 import { EditorShell, type EditorPanel, CanvasArea } from "@aurochs-ui/editor-controls/editor-shell";
-import { OptionalPropertySection, InspectorPanelWithTabs, type InspectorTab } from "@aurochs-ui/editor-controls/ui";
+import { InspectorPanelWithTabs, type InspectorTab } from "@aurochs-ui/editor-controls/ui";
 import { colorTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { ContextMenu, type MenuEntry } from "@aurochs-ui/ui-components";
 import { TextEditController, useTextEditHandlers } from "@aurochs-ui/ooxml-components/text-edit";
@@ -59,13 +64,12 @@ import {
   useCanvasHandlers,
   useCreationDrag,
   CreationToolbar,
-  createSelectMode,
   createShapeFromMode,
+  type CreationMode,
+  type LoadedLayoutData,
   LayoutThumbnail,
   useLayoutThumbnails,
   loadLayoutWithContext,
-  TransitionEditor,
-  SlideLayoutEditor,
   getCursorForCreationMode,
 } from "@aurochs-ui/ooxml-components";
 import type { SlideTransition } from "@aurochs-office/pptx/domain/transition";
@@ -76,9 +80,11 @@ import { INITIAL_VIEWPORT } from "@aurochs-ui/editor-core/viewport";
 import {
   PresentationEditorProvider,
   usePresentationEditor,
+  useDragHandlers,
+  useKeyboardShortcuts,
 } from "@aurochs-ui/pptx-editor";
 import type { PresentationEditorAction } from "@aurochs-ui/pptx-editor";
-import { createVirtualDocument, type VirtualDocumentInput } from "./adapter/layout-document-adapter";
+import { createVirtualDocument } from "./adapter/layout-document-adapter";
 import { useThemeDocumentSync } from "./adapter/use-theme-document-sync";
 import { layoutListEntryToSlideLayoutAttributes } from "./adapter/slide-layout-attributes";
 
@@ -160,6 +166,9 @@ function buildContextMenuItems(hasSelection: boolean): readonly MenuEntry[] {
 // Outer Component — wraps PresentationEditorProvider
 // =============================================================================
 
+/**
+ * Root POTX editor: theme state, virtual presentation document, and canvas provider.
+ */
 export function PotxEditor({ presentationFile, slideSize, className, onPackageFileChange }: PotxEditorProps) {
   const { state, dispatch: themeDispatch } = useThemeEditor();
   const { colorScheme, fontScheme, layoutEdit } = state;
@@ -231,14 +240,14 @@ export function PotxEditor({ presentationFile, slideSize, className, onPackageFi
 
 type PotxEditorContentProps = {
   readonly state: ThemeEditorState;
-  readonly themeDispatch: (action: import("./context/types").ThemeEditorAction) => void;
+  readonly themeDispatch: (action: ThemeEditorAction) => void;
   readonly presentationFile?: PackageFile;
   readonly slideSize?: SlideSize;
   readonly className?: string;
   readonly onPackageFileChange?: (file: PackageFile, slideSize: SlideSize) => void;
   readonly masterColorContext: { colorScheme: Record<string, string>; colorMap: Record<string, string> };
-  readonly virtualDocument: import("@aurochs-office/pptx/app").PresentationDocument;
-  readonly allLayoutData: readonly { id: string; data: import("@aurochs-ui/ooxml-components").LoadedLayoutData }[];
+  readonly virtualDocument: PresentationDocument;
+  readonly allLayoutData: readonly { id: string; data: LoadedLayoutData }[];
 };
 
 function PotxEditorContent({
@@ -253,13 +262,13 @@ function PotxEditorContent({
     dispatch: presDispatch,
     document: presDocument,
     activeSlide,
-    selectedShapes,
     primaryShape,
     creationMode,
     textEdit: textEditState,
   } = usePresentationEditor();
 
   const canvasRef = useRef<EditorCanvasHandle>(null);
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
   const [viewport, setViewport] = useState<ViewportTransform>(INITIAL_VIEWPORT);
 
   // Sync theme changes → PresentationEditorContext
@@ -308,8 +317,30 @@ function PotxEditorContent({
     return collectPptxShapeRenderData(renderedSlide.shapes as readonly Shape[]);
   }, [renderedSlide.shapes]);
 
+  // --- Drag handlers (move, resize, rotate with snapping) ---
+  useDragHandlers({
+    drag: presState.drag,
+    selection: presState.shapeSelection,
+    slide: renderedSlide,
+    width: slideSize?.width ?? px(960),
+    height: slideSize?.height ?? px(540),
+    canvasRef: canvasContainerRef,
+    snapEnabled: true,
+    snapStep: 10,
+    dispatch: presDispatch,
+    viewport,
+  });
+
+  // --- Keyboard shortcuts (undo/redo, delete, copy/paste, select all, etc.) ---
+  useKeyboardShortcuts({
+    dispatch: presDispatch,
+    selection: presState.shapeSelection,
+    slide: renderedSlide,
+    primaryShape,
+  });
+
   // --- Creation mode ---
-  const handleCreationModeChange = useCallback((mode: import("@aurochs-ui/ooxml-components").CreationMode) => {
+  const handleCreationModeChange = useCallback((mode: CreationMode) => {
     presDispatch({ type: "SET_CREATION_MODE", mode });
   }, [presDispatch]);
 
@@ -346,7 +377,7 @@ function PotxEditorContent({
   });
 
   const handleMarqueeSelect = useCallback(
-    (result: { readonly itemIds: readonly string[] }, additive: boolean) => {
+    (result: { readonly itemIds: readonly string[] }, _additive: boolean) => {
       presDispatch({ type: "SELECT_MULTIPLE_SHAPES", shapeIds: result.itemIds as readonly ShapeId[] });
     },
     [presDispatch],
@@ -514,7 +545,7 @@ function PotxEditorContent({
     return <span style={{ fontSize: "10px", color: "#999" }}>{item.name}</span>;
   }, [slideSize]);
 
-  const handleItemClick = useCallback((layoutPath: string) => {
+  const handleSelectLayout = useCallback((layoutPath: string) => {
     themeDispatch({ type: "SELECT_LAYOUT", layoutPath });
   }, [themeDispatch]);
 
@@ -533,9 +564,23 @@ function PotxEditorContent({
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "auto" }}>
       <ThemeNameSection themeName={themeName} onThemeNameChange={handleThemeNameChange} />
       <ThemeImportExportSection onExport={handleThemeExport} onImport={handleThemeImport} />
-      <ThemePresetSelector onPresetSelect={handlePresetSelect} />
-      <ColorSchemeEditor colorScheme={colorScheme} onColorChange={handleColorChange} onColorAdd={handleColorAdd} onColorRemove={handleColorRemove} onColorRename={handleColorRename} />
-      <FontSchemeEditor fontScheme={fontScheme} fontSchemeName={fontSchemeName} onMajorFontChange={handleMajorFontChange} onMinorFontChange={handleMinorFontChange} onFontSchemeNameChange={handleFontSchemeNameChange} />
+      <ThemeSchemeEditorsSection
+        presetSelector={{ onPresetSelect: handlePresetSelect }}
+        colorScheme={{
+          colorScheme,
+          onColorChange: handleColorChange,
+          onColorAdd: handleColorAdd,
+          onColorRemove: handleColorRemove,
+          onColorRename: handleColorRename,
+        }}
+        fontScheme={{
+          fontScheme,
+          fontSchemeName,
+          onMajorFontChange: handleMajorFontChange,
+          onMinorFontChange: handleMinorFontChange,
+          onFontSchemeNameChange: handleFontSchemeNameChange,
+        }}
+      />
     </div>
   ), [themeName, colorScheme, fontScheme, fontSchemeName, handleThemeNameChange, handleThemeExport, handleThemeImport, handlePresetSelect, handleColorChange, handleColorAdd, handleColorRemove, handleColorRename, handleMajorFontChange, handleMinorFontChange, handleFontSchemeNameChange]);
 
@@ -565,28 +610,58 @@ function PotxEditorContent({
       return <div style={{ padding: "16px", textAlign: "center", color: "var(--text-tertiary, #999)", fontSize: "13px" }}>No layout selected</div>;
     }
     return (
-      <>
-        <OptionalPropertySection title="Layout Attributes" defaultExpanded>
-          <SlideLayoutEditor
-            value={layoutListEntryToSlideLayoutAttributes(activeLayout)}
-            onChange={handleSlideLayoutAttributesChange}
-            showLayoutPicker={false}
-            includeShowMasterPhAnimField={false}
-            layoutOptions={layoutOptions}
-            onLayoutChange={() => {}}
-            slideSize={slideSize ?? { width: px(960), height: px(540) }}
-            presentationFile={presentationFile}
-          />
-        </OptionalPropertySection>
-        <MasterBackgroundEditor background={activeLayout.overrides?.background} onChange={handleLayoutBackgroundChange} title="Layout Background" />
-        <ColorMapEditor colorMapping={getLayoutColorMapping(activeLayout, state.masterColorMapping)} onChange={handleLayoutColorMapOverrideChange} title="Color Map Override" />
-        <OptionalPropertySection title="Transition" defaultExpanded={false}>
-          <TransitionEditor value={activeLayout.overrides?.transition} onChange={handleLayoutTransitionChange} />
-        </OptionalPropertySection>
+      <SlideLayoutChromeEditors
+        layout={{
+          value: layoutListEntryToSlideLayoutAttributes(activeLayout),
+          onChange: handleSlideLayoutAttributesChange,
+          showLayoutPicker: false,
+          showInlineLayoutPicker: true,
+          includeShowMasterPhAnimField: false,
+          layoutOptions,
+          onLayoutChange: handleSelectLayout,
+          slideSize: slideSize ?? { width: px(960), height: px(540) },
+          presentationFile,
+          layoutPreviewColorContext: masterColorContext,
+          layoutPreviewFontScheme: fontScheme,
+          layoutPreviewMasterBackground: state.masterBackground,
+          sectionTitle: "Layout Attributes",
+          sectionDefaultExpanded: true,
+        }}
+        layoutBackground={{
+          background: activeLayout.overrides?.background,
+          onChange: handleLayoutBackgroundChange,
+          title: "Layout Background",
+        }}
+        colorMap={{
+          colorMapping: getLayoutColorMapping(activeLayout, state.masterColorMapping),
+          onChange: handleLayoutColorMapOverrideChange,
+          title: LAYOUT_CHROME_COLOR_MAP_OVERRIDE_TITLE,
+        }}
+        transition={{
+          value: activeLayout.overrides?.transition,
+          onChange: handleLayoutTransitionChange,
+        }}
+      >
         {renderShapePanel(primaryShape, handleShapeChange)}
-      </>
+      </SlideLayoutChromeEditors>
     );
-  }, [activeLayout, state.masterColorMapping, handleSlideLayoutAttributesChange, layoutOptions, slideSize, presentationFile, handleLayoutBackgroundChange, handleLayoutColorMapOverrideChange, handleLayoutTransitionChange, primaryShape, handleShapeChange]);
+  }, [
+    activeLayout,
+    state.masterColorMapping,
+    state.masterBackground,
+    masterColorContext,
+    fontScheme,
+    handleSlideLayoutAttributesChange,
+    layoutOptions,
+    slideSize,
+    presentationFile,
+    handleSelectLayout,
+    handleLayoutBackgroundChange,
+    handleLayoutColorMapOverrideChange,
+    handleLayoutTransitionChange,
+    primaryShape,
+    handleShapeChange,
+  ]);
 
   const inspectorTabs = useMemo<readonly InspectorTab[]>(() => [
     { id: "theme", label: "Theme", content: themeTabContent },
@@ -612,10 +687,10 @@ function PotxEditorContent({
       items={layoutItems} itemWidth={itemWidth} itemHeight={itemHeight}
       orientation="vertical" mode="editable"
       activeItemId={layoutEdit.activeLayoutPath} itemLabel="Layout"
-      renderThumbnail={renderThumbnail} onItemClick={handleItemClick}
+      renderThumbnail={renderThumbnail} onItemClick={handleSelectLayout}
       onAddItem={handleAddLayout} onDeleteItems={handleDeleteLayouts} onDuplicateItems={handleDuplicateLayouts}
     />
-  ), [layoutItems, itemWidth, itemHeight, layoutEdit.activeLayoutPath, renderThumbnail, handleItemClick, handleAddLayout, handleDeleteLayouts, handleDuplicateLayouts]);
+  ), [layoutItems, itemWidth, itemHeight, layoutEdit.activeLayoutPath, renderThumbnail, handleSelectLayout, handleAddLayout, handleDeleteLayouts, handleDuplicateLayouts]);
 
   // === Center canvas ===
   const widthNum = slideSize ? (slideSize.width as number) : 960;
@@ -670,7 +745,7 @@ function PotxEditorContent({
       return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#999" }}>Select a layout</div>;
     }
     return (
-      <CanvasArea floatingToolbar={floatingToolbar}>
+      <CanvasArea floatingToolbar={floatingToolbar} ref={canvasContainerRef}>
         <EditorCanvas
           ref={canvasRef} canvasWidth={widthNum} canvasHeight={heightNum}
           zoomMode={"fit" as ZoomMode} onZoomModeChange={() => {}} onViewportChange={handleViewportChange}

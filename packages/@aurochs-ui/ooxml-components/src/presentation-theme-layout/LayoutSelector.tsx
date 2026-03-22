@@ -7,11 +7,10 @@
 import { type CSSProperties, useCallback, useState, useRef, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
-import type { SlideSize, Shape } from "@aurochs-office/pptx/domain";
-import type { PackageFile } from "@aurochs-office/opc";
-import type { SlideLayoutOption } from "@aurochs-office/pptx/app";
+import type { SlideSize } from "@aurochs-office/pptx/domain";
+import type { LayoutThumbnailData } from "./use-layout-thumbnails";
 import { LayoutThumbnail } from "./LayoutThumbnail";
-import { useLayoutThumbnails } from "./use-layout-thumbnails";
+import { LayoutThumbnailPickerGrid } from "./LayoutThumbnailPickerGrid";
 import { colorTokens, fontTokens, radiusTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 
 // =============================================================================
@@ -21,14 +20,14 @@ import { colorTokens, fontTokens, radiusTokens, spacingTokens } from "@aurochs-u
 export type LayoutSelectorProps = {
   /** Currently selected layout path */
   readonly value?: string;
-  /** Available layout options */
-  readonly options: readonly SlideLayoutOption[];
+  /** Thumbnail rows (from `useLayoutThumbnails` in the parent). */
+  readonly layouts: readonly LayoutThumbnailData[];
+  /** True when the presentation exposes at least one layout part (before search filter). */
+  readonly hasSourceOptions: boolean;
   /** Callback when layout is selected */
   readonly onChange: (layoutPath: string) => void;
   /** Slide size for preview */
   readonly slideSize?: SlideSize;
-  /** Presentation file for loading layout shapes */
-  readonly presentationFile?: PackageFile;
   /** Disabled state */
   readonly disabled?: boolean;
   /** CSS class */
@@ -131,65 +130,6 @@ const gridContainerStyle: CSSProperties = {
   padding: spacingTokens.sm,
 };
 
-const gridStyle: CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-  gap: spacingTokens.sm,
-};
-
-const cardBaseStyle: CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
-  gap: "4px",
-  padding: spacingTokens.xs,
-  borderRadius: "6px",
-  cursor: "pointer",
-  transition: "all 0.15s ease",
-  border: "2px solid transparent",
-  minWidth: 0,
-  overflow: "hidden",
-};
-
-const cardSelectedStyle: CSSProperties = {
-  ...cardBaseStyle,
-  backgroundColor: `var(--accent-primary, ${colorTokens.accent.primary})20`,
-  borderColor: `var(--accent-primary, ${colorTokens.accent.primary})`,
-};
-
-const cardUnselectedStyle: CSSProperties = {
-  ...cardBaseStyle,
-  backgroundColor: "transparent",
-  borderColor: "transparent",
-};
-
-const cardHoverStyle: CSSProperties = {
-  backgroundColor: "var(--bg-tertiary, #1a1a1a)",
-};
-
-const cardDisabledStyle: CSSProperties = {
-  ...cardBaseStyle,
-  opacity: 0.5,
-  cursor: "not-allowed",
-};
-
-const labelStyle: CSSProperties = {
-  fontSize: "10px",
-  color: colorTokens.text.secondary,
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap",
-  textAlign: "center",
-  width: "100%",
-};
-
-const emptyStyle: CSSProperties = {
-  padding: spacingTokens.lg,
-  textAlign: "center",
-  color: colorTokens.text.tertiary,
-  fontSize: fontTokens.size.sm,
-};
-
 // =============================================================================
 // Subcomponents
 // =============================================================================
@@ -208,60 +148,6 @@ function ChevronDown() {
   );
 }
 
-function LayoutSelectorEmpty({ hasOptions }: { hasOptions: boolean }) {
-  const message = hasOptions ? "No matching layouts" : "No layouts available";
-  return <div style={emptyStyle}>{message}</div>;
-}
-
-type LayoutSelectorGridProps = {
-  readonly layouts: readonly { value: string; label: string; shapes: readonly Shape[] }[];
-  readonly hasOptions: boolean;
-  readonly value?: string;
-  readonly hoveredPath: string | null;
-  readonly slideSize: SlideSize;
-  readonly getCardStyle: (isSelected: boolean, isHovered: boolean) => CSSProperties;
-  readonly onSelect: (path: string) => void;
-  readonly onHover: (path: string | null) => void;
-};
-
-function LayoutSelectorGrid({
-  layouts,
-  hasOptions,
-  value,
-  hoveredPath,
-  slideSize,
-  getCardStyle,
-  onSelect,
-  onHover,
-}: LayoutSelectorGridProps) {
-  if (layouts.length === 0) {
-    return <LayoutSelectorEmpty hasOptions={hasOptions} />;
-  }
-
-  return (
-    <div style={gridStyle}>
-      {layouts.map((layout) => {
-        const isSelected = layout.value === value;
-        const isHovered = layout.value === hoveredPath;
-
-        return (
-          <div
-            key={layout.value}
-            style={getCardStyle(isSelected, isHovered)}
-            onClick={() => onSelect(layout.value)}
-            onMouseEnter={() => onHover(layout.value)}
-            onMouseLeave={() => onHover(null)}
-            title={layout.value}
-          >
-            <LayoutThumbnail shapes={layout.shapes} slideSize={slideSize} width={70} />
-            <div style={labelStyle}>{layout.label}</div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 // =============================================================================
 // Component
 // =============================================================================
@@ -272,35 +158,25 @@ function LayoutSelectorGrid({
  */
 export function LayoutSelector({
   value,
-  options,
+  layouts,
+  hasSourceOptions,
   onChange,
   slideSize = DEFAULT_SLIDE_SIZE,
-  presentationFile,
   disabled,
   className,
   style,
 }: LayoutSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [hoveredPath, setHoveredPath] = useState<string | null>(null);
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
 
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Load layout shapes for preview
-  const layoutThumbnails = useLayoutThumbnails({
-    presentationFile,
-    layoutOptions: options,
-    slideSize,
-  });
+  const selectedLayout = layouts.find((l) => l.value === value);
 
-  // Find selected layout
-  const selectedLayout = layoutThumbnails.find((l) => l.value === value);
-
-  // Filter layouts by search term
-  const filteredLayouts = layoutThumbnails.filter((layout) => {
+  const filteredLayouts = layouts.filter((layout) => {
     if (!searchTerm) {
       return true;
     }
@@ -338,7 +214,6 @@ export function LayoutSelector({
     }
     setIsOpen(true);
     setSearchTerm("");
-    setHoveredPath(null);
   }, [disabled]);
 
   const handleClose = useCallback(() => {
@@ -369,19 +244,6 @@ export function LayoutSelector({
   const handleDropdownClick = useCallback((event: React.MouseEvent) => {
     event.stopPropagation();
   }, []);
-
-  const getCardStyle = (isSelected: boolean, isHovered: boolean): CSSProperties => {
-    if (disabled) {
-      return cardDisabledStyle;
-    }
-    if (isSelected) {
-      return cardSelectedStyle;
-    }
-    if (isHovered) {
-      return { ...cardUnselectedStyle, ...cardHoverStyle };
-    }
-    return cardUnselectedStyle;
-  };
 
   // Calculate position after render and focus search input
   useLayoutEffect(() => {
@@ -419,7 +281,14 @@ export function LayoutSelector({
         style={{ ...buttonBaseStyle, ...style }}
       >
         <div style={triggerPreviewStyle}>
-          {selectedLayout && <LayoutThumbnail shapes={selectedLayout.shapes} slideSize={slideSize} width={32} />}
+          {selectedLayout && (
+            <LayoutThumbnail
+              shapes={selectedLayout.shapes}
+              svg={selectedLayout.svg}
+              slideSize={slideSize}
+              width={32}
+            />
+          )}
           <span style={triggerLabelStyle}>{selectedLayout?.label ?? "Select layout..."}</span>
         </div>
         <ChevronDown />
@@ -454,15 +323,15 @@ export function LayoutSelector({
 
               {/* Layout grid */}
               <div style={gridContainerStyle}>
-                <LayoutSelectorGrid
+                <LayoutThumbnailPickerGrid
                   layouts={filteredLayouts}
-                  hasOptions={options.length > 0}
-                  value={value}
-                  hoveredPath={hoveredPath}
+                  selectedPath={value}
                   slideSize={slideSize}
-                  getCardStyle={getCardStyle}
+                  thumbnailWidth={70}
+                  variant="selector"
                   onSelect={handleSelect}
-                  onHover={setHoveredPath}
+                  disabled={disabled}
+                  hasSourceOptions={hasSourceOptions}
                 />
               </div>
             </div>

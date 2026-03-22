@@ -95,7 +95,7 @@ export type CursorState = {
 export type CompositionState = {
   /** Whether currently composing (IME active) */
   readonly isComposing: boolean;
-  /** The composition text (未確定文字) */
+  /** The composition text (IME pre-edit buffer) */
   readonly text: string;
   /** Start position of composition */
   readonly startOffset: number;

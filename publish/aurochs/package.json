@@ -106,6 +106,10 @@
       "types": "./dist/@aurochs-builder/xlsx/src/index.d.ts",
       "import": "./dist/xlsx/builder/index.js"
     },
+    "./xlsx/parser/full": {
+      "types": "./dist/@aurochs-office/xlsx/src/parser/index.d.ts",
+      "import": "./dist/xlsx/parser/full/index.js"
+    },
     "./xlsx/parser": {
       "types": "./dist/@aurochs-office/xlsx/src/index.d.ts",
       "import": "./dist/xlsx/parser/index.js"
@@ -129,6 +133,10 @@
     "./xlsx/viewer": {
       "types": "./dist/@aurochs-ui/xlsx-editor/src/viewer/index.d.ts",
       "import": "./dist/xlsx/viewer/index.js"
+    },
+    "./zip": {
+      "types": "./dist/@aurochs/zip/src/index.d.ts",
+      "import": "./dist/zip/index.js"
     }
   },
   "scripts": {

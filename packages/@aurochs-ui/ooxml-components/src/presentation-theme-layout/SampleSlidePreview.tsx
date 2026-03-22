@@ -104,7 +104,7 @@ export function SampleSlidePreview({ colorScheme, fontScheme }: SampleSlidePrevi
           </div>
           {majorEastAsian && (
             <div style={{ fontFamily: majorEastAsian, fontSize: "14px", color: `#${dk2}`, marginTop: "4px" }}>
-              {majorEastAsian} フォント
+              {majorEastAsian} (East Asian)
             </div>
           )}
           <div style={{ fontFamily: minorFont, fontSize: "14px", color: `#${dk2}`, marginTop: "4px" }}>
@@ -121,7 +121,7 @@ export function SampleSlidePreview({ colorScheme, fontScheme }: SampleSlidePrevi
             <div style={{ fontFamily: minorFont, fontSize: "12px", color: `#${dk2}` }}>• Secondary text (dk2)</div>
             {minorEastAsian && (
               <div style={{ fontFamily: minorEastAsian, fontSize: "12px", color: `#${dk1}` }}>
-                • {minorEastAsian} テキスト
+                • {minorEastAsian} (East Asian body)
               </div>
             )}
 

@@ -9,10 +9,20 @@ import type { SlideSize } from "@aurochs-office/pptx/domain";
 import type { PackageFile } from "@aurochs-office/opc";
 import type { Background } from "@aurochs-office/pptx/domain/slide/types";
 import type { SlideLayoutAttributes } from "@aurochs-office/pptx/parser/slide/layout-parser";
+import type { SlideTransition } from "@aurochs-office/pptx/domain/transition";
+import type { ColorMapping } from "@aurochs-office/pptx/domain/color/types";
 import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import type { SlideLayoutOption } from "@aurochs-office/pptx/app";
-import { BackgroundEditor, SlideSizeEditor, createDefaultBackground } from "../../editors/index";
-import { SlideLayoutEditor } from "@aurochs-ui/ooxml-components/presentation-theme-layout";
+import { BackgroundEditor, createDefaultBackground } from "../../editors/index";
+import {
+  LayoutInfoPanel,
+  type ColorMapEditorProps,
+  type SlideLayoutChromeEditorsProps,
+  SlideLayoutChromeEditors,
+  SlideSizeEditor,
+  LAYOUT_CHROME_COLOR_MAP_OVERRIDE_TITLE,
+  LAYOUT_CHROME_TRANSITION_DEFAULT_EXPANDED,
+} from "@aurochs-ui/ooxml-components/presentation-theme-layout";
 import { Button } from "@aurochs-ui/ui-components/primitives";
 
 // =============================================================================
@@ -30,7 +40,47 @@ export type SlidePropertiesPanelProps = {
   readonly slideSize?: SlideSize;
   readonly onSlideSizeChange?: (size: SlideSize) => void;
   readonly presentationFile?: PackageFile;
+  /** Effective slide color map for `ColorMapEditor` (merged master + slide override). */
+  readonly colorMapping?: ColorMapping;
+  readonly onColorMapChange?: (mappings: ColorMapping) => void;
+  readonly slideTransition?: SlideTransition;
+  readonly onSlideTransitionChange?: (transition: SlideTransition | undefined) => void;
+  /**
+   * When true (default), appends read-only layout thumbnails + current layout summary
+   * (`LayoutInfoPanel`) below editable chrome — same data as `layoutOptions` / `layoutPath`.
+   */
+  readonly showLayoutCatalog?: boolean;
 };
+
+type LayoutChromeTransition = NonNullable<SlideLayoutChromeEditorsProps["transition"]>;
+
+function layoutChromeColorMapForSlidePanel(
+  colorMapping: ColorMapping | undefined,
+  onColorMapChange: SlidePropertiesPanelProps["onColorMapChange"],
+): ColorMapEditorProps | undefined {
+  if (colorMapping === undefined || onColorMapChange === undefined) {
+    return undefined;
+  }
+  return {
+    colorMapping,
+    onChange: onColorMapChange,
+    title: LAYOUT_CHROME_COLOR_MAP_OVERRIDE_TITLE,
+  };
+}
+
+function layoutChromeTransitionForSlidePanel(
+  slideTransition: SlideTransition | undefined,
+  onSlideTransitionChange: SlidePropertiesPanelProps["onSlideTransitionChange"],
+): LayoutChromeTransition | undefined {
+  if (onSlideTransitionChange === undefined) {
+    return undefined;
+  }
+  return {
+    value: slideTransition,
+    onChange: onSlideTransitionChange,
+    sectionDefaultExpanded: LAYOUT_CHROME_TRANSITION_DEFAULT_EXPANDED,
+  };
+}
 
 // =============================================================================
 // Styles
@@ -72,6 +122,11 @@ export function SlidePropertiesPanel({
   slideSize,
   onSlideSizeChange,
   presentationFile,
+  colorMapping,
+  onColorMapChange,
+  slideTransition,
+  onSlideTransitionChange,
+  showLayoutCatalog = true,
 }: SlidePropertiesPanelProps) {
   const handleCreateBackground = useCallback(() => {
     onBackgroundChange(createDefaultBackground());
@@ -80,6 +135,9 @@ export function SlidePropertiesPanel({
   const handleRemoveBackground = useCallback(() => {
     onBackgroundChange(undefined);
   }, [onBackgroundChange]);
+
+  const layoutChromeColorMap = layoutChromeColorMapForSlidePanel(colorMapping, onColorMapChange);
+  const layoutChromeTransition = layoutChromeTransitionForSlidePanel(slideTransition, onSlideTransitionChange);
 
   return (
     <>
@@ -99,17 +157,30 @@ export function SlidePropertiesPanel({
         />
       </OptionalPropertySection>
 
-      <OptionalPropertySection title="Slide Layout" defaultExpanded={false}>
-        <LayoutContent
-          layoutAttributes={layoutAttributes}
-          layoutPath={layoutPath}
+      <SlideLayoutChromeEditors
+        layout={{
+          value: layoutAttributes,
+          onChange: onLayoutAttributesChange,
+          layoutPath,
+          layoutOptions,
+          onLayoutChange,
+          slideSize,
+          presentationFile,
+          sectionTitle: "Slide Layout",
+          sectionDefaultExpanded: false,
+        }}
+        colorMap={layoutChromeColorMap}
+        transition={layoutChromeTransition}
+      />
+      {showLayoutCatalog && (
+        <LayoutInfoPanel
           layoutOptions={layoutOptions}
-          onLayoutAttributesChange={onLayoutAttributesChange}
-          onLayoutChange={onLayoutChange}
+          currentLayoutPath={layoutPath}
+          layoutAttributes={layoutAttributes}
           slideSize={slideSize}
           presentationFile={presentationFile}
         />
-      </OptionalPropertySection>
+      )}
     </>
   );
 }
@@ -153,44 +224,3 @@ function BackgroundContent({
   );
 }
 
-type LayoutContentProps = {
-  readonly layoutAttributes?: SlideLayoutAttributes;
-  readonly layoutPath?: string;
-  readonly layoutOptions: readonly SlideLayoutOption[];
-  readonly onLayoutAttributesChange: (attrs: SlideLayoutAttributes) => void;
-  readonly onLayoutChange: (layoutPath: string) => void;
-  readonly slideSize?: SlideSize;
-  readonly presentationFile?: PackageFile;
-};
-
-const noLayoutStyle: CSSProperties = {
-  padding: "12px",
-  textAlign: "center",
-  color: "var(--text-tertiary, #737373)",
-  fontSize: "12px",
-};
-
-function LayoutContent({
-  layoutAttributes,
-  layoutPath,
-  layoutOptions,
-  onLayoutAttributesChange,
-  onLayoutChange,
-  slideSize,
-  presentationFile,
-}: LayoutContentProps) {
-  if (layoutAttributes) {
-    return (
-      <SlideLayoutEditor
-        value={layoutAttributes}
-        onChange={onLayoutAttributesChange}
-        layoutPath={layoutPath}
-        layoutOptions={layoutOptions}
-        onLayoutChange={onLayoutChange}
-        slideSize={slideSize}
-        presentationFile={presentationFile}
-      />
-    );
-  }
-  return <div style={noLayoutStyle}>No layout data available</div>;
-}

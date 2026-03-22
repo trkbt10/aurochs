@@ -10,8 +10,8 @@ import type { SlideLayoutAttributes } from "@aurochs-office/pptx/parser/slide/la
 import type { SlideLayoutOption } from "@aurochs-office/pptx/app";
 import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { colorTokens, fontTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
-import { LayoutThumbnail } from "./LayoutThumbnail";
-import { useLayoutThumbnails, type LayoutThumbnailData } from "./use-layout-thumbnails";
+import { LayoutThumbnailPickerGrid } from "./LayoutThumbnailPickerGrid";
+import { useLayoutThumbnails } from "./use-layout-thumbnails";
 
 export type LayoutInfoPanelProps = {
   /** Available layout options */
@@ -33,49 +33,8 @@ const containerStyle: CSSProperties = {
   overflow: "auto",
 };
 
-/** Layout thumbnail width - compact size for narrow panels */
+/** Layout thumbnail width — matches `SlideLayoutEditor` inline picker / selector cards */
 const LAYOUT_THUMBNAIL_WIDTH = 70;
-
-const layoutGridStyle: CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fill, minmax(80px, 1fr))",
-  gap: spacingTokens.xs,
-  padding: spacingTokens.sm,
-};
-
-const layoutCardStyle: CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
-  gap: "2px",
-  padding: spacingTokens.xs,
-  borderRadius: "6px",
-  cursor: "default",
-  transition: "background-color 0.15s ease",
-};
-
-const layoutCardActiveStyle: CSSProperties = {
-  ...layoutCardStyle,
-  backgroundColor: `var(--accent-primary, ${colorTokens.accent.primary})20`,
-  border: `2px solid var(--accent-primary, ${colorTokens.accent.primary})`,
-};
-
-const layoutCardInactiveStyle: CSSProperties = {
-  ...layoutCardStyle,
-  backgroundColor: colorTokens.background.secondary,
-  border: "2px solid transparent",
-};
-
-const layoutLabelStyle: CSSProperties = {
-  fontSize: "10px",
-  color: colorTokens.text.secondary,
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap",
-  textAlign: "center",
-  width: "100%",
-  marginTop: "2px",
-};
 
 const attributeRowStyle: CSSProperties = {
   display: "flex",
@@ -103,41 +62,6 @@ const emptyStateStyle: CSSProperties = {
 };
 
 const DEFAULT_SLIDE_SIZE: SlideSize = { width: px(9144000 / 914.4), height: px(6858000 / 914.4) };
-
-/**
- * Render layout grid with SVG previews.
- */
-function LayoutGrid({
-  layouts,
-  currentPath,
-  slideSize,
-}: {
-  layouts: readonly LayoutThumbnailData[];
-  currentPath?: string;
-  slideSize: SlideSize;
-}) {
-  if (layouts.length === 0) {
-    return <div style={emptyStateStyle}>No layouts available</div>;
-  }
-
-  return (
-    <div style={layoutGridStyle}>
-      {layouts.map((layout) => {
-        const isActive = layout.value === currentPath;
-        return (
-          <div
-            key={layout.value}
-            style={isActive ? layoutCardActiveStyle : layoutCardInactiveStyle}
-            title={layout.value}
-          >
-            <LayoutThumbnail shapes={layout.shapes} slideSize={slideSize} width={LAYOUT_THUMBNAIL_WIDTH} />
-            <div style={layoutLabelStyle}>{layout.label}</div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 
 /**
  * Render layout attributes as key-value pairs.
@@ -221,7 +145,14 @@ export function LayoutInfoPanel({
   return (
     <div style={containerStyle}>
       <OptionalPropertySection title={`Available Layouts (${layoutOptions.length})`} defaultExpanded>
-        <LayoutGrid layouts={layoutThumbnails} currentPath={currentLayoutPath} slideSize={slideSize} />
+        <LayoutThumbnailPickerGrid
+          layouts={layoutThumbnails}
+          selectedPath={currentLayoutPath}
+          slideSize={slideSize}
+          thumbnailWidth={LAYOUT_THUMBNAIL_WIDTH}
+          variant="inspector"
+          hasSourceOptions={layoutOptions.length > 0}
+        />
       </OptionalPropertySection>
 
       <OptionalPropertySection title="Current Layout" defaultExpanded={false}>

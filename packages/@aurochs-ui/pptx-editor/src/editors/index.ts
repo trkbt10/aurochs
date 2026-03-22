@@ -77,14 +77,11 @@ export {
   type TableEditorProps,
 } from "./table";
 
-// Slide-level editors (SlideLayoutEditor: @aurochs-ui/ooxml-components/presentation-theme-layout)
+// Slide-level editors (layout/size SoT: @aurochs-ui/ooxml-components/presentation-theme-layout)
 export {
   BackgroundEditor,
-  SlideSizeEditor,
   createDefaultBackground,
-  createDefaultSlideSize,
   type BackgroundEditorProps,
-  type SlideSizeEditorProps,
 } from "./slide";
 
 // OLE object editors

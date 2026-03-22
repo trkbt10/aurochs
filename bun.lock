@@ -163,6 +163,7 @@
       "name": "@aurochs-builder/pptx",
       "version": "0.7.0",
       "dependencies": {
+        "@aurochs-builder/core": "workspace:*",
         "@aurochs-builder/drawing-ml": "workspace:*",
         "@aurochs-office/chart": "workspace:*",
         "@aurochs-office/ooxml": "workspace:*",
@@ -697,12 +698,16 @@
       "dependencies": {
         "@aurochs-office/drawing-ml": "workspace:*",
         "@aurochs-office/ooxml": "workspace:*",
+        "@aurochs-office/opc": "workspace:*",
         "@aurochs-office/pptx": "workspace:*",
         "@aurochs-renderer/drawing-ml": "workspace:*",
         "@aurochs-renderer/pptx": "workspace:*",
+        "@aurochs-ui/color-editor": "workspace:*",
         "@aurochs-ui/editor-controls": "workspace:*",
         "@aurochs-ui/editor-core": "workspace:*",
         "@aurochs-ui/ui-components": "workspace:*",
+        "@aurochs/buffer": "workspace:*",
+        "@aurochs/files": "workspace:*",
         "@aurochs/glyph": "workspace:*",
       },
       "peerDependencies": {

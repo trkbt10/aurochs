@@ -4,7 +4,7 @@
  * Provides a hybrid text editing experience:
  * - Hidden textarea captures input and tracks cursor/selection
  * - Visual text is rendered as SVG on top
- * - IME composition (未確定文字) is displayed with underline
+ * - IME composition (pre-edit) text is displayed with underline
  * - Cursor and selection are overlaid
  */
 

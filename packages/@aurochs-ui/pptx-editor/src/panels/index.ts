@@ -12,8 +12,9 @@
  * - SlideInfoTab: Slide background and layout
  * - LayersTab: Layer hierarchy
  *
- * Inspector panels (read-only views):
- * - LayoutInfoPanel / ThemeViewerPanel / embedded media: @aurochs-ui/ooxml-components
+ * Inspector (read-only / shared UI from @aurochs-ui/ooxml-components):
+ * - Layout catalog thumbnails: `LayoutInfoPanel` (default inside `SlidePropertiesPanel` / Slide tab; can disable via `showLayoutCatalog`)
+ * - ThemeViewerPanel / SlideSizeEditor / SlideLayoutAttributesPanel / ThemeSchemeEditorsSection / embedded media
  */
 
 export { PropertyPanel } from "./PropertyPanel";

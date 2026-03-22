@@ -23,5 +23,11 @@ describe("pptx-editor/editors index exports", () => {
     expect("SlideLayoutEditor" in editors).toBe(false);
     expect("SlideLayoutEditorProps" in editors).toBe(false);
   });
+
+  it("does not re-export SlideSizeEditor (SoT: ooxml-components/presentation-theme-layout)", () => {
+    expect("SlideSizeEditor" in editors).toBe(false);
+    expect("SlideSizeEditorProps" in editors).toBe(false);
+    expect("createDefaultSlideSize" in editors).toBe(false);
+  });
 });
 

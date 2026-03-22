@@ -10,7 +10,7 @@ import { LayoutSelector } from "./LayoutSelector";
 describe("LayoutSelector", () => {
   it("opens dropdown and shows empty state when options are empty", () => {
     const { getByRole, getByText } = render(
-      <LayoutSelector options={[]} onChange={() => undefined} />,
+      <LayoutSelector layouts={[]} hasSourceOptions={false} onChange={() => undefined} />,
     );
 
     fireEvent.click(getByRole("button"));

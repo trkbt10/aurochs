@@ -6,7 +6,7 @@
  * - `presentation-slide-creation` — canvas creation mode, toolbar, shape factory
  * - `pptx-slide-pipeline` — transform / render helpers for slide shapes
  * - `presentation-canvas` — EditorCanvas selection & drag wiring
- * - `opc-embedded-assets` — OPC 埋め込みメディア一覧（現状 PresentationML / PPTX 発見ロジック）
+ * - `opc-embedded-assets` — embedded media browser (PresentationML / PPTX discovery today)
  *
  * Prefer subpath imports (`@aurochs-ui/ooxml-components/presentation-theme-layout`, etc.) when
  * only one area is needed.
@@ -31,6 +31,8 @@ export {
   type SlideLayoutOptionalBooleanSelectValue,
   LayoutThumbnail,
   type LayoutThumbnailProps,
+  LayoutThumbnailPickerGrid,
+  type LayoutThumbnailPickerGridProps,
   useLayoutThumbnails,
   loadLayoutWithContext,
   type UseLayoutThumbnailsOptions,
@@ -71,6 +73,18 @@ export {
   type MasterTextStylesEditorProps,
   SampleSlidePreview,
   type SampleSlidePreviewProps,
+  SlideLayoutAttributesPanel,
+  type SlideLayoutAttributesPanelProps,
+  SlideLayoutChromeEditors,
+  type SlideLayoutChromeEditorsProps,
+  LAYOUT_CHROME_COLOR_MAP_OVERRIDE_TITLE,
+  LAYOUT_CHROME_TRANSITION_DEFAULT_EXPANDED,
+  LAYOUT_CHROME_TRANSITION_SECTION_TITLE,
+  SlideSizeEditor,
+  createDefaultSlideSize,
+  type SlideSizeEditorProps,
+  ThemeSchemeEditorsSection,
+  type ThemeSchemeEditorsSectionProps,
 } from "./presentation-theme-layout";
 
 export type {

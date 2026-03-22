@@ -1,9 +1,10 @@
 /**
- * @file Asset panel component
+ * @file AssetPanel — embedded assets in an OPC package (PresentationML)
  *
- * Displays a list of embedded assets in the presentation.
- * Uses OPC relationships to discover media files (ECMA-376 compliant).
- * Supports uploading new assets via file picker or drag-and-drop.
+ * PPTX and POTX share the same OPC part model as `PackageFile`, so one component serves both editors.
+ *
+ * Media is discovered via relationships on slide, layout, and slide master parts
+ * (ECMA-376 Part 2 §9.3).
  *
  * @see ECMA-376 Part 2, Section 9.3 (Relationships)
  */
@@ -19,8 +20,8 @@ import { colorTokens, fontTokens, spacingTokens, iconTokens } from "@aurochs-ui/
 import { Button } from "@aurochs-ui/ui-components/primitives/Button";
 
 export type AssetPanelProps = {
-  /** Presentation file for reading asset content */
-  readonly presentationFile?: PackageFile;
+  /** Open XML package (e.g. PPTX, POTX) */
+  readonly packageFile?: PackageFile;
 };
 
 const containerStyle: CSSProperties = {
@@ -46,7 +47,7 @@ const assetItemStyle: CSSProperties = {
   cursor: "grab",
 };
 
-/** Data transfer type for asset drag operations */
+/** Data transfer type for asset drag operations (PPTX canvas drop handler) */
 export const ASSET_DRAG_TYPE = "application/x-pptx-asset";
 
 const assetThumbnailStyle: CSSProperties = {
@@ -142,7 +143,7 @@ function generateUploadedAssetId(): string {
   return `uploaded-${uploadedAssetCounter}`;
 }
 
-/** Asset information discovered from PPTX package */
+/** Asset information discovered from package parts */
 export type AssetInfo = {
   path: string;
   name: string;
@@ -191,15 +192,15 @@ const ASSET_TYPE_ICONS = {
 } as const;
 
 /**
- * Read asset data from presentation file.
+ * Read asset data from package.
  */
 function readAssetData(
-  presentationFile: PackageFile,
+  packageFile: PackageFile,
   path: string,
   type: AssetInfo["type"],
 ): { size?: number; dataUrl?: string } {
   try {
-    const buffer = presentationFile.readBinary(path);
+    const buffer = packageFile.readBinary(path);
     if (!buffer) {
       return {};
     }
@@ -216,12 +217,12 @@ function readAssetData(
 /**
  * Build asset info from discovered media paths.
  */
-function buildAssetInfo(presentationFile: PackageFile, mediaPaths: readonly string[]): AssetInfo[] {
+function buildAssetInfo(packageFile: PackageFile, mediaPaths: readonly string[]): AssetInfo[] {
   return mediaPaths.map((path) => {
     const name = path.split("/").pop() ?? path;
     const extension = name.split(".").pop()?.toLowerCase() ?? "";
     const type = getAssetType(path);
-    const { size, dataUrl } = readAssetData(presentationFile, path, type);
+    const { size, dataUrl } = readAssetData(packageFile, path, type);
 
     return { path, name, type, extension, size, dataUrl };
   });
@@ -551,12 +552,12 @@ function UploadArea({ onUpload }: { onUpload: (assets: AssetInfo[]) => void }) {
  * Render panel content based on state.
  */
 function AssetPanelContent({
-  presentationFile,
+  packageFile,
   embeddedAssets,
   uploadedAssets,
   onUpload,
 }: {
-  presentationFile?: PackageFile;
+  packageFile?: PackageFile;
   embeddedAssets: AssetInfo[];
   uploadedAssets: AssetInfo[];
   onUpload: (assets: AssetInfo[]) => void;
@@ -567,10 +568,10 @@ function AssetPanelContent({
   return (
     <>
       <UploadArea onUpload={onUpload} />
-      {!presentationFile && uploadedAssets.length === 0 && (
-        <div style={emptyStateStyle}>No presentation file loaded</div>
+      {!packageFile && uploadedAssets.length === 0 && (
+        <div style={emptyStateStyle}>No package file loaded</div>
       )}
-      {presentationFile && !hasAssets && <div style={emptyStateStyle}>No assets found</div>}
+      {packageFile && !hasAssets && <div style={emptyStateStyle}>No assets found</div>}
       {hasAssets && <AssetLists assets={allAssets} />}
     </>
   );
@@ -590,16 +591,16 @@ function AssetPanelContent({
  *
  * @see ECMA-376 Part 2, Section 9.3 (Relationships)
  */
-export function AssetPanel({ presentationFile }: AssetPanelProps) {
+export function AssetPanel({ packageFile }: AssetPanelProps) {
   const [uploadedAssets, setUploadedAssets] = useState<AssetInfo[]>([]);
 
   const embeddedAssets = useMemo(() => {
-    if (!presentationFile) {
+    if (!packageFile) {
       return [];
     }
-    const mediaPaths = discoverMediaPaths(presentationFile);
-    return buildAssetInfo(presentationFile, mediaPaths);
-  }, [presentationFile]);
+    const mediaPaths = discoverMediaPaths(packageFile);
+    return buildAssetInfo(packageFile, mediaPaths);
+  }, [packageFile]);
 
   const handleUpload = useCallback((newAssets: AssetInfo[]) => {
     setUploadedAssets((prev) => [...newAssets, ...prev]);
@@ -608,7 +609,7 @@ export function AssetPanel({ presentationFile }: AssetPanelProps) {
   return (
     <div style={containerStyle}>
       <AssetPanelContent
-        presentationFile={presentationFile}
+        packageFile={packageFile}
         embeddedAssets={embeddedAssets}
         uploadedAssets={uploadedAssets}
         onUpload={handleUpload}

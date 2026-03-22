@@ -78,8 +78,7 @@ import { RIGHT_PANEL_TABS, usePivotTabs } from "../layout";
 import { SelectedElementTab, SlideInfoTab, LayersTab } from "../panels/right-panel";
 import { InspectorPanelWithTabs } from "../panels/inspector";
 import { AssetPanel } from "@aurochs-ui/ooxml-components/opc-embedded-assets";
-import { ThemeViewerPanel } from "@aurochs-ui/ooxml-components/presentation-theme-layout";
-import { LayoutInfoPanel } from "@aurochs-ui/ooxml-components/presentation-theme-layout";
+import { ThemeSchemeEditorsSection, type ThemePreset } from "@aurochs-ui/ooxml-components/presentation-theme-layout";
 import { PresentationSlideshow, type SlideshowSlideContent } from "../viewer/PresentationSlideshow";
 import {
   usePanelCallbacks,
@@ -96,6 +95,10 @@ import { extractThemeFromBuffer } from "@aurochs-office/pptx/app";
 import { buildThemeXml, exportThemeAsPotx, getThemeFileName } from "@aurochs-builder/pptx/builders";
 import { downloadPresentation } from "@aurochs-office/opc";
 import type { SchemeColorName } from "@aurochs-office/drawing-ml/domain/color";
+import type { Theme } from "@aurochs-office/pptx/domain/theme/types";
+import type { FontSpec } from "@aurochs-office/ooxml/domain/font-scheme";
+import { resolveEditingTheme } from "./resolve-editing-theme";
+import { slideColorMappingForEditor } from "../slide/color-mapping-for-editor";
 
 // =============================================================================
 // Local constants (PPTX-specific, not part of shared EditorShell)
@@ -731,6 +734,111 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
   const colorContext = renderContext?.colorContext ?? document.colorContext;
   const fontScheme = renderContext?.fontScheme ?? document.fontScheme;
 
+  const [themeXmlDisplayName, setThemeXmlDisplayName] = useState("Theme");
+  const editingTheme = useMemo(() => resolveEditingTheme(document), [document]);
+
+  const applyFullTheme = useCallback(
+    (next: Theme, xmlName?: string) => {
+      const name = xmlName ?? themeXmlDisplayName;
+      const themeXml = buildThemeXml({ name, theme: next, fontSchemeName: name });
+      dispatch({
+        type: "APPLY_THEME",
+        themeName: name,
+        theme: next,
+        themeXml,
+        colorContext: { ...document.colorContext, colorScheme: next.colorScheme },
+      });
+    },
+    [dispatch, document.colorContext, themeXmlDisplayName],
+  );
+
+  const handleEditableColorChange = useCallback(
+    (name: string, color: string) => {
+      applyFullTheme({ ...editingTheme, colorScheme: { ...editingTheme.colorScheme, [name]: color } });
+    },
+    [editingTheme, applyFullTheme],
+  );
+
+  const handleEditableColorAdd = useCallback(
+    (name: string, color: string) => {
+      applyFullTheme({ ...editingTheme, colorScheme: { ...editingTheme.colorScheme, [name]: color } });
+    },
+    [editingTheme, applyFullTheme],
+  );
+
+  const handleEditableColorRemove = useCallback(
+    (name: string) => {
+      const nextScheme = { ...editingTheme.colorScheme } as Record<string, string>;
+      delete nextScheme[name];
+      applyFullTheme({ ...editingTheme, colorScheme: nextScheme });
+    },
+    [editingTheme, applyFullTheme],
+  );
+
+  const handleEditableColorRename = useCallback(
+    (oldName: string, newName: string) => {
+      const cs = editingTheme.colorScheme as Record<string, string>;
+      const value = cs[oldName];
+      if (value === undefined) {
+        return;
+      }
+      const nextScheme = { ...cs };
+      delete nextScheme[oldName];
+      nextScheme[newName] = value;
+      applyFullTheme({ ...editingTheme, colorScheme: nextScheme });
+    },
+    [editingTheme, applyFullTheme],
+  );
+
+  const handleEditableMajorFontChange = useCallback(
+    (spec: Partial<FontSpec>) => {
+      applyFullTheme({
+        ...editingTheme,
+        fontScheme: {
+          ...editingTheme.fontScheme,
+          majorFont: { ...editingTheme.fontScheme.majorFont, ...spec },
+        },
+      });
+    },
+    [editingTheme, applyFullTheme],
+  );
+
+  const handleEditableMinorFontChange = useCallback(
+    (spec: Partial<FontSpec>) => {
+      applyFullTheme({
+        ...editingTheme,
+        fontScheme: {
+          ...editingTheme.fontScheme,
+          minorFont: { ...editingTheme.fontScheme.minorFont, ...spec },
+        },
+      });
+    },
+    [editingTheme, applyFullTheme],
+  );
+
+  const handleEditableFontSchemeNameChange = useCallback(
+    (name: string) => {
+      setThemeXmlDisplayName(name);
+      applyFullTheme(editingTheme, name);
+    },
+    [editingTheme, applyFullTheme],
+  );
+
+  const handleEditablePresetSelect = useCallback(
+    (preset: ThemePreset) => {
+      setThemeXmlDisplayName(preset.name);
+      applyFullTheme(
+        {
+          ...editingTheme,
+          colorScheme: { ...editingTheme.colorScheme, ...preset.colorScheme },
+          fontScheme: preset.fontScheme,
+        },
+        preset.name,
+      );
+    },
+    [editingTheme, applyFullTheme],
+  );
+
   // ==========================================================================
   // Memoized Tab Content Components (3 combined tabs)
   // ==========================================================================
@@ -780,6 +888,7 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
     if (!activeSlide || !slide) {
       return <div style={noSlideStyle}>No slide selected</div>;
     }
+    const slideColorMapping = slideColorMappingForEditor(slide, document.colorContext.colorMap);
     return (
       <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "auto" }}>
         <SlideInfoTab
@@ -793,13 +902,10 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
           slideSize={{ width, height }}
           onSlideSizeChange={slideCallbacks.handleSlideSizeChange}
           presentationFile={document.presentationFile}
-        />
-        <LayoutInfoPanel
-          layoutOptions={layoutOptions}
-          currentLayoutPath={layoutPath}
-          layoutAttributes={layoutAttributes}
-          slideSize={{ width, height }}
-          presentationFile={document.presentationFile}
+          colorMapping={slideColorMapping}
+          onColorMapChange={slideCallbacks.handleSlideColorMapChange}
+          slideTransition={slide.transition}
+          onSlideTransitionChange={slideCallbacks.handleSlideTransitionChange}
         />
       </div>
     );
@@ -813,9 +919,12 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
     slideCallbacks.handleLayoutAttributesChange,
     slideCallbacks.handleLayoutChange,
     slideCallbacks.handleSlideSizeChange,
+    slideCallbacks.handleSlideColorMapChange,
+    slideCallbacks.handleSlideTransitionChange,
     width,
     height,
     document.presentationFile,
+    document.colorContext.colorMap,
   ]);
 
   // Theme import/export callbacks
@@ -837,6 +946,7 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
     const result = await extractThemeFromBuffer(buffer);
     if (!result.success) { throw new Error(result.error); }
     const { data } = result;
+    setThemeXmlDisplayName(data.themeName);
     const themeXml = buildThemeXml({ name: data.themeName, theme: data.theme });
     const newColorContext = { colorScheme: data.theme.colorScheme, colorMap: data.colorMap };
     dispatch({ type: "APPLY_THEME", themeName: data.themeName, theme: data.theme, themeXml, colorContext: newColorContext });
@@ -846,11 +956,42 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
     () => (
       <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "auto" }}>
         <AssetPanel packageFile={document.presentationFile} />
-        <ThemeViewerPanel colorContext={colorContext} fontScheme={fontScheme} />
+        <ThemeSchemeEditorsSection
+          presetSelector={{ onPresetSelect: handleEditablePresetSelect }}
+          colorScheme={{
+            colorScheme: editingTheme.colorScheme,
+            onColorChange: handleEditableColorChange,
+            onColorAdd: handleEditableColorAdd,
+            onColorRemove: handleEditableColorRemove,
+            onColorRename: handleEditableColorRename,
+          }}
+          fontScheme={{
+            fontScheme: editingTheme.fontScheme,
+            fontSchemeName: themeXmlDisplayName,
+            onMajorFontChange: handleEditableMajorFontChange,
+            onMinorFontChange: handleEditableMinorFontChange,
+            onFontSchemeNameChange: handleEditableFontSchemeNameChange,
+          }}
+        />
         <ThemeImportExportSection onExport={handleThemeExport} onImport={handleThemeImport} />
       </div>
     ),
-    [document.presentationFile, colorContext, fontScheme, handleThemeExport, handleThemeImport],
+    [
+      document.presentationFile,
+      editingTheme.colorScheme,
+      editingTheme.fontScheme,
+      themeXmlDisplayName,
+      handleEditablePresetSelect,
+      handleEditableColorChange,
+      handleEditableColorAdd,
+      handleEditableColorRemove,
+      handleEditableColorRename,
+      handleEditableMajorFontChange,
+      handleEditableMinorFontChange,
+      handleEditableFontSchemeNameChange,
+      handleThemeExport,
+      handleThemeImport,
+    ],
   );
 
   const tabContents = useMemo<TabContents>(() => ({

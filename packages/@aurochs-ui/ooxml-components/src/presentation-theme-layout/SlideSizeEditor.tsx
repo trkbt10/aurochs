@@ -1,7 +1,7 @@
 /**
- * @file SlideSizeEditor - PPTX-specific slide size editor
+ * @file SlideSizeEditor — editor for p:sldSz (slide size)
  *
- * Thin wrapper around the shared PageSizeEditor with PPTX presets.
+ * Single definition shared by PPTX slide editing and POTX template editing (SoT).
  *
  * @see ECMA-376 Part 1, Section 19.2.1.34 (sldSz)
  */
@@ -90,10 +90,6 @@ export function SlideSizeEditor({ value, onChange, disabled, style: _style }: Sl
     />
   );
 }
-
-// =============================================================================
-// Helpers
-// =============================================================================
 
 /**
  * Create a default slide size (16:9 widescreen)

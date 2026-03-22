@@ -31,7 +31,7 @@
 export { LineEditor, createDefaultLine, type LineEditorProps } from "./ui/line";
 
 // Shared editors: import from @aurochs-ui/editor-controls/editors
-// TransitionEditor: import from @aurochs-ui/ooxml-components
+// TransitionEditor: @aurochs-ui/ooxml-components/presentation-theme-layout
 
 // PPTX-specific editors
 export {
@@ -172,9 +172,13 @@ export { ExportButton, type ExportButtonProps } from "./presentation/components"
 // Export Hooks
 export {
   useExportPresentation,
+  useDragHandlers,
+  useKeyboardShortcuts,
   type ExportState,
   type UseExportPresentationOptions,
   type UseExportPresentationResult,
+  type UseDragHandlersParams,
+  type UseKeyboardShortcutsParams,
 } from "./presentation/hooks";
 
 // Context Menu Types
