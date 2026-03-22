@@ -10,39 +10,41 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Shape, Placeholder, Slide, Background } from "@aurochs-office/pptx/domain";
 import type { FontSpec } from "@aurochs-office/ooxml/domain/font-scheme";
-import type { SlideSize, SlideLayoutType } from "@aurochs-office/pptx/domain";
+import type { SlideSize } from "@aurochs-office/pptx/domain";
+import type { SlideLayoutAttributes } from "@aurochs-office/pptx/parser/slide/layout-parser";
 import type { PackageFile } from "@aurochs-office/opc";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import { buildSlideLayoutOptions, buildSlideLayoutEntries, loadSlideLayoutBundle } from "@aurochs-office/pptx/app";
 import type { SlideLayoutEntry } from "@aurochs-office/pptx/app";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import { SlideRenderer } from "@aurochs-renderer/pptx/react";
-import type { ThemePreset } from "./panels/types";
 import type { LayoutListEntry, ImportedThemeData, ThemeEditorState } from "./context/types";
 import type { SchemeColorName } from "@aurochs-office/drawing-ml/domain/color";
 import { ThemeImportExportSection } from "@aurochs-ui/ooxml-components/theme-io";
+import { ThemeNameSection } from "@aurochs-ui/ooxml-components";
 import { exportThemeAsPotx, getThemeFileName, type ThemeExportOptions, type LayoutExportEntry } from "@aurochs-builder/pptx/builders";
 import { extractThemeFromBuffer } from "@aurochs-office/pptx/app";
 import { downloadPresentation } from "@aurochs-office/opc";
 import { useThemeEditor } from "./context/ThemeEditorContext";
-import { ColorSchemeEditor } from "./panels/ColorSchemeEditor";
-import { FontSchemeEditor } from "./panels/FontSchemeEditor";
-import { ThemePresetSelector } from "./panels/ThemePresetSelector";
-import { LayoutAttributesSection } from "./panels/LayoutAttributesSection";
-import { LayoutShapePanel, NoShapeSelected } from "./panels/LayoutShapePanel";
-import { MasterBackgroundEditor } from "./panels/MasterBackgroundEditor";
-import { ColorMapEditor } from "./panels/ColorMapEditor";
-import { CustomColorsEditor } from "./panels/CustomColorsEditor";
-import { ExtraColorSchemesEditor } from "./panels/ExtraColorSchemesEditor";
-import { FormatSchemeEditor } from "./panels/FormatSchemeEditor";
-import { ObjectDefaultsEditor } from "./panels/ObjectDefaultsEditor";
-import { MasterTextStylesEditor } from "./panels/MasterTextStylesEditor";
+import { LayoutShapePanel, NoShapeSelected, ShapeInfoOverlay } from "./panels";
+import type { ThemePreset } from "@aurochs-ui/ooxml-components/presentation-theme-layout";
+import {
+  ColorSchemeEditor,
+  FontSchemeEditor,
+  ThemePresetSelector,
+  MasterBackgroundEditor,
+  ColorMapEditor,
+  CustomColorsEditor,
+  ExtraColorSchemesEditor,
+  FormatSchemeEditor,
+  ObjectDefaultsEditor,
+  MasterTextStylesEditor,
+} from "@aurochs-ui/ooxml-components/presentation-theme-layout";
+import { AssetPanel } from "@aurochs-ui/ooxml-components/opc-embedded-assets";
 import type { ColorMapping } from "@aurochs-office/pptx/domain/color/types";
 import type { CustomColor, ExtraColorScheme, FormatScheme } from "@aurochs-office/pptx/domain/theme/types";
 import { EditorShell, type EditorPanel, CanvasArea } from "@aurochs-ui/editor-controls/editor-shell";
 import { OptionalPropertySection, InspectorPanelWithTabs, type InspectorTab } from "@aurochs-ui/editor-controls/ui";
-import { Input } from "@aurochs-ui/ui-components/primitives/Input";
-import { FieldGroup } from "@aurochs-ui/ui-components/layout";
 import { colorTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { ContextMenu, type MenuEntry } from "@aurochs-ui/ui-components";
 import { TextEditController, useTextEditHandlers } from "@aurochs-ui/ooxml-components/text-edit";
@@ -63,6 +65,7 @@ import {
   useLayoutThumbnails,
   loadLayoutWithContext,
   TransitionEditor,
+  SlideLayoutEditor,
   getCursorForCreationMode,
 } from "@aurochs-ui/ooxml-components";
 import type { SlideTransition } from "@aurochs-office/pptx/domain/transition";
@@ -70,7 +73,6 @@ import { collectPptxShapeRenderData } from "@aurochs-ui/ooxml-components/pptx-re
 import type { ZoomMode } from "@aurochs-ui/editor-controls/zoom";
 import type { ViewportTransform } from "@aurochs-ui/editor-core/viewport";
 import { INITIAL_VIEWPORT } from "@aurochs-ui/editor-core/viewport";
-import { ShapeInfoOverlay } from "./panels/ShapeInfoOverlay";
 import {
   PresentationEditorProvider,
   usePresentationEditor,
@@ -78,6 +80,7 @@ import {
 import type { PresentationEditorAction } from "@aurochs-ui/pptx-editor";
 import { createVirtualDocument, type VirtualDocumentInput } from "./adapter/layout-document-adapter";
 import { useThemeDocumentSync } from "./adapter/use-theme-document-sync";
+import { layoutListEntryToSlideLayoutAttributes } from "./adapter/slide-layout-attributes";
 
 // =============================================================================
 // Types
@@ -151,17 +154,6 @@ function renderShapePanel(shape: Shape | undefined, onShapeChange: (id: ShapeId,
 function buildContextMenuItems(hasSelection: boolean): readonly MenuEntry[] {
   if (!hasSelection) { return []; }
   return [{ id: "delete", label: "Delete", shortcut: "⌫", danger: true }];
-}
-
-function ThemeNameSection({ themeName, onThemeNameChange }: { readonly themeName: string; readonly onThemeNameChange: (name: string) => void }) {
-  const handleChange = useCallback((value: string | number) => onThemeNameChange(String(value)), [onThemeNameChange]);
-  return (
-    <OptionalPropertySection title="Theme" defaultExpanded>
-      <FieldGroup label="Name" inline labelWidth={60}>
-        <Input value={themeName} onChange={handleChange} placeholder="Theme name" />
-      </FieldGroup>
-    </OptionalPropertySection>
-  );
 }
 
 // =============================================================================
@@ -443,18 +435,24 @@ function PotxEditorContent({
 
   // === Layout metadata callbacks ===
   const activeLayout = useMemo(() => layoutEdit.layouts.find((l) => l.id === layoutEdit.activeLayoutPath), [layoutEdit.layouts, layoutEdit.activeLayoutPath]);
-  const handleLayoutNameChange = useCallback((name: string) => {
-    if (!layoutEdit.activeLayoutPath) { return; }
-    themeDispatch({ type: "UPDATE_LAYOUT_ATTRIBUTES", layoutId: layoutEdit.activeLayoutPath, updates: { name } });
-  }, [themeDispatch, layoutEdit.activeLayoutPath]);
-  const handleLayoutTypeChange = useCallback((type: string) => {
-    if (!layoutEdit.activeLayoutPath) { return; }
-    themeDispatch({ type: "UPDATE_LAYOUT_ATTRIBUTES", layoutId: layoutEdit.activeLayoutPath, updates: { type: type as SlideLayoutType } });
-  }, [themeDispatch, layoutEdit.activeLayoutPath]);
-  const handleMatchingNameChange = useCallback((matchingName: string) => {
-    if (!layoutEdit.activeLayoutPath) { return; }
-    themeDispatch({ type: "UPDATE_LAYOUT_ATTRIBUTES", layoutId: layoutEdit.activeLayoutPath, updates: { matchingName } });
-  }, [themeDispatch, layoutEdit.activeLayoutPath]);
+  const handleSlideLayoutAttributesChange = useCallback(
+    (attrs: SlideLayoutAttributes) => {
+      if (!layoutEdit.activeLayoutPath) { return; }
+      themeDispatch({
+        type: "UPDATE_LAYOUT_ATTRIBUTES",
+        layoutId: layoutEdit.activeLayoutPath,
+        updates: {
+          name: attrs.name ?? "",
+          type: attrs.type ?? "blank",
+          matchingName: attrs.matchingName,
+          showMasterShapes: attrs.showMasterShapes,
+          preserve: attrs.preserve,
+          userDrawn: attrs.userDrawn,
+        },
+      });
+    },
+    [themeDispatch, layoutEdit.activeLayoutPath],
+  );
   const handleMasterBackgroundChange = useCallback((background: Background | undefined) => {
     themeDispatch({ type: "UPDATE_MASTER_BACKGROUND", background });
   }, [themeDispatch]);
@@ -541,6 +539,15 @@ function PotxEditorContent({
     </div>
   ), [themeName, colorScheme, fontScheme, fontSchemeName, handleThemeNameChange, handleThemeExport, handleThemeImport, handlePresetSelect, handleColorChange, handleColorAdd, handleColorRemove, handleColorRename, handleMajorFontChange, handleMinorFontChange, handleFontSchemeNameChange]);
 
+  const mediaTabContent = useMemo(
+    () => (
+      <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "auto" }}>
+        <AssetPanel packageFile={presentationFile} />
+      </div>
+    ),
+    [presentationFile],
+  );
+
   const masterTabContent = useMemo(() => (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "auto" }}>
       <MasterBackgroundEditor background={state.masterBackground} onChange={handleMasterBackgroundChange} title="Master Background" />
@@ -559,10 +566,18 @@ function PotxEditorContent({
     }
     return (
       <>
-        <LayoutAttributesSection layoutName={activeLayout.name} layoutType={activeLayout.type} matchingName={activeLayout.matchingName}
-          showMasterShapes={activeLayout.showMasterShapes} preserve={activeLayout.preserve} userDrawn={activeLayout.userDrawn}
-          onLayoutNameChange={handleLayoutNameChange} onLayoutTypeChange={handleLayoutTypeChange} onMatchingNameChange={handleMatchingNameChange}
-        />
+        <OptionalPropertySection title="Layout Attributes" defaultExpanded>
+          <SlideLayoutEditor
+            value={layoutListEntryToSlideLayoutAttributes(activeLayout)}
+            onChange={handleSlideLayoutAttributesChange}
+            showLayoutPicker={false}
+            includeShowMasterPhAnimField={false}
+            layoutOptions={layoutOptions}
+            onLayoutChange={() => {}}
+            slideSize={slideSize ?? { width: px(960), height: px(540) }}
+            presentationFile={presentationFile}
+          />
+        </OptionalPropertySection>
         <MasterBackgroundEditor background={activeLayout.overrides?.background} onChange={handleLayoutBackgroundChange} title="Layout Background" />
         <ColorMapEditor colorMapping={getLayoutColorMapping(activeLayout, state.masterColorMapping)} onChange={handleLayoutColorMapOverrideChange} title="Color Map Override" />
         <OptionalPropertySection title="Transition" defaultExpanded={false}>
@@ -571,13 +586,14 @@ function PotxEditorContent({
         {renderShapePanel(primaryShape, handleShapeChange)}
       </>
     );
-  }, [activeLayout, state.masterColorMapping, handleLayoutNameChange, handleLayoutTypeChange, handleMatchingNameChange, handleLayoutBackgroundChange, handleLayoutColorMapOverrideChange, handleLayoutTransitionChange, primaryShape, handleShapeChange]);
+  }, [activeLayout, state.masterColorMapping, handleSlideLayoutAttributesChange, layoutOptions, slideSize, presentationFile, handleLayoutBackgroundChange, handleLayoutColorMapOverrideChange, handleLayoutTransitionChange, primaryShape, handleShapeChange]);
 
   const inspectorTabs = useMemo<readonly InspectorTab[]>(() => [
     { id: "theme", label: "Theme", content: themeTabContent },
+    { id: "media", label: "Media", content: mediaTabContent },
     { id: "master", label: "Master", content: masterTabContent },
     { id: "layout", label: "Layout", content: layoutTabContent },
-  ], [themeTabContent, masterTabContent, layoutTabContent]);
+  ], [themeTabContent, mediaTabContent, masterTabContent, layoutTabContent]);
 
   const rightPanel = useMemo(() => (
     <InspectorPanelWithTabs tabs={inspectorTabs} activeTabId={activeTab} onActiveTabChange={setActiveTab} />

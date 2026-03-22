@@ -25,7 +25,7 @@ import type { MasterTextStyles } from "@aurochs-office/pptx/domain/text-style";
 import { createElement } from "@aurochs/xml";
 import { SCHEME_COLOR_NAMES } from "@aurochs-office/drawing-ml/domain/color";
 import { DEFAULT_COLOR_MAPPING } from "@aurochs-office/pptx/domain/color/types";
-import type { ThemePreset, ThemeColorScheme } from "../../panels/types";
+import type { ThemePreset, ThemeColorScheme } from "@aurochs-ui/ooxml-components/presentation-theme-layout";
 
 // =============================================================================
 // Helpers

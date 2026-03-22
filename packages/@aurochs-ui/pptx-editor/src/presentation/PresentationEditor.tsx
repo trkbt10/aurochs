@@ -76,7 +76,10 @@ import {
 import { EditorShell, CanvasArea, type EditorPanel } from "@aurochs-ui/editor-controls/editor-shell";
 import { RIGHT_PANEL_TABS, usePivotTabs } from "../layout";
 import { SelectedElementTab, SlideInfoTab, LayersTab } from "../panels/right-panel";
-import { AssetPanel, LayoutInfoPanel, ThemeViewerPanel, InspectorPanelWithTabs } from "../panels/inspector";
+import { InspectorPanelWithTabs } from "../panels/inspector";
+import { AssetPanel } from "@aurochs-ui/ooxml-components/opc-embedded-assets";
+import { ThemeViewerPanel } from "@aurochs-ui/ooxml-components/presentation-theme-layout";
+import { LayoutInfoPanel } from "@aurochs-ui/ooxml-components/presentation-theme-layout";
 import { PresentationSlideshow, type SlideshowSlideContent } from "../viewer/PresentationSlideshow";
 import {
   usePanelCallbacks,
@@ -842,7 +845,7 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
   const resourcesTabContent = useMemo(
     () => (
       <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "auto" }}>
-        <AssetPanel presentationFile={document.presentationFile} />
+        <AssetPanel packageFile={document.presentationFile} />
         <ThemeViewerPanel colorContext={colorContext} fontScheme={fontScheme} />
         <ThemeImportExportSection onExport={handleThemeExport} onImport={handleThemeImport} />
       </div>

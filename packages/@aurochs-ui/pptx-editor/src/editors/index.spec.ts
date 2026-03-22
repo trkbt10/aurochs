@@ -18,5 +18,10 @@ describe("pptx-editor/editors index exports", () => {
     expect(editors.ShapePropertiesEditor).toBeTypeOf("function");
     expect(editors.TextBodyEditor).toBeTypeOf("function");
   });
+
+  it("does not re-export SlideLayoutEditor (SoT: ooxml-components/presentation-theme-layout)", () => {
+    expect("SlideLayoutEditor" in editors).toBe(false);
+    expect("SlideLayoutEditorProps" in editors).toBe(false);
+  });
 });
 

@@ -5,11 +5,15 @@
   "type": "module",
   "sideEffects": false,
   "dependencies": {
+    "@aurochs/buffer": "workspace:*",
+    "@aurochs/files": "workspace:*",
     "@aurochs-office/drawing-ml": "workspace:*",
+    "@aurochs-office/opc": "workspace:*",
     "@aurochs-office/ooxml": "workspace:*",
     "@aurochs-office/pptx": "workspace:*",
     "@aurochs-renderer/drawing-ml": "workspace:*",
     "@aurochs-renderer/pptx": "workspace:*",
+    "@aurochs-ui/color-editor": "workspace:*",
     "@aurochs-ui/editor-controls": "workspace:*",
     "@aurochs-ui/editor-core": "workspace:*",
     "@aurochs-ui/ui-components": "workspace:*",
@@ -33,21 +37,41 @@
       "types": "./src/text-edit/index.ts",
       "default": "./src/text-edit/index.ts"
     },
+    "./presentation-theme-layout": {
+      "types": "./src/presentation-theme-layout/index.ts",
+      "default": "./src/presentation-theme-layout/index.ts"
+    },
+    "./presentation-slide-creation": {
+      "types": "./src/presentation-slide-creation/index.ts",
+      "default": "./src/presentation-slide-creation/index.ts"
+    },
+    "./pptx-slide-pipeline": {
+      "types": "./src/pptx-slide-pipeline/index.ts",
+      "default": "./src/pptx-slide-pipeline/index.ts"
+    },
+    "./presentation-canvas": {
+      "types": "./src/presentation-canvas/index.ts",
+      "default": "./src/presentation-canvas/index.ts"
+    },
     "./pptx-transform": {
-      "types": "./src/pptx-transform.ts",
-      "default": "./src/pptx-transform.ts"
+      "types": "./src/pptx-slide-pipeline/pptx-transform.ts",
+      "default": "./src/pptx-slide-pipeline/pptx-transform.ts"
     },
     "./pptx-render": {
-      "types": "./src/pptx-render.ts",
-      "default": "./src/pptx-render.ts"
+      "types": "./src/pptx-slide-pipeline/pptx-render.ts",
+      "default": "./src/pptx-slide-pipeline/pptx-render.ts"
     },
     "./pptx-render-resolver": {
-      "types": "./src/pptx-render-resolver.ts",
-      "default": "./src/pptx-render-resolver.ts"
+      "types": "./src/pptx-slide-pipeline/pptx-render-resolver.ts",
+      "default": "./src/pptx-slide-pipeline/pptx-render-resolver.ts"
     },
     "./theme-io": {
-      "types": "./src/ThemeImportExportSection.tsx",
-      "default": "./src/ThemeImportExportSection.tsx"
+      "types": "./src/presentation-theme-layout/ThemeImportExportSection.tsx",
+      "default": "./src/presentation-theme-layout/ThemeImportExportSection.tsx"
+    },
+    "./opc-embedded-assets": {
+      "types": "./src/opc-embedded-assets/index.ts",
+      "default": "./src/opc-embedded-assets/index.ts"
     }
   }
 }

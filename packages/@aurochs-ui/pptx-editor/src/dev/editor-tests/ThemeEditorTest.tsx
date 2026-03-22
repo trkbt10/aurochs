@@ -10,8 +10,8 @@ import {
   FontSchemeEditor,
   ThemePresetSelector,
   SampleSlidePreview,
-} from "@aurochs-ui/potx-editor";
-import type { ThemePreset } from "@aurochs-ui/potx-editor";
+  type ThemePreset,
+} from "@aurochs-ui/ooxml-components/presentation-theme-layout";
 import type { ColorScheme } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { FontScheme, FontSpec } from "@aurochs-office/ooxml/domain/font-scheme";
 

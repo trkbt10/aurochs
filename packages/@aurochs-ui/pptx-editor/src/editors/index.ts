@@ -3,7 +3,7 @@
  *
  * Only pptx-specific editors.
  * Shared editors: import from @aurochs-ui/editor-controls/editors
- * TransitionEditor: import from @aurochs-ui/ooxml-components
+ * SlideLayoutEditor / TransitionEditor: @aurochs-ui/ooxml-components/presentation-theme-layout
  */
 
 // Color editors (pptx-specific: FillEditor with BlipFill support)
@@ -77,15 +77,13 @@ export {
   type TableEditorProps,
 } from "./table";
 
-// Slide-level editors
+// Slide-level editors (SlideLayoutEditor: @aurochs-ui/ooxml-components/presentation-theme-layout)
 export {
   BackgroundEditor,
-  SlideLayoutEditor,
   SlideSizeEditor,
   createDefaultBackground,
   createDefaultSlideSize,
   type BackgroundEditorProps,
-  type SlideLayoutEditorProps,
   type SlideSizeEditorProps,
 } from "./slide";
 

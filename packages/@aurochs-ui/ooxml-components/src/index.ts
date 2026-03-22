@@ -1,42 +1,90 @@
 /**
  * @file ooxml-components entry point
  *
- * Shared UI components and hooks for OOXML document editors.
+ * Aggregates purpose-scoped modules:
+ * - `presentation-theme-layout` — theme, layout metadata, thumbnails, transitions
+ * - `presentation-slide-creation` — canvas creation mode, toolbar, shape factory
+ * - `pptx-slide-pipeline` — transform / render helpers for slide shapes
+ * - `presentation-canvas` — EditorCanvas selection & drag wiring
+ * - `opc-embedded-assets` — OPC 埋め込みメディア一覧（現状 PresentationML / PPTX 発見ロジック）
+ *
+ * Prefer subpath imports (`@aurochs-ui/ooxml-components/presentation-theme-layout`, etc.) when
+ * only one area is needed.
  */
 
-export {
-  useCanvasHandlers,
-  type UseCanvasHandlersOptions,
-  type CanvasHandlers,
-  type CanvasSelectionCallbacks,
-  type CanvasDragCallbacks,
-} from "./use-canvas-handlers";
+export type { ThemeColorScheme, ThemePreset } from "./presentation-theme-layout";
 
-export { LayoutThumbnail, type LayoutThumbnailProps } from "./LayoutThumbnail";
 export {
+  THEME_PRESETS,
+  OFFICE_THEME,
+  ThemeImportExportSection,
+  type ThemeImportExportSectionProps,
+  ThemeNameSection,
+  type ThemeNameSectionProps,
+  SLIDE_LAYOUT_TYPE_LABELS,
+  SLIDE_LAYOUT_TYPE_UI_ORDER,
+  SLIDE_LAYOUT_OPTIONAL_BOOLEAN_SELECT_OPTIONS,
+  slideLayoutOptionalBooleanToSelectValue,
+  slideLayoutSelectValueToOptionalBoolean,
+  slideLayoutTrimmedOptionalString,
+  slideLayoutTypeSelectOptions,
+  type SlideLayoutOptionalBooleanSelectValue,
+  LayoutThumbnail,
+  type LayoutThumbnailProps,
   useLayoutThumbnails,
   loadLayoutWithContext,
   type UseLayoutThumbnailsOptions,
   type LayoutThumbnailData,
   type LoadedLayoutData,
-} from "./use-layout-thumbnails";
+  TransitionEditor,
+  createDefaultTransition,
+  type TransitionEditorProps,
+  TransitionPreview,
+  type TransitionPreviewProps,
+  LayoutSelector,
+  type LayoutSelectorProps,
+  SlideLayoutEditor,
+  type SlideLayoutEditorProps,
+  LayoutInfoPanel,
+  type LayoutInfoPanelProps,
+  ThemeViewerPanel,
+  type ThemeViewerPanelProps,
+  ColorSchemeEditor,
+  type ColorSchemeEditorProps,
+  FontSchemeEditor,
+  type FontSchemeEditorProps,
+  ColorMapEditor,
+  type ColorMapEditorProps,
+  MasterBackgroundEditor,
+  type MasterBackgroundEditorProps,
+  ThemePresetSelector,
+  type ThemePresetSelectorProps,
+  CustomColorsEditor,
+  type CustomColorsEditorProps,
+  ExtraColorSchemesEditor,
+  type ExtraColorSchemesEditorProps,
+  FormatSchemeEditor,
+  type FormatSchemeEditorProps,
+  ObjectDefaultsEditor,
+  type ObjectDefaultsEditorProps,
+  MasterTextStylesEditor,
+  type MasterTextStylesEditorProps,
+  SampleSlidePreview,
+  type SampleSlidePreviewProps,
+} from "./presentation-theme-layout";
 
-export { TransitionEditor, createDefaultTransition, type TransitionEditorProps } from "./TransitionEditor";
-export { TransitionPreview, type TransitionPreviewProps } from "./TransitionPreview";
-
-// Creation types
 export type {
   CreationPresetShape,
   CreationChartType,
   CreationDiagramType,
   SmoothingLevel,
   CreationMode,
-} from "./creation-types";
-export { createSelectMode, isSameMode, getCursorForCreationMode } from "./creation-types";
-
-// Shape factory
-export type { ShapeBounds } from "./shape-factory";
+  ShapeBounds,
+} from "./presentation-slide-creation";
 export {
+  createSelectMode,
+  isSameMode,
+  getCursorForCreationMode,
   createSpShape,
   createTextBox,
   createConnector,
@@ -46,10 +94,36 @@ export {
   generateShapeId,
   resetShapeCounter,
   createShapeFromMode,
-} from "./shape-factory";
+  useCreationDrag,
+  type UseCreationDragOptions,
+  type UseCreationDragResult,
+  CreationToolbar,
+  type CreationToolbarProps,
+} from "./presentation-slide-creation";
 
-// Creation drag hook
-export { useCreationDrag, type UseCreationDragOptions, type UseCreationDragResult } from "./use-creation-drag";
+export {
+  withUpdatedTransform,
+  getAbsoluteBounds,
+  hasEditableTransform,
+  pptxTransformResolver,
+  getFillColor,
+  getStrokeColor,
+  getStrokeWidth,
+  pptxRenderResolver,
+  collectPptxShapeRenderData,
+} from "./pptx-slide-pipeline";
 
-// Creation toolbar
-export { CreationToolbar, type CreationToolbarProps } from "./CreationToolbar";
+export {
+  useCanvasHandlers,
+  type UseCanvasHandlersOptions,
+  type CanvasHandlers,
+  type CanvasSelectionCallbacks,
+  type CanvasDragCallbacks,
+} from "./presentation-canvas";
+
+export {
+  AssetPanel,
+  ASSET_DRAG_TYPE,
+  type AssetPanelProps,
+  type AssetInfo,
+} from "./opc-embedded-assets";

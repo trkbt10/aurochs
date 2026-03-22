@@ -51,7 +51,7 @@ import {
 import type { ViewportTransform } from "@aurochs-ui/editor-core/viewport";
 import { INITIAL_VIEWPORT } from "@aurochs-ui/editor-core/viewport";
 import type { ZoomMode } from "@aurochs-ui/editor-controls/zoom";
-import { ASSET_DRAG_TYPE } from "../panels/inspector/AssetPanel";
+import { ASSET_DRAG_TYPE } from "@aurochs-ui/ooxml-components/opc-embedded-assets";
 import { useCanvasHandlers, useCreationDrag } from "@aurochs-ui/ooxml-components";
 
 // =============================================================================

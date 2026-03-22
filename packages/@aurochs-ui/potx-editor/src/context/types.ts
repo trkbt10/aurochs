@@ -18,7 +18,7 @@ import type { SlideTransition } from "@aurochs-office/pptx/domain/transition";
 import type { ColorMapping, ColorMapOverride } from "@aurochs-office/pptx/domain/color/types";
 import type { CustomColor, ExtraColorScheme, FormatScheme, ObjectDefaults } from "@aurochs-office/pptx/domain/theme/types";
 import type { MasterTextStyles } from "@aurochs-office/pptx/domain/text-style";
-import type { ThemePreset } from "../panels/types";
+import type { ThemePreset } from "@aurochs-ui/ooxml-components/presentation-theme-layout";
 
 // =============================================================================
 // Layout Entry Types

@@ -1,8 +1,9 @@
 /**
  * @file potx-editor entry point
  *
- * PowerPoint Template (POTX) editor package.
- * Provides theme editing UI independent of pptx-editor.
+ * PowerPoint Template (POTX) editor shell and theme document state.
+ * Theme part UI (color/font/clrMap/background/presets/…) is implemented in
+ * `@aurochs-ui/ooxml-components/presentation-theme-layout`.
  */
 
 // =============================================================================
@@ -31,27 +32,13 @@ export type {
 } from "./context";
 
 // =============================================================================
-// Panels
+// Panels (POTX-only: layout shape UI / overlays)
 // =============================================================================
-export {
-  ColorSchemeEditor,
-  FontSchemeEditor,
-  ThemePresetSelector,
-  SampleSlidePreview,
-  LayoutAttributesSection,
-  THEME_PRESETS,
-  OFFICE_THEME,
-} from "./panels";
-export type {
-  ColorSchemeEditorProps,
-  FontSchemeEditorProps,
-  ThemePresetSelectorProps,
-  SampleSlidePreviewProps,
-  LayoutAttributesSectionProps,
-  ThemeColorScheme,
-  ThemePreset,
-} from "./panels";
+export { LayoutShapePanel, NoShapeSelected, ShapeInfoOverlay } from "./panels";
+export type { LayoutShapePanelProps, ShapeInfoOverlayProps } from "./panels";
+
 // Theme extraction/export: import directly from SoT packages
 // - extractThemeFromBuffer, ThemeExtractionResult: @aurochs-office/pptx/app
 // - ExtractedTheme, ThemeExtractionInput: @aurochs-office/pptx/domain
 // - exportThemeAsPotx, buildThemeXml, ThemeExportOptions: @aurochs-builder/pptx/builders
+// - theme UI: @aurochs-ui/ooxml-components/presentation-theme-layout

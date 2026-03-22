@@ -1,7 +1,7 @@
 /**
  * @file Slide-level editor exports
  *
- * TransitionEditor: import from @aurochs-ui/ooxml-components
+ * SlideLayoutEditor: @aurochs-ui/ooxml-components/presentation-theme-layout
  */
 
 export {
@@ -9,11 +9,6 @@ export {
   createDefaultBackground,
   type BackgroundEditorProps,
 } from "./BackgroundEditor";
-
-export {
-  SlideLayoutEditor,
-  type SlideLayoutEditorProps,
-} from "./SlideLayoutEditor";
 
 export {
   SlideSizeEditor,

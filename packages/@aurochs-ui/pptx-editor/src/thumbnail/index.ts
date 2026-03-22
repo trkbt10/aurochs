@@ -12,6 +12,8 @@
  * - cache utilities: Thumbnail cache management
  *
  * Note: SlideThumbnailPanel (the panel container) is in panels/ as it's a consumer.
+ *
+ * Layout thumbnails (`LayoutThumbnail`, `useLayoutThumbnails`): @aurochs-ui/ooxml-components/presentation-theme-layout
  */
 
 // Thumbnail item component
@@ -24,12 +26,6 @@ export type { SlideThumbnailPreviewProps } from "./SlideThumbnailPreview";
 
 export { useSlideThumbnails } from "./use-slide-thumbnails";
 export type { UseSlideThumbnailsOptions, SlideThumbnailRenderer } from "./use-slide-thumbnails";
-
-export { useLayoutThumbnails } from "./use-layout-thumbnails";
-export type { UseLayoutThumbnailsOptions, LayoutThumbnailData } from "./use-layout-thumbnails";
-
-export { LayoutThumbnail } from "./LayoutThumbnail";
-export type { LayoutThumbnailProps } from "./LayoutThumbnail";
 
 export {
   createThumbnailCache,

@@ -26,7 +26,7 @@
 import { loadPptxFromBuffer, extractThemeFromBuffer, buildSlideLayoutEntries } from "@aurochs-office/pptx/app";
 import { exportThemeAsPotx } from "@aurochs-builder/pptx/builders";
 import type { ThemeExportOptions } from "@aurochs-builder/pptx/builders";
-import { OFFICE_THEME } from "./presets/office-themes";
+import { OFFICE_THEME } from "@aurochs-ui/ooxml-components/presentation-theme-layout";
 import type { ThemeEditorState, ThemeEditorAction } from "../context/types";
 import { themeEditorReducer, createInitialThemeEditorState } from "../context/reducer/index";
 import type { CustomColor, ExtraColorScheme, FormatScheme, ObjectDefaults } from "@aurochs-office/pptx/domain/theme/types";

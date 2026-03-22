@@ -11,7 +11,8 @@ import type { Background } from "@aurochs-office/pptx/domain/slide/types";
 import type { SlideLayoutAttributes } from "@aurochs-office/pptx/parser/slide/layout-parser";
 import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import type { SlideLayoutOption } from "@aurochs-office/pptx/app";
-import { BackgroundEditor, SlideLayoutEditor, SlideSizeEditor, createDefaultBackground } from "../../editors/index";
+import { BackgroundEditor, SlideSizeEditor, createDefaultBackground } from "../../editors/index";
+import { SlideLayoutEditor } from "@aurochs-ui/ooxml-components/presentation-theme-layout";
 import { Button } from "@aurochs-ui/ui-components/primitives";
 
 // =============================================================================
