@@ -37,6 +37,8 @@ const entries = {
   "pptx/slide-canvas/index": resolve(__dirname, "../../@aurochs-ui/pptx-slide-canvas/src/index.ts"),
   // PPTX Viewer (from @aurochs-ui/pptx-viewer)
   "pptx/viewer/index": resolve(__dirname, "../../@aurochs-ui/pptx-viewer/src/index.ts"),
+  // PPTX Slide List (from @aurochs-ui/pptx-viewer/slide-list)
+  "pptx/viewer/slide-list/index": resolve(__dirname, "../../@aurochs-ui/pptx-viewer/src/slide-list/index.ts"),
 
   // DOCX Parser
   "docx/parser/index": resolve(__dirname, "../../@aurochs-office/docx/src/index.ts"),

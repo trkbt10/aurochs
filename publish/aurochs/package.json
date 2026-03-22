@@ -66,6 +66,10 @@
       "types": "./dist/@aurochs-ui/pptx-viewer/src/index.d.ts",
       "import": "./dist/pptx/viewer/index.js"
     },
+    "./pptx/viewer/slide-list": {
+      "types": "./dist/@aurochs-ui/pptx-viewer/src/slide-list/index.d.ts",
+      "import": "./dist/pptx/viewer/slide-list/index.js"
+    },
     "./docx/parser": {
       "types": "./dist/@aurochs-office/docx/src/index.d.ts",
       "import": "./dist/docx/parser/index.js"

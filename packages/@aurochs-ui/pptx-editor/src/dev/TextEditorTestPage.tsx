@@ -17,7 +17,7 @@ import {
   createDefaultLine,
   createDefaultEffects,
   createDefaultTextBody,
-} from "@aurochs-ui/pptx-editor";
+} from "@aurochs-ui/ooxml-components/drawing-ml";
 import type { Slide, TextBody, TextRun } from "@aurochs-office/pptx/domain";
 import { px, deg, pt, type Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import { SlideRendererSvg } from "@aurochs-renderer/pptx/react";
@@ -27,13 +27,13 @@ import type { TextSelection, CursorPosition, SelectionChangeEvent } from "@auroc
 import {
   applyRunPropertiesToSelection,
   applyParagraphPropertiesToSelection,
-} from "@aurochs-ui/pptx-editor/slide/text-edit/input-support/run-formatting";
+} from "@aurochs-ui/pptx-slide-canvas/slide/text-edit/input-support/run-formatting";
 import {
   extractTextProperties,
   getEffectiveRunPropertiesAtCursor,
   type TextSelectionContext,
-} from "@aurochs-ui/pptx-editor/editors/text/text-property-extractor";
-import { getExtractionValue, isMixed } from "@aurochs-ui/pptx-editor/editors/text/mixed-properties";
+} from "@aurochs-ui/ooxml-components/drawing-ml/text/text-property-extractor";
+import { getExtractionValue, isMixed } from "@aurochs-ui/ooxml-components/drawing-ml/text/mixed-properties";
 
 // Local test fixtures for TextEditorTestPage
 const testSlideSize = {

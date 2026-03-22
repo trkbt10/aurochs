@@ -105,6 +105,7 @@ export {
   patchWorkbook,
   updateChartDataInWorkbook,
   type CellUpdate,
+  type ImagePlacement,
   type SheetUpdate,
   type WorkbookPatchResult,
 } from "./patcher";

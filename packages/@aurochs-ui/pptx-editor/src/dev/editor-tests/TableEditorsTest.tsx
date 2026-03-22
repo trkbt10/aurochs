@@ -14,7 +14,7 @@ import {
   createDefaultTableCell,
   createDefaultTableProperties,
   createTable,
-} from "@aurochs-ui/pptx-editor";
+} from "@aurochs-ui/ooxml-components/drawing-ml";
 import type { TableCellProperties, TableCell, TableProperties, Table } from "@aurochs-office/pptx/domain/table/types";
 
 const cardStyle: CSSProperties = {

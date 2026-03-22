@@ -11,7 +11,7 @@ import {
   OleObjectEditor,
   createDefaultBackground,
   createDefaultOleReference,
-} from "@aurochs-ui/pptx-editor";
+} from "@aurochs-ui/ooxml-components/pptx-slide";
 import type { Background } from "@aurochs-office/pptx/domain/slide/types";
 import type { SlideTransition } from "@aurochs-office/pptx/domain/transition";
 import type { OleReference } from "@aurochs-office/pptx/domain/shape";

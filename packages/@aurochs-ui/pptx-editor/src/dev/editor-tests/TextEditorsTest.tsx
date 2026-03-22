@@ -16,7 +16,7 @@ import {
   createDefaultBulletStyle,
   createDefaultParagraphProperties,
   createDefaultTextBody,
-} from "@aurochs-ui/pptx-editor";
+} from "@aurochs-ui/ooxml-components/drawing-ml";
 import type {
   RunProperties,
   LineSpacing,

@@ -14,7 +14,7 @@ import {
   createDefaultEffects,
   createDefaultGeometry,
   createDefaultShapeProperties,
-} from "@aurochs-ui/pptx-editor";
+} from "@aurochs-ui/ooxml-components/drawing-ml";
 import type { NonVisualProperties, ShapeProperties } from "@aurochs-office/pptx/domain/shape";
 import type { Effects } from "@aurochs-office/pptx/domain";
 import type { Geometry } from "@aurochs-office/drawing-ml/domain/geometry";

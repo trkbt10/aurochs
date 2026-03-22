@@ -6,8 +6,8 @@
 
 import { useState, type CSSProperties } from "react";
 import { ColorEditor, createDefaultColor, createDefaultSolidFill } from "@aurochs-ui/editor-controls/editors";
-import { FillEditor } from "@aurochs-ui/pptx-editor";
-import { LineEditor, createDefaultLine } from "@aurochs-ui/pptx-editor";
+import { FillEditor } from "@aurochs-ui/ooxml-components/drawing-ml";
+import { LineEditor, createDefaultLine } from "@aurochs-ui/ooxml-components/drawing-ml";
 import type { Color } from "@aurochs-office/drawing-ml/domain/color";
 import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
 import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";

@@ -25,10 +25,10 @@ import { appendChild, replaceChildByName } from "@aurochs/xml";
 import type { ZipPackage } from "@aurochs/zip";
 import type { Workbook, WorkbookSheet } from "@aurochs-office/xlsx/workbook-parser";
 import { indexToColumnLetter } from "@aurochs-office/xlsx/domain/cell/address";
-import { colIdx } from "@aurochs-office/xlsx/domain/types";
+import { colIdx, rowIdx } from "@aurochs-office/xlsx/domain/types";
 import { serializeDrawing } from "./drawing";
 import type { MediaPart } from "./exporter";
-import type { XlsxDrawing } from "@aurochs-office/xlsx/domain/drawing/types";
+import type { XlsxDrawing, XlsxDrawingAnchor, XlsxDrawingContent } from "@aurochs-office/xlsx/domain/drawing/types";
 import {
   OFFICE_RELATIONSHIP_TYPES,
   DRAWINGML_CONTENT_TYPES,
@@ -58,6 +58,31 @@ export type CellUpdate = {
 };
 
 /**
+ * Image to place in a sheet.
+ *
+ * The patcher handles all domain object construction internally:
+ * relId generation, XlsxDrawingAnchor building, MediaPart wiring.
+ *
+ * @see ECMA-376 Part 4, Section 20.5.2.33 (twoCellAnchor)
+ */
+export type ImagePlacement = {
+  /** Image binary data */
+  readonly data: Uint8Array;
+  /** MIME content type (e.g., "image/png") */
+  readonly contentType: string;
+  /** Anchor start column (0-based) */
+  readonly fromCol: number;
+  /** Anchor start row (0-based) */
+  readonly fromRow: number;
+  /** Anchor end column (0-based) */
+  readonly toCol: number;
+  /** Anchor end row (0-based) */
+  readonly toRow: number;
+  /** Display name (optional). @see ECMA-376 Part 4, Section 20.5.2.17 */
+  readonly name?: string;
+};
+
+/**
  * Sheet update specification
  */
 export type SheetUpdate = {
@@ -67,9 +92,11 @@ export type SheetUpdate = {
   readonly cells: readonly CellUpdate[];
   /** If provided, update the sheet dimension (e.g., "A1:B10") */
   readonly dimension?: string;
-  /** Optional drawing to inject into the sheet */
+  /** Images to place in the sheet. Domain objects are constructed internally. */
+  readonly images?: readonly ImagePlacement[];
+  /** Low-level drawing injection (advanced). Prefer `images` for typical use. */
   readonly drawing?: XlsxDrawing;
-  /** Optional media parts keyed by drawing relationship ID (XlsxPicture.blipRelId) */
+  /** Media parts for low-level drawing (advanced). Keyed by drawing relationship ID. */
   readonly media?: ReadonlyMap<string, MediaPart>;
 };
 
@@ -88,6 +115,47 @@ export type WorkbookPatchResult = {
 // =============================================================================
 // Patching
 // =============================================================================
+
+/**
+ * Resolve SheetUpdate.images into drawing + media domain objects.
+ *
+ * If `images` is provided, constructs XlsxDrawing anchors and MediaPart entries.
+ * If `drawing` is already provided (low-level API), uses it directly.
+ */
+function resolveDrawingFromUpdate(update: SheetUpdate): {
+  readonly drawing: XlsxDrawing | undefined;
+  readonly media: ReadonlyMap<string, MediaPart> | undefined;
+} {
+  if (update.drawing) {
+    return { drawing: update.drawing, media: update.media };
+  }
+  if (!update.images || update.images.length === 0) {
+    return { drawing: undefined, media: undefined };
+  }
+
+  const anchors: XlsxDrawingAnchor[] = [];
+  const mediaMap = new Map<string, MediaPart>();
+
+  for (const [idx, img] of update.images.entries()) {
+    const relId = `rId_img_${idx + 1}`;
+
+    anchors.push({
+      type: "twoCellAnchor",
+      editAs: "oneCell",
+      from: { col: colIdx(img.fromCol), colOff: 0, row: rowIdx(img.fromRow), rowOff: 0 },
+      to: { col: colIdx(img.toCol), colOff: 0, row: rowIdx(img.toRow), rowOff: 0 },
+      content: {
+        type: "picture",
+        nvPicPr: { id: idx + 1, name: img.name ?? `Image${idx + 1}` },
+        blipRelId: relId,
+      },
+    });
+
+    mediaMap.set(relId, { data: img.data, contentType: img.contentType });
+  }
+
+  return { drawing: { anchors }, media: mediaMap };
+}
 
 /**
  * Patch a workbook with cell updates and optional drawing/media patches.
@@ -124,9 +192,12 @@ export async function patchWorkbook(workbook: Workbook, updates: readonly SheetU
     // Patch the sheet XML
     patchSheetXml({ pkg, sheet, cells: update.cells, sharedStrings, dimension: update.dimension });
 
+    // Resolve images → drawing + media (high-level API)
+    const resolved = resolveDrawingFromUpdate(update);
+
     // Patch drawing/media if present
-    if (update.drawing) {
-      patchDrawing({ pkg, sheet, drawing: update.drawing, media: update.media });
+    if (resolved.drawing) {
+      patchDrawing({ pkg, sheet, drawing: resolved.drawing, media: resolved.media });
     }
 
     updatedSheets.push(update.sheetName);
@@ -346,7 +417,7 @@ function collectBlipRelIds(drawing: XlsxDrawing): string[] {
 }
 
 function collectContentRelIds(
-  content: import("@aurochs-office/xlsx/domain/drawing/types").XlsxDrawingContent,
+  content: XlsxDrawingContent,
   relIds: string[],
 ): void {
   switch (content.type) {
