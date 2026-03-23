@@ -1,7 +1,4 @@
 /** @file Unit tests for registry element builders */
-import * as fs from "node:fs/promises";
-import * as os from "node:os";
-import * as nodePath from "node:path";
 import { createElement, type XmlDocument } from "@aurochs/xml";
 import {
   shapeBuilder,
@@ -845,19 +842,7 @@ describe("imageBuilder", () => {
     expect(result.xml.name).toBe("p:pic");
   });
 
-  it("throws when neither path nor data is provided", async () => {
-    const ctx = createMockCtx();
-
-    const spec: ImageSpec = {
-      type: "image",
-      x: 0,
-      y: 0,
-      width: 100,
-      height: 100,
-    };
-
-    await expect(imageBuilder(spec, "5", ctx)).rejects.toThrow("ImageSpec requires either 'path' or 'data'");
-  });
+  // data and mimeType are now required by the type system — no runtime test needed
 
   it("applies rotation and flip to image", async () => {
     const zipPackage = createMediaMockZip();
@@ -880,22 +865,7 @@ describe("imageBuilder", () => {
     expect(result.xml.name).toBe("p:pic");
   });
 
-  it("defaults mimeType to image/png when not specified", async () => {
-    const zipPackage = createMediaMockZip();
-    const ctx = createMockCtx({ zipPackage });
-
-    const spec: ImageSpec = {
-      type: "image",
-      data: new Uint8Array([0x89, 0x50, 0x4e, 0x47]),
-      x: 10,
-      y: 20,
-      width: 100,
-      height: 100,
-    };
-
-    const result = await imageBuilder(spec, "5", ctx);
-    expect(result.xml.name).toBe("p:pic");
-  });
+  // mimeType is now required by the type system — no runtime test needed
 
   it("builds an image with embedded video media from data", async () => {
     const zipPackage = createMediaMockZip();
@@ -920,76 +890,28 @@ describe("imageBuilder", () => {
     expect(result.xml.name).toBe("p:pic");
   });
 
-  it("throws when media spec has neither path nor data", async () => {
+  // media.data is now required by the type system — no runtime test needed
+
+  it("builds an image with embedded video media from in-memory data", async () => {
     const zipPackage = createMediaMockZip();
     const ctx = createMockCtx({ zipPackage });
 
     const spec: ImageSpec = {
       type: "image",
-      data: new Uint8Array([0x89]),
+      data: new Uint8Array([0x89, 0x50, 0x4e, 0x47]),
       mimeType: "image/png",
       x: 0,
       y: 0,
-      width: 100,
-      height: 100,
+      width: 640,
+      height: 480,
       media: {
         type: "video",
-      } as never,
+        data: new Uint8Array([0x00, 0x00, 0x00, 0x20]),
+        mimeType: "video/mp4",
+      },
     };
 
-    await expect(imageBuilder(spec, "5", ctx)).rejects.toThrow("MediaEmbedSpec requires either 'path' or 'data'");
-  });
-
-  it("builds an image from file path", async () => {
-    const tmpDir = await fs.mkdtemp(nodePath.join(os.tmpdir(), "registry-test-"));
-    try {
-      const imgPath = nodePath.join(tmpDir, "test.png");
-      await fs.writeFile(imgPath, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
-
-      const zipPackage = createMediaMockZip();
-      const ctx = createMockCtx({ zipPackage, specDir: tmpDir });
-
-      const spec: ImageSpec = {
-        type: "image",
-        path: "test.png",
-        x: 0,
-        y: 0,
-        width: 100,
-        height: 100,
-      };
-
-      const result = await imageBuilder(spec, "5", ctx);
-      expect(result.xml.name).toBe("p:pic");
-    } finally {
-      await fs.rm(tmpDir, { recursive: true, force: true });
-    }
-  });
-
-  it("builds an image with embedded media from file path", async () => {
-    const tmpDir = await fs.mkdtemp(nodePath.join(os.tmpdir(), "registry-test-"));
-    try {
-      const imgPath = nodePath.join(tmpDir, "poster.png");
-      await fs.writeFile(imgPath, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
-      const videoPath = nodePath.join(tmpDir, "clip.mp4");
-      await fs.writeFile(videoPath, Buffer.from([0x00, 0x00, 0x00, 0x20]));
-
-      const zipPackage = createMediaMockZip();
-      const ctx = createMockCtx({ zipPackage, specDir: tmpDir });
-
-      const spec: ImageSpec = {
-        type: "image",
-        path: "poster.png",
-        x: 0,
-        y: 0,
-        width: 640,
-        height: 480,
-        media: { type: "video", path: "clip.mp4" },
-      };
-
-      const result = await imageBuilder(spec, "5", ctx);
-      expect(result.xml.name).toBe("p:pic");
-    } finally {
-      await fs.rm(tmpDir, { recursive: true, force: true });
-    }
+    const result = await imageBuilder(spec, "5", ctx);
+    expect(result.xml.name).toBe("p:pic");
   });
 });

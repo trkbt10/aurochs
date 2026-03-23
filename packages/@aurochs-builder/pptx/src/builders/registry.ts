@@ -1,11 +1,6 @@
 /**
  * @file Element builder registry - unified approach to building PPTX elements
- *
- * NOTE: This module uses Node.js fs for file reading. For browser usage,
- * the image/media data should be passed directly instead of file paths.
  */
-
-import * as path from "node:path";
 import { OFFICE_RELATIONSHIP_TYPES } from "@aurochs-office/opc";
 import {
   addMedia,
@@ -30,7 +25,7 @@ import type { GroupTransform } from "@aurochs-office/drawing-ml/domain/geometry"
 import type { TextBody } from "@aurochs-office/pptx/domain/text";
 import type { Shape3d } from "@aurochs-office/pptx/domain/three-d";
 import { px, deg, type Pixels } from "@aurochs-office/drawing-ml/domain/units";
-import type { ShapeSpec, ImageSpec, ConnectorSpec, GroupSpec, TableSpec, TableCellSpec } from "../types";
+import type { ShapeSpec, ImageSpec, ConnectorSpec, GroupSpec, TableSpec, TableCellSpec, MediaEmbedSpec } from "../types";
 import type { TextInput } from "@aurochs-office/drawing-ml/domain/spec";
 import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import { contentToTextBody } from "./table-update-builder";
@@ -44,8 +39,8 @@ import { parseXml, serializeDocument, isXmlElement, updateAtPath, updateDocument
 import { buildBlipEffectsFromSpec } from "./blip-effects-builder";
 import { buildCustomGeometryFromSpec } from "./custom-geometry-builder";
 import { buildMediaReferenceFromSpec, detectEmbeddedMediaType } from "./media-embed-builder";
-import type { MediaType } from "@aurochs-builder/pptx/patcher/resources/media-manager";
-import { detectImageMimeType, readFileToArrayBuffer, uint8ArrayToArrayBuffer } from "./file-utils";
+import type { MediaContentType } from "@aurochs-office/opc";
+import { uint8ArrayToArrayBuffer } from "./file-utils";
 import { getSlideRelsPath } from "./rels-utils";
 
 // =============================================================================
@@ -283,38 +278,17 @@ function buildPicShape({
   };
 }
 
-/** Resolve media array buffer from spec.media */
-async function resolveMediaArrayBuffer(
-  media: { readonly data?: Uint8Array; readonly path?: string },
-  specDir: string,
-): Promise<ArrayBuffer> {
-  if (media.data) {
-    return uint8ArrayToArrayBuffer(media.data);
-  }
-  if (media.path) {
-    const mediaPath = path.resolve(specDir, media.path);
-    return readFileToArrayBuffer(mediaPath);
-  }
-  throw new Error("MediaEmbedSpec requires either 'path' or 'data'");
+/** Convert media data to ArrayBuffer */
+function resolveMediaArrayBuffer(media: MediaEmbedSpec): ArrayBuffer {
+  return uint8ArrayToArrayBuffer(media.data);
 }
 
-/** Resolve image data and mime type from an ImageSpec */
-async function resolveImageSpecData(
-  spec: ImageSpec,
-  specDir: string,
-): Promise<{ readonly arrayBuffer: ArrayBuffer; readonly mimeType: MediaType }> {
-  if (spec.data) {
-    const arrayBuffer = uint8ArrayToArrayBuffer(spec.data);
-    const mimeType = (spec.mimeType ?? "image/png") as MediaType;
-    return { arrayBuffer, mimeType };
-  }
-  if (spec.path) {
-    const imagePath = path.resolve(specDir, spec.path);
-    const mimeType = detectImageMimeType(imagePath);
-    const arrayBuffer = await readFileToArrayBuffer(imagePath);
-    return { arrayBuffer, mimeType };
-  }
-  throw new Error("ImageSpec requires either 'path' or 'data'");
+/** Convert image spec to ArrayBuffer + MediaContentType */
+function resolveImageSpecData(spec: ImageSpec): { readonly arrayBuffer: ArrayBuffer; readonly mimeType: MediaContentType } {
+  return {
+    arrayBuffer: uint8ArrayToArrayBuffer(spec.data),
+    mimeType: spec.mimeType as MediaContentType,
+  };
 }
 
 async function buildEmbeddedMedia(
@@ -325,7 +299,7 @@ async function buildEmbeddedMedia(
     return undefined;
   }
 
-  const mediaArrayBuffer = await resolveMediaArrayBuffer(spec.media, ctx.specDir);
+  const mediaArrayBuffer = resolveMediaArrayBuffer(spec.media);
 
   const mediaType = detectEmbeddedMediaType(spec.media);
 
@@ -340,7 +314,7 @@ async function buildEmbeddedMedia(
 }
 
 export const imageBuilder: AsyncBuilder<ImageSpec> = async (spec, id, ctx) => {
-  const { arrayBuffer, mimeType } = await resolveImageSpecData(spec, ctx.specDir);
+  const { arrayBuffer, mimeType } = resolveImageSpecData(spec);
 
   const { rId } = addMedia({
     pkg: ctx.zipPackage,

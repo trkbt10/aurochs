@@ -34,8 +34,8 @@ import {
   embedFonts,
   type ShapeChange,
   type PropertyChange,
-  type MediaType,
 } from "@aurochs-builder/pptx/patcher";
+import { normalizeMediaContentType } from "@aurochs-office/opc";
 
 // =============================================================================
 // Types
@@ -584,32 +584,13 @@ function isDataUrl(value: string): boolean {
  */
 function embedDataUrlMedia(pkg: ZipPackage, slidePath: string, dataUrl: string): string {
   const { mimeType, data } = parseDataUrl(dataUrl);
-  const mediaType = mimeTypeToMediaType(mimeType);
+  const mediaType = mimeTypeToMediaContentType(mimeType);
   const result = addMedia({ pkg, mediaData: data, mediaType, referringPart: slidePath });
   return result.rId;
 }
 
-/**
- * Convert MIME type string to MediaType.
- */
-function mimeTypeToMediaType(mimeType: string): MediaType {
-  const mapping: Record<string, MediaType> = {
-    "image/png": "image/png",
-    "image/jpeg": "image/jpeg",
-    "image/jpg": "image/jpeg",
-    "image/gif": "image/gif",
-    "image/svg+xml": "image/svg+xml",
-    "video/mp4": "video/mp4",
-    "audio/mpeg": "audio/mpeg",
-    "audio/mp3": "audio/mpeg",
-  };
-
-  const mediaType = mapping[mimeType];
-  if (!mediaType) {
-    throw new Error(`Unsupported media type: ${mimeType}`);
-  }
-  return mediaType;
-}
+/** Convert MIME type string to MediaContentType (delegates to OPC SoT) */
+const mimeTypeToMediaContentType = normalizeMediaContentType;
 
 // =============================================================================
 // Phase 9: Master/Layout/Theme Collection (ECMA-376 Part 2)

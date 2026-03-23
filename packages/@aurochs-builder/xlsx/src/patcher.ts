@@ -37,6 +37,7 @@ import {
   serializeWithDeclaration,
   parseContentTypes,
   contentTypesToEntries,
+  inferExtensionFromMediaContentType,
   type OpcRelationship,
 } from "@aurochs-office/opc";
 
@@ -431,21 +432,8 @@ function collectContentRelIds(
   }
 }
 
-/**
- * Infer file extension from MIME content type.
- */
-function inferExtensionFromContentType(contentType: string): string {
-  switch (contentType) {
-    case "image/png": return "png";
-    case "image/jpeg": return "jpeg";
-    case "image/gif": return "gif";
-    case "image/bmp": return "bmp";
-    case "image/tiff": return "tiff";
-    case "image/svg+xml": return "svg";
-    case "image/webp": return "webp";
-    default: return "bin";
-  }
-}
+/** Infer file extension from MIME content type (delegates to OPC SoT) */
+const inferExtensionFromContentType = inferExtensionFromMediaContentType;
 
 /**
  * Compute OPC relationship file path for a given part.

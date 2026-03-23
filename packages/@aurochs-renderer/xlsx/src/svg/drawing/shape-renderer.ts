@@ -61,7 +61,7 @@ function renderShapeGeometryPath(options: {
   preset: string;
   width: number;
   height: number;
-  warnings: Set<string> | undefined;
+  warnings: WarningsCollector | undefined;
 }): string {
   const { preset, width, height, warnings } = options;
   try {

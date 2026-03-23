@@ -1,43 +1,57 @@
 /**
- * @file Shared file I/O and MIME type utilities for PPTX builders
- *
- * NOTE: readFileToArrayBuffer uses Node.js fs. For browser usage,
- * pass in-memory data directly using uint8ArrayToArrayBuffer.
+ * @file Shared MIME type and data utilities for PPTX builders
  */
 
-import * as fs from "node:fs/promises";
-import * as path from "node:path";
-import type { MediaType } from "@aurochs-builder/pptx/patcher/resources/media-manager";
+import { IMAGE_EXTENSION_TO_CONTENT_TYPE, type MediaContentType } from "@aurochs-office/opc";
 
-const IMAGE_EXT_MAP: Record<string, MediaType> = {
-  ".png": "image/png",
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".gif": "image/gif",
-  ".svg": "image/svg+xml",
-};
+/**
+ * Extract file extension from a path or filename string.
+ *
+ * Handles `/` and `\` as path separators. Escaped characters (e.g. `\/`)
+ * are not treated as separators — only a bare separator counts.
+ */
+function extname(filePath: string): string {
+  const lastDot = filePath.lastIndexOf(".");
+  if (lastDot <= 0 || lastDot === filePath.length - 1) {
+    return "";
+  }
+
+  // Find the last unescaped path separator
+  const separatorRef = { value: -1 };
+  for (let i = 0; i < filePath.length; i++) {
+    const ch = filePath[i];
+    if (ch === "\\" && i + 1 < filePath.length) {
+      const next = filePath[i + 1];
+      if (next === "/" || next === "\\") {
+        i++; // skip escaped char
+        continue;
+      }
+      // Bare backslash as Windows path separator
+      separatorRef.value = i;
+    } else if (ch === "/") {
+      separatorRef.value = i;
+    }
+  }
+
+  if (lastDot < separatorRef.value) {
+    return "";
+  }
+  return filePath.slice(lastDot);
+}
 
 /**
  * Detect image MIME type from file extension.
  * Throws for unsupported extensions instead of silently defaulting.
+ *
+ * Extension → ContentType mapping is sourced from @aurochs-office/opc.
  */
-export function detectImageMimeType(filePath: string): MediaType {
-  const ext = path.extname(filePath).toLowerCase();
-  const mimeType = IMAGE_EXT_MAP[ext];
+export function detectImageMimeType(filePath: string): MediaContentType {
+  const ext = extname(filePath).toLowerCase();
+  const mimeType = IMAGE_EXTENSION_TO_CONTENT_TYPE[ext];
   if (!mimeType) {
-    throw new Error(`Unsupported image extension: "${ext}" (supported: ${Object.keys(IMAGE_EXT_MAP).join(", ")})`);
+    throw new Error(`Unsupported image extension: "${ext}" (supported: ${Object.keys(IMAGE_EXTENSION_TO_CONTENT_TYPE).join(", ")})`);
   }
   return mimeType;
-}
-
-/**
- * Read a file into an ArrayBuffer.
- */
-export async function readFileToArrayBuffer(filePath: string): Promise<ArrayBuffer> {
-  const buffer = await fs.readFile(filePath);
-  const arrayBuffer = new ArrayBuffer(buffer.length);
-  new Uint8Array(arrayBuffer).set(buffer);
-  return arrayBuffer;
 }
 
 /**

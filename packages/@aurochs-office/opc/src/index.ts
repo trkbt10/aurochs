@@ -130,7 +130,14 @@ export {
   WORDPROCESSINGML_CONTENT_TYPES,
   DRAWINGML_CONTENT_TYPES,
   OLE_CONTENT_TYPES,
+  IMAGE_CONTENT_TYPES,
+  VIDEO_CONTENT_TYPES,
+  AUDIO_CONTENT_TYPES,
+  IMAGE_EXTENSION_TO_CONTENT_TYPE,
+  inferExtensionFromMediaContentType,
+  normalizeMediaContentType,
 } from "./ooxml-content-types";
+export type { MediaContentType } from "./ooxml-content-types";
 
 // OOXML relationship types
 export {

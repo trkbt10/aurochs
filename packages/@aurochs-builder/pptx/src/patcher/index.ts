@@ -72,7 +72,6 @@ export {
 } from "./shape";
 
 // Resources - media/relationships/content-types helpers (Phase 7)
-export type { MediaType } from "./resources/media-manager";
 export { addMedia, findUnusedMedia, removeMediaReference } from "./resources/media-manager";
 
 export type { OleType } from "./resources/ole-manager";

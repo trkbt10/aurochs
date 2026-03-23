@@ -8,7 +8,6 @@ export type {
   AsciiTableContent,
   AsciiChartContent,
   AsciiDiagramContent,
-  Bounds,
 } from "./types";
 export type { SlideRenderParams } from "./slide-renderer";
 export { renderSlideAscii } from "./slide-renderer";

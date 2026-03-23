@@ -1,7 +1,7 @@
 /** @file Unit tests for media manager */
 import { parseXml, getByPath, getChildren } from "@aurochs/xml";
 import { createEmptyZipPackage } from "@aurochs/zip";
-import type { MediaType } from "./media-manager";
+import type { MediaContentType } from "@aurochs-office/opc";
 import { addMedia, findUnusedMedia, removeMediaReference } from "./media-manager";
 
 function minimalContentTypes(slideCount: number): string {
@@ -295,7 +295,7 @@ describe("media-manager", () => {
 
   describe("various media types", () => {
     const mediaTypeCases: Array<{
-      readonly mediaType: MediaType;
+      readonly mediaType: MediaContentType;
       readonly expectedExtension: string;
       readonly expectedPrefix: string;
       readonly expectedContentType: string;

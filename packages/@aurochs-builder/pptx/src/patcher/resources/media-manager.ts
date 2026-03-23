@@ -5,7 +5,7 @@ import { parseContentTypes } from "@aurochs-office/pptx/domain/content-types";
 import { getRelationshipPath, resolvePartPath } from "@aurochs-office/ooxml/parser";
 import { loadRelationships } from "@aurochs-office/pptx/parser/relationships";
 import { addContentType, removeUnusedContentTypes } from "./content-types-manager";
-import { listRelationships, OFFICE_RELATIONSHIP_TYPES } from "@aurochs-office/opc";
+import { listRelationships, OFFICE_RELATIONSHIP_TYPES, inferExtensionFromMediaContentType, type MediaContentType } from "@aurochs-office/opc";
 import {
   addRelationship,
   ensureRelationshipsDocument,
@@ -13,25 +13,13 @@ import {
   type RelationshipType,
 } from "./relationship-manager";
 
+
 export type AddMediaOptions = {
   readonly pkg: ZipPackage;
   readonly mediaData: ArrayBuffer;
-  readonly mediaType: MediaType;
+  readonly mediaType: MediaContentType;
   readonly referringPart: string;
 };
-
-export type MediaType =
-  | "image/png"
-  | "image/jpeg"
-  | "image/gif"
-  | "image/svg+xml"
-  | "video/mp4"
-  | "video/webm"
-  | "video/quicktime"
-  | "audio/mpeg"
-  | "audio/wav"
-  | "audio/mp4"
-  | "audio/ogg";
 
 const IMAGE_REL: RelationshipType = OFFICE_RELATIONSHIP_TYPES.image;
 const VIDEO_REL: RelationshipType = OFFICE_RELATIONSHIP_TYPES.video;
@@ -117,7 +105,7 @@ export function findUnusedMedia(pkg: ZipPackage): string[] {
   return allMedia.filter((p) => !used.has(p));
 }
 
-function updateContentTypesForMedia(pkg: ZipPackage, extension: string, mediaType: MediaType): void {
+function updateContentTypesForMedia(pkg: ZipPackage, extension: string, mediaType: MediaContentType): void {
   const contentTypesText = pkg.readText("[Content_Types].xml");
   if (contentTypesText === null) {
     throw new Error("addMedia: missing [Content_Types].xml");
@@ -198,35 +186,19 @@ function collectUsedMediaTargets(pkg: ZipPackage): Set<string> {
   return used;
 }
 
-function inferMediaInfo(mediaType: MediaType): {
+function inferMediaInfo(mediaType: MediaContentType): {
   readonly extension: string;
   readonly relationshipType: RelationshipType;
   readonly prefix: string;
 } {
-  switch (mediaType) {
-    case "image/png":
-      return { extension: "png", relationshipType: IMAGE_REL, prefix: "image" };
-    case "image/jpeg":
-      return { extension: "jpeg", relationshipType: IMAGE_REL, prefix: "image" };
-    case "image/gif":
-      return { extension: "gif", relationshipType: IMAGE_REL, prefix: "image" };
-    case "image/svg+xml":
-      return { extension: "svg", relationshipType: IMAGE_REL, prefix: "image" };
-    case "video/mp4":
-      return { extension: "mp4", relationshipType: VIDEO_REL, prefix: "video" };
-    case "video/webm":
-      return { extension: "webm", relationshipType: VIDEO_REL, prefix: "video" };
-    case "video/quicktime":
-      return { extension: "mov", relationshipType: VIDEO_REL, prefix: "video" };
-    case "audio/mpeg":
-      return { extension: "mp3", relationshipType: AUDIO_REL, prefix: "audio" };
-    case "audio/wav":
-      return { extension: "wav", relationshipType: AUDIO_REL, prefix: "audio" };
-    case "audio/mp4":
-      return { extension: "m4a", relationshipType: AUDIO_REL, prefix: "audio" };
-    case "audio/ogg":
-      return { extension: "ogg", relationshipType: AUDIO_REL, prefix: "audio" };
+  const extension = inferExtensionFromMediaContentType(mediaType);
+  if (mediaType.startsWith("video/")) {
+    return { extension, relationshipType: VIDEO_REL, prefix: "video" };
   }
+  if (mediaType.startsWith("audio/")) {
+    return { extension, relationshipType: AUDIO_REL, prefix: "audio" };
+  }
+  return { extension, relationshipType: IMAGE_REL, prefix: "image" };
 }
 
 function findExistingMediaByBytes(pkg: ZipPackage, extension: string, mediaData: ArrayBuffer): string | null {

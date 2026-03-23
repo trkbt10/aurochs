@@ -5,9 +5,8 @@
  * the image data should be passed directly instead of file paths.
  */
 
-import * as path from "node:path";
 import { createElement, getChild, isXmlElement, updateDocumentRoot, replaceChildByName, type XmlElement, type XmlDocument } from "@aurochs/xml";
-import { detectImageMimeType, readFileToArrayBuffer, uint8ArrayToArrayBuffer } from "./file-utils";
+import { detectImageMimeType, uint8ArrayToArrayBuffer } from "./file-utils";
 import { serializeFill } from "../patcher/serializer/fill";
 import { addMedia } from "../patcher/resources/media-manager";
 import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
@@ -139,23 +138,14 @@ export function applyBackground(
   });
 }
 
-/** Resolve image data and mime type from a BackgroundImageSpec */
-async function resolveImageData(
+/** Convert background image spec to ArrayBuffer + MediaType */
+function resolveImageData(
   spec: BackgroundImageSpec,
-  specDir: string,
-): Promise<{ readonly arrayBuffer: ArrayBuffer; readonly mimeType: ReturnType<typeof detectImageMimeType> }> {
-  if (spec.data) {
-    const arrayBuffer = uint8ArrayToArrayBuffer(spec.data);
-    const mimeType = (spec.mimeType ?? "image/png") as ReturnType<typeof detectImageMimeType>;
-    return { arrayBuffer, mimeType };
-  }
-  if (spec.path) {
-    const imagePath = path.resolve(specDir, spec.path);
-    const mimeType = detectImageMimeType(imagePath);
-    const arrayBuffer = await readFileToArrayBuffer(imagePath);
-    return { arrayBuffer, mimeType };
-  }
-  throw new Error("BackgroundImageSpec requires either 'path' or 'data'");
+): { readonly arrayBuffer: ArrayBuffer; readonly mimeType: ReturnType<typeof detectImageMimeType> } {
+  return {
+    arrayBuffer: uint8ArrayToArrayBuffer(spec.data),
+    mimeType: spec.mimeType as ReturnType<typeof detectImageMimeType>,
+  };
 }
 
 /**
@@ -166,7 +156,7 @@ export async function applyImageBackground(
   spec: BackgroundImageSpec,
   ctx: { specDir: string; zipPackage: ZipPackage; slidePath: string },
 ): Promise<XmlDocument> {
-  const { arrayBuffer, mimeType } = await resolveImageData(spec, ctx.specDir);
+  const { arrayBuffer, mimeType } = resolveImageData(spec);
 
 
   const { rId } = addMedia({

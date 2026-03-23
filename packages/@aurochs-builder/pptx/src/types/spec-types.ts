@@ -200,12 +200,10 @@ export type BlipEffectSpec = {
  */
 export type ImageSpec = {
   readonly type: "image";
-  /** File path (CLI usage). Either `path` or `data` must be provided. */
-  readonly path?: string;
-  /** In-memory image bytes (MCP / browser usage). */
-  readonly data?: Uint8Array;
-  /** MIME type (required when `data` is provided, e.g. "image/png"). */
-  readonly mimeType?: string;
+  /** In-memory image bytes. */
+  readonly data: Uint8Array;
+  /** MIME type per ECMA-376 §15.2.2 (e.g. "image/png", "image/jpeg"). */
+  readonly mimeType: string;
   readonly x: number;
   readonly y: number;
   readonly width: number;
@@ -225,12 +223,10 @@ export type ImageSpec = {
 
 export type MediaEmbedSpec = {
   readonly type: "video" | "audio";
-  /** File path (CLI usage). Either `path` or `data` must be provided. */
-  readonly path?: string;
-  /** In-memory media bytes (MCP / browser usage). */
-  readonly data?: Uint8Array;
-  /** MIME type (required when `data` is provided). */
-  readonly mimeType?: string;
+  /** In-memory media bytes. */
+  readonly data: Uint8Array;
+  /** MIME type (e.g. "video/mp4", "audio/mpeg"). */
+  readonly mimeType: string;
 };
 
 /**
@@ -487,12 +483,10 @@ export type BackgroundGradientSpec = {
  */
 export type BackgroundImageSpec = {
   readonly type: "image";
-  /** File path (CLI usage). Either `path` or `data` must be provided. */
-  readonly path?: string;
-  /** In-memory image bytes (MCP / browser usage). */
-  readonly data?: Uint8Array;
-  /** MIME type (required when `data` is provided). */
-  readonly mimeType?: string;
+  /** In-memory image bytes. */
+  readonly data: Uint8Array;
+  /** MIME type per ECMA-376 §15.2.2 (e.g. "image/png", "image/jpeg"). */
+  readonly mimeType: string;
   readonly mode?: "stretch" | "tile" | "cover";
 };
 

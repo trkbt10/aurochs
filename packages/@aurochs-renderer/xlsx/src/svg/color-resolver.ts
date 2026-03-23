@@ -11,7 +11,7 @@
  * @see ECMA-376 Part 4, Section 18.8.9 (color)
  */
 
-import type { XlsxColor } from "@aurochs-office/xlsx/domain/style/font";
+import type { XlsxColor } from "@aurochs-office/xlsx/domain/style/color";
 import type { ColorScheme } from "@aurochs-office/drawing-ml/domain/color-context";
 import { hexToRgb, rgbToHsl, hslToRgb, toHex } from "@aurochs/color";
 

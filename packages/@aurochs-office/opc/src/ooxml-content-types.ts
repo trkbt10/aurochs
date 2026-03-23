@@ -143,3 +143,138 @@ export const OLE_CONTENT_TYPES = {
   /** Embedded PowerPoint presentation */
   pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
 } as const;
+
+// =============================================================================
+// Media Content Types (Image / Video / Audio)
+// =============================================================================
+
+/**
+ * Image content types per ECMA-376 Part 1 §15.2.2.
+ *
+ * These are the image MIME types that may appear in [Content_Types].xml
+ * as Default entries for embedded media within OOXML packages.
+ */
+export const IMAGE_CONTENT_TYPES = {
+  /** @see ECMA-376 Part 1 §15.2.2.11 */
+  png: "image/png",
+  /** @see ECMA-376 Part 1 §15.2.2.8 */
+  jpeg: "image/jpeg",
+  /** @see ECMA-376 Part 1 §15.2.2.7 */
+  gif: "image/gif",
+  /** @see ECMA-376 Part 1 §15.2.2.1 */
+  bmp: "image/bmp",
+  /** @see ECMA-376 Part 1 §15.2.2.15 */
+  tiff: "image/tiff",
+  /** @see ECMA-376 Part 1 §15.2.2.5 */
+  emf: "image/x-emf",
+  /** @see ECMA-376 Part 1 §15.2.2.16 */
+  wmf: "image/x-wmf",
+  /** Office 365 extension (not in ECMA-376) */
+  svg: "image/svg+xml",
+} as const;
+
+/**
+ * Video content types supported by Office applications.
+ */
+export const VIDEO_CONTENT_TYPES = {
+  mp4: "video/mp4",
+  webm: "video/webm",
+  quicktime: "video/quicktime",
+} as const;
+
+/**
+ * Audio content types supported by Office applications.
+ */
+export const AUDIO_CONTENT_TYPES = {
+  mpeg: "audio/mpeg",
+  wav: "audio/wav",
+  mp4: "audio/mp4",
+  ogg: "audio/ogg",
+} as const;
+
+/**
+ * Union type of all media content types (image, video, audio)
+ * used in OOXML [Content_Types].xml Default entries.
+ */
+export type MediaContentType =
+  | (typeof IMAGE_CONTENT_TYPES)[keyof typeof IMAGE_CONTENT_TYPES]
+  | (typeof VIDEO_CONTENT_TYPES)[keyof typeof VIDEO_CONTENT_TYPES]
+  | (typeof AUDIO_CONTENT_TYPES)[keyof typeof AUDIO_CONTENT_TYPES];
+
+/**
+ * Mapping from file extension to image MediaContentType.
+ * Includes aliases (e.g. ".jpg" for JPEG, ".tif" for TIFF).
+ */
+export const IMAGE_EXTENSION_TO_CONTENT_TYPE: Record<string, MediaContentType> = {
+  ".png": IMAGE_CONTENT_TYPES.png,
+  ".jpg": IMAGE_CONTENT_TYPES.jpeg,
+  ".jpeg": IMAGE_CONTENT_TYPES.jpeg,
+  ".gif": IMAGE_CONTENT_TYPES.gif,
+  ".bmp": IMAGE_CONTENT_TYPES.bmp,
+  ".tiff": IMAGE_CONTENT_TYPES.tiff,
+  ".tif": IMAGE_CONTENT_TYPES.tiff,
+  ".emf": IMAGE_CONTENT_TYPES.emf,
+  ".wmf": IMAGE_CONTENT_TYPES.wmf,
+  ".svg": IMAGE_CONTENT_TYPES.svg,
+};
+
+/**
+ * Mapping from MediaContentType to file extension.
+ * Used when embedding media into OOXML packages.
+ */
+const MEDIA_CONTENT_TYPE_TO_EXTENSION: Record<MediaContentType, string> = {
+  "image/png": "png",
+  "image/jpeg": "jpeg",
+  "image/gif": "gif",
+  "image/bmp": "bmp",
+  "image/tiff": "tiff",
+  "image/x-emf": "emf",
+  "image/x-wmf": "wmf",
+  "image/svg+xml": "svg",
+  "video/mp4": "mp4",
+  "video/webm": "webm",
+  "video/quicktime": "mov",
+  "audio/mpeg": "mp3",
+  "audio/wav": "wav",
+  "audio/mp4": "m4a",
+  "audio/ogg": "ogg",
+};
+
+/**
+ * Infer file extension from a media content type.
+ * Returns "bin" for unrecognized types.
+ */
+export function inferExtensionFromMediaContentType(contentType: string): string {
+  return MEDIA_CONTENT_TYPE_TO_EXTENSION[contentType as MediaContentType] ?? "bin";
+}
+
+/**
+ * Alias mapping for non-canonical MIME types to their canonical MediaContentType.
+ *
+ * Handles common variants (e.g. "image/jpg" → "image/jpeg", "audio/mp3" → "audio/mpeg")
+ * that may appear in user input or data: URLs but are not themselves valid
+ * OOXML content types.
+ */
+const MEDIA_CONTENT_TYPE_ALIASES: Record<string, MediaContentType> = {
+  "image/jpg": "image/jpeg",
+  "audio/mp3": "audio/mpeg",
+};
+
+/**
+ * Normalize a MIME type string to a canonical MediaContentType.
+ *
+ * Accepts both canonical types (e.g. "image/png") and known aliases
+ * (e.g. "image/jpg" → "image/jpeg"). Throws for unrecognized types.
+ */
+export function normalizeMediaContentType(mimeType: string): MediaContentType {
+  // Check direct match
+  if (mimeType in MEDIA_CONTENT_TYPE_TO_EXTENSION) {
+    return mimeType as MediaContentType;
+  }
+  // Check alias
+  const alias = MEDIA_CONTENT_TYPE_ALIASES[mimeType];
+  if (alias) {
+    return alias;
+  }
+  throw new Error(`Unsupported media content type: "${mimeType}"`);
+}

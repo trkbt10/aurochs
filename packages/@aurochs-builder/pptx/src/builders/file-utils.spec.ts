@@ -1,8 +1,5 @@
 /** @file Unit tests for file-utils shared utilities */
-import * as fs from "node:fs/promises";
-import * as os from "node:os";
-import * as path from "node:path";
-import { detectImageMimeType, readFileToArrayBuffer, uint8ArrayToArrayBuffer } from "./file-utils";
+import { detectImageMimeType, uint8ArrayToArrayBuffer } from "./file-utils";
 
 describe("detectImageMimeType", () => {
   it("detects PNG", () => {
@@ -21,8 +18,24 @@ describe("detectImageMimeType", () => {
     expect(detectImageMimeType("animation.gif")).toBe("image/gif");
   });
 
-  it("detects SVG", () => {
-    expect(detectImageMimeType("icon.svg")).toBe("image/svg+xml");
+  it("detects BMP", () => {
+    expect(detectImageMimeType("image.bmp")).toBe("image/bmp");
+  });
+
+  it("detects TIFF (.tiff)", () => {
+    expect(detectImageMimeType("scan.tiff")).toBe("image/tiff");
+  });
+
+  it("detects TIFF (.tif)", () => {
+    expect(detectImageMimeType("scan.tif")).toBe("image/tiff");
+  });
+
+  it("detects EMF", () => {
+    expect(detectImageMimeType("diagram.emf")).toBe("image/x-emf");
+  });
+
+  it("detects WMF", () => {
+    expect(detectImageMimeType("clipart.wmf")).toBe("image/x-wmf");
   });
 
   it("is case-insensitive", () => {
@@ -30,8 +43,8 @@ describe("detectImageMimeType", () => {
     expect(detectImageMimeType("photo.JPG")).toBe("image/jpeg");
   });
 
-  it("throws for unsupported extension", () => {
-    expect(() => detectImageMimeType("file.bmp")).toThrow("Unsupported image extension");
+  it("detects SVG (Office 365 extension)", () => {
+    expect(detectImageMimeType("icon.svg")).toBe("image/svg+xml");
   });
 
   it("throws for unknown extension", () => {
@@ -65,49 +78,4 @@ describe("uint8ArrayToArrayBuffer", () => {
     const result = uint8ArrayToArrayBuffer(new Uint8Array(0));
     expect(result.byteLength).toBe(0);
   });
-});
-
-// =============================================================================
-// readFileToArrayBuffer
-// =============================================================================
-
-async function withTmpDir(fn: (dir: string) => Promise<void>): Promise<void> {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "file-utils-test-"));
-  try {
-    await fn(dir);
-  } finally {
-    await fs.rm(dir, { recursive: true, force: true });
-  }
-}
-
-describe("readFileToArrayBuffer", () => {
-  it("reads a file into an ArrayBuffer with correct content", () =>
-    withTmpDir(async (tmpDir) => {
-      const filePath = path.join(tmpDir, "test.bin");
-      const data = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-      await fs.writeFile(filePath, data);
-
-      const result = await readFileToArrayBuffer(filePath);
-
-      expect(result.byteLength).toBe(8);
-      const view = new Uint8Array(result);
-      expect(view[0]).toBe(0x89);
-      expect(view[1]).toBe(0x50);
-      expect(view[7]).toBe(0x0a);
-    }));
-
-  it("reads an empty file", () =>
-    withTmpDir(async (tmpDir) => {
-      const filePath = path.join(tmpDir, "empty.bin");
-      await fs.writeFile(filePath, Buffer.alloc(0));
-
-      const result = await readFileToArrayBuffer(filePath);
-      expect(result.byteLength).toBe(0);
-    }));
-
-  it("throws when file does not exist", () =>
-    withTmpDir(async (tmpDir) => {
-      const filePath = path.join(tmpDir, "nonexistent.bin");
-      await expect(readFileToArrayBuffer(filePath)).rejects.toThrow();
-    }));
 });

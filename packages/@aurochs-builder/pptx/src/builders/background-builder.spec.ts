@@ -255,40 +255,7 @@ describe("applyImageBackground", () => {
     expect(blipFill).toBeDefined();
   });
 
-  it("defaults to image/png mimeType when data is provided without mimeType", async () => {
-    const doc = createSlideDoc();
-    const imageData = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
-
-    const result = await applyImageBackground(
-      doc,
-      { type: "image", data: imageData },
-      {
-        specDir: "/tmp",
-        zipPackage: createMockZipPackage(),
-        slidePath: "ppt/slides/slide1.xml",
-      },
-    );
-
-    const cSld = getCsld(result);
-    const bg = getChild(cSld, "p:bg")!;
-    expect(bg).toBeDefined();
-  });
-
-  it("throws when neither path nor data is provided", async () => {
-    const doc = createSlideDoc();
-
-    await expect(
-      applyImageBackground(
-        doc,
-        { type: "image" },
-        {
-          specDir: "/tmp",
-          zipPackage: createMockZipPackage(),
-          slidePath: "ppt/slides/slide1.xml",
-        },
-      ),
-    ).rejects.toThrow("BackgroundImageSpec requires either 'path' or 'data'");
-  });
+  // data and mimeType are now required by the type system — no runtime test needed
 
   it("replaces existing p:bg when applying image background", async () => {
     const existingBg = createElement("p:bg", {}, []);

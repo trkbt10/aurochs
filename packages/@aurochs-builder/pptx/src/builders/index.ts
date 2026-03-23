@@ -5,7 +5,7 @@
  */
 
 // File I/O utilities
-export { detectImageMimeType, readFileToArrayBuffer, uint8ArrayToArrayBuffer } from "./file-utils";
+export { detectImageMimeType, uint8ArrayToArrayBuffer } from "./file-utils";
 
 // Relationship path utilities
 export { getSlideRelsPath } from "./rels-utils";
