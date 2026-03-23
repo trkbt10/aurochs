@@ -5,6 +5,7 @@
  */
 
 import { useState, useMemo, type CSSProperties } from "react";
+import { colorTokens, radiusTokens } from "@aurochs-ui/ui-components/design-tokens";
 import {
   RunPropertiesEditor,
   createDefaultRunProperties,
@@ -116,8 +117,8 @@ const containerStyle: CSSProperties = {
 const panelHeaderStyle: CSSProperties = {
   padding: "16px 20px",
   backgroundColor: "var(--bg-secondary)",
-  borderRadius: "12px",
-  border: "1px solid var(--border-subtle)",
+  borderRadius: radiusTokens.lg,
+  border: `1px solid ${colorTokens.border.subtle}`,
 };
 
 const panelTitleStyle: CSSProperties = {
@@ -142,8 +143,8 @@ const infoStyle: CSSProperties = {
 const infoPanelStyle: CSSProperties = {
   padding: "16px",
   backgroundColor: "var(--bg-secondary)",
-  borderRadius: "12px",
-  border: "1px solid var(--border-subtle)",
+  borderRadius: radiusTokens.lg,
+  border: `1px solid ${colorTokens.border.subtle}`,
 };
 
 const infoTitleStyle: CSSProperties = {
@@ -174,7 +175,7 @@ const kbdStyle: CSSProperties = {
   borderRadius: "4px",
   fontSize: "12px",
   fontFamily: "var(--font-mono)",
-  border: "1px solid var(--border-subtle)",
+  border: `1px solid ${colorTokens.border.subtle}`,
 };
 
 const featureListStyle: CSSProperties = {
@@ -197,9 +198,9 @@ const contentStyle: CSSProperties = {
 
 const panelStyle: CSSProperties = {
   backgroundColor: "var(--bg-secondary)",
-  borderRadius: "12px",
+  borderRadius: radiusTokens.lg,
   padding: "20px",
-  border: "1px solid var(--border-subtle)",
+  border: `1px solid ${colorTokens.border.subtle}`,
 };
 
 const panelHeadingStyle: CSSProperties = {
@@ -580,9 +581,9 @@ function createDemoNumbering(): DocxNumbering {
 
 const documentEditorContainerStyle: CSSProperties = {
   height: "800px",
-  backgroundColor: "#525659",
-  borderRadius: "12px",
-  border: "1px solid var(--border-subtle)",
+  backgroundColor: colorTokens.background.canvas,
+  borderRadius: radiusTokens.lg,
+  border: `1px solid ${colorTokens.border.subtle}`,
   overflow: "auto",
 };
 

@@ -11,7 +11,7 @@ import { createElementId } from "@aurochs/pdf";
 import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { LayerItem } from "react-editor-ui/LayerItem";
 import { TextBoxIcon, PictureIcon, PenIcon } from "@aurochs-ui/ui-components/icons";
-import { iconTokens } from "@aurochs-ui/ui-components/design-tokens";
+import { iconTokens, colorTokens, fontTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 
 // =============================================================================
 // Types
@@ -78,7 +78,7 @@ export function PdfLayerPanel({
   if (!page || page.elements.length === 0) {
     return (
       <OptionalPropertySection title="Layers" badge={0} defaultExpanded>
-        <div style={{ padding: "24px 16px", textAlign: "center", color: "#888", fontSize: "13px" }}>
+        <div style={{ padding: `${spacingTokens.xl} ${spacingTokens.lg}`, textAlign: "center", color: colorTokens.text.tertiary, fontSize: fontTokens.size.lg }}>
           No elements
         </div>
       </OptionalPropertySection>

@@ -6,6 +6,7 @@
  */
 
 import { useMemo, useCallback, type CSSProperties } from "react";
+import { colorTokens } from "@aurochs-ui/ui-components/design-tokens";
 import type { DocxDocument } from "@aurochs-office/docx/domain/document";
 import type { DocxParagraph } from "@aurochs-office/docx/domain/paragraph";
 import type { ContinuousCursorPosition } from "@aurochs-office/text-layout";
@@ -48,7 +49,7 @@ const editorContainerStyle: CSSProperties = {
 const canvasContainerStyle: CSSProperties = {
   width: "100%",
   height: "100%",
-  backgroundColor: "#525659",
+  backgroundColor: colorTokens.background.canvas,
   overflow: "auto",
 };
 

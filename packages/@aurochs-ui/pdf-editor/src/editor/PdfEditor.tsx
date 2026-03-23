@@ -7,6 +7,7 @@
  */
 
 import React, { useCallback, useMemo, useReducer, useState } from "react";
+import { spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { ZoomControls, type ZoomMode } from "@aurochs-ui/editor-controls/zoom";
 import { UndoRedoGroup, DeleteDuplicateGroup, ToolbarPopoverButton, POPOVER_ICON_SIZE, POPOVER_STROKE_WIDTH } from "@aurochs-ui/editor-controls/toolbar";
 import { ToolbarSeparator } from "@aurochs-ui/ui-components/primitives/ToolbarSeparator";
@@ -451,7 +452,7 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
   );
 
   const toolbar = (
-    <div style={{ display: "flex", alignItems: "center", padding: "0 8px", gap: "4px" }}>
+    <div style={{ display: "flex", alignItems: "center", padding: `0 ${spacingTokens.sm}`, gap: spacingTokens.xs }}>
       <UndoRedoGroup
         canUndo={canUndoNow}
         canRedo={canRedoNow}

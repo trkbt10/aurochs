@@ -3,6 +3,7 @@
  *
  * Shows common properties (fill, stroke, text formatting, transform) for all selected elements.
  * Uses shared adapters from pdf-adapters.ts (SoT for color conversion and text formatting).
+ * Follows the same SelectionHeader + OptionalPropertySection pattern as pptx-editor MultiSelectPanel.
  */
 
 import { useCallback, useMemo, type CSSProperties } from "react";
@@ -13,6 +14,9 @@ import { OutlineFormattingEditor } from "@aurochs-ui/editor-controls/surface";
 import { TextFormattingEditor } from "@aurochs-ui/editor-controls/text";
 import type { TextFormatting } from "@aurochs-ui/editor-controls/text";
 import type { FillFormatting, OutlineFormatting } from "@aurochs-ui/editor-controls/surface";
+import { colorTokens, fontTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
+import { PositionSection } from "react-editor-ui/sections/PositionSection";
+import { SizeSection } from "react-editor-ui/sections/SizeSection";
 import {
   pdfFillToFormatting,
   applyFillToGraphicsState,
@@ -35,13 +39,33 @@ export type PdfMultiSelectPanelProps = {
 };
 
 // =============================================================================
-// Styles
+// Constants
 // =============================================================================
 
-const containerStyle: CSSProperties = { display: "flex", flexDirection: "column", gap: "0", fontSize: "12px" };
-const headerStyle: CSSProperties = { padding: "12px 16px", fontSize: "13px", fontWeight: 600, color: "var(--text-secondary, #666)", borderBottom: "1px solid var(--border-subtle, #e8e8e8)" };
-const boundsGridStyle: CSSProperties = { padding: "4px 12px", fontSize: 11, display: "grid", gridTemplateColumns: "auto 1fr", gap: "2px 8px" };
-const labelStyle: CSSProperties = { color: "var(--text-tertiary, #999)" };
+/** Default color for newly created fill/stroke (PDF black) */
+const DEFAULT_ELEMENT_COLOR = "#000000";
+
+// =============================================================================
+// Sub-components
+// =============================================================================
+
+/**
+ * Header showing selection count (same pattern as pptx-editor SelectionHeader).
+ */
+function SelectionHeader({ count }: { readonly count: number }) {
+  const headerStyle: CSSProperties = {
+    padding: `${spacingTokens.md} ${spacingTokens.lg}`,
+    borderBottom: `1px solid ${colorTokens.border.primary}`,
+    fontSize: fontTokens.size.lg,
+    color: colorTokens.text.primary,
+  };
+
+  return (
+    <div style={headerStyle}>
+      <strong>{count} elements selected</strong>
+    </div>
+  );
+}
 
 // =============================================================================
 // Helpers
@@ -65,6 +89,11 @@ function getMixedStroke(elements: readonly PdfElement[]): OutlineFormatting | "m
     if (current.color !== first.color || current.width !== first.width || current.style !== first.style) { return "mixed"; }
   }
   return first;
+}
+
+/** No-op function for read-only handlers. */
+function noop() {
+  // intentionally empty
 }
 
 // =============================================================================
@@ -123,17 +152,19 @@ export function PdfMultiSelectPanel({ document, selectedIds, pageHeight: _pageHe
   );
 
   return (
-    <div style={{ ...containerStyle, ...style }}>
-      <div style={headerStyle}>{selectedIds.length} elements selected</div>
+    <div style={style}>
+      <SelectionHeader count={selectedIds.length} />
 
       {combinedBounds && (
         <OptionalPropertySection title="Transform" defaultExpanded>
-          <div style={boundsGridStyle}>
-            <span style={labelStyle}>X</span><span>{combinedBounds.x.toFixed(1)}</span>
-            <span style={labelStyle}>Y</span><span>{combinedBounds.y.toFixed(1)}</span>
-            <span style={labelStyle}>W</span><span>{combinedBounds.width.toFixed(1)}</span>
-            <span style={labelStyle}>H</span><span>{combinedBounds.height.toFixed(1)}</span>
-          </div>
+          <PositionSection
+            data={{ x: combinedBounds.x.toFixed(1), y: combinedBounds.y.toFixed(1) }}
+            onChange={noop}
+          />
+          <SizeSection
+            data={{ width: combinedBounds.width.toFixed(1), height: combinedBounds.height.toFixed(1) }}
+            onChange={noop}
+          />
         </OptionalPropertySection>
       )}
 
@@ -147,8 +178,8 @@ export function PdfMultiSelectPanel({ document, selectedIds, pageHeight: _pageHe
 
       <OptionalPropertySection
         title="Fill"
-        value={fillValue === "mixed" ? ({ type: "solid", color: "#000000" } as FillFormatting) : fillValue}
-        createDefault={() => ({ type: "solid" as const, color: "#000000" })}
+        value={fillValue === "mixed" ? ({ type: "solid", color: DEFAULT_ELEMENT_COLOR } as FillFormatting) : fillValue}
+        createDefault={() => ({ type: "solid" as const, color: DEFAULT_ELEMENT_COLOR })}
         onChange={handleFillChange}
         renderEditor={(value, onChange) => <FillFormattingEditor value={value} onChange={onChange} />}
         defaultExpanded
@@ -156,8 +187,8 @@ export function PdfMultiSelectPanel({ document, selectedIds, pageHeight: _pageHe
 
       <OptionalPropertySection
         title="Stroke"
-        value={strokeValue === "mixed" ? ({ width: 1, color: "#000000", style: "solid" } as OutlineFormatting) : strokeValue}
-        createDefault={() => ({ width: 1, color: "#000000", style: "solid" as const })}
+        value={strokeValue === "mixed" ? ({ width: 1, color: DEFAULT_ELEMENT_COLOR, style: "solid" } as OutlineFormatting) : strokeValue}
+        createDefault={() => ({ width: 1, color: DEFAULT_ELEMENT_COLOR, style: "solid" as const })}
         onChange={handleStrokeChange}
         renderEditor={(value, onChange) => <OutlineFormattingEditor value={value} onChange={onChange} />}
         defaultExpanded

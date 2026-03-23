@@ -30,6 +30,8 @@ export const colorTokens = {
     tertiary: "#f0f1f3",
     /** Hover state background */
     hover: "#e8eaed",
+    /** Viewer/canvas dark background (document preview area) */
+    canvas: "#525659",
   },
   text: {
     /** Primary text color */

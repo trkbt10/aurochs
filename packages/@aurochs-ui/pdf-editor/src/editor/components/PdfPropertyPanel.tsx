@@ -8,6 +8,7 @@
  */
 
 import { useCallback, useMemo, useState, type CSSProperties } from "react";
+import { fontTokens } from "@aurochs-ui/ui-components/design-tokens";
 import type { PdfElement, PdfTable, PdfElementId } from "@aurochs/pdf";
 import type { PageSizeData } from "@aurochs-ui/editor-core/adapter-types";
 import { PositionSection } from "react-editor-ui/sections/PositionSection";
@@ -51,7 +52,10 @@ export type PdfPropertyPanelProps = {
 // Styles
 // =============================================================================
 
-const containerStyle: CSSProperties = { display: "flex", flexDirection: "column", gap: "0", fontSize: "12px" };
+const containerStyle: CSSProperties = { display: "flex", flexDirection: "column", gap: "0" };
+
+/** Default color for newly created fill/stroke (PDF black) */
+const DEFAULT_ELEMENT_COLOR = "#000000";
 
 // =============================================================================
 // Table Inspector Sub-component
@@ -289,7 +293,7 @@ export function PdfPropertyPanel({ element, elementId, bounds: svgBounds, pageWi
           onChange={canEdit ? handleSizeChange : noop}
         />
         {svgBounds.rotation !== 0 && (
-          <div style={{ fontSize: 11 }}>Rotation: {svgBounds.rotation.toFixed(1)}&deg;</div>
+          <div style={{ fontSize: fontTokens.size.sm }}>Rotation: {svgBounds.rotation.toFixed(1)}&deg;</div>
         )}
       </OptionalPropertySection>
 
@@ -308,7 +312,7 @@ export function PdfPropertyPanel({ element, elementId, bounds: svgBounds, pageWi
       {/* Image dimensions info */}
       {element.type === "image" && (
         <OptionalPropertySection title="Image" defaultExpanded>
-          <div style={{ fontSize: 11 }}>Pixels: {element.width} x {element.height}</div>
+          <div style={{ fontSize: fontTokens.size.sm }}>Pixels: {element.width} x {element.height}</div>
         </OptionalPropertySection>
       )}
 
@@ -316,7 +320,7 @@ export function PdfPropertyPanel({ element, elementId, bounds: svgBounds, pageWi
       <OptionalPropertySection
         title="Fill"
         value={fillFormatting}
-        createDefault={() => ({ type: "solid" as const, color: "#000000" })}
+        createDefault={() => ({ type: "solid" as const, color: DEFAULT_ELEMENT_COLOR })}
         onChange={canEdit ? handleFillChange : noop}
         renderEditor={(value, onChange) => (
           <FillFormattingEditor value={value} onChange={onChange} disabled={!canEdit} />
@@ -328,7 +332,7 @@ export function PdfPropertyPanel({ element, elementId, bounds: svgBounds, pageWi
       <OptionalPropertySection
         title="Stroke"
         value={strokeFormatting}
-        createDefault={() => ({ width: 1, color: "#000000", style: "solid" as const })}
+        createDefault={() => ({ width: 1, color: DEFAULT_ELEMENT_COLOR, style: "solid" as const })}
         onChange={canEdit ? handleStrokeChange : noop}
         renderEditor={(value, onChange) => (
           <OutlineFormattingEditor value={value} onChange={onChange} disabled={!canEdit} />
