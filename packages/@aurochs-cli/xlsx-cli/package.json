@@ -15,11 +15,11 @@
     "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-cli/xlsx-cli/src'"
   },
   "dependencies": {
-    "@aurochs-cli/cli-core": "workspace:*",
     "@aurochs-builder/xlsx": "workspace:*",
+    "@aurochs-cli/cli-core": "workspace:*",
     "@aurochs-office/xlsx": "workspace:*",
     "@aurochs-renderer/xlsx": "workspace:*",
     "@aurochs/zip": "workspace:*",
-    "commander": "^12.0.0"
+    "commander": "^14.0.3"
   }
 }

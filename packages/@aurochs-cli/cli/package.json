@@ -13,10 +13,10 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@aurochs-cli/docx-cli": "workspace:*",
     "@aurochs-cli/pdf-cli": "workspace:*",
     "@aurochs-cli/pptx-cli": "workspace:*",
-    "@aurochs-cli/docx-cli": "workspace:*",
     "@aurochs-cli/xlsx-cli": "workspace:*",
-    "commander": "^12.0.0"
+    "commander": "^14.0.3"
   }
 }

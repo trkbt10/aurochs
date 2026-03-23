@@ -24,6 +24,6 @@
     "@aurochs-office/pptx": "workspace:*",
     "@aurochs-renderer/pptx": "workspace:*",
     "@aurochs/zip": "workspace:*",
-    "commander": "^12.0.0"
+    "commander": "^14.0.3"
   }
 }
