@@ -15,94 +15,20 @@ import type { ResourceMap } from "@aurochs-office/opc";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
 import { EMPTY_FONT_SCHEME } from "@aurochs-office/ooxml/domain/font-scheme";
 import type { ResourceResolver } from "../domain/resource-resolver";
+import type { ResourceStore } from "../domain/resource-store";
+import { createResourceStore } from "../domain/resource-store";
 import type { Slide as ApiSlide } from "./types";
 import { parseSlide } from "../parser/slide/slide-parser";
 import { createParseContext } from "../parser/context";
 import { extractThemeData } from "../parser/theme/theme-parser";
 import { createRenderContext } from "@aurochs-renderer/pptx";
+import { enrichSlideContent, type FileReader } from "../parser/slide/external-content-loader";
 import { getMimeTypeFromPath } from "@aurochs/files";
 import { createZipAdapter } from "../domain";
-import { toDataUrl } from "@aurochs/buffer";
 
 // =============================================================================
 // Resource Resolver Building
 // =============================================================================
-
-/**
- * Create a ResourceResolver from the presentation file
- *
- * This allows the editor to resolve image and embedded resource references.
- */
-function createResourceResolverFromFile(file: PackageFile, apiSlide: ApiSlide): ResourceResolver {
-  const resolveTarget = (id: string): string | undefined =>
-    apiSlide.relationships.getTarget(id) ??
-    apiSlide.layoutRelationships.getTarget(id) ??
-    apiSlide.masterRelationships.getTarget(id) ??
-    apiSlide.themeRelationships.getTarget(id);
-
-  const resolveType = (id: string): string | undefined =>
-    apiSlide.relationships.getType(id) ??
-    apiSlide.layoutRelationships.getType(id) ??
-    apiSlide.masterRelationships.getType(id) ??
-    apiSlide.themeRelationships.getType(id);
-
-  const resolveTargetByType = (relType: string): string | undefined =>
-    apiSlide.relationships.getTargetByType(relType) ??
-    apiSlide.layoutRelationships.getTargetByType(relType) ??
-    apiSlide.masterRelationships.getTargetByType(relType) ??
-    apiSlide.themeRelationships.getTargetByType(relType);
-
-  return {
-    getTarget: resolveTarget,
-    getType: resolveType,
-    resolve: (id: string) => {
-      const target = resolveTarget(id);
-      if (!target) {
-        return undefined;
-      }
-
-      // Normalize path (remove leading ../ and convert to ppt/ path)
-      const normalizedPath = normalizePptxPath(target);
-      const buffer = file.readBinary(normalizedPath);
-      if (!buffer) {
-        return undefined;
-      }
-
-      // Convert to data URL
-      const mimeType = getMimeTypeFromPath(normalizedPath);
-      if (!mimeType) {
-        return undefined;
-      }
-
-      return toDataUrl(buffer, mimeType);
-    },
-
-    getMimeType: (id: string) => {
-      const target = resolveTarget(id);
-      if (!target) {
-        return undefined;
-      }
-      return getMimeTypeFromPath(target);
-    },
-
-    getFilePath: (id: string) => {
-      return resolveTarget(id);
-    },
-
-    readFile: (path: string) => {
-      const normalizedPath = normalizePptxPath(path);
-      const buffer = file.readBinary(normalizedPath);
-      if (!buffer) {
-        return null;
-      }
-      return new Uint8Array(buffer);
-    },
-
-    getResourceByType: (relType: string) => {
-      return resolveTargetByType(relType);
-    },
-  };
-}
 
 /**
  * Create a ResourceResolver from multiple ResourceMap layers and a PackageFile.
@@ -116,6 +42,7 @@ function createResourceResolverFromFile(file: PackageFile, apiSlide: ApiSlide): 
 export function createResourceResolverFromMaps(
   file: PackageFile,
   resourceMaps: readonly ResourceMap[],
+  resourceStore: ResourceStore,
 ): ResourceResolver {
   const resolveTarget = (id: string): string | undefined => {
     for (const map of resourceMaps) {
@@ -144,22 +71,19 @@ export function createResourceResolverFromMaps(
   return {
     getTarget: resolveTarget,
     getType: resolveType,
-    resolve: (id: string) => {
-      const target = resolveTarget(id);
-      if (!target) { return undefined; }
-      const normalizedPath = normalizePptxPath(target);
-      const buffer = file.readBinary(normalizedPath);
-      if (!buffer) { return undefined; }
-      const mimeType = getMimeTypeFromPath(normalizedPath);
-      if (!mimeType) { return undefined; }
-      return toDataUrl(buffer, mimeType);
-    },
+    resolve: (id: string) => resourceStore.toDataUrl(id),
     getMimeType: (id: string) => {
+      const entry = resourceStore.get(id);
+      if (entry?.mimeType !== undefined) { return entry.mimeType; }
       const target = resolveTarget(id);
       if (!target) { return undefined; }
       return getMimeTypeFromPath(target);
     },
-    getFilePath: (id: string) => resolveTarget(id),
+    getFilePath: (id: string) => {
+      const entry = resourceStore.get(id);
+      if (entry?.path !== undefined) { return entry.path; }
+      return resolveTarget(id);
+    },
     readFile: (path: string) => {
       const normalizedPath = normalizePptxPath(path);
       const buffer = file.readBinary(normalizedPath);
@@ -211,8 +135,9 @@ export function convertToPresentationDocument(loaded: LoadedPresentation): Prese
   const colorContext = buildColorContextFromThemeData(themeData);
   const fontScheme = themeData?.theme.fontScheme ?? EMPTY_FONT_SCHEME;
 
-  // Build resource resolver from presentation file
-  const resources = buildResourceResolver(presentationFile, firstApiSlide);
+  // ResourceStore is the SoT for all resolved resources.
+  // All images, charts, diagrams, OLE objects are registered here.
+  const resourceStore = createResourceStore();
 
   // Convert each slide from API Slide to domain Slide
   const slides: SlideWithId[] = [];
@@ -233,13 +158,24 @@ export function convertToPresentationDocument(loaded: LoadedPresentation): Prese
     const domainSlide = parseSlide(apiSlide.content, parseCtx);
 
     if (domainSlide) {
+      // Register all resources (images, charts, diagrams, OLE) in ResourceStore
+      const fileReader: FileReader = {
+        readFile: (path: string) => renderContext.slideRenderContext!.readFile(path),
+        resolveResource: (id: string) => renderContext.slideRenderContext!.resolveResource(id),
+        getResourceByType: (relType: string) => apiSlide.relationships.getTargetByType(relType),
+      };
+      const enrichedSlide = enrichSlideContent(domainSlide, fileReader, resourceStore);
+
       slides.push({
         id: `slide-${i}`,
-        slide: domainSlide,
-        apiSlide, // Store API slide for proper rendering context
+        slide: enrichedSlide,
+        apiSlide,
       });
     }
   }
+
+  // Build ResourceResolver that delegates resolve() to ResourceStore
+  const resources = buildResourceResolverFromStore(presentationFile, firstApiSlide, resourceStore);
 
   // Create domain Presentation
   const domainPresentation: DomainPresentation = {
@@ -255,6 +191,7 @@ export function convertToPresentationDocument(loaded: LoadedPresentation): Prese
     colorContext,
     fontScheme,
     resources,
+    resourceStore,
     presentationFile,
   };
 }
@@ -273,12 +210,63 @@ function buildColorContextFromThemeData(themeData: ExtractedTheme | undefined): 
   return { colorScheme: themeData.theme.colorScheme, colorMap: themeData.colorMap };
 }
 
-function buildResourceResolver(file: PackageFile, firstApiSlide: ApiSlide | null): ResourceResolver {
+function buildResourceResolverFromStore(
+  file: PackageFile,
+  firstApiSlide: ApiSlide | null,
+  resourceStore: ResourceStore,
+): ResourceResolver {
   if (!firstApiSlide) {
     return createEmptyResourceResolver();
   }
 
-  return createResourceResolverFromFile(file, firstApiSlide);
+  const resolveTarget = (id: string): string | undefined =>
+    firstApiSlide.relationships.getTarget(id) ??
+    firstApiSlide.layoutRelationships.getTarget(id) ??
+    firstApiSlide.masterRelationships.getTarget(id) ??
+    firstApiSlide.themeRelationships.getTarget(id);
+
+  const resolveType = (id: string): string | undefined =>
+    firstApiSlide.relationships.getType(id) ??
+    firstApiSlide.layoutRelationships.getType(id) ??
+    firstApiSlide.masterRelationships.getType(id) ??
+    firstApiSlide.themeRelationships.getType(id);
+
+  return {
+    getTarget: resolveTarget,
+    getType: resolveType,
+    resolve: (id: string) => resourceStore.toDataUrl(id),
+    getMimeType: (id: string) => {
+      const entry = resourceStore.get(id);
+      if (entry?.mimeType !== undefined) {
+        return entry.mimeType;
+      }
+      const target = resolveTarget(id);
+      if (!target) {
+        return undefined;
+      }
+      return getMimeTypeFromPath(target);
+    },
+    getFilePath: (id: string) => {
+      const entry = resourceStore.get(id);
+      if (entry?.path !== undefined) {
+        return entry.path;
+      }
+      return resolveTarget(id);
+    },
+    readFile: (path: string) => {
+      const normalizedPath = normalizePptxPath(path);
+      const buffer = file.readBinary(normalizedPath);
+      if (!buffer) {
+        return null;
+      }
+      return new Uint8Array(buffer);
+    },
+    getResourceByType: (relType: string) =>
+      firstApiSlide.relationships.getTargetByType(relType) ??
+      firstApiSlide.layoutRelationships.getTargetByType(relType) ??
+      firstApiSlide.masterRelationships.getTargetByType(relType) ??
+      firstApiSlide.themeRelationships.getTargetByType(relType),
+  };
 }
 
 /**

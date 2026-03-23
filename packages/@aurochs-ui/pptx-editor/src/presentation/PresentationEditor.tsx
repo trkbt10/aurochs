@@ -51,7 +51,7 @@ import {
 } from "@aurochs-ui/ooxml-components/text-edit";
 import { ShapeToolbar } from "../panels/ShapeToolbar";
 import { buildSlideLayoutOptions } from "@aurochs-office/pptx/app";
-import { createRenderContext, getLayoutNonPlaceholderShapes } from "@aurochs-renderer/pptx";
+import { createRenderContext } from "@aurochs-renderer/pptx";
 import type { Chart } from "@aurochs-office/chart/domain";
 import { prepareSlide } from "../resource/register-slide-resources";
 import { getSlideLayoutAttributes } from "@aurochs-office/pptx/parser/slide/layout-parser";
@@ -92,6 +92,7 @@ import { PlayIcon } from "@aurochs-ui/ui-components/icons";
 import { ExportButton } from "./components";
 import { renderSlideSvg } from "@aurochs-renderer/pptx/svg";
 import { createCoreRenderContext } from "@aurochs-renderer/pptx";
+import { createResourceStore } from "@aurochs-office/pptx/domain/resource-store";
 import { ThemeImportExportSection } from "@aurochs-ui/ooxml-components/theme-io";
 import { extractThemeFromBuffer } from "@aurochs-office/pptx/app";
 import { buildThemeXml, exportThemeAsPotx, getThemeFileName } from "@aurochs-builder/pptx/builders";
@@ -651,6 +652,7 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
         colorContext: document.colorContext,
         resources: document.resources,
         fontScheme: document.fontScheme,
+        resourceStore: document.resourceStore ?? createResourceStore(),
       });
       const svg = renderSlideSvg(slideWithId.slide, renderCtx).svg;
       return { svg, timing: slideTiming, transition: slideTransition };
@@ -758,13 +760,7 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
     return activeSlide.apiSlide?.relationships.getTargetByType(RELATIONSHIP_TYPES.SLIDE_LAYOUT);
   }, [activeSlide]);
 
-  const layoutShapes = useMemo(() => {
-    const apiSlide = activeSlide?.apiSlide;
-    if (apiSlide === undefined) {
-      return undefined;
-    }
-    return getLayoutNonPlaceholderShapes(apiSlide);
-  }, [activeSlide?.apiSlide]);
+  const layoutShapes = renderContext?.layoutShapes;
 
   const getEditorSlideIndex = useCallback(() => {
     if (!activeSlide) {

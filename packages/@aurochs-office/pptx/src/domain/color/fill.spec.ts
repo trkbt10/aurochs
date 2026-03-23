@@ -14,21 +14,17 @@ describe("pptx/domain/color/fill", () => {
   });
 
   describe("resolveBlipFill", () => {
-    it("uses data URL directly and defaults to stretch", () => {
+    it("returns undefined without resolver", () => {
       const fill: BlipFill = {
         type: "blipFill",
-        resourceId: "data:image/png;base64,AAA",
+        resourceId: "rId1",
         relationshipType: "embed",
         rotWithShape: false,
       };
-      expect(resolveBlipFill(fill)).toEqual({
-        type: "image",
-        src: "data:image/png;base64,AAA",
-        mode: "stretch",
-      });
+      expect(resolveBlipFill(fill)).toBeUndefined();
     });
 
-    it("uses resolver for relationship IDs", () => {
+    it("uses resolver for resource IDs and defaults to stretch", () => {
       const fill: BlipFill = {
         type: "blipFill",
         resourceId: "rId2",
@@ -44,14 +40,15 @@ describe("pptx/domain/color/fill", () => {
   });
 
   describe("resolveFill", () => {
-    it("resolves blipFill to image fill", () => {
+    it("resolves blipFill to image fill via resolver", () => {
       const fill: BlipFill = {
         type: "blipFill",
-        resourceId: "data:image/png;base64,CCC",
+        resourceId: "rId3",
         relationshipType: "embed",
         rotWithShape: false,
       };
-      expect(resolveFill(fill)).toEqual({
+      const resolver = (rid: string) => (rid === "rId3" ? "data:image/png;base64,CCC" : undefined);
+      expect(resolveFill(fill, undefined, resolver)).toEqual({
         type: "image",
         src: "data:image/png;base64,CCC",
         mode: "stretch",

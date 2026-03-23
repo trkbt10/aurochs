@@ -5,6 +5,7 @@
  */
 
 import { px } from "@aurochs-office/drawing-ml/domain/units";
+import { createResourceStore } from "@aurochs-office/pptx/domain/resource-store";
 import type { CoreRenderContext } from "../render-context";
 import { createCoreRenderContext } from "../render-context";
 
@@ -86,5 +87,6 @@ export function createSvgRenderContext(config: CoreRenderContextConfig): SvgRend
 export function createEmptySvgRenderContext(): SvgRenderContext {
   return createSvgRenderContext({
     slideSize: { width: px(960), height: px(540) },
+    resourceStore: createResourceStore(),
   });
 }

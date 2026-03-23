@@ -7,15 +7,9 @@
 
 import type { Slide as ApiSlide } from "@aurochs-office/pptx/app/types";
 import type { SlideContext } from "@aurochs-office/pptx/parser/slide/context";
-import { createSlideContext } from "@aurochs-office/pptx/parser/slide/context";
-import { createPlaceholderTable, createColorMap } from "@aurochs-office/pptx/parser/slide/resource-adapters";
-import { parseTheme } from "@aurochs-office/pptx/parser/theme/theme-parser";
-import { parseSlideMaster } from "@aurochs-office/pptx/parser/slide/slide-parser";
+import { createSlideContextFromApiSlide, getLayoutNonPlaceholderShapes } from "@aurochs-office/pptx/parser/slide/context";
 import { getBackgroundFillData } from "@aurochs-office/pptx/parser/slide/background-parser";
-import { parseShapeTree } from "@aurochs-office/pptx/parser";
-import type { XmlElement, XmlDocument } from "@aurochs/xml";
-import { getByPath, getChild } from "@aurochs/xml";
-import type { SlideSize, Shape, SpShape } from "@aurochs-office/pptx/domain";
+import type { SlideSize } from "@aurochs-office/pptx/domain";
 import type { TextStyleLevels } from "@aurochs-office/pptx/domain/text-style";
 import type { ZipFile } from "@aurochs-office/opc";
 import type { CoreRenderContext } from "../render-context";
@@ -76,53 +70,48 @@ const NULL_FILE_READER: FileReader = {
   getResourceByType: () => undefined,
 };
 
-/** Build the SlideContext from API slide data with full theme context */
-function buildSlideRenderContext(opts: {
+/**
+ * Create FileReader from SlideContext.
+ *
+ * This is the single source of truth for FileReader construction from SlideContext.
+ * FileReader provides archive access scoped to the slide's relationships.
+ */
+export function createFileReaderFromSlideContext(ctx: SlideContext): FileReader {
+  return {
+    readFile: (path: string) => ctx.readFile(path),
+    resolveResource: (id: string) => ctx.resolveResource(id),
+    getResourceByType: (relType: string) => ctx.slide.resources.getTargetByType(relType),
+  };
+}
+
+/**
+ * Create FileReader for layout shapes from SlideContext.
+ *
+ * Layout shapes reference images via layout-scoped rIds that may differ
+ * from slide-scoped rIds. This FileReader resolves from layout resources first,
+ * then falls back to master resources.
+ */
+export function createLayoutFileReader(ctx: SlideContext): FileReader {
+  return {
+    readFile: (path: string) => ctx.readFile(path),
+    resolveResource: (rId: string) =>
+      ctx.layout.resources.getTarget(rId) ?? ctx.master.resources.getTarget(rId),
+    getResourceByType: (relType: string) =>
+      ctx.layout.resources.getTargetByType(relType) ?? ctx.master.resources.getTargetByType(relType),
+  };
+}
+
+/**
+ * Build SlideContext from API Slide.
+ * Delegates to parser layer's createSlideContextFromApiSlide (SoT).
+ */
+export function buildSlideRenderContext(opts: {
   apiSlide: ApiSlide;
   zip: ZipFile;
   defaultTextStyle: TextStyleLevels | null;
   renderOptions: RenderOptions | undefined;
 }): SlideContext {
-  const { apiSlide, zip, defaultTextStyle, renderOptions } = opts;
-  const slideClrMapOvr = getByPath(apiSlide.content, ["p:sld", "p:clrMapOvr", "a:overrideClrMapping"]);
-  const slideContent = getByPath(apiSlide.content, ["p:sld"]);
-
-  const slide = {
-    content: slideContent as XmlElement,
-    resources: apiSlide.relationships,
-    colorMapOverride: slideClrMapOvr !== undefined ? createColorMap(slideClrMapOvr) : undefined,
-  };
-
-  const layoutContent = getByPath(apiSlide.layout, ["p:sldLayout"]);
-
-  const layout = {
-    placeholders: createPlaceholderTable(apiSlide.layoutTables),
-    resources: apiSlide.layoutRelationships,
-    content: layoutContent as XmlElement | undefined,
-  };
-
-  // Use parseSlideMaster as SoT for colorMap, textStyles, and background
-  const parsedMaster = parseSlideMaster(apiSlide.master ?? undefined);
-
-  const master = {
-    textStyles: parsedMaster?.textStyles ?? { titleStyle: undefined, bodyStyle: undefined, otherStyle: undefined },
-    placeholders: createPlaceholderTable(apiSlide.masterTables),
-    colorMap: parsedMaster?.colorMap ?? {},
-    resources: apiSlide.masterRelationships,
-    background: parsedMaster?.background,
-  };
-
-  const theme = parseTheme(apiSlide.theme as XmlDocument, undefined);
-
-  const presentation = {
-    theme,
-    defaultTextStyle,
-    zip,
-    renderOptions: renderOptions ?? DEFAULT_RENDER_OPTIONS,
-    themeResources: apiSlide.themeRelationships,
-  };
-
-  return createSlideContext({ slide, layout, master, presentation });
+  return createSlideContextFromApiSlide(opts.apiSlide, opts.renderOptions ?? DEFAULT_RENDER_OPTIONS);
 }
 
 // =============================================================================
@@ -154,33 +143,20 @@ export function createRenderContext({
   const slideRenderCtx = buildSlideRenderContext({ apiSlide, zip, defaultTextStyle, renderOptions });
   const bgFillData = getBackgroundFillData(slideRenderCtx);
   const resolvedBackground = toResolvedBackgroundFill(bgFillData);
-  const layoutShapes = getLayoutNonPlaceholderShapes(apiSlide);
+  const layoutShapes = getLayoutNonPlaceholderShapes(slideRenderCtx);
 
-  const fileReader: FileReader = {
-    readFile: (path: string) => slideRenderCtx.readFile(path),
-    resolveResource: (id: string) => slideRenderCtx.resolveResource(id),
-    getResourceByType: (relType: string) => slideRenderCtx.slide.resources.getTargetByType(relType),
-  };
+  const fileReader = createFileReaderFromSlideContext(slideRenderCtx);
 
-  const renderContext = createRenderContextFromSlideContext(slideRenderCtx, slideSize, {
+  const coreContext = createRenderContextFromSlideContext(slideRenderCtx, slideSize, {
     resolvedBackground,
     layoutShapes,
     resourceStore,
   });
 
   return {
+    ...coreContext,
     slideRenderContext: slideRenderCtx,
     fileReader,
-    slideSize: renderContext.slideSize,
-    options: renderContext.options,
-    colorContext: renderContext.colorContext,
-    resources: renderContext.resources,
-    resourceStore: renderContext.resourceStore,
-    warnings: renderContext.warnings,
-    getNextShapeId: renderContext.getNextShapeId,
-    fontScheme: renderContext.fontScheme,
-    resolvedBackground: renderContext.resolvedBackground,
-    layoutShapes: renderContext.layoutShapes,
   };
 }
 
@@ -188,42 +164,3 @@ export function createRenderContext({
 // Layout Shape Extraction
 // =============================================================================
 
-/**
- * Check if a shape is a placeholder.
- * Only SpShape can be a placeholder.
- */
-function isPlaceholder(shape: Shape): boolean {
-  if (shape.type !== "sp") {
-    return false;
-  }
-  return (shape as SpShape).placeholder !== undefined;
-}
-
-/**
- * Get non-placeholder shapes from slide layout.
- * These are decorative shapes that should be rendered behind slide content.
- *
- * @param apiSlide - The API slide containing layout data
- * @returns Array of non-placeholder shapes from the layout
- *
- * @see ECMA-376 Part 1, Section 19.3.1.39 (sldLayout)
- */
-export function getLayoutNonPlaceholderShapes(apiSlide: ApiSlide): readonly Shape[] {
-  const layoutContent = getByPath(apiSlide.layout, ["p:sldLayout"]);
-  if (layoutContent === undefined) {
-    return [];
-  }
-
-  const cSld = getChild(layoutContent, "p:cSld");
-  if (cSld === undefined) {
-    return [];
-  }
-
-  const spTree = getChild(cSld, "p:spTree");
-  if (spTree === undefined) {
-    return [];
-  }
-
-  const layoutShapes = parseShapeTree({ spTree });
-  return layoutShapes.filter((shape: Shape) => !isPlaceholder(shape));
-}

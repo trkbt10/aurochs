@@ -8,19 +8,17 @@
  */
 
 import type { XmlDocument } from "@aurochs/xml";
-import { getChild } from "@aurochs/xml";
 import type { SlideContext } from "@aurochs-office/pptx/parser/slide/context";
-import { createResourceContextImpl } from "@aurochs-office/pptx/parser/slide/context";
-import type { Shape, SlideSize } from "@aurochs-office/pptx/domain";
-import { getNonPlaceholderShapes } from "@aurochs-office/pptx/domain/shape-utils";
+import type { SlideSize } from "@aurochs-office/pptx/domain";
 import { parseSlide } from "@aurochs-office/pptx/parser";
-import { parseShapeTree } from "@aurochs-office/pptx/parser";
 import { createParseContext } from "@aurochs-office/pptx/parser/context";
 import { renderSlideSvg, createEmptySlideSvg } from "./svg/renderer";
 import { createRenderContextFromSlideContext } from "./context/slide-context-adapter";
+import { getLayoutNonPlaceholderShapes } from "@aurochs-office/pptx/parser/slide/context";
+import { createFileReaderFromSlideContext, createLayoutFileReader } from "./context/api-render-context";
 import { toResolvedBackgroundFill } from "./background-fill";
 import { getBackgroundFillData } from "@aurochs-office/pptx/parser/slide/background-parser";
-import { enrichSlideContent, type FileReader } from "@aurochs-office/pptx/parser/slide/external-content-loader";
+import { enrichSlideContent } from "@aurochs-office/pptx/parser/slide/external-content-loader";
 import { createResourceStore } from "@aurochs-office/pptx/domain/resource-store";
 
 // =============================================================================
@@ -37,56 +35,6 @@ export type IntegratedSvgRenderResult = {
   /** Warnings generated during rendering */
   readonly warnings: readonly string[];
 };
-
-// =============================================================================
-// Layout Shape Extraction
-// =============================================================================
-
-/**
- * Parse and get non-placeholder shapes from slide layout.
- * These are decorative shapes that should be rendered behind slide content.
- *
- * Uses a layout-specific ResourceContext to resolve images from the layout's
- * relationships, not the slide's. This is critical because layout and slide
- * may have different rId mappings for the same relationship IDs.
- *
- * @param ctx - Slide render context containing layout content
- * @returns Array of non-placeholder shapes from layout
- *
- * @see ECMA-376 Part 1, Section 19.3.1.39 (sldLayout)
- */
-function getLayoutNonPlaceholderShapes(ctx: SlideContext): readonly Shape[] {
-  const layoutContent = ctx.layout.content;
-  if (layoutContent === undefined) {
-    return [];
-  }
-
-  // Get the shape tree from p:sldLayout/p:cSld/p:spTree
-  const cSld = getChild(layoutContent, "p:cSld");
-  if (cSld === undefined) {
-    return [];
-  }
-
-  const spTree = getChild(cSld, "p:spTree");
-  if (spTree === undefined) {
-    return [];
-  }
-
-  // Create a layout-specific ResourceContext that resolves from layout resources first
-  // This prevents rId collision between slide and layout relationships
-  const layoutResourceContext = createResourceContextImpl((rId: string) => {
-    // Resolve from layout resources first
-    const layoutTarget = ctx.layout.resources.getTarget(rId);
-    if (layoutTarget !== undefined) {
-      return layoutTarget;
-    }
-    // Fall back to master resources (for shared resources)
-    return ctx.master.resources.getTarget(rId);
-  }, ctx.readFile.bind(ctx));
-
-  const layoutShapes = parseShapeTree({ spTree, resourceContext: layoutResourceContext });
-  return getNonPlaceholderShapes(layoutShapes);
-}
 
 // =============================================================================
 // Integrated Render Functions
@@ -128,14 +76,16 @@ export function renderSlideSvgIntegrated(
   // Step 2: Parse layout to get non-placeholder shapes
   const layoutShapes = getLayoutNonPlaceholderShapes(ctx);
 
-  // Step 3: Enrich slide with pre-parsed chart/diagram content
+  // Step 3: Register all resources (images, charts, diagrams, OLE) in ResourceStore
   const resourceStore = createResourceStore();
-  const fileReader: FileReader = {
-    readFile: (path: string) => ctx.readFile(path),
-    resolveResource: (id: string) => ctx.resolveResource(id),
-    getResourceByType: (relType: string) => ctx.slide.resources.getTargetByType(relType),
-  };
+  const fileReader = createFileReaderFromSlideContext(ctx);
   const enrichedSlide = enrichSlideContent(parsedSlide, fileReader, resourceStore);
+
+  // Register layout shape images using layout-scoped resource resolution
+  if (layoutShapes.length > 0) {
+    const layoutFileReader = createLayoutFileReader(ctx);
+    enrichSlideContent({ shapes: layoutShapes }, layoutFileReader, resourceStore);
+  }
 
   // Step 4: Resolve background from hierarchy
   const bgFillData = getBackgroundFillData(ctx);

@@ -222,7 +222,8 @@ export type PresentationEditorAction =
   // Picture insertion
   | {
       readonly type: "ADD_PICTURE";
-      readonly dataUrl: string;
+      /** ResourceStore key where image data is registered (not a data URL) */
+      readonly resourceId: string;
       readonly x: Pixels;
       readonly y: Pixels;
       readonly width: Pixels;

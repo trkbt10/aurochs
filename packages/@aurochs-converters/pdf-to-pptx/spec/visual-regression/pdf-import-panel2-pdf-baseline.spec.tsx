@@ -209,6 +209,7 @@ describe("PDF import visual regression (panel2.pdf)", () => {
         slideSize={{ width: document.slideWidth, height: document.slideHeight }}
         colorContext={document.colorContext}
         resources={document.resources}
+        resourceStore={document.resourceStore}
         embeddedFontCss={document.embeddedFontCss}
       />,
     );

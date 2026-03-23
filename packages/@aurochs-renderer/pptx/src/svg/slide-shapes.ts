@@ -38,7 +38,6 @@ import {
   buildGroupTransformAttr,
 } from "./slide-utils";
 import { renderFillToSvgDef, renderFillToSvgStyle, getResolvedImageFill, renderImageFillToSvgDef } from "./fill";
-import { getBlipFillImageSrc } from "../utils/image-conversion";
 import { renderGeometryData } from "@aurochs-renderer/drawing-ml/svg";
 import { generateLineMarkers } from "./marker";
 import { resolveFill, formatRgba } from "@aurochs-office/pptx/domain/color/fill";
@@ -363,8 +362,7 @@ function renderPictureSvg({
   w: number;
   h: number;
 }): string {
-  // Use resolvedResource (resolved at parse time) if available, otherwise fall back to runtime resolution
-  const imagePath = getBlipFillImageSrc(shape.blipFill, (rId) => ctx.resources.resolve(rId));
+  const imagePath = ctx.resources.resolve(shape.blipFill.resourceId);
   if (imagePath === undefined) {
     return "";
   }
@@ -779,7 +777,8 @@ function renderOleObjectImage({
 
   // 2. Modern format: p:pic child element (ECMA-376-1:2016)
   if (data.pic?.resourceId !== undefined) {
-    const dataUrl = ctx.resourceStore?.toDataUrl(data.pic.resourceId) ?? ctx.resources.resolve(data.pic.resourceId);
+    // ResourceResolver.resolve() checks ResourceStore first, then archive
+    const dataUrl = ctx.resources.resolve(data.pic.resourceId);
     if (dataUrl !== undefined) {
       return `<image href="${dataUrl}" x="0" y="0" width="${w}" height="${h}" preserveAspectRatio="xMidYMid meet"/>`;
     }

@@ -640,6 +640,7 @@ async function renderImportedPdfPage(args: {
       slideSize={{ width: document.slideWidth, height: document.slideHeight }}
       colorContext={document.colorContext}
       resources={document.resources}
+      resourceStore={document.resourceStore}
       embeddedFontCss={document.embeddedFontCss}
     />,
   );

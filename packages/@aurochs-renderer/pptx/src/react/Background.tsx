@@ -9,7 +9,7 @@
 import type { ReactNode } from "react";
 import type { Background as BackgroundType, SlideSize } from "@aurochs-office/pptx/domain";
 import type { ResolvedBackgroundFill } from "@aurochs-office/drawing-ml/domain/background-fill";
-import { useRenderContext, useRenderResourceStore } from "./context";
+import { useRenderContext } from "./context";
 import { useSvgDefs } from "./hooks/useSvgDefs";
 import { resolveFill } from "@aurochs-office/pptx/domain/color/fill";
 import { ooxmlAngleToSvgLinearGradient, getRadialGradientCoords } from "../svg/gradient-utils";
@@ -85,7 +85,7 @@ export function ResolvedBackgroundRenderer({ resolvedBackground, slideSize }: Re
 export function BackgroundRenderer({ background, slideSize }: BackgroundRendererProps) {
   const { width, height } = slideSize;
   const { colorContext, resources, warnings } = useRenderContext();
-  const resourceStore = useRenderResourceStore();
+
   const { getNextId } = useSvgDefs();
 
   // Default white background
@@ -121,8 +121,8 @@ export function BackgroundRenderer({ background, slideSize }: BackgroundRenderer
     }
 
     case "blipFill": {
-      // Use ResourceStore (centralized) > legacy resolver
-      const imagePath = resourceStore?.toDataUrl(fill.resourceId) ?? resources.resolve(fill.resourceId);
+      // ResourceResolver.resolve() checks ResourceStore first, then archive
+      const imagePath = resources.resolve(fill.resourceId);
       if (imagePath !== undefined) {
         const aspectRatio = fill.stretch !== undefined ? "none" : "xMidYMid slice";
         return (

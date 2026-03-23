@@ -8,7 +8,7 @@
 
 import { getAttr, getChild, getChildren, isXmlElement, type XmlElement } from "@aurochs/xml";
 import type { Shape } from "../../domain";
-import type { PlaceholderContext, MasterStylesInfo, ResourceContext } from "../context";
+import type { PlaceholderContext, MasterStylesInfo } from "../context";
 import type { FormatScheme } from "../../domain/theme/types";
 
 import { parseSpShape } from "./sp";
@@ -70,7 +70,6 @@ export type ParseShapeElementOptions = {
   readonly ctx?: PlaceholderContext;
   readonly masterStylesInfo?: MasterStylesInfo;
   readonly formatScheme?: FormatScheme;
-  readonly resourceContext?: ResourceContext;
 };
 
 export type ParseShapeTreeOptions = {
@@ -78,7 +77,6 @@ export type ParseShapeTreeOptions = {
   readonly ctx?: PlaceholderContext;
   readonly masterStylesInfo?: MasterStylesInfo;
   readonly formatScheme?: FormatScheme;
-  readonly resourceContext?: ResourceContext;
 };
 
 // =============================================================================
@@ -93,7 +91,6 @@ export function parseShapeElement({
   ctx,
   masterStylesInfo,
   formatScheme,
-  resourceContext,
 }: ParseShapeElementOptions): Shape | undefined {
   switch (element.name) {
     case "p:sp":
@@ -108,7 +105,7 @@ export function parseShapeElement({
       return useShapeTextRect ? { ...parsed, useShapeTextRect } : parsed;
     }
     case "p:pic":
-      return parsePicShape(element, formatScheme, resourceContext);
+      return parsePicShape(element, formatScheme);
     case "p:grpSp":
       return parseGrpShape({
         element,
@@ -116,7 +113,7 @@ export function parseShapeElement({
         masterStylesInfo,
         formatScheme,
         parseShapeElement: ({ element: el, ctx: c, masterStylesInfo: m, formatScheme: f }) =>
-          parseShapeElement({ element: el, ctx: c, masterStylesInfo: m, formatScheme: f, resourceContext }),
+          parseShapeElement({ element: el, ctx: c, masterStylesInfo: m, formatScheme: f }),
       });
     case "p:cxnSp":
       return parseCxnShape(element, formatScheme);
@@ -132,7 +129,7 @@ export function parseShapeElement({
         masterStylesInfo,
         formatScheme,
         parseShapeElement: ({ element: el, ctx: c, masterStylesInfo: m, formatScheme: f }) =>
-          parseShapeElement({ element: el, ctx: c, masterStylesInfo: m, formatScheme: f, resourceContext }),
+          parseShapeElement({ element: el, ctx: c, masterStylesInfo: m, formatScheme: f }),
       });
     }
     case "mc:AlternateContent": {
@@ -145,7 +142,7 @@ export function parseShapeElement({
         if (isChoiceSupported(requires)) {
           for (const child of choice.children) {
             if (isXmlElement(child)) {
-              const shape = parseShapeElement({ element: child, ctx, masterStylesInfo, formatScheme, resourceContext });
+              const shape = parseShapeElement({ element: child, ctx, masterStylesInfo, formatScheme });
               if (shape) {
                 return shape;
               }
@@ -158,7 +155,7 @@ export function parseShapeElement({
       if (fallback) {
         for (const child of fallback.children) {
           if (isXmlElement(child)) {
-            const shape = parseShapeElement({ element: child, ctx, masterStylesInfo, formatScheme, resourceContext });
+            const shape = parseShapeElement({ element: child, ctx, masterStylesInfo, formatScheme });
             if (shape) {
               return shape;
             }
@@ -179,7 +176,7 @@ export function parseShapeElement({
  * @param ctx - Optional placeholder context for inheritance resolution
  * @param masterStylesInfo - Optional master styles info for text style resolution
  * @param formatScheme - Optional format scheme for style reference resolution
- * @param resourceContext - Optional resource context for image resolution
+ * Image data registration in ResourceStore is handled by enrichSlideContent, not here.
  * @returns Array of parsed Shape domain objects
  */
 export function parseShapeTree({
@@ -187,7 +184,6 @@ export function parseShapeTree({
   ctx,
   masterStylesInfo,
   formatScheme,
-  resourceContext,
 }: ParseShapeTreeOptions): readonly Shape[] {
   if (!spTree) {
     return [];
@@ -204,7 +200,7 @@ export function parseShapeTree({
       continue;
     }
 
-    const shape = parseShapeElement({ element: child, ctx, masterStylesInfo, formatScheme, resourceContext });
+    const shape = parseShapeElement({ element: child, ctx, masterStylesInfo, formatScheme });
     if (shape) {
       shapes.push(shape);
     }

@@ -57,11 +57,11 @@ export type FileReader = {
 };
 
 /**
- * Context for enrichment operations
+ * Context for content loading operations
  */
-type EnrichmentContext = {
+type ContentLoadContext = {
   readonly fileReader: FileReader;
-  readonly resourceStore?: ResourceStore;
+  readonly resourceStore: ResourceStore;
 };
 
 type TryGenerateDiagramShapesOptions = {
@@ -76,6 +76,7 @@ type DiagramResourceResolverContext = {
   readonly resources: ResourceMap;
   readonly baseDir: string;
   readonly fileReader: FileReader;
+  readonly resourceStore?: ResourceStore;
 };
 
 /**
@@ -93,8 +94,12 @@ type DiagramResourceResolverContext = {
  * @param resourceStore - Optional resource store for centralized management
  * @returns A new Slide with pre-parsed content attached
  */
-export function enrichSlideContent(slide: Slide, fileReader: FileReader, resourceStore?: ResourceStore): Slide {
-  const ctx: EnrichmentContext = { fileReader, resourceStore };
+export function enrichSlideContent(slide: Slide, fileReader: FileReader, resourceStore: ResourceStore): Slide {
+  const ctx: ContentLoadContext = { fileReader, resourceStore };
+
+  // Register all blipFill images in ResourceStore
+  registerSlideBlipFillImages(slide.shapes, fileReader, resourceStore);
+
   const enrichedShapes = slide.shapes.map((shape) => enrichShape(shape, ctx));
 
   // If no shapes were enriched, return the original slide
@@ -111,7 +116,7 @@ export function enrichSlideContent(slide: Slide, fileReader: FileReader, resourc
 /**
  * Enrich a single shape with pre-parsed content if applicable.
  */
-function enrichShape(shape: Shape, ctx: EnrichmentContext): Shape {
+function enrichShape(shape: Shape, ctx: ContentLoadContext): Shape {
   if (shape.type !== "graphicFrame") {
     return shape;
   }
@@ -138,57 +143,52 @@ function enrichShape(shape: Shape, ctx: EnrichmentContext): Shape {
  *
  * If ResourceStore is provided, the parsed chart is also registered there.
  */
-function enrichChartFrame(frame: GraphicFrame, ctx: EnrichmentContext): GraphicFrame {
+function enrichChartFrame(frame: GraphicFrame, ctx: ContentLoadContext): GraphicFrame {
   if (frame.content.type !== "chart") {
     return frame;
   }
 
   const { fileReader, resourceStore } = ctx;
   const chartRef = frame.content.data;
+  const resourceId = chartRef.resourceId as string;
 
-  // Skip if already in ResourceStore
-  if (resourceStore?.has(chartRef.resourceId as string)) {
+  if (resourceStore.has(resourceId)) {
     return frame;
   }
 
-  // Resolve chart file path from resource ID
-  const chartPath = fileReader.resolveResource(chartRef.resourceId as string);
+  const chartPath = fileReader.resolveResource(resourceId);
   if (chartPath === undefined) {
+    console.warn(`[enrichSlideContent] chart resource not found: ${resourceId}`);
     return frame;
   }
 
-  // Read chart XML file
   const chartData = fileReader.readFile(chartPath);
   if (chartData === null) {
+    console.warn(`[enrichSlideContent] chart file not readable: ${chartPath}`);
     return frame;
   }
 
-  // Parse chart XML
   const decoder = new TextDecoder();
-  const chartXmlText = decoder.decode(chartData);
-  const chartDoc = parseXml(chartXmlText);
+  const chartDoc = parseXml(decoder.decode(chartData));
   if (chartDoc === undefined) {
+    console.warn(`[enrichSlideContent] chart XML parse failed: ${chartPath}`);
     return frame;
   }
 
-  // Parse to Chart domain object
   const parsedChart = parseChart(chartDoc);
   if (parsedChart === undefined) {
+    console.warn(`[enrichSlideContent] chart domain parse failed: ${chartPath}`);
     return frame;
   }
 
-  // Register in ResourceStore
-  if (resourceStore !== undefined) {
-    resourceStore.set(chartRef.resourceId as string, {
-      kind: "chart",
-      source: "parsed",
-      data: chartData,
-      path: chartPath,
-      parsed: parsedChart,
-    });
-  }
+  resourceStore.set(resourceId, {
+    kind: "chart",
+    source: "parsed",
+    data: chartData,
+    path: chartPath,
+    parsed: parsedChart,
+  });
 
-  // Chart data is now stored in ResourceStore, frame remains unchanged
   return frame;
 }
 
@@ -205,7 +205,7 @@ function enrichChartFrame(frame: GraphicFrame, ctx: EnrichmentContext): GraphicF
  *
  * @see ECMA-376 Part 1, Section 21.4 - DrawingML Diagrams
  */
-function enrichDiagramFrame(frame: GraphicFrame, ctx: EnrichmentContext): GraphicFrame {
+function enrichDiagramFrame(frame: GraphicFrame, ctx: ContentLoadContext): GraphicFrame {
   if (frame.content.type !== "diagram") {
     return frame;
   }
@@ -213,8 +213,12 @@ function enrichDiagramFrame(frame: GraphicFrame, ctx: EnrichmentContext): Graphi
   const { fileReader, resourceStore } = ctx;
   const diagramRef = frame.content.data;
 
-  // Skip if already in ResourceStore
-  if (resourceStore?.has(diagramRef.dataResourceId ?? "")) {
+  if (diagramRef.dataResourceId === undefined) {
+    console.warn("[enrichSlideContent] diagram has no dataResourceId");
+    return frame;
+  }
+
+  if (resourceStore.has(diagramRef.dataResourceId)) {
     return frame;
   }
 
@@ -223,41 +227,41 @@ function enrichDiagramFrame(frame: GraphicFrame, ctx: EnrichmentContext): Graphi
   const styleDefinition = loadDiagramStyleDefinition(diagramRef.styleResourceId, fileReader);
   const colorsDefinition = loadDiagramColorsDefinition(diagramRef.colorResourceId, fileReader);
 
-  // Try to get pre-rendered shapes from diagram drawing file
-  // eslint-disable-next-line no-restricted-syntax -- mutable fallback: pre-rendered first, then dynamic generation
-  let shapes = tryParseDiagramDrawing(frame, fileReader);
+  // ECMA-376 Part 1, Section 21.4: Diagrams may have a pre-rendered drawing part
+  // (dgm:relIds/@r:dm points to a drawing1.xml with pre-baked shapes).
+  // If absent, shapes are generated from the data model using the layout engine.
+  const preRenderedShapes = tryParseDiagramDrawing(frame, fileReader, resourceStore);
+  const generatedShapes = preRenderedShapes === undefined || preRenderedShapes.length === 0
+    ? tryGenerateDiagramShapes({ frame, dataModel, layoutDefinition, styleDefinition, colorsDefinition })
+    : undefined;
+  const shapes = (preRenderedShapes !== undefined && preRenderedShapes.length > 0)
+    ? preRenderedShapes
+    : generatedShapes;
 
-  // If no pre-rendered shapes, fall back to dynamic generation using layout engine
   if (shapes === undefined || shapes.length === 0) {
-    shapes = tryGenerateDiagramShapes({ frame, dataModel, layoutDefinition, styleDefinition, colorsDefinition });
+    console.warn(`[enrichSlideContent] diagram has no shapes: ${diagramRef.dataResourceId}`);
   }
 
-  // Register diagram data in ResourceStore only if shapes were actually resolved.
-  // If no shapes could be parsed or generated, do not register — let the builder
-  // layer handle it (e.g. registerSlideResources for editor-created diagrams).
-  if (resourceStore !== undefined && diagramRef.dataResourceId !== undefined && shapes !== undefined && shapes.length > 0) {
-    resourceStore.set(diagramRef.dataResourceId, {
-      kind: "diagram",
-      source: "parsed",
-      data: new ArrayBuffer(0),
-      parsed: {
-        shapes,
-        dataModel,
-        layoutDefinition,
-        styleDefinition,
-        colorsDefinition,
-      },
-    });
-  }
+  resourceStore.set(diagramRef.dataResourceId, {
+    kind: "diagram",
+    source: "parsed",
+    data: new ArrayBuffer(0),
+    parsed: {
+      shapes: shapes ?? [],
+      dataModel,
+      layoutDefinition,
+      styleDefinition,
+      colorsDefinition,
+    },
+  });
 
-  // Diagram data is now stored in ResourceStore, frame remains unchanged
   return frame;
 }
 
 /**
  * Try to parse pre-rendered shapes from diagram drawing file.
  */
-function tryParseDiagramDrawing(frame: GraphicFrame, fileReader: FileReader): readonly Shape[] | undefined {
+function tryParseDiagramDrawing(frame: GraphicFrame, fileReader: FileReader, resourceStore?: ResourceStore): readonly Shape[] | undefined {
   // Find diagram drawing file using relationship type
   const diagramPath = fileReader.getResourceByType?.(RELATIONSHIP_TYPES.DIAGRAM_DRAWING);
   if (diagramPath === undefined) {
@@ -290,8 +294,10 @@ function tryParseDiagramDrawing(frame: GraphicFrame, fileReader: FileReader): re
   const diagramRelsData = fileReader.readFile(diagramRelsPath);
   const diagramResources = loadDiagramResources(diagramRelsData, diagramPath);
 
-  // Resolve blipFill resourceIds in diagram shapes using diagram relationships
-  return resolveDiagramShapeResources({ shapes: parsedContent.shapes, diagramResources, diagramPath, fileReader });
+  // Resolve blipFill resourceIds in diagram shapes using diagram relationships.
+  // Images are registered in ResourceStore; shapes' resourceId fields are updated
+  // to the resolved part path (globally unique, avoids rId scope collision).
+  return resolveDiagramShapeResources({ shapes: parsedContent.shapes, diagramResources, diagramPath, fileReader, resourceStore });
 }
 
 /**
@@ -429,27 +435,33 @@ function loadDiagramResourceXml(resourceId: string | undefined, fileReader: File
 }
 
 /**
- * Resolve blipFill resource IDs in diagram shapes to data URLs.
+ * Resolve blipFill resource IDs in diagram shapes.
  *
  * Diagram shapes reference images via r:embed IDs that point to
  * ppt/diagrams/_rels/drawing1.xml.rels, not the slide relationships.
- * This function walks all shapes and converts resourceIds to data URLs.
+ * These rIds are scoped to the diagram part and may collide with slide rIds.
+ *
+ * This function resolves each diagram rId to its part path (e.g., "ppt/media/image1.png"),
+ * registers the image data in ResourceStore under that path, and updates the shape's
+ * resourceId to the path. The part path is globally unique within the PPTX package.
  */
 function resolveDiagramShapeResources({
   shapes,
   diagramResources,
   diagramPath,
   fileReader,
+  resourceStore,
 }: {
   readonly shapes: readonly Shape[];
   readonly diagramResources: ResourceMap;
   readonly diagramPath: string;
   readonly fileReader: FileReader;
+  readonly resourceStore?: ResourceStore;
 }): readonly Shape[] {
   // Get the base directory for resolving relative paths
   const diagramDir = diagramPath.substring(0, diagramPath.lastIndexOf("/") + 1);
 
-  const ctx: DiagramResourceResolverContext = { resources: diagramResources, baseDir: diagramDir, fileReader };
+  const ctx: DiagramResourceResolverContext = { resources: diagramResources, baseDir: diagramDir, fileReader, resourceStore };
   return shapes.map((shape) => resolveShapeResources({ shape, ...ctx }));
 }
 
@@ -528,15 +540,17 @@ function resolvePicShapeResources({
 }
 
 /**
- * Resolve a BlipFill's resourceId to a data URL.
+ * Resolve a BlipFill's diagram-scoped resourceId to a globally unique part path.
+ * The image data is registered in ResourceStore.
  */
 function resolveBlipFill({
   fill,
   resources,
   baseDir,
   fileReader,
+  resourceStore,
 }: { readonly fill: BlipFill } & DiagramResourceResolverContext): BaseFill {
-  const resolved = resolveResourceToDataUrl({ resourceId: fill.resourceId, resources, baseDir, fileReader });
+  const resolved = resolveDiagramResourceId({ resourceId: fill.resourceId, resources, baseDir, fileReader, resourceStore });
 
   if (resolved === undefined) {
     return fill;
@@ -549,15 +563,17 @@ function resolveBlipFill({
 }
 
 /**
- * Resolve BlipFillProperties's resourceId to a data URL.
+ * Resolve BlipFillProperties's diagram-scoped resourceId to a globally unique part path.
+ * The image data is registered in ResourceStore.
  */
 function resolveBlipFillProperties({
   blipFill,
   resources,
   baseDir,
   fileReader,
+  resourceStore,
 }: { readonly blipFill: BlipFillProperties } & DiagramResourceResolverContext): BlipFillProperties {
-  const resolved = resolveResourceToDataUrl({ resourceId: blipFill.resourceId, resources, baseDir, fileReader });
+  const resolved = resolveDiagramResourceId({ resourceId: blipFill.resourceId, resources, baseDir, fileReader, resourceStore });
 
   if (resolved === undefined) {
     return blipFill;
@@ -570,45 +586,134 @@ function resolveBlipFillProperties({
 }
 
 /**
- * Resolve a resource ID to a data URL using diagram relationships.
+ * Resolve a diagram-scoped resource ID to a globally unique part path
+ * and register the image data in ResourceStore.
  *
- * @param resourceId - The r:embed or r:link ID (e.g., "rId1")
- * @param resources - Diagram relationships map
- * @param baseDir - Base directory for resolving relative paths
- * @param fileReader - File reader for accessing archive content
- * @returns Data URL if resolved, undefined if not found
+ * Diagram rIds (e.g., "rId1") are scoped to the diagram's .rels file and
+ * may collide with slide-scoped rIds. This function resolves the rId to
+ * the target part path (e.g., "ppt/media/image1.png") which is globally
+ * unique within the PPTX package.
+ *
+ * @returns Part path if resolved and registered, undefined if not found
  */
-function resolveResourceToDataUrl({
+function resolveDiagramResourceId({
   resourceId,
   resources,
   baseDir,
   fileReader,
+  resourceStore,
 }: { readonly resourceId: string } & DiagramResourceResolverContext): string | undefined {
-  // Skip if already a data URL
-  if (resourceId.startsWith("data:")) {
-    return undefined;
-  }
-
   // Look up in diagram relationships
-  // Note: targets should already be resolved by parseRelationships (RFC 3986)
-  // but we use resolvePartPath as a safety fallback for any relative paths
   const target = resources.getTarget(resourceId);
   if (target === undefined) {
     return undefined;
   }
 
-  // Target should be absolute, but resolve if relative
+  // Resolve to absolute part path
   const targetPath = target.startsWith("ppt/") ? target : resolvePartPath(baseDir, target);
 
-  // Read the resource file
-  const data = fileReader.readFile(targetPath);
-  if (data === null) {
-    return undefined;
+  // Register in ResourceStore if not already present
+  if (resourceStore !== undefined && !resourceStore.has(targetPath)) {
+    const data = fileReader.readFile(targetPath);
+    if (data !== null) {
+      const mimeType = getMimeTypeFromPath(targetPath) ?? "application/octet-stream";
+      resourceStore.set(targetPath, {
+        kind: "image",
+        source: "parsed",
+        data,
+        mimeType,
+        path: targetPath,
+      });
+    }
   }
 
-  // Convert to data URL
+  return targetPath;
+}
+
+// =============================================================================
+// BlipFill Image Registration
+// =============================================================================
+
+/**
+ * Register all blipFill images found in shapes into ResourceStore.
+ *
+ * Walks shapes recursively and for each blipFill resourceId:
+ * 1. Resolves the rId to a file path via fileReader
+ * 2. Reads the image data from the archive
+ * 3. Registers in ResourceStore under the rId
+ *
+ * This ensures ResourceStore is the single source of truth for all image data.
+ * After this, resolve() only needs to call resourceStore.toDataUrl().
+ */
+function registerSlideBlipFillImages(
+  shapes: readonly Shape[],
+  fileReader: FileReader,
+  resourceStore: ResourceStore,
+): void {
+  for (const shape of shapes) {
+    registerShapeBlipFillImages(shape, fileReader, resourceStore);
+  }
+}
+
+function registerShapeBlipFillImages(
+  shape: Shape,
+  fileReader: FileReader,
+  resourceStore: ResourceStore,
+): void {
+  switch (shape.type) {
+    case "sp": {
+      const fill = shape.properties?.fill;
+      if (fill?.type === "blipFill") {
+        registerBlipFillResourceId(fill.resourceId, fileReader, resourceStore);
+      }
+      break;
+    }
+    case "pic":
+      registerBlipFillResourceId(shape.blipFill.resourceId, fileReader, resourceStore);
+      break;
+    case "grpSp":
+      registerSlideBlipFillImages(shape.children, fileReader, resourceStore);
+      break;
+    case "cxnSp": {
+      const fill = shape.properties?.fill;
+      if (fill?.type === "blipFill") {
+        registerBlipFillResourceId(fill.resourceId, fileReader, resourceStore);
+      }
+      break;
+    }
+  }
+}
+
+/**
+ * Register a single blipFill resource in ResourceStore.
+ */
+function registerBlipFillResourceId(
+  resourceId: string,
+  fileReader: FileReader,
+  resourceStore: ResourceStore,
+): void {
+  if (resourceStore.has(resourceId)) {
+    return;
+  }
+
+  const targetPath = fileReader.resolveResource(resourceId);
+  if (targetPath === undefined) {
+    return;
+  }
+
+  const data = fileReader.readFile(targetPath);
+  if (data === null) {
+    return;
+  }
+
   const mimeType = getMimeTypeFromPath(targetPath) ?? "application/octet-stream";
-  return toDataUrl(data, mimeType);
+  resourceStore.set(resourceId, {
+    kind: "image",
+    source: "parsed",
+    data,
+    mimeType,
+    path: targetPath,
+  });
 }
 
 // =============================================================================
@@ -630,7 +735,7 @@ function resolveResourceToDataUrl({
  * @see ECMA-376 Part 1, Section 19.3.1.36a (oleObj)
  * @see MS-OE376 Part 4 Section 4.4.2.4
  */
-function enrichOleFrame(frame: GraphicFrame, ctx: EnrichmentContext): GraphicFrame {
+function enrichOleFrame(frame: GraphicFrame, ctx: ContentLoadContext): GraphicFrame {
   if (frame.content.type !== "oleObject") {
     return frame;
   }
@@ -638,33 +743,32 @@ function enrichOleFrame(frame: GraphicFrame, ctx: EnrichmentContext): GraphicFra
   const { fileReader, resourceStore } = ctx;
   const oleRef = frame.content.data;
 
-  // Skip if already in ResourceStore
-  if (resourceStore?.has(oleRef.resourceId ?? "")) {
+  if (oleRef.resourceId !== undefined && resourceStore.has(oleRef.resourceId)) {
     return frame;
   }
 
-  // Skip if no VML shape ID (modern format uses pic.resourceId directly)
+  // Modern format (ECMA-376-1:2016): p:pic child element provides preview.
+  // Its blipFill.resourceId is already registered by registerSlideBlipFillImages.
+  // Only legacy VML format (spid attribute) needs resolution here.
   if (oleRef.spid === undefined) {
     return frame;
   }
 
-  // Try to resolve VML preview image
   const previewImageUrl = resolveVmlPreviewImage(oleRef, fileReader);
   if (previewImageUrl === undefined) {
+    console.warn(`[enrichSlideContent] OLE VML preview not resolved: spid=${oleRef.spid}`);
     return frame;
   }
 
-  // Register preview image in ResourceStore
-  if (resourceStore !== undefined && oleRef.resourceId !== undefined) {
+  if (oleRef.resourceId !== undefined) {
     resourceStore.set(oleRef.resourceId, {
       kind: "ole",
       source: "parsed",
-      data: new ArrayBuffer(0), // Preview is stored as data URL
+      data: new ArrayBuffer(0),
       previewUrl: previewImageUrl,
     });
   }
 
-  // OLE preview is now stored in ResourceStore, frame remains unchanged
   return frame;
 }
 

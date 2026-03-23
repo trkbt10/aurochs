@@ -8,8 +8,13 @@
  */
 
 import type { XmlDocument, XmlElement } from "@aurochs/xml";
-import { getByPath } from "@aurochs/xml";
+import { getByPath, getChild } from "@aurochs/xml";
 import type { SlideLayoutType } from "../../domain/slide/types";
+import type { Shape, Background } from "../../domain";
+import type { PlaceholderContext, MasterStylesInfo } from "../context";
+import type { FormatScheme } from "../../domain/theme/types";
+import { parseShapeTree } from "../shape-parser/parse-element";
+import { parseSlideMaster, parseBackground } from "./slide-parser";
 
 /**
  * Slide layout attributes extracted from p:sldLayout element.
@@ -141,6 +146,84 @@ export function getSlideLayoutAttributes(layoutDoc: XmlDocument): SlideLayoutAtt
 /**
  * Apply slide layout attribute updates to a layout document.
  */
+// =============================================================================
+// Layout Content Parsing
+// =============================================================================
+
+/**
+ * Parsed layout content — shapes and background extracted from layout XML.
+ */
+export type ParsedLayoutContent = {
+  readonly shapes: readonly Shape[];
+  readonly background: Background | undefined;
+};
+
+/**
+ * Parse shapes and background from a layout XmlDocument.
+ *
+ * SoT for extracting renderable content from a slide layout.
+ * All XML traversal (p:sldLayout → p:cSld → p:spTree / p:bg) happens here.
+ *
+ * @param layoutDoc - Layout XML document
+ * @param options - Parsing context (placeholder, master styles, format scheme, master background fallback)
+ * @returns Parsed shapes and background, or undefined if layout structure is invalid
+ *
+ * @see ECMA-376 Part 1, Section 19.3.1.39 (p:sldLayout)
+ */
+export function parseLayoutContent(
+  layoutDoc: XmlDocument,
+  options: {
+    readonly placeholderCtx?: PlaceholderContext;
+    readonly masterStylesInfo?: MasterStylesInfo;
+    readonly formatScheme?: FormatScheme;
+    readonly masterBackground?: Background;
+    readonly masterDoc?: XmlDocument | null;
+  },
+): ParsedLayoutContent | undefined {
+  const layoutContent = getByPath(layoutDoc, ["p:sldLayout"]);
+  if (layoutContent === undefined) {
+    return undefined;
+  }
+
+  const cSld = getChild(layoutContent, "p:cSld");
+  if (cSld === undefined) {
+    return undefined;
+  }
+
+  const spTree = getChild(cSld, "p:spTree");
+  if (spTree === undefined) {
+    return undefined;
+  }
+
+  const shapes = parseShapeTree({
+    spTree,
+    ctx: options.placeholderCtx,
+    masterStylesInfo: options.masterStylesInfo,
+    formatScheme: options.formatScheme,
+  });
+
+  const background =
+    parseBackground(getChild(cSld, "p:bg"), options.formatScheme)
+    ?? options.masterBackground
+    ?? resolveBackgroundFromMaster(options.masterDoc, options.formatScheme);
+
+  return { shapes, background };
+}
+
+function resolveBackgroundFromMaster(
+  masterDoc: XmlDocument | null | undefined,
+  formatScheme: FormatScheme | undefined,
+): Background | undefined {
+  if (masterDoc === null || masterDoc === undefined) {
+    return undefined;
+  }
+  const parsedMaster = parseSlideMaster(masterDoc);
+  return parsedMaster?.background ?? parseBackground(
+    getByPath(masterDoc, ["p:sldMaster", "p:cSld", "p:bg"]) as XmlElement | undefined,
+    formatScheme,
+  );
+}
+
 export function applySlideLayoutAttributes(layoutDoc: XmlDocument, attributes: SlideLayoutAttributes): XmlDocument {
   if (!layoutDoc) {
     throw new Error("applySlideLayoutAttributes requires a layout document.");

@@ -10,9 +10,8 @@ import { memo, useMemo } from "react";
 import type { PicShape as PicShapeType } from "@aurochs-office/pptx/domain";
 import type { Transform } from "@aurochs-office/drawing-ml/domain/geometry";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
-import { useRenderResources, useRenderResourceStore } from "../context";
+import { useRenderResources } from "../context";
 import { buildTransformAttr } from "./transform";
-import { resolveImageUrl } from "../../utils/image-conversion";
 
 // =============================================================================
 // Types
@@ -72,13 +71,12 @@ function calculateCroppedImageLayout(
  */
 function PicShapeRendererBase({ shape, width, height, shapeId }: PicShapeRendererProps) {
   const resources = useRenderResources();
-  const resourceStore = useRenderResourceStore();
   const { blipFill, properties } = shape;
 
-  // Use ResourceStore (centralized) > runtime resolver (fallback)
+  // ResourceResolver.resolve() checks ResourceStore first, then falls back to archive
   const imagePath = useMemo(
-    () => resolveImageUrl(blipFill.resourceId, resourceStore, (rId) => resources.resolve(rId)),
-    [blipFill.resourceId, resources, resourceStore],
+    () => resources.resolve(blipFill.resourceId),
+    [blipFill.resourceId, resources],
   );
   if (imagePath === undefined) {
     return null;

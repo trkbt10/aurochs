@@ -130,25 +130,15 @@ export type ResolvedFill =
 /**
  * Resolve a blipFill to an image fill using the provided resource resolver.
  *
- * This function handles the resolution of blipFill (image fill) which can be:
- * 1. Already a data URL (pre-resolved during parsing)
- * 2. A relationship ID that needs to be resolved via resourceResolver
+ * The resourceId is a relationship ID or ResourceStore key.
+ * The resourceResolver (typically ResourceResolver.resolve) checks
+ * ResourceStore first, then falls back to direct archive access.
  *
  * @param fill - BlipFill to resolve
- * @param resourceResolver - Function to resolve relationship ID to data URL
+ * @param resourceResolver - Function to resolve resource ID to data URL
  * @returns ResolvedImageFill or undefined if resolution fails
  */
 export function resolveBlipFill(fill: BlipFill, resourceResolver?: ResourceResolverFn): ResolvedImageFill | undefined {
-  // If resourceId is already a data URL, use it directly
-  if (fill.resourceId.startsWith("data:")) {
-    return {
-      type: "image",
-      src: fill.resourceId,
-      mode: fill.tile ? "tile" : "stretch",
-    };
-  }
-
-  // Try to resolve using the provided resolver
   if (resourceResolver !== undefined) {
     const resolvedSrc = resourceResolver(fill.resourceId);
     if (resolvedSrc !== undefined) {

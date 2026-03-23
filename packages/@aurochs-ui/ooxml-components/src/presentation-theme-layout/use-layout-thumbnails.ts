@@ -12,14 +12,14 @@ import { useMemo } from "react";
 import type { Shape, SlideSize, Slide, Background } from "@aurochs-office/pptx/domain";
 import type { PackageFile } from "@aurochs-office/opc";
 import type { SlideLayoutOption } from "@aurochs-office/pptx/app";
-import type { XmlDocument } from "@aurochs/xml";
 import { loadSlideLayoutBundle, createResourceResolverFromMaps } from "@aurochs-office/pptx/app";
-import { parseShapeTree, parseBackground } from "@aurochs-office/pptx/parser";
+import { createResourceStore } from "@aurochs-office/pptx/domain/resource-store";
+import { enrichSlideContent, type FileReader } from "@aurochs-office/pptx/parser/slide/external-content-loader";
 import { parseTheme } from "@aurochs-office/pptx/parser/theme/theme-parser";
 import { parseSlideMaster } from "@aurochs-office/pptx/parser/slide/slide-parser";
 import { createPlaceholderTable } from "@aurochs-office/pptx/parser/slide/resource-adapters";
+import { parseLayoutContent } from "@aurochs-office/pptx/parser/slide/layout-parser";
 import type { PlaceholderContext, MasterStylesInfo } from "@aurochs-office/pptx/parser/context";
-import { getChild, getByPath } from "@aurochs/xml";
 import { DEFAULT_COLOR_MAPPING } from "@aurochs-office/pptx/domain/color/types";
 import { renderSlideSvg } from "@aurochs-renderer/pptx/svg";
 import { createCoreRenderContext } from "@aurochs-renderer/pptx";
@@ -83,16 +83,6 @@ function buildColorContext(colorScheme: ColorScheme | undefined): ColorContext |
 }
 
 /**
- * Extract background from bundle's slide master via parseSlideMaster (SoT).
- */
-function resolveBackgroundFromMasterBundle(master: XmlDocument | null, formatScheme: FormatScheme | undefined): Background | undefined {
-  if (!master) {
-    return undefined;
-  }
-  return parseSlideMaster(master, formatScheme)?.background;
-}
-
-/**
  * Load layout shapes with full context (PlaceholderContext + MasterStylesInfo)
  * and render SVG.
  *
@@ -111,20 +101,6 @@ export function loadLayoutWithContext(options: {
   const { file, layoutPath, slideSize } = options;
   try {
     const bundle = loadSlideLayoutBundle(file, layoutPath);
-    const layoutContent = getByPath(bundle.layout, ["p:sldLayout"]);
-    if (layoutContent === undefined) {
-      return undefined;
-    }
-
-    const cSld = getChild(layoutContent, "p:cSld");
-    if (cSld === undefined) {
-      return undefined;
-    }
-
-    const spTree = getChild(cSld, "p:spTree");
-    if (spTree === undefined) {
-      return undefined;
-    }
 
     // Build PlaceholderContext from master for transform inheritance
     const masterTable = createPlaceholderTable(bundle.masterTables);
@@ -142,43 +118,63 @@ export function loadLayoutWithContext(options: {
     };
 
     // Parse theme for color context, font scheme, and format scheme
-    // Override with editor state values if provided (for live theme preview)
     const parsedTheme = bundle.theme ? parseTheme(bundle.theme, undefined) : undefined;
     const colorContext = options.colorContext ?? buildColorContext(parsedTheme?.colorScheme);
     const fontScheme = options.fontScheme ?? parsedTheme?.fontScheme;
     const formatScheme = parsedTheme?.formatScheme;
 
-    // Parse shapes with full context
-    const shapes = parseShapeTree({
-      spTree,
-      ctx: placeholderCtx,
+    // Parse shapes and background from layout XML (SoT: parseLayoutContent)
+    const layoutContent = parseLayoutContent(bundle.layout, {
+      placeholderCtx,
       masterStylesInfo,
       formatScheme,
+      masterBackground: options.masterBackground,
+      masterDoc: bundle.master,
     });
+    if (layoutContent === undefined) {
+      return undefined;
+    }
 
-    // Create resource resolver for layout images
-    const resources = createResourceResolverFromMaps(file, [
+    const { shapes, background } = layoutContent;
+
+    // Register all blipFill images in ResourceStore
+    const resourceStore = createResourceStore();
+    const resourceMaps = [
       bundle.layoutRelationships,
       bundle.masterRelationships,
       bundle.themeRelationships,
-    ]);
+    ];
+    const fileReader: FileReader = {
+      readFile: (path: string) => {
+        const buffer = file.readBinary(path);
+        return buffer ?? null;
+      },
+      resolveResource: (id: string) => {
+        for (const map of resourceMaps) {
+          const target = map.getTarget(id);
+          if (target !== undefined) { return target; }
+        }
+        return undefined;
+      },
+      getResourceByType: (relType: string) => {
+        for (const map of resourceMaps) {
+          const target = map.getTargetByType(relType);
+          if (target !== undefined) { return target; }
+        }
+        return undefined;
+      },
+    };
+    enrichSlideContent({ shapes }, fileReader, resourceStore);
 
-    // Resolve background with ECMA-376 §19.3.1.2 inheritance: layout → master
-    // Layout's own p:bg is parsed with formatScheme for p:bgRef resolution (§19.3.1.4).
-    // masterBackground is already a resolved Background domain type from the editor state.
-    // Bundle master's p:bg is the final fallback.
-    const background =
-      parseBackground(getChild(cSld, "p:bg"), formatScheme)
-      ?? options.masterBackground
-      ?? resolveBackgroundFromMasterBundle(bundle.master, formatScheme);
+    const resources = createResourceResolverFromMaps(file, resourceMaps, resourceStore);
 
-    // Render SVG
     const pseudoSlide: Slide = { shapes, background };
     const renderCtx = createCoreRenderContext({
       slideSize,
       colorContext,
       resources,
       fontScheme,
+      resourceStore,
     });
     const result = renderSlideSvg(pseudoSlide, renderCtx);
 

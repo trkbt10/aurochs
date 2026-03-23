@@ -9,7 +9,7 @@
 import { useMemo } from "react";
 import type { OleReference } from "@aurochs-office/pptx/domain";
 import { EMU_PER_PIXEL } from "@aurochs-office/ooxml/domain/ooxml-units";
-import { useRenderContext, useRenderResources, useRenderResourceStore } from "../../../context";
+import { useRenderContext, useRenderResourceStore } from "../../../context";
 
 /**
  * Result of OLE preview resolution
@@ -42,7 +42,6 @@ export type OlePreviewResult = {
  * @returns Preview resolution result
  */
 export function useOlePreview(oleData: OleReference | undefined): OlePreviewResult {
-  const resources = useRenderResources();
   const resourceStore = useRenderResourceStore();
   const { warnings } = useRenderContext();
 
@@ -83,10 +82,9 @@ export function useOlePreview(oleData: OleReference | undefined): OlePreviewResu
       }
     }
 
-    // Try p:pic child element
+    // Try p:pic child element — image is in ResourceStore
     if (oleData.pic?.resourceId !== undefined) {
-      // Check ResourceStore for pic resource first
-      const picUrl = resourceStore?.toDataUrl(oleData.pic.resourceId) ?? resources.resolve(oleData.pic.resourceId);
+      const picUrl = resourceStore.toDataUrl(oleData.pic.resourceId);
       if (picUrl !== undefined) {
         return {
           previewUrl: picUrl,
@@ -115,5 +113,5 @@ export function useOlePreview(oleData: OleReference | undefined): OlePreviewResu
       imageWidth,
       imageHeight,
     };
-  }, [oleData, resources, resourceStore, warnings]);
+  }, [oleData, resourceStore, warnings]);
 }

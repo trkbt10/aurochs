@@ -20,7 +20,7 @@ import { getChild, getByPath } from "@aurochs/xml";
 import type { RenderOptions } from "@aurochs-renderer/pptx";
 
 // Import domain types from canonical sources
-import type { PlaceholderTable, Theme, ResolvedBlipResource, Background } from "../../domain/index";
+import type { PlaceholderTable, Theme, ResolvedBlipResource, Background, Shape } from "../../domain/index";
 import type { MasterTextStyles, TextStyleLevels } from "../../domain/text-style";
 import type { ZipFile, ResourceMap } from "@aurochs-office/opc";
 import type { TableStyleList } from "../table/style-parser";
@@ -579,4 +579,97 @@ export function toTextStyleContext(ctx: SlideContext): TextStyleContext {
     defaultTextStyle: ctx.presentation.defaultTextStyle,
     placeholders: toPlaceholderContext(ctx),
   };
+}
+
+// =============================================================================
+// API Slide → SlideContext Factory
+// =============================================================================
+
+import type { Slide as ApiSlide } from "../../app/types";
+import type { XmlDocument } from "@aurochs/xml";
+import { parseTheme } from "../theme/theme-parser";
+import { parseSlideMaster } from "./slide-parser";
+import { createPlaceholderTable, createColorMap } from "./resource-adapters";
+import { parseShapeTree } from "../shape-parser/parse-element";
+import { getNonPlaceholderShapes } from "../../domain/shape-utils";
+
+/**
+ * Create SlideContext from an API Slide object.
+ *
+ * SoT for converting API-level slide data (XML documents + relationship maps)
+ * into the parser-layer SlideContext. All XML decomposition happens here,
+ * not in the renderer layer.
+ *
+ * @param apiSlide - API slide containing XML documents and relationship maps
+ * @param renderOptions - Render options for dialect-specific behavior
+ */
+export function createSlideContextFromApiSlide(
+  apiSlide: ApiSlide,
+  renderOptions?: RenderOptions,
+): SlideContext {
+  const slideClrMapOvr = getByPath(apiSlide.content, ["p:sld", "p:clrMapOvr", "a:overrideClrMapping"]);
+  const slideContent = getByPath(apiSlide.content, ["p:sld"]);
+
+  const slide: SlideParams = {
+    content: slideContent as XmlElement,
+    resources: apiSlide.relationships,
+    colorMapOverride: slideClrMapOvr !== undefined ? createColorMap(slideClrMapOvr) : undefined,
+  };
+
+  const layoutContent = getByPath(apiSlide.layout, ["p:sldLayout"]);
+
+  const layout: SlideLayoutParams = {
+    placeholders: createPlaceholderTable(apiSlide.layoutTables),
+    resources: apiSlide.layoutRelationships,
+    content: layoutContent as XmlElement | undefined,
+  };
+
+  const parsedMaster = parseSlideMaster(apiSlide.master ?? undefined);
+
+  const master: SlideMasterParams = {
+    textStyles: parsedMaster?.textStyles ?? { titleStyle: undefined, bodyStyle: undefined, otherStyle: undefined },
+    placeholders: createPlaceholderTable(apiSlide.masterTables),
+    colorMap: parsedMaster?.colorMap ?? {},
+    resources: apiSlide.masterRelationships,
+    background: parsedMaster?.background,
+  };
+
+  const theme = parseTheme(apiSlide.theme as XmlDocument, undefined);
+
+  const presentation: PresentationContext = {
+    theme,
+    defaultTextStyle: apiSlide.defaultTextStyle,
+    zip: apiSlide.zip,
+    renderOptions: renderOptions ?? apiSlide.renderOptions,
+    themeResources: apiSlide.themeRelationships,
+    tableStyles: apiSlide.tableStyles ?? undefined,
+  };
+
+  return createSlideContext({ slide, layout, master, presentation });
+}
+
+/**
+ * Get non-placeholder shapes from slide layout.
+ *
+ * SoT for layout shape extraction from SlideContext.
+ *
+ * @see ECMA-376 Part 1, Section 19.3.1.39 (sldLayout)
+ */
+export function getLayoutNonPlaceholderShapes(ctx: SlideContext): readonly Shape[] {
+  const layoutContent = ctx.layout.content;
+  if (layoutContent === undefined) {
+    return [];
+  }
+
+  const cSld = getChild(layoutContent, "p:cSld");
+  if (cSld === undefined) {
+    return [];
+  }
+
+  const spTree = getChild(cSld, "p:spTree");
+  if (spTree === undefined) {
+    return [];
+  }
+
+  return getNonPlaceholderShapes(parseShapeTree({ spTree }));
 }

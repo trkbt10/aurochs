@@ -83,10 +83,10 @@ describe("createConnector", () => {
 });
 
 describe("createPicShape", () => {
-  it("creates picture with dataUrl", () => {
-    const shape = createPicShape("p1" as ShapeId, BOUNDS, "data:image/png;base64,abc");
+  it("creates picture with resourceId", () => {
+    const shape = createPicShape("p1" as ShapeId, BOUNDS, "uploaded:p1");
     expect(shape.type).toBe("pic");
-    expect(shape.blipFill.resourceId).toBe("data:image/png;base64,abc");
+    expect(shape.blipFill.resourceId).toBe("uploaded:p1");
   });
 });
 

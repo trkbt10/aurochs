@@ -5,7 +5,7 @@
  */
 
 import { getAttr, getChild, type XmlElement } from "@aurochs/xml";
-import type { BlipFillProperties, PicShape, PictureLocks, ResolvedBlipResource } from "../../domain";
+import type { BlipFillProperties, PicShape, PictureLocks } from "../../domain";
 import { px, pct } from "@aurochs-office/drawing-ml/domain/units";
 import { getBoolAttr, getIntAttr, parseBlipCompression, parseRectAlignment } from "../primitive";
 import { parseNonVisualMedia, parseNonVisualProperties } from "./non-visual";
@@ -13,9 +13,7 @@ import { parseShapeProperties } from "./properties";
 import { parseShapeStyle } from "./style";
 import { getBlipFillElement } from "./alternate-content";
 import { resolveEffectsFromStyleReference } from "../graphics/effects-parser";
-import type { ResourceContext } from "../context";
 import type { FormatScheme } from "../../domain/theme/types";
-import type { ResourceStore } from "../../domain/resource-store";
 
 /**
  * Parse blip fill properties for pictures
@@ -26,8 +24,6 @@ import type { ResourceStore } from "../../domain/resource-store";
  */
 export function parseBlipFillProperties(
   blipFill: XmlElement | undefined,
-  resourceContext?: ResourceContext,
-  resourceStore?: ResourceStore,
 ): BlipFillProperties | undefined {
   if (!blipFill) {
     return undefined;
@@ -42,27 +38,6 @@ export function parseBlipFillProperties(
   if (!resourceId) {
     return undefined;
   }
-
-  // Resolve image at parse time if context is available
-  // eslint-disable-next-line no-restricted-syntax -- mutable assigned conditionally when context is available
-  let resolvedResource: ResolvedBlipResource | undefined;
-  if (resourceContext !== undefined && !resourceId.startsWith("data:")) {
-    resolvedResource = resourceContext.resolveBlipFill(resourceId);
-
-    // Register in ResourceStore if available
-    if (resourceStore && resolvedResource) {
-      resourceStore.set(resourceId, {
-        kind: "image",
-        source: "parsed",
-        data: resolvedResource.data,
-        mimeType: resolvedResource.mimeType,
-        path: resolvedResource.path,
-      });
-    }
-  }
-
-  // Note: resolvedResource is no longer stored on BlipFillProperties
-  // It's registered in ResourceStore above
 
   // Parse source rect
   const sourceRect = parseSourceRect(getChild(blipFill, "a:srcRect"));
@@ -160,15 +135,16 @@ function detectMediaType(nvPicPr: XmlElement | undefined): PicShape["mediaType"]
 /**
  * Parse picture shape (p:pic)
  *
+ * Image data registration in ResourceStore is handled by
+ * enrichSlideContent (registerSlideBlipFillImages), not here.
+ *
  * @param element - The p:pic XML element
  * @param formatScheme - Optional format scheme for style reference resolution
- * @param resourceContext - Optional resource context for resolving images at parse time
  * @see ECMA-376 Part 1, Section 19.3.1.37
  */
 export function parsePicShape(
   element: XmlElement,
   formatScheme?: FormatScheme,
-  resourceContext?: ResourceContext,
 ): PicShape | undefined {
   const nvPicPr = getChild(element, "p:nvPicPr");
   const cNvPr = nvPicPr ? getChild(nvPicPr, "p:cNvPr") : undefined;
@@ -176,7 +152,7 @@ export function parsePicShape(
   const nvPr = nvPicPr ? getChild(nvPicPr, "p:nvPr") : undefined;
 
   const blipFill = getBlipFillElement(element);
-  const blipFillProps = parseBlipFillProperties(blipFill, resourceContext);
+  const blipFillProps = parseBlipFillProperties(blipFill);
   if (!blipFillProps) {
     return undefined;
   }

@@ -16,12 +16,10 @@ import type { ResourceResolver } from "@aurochs-office/pptx/domain/resource-reso
 import type { ResourceStore } from "@aurochs-office/pptx/domain/resource-store";
 import type { SlideContext } from "@aurochs-office/pptx/parser/slide/context";
 import type { CoreRenderContext } from "../render-context";
+import { createCoreRenderContext } from "../render-context";
 import type { RenderOptions } from "../render-options";
-import { DEFAULT_RENDER_OPTIONS } from "../render-options";
 import type { ResolvedBackgroundFill } from "@aurochs-office/drawing-ml/domain/background-fill";
-import { createWarningCollector } from "@aurochs-office/ooxml";
 import { getMimeTypeFromPath } from "@aurochs/files";
-import { toDataUrl } from "@aurochs/buffer";
 
 // =============================================================================
 // Types
@@ -34,7 +32,7 @@ export type RenderContextFromSlideOptions = {
   readonly renderOptions?: Partial<RenderOptions>;
   readonly resolvedBackground?: ResolvedBackgroundFill;
   readonly layoutShapes?: readonly Shape[];
-  readonly resourceStore?: ResourceStore;
+  readonly resourceStore: ResourceStore;
 };
 
 // =============================================================================
@@ -53,23 +51,19 @@ export type RenderContextFromSlideOptions = {
 export function createRenderContextFromSlideContext(
   ctx: SlideContext,
   slideSize: SlideSize,
-  options?: RenderContextFromSlideOptions,
+  options: RenderContextFromSlideOptions,
 ): CoreRenderContext {
-  const shapeId = { value: 0 };
-
-  return {
+  return createCoreRenderContext({
     slideSize,
-    options: { ...DEFAULT_RENDER_OPTIONS, ...options?.renderOptions },
+    options: options.renderOptions,
     colorContext: buildColorContext(ctx),
-    resources: buildResourceResolver(ctx),
-    warnings: createWarningCollector(),
-    getNextShapeId: () => `shape-${shapeId.value++}`,
-    resolvedBackground: options?.resolvedBackground,
+    resources: buildResourceResolver(ctx, options.resourceStore),
     fontScheme: buildFontScheme(ctx),
-    layoutShapes: options?.layoutShapes,
+    resolvedBackground: options.resolvedBackground,
+    layoutShapes: options.layoutShapes,
     tableStyles: ctx.presentation.tableStyles,
-    resourceStore: options?.resourceStore,
-  };
+    resourceStore: options.resourceStore,
+  });
 }
 
 // =============================================================================
@@ -114,29 +108,25 @@ function buildColorContext(ctx: SlideContext): ColorContext {
 }
 
 /**
- * Build ResourceResolver from SlideContext.
+ * Build ResourceResolver from SlideContext and ResourceStore.
+ *
+ * resolve() delegates to ResourceStore.toDataUrl() — ResourceStore is the
+ * single source of truth for all resolved image/resource data.
+ * All images must be registered in ResourceStore before rendering
+ * (via enrichSlideContent / registerSlideBlipFillImages).
  *
  * @see ECMA-376 Part 2 (Open Packaging Conventions)
  */
-function buildResourceResolver(ctx: SlideContext): ResourceResolver {
+function buildResourceResolver(ctx: SlideContext, resourceStore: ResourceStore): ResourceResolver {
   return {
     getTarget: (id: string) => ctx.slide.resources.getTarget(id),
     getType: (id: string) => ctx.slide.resources.getType(id),
-    resolve: (id: string) => {
-      const target = ctx.resolveResource(id);
-      if (target === undefined) {
-        return undefined;
-      }
-
-      const data = ctx.readFile(target);
-      if (data !== null) {
-        const mimeType = getMimeTypeFromPath(target) ?? "application/octet-stream";
-        return toDataUrl(data, mimeType);
-      }
-
-      return target;
-    },
+    resolve: (id: string) => resourceStore.toDataUrl(id),
     getMimeType: (id: string) => {
+      const entry = resourceStore.get(id);
+      if (entry?.mimeType !== undefined) {
+        return entry.mimeType;
+      }
       const target = ctx.resolveResource(id);
       if (target === undefined) {
         return undefined;
@@ -144,6 +134,10 @@ function buildResourceResolver(ctx: SlideContext): ResourceResolver {
       return getMimeTypeFromPath(target);
     },
     getFilePath: (id: string) => {
+      const entry = resourceStore.get(id);
+      if (entry?.path !== undefined) {
+        return entry.path;
+      }
       return ctx.resolveResource(id);
     },
     readFile: (path: string) => {

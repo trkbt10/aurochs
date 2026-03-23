@@ -151,4 +151,4 @@ export { createRenderContextFromSlideContext } from "./context/slide-context-ada
 
 export type { RenderContext, CreateRenderContextOptions } from "./context/api-render-context";
 
-export { createRenderContext, getLayoutNonPlaceholderShapes } from "./context/api-render-context";
+export { createRenderContext } from "./context/api-render-context";

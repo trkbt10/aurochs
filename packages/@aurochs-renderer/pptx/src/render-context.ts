@@ -10,6 +10,7 @@ import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
 import type { ResourceResolver } from "@aurochs-office/pptx/domain/resource-resolver";
 import { createEmptyResourceResolver } from "@aurochs-office/pptx/domain/resource-resolver";
 import type { ResourceStore } from "@aurochs-office/pptx/domain/resource-store";
+import { createResourceStore } from "@aurochs-office/pptx/domain/resource-store";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import type { RenderOptions } from "./render-options";
 import { DEFAULT_RENDER_OPTIONS } from "./render-options";
@@ -41,9 +42,6 @@ export type CoreRenderContext = {
 
   /** Warning collector */
   readonly warnings: WarningCollector;
-
-  /** Current shape ID counter */
-  readonly getNextShapeId: () => string;
 
   /**
    * Pre-resolved background fill (after slide → layout → master inheritance).
@@ -79,11 +77,12 @@ export type CoreRenderContext = {
   /**
    * Centralized resource store for resolved resource data.
    *
-   * During migration, this runs in parallel with `resources: ResourceResolver`.
-   * Eventually, this will replace the scattered resolved resource fields
-   * (e.g., BlipFillProperties.resolvedResource, OleReference.embedData).
+   * This is the single source of truth for all resolved resources:
+   * images, charts, diagrams, and OLE objects.
+   * ResourceResolver.resolve() checks this store first before
+   * falling back to direct archive access.
    */
-  readonly resourceStore?: ResourceStore;
+  readonly resourceStore: ResourceStore;
 };
 
 // =============================================================================
@@ -105,7 +104,7 @@ export type CoreRenderContextConfig = {
   readonly resolvedBackground?: ResolvedBackgroundFill;
   readonly layoutShapes?: readonly Shape[];
   readonly tableStyles?: TableStyleList;
-  readonly resourceStore?: ResourceStore;
+  readonly resourceStore: ResourceStore;
 };
 
 // =============================================================================
@@ -119,15 +118,12 @@ export type CoreRenderContextConfig = {
  * HTML and SVG contexts extend this with format-specific features.
  */
 export function createCoreRenderContext(config: CoreRenderContextConfig): CoreRenderContext {
-  const shapeId = { value: 0 };
-
   return {
     slideSize: config.slideSize,
     options: { ...DEFAULT_RENDER_OPTIONS, ...config.options },
     colorContext: config.colorContext ?? { colorScheme: {}, colorMap: {} },
     resources: config.resources ?? createEmptyResourceResolver(),
     warnings: createWarningCollector(),
-    getNextShapeId: () => `shape-${shapeId.value++}`,
     fontScheme: config.fontScheme,
     resolvedBackground: config.resolvedBackground,
     layoutShapes: config.layoutShapes,
@@ -142,5 +138,6 @@ export function createCoreRenderContext(config: CoreRenderContextConfig): CoreRe
 export function createEmptyCoreRenderContext(): CoreRenderContext {
   return createCoreRenderContext({
     slideSize: { width: px(960), height: px(540) },
+    resourceStore: createResourceStore(),
   });
 }

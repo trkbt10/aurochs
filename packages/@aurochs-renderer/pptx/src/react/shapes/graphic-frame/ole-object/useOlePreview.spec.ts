@@ -123,7 +123,7 @@ describe("useOlePreview", () => {
     expect(result.current.preview.hasPreview).toBe(true);
   });
 
-  it("falls back to resource resolver for p:pic when ResourceStore.toDataUrl returns undefined", () => {
+  it("returns no preview when p:pic resource has no mimeType in ResourceStore", () => {
     const store = createEmptyResourceStore();
     store.set("rId5", {
       kind: "image",
@@ -132,23 +132,17 @@ describe("useOlePreview", () => {
       // mimeType intentionally omitted so toDataUrl() returns undefined
     });
 
-    const resources: ResourceResolver = {
-      ...createEmptyResourceResolver(),
-      resolve: (resourceId) => (resourceId === "rId5" ? "data:image/png;base64,resolved" : undefined),
-    };
-
     const oleData: OleReference = {
       progId: "PowerPoint.Slide.8",
       pic: { resourceId: "rId5" },
     };
 
     const { result } = renderUseOlePreview(oleData, {
-      resources,
+      resources: createEmptyResourceResolver(),
       resourceStore: store,
     });
 
-    expect(result.current.preview.previewUrl).toBe("data:image/png;base64,resolved");
-    expect(result.current.preview.hasPreview).toBe(true);
+    expect(result.current.preview.hasPreview).toBe(false);
   });
 
   it("adds warning when no preview is available", () => {

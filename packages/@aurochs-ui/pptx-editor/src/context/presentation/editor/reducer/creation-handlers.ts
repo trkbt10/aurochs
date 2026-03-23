@@ -93,7 +93,7 @@ function handleAddPicture(state: PresentationEditorState, action: AddPictureActi
     height: action.height,
   };
 
-  const picShape = createPicShape(newId, bounds, action.dataUrl);
+  const picShape = createPicShape(newId, bounds, action.resourceId);
 
   const newDoc = updateActiveSlideInDocument(state.documentHistory.present, state.activeSlideId, (slide) => ({
     ...slide,

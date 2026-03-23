@@ -12,6 +12,7 @@ import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
 import type { ResourceResolver } from "../domain/resource-resolver";
+import type { ResourceStore } from "../domain/resource-store";
 import type { ResolvedBackgroundFill } from "@aurochs-office/drawing-ml/domain/background-fill";
 import type { Slide as ApiSlide } from "./types";
 
@@ -89,6 +90,8 @@ export type PresentationDocument = {
   readonly fontScheme: FontScheme;
   /** Resource resolver for images and embedded content */
   readonly resources: ResourceResolver;
+  /** Centralized resource store — SoT for all resolved resources (images, charts, diagrams) */
+  readonly resourceStore?: ResourceStore;
 
   /**
    * Presentation file for PPTX resources.

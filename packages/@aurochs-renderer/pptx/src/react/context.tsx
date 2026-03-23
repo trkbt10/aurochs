@@ -19,6 +19,7 @@ import type { ResolvedBackgroundFill } from "@aurochs-office/drawing-ml/domain/b
 import type { ResourceResolver } from "@aurochs-office/pptx/domain/resource-resolver";
 import { createEmptyResourceResolver } from "@aurochs-office/pptx/domain/resource-resolver";
 import type { ResourceStore } from "@aurochs-office/pptx/domain/resource-store";
+import { createResourceStore } from "@aurochs-office/pptx/domain/resource-store";
 import { createWarningCollector } from "@aurochs-office/ooxml";
 import type { TableStyleList } from "@aurochs-office/pptx/parser/table/style-parser";
 import { DrawingMLProvider } from "@aurochs-renderer/drawing-ml/react";
@@ -78,6 +79,7 @@ export function RenderProvider({
   tableStyles,
 }: RenderProviderProps) {
   const resolvedResources = useMemo(() => resources ?? createEmptyResourceResolver(), [resources]);
+  const resolvedResourceStore = useMemo(() => resourceStore ?? createResourceStore(), [resourceStore]);
 
   const resolvedColorContext = useMemo<ColorContext>(
     () => colorContext ?? { colorScheme: {}, colorMap: {} },
@@ -91,18 +93,14 @@ export function RenderProvider({
     [slideSize, resolvedResources, resolvedColorContext, resolvedOptions, resolvedBackground, fontScheme, layoutShapes],
   );
 
-  // Shape ID counter for unique IDs
-  const shapeIdRef = useMemo(() => ({ value: 0 }), []);
-
   const ctx = useMemo<ReactRenderContext>(
     () => ({
       slideSize,
       options: resolvedOptions,
       colorContext: resolvedColorContext,
       resources: resolvedResources,
-      resourceStore,
+      resourceStore: resolvedResourceStore,
       warnings,
-      getNextShapeId: () => `shape-${shapeIdRef.value++}`,
       resolvedBackground,
       fontScheme,
       layoutShapes,
@@ -113,13 +111,12 @@ export function RenderProvider({
       resolvedOptions,
       resolvedColorContext,
       resolvedResources,
-      resourceStore,
+      resolvedResourceStore,
       warnings,
       fontScheme,
       resolvedBackground,
       layoutShapes,
       tableStyles,
-      shapeIdRef,
     ],
   );
 
@@ -192,25 +189,25 @@ export function useRenderResources(): ResourceResolver {
 
 /**
  * Access resource store from the render context.
- * Returns undefined if resourceStore was not provided to RenderProvider.
  */
-export function useRenderResourceStore(): ResourceStore | undefined {
+export function useRenderResourceStore(): ResourceStore {
   const ctx = useContext(RenderContext);
-  return ctx?.resourceStore;
+  if (ctx === null) {
+    throw new Error("useRenderResourceStore must be used within a RenderProvider");
+  }
+  return ctx.resourceStore;
 }
 
 /**
  * Create a default render context for testing.
  */
 export function createDefaultReactRenderContext(): ReactRenderContext {
-  // eslint-disable-next-line no-restricted-syntax -- Closure state: unique ID counter for shapes
-  let shapeId = 0;
   return {
     slideSize: { width: px(960) as Pixels, height: px(540) as Pixels },
     options: DEFAULT_RENDER_OPTIONS,
     colorContext: { colorScheme: {}, colorMap: {} },
     resources: createEmptyResourceResolver(),
+    resourceStore: createResourceStore(),
     warnings: createWarningCollector(),
-    getNextShapeId: () => `shape-${shapeId++}`,
   };
 }

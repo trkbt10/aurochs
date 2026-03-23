@@ -2,21 +2,14 @@
  * @file Standalone SVG slide renderer
  *
  * Provides a pure function to render a Slide to SVG format.
- * This is the public API for SVG rendering, replacing the
- * Slide.renderSVG() method.
+ * This is the public API for SVG rendering.
  *
  * @see ECMA-376 Part 1, Section 19.3 (PresentationML)
  */
 
 import type { Slide } from "@aurochs-office/pptx/app/types";
-import type { XmlDocument, XmlElement } from "@aurochs/xml";
-import { getByPath } from "@aurochs/xml";
 import { renderSlideSvgIntegrated } from "../slide-render";
-import { createSlideContext, type SlideContext } from "@aurochs-office/pptx/parser/slide/context";
-import { createPlaceholderTable, createColorMap } from "@aurochs-office/pptx/parser/slide/resource-adapters";
-import { parseTheme } from "@aurochs-office/pptx/parser/theme/theme-parser";
-import { parseSlideMaster } from "@aurochs-office/pptx/parser/slide/slide-parser";
-import { DEFAULT_RENDER_OPTIONS } from "../render-options";
+import { buildSlideRenderContext } from "../context/api-render-context";
 
 /**
  * Result of rendering a slide to SVG.
@@ -29,81 +22,21 @@ export type SvgRenderResult = {
 };
 
 /**
- * Build SlideContext from a Slide object.
- *
- * This function coordinates parser and render layer utilities to build
- * the complete context needed for rendering.
- *
- * @param slide - Slide data with all rendering context
- * @returns SlideContext for use in rendering
- */
-function buildSlideContextFromSlide(slide: Slide): SlideContext {
-  // Extract color map override from slide (if present)
-  const slideClrMapOvr = getByPath(slide.content, ["p:sld", "p:clrMapOvr", "a:overrideClrMapping"]);
-
-  // Get slide content element
-  const slideContent = getByPath(slide.content, ["p:sld"]);
-
-  const slideParams = {
-    content: slideContent as XmlElement,
-    resources: slide.relationships,
-    colorMapOverride: slideClrMapOvr !== undefined ? createColorMap(slideClrMapOvr) : undefined,
-  };
-
-  // Get layout content element for background lookup
-  const layoutContent = getByPath(slide.layout, ["p:sldLayout"]);
-
-  const layout = {
-    placeholders: createPlaceholderTable(slide.layoutTables),
-    resources: slide.layoutRelationships,
-    content: layoutContent as XmlElement | undefined,
-  };
-
-  // Use parseSlideMaster as SoT for colorMap, textStyles, and background
-  const parsedMaster = parseSlideMaster(slide.master ?? undefined);
-
-  const master = {
-    textStyles: parsedMaster?.textStyles ?? { titleStyle: undefined, bodyStyle: undefined, otherStyle: undefined },
-    placeholders: createPlaceholderTable(slide.masterTables),
-    colorMap: parsedMaster?.colorMap ?? {},
-    resources: slide.masterRelationships,
-    background: parsedMaster?.background,
-  };
-
-  const theme = parseTheme(slide.theme, slide.themeOverrides as XmlDocument[]);
-
-  const presentation = {
-    theme,
-    defaultTextStyle: slide.defaultTextStyle,
-    zip: slide.zip,
-    renderOptions: slide.renderOptions ?? DEFAULT_RENDER_OPTIONS,
-    themeResources: slide.themeRelationships,
-    tableStyles: slide.tableStyles ?? undefined,
-  };
-
-  return createSlideContext({ slide: slideParams, layout, master, presentation });
-}
-
-/**
  * Render a slide to SVG format.
  *
- * This is the public API for SVG rendering, replacing the Slide.renderSVG() method.
- * The function takes a Slide object containing all necessary data and returns
- * a complete SVG document.
+ * This is the public API for SVG rendering.
  *
  * @param slide - Slide data with all rendering context
  * @returns SVG string and any warnings
- *
- * @example
- * ```typescript
- * import { renderSlideToSvg } from "@aurochs-renderer/pptx/svg";
- *
- * const { svg, warnings } = renderSlideToSvg(slide);
- * ```
  */
 export function renderSlideToSvg(slide: Slide): SvgRenderResult {
-  const slideRenderCtx = buildSlideContextFromSlide(slide);
-  const result = renderSlideSvgIntegrated(slide.content as XmlDocument, slideRenderCtx, slide.slideSize);
+  const slideRenderCtx = buildSlideRenderContext({
+    apiSlide: slide,
+    zip: slide.zip,
+    defaultTextStyle: slide.defaultTextStyle,
+    renderOptions: slide.renderOptions,
+  });
+  const result = renderSlideSvgIntegrated(slide.content, slideRenderCtx, slide.slideSize);
   return {
     svg: result.svg,
     warnings: result.warnings,

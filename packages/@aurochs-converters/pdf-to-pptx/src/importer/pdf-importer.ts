@@ -6,7 +6,10 @@ import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import type { ResourceResolver } from "@aurochs-office/pptx/domain/resource-resolver";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
 import { DEFAULT_COLOR_MAPPING } from "@aurochs-office/pptx/domain/color/types";
-import type { Presentation } from "@aurochs-office/pptx/domain";
+import type { Presentation, Shape } from "@aurochs-office/pptx/domain";
+import type { ResourceStore } from "@aurochs-office/pptx/domain/resource-store";
+import { createResourceStore } from "@aurochs-office/pptx/domain/resource-store";
+import { parseDataUrl } from "@aurochs/buffer";
 import type { PresentationDocument, SlideWithId } from "@aurochs-office/pptx/app/presentation-document";
 import type { Slide } from "@aurochs-office/pptx/domain/slide/types";
 import { openPresentation } from "@aurochs-office/pptx/app/open-presentation";
@@ -400,17 +403,58 @@ function createPresentationDocument(
   // Generate @font-face CSS for embedded fonts
   const embeddedFontCss = buildEmbeddedFontCss(pdfEmbeddedFonts);
 
+  // Extract data URL images from PicShapes and register in ResourceStore.
+  // Replaces data URL resourceIds with stable keys.
+  const resourceStore = createResourceStore();
+  const migratedSlides = slides.map((s) => ({
+    ...s,
+    slide: migrateDataUrlResources(s.slide, resourceStore),
+  }));
+
   return {
     presentation,
-    slides,
+    slides: migratedSlides,
     slideWidth: slideSize.width,
     slideHeight: slideSize.height,
     colorContext: createDefaultColorContextForPdf(),
     fontScheme: EMPTY_FONT_SCHEME,
     resources: createDataUrlResourceResolver(),
+    resourceStore,
     embeddedFonts,
     embeddedFontCss,
   };
+}
+
+/**
+ * Walk all shapes in a slide and migrate data URL resourceIds to ResourceStore.
+ * Each data URL is parsed, registered in the store under a generated key,
+ * and the shape's resourceId is replaced with that key.
+ */
+function migrateDataUrlResources(slide: Slide, resourceStore: ResourceStore): Slide {
+  // eslint-disable-next-line no-restricted-syntax -- counter for unique resource IDs
+  let counter = 0;
+  const migrateShape = (shape: Shape): Shape => {
+    if (shape.type === "pic" && shape.blipFill.resourceId.startsWith("data:")) {
+      const key = `pdf-image:${counter++}`;
+      registerDataUrlInStore(resourceStore, key, shape.blipFill.resourceId);
+      return { ...shape, blipFill: { ...shape.blipFill, resourceId: key } };
+    }
+    if (shape.type === "grpSp") {
+      return { ...shape, children: shape.children.map(migrateShape) };
+    }
+    return shape;
+  };
+  return { ...slide, shapes: slide.shapes.map(migrateShape) };
+}
+
+function registerDataUrlInStore(store: ResourceStore, key: string, dataUrl: string): void {
+  const { mimeType, data } = parseDataUrl(dataUrl);
+  store.set(key, {
+    kind: "image",
+    source: "parsed",
+    data,
+    mimeType,
+  });
 }
 
 function buildEmbeddedFontCss(pdfEmbeddedFonts: readonly PdfEmbeddedFont[] | undefined): string | undefined {

@@ -10,6 +10,7 @@ import { DEFAULT_COLOR_SCHEME, type SpShape, type CxnShape, type PicShape, type 
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import type { ShapeId, ResourceId } from "@aurochs-office/pptx/domain/types";
 import { px, deg, pct } from "@aurochs-office/drawing-ml/domain/units";
+import { parseDataUrl } from "@aurochs/buffer";
 import type { CreationPresetShape, CreationMode } from "./creation-types";
 
 // =============================================================================
@@ -208,12 +209,17 @@ export function createConnector(id: ShapeId, bounds: ShapeBounds): CxnShape {
 }
 
 /**
- * Create a picture shape
+ * Create a picture shape.
  *
- * For new pictures, resourceId is the dataURL of the image.
- * The rendering layer will handle dataURL resources.
+ * The caller is responsible for registering the image data in ResourceStore
+ * before calling this function. The `resourceId` should be the key under
+ * which the image was registered (e.g., "uploaded:{shapeId}").
+ *
+ * @param id - Shape ID
+ * @param bounds - Shape position and size
+ * @param resourceId - Key in ResourceStore where the image data is registered
  */
-export function createPicShape(id: ShapeId, bounds: ShapeBounds, dataUrl: string): PicShape {
+export function createPicShape(id: ShapeId, bounds: ShapeBounds, resourceId: string): PicShape {
   return {
     type: "pic",
     nonVisual: {
@@ -221,7 +227,7 @@ export function createPicShape(id: ShapeId, bounds: ShapeBounds, dataUrl: string
       name: `Picture ${id}`,
     },
     blipFill: {
-      resourceId: dataUrl as ResourceId,
+      resourceId,
       sourceRect: {
         left: pct(0),
         top: pct(0),
@@ -333,4 +339,29 @@ export function createShapeFromMode(mode: CreationMode, bounds: ShapeBounds): Sh
     default:
       return undefined;
   }
+}
+
+// =============================================================================
+// Image Registration
+// =============================================================================
+
+/**
+ * Register an image from a data URL in the ResourceStore.
+ *
+ * @param resourceStore - ResourceStore to register the image in
+ * @param resourceId - Key to register under (e.g., "uploaded:{shapeId}")
+ * @param dataUrl - Image data as a data URL (e.g., "data:image/png;base64,...")
+ */
+export function registerImageFromDataUrl(
+  resourceStore: { set(id: string, entry: { kind: "image"; source: "uploaded"; data: ArrayBuffer; mimeType: string }): void },
+  resourceId: string,
+  dataUrl: string,
+): void {
+  const { mimeType, data } = parseDataUrl(dataUrl);
+  resourceStore.set(resourceId, {
+    kind: "image",
+    source: "uploaded",
+    data,
+    mimeType,
+  });
 }

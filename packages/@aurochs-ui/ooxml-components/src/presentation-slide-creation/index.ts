@@ -24,6 +24,7 @@ export {
   createTextBox,
   createConnector,
   createPicShape,
+  registerImageFromDataUrl,
   createBoundsFromDrag,
   getDefaultBoundsForMode,
   generateShapeId,
