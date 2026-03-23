@@ -90,11 +90,7 @@ export function prepareSlideResources(
   options: PrepareSlideResourcesOptions,
 ): Slide {
   // Step 1: Parser → Context
-  const enrichedSlide = enrichSlideContent(
-    slide,
-    options.fileReader,
-    resourceStore,
-  );
+  const enrichedSlide = enrichSlideContent(slide, options.fileReader, resourceStore);
 
   // Step 2: Builder → Context (fills gaps left by step 1)
   registerBuilderResources(enrichedSlide.shapes, resourceStore, options);
@@ -109,26 +105,32 @@ export function prepareSlideResources(
 function registerBuilderResources(
   shapes: readonly Shape[],
   resourceStore: ResourceStore,
-  options?: PrepareSlideResourcesOptions,
+  options: PrepareSlideResourcesOptions,
 ): void {
   for (const shape of shapes) {
-    if (shape.type !== "graphicFrame") continue;
+    if (shape.type !== "graphicFrame") {
+      continue;
+    }
 
-    if (shape.content.type === "chart") {
-      const { resourceId, chartType } = shape.content.data;
-      if (resourceStore.has(resourceId as string)) continue;
-      if (chartType === undefined) continue;
-      resourceStore.set(resourceId as string, buildChartResourceEntry(chartType));
-    } else if (shape.content.type === "diagram") {
-      const { dataResourceId, diagramType } = shape.content.data;
-      if (dataResourceId === undefined) continue;
-      if (resourceStore.has(dataResourceId as string)) continue;
-      if (diagramType === undefined) continue;
-      const spec = options?.resolveDiagramSpec?.(diagramType);
-      if (spec === undefined) continue;
-      const width = (shape.transform?.width ?? 500) as number;
-      const height = (shape.transform?.height ?? 400) as number;
-      resourceStore.set(dataResourceId as string, buildDiagramResourceEntry(spec, width, height));
+    switch (shape.content.type) {
+      case "chart": {
+        const { resourceId, chartType } = shape.content.data;
+        if (chartType !== undefined && !resourceStore.has(resourceId)) {
+          resourceStore.set(resourceId, buildChartResourceEntry(chartType));
+        }
+        break;
+      }
+      case "diagram": {
+        const { dataResourceId, diagramType } = shape.content.data;
+        if (dataResourceId !== undefined && diagramType !== undefined && !resourceStore.has(dataResourceId)) {
+          const spec = options.resolveDiagramSpec?.(diagramType);
+          if (spec !== undefined) {
+            const { width, height } = shape.transform;
+            resourceStore.set(dataResourceId, buildDiagramResourceEntry(spec, width, height));
+          }
+        }
+        break;
+      }
     }
   }
 }
