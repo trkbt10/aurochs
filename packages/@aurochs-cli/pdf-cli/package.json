@@ -19,6 +19,6 @@
     "@aurochs-cli/cli-core": "workspace:*",
     "@aurochs-renderer/pdf": "workspace:*",
     "@aurochs/pdf": "workspace:*",
-    "commander": "^12.0.0"
+    "commander": "^12.1.0"
   }
 }

@@ -70,6 +70,6 @@
     "zstd-codec": "^0.1.5"
   },
   "devDependencies": {
-    "@types/pako": "^2.0.3"
+    "@types/pako": "^2.0.4"
   }
 }

@@ -20,6 +20,6 @@
     "@aurochs/zip": "workspace:*"
   },
   "devDependencies": {
-    "@types/vscode": "^1.85.0"
+    "@types/vscode": "^1.110.0"
   }
 }
