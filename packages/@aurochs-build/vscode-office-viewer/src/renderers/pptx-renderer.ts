@@ -42,6 +42,9 @@ export function renderPptxSlidesFromFile(presentationFile: PackageFile): PptxRen
       slideSize: presentation.size,
     });
 
+    if (!renderContext.slideRenderContext) {
+      throw new Error("slideRenderContext is required for PPTX rendering");
+    }
     const result = renderSlideSvgIntegrated(apiSlide.content, renderContext.slideRenderContext, presentation.size);
 
     return result.svg;

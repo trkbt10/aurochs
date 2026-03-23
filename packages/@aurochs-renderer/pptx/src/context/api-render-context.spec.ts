@@ -176,9 +176,9 @@ describe("createRenderContext", () => {
     const ctx = createRenderContext({ apiSlide, zip, slideSize });
 
     expect(ctx.slideRenderContext).toBeDefined();
-    expect(ctx.slideRenderContext.master).toBeDefined();
-    expect(ctx.slideRenderContext.presentation).toBeDefined();
-    expect(ctx.slideRenderContext.presentation.theme).toBeDefined();
+    expect(ctx.slideRenderContext!.master).toBeDefined();
+    expect(ctx.slideRenderContext!.presentation).toBeDefined();
+    expect(ctx.slideRenderContext!.presentation.theme).toBeDefined();
   });
 
   it("should parse theme color scheme correctly", () => {
@@ -187,7 +187,7 @@ describe("createRenderContext", () => {
     const slideSize = { width: px(960), height: px(540) };
 
     const ctx = createRenderContext({ apiSlide, zip, slideSize });
-    const colorScheme = ctx.slideRenderContext.presentation.theme.colorScheme;
+    const colorScheme = ctx.slideRenderContext!.presentation.theme.colorScheme;
 
     // Verify color scheme has expected colors
     expect(colorScheme.dk1).toBeDefined();
@@ -202,7 +202,7 @@ describe("createRenderContext", () => {
     const slideSize = { width: px(960), height: px(540) };
 
     const ctx = createRenderContext({ apiSlide, zip, slideSize });
-    const colorMap = ctx.slideRenderContext.master.colorMap;
+    const colorMap = ctx.slideRenderContext!.master.colorMap;
 
     // Verify color map mappings
     expect(colorMap.tx1).toBe("dk1");

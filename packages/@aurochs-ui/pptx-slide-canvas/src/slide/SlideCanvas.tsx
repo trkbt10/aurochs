@@ -23,6 +23,7 @@ import { isPathEditEditing } from "../context/slide/state";
 import type { CreationMode } from "@aurochs-ui/ooxml-components";
 import { isPenMode, isPathMode } from "../creation-mode-guards";
 import type { ResourceResolver } from "@aurochs-office/pptx/domain/resource-resolver";
+import type { ResourceStore } from "@aurochs-office/pptx/domain/resource-store";
 import type { ResolvedBackgroundFill } from "@aurochs-office/drawing-ml/domain/background-fill";
 import type { RenderOptions } from "@aurochs-renderer/pptx";
 import type { DrawingPath } from "@aurochs-ui/path-tools";
@@ -71,6 +72,8 @@ export type SlideCanvasProps = {
   readonly colorContext?: ColorContext;
   /** Resource resolver for images */
   readonly resources?: ResourceResolver;
+  /** Resource store for centralized resource management (charts, diagrams) */
+  readonly resourceStore?: ResourceStore;
   /** Font scheme for theme fonts */
   readonly fontScheme?: FontScheme;
   /** Pre-resolved background from inheritance chain */
@@ -218,6 +221,7 @@ export function SlideCanvas({
   style,
   colorContext,
   resources,
+  resourceStore,
   fontScheme,
   resolvedBackground,
   renderOptions,
@@ -793,6 +797,7 @@ export function SlideCanvas({
             slideSize={slideSize}
             colorContext={colorContext}
             resources={resources}
+            resourceStore={resourceStore}
             fontScheme={fontScheme}
             options={renderOptions}
             resolvedBackground={resolvedBackground}

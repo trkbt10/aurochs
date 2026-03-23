@@ -80,8 +80,28 @@ function toPresetGeometry(geometry: LayoutShapeResult["geometry"]): PresetGeomet
   };
 }
 
+/**
+ * Ensure textBody has bodyProperties (required by PPTX TextBody type).
+ * Diagram layout engine produces format-agnostic textBody without bodyProperties.
+ */
+function ensureBodyProperties(textBody: TextBody): TextBody {
+  if (textBody.bodyProperties) {
+    return textBody;
+  }
+  return { ...textBody, bodyProperties: {} };
+}
+
 function toTextBody(result: LayoutShapeResult): TextBody | undefined {
   if (!isTextBody(result.textBody)) {
+    // Diagram textBody may lack bodyProperties — try to adapt
+    if (isPartialTextBody(result.textBody)) {
+      const adapted = ensureBodyProperties(result.textBody as TextBody);
+      if (!result.textFill) {
+        return adapted;
+      }
+      const textFill = toFill(result.textFill);
+      return textFill ? applyStyleFillToTextBody(adapted, textFill) : adapted;
+    }
     return undefined;
   }
   if (!result.textFill) {
@@ -92,6 +112,16 @@ function toTextBody(result: LayoutShapeResult): TextBody | undefined {
     return result.textBody;
   }
   return applyStyleFillToTextBody(result.textBody, textFill);
+}
+
+/**
+ * Check if value looks like a textBody without bodyProperties.
+ * This handles diagram-generated textBody that has paragraphs but no bodyProperties.
+ */
+function isPartialTextBody(value: unknown): boolean {
+  if (!value || typeof value !== "object") return false;
+  const v = value as Record<string, unknown>;
+  return "paragraphs" in v && Array.isArray(v.paragraphs);
 }
 
 /** Convert a diagram layout result to a PPTX SpShape */

@@ -228,7 +228,7 @@ export function createChartGraphicFrame(id: ShapeId, bounds: ShapeBounds, chartT
 export function createDiagramGraphicFrame(
   id: ShapeId,
   bounds: ShapeBounds,
-  _diagramType: CreationDiagramType,
+  diagramType: CreationDiagramType,
 ): GraphicFrame {
   const diagramResourceId = `diagram-${id}` as ResourceId;
 
@@ -251,8 +251,7 @@ export function createDiagramGraphicFrame(
       type: "diagram",
       data: {
         dataResourceId: diagramResourceId,
-        // Note: Diagram data should be stored in ResourceStore separately
-        // The factory creates the shape reference; the editor manages the data
+        diagramType,
       },
     },
   };

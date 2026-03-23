@@ -617,12 +617,9 @@ function renderGraphicFrameSvg({
       if (diagramSvg !== undefined) {
         return `<g${transformAttr}${ooxmlIdAttr}>${diagramSvg}</g>`;
       }
-      // Fallback to placeholder if diagram content not available
-      ctx.warnings.add({
-        type: "fallback",
-        message: "Diagram drawing content not available",
-      });
-      return renderPlaceholder({ transformAttr, ooxmlIdAttr, w, h, label: "Diagram" });
+      throw new Error(
+        `renderGraphicFrameSvg: diagram rendering failed (dataResourceId=${content.data.dataResourceId ?? "undefined"}, resourceStore=${ctx.resourceStore ? "present" : "missing"})`,
+      );
     }
 
     case "oleObject": {

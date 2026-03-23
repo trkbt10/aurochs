@@ -224,6 +224,9 @@ export function convertToPresentationDocument(loaded: LoadedPresentation): Prese
     const renderContext = createRenderContext({ apiSlide, zip: zipFile, slideSize });
 
     // Create ParseContext with placeholder tables, master styles, format scheme
+    if (!renderContext.slideRenderContext) {
+      throw new Error("slideRenderContext is required when apiSlide is provided");
+    }
     const parseCtx = createParseContext(renderContext.slideRenderContext);
 
     // Parse the XML content with full context

@@ -397,11 +397,24 @@ export type DiagramContent = {
  * The parsedContent field is populated in the integration layer
  * to allow render to render without calling parser directly.
  */
+/**
+ * Diagram layout type hint for editor-created diagrams.
+ * Absent for PPTX-parsed diagrams (layout is in the diagram XML).
+ * Used to build default diagram data when not in the archive.
+ */
+export type DiagramLayoutType = "process" | "cycle" | "hierarchy" | "relationship";
+
 export type DiagramReference = {
   readonly dataResourceId?: ResourceId;
   readonly layoutResourceId?: ResourceId;
   readonly styleResourceId?: ResourceId;
   readonly colorResourceId?: ResourceId;
+  /**
+   * Diagram layout type hint for editor-created diagrams.
+   * Absent for PPTX-parsed diagrams (type is in diagram XML parts).
+   * Used to build default diagram data when not in the archive.
+   */
+  readonly diagramType?: DiagramLayoutType;
 };
 
 /**

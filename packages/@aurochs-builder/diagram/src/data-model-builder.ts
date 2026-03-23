@@ -4,7 +4,8 @@
  * Builds diagram data model (dgm:dataModel) from specification.
  */
 
-import type { DiagramDataModel, DiagramPoint, DiagramConnection, DiagramNodeSpec, DiagramBuildSpec } from "./types";
+import type { DiagramDataModel, DiagramPoint, DiagramConnection } from "@aurochs-office/diagram/domain";
+import type { DiagramNodeSpec, DiagramBuildSpec } from "./types";
 
 /**
  * Build a diagram point from node spec
@@ -27,24 +28,21 @@ function buildPoint(spec: DiagramNodeSpec): DiagramPoint {
 /**
  * Build diagram connection for a child node
  */
+/**
+ * Build a parOf connection.
+ *
+ * In tree-builder's interpretation of parOf:
+ *   sourceId = child, destinationId = parent
+ *
+ * So to make node a child of its parent:
+ *   sourceId = node.id, destinationId = parent
+ */
 function buildParentConnection(node: DiagramNodeSpec, orderIndex: number): DiagramConnection {
-  if (!node.parentId) {
-    // Root node connection
-    return {
-      modelId: `conn-${node.id}-root`,
-      type: "parOf",
-      sourceId: "0", // Document root
-      destinationId: node.id,
-      sourceOrder: orderIndex,
-      destinationOrder: 0,
-    };
-  }
-
   return {
-    modelId: `conn-${node.id}-${node.parentId}`,
+    modelId: `conn-${node.id}-${node.parentId ?? "root"}`,
     type: "parOf",
-    sourceId: node.parentId,
-    destinationId: node.id,
+    sourceId: node.id,
+    destinationId: node.parentId ?? "0",
     sourceOrder: orderIndex,
     destinationOrder: 0,
   };

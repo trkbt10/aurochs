@@ -69,6 +69,9 @@ export async function runShow(filePath: string, slideNumber: number): Promise<Re
     const apiSlide = presentation.getSlide(slideNumber);
     const zipFile = createZipAdapter(presentationFile);
     const renderContext = createRenderContext({ apiSlide, zip: zipFile, slideSize: presentation.size });
+    if (!renderContext.slideRenderContext) {
+      throw new Error("slideRenderContext is required for show");
+    }
     const parseCtx = createParseContext(renderContext.slideRenderContext);
     const domainSlide = parseSlide(apiSlide.content, parseCtx);
 

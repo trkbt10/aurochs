@@ -8,8 +8,11 @@
     "@aurochs/buffer": "workspace:*",
     "@aurochs/xml": "workspace:*",
     "@aurochs/zip": "workspace:*",
+    "@aurochs-builder/chart": "workspace:*",
     "@aurochs-builder/core": "workspace:*",
+    "@aurochs-builder/diagram": "workspace:*",
     "@aurochs-builder/drawing-ml": "workspace:*",
+    "@aurochs-office/diagram": "workspace:*",
     "@aurochs-office/chart": "workspace:*",
     "@aurochs-office/opc": "workspace:*",
     "@aurochs-office/ooxml": "workspace:*",
@@ -57,6 +60,10 @@
     "./patcher/*/*/*": {
       "types": "./src/patcher/*/*/*.ts",
       "default": "./src/patcher/*/*/*.ts"
+    },
+    "./resource-builder": {
+      "types": "./src/resource-builder.ts",
+      "default": "./src/resource-builder.ts"
     }
   }
 }

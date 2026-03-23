@@ -13,7 +13,6 @@ import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import { DiagramContainer } from "@aurochs-renderer/diagram/react";
 import { useRenderResourceStore } from "../../../context";
 import { ShapeRenderer } from "../../../ShapeRenderer";
-import { Placeholder } from "../shared";
 import type { ContentProps } from "../types";
 
 /**
@@ -48,7 +47,6 @@ export const DiagramContent = memo(function DiagramContent({
       width={width}
       height={height}
       getResource={getResource}
-      placeholder={<Placeholder width={width} height={height} label="Diagram" />}
       renderShape={(shape: Shape, index: number) => (
         <ShapeRenderer key={getShapeKey(shape, index)} shape={shape} editingShapeId={editingShapeId} />
       )}
@@ -60,12 +58,11 @@ export const DiagramContent = memo(function DiagramContent({
  * Get a stable key for a shape
  */
 function getShapeKey(shape: Shape, index: number): string {
-  // Use shape ID if available, otherwise fall back to index
+  if ("modelId" in shape && shape.modelId) {
+    return shape.modelId;
+  }
   if ("nonVisual" in shape && shape.nonVisual?.id) {
     return shape.nonVisual.id;
   }
-  if ("modelId" in shape && shape.modelId) {
-    return `diagram-${shape.modelId}`;
-  }
-  return `diagram-shape-${index}`;
+  return String(index);
 }

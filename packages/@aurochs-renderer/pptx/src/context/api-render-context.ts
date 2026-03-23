@@ -19,6 +19,7 @@ import type { SlideSize, Shape, SpShape } from "@aurochs-office/pptx/domain";
 import type { TextStyleLevels } from "@aurochs-office/pptx/domain/text-style";
 import type { ZipFile } from "@aurochs-office/opc";
 import type { CoreRenderContext } from "../render-context";
+import { createCoreRenderContext } from "../render-context";
 import type { RenderOptions } from "../render-options";
 import { DEFAULT_RENDER_OPTIONS } from "../render-options";
 import { toResolvedBackgroundFill } from "../background-fill";
@@ -41,18 +42,24 @@ import type { FileReader } from "@aurochs-office/pptx/parser/slide/external-cont
  * - Resolved background (from slide → layout → master hierarchy)
  * - Layout shapes (non-placeholder shapes from layout)
  */
+/**
+ * Render context for slide rendering.
+ *
+ * Always has fileReader (null-object if no archive).
+ * slideRenderContext is present only when apiSlide was provided.
+ */
 export type RenderContext = CoreRenderContext & {
-  readonly slideRenderContext: SlideContext;
-  /** FileReader for enriching slides with chart/diagram data from the PPTX archive */
+  readonly slideRenderContext?: SlideContext;
   readonly fileReader: FileReader;
 };
 
 /**
- * Options for creating a RenderContext from API slide data.
+ * Options for creating a RenderContext.
+ * apiSlide and zip are optional — without them, a minimal context is created.
  */
 export type CreateRenderContextOptions = {
-  readonly apiSlide: ApiSlide;
-  readonly zip: ZipFile;
+  readonly apiSlide?: ApiSlide;
+  readonly zip?: ZipFile;
   readonly slideSize: SlideSize;
   readonly defaultTextStyle?: TextStyleLevels | null;
   readonly renderOptions?: RenderOptions;
@@ -61,6 +68,13 @@ export type CreateRenderContextOptions = {
 // =============================================================================
 // Helpers
 // =============================================================================
+
+/** FileReader that reads nothing. Used when no PPTX archive is available. */
+const NULL_FILE_READER: FileReader = {
+  readFile: () => null,
+  resolveResource: () => undefined,
+  getResourceByType: () => undefined,
+};
 
 /** Build the SlideContext from API slide data with full theme context */
 function buildSlideRenderContext(opts: {
@@ -115,7 +129,14 @@ function buildSlideRenderContext(opts: {
 // Factory Function
 // =============================================================================
 
-/** Create a RenderContext from API slide data with full theme context */
+/**
+ * Create a RenderContext.
+ *
+ * When apiSlide + zip are provided: resolves theme, colors, fonts, background, layout.
+ * When absent: creates minimal context with empty defaults and null-object fileReader.
+ *
+ * ResourceStore and fileReader are always present — no branching needed by callers.
+ */
 export function createRenderContext({
   apiSlide,
   zip,
@@ -123,27 +144,24 @@ export function createRenderContext({
   defaultTextStyle = null,
   renderOptions,
 }: CreateRenderContextOptions): RenderContext {
-  // Build SlideRenderContext
-  const slideRenderCtx = buildSlideRenderContext({ apiSlide, zip, defaultTextStyle, renderOptions });
-
-  // Resolve background from hierarchy
-  const bgFillData = getBackgroundFillData(slideRenderCtx);
-  const resolvedBackground = toResolvedBackgroundFill(bgFillData);
-
-  // Extract layout non-placeholder shapes
-  const layoutShapes = getLayoutNonPlaceholderShapes(apiSlide);
-
-  // Create ResourceStore for chart/diagram data
   const resourceStore = createResourceStore();
 
-  // Build FileReader from SlideContext for enrichment
+  if (!apiSlide || !zip) {
+    const coreCtx = createCoreRenderContext({ slideSize, resourceStore });
+    return { ...coreCtx, fileReader: NULL_FILE_READER };
+  }
+
+  const slideRenderCtx = buildSlideRenderContext({ apiSlide, zip, defaultTextStyle, renderOptions });
+  const bgFillData = getBackgroundFillData(slideRenderCtx);
+  const resolvedBackground = toResolvedBackgroundFill(bgFillData);
+  const layoutShapes = getLayoutNonPlaceholderShapes(apiSlide);
+
   const fileReader: FileReader = {
     readFile: (path: string) => slideRenderCtx.readFile(path),
     resolveResource: (id: string) => slideRenderCtx.resolveResource(id),
     getResourceByType: (relType: string) => slideRenderCtx.slide.resources.getTargetByType(relType),
   };
 
-  // Create RenderContext with all resolved data
   const renderContext = createRenderContextFromSlideContext(slideRenderCtx, slideSize, {
     resolvedBackground,
     layoutShapes,

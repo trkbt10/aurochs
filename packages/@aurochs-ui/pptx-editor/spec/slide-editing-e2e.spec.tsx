@@ -15,12 +15,30 @@
 
 /* eslint-disable custom/no-as-outside-guard, no-restricted-syntax -- Test file */
 
+// jsdom lacks SVG text measurement APIs — stub them for rendering tests
+if (typeof globalThis.SVGElement !== "undefined") {
+  const proto = globalThis.SVGElement.prototype as Record<string, unknown>;
+  if (!proto.getComputedTextLength) {
+    proto.getComputedTextLength = function () { return 0; };
+  }
+  if (!proto.getSubStringLength) {
+    proto.getSubStringLength = function () { return 0; };
+  }
+  if (!proto.getNumberOfChars) {
+    proto.getNumberOfChars = function () { return 0; };
+  }
+  if (!proto.getBBox) {
+    proto.getBBox = function () { return { x: 0, y: 0, width: 0, height: 0 }; };
+  }
+}
+
 import { render } from "@testing-library/react";
 import type { Shape } from "@aurochs-office/pptx/domain";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import type { CreationMode } from "@aurochs-ui/ooxml-components";
 import { getDefaultBoundsForMode } from "@aurochs-ui/ooxml-components";
 import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
+import { createResourceStore } from "@aurochs-office/pptx/domain/resource-store";
 import {
   presentationEditorReducer,
   createPresentationEditorState,
@@ -33,6 +51,14 @@ import { createShapeFromMode } from "@aurochs-ui/pptx-slide-canvas/shape/factory
 import { createTestDocument } from "../src/context/presentation/editor/reducer/test-fixtures";
 import { collectShapeRenderData } from "@aurochs-ui/pptx-slide-canvas/shape/traverse";
 import { SlideCanvas } from "@aurochs-ui/pptx-slide-canvas/slide/SlideCanvas";
+import type { FileReader } from "@aurochs-office/pptx/parser/slide/external-content-loader";
+import { prepareSlide } from "../src/resource/register-slide-resources";
+
+const NULL_FILE_READER: FileReader = {
+  readFile: () => null,
+  resolveResource: () => undefined,
+  getResourceByType: () => undefined,
+};
 
 // =============================================================================
 // Helpers
@@ -106,6 +132,10 @@ function renderCanvas(state: PresentationEditorState) {
   }
   const primaryShape = findShapeByNonVisualId(slide.shapes, state.shapeSelection.primaryId);
 
+  // Populate ResourceStore for editor-created charts/diagrams (mimics PresentationEditor useMemo)
+  const resourceStore = createResourceStore();
+  prepareSlide(slide, resourceStore, NULL_FILE_READER);
+
   const result = render(
     <SlideCanvas
       slide={slide}
@@ -116,6 +146,7 @@ function renderCanvas(state: PresentationEditorState) {
       primaryShape={primaryShape}
       selectedShapes={selectedShapes}
       contextMenuActions={createContextMenuActions()}
+      resourceStore={resourceStore}
       onSelect={() => undefined}
       onSelectMultiple={() => undefined}
       onClearSelection={() => undefined}
@@ -585,5 +616,67 @@ describe("Slide Editing E2E - UI Rendering", () => {
         u5();
       });
     }
+  });
+
+  // ===========================================================================
+  // 11. Diagram rendering: [Diagram] placeholder must NOT appear
+  // ===========================================================================
+
+  describe("Diagram rendering: no [Diagram] placeholder", () => {
+    const DIAGRAM_TYPES = ["process", "cycle", "hierarchy", "relationship"] as const;
+
+    for (const diagramType of DIAGRAM_TYPES) {
+      it(`should NOT render [Diagram] placeholder for ${diagramType} diagram`, () => {
+        const mode: CreationMode = { type: "diagram", diagramType };
+        const { state } = createElement({ name: `diagram (${diagramType})`, mode });
+
+        const { container, unmount } = renderCanvas(state);
+
+        // [Diagram] placeholder text must not exist
+        const textElements = container.querySelectorAll("text");
+        const placeholderText = Array.from(textElements).find(
+          (el) => el.textContent === "[Diagram]",
+        );
+        expect(placeholderText).toBeUndefined();
+
+        // data-diagram-content should exist (shapes rendered)
+        const diagramContent = container.querySelector("[data-diagram-content]");
+        expect(diagramContent).not.toBeNull();
+
+        unmount();
+      });
+    }
+
+    it("should throw when ResourceStore is empty (no silent fallback)", () => {
+      const mode: CreationMode = { type: "diagram", diagramType: "process" };
+      const bounds = getDefaultBoundsForMode(mode, px(100), px(100));
+      const shape = createShapeFromMode(mode, bounds)!;
+      const state = presentationEditorReducer(baseState, { type: "CREATE_SHAPE", shape });
+      const activeSlide = getActiveSlide(state);
+      const slide = activeSlide?.slide ?? { shapes: [] };
+      const doc = state.documentHistory.present;
+
+      // Intentionally do NOT populate ResourceStore → must throw, not silently show placeholder
+      expect(() => {
+        render(
+          <SlideCanvas
+            slide={slide}
+            selection={state.shapeSelection}
+            drag={state.drag}
+            width={doc.slideWidth}
+            height={doc.slideHeight}
+            primaryShape={undefined}
+            selectedShapes={[]}
+            contextMenuActions={createContextMenuActions()}
+            onSelect={() => undefined}
+            onSelectMultiple={() => undefined}
+            onClearSelection={() => undefined}
+            onStartMove={() => undefined}
+            onStartResize={() => undefined}
+            onStartRotate={() => undefined}
+          />,
+        );
+      }).toThrow("DiagramContainer");
+    });
   });
 });

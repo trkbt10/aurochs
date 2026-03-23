@@ -52,9 +52,8 @@ import {
 import { ShapeToolbar } from "../panels/ShapeToolbar";
 import { buildSlideLayoutOptions } from "@aurochs-office/pptx/app";
 import { createRenderContext, getLayoutNonPlaceholderShapes } from "@aurochs-renderer/pptx";
-import { enrichSlideContent } from "@aurochs-office/pptx/parser/slide/external-content-loader";
 import type { Chart } from "@aurochs-office/chart/domain";
-import { populateEditorCreatedResources } from "./populate-editor-resources";
+import { prepareSlide } from "../resource/register-slide-resources";
 import { getSlideLayoutAttributes } from "@aurochs-office/pptx/parser/slide/layout-parser";
 import { RELATIONSHIP_TYPES, createZipAdapter } from "@aurochs-office/pptx/domain";
 import { CanvasControls } from "@aurochs-ui/editor-controls/shape-editor";
@@ -682,27 +681,17 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
     [getThumbnailSvg, width, height],
   );
 
-  const renderContext = useMemo(() => {
-    const apiSlide = activeSlide?.apiSlide;
-    if (apiSlide && zipFile) {
-      return createRenderContext({ apiSlide, zip: zipFile, slideSize: { width, height } });
-    }
-    return undefined;
-  }, [width, height, activeSlide?.apiSlide, zipFile]);
+  const renderContext = useMemo(
+    () => createRenderContext({ apiSlide: activeSlide?.apiSlide, zip: zipFile, slideSize: { width, height } }),
+    [width, height, activeSlide?.apiSlide, zipFile],
+  );
 
-  // Enrich active slide with chart/diagram data from PPTX archive
-  // into the editor resource store, so the canvas can render charts.
-  // Also populate editor-created charts that have chartType but no archive data.
+  // Prepare slide ResourceStore: parser enrich (archive) + builder (editor-created)
   useMemo(() => {
     if (!activeSlide?.slide || !editorResourceStore) {
       return;
     }
-    // Phase 1: Enrich from PPTX archive (for charts loaded from file)
-    if (renderContext) {
-      enrichSlideContent(activeSlide.slide, renderContext.fileReader, editorResourceStore);
-    }
-    // Phase 2: Populate editor-created charts/diagrams not in archive
-    populateEditorCreatedResources(activeSlide.slide.shapes, editorResourceStore);
+    prepareSlide(activeSlide.slide, editorResourceStore, renderContext.fileReader);
   }, [renderContext, activeSlide?.slide, editorResourceStore]);
 
   // Chart data change handler: updates ResourceStore and triggers re-render.

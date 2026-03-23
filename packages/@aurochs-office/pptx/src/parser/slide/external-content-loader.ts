@@ -232,14 +232,16 @@ function enrichDiagramFrame(frame: GraphicFrame, ctx: EnrichmentContext): Graphi
     shapes = tryGenerateDiagramShapes({ frame, dataModel, layoutDefinition, styleDefinition, colorsDefinition });
   }
 
-  // Register diagram data in ResourceStore
-  if (resourceStore !== undefined && diagramRef.dataResourceId !== undefined) {
+  // Register diagram data in ResourceStore only if shapes were actually resolved.
+  // If no shapes could be parsed or generated, do not register — let the builder
+  // layer handle it (e.g. registerSlideResources for editor-created diagrams).
+  if (resourceStore !== undefined && diagramRef.dataResourceId !== undefined && shapes !== undefined && shapes.length > 0) {
     resourceStore.set(diagramRef.dataResourceId, {
       kind: "diagram",
       source: "parsed",
-      data: new ArrayBuffer(0), // Diagram data is stored as parsed objects
+      data: new ArrayBuffer(0),
       parsed: {
-        shapes: shapes ?? [],
+        shapes,
         dataModel,
         layoutDefinition,
         styleDefinition,

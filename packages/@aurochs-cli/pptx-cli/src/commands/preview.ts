@@ -69,6 +69,9 @@ export async function runPreview(
 
       // Build parse context with layout/master inheritance for placeholder transforms
       const renderContext = createRenderContext({ apiSlide, zip: zipFile, slideSize: presentation.size });
+      if (!renderContext.slideRenderContext) {
+        throw new Error("slideRenderContext is required for preview");
+      }
       const parseCtx = createParseContext(renderContext.slideRenderContext);
       const domainSlide = parseSlide(apiSlide.content, parseCtx);
 
@@ -100,7 +103,7 @@ export async function runPreview(
         // SVG output using integrated renderer
         const svgResult = renderSlideSvgIntegrated(
           apiSlide.content,
-          renderContext.slideRenderContext,
+          renderContext.slideRenderContext!,
           presentation.size,
         );
         slides.push({

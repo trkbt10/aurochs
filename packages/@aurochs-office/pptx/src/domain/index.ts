@@ -407,6 +407,7 @@ export type {
   TableReference,
   ChartReference,
   DiagramContent,
+  DiagramLayoutType,
   DiagramReference,
   OleReference,
   OleObjectFollowColorScheme,
