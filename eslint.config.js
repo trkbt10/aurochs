@@ -96,6 +96,7 @@ export default [
         "custom/no-node-only-import": ["error", { packages: ["pngjs"] }],
         // Prohibit trivial type alias re-exports (export type X = ImportedY)
         "custom/no-type-alias-reexport": "error",
+        "custom/prefer-switch-or-map": "warn",
         // Prohibit direct Accordion/PropertySection in inspector panels; use OptionalPropertySection
         // Spread from modular groups
         ...rulesJSDoc,
