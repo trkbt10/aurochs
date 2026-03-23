@@ -63,7 +63,6 @@ export {
 // import directly from @aurochs-builder/drawing-ml/text
 export {
   generateShapeId,
-  setChildren,
   PRESET_MAP,
   buildBlipEffectsFromSpec,
   buildCustomGeometryFromSpec,
