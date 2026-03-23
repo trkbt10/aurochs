@@ -7,7 +7,7 @@ import type { Cell, CellValue } from "@aurochs-office/xlsx/domain/cell/types";
 import type { CellAddress, CellRange } from "@aurochs-office/xlsx/domain/cell/address";
 import { colIdx, rowIdx, styleId } from "@aurochs-office/xlsx/domain/types";
 import { createDefaultStyleSheet } from "@aurochs-office/xlsx/domain/style/types";
-import { getCell, getCellValue } from "../../../../cell/query";
+import { getCell, getCellValue } from "@aurochs-office/xlsx/domain/mutation/query";
 import { createHistory } from "@aurochs-ui/editor-core/history";
 import { createRangeSelection } from "../../state/selection";
 import { createIdleDragState } from "@aurochs-ui/editor-core/drag-state";

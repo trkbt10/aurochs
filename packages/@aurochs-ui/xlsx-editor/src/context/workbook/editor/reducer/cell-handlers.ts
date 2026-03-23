@@ -13,7 +13,7 @@ import {
   clearCellContents,
   clearCellFormats,
   setCellFormula,
-} from "../../../../cell/mutation";
+} from "@aurochs-office/xlsx/domain/mutation/cell";
 import { updateWorksheetInWorkbook } from "../../utils/worksheet-updater";
 
 type UpdateCellAction = Extract<XlsxEditorAction, { type: "UPDATE_CELL" }>;

@@ -12,7 +12,7 @@ import { colIdx, rowIdx } from "@aurochs-office/xlsx/domain/types";
 import type { CellAddress } from "@aurochs-office/xlsx/domain/cell/address";
 import { createFormulaEvaluator, type FormulaEvaluator } from "@aurochs-office/xlsx/formula/evaluator";
 import { createSheetLayout, type SheetLayout } from "../../selectors/sheet-layout";
-import { getCell } from "../../cell/query";
+import { getCell } from "@aurochs-office/xlsx/domain/mutation/query";
 import { resolveCellRenderStyle } from "../../selectors/cell-render-style";
 import { formatCellValueForDisplay, formatFormulaScalarForDisplay, resolveCellFormatCode } from "../../selectors/cell-display-text";
 import { normalizeMergeRange, findMergeForCell, type NormalizedMergeRange } from "../../sheet/merge-range";

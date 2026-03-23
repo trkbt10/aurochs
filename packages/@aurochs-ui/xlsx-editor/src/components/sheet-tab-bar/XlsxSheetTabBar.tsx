@@ -13,7 +13,7 @@
 import { useCallback, useState, type CSSProperties } from "react";
 import { colorTokens, spacingTokens } from "@aurochs-ui/ui-components";
 import { useXlsxWorkbookEditor } from "../../context/workbook/XlsxWorkbookEditorContext";
-import { getUsedRange } from "../../cell/query";
+import { getUsedRange } from "@aurochs-office/xlsx/domain/mutation/query";
 import { generateUniqueName } from "../../sheet/mutation";
 import { XlsxSheetTab } from "./XlsxSheetTab";
 import { XlsxSheetTabContextMenu, type XlsxSheetTabContextMenuAction } from "./XlsxSheetTabContextMenu";

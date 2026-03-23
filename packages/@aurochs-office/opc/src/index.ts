@@ -52,6 +52,7 @@ export {
   dirnamePosixPath,
   joinPosixPath,
   normalizePosixPath,
+  buildRelativeTarget,
 } from "./path";
 
 export { createGetZipTextFileContentFromBytes } from "./zip";

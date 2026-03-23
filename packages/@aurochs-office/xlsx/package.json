@@ -109,6 +109,30 @@
       "types": "./src/domain/sheet-utils.ts",
       "default": "./src/domain/sheet-utils.ts"
     },
+    "./domain/mutation/cell": {
+      "types": "./src/domain/mutation/cell.ts",
+      "default": "./src/domain/mutation/cell.ts"
+    },
+    "./domain/mutation/row": {
+      "types": "./src/domain/mutation/row.ts",
+      "default": "./src/domain/mutation/row.ts"
+    },
+    "./domain/mutation/column": {
+      "types": "./src/domain/mutation/column.ts",
+      "default": "./src/domain/mutation/column.ts"
+    },
+    "./domain/mutation/cell-range-utils": {
+      "types": "./src/domain/mutation/cell-range-utils.ts",
+      "default": "./src/domain/mutation/cell-range-utils.ts"
+    },
+    "./domain/mutation/query": {
+      "types": "./src/domain/mutation/query.ts",
+      "default": "./src/domain/mutation/query.ts"
+    },
+    "./domain/mutation/style": {
+      "types": "./src/domain/mutation/style.ts",
+      "default": "./src/domain/mutation/style.ts"
+    },
     "./formula/ast": {
       "types": "./src/formula/ast.ts",
       "default": "./src/formula/ast.ts"
@@ -164,6 +188,14 @@
     "./parser": {
       "types": "./src/parser/index.ts",
       "default": "./src/parser/index.ts"
+    },
+    "./parser/context": {
+      "types": "./src/parser/context.ts",
+      "default": "./src/parser/context.ts"
+    },
+    "./parser/worksheet": {
+      "types": "./src/parser/worksheet.ts",
+      "default": "./src/parser/worksheet.ts"
     },
     "./parser/*": {
       "types": "./src/parser/*.ts",

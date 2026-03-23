@@ -8,7 +8,7 @@
 import type { XlsxStyleSheet } from "@aurochs-office/xlsx/domain/style/types";
 import type { XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
 import { colIdx, rowIdx } from "@aurochs-office/xlsx/domain/types";
-import { getCell } from "../cell/query";
+import { getCell } from "@aurochs-office/xlsx/domain/mutation/query";
 import { resolveCellBorderDecoration, type CellBorderEdgeDecoration } from "./cell-render-style";
 import { createSheetLayout } from "./sheet-layout";
 import { findMergeForCell, normalizeMergeRange, type NormalizedMergeRange } from "../sheet/merge-range";

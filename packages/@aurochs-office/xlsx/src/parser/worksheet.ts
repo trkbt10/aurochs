@@ -300,6 +300,30 @@ export function parseCols(colsElement: XmlElement | undefined): readonly XlsxCol
  *
  * @see ECMA-376 Part 4, Section 18.3.1.73 (row)
  */
+/**
+ * Parse row-level attributes from a <row> element (excluding cells).
+ *
+ * This is the single source of truth for <row> attribute parsing.
+ * Used by both the full row parser and the patcher.
+ *
+ * @see ECMA-376 Part 4, Section 18.3.1.73 (row)
+ */
+export function parseRowAttrs(rowElement: XmlElement): Omit<XlsxRow, "cells"> {
+  const rowNumberAttr = parseIntAttr(getAttr(rowElement, "r"));
+  const r = rowNumberAttr ?? 1;
+  const styleAttr = parseIntAttr(getAttr(rowElement, "s"));
+
+  return {
+    rowNumber: rowIdx(r),
+    height: parseFloatAttr(getAttr(rowElement, "ht")),
+    hidden: parseBooleanAttr(getAttr(rowElement, "hidden")),
+    customHeight: parseBooleanAttr(getAttr(rowElement, "customHeight")),
+    styleId: styleAttr !== undefined ? styleId(styleAttr) : undefined,
+    outlineLevel: parseIntAttr(getAttr(rowElement, "outlineLevel")),
+    collapsed: parseBooleanAttr(getAttr(rowElement, "collapsed")),
+  };
+}
+
 export function parseRow(params: {
   readonly rowElement: XmlElement;
   readonly context: XlsxParseContext;
@@ -335,17 +359,14 @@ export function parseRow(params: {
     cells.push(parseCellWithAddress(cellElement, context, address));
     nextCol += 1;
   }
-  const styleAttr = parseIntAttr(getAttr(rowElement, "s"));
 
+  // Merge cell-independent attrs with cells. Use parseRowAttrs for attribute SoT,
+  // but override rowNumber with the cell-derived fallback logic above.
+  const attrs = parseRowAttrs(rowElement);
   return {
+    ...attrs,
     rowNumber: rowIdx(r),
     cells,
-    height: parseFloatAttr(getAttr(rowElement, "ht")),
-    hidden: parseBooleanAttr(getAttr(rowElement, "hidden")),
-    customHeight: parseBooleanAttr(getAttr(rowElement, "customHeight")),
-    styleId: styleAttr !== undefined ? styleId(styleAttr) : undefined,
-    outlineLevel: parseIntAttr(getAttr(rowElement, "outlineLevel")),
-    collapsed: parseBooleanAttr(getAttr(rowElement, "collapsed")),
   };
 }
 

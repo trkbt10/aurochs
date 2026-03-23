@@ -14,7 +14,7 @@ import {
   getCellValuesInRange,
   getUsedRange,
   hasCell,
-} from "./query";
+} from "@aurochs-office/xlsx/domain/mutation/query";
 
 function addr(col: number, row: number): CellAddress {
   return {

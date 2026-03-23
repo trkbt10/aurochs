@@ -6,7 +6,7 @@ import { colIdx, rowIdx } from "@aurochs-office/xlsx/domain/types";
 import type { Cell } from "@aurochs-office/xlsx/domain/cell/types";
 import type { CellAddress, CellRange } from "@aurochs-office/xlsx/domain/cell/address";
 import type { XlsxRow, XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
-import { getCell } from "../cell/query";
+import { getCell } from "@aurochs-office/xlsx/domain/mutation/query";
 import { mergeCells, unmergeCells } from "./merge-mutation";
 
 function addr(col: number, row: number): CellAddress {

@@ -21,7 +21,7 @@ export {
   groupRows,
   ungroupRows,
   setRowCollapsed,
-} from "./row-mutation";
+} from "@aurochs-office/xlsx/domain/mutation/row";
 
 // Column operations
 export {
@@ -34,4 +34,4 @@ export {
   groupColumns,
   ungroupColumns,
   setColumnCollapsed,
-} from "./column-mutation";
+} from "@aurochs-office/xlsx/domain/mutation/column";

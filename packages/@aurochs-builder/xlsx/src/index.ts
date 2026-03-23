@@ -55,6 +55,8 @@ export {
   serializeHeaderFooter,
   serializeRowBreaks,
   serializeColBreaks,
+  serializeRowAttrs,
+  serializeColAttrs,
 } from "./worksheet";
 
 // Workbook serialization
@@ -105,6 +107,8 @@ export {
   patchWorkbook,
   updateChartDataInWorkbook,
   type CellUpdate,
+  type RowUpdate,
+  type ColUpdate,
   type ImagePlacement,
   type SheetUpdate,
   type WorkbookPatchResult,

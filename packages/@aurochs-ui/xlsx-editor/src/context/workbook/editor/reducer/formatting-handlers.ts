@@ -8,9 +8,9 @@ import type { XlsxEditorAction, XlsxEditorState } from "../types";
 import type { HandlerMap } from "./handler-types";
 import { pushHistory } from "@aurochs-ui/editor-core/history";
 import { updateWorksheetInWorkbook } from "../../utils/worksheet-updater";
-import { applyStyleToRange } from "../../../../cell/style-mutation";
+import { applyStyleToRange } from "@aurochs-office/xlsx/domain/mutation/style";
 import { mergeCells, unmergeCells } from "../../../../sheet/merge-mutation";
-import { getCell } from "../../../../cell/query";
+import { getCell } from "@aurochs-office/xlsx/domain/mutation/query";
 import { resolveCellStyleDetails } from "../../../../selectors/cell-style-details";
 import type { XlsxCellXf } from "@aurochs-office/xlsx/domain/style/types";
 import {

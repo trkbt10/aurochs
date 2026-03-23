@@ -12,7 +12,7 @@ import type { Cell, CellValue } from "@aurochs-office/xlsx/domain/cell/types";
 import type { XlsxWorkbook, XlsxWorksheet, XlsxRow } from "@aurochs-office/xlsx/domain/workbook";
 import { createDefaultStyleSheet } from "@aurochs-office/xlsx/domain/style/types";
 import { createHistory } from "@aurochs-ui/editor-core/history";
-import { getCellValue } from "../../../../cell/query";
+import { getCellValue } from "@aurochs-office/xlsx/domain/mutation/query";
 import type { XlsxEditorAction, XlsxEditorState, CellEditComposition } from "../types";
 import { createEmptyCellSelection, createIdleComposition } from "../types";
 import { createIdleDragState } from "@aurochs-ui/editor-core/drag-state";

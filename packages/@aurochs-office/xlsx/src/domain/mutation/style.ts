@@ -4,13 +4,13 @@
  * Range-based style application for cells/rows/columns.
  */
 
-import type { Cell, CellValue } from "@aurochs-office/xlsx/domain/cell/types";
-import type { CellAddress, CellRange } from "@aurochs-office/xlsx/domain/cell/address";
-import type { XlsxRow, XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
-import { EXCEL_MAX_COLS, EXCEL_MAX_ROWS } from "@aurochs-office/xlsx/domain/constants";
-import { colIdx, rowIdx, type StyleId } from "@aurochs-office/xlsx/domain/types";
-import { applyColumnRangeOverride, toColNumber, toRowNumber, updateRowCollection } from "../row-col/cell-range-utils";
-import { clearCellFormats } from "./mutation";
+import type { Cell, CellValue } from "../cell/types";
+import type { CellAddress, CellRange } from "../cell/address";
+import type { XlsxRow, XlsxWorksheet } from "../workbook";
+import { EXCEL_MAX_COLS, EXCEL_MAX_ROWS } from "../constants";
+import { colIdx, rowIdx, type StyleId } from "../types";
+import { applyColumnRangeOverride, toColNumber, toRowNumber, updateRowCollection } from "./cell-range-utils";
+import { clearCellFormats } from "./cell";
 
 const EMPTY_VALUE: CellValue = { type: "empty" };
 

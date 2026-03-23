@@ -56,6 +56,43 @@ export function basenamePosixPath(p: string): string {
 }
 
 /**
+ * Compute a relative target path from a source part to a target part
+ * within an OPC package.
+ *
+ * This is the inverse of {@link resolveRelationshipTargetPath}: given two
+ * absolute package paths, it produces the relative URI reference that would
+ * appear in a Relationship/@Target attribute.
+ *
+ * @param sourcePart - Absolute package path of the source part (e.g., "xl/worksheets/sheet1.xml")
+ * @param targetPart - Absolute package path of the target part (e.g., "xl/drawings/drawing1.xml")
+ * @returns Relative target URI (e.g., "../drawings/drawing1.xml")
+ *
+ * @see ECMA-376 Part 2, Section 9.3 (Relationships)
+ */
+export function buildRelativeTarget(sourcePart: string, targetPart: string): string {
+  const sourceDir = dirnamePosixPath(sourcePart);
+  const targetDir = dirnamePosixPath(targetPart);
+  const targetFile = basenamePosixPath(targetPart);
+
+  if (sourceDir === targetDir) {
+    return targetFile;
+  }
+
+  const sourceParts = sourceDir === "." ? [] : sourceDir.split("/");
+  const targetParts = targetDir === "." ? [] : targetDir.split("/");
+
+  // Find common prefix length
+  let common = 0;
+  while (common < sourceParts.length && common < targetParts.length && sourceParts[common] === targetParts[common]) {
+    common++;
+  }
+
+  const ups = sourceParts.length - common;
+  const downs = targetParts.slice(common);
+  return [...Array(ups).fill(".."), ...downs, targetFile].join("/");
+}
+
+/**
  * Normalize a POSIX path by resolving `.` and `..` segments.
  *
  * @param p - Path

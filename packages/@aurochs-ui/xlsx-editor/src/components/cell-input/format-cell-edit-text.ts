@@ -4,7 +4,7 @@
 
 import type { CellAddress } from "@aurochs-office/xlsx/domain/cell/address";
 import type { XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
-import { getCell } from "../../cell/query";
+import { getCell } from "@aurochs-office/xlsx/domain/mutation/query";
 
 /**
  * Build the initial edit text for a cell editor input.

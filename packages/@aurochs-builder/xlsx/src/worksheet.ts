@@ -130,15 +130,14 @@ export function serializeDimension(rows: readonly XlsxRow[]): XmlElement {
 // =============================================================================
 
 /**
- * Serialize a single column definition to XML element.
+ * Serialize XlsxColumnDef properties to XML attribute map.
  *
- * @param col - Column definition
- * @returns XmlElement for the col element
+ * This is the single source of truth for <col> attribute serialization.
+ * Used by both the worksheet serializer and the patcher.
  *
- * @example
- * <col min="1" max="1" width="12" customWidth="1"/>
+ * @see ECMA-376 Part 4, Section 18.3.1.13 (col)
  */
-function serializeCol(col: XlsxColumnDef): XmlElement {
+export function serializeColAttrs(col: XlsxColumnDef): Record<string, string> {
   const attrs: Record<string, string> = {
     min: serializeColIndex(col.min),
     max: serializeColIndex(col.max),
@@ -161,10 +160,31 @@ function serializeCol(col: XlsxColumnDef): XmlElement {
     attrs.style = String(col.styleId);
   }
 
+  if (col.outlineLevel !== undefined && col.outlineLevel !== 0) {
+    attrs.outlineLevel = String(col.outlineLevel);
+  }
+
+  if (col.collapsed) {
+    attrs.collapsed = serializeBoolean(col.collapsed);
+  }
+
+  return attrs;
+}
+
+/**
+ * Serialize a single column definition to XML element.
+ *
+ * @param col - Column definition
+ * @returns XmlElement for the col element
+ *
+ * @example
+ * <col min="1" max="1" width="12" customWidth="1"/>
+ */
+function serializeCol(col: XlsxColumnDef): XmlElement {
   return {
     type: "element",
     name: "col",
-    attrs,
+    attrs: serializeColAttrs(col),
     children: [],
   };
 }
@@ -197,6 +217,54 @@ export function serializeCols(columns: readonly XlsxColumnDef[]): XmlElement {
 // =============================================================================
 
 /**
+ * Serialize XlsxRow properties (excluding cells) to XML attribute map.
+ *
+ * This is the single source of truth for <row> attribute serialization.
+ * Used by both the worksheet serializer and the patcher.
+ *
+ * @see ECMA-376 Part 4, Section 18.3.1.73 (row)
+ */
+export function serializeRowAttrs(row: {
+  readonly rowNumber: XlsxRow["rowNumber"];
+  readonly height?: XlsxRow["height"];
+  readonly customHeight?: XlsxRow["customHeight"];
+  readonly hidden?: XlsxRow["hidden"];
+  readonly styleId?: XlsxRow["styleId"];
+  readonly outlineLevel?: XlsxRow["outlineLevel"];
+  readonly collapsed?: XlsxRow["collapsed"];
+}): Record<string, string> {
+  const attrs: Record<string, string> = {
+    r: serializeRowIndex(row.rowNumber),
+  };
+
+  if (row.height !== undefined) {
+    attrs.ht = serializeFloat(row.height);
+  }
+
+  if (row.customHeight) {
+    attrs.customHeight = serializeBoolean(row.customHeight);
+  }
+
+  if (row.hidden) {
+    attrs.hidden = serializeBoolean(row.hidden);
+  }
+
+  if (row.styleId !== undefined && (row.styleId as number) !== 0) {
+    attrs.s = String(row.styleId);
+  }
+
+  if (row.outlineLevel !== undefined && row.outlineLevel !== 0) {
+    attrs.outlineLevel = String(row.outlineLevel);
+  }
+
+  if (row.collapsed) {
+    attrs.collapsed = serializeBoolean(row.collapsed);
+  }
+
+  return attrs;
+}
+
+/**
  * Serialize a single row to XML element.
  *
  * @param row - Row data
@@ -209,37 +277,12 @@ export function serializeCols(columns: readonly XlsxColumnDef[]): XmlElement {
  * </row>
  */
 export function serializeRow(row: XlsxRow, sharedStrings: SharedStringTable): XmlElement {
-  const attrs: Record<string, string> = {
-    r: serializeRowIndex(row.rowNumber),
-  };
-
-  // Row height (optional)
-  if (row.height !== undefined) {
-    attrs.ht = serializeFloat(row.height);
-  }
-
-  // Custom height flag (set when height is specified)
-  if (row.customHeight) {
-    attrs.customHeight = serializeBoolean(row.customHeight);
-  }
-
-  // Hidden flag
-  if (row.hidden) {
-    attrs.hidden = serializeBoolean(row.hidden);
-  }
-
-  // Row style (omit if 0)
-  if (row.styleId !== undefined && (row.styleId as number) !== 0) {
-    attrs.s = String(row.styleId);
-  }
-
-  // Serialize cells
   const children: XmlNode[] = row.cells.map((cell) => serializeCell(cell, sharedStrings));
 
   return {
     type: "element",
     name: "row",
-    attrs,
+    attrs: serializeRowAttrs(row),
     children,
   };
 }
@@ -263,9 +306,24 @@ export function serializeRow(row: XlsxRow, sharedStrings: SharedStringTable): Xm
  *   <row r="2">...</row>
  * </sheetData>
  */
+/**
+ * Check if a row has any content worth serializing.
+ * A row is non-empty if it has cells OR any row-level attributes (height, hidden, style, etc.).
+ */
+function hasRowContent(row: XlsxRow): boolean {
+  if (row.cells.length > 0) {
+    return true;
+  }
+  return row.height !== undefined
+    || row.hidden !== undefined
+    || row.customHeight !== undefined
+    || row.styleId !== undefined
+    || row.outlineLevel !== undefined
+    || row.collapsed !== undefined;
+}
+
 export function serializeSheetData(rows: readonly XlsxRow[], sharedStrings: SharedStringTable): XmlElement {
-  // Skip empty rows (rows with no cells)
-  const nonEmptyRows = rows.filter((row) => row.cells.length > 0);
+  const nonEmptyRows = rows.filter(hasRowContent);
 
   const children: XmlNode[] = nonEmptyRows.map((row) => serializeRow(row, sharedStrings));
 

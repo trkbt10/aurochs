@@ -2,8 +2,14 @@
  * @file XLSX Workbook Patcher
  *
  * Updates embedded Excel workbook (xlsx) data with cell values and drawing/media patches.
- * Used for synchronizing chart data changes to embedded workbooks and injecting
- * drawing content (images) into existing workbook templates.
+ *
+ * Architecture:
+ *   XML → parseWorksheet (parser SoT) → XlsxWorksheet
+ *   → domain mutations (updateCell, setRowHeight, setColumnWidth, etc.)
+ *   → serializeWorksheet (builder SoT) → XML
+ *
+ * The patcher itself holds no worksheet manipulation logic.
+ * All operations are delegated to the domain mutation layer.
  *
  * @see ECMA-376 Part 4 (SpreadsheetML)
  * @see ECMA-376 Part 4, Section 20.5 (SpreadsheetML Drawing)
@@ -12,22 +18,24 @@
 import {
   parseXml,
   getByPath,
-  getChildren,
-  getChild,
-  isXmlElement,
-  createElement,
-  createText,
   type XmlElement,
-  type XmlNode,
+  serializeDocument,
 } from "@aurochs/xml";
-import { serializeDocument } from "@aurochs/xml";
-import { appendChild, replaceChildByName } from "@aurochs/xml";
 import type { ZipPackage } from "@aurochs/zip";
 import type { Workbook, WorkbookSheet } from "@aurochs-office/xlsx/workbook-parser";
-import { indexToColumnLetter } from "@aurochs-office/xlsx/domain/cell/address";
-import { colIdx, rowIdx } from "@aurochs-office/xlsx/domain/types";
+import { indexToColumnLetter, parseRange } from "@aurochs-office/xlsx/domain/cell/address";
+import type { CellValue } from "@aurochs-office/xlsx/domain/cell/types";
+import type { XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
+import { colIdx, rowIdx, type RowIndex, type ColIndex } from "@aurochs-office/xlsx/domain/types";
+import { createDefaultParseContext, type XlsxParseContext } from "@aurochs-office/xlsx/parser/context";
+import { parseWorksheet } from "@aurochs-office/xlsx/parser/worksheet";
+import { updateCell } from "@aurochs-office/xlsx/domain/mutation/cell";
+import { setRowHeight, hideRows, unhideRows, setRowOutlineLevel, setRowCollapsed } from "@aurochs-office/xlsx/domain/mutation/row";
+import { setColumnWidth, hideColumns, unhideColumns, setColumnOutlineLevel, setColumnCollapsed } from "@aurochs-office/xlsx/domain/mutation/column";
+import type { SharedStringTable } from "./cell";
+import { serializeWorksheet } from "./worksheet";
 import { serializeDrawing } from "./drawing";
-import type { MediaPart } from "./exporter";
+import { createSharedStringTableBuilder, generateSharedStrings, type MediaPart } from "./exporter";
 import type { XlsxDrawing, XlsxDrawingAnchor, XlsxDrawingContent } from "@aurochs-office/xlsx/domain/drawing/types";
 import {
   OFFICE_RELATIONSHIP_TYPES,
@@ -38,8 +46,11 @@ import {
   parseContentTypes,
   contentTypesToEntries,
   inferExtensionFromMediaContentType,
+  listRelationships,
+  buildRelativeTarget,
   type OpcRelationship,
 } from "@aurochs-office/opc";
+import { getRelationshipPath } from "@aurochs-office/ooxml/parser";
 
 // =============================================================================
 // Types
@@ -58,10 +69,55 @@ export type CellUpdate = {
 };
 
 /**
- * Image to place in a sheet.
+ * Row dimension update.
  *
- * The patcher handles all domain object construction internally:
- * relId generation, XlsxDrawingAnchor building, MediaPart wiring.
+ * Properties mirror the domain type XlsxRow (§18.3.1.73).
+ *
+ * @see ECMA-376 Part 4, Section 18.3.1.73 (row)
+ */
+export type RowUpdate = {
+  /** Row number (1-based) */
+  readonly row: number;
+  /** Row height in points */
+  readonly height?: number;
+  /** Custom height flag (ECMA-376 §18.3.1.73 customHeight) */
+  readonly customHeight?: boolean;
+  /** Whether the row is hidden */
+  readonly hidden?: boolean;
+  /** Default style for cells in this row */
+  readonly styleId?: number;
+  /** Outline grouping level (0-7) */
+  readonly outlineLevel?: number;
+  /** Whether this row group is collapsed */
+  readonly collapsed?: boolean;
+};
+
+/**
+ * Column dimension update.
+ *
+ * Properties mirror the domain type XlsxColumnDef (§18.3.1.13).
+ *
+ * @see ECMA-376 Part 4, Section 18.3.1.13 (col)
+ */
+export type ColUpdate = {
+  /** Column number (1-based) */
+  readonly col: number;
+  /** Column width in character units */
+  readonly width?: number;
+  /** Whether the column is hidden */
+  readonly hidden?: boolean;
+  /** Whether the width is auto-fit to content */
+  readonly bestFit?: boolean;
+  /** Default style for cells in this column */
+  readonly styleId?: number;
+  /** Outline grouping level (0-7) */
+  readonly outlineLevel?: number;
+  /** Whether this column group is collapsed */
+  readonly collapsed?: boolean;
+};
+
+/**
+ * Image to place in a sheet.
  *
  * @see ECMA-376 Part 4, Section 20.5.2.33 (twoCellAnchor)
  */
@@ -92,6 +148,10 @@ export type SheetUpdate = {
   readonly cells: readonly CellUpdate[];
   /** If provided, update the sheet dimension (e.g., "A1:B10") */
   readonly dimension?: string;
+  /** Row dimension updates */
+  readonly rows?: readonly RowUpdate[];
+  /** Column dimension updates */
+  readonly cols?: readonly ColUpdate[];
   /** Images to place in the sheet. Domain objects are constructed internally. */
   readonly images?: readonly ImagePlacement[];
   /** Low-level drawing injection (advanced). Prefer `images` for typical use. */
@@ -118,9 +178,6 @@ export type WorkbookPatchResult = {
 
 /**
  * Resolve SheetUpdate.images into drawing + media domain objects.
- *
- * If `images` is provided, constructs XlsxDrawing anchors and MediaPart entries.
- * If `drawing` is already provided (low-level API), uses it directly.
  */
 function resolveDrawingFromUpdate(update: SheetUpdate): {
   readonly drawing: XlsxDrawing | undefined;
@@ -159,18 +216,23 @@ function resolveDrawingFromUpdate(update: SheetUpdate): {
 
 /**
  * Patch a workbook with cell updates and optional drawing/media patches.
- *
- * @param workbook - Parsed workbook
- * @param updates - Sheet updates to apply
- * @returns Patch result with updated xlsx buffer
  */
 export async function patchWorkbook(workbook: Workbook, updates: readonly SheetUpdate[]): Promise<WorkbookPatchResult> {
   const pkg = workbook.package;
   const updatedSheets: string[] = [];
-  const newSharedStrings: string[] = [];
 
-  // Build mutable shared strings list
-  const sharedStrings = [...workbook.sharedStrings];
+  // Build SharedStringTable (SoT) seeded with existing shared strings
+  const sst = createSharedStringTableBuilder();
+  for (const str of workbook.sharedStrings) {
+    sst.addString(str);
+  }
+  const initialCount = workbook.sharedStrings.length;
+
+  // Build parse context for domain-level roundtrip
+  const parseContext: XlsxParseContext = {
+    ...createDefaultParseContext(),
+    sharedStrings: workbook.sharedStrings,
+  };
 
   for (const update of updates) {
     const sheet = workbook.sheets.get(update.sheetName);
@@ -178,122 +240,197 @@ export async function patchWorkbook(workbook: Workbook, updates: readonly SheetU
       throw new Error(`patchWorkbook: sheet "${update.sheetName}" not found`);
     }
 
-    // Collect string values that need to be in shared strings
-    const stringValues = update.cells.filter((c) => typeof c.value === "string").map((c) => c.value as string);
-
-    // Add new strings to shared strings if not already present
-    for (const str of stringValues) {
-      if (!sharedStrings.includes(str)) {
-        sharedStrings.push(str);
-        newSharedStrings.push(str);
-      }
-    }
-
-    // Patch the sheet XML
-    patchSheetXml({ pkg, sheet, cells: update.cells, sharedStrings, dimension: update.dimension });
-
-    // Resolve images → drawing + media (high-level API)
+    // Resolve drawing before sheet patching (needed for drawingRelId)
     const resolved = resolveDrawingFromUpdate(update);
 
-    // Patch drawing/media if present
-    if (resolved.drawing) {
-      patchDrawing({ pkg, sheet, drawing: resolved.drawing, media: resolved.media });
-    }
+    // Patch the sheet
+    const drawingRelId = resolved.drawing
+      ? patchDrawing({ pkg, sheet, drawing: resolved.drawing, media: resolved.media })
+      : undefined;
+
+    patchSheet({ pkg, sheet, update, sst, parseContext, drawingRelId });
 
     updatedSheets.push(update.sheetName);
   }
 
-  // Update shared strings XML if we added new ones
+  // Update shared strings XML if new strings were added
+  const allStrings = sst.getStrings();
+  const newSharedStrings = allStrings.slice(initialCount);
   if (newSharedStrings.length > 0) {
-    patchSharedStringsXml(pkg, sharedStrings);
+    const sstXml = generateSharedStrings(allStrings);
+    pkg.writeText("xl/sharedStrings.xml", serializeWithDeclaration(sstXml));
   }
 
-  // Generate updated xlsx
   const xlsxBuffer = await pkg.toArrayBuffer();
 
-  return {
-    xlsxBuffer,
-    updatedSheets,
-    newSharedStrings,
-  };
+  return { xlsxBuffer, updatedSheets, newSharedStrings };
 }
 
 // =============================================================================
-// Sheet Root Element Detection
+// Sheet Patching (Full Domain Roundtrip)
 // =============================================================================
 
 /**
- * Supported sheet root element names.
- *
- * - "worksheet" for regular worksheets (xl/worksheets/sheetN.xml)
- * - "macrosheet" for Excel macro sheets (xl/macrosheets/sheetN.xml)
- *
- * @see ECMA-376 Part 4, Section 18.3.1.99 (worksheet)
- * @see MS-OFFMACRO2 Section 2.2.1.5 (Macro Sheet)
+ * Patch a single sheet via full domain roundtrip:
+ *   parseWorksheet → domain mutations → serializeWorksheet
  */
-const SHEET_ROOT_ELEMENTS = ["worksheet", "macrosheet"] as const;
-
-/**
- * Find the sheet root element (worksheet or macrosheet).
- *
- * @param sheetXml - Parsed sheet XML document
- * @returns The root element or null if not found
- */
-function findSheetRootElement(sheetXml: ReturnType<typeof parseXml>): XmlElement | null {
-  for (const rootName of SHEET_ROOT_ELEMENTS) {
-    const element = getByPath(sheetXml, [rootName]);
-    if (element) {
-      return element;
-    }
-  }
-  return null;
-}
-
-// =============================================================================
-// Sheet XML Patching
-// =============================================================================
-
-/**
- * Patch a single sheet's XML with cell updates.
- *
- * Supports both regular worksheets and Excel macro sheets (xlMacrosheet).
- *
- * @see MS-OFFMACRO2 Section 2.2.1.5 (Macro Sheet)
- */
-function patchSheetXml(params: {
+function patchSheet(params: {
   readonly pkg: ZipPackage;
   readonly sheet: WorkbookSheet;
-  readonly cells: readonly CellUpdate[];
-  readonly sharedStrings: readonly string[];
-  readonly dimension?: string;
+  readonly update: SheetUpdate;
+  readonly sst: SharedStringTable;
+  readonly parseContext: XlsxParseContext;
+  readonly drawingRelId?: string;
 }): void {
-  const { pkg, sheet, cells, sharedStrings, dimension } = params;
+  const { pkg, sheet, update, sst, parseContext, drawingRelId } = params;
   const sheetText = pkg.readText(sheet.xmlPath);
   if (!sheetText) {
-    throw new Error(`patchSheetXml: sheet XML not found at ${sheet.xmlPath}`);
+    throw new Error(`patchSheet: sheet XML not found at ${sheet.xmlPath}`);
   }
 
   const sheetXml = parseXml(sheetText);
   const sheetRootEl = findSheetRootElement(sheetXml);
   if (!sheetRootEl) {
     throw new Error(
-      `patchSheetXml: sheet root element not found in ${sheet.xmlPath}. ` +
+      `patchSheet: sheet root element not found in ${sheet.xmlPath}. ` +
         `Expected one of: ${SHEET_ROOT_ELEMENTS.join(", ")}`,
     );
   }
 
-  const sheetWithDimension = dimension ? updateDimension(sheetRootEl, dimension) : sheetRootEl;
-  const { worksheet: updatedSheet, sheetData: sheetDataEl } = ensureSheetDataElement(sheetWithDimension);
+  // 1. Parse existing worksheet into domain type
+  let worksheet = parseWorksheet({
+    worksheetElement: sheetRootEl,
+    context: parseContext,
+    options: undefined,
+    sheetInfo: {
+      name: sheet.name,
+      sheetId: extractSheetIndex(sheet.xmlPath),
+      state: "visible",
+      xmlPath: sheet.xmlPath,
+    },
+  });
 
-  // Apply cell updates
-  const updatedSheetData = applyCellUpdates(sheetDataEl, cells, sharedStrings);
+  // 2. Apply domain mutations
+  worksheet = applyCellUpdates(worksheet, update.cells);
+  worksheet = applyRowUpdates(worksheet, update.rows);
+  worksheet = applyColUpdates(worksheet, update.cols);
 
-  // Replace sheetData in sheet using replaceChildByName
-  const finalSheet = replaceChildByName(updatedSheet, "sheetData", updatedSheetData);
+  if (update.dimension) {
+    worksheet = { ...worksheet, dimension: parseDimensionString(update.dimension) };
+  }
 
-  // Serialize and write back
-  const serialized = serializeDocument({ children: [finalSheet] }, { declaration: true, standalone: true });
-  pkg.writeText(sheet.xmlPath, serialized);
+  if (update.drawing) {
+    worksheet = { ...worksheet, drawing: update.drawing };
+  }
+
+  // 3. Serialize through builder SoT
+  const serialized = serializeWorksheet(worksheet, sst, drawingRelId);
+  const doc = serializeDocument({ children: [serialized] }, { declaration: true, standalone: true });
+  pkg.writeText(sheet.xmlPath, doc);
+}
+
+// =============================================================================
+// Domain Mutation Application
+// =============================================================================
+
+/**
+ * Apply CellUpdate[] to worksheet via domain updateCell().
+ */
+function applyCellUpdates(worksheet: XlsxWorksheet, cells: readonly CellUpdate[]): XlsxWorksheet {
+  let ws = worksheet;
+  for (const cell of cells) {
+    const col = cell.col.toUpperCase();
+    const colIndex = columnLetterToIndex(col);
+    const value: CellValue = typeof cell.value === "number"
+      ? { type: "number", value: cell.value }
+      : { type: "string", value: cell.value };
+
+    ws = updateCell(ws, {
+      col: colIdx(colIndex),
+      row: rowIdx(cell.row),
+      colAbsolute: false,
+      rowAbsolute: false,
+    }, value);
+  }
+  return ws;
+}
+
+/**
+ * Apply RowUpdate[] to worksheet via domain row mutations.
+ */
+function applyRowUpdates(worksheet: XlsxWorksheet, rows?: readonly RowUpdate[]): XlsxWorksheet {
+  if (!rows || rows.length === 0) {
+    return worksheet;
+  }
+
+  let ws = worksheet;
+  for (const row of rows) {
+    const ri = rowIdx(row.row) as RowIndex;
+    if (row.height !== undefined) {
+      ws = setRowHeight(ws, ri, row.height);
+      // setRowHeight always sets customHeight=true. Override if explicitly false.
+      if (row.customHeight === false) {
+        const rowIndex = ws.rows.findIndex((r) => r.rowNumber === ri);
+        if (rowIndex >= 0) {
+          const updatedRows = [...ws.rows];
+          updatedRows[rowIndex] = { ...updatedRows[rowIndex], customHeight: undefined };
+          ws = { ...ws, rows: updatedRows };
+        }
+      }
+    }
+    if (row.hidden === true) {
+      ws = hideRows(ws, ri, 1);
+    } else if (row.hidden === false) {
+      ws = unhideRows(ws, ri, 1);
+    }
+    if (row.outlineLevel !== undefined) {
+      ws = setRowOutlineLevel(ws, ri, row.outlineLevel);
+    }
+    if (row.collapsed !== undefined) {
+      ws = setRowCollapsed(ws, ri, row.collapsed);
+    }
+  }
+  return ws;
+}
+
+/**
+ * Apply ColUpdate[] to worksheet via domain column mutations.
+ */
+function applyColUpdates(worksheet: XlsxWorksheet, cols?: readonly ColUpdate[]): XlsxWorksheet {
+  if (!cols || cols.length === 0) {
+    return worksheet;
+  }
+
+  let ws = worksheet;
+  for (const col of cols) {
+    const ci = colIdx(col.col) as ColIndex;
+    if (col.width !== undefined) {
+      ws = setColumnWidth(ws, ci, col.width);
+    }
+    if (col.hidden === true) {
+      ws = hideColumns(ws, ci, 1);
+    } else if (col.hidden === false) {
+      ws = unhideColumns(ws, ci, 1);
+    }
+    if (col.outlineLevel !== undefined) {
+      ws = setColumnOutlineLevel(ws, ci, col.outlineLevel);
+    }
+    if (col.collapsed !== undefined) {
+      ws = setColumnCollapsed(ws, ci, col.collapsed);
+    }
+  }
+  return ws;
+}
+
+// =============================================================================
+// Dimension Parsing
+// =============================================================================
+
+/**
+ * Parse a dimension string (e.g., "A1:B10") into a CellRange.
+ */
+function parseDimensionString(dimension: string): XlsxWorksheet["dimension"] {
+  return parseRange(dimension);
 }
 
 // =============================================================================
@@ -302,26 +439,16 @@ function patchSheetXml(params: {
 
 /**
  * Patch a sheet with drawing and media content.
- *
- * Follows the same OPC pattern as the exporter:
- * 1. Serialize drawing XML to xl/drawings/drawingN.xml
- * 2. Write media binaries to xl/media/
- * 3. Create drawing relationships (drawing → media)
- * 4. Create sheet relationships (sheet → drawing)
- * 5. Ensure sheet XML has <drawing r:id="..."/> element
- * 6. Update [Content_Types].xml for drawing override and media defaults
- *
- * @see ECMA-376 Part 4, Section 20.5 (SpreadsheetML Drawing)
+ * Returns the drawing relationship ID for use in serializeWorksheet.
  */
 function patchDrawing(params: {
   readonly pkg: ZipPackage;
   readonly sheet: WorkbookSheet;
   readonly drawing: XlsxDrawing;
   readonly media?: ReadonlyMap<string, MediaPart>;
-}): void {
+}): string {
   const { pkg, sheet, drawing, media } = params;
 
-  // Determine sheet index from xmlPath (e.g., "xl/worksheets/sheet1.xml" → 1)
   const sheetIndex = extractSheetIndex(sheet.xmlPath);
   const drawingPartPath = `xl/drawings/drawing${sheetIndex}.xml`;
   const sheetPartPath = sheet.xmlPath;
@@ -347,10 +474,8 @@ function patchDrawing(params: {
     const ext = inferExtensionFromContentType(mediaPart.contentType);
     const mediaPartPath = `xl/media/image_s${sheetIndex}_${mediaCounter.value}.${ext}`;
 
-    // Write media binary
     pkg.writeBinary(mediaPartPath, mediaPart.data);
 
-    // Build drawing → media relationship
     drawingRelationships.push({
       id: relId,
       type: OFFICE_RELATIONSHIP_TYPES.image,
@@ -363,7 +488,7 @@ function patchDrawing(params: {
   // 3. Write drawing relationships
   if (drawingRelationships.length > 0) {
     const drawingRelsXml = serializeRelationships(drawingRelationships);
-    pkg.writeText(relsPathFor(drawingPartPath), serializeWithDeclaration(drawingRelsXml));
+    pkg.writeText(getRelationshipPath(drawingPartPath), serializeWithDeclaration(drawingRelsXml));
   }
 
   // 4. Create sheet → drawing relationship
@@ -374,25 +499,38 @@ function patchDrawing(params: {
     target: buildRelativeTarget(sheetPartPath, drawingPartPath),
   };
 
-  // Read existing sheet rels or create new
-  const sheetRelsPath = relsPathFor(sheetPartPath);
+  const sheetRelsPath = getRelationshipPath(sheetPartPath);
   const existingSheetRelsText = pkg.readText(sheetRelsPath);
-  const sheetRels: OpcRelationship[] = existingSheetRelsText ? parseExistingRelationships(existingSheetRelsText) : [];
+  const sheetRels: OpcRelationship[] = existingSheetRelsText
+    ? listRelationships(parseXml(existingSheetRelsText))
+    : [];
   sheetRels.push(sheetDrawingRel);
 
   const sheetRelsXml = serializeRelationships(sheetRels);
   pkg.writeText(sheetRelsPath, serializeWithDeclaration(sheetRelsXml));
 
-  // 5. Ensure sheet XML has <drawing r:id="..."/> element
-  ensureDrawingElement(pkg, sheetPartPath, drawingRelId);
-
-  // 6. Update [Content_Types].xml
+  // 5. Update [Content_Types].xml
   updateContentTypesForDrawing(pkg, drawingPartPath, mediaDefaultExtensions);
+
+  return drawingRelId;
 }
 
-/**
- * Extract sheet index from xmlPath (e.g., "xl/worksheets/sheet1.xml" → 1).
- */
+// =============================================================================
+// Sheet Root Element Detection
+// =============================================================================
+
+const SHEET_ROOT_ELEMENTS = ["worksheet", "macrosheet"] as const;
+
+function findSheetRootElement(sheetXml: ReturnType<typeof parseXml>): XmlElement | null {
+  for (const rootName of SHEET_ROOT_ELEMENTS) {
+    const element = getByPath(sheetXml, [rootName]);
+    if (element) {
+      return element;
+    }
+  }
+  return null;
+}
+
 function extractSheetIndex(xmlPath: string): number {
   const match = xmlPath.match(/sheet(\d+)\.xml$/);
   if (!match) {
@@ -401,9 +539,10 @@ function extractSheetIndex(xmlPath: string): number {
   return parseInt(match[1], 10);
 }
 
-/**
- * Collect all blipRelIds from a drawing's anchors (recursively for groups).
- */
+// =============================================================================
+// Drawing Helpers
+// =============================================================================
+
 function collectBlipRelIds(drawing: XlsxDrawing): string[] {
   const relIds: string[] = [];
   for (const anchor of drawing.anchors) {
@@ -414,10 +553,7 @@ function collectBlipRelIds(drawing: XlsxDrawing): string[] {
   return relIds;
 }
 
-function collectContentRelIds(
-  content: XlsxDrawingContent,
-  relIds: string[],
-): void {
+function collectContentRelIds(content: XlsxDrawingContent, relIds: string[]): void {
   switch (content.type) {
     case "picture":
       if (content.blipRelId) {
@@ -432,116 +568,12 @@ function collectContentRelIds(
   }
 }
 
-/** Infer file extension from MIME content type (delegates to OPC SoT) */
 const inferExtensionFromContentType = inferExtensionFromMediaContentType;
 
-/**
- * Compute OPC relationship file path for a given part.
- *
- * @see ECMA-376 Part 2, Section 9.2 (Relationship Part Naming)
- */
-function relsPathFor(partPath: string): string {
-  const lastSlash = partPath.lastIndexOf("/");
-  const dir = partPath.substring(0, lastSlash);
-  const filename = partPath.substring(lastSlash + 1);
-  return `${dir}/_rels/${filename}.rels`;
-}
+// =============================================================================
+// Content Types
+// =============================================================================
 
-/**
- * Build a relative target path from source to target within the package.
- */
-function buildRelativeTarget(sourcePart: string, targetPart: string): string {
-  const sourceDir = sourcePart.substring(0, sourcePart.lastIndexOf("/"));
-  const targetDir = targetPart.substring(0, targetPart.lastIndexOf("/"));
-  const targetFile = targetPart.substring(targetPart.lastIndexOf("/") + 1);
-
-  if (sourceDir === targetDir) {
-    return targetFile;
-  }
-
-  // Count common prefix depth
-  const sourceParts = sourceDir.split("/");
-  const targetParts = targetDir.split("/");
-  const common = { value: 0 };
-  while (common.value < sourceParts.length && common.value < targetParts.length && sourceParts[common.value] === targetParts[common.value]) {
-    common.value++;
-  }
-
-  const ups = sourceParts.length - common.value;
-  const downs = targetParts.slice(common.value);
-  return [...Array(ups).fill(".."), ...downs, targetFile].join("/");
-}
-
-/**
- * Parse existing OPC relationships from XML text.
- */
-function parseExistingRelationships(xmlText: string): OpcRelationship[] {
-  const doc = parseXml(xmlText);
-  const rootEl = getByPath(doc, ["Relationships"]);
-  if (!rootEl) {
-    return [];
-  }
-  const rels: OpcRelationship[] = [];
-  for (const child of rootEl.children) {
-    if (isXmlElement(child) && child.name === "Relationship") {
-      const id = child.attrs["Id"];
-      const type = child.attrs["Type"];
-      const target = child.attrs["Target"];
-      if (id && type && target) {
-        const rel: OpcRelationship = { id, type, target };
-        const targetMode = child.attrs["TargetMode"];
-        if (targetMode === "External") {
-          rels.push({ ...rel, targetMode: "External" as const });
-        } else {
-          rels.push(rel);
-        }
-      }
-    }
-  }
-  return rels;
-}
-
-/**
- * Ensure the sheet XML has a <drawing r:id="..."/> element.
- *
- * If the sheet already has a <drawing> element, replace it.
- * Otherwise, append it after the last known child element.
- */
-/**
- * Replace existing drawing element or append a new one.
- */
-function replaceOrAppendDrawing(root: XmlElement, drawingEl: XmlElement, existing: XmlElement | undefined): XmlElement {
-  if (existing) {
-    return replaceChildByName(root, "drawing", drawingEl);
-  }
-  return appendChild(root, drawingEl);
-}
-
-function ensureDrawingElement(pkg: ZipPackage, sheetPath: string, drawingRelId: string): void {
-  const sheetText = pkg.readText(sheetPath);
-  if (!sheetText) {
-    return;
-  }
-
-  const sheetXml = parseXml(sheetText);
-  const sheetRootEl = findSheetRootElement(sheetXml);
-  if (!sheetRootEl) {
-    return;
-  }
-
-  const RELATIONSHIPS_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
-  const drawingEl = createElement("drawing", { "r:id": drawingRelId, "xmlns:r": RELATIONSHIPS_NS });
-
-  const existingDrawing = getChild(sheetRootEl, "drawing");
-  const updatedRoot = replaceOrAppendDrawing(sheetRootEl, drawingEl, existingDrawing);
-
-  const serialized = serializeDocument({ children: [updatedRoot] }, { declaration: true, standalone: true });
-  pkg.writeText(sheetPath, serialized);
-}
-
-/**
- * Update [Content_Types].xml with drawing override and media extension defaults.
- */
 function updateContentTypesForDrawing(
   pkg: ZipPackage,
   drawingPartPath: string,
@@ -556,7 +588,6 @@ function updateContentTypesForDrawing(
   const parsed = parseContentTypes(contentTypesDoc);
   const entries = contentTypesToEntries(parsed);
 
-  // Add drawing override if not already present
   const drawingOverridePartName = `/${drawingPartPath}`;
   const hasDrawingOverride = entries.some(
     (e) => e.kind === "override" && e.partName === drawingOverridePartName,
@@ -569,17 +600,12 @@ function updateContentTypesForDrawing(
     });
   }
 
-  // Add media extension defaults if not already present
   for (const [extension, contentType] of mediaDefaultExtensions) {
     const hasDefault = entries.some(
       (e) => e.kind === "default" && e.extension === extension,
     );
     if (!hasDefault) {
-      entries.push({
-        kind: "default",
-        extension,
-        contentType,
-      });
+      entries.push({ kind: "default", extension, contentType });
     }
   }
 
@@ -588,193 +614,8 @@ function updateContentTypesForDrawing(
 }
 
 // =============================================================================
-// Dimension and SheetData Helpers
-// =============================================================================
-
-/**
- * Update the dimension element in worksheet.
- */
-function updateDimension(worksheet: XmlElement, dimension: string): XmlElement {
-  const dimEl = getChild(worksheet, "dimension");
-  if (dimEl) {
-    // Update existing using replaceChildByName
-    return replaceChildByName(worksheet, "dimension", createElement("dimension", { ref: dimension }));
-  }
-  // Add dimension after sheetViews or at start
-  return insertChildAfter(worksheet, "sheetViews", createElement("dimension", { ref: dimension }));
-}
-
-function ensureSheetDataElement(worksheet: XmlElement): {
-  readonly worksheet: XmlElement;
-  readonly sheetData: XmlElement;
-} {
-  const existing = getChild(worksheet, "sheetData");
-  if (existing) {
-    return { worksheet, sheetData: existing };
-  }
-  const sheetData = createElement("sheetData", {}, []);
-  const updatedWorksheet = appendChild(worksheet, sheetData);
-  return { worksheet: updatedWorksheet, sheetData };
-}
-
-/**
- * Apply cell updates to sheetData element.
- */
-function applyCellUpdates(
-  sheetData: XmlElement,
-  cells: readonly CellUpdate[],
-  sharedStrings: readonly string[],
-): XmlElement {
-  // Group updates by row
-  const byRow = new Map<number, CellUpdate[]>();
-  for (const cell of cells) {
-    const existing = byRow.get(cell.row) ?? [];
-    existing.push(cell);
-    byRow.set(cell.row, existing);
-  }
-
-  // Get existing rows
-  const existingRows = getChildren(sheetData, "row");
-  const rowMap = new Map<number, XmlElement>();
-  for (const row of existingRows) {
-    const rStr = row.attrs["r"];
-    if (rStr) {
-      rowMap.set(parseInt(rStr, 10), row);
-    }
-  }
-
-  // Update or create rows
-  for (const [rowNum, updates] of byRow) {
-    const existingRow = rowMap.get(rowNum);
-    const newRow = applyRowUpdates({ existingRow, rowNum, updates, sharedStrings });
-    rowMap.set(rowNum, newRow);
-  }
-
-  // Sort rows by row number and create new sheetData
-  const sortedRows = Array.from(rowMap.entries())
-    .sort(([a], [b]) => a - b)
-    .map(([, row]) => row);
-
-  // Preserve non-row children and append rows
-  const nonRowChildren = sheetData.children.filter((child) => !isXmlElement(child) || child.name !== "row");
-
-  return createElement("sheetData", sheetData.attrs, [...nonRowChildren, ...sortedRows]);
-}
-
-/**
- * Apply updates to a single row.
- */
-function applyRowUpdates(params: {
-  readonly existingRow: XmlElement | undefined;
-  readonly rowNum: number;
-  readonly updates: readonly CellUpdate[];
-  readonly sharedStrings: readonly string[];
-}): XmlElement {
-  const { existingRow, rowNum, updates, sharedStrings } = params;
-  // Get existing cells
-  const cellMap = new Map<string, XmlElement>();
-  if (existingRow) {
-    const existingCells = getChildren(existingRow, "c");
-    for (const cell of existingCells) {
-      const ref = cell.attrs["r"];
-      if (ref) {
-        const colMatch = ref.match(/^([A-Z]+)/);
-        if (colMatch) {
-          cellMap.set(colMatch[1], cell);
-        }
-      }
-    }
-  }
-
-  // Apply updates
-  for (const update of updates) {
-    const col = update.col.toUpperCase();
-    const ref = `${col}${rowNum}`;
-    const newCell = createCellElement(ref, update.value, sharedStrings);
-    cellMap.set(col, newCell);
-  }
-
-  // Sort cells by column and create row
-  const sortedCells = Array.from(cellMap.entries())
-    .sort(([a], [b]) => columnLetterToIndex(a) - columnLetterToIndex(b))
-    .map(([, cell]) => cell);
-
-  const rowAttrs: Record<string, string> = { r: String(rowNum) };
-  if (existingRow?.attrs["spans"]) {
-    rowAttrs["spans"] = existingRow.attrs["spans"];
-  }
-
-  return createElement("row", rowAttrs, sortedCells);
-}
-
-/**
- * Create a cell element for a value.
- */
-function createCellElement(ref: string, value: string | number, sharedStrings: readonly string[]): XmlElement {
-  if (typeof value === "number") {
-    // Numeric cell
-    return createElement("c", { r: ref }, [createElement("v", {}, [createText(String(value))])]);
-  }
-
-  // String cell - use shared string
-  const ssIndex = sharedStrings.indexOf(value);
-  if (ssIndex !== -1) {
-    return createElement("c", { r: ref, t: "s" }, [createElement("v", {}, [createText(String(ssIndex))])]);
-  }
-
-  // Inline string fallback (shouldn't happen if we added to shared strings)
-  return createElement("c", { r: ref, t: "inlineStr" }, [
-    createElement("is", {}, [createElement("t", {}, [createText(value)])]),
-  ]);
-}
-
-/**
- * Patch shared strings XML.
- */
-function patchSharedStringsXml(pkg: ZipPackage, sharedStrings: readonly string[]): void {
-  const siElements = sharedStrings.map((str) => createElement("si", {}, [createElement("t", {}, [createText(str)])]));
-
-  const sstElement = createElement(
-    "sst",
-    {
-      xmlns: "http://schemas.openxmlformats.org/spreadsheetml/2006/main",
-      count: String(sharedStrings.length),
-      uniqueCount: String(sharedStrings.length),
-    },
-    siElements,
-  );
-
-  const serialized = serializeDocument({ children: [sstElement] }, { declaration: true, standalone: true });
-  pkg.writeText("xl/sharedStrings.xml", serialized);
-}
-
-// =============================================================================
 // Helper Functions
 // =============================================================================
-
-/**
- * Insert a child element after a named sibling.
- * If the named sibling is not found, prepend the child.
- *
- * Note: No exact equivalent exists in @aurochs/xml/mutate, so this is kept as-is.
- */
-function insertChildAfter(parent: XmlElement, afterName: string, child: XmlElement): XmlElement {
-  const reduced = parent.children.reduce(
-    (acc, existing): { readonly children: readonly XmlNode[]; readonly inserted: boolean } => {
-      const nextChildren = [...acc.children, existing];
-      if (!acc.inserted && isXmlElement(existing) && existing.name === afterName) {
-        return { children: [...nextChildren, child], inserted: true };
-      }
-      return { children: nextChildren, inserted: acc.inserted };
-    },
-    { children: [] as readonly XmlNode[], inserted: false },
-  );
-
-  if (reduced.inserted) {
-    return createElement(parent.name, parent.attrs, [...reduced.children]);
-  }
-  return createElement(parent.name, parent.attrs, [child, ...reduced.children]);
-}
 
 function columnLetterToIndex(col: string): number {
   const upper = col.toUpperCase();
@@ -787,17 +628,6 @@ function columnLetterToIndex(col: string): number {
 
 /**
  * Update chart data in a workbook.
- *
- * This is a convenience function for the common case of updating
- * categories in column A and values in subsequent columns.
- *
- * @param workbook - Parsed workbook
- * @param sheetName - Sheet to update
- * @param categories - Category values (written to column A starting at row 2)
- * @param seriesData - Array of series values (each written to columns B, C, D, etc.)
- * @param headerRow - Row for series names (default: 1)
- * @param seriesNames - Names for each series (written to header row)
- * @returns Updated xlsx buffer
  */
 export async function updateChartDataInWorkbook(params: {
   readonly workbook: Workbook;
@@ -811,46 +641,32 @@ export async function updateChartDataInWorkbook(params: {
   const cells: CellUpdate[] = [];
   const startRow = headerRow + 1;
 
-  // Write series names to header row
   if (seriesNames) {
     for (let i = 0; i < seriesNames.length; i++) {
       cells.push({
-        col: indexToColumnLetter(colIdx(i + 2)), // B, C, D, ...
+        col: indexToColumnLetter(colIdx(i + 2)),
         row: headerRow,
         value: seriesNames[i],
       });
     }
   }
 
-  // Write categories to column A
   for (let i = 0; i < categories.length; i++) {
-    cells.push({
-      col: "A",
-      row: startRow + i,
-      value: categories[i],
-    });
+    cells.push({ col: "A", row: startRow + i, value: categories[i] });
   }
 
-  // Write series values to columns B, C, D, ...
   for (let seriesIdx = 0; seriesIdx < seriesData.length; seriesIdx++) {
     const values = seriesData[seriesIdx];
-    const col = indexToColumnLetter(colIdx(seriesIdx + 2)); // B, C, D, ...
-
+    const col = indexToColumnLetter(colIdx(seriesIdx + 2));
     for (let i = 0; i < values.length; i++) {
-      cells.push({
-        col,
-        row: startRow + i,
-        value: values[i],
-      });
+      cells.push({ col, row: startRow + i, value: values[i] });
     }
   }
 
-  // Calculate dimension
   const lastRow = startRow + categories.length - 1;
   const lastCol = indexToColumnLetter(colIdx(seriesData.length + 1));
   const dimension = `A${headerRow}:${lastCol}${lastRow}`;
 
   const result = await patchWorkbook(workbook, [{ sheetName, cells, dimension }]);
-
   return result.xlsxBuffer;
 }

@@ -6,8 +6,8 @@ import { colIdx, rowIdx, styleId } from "@aurochs-office/xlsx/domain/types";
 import type { Cell } from "@aurochs-office/xlsx/domain/cell/types";
 import type { CellAddress } from "@aurochs-office/xlsx/domain/cell/address";
 import type { XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
-import { getCell } from "./query";
-import { clearCellFormats, updateCell } from "./mutation";
+import { getCell } from "@aurochs-office/xlsx/domain/mutation/query";
+import { clearCellFormats, updateCell } from "@aurochs-office/xlsx/domain/mutation/cell";
 
 function addr(col: number, row: number): CellAddress {
   return {

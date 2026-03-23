@@ -4,10 +4,10 @@
  * Operations for updating, deleting, and clearing cells in a worksheet.
  */
 
-import type { XlsxRow, XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
-import type { Cell, CellValue } from "@aurochs-office/xlsx/domain/cell/types";
-import type { CellAddress, CellRange } from "@aurochs-office/xlsx/domain/cell/address";
-import type { Formula } from "@aurochs-office/xlsx/domain/cell/formula";
+import type { XlsxRow, XlsxWorksheet } from "../workbook";
+import type { Cell, CellValue } from "../cell/types";
+import type { CellAddress, CellRange } from "../cell/address";
+import type { Formula } from "../cell/formula";
 
 const EMPTY_VALUE: CellValue = { type: "empty" };
 

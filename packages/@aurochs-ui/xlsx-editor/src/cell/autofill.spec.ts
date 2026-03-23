@@ -7,7 +7,7 @@ import { parseRange } from "@aurochs-office/xlsx/domain/cell/address";
 import type { Cell } from "@aurochs-office/xlsx/domain/cell/types";
 import type { XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
 import { applyAutofillToWorksheet } from "./autofill";
-import { getCell } from "./query";
+import { getCell } from "@aurochs-office/xlsx/domain/mutation/query";
 
 function cellAt(col: number, row: number, cell: Omit<Cell, "address">): Cell {
   return {

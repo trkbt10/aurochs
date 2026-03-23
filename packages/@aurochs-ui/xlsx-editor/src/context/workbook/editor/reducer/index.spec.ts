@@ -6,7 +6,7 @@ import type { CellAddress } from "@aurochs-office/xlsx/domain/cell/address";
 import type { XlsxWorkbook, XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
 import { createDefaultStyleSheet } from "@aurochs-office/xlsx/domain/style/types";
 import { colIdx, rowIdx } from "@aurochs-office/xlsx/domain/types";
-import { getCellValue } from "../../../../cell/query";
+import { getCellValue } from "@aurochs-office/xlsx/domain/mutation/query";
 import { createHistory, pushHistory } from "@aurochs-ui/editor-core/history";
 import { createEmptyCellSelection } from "../types";
 import { createIdleDragState } from "@aurochs-ui/editor-core/drag-state";

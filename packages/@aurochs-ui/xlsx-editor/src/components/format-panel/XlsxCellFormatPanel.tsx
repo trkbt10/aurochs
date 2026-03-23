@@ -11,7 +11,7 @@ import type { XlsxFont } from "@aurochs-office/xlsx/domain/style/font";
 import type { XlsxFill } from "@aurochs-office/xlsx/domain/style/fill";
 import type { XlsxBorder } from "@aurochs-office/xlsx/domain/style/border";
 import type { XlsxAlignment } from "@aurochs-office/xlsx/domain/style/types";
-import { getCell } from "../../cell/query";
+import { getCell } from "@aurochs-office/xlsx/domain/mutation/query";
 import { useXlsxWorkbookEditor } from "../../context/workbook/XlsxWorkbookEditorContext";
 import { resolveCellStyleDetails } from "../../selectors/cell-style-details";
 import { resolveSelectionFormatFlags } from "../../selectors/selection-format-flags";

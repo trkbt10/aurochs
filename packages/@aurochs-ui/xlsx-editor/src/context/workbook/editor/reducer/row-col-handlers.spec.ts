@@ -6,7 +6,7 @@ import type { XlsxWorkbook, XlsxWorksheet } from "@aurochs-office/xlsx/domain/wo
 import type { CellAddress } from "@aurochs-office/xlsx/domain/cell/address";
 import { createDefaultStyleSheet } from "@aurochs-office/xlsx/domain/style/types";
 import { colIdx, rowIdx } from "@aurochs-office/xlsx/domain/types";
-import { getCellValue } from "../../../../cell/query";
+import { getCellValue } from "@aurochs-office/xlsx/domain/mutation/query";
 import { createInitialState, xlsxEditorReducer } from "./index";
 
 function addr(col: number, row: number): CellAddress {

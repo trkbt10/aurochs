@@ -20,7 +20,7 @@ import { getCellEditKeyAction } from "../../hooks/useCellEditKeyboard";
 import { useFormulaAutocomplete } from "../../hooks/useFormulaAutocomplete";
 import { acceptAutocomplete } from "../../formula-edit/formula-autocomplete";
 import { FormulaAutocompleteDropdown } from "./FormulaAutocompleteDropdown";
-import { getCell } from "../../cell/query";
+import { getCell } from "@aurochs-office/xlsx/domain/mutation/query";
 import { resolveCellRenderStyle } from "../../selectors/cell-render-style";
 
 export type CellRect = {

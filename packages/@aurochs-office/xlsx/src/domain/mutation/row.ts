@@ -4,8 +4,8 @@
  * Operations for inserting, deleting, resizing, and hiding rows.
  */
 
-import type { XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
-import { rowIdx, type RowIndex } from "@aurochs-office/xlsx/domain/types";
+import type { XlsxWorksheet } from "../workbook";
+import { rowIdx, type RowIndex } from "../types";
 import {
   assertPositiveInteger,
   assertValidRowIndex,

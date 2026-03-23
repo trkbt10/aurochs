@@ -10,7 +10,7 @@ import type { Cell } from "@aurochs-office/xlsx/domain/cell/types";
 import type { CellAddress, CellRange } from "@aurochs-office/xlsx/domain/cell/address";
 import type { XlsxRow, XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
 import { colIdx, rowIdx } from "@aurochs-office/xlsx/domain/types";
-import { toColNumber, toRowNumber } from "../row-col/cell-range-utils";
+import { toColNumber, toRowNumber } from "@aurochs-office/xlsx/domain/mutation/cell-range-utils";
 
 function normalizeRangeBounds(range: CellRange): {
   readonly minRow: number;

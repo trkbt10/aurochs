@@ -11,7 +11,7 @@ import { colIdx, rowIdx } from "@aurochs-office/xlsx/domain/types";
 import { createDefaultStyleSheet } from "@aurochs-office/xlsx/domain/style/types";
 import type { CellAddress } from "@aurochs-office/xlsx/domain/cell/address";
 import { XlsxWorkbookEditorProvider, useXlsxWorkbookEditor } from "../context/workbook/XlsxWorkbookEditorContext";
-import { getCell } from "../cell/query";
+import { getCell } from "@aurochs-office/xlsx/domain/mutation/query";
 import { XlsxSheetGrid } from "./XlsxSheetGrid";
 
 function createResizeObserverEntry(width: number, height: number): ResizeObserverEntry {

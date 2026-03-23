@@ -12,8 +12,8 @@ import type { Formula } from "@aurochs-office/xlsx/domain/cell/formula";
 import type { XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
 import { colIdx, rowIdx, type StyleId } from "@aurochs-office/xlsx/domain/types";
 import { shiftFormulaReferences } from "@aurochs-office/xlsx/formula/shift";
-import { getCellsInRange, getCellValuesInRange } from "../../../../cell/query";
-import { deleteCellRange, updateCellById } from "../../../../cell/mutation";
+import { getCellsInRange, getCellValuesInRange } from "@aurochs-office/xlsx/domain/mutation/query";
+import { deleteCellRange, updateCellById } from "@aurochs-office/xlsx/domain/mutation/cell";
 import { pushHistory } from "@aurochs-ui/editor-core/history";
 import { replaceWorksheetInWorkbook } from "../../utils/worksheet-updater";
 

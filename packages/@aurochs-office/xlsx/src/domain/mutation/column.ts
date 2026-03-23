@@ -4,8 +4,8 @@
  * Operations for inserting, deleting, resizing, and hiding columns.
  */
 
-import type { XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
-import { colIdx, type ColIndex } from "@aurochs-office/xlsx/domain/types";
+import type { XlsxWorksheet } from "../workbook";
+import { colIdx, type ColIndex } from "../types";
 import {
   assertPositiveInteger,
   assertValidColIndex,

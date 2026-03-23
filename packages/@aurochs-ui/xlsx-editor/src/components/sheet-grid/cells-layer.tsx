@@ -11,7 +11,7 @@ import type { XlsxStyleSheet } from "@aurochs-office/xlsx/domain/style/types";
 import type { XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
 import { createFormulaEvaluator } from "@aurochs-office/xlsx/formula/evaluator";
 import { colIdx, rowIdx } from "@aurochs-office/xlsx/domain/types";
-import { getCell } from "../../cell/query";
+import { getCell } from "@aurochs-office/xlsx/domain/mutation/query";
 import { resolveCellRenderStyle } from "../../selectors/cell-render-style";
 import {
   formatCellValueForDisplay,
