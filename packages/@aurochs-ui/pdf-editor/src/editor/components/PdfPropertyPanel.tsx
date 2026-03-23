@@ -19,17 +19,17 @@ import { OutlineFormattingEditor } from "@aurochs-ui/editor-controls/surface";
 import { TextFormattingEditor } from "@aurochs-ui/editor-controls/text";
 import type { TextFormatting } from "@aurochs-ui/editor-controls/text";
 import type { FillFormatting, OutlineFormatting } from "@aurochs-ui/editor-controls/surface";
-import { PDF_TEXT_FEATURES, pdfTextToFormatting, applyTextFormattingToPdfElement } from "./pdf-adapters";
+import { PDF_TEXT_FEATURES, pdfTextToFormatting, applyTextFormattingToPdfElement } from "../../modules/formatting-context/pdf-adapters";
 import {
   pdfFillToFormatting,
   applyFillToGraphicsState,
   pdfStrokeToFormatting,
   applyStrokeToGraphicsState,
-} from "./pdf-surface-adapters";
-import { PDF_PAGE_PRESETS, findMatchingPreset } from "./pdf-page-size-adapter";
+} from "../../modules/formatting-context/pdf-surface-adapters";
+import { PDF_PAGE_PRESETS, findMatchingPreset } from "../../modules/formatting-context/pdf-page-size-adapter";
 import { TableCellGrid, TableDimensionEditor, TableStructureToolbar } from "@aurochs-ui/editor-controls/table";
 import type { CellPosition } from "@aurochs-ui/editor-core/table-selection";
-import { pdfTableOperationAdapter } from "./pdf-table-adapter";
+import { pdfTableOperationAdapter } from "../../modules/formatting-context/pdf-table-adapter";
 import type { PdfElementBounds } from "@aurochs-renderer/pdf/svg";
 
 // =============================================================================

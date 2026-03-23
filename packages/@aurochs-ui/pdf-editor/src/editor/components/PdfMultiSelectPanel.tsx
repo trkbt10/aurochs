@@ -18,8 +18,8 @@ import {
   applyFillToGraphicsState,
   pdfStrokeToFormatting,
   applyStrokeToGraphicsState,
-} from "./pdf-surface-adapters";
-import { PDF_TEXT_FEATURES, pdfTextToFormatting, applyTextFormattingToPdfElement } from "./pdf-adapters";
+} from "../../modules/formatting-context/pdf-surface-adapters";
+import { PDF_TEXT_FEATURES, pdfTextToFormatting, applyTextFormattingToPdfElement } from "../../modules/formatting-context/pdf-adapters";
 import { createDocumentQuery } from "@aurochs-renderer/pdf/svg";
 
 // =============================================================================

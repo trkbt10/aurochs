@@ -20,7 +20,7 @@ import { createEmptySelection, createSingleSelection, isSelected, toggleSelectio
 import { createIdleDragState, isDragMove, isDragIdle, isDragResize, isDragPendingMove } from "@aurochs-ui/editor-core/drag-state";
 import { createClipboardContent, incrementPasteCount } from "@aurochs-ui/editor-core/clipboard";
 import { calculateAlignment, type BoundsWithId } from "@aurochs-ui/editor-core/alignment";
-import type { PdfEditorState } from "./types";
+import type { PdfEditorState } from "../modules/editor-state-context/types";
 
 // =============================================================================
 // Test Fixtures

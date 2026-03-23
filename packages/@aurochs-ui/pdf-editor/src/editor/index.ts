@@ -8,10 +8,10 @@
  */
 
 export { PdfEditor, type PdfEditorProps } from "./PdfEditor";
-export { PdfPageCanvas, type PdfPageCanvasProps } from "./PdfPageCanvas";
-export { PdfPropertyPanel, type PdfPropertyPanelProps } from "./PdfPropertyPanel";
-export { PdfPageListPanel, type PdfPageListPanelProps } from "./PdfPageListPanel";
-export { PdfLayerPanel, type PdfLayerPanelProps } from "./PdfLayerPanel";
-export { PdfMultiSelectPanel, type PdfMultiSelectPanelProps } from "./PdfMultiSelectPanel";
-export type { PdfEditorState, PdfTextEditState } from "./types";
-export { pdfEditorReducer, createInitialState, type PdfEditorAction } from "./reducer";
+export { PdfPageCanvas, type PdfPageCanvasProps } from "./components/PdfPageCanvas";
+export { PdfPropertyPanel, type PdfPropertyPanelProps } from "./components/PdfPropertyPanel";
+export { PdfPageListPanel, type PdfPageListPanelProps } from "./components/PdfPageListPanel";
+export { PdfLayerPanel, type PdfLayerPanelProps } from "./components/PdfLayerPanel";
+export { PdfMultiSelectPanel, type PdfMultiSelectPanelProps } from "./components/PdfMultiSelectPanel";
+export type { PdfEditorState, PdfTextEditState } from "../modules/editor-state-context/types";
+export { pdfEditorReducer, createInitialState, type PdfEditorAction } from "../modules/editor-state-context/reducer";
