@@ -6,6 +6,7 @@
 
 import type { GraphicFrame, Table, TableRow, TableCell, TableColumn } from "@aurochs-office/pptx/domain";
 import type { ShapeId, ResourceId } from "@aurochs-office/pptx/domain/types";
+import type { ChartType } from "@aurochs-office/chart/domain";
 import { deg, px } from "@aurochs-office/drawing-ml/domain/units";
 import type { CreationChartType, CreationDiagramType } from "@aurochs-ui/ooxml-components";
 import type { ShapeBounds } from "@aurochs-ui/ooxml-components";
@@ -170,9 +171,23 @@ export function createTableGraphicFrame({ id, bounds, rows, cols }: CreateTableG
 }
 
 /**
- * Create a chart graphic frame
+ * Map UI creation chart type to ECMA-376 chart type.
+ *
+ * @see ECMA-376 Part 1, Section 21.2.2 (chart element types)
  */
-export function createChartGraphicFrame(id: ShapeId, bounds: ShapeBounds, _chartType: CreationChartType): GraphicFrame {
+const CREATION_CHART_TYPE_MAP: Record<CreationChartType, ChartType> = {
+  bar: "barChart",
+  line: "lineChart",
+  pie: "pieChart",
+};
+
+/**
+ * Create a chart graphic frame.
+ *
+ * The chartType is stored on ChartReference so the editor can build
+ * default chart data when it is not found in the PPTX archive.
+ */
+export function createChartGraphicFrame(id: ShapeId, bounds: ShapeBounds, chartType: CreationChartType): GraphicFrame {
   const chartResourceId = `chart-${id}` as ResourceId;
 
   return {
@@ -194,8 +209,7 @@ export function createChartGraphicFrame(id: ShapeId, bounds: ShapeBounds, _chart
       type: "chart",
       data: {
         resourceId: chartResourceId,
-        // Note: Chart data should be stored in ResourceStore separately
-        // The factory creates the shape reference; the editor manages the data
+        chartType: CREATION_CHART_TYPE_MAP[chartType],
       },
     },
   };

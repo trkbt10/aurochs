@@ -9,10 +9,12 @@
 
 import { useCallback, type CSSProperties } from "react";
 import type { Slide, Shape } from "@aurochs-office/pptx/domain/index";
+import type { Chart } from "@aurochs-office/chart/domain";
 import type { Background } from "@aurochs-office/pptx/domain/slide/types";
 import type { SlideLayoutAttributes } from "@aurochs-office/pptx/parser/slide/layout-parser";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import type { SlideLayoutOption } from "@aurochs-office/pptx/app";
+import type { ResourceStore } from "@aurochs-office/pptx/domain/resource-store";
 import { SlidePropertiesPanel } from "./property/SlidePropertiesPanel";
 import { MultiSelectPanel } from "./property/MultiSelectPanel";
 import { SpShapePanel } from "./property/SpShapePanel";
@@ -20,6 +22,7 @@ import { PicShapePanel } from "./property/PicShapePanel";
 import { CxnShapePanel } from "./property/CxnShapePanel";
 import { GrpShapePanel } from "./property/GrpShapePanel";
 import { TableFramePanel } from "./property/TableFramePanel";
+import { ChartFramePanel } from "./property/ChartFramePanel";
 import { DiagramFramePanel } from "./property/DiagramFramePanel";
 import { OleFramePanel } from "./property/OleFramePanel";
 import { UnknownShapePanel } from "./property/UnknownShapePanel";
@@ -56,6 +59,10 @@ export type PropertyPanelProps = {
   readonly onLayoutAttributesChange: (attrs: SlideLayoutAttributes) => void;
   /** Callback when layout selection changes */
   readonly onLayoutChange: (layoutPath: string) => void;
+  /** Callback when chart data changes (updates ResourceStore) */
+  readonly onChartChange?: (resourceId: string, chart: Chart) => void;
+  /** Resource store for accessing chart/diagram data */
+  readonly resourceStore?: ResourceStore;
   /** Custom class name */
   readonly className?: string;
   /** Custom style */
@@ -70,6 +77,8 @@ type ShapePanelContext = {
   readonly onShapeChange: (shape: Shape) => void;
   readonly onUngroup: (shapeId: ShapeId) => void;
   readonly onSelect: (shapeId: ShapeId, addToSelection: boolean, toggle?: boolean) => void;
+  readonly onChartChange?: (resourceId: string, chart: Chart) => void;
+  readonly resourceStore?: ResourceStore;
 };
 
 /**
@@ -93,7 +102,7 @@ function renderShapePanel(shape: Shape, ctx: ShapePanelContext): React.ReactNode
         />
       );
     case "graphicFrame":
-      return renderGraphicFramePanel(shape, ctx.onShapeChange);
+      return renderGraphicFramePanel(shape, ctx);
     case "contentPart":
       return (
         <div
@@ -116,29 +125,35 @@ function renderShapePanel(shape: Shape, ctx: ShapePanelContext): React.ReactNode
  */
 function renderGraphicFramePanel(
   shape: Shape & { type: "graphicFrame" },
-  onShapeChange: (shape: Shape) => void,
+  ctx: ShapePanelContext,
 ): React.ReactNode {
   switch (shape.content.type) {
     case "table":
-      return <TableFramePanel shape={shape} table={shape.content.data.table} onChange={onShapeChange} />;
-    case "chart":
-      // TODO: Get chart data from ResourceStore
-      // Chart data is now stored in ResourceStore, not on the shape
+      return <TableFramePanel shape={shape} table={shape.content.data.table} onChange={ctx.onShapeChange} />;
+    case "chart": {
+      const resourceId = shape.content.data.resourceId as string;
+      const entry = ctx.resourceStore?.get<Chart>(resourceId);
+      const chart = entry?.parsed;
+      if (chart === undefined) {
+        return (
+          <div style={{ padding: "16px", color: "var(--editor-text-secondary, #888)", fontSize: "12px" }}>
+            Chart data not available
+          </div>
+        );
+      }
       return (
-        <div
-          style={{
-            padding: "16px",
-            color: "var(--editor-text-secondary, #888)",
-            fontSize: "12px",
-          }}
-        >
-          Chart editing requires ResourceStore integration
-        </div>
+        <ChartFramePanel
+          shape={shape}
+          chart={chart}
+          onChange={ctx.onShapeChange}
+          onChartChange={ctx.onChartChange ? (newChart) => ctx.onChartChange!(resourceId, newChart) : undefined}
+        />
       );
+    }
     case "diagram":
-      return <DiagramFramePanel shape={shape} onChange={onShapeChange} />;
+      return <DiagramFramePanel shape={shape} onChange={ctx.onShapeChange} />;
     case "oleObject":
-      return <OleFramePanel shape={shape} onChange={onShapeChange} />;
+      return <OleFramePanel shape={shape} onChange={ctx.onShapeChange} />;
     case "unknown":
       return <UnknownShapePanel shape={shape} />;
     default:
@@ -172,6 +187,8 @@ export function PropertyPanel({
   onSelect,
   onLayoutAttributesChange,
   onLayoutChange,
+  onChartChange,
+  resourceStore,
   className,
   style,
 }: PropertyPanelProps) {
@@ -208,6 +225,8 @@ export function PropertyPanel({
     onShapeChange: handleShapeChange,
     onUngroup,
     onSelect,
+    onChartChange,
+    resourceStore,
   };
 
   // Text edit mode - show text property panel

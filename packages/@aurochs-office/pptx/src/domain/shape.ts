@@ -364,9 +364,19 @@ export type TableReference = {
  *
  * The parsedChart field is populated in the integration layer
  * to allow render to render without calling parser directly.
+ *
+ * @see ECMA-376 Part 1, Section 21.2.2.27 (chartSpace)
  */
 export type ChartReference = {
   readonly resourceId: ResourceId;
+  /**
+   * Chart type hint for editor-created charts.
+   * Absent for PPTX-parsed charts (type is in the chart XML).
+   * Used to build default chart data when not in the archive.
+   *
+   * @see ECMA-376 Part 1, Section 21.2.2 (chart element types)
+   */
+  readonly chartType?: import("@aurochs-office/chart/domain").ChartType;
 };
 
 /**

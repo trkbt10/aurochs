@@ -54,13 +54,14 @@ describe("Chart rendering - ECMA-376 compliance", () => {
      * - "autoZero" means the axis crosses at zero
      * - Bars should extend from zero line (up for positive, down for negative)
      */
-    it("renders a [Chart] placeholder when chart data is not in ResourceStore", () => {
+    it("renders chart content from PPTX archive via ResourceStore", () => {
       const presentation = openPresentation(getPackageFile());
       const slide = presentation.getSlide(8);
       const svg = renderSlideToSvg(slide).svg;
 
       expect(svg).toContain("<svg");
-      expect(svg).toContain("[Chart]");
+      // Chart should be rendered, not a placeholder
+      expect(svg).not.toContain("[Chart]");
     });
   });
 });

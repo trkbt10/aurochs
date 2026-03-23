@@ -52,6 +52,9 @@ import {
 import { ShapeToolbar } from "../panels/ShapeToolbar";
 import { buildSlideLayoutOptions } from "@aurochs-office/pptx/app";
 import { createRenderContext, getLayoutNonPlaceholderShapes } from "@aurochs-renderer/pptx";
+import { enrichSlideContent } from "@aurochs-office/pptx/parser/slide/external-content-loader";
+import type { Chart } from "@aurochs-office/chart/domain";
+import { createDefaultChart } from "@aurochs-builder/chart";
 import { getSlideLayoutAttributes } from "@aurochs-office/pptx/parser/slide/layout-parser";
 import { RELATIONSHIP_TYPES, createZipAdapter } from "@aurochs-office/pptx/domain";
 import { CanvasControls } from "@aurochs-ui/editor-controls/shape-editor";
@@ -687,6 +690,72 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
     return undefined;
   }, [width, height, activeSlide?.apiSlide, zipFile]);
 
+  // Enrich active slide with chart/diagram data from PPTX archive
+  // into the editor resource store, so the canvas can render charts.
+  // Also populate editor-created charts that have chartType but no archive data.
+  useMemo(() => {
+    if (!activeSlide?.slide || !editorResourceStore) {
+      return;
+    }
+    // Phase 1: Enrich from PPTX archive (for charts loaded from file)
+    if (renderContext) {
+      enrichSlideContent(activeSlide.slide, renderContext.fileReader, editorResourceStore);
+    }
+    // Phase 2: Populate editor-created charts not in archive
+    for (const shape of activeSlide.slide.shapes) {
+      if (shape.type !== "graphicFrame") continue;
+      if (shape.content.type !== "chart") continue;
+      const { resourceId, chartType } = shape.content.data;
+      if (editorResourceStore.has(resourceId as string)) continue;
+      if (chartType === undefined) continue;
+      const chart = createDefaultChart(chartType);
+      editorResourceStore.set(resourceId as string, {
+        kind: "chart",
+        source: "created",
+        data: new ArrayBuffer(0),
+        parsed: chart,
+      });
+    }
+  }, [renderContext, activeSlide?.slide, editorResourceStore]);
+
+  // Chart data change handler: updates ResourceStore and triggers re-render.
+  // ResourceStore is mutable (Map-based), so .set() alone won't cause React to re-render.
+  // We dispatch UPDATE_SHAPE to touch the shape reference, which propagates through
+  // the reducer → state change → component re-render → useChartSvg recomputes.
+  const handleChartChange = useCallback(
+    (resourceId: string, chart: Chart) => {
+      if (!editorResourceStore) return;
+      // 1. Update ResourceStore with new chart data
+      const existing = editorResourceStore.get(resourceId);
+      editorResourceStore.set(resourceId, {
+        kind: "chart",
+        source: existing?.source ?? "created",
+        data: existing?.data ?? new ArrayBuffer(0),
+        ...existing,
+        parsed: chart,
+      });
+      // 2. Touch the shape to trigger React re-render
+      // Find the shape with this resourceId and spread its content.data
+      // to create a new reference, causing the component tree to update.
+      if (!activeSlide?.slide) return;
+      for (const s of activeSlide.slide.shapes) {
+        if (s.type !== "graphicFrame") continue;
+        if (s.content.type !== "chart") continue;
+        if ((s.content.data.resourceId as string) !== resourceId) continue;
+        dispatch({
+          type: "UPDATE_SHAPE",
+          shapeId: s.nonVisual.id,
+          updater: (shape) => {
+            if (shape.type !== "graphicFrame" || shape.content.type !== "chart") return shape;
+            return { ...shape, content: { ...shape.content, data: { ...shape.content.data } } };
+          },
+        });
+        break;
+      }
+    },
+    [editorResourceStore, activeSlide?.slide, dispatch],
+  );
+
   const layoutOptions = useMemo(() => {
     const presentationFile = document.presentationFile;
     if (!presentationFile) {
@@ -855,6 +924,8 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
           onShapeChange={shape.handleShapeChange}
           onUngroup={shape.handleUngroup}
           onSelect={canvas.handleSelect}
+          onChartChange={handleChartChange}
+          resourceStore={editorResourceStore}
         />
         <LayersTab
           slide={slide}
@@ -882,6 +953,8 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
     shape.handleUpdateShapes,
     canvas.handleSelect,
     canvas.handleSelectMultiple,
+    handleChartChange,
+    editorResourceStore,
   ]);
 
   const slideTabContent = useMemo(() => {

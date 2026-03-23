@@ -13,6 +13,7 @@ import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-conte
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
 import { DEFAULT_COLOR_MAPPING } from "@aurochs-office/pptx/domain/color/types";
 import type { ResourceResolver } from "@aurochs-office/pptx/domain/resource-resolver";
+import type { ResourceStore } from "@aurochs-office/pptx/domain/resource-store";
 import type { SlideContext } from "@aurochs-office/pptx/parser/slide/context";
 import type { CoreRenderContext } from "../render-context";
 import type { RenderOptions } from "../render-options";
@@ -33,6 +34,7 @@ export type RenderContextFromSlideOptions = {
   readonly renderOptions?: Partial<RenderOptions>;
   readonly resolvedBackground?: ResolvedBackgroundFill;
   readonly layoutShapes?: readonly Shape[];
+  readonly resourceStore?: ResourceStore;
 };
 
 // =============================================================================
@@ -66,6 +68,7 @@ export function createRenderContextFromSlideContext(
     fontScheme: buildFontScheme(ctx),
     layoutShapes: options?.layoutShapes,
     tableStyles: ctx.presentation.tableStyles,
+    resourceStore: options?.resourceStore,
   };
 }
 

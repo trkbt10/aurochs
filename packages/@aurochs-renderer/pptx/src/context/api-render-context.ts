@@ -23,6 +23,8 @@ import type { RenderOptions } from "../render-options";
 import { DEFAULT_RENDER_OPTIONS } from "../render-options";
 import { toResolvedBackgroundFill } from "../background-fill";
 import { createRenderContextFromSlideContext } from "./slide-context-adapter";
+import { createResourceStore, type ResourceStore } from "@aurochs-office/pptx/domain/resource-store";
+import type { FileReader } from "@aurochs-office/pptx/parser/slide/external-content-loader";
 
 // =============================================================================
 // Types
@@ -41,6 +43,8 @@ import { createRenderContextFromSlideContext } from "./slide-context-adapter";
  */
 export type RenderContext = CoreRenderContext & {
   readonly slideRenderContext: SlideContext;
+  /** FileReader for enriching slides with chart/diagram data from the PPTX archive */
+  readonly fileReader: FileReader;
 };
 
 /**
@@ -129,18 +133,31 @@ export function createRenderContext({
   // Extract layout non-placeholder shapes
   const layoutShapes = getLayoutNonPlaceholderShapes(apiSlide);
 
+  // Create ResourceStore for chart/diagram data
+  const resourceStore = createResourceStore();
+
+  // Build FileReader from SlideContext for enrichment
+  const fileReader: FileReader = {
+    readFile: (path: string) => slideRenderCtx.readFile(path),
+    resolveResource: (id: string) => slideRenderCtx.resolveResource(id),
+    getResourceByType: (relType: string) => slideRenderCtx.slide.resources.getTargetByType(relType),
+  };
+
   // Create RenderContext with all resolved data
   const renderContext = createRenderContextFromSlideContext(slideRenderCtx, slideSize, {
     resolvedBackground,
     layoutShapes,
+    resourceStore,
   });
 
   return {
     slideRenderContext: slideRenderCtx,
+    fileReader,
     slideSize: renderContext.slideSize,
     options: renderContext.options,
     colorContext: renderContext.colorContext,
     resources: renderContext.resources,
+    resourceStore: renderContext.resourceStore,
     warnings: renderContext.warnings,
     getNextShapeId: renderContext.getNextShapeId,
     fontScheme: renderContext.fontScheme,

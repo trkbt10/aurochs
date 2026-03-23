@@ -47,6 +47,18 @@ export type { DataLabelsEditorProps } from "./chart/DataLabelsEditor";
 export { ChartShapePropertiesEditor, createDefaultChartShapeProperties } from "./chart/ChartShapePropertiesEditor";
 export type { ChartShapePropertiesEditorProps } from "./chart/ChartShapePropertiesEditor";
 
+// Extracted property editors
+export { View3DEditor, createDefaultView3D as createDefaultView3DExtracted } from "./chart/View3DEditor";
+export type { View3DEditorProps } from "./chart/View3DEditor";
+export { DataTableEditor, createDefaultDataTable as createDefaultDataTableExtracted } from "./chart/DataTableEditor";
+export type { DataTableEditorProps } from "./chart/DataTableEditor";
+export { ChartProtectionEditor, createDefaultChartProtection as createDefaultChartProtectionExtracted } from "./chart/ChartProtectionEditor";
+export type { ChartProtectionEditorProps } from "./chart/ChartProtectionEditor";
+
+// Purpose-oriented panel editor
+export { ChartPanelEditor } from "./panels/ChartPanelEditor";
+export type { ChartPanelEditorProps } from "./panels/ChartPanelEditor";
+
 export { ChartEditorAdaptersProvider, ChartEditorAdaptersBoundary, useChartEditorAdapters } from "./adapters";
 export type {
   ChartEditorAdapters,

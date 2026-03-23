@@ -9,7 +9,10 @@ import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import type { ZipFile } from "@aurochs-office/opc";
 import { renderSlideSvg } from "@aurochs-renderer/pptx/svg";
 import { createCoreRenderContext, createRenderContext as createApiRenderContext } from "@aurochs-renderer/pptx";
+import type { RenderContext } from "@aurochs-renderer/pptx";
 import type { SlideWithId } from "@aurochs-office/pptx/app";
+import { enrichSlideContent } from "@aurochs-office/pptx/parser/slide/external-content-loader";
+import { createDefaultChart } from "@aurochs-builder/chart";
 import {
   createThumbnailCache,
   getCachedThumbnail,
@@ -21,6 +24,11 @@ import {
 // =============================================================================
 // Helpers
 // =============================================================================
+
+/** Type guard: checks if context is a full RenderContext with fileReader */
+function isRenderContext(ctx: unknown): ctx is RenderContext {
+  return ctx !== null && typeof ctx === "object" && "fileReader" in ctx;
+}
 
 /** Build render context based on available API slide data */
 function buildRenderContext(
@@ -92,8 +100,31 @@ export function useSlideThumbnails(options: UseSlideThumbnailsOptions): SlideThu
       // Layout shapes are now included in context and rendered by renderSlideSvg
       const ctx = buildRenderContext(apiSlide, zipFile, slideSize);
 
+      // Enrich slide with chart/diagram data from PPTX archive
+      const enrichedSlide = isRenderContext(ctx)
+        ? enrichSlideContent(slide, ctx.fileReader, ctx.resourceStore)
+        : slide;
+
+      // Populate editor-created charts not in archive
+      if (ctx.resourceStore) {
+        for (const shape of enrichedSlide.shapes) {
+          if (shape.type !== "graphicFrame") continue;
+          if (shape.content.type !== "chart") continue;
+          const { resourceId, chartType } = shape.content.data;
+          if (ctx.resourceStore.has(resourceId as string)) continue;
+          if (chartType === undefined) continue;
+          const chart = createDefaultChart(chartType);
+          ctx.resourceStore.set(resourceId as string, {
+            kind: "chart",
+            source: "created",
+            data: new ArrayBuffer(0),
+            parsed: chart,
+          });
+        }
+      }
+
       // Render the edited domain slide and cache
-      const result = renderSlideSvg(slide, ctx);
+      const result = renderSlideSvg(enrichedSlide, ctx);
       setCachedThumbnail({ cache, slideId: id, slide, svg: result.svg });
       return result.svg;
     },

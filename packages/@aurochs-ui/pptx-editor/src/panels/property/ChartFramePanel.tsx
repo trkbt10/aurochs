@@ -1,13 +1,20 @@
 /**
  * @file Chart GraphicFrame property panel component
  *
- * Displays property editors for GraphicFrame elements containing charts.
+ * Uses ChartPanelEditor for purpose-oriented chart editing.
+ * Sections are organized by user intent:
+ * - Identity / Transform (GraphicFrame properties)
+ * - Title & Legend (most common edits)
+ * - Series (chart data and type)
+ * - Axes (axis configuration)
+ * - Appearance (styling, 3D)
+ * - Advanced (protection, external data)
  */
 
 import type { GraphicFrame } from "@aurochs-office/pptx/domain/index";
 import type { Chart } from "@aurochs-office/chart/domain";
 import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
-import { ChartEditor, ChartEditorAdaptersProvider } from "@aurochs-ui/chart-editor";
+import { ChartPanelEditor, ChartEditorAdaptersProvider } from "@aurochs-ui/chart-editor";
 import { pptxChartEditorAdapters } from "../../adapters";
 import { NonVisualPropertiesEditor } from "@aurochs-ui/ooxml-components/drawing-ml";
 import { TransformEditor } from "@aurochs-ui/editor-controls/editors";
@@ -20,10 +27,6 @@ export type ChartFramePanelProps = {
   readonly shape: GraphicFrame;
   readonly chart: Chart;
   readonly onChange: (shape: GraphicFrame) => void;
-  /**
-   * Callback for chart content changes.
-   * Chart data is stored in ResourceStore, not on the shape.
-   */
   readonly onChartChange?: (chart: Chart) => void;
 };
 
@@ -31,20 +34,7 @@ export type ChartFramePanelProps = {
 // Component
 // =============================================================================
 
-/**
- * GraphicFrame (chart) editor panel.
- *
- * Displays editors for:
- * - Identity (NonVisual properties)
- * - Transform
- * - Chart content
- */
 export function ChartFramePanel({ shape, chart, onChange, onChartChange }: ChartFramePanelProps) {
-  const handleChartChange = (newChart: Chart) => {
-    // Chart data is stored in ResourceStore, notify parent
-    onChartChange?.(newChart);
-  };
-
   return (
     <>
       <OptionalPropertySection title="Identity" defaultExpanded={false}>
@@ -57,11 +47,12 @@ export function ChartFramePanel({ shape, chart, onChange, onChartChange }: Chart
         )}
       </OptionalPropertySection>
 
-      <OptionalPropertySection title="Chart" defaultExpanded>
-        <ChartEditorAdaptersProvider adapters={pptxChartEditorAdapters}>
-          <ChartEditor value={chart} onChange={handleChartChange} />
-        </ChartEditorAdaptersProvider>
-      </OptionalPropertySection>
+      <ChartEditorAdaptersProvider adapters={pptxChartEditorAdapters}>
+        <ChartPanelEditor
+          value={chart}
+          onChange={(newChart) => onChartChange?.(newChart)}
+        />
+      </ChartEditorAdaptersProvider>
     </>
   );
 }

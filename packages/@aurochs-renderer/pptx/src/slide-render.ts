@@ -21,6 +21,7 @@ import { createRenderContextFromSlideContext } from "./context/slide-context-ada
 import { toResolvedBackgroundFill } from "./background-fill";
 import { getBackgroundFillData } from "@aurochs-office/pptx/parser/slide/background-parser";
 import { enrichSlideContent, type FileReader } from "@aurochs-office/pptx/parser/slide/external-content-loader";
+import { createResourceStore } from "@aurochs-office/pptx/domain/resource-store";
 
 // =============================================================================
 // Types
@@ -128,12 +129,13 @@ export function renderSlideSvgIntegrated(
   const layoutShapes = getLayoutNonPlaceholderShapes(ctx);
 
   // Step 3: Enrich slide with pre-parsed chart/diagram content
+  const resourceStore = createResourceStore();
   const fileReader: FileReader = {
     readFile: (path: string) => ctx.readFile(path),
     resolveResource: (id: string) => ctx.resolveResource(id),
     getResourceByType: (relType: string) => ctx.slide.resources.getTargetByType(relType),
   };
-  const enrichedSlide = enrichSlideContent(parsedSlide, fileReader);
+  const enrichedSlide = enrichSlideContent(parsedSlide, fileReader, resourceStore);
 
   // Step 4: Resolve background from hierarchy
   const bgFillData = getBackgroundFillData(ctx);
@@ -143,6 +145,7 @@ export function renderSlideSvgIntegrated(
   const renderCtx = createRenderContextFromSlideContext(ctx, slideSize, {
     resolvedBackground,
     layoutShapes,
+    resourceStore,
   });
   const result = renderSlideSvg(enrichedSlide, renderCtx);
 

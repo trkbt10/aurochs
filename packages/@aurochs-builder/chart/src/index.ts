@@ -39,3 +39,6 @@ export { buildChartDocument, buildChartElement, buildChartData } from "./chart-b
 
 // Chart space builder
 export { buildChartSpaceDocument, buildChartSpaceElement, type ChartSpaceOptions } from "./chart-space-builder";
+
+// Chart domain object factory
+export { createDefaultChart } from "./chart-factory";

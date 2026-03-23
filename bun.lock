@@ -774,6 +774,7 @@
       "name": "@aurochs-ui/pptx-editor",
       "version": "0.8.0",
       "dependencies": {
+        "@aurochs-builder/chart": "workspace:*",
         "@aurochs-builder/pptx": "workspace:*",
         "@aurochs-office/chart": "workspace:*",
         "@aurochs-office/pptx": "workspace:*",
@@ -808,6 +809,7 @@
       "version": "0.8.0",
       "dependencies": {
         "@aurochs-builder/pptx": "workspace:*",
+        "@aurochs-office/chart": "workspace:*",
         "@aurochs-office/drawing-ml": "workspace:*",
         "@aurochs-office/ooxml": "workspace:*",
         "@aurochs-office/pptx": "workspace:*",

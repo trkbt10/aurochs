@@ -6,6 +6,7 @@
   "sideEffects": false,
   "dependencies": {
     "@aurochs-builder/pptx": "workspace:*",
+    "@aurochs-office/chart": "workspace:*",
     "@aurochs-office/drawing-ml": "workspace:*",
     "@aurochs-office/ooxml": "workspace:*",
     "@aurochs-office/pptx": "workspace:*",
