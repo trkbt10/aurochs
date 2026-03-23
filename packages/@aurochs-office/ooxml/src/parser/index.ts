@@ -12,7 +12,6 @@
 export type { OoxmlTextReader } from "./relationships";
 export {
   resolvePartPath,
-  getRelationshipPath,
   parseRelationships,
   parseRelationshipsFromText,
   loadRelationships,

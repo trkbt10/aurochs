@@ -176,6 +176,10 @@
       "types": "./src/domain/diagram/format-guards.ts",
       "default": "./src/domain/diagram/format-guards.ts"
     },
+    "./domain/diagram/layout-engine": {
+      "types": "./src/domain/diagram/layout-engine/index.ts",
+      "default": "./src/domain/diagram/layout-engine/index.ts"
+    },
     "./domain/theme/types": {
       "types": "./src/domain/theme/types.ts",
       "default": "./src/domain/theme/types.ts"

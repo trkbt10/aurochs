@@ -22,7 +22,7 @@ import {
   updateDocumentRoot,
 } from "@aurochs/xml";
 import { readXmlOrThrow, writeXml } from "./xml-io";
-import { getRelationshipPath } from "@aurochs-office/ooxml/parser/relationships";
+import { getRelationshipPartPath } from "@aurochs-office/opc";
 import { CONTENT_TYPES, RELATIONSHIP_TYPES } from "@aurochs-office/pptx/domain";
 import { createEmptyZipPackage, isBinaryFile, type ZipPackage } from "@aurochs/zip";
 import { serializeSlideLayout } from "../patcher/layout/layout-serializer";
@@ -455,7 +455,7 @@ function findMasterForLayout(pkg: ZipPackage, layoutPath: string): string {
   const masterNumbers = extractExistingPartNumbers(pkg, "ppt/slideMasters", "slideMaster");
   for (const num of masterNumbers) {
     const masterPath = `ppt/slideMasters/slideMaster${num}.xml`;
-    const masterRelsPath = getRelationshipPath(masterPath);
+    const masterRelsPath = getRelationshipPartPath(masterPath);
     const masterRelsText = pkg.readText(masterRelsPath);
     if (!masterRelsText) {
       continue;
@@ -521,7 +521,7 @@ export function addSlideLayout(doc: PresentationDocument, masterPath?: string): 
     throw new Error(`LayoutOps: slide master does not exist: ${resolvedMasterPath}`);
   }
 
-  const masterRelsPath = getRelationshipPath(resolvedMasterPath);
+  const masterRelsPath = getRelationshipPartPath(resolvedMasterPath);
   const masterXml = readXmlOrThrow(pkg, resolvedMasterPath);
   const masterRelsXml = readXmlOrThrow(pkg, masterRelsPath);
   const contentTypesXml = readXmlOrThrow(pkg, CONTENT_TYPES_PATH);
@@ -542,7 +542,7 @@ export function addSlideLayout(doc: PresentationDocument, masterPath?: string): 
 
   // Create layout XML and rels
   writeXml(pkg,layoutPath, serializeSlideLayout({ type: "blank", preserve: true }));
-  writeXml(pkg,getRelationshipPath(layoutPath), buildLayoutRelsXml(resolvedMasterPath));
+  writeXml(pkg,getRelationshipPartPath(layoutPath), buildLayoutRelsXml(resolvedMasterPath));
 
   // Add relationship in master rels pointing to the new layout
   // Target is relative from ppt/slideMasters/ to ppt/slideLayouts/
@@ -598,7 +598,7 @@ export function deleteSlideLayout(doc: PresentationDocument, layoutPath: string)
 
   // Find the master that owns this layout
   const masterPath = findMasterForLayout(pkg, layoutPath);
-  const masterRelsPath = getRelationshipPath(masterPath);
+  const masterRelsPath = getRelationshipPartPath(masterPath);
   const masterXml = readXmlOrThrow(pkg, masterPath);
   const masterRelsXml = readXmlOrThrow(pkg, masterRelsPath);
   const contentTypesXml = readXmlOrThrow(pkg, CONTENT_TYPES_PATH);
@@ -627,7 +627,7 @@ export function deleteSlideLayout(doc: PresentationDocument, layoutPath: string)
 
   // Delete layout XML and rels files
   pkg.remove(layoutPath);
-  const layoutRelsPath = getRelationshipPath(layoutPath);
+  const layoutRelsPath = getRelationshipPartPath(layoutPath);
   if (pkg.exists(layoutRelsPath)) {
     pkg.remove(layoutRelsPath);
   }
@@ -668,7 +668,7 @@ export function duplicateSlideLayout(doc: PresentationDocument, layoutPath: stri
 
   // Find the master that owns this layout
   const masterPath = findMasterForLayout(pkg, layoutPath);
-  const masterRelsPath = getRelationshipPath(masterPath);
+  const masterRelsPath = getRelationshipPartPath(masterPath);
   const masterXml = readXmlOrThrow(pkg, masterPath);
   const masterRelsXml = readXmlOrThrow(pkg, masterRelsPath);
   const contentTypesXml = readXmlOrThrow(pkg, CONTENT_TYPES_PATH);
@@ -678,7 +678,7 @@ export function duplicateSlideLayout(doc: PresentationDocument, layoutPath: stri
   if (!sourceLayoutXml) {
     throw new Error(`LayoutOps: missing source layout xml: ${layoutPath}`);
   }
-  const sourceLayoutRelsPath = getRelationshipPath(layoutPath);
+  const sourceLayoutRelsPath = getRelationshipPartPath(layoutPath);
   const sourceLayoutRelsText = pkg.readText(sourceLayoutRelsPath);
 
   // Generate new file path
@@ -700,7 +700,7 @@ export function duplicateSlideLayout(doc: PresentationDocument, layoutPath: stri
 
   // Copy layout rels if they exist
   if (sourceLayoutRelsText) {
-    pkg.writeText(getRelationshipPath(newLayoutPath), sourceLayoutRelsText);
+    pkg.writeText(getRelationshipPartPath(newLayoutPath), sourceLayoutRelsText);
   }
 
   // Add new relationship in master rels

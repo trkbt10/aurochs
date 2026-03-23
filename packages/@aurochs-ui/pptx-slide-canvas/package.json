@@ -95,6 +95,14 @@
     "./slide/color-mapping-for-editor": {
       "types": "./src/slide/color-mapping-for-editor.ts",
       "default": "./src/slide/color-mapping-for-editor.ts"
+    },
+    "./slide/SlideCanvas": {
+      "types": "./src/slide/SlideCanvas.tsx",
+      "default": "./src/slide/SlideCanvas.tsx"
+    },
+    "./shape/traverse": {
+      "types": "./src/shape/traverse.ts",
+      "default": "./src/shape/traverse.ts"
     }
   }
 }

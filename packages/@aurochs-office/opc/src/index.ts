@@ -53,6 +53,8 @@ export {
   joinPosixPath,
   normalizePosixPath,
   buildRelativeTarget,
+  getRelationshipPartPath,
+  isAbsoluteIri,
 } from "./path";
 
 export { createGetZipTextFileContentFromBytes } from "./zip";

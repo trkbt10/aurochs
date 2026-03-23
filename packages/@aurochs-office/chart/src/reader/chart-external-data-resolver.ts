@@ -9,7 +9,8 @@
 
 import type { XmlDocument, XmlElement } from "@aurochs/xml";
 import { getByPath, getChild } from "@aurochs/xml";
-import { getRelationshipPath, loadRelationships, type OoxmlTextReader } from "@aurochs-office/ooxml/parser";
+import { loadRelationships, type OoxmlTextReader } from "@aurochs-office/ooxml/parser";
+import { getRelationshipPartPath } from "@aurochs-office/opc";
 
 /**
  * Package relationship type for embedded OLE packages (xlsx, docx, etc.)
@@ -96,7 +97,7 @@ export function resolveChartExternalData(
   const workbookPath = resources.getTarget(resourceId);
   if (!workbookPath) {
     // Check if relationship file even exists
-    const relsPath = getRelationshipPath(chartPath);
+    const relsPath = getRelationshipPartPath(chartPath);
     const relsText = file.readText(relsPath);
     if (relsText === null) {
       throw new Error(`resolveChartExternalData: relationship file not found: ${relsPath}`);

@@ -48,9 +48,9 @@ import {
   inferExtensionFromMediaContentType,
   listRelationships,
   buildRelativeTarget,
+  getRelationshipPartPath,
   type OpcRelationship,
 } from "@aurochs-office/opc";
-import { getRelationshipPath } from "@aurochs-office/ooxml/parser";
 
 // =============================================================================
 // Types
@@ -488,7 +488,7 @@ function patchDrawing(params: {
   // 3. Write drawing relationships
   if (drawingRelationships.length > 0) {
     const drawingRelsXml = serializeRelationships(drawingRelationships);
-    pkg.writeText(getRelationshipPath(drawingPartPath), serializeWithDeclaration(drawingRelsXml));
+    pkg.writeText(getRelationshipPartPath(drawingPartPath), serializeWithDeclaration(drawingRelsXml));
   }
 
   // 4. Create sheet → drawing relationship
@@ -499,7 +499,7 @@ function patchDrawing(params: {
     target: buildRelativeTarget(sheetPartPath, drawingPartPath),
   };
 
-  const sheetRelsPath = getRelationshipPath(sheetPartPath);
+  const sheetRelsPath = getRelationshipPartPath(sheetPartPath);
   const existingSheetRelsText = pkg.readText(sheetRelsPath);
   const sheetRels: OpcRelationship[] = existingSheetRelsText
     ? listRelationships(parseXml(existingSheetRelsText))

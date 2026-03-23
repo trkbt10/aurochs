@@ -23,7 +23,7 @@ import {
   updateDocumentRoot,
 } from "@aurochs/xml";
 import { readXmlOrThrow, writeXml } from "./xml-io";
-import { getRelationshipPath } from "@aurochs-office/ooxml/parser/relationships";
+import { getRelationshipPartPath } from "@aurochs-office/opc";
 import { CONTENT_TYPES, RELATIONSHIP_TYPES } from "@aurochs-office/pptx/domain";
 import { createEmptyZipPackage, isBinaryFile, type ZipPackage } from "@aurochs/zip";
 import { addSlideToList, removeSlideFromList, reorderSlideInList } from "./parts/presentation";
@@ -506,7 +506,7 @@ export async function addSlide(
   }
 
   writeXml(pkg, slidePath, buildBlankSlideXml());
-  writeXml(pkg, getRelationshipPath(slidePath), buildSlideRelsXml(layoutPath));
+  writeXml(pkg, getRelationshipPartPath(slidePath), buildSlideRelsXml(layoutPath));
 
   const updatedPresentationXml = addSlideToList(presentationXml, slideId, rId, position);
   const updatedPresentationRelsXml = addRelationship(presentationRelsXml, {
@@ -546,7 +546,7 @@ function removeSlideNotesParts(
   if (!notesSlidePath) {
     return contentTypesXml;
   }
-  const notesRelsPath = getRelationshipPath(notesSlidePath);
+  const notesRelsPath = getRelationshipPartPath(notesSlidePath);
   pkg.remove(notesSlidePath);
   if (pkg.exists(notesRelsPath)) {
     pkg.remove(notesRelsPath);
@@ -584,7 +584,7 @@ export function removeSlide(doc: PresentationDocument, slideIndex: number): Slid
   const slideTarget = findSlidePartTarget(presentationRelsXml, entry.rId);
   const slidePath = slideTargetToPartPath(slideTarget);
 
-  const slideRelsPath = getRelationshipPath(slidePath);
+  const slideRelsPath = getRelationshipPartPath(slidePath);
   const slideRelsText = pkg.readText(slideRelsPath);
   const slideRelsXml = slideRelsText ? parseXml(slideRelsText) : null;
   const notesRel = slideRelsXml ? findNotesRelationship(slideRelsXml) : null;
@@ -685,7 +685,7 @@ function duplicateNotesSlide({ pkg, slideRelsXml, slidePath, slideFilename }: Du
   if (!sourceNotesXml) {
     throw new Error(`SlideManager: missing source notes slide xml: ${sourceNotesPath}`);
   }
-  const sourceNotesRelsPath = getRelationshipPath(sourceNotesPath);
+  const sourceNotesRelsPath = getRelationshipPartPath(sourceNotesPath);
   const sourceNotesRelsText = pkg.readText(sourceNotesRelsPath);
   if (!sourceNotesRelsText) {
     throw new Error(`SlideManager: missing source notes slide rels: ${sourceNotesRelsPath}`);
@@ -700,10 +700,10 @@ function duplicateNotesSlide({ pkg, slideRelsXml, slidePath, slideFilename }: Du
   const notesRelsXml = parseXml(sourceNotesRelsText);
   const slideRelId = findNotesSlideToSlideRelationshipId(notesRelsXml);
   const updatedNotesRelsXml = updateRelationshipTarget(notesRelsXml, slideRelId, `../slides/${slideFilename}.xml`);
-  writeXml(pkg, getRelationshipPath(notesSlidePath), updatedNotesRelsXml);
+  writeXml(pkg, getRelationshipPartPath(notesSlidePath), updatedNotesRelsXml);
 
   const updatedSlideRelsXml = updateSlideRelsNotesTarget(slideRelsXml, `../notesSlides/${notesFilename}.xml`);
-  writeXml(pkg, getRelationshipPath(slidePath), updatedSlideRelsXml);
+  writeXml(pkg, getRelationshipPartPath(slidePath), updatedSlideRelsXml);
 
   return notesSlidePath;
 }
@@ -750,7 +750,7 @@ export async function duplicateSlide(doc: PresentationDocument, slideIndex: numb
   if (!sourceSlideXml) {
     throw new Error(`SlideManager: missing source slide xml: ${sourceSlidePath}`);
   }
-  const sourceSlideRelsPath = getRelationshipPath(sourceSlidePath);
+  const sourceSlideRelsPath = getRelationshipPartPath(sourceSlidePath);
   const sourceSlideRelsText = pkg.readText(sourceSlideRelsPath);
   if (!sourceSlideRelsText) {
     throw new Error(`SlideManager: missing source slide rels: ${sourceSlideRelsPath}`);
@@ -769,7 +769,7 @@ export async function duplicateSlide(doc: PresentationDocument, slideIndex: numb
   }
 
   pkg.writeText(slidePath, sourceSlideXml);
-  pkg.writeText(getRelationshipPath(slidePath), sourceSlideRelsText);
+  pkg.writeText(getRelationshipPartPath(slidePath), sourceSlideRelsText);
 
   const slideRelsXml = parseXml(sourceSlideRelsText);
   const notesSlidePath = duplicateNotesSlide({ pkg, slideRelsXml, slidePath, slideFilename });

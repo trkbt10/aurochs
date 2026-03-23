@@ -16,7 +16,7 @@ import { parseXml, serializeDocument, createElement, getDocumentRoot, updateDocu
 import { OFFICE_RELATIONSHIP_TYPES } from "@aurochs-office/opc";
 import { addContentType } from "./content-types-manager";
 import { addRelationship, ensureRelationshipsDocument, type RelationshipType } from "./relationship-manager";
-import { getRelationshipPath } from "@aurochs-office/ooxml/parser";
+import { getRelationshipPartPath } from "@aurochs-office/opc";
 
 const FONT_CONTENT_TYPE = "application/x-fontdata";
 const FONT_REL_TYPE: RelationshipType = OFFICE_RELATIONSHIP_TYPES.font;
@@ -114,7 +114,7 @@ function generateFontPath(pkg: ZipPackage): string {
  * Add font relationship to presentation.xml.rels
  */
 function addFontRelationship(pkg: ZipPackage, fontPath: string): string {
-  const relsPath = getRelationshipPath(PRESENTATION_PATH);
+  const relsPath = getRelationshipPartPath(PRESENTATION_PATH);
 
   // Read or create relationships document
   const existingRels = pkg.readText(relsPath);

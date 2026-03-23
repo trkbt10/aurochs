@@ -15,40 +15,7 @@
  * @see RFC 3986, Section 5.2 (Relative Resolution)
  */
 
-function getParentDirectory(path: string): string {
-  if (path.endsWith("/")) {
-    return path;
-  }
-  const lastSlash = path.lastIndexOf("/");
-  if (lastSlash === -1) {
-    return "";
-  }
-  return path.substring(0, lastSlash + 1);
-}
-
-function removeDotSegments(path: string): string {
-  const segments = path.split("/");
-  const result: string[] = [];
-
-  for (const segment of segments) {
-    if (segment === "..") {
-      if (result.length > 0) {
-        result.pop();
-      }
-      continue;
-    }
-    if (segment === "." || segment === "") {
-      continue;
-    }
-    result.push(segment);
-  }
-
-  return result.join("/");
-}
-
-function isAbsoluteIri(value: string): boolean {
-  return /^[A-Za-z][A-Za-z0-9+.-]*:/.test(value);
-}
+import { dirnamePosixPath, normalizePosixPath, isAbsoluteIri } from "./path";
 
 /**
  * Resolve an OPC relationship Target path against a source part path.
@@ -72,10 +39,12 @@ export function resolveRelationshipTargetPath(sourcePartPath: string, target: st
   // Relationship targets that start with "/" are "absolute-path references"
   // per RFC 3986, so we drop the leading "/" before normalizing.
   if (target.startsWith("/")) {
-    return removeDotSegments(target.substring(1));
+    return normalizePosixPath(target.substring(1));
   }
 
-  const baseDir = getParentDirectory(sourcePartPath);
-  return removeDotSegments(baseDir + target);
+  // dirnamePosixPath returns "." for paths without a directory separator.
+  // We need a trailing slash for correct concatenation.
+  const dir = dirnamePosixPath(sourcePartPath);
+  const baseDir = dir === "." ? "" : `${dir}/`;
+  return normalizePosixPath(baseDir + target);
 }
-

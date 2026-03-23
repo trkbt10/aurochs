@@ -40,7 +40,8 @@ import type { ResourceMap } from "@aurochs-office/opc";
 import { RELATIONSHIP_TYPES } from "../../domain/relationships";
 import { getMimeTypeFromPath } from "@aurochs/files";
 import { toDataUrl } from "@aurochs/buffer";
-import { getRelationshipPath, parseRelationships, resolvePartPath } from "@aurochs-office/ooxml/parser";
+import { parseRelationships, resolvePartPath } from "@aurochs-office/ooxml/parser";
+import { getRelationshipPartPath } from "@aurochs-office/opc";
 import { createEmptyResourceMap } from "../../domain/relationships";
 import { findVmlShapeImage, getVmlRelsPath, normalizeVmlImagePath } from "../external/vml-parser";
 import { emfToSvg } from "../external/emf-parser";
@@ -283,7 +284,7 @@ function tryParseDiagramDrawing(frame: GraphicFrame, fileReader: FileReader): re
   }
 
   // Load diagram-specific relationships for blipFill resolution
-  const diagramRelsPath = getRelationshipPath(diagramPath);
+  const diagramRelsPath = getRelationshipPartPath(diagramPath);
   const diagramRelsData = fileReader.readFile(diagramRelsPath);
   const diagramResources = loadDiagramResources(diagramRelsData, diagramPath);
 

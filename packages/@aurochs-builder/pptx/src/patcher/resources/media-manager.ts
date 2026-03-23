@@ -2,7 +2,8 @@
 import type { ZipPackage } from "@aurochs/zip";
 import { parseXml, serializeDocument } from "@aurochs/xml";
 import { parseContentTypes } from "@aurochs-office/pptx/domain/content-types";
-import { getRelationshipPath, resolvePartPath } from "@aurochs-office/ooxml/parser";
+import { resolvePartPath } from "@aurochs-office/ooxml/parser";
+import { getRelationshipPartPath } from "@aurochs-office/opc";
 import { loadRelationships } from "@aurochs-office/pptx/parser/relationships";
 import { addContentType, removeUnusedContentTypes } from "./content-types-manager";
 import { listRelationships, OFFICE_RELATIONSHIP_TYPES, inferExtensionFromMediaContentType, type MediaContentType } from "@aurochs-office/opc";
@@ -64,7 +65,7 @@ export function removeMediaReference(pkg: ZipPackage, mediaPath: string, referri
     throw new Error("removeMediaReference: referringPart is required");
   }
 
-  const relsPath = getRelationshipPath(referringPart);
+  const relsPath = getRelationshipPartPath(referringPart);
   if (!pkg.exists(relsPath)) {
     return;
   }
@@ -149,7 +150,7 @@ function addMediaRelationship({
   mediaPath,
   relationshipType,
 }: AddMediaRelationshipOptions): string {
-  const relsPath = getRelationshipPath(referringPart);
+  const relsPath = getRelationshipPartPath(referringPart);
   const relsXml = loadOrCreateRelsDocument(pkg, relsPath);
 
   const target = buildRelationshipTarget(referringPart, mediaPath);

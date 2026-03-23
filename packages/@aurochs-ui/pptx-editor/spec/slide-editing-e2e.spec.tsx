@@ -29,10 +29,10 @@ import type {
   PresentationEditorState,
   PresentationEditorAction,
 } from "../src/context/presentation/editor/types";
-import { createShapeFromMode } from "../src/shape/factory";
+import { createShapeFromMode } from "@aurochs-ui/pptx-slide-canvas/shape/factory";
 import { createTestDocument } from "../src/context/presentation/editor/reducer/test-fixtures";
-import { collectShapeRenderData } from "../src/shape/traverse";
-import { SlideCanvas } from "../src/slide/SlideCanvas";
+import { collectShapeRenderData } from "@aurochs-ui/pptx-slide-canvas/shape/traverse";
+import { SlideCanvas } from "@aurochs-ui/pptx-slide-canvas/slide/SlideCanvas";
 
 // =============================================================================
 // Helpers

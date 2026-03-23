@@ -54,7 +54,7 @@ import { buildSlideLayoutOptions } from "@aurochs-office/pptx/app";
 import { createRenderContext, getLayoutNonPlaceholderShapes } from "@aurochs-renderer/pptx";
 import { enrichSlideContent } from "@aurochs-office/pptx/parser/slide/external-content-loader";
 import type { Chart } from "@aurochs-office/chart/domain";
-import { createDefaultChart } from "@aurochs-builder/chart";
+import { populateEditorCreatedResources } from "./populate-editor-resources";
 import { getSlideLayoutAttributes } from "@aurochs-office/pptx/parser/slide/layout-parser";
 import { RELATIONSHIP_TYPES, createZipAdapter } from "@aurochs-office/pptx/domain";
 import { CanvasControls } from "@aurochs-ui/editor-controls/shape-editor";
@@ -701,21 +701,8 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
     if (renderContext) {
       enrichSlideContent(activeSlide.slide, renderContext.fileReader, editorResourceStore);
     }
-    // Phase 2: Populate editor-created charts not in archive
-    for (const shape of activeSlide.slide.shapes) {
-      if (shape.type !== "graphicFrame") continue;
-      if (shape.content.type !== "chart") continue;
-      const { resourceId, chartType } = shape.content.data;
-      if (editorResourceStore.has(resourceId as string)) continue;
-      if (chartType === undefined) continue;
-      const chart = createDefaultChart(chartType);
-      editorResourceStore.set(resourceId as string, {
-        kind: "chart",
-        source: "created",
-        data: new ArrayBuffer(0),
-        parsed: chart,
-      });
-    }
+    // Phase 2: Populate editor-created charts/diagrams not in archive
+    populateEditorCreatedResources(activeSlide.slide.shapes, editorResourceStore);
   }, [renderContext, activeSlide?.slide, editorResourceStore]);
 
   // Chart data change handler: updates ResourceStore and triggers re-render.

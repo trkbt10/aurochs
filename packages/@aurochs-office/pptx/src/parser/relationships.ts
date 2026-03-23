@@ -12,9 +12,9 @@ import type { PackageFile } from "@aurochs-office/opc";
 import type { ResourceMap } from "@aurochs-office/opc";
 import { RELATIONSHIP_TYPES, createEmptyResourceMap } from "../domain/relationships";
 import {
-  getRelationshipPath as getRelationshipPathShared,
   parseRelationshipsFromText as parseRelationshipsFromTextShared,
 } from "@aurochs-office/ooxml/parser";
+import { getRelationshipPartPath as getRelationshipPartPathShared } from "@aurochs-office/opc";
 
 // =============================================================================
 // High-Level Loading
@@ -33,7 +33,7 @@ import {
  * @see ECMA-376 Part 2, Section 9.3 (Relationships)
  */
 export function loadRelationships(file: PackageFile, partPath: string): ResourceMap {
-  const relsPath = getRelationshipPathShared(partPath);
+  const relsPath = getRelationshipPartPathShared(partPath);
   const relsText = file.readText(relsPath);
   if (relsText === null) {
     return createEmptyResourceMap();

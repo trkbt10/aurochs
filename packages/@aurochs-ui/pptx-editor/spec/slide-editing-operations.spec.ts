@@ -25,7 +25,7 @@ import { getDefaultBoundsForMode } from "@aurochs-ui/ooxml-components";
 import type { Shape } from "@aurochs-office/pptx/domain";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
-import { createShapeFromMode } from "../src/shape/factory";
+import { createShapeFromMode } from "@aurochs-ui/pptx-slide-canvas/shape/factory";
 import { createTestDocument } from "../src/context/presentation/editor/reducer/test-fixtures";
 import { getShapeTransform } from "@aurochs-renderer/pptx/svg";
 

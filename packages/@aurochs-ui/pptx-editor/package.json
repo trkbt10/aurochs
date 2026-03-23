@@ -6,6 +6,7 @@
   "sideEffects": false,
   "dependencies": {
     "@aurochs-builder/chart": "workspace:*",
+    "@aurochs-builder/diagram": "workspace:*",
     "@aurochs-builder/pptx": "workspace:*",
     "@aurochs-office/chart": "workspace:*",
     "@aurochs-office/pptx": "workspace:*",

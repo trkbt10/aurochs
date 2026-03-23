@@ -9,17 +9,19 @@
  */
 
 import type { ResourceMap, ResourceEntry } from "@aurochs-office/opc";
-import { createEmptyResourceMap, createResourceMap, resolveRelationshipTargetPath } from "@aurochs-office/opc";
+import {
+  createEmptyResourceMap,
+  createResourceMap,
+  resolveRelationshipTargetPath,
+  isAbsoluteIri,
+  getRelationshipPartPath,
+} from "@aurochs-office/opc";
 import type { XmlDocument } from "@aurochs/xml";
 import { getByPath, getChildren, parseXml } from "@aurochs/xml";
 
 export type OoxmlTextReader = {
   readText(path: string): string | null | undefined;
 };
-
-function isAbsoluteIri(value: string): boolean {
-  return /^[A-Za-z][A-Za-z0-9+.-]*:/.test(value);
-}
 
 /**
  * Resolve a relationship Target against the base part path.
@@ -31,21 +33,6 @@ export function resolvePartPath(basePath: string, reference: string): string {
     return reference;
   }
   return resolveRelationshipTargetPath(basePath, reference);
-}
-
-/**
- * Get the `.rels` file path for a given part.
- *
- * Per ECMA-376, relationships are stored in `_rels/[partname].rels`.
- */
-export function getRelationshipPath(partPath: string): string {
-  const lastSlash = partPath.lastIndexOf("/");
-  if (lastSlash === -1) {
-    return `_rels/${partPath}.rels`;
-  }
-  const dir = partPath.substring(0, lastSlash);
-  const filename = partPath.substring(lastSlash + 1);
-  return `${dir}/_rels/${filename}.rels`;
 }
 
 /**
@@ -93,7 +80,7 @@ export function parseRelationshipsFromText(relsText: string | null | undefined, 
  * Load and parse relationships for a part using a reader.
  */
 export function loadRelationships(reader: OoxmlTextReader, partPath: string): ResourceMap {
-  const relsPath = getRelationshipPath(partPath);
+  const relsPath = getRelationshipPartPath(partPath);
   const relsText = reader.readText(relsPath);
   return parseRelationshipsFromText(relsText, partPath);
 }
