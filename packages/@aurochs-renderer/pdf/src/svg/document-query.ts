@@ -2,17 +2,17 @@
  * @file PdfDocumentQuery — Domain query object for PDF documents
  *
  * Provides a single, canonical interface for querying PDF document structure.
- * Eliminates scattered parseElementId → doc.pages[i].elements[j] patterns
- * throughout the editor codebase.
+ * Bridges domain lookups (from @aurochs/pdf) with SVG coordinate conversion.
  *
  * All coordinate conversions, font metric resolution, and element lookups
  * go through this object, ensuring consistency and SoT compliance.
  */
 
 import type { PdfDocument, PdfPage, PdfElement } from "@aurochs/pdf";
-import { resolveTextFontMetrics } from "@aurochs-renderer/pdf/svg";
-import type { PdfElementId, PdfElementBounds } from "./types";
-import { parseElementId, createElementId, elementToSvgBounds } from "./types";
+import { type PdfElementId, parseElementId, createElementId } from "@aurochs/pdf";
+import { resolveTextFontMetrics } from "./text-bounds";
+import type { PdfElementBounds } from "./element-bounds";
+import { elementToSvgBounds } from "./element-bounds";
 
 // =============================================================================
 // Types
@@ -39,7 +39,7 @@ export type TextFontInfo = {
  * ```
  * const query = createDocumentQuery(doc);
  * const el = query.getElement(elementId);
- * const bounds = query.getElementBounds(elementId, pageIndex);
+ * const bounds = query.getElementBounds(elementId);
  * const font = query.getTextFontInfo(elementId);
  * ```
  */

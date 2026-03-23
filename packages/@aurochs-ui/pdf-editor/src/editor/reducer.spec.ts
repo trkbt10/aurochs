@@ -4,14 +4,13 @@
  * Tests every reducer action directly against pdfEditorReducer.
  */
 
-import { createDefaultGraphicsState, type PdfDocument, type PdfText, type PdfPath } from "@aurochs/pdf";
+import { createDefaultGraphicsState, type PdfDocument, type PdfText, type PdfPath, createElementId } from "@aurochs/pdf";
 import { canUndo } from "@aurochs-ui/editor-core/history";
 import { isSelected } from "@aurochs-ui/editor-core/selection";
 import { isDragMove, isDragIdle, isDragResize, isDragPendingMove } from "@aurochs-ui/editor-core/drag-state";
 import { pdfEditorReducer, createInitialState } from "./reducer";
 import type { PdfEditorAction } from "./reducer";
 import type { PdfEditorState } from "./types";
-import { createElementId } from "./types";
 
 // =============================================================================
 // Fixtures

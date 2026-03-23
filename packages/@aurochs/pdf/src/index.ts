@@ -68,6 +68,42 @@ export type { PdfImage } from "./domain";
 export type { PdfElement, PdfPage, PdfDocument, PdfTable, PdfTableRow, PdfTableCell } from "./domain";
 export { isPdfPath, isPdfText, isPdfImage, isPdfTable } from "./domain";
 
+// Element Addressing
+export type { PdfElementId } from "./domain";
+export { createElementId, parseElementId } from "./domain";
+
+// Element Transformation
+export { getElementRotationRad, getElementRotationDeg, rotateElement, moveElement } from "./domain";
+
+// Document Mutation
+export {
+  updateElementInDocument,
+  deleteElements,
+  addElementsToPage,
+  addPage,
+  deletePages,
+  duplicatePages,
+  reorderPages,
+  updatePageSize,
+} from "./domain";
+
+// Path Bounds
+export { getPathBounds } from "./domain";
+
+// Table Mutation
+export {
+  createTableCell,
+  insertRow,
+  removeRow,
+  insertColumn,
+  removeColumn,
+  setColumnWidth,
+  setRowHeight,
+  mergeCells,
+  splitCell,
+  type TableCellRange,
+} from "./domain";
+
 // Constants
 export { PT_TO_PX, PX_TO_PT, PDF_PAGE_SIZES } from "./domain";
 export { DEFAULT_FONT_METRICS } from "./domain";

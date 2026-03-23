@@ -17,8 +17,9 @@ import { pdfTextAdapter } from "./pdf-text-adapter";
 import { ContextMenu } from "@aurochs-ui/ui-components/context-menu";
 import type { MenuEntry } from "@aurochs-ui/ui-components/context-menu";
 import { InspectorPanelWithTabs, type InspectorTab } from "@aurochs-ui/editor-controls/ui";
-import type { PdfDocument, PdfElement } from "@aurochs/pdf";
-import { renderPdfPageToSvg } from "@aurochs-renderer/pdf/svg";
+import type { PdfDocument, PdfElement, PdfElementId } from "@aurochs/pdf";
+import { parseElementId } from "@aurochs/pdf";
+import { renderPdfPageToSvg, createDocumentQuery } from "@aurochs-renderer/pdf/svg";
 
 import { canUndo, canRedo } from "@aurochs-ui/editor-core/history";
 import type { ResizeHandlePosition } from "@aurochs-ui/editor-core/drag-state";
@@ -31,9 +32,6 @@ import { PdfPropertyPanel } from "./PdfPropertyPanel";
 import { PdfPageListPanel } from "./PdfPageListPanel";
 import { PdfLayerPanel } from "./PdfLayerPanel";
 import { PdfMultiSelectPanel } from "./PdfMultiSelectPanel";
-import type { PdfElementId } from "./types";
-import { parseElementId } from "./types";
-import { createDocumentQuery } from "./pdf-document-query";
 import { PdfTextEditController } from "./text-edit";
 
 const _RULER_THICKNESS = 20;

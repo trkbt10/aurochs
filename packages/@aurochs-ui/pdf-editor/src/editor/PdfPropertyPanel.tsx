@@ -8,7 +8,7 @@
  */
 
 import { useCallback, useMemo, useState, type CSSProperties } from "react";
-import type { PdfElement, PdfTable } from "@aurochs/pdf";
+import type { PdfElement, PdfTable, PdfElementId } from "@aurochs/pdf";
 import type { PageSizeData } from "@aurochs-ui/editor-core/adapter-types";
 import { PositionSection } from "react-editor-ui/sections/PositionSection";
 import { SizeSection } from "react-editor-ui/sections/SizeSection";
@@ -30,7 +30,7 @@ import { PDF_PAGE_PRESETS, findMatchingPreset } from "./pdf-page-size-adapter";
 import { TableCellGrid, TableDimensionEditor, TableStructureToolbar } from "@aurochs-ui/editor-controls/table";
 import type { CellPosition } from "@aurochs-ui/editor-core/table-selection";
 import { pdfTableOperationAdapter } from "./pdf-table-adapter";
-import type { PdfElementId, PdfElementBounds } from "./types";
+import type { PdfElementBounds } from "@aurochs-renderer/pdf/svg";
 
 // =============================================================================
 // Types

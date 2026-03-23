@@ -1,11 +1,11 @@
 /**
- * @file PDF Table Mutation Utilities
+ * @file PDF table mutation operations
  *
- * Immutable structure operations for PdfTable type.
+ * Immutable structure operations for PdfTable domain type.
+ * SoT for table row/column/cell mutations.
  */
 
-import type { PdfTable, PdfTableRow, PdfTableCell } from "@aurochs/pdf/domain";
-import type { CellRange } from "@aurochs-ui/editor-core/table-operations";
+import type { PdfTable, PdfTableRow, PdfTableCell } from "./types";
 
 // =============================================================================
 // Cell Factory
@@ -20,12 +20,15 @@ export function createTableCell(): PdfTableCell {
 // Row Operations
 // =============================================================================
 
-/** Insert a row at the given index. */
+/**
+ * Insert a row at the given index.
+ * New row height is inherited from the row at `rowIndex` (or the last row).
+ */
 export function insertRow(table: PdfTable, rowIndex: number): PdfTable {
   const colCount = table.columns.length;
-  const defaultHeight = table.rows[0]?.height ?? 30;
+  const referenceRow = table.rows[rowIndex] ?? table.rows[table.rows.length - 1];
   const newRow: PdfTableRow = {
-    height: defaultHeight,
+    height: referenceRow.height,
     cells: Array.from({ length: colCount }, () => createTableCell()),
   };
 
@@ -35,11 +38,9 @@ export function insertRow(table: PdfTable, rowIndex: number): PdfTable {
   };
 }
 
-/** Remove a row at the given index. */
+/** Remove a row at the given index. Preserves at least 1 row. */
 export function removeRow(table: PdfTable, rowIndex: number): PdfTable {
-  if (table.rows.length <= 1) {
-    return table;
-  }
+  if (table.rows.length <= 1) { return table; }
   return {
     ...table,
     rows: table.rows.filter((_, i) => i !== rowIndex),
@@ -50,12 +51,15 @@ export function removeRow(table: PdfTable, rowIndex: number): PdfTable {
 // Column Operations
 // =============================================================================
 
-/** Insert a column at the given index. */
+/**
+ * Insert a column at the given index.
+ * New column width is inherited from the column at `colIndex` (or the last column).
+ */
 export function insertColumn(table: PdfTable, colIndex: number): PdfTable {
-  const defaultWidth = table.columns[0]?.width ?? 100;
+  const referenceCol = table.columns[colIndex] ?? table.columns[table.columns.length - 1];
   const newColumns = [
     ...table.columns.slice(0, colIndex),
-    { width: defaultWidth },
+    { width: referenceCol.width },
     ...table.columns.slice(colIndex),
   ];
 
@@ -67,12 +71,9 @@ export function insertColumn(table: PdfTable, colIndex: number): PdfTable {
   return { ...table, columns: newColumns, rows: newRows };
 }
 
-/** Remove a column at the given index. */
+/** Remove a column at the given index. Preserves at least 1 column. */
 export function removeColumn(table: PdfTable, colIndex: number): PdfTable {
-  if (table.columns.length <= 1) {
-    return table;
-  }
-
+  if (table.columns.length <= 1) { return table; }
   return {
     ...table,
     columns: table.columns.filter((_, i) => i !== colIndex),
@@ -89,9 +90,7 @@ export function removeColumn(table: PdfTable, colIndex: number): PdfTable {
 
 /** Set column width at the given index. */
 export function setColumnWidth(table: PdfTable, colIndex: number, width: number): PdfTable {
-  if (colIndex < 0 || colIndex >= table.columns.length) {
-    return table;
-  }
+  if (colIndex < 0 || colIndex >= table.columns.length) { return table; }
   return {
     ...table,
     columns: table.columns.map((col, i) => (i === colIndex ? { width } : col)),
@@ -100,9 +99,7 @@ export function setColumnWidth(table: PdfTable, colIndex: number, width: number)
 
 /** Set row height at the given index. */
 export function setRowHeight(table: PdfTable, rowIndex: number, height: number): PdfTable {
-  if (rowIndex < 0 || rowIndex >= table.rows.length) {
-    return table;
-  }
+  if (rowIndex < 0 || rowIndex >= table.rows.length) { return table; }
   return {
     ...table,
     rows: table.rows.map((row, i) => (i === rowIndex ? { ...row, height } : row)),
@@ -113,12 +110,18 @@ export function setRowHeight(table: PdfTable, rowIndex: number, height: number):
 // Cell Merge / Split
 // =============================================================================
 
+/** Cell range for merge/split operations. */
+export type TableCellRange = {
+  readonly startRow: number;
+  readonly startCol: number;
+  readonly endRow: number;
+  readonly endCol: number;
+};
+
 /** Merge cells in the given range. */
-export function mergeCells(table: PdfTable, range: CellRange): PdfTable {
+export function mergeCells(table: PdfTable, range: TableCellRange): PdfTable {
   const { startRow, startCol, endRow, endCol } = range;
-  if (startRow >= endRow && startCol >= endCol) {
-    return table;
-  }
+  if (startRow >= endRow && startCol >= endCol) { return table; }
 
   const rowSpan = endRow - startRow + 1;
   const colSpan = endCol - startCol + 1;

@@ -2,6 +2,7 @@
  * @file PDF Table Operation Adapter
  *
  * Implements TableOperationAdapter for PdfTable type.
+ * Table mutations delegate to @aurochs/pdf domain (SoT).
  */
 
 import type { PdfTable } from "@aurochs/pdf/domain";
@@ -15,7 +16,7 @@ import {
   setRowHeight,
   mergeCells,
   splitCell,
-} from "../table/mutation";
+} from "@aurochs/pdf";
 
 /** Convert PdfTable to AbstractTable for shared UI components. */
 function toAbstract(table: PdfTable): AbstractTable {

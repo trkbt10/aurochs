@@ -2,10 +2,26 @@
  * @file PDF editor reducer
  *
  * Pure state management for the PDF editor.
+ * All document mutations delegate to @aurochs/pdf domain operations.
  * All actions and state transitions are tested independently of React components.
  */
 
-import type { PdfDocument, PdfElement, PdfTable } from "@aurochs/pdf";
+import type { PdfDocument, PdfElement, PdfTable, PdfElementId } from "@aurochs/pdf";
+import {
+  createElementId,
+  moveElement,
+  rotateElement,
+  getElementRotationRad,
+  updateElementInDocument,
+  deleteElements,
+  addElementsToPage,
+  addPage as domainAddPage,
+  deletePages as domainDeletePages,
+  duplicatePages as domainDuplicatePages,
+  reorderPages as domainReorderPages,
+  updatePageSize as domainUpdatePageSize,
+} from "@aurochs/pdf";
+import { createDocumentQuery } from "@aurochs-renderer/pdf/svg";
 import { createHistory, pushHistory, undoHistory, redoHistory, canUndo, canRedo } from "@aurochs-ui/editor-core/history";
 import { createEmptySelection, createSingleSelection, toggleSelection } from "@aurochs-ui/editor-core/selection";
 import { createClipboardContent, incrementPasteCount } from "@aurochs-ui/editor-core/clipboard";
@@ -16,10 +32,7 @@ import type { SimpleBounds } from "@aurochs-ui/editor-core/geometry";
 import { getCombinedBoundsWithRotation, calculateResizeBounds } from "@aurochs-ui/editor-core/geometry";
 import { snapAngle } from "@aurochs-ui/editor-core/geometry";
 import { calculateAlignment, type BoundsWithId, type AlignmentType } from "@aurochs-ui/editor-core/alignment";
-import { reorderItems } from "@aurochs-ui/editor-core/list-dnd";
-import type { PdfElementId, PdfEditorState } from "./types";
-import { createElementId, moveElement, rotateElement, updateElementInDocument, getElementRotationRad } from "./types";
-import { createDocumentQuery } from "./pdf-document-query";
+import type { PdfEditorState } from "./types";
 
 // =============================================================================
 // Action Types
@@ -93,6 +106,12 @@ export function collectSelectedElements(doc: PdfDocument, selectedIds: readonly 
   return selectedIds.map((id) => query.getElement(id)).filter((el): el is PdfElement => el !== undefined);
 }
 
+/** Create selection state from a list of element IDs. */
+function createSelectionFromIds(ids: readonly PdfElementId[]) {
+  if (ids.length === 1) { return createSingleSelection<PdfElementId>(ids[0]); }
+  return { selectedIds: ids, primaryId: ids[0] };
+}
+
 function applyResizeToDom(doc: PdfDocument, drag: ResizeDragState<PdfElementId>, pageHeight: number): PdfDocument {
   const dx = drag.previewDelta.dx;
   const dy = drag.previewDelta.dy;
@@ -149,12 +168,8 @@ export function pdfEditorReducer(state: PdfEditorState, action: PdfEditorAction)
     case "DELETE_SELECTED": {
       if (state.selection.selectedIds.length === 0) { return state; }
       const doc = state.documentHistory.present;
-      const idsToDelete = new Set(state.selection.selectedIds);
-      const newPages = doc.pages.map((page, pageIndex) => ({
-        ...page,
-        elements: page.elements.filter((_, elIndex) => !idsToDelete.has(`${pageIndex}:${elIndex}` as PdfElementId)),
-      }));
-      return { ...state, documentHistory: pushHistory(state.documentHistory, { ...doc, pages: newPages }), selection: createEmptySelection<PdfElementId>(), drag: createIdleDragState() };
+      const newDoc = deleteElements(doc, state.selection.selectedIds);
+      return { ...state, documentHistory: pushHistory(state.documentHistory, newDoc), selection: createEmptySelection<PdfElementId>(), drag: createIdleDragState() };
     }
 
     case "UNDO":
@@ -263,7 +278,6 @@ export function pdfEditorReducer(state: PdfEditorState, action: PdfEditorAction)
       if (!isDragRotate(state.drag)) { return state; }
       const { previewAngleDelta, shapeIds } = state.drag;
       if (Math.abs(previewAngleDelta) < 0.001) { return { ...state, drag: createIdleDragState() }; }
-      // Apply rotation to each element by recomposing CTM
       const doc = state.documentHistory.present;
       // eslint-disable-next-line no-restricted-syntax -- accumulator updated in loop
       let rotatedDoc = doc;
@@ -316,9 +330,8 @@ export function pdfEditorReducer(state: PdfEditorState, action: PdfEditorAction)
       const doc = state.documentHistory.present;
       const elements = collectSelectedElements(doc, state.selection.selectedIds);
       const clipboard = createClipboardContent({ payload: elements, isCut: true });
-      const idsToDelete = new Set(state.selection.selectedIds);
-      const newPages = doc.pages.map((page, pageIndex) => ({ ...page, elements: page.elements.filter((_, elIndex) => !idsToDelete.has(`${pageIndex}:${elIndex}` as PdfElementId)) }));
-      return { ...state, documentHistory: pushHistory(state.documentHistory, { ...doc, pages: newPages }), selection: createEmptySelection<PdfElementId>(), drag: createIdleDragState(), clipboard };
+      const newDoc = deleteElements(doc, state.selection.selectedIds);
+      return { ...state, documentHistory: pushHistory(state.documentHistory, newDoc), selection: createEmptySelection<PdfElementId>(), drag: createIdleDragState(), clipboard };
     }
 
     case "PASTE": {
@@ -328,11 +341,8 @@ export function pdfEditorReducer(state: PdfEditorState, action: PdfEditorAction)
       if (!page) { return state; }
       const offset = (state.clipboard.pasteCount + 1) * 10;
       const pastedElements = state.clipboard.payload.map((el) => moveElement(el, offset, offset));
-      const newElements = [...page.elements, ...pastedElements];
-      const newPages = doc.pages.map((p, i) => i === state.currentPageIndex ? { ...p, elements: newElements } : p);
-      const startIndex = page.elements.length;
-      const newIds = pastedElements.map((_, i) => createElementId(state.currentPageIndex, startIndex + i));
-      return { ...state, documentHistory: pushHistory(state.documentHistory, { ...doc, pages: newPages }), selection: newIds.length === 1 ? createSingleSelection<PdfElementId>(newIds[0]) : { selectedIds: newIds, primaryId: newIds[0] }, clipboard: incrementPasteCount(state.clipboard) };
+      const { document: newDoc, newElementIds } = addElementsToPage(doc, state.currentPageIndex, pastedElements);
+      return { ...state, documentHistory: pushHistory(state.documentHistory, newDoc), selection: createSelectionFromIds(newElementIds), clipboard: incrementPasteCount(state.clipboard) };
     }
 
     case "DUPLICATE": {
@@ -342,11 +352,8 @@ export function pdfEditorReducer(state: PdfEditorState, action: PdfEditorAction)
       const page = doc.pages[state.currentPageIndex];
       if (!page) { return state; }
       const duped = elements.map((el) => moveElement(el, 10, 10));
-      const newElements = [...page.elements, ...duped];
-      const newPages = doc.pages.map((p, i) => i === state.currentPageIndex ? { ...p, elements: newElements } : p);
-      const startIndex = page.elements.length;
-      const newIds = duped.map((_, i) => createElementId(state.currentPageIndex, startIndex + i));
-      return { ...state, documentHistory: pushHistory(state.documentHistory, { ...doc, pages: newPages }), selection: newIds.length === 1 ? createSingleSelection<PdfElementId>(newIds[0]) : { selectedIds: newIds, primaryId: newIds[0] } };
+      const { document: newDoc, newElementIds } = addElementsToPage(doc, state.currentPageIndex, duped);
+      return { ...state, documentHistory: pushHistory(state.documentHistory, newDoc), selection: createSelectionFromIds(newElementIds) };
     }
 
     case "ALIGN": {
@@ -396,60 +403,42 @@ export function pdfEditorReducer(state: PdfEditorState, action: PdfEditorAction)
 
     case "ADD_PAGE": {
       const doc = state.documentHistory.present;
-      const sourcePage = doc.pages[action.afterIndex] ?? doc.pages[doc.pages.length - 1];
-      if (!sourcePage) { return state; }
-      const blankPage = { ...sourcePage, elements: [], pageNumber: doc.pages.length + 1 };
-      const newPages = [...doc.pages];
-      newPages.splice(action.afterIndex + 1, 0, blankPage);
-      const newPageIndex = action.afterIndex + 1;
-      return { ...state, documentHistory: pushHistory(state.documentHistory, { ...doc, pages: newPages }), currentPageIndex: newPageIndex, selection: createEmptySelection<PdfElementId>() };
+      const { document: newDoc, newPageIndex } = domainAddPage(doc, action.afterIndex);
+      return { ...state, documentHistory: pushHistory(state.documentHistory, newDoc), currentPageIndex: newPageIndex, selection: createEmptySelection<PdfElementId>() };
     }
 
     case "DELETE_PAGES": {
       const doc = state.documentHistory.present;
-      if (doc.pages.length <= 1) { return state; } // Keep at least 1 page
-      const indicesToDelete = new Set(action.pageIndices);
-      const newPages = doc.pages.filter((_, i) => !indicesToDelete.has(i));
-      if (newPages.length === 0) { return state; } // Safety check
-      const newPageIndex = Math.min(state.currentPageIndex, newPages.length - 1);
-      return { ...state, documentHistory: pushHistory(state.documentHistory, { ...doc, pages: newPages }), currentPageIndex: newPageIndex, selection: createEmptySelection<PdfElementId>() };
+      const newDoc = domainDeletePages(doc, action.pageIndices);
+      if (newDoc === doc) { return state; }
+      const newPageIndex = Math.min(state.currentPageIndex, newDoc.pages.length - 1);
+      return { ...state, documentHistory: pushHistory(state.documentHistory, newDoc), currentPageIndex: newPageIndex, selection: createEmptySelection<PdfElementId>() };
     }
 
     case "DUPLICATE_PAGES": {
       const doc = state.documentHistory.present;
-      const sorted = [...action.pageIndices].sort((a, b) => a - b);
-      const duplicated = sorted.map((i) => doc.pages[i]).filter(Boolean);
-      if (duplicated.length === 0) { return state; }
-      const insertAt = sorted[sorted.length - 1] + 1;
-      const newPages = [...doc.pages];
-      newPages.splice(insertAt, 0, ...duplicated);
-      return { ...state, documentHistory: pushHistory(state.documentHistory, { ...doc, pages: newPages }), currentPageIndex: insertAt, selection: createEmptySelection<PdfElementId>() };
+      const { document: newDoc, insertedAtIndex } = domainDuplicatePages(doc, action.pageIndices);
+      if (newDoc === doc) { return state; }
+      return { ...state, documentHistory: pushHistory(state.documentHistory, newDoc), currentPageIndex: insertedAtIndex, selection: createEmptySelection<PdfElementId>() };
     }
 
     case "REORDER_PAGES": {
       const doc = state.documentHistory.present;
-      const newPages = reorderItems(doc.pages, action.pageIndices, action.toIndex);
-      const newPageIndex = action.toIndex;
-      return { ...state, documentHistory: pushHistory(state.documentHistory, { ...doc, pages: newPages as readonly typeof doc.pages[number][] }), currentPageIndex: Math.min(newPageIndex, newPages.length - 1), selection: createEmptySelection<PdfElementId>() };
+      const newDoc = domainReorderPages({ document: doc, pageIndices: action.pageIndices, toIndex: action.toIndex });
+      return { ...state, documentHistory: pushHistory(state.documentHistory, newDoc), currentPageIndex: Math.min(action.toIndex, newDoc.pages.length - 1), selection: createEmptySelection<PdfElementId>() };
     }
 
     case "UPDATE_PAGE_SIZE": {
       const doc = state.documentHistory.present;
-      const page = doc.pages[action.pageIndex];
-      if (!page) { return state; }
-      const newPage = { ...page, width: action.width, height: action.height };
-      const newPages = doc.pages.map((p, i) => i === action.pageIndex ? newPage : p);
-      return { ...state, documentHistory: pushHistory(state.documentHistory, { ...doc, pages: newPages }) };
+      const newDoc = domainUpdatePageSize({ document: doc, pageIndex: action.pageIndex, width: action.width, height: action.height });
+      return { ...state, documentHistory: pushHistory(state.documentHistory, newDoc) };
     }
 
     case "ADD_TABLE": {
       const doc = state.documentHistory.present;
-      const page = doc.pages[state.currentPageIndex];
-      if (!page) { return state; }
-      const newElements = [...page.elements, action.table as PdfElement];
-      const newPages = doc.pages.map((p, i) => i === state.currentPageIndex ? { ...p, elements: newElements } : p);
-      const newId = createElementId(state.currentPageIndex, page.elements.length);
-      return { ...state, documentHistory: pushHistory(state.documentHistory, { ...doc, pages: newPages }), selection: createSingleSelection<PdfElementId>(newId) };
+      const { document: newDoc, newElementIds } = addElementsToPage(doc, state.currentPageIndex, [action.table as PdfElement]);
+      if (newElementIds.length === 0) { return state; }
+      return { ...state, documentHistory: pushHistory(state.documentHistory, newDoc), selection: createSingleSelection<PdfElementId>(newElementIds[0]) };
     }
 
     case "UPDATE_TABLE": {

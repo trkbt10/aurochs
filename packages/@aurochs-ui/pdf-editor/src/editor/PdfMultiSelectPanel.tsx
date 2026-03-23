@@ -6,7 +6,7 @@
  */
 
 import { useCallback, useMemo, type CSSProperties } from "react";
-import type { PdfDocument, PdfElement } from "@aurochs/pdf";
+import type { PdfDocument, PdfElement, PdfElementId } from "@aurochs/pdf";
 import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { FillFormattingEditor } from "@aurochs-ui/editor-controls/surface";
 import { OutlineFormattingEditor } from "@aurochs-ui/editor-controls/surface";
@@ -20,8 +20,7 @@ import {
   applyStrokeToGraphicsState,
 } from "./pdf-surface-adapters";
 import { PDF_TEXT_FEATURES, pdfTextToFormatting, applyTextFormattingToPdfElement } from "./pdf-adapters";
-import type { PdfElementId } from "./types";
-import { createDocumentQuery } from "./pdf-document-query";
+import { createDocumentQuery } from "@aurochs-renderer/pdf/svg";
 
 // =============================================================================
 // Types

@@ -6,13 +6,12 @@
  */
 
 import { useCallback, useMemo, type PointerEvent as ReactPointerEvent } from "react";
-import type { PdfPage, PdfElement } from "@aurochs/pdf";
+import type { PdfPage, PdfElement, PdfElementId } from "@aurochs/pdf";
+import { createElementId } from "@aurochs/pdf";
 import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { LayerItem } from "react-editor-ui/LayerItem";
 import { TextBoxIcon, PictureIcon, PenIcon } from "@aurochs-ui/ui-components/icons";
 import { iconTokens } from "@aurochs-ui/ui-components/design-tokens";
-import type { PdfElementId } from "./types";
-import { createElementId } from "./types";
 
 // =============================================================================
 // Types

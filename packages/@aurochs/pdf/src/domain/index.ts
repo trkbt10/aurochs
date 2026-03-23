@@ -80,6 +80,7 @@ export type {
   PdfPaintOp,
   PdfPath,
 } from "./path";
+export { getPathBounds } from "./path";
 
 // Text domain
 export type { PdfText, PdfTextFontMetrics } from "./text";
@@ -90,6 +91,39 @@ export type { PdfImage } from "./image";
 // Document domain
 export type { PdfElement, PdfPage, PdfDocument, PdfEmbeddedFont, PdfTable, PdfTableRow, PdfTableCell } from "./document";
 export { PDF_UNITS, PDF_PAGE_SIZES, isPdfPath, isPdfText, isPdfImage, isPdfTable } from "./document";
+
+// Element addressing
+export type { PdfElementId } from "./document";
+export { createElementId, parseElementId } from "./document";
+
+// Element transformation
+export { getElementRotationRad, getElementRotationDeg, rotateElement, moveElement } from "./document";
+
+// Document mutation
+export {
+  updateElementInDocument,
+  deleteElements,
+  addElementsToPage,
+  addPage,
+  deletePages,
+  duplicatePages,
+  reorderPages,
+  updatePageSize,
+} from "./document";
+
+// Table mutation
+export {
+  createTableCell,
+  insertRow,
+  removeRow,
+  insertColumn,
+  removeColumn,
+  setColumnWidth,
+  setRowHeight,
+  mergeCells,
+  splitCell,
+  type TableCellRange,
+} from "./document";
 
 // Content stream domain
 export type { PdfTokenType, PdfToken } from "./content-stream";

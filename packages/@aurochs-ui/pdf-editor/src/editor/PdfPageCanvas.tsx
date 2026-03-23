@@ -13,7 +13,7 @@
  */
 
 import { useCallback, useMemo, useRef } from "react";
-import type { PdfPage } from "@aurochs/pdf";
+import type { PdfPage, PdfElementId } from "@aurochs/pdf";
 import {
   EditorCanvas,
   type EditorCanvasHandle,
@@ -25,8 +25,7 @@ import { isSelected } from "@aurochs-ui/editor-core/selection";
 import type { DragState } from "@aurochs-ui/editor-core/drag-state";
 import type { ZoomMode } from "@aurochs-ui/editor-controls/zoom";
 import type { ReactNode } from "react";
-import type { PdfElementId } from "./types";
-import { elementToSvgBounds } from "./types";
+import { elementToSvgBounds } from "@aurochs-renderer/pdf/svg";
 
 // =============================================================================
 // Types

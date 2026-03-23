@@ -32,9 +32,10 @@ import type { MoveDragState } from "@aurochs-ui/editor-core/drag-state";
 import { isPointInBounds, applyMovePreview } from "@aurochs-ui/editor-core/geometry";
 import type { RotatedBoundsInput } from "@aurochs-ui/editor-core/geometry";
 
-// ---- PDF-specific types ----
-import type { PdfElementId } from "./types";
-import { createElementId, elementToSvgBounds, moveElement, updateElementInDocument } from "./types";
+// ---- PDF-specific types (from @aurochs/pdf domain and @aurochs-renderer/pdf) ----
+import type { PdfElementId } from "@aurochs/pdf";
+import { createElementId, moveElement, updateElementInDocument } from "@aurochs/pdf";
+import { elementToSvgBounds } from "@aurochs-renderer/pdf/svg";
 
 // =============================================================================
 // Fixtures

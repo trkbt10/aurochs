@@ -13,14 +13,14 @@
  * - element update
  */
 
-import { createDefaultGraphicsState, type PdfDocument, type PdfText, type PdfPath, type PdfElement } from "@aurochs/pdf";
+import { createDefaultGraphicsState, type PdfDocument, type PdfText, type PdfPath, type PdfElement, type PdfElementId, createElementId, parseElementId, moveElement, updateElementInDocument } from "@aurochs/pdf";
+import { elementToSvgBounds } from "@aurochs-renderer/pdf/svg";
 import { createHistory, pushHistory, canUndo, canRedo, undoHistory, redoHistory } from "@aurochs-ui/editor-core/history";
 import { createEmptySelection, createSingleSelection, isSelected, toggleSelection } from "@aurochs-ui/editor-core/selection";
 import { createIdleDragState, isDragMove, isDragIdle, isDragResize, isDragPendingMove } from "@aurochs-ui/editor-core/drag-state";
 import { createClipboardContent, incrementPasteCount } from "@aurochs-ui/editor-core/clipboard";
 import { calculateAlignment, type BoundsWithId } from "@aurochs-ui/editor-core/alignment";
-import type { PdfEditorState, PdfElementId } from "./types";
-import { createElementId, parseElementId, moveElement, updateElementInDocument, elementToSvgBounds } from "./types";
+import type { PdfEditorState } from "./types";
 
 // =============================================================================
 // Test Fixtures

@@ -1,7 +1,7 @@
 /**
  * @file PDF path domain
  *
- * Exports types for PDF path handling.
+ * Exports types and utilities for PDF path handling.
  */
 
 export type {
@@ -16,3 +16,5 @@ export type {
   PdfPaintOp,
   PdfPath,
 } from "./types";
+
+export { getPathBounds } from "./bounds";
