@@ -54,6 +54,8 @@ export type XlsxColumnDef = {
   readonly hidden?: boolean;
   /** Whether the width is auto-fit to content */
   readonly bestFit?: boolean;
+  /** Whether width is explicitly set (not default) */
+  readonly customWidth?: boolean;
   /** Default style for cells in this column */
   readonly styleId?: StyleId;
   /**

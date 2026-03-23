@@ -280,7 +280,10 @@ export type ColumnSpec = {
   readonly width?: number;
   readonly hidden?: boolean;
   readonly bestFit?: boolean;
+  readonly customWidth?: boolean;
   readonly styleId?: number;
+  readonly outlineLevel?: number;
+  readonly collapsed?: boolean;
 };
 
 export type RowSpec = {
@@ -503,7 +506,10 @@ export function resolveColumn(spec: ColumnSpec): XlsxColumnDef {
     ...(spec.width !== undefined ? { width: spec.width } : {}),
     ...(spec.hidden !== undefined ? { hidden: spec.hidden } : {}),
     ...(spec.bestFit !== undefined ? { bestFit: spec.bestFit } : {}),
+    ...(spec.customWidth !== undefined ? { customWidth: spec.customWidth } : {}),
     ...(spec.styleId !== undefined ? { styleId: styleId(spec.styleId) } : {}),
+    ...(spec.outlineLevel !== undefined ? { outlineLevel: spec.outlineLevel } : {}),
+    ...(spec.collapsed !== undefined ? { collapsed: spec.collapsed } : {}),
   };
 }
 

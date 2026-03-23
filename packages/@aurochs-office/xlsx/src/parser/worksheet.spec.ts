@@ -57,6 +57,21 @@ describe("parseColumn", () => {
     expect(col.bestFit).toBe(true);
   });
 
+  it("should parse customWidth attribute", () => {
+    const el = parseElement('<col min="1" max="1" width="12" customWidth="1" />');
+    const col = parseColumn(el);
+
+    expect(col.customWidth).toBe(true);
+    expect(col.width).toBe(12);
+  });
+
+  it("should parse customWidth=0 as false", () => {
+    const el = parseElement('<col min="1" max="1" width="12" customWidth="0" />');
+    const col = parseColumn(el);
+
+    expect(col.customWidth).toBe(false);
+  });
+
   it("should parse style attribute", () => {
     const el = parseElement('<col min="1" max="1" style="5" />');
     const col = parseColumn(el);

@@ -339,7 +339,7 @@ describe("serializeSheetData", () => {
 
 describe("serializeCols", () => {
   it("should serialize single column", () => {
-    const columns: XlsxColumnDef[] = [{ min: colIdx(1), max: colIdx(1), width: 12 }];
+    const columns: XlsxColumnDef[] = [{ min: colIdx(1), max: colIdx(1), width: 12, customWidth: true }];
     const element = serializeCols(columns);
     const xml = serializeElement(element);
     expect(xml).toBe('<cols><col min="1" max="1" width="12" customWidth="1"/></cols>');

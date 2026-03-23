@@ -145,7 +145,10 @@ export function serializeColAttrs(col: XlsxColumnDef): Record<string, string> {
 
   if (col.width !== undefined) {
     attrs.width = serializeFloat(col.width);
-    attrs.customWidth = "1";
+  }
+
+  if (col.customWidth) {
+    attrs.customWidth = serializeBoolean(col.customWidth);
   }
 
   if (col.hidden) {
@@ -322,6 +325,9 @@ function hasRowContent(row: XlsxRow): boolean {
     || row.collapsed !== undefined;
 }
 
+/**
+ * Serialize worksheet rows into a `<sheetData>` element.
+ */
 export function serializeSheetData(rows: readonly XlsxRow[], sharedStrings: SharedStringTable): XmlElement {
   const nonEmptyRows = rows.filter(hasRowContent);
 

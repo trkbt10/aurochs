@@ -121,6 +121,10 @@
       "types": "./src/domain/mutation/column.ts",
       "default": "./src/domain/mutation/column.ts"
     },
+    "./domain/mutation/merge-cell": {
+      "types": "./src/domain/mutation/merge-cell.ts",
+      "default": "./src/domain/mutation/merge-cell.ts"
+    },
     "./domain/mutation/cell-range-utils": {
       "types": "./src/domain/mutation/cell-range-utils.ts",
       "default": "./src/domain/mutation/cell-range-utils.ts"

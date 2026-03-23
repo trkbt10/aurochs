@@ -265,6 +265,7 @@ export function parseColumn(colElement: XmlElement): XlsxColumnDef {
     width: parseFloatAttr(getAttr(colElement, "width")),
     hidden: parseBooleanAttr(getAttr(colElement, "hidden")),
     bestFit: parseBooleanAttr(getAttr(colElement, "bestFit")),
+    customWidth: parseBooleanAttr(getAttr(colElement, "customWidth")),
     styleId: styleAttr !== undefined ? styleId(styleAttr) : undefined,
     outlineLevel: parseIntAttr(getAttr(colElement, "outlineLevel")),
     collapsed: parseBooleanAttr(getAttr(colElement, "collapsed")),
@@ -324,6 +325,9 @@ export function parseRowAttrs(rowElement: XmlElement): Omit<XlsxRow, "cells"> {
   };
 }
 
+/**
+ * Parse a `<row>` element into an XlsxRow domain object.
+ */
 export function parseRow(params: {
   readonly rowElement: XmlElement;
   readonly context: XlsxParseContext;

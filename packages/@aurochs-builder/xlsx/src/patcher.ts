@@ -26,12 +26,13 @@ import type { Workbook, WorkbookSheet } from "@aurochs-office/xlsx/workbook-pars
 import { indexToColumnLetter, parseRange } from "@aurochs-office/xlsx/domain/cell/address";
 import type { CellValue } from "@aurochs-office/xlsx/domain/cell/types";
 import type { XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
-import { colIdx, rowIdx, type RowIndex, type ColIndex } from "@aurochs-office/xlsx/domain/types";
+import { colIdx, rowIdx, styleId, type RowIndex, type ColIndex } from "@aurochs-office/xlsx/domain/types";
 import { createDefaultParseContext, type XlsxParseContext } from "@aurochs-office/xlsx/parser/context";
 import { parseWorksheet } from "@aurochs-office/xlsx/parser/worksheet";
 import { updateCell } from "@aurochs-office/xlsx/domain/mutation/cell";
 import { setRowHeight, hideRows, unhideRows, setRowOutlineLevel, setRowCollapsed } from "@aurochs-office/xlsx/domain/mutation/row";
-import { setColumnWidth, hideColumns, unhideColumns, setColumnOutlineLevel, setColumnCollapsed } from "@aurochs-office/xlsx/domain/mutation/column";
+import { setColumnWidth, hideColumns, unhideColumns, setColumnOutlineLevel, setColumnCollapsed, setColumnBestFit, setColumnCustomWidth, setColumnStyleId } from "@aurochs-office/xlsx/domain/mutation/column";
+import { addMergeCells } from "@aurochs-office/xlsx/domain/mutation/merge-cell";
 import type { SharedStringTable } from "./cell";
 import { serializeWorksheet } from "./worksheet";
 import { serializeDrawing } from "./drawing";
@@ -108,6 +109,8 @@ export type ColUpdate = {
   readonly hidden?: boolean;
   /** Whether the width is auto-fit to content */
   readonly bestFit?: boolean;
+  /** Custom width flag (ECMA-376 §18.3.1.13 customWidth) */
+  readonly customWidth?: boolean;
   /** Default style for cells in this column */
   readonly styleId?: number;
   /** Outline grouping level (0-7) */
@@ -154,6 +157,8 @@ export type SheetUpdate = {
   readonly cols?: readonly ColUpdate[];
   /** Images to place in the sheet. Domain objects are constructed internally. */
   readonly images?: readonly ImagePlacement[];
+  /** Merge cell ranges to add (e.g., ["A1:B2", "D4:E5"]). Appended to existing merges. */
+  readonly mergeCells?: readonly string[];
   /** Low-level drawing injection (advanced). Prefer `images` for typical use. */
   readonly drawing?: XlsxDrawing;
   /** Media parts for low-level drawing (advanced). Keyed by drawing relationship ID. */
@@ -179,10 +184,23 @@ export type WorkbookPatchResult = {
 /**
  * Resolve SheetUpdate.images into drawing + media domain objects.
  */
-function resolveDrawingFromUpdate(update: SheetUpdate): {
+type ResolvedDrawing = {
   readonly drawing: XlsxDrawing | undefined;
   readonly media: ReadonlyMap<string, MediaPart> | undefined;
-} {
+};
+
+function resolveDrawingRelId(
+  resolved: ResolvedDrawing,
+  pkg: ZipPackage,
+  sheet: WorkbookSheet,
+): string | undefined {
+  if (!resolved.drawing) {
+    return undefined;
+  }
+  return patchDrawing({ pkg, sheet, drawing: resolved.drawing, media: resolved.media });
+}
+
+function resolveDrawingFromUpdate(update: SheetUpdate): ResolvedDrawing {
   if (update.drawing) {
     return { drawing: update.drawing, media: update.media };
   }
@@ -244,9 +262,7 @@ export async function patchWorkbook(workbook: Workbook, updates: readonly SheetU
     const resolved = resolveDrawingFromUpdate(update);
 
     // Patch the sheet
-    const drawingRelId = resolved.drawing
-      ? patchDrawing({ pkg, sheet, drawing: resolved.drawing, media: resolved.media })
-      : undefined;
+    const drawingRelId = resolveDrawingRelId(resolved, pkg, sheet);
 
     patchSheet({ pkg, sheet, update, sst, parseContext, drawingRelId });
 
@@ -298,7 +314,7 @@ function patchSheet(params: {
   }
 
   // 1. Parse existing worksheet into domain type
-  let worksheet = parseWorksheet({
+  const parsed = parseWorksheet({
     worksheetElement: sheetRootEl,
     context: parseContext,
     options: undefined,
@@ -311,17 +327,7 @@ function patchSheet(params: {
   });
 
   // 2. Apply domain mutations
-  worksheet = applyCellUpdates(worksheet, update.cells);
-  worksheet = applyRowUpdates(worksheet, update.rows);
-  worksheet = applyColUpdates(worksheet, update.cols);
-
-  if (update.dimension) {
-    worksheet = { ...worksheet, dimension: parseDimensionString(update.dimension) };
-  }
-
-  if (update.drawing) {
-    worksheet = { ...worksheet, drawing: update.drawing };
-  }
+  const worksheet = applySheetUpdate(parsed, update);
 
   // 3. Serialize through builder SoT
   const serialized = serializeWorksheet(worksheet, sst, drawingRelId);
@@ -334,25 +340,51 @@ function patchSheet(params: {
 // =============================================================================
 
 /**
+ * Apply all SheetUpdate mutations to a worksheet.
+ */
+function applySheetUpdate(worksheet: XlsxWorksheet, update: SheetUpdate): XlsxWorksheet {
+  const withCells = applyCellUpdates(worksheet, update.cells);
+  const withRows = applyRowUpdates(withCells, update.rows);
+  const withCols = applyColUpdates(withRows, update.cols);
+  const withMerge = applyMergeCellUpdates(withCols, update.mergeCells);
+  const withDimension = applyDimension(withMerge, update.dimension);
+  return applyDrawing(withDimension, update.drawing);
+}
+
+function applyDimension(ws: XlsxWorksheet, dimension: string | undefined): XlsxWorksheet {
+  if (!dimension) {
+    return ws;
+  }
+  return { ...ws, dimension: parseDimensionString(dimension) };
+}
+
+function applyDrawing(ws: XlsxWorksheet, drawing: XlsxDrawing | undefined): XlsxWorksheet {
+  if (!drawing) {
+    return ws;
+  }
+  return { ...ws, drawing };
+}
+
+/**
  * Apply CellUpdate[] to worksheet via domain updateCell().
  */
-function applyCellUpdates(worksheet: XlsxWorksheet, cells: readonly CellUpdate[]): XlsxWorksheet {
-  let ws = worksheet;
-  for (const cell of cells) {
-    const col = cell.col.toUpperCase();
-    const colIndex = columnLetterToIndex(col);
-    const value: CellValue = typeof cell.value === "number"
-      ? { type: "number", value: cell.value }
-      : { type: "string", value: cell.value };
+function toCellValue(raw: string | number): CellValue {
+  if (typeof raw === "number") {
+    return { type: "number", value: raw };
+  }
+  return { type: "string", value: raw };
+}
 
-    ws = updateCell(ws, {
+function applyCellUpdates(worksheet: XlsxWorksheet, cells: readonly CellUpdate[]): XlsxWorksheet {
+  return cells.reduce((ws, cell) => {
+    const colIndex = columnLetterToIndex(cell.col.toUpperCase());
+    return updateCell(ws, {
       col: colIdx(colIndex),
       row: rowIdx(cell.row),
       colAbsolute: false,
       rowAbsolute: false,
-    }, value);
-  }
-  return ws;
+    }, toCellValue(cell.value));
+  }, worksheet);
 }
 
 /**
@@ -363,32 +395,55 @@ function applyRowUpdates(worksheet: XlsxWorksheet, rows?: readonly RowUpdate[]):
     return worksheet;
   }
 
-  let ws = worksheet;
-  for (const row of rows) {
-    const ri = rowIdx(row.row) as RowIndex;
-    if (row.height !== undefined) {
-      ws = setRowHeight(ws, ri, row.height);
-      // setRowHeight always sets customHeight=true. Override if explicitly false.
-      if (row.customHeight === false) {
-        const rowIndex = ws.rows.findIndex((r) => r.rowNumber === ri);
-        if (rowIndex >= 0) {
-          const updatedRows = [...ws.rows];
-          updatedRows[rowIndex] = { ...updatedRows[rowIndex], customHeight: undefined };
-          ws = { ...ws, rows: updatedRows };
-        }
-      }
-    }
-    if (row.hidden === true) {
-      ws = hideRows(ws, ri, 1);
-    } else if (row.hidden === false) {
-      ws = unhideRows(ws, ri, 1);
-    }
-    if (row.outlineLevel !== undefined) {
-      ws = setRowOutlineLevel(ws, ri, row.outlineLevel);
-    }
-    if (row.collapsed !== undefined) {
-      ws = setRowCollapsed(ws, ri, row.collapsed);
-    }
+  return rows.reduce((ws, row) => applySingleRowUpdate(ws, row), worksheet);
+}
+
+function applyRowOutlineLevel(ws: XlsxWorksheet, ri: RowIndex, outlineLevel: number | undefined): XlsxWorksheet {
+  if (outlineLevel === undefined) {
+    return ws;
+  }
+  return setRowOutlineLevel(ws, ri, outlineLevel);
+}
+
+function applyRowCollapsed(ws: XlsxWorksheet, ri: RowIndex, collapsed: boolean | undefined): XlsxWorksheet {
+  if (collapsed === undefined) {
+    return ws;
+  }
+  return setRowCollapsed(ws, ri, collapsed);
+}
+
+function applySingleRowUpdate(ws: XlsxWorksheet, row: RowUpdate): XlsxWorksheet {
+  const ri = rowIdx(row.row) as RowIndex;
+  const withHeight = applyRowHeight(ws, ri, row);
+  const withVisibility = applyRowVisibility(withHeight, ri, row);
+  const withOutline = applyRowOutlineLevel(withVisibility, ri, row.outlineLevel);
+  return applyRowCollapsed(withOutline, ri, row.collapsed);
+}
+
+function applyRowHeight(ws: XlsxWorksheet, ri: RowIndex, row: RowUpdate): XlsxWorksheet {
+  if (row.height === undefined) {
+    return ws;
+  }
+  const withHeight = setRowHeight(ws, ri, row.height);
+  // setRowHeight always sets customHeight=true. Override if explicitly false.
+  if (row.customHeight !== false) {
+    return withHeight;
+  }
+  const rowIndex = withHeight.rows.findIndex((r) => r.rowNumber === ri);
+  if (rowIndex < 0) {
+    return withHeight;
+  }
+  const updatedRows = [...withHeight.rows];
+  updatedRows[rowIndex] = { ...updatedRows[rowIndex], customHeight: undefined };
+  return { ...withHeight, rows: updatedRows };
+}
+
+function applyRowVisibility(ws: XlsxWorksheet, ri: RowIndex, row: RowUpdate): XlsxWorksheet {
+  if (row.hidden === true) {
+    return hideRows(ws, ri, 1);
+  }
+  if (row.hidden === false) {
+    return unhideRows(ws, ri, 1);
   }
   return ws;
 }
@@ -401,25 +456,79 @@ function applyColUpdates(worksheet: XlsxWorksheet, cols?: readonly ColUpdate[]):
     return worksheet;
   }
 
-  let ws = worksheet;
-  for (const col of cols) {
-    const ci = colIdx(col.col) as ColIndex;
-    if (col.width !== undefined) {
-      ws = setColumnWidth(ws, ci, col.width);
-    }
-    if (col.hidden === true) {
-      ws = hideColumns(ws, ci, 1);
-    } else if (col.hidden === false) {
-      ws = unhideColumns(ws, ci, 1);
-    }
-    if (col.outlineLevel !== undefined) {
-      ws = setColumnOutlineLevel(ws, ci, col.outlineLevel);
-    }
-    if (col.collapsed !== undefined) {
-      ws = setColumnCollapsed(ws, ci, col.collapsed);
-    }
+  return cols.reduce((ws, col) => applySingleColUpdate(ws, col), worksheet);
+}
+
+function applyColOutlineLevel(ws: XlsxWorksheet, ci: ColIndex, outlineLevel: number | undefined): XlsxWorksheet {
+  if (outlineLevel === undefined) {
+    return ws;
+  }
+  return setColumnOutlineLevel(ws, ci, outlineLevel);
+}
+
+function applyColCollapsed(ws: XlsxWorksheet, ci: ColIndex, collapsed: boolean | undefined): XlsxWorksheet {
+  if (collapsed === undefined) {
+    return ws;
+  }
+  return setColumnCollapsed(ws, ci, collapsed);
+}
+
+function applyColBestFit(ws: XlsxWorksheet, ci: ColIndex, bestFit: boolean | undefined): XlsxWorksheet {
+  if (bestFit === undefined) {
+    return ws;
+  }
+  return setColumnBestFit(ws, ci, bestFit);
+}
+
+function applyColStyleId(ws: XlsxWorksheet, ci: ColIndex, sid: number | undefined): XlsxWorksheet {
+  if (sid === undefined) {
+    return ws;
+  }
+  return setColumnStyleId(ws, ci, styleId(sid));
+}
+
+function applySingleColUpdate(ws: XlsxWorksheet, col: ColUpdate): XlsxWorksheet {
+  const ci = colIdx(col.col) as ColIndex;
+  const withWidth = applyColWidth(ws, ci, col);
+  const withVisibility = applyColVisibility(withWidth, ci, col);
+  const withOutline = applyColOutlineLevel(withVisibility, ci, col.outlineLevel);
+  const withCollapsed = applyColCollapsed(withOutline, ci, col.collapsed);
+  const withBestFit = applyColBestFit(withCollapsed, ci, col.bestFit);
+  return applyColStyleId(withBestFit, ci, col.styleId);
+}
+
+function applyColWidth(ws: XlsxWorksheet, ci: ColIndex, col: ColUpdate): XlsxWorksheet {
+  if (col.width === undefined) {
+    return ws;
+  }
+  const withWidth = setColumnWidth(ws, ci, col.width);
+  // setColumnWidth always sets customWidth=true. Override if explicitly false.
+  if (col.customWidth === false) {
+    return setColumnCustomWidth(withWidth, ci, false);
+  }
+  return withWidth;
+}
+
+function applyColVisibility(ws: XlsxWorksheet, ci: ColIndex, col: ColUpdate): XlsxWorksheet {
+  if (col.hidden === true) {
+    return hideColumns(ws, ci, 1);
+  }
+  if (col.hidden === false) {
+    return unhideColumns(ws, ci, 1);
   }
   return ws;
+}
+
+/**
+ * Apply mergeCells updates to worksheet via domain addMergeCells().
+ */
+function applyMergeCellUpdates(worksheet: XlsxWorksheet, mergeCells?: readonly string[]): XlsxWorksheet {
+  if (!mergeCells || mergeCells.length === 0) {
+    return worksheet;
+  }
+
+  const ranges = mergeCells.map(parseRange);
+  return addMergeCells(worksheet, ranges);
 }
 
 // =============================================================================
@@ -441,6 +550,13 @@ function parseDimensionString(dimension: string): XlsxWorksheet["dimension"] {
  * Patch a sheet with drawing and media content.
  * Returns the drawing relationship ID for use in serializeWorksheet.
  */
+function parseExistingRelationships(xml: string | null | undefined): OpcRelationship[] {
+  if (!xml) {
+    return [];
+  }
+  return listRelationships(parseXml(xml));
+}
+
 function patchDrawing(params: {
   readonly pkg: ZipPackage;
   readonly sheet: WorkbookSheet;
@@ -501,9 +617,7 @@ function patchDrawing(params: {
 
   const sheetRelsPath = getRelationshipPartPath(sheetPartPath);
   const existingSheetRelsText = pkg.readText(sheetRelsPath);
-  const sheetRels: OpcRelationship[] = existingSheetRelsText
-    ? listRelationships(parseXml(existingSheetRelsText))
-    : [];
+  const sheetRels: OpcRelationship[] = parseExistingRelationships(existingSheetRelsText);
   sheetRels.push(sheetDrawingRel);
 
   const sheetRelsXml = serializeRelationships(sheetRels);

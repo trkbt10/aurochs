@@ -92,7 +92,10 @@ export const COLUMN_SPEC_FIELDS = {
   width: "Column spec",
   hidden: "Column spec",
   bestFit: "Column spec",
+  customWidth: "Column spec",
   styleId: "Column spec",
+  outlineLevel: "Column spec",
+  collapsed: "Column spec",
 } satisfies Record<keyof ColumnSpec, string>;
 
 export const SHEET_SPEC_FIELDS = {

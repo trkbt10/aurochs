@@ -5,7 +5,7 @@
  */
 
 import type { XlsxWorksheet } from "../workbook";
-import { colIdx, type ColIndex } from "../types";
+import { colIdx, type ColIndex, type StyleId } from "../types";
 import {
   assertPositiveInteger,
   assertValidColIndex,
@@ -87,7 +87,31 @@ export function setColumnWidth(worksheet: XlsxWorksheet, colIndex: ColIndex, wid
 
   return {
     ...worksheet,
-    columns: applyColumnOverride(worksheet.columns, colIndex, { width }),
+    columns: applyColumnOverride(worksheet.columns, colIndex, { width, customWidth: true }),
+  };
+}
+
+/**
+ * Set the customWidth flag for a column.
+ *
+ * When customWidth is true, the column width was explicitly set by the user.
+ * When false/undefined, the width is considered a default width that Excel
+ * may recalculate.
+ *
+ * @param worksheet - The worksheet to modify
+ * @param colIndex - The column index
+ * @param customWidth - Whether the width is explicitly set
+ *
+ * @see ECMA-376 Part 4, Section 18.3.1.13 (col)
+ */
+export function setColumnCustomWidth(worksheet: XlsxWorksheet, colIndex: ColIndex, customWidth: boolean): XlsxWorksheet {
+  assertValidColIndex(colIndex, "colIndex");
+
+  return {
+    ...worksheet,
+    columns: applyColumnOverride(worksheet.columns, colIndex, {
+      customWidth: customWidth ? true : undefined,
+    }),
   };
 }
 
@@ -188,6 +212,46 @@ export function ungroupColumns(worksheet: XlsxWorksheet, startCol: ColIndex, cou
   }
 
   return { ...worksheet, columns: columnsRef.value };
+}
+
+/**
+ * Set the default style for cells in a column.
+ *
+ * @param worksheet - The worksheet to modify
+ * @param colIndex - The column index
+ * @param sid - The style ID to apply (0 or undefined removes the override)
+ */
+export function setColumnStyleId(worksheet: XlsxWorksheet, colIndex: ColIndex, sid: StyleId): XlsxWorksheet {
+  assertValidColIndex(colIndex, "colIndex");
+
+  return {
+    ...worksheet,
+    columns: applyColumnOverride(worksheet.columns, colIndex, {
+      styleId: (sid as number) === 0 ? undefined : sid,
+    }),
+  };
+}
+
+/**
+ * Set the bestFit flag for a column.
+ *
+ * When bestFit is true, the column width was determined by auto-fit
+ * rather than manual user input. This distinction affects the
+ * customWidth attribute in OOXML serialization (§18.3.1.13).
+ *
+ * @param worksheet - The worksheet to modify
+ * @param colIndex - The column index
+ * @param bestFit - Whether the width is auto-fit to content
+ */
+export function setColumnBestFit(worksheet: XlsxWorksheet, colIndex: ColIndex, bestFit: boolean): XlsxWorksheet {
+  assertValidColIndex(colIndex, "colIndex");
+
+  return {
+    ...worksheet,
+    columns: applyColumnOverride(worksheet.columns, colIndex, {
+      bestFit: bestFit ? true : undefined,
+    }),
+  };
 }
 
 /**

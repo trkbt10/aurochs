@@ -227,7 +227,10 @@ Two modes: **create** (build from scratch) and **modify** (edit existing file).
   "width": 15,                        // Width in characters
   "hidden": false,
   "bestFit": true,
-  "styleId": 0
+  "customWidth": true,                 // Whether width is explicitly set (not default)
+  "styleId": 0,
+  "outlineLevel": 1,                  // Grouping level (0-7, 0 = no grouping)
+  "collapsed": false                   // Whether this column group is collapsed
 }
 ```
 

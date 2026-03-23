@@ -696,3 +696,106 @@ describe("patchWorkbook — SharedStringTable integration", () => {
     expect(sstXml).toContain("uniqueCount");
   });
 });
+
+// =============================================================================
+// Merge Cell Tests
+// =============================================================================
+
+const SHEET_XML_WITH_EXISTING_MERGES = [
+  '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',
+  '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">',
+  "  <sheetData>",
+  '    <row r="1"><c r="A1"><v>42</v></c></row>',
+  "  </sheetData>",
+  '  <mergeCells count="1">',
+  '    <mergeCell ref="A1:B1"/>',
+  "  </mergeCells>",
+  "</worksheet>",
+].join("\n");
+
+describe("patchWorkbook — mergeCells", () => {
+  it("adds mergeCells to a sheet with no existing merges", async () => {
+    const workbook = createTestWorkbook(MINIMAL_SHEET_XML);
+    const update: SheetUpdate = {
+      sheetName: "Sheet1",
+      cells: [],
+      mergeCells: ["A1:B2", "D4:E5"],
+    };
+
+    await patchWorkbook(workbook, [update]);
+
+    const worksheet = readPatchedSheet(workbook);
+    const sheetXml = workbook.package.readText("xl/worksheets/sheet1.xml")!;
+    expect(sheetXml).toContain("<mergeCells");
+    expect(sheetXml).toContain('ref="A1:B2"');
+    expect(sheetXml).toContain('ref="D4:E5"');
+    expect(sheetXml).toContain('count="2"');
+  });
+
+  it("appends mergeCells to a sheet with existing merges", async () => {
+    const workbook = createTestWorkbook(SHEET_XML_WITH_EXISTING_MERGES);
+    const update: SheetUpdate = {
+      sheetName: "Sheet1",
+      cells: [],
+      mergeCells: ["C3:D4"],
+    };
+
+    await patchWorkbook(workbook, [update]);
+
+    const sheetXml = workbook.package.readText("xl/worksheets/sheet1.xml")!;
+    expect(sheetXml).toContain("<mergeCells");
+    // Original merge preserved
+    expect(sheetXml).toContain('ref="A1:B1"');
+    // New merge added
+    expect(sheetXml).toContain('ref="C3:D4"');
+    expect(sheetXml).toContain('count="2"');
+  });
+
+  it("works together with cells and rows updates", async () => {
+    const workbook = createTestWorkbook(MINIMAL_SHEET_XML);
+    const update: SheetUpdate = {
+      sheetName: "Sheet1",
+      cells: [{ col: "A", row: 1, value: "merged" }],
+      rows: [{ row: 1, height: 30, customHeight: true }],
+      mergeCells: ["A1:C1"],
+    };
+
+    await patchWorkbook(workbook, [update]);
+
+    const sheetXml = workbook.package.readText("xl/worksheets/sheet1.xml")!;
+    // Cell updated (string value stored via sharedStrings, so check t="s")
+    expect(sheetXml).toContain('t="s"');
+    // Row height set
+    expect(sheetXml).toContain('ht="30"');
+    expect(sheetXml).toContain('customHeight="1"');
+    // Merge added
+    expect(sheetXml).toContain('ref="A1:C1"');
+  });
+
+  it("does nothing when mergeCells is empty array", async () => {
+    const workbook = createTestWorkbook(MINIMAL_SHEET_XML);
+    const update: SheetUpdate = {
+      sheetName: "Sheet1",
+      cells: [],
+      mergeCells: [],
+    };
+
+    await patchWorkbook(workbook, [update]);
+
+    const sheetXml = workbook.package.readText("xl/worksheets/sheet1.xml")!;
+    expect(sheetXml).not.toContain("<mergeCells");
+  });
+
+  it("does nothing when mergeCells is undefined", async () => {
+    const workbook = createTestWorkbook(MINIMAL_SHEET_XML);
+    const update: SheetUpdate = {
+      sheetName: "Sheet1",
+      cells: [],
+    };
+
+    await patchWorkbook(workbook, [update]);
+
+    const sheetXml = workbook.package.readText("xl/worksheets/sheet1.xml")!;
+    expect(sheetXml).not.toContain("<mergeCells");
+  });
+});
