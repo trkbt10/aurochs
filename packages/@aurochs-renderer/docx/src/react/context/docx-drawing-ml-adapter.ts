@@ -9,7 +9,8 @@
 
 import type { DrawingMLRenderContext, WarningCollector } from "@aurochs-renderer/drawing-ml/react";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
-import type { DocxDrawingRenderContext, DocxResourceResolver, DocxPageSize } from "./types";
+import { createResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
+import type { DocxDrawingRenderContext, DocxPageSize } from "./types";
 
 // =============================================================================
 // Helper Functions
@@ -26,17 +27,6 @@ function createRenderSize(pageSize: DocxPageSize | undefined): { width: number; 
     width: pageSize.width as number,
     height: pageSize.height as number,
   };
-}
-
-/**
- * Resolve target path from relationship target.
- * Handles absolute paths (starting with /) and relative paths.
- */
-function resolveTargetPath(target: string): string {
-  if (target.startsWith("/")) {
-    return target.slice(1);
-  }
-  return `word/${target}`;
 }
 
 // =============================================================================
@@ -79,9 +69,9 @@ export function createDrawingMLContextFromDocx(
     },
   };
 
-  // Create resource resolver that uses DOCX ResourceResolver
+  // Create resource resolver that uses ResourceStore
   const resolveResource = (resourceId: string): string | undefined => {
-    return docxContext.resources.resolve(resourceId);
+    return docxContext.resourceStore.toDataUrl(resourceId);
   };
 
   // Create ID generator for SVG defs
@@ -111,66 +101,6 @@ export function createDrawingMLContextFromDocx(
 // =============================================================================
 
 /**
- * Create an empty DOCX resource resolver (for testing).
- */
-export function createEmptyDocxResourceResolver(): DocxResourceResolver {
-  return {
-    resolve: () => undefined,
-    getMimeType: () => undefined,
-    getTarget: () => undefined,
-  };
-}
-
-/**
- * Create a DOCX resource resolver from relationship data and file reader.
- *
- * @param relationships - Document relationships array
- * @param readFile - Function to read file content from package
- * @param getMimeType - Function to get MIME type from path
- * @returns Resource resolver for DOCX drawings
- */
-export function createDocxResourceResolver(
-  relationships: ReadonlyMap<string, { target: string; type: string }>,
-  readFile: (path: string) => Uint8Array | null,
-  getMimeType: (path: string) => string | undefined,
-): DocxResourceResolver {
-  const resolve = (rId: string): string | undefined => {
-    const rel = relationships.get(rId);
-    if (rel === undefined) {
-      return undefined;
-    }
-
-    // Resolve path relative to word/ directory
-    const targetPath = resolveTargetPath(rel.target);
-
-    const content = readFile(targetPath);
-    if (content === null) {
-      return undefined;
-    }
-
-    const mimeType = getMimeType(targetPath) ?? "application/octet-stream";
-    const base64 = btoa(
-      content.reduce((data, byte) => data + String.fromCharCode(byte), ""),
-    );
-
-    return `data:${mimeType};base64,${base64}`;
-  };
-
-  return {
-    resolve,
-    getMimeType: (rId: string) => {
-      const rel = relationships.get(rId);
-      if (rel === undefined) {
-        return undefined;
-      }
-      const targetPath = resolveTargetPath(rel.target);
-      return getMimeType(targetPath);
-    },
-    getTarget: (rId: string) => relationships.get(rId)?.target,
-  };
-}
-
-/**
  * Create an empty color context (for testing or when no theme is available).
  */
 export function createEmptyColorContext(): ColorContext {
@@ -188,7 +118,7 @@ export function createDefaultDocxDrawingContext(): DocxDrawingRenderContext {
 
   return {
     colorContext: createEmptyColorContext(),
-    resources: createEmptyDocxResourceResolver(),
+    resourceStore: createResourceStore(),
     warnings: {
       add: (warning) => warnings.push(warning),
       getAll: () => warnings,

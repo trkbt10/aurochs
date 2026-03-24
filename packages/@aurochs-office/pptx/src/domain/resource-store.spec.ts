@@ -88,49 +88,49 @@ describe("createResourceStore", () => {
     });
   });
 
-  describe("getBySlide", () => {
-    it("should filter resources by slideId", () => {
+  describe("getByScope", () => {
+    it("should filter resources by scopeId", () => {
       const store = createResourceStore();
-      store.set("rId1", { kind: "image", source: "parsed", data: new ArrayBuffer(0), slideId: "slide1" });
-      store.set("rId2", { kind: "image", source: "parsed", data: new ArrayBuffer(0), slideId: "slide2" });
-      store.set("rId3", { kind: "image", source: "parsed", data: new ArrayBuffer(0), slideId: "slide1" });
+      store.set("rId1", { kind: "image", source: "parsed", data: new ArrayBuffer(0), scopeId: "slide1" });
+      store.set("rId2", { kind: "image", source: "parsed", data: new ArrayBuffer(0), scopeId: "slide2" });
+      store.set("rId3", { kind: "image", source: "parsed", data: new ArrayBuffer(0), scopeId: "slide1" });
 
-      const slide1Resources = Array.from(store.getBySlide("slide1"));
+      const slide1Resources = Array.from(store.getByScope("slide1"));
       expect(slide1Resources).toContain("rId1");
       expect(slide1Resources).toContain("rId3");
       expect(slide1Resources).not.toContain("rId2");
       expect(slide1Resources.length).toBe(2);
     });
 
-    it("should return empty for non-existent slideId", () => {
+    it("should return empty for non-existent scopeId", () => {
       const store = createResourceStore();
-      store.set("rId1", { kind: "image", source: "parsed", data: new ArrayBuffer(0), slideId: "slide1" });
+      store.set("rId1", { kind: "image", source: "parsed", data: new ArrayBuffer(0), scopeId: "slide1" });
 
-      const resources = Array.from(store.getBySlide("slide999"));
+      const resources = Array.from(store.getByScope("slide999"));
       expect(resources.length).toBe(0);
     });
   });
 
-  describe("releaseSlide", () => {
+  describe("releaseScope", () => {
     it("should remove all resources for a slide", () => {
       const store = createResourceStore();
-      store.set("rId1", { kind: "image", source: "parsed", data: new ArrayBuffer(0), slideId: "slide1" });
-      store.set("rId2", { kind: "image", source: "parsed", data: new ArrayBuffer(0), slideId: "slide2" });
-      store.set("rId3", { kind: "image", source: "parsed", data: new ArrayBuffer(0), slideId: "slide1" });
+      store.set("rId1", { kind: "image", source: "parsed", data: new ArrayBuffer(0), scopeId: "slide1" });
+      store.set("rId2", { kind: "image", source: "parsed", data: new ArrayBuffer(0), scopeId: "slide2" });
+      store.set("rId3", { kind: "image", source: "parsed", data: new ArrayBuffer(0), scopeId: "slide1" });
 
-      store.releaseSlide("slide1");
+      store.releaseScope("slide1");
 
       expect(store.has("rId1")).toBe(false);
       expect(store.has("rId2")).toBe(true);
       expect(store.has("rId3")).toBe(false);
     });
 
-    it("should not affect resources without slideId", () => {
+    it("should not affect resources without scopeId", () => {
       const store = createResourceStore();
       store.set("rId1", { kind: "image", source: "parsed", data: new ArrayBuffer(0) });
-      store.set("rId2", { kind: "image", source: "parsed", data: new ArrayBuffer(0), slideId: "slide1" });
+      store.set("rId2", { kind: "image", source: "parsed", data: new ArrayBuffer(0), scopeId: "slide1" });
 
-      store.releaseSlide("slide1");
+      store.releaseScope("slide1");
 
       expect(store.has("rId1")).toBe(true);
       expect(store.has("rId2")).toBe(false);

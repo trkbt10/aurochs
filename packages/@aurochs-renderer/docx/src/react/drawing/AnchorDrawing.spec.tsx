@@ -6,7 +6,8 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AnchorDrawing } from "./AnchorDrawing";
 import type { DocxAnchorDrawing } from "@aurochs-office/docx/domain/drawing";
-import type { DocxResourceResolver } from "../context";
+import type { ResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
+import { createResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 import { emu } from "@aurochs-office/drawing-ml/domain/units";
 
 // =============================================================================
@@ -42,26 +43,29 @@ function createMockDrawing(overrides?: Partial<DocxAnchorDrawing>): DocxAnchorDr
   };
 }
 
-function createMockResolver(resolveResult?: string): DocxResourceResolver {
-  return {
-    resolve: () => resolveResult,
-    getMimeType: () => "image/png",
-    getTarget: () => "media/image1.png",
-  };
+function createMockResourceStore(resolveResult?: string): ResourceStore {
+  const store = createResourceStore();
+  if (resolveResult !== undefined) {
+    return {
+      ...store,
+      toDataUrl: () => resolveResult,
+    };
+  }
+  return store;
 }
 
 function renderAnchorDrawing(props: {
   drawing?: DocxAnchorDrawing;
   x?: number;
   y?: number;
-  resources?: DocxResourceResolver;
+  resourceStore?: ResourceStore;
   idPrefix?: string;
 }): string {
   const element = createElement(AnchorDrawing, {
     drawing: props.drawing ?? createMockDrawing(),
     x: props.x ?? 0,
     y: props.y ?? 0,
-    resources: props.resources ?? createMockResolver(),
+    resourceStore: props.resourceStore ?? createMockResourceStore(),
     idPrefix: props.idPrefix,
   });
   return renderToStaticMarkup(element);
@@ -93,7 +97,7 @@ describe("AnchorDrawing", () => {
         drawing,
         x: 100,
         y: 200,
-        resources: createMockResolver("data:image/png;base64,test"),
+        resourceStore: createMockResourceStore("data:image/png;base64,test"),
       });
 
       expect(html).toContain('transform="translate(100, 200)"');
@@ -111,7 +115,7 @@ describe("AnchorDrawing", () => {
       });
       const html = renderAnchorDrawing({
         drawing,
-        resources: createMockResolver("data:image/png;base64,test"),
+        resourceStore: createMockResourceStore("data:image/png;base64,test"),
       });
 
       expect(html).toContain('data-element-type="anchor-drawing"');
@@ -130,7 +134,7 @@ describe("AnchorDrawing", () => {
       });
       const html = renderAnchorDrawing({
         drawing,
-        resources: createMockResolver("data:image/png;base64,test"),
+        resourceStore: createMockResourceStore("data:image/png;base64,test"),
       });
 
       expect(html).toContain('data-doc-pr-id="42"');
@@ -151,7 +155,7 @@ describe("AnchorDrawing", () => {
       });
       const html = renderAnchorDrawing({
         drawing,
-        resources: createMockResolver("data:image/png;base64,test"),
+        resourceStore: createMockResourceStore("data:image/png;base64,test"),
       });
 
       expect(html).toContain('data-behind-doc="true"');
@@ -172,7 +176,7 @@ describe("AnchorDrawing", () => {
       });
       const html = renderAnchorDrawing({
         drawing,
-        resources: createMockResolver("data:image/png;base64,imagedata"),
+        resourceStore: createMockResourceStore("data:image/png;base64,imagedata"),
       });
 
       expect(html).toContain("<image");
@@ -195,7 +199,7 @@ describe("AnchorDrawing", () => {
       });
       const html = renderAnchorDrawing({
         drawing,
-        resources: createMockResolver("data:image/png;base64,test"),
+        resourceStore: createMockResourceStore("data:image/png;base64,test"),
       });
 
       expect(html).toContain('width="96"');
@@ -217,7 +221,7 @@ describe("AnchorDrawing", () => {
       const html = renderAnchorDrawing({
         drawing,
         idPrefix: "anchor-clip",
-        resources: createMockResolver("data:image/png;base64,test"),
+        resourceStore: createMockResourceStore("data:image/png;base64,test"),
       });
 
       expect(html).toContain('id="anchor-clip-5"');

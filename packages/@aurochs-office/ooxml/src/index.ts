@@ -72,3 +72,12 @@ export { createWarningCollector } from "./domain/warnings";
 
 // Domain types - Content Extraction
 export type { SegmentType, ContentSegment, ExtractionResult } from "./domain/extraction";
+
+// Domain types - Resource Store
+export type {
+  ResourceKind,
+  ResourceSource,
+  ResolvedResourceEntry,
+  ResourceStore,
+} from "./domain/resource-store";
+export { createResourceStore } from "./domain/resource-store";

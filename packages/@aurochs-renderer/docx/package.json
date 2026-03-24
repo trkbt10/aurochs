@@ -8,6 +8,7 @@
     "@aurochs/glyph": "workspace:*",
     "@aurochs-office/docx": "workspace:*",
     "@aurochs-office/drawing-ml": "workspace:*",
+    "@aurochs-office/ooxml": "workspace:*",
     "@aurochs-office/text-layout": "workspace:*",
     "@aurochs-renderer/drawing-ml": "workspace:*"
   },

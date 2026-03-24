@@ -5,6 +5,7 @@
   "type": "module",
   "sideEffects": false,
   "dependencies": {
+    "@aurochs/buffer": "workspace:*",
     "@aurochs/color": "workspace:*",
     "@aurochs-office/drawing-ml": "workspace:*",
     "@aurochs-office/opc": "workspace:*",

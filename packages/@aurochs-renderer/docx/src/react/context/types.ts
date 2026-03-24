@@ -8,41 +8,7 @@
 
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
-
-// =============================================================================
-// Resource Resolver Types
-// =============================================================================
-
-/**
- * Resource resolver for DOCX drawings.
- *
- * Resolves relationship IDs to data URLs for images and other resources.
- */
-export type DocxResourceResolver = {
-  /**
-   * Resolve a relationship ID to a data URL.
-   *
-   * @param rId - Relationship ID (e.g., "rId5")
-   * @returns Data URL or undefined if not found
-   */
-  readonly resolve: (rId: string) => string | undefined;
-
-  /**
-   * Get the MIME type for a resource.
-   *
-   * @param rId - Relationship ID
-   * @returns MIME type (e.g., "image/png") or undefined
-   */
-  readonly getMimeType: (rId: string) => string | undefined;
-
-  /**
-   * Get the target path for a relationship ID.
-   *
-   * @param rId - Relationship ID
-   * @returns Target path (e.g., "media/image1.png") or undefined
-   */
-  readonly getTarget: (rId: string) => string | undefined;
-};
+import type { ResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 
 // =============================================================================
 // Warning Collector
@@ -100,8 +66,8 @@ export type DocxDrawingRenderContext = {
   /** Color context for scheme color resolution */
   readonly colorContext: ColorContext;
 
-  /** Resource resolver for images and other resources */
-  readonly resources: DocxResourceResolver;
+  /** Resource store for images and other resources */
+  readonly resourceStore: ResourceStore;
 
   /** Warning collector for rendering issues */
   readonly warnings: DocxWarningCollector;

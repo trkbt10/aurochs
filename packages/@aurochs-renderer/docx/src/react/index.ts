@@ -15,15 +15,12 @@ export {
 
 // Context - DOCX Drawing Render Context and Adapter
 export {
-  type DocxResourceResolver,
   type DocxRenderWarning,
   type DocxWarningCollector,
   type DocxPageSize,
   type DocxPageMargins,
   type DocxDrawingRenderContext,
   createDrawingMLContextFromDocx,
-  createEmptyDocxResourceResolver,
-  createDocxResourceResolver,
   createEmptyColorContext,
   createDefaultDocxDrawingContext,
 } from "./context";

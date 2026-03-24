@@ -6,7 +6,8 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { InlineDrawing } from "./InlineDrawing";
 import type { DocxInlineDrawing } from "@aurochs-office/docx/domain/drawing";
-import type { DocxResourceResolver } from "../context";
+import type { ResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
+import { createResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 import { emu } from "@aurochs-office/drawing-ml/domain/units";
 
 // =============================================================================
@@ -32,26 +33,31 @@ function createMockDrawing(overrides?: Partial<DocxInlineDrawing>): DocxInlineDr
   };
 }
 
-function createMockResolver(resolveResult?: string): DocxResourceResolver {
-  return {
-    resolve: () => resolveResult,
-    getMimeType: () => "image/png",
-    getTarget: () => "media/image1.png",
-  };
+function createMockResourceStore(resolveResult?: string): ResourceStore {
+  const store = createResourceStore();
+  if (resolveResult !== undefined) {
+    // Register a resource that will produce the desired data URL via toDataUrl
+    // We use a custom store that overrides toDataUrl for test simplicity
+    return {
+      ...store,
+      toDataUrl: () => resolveResult,
+    };
+  }
+  return store;
 }
 
 function renderInlineDrawing(props: {
   drawing?: DocxInlineDrawing;
   x?: number;
   y?: number;
-  resources?: DocxResourceResolver;
+  resourceStore?: ResourceStore;
   idPrefix?: string;
 }): string {
   const element = createElement(InlineDrawing, {
     drawing: props.drawing ?? createMockDrawing(),
     x: props.x ?? 0,
     y: props.y ?? 0,
-    resources: props.resources ?? createMockResolver(),
+    resourceStore: props.resourceStore ?? createMockResourceStore(),
     idPrefix: props.idPrefix,
   });
   return renderToStaticMarkup(element);
@@ -83,7 +89,7 @@ describe("InlineDrawing", () => {
         drawing,
         x: 50,
         y: 100,
-        resources: createMockResolver("data:image/png;base64,test"),
+        resourceStore: createMockResourceStore("data:image/png;base64,test"),
       });
 
       expect(html).toContain('transform="translate(50, 100)"');
@@ -101,7 +107,7 @@ describe("InlineDrawing", () => {
       });
       const html = renderInlineDrawing({
         drawing,
-        resources: createMockResolver("data:image/png;base64,test"),
+        resourceStore: createMockResourceStore("data:image/png;base64,test"),
       });
 
       expect(html).toContain('data-element-type="inline-drawing"');
@@ -120,7 +126,7 @@ describe("InlineDrawing", () => {
       });
       const html = renderInlineDrawing({
         drawing,
-        resources: createMockResolver("data:image/png;base64,test"),
+        resourceStore: createMockResourceStore("data:image/png;base64,test"),
       });
 
       expect(html).toContain('data-doc-pr-id="42"');
@@ -141,7 +147,7 @@ describe("InlineDrawing", () => {
       });
       const html = renderInlineDrawing({
         drawing,
-        resources: createMockResolver("data:image/png;base64,imagedata"),
+        resourceStore: createMockResourceStore("data:image/png;base64,imagedata"),
       });
 
       expect(html).toContain("<image");
@@ -164,7 +170,7 @@ describe("InlineDrawing", () => {
       });
       const html = renderInlineDrawing({
         drawing,
-        resources: createMockResolver("data:image/png;base64,test"),
+        resourceStore: createMockResourceStore("data:image/png;base64,test"),
       });
 
       expect(html).toContain('width="96"');
@@ -186,7 +192,7 @@ describe("InlineDrawing", () => {
       const html = renderInlineDrawing({
         drawing,
         idPrefix: "myprefix",
-        resources: createMockResolver("data:image/png;base64,test"),
+        resourceStore: createMockResourceStore("data:image/png;base64,test"),
       });
 
       expect(html).toContain('id="myprefix-5"');
@@ -206,7 +212,7 @@ describe("InlineDrawing", () => {
       });
       const html = renderInlineDrawing({
         drawing,
-        resources: createMockResolver("data:image/png;base64,test"),
+        resourceStore: createMockResourceStore("data:image/png;base64,test"),
       });
 
       expect(html).toContain('id="inline-7"');

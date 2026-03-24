@@ -13,7 +13,7 @@ import { emuToPx } from "@aurochs-office/docx/domain/ecma376-defaults";
 import { Picture } from "./Picture";
 import { WordprocessingShape } from "./WordprocessingShape";
 import { ChartPlaceholder } from "./ChartPlaceholder";
-import type { DocxResourceResolver } from "../context";
+import type { ResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 
 // =============================================================================
 // Types
@@ -29,8 +29,8 @@ export type InlineDrawingProps = {
   readonly x: number;
   /** Y position in pixels (from text layout) */
   readonly y: number;
-  /** Resource resolver for images */
-  readonly resources: DocxResourceResolver;
+  /** Resource store for images */
+  readonly resourceStore: ResourceStore;
   /** Unique ID prefix for clip paths */
   readonly idPrefix?: string;
 };
@@ -63,7 +63,7 @@ function useInlineDataAttributes(drawing: DocxInlineDrawing) {
 /**
  * Renders an inline drawing (wp:inline) as SVG group.
  */
-function InlineDrawingBase({ drawing, x, y, resources, idPrefix }: InlineDrawingProps) {
+function InlineDrawingBase({ drawing, x, y, resourceStore, idPrefix }: InlineDrawingProps) {
   // Convert extent from EMUs to pixels
   const width = useMemo(() => emuToPx(drawing.extent.cx as number) as number, [drawing.extent.cx]);
   const height = useMemo(() => emuToPx(drawing.extent.cy as number) as number, [drawing.extent.cy]);
@@ -80,8 +80,8 @@ function InlineDrawingBase({ drawing, x, y, resources, idPrefix }: InlineDrawing
     if (rId === undefined) {
       return undefined;
     }
-    return resources.resolve(rId as string);
-  }, [drawing.pic, resources]);
+    return resourceStore.toDataUrl(rId as string);
+  }, [drawing.pic, resourceStore]);
 
   // Generate unique clip ID
   const clipId = useMemo(() => {

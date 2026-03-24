@@ -6,7 +6,6 @@
 
 // Types
 export type {
-  DocxResourceResolver,
   DocxRenderWarning,
   DocxWarningCollector,
   DocxPageSize,
@@ -17,8 +16,6 @@ export type {
 // Adapter
 export {
   createDrawingMLContextFromDocx,
-  createEmptyDocxResourceResolver,
-  createDocxResourceResolver,
   createEmptyColorContext,
   createDefaultDocxDrawingContext,
 } from "./docx-drawing-ml-adapter";
