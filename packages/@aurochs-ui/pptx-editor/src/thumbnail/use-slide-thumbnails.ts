@@ -4,11 +4,12 @@
 
 import { useRef, useMemo, useCallback } from "react";
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
-import type { ZipFile } from "@aurochs-office/opc";
+
 import { renderSlideSvg } from "@aurochs-renderer/pptx/svg";
-import { createRenderContext } from "@aurochs-renderer/pptx";
+import { createRenderContext, createCoreRenderContext } from "@aurochs-renderer/pptx";
 import type { SlideWithId } from "@aurochs-office/pptx/app";
-import { prepareSlide } from "../resource/register-slide-resources";
+import { createResourceStore } from "@aurochs-office/pptx/domain/resource-store";
+import { prepareSlide, registerEditorResources } from "../resource/register-slide-resources";
 import {
   createThumbnailCache,
   getCachedThumbnail,
@@ -25,7 +26,6 @@ export type UseSlideThumbnailsOptions = {
   readonly slideWidth: Pixels;
   readonly slideHeight: Pixels;
   readonly slides: readonly SlideWithId[];
-  readonly zipFile: ZipFile;
 };
 
 export type SlideThumbnailRenderer = {
@@ -37,7 +37,7 @@ export type SlideThumbnailRenderer = {
 // =============================================================================
 
 export function useSlideThumbnails(options: UseSlideThumbnailsOptions): SlideThumbnailRenderer {
-  const { slideWidth, slideHeight, slides, zipFile } = options;
+  const { slideWidth, slideHeight, slides } = options;
   const cacheRef = useRef<ThumbnailCache>(createThumbnailCache());
   const slideSize = useMemo(() => ({ width: slideWidth, height: slideHeight }), [slideWidth, slideHeight]);
 
@@ -56,19 +56,24 @@ export function useSlideThumbnails(options: UseSlideThumbnailsOptions): SlideThu
         return cached;
       }
 
-      // No branching: createRenderContext handles apiSlide present or absent
-      const ctx = createRenderContext({ apiSlide, zip: zipFile, slideSize });
+      let ctx: ReturnType<typeof createCoreRenderContext>;
+      let enrichedSlide: typeof slide;
 
-      if (!ctx.resourceStore) {
-        throw new Error("useSlideThumbnails: ctx.resourceStore is required");
+      if (apiSlide) {
+        const renderCtx = createRenderContext({ apiSlide, slideSize });
+        ctx = renderCtx;
+        enrichedSlide = prepareSlide(slide, ctx.resourceStore, renderCtx.fileReader);
+      } else {
+        ctx = createCoreRenderContext({ slideSize, resourceStore: createResourceStore() });
+        registerEditorResources(slide, ctx.resourceStore);
+        enrichedSlide = slide;
       }
 
-      const enrichedSlide = prepareSlide(slide, ctx.resourceStore, ctx.fileReader);
       const result = renderSlideSvg(enrichedSlide, ctx);
       setCachedThumbnail({ cache, slideId: id, slide, svg: result.svg });
       return result.svg;
     },
-    [slideSize, zipFile],
+    [slideSize],
   );
 
   return { getThumbnailSvg };

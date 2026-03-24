@@ -20,12 +20,18 @@ import { getChild, getByPath } from "@aurochs/xml";
 import type { RenderOptions } from "@aurochs-renderer/pptx";
 
 // Import domain types from canonical sources
-import type { PlaceholderTable, Theme, ResolvedBlipResource, Background, Shape } from "../../domain/index";
+import type { PlaceholderTable, Theme, ResolvedBlipResource, Background, Shape, ArchiveAccess } from "../../domain/index";
+import type { FileReader } from "./external-content-loader";
 import type { MasterTextStyles, TextStyleLevels } from "../../domain/text-style";
 import type { ZipFile, ResourceMap } from "@aurochs-office/opc";
 import type { TableStyleList } from "../table/style-parser";
-import type { ColorMap, ColorResolveContext } from "@aurochs-office/drawing-ml/domain/color-context";
-import { getMimeType } from "@aurochs/files";
+import type { ColorMap, ColorResolveContext, ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
+import { SCHEME_COLOR_NAMES } from "@aurochs-office/drawing-ml/domain/color";
+import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
+import type { ResourceResolver } from "../../domain/resource-resolver";
+import type { ResourceStore } from "../../domain/resource-store";
+import { DEFAULT_COLOR_MAPPING } from "../../domain/color/types";
+import { getMimeType, getMimeTypeFromPath } from "@aurochs/files";
 
 // =============================================================================
 // Params (immutable data)
@@ -309,6 +315,28 @@ export type SlideContext = {
    * @see ECMA-376 Part 1, Section 20.1.4.1.7 (a:bgFillStyleLst)
    */
   toThemeResourceContext(): ResourceContext;
+  /**
+   * Create FileReader for external content loading.
+   *
+   * @param scope - "slide" (default) resolves via slide → layout → master chain,
+   *                "layout" resolves via layout → master (for layout-scoped shapes).
+   */
+  toFileReader(scope?: "slide" | "layout"): FileReader;
+  /**
+   * Build resolved ColorContext (scheme colors + flat color map with overrides applied).
+   * @see ECMA-376 Part 1, Section 20.1.4.1.10 (a:clrScheme)
+   */
+  toRendererColorContext(): ColorContext;
+  /**
+   * Build ResourceResolver backed by ResourceStore.
+   * @see ECMA-376 Part 2 (Open Packaging Conventions)
+   */
+  toResourceResolver(resourceStore: ResourceStore): ResourceResolver;
+  /**
+   * Build FontScheme from theme data.
+   * @see ECMA-376 Part 1, Section 20.1.4.1.18 (a:fontScheme)
+   */
+  toFontScheme(): FontScheme;
 };
 
 /**
@@ -398,6 +426,107 @@ export function createSlideContext({
         self.readFile.bind(self),
       );
     },
+
+    toFileReader(scope: "slide" | "layout" = "slide"): FileReader {
+      if (scope === "layout") {
+        return {
+          readFile: self.readFile.bind(self),
+          resolveResource: (rId: string) =>
+            layout.resources.getTarget(rId) ?? master.resources.getTarget(rId),
+          getResourceByType: (relType: string) =>
+            layout.resources.getTargetByType(relType) ?? master.resources.getTargetByType(relType),
+        };
+      }
+      return {
+        readFile: self.readFile.bind(self),
+        resolveResource: self.resolveResource.bind(self),
+        getResourceByType: (relType: string) => slide.resources.getTargetByType(relType),
+      };
+    },
+
+    toRendererColorContext(): ColorContext {
+      const scheme = presentation.theme.colorScheme;
+      const masterMap = master.colorMap;
+      const overrideMap = slide.colorMapOverride;
+
+      const colorScheme: Record<string, string> = {};
+      for (const name of SCHEME_COLOR_NAMES) {
+        const value = scheme[name];
+        if (value !== undefined) {
+          colorScheme[name] = value;
+        }
+      }
+
+      const colorMap: Record<string, string> = {};
+      const colorMappingKeys = Object.keys(DEFAULT_COLOR_MAPPING);
+      for (const name of colorMappingKeys) {
+        if (overrideMap !== undefined) {
+          const ov = overrideMap[name];
+          if (ov !== undefined) {
+            colorMap[name] = ov;
+            continue;
+          }
+        }
+        const val = masterMap[name];
+        if (val !== undefined) {
+          colorMap[name] = val;
+        }
+      }
+
+      return { colorScheme, colorMap };
+    },
+
+    toResourceResolver(resourceStore: ResourceStore): ResourceResolver {
+      return {
+        getTarget: (id: string) => slide.resources.getTarget(id),
+        getType: (id: string) => slide.resources.getType(id),
+        resolve: (id: string) => resourceStore.toDataUrl(id),
+        getMimeType: (id: string) => {
+          const entry = resourceStore.get(id);
+          if (entry?.mimeType !== undefined) {
+            return entry.mimeType;
+          }
+          const target = self.resolveResource(id);
+          if (target === undefined) {
+            return undefined;
+          }
+          return getMimeTypeFromPath(target);
+        },
+        getFilePath: (id: string) => {
+          const entry = resourceStore.get(id);
+          if (entry?.path !== undefined) {
+            return entry.path;
+          }
+          return self.resolveResource(id);
+        },
+        readFile: (path: string) => {
+          const data = self.readFile(path);
+          if (data === null) {
+            return null;
+          }
+          return new Uint8Array(data);
+        },
+        getResourceByType: (relType: string) => {
+          return slide.resources.getTargetByType(relType);
+        },
+      };
+    },
+
+    toFontScheme(): FontScheme {
+      const fs = presentation.theme.fontScheme;
+      return {
+        majorFont: {
+          latin: fs.majorFont.latin,
+          eastAsian: fs.majorFont.eastAsian,
+          complexScript: fs.majorFont.complexScript,
+        },
+        minorFont: {
+          latin: fs.minorFont.latin,
+          eastAsian: fs.minorFont.eastAsian,
+          complexScript: fs.minorFont.complexScript,
+        },
+      };
+    },
   };
 
   return self;
@@ -422,15 +551,11 @@ export type PlaceholderContext = {
 /**
  * Context for resource access.
  *
- * Provides methods to resolve relationship IDs and read files from the package.
+ * Extends ArchiveAccess with blipFill image resolution for parse-time use.
  *
  * @see ECMA-376 Part 2 (Open Packaging Conventions)
  */
-export type ResourceContext = {
-  /** Resolve relationship ID to target path */
-  readonly resolveResource: (rId: string) => string | undefined;
-  /** Read file from package */
-  readonly readFile: (path: string) => ArrayBuffer | null;
+export type ResourceContext = ArchiveAccess & {
   /**
    * Resolve a blipFill resource ID to raw image data.
    * This is the unified method for resolving image resources at parse time.
@@ -457,21 +582,17 @@ export type BackgroundSource = {
 /**
  * Context for background processing.
  *
- * Contains pre-extracted background elements from the slide hierarchy,
- * avoiding the need to traverse XML during rendering.
+ * Extends ArchiveAccess with pre-extracted background elements from
+ * the slide hierarchy, avoiding the need to traverse XML during rendering.
  *
  * @see ECMA-376 Part 1, Section 19.3.1.1 (p:bg)
  */
-export type BackgroundContext = {
+export type BackgroundContext = ArchiveAccess & {
   /**
    * Background sources in priority order [slide, layout, master].
    * The first non-empty source should be used.
    */
   readonly sources: readonly BackgroundSource[];
-  /** Resolve relationship ID to target path */
-  readonly resolveResource: (rId: string) => string | undefined;
-  /** Read file from package */
-  readonly readFile: (path: string) => ArrayBuffer | null;
   /** Color resolution context */
   readonly colorCtx: ColorResolveContext;
 };

@@ -51,14 +51,7 @@ import { createShapeFromMode } from "@aurochs-ui/pptx-slide-canvas/shape/factory
 import { createTestDocument } from "../src/context/presentation/editor/reducer/test-fixtures";
 import { collectShapeRenderData } from "@aurochs-ui/pptx-slide-canvas/shape/traverse";
 import { SlideCanvas } from "@aurochs-ui/pptx-slide-canvas/slide/SlideCanvas";
-import type { FileReader } from "@aurochs-office/pptx/parser/slide/external-content-loader";
-import { prepareSlide } from "../src/resource/register-slide-resources";
-
-const NULL_FILE_READER: FileReader = {
-  readFile: () => null,
-  resolveResource: () => undefined,
-  getResourceByType: () => undefined,
-};
+import { registerEditorResources } from "../src/resource/register-slide-resources";
 
 // =============================================================================
 // Helpers
@@ -134,7 +127,7 @@ function renderCanvas(state: PresentationEditorState) {
 
   // Populate ResourceStore for editor-created charts/diagrams (mimics PresentationEditor useMemo)
   const resourceStore = createResourceStore();
-  prepareSlide(slide, resourceStore, NULL_FILE_READER);
+  registerEditorResources(slide, resourceStore);
 
   const result = render(
     <SlideCanvas

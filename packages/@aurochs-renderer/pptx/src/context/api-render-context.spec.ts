@@ -170,10 +170,9 @@ function createMockZip(): ZipFile {
 describe("createRenderContext", () => {
   it("should create SlideRenderContext from API slide", () => {
     const apiSlide = createMockApiSlide();
-    const zip = createMockZip();
     const slideSize = { width: px(960), height: px(540) };
 
-    const ctx = createRenderContext({ apiSlide, zip, slideSize });
+    const ctx = createRenderContext({ apiSlide, slideSize });
 
     expect(ctx.slideRenderContext).toBeDefined();
     expect(ctx.slideRenderContext!.master).toBeDefined();
@@ -183,10 +182,9 @@ describe("createRenderContext", () => {
 
   it("should parse theme color scheme correctly", () => {
     const apiSlide = createMockApiSlide();
-    const zip = createMockZip();
     const slideSize = { width: px(960), height: px(540) };
 
-    const ctx = createRenderContext({ apiSlide, zip, slideSize });
+    const ctx = createRenderContext({ apiSlide, slideSize });
     const colorScheme = ctx.slideRenderContext!.presentation.theme.colorScheme;
 
     // Verify color scheme has expected colors
@@ -198,10 +196,9 @@ describe("createRenderContext", () => {
 
   it("should parse master color map correctly", () => {
     const apiSlide = createMockApiSlide();
-    const zip = createMockZip();
     const slideSize = { width: px(960), height: px(540) };
 
-    const ctx = createRenderContext({ apiSlide, zip, slideSize });
+    const ctx = createRenderContext({ apiSlide, slideSize });
     const colorMap = ctx.slideRenderContext!.master.colorMap;
 
     // Verify color map mappings
@@ -214,10 +211,9 @@ describe("createRenderContext", () => {
 describe("createRenderContext output", () => {
   it("should create HtmlRenderContext with color context", () => {
     const apiSlide = createMockApiSlide();
-    const zip = createMockZip();
     const slideSize = { width: px(960), height: px(540) };
 
-    const ctx = createRenderContext({ apiSlide, zip, slideSize });
+    const ctx = createRenderContext({ apiSlide, slideSize });
 
     expect(ctx).toBeDefined();
     expect(ctx.colorContext).toBeDefined();
@@ -227,10 +223,9 @@ describe("createRenderContext output", () => {
 
   it("should resolve scheme colors via resolveColor", async () => {
     const apiSlide = createMockApiSlide();
-    const zip = createMockZip();
     const slideSize = { width: px(960), height: px(540) };
 
-    const ctx = createRenderContext({ apiSlide, zip, slideSize });
+    const ctx = createRenderContext({ apiSlide, slideSize });
     const colorContext = ctx.colorContext;
 
     // Create Color objects with spec structure
@@ -254,10 +249,9 @@ describe("createRenderContext output", () => {
 
   it("should include theme colors in colorScheme", () => {
     const apiSlide = createMockApiSlide();
-    const zip = createMockZip();
     const slideSize = { width: px(960), height: px(540) };
 
-    const ctx = createRenderContext({ apiSlide, zip, slideSize });
+    const ctx = createRenderContext({ apiSlide, slideSize });
     const { colorScheme } = ctx.colorContext;
 
     // Theme colors should be populated
@@ -269,10 +263,9 @@ describe("createRenderContext output", () => {
 
   it("should include color map in colorContext", () => {
     const apiSlide = createMockApiSlide();
-    const zip = createMockZip();
     const slideSize = { width: px(960), height: px(540) };
 
-    const ctx = createRenderContext({ apiSlide, zip, slideSize });
+    const ctx = createRenderContext({ apiSlide, slideSize });
     const { colorMap } = ctx.colorContext;
 
     // Color map should have proper mappings
@@ -283,10 +276,9 @@ describe("createRenderContext output", () => {
 
   it("should include font scheme", () => {
     const apiSlide = createMockApiSlide();
-    const zip = createMockZip();
     const slideSize = { width: px(960), height: px(540) };
 
-    const ctx = createRenderContext({ apiSlide, zip, slideSize });
+    const ctx = createRenderContext({ apiSlide, slideSize });
 
     expect(ctx.fontScheme).toBeDefined();
     expect(ctx.fontScheme?.majorFont.latin).toBe("Calibri Light");
@@ -295,10 +287,9 @@ describe("createRenderContext output", () => {
 
   it("should have resource resolver", () => {
     const apiSlide = createMockApiSlide();
-    const zip = createMockZip();
     const slideSize = { width: px(960), height: px(540) };
 
-    const ctx = createRenderContext({ apiSlide, zip, slideSize });
+    const ctx = createRenderContext({ apiSlide, slideSize });
 
     expect(ctx.resources).toBeDefined();
     expect(typeof ctx.resources.resolve).toBe("function");

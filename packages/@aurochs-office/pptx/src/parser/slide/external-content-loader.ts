@@ -1,10 +1,11 @@
 /**
- * @file Content enricher for pre-parsing chart and diagram content
+ * @file External content loader for pre-parsing chart and diagram content
  *
- * This module enriches Slide domain objects with pre-parsed chart and diagram
- * content, allowing render to render without directly calling parser.
+ * This module loads external content (charts, diagrams, OLE objects, images)
+ * from the PPTX archive and attaches parsed data to Slide domain objects,
+ * allowing render to render without directly calling parser.
  *
- * The enrichment happens in the integration layer, bridging parser and render.
+ * The loading happens in the integration layer, bridging parser and render.
  */
 
 import type { BlipFill } from "@aurochs-office/drawing-ml/domain/fill";
@@ -36,7 +37,7 @@ import { parseDiagramStyleDefinition } from "@aurochs-office/diagram/parser/diag
 import { parseShapeProperties } from "../shape-parser/properties";
 import { parseTextBody } from "../text/text-parser";
 import { parseShapeStyle } from "../shape-parser/style";
-import type { ResourceMap } from "@aurochs-office/opc";
+import type { ResourceMap, PackageFile } from "@aurochs-office/opc";
 import { RELATIONSHIP_TYPES } from "../../domain/relationships";
 import { getMimeTypeFromPath } from "@aurochs/files";
 import { toDataUrl } from "@aurochs/buffer";
@@ -46,15 +47,58 @@ import { createEmptyResourceMap } from "../../domain/relationships";
 import { findVmlShapeImage, getVmlRelsPath, normalizeVmlImagePath } from "../external/vml-parser";
 import { emfToSvg } from "../external/emf-parser";
 import type { ResourceStore } from "../../domain/resource-store";
+import type { ArchiveAccess } from "../../domain/archive-access";
 
 /**
- * File reader interface for loading content from PPTX archive
+ * File reader interface for loading content from PPTX archive.
+ *
+ * Extends ArchiveAccess with an optional method for resolving
+ * resources by relationship type (needed for VML drawings, diagram drawings, etc.).
  */
-export type FileReader = {
-  readonly readFile: (path: string) => ArrayBuffer | null;
-  readonly resolveResource: (id: string) => string | undefined;
+export type FileReader = ArchiveAccess & {
   readonly getResourceByType?: (relType: string) => string | undefined;
 };
+
+/**
+ * Null-object FileReader: reads nothing, resolves nothing.
+ * Use when no PPTX archive is available (e.g., editor-created slides).
+ */
+export const NULL_FILE_READER: FileReader = {
+  readFile: () => null,
+  resolveResource: () => undefined,
+};
+
+/**
+ * Create FileReader from a PackageFile and a chain of ResourceMaps.
+ *
+ * Resolves resources by checking each ResourceMap in order (first match wins).
+ * Used for layout/master/theme-scoped resource resolution.
+ *
+ * @param packageFile - OPC package for file reading
+ * @param resourceMaps - ResourceMaps to check in order for relationship resolution
+ */
+export function createFileReaderFromPackage(
+  packageFile: PackageFile,
+  resourceMaps: readonly ResourceMap[],
+): FileReader {
+  return {
+    readFile: (path: string) => packageFile.readBinary(path) ?? null,
+    resolveResource: (id: string) => {
+      for (const map of resourceMaps) {
+        const target = map.getTarget(id);
+        if (target !== undefined) return target;
+      }
+      return undefined;
+    },
+    getResourceByType: (relType: string) => {
+      for (const map of resourceMaps) {
+        const target = map.getTargetByType(relType);
+        if (target !== undefined) return target;
+      }
+      return undefined;
+    },
+  };
+}
 
 /**
  * Context for content loading operations
@@ -80,21 +124,22 @@ type DiagramResourceResolverContext = {
 };
 
 /**
- * Enrich a Slide with pre-parsed chart and diagram content.
+ * Load external content (charts, diagrams, OLE, images) from the PPTX archive
+ * and attach parsed data to the Slide domain object.
  *
  * This function iterates through all shapes in the slide and for each
  * GraphicFrame with chart or diagram content, loads and parses the
  * external XML files and attaches the parsed data to the domain objects.
  *
- * If a ResourceStore is provided, parsed content is also registered there
- * for centralized resource management.
+ * Parsed content is registered in the ResourceStore for centralized
+ * resource management.
  *
  * @param slide - The parsed Slide domain object
  * @param fileReader - Interface for reading files from the PPTX archive
- * @param resourceStore - Optional resource store for centralized management
+ * @param resourceStore - Resource store for centralized management
  * @returns A new Slide with pre-parsed content attached
  */
-export function enrichSlideContent(slide: Slide, fileReader: FileReader, resourceStore: ResourceStore): Slide {
+export function loadSlideExternalContent(slide: Slide, fileReader: FileReader, resourceStore: ResourceStore): Slide {
   const ctx: ContentLoadContext = { fileReader, resourceStore };
 
   // Register all blipFill images in ResourceStore
@@ -158,26 +203,26 @@ function enrichChartFrame(frame: GraphicFrame, ctx: ContentLoadContext): Graphic
 
   const chartPath = fileReader.resolveResource(resourceId);
   if (chartPath === undefined) {
-    console.warn(`[enrichSlideContent] chart resource not found: ${resourceId}`);
+    console.warn(`[loadSlideExternalContent] chart resource not found: ${resourceId}`);
     return frame;
   }
 
   const chartData = fileReader.readFile(chartPath);
   if (chartData === null) {
-    console.warn(`[enrichSlideContent] chart file not readable: ${chartPath}`);
+    console.warn(`[loadSlideExternalContent] chart file not readable: ${chartPath}`);
     return frame;
   }
 
   const decoder = new TextDecoder();
   const chartDoc = parseXml(decoder.decode(chartData));
   if (chartDoc === undefined) {
-    console.warn(`[enrichSlideContent] chart XML parse failed: ${chartPath}`);
+    console.warn(`[loadSlideExternalContent] chart XML parse failed: ${chartPath}`);
     return frame;
   }
 
   const parsedChart = parseChart(chartDoc);
   if (parsedChart === undefined) {
-    console.warn(`[enrichSlideContent] chart domain parse failed: ${chartPath}`);
+    console.warn(`[loadSlideExternalContent] chart domain parse failed: ${chartPath}`);
     return frame;
   }
 
@@ -214,7 +259,7 @@ function enrichDiagramFrame(frame: GraphicFrame, ctx: ContentLoadContext): Graph
   const diagramRef = frame.content.data;
 
   if (diagramRef.dataResourceId === undefined) {
-    console.warn("[enrichSlideContent] diagram has no dataResourceId");
+    console.warn("[loadSlideExternalContent] diagram has no dataResourceId");
     return frame;
   }
 
@@ -239,7 +284,8 @@ function enrichDiagramFrame(frame: GraphicFrame, ctx: ContentLoadContext): Graph
     : generatedShapes;
 
   if (shapes === undefined || shapes.length === 0) {
-    console.warn(`[enrichSlideContent] diagram has no shapes: ${diagramRef.dataResourceId}`);
+    // Do not register empty entries — allow builder to generate shapes later
+    return frame;
   }
 
   resourceStore.set(diagramRef.dataResourceId, {
@@ -247,7 +293,7 @@ function enrichDiagramFrame(frame: GraphicFrame, ctx: ContentLoadContext): Graph
     source: "parsed",
     data: new ArrayBuffer(0),
     parsed: {
-      shapes: shapes ?? [],
+      shapes,
       dataModel,
       layoutDefinition,
       styleDefinition,
@@ -756,7 +802,7 @@ function enrichOleFrame(frame: GraphicFrame, ctx: ContentLoadContext): GraphicFr
 
   const previewImageUrl = resolveVmlPreviewImage(oleRef, fileReader);
   if (previewImageUrl === undefined) {
-    console.warn(`[enrichSlideContent] OLE VML preview not resolved: spid=${oleRef.spid}`);
+    console.warn(`[loadSlideExternalContent] OLE VML preview not resolved: spid=${oleRef.spid}`);
     return frame;
   }
 

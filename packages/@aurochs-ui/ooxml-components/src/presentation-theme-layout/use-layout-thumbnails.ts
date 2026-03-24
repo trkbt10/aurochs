@@ -14,7 +14,7 @@ import type { PackageFile } from "@aurochs-office/opc";
 import type { SlideLayoutOption } from "@aurochs-office/pptx/app";
 import { loadSlideLayoutBundle, createResourceResolverFromMaps } from "@aurochs-office/pptx/app";
 import { createResourceStore } from "@aurochs-office/pptx/domain/resource-store";
-import { enrichSlideContent, type FileReader } from "@aurochs-office/pptx/parser/slide/external-content-loader";
+import { loadSlideExternalContent, createFileReaderFromPackage } from "@aurochs-office/pptx/parser/slide/external-content-loader";
 import { parseTheme } from "@aurochs-office/pptx/parser/theme/theme-parser";
 import { parseSlideMaster } from "@aurochs-office/pptx/parser/slide/slide-parser";
 import { createPlaceholderTable } from "@aurochs-office/pptx/parser/slide/resource-adapters";
@@ -144,27 +144,8 @@ export function loadLayoutWithContext(options: {
       bundle.masterRelationships,
       bundle.themeRelationships,
     ];
-    const fileReader: FileReader = {
-      readFile: (path: string) => {
-        const buffer = file.readBinary(path);
-        return buffer ?? null;
-      },
-      resolveResource: (id: string) => {
-        for (const map of resourceMaps) {
-          const target = map.getTarget(id);
-          if (target !== undefined) { return target; }
-        }
-        return undefined;
-      },
-      getResourceByType: (relType: string) => {
-        for (const map of resourceMaps) {
-          const target = map.getTargetByType(relType);
-          if (target !== undefined) { return target; }
-        }
-        return undefined;
-      },
-    };
-    enrichSlideContent({ shapes }, fileReader, resourceStore);
+    const fileReader = createFileReaderFromPackage(file, resourceMaps);
+    loadSlideExternalContent({ shapes }, fileReader, resourceStore);
 
     const resources = createResourceResolverFromMaps(file, resourceMaps, resourceStore);
 

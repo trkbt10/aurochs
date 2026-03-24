@@ -16,32 +16,19 @@ import { renderHook } from "@testing-library/react";
 import type { SlideWithId } from "@aurochs-office/pptx/app";
 import type { Slide, Shape } from "@aurochs-office/pptx/domain";
 import type { ShapeId, ResourceId } from "@aurochs-office/pptx/domain/types";
-import type { ZipFile } from "@aurochs-office/opc";
+
 import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import { renderSlideSvg } from "@aurochs-renderer/pptx/svg";
 import { createCoreRenderContext } from "@aurochs-renderer/pptx";
 import { createResourceStore } from "@aurochs-office/pptx/domain/resource-store";
-import { enrichSlideContent } from "@aurochs-office/pptx/parser/slide/external-content-loader";
-import type { FileReader } from "@aurochs-office/pptx/parser/slide/external-content-loader";
-import { prepareSlide } from "../resource/register-slide-resources";
-
-const NULL_FILE_READER: FileReader = {
-  readFile: () => null,
-  resolveResource: () => undefined,
-  getResourceByType: () => undefined,
-};
+import { loadSlideExternalContent, NULL_FILE_READER } from "@aurochs-office/pptx/parser/slide/external-content-loader";
+import { registerEditorResources } from "../resource/register-slide-resources";
 import { useSlideThumbnails } from "./use-slide-thumbnails";
 
 // =============================================================================
 // Fixtures
 // =============================================================================
-
-function createEmptyZipFile(): ZipFile {
-  return {
-    file: () => null,
-  };
-}
 
 function createDiagramSlide(diagramType: "process" | "cycle" | "hierarchy" | "relationship"): Slide {
   return {
@@ -101,7 +88,7 @@ describe("renderSlideSvg structural invariant", () => {
     });
 
     // Write to the SAME store that ctx references
-    prepareSlide(slide, store, NULL_FILE_READER);
+    registerEditorResources(slide, store);
 
     // renderSlideSvg reads from ctx.resourceStore (which is store)
     const result = renderSlideSvg(slide, ctx);
@@ -111,7 +98,7 @@ describe("renderSlideSvg structural invariant", () => {
   it("should generate diagram shapes with unique IDs", () => {
     const slide = createDiagramSlide("process");
     const store = createResourceStore();
-    prepareSlide(slide, store, NULL_FILE_READER);
+    registerEditorResources(slide, store);
 
     const entry = store.get<{ shapes: readonly Shape[] }>("diagram-diag-1");
     const ids = entry!.parsed!.shapes
@@ -132,7 +119,7 @@ describe("renderSlideSvg structural invariant", () => {
       resourceStore: readStore,
     });
 
-    prepareSlide(slide, writeStore, NULL_FILE_READER);
+    registerEditorResources(slide, writeStore);
 
     expect(() => renderSlideSvg(slide, ctx)).toThrow();
   });
@@ -145,9 +132,9 @@ describe("renderSlideSvg structural invariant", () => {
       resourceStore: store,
     });
 
-    // Parser (enrichSlideContent) does not register if no archive data found.
+    // Parser (loadSlideExternalContent) does not register if no archive data found.
     // Builder (registerSlideResources) fills in the gap.
-    prepareSlide(slide, store, NULL_FILE_READER);
+    registerEditorResources(slide, store);
 
     const result = renderSlideSvg(slide, ctx);
     expect(result.svg).not.toContain("[Diagram]");
@@ -170,7 +157,7 @@ describe("renderSlideSvg structural invariant", () => {
       parsed: { shapes: [markerShape] },
     });
 
-    prepareSlide(slide, store, NULL_FILE_READER);
+    registerEditorResources(slide, store);
 
     // Builder must NOT overwrite — parser's entry takes precedence
     const entry = store.get<{ shapes: readonly unknown[] }>("diagram-diag-1");
@@ -178,10 +165,10 @@ describe("renderSlideSvg structural invariant", () => {
     expect(entry!.parsed!.shapes[0]).toBe(markerShape);
   });
 
-  it("should work after enrichSlideContent runs on editor-created diagram (simulates apiSlide present)", () => {
+  it("should work after loadSlideExternalContent runs on editor-created diagram (simulates apiSlide present)", () => {
     // This simulates the browser failure path:
     // 1. buildRenderContext creates ctx with its own ResourceStore
-    // 2. enrichSlideContent runs (parser) — for editor-created diagram, no archive data
+    // 2. loadSlideExternalContent runs (parser) — for editor-created diagram, no archive data
     // 3. registerSlideResources runs (builder) — should fill in the gap
     // 4. renderSlideSvg runs (renderer) — should find data in ctx.resourceStore
 
@@ -192,19 +179,14 @@ describe("renderSlideSvg structural invariant", () => {
       resourceStore: store,
     });
 
-    // Step 2: Parser enrichment with a dummy fileReader (no archive)
-    const dummyFileReader = {
-      readFile: () => null,
-      resolveResource: () => undefined,
-      getResourceByType: () => undefined,
-    };
-    const enrichedSlide = enrichSlideContent(slide, dummyFileReader, store);
+    // Step 2: Parser enrichment with no archive (NULL_FILE_READER)
+    const enrichedSlide = loadSlideExternalContent(slide, NULL_FILE_READER, store);
 
     // Parser must NOT have registered an empty entry
     expect(store.has("diagram-diag-1")).toBe(false);
 
     // Step 3: Builder fills in
-    prepareSlide(enrichedSlide, store, dummyFileReader);
+    registerEditorResources(enrichedSlide, store);
 
     // Step 4: Renderer reads from the SAME store
     const result = renderSlideSvg(enrichedSlide, ctx);
@@ -219,7 +201,7 @@ describe("renderSlideSvg structural invariant", () => {
       resourceStore: store,
     });
 
-    prepareSlide(slide, store, NULL_FILE_READER);
+    registerEditorResources(slide, store);
 
     const result = renderSlideSvg(slide, ctx);
     expect(result.svg).not.toContain("[Chart]");
@@ -242,7 +224,7 @@ describe("useSlideThumbnails", () => {
           slideWidth: px(960) as Pixels,
           slideHeight: px(540) as Pixels,
           slides: [slideWithId],
-          zipFile: createEmptyZipFile(),
+
         }),
       );
 
@@ -264,7 +246,6 @@ describe("useSlideThumbnails", () => {
         slideWidth: px(960) as Pixels,
         slideHeight: px(540) as Pixels,
         slides: [slideWithId],
-        zipFile: createEmptyZipFile(),
       }),
     );
 
@@ -284,7 +265,6 @@ describe("useSlideThumbnails", () => {
         slideWidth: px(960) as Pixels,
         slideHeight: px(540) as Pixels,
         slides: [slideWithId],
-        zipFile: createEmptyZipFile(),
       }),
     );
 

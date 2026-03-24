@@ -149,6 +149,6 @@ export type { RenderContextFromSlideOptions } from "./context/slide-context-adap
 
 export { createRenderContextFromSlideContext } from "./context/slide-context-adapter";
 
-export type { RenderContext, CreateRenderContextOptions } from "./context/api-render-context";
+export type { RenderContext } from "./context/api-render-context";
 
 export { createRenderContext } from "./context/api-render-context";

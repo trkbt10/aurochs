@@ -176,7 +176,7 @@ export function parseShapeElement({
  * @param ctx - Optional placeholder context for inheritance resolution
  * @param masterStylesInfo - Optional master styles info for text style resolution
  * @param formatScheme - Optional format scheme for style reference resolution
- * Image data registration in ResourceStore is handled by enrichSlideContent, not here.
+ * Image data registration in ResourceStore is handled by loadSlideExternalContent, not here.
  * @returns Array of parsed Shape domain objects
  */
 export function parseShapeTree({

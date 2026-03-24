@@ -4,18 +4,15 @@
 
 import { loadPresentationBundle } from "./loader";
 import { openPresentation } from "@aurochs-office/pptx";
-import { createZipAdapter } from "@aurochs-office/pptx/domain";
+
 import { parseSlide } from "@aurochs-office/pptx/parser/slide/slide-parser";
 import { createParseContext } from "@aurochs-office/pptx/parser/context";
-import { enrichSlideContent, type FileReader } from "@aurochs-office/pptx/parser/slide/external-content-loader";
-import { createResourceStore } from "@aurochs-office/pptx/domain/resource-store";
+import { loadSlideExternalContent } from "@aurochs-office/pptx/parser/slide/external-content-loader";
 import { createRenderContext } from "@aurochs-renderer/pptx";
 import { renderSlideSvgIntegrated } from "@aurochs-renderer/pptx/slide-render";
 import { success, error, type Result } from "@aurochs-cli/cli-core";
-import { serializeShape, type SerializationContext, type ShapeJson } from "../serializers/shape-serializer";
+import { serializeShape, type ShapeJson } from "../serializers/shape-serializer";
 import { renderSlideAscii } from "@aurochs-renderer/pptx/ascii";
-import type { Chart } from "@aurochs-office/chart/domain";
-import type { Shape } from "@aurochs-office/pptx/domain/shape";
 
 export type PreviewFormat = "ascii" | "svg";
 
@@ -62,13 +59,11 @@ export async function runPreview(
     const start = slideNumber ?? 1;
     const end = slideNumber ?? presentation.count;
     const slides: PreviewSlide[] = [];
-    const zipFile = createZipAdapter(presentationFile);
-
     for (let i = start; i <= end; i++) {
       const apiSlide = presentation.getSlide(i);
 
       // Build parse context with layout/master inheritance for placeholder transforms
-      const renderContext = createRenderContext({ apiSlide, zip: zipFile, slideSize: presentation.size });
+      const renderContext = createRenderContext({ apiSlide, slideSize: presentation.size });
       if (!renderContext.slideRenderContext) {
         throw new Error("slideRenderContext is required for preview");
       }
@@ -79,25 +74,11 @@ export async function runPreview(
         continue;
       }
 
-      // Enrich slide with chart/diagram data from archive
-      const fileReader: FileReader = {
-        readFile: (path: string) => apiSlide.zip.file(path)?.asArrayBuffer() ?? null,
-        resolveResource: (id: string) => apiSlide.relationships.getTarget(id),
-        getResourceByType: (relType: string) => apiSlide.relationships.getTargetByType(relType),
-      };
-      const resourceStore = createResourceStore();
-      const enrichedSlide = enrichSlideContent(domainSlide, fileReader, resourceStore);
+      // Load external content (charts, diagrams, OLE, images) into ResourceStore
+      const { fileReader, resourceStore } = renderContext;
+      const enrichedSlide = loadSlideExternalContent(domainSlide, fileReader, resourceStore);
 
-      // Build serialization context with resolvers from resource store
-      const ctx: SerializationContext = {
-        resolveChart: (resourceId: string) => resourceStore.get(resourceId)?.parsed as Chart | undefined,
-        resolveDiagramShapes: (diagramRef) => {
-          const entry = resourceStore.get(diagramRef.dataResourceId ?? "");
-          return (entry?.parsed as { shapes?: readonly Shape[] } | undefined)?.shapes;
-        },
-      };
-
-      const shapes = enrichedSlide.shapes.map((s) => serializeShape(s, ctx));
+      const shapes = enrichedSlide.shapes.map((s) => serializeShape(s, resourceStore));
 
       if (format === "svg") {
         // SVG output using integrated renderer

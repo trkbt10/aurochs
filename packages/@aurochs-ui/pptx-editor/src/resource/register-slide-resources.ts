@@ -1,8 +1,8 @@
 /**
  * @file Slide resource preparation (pptx-editor configuration)
  *
- * Thin wrapper over @aurochs-builder/pptx/resource-builder's prepareSlideResources,
- * providing pptx-editor's default diagram node specs and a null-object FileReader.
+ * Wraps @aurochs-builder/pptx/resource-builder functions,
+ * providing pptx-editor's default diagram node specs.
  */
 
 import type { Slide } from "@aurochs-office/pptx/domain";
@@ -10,9 +10,7 @@ import type { DiagramLayoutType } from "@aurochs-office/pptx/domain/shape";
 import type { ResourceStore } from "@aurochs-office/pptx/domain/resource-store";
 import type { DiagramBuildSpec } from "@aurochs-builder/diagram";
 import type { FileReader } from "@aurochs-office/pptx/parser/slide/external-content-loader";
-import { prepareSlideResources } from "@aurochs-builder/pptx/resource-builder";
-
-
+import { prepareSlideResources, registerBuilderResources } from "@aurochs-builder/pptx/resource-builder";
 
 /**
  * UI-defined default node specs per diagram layout type.
@@ -56,20 +54,27 @@ function resolveDiagramSpec(diagramType: DiagramLayoutType): DiagramBuildSpec | 
   return DIAGRAM_SPECS[diagramType];
 }
 
+const BUILDER_OPTIONS = { resolveDiagramSpec };
+
 /**
- * Prepare a slide's ResourceStore for rendering.
- * Handles both archive-loaded and editor-created chart/diagram content.
- *
- * @param fileReader - FileReader for archive access. Use NULL_FILE_READER if no archive.
+ * Prepare a slide's ResourceStore from archive + builder.
+ * Use when PPTX archive is available (apiSlide present).
  */
 export function prepareSlide(
   slide: Slide,
   resourceStore: ResourceStore,
   fileReader: FileReader,
 ): Slide {
-  return prepareSlideResources(slide, resourceStore, {
-    resolveDiagramSpec,
-    fileReader,
-  });
+  return prepareSlideResources(slide, resourceStore, fileReader, BUILDER_OPTIONS);
 }
 
+/**
+ * Register builder-generated resources only (no archive).
+ * Use for editor-created slides without PPTX archive.
+ */
+export function registerEditorResources(
+  slide: Slide,
+  resourceStore: ResourceStore,
+): void {
+  registerBuilderResources(slide.shapes, resourceStore, BUILDER_OPTIONS);
+}

@@ -136,7 +136,7 @@ function detectMediaType(nvPicPr: XmlElement | undefined): PicShape["mediaType"]
  * Parse picture shape (p:pic)
  *
  * Image data registration in ResourceStore is handled by
- * enrichSlideContent (registerSlideBlipFillImages), not here.
+ * loadSlideExternalContent (registerSlideBlipFillImages), not here.
  *
  * @param element - The p:pic XML element
  * @param formatScheme - Optional format scheme for style reference resolution

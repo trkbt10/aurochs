@@ -13,7 +13,7 @@ import type { SpShape, GrpShape, GraphicFrame } from "@aurochs-office/pptx/domai
 import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import type { Table, TableRow, TableCell } from "@aurochs-office/pptx/domain/table/types";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
-import type { ResourceResolver } from "@aurochs-office/pptx/domain/resource-resolver";
+import { createEmptyResourceResolver } from "@aurochs-office/pptx/domain/resource-resolver";
 import { px, deg, pt } from "@aurochs-office/drawing-ml/domain/units";
 import { EMPTY_FONT_SCHEME } from "@aurochs-office/ooxml/domain/font-scheme";
 
@@ -439,18 +439,7 @@ const createSlide5 = (): Slide => ({
 const SLIDE_WIDTH = 960;
 const SLIDE_HEIGHT = 540;
 
-/**
- * Empty resource resolver for test purposes
- */
-const emptyResourceResolver: ResourceResolver = {
-  getTarget: () => undefined,
-  getType: () => undefined,
-  resolve: () => undefined,
-  getMimeType: () => undefined,
-  getFilePath: () => undefined,
-  readFile: () => null,
-  getResourceByType: () => undefined,
-};
+const emptyResourceResolver = createEmptyResourceResolver();
 
 /**
  * Default color context for test purposes

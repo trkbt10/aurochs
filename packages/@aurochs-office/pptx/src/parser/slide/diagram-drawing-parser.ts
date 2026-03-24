@@ -22,19 +22,17 @@ import type { XmlDocument, XmlElement } from "@aurochs/xml";
 import { getAttr, getByPath, getChild, isXmlElement, parseXml } from "@aurochs/xml";
 import { parseShapeTree, parseShapeElement } from "../shape-parser/index";
 import { parseTransform } from "../graphics/transform-parser";
+import type { ArchiveAccess } from "../../domain/archive-access";
 
 // Note: DiagramContent type is now defined in domain/shape.ts
 // Import directly from domain instead of parser
 
 /**
- * Diagram parsing context
+ * Diagram parsing context.
+ *
+ * Uses ArchiveAccess as the base interface for ZIP file access.
  */
-export type DiagramParseContext = {
-  /** Read file from ZIP */
-  readonly readFile: (path: string) => Uint8Array | null;
-  /** Resolve resource ID to path */
-  readonly resolveResource: (id: string) => string | undefined;
-};
+export type DiagramParseContext = ArchiveAccess;
 
 // =============================================================================
 // Diagram Parsing

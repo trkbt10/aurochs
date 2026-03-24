@@ -15,10 +15,9 @@ import { createParseContext } from "@aurochs-office/pptx/parser/context";
 import { renderSlideSvg, createEmptySlideSvg } from "./svg/renderer";
 import { createRenderContextFromSlideContext } from "./context/slide-context-adapter";
 import { getLayoutNonPlaceholderShapes } from "@aurochs-office/pptx/parser/slide/context";
-import { createFileReaderFromSlideContext, createLayoutFileReader } from "./context/api-render-context";
 import { toResolvedBackgroundFill } from "./background-fill";
 import { getBackgroundFillData } from "@aurochs-office/pptx/parser/slide/background-parser";
-import { enrichSlideContent } from "@aurochs-office/pptx/parser/slide/external-content-loader";
+import { loadSlideExternalContent } from "@aurochs-office/pptx/parser/slide/external-content-loader";
 import { createResourceStore } from "@aurochs-office/pptx/domain/resource-store";
 
 // =============================================================================
@@ -78,13 +77,13 @@ export function renderSlideSvgIntegrated(
 
   // Step 3: Register all resources (images, charts, diagrams, OLE) in ResourceStore
   const resourceStore = createResourceStore();
-  const fileReader = createFileReaderFromSlideContext(ctx);
-  const enrichedSlide = enrichSlideContent(parsedSlide, fileReader, resourceStore);
+  const fileReader = ctx.toFileReader();
+  const enrichedSlide = loadSlideExternalContent(parsedSlide, fileReader, resourceStore);
 
   // Register layout shape images using layout-scoped resource resolution
   if (layoutShapes.length > 0) {
-    const layoutFileReader = createLayoutFileReader(ctx);
-    enrichSlideContent({ shapes: layoutShapes }, layoutFileReader, resourceStore);
+    const layoutFileReader = ctx.toFileReader("layout");
+    loadSlideExternalContent({ shapes: layoutShapes }, layoutFileReader, resourceStore);
   }
 
   // Step 4: Resolve background from hierarchy

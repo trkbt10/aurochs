@@ -18,8 +18,7 @@ import {
 } from "@aurochs-office/pptx/domain/color/fill";
 import type { ResolvedLine as OoxmlResolvedLine } from "@aurochs-office/drawing-ml/domain/resolved-fill";
 import { useShapeStyle as useShapeStyleBase, type ShapeStyleResult } from "@aurochs-renderer/drawing-ml/react";
-import { useRenderContext, useRenderResources, useRenderResourceStore } from "../context";
-import type { ResourceResolverFn } from "@aurochs-office/pptx/domain/resource-resolver";
+import { useRenderContext, useRenderResourceStore } from "../context";
 
 // =============================================================================
 // Types
@@ -54,7 +53,7 @@ export type PptxShapeStyleInput = {
 function resolveFillIfDefined(
   fill: BaseFill | undefined,
   colorContext: ColorContext | undefined,
-  resourceResolver: ResourceResolverFn,
+  resourceResolver: (resourceId: string) => string | undefined,
 ) {
   if (fill === undefined) {
     return undefined;
@@ -146,24 +145,13 @@ function convertResolvedLine(pptxLine: PptxResolvedLine): OoxmlResolvedLine {
  */
 export function useShapeStyle(input: PptxShapeStyleInput): ShapeStyleResult {
   const { colorContext } = useRenderContext();
-  const resources = useRenderResources();
   const resourceStore = useRenderResourceStore();
 
-  // Create composite resolver: ResourceStore > legacy resolver
-  const compositeResolver: ResourceResolverFn = (resourceId) => {
-    // 1. Check ResourceStore first
-    if (resourceStore !== undefined) {
-      const url = resourceStore.toDataUrl(resourceId);
-      if (url !== undefined) {
-        return url;
-      }
-    }
-    // 2. Fall back to legacy resolver
-    return resources.resolve(resourceId);
-  };
+  // ResourceStore is the single source of truth for resource resolution
+  const resolveResource = (resourceId: string) => resourceStore.toDataUrl(resourceId);
 
   // Resolve PPTX types to format-agnostic types
-  const resolvedFill = resolveFillIfDefined(input.fill, colorContext, compositeResolver);
+  const resolvedFill = resolveFillIfDefined(input.fill, colorContext, resolveResource);
   const pptxResolvedLine = resolveLineIfDefined(input.line, colorContext);
   const resolvedLine = convertLineIfDefined(pptxResolvedLine);
 

@@ -68,6 +68,28 @@ export function formatListPretty(data: ListData): string {
 }
 
 /**
+ * Collect chart shapes from a flat or nested shape tree.
+ */
+function collectChartShapes(
+  shapes: readonly import("../serializers/shape-serializer").ShapeJson[],
+): readonly { readonly resourceId: string; readonly chartType?: string; readonly title?: string }[] {
+  const charts: { readonly resourceId: string; readonly chartType?: string; readonly title?: string }[] = [];
+  for (const shape of shapes) {
+    if (shape.content?.type === "chart") {
+      charts.push({
+        resourceId: shape.content.chart.resourceId,
+        chartType: shape.content.chart.chartType,
+        title: shape.content.chart.title,
+      });
+    }
+    if (shape.children) {
+      charts.push(...collectChartShapes(shape.children));
+    }
+  }
+  return charts;
+}
+
+/**
  * Format slide content for human-readable output.
  */
 export function formatShowPretty(data: ShowData): string {
@@ -78,8 +100,9 @@ export function formatShowPretty(data: ShowData): string {
   }
   lines.push(`Shapes: ${data.shapes.length}`);
 
-  if (data.charts && data.charts.length > 0) {
-    lines.push(`Charts: ${data.charts.length}`);
+  const charts = collectChartShapes(data.shapes);
+  if (charts.length > 0) {
+    lines.push(`Charts: ${charts.length}`);
   }
   lines.push("");
 
@@ -92,17 +115,12 @@ export function formatShowPretty(data: ShowData): string {
     }
   }
 
-  if (data.charts && data.charts.length > 0) {
+  if (charts.length > 0) {
     lines.push("");
     lines.push("Charts:");
-    for (const c of data.charts) {
-      if (c.error) {
-        lines.push(`  ${c.resourceId}: ERROR ${c.error}`);
-        continue;
-      }
-      const types = c.chart?.types ?? [];
-      const typeLabel = types.length ? types.join(", ") : "(unknown)";
-      lines.push(`  ${c.resourceId}: ${typeLabel}${c.partPath ? ` (${c.partPath})` : ""}`);
+    for (const c of charts) {
+      const typeLabel = c.chartType ?? "(unknown)";
+      lines.push(`  ${c.resourceId}: ${typeLabel}${c.title ? ` "${c.title}"` : ""}`);
     }
   }
 

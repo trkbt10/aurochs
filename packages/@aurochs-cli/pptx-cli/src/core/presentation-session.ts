@@ -12,7 +12,7 @@ import { openPresentation, type Presentation } from "@aurochs-office/pptx/app";
 import type { Slide as ApiSlide } from "@aurochs-office/pptx/app/types";
 import { parseSlide } from "@aurochs-office/pptx/parser/slide/slide-parser";
 import type { ZipPackage } from "@aurochs/zip";
-import { createZipFileAdapter } from "@aurochs-office/opc";
+
 import { parseXml, serializeDocument } from "@aurochs/xml";
 import {
   applySlideOperations,
@@ -525,7 +525,6 @@ export function createPresentationSession(): PresentationSession {
         const apiSlide = state.presentation.getSlide(slideNumber);
         const renderContext = createRenderContext({
           apiSlide: apiSlide as ApiSlide,
-          zip: createZipFileAdapter(state.zipPackage),
           slideSize,
         });
 

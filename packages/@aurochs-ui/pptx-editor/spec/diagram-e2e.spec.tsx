@@ -26,6 +26,7 @@ import type { Slide } from "@aurochs-office/pptx/domain";
 import type { ShapeId, ResourceId } from "@aurochs-office/pptx/domain/types";
 import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
 import { EMPTY_FONT_SCHEME } from "@aurochs-office/ooxml/domain/font-scheme";
+import { createEmptyResourceResolver } from "@aurochs-office/pptx/domain/resource-resolver";
 import { PresentationEditor } from "../src/presentation/PresentationEditor";
 
 function createDocumentWithDiagram(): PresentationDocument {
@@ -55,15 +56,7 @@ function createDocumentWithDiagram(): PresentationDocument {
     slideWidth: px(960),
     slideHeight: px(540),
     colorContext: { colorScheme: {}, colorMap: {} },
-    resources: {
-      getTarget: () => undefined,
-      getType: () => undefined,
-      resolve: () => undefined,
-      getMimeType: () => undefined,
-      getFilePath: () => undefined,
-      readFile: () => null,
-      getResourceByType: () => undefined,
-    },
+    resources: createEmptyResourceResolver(),
     fontScheme: EMPTY_FONT_SCHEME,
   };
 }

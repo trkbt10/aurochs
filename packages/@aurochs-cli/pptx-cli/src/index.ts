@@ -48,7 +48,6 @@ export {
   type DiagramJson,
   type DiagramShapeJson,
   type GraphicContentJson,
-  type SerializationContext,
 } from "./serializers/shape-serializer";
 
 // Pretty output formatters

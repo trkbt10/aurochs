@@ -13,7 +13,7 @@
 import { useRef, useMemo, useCallback, useState, useEffect, type CSSProperties, type ReactNode } from "react";
 import type { PivotBehavior } from "react-panel-layout/pivot";
 import type { Shape, Slide as DomainSlide, RunProperties, ParagraphProperties, TextBody } from "@aurochs-office/pptx/domain";
-import type { ZipFile } from "@aurochs-office/opc";
+
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import type { PresentationDocument, SlideWithId } from "@aurochs-office/pptx/app";
@@ -53,9 +53,9 @@ import { ShapeToolbar } from "../panels/ShapeToolbar";
 import { buildSlideLayoutOptions } from "@aurochs-office/pptx/app";
 import { createRenderContext } from "@aurochs-renderer/pptx";
 import type { Chart } from "@aurochs-office/chart/domain";
-import { prepareSlide } from "../resource/register-slide-resources";
+import { prepareSlide, registerEditorResources } from "../resource/register-slide-resources";
 import { getSlideLayoutAttributes } from "@aurochs-office/pptx/parser/slide/layout-parser";
-import { RELATIONSHIP_TYPES, createZipAdapter } from "@aurochs-office/pptx/domain";
+import { RELATIONSHIP_TYPES } from "@aurochs-office/pptx/domain";
 import { CanvasControls } from "@aurochs-ui/editor-controls/shape-editor";
 import type { ZoomMode } from "@aurochs-ui/editor-controls/zoom";
 import { SvgEditorCanvas, type AssetDropData } from "@aurochs-ui/pptx-slide-canvas/slide-canvas/SvgEditorCanvas";
@@ -615,14 +615,6 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
   // Derived values
   // ==========================================================================
 
-  const zipFile = useMemo<ZipFile>(() => {
-    const presentationFile = document.presentationFile;
-    if (presentationFile) {
-      return createZipAdapter(presentationFile);
-    }
-    return { file: () => null };
-  }, [document.presentationFile]);
-
   const previewSlideSize = useMemo(() => {
     return document.presentation.slideSize ?? { width: document.slideWidth, height: document.slideHeight };
   }, [document.presentation.slideSize, document.slideWidth, document.slideHeight]);
@@ -640,7 +632,6 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
       if (slideWithId.apiSlide && document.presentationFile) {
         const renderCtx = createRenderContext({
           apiSlide: slideWithId.apiSlide,
-          zip: zipFile,
           slideSize: previewSlideSize,
         });
         const svg = renderSlideSvg(slideWithId.slide, renderCtx).svg;
@@ -664,7 +655,6 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
       document.resources,
       document.fontScheme,
       previewSlideSize,
-      zipFile,
     ],
   );
 
@@ -672,7 +662,6 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
     slideWidth: width,
     slideHeight: height,
     slides: document.slides,
-    zipFile,
   });
 
   const renderThumbnail = useCallback(
@@ -684,16 +673,26 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
   );
 
   const renderContext = useMemo(
-    () => createRenderContext({ apiSlide: activeSlide?.apiSlide, zip: zipFile, slideSize: { width, height } }),
-    [width, height, activeSlide?.apiSlide, zipFile],
+    () => {
+      if (!activeSlide?.apiSlide) return undefined;
+      return createRenderContext({ apiSlide: activeSlide.apiSlide, slideSize: { width, height } });
+    },
+    [width, height, activeSlide?.apiSlide],
   );
 
-  // Prepare slide ResourceStore: parser enrich (archive) + builder (editor-created)
+  // Prepare slide ResourceStore: archive load + builder registration
   useMemo(() => {
-    if (!activeSlide?.slide || !editorResourceStore) {
-      return;
+    if (!activeSlide?.slide) {
+      return; // No active slide selected — nothing to prepare
     }
-    prepareSlide(activeSlide.slide, editorResourceStore, renderContext.fileReader);
+    if (!editorResourceStore) {
+      throw new Error("editorResourceStore is required when activeSlide is present");
+    }
+    if (renderContext?.fileReader) {
+      prepareSlide(activeSlide.slide, editorResourceStore, renderContext.fileReader);
+    } else {
+      registerEditorResources(activeSlide.slide, editorResourceStore);
+    }
   }, [renderContext, activeSlide?.slide, editorResourceStore]);
 
   // Chart data change handler: updates ResourceStore and triggers re-render.

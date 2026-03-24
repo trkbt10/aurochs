@@ -31,15 +31,7 @@ import {
   extractTextFromBody,
 } from "@aurochs-office/pptx/domain/text-utils";
 import type { Chart } from "@aurochs-office/chart/domain";
-
-/**
- * Optional context for enriching serialized shapes with chart/diagram data.
- * Used by the preview command to embed renderable data.
- */
-export type SerializationContext = {
-  readonly resolveChart?: (resourceId: string) => Chart | undefined;
-  readonly resolveDiagramShapes?: (diagramRef: DiagramReference) => readonly Shape[] | undefined;
-};
+import type { ResourceStore } from "@aurochs-office/pptx/domain/resource-store";
 
 // =============================================================================
 // Base Types
@@ -726,13 +718,13 @@ function serializeTable(tableRef: TableReference): TableJson {
   };
 }
 
-function serializeChart(chartRef: ChartReference, ctx?: SerializationContext): ChartJson {
+function serializeChart(chartRef: ChartReference, resourceStore?: ResourceStore): ChartJson {
   const result: ChartJson & Record<string, unknown> = {
     resourceId: chartRef.resourceId,
   };
 
-  if (ctx?.resolveChart) {
-    const chart = ctx.resolveChart(chartRef.resourceId as string);
+  if (resourceStore) {
+    const chart = resourceStore.get(chartRef.resourceId as string)?.parsed as Chart | undefined;
     if (chart) {
       const title =
         chart.title?.textBody?.paragraphs
@@ -804,7 +796,7 @@ function extractDiagramShapeText(
 function serializeDiagram(
   diagramRef: DiagramReference,
   frame?: { transform?: Transform },
-  ctx?: SerializationContext,
+  resourceStore?: ResourceStore,
 ): DiagramJson {
   const base: DiagramJson & Record<string, unknown> = {
     dataResourceId: diagramRef.dataResourceId,
@@ -813,8 +805,9 @@ function serializeDiagram(
     colorResourceId: diagramRef.colorResourceId,
   };
 
-  if (ctx?.resolveDiagramShapes) {
-    const shapes = ctx.resolveDiagramShapes(diagramRef);
+  if (resourceStore) {
+    const entry = resourceStore.get(diagramRef.dataResourceId ?? "");
+    const shapes = (entry?.parsed as { shapes?: readonly Shape[] } | undefined)?.shapes;
     if (shapes && shapes.length > 0) {
       const diagramShapes: DiagramShapeJson[] = [];
       for (const s of shapes) {
@@ -844,15 +837,15 @@ function serializeDiagram(
 function serializeGraphicContent(
   content: GraphicContent,
   frame?: { transform?: Transform },
-  ctx?: SerializationContext,
+  resourceStore?: ResourceStore,
 ): GraphicContentJson {
   switch (content.type) {
     case "table":
       return { type: "table", table: serializeTable(content.data) };
     case "chart":
-      return { type: "chart", chart: serializeChart(content.data, ctx) };
+      return { type: "chart", chart: serializeChart(content.data, resourceStore) };
     case "diagram":
-      return { type: "diagram", diagram: serializeDiagram(content.data, frame, ctx) };
+      return { type: "diagram", diagram: serializeDiagram(content.data, frame, resourceStore) };
     case "oleObject":
       return { type: "oleObject", progId: content.data.progId };
     case "unknown":
@@ -879,7 +872,7 @@ function serializeShapeProperties(props: ShapeProperties): {
 /**
  * Serialize a Shape to JSON-friendly format
  */
-export function serializeShape(shape: Shape, ctx?: SerializationContext): ShapeJson {
+export function serializeShape(shape: Shape, resourceStore?: ResourceStore): ShapeJson {
   switch (shape.type) {
     case "sp": {
       const text = extractTextFromShape(shape);
@@ -929,7 +922,7 @@ export function serializeShape(shape: Shape, ctx?: SerializationContext): ShapeJ
         id: shape.nonVisual.id,
         name: shape.nonVisual.name,
         type: shape.type,
-        children: shape.children.map((c) => serializeShape(c, ctx)),
+        children: shape.children.map((c) => serializeShape(c, resourceStore)),
       };
     }
     case "cxnSp": {
@@ -958,7 +951,7 @@ export function serializeShape(shape: Shape, ctx?: SerializationContext): ShapeJ
         type: shape.type,
         bounds: serializeBounds(shape.transform),
         rotation: shape.transform?.rotation !== 0 ? shape.transform?.rotation : undefined,
-        content: serializeGraphicContent(shape.content, { transform: shape.transform ?? undefined }, ctx),
+        content: serializeGraphicContent(shape.content, { transform: shape.transform ?? undefined }, resourceStore),
       };
     }
     case "contentPart": {

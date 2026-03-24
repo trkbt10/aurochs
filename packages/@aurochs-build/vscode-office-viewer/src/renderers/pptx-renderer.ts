@@ -7,7 +7,7 @@
 
 import { openPresentation } from "@aurochs-office/pptx";
 import type { PackageFile } from "@aurochs-office/opc";
-import { createZipAdapter } from "@aurochs-office/pptx/domain";
+
 import { loadPptxBundleFromBuffer } from "@aurochs-office/pptx/app/pptx-loader";
 import { createRenderContext } from "@aurochs-renderer/pptx";
 import { renderSlideSvgIntegrated } from "@aurochs-renderer/pptx/slide-render";
@@ -31,14 +31,11 @@ export async function renderPptxSlides(data: Uint8Array): Promise<PptxRenderResu
  */
 export function renderPptxSlidesFromFile(presentationFile: PackageFile): PptxRenderResult {
   const presentation = openPresentation(presentationFile);
-  const zipFile = createZipAdapter(presentationFile);
-
   const slideIndices = Array.from({ length: presentation.count }, (_, i) => i + 1);
   const slides = slideIndices.map((i) => {
     const apiSlide = presentation.getSlide(i);
     const renderContext = createRenderContext({
       apiSlide,
-      zip: zipFile,
       slideSize: presentation.size,
     });
 

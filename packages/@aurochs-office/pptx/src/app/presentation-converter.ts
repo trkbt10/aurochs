@@ -14,7 +14,7 @@ import type { ExtractedTheme } from "../domain";
 import type { ResourceMap } from "@aurochs-office/opc";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
 import { EMPTY_FONT_SCHEME } from "@aurochs-office/ooxml/domain/font-scheme";
-import type { ResourceResolver } from "../domain/resource-resolver";
+import { createEmptyResourceResolver, type ResourceResolver } from "../domain/resource-resolver";
 import type { ResourceStore } from "../domain/resource-store";
 import { createResourceStore } from "../domain/resource-store";
 import type { Slide as ApiSlide } from "./types";
@@ -22,9 +22,9 @@ import { parseSlide } from "../parser/slide/slide-parser";
 import { createParseContext } from "../parser/context";
 import { extractThemeData } from "../parser/theme/theme-parser";
 import { createRenderContext } from "@aurochs-renderer/pptx";
-import { enrichSlideContent, type FileReader } from "../parser/slide/external-content-loader";
+import { loadSlideExternalContent } from "../parser/slide/external-content-loader";
 import { getMimeTypeFromPath } from "@aurochs/files";
-import { createZipAdapter } from "../domain";
+
 
 // =============================================================================
 // Resource Resolver Building
@@ -124,8 +124,6 @@ export function convertToPresentationDocument(loaded: LoadedPresentation): Prese
   const { presentation, presentationFile } = loaded;
   const slideCount = presentation.count;
   const slideSize = presentation.size;
-  const zipFile = createZipAdapter(presentationFile);
-
   // Get first slide to extract theme/master info (shared across presentation)
   const firstApiSlide = slideCount > 0 ? presentation.getSlide(1) : null;
 
@@ -146,7 +144,7 @@ export function convertToPresentationDocument(loaded: LoadedPresentation): Prese
     const apiSlide = presentation.getSlide(i);
 
     // Build SlideRenderContext for proper parsing with style inheritance
-    const renderContext = createRenderContext({ apiSlide, zip: zipFile, slideSize });
+    const renderContext = createRenderContext({ apiSlide, slideSize });
 
     // Create ParseContext with placeholder tables, master styles, format scheme
     if (!renderContext.slideRenderContext) {
@@ -159,12 +157,7 @@ export function convertToPresentationDocument(loaded: LoadedPresentation): Prese
 
     if (domainSlide) {
       // Register all resources (images, charts, diagrams, OLE) in ResourceStore
-      const fileReader: FileReader = {
-        readFile: (path: string) => renderContext.slideRenderContext!.readFile(path),
-        resolveResource: (id: string) => renderContext.slideRenderContext!.resolveResource(id),
-        getResourceByType: (relType: string) => apiSlide.relationships.getTargetByType(relType),
-      };
-      const enrichedSlide = enrichSlideContent(domainSlide, fileReader, resourceStore);
+      const enrichedSlide = loadSlideExternalContent(domainSlide, renderContext.fileReader, resourceStore);
 
       slides.push({
         id: `slide-${i}`,
@@ -269,17 +262,3 @@ function buildResourceResolverFromStore(
   };
 }
 
-/**
- * Create an empty resource resolver (fallback)
- */
-function createEmptyResourceResolver(): ResourceResolver {
-  return {
-    getTarget: () => undefined,
-    getType: () => undefined,
-    resolve: () => undefined,
-    getMimeType: () => undefined,
-    getFilePath: () => undefined,
-    readFile: () => null,
-    getResourceByType: () => undefined,
-  };
-}

@@ -18,7 +18,7 @@ import type { ResolvedResourceEntry, ResourceStore } from "@aurochs-office/pptx/
 import type { ChartType } from "@aurochs-office/chart/domain";
 import type { DiagramDataModel } from "@aurochs-office/diagram/domain";
 import type { FileReader } from "@aurochs-office/pptx/parser/slide/external-content-loader";
-import { enrichSlideContent } from "@aurochs-office/pptx/parser/slide/external-content-loader";
+import { loadSlideExternalContent } from "@aurochs-office/pptx/parser/slide/external-content-loader";
 import { createDefaultChart } from "@aurochs-builder/chart";
 import { buildDataModel } from "@aurochs-builder/diagram";
 import type { DiagramBuildSpec } from "@aurochs-builder/diagram";
@@ -68,44 +68,47 @@ export function buildDiagramResourceEntry(
 // Slide-level resource preparation
 // =============================================================================
 
-export type PrepareSlideResourcesOptions = {
+export type BuilderResourceOptions = {
   /** Resolve a DiagramBuildSpec for a given layout type. Returns undefined to skip. */
   readonly resolveDiagramSpec?: (diagramType: DiagramLayoutType) => DiagramBuildSpec | undefined;
-  /** FileReader for PPTX archive content. Caller must provide — no hidden default. */
-  readonly fileReader: FileReader;
 };
 
 /**
- * Prepare a slide's ResourceStore for rendering.
+ * Prepare a slide's ResourceStore for rendering from PPTX archive.
  *
- * Always runs both steps:
- * 1. Parser: enrichSlideContent — reads archive via fileReader
+ * Runs two steps:
+ * 1. Parser: loadSlideExternalContent — reads archive via fileReader
  * 2. Builder: register chart/diagram entries for shapes not covered by step 1
+ *
+ * Use this when a PPTX archive is available (apiSlide present).
  *
  * @returns The enriched slide (may differ from input if parser attached data)
  */
 export function prepareSlideResources(
   slide: Slide,
   resourceStore: ResourceStore,
-  options: PrepareSlideResourcesOptions,
+  fileReader: FileReader,
+  options: BuilderResourceOptions = {},
 ): Slide {
-  // Step 1: Parser → Context
-  const enrichedSlide = enrichSlideContent(slide, options.fileReader, resourceStore);
-
-  // Step 2: Builder → Context (fills gaps left by step 1)
+  const enrichedSlide = loadSlideExternalContent(slide, fileReader, resourceStore);
   registerBuilderResources(enrichedSlide.shapes, resourceStore, options);
-
   return enrichedSlide;
 }
 
 // =============================================================================
-// Internal: builder resource registration
+// Builder resource registration
 // =============================================================================
 
-function registerBuilderResources(
+/**
+ * Register builder-generated resources (charts, diagrams) in ResourceStore.
+ *
+ * Use this when no PPTX archive is available (editor-created slides).
+ * Only generates resources for shapes that don't already have entries in the store.
+ */
+export function registerBuilderResources(
   shapes: readonly Shape[],
   resourceStore: ResourceStore,
-  options: PrepareSlideResourcesOptions,
+  options: BuilderResourceOptions = {},
 ): void {
   for (const shape of shapes) {
     if (shape.type !== "graphicFrame") {

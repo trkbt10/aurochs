@@ -9,7 +9,8 @@
 
 import type { Slide } from "@aurochs-office/pptx/app/types";
 import { renderSlideSvgIntegrated } from "../slide-render";
-import { buildSlideRenderContext } from "../context/api-render-context";
+import { createSlideContextFromApiSlide } from "@aurochs-office/pptx/parser/slide/context";
+import { DEFAULT_RENDER_OPTIONS } from "../render-options";
 
 /**
  * Result of rendering a slide to SVG.
@@ -30,12 +31,7 @@ export type SvgRenderResult = {
  * @returns SVG string and any warnings
  */
 export function renderSlideToSvg(slide: Slide): SvgRenderResult {
-  const slideRenderCtx = buildSlideRenderContext({
-    apiSlide: slide,
-    zip: slide.zip,
-    defaultTextStyle: slide.defaultTextStyle,
-    renderOptions: slide.renderOptions,
-  });
+  const slideRenderCtx = createSlideContextFromApiSlide(slide, slide.renderOptions ?? DEFAULT_RENDER_OPTIONS);
   const result = renderSlideSvgIntegrated(slide.content, slideRenderCtx, slide.slideSize);
   return {
     svg: result.svg,
