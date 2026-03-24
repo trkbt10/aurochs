@@ -9,6 +9,7 @@ import { parseXml, getByPath, getChildren } from "@aurochs/xml";
 import { createEmptyZipPackage } from "@aurochs/zip";
 import type { PresentationDocument } from "@aurochs-office/pptx/app/presentation-document";
 import { EMPTY_FONT_SCHEME } from "@aurochs-office/ooxml/domain/font-scheme";
+import { createResourceStore } from "@aurochs-office/pptx/domain/resource-store";
 import { addSlideLayout, deleteSlideLayout, duplicateSlideLayout } from "./layout-ops";
 
 // =============================================================================
@@ -98,7 +99,6 @@ function createMinimalPptxDoc(): PresentationDocument {
   );
 
   const presentationFile = pkg.asPresentationFile();
-  const emptyResolver = { getTarget: () => undefined, getType: () => undefined, resolve: () => undefined, getMimeType: () => undefined, getFilePath: () => undefined, readFile: () => null, getResourceByType: () => undefined };
   return {
     presentation: { slideSize: { width: 9144000, height: 6858000 } },
     slides: [],
@@ -106,7 +106,7 @@ function createMinimalPptxDoc(): PresentationDocument {
     slideHeight: 6858000,
     colorContext: { colorScheme: {}, colorMap: {} },
     fontScheme: EMPTY_FONT_SCHEME,
-    resources: emptyResolver,
+    resourceStore: createResourceStore(),
     presentationFile,
   } satisfies PresentationDocument;
 }

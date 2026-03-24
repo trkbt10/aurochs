@@ -22,7 +22,7 @@ export function createDiagramRenderContext<TShape>(
 
   return {
     renderShape,
-    getResource: <TParsed>(resourceId: string) => ctx.resourceStore?.get<TParsed>(resourceId),
+    getResource: <TParsed>(resourceId: string) => ctx.resourceStore.get<TParsed>(resourceId),
     warnings: ctx.warnings,
   };
 }
