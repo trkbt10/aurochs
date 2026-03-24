@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-03-24
+
 ### Added
 
 - PPTX domain types export (`aurochs/pptx/domain`) for type-safe PPTX content access
@@ -222,7 +224,8 @@ Project inception.
 - Text body and paragraph rendering
 - Theme and style support
 
-[Unreleased]: https://github.com/trkbt10/aurochs/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/trkbt10/aurochs/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/trkbt10/aurochs/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/trkbt10/aurochs/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/trkbt10/aurochs/compare/v0.6.4...v0.7.0
 [0.6.4]: https://github.com/trkbt10/aurochs/compare/v0.6.0...v0.6.4
