@@ -13,14 +13,4 @@ export {
   createDefaultSolidFill,
   createNoFill,
 } from "./BaseFillEditor";
-export {
-  GradientStopEditor,
-  type GradientStopEditorProps,
-  createDefaultGradientStop,
-} from "./GradientStopEditor";
-export {
-  GradientStopsEditor,
-  type GradientStopsEditorProps,
-  createDefaultGradientStops,
-} from "./GradientStopsEditor";
 export { schemeColorNameOptions, schemeColorValueOptions, patternPresetOptions } from "./color-options";

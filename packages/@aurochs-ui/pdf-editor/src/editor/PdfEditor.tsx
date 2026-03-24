@@ -34,6 +34,7 @@ import { PdfPageListPanel } from "./components/PdfPageListPanel";
 import { PdfLayerPanel } from "./components/PdfLayerPanel";
 import { PdfMultiSelectPanel } from "./components/PdfMultiSelectPanel";
 import { PdfTextEditController } from "./text-edit";
+import { ColorEditingProvider } from "@aurochs-ui/color-editor/context";
 
 const _RULER_THICKNESS = 20;
 
@@ -498,13 +499,15 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
   );
 
   return (
-    <EditorShell
-      toolbar={toolbar}
-      panels={panels}
-      className={className}
-    >
-      {centerContent}
-    </EditorShell>
+    <ColorEditingProvider>
+      <EditorShell
+        toolbar={toolbar}
+        panels={panels}
+        className={className}
+      >
+        {centerContent}
+      </EditorShell>
+    </ColorEditingProvider>
   );
 }
 

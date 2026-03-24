@@ -9,13 +9,12 @@ import { useCallback, type CSSProperties, type ReactNode } from "react";
 import { Select } from "@aurochs-ui/ui-components/primitives";
 import { FieldRow } from "@aurochs-ui/ui-components/layout";
 import { FillPickerPopover, ColorPickerPopover } from "@aurochs-ui/color-editor";
-import type { BaseFill, SolidFill, GradientFill, PatternFill, LinearGradient, NoFill } from "@aurochs-office/drawing-ml/domain/fill";
-import { deg } from "@aurochs-office/drawing-ml/domain/units";
+import { AdaptedGradientEditor } from "@aurochs-ui/color-editor/composed";
+import type { BaseFill, SolidFill, GradientFill, PatternFill, NoFill } from "@aurochs-office/drawing-ml/domain/fill";
+import { deg, pct } from "@aurochs-office/drawing-ml/domain/units";
 import type { EditorProps, SelectOption } from "@aurochs-ui/ui-components/types";
 import { colorTokens, fontTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { createDefaultColor } from "./ColorEditor";
-import { GradientStopsEditor, createDefaultGradientStops } from "./GradientStopsEditor";
-import { DegreesEditor } from "../primitives/DegreesEditor";
 import { patternPresetOptions } from "./color-options";
 
 // =============================================================================
@@ -86,7 +85,10 @@ function createDefaultFill(type: FillType, extensions?: readonly FillTypeExtensi
     case "gradientFill":
       return {
         type: "gradientFill",
-        stops: createDefaultGradientStops(),
+        stops: [
+          { position: pct(0), color: createDefaultColor("000000") },
+          { position: pct(100), color: createDefaultColor("FFFFFF") },
+        ],
         linear: { angle: deg(90), scaled: true },
         rotWithShape: true,
       };
@@ -223,7 +225,6 @@ export function BaseFillEditor({
   // Gradient Fill
   if (value.type === "gradientFill") {
     const gradientFill = value as GradientFill;
-    const angle = gradientFill.linear?.angle ?? 0;
 
     return (
       <div className={className} style={{ ...containerStyle, ...style }}>
@@ -236,20 +237,10 @@ export function BaseFillEditor({
             disabled={disabled}
             style={typeSelectStyle}
           />
-          <DegreesEditor
-            value={deg(angle)}
-            onChange={(a) =>
-              onChange({
-                ...gradientFill,
-                linear: { ...(gradientFill.linear ?? { scaled: true }), angle: a } as LinearGradient,
-              })
-            }
-            disabled={disabled}
-          />
         </div>
-        <GradientStopsEditor
-          value={gradientFill.stops}
-          onChange={(stops) => onChange({ ...gradientFill, stops })}
+        <AdaptedGradientEditor
+          value={gradientFill}
+          onChange={(fill) => onChange(fill)}
           disabled={disabled}
         />
       </div>

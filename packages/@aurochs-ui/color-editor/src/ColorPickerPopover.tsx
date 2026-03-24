@@ -1,19 +1,12 @@
 /**
  * @file ColorPickerPopover component
  *
- * Adobe/Figma-style color picker that opens in a popover.
- * Displays a color swatch that, when clicked, opens a popover with RGB/HSL sliders.
- * Uses design tokens for consistent styling.
+ * API-compatible wrapper over AdaptedColorPicker.
+ * Delegates to react-editor-ui's ColorPicker via Popover(unstyled).
  */
 
-import { useCallback, useMemo, type CSSProperties, type ReactNode } from "react";
-import type { SolidFill } from "@aurochs-office/drawing-ml/domain/fill";
-import { pct } from "@aurochs-office/drawing-ml/domain/units";
-import { Popover } from "@aurochs-ui/ui-components/primitives";
-import { LabeledSlider } from "./LabeledSlider";
-import { FillPreview } from "./FillPreview";
-import { HexColorEditor } from "./components";
-import { colorTokens, radiusTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
+import type { ReactNode } from "react";
+import { AdaptedColorPicker } from "./composed/AdaptedColorPicker";
 
 export type ColorPickerPopoverProps = {
   /** Hex color value (6 characters, no #) */
@@ -32,75 +25,10 @@ export type ColorPickerPopoverProps = {
   readonly trigger?: ReactNode;
 };
 
-const defaultTriggerStyle: CSSProperties = {
-  width: "24px",
-  height: "24px",
-  borderRadius: radiusTokens.sm,
-  cursor: "pointer",
-  border: `1px solid var(--border-subtle, ${colorTokens.border.subtle})`,
-  overflow: "hidden",
-};
-
-const popoverContentStyle: CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  gap: spacingTokens.md,
-  width: "240px",
-};
-
 /**
  * A color picker popover triggered by clicking a color swatch.
- * Provides RGB and HSL slider modes for color adjustment.
+ * Internally delegates to react-editor-ui's ColorPicker.
  */
-export function ColorPickerPopover({
-  value,
-  onChange,
-  alpha = 1,
-  onAlphaChange,
-  showAlpha = false,
-  disabled,
-  trigger,
-}: ColorPickerPopoverProps) {
-  const handleAlphaChange = useCallback(
-    (v: number) => {
-      onAlphaChange?.(v / 100);
-    },
-    [onAlphaChange],
-  );
-
-  const fill = useMemo(
-    (): SolidFill => ({
-      type: "solidFill",
-      color: {
-        spec: { type: "srgb", value },
-        transform: alpha < 1 ? { alpha: pct(alpha * 100) } : undefined,
-      },
-    }),
-    [value, alpha],
-  );
-
-  const triggerElement = trigger ?? (
-    <div style={{ ...defaultTriggerStyle, opacity: disabled ? 0.5 : 1 }}>
-      <FillPreview fill={fill} />
-    </div>
-  );
-
-  return (
-    <Popover trigger={triggerElement} align="start" side="bottom" disabled={disabled}>
-      <div style={popoverContentStyle}>
-        <HexColorEditor value={value} onChange={onChange} alpha={alpha} />
-
-        {showAlpha && onAlphaChange && (
-          <LabeledSlider
-            label="A"
-            value={Math.round(alpha * 100)}
-            onChange={handleAlphaChange}
-            min={0}
-            max={100}
-            suffix="%"
-          />
-        )}
-      </div>
-    </Popover>
-  );
+export function ColorPickerPopover(props: ColorPickerPopoverProps) {
+  return <AdaptedColorPicker {...props} />;
 }

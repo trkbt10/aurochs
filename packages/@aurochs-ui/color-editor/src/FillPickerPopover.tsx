@@ -1,16 +1,16 @@
 /**
  * @file FillPickerPopover component
  *
- * Popover for editing Fill values (NoFill, Solid, Gradient).
+ * Popover for editing Fill values.
+ * Uses react-editor-ui's FillPanel internally while maintaining API compatibility.
  */
 
-import { useCallback, type CSSProperties, type ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { Popover } from "@aurochs-ui/ui-components/primitives";
-import { Select } from "@aurochs-ui/ui-components/primitives";
 import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
+import { colorTokens, radiusTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { FillPreview } from "./FillPreview";
-import { fillTypeOptions, createDefaultFill, SolidFillEditor, GradientFillEditor, type FillType } from "./fill";
-import { colorTokens, radiusTokens, spacingTokens, fontTokens } from "@aurochs-ui/ui-components/design-tokens";
+import { AdaptedFillPanel } from "./composed/AdaptedFillPanel";
 
 export type FillPickerPopoverProps = {
   /** Current fill value */
@@ -33,36 +33,15 @@ const defaultTriggerStyle: CSSProperties = {
 };
 
 const popoverContentStyle: CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  gap: spacingTokens.md,
+  padding: spacingTokens.md,
   width: "260px",
-};
-
-const headerStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: spacingTokens.sm,
-};
-
-const noFillMessageStyle: CSSProperties = {
-  textAlign: "center",
-  color: "var(--text-tertiary)",
-  fontSize: fontTokens.size.md,
-  padding: "16px 0",
 };
 
 /**
  * A fill picker popover for editing Fill values.
+ * Internally delegates to react-editor-ui's FillPanel via AdaptedFillPanel.
  */
 export function FillPickerPopover({ value, onChange, disabled, trigger }: FillPickerPopoverProps) {
-  const handleTypeChange = useCallback(
-    (newType: string) => {
-      onChange(createDefaultFill(newType as FillType));
-    },
-    [onChange],
-  );
-
   const triggerElement = trigger ?? (
     <div style={{ ...defaultTriggerStyle, opacity: disabled ? 0.5 : 1 }}>
       <FillPreview fill={value} />
@@ -72,15 +51,7 @@ export function FillPickerPopover({ value, onChange, disabled, trigger }: FillPi
   return (
     <Popover trigger={triggerElement} align="start" side="bottom" disabled={disabled}>
       <div style={popoverContentStyle}>
-        <div style={headerStyle}>
-          <Select value={value.type} onChange={handleTypeChange} options={fillTypeOptions} style={{ flex: 1 }} />
-        </div>
-
-        {value.type === "noFill" && <div style={noFillMessageStyle}>No fill</div>}
-
-        {value.type === "solidFill" && <SolidFillEditor value={value} onChange={onChange} />}
-
-        {value.type === "gradientFill" && <GradientFillEditor value={value} onChange={onChange} />}
+        <AdaptedFillPanel value={value} onChange={onChange} disabled={disabled} />
       </div>
     </Popover>
   );

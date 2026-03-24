@@ -163,9 +163,12 @@
       "name": "@aurochs-builder/pptx",
       "version": "0.8.0",
       "dependencies": {
+        "@aurochs-builder/chart": "workspace:*",
         "@aurochs-builder/core": "workspace:*",
+        "@aurochs-builder/diagram": "workspace:*",
         "@aurochs-builder/drawing-ml": "workspace:*",
         "@aurochs-office/chart": "workspace:*",
+        "@aurochs-office/diagram": "workspace:*",
         "@aurochs-office/ooxml": "workspace:*",
         "@aurochs-office/opc": "workspace:*",
         "@aurochs-office/pptx": "workspace:*",
@@ -634,6 +637,7 @@
         "@aurochs-office/drawing-ml": "workspace:*",
         "@aurochs-ui/ui-components": "workspace:*",
         "@aurochs/color": "workspace:*",
+        "react-editor-ui": "^0.4.0",
       },
       "peerDependencies": {
         "react": "^18.0.0 || ^19.0.0",
@@ -775,6 +779,7 @@
       "version": "0.8.0",
       "dependencies": {
         "@aurochs-builder/chart": "workspace:*",
+        "@aurochs-builder/diagram": "workspace:*",
         "@aurochs-builder/pptx": "workspace:*",
         "@aurochs-office/chart": "workspace:*",
         "@aurochs-office/pptx": "workspace:*",

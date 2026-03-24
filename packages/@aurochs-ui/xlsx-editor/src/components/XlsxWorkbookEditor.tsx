@@ -15,6 +15,7 @@ import { XlsxWorkbookToolbar } from "./toolbar/XlsxWorkbookToolbar";
 import { XlsxCellFormatPanel } from "./format-panel/XlsxCellFormatPanel";
 import { XlsxSheetPanel } from "./sheet-panel/XlsxSheetPanel";
 import { XlsxSheetTabBar } from "./sheet-tab-bar";
+import { ColorEditingProvider } from "@aurochs-ui/color-editor/context";
 
 export type XlsxWorkbookEditorProps = {
   readonly workbook: XlsxWorkbook;
@@ -99,9 +100,11 @@ export function XlsxWorkbookEditor({ workbook, grid, style, onWorkbookChange }: 
         ...style,
       }}
     >
-      <XlsxWorkbookEditorProvider initialWorkbook={workbook} onWorkbookChange={onWorkbookChange}>
-        <XlsxWorkbookEditorInner grid={grid} />
-      </XlsxWorkbookEditorProvider>
+      <ColorEditingProvider>
+        <XlsxWorkbookEditorProvider initialWorkbook={workbook} onWorkbookChange={onWorkbookChange}>
+          <XlsxWorkbookEditorInner grid={grid} />
+        </XlsxWorkbookEditorProvider>
+      </ColorEditingProvider>
     </div>
   );
 }

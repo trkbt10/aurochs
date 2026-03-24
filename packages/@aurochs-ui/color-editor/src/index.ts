@@ -1,33 +1,17 @@
 /**
  * @file Color editor exports
  *
- * Generic color editor components independent of specific document formats.
- * Uses DrawingML types from @aurochs-office/drawing-ml for fill representations.
+ * Color editing components and utilities.
+ * UI components delegate to react-editor-ui internally.
+ * Adapters convert between DrawingML types and react-editor-ui types.
  */
 
 // Visualization
 export { FillPreview, type FillPreviewProps } from "./FillPreview";
 
-// Popovers
+// Popovers (API-compatible wrappers over react-editor-ui)
 export { ColorPickerPopover, type ColorPickerPopoverProps } from "./ColorPickerPopover";
 export { FillPickerPopover, type FillPickerPopoverProps } from "./FillPickerPopover";
-
-// Labeled slider
-export { LabeledSlider, type LabeledSliderProps } from "./LabeledSlider";
-
-// Input components
-export {
-  RgbSliders,
-  type RgbSlidersProps,
-  HslSliders,
-  type HslSlidersProps,
-  ColorModeSliders,
-  type ColorModeSlidersProps,
-  ColorPreviewInput,
-  type ColorPreviewInputProps,
-  HexColorEditor,
-  type HexColorEditorProps,
-} from "./components";
 
 // Conversion utilities
 export {
@@ -49,10 +33,44 @@ export {
   createDefaultFill,
   getHexFromColor,
   getStopHex,
-  SolidFillEditor,
-  type SolidFillEditorProps,
-  GradientStopRow,
-  type GradientStopRowProps,
-  GradientFillEditor,
-  type GradientFillEditorProps,
 } from "./fill";
+
+// Adapters (DrawingML ↔ react-editor-ui)
+export {
+  toReactHex,
+  fromReactHex,
+  colorToColorValue,
+  colorValueToColor,
+  gradientFillToGradientValue,
+  gradientValueToGradientFill,
+  baseFillToFillValue,
+  fillValueToBaseFill,
+  type ReuiColorValue,
+  type ReuiGradientType,
+  type ReuiGradientStop,
+  type ReuiGradientValue,
+  type ReuiSolidFillValue,
+  type ReuiGradientFillValue,
+  type ReuiFillValue,
+  type ReuiFillValueInput,
+} from "./adapters";
+
+// Composed components (react-editor-ui wrapped with DrawingML props)
+export {
+  AdaptedColorPicker,
+  type AdaptedColorPickerProps,
+  AdaptedColorInput,
+  type AdaptedColorInputProps,
+  AdaptedFillPanel,
+  type AdaptedFillPanelProps,
+  AdaptedGradientEditor,
+  type AdaptedGradientEditorProps,
+} from "./composed";
+
+// Context
+export {
+  ColorEditingProvider,
+  useColorEditing,
+  type ColorEditingContextValue,
+  type ColorEditingProviderProps,
+} from "./context";

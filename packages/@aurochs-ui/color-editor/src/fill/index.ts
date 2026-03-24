@@ -1,5 +1,5 @@
 /**
- * @file Fill editor components exports
+ * @file Fill utility exports
  */
 
 export {
@@ -10,7 +10,3 @@ export {
   getHexFromColor,
   getStopHex,
 } from "./fill-utils";
-
-export { SolidFillEditor, type SolidFillEditorProps } from "./SolidFillEditor";
-export { GradientStopRow, type GradientStopRowProps } from "./GradientStopRow";
-export { GradientFillEditor, type GradientFillEditorProps } from "./GradientFillEditor";

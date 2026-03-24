@@ -42,6 +42,12 @@ export type PopoverProps = {
   readonly className?: string;
   /** Content padding. Default: spacingTokens.md (12px). Set to "0" to disable. */
   readonly padding?: string;
+  /**
+   * Unstyled mode: Popover only provides positioning, portal, and overlay.
+   * No container chrome (background, border, shadow, border-radius) is applied.
+   * Use when children provide their own container chrome.
+   */
+  readonly unstyled?: boolean;
 };
 
 const overlayStyle: CSSProperties = {
@@ -60,6 +66,12 @@ const contentBaseStyle: CSSProperties = {
   maxWidth: "400px",
   maxHeight: "80vh",
   overflow: "auto",
+};
+
+/** Unstyled mode: positioning only. No container chrome. */
+const contentUnstyledStyle: CSSProperties = {
+  position: "fixed",
+  zIndex: 1000,
 };
 
 const defaultPadding = spacingTokens.md;
@@ -184,6 +196,7 @@ export function Popover({
   disabled,
   className,
   padding,
+  unstyled = false,
 }: PopoverProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const isControlled = controlledOpen !== undefined;
@@ -303,8 +316,8 @@ export function Popover({
             <div
               ref={contentRef}
               style={{
-                ...contentBaseStyle,
-                padding: padding ?? defaultPadding,
+                ...(unstyled ? contentUnstyledStyle : contentBaseStyle),
+                ...(unstyled ? {} : { padding: padding ?? defaultPadding }),
                 top: resolvedPosition.top,
                 left: resolvedPosition.left,
                 visibility: position ? "visible" : "hidden",

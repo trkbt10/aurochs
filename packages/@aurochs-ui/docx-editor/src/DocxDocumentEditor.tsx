@@ -17,6 +17,7 @@ import { DocumentToolbar } from "./panels/DocumentToolbar";
 import { SelectedElementPanel } from "./panels/SelectedElementPanel";
 import { DocxPageListPanel } from "./panels/DocxPageListPanel";
 import { ContinuousEditor } from "./text-edit/ContinuousEditor";
+import { ColorEditingProvider } from "@aurochs-ui/color-editor/context";
 
 // =============================================================================
 // Types
@@ -164,9 +165,11 @@ export function DocxDocumentEditor({
 }: DocxDocumentEditorProps) {
   return (
     <div style={{ ...editorContainerStyle, ...style }} className={className}>
-      <DocumentEditorProvider initialDocument={initialDocument}>
-        <DocxDocumentEditorInner />
-      </DocumentEditorProvider>
+      <ColorEditingProvider>
+        <DocumentEditorProvider initialDocument={initialDocument}>
+          <DocxDocumentEditorInner />
+        </DocumentEditorProvider>
+      </ColorEditingProvider>
     </div>
   );
 }

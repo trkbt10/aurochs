@@ -7,7 +7,8 @@
   "dependencies": {
     "@aurochs-office/drawing-ml": "workspace:*",
     "@aurochs-ui/ui-components": "workspace:*",
-    "@aurochs/color": "workspace:*"
+    "@aurochs/color": "workspace:*",
+    "react-editor-ui": "^0.4.0"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",
@@ -22,6 +23,18 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./adapters": {
+      "types": "./src/adapters/index.ts",
+      "default": "./src/adapters/index.ts"
+    },
+    "./context": {
+      "types": "./src/context/index.ts",
+      "default": "./src/context/index.ts"
+    },
+    "./composed": {
+      "types": "./src/composed/index.ts",
+      "default": "./src/composed/index.ts"
     }
   }
 }

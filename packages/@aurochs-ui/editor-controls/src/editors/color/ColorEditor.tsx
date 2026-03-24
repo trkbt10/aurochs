@@ -6,7 +6,7 @@
  * Parent provides semantic labels (e.g., "Fill Color", "Text Color").
  */
 
-import { useCallback, useMemo, useState, type CSSProperties } from "react";
+import { useCallback, useState, type CSSProperties } from "react";
 import { Button, Select } from "@aurochs-ui/ui-components/primitives";
 import { ColorPickerPopover } from "@aurochs-ui/color-editor";
 import { ColorTransformEditor } from "./ColorTransformEditor";
@@ -14,9 +14,7 @@ import { createDefaultSrgbColor } from "./ColorSpecEditor";
 import type { Color, ColorSpec, ColorTransform, SrgbColor, SchemeColor } from "@aurochs-office/drawing-ml/domain/color";
 import type { EditorProps, SelectOption } from "@aurochs-ui/ui-components/types";
 import { schemeColorNameOptions } from "./color-options";
-import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
-import { resolveColor } from "@aurochs-office/drawing-ml/domain/color-resolution";
-import { useEditorConfig } from "../../editor-config";
+import { useColorEditing } from "@aurochs-ui/color-editor/context";
 
 export type ColorEditorProps = EditorProps<Color> & {
   readonly style?: CSSProperties;
@@ -58,13 +56,13 @@ function createDefaultColorSpec(type: ColorSpecType): ColorSpec {
 }
 
 function getHexPreview(
+  resolveToHex: (color: Color) => string,
   spec: ColorSpec,
-  colorContext: ColorContext | undefined,
   transform: ColorTransform | undefined,
 ): string {
-  const resolved = resolveColor({ spec, transform }, colorContext);
-  // Note: ECMA-376 does not define a fallback display color; this is UI-only.
-  return resolved ?? "000000";
+  const reactHex = resolveToHex({ spec, transform });
+  // resolveToHex returns "#rrggbb", strip # for bare hex
+  return reactHex.replace(/^#/, "").toUpperCase();
 }
 
 /**
@@ -80,14 +78,7 @@ export function ColorEditor({
   showTransform = false,
   showModeSwitch = false,
 }: ColorEditorProps) {
-  const { colorScheme, colorMap } = useEditorConfig();
-  const colorContext = useMemo<ColorContext>(
-    () => ({
-      colorScheme: colorScheme ?? {},
-      colorMap: colorMap ?? {},
-    }),
-    [colorScheme, colorMap],
-  );
+  const { resolveToHex } = useColorEditing();
   const [transformExpanded, setTransformExpanded] = useState(!!value.transform);
 
   const handleSpecChange = useCallback(
@@ -170,7 +161,7 @@ export function ColorEditor({
       <div className={className} style={style}>
         <div style={containerStyle}>
           <ColorPickerPopover
-            value={getHexPreview(value.spec, colorContext, value.transform)}
+            value={getHexPreview(resolveToHex, value.spec, value.transform)}
             onChange={handleHexChange}
             disabled={disabled}
           />
@@ -200,7 +191,7 @@ export function ColorEditor({
     <div className={className} style={style}>
       <div style={containerStyle}>
         <ColorPickerPopover
-          value={getHexPreview(value.spec, colorContext, value.transform)}
+          value={getHexPreview(resolveToHex, value.spec, value.transform)}
           onChange={handleHexChange}
           disabled={disabled}
         />
