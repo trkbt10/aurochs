@@ -9,7 +9,8 @@ import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
 import { EMPTY_FONT_SCHEME } from "@aurochs-office/ooxml/domain/font-scheme";
-import { createEmptyResourceResolver } from "@aurochs-office/pptx/domain/resource-resolver";
+import type { ResourceStore } from "@aurochs-office/pptx/domain/resource-store";
+import { createResourceStore } from "@aurochs-office/pptx/domain/resource-store";
 import type { PresentationDocument, SlideWithId } from "@aurochs-office/pptx/app";
 
 // =============================================================================
@@ -39,7 +40,7 @@ export function createDocumentFromPresentation({
   slideWidth,
   slideHeight,
   colorContext = EMPTY_COLOR_CONTEXT,
-  resources = createEmptyResourceResolver(),
+  resourceStore = createResourceStore(),
   fontScheme = EMPTY_FONT_SCHEME,
 }: {
   presentation: Presentation;
@@ -47,7 +48,7 @@ export function createDocumentFromPresentation({
   slideWidth: Pixels;
   slideHeight: Pixels;
   colorContext?: ColorContext;
-  resources?: ResourceResolver;
+  resourceStore?: ResourceStore;
   fontScheme?: FontScheme;
 }): PresentationDocument {
   return {
@@ -56,7 +57,7 @@ export function createDocumentFromPresentation({
     slideWidth,
     slideHeight,
     colorContext,
-    resources,
+    resourceStore,
     fontScheme,
   };
 }
@@ -73,7 +74,7 @@ export function createEmptyDocument(slideWidth: Pixels, slideHeight: Pixels): Pr
     slideWidth,
     slideHeight,
     colorContext: EMPTY_COLOR_CONTEXT,
-    resources: createEmptyResourceResolver(),
+    resourceStore: createResourceStore(),
     fontScheme: EMPTY_FONT_SCHEME,
   };
 }

@@ -16,8 +16,6 @@ import type { CoreRenderContext } from "../render-context";
 import type { RenderOptions } from "../render-options";
 import { DEFAULT_RENDER_OPTIONS } from "../render-options";
 import type { ResolvedBackgroundFill } from "@aurochs-office/drawing-ml/domain/background-fill";
-import type { ResourceResolver } from "@aurochs-office/pptx/domain/resource-resolver";
-import { createEmptyResourceResolver } from "@aurochs-office/pptx/domain/resource-resolver";
 import type { ResourceStore } from "@aurochs-office/pptx/domain/resource-store";
 import { createResourceStore } from "@aurochs-office/pptx/domain/resource-store";
 import { createWarningCollector } from "@aurochs-office/ooxml";
@@ -42,7 +40,6 @@ export type RenderProviderProps = {
   readonly children: ReactNode;
   readonly slideSize: SlideSize;
   readonly colorContext?: ColorContext;
-  readonly resources?: ResourceResolver;
   readonly resourceStore?: ResourceStore;
   readonly fontScheme?: FontScheme;
   readonly options?: Partial<RenderOptions>;
@@ -57,7 +54,6 @@ export type RenderProviderProps = {
 // =============================================================================
 
 const RenderContext = createContext<ReactRenderContext | null>(null);
-const RenderResourcesContext = createContext<ResourceResolver | null>(null);
 
 // =============================================================================
 // Provider
@@ -70,7 +66,6 @@ export function RenderProvider({
   children,
   slideSize,
   colorContext,
-  resources,
   resourceStore,
   fontScheme,
   options,
@@ -78,7 +73,6 @@ export function RenderProvider({
   layoutShapes,
   tableStyles,
 }: RenderProviderProps) {
-  const resolvedResources = useMemo(() => resources ?? createEmptyResourceResolver(), [resources]);
   const resolvedResourceStore = useMemo(() => resourceStore ?? createResourceStore(), [resourceStore]);
 
   const resolvedColorContext = useMemo<ColorContext>(
@@ -90,7 +84,7 @@ export function RenderProvider({
 
   const warnings = useMemo(
     () => createWarningCollector(),
-    [slideSize, resolvedResources, resolvedColorContext, resolvedOptions, resolvedBackground, fontScheme, layoutShapes],
+    [slideSize, resolvedResourceStore, resolvedColorContext, resolvedOptions, resolvedBackground, fontScheme, layoutShapes],
   );
 
   const ctx = useMemo<ReactRenderContext>(
@@ -98,7 +92,6 @@ export function RenderProvider({
       slideSize,
       options: resolvedOptions,
       colorContext: resolvedColorContext,
-      resources: resolvedResources,
       resourceStore: resolvedResourceStore,
       warnings,
       resolvedBackground,
@@ -110,7 +103,6 @@ export function RenderProvider({
       slideSize,
       resolvedOptions,
       resolvedColorContext,
-      resolvedResources,
       resolvedResourceStore,
       warnings,
       fontScheme,
@@ -136,8 +128,8 @@ export function RenderProvider({
 
   // Create resource resolver for DrawingML
   const resolveResource = useMemo(
-    () => (resourceId: string) => resolvedResources.resolve(resourceId),
-    [resolvedResources],
+    () => (resourceId: string) => resolvedResourceStore.toDataUrl(resourceId),
+    [resolvedResourceStore],
   );
 
   // Create ID generator for DrawingML defs
@@ -145,18 +137,16 @@ export function RenderProvider({
   const getNextId = useMemo(() => (prefix: string) => `${prefix}-${defIdRef.value++}`, [defIdRef]);
 
   return (
-    <RenderResourcesContext.Provider value={resolvedResources}>
-      <RenderContext.Provider value={ctx}>
-        <DrawingMLProvider
-          colorContext={resolvedColorContext}
-          resolveResource={resolveResource}
-          getNextId={getNextId}
-          warnings={drawingMLWarnings}
-        >
-          {children}
-        </DrawingMLProvider>
-      </RenderContext.Provider>
-    </RenderResourcesContext.Provider>
+    <RenderContext.Provider value={ctx}>
+      <DrawingMLProvider
+        colorContext={resolvedColorContext}
+        resolveResource={resolveResource}
+        getNextId={getNextId}
+        warnings={drawingMLWarnings}
+      >
+        {children}
+      </DrawingMLProvider>
+    </RenderContext.Provider>
   );
 }
 
@@ -174,17 +164,6 @@ export function useRenderContext(): ReactRenderContext {
     throw new Error("useRenderContext must be used within a RenderProvider");
   }
   return ctx;
-}
-
-/**
- * Access resource resolver without subscribing to the full render context.
- */
-export function useRenderResources(): ResourceResolver {
-  const resources = useContext(RenderResourcesContext);
-  if (resources === null) {
-    throw new Error("useRenderResources must be used within a RenderProvider");
-  }
-  return resources;
 }
 
 /**
@@ -206,7 +185,6 @@ export function createDefaultReactRenderContext(): ReactRenderContext {
     slideSize: { width: px(960) as Pixels, height: px(540) as Pixels },
     options: DEFAULT_RENDER_OPTIONS,
     colorContext: { colorScheme: {}, colorMap: {} },
-    resources: createEmptyResourceResolver(),
     resourceStore: createResourceStore(),
     warnings: createWarningCollector(),
   };

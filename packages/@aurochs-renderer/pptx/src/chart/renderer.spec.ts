@@ -24,6 +24,7 @@ import type {
   BubbleSeries,
 } from "@aurochs-office/chart/domain";
 import { createCoreRenderContext } from "../render-context";
+import { createResourceStore } from "@aurochs-office/pptx/domain/resource-store";
 import { pct, deg, px } from "@aurochs-office/drawing-ml/domain/units";
 import { loadPptxFile } from "../../scripts/lib/pptx-loader";
 import { resolveRepoPath } from "../test-utils/repo-paths";
@@ -192,6 +193,7 @@ function createMockLineSeries(values: number[], name: string = "Series 1"): Line
 describe("Chart renderer unit tests", () => {
   const ctx = createCoreRenderContext({
     slideSize: { width: px(800), height: px(600) },
+    resourceStore: createResourceStore(),
   });
 
   describe("barDir - ECMA-376 Section 21.2.3.3", () => {

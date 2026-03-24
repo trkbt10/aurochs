@@ -102,6 +102,7 @@ import type { Theme } from "@aurochs-office/pptx/domain/theme/types";
 import type { FontSpec } from "@aurochs-office/ooxml/domain/font-scheme";
 import { resolveEditingTheme } from "./resolve-editing-theme";
 import { slideColorMappingForEditor } from "@aurochs-ui/pptx-slide-canvas/slide/color-mapping-for-editor";
+import { ColorEditingProvider } from "@aurochs-ui/color-editor/context";
 
 // =============================================================================
 // Local constants (PPTX-specific, not part of shared EditorShell)
@@ -641,7 +642,6 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
       const renderCtx = createCoreRenderContext({
         slideSize: previewSlideSize,
         colorContext: document.colorContext,
-        resources: document.resources,
         fontScheme: document.fontScheme,
         resourceStore: document.resourceStore ?? createResourceStore(),
       });
@@ -652,7 +652,6 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
       document.slides,
       document.presentationFile,
       document.colorContext,
-      document.resources,
       document.fontScheme,
       previewSlideSize,
     ],
@@ -1109,7 +1108,6 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
           selectedShapes={selectedShapes}
           contextMenuActions={contextMenuActions}
           colorContext={colorContext}
-          resources={renderContext?.resources ?? document.resources}
           resourceStore={editorResourceStore}
           fontScheme={fontScheme}
           resolvedBackground={renderContext?.resolvedBackground ?? activeSlide?.resolvedBackground}
@@ -1162,7 +1160,6 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
     contextMenuActions,
     colorContext,
     renderContext,
-    document.resources,
     document.embeddedFontCss,
     editorResourceStore,
     fontScheme,
@@ -1290,18 +1287,23 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
   }
 
   return (
-    <TextEditContextProvider value={textEditContextValue}>
-      {isPreviewOpen && (
-        <PresentationSlideshow
-          slideCount={document.slides.length}
-          slideSize={previewSlideSize}
-          startSlideIndex={startSlideIndex}
-          getSlideContent={getPreviewSlideContent}
-          onExit={closePreview}
-        />
-      )}
-      {renderEditorBody()}
-    </TextEditContextProvider>
+    <ColorEditingProvider
+      colorScheme={colorContext.colorScheme}
+      colorMap={colorContext.colorMap}
+    >
+      <TextEditContextProvider value={textEditContextValue}>
+        {isPreviewOpen && (
+          <PresentationSlideshow
+            slideCount={document.slides.length}
+            slideSize={previewSlideSize}
+            startSlideIndex={startSlideIndex}
+            getSlideContent={getPreviewSlideContent}
+            onExit={closePreview}
+          />
+        )}
+        {renderEditorBody()}
+      </TextEditContextProvider>
+    </ColorEditingProvider>
   );
 }
 

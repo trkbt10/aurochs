@@ -8,7 +8,7 @@ import { px } from "@aurochs-office/drawing-ml/domain/units";
 import type { Slide } from "@aurochs-office/pptx/domain";
 import type { PresentationDocument, SlideWithId } from "@aurochs-office/pptx/app";
 import { EMPTY_FONT_SCHEME } from "@aurochs-office/ooxml/domain/font-scheme";
-import { createEmptyResourceResolver } from "@aurochs-office/pptx/domain/resource-resolver";
+import { createResourceStore } from "@aurochs-office/pptx/domain/resource-store";
 import { generateSlideId, findSlideById, getSlideIndex, updateSlide, updateSlideEntry } from "./slide";
 
 // NOTE: addSlide, duplicateSlide, deleteSlide, moveSlide require presentationFile
@@ -32,7 +32,7 @@ function createTestDocument(slideCount = 3): PresentationDocument {
     slideWidth: px(960),
     slideHeight: px(540),
     colorContext: { colorScheme: {}, colorMap: {} },
-    resources: createEmptyResourceResolver(),
+    resourceStore: createResourceStore(),
     fontScheme: EMPTY_FONT_SCHEME,
   };
 }

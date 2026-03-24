@@ -87,14 +87,6 @@ describe("font rendering in SVG output", () => {
         slide={slide}
         slideSize={{ width: px(200), height: px(200) }}
         colorContext={{ colorScheme: {}, colorMap: {} }}
-        resources={{
-          getTarget: () => undefined,
-          getType: () => undefined,
-          resolve: () => undefined,
-          getMimeType: () => undefined,
-          getFilePath: () => undefined,
-          readFile: () => null,
-        }}
       />,
     );
 
@@ -120,14 +112,6 @@ describe("font rendering in SVG output", () => {
         slide={slide}
         slideSize={{ width: px(200), height: px(200) }}
         colorContext={{ colorScheme: {}, colorMap: {} }}
-        resources={{
-          getTarget: () => undefined,
-          getType: () => undefined,
-          resolve: () => undefined,
-          getMimeType: () => undefined,
-          getFilePath: () => undefined,
-          readFile: () => null,
-        }}
       />,
     );
 
@@ -151,14 +135,6 @@ describe("font rendering in SVG output", () => {
         slide={slide}
         slideSize={{ width: px(200), height: px(200) }}
         colorContext={{ colorScheme: {}, colorMap: {} }}
-        resources={{
-          getTarget: () => undefined,
-          getType: () => undefined,
-          resolve: () => undefined,
-          getMimeType: () => undefined,
-          getFilePath: () => undefined,
-          readFile: () => null,
-        }}
       />,
     );
 
@@ -208,14 +184,6 @@ describe("PDF to SVG font rendering", () => {
         slide={slide}
         slideSize={{ width: px(200), height: px(200) }}
         colorContext={{ colorScheme: {}, colorMap: {} }}
-        resources={{
-          getTarget: () => undefined,
-          getType: () => undefined,
-          resolve: () => undefined,
-          getMimeType: () => undefined,
-          getFilePath: () => undefined,
-          readFile: () => null,
-        }}
       />,
     );
 
@@ -262,14 +230,6 @@ describe("PDF to SVG font rendering", () => {
         slide={slide}
         slideSize={{ width: px(200), height: px(200) }}
         colorContext={{ colorScheme: {}, colorMap: {} }}
-        resources={{
-          getTarget: () => undefined,
-          getType: () => undefined,
-          resolve: () => undefined,
-          getMimeType: () => undefined,
-          getFilePath: () => undefined,
-          readFile: () => null,
-        }}
       />,
     );
 

@@ -25,7 +25,6 @@ import type { ResizeHandlePosition } from "@aurochs-ui/editor-core/drag-state";
 import { isPathEditEditing } from "../context/slide/state";
 import type { CreationMode } from "@aurochs-ui/ooxml-components";
 import { isPenMode, isPathMode } from "../creation-mode-guards";
-import type { ResourceResolver } from "@aurochs-office/pptx/domain/resource-resolver";
 import type { ResourceStore } from "@aurochs-office/pptx/domain/resource-store";
 import type { ResolvedBackgroundFill } from "@aurochs-office/drawing-ml/domain/background-fill";
 import type { RenderOptions } from "@aurochs-renderer/pptx";
@@ -70,7 +69,6 @@ export type SvgEditorCanvasProps = {
   readonly selectedShapes: readonly Shape[];
   readonly contextMenuActions: ContextMenuActions;
   readonly colorContext?: ColorContext;
-  readonly resources?: ResourceResolver;
   readonly resourceStore?: ResourceStore;
   readonly fontScheme?: FontScheme;
   readonly resolvedBackground?: ResolvedBackgroundFill;
@@ -151,7 +149,6 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
     selectedShapes,
     contextMenuActions,
     colorContext,
-    resources,
     resourceStore,
     fontScheme,
     resolvedBackground,
@@ -444,7 +441,6 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
           slide={slide}
           slideSize={slideSizeForRenderer}
           colorContext={colorContext}
-          resources={resources}
           resourceStore={resourceStore}
           fontScheme={fontScheme}
           options={renderOptions}

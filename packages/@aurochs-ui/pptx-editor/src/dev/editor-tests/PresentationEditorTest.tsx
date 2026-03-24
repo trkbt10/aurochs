@@ -13,7 +13,7 @@ import type { SpShape, GrpShape, GraphicFrame } from "@aurochs-office/pptx/domai
 import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import type { Table, TableRow, TableCell } from "@aurochs-office/pptx/domain/table/types";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
-import { createEmptyResourceResolver } from "@aurochs-office/pptx/domain/resource-resolver";
+import { createResourceStore } from "@aurochs-office/pptx/domain/resource-store";
 import { px, deg, pt } from "@aurochs-office/drawing-ml/domain/units";
 import { EMPTY_FONT_SCHEME } from "@aurochs-office/ooxml/domain/font-scheme";
 
@@ -439,7 +439,7 @@ const createSlide5 = (): Slide => ({
 const SLIDE_WIDTH = 960;
 const SLIDE_HEIGHT = 540;
 
-const emptyResourceResolver = createEmptyResourceResolver();
+const testResourceStore = createResourceStore();
 
 /**
  * Default color context for test purposes
@@ -471,7 +471,7 @@ const createTestDocument = (): PresentationDocument => {
     slideWidth: px(SLIDE_WIDTH),
     slideHeight: px(SLIDE_HEIGHT),
     colorContext: defaultColorContext,
-    resources: emptyResourceResolver,
+    resourceStore: testResourceStore,
     fontScheme: EMPTY_FONT_SCHEME,
   };
 };

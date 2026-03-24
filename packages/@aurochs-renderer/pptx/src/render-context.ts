@@ -2,13 +2,12 @@
  * @file Core render context
  *
  * Format-agnostic render context shared by HTML and SVG renderers.
+ * ResourceStore is the single source of truth for all resource resolution.
  */
 
 import type { SlideSize, Shape } from "@aurochs-office/pptx/domain";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
-import type { ResourceResolver } from "@aurochs-office/pptx/domain/resource-resolver";
-import { createEmptyResourceResolver } from "@aurochs-office/pptx/domain/resource-resolver";
 import type { ResourceStore } from "@aurochs-office/pptx/domain/resource-store";
 import { createResourceStore } from "@aurochs-office/pptx/domain/resource-store";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
@@ -37,9 +36,6 @@ export type CoreRenderContext = {
   /** Color resolution context */
   readonly colorContext: ColorContext;
 
-  /** Resource resolver */
-  readonly resources: ResourceResolver;
-
   /** Warning collector */
   readonly warnings: WarningCollector;
 
@@ -59,10 +55,6 @@ export type CoreRenderContext = {
    * Non-placeholder shapes from slide layout.
    * These are decorative shapes that should be rendered behind slide content.
    *
-   * Per ECMA-376 Part 1, Section 19.3.1.39 (sldLayout):
-   * Layout shapes provide visual decoration that is inherited by slides.
-   * Only non-placeholder shapes are included here.
-   *
    * @see ECMA-376 Part 1, Section 19.3.1.39 (sldLayout)
    */
   readonly layoutShapes?: readonly Shape[];
@@ -75,12 +67,7 @@ export type CoreRenderContext = {
   readonly tableStyles?: TableStyleList;
 
   /**
-   * Centralized resource store for resolved resource data.
-   *
-   * This is the single source of truth for all resolved resources:
-   * images, charts, diagrams, and OLE objects.
-   * ResourceResolver.resolve() checks this store first before
-   * falling back to direct archive access.
+   * Centralized resource store — single source of truth for all resolved resources.
    */
   readonly resourceStore: ResourceStore;
 };
@@ -91,15 +78,11 @@ export type CoreRenderContext = {
 
 /**
  * Configuration for creating a core render context.
- *
- * This is the configuration type used by all render context factories.
- * All optional fields have sensible defaults when not provided.
  */
 export type CoreRenderContextConfig = {
   readonly slideSize: SlideSize;
   readonly options?: Partial<RenderOptions>;
   readonly colorContext?: ColorContext;
-  readonly resources?: ResourceResolver;
   readonly fontScheme?: FontScheme;
   readonly resolvedBackground?: ResolvedBackgroundFill;
   readonly layoutShapes?: readonly Shape[];
@@ -113,16 +96,12 @@ export type CoreRenderContextConfig = {
 
 /**
  * Create a core render context (format-agnostic).
- *
- * This is the primary factory for creating render contexts.
- * HTML and SVG contexts extend this with format-specific features.
  */
 export function createCoreRenderContext(config: CoreRenderContextConfig): CoreRenderContext {
   return {
     slideSize: config.slideSize,
     options: { ...DEFAULT_RENDER_OPTIONS, ...config.options },
     colorContext: config.colorContext ?? { colorScheme: {}, colorMap: {} },
-    resources: config.resources ?? createEmptyResourceResolver(),
     warnings: createWarningCollector(),
     fontScheme: config.fontScheme,
     resolvedBackground: config.resolvedBackground,

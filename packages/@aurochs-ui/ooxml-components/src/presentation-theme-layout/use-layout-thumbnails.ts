@@ -12,8 +12,8 @@ import { useMemo } from "react";
 import type { Shape, SlideSize, Slide, Background } from "@aurochs-office/pptx/domain";
 import type { PackageFile } from "@aurochs-office/opc";
 import type { SlideLayoutOption } from "@aurochs-office/pptx/app";
-import { loadSlideLayoutBundle, createResourceResolverFromMaps } from "@aurochs-office/pptx/app";
-import { createResourceStore } from "@aurochs-office/pptx/domain/resource-store";
+import { loadSlideLayoutBundle } from "@aurochs-office/pptx/app";
+import { createResourceStore, type ResourceStore } from "@aurochs-office/pptx/domain/resource-store";
 import { loadSlideExternalContent, createFileReaderFromPackage } from "@aurochs-office/pptx/parser/slide/external-content-loader";
 import { parseTheme } from "@aurochs-office/pptx/parser/theme/theme-parser";
 import { parseSlideMaster } from "@aurochs-office/pptx/parser/slide/slide-parser";
@@ -24,7 +24,6 @@ import { DEFAULT_COLOR_MAPPING } from "@aurochs-office/pptx/domain/color/types";
 import { renderSlideSvg } from "@aurochs-renderer/pptx/svg";
 import { createCoreRenderContext } from "@aurochs-renderer/pptx";
 import type { ColorContext, ColorScheme } from "@aurochs-office/drawing-ml/domain/color-context";
-import type { ResourceResolver as DomainResourceResolver } from "@aurochs-office/pptx/domain/resource-resolver";
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
 import type { FormatScheme } from "@aurochs-office/pptx/domain/theme/types";
 
@@ -60,7 +59,7 @@ export type LoadedLayoutData = {
   readonly pseudoSlide: Slide;
   readonly colorContext: ColorContext | undefined;
   readonly fontScheme: FontScheme | undefined;
-  readonly resources: DomainResourceResolver;
+  readonly resourceStore: ResourceStore;
   readonly slideSize: SlideSize;
   readonly svg: string;
 };
@@ -147,19 +146,16 @@ export function loadLayoutWithContext(options: {
     const fileReader = createFileReaderFromPackage(file, resourceMaps);
     loadSlideExternalContent({ shapes }, fileReader, resourceStore);
 
-    const resources = createResourceResolverFromMaps(file, resourceMaps, resourceStore);
-
     const pseudoSlide: Slide = { shapes, background };
     const renderCtx = createCoreRenderContext({
       slideSize,
       colorContext,
-      resources,
       fontScheme,
       resourceStore,
     });
     const result = renderSlideSvg(pseudoSlide, renderCtx);
 
-    return { shapes, pseudoSlide, colorContext, fontScheme, resources, slideSize, svg: result.svg };
+    return { shapes, pseudoSlide, colorContext, fontScheme, resourceStore, slideSize, svg: result.svg };
   } catch (error) {
     console.warn("Failed to load layout:", error);
     return undefined;

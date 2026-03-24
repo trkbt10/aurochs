@@ -21,7 +21,8 @@ import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-conte
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
 import type { Theme } from "@aurochs-office/pptx/domain/theme/types";
 import type { LoadedLayoutData } from "@aurochs-ui/ooxml-components";
-import type { ResourceResolver } from "@aurochs-office/pptx/domain/resource-resolver";
+import type { ResourceStore } from "@aurochs-office/pptx/domain/resource-store";
+import { createResourceStore } from "@aurochs-office/pptx/domain/resource-store";
 
 // =============================================================================
 // Types
@@ -33,22 +34,10 @@ export type VirtualDocumentInput = {
   readonly colorContext: ColorContext;
   readonly fontScheme: FontScheme;
   readonly theme?: Theme;
-  readonly resources?: ResourceResolver;
+  readonly resourceStore?: ResourceStore;
   readonly presentationFile?: PackageFile;
 };
 
-/**
- * Null-object ResourceResolver for virtual documents with no file resources.
- * All lookups return undefined.
- */
-const NULL_RESOURCE_RESOLVER: ResourceResolver = {
-  resolve: () => undefined,
-  getMimeType: () => undefined,
-  getTarget: () => undefined,
-  getType: () => undefined,
-  readFile: () => null,
-  getFilePath: () => undefined,
-} as ResourceResolver;
 
 // =============================================================================
 // Conversion
@@ -102,7 +91,7 @@ export function createVirtualDocument(input: VirtualDocumentInput): Presentation
     theme: input.theme,
     colorContext: input.colorContext,
     fontScheme: input.fontScheme,
-    resources: input.resources ?? NULL_RESOURCE_RESOLVER,
+    resourceStore: input.resourceStore ?? createResourceStore(),
     presentationFile: input.presentationFile,
   };
 }

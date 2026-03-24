@@ -11,7 +11,6 @@ import type { Theme } from "../domain/theme/types";
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
-import type { ResourceResolver } from "../domain/resource-resolver";
 import type { ResourceStore } from "../domain/resource-store";
 import type { ResolvedBackgroundFill } from "@aurochs-office/drawing-ml/domain/background-fill";
 import type { Slide as ApiSlide } from "./types";
@@ -88,10 +87,8 @@ export type PresentationDocument = {
   readonly colorContext: ColorContext;
   /** Font scheme for resolving theme fonts (+mj-lt, +mn-lt, etc.) — required per ECMA-376 §20.1.6.10 */
   readonly fontScheme: FontScheme;
-  /** Resource resolver for images and embedded content */
-  readonly resources: ResourceResolver;
   /** Centralized resource store — SoT for all resolved resources (images, charts, diagrams) */
-  readonly resourceStore?: ResourceStore;
+  readonly resourceStore: ResourceStore;
 
   /**
    * Presentation file for PPTX resources.

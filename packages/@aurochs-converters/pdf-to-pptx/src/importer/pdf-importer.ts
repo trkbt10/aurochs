@@ -3,7 +3,6 @@
  */
 
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
-import type { ResourceResolver } from "@aurochs-office/pptx/domain/resource-resolver";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
 import { DEFAULT_COLOR_MAPPING } from "@aurochs-office/pptx/domain/color/types";
 import type { Presentation, Shape } from "@aurochs-office/pptx/domain";
@@ -418,7 +417,6 @@ function createPresentationDocument(
     slideHeight: slideSize.height,
     colorContext: createDefaultColorContextForPdf(),
     fontScheme: EMPTY_FONT_SCHEME,
-    resources: createDataUrlResourceResolver(),
     resourceStore,
     embeddedFonts,
     embeddedFontCss,
@@ -470,77 +468,6 @@ function buildEmbeddedFontCss(pdfEmbeddedFonts: readonly PdfEmbeddedFont[] | und
       mimeType: f.mimeType,
     })),
   );
-}
-
-/**
- * A ResourceResolver that only handles data URLs.
- * Used for PDF imports where all resources are embedded.
- */
-type DataUrlResourceResolver = ResourceResolver & {
-  readonly resolve: (resourceId: string) => string | undefined;
-};
-
-/**
- * Create a ResourceResolver for PDF imports.
- *
- * ## Design Decision: Data URL-based Resources
- *
- * PDFs are not OPC (Open Packaging Conventions) archives. Unlike PPTX files,
- * which have a zip structure with relationship parts, PDFs embed resources
- * directly in the document stream.
- *
- * When importing PDF to PPTX, we convert embedded resources (images, etc.)
- * to data URLs:
- *
- * ```
- * PDF embedded image → data:image/png;base64,... → PPTX blip reference
- * ```
- *
- * This approach:
- * - Avoids creating temporary files
- * - Simplifies the import pipeline
- * - Allows immediate use without file extraction
- *
- * ## Limitations
- *
- * This resolver does NOT support:
- * - External file references (getFilePath returns undefined)
- * - OPC relationship lookups (getTarget, getType return undefined)
- * - File reading from disk (readFile returns null)
- *
- * These limitations are acceptable because PDF imports:
- * - Embed all resources as data URLs
- * - Don't use OPC relationships
- * - Don't reference external files
- *
- * @see ResourceResolver interface in resource-resolver.ts
- */
-function createDataUrlResourceResolver(): DataUrlResourceResolver {
-  return {
-    // OPC relationship methods - not applicable to PDF imports
-    getTarget: () => undefined,
-    getType: () => undefined,
-    resolve: (resourceId: string) => {
-      if (resourceId.startsWith("data:")) {
-        return resourceId;
-      }
-      console.warn(
-        `[PDF Import] Resource "${resourceId.slice(0, 50)}..." is not a data URL. ` +
-          `PDF imports only support embedded resources.`,
-      );
-      return undefined;
-    },
-    getMimeType: (id: string) => {
-      if (id.startsWith("data:")) {
-        const match = id.match(/^data:([^;,]+)/);
-        return match?.[1];
-      }
-      return undefined;
-    },
-    // File-based methods - not applicable to PDF imports
-    getFilePath: () => undefined,
-    readFile: () => null,
-  };
 }
 
 /**

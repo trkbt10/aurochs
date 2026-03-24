@@ -47,7 +47,6 @@ export function createRenderContextFromSlideContext(
     slideSize,
     options: options.renderOptions,
     colorContext: ctx.toRendererColorContext(),
-    resources: ctx.toResourceResolver(options.resourceStore),
     fontScheme: ctx.toFontScheme(),
     resolvedBackground: options.resolvedBackground,
     layoutShapes: options.layoutShapes,

@@ -9,10 +9,7 @@ import type { DrawingMLRenderContext, WarningCollector } from "@aurochs-renderer
 import type { ReactRenderContext } from "./context";
 
 function createResolveResource(pptxContext: ReactRenderContext): DrawingMLRenderContext["resolveResource"] {
-  if (!pptxContext.resources) {
-    return undefined;
-  }
-  return (resourceId: string) => pptxContext.resources.resolve(resourceId);
+  return (resourceId: string) => pptxContext.resourceStore.toDataUrl(resourceId);
 }
 
 function createRenderSize(slideSize: ReactRenderContext["slideSize"]): DrawingMLRenderContext["renderSize"] {

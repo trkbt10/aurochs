@@ -84,7 +84,7 @@ export function ResolvedBackgroundRenderer({ resolvedBackground, slideSize }: Re
  */
 export function BackgroundRenderer({ background, slideSize }: BackgroundRendererProps) {
   const { width, height } = slideSize;
-  const { colorContext, resources, warnings } = useRenderContext();
+  const { colorContext, resourceStore, warnings } = useRenderContext();
 
   const { getNextId } = useSvgDefs();
 
@@ -121,8 +121,7 @@ export function BackgroundRenderer({ background, slideSize }: BackgroundRenderer
     }
 
     case "blipFill": {
-      // ResourceResolver.resolve() checks ResourceStore first, then archive
-      const imagePath = resources.resolve(fill.resourceId);
+      const imagePath = resourceStore.toDataUrl(fill.resourceId);
       if (imagePath !== undefined) {
         const aspectRatio = fill.stretch !== undefined ? "none" : "xMidYMid slice";
         return (

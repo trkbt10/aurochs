@@ -6,7 +6,7 @@
 
 import { cleanup, renderHook, act, waitFor } from "@testing-library/react";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
-import { createEmptyResourceResolver } from "@aurochs-office/pptx/domain/resource-resolver";
+import { createResourceStore } from "@aurochs-office/pptx/domain/resource-store";
 import type { PresentationDocument } from "@aurochs-office/pptx/app";
 import {
   PdfImportError,
@@ -26,7 +26,7 @@ function createDocumentFixture(): PresentationDocument {
     slideHeight: px(750),
     colorContext: { colorScheme: {}, colorMap: {} },
     fontScheme: EMPTY_FONT_SCHEME,
-    resources: createEmptyResourceResolver(),
+    resourceStore: createResourceStore(),
   };
 }
 

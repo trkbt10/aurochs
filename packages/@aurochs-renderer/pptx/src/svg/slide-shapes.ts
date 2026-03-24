@@ -159,7 +159,7 @@ function renderFillAttrs({
 
   // Handle image fill (blipFill) using resource resolver
   if (fill.type === "blipFill") {
-    const imageFill = getResolvedImageFill(fill, ctx.colorContext, ctx.resources.resolve);
+    const imageFill = getResolvedImageFill(fill, ctx.colorContext, (id: string) => ctx.resourceStore.toDataUrl(id));
     if (imageFill !== undefined && w !== undefined && h !== undefined) {
       const patternId = defsCollector.getNextId("img-pattern");
       const patternDef = renderImageFillToSvgDef({ imageFill, patternId, width: w, height: h });
@@ -362,7 +362,7 @@ function renderPictureSvg({
   w: number;
   h: number;
 }): string {
-  const imagePath = ctx.resources.resolve(shape.blipFill.resourceId);
+  const imagePath = ctx.resourceStore.toDataUrl(shape.blipFill.resourceId);
   if (imagePath === undefined) {
     return "";
   }
@@ -777,8 +777,7 @@ function renderOleObjectImage({
 
   // 2. Modern format: p:pic child element (ECMA-376-1:2016)
   if (data.pic?.resourceId !== undefined) {
-    // ResourceResolver.resolve() checks ResourceStore first, then archive
-    const dataUrl = ctx.resources.resolve(data.pic.resourceId);
+    const dataUrl = ctx.resourceStore.toDataUrl(data.pic.resourceId);
     if (dataUrl !== undefined) {
       return `<image href="${dataUrl}" x="0" y="0" width="${w}" height="${h}" preserveAspectRatio="xMidYMid meet"/>`;
     }

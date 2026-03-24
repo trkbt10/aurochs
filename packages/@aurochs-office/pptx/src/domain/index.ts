@@ -680,12 +680,8 @@ export { isPlaceholder, getNonPlaceholderShapes } from "./shape-utils";
 export type {
   ResourceRelationshipResolver,
   ResourceResolverFn,
-  ResourceResolver,
 } from "./resource-resolver";
 
 export {
-  createEmptyResourceResolver,
   createEmptyRelationshipResolver,
-  toResolverFn,
-  toRelationshipResolver,
 } from "./resource-resolver";

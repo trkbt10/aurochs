@@ -40,7 +40,7 @@ function resolveFillForChartRender(fill: BaseFill, ctx: CoreRenderContext): Reso
   if (fill.type === "blipFill") {
     return { type: "unresolved", originalType: "blipFill" };
   }
-  const resolved = resolveFill(fill as BaseFill, ctx.colorContext, ctx.resources.resolve);
+  const resolved = resolveFill(fill as BaseFill, ctx.colorContext, (id: string) => ctx.resourceStore.toDataUrl(id));
   switch (resolved.type) {
     case "none":
       return { type: "none" };

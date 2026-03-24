@@ -285,13 +285,13 @@ describe("createRenderContext output", () => {
     expect(ctx.fontScheme?.minorFont.latin).toBe("Calibri");
   });
 
-  it("should have resource resolver", () => {
+  it("should have resource store", () => {
     const apiSlide = createMockApiSlide();
     const slideSize = { width: px(960), height: px(540) };
 
     const ctx = createRenderContext({ apiSlide, slideSize });
 
-    expect(ctx.resources).toBeDefined();
-    expect(typeof ctx.resources.resolve).toBe("function");
+    expect(ctx.resourceStore).toBeDefined();
+    expect(typeof ctx.resourceStore.toDataUrl).toBe("function");
   });
 });

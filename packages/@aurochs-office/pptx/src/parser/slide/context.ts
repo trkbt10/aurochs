@@ -28,10 +28,8 @@ import type { TableStyleList } from "../table/style-parser";
 import type { ColorMap, ColorResolveContext, ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
 import { SCHEME_COLOR_NAMES } from "@aurochs-office/drawing-ml/domain/color";
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
-import type { ResourceResolver } from "../../domain/resource-resolver";
-import type { ResourceStore } from "../../domain/resource-store";
 import { DEFAULT_COLOR_MAPPING } from "../../domain/color/types";
-import { getMimeType, getMimeTypeFromPath } from "@aurochs/files";
+import { getMimeType } from "@aurochs/files";
 
 // =============================================================================
 // Params (immutable data)
@@ -328,11 +326,6 @@ export type SlideContext = {
    */
   toRendererColorContext(): ColorContext;
   /**
-   * Build ResourceResolver backed by ResourceStore.
-   * @see ECMA-376 Part 2 (Open Packaging Conventions)
-   */
-  toResourceResolver(resourceStore: ResourceStore): ResourceResolver;
-  /**
    * Build FontScheme from theme data.
    * @see ECMA-376 Part 1, Section 20.1.4.1.18 (a:fontScheme)
    */
@@ -474,42 +467,6 @@ export function createSlideContext({
       }
 
       return { colorScheme, colorMap };
-    },
-
-    toResourceResolver(resourceStore: ResourceStore): ResourceResolver {
-      return {
-        getTarget: (id: string) => slide.resources.getTarget(id),
-        getType: (id: string) => slide.resources.getType(id),
-        resolve: (id: string) => resourceStore.toDataUrl(id),
-        getMimeType: (id: string) => {
-          const entry = resourceStore.get(id);
-          if (entry?.mimeType !== undefined) {
-            return entry.mimeType;
-          }
-          const target = self.resolveResource(id);
-          if (target === undefined) {
-            return undefined;
-          }
-          return getMimeTypeFromPath(target);
-        },
-        getFilePath: (id: string) => {
-          const entry = resourceStore.get(id);
-          if (entry?.path !== undefined) {
-            return entry.path;
-          }
-          return self.resolveResource(id);
-        },
-        readFile: (path: string) => {
-          const data = self.readFile(path);
-          if (data === null) {
-            return null;
-          }
-          return new Uint8Array(data);
-        },
-        getResourceByType: (relType: string) => {
-          return slide.resources.getTargetByType(relType);
-        },
-      };
     },
 
     toFontScheme(): FontScheme {

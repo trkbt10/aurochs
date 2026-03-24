@@ -66,7 +66,7 @@ export function renderTextSvg({ textBody, ctx, boxWidth, boxHeight, defsCollecto
   // @see ECMA-376 Part 1, Section 21.1.2.4.2 (a:buBlip)
   // @see ECMA-376 Part 1, Section 20.1.4.1.16-17 (theme fonts)
 
-  const resourceResolver = (resourceId: string) => ctx.resources.resolve(resourceId);
+  const resourceResolver = (resourceId: string) => ctx.resourceStore.toDataUrl(resourceId);
   const layoutInput = toLayoutInput({
     body: textBody,
     width: px(boxWidth),

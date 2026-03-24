@@ -155,7 +155,7 @@ function applyVerticalTextTransform(...args: ApplyVerticalTextTransformArgs): Re
  * @see ECMA-376 Part 1, Section 21.1.2 (DrawingML - Text)
  */
 export function TextRenderer({ textBody, width, height }: TextRendererProps) {
-  const { colorContext, fontScheme, options, resources } = useRenderContext();
+  const { colorContext, fontScheme, options, resourceStore } = useRenderContext();
   const { getNextId, addDef, hasDef } = useSvgDefs();
   const paragraphMeasurer = useMemo(() => createLayoutParagraphMeasurer(), []);
 
@@ -167,7 +167,7 @@ export function TextRenderer({ textBody, width, height }: TextRendererProps) {
   const scene3d = textBody.bodyProperties.scene3d;
   const shape3d = textBody.bodyProperties.shape3d;
   // Convert TextBody to layout input
-  const resourceResolver = (resourceId: string) => resources.resolve(resourceId);
+  const resourceResolver = (resourceId: string) => resourceStore.toDataUrl(resourceId);
   const layoutInput = toLayoutInput({
     body: textBody,
     width: px(width),

@@ -213,7 +213,7 @@ export function PotxEditor({ presentationFile, slideSize, className, onPackageFi
     return createVirtualDocument({
       layouts: allLayoutData, slideSize: effectiveSlideSize,
       colorContext: masterColorContext, fontScheme,
-      resources: allLayoutData[0]?.data.resources, presentationFile,
+      presentationFile,
     });
   }, [allLayoutData, slideSize, masterColorContext, fontScheme, presentationFile]);
 
@@ -770,7 +770,7 @@ function PotxEditorContent({
         >
           <SlideRenderer
             slide={renderedSlide} slideSize={slideSizeForRenderer}
-            colorContext={editedColorContext} resources={activeLayoutData.resources}
+            colorContext={editedColorContext}
             fontScheme={fontScheme} editingShapeId={editingShapeId}
           />
           {creationRect && (

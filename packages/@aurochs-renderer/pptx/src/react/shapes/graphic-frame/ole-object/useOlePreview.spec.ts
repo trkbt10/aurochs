@@ -17,22 +17,18 @@ import { useOlePreview } from "./useOlePreview";
 import { RenderProvider, useRenderContext } from "../../../context";
 import { px, type Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import type { OleReference } from "@aurochs-office/pptx/domain";
-import type { ResourceResolver } from "@aurochs-office/pptx/domain/resource-resolver";
-import { createEmptyResourceResolver } from "@aurochs-office/pptx/domain/resource-resolver";
 import type { ResourceStore } from "@aurochs-office/pptx/domain/resource-store";
 import { createEmptyResourceStore } from "@aurochs-office/pptx/domain/resource-store";
 import { EMU_PER_PIXEL } from "@aurochs-office/ooxml/domain/ooxml-units";
 
 type RenderDeps = {
-  readonly resources?: ResourceResolver;
   readonly resourceStore?: ResourceStore;
 };
 
-function createWrapper({ resources, resourceStore }: RenderDeps) {
+function createWrapper({ resourceStore }: RenderDeps) {
   return function Wrapper({ children }: { readonly children: ReactNode }) {
     return createElement(RenderProvider, {
       slideSize: { width: px(960) as Pixels, height: px(540) as Pixels },
-      resources,
       resourceStore,
       children,
     });
@@ -54,7 +50,6 @@ function renderUseOlePreview(oleData: OleReference | undefined, deps: RenderDeps
 describe("useOlePreview", () => {
   it("returns undefined values when oleData is undefined", () => {
     const { result } = renderUseOlePreview(undefined, {
-      resources: createEmptyResourceResolver(),
       resourceStore: createEmptyResourceStore(),
     });
 
@@ -85,7 +80,6 @@ describe("useOlePreview", () => {
     };
 
     const { result } = renderUseOlePreview(oleData, {
-      resources: createEmptyResourceResolver(),
       resourceStore: store,
     });
 
@@ -115,7 +109,6 @@ describe("useOlePreview", () => {
     };
 
     const { result } = renderUseOlePreview(oleData, {
-      resources: createEmptyResourceResolver(),
       resourceStore: store,
     });
 
@@ -138,7 +131,6 @@ describe("useOlePreview", () => {
     };
 
     const { result } = renderUseOlePreview(oleData, {
-      resources: createEmptyResourceResolver(),
       resourceStore: store,
     });
 
@@ -151,7 +143,6 @@ describe("useOlePreview", () => {
     };
 
     const { result } = renderUseOlePreview(oleData, {
-      resources: createEmptyResourceResolver(),
       resourceStore: createEmptyResourceStore(),
     });
 
@@ -179,7 +170,6 @@ describe("useOlePreview", () => {
     };
 
     const { result } = renderUseOlePreview(oleData, {
-      resources: createEmptyResourceResolver(),
       resourceStore: store,
     });
 
@@ -204,7 +194,6 @@ describe("useOlePreview", () => {
       };
 
       const { result } = renderUseOlePreview(oleData, {
-        resources: createEmptyResourceResolver(),
         resourceStore: store,
       });
 
@@ -228,7 +217,6 @@ describe("useOlePreview", () => {
       };
 
       const { result } = renderUseOlePreview(oleData, {
-        resources: createEmptyResourceResolver(),
         resourceStore: store,
       });
 

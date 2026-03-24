@@ -11,7 +11,9 @@ import { px } from "@aurochs-office/drawing-ml/domain/units";
 import type { SlideSize, Slide } from "@aurochs-office/pptx/domain";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
-import type { ResourceResolver } from "@aurochs-office/pptx/domain/resource-resolver";
+import type { ResourceStore } from "@aurochs-office/pptx/domain/resource-store";
+import { createResourceStore } from "@aurochs-office/pptx/domain/resource-store";
+import { createResourceStore } from "@aurochs-office/pptx/domain/resource-store";
 
 // =============================================================================
 // Helpers
@@ -33,21 +35,14 @@ function createMockLayoutData(shapeCount: number): LoadedLayoutData {
     pseudoSlide: slide,
     colorContext: undefined,
     fontScheme: undefined,
-    resources: createMockResourceResolver(),
+    resourceStore: createResourceStore(),
     slideSize: { width: px(960), height: px(540) },
     svg: "<svg></svg>",
   };
 }
 
-function createMockResourceResolver(): ResourceResolver {
-  return {
-    resolve: () => undefined,
-    getMimeType: () => undefined,
-    getTarget: () => undefined,
-    getType: () => undefined,
-    readFile: () => null,
-    getFilePath: () => undefined,
-  };
+function createMockResourceStore(): ResourceStore {
+  return createResourceStore();
 }
 
 const SLIDE_SIZE: SlideSize = { width: px(960), height: px(540) };
@@ -120,7 +115,7 @@ describe("createVirtualDocument", () => {
       slideSize: SLIDE_SIZE,
       colorContext: COLOR_CONTEXT,
       fontScheme: FONT_SCHEME,
-      resources: createMockResourceResolver(),
+      resourceStore: createMockResourceStore(),
     });
 
     expect(doc.slides).toHaveLength(3);
@@ -132,7 +127,7 @@ describe("createVirtualDocument", () => {
       slideSize: SLIDE_SIZE,
       colorContext: COLOR_CONTEXT,
       fontScheme: FONT_SCHEME,
-      resources: createMockResourceResolver(),
+      resourceStore: createMockResourceStore(),
     });
 
     expect(doc.slideWidth).toBe(SLIDE_SIZE.width);
@@ -145,7 +140,7 @@ describe("createVirtualDocument", () => {
       slideSize: SLIDE_SIZE,
       colorContext: COLOR_CONTEXT,
       fontScheme: FONT_SCHEME,
-      resources: createMockResourceResolver(),
+      resourceStore: createMockResourceStore(),
     });
 
     expect(doc.presentation.slideSize).toBe(SLIDE_SIZE);
@@ -157,7 +152,7 @@ describe("createVirtualDocument", () => {
       slideSize: SLIDE_SIZE,
       colorContext: COLOR_CONTEXT,
       fontScheme: FONT_SCHEME,
-      resources: createMockResourceResolver(),
+      resourceStore: createMockResourceStore(),
     });
 
     expect(doc.colorContext).toBe(COLOR_CONTEXT);
@@ -171,7 +166,7 @@ describe("createVirtualDocument", () => {
       slideSize: SLIDE_SIZE,
       colorContext: COLOR_CONTEXT,
       fontScheme: FONT_SCHEME,
-      resources: createMockResourceResolver(),
+      resourceStore: createMockResourceStore(),
       presentationFile: mockFile,
     });
 
@@ -189,7 +184,7 @@ describe("createVirtualDocument", () => {
       slideSize: SLIDE_SIZE,
       colorContext: COLOR_CONTEXT,
       fontScheme: FONT_SCHEME,
-      resources: createMockResourceResolver(),
+      resourceStore: createMockResourceStore(),
     });
 
     expect(doc.slides[0].id).toBe("ppt/slideLayouts/slideLayout1.xml");

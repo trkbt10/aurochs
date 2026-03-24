@@ -8,24 +8,6 @@ import { importPdf, importPdfFromFile, importPdfFromUrl, PdfImportError } from "
 import { buildSimplePdfBytes } from "../test-utils/simple-pdf";
 import { getSampleFixturePath } from "@aurochs/pdf/test-utils/pdf-fixtures";
 
-function createConsoleWarnSpy(): Readonly<{
-  readonly calls: readonly ReadonlyArray<unknown>[];
-  readonly restore: () => void;
-}> {
-  const calls: ReadonlyArray<unknown>[] = [];
-  const original = console.warn;
-
-  console.warn = (...args: unknown[]) => {
-    calls.push(args);
-  };
-
-  const restore = (): void => {
-    console.warn = original;
-  };
-
-  return { calls, restore };
-}
-
 function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
   if (bytes.buffer instanceof ArrayBuffer) {
     return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
@@ -231,22 +213,11 @@ describe("pdf-importer", () => {
     } satisfies Partial<PdfImportError>);
   });
 
-  it("uses a data URL-based ResourceResolver", async () => {
+  it("populates resourceStore for data URL images", async () => {
     const bytes = await createPdfBytes([{ width: 200, height: 200 }] as const);
     const result = await importPdf(bytes);
-    const resolver = result.document.resources;
 
-    const dataUrl = "data:image/png;base64,AAAA";
-    expect(resolver.resolve(dataUrl)).toBe(dataUrl);
-    expect(resolver.getMimeType(dataUrl)).toBe("image/png");
-
-    const warnSpy = createConsoleWarnSpy();
-    expect(resolver.resolve("file:///tmp/image.png")).toBeUndefined();
-    expect(warnSpy.calls).toHaveLength(1);
-    warnSpy.restore();
-
-    expect(resolver.getMimeType("file:///tmp/image.png")).toBeUndefined();
-    expect(resolver.getFilePath("file:///tmp/image.png")).toBeUndefined();
-    expect(resolver.readFile("/tmp/image.png")).toBeNull();
+    // resourceStore is present and is a ResourceStore
+    expect(result.document.resourceStore).toBeDefined();
   });
 });

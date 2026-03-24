@@ -10,7 +10,7 @@ import { memo, useMemo } from "react";
 import type { PicShape as PicShapeType } from "@aurochs-office/pptx/domain";
 import type { Transform } from "@aurochs-office/drawing-ml/domain/geometry";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
-import { useRenderResources } from "../context";
+import { useRenderResourceStore } from "../context";
 import { buildTransformAttr } from "./transform";
 
 // =============================================================================
@@ -70,13 +70,12 @@ function calculateCroppedImageLayout(
  * Renders a picture (p:pic) as React SVG elements.
  */
 function PicShapeRendererBase({ shape, width, height, shapeId }: PicShapeRendererProps) {
-  const resources = useRenderResources();
+  const resourceStore = useRenderResourceStore();
   const { blipFill, properties } = shape;
 
-  // ResourceResolver.resolve() checks ResourceStore first, then falls back to archive
   const imagePath = useMemo(
-    () => resources.resolve(blipFill.resourceId),
-    [blipFill.resourceId, resources],
+    () => resourceStore.toDataUrl(blipFill.resourceId),
+    [blipFill.resourceId, resourceStore],
   );
   if (imagePath === undefined) {
     return null;

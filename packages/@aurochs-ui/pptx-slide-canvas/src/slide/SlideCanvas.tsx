@@ -22,7 +22,6 @@ import type { ResizeHandlePosition } from "@aurochs-ui/editor-core/drag-state";
 import { isPathEditEditing } from "../context/slide/state";
 import type { CreationMode } from "@aurochs-ui/ooxml-components";
 import { isPenMode, isPathMode } from "../creation-mode-guards";
-import type { ResourceResolver } from "@aurochs-office/pptx/domain/resource-resolver";
 import type { ResourceStore } from "@aurochs-office/pptx/domain/resource-store";
 import type { ResolvedBackgroundFill } from "@aurochs-office/drawing-ml/domain/background-fill";
 import type { RenderOptions } from "@aurochs-renderer/pptx";
@@ -70,8 +69,6 @@ export type SlideCanvasProps = {
   // React Renderer props
   /** Color context for theme color resolution */
   readonly colorContext?: ColorContext;
-  /** Resource resolver for images */
-  readonly resources?: ResourceResolver;
   /** Resource store for centralized resource management (charts, diagrams) */
   readonly resourceStore?: ResourceStore;
   /** Font scheme for theme fonts */
@@ -220,7 +217,6 @@ export function SlideCanvas({
   className,
   style,
   colorContext,
-  resources,
   resourceStore,
   fontScheme,
   resolvedBackground,
@@ -796,7 +792,6 @@ export function SlideCanvas({
             slide={slide}
             slideSize={slideSize}
             colorContext={colorContext}
-            resources={resources}
             resourceStore={resourceStore}
             fontScheme={fontScheme}
             options={renderOptions}

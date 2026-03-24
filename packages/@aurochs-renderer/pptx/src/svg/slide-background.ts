@@ -131,7 +131,7 @@ export function renderBackgroundSvg({
     }
 
     case "blipFill": {
-      const imagePath = ctx.resources.resolve(fill.resourceId);
+      const imagePath = ctx.resourceStore.toDataUrl(fill.resourceId);
       if (imagePath !== undefined) {
         // ECMA-376 Part 1, Section 20.1.8.56 (a:stretch):
         // When stretch is specified, use preserveAspectRatio="none"
