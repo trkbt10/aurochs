@@ -88,6 +88,18 @@ const entries = {
   // PDF Renderer
   "pdf/renderer/svg/index": resolve(__dirname, "../../@aurochs-renderer/pdf/src/svg/index.ts"),
   "pdf/renderer/react/index": resolve(__dirname, "../../@aurochs-renderer/pdf/src/react/index.ts"),
+
+  // OOXML Domain (shared types: ResourceStore, borders, numbering, text, etc.)
+  "ooxml/domain/index": resolve(__dirname, "../../@aurochs-office/ooxml/src/index.ts"),
+
+  // PPTX Domain (type-safe domain objects for PPTX content)
+  "pptx/domain/index": resolve(__dirname, "../../@aurochs-office/pptx/src/domain/index.ts"),
+
+  // DOCX Domain (type-safe domain objects for DOCX content)
+  "docx/domain/index": resolve(__dirname, "../../@aurochs-office/docx/src/domain/index.ts"),
+
+  // DOCX Builder (build + patch DOCX files)
+  "docx/builder/index": resolve(__dirname, "../../@aurochs-builder/docx/src/index.ts"),
 };
 
 export default defineConfig({
@@ -144,6 +156,15 @@ export default defineConfig({
         resolve(__dirname, "../../@aurochs-builder/pdf/src/**"),
         resolve(__dirname, "../../@aurochs-renderer/pdf/src/svg/**"),
         resolve(__dirname, "../../@aurochs-renderer/pdf/src/react/**"),
+        // OOXML (shared domain types)
+        resolve(__dirname, "../../@aurochs-office/ooxml/src/**"),
+        // PPTX Domain
+        resolve(__dirname, "../../@aurochs-office/pptx/src/domain/**"),
+        resolve(__dirname, "../../@aurochs-office/pptx/src/domain/*/**"),
+        // DOCX Domain
+        resolve(__dirname, "../../@aurochs-office/docx/src/domain/**"),
+        // DOCX Builder
+        resolve(__dirname, "../../@aurochs-builder/docx/src/**"),
       ],
     }),
   ],

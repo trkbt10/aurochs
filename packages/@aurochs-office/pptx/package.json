@@ -136,9 +136,9 @@
       "types": "./src/domain/transition.ts",
       "default": "./src/domain/transition.ts"
     },
-    "./domain/resource-store": {
-      "types": "./src/domain/resource-store.ts",
-      "default": "./src/domain/resource-store.ts"
+    "./domain/text-utils": {
+      "types": "./src/domain/text-utils.ts",
+      "default": "./src/domain/text-utils.ts"
     },
     "./domain/shape-utils": {
       "types": "./src/domain/shape-utils.ts",
@@ -271,6 +271,10 @@
     "./parser/text/text-effects": {
       "types": "./src/parser/text/text-effects.ts",
       "default": "./src/parser/text/text-effects.ts"
+    },
+    "./parser/text/text-style-levels": {
+      "types": "./src/parser/text/text-style-levels.ts",
+      "default": "./src/parser/text/text-style-levels.ts"
     },
     "./parser/slide/context": {
       "types": "./src/parser/slide/context.ts",

@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- PPTX domain types export (`aurochs/pptx/domain`) for type-safe PPTX content access
+- DOCX domain types export (`aurochs/docx/domain`) for type-safe DOCX content access
+- DOCX builder export (`aurochs/docx/builder`) with `buildDocx` / `patchDocx` APIs
+- OOXML shared domain export (`aurochs/ooxml/domain`) with ResourceStore and shared types
+- XLSX patcher: `customWidth`, `mergeCells` support, and column mutations
+- XLSX row mutation operations: insert, delete, hide, unhide, set height, outline level
+- Chart rendering and editing integration in PPTX editor
+- Diagram rendering enhancement in PPTX editor
+- PDF document mutation operations and element transformations
+- PDF editor shared infrastructure with canvas and viewport support
+
+### Changed
+
+- ResourceStore promoted to OOXML shared layer (`@aurochs-office/ooxml`) as single source of truth
+- ResourceResolver eliminated in favor of unified ResourceStore interface
+- Slide resource preparation and registration logic streamlined
+- Media handling and MIME type detection streamlined
+- Color-editor UI replaced with shared `react-editor-ui` components
+
+### Fixed
+
+- Stale `resource-store` export removed from PPTX package (moved to OOXML)
+- Missing `text-utils` and `text-style-levels` explicit exports in PPTX package
+- Broken `cell/query` import path in XLSX editor components
+- Unnecessary optional chaining on required `resourceStore` field removed
+
 ## [0.8.0] - 2026-03-22
 
 ### Added

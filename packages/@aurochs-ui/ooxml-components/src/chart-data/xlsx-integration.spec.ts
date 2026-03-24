@@ -9,7 +9,7 @@ import type { Cell, CellValue } from "@aurochs-office/xlsx/domain/cell/types";
 import type { CellAddress } from "@aurochs-office/xlsx/domain/cell/address";
 import { colIdx, rowIdx } from "@aurochs-office/xlsx/domain/types";
 import { createDefaultStyleSheet } from "@aurochs-office/xlsx/domain/style/types";
-import { getCellValue } from "@aurochs-ui/xlsx-editor/cell/query";
+import { getCellValue } from "@aurochs-office/xlsx/domain/mutation/query";
 import { createChartDataEditor, editorToSheetUpdates } from "./xlsx-integration";
 
 // =============================================================================

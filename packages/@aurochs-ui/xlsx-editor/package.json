@@ -27,10 +27,6 @@
       "types": "./src/index.ts",
       "default": "./src/index.ts"
     },
-    "./cell/query": {
-      "types": "./src/cell/query.ts",
-      "default": "./src/cell/query.ts"
-    },
     "./selectors/cell-render-style": {
       "types": "./src/selectors/cell-render-style.ts",
       "default": "./src/selectors/cell-render-style.ts"

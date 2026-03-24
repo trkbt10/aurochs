@@ -9,8 +9,10 @@
     "verify": "node scripts/verify-exports.mjs"
   },
   "dependencies": {
+    "@aurochs-builder/docx": "workspace:*",
     "@aurochs-builder/pdf": "workspace:*",
     "@aurochs-office/docx": "workspace:*",
+    "@aurochs-office/ooxml": "workspace:*",
     "@aurochs-office/pptx": "workspace:*",
     "@aurochs-office/xlsx": "workspace:*",
     "@aurochs-renderer/docx": "workspace:*",

@@ -96,6 +96,9 @@ function createMockApiSlide(): ApiSlide {
   const master = {
     children: [
       elem("p:sldMaster", {}, [
+        elem("p:cSld", {}, [
+          elem("p:spTree", {}, []),
+        ]),
         elem(
           "p:clrMap",
           {

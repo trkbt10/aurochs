@@ -170,7 +170,7 @@ describe("xlsx-editor/row-col/mutation", () => {
 
     const next = setColumnWidth(worksheet, colIdx(2), 20);
 
-    expect(next.columns).toEqual([{ min: colIdx(2), max: colIdx(2), width: 20 }]);
+    expect(next.columns).toEqual([{ min: colIdx(2), max: colIdx(2), width: 20, customWidth: true }]);
   });
 
   it("deleteColumns removes cells in range and shifts following cells", () => {
