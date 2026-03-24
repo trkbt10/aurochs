@@ -616,7 +616,7 @@ function renderGraphicFrameSvg({
         return `<g${transformAttr}${ooxmlIdAttr}>${diagramSvg}</g>`;
       }
       throw new Error(
-        `renderGraphicFrameSvg: diagram rendering failed (dataResourceId=${content.data.dataResourceId ?? "undefined"}, resourceStore=${ctx.resourceStore ? "present" : "missing"})`,
+        `renderGraphicFrameSvg: diagram rendering failed (dataResourceId=${content.data.dataResourceId ?? "undefined"})`,
       );
     }
 
@@ -700,7 +700,7 @@ export function renderDiagramShapesSvg({
     return undefined;
   }
 
-  const entry = ctx.resourceStore?.get<{ readonly shapes: readonly DomainShape[] }>(
+  const entry = ctx.resourceStore.get<{ readonly shapes: readonly DomainShape[] }>(
     diagramRef.dataResourceId,
   );
   const diagramContent = entry?.parsed;
@@ -769,7 +769,7 @@ function renderOleObjectImage({
 }): string | undefined {
   // 1. Check ResourceStore for preview URL
   if (data.resourceId !== undefined) {
-    const entry = ctx.resourceStore?.get(data.resourceId);
+    const entry = ctx.resourceStore.get(data.resourceId);
     if (entry?.previewUrl !== undefined) {
       return `<image href="${entry.previewUrl}" x="0" y="0" width="${w}" height="${h}" preserveAspectRatio="xMidYMid meet"/>`;
     }
@@ -822,7 +822,7 @@ function renderChartFromRef({
   ctx: CoreRenderContext;
 }): string | undefined {
   // Get chart data from ResourceStore
-  const entry = ctx.resourceStore?.get<DomainChart>(chartRef.resourceId);
+  const entry = ctx.resourceStore.get<DomainChart>(chartRef.resourceId);
   const parsedChart = entry?.parsed;
 
   if (parsedChart !== undefined) {
