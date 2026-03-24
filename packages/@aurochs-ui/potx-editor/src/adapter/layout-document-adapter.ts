@@ -21,8 +21,8 @@ import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-conte
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
 import type { Theme } from "@aurochs-office/pptx/domain/theme/types";
 import type { LoadedLayoutData } from "@aurochs-ui/ooxml-components";
-import type { ResourceStore } from "@aurochs-office/pptx/domain/resource-store";
-import { createResourceStore } from "@aurochs-office/pptx/domain/resource-store";
+import type { ResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
+import { createResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 
 // =============================================================================
 // Types

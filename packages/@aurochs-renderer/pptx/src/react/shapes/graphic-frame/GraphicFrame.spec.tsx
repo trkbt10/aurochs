@@ -13,7 +13,7 @@ import type { GraphicFrame as GraphicFrameType, SlideSize } from "@aurochs-offic
 import type { Transform } from "@aurochs-office/drawing-ml/domain/geometry";
 import type { Table } from "@aurochs-office/pptx/domain/table/types";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
-import { createResourceStore, type ResourceStore } from "@aurochs-office/pptx/domain/resource-store";
+import { createResourceStore, type ResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
 import { RenderProvider } from "../../context";
 import { SvgDefsProvider } from "../../hooks/useSvgDefs";

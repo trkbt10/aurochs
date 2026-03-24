@@ -14,7 +14,7 @@ import type { Background } from "@aurochs-office/pptx/domain/slide/types";
 import type { SlideLayoutAttributes } from "@aurochs-office/pptx/parser/slide/layout-parser";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import type { SlideLayoutOption } from "@aurochs-office/pptx/app";
-import type { ResourceStore } from "@aurochs-office/pptx/domain/resource-store";
+import type { ResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 import { SlidePropertiesPanel } from "./property/SlidePropertiesPanel";
 import { MultiSelectPanel } from "./property/MultiSelectPanel";
 import { SpShapePanel } from "./property/SpShapePanel";

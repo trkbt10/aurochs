@@ -9,8 +9,8 @@ import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
 import { EMPTY_FONT_SCHEME } from "@aurochs-office/ooxml/domain/font-scheme";
-import type { ResourceStore } from "@aurochs-office/pptx/domain/resource-store";
-import { createResourceStore } from "@aurochs-office/pptx/domain/resource-store";
+import type { ResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
+import { createResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 import type { PresentationDocument, SlideWithId } from "@aurochs-office/pptx/app";
 
 // =============================================================================

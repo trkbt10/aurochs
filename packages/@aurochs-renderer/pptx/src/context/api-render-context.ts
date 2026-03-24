@@ -15,7 +15,7 @@ import type { RenderOptions } from "../render-options";
 import { DEFAULT_RENDER_OPTIONS } from "../render-options";
 import { toResolvedBackgroundFill } from "../background-fill";
 import { createRenderContextFromSlideContext } from "./slide-context-adapter";
-import { createResourceStore } from "@aurochs-office/pptx/domain/resource-store";
+import { createResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 import type { FileReader } from "@aurochs-office/pptx/parser/slide/external-content-loader";
 
 // =============================================================================

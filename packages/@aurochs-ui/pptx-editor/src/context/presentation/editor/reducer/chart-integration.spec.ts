@@ -11,7 +11,7 @@
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import type { Chart } from "@aurochs-office/chart/domain";
 import type { GraphicFrame } from "@aurochs-office/pptx/domain";
-import { createResourceStore, type ResourceStore } from "@aurochs-office/pptx/domain/resource-store";
+import { createResourceStore, type ResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 import { createDefaultChart } from "@aurochs-builder/chart";
 import {
   presentationEditorReducer,

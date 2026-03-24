@@ -5,7 +5,7 @@
  */
 
 import { px } from "@aurochs-office/drawing-ml/domain/units";
-import { createResourceStore } from "@aurochs-office/pptx/domain/resource-store";
+import { createResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 import type { CoreRenderContext } from "../render-context";
 import { createCoreRenderContext } from "../render-context";
 

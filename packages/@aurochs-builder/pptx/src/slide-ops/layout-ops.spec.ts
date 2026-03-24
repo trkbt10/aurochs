@@ -9,7 +9,7 @@ import { parseXml, getByPath, getChildren } from "@aurochs/xml";
 import { createEmptyZipPackage } from "@aurochs/zip";
 import type { PresentationDocument } from "@aurochs-office/pptx/app/presentation-document";
 import { EMPTY_FONT_SCHEME } from "@aurochs-office/ooxml/domain/font-scheme";
-import { createResourceStore } from "@aurochs-office/pptx/domain/resource-store";
+import { createResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 import { addSlideLayout, deleteSlideLayout, duplicateSlideLayout } from "./layout-ops";
 
 // =============================================================================

@@ -11,7 +11,7 @@ import type { Theme } from "../domain/theme/types";
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
-import type { ResourceStore } from "../domain/resource-store";
+import type { ResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 import type { ResolvedBackgroundFill } from "@aurochs-office/drawing-ml/domain/background-fill";
 import type { Slide as ApiSlide } from "./types";
 

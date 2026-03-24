@@ -11,7 +11,7 @@ import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import type { RenderOptions } from "../render-options";
 import type { ResolvedBackgroundFill } from "@aurochs-office/drawing-ml/domain/background-fill";
-import type { ResourceStore } from "@aurochs-office/pptx/domain/resource-store";
+import type { ResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 import { RenderProvider, useRenderContext } from "./context";
 import { SvgDefsProvider } from "./hooks/useSvgDefs";
 import { ResolvedBackgroundRenderer, BackgroundRenderer } from "./Background";

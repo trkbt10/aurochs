@@ -9,7 +9,7 @@ import { useCallback, type CSSProperties } from "react";
 import type { Shape } from "@aurochs-office/pptx/domain/index";
 import type { Chart } from "@aurochs-office/chart/domain";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
-import type { ResourceStore } from "@aurochs-office/pptx/domain/resource-store";
+import type { ResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 import { MultiSelectPanel } from "../property/MultiSelectPanel";
 import { SpShapePanel } from "../property/SpShapePanel";
 import { PicShapePanel } from "../property/PicShapePanel";

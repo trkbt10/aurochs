@@ -7,7 +7,7 @@
 
 import type { Slide } from "@aurochs-office/pptx/domain";
 import type { DiagramLayoutType } from "@aurochs-office/pptx/domain/shape";
-import type { ResourceStore } from "@aurochs-office/pptx/domain/resource-store";
+import type { ResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 import type { DiagramBuildSpec } from "@aurochs-builder/diagram";
 import type { FileReader } from "@aurochs-office/pptx/parser/slide/external-content-loader";
 import { prepareSlideResources, registerBuilderResources } from "@aurochs-builder/pptx/resource-builder";

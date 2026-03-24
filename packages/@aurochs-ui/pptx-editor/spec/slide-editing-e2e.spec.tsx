@@ -38,7 +38,7 @@ import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import type { CreationMode } from "@aurochs-ui/ooxml-components";
 import { getDefaultBoundsForMode } from "@aurochs-ui/ooxml-components";
 import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
-import { createResourceStore } from "@aurochs-office/pptx/domain/resource-store";
+import { createResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 import {
   presentationEditorReducer,
   createPresentationEditorState,

@@ -46,7 +46,7 @@ import { getRelationshipPartPath } from "@aurochs-office/opc";
 import { createEmptyResourceMap } from "../../domain/relationships";
 import { findVmlShapeImage, getVmlRelsPath, normalizeVmlImagePath } from "../external/vml-parser";
 import { emfToSvg } from "../external/emf-parser";
-import type { ResourceStore } from "../../domain/resource-store";
+import type { ResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 import type { ArchiveAccess } from "../../domain/archive-access";
 
 /**

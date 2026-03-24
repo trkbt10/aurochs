@@ -6,7 +6,7 @@
  */
 
 import { createContext, useContext, useMemo, type ReactNode } from "react";
-import { createResourceStore, type ResourceStore, type ResourceKind } from "@aurochs-office/pptx/domain/resource-store";
+import { createResourceStore, type ResourceStore, type ResourceKind } from "@aurochs-office/ooxml/domain/resource-store";
 import type { ResourceId } from "@aurochs-office/pptx/domain/resource";
 
 // =============================================================================

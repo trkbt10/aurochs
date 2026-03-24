@@ -13,7 +13,7 @@ import type { SpShape, GrpShape, GraphicFrame } from "@aurochs-office/pptx/domai
 import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import type { Table, TableRow, TableCell } from "@aurochs-office/pptx/domain/table/types";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
-import { createResourceStore } from "@aurochs-office/pptx/domain/resource-store";
+import { createResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 import { px, deg, pt } from "@aurochs-office/drawing-ml/domain/units";
 import { EMPTY_FONT_SCHEME } from "@aurochs-office/ooxml/domain/font-scheme";
 

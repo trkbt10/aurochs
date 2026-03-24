@@ -21,7 +21,7 @@ import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import { renderSlideSvg } from "@aurochs-renderer/pptx/svg";
 import { createCoreRenderContext } from "@aurochs-renderer/pptx";
-import { createResourceStore } from "@aurochs-office/pptx/domain/resource-store";
+import { createResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 import { loadSlideExternalContent, NULL_FILE_READER } from "@aurochs-office/pptx/parser/slide/external-content-loader";
 import { registerEditorResources } from "../resource/register-slide-resources";
 import { useSlideThumbnails } from "./use-slide-thumbnails";

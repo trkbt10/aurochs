@@ -8,7 +8,7 @@ import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import { renderSlideSvg } from "@aurochs-renderer/pptx/svg";
 import { createRenderContext, createCoreRenderContext } from "@aurochs-renderer/pptx";
 import type { SlideWithId } from "@aurochs-office/pptx/app";
-import { createResourceStore } from "@aurochs-office/pptx/domain/resource-store";
+import { createResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 import { prepareSlide, registerEditorResources } from "../resource/register-slide-resources";
 import {
   createThumbnailCache,

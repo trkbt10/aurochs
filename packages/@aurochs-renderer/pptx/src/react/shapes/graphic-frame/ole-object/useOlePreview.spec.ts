@@ -17,8 +17,8 @@ import { useOlePreview } from "./useOlePreview";
 import { RenderProvider, useRenderContext } from "../../../context";
 import { px, type Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import type { OleReference } from "@aurochs-office/pptx/domain";
-import type { ResourceStore } from "@aurochs-office/pptx/domain/resource-store";
-import { createEmptyResourceStore } from "@aurochs-office/pptx/domain/resource-store";
+import type { ResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
+import { createEmptyResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 import { EMU_PER_PIXEL } from "@aurochs-office/ooxml/domain/ooxml-units";
 
 type RenderDeps = {

@@ -8,7 +8,7 @@
  */
 
 import type { SlideSize, Shape } from "@aurochs-office/pptx/domain";
-import type { ResourceStore } from "@aurochs-office/pptx/domain/resource-store";
+import type { ResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 import type { SlideContext } from "@aurochs-office/pptx/parser/slide/context";
 import type { CoreRenderContext } from "../render-context";
 import { createCoreRenderContext } from "../render-context";

@@ -6,7 +6,7 @@
 
 import { cleanup, renderHook, act, waitFor } from "@testing-library/react";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
-import { createResourceStore } from "@aurochs-office/pptx/domain/resource-store";
+import { createResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 import type { PresentationDocument } from "@aurochs-office/pptx/app";
 import {
   PdfImportError,

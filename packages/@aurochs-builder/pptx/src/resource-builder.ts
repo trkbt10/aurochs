@@ -14,7 +14,7 @@
 
 import type { Slide, Shape } from "@aurochs-office/pptx/domain";
 import type { DiagramLayoutType } from "@aurochs-office/pptx/domain/shape";
-import type { ResolvedResourceEntry, ResourceStore } from "@aurochs-office/pptx/domain/resource-store";
+import type { ResolvedResourceEntry, ResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 import type { ChartType } from "@aurochs-office/chart/domain";
 import type { DiagramDataModel } from "@aurochs-office/diagram/domain";
 import type { FileReader } from "@aurochs-office/pptx/parser/slide/external-content-loader";

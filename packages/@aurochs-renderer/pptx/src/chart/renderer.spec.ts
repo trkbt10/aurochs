@@ -24,7 +24,7 @@ import type {
   BubbleSeries,
 } from "@aurochs-office/chart/domain";
 import { createCoreRenderContext } from "../render-context";
-import { createResourceStore } from "@aurochs-office/pptx/domain/resource-store";
+import { createResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 import { pct, deg, px } from "@aurochs-office/drawing-ml/domain/units";
 import { loadPptxFile } from "../../scripts/lib/pptx-loader";
 import { resolveRepoPath } from "../test-utils/repo-paths";

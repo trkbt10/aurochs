@@ -13,7 +13,7 @@ import type { Shape, SlideSize, Slide, Background } from "@aurochs-office/pptx/d
 import type { PackageFile } from "@aurochs-office/opc";
 import type { SlideLayoutOption } from "@aurochs-office/pptx/app";
 import { loadSlideLayoutBundle } from "@aurochs-office/pptx/app";
-import { createResourceStore, type ResourceStore } from "@aurochs-office/pptx/domain/resource-store";
+import { createResourceStore, type ResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 import { loadSlideExternalContent, createFileReaderFromPackage } from "@aurochs-office/pptx/parser/slide/external-content-loader";
 import { parseTheme } from "@aurochs-office/pptx/parser/theme/theme-parser";
 import { parseSlideMaster } from "@aurochs-office/pptx/parser/slide/slide-parser";

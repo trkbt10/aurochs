@@ -92,7 +92,7 @@ import { PlayIcon } from "@aurochs-ui/ui-components/icons";
 import { ExportButton } from "./components";
 import { renderSlideSvg } from "@aurochs-renderer/pptx/svg";
 import { createCoreRenderContext } from "@aurochs-renderer/pptx";
-import { createResourceStore } from "@aurochs-office/pptx/domain/resource-store";
+import { createResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 import { ThemeImportExportSection } from "@aurochs-ui/ooxml-components/theme-io";
 import { extractThemeFromBuffer } from "@aurochs-office/pptx/app";
 import { buildThemeXml, exportThemeAsPotx, getThemeFileName } from "@aurochs-builder/pptx/builders";

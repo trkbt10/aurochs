@@ -21,7 +21,7 @@ import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import type { PresentationDocument } from "@aurochs-office/pptx/app";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import { EMPTY_FONT_SCHEME } from "@aurochs-office/ooxml/domain/font-scheme";
-import { createResourceStore } from "@aurochs-office/pptx/domain/resource-store";
+import { createResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 import {
   PresentationEditorProvider,
   usePresentationEditor,

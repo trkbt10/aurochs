@@ -25,7 +25,7 @@ import type { ResizeHandlePosition } from "@aurochs-ui/editor-core/drag-state";
 import { isPathEditEditing } from "../context/slide/state";
 import type { CreationMode } from "@aurochs-ui/ooxml-components";
 import { isPenMode, isPathMode } from "../creation-mode-guards";
-import type { ResourceStore } from "@aurochs-office/pptx/domain/resource-store";
+import type { ResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 import type { ResolvedBackgroundFill } from "@aurochs-office/drawing-ml/domain/background-fill";
 import type { RenderOptions } from "@aurochs-renderer/pptx";
 import type { DrawingPath } from "@aurochs-ui/path-tools";

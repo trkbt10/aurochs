@@ -18,7 +18,7 @@ import { getLayoutNonPlaceholderShapes } from "@aurochs-office/pptx/parser/slide
 import { toResolvedBackgroundFill } from "./background-fill";
 import { getBackgroundFillData } from "@aurochs-office/pptx/parser/slide/background-parser";
 import { loadSlideExternalContent } from "@aurochs-office/pptx/parser/slide/external-content-loader";
-import { createResourceStore } from "@aurochs-office/pptx/domain/resource-store";
+import { createResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 
 // =============================================================================
 // Types

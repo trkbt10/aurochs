@@ -1,9 +1,11 @@
 /** @file Unit tests for resource store implementation */
 import {
   createResourceStore,
-  createEmptyResourceStore,
   type ResolvedResourceEntry,
-} from "./resource-store";
+} from "@aurochs-office/ooxml/domain/resource-store";
+
+/** @deprecated alias kept for backward compat test */
+const createEmptyResourceStore = createResourceStore;
 
 describe("createResourceStore", () => {
   it("should create an empty store", () => {

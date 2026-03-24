@@ -31,7 +31,7 @@ import {
   extractTextFromBody,
 } from "@aurochs-office/pptx/domain/text-utils";
 import type { Chart } from "@aurochs-office/chart/domain";
-import type { ResourceStore } from "@aurochs-office/pptx/domain/resource-store";
+import type { ResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 
 // =============================================================================
 // Base Types
