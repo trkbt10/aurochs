@@ -51,7 +51,7 @@ import { createShapeFromMode } from "@aurochs-ui/pptx-slide-canvas/shape/factory
 import { createTestDocument } from "../src/context/presentation/editor/reducer/test-fixtures";
 import { collectShapeRenderData } from "@aurochs-ui/pptx-slide-canvas/shape/traverse";
 import { SlideCanvas } from "@aurochs-ui/pptx-slide-canvas/slide/SlideCanvas";
-import { registerEditorResources } from "../src/resource/register-slide-resources";
+import { prepareSlide } from "../src/resource/register-slide-resources";
 
 // =============================================================================
 // Helpers
@@ -127,7 +127,7 @@ function renderCanvas(state: PresentationEditorState) {
 
   // Populate ResourceStore for editor-created charts/diagrams (mimics PresentationEditor useMemo)
   const resourceStore = createResourceStore();
-  registerEditorResources(slide, resourceStore);
+  prepareSlide(slide, resourceStore);
 
   const result = render(
     <SlideCanvas

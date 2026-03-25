@@ -8,7 +8,8 @@ import { openPresentation } from "@aurochs-office/pptx";
 import { parseSlide } from "@aurochs-office/pptx/parser/slide/slide-parser";
 import { createParseContext } from "@aurochs-office/pptx/parser/context";
 import { loadSlideExternalContent } from "@aurochs-office/pptx/parser/slide/external-content-loader";
-import { createRenderContext } from "@aurochs-renderer/pptx";
+import { createSlideContextFromApiSlide } from "@aurochs-office/pptx/parser/slide/context";
+import { createResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 import { success, error, type Result } from "@aurochs-cli/cli-core";
 import { serializeShape, type ShapeJson } from "../serializers/shape-serializer";
 import type { SlideTransition } from "@aurochs-office/pptx/domain/transition";
@@ -33,11 +34,8 @@ export async function runShow(filePath: string, slideNumber: number): Promise<Re
     }
 
     const apiSlide = presentation.getSlide(slideNumber);
-    const renderContext = createRenderContext({ apiSlide, slideSize: presentation.size });
-    if (!renderContext.slideRenderContext) {
-      throw new Error("slideRenderContext is required for show");
-    }
-    const parseCtx = createParseContext(renderContext.slideRenderContext);
+    const slideCtx = createSlideContextFromApiSlide(apiSlide);
+    const parseCtx = createParseContext(slideCtx);
     const domainSlide = parseSlide(apiSlide.content, parseCtx);
 
     if (!domainSlide) {
@@ -45,7 +43,8 @@ export async function runShow(filePath: string, slideNumber: number): Promise<Re
     }
 
     // Load external content (charts, diagrams, OLE, images) into ResourceStore
-    const { fileReader, resourceStore } = renderContext;
+    const resourceStore = createResourceStore();
+    const fileReader = slideCtx.toFileReader();
     const enrichedSlide = loadSlideExternalContent(domainSlide, fileReader, resourceStore);
 
     return success({

@@ -8,7 +8,8 @@ import { openPresentation } from "@aurochs-office/pptx";
 import { parseSlide } from "@aurochs-office/pptx/parser/slide/slide-parser";
 import { createParseContext } from "@aurochs-office/pptx/parser/context";
 import { loadSlideExternalContent } from "@aurochs-office/pptx/parser/slide/external-content-loader";
-import { createRenderContext } from "@aurochs-renderer/pptx";
+import { createSlideContextFromApiSlide } from "@aurochs-office/pptx/parser/slide/context";
+import { createResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 import { renderSlideSvgIntegrated } from "@aurochs-renderer/pptx/slide-render";
 import { success, error, type Result } from "@aurochs-cli/cli-core";
 import { serializeShape, type ShapeJson } from "../serializers/shape-serializer";
@@ -63,11 +64,8 @@ export async function runPreview(
       const apiSlide = presentation.getSlide(i);
 
       // Build parse context with layout/master inheritance for placeholder transforms
-      const renderContext = createRenderContext({ apiSlide, slideSize: presentation.size });
-      if (!renderContext.slideRenderContext) {
-        throw new Error("slideRenderContext is required for preview");
-      }
-      const parseCtx = createParseContext(renderContext.slideRenderContext);
+      const slideCtx = createSlideContextFromApiSlide(apiSlide);
+      const parseCtx = createParseContext(slideCtx);
       const domainSlide = parseSlide(apiSlide.content, parseCtx);
 
       if (!domainSlide) {
@@ -75,7 +73,8 @@ export async function runPreview(
       }
 
       // Load external content (charts, diagrams, OLE, images) into ResourceStore
-      const { fileReader, resourceStore } = renderContext;
+      const resourceStore = createResourceStore();
+      const fileReader = slideCtx.toFileReader();
       const enrichedSlide = loadSlideExternalContent(domainSlide, fileReader, resourceStore);
 
       const shapes = enrichedSlide.shapes.map((s) => serializeShape(s, resourceStore));
@@ -84,7 +83,7 @@ export async function runPreview(
         // SVG output using integrated renderer
         const svgResult = renderSlideSvgIntegrated(
           apiSlide.content,
-          renderContext.slideRenderContext!,
+          slideCtx,
           presentation.size,
         );
         slides.push({

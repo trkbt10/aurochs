@@ -1,16 +1,23 @@
 /**
  * @file Slide resource preparation (pptx-editor configuration)
  *
- * Wraps @aurochs-builder/pptx/resource-builder functions,
- * providing pptx-editor's default diagram node specs.
+ * Single entry point: prepareSlide.
+ *
+ * Archive resources are already loaded into the document's ResourceStore
+ * by the converter (loadSlideExternalContent at document creation time).
+ * This function only registers builder-generated resources (editor-created
+ * charts, diagrams) for shapes that don't already have entries in the store.
+ *
+ * FileReader is NOT used here — it belongs to the converter's document creation
+ * path, not to the editor's render-time path.
  */
 
 import type { Slide } from "@aurochs-office/pptx/domain";
 import type { DiagramLayoutType } from "@aurochs-office/pptx/domain/shape";
 import type { ResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 import type { DiagramBuildSpec } from "@aurochs-builder/diagram";
-import type { FileReader } from "@aurochs-office/pptx/parser/slide/external-content-loader";
-import { prepareSlideResources, registerBuilderResources } from "@aurochs-builder/pptx/resource-builder";
+import { prepareSlideResources } from "@aurochs-builder/pptx/resource-builder";
+import { NULL_FILE_READER } from "@aurochs-office/pptx/parser/slide/external-content-loader";
 
 /**
  * UI-defined default node specs per diagram layout type.
@@ -57,24 +64,18 @@ function resolveDiagramSpec(diagramType: DiagramLayoutType): DiagramBuildSpec | 
 const BUILDER_OPTIONS = { resolveDiagramSpec };
 
 /**
- * Prepare a slide's ResourceStore from archive + builder.
- * Use when PPTX archive is available (apiSlide present).
+ * Prepare a slide's ResourceStore for rendering.
+ *
+ * Archive resources are already in the store (loaded at document creation time).
+ * This only registers builder-generated resources for editor-created shapes.
+ *
+ * NULL_FILE_READER is passed to prepareSlideResources: loadSlideExternalContent
+ * becomes a no-op (archive entries already present in store, and readFile returns null).
+ * registerBuilderResources fills in any remaining gaps.
  */
 export function prepareSlide(
   slide: Slide,
   resourceStore: ResourceStore,
-  fileReader: FileReader,
 ): Slide {
-  return prepareSlideResources(slide, resourceStore, fileReader, BUILDER_OPTIONS);
-}
-
-/**
- * Register builder-generated resources only (no archive).
- * Use for editor-created slides without PPTX archive.
- */
-export function registerEditorResources(
-  slide: Slide,
-  resourceStore: ResourceStore,
-): void {
-  registerBuilderResources(slide.shapes, resourceStore, BUILDER_OPTIONS);
+  return prepareSlideResources(slide, resourceStore, NULL_FILE_READER, BUILDER_OPTIONS);
 }

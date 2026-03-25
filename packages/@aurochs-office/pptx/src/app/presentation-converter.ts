@@ -19,7 +19,8 @@ import type { Slide as ApiSlide } from "./types";
 import { parseSlide } from "../parser/slide/slide-parser";
 import { createParseContext } from "../parser/context";
 import { extractThemeData } from "../parser/theme/theme-parser";
-import { createRenderContext } from "@aurochs-renderer/pptx";
+import { createSlideContextFromApiSlide, getLayoutNonPlaceholderShapes } from "../parser/slide/context";
+import { getBackgroundFillData, toResolvedBackgroundFill } from "../parser/slide/background-parser";
 import { loadSlideExternalContent } from "../parser/slide/external-content-loader";
 
 // =============================================================================
@@ -52,26 +53,27 @@ export function convertToPresentationDocument(loaded: LoadedPresentation): Prese
   for (let i = 1; i <= slideCount; i++) {
     const apiSlide = presentation.getSlide(i);
 
-    // Build SlideRenderContext for proper parsing with style inheritance
-    const renderContext = createRenderContext({ apiSlide, slideSize });
+    // Build SlideContext for proper parsing with style inheritance
+    const slideCtx = createSlideContextFromApiSlide(apiSlide);
+    const fileReader = slideCtx.toFileReader();
 
-    // Create ParseContext with placeholder tables, master styles, format scheme
-    if (!renderContext.slideRenderContext) {
-      throw new Error("slideRenderContext is required when apiSlide is provided");
-    }
-    const parseCtx = createParseContext(renderContext.slideRenderContext);
+    const parseCtx = createParseContext(slideCtx);
 
     // Parse the XML content with full context
     const domainSlide = parseSlide(apiSlide.content, parseCtx);
 
     if (domainSlide) {
       // Register all resources (images, charts, diagrams, OLE) in ResourceStore
-      const enrichedSlide = loadSlideExternalContent(domainSlide, renderContext.fileReader, resourceStore);
+      const enrichedSlide = loadSlideExternalContent(domainSlide, fileReader, resourceStore);
 
       slides.push({
         id: `slide-${i}`,
         slide: enrichedSlide,
         apiSlide,
+        colorContext: slideCtx.toRendererColorContext(),
+        fontScheme: slideCtx.toFontScheme(),
+        resolvedBackground: toResolvedBackgroundFill(getBackgroundFillData(slideCtx)),
+        layoutShapes: getLayoutNonPlaceholderShapes(slideCtx),
       });
     }
   }

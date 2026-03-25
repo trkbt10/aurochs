@@ -10,6 +10,9 @@
  */
 
 import { createRenderContext } from "./api-render-context";
+import { createResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
+import { createSlideContextFromApiSlide, getLayoutNonPlaceholderShapes } from "@aurochs-office/pptx/parser/slide/context";
+import { getBackgroundFillData, toResolvedBackgroundFill } from "@aurochs-office/pptx/parser/slide/background-parser";
 import type { Slide as ApiSlide } from "@aurochs-office/pptx/app/types";
 import type { XmlElement, XmlDocument } from "@aurochs/xml";
 import type { ResourceMap } from "@aurochs-office/opc";
@@ -18,6 +21,24 @@ import { px } from "@aurochs-office/drawing-ml/domain/units";
 import type { ZipFile } from "@aurochs-office/opc";
 import { resolveColor } from "@aurochs-office/drawing-ml/domain/color-resolution";
 import { DEFAULT_RENDER_OPTIONS } from "../render-options";
+
+// =============================================================================
+// Helpers
+// =============================================================================
+
+/** Build RenderContext from apiSlide using parser-layer APIs directly */
+function buildRenderContextFromApiSlide(apiSlide: ApiSlide) {
+  const slideCtx = createSlideContextFromApiSlide(apiSlide);
+  return createRenderContext({
+    slideSize: { width: px(960), height: px(540) },
+    resourceStore: createResourceStore(),
+    colorContext: slideCtx.toRendererColorContext(),
+    fontScheme: slideCtx.toFontScheme(),
+    resolvedBackground: toResolvedBackgroundFill(getBackgroundFillData(slideCtx)),
+    layoutShapes: getLayoutNonPlaceholderShapes(slideCtx),
+    slideRenderContext: slideCtx,
+  });
+}
 
 // =============================================================================
 // Test Fixtures
@@ -175,7 +196,7 @@ describe("createRenderContext", () => {
     const apiSlide = createMockApiSlide();
     const slideSize = { width: px(960), height: px(540) };
 
-    const ctx = createRenderContext({ apiSlide, slideSize });
+    const ctx = buildRenderContextFromApiSlide(apiSlide);
 
     expect(ctx.slideRenderContext).toBeDefined();
     expect(ctx.slideRenderContext!.master).toBeDefined();
@@ -187,7 +208,7 @@ describe("createRenderContext", () => {
     const apiSlide = createMockApiSlide();
     const slideSize = { width: px(960), height: px(540) };
 
-    const ctx = createRenderContext({ apiSlide, slideSize });
+    const ctx = buildRenderContextFromApiSlide(apiSlide);
     const colorScheme = ctx.slideRenderContext!.presentation.theme.colorScheme;
 
     // Verify color scheme has expected colors
@@ -201,7 +222,7 @@ describe("createRenderContext", () => {
     const apiSlide = createMockApiSlide();
     const slideSize = { width: px(960), height: px(540) };
 
-    const ctx = createRenderContext({ apiSlide, slideSize });
+    const ctx = buildRenderContextFromApiSlide(apiSlide);
     const colorMap = ctx.slideRenderContext!.master.colorMap;
 
     // Verify color map mappings
@@ -216,7 +237,7 @@ describe("createRenderContext output", () => {
     const apiSlide = createMockApiSlide();
     const slideSize = { width: px(960), height: px(540) };
 
-    const ctx = createRenderContext({ apiSlide, slideSize });
+    const ctx = buildRenderContextFromApiSlide(apiSlide);
 
     expect(ctx).toBeDefined();
     expect(ctx.colorContext).toBeDefined();
@@ -228,7 +249,7 @@ describe("createRenderContext output", () => {
     const apiSlide = createMockApiSlide();
     const slideSize = { width: px(960), height: px(540) };
 
-    const ctx = createRenderContext({ apiSlide, slideSize });
+    const ctx = buildRenderContextFromApiSlide(apiSlide);
     const colorContext = ctx.colorContext;
 
     // Create Color objects with spec structure
@@ -254,7 +275,7 @@ describe("createRenderContext output", () => {
     const apiSlide = createMockApiSlide();
     const slideSize = { width: px(960), height: px(540) };
 
-    const ctx = createRenderContext({ apiSlide, slideSize });
+    const ctx = buildRenderContextFromApiSlide(apiSlide);
     const { colorScheme } = ctx.colorContext;
 
     // Theme colors should be populated
@@ -268,7 +289,7 @@ describe("createRenderContext output", () => {
     const apiSlide = createMockApiSlide();
     const slideSize = { width: px(960), height: px(540) };
 
-    const ctx = createRenderContext({ apiSlide, slideSize });
+    const ctx = buildRenderContextFromApiSlide(apiSlide);
     const { colorMap } = ctx.colorContext;
 
     // Color map should have proper mappings
@@ -281,7 +302,7 @@ describe("createRenderContext output", () => {
     const apiSlide = createMockApiSlide();
     const slideSize = { width: px(960), height: px(540) };
 
-    const ctx = createRenderContext({ apiSlide, slideSize });
+    const ctx = buildRenderContextFromApiSlide(apiSlide);
 
     expect(ctx.fontScheme).toBeDefined();
     expect(ctx.fontScheme?.majorFont.latin).toBe("Calibri Light");
@@ -292,7 +313,7 @@ describe("createRenderContext output", () => {
     const apiSlide = createMockApiSlide();
     const slideSize = { width: px(960), height: px(540) };
 
-    const ctx = createRenderContext({ apiSlide, slideSize });
+    const ctx = buildRenderContextFromApiSlide(apiSlide);
 
     expect(ctx.resourceStore).toBeDefined();
     expect(typeof ctx.resourceStore.toDataUrl).toBe("function");

@@ -15,8 +15,7 @@ import { createParseContext } from "@aurochs-office/pptx/parser/context";
 import { renderSlideSvg, createEmptySlideSvg } from "./svg/renderer";
 import { createRenderContextFromSlideContext } from "./context/slide-context-adapter";
 import { getLayoutNonPlaceholderShapes } from "@aurochs-office/pptx/parser/slide/context";
-import { toResolvedBackgroundFill } from "./background-fill";
-import { getBackgroundFillData } from "@aurochs-office/pptx/parser/slide/background-parser";
+import { getBackgroundFillData, toResolvedBackgroundFill } from "@aurochs-office/pptx/parser/slide/background-parser";
 import { loadSlideExternalContent } from "@aurochs-office/pptx/parser/slide/external-content-loader";
 import { createResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 

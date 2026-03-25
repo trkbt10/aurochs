@@ -26,11 +26,3 @@ export type { SlideThumbnailPreviewProps } from "./SlideThumbnailPreview";
 
 export { useSlideThumbnails } from "./use-slide-thumbnails";
 export type { UseSlideThumbnailsOptions, SlideThumbnailRenderer } from "./use-slide-thumbnails";
-
-export {
-  createThumbnailCache,
-  getCachedThumbnail,
-  setCachedThumbnail,
-  pruneCacheForSlideIds,
-} from "./cache";
-export type { ThumbnailCache, ThumbnailCacheEntry } from "./cache";

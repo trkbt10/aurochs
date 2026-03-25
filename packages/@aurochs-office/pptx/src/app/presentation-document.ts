@@ -5,7 +5,7 @@
  * PPTX presentation data, including rendering context dependencies.
  */
 
-import type { Slide, Presentation } from "../domain";
+import type { Slide, Shape, Presentation } from "../domain";
 import type { PackageFile } from "@aurochs-office/opc";
 import type { Theme } from "../domain/theme/types";
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
@@ -52,8 +52,26 @@ export type SlideWithId = {
    * Contains all XML data needed to build SlideRenderContext.
    */
   readonly apiSlide?: ApiSlide;
+
+  // === Per-slide rendering context (resolved at document creation time) ===
+  /**
+   * Color context for this slide (theme colors + color map, including clrMapOvr).
+   * Resolved at document creation time from apiSlide or document defaults.
+   */
+  readonly colorContext?: ColorContext;
+  /**
+   * Font scheme for this slide.
+   * Resolved at document creation time from apiSlide or document defaults.
+   */
+  readonly fontScheme?: FontScheme;
   /** Pre-resolved background (from slide -> layout -> master inheritance) */
   readonly resolvedBackground?: ResolvedBackgroundFill;
+  /**
+   * Non-placeholder shapes from slide layout (decorative shapes behind content).
+   * Resolved at document creation time from apiSlide.
+   */
+  readonly layoutShapes?: readonly Shape[];
+
   /** Layout path override for editor-driven layout selection */
   readonly layoutPathOverride?: string;
 };

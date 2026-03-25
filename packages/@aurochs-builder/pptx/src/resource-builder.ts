@@ -102,10 +102,10 @@ export function prepareSlideResources(
 /**
  * Register builder-generated resources (charts, diagrams) in ResourceStore.
  *
- * Use this when no PPTX archive is available (editor-created slides).
  * Only generates resources for shapes that don't already have entries in the store.
+ * Internal to this module — callers use prepareSlideResources.
  */
-export function registerBuilderResources(
+function registerBuilderResources(
   shapes: readonly Shape[],
   resourceStore: ResourceStore,
   options: BuilderResourceOptions = {},

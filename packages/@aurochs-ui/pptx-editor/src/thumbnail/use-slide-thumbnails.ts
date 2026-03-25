@@ -1,22 +1,18 @@
 /**
- * @file Hook for cached slide thumbnail rendering
+ * @file Hook for slide thumbnail rendering
+ *
+ * Thumbnail SVGs are derived from slides + slideSize via useMemo.
+ * No mutable cache — React's memo handles staleness.
  */
 
-import { useRef, useMemo, useCallback } from "react";
+import { useMemo, useCallback } from "react";
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 
 import { renderSlideSvg } from "@aurochs-renderer/pptx/svg";
-import { createRenderContext, createCoreRenderContext } from "@aurochs-renderer/pptx";
-import type { SlideWithId } from "@aurochs-office/pptx/app";
+import { createRenderContext } from "@aurochs-renderer/pptx";
+import type { SlideWithId, SlideId } from "@aurochs-office/pptx/app";
 import { createResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
-import { prepareSlide, registerEditorResources } from "../resource/register-slide-resources";
-import {
-  createThumbnailCache,
-  getCachedThumbnail,
-  setCachedThumbnail,
-  pruneCacheForSlideIds,
-  type ThumbnailCache,
-} from "./cache";
+import { prepareSlide } from "../resource/register-slide-resources";
 
 // =============================================================================
 // Types
@@ -38,42 +34,30 @@ export type SlideThumbnailRenderer = {
 
 export function useSlideThumbnails(options: UseSlideThumbnailsOptions): SlideThumbnailRenderer {
   const { slideWidth, slideHeight, slides } = options;
-  const cacheRef = useRef<ThumbnailCache>(createThumbnailCache());
   const slideSize = useMemo(() => ({ width: slideWidth, height: slideHeight }), [slideWidth, slideHeight]);
 
-  useMemo(() => {
-    const validIds = new Set(slides.map((s) => s.id));
-    pruneCacheForSlideIds(cacheRef.current, validIds);
-  }, [slides]);
+  const thumbnailMap = useMemo(() => {
+    const map = new Map<SlideId, string>();
+    for (const slideWithId of slides) {
+      const resourceStore = createResourceStore();
+      const ctx = createRenderContext({
+        slideSize,
+        resourceStore,
+        colorContext: slideWithId.colorContext,
+        fontScheme: slideWithId.fontScheme,
+        resolvedBackground: slideWithId.resolvedBackground,
+        layoutShapes: slideWithId.layoutShapes,
+      });
+      const enrichedSlide = prepareSlide(slideWithId.slide, resourceStore);
+      const result = renderSlideSvg(enrichedSlide, ctx);
+      map.set(slideWithId.id, result.svg);
+    }
+    return map;
+  }, [slides, slideSize]);
 
   const getThumbnailSvg = useCallback(
-    (slideWithId: SlideWithId): string => {
-      const { id, slide, apiSlide } = slideWithId;
-      const cache = cacheRef.current;
-
-      const cached = getCachedThumbnail(cache, id, slide);
-      if (cached !== undefined) {
-        return cached;
-      }
-
-      let ctx: ReturnType<typeof createCoreRenderContext>;
-      let enrichedSlide: typeof slide;
-
-      if (apiSlide) {
-        const renderCtx = createRenderContext({ apiSlide, slideSize });
-        ctx = renderCtx;
-        enrichedSlide = prepareSlide(slide, ctx.resourceStore, renderCtx.fileReader);
-      } else {
-        ctx = createCoreRenderContext({ slideSize, resourceStore: createResourceStore() });
-        registerEditorResources(slide, ctx.resourceStore);
-        enrichedSlide = slide;
-      }
-
-      const result = renderSlideSvg(enrichedSlide, ctx);
-      setCachedThumbnail({ cache, slideId: id, slide, svg: result.svg });
-      return result.svg;
-    },
-    [slideSize],
+    (slideWithId: SlideWithId): string => thumbnailMap.get(slideWithId.id) ?? "",
+    [thumbnailMap],
   );
 
   return { getThumbnailSvg };

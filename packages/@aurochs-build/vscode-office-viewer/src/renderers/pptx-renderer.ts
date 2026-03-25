@@ -9,7 +9,7 @@ import { openPresentation } from "@aurochs-office/pptx";
 import type { PackageFile } from "@aurochs-office/opc";
 
 import { loadPptxBundleFromBuffer } from "@aurochs-office/pptx/app/pptx-loader";
-import { createRenderContext } from "@aurochs-renderer/pptx";
+import { createSlideContextFromApiSlide } from "@aurochs-office/pptx/parser/slide/context";
 import { renderSlideSvgIntegrated } from "@aurochs-renderer/pptx/slide-render";
 
 export type PptxRenderResult = {
@@ -34,15 +34,8 @@ export function renderPptxSlidesFromFile(presentationFile: PackageFile): PptxRen
   const slideIndices = Array.from({ length: presentation.count }, (_, i) => i + 1);
   const slides = slideIndices.map((i) => {
     const apiSlide = presentation.getSlide(i);
-    const renderContext = createRenderContext({
-      apiSlide,
-      slideSize: presentation.size,
-    });
-
-    if (!renderContext.slideRenderContext) {
-      throw new Error("slideRenderContext is required for PPTX rendering");
-    }
-    const result = renderSlideSvgIntegrated(apiSlide.content, renderContext.slideRenderContext, presentation.size);
+    const slideCtx = createSlideContextFromApiSlide(apiSlide);
+    const result = renderSlideSvgIntegrated(apiSlide.content, slideCtx, presentation.size);
 
     return result.svg;
   });

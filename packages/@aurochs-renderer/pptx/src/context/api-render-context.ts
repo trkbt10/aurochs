@@ -1,99 +1,136 @@
 /**
- * @file SlideRenderContext builder for app usage
+ * @file RenderContext factory and archive slide context resolver
  *
- * Creates SlideRenderContext from API Slide and ZipFile.
- * This enables proper rendering with full theme/master/layout context.
+ * Single factory: createRenderContext — takes all fields explicitly.
+ * Archive helper: resolveArchiveSlideContext — extracts rendering fields from ApiSlide.
+ *
+ * FileReader is NOT part of RenderContext — it belongs on SlideWithId (SoT for file resolution).
  */
 
 import type { Slide as ApiSlide } from "@aurochs-office/pptx/app/types";
 import type { SlideContext } from "@aurochs-office/pptx/parser/slide/context";
 import { createSlideContextFromApiSlide, getLayoutNonPlaceholderShapes } from "@aurochs-office/pptx/parser/slide/context";
 import { getBackgroundFillData } from "@aurochs-office/pptx/parser/slide/background-parser";
-import type { SlideSize } from "@aurochs-office/pptx/domain";
-import type { CoreRenderContext } from "../render-context";
+import type { SlideSize, Shape } from "@aurochs-office/pptx/domain";
+import { createCoreRenderContext } from "../render-context";
 import type { RenderOptions } from "../render-options";
 import { DEFAULT_RENDER_OPTIONS } from "../render-options";
-import { toResolvedBackgroundFill } from "../background-fill";
-import { createRenderContextFromSlideContext } from "./slide-context-adapter";
-import { createResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
-import type { FileReader } from "@aurochs-office/pptx/parser/slide/external-content-loader";
+import { toResolvedBackgroundFill } from "@aurochs-office/pptx/parser/slide/background-parser";
+import type { ResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
+import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
+import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
+import type { ResolvedBackgroundFill } from "@aurochs-office/drawing-ml/domain/background-fill";
+import type { TableStyleList } from "@aurochs-office/pptx/parser/table/style-parser";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 /**
- * Extended RenderContext with SlideContext for advanced usage.
- *
- * This is the main function for the editor to use when rendering edited slides.
- * It includes:
- * - Color context (theme colors + color map)
- * - Resource resolver (for images)
- * - Font scheme
- * - Resolved background (from slide → layout → master hierarchy)
- * - Layout shapes (non-placeholder shapes from layout)
- */
-/**
  * Render context for slide rendering.
  *
- * Always has fileReader (null-object if no archive).
- * slideRenderContext is present only when apiSlide was provided.
+ * slideRenderContext is present only for archive slides.
+ * FileReader is NOT included — it belongs on SlideWithId.
  */
-export type RenderContext = CoreRenderContext & {
+export type RenderContext = {
+  readonly slideSize: SlideSize;
+  readonly options: RenderOptions;
+  readonly colorContext: ColorContext;
+  readonly warnings: import("@aurochs-office/ooxml").WarningCollector;
+  readonly resolvedBackground?: ResolvedBackgroundFill;
+  readonly fontScheme?: FontScheme;
+  readonly layoutShapes?: readonly Shape[];
+  readonly tableStyles?: TableStyleList;
+  readonly resourceStore: ResourceStore;
   readonly slideRenderContext?: SlideContext;
-  readonly fileReader: FileReader;
 };
 
-// CreateRenderContextOptions removed — createRenderContext now takes an inline parameter type
-// with required apiSlide and zip.
+/**
+ * Configuration for createRenderContext.
+ * All fields are explicit — no derivation inside the factory.
+ */
+export type RenderContextConfig = {
+  readonly slideSize: SlideSize;
+  readonly resourceStore: ResourceStore;
+  readonly colorContext?: ColorContext;
+  readonly fontScheme?: FontScheme;
+  readonly resolvedBackground?: ResolvedBackgroundFill;
+  readonly layoutShapes?: readonly Shape[];
+  readonly tableStyles?: TableStyleList;
+  readonly slideRenderContext?: SlideContext;
+  readonly renderOptions?: Partial<RenderOptions>;
+};
 
-// =============================================================================
-// Helpers
-// =============================================================================
+/**
+ * Values extracted from an ApiSlide for constructing a RenderContext.
+ * Returned by resolveArchiveSlideContext.
+ *
+ * Does NOT include fileReader — that belongs on SlideWithId.
+ */
+export type ArchiveSlideContext = {
+  readonly colorContext: ColorContext;
+  readonly fontScheme: FontScheme;
+  readonly resolvedBackground: ResolvedBackgroundFill | undefined;
+  readonly layoutShapes: readonly Shape[];
+  readonly tableStyles: TableStyleList | undefined;
+  readonly slideRenderContext: SlideContext;
+};
 
 // =============================================================================
 // Factory Function
 // =============================================================================
 
 /**
- * Create a RenderContext from an API Slide.
+ * Create a RenderContext from explicit configuration.
  *
- * Resolves theme, colors, fonts, background, layout from the PPTX archive.
- * apiSlide is required — if no archive is available,
- * use createCoreRenderContext directly.
+ * Single construction path for all slides (archive and editor-created).
+ * For archive slides, use resolveArchiveSlideContext to extract fields from ApiSlide.
  */
-export function createRenderContext({
-  apiSlide,
-  slideSize,
-  renderOptions,
-}: {
-  readonly apiSlide: ApiSlide;
-  readonly slideSize: SlideSize;
-  readonly renderOptions?: RenderOptions;
-}): RenderContext {
-  const resourceStore = createResourceStore();
-
-  const slideRenderCtx = createSlideContextFromApiSlide(apiSlide, renderOptions ?? DEFAULT_RENDER_OPTIONS);
-  const bgFillData = getBackgroundFillData(slideRenderCtx);
-  const resolvedBackground = toResolvedBackgroundFill(bgFillData);
-  const layoutShapes = getLayoutNonPlaceholderShapes(slideRenderCtx);
-
-  const fileReader = slideRenderCtx.toFileReader();
-
-  const coreContext = createRenderContextFromSlideContext(slideRenderCtx, slideSize, {
-    resolvedBackground,
-    layoutShapes,
-    resourceStore,
+export function createRenderContext(config: RenderContextConfig): RenderContext {
+  const coreContext = createCoreRenderContext({
+    slideSize: config.slideSize,
+    options: config.renderOptions,
+    colorContext: config.colorContext,
+    fontScheme: config.fontScheme,
+    resolvedBackground: config.resolvedBackground,
+    layoutShapes: config.layoutShapes,
+    tableStyles: config.tableStyles,
+    resourceStore: config.resourceStore,
   });
 
   return {
     ...coreContext,
-    slideRenderContext: slideRenderCtx,
-    fileReader,
+    slideRenderContext: config.slideRenderContext,
   };
 }
 
 // =============================================================================
-// Layout Shape Extraction
+// Archive Slide Context Resolver
 // =============================================================================
 
+/**
+ * Extract rendering context fields from an ApiSlide.
+ *
+ * Resolves theme, colors, fonts, background, layout shapes from the PPTX archive.
+ * FileReader is NOT included — it is set on SlideWithId at slide creation time.
+ *
+ * Usage:
+ *   const archive = resolveArchiveSlideContext(apiSlide);
+ *   const ctx = createRenderContext({ slideSize, resourceStore, ...archive });
+ */
+function resolveArchiveSlideContext(
+  apiSlide: ApiSlide,
+  renderOptions?: RenderOptions,
+): ArchiveSlideContext {
+  const slideCtx = createSlideContextFromApiSlide(apiSlide, renderOptions ?? DEFAULT_RENDER_OPTIONS);
+  const bgFillData = getBackgroundFillData(slideCtx);
+
+  return {
+    colorContext: slideCtx.toRendererColorContext(),
+    fontScheme: slideCtx.toFontScheme(),
+    resolvedBackground: toResolvedBackgroundFill(bgFillData),
+    layoutShapes: getLayoutNonPlaceholderShapes(slideCtx),
+    tableStyles: slideCtx.presentation.tableStyles,
+    slideRenderContext: slideCtx,
+  };
+}

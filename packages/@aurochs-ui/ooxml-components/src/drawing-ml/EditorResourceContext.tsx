@@ -76,9 +76,9 @@ const EditorResourceContext = createContext<EditorResourceContextValue | undefin
  *
  * Provides centralized resource management for uploaded and created resources.
  */
-export function EditorResourceProvider({ children }: { readonly children: ReactNode }) {
+export function EditorResourceProvider({ children, initialStore }: { readonly children: ReactNode; readonly initialStore?: ResourceStore }) {
   const value = useMemo<EditorResourceContextValue>(() => {
-    const store = createResourceStore();
+    const store = initialStore ?? createResourceStore();
     // eslint-disable-next-line no-restricted-syntax -- mutable counter for generating unique resource IDs
     let nextId = 1;
 

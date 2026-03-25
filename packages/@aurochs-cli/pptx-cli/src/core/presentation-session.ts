@@ -37,6 +37,8 @@ import {
   type ThemeEditSpec,
 } from "@aurochs-builder/pptx";
 import { renderSlideSvg, createRenderContext, createEmptySlideSvg } from "@aurochs-renderer/pptx";
+import { createSlideContextFromApiSlide } from "@aurochs-office/pptx/parser/slide/context";
+import { createResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 
 // =============================================================================
 // Types
@@ -523,9 +525,13 @@ export function createPresentationSession(): PresentationSession {
 
       try {
         const apiSlide = state.presentation.getSlide(slideNumber);
+        const slideCtx = createSlideContextFromApiSlide(apiSlide as ApiSlide);
         const renderContext = createRenderContext({
-          apiSlide: apiSlide as ApiSlide,
           slideSize,
+          resourceStore: createResourceStore(),
+          colorContext: slideCtx.toRendererColorContext(),
+          fontScheme: slideCtx.toFontScheme(),
+          slideRenderContext: slideCtx,
         });
 
         const domainSlide = parseSlide(apiSlide.content);

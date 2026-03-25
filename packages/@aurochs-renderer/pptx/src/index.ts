@@ -48,12 +48,6 @@ export {
 // =============================================================================
 
 // =============================================================================
-// Types from background-fill
-// =============================================================================
-
-export { toResolvedBackgroundFill } from "./background-fill";
-
-// =============================================================================
 // Types from transform
 // =============================================================================
 
@@ -149,6 +143,6 @@ export type { RenderContextFromSlideOptions } from "./context/slide-context-adap
 
 export { createRenderContextFromSlideContext } from "./context/slide-context-adapter";
 
-export type { RenderContext } from "./context/api-render-context";
+export type { RenderContext, RenderContextConfig } from "./context/api-render-context";
 
 export { createRenderContext } from "./context/api-render-context";

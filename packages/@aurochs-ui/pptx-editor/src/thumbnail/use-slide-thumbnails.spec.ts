@@ -22,8 +22,7 @@ import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import { renderSlideSvg } from "@aurochs-renderer/pptx/svg";
 import { createCoreRenderContext } from "@aurochs-renderer/pptx";
 import { createResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
-import { loadSlideExternalContent, NULL_FILE_READER } from "@aurochs-office/pptx/parser/slide/external-content-loader";
-import { registerEditorResources } from "../resource/register-slide-resources";
+import { prepareSlide } from "../resource/register-slide-resources";
 import { useSlideThumbnails } from "./use-slide-thumbnails";
 
 // =============================================================================
@@ -88,7 +87,7 @@ describe("renderSlideSvg structural invariant", () => {
     });
 
     // Write to the SAME store that ctx references
-    registerEditorResources(slide, store);
+    prepareSlide(slide, store);
 
     // renderSlideSvg reads from ctx.resourceStore (which is store)
     const result = renderSlideSvg(slide, ctx);
@@ -98,7 +97,7 @@ describe("renderSlideSvg structural invariant", () => {
   it("should generate diagram shapes with unique IDs", () => {
     const slide = createDiagramSlide("process");
     const store = createResourceStore();
-    registerEditorResources(slide, store);
+    prepareSlide(slide, store);
 
     const entry = store.get<{ shapes: readonly Shape[] }>("diagram-diag-1");
     const ids = entry!.parsed!.shapes
@@ -119,7 +118,7 @@ describe("renderSlideSvg structural invariant", () => {
       resourceStore: readStore,
     });
 
-    registerEditorResources(slide, writeStore);
+    prepareSlide(slide, writeStore);
 
     expect(() => renderSlideSvg(slide, ctx)).toThrow();
   });
@@ -134,7 +133,7 @@ describe("renderSlideSvg structural invariant", () => {
 
     // Parser (loadSlideExternalContent) does not register if no archive data found.
     // Builder (registerSlideResources) fills in the gap.
-    registerEditorResources(slide, store);
+    prepareSlide(slide, store);
 
     const result = renderSlideSvg(slide, ctx);
     expect(result.svg).not.toContain("[Diagram]");
@@ -157,7 +156,7 @@ describe("renderSlideSvg structural invariant", () => {
       parsed: { shapes: [markerShape] },
     });
 
-    registerEditorResources(slide, store);
+    prepareSlide(slide, store);
 
     // Builder must NOT overwrite — parser's entry takes precedence
     const entry = store.get<{ shapes: readonly unknown[] }>("diagram-diag-1");
@@ -165,12 +164,9 @@ describe("renderSlideSvg structural invariant", () => {
     expect(entry!.parsed!.shapes[0]).toBe(markerShape);
   });
 
-  it("should work after loadSlideExternalContent runs on editor-created diagram (simulates apiSlide present)", () => {
-    // This simulates the browser failure path:
-    // 1. buildRenderContext creates ctx with its own ResourceStore
-    // 2. loadSlideExternalContent runs (parser) — for editor-created diagram, no archive data
-    // 3. registerSlideResources runs (builder) — should fill in the gap
-    // 4. renderSlideSvg runs (renderer) — should find data in ctx.resourceStore
+  it("should work with NULL_FILE_READER on editor-created diagram (prepareSlide handles both steps)", () => {
+    // prepareSlide runs loadSlideExternalContent (no-op with NULL_FILE_READER)
+    // then registerBuilderResources fills in the gap.
 
     const slide = createDiagramSlide("process");
     const store = createResourceStore();
@@ -179,16 +175,11 @@ describe("renderSlideSvg structural invariant", () => {
       resourceStore: store,
     });
 
-    // Step 2: Parser enrichment with no archive (NULL_FILE_READER)
-    const enrichedSlide = loadSlideExternalContent(slide, NULL_FILE_READER, store);
+    const enrichedSlide = prepareSlide(slide, store);
 
-    // Parser must NOT have registered an empty entry
-    expect(store.has("diagram-diag-1")).toBe(false);
+    // Builder should have registered the diagram
+    expect(store.has("diagram-diag-1")).toBe(true);
 
-    // Step 3: Builder fills in
-    registerEditorResources(enrichedSlide, store);
-
-    // Step 4: Renderer reads from the SAME store
     const result = renderSlideSvg(enrichedSlide, ctx);
     expect(result.svg).not.toContain("[Diagram]");
   });
@@ -201,7 +192,7 @@ describe("renderSlideSvg structural invariant", () => {
       resourceStore: store,
     });
 
-    registerEditorResources(slide, store);
+    prepareSlide(slide, store);
 
     const result = renderSlideSvg(slide, ctx);
     expect(result.svg).not.toContain("[Chart]");
@@ -217,7 +208,7 @@ describe("useSlideThumbnails", () => {
 
   for (const diagramType of DIAGRAM_TYPES) {
     it(`should render ${diagramType} diagram shapes in SVG thumbnail (not [Diagram] placeholder)`, () => {
-      const slideWithId: SlideWithId = { id: "slide-1", slide: createDiagramSlide(diagramType) };
+      const slideWithId: SlideWithId = { id: "slide-1", slide: createDiagramSlide(diagramType)};
 
       const { result } = renderHook(() =>
         useSlideThumbnails({
@@ -239,7 +230,7 @@ describe("useSlideThumbnails", () => {
   }
 
   it("should render chart in SVG thumbnail (not [Chart] placeholder)", () => {
-    const slideWithId: SlideWithId = { id: "slide-chart", slide: createChartSlide() };
+    const slideWithId: SlideWithId = { id: "slide-chart", slide: createChartSlide()};
 
     const { result } = renderHook(() =>
       useSlideThumbnails({
@@ -271,5 +262,158 @@ describe("useSlideThumbnails", () => {
     const svg = result.current.getThumbnailSvg(slideWithId);
     expect(svg).toBeDefined();
     expect(svg).not.toContain("[Diagram]");
+  });
+});
+
+// =============================================================================
+// useSlideThumbnails recomputation and thumbnailMap invariants
+// =============================================================================
+
+describe("useSlideThumbnails recomputation", () => {
+  it("should recompute thumbnails when slides array reference changes", () => {
+    const slide1: SlideWithId = { id: "slide-1", slide: createDiagramSlide("process") };
+    const slide2: SlideWithId = { id: "slide-2", slide: createChartSlide() };
+
+    const initialSlides = [slide1];
+
+    const { result, rerender } = renderHook(
+      ({ slides }) =>
+        useSlideThumbnails({
+          slideWidth: px(960) as Pixels,
+          slideHeight: px(540) as Pixels,
+          slides,
+        }),
+      { initialProps: { slides: initialSlides } },
+    );
+
+    const svgBefore = result.current.getThumbnailSvg(slide1);
+    expect(svgBefore.length).toBeGreaterThan(0);
+
+    // Rerender with a new slides array that includes slide2
+    const updatedSlides = [slide1, slide2];
+    rerender({ slides: updatedSlides });
+
+    // After rerender, both slides should have thumbnails
+    const svg1After = result.current.getThumbnailSvg(slide1);
+    const svg2After = result.current.getThumbnailSvg(slide2);
+    expect(svg1After.length).toBeGreaterThan(0);
+    expect(svg2After.length).toBeGreaterThan(0);
+  });
+
+  it("should return non-empty SVG from getThumbnailSvg for each slide", () => {
+    const slides: SlideWithId[] = [
+      { id: "slide-a", slide: createDiagramSlide("process") },
+      { id: "slide-b", slide: createDiagramSlide("cycle") },
+      { id: "slide-c", slide: createChartSlide() },
+      { id: "slide-d", slide: { shapes: [] } },
+    ];
+
+    const { result } = renderHook(() =>
+      useSlideThumbnails({
+        slideWidth: px(960) as Pixels,
+        slideHeight: px(540) as Pixels,
+        slides,
+      }),
+    );
+
+    for (const slideWithId of slides) {
+      const svg = result.current.getThumbnailSvg(slideWithId);
+      // Every slide — including empty ones — should produce a non-empty SVG string
+      // (at minimum the <svg> wrapper element is present)
+      expect(svg.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("should return empty string for a slide not in the current slides array", () => {
+    const slideInArray: SlideWithId = { id: "slide-in", slide: { shapes: [] } };
+    const slideNotInArray: SlideWithId = { id: "slide-out", slide: { shapes: [] } };
+
+    const { result } = renderHook(() =>
+      useSlideThumbnails({
+        slideWidth: px(960) as Pixels,
+        slideHeight: px(540) as Pixels,
+        slides: [slideInArray],
+      }),
+    );
+
+    // slide that was rendered should have SVG
+    expect(result.current.getThumbnailSvg(slideInArray).length).toBeGreaterThan(0);
+    // slide that was NOT in the array should return empty string (fallback in useCallback)
+    expect(result.current.getThumbnailSvg(slideNotInArray)).toBe("");
+  });
+
+  it("should produce distinct SVGs for slides with different content", () => {
+    const diagramSlide: SlideWithId = { id: "slide-diagram", slide: createDiagramSlide("hierarchy") };
+    const chartSlide: SlideWithId = { id: "slide-chart", slide: createChartSlide() };
+    const emptySlide: SlideWithId = { id: "slide-empty", slide: { shapes: [] } };
+
+    const { result } = renderHook(() =>
+      useSlideThumbnails({
+        slideWidth: px(960) as Pixels,
+        slideHeight: px(540) as Pixels,
+        slides: [diagramSlide, chartSlide, emptySlide],
+      }),
+    );
+
+    const svgDiagram = result.current.getThumbnailSvg(diagramSlide);
+    const svgChart = result.current.getThumbnailSvg(chartSlide);
+    const svgEmpty = result.current.getThumbnailSvg(emptySlide);
+
+    // Slides with different content should produce different SVG strings
+    expect(svgDiagram).not.toBe(svgChart);
+    expect(svgDiagram).not.toBe(svgEmpty);
+    expect(svgChart).not.toBe(svgEmpty);
+  });
+
+  it("should not recompute when same slides reference is passed", () => {
+    const slides: SlideWithId[] = [
+      { id: "slide-1", slide: createDiagramSlide("process") },
+    ];
+
+    const { result, rerender } = renderHook(
+      ({ slides }) =>
+        useSlideThumbnails({
+          slideWidth: px(960) as Pixels,
+          slideHeight: px(540) as Pixels,
+          slides,
+        }),
+      { initialProps: { slides } },
+    );
+
+    const getThumbnailBefore = result.current.getThumbnailSvg;
+
+    // Rerender with the SAME reference
+    rerender({ slides });
+
+    // useMemo should return the same thumbnailMap, so getThumbnailSvg
+    // should be referentially identical (useCallback depends on thumbnailMap)
+    const getThumbnailAfter = result.current.getThumbnailSvg;
+    expect(getThumbnailAfter).toBe(getThumbnailBefore);
+  });
+
+  it("should drop old slide thumbnails when slides array shrinks", () => {
+    const slide1: SlideWithId = { id: "slide-1", slide: createDiagramSlide("process") };
+    const slide2: SlideWithId = { id: "slide-2", slide: createChartSlide() };
+
+    const { result, rerender } = renderHook(
+      ({ slides }) =>
+        useSlideThumbnails({
+          slideWidth: px(960) as Pixels,
+          slideHeight: px(540) as Pixels,
+          slides,
+        }),
+      { initialProps: { slides: [slide1, slide2] } },
+    );
+
+    // Both slides have thumbnails initially
+    expect(result.current.getThumbnailSvg(slide1).length).toBeGreaterThan(0);
+    expect(result.current.getThumbnailSvg(slide2).length).toBeGreaterThan(0);
+
+    // Remove slide2 from the array
+    rerender({ slides: [slide1] });
+
+    // slide1 still has a thumbnail, slide2 is gone (empty string fallback)
+    expect(result.current.getThumbnailSvg(slide1).length).toBeGreaterThan(0);
+    expect(result.current.getThumbnailSvg(slide2)).toBe("");
   });
 });

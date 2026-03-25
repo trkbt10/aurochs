@@ -52,8 +52,9 @@ import {
 import { ShapeToolbar } from "../panels/ShapeToolbar";
 import { buildSlideLayoutOptions } from "@aurochs-office/pptx/app";
 import { createRenderContext } from "@aurochs-renderer/pptx";
+import { createResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 import type { Chart } from "@aurochs-office/chart/domain";
-import { prepareSlide, registerEditorResources } from "../resource/register-slide-resources";
+import { prepareSlide } from "../resource/register-slide-resources";
 import { getSlideLayoutAttributes } from "@aurochs-office/pptx/parser/slide/layout-parser";
 import { RELATIONSHIP_TYPES } from "@aurochs-office/pptx/domain";
 import { CanvasControls } from "@aurochs-ui/editor-controls/shape-editor";
@@ -91,8 +92,6 @@ import {
 import { PlayIcon } from "@aurochs-ui/ui-components/icons";
 import { ExportButton } from "./components";
 import { renderSlideSvg } from "@aurochs-renderer/pptx/svg";
-import { createCoreRenderContext } from "@aurochs-renderer/pptx";
-import { createResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 import { ThemeImportExportSection } from "@aurochs-ui/ooxml-components/theme-io";
 import { extractThemeFromBuffer } from "@aurochs-office/pptx/app";
 import { buildThemeXml, exportThemeAsPotx, getThemeFileName } from "@aurochs-builder/pptx/builders";
@@ -630,20 +629,14 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
       const slideTransition = slideWithId.apiSlide?.transition ?? slideWithId.slide.transition;
       const slideTiming = slideWithId.apiSlide?.timing;
 
-      if (slideWithId.apiSlide && document.presentationFile) {
-        const renderCtx = createRenderContext({
-          apiSlide: slideWithId.apiSlide,
-          slideSize: previewSlideSize,
-        });
-        const svg = renderSlideSvg(slideWithId.slide, renderCtx).svg;
-        return { svg, timing: slideTiming, transition: slideTransition };
-      }
-
-      const renderCtx = createCoreRenderContext({
+      const resourceStore = document.resourceStore ?? createResourceStore();
+      const renderCtx = createRenderContext({
         slideSize: previewSlideSize,
-        colorContext: document.colorContext,
-        fontScheme: document.fontScheme,
-        resourceStore: document.resourceStore ?? createResourceStore(),
+        resourceStore,
+        colorContext: slideWithId.colorContext ?? document.colorContext,
+        fontScheme: slideWithId.fontScheme ?? document.fontScheme,
+        resolvedBackground: slideWithId.resolvedBackground,
+        layoutShapes: slideWithId.layoutShapes,
       });
       const svg = renderSlideSvg(slideWithId.slide, renderCtx).svg;
       return { svg, timing: slideTiming, transition: slideTransition };
@@ -673,26 +666,25 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
 
   const renderContext = useMemo(
     () => {
-      if (!activeSlide?.apiSlide) return undefined;
-      return createRenderContext({ apiSlide: activeSlide.apiSlide, slideSize: { width, height } });
+      if (!editorResourceStore) return undefined;
+      return createRenderContext({
+        slideSize: { width, height },
+        resourceStore: editorResourceStore,
+        colorContext: activeSlide?.colorContext ?? document.colorContext,
+        fontScheme: activeSlide?.fontScheme ?? document.fontScheme,
+        resolvedBackground: activeSlide?.resolvedBackground,
+        layoutShapes: activeSlide?.layoutShapes,
+      });
     },
-    [width, height, activeSlide?.apiSlide],
+    [width, height, activeSlide, editorResourceStore, document.colorContext, document.fontScheme],
   );
 
-  // Prepare slide ResourceStore: archive load + builder registration
+  // Register builder-generated resources (editor-created charts/diagrams).
+  // Archive resources are already in editorResourceStore (seeded from document.resourceStore).
   useMemo(() => {
-    if (!activeSlide?.slide) {
-      return; // No active slide selected — nothing to prepare
-    }
-    if (!editorResourceStore) {
-      throw new Error("editorResourceStore is required when activeSlide is present");
-    }
-    if (renderContext?.fileReader) {
-      prepareSlide(activeSlide.slide, editorResourceStore, renderContext.fileReader);
-    } else {
-      registerEditorResources(activeSlide.slide, editorResourceStore);
-    }
-  }, [renderContext, activeSlide?.slide, editorResourceStore]);
+    if (!activeSlide?.slide || !editorResourceStore) return;
+    prepareSlide(activeSlide.slide, editorResourceStore);
+  }, [activeSlide?.slide, editorResourceStore]);
 
   // Chart data change handler: updates ResourceStore and triggers re-render.
   // ResourceStore is mutable (Map-based), so .set() alone won't cause React to re-render.
@@ -1335,7 +1327,7 @@ export function PresentationEditor({
 
   return (
     <PresentationPreviewProvider>
-      <EditorResourceProvider>
+      <EditorResourceProvider initialStore={initialDocument.resourceStore}>
         <PresentationEditorProvider initialDocument={initialDocument}>
           <div className={className} style={containerStyles}>
             <EditorContent showInspector={showInspector} showToolbar={showToolbar} />
