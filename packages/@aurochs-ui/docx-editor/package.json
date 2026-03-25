@@ -7,6 +7,7 @@
   "dependencies": {
     "@aurochs/glyph": "workspace:*",
     "@aurochs-office/docx": "workspace:*",
+    "@aurochs-office/drawing-ml": "workspace:*",
     "@aurochs-office/text-layout": "workspace:*",
     "@aurochs-renderer/docx": "workspace:*",
     "@aurochs-ui/editor-core": "workspace:*",
@@ -19,7 +20,9 @@
   "scripts": {
     "lint": "eslint src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-ui/docx-editor/src'"
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-ui/docx-editor/src'",
+    "dev:editor": "vite --config dev/vite.config.ts --open /docx-editor.html",
+    "dev:viewer": "vite --config dev/vite.config.ts --open /docx-viewer.html"
   },
   "exports": {
     ".": {

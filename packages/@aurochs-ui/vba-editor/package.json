@@ -21,7 +21,8 @@
     "e2e:test": "bun run spec/e2e/vba-editor.e2e.ts",
     "visual:dev": "vite --config spec/e2e/vite.config.ts",
     "visual:test": "bun run spec/visual/vba-editor-visual.spec.ts",
-    "visual:update": "bun run spec/visual/vba-editor-visual.spec.ts --update"
+    "visual:update": "bun run spec/visual/vba-editor-visual.spec.ts --update",
+    "dev": "vite --config dev/vite.config.ts --open"
   },
   "exports": {
     ".": {
@@ -39,6 +40,10 @@
     "./hooks": {
       "types": "./src/hooks/index.ts",
       "default": "./src/hooks/index.ts"
+    },
+    "./dev": {
+      "types": "./src/dev/index.ts",
+      "default": "./src/dev/index.ts"
     }
   }
 }

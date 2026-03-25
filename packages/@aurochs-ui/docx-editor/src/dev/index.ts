@@ -5,3 +5,5 @@
  */
 
 export { DocxEditorTestPage } from "./DocxEditorTestPage";
+export { DocxEditorPreviewPage } from "./DocxEditorPreviewPage";
+export { DocxViewerPreviewPage } from "./DocxViewerPreviewPage";

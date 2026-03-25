@@ -8,3 +8,4 @@ export { XlsxWorkbookPage } from "./XlsxWorkbookPage";
 export { XlsxFormulaCatalogLayout } from "./formula/XlsxFormulaCatalogLayout";
 export { XlsxFormulaCatalogIndexPage } from "./formula/XlsxFormulaCatalogIndexPage";
 export { XlsxFormulaFunctionPage } from "./formula/XlsxFormulaFunctionPage";
+export { XlsxViewerPreviewPage } from "./XlsxViewerPreviewPage";

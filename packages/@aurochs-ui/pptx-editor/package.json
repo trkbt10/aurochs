@@ -9,6 +9,7 @@
     "@aurochs-builder/diagram": "workspace:*",
     "@aurochs-builder/pptx": "workspace:*",
     "@aurochs-office/chart": "workspace:*",
+    "@aurochs-office/drawing-ml": "workspace:*",
     "@aurochs-office/pptx": "workspace:*",
     "@aurochs-renderer/pptx": "workspace:*",
     "@aurochs-ui/chart-editor": "workspace:*",
@@ -37,7 +38,9 @@
     "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-ui/pptx-editor/src'",
     "visual:test": "vitest --run --config ../../../vitest.config.ts '../../../packages/@aurochs-ui/pptx-editor/spec/pptx-visual.spec.ts'",
     "visual:fixtures": "bun run scripts/generate-visual-fixtures.ts",
-    "visual:baselines": "bun run scripts/generate-editor-baselines.ts"
+    "visual:baselines": "bun run scripts/generate-editor-baselines.ts",
+    "dev:viewer": "vite --config dev/vite.config.ts --open /pptx-viewer.html",
+    "dev:slideshow": "vite --config dev/vite.config.ts --open /pptx-slideshow.html"
   },
   "exports": {
     ".": {
@@ -47,6 +50,10 @@
     "./adapters": {
       "types": "./src/adapters/index.ts",
       "default": "./src/adapters/index.ts"
+    },
+    "./dev": {
+      "types": "./src/dev/index.ts",
+      "default": "./src/dev/index.ts"
     }
   },
   "devDependencies": {

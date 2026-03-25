@@ -6,13 +6,16 @@
   "sideEffects": false,
   "dependencies": {
     "@aurochs-office/vba": "workspace:*",
+    "@aurochs-office/opc": "workspace:*",
+    "@aurochs-office/xls": "workspace:*",
     "@aurochs-office/xlsx": "workspace:*",
     "@aurochs-ui/color-editor": "workspace:*",
     "@aurochs-ui/editor-core": "workspace:*",
     "@aurochs-ui/editor-controls": "workspace:*",
     "@aurochs-ui/ui-components": "workspace:*",
     "@aurochs-ui/vba-editor": "workspace:*",
-    "@aurochs/zip": "workspace:*"
+    "@aurochs/zip": "workspace:*",
+    "react-router-dom": "^7.13.1"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0"
@@ -20,7 +23,9 @@
   "scripts": {
     "lint": "eslint src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-ui/xlsx-editor/src'"
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-ui/xlsx-editor/src'",
+    "dev:editor": "vite --config dev/vite.config.ts --open /xlsx-editor.html",
+    "dev:viewer": "vite --config dev/vite.config.ts --open /xlsx-viewer.html"
   },
   "exports": {
     ".": {

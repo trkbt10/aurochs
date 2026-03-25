@@ -1,15 +1,18 @@
 /**
  * @file Vite config for the UI Preview dev server (MPA).
  *
- * Each @aurochs-ui package has its own HTML entry point.
+ * Aggregation hub — HTML entry points reference each package's dev/ entry directly.
+ * Root is set to packages/@aurochs-ui/ so all sibling packages are accessible.
  */
 
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "node:path";
 
+const aurachsUiRoot = path.resolve(__dirname, "..");
+
 export default defineConfig({
-  root: path.resolve(__dirname),
+  root: aurachsUiRoot,
   plugins: [react()],
   server: {
     port: 5178,

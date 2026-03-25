@@ -14,7 +14,8 @@
   "scripts": {
     "lint": "eslint src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-ui/ui-components/src'"
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-ui/ui-components/src'",
+    "dev": "vite --config dev/vite.config.ts --open"
   },
   "exports": {
     ".": {
@@ -172,6 +173,10 @@
     "./player": {
       "types": "./src/player/index.ts",
       "default": "./src/player/index.ts"
+    },
+    "./dev": {
+      "types": "./src/dev/index.ts",
+      "default": "./src/dev/index.ts"
     }
   }
 }

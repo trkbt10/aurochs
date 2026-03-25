@@ -11,7 +11,8 @@
     "@aurochs-ui/editor-core": "workspace:*",
     "@aurochs-ui/ui-components": "workspace:*",
     "react-editor-ui": "^0.4.0",
-    "react-panel-layout": "^0.7.1"
+    "react-panel-layout": "^0.7.1",
+    "react-router-dom": "^7.13.1"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",
@@ -20,7 +21,8 @@
   "scripts": {
     "lint": "eslint src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-ui/editor-controls/src'"
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-ui/editor-controls/src'",
+    "dev": "vite --config dev/vite.config.ts --open"
   },
   "exports": {
     ".": {

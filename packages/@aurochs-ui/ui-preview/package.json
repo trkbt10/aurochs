@@ -4,42 +4,17 @@
   "private": true,
   "type": "module",
   "sideEffects": false,
-  "description": "Development preview server for @aurochs-ui packages",
-  "dependencies": {
-    "@aurochs-builder/xlsx": "workspace:*",
-    "@aurochs-office/docx": "workspace:*",
-    "@aurochs-office/drawing-ml": "workspace:*",
-    "@aurochs-office/opc": "workspace:*",
-    "@aurochs-office/pptx": "workspace:*",
-    "@aurochs-office/text-layout": "workspace:*",
-    "@aurochs-renderer/pptx": "workspace:*",
-    "@aurochs-office/xls": "workspace:*",
-    "@aurochs-office/xlsx": "workspace:*",
-    "@aurochs-ui/ui-components": "workspace:*",
-    "@aurochs-ui/editor-controls": "workspace:*",
-    "@aurochs-ui/docx-editor": "workspace:*",
-    "@aurochs-ui/pptx-editor": "workspace:*",
-    "@aurochs-ui/pptx-viewer": "workspace:*",
-    "@aurochs-ui/xlsx-editor": "workspace:*",
-    "@aurochs-ui/vba-editor": "workspace:*",
-    "@aurochs-office/vba": "workspace:*",
-    "react-router-dom": "^7.13.1"
-  },
-  "peerDependencies": {
-    "react": "^18.0.0 || ^19.0.0",
-    "react-dom": "^18.0.0 || ^19.0.0"
-  },
+  "description": "Aggregation hub for @aurochs-ui dev previews. No source code — HTML entry points reference each package's dev/ directly.",
   "scripts": {
-    "dev:xlsx": "vite --open /xlsx-editor.html",
-    "dev:xlsx-viewer": "vite --open /xlsx-viewer.html",
-    "dev:docx": "vite --open /docx-editor.html",
-    "dev:docx-viewer": "vite --open /docx-viewer.html",
-    "dev:pptx-slideshow": "vite --open /pptx-slideshow.html",
-    "dev:pptx-viewer": "vite --open /pptx-viewer.html",
-    "dev:editor-controls": "vite --open /editor-controls.html",
-    "dev:vba": "vite --open /vba-editor.html",
-    "dev:ui-components": "vite --open /ui-components.html",
-    "lint": "eslint src",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "dev": "vite --open /ui-preview/index.html",
+    "dev:xlsx": "vite --open /ui-preview/xlsx-editor.html",
+    "dev:xlsx-viewer": "vite --open /ui-preview/xlsx-viewer.html",
+    "dev:docx": "vite --open /ui-preview/docx-editor.html",
+    "dev:docx-viewer": "vite --open /ui-preview/docx-viewer.html",
+    "dev:pptx-slideshow": "vite --open /ui-preview/pptx-slideshow.html",
+    "dev:pptx-viewer": "vite --open /ui-preview/pptx-viewer.html",
+    "dev:editor-controls": "vite --open /ui-preview/editor-controls.html",
+    "dev:vba": "vite --open /ui-preview/vba-editor.html",
+    "dev:ui-components": "vite --open /ui-preview/ui-components.html"
   }
 }
