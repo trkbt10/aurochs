@@ -122,7 +122,9 @@ describe("applyConstraintsToChildren", () => {
 
 describe("resolveInstanceLayout", () => {
   function makeChild(
-    { guid, x, y, w, h, hConstraint, vConstraint }: { guid: { sessionID: number; localID: number }; x: number; y: number; w: number; h: number; hConstraint?: number; vConstraint?: number; }
+    guid: { sessionID: number; localID: number },
+    x: number, y: number, w: number, h: number,
+    hConstraint?: number, vConstraint?: number,
   ): FigNode {
     const node: Record<string, unknown> = {
       name: "child",
@@ -230,12 +232,12 @@ describe("resolveInstanceLayout", () => {
       },
     ];
 
-    const result = resolveInstanceLayout(
-      [childA, childB],
-      { x: 48, y: 48 }, // SYMBOL size
-      { x: 44, y: 22 }, // INSTANCE size
-      derived,
-    );
+    const result = resolveInstanceLayout({
+      children: [childA, childB],
+      symbolSize: { x: 48, y: 48 },
+      instanceSize: { x: 44, y: 22 },
+      derivedSymbolData: derived,
+    });
 
     expect(result.sizeApplied).toBe(true);
 

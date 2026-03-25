@@ -5,6 +5,7 @@
 import type { FigBlob, FigImage } from "@aurochs/fig/parser";
 import type { FigNode } from "@aurochs/fig/types";
 import type { FontLoader } from "./font";
+import type { FigResolver } from "./symbols/fig-resolver";
 
 // =============================================================================
 // SVG Render Context
@@ -38,10 +39,8 @@ export type FigSvgRenderContext = {
   readonly images: ReadonlyMap<string, FigImage>;
   /** Whether to render hidden nodes (visible: false) */
   readonly showHiddenNodes: boolean;
-  /** Symbol map for INSTANCE node resolution (GUID string -> FigNode) */
-  readonly symbolMap?: ReadonlyMap<string, FigNode>;
-  /** Pre-resolved SYMBOL cache (GUID string -> resolved FigNode with expanded children) */
-  readonly resolvedSymbolCache?: ReadonlyMap<string, FigNode>;
+  /** Instance resolver for SYMBOL/COMPONENT/INSTANCE resolution */
+  readonly resolver?: FigResolver;
   /** Font loader for path-based text rendering */
   readonly fontLoader?: FontLoader;
 };
@@ -55,10 +54,8 @@ export type FigSvgRenderContextConfig = {
   readonly images?: ReadonlyMap<string, FigImage>;
   /** Whether to render hidden nodes (visible: false) */
   readonly showHiddenNodes?: boolean;
-  /** Symbol map for INSTANCE node resolution (GUID string -> FigNode) */
-  readonly symbolMap?: ReadonlyMap<string, FigNode>;
-  /** Pre-resolved SYMBOL cache (GUID string -> resolved FigNode with expanded children) */
-  readonly resolvedSymbolCache?: ReadonlyMap<string, FigNode>;
+  /** Instance resolver for SYMBOL/COMPONENT/INSTANCE resolution */
+  readonly resolver?: FigResolver;
   /** Font loader for path-based text rendering */
   readonly fontLoader?: FontLoader;
 };

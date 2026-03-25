@@ -8,6 +8,7 @@
 import type { FigNode } from "@aurochs/fig/types";
 import type { FigImage } from "@aurochs/fig/parser";
 import type { FigBlob } from "@aurochs/fig/parser";
+import { guidToString } from "@aurochs/fig/parser";
 import {
   extractBaseProps,
   extractSizeProps,
@@ -94,8 +95,7 @@ function getNodeId(node: FigNode, ctx: BuildContext): SceneNodeId {
   const guid = node.guid;
   if (guid) {
     if (typeof guid === "object" && guid !== null) {
-      const g = guid as { sessionID?: number; localID?: number };
-      return createNodeId(`${g.sessionID ?? 0}:${g.localID ?? 0}`);
+      return createNodeId(guidToString(guid as { sessionID: number; localID: number }));
     }
     return createNodeId(String(guid));
   }

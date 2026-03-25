@@ -9,9 +9,8 @@
  */
 
 import type { FigNode } from "@aurochs/fig/types";
-import { guidToString, getNodeType } from "@aurochs/fig/parser";
-import { extractSymbolIDPair, getEffectiveSymbolID } from "@aurochs/fig/symbols";
-import { resolveSymbolGuidStr } from "./symbol-resolver";
+import { getNodeType, safeChildren } from "@aurochs/fig/parser";
+import { resolveInstanceReferences } from "./symbol-resolver";
 
 // =============================================================================
 // Public types
@@ -29,34 +28,34 @@ export type SymbolDependencyGraph = {
 export type ResolvedSymbolCache = ReadonlyMap<string, FigNode>;
 
 // =============================================================================
-// Internal helpers
+// Tree walking
 // =============================================================================
 
 /**
- * Collect all SYMBOL GUIDs referenced by INSTANCE nodes in a subtree.
- * Uses resolveSymbolGuidStr to handle sessionID mismatches.
+ * Walk a node tree, calling `visitor` on every node (depth-first).
  */
-function collectInstanceDependencies(node: FigNode, deps: Set<string>, symbolMap: ReadonlyMap<string, FigNode>): void {
-  if (getNodeType(node) === "INSTANCE") {
-    const pair = extractSymbolIDPair(node as Record<string, unknown>);
-    if (pair) {
-      // Track both symbolID and overriddenSymbolID as dependencies
-      const resolved = resolveSymbolGuidStr(pair.symbolID, symbolMap);
-      if (resolved) {
-        deps.add(resolved.guidStr);
-      }
-      if (pair.overriddenSymbolID) {
-        const overResolved = resolveSymbolGuidStr(pair.overriddenSymbolID, symbolMap);
-        if (overResolved) {
-          deps.add(overResolved.guidStr);
-        }
-      }
-    }
-  }
-  for (const child of node.children ?? []) {
-    collectInstanceDependencies(child, deps, symbolMap);
+function walkTree(
+  node: FigNode,
+  visitor: (n: FigNode) => void,
+): void {
+  visitor(node);
+  for (const child of safeChildren(node)) {
+    walkTree(child, visitor);
   }
 }
+
+// =============================================================================
+// Clone with expansion — Single implementation
+//
+// One recursive function handles both INSTANCE expansion and plain cloning.
+// There is no separate "clonePlain" — the else-branch is inline.
+// =============================================================================
+
+type CloneContext = {
+  readonly cache: Map<string, FigNode>;
+  readonly symbolMap: ReadonlyMap<string, FigNode>;
+  readonly expanding: Set<string>;
+};
 
 /**
  * Deep clone a FigNode tree, expanding INSTANCE children from the cache.
@@ -65,52 +64,38 @@ function collectInstanceDependencies(node: FigNode, deps: Set<string>, symbolMap
  * the clone gets the cached SYMBOL's children set as its own children
  * (without overrides — those are applied per-instance at render time).
  *
- * `expanding` tracks SYMBOL GUIDs currently being expanded in the call stack
- * to prevent infinite recursion from circular dependencies.
+ * `ctx.expanding` tracks SYMBOL GUIDs currently being expanded in the
+ * call stack to prevent infinite recursion from circular dependencies.
  */
-function deepCloneWithExpansion(
-  { node, cache, symbolMap, expanding }: { node: FigNode; cache: Map<string, FigNode>; symbolMap: ReadonlyMap<string, FigNode>; expanding: Set<string>; }
-): FigNode {
+function cloneAndExpand(node: FigNode, ctx: CloneContext): FigNode {
   const nodeType = getNodeType(node);
 
+  // INSTANCE expansion: replace children with those from the resolved SYMBOL
   if (nodeType === "INSTANCE") {
-    const effectiveID = getEffectiveSymbolID(node as Record<string, unknown>);
-    if (effectiveID) {
-      // Resolve with localID fallback (handles sessionID mismatch)
-      const resolved = resolveSymbolGuidStr(effectiveID, symbolMap);
-      const symGuid = resolved?.guidStr ?? guidToString(effectiveID);
-      // Skip expansion if this SYMBOL is already being expanded (circular dep)
-      if (!expanding.has(symGuid)) {
-        const sym = cache.get(symGuid) ?? resolved?.node;
-        if (sym) {
-          expanding.add(symGuid);
-          const symChildren = sym.children ?? [];
-          const expanded: FigNode = {
-            ...node,
-            children: symChildren.map((c) => deepCloneWithExpansion(c, cache, symbolMap, expanding)),
-          };
-          expanding.delete(symGuid);
-          return expanded;
-        }
+    const resolution = resolveInstanceReferences(node, ctx.symbolMap);
+    if (resolution.effectiveSymbol) {
+      const { guidStr: symGuid, node: symNodeDirect } = resolution.effectiveSymbol;
+      if (!ctx.expanding.has(symGuid)) {
+        const sym = ctx.cache.get(symGuid) ?? symNodeDirect;
+        ctx.expanding.add(symGuid);
+        const expanded: FigNode = {
+          ...node,
+          children: safeChildren(sym).map((c) => cloneAndExpand(c, ctx)),
+        };
+        ctx.expanding.delete(symGuid);
+        return expanded;
       }
     }
-    // No resolvable SYMBOL or circular — clone as-is
-    return clonePlain({ node, cache, symbolMap, expanding });
   }
 
-  return clonePlain({ node, cache, symbolMap, expanding });
-}
-
-function clonePlain(
-  { node, cache, symbolMap, expanding }: { node: FigNode; cache: Map<string, FigNode>; symbolMap: ReadonlyMap<string, FigNode>; expanding: Set<string>; }
-): FigNode {
-  const children = node.children;
-  if (!children || children.length === 0) {
+  // Plain clone: shallow-copy this node, recurse into children
+  const children = safeChildren(node);
+  if (children.length === 0) {
     return { ...node };
   }
   return {
     ...node,
-    children: children.map((c) => deepCloneWithExpansion(c, cache, symbolMap, expanding)),
+    children: children.map((c) => cloneAndExpand(c, ctx)),
   };
 }
 
@@ -131,13 +116,21 @@ export function buildSymbolDependencyGraph(symbolMap: ReadonlyMap<string, FigNod
   // 1. Identify all SYMBOLs and collect their dependencies
   for (const [guidStr, node] of symbolMap) {
     const nodeType = getNodeType(node);
-    if (nodeType !== "SYMBOL" && nodeType !== "COMPONENT" && nodeType !== "COMPONENT_SET") {continue;}
+    if (nodeType !== "SYMBOL" && nodeType !== "COMPONENT" && nodeType !== "COMPONENT_SET") { continue; }
     allSymbolIds.add(guidStr);
+
+    // Walk the subtree and collect INSTANCE dependencies via the shared resolution
     const deps = new Set<string>();
-    // Only scan children, not the SYMBOL/COMPONENT node itself
-    for (const child of node.children ?? []) {
-      collectInstanceDependencies(child, deps, symbolMap);
+    for (const child of safeChildren(node)) {
+      walkTree(child, (n) => {
+        if (getNodeType(n) !== "INSTANCE") { return; }
+        const resolution = resolveInstanceReferences(n, symbolMap);
+        for (const depGuid of resolution.allDependencyGuids) {
+          deps.add(depGuid);
+        }
+      });
     }
+
     // Filter to only deps that are actually SYMBOLs/COMPONENTs in the map
     const validDeps = new Set<string>();
     for (const dep of deps) {
@@ -154,22 +147,8 @@ export function buildSymbolDependencyGraph(symbolMap: ReadonlyMap<string, FigNod
     dependencies.set(guidStr, validDeps);
   }
 
-  // 2. Kahn's algorithm for topological sort (leaf-first)
-  const inDegree = new Map<string, number>();
-  for (const id of allSymbolIds) {
-    inDegree.set(id, 0);
-  }
-  for (const [, deps] of dependencies) {
-    for (const dep of deps) {
-      if (inDegree.has(dep)) {
-        inDegree.set(dep, (inDegree.get(dep) ?? 0) + 1);
-      }
-    }
-  }
-
-  // Wait — Kahn's algorithm with in-degree tracks "who depends on me".
-  // But we want leaf-first (SYMBOLs with no dependencies resolved first).
-  // Let's recompute: inDegree[X] = number of SYMBOLs that X depends on.
+  // 2. Modified Kahn's algorithm for topological sort (leaf-first)
+  // depCount[X] = number of SYMBOLs that X depends on
   const depCount = new Map<string, number>();
   for (const id of allSymbolIds) {
     depCount.set(id, (dependencies.get(id) ?? new Set()).size);
@@ -241,10 +220,10 @@ export function preResolveSymbols(
 
   for (const symbolId of graph.resolveOrder) {
     const originalSymbol = symbolMap.get(symbolId);
-    if (!originalSymbol) {continue;}
+    if (!originalSymbol) { continue; }
 
     // Deep clone the SYMBOL, expanding nested INSTANCEs from already-resolved cache
-    const resolved = deepCloneWithExpansion({ node: originalSymbol, cache, symbolMap, expanding: new Set() });
+    const resolved = cloneAndExpand(originalSymbol, { cache, symbolMap, expanding: new Set() });
     cache.set(symbolId, resolved);
   }
 

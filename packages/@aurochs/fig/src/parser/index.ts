@@ -25,6 +25,7 @@ export {
   getNodeType,
   findNodesByType,
   findNodeByGuid,
+  safeChildren,
 } from "./tree-builder";
 
 export type { FigGuid, NodeTreeResult } from "./tree-builder";

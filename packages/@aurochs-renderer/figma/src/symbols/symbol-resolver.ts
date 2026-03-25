@@ -3,7 +3,10 @@
  */
 
 import type { FigNode } from "@aurochs/fig/types";
-import { guidToString, getNodeType, type FigGuid } from "@aurochs/fig/parser";
+import { guidToString, getNodeType, safeChildren, type FigGuid } from "@aurochs/fig/parser";
+import { extractSymbolIDPair } from "@aurochs/fig/symbols";
+import { buildGuidTranslationMap, translateOverrides } from "./guid-translation";
+import { resolveInstanceLayout } from "./constraints";
 
 // =============================================================================
 // Types
@@ -64,40 +67,6 @@ export function getInstanceSymbolOverrides(
 // =============================================================================
 
 /**
- * Resolve SYMBOL node from INSTANCE's symbolData
- *
- * @param symbolData - The symbolData from an INSTANCE node
- * @param symbolMap - Map of GUID string to FigNode
- * @returns The referenced SYMBOL node, or undefined if not found
- */
-export function resolveSymbol(symbolData: FigSymbolData, symbolMap: ReadonlyMap<string, FigNode>): FigNode | undefined {
-  const symbolGuidStr = guidToString(symbolData.symbolID);
-  return symbolMap.get(symbolGuidStr);
-}
-
-/**
- * Look up a node in symbolMap by GUID, with localID fallback.
- *
- * Builder-generated .fig files may have sessionID mismatches between
- * the SYMBOL node's guid and the INSTANCE's symbolID reference.
- * When exact match fails, searches by localID suffix (`:localID`).
- */
-export function resolveSymbolByGuid(symbolID: FigGuid, symbolMap: ReadonlyMap<string, FigNode>): FigNode | undefined {
-  const exactKey = guidToString(symbolID);
-  const exact = symbolMap.get(exactKey);
-  if (exact) {return exact;}
-
-  // Fallback: search by localID suffix
-  const localIdSuffix = `:${symbolID.localID}`;
-  for (const [key, node] of symbolMap) {
-    if (key.endsWith(localIdSuffix)) {
-      return node;
-    }
-  }
-  return undefined;
-}
-
-/**
  * Resolve a GUID string from symbolMap, with localID fallback.
  * Returns both the resolved node and the actual key in the map.
  */
@@ -119,6 +88,58 @@ export function resolveSymbolGuidStr(
 }
 
 // =============================================================================
+// INSTANCE reference resolution — Single Source of Truth
+//
+// Every consumer that needs "which SYMBOL does this INSTANCE point to?"
+// MUST go through resolveInstanceReferences(). This is used by both
+// the pre-resolver (dependency graph + clone expansion) and the
+// renderer (resolveInstance).
+// =============================================================================
+
+/**
+ * Resolved INSTANCE references.
+ *
+ * - `effectiveSymbol`: the SYMBOL that this INSTANCE should actually render
+ *   (overriddenSymbolID takes precedence over symbolID).
+ * - `allDependencyGuids`: all SYMBOL GUIDs this INSTANCE depends on
+ *   (includes both symbolID and overriddenSymbolID for correct dep ordering).
+ */
+export type InstanceResolution = {
+  readonly effectiveSymbol: { readonly node: FigNode; readonly guidStr: string } | undefined;
+  readonly allDependencyGuids: readonly string[];
+};
+
+/**
+ * Resolve an INSTANCE node's SYMBOL references.
+ *
+ * This is the single source of truth for "INSTANCE → SYMBOL" resolution.
+ * Both dependency graph building, clone expansion, and rendering use this.
+ */
+export function resolveInstanceReferences(
+  node: FigNode,
+  symbolMap: ReadonlyMap<string, FigNode>,
+): InstanceResolution {
+  const pair = extractSymbolIDPair(node as Record<string, unknown>);
+  if (!pair) { return { effectiveSymbol: undefined, allDependencyGuids: [] }; }
+
+  const allDeps: string[] = [];
+
+  const primaryResolved = resolveSymbolGuidStr(pair.symbolID, symbolMap);
+  if (primaryResolved) { allDeps.push(primaryResolved.guidStr); }
+
+  let overrideResolved: { node: FigNode; guidStr: string } | undefined;
+  if (pair.overriddenSymbolID) {
+    overrideResolved = resolveSymbolGuidStr(pair.overriddenSymbolID, symbolMap) ?? undefined;
+    if (overrideResolved) { allDeps.push(overrideResolved.guidStr); }
+  }
+
+  return {
+    effectiveSymbol: overrideResolved ?? primaryResolved,
+    allDependencyGuids: allDeps,
+  };
+}
+
+// =============================================================================
 // Node Cloning
 // =============================================================================
 
@@ -126,8 +147,8 @@ export function resolveSymbolGuidStr(
  * Deep clone a FigNode and its children
  */
 function deepCloneNode(node: FigNode): FigNode {
-  const children = node.children;
-  if (!children || children.length === 0) {
+  const children = safeChildren(node);
+  if (children.length === 0) {
     return { ...node };
   }
   return {
@@ -176,7 +197,7 @@ export type CloneSymbolChildrenOptions = {
  * @returns Cloned children with overrides applied
  */
 export function cloneSymbolChildren(symbolNode: FigNode, options?: CloneSymbolChildrenOptions): readonly FigNode[] {
-  const children = symbolNode.children ?? [];
+  const children = safeChildren(symbolNode);
   if (children.length === 0) {
     return [];
   }
@@ -319,12 +340,23 @@ function applyComponentPropAssignments(
               nodeData.visible = boolVal;
             }
           }
+        } else if (ref.componentPropNodeField?.name === "OVERRIDDEN_SYMBOL_ID") {
+          // Instance swap via component property: the CPA value specifies
+          // which SYMBOL/COMPONENT this nested INSTANCE should resolve to.
+          // Set overriddenSymbolID so that resolveInstance() → getEffectiveSymbolID()
+          // picks up the swapped component during lazy rendering resolution.
+          if (assignment) {
+            const guidVal = assignment.value.guidValue as FigGuid | undefined;
+            if (guidVal) {
+              nodeData.overriddenSymbolID = guidVal;
+            }
+          }
         }
       }
     }
 
     // Recurse
-    for (const child of node.children ?? []) {
+    for (const child of safeChildren(node)) {
       walk(child);
     }
   }
@@ -354,7 +386,7 @@ function cleanupStaleDerivedTextData(nodes: FigNode[], cpaGuids: Set<string>): v
     if (guid && cpaGuids.has(guidToString(guid)) && nd.derivedTextData) {
       delete nd.derivedTextData;
     }
-    for (const child of node.children ?? []) {
+    for (const child of safeChildren(node)) {
       walk(child);
     }
   }
@@ -377,8 +409,8 @@ function cleanupStaleDerivedTextData(nodes: FigNode[], cpaGuids: Set<string>): v
  */
 function expandContainersToFitChildren(nodes: FigNode[]): void {
   for (const node of nodes) {
-    const children = node.children as FigNode[] | undefined;
-    if (!children?.length) {continue;}
+    const children = safeChildren(node) as FigNode[];
+    if (children.length === 0) {continue;}
 
     // Skip INSTANCE nodes: their children come from pre-resolution and
     // haven't been properly sized yet. Nested INSTANCE resolution during
@@ -503,24 +535,217 @@ function applyOverrides(nodes: FigNode[], overrides: readonly FigSymbolOverride[
           // Non-INSTANCE container (FRAME, GROUP, etc.): apply recursively
           // to children immediately, since these nodes don't go through
           // resolveInstance() and derivedSymbolData would be lost.
-          const children = node.children as FigNode[] | undefined;
-          if (children && children.length > 0) {
-            applyOverrides(children, nested);
+          const containerChildren = safeChildren(node) as FigNode[];
+          if (containerChildren.length > 0) {
+            applyOverrides(containerChildren, nested);
           }
         }
       }
     }
 
     // Recurse to children
-    const children = node.children as FigNode[] | undefined;
-    if (children) {
-      for (const child of children) {
-        applyToNode(child);
-      }
+    for (const child of safeChildren(node)) {
+      applyToNode(child);
     }
   }
 
   for (const node of nodes) {
     applyToNode(node);
   }
+}
+
+// =============================================================================
+// Instance node resolution — Full pipeline
+//
+// This is the SoT for "INSTANCE → renderable (node + children)".
+// The renderer calls this; it does NOT implement resolution logic itself.
+// =============================================================================
+
+/**
+ * Result of resolving an INSTANCE node into renderable content.
+ */
+export type ResolvedInstanceNode = {
+  /** The node to render (may have SYMBOL properties merged in) */
+  readonly node: FigNode;
+  /** Resolved children (cloned from SYMBOL with overrides applied) */
+  readonly children: readonly FigNode[];
+};
+
+/**
+ * Context required for full INSTANCE resolution.
+ */
+export type InstanceResolveContext = {
+  readonly symbolMap: ReadonlyMap<string, FigNode>;
+  readonly resolvedSymbolCache?: ReadonlyMap<string, FigNode>;
+};
+
+/**
+ * Merge SYMBOL style properties into INSTANCE node.
+ *
+ * SYMBOL properties always take precedence for visual/style attributes.
+ * In Figma's .fig format, INSTANCE nodes inherit all visual properties
+ * from their referenced SYMBOL — direct property overrides on the
+ * INSTANCE node itself (e.g. fillPaints, size) are ignored.
+ * Instance-specific overrides go through symbolOverrides/derivedSymbolData,
+ * which are applied separately via cloneSymbolChildren.
+ */
+export function mergeSymbolProperties(instanceNode: FigNode, symbolNode: FigNode): FigNode {
+  const merged: Record<string, unknown> = { ...instanceNode };
+
+  // SYMBOL's visual properties always override INSTANCE-level values.
+  if (symbolNode.fillPaints) { merged.fillPaints = symbolNode.fillPaints; }
+  if (symbolNode.strokePaints) { merged.strokePaints = symbolNode.strokePaints; }
+  if (symbolNode.strokeWeight !== undefined) { merged.strokeWeight = symbolNode.strokeWeight; }
+  if (symbolNode.cornerRadius !== undefined) { merged.cornerRadius = symbolNode.cornerRadius; }
+  if (symbolNode.rectangleCornerRadii) { merged.rectangleCornerRadii = symbolNode.rectangleCornerRadii; }
+
+  // fillGeometry / strokeGeometry: only copy from SYMBOL if sizes match.
+  const instSize = instanceNode.size;
+  const symSize = symbolNode.size;
+  const sameSize = instSize && symSize && instSize.x === symSize.x && instSize.y === symSize.y;
+  if (symbolNode.fillGeometry && sameSize) { merged.fillGeometry = symbolNode.fillGeometry; }
+  if (symbolNode.strokeGeometry && sameSize) { merged.strokeGeometry = symbolNode.strokeGeometry; }
+
+  // clipsContent / frameMaskDisabled
+  const instanceHasOwnClip = instanceNode.frameMaskDisabled !== undefined || instanceNode.clipsContent !== undefined;
+  if (!instanceHasOwnClip) {
+    if (symbolNode.frameMaskDisabled !== undefined) {
+      merged.frameMaskDisabled = symbolNode.frameMaskDisabled;
+    } else if (symbolNode.clipsContent !== undefined) {
+      merged.clipsContent = symbolNode.clipsContent;
+    } else {
+      merged.frameMaskDisabled = false;
+    }
+  }
+
+  if (symbolNode.effects) { merged.effects = symbolNode.effects; }
+  if (symbolNode.strokeJoin !== undefined) { merged.strokeJoin = symbolNode.strokeJoin; }
+  if (symbolNode.strokeCap !== undefined) { merged.strokeCap = symbolNode.strokeCap; }
+  const symBlendMode = (symbolNode as Record<string, unknown>).blendMode;
+  if (symBlendMode !== undefined) { merged.blendMode = symBlendMode; }
+  if (symbolNode.mask !== undefined) { merged.mask = symbolNode.mask; }
+  const symCornerSmoothing = (symbolNode as Record<string, unknown>).cornerSmoothing;
+  if (symCornerSmoothing !== undefined) { merged.cornerSmoothing = symCornerSmoothing; }
+  if (symbolNode.size) { merged.size = symbolNode.size; }
+  merged.opacity = symbolNode.opacity;
+
+  return merged as FigNode;
+}
+
+/**
+ * Properties that can be overridden on the INSTANCE frame itself via
+ * self-referencing symbolOverrides (guidPath targeting the SYMBOL's own GUID).
+ */
+const SELF_OVERRIDE_PROPERTIES = new Set([
+  "fillPaints", "strokePaints", "strokeWeight", "strokeJoin", "strokeCap",
+  "effects", "opacity", "visible", "cornerRadius", "rectangleCornerRadii",
+  "blendMode", "clipsContent", "frameMaskDisabled", "mask", "cornerSmoothing",
+  "backgroundColor", "backgroundEnabled", "backgroundOpacity",
+]);
+
+/**
+ * Apply self-referencing symbolOverrides to the merged INSTANCE node.
+ */
+export function applySelfOverridesToMergedNode(
+  mergedNode: Record<string, unknown>,
+  overrides: readonly FigSymbolOverride[],
+  symbolGuidStr: string,
+): void {
+  for (const ov of overrides) {
+    const guids = ov.guidPath?.guids;
+    if (!guids || guids.length !== 1) { continue; }
+    if (guidToString(guids[0]) !== symbolGuidStr) { continue; }
+    for (const [key, value] of Object.entries(ov)) {
+      if (key === "guidPath") { continue; }
+      if (!SELF_OVERRIDE_PROPERTIES.has(key)) { continue; }
+      mergedNode[key] = value;
+    }
+  }
+}
+
+/**
+ * Translate override GUIDs if the translation map is non-empty.
+ */
+function translateOverridesIfNeeded<T>(
+  translationMap: ReadonlyMap<string, string>,
+  overrides: T | undefined,
+): T | undefined {
+  if (translationMap.size > 0 && overrides) {
+    return translateOverrides(overrides as unknown as readonly FigSymbolOverride[], translationMap) as unknown as T;
+  }
+  return overrides;
+}
+
+/**
+ * Resolve an INSTANCE node into renderable content.
+ *
+ * This is the single source of truth for the full INSTANCE resolution pipeline:
+ * 1. Resolve INSTANCE → SYMBOL reference
+ * 2. Merge SYMBOL properties into INSTANCE
+ * 3. Translate override GUIDs
+ * 4. Apply self-referencing overrides to the merged node
+ * 5. Clone SYMBOL children with overrides applied
+ * 6. Resolve layout for resized instances
+ *
+ * The renderer calls this function and renders the result — it does NOT
+ * implement any resolution logic itself.
+ */
+export function resolveInstanceNode(
+  node: FigNode,
+  ctx: InstanceResolveContext,
+): ResolvedInstanceNode {
+  const nodeRecord = node as Record<string, unknown>;
+
+  // 1. Resolve INSTANCE → SYMBOL
+  const resolution = resolveInstanceReferences(node, ctx.symbolMap);
+  if (!resolution.effectiveSymbol) {
+    return { node, children: safeChildren(node) };
+  }
+
+  const { node: resolvedSymNode, guidStr: resolvedGuidStr } = resolution.effectiveSymbol;
+  const symNode = ctx.resolvedSymbolCache?.get(resolvedGuidStr) ?? resolvedSymNode;
+  const originalSymNode = resolvedSymNode;
+
+  // 2. Merge SYMBOL properties into INSTANCE
+  const mergedNode = mergeSymbolProperties(node, symNode);
+
+  // 3. Translate override GUIDs
+  const rawSymbolOverrides = getInstanceSymbolOverrides(nodeRecord);
+  const rawDerivedSymbolData = nodeRecord.derivedSymbolData as FigDerivedSymbolData | undefined;
+  const translationMap = buildGuidTranslationMap(
+    safeChildren(originalSymNode),
+    rawDerivedSymbolData,
+    rawSymbolOverrides,
+  );
+  const symbolOverrides = translateOverridesIfNeeded(translationMap, rawSymbolOverrides);
+  const derivedSymbolData = translateOverridesIfNeeded(translationMap, rawDerivedSymbolData) as FigDerivedSymbolData;
+
+  // 4. Apply self-referencing overrides
+  if (symbolOverrides && symbolOverrides.length > 0) {
+    applySelfOverridesToMergedNode(mergedNode as Record<string, unknown>, symbolOverrides, guidToString(symNode.guid));
+  }
+
+  // 5. Clone SYMBOL children with overrides
+  const componentPropAssignments = collectComponentPropAssignments(nodeRecord);
+  const children = cloneSymbolChildren(symNode, {
+    symbolOverrides,
+    derivedSymbolData,
+    componentPropAssignments: componentPropAssignments.length > 0 ? componentPropAssignments : undefined,
+  });
+
+  // 6. Layout resolution for resized instances
+  const instanceSize = node.size;
+  const symbolSize = symNode.size;
+  const isResized = instanceSize && symbolSize && (instanceSize.x !== symbolSize.x || instanceSize.y !== symbolSize.y);
+
+  let resolvedChildren = children;
+  if (isResized) {
+    const layout = resolveInstanceLayout({ children, symbolSize: symbolSize!, instanceSize: instanceSize!, derivedSymbolData });
+    resolvedChildren = layout.children;
+    if (layout.sizeApplied) {
+      (mergedNode as Record<string, unknown>).size = instanceSize;
+    }
+  }
+
+  return { node: mergedNode, children: resolvedChildren };
 }

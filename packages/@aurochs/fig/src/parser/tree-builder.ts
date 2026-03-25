@@ -161,10 +161,8 @@ export function findNodesByType(
     if (getNodeType(node) === nodeType) {
       result.push(node);
     }
-    if (node.children) {
-      for (const child of node.children) {
-        visit(child);
-      }
+    for (const child of safeChildren(node)) {
+      visit(child);
     }
   }
 
@@ -183,4 +181,17 @@ export function findNodeByGuid(
   guidStr: string
 ): FigNode | undefined {
   return nodeMap.get(guidStr);
+}
+
+/**
+ * Get valid (non-null/undefined) children from a FigNode.
+ *
+ * Real .fig files can have sparse children arrays with null/undefined entries
+ * caused by deleted nodes or malformed data. All tree-walking code must use
+ * this function instead of accessing `.children` directly.
+ */
+export function safeChildren(node: FigNode): readonly FigNode[] {
+  const children = node.children;
+  if (!children || children.length === 0) { return []; }
+  return children.filter((c): c is FigNode => c != null);
 }

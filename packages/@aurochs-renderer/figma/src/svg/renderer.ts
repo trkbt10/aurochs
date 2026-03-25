@@ -4,6 +4,7 @@
 
 import type { FigNode, FigNodeType } from "@aurochs/fig/types";
 import type { FigBlob, FigImage } from "@aurochs/fig/parser";
+import { guidToString, getNodeType, safeChildren } from "@aurochs/fig/parser";
 import type { FigSvgRenderContext, FigSvgRenderResult } from "../types";
 import { createFigSvgRenderContext } from "./context";
 import { svg, defs, g, rect, mask, type SvgString, EMPTY_SVG } from "./primitives";
@@ -21,17 +22,7 @@ import {
   hasDerivedPathData,
   type DerivedPathRenderContext,
 } from "./nodes/text/derived-path-render";
-import { getEffectiveSymbolID } from "@aurochs/fig/symbols";
-import {
-  cloneSymbolChildren,
-  collectComponentPropAssignments,
-  getInstanceSymbolOverrides,
-  resolveSymbolGuidStr,
-  type FigDerivedSymbolData,
-} from "../symbols/symbol-resolver";
-import { preResolveSymbols } from "../symbols/symbol-pre-resolver";
-import { resolveInstanceLayout } from "../symbols/constraints";
-import { buildGuidTranslationMap, translateOverrides } from "../symbols/guid-translation";
+import { createFigResolver, type ResolvedInstanceNode } from "../symbols/fig-resolver";
 import type { FontLoader } from "../font";
 
 // =============================================================================
@@ -39,16 +30,6 @@ import type { FontLoader } from "../font";
 // =============================================================================
 
 /** Apply GUID translation to overrides if translation map is non-empty */
-function translateOverridesIfNeeded<T>(
-  translationMap: ReadonlyMap<string, string>,
-  overrides: T | undefined
-): T | undefined {
-  if (translationMap.size > 0 && overrides) {
-    return translateOverrides(overrides, translationMap) as T;
-  }
-  return overrides;
-}
-
 /**
  * Get the root frame's transform offset (translation component)
  */
@@ -138,8 +119,6 @@ export type FigSvgRenderOptions = {
   readonly showHiddenNodes?: boolean;
   /** Symbol map for INSTANCE node resolution (from buildNodeTree) */
   readonly symbolMap?: ReadonlyMap<string, FigNode>;
-  /** Pre-resolved SYMBOL cache (GUID string -> resolved FigNode with expanded children) */
-  readonly resolvedSymbolCache?: ReadonlyMap<string, FigNode>;
   /** Font loader for path-based text rendering (enables high-precision text) */
   readonly fontLoader?: FontLoader;
 };
@@ -166,18 +145,18 @@ export async function renderFigToSvg(
 
   const warnings: string[] = [];
 
-  // Pre-resolve SYMBOLs if symbolMap is provided
-  const resolvedSymbolCache =
-    options?.resolvedSymbolCache ??
-    (options?.symbolMap ? preResolveSymbols(options.symbolMap, { warnings }) : undefined);
+  // Create resolver if symbolMap is provided
+  const resolver = options?.symbolMap ? createFigResolver(options.symbolMap) : undefined;
+  if (resolver) {
+    warnings.push(...resolver.warnings);
+  }
 
   const ctx = createFigSvgRenderContext({
     canvasSize: { width, height },
     blobs: options?.blobs ?? [],
     images: options?.images ?? new Map(),
     showHiddenNodes: options?.showHiddenNodes,
-    symbolMap: options?.symbolMap,
-    resolvedSymbolCache,
+    resolver,
     fontLoader: options?.fontLoader,
   });
   const nodesToRender = getNodesToRender(nodes, options?.normalizeRootTransform);
@@ -242,172 +221,26 @@ function isMaskNode(node: FigNode): boolean {
 /**
  * Result of resolving an INSTANCE node against its SYMBOL
  */
-type InstanceResolution = {
-  /** The node to render (may have SYMBOL properties merged in) */
-  readonly node: FigNode;
-  /** Resolved children (cloned from SYMBOL) */
-  readonly children: readonly FigNode[];
-};
-
 /**
- * Merge SYMBOL style properties into INSTANCE node.
- *
- * SYMBOL properties always take precedence for visual/style attributes.
- * In Figma's .fig format, INSTANCE nodes inherit all visual properties
- * from their referenced SYMBOL — direct property overrides on the
- * INSTANCE node itself (e.g. fillPaints, size) are ignored.
- * Instance-specific overrides go through symbolOverrides/derivedSymbolData,
- * which are applied separately via cloneSymbolChildren.
- */
-function mergeSymbolProperties(instanceNode: FigNode, symbolNode: FigNode): FigNode {
-  const merged: Record<string, unknown> = { ...instanceNode };
-
-  // SYMBOL's visual properties always override INSTANCE-level values.
-  // fillPaints (background)
-  if (symbolNode.fillPaints) {
-    merged.fillPaints = symbolNode.fillPaints;
-  }
-  // strokePaints
-  if (symbolNode.strokePaints) {
-    merged.strokePaints = symbolNode.strokePaints;
-  }
-  // strokeWeight
-  if (symbolNode.strokeWeight !== undefined) {
-    merged.strokeWeight = symbolNode.strokeWeight;
-  }
-  // cornerRadius
-  if (symbolNode.cornerRadius !== undefined) {
-    merged.cornerRadius = symbolNode.cornerRadius;
-  }
-  // rectangleCornerRadii
-  if (symbolNode.rectangleCornerRadii) {
-    merged.rectangleCornerRadii = symbolNode.rectangleCornerRadii;
-  }
-  // fillGeometry / strokeGeometry: only copy from SYMBOL if sizes match.
-  // These contain pre-baked paths for the SYMBOL's specific dimensions.
-  // When the INSTANCE is resized, using SYMBOL geometry produces wrong-sized shapes.
-  // The frame renderer falls back to generating rect from size + cornerRadius.
-  const instSize = instanceNode.size;
-  const symSize = symbolNode.size;
-  const sameSize = instSize && symSize && instSize.x === symSize.x && instSize.y === symSize.y;
-  if (symbolNode.fillGeometry && sameSize) {
-    merged.fillGeometry = symbolNode.fillGeometry;
-  }
-  if (symbolNode.strokeGeometry && sameSize) {
-    merged.strokeGeometry = symbolNode.strokeGeometry;
-  }
-  // clipsContent / frameMaskDisabled
-  // Respect INSTANCE-level overrides: if the INSTANCE has its own explicit
-  // frameMaskDisabled (different from SYMBOL's), it's an intentional per-instance
-  // clip override and should be preserved.
-  const instanceHasOwnClip = instanceNode.frameMaskDisabled !== undefined || instanceNode.clipsContent !== undefined;
-  if (!instanceHasOwnClip) {
-    if (symbolNode.frameMaskDisabled !== undefined) {
-      merged.frameMaskDisabled = symbolNode.frameMaskDisabled;
-    } else if (symbolNode.clipsContent !== undefined) {
-      merged.clipsContent = symbolNode.clipsContent;
-    } else {
-      // SYMBOL/COMPONENT/FRAME clip content by default in Figma.
-      // Set explicitly so the INSTANCE node doesn't fall through to
-      // resolveClipsContent()'s INSTANCE default (false).
-      merged.frameMaskDisabled = false;
-    }
-  }
-  // effects
-  if (symbolNode.effects) {
-    merged.effects = symbolNode.effects;
-  }
-  // size — INSTANCE renders at SYMBOL's frame size
-  if (symbolNode.size) {
-    merged.size = symbolNode.size;
-  }
-  // opacity — INSTANCE-level opacity is not applied in .fig import
-  merged.opacity = symbolNode.opacity;
-
-  return merged as FigNode;
-}
-
-/**
- * Resolve children and inherited properties for INSTANCE nodes
+ * Resolve an INSTANCE node to renderable content.
+ * Delegates to resolveInstanceNode() in symbol-resolver (the SoT for resolution).
  */
 function resolveInstance(
   { node, nodeType, ctx, warnings }: { node: FigNode; nodeType: string; ctx: FigSvgRenderContext; warnings: string[]; }
-): InstanceResolution {
+): ResolvedInstanceNode {
   if (nodeType !== "INSTANCE") {
-    return { node, children: node.children ?? [] };
+    return { node, children: safeChildren(node) };
   }
 
-  const nodeRecord = node as Record<string, unknown>;
-
-  // Unified effective symbol ID (handles overriddenSymbolID for variant switching)
-  const effectiveID = getEffectiveSymbolID(nodeRecord);
-  if (!effectiveID) {
-    return { node, children: node.children ?? [] };
-  }
-
-  if (!ctx.symbolMap) {
-    const warning = "Symbol map missing: INSTANCE nodes will not be resolved (pass symbolMap from buildNodeTree).";
+  if (!ctx.resolver) {
+    const warning = "Resolver missing: INSTANCE nodes will not be resolved (pass symbolMap to renderFigToSvg).";
     if (!warnings.includes(warning)) {
       warnings.push(warning);
     }
-    return { node, children: node.children ?? [] };
+    return { node, children: safeChildren(node) };
   }
 
-  // Resolve SYMBOL/COMPONENT with localID fallback (handles sessionID mismatch in builder files)
-  const resolved = resolveSymbolGuidStr(effectiveID, ctx.symbolMap);
-  if (!resolved) {
-    const idStr = `${effectiveID.sessionID}:${effectiveID.localID}`;
-    warnings.push(`Could not resolve SYMBOL for INSTANCE "${node.name ?? "unnamed"}" (symbolID: ${idStr})`);
-    return { node, children: node.children ?? [] };
-  }
-
-  // Try pre-resolved cache first, then use the resolved node directly
-  const symNode = ctx.resolvedSymbolCache?.get(resolved.guidStr) ?? resolved.node;
-  // Use original SYMBOL (not pre-resolved) for GUID translation to avoid offset
-  // distortion from expanded INSTANCE children in the descendant set
-  const originalSymNode = resolved.node;
-
-  // Merge SYMBOL properties into INSTANCE (inherit fill, stroke, etc.)
-  const mergedNode = mergeSymbolProperties(node, symNode);
-
-  // Get overrides and derivedSymbolData for transform overrides
-  const rawSymbolOverrides = getInstanceSymbolOverrides(nodeRecord);
-  const rawDerivedSymbolData = nodeRecord.derivedSymbolData as FigDerivedSymbolData | undefined;
-
-  // Translate override GUIDs to match SYMBOL descendant GUIDs
-  const translationMap = buildGuidTranslationMap(
-    originalSymNode.children ?? [],
-    rawDerivedSymbolData,
-    rawSymbolOverrides,
-  );
-  const symbolOverrides = translateOverridesIfNeeded(translationMap, rawSymbolOverrides);
-  const derivedSymbolData = translateOverridesIfNeeded(translationMap, rawDerivedSymbolData) as FigDerivedSymbolData;
-
-  // Collect component property assignments for text overrides etc.
-  const componentPropAssignments = collectComponentPropAssignments(nodeRecord);
-
-  // Clone SYMBOL children with overrides applied
-  const children = cloneSymbolChildren(symNode, {
-    symbolOverrides,
-    derivedSymbolData,
-    componentPropAssignments: componentPropAssignments.length > 0 ? componentPropAssignments : undefined,
-  });
-
-  // Layout resolution: adjust child positions/sizes when instance is resized
-  const instanceSize = node.size;
-  const symbolSize = symNode.size;
-  const isResized = instanceSize && symbolSize && (instanceSize.x !== symbolSize.x || instanceSize.y !== symbolSize.y);
-
-  const resolvedChildrenRef = { value: children };
-  if (isResized) {
-    const layout = resolveInstanceLayout({ children, symbolSize: symbolSize!, instanceSize: instanceSize!, derivedSymbolData });
-    resolvedChildrenRef.value = layout.children;
-    if (layout.sizeApplied) {
-      (mergedNode as Record<string, unknown>).size = instanceSize;
-    }
-  }
-
-  return { node: mergedNode, children: resolvedChildrenRef.value };
+  return ctx.resolver.resolveInstance(node);
 }
 
 const FIGMA_BLEND_MODE_TO_CSS: Record<string, string> = {
@@ -538,24 +371,6 @@ async function renderNode(node: FigNode, ctx: FigSvgRenderContext, warnings: str
   return contentRef.value;
 }
 
-/**
- * Get the node type from a Figma node
- */
-function getNodeType(node: FigNode): FigNodeType | string {
-  const type = node.type;
-
-  if (!type) {
-    return "UNKNOWN";
-  }
-
-  // KiwiEnumValue: { value: number; name: string }
-  if (typeof type === "object" && "name" in type) {
-    return type.name;
-  }
-
-  return "UNKNOWN";
-}
-
 // =============================================================================
 // Mask Processing
 // =============================================================================
@@ -654,7 +469,7 @@ export async function renderCanvas(
   canvasNode: Pick<FigNode, "children">,
   options?: FigSvgRenderOptions,
 ): Promise<FigSvgRenderResult> {
-  const children = canvasNode.children ?? [];
+  const children = safeChildren(canvasNode);
 
   const defaultWidth = options?.width ?? 800;
   const defaultHeight = options?.height ?? 600;

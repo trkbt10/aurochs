@@ -12,6 +12,7 @@
 
 import type { FigNode } from "@aurochs/fig/types";
 import { CONSTRAINT_TYPE_VALUES } from "@aurochs/fig/constants";
+import { guidToString } from "@aurochs/fig/parser";
 import { getConstraintValue, resolveChildConstraints } from "@aurochs/fig/symbols";
 import type { FigDerivedSymbolData } from "./symbol-resolver";
 
@@ -83,10 +84,10 @@ function isDerivedDataApplicable(derivedSymbolData: FigDerivedSymbolData, childr
   return derivedSymbolData.some((entry) => {
     const firstGuid = entry.guidPath?.guids?.[0];
     if (!firstGuid) {return false;}
-    const key = `${firstGuid.sessionID}:${firstGuid.localID}`;
+    const key = guidToString(firstGuid);
     return children.some((child) => {
       const cg = (child as Record<string, unknown>).guid as { sessionID: number; localID: number } | undefined;
-      return cg != null && `${cg.sessionID}:${cg.localID}` === key;
+      return cg != null && guidToString(cg) === key;
     });
   });
 }
@@ -104,10 +105,10 @@ function clearDerivedGeometry(derivedSymbolData: FigDerivedSymbolData, children:
     if (!entry.size) {continue;}
     const targetGuid = entry.guidPath?.guids?.[entry.guidPath.guids.length - 1];
     if (!targetGuid) {continue;}
-    const targetKey = `${targetGuid.sessionID}:${targetGuid.localID}`;
+    const targetKey = guidToString(targetGuid);
     for (const child of children) {
       const cg = (child as Record<string, unknown>).guid as { sessionID: number; localID: number } | undefined;
-      if (cg && `${cg.sessionID}:${cg.localID}` === targetKey) {
+      if (cg && guidToString(cg) === targetKey) {
         delete (child as Record<string, unknown>).fillGeometry;
         delete (child as Record<string, unknown>).strokeGeometry;
         matched.add(targetKey);
@@ -192,7 +193,7 @@ function supplementConstraints(
   return children.map((child) => {
     const nd = child as Record<string, unknown>;
     const cg = nd.guid as { sessionID: number; localID: number } | undefined;
-    const guidKey = cg ? `${cg.sessionID}:${cg.localID}` : undefined;
+    const guidKey = cg ? guidToString(cg) : undefined;
 
     // Skip children already handled by dsd
     if (guidKey && coveredGuids.has(guidKey)) {return child;}

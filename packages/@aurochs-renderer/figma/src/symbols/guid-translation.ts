@@ -10,7 +10,7 @@
  */
 
 import type { FigNode } from "@aurochs/fig/types";
-import { getNodeType, guidToString, type FigGuid } from "@aurochs/fig/parser";
+import { getNodeType, guidToString, safeChildren, type FigGuid } from "@aurochs/fig/parser";
 import type { FigSymbolOverride } from "./symbol-resolver";
 
 // =============================================================================
@@ -56,7 +56,7 @@ function collectDescendantInfo(nodes: readonly FigNode[]): DescendantInfo[] {
         size: size ? { x: size.x, y: size.y } : undefined,
       });
     }
-    for (const child of node.children ?? []) {
+    for (const child of safeChildren(node)) {
       walk(child);
     }
   }

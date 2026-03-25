@@ -339,7 +339,7 @@ describe("preResolveSymbols", () => {
   it("resolves INSTANCE despite sessionID mismatch (localID fallback)", () => {
     // SYMBOL has sessionID=0, INSTANCE references sessionID=1
     const symB = makeSymbolWithSession({ sessionID: 0, localID: 20, children: [makeRect(21, "InnerRect")], name: "SymbolB" });
-    const symA = makeSymbolWithSession({ sessionID: 0, localID: 10, children: [makeInstanceMismatch(11, 1, 20)], name: "SymbolA" });
+    const symA = makeSymbolWithSession({ sessionID: 0, localID: 10, children: [makeInstanceMismatch({ localID: 11, refSessionID: 1, symbolLocalID: 20 })], name: "SymbolA" });
     const symbolMap = new Map([
       ["0:10", symA],
       ["0:20", symB],
@@ -372,5 +372,66 @@ describe("preResolveSymbols", () => {
     expect(instanceInA.children).toBeDefined();
     expect(instanceInA.children!.length).toBe(1);
     expect(instanceInA.children![0].name).toBe("InnerRect");
+  });
+
+  it("handles SYMBOL whose children array contains undefined entries", () => {
+    // Real .fig files can have sparse children arrays with undefined entries
+    // caused by deleted nodes or malformed data.
+    // deepCloneWithExpansion must not crash on these.
+    const children = [makeRect(11, "ValidRect"), undefined as unknown as FigNode, makeRect(12, "AnotherRect")];
+    const sym = makeSymbol(10, children, "SparseSymbol");
+    const symbolMap = new Map([[guidStr(10), sym]]);
+
+    expect(() => {
+      preResolveSymbols(symbolMap);
+    }).not.toThrow();
+
+    const cache = preResolveSymbols(symbolMap);
+    const resolved = cache.get(guidStr(10))!;
+    // undefined entries should be filtered out, leaving only valid nodes
+    const validChildren = resolved.children!.filter((c) => c != null);
+    expect(validChildren.length).toBe(2);
+    expect(validChildren[0].name).toBe("ValidRect");
+    expect(validChildren[1].name).toBe("AnotherRect");
+  });
+
+  it("handles INSTANCE expansion when referenced SYMBOL has undefined children entries", () => {
+    // SYMBOL B has sparse children, SYMBOL A contains INSTANCE of B.
+    // The expansion of A's INSTANCE should not crash when cloning B's children.
+    const sparseChildren = [makeRect(21, "InnerRect"), undefined as unknown as FigNode];
+    const symB = makeSymbol(20, sparseChildren, "SymbolB");
+    const symA = makeSymbol(10, [makeInstance(11, 20)], "SymbolA");
+    const symbolMap = new Map([
+      [guidStr(10), symA],
+      [guidStr(20), symB],
+    ]);
+
+    expect(() => {
+      preResolveSymbols(symbolMap);
+    }).not.toThrow();
+
+    const cache = preResolveSymbols(symbolMap);
+    const resolvedA = cache.get(guidStr(10))!;
+    const instanceInA = resolvedA.children![0];
+    // Expanded INSTANCE should contain only the valid child from B
+    const validChildren = instanceInA.children!.filter((c) => c != null);
+    expect(validChildren.length).toBe(1);
+    expect(validChildren[0].name).toBe("InnerRect");
+  });
+
+  it("handles SYMBOL with null children entries", () => {
+    const children = [null as unknown as FigNode, makeRect(11, "ValidRect")];
+    const sym = makeSymbol(10, children, "NullChildSymbol");
+    const symbolMap = new Map([[guidStr(10), sym]]);
+
+    expect(() => {
+      preResolveSymbols(symbolMap);
+    }).not.toThrow();
+
+    const cache = preResolveSymbols(symbolMap);
+    const resolved = cache.get(guidStr(10))!;
+    const validChildren = resolved.children!.filter((c) => c != null);
+    expect(validChildren.length).toBe(1);
+    expect(validChildren[0].name).toBe("ValidRect");
   });
 });

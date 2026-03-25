@@ -17,7 +17,7 @@ import type { FontSpec } from "../../../text/measure/types";
 /**
  * Shared measurement provider instance
  */
-const measurementProvider: ReturnType<typeof createMeasurementProvider> | null = null;
+let measurementProvider: ReturnType<typeof createMeasurementProvider> | null = null;
 
 function getMeasurementProvider() {
   if (!measurementProvider) {
