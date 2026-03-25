@@ -879,10 +879,6 @@
         "react-dom": "^18.0.0 || ^19.0.0",
       },
     },
-    "packages/@aurochs-ui/ui-preview": {
-      "name": "@aurochs-ui/ui-preview",
-      "version": "0.9.0",
-    },
     "packages/@aurochs-ui/vba-editor": {
       "name": "@aurochs-ui/vba-editor",
       "version": "0.9.0",
@@ -1129,8 +1125,6 @@
     "@aurochs-ui/presentation-suite": ["@aurochs-ui/presentation-suite@workspace:packages/@aurochs-ui/presentation-suite"],
 
     "@aurochs-ui/ui-components": ["@aurochs-ui/ui-components@workspace:packages/@aurochs-ui/ui-components"],
-
-    "@aurochs-ui/ui-preview": ["@aurochs-ui/ui-preview@workspace:packages/@aurochs-ui/ui-preview"],
 
     "@aurochs-ui/vba-editor": ["@aurochs-ui/vba-editor@workspace:packages/@aurochs-ui/vba-editor"],
 
