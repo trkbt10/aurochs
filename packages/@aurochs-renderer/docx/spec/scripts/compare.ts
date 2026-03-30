@@ -7,7 +7,7 @@
 import * as fs from "node:fs";
 import { Resvg } from "@resvg/resvg-js";
 import pixelmatch from "pixelmatch";
-import { PNG } from "pngjs";
+import { readPng, createPngImage, type PngImage } from "@aurochs/png";
 
 // =============================================================================
 // Types
@@ -53,13 +53,13 @@ export function svgToPng(svg: string, width?: number): Buffer {
 // PNG Utilities
 // =============================================================================
 
-function loadPng(filePath: string): PNG {
+function loadPng(filePath: string): PngImage {
   const buffer = fs.readFileSync(filePath);
-  return PNG.sync.read(buffer);
+  return readPng(buffer);
 }
 
-function resizePng(png: PNG, targetWidth: number, targetHeight: number): PNG {
-  const resized = new PNG({ width: targetWidth, height: targetHeight });
+function resizePng(png: PngImage, targetWidth: number, targetHeight: number): PngImage {
+  const resized = createPngImage({ width: targetWidth, height: targetHeight });
   const xScale = png.width / targetWidth;
   const yScale = png.height / targetHeight;
 
@@ -105,14 +105,14 @@ export function compareToBaseline(
 
   // Convert SVG to PNG at baseline width
   const pngBuffer = svgToPng(svg, baseline.width);
-  const rawActual = PNG.sync.read(pngBuffer);
+  const rawActual = readPng(pngBuffer);
 
   // Resize if needed
   const needsResize = rawActual.width !== baseline.width || rawActual.height !== baseline.height;
   const actual = needsResize ? resizePng(rawActual, baseline.width, baseline.height) : rawActual;
 
   // Compare
-  const diff = new PNG({ width: baseline.width, height: baseline.height });
+  const diff = createPngImage({ width: baseline.width, height: baseline.height });
   const diffPixels = pixelmatch(
     baseline.data,
     actual.data,

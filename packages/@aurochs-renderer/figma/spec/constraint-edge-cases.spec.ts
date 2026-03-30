@@ -17,7 +17,7 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Resvg } from "@resvg/resvg-js";
 import pixelmatch from "pixelmatch";
-import { PNG } from "pngjs";
+import { readPng, writePng, createPngImage } from "@aurochs/png";
 import {
   parseFigFile,
   buildNodeTree,
@@ -132,10 +132,10 @@ function compareSvgs(
   const { threshold = 0.1, maxDiffPercent = 5.0, saveDiff = false } = options;
 
   const actualPngBuffer = svgToPng(actualSvg);
-  const actual = PNG.sync.read(actualPngBuffer);
+  const actual = readPng(actualPngBuffer);
 
   const renderedPngBuffer = svgToPng(renderedSvg, actual.width);
-  const renderedRef = { value: PNG.sync.read(renderedPngBuffer) };
+  const renderedRef = { value: readPng(renderedPngBuffer) };
 
   if (saveDiff) {
     ensureDirs();
@@ -145,7 +145,7 @@ function compareSvgs(
   }
 
   if (renderedRef.value.width !== actual.width || renderedRef.value.height !== actual.height) {
-    const resized = new PNG({ width: actual.width, height: actual.height });
+    const resized = createPngImage({ width: actual.width, height: actual.height });
     for (let y = 0; y < actual.height; y++) {
       const sy = Math.floor((y / actual.height) * renderedRef.value.height);
       for (let x = 0; x < actual.width; x++) {
@@ -161,7 +161,7 @@ function compareSvgs(
     renderedRef.value = resized;
   }
 
-  const diff = new PNG({ width: actual.width, height: actual.height });
+  const diff = createPngImage({ width: actual.width, height: actual.height });
 
   const diffPixels = pixelmatch(actual.data, renderedRef.value.data, diff.data, actual.width, actual.height, {
     threshold,
@@ -174,7 +174,7 @@ function compareSvgs(
 
   if (saveDiff && diffPixels > 0) {
     const safeName = frameName.replace(/[^a-zA-Z0-9-_]/g, "_");
-    const buffer = PNG.sync.write(diff);
+    const buffer = writePng(diff);
     fs.writeFileSync(path.join(DIFF_DIR, `${safeName}-diff.png`), buffer);
   }
 

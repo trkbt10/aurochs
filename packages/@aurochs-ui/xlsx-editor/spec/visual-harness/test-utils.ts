@@ -8,7 +8,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import pixelmatch from "pixelmatch";
-import { PNG } from "pngjs";
+import { readPng, writePng, createPngImage, type PngImage } from "@aurochs/png";
 import reactPlugin from "@vitejs/plugin-react";
 import { createServer, type ViteDevServer } from "vite";
 import puppeteer, { type Browser, type Page } from "puppeteer";
@@ -102,12 +102,12 @@ export function comparePngs(params: {
   };
 }): CompareResult {
   const { actual, baseline, name, diffPath, options } = params;
-  const imgA = PNG.sync.read(actual);
-  const imgBRef = { value: PNG.sync.read(baseline) };
+  const imgA = readPng(actual);
+  const imgBRef = { value: readPng(baseline) };
 
   // Resize if dimensions don't match (use nearest-neighbor scaling)
   if (imgBRef.value.width !== imgA.width || imgBRef.value.height !== imgA.height) {
-    const resized = new PNG({ width: imgA.width, height: imgA.height });
+    const resized = createPngImage({ width: imgA.width, height: imgA.height });
     for (let y = 0; y < imgA.height; y++) {
       const sy = Math.floor((y / imgA.height) * imgBRef.value.height);
       for (let x = 0; x < imgA.width; x++) {
@@ -131,8 +131,8 @@ export function comparePngs(params: {
   const region = resolveComparisonRegion({ contentOnly, headerLeft, headerTop, width: imgA.width, height: imgA.height });
 
   // Extract region from both images
-  const extractRegion = (img: PNG, r: { x: number; y: number; w: number; h: number }): PNG => {
-    const regionPng = new PNG({ width: r.w, height: r.h });
+  const extractRegion = (img: PngImage, r: { x: number; y: number; w: number; h: number }): PngImage => {
+    const regionPng = createPngImage({ width: r.w, height: r.h });
     for (let py = 0; py < r.h; py++) {
       for (let px = 0; px < r.w; px++) {
         const srcIdx = ((r.y + py) * img.width + (r.x + px)) * 4;
@@ -149,14 +149,14 @@ export function comparePngs(params: {
   const regionA = contentOnly ? extractRegion(imgA, region) : imgA;
   const regionB = contentOnly ? extractRegion(imgBRef.value, region) : imgBRef.value;
 
-  const diff = new PNG({ width: regionA.width, height: regionA.height });
+  const diff = createPngImage({ width: regionA.width, height: regionA.height });
   const diffPixels = pixelmatch(regionA.data, regionB.data, diff.data, regionA.width, regionA.height, {
     threshold: 0.1,
     includeAA: false,
   });
 
   if (diffPath && diffPixels > 0) {
-    fs.writeFileSync(diffPath, PNG.sync.write(diff));
+    fs.writeFileSync(diffPath, writePng(diff));
   }
 
   const totalPixels = regionA.width * regionA.height;

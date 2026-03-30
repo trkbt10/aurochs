@@ -15,7 +15,7 @@
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { PNG } from "pngjs";
+import { readPng, writePng, createPngImage, type PngImage } from "@aurochs/png";
 import { parsePdf } from "../packages/@aurochs/pdf/src/parser/core/pdf-parser";
 import type { PdfText } from "../packages/@aurochs/pdf/src/domain/text";
 import type { PdfPath } from "../packages/@aurochs/pdf/src/domain/path";
@@ -658,7 +658,7 @@ function countOnPixels(mask: Uint8Array): number {
   return count;
 }
 
-function buildInkMask(png: PNG, inkLumaThreshold: number): Uint8Array {
+function buildInkMask(png: PngImage, inkLumaThreshold: number): Uint8Array {
   const mask = new Uint8Array(png.width * png.height);
   for (let y = 0; y < png.height; y++) {
     for (let x = 0; x < png.width; x++) {
@@ -1061,9 +1061,9 @@ function buildDiffMaskPng(args: {
   readonly runMask: Uint8Array;
   readonly width: number;
   readonly height: number;
-}): { readonly png: PNG; readonly breakdown: TricolorDiffBreakdown } {
+}): { readonly png: PngImage; readonly breakdown: TricolorDiffBreakdown } {
   const { originalInkMask, runMask, width, height } = args;
-  const png = new PNG({ width, height });
+  const png = createPngImage({ width, height });
   const breakdown = {
     overlapPixelCount: 0,
     originalOnlyPixelCount: 0,
@@ -2722,7 +2722,7 @@ async function buildOriginalComparisonArtifacts(cli: CliArgs): Promise<OverlaySu
     outputPrefix: pngPrefix,
   });
 
-  const originalPng = PNG.sync.read(readFileSync(originalPngPath));
+  const originalPng = readPng(readFileSync(originalPngPath));
   const originalInkMask = buildInkMask(originalPng, cli.inkLumaThreshold);
   const textFocusMask = buildTextFocusMask({
     texts,
@@ -2816,7 +2816,7 @@ async function buildOriginalComparisonArtifacts(cli: CliArgs): Promise<OverlaySu
   });
 
   const diffPngPath = path.resolve(cli.outDir, `${baseName}.compare-diff.png`);
-  const diffPngBuffer = PNG.sync.write(diffPng);
+  const diffPngBuffer = Buffer.from(writePng(diffPng));
   writeFileSync(diffPngPath, diffPngBuffer);
 
   const originalPngDataUri = toDataUriPng(readFileSync(originalPngPath));

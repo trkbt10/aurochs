@@ -7,7 +7,7 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Resvg } from "@resvg/resvg-js";
 import pixelmatch from "pixelmatch";
-import { PNG } from "pngjs";
+import { readPng, writePng, createPngImage } from "@aurochs/png";
 import { parseFigFile, buildNodeTree, findNodesByType, type FigBlob } from "@aurochs/fig/parser";
 import type { FigNode } from "@aurochs/fig/types";
 import { createNodeFontLoaderWithFontsource } from "../src/font-drivers/node";
@@ -214,12 +214,12 @@ ${pathSvg}
     fs.writeFileSync(path.join(DEBUG_DIR, "size-64-rendered.png"), renderedPng);
 
     // Create diff image
-    const actualPngParsed = PNG.sync.read(actualPng);
-    const renderedPngParsed = PNG.sync.read(renderedPng);
+    const actualPngParsed = readPng(actualPng);
+    const renderedPngParsed = readPng(renderedPng);
 
     const width = Math.max(actualPngParsed.width, renderedPngParsed.width);
     const height = Math.max(actualPngParsed.height, renderedPngParsed.height);
-    const diff = new PNG({ width, height });
+    const diff = createPngImage({ width, height });
 
     const diffPixels = pixelmatch(actualPngParsed.data, renderedPngParsed.data, diff.data, width, height, {
       threshold: 0.1,
@@ -227,7 +227,7 @@ ${pathSvg}
     });
 
     const diffPercent = (diffPixels / (width * height)) * 100;
-    fs.writeFileSync(path.join(DEBUG_DIR, "size-64-diff.png"), PNG.sync.write(diff));
+    fs.writeFileSync(path.join(DEBUG_DIR, "size-64-diff.png"), writePng(diff));
 
     console.log(`\n=== Comparison Result ===`);
     console.log(`Diff: ${diffPercent.toFixed(2)}%`);
@@ -282,12 +282,12 @@ ${pathSvg}
     const actualPng = svgToPng(actualSvg);
     const renderedPng = svgToPng(renderedSvg);
 
-    const actualPngParsed = PNG.sync.read(actualPng);
-    const renderedPngParsed = PNG.sync.read(renderedPng);
+    const actualPngParsed = readPng(actualPng);
+    const renderedPngParsed = readPng(renderedPng);
 
     const width = actualPngParsed.width;
     const height = actualPngParsed.height;
-    const diff = new PNG({ width, height });
+    const diff = createPngImage({ width, height });
 
     const diffPixels = pixelmatch(actualPngParsed.data, renderedPngParsed.data, diff.data, width, height, {
       threshold: 0.1,
@@ -298,7 +298,7 @@ ${pathSvg}
 
     console.log(`Diff: ${diffPercent.toFixed(2)}%`);
 
-    fs.writeFileSync(path.join(DEBUG_DIR, "2-lines-diff.png"), PNG.sync.write(diff));
+    fs.writeFileSync(path.join(DEBUG_DIR, "2-lines-diff.png"), writePng(diff));
 
     expect(diffPercent).toBeDefined();
   });

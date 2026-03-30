@@ -9,7 +9,7 @@ import * as path from "node:path";
 import { execFileSync } from "node:child_process";
 import { Resvg } from "@resvg/resvg-js";
 import pixelmatch from "pixelmatch";
-import { PNG } from "pngjs";
+import { readPng, writePng, createPngImage, type PngImage } from "@aurochs/png";
 
 const VISUAL_DIR = path.dirname(new URL(import.meta.url).pathname);
 const SNAPSHOT_DIR = path.join(VISUAL_DIR, "snapshots");
@@ -87,16 +87,16 @@ export function svgToPng(svg: string, width?: number, options: Pick<CompareOptio
 /**
  * Load PNG file and return PNG object
  */
-function loadPng(filePath: string): PNG {
+function loadPng(filePath: string): PngImage {
   const buffer = fs.readFileSync(filePath);
-  return PNG.sync.read(buffer);
+  return readPng(buffer);
 }
 
 /**
  * Save PNG to file
  */
-function savePng(png: PNG, filePath: string): void {
-  const buffer = PNG.sync.write(png);
+function savePng(png: PngImage, filePath: string): void {
+  const buffer = writePng(png);
   fs.writeFileSync(filePath, buffer);
 }
 
@@ -104,8 +104,8 @@ function savePng(png: PNG, filePath: string): void {
  * Resize PNG to match target dimensions
  * Uses bilinear sampling (good default for downscale/upscale).
  */
-function resizePng(png: PNG, targetWidth: number, targetHeight: number): PNG {
-  const resized = new PNG({ width: targetWidth, height: targetHeight });
+function resizePng(png: PngImage, targetWidth: number, targetHeight: number): PngImage {
+  const resized = createPngImage({ width: targetWidth, height: targetHeight });
 
   if (targetWidth <= 0 || targetHeight <= 0) {
     throw new Error(`Invalid target size: ${targetWidth}x${targetHeight}`);
@@ -171,8 +171,8 @@ function parsePngAndResizeIfNeeded(args: {
   readonly pngBytes: Uint8Array | Buffer;
   readonly targetWidth: number;
   readonly targetHeight: number;
-}): PNG {
-  const decoded = PNG.sync.read(args.pngBytes);
+}): PngImage {
+  const decoded = readPng(args.pngBytes);
   if (decoded.width === args.targetWidth && decoded.height === args.targetHeight) {
     return decoded;
   }
@@ -224,7 +224,7 @@ export function compareSvgToSnapshot(
   fs.writeFileSync(actualPath, actualPng);
 
   // Create diff image
-  const diff = new PNG({ width: baseline.width, height: baseline.height });
+  const diff = createPngImage({ width: baseline.width, height: baseline.height });
 
   const diffPixels = pixelmatch(
     baseline.data,
@@ -376,7 +376,7 @@ function renderPdfPageToPngPath(
   return outPath;
 }
 
-function fillPng(png: PNG, bg: { r: number; g: number; b: number; a: number }): void {
+function fillPng(png: PngImage, bg: { r: number; g: number; b: number; a: number }): void {
   for (let y = 0; y < png.height; y++) {
     for (let x = 0; x < png.width; x++) {
       const i = (y * png.width + x) * 4;
@@ -388,7 +388,7 @@ function fillPng(png: PNG, bg: { r: number; g: number; b: number; a: number }): 
   }
 }
 
-function blitPng(args: { readonly src: PNG; readonly dst: PNG; readonly dx: number; readonly dy: number }): void {
+function blitPng(args: { readonly src: PngImage; readonly dst: PngImage; readonly dx: number; readonly dy: number }): void {
   const { src, dst, dx, dy } = args;
   for (let y = 0; y < src.height; y++) {
     const ty = y + dy;
@@ -408,14 +408,14 @@ function blitPng(args: { readonly src: PNG; readonly dst: PNG; readonly dx: numb
 
 function renderPdfBaselineToTarget(
   args: {
-    readonly pdfPng: PNG;
+    readonly pdfPng: PngImage;
     readonly targetWidth: number;
     readonly targetHeight: number;
     readonly bg: { r: number; g: number; b: number; a: number };
   }
-): PNG {
+): PngImage {
   const { pdfPng, targetWidth, targetHeight, bg } = args;
-  const canvas = new PNG({ width: targetWidth, height: targetHeight });
+  const canvas = createPngImage({ width: targetWidth, height: targetHeight });
   fillPng(canvas, bg);
 
   const scale = Math.min(targetWidth / pdfPng.width, targetHeight / pdfPng.height);
@@ -526,9 +526,9 @@ function renderMaskPng(args: {
   readonly mask: Uint8Array;
   readonly onColor: Rgba;
   readonly offColor: Rgba;
-}): PNG {
+}): PngImage {
   const { width, height, mask, onColor, offColor } = args;
-  const png = new PNG({ width, height });
+  const png = createPngImage({ width, height });
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const color = mask[y * width + x] === 1 ? onColor : offColor;
@@ -635,7 +635,7 @@ export function compareTextRegionMasks(args: {
     offColor: colorBackground,
   });
 
-  const diffPng = new PNG({ width, height });
+  const diffPng = createPngImage({ width, height });
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const baseline = baselineMask[y * width + x] === 1;
@@ -723,7 +723,7 @@ export function compareSvgToPdfBaseline(
   const actualPath = path.join(OUTPUT_DIR, `${snapshotName}-slide-${slideNumber}.png`);
   savePng(actual, actualPath);
 
-  const diff = new PNG({ width: baseline.targetWidth, height: baseline.targetHeight });
+  const diff = createPngImage({ width: baseline.targetWidth, height: baseline.targetHeight });
 
   const diffPixels = pixelmatch(
     fittedBaseline.data,
@@ -803,7 +803,7 @@ export function compareWithDetails(
   fs.writeFileSync(actualPath, actualPng);
 
   // Create diff image
-  const diff = new PNG({ width: baseline.width, height: baseline.height });
+  const diff = createPngImage({ width: baseline.width, height: baseline.height });
 
   const diffPixels = pixelmatch(
     baseline.data,

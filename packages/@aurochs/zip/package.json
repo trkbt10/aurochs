@@ -6,8 +6,7 @@
   "sideEffects": false,
   "dependencies": {
     "fflate": "^0.8.2",
-    "jpeg-js": "^0.4.4",
-    "pngjs": "^7.0.0"
+    "jpeg-js": "^0.4.4"
   },
   "scripts": {
     "lint": "eslint src",

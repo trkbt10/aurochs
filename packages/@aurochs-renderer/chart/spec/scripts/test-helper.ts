@@ -12,7 +12,7 @@ import { renderChart } from "../../src/svg/render-chart";
 import { createTestChartRenderContext } from "../../src/svg/test-utils";
 import { svgToPng, type CompareOptions, type CompareResult } from "./compare";
 import pixelmatch from "pixelmatch";
-import { PNG } from "pngjs";
+import { readPng, createPngImage, type PngImage } from "@aurochs/png";
 
 export type RenderedChartFixture = {
   readonly svg: string;
@@ -63,16 +63,16 @@ export function baselinePath(fixtureName: string, callerUrl: string): string {
 /**
  * Load PNG file and return PNG object
  */
-function loadPng(filePath: string): PNG {
+function loadPng(filePath: string): PngImage {
   const buffer = fs.readFileSync(filePath);
-  return PNG.sync.read(buffer);
+  return readPng(buffer);
 }
 
 /**
  * Resize PNG to match target dimensions using bilinear interpolation
  */
-function resizePng(png: PNG, targetWidth: number, targetHeight: number): PNG {
-  const resized = new PNG({ width: targetWidth, height: targetHeight });
+function resizePng(png: PngImage, targetWidth: number, targetHeight: number): PngImage {
+  const resized = createPngImage({ width: targetWidth, height: targetHeight });
 
   if (targetWidth <= 0 || targetHeight <= 0) {
     throw new Error(`Invalid target size: ${targetWidth}x${targetHeight}`);
@@ -139,7 +139,7 @@ function resizePng(png: PNG, targetWidth: number, targetHeight: number): PNG {
 /**
  * Resize PNG if dimensions don't match target.
  */
-function ensureSize(png: PNG, targetWidth: number, targetHeight: number): PNG {
+function ensureSize(png: PngImage, targetWidth: number, targetHeight: number): PngImage {
   if (png.width === targetWidth && png.height === targetHeight) {
     return png;
   }
@@ -162,9 +162,9 @@ export function compareToBaseline(
 
   const baseline = loadPng(baselinePngPath);
   const actualPng = svgToPng(svg, baseline.width, options);
-  const actual = ensureSize(PNG.sync.read(actualPng), baseline.width, baseline.height);
+  const actual = ensureSize(readPng(actualPng), baseline.width, baseline.height);
 
-  const diff = new PNG({ width: baseline.width, height: baseline.height });
+  const diff = createPngImage({ width: baseline.width, height: baseline.height });
 
   const diffPixels = pixelmatch(
     baseline.data,

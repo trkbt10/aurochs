@@ -93,7 +93,7 @@ export default [
         // Require object parameter for functions with 4+ params
         "custom/max-params": ["error", { max: 3 }],
         // Prohibit Node.js-only packages in browser code (must use .node.ts files)
-        "custom/no-node-only-import": ["error", { packages: ["pngjs"] }],
+        "custom/no-node-only-import": ["error", { packages: [] }],
         // Prohibit trivial type alias re-exports (export type X = ImportedY)
         "custom/no-type-alias-reexport": "error",
         "custom/prefer-switch-or-map": "warn",

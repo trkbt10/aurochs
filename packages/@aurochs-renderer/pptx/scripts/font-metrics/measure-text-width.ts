@@ -8,7 +8,7 @@
  *   bun run scripts/font-metrics/measure-text-width.ts --all
  */
 
-import { PNG } from "pngjs";
+import { readPng, type PngImage } from "@aurochs/png";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
@@ -33,7 +33,7 @@ type TextAnalysis = {
   }[];
 };
 
-function findTextLines(png: PNG): TextLine[] {
+function findTextLines(png: PngImage): TextLine[] {
   const lines: TextLine[] = [];
   const inText = { value: false };
   const currentLine = { value: { rows: [] as number[], startXs: [] as number[], endXs: [] as number[] } };
@@ -94,8 +94,8 @@ function analyzeSnapshot(name: string): TextAnalysis | null {
     return null;
   }
 
-  const baseline = PNG.sync.read(fs.readFileSync(baselinePath));
-  const output = PNG.sync.read(fs.readFileSync(outputPath));
+  const baseline = readPng(fs.readFileSync(baselinePath));
+  const output = readPng(fs.readFileSync(outputPath));
 
   const baselineLines = findTextLines(baseline);
   const outputLines = findTextLines(output);

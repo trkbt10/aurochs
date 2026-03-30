@@ -6,7 +6,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { PNG } from "pngjs";
+import { readPng, createPngImage, type PngImage } from "@aurochs/png";
 import pixelmatch from "pixelmatch";
 
 const fixturesDir = path.resolve(__dirname, "../fixtures/visual");
@@ -35,8 +35,8 @@ type DiffAnalysis = {
 };
 
 function analyzeRegion(params: {
-  imgA: PNG;
-  imgB: PNG;
+  imgA: PngImage;
+  imgB: PngImage;
   x: number;
   y: number;
   w: number;
@@ -67,7 +67,7 @@ function analyzeRegion(params: {
   };
 }
 
-function analyzeColors(imgA: PNG, imgB: PNG): { backgroundDiff: number; textDiff: number; borderDiff: number } {
+function analyzeColors(imgA: PngImage, imgB: PngImage): { backgroundDiff: number; textDiff: number; borderDiff: number } {
   const counters = { backgroundDiff: 0, textDiff: 0, borderDiff: 0 };
 
   for (let y = 0; y < imgA.height; y++) {
@@ -107,8 +107,8 @@ function analyzeDiff(name: string): DiffAnalysis | null {
     return null;
   }
 
-  const baselineImg = PNG.sync.read(fs.readFileSync(baselinePath));
-  const outputImg = PNG.sync.read(fs.readFileSync(outputPath));
+  const baselineImg = readPng(fs.readFileSync(baselinePath));
+  const outputImg = readPng(fs.readFileSync(outputPath));
 
   // Ensure same size
   if (baselineImg.width !== outputImg.width || baselineImg.height !== outputImg.height) {
@@ -121,7 +121,7 @@ function analyzeDiff(name: string): DiffAnalysis | null {
   const totalPixels = w * h;
 
   // Calculate overall diff
-  const diff = new PNG({ width: w, height: h });
+  const diff = createPngImage({ width: w, height: h });
   const diffPixels = pixelmatch(
     outputImg.data,
     baselineImg.data,

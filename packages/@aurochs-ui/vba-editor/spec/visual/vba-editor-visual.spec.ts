@@ -9,7 +9,7 @@ import puppeteer, { type Browser, type Page } from "puppeteer-core";
 import { createServer, type ViteDevServer } from "vite";
 import path from "node:path";
 import fs from "node:fs";
-import { PNG } from "pngjs";
+import { readPng, writePng, createPngImage, type PngImage } from "@aurochs/png";
 import pixelmatch from "pixelmatch";
 
 // =============================================================================
@@ -52,16 +52,16 @@ function ensureDir(dir: string): void {
   }
 }
 
-function loadPng(filePath: string): PNG | null {
+function loadPng(filePath: string): PngImage | null {
   if (!fs.existsSync(filePath)) {
     return null;
   }
   const data = fs.readFileSync(filePath);
-  return PNG.sync.read(data);
+  return readPng(data);
 }
 
-function savePng(filePath: string, png: PNG): void {
-  const buffer = PNG.sync.write(png);
+function savePng(filePath: string, png: PngImage): void {
+  const buffer = writePng(png);
   fs.writeFileSync(filePath, buffer);
 }
 
@@ -69,11 +69,11 @@ function savePng(filePath: string, png: PNG): void {
  * Compare two images and return diff percentage.
  */
 function compareImages(
-  actual: PNG,
-  expected: PNG
-): { diffPercent: number; diffPng: PNG } {
+  actual: PngImage,
+  expected: PngImage
+): { diffPercent: number; diffPng: PngImage } {
   const { width, height } = expected;
-  const diffPng = new PNG({ width, height });
+  const diffPng = createPngImage({ width, height });
 
   const diffPixels = pixelmatch(
     expected.data,
@@ -218,7 +218,7 @@ async function runVisualTests(options: {
       console.log(`Testing: ${scenario.name}`);
 
       const screenshotBuffer = await captureScenario(page, scenario);
-      const actualPng = PNG.sync.read(screenshotBuffer);
+      const actualPng = readPng(screenshotBuffer);
 
       const baselinePath = path.join(BASELINE_DIR, `${scenario.name}.png`);
       const outputPath = path.join(OUTPUT_DIR, `${scenario.name}.png`);

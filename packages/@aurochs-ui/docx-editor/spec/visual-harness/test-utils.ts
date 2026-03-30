@@ -8,7 +8,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import pixelmatch from "pixelmatch";
-import { PNG } from "pngjs";
+import { readPng, writePng, createPngImage, type PngImage } from "@aurochs/png";
 import { createServer, type ViteDevServer } from "vite";
 import puppeteer, { type Browser, type Page } from "puppeteer";
 import type { DocxParagraph, DocxNumbering, DocxSectionProperties } from "@aurochs-office/docx/domain";
@@ -81,20 +81,20 @@ export type ComparePngsOptions = {
  */
 export function comparePngs(options: ComparePngsOptions): CompareResult {
   const { actual, baseline, name, diffPath } = options;
-  const imgA = PNG.sync.read(actual);
-  const imgBOriginal = PNG.sync.read(baseline);
+  const imgA = readPng(actual);
+  const imgBOriginal = readPng(baseline);
 
   // Resize if dimensions don't match (use nearest-neighbor scaling)
   const imgB = resizeIfNeeded(imgBOriginal, imgA.width, imgA.height);
 
-  const diff = new PNG({ width: imgA.width, height: imgA.height });
+  const diff = createPngImage({ width: imgA.width, height: imgA.height });
   const diffPixels = pixelmatch(imgA.data, imgB.data, diff.data, imgA.width, imgA.height, {
     threshold: 0.1,
     includeAA: false,
   });
 
   if (diffPath && diffPixels > 0) {
-    fs.writeFileSync(diffPath, PNG.sync.write(diff));
+    fs.writeFileSync(diffPath, writePng(diff));
   }
 
   const totalPixels = imgA.width * imgA.height;
@@ -109,12 +109,12 @@ export function comparePngs(options: ComparePngsOptions): CompareResult {
 /**
  * Resize a PNG to target dimensions using nearest-neighbor scaling.
  */
-function resizeIfNeeded(img: PNG, targetWidth: number, targetHeight: number): PNG {
+function resizeIfNeeded(img: PngImage, targetWidth: number, targetHeight: number): PngImage {
   if (img.width === targetWidth && img.height === targetHeight) {
     return img;
   }
 
-  const resized = new PNG({ width: targetWidth, height: targetHeight });
+  const resized = createPngImage({ width: targetWidth, height: targetHeight });
   const srcDim = { width: img.width, height: img.height };
   const dstDim = { width: targetWidth, height: targetHeight };
   for (const [dstIdx, srcIdx] of generateResizeMapping({ src: srcDim, dst: dstDim })) {

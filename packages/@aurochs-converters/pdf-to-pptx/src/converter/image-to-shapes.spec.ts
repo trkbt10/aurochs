@@ -6,6 +6,7 @@ import type { PdfImage } from "@aurochs/pdf/domain";
 import { createDefaultGraphicsState } from "@aurochs/pdf/domain";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import { base64ArrayBuffer, base64ToArrayBuffer, parseDataUrl, toDataUrl } from "@aurochs/buffer";
+import { readPng } from "@aurochs/png";
 import { convertImageToShape } from "./image-to-shapes";
 import { createFitContext } from "./transform-converter";
 
@@ -101,14 +102,7 @@ describe("convertImageToShape", () => {
     const parsed = parseDataUrl(shape.blipFill.resourceId);
     expect(parsed.mimeType).toBe("image/png");
 
-    type PngReadResult = Readonly<{ readonly width: number; readonly height: number; readonly data: Uint8Array }>;
-    type PngjsModule = Readonly<{
-      readonly PNG: Readonly<{ readonly sync: Readonly<{ readonly read: (bytes: Buffer) => PngReadResult }> }>;
-    }>;
-
-    // eslint-disable-next-line @typescript-eslint/no-require-imports -- pngjs is CJS
-    const pngjs = require("pngjs") as PngjsModule;
-    const decoded = pngjs.PNG.sync.read(Buffer.from(parsed.data));
+    const decoded = readPng(new Uint8Array(parsed.data));
 
     expect(decoded.width).toBe(2);
     expect(decoded.height).toBe(1);
@@ -141,14 +135,7 @@ describe("convertImageToShape", () => {
     const parsed = parseDataUrl(shape.blipFill.resourceId);
     expect(parsed.mimeType).toBe("image/png");
 
-    type PngReadResult = Readonly<{ readonly width: number; readonly height: number; readonly data: Uint8Array }>;
-    type PngjsModule = Readonly<{
-      readonly PNG: Readonly<{ readonly sync: Readonly<{ readonly read: (bytes: Buffer) => PngReadResult }> }>;
-    }>;
-
-    // eslint-disable-next-line @typescript-eslint/no-require-imports -- pngjs is CJS
-    const pngjs = require("pngjs") as PngjsModule;
-    const decoded = pngjs.PNG.sync.read(Buffer.from(parsed.data));
+    const decoded = readPng(new Uint8Array(parsed.data));
 
     // RGBA for 2x1: [r,g,b,a, r,g,b,a]
     expect(Array.from(decoded.data.slice(0, 4))).toEqual([255, 0, 0, 128]);
@@ -282,14 +269,7 @@ describe("convertImageToShape", () => {
     const parsed = parseDataUrl(shape.blipFill.resourceId);
     expect(parsed.mimeType).toBe("image/png");
 
-    type PngReadResult = Readonly<{ readonly width: number; readonly height: number; readonly data: Uint8Array }>;
-    type PngjsModule = Readonly<{
-      readonly PNG: Readonly<{ readonly sync: Readonly<{ readonly read: (bytes: Buffer) => PngReadResult }> }>;
-    }>;
-
-    // eslint-disable-next-line @typescript-eslint/no-require-imports -- pngjs is CJS
-    const pngjs = require("pngjs") as PngjsModule;
-    const decoded = pngjs.PNG.sync.read(Buffer.from(parsed.data));
+    const decoded = readPng(new Uint8Array(parsed.data));
 
     expect(decoded.width).toBe(15);
     expect(decoded.height).toBe(10);
@@ -349,14 +329,7 @@ describe("convertImageToShape", () => {
     const parsed = parseDataUrl(shape.blipFill.resourceId);
     expect(parsed.mimeType).toBe("image/png");
 
-    type PngReadResult = Readonly<{ readonly width: number; readonly height: number; readonly data: Uint8Array }>;
-    type PngjsModule = Readonly<{
-      readonly PNG: Readonly<{ readonly sync: Readonly<{ readonly read: (bytes: Buffer) => PngReadResult }> }>;
-    }>;
-
-    // eslint-disable-next-line @typescript-eslint/no-require-imports -- pngjs is CJS
-    const pngjs = require("pngjs") as PngjsModule;
-    const decoded = pngjs.PNG.sync.read(Buffer.from(parsed.data));
+    const decoded = readPng(new Uint8Array(parsed.data));
     expect(decoded.width).toBe(5);
     expect(decoded.height).toBe(10);
   });

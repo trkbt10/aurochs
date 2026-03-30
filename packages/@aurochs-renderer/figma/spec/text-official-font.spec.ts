@@ -7,7 +7,7 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Resvg } from "@resvg/resvg-js";
 import pixelmatch from "pixelmatch";
-import { PNG } from "pngjs";
+import { readPng, createPngImage } from "@aurochs/png";
 import { parse as parseFont } from "opentype.js";
 import { parseFigFile, buildNodeTree, findNodesByType, type FigBlob } from "@aurochs/fig/parser";
 import type { FigNode } from "@aurochs/fig/types";
@@ -151,12 +151,12 @@ ${pathSvg}
     const actualPng = svgToPng(actualSvg);
     const renderedPng = svgToPng(renderedSvg);
 
-    const actualPngParsed = PNG.sync.read(actualPng);
-    const renderedPngParsed = PNG.sync.read(renderedPng);
+    const actualPngParsed = readPng(actualPng);
+    const renderedPngParsed = readPng(renderedPng);
 
     const width = actualPngParsed.width;
     const height = actualPngParsed.height;
-    const diff = new PNG({ width, height });
+    const diff = createPngImage({ width, height });
 
     const diffPixels = pixelmatch(actualPngParsed.data, renderedPngParsed.data, diff.data, width, height, {
       threshold: 0.1,
@@ -199,12 +199,12 @@ ${pathSvg}
     const actualPng = svgToPng(actualSvg);
     const renderedPng = svgToPng(renderedSvg);
 
-    const actualPngParsed = PNG.sync.read(actualPng);
-    const renderedPngParsed = PNG.sync.read(renderedPng);
+    const actualPngParsed = readPng(actualPng);
+    const renderedPngParsed = readPng(renderedPng);
 
     const width = actualPngParsed.width;
     const height = actualPngParsed.height;
-    const diff = new PNG({ width, height });
+    const diff = createPngImage({ width, height });
 
     const diffPixels = pixelmatch(actualPngParsed.data, renderedPngParsed.data, diff.data, width, height, {
       threshold: 0.1,
@@ -247,12 +247,12 @@ ${pathSvg}
     const actualPng = svgToPng(actualSvg);
     const renderedPng = svgToPng(renderedSvg);
 
-    const actualPngParsed = PNG.sync.read(actualPng);
-    const renderedPngParsed = PNG.sync.read(renderedPng);
+    const actualPngParsed = readPng(actualPng);
+    const renderedPngParsed = readPng(renderedPng);
 
     const width = actualPngParsed.width;
     const height = actualPngParsed.height;
-    const diff = new PNG({ width, height });
+    const diff = createPngImage({ width, height });
 
     const diffPixels = pixelmatch(actualPngParsed.data, renderedPngParsed.data, diff.data, width, height, {
       threshold: 0.1,

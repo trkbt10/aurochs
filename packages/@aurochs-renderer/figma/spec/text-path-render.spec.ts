@@ -9,7 +9,7 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Resvg } from "@resvg/resvg-js";
 import pixelmatch from "pixelmatch";
-import { PNG } from "pngjs";
+import { readPng, createPngImage } from "@aurochs/png";
 import { parseFigFile, buildNodeTree, findNodesByType, type FigBlob } from "@aurochs/fig/parser";
 import type { FigNode } from "@aurochs/fig/types";
 import { createNodeFontLoaderWithFontsource } from "../src/font-drivers/node";
@@ -44,12 +44,12 @@ function svgToPng(svg: string): Buffer {
 }
 
 function comparePngs(actual: Buffer, rendered: Buffer): { diffPercent: number } {
-  const actualPng = PNG.sync.read(actual);
-  const renderedPngRef = { value: PNG.sync.read(rendered) };
+  const actualPng = readPng(actual);
+  const renderedPngRef = { value: readPng(rendered) };
 
   // Resize if needed
   if (renderedPngRef.value.width !== actualPng.width || renderedPngRef.value.height !== actualPng.height) {
-    const resized = new PNG({ width: actualPng.width, height: actualPng.height });
+    const resized = createPngImage({ width: actualPng.width, height: actualPng.height });
     for (let y = 0; y < actualPng.height; y++) {
       const sy = Math.floor((y / actualPng.height) * renderedPngRef.value.height);
       for (let x = 0; x < actualPng.width; x++) {
@@ -65,7 +65,7 @@ function comparePngs(actual: Buffer, rendered: Buffer): { diffPercent: number } 
     renderedPngRef.value = resized;
   }
 
-  const diff = new PNG({ width: actualPng.width, height: actualPng.height });
+  const diff = createPngImage({ width: actualPng.width, height: actualPng.height });
   const diffPixels = pixelmatch(actualPng.data, renderedPngRef.value.data, diff.data, actualPng.width, actualPng.height, {
     threshold: 0.1,
     includeAA: false,

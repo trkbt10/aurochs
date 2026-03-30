@@ -15,7 +15,7 @@
  *   bun run scripts/font-metrics/calibrate-font.ts arial char-spacing
  */
 
-import { PNG } from "pngjs";
+import { readPng, type PngImage } from "@aurochs/png";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { getFontMetrics } from "../../src/text/fonts";
@@ -29,7 +29,7 @@ type LineData = {
   widthRatio: number;
 };
 
-function findTextWidth(png: PNG, row: number): { startX: number; endX: number; width: number } {
+function findTextWidth(png: PngImage, row: number): { startX: number; endX: number; width: number } {
   const startX = { value: -1 };
   const endX = { value: -1 };
 
@@ -48,7 +48,7 @@ function findTextWidth(png: PNG, row: number): { startX: number; endX: number; w
   return { startX: startX.value, endX: endX.value, width: endX.value - startX.value };
 }
 
-function findTextRows(png: PNG): number[] {
+function findTextRows(png: PngImage): number[] {
   const rows: number[] = [];
   const inText = { value: false };
   const textRows = { value: [] as number[] };
@@ -92,8 +92,8 @@ function analyzeSnapshot(name: string): LineData[] {
     return [];
   }
 
-  const baseline = PNG.sync.read(fs.readFileSync(baselinePath));
-  const output = PNG.sync.read(fs.readFileSync(outputPath));
+  const baseline = readPng(fs.readFileSync(baselinePath));
+  const output = readPng(fs.readFileSync(outputPath));
 
   const baselineRows = findTextRows(baseline);
   const outputRows = findTextRows(output);

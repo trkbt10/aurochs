@@ -7,7 +7,7 @@
 import * as fs from "node:fs";
 import { Resvg } from "@resvg/resvg-js";
 import pixelmatch from "pixelmatch";
-import { PNG } from "pngjs";
+import { readPng, writePng, createPngImage } from "@aurochs/png";
 import { createServer, type ViteDevServer } from "vite";
 import puppeteer, { type Browser, type Page } from "puppeteer";
 import { parseFigFile, buildNodeTree, findNodesByType, type FigBlob, type FigImage } from "@aurochs/fig/parser";
@@ -84,11 +84,11 @@ export function svgToPng(svg: string, width?: number): Buffer {
 export function comparePngs(
   { a, b, frameName, diffPath}: { a: Buffer; b: Buffer; frameName: string; diffPath?: string; }
 ): CompareResult {
-  const imgA = PNG.sync.read(a);
-  const imgBRef = { value: PNG.sync.read(b) };
+  const imgA = readPng(a);
+  const imgBRef = { value: readPng(b) };
   // Resize if dimensions don't match
   if (imgBRef.value.width !== imgA.width || imgBRef.value.height !== imgA.height) {
-    const resized = new PNG({ width: imgA.width, height: imgA.height });
+    const resized = createPngImage({ width: imgA.width, height: imgA.height });
     for (let y = 0; y < imgA.height; y++) {
       const sy = Math.floor((y / imgA.height) * imgBRef.value.height);
       for (let x = 0; x < imgA.width; x++) {
@@ -103,13 +103,13 @@ export function comparePngs(
     }
     imgBRef.value = resized;
   }
-  const diff = new PNG({ width: imgA.width, height: imgA.height });
+  const diff = createPngImage({ width: imgA.width, height: imgA.height });
   const diffPixels = pixelmatch(imgA.data, imgBRef.value.data, diff.data, imgA.width, imgA.height, {
     threshold: 0.1,
     includeAA: false,
   });
   if (diffPath && diffPixels > 0) {
-    fs.writeFileSync(diffPath, PNG.sync.write(diff));
+    fs.writeFileSync(diffPath, writePng(diff));
   }
   const totalPixels = imgA.width * imgA.height;
   return {

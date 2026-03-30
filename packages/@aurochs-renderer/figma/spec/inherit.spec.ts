@@ -16,7 +16,7 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Resvg } from "@resvg/resvg-js";
 import pixelmatch from "pixelmatch";
-import { PNG } from "pngjs";
+import { readPng, writePng, createPngImage } from "@aurochs/png";
 import {
   parseFigFile,
   buildNodeTree,
@@ -109,11 +109,11 @@ function listActualSvgFiles(dir: string): string[] {
 function comparePngs(
   { a, b, frameName, diffPath}: { a: Buffer; b: Buffer; frameName: string; diffPath?: string; }
 ): CompareResult {
-  const imgA = PNG.sync.read(a);
-  const imgBRef = { value: PNG.sync.read(b) };
+  const imgA = readPng(a);
+  const imgBRef = { value: readPng(b) };
 
   if (imgBRef.value.width !== imgA.width || imgBRef.value.height !== imgA.height) {
-    const resized = new PNG({ width: imgA.width, height: imgA.height });
+    const resized = createPngImage({ width: imgA.width, height: imgA.height });
     for (let y = 0; y < imgA.height; y++) {
       const sy = Math.floor((y / imgA.height) * imgBRef.value.height);
       for (let x = 0; x < imgA.width; x++) {
@@ -129,14 +129,14 @@ function comparePngs(
     imgBRef.value = resized;
   }
 
-  const diff = new PNG({ width: imgA.width, height: imgA.height });
+  const diff = createPngImage({ width: imgA.width, height: imgA.height });
   const diffPixels = pixelmatch(imgA.data, imgBRef.value.data, diff.data, imgA.width, imgA.height, {
     threshold: 0.1,
     includeAA: false,
   });
 
   if (diffPath && diffPixels > 0) {
-    fs.writeFileSync(diffPath, PNG.sync.write(diff));
+    fs.writeFileSync(diffPath, writePng(diff));
   }
 
   const totalPixels = imgA.width * imgA.height;
@@ -359,7 +359,7 @@ describe("Inherit Visual Regression", () => {
       // Pixel comparison
       const actualSvg = fs.readFileSync(path.join(ACTUAL_DIR, actualFile), "utf-8");
       const actualPng = svgToPng(actualSvg);
-      const renderedPng = svgToPng(result.svg, PNG.sync.read(actualPng).width);
+      const renderedPng = svgToPng(result.svg, readPng(actualPng).width);
 
       // Save PNGs
       fs.writeFileSync(path.join(OUTPUT_DIR, `${safe}-actual.png`), actualPng);
