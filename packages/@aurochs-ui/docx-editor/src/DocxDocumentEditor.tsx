@@ -14,7 +14,7 @@ import { useDocumentLayout } from "@aurochs-renderer/docx/react";
 import { EditorShell, type EditorPanel } from "@aurochs-ui/editor-controls/editor-shell";
 import { DocumentEditorProvider, useDocumentEditor } from "./context/document/DocumentEditorContext";
 import { DocumentToolbar } from "./panels/DocumentToolbar";
-import { SelectedElementPanel } from "./panels/SelectedElementPanel";
+import { DocxRibbonToolbar } from "./panels/DocxRibbonToolbar";
 import { DocxPageListPanel } from "./panels/DocxPageListPanel";
 import { ContinuousEditor } from "./text-edit/ContinuousEditor";
 import { ColorEditingProvider } from "@aurochs-ui/color-editor/context";
@@ -23,11 +23,18 @@ import { ColorEditingProvider } from "@aurochs-ui/color-editor/context";
 // Types
 // =============================================================================
 
+/** Which toolbar panel sits above the editor. Both are first-class options. */
+export type DocxToolbarPanel = "classic" | "ribbon";
+
 export type DocxDocumentEditorProps = {
   /** Initial document to edit */
   readonly initialDocument: DocxDocument;
   /** Called when document changes */
   readonly onDocumentChange?: (document: DocxDocument) => void;
+  /** Toolbar panel to use. Defaults to "classic". */
+  readonly toolbarPanel?: DocxToolbarPanel;
+  /** Additional panels to inject into EditorShell. */
+  readonly panels?: readonly EditorPanel[];
   /** Custom style for container */
   readonly style?: CSSProperties;
   /** Custom class name */
@@ -54,18 +61,12 @@ const canvasContainerStyle: CSSProperties = {
   overflow: "auto",
 };
 
-const rightPanelContainerStyle: CSSProperties = {
-  height: "100%",
-  display: "flex",
-  flexDirection: "column",
-  overflow: "auto",
-};
 
 // =============================================================================
 // Inner Component
 // =============================================================================
 
-function DocxDocumentEditorInner() {
+function DocxDocumentEditorInner({ toolbarPanel, extraPanels }: { readonly toolbarPanel: DocxToolbarPanel; readonly extraPanels: readonly EditorPanel[] }) {
   const { document, dispatch, activePageIndex } = useDocumentEditor();
 
   const paragraphs = useMemo(
@@ -110,37 +111,35 @@ function DocxDocumentEditorInner() {
       resizable: true,
       minSize: 160,
       maxSize: 300,
-      drawerLabel: "ページ",
+      drawerLabel: "Pages",
     },
-    {
-      id: "properties",
-      position: "right" as const,
-      content: (
-        <div style={rightPanelContainerStyle}>
-          <SelectedElementPanel />
-        </div>
-      ),
-      size: "320px",
-      resizable: true,
-      minSize: 280,
-      maxSize: 500,
-      drawerLabel: "Format",
-    },
-  ], [pagedLayout.pages, activePageIndex, handlePageSelect]);
+    ...extraPanels,
+  ], [pagedLayout.pages, activePageIndex, handlePageSelect, extraPanels]);
+
+  const canvas = (
+    <div style={canvasContainerStyle}>
+      <ContinuousEditor
+        paragraphs={paragraphs}
+        sectPr={document.body.sectPr}
+        numbering={document.numbering}
+        onCursorChange={handleCursorChange}
+      />
+    </div>
+  );
+
+  if (toolbarPanel === "ribbon") {
+    return (
+      <DocxRibbonToolbar>
+        <EditorShell panels={panels}>
+          {canvas}
+        </EditorShell>
+      </DocxRibbonToolbar>
+    );
+  }
 
   return (
-    <EditorShell
-      toolbar={<DocumentToolbar />}
-      panels={panels}
-    >
-      <div style={canvasContainerStyle}>
-        <ContinuousEditor
-          paragraphs={paragraphs}
-          sectPr={document.body.sectPr}
-          numbering={document.numbering}
-          onCursorChange={handleCursorChange}
-        />
-      </div>
+    <EditorShell toolbar={<DocumentToolbar />} panels={panels}>
+      {canvas}
     </EditorShell>
   );
 }
@@ -160,6 +159,8 @@ function DocxDocumentEditorInner() {
 export function DocxDocumentEditor({
   initialDocument,
   onDocumentChange: _onDocumentChange,
+  toolbarPanel = "classic",
+  panels = [],
   style,
   className,
 }: DocxDocumentEditorProps) {
@@ -167,7 +168,7 @@ export function DocxDocumentEditor({
     <div style={{ ...editorContainerStyle, ...style }} className={className}>
       <ColorEditingProvider>
         <DocumentEditorProvider initialDocument={initialDocument}>
-          <DocxDocumentEditorInner />
+          <DocxDocumentEditorInner toolbarPanel={toolbarPanel} extraPanels={panels} />
         </DocumentEditorProvider>
       </ColorEditingProvider>
     </div>

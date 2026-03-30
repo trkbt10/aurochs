@@ -12,6 +12,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         editor: path.resolve(__dirname, "docx-editor.html"),
+        "editor-ribbon": path.resolve(__dirname, "docx-editor-ribbon.html"),
         viewer: path.resolve(__dirname, "docx-viewer.html"),
       },
     },

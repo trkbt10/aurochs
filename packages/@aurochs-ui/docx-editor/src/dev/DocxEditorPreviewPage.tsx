@@ -6,6 +6,8 @@
 
 import { type CSSProperties } from "react";
 import { DocxDocumentEditor } from "@aurochs-ui/docx-editor";
+import type { EditorPanel } from "@aurochs-ui/editor-controls/editor-shell";
+import { SelectedElementPanel } from "../panels/SelectedElementPanel";
 import type { DocxDocument } from "@aurochs-office/docx/domain/document";
 import type { DocxParagraph } from "@aurochs-office/docx/domain/paragraph";
 import { halfPoints } from "@aurochs-office/docx/domain/types";
@@ -72,11 +74,37 @@ const containerStyle: CSSProperties = {
   flexDirection: "column",
 };
 
-export function DocxEditorPreviewPage() {
+export type DocxEditorPreviewPageProps = {
+  readonly toolbarPanel?: "classic" | "ribbon";
+};
+
+const rightPanelStyle: CSSProperties = { height: "100%", display: "flex", flexDirection: "column", overflow: "auto" };
+
+const CLASSIC_PANELS: readonly EditorPanel[] = [
+  {
+    id: "properties",
+    position: "right",
+    content: <div style={rightPanelStyle}><SelectedElementPanel /></div>,
+    size: "320px",
+    resizable: true,
+    minSize: 280,
+    maxSize: 500,
+    drawerLabel: "Format",
+  },
+];
+
+const NO_PANELS: readonly EditorPanel[] = [];
+
+/** DOCX editor preview page with selectable toolbar panel. */
+export function DocxEditorPreviewPage({ toolbarPanel = "classic" }: DocxEditorPreviewPageProps) {
+  const panels = toolbarPanel === "classic" ? CLASSIC_PANELS : NO_PANELS;
+
   return (
     <div style={containerStyle}>
       <DocxDocumentEditor
         initialDocument={sampleDocument}
+        toolbarPanel={toolbarPanel}
+        panels={panels}
         onDocumentChange={(doc) => {
           console.log("Document changed:", doc);
         }}

@@ -22,7 +22,9 @@
     "lint": "eslint src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-ui/editor-controls/src'",
-    "dev": "vite --config dev/vite.config.ts --open"
+    "dev": "vite --config dev/vite.config.ts --open",
+    "e2e": "playwright test",
+    "e2e:update": "playwright test --update-snapshots"
   },
   "exports": {
     ".": {
@@ -104,6 +106,10 @@
     "./editors": {
       "types": "./src/editors/index.ts",
       "default": "./src/editors/index.ts"
+    },
+    "./ribbon-menu": {
+      "types": "./src/ribbon-menu/index.ts",
+      "default": "./src/ribbon-menu/index.ts"
     }
   }
 }

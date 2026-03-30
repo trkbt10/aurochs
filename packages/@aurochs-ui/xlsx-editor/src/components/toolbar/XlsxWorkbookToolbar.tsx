@@ -49,7 +49,19 @@ export type XlsxWorkbookToolbarProps = {
   readonly onMacroClick?: () => void;
 };
 
-const barStyle: CSSProperties = {
+const wrapperStyle: CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  gap: spacingTokens.xs,
+};
+
+const topRowStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: spacingTokens.sm,
+};
+
+const bottomRowStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
   gap: spacingTokens.sm,
@@ -57,11 +69,7 @@ const barStyle: CSSProperties = {
 
 const addressInputStyle: CSSProperties = {
   width: 90,
-};
-
-const formulaInputStyle: CSSProperties = {
-  flex: 1,
-  minWidth: 120,
+  flexShrink: 0,
 };
 
 function createA1AddressText(address: CellAddress): string {
@@ -250,101 +258,104 @@ export function XlsxWorkbookToolbar({
   };
 
   return (
-    <div style={barStyle}>
-      <UndoRedoGroup
-        canUndo={canUndo}
-        canRedo={canRedo}
-        onUndo={() => dispatch({ type: "UNDO" })}
-        onRedo={() => dispatch({ type: "REDO" })}
-      />
-
-      <ToolbarPopoverButton
-        icon={<TypeIcon size={POPOVER_ICON_SIZE} strokeWidth={POPOVER_STROKE_WIDTH} />}
-        label="Text formatting"
-        disabled={!toolbarCanFormat}
-        panelWidth={280}
-      >
-        <TextFormattingEditor
-          value={textFormatting}
-          onChange={handleTextFormattingChange}
-          disabled={!toolbarCanFormat}
+    <div style={wrapperStyle}>
+      <div style={topRowStyle}>
+        <UndoRedoGroup
+          canUndo={canUndo}
+          canRedo={canRedo}
+          onUndo={() => dispatch({ type: "UNDO" })}
+          onRedo={() => dispatch({ type: "REDO" })}
         />
-      </ToolbarPopoverButton>
 
-      <AlignmentGroup
-        value={selectedHorizontalAlignment as AlignmentValue | AlignmentValue[] | undefined}
-        onChange={handleAlignmentChange}
-        disabled={!targetRange || disableInputs}
-      />
+        <ToolbarPopoverButton
+          icon={<TypeIcon size={POPOVER_ICON_SIZE} strokeWidth={POPOVER_STROKE_WIDTH} />}
+          label="Text formatting"
+          disabled={!toolbarCanFormat}
+          panelWidth={280}
+        >
+          <TextFormattingEditor
+            value={textFormatting}
+            onChange={handleTextFormattingChange}
+            disabled={!toolbarCanFormat}
+          />
+        </ToolbarPopoverButton>
 
-      <VerticalAlignmentGroup
-        value={selectedVerticalAlignment as VerticalAlignmentValue | VerticalAlignmentValue[] | undefined}
-        onChange={handleVerticalAlignmentChange}
-        disabled={!targetRange || disableInputs}
-      />
+        <AlignmentGroup
+          value={selectedHorizontalAlignment as AlignmentValue | AlignmentValue[] | undefined}
+          onChange={handleAlignmentChange}
+          disabled={!targetRange || disableInputs}
+        />
 
-      <WrapTextButton
-        pressed={resolveWrapPressed(selectedWrapText)}
-        onChange={handleWrapTextChange}
-        disabled={!targetRange || disableInputs}
-      />
+        <VerticalAlignmentGroup
+          value={selectedVerticalAlignment as VerticalAlignmentValue | VerticalAlignmentValue[] | undefined}
+          onChange={handleVerticalAlignmentChange}
+          disabled={!targetRange || disableInputs}
+        />
 
-      <Input value={activeCellText} placeholder="A1" readOnly onChange={() => undefined} style={addressInputStyle} />
+        <WrapTextButton
+          pressed={resolveWrapPressed(selectedWrapText)}
+          onChange={handleWrapTextChange}
+          disabled={!targetRange || disableInputs}
+        />
 
-      <StylePicker
-        styles={workbook.styles}
-        currentStyleId={styleDetails?.styleId}
-        disabled={!targetRange || disableInputs}
-        onNamedStyleSelect={(cellStyleIndex) => {
-          if (!targetRange) {
-            return;
-          }
-          dispatch({ type: "APPLY_NAMED_STYLE", range: targetRange, cellStyleIndex });
-        }}
-      />
+        <StylePicker
+          styles={workbook.styles}
+          currentStyleId={styleDetails?.styleId}
+          disabled={!targetRange || disableInputs}
+          onNamedStyleSelect={(cellStyleIndex) => {
+            if (!targetRange) {
+              return;
+            }
+            dispatch({ type: "APPLY_NAMED_STYLE", range: targetRange, cellStyleIndex });
+          }}
+        />
 
-      <Button
-        size="sm"
-        disabled={!targetRange || disableInputs}
-        onClick={() => {
-          if (!targetRange) {
-            return;
-          }
-          dispatch({ type: "MERGE_CELLS", range: targetRange });
-        }}
-        title="Merge cells"
-      >
-        <MergeCellsIcon size={14} />
-      </Button>
-      <Button
-        size="sm"
-        disabled={!targetRange || disableInputs}
-        onClick={() => {
-          if (!targetRange) {
-            return;
-          }
-          dispatch({ type: "UNMERGE_CELLS", range: targetRange });
-        }}
-        title="Unmerge cells"
-      >
-        <UnmergeCellsIcon size={14} />
-      </Button>
-
-      <div style={{ display: "flex", alignItems: "center", gap: spacingTokens.xs }}>
-        <ZoomControls zoom={zoom} onZoomChange={onZoomChange} />
-      </div>
-
-      {vbaProgram && (
         <Button
           size="sm"
-          onClick={onMacroClick}
-          title="Macros"
+          disabled={!targetRange || disableInputs}
+          onClick={() => {
+            if (!targetRange) {
+              return;
+            }
+            dispatch({ type: "MERGE_CELLS", range: targetRange });
+          }}
+          title="Merge cells"
         >
-          Macros
+          <MergeCellsIcon size={14} />
         </Button>
-      )}
+        <Button
+          size="sm"
+          disabled={!targetRange || disableInputs}
+          onClick={() => {
+            if (!targetRange) {
+              return;
+            }
+            dispatch({ type: "UNMERGE_CELLS", range: targetRange });
+          }}
+          title="Unmerge cells"
+        >
+          <UnmergeCellsIcon size={14} />
+        </Button>
 
-      <XlsxFormulaBar sheet={sheet} style={formulaInputStyle} />
+        <div style={{ display: "flex", alignItems: "center", gap: spacingTokens.xs }}>
+          <ZoomControls zoom={zoom} onZoomChange={onZoomChange} />
+        </div>
+
+        {vbaProgram && (
+          <Button
+            size="sm"
+            onClick={onMacroClick}
+            title="Macros"
+          >
+            Macros
+          </Button>
+        )}
+      </div>
+
+      <div style={bottomRowStyle}>
+        <Input value={activeCellText} placeholder="A1" readOnly onChange={() => undefined} style={addressInputStyle} />
+        <XlsxFormulaBar sheet={sheet} />
+      </div>
     </div>
   );
 }

@@ -7,3 +7,4 @@ export { EditorControlsIndexPage } from "./EditorControlsIndexPage";
 export { TextEditorsPage } from "./TextEditorsPage";
 export { SurfaceEditorsPage } from "./SurfaceEditorsPage";
 export { TableEditorsPage } from "./TableEditorsPage";
+export { RibbonMenuPreviewPage } from "./RibbonMenuPreviewPage";

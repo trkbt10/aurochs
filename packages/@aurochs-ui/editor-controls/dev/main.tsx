@@ -8,6 +8,7 @@ import {
   TextEditorsPage,
   SurfaceEditorsPage,
   TableEditorsPage,
+  RibbonMenuPreviewPage,
 } from "../src/dev";
 
 injectCSSVariables();
@@ -22,6 +23,7 @@ createRoot(document.getElementById("root")!).render(
           <Route path="surface" element={<SurfaceEditorsPage />} />
           <Route path="table" element={<TableEditorsPage />} />
         </Route>
+        <Route path="ribbon" element={<RibbonMenuPreviewPage />} />
       </Routes>
     </HashRouter>
   </StrictMode>,

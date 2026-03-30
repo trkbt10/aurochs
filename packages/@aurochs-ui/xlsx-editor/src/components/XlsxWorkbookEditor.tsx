@@ -4,11 +4,11 @@
  * Workbook editor UI using EditorShell for responsive layout.
  */
 
-import { useMemo, useState, type CSSProperties } from "react";
+import { useMemo, useState, useCallback, type CSSProperties } from "react";
 import type { XlsxWorkbook } from "@aurochs-office/xlsx/domain/workbook";
 import { EditorShell, type EditorPanel } from "@aurochs-ui/editor-controls/editor-shell";
 import { editorShellTokens } from "@aurochs-ui/ui-components/design-tokens";
-import { Tabs } from "@aurochs-ui/ui-components/primitives/Tabs";
+import { InspectorPanelWithTabs } from "@aurochs-ui/editor-controls/ui";
 import { XlsxWorkbookEditorProvider, useXlsxWorkbookEditor } from "../context/workbook/XlsxWorkbookEditorContext";
 import { XlsxSheetGrid, type XlsxGridMetrics } from "./XlsxSheetGrid";
 import { XlsxWorkbookToolbar } from "./toolbar/XlsxWorkbookToolbar";
@@ -27,6 +27,11 @@ export type XlsxWorkbookEditorProps = {
 function XlsxWorkbookEditorInner({ grid }: { readonly grid: XlsxGridMetrics }) {
   const { workbook, activeSheetIndex } = useXlsxWorkbookEditor();
   const [zoom, setZoom] = useState<number>(1);
+  const [inspectorTabId, setInspectorTabId] = useState("format");
+
+  const handleInspectorTabChange = useCallback((tabId: string) => {
+    setInspectorTabId(tabId);
+  }, []);
 
   const activeSheet = activeSheetIndex !== undefined ? workbook.sheets[activeSheetIndex] : undefined;
 
@@ -39,13 +44,13 @@ function XlsxWorkbookEditorInner({ grid }: { readonly grid: XlsxGridMetrics }) {
         id: "inspector",
         position: "right",
         content: (
-          <Tabs
-            items={[
+          <InspectorPanelWithTabs
+            tabs={[
               { id: "format", label: "Format", content: <XlsxCellFormatPanel sheetIndex={activeSheetIndex} /> },
               { id: "sheet", label: "Sheet", content: <XlsxSheetPanel sheetIndex={activeSheetIndex} /> },
             ]}
-            defaultValue="format"
-            size="sm"
+            activeTabId={inspectorTabId}
+            onActiveTabChange={handleInspectorTabChange}
           />
         ),
         size: editorShellTokens.panel.xlsxFormatPanelSize,
@@ -53,7 +58,7 @@ function XlsxWorkbookEditorInner({ grid }: { readonly grid: XlsxGridMetrics }) {
         drawerLabel: "Inspector",
       },
     ];
-  }, [activeSheetIndex]);
+  }, [activeSheetIndex, inspectorTabId, handleInspectorTabChange]);
 
   if (!activeSheet || activeSheetIndex === undefined) {
     return (

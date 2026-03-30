@@ -22,6 +22,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-ui/docx-editor/src'",
     "dev:editor": "vite --config dev/vite.config.ts --open /docx-editor.html",
+    "dev:editor:ribbon": "vite --config dev/vite.config.ts --open /docx-editor-ribbon.html",
     "dev:viewer": "vite --config dev/vite.config.ts --open /docx-viewer.html"
   },
   "exports": {
