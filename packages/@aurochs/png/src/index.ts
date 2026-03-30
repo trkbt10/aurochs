@@ -1,9 +1,12 @@
 /**
  * @file PNG Module
  *
- * Default export uses browser implementation.
- * Use conditional exports (browser/node) for environment-specific imports.
+ * Pure TypeScript PNG encoder/decoder. Environment-independent.
  */
 
-export { encodeRgbaToPngDataUrl, encodeRgbaToPng } from "./encoder.browser";
+export { encodeRgbaToPngDataUrl, encodeRgbaToPng } from "./encoder";
 export { isPng, PNG_SIGNATURE } from "./detector";
+export { pack as packPng } from "./pngjs/packer";
+export { parseSync as parsePng } from "./pngjs/parser-sync";
+export type { PngData, PackerOptions } from "./pngjs/packer";
+export type { ParseResult, ParseOptions } from "./pngjs/parser-sync";

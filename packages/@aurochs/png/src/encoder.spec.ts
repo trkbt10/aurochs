@@ -110,31 +110,10 @@ describe("PNG Encoder", () => {
   });
 
   describe("handles edge cases", () => {
-    it("falls back to pngjs when canvas 2d context is unavailable", () => {
-      const originalDocument = globalThis.document;
-      Object.defineProperty(globalThis, "document", {
-        configurable: true,
-        value: {
-          createElement: () => ({
-            getContext: () => null,
-          }),
-        },
-      });
-
-      try {
-        const rgbaData = new Uint8ClampedArray([255, 0, 0, 255]);
-        const png = encodeRgbaToPng(rgbaData, 1, 1);
-        expect(png[0]).toBe(0x89);
-      } finally {
-        if (originalDocument === undefined) {
-          delete (globalThis as { document?: unknown }).document;
-        } else {
-          Object.defineProperty(globalThis, "document", {
-            configurable: true,
-            value: originalDocument,
-          });
-        }
-      }
+    it("encodes without canvas dependency (pure TS packer)", () => {
+      const rgbaData = new Uint8ClampedArray([255, 0, 0, 255]);
+      const png = encodeRgbaToPng(rgbaData, 1, 1);
+      expect(png[0]).toBe(0x89);
     });
 
     it("encodes transparent pixels correctly", () => {
