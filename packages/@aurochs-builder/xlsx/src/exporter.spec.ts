@@ -25,7 +25,7 @@ import { loadZipPackage } from "@aurochs/zip";
 import type { XlsxWorkbook, XlsxWorksheet, XlsxRow } from "@aurochs-office/xlsx/domain/workbook";
 import type { Cell } from "@aurochs-office/xlsx/domain/cell/types";
 import { createDefaultStyleSheet } from "@aurochs-office/xlsx/domain/style/types";
-import { colIdx, rowIdx } from "@aurochs-office/xlsx/domain/types";
+import { colIdx, rowIdx, sheetId } from "@aurochs-office/xlsx/domain/types";
 import { serializeElement } from "@aurochs/xml";
 
 // =============================================================================
@@ -90,14 +90,14 @@ function createRow(rowNumber: number, cells: readonly Cell[]): XlsxRow {
 /**
  * Create a simple test worksheet.
  */
-function createWorksheet(name: string, sheetId: number, rows: readonly XlsxRow[]): XlsxWorksheet {
+function createWorksheet(name: string, id: number, rows: readonly XlsxRow[]): XlsxWorksheet {
   return {
     dateSystem: "1900",
     name,
-    sheetId,
+    sheetId: sheetId(id),
     state: "visible",
     rows,
-    xmlPath: `xl/worksheets/sheet${sheetId}.xml`,
+    xmlPath: `xl/worksheets/sheet${id}.xml`,
   };
 }
 

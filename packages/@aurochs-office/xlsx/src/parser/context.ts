@@ -16,6 +16,7 @@ import type { XlsxStyleSheet } from "../domain/style/types";
 import { createDefaultStyleSheet } from "../domain/style/types";
 import type { XlsxDefinedName } from "../domain/workbook";
 import type { XlsxDateSystem } from "../domain/date-system";
+import type { SheetId } from "../domain/types";
 
 // =============================================================================
 // Sheet Info
@@ -28,7 +29,7 @@ import type { XlsxDateSystem } from "../domain/date-system";
  */
 export type XlsxSheetInfo = {
   readonly name: string;
-  readonly sheetId: number;
+  readonly sheetId: SheetId;
   readonly rId: string;
   readonly state: "visible" | "hidden" | "veryHidden";
 };

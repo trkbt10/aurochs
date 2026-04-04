@@ -14,7 +14,7 @@ import type { XlsxConditionalFormatting } from "@aurochs-office/xlsx/domain/cond
 import type { XlsxDataValidation } from "@aurochs-office/xlsx/domain/data-validation";
 import type { XlsxHyperlink } from "@aurochs-office/xlsx/domain/hyperlink";
 import type { XlsxPageSetup, XlsxPageMargins, XlsxHeaderFooter, XlsxPrintOptions } from "@aurochs-office/xlsx/domain/page-setup";
-import { colIdx, rowIdx, styleId } from "@aurochs-office/xlsx/domain/types";
+import { colIdx, rowIdx, styleId, sheetId } from "@aurochs-office/xlsx/domain/types";
 import type { SharedStringTable } from "./cell";
 import {
   serializeWorksheet,
@@ -137,7 +137,7 @@ function createWorksheet(
   return {
     dateSystem: "1900",
     name: "Sheet1",
-    sheetId: 1,
+    sheetId: sheetId(1),
     state: "visible",
     rows,
     columns: options?.columns,

@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { addMergeCells, removeMergeCells, setMergeCells } from "./merge-cell";
 import type { XlsxWorksheet } from "../workbook";
 import type { CellRange } from "../cell/address";
-import { colIdx, rowIdx } from "../types";
+import { colIdx, rowIdx, sheetId } from "../types";
 
 function makeRange(startCol: number, startRow: number, endCol: number, endRow: number): CellRange {
   return {
@@ -14,7 +14,7 @@ function makeRange(startCol: number, startRow: number, endCol: number, endRow: n
 function emptyWorksheet(mergeCells?: readonly CellRange[]): XlsxWorksheet {
   return {
     name: "Sheet1",
-    sheetId: 1,
+    sheetId: sheetId(1),
     state: "visible",
     rows: [],
     xmlPath: "xl/worksheets/sheet1.xml",

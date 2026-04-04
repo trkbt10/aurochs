@@ -11,6 +11,7 @@ import {
   fontId,
   numFmtId,
   rowIdx,
+  sheetId,
   styleId,
   type ColIndex,
   type RowIndex,
@@ -57,7 +58,7 @@ export function createDemoWorkbook(): XlsxWorkbook {
       {
         dateSystem: "1900",
         name: "Sheet1",
-        sheetId: 1,
+        sheetId: sheetId(1),
         state: "visible",
         sheetView: { showGridLines: true, showRowColHeaders: true },
         rows: [
@@ -91,7 +92,7 @@ export function createDemoWorkbook(): XlsxWorkbook {
       {
         dateSystem: "1900",
         name: "Sheet2",
-        sheetId: 2,
+        sheetId: sheetId(2),
         state: "visible",
         sheetView: { showGridLines: true, showRowColHeaders: true },
         rows: [
@@ -106,7 +107,7 @@ export function createDemoWorkbook(): XlsxWorkbook {
       {
         dateSystem: "1900",
         name: "Layout Demo",
-        sheetId: 3,
+        sheetId: sheetId(3),
         state: "visible",
         sheetView: {
           showGridLines: true,

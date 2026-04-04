@@ -11,7 +11,8 @@
  */
 
 import type { XmlElement, XmlNode } from "@aurochs/xml";
-import type { XlsxWorksheet, XlsxRow, XlsxColumnDef, XlsxSheetView, XlsxPane, XlsxSelection } from "@aurochs-office/xlsx/domain/workbook";
+import type { XlsxRow, XlsxColumnDef, XlsxSheetView, XlsxPane, XlsxSelection } from "@aurochs-office/xlsx/domain/workbook";
+import type { XlsxWorksheetInput } from "./builder-types";
 import type { CellRange } from "@aurochs-office/xlsx/domain/cell/address";
 import type { XlsxColor } from "@aurochs-office/xlsx/domain/style/color";
 import type { XlsxSheetProtection } from "@aurochs-office/xlsx/domain/protection";
@@ -394,7 +395,7 @@ export function serializeMergeCells(mergeCells: readonly CellRange[]): XmlElemen
 // sheetFormatPr Serialization
 // =============================================================================
 
-function serializeSheetFormatPr(worksheet: XlsxWorksheet): XmlElement | undefined {
+function serializeSheetFormatPr(worksheet: XlsxWorksheetInput): XmlElement | undefined {
   const pr = worksheet.sheetFormatPr;
   if (!pr) {
     return undefined;
@@ -452,7 +453,7 @@ function serializeColorElement(elementName: string, color: XlsxColor): XmlElemen
  *
  * @see ECMA-376 Part 4, Section 18.3.1.82 (sheetPr)
  */
-export function serializeSheetPr(worksheet: XlsxWorksheet): XmlElement | undefined {
+export function serializeSheetPr(worksheet: XlsxWorksheetInput): XmlElement | undefined {
   if (!worksheet.tabColor) {
     return undefined;
   }
@@ -1000,7 +1001,7 @@ export function serializeColBreaks(breaks: readonly XlsxPageBreak[]): XmlElement
  * @see ECMA-376 Part 4, Section 18.3.1.99 (worksheet)
  */
 export function serializeWorksheet(
-  worksheet: XlsxWorksheet,
+  worksheet: XlsxWorksheetInput,
   sharedStrings: SharedStringTable,
   drawingRelId?: string,
 ): XmlElement {

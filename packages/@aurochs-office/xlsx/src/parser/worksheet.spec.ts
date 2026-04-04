@@ -18,6 +18,7 @@ import {
   parseSheetView,
   parseWorksheet,
 } from "./worksheet";
+import { sheetId } from "../domain/types";
 
 // =============================================================================
 // Test Helpers
@@ -401,7 +402,7 @@ describe("parseWorksheet", () => {
   const context = createDefaultParseContext();
   const sheetInfo = {
     name: "Sheet1",
-    sheetId: 1,
+    sheetId: sheetId(1),
     state: "visible" as const,
     xmlPath: "xl/worksheets/sheet1.xml",
   };

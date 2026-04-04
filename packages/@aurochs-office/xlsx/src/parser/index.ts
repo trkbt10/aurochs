@@ -17,6 +17,7 @@
  */
 
 import type { XlsxWorkbook, XlsxDefinedName, XlsxWorksheet } from "../domain/workbook";
+import { sheetId } from "../domain/types";
 import { createDefaultStyleSheet } from "../domain/style/types";
 import type { XlsxTable } from "../domain/table/types";
 import type { XlsxSheetInfo, XlsxWorkbookInfo } from "./context";
@@ -127,11 +128,11 @@ function parseRelationshipInfosFromDocument(relsXml: XmlDocument): readonly Rela
  */
 export function parseSheetElement(sheetElement: XmlElement): XlsxSheetInfo {
   const name = getAttr(sheetElement, "name") ?? "Sheet";
-  const sheetId = parseInt(getAttr(sheetElement, "sheetId") ?? "1", 10);
+  const rawSheetId = parseInt(getAttr(sheetElement, "sheetId") ?? "1", 10);
   const rId = getAttr(sheetElement, "r:id") ?? getAttr(sheetElement, "rId") ?? "";
   const state = (getAttr(sheetElement, "state") ?? "visible") as "visible" | "hidden" | "veryHidden";
 
-  return { name, sheetId, rId, state };
+  return { name, sheetId: sheetId(rawSheetId), rId, state };
 }
 
 /**

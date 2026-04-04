@@ -4,7 +4,7 @@
 
 import { serializeElement } from "@aurochs/xml";
 import { serializeWorksheet } from "./worksheet";
-import { colIdx } from "@aurochs-office/xlsx/domain/types";
+import { colIdx, sheetId } from "@aurochs-office/xlsx/domain/types";
 
 function createMockSharedStrings() {
   const strings: string[] = [];
@@ -34,7 +34,7 @@ describe("serializeWorksheet (sheetFormatPr)", () => {
         {
           dateSystem: "1900",
           name: "Sheet1",
-          sheetId: 1,
+          sheetId: sheetId(1),
           state: "visible",
           sheetFormatPr: {},
           rows: [],
@@ -53,7 +53,7 @@ describe("serializeWorksheet (sheetFormatPr)", () => {
         {
           dateSystem: "1900",
           name: "Sheet1",
-          sheetId: 1,
+          sheetId: sheetId(1),
           state: "visible",
           sheetFormatPr: { defaultRowHeight: 20, defaultColWidth: 10, zeroHeight: false },
           columns: [{ min: colIdx(1), max: colIdx(1), width: 12 }],

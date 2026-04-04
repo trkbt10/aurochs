@@ -10,7 +10,8 @@
  */
 
 import { createElement, type XmlElement, type XmlNode } from "@aurochs/xml";
-import type { XlsxWorkbook, XlsxWorksheet, XlsxDefinedName } from "@aurochs-office/xlsx/domain/workbook";
+import type { XlsxDefinedName } from "@aurochs-office/xlsx/domain/workbook";
+import type { XlsxWorkbookInput, XlsxWorksheetInput } from "./builder-types";
 import { SPREADSHEETML_NAMESPACES, OFFICE_NAMESPACES } from "@aurochs-office/opc";
 
 // =============================================================================
@@ -114,7 +115,7 @@ function serializeBookViews(): XmlElement {
  * <sheet name="Sheet1" sheetId="1" r:id="rId1"/>
  * <sheet name="Hidden" sheetId="2" state="hidden" r:id="rId2"/>
  */
-function serializeSheet(sheet: XlsxWorksheet, relationshipId: string): XmlElement {
+function serializeSheet(sheet: XlsxWorksheetInput, relationshipId: string): XmlElement {
   const attrs: Record<string, string> = {
     name: sheet.name,
     sheetId: String(sheet.sheetId),
@@ -150,7 +151,7 @@ function serializeSheet(sheet: XlsxWorksheet, relationshipId: string): XmlElemen
  * </sheets>
  */
 export function serializeSheets(
-  sheets: readonly XlsxWorksheet[],
+  sheets: readonly XlsxWorksheetInput[],
   sheetRelationships: ReadonlyMap<number, string>,
 ): XmlElement {
   const children: XmlNode[] = sheets.map((sheet, index) => {
@@ -287,7 +288,7 @@ function serializeCalcPr(): XmlElement {
  * // => <workbook xmlns="..." xmlns:r="...">...</workbook>
  * ```
  */
-export function serializeWorkbook(workbook: XlsxWorkbook, sheetRelationships: ReadonlyMap<number, string>): XmlElement {
+export function serializeWorkbook(workbook: XlsxWorkbookInput, sheetRelationships: ReadonlyMap<number, string>): XmlElement {
   const children: XmlNode[] = [];
 
   // 1. fileVersion

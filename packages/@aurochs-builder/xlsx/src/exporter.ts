@@ -35,8 +35,8 @@ import {
   type ContentTypeEntry,
   type ParsedContentTypes,
 } from "@aurochs-office/opc";
-import type { XlsxWorkbook } from "@aurochs-office/xlsx/domain/workbook";
 import { serializeWorkbook, serializeStyleSheet, serializeWorksheet, type SharedStringTable } from "./index";
+import type { XlsxWorkbookInput } from "./builder-types";
 import { serializeDrawing } from "./drawing";
 
 // =============================================================================
@@ -155,7 +155,7 @@ export function createSharedStringTableBuilder(): SharedStringTable & {
  * @param workbook - The workbook to collect strings from
  * @returns SharedStringTable builder with all strings indexed
  */
-export function collectSharedStrings(workbook: XlsxWorkbook): SharedStringTable & { getStrings(): readonly string[] } {
+export function collectSharedStrings(workbook: XlsxWorkbookInput): SharedStringTable & { getStrings(): readonly string[] } {
   const builder = createSharedStringTableBuilder();
 
   for (const sheet of workbook.sheets) {
@@ -204,7 +204,7 @@ type GenerateContentTypesOptions = {
  * @see MS-OFFMACRO2 Section 2.2.1.3 (macroEnabled content types)
  */
 export function generateContentTypes(
-  workbook: XlsxWorkbook,
+  workbook: XlsxWorkbookInput,
   options: GenerateContentTypesOptions = {},
 ): XmlElement {
   const { sourceContentTypes, additionalEntries } = options;
@@ -347,7 +347,7 @@ const PRESERVE_RELATIONSHIP_TYPES = new Set([
  * @see MS-OFFMACRO2 Section 2.2.1.5 (xlMacrosheet relationship)
  */
 export function generateWorkbookRels(
-  workbook: XlsxWorkbook,
+  workbook: XlsxWorkbookInput,
   options: GenerateWorkbookRelsOptions = {},
 ): XmlElement {
   const { sourcePackage } = options;
@@ -452,7 +452,7 @@ export function generateSharedStrings(sharedStrings: readonly string[]): XmlElem
  * @param workbook - The workbook to build relationships for
  * @returns Map from sheet index (0-based) to relationship ID
  */
-function buildSheetRelationships(workbook: XlsxWorkbook): Map<number, string> {
+function buildSheetRelationships(workbook: XlsxWorkbookInput): Map<number, string> {
   const map = new Map<number, string>();
   for (let i = 0; i < workbook.sheets.length; i++) {
     map.set(i, `rId${i + 1}`);
@@ -632,7 +632,7 @@ function collectContentRelIds(
  * without writing anything. The exporter then writes the plan to the package.
  */
 function buildDrawingExportPlan(
-  workbook: XlsxWorkbook,
+  workbook: XlsxWorkbookInput,
   sheetMedia?: ReadonlyMap<number, ReadonlyMap<string, MediaPart>>,
 ): DrawingExportPlan {
   const drawingParts: DrawingPartPlan[] = [];
@@ -787,7 +787,7 @@ function parseSourceContentTypes(sourcePackage: ZipPackage | undefined): ParsedC
  * ```
  */
 export async function exportXlsx(
-  workbook: XlsxWorkbook,
+  workbook: XlsxWorkbookInput,
   options: ExportXlsxOptions = {},
 ): Promise<Uint8Array> {
   const { sourcePackage } = options;

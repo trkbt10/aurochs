@@ -5,7 +5,7 @@
 import type { CellRange } from "@aurochs-office/xlsx/domain/cell/address";
 import type { Cell, CellValue } from "@aurochs-office/xlsx/domain/cell/types";
 import type { XlsxWorkbook, XlsxWorksheet, XlsxRow, XlsxColumnDef } from "@aurochs-office/xlsx/domain/workbook";
-import { colIdx, rowIdx, styleId as createStyleId } from "@aurochs-office/xlsx/domain/types";
+import { colIdx, rowIdx, styleId as createStyleId, sheetId as createSheetId } from "@aurochs-office/xlsx/domain/types";
 import type { XlsCell, XlsCellRange, XlsDimensions, XlsWorkbook, XlsWorksheet } from "../domain/types";
 import type { XlsParseContext } from "../parse-context";
 import { warnOrThrow } from "../parse-context";
@@ -241,7 +241,7 @@ function toXlsxWorksheet(params: {
   return {
     dateSystem,
     name: sheet.name,
-    sheetId,
+    sheetId: createSheetId(sheetId),
     state: sheet.state,
     dimension,
     ...(columns ? { columns } : {}),

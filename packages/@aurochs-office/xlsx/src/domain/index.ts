@@ -8,8 +8,8 @@
  */
 
 // Branded types and constructors
-export type { RowIndex, ColIndex, StyleId, FontId, FillId, BorderId, NumFmtId } from "./types";
-export { rowIdx, colIdx, styleId, fontId, fillId, borderId, numFmtId } from "./types";
+export type { RowIndex, ColIndex, StyleId, FontId, FillId, BorderId, NumFmtId, SheetId } from "./types";
+export { rowIdx, colIdx, styleId, fontId, fillId, borderId, numFmtId, sheetId } from "./types";
 
 // Date system
 export type { XlsxDateSystem } from "./date-system";

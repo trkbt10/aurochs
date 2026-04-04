@@ -26,7 +26,7 @@ import type { Workbook, WorkbookSheet } from "@aurochs-office/xlsx/workbook-pars
 import { indexToColumnLetter, parseRange } from "@aurochs-office/xlsx/domain/cell/address";
 import type { CellValue } from "@aurochs-office/xlsx/domain/cell/types";
 import type { XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
-import { colIdx, rowIdx, styleId, type RowIndex, type ColIndex } from "@aurochs-office/xlsx/domain/types";
+import { colIdx, rowIdx, styleId, sheetId, type RowIndex, type ColIndex } from "@aurochs-office/xlsx/domain/types";
 import { createDefaultParseContext, type XlsxParseContext } from "@aurochs-office/xlsx/parser/context";
 import { parseWorksheet } from "@aurochs-office/xlsx/parser/worksheet";
 import { updateCell } from "@aurochs-office/xlsx/domain/mutation/cell";
@@ -320,7 +320,7 @@ function patchSheet(params: {
     options: undefined,
     sheetInfo: {
       name: sheet.name,
-      sheetId: extractSheetIndex(sheet.xmlPath),
+      sheetId: sheetId(extractSheetIndex(sheet.xmlPath)),
       state: "visible",
       xmlPath: sheet.xmlPath,
     },

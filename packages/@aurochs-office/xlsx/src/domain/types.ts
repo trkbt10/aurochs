@@ -83,6 +83,13 @@ export type NumFmtId = Brand<number, "NumFmtId">;
 // =============================================================================
 
 /**
+ * Sheet identifier (positive integer, unique within a workbook)
+ *
+ * @see ECMA-376 Part 4, Section 18.2.19 (sheet)
+ */
+export type SheetId = Brand<number, "SheetId">;
+
+/**
  * Index into the shared strings table (sharedStrings.xml)
  *
  * @see ECMA-376 Part 4, Section 18.4 (Shared String Table)
@@ -132,6 +139,20 @@ export const borderId = (v: number): BorderId => v as BorderId;
  * Create a NumFmtId from a number.
  */
 export const numFmtId = (v: number): NumFmtId => v as NumFmtId;
+
+/**
+ * Create a SheetId from a number.
+ *
+ * @throws Error if value is not a positive integer
+ */
+export function sheetId(v: number): SheetId {
+  if (!Number.isInteger(v) || v < 1) {
+    throw new Error(
+      `sheetId: expected positive integer, got ${String(v)} (ECMA-376 Part 4, Section 18.2.19)`,
+    );
+  }
+  return v as SheetId;
+}
 
 /**
  * Create a SharedStringIndex from a number.

@@ -11,6 +11,7 @@
 import { serializeElement } from "@aurochs/xml";
 import type { XlsxWorkbook, XlsxWorksheet, XlsxDefinedName } from "@aurochs-office/xlsx/domain/workbook";
 import { createDefaultStyleSheet } from "@aurochs-office/xlsx/domain/style/types";
+import { sheetId } from "@aurochs-office/xlsx/domain/types";
 import { serializeWorkbook, serializeSheets, serializeDefinedNames } from "./workbook";
 import { serializeRelationships, type OpcRelationship as XlsxRelationship } from "@aurochs-office/opc";
 
@@ -23,16 +24,16 @@ import { serializeRelationships, type OpcRelationship as XlsxRelationship } from
  */
 function createWorksheet(
   name: string,
-  sheetId: number,
+  id: number,
   state: "visible" | "hidden" | "veryHidden" = "visible",
 ): XlsxWorksheet {
   return {
     dateSystem: "1900",
     name,
-    sheetId,
+    sheetId: sheetId(id),
     state,
     rows: [],
-    xmlPath: `xl/worksheets/sheet${sheetId}.xml`,
+    xmlPath: `xl/worksheets/sheet${id}.xml`,
   };
 }
 

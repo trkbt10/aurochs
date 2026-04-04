@@ -2,7 +2,7 @@
  * @file Unit tests for the formula evaluator (AST execution + workbook lookup).
  */
 
-import { colIdx, rowIdx } from "../domain/types";
+import { colIdx, rowIdx, sheetId as mkSheetId } from "../domain/types";
 import type { Cell, CellValue } from "../domain/cell/types";
 import type { XlsxRow, XlsxWorksheet, XlsxWorkbook } from "../domain/workbook";
 import { createDefaultStyleSheet } from "../domain/style/types";
@@ -32,7 +32,7 @@ function formulaCell(col: number, row: number, formula: string): Cell {
   };
 }
 
-function makeWorksheet(name: string, sheetId: number, cells: readonly Cell[]): XlsxWorksheet {
+function makeWorksheet(name: string, id: number, cells: readonly Cell[]): XlsxWorksheet {
   const rowsByNumber = new Map<number, Cell[]>();
   for (const cell of cells) {
     const rowNumber = cell.address.row as number;
@@ -51,10 +51,10 @@ function makeWorksheet(name: string, sheetId: number, cells: readonly Cell[]): X
   return {
     dateSystem: "1900",
     name,
-    sheetId,
+    sheetId: mkSheetId(id),
     state: "visible",
     rows,
-    xmlPath: `xl/worksheets/sheet${sheetId}.xml`,
+    xmlPath: `xl/worksheets/sheet${id}.xml`,
   };
 }
 

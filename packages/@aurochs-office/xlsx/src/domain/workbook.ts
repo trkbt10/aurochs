@@ -13,7 +13,7 @@ import type { CellRange } from "./cell/address";
 import type { Cell } from "./cell/types";
 import type { XlsxStyleSheet } from "./style/types";
 import type { XlsxTable } from "./table/types";
-import type { RowIndex, ColIndex, StyleId } from "./types";
+import type { RowIndex, ColIndex, StyleId, SheetId } from "./types";
 import type { XlsxConditionalFormatting } from "./conditional-formatting";
 import type { XlsxComment } from "./comment";
 import type { XlsxHyperlink } from "./hyperlink";
@@ -201,7 +201,7 @@ export type XlsxWorksheet = {
   /** Sheet name (tab name) */
   readonly name: string;
   /** Unique sheet identifier */
-  readonly sheetId: number;
+  readonly sheetId: SheetId;
   /** Visibility state of the sheet */
   readonly state: "visible" | "hidden" | "veryHidden";
   /** The used range of the sheet */

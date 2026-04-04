@@ -99,6 +99,9 @@ export {
   type MediaPart,
 } from "./exporter";
 
+// Builder input types
+export type { XlsxWorkbookInput, XlsxWorksheetInput } from "./builder-types";
+
 // Drawing serialization
 export { serializeDrawing } from "./drawing";
 

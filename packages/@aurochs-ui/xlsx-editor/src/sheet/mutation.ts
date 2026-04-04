@@ -5,6 +5,7 @@
  */
 
 import type { XlsxWorkbook, XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
+import { sheetId as createSheetId } from "@aurochs-office/xlsx/domain/types";
 
 function assertNonEmptyString(value: string, label: string): void {
   if (value.trim().length === 0) {
@@ -45,13 +46,13 @@ function moveElementInArray<T>(array: readonly T[], fromIndex: number, toIndex: 
   return insertAt(withoutElement, toIndex, element);
 }
 
-function cloneWorksheetForDuplicate(worksheet: XlsxWorksheet, name: string, sheetId: number): XlsxWorksheet {
+function cloneWorksheetForDuplicate(worksheet: XlsxWorksheet, name: string, id: number): XlsxWorksheet {
   const cloned = structuredClone(worksheet);
   return {
     ...cloned,
     name,
-    sheetId,
-    xmlPath: `xl/worksheets/sheet${sheetId}.xml`,
+    sheetId: createSheetId(id),
+    xmlPath: `xl/worksheets/sheet${id}.xml`,
   };
 }
 
@@ -167,12 +168,11 @@ export function createEmptyWorksheet(
   }
 
   assertNonEmptyString(name, "name");
-  assertPositiveInteger(sheetId, "sheetId");
 
   return {
     dateSystem,
     name,
-    sheetId,
+    sheetId: createSheetId(sheetId),
     state: "visible",
     rows: [],
     xmlPath: `xl/worksheets/sheet${sheetId}.xml`,

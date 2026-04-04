@@ -5,6 +5,7 @@
 import { CfbFormatError, openCfb, type CfbWarning } from "@aurochs-office/cfb";
 import { createDefaultStyleSheet } from "@aurochs-office/xlsx/domain/style/types";
 import type { XlsxWorkbook, XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
+import { sheetId } from "@aurochs-office/xlsx/domain/types";
 import type { XlsParseContext, XlsParseMode } from "./parse-context";
 import { isStrict, warnOrThrow } from "./parse-context";
 import type { XlsWarningSink, XlsWarning } from "./warnings";
@@ -35,7 +36,7 @@ function createFallbackWorkbook(): XlsxWorkbook {
   const sheet: XlsxWorksheet = {
     dateSystem,
     name: "Sheet1",
-    sheetId: 1,
+    sheetId: sheetId(1),
     state: "visible",
     rows: [],
     xmlPath: "xl/worksheets/sheet1.xml",

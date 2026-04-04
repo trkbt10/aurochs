@@ -41,7 +41,7 @@ import type {
   XlsxDynamicFilter,
   XlsxDynamicFilterType,
 } from "../domain/auto-filter";
-import { rowIdx, colIdx, styleId } from "../domain/types";
+import { rowIdx, colIdx, styleId, type SheetId } from "../domain/types";
 import type { XlsxParseContext } from "./context";
 import type { XlsxParseOptions } from "./options";
 import { parseCellWithAddress } from "./cell";
@@ -1071,7 +1071,7 @@ export function parseWorksheet(params: {
   readonly options: XlsxParseOptions | undefined;
   readonly sheetInfo: {
     readonly name: string;
-    readonly sheetId: number;
+    readonly sheetId: SheetId;
     readonly state: "visible" | "hidden" | "veryHidden";
     readonly xmlPath: string;
   };
