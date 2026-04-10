@@ -20,7 +20,7 @@ import type { XlsxPageBreaks } from "@aurochs-office/xlsx/domain/page-breaks";
 import type { XlsxComment } from "@aurochs-office/xlsx/domain/comment";
 import type { XlsxHyperlink } from "@aurochs-office/xlsx/domain/hyperlink";
 import type { XlsxWorkbookProtection, XlsxSheetProtection } from "@aurochs-office/xlsx/domain/protection";
-import type { XlsxAutoFilter } from "@aurochs-office/xlsx/domain/auto-filter";
+import type { XlsxAutoFilter, XlsxFilterType, XlsxSortCondition } from "@aurochs-office/xlsx/domain/auto-filter";
 import type { XlsxDataValidation } from "@aurochs-office/xlsx/domain/data-validation";
 import type { XlsxConditionalFormatting } from "@aurochs-office/xlsx/domain/conditional-formatting";
 import type { XlsxPane } from "@aurochs-office/xlsx/domain/workbook";
@@ -370,6 +370,9 @@ export type XlsxEditorAction =
 
   // Auto Filter
   | { readonly type: "SET_AUTO_FILTER"; readonly sheetIndex: number; readonly autoFilter: XlsxAutoFilter | undefined }
+  | { readonly type: "SET_FILTER_COLUMN"; readonly sheetIndex: number; readonly colId: number; readonly filter: XlsxFilterType | undefined }
+  | { readonly type: "APPLY_SORT"; readonly sheetIndex: number; readonly sortCondition: XlsxSortCondition }
+  | { readonly type: "CLEAR_ALL_FILTERS"; readonly sheetIndex: number }
 
   // Data Validation
   | { readonly type: "SET_DATA_VALIDATION"; readonly sheetIndex: number; readonly validation: XlsxDataValidation }

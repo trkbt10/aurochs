@@ -63,6 +63,26 @@
       "types": "./src/domain/table/types.ts",
       "default": "./src/domain/table/types.ts"
     },
+    "./domain/auto-filter": {
+      "types": "./src/domain/auto-filter.ts",
+      "default": "./src/domain/auto-filter.ts"
+    },
+    "./domain/auto-filter-evaluator": {
+      "types": "./src/domain/auto-filter-evaluator.ts",
+      "default": "./src/domain/auto-filter-evaluator.ts"
+    },
+    "./domain/auto-filter-column-type": {
+      "types": "./src/domain/auto-filter-column-type.ts",
+      "default": "./src/domain/auto-filter-column-type.ts"
+    },
+    "./domain/auto-filter-menu-config": {
+      "types": "./src/domain/auto-filter-menu-config.ts",
+      "default": "./src/domain/auto-filter-menu-config.ts"
+    },
+    "./domain/sort": {
+      "types": "./src/domain/sort.ts",
+      "default": "./src/domain/sort.ts"
+    },
     "./domain/conditional-formatting": {
       "types": "./src/domain/conditional-formatting.ts",
       "default": "./src/domain/conditional-formatting.ts"

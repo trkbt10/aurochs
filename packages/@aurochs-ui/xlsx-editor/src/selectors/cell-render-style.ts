@@ -74,7 +74,7 @@ function applyAlignment(
   }
 
   if (alignment.wrapText === true) {
-    style.whiteSpace = "normal";
+    style.whiteSpace = "pre-wrap";
   }
 
   const indent = alignment.indent;

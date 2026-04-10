@@ -7,7 +7,7 @@
  * - cell content layer
  */
 
-import { useCallback, useMemo, type CSSProperties } from "react";
+import { useCallback, useMemo, useState, type CSSProperties } from "react";
 import { clampRange, useVirtualScrollContext } from "@aurochs-ui/ui-components";
 import type { XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
 import type { FormulaEvaluator } from "@aurochs-office/xlsx/formula/evaluator";
@@ -19,6 +19,8 @@ import { XlsxSheetGridHeaderLayer } from "./header-layer";
 import { XlsxSheetGridCellViewport } from "./cell-viewport";
 import { XlsxSheetGridCellsLayer } from "./cells-layer";
 import { FrozenPanesLayer } from "./frozen-panes-layer";
+import { AutoFilterOverlay } from "./auto-filter-overlay";
+import { AutoFilterDropdown } from "./auto-filter-dropdown";
 import type { SheetLayout } from "../../selectors/sheet-layout";
 
 const layerRootStyle: CSSProperties = {
@@ -134,6 +136,18 @@ export function XlsxSheetGridLayers({
   const frozenRowCount = isFrozen ? (pane?.ySplit ?? 0) : 0;
   const frozenColCount = isFrozen ? (pane?.xSplit ?? 0) : 0;
 
+  // AutoFilter dropdown state
+  const [autoFilterDropdown, setAutoFilterDropdown] = useState<{
+    readonly col1: number;
+    readonly anchorX: number;
+    readonly anchorY: number;
+  } | null>(null);
+
+  const handleAutoFilterButtonClick = useCallback((col1: number, anchorElement: HTMLElement) => {
+    const rect = anchorElement.getBoundingClientRect();
+    setAutoFilterDropdown({ col1, anchorX: rect.left, anchorY: rect.bottom });
+  }, []);
+
   return (
     <div style={layerRootStyle}>
       <div
@@ -218,6 +232,30 @@ export function XlsxSheetGridLayers({
           />
         </XlsxSheetGridCellViewport>
 
+        {/* AutoFilter buttons — above cell viewport and frozen panes (zIndex: 10-12) */}
+        {sheet.autoFilter && (
+          <div
+            style={{
+              position: "absolute",
+              left: rowHeaderWidthPx,
+              top: colHeaderHeightPx,
+              right: 0,
+              bottom: 0,
+              overflow: "hidden",
+              pointerEvents: "none",
+              zIndex: 15,
+            }}
+          >
+            <AutoFilterOverlay
+              autoFilter={sheet.autoFilter}
+              layout={layout}
+              scrollTop={scrollTopUnscaled}
+              scrollLeft={scrollLeftUnscaled}
+              onButtonClick={handleAutoFilterButtonClick}
+            />
+          </div>
+        )}
+
         {/* Frozen panes overlay */}
         {(frozenRowCount > 0 || frozenColCount > 0) && (
           <FrozenPanesLayer
@@ -241,6 +279,20 @@ export function XlsxSheetGridLayers({
           />
         )}
       </div>
+
+      {/* AutoFilter dropdown (portals to document.body, outside zoom transform) */}
+      {autoFilterDropdown && sheet.autoFilter && (
+        <AutoFilterDropdown
+          col1={autoFilterDropdown.col1}
+          anchorX={autoFilterDropdown.anchorX}
+          anchorY={autoFilterDropdown.anchorY}
+          sheet={sheet}
+          autoFilter={sheet.autoFilter}
+          sheetIndex={sheetIndex}
+          dispatch={dispatch}
+          onClose={() => setAutoFilterDropdown(null)}
+        />
+      )}
     </div>
   );
 }

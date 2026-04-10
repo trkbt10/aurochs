@@ -28,6 +28,7 @@ export type XlsxFilterValue = {
  * Filter by specific values.
  *
  * @see ECMA-376 Part 4, Section 18.3.2.8 (filters)
+ * @see ECMA-376 Part 4, Section 18.3.2.4 (dateGroupItem)
  */
 export type XlsxFilters = {
   readonly type: "filters";
@@ -35,6 +36,16 @@ export type XlsxFilters = {
   readonly blank?: boolean;
   /** Filter values */
   readonly values?: readonly XlsxFilterValue[];
+  /**
+   * Date grouping items for date-based value filtering.
+   *
+   * When present, rows whose date values fall within any of these
+   * date groupings are shown. This is how Excel represents date
+   * hierarchy selections (e.g. "all dates in January 2024").
+   *
+   * @see ECMA-376 Part 4, Section 18.3.2.4 (dateGroupItem)
+   */
+  readonly dateGroupItems?: readonly XlsxDateGroupItem[];
 };
 
 // =============================================================================
@@ -201,7 +212,9 @@ export type XlsxDynamicFilter = {
 /**
  * Color filter configuration.
  *
- * @see ECMA-376 Part 4, Section 18.3.2.0 (colorFilter - extension)
+ * Filters rows by cell background color or font color using a DXF reference.
+ *
+ * @see ECMA-376 Part 1, Section 18.3.2.10 (colorFilter — OOXML extension)
  */
 export type XlsxColorFilter = {
   readonly type: "colorFilter";
@@ -218,7 +231,9 @@ export type XlsxColorFilter = {
 /**
  * Icon filter configuration.
  *
- * @see ECMA-376 Part 4, Section 18.3.2.6 (iconFilter - extension)
+ * Filters rows by conditional formatting icon.
+ *
+ * @see ECMA-376 Part 4, Section 18.3.2.6 (iconFilter)
  */
 export type XlsxIconFilter = {
   readonly type: "iconFilter";
@@ -233,7 +248,12 @@ export type XlsxIconFilter = {
 // =============================================================================
 
 /**
- * Filter type union.
+ * Discriminated union of all filter types that can be set on a filterColumn.
+ *
+ * Only one filter type can be active per column. The `type` discriminant
+ * determines which variant is active.
+ *
+ * @see ECMA-376 Part 4, Section 18.3.2.5 (filterColumn — child element choice group)
  */
 export type XlsxFilterType =
   | XlsxFilters
