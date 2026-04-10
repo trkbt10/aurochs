@@ -26,6 +26,27 @@ export type XlsxSvgRenderContextConfig = {
   readonly options?: Partial<XlsxRenderOptions>;
 };
 
+/**
+ * Extract render option overrides from sheet-level formatting properties.
+ *
+ * @see ECMA-376 Part 4, Section 18.3.1.82 (sheetFormatPr)
+ */
+function buildSheetDefaults(sheet: XlsxWorksheet): Partial<XlsxRenderOptions> {
+  const fmt = sheet.sheetFormatPr;
+  if (!fmt) {
+    return {};
+  }
+
+  const defaults: Record<string, unknown> = {};
+  if (fmt.defaultRowHeight !== undefined) {
+    defaults.defaultRowHeight = fmt.defaultRowHeight;
+  }
+  if (fmt.defaultColWidth !== undefined) {
+    defaults.defaultColumnWidth = fmt.defaultColWidth;
+  }
+  return defaults as Partial<XlsxRenderOptions>;
+}
+
 // =============================================================================
 // Context Factory
 // =============================================================================
@@ -49,9 +70,12 @@ export function createXlsxSvgRenderContext(config: XlsxSvgRenderContextConfig): 
 
   const sheet = workbook.sheets[sheetIndex]!;
 
-  // Merge options with defaults
+  // Merge options: sheet's sheetFormatPr values take precedence over global defaults,
+  // but explicit user-provided options take highest precedence.
+  const sheetDefaults = buildSheetDefaults(sheet);
   const options: XlsxRenderOptions = {
     ...DEFAULT_XLSX_RENDER_OPTIONS,
+    ...sheetDefaults,
     ...partialOptions,
   };
 

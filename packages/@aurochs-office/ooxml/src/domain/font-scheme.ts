@@ -27,6 +27,16 @@ export type FontSpec = {
   readonly eastAsian?: string;
   /** Complex script font typeface */
   readonly complexScript?: string;
+  /**
+   * Script-specific font overrides (`<a:font script="..." typeface="..."/>`).
+   *
+   * Maps IETF script tags (e.g. "Jpan", "Hang", "Hans") to typeface names.
+   * Used when `eastAsian` or `complexScript` is empty — the renderer should
+   * look up the appropriate script tag here.
+   *
+   * @see ECMA-376 Part 1, Section 20.1.4.1.16-17 (a:majorFont / a:minorFont)
+   */
+  readonly supplementalFonts?: Readonly<Record<string, string>>;
 };
 
 /**
@@ -109,4 +119,37 @@ export function resolveThemeFont(
       // Unknown theme reference
       return undefined;
   }
+}
+
+/**
+ * Resolve a font from a FontSpec, with supplemental font fallback.
+ *
+ * The resolution order is:
+ * 1. Primary field (latin, eastAsian, complexScript) — if non-empty
+ * 2. Supplemental fonts — looked up by script tag (e.g. "Jpan")
+ * 3. undefined — no suitable font found
+ *
+ * @param fontSpec - The font specification
+ * @param category - Which primary field to try ("latin" | "eastAsian" | "complexScript")
+ * @param scriptTag - Optional IETF script tag for supplemental lookup (e.g. "Jpan", "Hang")
+ * @returns Resolved typeface name, or undefined
+ */
+export function resolveFontFromSpec(
+  fontSpec: FontSpec,
+  category: "latin" | "eastAsian" | "complexScript",
+  scriptTag?: string,
+): string | undefined {
+  const primary = fontSpec[category];
+  if (primary !== undefined && primary !== "") {
+    return primary;
+  }
+
+  if (scriptTag !== undefined && fontSpec.supplementalFonts !== undefined) {
+    const supplemental = fontSpec.supplementalFonts[scriptTag];
+    if (supplemental !== undefined && supplemental !== "") {
+      return supplemental;
+    }
+  }
+
+  return undefined;
 }

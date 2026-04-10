@@ -9,7 +9,7 @@
  * @see ECMA-376 Part 4, Section 18.3.1.13 (col)
  */
 
-import type { XlsxWorksheet, XlsxRow, XlsxColumnDef, XlsxSheetView, XlsxPane, XlsxSelection } from "../domain/workbook";
+import type { XlsxWorksheet, XlsxRow, XlsxColumnDef, XlsxSheetView, XlsxPane, XlsxSelection, XlsxSheetFormatPr } from "../domain/workbook";
 import type { XlsxPageBreaks, XlsxPageBreak } from "../domain/page-breaks";
 import type { XlsxSparklineGroup, XlsxSparkline, XlsxSparklineType } from "../domain/sparkline";
 import type {
@@ -1051,6 +1051,39 @@ function parseAutoFilter(autoFilterElement: XmlElement | undefined): XlsxAutoFil
 }
 
 // =============================================================================
+// Sheet Format Properties Parsing
+// =============================================================================
+
+/**
+ * Parse the sheetFormatPr element.
+ *
+ * @param worksheetElement - The root <worksheet> element
+ * @returns Parsed sheet format properties, or undefined if not present
+ *
+ * @see ECMA-376 Part 4, Section 18.3.1.82 (sheetFormatPr)
+ */
+function parseSheetFormatPr(worksheetElement: XmlElement): XlsxSheetFormatPr | undefined {
+  const el = getChild(worksheetElement, "sheetFormatPr");
+  if (!el) {
+    return undefined;
+  }
+
+  const defaultRowHeight = parseFloatAttr(getAttr(el, "defaultRowHeight"));
+  const defaultColWidth = parseFloatAttr(getAttr(el, "defaultColWidth"));
+  const zeroHeight = parseBooleanAttr(getAttr(el, "zeroHeight"));
+
+  if (defaultRowHeight === undefined && defaultColWidth === undefined && zeroHeight === undefined) {
+    return undefined;
+  }
+
+  return {
+    defaultRowHeight,
+    defaultColWidth,
+    zeroHeight,
+  };
+}
+
+// =============================================================================
 // Worksheet Parsing
 // =============================================================================
 
@@ -1079,6 +1112,7 @@ export function parseWorksheet(params: {
   const { worksheetElement, context, options, sheetInfo } = params;
   const sheetPrEl = getChild(worksheetElement, "sheetPr");
   const tabColor = parseColorElement(sheetPrEl ? getChild(sheetPrEl, "tabColor") : undefined);
+  const sheetFormatPr = parseSheetFormatPr(worksheetElement);
   const dimensionEl = getChild(worksheetElement, "dimension");
   const sheetViewsEl = getChild(worksheetElement, "sheetViews");
   const colsEl = getChild(worksheetElement, "cols");
@@ -1122,6 +1156,7 @@ export function parseWorksheet(params: {
     state: sheetInfo.state,
     dimension: parseDimension(dimensionEl),
     sheetView: parseOptionalSheetView(sheetViewEl),
+    sheetFormatPr,
     tabColor,
     columns: parseCols(colsEl),
     rows,

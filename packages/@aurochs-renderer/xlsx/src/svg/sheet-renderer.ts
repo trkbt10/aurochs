@@ -15,7 +15,7 @@ import type { StyleId } from "@aurochs-office/xlsx/domain/types";
 import type { SheetSvgResult, XlsxRenderOptions, XlsxSvgRenderContext } from "./types";
 import { createXlsxSvgRenderContext, getColorScheme } from "./context";
 import { createStyleCache, createDefaultStyle } from "./style-resolver";
-import { renderCell, renderCellFill } from "./cell-renderer";
+import { renderCellText, renderCellFill } from "./cell-renderer";
 import { renderCellBorders, renderGridLines, renderColumnHeaders, renderRowHeaders } from "./border-renderer";
 import { cellRefFromIndices } from "./layout";
 import { renderAllDrawings } from "./drawing-renderer";
@@ -52,7 +52,8 @@ export function renderSheetWithContext(ctx: XlsxSvgRenderContext): SheetSvgResul
   }
 
   const colorScheme = getColorScheme(ctx);
-  const resolveStyle = createStyleCache(ctx.workbook.styles, colorScheme, options);
+  const fontScheme = ctx.workbook.theme?.fontScheme;
+  const resolveStyle = createStyleCache(ctx.workbook.styles, colorScheme, fontScheme, options);
   const elements: string[] = [];
 
   elements.push(renderBackground(ctx));
@@ -241,7 +242,10 @@ function renderAllCellText(ctx: XlsxSvgRenderContext, resolveStyle: StyleResolve
     }
 
     const style = resolveStyle(cell.styleId);
-    parts.push(renderCell({ cell, layout, style, ctx }));
+    const textSvg = renderCellText({ cell, layout, style, ctx });
+    if (textSvg) {
+      parts.push(textSvg);
+    }
   }
 
   return parts.join("");

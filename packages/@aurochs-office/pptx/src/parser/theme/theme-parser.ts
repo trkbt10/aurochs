@@ -45,11 +45,32 @@ function extractFontSpec(fontElement: XmlElement | undefined): FontSpec {
   const ea = getChild(fontElement, "a:ea");
   const cs = getChild(fontElement, "a:cs");
 
+  // Collect supplemental script-specific font definitions.
+  const supplementalFonts = collectSupplementalFonts(fontElement);
+
   return {
     latin: latin?.attrs?.typeface,
     eastAsian: ea?.attrs?.typeface,
     complexScript: cs?.attrs?.typeface,
+    supplementalFonts: Object.keys(supplementalFonts).length > 0 ? supplementalFonts : undefined,
   };
+}
+
+/**
+ * Collect `<a:font script="..." typeface="..."/>` entries from a font element.
+ *
+ * @see ECMA-376 Part 1, Section 20.1.4.1.9 (a:font)
+ */
+function collectSupplementalFonts(fontElement: XmlElement): Record<string, string> {
+  const fonts: Record<string, string> = {};
+  for (const child of getChildren(fontElement, "a:font")) {
+    const script = getAttr(child, "script");
+    const typeface = getAttr(child, "typeface");
+    if (script !== undefined && typeface !== undefined && typeface !== "") {
+      fonts[script] = typeface;
+    }
+  }
+  return fonts;
 }
 
 /**

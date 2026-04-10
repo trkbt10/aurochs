@@ -18,7 +18,16 @@ import type { Chart } from "@aurochs-office/chart/domain";
  * Resolved font properties with computed color.
  */
 export type ResolvedFont = {
-  readonly name: string;
+  /**
+   * Font family fallback chain, ordered by priority.
+   *
+   * Example: `["Yu Gothic", "Calibri"]` → the renderer tries "Yu Gothic" first,
+   * then falls back to "Calibri" for characters not covered.
+   *
+   * When the font's `scheme` attribute references a theme fontScheme, this chain
+   * is built from the theme's script-specific and latin typefaces.
+   */
+  readonly families: readonly string[];
   readonly size: number;
   readonly bold?: boolean;
   readonly italic?: boolean;

@@ -313,7 +313,7 @@ export function renderCellText(params: RenderCellTextParams): string {
   const styleStr = buildFontStyleString(font);
 
   if (alignment?.wrapText && layout.width > 0) {
-    return renderWrappedText({ text, x, y, layout, fontSize: font.size, anchor, style: styleStr });
+    return renderWrappedText({ text, x, y, layout, fontSize: font.size, anchor, style: styleStr, ctx });
   }
 
   const clipId = ctx.defs.generateId("clip");
@@ -323,7 +323,7 @@ export function renderCellText(params: RenderCellTextParams): string {
 }
 
 type FontStyleParams = {
-  readonly name: string;
+  readonly families: readonly string[];
   readonly size: number;
   readonly bold?: boolean;
   readonly italic?: boolean;
@@ -332,9 +332,20 @@ type FontStyleParams = {
   readonly strikethrough?: boolean;
 };
 
+/**
+ * Build a CSS-compatible font-family value from an ordered family chain.
+ *
+ * Each family name is quoted (safe for names containing spaces), and the
+ * generic `sans-serif` fallback is always appended.
+ */
+function buildFontFamilyValue(families: readonly string[]): string {
+  const quoted = families.map((f) => `"${f}"`);
+  return [...quoted, "sans-serif"].join(", ");
+}
+
 function buildFontStyleString(font: FontStyleParams): string {
   const styleAttrs: string[] = [];
-  styleAttrs.push(`font-family: "${font.name}", sans-serif`);
+  styleAttrs.push(`font-family: ${buildFontFamilyValue(font.families)}`);
   styleAttrs.push(`font-size: ${font.size}pt`);
 
   if (font.bold) {
@@ -374,19 +385,35 @@ type WrappedTextParams = {
   readonly fontSize: number;
   readonly anchor: string;
   readonly style: string;
+  readonly ctx: XlsxSvgRenderContext;
 };
 
 function renderWrappedText(params: WrappedTextParams): string {
-  const { text, x, layout, fontSize, anchor, style } = params;
+  const { text, x, layout, fontSize, anchor, style, ctx } = params;
   const lineHeight = fontSize * 1.2;
-  const maxLines = Math.floor(layout.height / lineHeight);
+  const maxLines = Math.max(1, Math.floor(layout.height / lineHeight));
   const lines = wrapText({ text, width: layout.width, fontSize, maxLines });
 
+  if (lines.length === 0) {
+    return "";
+  }
+
+  // First tspan uses absolute y; subsequent use relative dy.
+  const padding = 2;
+  const startY = layout.y + fontSize + padding;
   const tspans = lines
-    .map((line, i) => `<tspan x="${x}" dy="${i === 0 ? 0 : lineHeight}">${escapeXml(line)}</tspan>`)
+    .map((line, i) => {
+      if (i === 0) {
+        return `<tspan x="${x}" y="${startY}">${escapeXml(line)}</tspan>`;
+      }
+      return `<tspan x="${x}" dy="${lineHeight}">${escapeXml(line)}</tspan>`;
+    })
     .join("");
 
-  return `<text text-anchor="${anchor}" style="${style}">${tspans}</text>`;
+  const clipId = ctx.defs.generateId("clip");
+  ctx.defs.add(`<clipPath id="${clipId}"><rect x="${layout.x}" y="${layout.y}" width="${layout.width}" height="${layout.height}"/></clipPath>`);
+
+  return `<text text-anchor="${anchor}" style="${style}" clip-path="url(#${clipId})">${tspans}</text>`;
 }
 
 type WrapTextParams = {
@@ -399,10 +426,28 @@ type WrapTextParams = {
 function wrapText(params: WrapTextParams): string[] {
   const { text, width, fontSize, maxLines } = params;
   const avgCharWidth = fontSize * 0.6;
-  const charsPerLine = Math.floor(width / avgCharWidth);
-  const words = text.split(/\s+/);
+  const charsPerLine = Math.max(1, Math.floor(width / avgCharWidth));
 
-  return buildWrappedLines({ words, charsPerLine, maxLines });
+  // Split by explicit line breaks first (\r\n or \n), then word-wrap each paragraph.
+  const paragraphs = text.split(/\r?\n/);
+  const result: string[] = [];
+
+  for (const paragraph of paragraphs) {
+    if (result.length >= maxLines) {
+      break;
+    }
+    if (paragraph === "") {
+      // Empty line from consecutive line breaks
+      result.push("");
+      continue;
+    }
+    const words = paragraph.split(/[ \t]+/).filter((w) => w.length > 0);
+    const remaining = maxLines - result.length;
+    const wrapped = buildWrappedLines({ words, charsPerLine, maxLines: remaining });
+    result.push(...wrapped);
+  }
+
+  return result.slice(0, maxLines);
 }
 
 type BuildLinesParams = {

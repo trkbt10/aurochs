@@ -17,6 +17,8 @@ import type { XlsxFill } from "@aurochs-office/xlsx/domain/style/fill";
 import type { XlsxBorder, XlsxBorderEdge } from "@aurochs-office/xlsx/domain/style/border";
 import type { StyleId } from "@aurochs-office/xlsx/domain/types";
 import type { ColorScheme } from "@aurochs-office/drawing-ml/domain/color-context";
+import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
+import { resolveFontFromSpec } from "@aurochs-office/ooxml/domain/font-scheme";
 import { resolveFormatCode } from "@aurochs-office/xlsx/domain/style/number-format";
 import type {
   ResolvedCellStyle,
@@ -37,7 +39,7 @@ import { resolveXlsxColor, getDefaultFontColor, getDefaultBorderColor } from "./
  */
 export function createDefaultFont(options: XlsxRenderOptions): ResolvedFont {
   return {
-    name: options.defaultFontFamily,
+    families: [options.defaultFontFamily],
     size: options.defaultFontSize,
     color: getDefaultFontColor(),
   };
@@ -76,13 +78,15 @@ export function createDefaultStyle(options: XlsxRenderOptions): ResolvedCellStyl
 type ColorResolveParams = {
   readonly colorScheme?: ColorScheme;
   readonly indexedColors?: readonly string[];
+  readonly fontScheme?: FontScheme;
 };
 
 function resolveFont(font: XlsxFont, params: ColorResolveParams): ResolvedFont {
   const fontColor = resolveFontColor(font, params);
+  const families = resolveFontFamilies(font, params);
 
   return {
-    name: font.name,
+    families,
     size: font.size,
     bold: font.bold,
     italic: font.italic,
@@ -91,6 +95,47 @@ function resolveFont(font: XlsxFont, params: ColorResolveParams): ResolvedFont {
     color: fontColor,
     vertAlign: font.vertAlign,
   };
+}
+
+/**
+ * Build an ordered font-family fallback chain from a font definition.
+ *
+ * When a font has `scheme="minor"` or `scheme="major"`, the actual typefaces
+ * come from the theme's fontScheme:
+ *   - East Asian (with supplemental script fallback, e.g. script="Jpan")
+ *   - Latin
+ *
+ * Excel applies different typefaces per script run within a single cell.
+ * SVG/CSS cannot do per-character font switching, so we build a CSS
+ * `font-family` fallback chain. East Asian typeface comes first so that
+ * CJK glyphs are found before falling back to the latin typeface.
+ *
+ * When no theme fontScheme applies, the font's own `name` is used.
+ */
+function resolveFontFamilies(font: XlsxFont, params: ColorResolveParams): readonly string[] {
+  const { fontScheme } = params;
+  if (!fontScheme || !font.scheme || font.scheme === "none") {
+    return [font.name];
+  }
+
+  const spec = font.scheme === "major" ? fontScheme.majorFont : fontScheme.minorFont;
+
+  const latinFont = resolveFontFromSpec(spec, "latin");
+  const eaFont = resolveFontFromSpec(spec, "eastAsian", "Jpan");
+
+  // Build a deduplicated, prioritised chain.
+  const chain: string[] = [];
+  if (eaFont) {
+    chain.push(eaFont);
+  }
+  if (latinFont && latinFont !== eaFont) {
+    chain.push(latinFont);
+  }
+
+  if (chain.length === 0) {
+    return [font.name];
+  }
+  return chain;
 }
 
 function resolveFontColor(font: XlsxFont, params: ColorResolveParams): string {
@@ -205,6 +250,7 @@ type ResolveCellStyleParams = {
   readonly styleId: StyleId | undefined;
   readonly styles: XlsxStyleSheet;
   readonly colorScheme: ColorScheme | undefined;
+  readonly fontScheme: FontScheme | undefined;
   readonly options: XlsxRenderOptions;
 };
 
@@ -212,7 +258,7 @@ type ResolveCellStyleParams = {
  * Resolve a cell's style by its styleId.
  */
 export function resolveCellStyle(params: ResolveCellStyleParams): ResolvedCellStyle {
-  const { styleId, styles, colorScheme, options } = params;
+  const { styleId, styles, colorScheme, fontScheme, options } = params;
 
   if (styleId === undefined) {
     return createDefaultStyle(options);
@@ -226,6 +272,7 @@ export function resolveCellStyle(params: ResolveCellStyleParams): ResolvedCellSt
   const colorParams: ColorResolveParams = {
     colorScheme,
     indexedColors: styles.indexedColors,
+    fontScheme,
   };
 
   return buildResolvedStyle({ cellXf, styles, colorParams, options });
@@ -308,6 +355,7 @@ function resolveXlsxCellXfBorder(params: ResolveBorderParams): ResolvedBorder {
 type StyleCacheConfig = {
   readonly styles: XlsxStyleSheet;
   readonly colorScheme: ColorScheme | undefined;
+  readonly fontScheme: FontScheme | undefined;
   readonly options: XlsxRenderOptions;
 };
 
@@ -319,10 +367,11 @@ type StyleCacheConfig = {
 export function createStyleCache(
   styles: XlsxStyleSheet,
   colorScheme: ColorScheme | undefined,
+  fontScheme: FontScheme | undefined,
   options: XlsxRenderOptions,
 ): (styleId: StyleId | undefined) => ResolvedCellStyle {
   const cache = new Map<number | undefined, ResolvedCellStyle>();
-  const config: StyleCacheConfig = { styles, colorScheme, options };
+  const config: StyleCacheConfig = { styles, colorScheme, fontScheme, options };
 
   return (styleId) => {
     const key = styleId as number | undefined;
@@ -331,7 +380,13 @@ export function createStyleCache(
       return cached;
     }
 
-    const resolved = resolveCellStyle({ styleId, styles: config.styles, colorScheme: config.colorScheme, options: config.options });
+    const resolved = resolveCellStyle({
+      styleId,
+      styles: config.styles,
+      colorScheme: config.colorScheme,
+      fontScheme: config.fontScheme,
+      options: config.options,
+    });
     cache.set(key, resolved);
     return resolved;
   };
