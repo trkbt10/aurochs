@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-04-10
+
+### Added
+
+- Unified file-to-Markdown conversion via `aurochs -i <file> [-o <file>]` (ffmpeg-style interface)
+- Support for PPTX, XLSX, DOCX, PDF input with automatic format detection from file extension
+- Transparent legacy format conversion: PPT, XLS, DOC are converted in-memory before Markdown output
+- PDF Markdown renderer with text line grouping, heading detection from font size, and bold/italic formatting
+- `convertToMarkdown()` programmatic API exported from `@aurochs-cli/cli`
+
+### Fixed
+
+- Unified commander dependency to ^14.0.3 across all CLI packages (pdf-cli was on ^12.1.0)
+
 ## [0.10.0] - 2026-04-10
 
 ### Added
@@ -249,7 +263,8 @@ Project inception.
 - Text body and paragraph rendering
 - Theme and style support
 
-[Unreleased]: https://github.com/trkbt10/aurochs/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/trkbt10/aurochs/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/trkbt10/aurochs/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/trkbt10/aurochs/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/trkbt10/aurochs/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/trkbt10/aurochs/compare/v0.7.0...v0.8.0
