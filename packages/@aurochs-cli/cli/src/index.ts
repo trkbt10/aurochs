@@ -6,3 +6,12 @@ export { createProgram as createPptxProgram } from "@aurochs-cli/pptx-cli";
 export { createProgram as createDocxProgram } from "@aurochs-cli/docx-cli";
 export { createProgram as createXlsxProgram } from "@aurochs-cli/xlsx-cli";
 export { createProgram as createPdfProgram } from "@aurochs-cli/pdf-cli";
+
+// Conversion API
+export {
+  convertToMarkdown,
+  getSupportedExtensions,
+  type InputFormat,
+  type ConvertOptions,
+  type ConvertResult,
+} from "./convert";

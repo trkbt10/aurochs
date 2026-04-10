@@ -29,6 +29,10 @@
       "types": "./src/svg/index.ts",
       "default": "./src/svg/index.ts"
     },
+    "./mermaid": {
+      "types": "./src/mermaid/index.ts",
+      "default": "./src/mermaid/index.ts"
+    },
     "./react": {
       "types": "./src/react/index.ts",
       "default": "./src/react/index.ts"

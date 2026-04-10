@@ -13,10 +13,16 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@aurochs-builder/pdf": "workspace:*",
     "@aurochs-cli/docx-cli": "workspace:*",
     "@aurochs-cli/pdf-cli": "workspace:*",
     "@aurochs-cli/pptx-cli": "workspace:*",
     "@aurochs-cli/xlsx-cli": "workspace:*",
+    "@aurochs-renderer/docx": "workspace:*",
+    "@aurochs-renderer/pdf": "workspace:*",
+    "@aurochs-renderer/pptx": "workspace:*",
+    "@aurochs-renderer/xlsx": "workspace:*",
+    "@aurochs/pdf": "workspace:*",
     "commander": "^14.0.3"
   }
 }
