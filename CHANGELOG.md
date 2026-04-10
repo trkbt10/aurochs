@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-04-10
+
+### Added
+
+- XLSX autoFilter evaluation engine with ECMA-376 §18.3.2 compliant filter evaluation (filters, customFilters, top10, dynamicFilter)
+- XLSX row sorting with Excel-standard type ordering (number < text < boolean < error < empty) per §18.3.1.92
+- XLSX autoFilter column data type inference (text/number/date/mixed) for adaptive UI
+- XLSX autoFilter Excel-style dropdown panel with type-adaptive sort labels, inline operator+value condition rows, And/Or toggle, search box, value checklist, Auto Apply, and Clear Filter
+- XLSX autoFilter button overlay on header row cells (matching Excel placement) with independent z-index layer
+- XLSX autoFilter mutations: setFilterColumn with automatic row visibility recalculation, applySort with sortState update, clearAllFilters
+- XLSX autoFilter reducer actions: SET_FILTER_COLUMN, APPLY_SORT, CLEAR_ALL_FILTERS
+- XLSX autoFilter menu configuration mapping column data types to ECMA-376 filter structures (customFilter wildcards §18.3.2.1, top10 §18.3.2.10, dynamicFilter date types §18.18.26)
+- `dateGroupItems` field to `XlsxFilters` type for date hierarchy filtering per §18.3.2.4
+
+### Fixed
+
+- `XlsxColorFilter` spec reference corrected from non-existent §18.3.2.0 to OOXML extension reference
+- `XlsxIconFilter` removed incorrect "(extension)" label (§18.3.2.6 is a standard element)
+- Cell wrapText rendering: use `pre-wrap` instead of `normal` to preserve literal newlines
+
+### Changed
+
+- ECMA-376 section references added to all autoFilter domain modules (evaluator, sort, column-type, menu-config) with per-function `@see` annotations
+- AutoFilter SoT documented: UI delegates to domain layer modules for all filter/sort logic
+
 ## [0.9.0] - 2026-03-24
 
 ### Added
@@ -224,7 +249,8 @@ Project inception.
 - Text body and paragraph rendering
 - Theme and style support
 
-[Unreleased]: https://github.com/trkbt10/aurochs/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/trkbt10/aurochs/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/trkbt10/aurochs/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/trkbt10/aurochs/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/trkbt10/aurochs/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/trkbt10/aurochs/compare/v0.6.4...v0.7.0
