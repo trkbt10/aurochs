@@ -17,6 +17,9 @@ export {
   loadRelationships,
 } from "./relationships";
 
+// Font scheme parsing (shared between XLSX and PPTX)
+export { extractFontSpec, parseFontSchemeFromElements } from "./font-scheme";
+
 // Drawing primitive parsing (returns EMU values)
 export {
   parseEmuValue,

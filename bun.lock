@@ -478,9 +478,11 @@
       "name": "@aurochs-office/xlsx",
       "version": "0.9.0",
       "dependencies": {
+        "@aurochs-office/drawing-ml": "workspace:*",
         "@aurochs-office/ooxml": "workspace:*",
         "@aurochs-office/opc": "workspace:*",
         "@aurochs-office/vba": "workspace:*",
+        "@aurochs/color": "workspace:*",
         "@aurochs/xml": "workspace:*",
         "@aurochs/zip": "workspace:*",
       },
@@ -896,6 +898,7 @@
       "name": "@aurochs-ui/xlsx-editor",
       "version": "0.9.0",
       "dependencies": {
+        "@aurochs-office/drawing-ml": "workspace:*",
         "@aurochs-office/opc": "workspace:*",
         "@aurochs-office/vba": "workspace:*",
         "@aurochs-office/xls": "workspace:*",

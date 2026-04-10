@@ -40,6 +40,8 @@ import type {
   XlsxTop10Filter,
   XlsxDynamicFilter,
   XlsxDynamicFilterType,
+  XlsxSortState,
+  XlsxSortCondition,
 } from "../domain/auto-filter";
 import { rowIdx, colIdx, styleId, type SheetId } from "../domain/types";
 import type { XlsxParseContext } from "./context";
@@ -1043,10 +1045,48 @@ function parseAutoFilter(autoFilterElement: XmlElement | undefined): XlsxAutoFil
   const ref = parseRange(refAttr);
   const filterColumnElements = getChildren(autoFilterElement, "filterColumn");
   const filterColumns = filterColumnElements.map(parseFilterColumn);
+  const sortState = parseSortState(getChild(autoFilterElement, "sortState"));
 
   return {
     ref,
     ...(filterColumns.length > 0 && { filterColumns }),
+    ...(sortState && { sortState }),
+  };
+}
+
+/**
+ * Parse sort state from `<sortState>` element.
+ *
+ * @see ECMA-376 Part 4, Section 18.3.1.92 (sortState)
+ */
+function parseSortState(sortStateEl: XmlElement | undefined): XlsxSortState | undefined {
+  if (!sortStateEl) {
+    return undefined;
+  }
+
+  const refAttr = getAttr(sortStateEl, "ref");
+  if (!refAttr) {
+    return undefined;
+  }
+
+  const caseSensitive = parseBooleanAttr(getAttr(sortStateEl, "caseSensitive"));
+  const conditionElements = getChildren(sortStateEl, "sortCondition");
+  const sortConditions: XlsxSortCondition[] = [];
+
+  for (const el of conditionElements) {
+    const condRef = getAttr(el, "ref");
+    if (condRef) {
+      sortConditions.push({
+        ref: condRef,
+        descending: parseBooleanAttr(getAttr(el, "descending")),
+      });
+    }
+  }
+
+  return {
+    ref: refAttr,
+    caseSensitive,
+    ...(sortConditions.length > 0 && { sortConditions }),
   };
 }
 

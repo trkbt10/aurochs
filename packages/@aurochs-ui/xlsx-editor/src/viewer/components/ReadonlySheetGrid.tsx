@@ -196,7 +196,7 @@ function GridLayers({
             dateSystem: sheet.dateSystem,
             formulaEvaluator,
           });
-          const cellRenderStyle = resolveCellRenderStyle({ styles: workbook.styles, sheet, address: originAddress, cell });
+          const cellRenderStyle = resolveCellRenderStyle({ styles: workbook.styles, sheet, address: originAddress, cell, colorScheme: workbook.theme?.colorScheme });
 
           const leftPx = layout.cols.getBoundaryOffsetPx(merge.minCol - 1);
           const rightPx = layout.cols.getBoundaryOffsetPx(merge.maxCol);
@@ -235,7 +235,7 @@ function GridLayers({
           dateSystem: sheet.dateSystem,
           formulaEvaluator,
         });
-        const cellRenderStyle = resolveCellRenderStyle({ styles: workbook.styles, sheet, address, cell });
+        const cellRenderStyle = resolveCellRenderStyle({ styles: workbook.styles, sheet, address, cell, colorScheme: workbook.theme?.colorScheme });
         const width = layout.cols.getSizePx(col0);
         if (width <= 0) {continue;}
         if (text === "" && Object.keys(cellRenderStyle).length === 0) {continue;}

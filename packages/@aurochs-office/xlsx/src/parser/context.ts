@@ -14,7 +14,7 @@
 
 import type { XlsxStyleSheet } from "../domain/style/types";
 import { createDefaultStyleSheet } from "../domain/style/types";
-import type { XlsxDefinedName } from "../domain/workbook";
+import type { XlsxDefinedName, XlsxCalcProperties } from "../domain/workbook";
 import type { XlsxDateSystem } from "../domain/date-system";
 import type { SheetId } from "../domain/types";
 
@@ -47,6 +47,8 @@ export type XlsxWorkbookInfo = {
   readonly sheets: readonly XlsxSheetInfo[];
   readonly definedNames?: readonly XlsxDefinedName[];
   readonly dateSystem: XlsxDateSystem;
+  /** Calculation properties from `<calcPr>` */
+  readonly calcProperties?: XlsxCalcProperties;
 };
 
 // =============================================================================

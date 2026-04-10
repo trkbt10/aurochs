@@ -5,9 +5,11 @@
   "type": "module",
   "sideEffects": false,
   "dependencies": {
+    "@aurochs-office/drawing-ml": "workspace:*",
     "@aurochs-office/opc": "workspace:*",
     "@aurochs-office/ooxml": "workspace:*",
     "@aurochs-office/vba": "workspace:*",
+    "@aurochs/color": "workspace:*",
     "@aurochs/xml": "workspace:*",
     "@aurochs/zip": "workspace:*"
   },
@@ -68,6 +70,10 @@
     "./domain/style/border": {
       "types": "./src/domain/style/border.ts",
       "default": "./src/domain/style/border.ts"
+    },
+    "./domain/style/color-resolver": {
+      "types": "./src/domain/style/color-resolver.ts",
+      "default": "./src/domain/style/color-resolver.ts"
     },
     "./domain/style/dxf": {
       "types": "./src/domain/style/dxf.ts",

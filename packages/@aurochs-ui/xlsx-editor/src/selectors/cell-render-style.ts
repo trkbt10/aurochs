@@ -11,7 +11,7 @@ import type { XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
 import type { XlsxStyleSheet, XlsxAlignment } from "@aurochs-office/xlsx/domain/style/types";
 import type { XlsxDifferentialFormat } from "@aurochs-office/xlsx/domain/style/dxf";
 import type { XlsxFill } from "@aurochs-office/xlsx/domain/style/fill";
-import { xlsxColorToCss, type XlsxColorLike } from "./xlsx-color";
+import { xlsxColorToCss, type XlsxColorLike, type XlsxColorToCssOptions } from "./xlsx-color";
 import { resolveCellXf } from "./cell-xf";
 
 type XlsxCellRenderCssProperties = CSSProperties &
@@ -89,15 +89,36 @@ function applyAlignment(
   }
 }
 
-function resolveFillBackgroundColor(fill: XlsxFill | undefined, styles: XlsxStyleSheet): string | undefined {
+/**
+ * Resolve the effective background color from a pattern fill.
+ *
+ * For `patternType="solid"`, only `fgColor` determines the background.
+ * The `bgColor` in a solid pattern is meaningless per ECMA-376 §18.8.32
+ * and must NOT be used as a fallback — it is typically `indexed:64`
+ * (system foreground = black), which would incorrectly paint cells black.
+ *
+ * For other pattern types, `bgColor` provides the background behind the
+ * pattern (not yet implemented — we only handle solid fills).
+ */
+function resolveFillBackgroundColor(fill: XlsxFill | undefined, colorOptions: XlsxColorToCssOptions): string | undefined {
   if (!fill || fill.type !== "pattern") {
     return undefined;
   }
-  const fg = xlsxColorToCss(fill.pattern.fgColor as XlsxColorLike | undefined, { indexedColors: styles.indexedColors });
+
+  const { patternType, fgColor, bgColor } = fill.pattern;
+
+  if (patternType === "solid") {
+    // Solid fill: fgColor is the only source of truth.
+    return xlsxColorToCss(fgColor as XlsxColorLike | undefined, colorOptions);
+  }
+
+  // Non-solid patterns: fgColor is the pattern, bgColor is the background.
+  // Fall back from fg → bg for non-solid patterns.
+  const fg = xlsxColorToCss(fgColor as XlsxColorLike | undefined, colorOptions);
   if (fg) {
     return fg;
   }
-  return xlsxColorToCss(fill.pattern.bgColor as XlsxColorLike | undefined, { indexedColors: styles.indexedColors });
+  return xlsxColorToCss(bgColor as XlsxColorLike | undefined, colorOptions);
 }
 
 type CssBorderStyle = "solid" | "dashed" | "dotted" | "double";
@@ -154,10 +175,13 @@ export function resolveCellRenderStyle(params: {
   readonly cell: Cell | undefined;
   readonly conditionalFormat?: XlsxDifferentialFormat;
   readonly tableStyleFormat?: XlsxDifferentialFormat;
+  /** Theme color scheme for resolving theme colors. Pass `workbook.theme?.colorScheme`. */
+  readonly colorScheme?: Readonly<Record<string, string>>;
 }): XlsxCellRenderCssProperties {
   const { styles, sheet, address, cell } = params;
   const { xf: resolvedXf } = resolveCellXf({ styles, sheet, address, cell });
   const css: XlsxCellRenderCssProperties = {};
+  const colorOptions: XlsxColorToCssOptions = { indexedColors: styles.indexedColors, colorScheme: params.colorScheme };
 
   const font = styles.fonts[resolvedXf.fontId as number];
   const tableFont = params.tableStyleFormat?.font;
@@ -183,7 +207,7 @@ export function resolveCellRenderStyle(params: {
     css.fontStyle = "italic";
   }
   if (effectiveColor) {
-    const color = xlsxColorToCss(effectiveColor as XlsxColorLike, { indexedColors: styles.indexedColors });
+    const color = xlsxColorToCss(effectiveColor as XlsxColorLike, colorOptions);
     if (color) {
       css.color = color;
     }
@@ -202,18 +226,18 @@ export function resolveCellRenderStyle(params: {
 
   const fill = styles.fills[resolvedXf.fillId as number];
   if (fill?.type === "pattern" && fill.pattern.patternType === "solid") {
-    const bg = resolveFillBackgroundColor(fill, styles);
+    const bg = resolveFillBackgroundColor(fill, colorOptions);
     if (bg) {
       css.backgroundColor = bg;
     }
   }
 
-  const tableBg = resolveFillBackgroundColor(params.tableStyleFormat?.fill, styles);
+  const tableBg = resolveFillBackgroundColor(params.tableStyleFormat?.fill, colorOptions);
   if (tableBg) {
     css.backgroundColor = tableBg;
   }
 
-  const conditionalBg = resolveFillBackgroundColor(params.conditionalFormat?.fill, styles);
+  const conditionalBg = resolveFillBackgroundColor(params.conditionalFormat?.fill, colorOptions);
   if (conditionalBg) {
     css.backgroundColor = conditionalBg;
   }
@@ -234,6 +258,8 @@ export function resolveCellBorderDecoration(params: {
   readonly address: CellAddress;
   readonly cell: Cell | undefined;
   readonly defaultBorderColor?: string;
+  /** Theme color scheme for resolving theme colors. Pass `workbook.theme?.colorScheme`. */
+  readonly colorScheme?: Readonly<Record<string, string>>;
 }): CellBorderDecoration | undefined {
   const { styles, sheet, address, cell } = params;
   const fallback = params.defaultBorderColor ?? "var(--border-primary)";
@@ -242,6 +268,8 @@ export function resolveCellBorderDecoration(params: {
   if (!border) {
     return undefined;
   }
+
+  const colorOptions: XlsxColorToCssOptions = { indexedColors: styles.indexedColors, colorScheme: params.colorScheme };
 
   const left = border.left ? borderStyleToCss(border.left.style) : undefined;
   const right = border.right ? borderStyleToCss(border.right.style) : undefined;
@@ -272,22 +300,22 @@ export function resolveCellBorderDecoration(params: {
   const leftDecoration = toEdgeDecoration(
     "left",
     left,
-    xlsxColorToCss(border.left?.color as XlsxColorLike | undefined, { indexedColors: styles.indexedColors }),
+    xlsxColorToCss(border.left?.color as XlsxColorLike | undefined, colorOptions),
   );
   const rightDecoration = toEdgeDecoration(
     "right",
     right,
-    xlsxColorToCss(border.right?.color as XlsxColorLike | undefined, { indexedColors: styles.indexedColors }),
+    xlsxColorToCss(border.right?.color as XlsxColorLike | undefined, colorOptions),
   );
   const topDecoration = toEdgeDecoration(
     "top",
     top,
-    xlsxColorToCss(border.top?.color as XlsxColorLike | undefined, { indexedColors: styles.indexedColors }),
+    xlsxColorToCss(border.top?.color as XlsxColorLike | undefined, colorOptions),
   );
   const bottomDecoration = toEdgeDecoration(
     "bottom",
     bottom,
-    xlsxColorToCss(border.bottom?.color as XlsxColorLike | undefined, { indexedColors: styles.indexedColors }),
+    xlsxColorToCss(border.bottom?.color as XlsxColorLike | undefined, colorOptions),
   );
 
   const result: CellBorderDecoration = {

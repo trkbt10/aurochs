@@ -70,7 +70,7 @@ export function XlsxCellEditorOverlay({ sheet, address, rect, onCommitAndMove, o
       return {};
     }
     const cell = getCell(sheet, address);
-    const css = resolveCellRenderStyle({ styles: workbook.styles, sheet, address, cell });
+    const css = resolveCellRenderStyle({ styles: workbook.styles, sheet, address, cell, colorScheme: workbook.theme?.colorScheme });
     return {
       fontFamily: css.fontFamily,
       fontSize: css.fontSize,

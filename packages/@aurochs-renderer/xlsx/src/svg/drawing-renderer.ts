@@ -110,6 +110,7 @@ function renderContent(options: RenderContentOptions): string {
         shape: content,
         bounds,
         warnings: ctx.warnings,
+        colorScheme: ctx.workbook.theme?.colorScheme,
       });
 
     case "chartFrame":
@@ -118,6 +119,7 @@ function renderContent(options: RenderContentOptions): string {
         bounds,
         resolveChart: resolverOptions?.resolveChart,
         warnings: ctx.warnings,
+        colorScheme: ctx.workbook.theme?.colorScheme,
       });
 
     case "groupShape":

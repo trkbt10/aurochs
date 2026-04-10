@@ -9,6 +9,7 @@ import type { Chart } from "@aurochs-office/chart/domain";
 import { renderChart } from "@aurochs-renderer/chart/svg";
 import type { ChartRenderContext, FillResolver, ResolvedFill, ResolvedTextStyle } from "@aurochs-renderer/chart/svg";
 import type { WarningCollector } from "@aurochs-office/ooxml";
+import type { ColorScheme } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { DrawingBounds } from "../drawing-layout";
 import type { WarningsCollector } from "../types";
 
@@ -34,6 +35,8 @@ export type RenderChartFrameOptions = {
   readonly resolveChart?: ChartResolver;
   /** Warnings collector */
   readonly warnings?: WarningsCollector;
+  /** Color scheme from workbook theme for resolving scheme colors */
+  readonly colorScheme?: ColorScheme;
 };
 
 // =============================================================================
@@ -41,26 +44,40 @@ export type RenderChartFrameOptions = {
 // =============================================================================
 
 /**
- * Default color palette for chart series.
- * Matches Excel's default color scheme.
+ * Fallback color palette used when no theme is available.
+ * Matches the default Office theme accent colors.
  */
-const DEFAULT_SERIES_COLORS = [
-  "#4472C4", // Blue
-  "#ED7D31", // Orange
-  "#A5A5A5", // Gray
-  "#FFC000", // Yellow
-  "#5B9BD5", // Light Blue
-  "#70AD47", // Green
-  "#264478", // Dark Blue
-  "#9E480E", // Dark Orange
-  "#636363", // Dark Gray
-  "#997300", // Dark Yellow
+const FALLBACK_SERIES_COLORS = [
+  "#4472C4", "#ED7D31", "#A5A5A5", "#FFC000", "#5B9BD5", "#70AD47",
+  "#264478", "#9E480E", "#636363", "#997300",
 ];
 
 /**
- * Create a default chart render context for XLSX charts.
+ * Build series colors from a color scheme (accent1-accent6) with darker variants.
  */
-function createDefaultChartRenderContext(warnings?: WarningsCollector): ChartRenderContext {
+function buildSeriesColors(colorScheme: ColorScheme | undefined): readonly string[] {
+  if (!colorScheme) {
+    return FALLBACK_SERIES_COLORS;
+  }
+
+  const accentKeys = ["accent1", "accent2", "accent3", "accent4", "accent5", "accent6"] as const;
+  const accents = accentKeys.map((key) => {
+    const hex = colorScheme[key];
+    return hex ? (hex.startsWith("#") ? hex : `#${hex}`) : undefined;
+  }).filter((c): c is string => c !== undefined);
+
+  if (accents.length === 0) {
+    return FALLBACK_SERIES_COLORS;
+  }
+
+  return accents;
+}
+
+/**
+ * Create a chart render context using theme data from the workbook.
+ */
+function createChartRenderContext(colorScheme: ColorScheme | undefined, warnings?: WarningsCollector): ChartRenderContext {
+  const seriesColors = buildSeriesColors(colorScheme);
   const warningCollector: WarningCollector = {
     add: (warning) => {
       warnings?.add(`Chart warning: ${warning.message}`);
@@ -69,57 +86,70 @@ function createDefaultChartRenderContext(warnings?: WarningsCollector): ChartRen
     hasErrors: () => false,
   };
 
+  // Resolve a theme key to hex (with fallback)
+  const themeHex = (key: string, fallback: string): string => {
+    if (!colorScheme) return fallback;
+    const val = colorScheme[key];
+    if (!val) return fallback;
+    return val.startsWith("#") ? val : `#${val}`;
+  };
+
   return {
     getSeriesColor: (index: number) => {
-      return DEFAULT_SERIES_COLORS[index % DEFAULT_SERIES_COLORS.length];
+      return seriesColors[index % seriesColors.length]!;
     },
-    getAxisColor: () => "#595959",
-    getGridlineColor: () => "#D9D9D9",
+    getAxisColor: () => themeHex("dk1", "#595959"),
+    getGridlineColor: () => themeHex("lt2", "#D9D9D9"),
     getTextStyle: (): ResolvedTextStyle => ({
       fontFamily: "Calibri, sans-serif",
       fontSize: 11,
       fontWeight: "normal",
-      color: "#404040",
+      color: themeHex("dk1", "#404040"),
     }),
     warnings: warningCollector,
   };
 }
 
 /**
- * Resolve hex color from Color spec.
+ * Scheme color name aliases used in chart XML.
+ * tx1/bg1 map to dk1/lt1, tx2/bg2 map to dk2/lt2 respectively.
  */
-function resolveColorHex(color: { readonly spec: { readonly type: string; readonly value?: string } }): string {
+const SCHEME_ALIASES: Readonly<Record<string, string>> = {
+  tx1: "dk1",
+  tx2: "dk2",
+  bg1: "lt1",
+  bg2: "lt2",
+};
+
+/**
+ * Resolve hex color from Color spec, using the workbook's color scheme
+ * for scheme colors instead of a hardcoded palette.
+ */
+function resolveColorHex(
+  color: { readonly spec: { readonly type: string; readonly value?: string } },
+  colorScheme: ColorScheme | undefined,
+): string {
   const spec = color.spec;
   if (spec.type === "srgb" && spec.value) {
     return `#${spec.value}`;
   }
   if (spec.type === "scheme" && spec.value) {
-    // Map common scheme colors to defaults
-    const schemeColorMap: Record<string, string> = {
-      dk1: "#000000",
-      dk2: "#44546A",
-      lt1: "#FFFFFF",
-      lt2: "#E7E6E6",
-      accent1: "#4472C4",
-      accent2: "#ED7D31",
-      accent3: "#A5A5A5",
-      accent4: "#FFC000",
-      accent5: "#5B9BD5",
-      accent6: "#70AD47",
-      tx1: "#000000",
-      tx2: "#44546A",
-      bg1: "#FFFFFF",
-      bg2: "#E7E6E6",
-    };
-    return schemeColorMap[spec.value] ?? "#000000";
+    const key = SCHEME_ALIASES[spec.value] ?? spec.value;
+    if (colorScheme) {
+      const hex = colorScheme[key];
+      if (hex) {
+        return hex.startsWith("#") ? hex : `#${hex}`;
+      }
+    }
+    return "#000000";
   }
   return "#000000";
 }
 
 /**
- * Create a default fill resolver for XLSX charts.
+ * Create a fill resolver for XLSX charts that uses the workbook's color scheme.
  */
-function createDefaultFillResolver(): FillResolver {
+function createFillResolver(colorScheme: ColorScheme | undefined): FillResolver {
   return {
     resolve: (fill): ResolvedFill => {
       if (!fill) {
@@ -136,7 +166,7 @@ function createDefaultFillResolver(): FillResolver {
         return {
           type: "solid",
           color: {
-            hex: resolveColorHex(color),
+            hex: resolveColorHex(color, colorScheme),
             alpha: 1,
           },
         };
@@ -146,7 +176,7 @@ function createDefaultFillResolver(): FillResolver {
       if (fill.type === "gradientFill") {
         const stops = fill.stops.map((stop) => ({
           color: {
-            hex: resolveColorHex(stop.color),
+            hex: resolveColorHex(stop.color, colorScheme),
             alpha: 1,
           },
           position: stop.position / 100,
@@ -218,7 +248,7 @@ function resolveChartFromFrame(
 
 /** Render a chart frame to SVG */
 export function renderChartFrame(options: RenderChartFrameOptions): string {
-  const { chartFrame, bounds, resolveChart, warnings } = options;
+  const { chartFrame, bounds, resolveChart, warnings, colorScheme } = options;
 
   // Skip if no bounds
   if (bounds.width <= 0 || bounds.height <= 0) {
@@ -233,9 +263,9 @@ export function renderChartFrame(options: RenderChartFrameOptions): string {
     return renderPlaceholder(bounds, "Chart");
   }
 
-  // Create chart render context
-  const ctx = createDefaultChartRenderContext(warnings);
-  const fillResolver = createDefaultFillResolver();
+  // Create chart render context with theme colors
+  const ctx = createChartRenderContext(colorScheme, warnings);
+  const fillResolver = createFillResolver(colorScheme);
 
   // Render chart
   const chartSvg = renderChart({

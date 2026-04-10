@@ -307,3 +307,124 @@ describe("resolveCellBorderDecoration", () => {
     expect(border?.left?.color).toBe("#000000");
   });
 });
+
+describe("resolveCellRenderStyle with theme colors", () => {
+  /**
+   * Reproduces the exact style structure from the test XLSX file:
+   * - Fill: patternType="solid", fgColor=theme:0 tint:-0.15, bgColor=indexed:64
+   * - Font: color=theme:1, name="Yu Gothic", scheme="minor"
+   * - Theme: lt1=FFFFFF, dk1=000000
+   *
+   * Expected: backgroundColor=#d9d9d9 (grey), color=#000000 (black)
+   * Bug: without colorScheme, fgColor resolves to undefined, then bgColor (indexed:64)
+   *       falls back to #000000 → black background on black text.
+   */
+  function createThemeTestStyles(): XlsxStyleSheet {
+    const base = createDefaultStyleSheet();
+    return {
+      ...base,
+      fonts: [
+        ...base.fonts,
+        // fontId=base.fonts.length: theme font with scheme="minor"
+        {
+          name: "Yu Gothic",
+          size: 11,
+          color: { type: "theme", theme: 1 },
+          family: 2,
+          scheme: "minor",
+        },
+      ],
+      fills: [
+        ...base.fills,
+        // fillId=base.fills.length: solid fill with theme color + tint
+        {
+          type: "pattern",
+          pattern: {
+            patternType: "solid",
+            fgColor: { type: "theme", theme: 0, tint: -0.1499984740745262 },
+            bgColor: { type: "indexed", index: 64 },
+          },
+        },
+      ],
+      borders: [
+        ...base.borders,
+        // borderId=base.borders.length: thin borders with indexed:64 color
+        {
+          left: { style: "thin", color: { type: "indexed", index: 64 } },
+          right: { style: "thin", color: { type: "indexed", index: 64 } },
+          top: { style: "thin", color: { type: "indexed", index: 64 } },
+          bottom: { style: "thin", color: { type: "indexed", index: 64 } },
+        },
+      ],
+      cellXfs: [
+        ...base.cellXfs,
+        // styleId for header cell: fill + font + border + wrapText
+        {
+          numFmtId: numFmtId(0),
+          fontId: fontId(base.fonts.length),
+          fillId: fillId(base.fills.length),
+          borderId: borderId(base.borders.length),
+          applyFill: true,
+          applyBorder: true,
+          alignment: { wrapText: true },
+          applyAlignment: true,
+        },
+      ],
+    };
+  }
+
+  const OFFICE_COLOR_SCHEME: Record<string, string> = {
+    lt1: "FFFFFF",
+    dk1: "000000",
+    lt2: "E7E6E6",
+    dk2: "44546A",
+    accent1: "5B9BD5",
+    accent2: "ED7D31",
+    accent3: "A5A5A5",
+    accent4: "FFC000",
+    accent5: "4472C4",
+    accent6: "70AD47",
+    hlink: "0563C1",
+    folHlink: "954F72",
+  };
+
+  it("resolves theme fill and font colors correctly with colorScheme", () => {
+    const styles = createThemeTestStyles();
+    const sheet = createSheet();
+    const address = createAddress(1, 1);
+    const headerStyleId = styleId(styles.cellXfs.length - 1);
+
+    const result = resolveCellRenderStyle({
+      styles,
+      sheet,
+      address,
+      cell: { address, value: { type: "string", value: "優先度" }, styleId: headerStyleId },
+      colorScheme: OFFICE_COLOR_SCHEME,
+    });
+
+    // Fill: theme=0 (lt1=FFFFFF) with tint=-0.15 → #d9d9d9 (grey)
+    expect(result.backgroundColor).toBe("#d9d9d9");
+    // Font: theme=1 (dk1=000000) → #000000 (black)
+    expect(result.color).toBe("#000000");
+  });
+
+  it("uses ECMA-376 default theme when colorScheme is omitted", () => {
+    const styles = createThemeTestStyles();
+    const sheet = createSheet();
+    const address = createAddress(1, 1);
+    const headerStyleId = styleId(styles.cellXfs.length - 1);
+
+    const result = resolveCellRenderStyle({
+      styles,
+      sheet,
+      address,
+      cell: { address, value: { type: "string", value: "優先度" }, styleId: headerStyleId },
+      // colorScheme intentionally omitted — falls back to ECMA-376 default
+    });
+
+    // Default Office theme: theme=0 (lt1=FFFFFF) + tint=-0.15 → #d9d9d9
+    expect(result.backgroundColor).toBe("#d9d9d9");
+    // Default Office theme: theme=1 (dk1=000000) → #000000
+    expect(result.color).toBe("#000000");
+  });
+});

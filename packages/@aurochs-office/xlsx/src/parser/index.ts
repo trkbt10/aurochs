@@ -207,12 +207,34 @@ export function parseWorkbookXml(workbookElement: XmlElement): XlsxWorkbookInfo 
   const workbookPrEl = getChild(workbookElement, "workbookPr");
   const sheetsEl = getChild(workbookElement, "sheets");
   const definedNamesEl = getChild(workbookElement, "definedNames");
+  const calcPrEl = getChild(workbookElement, "calcPr");
 
   return {
     sheets: parseSheets(sheetsEl),
     definedNames: parseDefinedNames(definedNamesEl),
     dateSystem: resolveXlsxDateSystem(workbookPrEl ? parseBooleanAttr(getAttr(workbookPrEl, "date1904")) : undefined),
+    calcProperties: parseCalcProperties(calcPrEl),
   };
+}
+
+/**
+ * Parse calculation properties from the `<calcPr>` element.
+ *
+ * @see ECMA-376 Part 4, Section 18.2.2 (calcPr)
+ */
+function parseCalcProperties(calcPrEl: XmlElement | undefined): { calcId?: number; fullCalcOnLoad?: boolean } | undefined {
+  if (!calcPrEl) {
+    return undefined;
+  }
+
+  const calcId = parseIntAttr(getAttr(calcPrEl, "calcId"));
+  const fullCalcOnLoad = parseBooleanAttr(getAttr(calcPrEl, "fullCalcOnLoad"));
+
+  if (calcId === undefined && fullCalcOnLoad === undefined) {
+    return undefined;
+  }
+
+  return { calcId, fullCalcOnLoad };
 }
 
 // =============================================================================
@@ -673,6 +695,7 @@ export async function parseXlsxWorkbook(
     workbookProtection,
     charts: allCharts.length > 0 ? allCharts : undefined,
     pivotTables: allPivotTables.length > 0 ? allPivotTables : undefined,
+    calcProperties: workbookInfo.calcProperties,
     pivotCaches: pivotCaches.length > 0 ? pivotCaches : undefined,
     theme,
   };

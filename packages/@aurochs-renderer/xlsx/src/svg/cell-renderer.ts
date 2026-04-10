@@ -11,6 +11,8 @@ import type { Cell, CellValue } from "@aurochs-office/xlsx/domain/cell/types";
 import type { XlsxAlignment } from "@aurochs-office/xlsx/domain/style/types";
 import { formatNumberByCode } from "@aurochs-office/xlsx/domain/style/format-value";
 import { dateToSerial } from "@aurochs-office/xlsx/domain/date-serial";
+import { el, selfClosingEl, escapeXml as escapeXmlValue } from "@aurochs/xml";
+import type { AttrMap } from "@aurochs/xml";
 import type { XlsxSvgRenderContext, CellLayout, ResolvedCellStyle, ResolvedFill } from "./types";
 
 // =============================================================================
@@ -134,19 +136,6 @@ function formatGeneralNumber(value: number): string {
 }
 
 // =============================================================================
-// SVG Escaping
-// =============================================================================
-
-function escapeXml(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
-}
-
-// =============================================================================
 // Fill Rendering
 // =============================================================================
 
@@ -167,7 +156,7 @@ export function renderCellFill(params: RenderCellFillParams): string {
   }
 
   if (fill.type === "solid") {
-    return `<rect x="${layout.x}" y="${layout.y}" width="${layout.width}" height="${layout.height}" fill="${fill.color}"/>`;
+    return selfClosingEl("rect", { x: layout.x, y: layout.y, width: layout.width, height: layout.height, fill: fill.color });
   }
 
   if (fill.type === "gradient") {
@@ -196,7 +185,7 @@ function renderGradientFill(params: RenderGradientFillParams): string {
     ctx.defs.add(gradientDef);
   }
 
-  return `<rect x="${layout.x}" y="${layout.y}" width="${layout.width}" height="${layout.height}" fill="url(#${gradientId})"/>`;
+  return selfClosingEl("rect", { x: layout.x, y: layout.y, width: layout.width, height: layout.height, fill: `url(#${gradientId})` });
 }
 
 type LinearGradientDefParams = {
@@ -213,15 +202,15 @@ function createLinearGradientDef(params: LinearGradientDefParams): string {
   const x2 = 50 + Math.sin(angle) * 50;
   const y2 = 50 - Math.cos(angle) * 50;
 
-  const stopsStr = stops.map((s) => `<stop offset="${s.position * 100}%" stop-color="${s.color}"/>`).join("");
+  const stopsStr = stops.map((s) => selfClosingEl("stop", { offset: `${s.position * 100}%`, "stop-color": s.color })).join("");
 
-  return `<linearGradient id="${id}" x1="${x1}%" y1="${y1}%" x2="${x2}%" y2="${y2}%">${stopsStr}</linearGradient>`;
+  return el("linearGradient", { id, x1: `${x1}%`, y1: `${y1}%`, x2: `${x2}%`, y2: `${y2}%` }, stopsStr);
 }
 
 function createRadialGradientDef(id: string, stops: readonly { position: number; color: string }[]): string {
-  const stopsStr = stops.map((s) => `<stop offset="${s.position * 100}%" stop-color="${s.color}"/>`).join("");
+  const stopsStr = stops.map((s) => selfClosingEl("stop", { offset: `${s.position * 100}%`, "stop-color": s.color })).join("");
 
-  return `<radialGradient id="${id}" cx="50%" cy="50%" r="50%">${stopsStr}</radialGradient>`;
+  return el("radialGradient", { id, cx: "50%", cy: "50%", r: "50%" }, stopsStr);
 }
 
 // =============================================================================
@@ -310,17 +299,29 @@ export function renderCellText(params: RenderCellTextParams): string {
 
   const { font, alignment } = style;
   const { x, y, anchor, baseline } = calculateTextPosition({ layout, alignment, fontSize: font.size });
-  const styleStr = buildFontStyleString(font);
+  const fontAttrMap = buildFontAttrMap(font);
 
   if (alignment?.wrapText && layout.width > 0) {
-    return renderWrappedText({ text, x, y, layout, fontSize: font.size, anchor, style: styleStr, ctx });
+    return renderWrappedText({ text, x, y, layout, fontSize: font.size, anchor, fontAttrMap, ctx });
   }
 
   const clipId = ctx.defs.generateId("clip");
-  ctx.defs.add(`<clipPath id="${clipId}"><rect x="${layout.x}" y="${layout.y}" width="${layout.width}" height="${layout.height}"/></clipPath>`);
+  ctx.defs.add(el("clipPath", { id: clipId },
+    selfClosingEl("rect", { x: layout.x, y: layout.y, width: layout.width, height: layout.height }),
+  ));
 
-  return `<text x="${x}" y="${y}" text-anchor="${anchor}" dominant-baseline="${baseline}" style="${styleStr}" clip-path="url(#${clipId})">${escapeXml(text)}</text>`;
+  return el("text", {
+    x, y,
+    "text-anchor": anchor,
+    "dominant-baseline": baseline,
+    "clip-path": `url(#${clipId})`,
+    ...fontAttrMap,
+  }, escapeXmlValue(text));
 }
+
+// =============================================================================
+// Font Attribute Map
+// =============================================================================
 
 type FontStyleParams = {
   readonly families: readonly string[];
@@ -333,37 +334,36 @@ type FontStyleParams = {
 };
 
 /**
- * Build a CSS-compatible font-family value from an ordered family chain.
+ * Build SVG font-family attribute value from an ordered family chain.
  *
- * Each family name is quoted (safe for names containing spaces), and the
- * generic `sans-serif` fallback is always appended.
+ * Each family name is single-quoted. The `el()` builder will then escape
+ * these single quotes to `&apos;` when serializing into the XML attribute
+ * value, ensuring no collision with the attribute's double-quote boundary.
  */
 function buildFontFamilyValue(families: readonly string[]): string {
-  const quoted = families.map((f) => `"${f}"`);
+  const quoted = families.map((f) => `'${f}'`);
   return [...quoted, "sans-serif"].join(", ");
 }
 
-function buildFontStyleString(font: FontStyleParams): string {
-  const styleAttrs: string[] = [];
-  styleAttrs.push(`font-family: ${buildFontFamilyValue(font.families)}`);
-  styleAttrs.push(`font-size: ${font.size}pt`);
-
-  if (font.bold) {
-    styleAttrs.push("font-weight: bold");
-  }
-  if (font.italic) {
-    styleAttrs.push("font-style: italic");
-  }
-  if (font.color) {
-    styleAttrs.push(`fill: ${font.color}`);
-  }
-
+/**
+ * Build an AttrMap of SVG presentation attributes for font styling.
+ *
+ * Returns a plain object that can be spread into `el("text", { ...fontAttrs, ...otherAttrs })`.
+ * The `el()` function handles escaping — callers never need to worry about
+ * quoting or XML special characters.
+ *
+ * @see SVG 1.1 §10.10 (Font selection properties)
+ */
+function buildFontAttrMap(font: FontStyleParams): AttrMap {
   const decorations = buildTextDecorations(font);
-  if (decorations) {
-    styleAttrs.push(`text-decoration: ${decorations}`);
-  }
-
-  return styleAttrs.join("; ");
+  return {
+    "font-family": buildFontFamilyValue(font.families),
+    "font-size": `${font.size}pt`,
+    "font-weight": font.bold ? "bold" : undefined,
+    "font-style": font.italic ? "italic" : undefined,
+    fill: font.color,
+    "text-decoration": decorations || undefined,
+  };
 }
 
 function buildTextDecorations(font: { underline?: boolean; strikethrough?: boolean }): string {
@@ -384,12 +384,13 @@ type WrappedTextParams = {
   readonly layout: CellLayout;
   readonly fontSize: number;
   readonly anchor: string;
-  readonly style: string;
+  /** SVG presentation attributes for font styling */
+  readonly fontAttrMap: AttrMap;
   readonly ctx: XlsxSvgRenderContext;
 };
 
 function renderWrappedText(params: WrappedTextParams): string {
-  const { text, x, layout, fontSize, anchor, style, ctx } = params;
+  const { text, x, layout, fontSize, anchor, fontAttrMap, ctx } = params;
   const lineHeight = fontSize * 1.2;
   const maxLines = Math.max(1, Math.floor(layout.height / lineHeight));
   const lines = wrapText({ text, width: layout.width, fontSize, maxLines });
@@ -404,16 +405,22 @@ function renderWrappedText(params: WrappedTextParams): string {
   const tspans = lines
     .map((line, i) => {
       if (i === 0) {
-        return `<tspan x="${x}" y="${startY}">${escapeXml(line)}</tspan>`;
+        return el("tspan", { x, y: startY }, escapeXmlValue(line));
       }
-      return `<tspan x="${x}" dy="${lineHeight}">${escapeXml(line)}</tspan>`;
+      return el("tspan", { x, dy: lineHeight }, escapeXmlValue(line));
     })
     .join("");
 
   const clipId = ctx.defs.generateId("clip");
-  ctx.defs.add(`<clipPath id="${clipId}"><rect x="${layout.x}" y="${layout.y}" width="${layout.width}" height="${layout.height}"/></clipPath>`);
+  ctx.defs.add(el("clipPath", { id: clipId },
+    selfClosingEl("rect", { x: layout.x, y: layout.y, width: layout.width, height: layout.height }),
+  ));
 
-  return `<text text-anchor="${anchor}" style="${style}" clip-path="url(#${clipId})">${tspans}</text>`;
+  return el("text", {
+    "text-anchor": anchor,
+    "clip-path": `url(#${clipId})`,
+    ...fontAttrMap,
+  }, tspans);
 }
 
 type WrapTextParams = {

@@ -130,6 +130,13 @@ export type { MarkupCompatibilityOptions } from "./markup-compatibility";
 export { applyMarkupCompatibility } from "./markup-compatibility";
 
 // =============================================================================
+// Element Builder (string-based XML/SVG construction)
+// =============================================================================
+
+export type { AttrValue, AttrMap } from "./element-builder";
+export { serializeAttrs, el, selfClosingEl } from "./element-builder";
+
+// =============================================================================
 // Escape / Decode Utilities
 // =============================================================================
 

@@ -9,7 +9,8 @@
 import type { XmlElement, XmlDocument } from "@aurochs/xml";
 import { getAttr, getChild, getChildren, getByPath } from "@aurochs/xml";
 import type { ColorMap, ColorScheme } from "@aurochs-office/drawing-ml/domain/color-context";
-import type { FontScheme, FontSpec } from "@aurochs-office/ooxml/domain/font-scheme";
+import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
+import { parseFontSchemeFromElements } from "@aurochs-office/ooxml/parser/font-scheme";
 import type {
   CustomColor,
   ExtraColorScheme,
@@ -34,47 +35,9 @@ import { parseEffects } from "../graphics/effects-parser";
 // =============================================================================
 
 /**
- * Extract font spec from font element (a:majorFont or a:minorFont).
- */
-function extractFontSpec(fontElement: XmlElement | undefined): FontSpec {
-  if (fontElement === undefined) {
-    return { latin: undefined, eastAsian: undefined, complexScript: undefined };
-  }
-
-  const latin = getChild(fontElement, "a:latin");
-  const ea = getChild(fontElement, "a:ea");
-  const cs = getChild(fontElement, "a:cs");
-
-  // Collect supplemental script-specific font definitions.
-  const supplementalFonts = collectSupplementalFonts(fontElement);
-
-  return {
-    latin: latin?.attrs?.typeface,
-    eastAsian: ea?.attrs?.typeface,
-    complexScript: cs?.attrs?.typeface,
-    supplementalFonts: Object.keys(supplementalFonts).length > 0 ? supplementalFonts : undefined,
-  };
-}
-
-/**
- * Collect `<a:font script="..." typeface="..."/>` entries from a font element.
- *
- * @see ECMA-376 Part 1, Section 20.1.4.1.9 (a:font)
- */
-function collectSupplementalFonts(fontElement: XmlElement): Record<string, string> {
-  const fonts: Record<string, string> = {};
-  for (const child of getChildren(fontElement, "a:font")) {
-    const script = getAttr(child, "script");
-    const typeface = getAttr(child, "typeface");
-    if (script !== undefined && typeface !== undefined && typeface !== "") {
-      fonts[script] = typeface;
-    }
-  }
-  return fonts;
-}
-
-/**
  * Parse FontScheme from theme content.
+ *
+ * Delegates font spec extraction to the shared OOXML parser.
  *
  * @see ECMA-376 Part 1, Section 20.1.4.1.18 (a:fontScheme)
  */
@@ -86,15 +49,12 @@ export function parseFontScheme(themeContent: XmlDocument | null): FontScheme {
     };
   }
 
-  const fontScheme = getByPath(themeContent, ["a:theme", "a:themeElements", "a:fontScheme"]);
+  const fontSchemeEl = getByPath(themeContent, ["a:theme", "a:themeElements", "a:fontScheme"]);
 
-  const majorFont = fontScheme !== undefined ? getChild(fontScheme, "a:majorFont") : undefined;
-  const minorFont = fontScheme !== undefined ? getChild(fontScheme, "a:minorFont") : undefined;
+  const majorFont = fontSchemeEl !== undefined ? getChild(fontSchemeEl, "a:majorFont") : undefined;
+  const minorFont = fontSchemeEl !== undefined ? getChild(fontSchemeEl, "a:minorFont") : undefined;
 
-  return {
-    majorFont: extractFontSpec(majorFont),
-    minorFont: extractFontSpec(minorFont),
-  };
+  return parseFontSchemeFromElements(majorFont, minorFont);
 }
 
 // =============================================================================

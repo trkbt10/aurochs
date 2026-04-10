@@ -9,6 +9,7 @@ import type { CellAddress } from "@aurochs-office/xlsx/domain/cell/address";
 import type { Cell } from "@aurochs-office/xlsx/domain/cell/types";
 import type { XlsxStyleSheet } from "@aurochs-office/xlsx/domain/style/types";
 import type { XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
+import type { ColorScheme } from "@aurochs-office/drawing-ml/domain/color-context";
 import { createFormulaEvaluator } from "@aurochs-office/xlsx/formula/evaluator";
 import { colIdx, rowIdx } from "@aurochs-office/xlsx/domain/types";
 import { getCell } from "@aurochs-office/xlsx/domain/mutation/query";
@@ -35,6 +36,8 @@ export type XlsxSheetGridCellsLayerProps = {
   readonly scrollLeft: number;
   readonly normalizedMerges: readonly NormalizedMergeRange[];
   readonly formulaEvaluator: ReturnType<typeof createFormulaEvaluator>;
+  /** Theme color scheme for resolving theme-based colors */
+  readonly colorScheme?: ColorScheme;
 };
 
 const cellBaseStyle: CSSProperties = {
@@ -149,6 +152,7 @@ export function XlsxSheetGridCellsLayer({
   scrollLeft,
   normalizedMerges,
   formulaEvaluator,
+  colorScheme,
 }: XlsxSheetGridCellsLayerProps) {
   const cellNodes = useMemo(() => {
     const nodes: ReactNode[] = [];
@@ -196,6 +200,7 @@ export function XlsxSheetGridCellsLayer({
             address: originAddress,
             cell,
             conditionalFormat,
+            colorScheme,
           });
 
           const leftPx = layout.cols.getBoundaryOffsetPx(merge.minCol - 1);
@@ -251,7 +256,7 @@ export function XlsxSheetGridCellsLayer({
           formatCode,
           dateSystem: sheet.dateSystem,
         });
-        const cellRenderStyle = resolveCellRenderStyle({ styles, sheet, address, cell, conditionalFormat });
+        const cellRenderStyle = resolveCellRenderStyle({ styles, sheet, address, cell, conditionalFormat, colorScheme });
         const width = layout.cols.getSizePx(col0);
         if (width <= 0) {
           continue;
@@ -282,6 +287,7 @@ export function XlsxSheetGridCellsLayer({
     }
     return nodes;
   }, [
+    colorScheme,
     colRange.end,
     colRange.start,
     formulaEvaluator,

@@ -79,7 +79,9 @@ const cardBaseStyle: CSSProperties = {
   alignItems: "center",
   padding: spacingTokens.sm,
   borderRadius: radiusTokens.md,
-  border: "1px solid var(--border-subtle)",
+  borderWidth: 1,
+  borderStyle: "solid",
+  borderColor: "var(--border-subtle)",
   backgroundColor: "var(--bg-tertiary)",
   cursor: "pointer",
   transition: "all 150ms ease",
@@ -112,7 +114,9 @@ const previewBoxStyle: CSSProperties = {
   alignItems: "center",
   justifyContent: "center",
   fontSize: fontTokens.size.md,
-  border: "1px solid var(--border-subtle)",
+  borderWidth: 1,
+  borderStyle: "solid",
+  borderColor: "var(--border-subtle)",
   transition: "all 150ms ease",
 };
 

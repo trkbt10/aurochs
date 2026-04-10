@@ -6,6 +6,7 @@
   "sideEffects": false,
   "dependencies": {
     "@aurochs-office/vba": "workspace:*",
+    "@aurochs-office/drawing-ml": "workspace:*",
     "@aurochs-office/opc": "workspace:*",
     "@aurochs-office/xls": "workspace:*",
     "@aurochs-office/xlsx": "workspace:*",

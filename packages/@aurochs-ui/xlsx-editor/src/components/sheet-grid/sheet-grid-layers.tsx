@@ -214,6 +214,7 @@ export function XlsxSheetGridLayers({
             scrollLeft={scrollLeftUnscaled}
             normalizedMerges={normalizedMerges}
             formulaEvaluator={formulaEvaluator}
+            colorScheme={workbook.theme?.colorScheme}
           />
         </XlsxSheetGridCellViewport>
 
@@ -236,6 +237,7 @@ export function XlsxSheetGridLayers({
             frozenColCount={frozenColCount}
             visibleRowRange={rowRange}
             visibleColRange={colRange}
+            colorScheme={workbook.theme?.colorScheme}
           />
         )}
       </div>
