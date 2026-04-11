@@ -11,7 +11,9 @@ import {
   createElementId,
   moveElement,
   rotateElement,
+  scaleElement,
   getElementRotationRad,
+  getPathBounds,
   updateElementInDocument,
   deleteElements,
   addElementsToPage,
@@ -127,7 +129,37 @@ function applyResizeToDom(doc: PdfDocument, drag: ResizeDragState<PdfElementId>,
     document: doc, elementId: shapeId,
     updater: (el) => {
       if (el.type === "text") {
+        // Convert SVG-space bounds to PDF-space (flip Y)
         return { ...el, x: newBounds.x, y: pageHeight - newBounds.y - newBounds.height, width: newBounds.width, height: newBounds.height };
+      }
+      if (el.type === "path") {
+        // Path bounds are computed in PDF space by getPathBounds, then converted to SVG space
+        // by elementToSvgBounds (y = pageHeight - pdfY - height). Reverse that conversion
+        // to get the new bounds in PDF space.
+        const oldPdfBounds = getPathBounds(el);
+        const newPdfBounds = {
+          x: newBounds.x,
+          y: pageHeight - newBounds.y - newBounds.height,
+          width: newBounds.width,
+          height: newBounds.height,
+        };
+        return scaleElement(el, oldPdfBounds, newPdfBounds);
+      }
+      if (el.type === "image") {
+        // Image: position and size are encoded in the CTM
+        const ctm = el.graphicsState.ctm;
+        const oldW = Math.abs(ctm[0]);
+        const oldH = Math.abs(ctm[3]);
+        const oldX = ctm[4];
+        const oldY = ctm[5];
+        const oldPdfBounds = { x: oldX, y: oldY, width: oldW, height: oldH };
+        const newPdfBounds = {
+          x: newBounds.x,
+          y: pageHeight - newBounds.y - newBounds.height,
+          width: newBounds.width,
+          height: newBounds.height,
+        };
+        return scaleElement(el, oldPdfBounds, newPdfBounds);
       }
       return el;
     },
@@ -265,12 +297,12 @@ export function pdfEditorReducer(state: PdfEditorState, action: PdfEditorAction)
     case "UPDATE_ROTATE": {
       if (!isDragRotate(state.drag)) { return state; }
       const currentAngle = Math.atan2(action.currentY - state.drag.centerY, action.currentX - state.drag.centerX);
-      // eslint-disable-next-line no-restricted-syntax -- reassigned after snap
-      let previewAngleDelta = currentAngle - state.drag.startAngle;
-      // Snap total rotation angle to cardinal directions
-      const totalDeg = state.drag.initialRotation + (previewAngleDelta * 180) / Math.PI;
+      const rawDeltaRad = currentAngle - state.drag.startAngle;
+      // Convert to degrees, snap, and keep in degrees.
+      // previewAngleDelta is in degrees — consistent with initialRotationsMap and applyRotatePreview.
+      const totalDeg = state.drag.initialRotation + (rawDeltaRad * 180) / Math.PI;
       const snappedDeg = snapAngle(totalDeg);
-      previewAngleDelta = ((snappedDeg - state.drag.initialRotation) * Math.PI) / 180;
+      const previewAngleDelta = snappedDeg - state.drag.initialRotation;
       return { ...state, drag: { ...state.drag, previewAngleDelta } };
     }
 
@@ -278,16 +310,12 @@ export function pdfEditorReducer(state: PdfEditorState, action: PdfEditorAction)
       if (isDragPendingRotate(state.drag)) { return { ...state, drag: createIdleDragState() }; }
       if (!isDragRotate(state.drag)) { return state; }
       const { previewAngleDelta, shapeIds } = state.drag;
-      if (Math.abs(previewAngleDelta) < 0.001) { return { ...state, drag: createIdleDragState() }; }
+      // previewAngleDelta is in degrees
+      if (Math.abs(previewAngleDelta) < 0.01) { return { ...state, drag: createIdleDragState() }; }
+      // Convert degrees to radians for rotateElement (which operates on CTM)
+      const deltaRad = (previewAngleDelta * Math.PI) / 180;
       const doc = state.documentHistory.present;
-      // eslint-disable-next-line no-restricted-syntax -- accumulator updated in loop
-      let rotatedDoc = doc;
-      for (const id of shapeIds) {
-        rotatedDoc = updateElementInDocument({
-          document: rotatedDoc, elementId: id,
-          updater: (el) => rotateElement(el, previewAngleDelta),
-        });
-      }
+      const rotatedDoc = shapeIds.reduce((d, id) => updateElementInDocument({ document: d, elementId: id, updater: (el) => rotateElement(el, deltaRad) }), doc);
       return { ...state, documentHistory: pushHistory(state.documentHistory, rotatedDoc), drag: createIdleDragState() };
     }
 
@@ -308,14 +336,7 @@ export function pdfEditorReducer(state: PdfEditorState, action: PdfEditorAction)
     case "NUDGE_SELECTED": {
       if (state.selection.selectedIds.length === 0) { return state; }
       const doc = state.documentHistory.present;
-      // eslint-disable-next-line no-restricted-syntax -- accumulator updated in loop
-      let nudgedDoc = doc;
-      for (const id of state.selection.selectedIds) {
-        nudgedDoc = updateElementInDocument({
-          document: nudgedDoc, elementId: id,
-          updater: (el) => moveElement(el, action.dx, action.dy),
-        });
-      }
+      const nudgedDoc = state.selection.selectedIds.reduce((d, id) => updateElementInDocument({ document: d, elementId: id, updater: (el) => moveElement(el, action.dx, action.dy) }), doc);
       return { ...state, documentHistory: pushHistory(state.documentHistory, nudgedDoc) };
     }
 
@@ -368,16 +389,14 @@ export function pdfEditorReducer(state: PdfEditorState, action: PdfEditorAction)
       });
       const updates = calculateAlignment(shapes, action.alignment);
       if (updates.length === 0) { return state; }
-      // eslint-disable-next-line no-restricted-syntax -- accumulator updated in loop
-      let newDoc = doc;
-      for (const update of updates) {
+      const newDoc = updates.reduce((d, update) => {
         const original = shapes.find((s) => s.id === update.id);
-        if (!original) { continue; }
+        if (!original) { return d; }
         const dx = update.bounds.x - original.bounds.x;
         const dy = update.bounds.y - original.bounds.y;
-        if (dx === 0 && dy === 0) { continue; }
-        newDoc = updateElementInDocument({ document: newDoc, elementId: update.id, updater: (el) => moveElement(el, dx, dy) });
-      }
+        if (dx === 0 && dy === 0) { return d; }
+        return updateElementInDocument({ document: d, elementId: update.id, updater: (el) => moveElement(el, dx, dy) });
+      }, doc);
       return { ...state, documentHistory: pushHistory(state.documentHistory, newDoc) };
     }
 

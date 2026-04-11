@@ -97,7 +97,7 @@ export type { PdfElementId } from "./document";
 export { createElementId, parseElementId } from "./document";
 
 // Element transformation
-export { getElementRotationRad, getElementRotationDeg, rotateElement, moveElement } from "./document";
+export { getElementRotationRad, getElementRotationDeg, rotateElement, moveElement, scaleElement } from "./document";
 
 // Document mutation
 export {

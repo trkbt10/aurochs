@@ -7,7 +7,7 @@
 import { createDefaultGraphicsState, type PdfDocument, type PdfText, type PdfPath, createElementId } from "@aurochs/pdf";
 import { canUndo } from "@aurochs-ui/editor-core/history";
 import { isSelected } from "@aurochs-ui/editor-core/selection";
-import { isDragMove, isDragIdle, isDragResize, isDragPendingMove } from "@aurochs-ui/editor-core/drag-state";
+import { isDragMove, isDragIdle, isDragResize, isDragRotate, isDragPendingMove } from "@aurochs-ui/editor-core/drag-state";
 import { pdfEditorReducer, createInitialState } from "./reducer";
 import type { PdfEditorAction } from "./reducer";
 import type { PdfEditorState } from "./types";
@@ -202,6 +202,96 @@ describe("reducer: Resize", () => {
     const s2 = apply(s1, { type: "END_RESIZE" });
     expect(isDragIdle(s2.drag)).toBe(true);
     expect(canUndo(s2.documentHistory)).toBe(false);
+  });
+
+  it("END_RESIZE on path element scales path operations", () => {
+    // id2 is the rect path: { type: "rect", x: 50, y: 400, width: 200, height: 100 }
+    // In SVG space (page height 792): x=50, y=792-400-100=292, w=200, h=100
+    const id2 = createElementId(0, 2);
+    const s0 = apply(createInitialState(createTestDoc()), { type: "SELECT", elementId: id2, addToSelection: false });
+    // Start resize from SE corner: (50+200, 292+100) = (250, 392) in SVG space
+    const s1 = apply(s0, { type: "START_RESIZE", handle: "se", startX: 250, startY: 392 });
+    expect(isDragResize(s1.drag)).toBe(true);
+    // Drag SE handle 100px right, 50px down → new width=300, new height=150
+    const s2 = apply(s1, { type: "UPDATE_RESIZE", currentX: 350, currentY: 442 });
+    const s3 = apply(s2, { type: "END_RESIZE" });
+    expect(isDragIdle(s3.drag)).toBe(true);
+    expect(canUndo(s3.documentHistory)).toBe(true);
+    const path = s3.documentHistory.present.pages[0].elements[2] as PdfPath;
+    expect(path.type).toBe("path");
+    const rectOp = path.operations[0];
+    if (rectOp.type === "rect") {
+      // Original: x=50, y=400, w=200, h=100
+      // New SVG bounds: x=50, y=292, w=300, h=150
+      // New PDF bounds: x=50, y=792-292-150=350, w=300, h=150
+      // scaleX = 300/200 = 1.5, scaleY = 150/100 = 1.5
+      expect(rectOp.width).toBeCloseTo(300, 1);
+      expect(rectOp.height).toBeCloseTo(150, 1);
+    }
+  });
+
+  it("END_RESIZE on text element updates text bounds", () => {
+    // id0 is text1: { x: 100, y: 700, width: 200, height: 20 }
+    // In SVG space: x=100, y=792-700-20=72, w=200, h=20
+    const s0 = apply(createInitialState(createTestDoc()), { type: "SELECT", elementId: id0, addToSelection: false });
+    const s1 = apply(s0, { type: "START_RESIZE", handle: "e", startX: 300, startY: 82 });
+    const s2 = apply(s1, { type: "UPDATE_RESIZE", currentX: 400, currentY: 82 });
+    const s3 = apply(s2, { type: "END_RESIZE" });
+    const text = s3.documentHistory.present.pages[0].elements[0] as PdfText;
+    expect(text.width).toBe(300); // 200 + 100
+  });
+});
+
+// =============================================================================
+// Rotate
+// =============================================================================
+
+describe("reducer: Rotate", () => {
+  it("START_ROTATE creates rotate drag state", () => {
+    const s0 = apply(createInitialState(createTestDoc()), { type: "SELECT", elementId: id0, addToSelection: false });
+    const s1 = apply(s0, { type: "START_ROTATE", startX: 200, startY: 50 });
+    expect(isDragRotate(s1.drag)).toBe(true);
+  });
+
+  it("UPDATE_ROTATE stores preview angle delta in degrees", () => {
+    const s0 = apply(createInitialState(createTestDoc()), { type: "SELECT", elementId: id0, addToSelection: false });
+    // Start rotate from directly above the center of the text bounding box
+    // Text SVG bounds: x=100, y=72, w=200, h=20 → center=(200, 82)
+    // Start above center: (200, 50) → angle ≈ -90° (pointing up)
+    const s1 = apply(s0, { type: "START_ROTATE", startX: 200, startY: 50 });
+    // Move to the right of center: (250, 82) → angle ≈ 0° (pointing right)
+    // This is a ~90° clockwise rotation
+    const s2 = apply(s1, { type: "UPDATE_ROTATE", currentX: 250, currentY: 82 });
+    if (isDragRotate(s2.drag)) {
+      // The snapped angle should be 90° (snaps to 45° multiples)
+      expect(s2.drag.previewAngleDelta).toBeCloseTo(90, 0);
+    }
+  });
+
+  it("END_ROTATE commits rotation to history (angle applied correctly)", () => {
+    const s0 = apply(createInitialState(createTestDoc()), { type: "SELECT", elementId: id0, addToSelection: false });
+    const s1 = apply(s0, { type: "START_ROTATE", startX: 200, startY: 50 });
+    const s2 = apply(s1, { type: "UPDATE_ROTATE", currentX: 250, currentY: 82 });
+    const s3 = apply(s2, { type: "END_ROTATE" });
+    expect(isDragIdle(s3.drag)).toBe(true);
+    expect(canUndo(s3.documentHistory)).toBe(true);
+    // Verify the element was actually rotated (CTM should have rotation component)
+    const el = s3.documentHistory.present.pages[0].elements[0];
+    const ctm = el.graphicsState.ctm;
+    // After ~90° rotation: a≈0, b≈1 (for identity scale)
+    // The rotation should be significant (close to 90°), not negligible (radians interpreted as degrees)
+    const rotation = Math.atan2(ctm[1], ctm[0]) * 180 / Math.PI;
+    expect(Math.abs(rotation)).toBeGreaterThan(45); // Should be ~90°, definitely not ~1.57°
+  });
+
+  it("END_ROTATE with near-zero delta is no-op", () => {
+    const s0 = apply(createInitialState(createTestDoc()), { type: "SELECT", elementId: id0, addToSelection: false });
+    const s1 = apply(s0, { type: "START_ROTATE", startX: 200, startY: 50 });
+    // Barely move — angle delta will be effectively 0 after snap
+    const s2 = apply(s1, { type: "UPDATE_ROTATE", currentX: 200, currentY: 50 });
+    const s3 = apply(s2, { type: "END_ROTATE" });
+    expect(isDragIdle(s3.drag)).toBe(true);
+    expect(canUndo(s3.documentHistory)).toBe(false);
   });
 });
 

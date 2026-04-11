@@ -5,7 +5,33 @@
  * from its operations (moveTo, lineTo, curveTo, rect).
  */
 
-import type { PdfPath } from "./types";
+import type { PdfPath, PdfPathOp } from "./types";
+
+type Extremes = { minX: number; minY: number; maxX: number; maxY: number };
+
+const EMPTY_EXTREMES: Extremes = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+
+function extendExtremes(ext: Extremes, x: number, y: number): Extremes {
+  return {
+    minX: Math.min(ext.minX, x),
+    minY: Math.min(ext.minY, y),
+    maxX: Math.max(ext.maxX, x),
+    maxY: Math.max(ext.maxY, y),
+  };
+}
+
+function accumulateOp(ext: Extremes, op: PdfPathOp): Extremes {
+  if (op.type === "rect") {
+    return extendExtremes(extendExtremes(ext, op.x, op.y), op.x + op.width, op.y + op.height);
+  }
+  if ("point" in op) {
+    return extendExtremes(ext, op.point.x, op.point.y);
+  }
+  if ("end" in op) {
+    return extendExtremes(ext, op.end.x, op.end.y);
+  }
+  return ext;
+}
 
 /**
  * Calculate the axis-aligned bounding box of a PDF path from its operations.
@@ -16,34 +42,8 @@ import type { PdfPath } from "./types";
  * Returns `{ x: 0, y: 0, width: 0, height: 0 }` for empty paths.
  */
 export function getPathBounds(path: PdfPath): { x: number; y: number; width: number; height: number } {
-  // eslint-disable-next-line no-restricted-syntax -- accumulator for bounds
-  let minX = Infinity;
-  // eslint-disable-next-line no-restricted-syntax -- accumulator for bounds
-  let minY = Infinity;
-  // eslint-disable-next-line no-restricted-syntax -- accumulator for bounds
-  let maxX = -Infinity;
-  // eslint-disable-next-line no-restricted-syntax -- accumulator for bounds
-  let maxY = -Infinity;
+  const ext = path.operations.reduce(accumulateOp, EMPTY_EXTREMES);
 
-  for (const op of path.operations) {
-    if (op.type === "rect") {
-      minX = Math.min(minX, op.x);
-      minY = Math.min(minY, op.y);
-      maxX = Math.max(maxX, op.x + op.width);
-      maxY = Math.max(maxY, op.y + op.height);
-    } else if ("point" in op) {
-      minX = Math.min(minX, op.point.x);
-      minY = Math.min(minY, op.point.y);
-      maxX = Math.max(maxX, op.point.x);
-      maxY = Math.max(maxY, op.point.y);
-    } else if ("end" in op) {
-      minX = Math.min(minX, op.end.x);
-      minY = Math.min(minY, op.end.y);
-      maxX = Math.max(maxX, op.end.x);
-      maxY = Math.max(maxY, op.end.y);
-    }
-  }
-
-  if (!isFinite(minX)) { return { x: 0, y: 0, width: 0, height: 0 }; }
-  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+  if (!isFinite(ext.minX)) { return { x: 0, y: 0, width: 0, height: 0 }; }
+  return { x: ext.minX, y: ext.minY, width: ext.maxX - ext.minX, height: ext.maxY - ext.minY };
 }

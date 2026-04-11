@@ -387,6 +387,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
     (id: string, e: React.PointerEvent) => {
       if (!onItemPointerDown) {return;}
       e.stopPropagation();
+      e.preventDefault(); // Suppress browser text selection during drag
       const coords = makeCoordsFromEvent(e);
       if (!coords) {return;}
       onItemPointerDown(id, coords, e);

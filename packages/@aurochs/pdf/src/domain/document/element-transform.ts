@@ -56,6 +56,98 @@ export function rotateElement(element: PdfElement, angleDeltaRad: number): PdfEl
 }
 
 // =============================================================================
+// Scale (resize)
+// =============================================================================
+
+/** Apply stroke width scaling, returning the original graphics state when scale is 1. */
+function scaleStrokeWidth(gs: PdfElement["graphicsState"], strokeScale: number): PdfElement["graphicsState"] {
+  if (strokeScale === 1) { return gs; }
+  return { ...gs, lineWidth: gs.lineWidth * strokeScale };
+}
+
+/**
+ * Scale a PDF element to fit new bounds.
+ *
+ * @param element - The element to scale (immutable — returns a new instance).
+ * @param oldBounds - The element's current bounding box in PDF coordinate space (bottom-left origin).
+ * @param newBounds - The desired bounding box in PDF coordinate space (bottom-left origin).
+ */
+export function scaleElement(
+  element: PdfElement,
+  oldBounds: { readonly x: number; readonly y: number; readonly width: number; readonly height: number },
+  newBounds: { readonly x: number; readonly y: number; readonly width: number; readonly height: number },
+): PdfElement {
+  if (oldBounds.width === 0 || oldBounds.height === 0) { return element; }
+
+  const scaleX = newBounds.width / oldBounds.width;
+  const scaleY = newBounds.height / oldBounds.height;
+  const originX = oldBounds.x;
+  const originY = oldBounds.y;
+  const offsetX = newBounds.x - originX;
+  const offsetY = newBounds.y - originY;
+
+  if (element.type === "path") {
+    const scalePoint = (p: { readonly x: number; readonly y: number }): { readonly x: number; readonly y: number } => ({
+      x: (p.x - originX) * scaleX + originX + offsetX,
+      y: (p.y - originY) * scaleY + originY + offsetY,
+    });
+
+    const operations = element.operations.map((op) => {
+      if (op.type === "rect") {
+        const topLeft = scalePoint({ x: op.x, y: op.y });
+        return { ...op, x: topLeft.x, y: topLeft.y, width: op.width * scaleX, height: op.height * scaleY };
+      }
+      if (op.type === "closePath") { return op; }
+      if ("point" in op) {
+        return { ...op, point: scalePoint(op.point) };
+      }
+      if ("end" in op) {
+        return {
+          ...op,
+          end: scalePoint(op.end),
+          ...("cp1" in op ? { cp1: scalePoint(op.cp1) } : {}),
+          ...("cp2" in op ? { cp2: scalePoint(op.cp2) } : {}),
+        };
+      }
+      return op;
+    });
+
+    // Scale stroke width proportionally (geometric mean of scale factors)
+    const strokeScale = Math.sqrt(Math.abs(scaleX * scaleY));
+    const gs = element.graphicsState;
+    const scaledGs = scaleStrokeWidth(gs, strokeScale);
+
+    return { ...element, operations, graphicsState: scaledGs };
+  }
+
+  if (element.type === "text") {
+    return {
+      ...element,
+      x: newBounds.x,
+      y: newBounds.y,
+      width: newBounds.width,
+      height: newBounds.height,
+    };
+  }
+
+  if (element.type === "image") {
+    const ctm = element.graphicsState.ctm;
+    const decomp = decomposeMatrix(ctm);
+    const newCtm: readonly [number, number, number, number, number, number] = [
+      decomp.scaleX * scaleX * Math.cos(decomp.rotation),
+      decomp.scaleX * scaleX * Math.sin(decomp.rotation),
+      -decomp.scaleY * scaleY * Math.sin(decomp.rotation),
+      decomp.scaleY * scaleY * Math.cos(decomp.rotation),
+      newBounds.x,
+      newBounds.y,
+    ];
+    return { ...element, graphicsState: { ...element.graphicsState, ctm: newCtm } };
+  }
+
+  return element;
+}
+
+// =============================================================================
 // Position delta (move)
 // =============================================================================
 

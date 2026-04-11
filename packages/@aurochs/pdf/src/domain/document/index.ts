@@ -13,7 +13,7 @@ export type { PdfElementId } from "./element-id";
 export { createElementId, parseElementId } from "./element-id";
 
 // Element transformation
-export { getElementRotationRad, getElementRotationDeg, rotateElement, moveElement } from "./element-transform";
+export { getElementRotationRad, getElementRotationDeg, rotateElement, moveElement, scaleElement } from "./element-transform";
 
 // Document mutation
 export {
