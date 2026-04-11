@@ -274,32 +274,106 @@ describe("reducer: ALIGN", () => {
 
 // =============================================================================
 // Text Edit
+//
+// Text editing ends in 3 ways:
+//   1. Enter key   → explicit commit (COMMIT_TEXT_EDIT)
+//   2. ESC key     → explicit discard (CANCEL_TEXT_EDIT)
+//   3. Click outside → END_TEXT_EDIT closes UI, then component unmount
+//                      cleanup dispatches COMMIT_TEXT_EDIT if text changed
+//
+// COMMIT_TEXT_EDIT carries its own elementId so it works regardless of
+// whether textEdit state is still active (critical for path 3).
 // =============================================================================
 
 describe("reducer: TextEdit", () => {
-  it("START_TEXT_EDIT activates with text and bounds", () => {
-    const s0 = createInitialState(createTestDoc());
-    const s1 = apply(s0, { type: "START_TEXT_EDIT", elementId: id0, text: "Hello", bounds: { x: 100, y: 72, width: 200, height: 20 } });
+  const textEditBounds = { x: 100, y: 72, width: 200, height: 20 };
+
+  function startEditing(state: PdfEditorState = createInitialState(createTestDoc())) {
+    return apply(state, { type: "START_TEXT_EDIT", elementId: id0, text: "Hello", bounds: textEditBounds });
+  }
+
+  // --- Activation ---
+
+  it("START_TEXT_EDIT activates with text, elementId, and bounds", () => {
+    const s1 = startEditing();
     expect(s1.textEdit.active).toBe(true);
     if (s1.textEdit.active) {
       expect(s1.textEdit.initialText).toBe("Hello");
       expect(s1.textEdit.elementId).toBe(id0);
+      expect(s1.textEdit.bounds).toEqual(textEditBounds);
     }
   });
 
+  // --- Path 1: Enter key → explicit commit ---
+
   it("COMMIT_TEXT_EDIT saves text to document and deactivates", () => {
-    const s0 = apply(createInitialState(createTestDoc()), { type: "START_TEXT_EDIT", elementId: id0, text: "Hello", bounds: { x: 100, y: 72, width: 200, height: 20 } });
-    const s1 = apply(s0, { type: "COMMIT_TEXT_EDIT", text: "Changed" });
+    const s1 = apply(startEditing(), { type: "COMMIT_TEXT_EDIT", elementId: id0, text: "Changed" });
     expect(s1.textEdit.active).toBe(false);
     expect((s1.documentHistory.present.pages[0].elements[0] as PdfText).text).toBe("Changed");
     expect(canUndo(s1.documentHistory)).toBe(true);
   });
 
-  it("CANCEL_TEXT_EDIT deactivates without saving", () => {
-    const s0 = apply(createInitialState(createTestDoc()), { type: "START_TEXT_EDIT", elementId: id0, text: "Changed", bounds: { x: 100, y: 72, width: 200, height: 20 } });
-    const s1 = apply(s0, { type: "CANCEL_TEXT_EDIT" });
+  it("COMMIT_TEXT_EDIT with same text still creates history entry", () => {
+    const s1 = apply(startEditing(), { type: "COMMIT_TEXT_EDIT", elementId: id0, text: "Hello" });
     expect(s1.textEdit.active).toBe(false);
-    expect((s1.documentHistory.present.pages[0].elements[0] as PdfText).text).toBe("Hello"); // unchanged
+    expect(canUndo(s1.documentHistory)).toBe(true);
+  });
+
+  // --- Path 2: ESC key → explicit discard ---
+
+  it("CANCEL_TEXT_EDIT deactivates without saving", () => {
+    const s1 = apply(startEditing(), { type: "CANCEL_TEXT_EDIT" });
+    expect(s1.textEdit.active).toBe(false);
+    expect((s1.documentHistory.present.pages[0].elements[0] as PdfText).text).toBe("Hello");
+    expect(canUndo(s1.documentHistory)).toBe(false);
+  });
+
+  // --- Path 3: Click outside → END_TEXT_EDIT + unmount COMMIT ---
+  //
+  // Sequence: END_TEXT_EDIT → textEdit.active becomes false → component unmounts
+  //           → cleanup dispatches COMMIT_TEXT_EDIT with elementId from closure
+
+  it("END_TEXT_EDIT deactivates without saving (UI close only)", () => {
+    const s1 = apply(startEditing(), { type: "END_TEXT_EDIT" });
+    expect(s1.textEdit.active).toBe(false);
+    expect((s1.documentHistory.present.pages[0].elements[0] as PdfText).text).toBe("Hello");
+    expect(canUndo(s1.documentHistory)).toBe(false);
+  });
+
+  it("COMMIT_TEXT_EDIT after END_TEXT_EDIT saves text (unmount cleanup path)", () => {
+    const s0 = startEditing();
+    const s1 = apply(s0, { type: "END_TEXT_EDIT" });
+    expect(s1.textEdit.active).toBe(false);
+    const s2 = apply(s1, { type: "COMMIT_TEXT_EDIT", elementId: id0, text: "Edited" });
+    expect(s2.textEdit.active).toBe(false);
+    expect((s2.documentHistory.present.pages[0].elements[0] as PdfText).text).toBe("Edited");
+    expect(canUndo(s2.documentHistory)).toBe(true);
+  });
+
+  it("COMMIT_TEXT_EDIT after CANCEL_TEXT_EDIT still saves (defensive)", () => {
+    // Even though CANCEL means discard, if the controller's cleanup fires
+    // COMMIT afterward, the reducer must not silently drop the edit.
+    const s0 = startEditing();
+    const s1 = apply(s0, { type: "CANCEL_TEXT_EDIT" });
+    const s2 = apply(s1, { type: "COMMIT_TEXT_EDIT", elementId: id0, text: "Edited" });
+    expect((s2.documentHistory.present.pages[0].elements[0] as PdfText).text).toBe("Edited");
+  });
+
+  // --- COMMIT_TEXT_EDIT is self-contained (carries elementId) ---
+
+  it("COMMIT_TEXT_EDIT works even without prior START_TEXT_EDIT", () => {
+    const s0 = createInitialState(createTestDoc());
+    expect(s0.textEdit.active).toBe(false);
+    const s1 = apply(s0, { type: "COMMIT_TEXT_EDIT", elementId: id0, text: "Direct" });
+    expect((s1.documentHistory.present.pages[0].elements[0] as PdfText).text).toBe("Direct");
+  });
+
+  it("COMMIT_TEXT_EDIT targets correct element via action.elementId", () => {
+    const s0 = startEditing(); // editing id0
+    const s1 = apply(s0, { type: "COMMIT_TEXT_EDIT", elementId: id1, text: "Changed World" });
+    // id0 unchanged, id1 updated
+    expect((s1.documentHistory.present.pages[0].elements[0] as PdfText).text).toBe("Hello");
+    expect((s1.documentHistory.present.pages[0].elements[1] as PdfText).text).toBe("Changed World");
   });
 });
 

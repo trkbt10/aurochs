@@ -143,7 +143,7 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
     [],
   );
 
-  const handleCancelTextEdit = useCallback(() => dispatch({ type: "CANCEL_TEXT_EDIT" }), []);
+  const handleEndTextEdit = useCallback(() => dispatch({ type: "END_TEXT_EDIT" }), []);
 
   const handleUpdateElement = useCallback(
     (elementId: PdfElementId, updater: (el: PdfElement) => PdfElement) => dispatch({ type: "UPDATE_ELEMENT", elementId, updater }),
@@ -356,6 +356,7 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
 
   function renderTextEditOverlay() {
     if (!state.textEdit.active || !currentPage || !textEditElement) { return undefined; }
+    const editingElementId = state.textEdit.elementId;
     return (
       <PdfTextEditController
         bounds={{ ...state.textEdit.bounds, rotation: 0 }}
@@ -363,7 +364,7 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
         pageHeight={currentPage.height}
         canvasWidth={currentPage.width}
         canvasHeight={currentPage.height}
-        onComplete={(text) => dispatch({ type: "COMMIT_TEXT_EDIT", text })}
+        onComplete={(text) => dispatch({ type: "COMMIT_TEXT_EDIT", elementId: editingElementId, text })}
         onCancel={() => dispatch({ type: "CANCEL_TEXT_EDIT" })}
       />
     );
@@ -404,7 +405,7 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
           onUpdateRotate={handleUpdateRotate}
           onEndRotate={handleEndRotate}
           onDoubleClick={handleDoubleClick}
-          onCancelTextEdit={handleCancelTextEdit}
+          onEndTextEdit={handleEndTextEdit}
         />
         </div>
         {contextMenu && (

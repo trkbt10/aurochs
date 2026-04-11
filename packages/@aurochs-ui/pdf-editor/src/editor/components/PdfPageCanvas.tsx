@@ -9,7 +9,7 @@
  * - onItemDragMove/End → global drag tracking by EditorCanvas
  * - onMarqueeSelect → multi-select via marquee
  * - showRotateHandle + onRotateStart/DragMove/DragEnd → rotation support
- * - onCanvasPointerDown → text edit cancel on background click
+ * - onCanvasPointerDown → end text edit on background click
  */
 
 import { useCallback, useMemo, useRef } from "react";
@@ -62,7 +62,7 @@ export type PdfPageCanvasProps = {
   readonly onEndRotate: () => void;
   // --- Other ---
   readonly onDoubleClick?: (elementId: PdfElementId) => void;
-  readonly onCancelTextEdit?: () => void;
+  readonly onEndTextEdit?: () => void;
 };
 
 // =============================================================================
@@ -96,7 +96,7 @@ export function PdfPageCanvas({
   onUpdateRotate,
   onEndRotate,
   onDoubleClick,
-  onCancelTextEdit,
+  onEndTextEdit,
 }: PdfPageCanvasProps) {
   const canvasRef = useRef<EditorCanvasHandle>(null);
 
@@ -113,9 +113,9 @@ export function PdfPageCanvas({
   const handleItemPointerDown = useCallback(
     (id: string, coords: CanvasPageCoords, e: React.PointerEvent) => {
       if (e.button !== 0) { return; }
-      // Cancel text editing when clicking a different element
-      if (isTextEditing && onCancelTextEdit) {
-        onCancelTextEdit();
+      // End text editing when clicking a different element
+      if (isTextEditing && onEndTextEdit) {
+        onEndTextEdit();
       }
       const elementId = id as PdfElementId;
       if (!isSelected(selection, elementId)) {
@@ -123,7 +123,7 @@ export function PdfPageCanvas({
       }
       onStartMove(coords.pageX, coords.pageY, coords.clientX, coords.clientY);
     },
-    [selection, onSelect, onStartMove, isTextEditing, onCancelTextEdit],
+    [selection, onSelect, onStartMove, isTextEditing, onEndTextEdit],
   );
 
   const handleItemDoubleClick = useCallback(
@@ -137,12 +137,12 @@ export function PdfPageCanvas({
 
   const handleCanvasPointerDown = useCallback(
     (coords: CanvasPageCoords, e: React.PointerEvent) => {
-      if (isTextEditing && onCancelTextEdit) {
-        onCancelTextEdit();
+      if (isTextEditing && onEndTextEdit) {
+        onEndTextEdit();
         e.preventDefault(); // suppress marquee
       }
     },
-    [isTextEditing, onCancelTextEdit],
+    [isTextEditing, onEndTextEdit],
   );
 
   const handleCanvasClick = useCallback(() => {
