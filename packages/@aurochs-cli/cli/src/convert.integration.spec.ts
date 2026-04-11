@@ -5,7 +5,9 @@
  */
 
 import { join } from "node:path";
-import { convertToMarkdown } from "./convert";
+import { tmpdir } from "node:os";
+import { readFile, unlink } from "node:fs/promises";
+import { convertToMarkdown, convert } from "./convert";
 
 const ROOT = join(import.meta.dirname, "../../../..");
 
@@ -65,10 +67,123 @@ describe("convertToMarkdown - PDF", () => {
   });
 });
 
+// =============================================================================
+// convert() - multi-format output
+// =============================================================================
+
+describe("convert - SVG output", () => {
+  it("converts PPTX to SVG", async () => {
+    const result = await convert(FIXTURES.pptx, { outputFormat: "svg" });
+    expect(result.inputFormat).toBe("pptx");
+    expect(result.outputFormat).toBe("svg");
+    expect(result.pages.length).toBeGreaterThanOrEqual(1);
+    for (const page of result.pages) {
+      expect(typeof page.content).toBe("string");
+      expect(page.content as string).toContain("<svg");
+    }
+  });
+
+  it("converts XLSX to SVG", async () => {
+    const result = await convert(FIXTURES.xlsx, { outputFormat: "svg" });
+    expect(result.inputFormat).toBe("xlsx");
+    expect(result.outputFormat).toBe("svg");
+    expect(result.pages.length).toBeGreaterThanOrEqual(1);
+    for (const page of result.pages) {
+      expect(typeof page.content).toBe("string");
+      expect(page.content as string).toContain("<svg");
+    }
+  });
+
+  it("converts DOCX to SVG", async () => {
+    const result = await convert(FIXTURES.docx, { outputFormat: "svg" });
+    expect(result.inputFormat).toBe("docx");
+    expect(result.outputFormat).toBe("svg");
+    expect(result.pages.length).toBeGreaterThanOrEqual(1);
+    for (const page of result.pages) {
+      expect(typeof page.content).toBe("string");
+      expect(page.content as string).toContain("<svg");
+    }
+  });
+
+  it("converts PDF to SVG", async () => {
+    const result = await convert(FIXTURES.pdf, { outputFormat: "svg" });
+    expect(result.inputFormat).toBe("pdf");
+    expect(result.outputFormat).toBe("svg");
+    expect(result.pages.length).toBeGreaterThanOrEqual(1);
+    for (const page of result.pages) {
+      expect(typeof page.content).toBe("string");
+      expect(page.content as string).toContain("<svg");
+    }
+  });
+});
+
+describe("convert - text output", () => {
+  it("converts PPTX to text", async () => {
+    const result = await convert(FIXTURES.pptx, { outputFormat: "text" });
+    expect(result.inputFormat).toBe("pptx");
+    expect(result.outputFormat).toBe("text");
+    expect(result.pages.length).toBeGreaterThanOrEqual(1);
+    for (const page of result.pages) {
+      expect(typeof page.content).toBe("string");
+    }
+  });
+
+  it("converts XLSX to text", async () => {
+    const result = await convert(FIXTURES.xlsx, { outputFormat: "text" });
+    expect(result.inputFormat).toBe("xlsx");
+    expect(result.outputFormat).toBe("text");
+    expect(result.pages.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("converts DOCX to text", async () => {
+    const result = await convert(FIXTURES.docx, { outputFormat: "text" });
+    expect(result.inputFormat).toBe("docx");
+    expect(result.outputFormat).toBe("text");
+    expect(result.pages.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("rejects PDF to text", async () => {
+    await expect(
+      convert(FIXTURES.pdf, { outputFormat: "text" }),
+    ).rejects.toThrow("Unsupported conversion: pdf → text");
+  });
+});
+
+describe("convert - output format inference from file extension", () => {
+  it("infers SVG from .svg output path with %d placeholder", async () => {
+    const ts = Date.now();
+    const outputPath = join(tmpdir(), `aurochs-test-${ts}_%d.svg`);
+
+    try {
+      const result = await convert(FIXTURES.pptx, { outputPath });
+      expect(result.outputFormat).toBe("svg");
+      // blank.pptx has 2 slides → 2 files
+      for (const page of result.pages) {
+        const filePath = join(tmpdir(), `aurochs-test-${ts}_${page.index}.svg`);
+        const content = await readFile(filePath, "utf-8");
+        expect(content).toContain("<svg");
+      }
+    } finally {
+      for (const i of Array.from({ length: 10 }, (_, k) => k + 1)) {
+        await unlink(join(tmpdir(), `aurochs-test-${ts}_${i}.svg`)).catch(() => {});
+      }
+    }
+  });
+
+  it("infers text from .txt output path", async () => {
+    const outputPath = join(tmpdir(), `aurochs-test-${Date.now()}.txt`);
+
+    try {
+      const result = await convert(FIXTURES.pptx, { outputPath });
+      expect(result.outputFormat).toBe("text");
+    } finally {
+      await unlink(outputPath).catch(() => {});
+    }
+  });
+});
+
 describe("convertToMarkdown - file output", () => {
   it("writes markdown to a file when outputPath is given", async () => {
-    const { tmpdir } = await import("node:os");
-    const { readFile, unlink } = await import("node:fs/promises");
     const outputPath = join(tmpdir(), `aurochs-test-${Date.now()}.md`);
 
     try {

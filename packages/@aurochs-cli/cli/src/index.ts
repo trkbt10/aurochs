@@ -9,9 +9,15 @@ export { createProgram as createPdfProgram } from "@aurochs-cli/pdf-cli";
 
 // Conversion API
 export {
+  convert,
   convertToMarkdown,
   getSupportedExtensions,
+  getSupportedOutputExtensions,
+  getSupportedOutputFormats,
   type InputFormat,
+  type OutputFormat,
   type ConvertOptions,
   type ConvertResult,
+  type ConvertOutput,
+  type ConvertPage,
 } from "./convert";

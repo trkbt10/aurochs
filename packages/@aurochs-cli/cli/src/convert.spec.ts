@@ -2,7 +2,13 @@
  * @file Tests for the unified conversion pipeline
  */
 
-import { getSupportedExtensions } from "./convert";
+import {
+  convert,
+  convertToMarkdown,
+  getSupportedExtensions,
+  getSupportedOutputExtensions,
+  getSupportedOutputFormats,
+} from "./convert";
 
 describe("getSupportedExtensions", () => {
   it("includes all expected extensions", () => {
@@ -21,23 +27,94 @@ describe("getSupportedExtensions", () => {
   });
 });
 
-describe("convertToMarkdown", () => {
-  // NOTE: Full integration tests with actual fixture files are in
-  // convert.integration.spec.ts. These tests verify the convert module's
-  // error handling and format detection without requiring fixture files.
+describe("getSupportedOutputExtensions", () => {
+  it("includes all expected output extensions", () => {
+    const extensions = getSupportedOutputExtensions();
+    expect(extensions).toContain(".md");
+    expect(extensions).toContain(".markdown");
+    expect(extensions).toContain(".svg");
+    expect(extensions).toContain(".txt");
+    expect(extensions).toContain(".png");
+  });
+});
 
+describe("getSupportedOutputFormats", () => {
+  it("pptx supports markdown, svg, text, png", () => {
+    const formats = getSupportedOutputFormats("pptx");
+    expect(formats).toContain("markdown");
+    expect(formats).toContain("svg");
+    expect(formats).toContain("text");
+    expect(formats).toContain("png");
+  });
+
+  it("xlsx supports markdown, svg, text, png", () => {
+    const formats = getSupportedOutputFormats("xlsx");
+    expect(formats).toContain("markdown");
+    expect(formats).toContain("svg");
+    expect(formats).toContain("text");
+    expect(formats).toContain("png");
+  });
+
+  it("docx supports markdown, svg, text, png", () => {
+    const formats = getSupportedOutputFormats("docx");
+    expect(formats).toContain("markdown");
+    expect(formats).toContain("svg");
+    expect(formats).toContain("text");
+    expect(formats).toContain("png");
+  });
+
+  it("pdf supports markdown, svg, png but NOT text", () => {
+    const formats = getSupportedOutputFormats("pdf");
+    expect(formats).toContain("markdown");
+    expect(formats).toContain("svg");
+    expect(formats).toContain("png");
+    expect(formats).not.toContain("text");
+  });
+});
+
+describe("convertToMarkdown", () => {
   it("rejects unsupported file extensions", async () => {
-    const { convertToMarkdown } = await import("./convert");
-    await expect(convertToMarkdown("file.txt")).rejects.toThrow("Unsupported file format");
+    await expect(convertToMarkdown("file.txt")).rejects.toThrow("Unsupported input format");
   });
 
   it("rejects unknown extensions with helpful message", async () => {
-    const { convertToMarkdown } = await import("./convert");
-    await expect(convertToMarkdown("image.png")).rejects.toThrow(".pptx");
+    await expect(convertToMarkdown("image.bmp")).rejects.toThrow(".pptx");
   });
 
   it("rejects files without extension", async () => {
-    const { convertToMarkdown } = await import("./convert");
-    await expect(convertToMarkdown("noextension")).rejects.toThrow("Unsupported file format");
+    await expect(convertToMarkdown("noextension")).rejects.toThrow("Unsupported input format");
+  });
+});
+
+describe("convert", () => {
+  it("rejects unsupported input format", async () => {
+    await expect(convert("file.bmp")).rejects.toThrow("Unsupported input format");
+  });
+
+  it("rejects unsupported conversion: pdf → text", async () => {
+    await expect(
+      convert("file.pdf", { outputFormat: "text" }),
+    ).rejects.toThrow("Unsupported conversion: pdf → text");
+  });
+
+  it("infers output format from output path extension", async () => {
+    // This will fail because the input file doesn't exist, but the error
+    // should NOT be about unsupported format — it should be a file read error
+    await expect(
+      convert("nonexistent.pptx", { outputPath: "output.svg" }),
+    ).rejects.not.toThrow("Unsupported");
+  });
+
+  it("defaults to markdown when no output format specified", async () => {
+    // Will fail on file read, but not on format detection
+    await expect(
+      convert("nonexistent.pptx"),
+    ).rejects.not.toThrow("Unsupported");
+  });
+
+  it("rejects unknown output extension", async () => {
+    await expect(
+      convert("file.pptx", { outputPath: "output.json" }),
+    ).rejects.toThrow('Cannot infer output format from extension ".json"');
   });
 });

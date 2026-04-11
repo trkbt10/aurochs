@@ -1,24 +1,23 @@
 /**
- * @file Unified file-to-Markdown conversion pipeline
+ * @file Unified file conversion pipeline
  *
  * Converts Office documents (PPTX, XLSX, DOCX, PDF) and their legacy
- * counterparts (PPT, XLS, DOC) to Markdown output. This is the core logic
- * behind the `aurochs -i <file>` interface.
+ * counterparts (PPT, XLS, DOC) to various output formats (Markdown, SVG, text, PNG).
  *
  * ## Architecture
  *
- * Each format has its own conversion path:
+ * Each input format has its own conversion path per output format:
  *
- * - **PPTX/PPT**: runPreview → renderSlideMermaid (shapes → markdown/mermaid)
- * - **XLSX/XLS**: runPreview → renderSheetMermaid (rows → markdown table)
- * - **DOCX/DOC**: runPreview → renderDocxMermaid (blocks → markdown)
- * - **PDF**: buildPdf (text extraction) → renderPdfPageMermaid (text items → markdown)
+ * - **Markdown**: runPreview → mermaid renderer (shapes/rows/blocks → markdown)
+ * - **SVG**: runPreview(format: "svg") → slide/sheet/section/page .svg strings
+ * - **Text**: runPreview(format: "ascii") → slide/sheet/section .ascii strings
+ * - **PNG**: SVG pipeline → @resvg/resvg-js rasterization
  *
  * Legacy formats (PPT, XLS, DOC) are transparently converted to their modern
  * counterparts by the loaders inside each CLI package.
  */
 
-import { extname } from "node:path";
+import { extname, dirname, basename, join } from "node:path";
 import * as fs from "node:fs/promises";
 
 // PPTX
@@ -37,6 +36,10 @@ import { renderDocxMermaid } from "@aurochs-renderer/docx/mermaid";
 import { buildPdf } from "@aurochs-builder/pdf";
 import type { PdfText } from "@aurochs/pdf/domain";
 import { renderPdfPageMermaid } from "@aurochs-renderer/pdf/mermaid";
+import { renderPdfSourceToSvgs } from "@aurochs-renderer/pdf";
+
+// PNG (SVG rasterization)
+import { Resvg } from "@resvg/resvg-js";
 
 // =============================================================================
 // Types
@@ -45,8 +48,11 @@ import { renderPdfPageMermaid } from "@aurochs-renderer/pdf/mermaid";
 /** Supported input format, detected from file extension. */
 export type InputFormat = "pptx" | "xlsx" | "docx" | "pdf";
 
+/** Supported output format. */
+export type OutputFormat = "markdown" | "svg" | "text" | "png";
+
 export type ConvertOptions = {
-  /** Output file path. If omitted, result is returned as string. */
+  /** Output file path. If omitted, result is returned as string (stdout). */
   readonly outputPath?: string;
 };
 
@@ -57,6 +63,27 @@ export type ConvertResult = {
   readonly format: InputFormat;
   /** Whether the file was a legacy format that was transparently converted. */
   readonly isLegacy: boolean;
+};
+
+/** Result from the generalized convert function. */
+export type ConvertOutput = {
+  /** Output pages/slides/sheets. Each element is one logical unit. */
+  readonly pages: readonly ConvertPage[];
+  /** Detected input format. */
+  readonly inputFormat: InputFormat;
+  /** Output format used. */
+  readonly outputFormat: OutputFormat;
+  /** Whether the file was a legacy format that was transparently converted. */
+  readonly isLegacy: boolean;
+};
+
+export type ConvertPage = {
+  /** 1-indexed page/slide/sheet number. */
+  readonly index: number;
+  /** Label for this page (e.g. "Slide 1", "Sheet1", "Section 1", "Page 1"). */
+  readonly label: string;
+  /** Content as string (markdown/svg/text) or Buffer (png). */
+  readonly content: string | Buffer;
 };
 
 // =============================================================================
@@ -73,87 +100,161 @@ const EXTENSION_MAP: Record<string, { format: InputFormat; legacy: boolean }> = 
   ".pdf": { format: "pdf", legacy: false },
 };
 
-function detectFormat(filePath: string): { format: InputFormat; legacy: boolean } | undefined {
+const OUTPUT_EXTENSION_MAP: Record<string, OutputFormat> = {
+  ".md": "markdown",
+  ".markdown": "markdown",
+  ".svg": "svg",
+  ".txt": "text",
+  ".png": "png",
+};
+
+/**
+ * Supported output formats per input format.
+ *
+ * If a combination is not listed here, conversion will throw an error.
+ * PDF → text is not supported because there is no ASCII renderer for PDF.
+ */
+const SUPPORTED_CONVERSIONS: Record<InputFormat, readonly OutputFormat[]> = {
+  pptx: ["markdown", "svg", "text", "png"],
+  xlsx: ["markdown", "svg", "text", "png"],
+  docx: ["markdown", "svg", "text", "png"],
+  pdf: ["markdown", "svg", "png"],
+};
+
+function detectInputFormat(filePath: string): { format: InputFormat; legacy: boolean } | undefined {
   const ext = extname(filePath).toLowerCase();
   return EXTENSION_MAP[ext];
 }
 
+function detectOutputFormat(filePath: string): OutputFormat | undefined {
+  const ext = extname(filePath).toLowerCase();
+  return OUTPUT_EXTENSION_MAP[ext];
+}
+
+function assertConversionSupported(inputFormat: InputFormat, outputFormat: OutputFormat): void {
+  const supported = SUPPORTED_CONVERSIONS[inputFormat];
+  if (!supported.includes(outputFormat)) {
+    throw new Error(
+      `Unsupported conversion: ${inputFormat} → ${outputFormat}. ` +
+        `Supported output formats for ${inputFormat}: ${supported.join(", ")}`,
+    );
+  }
+}
+
 // =============================================================================
-// PPTX/PPT → Markdown
+// Output path resolution (%d pattern, ffmpeg-style)
 // =============================================================================
 
-async function convertPptxToMarkdown(filePath: string): Promise<string> {
-  // runPreview handles .ppt → .pptx conversion transparently via its loader
+/**
+ * Resolves output paths for multi-page output using ffmpeg-style %d pattern.
+ *
+ * - `output_%d.svg` with 3 pages → `output_1.svg`, `output_2.svg`, `output_3.svg`
+ * - `output.svg` with 1 page → `output.svg`
+ * - `output.svg` with 3 pages + concatenable format → `output.svg` (single file)
+ * - `output.svg` with 3 pages + non-concatenable format → Error
+ */
+function resolveOutputPaths(
+  outputPath: string,
+  pageCount: number,
+  outputFormat: OutputFormat,
+): string[] {
+  const hasPlaceholder = outputPath.includes("%d");
+
+  if (hasPlaceholder) {
+    return Array.from({ length: pageCount }, (_, i) =>
+      outputPath.replace("%d", String(i + 1)),
+    );
+  }
+
+  if (pageCount === 1) {
+    return [outputPath];
+  }
+
+  // Multiple pages without %d placeholder
+  const concatenableFormats: OutputFormat[] = ["markdown", "text"];
+  if (concatenableFormats.includes(outputFormat)) {
+    // Concatenate into a single file
+    return [outputPath];
+  }
+
+  // SVG/PNG cannot be meaningfully concatenated into a single file
+  throw new Error(
+    `Multiple pages found (${pageCount}). Use %d placeholder for multi-page output ` +
+      `(e.g. -o ${insertPlaceholder(outputPath)})`,
+  );
+}
+
+function insertPlaceholder(outputPath: string): string {
+  const ext = extname(outputPath);
+  const base = basename(outputPath, ext);
+  const dir = dirname(outputPath);
+  return join(dir, `${base}_%d${ext}`);
+}
+
+// =============================================================================
+// Markdown converters (existing)
+// =============================================================================
+
+async function convertPptxToMarkdown(filePath: string): Promise<ConvertPage[]> {
   const result = await runPptxPreview(filePath, undefined, { width: 80 });
   if (!result.success) {
     throw new Error(`${result.error.code}: ${result.error.message}`);
   }
 
-  const sections: string[] = [];
-  for (const slide of result.data.slides) {
+  return result.data.slides.map((slide) => {
     const header = `## Slide ${slide.number}`;
     const markdown = renderSlideMermaid({ shapes: slide.shapes, slideNumber: slide.number });
-    sections.push(markdown ? `${header}\n\n${markdown}` : header);
-  }
-
-  return sections.join("\n\n");
+    return {
+      index: slide.number,
+      label: `Slide ${slide.number}`,
+      content: markdown ? `${header}\n\n${markdown}` : header,
+    };
+  });
 }
 
-// =============================================================================
-// XLSX/XLS → Markdown
-// =============================================================================
-
-async function convertXlsxToMarkdown(filePath: string): Promise<string> {
-  // runPreview handles .xls → .xlsx conversion transparently via its loader
+async function convertXlsxToMarkdown(filePath: string): Promise<ConvertPage[]> {
   const result = await runXlsxPreview(filePath, undefined, { width: 80 });
   if (!result.success) {
     throw new Error(`${result.error.code}: ${result.error.message}`);
   }
 
-  const sections: string[] = [];
-  for (const sheet of result.data.sheets) {
+  return result.data.sheets.map((sheet, i) => {
     const header = `## ${sheet.name}`;
     const markdown = renderSheetMermaid({
       name: sheet.name,
       rows: sheet.rows,
       columnCount: sheet.colCount,
     });
-    sections.push(markdown ? `${header}\n\n${markdown}` : header);
-  }
-
-  return sections.join("\n\n");
+    return {
+      index: i + 1,
+      label: sheet.name,
+      content: markdown ? `${header}\n\n${markdown}` : header,
+    };
+  });
 }
 
-// =============================================================================
-// DOCX/DOC → Markdown
-// =============================================================================
-
-async function convertDocxToMarkdown(filePath: string): Promise<string> {
-  // runPreview handles .doc → .docx conversion transparently via its loader
+async function convertDocxToMarkdown(filePath: string): Promise<ConvertPage[]> {
   const result = await runDocxPreview(filePath, undefined, { width: 80 });
   if (!result.success) {
     throw new Error(`${result.error.code}: ${result.error.message}`);
   }
 
-  const sections: string[] = [];
-  for (const section of result.data.sections) {
+  return result.data.sections.map((section) => {
     const header = `## Section ${section.number}`;
     const markdown = renderDocxMermaid({ blocks: section.blocks });
-    sections.push(markdown ? `${header}\n\n${markdown}` : header);
-  }
-
-  return sections.join("\n\n");
+    return {
+      index: section.number,
+      label: `Section ${section.number}`,
+      content: markdown ? `${header}\n\n${markdown}` : header,
+    };
+  });
 }
-
-// =============================================================================
-// PDF → Markdown
-// =============================================================================
 
 function isTextElement(element: { type: string }): element is PdfText {
   return element.type === "text";
 }
 
-async function convertPdfToMarkdown(filePath: string): Promise<string> {
+async function convertPdfToMarkdown(filePath: string): Promise<ConvertPage[]> {
   const data = new Uint8Array(await fs.readFile(filePath));
   const document = await buildPdf({
     data,
@@ -163,8 +264,7 @@ async function convertPdfToMarkdown(filePath: string): Promise<string> {
     },
   });
 
-  const sections: string[] = [];
-  for (const page of document.pages) {
+  return document.pages.map((page) => {
     const header = `## Page ${page.pageNumber}`;
     const textItems = page.elements.filter(isTextElement).map((el) => ({
       text: el.text,
@@ -183,25 +283,300 @@ async function convertPdfToMarkdown(filePath: string): Promise<string> {
       height: page.height,
       textItems,
     });
-    sections.push(markdown ? `${header}\n\n${markdown}` : header);
-  }
-
-  return sections.join("\n\n");
+    return {
+      index: page.pageNumber,
+      label: `Page ${page.pageNumber}`,
+      content: markdown ? `${header}\n\n${markdown}` : header,
+    };
+  });
 }
 
 // =============================================================================
-// Public API
+// SVG converters
 // =============================================================================
 
-const FORMAT_CONVERTERS: Record<InputFormat, (filePath: string) => Promise<string>> = {
+async function convertPptxToSvg(filePath: string): Promise<ConvertPage[]> {
+  const result = await runPptxPreview(filePath, undefined, { width: 80, format: "svg" });
+  if (!result.success) {
+    throw new Error(`${result.error.code}: ${result.error.message}`);
+  }
+
+  return result.data.slides.map((slide) => ({
+    index: slide.number,
+    label: `Slide ${slide.number}`,
+    content: slide.svg ?? "",
+  }));
+}
+
+async function convertXlsxToSvg(filePath: string): Promise<ConvertPage[]> {
+  const result = await runXlsxPreview(filePath, undefined, { width: 80, format: "svg" });
+  if (!result.success) {
+    throw new Error(`${result.error.code}: ${result.error.message}`);
+  }
+
+  return result.data.sheets.map((sheet, i) => ({
+    index: i + 1,
+    label: sheet.name,
+    content: sheet.svg ?? "",
+  }));
+}
+
+async function convertDocxToSvg(filePath: string): Promise<ConvertPage[]> {
+  const result = await runDocxPreview(filePath, undefined, { width: 80, format: "svg" });
+  if (!result.success) {
+    throw new Error(`${result.error.code}: ${result.error.message}`);
+  }
+
+  return result.data.sections.map((section) => ({
+    index: section.number,
+    label: `Section ${section.number}`,
+    content: section.svg ?? "",
+  }));
+}
+
+async function convertPdfToSvg(filePath: string): Promise<ConvertPage[]> {
+  const data = new Uint8Array(await fs.readFile(filePath));
+  const svgs = await renderPdfSourceToSvgs({ data });
+
+  return svgs.map((svg, i) => ({
+    index: i + 1,
+    label: `Page ${i + 1}`,
+    content: svg,
+  }));
+}
+
+// =============================================================================
+// Text (ASCII) converters
+// =============================================================================
+
+async function convertPptxToText(filePath: string): Promise<ConvertPage[]> {
+  const result = await runPptxPreview(filePath, undefined, { width: 80, format: "ascii" });
+  if (!result.success) {
+    throw new Error(`${result.error.code}: ${result.error.message}`);
+  }
+
+  return result.data.slides.map((slide) => ({
+    index: slide.number,
+    label: `Slide ${slide.number}`,
+    content: slide.ascii ?? "",
+  }));
+}
+
+async function convertXlsxToText(filePath: string): Promise<ConvertPage[]> {
+  const result = await runXlsxPreview(filePath, undefined, { width: 80, format: "ascii" });
+  if (!result.success) {
+    throw new Error(`${result.error.code}: ${result.error.message}`);
+  }
+
+  return result.data.sheets.map((sheet, i) => ({
+    index: i + 1,
+    label: sheet.name,
+    content: sheet.ascii ?? "",
+  }));
+}
+
+async function convertDocxToText(filePath: string): Promise<ConvertPage[]> {
+  const result = await runDocxPreview(filePath, undefined, { width: 80, format: "ascii" });
+  if (!result.success) {
+    throw new Error(`${result.error.code}: ${result.error.message}`);
+  }
+
+  return result.data.sections.map((section) => ({
+    index: section.number,
+    label: `Section ${section.number}`,
+    content: section.ascii ?? "",
+  }));
+}
+
+// =============================================================================
+// PNG converter (SVG → PNG via @resvg/resvg-js)
+// =============================================================================
+
+function svgToPngBuffer(svg: string): Buffer {
+  const resvg = new Resvg(svg, {
+    font: { loadSystemFonts: true },
+  });
+  const pngData = resvg.render();
+  return Buffer.from(pngData.asPng());
+}
+
+async function convertToPng(
+  filePath: string,
+  inputFormat: InputFormat,
+): Promise<ConvertPage[]> {
+  const svgConverter = SVG_CONVERTERS[inputFormat];
+  const svgPages = await svgConverter(filePath);
+
+  return svgPages.map((page) => ({
+    index: page.index,
+    label: page.label,
+    content: svgToPngBuffer(page.content as string),
+  }));
+}
+
+// =============================================================================
+// Converter registries
+// =============================================================================
+
+type PageConverter = (filePath: string) => Promise<ConvertPage[]>;
+
+const MARKDOWN_CONVERTERS: Record<InputFormat, PageConverter> = {
   pptx: convertPptxToMarkdown,
   xlsx: convertXlsxToMarkdown,
   docx: convertDocxToMarkdown,
   pdf: convertPdfToMarkdown,
 };
 
+const SVG_CONVERTERS: Record<InputFormat, PageConverter> = {
+  pptx: convertPptxToSvg,
+  xlsx: convertXlsxToSvg,
+  docx: convertDocxToSvg,
+  pdf: convertPdfToSvg,
+};
+
+const TEXT_CONVERTERS: Partial<Record<InputFormat, PageConverter>> = {
+  pptx: convertPptxToText,
+  xlsx: convertXlsxToText,
+  docx: convertDocxToText,
+  // pdf: not supported (no ASCII renderer)
+};
+
+// =============================================================================
+// Public API
+// =============================================================================
+
+/**
+ * Resolve the output format from explicit option, output path extension, or default.
+ *
+ * Priority:
+ * 1. Explicit `outputFormat` (highest)
+ * 2. Output file extension from `outputPath`
+ * 3. Default: "markdown" (only when no outputPath — backward-compatible stdout behavior)
+ */
+function resolveOutputFormat(
+  explicitFormat: OutputFormat | undefined,
+  outputPath: string | undefined,
+): OutputFormat {
+  if (explicitFormat) {
+    return explicitFormat;
+  }
+  if (outputPath) {
+    const inferred = detectOutputFormat(outputPath);
+    if (!inferred) {
+      const ext = extname(outputPath).toLowerCase();
+      const supportedOut = Object.keys(OUTPUT_EXTENSION_MAP).join(", ");
+      throw new Error(
+        `Cannot infer output format from extension "${ext}". Supported output extensions: ${supportedOut}`,
+      );
+    }
+    return inferred;
+  }
+  // No output path, no explicit format → stdout markdown (backward-compatible default)
+  return "markdown";
+}
+
+/**
+ * Run the appropriate converter for the given input/output format combination.
+ */
+async function runConverter(
+  inputPath: string,
+  inputFormat: InputFormat,
+  outputFormat: OutputFormat,
+): Promise<ConvertPage[]> {
+  switch (outputFormat) {
+    case "markdown":
+      return MARKDOWN_CONVERTERS[inputFormat](inputPath);
+    case "svg":
+      return SVG_CONVERTERS[inputFormat](inputPath);
+    case "text": {
+      const converter = TEXT_CONVERTERS[inputFormat];
+      if (!converter) {
+        // This shouldn't happen due to assertConversionSupported, but TypeScript needs it
+        throw new Error(`Unsupported conversion: ${inputFormat} → text`);
+      }
+      return converter(inputPath);
+    }
+    case "png":
+      return convertToPng(inputPath, inputFormat);
+  }
+}
+
+/**
+ * Write conversion results to file(s).
+ */
+async function writeOutput(
+  outputPath: string,
+  pages: readonly ConvertPage[],
+  outputFormat: OutputFormat,
+): Promise<void> {
+  const outputPaths = resolveOutputPaths(outputPath, pages.length, outputFormat);
+
+  if (outputPaths.length === 1 && pages.length > 1) {
+    // Concatenate pages into a single file (markdown/text only, validated by resolveOutputPaths)
+    const concatenated = pages.map((p) => p.content as string).join("\n\n");
+    await fs.writeFile(outputPaths[0], concatenated, "utf-8");
+  } else {
+    await Promise.all(
+      outputPaths.map(async (path, i) => {
+        const page = pages[i];
+        if (Buffer.isBuffer(page.content)) {
+          await fs.writeFile(path, page.content);
+        } else {
+          await fs.writeFile(path, page.content, "utf-8");
+        }
+      }),
+    );
+  }
+}
+
+/**
+ * Convert an Office document to the specified output format.
+ *
+ * Output format is determined by:
+ * 1. Explicit `outputFormat` option (highest priority)
+ * 2. Output file extension from `outputPath` (if provided)
+ * 3. Default: "markdown" (only when no outputPath)
+ *
+ * @throws Error if the input format is unsupported
+ * @throws Error if the input→output combination is unsupported
+ * @throws Error if the output file extension is unrecognized
+ * @throws Error if multi-page output is written to a single file without %d placeholder (for SVG/PNG)
+ */
+export async function convert(
+  inputPath: string,
+  options: {
+    readonly outputPath?: string;
+    readonly outputFormat?: OutputFormat;
+  } = {},
+): Promise<ConvertOutput> {
+  const detected = detectInputFormat(inputPath);
+  if (!detected) {
+    const ext = extname(inputPath).toLowerCase();
+    const supported = Object.keys(EXTENSION_MAP).join(", ");
+    throw new Error(`Unsupported input format: "${ext}". Supported formats: ${supported}`);
+  }
+
+  const outputFormat = resolveOutputFormat(options.outputFormat, options.outputPath);
+  assertConversionSupported(detected.format, outputFormat);
+
+  const pages = await runConverter(inputPath, detected.format, outputFormat);
+
+  if (options.outputPath) {
+    await writeOutput(options.outputPath, pages, outputFormat);
+  }
+
+  return {
+    pages,
+    inputFormat: detected.format,
+    outputFormat,
+    isLegacy: detected.legacy,
+  };
+}
+
 /**
  * Convert an Office document to Markdown.
+ *
+ * This is a convenience wrapper around `convert()` for backward compatibility.
  *
  * @param inputPath - Path to the input file (.pptx, .ppt, .xlsx, .xls, .docx, .doc, .pdf)
  * @param options - Conversion options (output path, etc.)
@@ -212,30 +587,37 @@ export async function convertToMarkdown(
   inputPath: string,
   options: ConvertOptions = {},
 ): Promise<ConvertResult> {
-  const detected = detectFormat(inputPath);
-  if (!detected) {
-    const ext = extname(inputPath).toLowerCase();
-    const supported = Object.keys(EXTENSION_MAP).join(", ");
-    throw new Error(`Unsupported file format: "${ext}". Supported formats: ${supported}`);
-  }
+  const result = await convert(inputPath, {
+    outputPath: options.outputPath,
+    outputFormat: "markdown",
+  });
 
-  const converter = FORMAT_CONVERTERS[detected.format];
-  const markdown = await converter(inputPath);
-
-  if (options.outputPath) {
-    await fs.writeFile(options.outputPath, markdown, "utf-8");
-  }
+  const markdown = result.pages.map((p) => p.content as string).join("\n\n");
 
   return {
     markdown,
-    format: detected.format,
-    isLegacy: detected.legacy,
+    format: result.inputFormat,
+    isLegacy: result.isLegacy,
   };
 }
 
 /**
- * Get the list of supported file extensions.
+ * Get the list of supported input file extensions.
  */
 export function getSupportedExtensions(): string[] {
   return Object.keys(EXTENSION_MAP);
+}
+
+/**
+ * Get the list of supported output file extensions.
+ */
+export function getSupportedOutputExtensions(): string[] {
+  return Object.keys(OUTPUT_EXTENSION_MAP);
+}
+
+/**
+ * Get the supported output formats for a given input format.
+ */
+export function getSupportedOutputFormats(inputFormat: InputFormat): readonly OutputFormat[] {
+  return SUPPORTED_CONVERSIONS[inputFormat];
 }
