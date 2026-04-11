@@ -353,7 +353,40 @@ describe("GraphicFrameRenderer", () => {
   });
 
   describe("diagram content", () => {
-    it("renders diagram without throwing", () => {
+    it("renders diagram without throwing when shapes are in ResourceStore", () => {
+      const shape = createDiagramGraphicFrame();
+      const store = createResourceStore();
+      // Register diagram shapes so DiagramContainer finds them
+      store.set("rId1", {
+        kind: "diagram",
+        source: "created",
+        data: new ArrayBuffer(0),
+        parsed: {
+          shapes: [
+            {
+              type: "sp",
+              nonVisual: { id: "diag-shape-1", name: "Diagram Shape" },
+              properties: {
+                transform: {
+                  x: px(0), y: px(0), width: px(100), height: px(50),
+                  rotation: deg(0), flipH: false, flipV: false,
+                },
+              },
+            },
+          ],
+        },
+      });
+
+      expect(() => {
+        render(
+          <TestWrapper resourceStore={store}>
+            <GraphicFrameRenderer shape={shape} width={200} height={100} shapeId="test-diagram" />
+          </TestWrapper>,
+        );
+      }).not.toThrow();
+    });
+
+    it("throws when diagram shapes are not in ResourceStore", () => {
       const shape = createDiagramGraphicFrame();
 
       expect(() => {
@@ -362,7 +395,7 @@ describe("GraphicFrameRenderer", () => {
             <GraphicFrameRenderer shape={shape} width={200} height={100} shapeId="test-diagram" />
           </TestWrapper>,
         );
-      }).not.toThrow();
+      }).toThrow("DiagramContainer: no shapes available");
     });
   });
 

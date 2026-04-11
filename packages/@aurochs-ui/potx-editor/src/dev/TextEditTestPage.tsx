@@ -70,7 +70,7 @@ function TextEditStateInspector() {
 
       <div style={fieldStyle}>
         <span style={labelStyle}>Selected shapes:</span>
-        <code style={valueStyle}>{presCtx?.state.shapeSelection.selectedIds.length ?? 0}</code>
+        <code style={valueStyle}>{presCtx?.shapeSelection.selectedIds.length ?? 0}</code>
       </div>
 
       <div style={fieldStyle}>

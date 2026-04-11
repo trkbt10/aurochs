@@ -24,8 +24,8 @@ import type { SvgResult } from "../types";
  * @returns SVG result with content flag
  */
 export function useDiagramSvg(diagramData: DiagramReference | undefined, width: number, height: number): SvgResult {
-  // Get full render context for diagram rendering
   const ctx = useRenderContext();
+  const { colorContext, options, slideSize, fontScheme, resourceStore } = ctx;
 
   return useMemo(() => {
     if (diagramData === undefined) {
@@ -40,5 +40,5 @@ export function useDiagramSvg(diagramData: DiagramReference | undefined, width: 
     });
 
     return { svg: svg ?? null, hasContent: svg !== undefined };
-  }, [diagramData, width, height, ctx]);
+  }, [diagramData, width, height, colorContext, options, slideSize, fontScheme, resourceStore]);
 }

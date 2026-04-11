@@ -143,10 +143,11 @@ function createTestDocument(): PresentationDocument {
 
 function EditorHarness() {
   const {
-    state,
     dispatch,
     activeSlide,
     primaryShape,
+    shapeSelection,
+    drag,
     textEdit: textEditState,
   } = usePresentationEditor();
 
@@ -164,8 +165,8 @@ function EditorHarness() {
 
   // Drag handlers — the fix for potx-editor
   useDragHandlers({
-    drag: state.drag,
-    selection: state.shapeSelection,
+    drag: drag,
+    selection: shapeSelection,
     slide: slide,
     width: px(width),
     height: px(height),
@@ -177,7 +178,7 @@ function EditorHarness() {
 
   // Canvas interaction handlers
   const handlers = useCanvasHandlers({
-    selectedIds: state.shapeSelection.selectedIds,
+    selectedIds: shapeSelection.selectedIds,
     onSelect: (id, addToSelection, toggle) =>
       dispatch({ type: "SELECT_SHAPE", shapeId: id as ShapeId, addToSelection, toggle }),
     onSelectMultiple: (ids) =>
@@ -225,7 +226,7 @@ function EditorHarness() {
   // Keyboard shortcuts (undo/redo, delete, copy/paste, select all, etc.) — SoT from pptx-editor
   useKeyboardShortcuts({
     dispatch,
-    selection: state.shapeSelection,
+    selection: shapeSelection,
     slide,
     primaryShape,
   });
@@ -249,8 +250,8 @@ function EditorHarness() {
       };
     };
 
-    harnessWindow.getSelectedIds = () => [...state.shapeSelection.selectedIds];
-    harnessWindow.getDragType = () => state.drag.type;
+    harnessWindow.getSelectedIds = () => [...shapeSelection.selectedIds];
+    harnessWindow.getDragType = () => drag.type;
     harnessWindow.getShapeCount = () => slide.shapes.length;
 
     harnessWindow.getTextEditState = () => ({
@@ -264,11 +265,11 @@ function EditorHarness() {
     };
 
     harnessWindow.deleteSelectedShapes = () => {
-      dispatch({ type: "DELETE_SHAPES", shapeIds: state.shapeSelection.selectedIds });
+      dispatch({ type: "DELETE_SHAPES", shapeIds: shapeSelection.selectedIds });
     };
   });
 
-  const isInteracting = state.drag.type !== "idle";
+  const isInteracting = drag.type !== "idle";
 
   return (
     <div ref={containerRef} style={{ width, height, position: "relative" }}>
@@ -279,9 +280,9 @@ function EditorHarness() {
         zoomMode={"fit" as ZoomMode}
         onZoomModeChange={() => {}}
         itemBounds={shapeRenderData as readonly EditorCanvasItemBounds[]}
-        selectedIds={state.shapeSelection.selectedIds}
-        primaryId={state.shapeSelection.primaryId}
-        drag={state.drag}
+        selectedIds={shapeSelection.selectedIds}
+        primaryId={shapeSelection.primaryId}
+        drag={drag}
         isInteracting={isInteracting}
         isTextEditing={isTextEditActive(textEditState)}
         showRotateHandle={!isTextEditActive(textEditState)}

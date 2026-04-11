@@ -1,22 +1,47 @@
 /**
  * @file Slide thumbnail preview component
  *
- * Renders a scaled SVG preview for a slide thumbnail.
- * Accepts an SVG string, parses it into a structured tree,
- * and renders as React elements within a viewBox-scaled container.
+ * Renders a slide thumbnail using the React component-based SlideRenderer.
+ * This enables shape-level memoization via ShapeRenderer's memo: when a single
+ * shape changes, only that shape re-renders — all other shapes are skipped by
+ * React's reconciliation.
+ *
+ * The previous implementation converted slides to SVG strings via renderSlideSvg(),
+ * then parsed them back into React elements. That approach forced a full rebuild
+ * of the entire SVG tree on every change, defeating React's diffing capabilities.
  */
 
 import { useMemo, type CSSProperties } from "react";
-import { parseSvgString, svgChildrenToJsx } from "@aurochs-renderer/svg";
+import type { Slide, Shape } from "@aurochs-office/pptx/domain";
+import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
+import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
+import type { ResolvedBackgroundFill } from "@aurochs-office/drawing-ml/domain/background-fill";
+import type { ResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
+import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
+import { SlideRenderer } from "@aurochs-renderer/pptx/react";
+import { prepareSlide } from "../resource/register-slide-resources";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 export type SlideThumbnailPreviewProps = {
-  readonly svg: string;
-  readonly slideWidth: number;
-  readonly slideHeight: number;
+  /** Parsed domain slide */
+  readonly slide: Slide;
+  /** Slide width in pixels */
+  readonly slideWidth: Pixels;
+  /** Slide height in pixels */
+  readonly slideHeight: Pixels;
+  /** Color context for color resolution */
+  readonly colorContext?: ColorContext;
+  /** Font scheme for theme fonts */
+  readonly fontScheme?: FontScheme;
+  /** Pre-resolved background fill */
+  readonly resolvedBackground?: ResolvedBackgroundFill;
+  /** Non-placeholder shapes from slide layout */
+  readonly layoutShapes?: readonly Shape[];
+  /** Centralized resource store */
+  readonly resourceStore?: ResourceStore;
 };
 
 // =============================================================================
@@ -43,19 +68,34 @@ const svgStyle: CSSProperties = {
 /**
  * Slide thumbnail preview component
  *
- * Renders an SVG string as a scaled preview within its container.
+ * Renders a slide using the same React component pipeline as the main editor canvas.
+ * ShapeRenderer's memo ensures only changed shapes re-render within the thumbnail.
  */
-export function SlideThumbnailPreview({ svg, slideWidth, slideHeight }: SlideThumbnailPreviewProps) {
-  // Parse SVG and extract inner content as React elements
-  const innerContent = useMemo(() => {
-    const root = parseSvgString(svg);
-    if (root === null) {
-      return null;
-    }
-    return svgChildrenToJsx(root.children, "thumb");
-  }, [svg]);
+export function SlideThumbnailPreview({
+  slide,
+  slideWidth,
+  slideHeight,
+  colorContext,
+  fontScheme,
+  resolvedBackground,
+  layoutShapes,
+  resourceStore,
+}: SlideThumbnailPreviewProps) {
+  const slideSize = useMemo(
+    () => ({ width: slideWidth, height: slideHeight }),
+    [slideWidth, slideHeight],
+  );
 
   const viewBox = `0 0 ${slideWidth} ${slideHeight}`;
+
+  // Register builder-generated resources (editor-created charts/diagrams).
+  // This is idempotent: already-registered resources are not overwritten.
+  // Same pattern as PresentationEditor's prepareSlide call for the main canvas.
+  useMemo(() => {
+    if (resourceStore) {
+      prepareSlide(slide, resourceStore);
+    }
+  }, [slide, resourceStore]);
 
   return (
     <div style={containerStyle}>
@@ -64,7 +104,15 @@ export function SlideThumbnailPreview({ svg, slideWidth, slideHeight }: SlideThu
         viewBox={viewBox}
         preserveAspectRatio="xMidYMid meet"
       >
-        {innerContent}
+        <SlideRenderer
+          slide={slide}
+          slideSize={slideSize}
+          colorContext={colorContext}
+          fontScheme={fontScheme}
+          resolvedBackground={resolvedBackground}
+          layoutShapes={layoutShapes}
+          resourceStore={resourceStore}
+        />
       </svg>
     </div>
   );

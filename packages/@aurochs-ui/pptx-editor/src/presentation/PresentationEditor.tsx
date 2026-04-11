@@ -20,7 +20,6 @@ import type { PresentationDocument, SlideWithId } from "@aurochs-office/pptx/app
 import { PresentationEditorProvider, usePresentationEditor } from "../context/presentation/PresentationEditorContext";
 import { EditorResourceProvider, useEditorResourceStore } from "@aurochs-ui/ooxml-components/drawing-ml/EditorResourceContext";
 import { SlideThumbnailPanel } from "../panels";
-import { useSlideThumbnails } from "../thumbnail/use-slide-thumbnails";
 import { SlideThumbnailPreview } from "../thumbnail/SlideThumbnailPreview";
 import { CreationToolbar, createSelectMode } from "@aurochs-ui/ooxml-components";
 import type { CreationMode } from "@aurochs-ui/ooxml-components";
@@ -171,12 +170,14 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
   });
 
   const {
-    state,
     dispatch,
     document,
     activeSlide,
     selectedShapes,
     primaryShape,
+    shapeSelection: selection,
+    drag,
+    clipboard,
     canUndo,
     canRedo,
     creationMode,
@@ -187,7 +188,6 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
   const editorResourceStore = useEditorResourceStore();
 
   const canvasRef = useRef<HTMLDivElement>(null);
-  const { shapeSelection: selection, drag } = state;
   const [zoomMode, setZoomMode] = useState<ZoomMode>("fit");
   const [displayZoom, setDisplayZoom] = useState(1);
   const [showRulers, setShowRulers] = useState(true);
@@ -217,7 +217,7 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
     selection,
     slide,
     primaryShape,
-    clipboard: state.clipboard,
+    clipboard,
   });
 
   useKeyboardShortcuts({ dispatch, selection, slide, primaryShape });
@@ -283,27 +283,32 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
         height: px(150),
       };
 
-      if (assetData.type === "image") {
-        const newShape = createPicShape(generateShapeId(), bounds, assetData.dataUrl);
-        dispatch({ type: "CREATE_SHAPE", shape: newShape });
-      } else if (assetData.type === "ole") {
-        const oleType = getOleTypeFromFile(assetData.name);
-        if (oleType) {
-          const binaryString = atob(assetData.embedDataBase64);
-          const bytes = new Uint8Array(binaryString.length);
-          for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-          }
-          const embedData = bytes.buffer;
+      switch (assetData.type) {
+        case "image": {
+          const newShape = createPicShape(generateShapeId(), bounds, assetData.dataUrl);
+          dispatch({ type: "CREATE_SHAPE", shape: newShape });
+          break;
+        }
+        case "ole": {
+          const oleType = getOleTypeFromFile(assetData.name);
+          if (oleType) {
+            const binaryString = atob(assetData.embedDataBase64);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+              bytes[i] = binaryString.charCodeAt(i);
+            }
+            const embedData = bytes.buffer;
 
-          const newFrame = createOleGraphicFrame({
-            id: generateShapeId(),
-            bounds,
-            oleType,
-            embedData,
-            filename: assetData.name,
-          });
-          dispatch({ type: "CREATE_SHAPE", shape: newFrame });
+            const newFrame = createOleGraphicFrame({
+              id: generateShapeId(),
+              bounds,
+              oleType,
+              embedData,
+              filename: assetData.name,
+            });
+            dispatch({ type: "CREATE_SHAPE", shape: newFrame });
+          }
+          break;
         }
       }
     },
@@ -643,30 +648,34 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
     },
     [
       document.slides,
-      document.presentationFile,
+      document.resourceStore,
       document.colorContext,
       document.fontScheme,
       previewSlideSize,
     ],
   );
 
-  const { getThumbnailSvg } = useSlideThumbnails({
-    slideWidth: width,
-    slideHeight: height,
-    slides: document.slides,
-  });
-
   const renderThumbnail = useCallback(
     (slideWithId: SlideWithId) => {
-      const svg = getThumbnailSvg(slideWithId);
-      return <SlideThumbnailPreview svg={svg} slideWidth={width as number} slideHeight={height as number} />;
+      return (
+        <SlideThumbnailPreview
+          slide={slideWithId.slide}
+          slideWidth={width}
+          slideHeight={height}
+          colorContext={slideWithId.colorContext ?? document.colorContext}
+          fontScheme={slideWithId.fontScheme ?? document.fontScheme}
+          resolvedBackground={slideWithId.resolvedBackground}
+          layoutShapes={slideWithId.layoutShapes}
+          resourceStore={editorResourceStore}
+        />
+      );
     },
-    [getThumbnailSvg, width, height],
+    [width, height, document.colorContext, document.fontScheme, editorResourceStore],
   );
 
   const renderContext = useMemo(
     () => {
-      if (!editorResourceStore) return undefined;
+      if (!editorResourceStore) {return undefined;}
       return createRenderContext({
         slideSize: { width, height },
         resourceStore: editorResourceStore,
@@ -682,7 +691,7 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
   // Register builder-generated resources (editor-created charts/diagrams).
   // Archive resources are already in editorResourceStore (seeded from document.resourceStore).
   useMemo(() => {
-    if (!activeSlide?.slide || !editorResourceStore) return;
+    if (!activeSlide?.slide || !editorResourceStore) {return;}
     prepareSlide(activeSlide.slide, editorResourceStore);
   }, [activeSlide?.slide, editorResourceStore]);
 
@@ -692,7 +701,7 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
   // the reducer → state change → component re-render → useChartSvg recomputes.
   const handleChartChange = useCallback(
     (resourceId: string, chart: Chart) => {
-      if (!editorResourceStore) return;
+      if (!editorResourceStore) {return;}
       // 1. Update ResourceStore with new chart data
       const existing = editorResourceStore.get(resourceId);
       editorResourceStore.set(resourceId, {
@@ -705,16 +714,16 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
       // 2. Touch the shape to trigger React re-render
       // Find the shape with this resourceId and spread its content.data
       // to create a new reference, causing the component tree to update.
-      if (!activeSlide?.slide) return;
+      if (!activeSlide?.slide) {return;}
       for (const s of activeSlide.slide.shapes) {
-        if (s.type !== "graphicFrame") continue;
-        if (s.content.type !== "chart") continue;
-        if ((s.content.data.resourceId as string) !== resourceId) continue;
+        if (s.type !== "graphicFrame") {continue;}
+        if (s.content.type !== "chart") {continue;}
+        if ((s.content.data.resourceId as string) !== resourceId) {continue;}
         dispatch({
           type: "UPDATE_SHAPE",
           shapeId: s.nonVisual.id,
           updater: (shape) => {
-            if (shape.type !== "graphicFrame" || shape.content.type !== "chart") return shape;
+            if (shape.type !== "graphicFrame" || shape.content.type !== "chart") {return shape;}
             return { ...shape, content: { ...shape.content, data: { ...shape.content.data } } };
           },
         });

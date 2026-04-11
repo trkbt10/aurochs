@@ -13,7 +13,6 @@ import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-conte
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
 import type { ResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 import { createResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
-import { createResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 
 // =============================================================================
 // Helpers

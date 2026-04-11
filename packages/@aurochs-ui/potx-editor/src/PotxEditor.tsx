@@ -258,11 +258,13 @@ function PotxEditorContent({
 
   // pptx-editor context for canvas state
   const {
-    state: presState,
     dispatch: presDispatch,
     document: presDocument,
     activeSlide,
+    activeSlideId: presActiveSlideId,
     primaryShape,
+    shapeSelection: presShapeSelection,
+    drag: presDrag,
     creationMode,
     textEdit: textEditState,
   } = usePresentationEditor();
@@ -281,15 +283,15 @@ function PotxEditorContent({
     presentationDispatch: presDispatch,
     currentDocument: presDocument,
     onLayoutShapesChange: handleLayoutShapesChange,
-    activeSlideId: presState.activeSlideId,
+    activeSlideId: presActiveSlideId,
   });
 
   // Sync layout selection to PresentationEditorContext
   useEffect(() => {
-    if (layoutEdit.activeLayoutPath && layoutEdit.activeLayoutPath !== presState.activeSlideId) {
+    if (layoutEdit.activeLayoutPath && layoutEdit.activeLayoutPath !== presActiveSlideId) {
       presDispatch({ type: "SELECT_SLIDE", slideId: layoutEdit.activeLayoutPath });
     }
-  }, [layoutEdit.activeLayoutPath, presState.activeSlideId, presDispatch]);
+  }, [layoutEdit.activeLayoutPath, presActiveSlideId, presDispatch]);
 
   // Load shapes into theme state when layout changes
   const activeLayoutData = useMemo(
@@ -319,8 +321,8 @@ function PotxEditorContent({
 
   // --- Drag handlers (move, resize, rotate with snapping) ---
   useDragHandlers({
-    drag: presState.drag,
-    selection: presState.shapeSelection,
+    drag: presDrag,
+    selection: presShapeSelection,
     slide: renderedSlide,
     width: slideSize?.width ?? px(960),
     height: slideSize?.height ?? px(540),
@@ -334,7 +336,7 @@ function PotxEditorContent({
   // --- Keyboard shortcuts (undo/redo, delete, copy/paste, select all, etc.) ---
   useKeyboardShortcuts({
     dispatch: presDispatch,
-    selection: presState.shapeSelection,
+    selection: presShapeSelection,
     slide: renderedSlide,
     primaryShape,
   });
@@ -364,7 +366,7 @@ function PotxEditorContent({
 
   // --- Canvas handlers (dispatch to PresentationEditorContext) ---
   const handlers = useCanvasHandlers({
-    selectedIds: presState.shapeSelection.selectedIds,
+    selectedIds: presShapeSelection.selectedIds,
     onSelect: (id, addToSelection, toggle) => presDispatch({ type: "SELECT_SHAPE", shapeId: id as ShapeId, addToSelection, toggle }),
     onSelectMultiple: (ids) => presDispatch({ type: "SELECT_MULTIPLE_SHAPES", shapeIds: ids as readonly ShapeId[] }),
     onClearSelection: handleClearSelection,
@@ -424,14 +426,14 @@ function PotxEditorContent({
   // --- Context menu ---
   const handleContextMenuAction = useCallback((actionId: string) => {
     if (actionId === "delete") {
-      presDispatch({ type: "DELETE_SHAPES", shapeIds: presState.shapeSelection.selectedIds });
+      presDispatch({ type: "DELETE_SHAPES", shapeIds: presShapeSelection.selectedIds });
     }
     handlers.closeContextMenu();
-  }, [presDispatch, presState.shapeSelection.selectedIds, handlers]);
+  }, [presDispatch, presShapeSelection.selectedIds, handlers]);
 
   const contextMenuItems = useMemo(
-    () => buildContextMenuItems(presState.shapeSelection.selectedIds.length > 0),
-    [presState.shapeSelection.selectedIds.length],
+    () => buildContextMenuItems(presShapeSelection.selectedIds.length > 0),
+    [presShapeSelection.selectedIds.length],
   );
 
   // === Theme callbacks (dispatch to ThemeEditorContext) ===
@@ -705,7 +707,7 @@ function PotxEditorContent({
 
   const handleViewportChange = useCallback((vp: ViewportTransform) => setViewport(vp), []);
   const enableMarquee = creationMode.type === "select" && !isTextEditing;
-  const isInteracting = presState.drag.type !== "idle";
+  const isInteracting = presDrag.type !== "idle";
   const canvasCursor = getCursorForCreationMode(creationMode, isInteracting);
 
   const floatingToolbar = useMemo(() => {
@@ -720,8 +722,8 @@ function PotxEditorContent({
       <>
         <ShapeInfoOverlay
           shapes={renderedSlide.shapes as Shape[]}
-          primaryId={presState.shapeSelection.primaryId}
-          isMultiSelection={presState.shapeSelection.selectedIds.length > 1}
+          primaryId={presShapeSelection.primaryId}
+          isMultiSelection={presShapeSelection.selectedIds.length > 1}
           onPlaceholderChange={handlePlaceholderChange}
           onDoubleClick={handleShapeDoubleClickFromOverlay}
         />
@@ -738,7 +740,7 @@ function PotxEditorContent({
         )}
       </>
     );
-  }, [renderedSlide.shapes, presState.shapeSelection, handlePlaceholderChange, handleShapeDoubleClickFromOverlay, textEditState, handleTextEditComplete, handleTextEditCancel, handleTextEditOverlayPointerDown, editedColorContext, fontScheme, widthNum, heightNum]);
+  }, [renderedSlide.shapes, presShapeSelection, handlePlaceholderChange, handleShapeDoubleClickFromOverlay, textEditState, handleTextEditComplete, handleTextEditCancel, handleTextEditOverlayPointerDown, editedColorContext, fontScheme, widthNum, heightNum]);
 
   const centerContent = useMemo(() => {
     if (!activeLayoutData) {
@@ -751,9 +753,9 @@ function PotxEditorContent({
           zoomMode={"fit" as ZoomMode} onZoomModeChange={() => {}} onViewportChange={handleViewportChange}
           cursor={canvasCursor}
           itemBounds={shapeRenderData as readonly EditorCanvasItemBounds[]}
-          selectedIds={presState.shapeSelection.selectedIds}
-          primaryId={presState.shapeSelection.primaryId}
-          drag={presState.drag}
+          selectedIds={presShapeSelection.selectedIds}
+          primaryId={presShapeSelection.primaryId}
+          drag={presDrag}
           isInteracting={isInteracting} isTextEditing={isTextEditing}
           showRotateHandle={!isTextEditing}
           onItemPointerDown={handlers.handleItemPointerDown}
@@ -791,7 +793,7 @@ function PotxEditorContent({
         )}
       </CanvasArea>
     );
-  }, [activeLayoutData, floatingToolbar, widthNum, heightNum, shapeRenderData, presState.shapeSelection, presState.drag, handlers, slideSizeForRenderer, editedColorContext, fontScheme, enableMarquee, isInteracting, isTextEditing, canvasCursor, creationRect, viewport.scale, handleViewportChange, contextMenuItems, handleContextMenuAction, shapeInfoOverlay, renderedSlide, editingShapeId]);
+  }, [activeLayoutData, floatingToolbar, widthNum, heightNum, shapeRenderData, presShapeSelection, presDrag, handlers, slideSizeForRenderer, editedColorContext, fontScheme, enableMarquee, isInteracting, isTextEditing, canvasCursor, creationRect, viewport.scale, handleViewportChange, contextMenuItems, handleContextMenuAction, shapeInfoOverlay, renderedSlide, editingShapeId]);
 
   const panels = useMemo<EditorPanel[]>(() => [
     { id: "layouts", content: leftPanel, position: "left", size: "180px" },

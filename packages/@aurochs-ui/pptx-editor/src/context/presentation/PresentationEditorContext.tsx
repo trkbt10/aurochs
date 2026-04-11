@@ -2,6 +2,11 @@
  * @file Presentation editor context
  *
  * Provides presentation editor state and actions to child components.
+ *
+ * The context value is memoized with fine-grained dependencies: each
+ * sub-field of the reducer state is tracked individually so that changes
+ * to one field (e.g. drag preview) do not invalidate the context for
+ * consumers that only use other fields (e.g. document, activeSlide).
  */
 
 import { createContext, useContext, useReducer, useMemo, type ReactNode } from "react";
@@ -67,42 +72,48 @@ export function PresentationEditorProvider({
 
   const canUndo = state.documentHistory.past.length > 0;
   const canRedo = state.documentHistory.future.length > 0;
-  const creationMode = state.creationMode;
-  const textEdit = state.textEdit;
-  const pathDraw = state.pathDraw;
-  const pathEdit = state.pathEdit;
 
   // Slide operations hook (async operations)
   const slideOperations = useSlideOperations(state, dispatch);
 
+  // Memoize context value with fine-grained dependencies.
+  // Each sub-field is listed individually so that a change to one
+  // (e.g. drag preview updating state.drag) does not cause consumers
+  // that only read document/activeSlide to re-render.
   const value = useMemo<PresentationEditorContextValue>(
     () => ({
-      state,
       dispatch,
       document,
       activeSlide,
+      activeSlideId: state.activeSlideId,
       selectedShapes,
       primaryShape,
+      shapeSelection: state.shapeSelection,
+      drag: state.drag,
+      clipboard: state.clipboard,
       canUndo,
       canRedo,
-      creationMode,
-      textEdit,
-      pathDraw,
-      pathEdit,
+      creationMode: state.creationMode,
+      textEdit: state.textEdit,
+      pathDraw: state.pathDraw,
+      pathEdit: state.pathEdit,
       slideOperations,
     }),
     [
-      state,
       document,
       activeSlide,
+      state.activeSlideId,
       selectedShapes,
       primaryShape,
+      state.shapeSelection,
+      state.drag,
+      state.clipboard,
       canUndo,
       canRedo,
-      creationMode,
-      textEdit,
-      pathDraw,
-      pathEdit,
+      state.creationMode,
+      state.textEdit,
+      state.pathDraw,
+      state.pathEdit,
       slideOperations,
     ],
   );

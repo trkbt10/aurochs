@@ -5,11 +5,7 @@
  *
  * Components:
  * - ThumbnailItem: Individual slide thumbnail with drag-and-drop
- * - SlideThumbnailPreview: SVG preview component
- *
- * Hooks & utilities:
- * - useSlideThumbnails: Hook for cached thumbnail generation
- * - cache utilities: Thumbnail cache management
+ * - SlideThumbnailPreview: React component-based slide preview
  *
  * Note: SlideThumbnailPanel (the panel container) is in panels/ as it's a consumer.
  *
@@ -23,6 +19,3 @@ export type { ThumbnailItemProps, DragState, ContextMenuState } from "./types";
 // Rendering components
 export { SlideThumbnailPreview } from "./SlideThumbnailPreview";
 export type { SlideThumbnailPreviewProps } from "./SlideThumbnailPreview";
-
-export { useSlideThumbnails } from "./use-slide-thumbnails";
-export type { UseSlideThumbnailsOptions, SlideThumbnailRenderer } from "./use-slide-thumbnails";

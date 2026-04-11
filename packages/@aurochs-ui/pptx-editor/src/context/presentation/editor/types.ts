@@ -325,16 +325,23 @@ export type PresentationEditorAction =
  * Presentation editor context value
  */
 export type PresentationEditorContextValue = {
-  readonly state: PresentationEditorState;
   readonly dispatch: (action: PresentationEditorAction) => void;
   /** Current document (from history.present) */
   readonly document: PresentationDocument;
   /** Active slide */
   readonly activeSlide: SlideWithId | undefined;
+  /** Currently active slide ID */
+  readonly activeSlideId: SlideId | undefined;
   /** Selected shapes in active slide */
   readonly selectedShapes: readonly Shape[];
   /** Primary selected shape */
   readonly primaryShape: Shape | undefined;
+  /** Shape selection state */
+  readonly shapeSelection: SelectionState;
+  /** Current drag operation */
+  readonly drag: DragState;
+  /** Clipboard content */
+  readonly clipboard: ClipboardContent | undefined;
   /** Can undo */
   readonly canUndo: boolean;
   /** Can redo */

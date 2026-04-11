@@ -5,7 +5,7 @@
  * Enables child components to access color resolution, resources, and options.
  */
 
-import { createContext, useContext, useMemo, type ReactNode } from "react";
+import { createContext, useContext, useMemo, useRef, type ReactNode } from "react";
 import type { SlideSize, Shape } from "@aurochs-office/pptx/domain";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
@@ -82,10 +82,10 @@ export function RenderProvider({
 
   const resolvedOptions = useMemo<RenderOptions>(() => ({ ...DEFAULT_RENDER_OPTIONS, ...options }), [options]);
 
-  const warnings = useMemo(
-    () => createWarningCollector(),
-    [slideSize, resolvedResourceStore, resolvedColorContext, resolvedOptions, resolvedBackground, fontScheme, layoutShapes],
-  );
+  // WarningCollector is a stateless accumulator used only for logging.
+  // It does not affect React rendering output. Using a ref prevents it
+  // from invalidating the context on every prop change.
+  const warningsRef = useRef(createWarningCollector());
 
   const ctx = useMemo<ReactRenderContext>(
     () => ({
@@ -93,7 +93,7 @@ export function RenderProvider({
       options: resolvedOptions,
       colorContext: resolvedColorContext,
       resourceStore: resolvedResourceStore,
-      warnings,
+      warnings: warningsRef.current,
       resolvedBackground,
       fontScheme,
       layoutShapes,
@@ -104,7 +104,6 @@ export function RenderProvider({
       resolvedOptions,
       resolvedColorContext,
       resolvedResourceStore,
-      warnings,
       fontScheme,
       resolvedBackground,
       layoutShapes,
@@ -112,18 +111,18 @@ export function RenderProvider({
     ],
   );
 
-  // Create DrawingML warnings adapter
+  // DrawingML warnings adapter — stable because warningsRef is stable.
   const drawingMLWarnings = useMemo<WarningCollector>(
     () => ({
       warn: (message, context) => {
-        warnings.add({
+        warningsRef.current.add({
           type: "unsupported",
           message,
           details: context ? JSON.stringify(context) : undefined,
         });
       },
     }),
-    [warnings],
+    [],
   );
 
   // Create resource resolver for DrawingML

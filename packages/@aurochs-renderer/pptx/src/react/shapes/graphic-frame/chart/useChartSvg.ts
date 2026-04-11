@@ -10,7 +10,7 @@
 import { useMemo, type ReactNode } from "react";
 import type { Chart } from "@aurochs-office/chart/domain";
 import type { ChartReference } from "@aurochs-office/pptx/domain";
-import { useRenderContext, useRenderResourceStore } from "../../../context";
+import { useRenderContext } from "../../../context";
 import { renderChart } from "../../../../chart";
 import { parseSvgString, svgChildrenToJsx } from "@aurochs-renderer/svg";
 
@@ -40,7 +40,7 @@ export type ChartSvgResult = {
  */
 export function useChartSvg(chartData: ChartReference | undefined, width: number, height: number): ChartSvgResult {
   const ctx = useRenderContext();
-  const resourceStore = useRenderResourceStore();
+  const { colorContext, options, slideSize, fontScheme, resourceStore, warnings } = ctx;
 
   return useMemo(() => {
     if (chartData === undefined) {
@@ -51,7 +51,7 @@ export function useChartSvg(chartData: ChartReference | undefined, width: number
     const chart = entry?.parsed;
 
     if (chart === undefined) {
-      ctx.warnings.add({
+      warnings.add({
         type: "fallback",
         message: `Chart not in ResourceStore: ${chartData.resourceId}`,
       });
@@ -71,5 +71,5 @@ export function useChartSvg(chartData: ChartReference | undefined, width: number
 
     const content = svgChildrenToJsx(root.children, "chart");
     return { content, hasContent: true };
-  }, [chartData, width, height, ctx, resourceStore]);
+  }, [chartData, width, height, colorContext, options, slideSize, fontScheme, resourceStore]);
 }
