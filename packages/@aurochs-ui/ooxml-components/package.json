@@ -13,6 +13,7 @@
     "@aurochs-office/pptx": "workspace:*",
     "@aurochs-renderer/drawing-ml": "workspace:*",
     "@aurochs-renderer/pptx": "workspace:*",
+    "@aurochs-renderer/svg": "workspace:*",
     "@aurochs-office/xlsx": "workspace:*",
     "@aurochs-ui/chart-editor": "workspace:*",
     "@aurochs-ui/color-editor": "workspace:*",
@@ -30,7 +31,7 @@
   },
   "scripts": {
     "lint": "eslint src",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit --rootDir ../../..",
     "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-ui/ooxml-components/src'"
   },
   "exports": {

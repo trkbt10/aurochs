@@ -12,8 +12,7 @@ import type { Chart } from "@aurochs-office/chart/domain";
 import type { ChartReference } from "@aurochs-office/pptx/domain";
 import { useRenderContext, useRenderResourceStore } from "../../../context";
 import { renderChart } from "../../../../chart";
-import { parseSvgString } from "../../../../svg/svg-parse";
-import { svgChildrenToJsx } from "../../../../svg/svg-to-jsx";
+import { parseSvgString, svgChildrenToJsx } from "@aurochs-renderer/svg";
 
 /**
  * Result of chart rendering hook.

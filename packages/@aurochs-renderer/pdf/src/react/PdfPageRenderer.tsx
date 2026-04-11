@@ -2,7 +2,8 @@
 import type { CSSProperties } from "react";
 import { useMemo } from "react";
 import type { PdfPage } from "@aurochs/pdf/domain";
-import { renderPdfPageToSvgNode, svgElementToJsx } from "../svg";
+import { renderPdfPageToSvgNode } from "../svg";
+import { svgElementToJsx } from "@aurochs-renderer/svg";
 import type { PdfSvgRenderOptions } from "../types";
 
 export type PdfPageRendererProps = Readonly<{

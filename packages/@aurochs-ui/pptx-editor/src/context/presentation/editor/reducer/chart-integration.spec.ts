@@ -10,7 +10,7 @@
 
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import type { Chart } from "@aurochs-office/chart/domain";
-import type { GraphicFrame } from "@aurochs-office/pptx/domain";
+import type { GraphicFrame, ChartReference } from "@aurochs-office/pptx/domain";
 import { createResourceStore, type ResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 import { createDefaultChart } from "@aurochs-builder/chart";
 import {
@@ -26,6 +26,13 @@ function dispatch(state: PresentationEditorState, action: PresentationEditorActi
 
 function getActiveSlide(state: PresentationEditorState) {
   return state.documentHistory.present.slides.find((s) => s.id === state.activeSlideId);
+}
+
+function getChartData(shape: GraphicFrame): ChartReference {
+  if (shape.content.type !== "chart") {
+    throw new Error(`Expected chart content, got ${shape.content.type}`);
+  }
+  return shape.content.data;
 }
 
 describe("Chart editing integration", () => {
@@ -47,8 +54,9 @@ describe("Chart editing integration", () => {
     const shape = slide!.slide.shapes[0] as GraphicFrame;
     expect(shape.type).toBe("graphicFrame");
     expect(shape.content.type).toBe("chart");
-    expect(shape.content.data.resourceId).toBeDefined();
-    expect(shape.content.data.chartType).toBe("barChart");
+    const chartData = getChartData(shape);
+    expect(chartData.resourceId).toBeDefined();
+    expect(chartData.chartType).toBe("barChart");
   });
 
   it("createDefaultChart produces a valid Chart for editor-created charts", () => {
@@ -92,7 +100,7 @@ describe("Chart editing integration", () => {
 
     const slide = getActiveSlide(state)!;
     const shape = slide.slide.shapes[0] as GraphicFrame;
-    const resourceId = shape.content.data.resourceId as string;
+    const resourceId = getChartData(shape).resourceId as string;
 
     // 2. Populate ResourceStore with default chart
     const store = createResourceStore();
@@ -137,7 +145,7 @@ describe("Chart editing integration", () => {
     const updatedSlide = getActiveSlide(state)!;
     const updatedShape = updatedSlide.slide.shapes[0] as GraphicFrame;
     expect(updatedShape).not.toBe(shape); // New reference
-    expect(updatedShape.content.data.resourceId).toBe(resourceId); // Same resource ID
+    expect(getChartData(updatedShape).resourceId).toBe(resourceId); // Same resource ID
 
     // 5. Verify ResourceStore returns edited chart (what useChartSvg would read)
     const entry = store.get<Chart>(resourceId);
@@ -169,18 +177,19 @@ describe("Chart editing integration", () => {
 
       const slide = getActiveSlide(state)!;
       const shape = slide.slide.shapes[0] as GraphicFrame;
-      expect(shape.content.data.chartType).toBe(ecma);
+      const chartRef = getChartData(shape);
+      expect(chartRef.chartType).toBe(ecma);
 
       // Populate store and verify readable
       const chart = createDefaultChart(ecma);
-      store.set(shape.content.data.resourceId as string, {
+      store.set(chartRef.resourceId as string, {
         kind: "chart",
         source: "created",
         data: new ArrayBuffer(0),
         parsed: chart,
       });
 
-      const entry = store.get<Chart>(shape.content.data.resourceId as string);
+      const entry = store.get<Chart>(chartRef.resourceId as string);
       expect(entry!.parsed!.plotArea.charts[0].type).toBe(ecma);
     }
   });

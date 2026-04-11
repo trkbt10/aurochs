@@ -21,7 +21,7 @@ import type { RenderWarning } from "@aurochs-office/ooxml";
 import { createDefsCollector } from "./slide-utils";
 import { renderResolvedBackgroundSvg, renderBackgroundSvg } from "./slide-background";
 import { renderShapesSvg } from "./slide-shapes";
-import { parseSvgString } from "./svg-parse";
+import { parseSvgString } from "@aurochs-renderer/svg";
 
 // =============================================================================
 // Types

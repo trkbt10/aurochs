@@ -8,6 +8,7 @@
     "@aurochs/pdf": "workspace:*",
     "@aurochs-builder/pdf": "workspace:*",
     "@aurochs-renderer/pdf": "workspace:*",
+    "@aurochs-renderer/svg": "workspace:*",
     "@aurochs-ui/editor-core": "workspace:*",
     "@aurochs-ui/editor-controls": "workspace:*",
     "@aurochs-ui/ui-components": "workspace:*",

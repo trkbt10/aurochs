@@ -9,7 +9,8 @@ import { useState, useCallback, useEffect, type CSSProperties, type ReactNode } 
 import { colorTokens, spacingTokens, shadowTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { buildPdf } from "@aurochs-builder/pdf";
 import type { PdfDocument } from "@aurochs/pdf";
-import { renderPdfPageToSvgNode, svgElementToJsx } from "@aurochs-renderer/pdf/svg";
+import { renderPdfPageToSvgNode } from "@aurochs-renderer/pdf/svg";
+import { svgElementToJsx } from "@aurochs-renderer/svg";
 import {
   ViewerContainer,
   ViewerContent,

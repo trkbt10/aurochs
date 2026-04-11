@@ -10,8 +10,7 @@
  */
 
 import { forwardRef, memo, useMemo, type CSSProperties } from "react";
-import { parseSvgString, normalizeSvgForScaling } from "../svg/svg-parse";
-import { svgElementToJsx, svgChildrenToJsx } from "../svg/svg-to-jsx";
+import { parseSvgString, normalizeSvgForScaling, svgElementToJsx, svgChildrenToJsx } from "@aurochs-renderer/svg";
 
 // =============================================================================
 // Types

@@ -13,8 +13,7 @@ import { px } from "@aurochs-office/drawing-ml/domain/units";
 import { useRenderContext } from "../../../context";
 import { renderTableSvg } from "../../../../svg/table";
 import { createDefsCollector } from "../../../../svg/slide-utils";
-import { parseSvgFragment } from "../../../../svg/svg-parse";
-import { svgChildrenToJsx } from "../../../../svg/svg-to-jsx";
+import { parseSvgFragment, svgChildrenToJsx } from "@aurochs-renderer/svg";
 
 /**
  * Result of table rendering hook.

@@ -6,7 +6,9 @@
   "sideEffects": false,
   "dependencies": {
     "@aurochs-office/drawing-ml": "workspace:*",
-    "@aurochs-office/ooxml": "workspace:*",
+    "@aurochs-office/ooxml": "workspace:*"
+  },
+  "devDependencies": {
     "@aurochs-office/pptx": "workspace:*",
     "@aurochs-renderer/pptx": "workspace:*"
   },

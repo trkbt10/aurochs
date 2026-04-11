@@ -8,8 +8,7 @@
 
 import { useMemo, type CSSProperties, type ReactNode } from "react";
 import type { SlideSize, Shape, SpShape } from "@aurochs-office/pptx/domain";
-import { parseSvgString } from "@aurochs-renderer/pptx/svg/svg-parse";
-import { svgChildrenToJsx } from "@aurochs-renderer/pptx/svg/svg-to-jsx";
+import { parseSvgString, svgChildrenToJsx } from "@aurochs-renderer/svg";
 
 // =============================================================================
 // Types

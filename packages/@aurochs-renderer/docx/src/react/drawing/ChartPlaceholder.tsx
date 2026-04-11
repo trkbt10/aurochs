@@ -7,11 +7,12 @@
  * @see ECMA-376 Part 1, Section 21.2 (DrawingML - Charts)
  */
 
-import { memo, useMemo } from "react";
+import { memo, useMemo, type ReactNode } from "react";
 import type { DocxChart } from "@aurochs-office/docx/domain/drawing";
 import type { Chart } from "@aurochs-office/chart/domain";
 import type { DocxDrawingRenderContext } from "../context";
 import { renderChart, hasChartData } from "../../chart";
+import { parseSvgString, svgChildrenToJsx } from "@aurochs-renderer/svg";
 
 // =============================================================================
 // Types
@@ -42,18 +43,6 @@ export type ChartPlaceholderProps = {
 // =============================================================================
 
 /**
- * Extract SVG content from rendered chart HTML.
- */
-function extractSvgContent(html: string): string | null {
-  // Remove the outer <svg> wrapper if present
-  const svgMatch = /<svg[^>]*>([\s\S]*)<\/svg>/i.exec(html);
-  if (svgMatch !== null) {
-    return svgMatch[1];
-  }
-  return html;
-}
-
-/**
  * Renders a chart placeholder as SVG elements.
  *
  * When chartData and renderContext are provided, renders the actual chart.
@@ -69,7 +58,7 @@ function ChartPlaceholderBase({
   renderContext,
 }: ChartPlaceholderProps) {
   // Try to render actual chart if data is provided
-  const chartSvg = useMemo(() => {
+  const chartContent: ReactNode[] | null = useMemo(() => {
     if (chartData === undefined || renderContext === undefined) {
       return null;
     }
@@ -79,13 +68,22 @@ function ChartPlaceholderBase({
     }
 
     try {
-      const svg = renderChart({
+      const svgString = renderChart({
         chart: chartData,
         width,
         height,
         ctx: renderContext,
       });
-      return extractSvgContent(svg);
+
+      // Parse SVG string into XmlElement tree and extract inner children.
+      // The outer <svg> wrapper is discarded because we render within
+      // an existing SVG context (inside a <g> element).
+      const root = parseSvgString(svgString);
+      if (root === null) {
+        return null;
+      }
+
+      return svgChildrenToJsx(root.children, "chart");
     } catch (error: unknown) {
       // Fall back to placeholder on error
       // Log error in development for debugging
@@ -97,14 +95,15 @@ function ChartPlaceholderBase({
   }, [chartData, renderContext, width, height]);
 
   // Render actual chart if available
-  if (chartSvg !== null) {
+  if (chartContent !== null) {
     return (
       <g
         transform={`translate(${x}, ${y})`}
         data-element-type="chart"
         data-chart-rid={chart.rId}
-        dangerouslySetInnerHTML={{ __html: chartSvg }}
-      />
+      >
+        {chartContent}
+      </g>
     );
   }
   const fontSize = Math.min(12, width / 10);

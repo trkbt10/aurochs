@@ -12,6 +12,7 @@
     "@aurochs-office/drawing-ml": "workspace:*",
     "@aurochs-office/pptx": "workspace:*",
     "@aurochs-renderer/pptx": "workspace:*",
+    "@aurochs-renderer/svg": "workspace:*",
     "@aurochs-ui/chart-editor": "workspace:*",
     "@aurochs-ui/color-editor": "workspace:*",
     "@aurochs-ui/diagram-editor": "workspace:*",

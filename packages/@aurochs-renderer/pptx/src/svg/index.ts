@@ -48,9 +48,6 @@ export { renderGeometryPath, renderGeometryPathWithMarkers } from "./geometry";
 // SVG utilities
 export { extractSvgContent } from "./svg-utils";
 
-// SVG parsing (string → structured tree)
-export { parseSvgString, parseSvgInnerContent, parseSvgFragment, normalizeSvgForScaling } from "./svg-parse";
-
 // Slide rendering
 export type { SvgRenderResult } from "./slide-render";
 export { renderSlideToSvg } from "./slide-render";
@@ -58,8 +55,5 @@ export { renderSlideToSvg } from "./slide-render";
 // Low-level (domain-based) slide renderer and helpers used by editor
 export type { SvgSlideRenderResult, SvgSlideNodeRenderResult, SvgSlideContentRenderResult } from "./renderer";
 export { renderSlideSvg, renderSlideSvgNode, createEmptySlideSvg } from "./renderer";
-
-// SVG → React element conversion
-export { svgElementToJsx, svgChildrenToJsx } from "./svg-to-jsx";
 
 export { getShapeTransform, isShapeHidden } from "./slide-utils";

@@ -1,22 +1,10 @@
 /**
- * @file Convert XML/SVG element trees to React elements.
+ * @file Convert XmlElement trees to React elements.
  *
- * Produces React element trees from the structured XmlElement
- * representation (the canonical SVG node type in @aurochs/xml).
- *
- * React's createElement handles text escaping, and the resulting
- * element tree participates in React reconciliation (structural diffing).
- *
- * ## Attribute mapping
- *
- * SVG attributes use kebab-case (`clip-path`, `font-size`, `stroke-width`),
- * while React requires camelCase JSX props (`clipPath`, `fontSize`, `strokeWidth`).
- * Namespaced attributes also need mapping (`xml:space` → `xmlSpace`,
- * `xlink:href` → `xlinkHref`).
- *
- * The mapping table covers SVG presentation attributes used by the PPTX renderer.
- * Unknown attributes pass through unchanged (React will warn in development
- * mode if they are invalid).
+ * Bridges the gap between SVG attribute naming (kebab-case, namespaced)
+ * and React JSX prop naming (camelCase). By producing a proper React
+ * element tree the SVG content participates in reconciliation and
+ * escaping, removing the need for dangerouslySetInnerHTML.
  */
 
 import { createElement, type ReactNode } from "react";

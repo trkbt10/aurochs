@@ -6,7 +6,7 @@
 
 import type { XlsxWorksheet, XlsxRow } from "@aurochs-office/xlsx/domain/workbook";
 import type { Cell, CellValue } from "@aurochs-office/xlsx/domain/cell/types";
-import { colIdx, rowIdx } from "@aurochs-office/xlsx/domain/types";
+import { colIdx, rowIdx, sheetId } from "@aurochs-office/xlsx/domain/types";
 import { detectChartDataLayout, countCategories, countSeries } from "./layout-detection";
 
 // =============================================================================
@@ -66,7 +66,7 @@ function createWorksheet(rows: XlsxRow[]): XlsxWorksheet {
   return {
     dateSystem: "1900",
     name: "Sheet1",
-    sheetId: 1,
+    sheetId: sheetId(1),
     state: "visible",
     rows,
     xmlPath: "xl/worksheets/sheet1.xml",

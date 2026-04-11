@@ -14,6 +14,7 @@
     "@aurochs-renderer/chart": "workspace:*",
     "@aurochs-renderer/diagram": "workspace:*",
     "@aurochs-renderer/drawing-ml": "workspace:*",
+    "@aurochs-renderer/svg": "workspace:*",
     "@aurochs-office/ooxml": "workspace:*",
     "@aurochs-office/pptx": "workspace:*",
     "@aurochs/xml": "workspace:*"

@@ -7,8 +7,7 @@
  */
 
 import { useMemo, type CSSProperties } from "react";
-import { parseSvgString } from "@aurochs-renderer/pptx/svg/svg-parse";
-import { svgChildrenToJsx } from "@aurochs-renderer/pptx/svg/svg-to-jsx";
+import { parseSvgString, svgChildrenToJsx } from "@aurochs-renderer/svg";
 
 // =============================================================================
 // Types

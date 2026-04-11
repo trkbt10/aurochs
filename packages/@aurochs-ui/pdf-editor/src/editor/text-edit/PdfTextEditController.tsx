@@ -21,7 +21,8 @@ import {
   type ChangeEvent,
 } from "react";
 import type { PdfText } from "@aurochs/pdf";
-import { renderPdfElementToSvgNodes, svgFragmentToJsx, resolveTextFontMetrics, resolveTextAnchor } from "@aurochs-renderer/pdf/svg";
+import { renderPdfElementToSvgNodes, resolveTextFontMetrics, resolveTextAnchor } from "@aurochs-renderer/pdf/svg";
+import { svgChildrenToJsx as svgFragmentToJsx } from "@aurochs-renderer/svg";
 import {
   coordinatesToCursorPosition,
   cursorPositionToCoordinates,

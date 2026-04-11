@@ -12,8 +12,8 @@ import {
   slideEditorReducer,
   createSlideEditorState,
   findShapeById,
-  type ResizeHandlePosition,
 } from "@aurochs-ui/pptx-slide-canvas";
+import type { ResizeHandlePosition } from "@aurochs-ui/editor-core/drag-state";
 import { PropertyPanel } from "@aurochs-ui/pptx-editor";
 import { withUpdatedTransform } from "@aurochs-ui/ooxml-components/pptx-transform";
 import { clientToCanvasCoords } from "@aurochs-ui/editor-core/geometry";

@@ -1,11 +1,9 @@
 /**
  * @file SVG string parser
  *
- * Parses SVG strings into structured XmlElement trees using @aurochs/xml.
- * SVG is valid XML, so the existing XML parser handles it directly.
- *
- * This replaces ad-hoc string manipulation (regex-based width/height
- * replacement, content extraction) with structured tree operations.
+ * Parses SVG strings into XmlElement trees so that downstream code can
+ * inspect, transform, or convert them to React elements without
+ * operating on raw strings.
  */
 
 import type { XmlElement, XmlNode } from "@aurochs/xml";
@@ -40,7 +38,12 @@ export function parseSvgString(svg: string): XmlElement | null {
       }
     }
     return null;
-  } catch {
+  } catch (error: unknown) {
+    // Invalid SVG/XML — return null to signal parse failure.
+    // Log in development for debugging malformed SVG inputs.
+    if (process.env.NODE_ENV === "development") {
+      console.warn("parseSvgString: invalid SVG/XML", error);
+    }
     return null;
   }
 }
@@ -48,9 +51,9 @@ export function parseSvgString(svg: string): XmlElement | null {
 /**
  * Parse an SVG string and return the inner children of the root `<svg>` element.
  *
- * This is the structured equivalent of `extractSvgContent()` — instead of
- * extracting inner HTML as a string via regex, it returns the parsed child
- * nodes that can be converted to JSX via `svgChildrenToJsx()`.
+ * Useful when the caller already has an outer SVG context (e.g. a `<g>`)
+ * and only needs the content inside the `<svg>` wrapper. The returned
+ * nodes can be passed to `svgChildrenToJsx()` for React rendering.
  *
  * @param svg - Complete SVG document string
  * @returns Array of child XmlNodes inside the `<svg>` root, or empty array
@@ -99,7 +102,10 @@ export function parseSvgFragment(fragment: string): readonly XmlNode[] {
       }
     }
     return [];
-  } catch {
+  } catch (error: unknown) {
+    if (process.env.NODE_ENV === "development") {
+      console.warn("parseSvgFragment: invalid SVG/XML fragment", error);
+    }
     return [];
   }
 }
@@ -107,11 +113,10 @@ export function parseSvgFragment(fragment: string): readonly XmlNode[] {
 /**
  * Modify SVG root element attributes for responsive scaling.
  *
- * This is the structured replacement for the regex-based `normalizeForScaling()`.
- * Instead of string manipulation, it works on the parsed tree directly:
- * - Sets `width` and `height` to "100%"
- * - Ensures `preserveAspectRatio` is set (defaults to "xMidYMid meet")
- * - Preserves the existing `viewBox` for proper aspect ratio
+ * Returns a new XmlElement with:
+ * - `width` and `height` set to "100%" so the SVG fills its container
+ * - `preserveAspectRatio` set to "xMidYMid meet" (if not already present)
+ * - The existing `viewBox` preserved for correct aspect ratio
  *
  * @param element - The root `<svg>` XmlElement
  * @returns A new XmlElement with normalized attributes
