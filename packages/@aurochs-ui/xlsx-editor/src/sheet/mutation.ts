@@ -5,7 +5,7 @@
  */
 
 import type { XlsxWorkbook, XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
-import { sheetId as createSheetId } from "@aurochs-office/xlsx/domain/types";
+import { sheetId as createSheetId, type SheetId } from "@aurochs-office/xlsx/domain/types";
 
 function assertNonEmptyString(value: string, label: string): void {
   if (value.trim().length === 0) {
@@ -46,12 +46,12 @@ function moveElementInArray<T>(array: readonly T[], fromIndex: number, toIndex: 
   return insertAt(withoutElement, toIndex, element);
 }
 
-function cloneWorksheetForDuplicate(worksheet: XlsxWorksheet, name: string, id: number): XlsxWorksheet {
+function cloneWorksheetForDuplicate(worksheet: XlsxWorksheet, name: string, id: SheetId): XlsxWorksheet {
   const cloned = structuredClone(worksheet);
   return {
     ...cloned,
     name,
-    sheetId: createSheetId(id),
+    sheetId: id,
     xmlPath: `xl/worksheets/sheet${id}.xml`,
   };
 }
@@ -147,16 +147,16 @@ export function duplicateSheet(workbook: XlsxWorkbook, sheetIndex: number): Xlsx
 /**
  * Create an empty worksheet
  */
-export function createEmptyWorksheet(name: string, sheetId: number): XlsxWorksheet;
+export function createEmptyWorksheet(name: string, sheetId: SheetId): XlsxWorksheet;
 export function createEmptyWorksheet(
   dateSystem: XlsxWorkbook["dateSystem"],
   name: string,
-  sheetId: number,
+  sheetId: SheetId,
 ): XlsxWorksheet;
 export function createEmptyWorksheet(
   nameOrDateSystem: string,
-  sheetIdOrName: number | string,
-  sheetIdMaybe?: number,
+  sheetIdOrName: SheetId | string,
+  sheetIdMaybe?: SheetId,
 ): XlsxWorksheet {
   const usesExplicitDateSystem = typeof sheetIdOrName === "string";
   const dateSystem = usesExplicitDateSystem ? (nameOrDateSystem as XlsxWorkbook["dateSystem"]) : "1900";
@@ -172,7 +172,7 @@ export function createEmptyWorksheet(
   return {
     dateSystem,
     name,
-    sheetId: createSheetId(sheetId),
+    sheetId,
     state: "visible",
     rows: [],
     xmlPath: `xl/worksheets/sheet${sheetId}.xml`,
@@ -182,9 +182,9 @@ export function createEmptyWorksheet(
 /**
  * Get the next available sheet ID
  */
-export function getNextSheetId(workbook: XlsxWorkbook): number {
-  const maxSheetId = workbook.sheets.reduce((max, sheet) => (sheet.sheetId > max ? sheet.sheetId : max), 0);
-  return maxSheetId + 1;
+export function getNextSheetId(workbook: XlsxWorkbook): SheetId {
+  const maxSheetId = workbook.sheets.reduce<number>((max, sheet) => (sheet.sheetId > max ? sheet.sheetId : max), 0);
+  return createSheetId(maxSheetId + 1);
 }
 
 /**

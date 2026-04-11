@@ -38,4 +38,9 @@ export {
   schemeColorNameOptions,
   schemeColorValueOptions,
   patternPresetOptions,
+  GradientStopEditor,
+  GradientStopsEditor,
+  createDefaultGradientStops,
+  type GradientStopEditorProps,
+  type GradientStopsEditorProps,
 } from "./color";
