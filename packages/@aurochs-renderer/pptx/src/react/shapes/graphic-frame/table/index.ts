@@ -3,4 +3,4 @@
  */
 
 export { TableContent, type TableContentProps } from "./TableContent";
-export { useTableSvg } from "./useTableSvg";
+export { useTableSvg, type TableSvgResult } from "./useTableSvg";

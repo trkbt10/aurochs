@@ -6,9 +6,10 @@
  * falling back to wireframe rendering when SVG is not available.
  */
 
-import { useMemo, type CSSProperties } from "react";
+import { useMemo, type CSSProperties, type ReactNode } from "react";
 import type { SlideSize, Shape, SpShape } from "@aurochs-office/pptx/domain";
-import { extractSvgContent } from "@aurochs-renderer/pptx/svg";
+import { parseSvgString } from "@aurochs-renderer/pptx/svg/svg-parse";
+import { svgChildrenToJsx } from "@aurochs-renderer/pptx/svg/svg-to-jsx";
 
 // =============================================================================
 // Types
@@ -87,17 +88,28 @@ export function LayoutThumbnail({ shapes, svg, slideSize, width = 80, height, cl
 
   const viewBox = `0 0 ${slideSize.width} ${slideSize.height}`;
 
-  // Use SVG from renderSlideSvg when available
-  if (svg) {
-    const innerContent = extractSvgContent(svg);
+  // Parse SVG string into React elements when available
+  const svgContent = useMemo(() => {
+    if (!svg) {
+      return null;
+    }
+    const root = parseSvgString(svg);
+    if (root === null) {
+      return null;
+    }
+    return svgChildrenToJsx(root.children, "layout");
+  }, [svg]);
+
+  if (svgContent) {
     return (
       <div className={className} style={{ ...containerStyle, width, height: finalHeight, ...style }}>
         <svg
           style={svgStyle}
           viewBox={viewBox}
           preserveAspectRatio="xMidYMid meet"
-          dangerouslySetInnerHTML={{ __html: innerContent }}
-        />
+        >
+          {svgContent}
+        </svg>
       </div>
     );
   }
@@ -107,7 +119,7 @@ export function LayoutThumbnail({ shapes, svg, slideSize, width = 80, height, cl
 }
 
 // =============================================================================
-// Wireframe Fallback
+// Wireframe Fallback (renders React elements directly)
 // =============================================================================
 
 function LayoutThumbnailWireframe({
@@ -138,43 +150,64 @@ function LayoutThumbnailWireframe({
         height="100%"
         viewBox={viewBox}
         preserveAspectRatio="xMidYMid meet"
-        dangerouslySetInnerHTML={{ __html: svgContent }}
-      />
+      >
+        {svgContent}
+      </svg>
     </div>
   );
 }
 
 /**
- * Render shapes as wireframe boxes.
+ * Render shapes as wireframe boxes (React elements).
  */
-function renderWireframeLayout(shapes: readonly Shape[], slideSize: SlideSize): string {
+function renderWireframeLayout(shapes: readonly Shape[], slideSize: SlideSize): ReactNode {
   const w = slideSize.width as number;
   const h = slideSize.height as number;
 
-  const background = `<rect width="${w}" height="${h}" fill="#fafafa"/>`;
+  const background = <rect key="bg" width={w} height={h} fill="#fafafa" />;
 
   if (shapes.length === 0) {
     const textSize = Math.min(w, h) * 0.06;
-    const emptyLabel = `<text x="${w / 2}" y="${h / 2}" font-size="${textSize}" fill="#ccc" text-anchor="middle" dominant-baseline="middle">Empty</text>`;
-    return background + emptyLabel;
+    return (
+      <>
+        {background}
+        <text
+          key="empty"
+          x={w / 2}
+          y={h / 2}
+          fontSize={textSize}
+          fill="#ccc"
+          textAnchor="middle"
+          dominantBaseline="middle"
+        >
+          Empty
+        </text>
+      </>
+    );
   }
 
-  const shapesSvg = shapes.map((shape) => renderShapeWireframe(shape, slideSize)).join("");
-  return background + shapesSvg;
+  const shapeElements = shapes.map((shape, i) => renderShapeWireframe(shape, slideSize, i));
+
+  return (
+    <>
+      {background}
+      {shapeElements}
+    </>
+  );
 }
 
 /**
  * Render a single shape as wireframe.
  */
-function renderShapeWireframe(shape: Shape, slideSize: SlideSize): string {
+function renderShapeWireframe(shape: Shape, slideSize: SlideSize, index: number): ReactNode {
   if (shape.type !== "sp") {
-    return "";
+    return null;
   }
 
   const sp = shape as SpShape;
   const xform = sp.properties?.transform;
   if (!xform) {
-    return "";
+    return null;
   }
 
   const x = xform.x as number;
@@ -185,7 +218,7 @@ function renderShapeWireframe(shape: Shape, slideSize: SlideSize): string {
   // Skip very small shapes (like slide numbers)
   const minSize = Math.min(slideSize.width as number, slideSize.height as number) * 0.05;
   if (w < minSize && h < minSize) {
-    return "";
+    return null;
   }
 
   // Get placeholder type
@@ -195,26 +228,35 @@ function renderShapeWireframe(shape: Shape, slideSize: SlideSize): string {
   // Choose color based on placeholder type
   const color = getPlaceholderColor(phType);
   const textSize = Math.min(w, h) * 0.25;
-
-  const rect = `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${color}10" stroke="${color}" stroke-width="2" stroke-dasharray="4,2"/>`;
-  const labelSvg = buildLabelSvg({ label, textSize, cx: x + w / 2, cy: y + h / 2, color });
-  return rect + labelSvg;
-}
-
-type LabelSvgInput = {
-  readonly label: string;
-  readonly textSize: number;
-  readonly cx: number;
-  readonly cy: number;
-  readonly color: string;
-};
-
-function buildLabelSvg({ label, textSize, cx, cy, color }: LabelSvgInput): string {
   const showLabel = label && textSize > 8;
-  if (!showLabel) {
-    return "";
-  }
-  return `<text x="${cx}" y="${cy}" font-size="${textSize}" fill="${color}" text-anchor="middle" dominant-baseline="middle" font-family="system-ui">${label}</text>`;
+
+  return (
+    <g key={`shape-${index}`}>
+      <rect
+        x={x}
+        y={y}
+        width={w}
+        height={h}
+        fill={`${color}10`}
+        stroke={color}
+        strokeWidth={2}
+        strokeDasharray="4,2"
+      />
+      {showLabel && (
+        <text
+          x={x + w / 2}
+          y={y + h / 2}
+          fontSize={textSize}
+          fill={color}
+          textAnchor="middle"
+          dominantBaseline="middle"
+          fontFamily="system-ui"
+        >
+          {label}
+        </text>
+      )}
+    </g>
+  );
 }
 
 /**

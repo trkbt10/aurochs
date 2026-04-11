@@ -169,10 +169,13 @@ export function PdfPageCanvas({
 
   const handleItemDragMove = useCallback(
     (coords: CanvasPageCoords) => {
-      if (drag.type === "pending-move") {
-        onConfirmMove(coords.clientX, coords.clientY);
-      } else if (drag.type === "move") {
-        onUpdateMove(coords.pageX, coords.pageY);
+      switch (drag.type) {
+        case "pending-move":
+          onConfirmMove(coords.clientX, coords.clientY);
+          break;
+        case "move":
+          onUpdateMove(coords.pageX, coords.pageY);
+          break;
       }
     },
     [drag.type, onConfirmMove, onUpdateMove],

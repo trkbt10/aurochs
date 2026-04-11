@@ -3,10 +3,15 @@
  *
  * Unified component for rendering SVG content with proper memoization.
  * Supports both full SVG strings and inner content extraction.
+ *
+ * SVG strings are parsed into XmlElement trees (via @aurochs/xml) and
+ * converted to React elements. Attribute manipulation (responsive sizing,
+ * preserveAspectRatio) operates on the structured tree, not on strings.
  */
 
 import { forwardRef, memo, useMemo, type CSSProperties } from "react";
-import { extractSvgContent } from "../svg/svg-utils";
+import { parseSvgString, normalizeSvgForScaling } from "../svg/svg-parse";
+import { svgElementToJsx, svgChildrenToJsx } from "../svg/svg-to-jsx";
 
 // =============================================================================
 // Types
@@ -15,7 +20,7 @@ import { extractSvgContent } from "../svg/svg-utils";
 /**
  * Render mode for SVG content
  *
- * - `full`: Render the complete SVG as-is using dangerouslySetInnerHTML
+ * - `full`: Render the complete SVG element with responsive scaling
  * - `inner`: Extract inner content and wrap in a new SVG with proper viewBox
  */
 export type SvgRenderMode = "full" | "inner";
@@ -37,34 +42,6 @@ export type SvgContentRendererProps = {
   /** Additional style for container */
   readonly style?: CSSProperties;
 };
-
-// =============================================================================
-// Helpers
-// =============================================================================
-
-/**
- * Normalize SVG for responsive scaling.
- *
- * Replaces fixed pixel width/height with 100% and ensures preserveAspectRatio
- * is set. This allows SVGs with viewBox to scale properly within their container.
- *
- * @param svg - Original SVG string
- * @returns SVG string with normalized dimensions
- */
-function normalizeForScaling(svg: string): string {
-  // Replace width="..." and height="..." (numeric or percentage) with 100%
-  // Preserves viewBox which controls the actual aspect ratio
-  const result = { value: svg.replace(/(<svg[^>]*)\s+width=["'][^"']*["']/, "$1 width=\"100%\"") };
-  result.value = result.value.replace(/(<svg[^>]*)\s+height=["'][^"']*["']/, "$1 height=\"100%\"");
-
-  // Add preserveAspectRatio if not present (defaults to xMidYMid meet per SVG spec,
-  // but being explicit ensures consistent behavior)
-  if (!result.value.includes("preserveAspectRatio")) {
-    result.value = result.value.replace(/(<svg[^>]*)>/, '$1 preserveAspectRatio="xMidYMid meet">');
-  }
-
-  return result.value;
-}
 
 // =============================================================================
 // Styles
@@ -94,12 +71,11 @@ const svgStyle: CSSProperties = {
  * Renders an SVG string efficiently with proper memoization to prevent
  * unnecessary re-renders. Supports two modes:
  *
- * - **full**: Renders the complete SVG as-is, wrapped in a container div.
- *   Use this for main slide display where the SVG already has correct dimensions.
+ * - **full**: Parses the SVG, normalizes dimensions to 100% for responsive
+ *   scaling, and converts to React elements.
  *
- * - **inner**: Extracts the inner content from the SVG and wraps it in a new
- *   SVG element with the provided viewBox dimensions. Use this for thumbnails
- *   or scaled previews.
+ * - **inner**: Parses the SVG, extracts the children of the root `<svg>`
+ *   element, and wraps them in a new `<svg>` with the provided viewBox.
  *
  * @example
  * ```tsx
@@ -129,21 +105,25 @@ export const SvgContentRenderer = memo(
     { svg, width, height, mode = "inner", className, style },
     ref,
   ) {
-    // Memoize normalized SVG for full mode (responsive scaling)
-    const normalizedSvg = useMemo(() => {
-      if (mode !== "full") {
-        return null;
-      }
-      return normalizeForScaling(svg);
-    }, [svg, mode]);
+    // Parse SVG string into structured tree (shared between both modes)
+    const parsedSvg = useMemo(() => parseSvgString(svg), [svg]);
 
-    // Memoize content extraction for inner mode
-    const innerContent = useMemo(() => {
-      if (mode === "full") {
+    // Full mode: normalize for responsive scaling, then convert to JSX
+    const fullContent = useMemo(() => {
+      if (mode !== "full" || parsedSvg === null) {
         return null;
       }
-      return extractSvgContent(svg);
-    }, [svg, mode]);
+      const normalized = normalizeSvgForScaling(parsedSvg);
+      return svgElementToJsx(normalized);
+    }, [parsedSvg, mode]);
+
+    // Inner mode: extract children and convert to JSX
+    const innerContent = useMemo(() => {
+      if (mode === "full" || parsedSvg === null) {
+        return null;
+      }
+      return svgChildrenToJsx(parsedSvg.children);
+    }, [parsedSvg, mode]);
 
     // Memoize viewBox for inner mode
     const viewBox = useMemo(() => `0 0 ${width} ${height}`, [width, height]);
@@ -156,12 +136,9 @@ export const SvgContentRenderer = memo(
 
     if (mode === "full") {
       return (
-        <div
-          ref={ref}
-          className={className}
-          style={mergedStyle}
-          dangerouslySetInnerHTML={{ __html: normalizedSvg ?? "" }}
-        />
+        <div ref={ref} className={className} style={mergedStyle}>
+          {fullContent}
+        </div>
       );
     }
 
@@ -171,8 +148,9 @@ export const SvgContentRenderer = memo(
           style={svgStyle}
           viewBox={viewBox}
           preserveAspectRatio="xMidYMid meet"
-          dangerouslySetInnerHTML={{ __html: innerContent ?? "" }}
-        />
+        >
+          {innerContent}
+        </svg>
       </div>
     );
   }),

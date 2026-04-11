@@ -31,7 +31,8 @@ export type ContentProps<T> = {
 };
 
 /**
- * Result type for SVG generation hooks
+ * @deprecated Use ChartSvgResult or TableSvgResult from the respective hooks.
+ * This type existed when hooks returned SVG strings. They now return ReactNode.
  */
 export type SvgResult = {
   readonly svg: string | null;

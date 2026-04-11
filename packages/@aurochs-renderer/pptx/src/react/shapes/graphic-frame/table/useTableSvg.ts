@@ -1,34 +1,46 @@
 /**
- * @file Hook for table SVG generation
+ * @file Hook for table rendering
  *
- * Encapsulates context extraction and SVG generation for tables.
- * This hook ensures correct parameters are always passed to renderTableSvg,
- * preventing bugs like passing the wrong context properties.
+ * Encapsulates context extraction, table SVG generation, and conversion
+ * to React elements. Returns ReactNode ready for rendering.
  *
  * @see ECMA-376 Part 1, Section 21.1.3 - DrawingML Tables
  */
 
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import type { Table } from "@aurochs-office/pptx/domain/table/types";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import { useRenderContext } from "../../../context";
 import { renderTableSvg } from "../../../../svg/table";
 import { createDefsCollector } from "../../../../svg/slide-utils";
-import type { SvgResult } from "../types";
+import { parseSvgFragment } from "../../../../svg/svg-parse";
+import { svgChildrenToJsx } from "../../../../svg/svg-to-jsx";
 
 /**
- * Hook to render table to SVG string.
+ * Result of table rendering hook.
  *
- * Encapsulates context extraction to prevent incorrect parameter passing.
- * The bug that occurred was passing renderCtx instead of renderCtx.colorContext
- * to renderTableSvg - this hook ensures correct context is always used.
+ * Returns React nodes (not SVG strings) — the content is already
+ * parsed and converted to React elements within the hook.
+ */
+export type TableSvgResult = {
+  /** React elements representing the table SVG content, or null if no content */
+  readonly content: ReactNode;
+  /** Whether table content was successfully generated */
+  readonly hasContent: boolean;
+};
+
+/**
+ * Hook to render table as React elements.
+ *
+ * Renders the table domain object via the SVG table renderer and
+ * returns the result as React elements.
  *
  * @param table - Table domain object (may be undefined)
  * @param width - Width in pixels
  * @param height - Height in pixels
- * @returns SVG result with content flag
+ * @returns React elements and content flag
  */
-export function useTableSvg(table: Table | undefined, width: number, height: number): SvgResult {
+export function useTableSvg(table: Table | undefined, width: number, height: number): TableSvgResult {
   const renderCtx = useRenderContext();
   const {
     colorContext,
@@ -44,11 +56,11 @@ export function useTableSvg(table: Table | undefined, width: number, height: num
 
   return useMemo(() => {
     if (table === undefined) {
-      return { svg: null, hasContent: false };
+      return { content: null, hasContent: false };
     }
 
     const defsCollector = createDefsCollector();
-    const svg = renderTableSvg({
+    const tableSvgString = renderTableSvg({
       table,
       frameWidth: px(width),
       frameHeight: px(height),
@@ -58,7 +70,14 @@ export function useTableSvg(table: Table | undefined, width: number, height: num
       tableStyles: renderCtx.tableStyles,
     });
 
-    return { svg: defsCollector.toDefsElement() + svg, hasContent: true };
+    // renderTableSvg returns an SVG fragment (no outer <svg> wrapper).
+    // defsCollector.toDefsElement() returns <defs>...</defs> or "".
+    // Together they form a multi-root SVG fragment.
+    const combinedFragment = defsCollector.toDefsElement() + tableSvgString;
+
+    const nodes = parseSvgFragment(combinedFragment);
+    const content = svgChildrenToJsx(nodes, "table");
+    return { content, hasContent: true };
   }, [
     table,
     width,

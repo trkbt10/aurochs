@@ -3,4 +3,3 @@
  */
 
 export { Placeholder, type PlaceholderProps } from "./Placeholder";
-export { SvgInnerHtml, type SvgInnerHtmlProps } from "./SvgInnerHtml";

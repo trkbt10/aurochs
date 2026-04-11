@@ -44,6 +44,14 @@
       "types": "./src/svg/index.ts",
       "default": "./src/svg/index.ts"
     },
+    "./svg/svg-parse": {
+      "types": "./src/svg/svg-parse.ts",
+      "default": "./src/svg/svg-parse.ts"
+    },
+    "./svg/svg-to-jsx": {
+      "types": "./src/svg/svg-to-jsx.tsx",
+      "default": "./src/svg/svg-to-jsx.tsx"
+    },
     "./svg-viewport": {
       "types": "./src/svg-viewport/index.ts",
       "default": "./src/svg-viewport/index.ts"

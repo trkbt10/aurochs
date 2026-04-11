@@ -3,4 +3,4 @@
  */
 
 export { ChartContent, type ChartContentProps } from "./ChartContent";
-export { useChartSvg } from "./useChartSvg";
+export { useChartSvg, type ChartSvgResult } from "./useChartSvg";

@@ -292,7 +292,7 @@ describe("GraphicFrameRenderer", () => {
         </TestWrapper>,
       );
 
-      // Table should be rendered via dangerouslySetInnerHTML
+      // Table SVG is parsed and rendered as React elements
       // Look for rect elements (table cells render as rects)
       const rects = container.querySelectorAll("rect");
       expect(rects.length).toBeGreaterThan(0);
