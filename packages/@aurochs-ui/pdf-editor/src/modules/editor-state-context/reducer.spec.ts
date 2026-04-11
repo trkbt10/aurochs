@@ -313,7 +313,10 @@ describe("reducer: TextEdit", () => {
     expect(canUndo(s1.documentHistory)).toBe(true);
   });
 
-  it("COMMIT_TEXT_EDIT with same text still creates history entry", () => {
+  it("COMMIT_TEXT_EDIT with same text still creates history entry (component guards this)", () => {
+    // The reducer always pushes history when COMMIT_TEXT_EDIT arrives.
+    // PdfTextEditController is responsible for not dispatching COMMIT
+    // when text is unchanged — the reducer is intentionally simple here.
     const s1 = apply(startEditing(), { type: "COMMIT_TEXT_EDIT", elementId: id0, text: "Hello" });
     expect(s1.textEdit.active).toBe(false);
     expect(canUndo(s1.documentHistory)).toBe(true);

@@ -412,7 +412,11 @@ export function PdfTextEditController({
       } else if (e.key === "Enter" && !e.shiftKey && !composition.isComposing) {
         e.preventDefault();
         finishedRef.current = true;
-        onComplete(currentText);
+        if (currentText !== initialTextRef.current) {
+          onComplete(currentText);
+        } else {
+          onCancel();
+        }
       }
     },
     [composition.isComposing, onCancel, onComplete, currentText],

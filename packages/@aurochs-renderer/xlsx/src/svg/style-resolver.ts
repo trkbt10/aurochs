@@ -28,7 +28,7 @@ import type {
   ResolvedBorderEdge,
   XlsxRenderOptions,
 } from "./types";
-import { resolveXlsxColor, getDefaultFontColor, getDefaultBorderColor } from "./color-resolver";
+import { resolveXlsxColor, getDefaultFontColor, getDefaultBorderColor } from "@aurochs-office/xlsx/domain/style/color-resolver";
 
 // =============================================================================
 // Default Styles

@@ -29,7 +29,7 @@ export { createXlsxSvgRenderContext, createEmptyXlsxSvgRenderContext, getColorSc
 export { calculateSheetLayout, columnIndexToLetter, cellRefFromIndices } from "./layout";
 
 // Color resolution
-export { resolveXlsxColor, getDefaultFontColor, getDefaultBackgroundColor, getDefaultBorderColor } from "./color-resolver";
+export { resolveXlsxColor, getDefaultFontColor, getDefaultBackgroundColor, getDefaultBorderColor } from "@aurochs-office/xlsx/domain/style/color-resolver";
 
 // Style resolution
 export { resolveCellStyle, createStyleCache, createDefaultFont, createDefaultFill, createDefaultBorder, createDefaultStyle } from "./style-resolver";
