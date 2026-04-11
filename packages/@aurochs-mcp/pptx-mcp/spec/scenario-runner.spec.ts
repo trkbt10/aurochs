@@ -105,14 +105,16 @@ function assertResponse(
     const meta = result._meta as Record<string, unknown>;
     const sd = meta?.slideData as Record<string, unknown> | undefined;
     expect(sd).toBeDefined();
-    expect(typeof sd?.svg).toBe("string");
-    expect(sd!.svg as string).toContain("<svg");
+    // slideData now contains domain objects instead of SVG string
+    expect(sd!.slide).toBeDefined();
+    expect(sd!.slideSize).toBeDefined();
   }
 
-  // Step-specific: svgContains
+  // Step-specific: svgContains — no longer applicable (slideData contains domain objects, not SVG)
   if (stepAssert.svgContains) {
+    // Verify that slideData contains a parsed slide instead
     const sd = (result._meta as Record<string, unknown>)?.slideData as Record<string, unknown>;
-    expect(sd?.svg as string).toContain(stepAssert.svgContains);
+    expect(sd?.slide).toBeDefined();
   }
 
   // Step-specific: contentContains

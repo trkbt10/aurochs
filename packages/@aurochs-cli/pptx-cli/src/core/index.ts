@@ -7,6 +7,7 @@ export {
   type PresentationSession,
   type SessionInfo,
   type RenderResult,
+  type SlideRenderData,
   type AddSlideResult,
   type RemoveSlideResult,
   type ReorderSlideResult,

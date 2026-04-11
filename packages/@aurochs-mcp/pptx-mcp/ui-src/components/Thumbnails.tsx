@@ -4,11 +4,8 @@
 
 import type { ReactElement } from "react";
 import { tokens } from "@aurochs-ui/ui-components";
-
-type SlideData = {
-  readonly number: number;
-  readonly svg?: string;
-};
+import { SlideRendererSvg } from "@aurochs-renderer/pptx/react";
+import type { SlideData } from "../App";
 
 type ThumbnailsProps = {
   readonly slides: readonly SlideData[];
@@ -21,12 +18,17 @@ type ThumbnailsProps = {
 };
 
 function renderThumbnailContent(slide: SlideData): ReactElement {
-  if (slide.svg) {
+  if (slide.slide && slide.slideSize) {
     return (
-      <div
+      <SlideRendererSvg
+        slide={slide.slide}
+        slideSize={slide.slideSize}
+        colorContext={slide.colorContext}
+        fontScheme={slide.fontScheme}
+        options={slide.options}
+        resolvedBackground={slide.resolvedBackground}
+        layoutShapes={slide.layoutShapes}
         style={{ width: "100%", height: "100%" }}
-        // biome-ignore lint: SVG content is from trusted source (server-rendered)
-        dangerouslySetInnerHTML={{ __html: slide.svg }}
       />
     );
   }

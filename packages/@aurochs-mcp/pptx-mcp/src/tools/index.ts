@@ -320,6 +320,13 @@ function presentationMeta(session: PresentationSession): { slideCount: number; w
   return { slideCount: info.slideCount, width: info.width, height: info.height };
 }
 
+import type { SlideRenderData } from "@aurochs-cli/pptx-cli/core";
+
+function buildSlideData(session: PresentationSession, slideNumber: number): { number: number } & SlideRenderData {
+  const data = session.renderSlideData(slideNumber);
+  return { number: slideNumber, ...data };
+}
+
 // =============================================================================
 // Tool Registration
 // =============================================================================
@@ -463,7 +470,6 @@ export function registerTools(server: McpServer, session: PresentationSession): 
       const { source_slide_number, insert_at } = args;
       try {
         const result = await session.duplicateSlide(source_slide_number, insert_at);
-        const svg = session.renderSlide(result.newSlideNumber);
         return {
           content: [
             {
@@ -479,7 +485,7 @@ export function registerTools(server: McpServer, session: PresentationSession): 
           _meta: {
             ui: { resourceUri: "ui://pptx/preview" },
             presentation: presentationMeta(session),
-            slideData: { number: result.newSlideNumber, svg: svg.svg },
+            slideData: buildSlideData(session, result.newSlideNumber),
           },
         };
       } catch (err) {
@@ -501,13 +507,12 @@ export function registerTools(server: McpServer, session: PresentationSession): 
           slide_number,
           coerceShapeSpec(shape as Record<string, unknown>) as ShapeSpec,
         );
-        const svg = session.renderSlide(slide_number);
         return {
           content: [{ type: "text" as const, text: JSON.stringify({ success: true, shape_id: result.shapeId }) }],
           _meta: {
             ui: { resourceUri: "ui://pptx/preview" },
             presentation: presentationMeta(session),
-            slideData: { number: slide_number, svg: svg.svg },
+            slideData: buildSlideData(session, slide_number),
           },
         };
       } catch (err) {
@@ -526,13 +531,12 @@ export function registerTools(server: McpServer, session: PresentationSession): 
       const { slide_number, text, x, y, width, height } = args;
       try {
         const result = await session.addShape(slide_number, { type: "rect", x, y, width, height, text });
-        const svg = session.renderSlide(slide_number);
         return {
           content: [{ type: "text" as const, text: JSON.stringify({ success: true, shape_id: result.shapeId }) }],
           _meta: {
             ui: { resourceUri: "ui://pptx/preview" },
             presentation: presentationMeta(session),
-            slideData: { number: slide_number, svg: svg.svg },
+            slideData: buildSlideData(session, slide_number),
           },
         };
       } catch (err) {
@@ -560,13 +564,12 @@ export function registerTools(server: McpServer, session: PresentationSession): 
           height: image.height,
         };
         const result = await session.addImage(slide_number, spec);
-        const svg = session.renderSlide(slide_number);
         return {
           content: [{ type: "text" as const, text: JSON.stringify({ success: true, image_id: result.imageId }) }],
           _meta: {
             ui: { resourceUri: "ui://pptx/preview" },
             presentation: presentationMeta(session),
-            slideData: { number: slide_number, svg: svg.svg },
+            slideData: buildSlideData(session, slide_number),
           },
         };
       } catch (err) {
@@ -598,7 +601,6 @@ export function registerTools(server: McpServer, session: PresentationSession): 
           lineWidth: connector.line_width,
         };
         const result = await session.addConnector(slide_number, spec);
-        const svg = session.renderSlide(slide_number);
         return {
           content: [
             { type: "text" as const, text: JSON.stringify({ success: true, connector_id: result.connectorId }) },
@@ -606,7 +608,7 @@ export function registerTools(server: McpServer, session: PresentationSession): 
           _meta: {
             ui: { resourceUri: "ui://pptx/preview" },
             presentation: presentationMeta(session),
-            slideData: { number: slide_number, svg: svg.svg },
+            slideData: buildSlideData(session, slide_number),
           },
         };
       } catch (err) {
@@ -625,13 +627,12 @@ export function registerTools(server: McpServer, session: PresentationSession): 
       const { slide_number, table } = args;
       try {
         const result = await session.addTable(slide_number, table);
-        const svg = session.renderSlide(slide_number);
         return {
           content: [{ type: "text" as const, text: JSON.stringify({ success: true, table_id: result.tableId }) }],
           _meta: {
             ui: { resourceUri: "ui://pptx/preview" },
             presentation: presentationMeta(session),
-            slideData: { number: slide_number, svg: svg.svg },
+            slideData: buildSlideData(session, slide_number),
           },
         };
       } catch (err) {
@@ -657,13 +658,12 @@ export function registerTools(server: McpServer, session: PresentationSession): 
           slide_number,
           g as { x: number; y: number; width: number; height: number; children: ShapeSpec[] },
         );
-        const svg = session.renderSlide(slide_number);
         return {
           content: [{ type: "text" as const, text: JSON.stringify({ success: true, group_id: result.groupId }) }],
           _meta: {
             ui: { resourceUri: "ui://pptx/preview" },
             presentation: presentationMeta(session),
-            slideData: { number: slide_number, svg: svg.svg },
+            slideData: buildSlideData(session, slide_number),
           },
         };
       } catch (err) {
@@ -683,13 +683,12 @@ export function registerTools(server: McpServer, session: PresentationSession): 
       try {
         const spec: TableUpdateSpec = { shapeId: update.shape_id };
         const result = await session.updateTable(slide_number, spec);
-        const svg = session.renderSlide(slide_number);
         return {
           content: [{ type: "text" as const, text: JSON.stringify({ success: true, updated: result.updated }) }],
           _meta: {
             ui: { resourceUri: "ui://pptx/preview" },
             presentation: presentationMeta(session),
-            slideData: { number: slide_number, svg: svg.svg },
+            slideData: buildSlideData(session, slide_number),
           },
         };
       } catch (err) {
@@ -842,7 +841,6 @@ export function registerTools(server: McpServer, session: PresentationSession): 
           addTables: add_tables as SlideModInput["addTables"],
         };
         const result = await session.modifySlide(input);
-        const svg = session.renderSlide(slide_number);
         return {
           content: [
             { type: "text" as const, text: JSON.stringify({ success: true, elements_added: result.elementsAdded }) },
@@ -850,7 +848,7 @@ export function registerTools(server: McpServer, session: PresentationSession): 
           _meta: {
             ui: { resourceUri: "ui://pptx/preview" },
             presentation: presentationMeta(session),
-            slideData: { number: slide_number, svg: svg.svg },
+            slideData: buildSlideData(session, slide_number),
           },
         };
       } catch (err) {
@@ -926,13 +924,13 @@ export function registerTools(server: McpServer, session: PresentationSession): 
       }
       const { slide_number } = args;
       try {
-        const result = session.renderSlide(slide_number);
+        const svgResult = session.renderSlide(slide_number);
         return {
-          content: [{ type: "text" as const, text: result.svg }],
+          content: [{ type: "text" as const, text: svgResult.svg }],
           _meta: {
             ui: { resourceUri: "ui://pptx/preview" },
             presentation: presentationMeta(session),
-            slideData: { number: slide_number, svg: result.svg },
+            slideData: buildSlideData(session, slide_number),
           },
         };
       } catch (err) {

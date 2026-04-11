@@ -7,6 +7,8 @@
 
 import { App } from "@modelcontextprotocol/ext-apps";
 
+import type { SlideRenderData } from "@aurochs-cli/pptx-cli/core";
+
 export type ToolResultMeta = {
   readonly ui?: { resourceUri: string };
   readonly currentSlide?: number;
@@ -15,10 +17,7 @@ export type ToolResultMeta = {
     readonly width: number;
     readonly height: number;
   };
-  readonly slideData?: {
-    readonly number: number;
-    readonly svg?: string;
-  };
+  readonly slideData?: { readonly number: number } & SlideRenderData;
   [key: string]: unknown;
 };
 

@@ -22,6 +22,7 @@
     "@modelcontextprotocol/ext-apps": "^1.2.2",
     "@modelcontextprotocol/sdk": "^1.27.1",
     "@aurochs-cli/pptx-cli": "workspace:*",
+    "@aurochs-renderer/pptx": "workspace:*",
     "@aurochs-ui/ui-components": "workspace:*",
     "hono": "^4.12.8",
     "zod": "^3.25.76"

@@ -4,7 +4,7 @@
  * SoT for the editor canvas used by both pptx-editor and pdf-editor.
  * Manages viewport (pan/zoom), coordinate conversion, marquee selection,
  * selection box rendering, and global drag tracking.
- * Format-specific content is injected via children/contentSvg props.
+ * Format-specific content is injected via children prop.
  *
  * Key features:
  * - Internal viewport management (pan/zoom via wheel, middle-click, alt+click)
@@ -100,10 +100,6 @@ export type EditorCanvasProps = {
   // --- Content ---
   /** React children rendered inside the viewport transform group (e.g., SlideRenderer). */
   readonly children?: ReactNode;
-  /** SVG string to inject via dangerouslySetInnerHTML (outer <svg> tags are stripped). */
-  readonly contentSvg?: string;
-  /** Additional SVG overlay string. */
-  readonly overlaySvg?: string;
   /** Embedded font CSS (@font-face declarations) injected as <style> in SVG. */
   readonly embeddedFontCss?: string;
 
@@ -185,14 +181,6 @@ export type EditorCanvasProps = {
 // Helpers
 // =============================================================================
 
-function extractSvgInnerContent(svgString: string): string {
-  const openTagEnd = svgString.indexOf(">");
-  if (openTagEnd === -1) {return svgString;}
-  const closeTagStart = svgString.lastIndexOf("</svg>");
-  if (closeTagStart === -1) {return svgString;}
-  return svgString.slice(openTagEnd + 1, closeTagStart);
-}
-
 const DEFAULT_RULER_THICKNESS = 20;
 
 function getRotationTransform(b: EditorCanvasItemBounds): string | undefined {
@@ -236,8 +224,6 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
     showRulers = true,
     rulerThickness: rulerThicknessProp = DEFAULT_RULER_THICKNESS,
     children,
-    contentSvg,
-    overlaySvg,
     embeddedFontCss,
     itemBounds,
     selectedIds,
@@ -338,12 +324,6 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
   const marqueeRef = useRef<MarqueeState | null>(null);
   const ignoreNextClickRef = useRef(false);
   const [activeTracking, setActiveTracking] = useState<ActiveTracking | null>(null);
-
-  // Content extraction
-  const innerContent = useMemo(
-    () => (contentSvg ? extractSvgInnerContent(contentSvg) : undefined),
-    [contentSvg],
-  );
 
   // --- Compute selectedBounds from itemBounds + selectedIds + drag ---
   const selectedBounds = useMemo(() => {
@@ -699,10 +679,6 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
 
             {/* Content: React children (e.g., SlideRenderer) */}
             {children}
-
-            {/* Content: SVG string injection */}
-            {innerContent != null && <g dangerouslySetInnerHTML={{ __html: innerContent }} />}
-            {overlaySvg && <g dangerouslySetInnerHTML={{ __html: overlaySvg }} />}
 
             {/* Hit areas for items */}
             {itemBounds.map((b) => (

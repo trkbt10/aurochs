@@ -9,11 +9,9 @@ import { app, connectApp, type ToolResultMeta } from "./mcp-bridge";
 import { SlideCanvas } from "./components/SlideCanvas";
 import { Thumbnails } from "./components/Thumbnails";
 import { BuildProgress } from "./components/BuildProgress";
+import type { SlideRenderData } from "@aurochs-cli/pptx-cli/core";
 
-type SlideData = {
-  readonly number: number;
-  readonly svg?: string;
-};
+export type SlideData = { readonly number: number } & Partial<SlideRenderData>;
 
 type PresentationData = {
   readonly slideCount: number;

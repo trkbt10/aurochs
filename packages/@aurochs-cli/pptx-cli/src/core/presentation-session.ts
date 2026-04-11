@@ -36,9 +36,16 @@ import {
   type SimpleNotesSpec,
   type ThemeEditSpec,
 } from "@aurochs-builder/pptx";
-import { renderSlideSvg, createRenderContext, createEmptySlideSvg } from "@aurochs-renderer/pptx";
-import { createSlideContextFromApiSlide } from "@aurochs-office/pptx/parser/slide/context";
+import { renderSlideSvg, createRenderContext, createEmptySlideSvg, DEFAULT_RENDER_OPTIONS } from "@aurochs-renderer/pptx";
+import { createSlideContextFromApiSlide, getLayoutNonPlaceholderShapes } from "@aurochs-office/pptx/parser/slide/context";
+import { getBackgroundFillData, toResolvedBackgroundFill } from "@aurochs-office/pptx/parser/slide/background-parser";
 import { createResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
+import type { Slide as DomainSlide, Shape, SlideSize } from "@aurochs-office/pptx/domain";
+import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
+import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
+import type { ResolvedBackgroundFill } from "@aurochs-office/drawing-ml/domain/background-fill";
+import type { RenderOptions } from "@aurochs-renderer/pptx";
+import type { TableStyleList } from "@aurochs-office/pptx/parser/table/style-parser";
 
 // =============================================================================
 // Types
@@ -53,6 +60,33 @@ export type SessionInfo = {
 
 export type RenderResult = {
   readonly svg: string;
+  readonly warnings: readonly { message: string }[];
+};
+
+/**
+ * Slide render data containing domain objects for client-side React rendering.
+ *
+ * All fields are JSON-serializable plain data types (no class instances, no methods).
+ * The client can reconstruct a SlideRenderer from this data without parsing SVG strings.
+ */
+export type SlideRenderData = {
+  /** Parsed slide domain object */
+  readonly slide: DomainSlide;
+  /** Slide dimensions */
+  readonly slideSize: SlideSize;
+  /** Color resolution context (theme colors + color map) */
+  readonly colorContext: ColorContext;
+  /** Font scheme for resolving theme font references */
+  readonly fontScheme: FontScheme;
+  /** Pre-resolved background fill (after slide → layout → master inheritance) */
+  readonly resolvedBackground?: ResolvedBackgroundFill;
+  /** Non-placeholder shapes from slide layout (decorative, rendered behind content) */
+  readonly layoutShapes: readonly Shape[];
+  /** Table styles from presentation */
+  readonly tableStyles?: TableStyleList;
+  /** Render options */
+  readonly options: RenderOptions;
+  /** Render warnings */
   readonly warnings: readonly { message: string }[];
 };
 
@@ -163,6 +197,8 @@ export type PresentationSession = {
   readonly applyTheme: (theme: ThemeEditSpec) => void;
   /** Render a slide to SVG */
   readonly renderSlide: (slideNumber: number) => RenderResult;
+  /** Get slide render data (domain objects for client-side React rendering) */
+  readonly renderSlideData: (slideNumber: number) => SlideRenderData;
   /** Export to ArrayBuffer */
   readonly exportBuffer: () => Promise<ArrayBuffer>;
   /** Get current info */
@@ -544,6 +580,39 @@ export function createPresentationSession(): PresentationSession {
       } catch (error) {
         return { svg: createEmptySlideSvg(slideSize), warnings: [{ message: (error as Error).message }] };
       }
+    },
+
+    renderSlideData(slideNumber: number): SlideRenderData {
+      if (!state.zipPackage || !state.presentation) {
+        throw new Error("No active session");
+      }
+
+      if (slideNumber < 1 || slideNumber > state.slideCount) {
+        throw new Error(`Invalid slide: ${slideNumber}. Valid range: 1-${state.slideCount}`);
+      }
+
+      const slideSize = state.presentation.size;
+      const apiSlide = state.presentation.getSlide(slideNumber);
+      const slideCtx = createSlideContextFromApiSlide(apiSlide as ApiSlide);
+
+      const domainSlide = parseSlide(apiSlide.content);
+      if (!domainSlide) {
+        throw new Error("Failed to parse slide");
+      }
+
+      const bgFillData = getBackgroundFillData(slideCtx);
+
+      return {
+        slide: domainSlide,
+        slideSize,
+        colorContext: slideCtx.toRendererColorContext(),
+        fontScheme: slideCtx.toFontScheme(),
+        resolvedBackground: toResolvedBackgroundFill(bgFillData),
+        layoutShapes: getLayoutNonPlaceholderShapes(slideCtx),
+        tableStyles: slideCtx.presentation.tableStyles,
+        options: DEFAULT_RENDER_OPTIONS,
+        warnings: [],
+      };
     },
 
     async exportBuffer(): Promise<ArrayBuffer> {
