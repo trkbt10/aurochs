@@ -210,7 +210,7 @@ describe("serializeDocument", () => {
       ],
     };
     expect(serializeDocument(doc, { declaration: true })).toBe(
-      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><root/>',
+      '<?xml version="1.0" encoding="UTF-8"?><root/>',
     );
   });
 
@@ -234,7 +234,7 @@ describe("serializeDocument", () => {
     };
     const result = serializeDocument(doc, { declaration: true, indent: true });
     expect(result).toBe(
-      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
+      '<?xml version="1.0" encoding="UTF-8"?>\n' +
         "<root>\n" +
         "  <child/>\n" +
         "</root>",
@@ -253,7 +253,7 @@ describe("serializeDocument", () => {
       ],
     };
     expect(serializeDocument(doc, { declaration: true, encoding: "UTF-16" })).toBe(
-      '<?xml version="1.0" encoding="UTF-16" standalone="yes"?><root/>',
+      '<?xml version="1.0" encoding="UTF-16"?><root/>',
     );
   });
 

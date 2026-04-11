@@ -20,7 +20,7 @@ import type { MenuEntry } from "@aurochs-ui/ui-components/context-menu";
 import { InspectorPanelWithTabs, type InspectorTab } from "@aurochs-ui/editor-controls/ui";
 import type { PdfDocument, PdfElement, PdfElementId } from "@aurochs/pdf";
 import { parseElementId } from "@aurochs/pdf";
-import { renderPdfPageToSvg, createDocumentQuery } from "@aurochs-renderer/pdf/svg";
+import { renderPdfPageToSvgNode, svgChildrenToJsx, createDocumentQuery } from "@aurochs-renderer/pdf/svg";
 
 import { canUndo, canRedo } from "@aurochs-ui/editor-core/history";
 import type { ResizeHandlePosition } from "@aurochs-ui/editor-core/drag-state";
@@ -335,9 +335,10 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
     return new Set([parseElementId(state.textEdit.elementId).elementIndex]);
   }, [state.textEdit]);
 
-  const contentSvg = useMemo(() => {
-    if (!currentPage) { return ""; }
-    return renderPdfPageToSvg(currentPage, { excludeElementIndices: excludeSet });
+  const contentChildren = useMemo(() => {
+    if (!currentPage) { return null; }
+    const svgNode = renderPdfPageToSvgNode(currentPage, { excludeElementIndices: excludeSet });
+    return svgChildrenToJsx(svgNode, "pdf-page");
   }, [currentPage, excludeSet]);
 
   // ---- Text edit controller (PPTX-style: SVG text + cursor + selection in one component) ----
@@ -386,7 +387,7 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
           onZoomModeChange={setZoomMode}
           onDisplayZoomChange={setDisplayZoom}
           showRulers
-          contentSvg={contentSvg}
+          contentChildren={contentChildren}
           viewportOverlay={textEditOverlayNode}
           isTextEditing={state.textEdit.active}
           onSelect={handleSelect}

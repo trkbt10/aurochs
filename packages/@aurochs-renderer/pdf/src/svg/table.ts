@@ -1,21 +1,24 @@
 /**
  * @file PDF Table SVG Renderer
  *
- * Renders PdfTable elements as SVG rectangles (cell borders/backgrounds) + text.
+ * Renders PdfTable elements as SVG node trees (rectangles + text).
  */
 
 import type { PdfTable } from "@aurochs/pdf/domain";
 import { formatSvgNumber } from "./number-format";
-import { escapeXmlText } from "./xml-escape";
+import type { XmlNode } from "@aurochs/xml";
+import type { SvgFragment } from "./svg-node";
+import { svgRect, svgText } from "./svg-node";
+import { serializeSvgFragment } from "./svg-serializer";
 
 /**
- * Render a PdfTable to SVG markup.
+ * Render a PdfTable to an SvgFragment (array of SVG nodes).
  *
  * Renders in SVG coordinate space (top-left origin). The table's (x, y) is
  * already in SVG coordinates (converted from PDF bottom-left by the caller).
  */
-export function renderPdfTable(table: PdfTable, pageHeight: number): string {
-  const parts: string[] = [];
+export function renderPdfTableNode(table: PdfTable, pageHeight: number): SvgFragment {
+  const nodes: XmlNode[] = [];
   const borderWidth = table.borderWidth ?? 1;
   const borderColor = table.borderColor ?? "#000000";
 
@@ -28,10 +31,12 @@ export function renderPdfTable(table: PdfTable, pageHeight: number): string {
   const totalHeight = table.rows.reduce((sum, row) => sum + row.height, 0);
 
   // Outer border
-  parts.push(
-    `<rect x="${formatSvgNumber(tableX)}" y="${formatSvgNumber(tableY)}"` +
-    ` width="${formatSvgNumber(totalWidth)}" height="${formatSvgNumber(totalHeight)}"` +
-    ` fill="none" stroke="${borderColor}" stroke-width="${formatSvgNumber(borderWidth)}" />`,
+  nodes.push(
+    svgRect({
+      x: tableX, y: tableY,
+      width: totalWidth, height: totalHeight,
+      fill: "none", stroke: borderColor, strokeWidth: borderWidth,
+    }),
   );
 
   // Render rows and cells
@@ -63,18 +68,22 @@ export function renderPdfTable(table: PdfTable, pageHeight: number): string {
 
       // Cell background
       if (cell.backgroundColor) {
-        parts.push(
-          `<rect x="${formatSvgNumber(currentX)}" y="${formatSvgNumber(currentY)}"` +
-          ` width="${formatSvgNumber(cellWidth)}" height="${formatSvgNumber(cellHeight)}"` +
-          ` fill="${cell.backgroundColor}" stroke="none" />`,
+        nodes.push(
+          svgRect({
+            x: currentX, y: currentY,
+            width: cellWidth, height: cellHeight,
+            fill: cell.backgroundColor, stroke: "none",
+          }),
         );
       }
 
       // Cell border
-      parts.push(
-        `<rect x="${formatSvgNumber(currentX)}" y="${formatSvgNumber(currentY)}"` +
-        ` width="${formatSvgNumber(cellWidth)}" height="${formatSvgNumber(cellHeight)}"` +
-        ` fill="none" stroke="${borderColor}" stroke-width="${formatSvgNumber(borderWidth * 0.5)}" />`,
+      nodes.push(
+        svgRect({
+          x: currentX, y: currentY,
+          width: cellWidth, height: cellHeight,
+          fill: "none", stroke: borderColor, strokeWidth: borderWidth * 0.5,
+        }),
       );
 
       // Cell text
@@ -82,10 +91,17 @@ export function renderPdfTable(table: PdfTable, pageHeight: number): string {
         const textX = currentX + 4; // Left padding
         const textY = computeTextY(currentY, cellHeight, cell.verticalAlignment);
 
-        parts.push(
-          `<text x="${formatSvgNumber(textX)}" y="${formatSvgNumber(textY)}"` +
-          ` font-size="10" fill="#000000" dominant-baseline="${getDominantBaseline(cell.verticalAlignment)}"` +
-          `>${escapeXmlText(cell.text)}</text>`,
+        nodes.push(
+          svgText(
+            {
+              x: formatSvgNumber(textX),
+              y: formatSvgNumber(textY),
+              "font-size": "10",
+              fill: "#000000",
+              "dominant-baseline": getDominantBaseline(cell.verticalAlignment),
+            },
+            cell.text,
+          ),
         );
       }
 
@@ -95,7 +111,14 @@ export function renderPdfTable(table: PdfTable, pageHeight: number): string {
     currentY += row.height;
   }
 
-  return parts.join("");
+  return nodes;
+}
+
+/**
+ * Render a PdfTable to SVG markup string (backward compatible).
+ */
+export function renderPdfTable(table: PdfTable, pageHeight: number): string {
+  return serializeSvgFragment(renderPdfTableNode(table, pageHeight));
 }
 
 /** Compute text Y position based on vertical alignment. */

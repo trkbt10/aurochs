@@ -22,7 +22,9 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-ui/pdf-editor/src'",
     "e2e:dev": "vite --config spec/e2e/vite.config.ts",
-    "e2e:test": "bun run spec/e2e/pdf-editor.e2e.ts"
+    "e2e:test": "bun run spec/e2e/pdf-editor.e2e.ts",
+    "e2e:perf:dev": "vite --config spec/e2e/perf-vite.config.ts",
+    "e2e:perf": "bun run spec/e2e/pdf-editor-perf.e2e.ts"
   },
   "exports": {
     ".": {

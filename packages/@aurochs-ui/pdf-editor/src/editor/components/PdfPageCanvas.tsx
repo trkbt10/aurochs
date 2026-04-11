@@ -40,7 +40,7 @@ export type PdfPageCanvasProps = {
   readonly onZoomModeChange: (mode: ZoomMode) => void;
   readonly onDisplayZoomChange?: (zoom: number) => void;
   readonly showRulers?: boolean;
-  readonly contentSvg: string;
+  readonly contentChildren: ReactNode;
   readonly viewportOverlay?: ReactNode;
   readonly isTextEditing?: boolean;
   // --- Selection ---
@@ -79,7 +79,7 @@ export function PdfPageCanvas({
   onZoomModeChange,
   onDisplayZoomChange,
   showRulers = true,
-  contentSvg,
+  contentChildren,
   viewportOverlay,
   isTextEditing = false,
   onSelect,
@@ -235,8 +235,6 @@ export function PdfPageCanvas({
       onZoomModeChange={onZoomModeChange}
       onDisplayZoomChange={onDisplayZoomChange}
       showRulers={showRulers}
-      contentSvg={contentSvg}
-
       itemBounds={elementBounds}
       selectedIds={selection.selectedIds}
       primaryId={selection.primaryId}
@@ -258,6 +256,8 @@ export function PdfPageCanvas({
       onRotateDragEnd={handleRotateDragEnd}
       onMarqueeSelect={handleMarqueeSelect}
       viewportOverlay={viewportOverlay}
-    />
+    >
+      {contentChildren}
+    </EditorCanvas>
   );
 }

@@ -25,7 +25,12 @@ export type SerializeOptions = {
   readonly declaration?: boolean;
   /** Encoding to specify in declaration (default: "UTF-8") */
   readonly encoding?: string;
-  /** Standalone attribute in declaration */
+  /**
+   * Standalone attribute in declaration.
+   * - `true`  → `standalone="yes"`
+   * - `false` → `standalone="no"`
+   * - `undefined` (default) → attribute omitted entirely
+   */
   readonly standalone?: boolean;
   /** Enable pretty printing with indentation */
   readonly indent?: boolean;
@@ -35,10 +40,19 @@ export type SerializeOptions = {
   readonly selfClosing?: boolean;
 };
 
-const DEFAULT_OPTIONS: Required<SerializeOptions> = {
+type ResolvedSerializeOptions = {
+  readonly declaration: boolean;
+  readonly encoding: string;
+  readonly standalone: boolean | undefined;
+  readonly indent: boolean;
+  readonly indentString: string;
+  readonly selfClosing: boolean;
+};
+
+const DEFAULT_OPTIONS: ResolvedSerializeOptions = {
   declaration: false,
   encoding: "UTF-8",
-  standalone: true,
+  standalone: undefined,
   indent: false,
   indentString: "  ",
   selfClosing: true,
@@ -86,7 +100,10 @@ export function serializeElement(
  *   ]
  * };
  * serializeDocument(doc, { declaration: true })
- * // => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<root/>'
+ * // => '<?xml version="1.0" encoding="UTF-8"?><root/>'
+ *
+ * serializeDocument(doc, { declaration: true, standalone: true })
+ * // => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><root/>'
  * ```
  */
 export function serializeDocument(
@@ -140,7 +157,7 @@ export function serializeNode(
 
 function serializeElementInternal(
   element: XmlElement,
-  opts: Required<SerializeOptions>,
+  opts: ResolvedSerializeOptions,
   depth: number,
 ): string {
   const indent = opts.indent ? opts.indentString.repeat(depth) : "";
@@ -211,7 +228,7 @@ function serializeAttributes(attrs: Readonly<Record<string, string>>): string {
   return parts.join(" ");
 }
 
-function buildDeclaration(opts: Required<SerializeOptions>): string {
+function buildDeclaration(opts: ResolvedSerializeOptions): string {
   const parts = ['<?xml version="1.0"'];
 
   if (opts.encoding) {

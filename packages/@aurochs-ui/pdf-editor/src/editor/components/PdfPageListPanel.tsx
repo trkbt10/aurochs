@@ -9,7 +9,7 @@
 import { useMemo } from "react";
 import type { PdfPage } from "@aurochs/pdf";
 import { PDF_PAGE_SIZES } from "@aurochs/pdf";
-import { renderPdfPageToSvg } from "@aurochs-renderer/pdf/svg";
+import { renderPdfPageToSvgNode, svgElementToJsx } from "@aurochs-renderer/pdf/svg";
 import { ItemList } from "@aurochs-ui/editor-controls/item-list";
 import { thumbnailInnerStyle } from "@aurochs-ui/editor-controls/item-list";
 
@@ -36,22 +36,14 @@ type PdfPageItem = {
 // Page Thumbnail
 // =============================================================================
 
-function extractSvgInner(svgStr: string): string {
-  const start = svgStr.indexOf(">") + 1;
-  const end = svgStr.lastIndexOf("</svg>");
-  return start > 0 && end > start ? svgStr.slice(start, end) : "";
-}
-
 function PageThumbnail({ page }: { readonly page: PdfPage }) {
-  const innerContent = useMemo(() => extractSvgInner(renderPdfPageToSvg(page)), [page]);
+  const svgElement = useMemo(
+    () => svgElementToJsx(renderPdfPageToSvgNode(page, { width: "100%", height: "100%" })),
+    [page],
+  );
   return (
     <div style={thumbnailInnerStyle}>
-      <svg
-        style={{ width: "100%", height: "100%" }}
-        viewBox={`0 0 ${page.width} ${page.height}`}
-        preserveAspectRatio="xMidYMid meet"
-        dangerouslySetInnerHTML={{ __html: innerContent }}
-      />
+      {svgElement}
     </div>
   );
 }

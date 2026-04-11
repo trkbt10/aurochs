@@ -21,7 +21,7 @@ import {
   type ChangeEvent,
 } from "react";
 import type { PdfText } from "@aurochs/pdf";
-import { renderPdfElementToSvg, resolveTextFontMetrics, resolveTextAnchor } from "@aurochs-renderer/pdf/svg";
+import { renderPdfElementToSvgNodes, svgFragmentToJsx, resolveTextFontMetrics, resolveTextAnchor } from "@aurochs-renderer/pdf/svg";
 import {
   coordinatesToCursorPosition,
   cursorPositionToCoordinates,
@@ -253,12 +253,12 @@ export function PdfTextEditController({
     [element.fontSize, fontFamily, fontWeight, fontStyle, metrics],
   );
 
-  // --- Text SVG rendering via renderPdfElementToSvg (SoT) ---
+  // --- Text SVG rendering via renderPdfElementToSvgNodes (SoT) ---
   // Build a live PdfText with updated text, then render using the same renderer
   // that produces contentSvg. This guarantees font/position parity.
-  const textSvgMarkup = useMemo(() => {
+  const textSvgNodes = useMemo(() => {
     const liveElement: PdfText = { ...element, text: currentText };
-    return renderPdfElementToSvg(liveElement, pageHeight);
+    return svgFragmentToJsx(renderPdfElementToSvgNodes(liveElement, pageHeight), "text-edit");
   }, [element, currentText, pageHeight]);
 
   // --- Cursor update ---
@@ -478,8 +478,8 @@ export function PdfTextEditController({
           />
         ))}
 
-        {/* Rendered text via renderPdfElementToSvg — single SoT */}
-        <g dangerouslySetInnerHTML={{ __html: textSvgMarkup }} />
+        {/* Rendered text via renderPdfElementToSvgNodes — single SoT */}
+        <g>{textSvgNodes}</g>
 
         {/* Cursor caret (bounds-local → page-coordinate offset) */}
         {cursorState.cursor && (
