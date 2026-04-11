@@ -1,6 +1,17 @@
-# aurochs
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/brand/icon-light@2x.png">
+    <source media="(prefers-color-scheme: light)" srcset="docs/brand/icon-dark@2x.png">
+    <img alt="Aurochs" src="docs/brand/icon-dark@2x.png" width="120">
+  </picture>
+</p>
 
-Parse, render, and edit Office documents (PPTX, DOCX, XLSX) in pure TypeScript. No native dependencies, no server required.
+<h1 align="center">aurochs</h1>
+
+<p align="center">
+  Parse, render, and edit Office documents (PPTX, DOCX, XLSX) in pure TypeScript.<br>
+  No native dependencies, no server required.
+</p>
 
 **[Demo](https://trkbt10.github.io/aurochs/)**
 
