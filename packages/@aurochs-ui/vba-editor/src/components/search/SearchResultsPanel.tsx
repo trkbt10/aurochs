@@ -2,6 +2,7 @@
  * @file Search Results Panel
  *
  * Displays project-wide search results grouped by module.
+ * Uses shared icons and primitives from @aurochs-ui/ui-components.
  */
 
 import {
@@ -10,73 +11,160 @@ import {
   useMemo,
   type ReactNode,
   type KeyboardEvent,
+  type CSSProperties,
 } from "react";
+import {
+  IconButton,
+  ChevronRightIcon,
+  ChevronDownIcon,
+  CloseIcon,
+  AddIcon,
+  LineIcon,
+  FileIcon,
+  iconTokens,
+  colorTokens,
+  fontTokens,
+  spacingTokens,
+} from "@aurochs-ui/ui-components";
 import type { ProjectSearchMatch } from "../../context/vba-editor/types";
 import { useVbaEditor } from "../../context/vba-editor";
-import styles from "./SearchResultsPanel.module.css";
 
 // =============================================================================
-// Icons
+// Styles
 // =============================================================================
 
-function ChevronRightIcon(): ReactNode {
-  return (
-    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-      <path
-        d="M4 2l4 4-4 4"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
+const MONO_FONT = `"Consolas", "Monaco", "Courier New", monospace`;
 
-function ChevronDownIcon(): ReactNode {
-  return (
-    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-      <path
-        d="M2 4l4 4 4-4"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
+const containerStyle: CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  height: "100%",
+  background: `var(--bg-primary, ${colorTokens.background.primary})`,
+  borderLeft: `1px solid var(--border-subtle, ${colorTokens.border.subtle})`,
+};
 
-function ModuleIcon(): ReactNode {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-      <rect
-        x="2"
-        y="2"
-        width="10"
-        height="10"
-        rx="1"
-        stroke="currentColor"
-        strokeWidth="1.2"
-      />
-      <path d="M5 5h4M5 7h3M5 9h4" stroke="currentColor" strokeWidth="1" />
-    </svg>
-  );
-}
+const headerStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  padding: `${spacingTokens.sm} ${spacingTokens.md}`,
+  borderBottom: `1px solid var(--border-subtle, ${colorTokens.border.subtle})`,
+  background: `var(--bg-secondary, ${colorTokens.background.secondary})`,
+};
 
-function CloseIcon(): ReactNode {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-      <path
-        d="M3 3l8 8M11 3l-8 8"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
+const titleStyle: CSSProperties = {
+  fontSize: fontTokens.size.md,
+  fontWeight: fontTokens.weight.semibold,
+  color: `var(--text-primary, ${colorTokens.text.primary})`,
+};
+
+const totalCountStyle: CSSProperties = {
+  marginLeft: spacingTokens["xs-plus"],
+  fontWeight: fontTokens.weight.normal,
+  color: `var(--text-secondary, ${colorTokens.text.secondary})`,
+};
+
+const headerActionsStyle: CSSProperties = {
+  display: "flex",
+  gap: spacingTokens.xs,
+};
+
+const resultsStyle: CSSProperties = {
+  flex: 1,
+  overflowY: "auto",
+};
+
+const noResultsStyle: CSSProperties = {
+  padding: spacingTokens.xl,
+  textAlign: "center",
+  fontSize: fontTokens.size.lg,
+  color: `var(--text-tertiary, ${colorTokens.text.tertiary})`,
+};
+
+const moduleGroupStyle: CSSProperties = {
+  borderBottom: `1px solid var(--border-subtle, ${colorTokens.border.subtle})`,
+};
+
+const moduleHeaderStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: spacingTokens["xs-plus"],
+  padding: `${spacingTokens["xs-plus"]} ${spacingTokens.sm}`,
+  background: `var(--bg-secondary, ${colorTokens.background.secondary})`,
+  cursor: "pointer",
+  userSelect: "none",
+};
+
+const chevronStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  color: `var(--text-secondary, ${colorTokens.text.secondary})`,
+};
+
+const moduleIconStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  color: `var(--color-primary, ${colorTokens.accent.primary})`,
+};
+
+const moduleNameStyle: CSSProperties = {
+  flex: 1,
+  fontSize: fontTokens.size.md,
+  fontWeight: fontTokens.weight.medium,
+  color: `var(--text-primary, ${colorTokens.text.primary})`,
+  whiteSpace: "nowrap",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+};
+
+const matchBadgeStyle: CSSProperties = {
+  padding: `1px ${spacingTokens["xs-plus"]}`,
+  fontSize: fontTokens.size.xs,
+  fontWeight: fontTokens.weight.semibold,
+  color: `var(--text-secondary, ${colorTokens.text.secondary})`,
+  background: `var(--bg-tertiary, ${colorTokens.background.tertiary})`,
+  borderRadius: "10px",
+};
+
+const matchListStyle: CSSProperties = {
+  background: `var(--bg-primary, ${colorTokens.background.primary})`,
+};
+
+const matchItemBaseStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "flex-start",
+  gap: spacingTokens.sm,
+  padding: `${spacingTokens.xs} ${spacingTokens.sm} ${spacingTokens.xs} 28px`,
+  cursor: "pointer",
+  fontFamily: MONO_FONT,
+  fontSize: fontTokens.size.md,
+  lineHeight: "1.4",
+};
+
+const matchItemSelectedStyle: CSSProperties = {
+  ...matchItemBaseStyle,
+  background: `rgba(68, 114, 196, 0.1)`,
+};
+
+const lineNumberStyle: CSSProperties = {
+  minWidth: 32,
+  color: `var(--text-tertiary, ${colorTokens.text.tertiary})`,
+  textAlign: "right",
+  flexShrink: 0,
+};
+
+const lineTextStyle: CSSProperties = {
+  flex: 1,
+  color: `var(--text-primary, ${colorTokens.text.primary})`,
+  whiteSpace: "pre",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+};
+
+const highlightStyle: CSSProperties = {
+  background: `var(--search-match-bg, rgba(255, 200, 0, 0.4))`,
+  borderRadius: "2px",
+};
 
 // =============================================================================
 // Types
@@ -90,6 +178,16 @@ export type SearchResultsPanelProps = {
 // =============================================================================
 // Helpers
 // =============================================================================
+
+/**
+ * Render the expand/collapse chevron icon.
+ */
+function renderChevron(isExpanded: boolean, size: number): ReactNode {
+  if (isExpanded) {
+    return <ChevronDownIcon size={size} />;
+  }
+  return <ChevronRightIcon size={size} />;
+}
 
 /**
  * Highlight matching text within line.
@@ -106,7 +204,7 @@ function highlightMatch(
   return (
     <>
       {before}
-      <span className={styles.highlight}>{match}</span>
+      <span style={highlightStyle}>{match}</span>
       {after}
     </>
   );
@@ -125,6 +223,9 @@ type ModuleResultGroupProps = {
   readonly selectedMatchKey?: string;
 };
 
+/**
+ * A single module's search results with expandable header.
+ */
 function ModuleResultGroup({
   moduleName,
   matches,
@@ -143,30 +244,32 @@ function ModuleResultGroup({
     [onToggle],
   );
 
+  const iconSize = iconTokens.size.sm - 2; // 12px for compact display
+
   return (
-    <div className={styles.moduleGroup}>
+    <div style={moduleGroupStyle}>
       {/* Module header */}
       <div
-        className={styles.moduleHeader}
+        style={moduleHeaderStyle}
         onClick={onToggle}
         onKeyDown={handleKeyDown}
         role="button"
         tabIndex={0}
         aria-expanded={isExpanded}
       >
-        <span className={styles.chevron}>
-          {isExpanded ? <ChevronDownIcon /> : <ChevronRightIcon />}
+        <span style={chevronStyle}>
+          {renderChevron(isExpanded, iconSize)}
         </span>
-        <span className={styles.moduleIcon}>
-          <ModuleIcon />
+        <span style={moduleIconStyle}>
+          <FileIcon size={iconSize + 2} />
         </span>
-        <span className={styles.moduleName}>{moduleName}</span>
-        <span className={styles.matchBadge}>{matches.length}</span>
+        <span style={moduleNameStyle}>{moduleName}</span>
+        <span style={matchBadgeStyle}>{matches.length}</span>
       </div>
 
       {/* Match list */}
       {isExpanded && (
-        <div className={styles.matchList}>
+        <div style={matchListStyle}>
           {matches.map((match, index) => {
             const matchKey = `${moduleName}:${match.line}:${match.startColumn}`;
             const isSelected = matchKey === selectedMatchKey;
@@ -174,7 +277,7 @@ function ModuleResultGroup({
             return (
               <div
                 key={`${match.line}-${match.startColumn}-${index}`}
-                className={`${styles.matchItem} ${isSelected ? styles.selected : ""}`}
+                style={isSelected ? matchItemSelectedStyle : matchItemBaseStyle}
                 onClick={() => onMatchClick(match)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
@@ -185,8 +288,8 @@ function ModuleResultGroup({
                 role="button"
                 tabIndex={0}
               >
-                <span className={styles.lineNumber}>{match.line}</span>
-                <span className={styles.lineText}>
+                <span style={lineNumberStyle}>{match.line}</span>
+                <span style={lineTextStyle}>
                   {highlightMatch(
                     match.lineText,
                     match.startColumn,
@@ -203,7 +306,7 @@ function ModuleResultGroup({
 }
 
 // =============================================================================
-// Search Results Panel
+// Render helpers
 // =============================================================================
 
 type RenderResultsListOptions = {
@@ -227,7 +330,7 @@ function renderResultsList(options: RenderResultsListOptions): ReactNode {
   } = options;
   if (!hasResults) {
     return (
-      <div className={styles.noResults}>
+      <div style={noResultsStyle}>
         {query ? "No results found" : "Enter a search term"}
       </div>
     );
@@ -250,6 +353,10 @@ function renderResultsList(options: RenderResultsListOptions): ReactNode {
     );
   });
 }
+
+// =============================================================================
+// Search Results Panel
+// =============================================================================
 
 /**
  * Search Results Panel.
@@ -327,53 +434,51 @@ export function SearchResultsPanel({
   }
 
   const hasResults = search.projectMatchCount > 0;
+  const actionIconSize = iconTokens.size.sm;
 
   return (
-    <div className={styles.container}>
+    <div style={containerStyle}>
       {/* Header */}
-      <div className={styles.header}>
-        <span className={styles.title}>
+      <div style={headerStyle}>
+        <span style={titleStyle}>
           Search Results
           {hasResults && (
-            <span className={styles.totalCount}>
+            <span style={totalCountStyle}>
               ({search.projectMatchCount} matches in {sortedModuleNames.length} files)
             </span>
           )}
         </span>
-        <div className={styles.headerActions}>
+        <div style={headerActionsStyle}>
           {hasResults && (
             <>
-              <button
-                type="button"
-                className={styles.actionButton}
+              <IconButton
+                icon={<AddIcon size={actionIconSize} />}
                 onClick={handleExpandAll}
-                title="Expand All"
-              >
-                +
-              </button>
-              <button
-                type="button"
-                className={styles.actionButton}
+                variant="ghost"
+                size="sm"
+                label="Expand All"
+              />
+              <IconButton
+                icon={<LineIcon size={actionIconSize} />}
                 onClick={handleCollapseAll}
-                title="Collapse All"
-              >
-                -
-              </button>
+                variant="ghost"
+                size="sm"
+                label="Collapse All"
+              />
             </>
           )}
-          <button
-            type="button"
-            className={styles.closeButton}
+          <IconButton
+            icon={<CloseIcon size={actionIconSize} />}
             onClick={handleClose}
-            title="Close"
-          >
-            <CloseIcon />
-          </button>
+            variant="ghost"
+            size="sm"
+            label="Close"
+          />
         </div>
       </div>
 
       {/* Results */}
-      <div className={styles.results}>
+      <div style={resultsStyle}>
         {renderResultsList({
           hasResults,
           query: search.query,

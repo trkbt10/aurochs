@@ -9,6 +9,7 @@ import type { XlsxStyleSheet } from "@aurochs-office/xlsx/domain/style/types";
 import type { XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
 import type { ColorScheme } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { FormulaEvaluator } from "@aurochs-office/xlsx/formula/evaluator";
+import { EXCEL_MAX_ROWS, EXCEL_MAX_COLS } from "@aurochs-office/xlsx/domain/constants";
 import type { SheetLayout } from "../selectors/sheet-layout";
 import type { NormalizedMergeRange } from "../sheet/merge-range";
 
@@ -89,8 +90,8 @@ export type SheetGridMetrics = {
  * @see ECMA-376 Part 4, Section 18.3.1.81 (sheetFormatPr: defaultColWidth)
  */
 export const DEFAULT_SHEET_GRID_METRICS: SheetGridMetrics = {
-  rowCount: 100,
-  colCount: 26,
+  rowCount: EXCEL_MAX_ROWS,
+  colCount: EXCEL_MAX_COLS,
   rowHeightPx: 20,
   colWidthPx: 64,
   rowHeaderWidthPx: 46,

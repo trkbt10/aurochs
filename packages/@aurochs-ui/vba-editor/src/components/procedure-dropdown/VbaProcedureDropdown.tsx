@@ -7,6 +7,7 @@
 import { useMemo, type CSSProperties, type ReactNode } from "react";
 import type { VbaProcedure } from "@aurochs-office/vba";
 import { SearchableSelect, type SearchableSelectOption } from "@aurochs-ui/ui-components/primitives";
+import { colorTokens, fontTokens, spacingTokens } from "@aurochs-ui/ui-components";
 import { useVbaEditor } from "../../context/vba-editor";
 
 export type VbaProcedureDropdownProps = {
@@ -64,9 +65,9 @@ export function VbaProcedureDropdown({ style }: VbaProcedureDropdownProps): Reac
     return (
       <div
         style={{
-          padding: "5px 8px",
-          fontSize: "13px",
-          color: "var(--color-text-tertiary, #999999)",
+          padding: `${spacingTokens["xs-plus"]} ${spacingTokens.sm}`,
+          fontSize: fontTokens.size.lg,
+          color: `var(--text-tertiary, ${colorTokens.text.tertiary})`,
           ...style,
         }}
       >

@@ -392,6 +392,9 @@ const RENDERER_TYPES: RendererType[] = ["html", "svg", "canvas"];
 // Main Component
 // =============================================================================
 
+/**
+ * Preview page for VBA editor development.
+ */
 export function VbaEditorPreviewPage() {
   const { type: currentType, component: CurrentRenderer } = getRendererFromUrl();
 

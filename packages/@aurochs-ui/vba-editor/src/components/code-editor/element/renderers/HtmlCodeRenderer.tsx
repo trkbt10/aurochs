@@ -15,7 +15,14 @@ import { useMemo, memo, type ReactNode, type CSSProperties } from "react";
 import type { Token } from "../../code/syntax-highlight";
 import type { CodeRendererProps, HighlightRange, HighlightType } from "./types";
 import { getTokenStyleCss } from "./token-colors";
-import styles from "../../VbaCodeEditor.module.css";
+import {
+  codeDisplayStyle,
+  buildLineStyle,
+  buildLineNumberStyle,
+  lineContentStyle,
+  lineInnerStyle,
+  cursorBaseStyle,
+} from "../../code-editor-styles";
 
 // =============================================================================
 // Constants
@@ -279,28 +286,25 @@ const Line = memo(function Line({
   );
 
   return (
-    <div className={styles.line} style={{ height: lineHeight, lineHeight: `${lineHeight}px` }}>
+    <div style={buildLineStyle(lineHeight)}>
       {/* Line number */}
       {showLineNumbers && (
-        <span
-          className={styles.lineNumber}
-          style={{ width: lineNumberWidth, minWidth: lineNumberWidth }}
-        >
+        <span style={buildLineNumberStyle(lineNumberWidth)}>
           {lineNumber}
         </span>
       )}
 
       {/* Code content */}
-      <span className={styles.lineContent}>
+      <span style={lineContentStyle}>
         {/* Inner container - self-contained positioning context for text and cursor */}
-        <span className={styles.lineInner}>
+        <span style={lineInnerStyle}>
           {segments.length === 0 ? "\u00A0" : segments.map(renderSegment)}
 
           {/* Cursor - positioned relative to lineInner, independent of outer padding */}
           {cursor && (
             <span
-              className={styles.cursor}
               style={{
+                ...cursorBaseStyle,
                 left: `${cursor.column - 1}ch`,
                 animation: cursor.blinking ? "vba-cursor-blink 1s step-end infinite" : "none",
               }}
@@ -374,7 +378,7 @@ export const HtmlCodeRenderer = memo(function HtmlCodeRenderer({
   }, [cursor, visibleRange]);
 
   return (
-    <div className={styles.codeDisplay}>
+    <div style={codeDisplayStyle}>
       {/* Top spacer */}
       {topSpacerHeight > 0 && <div style={{ height: topSpacerHeight }} />}
 

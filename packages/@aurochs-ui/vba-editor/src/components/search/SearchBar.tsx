@@ -2,122 +2,123 @@
  * @file Search Bar Component
  *
  * Floating search/replace bar for VBA code editor.
+ * Uses shared icons and primitives from @aurochs-ui/ui-components.
  */
 
 import {
   useCallback,
   useRef,
   useEffect,
+  useState,
   type ReactNode,
   type KeyboardEvent,
   type ChangeEvent,
+  type CSSProperties,
 } from "react";
-import { IconButton } from "@aurochs-ui/ui-components/primitives";
+import {
+  IconButton,
+  ToggleButton,
+  ChevronUpIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  CloseIcon,
+  ReplaceIcon,
+  ReplaceAllIcon,
+  iconTokens,
+  colorTokens,
+  spacingTokens,
+  fontTokens,
+  radiusTokens,
+  shadowTokens,
+} from "@aurochs-ui/ui-components";
 import { useVbaEditor } from "../../context/vba-editor";
-import styles from "./SearchBar.module.css";
 
 // =============================================================================
-// Icons
+// Styles
 // =============================================================================
 
-function ChevronUpIcon(): ReactNode {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-      <path
-        d="M3 9l4-4 4 4"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
+const containerStyle: CSSProperties = {
+  position: "absolute",
+  top: spacingTokens.sm,
+  right: spacingTokens.lg,
+  zIndex: 100,
+  display: "flex",
+  gap: spacingTokens.xs,
+  padding: spacingTokens.sm,
+  background: `var(--bg-primary, ${colorTokens.background.primary})`,
+  border: `1px solid var(--border-subtle, ${colorTokens.border.subtle})`,
+  borderRadius: radiusTokens.md,
+  boxShadow: shadowTokens.md,
+};
 
-function ChevronDownIcon(): ReactNode {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-      <path
-        d="M3 5l4 4 4-4"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
+const expandButtonBaseStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "flex-start",
+  padding: `${spacingTokens["xs-plus"]} ${spacingTokens["2xs"]}`,
+  background: "transparent",
+  border: "none",
+  cursor: "pointer",
+  color: `var(--text-secondary, ${colorTokens.text.secondary})`,
+  transition: "transform 0.15s ease",
+};
 
-function CloseIcon(): ReactNode {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-      <path
-        d="M3 3l8 8M11 3l-8 8"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
+const contentStyle: CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  gap: spacingTokens["xs-plus"],
+};
 
-function ReplaceIcon(): ReactNode {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-      <path
-        d="M2 7h10M8 3l4 4-4 4"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
+const rowStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: spacingTokens.xs,
+};
 
-function ReplaceAllIcon(): ReactNode {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-      <path
-        d="M2 5h10M8 1l4 4-4 4"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M2 9h10M8 5l4 4-4 4"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
+const SEARCH_INPUT_FONT = `"Consolas", "Monaco", "Courier New", monospace`;
 
-function ExpandIcon(): ReactNode {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-      <path
-        d="M5 3l4 4-4 4"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
+const inputBaseStyle: CSSProperties = {
+  width: 180,
+  padding: `${spacingTokens.xs} ${spacingTokens.sm}`,
+  fontSize: fontTokens.size.lg,
+  fontFamily: SEARCH_INPUT_FONT,
+  background: `var(--bg-secondary, ${colorTokens.background.secondary})`,
+  border: `1px solid var(--border-subtle, ${colorTokens.border.subtle})`,
+  borderRadius: radiusTokens.sm,
+  outline: "none",
+  color: `var(--text-primary, ${colorTokens.text.primary})`,
+};
+
+const inputFocusStyle: CSSProperties = {
+  ...inputBaseStyle,
+  borderColor: `var(--color-primary, ${colorTokens.accent.primary})`,
+  boxShadow: `0 0 0 2px rgba(68, 114, 196, 0.2)`,
+};
+
+const matchCountStyle: CSSProperties = {
+  minWidth: 60,
+  padding: `0 ${spacingTokens.sm}`,
+  fontSize: fontTokens.size.md,
+  color: `var(--text-secondary, ${colorTokens.text.secondary})`,
+  textAlign: "center",
+  whiteSpace: "nowrap",
+};
+
+const optionsStyle: CSSProperties = {
+  display: "flex",
+  gap: spacingTokens["2xs"],
+};
 
 // =============================================================================
-// Search Bar Component
+// Types
 // =============================================================================
 
 export type SearchBarProps = {
   readonly onClose?: () => void;
 };
+
+// =============================================================================
+// Component
+// =============================================================================
 
 /**
  * Search Bar component.
@@ -129,6 +130,8 @@ export function SearchBar({ onClose }: SearchBarProps): ReactNode {
   const { search } = state;
   const inputRef = useRef<HTMLInputElement>(null);
   const replaceInputRef = useRef<HTMLInputElement>(null);
+  const [searchFocused, setSearchFocused] = useState(false);
+  const [replaceFocused, setReplaceFocused] = useState(false);
 
   // State for showing replace row
   const showReplace = search.mode === "in-file" && search.replaceText !== "" || false;
@@ -162,22 +165,25 @@ export function SearchBar({ onClose }: SearchBarProps): ReactNode {
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        handleClose();
-      } else if (event.key === "Enter") {
-        event.preventDefault();
-        if (event.shiftKey) {
-          dispatch({ type: "NAVIGATE_MATCH", direction: "previous" });
-        } else {
-          dispatch({ type: "NAVIGATE_MATCH", direction: "next" });
-        }
-      } else if (event.key === "F3") {
-        event.preventDefault();
-        dispatch({
-          type: "NAVIGATE_MATCH",
-          direction: event.shiftKey ? "previous" : "next",
-        });
+      switch (event.key) {
+        case "Escape":
+          event.preventDefault();
+          handleClose();
+          break;
+        case "Enter":
+          event.preventDefault();
+          dispatch({
+            type: "NAVIGATE_MATCH",
+            direction: event.shiftKey ? "previous" : "next",
+          });
+          break;
+        case "F3":
+          event.preventDefault();
+          dispatch({
+            type: "NAVIGATE_MATCH",
+            direction: event.shiftKey ? "previous" : "next",
+          });
+          break;
       }
     },
     [dispatch, handleClose],
@@ -226,50 +232,59 @@ export function SearchBar({ onClose }: SearchBarProps): ReactNode {
   const matchDisplay =
     matchCount > 0 ? `${currentMatch}/${matchCount}` : "No results";
 
+  const iconSize = iconTokens.size.sm;
+
+  const expandStyle: CSSProperties = {
+    ...expandButtonBaseStyle,
+    transform: showReplace ? "rotate(90deg)" : undefined,
+  };
+
   return (
-    <div className={styles.container} onKeyDown={handleKeyDown}>
+    <div style={containerStyle} onKeyDown={handleKeyDown}>
       {/* Expand toggle */}
       <button
         type="button"
-        className={`${styles.expandButton} ${showReplace ? styles.expanded : ""}`}
+        style={expandStyle}
         onClick={toggleReplace}
         title="Toggle Replace"
       >
-        <ExpandIcon />
+        <ChevronRightIcon size={iconSize} />
       </button>
 
-      <div className={styles.content}>
+      <div style={contentStyle}>
         {/* Search input row */}
-        <div className={styles.row}>
+        <div style={rowStyle}>
           <input
             ref={inputRef}
             type="text"
-            className={styles.input}
+            style={searchFocused ? inputFocusStyle : inputBaseStyle}
             value={search.query}
             onChange={handleQueryChange}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
             placeholder="Find..."
             autoComplete="off"
             spellCheck={false}
           />
 
-          <span className={styles.matchCount}>{matchDisplay}</span>
+          <span style={matchCountStyle}>{matchDisplay}</span>
 
           <IconButton
-            icon={<ChevronUpIcon />}
+            icon={<ChevronUpIcon size={iconSize} />}
             onClick={handlePrevious}
             variant="ghost"
             size="sm"
             disabled={matchCount === 0}
           />
           <IconButton
-            icon={<ChevronDownIcon />}
+            icon={<ChevronDownIcon size={iconSize} />}
             onClick={handleNext}
             variant="ghost"
             size="sm"
             disabled={matchCount === 0}
           />
           <IconButton
-            icon={<CloseIcon />}
+            icon={<CloseIcon size={iconSize} />}
             onClick={handleClose}
             variant="ghost"
             size="sm"
@@ -278,26 +293,28 @@ export function SearchBar({ onClose }: SearchBarProps): ReactNode {
 
         {/* Replace row */}
         {showReplace && (
-          <div className={styles.row}>
+          <div style={rowStyle}>
             <input
               ref={replaceInputRef}
               type="text"
-              className={styles.input}
+              style={replaceFocused ? inputFocusStyle : inputBaseStyle}
               value={search.replaceText}
               onChange={handleReplaceChange}
+              onFocus={() => setReplaceFocused(true)}
+              onBlur={() => setReplaceFocused(false)}
               placeholder="Replace..."
               autoComplete="off"
               spellCheck={false}
             />
             <IconButton
-              icon={<ReplaceIcon />}
+              icon={<ReplaceIcon size={iconSize} />}
               onClick={handleReplaceCurrent}
               variant="ghost"
               size="sm"
               disabled={matchCount === 0}
             />
             <IconButton
-              icon={<ReplaceAllIcon />}
+              icon={<ReplaceAllIcon size={iconSize} />}
               onClick={handleReplaceAll}
               variant="ghost"
               size="sm"
@@ -307,31 +324,31 @@ export function SearchBar({ onClose }: SearchBarProps): ReactNode {
         )}
 
         {/* Options row */}
-        <div className={styles.options}>
-          <button
-            type="button"
-            className={`${styles.optionButton} ${search.options.caseSensitive ? styles.active : ""}`}
-            onClick={() => toggleOption("caseSensitive")}
-            title="Match Case"
+        <div style={optionsStyle}>
+          <ToggleButton
+            pressed={search.options.caseSensitive}
+            onChange={() => toggleOption("caseSensitive")}
+            label="Match Case"
+            ariaLabel="Match Case"
           >
             Aa
-          </button>
-          <button
-            type="button"
-            className={`${styles.optionButton} ${search.options.wholeWord ? styles.active : ""}`}
-            onClick={() => toggleOption("wholeWord")}
-            title="Match Whole Word"
+          </ToggleButton>
+          <ToggleButton
+            pressed={search.options.wholeWord}
+            onChange={() => toggleOption("wholeWord")}
+            label="Match Whole Word"
+            ariaLabel="Match Whole Word"
           >
             ab
-          </button>
-          <button
-            type="button"
-            className={`${styles.optionButton} ${search.options.useRegex ? styles.active : ""}`}
-            onClick={() => toggleOption("useRegex")}
-            title="Use Regular Expression"
+          </ToggleButton>
+          <ToggleButton
+            pressed={search.options.useRegex}
+            onChange={() => toggleOption("useRegex")}
+            label="Use Regular Expression"
+            ariaLabel="Use Regular Expression"
           >
             .*
-          </button>
+          </ToggleButton>
         </div>
       </div>
     </div>

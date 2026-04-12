@@ -98,6 +98,8 @@ export {
   Download as DownloadIcon,
   Upload as UploadIcon,
   X as CloseIcon,
+  Replace as ReplaceIcon,
+  ReplaceAll as ReplaceAllIcon,
   ChevronRight as ChevronRightIcon,
   ChevronDown as ChevronDownIcon,
   ChevronUp as ChevronUpIcon,

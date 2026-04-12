@@ -9,11 +9,13 @@
  */
 
 import type { ReactNode, CSSProperties } from "react";
-import { colorTokens, radiusTokens, spacingTokens } from "../design-tokens";
+import { colorTokens, fontTokens, radiusTokens, spacingTokens } from "../design-tokens";
 
 export type SectionProps = {
   /** Content to render inside the section */
   readonly children: ReactNode;
+  /** Optional section title (uppercase label) */
+  readonly title?: string;
   /** Gap between child elements (default: 12) */
   readonly gap?: number;
   /** Additional CSS class */
@@ -22,11 +24,20 @@ export type SectionProps = {
   readonly style?: CSSProperties;
 };
 
+const titleStyle: CSSProperties = {
+  fontSize: fontTokens.size.xs,
+  fontWeight: fontTokens.weight.semibold,
+  color: `var(--text-tertiary, ${colorTokens.text.tertiary})`,
+  textTransform: "uppercase",
+  letterSpacing: fontTokens.letterSpacing.uppercase,
+};
+
 /**
  * A visual container section with consistent dark theme styling.
  */
 export function Section({
   children,
+  title,
   gap = 12,
   className,
   style,
@@ -43,6 +54,7 @@ export function Section({
 
   return (
     <div style={{ ...sectionStyle, ...style }} className={className}>
+      {title && <div style={titleStyle}>{title}</div>}
       {children}
     </div>
   );

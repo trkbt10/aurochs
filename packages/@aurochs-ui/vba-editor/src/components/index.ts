@@ -4,7 +4,6 @@
 
 export { VbaEditor, type VbaEditorProps } from "./VbaEditor";
 export { VbaCodeEditor, type VbaCodeEditorProps } from "./code-editor";
-export { VbaModuleList, type VbaModuleListProps } from "./module-list";
 export {
   VbaModuleGroupedList,
   type VbaModuleGroupedListProps,

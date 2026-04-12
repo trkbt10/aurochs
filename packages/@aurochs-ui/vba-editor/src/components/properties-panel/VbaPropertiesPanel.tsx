@@ -2,12 +2,20 @@
  * @file VBA Properties Panel Component
  *
  * Sidebar showing module and procedure properties.
+ * Uses shared layout components from @aurochs-ui/ui-components.
  */
 
 import type { CSSProperties, ReactNode } from "react";
 import type { VbaModuleType, VbaTypeName } from "@aurochs-office/vba";
+import {
+  Panel,
+  Section,
+  FieldGroup,
+  colorTokens,
+  fontTokens,
+  spacingTokens,
+} from "@aurochs-ui/ui-components";
 import { useVbaEditor } from "../../context/vba-editor";
-import styles from "./VbaPropertiesPanel.module.css";
 
 export type VbaPropertiesPanelProps = {
   readonly style?: CSSProperties;
@@ -30,6 +38,48 @@ function formatReturnType(returnType: VbaTypeName): string {
   return returnType.userDefined;
 }
 
+// =============================================================================
+// Styles
+// =============================================================================
+
+const propertyValueStyle: CSSProperties = {
+  fontSize: fontTokens.size.sm,
+  fontWeight: fontTokens.weight.medium,
+  color: `var(--text-primary, ${colorTokens.text.primary})`,
+  textAlign: "right",
+  maxWidth: "60%",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+};
+
+const emptyMessageStyle: CSSProperties = {
+  padding: spacingTokens.lg,
+  color: `var(--text-tertiary, ${colorTokens.text.tertiary})`,
+  fontStyle: "italic",
+  fontSize: fontTokens.size.sm,
+  textAlign: "center",
+};
+
+// =============================================================================
+// Helpers
+// =============================================================================
+
+/**
+ * A single property row with label and value, using FieldGroup inline layout.
+ */
+function PropertyField({ label, value }: { label: string; value: ReactNode }): ReactNode {
+  return (
+    <FieldGroup label={label} inline labelWidth={80}>
+      <span style={propertyValueStyle}>{value}</span>
+    </FieldGroup>
+  );
+}
+
+// =============================================================================
+// Component
+// =============================================================================
+
 /**
  * VBA Properties Panel component.
  *
@@ -43,9 +93,9 @@ export function VbaPropertiesPanel({ style }: VbaPropertiesPanelProps): ReactNod
 
   if (!activeModule) {
     return (
-      <div className={styles.container} style={style}>
-        <div className={styles.emptyMessage}>No module selected</div>
-      </div>
+      <Panel style={{ ...style, height: "100%" }} width="100%">
+        <div style={emptyMessageStyle}>No module selected</div>
+      </Panel>
     );
   }
 
@@ -54,58 +104,29 @@ export function VbaPropertiesPanel({ style }: VbaPropertiesPanelProps): ReactNod
   );
 
   return (
-    <div className={styles.container} style={style}>
+    <Panel style={{ ...style, height: "100%" }} width="100%">
       {/* Module Info */}
-      <div className={styles.section}>
-        <div className={styles.sectionTitle}>Module</div>
-        <div className={styles.property}>
-          <span className={styles.propertyLabel}>Name</span>
-          <span className={styles.propertyValue}>{activeModule.name}</span>
-        </div>
-        <div className={styles.property}>
-          <span className={styles.propertyLabel}>Type</span>
-          <span className={styles.propertyValue}>
-            {MODULE_TYPE_LABELS[activeModule.type]}
-          </span>
-        </div>
-        <div className={styles.property}>
-          <span className={styles.propertyLabel}>Procedures</span>
-          <span className={styles.propertyValue}>{activeProcedures.length}</span>
-        </div>
-      </div>
+      <Section title="Module" gap={4} style={{ borderRadius: 0 }}>
+        <PropertyField label="Name" value={activeModule.name} />
+        <PropertyField label="Type" value={MODULE_TYPE_LABELS[activeModule.type]} />
+        <PropertyField label="Procedures" value={activeProcedures.length} />
+      </Section>
 
       {/* Selected Procedure Info */}
       {selectedProcedure && (
-        <div className={styles.section}>
-          <div className={styles.sectionTitle}>Procedure</div>
-          <div className={styles.property}>
-            <span className={styles.propertyLabel}>Name</span>
-            <span className={styles.propertyValue}>{selectedProcedure.name}</span>
-          </div>
-          <div className={styles.property}>
-            <span className={styles.propertyLabel}>Type</span>
-            <span className={styles.propertyValue}>{selectedProcedure.type}</span>
-          </div>
-          <div className={styles.property}>
-            <span className={styles.propertyLabel}>Visibility</span>
-            <span className={styles.propertyValue}>{selectedProcedure.visibility}</span>
-          </div>
-          <div className={styles.property}>
-            <span className={styles.propertyLabel}>Parameters</span>
-            <span className={styles.propertyValue}>
-              {selectedProcedure.parameters.length}
-            </span>
-          </div>
+        <Section title="Procedure" gap={4} style={{ borderRadius: 0 }}>
+          <PropertyField label="Name" value={selectedProcedure.name} />
+          <PropertyField label="Type" value={selectedProcedure.type} />
+          <PropertyField label="Visibility" value={selectedProcedure.visibility} />
+          <PropertyField label="Parameters" value={selectedProcedure.parameters.length} />
           {selectedProcedure.returnType && (
-            <div className={styles.property}>
-              <span className={styles.propertyLabel}>Returns</span>
-              <span className={styles.propertyValue}>
-                {formatReturnType(selectedProcedure.returnType)}
-              </span>
-            </div>
+            <PropertyField
+              label="Returns"
+              value={formatReturnType(selectedProcedure.returnType)}
+            />
           )}
-        </div>
+        </Section>
       )}
-    </div>
+    </Panel>
   );
 }

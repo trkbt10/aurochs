@@ -5,7 +5,7 @@
  */
 
 import { useMemo, memo, type CSSProperties, type ReactNode } from "react";
-import styles from "../VbaCodeEditor.module.css";
+import { lineNumbersGutterStyle, lineNumberGutterItemStyle } from "../code-editor-styles";
 
 // =============================================================================
 // Types
@@ -88,13 +88,13 @@ export const LineNumbers = memo(function LineNumbers({
   }, [startLine, endLine]);
 
   return (
-    <div className={styles.lineNumbers} style={style}>
+    <div style={{ ...lineNumbersGutterStyle, ...style }}>
       {/* Top spacer */}
       {topHeight > 0 && <div style={{ height: topHeight }} />}
 
       {/* Visible line numbers */}
       {visibleNumbers.map((num) => (
-        <div key={num} className={styles.lineNumber}>
+        <div key={num} style={lineNumberGutterItemStyle}>
           {num}
         </div>
       ))}

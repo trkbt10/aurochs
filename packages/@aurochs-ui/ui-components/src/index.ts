@@ -22,6 +22,7 @@ export {
   spacingTokens,
   fontTokens,
   iconTokens,
+  shadowTokens,
   injectCSSVariables,
   removeCSSVariables,
   generateCSSVariables,
@@ -33,6 +34,7 @@ export {
   type SpacingTokens,
   type FontTokens,
   type IconTokens,
+  type ShadowTokens,
 } from "./design-tokens";
 
 // Icons
@@ -94,6 +96,8 @@ export {
   PlayIcon,
   RectIcon,
   RedoIcon,
+  ReplaceIcon,
+  ReplaceAllIcon,
   RightArrowIcon,
   RotateCcwIcon,
   RoundRectIcon,

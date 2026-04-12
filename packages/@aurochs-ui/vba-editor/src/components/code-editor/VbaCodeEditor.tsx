@@ -40,7 +40,13 @@ import { SearchBar } from "../search";
 import { useSearchIntegration } from "../../hooks/use-search";
 import { useVbaCompletion } from "../../completion";
 import { CompletionPopup } from "../completion";
-import styles from "./VbaCodeEditor.module.css";
+import {
+  editorContainerStyle,
+  emptyMessageStyle,
+  codeAreaStyle,
+  hiddenTextareaStyle,
+  imeCompositionStyle,
+} from "./code-editor-styles";
 
 // =============================================================================
 // Constants
@@ -720,8 +726,8 @@ export function VbaCodeEditor({
 
   if (!activeModuleSource) {
     return (
-      <div ref={containerRef} className={styles.container} style={style}>
-        <div className={styles.emptyMessage}>No module selected</div>
+      <div ref={containerRef} style={{ ...editorContainerStyle, ...style }}>
+        <div style={emptyMessageStyle}>No module selected</div>
       </div>
     );
   }
@@ -734,15 +740,15 @@ export function VbaCodeEditor({
   }, [cursorState]);
 
   return (
-    <div ref={containerRef} className={styles.container} style={style} onClick={handleContainerClick}>
+    <div ref={containerRef} style={{ ...editorContainerStyle, ...style }} onClick={handleContainerClick}>
       {/* Search bar */}
       <SearchBar />
 
-      <div ref={codeAreaRef} className={styles.codeArea} onScroll={handleCodeAreaScroll}>
+      <div ref={codeAreaRef} style={codeAreaStyle} onScroll={handleCodeAreaScroll}>
         {/* Hidden textarea for input */}
         <textarea
           ref={textareaRef}
-          className={styles.hiddenTextarea}
+          style={hiddenTextareaStyle}
           value={activeModuleSource}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
@@ -758,7 +764,7 @@ export function VbaCodeEditor({
 
         {/* IME composition indicator */}
         {composition.isComposing && composition.text && (
-          <div className={styles.imeComposition} style={imeInputStyle}>
+          <div style={{ ...imeCompositionStyle, ...imeInputStyle }}>
             {composition.text}
           </div>
         )}

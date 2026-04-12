@@ -40,13 +40,11 @@ export { vbaEditorReducer, createInitialState } from "./context/vba-editor";
 
 export {
   VbaCodeEditor,
-  VbaModuleList,
   VbaProcedureDropdown,
   VbaEditorToolbar,
   VbaPropertiesPanel,
   VbaExecutionPanel,
   type VbaCodeEditorProps,
-  type VbaModuleListProps,
   type VbaProcedureDropdownProps,
   type VbaEditorToolbarProps,
   type VbaPropertiesPanelProps,

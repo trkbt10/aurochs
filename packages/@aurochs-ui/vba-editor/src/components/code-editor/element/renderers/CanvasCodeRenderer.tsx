@@ -15,7 +15,7 @@ import { useRef, useEffect, useMemo, memo, type ReactNode } from "react";
 import type { Token } from "../../code/syntax-highlight";
 import type { CodeRendererProps, HighlightRange, HighlightType } from "./types";
 import { getTokenColorCss } from "./token-colors";
-import styles from "../../VbaCodeEditor.module.css";
+import { codeDisplayStyle } from "../../code-editor-styles";
 
 // =============================================================================
 // Constants
@@ -406,7 +406,7 @@ export const CanvasCodeRenderer = memo(function CanvasCodeRenderer({
   ]);
 
   return (
-    <div className={styles.codeDisplay}>
+    <div style={codeDisplayStyle}>
       {topSpacerHeight > 0 && <div style={{ height: topSpacerHeight }} />}
 
       <canvas

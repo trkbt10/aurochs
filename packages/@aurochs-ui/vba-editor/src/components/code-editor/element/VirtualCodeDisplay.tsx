@@ -7,7 +7,7 @@
 import { useMemo, type ReactNode, type CSSProperties, memo } from "react";
 import { getTokenColor, type Token } from "../code/syntax-highlight";
 import type { LineTokenCache } from "../line/use-line-token-cache";
-import styles from "../VbaCodeEditor.module.css";
+import { codeDisplayStyle, buildLineStyle } from "../code-editor-styles";
 
 // =============================================================================
 // Types
@@ -72,9 +72,12 @@ type LineProps = {
   readonly tokens: readonly Token[];
 };
 
+/** Default line height (21px) matching code editor layout. */
+const DEFAULT_LINE_STYLE = buildLineStyle(21);
+
 const Line = memo(function Line({ tokens }: LineProps): ReactNode {
   return (
-    <div className={styles.line}>
+    <div style={DEFAULT_LINE_STYLE}>
       {tokens.length === 0 ? "\u00A0" : tokens.map(renderToken)}
     </div>
   );
@@ -107,7 +110,7 @@ export const VirtualCodeDisplay = memo(function VirtualCodeDisplay({
   }, [visibleLines, tokenCache]);
 
   return (
-    <div className={styles.codeDisplay}>
+    <div style={codeDisplayStyle}>
       {/* Top spacer */}
       {topSpacerHeight > 0 && <div style={{ height: topSpacerHeight }} />}
 

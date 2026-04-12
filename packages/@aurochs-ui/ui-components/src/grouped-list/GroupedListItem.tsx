@@ -180,17 +180,21 @@ export function GroupedListItem<TMeta = unknown>({
 
   const handleInputKeyDown = useCallback(
     (e: KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        const trimmed = editValue.trim();
-        if (trimmed && trimmed !== item.label) {
-          onRenameSubmit(item.id, trimmed);
+      switch (e.key) {
+        case "Enter": {
+          e.preventDefault();
+          const trimmed = editValue.trim();
+          if (trimmed && trimmed !== item.label) {
+            onRenameSubmit(item.id, trimmed);
+          }
+          onRenameCancel(item.id);
+          break;
         }
-        onRenameCancel(item.id);
-      } else if (e.key === "Escape") {
-        e.preventDefault();
-        setEditValue(item.label);
-        onRenameCancel(item.id);
+        case "Escape":
+          e.preventDefault();
+          setEditValue(item.label);
+          onRenameCancel(item.id);
+          break;
       }
     },
     [editValue, item.label, item.id, onRenameSubmit, onRenameCancel]

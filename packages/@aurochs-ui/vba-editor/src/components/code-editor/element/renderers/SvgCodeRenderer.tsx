@@ -15,7 +15,7 @@ import { useMemo, memo, type ReactNode } from "react";
 import type { Token } from "../../code/syntax-highlight";
 import type { CodeRendererProps, HighlightRange, HighlightType } from "./types";
 import { getTokenColorCss } from "./token-colors";
-import styles from "../../VbaCodeEditor.module.css";
+import { codeDisplayStyle } from "../../code-editor-styles";
 
 // =============================================================================
 // Constants
@@ -393,7 +393,7 @@ export const SvgCodeRenderer = memo(function SvgCodeRenderer({
   const svgHeight = (visibleRange.end - visibleRange.start) * lineHeight;
 
   return (
-    <div className={styles.codeDisplay}>
+    <div style={codeDisplayStyle}>
       {topSpacerHeight > 0 && <div style={{ height: topSpacerHeight }} />}
 
       <svg
