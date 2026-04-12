@@ -6,7 +6,7 @@
  * EXIT_CELL_EDIT, SET_COMPOSITION, INSERT_CELL_REFERENCE.
  */
 
-import { colIdx, rowIdx } from "@aurochs-office/xlsx/domain/types";
+import { colIdx, rowIdx, sheetId } from "@aurochs-office/xlsx/domain/types";
 import type { CellAddress } from "@aurochs-office/xlsx/domain/cell/address";
 import type { Cell, CellValue } from "@aurochs-office/xlsx/domain/cell/types";
 import type { XlsxWorkbook, XlsxWorksheet, XlsxRow } from "@aurochs-office/xlsx/domain/workbook";
@@ -62,7 +62,7 @@ function createWorksheet(cells: readonly Cell[]): XlsxWorksheet {
   return {
     dateSystem: "1900",
     name: "Sheet1",
-    sheetId: 1,
+    sheetId: sheetId(1),
     state: "visible",
     xmlPath: "xl/worksheets/sheet1.xml",
     rows,
@@ -385,7 +385,7 @@ describe("xlsx-editor/context/workbook/editor/reducer/editing-handlers", () => {
       const sheet2: XlsxWorksheet = {
         ...createWorksheet(sheet2Cells),
         name: "Sheet2",
-        sheetId: 2,
+        sheetId: sheetId(2),
         xmlPath: "xl/worksheets/sheet2.xml",
       };
       const wb: XlsxWorkbook = {

@@ -7,7 +7,7 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { triggerResizeObservers } from "../../../../../spec/test-utils/resize-observer";
 import type { XlsxWorkbook } from "@aurochs-office/xlsx/domain/workbook";
-import { colIdx, rowIdx } from "@aurochs-office/xlsx/domain/types";
+import { colIdx, rowIdx, sheetId } from "@aurochs-office/xlsx/domain/types";
 import { createDefaultStyleSheet } from "@aurochs-office/xlsx/domain/style/types";
 import type { CellAddress } from "@aurochs-office/xlsx/domain/cell/address";
 import { XlsxWorkbookEditorProvider, useXlsxWorkbookEditor } from "../context/workbook/XlsxWorkbookEditorContext";
@@ -38,7 +38,7 @@ function createWorkbook(): XlsxWorkbook {
       {
         dateSystem: "1900",
         name: "Sheet1",
-        sheetId: 1,
+        sheetId: sheetId(1),
         state: "visible",
         rows: [
           {
@@ -108,7 +108,7 @@ describe("XlsxSheetGrid", () => {
         {
           dateSystem: "1900",
           name: "Sheet1",
-          sheetId: 1,
+          sheetId: sheetId(1),
           state: "visible",
           rows: [],
           xmlPath: "xl/worksheets/sheet1.xml",
@@ -226,7 +226,7 @@ describe("XlsxSheetGrid", () => {
         {
           dateSystem: "1900",
           name: "Sheet1",
-          sheetId: 1,
+          sheetId: sheetId(1),
           state: "visible",
           rows: [
             {
@@ -540,7 +540,7 @@ describe("XlsxSheetGrid", () => {
         {
           dateSystem: "1900",
           name: "Sheet1",
-          sheetId: 1,
+          sheetId: sheetId(1),
           state: "visible",
           rows: [
             {

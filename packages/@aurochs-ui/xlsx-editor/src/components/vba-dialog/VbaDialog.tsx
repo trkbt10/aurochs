@@ -16,7 +16,7 @@ import {
 import { createPortal } from "react-dom";
 import type { VbaProgramIr } from "@aurochs-office/vba";
 import type { XlsxWorkbook } from "@aurochs-office/xlsx/domain/workbook";
-import { VbaEditor, SvgCodeRenderer, type RunStatus } from "@aurochs-ui/vba-editor";
+import { VbaEditor, SvgCodeRenderer } from "@aurochs-ui/vba-editor";
 import { Button } from "@aurochs-ui/ui-components/primitives";
 import { executeVbaProcedure, applyMutations } from "../../vba";
 
@@ -97,13 +97,6 @@ const emptyStateStyle: CSSProperties = {
   color: "var(--text-secondary)",
 };
 
-function formatRunMessage(time: string, changes: number): string {
-  if (changes > 0) {
-    return `${time}ms · ${changes} change${changes !== 1 ? "s" : ""}`;
-  }
-  return `${time}ms`;
-}
-
 // =============================================================================
 // Component
 // =============================================================================
@@ -119,8 +112,6 @@ export function VbaDialog({
   workbook,
   onWorkbookChange,
 }: VbaDialogProps): ReactNode {
-  const [runStatus, setRunStatus] = useState<RunStatus | undefined>();
-
   // Track edited program for execution
   const [editedProgram, setEditedProgram] = useState(program);
   const editedProgramRef = useRef(editedProgram);
@@ -154,8 +145,6 @@ export function VbaDialog({
         return;
       }
 
-      setRunStatus({ state: "running", message: "Running..." });
-
       // Run synchronously (VBA execution is synchronous)
       try {
         const result = executeVbaProcedure({
@@ -166,24 +155,17 @@ export function VbaDialog({
         });
 
         if (result.ok) {
-          const time = result.durationMs.toFixed(1);
-          const changes = result.mutations.length;
-          const message = formatRunMessage(time, changes);
-          setRunStatus({ state: "success", message });
-
           // Apply mutations
+          const changes = result.mutations.length;
           if (changes > 0 && onWorkbookChange) {
             const updatedWorkbook = applyMutations(workbook, result.mutations);
             onWorkbookChange(updatedWorkbook);
           }
-        } else {
-          setRunStatus({ state: "error", message: `Error: ${result.message}` });
         }
-      } catch (err) {
-        setRunStatus({
-          state: "error",
-          message: `Error: ${err instanceof Error ? err.message : "Unknown error"}`,
-        });
+      } catch (error: unknown) {
+        // Execution errors are handled internally by VbaEditor's execution panel.
+        // Log for debugging but do not surface to the user.
+        console.debug("VBA execution error:", error);
       }
     },
     [workbook, onWorkbookChange]
@@ -230,7 +212,6 @@ export function VbaDialog({
             Renderer={SvgCodeRenderer}
             style={{ width: "100%", height: "100%" }}
             onRun={handleRun}
-            runStatus={runStatus}
           />
         </div>
       );

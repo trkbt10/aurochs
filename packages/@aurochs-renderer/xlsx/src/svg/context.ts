@@ -6,7 +6,8 @@
  */
 
 import type { XlsxWorkbook, XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
-import type { XlsxSvgRenderContext, XlsxRenderOptions } from "./types";
+import { sheetId as createSheetId } from "@aurochs-office/xlsx/domain/types";
+import type { XlsxSvgRenderContext, XlsxRenderOptions, ImageResolver, ChartResolver } from "./types";
 import { DEFAULT_XLSX_RENDER_OPTIONS, createDefsCollector, createWarningsCollector } from "./types";
 import { calculateSheetLayout } from "./layout";
 
@@ -24,6 +25,10 @@ export type XlsxSvgRenderContextConfig = {
   readonly sheetIndex: number;
   /** Optional render options (merged with defaults) */
   readonly options?: Partial<XlsxRenderOptions>;
+  /** Optional image resolver for drawing elements (overrides workbook.resourceStore) */
+  readonly resolveImage?: ImageResolver;
+  /** Optional chart resolver for chart frames */
+  readonly resolveChart?: ChartResolver;
 };
 
 /**
@@ -86,6 +91,9 @@ export function createXlsxSvgRenderContext(config: XlsxSvgRenderContextConfig): 
   const defs = createDefsCollector();
   const warnings = createWarningsCollector();
 
+  const resolveImage = config.resolveImage ?? buildImageResolverFromWorkbook(workbook);
+  const resolveChart = config.resolveChart ?? buildChartResolverFromWorkbook(workbook);
+
   return {
     workbook,
     sheet,
@@ -93,6 +101,8 @@ export function createXlsxSvgRenderContext(config: XlsxSvgRenderContextConfig): 
     options,
     defs,
     warnings,
+    ...(resolveImage && { resolveImage }),
+    ...(resolveChart && { resolveChart }),
   };
 }
 
@@ -103,7 +113,7 @@ export function createEmptyXlsxSvgRenderContext(): XlsxSvgRenderContext {
   const emptySheet: XlsxWorksheet = {
     dateSystem: "1900",
     name: "Sheet1",
-    sheetId: 1,
+    sheetId: createSheetId(1),
     state: "visible",
     rows: [],
     xmlPath: "xl/worksheets/sheet1.xml",
@@ -146,4 +156,33 @@ export function getColorScheme(ctx: XlsxSvgRenderContext): Record<string, string
  */
 export function getIndexedColors(ctx: XlsxSvgRenderContext): readonly string[] | undefined {
   return ctx.workbook.styles.indexedColors;
+}
+
+// =============================================================================
+// Resolver Factories
+// =============================================================================
+
+/**
+ * Build an image resolver from workbook.resourceStore if available.
+ */
+function buildImageResolverFromWorkbook(workbook: XlsxWorkbook): ImageResolver | undefined {
+  if (!workbook.resourceStore) {
+    return undefined;
+  }
+  const store = workbook.resourceStore;
+  return (relId: string) => store.toDataUrl(relId);
+}
+
+/**
+ * Build a chart resolver from workbook.charts if available.
+ */
+function buildChartResolverFromWorkbook(workbook: XlsxWorkbook): ChartResolver | undefined {
+  if (!workbook.charts) {
+    return undefined;
+  }
+  const charts = workbook.charts;
+  return (relIdOrPath: string) => {
+    const match = charts.find((c) => c.relId === relIdOrPath || c.chartPath === relIdOrPath);
+    return match?.chart;
+  };
 }

@@ -8,6 +8,7 @@ import { act, render, screen } from "@testing-library/react";
 import { triggerResizeObservers } from "../../../../../../spec/test-utils/resize-observer";
 import type { XlsxWorkbook } from "@aurochs-office/xlsx/domain/workbook";
 import { createDefaultStyleSheet } from "@aurochs-office/xlsx/domain/style/types";
+import { sheetId } from "@aurochs-office/xlsx/domain/types";
 import { VirtualScroll } from "@aurochs-ui/ui-components";
 import { createSheetLayout } from "../../selectors/sheet-layout";
 import { createFormulaEvaluator } from "@aurochs-office/xlsx/formula/evaluator";
@@ -35,7 +36,7 @@ describe("xlsx-editor/components/sheet-grid/sheet-grid-layers", () => {
         {
           dateSystem: "1900",
           name: "Sheet1",
-          sheetId: 1,
+          sheetId: sheetId(1),
           state: "visible",
           rows: [],
           xmlPath: "xl/worksheets/sheet1.xml",

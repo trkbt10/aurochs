@@ -5,7 +5,7 @@
 import type { XlsxWorkbook, XlsxWorksheet, XlsxRow } from "@aurochs-office/xlsx/domain/workbook";
 import type { Cell, CellValue } from "@aurochs-office/xlsx/domain/cell/types";
 import type { CellAddress, CellRange } from "@aurochs-office/xlsx/domain/cell/address";
-import { colIdx, rowIdx, styleId } from "@aurochs-office/xlsx/domain/types";
+import { colIdx, rowIdx, sheetId, styleId } from "@aurochs-office/xlsx/domain/types";
 import { createDefaultStyleSheet } from "@aurochs-office/xlsx/domain/style/types";
 import { getCell, getCellValue } from "@aurochs-office/xlsx/domain/mutation/query";
 import { createHistory } from "@aurochs-ui/editor-core/history";
@@ -81,7 +81,7 @@ function createWorksheet(name: string, sheetIdValue: number, cells: readonly Cel
   return {
     dateSystem: "1900",
     name,
-    sheetId: sheetIdValue,
+    sheetId: sheetId(sheetIdValue),
     state: "visible",
     xmlPath: `xl/worksheets/sheet${sheetIdValue}.xml`,
     rows,

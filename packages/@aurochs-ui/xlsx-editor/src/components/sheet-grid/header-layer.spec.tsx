@@ -6,6 +6,7 @@
 
 import { fireEvent, render, screen } from "@testing-library/react";
 import type { XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
+import { sheetId } from "@aurochs-office/xlsx/domain/types";
 import { createSheetLayout } from "../../selectors/sheet-layout";
 import { createIdleDragState } from "@aurochs-ui/editor-core/drag-state";
 import { XlsxSheetGridHeaderLayer } from "./header-layer";
@@ -15,7 +16,7 @@ describe("xlsx-editor/components/sheet-grid/header-layer", () => {
     const sheet: XlsxWorksheet = {
       dateSystem: "1900",
       name: "Sheet1",
-      sheetId: 1,
+      sheetId: sheetId(1),
       state: "visible",
       rows: [],
       xmlPath: "xl/worksheets/sheet1.xml",

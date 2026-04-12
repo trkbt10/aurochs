@@ -33,6 +33,9 @@ import { parseBooleanAttr, parseIntAttr } from "./primitive";
 import { parseWorkbookProtection } from "./protection";
 import { parseDrawing } from "./drawing";
 import { collectChartRelIds, resolveCharts, updateDrawingWithChartPaths } from "./chart-resolver";
+import { collectImageRelIds, resolveDrawingImages } from "./image-resolver";
+import type { ResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
+import { createResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 import { parsePivotTable } from "./pivot/pivot-table";
 import { parsePivotCacheDefinition } from "./pivot/pivot-cache";
 import { parseTheme } from "./theme";
@@ -409,6 +412,27 @@ function collectTableRelationshipIds(worksheetRoot: XmlElement): readonly string
   return ids;
 }
 
+function resolveImagesIfAvailable(params: {
+  readonly drawing: ReturnType<typeof parseDrawing>;
+  readonly drawingPath: string;
+  readonly drawingRelationships: ReadonlyMap<string, string>;
+  readonly readBinary?: (path: string) => ArrayBuffer | null;
+  readonly resourceStore?: ResourceStore;
+}): ReturnType<typeof parseDrawing> {
+  const { drawing, drawingPath, drawingRelationships, readBinary, resourceStore } = params;
+  const imageRelIds = collectImageRelIds(drawing);
+  if (imageRelIds.length === 0 || !readBinary || !resourceStore) {
+    return drawing;
+  }
+  return resolveDrawingImages({
+    drawing,
+    drawingPath,
+    drawingRelationships,
+    readBinary,
+    resourceStore,
+  });
+}
+
 type DrawingWithCharts = {
   readonly drawing: ReturnType<typeof parseDrawing> | undefined;
   readonly charts: readonly XlsxWorkbookChart[];
@@ -420,8 +444,10 @@ async function loadWorksheetDrawingFromRelationships(params: {
   readonly worksheetXmlPath: string;
   readonly relationships: readonly RelationshipInfo[];
   readonly sheetIndex: number;
+  readonly readBinary?: (path: string) => ArrayBuffer | null;
+  readonly resourceStore?: ResourceStore;
 }): Promise<DrawingWithCharts> {
-  const { getFileContent, worksheetXmlPath, relationships, sheetIndex } = params;
+  const { getFileContent, worksheetXmlPath, relationships, sheetIndex, readBinary, resourceStore } = params;
   const drawingRel = relationships.find((rel) => rel.type.endsWith("/drawing"));
   if (!drawingRel) {
     return { drawing: undefined, charts: [] };
@@ -436,16 +462,25 @@ async function loadWorksheetDrawingFromRelationships(params: {
     return { drawing: undefined, charts: [] };
   }
 
-  // Collect chart relationship IDs from drawing
-  const chartRelIds = collectChartRelIds(parsedDrawing);
-  if (chartRelIds.length === 0) {
-    return { drawing: parsedDrawing, charts: [], drawingPath };
-  }
-
-  // Load drawing relationships for chart resolution
+  // Load drawing relationships (needed for both charts and images)
   const drawingRelsPath = resolveRelationshipsPathForPart(drawingPath);
   const drawingRelsXml = await getFileContent(drawingRelsPath);
   const drawingRels = parseRelsOrEmpty(drawingRelsXml);
+
+  // Resolve images if binary reader and resource store are available
+  const drawingAfterImages = resolveImagesIfAvailable({
+    drawing: parsedDrawing,
+    drawingPath,
+    drawingRelationships: drawingRels,
+    readBinary,
+    resourceStore,
+  });
+
+  // Collect chart relationship IDs from drawing
+  const chartRelIds = collectChartRelIds(drawingAfterImages);
+  if (chartRelIds.length === 0) {
+    return { drawing: drawingAfterImages, charts: [], drawingPath };
+  }
 
   // Resolve charts
   const resolvedCharts = await resolveCharts({
@@ -463,7 +498,7 @@ async function loadWorksheetDrawingFromRelationships(params: {
 
   // Update drawing with chart paths
   const chartPathMap = new Map(resolvedCharts.map((c) => [c.relId, c.chartPath]));
-  const drawing = updateDrawingWithChartPaths(parsedDrawing, chartPathMap);
+  const drawing = updateDrawingWithChartPaths(drawingAfterImages, chartPathMap);
 
   return { drawing, charts, drawingPath };
 }
@@ -584,6 +619,36 @@ async function loadTheme(
  * console.log(workbook.sharedStrings); // Shared string table
  * ```
  */
+/**
+ * Result of parsing an XLSX workbook with resource resolution.
+ *
+ * Returned by `parseXlsxWorkbook` when a `readBinary` option is provided.
+ * The ResourceStore contains all resolved embedded resources (images)
+ * that can be used for rendering drawings.
+ */
+export type XlsxParseResult = {
+  readonly workbook: XlsxWorkbook;
+  readonly resourceStore: ResourceStore;
+};
+
+/**
+ * Parse a complete XLSX workbook from file content.
+ *
+ * This is the main entry point for parsing XLSX files.
+ * It orchestrates parsing of all component files and returns
+ * a complete XlsxWorkbook object.
+ *
+ * When `options.readBinary` is provided, images in drawings are resolved
+ * and stored in `workbook.resourceStore` for use during rendering.
+ *
+ * @param getFileContent - Function to retrieve file content by path within the XLSX package
+ * @param options - Parser options (non-standard behaviors must be enabled explicitly)
+ * @returns Parsed workbook with all sheets, styles, shared strings, and defined names
+ * @throws Error if workbook.xml is not found
+ *
+ * @see ECMA-376 Part 2 (OPC) - Package Structure
+ * @see ECMA-376 Part 4, Section 18.2.28 (workbook)
+ */
 export async function parseXlsxWorkbook(
   getFileContent: (path: string) => Promise<string | undefined>,
   options?: XlsxParseOptions,
@@ -619,6 +684,10 @@ export async function parseXlsxWorkbook(
   // 5. Create context
   const context = createParseContext({ sharedStrings, styleSheet, workbookInfo, relationships });
 
+  // 5.1 Create resource store for embedded resources (images)
+  const resourceStore = createResourceStore();
+  const readBinary = options?.readBinary;
+
   // 6. Parse each worksheet
   const sheets: XlsxWorksheet[] = [];
   const tables: XlsxTable[] = [];
@@ -651,6 +720,8 @@ export async function parseXlsxWorkbook(
         worksheetXmlPath: xmlPath,
         relationships: relInfos,
         sheetIndex,
+        readBinary,
+        resourceStore,
       });
       const sheetPivotTables = await loadWorksheetPivotTables(getFileContent, xmlPath, relInfos);
 
@@ -698,6 +769,7 @@ export async function parseXlsxWorkbook(
     calcProperties: workbookInfo.calcProperties,
     pivotCaches: pivotCaches.length > 0 ? pivotCaches : undefined,
     theme,
+    ...(readBinary && { resourceStore }),
   };
 }
 

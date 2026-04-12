@@ -28,9 +28,6 @@ export { createXlsxSvgRenderContext, createEmptyXlsxSvgRenderContext, getColorSc
 // Layout
 export { calculateSheetLayout, columnIndexToLetter, cellRefFromIndices } from "./layout";
 
-// Color resolution
-export { resolveXlsxColor, getDefaultFontColor, getDefaultBackgroundColor, getDefaultBorderColor } from "@aurochs-office/xlsx/domain/style/color-resolver";
-
 // Style resolution
 export { resolveCellStyle, createStyleCache, createDefaultFont, createDefaultFill, createDefaultBorder, createDefaultStyle } from "./style-resolver";
 
@@ -39,6 +36,9 @@ export { formatCellValue, renderCellFill, renderCellText, renderCell } from "./c
 
 // Border rendering
 export { renderCellBorders, renderGridLines, renderColumnHeaders, renderRowHeaders } from "./border-renderer";
+
+// Drawing rendering
+export { renderAllDrawings, type RenderDrawingsOptions } from "./drawing-renderer";
 
 // Sheet rendering (main entry points)
 export { renderSheetToSvg, renderSheetWithContext, renderFirstSheetToSvg, renderSheetByNameToSvg } from "./sheet-renderer";

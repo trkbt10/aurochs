@@ -5,6 +5,7 @@
   "type": "module",
   "sideEffects": false,
   "dependencies": {
+    "@aurochs/xml": "workspace:*",
     "@aurochs/color": "workspace:*",
     "@aurochs/mermaid": "workspace:*",
     "@aurochs-office/chart": "workspace:*",
@@ -35,6 +36,10 @@
     "./svg": {
       "types": "./src/svg/index.ts",
       "default": "./src/svg/index.ts"
+    },
+    "./html": {
+      "types": "./src/html/index.ts",
+      "default": "./src/html/index.ts"
     }
   }
 }

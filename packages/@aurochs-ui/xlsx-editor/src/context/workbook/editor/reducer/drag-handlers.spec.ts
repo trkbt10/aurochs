@@ -7,7 +7,7 @@
 import type { XlsxWorkbook } from "@aurochs-office/xlsx/domain/workbook";
 import { createDefaultStyleSheet } from "@aurochs-office/xlsx/domain/style/types";
 import { parseCellRef, parseRange } from "@aurochs-office/xlsx/domain/cell/address";
-import { colIdx, rowIdx } from "@aurochs-office/xlsx/domain/types";
+import { colIdx, rowIdx, sheetId } from "@aurochs-office/xlsx/domain/types";
 import { createHistory } from "@aurochs-ui/editor-core/history";
 import { createEmptyCellSelection, type XlsxEditorState } from "../types";
 import { createIdleDragState } from "@aurochs-ui/editor-core/drag-state";
@@ -20,7 +20,7 @@ function createTestWorkbook(): XlsxWorkbook {
       {
         dateSystem: "1900",
         name: "Sheet1",
-        sheetId: 1,
+        sheetId: sheetId(1),
         state: "visible",
         rows: [],
         xmlPath: "xl/worksheets/sheet1.xml",
@@ -192,7 +192,7 @@ describe("xlsx-editor/context/workbook/editor/reducer/drag-handlers", () => {
         {
           dateSystem: "1900",
           name: "Sheet1",
-          sheetId: 1,
+          sheetId: sheetId(1),
           state: "visible",
           rows: [
             {

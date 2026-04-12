@@ -88,6 +88,7 @@
         "@aurochs-office/xlsx": "workspace:*",
         "@aurochs-renderer/pdf": "workspace:*",
         "@aurochs-renderer/pptx": "workspace:*",
+        "@aurochs-renderer/xlsx": "workspace:*",
         "@aurochs/zip": "workspace:*",
       },
       "devDependencies": {
@@ -644,6 +645,7 @@
         "@aurochs-renderer/drawing-ml": "workspace:*",
         "@aurochs/color": "workspace:*",
         "@aurochs/mermaid": "workspace:*",
+        "@aurochs/xml": "workspace:*",
       },
     },
     "packages/@aurochs-ui/chart-editor": {

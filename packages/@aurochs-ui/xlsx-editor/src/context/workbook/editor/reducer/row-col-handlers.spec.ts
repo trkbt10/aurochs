@@ -5,7 +5,7 @@
 import type { XlsxWorkbook, XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
 import type { CellAddress } from "@aurochs-office/xlsx/domain/cell/address";
 import { createDefaultStyleSheet } from "@aurochs-office/xlsx/domain/style/types";
-import { colIdx, rowIdx } from "@aurochs-office/xlsx/domain/types";
+import { colIdx, rowIdx, sheetId } from "@aurochs-office/xlsx/domain/types";
 import { getCellValue } from "@aurochs-office/xlsx/domain/mutation/query";
 import { createInitialState, xlsxEditorReducer } from "./index";
 
@@ -18,13 +18,13 @@ function addr(col: number, row: number): CellAddress {
   };
 }
 
-function createWorksheet(name: string, sheetId: number): XlsxWorksheet {
+function createWorksheet(name: string, id: number): XlsxWorksheet {
   return {
     dateSystem: "1900",
     name,
-    sheetId,
+    sheetId: sheetId(id),
     state: "visible",
-    xmlPath: `xl/worksheets/sheet${sheetId}.xml`,
+    xmlPath: `xl/worksheets/sheet${id}.xml`,
     rows: [],
   };
 }

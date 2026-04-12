@@ -17,6 +17,7 @@ import { resolveCellRenderStyle } from "../../selectors/cell-render-style";
 import { formatCellValueForDisplay, formatFormulaScalarForDisplay, resolveCellFormatCode } from "../../selectors/cell-display-text";
 import { normalizeMergeRange, findMergeForCell, type NormalizedMergeRange } from "../../sheet/merge-range";
 import { indexToColumnLetter } from "@aurochs-office/xlsx/domain/cell/address";
+import { DrawingOverlay, type DrawingPositionResolver } from "../../drawing/DrawingOverlay";
 
 export type ReadonlySheetGridProps = {
   /** The workbook containing styles and shared data */
@@ -112,6 +113,19 @@ function formatCellText(params: FormatCellTextParams): string {
     return formatFormulaScalarForDisplay(evaluated, formatCode, { dateSystem });
   }
   return formatCellValueForDisplay(cell?.value ?? { type: "empty" }, formatCode, { dateSystem });
+}
+
+/**
+ * Create a DrawingPositionResolver from the editor's SheetLayout.
+ *
+ * Maps 0-based column/row indices to pixel positions
+ * using the axis layout's offset functions.
+ */
+function createDrawingPositionResolver(layout: SheetLayout): DrawingPositionResolver {
+  return {
+    getColumnPositionPx: (col0: number) => layout.cols.getOffsetPx(col0),
+    getRowPositionPx: (row0: number) => layout.rows.getOffsetPx(row0),
+  };
 }
 
 type GridLayersProps = {
@@ -378,6 +392,8 @@ function GridLayers({
   const headerOffsetX = showHeaders ? metrics.rowHeaderWidthPx : 0;
   const headerOffsetY = showHeaders ? metrics.colHeaderHeightPx : 0;
 
+  const drawingPositionResolver = useMemo(() => createDrawingPositionResolver(layout), [layout]);
+
   return (
     <div style={layerRootStyle}>
       <div
@@ -410,6 +426,11 @@ function GridLayers({
           >
             {gridlineNodes}
             {cellNodes}
+            <DrawingOverlay
+              drawing={sheet.drawing}
+              positionResolver={drawingPositionResolver}
+              resourceStore={workbook.resourceStore}
+            />
           </div>
         </div>
       </div>

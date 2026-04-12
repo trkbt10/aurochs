@@ -22,5 +22,16 @@ export type XlsxParseOptions = {
    * @default false
    */
   readonly includeRichText?: boolean;
+
+  /**
+   * Binary file reader for resolving embedded resources (images).
+   *
+   * When provided, images referenced in drawings will be resolved and
+   * registered in a ResourceStore, which is returned via `XlsxParseResult`.
+   *
+   * Without this, drawings will still be parsed but images will not have
+   * their binary data available for rendering.
+   */
+  readonly readBinary?: (path: string) => ArrayBuffer | null;
 };
 

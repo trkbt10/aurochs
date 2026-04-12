@@ -5,7 +5,7 @@
 import type { XlsxStyleSheet } from "@aurochs-office/xlsx/domain/style/types";
 import type { XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
 import { createDefaultStyleSheet } from "@aurochs-office/xlsx/domain/style/types";
-import { borderId, colIdx, fillId, fontId, numFmtId, rowIdx, styleId } from "@aurochs-office/xlsx/domain/types";
+import { borderId, colIdx, fillId, fontId, numFmtId, rowIdx, sheetId, styleId } from "@aurochs-office/xlsx/domain/types";
 import type { CellAddress } from "@aurochs-office/xlsx/domain/cell/address";
 import { resolveCellBorderDecoration, resolveCellRenderStyle } from "./cell-render-style";
 
@@ -122,7 +122,7 @@ function createSheet(): XlsxWorksheet {
   return {
     dateSystem: "1900",
     name: "Sheet1",
-    sheetId: 1,
+    sheetId: sheetId(1),
     state: "visible",
     rows: [],
     xmlPath: "xl/worksheets/sheet1.xml",
@@ -191,7 +191,7 @@ describe("resolveCellRenderStyle", () => {
     const sheet: XlsxWorksheet = {
       dateSystem: "1900",
       name: "Sheet1",
-      sheetId: 1,
+      sheetId: sheetId(1),
       state: "visible",
       rows: [{ rowNumber: rowIdx(1), styleId: styleId(1), cells: [] }],
       xmlPath: "xl/worksheets/sheet1.xml",
@@ -207,7 +207,7 @@ describe("resolveCellRenderStyle", () => {
     const sheet: XlsxWorksheet = {
       dateSystem: "1900",
       name: "Sheet1",
-      sheetId: 1,
+      sheetId: sheetId(1),
       state: "visible",
       columns: [{ min: colIdx(2), max: colIdx(2), styleId: styleId(1) }],
       rows: [],

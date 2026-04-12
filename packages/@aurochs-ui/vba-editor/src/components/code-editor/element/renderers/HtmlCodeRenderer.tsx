@@ -353,6 +353,17 @@ export const HtmlCodeRenderer = memo(function HtmlCodeRenderer({
     return map;
   }, [visibleRange.start, visibleRange.end, lines, highlights]);
 
+  function buildLineCursor(
+    cursorLine: number | undefined,
+    lineNumber: number,
+    cur: CodeRendererProps["cursor"],
+  ): { column: number; blinking: boolean } | undefined {
+    if (cursorLine !== lineNumber || !cur) {
+      return undefined;
+    }
+    return { column: cur.column, blinking: cur.blinking };
+  }
+
   // Check if cursor is on a visible line
   const cursorOnLine = useMemo(() => {
     if (!cursor?.visible) {return undefined;}

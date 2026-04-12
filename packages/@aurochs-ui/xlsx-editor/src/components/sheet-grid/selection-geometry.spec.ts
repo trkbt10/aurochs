@@ -2,7 +2,7 @@
  * @file Unit tests for selection rectangle geometry helpers.
  */
 
-import { colIdx, rowIdx } from "@aurochs-office/xlsx/domain/types";
+import { colIdx, rowIdx, sheetId } from "@aurochs-office/xlsx/domain/types";
 import type { XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
 import { createSheetLayout } from "../../selectors/sheet-layout";
 import { clipRectToViewport, getActiveCellRect, getRangeBounds, getSelectedRangeRect } from "./selection-geometry";
@@ -11,7 +11,7 @@ function sheet(): XlsxWorksheet {
   return {
     dateSystem: "1900",
     name: "Sheet1",
-    sheetId: 1,
+    sheetId: sheetId(1),
     state: "visible",
     rows: [],
     xmlPath: "xl/worksheets/sheet1.xml",

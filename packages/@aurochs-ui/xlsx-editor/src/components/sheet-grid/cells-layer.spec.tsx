@@ -7,7 +7,7 @@
 import { render, screen } from "@testing-library/react";
 import type { XlsxWorkbook, XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
 import { createDefaultStyleSheet } from "@aurochs-office/xlsx/domain/style/types";
-import { colIdx, rowIdx, styleId, fontId, fillId, borderId, numFmtId } from "@aurochs-office/xlsx/domain/types";
+import { colIdx, rowIdx, sheetId, styleId, fontId, fillId, borderId, numFmtId } from "@aurochs-office/xlsx/domain/types";
 import { createSheetLayout } from "../../selectors/sheet-layout";
 import { createFormulaEvaluator } from "@aurochs-office/xlsx/formula/evaluator";
 import { XlsxSheetGridCellsLayer } from "./cells-layer";
@@ -17,7 +17,7 @@ describe("xlsx-editor/components/sheet-grid/cells-layer", () => {
     const sheet: XlsxWorksheet = {
       dateSystem: "1900",
       name: "Sheet1",
-      sheetId: 1,
+      sheetId: sheetId(1),
       state: "visible",
       rows: [
         {
@@ -71,7 +71,7 @@ describe("xlsx-editor/components/sheet-grid/cells-layer", () => {
     const sheet: XlsxWorksheet = {
       dateSystem: "1900",
       name: "Sheet1",
-      sheetId: 1,
+      sheetId: sheetId(1),
       state: "visible",
       rows: [
         {
@@ -127,7 +127,7 @@ describe("xlsx-editor/components/sheet-grid/cells-layer", () => {
     const themeFill = {
       type: "pattern" as const,
       pattern: {
-        patternType: "solid",
+        patternType: "solid" as const,
         fgColor: { type: "theme" as const, theme: 0, tint: -0.1499984740745262 },
         bgColor: { type: "indexed" as const, index: 64 },
       },
@@ -154,7 +154,7 @@ describe("xlsx-editor/components/sheet-grid/cells-layer", () => {
     const sheet: XlsxWorksheet = {
       dateSystem: "1900",
       name: "Sheet1",
-      sheetId: 1,
+      sheetId: sheetId(1),
       state: "visible",
       rows: [
         {
@@ -221,7 +221,7 @@ describe("xlsx-editor/components/sheet-grid/cells-layer", () => {
     const themeFill = {
       type: "pattern" as const,
       pattern: {
-        patternType: "solid",
+        patternType: "solid" as const,
         fgColor: { type: "theme" as const, theme: 0, tint: -0.15 },
         bgColor: { type: "indexed" as const, index: 64 },
       },
@@ -244,7 +244,7 @@ describe("xlsx-editor/components/sheet-grid/cells-layer", () => {
     const sheet: XlsxWorksheet = {
       dateSystem: "1900",
       name: "Sheet1",
-      sheetId: 1,
+      sheetId: sheetId(1),
       state: "visible",
       rows: [
         {

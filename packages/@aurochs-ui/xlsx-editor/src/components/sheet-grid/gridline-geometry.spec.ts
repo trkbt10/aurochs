@@ -5,7 +5,7 @@
 import type { XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
 import { createSheetLayout } from "../../selectors/sheet-layout";
 import { getVisibleGridLineSegments } from "./gridline-geometry";
-import { colIdx, rowIdx } from "@aurochs-office/xlsx/domain/types";
+import { colIdx, rowIdx, sheetId } from "@aurochs-office/xlsx/domain/types";
 import type { CellAddress } from "@aurochs-office/xlsx/domain/cell/address";
 import { normalizeMergeRange } from "../../sheet/merge-range";
 
@@ -13,7 +13,7 @@ function sheet(): XlsxWorksheet {
   return {
     dateSystem: "1900",
     name: "Sheet1",
-    sheetId: 1,
+    sheetId: sheetId(1),
     state: "visible",
     rows: [],
     xmlPath: "xl/worksheets/sheet1.xml",

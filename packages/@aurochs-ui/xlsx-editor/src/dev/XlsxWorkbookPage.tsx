@@ -13,6 +13,7 @@ import {
   fontId,
   numFmtId,
   rowIdx,
+  sheetId,
   styleId,
   type ColIndex,
   type RowIndex,
@@ -160,7 +161,7 @@ function createTestWorkbook(): XlsxWorkbook {
       {
         dateSystem: "1900",
         name: "Sheet1",
-        sheetId: 1,
+        sheetId: sheetId(1),
         state: "visible",
         sheetView: { showGridLines: true, showRowColHeaders: true },
         rows: [
@@ -285,7 +286,7 @@ function createTestWorkbook(): XlsxWorkbook {
       {
         dateSystem: "1900",
         name: "Sheet2",
-        sheetId: 2,
+        sheetId: sheetId(2),
         state: "visible",
         sheetView: { showGridLines: true, showRowColHeaders: true },
         rows: [
@@ -440,7 +441,7 @@ function createPatternWorkbook(): XlsxWorkbook {
       {
         dateSystem: "1900",
         name: "CellTypes",
-        sheetId: 1,
+        sheetId: sheetId(1),
         state: "visible",
         sheetView: { showGridLines: true, showRowColHeaders: true },
         rows: [
@@ -471,7 +472,7 @@ function createPatternWorkbook(): XlsxWorkbook {
       {
         dateSystem: "1900",
         name: "Styles",
-        sheetId: 2,
+        sheetId: sheetId(2),
         state: "visible",
         sheetView: { showGridLines: true, showRowColHeaders: true },
         rows: [
@@ -521,7 +522,7 @@ function createPatternWorkbook(): XlsxWorkbook {
       {
         dateSystem: "1900",
         name: "Borders",
-        sheetId: 3,
+        sheetId: sheetId(3),
         state: "visible",
         sheetView: { showGridLines: true, showRowColHeaders: true },
         rows: [
@@ -561,7 +562,7 @@ function createPatternWorkbook(): XlsxWorkbook {
       {
         dateSystem: "1900",
         name: "Merges",
-        sheetId: 4,
+        sheetId: sheetId(4),
         state: "visible",
         sheetView: { showGridLines: true, showRowColHeaders: true },
         columns: [
@@ -604,7 +605,7 @@ function createPatternWorkbook(): XlsxWorkbook {
       {
         dateSystem: "1900",
         name: "Formulas",
-        sheetId: 5,
+        sheetId: sheetId(5),
         state: "visible",
         sheetView: { showGridLines: true, showRowColHeaders: true },
         rows: [
@@ -643,7 +644,7 @@ function createPatternWorkbook(): XlsxWorkbook {
       {
         dateSystem: "1900",
         name: "NumberFormats",
-        sheetId: 6,
+        sheetId: sheetId(6),
         state: "visible",
         sheetView: { showGridLines: true, showRowColHeaders: true },
         rows: [

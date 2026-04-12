@@ -5,7 +5,7 @@
 import type { XlsxStyleSheet } from "@aurochs-office/xlsx/domain/style/types";
 import type { XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
 import { createDefaultStyleSheet } from "@aurochs-office/xlsx/domain/style/types";
-import { borderId, colIdx, fillId, fontId, numFmtId, rowIdx, styleId } from "@aurochs-office/xlsx/domain/types";
+import { borderId, colIdx, fillId, fontId, numFmtId, rowIdx, sheetId, styleId } from "@aurochs-office/xlsx/domain/types";
 import type { CellAddress } from "@aurochs-office/xlsx/domain/cell/address";
 import { createSheetLayout } from "./sheet-layout";
 import { buildBorderOverlayLines } from "./border-overlay";
@@ -47,7 +47,7 @@ function createSheet(styles: XlsxStyleSheet): XlsxWorksheet {
   return {
     dateSystem: "1900",
     name: "Sheet1",
-    sheetId: 1,
+    sheetId: sheetId(1),
     state: "visible",
     rows: [
       {
@@ -100,7 +100,7 @@ describe("buildBorderOverlayLines", () => {
     const sheet: XlsxWorksheet = {
       dateSystem: "1900",
       name: "Sheet1",
-      sheetId: 1,
+      sheetId: sheetId(1),
       state: "visible",
       rows: [
         {

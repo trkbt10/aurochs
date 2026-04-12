@@ -7,18 +7,18 @@ import { createDefaultStyleSheet } from "@aurochs-office/xlsx/domain/style/types
 import type { XlsxEditorState, CellEditingState } from "../types";
 import { createEmptyCellSelection, createIdleComposition } from "../types";
 import { createIdleDragState } from "@aurochs-ui/editor-core/drag-state";
-import { colIdx, rowIdx } from "@aurochs-office/xlsx/domain/types";
+import { colIdx, rowIdx, sheetId } from "@aurochs-office/xlsx/domain/types";
 import { createHistory, pushHistory } from "@aurochs-ui/editor-core/history";
 import { sheetHandlers } from "./sheet-handlers";
 
-function createWorksheet(name: string, sheetId: number): XlsxWorksheet {
+function createWorksheet(name: string, id: number): XlsxWorksheet {
   return {
     dateSystem: "1900",
     name,
-    sheetId,
+    sheetId: sheetId(id),
     state: "visible",
     rows: [],
-    xmlPath: `xl/worksheets/sheet${sheetId}.xml`,
+    xmlPath: `xl/worksheets/sheet${id}.xml`,
   };
 }
 

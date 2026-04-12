@@ -1,19 +1,16 @@
 /**
- * Tests for autoFilter menu configuration based on column data type.
+ * @file Tests for autoFilter menu configuration based on column data type.
  *
  * Verifies that the correct sort labels and filter submenu items
  * are produced for each ColumnDataType.
  */
 
-import { describe, it, expect } from "vitest";
 import {
   getSortLabels,
   getFilterSubmenuItems,
   getOperatorOptions,
   buildCustomFilter,
-  type FilterSubmenuItem,
 } from "./auto-filter-menu-config";
-import type { XlsxCustomFilters } from "./auto-filter";
 
 describe("getSortLabels", () => {
   it("should return text labels for 'text' type", () => {
@@ -44,8 +41,8 @@ describe("getSortLabels", () => {
 describe("getFilterSubmenuItems", () => {
   it("should return text filter items for 'text' type", () => {
     const items = getFilterSubmenuItems("text");
-    expect(items.submenuLabel).toBe("テキストフィルター");
-    const ids = items.items.map((i) => i.id);
+    expect(items!.submenuLabel).toBe("テキストフィルター");
+    const ids = items!.items.map((i) => i.id);
     expect(ids).toContain("equal");
     expect(ids).toContain("notEqual");
     expect(ids).toContain("beginsWith");
@@ -56,8 +53,8 @@ describe("getFilterSubmenuItems", () => {
 
   it("should return number filter items for 'number' type", () => {
     const items = getFilterSubmenuItems("number");
-    expect(items.submenuLabel).toBe("数値フィルター");
-    const ids = items.items.map((i) => i.id);
+    expect(items!.submenuLabel).toBe("数値フィルター");
+    const ids = items!.items.map((i) => i.id);
     expect(ids).toContain("equal");
     expect(ids).toContain("notEqual");
     expect(ids).toContain("greaterThan");
@@ -72,8 +69,8 @@ describe("getFilterSubmenuItems", () => {
 
   it("should return date filter items for 'date' type", () => {
     const items = getFilterSubmenuItems("date");
-    expect(items.submenuLabel).toBe("日付フィルター");
-    const ids = items.items.map((i) => i.id);
+    expect(items!.submenuLabel).toBe("日付フィルター");
+    const ids = items!.items.map((i) => i.id);
     expect(ids).toContain("equal");
     expect(ids).toContain("before");
     expect(ids).toContain("after");

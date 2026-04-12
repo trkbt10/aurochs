@@ -3,7 +3,7 @@
  */
 
 import { EXCEL_MAX_COLS, EXCEL_MAX_ROWS } from "@aurochs-office/xlsx/domain/constants";
-import { colIdx, rowIdx, styleId } from "@aurochs-office/xlsx/domain/types";
+import { colIdx, rowIdx, sheetId, styleId } from "@aurochs-office/xlsx/domain/types";
 import type { Cell, CellValue } from "@aurochs-office/xlsx/domain/cell/types";
 import type { CellAddress, CellRange } from "@aurochs-office/xlsx/domain/cell/address";
 import type { XlsxRow, XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
@@ -52,7 +52,7 @@ function createWorksheet(cells: readonly Cell[], opts?: Partial<XlsxWorksheet>):
   return {
     dateSystem,
     name: "Sheet1",
-    sheetId: 1,
+    sheetId: sheetId(1),
     state: "visible",
     xmlPath: "xl/worksheets/sheet1.xml",
     rows,

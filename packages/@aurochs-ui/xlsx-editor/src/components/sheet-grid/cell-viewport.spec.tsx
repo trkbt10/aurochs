@@ -8,7 +8,7 @@ import { render, screen } from "@testing-library/react";
 import { fireEvent } from "@testing-library/react";
 import type { XlsxWorkbook, XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
 import { createDefaultStyleSheet } from "@aurochs-office/xlsx/domain/style/types";
-import { colIdx, rowIdx } from "@aurochs-office/xlsx/domain/types";
+import { colIdx, rowIdx, sheetId } from "@aurochs-office/xlsx/domain/types";
 import { createSheetLayout } from "../../selectors/sheet-layout";
 import type { XlsxEditorAction } from "../../context/workbook/editor/types";
 import { XlsxSheetGridCellViewport } from "./cell-viewport";
@@ -18,7 +18,7 @@ describe("xlsx-editor/components/sheet-grid/cell-viewport", () => {
     const sheet: XlsxWorksheet = {
       dateSystem: "1900",
       name: "Sheet1",
-      sheetId: 1,
+      sheetId: sheetId(1),
       state: "visible",
       rows: [],
       xmlPath: "xl/worksheets/sheet1.xml",
@@ -74,7 +74,7 @@ describe("xlsx-editor/components/sheet-grid/cell-viewport", () => {
     const sheet: XlsxWorksheet = {
       dateSystem: "1900",
       name: "Sheet1",
-      sheetId: 1,
+      sheetId: sheetId(1),
       state: "visible",
       rows: [],
       xmlPath: "xl/worksheets/sheet1.xml",
@@ -148,7 +148,7 @@ describe("xlsx-editor/components/sheet-grid/cell-viewport", () => {
     const sheet: XlsxWorksheet = {
       dateSystem: "1900",
       name: "Sheet1",
-      sheetId: 1,
+      sheetId: sheetId(1),
       state: "visible",
       rows: [],
       xmlPath: "xl/worksheets/sheet1.xml",

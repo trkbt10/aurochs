@@ -6,7 +6,7 @@
 
 import type { CellAddress } from "@aurochs-office/xlsx/domain/cell/address";
 import type { Cell } from "@aurochs-office/xlsx/domain/cell/types";
-import { colIdx, rowIdx } from "@aurochs-office/xlsx/domain/types";
+import { colIdx, rowIdx, sheetId } from "@aurochs-office/xlsx/domain/types";
 import type { XlsxWorkbook } from "@aurochs-office/xlsx/domain/workbook";
 import { createDefaultStyleSheet } from "@aurochs-office/xlsx/domain/style/types";
 
@@ -69,7 +69,7 @@ export function createFormulaSampleWorkbook(): XlsxWorkbook {
       {
         dateSystem: "1900",
         name: "Sheet1",
-        sheetId: 1,
+        sheetId: sheetId(1),
         state: "visible",
         sheetView: { showGridLines: true, showRowColHeaders: true },
         rows,
@@ -78,7 +78,7 @@ export function createFormulaSampleWorkbook(): XlsxWorkbook {
       {
         dateSystem: "1900",
         name: "Sheet2",
-        sheetId: 2,
+        sheetId: sheetId(2),
         state: "visible",
         sheetView: { showGridLines: true, showRowColHeaders: true },
         rows: [

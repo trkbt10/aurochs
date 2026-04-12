@@ -6,7 +6,8 @@
 
 import * as vscode from "vscode";
 import { parseXls } from "@aurochs-office/xls";
-import { renderXlsxHtml, renderXlsxWorkbookHtml, type XlsxRenderResult } from "../renderers/xlsx-renderer";
+import { renderXlsxHtml } from "../renderers/xlsx-renderer";
+import { renderWorkbookToHtml, type WorkbookHtmlResult } from "@aurochs-renderer/xlsx/html";
 import { buildXlsxWebviewHtml } from "../webview/xlsx-template";
 import { buildErrorHtml } from "./error-html";
 
@@ -42,10 +43,10 @@ export function createXlsxEditorProvider(): vscode.CustomReadonlyEditorProvider 
 }
 
 /** Render .xls or .xlsx bytes to sheet HTML. */
-function renderToSheets(uri: vscode.Uri, data: Uint8Array): Promise<XlsxRenderResult> | XlsxRenderResult {
+function renderToSheets(uri: vscode.Uri, data: Uint8Array): Promise<WorkbookHtmlResult> | WorkbookHtmlResult {
   if (uri.path.toLowerCase().endsWith(".xls")) {
     const workbook = parseXls(data, { mode: "lenient" });
-    return renderXlsxWorkbookHtml(workbook);
+    return renderWorkbookToHtml(workbook);
   }
   return renderXlsxHtml(data);
 }

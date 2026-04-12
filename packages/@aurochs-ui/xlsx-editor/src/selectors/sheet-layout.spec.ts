@@ -2,7 +2,7 @@
  * @file Unit tests for sheet layout calculations (row/column metrics).
  */
 
-import { colIdx, rowIdx } from "@aurochs-office/xlsx/domain/types";
+import { colIdx, rowIdx, sheetId } from "@aurochs-office/xlsx/domain/types";
 import type { XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
 import {
   columnWidthCharToPixels,
@@ -30,7 +30,7 @@ describe("xlsx-editor/selectors/sheet-layout", () => {
     const sheet: XlsxWorksheet = {
       dateSystem: "1900",
       name: "Sheet1",
-      sheetId: 1,
+      sheetId: sheetId(1),
       state: "visible",
       xmlPath: "xl/worksheets/sheet1.xml",
       columns: [

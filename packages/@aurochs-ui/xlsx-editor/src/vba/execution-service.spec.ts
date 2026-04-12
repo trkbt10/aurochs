@@ -5,6 +5,7 @@
 import type { VbaProgramIr } from "@aurochs-office/vba";
 import type { XlsxWorkbook } from "@aurochs-office/xlsx/domain/workbook";
 import { createDefaultStyleSheet } from "@aurochs-office/xlsx/domain/style/types";
+import { sheetId } from "@aurochs-office/xlsx/domain/types";
 import { executeVbaProcedure } from "./execution-service";
 
 // =============================================================================
@@ -18,7 +19,7 @@ function createMinimalWorkbook(): XlsxWorkbook {
       {
         dateSystem: "1900",
         name: "Sheet1",
-        sheetId: 1,
+        sheetId: sheetId(1),
         state: "visible",
         sheetView: { showGridLines: true, showRowColHeaders: true },
         rows: [],

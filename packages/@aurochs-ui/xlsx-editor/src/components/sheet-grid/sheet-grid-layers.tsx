@@ -22,6 +22,7 @@ import { FrozenPanesLayer } from "./frozen-panes-layer";
 import { AutoFilterOverlay } from "./auto-filter-overlay";
 import { AutoFilterDropdown } from "./auto-filter-dropdown";
 import type { SheetLayout } from "../../selectors/sheet-layout";
+import { DrawingOverlay, type DrawingPositionResolver } from "../../drawing/DrawingOverlay";
 
 const layerRootStyle: CSSProperties = {
   position: "absolute",
@@ -130,6 +131,11 @@ export function XlsxSheetGridLayers({
     root?.focus();
   }, []);
 
+  const drawingPositionResolver = useMemo<DrawingPositionResolver>(() => ({
+    getColumnPositionPx: (col0: number) => layout.cols.getOffsetPx(col0),
+    getRowPositionPx: (row0: number) => layout.rows.getOffsetPx(row0),
+  }), [layout]);
+
   // Freeze panes configuration
   const pane = sheet.sheetView?.pane;
   const isFrozen = pane?.state === "frozen" || pane?.state === "frozenSplit";
@@ -230,6 +236,29 @@ export function XlsxSheetGridLayers({
             formulaEvaluator={formulaEvaluator}
             colorScheme={workbook.theme?.colorScheme}
           />
+          {sheet.drawing && (
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                overflow: "hidden",
+                pointerEvents: "none",
+              }}
+            >
+              <div
+                style={{
+                  position: "absolute",
+                  transform: `translate(${-scrollLeftUnscaled}px, ${-scrollTopUnscaled}px)`,
+                }}
+              >
+                <DrawingOverlay
+                  drawing={sheet.drawing}
+                  positionResolver={drawingPositionResolver}
+                  resourceStore={workbook.resourceStore}
+                />
+              </div>
+            </div>
+          )}
         </XlsxSheetGridCellViewport>
 
         {/* AutoFilter buttons — above cell viewport and frozen panes (zIndex: 10-12) */}

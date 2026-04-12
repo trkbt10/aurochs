@@ -31,6 +31,7 @@ import type { SharedStringItem } from "../parser/shared-strings";
 import type { XlsxTheme } from "./theme";
 import type { XlsxPageBreaks } from "./page-breaks";
 import type { XlsxSparklineGroup } from "./sparkline";
+import type { ResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 
 // =============================================================================
 // Column Definition
@@ -388,6 +389,14 @@ export type XlsxWorkbook = {
    * @see ECMA-376 Part 1, Section 20.1.6 (Theme)
    */
   readonly theme?: XlsxTheme;
+  /**
+   * Resource store for embedded resources (images).
+   *
+   * Populated when the parser is given a binary file reader via
+   * `XlsxParseOptions.readBinary`. Contains image data resolved from
+   * drawing relationship IDs, accessible via `toDataUrl(relId)`.
+   */
+  readonly resourceStore?: ResourceStore;
 };
 
 // =============================================================================

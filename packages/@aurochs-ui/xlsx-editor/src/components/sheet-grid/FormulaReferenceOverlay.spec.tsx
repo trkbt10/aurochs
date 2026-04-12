@@ -6,13 +6,13 @@
  */
 
 import { render, screen } from "@testing-library/react";
-import { colIdx, rowIdx } from "@aurochs-office/xlsx/domain/types";
+import { colIdx, rowIdx, sheetId } from "@aurochs-office/xlsx/domain/types";
 import type { FormulaReferenceToken } from "../../formula-edit/types";
 import { createSheetLayout } from "../../selectors/sheet-layout";
 import { FormulaReferenceOverlay } from "./FormulaReferenceOverlay";
 
 const layout = createSheetLayout(
-  { dateSystem: "1900", name: "Sheet1", sheetId: 1, state: "visible", rows: [], xmlPath: "" },
+  { dateSystem: "1900", name: "Sheet1", sheetId: sheetId(1), state: "visible", rows: [], xmlPath: "" },
   { rowCount: 20, colCount: 10, defaultRowHeightPx: 20, defaultColWidthPx: 60 },
 );
 

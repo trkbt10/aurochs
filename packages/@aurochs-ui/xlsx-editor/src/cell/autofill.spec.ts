@@ -2,7 +2,7 @@
  * @file Autofill (fill handle) mutation tests
  */
 
-import { colIdx, rowIdx, styleId } from "@aurochs-office/xlsx/domain/types";
+import { colIdx, rowIdx, sheetId, styleId } from "@aurochs-office/xlsx/domain/types";
 import { parseRange } from "@aurochs-office/xlsx/domain/cell/address";
 import type { Cell } from "@aurochs-office/xlsx/domain/cell/types";
 import type { XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
@@ -22,7 +22,7 @@ function createSheet(cells: readonly Cell[], opts?: Partial<XlsxWorksheet>): Xls
   return {
     dateSystem,
     name: "Sheet1",
-    sheetId: 1,
+    sheetId: sheetId(1),
     state: "visible",
     xmlPath: "xl/worksheets/sheet1.xml",
     rows: [

@@ -5,7 +5,7 @@
 import type { XlsxWorkbook, XlsxWorksheet, XlsxRow } from "@aurochs-office/xlsx/domain/workbook";
 import type { Cell, CellValue } from "@aurochs-office/xlsx/domain/cell/types";
 import type { CellAddress } from "@aurochs-office/xlsx/domain/cell/address";
-import { rowIdx, colIdx } from "@aurochs-office/xlsx/domain/types";
+import { rowIdx, colIdx, sheetId } from "@aurochs-office/xlsx/domain/types";
 import type { CellMutation } from "./types";
 import { applyMutations } from "./mutation-applicator";
 
@@ -40,7 +40,7 @@ function createSheet(name: string, rows: XlsxRow[]): XlsxWorksheet {
   return {
     dateSystem: "1900",
     name,
-    sheetId: 1,
+    sheetId: sheetId(1),
     state: "visible",
     sheetView: { showGridLines: true, showRowColHeaders: true },
     rows,

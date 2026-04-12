@@ -396,7 +396,7 @@ function extractDocTextboxes(ctx: {
   fullText: string;
   txbxTextStart: number;
   subdocBuilder: SubdocParagraphBuilder;
-}): readonly ReturnType<typeof extractTextboxes> {
+}): ReturnType<typeof extractTextboxes> {
   if (ctx.fib.ccpTxbx <= 0) { return []; }
   return extractTextboxes({ textCps: ctx.txbxTextCps, fullText: ctx.fullText, txbxTextStart: ctx.txbxTextStart, buildParagraphs: ctx.subdocBuilder });
 }

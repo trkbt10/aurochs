@@ -2,7 +2,7 @@
  * @file Cell query tests
  */
 
-import { colIdx, rowIdx } from "@aurochs-office/xlsx/domain/types";
+import { colIdx, rowIdx, sheetId } from "@aurochs-office/xlsx/domain/types";
 import type { Cell, CellValue } from "@aurochs-office/xlsx/domain/cell/types";
 import type { CellAddress, CellRange } from "@aurochs-office/xlsx/domain/cell/address";
 import type { XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
@@ -64,7 +64,7 @@ function createWorksheet(cells: readonly Cell[]): XlsxWorksheet {
   return {
     dateSystem: "1900",
     name: "Sheet1",
-    sheetId: 1,
+    sheetId: sheetId(1),
     state: "visible",
     xmlPath: "xl/worksheets/sheet1.xml",
     rows: [...rows.entries()].map(([rowNumber, rowCells]) => ({

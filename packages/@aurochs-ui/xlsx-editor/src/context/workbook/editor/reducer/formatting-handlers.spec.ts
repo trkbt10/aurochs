@@ -6,16 +6,16 @@ import { EXCEL_MAX_COLS } from "@aurochs-office/xlsx/domain/constants";
 import type { CellRange } from "@aurochs-office/xlsx/domain/cell/address";
 import type { XlsxWorkbook, XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
 import { createDefaultStyleSheet } from "@aurochs-office/xlsx/domain/style/types";
-import { colIdx, rowIdx, styleId } from "@aurochs-office/xlsx/domain/types";
+import { colIdx, rowIdx, sheetId, styleId } from "@aurochs-office/xlsx/domain/types";
 import { createInitialState, xlsxEditorReducer } from "./index";
 
-function createWorksheet(name: string, sheetId: number): XlsxWorksheet {
+function createWorksheet(name: string, id: number): XlsxWorksheet {
   return {
     dateSystem: "1900",
     name,
-    sheetId,
+    sheetId: sheetId(id),
     state: "visible",
-    xmlPath: `xl/worksheets/sheet${sheetId}.xml`,
+    xmlPath: `xl/worksheets/sheet${id}.xml`,
     rows: [],
   };
 }

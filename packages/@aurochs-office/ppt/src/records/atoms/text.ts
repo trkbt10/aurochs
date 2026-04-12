@@ -157,7 +157,7 @@ export function parseStyleTextPropAtom(record: PptRecord, textLength: number): S
       const count = u16();
       // Each tab stop is 4 bytes (position u16 + type u16)
       const skipBytes = count * 4;
-      if (canRead(skipBytes)) {offset += skipBytes;}
+      if (canRead(skipBytes)) {pos.value += skipBytes;}
     }
     if ((mask & 0x10000) && canRead(2)) { /* fontAlign */ u16(); }
     if ((mask & 0xE0000) && canRead(2)) { /* wrapFlags (charWrap + wordWrap + overflow) */ u16(); }

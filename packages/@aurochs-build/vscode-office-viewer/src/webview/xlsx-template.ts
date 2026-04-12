@@ -6,12 +6,12 @@
 
 import type { Webview } from "vscode";
 import { buildWebviewHtml } from "./template";
-import type { XlsxSheetHtml } from "../renderers/xlsx-renderer";
+import type { SheetHtmlResult } from "@aurochs-renderer/xlsx/html";
 
 /** Parameters for building the XLSX webview HTML. */
 export type XlsxWebviewParams = {
   readonly webview: Webview;
-  readonly sheets: readonly XlsxSheetHtml[];
+  readonly sheets: readonly SheetHtmlResult[];
   readonly fileName: string;
 };
 
