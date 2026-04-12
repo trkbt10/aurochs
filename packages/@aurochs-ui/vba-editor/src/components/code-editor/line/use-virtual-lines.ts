@@ -99,18 +99,21 @@ export function useVirtualLines(
   const topSpacerHeight = startLine * lineHeight;
   const bottomSpacerHeight = (lineCount - endLine) * lineHeight;
 
+  // Track the observed element to reconnect ResizeObserver when it changes.
+  const [observedElement, setObservedElement] = useState<HTMLElement | null>(null);
+
   // Handle container ref
   const setContainer = useCallback((node: HTMLElement | null) => {
     containerRef.current = node;
+    setObservedElement(node);
     if (node) {
       setViewportHeight(node.clientHeight);
     }
   }, []);
 
-  // Observe container resize
+  // Observe container resize — re-runs when observedElement changes
   useEffect(() => {
-    const element = containerRef.current;
-    if (!element) {
+    if (!observedElement) {
       return;
     }
 
@@ -120,9 +123,9 @@ export function useVirtualLines(
       }
     });
 
-    observer.observe(element);
+    observer.observe(observedElement);
     return () => observer.disconnect();
-  }, []);
+  }, [observedElement]);
 
   const state: VirtualLinesState = {
     scrollTop,

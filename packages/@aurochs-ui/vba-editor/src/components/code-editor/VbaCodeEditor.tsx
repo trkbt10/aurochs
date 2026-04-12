@@ -1,182 +1,50 @@
 /**
  * @file VBA Code Editor Component
  *
- * Main code editing area with syntax highlighting, line numbers, and editing support.
- * Features virtual scrolling for efficient rendering of large files.
+ * Thin wrapper around react-editor-ui's CodeEditor that integrates
+ * VBA-specific features: syntax highlighting, search, and completion.
  *
- * Uses unified renderer for line numbers, highlights, and cursor.
+ * The core editing concerns (textarea management, cursor, selection,
+ * virtual scrolling, IME composition, undo/redo) are all delegated to
+ * CodeEditor. This component is responsible only for:
+ * - Bridging BlockDocument ↔ VBA editor context
+ * - Search integration (SearchBar overlay + highlight ranges)
+ * - Completion popup
+ * - VBA-specific key bindings (search open/close)
  */
 
 import {
   useMemo,
-  useRef,
-  useState,
   useCallback,
+  useState,
   useEffect,
   type CSSProperties,
   type ReactNode,
+  type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
-import { useVbaEditor } from "../../context/vba-editor";
-import { useModuleTokenCache } from "./line/use-line-token-cache";
 import {
-  HtmlCodeRenderer,
-  type CodeRendererComponent,
+  CodeEditor,
+  createBlockDocument,
+  getBlockDocumentText,
+  type BlockDocument,
+  type CursorPosition,
+  type SelectionRange,
   type HighlightRange,
-  type CursorState,
-} from "./element/renderers";
-import { useVirtualLines } from "./line/use-virtual-lines";
-import { useDebouncedHistory } from "./code/use-debounced-history";
-import { useScopedSelectionChange } from "./code/use-scoped-selection-change";
-import {
-  useCodeComposition,
-  INITIAL_COMPOSITION_STATE,
-  type CompositionState,
-} from "./code/use-code-composition";
-import { useCodeKeyHandlers } from "./code/use-code-key-handlers";
-import { useFontMetrics } from "./element/use-font-metrics";
-import { useLineIndex } from "./line/use-line-index";
+} from "react-editor-ui/editors/RichTextEditors";
+import { useVbaEditor } from "../../context/vba-editor";
 import type { SearchMatch } from "../../context/vba-editor/types";
 import { SearchBar } from "../search";
 import { useSearchIntegration } from "../../hooks/use-search";
 import { useVbaCompletion } from "../../completion";
 import { CompletionPopup } from "../completion";
-import {
-  editorContainerStyle,
-  emptyMessageStyle,
-  codeAreaStyle,
-  hiddenTextareaStyle,
-  imeCompositionStyle,
-} from "./code-editor-styles";
+import { vbaTokenizer, vbaTokenStyles } from "./vba-tokenizer";
 
 // =============================================================================
 // Constants
 // =============================================================================
 
 const LINE_HEIGHT = 21;
-const OVERSCAN = 5;
-const HISTORY_DEBOUNCE_MS = 300;
 const LINE_NUMBER_WIDTH = 48;
-const CODE_PADDING = 8;
-
-// =============================================================================
-// Helper Functions
-// =============================================================================
-
-/**
- * Fallback line/column finder when lineIndex is not in sync with textarea.
- */
-function findLineColumnFallback(
-  currentLines: readonly string[],
-  offset: number
-): { line: number; column: number } {
-  const remaining = { value: offset };
-  for (const [i, lineText] of currentLines.entries()) {
-    const len = lineText.length;
-    if (remaining.value <= len) {
-      return { line: i + 1, column: remaining.value + 1 };
-    }
-    remaining.value -= len + 1;
-  }
-  const lastLine = currentLines[currentLines.length - 1];
-  return { line: currentLines.length, column: (lastLine?.length ?? 0) + 1 };
-}
-
-/**
- * Create line-at-offset lookup function.
- */
-function createLineAtOffsetFn(
-  sourceInSync: boolean,
-  lineIndex: { getLineAtOffset: (offset: number) => { line: number; column: number } },
-  currentLines: readonly string[]
-): (offset: number) => { line: number; column: number } {
-  if (sourceInSync) {
-    return lineIndex.getLineAtOffset;
-  }
-  return (offset: number) => findLineColumnFallback(currentLines, offset);
-}
-
-/**
- * Convert line/column to character offset.
- */
-function lineColumnToOffset(
-  lines: readonly string[],
-  line: number,
-  column: number
-): number {
-  const offset = { value: 0 };
-  for (let i = 0; i < line - 1 && i < lines.length; i++) {
-    offset.value += lines[i].length + 1; // +1 for newline
-  }
-  const lineText = lines[line - 1] ?? "";
-  offset.value += Math.min(column - 1, lineText.length);
-  return offset.value;
-}
-
-type CoordinatesToPositionOptions = {
-  readonly x: number;
-  readonly y: number;
-  readonly scrollTop: number;
-  readonly lines: readonly string[];
-  readonly measureText: ((text: string) => number) | undefined;
-};
-
-/**
- * Convert click coordinates to line/column position.
- */
-function coordinatesToPosition(options: CoordinatesToPositionOptions): { line: number; column: number } {
-  const { x, y, scrollTop, lines, measureText } = options;
-  // Adjust for scroll
-  const adjustedY = y + scrollTop;
-
-  // Calculate line (1-based)
-  const lineIndex = Math.floor(adjustedY / LINE_HEIGHT);
-  const line = Math.max(1, Math.min(lineIndex + 1, lines.length));
-
-  // Get the line text
-  const lineText = lines[line - 1] ?? "";
-
-  // Calculate column based on x position
-  // x is relative to code area, so subtract line number width and padding
-  const codeX = x - LINE_NUMBER_WIDTH - CODE_PADDING;
-
-  if (codeX <= 0) {
-    return { line, column: 1 };
-  }
-
-  // Find column by measuring text widths
-  const column = findColumnFromX(codeX, lineText, measureText);
-
-  // Clamp column to line length + 1
-  return { line, column: Math.min(column, lineText.length + 1) };
-}
-
-/**
- * Find column position from X coordinate.
- */
-function findColumnFromX(
-  codeX: number,
-  lineText: string,
-  measureText: ((text: string) => number) | undefined,
-): number {
-  if (measureText) {
-    // Binary search for the closest column
-    const low = { value: 0 };
-    const high = { value: lineText.length };
-    while (low.value < high.value) {
-      const mid = Math.floor((low.value + high.value + 1) / 2);
-      const width = measureText(lineText.slice(0, mid));
-      if (width <= codeX) {
-        low.value = mid;
-      } else {
-        high.value = mid - 1;
-      }
-    }
-    return low.value + 1;
-  }
-  // Fallback: estimate using average character width
-  const avgCharWidth = 7.8;
-  return Math.max(1, Math.round(codeX / avgCharWidth) + 1);
-}
 
 // =============================================================================
 // Types
@@ -184,99 +52,110 @@ function findColumnFromX(
 
 export type VbaCodeEditorProps = {
   readonly style?: CSSProperties;
-  /** Code renderer component. Defaults to HtmlCodeRenderer. */
-  readonly Renderer?: CodeRendererComponent;
 };
 
 // =============================================================================
-// Internal State Types
+// Styles
 // =============================================================================
 
-type EditorCursorState = {
-  /** Cursor line (1-based) */
-  readonly line: number;
-  /** Cursor column (1-based) */
-  readonly column: number;
-  /** Whether cursor is visible */
-  readonly visible: boolean;
-  /** Whether cursor is blinking */
-  readonly blinking: boolean;
-};
-
-type EditorSelectionState = {
-  readonly startLine: number;
-  readonly startColumn: number;
-  readonly endLine: number;
-  readonly endColumn: number;
-};
-
-const INITIAL_CURSOR: EditorCursorState = {
-  line: 1,
-  column: 1,
-  visible: true,
-  blinking: true,
+const wrapperStyle: CSSProperties = {
+  position: "relative",
+  flex: 1,
+  height: "100%",
+  display: "flex",
+  flexDirection: "column",
+  minHeight: 0,
+  overflow: "hidden",
 };
 
 // =============================================================================
-// Main Component
+// Component
 // =============================================================================
 
 /**
  * VBA Code Editor component.
  *
- * Displays VBA source code with:
- * - Virtual scrolling for large files (10,000+ lines)
- * - Line numbers (integrated in renderer)
- * - Syntax highlighting with token caching
- * - Selection and match highlights (integrated in renderer)
- * - Cursor (integrated in renderer)
- * - Editable text via hidden textarea
- * - IME composition support
- * - Debounced undo history
+ * Wraps react-editor-ui's CodeEditor with VBA-specific integrations:
+ * - VBA syntax highlighting via vbaTokenizer
+ * - In-file and project-wide search with match highlighting
+ * - Code completion (IntelliSense)
+ * - Integration with VBA editor context (module source management)
  */
-export function VbaCodeEditor({
-  style,
-  Renderer = HtmlCodeRenderer,
-}: VbaCodeEditorProps): ReactNode {
-  const { activeModuleSource, activeModule, dispatch, canUndo, canRedo, pendingCursorOffset, state } =
-    useVbaEditor();
+export function VbaCodeEditor({ style }: VbaCodeEditorProps): ReactNode {
+  const {
+    activeModuleSource,
+    activeModule,
+    dispatch,
+    state,
+  } = useVbaEditor();
   const { search } = state;
 
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const codeAreaRef = useRef<HTMLDivElement>(null);
-  const [composition, setComposition] = useState<CompositionState>(
-    INITIAL_COMPOSITION_STATE
-  );
-  const [cursorState, setCursorState] = useState<EditorCursorState>(INITIAL_CURSOR);
-  const [selectionState, setSelectionState] = useState<EditorSelectionState | undefined>(undefined);
-  const [isDragging, setIsDragging] = useState(false);
-  const dragStartRef = useRef<{ line: number; column: number } | null>(null);
+  // -------------------------------------------------------------------------
+  // BlockDocument bridge
+  // -------------------------------------------------------------------------
 
-  // Token cache for efficient syntax highlighting
-  const tokenCache = useModuleTokenCache(activeModule?.name);
-
-  // Measure actual font metrics from container
-  const { measureText } = useFontMetrics(containerRef);
-
-  // Line index for efficient offset-to-line conversion
-  const lineIndex = useLineIndex(activeModuleSource ?? "");
-  const lines = lineIndex.lines;
-
-  // Virtual scrolling state
-  const { state: virtualState, setScrollTop, containerRef: virtualContainerRef } = useVirtualLines(
-    lines.length,
-    { lineHeight: LINE_HEIGHT, overscan: OVERSCAN }
+  const [doc, setDoc] = useState<BlockDocument>(() =>
+    createBlockDocument(activeModuleSource ?? ""),
   );
 
-  // Debounced history for grouping rapid keystrokes
-  const { updateSource, flush: flushHistory } = useDebouncedHistory({
-    debounceMs: HISTORY_DEBOUNCE_MS,
-    dispatch,
-    moduleName: activeModule?.name,
-  });
+  // Sync: context → BlockDocument (when active module changes)
+  const prevModuleRef = useMemo(() => ({ name: activeModule?.name }), [activeModule?.name]);
+  useEffect(() => {
+    setDoc(createBlockDocument(activeModuleSource ?? ""));
+    // activeModuleSource is intentionally excluded: this effect should only run
+    // when the active module switches (prevModuleRef changes), not on every edit.
+  }, [prevModuleRef]);
 
+  // Sync: BlockDocument → context (on every edit)
+  const handleDocumentChange = useCallback(
+    (newDoc: BlockDocument) => {
+      setDoc(newDoc);
+      if (!activeModule?.name) {return;}
+      const text = getBlockDocumentText(newDoc);
+      // Skip if text hasn't changed (cursor-only update)
+      if (text === activeModuleSource) {return;}
+      dispatch({
+        type: "UPDATE_MODULE_SOURCE",
+        moduleName: activeModule.name,
+        source: text,
+        cursorOffset: 0, // CodeEditor manages cursor internally
+      });
+    },
+    [activeModule?.name, activeModuleSource, dispatch],
+  );
+
+  // -------------------------------------------------------------------------
+  // Cursor / Selection → context
+  // -------------------------------------------------------------------------
+
+  const handleCursorChange = useCallback(
+    (pos: CursorPosition) => {
+      dispatch({ type: "SET_CURSOR", line: pos.line, column: pos.column });
+    },
+    [dispatch],
+  );
+
+  const handleSelectionChange = useCallback(
+    (sel: SelectionRange | undefined) => {
+      if (sel) {
+        dispatch({
+          type: "SET_SELECTION",
+          startLine: sel.start.line,
+          startColumn: sel.start.column,
+          endLine: sel.end.line,
+          endColumn: sel.end.column,
+        });
+      } else {
+        dispatch({ type: "CLEAR_SELECTION" });
+      }
+    },
+    [dispatch],
+  );
+
+  // -------------------------------------------------------------------------
   // Search integration
+  // -------------------------------------------------------------------------
+
   const handleMatchesUpdate = useCallback(
     (matches: readonly SearchMatch[]) => {
       dispatch({ type: "UPDATE_MATCHES", matches });
@@ -292,11 +171,25 @@ export function VbaCodeEditor({
     onMatchesUpdate: handleMatchesUpdate,
   });
 
-  // Completion (IntelliSense)
-  const cursorOffset = useMemo(() => {
-    const textarea = textareaRef.current;
-    return textarea?.selectionStart ?? 0;
-  }, [cursorState]);
+  // Build highlight ranges from search matches
+  const highlights = useMemo((): readonly HighlightRange[] => {
+    if (!search.isOpen || search.matches.length === 0) {
+      return [];
+    }
+    return search.matches.map((match, i) => ({
+      startLine: match.line,
+      startColumn: match.startColumn,
+      endLine: match.line,
+      endColumn: match.endColumn,
+      type: i === search.currentMatchIndex ? "currentMatch" as const : "match" as const,
+    }));
+  }, [search.isOpen, search.matches, search.currentMatchIndex]);
+
+  // -------------------------------------------------------------------------
+  // Completion
+  // -------------------------------------------------------------------------
+
+  const [cursorOffset, setCursorOffset] = useState(0);
 
   const handleCompletionSourceUpdate = useCallback(
     (newSource: string, newCursorOffset: number) => {
@@ -307,6 +200,7 @@ export function VbaCodeEditor({
         source: newSource,
         cursorOffset: newCursorOffset,
       });
+      setDoc(createBlockDocument(newSource));
     },
     [dispatch, activeModule?.name],
   );
@@ -318,484 +212,99 @@ export function VbaCodeEditor({
     onSourceUpdate: handleCompletionSourceUpdate,
   });
 
-  // Composition handlers
-  const {
-    handleCompositionStart,
-    handleCompositionUpdate,
-    handleCompositionEnd,
-  } = useCodeComposition({ setComposition });
-
-  // Cache for cursor position
-  const cursorCacheRef = useRef<{
-    selectionStart: number;
-    selectionEnd: number;
-    valueLength: number;
-  } | null>(null);
-
-  // Update cursor position from textarea selection
-  const updateCursorPosition = useCallback(() => {
-    if (composition.isComposing) {
-      return;
-    }
-
-    const textarea = textareaRef.current;
-    if (!textarea) {
-      return;
-    }
-
-    const { selectionStart, selectionEnd, value } = textarea;
-    const hasSelection = selectionStart !== selectionEnd;
-
-    // Skip if selection hasn't changed
-    const cache = cursorCacheRef.current;
-    if (
-      cache !== null &&
-      cache.selectionStart === selectionStart &&
-      cache.selectionEnd === selectionEnd &&
-      cache.valueLength === value.length
-    ) {
-      return;
-    }
-
-    cursorCacheRef.current = { selectionStart, selectionEnd, valueLength: value.length };
-
-    const sourceInSync = value === activeModuleSource;
-    const currentLines = sourceInSync ? lines : value.split("\n");
-    const getLineAtOffset = createLineAtOffsetFn(sourceInSync, lineIndex, currentLines);
-
-    if (hasSelection) {
-      const start = getLineAtOffset(selectionStart);
-      const end = getLineAtOffset(selectionEnd);
-
-      dispatch({
-        type: "SET_SELECTION",
-        startLine: start.line,
-        startColumn: start.column,
-        endLine: end.line,
-        endColumn: end.column,
-      });
-
-      setSelectionState({
-        startLine: start.line,
-        startColumn: start.column,
-        endLine: end.line,
-        endColumn: end.column,
-      });
-
-      setCursorState({
-        line: end.line,
-        column: end.column,
-        visible: false,
-        blinking: false,
-      });
-    } else {
-      const pos = getLineAtOffset(selectionStart);
-
-      dispatch({ type: "SET_CURSOR", line: pos.line, column: pos.column });
-      dispatch({ type: "CLEAR_SELECTION" });
-
-      setSelectionState(undefined);
-      setCursorState({
-        line: pos.line,
-        column: pos.column,
-        visible: true,
-        blinking: true,
-      });
-    }
-  }, [composition.isComposing, dispatch, activeModuleSource, lines, lineIndex]);
-
-  // Scoped selection change listener
-  useScopedSelectionChange(textareaRef, updateCursorPosition);
-
-  // Handle text change from textarea
-  const handleChange = useCallback(
-    (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-      const textarea = event.target;
-      const newText = textarea.value;
-      const offset = textarea.selectionStart;
-
-      updateSource(newText, offset);
-
-      requestAnimationFrame(() => {
-        updateCursorPosition();
-      });
+  // Track cursor offset for completion
+  const handleCursorChangeWithOffset = useCallback(
+    (pos: CursorPosition) => {
+      handleCursorChange(pos);
+      // Compute flat character offset from line/column for the completion engine
+      if (activeModuleSource) {
+        const lines = activeModuleSource.split("\n");
+        const lineOffset = lines.slice(0, pos.line - 1).reduce((sum, l) => sum + l.length + 1, 0);
+        const columnOffset = Math.min(pos.column - 1, (lines[pos.line - 1] ?? "").length);
+        setCursorOffset(lineOffset + columnOffset);
+      }
     },
-    [updateSource, updateCursorPosition]
+    [handleCursorChange, activeModuleSource],
   );
 
-  // Key handlers
-  const { handleKeyDown: baseHandleKeyDown } = useCodeKeyHandlers({
-    composition,
-    dispatch,
-    canUndo,
-    canRedo,
-    moduleName: activeModule?.name,
-  });
+  // Completion popup position
+  const completionPosition = useMemo(() => {
+    if (!state.cursor) {return { x: 0, y: 0 };}
+    const x = LINE_NUMBER_WIDTH + (state.cursor.column - 1) * 7.8;
+    const y = (state.cursor.line - 1) * LINE_HEIGHT + LINE_HEIGHT + 4;
+    return { x, y };
+  }, [state.cursor]);
+
+  // -------------------------------------------------------------------------
+  // VBA-specific keyboard shortcuts
+  // -------------------------------------------------------------------------
 
   const handleKeyDown = useCallback(
-    (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      // Completion navigation
-      if (completion.state.isOpen) {
-        if (event.key === "ArrowDown") {
-          event.preventDefault();
-          completion.moveHighlight(1);
-          return;
-        }
-        if (event.key === "ArrowUp") {
-          event.preventDefault();
-          completion.moveHighlight(-1);
-          return;
-        }
-        if (event.key === "Tab" || event.key === "Enter") {
-          event.preventDefault();
-          completion.accept();
-          return;
-        }
-        if (event.key === "Escape") {
-          event.preventDefault();
-          completion.dismiss();
-          return;
-        }
-      }
+    (event: ReactKeyboardEvent) => {
+      const mod = event.metaKey || event.ctrlKey;
 
-      // Manual completion trigger: Ctrl+Space
-      if ((event.ctrlKey || event.metaKey) && event.key === " ") {
+      // Cmd+F / Ctrl+F: open in-file search
+      if (mod && event.key.toLowerCase() === "f" && !event.shiftKey) {
         event.preventDefault();
-        completion.triggerManually();
+        dispatch({ type: "OPEN_SEARCH", mode: "in-file" });
         return;
       }
-
-      // Flush history before undo/redo
-      if ((event.metaKey || event.ctrlKey) && (event.key === "z" || event.key === "Z")) {
-        flushHistory();
+      // Cmd+Shift+F: open project-wide search
+      if (mod && event.key.toLowerCase() === "f" && event.shiftKey) {
+        event.preventDefault();
+        dispatch({ type: "OPEN_SEARCH", mode: "project-wide" });
+        return;
       }
-      baseHandleKeyDown(event);
+      // Cmd+H: open search (replace mode)
+      if (mod && event.key.toLowerCase() === "h") {
+        event.preventDefault();
+        dispatch({ type: "OPEN_SEARCH", mode: "in-file" });
+        return;
+      }
+      // Escape: close search
+      if (event.key === "Escape") {
+        dispatch({ type: "CLOSE_SEARCH" });
+      }
     },
-    [baseHandleKeyDown, flushHistory, completion]
+    [dispatch],
   );
 
-  // Sync scroll
-  const handleCodeAreaScroll = useCallback(() => {
-    const codeArea = codeAreaRef.current;
-    const textarea = textareaRef.current;
-    if (codeArea) {
-      setScrollTop(codeArea.scrollTop);
-      if (textarea) {
-        textarea.scrollTop = codeArea.scrollTop;
-        textarea.scrollLeft = codeArea.scrollLeft;
-      }
-    }
-  }, [setScrollTop]);
+  // -------------------------------------------------------------------------
+  // Render
+  // -------------------------------------------------------------------------
 
-  const handleTextareaScroll = useCallback(() => {
-    const textarea = textareaRef.current;
-    const codeArea = codeAreaRef.current;
-    if (textarea && codeArea) {
-      codeArea.scrollTop = textarea.scrollTop;
-      codeArea.scrollLeft = textarea.scrollLeft;
-      setScrollTop(textarea.scrollTop);
-    }
-  }, [setScrollTop]);
-
-  // Click handler to focus textarea
-  const handleContainerClick = useCallback(() => {
-    textareaRef.current?.focus();
-  }, []);
-
-  // Pointer event handlers for text selection (supports mouse + touch)
-  const handleCodePointerDown = useCallback(
-    (event: React.PointerEvent<HTMLDivElement>) => {
-      // Only handle primary pointer (left mouse or touch)
-      if (!event.isPrimary) {return;}
-
-      const codeArea = codeAreaRef.current;
-      if (!codeArea) {return;}
-
-      const rect = codeArea.getBoundingClientRect();
-      const x = event.clientX - rect.left;
-      const y = event.clientY - rect.top;
-
-      const pos = coordinatesToPosition({ x, y, scrollTop: codeArea.scrollTop, lines, measureText });
-
-      // Start drag selection
-      dragStartRef.current = pos;
-      setIsDragging(true);
-
-      // Capture pointer for drag outside element
-      (event.target as HTMLElement).setPointerCapture(event.pointerId);
-
-      // Update cursor and clear selection
-      setCursorState({
-        line: pos.line,
-        column: pos.column,
-        visible: true,
-        blinking: true,
-      });
-      setSelectionState(undefined);
-
-      // Sync to textarea
-      const textarea = textareaRef.current;
-      if (textarea) {
-        const offset = lineColumnToOffset(lines, pos.line, pos.column);
-        textarea.focus();
-        textarea.setSelectionRange(offset, offset);
-      }
-
-      // Dispatch cursor position
-      dispatch({ type: "SET_CURSOR", line: pos.line, column: pos.column });
-      dispatch({ type: "CLEAR_SELECTION" });
-
-      event.preventDefault();
-    },
-    [lines, measureText, dispatch]
-  );
-
-  const handleCodePointerMove = useCallback(
-    (event: React.PointerEvent<HTMLDivElement>) => {
-      if (!isDragging || !dragStartRef.current || !event.isPrimary) {return;}
-
-      const codeArea = codeAreaRef.current;
-      if (!codeArea) {return;}
-
-      const rect = codeArea.getBoundingClientRect();
-      const x = event.clientX - rect.left;
-      const y = event.clientY - rect.top;
-
-      const endPos = coordinatesToPosition({ x, y, scrollTop: codeArea.scrollTop, lines, measureText });
-      const startPos = dragStartRef.current;
-
-      // Determine selection direction
-      const isForward =
-        endPos.line > startPos.line ||
-        (endPos.line === startPos.line && endPos.column >= startPos.column);
-
-      const selStart = isForward ? startPos : endPos;
-      const selEnd = isForward ? endPos : startPos;
-
-      // Update selection state
-      setSelectionState({
-        startLine: selStart.line,
-        startColumn: selStart.column,
-        endLine: selEnd.line,
-        endColumn: selEnd.column,
-      });
-
-      // Update cursor to end of selection
-      setCursorState({
-        line: endPos.line,
-        column: endPos.column,
-        visible: false,
-        blinking: false,
-      });
-
-      // Sync to textarea
-      const textarea = textareaRef.current;
-      if (textarea) {
-        const startOffset = lineColumnToOffset(lines, selStart.line, selStart.column);
-        const endOffset = lineColumnToOffset(lines, selEnd.line, selEnd.column);
-        textarea.setSelectionRange(startOffset, endOffset);
-      }
-
-      // Dispatch selection
-      dispatch({
-        type: "SET_SELECTION",
-        startLine: selStart.line,
-        startColumn: selStart.column,
-        endLine: selEnd.line,
-        endColumn: selEnd.column,
-      });
-
-      event.preventDefault();
-    },
-    [isDragging, lines, measureText, dispatch]
-  );
-
-  const handleCodePointerUp = useCallback(
-    (event: React.PointerEvent<HTMLDivElement>) => {
-      if (!event.isPrimary) {return;}
-      setIsDragging(false);
-      dragStartRef.current = null;
-      (event.target as HTMLElement).releasePointerCapture(event.pointerId);
-    },
-    []
-  );
-
-  // Restore cursor position after undo/redo
-  useEffect(() => {
-    if (pendingCursorOffset === undefined) {
-      return;
-    }
-
-    const textarea = textareaRef.current;
-    if (!textarea) {
-      return;
-    }
-
-    textarea.selectionStart = pendingCursorOffset;
-    textarea.selectionEnd = pendingCursorOffset;
-    dispatch({ type: "CLEAR_PENDING_CURSOR" });
-
-    requestAnimationFrame(() => {
-      updateCursorPosition();
-    });
-  }, [pendingCursorOffset, dispatch, updateCursorPosition]);
-
-  // Ensure cursor is visible in viewport
-  useEffect(() => {
-    const textarea = textareaRef.current;
-    const codeArea = codeAreaRef.current;
-    if (!textarea || !codeArea || !cursorState.visible) {
-      return;
-    }
-
-    const cursorY = (cursorState.line - 1) * LINE_HEIGHT;
-    const visibleTop = codeArea.scrollTop;
-    const visibleBottom = visibleTop + codeArea.clientHeight;
-
-    if (cursorY < visibleTop || cursorY + LINE_HEIGHT > visibleBottom) {
-      const targetScroll = Math.max(0, cursorY - codeArea.clientHeight / 2);
-      codeArea.scrollTop = targetScroll;
-      textarea.scrollTop = targetScroll;
-      setScrollTop(targetScroll);
-    }
-  }, [cursorState.line, cursorState.visible, setScrollTop]);
-
-  // Focus textarea on mount
-  useEffect(() => {
-    textareaRef.current?.focus();
-  }, []);
-
-  // Set up virtual container ref
-  useEffect(() => {
-    virtualContainerRef(codeAreaRef.current);
-  }, [virtualContainerRef]);
-
-  // Build highlights array for renderer
-  const highlights = useMemo((): readonly HighlightRange[] => {
-    const result: HighlightRange[] = [];
-
-    // Add selection
-    if (selectionState) {
-      result.push({
-        startLine: selectionState.startLine,
-        startColumn: selectionState.startColumn,
-        endLine: selectionState.endLine,
-        endColumn: selectionState.endColumn,
-        type: "selection",
-      });
-    }
-
-    // Add search matches
-    if (search.isOpen && search.matches.length > 0) {
-      for (let i = 0; i < search.matches.length; i++) {
-        const match = search.matches[i];
-        result.push({
-          startLine: match.line,
-          startColumn: match.startColumn,
-          endLine: match.line,
-          endColumn: match.endColumn,
-          type: i === search.currentMatchIndex ? "currentMatch" : "match",
-        });
-      }
-    }
-
-    return result;
-  }, [selectionState, search.isOpen, search.matches, search.currentMatchIndex]);
-
-  // Build cursor state for renderer
-  const rendererCursor = useMemo((): CursorState | undefined => {
-    if (composition.isComposing || !cursorState.visible) {
-      return undefined;
-    }
-    return {
-      line: cursorState.line,
-      column: cursorState.column,
-      visible: cursorState.visible,
-      blinking: cursorState.blinking,
-    };
-  }, [cursorState, composition.isComposing]);
-
-  // Completion popup position (based on cursor line/column)
-  const completionPosition = useMemo(() => {
-    if (!cursorState.visible) {return { x: 0, y: 0 };}
-    // Estimate position: line number width + column offset
-    const x = LINE_NUMBER_WIDTH + (cursorState.column - 1) * 7.8; // approx char width
-    const y = (cursorState.line - 1) * LINE_HEIGHT + LINE_HEIGHT + 4;
-    return { x, y };
-  }, [cursorState]);
-
-  if (!activeModuleSource) {
+  if (!activeModuleSource && activeModuleSource !== "") {
     return (
-      <div ref={containerRef} style={{ ...editorContainerStyle, ...style }}>
-        <div style={emptyMessageStyle}>No module selected</div>
+      <div style={{ ...wrapperStyle, ...style }}>
+        <div style={{ color: "#9aa0a6", fontStyle: "italic", padding: 16 }}>
+          No module selected
+        </div>
       </div>
     );
   }
 
-  // IME input style
-  const imeInputStyle = useMemo((): CSSProperties => {
-    const x = LINE_NUMBER_WIDTH + (cursorState.column - 1) * 7.8;
-    const y = (cursorState.line - 1) * LINE_HEIGHT;
-    return { left: x, top: y };
-  }, [cursorState]);
-
   return (
-    <div ref={containerRef} style={{ ...editorContainerStyle, ...style }} onClick={handleContainerClick}>
-      {/* Search bar */}
+    <div style={{ ...wrapperStyle, ...style }} onKeyDown={handleKeyDown}>
+      {/* Search bar overlay */}
       <SearchBar />
 
-      <div ref={codeAreaRef} style={codeAreaStyle} onScroll={handleCodeAreaScroll}>
-        {/* Hidden textarea for input */}
-        <textarea
-          ref={textareaRef}
-          style={hiddenTextareaStyle}
-          value={activeModuleSource}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          onScroll={handleTextareaScroll}
-          onCompositionStart={handleCompositionStart}
-          onCompositionUpdate={handleCompositionUpdate}
-          onCompositionEnd={handleCompositionEnd}
-          autoCapitalize="off"
-          autoComplete="off"
-          autoCorrect="off"
-          spellCheck={false}
-        />
+      {/* Code editor */}
+      <CodeEditor
+        document={doc}
+        onDocumentChange={handleDocumentChange}
+        tokenizer={vbaTokenizer}
+        tokenStyles={vbaTokenStyles}
+        highlights={highlights}
+        onCursorChange={handleCursorChangeWithOffset}
+        onSelectionChange={handleSelectionChange}
+        showLineNumbers
+        tabSize={4}
+        style={{ flex: 1, minHeight: 0 }}
+      />
 
-        {/* IME composition indicator */}
-        {composition.isComposing && composition.text && (
-          <div style={{ ...imeCompositionStyle, ...imeInputStyle }}>
-            {composition.text}
-          </div>
-        )}
-
-        {/* Unified code display with line numbers, highlights, and cursor */}
-        <div
-          onPointerDown={handleCodePointerDown}
-          onPointerMove={handleCodePointerMove}
-          onPointerUp={handleCodePointerUp}
-          style={{ cursor: "text", touchAction: "none" }}
-        >
-          <Renderer
-            lines={lines}
-            visibleRange={virtualState.visibleRange}
-            topSpacerHeight={virtualState.topSpacerHeight}
-            bottomSpacerHeight={virtualState.bottomSpacerHeight}
-            tokenCache={tokenCache}
-            lineHeight={LINE_HEIGHT}
-            padding={CODE_PADDING}
-            width={codeAreaRef.current?.clientWidth}
-            height={virtualState.viewportHeight}
-            measureText={measureText}
-            showLineNumbers={true}
-            lineNumberWidth={LINE_NUMBER_WIDTH}
-            highlights={highlights}
-            cursor={rendererCursor}
-          />
-        </div>
-
-        {/* Completion popup */}
-        {completion.state.isOpen && cursorState.visible && (
+      {/* Completion popup */}
+      {completion.state.isOpen && (
+        <div style={{ position: "absolute", zIndex: 200, top: 0, left: 0 }}>
           <CompletionPopup
             items={completion.state.items}
             highlightedIndex={completion.state.highlightedIndex}
@@ -806,16 +315,8 @@ export function VbaCodeEditor({
             }}
             onDismiss={completion.dismiss}
           />
-        )}
-      </div>
-
-      {/* CSS for cursor blink animation */}
-      <style>{`
-        @keyframes vba-cursor-blink {
-          0%, 50% { opacity: 1; }
-          51%, 100% { opacity: 0; }
-        }
-      `}</style>
+        </div>
+      )}
     </div>
   );
 }

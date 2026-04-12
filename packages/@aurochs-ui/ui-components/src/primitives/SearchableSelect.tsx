@@ -3,6 +3,9 @@
  *
  * A searchable dropdown component with custom item rendering support.
  * Supports grouping, filtering, and custom preview rendering for each item.
+ *
+ * Uses Popover (unstyled mode) as the single source of truth for
+ * positioning, portal, overlay, and visibility control.
  */
 
 import {
@@ -16,11 +19,11 @@ import {
   type KeyboardEvent,
   type UIEvent as ReactUIEvent,
 } from "react";
-import { createPortal } from "react-dom";
 import { colorTokens, fontTokens, radiusTokens, spacingTokens } from "../design-tokens";
+import { Popover } from "./Popover";
 
 // =============================================================================
-// Types
+// Utility
 // =============================================================================
 
 function lowerBound(values: readonly number[], target: number): number {
@@ -36,6 +39,10 @@ function lowerBound(values: readonly number[], target: number): number {
   };
   return recur(0, values.length);
 }
+
+// =============================================================================
+// Types
+// =============================================================================
 
 /**
  * Option item for SearchableSelect
@@ -150,15 +157,7 @@ const chevronStyle: CSSProperties = {
   flexShrink: 0,
 };
 
-const overlayStyle: CSSProperties = {
-  position: "fixed",
-  inset: 0,
-  zIndex: 999,
-};
-
 const dropdownStyle = (width: number | string, maxHeight: number): CSSProperties => ({
-  position: "fixed",
-  zIndex: 1000,
   backgroundColor: `var(--bg-secondary, ${colorTokens.background.secondary})`,
   borderRadius: radiusTokens.md,
   border: `1px solid var(--border-primary, ${colorTokens.border.primary})`,
@@ -245,8 +244,6 @@ function getItemCursor(isDisabled: boolean): string {
 }
 
 function includesActiveTag<T extends string>(opt: SearchableSelectOption<T>, activeTagId: string): boolean {
-  // If an option has no tags, treat it as untagged and keep it visible.
-  // This keeps utility rows (e.g. Actions) available even when filtering.
   if (!opt.tags || opt.tags.length === 0) {
     return true;
   }
@@ -307,6 +304,10 @@ function ChevronDown() {
 
 /**
  * A searchable dropdown select with custom item rendering support.
+ *
+ * Positioning, portal, overlay, and visibility control are delegated to
+ * Popover (unstyled mode). This component is responsible only for the
+ * trigger button rendering and the dropdown content (search + list).
  */
 export function SearchableSelect<T extends string = string>({
   value,
@@ -332,8 +333,6 @@ export function SearchableSelect<T extends string = string>({
   const [viewportHeight, setViewportHeight] = useState(0);
   const [activeTagId, setActiveTagId] = useState<string | null>(null);
 
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -483,66 +482,40 @@ export function SearchableSelect<T extends string = string>({
     scrollTop,
   ]);
 
-  // Position state
-  const [position, setPosition] = useState({ top: 0, left: 0 });
+  // -------------------------------------------------------------------------
+  // Open / Close
+  // -------------------------------------------------------------------------
 
-  // Calculate dropdown position
-  const updatePosition = useCallback(() => {
-    if (!triggerRef.current) {
-      return;
-    }
-    const rect = triggerRef.current.getBoundingClientRect();
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const dropdownHeight = Math.min(maxHeight, 400);
+  const handleOpenChange = useCallback(
+    (open: boolean) => {
+      if (open) {
+        if (disabled) {
+          return;
+        }
+        setIsOpen(true);
+        setSearchQuery("");
+        setHighlightedIndex(0);
+        setScrollTop(0);
+        if (listRef.current) {
+          listRef.current.scrollTop = 0;
+        }
+      } else {
+        setIsOpen(false);
+        setSearchQuery("");
+        setScrollTop(0);
+      }
+    },
+    [disabled],
+  );
 
-    const hasSpaceBelow = spaceBelow >= dropdownHeight;
-    const top = hasSpaceBelow ? rect.bottom + 4 : rect.top - dropdownHeight - 4;
-
-    const leftUnclamped = rect.left;
-    const numericWidth = typeof dropdownWidth === "number" ? dropdownWidth : parseFloat(dropdownWidth) || 280;
-    const maxLeft = Math.max(8, window.innerWidth - numericWidth - 8);
-    setPosition({
-      top: Math.max(8, top),
-      left: Math.min(Math.max(8, leftUnclamped), maxLeft),
-    });
-  }, [maxHeight, dropdownWidth]);
-
-  // Handle open
-  const handleOpen = useCallback(() => {
-    if (disabled) {
-      return;
-    }
-    setIsOpen(true);
-    setSearchQuery("");
-    setHighlightedIndex(0);
-    setScrollTop(0);
-    if (listRef.current) {
-      listRef.current.scrollTop = 0;
-    }
-  }, [disabled]);
-
-  // Handle close
   const handleClose = useCallback(() => {
-    setIsOpen(false);
-    setSearchQuery("");
-    setScrollTop(0);
-  }, []);
+    handleOpenChange(false);
+  }, [handleOpenChange]);
 
-  const handleDropdownPointerDown = useCallback(
-    (event: React.PointerEvent) => {
-      event.stopPropagation();
-    },
-    []
-  );
+  // -------------------------------------------------------------------------
+  // Select / Keyboard
+  // -------------------------------------------------------------------------
 
-  const handleDropdownClick = useCallback(
-    (event: React.MouseEvent) => {
-      event.stopPropagation();
-    },
-    []
-  );
-
-  // Handle select
   const handleSelect = useCallback(
     (optionValue: T) => {
       onChange(optionValue);
@@ -551,7 +524,6 @@ export function SearchableSelect<T extends string = string>({
     [onChange, handleClose]
   );
 
-  // Handle keyboard navigation
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLInputElement>) => {
       switch (e.key) {
@@ -580,15 +552,19 @@ export function SearchableSelect<T extends string = string>({
     [flatOptions, highlightedIndex, handleSelect, handleClose]
   );
 
-  // Focus search input when opened
+  // -------------------------------------------------------------------------
+  // Focus search input when Popover mounts content
+  // -------------------------------------------------------------------------
+
   useEffect(() => {
     if (isOpen) {
-      updatePosition();
-      requestAnimationFrame(() => {
-        searchInputRef.current?.focus();
-      });
+      searchInputRef.current?.focus();
     }
-  }, [isOpen, updatePosition]);
+  }, [isOpen]);
+
+  // -------------------------------------------------------------------------
+  // Virtual scroll helpers
+  // -------------------------------------------------------------------------
 
   const handleListScroll = useCallback((event: ReactUIEvent<HTMLDivElement>) => {
     setScrollTop(event.currentTarget.scrollTop);
@@ -609,19 +585,6 @@ export function SearchableSelect<T extends string = string>({
       window.removeEventListener("resize", measureViewport);
     };
   }, [isOpen, measureViewport]);
-
-  // Update position on scroll/resize
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-    window.addEventListener("resize", updatePosition);
-    window.addEventListener("scroll", updatePosition, true);
-    return () => {
-      window.removeEventListener("resize", updatePosition);
-      window.removeEventListener("scroll", updatePosition, true);
-    };
-  }, [isOpen, updatePosition]);
 
   // Keep highlighted option in view
   useEffect(() => {
@@ -660,196 +623,195 @@ export function SearchableSelect<T extends string = string>({
     setHighlightedIndex(0);
   }, [searchQuery, activeTagId]);
 
-  // Render trigger content
-  function getTriggerContent() {
+  // -------------------------------------------------------------------------
+  // Render
+  // -------------------------------------------------------------------------
+
+  function getTriggerContent(): ReactNode {
     if (!selectedOption) {
       return placeholder;
     }
     return renderValue?.(selectedOption) ?? selectedOption.label;
   }
-  const triggerContent = getTriggerContent();
 
   const buttonBaseStyle = disabled ? triggerDisabledStyle : triggerStyle;
 
-  return (
-    <>
-      <button
-        ref={triggerRef}
-        type="button"
-        onClick={handleOpen}
-        disabled={disabled}
-        className={className}
-        style={{ ...buttonBaseStyle, ...style }}
-      >
-        <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {triggerContent}
-        </span>
-        <ChevronDown />
-      </button>
+  const trigger = (
+    <button
+      type="button"
+      disabled={disabled}
+      className={className}
+      style={{ ...buttonBaseStyle, ...style }}
+    >
+      <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        {getTriggerContent()}
+      </span>
+      <ChevronDown />
+    </button>
+  );
 
-      {isOpen &&
-        createPortal(
-          <>
-            <div style={overlayStyle} onClick={handleClose} />
+  const dropdownContent = (
+    <div style={dropdownStyle(dropdownWidth, maxHeight)}>
+      {/* Search input */}
+      <div style={searchContainerStyle}>
+        <input
+          ref={searchInputRef}
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={searchPlaceholder}
+          style={searchInputStyle}
+        />
+        {tagFilter && tagFilter.tags.length > 0 && (
+          <div style={filterRowStyle}>
             <div
-              ref={dropdownRef}
-              style={{
-                ...dropdownStyle(dropdownWidth, maxHeight),
-                top: position.top,
-                left: position.left,
+              role="button"
+              tabIndex={0}
+              style={filterChipStyle(activeTagId === null)}
+              onClick={() => setActiveTagId(null)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  setActiveTagId(null);
+                }
               }}
-              onClick={handleDropdownClick}
-              onPointerDown={handleDropdownPointerDown}
             >
-              {/* Search input */}
-              <div style={searchContainerStyle}>
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder={searchPlaceholder}
-                  style={searchInputStyle}
-                />
-                {tagFilter && tagFilter.tags.length > 0 && (
-                  <div style={filterRowStyle}>
-                    <div
-                      role="button"
-                      tabIndex={0}
-                      style={filterChipStyle(activeTagId === null)}
-                      onClick={() => setActiveTagId(null)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") {
-                          event.preventDefault();
-                          setActiveTagId(null);
-                        }
-                      }}
-                    >
-                      {tagFilter.allLabel ?? "All"}
-                    </div>
-                    {tagFilter.tags.map((tag) => (
-                      <div
-                        key={tag.id}
-                        role="button"
-                        tabIndex={0}
-                        style={filterChipStyle(activeTagId === tag.id)}
-                        onClick={() => setActiveTagId(tag.id)}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter" || event.key === " ") {
-                            event.preventDefault();
-                            setActiveTagId(tag.id);
-                          }
-                        }}
-                      >
-                        {tag.label}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Options list */}
-              <div ref={listRef} style={listStyle} onScroll={handleListScroll} data-testid={listTestId}>
-                {rows.length === 0 && <div style={noResultsStyle}>No results found</div>}
-
-                {rows.length > 0 && !virtualLayout && (
-                  <>
-                    {rows.map((row) => {
-                      if (row.kind === "header") {
-                        return (
-                          <div key={row.key} style={groupHeaderStyle}>
-                            {row.group}
-                          </div>
-                        );
-                      }
-
-                      const opt = row.option;
-                      const globalIndex = row.optionIndex;
-                      const isSelected = opt.value === value;
-                      const isHighlighted = globalIndex === highlightedIndex;
-
-                      return (
-                        <div
-                          key={opt.value}
-                          data-option-index={globalIndex}
-                          style={itemStyle(isSelected, isHighlighted, !!opt.disabled)}
-                          onClick={() => {
-                            if (!opt.disabled) {
-                              handleSelect(opt.value);
-                            }
-                          }}
-                          onMouseEnter={() => setHighlightedIndex(globalIndex)}
-                        >
-                          {renderItem?.({ option: opt, isSelected, isHighlighted }) ?? opt.label}
-                        </div>
-                      );
-                    })}
-                  </>
-                )}
-
-                {rows.length > 0 && virtualLayout && (
-                  <div style={{ ...virtualContainerStyle, height: `${virtualLayout.totalHeight}px` }}>
-                    {rows.slice(virtualLayout.startIndex, virtualLayout.endIndex).map((row, localIndex) => {
-                      const rowIndex = virtualLayout.startIndex + localIndex;
-                      const top = virtualLayout.offsets[rowIndex] ?? 0;
-                      const height = virtualLayout.heights[rowIndex] ?? virtualItemHeight;
-
-                      if (row.kind === "header") {
-                        return (
-                          <div
-                            key={`${row.key}:${rowIndex}`}
-                            style={{
-                              ...groupHeaderStyle,
-                              position: "absolute",
-                              top: `${top}px`,
-                              height: `${height}px`,
-                              boxSizing: "border-box",
-                              left: 0,
-                              right: 0,
-                            }}
-                          >
-                            {row.group}
-                          </div>
-                        );
-                      }
-
-                      const opt = row.option;
-                      const globalIndex = row.optionIndex;
-                      const isSelected = opt.value === value;
-                      const isHighlighted = globalIndex === highlightedIndex;
-
-                      return (
-                        <div
-                          key={`${opt.value}:${rowIndex}`}
-                          data-option-index={globalIndex}
-                          style={{
-                            ...itemStyle(isSelected, isHighlighted, !!opt.disabled),
-                            position: "absolute",
-                            top: `${top}px`,
-                            height: `${height}px`,
-                            boxSizing: "border-box",
-                            left: 0,
-                            right: 0,
-                          }}
-                          onClick={() => {
-                            if (!opt.disabled) {
-                              handleSelect(opt.value);
-                            }
-                          }}
-                          onMouseEnter={() => setHighlightedIndex(globalIndex)}
-                        >
-                          {renderItem?.({ option: opt, isSelected, isHighlighted }) ?? opt.label}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+              {tagFilter.allLabel ?? "All"}
             </div>
-          </>,
-          document.body
+            {tagFilter.tags.map((tag) => (
+              <div
+                key={tag.id}
+                role="button"
+                tabIndex={0}
+                style={filterChipStyle(activeTagId === tag.id)}
+                onClick={() => setActiveTagId(tag.id)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    setActiveTagId(tag.id);
+                  }
+                }}
+              >
+                {tag.label}
+              </div>
+            ))}
+          </div>
         )}
-    </>
+      </div>
+
+      {/* Options list */}
+      <div ref={listRef} style={listStyle} onScroll={handleListScroll} data-testid={listTestId}>
+        {rows.length === 0 && <div style={noResultsStyle}>No results found</div>}
+
+        {rows.length > 0 && !virtualLayout && (
+          <>
+            {rows.map((row) => {
+              if (row.kind === "header") {
+                return (
+                  <div key={row.key} style={groupHeaderStyle}>
+                    {row.group}
+                  </div>
+                );
+              }
+
+              const opt = row.option;
+              const globalIndex = row.optionIndex;
+              const isSelected = opt.value === value;
+              const isHighlighted = globalIndex === highlightedIndex;
+
+              return (
+                <div
+                  key={opt.value}
+                  data-option-index={globalIndex}
+                  style={itemStyle(isSelected, isHighlighted, !!opt.disabled)}
+                  onClick={() => {
+                    if (!opt.disabled) {
+                      handleSelect(opt.value);
+                    }
+                  }}
+                  onMouseEnter={() => setHighlightedIndex(globalIndex)}
+                >
+                  {renderItem?.({ option: opt, isSelected, isHighlighted }) ?? opt.label}
+                </div>
+              );
+            })}
+          </>
+        )}
+
+        {rows.length > 0 && virtualLayout && (
+          <div style={{ ...virtualContainerStyle, height: `${virtualLayout.totalHeight}px` }}>
+            {rows.slice(virtualLayout.startIndex, virtualLayout.endIndex).map((row, localIndex) => {
+              const rowIndex = virtualLayout.startIndex + localIndex;
+              const top = virtualLayout.offsets[rowIndex] ?? 0;
+              const height = virtualLayout.heights[rowIndex] ?? virtualItemHeight;
+
+              if (row.kind === "header") {
+                return (
+                  <div
+                    key={`${row.key}:${rowIndex}`}
+                    style={{
+                      ...groupHeaderStyle,
+                      position: "absolute",
+                      top: `${top}px`,
+                      height: `${height}px`,
+                      boxSizing: "border-box",
+                      left: 0,
+                      right: 0,
+                    }}
+                  >
+                    {row.group}
+                  </div>
+                );
+              }
+
+              const opt = row.option;
+              const globalIndex = row.optionIndex;
+              const isSelected = opt.value === value;
+              const isHighlighted = globalIndex === highlightedIndex;
+
+              return (
+                <div
+                  key={`${opt.value}:${rowIndex}`}
+                  data-option-index={globalIndex}
+                  style={{
+                    ...itemStyle(isSelected, isHighlighted, !!opt.disabled),
+                    position: "absolute",
+                    top: `${top}px`,
+                    height: `${height}px`,
+                    boxSizing: "border-box",
+                    left: 0,
+                    right: 0,
+                  }}
+                  onClick={() => {
+                    if (!opt.disabled) {
+                      handleSelect(opt.value);
+                    }
+                  }}
+                  onMouseEnter={() => setHighlightedIndex(globalIndex)}
+                >
+                  {renderItem?.({ option: opt, isSelected, isHighlighted }) ?? opt.label}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <Popover
+      trigger={trigger}
+      open={isOpen}
+      onOpenChange={handleOpenChange}
+      side="bottom"
+      align="start"
+      unstyled
+      padding="0"
+      disabled={disabled}
+    >
+      {dropdownContent}
+    </Popover>
   );
 }

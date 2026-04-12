@@ -32,10 +32,19 @@ export const CODE_FONT_SIZE = fontTokens.size.lg;
 
 /**
  * Main editor container.
+ *
+ * `height: "100%"` is required because the parent (EditorShell's GridLayout
+ * layer wrapper) uses `overflow: hidden` with a grid-defined height, but is
+ * not a flex container. Without explicit height, the editor grows to fit its
+ * content and virtual scrolling cannot determine the viewport size.
+ *
+ * `flex: 1` is kept for contexts where the editor is placed inside a flex
+ * container directly (e.g. standalone usage outside EditorShell).
  */
 export const editorContainerStyle: CSSProperties = {
   display: "flex",
   flex: 1,
+  height: "100%",
   minHeight: 0,
   overflow: "hidden",
   background: `var(--bg-primary, ${colorTokens.background.primary})`,
@@ -100,6 +109,7 @@ export function buildLineStyle(lineHeight: number): CSSProperties {
  */
 export function buildLineNumberStyle(width: number): CSSProperties {
   return {
+    boxSizing: "border-box",
     flexShrink: 0,
     paddingRight: spacingTokens.sm,
     paddingLeft: spacingTokens.sm,

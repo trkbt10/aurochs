@@ -5,59 +5,48 @@
 import { StrictMode, type CSSProperties } from "react";
 import { createRoot } from "react-dom/client";
 import { injectCSSVariables } from "@aurochs-ui/ui-components/design-tokens";
-import {
-  VbaEditor,
-  HtmlCodeRenderer,
-  SvgCodeRenderer,
-  CanvasCodeRenderer,
-  type CodeRendererComponent,
-  type RendererType,
-} from "@aurochs-ui/vba-editor";
+import { VbaEditor } from "@aurochs-ui/vba-editor";
 import type { VbaProgramIr, VbaModule } from "@aurochs-office/vba";
 
 injectCSSVariables();
 
 // =============================================================================
-// URL Parameter Parsing
-// =============================================================================
-
-/** Test-level renderer mapping for URL-based selection. */
-const RENDERER_MAP: Record<RendererType, CodeRendererComponent> = {
-  html: HtmlCodeRenderer,
-  svg: SvgCodeRenderer,
-  canvas: CanvasCodeRenderer,
-};
-
-function getRendererFromUrl(): { type: RendererType; component: CodeRendererComponent } {
-  const params = new URLSearchParams(window.location.search);
-  const renderer = params.get("renderer");
-  if (renderer === "svg" || renderer === "canvas" || renderer === "html") {
-    return { type: renderer, component: RENDERER_MAP[renderer] };
-  }
-  return { type: "html", component: HtmlCodeRenderer };
-}
-
-// =============================================================================
 // Simple Test Module
 // =============================================================================
 
-const testModuleSource = `Sub Test()
-    ' This is a comment line
-    Dim x As Integer
-    Dim y As Long
-    Dim z As String
-    x = 1
-    y = 2
-    z = "Hello World"
-    ' Japanese: 日本語テスト
-    ' Korean: 한글 테스트
-    ' Chinese: 中文测试
-    If x > 0 Then
-        y = x * 2
-    End If
-    MsgBox z
-End Sub
-`;
+/**
+ * Generate test source code with enough lines to exceed a 720px viewport.
+ * At 21px per line, 720px / 21 ≈ 34 lines visible. With EditorShell
+ * chrome (toolbar, status bar, panels) the visible area is smaller.
+ * 60+ lines ensures scrollability in all layouts.
+ */
+function generateTestSource(): string {
+  const lines: string[] = [
+    "Sub Test()",
+    "    ' This is a comment line",
+    "    Dim x As Integer",
+    "    Dim y As Long",
+    "    Dim z As String",
+    "    x = 1",
+    "    y = 2",
+    '    z = "Hello World"',
+    "    ' Japanese: 日本語テスト",
+    "    ' Korean: 한글 테스트",
+    "    ' Chinese: 中文测试",
+    "    If x > 0 Then",
+    "        y = x * 2",
+    "    End If",
+    "    MsgBox z",
+  ];
+  // Pad with numbered comment lines to exceed viewport
+  for (let i = 1; i <= 50; i++) {
+    lines.push(`    ' Line ${i}: padding for scroll test`);
+  }
+  lines.push("End Sub");
+  return lines.join("\n");
+}
+
+const testModuleSource = generateTestSource();
 
 const testModule: VbaModule = {
   name: "TestModule",
@@ -109,17 +98,6 @@ const navStyle: CSSProperties = {
   flexShrink: 0,
 };
 
-const linkStyle: CSSProperties = {
-  color: "#0066cc",
-  textDecoration: "none",
-};
-
-const activeLinkStyle: CSSProperties = {
-  ...linkStyle,
-  fontWeight: "bold",
-  color: "#000",
-};
-
 const editorContainerStyle: CSSProperties = {
   flex: 1,
   minHeight: 0,
@@ -129,43 +107,22 @@ const editorContainerStyle: CSSProperties = {
 // Root Component
 // =============================================================================
 
-const RENDERER_TYPES: RendererType[] = ["html", "svg", "canvas"];
-
+/**
+ * E2E test application.
+ */
 function App() {
-  const { type: currentType, component: CurrentRenderer } = getRendererFromUrl();
-
-  const handleRun = (procedureName: string) => {
-    console.log(`Running: ${procedureName}`);
-  };
-
-  const handleStop = () => {
-    console.log("Execution stopped");
-  };
-
   return (
     <div style={containerStyle} data-testid="vba-editor-container">
-      {/* Editor */}
       <div style={editorContainerStyle}>
         <VbaEditor
           program={testProgram}
-          Renderer={CurrentRenderer}
-          onRun={handleRun}
-          onStop={handleStop}
+          onRun={(name) => console.log(`Running: ${name}`)}
+          onStop={() => console.log("Execution stopped")}
         />
       </div>
 
-      {/* Renderer navigation - bottom */}
       <nav style={navStyle}>
-        <span>Renderer:</span>
-        {RENDERER_TYPES.map((r) => (
-          <a
-            key={r}
-            href={`?renderer=${r}`}
-            style={r === currentType ? activeLinkStyle : linkStyle}
-          >
-            {r.toUpperCase()}
-          </a>
-        ))}
+        <span>VBA Editor E2E</span>
       </nav>
     </div>
   );

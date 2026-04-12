@@ -10,7 +10,7 @@ import { EditorShell, type EditorPanel } from "@aurochs-ui/editor-controls/edito
 import { EditorStatusBar } from "@aurochs-ui/ui-components";
 import { VbaEditorProvider, useVbaEditor } from "../context/vba-editor";
 import type { ProjectSearchMatch } from "../context/vba-editor/types";
-import { VbaCodeEditor, type CodeRendererComponent } from "./code-editor";
+import { VbaCodeEditor } from "./code-editor";
 import { VbaModuleGroupedList } from "./vba-module-list";
 import { VbaEditorToolbar } from "./toolbar";
 import { VbaExecutionPanel, type ExecutionState } from "./execution-panel";
@@ -26,8 +26,6 @@ export type VbaEditorProps = {
   readonly readonly?: boolean;
   /** Custom style */
   readonly style?: CSSProperties;
-  /** Code renderer component. Defaults to HtmlCodeRenderer. */
-  readonly Renderer?: CodeRendererComponent;
   /** Callback when Run button is clicked. Receives the selected procedure name. */
   readonly onRun?: (procedureName: string) => void;
   /** Callback when Stop button is clicked. */
@@ -36,7 +34,6 @@ export type VbaEditorProps = {
 
 type VbaEditorInnerProps = {
   readonly style?: CSSProperties;
-  readonly Renderer?: CodeRendererComponent;
   readonly onRun?: (procedureName: string) => void;
   readonly onStop?: () => void;
 };
@@ -46,7 +43,6 @@ type VbaEditorInnerProps = {
  */
 function VbaEditorInner({
   style,
-  Renderer,
   onRun,
   onStop,
 }: VbaEditorInnerProps): ReactNode {
@@ -80,7 +76,6 @@ function VbaEditorInner({
   // Handle result click to navigate
   const handleMatchSelect = useCallback(
     (moduleName: string, match: ProjectSearchMatch) => {
-      // Select the module and set cursor to match position
       dispatch({ type: "SELECT_MODULE", moduleName });
       dispatch({
         type: "SET_CURSOR",
@@ -96,7 +91,6 @@ function VbaEditorInner({
     (procedureName: string) => {
       setExecutionState("running");
       onRun?.(procedureName);
-      // Simulate completion after a delay (in real use, caller would control this)
       setTimeout(() => setExecutionState("success"), 100);
     },
     [onRun]
@@ -139,12 +133,11 @@ function VbaEditorInner({
   // Compute selection character count
   const selectionInfo = useMemo(() => {
     if (!selection) {return undefined;}
-    // Simple estimation - actual character count would need source text
     const lines = selection.endLine - selection.startLine;
-    return { lines, characters: 0 }; // Characters computed in context if needed
+    return { lines, characters: 0 };
   }, [selection]);
 
-  // Bottom bar: always show status bar, add search results when searching
+  // Bottom bar
   const bottomBar = (
     <>
       {search.isOpen && search.mode === "project-wide" && (
@@ -165,7 +158,7 @@ function VbaEditorInner({
       bottomBar={bottomBar}
       style={style}
     >
-      <VbaCodeEditor Renderer={Renderer} />
+      <VbaCodeEditor />
     </EditorShell>
   );
 }
@@ -184,7 +177,6 @@ export function VbaEditor({
   onProgramChange: _onProgramChange,
   readonly: _readonly,
   style,
-  Renderer,
   onRun,
   onStop,
 }: VbaEditorProps): ReactNode {
@@ -192,7 +184,6 @@ export function VbaEditor({
     <VbaEditorProvider program={program}>
       <VbaEditorInner
         style={style}
-        Renderer={Renderer}
         onRun={onRun}
         onStop={onStop}
       />

@@ -169,12 +169,16 @@ export const handleReplaceModuleSource: ActionHandler<
     cursorOffset: action.cursorOffset,
   });
 
+  const isActiveModule = state.activeModuleName === action.moduleName;
+  const pendingOffset = isActiveModule ? action.cursorOffset : undefined;
+
   return {
     ...state,
     sourceHistory: {
       ...state.sourceHistory,
       present: newSourceMap, // No history push - just replace present
     },
+    pendingCursorOffset: pendingOffset,
   };
 };
 

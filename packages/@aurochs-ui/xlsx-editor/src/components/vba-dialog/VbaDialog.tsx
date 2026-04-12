@@ -16,7 +16,7 @@ import {
 import { createPortal } from "react-dom";
 import type { VbaProgramIr } from "@aurochs-office/vba";
 import type { XlsxWorkbook } from "@aurochs-office/xlsx/domain/workbook";
-import { VbaEditor, SvgCodeRenderer } from "@aurochs-ui/vba-editor";
+import { VbaEditor } from "@aurochs-ui/vba-editor";
 import { Button } from "@aurochs-ui/ui-components/primitives";
 import { executeVbaProcedure, applyMutations } from "../../vba";
 
@@ -209,7 +209,6 @@ export function VbaDialog({
           <VbaEditor
             program={editedProgram}
             onProgramChange={handleProgramChange}
-            Renderer={SvgCodeRenderer}
             style={{ width: "100%", height: "100%" }}
             onRun={handleRun}
           />

@@ -64,14 +64,7 @@ export {
 } from "./components/code-editor";
 
 // =============================================================================
-// Renderers
+// VBA Tokenizer (for external use with CodeEditor from react-editor-ui)
 // =============================================================================
 
-export {
-  type RendererType,
-  type CodeRendererProps,
-  type CodeRendererComponent,
-  HtmlCodeRenderer,
-  SvgCodeRenderer,
-  CanvasCodeRenderer,
-} from "./components/code-editor";
+export { vbaTokenizer, vbaTokenStyles } from "./components/code-editor/vba-tokenizer";
