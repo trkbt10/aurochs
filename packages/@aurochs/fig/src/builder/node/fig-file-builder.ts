@@ -23,16 +23,16 @@ import type {
   VectorNodeData,
   RectangleNodeData,
   RoundedRectangleNodeData,
-  Stroke,
   ArcData,
 } from "../shape";
+import type { Stroke } from "../types";
 import type { EffectData } from "../effect/types";
 import type { GroupNodeData } from "./group-builder";
 import type { SectionNodeData } from "./section-builder";
 import type { BooleanOperationNodeData } from "./boolean-builder";
 import { SHAPE_NODE_TYPES, NODE_TYPE_VALUES } from "../../constants";
 import { buildFigHeader } from "../header";
-import { createEmptyZipPackage } from "@oxen/zip";
+import { createEmptyZipPackage } from "@aurochs/zip";
 import { encodeFigSchema } from "./schema-encoder";
 import {
   encodeRectangleBlob,
