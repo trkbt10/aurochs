@@ -559,8 +559,8 @@
         "react-dom": "^18.0.0 || ^19.0.0",
       },
     },
-    "packages/@aurochs-renderer/figma": {
-      "name": "@aurochs-renderer/figma",
+    "packages/@aurochs-renderer/fig": {
+      "name": "@aurochs-renderer/fig",
       "version": "0.11.0",
       "dependencies": {
         "@aurochs/fig": "workspace:*",
@@ -1130,7 +1130,7 @@
 
     "@aurochs-renderer/drawing-ml": ["@aurochs-renderer/drawing-ml@workspace:packages/@aurochs-renderer/drawing-ml"],
 
-    "@aurochs-renderer/figma": ["@aurochs-renderer/figma@workspace:packages/@aurochs-renderer/figma"],
+    "@aurochs-renderer/fig": ["@aurochs-renderer/fig@workspace:packages/@aurochs-renderer/fig"],
 
     "@aurochs-renderer/pdf": ["@aurochs-renderer/pdf@workspace:packages/@aurochs-renderer/pdf"],
 

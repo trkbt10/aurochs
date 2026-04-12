@@ -152,7 +152,7 @@ Multiple output targets for each format.
 | `@aurochs-renderer/xlsx` | — | — | yes | — |
 | `@aurochs-renderer/chart` | yes | — | yes | yes |
 | `@aurochs-renderer/diagram` | — | yes | yes | yes |
-| `@aurochs-renderer/figma` | yes | — | — | — |
+| `@aurochs-renderer/fig` | yes | — | — | — |
 
 ### Figma `.fig` renderer
 
