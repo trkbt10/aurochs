@@ -15,11 +15,12 @@ import { PDF_VIEW_TYPE, createPdfEditorProvider } from "./providers/pdf-provider
  */
 export function activate(context: vscode.ExtensionContext): void {
   const editorOptions = { supportsMultipleEditorsPerDocument: true };
+  const extensionUri = context.extensionUri;
 
   context.subscriptions.push(
     vscode.window.registerCustomEditorProvider(
       PPTX_VIEW_TYPE,
-      createPptxEditorProvider(),
+      createPptxEditorProvider(extensionUri),
       editorOptions,
     ),
   );
@@ -27,7 +28,7 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.window.registerCustomEditorProvider(
       DOCX_VIEW_TYPE,
-      createDocxEditorProvider(),
+      createDocxEditorProvider(extensionUri),
       editorOptions,
     ),
   );
@@ -35,7 +36,7 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.window.registerCustomEditorProvider(
       XLSX_VIEW_TYPE,
-      createXlsxEditorProvider(),
+      createXlsxEditorProvider(extensionUri),
       editorOptions,
     ),
   );
@@ -43,7 +44,7 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.window.registerCustomEditorProvider(
       PDF_VIEW_TYPE,
-      createPdfEditorProvider(),
+      createPdfEditorProvider(extensionUri),
       editorOptions,
     ),
   );

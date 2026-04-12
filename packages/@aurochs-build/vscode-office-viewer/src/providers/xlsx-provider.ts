@@ -8,36 +8,48 @@ import * as vscode from "vscode";
 import { parseXls } from "@aurochs-office/xls";
 import { renderXlsxHtml } from "../renderers/xlsx-renderer";
 import { renderWorkbookToHtml, type WorkbookHtmlResult } from "@aurochs-renderer/xlsx/html";
-import { buildXlsxWebviewHtml } from "../webview/xlsx-template";
-import { buildErrorHtml } from "./error-html";
+import { buildWebviewShell } from "../webview/template";
+import { sendWhenReady } from "./webview-messaging";
+import type { ExtensionToWebviewMessage } from "../webview/types";
 
 export const XLSX_VIEW_TYPE = "aurochs.xlsxViewer";
 
 /**
  * Create an XLSX custom readonly editor provider.
  */
-export function createXlsxEditorProvider(): vscode.CustomReadonlyEditorProvider {
+export function createXlsxEditorProvider(extensionUri: vscode.Uri): vscode.CustomReadonlyEditorProvider {
   return {
     async openCustomDocument(uri: vscode.Uri): Promise<vscode.CustomDocument> {
       return { uri, dispose: () => {} };
     },
 
     async resolveCustomEditor(document: vscode.CustomDocument, webviewPanel: vscode.WebviewPanel): Promise<void> {
-      webviewPanel.webview.options = { enableScripts: true };
+      webviewPanel.webview.options = {
+        enableScripts: true,
+        localResourceRoots: [vscode.Uri.joinPath(extensionUri, "dist")],
+      };
 
+      webviewPanel.webview.html = buildWebviewShell({
+        webview: webviewPanel.webview,
+        extensionUri,
+      });
+
+      let message: ExtensionToWebviewMessage;
       try {
         const data = await vscode.workspace.fs.readFile(document.uri);
         const result = await renderToSheets(document.uri, new Uint8Array(data));
-
         const fileName = document.uri.path.split("/").pop() ?? "spreadsheet";
-        webviewPanel.webview.html = buildXlsxWebviewHtml({
-          webview: webviewPanel.webview,
-          sheets: result.sheets,
-          fileName,
-        });
+
+        message = { type: "xlsx", fileName, sheets: result.sheets };
       } catch (err) {
-        webviewPanel.webview.html = buildErrorHtml(webviewPanel.webview, "Failed to load spreadsheet", err);
+        message = {
+          type: "error",
+          title: "Failed to load spreadsheet",
+          message: err instanceof Error ? err.message : String(err),
+        };
       }
+
+      sendWhenReady(webviewPanel.webview, message);
     },
   };
 }

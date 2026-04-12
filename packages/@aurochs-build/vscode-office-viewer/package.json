@@ -4,23 +4,28 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "bun build src/extension.ts --target node --outdir ../../../publish/aurochs-office-viewer/dist --external vscode",
+    "build": "bun build src/extension.ts --target node --outdir ../../../publish/aurochs-office-viewer/dist --external vscode && bun build src/webview/main.tsx --target browser --outdir ../../../publish/aurochs-office-viewer/dist/webview --minify",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src"
   },
   "dependencies": {
-    "@aurochs-office/pptx": "workspace:*",
-    "@aurochs-office/ppt": "workspace:*",
-    "@aurochs-office/docx": "workspace:*",
     "@aurochs-office/doc": "workspace:*",
-    "@aurochs-office/xlsx": "workspace:*",
+    "@aurochs-office/docx": "workspace:*",
+    "@aurochs-office/ppt": "workspace:*",
+    "@aurochs-office/pptx": "workspace:*",
     "@aurochs-office/xls": "workspace:*",
+    "@aurochs-office/xlsx": "workspace:*",
+    "@aurochs-renderer/pdf": "workspace:*",
     "@aurochs-renderer/pptx": "workspace:*",
     "@aurochs-renderer/xlsx": "workspace:*",
-    "@aurochs-renderer/pdf": "workspace:*",
-    "@aurochs/zip": "workspace:*"
+    "@aurochs/zip": "workspace:*",
+    "@vscode-elements/elements": "^2.5.1",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
   },
   "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
     "@types/vscode": "^1.110.0"
   }
 }

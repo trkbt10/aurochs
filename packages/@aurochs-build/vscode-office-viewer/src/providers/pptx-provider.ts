@@ -7,38 +7,54 @@
 import * as vscode from "vscode";
 import { parsePpt } from "@aurochs-office/ppt";
 import { renderPptxSlides, renderPptxSlidesFromFile, type PptxRenderResult } from "../renderers/pptx-renderer";
-import { buildPptxWebviewHtml } from "../webview/pptx-template";
-import { buildErrorHtml } from "./error-html";
+import { buildWebviewShell } from "../webview/template";
+import { sendWhenReady } from "./webview-messaging";
+import type { ExtensionToWebviewMessage } from "../webview/types";
 
 export const PPTX_VIEW_TYPE = "aurochs.pptxViewer";
 
 /**
  * Create a PPTX custom readonly editor provider.
  */
-export function createPptxEditorProvider(): vscode.CustomReadonlyEditorProvider {
+export function createPptxEditorProvider(extensionUri: vscode.Uri): vscode.CustomReadonlyEditorProvider {
   return {
     async openCustomDocument(uri: vscode.Uri): Promise<vscode.CustomDocument> {
       return { uri, dispose: () => {} };
     },
 
     async resolveCustomEditor(document: vscode.CustomDocument, webviewPanel: vscode.WebviewPanel): Promise<void> {
-      webviewPanel.webview.options = { enableScripts: true };
+      webviewPanel.webview.options = {
+        enableScripts: true,
+        localResourceRoots: [vscode.Uri.joinPath(extensionUri, "dist")],
+      };
 
+      webviewPanel.webview.html = buildWebviewShell({
+        webview: webviewPanel.webview,
+        extensionUri,
+      });
+
+      let message: ExtensionToWebviewMessage;
       try {
         const data = await vscode.workspace.fs.readFile(document.uri);
         const result = await renderToSlides(document.uri, new Uint8Array(data));
-
         const fileName = document.uri.path.split("/").pop() ?? "presentation";
-        webviewPanel.webview.html = buildPptxWebviewHtml({
-          webview: webviewPanel.webview,
+
+        message = {
+          type: "pptx",
+          fileName,
           slides: result.slides,
           width: result.width,
           height: result.height,
-          fileName,
-        });
+        };
       } catch (err) {
-        webviewPanel.webview.html = buildErrorHtml(webviewPanel.webview, "Failed to load presentation", err);
+        message = {
+          type: "error",
+          title: "Failed to load presentation",
+          message: err instanceof Error ? err.message : String(err),
+        };
       }
+
+      sendWhenReady(webviewPanel.webview, message);
     },
   };
 }

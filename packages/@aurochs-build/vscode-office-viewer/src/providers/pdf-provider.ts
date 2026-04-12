@@ -6,36 +6,48 @@
 
 import * as vscode from "vscode";
 import { renderPdfPages } from "../renderers/pdf-renderer";
-import { buildPdfWebviewHtml } from "../webview/pdf-template";
-import { buildErrorHtml } from "./error-html";
+import { buildWebviewShell } from "../webview/template";
+import { sendWhenReady } from "./webview-messaging";
+import type { ExtensionToWebviewMessage } from "../webview/types";
 
 export const PDF_VIEW_TYPE = "aurochs.pdfViewer";
 
 /**
  * Create a PDF custom readonly editor provider.
  */
-export function createPdfEditorProvider(): vscode.CustomReadonlyEditorProvider {
+export function createPdfEditorProvider(extensionUri: vscode.Uri): vscode.CustomReadonlyEditorProvider {
   return {
     async openCustomDocument(uri: vscode.Uri): Promise<vscode.CustomDocument> {
       return { uri, dispose: () => {} };
     },
 
     async resolveCustomEditor(document: vscode.CustomDocument, webviewPanel: vscode.WebviewPanel): Promise<void> {
-      webviewPanel.webview.options = { enableScripts: true };
+      webviewPanel.webview.options = {
+        enableScripts: true,
+        localResourceRoots: [vscode.Uri.joinPath(extensionUri, "dist")],
+      };
 
+      webviewPanel.webview.html = buildWebviewShell({
+        webview: webviewPanel.webview,
+        extensionUri,
+      });
+
+      let message: ExtensionToWebviewMessage;
       try {
         const data = await vscode.workspace.fs.readFile(document.uri);
         const result = await renderPdfPages(new Uint8Array(data));
-
         const fileName = document.uri.path.split("/").pop() ?? "document.pdf";
-        webviewPanel.webview.html = buildPdfWebviewHtml({
-          webview: webviewPanel.webview,
-          pages: result.pages,
-          fileName,
-        });
+
+        message = { type: "pdf", fileName, pages: result.pages };
       } catch (err) {
-        webviewPanel.webview.html = buildErrorHtml(webviewPanel.webview, "Failed to load PDF", err);
+        message = {
+          type: "error",
+          title: "Failed to load PDF",
+          message: err instanceof Error ? err.message : String(err),
+        };
       }
+
+      sendWhenReady(webviewPanel.webview, message);
     },
   };
 }
