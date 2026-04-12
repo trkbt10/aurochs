@@ -7,6 +7,13 @@
 
 import type { XlsxColumnDef, XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
 import { colIdx, rowIdx, type ColIndex, type RowIndex } from "@aurochs-office/xlsx/domain/types";
+import {
+  pointsToPixels as domainPointsToPixels,
+  pixelsToPoints as domainPixelsToPoints,
+  columnWidthCharToPixels as domainColumnWidthCharToPixels,
+  pixelsToColumnWidthChar as domainPixelsToColumnWidthChar,
+  type ColumnWidthConversionOptions,
+} from "@aurochs-office/xlsx/domain/style/unit-conversion";
 
 export type SheetLayoutOptions = {
   readonly rowCount: number;
@@ -46,40 +53,35 @@ export type SheetLayout = {
   readonly totalColsWidthPx: number;
 };
 
-const SCREEN_DPI = 96;
 
 /**
- * Convert typographic points (1/72 inch) to pixels using the editor's assumed screen DPI.
+ * Convert typographic points (1/72 inch) to pixels using the assumed screen DPI (96).
+ *
+ * Delegates to the canonical implementation in @aurochs-office/xlsx/domain/style/unit-conversion.
  */
 export function pointsToPixels(points: number): number {
   if (!Number.isFinite(points)) {
     throw new Error(`points must be finite: ${points}`);
   }
-  return (points * SCREEN_DPI) / 72;
+  return domainPointsToPixels(points);
 }
 
 /**
- * Convert pixels to typographic points (1/72 inch) using the editor's assumed screen DPI.
+ * Convert pixels to typographic points (1/72 inch).
+ *
+ * Delegates to the canonical implementation in @aurochs-office/xlsx/domain/style/unit-conversion.
  */
 export function pixelsToPoints(pixels: number): number {
   if (!Number.isFinite(pixels)) {
     throw new Error(`pixels must be finite: ${pixels}`);
   }
-  return (pixels * 72) / SCREEN_DPI;
+  return domainPixelsToPoints(pixels);
 }
-
-export type ColumnWidthConversionOptions = {
-  /**
-   * Approximate maximum digit width (MDW) in px at 96 DPI.
-   * Excel commonly uses Calibri 11 by default (MDW≈7).
-   */
-  readonly maxDigitWidthPx?: number;
-  /** Extra padding in px applied by Excel-like rendering. */
-  readonly paddingPx?: number;
-};
 
 /**
  * Convert an Excel column width (in "characters") to pixels using an Excel-like approximation.
+ *
+ * Delegates to the canonical implementation in @aurochs-office/xlsx/domain/style/unit-conversion.
  */
 export function columnWidthCharToPixels(widthChars: number, options?: ColumnWidthConversionOptions): number {
   if (!Number.isFinite(widthChars)) {
@@ -88,16 +90,16 @@ export function columnWidthCharToPixels(widthChars: number, options?: ColumnWidt
   if (widthChars < 0) {
     throw new Error(`widthChars must be >= 0: ${widthChars}`);
   }
-  const maxDigitWidthPx = options?.maxDigitWidthPx ?? 7;
-  const paddingPx = options?.paddingPx ?? 5;
-  if (maxDigitWidthPx <= 0) {
-    throw new Error(`maxDigitWidthPx must be > 0: ${maxDigitWidthPx}`);
+  if (options?.maxDigitWidthPx !== undefined && options.maxDigitWidthPx <= 0) {
+    throw new Error(`maxDigitWidthPx must be > 0: ${options.maxDigitWidthPx}`);
   }
-  return Math.max(0, Math.floor(widthChars * maxDigitWidthPx + paddingPx));
+  return domainColumnWidthCharToPixels(widthChars, options);
 }
 
 /**
- * Convert pixels to an Excel column width (in "characters") using an Excel-like approximation.
+ * Convert pixels to an Excel column width (in "characters").
+ *
+ * Delegates to the canonical implementation in @aurochs-office/xlsx/domain/style/unit-conversion.
  */
 export function pixelsToColumnWidthChar(pixels: number, options?: ColumnWidthConversionOptions): number {
   if (!Number.isFinite(pixels)) {
@@ -106,12 +108,10 @@ export function pixelsToColumnWidthChar(pixels: number, options?: ColumnWidthCon
   if (pixels < 0) {
     throw new Error(`pixels must be >= 0: ${pixels}`);
   }
-  const maxDigitWidthPx = options?.maxDigitWidthPx ?? 7;
-  const paddingPx = options?.paddingPx ?? 5;
-  if (maxDigitWidthPx <= 0) {
-    throw new Error(`maxDigitWidthPx must be > 0: ${maxDigitWidthPx}`);
+  if (options?.maxDigitWidthPx !== undefined && options.maxDigitWidthPx <= 0) {
+    throw new Error(`maxDigitWidthPx must be > 0: ${options.maxDigitWidthPx}`);
   }
-  return Math.max(0, (pixels - paddingPx) / maxDigitWidthPx);
+  return domainPixelsToColumnWidthChar(pixels, options);
 }
 
 function assertValidIndex0(index0: number, count: number, label: string): void {

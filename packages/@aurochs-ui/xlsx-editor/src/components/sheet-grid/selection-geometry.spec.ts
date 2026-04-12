@@ -4,7 +4,7 @@
 
 import { colIdx, rowIdx, sheetId } from "@aurochs-office/xlsx/domain/types";
 import type { XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
-import { createSheetLayout } from "../../selectors/sheet-layout";
+import { createSheetLayout } from "@aurochs-ui/xlsx-sheet/selectors/sheet-layout";
 import { clipRectToViewport, getActiveCellRect, getRangeBounds, getSelectedRangeRect } from "./selection-geometry";
 
 function sheet(): XlsxWorksheet {

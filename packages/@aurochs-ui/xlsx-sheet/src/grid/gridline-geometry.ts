@@ -6,8 +6,8 @@
  */
 
 import { colIdx, rowIdx } from "@aurochs-office/xlsx/domain/types";
-import { createSheetLayout } from "../../selectors/sheet-layout";
-import { findMergeForCell, type NormalizedMergeRange } from "../../sheet/merge-range";
+import { createSheetLayout } from "../selectors/sheet-layout";
+import { findMergeForCell, type NormalizedMergeRange } from "../sheet/merge-range";
 
 export type GridLineSegment = {
   readonly key: string;

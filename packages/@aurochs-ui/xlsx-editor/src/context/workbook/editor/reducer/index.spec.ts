@@ -65,18 +65,16 @@ describe("xlsx-editor/context/workbook/editor/reducer/index", () => {
 
   it("xlsxEditorReducer dispatches selection and cell actions", () => {
     const workbook = createWorkbook([createWorksheet("Sheet1", 1)]);
-    // eslint-disable-next-line no-restricted-syntax -- test requires sequential state updates
-    let state = createInitialState(workbook);
+    const state = [
+      { type: "SELECT_CELL" as const, address: addr(2, 3) },
+      {
+        type: "UPDATE_CELL" as const,
+        address: addr(2, 3),
+        value: { type: "string" as const, value: "B3" },
+      },
+    ].reduce(xlsxEditorReducer, createInitialState(workbook));
 
-    state = xlsxEditorReducer(state, { type: "SELECT_CELL", address: addr(2, 3) });
     expect(state.cellSelection.activeCell).toEqual(addr(2, 3));
-
-    state = xlsxEditorReducer(state, {
-      type: "UPDATE_CELL",
-      address: addr(2, 3),
-      value: { type: "string", value: "B3" },
-    });
-
     expect(state.workbookHistory.past).toHaveLength(1);
     const sheet = state.workbookHistory.present.sheets[0];
     expect(getCellValue(sheet, addr(2, 3))).toEqual({ type: "string", value: "B3" });
@@ -84,15 +82,18 @@ describe("xlsx-editor/context/workbook/editor/reducer/index", () => {
 
   it("COMMIT_CELL_EDIT updates a cell and exits editing mode", () => {
     const workbook = createWorkbook([createWorksheet("Sheet1", 1)]);
-    // eslint-disable-next-line no-restricted-syntax -- test requires sequential state updates
-    let state = createInitialState(workbook);
+    const stateAfterEnter = xlsxEditorReducer(createInitialState(workbook), {
+      type: "ENTER_CELL_EDIT",
+      address: addr(1, 1),
+      entryMode: "enter",
+    });
+    expect(stateAfterEnter.editing?.address).toEqual(addr(1, 1));
 
-    state = xlsxEditorReducer(state, { type: "ENTER_CELL_EDIT", address: addr(1, 1), entryMode: "enter" });
-    expect(state.editing?.address).toEqual(addr(1, 1));
-
-    // Update text to a number value
-    state = xlsxEditorReducer(state, { type: "UPDATE_EDIT_TEXT", text: "123", caretOffset: 3, selectionEnd: 3 });
-    state = xlsxEditorReducer(state, { type: "COMMIT_CELL_EDIT" });
+    // Update text to a number value, then commit
+    const state = [
+      { type: "UPDATE_EDIT_TEXT" as const, text: "123", caretOffset: 3, selectionEnd: 3 },
+      { type: "COMMIT_CELL_EDIT" as const },
+    ].reduce(xlsxEditorReducer, stateAfterEnter);
 
     expect(state.editing).toBeUndefined();
     const sheet = state.workbookHistory.present.sheets[0];

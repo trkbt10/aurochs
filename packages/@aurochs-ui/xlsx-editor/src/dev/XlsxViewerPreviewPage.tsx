@@ -138,6 +138,9 @@ async function parseWorkbookFromFile(file: File): Promise<XlsxWorkbook> {
 // Main Component
 // =============================================================================
 
+/**
+ * Development preview page for the XLSX viewer with drag-and-drop file loading.
+ */
 export function XlsxViewerPreviewPage() {
   const [workbook, setWorkbook] = useState<XlsxWorkbook | null>(null);
   const [viewerMode, setViewerMode] = useState<ViewerMode>("full");

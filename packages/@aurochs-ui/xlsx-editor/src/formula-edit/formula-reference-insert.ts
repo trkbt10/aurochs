@@ -30,18 +30,15 @@ export function isReferenceInsertionPoint(text: string, caretOffset: number): bo
   }
 
   // Scan backward from caret, skipping whitespace
-  // eslint-disable-next-line no-restricted-syntax -- decremented in loop
-  let pos = caretOffset - 1;
-  while (pos >= 0 && /\s/.test(text[pos])) {
-    pos -= 1;
-  }
+  const textBeforeCaret = text.slice(0, caretOffset);
+  const trimmed = textBeforeCaret.replace(/\s+$/, "");
 
-  if (pos < 0) {
+  if (trimmed.length === 0) {
     // Only whitespace before caret — no insertion context
     return false;
   }
 
-  const ch = text[pos];
+  const ch = trimmed[trimmed.length - 1];
 
   // After `=` (formula start) → insert
   if (ch === "=") {

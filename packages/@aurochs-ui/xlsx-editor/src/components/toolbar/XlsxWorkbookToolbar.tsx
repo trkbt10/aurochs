@@ -34,7 +34,7 @@ import { StylePicker } from "./StylePicker";
 import { XlsxFormulaBar } from "./XlsxFormulaBar";
 import { useXlsxWorkbookEditor } from "../../context/workbook/XlsxWorkbookEditorContext";
 import { getCell } from "@aurochs-office/xlsx/domain/mutation/query";
-import { resolveCellStyleDetails } from "../../selectors/cell-style-details";
+import { resolveCellStyleDetails } from "@aurochs-ui/xlsx-sheet/selectors/cell-style-details";
 import { resolveSelectionFormatFlags } from "../../selectors/selection-format-flags";
 import type { XlsxAlignment } from "@aurochs-office/xlsx/domain/style/types";
 import { xlsxTextAdapter } from "../../adapters/editor-controls/xlsx-text-adapter";

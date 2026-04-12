@@ -38,9 +38,9 @@ import {
   fontTokens,
 } from "@aurochs-ui/ui-components";
 import type { XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
-import type { XlsxAutoFilter, XlsxFilterType, XlsxSortCondition, XlsxDynamicFilterType } from "@aurochs-office/xlsx/domain/auto-filter";
+import type { XlsxAutoFilter, XlsxFilterType, XlsxSortCondition } from "@aurochs-office/xlsx/domain/auto-filter";
 import type { CellValue } from "@aurochs-office/xlsx/domain/cell/types";
-import { colIdx } from "@aurochs-office/xlsx/domain/types";
+import { colIdx, rowIdx } from "@aurochs-office/xlsx/domain/types";
 import { getCellValue } from "@aurochs-office/xlsx/domain/mutation/query";
 import { indexToColumnLetter } from "@aurochs-office/xlsx/domain/cell/address";
 import { inferColumnDataType } from "@aurochs-office/xlsx/domain/auto-filter-column-type";
@@ -73,26 +73,39 @@ type FilterValueEntry = {
   readonly isBlank: boolean;
 };
 
-function collectUniqueValues(
+function buildRowIndices(startRow: number, endRow: number): readonly number[] {
+  return Array.from({ length: endRow - startRow + 1 }, (_, i) => startRow + i);
+}
+
+function scanColumnValues(
   sheet: XlsxWorksheet,
   autoFilter: XlsxAutoFilter,
   col1: number,
-): readonly FilterValueEntry[] {
+): { readonly values: Map<string, FilterValueEntry>; readonly hasBlank: boolean } {
   const startRow = (autoFilter.ref.start.row as number) + 1;
   const endRow = autoFilter.ref.end.row as number;
   const values = new Map<string, FilterValueEntry>();
-  let hasBlank = false;
+  const rows = buildRowIndices(startRow, endRow);
 
-  for (let row = startRow; row <= endRow; row++) {
+  const foundBlank = rows.some((row) => {
     const cellValue = getCellValue(sheet, {
       col: colIdx(col1),
-      row: colIdx(row) as unknown as typeof autoFilter.ref.start.row,
+      row: rowIdx(row),
+      colAbsolute: false,
+      rowAbsolute: false,
+    });
+    return !cellValue || cellValue.type === "empty";
+  });
+
+  for (const row of rows) {
+    const cellValue = getCellValue(sheet, {
+      col: colIdx(col1),
+      row: rowIdx(row),
       colAbsolute: false,
       rowAbsolute: false,
     });
 
     if (!cellValue || cellValue.type === "empty") {
-      hasBlank = true;
       continue;
     }
 
@@ -102,10 +115,22 @@ function collectUniqueValues(
     }
   }
 
+  return { values, hasBlank: foundBlank };
+}
+
+function collectUniqueValues(
+  sheet: XlsxWorksheet,
+  autoFilter: XlsxAutoFilter,
+  col1: number,
+): readonly FilterValueEntry[] {
+  const { values, hasBlank } = scanColumnValues(sheet, autoFilter, col1);
+
   const sorted = [...values.values()].sort((a, b) => {
     const numA = Number(a.label);
     const numB = Number(b.label);
-    if (!Number.isNaN(numA) && !Number.isNaN(numB)) return numA - numB;
+    if (!Number.isNaN(numA) && !Number.isNaN(numB)) {
+      return numA - numB;
+    }
     return a.label.localeCompare(b.label);
   });
 
@@ -124,6 +149,26 @@ function cellValueToLabel(value: CellValue): string {
     case "date": return value.value.toLocaleDateString();
     case "empty": return "";
   }
+}
+
+const VIEWPORT_PADDING = 8;
+
+function clampAxis(anchor: number, size: number, viewportSize: number): number {
+  if (anchor + size + VIEWPORT_PADDING > viewportSize) {
+    return Math.max(VIEWPORT_PADDING, viewportSize - size - VIEWPORT_PADDING);
+  }
+  return anchor;
+}
+
+function clampMenuPosition(
+  menu: HTMLElement,
+  anchorX: number,
+  anchorY: number,
+): { readonly x: number; readonly y: number } {
+  const rect = menu.getBoundingClientRect();
+  const x = clampAxis(anchorX, rect.width, window.innerWidth);
+  const y = clampAxis(anchorY, rect.height, window.innerHeight);
+  return { x, y };
 }
 
 // =============================================================================
@@ -215,6 +260,9 @@ const footerStyle: CSSProperties = {
 
 const NONE_OPERATOR = "";
 
+/**
+ * Excel-style autoFilter dropdown panel with sort, condition filters, and value checklist.
+ */
 export function AutoFilterDropdown({
   col1,
   anchorX,
@@ -281,9 +329,9 @@ export function AutoFilterDropdown({
     }
     const checked = new Set<string>();
     if (currentFilter.values) {
-      for (const v of currentFilter.values) checked.add(v.val);
+      for (const v of currentFilter.values) {checked.add(v.val);}
     }
-    if (currentFilter.blank) checked.add(BLANK_LABEL);
+    if (currentFilter.blank) {checked.add(BLANK_LABEL);}
     return checked;
   });
 
@@ -298,7 +346,7 @@ export function AutoFilterDropdown({
 
   // Filtered value list
   const filteredValues = useMemo(() => {
-    if (!searchText) return uniqueValues;
+    if (!searchText) {return uniqueValues;}
     const lower = searchText.toLowerCase();
     return uniqueValues.filter((v) => v.label.toLowerCase().includes(lower));
   }, [uniqueValues, searchText]);
@@ -306,7 +354,7 @@ export function AutoFilterDropdown({
   // Escape
   useEffect(() => {
     const handler = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {onClose();}
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
@@ -316,14 +364,11 @@ export function AutoFilterDropdown({
   const [menuPos, setMenuPos] = useState({ x: anchorX, y: anchorY });
   useEffect(() => {
     const menu = menuRef.current;
-    if (!menu) return;
-    const rect = menu.getBoundingClientRect();
-    const padding = 8;
-    let x = anchorX;
-    let y = anchorY;
-    if (x + rect.width + padding > window.innerWidth) x = Math.max(padding, window.innerWidth - rect.width - padding);
-    if (y + rect.height + padding > window.innerHeight) y = Math.max(padding, window.innerHeight - rect.height - padding);
-    if (x !== anchorX || y !== anchorY) setMenuPos({ x, y });
+    if (!menu) {return;}
+    const clamped = clampMenuPosition(menu, anchorX, anchorY);
+    if (clamped.x !== anchorX || clamped.y !== anchorY) {
+      setMenuPos(clamped);
+    }
   }, [anchorX, anchorY]);
 
   // --- Handlers ---
@@ -344,7 +389,7 @@ export function AutoFilterDropdown({
   );
 
   const applyConditionFilter = useCallback(() => {
-    if (operator1 === NONE_OPERATOR) return;
+    if (operator1 === NONE_OPERATOR) {return;}
 
     const filter = buildCustomFilter(operator1, value1);
 
@@ -369,15 +414,15 @@ export function AutoFilterDropdown({
   const toggleValue = useCallback((label: string) => {
     setCheckedValues((prev) => {
       const next = new Set(prev);
-      if (next.has(label)) next.delete(label);
-      else next.add(label);
+      if (next.has(label)) {next.delete(label);}
+      else {next.add(label);}
       return next;
     });
   }, []);
 
   const toggleAll = useCallback(() => {
-    if (allChecked) setCheckedValues(new Set());
-    else setCheckedValues(new Set(uniqueValues.map((v) => v.label)));
+    if (allChecked) {setCheckedValues(new Set());}
+    else {setCheckedValues(new Set(uniqueValues.map((v) => v.label)));}
   }, [allChecked, uniqueValues]);
 
   // Auto-apply effect: when checkedValues change and autoApply is on
@@ -387,7 +432,7 @@ export function AutoFilterDropdown({
       prevCheckedRef.current = checkedValues;
       return;
     }
-    if (prevCheckedRef.current === checkedValues) return;
+    if (prevCheckedRef.current === checkedValues) {return;}
     prevCheckedRef.current = checkedValues;
 
     if (allChecked) {
@@ -477,7 +522,7 @@ export function AutoFilterDropdown({
               onChange={(v) => setValue1(String(v))}
               placeholder="値..."
               width={110}
-              onKeyDown={(e) => { if (e.key === "Enter") applyConditionFilter(); }}
+              onKeyDown={(e) => { if (e.key === "Enter") {applyConditionFilter();} }}
             />
           </div>
           {/* And / Or */}
@@ -504,7 +549,7 @@ export function AutoFilterDropdown({
               onChange={(v) => setValue2(String(v))}
               placeholder="値..."
               width={110}
-              onKeyDown={(e) => { if (e.key === "Enter") applyConditionFilter(); }}
+              onKeyDown={(e) => { if (e.key === "Enter") {applyConditionFilter();} }}
             />
           </div>
         </div>
@@ -527,7 +572,7 @@ export function AutoFilterDropdown({
             <input
               type="checkbox"
               checked={allChecked}
-              ref={(el) => { if (el) el.indeterminate = !allChecked && !noneChecked; }}
+              ref={(el) => { if (el) {el.indeterminate = !allChecked && !noneChecked;} }}
               onChange={toggleAll}
             />
             (すべて選択)

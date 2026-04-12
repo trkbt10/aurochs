@@ -1,34 +1,41 @@
 /**
- * Tests for AutoFilterOverlay.
+ * @file Tests for AutoFilterOverlay.
  *
  * Verifies React rendering produces the expected DOM structure.
  */
 
-import { describe, it, expect, vi } from "vitest";
 import { render } from "@testing-library/react";
 import type { XlsxAutoFilter } from "@aurochs-office/xlsx/domain/auto-filter";
 import type { XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
 import { colIdx, rowIdx, sheetId } from "@aurochs-office/xlsx/domain/types";
 import type { CellRange } from "@aurochs-office/xlsx/domain/cell/address";
-import { createSheetLayout } from "../../selectors/sheet-layout";
+import { createSheetLayout } from "@aurochs-ui/xlsx-sheet/selectors/sheet-layout";
 import { AutoFilterOverlay } from "./auto-filter-overlay";
 
-function makeRange(startCol: number, startRow: number, endCol: number, endRow: number): CellRange {
+function makeRange(params: {
+  readonly startCol: number;
+  readonly startRow: number;
+  readonly endCol: number;
+  readonly endRow: number;
+}): CellRange {
   return {
-    start: { col: colIdx(startCol), row: rowIdx(startRow), colAbsolute: false, rowAbsolute: false },
-    end: { col: colIdx(endCol), row: rowIdx(endRow), colAbsolute: false, rowAbsolute: false },
+    start: { col: colIdx(params.startCol), row: rowIdx(params.startRow), colAbsolute: false, rowAbsolute: false },
+    end: { col: colIdx(params.endCol), row: rowIdx(params.endRow), colAbsolute: false, rowAbsolute: false },
   };
 }
 
-function makeWorksheet(autoFilter?: XlsxAutoFilter): XlsxWorksheet {
+function makeWorksheet(options?: {
+  readonly autoFilter?: XlsxAutoFilter;
+  readonly rows?: XlsxWorksheet["rows"];
+}): XlsxWorksheet {
   return {
     name: "Sheet1",
     sheetId: sheetId(1),
     state: "visible",
-    rows: [],
+    rows: options?.rows ?? [],
     xmlPath: "xl/worksheets/sheet1.xml",
     dateSystem: "1900",
-    autoFilter,
+    autoFilter: options?.autoFilter,
   };
 }
 
@@ -41,10 +48,14 @@ function makeLayout(ws: XlsxWorksheet) {
   });
 }
 
+function noop() {
+  // intentionally empty
+}
+
 describe("AutoFilterOverlay rendering", () => {
   it("should render a button for each column in the autoFilter range", () => {
-    const autoFilter: XlsxAutoFilter = { ref: makeRange(1, 1, 3, 10) };
-    const layout = makeLayout(makeWorksheet(autoFilter));
+    const autoFilter: XlsxAutoFilter = { ref: makeRange({ startCol: 1, startRow: 1, endCol: 3, endRow: 10 }) };
+    const layout = makeLayout(makeWorksheet({ autoFilter }));
 
     const { getAllByTestId } = render(
       <AutoFilterOverlay
@@ -52,7 +63,7 @@ describe("AutoFilterOverlay rendering", () => {
         layout={layout}
         scrollTop={0}
         scrollLeft={0}
-        onButtonClick={vi.fn()}
+        onButtonClick={noop}
       />,
     );
 
@@ -60,8 +71,8 @@ describe("AutoFilterOverlay rendering", () => {
   });
 
   it("should position button containers with viewport-relative coordinates", () => {
-    const autoFilter: XlsxAutoFilter = { ref: makeRange(1, 1, 2, 5) };
-    const layout = makeLayout(makeWorksheet(autoFilter));
+    const autoFilter: XlsxAutoFilter = { ref: makeRange({ startCol: 1, startRow: 1, endCol: 2, endRow: 5 }) };
+    const layout = makeLayout(makeWorksheet({ autoFilter }));
 
     const { getAllByTestId } = render(
       <AutoFilterOverlay
@@ -69,7 +80,7 @@ describe("AutoFilterOverlay rendering", () => {
         layout={layout}
         scrollTop={0}
         scrollLeft={0}
-        onButtonClick={vi.fn()}
+        onButtonClick={noop}
       />,
     );
 
@@ -87,8 +98,8 @@ describe("AutoFilterOverlay rendering", () => {
   });
 
   it("should adjust positions for scroll offset", () => {
-    const autoFilter: XlsxAutoFilter = { ref: makeRange(1, 1, 2, 5) };
-    const layout = makeLayout(makeWorksheet(autoFilter));
+    const autoFilter: XlsxAutoFilter = { ref: makeRange({ startCol: 1, startRow: 1, endCol: 2, endRow: 5 }) };
+    const layout = makeLayout(makeWorksheet({ autoFilter }));
 
     const { getAllByTestId } = render(
       <AutoFilterOverlay
@@ -96,7 +107,7 @@ describe("AutoFilterOverlay rendering", () => {
         layout={layout}
         scrollTop={10}
         scrollLeft={20}
-        onButtonClick={vi.fn()}
+        onButtonClick={noop}
       />,
     );
 
@@ -107,10 +118,10 @@ describe("AutoFilterOverlay rendering", () => {
 
   it("should skip columns with hiddenButton=true", () => {
     const autoFilter: XlsxAutoFilter = {
-      ref: makeRange(1, 1, 3, 10),
+      ref: makeRange({ startCol: 1, startRow: 1, endCol: 3, endRow: 10 }),
       filterColumns: [{ colId: colIdx(1), hiddenButton: true }],
     };
-    const layout = makeLayout(makeWorksheet(autoFilter));
+    const layout = makeLayout(makeWorksheet({ autoFilter }));
 
     const { getAllByTestId } = render(
       <AutoFilterOverlay
@@ -118,7 +129,7 @@ describe("AutoFilterOverlay rendering", () => {
         layout={layout}
         scrollTop={0}
         scrollLeft={0}
-        onButtonClick={vi.fn()}
+        onButtonClick={noop}
       />,
     );
 
@@ -126,8 +137,8 @@ describe("AutoFilterOverlay rendering", () => {
   });
 
   it("should set pointerEvents:auto on buttons for click handling", () => {
-    const autoFilter: XlsxAutoFilter = { ref: makeRange(1, 1, 2, 5) };
-    const layout = makeLayout(makeWorksheet(autoFilter));
+    const autoFilter: XlsxAutoFilter = { ref: makeRange({ startCol: 1, startRow: 1, endCol: 2, endRow: 5 }) };
+    const layout = makeLayout(makeWorksheet({ autoFilter }));
 
     const { getAllByTestId } = render(
       <AutoFilterOverlay
@@ -135,7 +146,7 @@ describe("AutoFilterOverlay rendering", () => {
         layout={layout}
         scrollTop={0}
         scrollLeft={0}
-        onButtonClick={vi.fn()}
+        onButtonClick={noop}
       />,
     );
 
@@ -146,8 +157,8 @@ describe("AutoFilterOverlay rendering", () => {
   });
 
   it("should set pointerEvents:none on the wrapper to pass clicks through to cells", () => {
-    const autoFilter: XlsxAutoFilter = { ref: makeRange(1, 1, 2, 5) };
-    const layout = makeLayout(makeWorksheet(autoFilter));
+    const autoFilter: XlsxAutoFilter = { ref: makeRange({ startCol: 1, startRow: 1, endCol: 2, endRow: 5 }) };
+    const layout = makeLayout(makeWorksheet({ autoFilter }));
 
     const { getByTestId } = render(
       <AutoFilterOverlay
@@ -155,7 +166,7 @@ describe("AutoFilterOverlay rendering", () => {
         layout={layout}
         scrollTop={0}
         scrollLeft={0}
-        onButtonClick={vi.fn()}
+        onButtonClick={noop}
       />,
     );
 
@@ -164,9 +175,11 @@ describe("AutoFilterOverlay rendering", () => {
   });
 
   it("should not render buttons when header row is hidden (height=0)", () => {
-    const autoFilter: XlsxAutoFilter = { ref: makeRange(1, 1, 3, 10) };
-    const ws = makeWorksheet(autoFilter);
-    (ws as any).rows = [{ rowNumber: rowIdx(1), cells: [], hidden: true }];
+    const autoFilter: XlsxAutoFilter = { ref: makeRange({ startCol: 1, startRow: 1, endCol: 3, endRow: 10 }) };
+    const ws = makeWorksheet({
+      autoFilter,
+      rows: [{ rowNumber: rowIdx(1), cells: [], hidden: true }],
+    });
     const layout = makeLayout(ws);
 
     const { queryAllByTestId } = render(
@@ -175,7 +188,7 @@ describe("AutoFilterOverlay rendering", () => {
         layout={layout}
         scrollTop={0}
         scrollLeft={0}
-        onButtonClick={vi.fn()}
+        onButtonClick={noop}
       />,
     );
 

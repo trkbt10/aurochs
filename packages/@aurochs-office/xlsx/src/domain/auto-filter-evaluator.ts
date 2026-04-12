@@ -26,7 +26,7 @@ import type {
   XlsxDynamicFilter,
   XlsxFilterOperator,
 } from "./auto-filter";
-import { colIdx, type ColIndex } from "./types";
+import { colIdx, rowIdx } from "./types";
 import { getCellValue } from "./mutation/query";
 
 // =============================================================================
@@ -92,35 +92,77 @@ function cellValueToNumber(value: CellValue): number | undefined {
  * - `~?` is a literal `?`
  * - `~~` is a literal `~`
  */
-function wildcardToRegExp(pattern: string): RegExp {
-  let regexStr = "^";
-  let i = 0;
-  while (i < pattern.length) {
-    const ch = pattern[i];
-    if (ch === "~" && i + 1 < pattern.length) {
-      // Escape sequence: ~*, ~?, ~~
-      const next = pattern[i + 1];
-      if (next === "*" || next === "?" || next === "~") {
-        regexStr += escapeRegExpChar(next);
-        i += 2;
-        continue;
-      }
-    }
-    if (ch === "*") {
-      regexStr += ".*";
-    } else if (ch === "?") {
-      regexStr += ".";
-    } else {
-      regexStr += escapeRegExpChar(ch);
-    }
-    i++;
+/**
+ * Token emitted by the wildcard pattern tokenizer.
+ */
+type WildcardToken =
+  | { readonly kind: "literal"; readonly ch: string }
+  | { readonly kind: "star" }
+  | { readonly kind: "question" };
+
+/**
+ * Tokenize an Excel wildcard pattern into semantic tokens.
+ *
+ * Handles escape sequences: `~*` → literal `*`, `~?` → literal `?`, `~~` → literal `~`.
+ */
+function tokenizeWildcardPattern(pattern: string): readonly WildcardToken[] {
+  const tokens: WildcardToken[] = [];
+  const chars = [...pattern];
+  const iter = chars[Symbol.iterator]();
+
+  function advance(): IteratorResult<string> {
+    return iter.next();
   }
-  regexStr += "$";
-  return new RegExp(regexStr, "u");
+
+  const first = advance();
+  if (first.done) {
+    return tokens;
+  }
+  const process = (ch: string): void => {
+    if (ch === "~") {
+      const next = advance();
+      if (!next.done && (next.value === "*" || next.value === "?" || next.value === "~")) {
+        tokens.push({ kind: "literal", ch: next.value });
+      } else {
+        tokens.push({ kind: "literal", ch });
+        if (!next.done) {
+          process(next.value);
+        }
+      }
+    } else if (ch === "*") {
+      tokens.push({ kind: "star" });
+    } else if (ch === "?") {
+      tokens.push({ kind: "question" });
+    } else {
+      tokens.push({ kind: "literal", ch });
+    }
+  };
+
+  process(first.value);
+  for (const ch of iter) {
+    process(ch);
+  }
+
+  return tokens;
 }
 
 function escapeRegExpChar(ch: string): string {
   return ch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function wildcardToRegExp(pattern: string): RegExp {
+  const tokens = tokenizeWildcardPattern(pattern);
+  const regexParts = tokens.map((token): string => {
+    switch (token.kind) {
+      case "star":
+        return ".*";
+      case "question":
+        return ".";
+      case "literal":
+        return escapeRegExpChar(token.ch);
+    }
+  });
+  return new RegExp(`^${regexParts.join("")}$`, "u");
 }
 
 /**
@@ -128,22 +170,17 @@ function escapeRegExpChar(ch: string): string {
  * `~*` → `*`, `~?` → `?`, `~~` → `~`
  */
 function unescapeWildcardPattern(pattern: string): string {
-  let result = "";
-  let i = 0;
-  while (i < pattern.length) {
-    const ch = pattern[i];
-    if (ch === "~" && i + 1 < pattern.length) {
-      const next = pattern[i + 1];
-      if (next === "*" || next === "?" || next === "~") {
-        result += next;
-        i += 2;
-        continue;
-      }
+  const tokens = tokenizeWildcardPattern(pattern);
+  return tokens.map((token) => {
+    switch (token.kind) {
+      case "star":
+        return "*";
+      case "question":
+        return "?";
+      case "literal":
+        return token.ch;
     }
-    result += ch;
-    i++;
-  }
-  return result;
+  }).join("");
 }
 
 /**
@@ -187,7 +224,9 @@ function evaluateCustomCondition(condition: XlsxCustomFilter, cellValue: CellVal
   if (operator === "equal" || operator === "notEqual") {
     if (hasWildcards(filterValStr)) {
       const strVal = cellValueToString(cellValue);
-      if (strVal === undefined) return operator === "notEqual";
+      if (strVal === undefined) {
+        return operator === "notEqual";
+      }
       const regex = wildcardToRegExp(filterValStr);
       const matches = regex.test(strVal);
       return operator === "equal" ? matches : !matches;
@@ -195,7 +234,9 @@ function evaluateCustomCondition(condition: XlsxCustomFilter, cellValue: CellVal
     // Even without wildcards, the pattern may contain escape sequences (~*, ~?, ~~)
     if (filterValStr.includes("~")) {
       const strVal = cellValueToString(cellValue);
-      if (strVal === undefined) return operator === "notEqual";
+      if (strVal === undefined) {
+        return operator === "notEqual";
+      }
       const unescaped = unescapeWildcardPattern(filterValStr);
       const matches = strVal === unescaped;
       return operator === "equal" ? matches : !matches;
@@ -211,7 +252,9 @@ function evaluateCustomCondition(condition: XlsxCustomFilter, cellValue: CellVal
 
   // Fall back to string comparison
   const cellStr = cellValueToString(cellValue);
-  if (cellStr === undefined) return false;
+  if (cellStr === undefined) {
+    return false;
+  }
   return compareStrings(cellStr, filterValStr, operator);
 }
 
@@ -275,7 +318,9 @@ function evaluateFilters(filter: XlsxFilters, cellValue: CellValue): boolean {
   }
 
   const cellStr = cellValueToString(cellValue);
-  if (cellStr === undefined) return false;
+  if (cellStr === undefined) {
+    return false;
+  }
 
   return filter.values.some((v) => v.val === cellStr);
 }
@@ -291,7 +336,9 @@ function evaluateFilters(filter: XlsxFilters, cellValue: CellValue): boolean {
  * @see ECMA-376 Part 4, Section 18.18.31 (ST_FilterOperator)
  */
 function evaluateCustomFilters(filter: XlsxCustomFilters, cellValue: CellValue): boolean {
-  if (filter.conditions.length === 0) return true;
+  if (filter.conditions.length === 0) {
+    return true;
+  }
 
   if (filter.and) {
     return filter.conditions.every((c) => evaluateCustomCondition(c, cellValue));
@@ -312,10 +359,14 @@ function evaluateCustomFilters(filter: XlsxCustomFilters, cellValue: CellValue):
 function evaluateTop10(filter: XlsxTop10Filter, cellValue: CellValue): boolean {
   // top10 uses a pre-computed filterVal threshold.
   // If filterVal is not set, the filter cannot be evaluated at the per-cell level.
-  if (filter.filterVal === undefined) return true;
+  if (filter.filterVal === undefined) {
+    return true;
+  }
 
   const cellNum = cellValueToNumber(cellValue);
-  if (cellNum === undefined) return false;
+  if (cellNum === undefined) {
+    return false;
+  }
 
   const isTop = filter.top !== false; // default is top
   return isTop ? cellNum >= filter.filterVal : cellNum <= filter.filterVal;
@@ -335,10 +386,14 @@ function evaluateTop10(filter: XlsxTop10Filter, cellValue: CellValue): boolean {
 function evaluateDynamic(filter: XlsxDynamicFilter, cellValue: CellValue): boolean {
   // Dynamic filters that operate on pre-computed val (set by the application).
   // aboveAverage/belowAverage: val holds the computed average.
-  if (filter.val === undefined) return true;
+  if (filter.val === undefined) {
+    return true;
+  }
 
   const cellNum = cellValueToNumber(cellValue);
-  if (cellNum === undefined) return false;
+  if (cellNum === undefined) {
+    return false;
+  }
 
   switch (filter.filterType) {
     case "aboveAverage":
@@ -431,24 +486,19 @@ export function evaluateAutoFilter(
   const emptyValue: CellValue = { type: "empty" };
 
   for (let row = dataStartRow; row <= dataEndRow; row++) {
-    let visible = true;
-
-    for (const fc of activeFilters) {
+    const visible = activeFilters.every((fc) => {
       // colId is 0-based relative to the autoFilter ref's start column
       const absoluteCol = refStartCol + (fc.colId as number);
       const cellValue =
         getCellValue(worksheet, {
           col: colIdx(absoluteCol),
-          row: colIdx(row) as unknown as typeof autoFilter.ref.start.row,
+          row: rowIdx(row),
           colAbsolute: false,
           rowAbsolute: false,
         }) ?? emptyValue;
 
-      if (!evaluateFilter(fc.filter!, cellValue)) {
-        visible = false;
-        break;
-      }
-    }
+      return evaluateFilter(fc.filter!, cellValue);
+    });
 
     if (!visible) {
       hiddenRows.add(row);

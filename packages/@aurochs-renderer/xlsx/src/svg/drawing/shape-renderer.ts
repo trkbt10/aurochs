@@ -101,12 +101,19 @@ function renderShapeGeometryPath(options: {
  * Resolve a theme color key to a hex value.
  */
 function resolveThemeHex(key: string, colorScheme: ColorScheme | undefined, fallback: string): string {
-  if (!colorScheme) return fallback;
+  if (!colorScheme) {
+    return fallback;
+  }
   const val = colorScheme[key];
-  if (!val) return fallback;
+  if (!val) {
+    return fallback;
+  }
   return val.startsWith("#") ? val : `#${val}`;
 }
 
+/**
+ * Render a drawing shape (e.g. rectangle, oval, connector) as an SVG string.
+ */
 export function renderShape(options: RenderShapeOptions): string {
   const { shape, bounds, warnings, colorScheme } = options;
 

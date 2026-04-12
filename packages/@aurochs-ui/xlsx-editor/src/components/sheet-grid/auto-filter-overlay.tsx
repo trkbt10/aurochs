@@ -13,7 +13,7 @@
 import { useMemo, type ReactNode } from "react";
 import type { XlsxAutoFilter } from "@aurochs-office/xlsx/domain/auto-filter";
 import { columnLetterToIndex } from "@aurochs-office/xlsx/domain/cell/address";
-import type { SheetLayout } from "../../selectors/sheet-layout";
+import type { SheetLayout } from "@aurochs-ui/xlsx-sheet/selectors/sheet-layout";
 import { AutoFilterButton } from "./auto-filter-button";
 
 export type AutoFilterOverlayProps = {
@@ -29,10 +29,18 @@ export type AutoFilterOverlayProps = {
  */
 function sortConditionCol1(ref: string): number | undefined {
   const match = ref.match(/^(\$?)([A-Z]+)/);
-  if (!match) return undefined;
+  if (!match) {return undefined;}
   return columnLetterToIndex(match[2]) as number;
 }
 
+
+
+
+
+
+/**
+ * Renders autoFilter dropdown buttons overlaid on the header row cells.
+ */
 export function AutoFilterOverlay({
   autoFilter,
   layout,
@@ -65,11 +73,11 @@ export function AutoFilterOverlay({
     const relativeColId = col1 - startCol;
 
     const fc = autoFilter.filterColumns?.find((c) => (c.colId as number) === relativeColId);
-    if (fc?.hiddenButton === true) continue;
+    if (fc?.hiddenButton === true) {continue;}
 
     const cellWidth = layout.cols.getSizePx(col0);
     const cellHeight = layout.rows.getSizePx(headerRow0);
-    if (cellWidth <= 0 || cellHeight <= 0) continue;
+    if (cellWidth <= 0 || cellHeight <= 0) {continue;}
 
     // Viewport-relative coordinates
     const left = layout.cols.getOffsetPx(col0) - scrollLeft;

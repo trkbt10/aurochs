@@ -1,5 +1,5 @@
 /**
- * Tests for column data type inference used by autoFilter menus.
+ * @file Tests for column data type inference used by autoFilter menus.
  *
  * Excel dynamically changes sort labels and filter submenus based on
  * the predominant data type in a column:
@@ -12,8 +12,7 @@
  * | mixed       | A → Z         | Z → A          | (none)            |
  */
 
-import { describe, it, expect } from "vitest";
-import { inferColumnDataType, type ColumnDataType } from "./auto-filter-column-type";
+import { inferColumnDataType } from "./auto-filter-column-type";
 import type { CellValue } from "./cell/types";
 import type { CellAddress, CellRange } from "./cell/address";
 import type { XlsxWorksheet, XlsxRow } from "./workbook";
@@ -28,8 +27,8 @@ function addr(col: number, row: number): CellAddress {
   return { col: colIdx(col), row: rowIdx(row), colAbsolute: false, rowAbsolute: false };
 }
 
-function makeRange(sc: number, sr: number, ec: number, er: number): CellRange {
-  return { start: addr(sc, sr), end: addr(ec, er) };
+function makeRange(range: { sc: number; sr: number; ec: number; er: number }): CellRange {
+  return { start: addr(range.sc, range.sr), end: addr(range.ec, range.er) };
 }
 
 function makeRow(rowNumber: number, cells: readonly { col: number; value: CellValue }[]): XlsxRow {
@@ -64,7 +63,7 @@ function err(): CellValue { return { type: "error", value: "#N/A" }; }
 
 describe("inferColumnDataType", () => {
   it("should return 'text' when all data cells are strings", () => {
-    const af: XlsxAutoFilter = { ref: makeRange(1, 1, 1, 4) };
+    const af: XlsxAutoFilter = { ref: makeRange({ sc: 1, sr: 1, ec: 1, er: 4 }) };
     const ws = makeWorksheet([
       makeRow(1, [{ col: 1, value: str("Header") }]),
       makeRow(2, [{ col: 1, value: str("Alice") }]),
@@ -75,7 +74,7 @@ describe("inferColumnDataType", () => {
   });
 
   it("should return 'number' when all data cells are numbers", () => {
-    const af: XlsxAutoFilter = { ref: makeRange(1, 1, 1, 4) };
+    const af: XlsxAutoFilter = { ref: makeRange({ sc: 1, sr: 1, ec: 1, er: 4 }) };
     const ws = makeWorksheet([
       makeRow(1, [{ col: 1, value: str("Score") }]),
       makeRow(2, [{ col: 1, value: num(100) }]),
@@ -86,7 +85,7 @@ describe("inferColumnDataType", () => {
   });
 
   it("should return 'date' when all data cells are dates", () => {
-    const af: XlsxAutoFilter = { ref: makeRange(1, 1, 1, 4) };
+    const af: XlsxAutoFilter = { ref: makeRange({ sc: 1, sr: 1, ec: 1, er: 4 }) };
     const ws = makeWorksheet([
       makeRow(1, [{ col: 1, value: str("Date") }]),
       makeRow(2, [{ col: 1, value: date(2024, 1, 15) }]),
@@ -97,7 +96,7 @@ describe("inferColumnDataType", () => {
   });
 
   it("should return 'mixed' when column has both text and numbers", () => {
-    const af: XlsxAutoFilter = { ref: makeRange(1, 1, 1, 4) };
+    const af: XlsxAutoFilter = { ref: makeRange({ sc: 1, sr: 1, ec: 1, er: 4 }) };
     const ws = makeWorksheet([
       makeRow(1, [{ col: 1, value: str("Data") }]),
       makeRow(2, [{ col: 1, value: str("Alice") }]),
@@ -108,7 +107,7 @@ describe("inferColumnDataType", () => {
   });
 
   it("should ignore empty cells when determining type", () => {
-    const af: XlsxAutoFilter = { ref: makeRange(1, 1, 1, 5) };
+    const af: XlsxAutoFilter = { ref: makeRange({ sc: 1, sr: 1, ec: 1, er: 5 }) };
     const ws = makeWorksheet([
       makeRow(1, [{ col: 1, value: str("Score") }]),
       makeRow(2, [{ col: 1, value: num(10) }]),
@@ -120,7 +119,7 @@ describe("inferColumnDataType", () => {
   });
 
   it("should ignore error cells when determining type", () => {
-    const af: XlsxAutoFilter = { ref: makeRange(1, 1, 1, 4) };
+    const af: XlsxAutoFilter = { ref: makeRange({ sc: 1, sr: 1, ec: 1, er: 4 }) };
     const ws = makeWorksheet([
       makeRow(1, [{ col: 1, value: str("Data") }]),
       makeRow(2, [{ col: 1, value: num(10) }]),
@@ -131,7 +130,7 @@ describe("inferColumnDataType", () => {
   });
 
   it("should ignore boolean cells when determining type (treat as secondary)", () => {
-    const af: XlsxAutoFilter = { ref: makeRange(1, 1, 1, 4) };
+    const af: XlsxAutoFilter = { ref: makeRange({ sc: 1, sr: 1, ec: 1, er: 4 }) };
     const ws = makeWorksheet([
       makeRow(1, [{ col: 1, value: str("Flag") }]),
       makeRow(2, [{ col: 1, value: num(1) }]),
@@ -143,7 +142,7 @@ describe("inferColumnDataType", () => {
   });
 
   it("should return 'text' when column is all empty (fallback)", () => {
-    const af: XlsxAutoFilter = { ref: makeRange(1, 1, 1, 3) };
+    const af: XlsxAutoFilter = { ref: makeRange({ sc: 1, sr: 1, ec: 1, er: 3 }) };
     const ws = makeWorksheet([
       makeRow(1, [{ col: 1, value: str("Header") }]),
       makeRow(2, [{ col: 1, value: empty() }]),
@@ -154,7 +153,7 @@ describe("inferColumnDataType", () => {
 
   it("should skip header row when inferring type", () => {
     // Header is text "Name", but data is all numbers
-    const af: XlsxAutoFilter = { ref: makeRange(1, 1, 1, 3) };
+    const af: XlsxAutoFilter = { ref: makeRange({ sc: 1, sr: 1, ec: 1, er: 3 }) };
     const ws = makeWorksheet([
       makeRow(1, [{ col: 1, value: str("Name") }]),
       makeRow(2, [{ col: 1, value: num(100) }]),
@@ -164,7 +163,7 @@ describe("inferColumnDataType", () => {
   });
 
   it("should handle non-A1 autoFilter range correctly", () => {
-    const af: XlsxAutoFilter = { ref: makeRange(3, 5, 4, 8) };
+    const af: XlsxAutoFilter = { ref: makeRange({ sc: 3, sr: 5, ec: 4, er: 8 }) };
     const ws = makeWorksheet([
       makeRow(5, [{ col: 3, value: str("Header") }]),
       makeRow(6, [{ col: 3, value: date(2024, 1, 1) }]),
@@ -175,7 +174,7 @@ describe("inferColumnDataType", () => {
   });
 
   it("should treat numbers+dates as 'number' (dates are numeric in Excel)", () => {
-    const af: XlsxAutoFilter = { ref: makeRange(1, 1, 1, 4) };
+    const af: XlsxAutoFilter = { ref: makeRange({ sc: 1, sr: 1, ec: 1, er: 4 }) };
     const ws = makeWorksheet([
       makeRow(1, [{ col: 1, value: str("Mixed") }]),
       makeRow(2, [{ col: 1, value: num(42000) }]),

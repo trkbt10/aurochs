@@ -91,31 +91,24 @@ function createEmptyAnalysis(): FormulaAnalysis {
  * Each unique reference text gets a color index in encounter order.
  */
 function extractReferencesFromTokens(tokens: readonly FormulaTextToken[]): FormulaReferenceToken[] {
-  const refs: FormulaReferenceToken[] = [];
-  // eslint-disable-next-line no-restricted-syntax -- incremented in loop
-  let colorIndex = 0;
-
-  for (const token of tokens) {
-    if (token.type !== "reference") {
-      continue;
-    }
-
-    const parsed = parseReferenceText(token.text);
-    if (!parsed) {
-      continue;
-    }
-
-    refs.push({
-      range: parsed.range,
-      sheetName: parsed.sheetName,
-      startOffset: token.startOffset,
-      endOffset: token.endOffset,
-      colorIndex: colorIndex % 8,
-    });
-    colorIndex += 1;
-  }
-
-  return refs;
+  return tokens
+    .filter((token): token is FormulaTextToken & { type: "reference" } => token.type === "reference")
+    .reduce<FormulaReferenceToken[]>((refs, token) => {
+      const parsed = parseReferenceText(token.text);
+      if (!parsed) {
+        return refs;
+      }
+      return [
+        ...refs,
+        {
+          range: parsed.range,
+          sheetName: parsed.sheetName,
+          startOffset: token.startOffset,
+          endOffset: token.endOffset,
+          colorIndex: refs.length % 8,
+        },
+      ];
+    }, []);
 }
 
 /**
@@ -124,20 +117,21 @@ function extractReferencesFromTokens(tokens: readonly FormulaTextToken[]): Formu
  *
  * Returns undefined for partial/invalid references.
  */
+/** Extract and strip the sheet prefix (e.g. `Sheet1!` or `'My Sheet'!`) from a reference text. */
+function stripSheetPrefix(text: string): { sheetName: string | undefined; refPart: string } {
+  const match = text.match(/^(?:'((?:[^']|'')*)'!|([A-Za-z_]\w*)!)/);
+  if (!match) {
+    return { sheetName: undefined, refPart: text };
+  }
+  const sheetName = match[1]?.replace(/''/g, "'") ?? match[2];
+  return { sheetName, refPart: text.slice(match[0].length) };
+}
+
 function parseReferenceText(
   text: string,
 ): { range: CellRange; sheetName: string | undefined } | undefined {
-  // eslint-disable-next-line no-restricted-syntax -- assigned conditionally from regex match
-  let sheetName: string | undefined;
-  // eslint-disable-next-line no-restricted-syntax -- reassigned after stripping sheet prefix
-  let refPart = text;
-
   // Strip sheet prefix
-  const sheetMatch = text.match(/^(?:'((?:[^']|'')*)'!|([A-Za-z_]\w*)!)/);
-  if (sheetMatch) {
-    sheetName = sheetMatch[1]?.replace(/''/g, "'") ?? sheetMatch[2];
-    refPart = text.slice(sheetMatch[0].length);
-  }
+  const { sheetName, refPart } = stripSheetPrefix(text);
 
   // Try range (A1:B2)
   const rangeMatch = refPart.match(/^(\$?[A-Za-z]{1,3})(\$?\d+):(\$?[A-Za-z]{1,3})(\$?\d+)$/);
@@ -187,12 +181,10 @@ function parseSingleRef(
 }
 
 function columnLettersToIndex(letters: string): number {
-  // eslint-disable-next-line no-restricted-syntax -- accumulator in loop
-  let result = 0;
-  for (let i = 0; i < letters.length; i++) {
-    result = result * 26 + (letters.charCodeAt(i) - 64);
-  }
-  return result;
+  return Array.from(letters).reduce(
+    (result, ch) => result * 26 + (ch.charCodeAt(0) - 64),
+    0,
+  );
 }
 
 /**

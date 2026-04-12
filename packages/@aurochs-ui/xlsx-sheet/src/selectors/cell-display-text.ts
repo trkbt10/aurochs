@@ -16,7 +16,7 @@ import { resolveFormatCode } from "@aurochs-office/xlsx/domain/style/number-form
 import { formatNumberByCode } from "@aurochs-office/xlsx/domain/style/format-value";
 import type { FormulaScalar } from "@aurochs-office/xlsx/formula/types";
 import { isFormulaError, toDisplayText } from "@aurochs-office/xlsx/formula/types";
-import { resolveCellXf } from "./cell-xf";
+import { resolveCellXf } from "@aurochs-office/xlsx/domain/style/xf-resolver";
 
 /**
  * Resolve the effective number format code for a cell.

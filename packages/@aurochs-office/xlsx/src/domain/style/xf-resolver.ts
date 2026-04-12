@@ -3,12 +3,19 @@
  *
  * Resolves effective `styleId` for a cell (cell → row → column) and returns
  * the merged CellXf (cellXfs + cellStyleXfs xfId) that should be used for rendering.
+ *
+ * This is the canonical XF resolution logic shared by all rendering layers
+ * (SVG renderer, React UI, etc.).
+ *
+ * @see ECMA-376 Part 4, Section 18.8.45 (xf - Cell Format)
+ * @see ECMA-376 Part 4, Section 18.3.1.73 (row → s attribute)
+ * @see ECMA-376 Part 4, Section 18.3.1.13 (col → style attribute)
  */
 
-import type { CellAddress } from "@aurochs-office/xlsx/domain/cell/address";
-import type { Cell } from "@aurochs-office/xlsx/domain/cell/types";
-import type { XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
-import type { XlsxStyleSheet, XlsxCellXf } from "@aurochs-office/xlsx/domain/style/types";
+import type { CellAddress } from "../cell/address";
+import type { Cell } from "../cell/types";
+import type { XlsxWorksheet } from "../workbook";
+import type { XlsxStyleSheet, XlsxCellXf } from "./types";
 
 function getColumnStyleId(sheet: XlsxWorksheet, colNumber: number): number | undefined {
   for (const def of sheet.columns ?? []) {
@@ -27,6 +34,8 @@ function getRowStyleId(sheet: XlsxWorksheet, rowNumber: number): number | undefi
 /**
  * Resolve the effective `styleId` for a cell address based on SpreadsheetML inheritance:
  * cell → row → column.
+ *
+ * @see ECMA-376 Part 4, Section 18.3.1.4 (c → s attribute)
  */
 export function resolveEffectiveStyleId(
   sheet: XlsxWorksheet,
@@ -48,6 +57,15 @@ function getCellXf(styles: XlsxStyleSheet, styleId: number | undefined): XlsxCel
   return styles.cellXfs[idx] ?? styles.cellXfs[0];
 }
 
+/**
+ * Merge a cell XF with its base cell style XF (via xfId).
+ *
+ * Each `applyXxx` flag controls whether the cell XF's value overrides
+ * the base cell style XF's value. When `applyXxx !== false` (default true),
+ * the cell XF wins; otherwise the base value is used.
+ *
+ * @see ECMA-376 Part 4, Section 18.8.45 (xf)
+ */
 function mergeCellXf(styles: XlsxStyleSheet, xf: XlsxCellXf): XlsxCellXf {
   const base = xf.xfId !== undefined ? styles.cellStyleXfs[xf.xfId] : undefined;
   if (!base) {

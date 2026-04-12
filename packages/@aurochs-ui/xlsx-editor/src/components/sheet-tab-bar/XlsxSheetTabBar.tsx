@@ -12,6 +12,7 @@
 
 import { useCallback, useState, type CSSProperties } from "react";
 import { colorTokens, spacingTokens } from "@aurochs-ui/ui-components";
+import { sheetTabBarContainerStyle } from "@aurochs-ui/xlsx-sheet/core";
 import { useXlsxWorkbookEditor } from "../../context/workbook/XlsxWorkbookEditorContext";
 import { getUsedRange } from "@aurochs-office/xlsx/domain/mutation/query";
 import { generateUniqueName } from "../../sheet/mutation";
@@ -25,13 +26,6 @@ export type XlsxSheetTabBarProps = {
   readonly style?: CSSProperties;
 };
 
-const containerStyle: CSSProperties = {
-  display: "flex",
-  flexDirection: "row",
-  width: "100%",
-  borderTop: `1px solid var(--border-primary, ${colorTokens.border.primary})`,
-  backgroundColor: `var(--bg-secondary, ${colorTokens.background.secondary})`,
-};
 
 const tabScrollAreaStyle: CSSProperties = {
   flexGrow: 1,
@@ -178,7 +172,7 @@ export function XlsxSheetTabBar({ style }: XlsxSheetTabBarProps) {
 
   return (
     <>
-      <div style={{ ...containerStyle, ...style }}>
+      <div style={{ ...sheetTabBarContainerStyle, ...style }}>
         <div style={tabScrollAreaStyle} onDragOver={(e) => e.preventDefault()} onDrop={handleDrop}>
           <div role="tablist" style={tabListStyle}>
             {workbook.sheets.map((sheet, index) => {

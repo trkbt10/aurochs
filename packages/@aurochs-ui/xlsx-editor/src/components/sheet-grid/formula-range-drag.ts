@@ -8,8 +8,8 @@
 
 import type { CellAddress } from "@aurochs-office/xlsx/domain/cell/address";
 import type { XlsxEditorAction } from "../../context/workbook/editor/types";
-import type { createSheetLayout } from "../../selectors/sheet-layout";
-import type { NormalizedMergeRange } from "../../sheet/merge-range";
+import type { createSheetLayout } from "@aurochs-ui/xlsx-sheet/selectors/sheet-layout";
+import type { NormalizedMergeRange } from "@aurochs-ui/xlsx-sheet/sheet/merge-range";
 import { buildReferenceText } from "../../formula-edit/formula-reference-insert";
 import { hitTestCellFromPointerEvent } from "./cell-hit-test";
 import { safeReleasePointerCapture, safeSetPointerCapture } from "./pointer-capture";
@@ -65,11 +65,8 @@ export function startFormulaRangeDrag(params: {
     dispatch,
   } = params;
 
-  // eslint-disable-next-line no-restricted-syntax -- reassigned in onMove callback
-  let currentText = params.editingText;
+  const dragState = { currentText: params.editingText, currentRefLength: params.refLength };
   const currentRefOffset = params.refInsertOffset;
-  // eslint-disable-next-line no-restricted-syntax -- reassigned in onMove callback
-  let currentRefLength = params.refLength;
 
   safeSetPointerCapture(captureTarget, pointerId);
 
@@ -91,14 +88,14 @@ export function startFormulaRangeDrag(params: {
       currentSheetName,
     );
 
-    const before = currentText.slice(0, currentRefOffset);
-    const after = currentText.slice(currentRefOffset + currentRefLength);
+    const before = dragState.currentText.slice(0, currentRefOffset);
+    const after = dragState.currentText.slice(currentRefOffset + dragState.currentRefLength);
     const newText = before + newRefText + after;
     const newCaretOffset = currentRefOffset + newRefText.length;
 
     // Update tracking state for subsequent moves
-    currentText = newText;
-    currentRefLength = newRefText.length;
+    dragState.currentText = newText;
+    dragState.currentRefLength = newRefText.length;
 
     dispatch({
       type: "UPDATE_EDIT_TEXT",

@@ -6,7 +6,7 @@
  */
 
 // XLSX-specific components
-export { SheetTabViewer, ReadonlySheetGrid, type SheetTabViewerProps, type ReadonlySheetGridProps } from "./components";
+export { SheetTabViewer, ReadonlySheetGrid, type ReadonlySheetGridProps } from "./components";
 
 // Composite viewers
 export { WorkbookViewer, type WorkbookViewerProps } from "./WorkbookViewer";

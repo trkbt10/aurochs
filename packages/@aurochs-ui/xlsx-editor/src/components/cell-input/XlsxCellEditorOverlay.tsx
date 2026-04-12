@@ -21,7 +21,7 @@ import { useFormulaAutocomplete } from "../../hooks/useFormulaAutocomplete";
 import { acceptAutocomplete } from "../../formula-edit/formula-autocomplete";
 import { FormulaAutocompleteDropdown } from "./FormulaAutocompleteDropdown";
 import { getCell } from "@aurochs-office/xlsx/domain/mutation/query";
-import { resolveCellRenderStyle } from "../../selectors/cell-render-style";
+import { resolveCellRenderStyle } from "@aurochs-ui/xlsx-sheet/selectors/cell-render-style";
 
 export type CellRect = {
   readonly left: number;

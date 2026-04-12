@@ -17,7 +17,7 @@ import type { CellRange } from "./cell/address";
 import { parseRange } from "./cell/address";
 import type { XlsxWorksheet, XlsxRow } from "./workbook";
 import type { XlsxSortState } from "./auto-filter";
-import { colIdx, rowIdx, type ColIndex, type RowIndex } from "./types";
+import { rowIdx, type ColIndex } from "./types";
 
 // =============================================================================
 // Sort key extraction
@@ -172,11 +172,17 @@ export function sortWorksheetRows(
       // Empty cells always go to the end regardless of direction
       const aEmpty = va.type === "empty";
       const bEmpty = vb.type === "empty";
-      if (aEmpty && bEmpty) continue;
-      if (aEmpty) return 1;
-      if (bEmpty) return -1;
+      if (aEmpty && bEmpty) {
+        continue;
+      }
+      if (aEmpty) {
+        return 1;
+      }
+      if (bEmpty) {
+        return -1;
+      }
 
-      let cmp = compareCellValues(va, vb);
+      const cmp = compareCellValues(va, vb);
       if (cmp !== 0) {
         return descending ? -cmp : cmp;
       }

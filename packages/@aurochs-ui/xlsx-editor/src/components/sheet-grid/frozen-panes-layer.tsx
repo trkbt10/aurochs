@@ -10,8 +10,8 @@ import type { XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
 import type { FormulaEvaluator } from "@aurochs-office/xlsx/formula/evaluator";
 import type { XlsxStyleSheet } from "@aurochs-office/xlsx/domain/style/types";
 import type { ColorScheme } from "@aurochs-office/drawing-ml/domain/color-context";
-import type { SheetLayout } from "../../selectors/sheet-layout";
-import type { NormalizedMergeRange } from "../../sheet/merge-range";
+import type { SheetLayout } from "@aurochs-ui/xlsx-sheet/selectors/sheet-layout";
+import type { NormalizedMergeRange } from "@aurochs-ui/xlsx-sheet/sheet/merge-range";
 import { XlsxSheetGridCellsLayer } from "./cells-layer";
 import { colorTokens } from "@aurochs-ui/ui-components/design-tokens";
 
@@ -155,6 +155,7 @@ export function FrozenPanesLayer({
               scrollLeft={scrollLeft}
               normalizedMerges={normalizedMerges}
               formulaEvaluator={formulaEvaluator}
+              colorScheme={colorScheme}
             />
           </div>
         </div>
@@ -192,6 +193,7 @@ export function FrozenPanesLayer({
               scrollLeft={0}
               normalizedMerges={normalizedMerges}
               formulaEvaluator={formulaEvaluator}
+              colorScheme={colorScheme}
             />
           </div>
         </div>

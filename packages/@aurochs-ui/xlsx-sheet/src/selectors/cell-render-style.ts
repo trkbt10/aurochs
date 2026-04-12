@@ -11,8 +11,9 @@ import type { XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
 import type { XlsxStyleSheet, XlsxAlignment } from "@aurochs-office/xlsx/domain/style/types";
 import type { XlsxDifferentialFormat } from "@aurochs-office/xlsx/domain/style/dxf";
 import type { XlsxFill } from "@aurochs-office/xlsx/domain/style/fill";
-import { xlsxColorToCss, type XlsxColorLike, type XlsxColorToCssOptions } from "./xlsx-color";
-import { resolveCellXf } from "./cell-xf";
+import type { XlsxColor } from "@aurochs-office/xlsx/domain/style/color";
+import { xlsxColorToCss, type XlsxColorToCssOptions } from "./xlsx-color";
+import { resolveCellXf } from "@aurochs-office/xlsx/domain/style/xf-resolver";
 
 type XlsxCellRenderCssProperties = CSSProperties &
   Partial<Record<"--xlsx-cell-indent-start" | "--xlsx-cell-indent-end", string>>;
@@ -45,10 +46,13 @@ function applyAlignment(
     return;
   }
 
-  if (alignment.readingOrder === 1) {
-    style.direction = "ltr";
-  } else if (alignment.readingOrder === 2) {
-    style.direction = "rtl";
+  switch (alignment.readingOrder) {
+    case 1:
+      style.direction = "ltr";
+      break;
+    case 2:
+      style.direction = "rtl";
+      break;
   }
 
   const rotation = alignment.textRotation;
@@ -67,10 +71,13 @@ function applyAlignment(
     }
   }
 
-  if (alignment.vertical === "top") {
-    style.alignItems = "flex-start";
-  } else if (alignment.vertical === "bottom") {
-    style.alignItems = "flex-end";
+  switch (alignment.vertical) {
+    case "top":
+      style.alignItems = "flex-start";
+      break;
+    case "bottom":
+      style.alignItems = "flex-end";
+      break;
   }
 
   if (alignment.wrapText === true) {
@@ -109,16 +116,16 @@ function resolveFillBackgroundColor(fill: XlsxFill | undefined, colorOptions: Xl
 
   if (patternType === "solid") {
     // Solid fill: fgColor is the only source of truth.
-    return xlsxColorToCss(fgColor as XlsxColorLike | undefined, colorOptions);
+    return xlsxColorToCss(fgColor as XlsxColor | undefined, colorOptions);
   }
 
   // Non-solid patterns: fgColor is the pattern, bgColor is the background.
   // Fall back from fg → bg for non-solid patterns.
-  const fg = xlsxColorToCss(fgColor as XlsxColorLike | undefined, colorOptions);
+  const fg = xlsxColorToCss(fgColor as XlsxColor | undefined, colorOptions);
   if (fg) {
     return fg;
   }
-  return xlsxColorToCss(bgColor as XlsxColorLike | undefined, colorOptions);
+  return xlsxColorToCss(bgColor as XlsxColor | undefined, colorOptions);
 }
 
 type CssBorderStyle = "solid" | "dashed" | "dotted" | "double";
@@ -207,7 +214,7 @@ export function resolveCellRenderStyle(params: {
     css.fontStyle = "italic";
   }
   if (effectiveColor) {
-    const color = xlsxColorToCss(effectiveColor as XlsxColorLike, colorOptions);
+    const color = xlsxColorToCss(effectiveColor as XlsxColor, colorOptions);
     if (color) {
       css.color = color;
     }
@@ -300,22 +307,22 @@ export function resolveCellBorderDecoration(params: {
   const leftDecoration = toEdgeDecoration(
     "left",
     left,
-    xlsxColorToCss(border.left?.color as XlsxColorLike | undefined, colorOptions),
+    xlsxColorToCss(border.left?.color as XlsxColor | undefined, colorOptions),
   );
   const rightDecoration = toEdgeDecoration(
     "right",
     right,
-    xlsxColorToCss(border.right?.color as XlsxColorLike | undefined, colorOptions),
+    xlsxColorToCss(border.right?.color as XlsxColor | undefined, colorOptions),
   );
   const topDecoration = toEdgeDecoration(
     "top",
     top,
-    xlsxColorToCss(border.top?.color as XlsxColorLike | undefined, colorOptions),
+    xlsxColorToCss(border.top?.color as XlsxColor | undefined, colorOptions),
   );
   const bottomDecoration = toEdgeDecoration(
     "bottom",
     bottom,
-    xlsxColorToCss(border.bottom?.color as XlsxColorLike | undefined, colorOptions),
+    xlsxColorToCss(border.bottom?.color as XlsxColor | undefined, colorOptions),
   );
 
   const result: CellBorderDecoration = {

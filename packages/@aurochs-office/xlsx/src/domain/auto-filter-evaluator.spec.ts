@@ -1,4 +1,7 @@
-import { describe, it, expect } from "vitest";
+/**
+ * @file Tests for autoFilter evaluation engine.
+ */
+
 import {
   evaluateFilter,
   evaluateAutoFilter,
@@ -8,7 +11,6 @@ import type { CellRange, CellAddress } from "./cell/address";
 import type { XlsxWorksheet, XlsxRow } from "./workbook";
 import type {
   XlsxAutoFilter,
-  XlsxFilterType,
   XlsxFilters,
   XlsxCustomFilters,
   XlsxTop10Filter,
@@ -24,8 +26,8 @@ function addr(col: number, row: number): CellAddress {
   return { col: colIdx(col), row: rowIdx(row), colAbsolute: false, rowAbsolute: false };
 }
 
-function makeRange(startCol: number, startRow: number, endCol: number, endRow: number): CellRange {
-  return { start: addr(startCol, startRow), end: addr(endCol, endRow) };
+function makeRange(range: { sc: number; sr: number; ec: number; er: number }): CellRange {
+  return { start: addr(range.sc, range.sr), end: addr(range.ec, range.er) };
 }
 
 function makeRow(rowNumber: number, cells: readonly { col: number; value: CellValue }[]): XlsxRow {
@@ -58,9 +60,6 @@ function num(v: number): CellValue {
 }
 function bool(v: boolean): CellValue {
   return { type: "boolean", value: v };
-}
-function err(v: "#N/A" | "#DIV/0!"): CellValue {
-  return { type: "error", value: v };
 }
 function empty(): CellValue {
   return { type: "empty" };
@@ -364,7 +363,7 @@ describe("evaluateFilter", () => {
 
 describe("evaluateAutoFilter", () => {
   it("should return empty set when no filterColumns", () => {
-    const autoFilter: XlsxAutoFilter = { ref: makeRange(1, 1, 3, 10) };
+    const autoFilter: XlsxAutoFilter = { ref: makeRange({ sc: 1, sr: 1, ec: 3, er: 10 }) };
     const ws = makeWorksheet([
       makeRow(1, [{ col: 1, value: str("Header") }]),
       makeRow(2, [{ col: 1, value: str("A") }]),
@@ -377,7 +376,7 @@ describe("evaluateAutoFilter", () => {
 
   it("should hide rows that do not match the filter", () => {
     const autoFilter: XlsxAutoFilter = {
-      ref: makeRange(1, 1, 2, 5),
+      ref: makeRange({ sc: 1, sr: 1, ec: 2, er: 5 }),
       filterColumns: [
         {
           colId: colIdx(0), // column A (relative to ref start col 1)
@@ -403,7 +402,7 @@ describe("evaluateAutoFilter", () => {
 
   it("should apply multiple filterColumns with AND logic (all must match)", () => {
     const autoFilter: XlsxAutoFilter = {
-      ref: makeRange(1, 1, 3, 5),
+      ref: makeRange({ sc: 1, sr: 1, ec: 3, er: 5 }),
       filterColumns: [
         {
           colId: colIdx(0), // col A
@@ -435,7 +434,7 @@ describe("evaluateAutoFilter", () => {
 
   it("should not hide rows outside the autoFilter ref range", () => {
     const autoFilter: XlsxAutoFilter = {
-      ref: makeRange(1, 1, 1, 3), // only rows 1-3
+      ref: makeRange({ sc: 1, sr: 1, ec: 1, er: 3 }), // only rows 1-3
       filterColumns: [
         {
           colId: colIdx(0),
@@ -458,7 +457,7 @@ describe("evaluateAutoFilter", () => {
 
   it("should never hide the header row (first row of ref)", () => {
     const autoFilter: XlsxAutoFilter = {
-      ref: makeRange(1, 1, 1, 3),
+      ref: makeRange({ sc: 1, sr: 1, ec: 1, er: 3 }),
       filterColumns: [
         {
           colId: colIdx(0),
@@ -478,7 +477,7 @@ describe("evaluateAutoFilter", () => {
 
   it("should handle empty rows (no cells) as empty values", () => {
     const autoFilter: XlsxAutoFilter = {
-      ref: makeRange(1, 1, 1, 4),
+      ref: makeRange({ sc: 1, sr: 1, ec: 1, er: 4 }),
       filterColumns: [
         {
           colId: colIdx(0),
@@ -502,7 +501,7 @@ describe("evaluateAutoFilter", () => {
   it("should handle autoFilter with ref starting at non-A1 position", () => {
     // autoFilter.ref = C3:D6, so colId=0 maps to column C (col=3), colId=1 to column D (col=4)
     const autoFilter: XlsxAutoFilter = {
-      ref: makeRange(3, 3, 4, 6),
+      ref: makeRange({ sc: 3, sr: 3, ec: 4, er: 6 }),
       filterColumns: [
         {
           colId: colIdx(0), // relative → absolute col 3 (C)
@@ -526,7 +525,7 @@ describe("evaluateAutoFilter", () => {
 
   it("should skip filterColumns without a filter defined", () => {
     const autoFilter: XlsxAutoFilter = {
-      ref: makeRange(1, 1, 2, 3),
+      ref: makeRange({ sc: 1, sr: 1, ec: 2, er: 3 }),
       filterColumns: [
         {
           colId: colIdx(0),

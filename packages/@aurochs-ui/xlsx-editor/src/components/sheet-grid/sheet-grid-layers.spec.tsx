@@ -10,7 +10,7 @@ import type { XlsxWorkbook } from "@aurochs-office/xlsx/domain/workbook";
 import { createDefaultStyleSheet } from "@aurochs-office/xlsx/domain/style/types";
 import { sheetId } from "@aurochs-office/xlsx/domain/types";
 import { VirtualScroll } from "@aurochs-ui/ui-components";
-import { createSheetLayout } from "../../selectors/sheet-layout";
+import { createSheetLayout } from "@aurochs-ui/xlsx-sheet/selectors/sheet-layout";
 import { createFormulaEvaluator } from "@aurochs-office/xlsx/formula/evaluator";
 import { XlsxWorkbookEditorProvider } from "../../context/workbook/XlsxWorkbookEditorContext";
 import { XlsxSheetGridLayers } from "./sheet-grid-layers";

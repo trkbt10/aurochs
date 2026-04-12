@@ -10,7 +10,7 @@ import type { CellAddress } from "@aurochs-office/xlsx/domain/cell/address";
 import { colIdx, rowIdx } from "@aurochs-office/xlsx/domain/types";
 import { createFormulaEvaluator } from "@aurochs-office/xlsx/formula/evaluator";
 import { useXlsxWorkbookEditor } from "../context/workbook/XlsxWorkbookEditorContext";
-import { createSheetLayout } from "../selectors/sheet-layout";
+import { createSheetLayout } from "@aurochs-ui/xlsx-sheet/selectors/sheet-layout";
 import { XlsxSheetGridLayers } from "./sheet-grid/sheet-grid-layers";
 
 export type XlsxGridMetrics = {

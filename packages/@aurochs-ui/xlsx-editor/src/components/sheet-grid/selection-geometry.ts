@@ -6,7 +6,7 @@
  */
 
 import type { CellAddress } from "@aurochs-office/xlsx/domain/cell/address";
-import { createSheetLayout, toColIndex0, toRowIndex0 } from "../../selectors/sheet-layout";
+import { createSheetLayout, toColIndex0, toRowIndex0 } from "@aurochs-ui/xlsx-sheet/selectors/sheet-layout";
 
 export type RangeBounds = {
   readonly minRow: number;

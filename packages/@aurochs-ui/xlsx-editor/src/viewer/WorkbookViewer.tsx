@@ -6,6 +6,7 @@
 
 import { useMemo, useState, useCallback, type CSSProperties, type ReactNode } from "react";
 import type { XlsxWorkbook } from "@aurochs-office/xlsx/domain/workbook";
+import { DEFAULT_SHEET_GRID_METRICS } from "@aurochs-ui/xlsx-sheet/core";
 import { ZoomControls, getNextZoomValue } from "@aurochs-ui/editor-controls/zoom";
 import { colorTokens } from "@aurochs-ui/ui-components/design-tokens";
 import {
@@ -60,14 +61,7 @@ export type WorkbookViewerProps = {
   readonly style?: CSSProperties;
 };
 
-const DEFAULT_METRICS = {
-  rowCount: 100,
-  colCount: 26,
-  rowHeightPx: 24,
-  colWidthPx: 80,
-  rowHeaderWidthPx: 40,
-  colHeaderHeightPx: 24,
-};
+const DEFAULT_METRICS = DEFAULT_SHEET_GRID_METRICS;
 
 const gridAreaStyle: CSSProperties = {
   flex: 1,

@@ -12,7 +12,7 @@ import { clampRange, useVirtualScrollContext } from "@aurochs-ui/ui-components";
 import type { XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
 import type { FormulaEvaluator } from "@aurochs-office/xlsx/formula/evaluator";
 import { useXlsxWorkbookEditor } from "../../context/workbook/XlsxWorkbookEditorContext";
-import { normalizeMergeRange } from "../../sheet/merge-range";
+import { normalizeMergeRange } from "@aurochs-ui/xlsx-sheet/sheet/merge-range";
 import { getAllSelectedRanges } from "../../context/workbook/state/selection";
 import { getRangeBounds } from "./selection-geometry";
 import { XlsxSheetGridHeaderLayer } from "./header-layer";
@@ -21,8 +21,8 @@ import { XlsxSheetGridCellsLayer } from "./cells-layer";
 import { FrozenPanesLayer } from "./frozen-panes-layer";
 import { AutoFilterOverlay } from "./auto-filter-overlay";
 import { AutoFilterDropdown } from "./auto-filter-dropdown";
-import type { SheetLayout } from "../../selectors/sheet-layout";
-import { DrawingOverlay, type DrawingPositionResolver } from "../../drawing/DrawingOverlay";
+import type { SheetLayout } from "@aurochs-ui/xlsx-sheet/selectors/sheet-layout";
+import { CoreSheetViewport } from "@aurochs-ui/xlsx-sheet/core";
 
 const layerRootStyle: CSSProperties = {
   position: "absolute",
@@ -131,11 +131,6 @@ export function XlsxSheetGridLayers({
     root?.focus();
   }, []);
 
-  const drawingPositionResolver = useMemo<DrawingPositionResolver>(() => ({
-    getColumnPositionPx: (col0: number) => layout.cols.getOffsetPx(col0),
-    getRowPositionPx: (row0: number) => layout.rows.getOffsetPx(row0),
-  }), [layout]);
-
   // Freeze panes configuration
   const pane = sheet.sheetView?.pane;
   const isFrozen = pane?.state === "frozen" || pane?.state === "frozenSplit";
@@ -192,74 +187,64 @@ export function XlsxSheetGridLayers({
           zoom={zoom}
         />
 
-        <XlsxSheetGridCellViewport
+        {/* Grid viewport: gridlines → cells + interactive overlay → borders → drawings */}
+        <CoreSheetViewport
           sheet={sheet}
-          workbookStyles={workbook.styles}
+          styles={workbook.styles}
           layout={layout}
-          metrics={{
-            rowCount: metrics.rowCount,
-            colCount: metrics.colCount,
-            rowHeaderWidthPx,
-            colHeaderHeightPx,
-          }}
           rowRange={rowRange}
           colRange={colRange}
           scrollTop={scrollTopUnscaled}
           scrollLeft={scrollLeftUnscaled}
-          viewportWidth={viewportWidthUnscaled}
-          viewportHeight={viewportHeightUnscaled}
-          selection={{
-            selectedRanges,
-            activeRange: selection.selectedRange,
-            activeCell: selection.activeCell,
-          }}
-          state={{
-            editing: state.editing,
-          }}
-          activeSheetIndex={activeSheetIndex}
-          editingSheetName={editingSheetName}
+          viewportWidth={gridViewportWidth}
+          viewportHeight={gridViewportHeight}
+          rowCount={metrics.rowCount}
+          colCount={metrics.colCount}
           normalizedMerges={normalizedMerges}
-          dispatch={dispatch}
-          zoom={zoom}
-          focusGridRoot={focusGridRoot}
+          headerOffsetX={rowHeaderWidthPx}
+          headerOffsetY={colHeaderHeightPx}
+          drawing={sheet.drawing}
+          resourceStore={workbook.resourceStore}
         >
-          <XlsxSheetGridCellsLayer
-            sheetIndex={sheetIndex}
+          <XlsxSheetGridCellViewport
             sheet={sheet}
-            styles={workbook.styles}
             layout={layout}
-            rowRange={rowRange}
-            colRange={colRange}
+            metrics={{
+              rowCount: metrics.rowCount,
+              colCount: metrics.colCount,
+            }}
             scrollTop={scrollTopUnscaled}
             scrollLeft={scrollLeftUnscaled}
+            selection={{
+              selectedRanges,
+              activeRange: selection.selectedRange,
+              activeCell: selection.activeCell,
+            }}
+            state={{
+              editing: state.editing,
+            }}
+            activeSheetIndex={activeSheetIndex}
+            editingSheetName={editingSheetName}
             normalizedMerges={normalizedMerges}
-            formulaEvaluator={formulaEvaluator}
-            colorScheme={workbook.theme?.colorScheme}
-          />
-          {sheet.drawing && (
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                overflow: "hidden",
-                pointerEvents: "none",
-              }}
-            >
-              <div
-                style={{
-                  position: "absolute",
-                  transform: `translate(${-scrollLeftUnscaled}px, ${-scrollTopUnscaled}px)`,
-                }}
-              >
-                <DrawingOverlay
-                  drawing={sheet.drawing}
-                  positionResolver={drawingPositionResolver}
-                  resourceStore={workbook.resourceStore}
-                />
-              </div>
-            </div>
-          )}
-        </XlsxSheetGridCellViewport>
+            dispatch={dispatch}
+            zoom={zoom}
+            focusGridRoot={focusGridRoot}
+          >
+            <XlsxSheetGridCellsLayer
+              sheetIndex={sheetIndex}
+              sheet={sheet}
+              styles={workbook.styles}
+              layout={layout}
+              rowRange={rowRange}
+              colRange={colRange}
+              scrollTop={scrollTopUnscaled}
+              scrollLeft={scrollLeftUnscaled}
+              normalizedMerges={normalizedMerges}
+              formulaEvaluator={formulaEvaluator}
+              colorScheme={workbook.theme?.colorScheme}
+            />
+          </XlsxSheetGridCellViewport>
+        </CoreSheetViewport>
 
         {/* AutoFilter buttons — above cell viewport and frozen panes (zIndex: 10-12) */}
         {sheet.autoFilter && (

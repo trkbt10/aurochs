@@ -1,21 +1,25 @@
 /**
- * @file Sheet grid viewport (overlay layer)
+ * @file Sheet grid interactive overlay
  *
- * Renders selection overlays, gridlines/borders, and the inline cell editor within the visible viewport.
+ * Renders selection rectangles, fill handle, formula reference overlay,
+ * and inline cell editor. Handles pointer events for cell selection,
+ * drag-select, and fill-drag.
+ *
+ * This component is a sibling of CoreSheetViewport, positioned at the
+ * same coordinates. It does NOT render gridlines, borders, or cell content —
+ * those are handled by CoreSheetViewport (the SoT for grid rendering).
  */
 
 import { useCallback, useEffect, useMemo, useRef, type CSSProperties } from "react";
 import type { CellAddress } from "@aurochs-office/xlsx/domain/cell/address";
 import { colIdx, rowIdx } from "@aurochs-office/xlsx/domain/types";
-import type { XlsxStyleSheet } from "@aurochs-office/xlsx/domain/style/types";
 import type { XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
 import { colorTokens } from "@aurochs-ui/ui-components";
+import { useCoreSheetViewport } from "@aurochs-ui/xlsx-sheet/core";
 import { XlsxCellEditorOverlay } from "../cell-input/XlsxCellEditorOverlay";
-import { buildBorderOverlayLines } from "../../selectors/border-overlay";
-import { findMergeForCell, type NormalizedMergeRange } from "../../sheet/merge-range";
-import { getVisibleGridLineSegments } from "./gridline-geometry";
+import { findMergeForCell, type NormalizedMergeRange } from "@aurochs-ui/xlsx-sheet/sheet/merge-range";
 import { clipRectToViewport, getActiveCellRect, getSelectedRangeRect } from "./selection-geometry";
-import { createSheetLayout } from "../../selectors/sheet-layout";
+import type { SheetLayout } from "@aurochs-ui/xlsx-sheet/selectors/sheet-layout";
 import type { CellEditingState, XlsxEditorAction } from "../../context/workbook/editor/types";
 import { startFillHandlePointerDrag } from "./fill-handle-drag";
 import { startRangeSelectPointerDrag } from "./range-select-drag";
@@ -77,22 +81,35 @@ function resolveElementFromTarget(target: EventTarget): HTMLElement | null {
   return null;
 }
 
+function computeNextPosition(params: {
+  readonly direction: "down" | "up" | "right" | "left";
+  readonly col: number;
+  readonly row: number;
+  readonly rowCount: number;
+  readonly colCount: number;
+}): { readonly nextCol: number; readonly nextRow: number } {
+  const { direction, col, row, rowCount, colCount } = params;
+  switch (direction) {
+    case "down":
+      return { nextCol: col, nextRow: Math.min(row + 1, rowCount) };
+    case "up":
+      return { nextCol: col, nextRow: Math.max(row - 1, 1) };
+    case "right":
+      return { nextCol: Math.min(col + 1, colCount), nextRow: row };
+    case "left":
+      return { nextCol: Math.max(col - 1, 1), nextRow: row };
+  }
+}
+
 export type XlsxSheetGridCellViewportProps = {
   readonly sheet: XlsxWorksheet;
-  readonly workbookStyles: XlsxStyleSheet;
-  readonly layout: ReturnType<typeof createSheetLayout>;
+  readonly layout: SheetLayout;
   readonly metrics: {
     readonly rowCount: number;
     readonly colCount: number;
-    readonly rowHeaderWidthPx: number;
-    readonly colHeaderHeightPx: number;
   };
-  readonly rowRange: { readonly start: number; readonly end: number };
-  readonly colRange: { readonly start: number; readonly end: number };
   readonly scrollTop: number;
   readonly scrollLeft: number;
-  readonly viewportWidth: number;
-  readonly viewportHeight: number;
   /** Display zoom factor (1 = 100%). */
   readonly zoom: number;
   readonly focusGridRoot: (target: EventTarget) => void;
@@ -109,26 +126,26 @@ export type XlsxSheetGridCellViewportProps = {
   readonly editingSheetName: string | undefined;
   readonly normalizedMerges: readonly NormalizedMergeRange[];
   readonly dispatch: (action: XlsxEditorAction) => void;
-  readonly children: React.ReactNode;
+  /** Cell content layer (CellsLayer), rendered inside the interactive overlay container */
+  readonly children?: React.ReactNode;
 };
 
 /**
- * Viewport overlay for the sheet grid.
+ * Interactive overlay for the sheet grid.
  *
- * This component does not render cell contents; it overlays selection rectangles, gridlines/borders,
- * merge outlines, and the inline editor above the cells layer.
+ * Renders selection rectangles, fill handle, formula reference overlay,
+ * and inline cell editor. Handles pointer events for cell selection.
+ *
+ * This is a sibling of CoreSheetViewport, positioned at the same absolute
+ * coordinates. It uses `viewportContainerBaseStyle` from xlsx-sheet to
+ * ensure pixel-perfect alignment with the grid below.
  */
 export function XlsxSheetGridCellViewport({
   sheet,
-  workbookStyles,
   layout,
   metrics,
-  rowRange,
-  colRange,
   scrollTop,
   scrollLeft,
-  viewportWidth,
-  viewportHeight,
   zoom,
   focusGridRoot,
   selection,
@@ -142,6 +159,7 @@ export function XlsxSheetGridCellViewport({
   if (!Number.isFinite(zoom) || zoom <= 0) {
     throw new Error(`XlsxSheetGridCellViewport zoom must be a positive finite number: ${String(zoom)}`);
   }
+  const { viewportWidth: gridViewportWidth, viewportHeight: gridViewportHeight } = useCoreSheetViewport();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const fillDragListener = useRef<(() => void) | null>(null);
   const rangeSelectCleanupRef = useRef<(() => void) | null>(null);
@@ -166,12 +184,6 @@ export function XlsxSheetGridCellViewport({
     };
   }, []);
 
-  const rowHeaderWidthPx = metrics.rowHeaderWidthPx;
-  const colHeaderHeightPx = metrics.colHeaderHeightPx;
-
-  const gridViewportWidth = Math.max(0, viewportWidth - rowHeaderWidthPx);
-  const gridViewportHeight = Math.max(0, viewportHeight - colHeaderHeightPx);
-
   const selectedRangeRects = useMemo(() => {
     return selection.selectedRanges
       .map((range) =>
@@ -188,51 +200,6 @@ export function XlsxSheetGridCellViewport({
     const rect = getSelectedRangeRect({ range: selection.activeRange, layout, scrollTop, scrollLeft });
     return clipRectToViewport(rect, gridViewportWidth, gridViewportHeight);
   }, [gridViewportHeight, gridViewportWidth, layout, scrollLeft, scrollTop, selection.activeRange]);
-
-  const gridLineSegments = useMemo(() => {
-    if (sheet.sheetView?.showGridLines === false) {
-      return { vertical: [], horizontal: [] } as const;
-    }
-    return getVisibleGridLineSegments({
-      rowRange,
-      colRange,
-      layout,
-      scrollTop,
-      scrollLeft,
-      viewportWidth: gridViewportWidth,
-      viewportHeight: gridViewportHeight,
-      normalizedMerges,
-      rowCount: metrics.rowCount,
-      colCount: metrics.colCount,
-    });
-  }, [
-    colRange,
-    gridViewportHeight,
-    gridViewportWidth,
-    layout,
-    metrics.colCount,
-    metrics.rowCount,
-    normalizedMerges,
-    rowRange,
-    scrollLeft,
-    scrollTop,
-    sheet.sheetView?.showGridLines,
-  ]);
-
-  const borderLines = useMemo(() => {
-    return buildBorderOverlayLines({
-      sheet,
-      styles: workbookStyles,
-      layout,
-      rowRange,
-      colRange,
-      rowCount: metrics.rowCount,
-      colCount: metrics.colCount,
-      scrollTop,
-      scrollLeft,
-      defaultBorderColor: `var(--border-primary, ${colorTokens.border.primary})`,
-    });
-  }, [colRange, layout, metrics.colCount, metrics.rowCount, rowRange, scrollLeft, scrollTop, sheet, workbookStyles]);
 
   const editingCell = state.editing?.address;
   const editingRect = useMemo(() => {
@@ -274,22 +241,13 @@ export function XlsxSheetGridCellViewport({
       if (!cell) {
         return;
       }
-      const col = cell.col as number;
-      const row = cell.row as number;
-
-      // eslint-disable-next-line no-restricted-syntax -- reassigned conditionally per direction
-      let nextCol = col;
-      // eslint-disable-next-line no-restricted-syntax -- reassigned conditionally per direction
-      let nextRow = row;
-      if (direction === "down") {
-        nextRow = Math.min(row + 1, metrics.rowCount);
-      } else if (direction === "up") {
-        nextRow = Math.max(row - 1, 1);
-      } else if (direction === "right") {
-        nextCol = Math.min(col + 1, metrics.colCount);
-      } else if (direction === "left") {
-        nextCol = Math.max(col - 1, 1);
-      }
+      const { nextCol, nextRow } = computeNextPosition({
+        direction,
+        col: cell.col as number,
+        row: cell.row as number,
+        rowCount: metrics.rowCount,
+        colCount: metrics.colCount,
+      });
 
       dispatch({
         type: "SELECT_CELL",
@@ -476,15 +434,16 @@ export function XlsxSheetGridCellViewport({
     },
     [
       dispatch,
+      editingSheetName,
       focusGridRoot,
       getCellAddressFromEventTarget,
       hitTestViewportCell,
       layout,
-      metrics.colCount,
-      metrics.rowCount,
+      metrics,
       normalizedMerges,
       scrollLeft,
       scrollTop,
+      sheet.name,
       state.editing,
       zoom,
     ],
@@ -521,77 +480,13 @@ export function XlsxSheetGridCellViewport({
       data-xlsx-grid-viewport="true"
       style={{
         position: "absolute",
-        left: rowHeaderWidthPx,
-        top: colHeaderHeightPx,
-        right: 0,
-        bottom: 0,
-        overflow: "hidden",
-        backgroundColor: `var(--bg-primary, ${colorTokens.background.primary})`,
+        inset: 0,
+        pointerEvents: "auto",
       }}
       onPointerDown={handleViewportPointerDown}
       onDoubleClick={handleViewportDoubleClick}
     >
-      {sheet.sheetView?.showGridLines !== false && gridViewportWidth > 0 && gridViewportHeight > 0 && (
-        <svg
-          data-testid="xlsx-gridlines"
-          style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
-          width={gridViewportWidth}
-          height={gridViewportHeight}
-          viewBox={`0 0 ${gridViewportWidth} ${gridViewportHeight}`}
-        >
-          {gridLineSegments.vertical.map((line) => (
-            <line
-              key={line.key}
-              x1={line.x1}
-              y1={line.y1}
-              x2={line.x2}
-              y2={line.y2}
-              stroke={`var(--border-primary, ${colorTokens.border.primary})`}
-              strokeWidth={1}
-              shapeRendering="crispEdges"
-            />
-          ))}
-          {gridLineSegments.horizontal.map((line) => (
-            <line
-              key={line.key}
-              x1={line.x1}
-              y1={line.y1}
-              x2={line.x2}
-              y2={line.y2}
-              stroke={`var(--border-primary, ${colorTokens.border.primary})`}
-              strokeWidth={1}
-              shapeRendering="crispEdges"
-            />
-          ))}
-        </svg>
-      )}
-
       {children}
-
-      {borderLines.length > 0 && gridViewportWidth > 0 && gridViewportHeight > 0 && (
-        <svg
-          data-testid="xlsx-borders"
-          style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
-          width={gridViewportWidth}
-          height={gridViewportHeight}
-          viewBox={`0 0 ${gridViewportWidth} ${gridViewportHeight}`}
-        >
-          {borderLines.map((line) => (
-            <line
-              key={line.key}
-              x1={line.x1}
-              y1={line.y1}
-              x2={line.x2}
-              y2={line.y2}
-              stroke={line.stroke}
-              strokeWidth={line.strokeWidth}
-              strokeDasharray={line.strokeDasharray}
-              shapeRendering="crispEdges"
-              strokeLinecap="square"
-            />
-          ))}
-        </svg>
-      )}
 
       {selectedRangeRects.map((rect, idx) => (
         <div

@@ -12,13 +12,6 @@ import type { XlsxColor } from "@aurochs-office/xlsx/domain/style/color";
 import { resolveXlsxColor } from "@aurochs-office/xlsx/domain/style/color-resolver";
 import type { ColorScheme } from "@aurochs-office/drawing-ml/domain/color-context";
 
-/**
- * Color-like type accepted by `xlsxColorToCss`.
- *
- * Matches the shape of `XlsxColor` from the domain layer.
- */
-export type XlsxColorLike = XlsxColor;
-
 export type XlsxColorToCssOptions = {
   /**
    * Indexed palette override from `styles.xml` (`colors/indexedColors`).
@@ -40,7 +33,7 @@ export type XlsxColorToCssOptions = {
  * Delegates to the canonical `resolveXlsxColor` from the domain layer.
  * This is the only place in the editor that should resolve XLSX colors.
  */
-export function xlsxColorToCss(color: XlsxColorLike | undefined, options?: XlsxColorToCssOptions): string | undefined {
+export function xlsxColorToCss(color: XlsxColor | undefined, options?: XlsxColorToCssOptions): string | undefined {
   if (!color) {
     return undefined;
   }

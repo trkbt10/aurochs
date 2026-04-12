@@ -21,7 +21,8 @@ import {
 } from "../../state/drag";
 import { createIdleDragState } from "@aurochs-ui/editor-core/drag-state";
 import { applyAutofillToWorksheet } from "../../../../cell/autofill";
-import { setColumnWidth, setRowHeight } from "../../../../row-col/mutation";
+import { setRowHeight } from "@aurochs-office/xlsx/domain/mutation/row";
+import { setColumnWidth } from "@aurochs-office/xlsx/domain/mutation/column";
 import { updateWorksheetInWorkbook } from "../../utils/worksheet-updater";
 
 type StartRangeSelectAction = Extract<XlsxEditorAction, { type: "START_RANGE_SELECT" }>;

@@ -76,14 +76,13 @@ export function FormulaBarSyntaxOverlay({ text, tokens, references }: FormulaBar
     const result: { text: string; color: string | undefined; key: string }[] = [];
 
     // Fill gaps between tokens (leading "=" etc.)
-    // eslint-disable-next-line no-restricted-syntax -- incremented in loop
-    let lastEnd = 0;
+    const cursor = { lastEnd: 0 };
     for (const token of tokens) {
-      if (token.startOffset > lastEnd) {
+      if (token.startOffset > cursor.lastEnd) {
         result.push({
-          text: text.slice(lastEnd, token.startOffset),
+          text: text.slice(cursor.lastEnd, token.startOffset),
           color: undefined,
-          key: `gap-${lastEnd}`,
+          key: `gap-${cursor.lastEnd}`,
         });
       }
 
@@ -95,15 +94,15 @@ export function FormulaBarSyntaxOverlay({ text, tokens, references }: FormulaBar
         key: `t-${token.startOffset}`,
       });
 
-      lastEnd = token.endOffset;
+      cursor.lastEnd = token.endOffset;
     }
 
     // Trailing text
-    if (lastEnd < text.length) {
+    if (cursor.lastEnd < text.length) {
       result.push({
-        text: text.slice(lastEnd),
+        text: text.slice(cursor.lastEnd),
         color: undefined,
-        key: `tail-${lastEnd}`,
+        key: `tail-${cursor.lastEnd}`,
       });
     }
 

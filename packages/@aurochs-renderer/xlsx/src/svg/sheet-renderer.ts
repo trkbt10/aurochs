@@ -53,7 +53,7 @@ export function renderSheetWithContext(ctx: XlsxSvgRenderContext): SheetSvgResul
 
   const colorScheme = getColorScheme(ctx);
   const fontScheme = ctx.workbook.theme?.fontScheme;
-  const resolveStyle = createStyleCache(ctx.workbook.styles, colorScheme, fontScheme, options);
+  const resolveStyle = createStyleCache({ styles: ctx.workbook.styles, colorScheme, fontScheme, options });
   const elements: string[] = [];
 
   elements.push(renderBackground(ctx));

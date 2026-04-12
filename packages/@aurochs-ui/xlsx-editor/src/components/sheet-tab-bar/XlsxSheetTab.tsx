@@ -12,33 +12,30 @@
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
 import { colorTokens, radiusTokens, spacingTokens, fontTokens } from "@aurochs-ui/ui-components";
+import { sheetTabBaseStyle, sheetTabActiveStyle as sheetTabActiveBaseStyle } from "@aurochs-ui/xlsx-sheet/core";
 import type { DropTargetPosition, XlsxSheetTabProps } from "./types";
 
 const DROP_INDICATOR_WIDTH = "2px";
 const TAB_MIN_WIDTH = "80px";
 
 const tabBaseStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
+  ...sheetTabBaseStyle,
   gap: spacingTokens.xs,
-  padding: `${spacingTokens.xs} ${spacingTokens.sm}`,
-  border: `1px solid var(--border-primary, ${colorTokens.border.primary})`,
-  borderTop: "none",
-  backgroundColor: `var(--bg-secondary, ${colorTokens.background.secondary})`,
-  cursor: "pointer",
-  fontSize: fontTokens.size.sm,
   position: "relative",
   userSelect: "none",
   transition: "background-color 0.15s ease, box-shadow 0.1s ease",
   flex: "1 1 0",
   minWidth: TAB_MIN_WIDTH,
-  boxSizing: "border-box",
 };
 
 const activeTabStyle: CSSProperties = {
-  ...tabBaseStyle,
-  backgroundColor: `var(--bg-primary, ${colorTokens.background.primary})`,
-  fontWeight: fontTokens.weight.medium,
+  ...sheetTabActiveBaseStyle,
+  gap: spacingTokens.xs,
+  position: "relative",
+  userSelect: "none",
+  transition: "background-color 0.15s ease, box-shadow 0.1s ease",
+  flex: "1 1 0",
+  minWidth: TAB_MIN_WIDTH,
 };
 
 const draggingTabStyle: CSSProperties = {
@@ -247,17 +244,22 @@ export function XlsxSheetTab({
 
   const handleInputKeyDown = useCallback(
     (e: KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        const trimmed = editValue.trim();
-        if (trimmed && trimmed !== sheetName) {
-          onRename(trimmed);
-        }
-        onCancelEdit();
-      } else if (e.key === "Escape") {
-        e.preventDefault();
-        setEditValue(sheetName);
-        onCancelEdit();
+      switch (e.key) {
+        case "Enter":
+          e.preventDefault();
+          {
+            const trimmed = editValue.trim();
+            if (trimmed && trimmed !== sheetName) {
+              onRename(trimmed);
+            }
+          }
+          onCancelEdit();
+          break;
+        case "Escape":
+          e.preventDefault();
+          setEditValue(sheetName);
+          onCancelEdit();
+          break;
       }
     },
     [editValue, sheetName, onRename, onCancelEdit],

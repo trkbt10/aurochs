@@ -7,8 +7,8 @@
 
 import type { CellAddress } from "@aurochs-office/xlsx/domain/cell/address";
 import type { XlsxEditorAction } from "../../context/workbook/editor/types";
-import type { createSheetLayout } from "../../selectors/sheet-layout";
-import { findMergeForCell, type NormalizedMergeRange } from "../../sheet/merge-range";
+import type { createSheetLayout } from "@aurochs-ui/xlsx-sheet/selectors/sheet-layout";
+import { findMergeForCell, type NormalizedMergeRange } from "@aurochs-ui/xlsx-sheet/sheet/merge-range";
 import { hitTestCellFromPointerEvent } from "./cell-hit-test";
 import { safeReleasePointerCapture, safeSetPointerCapture } from "./pointer-capture";
 import { startWindowPointerDrag } from "./window-pointer-drag";

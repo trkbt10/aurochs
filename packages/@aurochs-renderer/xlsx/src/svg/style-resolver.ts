@@ -29,6 +29,7 @@ import type {
   XlsxRenderOptions,
 } from "./types";
 import { resolveXlsxColor, getDefaultFontColor, getDefaultBorderColor } from "@aurochs-office/xlsx/domain/style/color-resolver";
+import { resolveMergedCellXfFromStyleId } from "@aurochs-office/xlsx/domain/style/xf-resolver";
 
 // =============================================================================
 // Default Styles
@@ -256,6 +257,10 @@ type ResolveCellStyleParams = {
 
 /**
  * Resolve a cell's style by its styleId.
+ *
+ * Uses the domain XF resolver to correctly merge cellXfs with cellStyleXfs
+ * (via xfId), ensuring style inheritance is applied consistently across
+ * all rendering layers.
  */
 export function resolveCellStyle(params: ResolveCellStyleParams): ResolvedCellStyle {
   const { styleId, styles, colorScheme, fontScheme, options } = params;
@@ -264,10 +269,7 @@ export function resolveCellStyle(params: ResolveCellStyleParams): ResolvedCellSt
     return createDefaultStyle(options);
   }
 
-  const cellXf = styles.cellXfs[styleId as number];
-  if (!cellXf) {
-    return createDefaultStyle(options);
-  }
+  const cellXf = resolveMergedCellXfFromStyleId(styles, styleId as number);
 
   const colorParams: ColorResolveParams = {
     colorScheme,
@@ -352,7 +354,7 @@ function resolveXlsxCellXfBorder(params: ResolveBorderParams): ResolvedBorder {
 // Style Cache
 // =============================================================================
 
-type StyleCacheConfig = {
+export type StyleCacheConfig = {
   readonly styles: XlsxStyleSheet;
   readonly colorScheme: ColorScheme | undefined;
   readonly fontScheme: FontScheme | undefined;
@@ -365,13 +367,9 @@ type StyleCacheConfig = {
  * Caches resolved styles by styleId to avoid repeated resolution.
  */
 export function createStyleCache(
-  styles: XlsxStyleSheet,
-  colorScheme: ColorScheme | undefined,
-  fontScheme: FontScheme | undefined,
-  options: XlsxRenderOptions,
+  config: StyleCacheConfig,
 ): (styleId: StyleId | undefined) => ResolvedCellStyle {
   const cache = new Map<number | undefined, ResolvedCellStyle>();
-  const config: StyleCacheConfig = { styles, colorScheme, fontScheme, options };
 
   return (styleId) => {
     const key = styleId as number | undefined;

@@ -8,7 +8,7 @@ import type { XlsxWorkbook, XlsxWorksheet, XlsxRow } from "@aurochs-office/xlsx/
 import type { XlsxAutoFilter, XlsxFilterType, XlsxFilterColumn, XlsxSortCondition, XlsxSortState } from "@aurochs-office/xlsx/domain/auto-filter";
 import { evaluateAutoFilter } from "@aurochs-office/xlsx/domain/auto-filter-evaluator";
 import { sortWorksheetRows } from "@aurochs-office/xlsx/domain/sort";
-import { colIdx } from "@aurochs-office/xlsx/domain/types";
+import { colIdx, rowIdx } from "@aurochs-office/xlsx/domain/types";
 import { formatRange } from "@aurochs-office/xlsx/domain/cell/address";
 
 function assertValidSheetIndex(workbook: XlsxWorkbook, sheetIndex: number): void {
@@ -29,6 +29,22 @@ function updateSheet(
     idx === sheetIndex ? { ...sheet, ...update } : sheet,
   );
   return { ...workbook, sheets };
+}
+
+/**
+ * Determine the data start row for sorting.
+ * If start and end rows are the same (single-row range), use the start row as-is.
+ * Otherwise, offset the header row by 1 to begin at the first data row.
+ */
+function computeDataStartRow(
+  startRow: ReturnType<typeof rowIdx>,
+  endRow: ReturnType<typeof rowIdx>,
+  headerRow: number,
+): ReturnType<typeof rowIdx> {
+  if (startRow === endRow) {
+    return startRow;
+  }
+  return rowIdx(headerRow + 1);
 }
 
 /**
@@ -58,21 +74,41 @@ export function clearAutoFilter(
 // Filter Column Operations
 // =============================================================================
 
+export type SetFilterColumnParams = {
+  readonly workbook: XlsxWorkbook;
+  readonly sheetIndex: number;
+  /** 0-based column index relative to autoFilter ref */
+  readonly colId: number;
+  /** Filter to apply, or undefined to clear this column's filter */
+  readonly filter: XlsxFilterType | undefined;
+};
+
+/**
+ * Compute updated filterColumns after applying or removing a filter on a specific column.
+ */
+function computeFilterColumns(
+  existingColumns: readonly XlsxFilterColumn[],
+  colIdIdx: ReturnType<typeof colIdx>,
+  filter: XlsxFilterType | undefined,
+): readonly XlsxFilterColumn[] {
+  if (filter === undefined) {
+    return existingColumns.filter((fc) => fc.colId !== colIdIdx);
+  }
+  const existingIndex = existingColumns.findIndex((fc) => fc.colId === colIdIdx);
+  if (existingIndex >= 0) {
+    return existingColumns.map((fc, i) =>
+      i === existingIndex ? { ...fc, filter } : fc,
+    );
+  }
+  return [...existingColumns, { colId: colIdIdx, filter }];
+}
+
 /**
  * Apply a filter condition to a specific column.
  * Updates filterColumn and recalculates row visibility.
- *
- * @param workbook - Current workbook
- * @param sheetIndex - Target sheet index
- * @param colId - 0-based column index relative to autoFilter ref
- * @param filter - Filter to apply, or undefined to clear this column's filter
  */
-export function setFilterColumn(
-  workbook: XlsxWorkbook,
-  sheetIndex: number,
-  colId: number,
-  filter: XlsxFilterType | undefined,
-): XlsxWorkbook {
+export function setFilterColumn(params: SetFilterColumnParams): XlsxWorkbook {
+  const { workbook, sheetIndex, colId, filter } = params;
   assertValidSheetIndex(workbook, sheetIndex);
   const sheet = workbook.sheets[sheetIndex];
   const autoFilter = sheet.autoFilter;
@@ -80,26 +116,9 @@ export function setFilterColumn(
     throw new Error("Cannot set filter column: no autoFilter defined on this sheet");
   }
 
-  // Update or add the filterColumn entry
   const existingColumns = autoFilter.filterColumns ?? [];
   const colIdIdx = colIdx(colId);
-  let newColumns: readonly XlsxFilterColumn[];
-
-  if (filter === undefined) {
-    // Remove this column's filter
-    newColumns = existingColumns.filter((fc) => fc.colId !== colIdIdx);
-  } else {
-    const existingIndex = existingColumns.findIndex((fc) => fc.colId === colIdIdx);
-    if (existingIndex >= 0) {
-      // Update existing
-      newColumns = existingColumns.map((fc, i) =>
-        i === existingIndex ? { ...fc, filter } : fc,
-      );
-    } else {
-      // Add new
-      newColumns = [...existingColumns, { colId: colIdIdx, filter }];
-    }
-  }
+  const newColumns = computeFilterColumns(existingColumns, colIdIdx, filter);
 
   const newAutoFilter: XlsxAutoFilter = {
     ...autoFilter,
@@ -161,12 +180,12 @@ export function applySort(
   const refStartRow = autoFilter.ref.start.row as number;
   const refEndRow = autoFilter.ref.end.row as number;
   const headerRow = Math.min(refStartRow, refEndRow);
-  const dataEndRow = Math.max(refStartRow, refEndRow);
 
   // Build data range ref for the sortState (header+1 to end)
+  const dataStartRow = computeDataStartRow(autoFilter.ref.start.row, autoFilter.ref.end.row, headerRow);
   const dataRange = {
     ...autoFilter.ref,
-    start: { ...autoFilter.ref.start, row: autoFilter.ref.start.row === autoFilter.ref.end.row ? autoFilter.ref.start.row : colIdx(headerRow + 1) as unknown as typeof autoFilter.ref.start.row },
+    start: { ...autoFilter.ref.start, row: dataStartRow },
   };
 
   const sortState: XlsxSortState = {

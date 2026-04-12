@@ -88,9 +88,13 @@ function createChartRenderContext(colorScheme: ColorScheme | undefined, warnings
 
   // Resolve a theme key to hex (with fallback)
   const themeHex = (key: string, fallback: string): string => {
-    if (!colorScheme) return fallback;
+    if (!colorScheme) {
+      return fallback;
+    }
     const val = colorScheme[key];
-    if (!val) return fallback;
+    if (!val) {
+      return fallback;
+    }
     return val.startsWith("#") ? val : `#${val}`;
   };
 

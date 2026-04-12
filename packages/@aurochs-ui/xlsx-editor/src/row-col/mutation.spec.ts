@@ -7,23 +7,25 @@ import type { Cell, CellValue } from "@aurochs-office/xlsx/domain/cell/types";
 import type { CellAddress, CellRange } from "@aurochs-office/xlsx/domain/cell/address";
 import type { XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
 import {
-  deleteColumns,
   deleteRows,
-  hideColumns,
   hideRows,
-  insertColumns,
   insertRows,
-  setColumnWidth,
   setRowHeight,
-  unhideColumns,
   unhideRows,
   groupRows,
   ungroupRows,
   setRowCollapsed,
+} from "@aurochs-office/xlsx/domain/mutation/row";
+import {
+  deleteColumns,
+  hideColumns,
+  insertColumns,
+  setColumnWidth,
+  unhideColumns,
   groupColumns,
   ungroupColumns,
   setColumnCollapsed,
-} from "./mutation";
+} from "@aurochs-office/xlsx/domain/mutation/column";
 
 function addr(col: number, row: number): CellAddress {
   return {

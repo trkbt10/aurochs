@@ -20,7 +20,7 @@ import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { AddIcon, DeleteIcon } from "@aurochs-ui/ui-components/icons";
 import { colorTokens, spacingTokens, fontTokens, radiusTokens } from "@aurochs-ui/ui-components/design-tokens";
 import type { XlsxStyleSheet, XlsxCellXf, XlsxCellStyle } from "@aurochs-office/xlsx/domain/style/types";
-import { xlsxColorToCss } from "../../../selectors/xlsx-color";
+import { xlsxColorToCss } from "@aurochs-ui/xlsx-sheet/selectors/xlsx-color";
 
 // =============================================================================
 // Types
@@ -384,12 +384,15 @@ export function StyleSection({
           placeholder="Style name"
           onChange={(v) => setNewStyleName(String(v))}
           onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              handleCreateSubmit();
-            } else if (e.key === "Escape") {
-              e.preventDefault();
-              handleCreateCancel();
+            switch (e.key) {
+              case "Enter":
+                e.preventDefault();
+                handleCreateSubmit();
+                break;
+              case "Escape":
+                e.preventDefault();
+                handleCreateCancel();
+                break;
             }
           }}
           style={{ flex: 1 }}

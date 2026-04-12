@@ -13,18 +13,19 @@
 
 import type { XlsxWorksheet, XlsxRow, XlsxColumnDef } from "@aurochs-office/xlsx/domain/workbook";
 import type { CellRange } from "@aurochs-office/xlsx/domain/cell/address";
+import { pointsToPixels, columnWidthCharToPixels } from "@aurochs-office/xlsx/domain/style/unit-conversion";
 import type { SheetLayout, CellLayout, XlsxRenderOptions } from "./types";
 
 // =============================================================================
 // Excel Unit Conversions
 // =============================================================================
 
-function columnWidthToPixels(excelWidth: number, scale: number): number {
-  return Math.round(excelWidth * scale);
+function columnWidthToPixels(excelWidth: number, _scale: number): number {
+  return columnWidthCharToPixels(excelWidth);
 }
 
 function rowHeightToPixels(points: number): number {
-  return Math.round(points * (96 / 72));
+  return Math.round(pointsToPixels(points));
 }
 
 // =============================================================================

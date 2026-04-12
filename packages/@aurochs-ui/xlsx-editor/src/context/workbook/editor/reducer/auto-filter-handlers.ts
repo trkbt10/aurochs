@@ -36,7 +36,12 @@ function handleSetFilterColumn(
   action: SetFilterColumnAction,
 ): XlsxEditorState {
   const currentWorkbook = state.workbookHistory.present;
-  const newWorkbook = setFilterColumn(currentWorkbook, action.sheetIndex, action.colId, action.filter);
+  const newWorkbook = setFilterColumn({
+    workbook: currentWorkbook,
+    sheetIndex: action.sheetIndex,
+    colId: action.colId,
+    filter: action.filter,
+  });
   return {
     ...state,
     workbookHistory: pushHistory(state.workbookHistory, newWorkbook),

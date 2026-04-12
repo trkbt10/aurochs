@@ -13,7 +13,7 @@ import type { XlsxBorder } from "@aurochs-office/xlsx/domain/style/border";
 import type { XlsxAlignment } from "@aurochs-office/xlsx/domain/style/types";
 import { getCell } from "@aurochs-office/xlsx/domain/mutation/query";
 import { useXlsxWorkbookEditor } from "../../context/workbook/XlsxWorkbookEditorContext";
-import { resolveCellStyleDetails } from "../../selectors/cell-style-details";
+import { resolveCellStyleDetails } from "@aurochs-ui/xlsx-sheet/selectors/cell-style-details";
 import { resolveSelectionFormatFlags } from "../../selectors/selection-format-flags";
 import { xlsxSelectionToMixedContext } from "../../adapters/editor-controls/xlsx-mixed-state";
 import { buildDecimalFormat, buildScientificFormat } from "./number-format";

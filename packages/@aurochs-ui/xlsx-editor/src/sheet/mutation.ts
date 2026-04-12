@@ -13,12 +13,6 @@ function assertNonEmptyString(value: string, label: string): void {
   }
 }
 
-function assertPositiveInteger(value: number, label: string): void {
-  if (!Number.isInteger(value) || value <= 0) {
-    throw new Error(`${label} must be a positive integer: ${value}`);
-  }
-}
-
 function assertValidSheetIndex(workbook: XlsxWorkbook, sheetIndex: number, label = "sheetIndex"): void {
   if (!Number.isInteger(sheetIndex)) {
     throw new Error(`${label} must be an integer`);

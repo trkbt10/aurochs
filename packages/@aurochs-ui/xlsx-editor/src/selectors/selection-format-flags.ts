@@ -9,7 +9,7 @@
 import type { CellRange } from "@aurochs-office/xlsx/domain/cell/address";
 import type { XlsxAlignment, XlsxStyleSheet } from "@aurochs-office/xlsx/domain/style/types";
 import type { XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
-import { resolveMergedCellXfFromStyleId } from "./cell-xf";
+import { resolveMergedCellXfFromStyleId } from "@aurochs-office/xlsx/domain/style/xf-resolver";
 
 export type SelectionFormatFlags = {
   readonly bold: boolean | boolean[];

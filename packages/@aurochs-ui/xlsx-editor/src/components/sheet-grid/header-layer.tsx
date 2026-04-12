@@ -9,6 +9,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { ContextMenu, type MenuEntry, colorTokens } from "@aurochs-ui/ui-components";
+import { headerCellBaseStyle } from "@aurochs-ui/xlsx-sheet/core";
 import type { CellAddress } from "@aurochs-office/xlsx/domain/cell/address";
 import type { XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
 import { colIdx, rowIdx } from "@aurochs-office/xlsx/domain/types";
@@ -20,7 +21,7 @@ import {
   pixelsToColumnWidthChar,
   pixelsToPoints,
   pointsToPixels,
-} from "../../selectors/sheet-layout";
+} from "@aurochs-ui/xlsx-sheet/selectors/sheet-layout";
 import type { RangeBounds } from "./selection-geometry";
 import { safeReleasePointerCapture, safeSetPointerCapture } from "./pointer-capture";
 import { startWindowPointerDrag } from "./window-pointer-drag";
@@ -71,18 +72,6 @@ export type XlsxSheetGridHeaderLayerProps = {
   readonly focusGridRoot: (target: EventTarget) => void;
   /** Display zoom factor (1 = 100%). */
   readonly zoom: number;
-};
-
-const headerCellBaseStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  boxSizing: "border-box",
-  fontSize: 12,
-  color: `var(--text-secondary, ${colorTokens.text.secondary})`,
-  backgroundColor: `var(--bg-tertiary, ${colorTokens.background.tertiary})`,
-  borderRight: `1px solid var(--border-primary, ${colorTokens.border.primary})`,
-  borderBottom: `1px solid var(--border-primary, ${colorTokens.border.primary})`,
 };
 
 const headerCellSelectedStyle: CSSProperties = {

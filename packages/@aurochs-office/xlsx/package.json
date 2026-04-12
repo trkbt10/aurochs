@@ -131,6 +131,14 @@
       "types": "./src/domain/style/types.ts",
       "default": "./src/domain/style/types.ts"
     },
+    "./domain/style/xf-resolver": {
+      "types": "./src/domain/style/xf-resolver.ts",
+      "default": "./src/domain/style/xf-resolver.ts"
+    },
+    "./domain/style/unit-conversion": {
+      "types": "./src/domain/style/unit-conversion.ts",
+      "default": "./src/domain/style/unit-conversion.ts"
+    },
     "./domain/sheet-utils": {
       "types": "./src/domain/sheet-utils.ts",
       "default": "./src/domain/sheet-utils.ts"

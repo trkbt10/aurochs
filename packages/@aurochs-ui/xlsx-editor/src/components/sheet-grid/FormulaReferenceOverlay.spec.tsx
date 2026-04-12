@@ -8,7 +8,7 @@
 import { render, screen } from "@testing-library/react";
 import { colIdx, rowIdx, sheetId } from "@aurochs-office/xlsx/domain/types";
 import type { FormulaReferenceToken } from "../../formula-edit/types";
-import { createSheetLayout } from "../../selectors/sheet-layout";
+import { createSheetLayout } from "@aurochs-ui/xlsx-sheet/selectors/sheet-layout";
 import { FormulaReferenceOverlay } from "./FormulaReferenceOverlay";
 
 const layout = createSheetLayout(

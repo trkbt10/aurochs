@@ -56,10 +56,7 @@ function range({
 describe("xlsx-editor/context/workbook/editor/reducer/formatting-handlers", () => {
   it("APPLY_STYLE applies styleId to the active sheet and records history", () => {
     const workbook = createWorkbook([createWorksheet("Sheet1", 1)]);
-    // eslint-disable-next-line no-restricted-syntax -- test requires sequential state updates
-    let state = createInitialState(workbook);
-
-    state = xlsxEditorReducer(state, {
+    const state = xlsxEditorReducer(createInitialState(workbook), {
       type: "APPLY_STYLE",
       range: wholeRowRange(3),
       styleId: styleId(9),
@@ -72,11 +69,9 @@ describe("xlsx-editor/context/workbook/editor/reducer/formatting-handlers", () =
 
   it("SET_SELECTION_FORMAT creates a new styleId and applies it to the range", () => {
     const workbook = createWorkbook([createWorksheet("Sheet1", 1)]);
-    // eslint-disable-next-line no-restricted-syntax -- test requires sequential state updates
-    let state = createInitialState(workbook);
 
     const baseFont = workbook.styles.fonts[0]!;
-    state = xlsxEditorReducer(state, {
+    const state = xlsxEditorReducer(createInitialState(workbook), {
       type: "SET_SELECTION_FORMAT",
       range: range({ startCol: 1, startRow: 1, endCol: 1, endRow: 1 }),
       format: {
@@ -105,10 +100,7 @@ describe("xlsx-editor/context/workbook/editor/reducer/formatting-handlers", () =
 
   it("MERGE_CELLS adds a mergeCells range", () => {
     const workbook = createWorkbook([createWorksheet("Sheet1", 1)]);
-    // eslint-disable-next-line no-restricted-syntax -- test requires sequential state updates
-    let state = createInitialState(workbook);
-
-    state = xlsxEditorReducer(state, {
+    const state = xlsxEditorReducer(createInitialState(workbook), {
       type: "MERGE_CELLS",
       range: range({ startCol: 2, startRow: 2, endCol: 1, endRow: 1 }),
     });
@@ -124,10 +116,7 @@ describe("xlsx-editor/context/workbook/editor/reducer/formatting-handlers", () =
         mergeCells: [range({ startCol: 1, startRow: 1, endCol: 2, endRow: 2 })],
       },
     ]);
-    // eslint-disable-next-line no-restricted-syntax -- test requires sequential state updates
-    let state = createInitialState(workbook);
-
-    state = xlsxEditorReducer(state, {
+    const state = xlsxEditorReducer(createInitialState(workbook), {
       type: "UNMERGE_CELLS",
       range: range({ startCol: 2, startRow: 2, endCol: 3, endRow: 3 }),
     });

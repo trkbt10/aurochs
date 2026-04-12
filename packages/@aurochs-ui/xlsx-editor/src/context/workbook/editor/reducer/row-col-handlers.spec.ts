@@ -56,10 +56,10 @@ describe("xlsx-editor/context/workbook/editor/reducer/row-col-handlers", () => {
     };
 
     const workbook = createWorkbook([sheet]);
-    // eslint-disable-next-line no-restricted-syntax -- test requires sequential state updates
-    let state = createInitialState(workbook);
-
-    state = xlsxEditorReducer(state, { type: "INSERT_ROWS", startRow: rowIdx(2), count: 2 });
+    const state = xlsxEditorReducer(
+      createInitialState(workbook),
+      { type: "INSERT_ROWS", startRow: rowIdx(2), count: 2 },
+    );
 
     expect(state.workbookHistory.past).toHaveLength(1);
     const nextSheet = state.workbookHistory.present.sheets[0];

@@ -7,8 +7,8 @@
 
 import type { CellAddress } from "@aurochs-office/xlsx/domain/cell/address";
 import { colIdx, rowIdx } from "@aurochs-office/xlsx/domain/types";
-import type { createSheetLayout } from "../../selectors/sheet-layout";
-import { findMergeForCell, type NormalizedMergeRange } from "../../sheet/merge-range";
+import type { createSheetLayout } from "@aurochs-ui/xlsx-sheet/selectors/sheet-layout";
+import { findMergeForCell, type NormalizedMergeRange } from "@aurochs-ui/xlsx-sheet/sheet/merge-range";
 
 type Layout = ReturnType<typeof createSheetLayout>;
 

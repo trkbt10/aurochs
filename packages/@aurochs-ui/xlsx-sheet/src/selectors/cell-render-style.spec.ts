@@ -158,7 +158,7 @@ describe("resolveCellRenderStyle", () => {
       address,
       cell: { address, value: { type: "empty" }, styleId: styleId(4) },
     });
-    expect(alignmentStyle.whiteSpace).toBe("normal");
+    expect(alignmentStyle.whiteSpace).toBe("pre-wrap");
     expect(alignmentStyle.alignItems).toBe("flex-start");
     expect(alignmentStyle.justifyContent).toBeUndefined();
   });

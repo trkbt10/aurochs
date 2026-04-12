@@ -6,6 +6,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { XlsxWorkbookEditor } from "@aurochs-ui/xlsx-editor";
+import { DEFAULT_SHEET_GRID_METRICS } from "@aurochs-ui/xlsx-sheet/core";
 import type { XlsxWorkbook } from "@aurochs-office/xlsx/domain/workbook";
 import { exportXlsx } from "@aurochs-builder/xlsx/exporter";
 import { Button } from "@aurochs-ui/ui-components";
@@ -74,13 +75,10 @@ export function XlsxEditorPage({ workbook: inputWorkbook, fileName, onBack }: Pr
         workbook={initialWorkbook}
         onWorkbookChange={setCurrentWorkbook}
         grid={{
+          ...DEFAULT_SHEET_GRID_METRICS,
           rowCount: 1_048_576,
           colCount: 16_384,
-          rowHeightPx: 22,
-          colWidthPx: 120,
-          headerSizePx: 32,
-          colHeaderHeightPx: 22,
-          rowHeaderWidthPx: 56,
+          headerSizePx: DEFAULT_SHEET_GRID_METRICS.rowHeaderWidthPx,
           overscanRows: 4,
           overscanCols: 2,
         }}

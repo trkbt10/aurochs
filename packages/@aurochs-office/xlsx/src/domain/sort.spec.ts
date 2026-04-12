@@ -1,4 +1,7 @@
-import { describe, it, expect } from "vitest";
+/**
+ * @file Tests for worksheet row sorting.
+ */
+
 import { sortWorksheetRows } from "./sort";
 import type { CellValue } from "./cell/types";
 import type { CellRange, CellAddress } from "./cell/address";
@@ -14,8 +17,8 @@ function addr(col: number, row: number): CellAddress {
   return { col: colIdx(col), row: rowIdx(row), colAbsolute: false, rowAbsolute: false };
 }
 
-function makeRange(startCol: number, startRow: number, endCol: number, endRow: number): CellRange {
-  return { start: addr(startCol, startRow), end: addr(endCol, endRow) };
+function makeRange(range: { sc: number; sr: number; ec: number; er: number }): CellRange {
+  return { start: addr(range.sc, range.sr), end: addr(range.ec, range.er) };
 }
 
 function makeRow(rowNumber: number, cells: readonly { col: number; value: CellValue }[], extra?: { hidden?: boolean }): XlsxRow {
@@ -59,9 +62,15 @@ function err(v: "#N/A"): CellValue {
 function colValues(ws: XlsxWorksheet, col: number): readonly (string | number | undefined)[] {
   return ws.rows.map((row) => {
     const cell = row.cells.find((c) => (c.address.col as number) === col);
-    if (!cell || cell.value.type === "empty") return undefined;
-    if (cell.value.type === "string") return cell.value.value;
-    if (cell.value.type === "number") return cell.value.value;
+    if (!cell || cell.value.type === "empty") {
+      return undefined;
+    }
+    if (cell.value.type === "string") {
+      return cell.value.value;
+    }
+    if (cell.value.type === "number") {
+      return cell.value.value;
+    }
     return undefined;
   });
 }
@@ -82,7 +91,7 @@ describe("sortWorksheetRows", () => {
       ref: "A2:A4",
       sortConditions: [{ ref: "A2:A4" }], // ascending by default
     };
-    const result = sortWorksheetRows(ws, sortState, makeRange(1, 1, 1, 4));
+    const result = sortWorksheetRows(ws, sortState, makeRange({ sc: 1, sr: 1, ec: 1, er: 4 }));
 
     // Header stays, data rows reordered
     expect(colValues(result, 1)).toEqual(["Header", 10, 20, 30]);
@@ -99,7 +108,7 @@ describe("sortWorksheetRows", () => {
       ref: "A2:A4",
       sortConditions: [{ ref: "A2:A4", descending: true }],
     };
-    const result = sortWorksheetRows(ws, sortState, makeRange(1, 1, 1, 4));
+    const result = sortWorksheetRows(ws, sortState, makeRange({ sc: 1, sr: 1, ec: 1, er: 4 }));
 
     expect(colValues(result, 1)).toEqual(["Header", 30, 20, 10]);
   });
@@ -119,7 +128,7 @@ describe("sortWorksheetRows", () => {
         { ref: "B2:B5", descending: true }, // secondary: score descending
       ],
     };
-    const result = sortWorksheetRows(ws, sortState, makeRange(1, 1, 2, 5));
+    const result = sortWorksheetRows(ws, sortState, makeRange({ sc: 1, sr: 1, ec: 2, er: 5 }));
 
     expect(colValues(result, 1)).toEqual(["Name", "Alice", "Alice", "Bob", "Bob"]);
     expect(colValues(result, 2)).toEqual(["Score", 80, 70, 90, 60]);
@@ -136,7 +145,7 @@ describe("sortWorksheetRows", () => {
       ref: "A2:A4",
       sortConditions: [{ ref: "A2:A4" }],
     };
-    const result = sortWorksheetRows(ws, sortState, makeRange(1, 1, 1, 4));
+    const result = sortWorksheetRows(ws, sortState, makeRange({ sc: 1, sr: 1, ec: 1, er: 4 }));
 
     expect(colValues(result, 1)).toEqual(["H", 10, 20, undefined]);
   });
@@ -152,7 +161,7 @@ describe("sortWorksheetRows", () => {
       ref: "A2:A4",
       sortConditions: [{ ref: "A2:A4", descending: true }],
     };
-    const result = sortWorksheetRows(ws, sortState, makeRange(1, 1, 1, 4));
+    const result = sortWorksheetRows(ws, sortState, makeRange({ sc: 1, sr: 1, ec: 1, er: 4 }));
 
     expect(colValues(result, 1)).toEqual(["H", 20, 10, undefined]);
   });
@@ -171,7 +180,7 @@ describe("sortWorksheetRows", () => {
       ref: "A2:A6",
       sortConditions: [{ ref: "A2:A6" }],
     };
-    const result = sortWorksheetRows(ws, sortState, makeRange(1, 1, 1, 6));
+    const result = sortWorksheetRows(ws, sortState, makeRange({ sc: 1, sr: 1, ec: 1, er: 6 }));
 
     // numbers ascending, then text ascending, then errors
     expect(colValues(result, 1)).toEqual(["H", 1, 5, "Apple", "Banana", undefined]);
@@ -197,7 +206,7 @@ describe("sortWorksheetRows", () => {
       sortConditions: [{ ref: "A2:A4" }],
     };
     // autoFilter ref is A1:A4, so row 5 is outside
-    const result = sortWorksheetRows(ws, sortState, makeRange(1, 1, 1, 4));
+    const result = sortWorksheetRows(ws, sortState, makeRange({ sc: 1, sr: 1, ec: 1, er: 4 }));
 
     expect(colValues(result, 1)).toEqual(["Header", 10, 20, 30, "Footer"]);
     // Row 5 should keep its original row number
@@ -215,7 +224,7 @@ describe("sortWorksheetRows", () => {
       ref: "A2:A4",
       sortConditions: [{ ref: "A2:A4" }],
     };
-    const result = sortWorksheetRows(ws, sortState, makeRange(1, 1, 1, 4));
+    const result = sortWorksheetRows(ws, sortState, makeRange({ sc: 1, sr: 1, ec: 1, er: 4 }));
 
     // After sort, rows are 10, 20, 30
     // The hidden row (originally 30) retains its hidden state
@@ -236,7 +245,7 @@ describe("sortWorksheetRows", () => {
       ref: "A2:A3",
       sortConditions: [{ ref: "A2:A3" }],
     };
-    const result = sortWorksheetRows(ws, sortState, makeRange(1, 1, 1, 3));
+    const result = sortWorksheetRows(ws, sortState, makeRange({ sc: 1, sr: 1, ec: 1, er: 3 }));
 
     // After sort: row 2 has value 10, row 3 has value 30
     expect((result.rows[1].rowNumber as number)).toBe(2);
@@ -257,7 +266,7 @@ describe("sortWorksheetRows", () => {
       ref: "A2:A4",
       sortConditions: [{ ref: "A2:A4" }],
     };
-    const result = sortWorksheetRows(ws, sortState, makeRange(1, 1, 1, 4));
+    const result = sortWorksheetRows(ws, sortState, makeRange({ sc: 1, sr: 1, ec: 1, er: 4 }));
 
     // 10, 20 — the missing row has no cells and is not materialized in output
     expect(colValues(result, 1)).toEqual(["H", 10, 20]);
@@ -273,7 +282,7 @@ describe("sortWorksheetRows", () => {
       ref: "A2:B3",
       sortConditions: [{ ref: "A2:A3" }], // sort by name ascending
     };
-    const result = sortWorksheetRows(ws, sortState, makeRange(1, 1, 2, 3));
+    const result = sortWorksheetRows(ws, sortState, makeRange({ sc: 1, sr: 1, ec: 2, er: 3 }));
 
     expect(colValues(result, 1)).toEqual(["Name", "Alice", "Bob"]);
     expect(colValues(result, 2)).toEqual(["Age", 25, 30]); // ages follow their names

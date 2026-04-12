@@ -12,7 +12,7 @@ import type { XlsxFont } from "@aurochs-office/xlsx/domain/style/font";
 import type { XlsxFill } from "@aurochs-office/xlsx/domain/style/fill";
 import type { XlsxBorder } from "@aurochs-office/xlsx/domain/style/border";
 import { resolveFormatCode } from "@aurochs-office/xlsx/domain/style/number-format";
-import { resolveCellXf } from "./cell-xf";
+import { resolveCellXf } from "@aurochs-office/xlsx/domain/style/xf-resolver";
 
 export type ResolvedCellStyleDetails = {
   readonly styleId: number | undefined;

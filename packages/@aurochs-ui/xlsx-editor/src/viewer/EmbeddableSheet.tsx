@@ -6,6 +6,7 @@
 
 import { useMemo, useState, useCallback, type CSSProperties } from "react";
 import type { XlsxWorkbook } from "@aurochs-office/xlsx/domain/workbook";
+import { DEFAULT_SHEET_GRID_METRICS } from "@aurochs-ui/xlsx-sheet/core";
 import { ZoomControls, getNextZoomValue } from "@aurochs-ui/editor-controls/zoom";
 import {
   EmbeddableContainer,
@@ -56,12 +57,9 @@ export type EmbeddableSheetProps = {
 };
 
 const DEFAULT_METRICS = {
+  ...DEFAULT_SHEET_GRID_METRICS,
   rowCount: 50,
   colCount: 20,
-  rowHeightPx: 24,
-  colWidthPx: 80,
-  rowHeaderWidthPx: 40,
-  colHeaderHeightPx: 24,
 };
 
 /**

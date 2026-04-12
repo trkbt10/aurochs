@@ -41,6 +41,15 @@ export type XlsxFormulaBarProps = {
  * - Editing: reads `editing.text`, writes via `UPDATE_EDIT_TEXT`.
  *   Enter/Tab commits, Escape cancels.
  */
+/** Build input style: in formula mode, make text transparent so the syntax overlay shows through. */
+function resolveFormulaBarInputStyle(base: CSSProperties, isFormulaMode: boolean): CSSProperties {
+  if (isFormulaMode) {
+    return { ...base, color: "transparent", caretColor: "var(--text-primary, #222)" };
+  }
+  return { ...base };
+}
+
+/** Formula bar input with syntax highlighting for formula mode. */
 export function XlsxFormulaBar({ sheet, style, onCommitAndMove }: XlsxFormulaBarProps) {
   const { dispatch, selection, editing } = useXlsxWorkbookEditor();
   const activeCell = selection.activeCell;
@@ -233,13 +242,7 @@ export function XlsxFormulaBar({ sheet, style, onCommitAndMove }: XlsxFormulaBar
   );
 
   const isFormulaMode = editing?.isFormulaMode === true;
-  // eslint-disable-next-line no-restricted-syntax -- assigned conditionally via if/else
-  let inputStyle: CSSProperties;
-  if (isFormulaMode) {
-    inputStyle = { ...style, color: "transparent", caretColor: "var(--text-primary, #222)" };
-  } else {
-    inputStyle = { ...style };
-  }
+  const inputStyle: CSSProperties = resolveFormulaBarInputStyle(style ?? {}, isFormulaMode);
 
   return (
     <div style={{ position: "relative", flex: 1 }}>

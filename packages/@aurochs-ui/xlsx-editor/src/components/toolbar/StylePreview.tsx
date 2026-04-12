@@ -7,7 +7,7 @@
 
 import type { CSSProperties } from "react";
 import type { XlsxStyleSheet, XlsxCellXf } from "@aurochs-office/xlsx/domain/style/types";
-import { xlsxColorToCss } from "../../selectors/xlsx-color";
+import { xlsxColorToCss } from "@aurochs-ui/xlsx-sheet/selectors/xlsx-color";
 import { radiusTokens } from "@aurochs-ui/ui-components/design-tokens";
 
 export type StylePreviewProps = {

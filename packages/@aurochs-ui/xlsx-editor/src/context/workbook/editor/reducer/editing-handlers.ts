@@ -6,6 +6,8 @@
  * source of truth shared by both the formula bar and the inline cell editor.
  */
 
+import type { XlsxWorkbook, XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
+import type { CellAddress } from "@aurochs-office/xlsx/domain/cell/address";
 import type { XlsxEditorAction, XlsxEditorState } from "../types";
 import { createIdleComposition } from "../types";
 import type { HandlerMap } from "./handler-types";
@@ -14,13 +16,21 @@ import { updateCell } from "@aurochs-office/xlsx/domain/mutation/cell";
 import { setCellFormula } from "@aurochs-office/xlsx/domain/mutation/cell";
 import { updateWorksheetInWorkbook } from "../../utils/worksheet-updater";
 import { formatCellEditText } from "../../../../components/cell-input/format-cell-edit-text";
-import { parseCellUserInput } from "../../../../components/cell-input/parse-cell-user-input";
+import { parseCellUserInput, type ParseCellUserInputResult } from "../../../../components/cell-input/parse-cell-user-input";
 
 type EnterCellEditAction = Extract<XlsxEditorAction, { type: "ENTER_CELL_EDIT" }>;
 type UpdateEditTextAction = Extract<XlsxEditorAction, { type: "UPDATE_EDIT_TEXT" }>;
 type SetEditOriginAction = Extract<XlsxEditorAction, { type: "SET_EDIT_ORIGIN" }>;
 type SetCompositionAction = Extract<XlsxEditorAction, { type: "SET_COMPOSITION" }>;
 type InsertCellReferenceAction = Extract<XlsxEditorAction, { type: "INSERT_CELL_REFERENCE" }>;
+
+/** Resolve initial text for a cell edit based on entry mode. */
+function resolveInitialEditText(action: EnterCellEditAction, sheet: XlsxWorksheet): string {
+  if (action.entryMode === "replace" && action.initialChar !== undefined) {
+    return action.initialChar;
+  }
+  return formatCellEditText(sheet, action.address);
+}
 
 function getActiveSheet(state: XlsxEditorState) {
   if (state.activeSheetIndex === undefined) {
@@ -35,14 +45,7 @@ function handleEnterCellEdit(state: XlsxEditorState, action: EnterCellEditAction
     return state;
   }
 
-  const isReplace = action.entryMode === "replace";
-  // eslint-disable-next-line no-restricted-syntax -- assigned conditionally
-  let text: string;
-  if (isReplace && action.initialChar !== undefined) {
-    text = action.initialChar;
-  } else {
-    text = formatCellEditText(sheet, action.address);
-  }
+  const text = resolveInitialEditText(action, sheet);
 
   const caretOffset = text.length;
 
@@ -91,6 +94,20 @@ function handleSetEditOrigin(state: XlsxEditorState, action: SetEditOriginAction
   };
 }
 
+/** Apply a parsed cell input (value or formula) to the workbook. */
+function applyParsedCellInput(params: {
+  readonly workbook: XlsxWorkbook;
+  readonly sheetIndex: number;
+  readonly address: CellAddress;
+  readonly result: ParseCellUserInputResult;
+}): XlsxWorkbook {
+  const { workbook, sheetIndex, address, result } = params;
+  if (result.type === "formula") {
+    return updateWorksheetInWorkbook(workbook, sheetIndex, (ws) => setCellFormula(ws, address, result.formula));
+  }
+  return updateWorksheetInWorkbook(workbook, sheetIndex, (ws) => updateCell(ws, address, result.value));
+}
+
 function handleCommitCellEdit(state: XlsxEditorState): XlsxEditorState {
   const editing = state.editing;
   if (!editing) {
@@ -101,17 +118,12 @@ function handleCommitCellEdit(state: XlsxEditorState): XlsxEditorState {
 
   const result = parseCellUserInput(editing.text);
 
-  // eslint-disable-next-line no-restricted-syntax -- assigned conditionally per parse result type
-  let updatedWorkbook;
-  if (result.type === "formula") {
-    updatedWorkbook = updateWorksheetInWorkbook(state.workbookHistory.present, sheetIndex, (worksheet) =>
-      setCellFormula(worksheet, editing.address, result.formula),
-    );
-  } else {
-    updatedWorkbook = updateWorksheetInWorkbook(state.workbookHistory.present, sheetIndex, (worksheet) =>
-      updateCell(worksheet, editing.address, result.value),
-    );
-  }
+  const updatedWorkbook = applyParsedCellInput({
+    workbook: state.workbookHistory.present,
+    sheetIndex,
+    address: editing.address,
+    result,
+  });
 
   return {
     ...state,

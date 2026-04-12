@@ -7,7 +7,7 @@
  */
 
 import { useMemo, type CSSProperties } from "react";
-import { createSheetLayout } from "../../selectors/sheet-layout";
+import { createSheetLayout } from "@aurochs-ui/xlsx-sheet/selectors/sheet-layout";
 import { getReferenceColor } from "../../formula-edit/formula-reference-colors";
 import type { FormulaReferenceToken } from "../../formula-edit/types";
 import { getSelectedRangeRect, clipRectToViewport, type CellRect } from "./selection-geometry";

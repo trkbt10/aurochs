@@ -66,151 +66,162 @@ const OPERATORS = ["<>", ">=", "<=", "+", "-", "*", "/", "^", "&", "=", ">", "<"
  * All offsets are 0-based, relative to the input string.
  * Returns an empty array for empty input.
  */
-export function tokenizeFormula(formula: string): FormulaTextToken[] {
+/**
+ * Scan a string literal starting at position 0 (which is the opening `"`).
+ * Returns the length of the string literal including quotes.
+ *
+ * Handles escaped quotes (`""`) by scanning character-by-character via recursion.
+ */
+function scanStringLiteral(rest: string): number {
+  return scanStringBody(rest, 1);
+}
+
+/**
+ * Recursively scan the body of a string literal starting at `idx`.
+ * Returns the total length of the string literal (from position 0).
+ */
+function scanStringBody(rest: string, idx: number): number {
+  if (idx >= rest.length) {
+    // Unterminated string — consume all remaining
+    return rest.length;
+  }
+  if (rest[idx] === '"') {
+    // Check if this is an escaped quote (`""`)
+    if (idx + 1 < rest.length && rest[idx + 1] === '"') {
+      return scanStringBody(rest, idx + 2);
+    }
+    // Closing quote found
+    return idx + 1;
+  }
+  return scanStringBody(rest, idx + 1);
+}
+
+/**
+ * Try to match an operator at the start of `rest`.
+ * Returns the matched operator or undefined.
+ */
+function matchOperator(rest: string): (typeof OPERATORS)[number] | undefined {
+  return OPERATORS.find((op) => rest.startsWith(op));
+}
+
+/**
+ * Try to match a single token at the given position.
+ * Returns the token and its length, or undefined if no match.
+ */
+function matchToken(formula: string, pos: number): { token: FormulaTextToken; length: number } | undefined {
+  const rest = formula.slice(pos);
+
+  // Whitespace
+  const wsMatch = rest.match(WHITESPACE_RE);
+  if (wsMatch) {
+    return { token: { type: "whitespace", text: wsMatch[0], startOffset: pos, endOffset: pos + wsMatch[0].length }, length: wsMatch[0].length };
+  }
+
+  // Error literal (#REF!, #NAME?, etc.)
+  const errMatch = rest.match(ERROR_RE);
+  if (errMatch) {
+    return { token: { type: "error", text: errMatch[0], startOffset: pos, endOffset: pos + errMatch[0].length }, length: errMatch[0].length };
+  }
+
+  // String literal
+  if (rest[0] === '"') {
+    const end = scanStringLiteral(rest);
+    return { token: { type: "string", text: rest.slice(0, end), startOffset: pos, endOffset: pos + end }, length: end };
+  }
+
+  // Cell reference (check before identifier to avoid misclassification)
+  const refMatch = rest.match(CELL_REF_RE);
+  if (refMatch) {
+    return { token: { type: "reference", text: refMatch[0], startOffset: pos, endOffset: pos + refMatch[0].length }, length: refMatch[0].length };
+  }
+
+  // Sheet-qualified prefix without a complete reference (e.g., `Sheet1!` while still typing)
+  const sheetMatch = rest.match(SHEET_PREFIX_RE);
+  if (sheetMatch) {
+    return { token: { type: "reference", text: sheetMatch[0], startOffset: pos, endOffset: pos + sheetMatch[0].length }, length: sheetMatch[0].length };
+  }
+
+  // Function name (identifier followed by `(`)
+  const funcMatch = rest.match(FUNCTION_NAME_RE);
+  if (funcMatch) {
+    return { token: { type: "function", text: funcMatch[0], startOffset: pos, endOffset: pos + funcMatch[0].length }, length: funcMatch[0].length };
+  }
+
+  // Bare identifier (named range or incomplete function name)
+  const idMatch = rest.match(IDENTIFIER_RE);
+  if (idMatch) {
+    const upper = idMatch[0].toUpperCase();
+    const type = /^\$?[A-Z]{1,3}$/.test(upper) ? "reference" as const : "function" as const;
+    return { token: { type, text: idMatch[0], startOffset: pos, endOffset: pos + idMatch[0].length }, length: idMatch[0].length };
+  }
+
+  // Number literal
+  const numMatch = rest.match(NUMBER_RE);
+  if (numMatch) {
+    return { token: { type: "literal", text: numMatch[0], startOffset: pos, endOffset: pos + numMatch[0].length }, length: numMatch[0].length };
+  }
+
+  // Multi-character operators (must check before single-char)
+  const op = matchOperator(rest);
+  if (op) {
+    return { token: { type: "operator", text: op, startOffset: pos, endOffset: pos + op.length }, length: op.length };
+  }
+
+  // Parentheses
+  if (rest[0] === "(" || rest[0] === ")") {
+    return { token: { type: "paren", text: rest[0], startOffset: pos, endOffset: pos + 1 }, length: 1 };
+  }
+
+  // Comma
+  if (rest[0] === ",") {
+    return { token: { type: "comma", text: ",", startOffset: pos, endOffset: pos + 1 }, length: 1 };
+  }
+
+  // Semicolon
+  if (rest[0] === ";") {
+    return { token: { type: "semicolon", text: ";", startOffset: pos, endOffset: pos + 1 }, length: 1 };
+  }
+
+  // Colon (standalone, not part of a range — shouldn't normally reach here)
+  if (rest[0] === ":") {
+    return { token: { type: "colon", text: ":", startOffset: pos, endOffset: pos + 1 }, length: 1 };
+  }
+
+  // Brackets
+  if (rest[0] === "{" || rest[0] === "}") {
+    return { token: { type: "bracket", text: rest[0], startOffset: pos, endOffset: pos + 1 }, length: 1 };
+  }
+
+  // Unrecognized character → error token
+  return { token: { type: "error", text: rest[0], startOffset: pos, endOffset: pos + 1 }, length: 1 };
+}
+
+/**
+ * Tokenize by repeatedly matching at the current position.
+ * Uses a mutable cursor object to track position without `let`.
+ */
+function collectTokens(formula: string): FormulaTextToken[] {
+  const cursor = { pos: 0 };
   const tokens: FormulaTextToken[] = [];
-  // eslint-disable-next-line no-restricted-syntax -- incremented in tokenizer loop
-  let pos = 0;
 
-  while (pos < formula.length) {
-    const rest = formula.slice(pos);
-
-    // Whitespace
-    const wsMatch = rest.match(WHITESPACE_RE);
-    if (wsMatch) {
-      tokens.push({ type: "whitespace", text: wsMatch[0], startOffset: pos, endOffset: pos + wsMatch[0].length });
-      pos += wsMatch[0].length;
-      continue;
+  while (cursor.pos < formula.length) {
+    const result = matchToken(formula, cursor.pos);
+    if (!result) {
+      break;
     }
-
-    // Error literal (#REF!, #NAME?, etc.)
-    const errMatch = rest.match(ERROR_RE);
-    if (errMatch) {
-      tokens.push({ type: "error", text: errMatch[0], startOffset: pos, endOffset: pos + errMatch[0].length });
-      pos += errMatch[0].length;
-      continue;
-    }
-
-    // String literal
-    if (rest[0] === '"') {
-      // eslint-disable-next-line no-restricted-syntax -- incremented in string scan loop
-      let end = 1;
-      while (end < rest.length) {
-        if (rest[end] === '"') {
-          if (end + 1 < rest.length && rest[end + 1] === '"') {
-            end += 2; // escaped quote
-          } else {
-            end += 1; // closing quote
-            break;
-          }
-        } else {
-          end += 1;
-        }
-      }
-      tokens.push({ type: "string", text: rest.slice(0, end), startOffset: pos, endOffset: pos + end });
-      pos += end;
-      continue;
-    }
-
-    // Cell reference (check before identifier to avoid misclassification)
-    const refMatch = rest.match(CELL_REF_RE);
-    if (refMatch) {
-      tokens.push({ type: "reference", text: refMatch[0], startOffset: pos, endOffset: pos + refMatch[0].length });
-      pos += refMatch[0].length;
-      continue;
-    }
-
-    // Sheet-qualified prefix without a complete reference (e.g., `Sheet1!` while still typing)
-    const sheetMatch = rest.match(SHEET_PREFIX_RE);
-    if (sheetMatch) {
-      tokens.push({ type: "reference", text: sheetMatch[0], startOffset: pos, endOffset: pos + sheetMatch[0].length });
-      pos += sheetMatch[0].length;
-      continue;
-    }
-
-    // Function name (identifier followed by `(`)
-    const funcMatch = rest.match(FUNCTION_NAME_RE);
-    if (funcMatch) {
-      tokens.push({ type: "function", text: funcMatch[0], startOffset: pos, endOffset: pos + funcMatch[0].length });
-      pos += funcMatch[0].length;
-      continue;
-    }
-
-    // Bare identifier (named range or incomplete function name)
-    const idMatch = rest.match(IDENTIFIER_RE);
-    if (idMatch) {
-      // Distinguish: if it looks like a column-only reference (A-XFD), classify as reference
-      const upper = idMatch[0].toUpperCase();
-      if (/^\$?[A-Z]{1,3}$/.test(upper)) {
-        tokens.push({ type: "reference", text: idMatch[0], startOffset: pos, endOffset: pos + idMatch[0].length });
-      } else {
-        tokens.push({ type: "function", text: idMatch[0], startOffset: pos, endOffset: pos + idMatch[0].length });
-      }
-      pos += idMatch[0].length;
-      continue;
-    }
-
-    // Number literal
-    const numMatch = rest.match(NUMBER_RE);
-    if (numMatch) {
-      tokens.push({ type: "literal", text: numMatch[0], startOffset: pos, endOffset: pos + numMatch[0].length });
-      pos += numMatch[0].length;
-      continue;
-    }
-
-    // Multi-character operators (must check before single-char)
-    // eslint-disable-next-line no-restricted-syntax -- set to true when operator matches
-    let matchedOp = false;
-    for (const op of OPERATORS) {
-      if (rest.startsWith(op)) {
-        tokens.push({ type: "operator", text: op, startOffset: pos, endOffset: pos + op.length });
-        pos += op.length;
-        matchedOp = true;
-        break;
-      }
-    }
-    if (matchedOp) {
-      continue;
-    }
-
-    // Parentheses
-    if (rest[0] === "(" || rest[0] === ")") {
-      tokens.push({ type: "paren", text: rest[0], startOffset: pos, endOffset: pos + 1 });
-      pos += 1;
-      continue;
-    }
-
-    // Comma
-    if (rest[0] === ",") {
-      tokens.push({ type: "comma", text: ",", startOffset: pos, endOffset: pos + 1 });
-      pos += 1;
-      continue;
-    }
-
-    // Semicolon
-    if (rest[0] === ";") {
-      tokens.push({ type: "semicolon", text: ";", startOffset: pos, endOffset: pos + 1 });
-      pos += 1;
-      continue;
-    }
-
-    // Colon (standalone, not part of a range — shouldn't normally reach here)
-    if (rest[0] === ":") {
-      tokens.push({ type: "colon", text: ":", startOffset: pos, endOffset: pos + 1 });
-      pos += 1;
-      continue;
-    }
-
-    // Brackets
-    if (rest[0] === "{" || rest[0] === "}") {
-      tokens.push({ type: "bracket", text: rest[0], startOffset: pos, endOffset: pos + 1 });
-      pos += 1;
-      continue;
-    }
-
-    // Unrecognized character → error token
-    tokens.push({ type: "error", text: rest[0], startOffset: pos, endOffset: pos + 1 });
-    pos += 1;
+    tokens.push(result.token);
+    cursor.pos += result.length;
   }
 
   return tokens;
+}
+
+/**
+ * Tokenize formula text (without leading "=") into FormulaTextToken[].
+ *
+ * All offsets are 0-based, relative to the input string.
+ * Returns an empty array for empty input.
+ */
+export function tokenizeFormula(formula: string): FormulaTextToken[] {
+  return collectTokens(formula);
 }

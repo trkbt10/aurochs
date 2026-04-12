@@ -24,7 +24,7 @@
 
 import type { XlsxWorksheet } from "./workbook";
 import type { XlsxAutoFilter } from "./auto-filter";
-import { colIdx } from "./types";
+import { colIdx, rowIdx } from "./types";
 import { getCellValue } from "./mutation/query";
 
 // =============================================================================
@@ -41,6 +41,44 @@ export type ColumnDataType = "text" | "number" | "date" | "mixed";
 // =============================================================================
 // Implementation
 // =============================================================================
+
+/**
+ * Build an array of 1-based row indices for a range [startRow, endRow].
+ */
+function rowRange(startRow: number, endRow: number): readonly number[] {
+  return Array.from({ length: endRow - startRow + 1 }, (_, i) => startRow + i);
+}
+
+/**
+ * Scan data cells in a column range and classify which primary types are present.
+ */
+function countDataTypes(params: {
+  readonly worksheet: XlsxWorksheet;
+  readonly col1: number;
+  readonly startRow: number;
+  readonly endRow: number;
+}): { hasText: boolean; hasNumber: boolean; hasDate: boolean } {
+  const types = new Set<string>();
+
+  for (const row of rowRange(params.startRow, params.endRow)) {
+    const value = getCellValue(params.worksheet, {
+      col: colIdx(params.col1),
+      row: rowIdx(row),
+      colAbsolute: false,
+      rowAbsolute: false,
+    });
+
+    if (value) {
+      types.add(value.type);
+    }
+  }
+
+  return {
+    hasText: types.has("string"),
+    hasNumber: types.has("number"),
+    hasDate: types.has("date"),
+  };
+}
 
 /**
  * Infer the predominant data type of a column within an autoFilter range.
@@ -69,45 +107,19 @@ export function inferColumnDataType(
   const startRow = (autoFilter.ref.start.row as number) + 1; // skip header
   const endRow = autoFilter.ref.end.row as number;
 
-  let hasText = false;
-  let hasNumber = false;
-  let hasDate = false;
-
-  for (let row = startRow; row <= endRow; row++) {
-    const value = getCellValue(worksheet, {
-      col: colIdx(col1),
-      row: colIdx(row) as unknown as typeof autoFilter.ref.start.row,
-      colAbsolute: false,
-      rowAbsolute: false,
-    });
-
-    if (!value) continue;
-
-    switch (value.type) {
-      case "string":
-        hasText = true;
-        break;
-      case "number":
-        hasNumber = true;
-        break;
-      case "date":
-        hasDate = true;
-        break;
-      // empty, error, boolean — ignored for type determination
-    }
-  }
+  const typeCounts = countDataTypes({ worksheet, col1, startRow, endRow });
 
   // Determine the predominant type
-  if (hasText && (hasNumber || hasDate)) {
+  if (typeCounts.hasText && (typeCounts.hasNumber || typeCounts.hasDate)) {
     return "mixed";
   }
-  if (hasText) {
+  if (typeCounts.hasText) {
     return "text";
   }
-  if (hasDate && !hasNumber) {
+  if (typeCounts.hasDate && !typeCounts.hasNumber) {
     return "date";
   }
-  if (hasNumber || hasDate) {
+  if (typeCounts.hasNumber || typeCounts.hasDate) {
     // number+date → "number" (dates are numeric in Excel)
     return "number";
   }

@@ -10,21 +10,23 @@ import { pushHistory } from "@aurochs-ui/editor-core/history";
 import {
   insertRows,
   deleteRows,
-  insertColumns,
-  deleteColumns,
   setRowHeight,
-  setColumnWidth,
   hideRows,
   unhideRows,
-  hideColumns,
-  unhideColumns,
   groupRows,
   ungroupRows,
   setRowCollapsed,
+} from "@aurochs-office/xlsx/domain/mutation/row";
+import {
+  insertColumns,
+  deleteColumns,
+  setColumnWidth,
+  hideColumns,
+  unhideColumns,
   groupColumns,
   ungroupColumns,
   setColumnCollapsed,
-} from "../../../../row-col/mutation";
+} from "@aurochs-office/xlsx/domain/mutation/column";
 import { updateWorksheetInWorkbook } from "../../utils/worksheet-updater";
 
 type InsertRowsAction = Extract<XlsxEditorAction, { type: "INSERT_ROWS" }>;

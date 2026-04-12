@@ -8,7 +8,7 @@ import { render, screen } from "@testing-library/react";
 import type { XlsxWorkbook, XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
 import { createDefaultStyleSheet } from "@aurochs-office/xlsx/domain/style/types";
 import { colIdx, rowIdx, sheetId, styleId, fontId, fillId, borderId, numFmtId } from "@aurochs-office/xlsx/domain/types";
-import { createSheetLayout } from "../../selectors/sheet-layout";
+import { createSheetLayout } from "@aurochs-ui/xlsx-sheet/selectors/sheet-layout";
 import { createFormulaEvaluator } from "@aurochs-office/xlsx/formula/evaluator";
 import { XlsxSheetGridCellsLayer } from "./cells-layer";
 

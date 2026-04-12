@@ -8,8 +8,8 @@
 import type { CellAddress, CellRange } from "@aurochs-office/xlsx/domain/cell/address";
 import { colIdx as colIdxFn, rowIdx as rowIdxFn } from "@aurochs-office/xlsx/domain/types";
 import type { XlsxEditorAction } from "../../context/workbook/editor/types";
-import type { createSheetLayout } from "../../selectors/sheet-layout";
-import type { NormalizedMergeRange } from "../../sheet/merge-range";
+import type { createSheetLayout } from "@aurochs-ui/xlsx-sheet/selectors/sheet-layout";
+import type { NormalizedMergeRange } from "@aurochs-ui/xlsx-sheet/sheet/merge-range";
 import { getRangeBounds } from "./selection-geometry";
 import { safeReleasePointerCapture, safeSetPointerCapture } from "./pointer-capture";
 import { startWindowPointerDrag } from "./window-pointer-drag";
