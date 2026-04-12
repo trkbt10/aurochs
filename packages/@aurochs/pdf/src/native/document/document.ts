@@ -12,10 +12,12 @@ import { createStandardDecrypter } from "../encryption/standard";
 export type NativePdfEncryptionMode =
   | { readonly mode: "reject" }
   | { readonly mode: "ignore" }
+  | { readonly mode: "auto" }
   | { readonly mode: "password"; readonly password: string };
 
 export type NativePdfLoadOptions = Readonly<{
-  readonly encryption: NativePdfEncryptionMode;
+  /** How to handle encrypted PDFs. Defaults to `"auto"` (try empty password). */
+  readonly encryption?: NativePdfEncryptionMode;
 }>;
 
 export type NativePdfMetadata = Readonly<{
@@ -338,7 +340,6 @@ export function createNativePdfDocument(
 ): NativePdfDocument {
   if (!bytes) {throw new Error("bytes is required");}
   if (!options) {throw new Error("options is required");}
-  if (!options.encryption) {throw new Error("options.encryption is required");}
 
   const xref = loadXRef(bytes);
   const trailer = xref.trailer;
@@ -390,13 +391,22 @@ function createPdfResolverWithEncryption({
     return createPdfResolver(bytes, xref);
   }
 
-  if (options.encryption.mode === "reject") {
+  const encryption = options.encryption ?? { mode: "auto" as const };
+
+  if (encryption.mode === "reject") {
     throw new Error("Encrypted PDF");
   }
 
-  if (options.encryption.mode !== "password") {
+  if (encryption.mode === "ignore") {
     return createPdfResolver(bytes, xref);
   }
+
+  // "auto" mode: try empty password first.
+  // PDF spec (ISO 32000-1 §7.6.3.1): conforming readers shall first try to
+  // authenticate the empty string as user password. If that succeeds the
+  // document opens without prompting.
+  // "password" mode: use the provided password.
+  const password = encryption.mode === "auto" ? "" : encryption.password;
 
   const idArr = asArray(dictGet(trailer, "ID"));
   const id0 = idArr && idArr.length > 0 ? asString(idArr[0])?.bytes : null;
@@ -407,16 +417,24 @@ function createPdfResolverWithEncryption({
   const encryptDict = asDict(encryptObj);
   if (!encryptDict) {throw new Error("Encrypted PDF: /Encrypt is not a dictionary");}
 
-  const decrypter = createStandardDecrypter({
-    encryptDict,
-    fileId0: id0,
-    password: options.encryption.password,
-  });
+  try {
+    const decrypter = createStandardDecrypter({
+      encryptDict,
+      fileId0: id0,
+      password,
+    });
 
-  return createPdfResolver(bytes, xref, {
-    decrypter,
-    skipDecryptObjectNums: new Set([encryptRef.obj]),
-  });
+    return createPdfResolver(bytes, xref, {
+      decrypter,
+      skipDecryptObjectNums: new Set([encryptRef.obj]),
+    });
+  } catch (e) {
+    if (encryption.mode === "auto") {
+      // Empty password failed — this PDF requires a real password.
+      throw new Error("Encrypted PDF");
+    }
+    throw e;
+  }
 }
 
 function createNativePdfPages(pageDicts: readonly PdfDict[], resolver: PdfResolver): readonly NativePdfPage[] {

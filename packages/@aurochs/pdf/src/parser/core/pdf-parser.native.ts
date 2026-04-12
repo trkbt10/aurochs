@@ -119,7 +119,7 @@ const DEFAULT_PARSE_OPTIONS: Required<PdfParseOptions> = {
   softMaskVectorMaxSize: 0,
   shadingMaxSize: 0,
   clipPathMaxSize: 0,
-  encryption: { mode: "reject" },
+  encryption: { mode: "auto" },
 };
 
 const DEFAULT_BUILD_OPTIONS: Required<PdfBuildOptions> = {

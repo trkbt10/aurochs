@@ -7,6 +7,7 @@ export type PdfLoadPurpose = "parse" | "inspect";
 export type PdfLoadEncryption =
   | { readonly mode: "reject" }
   | { readonly mode: "ignore" }
+  | { readonly mode: "auto" }
   | { readonly mode: "password"; readonly password: string };
 
 export type PdfLoadOptions = Readonly<{
@@ -15,8 +16,8 @@ export type PdfLoadOptions = Readonly<{
    * Used to keep call sites explicit and to preserve flexibility for future behaviors.
    */
   readonly purpose: PdfLoadPurpose;
-  /** How to handle encrypted PDFs. */
-  readonly encryption: PdfLoadEncryption;
+  /** How to handle encrypted PDFs. Defaults to `"auto"` (try empty password). */
+  readonly encryption?: PdfLoadEncryption;
   /**
    * Historically forwarded to pdf-lib. Kept for API stability.
    * Native loader ignores this field.

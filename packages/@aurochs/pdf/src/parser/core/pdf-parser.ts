@@ -90,7 +90,6 @@ export {
 export async function getPdfPageCount(data: Uint8Array | ArrayBuffer): Promise<number> {
   const pdfDoc = await loadNativePdfDocumentForParser(data, {
     purpose: "inspect",
-    encryption: { mode: "ignore" },
     updateMetadata: false,
   });
   return pdfDoc.getPageCount();
@@ -113,7 +112,6 @@ export async function getPdfPageDimensions(
 ): Promise<{ width: number; height: number } | null> {
   const pdfDoc = await loadNativePdfDocumentForParser(data, {
     purpose: "inspect",
-    encryption: { mode: "ignore" },
     updateMetadata: false,
   });
 

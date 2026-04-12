@@ -432,9 +432,10 @@ export function App() {
     [pdf],
   );
 
-  const handleStartPdfEditor = useCallback(() => {
+  const handleStartPdfEditor = useCallback(async () => {
+    await pdf.ensureDocument();
     navigate("/pdf/editor");
-  }, [navigate]);
+  }, [navigate, pdf]);
 
   const handleExitPdfEditor = useCallback(() => {
     if (pdf.data) {

@@ -44,7 +44,6 @@ export async function loadNativePdfDocumentForParser(
   if (!data) {throw new Error("data is required");}
   if (!options) {throw new Error("options is required");}
   if (!options.purpose) {throw new Error("options.purpose is required");}
-  if (!options.encryption) {throw new Error("options.encryption is required");}
   if (typeof options.updateMetadata !== "boolean") {throw new Error("options.updateMetadata must be a boolean");}
 
   try {
