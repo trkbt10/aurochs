@@ -6,7 +6,7 @@
 
 import { useCallback } from "react";
 import { useFileLoader } from "./useFileLoader";
-import { createFigDesignDocument, createDemoFigDesignDocument } from "@aurochs-builder/fig/context";
+import { createFigDesignDocument, createEmptyFigDesignDocument } from "@aurochs-builder/fig/context";
 import type { FigDesignDocument } from "@aurochs/fig/domain";
 
 type UseFigReturn = {
@@ -57,7 +57,7 @@ export function useFig(): UseFigReturn {
 
   const loadDemo = useCallback(() => {
     loader.load("demo.fig", async () => {
-      return createDemoFigDesignDocument();
+      return createEmptyFigDesignDocument("Page 1");
     });
   }, [loader]);
 
