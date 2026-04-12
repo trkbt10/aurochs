@@ -66,6 +66,10 @@
       "types": "./src/symbols/index.ts",
       "default": "./src/symbols/index.ts"
     },
+    "./roundtrip": {
+      "types": "./src/roundtrip/index.ts",
+      "default": "./src/roundtrip/index.ts"
+    },
     "./test-helpers": {
       "types": "./src/kiwi/test-helpers.ts",
       "default": "./src/kiwi/test-helpers.ts"

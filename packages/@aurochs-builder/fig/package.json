@@ -1,0 +1,45 @@
+{
+  "name": "@aurochs-builder/fig",
+  "version": "0.11.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "dependencies": {
+    "@aurochs/fig": "workspace:*"
+  },
+  "scripts": {
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit --rootDir ../../..",
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-builder/fig/src'"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./types": {
+      "types": "./src/types/index.ts",
+      "default": "./src/types/index.ts"
+    },
+    "./context": {
+      "types": "./src/context/index.ts",
+      "default": "./src/context/index.ts"
+    },
+    "./export": {
+      "types": "./src/export/index.ts",
+      "default": "./src/export/index.ts"
+    },
+    "./page-ops": {
+      "types": "./src/page-ops/index.ts",
+      "default": "./src/page-ops/index.ts"
+    },
+    "./node-ops": {
+      "types": "./src/node-ops/index.ts",
+      "default": "./src/node-ops/index.ts"
+    },
+    "./builders": {
+      "types": "./src/builders/index.ts",
+      "default": "./src/builders/index.ts"
+    }
+  }
+}

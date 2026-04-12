@@ -14,13 +14,14 @@ import "./LandingPage.css";
 // Types
 // =============================================================================
 
-type FileType = "pptx" | "pdf" | "docx" | "xlsx";
+type FileType = "pptx" | "pdf" | "docx" | "xlsx" | "fig";
 
 export type FileSelectResult =
   | { readonly type: "pptx"; readonly file: File }
   | { readonly type: "pdf"; readonly file: File }
   | { readonly type: "docx"; readonly file: File }
-  | { readonly type: "xlsx"; readonly file: File };
+  | { readonly type: "xlsx"; readonly file: File }
+  | { readonly type: "fig"; readonly file: File };
 
 type Props = {
   readonly onFileSelect: (result: FileSelectResult) => void;
@@ -34,6 +35,8 @@ type Props = {
   readonly onPdfEditorDemo: () => void;
   readonly onPotxEditorDemo: () => void;
   readonly onPptxSuiteDemo: () => void;
+  readonly onFigViewerDemo: () => void;
+  readonly onFigEditorDemo: () => void;
   readonly isLoading?: boolean;
 };
 
@@ -41,7 +44,7 @@ type Props = {
 // Helpers
 // =============================================================================
 
-const ACCEPTED_EXTENSIONS = ".pptx,.pdf,.docx,.xlsx,.xls";
+const ACCEPTED_EXTENSIONS = ".pptx,.pdf,.docx,.xlsx,.xls,.fig";
 
 function detectFileType(file: File): FileType | null {
   const name = file.name.toLowerCase();
@@ -49,6 +52,7 @@ function detectFileType(file: File): FileType | null {
   if (name.endsWith(".pdf")) {return "pdf";}
   if (name.endsWith(".docx")) {return "docx";}
   if (name.endsWith(".xlsx") || name.endsWith(".xls")) {return "xlsx";}
+  if (name.endsWith(".fig")) {return "fig";}
   return null;
 }
 
@@ -95,6 +99,8 @@ export function LandingPage({
   onPdfEditorDemo,
   onPotxEditorDemo,
   onPptxSuiteDemo,
+  onFigViewerDemo,
+  onFigEditorDemo,
   isLoading,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -369,6 +375,27 @@ export function LandingPage({
                 <button className="demo-card-btn" onClick={onPptxSuiteDemo} disabled={isLoading}>
                   <GridIcon size={14} />
                   <span>Suite</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Fig Design Card */}
+            <div className="landing-demo-card">
+              <div className="demo-card-header">
+                <span className="demo-card-icon fig">F</span>
+                <div className="demo-card-info">
+                  <span className="demo-card-title">.fig</span>
+                  <span className="demo-card-subtitle">Design</span>
+                </div>
+              </div>
+              <div className="demo-card-actions">
+                <button className="demo-card-btn" onClick={onFigViewerDemo} disabled={isLoading}>
+                  <PlayIcon size={14} />
+                  <span>View</span>
+                </button>
+                <button className="demo-card-btn" onClick={onFigEditorDemo} disabled={isLoading}>
+                  <EditIcon size={14} />
+                  <span>Edit</span>
                 </button>
               </div>
             </div>

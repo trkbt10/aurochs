@@ -148,6 +148,13 @@
         "@aurochs-office/ooxml": "workspace:*",
       },
     },
+    "packages/@aurochs-builder/fig": {
+      "name": "@aurochs-builder/fig",
+      "version": "0.11.0",
+      "dependencies": {
+        "@aurochs/fig": "workspace:*",
+      },
+    },
     "packages/@aurochs-builder/mermaid": {
       "name": "@aurochs-builder/mermaid",
       "version": "0.11.0",
@@ -729,6 +736,22 @@
         "react": "^18.0.0 || ^19.0.0",
       },
     },
+    "packages/@aurochs-ui/fig-editor": {
+      "name": "@aurochs-ui/fig-editor",
+      "version": "0.11.0",
+      "dependencies": {
+        "@aurochs-builder/fig": "workspace:*",
+        "@aurochs-renderer/fig": "workspace:*",
+        "@aurochs-ui/editor-controls": "workspace:*",
+        "@aurochs-ui/editor-core": "workspace:*",
+        "@aurochs-ui/ui-components": "workspace:*",
+        "@aurochs/fig": "workspace:*",
+      },
+      "peerDependencies": {
+        "react": "^18.0.0 || ^19.0.0",
+        "react-dom": "^18.0.0 || ^19.0.0",
+      },
+    },
     "packages/@aurochs-ui/ooxml-components": {
       "name": "@aurochs-ui/ooxml-components",
       "version": "0.11.0",
@@ -1062,6 +1085,8 @@
 
     "@aurochs-builder/drawing-ml": ["@aurochs-builder/drawing-ml@workspace:packages/@aurochs-builder/drawing-ml"],
 
+    "@aurochs-builder/fig": ["@aurochs-builder/fig@workspace:packages/@aurochs-builder/fig"],
+
     "@aurochs-builder/mermaid": ["@aurochs-builder/mermaid@workspace:packages/@aurochs-builder/mermaid"],
 
     "@aurochs-builder/pdf": ["@aurochs-builder/pdf@workspace:packages/@aurochs-builder/pdf"],
@@ -1153,6 +1178,8 @@
     "@aurochs-ui/editor-controls": ["@aurochs-ui/editor-controls@workspace:packages/@aurochs-ui/editor-controls"],
 
     "@aurochs-ui/editor-core": ["@aurochs-ui/editor-core@workspace:packages/@aurochs-ui/editor-core"],
+
+    "@aurochs-ui/fig-editor": ["@aurochs-ui/fig-editor@workspace:packages/@aurochs-ui/fig-editor"],
 
     "@aurochs-ui/ooxml-components": ["@aurochs-ui/ooxml-components@workspace:packages/@aurochs-ui/ooxml-components"],
 

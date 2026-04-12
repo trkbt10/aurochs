@@ -6,7 +6,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { Routes, Route, Navigate, useNavigate, useParams } from "react-router-dom";
-import { usePptx, useDocx, useXlsx, usePdf } from "./hooks";
+import { usePptx, useDocx, useXlsx, usePdf, useFig } from "./hooks";
 import { LandingPage, type FileSelectResult } from "./pages/LandingPage";
 import { PptxViewerPage } from "./pages/PptxViewerPage";
 import { PptxSlideshowPage } from "./pages/PptxSlideshowPage";
@@ -20,6 +20,8 @@ import { PdfEditorPage } from "./pages/PdfEditorPage";
 import { PotxEditorPage } from "./pages/PotxEditorPage";
 import { TextEditTestPage } from "@aurochs-ui/potx-editor/dev/TextEditTestPage";
 import { PresentationSuitePage } from "./pages/PresentationSuitePage";
+import { FigEditorPage } from "./pages/FigEditorPage";
+import { FigViewerPage } from "./pages/FigViewerPage";
 import { createDefaultGraphicsState, type PdfDocument as PdfDoc } from "@aurochs/pdf";
 import { convertToPresentationDocument, type PresentationDocument } from "@aurochs-office/pptx/app";
 import "./App.css";
@@ -80,6 +82,7 @@ export function App() {
   const docx = useDocx();
   const xlsx = useXlsx();
   const pdf = usePdf();
+  const fig = useFig();
 
   // ---- Event Handlers ----
 
@@ -119,9 +122,19 @@ export function App() {
           xlsx.loadFromFile(result.file);
           navigate("/xlsx/editor");
           break;
+        case "fig":
+          pptx.reset();
+          docx.reset();
+          xlsx.reset();
+          pdf.reset();
+          setImportedDocument(null);
+          setImportedFileName(null);
+          fig.loadFromFile(result.file);
+          navigate("/fig/viewer");
+          break;
       }
     },
-    [pptx, docx, xlsx, navigate],
+    [pptx, docx, xlsx, fig, navigate],
   );
 
   const handlePptxDemo = useCallback(() => {
@@ -200,6 +213,28 @@ export function App() {
     navigate("/potx/editor");
   }, [navigate]);
 
+  const handleFigViewerDemo = useCallback(() => {
+    pptx.reset();
+    docx.reset();
+    xlsx.reset();
+    pdf.reset();
+    setImportedDocument(null);
+    setImportedFileName(null);
+    fig.loadDemo();
+    navigate("/fig/viewer");
+  }, [pptx, docx, xlsx, pdf, fig, navigate]);
+
+  const handleFigEditorDemo = useCallback(() => {
+    pptx.reset();
+    docx.reset();
+    xlsx.reset();
+    pdf.reset();
+    setImportedDocument(null);
+    setImportedFileName(null);
+    fig.loadDemo();
+    navigate("/fig/editor");
+  }, [pptx, docx, xlsx, pdf, fig, navigate]);
+
   const handlePptxSuiteDemo = useCallback(() => {
     setImportedDocument(null);
     setImportedFileName(null);
@@ -216,8 +251,9 @@ export function App() {
     docx.reset();
     xlsx.reset();
     pdf.reset();
+    fig.reset();
     navigate("/");
-  }, [pptx, docx, xlsx, pdf, navigate]);
+  }, [pptx, docx, xlsx, pdf, fig, navigate]);
 
   const handleStartSlideshow = useCallback(
     (slideNumber: number) => {
@@ -253,7 +289,7 @@ export function App() {
     }
   }, [pptx.presentation]);
 
-  const isLoading = pptx.status === "loading" || docx.status === "loading" || xlsx.status === "loading" || pdf.status === "loading";
+  const isLoading = pptx.status === "loading" || docx.status === "loading" || xlsx.status === "loading" || pdf.status === "loading" || fig.status === "loading";
 
   // ---- Error state ----
 
@@ -293,6 +329,8 @@ export function App() {
       onPdfEditorDemo={handlePdfEditorDemo}
       onPotxEditorDemo={handlePotxEditorDemo}
       onPptxSuiteDemo={handlePptxSuiteDemo}
+      onFigViewerDemo={handleFigViewerDemo}
+      onFigEditorDemo={handleFigEditorDemo}
       isLoading={isLoading}
     />
   );
@@ -313,6 +351,8 @@ export function App() {
             onPdfEditorDemo={handlePdfEditorDemo}
             onPotxEditorDemo={handlePotxEditorDemo}
             onPptxSuiteDemo={handlePptxSuiteDemo}
+            onFigViewerDemo={handleFigViewerDemo}
+            onFigEditorDemo={handleFigEditorDemo}
             isLoading
           />
         );
@@ -429,6 +469,49 @@ export function App() {
     <PotxEditorPage onBack={handleBack} />
   );
 
+  const handleFigFileSelect = useCallback(
+    (file: File) => {
+      fig.loadFromFile(file);
+    },
+    [fig],
+  );
+
+  const handleStartFigEditor = useCallback(() => {
+    navigate("/fig/editor");
+  }, [navigate]);
+
+  const handleExitFigEditor = useCallback(() => {
+    if (fig.document) {
+      navigate("/fig/viewer");
+      return;
+    }
+    handleBack();
+  }, [handleBack, navigate, fig.document]);
+
+  const FigViewerRoute = () => (
+    <FigViewerPage
+      document={fig.document}
+      fileName={fig.fileName}
+      onBack={handleBack}
+      onFileSelect={handleFigFileSelect}
+      onStartEditor={fig.document ? handleStartFigEditor : undefined}
+    />
+  );
+
+  const FigEditorRoute = () => {
+    const doc = fig.document;
+    if (!doc) {
+      return <Navigate to="/" replace />;
+    }
+    return (
+      <FigEditorPage
+        document={doc}
+        fileName={fig.fileName ?? "design.fig"}
+        onBack={handleExitFigEditor}
+      />
+    );
+  };
+
   const PresentationSuiteRoute = () => {
     const activeDocument = importedDocument ?? editorDocument;
     if (!activeDocument) {
@@ -455,6 +538,8 @@ export function App() {
       <Route path="/potx/editor" element={<PotxEditorRoute />} />
       <Route path="/potx/editor/dev/text-edit" element={<TextEditTestPage onBack={handleBack} />} />
       <Route path="/pptx/suite" element={<PresentationSuiteRoute />} />
+      <Route path="/fig/viewer" element={<FigViewerRoute />} />
+      <Route path="/fig/editor" element={<FigEditorRoute />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
