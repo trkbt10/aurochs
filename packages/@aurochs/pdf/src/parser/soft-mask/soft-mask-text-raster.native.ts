@@ -150,16 +150,16 @@ function computeOrientedBoxForRun(run: TextRun, fontMappings: FontMappings): Ori
   const tmF = run.textMatrix[5] ?? 0;
   const textSpaceY = tmF + run.textRise;
 
-  const displacement = calculateTextDisplacement(
-    run.text,
-    run.fontSize,
-    run.charSpacing,
-    run.wordSpacing,
-    run.horizontalScaling,
+  const displacement = calculateTextDisplacement({
+    text: run.text,
+    fontSize: run.fontSize,
+    charSpacing: run.charSpacing,
+    wordSpacing: run.wordSpacing,
+    horizontalScaling: run.horizontalScaling,
     metrics,
     codeByteWidth,
-    0,
-  );
+    tjAdjustment: 0,
+  });
 
   const start = transformPoint({ x: tmE, y: textSpaceY }, run.graphicsState.ctm);
   const end = transformPoint({ x: tmE + displacement, y: textSpaceY }, run.graphicsState.ctm);

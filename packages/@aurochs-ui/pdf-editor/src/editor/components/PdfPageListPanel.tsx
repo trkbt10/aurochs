@@ -9,6 +9,7 @@
 import { useMemo } from "react";
 import type { PdfPage } from "@aurochs/pdf";
 import { PDF_PAGE_SIZES } from "@aurochs/pdf";
+import type { FontProvider } from "@aurochs/pdf/domain/font";
 import { renderPdfPageToSvgNode } from "@aurochs-renderer/pdf/svg";
 import { svgElementToJsx } from "@aurochs-renderer/svg";
 import { ItemList } from "@aurochs-ui/editor-controls/item-list";
@@ -21,6 +22,7 @@ import { thumbnailInnerStyle } from "@aurochs-ui/editor-controls/item-list";
 export type PdfPageListPanelProps = {
   readonly pages: readonly PdfPage[];
   readonly currentPageIndex: number;
+  readonly fontProvider?: FontProvider;
   readonly onPageSelect: (pageIndex: number) => void;
   readonly onAddPage?: (atIndex: number) => void;
   readonly onDeletePages?: (pageIndices: readonly number[]) => void;
@@ -37,10 +39,10 @@ type PdfPageItem = {
 // Page Thumbnail
 // =============================================================================
 
-function PageThumbnail({ page }: { readonly page: PdfPage }) {
+function PageThumbnail({ page, fontProvider }: { readonly page: PdfPage; readonly fontProvider?: FontProvider }) {
   const svgElement = useMemo(
-    () => svgElementToJsx(renderPdfPageToSvgNode(page, { width: "100%", height: "100%" })),
-    [page],
+    () => svgElementToJsx(renderPdfPageToSvgNode(page, { width: "100%", height: "100%", fontProvider })),
+    [page, fontProvider],
   );
   return (
     <div style={thumbnailInnerStyle}>
@@ -57,6 +59,7 @@ function PageThumbnail({ page }: { readonly page: PdfPage }) {
 export function PdfPageListPanel({
   pages,
   currentPageIndex,
+  fontProvider,
   onPageSelect,
   onAddPage,
   onDeletePages,
@@ -85,7 +88,7 @@ export function PdfPageListPanel({
       mode={hasOperations ? "editable" : "readonly"}
       activeItemId={currentPageIndex}
       itemLabel="Page"
-      renderThumbnail={(item) => <PageThumbnail page={item.page} />}
+      renderThumbnail={(item) => <PageThumbnail page={item.page} fontProvider={fontProvider} />}
       onItemClick={(id) => onPageSelect(id)}
       onAddItem={onAddPage}
       onDeleteItems={onDeletePages}

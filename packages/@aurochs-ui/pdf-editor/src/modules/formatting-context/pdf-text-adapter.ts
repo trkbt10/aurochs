@@ -6,6 +6,7 @@
  */
 
 import type { PdfText } from "@aurochs/pdf";
+import { withFontFamily, withFontSize, withCharSpacing } from "@aurochs/pdf";
 import type { FormattingAdapter } from "@aurochs-ui/editor-controls/formatting-adapter";
 import type { TextFormatting } from "@aurochs-ui/editor-controls/text";
 
@@ -38,23 +39,19 @@ export const pdfTextAdapter: FormattingAdapter<PdfText, TextFormatting> = {
     return {
       fontFamily: value.baseFont ?? value.fontName,
       fontSize: value.fontSize,
-      bold: value.isBold ?? undefined,
-      italic: value.isItalic ?? undefined,
+      bold: value.isBold,
+      italic: value.isItalic,
       textColor: pdfFillColorToHex(value.graphicsState),
-      letterSpacing: value.charSpacing ?? undefined,
+      letterSpacing: value.charSpacing,
     };
   },
 
   applyUpdate(current: PdfText, update: Partial<TextFormatting>): PdfText {
-    const r: Record<string, unknown> = { ...current };
-
-    if ("fontSize" in update && update.fontSize !== undefined) {
-      r.fontSize = update.fontSize;
-    }
-    if ("letterSpacing" in update) {
-      r.charSpacing = update.letterSpacing ?? undefined;
-    }
-
-    return r as PdfText;
+    const operations: ReadonlyArray<(el: PdfText) => PdfText> = [
+      (el) => "fontSize" in update && update.fontSize !== undefined ? withFontSize(el, update.fontSize) : el,
+      (el) => "letterSpacing" in update ? withCharSpacing(el, update.letterSpacing) : el,
+      (el) => "fontFamily" in update && update.fontFamily !== undefined ? withFontFamily(el, update.fontFamily) : el,
+    ];
+    return operations.reduce((el, op) => op(el), current);
   },
 };

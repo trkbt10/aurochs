@@ -37,6 +37,7 @@ export { PATH_CONSTRUCTION_HANDLERS, PATH_PAINTING_HANDLERS, pathHandlers } from
 export { COLOR_HANDLERS, colorHandlers } from "./color-handlers";
 export { GRAPHICS_STATE_HANDLERS, graphicsStateHandlers } from "./graphics-state-handlers";
 export { TEXT_HANDLERS, textHandlers, createInitialTextState, calculateTextDisplacement, calculateEffectiveFontSize, getGlyphWidth, createTextRun } from "./text-handlers";
+export type { TextDisplacementParams, VerticalTextDisplacementParams } from "./text-handlers";
 export { SHADING_HANDLERS, shadingHandlers } from "./shading-handlers";
 export { XOBJECT_HANDLERS, xobjectHandlers } from "./xobject-handlers";
 

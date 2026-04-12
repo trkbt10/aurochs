@@ -48,7 +48,7 @@ export type PdfPageCanvasProps = {
   readonly onClearSelection: () => void;
   readonly onSelectMultiple: (elementIds: readonly PdfElementId[]) => void;
   // --- Move ---
-  readonly onStartMove: (startX: number, startY: number, clientX: number, clientY: number) => void;
+  readonly onStartMove: (args: { readonly startX: number; readonly startY: number; readonly clientX: number; readonly clientY: number }) => void;
   readonly onConfirmMove: (clientX: number, clientY: number) => void;
   readonly onUpdateMove: (currentX: number, currentY: number) => void;
   readonly onEndMove: () => void;
@@ -121,7 +121,7 @@ export function PdfPageCanvas({
       if (!isSelected(selection, elementId)) {
         onSelect(elementId, coords.addToSelection);
       }
-      onStartMove(coords.pageX, coords.pageY, coords.clientX, coords.clientY);
+      onStartMove({ startX: coords.pageX, startY: coords.pageY, clientX: coords.clientX, clientY: coords.clientY });
     },
     [selection, onSelect, onStartMove, isTextEditing, onEndTextEdit],
   );

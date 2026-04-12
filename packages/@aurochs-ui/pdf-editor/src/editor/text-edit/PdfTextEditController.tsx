@@ -21,6 +21,7 @@ import {
   type ChangeEvent,
 } from "react";
 import type { PdfText } from "@aurochs/pdf";
+import type { FontProvider } from "@aurochs/pdf/domain/font";
 import { renderPdfElementToSvgNodes, resolveTextFontMetrics, resolveTextAnchor } from "@aurochs-renderer/pdf/svg";
 import { svgChildrenToJsx as svgFragmentToJsx } from "@aurochs-renderer/svg";
 import {
@@ -62,6 +63,8 @@ export type PdfTextEditControllerProps = {
   readonly canvasWidth: number;
   /** Canvas height (page height) for percentage-based positioning. */
   readonly canvasHeight: number;
+  /** Font provider for font resolution. */
+  readonly fontProvider?: FontProvider;
   readonly onComplete: (newText: string) => void;
   readonly onCancel: () => void;
 };
@@ -114,13 +117,17 @@ function getWordRange(text: string, offset: number): { start: number; end: numbe
 // this cursor calculation consume the same low-level values directly.
 // =============================================================================
 
-const measureCtxCache = { ctx: null as CanvasRenderingContext2D | null };
+/**
+ * Canvas 2D context for text measurement.
+ * Initialized at module load in browser; null in SSR.
+ */
+const measureCtx: CanvasRenderingContext2D | null =
+  typeof document !== "undefined"
+    ? document.createElement("canvas").getContext("2d")
+    : null;
+
 function getCanvasCtx(): CanvasRenderingContext2D | null {
-  if (!measureCtxCache.ctx) {
-    // eslint-disable-next-line no-restricted-syntax -- SSR safety: canvas not available server-side
-    try { measureCtxCache.ctx = document.createElement("canvas").getContext("2d"); } catch { /* SSR */ }
-  }
-  return measureCtxCache.ctx;
+  return measureCtx;
 }
 
 /**
@@ -199,6 +206,7 @@ export function PdfTextEditController({
   pageHeight,
   canvasWidth,
   canvasHeight,
+  fontProvider,
   onComplete,
   onCancel,
 }: PdfTextEditControllerProps) {
@@ -221,9 +229,13 @@ export function PdfTextEditController({
   // Domain SoT: same functions the SVG renderer calls
   const metrics = useMemo(() => resolveTextFontMetrics(element), [element]);
   const anchor = useMemo(() => resolveTextAnchor(element, pageHeight), [element, pageHeight]);
-  const fontFamily = element.baseFont ?? element.fontName;
-  const fontWeight = element.isBold ? "bold" : "normal";
-  const fontStyle = element.isItalic ? "italic" : "normal";
+  const resolvedFont = useMemo(
+    () => fontProvider?.resolve(element.fontName, element.baseFont),
+    [fontProvider, element.fontName, element.baseFont],
+  );
+  const fontFamily = resolvedFont?.cssFontFamily ?? element.baseFont ?? element.fontName;
+  const fontWeight = (resolvedFont?.isBold ?? element.isBold) ? "bold" : "normal";
+  const fontStyle = (resolvedFont?.isItalic ?? element.isItalic) ? "italic" : "normal";
 
   const textBody = useMemo(
     () => ({ paragraphs: [{ runs: [{ type: "regular" as const, text: currentText }] }] }),
@@ -259,8 +271,8 @@ export function PdfTextEditController({
   // that produces contentSvg. This guarantees font/position parity.
   const textSvgNodes = useMemo(() => {
     const liveElement: PdfText = { ...element, text: currentText };
-    return svgFragmentToJsx(renderPdfElementToSvgNodes(liveElement, pageHeight), "text-edit");
-  }, [element, currentText, pageHeight]);
+    return svgFragmentToJsx(renderPdfElementToSvgNodes(liveElement, pageHeight, fontProvider), "text-edit");
+  }, [element, currentText, pageHeight, fontProvider]);
 
   // --- Cursor update ---
 

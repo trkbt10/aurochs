@@ -22,12 +22,10 @@ function encodeAscii(text: string): Uint8Array {
 function concat(...arrays: Uint8Array[]): Uint8Array {
   const totalLength = arrays.reduce((sum, arr) => sum + arr.length, 0);
   const result = new Uint8Array(totalLength);
-  // eslint-disable-next-line no-restricted-syntax -- accumulator updated in loop
-  let offset = 0;
-  for (const arr of arrays) {
+  arrays.reduce((offset, arr) => {
     result.set(arr, offset);
-    offset += arr.length;
-  }
+    return offset + arr.length;
+  }, 0);
   return result;
 }
 
@@ -126,41 +124,24 @@ export function serializePdfName(name: string): Uint8Array {
  * @see ISO 32000-1:2008 Section 7.3.4.2
  */
 function escapeStringLiteral(text: string): string {
-  // eslint-disable-next-line no-restricted-syntax -- string builder pattern
-  let result = "";
-  for (let i = 0; i < text.length; i++) {
+  return Array.from({ length: text.length }, (_, i) => {
     const char = text[i];
     const code = text.charCodeAt(i);
 
-    if (char === "\\") {
-      result += "\\\\";
-    } else if (char === "(") {
-      result += "\\(";
-    } else if (char === ")") {
-      result += "\\)";
-    } else if (code === 0x0a) {
-      // LF
-      result += "\\n";
-    } else if (code === 0x0d) {
-      // CR
-      result += "\\r";
-    } else if (code === 0x09) {
-      // TAB
-      result += "\\t";
-    } else if (code === 0x08) {
-      // BS
-      result += "\\b";
-    } else if (code === 0x0c) {
-      // FF
-      result += "\\f";
-    } else if (code < 0x20 || code > 0x7e) {
+    if (char === "\\") { return "\\\\"; }
+    if (char === "(") { return "\\("; }
+    if (char === ")") { return "\\)"; }
+    if (code === 0x0a) { return "\\n"; } // LF
+    if (code === 0x0d) { return "\\r"; } // CR
+    if (code === 0x09) { return "\\t"; } // TAB
+    if (code === 0x08) { return "\\b"; } // BS
+    if (code === 0x0c) { return "\\f"; } // FF
+    if (code < 0x20 || code > 0x7e) {
       // Non-printable: use octal escape
-      result += "\\" + code.toString(8).padStart(3, "0");
-    } else {
-      result += char;
+      return "\\" + code.toString(8).padStart(3, "0");
     }
-  }
-  return result;
+    return char;
+  }).join("");
 }
 
 /**

@@ -45,6 +45,15 @@ const PDF_STANDARD_14_FONTS: Record<string, string> = {
  * For embedded fonts, returns the font name as-is (after cleanup).
  * For PDF Standard 14 fonts, maps to system font equivalents.
  *
+ * **Usage guidance**: For rendering and writing, use `FontProvider.resolve()`
+ * instead of calling this function directly. `FontProvider.resolve()` handles
+ * embedded font matching, Standard 14 mapping, system fonts, and fallback
+ * in a unified way.
+ *
+ * Direct use of this function is appropriate only for pure font name
+ * normalization without font resolution (e.g., cross-format conversion
+ * where FontProvider context is not applicable).
+ *
  * IMPORTANT: Do NOT modify font names beyond removing PDF syntax artifacts.
  * Embedded fonts use their exact names for @font-face declarations.
  * Changing the name (e.g., hyphens to spaces) would break font matching.

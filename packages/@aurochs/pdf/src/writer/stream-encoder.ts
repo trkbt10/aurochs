@@ -20,12 +20,10 @@ function encodeAscii(text: string): Uint8Array {
 function concat(...arrays: Uint8Array[]): Uint8Array {
   const totalLength = arrays.reduce((sum, arr) => sum + arr.length, 0);
   const result = new Uint8Array(totalLength);
-  // eslint-disable-next-line no-restricted-syntax -- accumulator updated in loop
-  let offset = 0;
-  for (const arr of arrays) {
+  arrays.reduce((offset, arr) => {
     result.set(arr, offset);
-    offset += arr.length;
-  }
+    return offset + arr.length;
+  }, 0);
   return result;
 }
 

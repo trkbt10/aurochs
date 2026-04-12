@@ -107,16 +107,17 @@ function applyDecodeIfPresent(
  * - 1/2/4-bit: unpacked and scaled to 8-bit (0-255)
  * - 16-bit: downsampled to 8-bit by taking the high byte
  */
-// eslint-disable-next-line custom/max-params -- Public API with many callers
-export function convertToRgba(
-  data: Uint8Array,
-  width: number,
-  height: number,
-  colorSpace: PdfColorSpace,
-  bitsPerComponent: number,
-  options?: Readonly<{ readonly decode?: readonly number[] }>,
-): Uint8ClampedArray {
-  const { decode: _decode } = options ?? {};
+export type ConvertToRgbaParams = {
+  readonly data: Uint8Array;
+  readonly width: number;
+  readonly height: number;
+  readonly colorSpace: PdfColorSpace;
+  readonly bitsPerComponent: number;
+  readonly decode?: readonly number[];
+};
+
+export function convertToRgba(p: ConvertToRgbaParams): Uint8ClampedArray {
+  const { data, width, height, colorSpace, bitsPerComponent } = p;
   const pixelCount = width * height;
   const rgba = new Uint8ClampedArray(pixelCount * 4);
 
@@ -142,7 +143,7 @@ export function convertToRgba(
   }
 
   const normalizedBase = normalizeRawPixelDataTo8BitSamples(data, bitsPerComponent, sampleCount);
-  const normalizedData = applyDecodeIfPresent(normalizedBase, componentsPerPixel, options?.decode);
+  const normalizedData = applyDecodeIfPresent(normalizedBase, componentsPerPixel, p.decode);
 
   if (bitsPerComponent === 8 && normalizedData.length !== sampleCount) {
     // Try to auto-detect color space based on data length (8-bit only)

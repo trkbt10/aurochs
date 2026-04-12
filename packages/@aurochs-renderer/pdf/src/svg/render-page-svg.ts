@@ -18,7 +18,8 @@ import type {
   PdfPath,
   PdfText,
 } from "@aurochs/pdf/domain";
-import { normalizeFontFamily } from "@aurochs/pdf/domain/font";
+import type { FontProvider, ResolvedFont } from "@aurochs/pdf/domain/font";
+import { createFontProvider } from "@aurochs/pdf/domain/font";
 import { getPathBounds, getElementRotationDeg } from "@aurochs/pdf";
 import type { PdfSvgRenderOptions } from "../types";
 import { toSvgPaint } from "./color-to-svg";
@@ -237,6 +238,18 @@ function renderPathNode(path: PdfPath, pageHeight: number, registry: ClipPathReg
 }
 
 // =============================================================================
+// Font resolution
+// =============================================================================
+
+/**
+ * Resolve font for a PdfText element through FontProvider.
+ * This is the single path for all font resolution in the renderer.
+ */
+function resolveFontForText(text: PdfText, fontProvider: FontProvider): ResolvedFont {
+  return fontProvider.resolve(text.fontName, text.baseFont);
+}
+
+// =============================================================================
 // Text rendering helpers
 // =============================================================================
 
@@ -296,7 +309,7 @@ function buildTextTransform(anchor: TextAnchor, textScale: number): string | nul
   );
 }
 
-function renderTextNode(text: PdfText, pageHeight: number, registry: ClipPathRegistry): XmlElement | null {
+function renderTextNode(text: PdfText, pageHeight: number, registry: ClipPathRegistry, fontProvider: FontProvider): XmlElement | null {
   if (text.text.length === 0) {
     return null;
   }
@@ -316,9 +329,11 @@ function renderTextNode(text: PdfText, pageHeight: number, registry: ClipPathReg
   const baseAnchor = resolveTextAnchor(text, pageHeight);
   const verticalWriting = isVerticalWritingText(text);
   const anchor = verticalWriting ? normalizeTextAnchorForVerticalWriting(baseAnchor) : baseAnchor;
-  const fontFamily = normalizeFontFamily(text.baseFont ?? text.fontName);
-  const fontWeight = text.isBold ? "700" : "400";
-  const fontStyle = text.isItalic ? "italic" : "normal";
+  // Resolve font through FontProvider (single path for all font resolution)
+  const resolved = resolveFontForText(text, fontProvider);
+  const fontFamily = resolved.cssFontFamily;
+  const fontWeight = resolved.isBold ? "700" : "400";
+  const fontStyle = resolved.isItalic ? "italic" : "normal";
 
   const textScale = normalizeTextScale(text);
   const transform = buildTextTransform(anchor, textScale);
@@ -416,13 +431,13 @@ function renderImageNode(image: PdfImage, pageHeight: number, registry: ClipPath
 // Element dispatch
 // =============================================================================
 
-function renderElementNode(element: PdfElement, pageHeight: number, registry: ClipPathRegistry): XmlNode | SvgFragment | null {
+function renderElementNode(element: PdfElement, pageHeight: number, registry: ClipPathRegistry, fontProvider: FontProvider): XmlNode | SvgFragment | null {
   if (element.type === "path") {
     return renderPathNode(element, pageHeight, registry);
   }
 
   if (element.type === "text") {
-    return renderTextNode(element, pageHeight, registry);
+    return renderTextNode(element, pageHeight, registry, fontProvider);
   }
 
   if (element.type === "table") {
@@ -442,9 +457,10 @@ function renderElementNode(element: PdfElement, pageHeight: number, registry: Cl
  * Returns a fragment because the element may require clip-path definitions
  * that must be placed in a `<defs>` block alongside the element markup.
  */
-export function renderPdfElementToSvgNodes(element: PdfElement, pageHeight: number): SvgFragment {
+export function renderPdfElementToSvgNodes(element: PdfElement, pageHeight: number, fontProvider?: FontProvider): SvgFragment {
+  const provider = fontProvider ?? createFontProvider();
   const registry = createClipPathRegistry();
-  const content = renderElementNode(element, pageHeight, registry);
+  const content = renderElementNode(element, pageHeight, registry, provider);
 
   const nodes: XmlNode[] = [];
 
@@ -490,6 +506,7 @@ export function renderPdfPageToSvgNode(page: PdfPage, options: PdfSvgRenderOptio
     throw new Error("page is required");
   }
 
+  const fontProvider = options.fontProvider ?? createFontProvider();
   const registry = createClipPathRegistry();
   const bodyNodes: XmlNode[] = [];
 
@@ -503,7 +520,7 @@ export function renderPdfPageToSvgNode(page: PdfPage, options: PdfSvgRenderOptio
   const excludeSet = options.excludeElementIndices;
   for (let i = 0; i < page.elements.length; i++) {
     if (excludeSet?.has(i)) { continue; }
-    const rendered = renderElementNode(page.elements[i], page.height, registry);
+    const rendered = renderElementNode(page.elements[i], page.height, registry, fontProvider);
     if (rendered !== null) {
       if (Array.isArray(rendered)) {
         bodyNodes.push(...rendered);
@@ -544,8 +561,9 @@ export function renderPdfPageToSvgNode(page: PdfPage, options: PdfSvgRenderOptio
  * Render a single PDF element to SVG markup string.
  * Exported for use by editor overlays (e.g., text edit preview).
  */
-export function renderPdfElementToSvg(element: PdfElement, pageHeight: number): string {
-  const fragment = renderPdfElementToSvgNodes(element, pageHeight);
+export function renderPdfElementToSvg(element: PdfElement, pageHeight: number, fontProvider?: FontProvider): string {
+  const provider = fontProvider ?? createFontProvider();
+  const fragment = renderPdfElementToSvgNodes(element, pageHeight, provider);
   return serializeSvgFragment(fragment);
 }
 

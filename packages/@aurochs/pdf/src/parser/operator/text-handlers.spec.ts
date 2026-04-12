@@ -133,28 +133,28 @@ describe("text-handlers", () => {
     it("calculates displacement for single character", () => {
       // 'A' width=600, fontSize=10
       // displacement = 600 * 10 / 1000 = 6
-      const displacement = calculateTextDisplacement("A", 10, 0, 0, 100, defaultMetrics, 1);
+      const displacement = calculateTextDisplacement({ text: "A", fontSize: 10, charSpacing: 0, wordSpacing: 0, horizontalScaling: 100, metrics: defaultMetrics, codeByteWidth: 1 });
       expect(displacement).toBeCloseTo(6);
     });
 
     it("applies character spacing", () => {
       // 'AB': A=600, B=700, fontSize=10, Tc=2
       // displacement = (6 + 2) + (7 + 2) = 17
-      const displacement = calculateTextDisplacement("AB", 10, 2, 0, 100, defaultMetrics, 1);
+      const displacement = calculateTextDisplacement({ text: "AB", fontSize: 10, charSpacing: 2, wordSpacing: 0, horizontalScaling: 100, metrics: defaultMetrics, codeByteWidth: 1 });
       expect(displacement).toBeCloseTo(17);
     });
 
     it("applies word spacing only to spaces", () => {
       // 'A B': A=600, space=300, B=700, fontSize=10, Tw=5
       // displacement = 6 + (3 + 5) + 7 = 21
-      const displacement = calculateTextDisplacement("A B", 10, 0, 5, 100, defaultMetrics, 1);
+      const displacement = calculateTextDisplacement({ text: "A B", fontSize: 10, charSpacing: 0, wordSpacing: 5, horizontalScaling: 100, metrics: defaultMetrics, codeByteWidth: 1 });
       expect(displacement).toBeCloseTo(21);
     });
 
     it("applies horizontal scaling", () => {
       // 'A' width=600, fontSize=10, Tz=200
       // displacement = 6 * 2 = 12
-      const displacement = calculateTextDisplacement("A", 10, 0, 0, 200, defaultMetrics, 1);
+      const displacement = calculateTextDisplacement({ text: "A", fontSize: 10, charSpacing: 0, wordSpacing: 0, horizontalScaling: 200, metrics: defaultMetrics, codeByteWidth: 1 });
       expect(displacement).toBeCloseTo(12);
     });
 
@@ -167,7 +167,7 @@ describe("text-handlers", () => {
       };
       // Two-byte text: high=1, low=0 -> CID=256
       const text = String.fromCharCode(1, 0);
-      const displacement = calculateTextDisplacement(text, 10, 0, 0, 100, cidMetrics, 2);
+      const displacement = calculateTextDisplacement({ text, fontSize: 10, charSpacing: 0, wordSpacing: 0, horizontalScaling: 100, metrics: cidMetrics, codeByteWidth: 2 });
       expect(displacement).toBeCloseTo(10); // 1000 * 10 / 1000 = 10
     });
   });

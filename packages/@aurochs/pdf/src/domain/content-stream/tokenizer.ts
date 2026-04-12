@@ -38,8 +38,11 @@ export type PdfToken = {
 // =============================================================================
 
 // PDF Reference Table 1 - White-space characters
-// eslint-disable-next-line no-control-regex -- PDF spec requires these control characters
-const WHITESPACE = /[\x00\x09\x0a\x0c\x0d\x20]/;
+// NUL(0), TAB(9), LF(10), FF(12), CR(13), SPACE(32)
+const PDF_WHITESPACE_CHARS = [0x00, 0x09, 0x0a, 0x0c, 0x0d, 0x20] as const;
+const WHITESPACE = new RegExp(
+  `[${PDF_WHITESPACE_CHARS.map((code) => String.fromCharCode(code)).join("")}]`,
+);
 // PDF Reference Table 2 - Delimiter characters
 const DELIMITER = /[()<>[\]{}/%]/;
 
@@ -48,69 +51,71 @@ const DELIMITER = /[()<>[\]{}/%]/;
  */
 export function tokenizeContentStream(content: string): PdfToken[] {
   const tokens: PdfToken[] = [];
-  for (let pos = 0; pos < content.length; ) {
+  const cursor: Cursor = { pos: 0 };
+
+  while (cursor.pos < content.length) {
     // Skip whitespace
-    while (pos < content.length && WHITESPACE.test(content[pos])) {
-      pos++;
+    while (cursor.pos < content.length && WHITESPACE.test(content[cursor.pos])) {
+      cursor.pos++;
     }
 
-    if (pos >= content.length) {
+    if (cursor.pos >= content.length) {
       break;
     }
 
-    const char = content[pos];
+    const char = content[cursor.pos];
 
     // Comment (skip until end of line)
     if (char === "%") {
-      while (pos < content.length && content[pos] !== "\n" && content[pos] !== "\r") {
-        pos++;
+      while (cursor.pos < content.length && content[cursor.pos] !== "\n" && content[cursor.pos] !== "\r") {
+        cursor.pos++;
       }
       continue;
     }
 
     // String literal (parentheses)
     if (char === "(") {
-      const [str, newPos] = parseParenString(content, pos);
+      const [str, newPos] = parseParenString(content, cursor.pos);
       tokens.push({
         type: "string",
         value: str,
-        raw: content.slice(pos, newPos),
+        raw: content.slice(cursor.pos, newPos),
       });
-      pos = newPos;
+      cursor.pos = newPos;
       continue;
     }
 
     // Hex string
-    if (char === "<" && content[pos + 1] !== "<") {
-      const [str, newPos] = parseHexString(content, pos);
+    if (char === "<" && content[cursor.pos + 1] !== "<") {
+      const [str, newPos] = parseHexString(content, cursor.pos);
       tokens.push({
         type: "string",
         value: str,
-        raw: content.slice(pos, newPos),
+        raw: content.slice(cursor.pos, newPos),
       });
-      pos = newPos;
+      cursor.pos = newPos;
       continue;
     }
 
     // Dictionary start
-    if (char === "<" && content[pos + 1] === "<") {
+    if (char === "<" && content[cursor.pos + 1] === "<") {
       tokens.push({
         type: "dict_start",
         value: "<<",
         raw: "<<",
       });
-      pos += 2;
+      cursor.pos += 2;
       continue;
     }
 
     // Dictionary end
-    if (char === ">" && content[pos + 1] === ">") {
+    if (char === ">" && content[cursor.pos + 1] === ">") {
       tokens.push({
         type: "dict_end",
         value: ">>",
         raw: ">>",
       });
-      pos += 2;
+      cursor.pos += 2;
       continue;
     }
 
@@ -121,7 +126,7 @@ export function tokenizeContentStream(content: string): PdfToken[] {
         value: "[",
         raw: "[",
       });
-      pos++;
+      cursor.pos++;
       continue;
     }
 
@@ -132,32 +137,32 @@ export function tokenizeContentStream(content: string): PdfToken[] {
         value: "]",
         raw: "]",
       });
-      pos++;
+      cursor.pos++;
       continue;
     }
 
     // Name
     if (char === "/") {
-      const [name, newPos] = parseName(content, pos);
+      const [name, newPos] = parseName(content, cursor.pos);
       tokens.push({
         type: "name",
         value: name,
-        raw: content.slice(pos, newPos),
+        raw: content.slice(cursor.pos, newPos),
       });
-      pos = newPos;
+      cursor.pos = newPos;
       continue;
     }
 
     // Number or operator
-    if (isNumberStart(char, content[pos + 1])) {
-      const [num, newPos] = parseNumber(content, pos);
+    if (isNumberStart(char, content[cursor.pos + 1])) {
+      const [num, newPos] = parseNumber(content, cursor.pos);
       if (num !== null) {
         tokens.push({
           type: "number",
           value: num,
-          raw: content.slice(pos, newPos),
+          raw: content.slice(cursor.pos, newPos),
         });
-        pos = newPos;
+        cursor.pos = newPos;
         continue;
       }
     }
@@ -165,18 +170,18 @@ export function tokenizeContentStream(content: string): PdfToken[] {
     // Operator: any token that's not a number, name, string, array, dict, delimiter, or whitespace.
     // PDF content stream operators may include digits (e.g. Type3 `d0`/`d1`).
     if (isOperatorStart(char)) {
-      const [op, newPos] = parseOperator(content, pos);
+      const [op, newPos] = parseOperator(content, cursor.pos);
       tokens.push({
         type: "operator",
         value: op,
         raw: op,
       });
-      pos = newPos;
+      cursor.pos = newPos;
       continue;
     }
 
     // Skip unknown character
-    pos++;
+    cursor.pos++;
   }
 
   return tokens;
@@ -186,7 +191,12 @@ export function tokenizeContentStream(content: string): PdfToken[] {
 // Parse Functions
 // =============================================================================
 
-/* eslint-disable no-restricted-syntax -- parsers require mutable state for position tracking */
+/**
+ * Mutable cursor for tracking parse position.
+ * Using an object avoids `let` declarations while allowing mutation
+ * through a `const` binding.
+ */
+type Cursor = { pos: number };
 
 function isNumberStart(char: string, nextChar: string | undefined): boolean {
   if (char >= "0" && char <= "9") {return true;}
@@ -200,164 +210,160 @@ function isNumberStart(char: string, nextChar: string | undefined): boolean {
 }
 
 function parseNumber(content: string, pos: number): [number | null, number] {
-  const start = pos;
+  const cursor: Cursor = { pos };
 
   // Optional sign
-  if (content[pos] === "-" || content[pos] === "+") {
-    pos++;
+  if (content[cursor.pos] === "-" || content[cursor.pos] === "+") {
+    cursor.pos++;
   }
 
   // Integer part
-  while (pos < content.length && content[pos] >= "0" && content[pos] <= "9") {
-    pos++;
+  while (cursor.pos < content.length && content[cursor.pos] >= "0" && content[cursor.pos] <= "9") {
+    cursor.pos++;
   }
 
   // Decimal part
-  if (pos < content.length && content[pos] === ".") {
-    pos++;
-    while (pos < content.length && content[pos] >= "0" && content[pos] <= "9") {
-      pos++;
+  if (cursor.pos < content.length && content[cursor.pos] === ".") {
+    cursor.pos++;
+    while (cursor.pos < content.length && content[cursor.pos] >= "0" && content[cursor.pos] <= "9") {
+      cursor.pos++;
     }
   }
 
-  const raw = content.slice(start, pos);
+  const raw = content.slice(pos, cursor.pos);
   if (raw === "" || raw === "-" || raw === "+" || raw === ".") {
-    return [null, start];
+    return [null, pos];
   }
 
   const num = parseFloat(raw);
   if (isNaN(num)) {
-    return [null, start];
+    return [null, pos];
   }
 
-  return [num, pos];
+  return [num, cursor.pos];
 }
 
-function parseParenString(content: string, pos: number): [string, number] {
-  let result = "";
-  pos++; // skip opening (
-  let depth = 1;
+/**
+ * Parse an octal escape sequence starting at `cursor.pos`.
+ * The first octal digit has already been read as `firstDigit`.
+ * Advances `cursor.pos` past any additional octal digits consumed.
+ */
+function parseOctalEscape(content: string, cursor: Cursor, firstDigit: string): string {
+  const digits: string[] = [firstDigit];
+  if (cursor.pos + 1 < content.length && content[cursor.pos + 1] >= "0" && content[cursor.pos + 1] <= "7") {
+    cursor.pos++;
+    digits.push(content[cursor.pos]);
+    if (cursor.pos + 1 < content.length && content[cursor.pos + 1] >= "0" && content[cursor.pos + 1] <= "7") {
+      cursor.pos++;
+      digits.push(content[cursor.pos]);
+    }
+  }
+  return String.fromCharCode(parseInt(digits.join(""), 8));
+}
 
-  while (pos < content.length && depth > 0) {
-    const char = content[pos];
+const SIMPLE_ESCAPES: Readonly<Record<string, string>> = {
+  n: "\n",
+  r: "\r",
+  t: "\t",
+  b: "\b",
+  f: "\f",
+  "(": "(",
+  ")": ")",
+  "\\": "\\",
+};
+
+function parseParenString(content: string, pos: number): [string, number] {
+  const parts: string[] = [];
+  const cursor: Cursor = { pos: pos + 1 }; // skip opening (
+  const depth: Cursor = { pos: 1 }; // reuse Cursor shape for depth counter
+
+  while (cursor.pos < content.length && depth.pos > 0) {
+    const char = content[cursor.pos];
 
     if (char === "\\") {
       // Escape sequence
-      pos++;
-      if (pos >= content.length) {break;}
+      cursor.pos++;
+      if (cursor.pos >= content.length) {break;}
 
-      const escaped = content[pos];
-      switch (escaped) {
-        case "n":
-          result += "\n";
-          break;
-        case "r":
-          result += "\r";
-          break;
-        case "t":
-          result += "\t";
-          break;
-        case "b":
-          result += "\b";
-          break;
-        case "f":
-          result += "\f";
-          break;
-        case "(":
-        case ")":
-        case "\\":
-          result += escaped;
-          break;
-        default:
-          // Octal escape or ignored
-          if (escaped >= "0" && escaped <= "7") {
-            let octal = escaped;
-            if (pos + 1 < content.length && content[pos + 1] >= "0" && content[pos + 1] <= "7") {
-              pos++;
-              octal += content[pos];
-              if (pos + 1 < content.length && content[pos + 1] >= "0" && content[pos + 1] <= "7") {
-                pos++;
-                octal += content[pos];
-              }
-            }
-            result += String.fromCharCode(parseInt(octal, 8));
-          } else {
-            result += escaped;
-          }
+      const escaped = content[cursor.pos];
+      const simple = SIMPLE_ESCAPES[escaped];
+      if (simple !== undefined) {
+        parts.push(simple);
+      } else if (escaped >= "0" && escaped <= "7") {
+        parts.push(parseOctalEscape(content, cursor, escaped));
+      } else {
+        parts.push(escaped);
       }
     } else if (char === "(") {
-      depth++;
-      result += char;
+      depth.pos++;
+      parts.push(char);
     } else if (char === ")") {
-      depth--;
-      if (depth > 0) {
-        result += char;
+      depth.pos--;
+      if (depth.pos > 0) {
+        parts.push(char);
       }
     } else {
-      result += char;
+      parts.push(char);
     }
-    pos++;
+    cursor.pos++;
   }
 
-  return [result, pos];
+  return [parts.join(""), cursor.pos];
 }
 
 function parseHexString(content: string, pos: number): [string, number] {
-  pos++; // skip <
-  let hex = "";
+  const cursor: Cursor = { pos: pos + 1 }; // skip <
+  const hexParts: string[] = [];
 
-  while (pos < content.length && content[pos] !== ">") {
-    const char = content[pos];
+  while (cursor.pos < content.length && content[cursor.pos] !== ">") {
+    const char = content[cursor.pos];
     if (!WHITESPACE.test(char)) {
-      hex += char;
+      hexParts.push(char);
     }
-    pos++;
+    cursor.pos++;
   }
-  pos++; // skip >
+  cursor.pos++; // skip >
 
-  // Pad with 0 if odd length
-  if (hex.length % 2 !== 0) {
-    hex += "0";
-  }
+  const hex = hexParts.join("") + (hexParts.length % 2 !== 0 ? "0" : "");
 
   // Convert hex to string
-  let result = "";
-  for (let i = 0; i < hex.length; i += 2) {
+  const resultParts: string[] = [];
+  for (const [i] of Array.from({ length: Math.floor(hex.length / 2) }, (_, idx) => [idx * 2])) {
     const byte = parseInt(hex.slice(i, i + 2), 16);
     if (!isNaN(byte)) {
-      result += String.fromCharCode(byte);
+      resultParts.push(String.fromCharCode(byte));
     }
   }
 
-  return [result, pos];
+  return [resultParts.join(""), cursor.pos];
 }
 
 function parseName(content: string, pos: number): [string, number] {
-  pos++; // skip /
-  let name = "";
+  const cursor: Cursor = { pos: pos + 1 }; // skip /
+  const parts: string[] = [];
 
-  while (pos < content.length) {
-    const char = content[pos];
+  while (cursor.pos < content.length) {
+    const char = content[cursor.pos];
     if (WHITESPACE.test(char) || DELIMITER.test(char)) {
       break;
     }
 
     // Handle #XX escape
-    if (char === "#" && pos + 2 < content.length) {
-      const hex = content.slice(pos + 1, pos + 3);
+    if (char === "#" && cursor.pos + 2 < content.length) {
+      const hex = content.slice(cursor.pos + 1, cursor.pos + 3);
       const code = parseInt(hex, 16);
       if (!isNaN(code)) {
-        name += String.fromCharCode(code);
-        pos += 3;
+        parts.push(String.fromCharCode(code));
+        cursor.pos += 3;
         continue;
       }
     }
 
-    name += char;
-    pos++;
+    parts.push(char);
+    cursor.pos++;
   }
 
-  return [name, pos];
+  return [parts.join(""), cursor.pos];
 }
 
 function isOperatorStart(char: string): boolean {
@@ -365,15 +371,15 @@ function isOperatorStart(char: string): boolean {
 }
 
 function parseOperator(content: string, pos: number): [string, number] {
-  const start = pos;
+  const cursor: Cursor = { pos };
 
-  while (pos < content.length) {
-    const char = content[pos];
+  while (cursor.pos < content.length) {
+    const char = content[cursor.pos];
     if (WHITESPACE.test(char) || DELIMITER.test(char)) {
       break;
     }
-    pos++;
+    cursor.pos++;
   }
 
-  return [content.slice(start, pos), pos];
+  return [content.slice(pos, cursor.pos), cursor.pos];
 }

@@ -92,24 +92,26 @@ function forEachCharCode(
  * @param codeByteWidth - 1 for single-byte, 2 for CID fonts
  * @param tjAdjustment - Optional TJ adjustment in 1/1000 em (default 0)
  */
-// eslint-disable-next-line custom/max-params -- Public API with many callers
-export function calculateTextDisplacement(
-  text: string,
-  fontSize: number,
-  charSpacing: number,
-  wordSpacing: number,
-  horizontalScaling: number,
-  metrics: FontMetrics,
-  codeByteWidth: 1 | 2,
-  tjAdjustment = 0,
-): number {
-  const Th = horizontalScaling / 100;
+export type TextDisplacementParams = {
+  readonly text: string;
+  readonly fontSize: number;
+  readonly charSpacing: number;
+  readonly wordSpacing: number;
+  readonly horizontalScaling: number;
+  readonly metrics: FontMetrics;
+  readonly codeByteWidth: 1 | 2;
+  readonly tjAdjustment?: number;
+};
+
+export function calculateTextDisplacement(p: TextDisplacementParams): number {
+  const tjAdj = p.tjAdjustment ?? 0;
+  const Th = p.horizontalScaling / 100;
   const totalDisplacement = { value: 0 };
 
-  forEachCharCode(text, codeByteWidth, (charCode, isSpace) => {
-    const w0 = getGlyphWidth(charCode, metrics);
-    const glyphWidth = (w0 - tjAdjustment) * fontSize / 1000;
-    const charDisplacement = (glyphWidth + charSpacing + (isSpace ? wordSpacing : 0)) * Th;
+  forEachCharCode(p.text, p.codeByteWidth, (charCode, isSpace) => {
+    const w0 = getGlyphWidth(charCode, p.metrics);
+    const glyphWidth = (w0 - tjAdj) * p.fontSize / 1000;
+    const charDisplacement = (glyphWidth + p.charSpacing + (isSpace ? p.wordSpacing : 0)) * Th;
     totalDisplacement.value += charDisplacement;
   });
 
@@ -122,23 +124,26 @@ export function calculateTextDisplacement(
  * Uses vertical metrics (`w1`) when available. If no explicit per-glyph
  * vertical displacement is present, falls back to `defaultVerticalDisplacement`.
  */
-// eslint-disable-next-line custom/max-params -- Mirrors calculateTextDisplacement with vertical metrics inputs
-export function calculateVerticalTextDisplacement(
-  text: string,
-  fontSize: number,
-  charSpacing: number,
-  wordSpacing: number,
-  codeByteWidth: 1 | 2,
-  verticalDisplacements?: ReadonlyMap<number, number>,
-  defaultVerticalDisplacement = -1000,
-  tjAdjustment = 0,
-): number {
+export type VerticalTextDisplacementParams = {
+  readonly text: string;
+  readonly fontSize: number;
+  readonly charSpacing: number;
+  readonly wordSpacing: number;
+  readonly codeByteWidth: 1 | 2;
+  readonly verticalDisplacements?: ReadonlyMap<number, number>;
+  readonly defaultVerticalDisplacement?: number;
+  readonly tjAdjustment?: number;
+};
+
+export function calculateVerticalTextDisplacement(p: VerticalTextDisplacementParams): number {
+  const defaultW1 = p.defaultVerticalDisplacement ?? -1000;
+  const tjAdj = p.tjAdjustment ?? 0;
   const totalDisplacement = { value: 0 };
 
-  forEachCharCode(text, codeByteWidth, (charCode, isSpace) => {
-    const w1 = verticalDisplacements?.get(charCode) ?? defaultVerticalDisplacement;
-    const glyphDisplacement = (w1 - tjAdjustment) * fontSize / 1000;
-    const charDisplacement = glyphDisplacement + charSpacing + (isSpace ? wordSpacing : 0);
+  forEachCharCode(p.text, p.codeByteWidth, (charCode, isSpace) => {
+    const w1 = p.verticalDisplacements?.get(charCode) ?? defaultW1;
+    const glyphDisplacement = (w1 - tjAdj) * p.fontSize / 1000;
+    const charDisplacement = glyphDisplacement + p.charSpacing + (isSpace ? p.wordSpacing : 0);
     totalDisplacement.value += charDisplacement;
   });
 
@@ -170,17 +175,17 @@ function resolveRunDisplacement(args: {
     defaultVerticalDisplacement,
   } = args;
   if (writingMode === 1) {
-    return calculateVerticalTextDisplacement(
+    return calculateVerticalTextDisplacement({
       text,
       fontSize,
       charSpacing,
       wordSpacing,
       codeByteWidth,
       verticalDisplacements,
-      defaultVerticalDisplacement ?? -1000,
-    );
+      defaultVerticalDisplacement: defaultVerticalDisplacement ?? -1000,
+    });
   }
-  return calculateTextDisplacement(
+  return calculateTextDisplacement({
     text,
     fontSize,
     charSpacing,
@@ -188,7 +193,7 @@ function resolveRunDisplacement(args: {
     horizontalScaling,
     metrics,
     codeByteWidth,
-  );
+  });
 }
 
 function getTextAdvance(args: {

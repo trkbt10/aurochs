@@ -27,7 +27,6 @@ export type PdfObjectEntry = {
  * 3. Call set() with the serialized data
  * 4. After all objects are built, call getAll() to get entries for writing
  */
-// eslint-disable-next-line no-restricted-syntax -- stateful tracker requires class encapsulation
 export class PdfObjectTracker {
   private nextObjNum = 1;
   private entries = new Map<number, PdfObjectEntry>();

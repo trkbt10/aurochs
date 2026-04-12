@@ -22,6 +22,7 @@ import {
   duplicatePages as domainDuplicatePages,
   reorderPages as domainReorderPages,
   updatePageSize as domainUpdatePageSize,
+  withTextContent,
 } from "@aurochs/pdf";
 import { createDocumentQuery } from "@aurochs-renderer/pdf/svg";
 import { createHistory, pushHistory, undoHistory, redoHistory, canUndo, canRedo } from "@aurochs-ui/editor-core/history";
@@ -412,7 +413,11 @@ export function pdfEditorReducer(state: PdfEditorState, action: PdfEditorAction)
     case "COMMIT_TEXT_EDIT": {
       const { elementId, text } = action;
       const doc = state.documentHistory.present;
-      const newDoc = updateElementInDocument({ document: doc, elementId, updater: (el) => el.type === "text" ? { ...el, text } : el });
+      const newDoc = updateElementInDocument({
+        document: doc,
+        elementId,
+        updater: (el) => el.type === "text" ? withTextContent(el, text) : el,
+      });
       return { ...state, documentHistory: pushHistory(state.documentHistory, newDoc), textEdit: { active: false } };
     }
 

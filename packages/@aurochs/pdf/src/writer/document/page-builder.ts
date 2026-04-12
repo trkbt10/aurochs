@@ -6,6 +6,7 @@
 
 import type { PdfObject } from "../../native/core/types";
 import type { PdfPage, PdfElement, PdfEmbeddedFont } from "../../domain/document";
+import type { FontProvider } from "../../domain/font/font-provider";
 import type { PdfPath } from "../../domain/path";
 import type { PdfText } from "../../domain/text";
 import type { PdfImage } from "../../domain/image";
@@ -61,21 +62,31 @@ function collectImages(elements: readonly PdfElement[]): PdfImage[] {
   return elements.filter((e): e is PdfImage => e.type === "image");
 }
 
+type ContentStreamOptions = {
+  readonly elements: readonly PdfElement[];
+  readonly fontMap: ReadonlyMap<string, string>;
+  readonly imageMap: ReadonlyMap<number, string>;
+  readonly embeddedFonts?: readonly PdfEmbeddedFont[];
+  readonly fontProvider?: FontProvider;
+};
+
 /**
  * Generate content stream operators for a page's elements.
  */
-// eslint-disable-next-line custom/max-params -- legacy API with separate font/image maps
-function generateContentStreamOperators(
-  elements: readonly PdfElement[],
-  fontMap: ReadonlyMap<string, string>,
-  imageMap: ReadonlyMap<number, string>,
-  embeddedFonts?: readonly PdfEmbeddedFont[]
-): string {
-  const operators: string[] = [];
-  // eslint-disable-next-line no-restricted-syntax -- counter incremented in loop
-  let imageIndex = 0;
+function generateContentStreamOperators(options: ContentStreamOptions): string {
+  const { elements, fontMap, imageMap, embeddedFonts, fontProvider } = options;
 
-  for (const element of elements) {
+  // Pre-compute a mapping from element index to image index for image elements
+  const elementImageIndex = new Map<number, number>();
+  elements.reduce((imageCount, element, elementIdx) => {
+    if (element.type === "image") {
+      elementImageIndex.set(elementIdx, imageCount);
+      return imageCount + 1;
+    }
+    return imageCount;
+  }, 0);
+
+  const operators = elements.map((element, elementIdx) => {
     switch (element.type) {
       case "path": {
         const path = element as PdfPath;
@@ -88,8 +99,7 @@ function generateContentStreamOperators(
           }),
           serializePath(path),
         ].join("\n");
-        operators.push(wrapInGraphicsState(pathOps));
-        break;
+        return wrapInGraphicsState(pathOps);
       }
 
       case "text": {
@@ -98,6 +108,7 @@ function generateContentStreamOperators(
         const ctx = {
           fontNameToResource: fontMap,
           embeddedFonts,
+          fontProvider,
         };
         const textOps = [
           serializeGraphicsState(text.graphicsState, {
@@ -107,12 +118,12 @@ function generateContentStreamOperators(
           }),
           serializeText(text, ctx),
         ].join("\n");
-        operators.push(wrapInGraphicsState(textOps));
-        break;
+        return wrapInGraphicsState(textOps);
       }
 
       case "image": {
         const image = element as PdfImage;
+        const imageIndex = elementImageIndex.get(elementIdx)!;
         const imageName = imageMap.get(imageIndex);
         if (imageName) {
           // Image placement using CTM
@@ -121,13 +132,12 @@ function generateContentStreamOperators(
             `${a} ${b} ${c} ${d} ${e} ${f} cm`,
             `/${imageName} Do`,
           ].join("\n");
-          operators.push(wrapInGraphicsState(imageOps));
+          return wrapInGraphicsState(imageOps);
         }
-        imageIndex++;
-        break;
+        return null;
       }
     }
-  }
+  }).filter((op): op is string => op !== null);
 
   return operators.join("\n");
 }
@@ -140,13 +150,15 @@ export type BuildPageOptions = {
   readonly tracker: PdfObjectTracker;
   /** Embedded fonts for CID font text serialization. */
   readonly embeddedFonts?: readonly PdfEmbeddedFont[];
+  /** Font provider for re-encoding edited text. */
+  readonly fontProvider?: FontProvider;
 };
 
 /**
  * Build a page object.
  */
 export function buildPage(options: BuildPageOptions): PageBuildResult {
-  const { page, pagesObjNum, fontObjMap, imageObjMap, tracker, embeddedFonts } = options;
+  const { page, pagesObjNum, fontObjMap, imageObjMap, tracker, embeddedFonts, fontProvider } = options;
   // Allocate object numbers
   const pageObjNum = tracker.allocate();
   const contentObjNum = tracker.allocate();
@@ -158,55 +170,45 @@ export function buildPage(options: BuildPageOptions): PageBuildResult {
 
   // Build font resource map (name -> resource name)
   const fontResourceMap = new Map<string, string>();
-  // eslint-disable-next-line no-restricted-syntax -- counter incremented in loop
-  let fontIndex = 1;
-  for (const fontName of usedFontNames) {
-    if (fontObjMap.has(fontName)) {
-      fontResourceMap.set(fontName, `F${fontIndex}`);
-      fontIndex++;
-    }
+  const fontsWithObjNums = [...usedFontNames].filter((name) => fontObjMap.has(name));
+  for (const [idx, fontName] of fontsWithObjNums.entries()) {
+    fontResourceMap.set(fontName, `F${idx + 1}`);
   }
 
   // Build image resource map (index -> resource name)
   const imageResourceMap = new Map<number, string>();
-  // eslint-disable-next-line no-restricted-syntax -- counter incremented in loop
-  let imageIdx = 0;
-  for (const _ of images) {
+  for (const [imageIdx] of images.entries()) {
     if (imageObjMap.has(imageIdx)) {
       imageResourceMap.set(imageIdx, `Im${imageIdx + 1}`);
     }
-    imageIdx++;
   }
 
   // Generate content stream
-  const contentOperators = generateContentStreamOperators(
-    page.elements,
-    fontResourceMap,
-    imageResourceMap,
-    embeddedFonts
-  );
+  const contentOperators = generateContentStreamOperators({
+    elements: page.elements,
+    fontMap: fontResourceMap,
+    imageMap: imageResourceMap,
+    embeddedFonts,
+    fontProvider,
+  });
   const contentStream = serializeContentStream(contentOperators, "FlateDecode");
   tracker.set(contentObjNum, serializeIndirectObject(contentObjNum, 0, contentStream));
 
   // Build resources dictionary
   const fontRefs = new Map<string, number>();
-  fontIndex = 1;
-  for (const fontName of usedFontNames) {
+  for (const [idx, fontName] of fontsWithObjNums.entries()) {
     const objNum = fontObjMap.get(fontName);
     if (objNum !== undefined) {
-      fontRefs.set(`F${fontIndex}`, objNum);
-      fontIndex++;
+      fontRefs.set(`F${idx + 1}`, objNum);
     }
   }
 
   const imageRefs = new Map<string, number>();
-  imageIdx = 0;
-  for (const _ of images) {
+  for (const [imageIdx] of images.entries()) {
     const objNum = imageObjMap.get(imageIdx);
     if (objNum !== undefined) {
       imageRefs.set(`Im${imageIdx + 1}`, objNum);
     }
-    imageIdx++;
   }
 
   const resourceRefs: ResourceRefs = {

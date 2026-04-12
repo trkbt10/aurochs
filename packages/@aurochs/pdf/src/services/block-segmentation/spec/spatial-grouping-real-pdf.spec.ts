@@ -81,11 +81,10 @@ describe("spatialGrouping with real PDF", () => {
   });
 
   it("should group section header with its description", () => {
-    // eslint-disable-next-line no-irregular-whitespace -- Japanese PDF content with full-width space
-    // "１　「都道府県コード」と「都道府県名」" section
+    // "１\u3000「都道府県コード」と「都道府県名」" section
     const sectionGroup = groups.value.find((g) => {
       const content = getGroupedTextContent(g);
-      return content.includes("１　「都道府県コード」と「都道府県名」");
+      return content.includes("\uFF11\u3000\u300C\u90FD\u9053\u5E9C\u770C\u30B3\u30FC\u30C9\u300D\u3068\u300C\u90FD\u9053\u5E9C\u770C\u540D\u300D");
     });
 
     expect(sectionGroup).toBeDefined();

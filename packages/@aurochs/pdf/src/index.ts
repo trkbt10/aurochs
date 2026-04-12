@@ -59,7 +59,15 @@ export type {
 } from "./domain";
 
 // Text Types
-export type { PdfText } from "./domain";
+export type { PdfText, PdfTextEditState } from "./domain";
+
+// Text Domain Operations
+export {
+  withTextContent,
+  withFontFamily,
+  withFontSize,
+  withCharSpacing,
+} from "./domain";
 
 // Image Types
 export type { PdfImage } from "./domain";

@@ -27,7 +27,12 @@ function toRgba64x64(image: {
   readonly bitsPerComponent: number;
   readonly decode?: readonly number[];
 }): Uint8ClampedArray {
-  return convertToRgba(image.data, image.width, image.height, image.colorSpace, image.bitsPerComponent, {
+  return convertToRgba({
+    data: image.data,
+    width: image.width,
+    height: image.height,
+    colorSpace: image.colorSpace,
+    bitsPerComponent: image.bitsPerComponent,
     decode: image.decode,
   });
 }
@@ -814,7 +819,7 @@ describe("image-extractor (CCITTFaxDecode)", () => {
     expect(image.colorSpace).toBe("DeviceGray");
     expect(image.bitsPerComponent).toBe(1);
 
-    const rgba = convertToRgba(image.data, image.width, image.height, image.colorSpace, image.bitsPerComponent);
+    const rgba = convertToRgba({ data: image.data, width: image.width, height: image.height, colorSpace: image.colorSpace, bitsPerComponent: image.bitsPerComponent });
     // Expect white on the left half, black on the right half (row 0).
     expect(pixelGray({ rgba, x: 0, y: 0, width: 16 })).toBe(255);
     expect(pixelGray({ rgba, x: 15, y: 0, width: 16 })).toBe(0);
@@ -844,7 +849,7 @@ describe("image-extractor (CCITTFaxDecode)", () => {
     expect(image.colorSpace).toBe("DeviceGray");
     expect(image.bitsPerComponent).toBe(1);
 
-    const rgba = convertToRgba(image.data, image.width, image.height, image.colorSpace, image.bitsPerComponent);
+    const rgba = convertToRgba({ data: image.data, width: image.width, height: image.height, colorSpace: image.colorSpace, bitsPerComponent: image.bitsPerComponent });
     expect(pixelGray({ rgba, x: 0, y: 0, width: 16 })).toBe(255);
     expect(pixelGray({ rgba, x: 15, y: 0, width: 16 })).toBe(0);
   });
@@ -881,7 +886,7 @@ describe("image-extractor (LZWDecode)", () => {
     expect(image.colorSpace).toBe("DeviceRGB");
     expect(image.bitsPerComponent).toBe(8);
 
-    const rgba = convertToRgba(image.data, image.width, image.height, image.colorSpace, image.bitsPerComponent);
+    const rgba = convertToRgba({ data: image.data, width: image.width, height: image.height, colorSpace: image.colorSpace, bitsPerComponent: image.bitsPerComponent });
     expect(Array.from(rgba.slice(0, 4))).toEqual([255, 0, 0, 255]);
     expect(Array.from(rgba.slice(4, 8))).toEqual([0, 255, 0, 255]);
   });
@@ -920,7 +925,7 @@ describe("image-extractor (DCTDecode)", () => {
     expect(image.colorSpace).toBe("DeviceRGB");
     expect(image.bitsPerComponent).toBe(8);
 
-    const out = convertToRgba(image.data, image.width, image.height, image.colorSpace, image.bitsPerComponent);
+    const out = convertToRgba({ data: image.data, width: image.width, height: image.height, colorSpace: image.colorSpace, bitsPerComponent: image.bitsPerComponent });
     const p0 = out.slice(0, 4);
     const p1 = out.slice(4, 8);
     // JPEG is lossy; use generous thresholds.
@@ -986,7 +991,7 @@ describe("image-extractor (JPXDecode)", () => {
     expect(image.colorSpace).toBe("DeviceRGB");
     expect(image.bitsPerComponent).toBe(8);
 
-    const rgba = convertToRgba(image.data, 2, 1, image.colorSpace, image.bitsPerComponent);
+    const rgba = convertToRgba({ data: image.data, width: 2, height: 1, colorSpace: image.colorSpace, bitsPerComponent: image.bitsPerComponent });
     expect(Array.from(rgba.slice(0, 4))).toEqual([255, 0, 0, 255]);
     expect(Array.from(rgba.slice(4, 8))).toEqual([0, 255, 0, 255]);
   });
@@ -1046,7 +1051,7 @@ describe("image-extractor (JPXDecode)", () => {
     expect(images).toHaveLength(1);
 
     const image = images[0]!;
-    const rgba = convertToRgba(image.data, 2, 1, image.colorSpace, image.bitsPerComponent);
+    const rgba = convertToRgba({ data: image.data, width: 2, height: 1, colorSpace: image.colorSpace, bitsPerComponent: image.bitsPerComponent });
     expect(Array.from(rgba.slice(0, 4))).toEqual([255, 0, 0, 255]);
     expect(Array.from(rgba.slice(4, 8))).toEqual([0, 255, 0, 255]);
   });
@@ -1219,7 +1224,7 @@ describe("image-extractor (Separation/DeviceN)", () => {
     expect(image.colorSpace).toBe("DeviceRGB");
     expect(image.bitsPerComponent).toBe(8);
 
-    const rgba = convertToRgba(image.data, image.width, image.height, image.colorSpace, image.bitsPerComponent);
+    const rgba = convertToRgba({ data: image.data, width: image.width, height: image.height, colorSpace: image.colorSpace, bitsPerComponent: image.bitsPerComponent });
     // tint 0 => white, tint 1 => black (inverted grayscale mapping)
     expect(Array.from(rgba.slice(0, 4))).toEqual([255, 255, 255, 255]);
     expect(Array.from(rgba.slice(4, 8))).toEqual([0, 0, 0, 255]);
@@ -1246,7 +1251,7 @@ describe("image-extractor (Separation/DeviceN)", () => {
     expect(image.colorSpace).toBe("DeviceRGB");
     expect(image.bitsPerComponent).toBe(8);
 
-    const rgba = convertToRgba(image.data, image.width, image.height, image.colorSpace, image.bitsPerComponent);
+    const rgba = convertToRgba({ data: image.data, width: image.width, height: image.height, colorSpace: image.colorSpace, bitsPerComponent: image.bitsPerComponent });
     expect(Array.from(rgba.slice(0, 4))).toEqual([128, 128, 128, 255]);
   });
 });
@@ -1272,7 +1277,7 @@ describe("image-extractor (Lab)", () => {
     expect(image.colorSpace).toBe("DeviceRGB");
     expect(image.bitsPerComponent).toBe(8);
 
-    const rgba = convertToRgba(image.data, 1, 1, image.colorSpace, image.bitsPerComponent);
+    const rgba = convertToRgba({ data: image.data, width: 1, height: 1, colorSpace: image.colorSpace, bitsPerComponent: image.bitsPerComponent });
     expect(Array.from(rgba.slice(0, 4))).toEqual([255, 255, 255, 255]);
   });
 
@@ -1293,7 +1298,7 @@ describe("image-extractor (Lab)", () => {
     expect(images).toHaveLength(1);
 
     const image = images[0]!;
-    const rgba = convertToRgba(image.data, 1, 1, image.colorSpace, image.bitsPerComponent);
+    const rgba = convertToRgba({ data: image.data, width: 1, height: 1, colorSpace: image.colorSpace, bitsPerComponent: image.bitsPerComponent });
     expect(Array.from(rgba.slice(0, 4))).toEqual([0, 0, 0, 255]);
   });
 });
@@ -1318,7 +1323,7 @@ describe("image-extractor (CalGray / CalRGB)", () => {
     expect(image.colorSpace).toBe("DeviceRGB");
     expect(image.bitsPerComponent).toBe(8);
 
-    const rgba = convertToRgba(image.data, 1, 1, image.colorSpace, image.bitsPerComponent);
+    const rgba = convertToRgba({ data: image.data, width: 1, height: 1, colorSpace: image.colorSpace, bitsPerComponent: image.bitsPerComponent });
     expect(Array.from(rgba.slice(0, 4))).toEqual([137, 137, 137, 255]);
   });
 
@@ -1346,7 +1351,7 @@ describe("image-extractor (CalGray / CalRGB)", () => {
     expect(image.colorSpace).toBe("DeviceRGB");
     expect(image.bitsPerComponent).toBe(8);
 
-    const rgba = convertToRgba(image.data, 1, 1, image.colorSpace, image.bitsPerComponent);
+    const rgba = convertToRgba({ data: image.data, width: 1, height: 1, colorSpace: image.colorSpace, bitsPerComponent: image.bitsPerComponent });
     expect(Array.from(rgba.slice(0, 4))).toEqual([137, 0, 0, 255]);
   });
 });
@@ -1372,7 +1377,7 @@ describe("image-extractor (ICCBased)", () => {
     expect(image.colorSpace).toBe("DeviceRGB");
     expect(image.bitsPerComponent).toBe(8);
 
-    const rgba = convertToRgba(image.data, 1, 1, image.colorSpace, image.bitsPerComponent);
+    const rgba = convertToRgba({ data: image.data, width: 1, height: 1, colorSpace: image.colorSpace, bitsPerComponent: image.bitsPerComponent });
     expect(Array.from(rgba.slice(0, 4))).toEqual([128, 128, 128, 255]);
   });
 
@@ -1400,7 +1405,7 @@ describe("image-extractor (ICCBased)", () => {
     expect(image.colorSpace).toBe("DeviceRGB");
     expect(image.bitsPerComponent).toBe(8);
 
-    const rgba = convertToRgba(image.data, 1, 1, image.colorSpace, image.bitsPerComponent);
+    const rgba = convertToRgba({ data: image.data, width: 1, height: 1, colorSpace: image.colorSpace, bitsPerComponent: image.bitsPerComponent });
     expect(Array.from(rgba.slice(0, 4))).toEqual([137, 0, 0, 255]);
   });
 
@@ -1428,7 +1433,7 @@ describe("image-extractor (ICCBased)", () => {
     expect(image.colorSpace).toBe("DeviceRGB");
     expect(image.bitsPerComponent).toBe(8);
 
-    const rgba = convertToRgba(image.data, 1, 1, image.colorSpace, image.bitsPerComponent);
+    const rgba = convertToRgba({ data: image.data, width: 1, height: 1, colorSpace: image.colorSpace, bitsPerComponent: image.bitsPerComponent });
     expect(Array.from(rgba.slice(0, 4))).toEqual([137, 137, 137, 255]);
   });
 
@@ -1456,7 +1461,7 @@ describe("image-extractor (ICCBased)", () => {
     expect(image.colorSpace).toBe("DeviceRGB");
     expect(image.bitsPerComponent).toBe(8);
 
-    const rgba = convertToRgba(image.data, 1, 1, image.colorSpace, image.bitsPerComponent);
+    const rgba = convertToRgba({ data: image.data, width: 1, height: 1, colorSpace: image.colorSpace, bitsPerComponent: image.bitsPerComponent });
     expect(Array.from(rgba.slice(0, 4))).toEqual([255, 0, 0, 255]);
   });
 });
@@ -1484,7 +1489,7 @@ describe("image-extractor (DeviceCMYK)", () => {
     expect(image.colorSpace).toBe("DeviceCMYK");
     expect(image.bitsPerComponent).toBe(8);
 
-    const rgba = convertToRgba(image.data, image.width, image.height, image.colorSpace, image.bitsPerComponent);
+    const rgba = convertToRgba({ data: image.data, width: image.width, height: image.height, colorSpace: image.colorSpace, bitsPerComponent: image.bitsPerComponent });
     const p0 = Array.from(rgba.slice(0, 4));
     expect(p0[0]).toBeGreaterThan(200);
     expect(p0[1]).toBeLessThan(60);
@@ -1510,7 +1515,12 @@ describe("image-extractor (/Decode)", () => {
     expect(images).toHaveLength(1);
 
     const image = images[0]!;
-    const rgba = convertToRgba(image.data, image.width, image.height, image.colorSpace, image.bitsPerComponent, {
+    const rgba = convertToRgba({
+      data: image.data,
+      width: image.width,
+      height: image.height,
+      colorSpace: image.colorSpace,
+      bitsPerComponent: image.bitsPerComponent,
       decode: image.decode,
     });
     expect(Array.from(rgba.slice(0, 4))).toEqual([255, 255, 255, 255]);
@@ -1536,7 +1546,7 @@ describe("image-extractor (/Indexed)", () => {
     const image = images[0]!;
     expect(image.colorSpace).toBe("DeviceRGB");
     expect(image.bitsPerComponent).toBe(8);
-    const rgba = convertToRgba(image.data, image.width, image.height, image.colorSpace, image.bitsPerComponent);
+    const rgba = convertToRgba({ data: image.data, width: image.width, height: image.height, colorSpace: image.colorSpace, bitsPerComponent: image.bitsPerComponent });
     expect(Array.from(rgba.slice(0, 8))).toEqual([0, 0, 0, 255, 255, 255, 255, 255]);
   });
 
@@ -1556,7 +1566,7 @@ describe("image-extractor (/Indexed)", () => {
     expect(images).toHaveLength(1);
 
     const image = images[0]!;
-    const rgba = convertToRgba(image.data, image.width, image.height, image.colorSpace, image.bitsPerComponent);
+    const rgba = convertToRgba({ data: image.data, width: image.width, height: image.height, colorSpace: image.colorSpace, bitsPerComponent: image.bitsPerComponent });
     expect(Array.from(rgba.slice(0, 8))).toEqual([255, 255, 255, 255, 0, 0, 0, 255]);
   });
 
@@ -1599,7 +1609,7 @@ describe("image-extractor (/Indexed)", () => {
     const image = images[0]!;
     expect(image.colorSpace).toBe("DeviceRGB");
     expect(image.bitsPerComponent).toBe(8);
-    const rgba = convertToRgba(image.data, image.width, image.height, image.colorSpace, image.bitsPerComponent);
+    const rgba = convertToRgba({ data: image.data, width: image.width, height: image.height, colorSpace: image.colorSpace, bitsPerComponent: image.bitsPerComponent });
     expect(Array.from(rgba.slice(0, 8))).toEqual([0, 0, 0, 255, 0, 255, 255, 255]);
   });
 
@@ -1619,7 +1629,7 @@ describe("image-extractor (/Indexed)", () => {
     expect(images).toHaveLength(1);
 
     const image = images[0]!;
-    const rgba = convertToRgba(image.data, image.width, image.height, image.colorSpace, image.bitsPerComponent);
+    const rgba = convertToRgba({ data: image.data, width: image.width, height: image.height, colorSpace: image.colorSpace, bitsPerComponent: image.bitsPerComponent });
     expect(Array.from(rgba.slice(0, 8))).toEqual([0, 255, 255, 255, 0, 0, 0, 255]);
   });
 });

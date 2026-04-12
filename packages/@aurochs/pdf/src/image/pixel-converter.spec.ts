@@ -130,7 +130,7 @@ describe("pixel-converter", () => {
   describe("convertToRgba", () => {
     test("converts DeviceGray", () => {
       const data = new Uint8Array([128]);
-      const result = convertToRgba(data, 1, 1, "DeviceGray", 8);
+      const result = convertToRgba({ data, width: 1, height: 1, colorSpace: "DeviceGray", bitsPerComponent: 8 });
 
       expect(result[0]).toBe(128);
       expect(result[1]).toBe(128);
@@ -140,7 +140,7 @@ describe("pixel-converter", () => {
 
     test("converts DeviceRGB", () => {
       const data = new Uint8Array([255, 0, 128]);
-      const result = convertToRgba(data, 1, 1, "DeviceRGB", 8);
+      const result = convertToRgba({ data, width: 1, height: 1, colorSpace: "DeviceRGB", bitsPerComponent: 8 });
 
       expect(result[0]).toBe(255);
       expect(result[1]).toBe(0);
@@ -150,7 +150,7 @@ describe("pixel-converter", () => {
 
     test("converts DeviceCMYK", () => {
       const data = new Uint8Array([0, 0, 0, 0]); // White in CMYK
-      const result = convertToRgba(data, 1, 1, "DeviceCMYK", 8);
+      const result = convertToRgba({ data, width: 1, height: 1, colorSpace: "DeviceCMYK", bitsPerComponent: 8 });
 
       expect(result[0]).toBe(255);
       expect(result[1]).toBe(255);
@@ -160,7 +160,7 @@ describe("pixel-converter", () => {
 
     test("handles 2x2 image", () => {
       const data = new Uint8Array([0, 128, 192, 255]); // 4 grayscale pixels
-      const result = convertToRgba(data, 2, 2, "DeviceGray", 8);
+      const result = convertToRgba({ data, width: 2, height: 2, colorSpace: "DeviceGray", bitsPerComponent: 8 });
 
       expect(result.length).toBe(16); // 4 pixels * 4 channels
       expect(result[0]).toBe(0);
@@ -172,7 +172,7 @@ describe("pixel-converter", () => {
     test("expands 1-bit packed grayscale", () => {
       // 2 pixels: [0, 1] packed into the high bits: 0b0100_0000
       const data = new Uint8Array([0b0100_0000]);
-      const result = convertToRgba(data, 2, 1, "DeviceGray", 1);
+      const result = convertToRgba({ data, width: 2, height: 1, colorSpace: "DeviceGray", bitsPerComponent: 1 });
 
       expect(Array.from(result)).toEqual([
         0,
@@ -189,7 +189,7 @@ describe("pixel-converter", () => {
     test("expands 2-bit packed grayscale", () => {
       // 4 pixels: [0, 1, 2, 3] packed as: 00 01 10 11 => 0x1B
       const data = new Uint8Array([0x1b]);
-      const result = convertToRgba(data, 4, 1, "DeviceGray", 2);
+      const result = convertToRgba({ data, width: 4, height: 1, colorSpace: "DeviceGray", bitsPerComponent: 2 });
 
       expect(result[0]).toBe(0);
       expect(result[4]).toBe(85);
@@ -200,7 +200,7 @@ describe("pixel-converter", () => {
     test("expands 4-bit packed grayscale", () => {
       // 3 pixels: [0, 15, 8] packed as: 0x0F, 0x80
       const data = new Uint8Array([0x0f, 0x80]);
-      const result = convertToRgba(data, 3, 1, "DeviceGray", 4);
+      const result = convertToRgba({ data, width: 3, height: 1, colorSpace: "DeviceGray", bitsPerComponent: 4 });
 
       expect(result[0]).toBe(0);
       expect(result[4]).toBe(255);
@@ -212,7 +212,7 @@ describe("pixel-converter", () => {
       // R=0x1234 => 0x12, G=0xABCD => 0xAB, B=0x00FF => 0x00
       const data = new Uint8Array([0x12, 0x34, 0xab, 0xcd, 0x00, 0xff]);
       const infoSpy = createConsoleSpy("info");
-      const result = convertToRgba(data, 1, 1, "DeviceRGB", 16);
+      const result = convertToRgba({ data, width: 1, height: 1, colorSpace: "DeviceRGB", bitsPerComponent: 16 });
 
       expect(Array.from(result)).toEqual([0x12, 0xab, 0x00, 255]);
       expect(infoSpy.calls.length).toBeGreaterThan(0);
@@ -221,7 +221,7 @@ describe("pixel-converter", () => {
 
     test("throws for unsupported bitsPerComponent", () => {
       const data = new Uint8Array([0]);
-      expect(() => convertToRgba(data, 1, 1, "DeviceGray", 3)).toThrow(
+      expect(() => convertToRgba({ data, width: 1, height: 1, colorSpace: "DeviceGray", bitsPerComponent: 3 })).toThrow(
         /Unsupported bitsPerComponent/
       );
     });
@@ -229,7 +229,7 @@ describe("pixel-converter", () => {
     test("warns and proceeds on small data length mismatch", () => {
       const warnSpy = createConsoleSpy("warn");
       const data = new Uint8Array(19).fill(255);
-      const result = convertToRgba(data, 20, 1, "DeviceGray", 8);
+      const result = convertToRgba({ data, width: 20, height: 1, colorSpace: "DeviceGray", bitsPerComponent: 8 });
 
       expect(result.length).toBe(20 * 4);
       expect(result[19 * 4]).toBe(0);
@@ -241,7 +241,7 @@ describe("pixel-converter", () => {
 
     test("throws on large data length mismatch", () => {
       const data = new Uint8Array(10).fill(255);
-      expect(() => convertToRgba(data, 20, 1, "DeviceGray", 8)).toThrow(/Cannot process image/);
+      expect(() => convertToRgba({ data, width: 20, height: 1, colorSpace: "DeviceGray", bitsPerComponent: 8 })).toThrow(/Cannot process image/);
     });
   });
 });

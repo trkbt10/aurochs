@@ -235,16 +235,16 @@ function computeOrientedBoxForRun(run: TextRun, fontMappings: FontMappings): Ori
   const [tmE, tmF] = [run.textMatrix[4], run.textMatrix[5]];
   const textSpaceY = tmF + run.textRise;
 
-  const displacement = calculateTextDisplacement(
-    run.text,
-    run.fontSize,
-    run.charSpacing,
-    run.wordSpacing,
-    run.horizontalScaling,
+  const displacement = calculateTextDisplacement({
+    text: run.text,
+    fontSize: run.fontSize,
+    charSpacing: run.charSpacing,
+    wordSpacing: run.wordSpacing,
+    horizontalScaling: run.horizontalScaling,
     metrics,
     codeByteWidth,
-    0,
-  );
+    tjAdjustment: 0,
+  });
 
   const start = transformPoint({ x: tmE, y: textSpaceY }, run.graphicsState.ctm);
   const end = transformPoint({ x: tmE + displacement, y: textSpaceY }, run.graphicsState.ctm);
@@ -934,7 +934,12 @@ function tryExtractPerPixelSoftMaskFromElements({
         });
         if (!decoded) {return { ...acc, error: true };}
         const applied = applyGraphicsSoftMaskToPdfImage(decoded);
-        const rgba = convertToRgba(applied.data, applied.width, applied.height, applied.colorSpace, applied.bitsPerComponent, {
+        const rgba = convertToRgba({
+          data: applied.data,
+          width: applied.width,
+          height: applied.height,
+          colorSpace: applied.colorSpace,
+          bitsPerComponent: applied.bitsPerComponent,
           decode: applied.decode,
         });
 

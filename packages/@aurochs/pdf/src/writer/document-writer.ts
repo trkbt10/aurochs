@@ -7,6 +7,8 @@
 import type { PdfDocument } from "../domain/document";
 import type { PdfObject } from "../native/core/types";
 import type { PdfImage } from "../domain/image";
+import type { FontProvider } from "../domain/font/font-provider";
+import { createFontProvider } from "../domain/font/font-provider";
 import { serializePdfDict, serializeIndirectObject } from "./object-serializer";
 import { buildXrefSection } from "./xref-builder";
 import {
@@ -25,12 +27,10 @@ function encodeAscii(text: string): Uint8Array {
 function concat(...arrays: Uint8Array[]): Uint8Array {
   const totalLength = arrays.reduce((sum, arr) => sum + arr.length, 0);
   const result = new Uint8Array(totalLength);
-  // eslint-disable-next-line no-restricted-syntax -- accumulator updated in loop
-  let offset = 0;
-  for (const arr of arrays) {
+  arrays.reduce((offset, arr) => {
     result.set(arr, offset);
-    offset += arr.length;
-  }
+    return offset + arr.length;
+  }, 0);
   return result;
 }
 
@@ -46,6 +46,12 @@ export type PdfWriteOptions = {
   readonly producer?: string;
   /** Creation date for /Info dictionary */
   readonly creationDate?: Date;
+  /**
+   * Font provider for font resolution and re-encoding.
+   * When provided, edited text elements will be re-encoded through this provider.
+   * When omitted, a default provider is created from the document's embedded fonts.
+   */
+  readonly fontProvider?: FontProvider;
 };
 
 /**
@@ -98,20 +104,10 @@ function collectAllFontNames(document: PdfDocument): Set<string> {
  * Collect all images from a document.
  */
 function collectAllImages(document: PdfDocument): { page: number; index: number; image: PdfImage }[] {
-  const images: { page: number; index: number; image: PdfImage }[] = [];
-
-  for (let pageIdx = 0; pageIdx < document.pages.length; pageIdx++) {
-    // eslint-disable-next-line no-restricted-syntax -- counter incremented in loop
-    let imageIdx = 0;
-    for (const element of document.pages[pageIdx].elements) {
-      if (element.type === "image") {
-        images.push({ page: pageIdx, index: imageIdx, image: element });
-        imageIdx++;
-      }
-    }
-  }
-
-  return images;
+  return document.pages.flatMap((page, pageIdx) => {
+    const imageElements = page.elements.filter((e): e is PdfImage => e.type === "image");
+    return imageElements.map((image, imageIdx) => ({ page: pageIdx, index: imageIdx, image }));
+  });
 }
 
 /**
@@ -131,6 +127,9 @@ export function writePdfDocument(
   } = options;
 
   const tracker = new PdfObjectTracker();
+
+  // Create FontProvider (use provided one, or create default from embedded fonts)
+  const fontProvider = options.fontProvider ?? createFontProvider({ embeddedFonts: document.embeddedFonts });
 
   // Phase 1: Reserve object numbers for structure
   // We need to know /Pages objNum before building pages, but we build pages before /Pages
@@ -165,15 +164,11 @@ export function writePdfDocument(
 
     // Build image map for this page
     const pageImageObjMap = new Map<number, number>();
-    // eslint-disable-next-line no-restricted-syntax -- accumulator updated in loop
-    let imageIdx = 0;
-    for (const element of page.elements) {
-      if (element.type === "image") {
-        const objNum = globalImageObjMap.get(`${pageIdx}:${imageIdx}`);
-        if (objNum !== undefined) {
-          pageImageObjMap.set(imageIdx, objNum);
-        }
-        imageIdx++;
+    const imageElements = page.elements.filter((e) => e.type === "image");
+    for (const [imageIdx] of imageElements.entries()) {
+      const objNum = globalImageObjMap.get(`${pageIdx}:${imageIdx}`);
+      if (objNum !== undefined) {
+        pageImageObjMap.set(imageIdx, objNum);
       }
     }
 
@@ -184,6 +179,7 @@ export function writePdfDocument(
       imageObjMap: pageImageObjMap,
       tracker,
       embeddedFonts: document.embeddedFonts,
+      fontProvider,
     });
     pageObjNums.push(result.pageObjNum);
   }
@@ -246,18 +242,15 @@ export function writePdfDocument(
   // Get all entries and calculate offsets
   const entries = tracker.getAll();
   const parts: Uint8Array[] = [header];
-  // eslint-disable-next-line no-restricted-syntax -- accumulator updated in loop
-  let currentOffset = header.length;
 
   // Write objects in order and record offsets
-  for (const entry of entries) {
-    (entry as { offset: number }).offset = currentOffset;
+  const xrefOffset = entries.reduce((offset, entry) => {
+    (entry as { offset: number }).offset = offset;
     parts.push(entry.data);
-    currentOffset += entry.data.length;
-  }
+    return offset + entry.data.length;
+  }, header.length);
 
   // Build xref section
-  const xrefOffset = currentOffset;
   const xrefSection = buildXrefSection({
     entries,
     size: tracker.getSize(),

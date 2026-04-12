@@ -9,6 +9,30 @@ import type { PdfObject } from "../native/core/types";
 const decoder = new TextDecoder();
 const toText = (bytes: Uint8Array) => decoder.decode(bytes);
 
+/**
+ * Find the first index in `haystack` where `needle` occurs as a contiguous byte subsequence.
+ * Returns -1 when not found (same semantics as `String.prototype.indexOf`).
+ * Scans forward from the beginning of `haystack`.
+ */
+function indexOfBytes(haystack: Uint8Array, needle: Uint8Array): number {
+  return Array.from(
+    { length: haystack.length - needle.length + 1 },
+    (_, i) => i,
+  ).findIndex((i) => needle.every((b, j) => haystack[i + j] === b));
+}
+
+/**
+ * Find the *last* index in `haystack` where `needle` occurs as a contiguous byte subsequence.
+ * Returns -1 when not found.
+ */
+function lastIndexOfBytes(haystack: Uint8Array, needle: Uint8Array): number {
+  const candidates = Array.from(
+    { length: haystack.length - needle.length + 1 },
+    (_, i) => i,
+  ).filter((i) => needle.every((b, j) => haystack[i + j] === b));
+  return candidates.length > 0 ? candidates[candidates.length - 1] : -1;
+}
+
 describe("serializePdfStream", () => {
   it("serializes stream with FlateDecode compression (default)", () => {
     const data = new TextEncoder().encode("Hello, World!");
@@ -56,35 +80,10 @@ describe("serializePdfStream", () => {
     const streamMarker = new TextEncoder().encode("stream\n");
     const endstreamMarker = new TextEncoder().encode("\nendstream");
 
-    // eslint-disable-next-line no-restricted-syntax -- updated in search loop
-    let streamStart = -1;
-    for (let i = 0; i <= result.length - streamMarker.length; i++) {      // eslint-disable-next-line no-restricted-syntax -- flag updated in inner loop
-      let match = true;
-      for (let j = 0; j < streamMarker.length; j++) {        if (result[i + j] !== streamMarker[j]) {
-          match = false;
-          break;
-        }
-      }
-      if (match) {
-        streamStart = i + streamMarker.length;
-        break;
-      }
-    }
+    const streamMarkerPos = indexOfBytes(result, streamMarker);
+    const streamStart = streamMarkerPos === -1 ? -1 : streamMarkerPos + streamMarker.length;
 
-    // eslint-disable-next-line no-restricted-syntax -- updated in search loop
-    let streamEnd = -1;
-    for (let i = result.length - endstreamMarker.length; i >= 0; i--) {      // eslint-disable-next-line no-restricted-syntax -- flag updated in inner loop
-      let match = true;
-      for (let j = 0; j < endstreamMarker.length; j++) {        if (result[i + j] !== endstreamMarker[j]) {
-          match = false;
-          break;
-        }
-      }
-      if (match) {
-        streamEnd = i;
-        break;
-      }
-    }
+    const streamEnd = lastIndexOfBytes(result, endstreamMarker);
 
     expect(streamStart).toBeGreaterThan(0);
     expect(streamEnd).toBeGreaterThan(streamStart);

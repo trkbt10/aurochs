@@ -57,8 +57,6 @@ type ParseState = {
   truncatedRangeCount: number;
 };
 
-/* eslint-disable no-restricted-syntax -- parsers require mutable state for regex iteration */
-
 /**
  * Default cap for one `bfrange` expansion.
  * 65536 keeps complete 2-byte maps while still bounding memory use.
@@ -80,7 +78,6 @@ export function parseToUnicodeCMap(
   };
 
   const codeSpace = parseCodeSpaceMetadata(data);
-  let maxSourceHexLength = 0;
 
   const bfcharLength = parseBfCharInternal({
     data,
@@ -88,7 +85,6 @@ export function parseToUnicodeCMap(
     byteMapping,
     parseState,
   });
-  maxSourceHexLength = Math.max(maxSourceHexLength, bfcharLength);
 
   const bfrangeLength = parseBfRangeInternal({
     data,
@@ -97,7 +93,8 @@ export function parseToUnicodeCMap(
     parseState,
     options,
   });
-  maxSourceHexLength = Math.max(maxSourceHexLength, bfrangeLength);
+
+  const maxSourceHexLength = Math.max(bfcharLength, bfrangeLength);
 
   const sourceCodeByteLengthsSet = new Set<number>(codeSpace.byteLengths);
   for (const key of byteMapping.keys()) {
@@ -159,10 +156,9 @@ function parseBfCharInternal(
     parseState,
   } = args;
   const sectionRegex = /beginbfchar\s*\n?([\s\S]*?)endbfchar/gi;
-  let sectionMatch;
-  let maxSourceLength = 0;
+  const tracker = { maxSourceLength: 0 };
 
-  while ((sectionMatch = sectionRegex.exec(data)) !== null) {
+  for (const sectionMatch of data.matchAll(sectionRegex)) {
     const content = stripComments(sectionMatch[1] ?? "");
     if (!content) {
       continue;
@@ -181,9 +177,9 @@ function parseBfCharInternal(
       parseState.invalidEntryCount += 1;
     }
 
-    for (let i = 0; i < pairCount; i += 1) {
-      const sourceHex = hexTokens[i * 2];
-      const destHex = hexTokens[i * 2 + 1];
+    for (const pairIndex of Array.from({ length: pairCount }, (_, idx) => idx)) {
+      const sourceHex = hexTokens[pairIndex * 2];
+      const destHex = hexTokens[pairIndex * 2 + 1];
       if (!sourceHex || !destHex) {
         parseState.invalidEntryCount += 1;
         continue;
@@ -195,7 +191,7 @@ function parseBfCharInternal(
         continue;
       }
 
-      maxSourceLength = Math.max(maxSourceLength, normalizedSource.length);
+      tracker.maxSourceLength = Math.max(tracker.maxSourceLength, normalizedSource.length);
 
       const unicode = hexToString(destHex);
       if (unicode === null) {
@@ -212,7 +208,7 @@ function parseBfCharInternal(
     }
   }
 
-  return maxSourceLength;
+  return tracker.maxSourceLength;
 }
 
 /**
@@ -237,6 +233,34 @@ export function parseBfRange(
   });
 }
 
+function collectBracketedDestinations(
+  tokens: readonly CMapSectionToken[],
+  startPos: number,
+  parseState: ParseState,
+): { readonly destinationHexes: string[]; readonly closed: boolean; readonly endPos: number } {
+  const destinationHexes: string[] = [];
+  const cursor = { pos: startPos };
+  const state = { closed: false };
+  while (cursor.pos < tokens.length) {
+    const token = tokens[cursor.pos];
+    if (!token) {
+      break;
+    }
+    if (token.kind === "rbracket") {
+      state.closed = true;
+      cursor.pos += 1;
+      break;
+    }
+    if (token.kind === "hex") {
+      destinationHexes.push(token.value);
+    } else {
+      parseState.invalidEntryCount += 1;
+    }
+    cursor.pos += 1;
+  }
+  return { destinationHexes, closed: state.closed, endPos: cursor.pos };
+}
+
 function parseBfRangeInternal(
   args: Readonly<{
     data: string;
@@ -254,35 +278,35 @@ function parseBfRangeInternal(
     options = {},
   } = args;
   const sectionRegex = /beginbfrange\s*\n?([\s\S]*?)endbfrange/gi;
-  let sectionMatch;
-  let maxSourceLength = 0;
+  const tracker = { maxSourceLength: 0 };
   const maxRangeEntries = options.maxRangeEntries ?? BFRANGE_MAX_ENTRIES;
 
-  while ((sectionMatch = sectionRegex.exec(data)) !== null) {
+  for (const sectionMatch of data.matchAll(sectionRegex)) {
     const content = stripComments(sectionMatch[1] ?? "");
     if (!content) {
       continue;
     }
 
     const tokens = tokenizeCMapSection(content);
-    for (let i = 0; i < tokens.length;) {
-      const startToken = tokens[i];
+    const idx = { pos: 0 };
+    while (idx.pos < tokens.length) {
+      const startToken = tokens[idx.pos];
       if (!startToken) {
         break;
       }
       if (startToken.kind !== "hex") {
-        i += 1;
+        idx.pos += 1;
         continue;
       }
 
-      const endToken = tokens[i + 1];
+      const endToken = tokens[idx.pos + 1];
       if (!endToken || endToken.kind !== "hex") {
         parseState.invalidEntryCount += 1;
-        i += 1;
+        idx.pos += 1;
         continue;
       }
 
-      const valueToken = tokens[i + 2];
+      const valueToken = tokens[idx.pos + 2];
       if (!valueToken) {
         parseState.invalidEntryCount += 1;
         break;
@@ -292,11 +316,11 @@ function parseBfRangeInternal(
         const sourceMeta = parseSourceRangeMeta(startToken.value, endToken.value);
         if (!sourceMeta) {
           parseState.invalidEntryCount += 1;
-          i += 3;
+          idx.pos += 3;
           continue;
         }
 
-        maxSourceLength = Math.max(maxSourceLength, sourceMeta.sourceHexLength);
+        tracker.maxSourceLength = Math.max(tracker.maxSourceLength, sourceMeta.sourceHexLength);
 
         applySimpleRangeMappings({
           sourceMeta,
@@ -306,7 +330,7 @@ function parseBfRangeInternal(
           byteMapping,
           parseState,
         });
-        i += 3;
+        idx.pos += 3;
         continue;
       }
 
@@ -314,32 +338,13 @@ function parseBfRangeInternal(
         const sourceMeta = parseSourceRangeMeta(startToken.value, endToken.value);
         if (!sourceMeta) {
           parseState.invalidEntryCount += 1;
-          i += 3;
+          idx.pos += 3;
           continue;
         }
 
-        maxSourceLength = Math.max(maxSourceLength, sourceMeta.sourceHexLength);
+        tracker.maxSourceLength = Math.max(tracker.maxSourceLength, sourceMeta.sourceHexLength);
 
-        const destinationHexes: string[] = [];
-        let closed = false;
-        let cursor = i + 3;
-        while (cursor < tokens.length) {
-          const token = tokens[cursor];
-          if (!token) {
-            break;
-          }
-          if (token.kind === "rbracket") {
-            closed = true;
-            cursor += 1;
-            break;
-          }
-          if (token.kind === "hex") {
-            destinationHexes.push(token.value);
-          } else {
-            parseState.invalidEntryCount += 1;
-          }
-          cursor += 1;
-        }
+        const { destinationHexes, closed, endPos } = collectBracketedDestinations(tokens, idx.pos + 3, parseState);
         if (!closed) {
           parseState.invalidEntryCount += 1;
         }
@@ -353,16 +358,16 @@ function parseBfRangeInternal(
           parseState,
         });
 
-        i = cursor;
+        idx.pos = endPos;
         continue;
       }
 
       parseState.invalidEntryCount += 1;
-      i += 1;
+      idx.pos += 1;
     }
   }
 
-  return maxSourceLength;
+  return tracker.maxSourceLength;
 }
 
 type CMapSectionToken =
@@ -374,8 +379,7 @@ type CMapSectionToken =
 function tokenizeCMapSection(content: string): readonly CMapSectionToken[] {
   const tokens: CMapSectionToken[] = [];
   const tokenRegex = /<([^>]*)>|\[|\]|[^\s]+/g;
-  let match;
-  while ((match = tokenRegex.exec(content)) !== null) {
+  for (const match of content.matchAll(tokenRegex)) {
     if (match[1] !== undefined) {
       tokens.push({ kind: "hex", value: match[1] });
       continue;
@@ -460,19 +464,22 @@ function applySimpleRangeMappings(args: {
     );
   }
 
-  for (let offset = 0; offset < actualRangeSize; offset++) {
-    const sourceCode = sourceMeta.start + offset;
+  const iter = { offset: 0 };
+  while (iter.offset < actualRangeSize) {
+    const sourceCode = sourceMeta.start + iter.offset;
     const sourceHex = sourceCode.toString(16).padStart(sourceMeta.sourceHexLength, "0").toUpperCase();
 
-    const destinationHex = incrementHexString(normalizedDestinationStart, offset);
+    const destinationHex = incrementHexString(normalizedDestinationStart, iter.offset);
     if (!destinationHex) {
       parseState.invalidEntryCount += 1;
+      iter.offset++;
       continue;
     }
 
     const unicode = hexToString(destinationHex);
     if (unicode === null) {
       parseState.invalidEntryCount += 1;
+      iter.offset++;
       continue;
     }
 
@@ -486,6 +493,7 @@ function applySimpleRangeMappings(args: {
     if (!Number.isSafeInteger(sourceCode)) {
       parseState.invalidEntryCount += 1;
     }
+    iter.offset++;
   }
 }
 
@@ -519,18 +527,21 @@ function applyArrayRangeMappings(args: {
 
   const actualRangeSize = Math.min(maxAllowedByConfig, destinationHexes.length);
 
-  for (let offset = 0; offset < actualRangeSize; offset++) {
-    const sourceCode = sourceMeta.start + offset;
+  const iter = { offset: 0 };
+  while (iter.offset < actualRangeSize) {
+    const sourceCode = sourceMeta.start + iter.offset;
     const sourceHex = sourceCode.toString(16).padStart(sourceMeta.sourceHexLength, "0").toUpperCase();
-    const destinationHex = destinationHexes[offset];
+    const destinationHex = destinationHexes[iter.offset];
     if (!destinationHex) {
       parseState.invalidEntryCount += 1;
+      iter.offset++;
       continue;
     }
 
     const unicode = hexToString(destinationHex);
     if (unicode === null) {
       parseState.invalidEntryCount += 1;
+      iter.offset++;
       continue;
     }
 
@@ -540,6 +551,7 @@ function applyArrayRangeMappings(args: {
       mapping,
       byteMapping,
     });
+    iter.offset++;
   }
 
   if (destinationHexes.length < maxAllowedByConfig) {
@@ -571,18 +583,17 @@ type CodeSpaceParseResult = Readonly<{
 function parseCodeSpaceMetadata(data: string): CodeSpaceParseResult {
   const lengths = new Set<number>();
   const sectionRegex = /begincodespacerange\s*\n?([\s\S]*?)endcodespacerange/gi;
-  let sectionMatch;
 
-  while ((sectionMatch = sectionRegex.exec(data)) !== null) {
+  for (const sectionMatch of data.matchAll(sectionRegex)) {
     const content = stripComments(sectionMatch[1] ?? "");
     const hexTokens = [...content.matchAll(/<([^>]*)>/g)]
       .map((match) => match[1])
       .filter((value): value is string => value !== undefined);
     const pairCount = Math.floor(hexTokens.length / 2);
 
-    for (let i = 0; i < pairCount; i += 1) {
-      const startHex = normalizeHexLiteral(hexTokens[i * 2] ?? "");
-      const endHex = normalizeHexLiteral(hexTokens[i * 2 + 1] ?? "");
+    for (const pairIndex of Array.from({ length: pairCount }, (_, idx) => idx)) {
+      const startHex = normalizeHexLiteral(hexTokens[pairIndex * 2] ?? "");
+      const endHex = normalizeHexLiteral(hexTokens[pairIndex * 2 + 1] ?? "");
       if (!startHex || !endHex || startHex.length !== endHex.length) {
         continue;
       }
@@ -629,34 +640,47 @@ function stripComments(content: string): string {
     .join("\n");
 }
 
+function parseHexToBytes(normalized: string): Uint8Array | null {
+  const byteCount = normalized.length / 2;
+  const bytes = new Uint8Array(byteCount);
+  const idx = { pos: 0 };
+  while (idx.pos < normalized.length) {
+    const value = Number.parseInt(normalized.slice(idx.pos, idx.pos + 2), 16);
+    if (!Number.isFinite(value)) {
+      return null;
+    }
+    bytes[idx.pos / 2] = value;
+    idx.pos += 2;
+  }
+  return bytes;
+}
+
 function incrementHexString(hex: string, increment: number): string | null {
   const normalized = normalizeHexLiteral(hex);
   if (!normalized || increment < 0 || !Number.isSafeInteger(increment)) {
     return null;
   }
 
-  const bytes = new Uint8Array(normalized.length / 2);
-  for (let i = 0; i < normalized.length; i += 2) {
-    const value = Number.parseInt(normalized.slice(i, i + 2), 16);
-    if (!Number.isFinite(value)) {
-      return null;
-    }
-    bytes[i / 2] = value;
+  const bytes = parseHexToBytes(normalized);
+  if (!bytes) {
+    return null;
   }
 
-  let carry = increment;
-  for (let i = bytes.length - 1; i >= 0; i--) {
-    if (carry <= 0) {
+  const state = { carry: increment };
+  const idx = { pos: bytes.length - 1 };
+  while (idx.pos >= 0) {
+    if (state.carry <= 0) {
       break;
     }
 
-    const add = carry & 0xff;
-    const sum = bytes[i]! + add;
-    bytes[i] = sum & 0xff;
-    carry = (carry >>> 8) + (sum >>> 8);
+    const add = state.carry & 0xff;
+    const sum = bytes[idx.pos]! + add;
+    bytes[idx.pos] = sum & 0xff;
+    state.carry = (state.carry >>> 8) + (sum >>> 8);
+    idx.pos--;
   }
 
-  if (carry > 0) {
+  if (state.carry > 0) {
     return null;
   }
 
@@ -674,32 +698,34 @@ function buildDiagnostics(args: Readonly<{
     codeSpaceByteLengths,
   } = args;
   const histogram = new Map<number, number>();
-  let replacementCharMapCount = 0;
-  let privateUseCharMapCount = 0;
-  let sourceLengthOutsideCodeSpaceCount = 0;
+  const counters = {
+    replacementCharMapCount: 0,
+    privateUseCharMapCount: 0,
+    sourceLengthOutsideCodeSpaceCount: 0,
+  };
   const hasCodeSpaceInfo = codeSpaceByteLengths.size > 0;
 
   for (const [sourceHex, decoded] of byteMapping.entries()) {
     const sourceLength = sourceHex.length / 2;
     histogram.set(sourceLength, (histogram.get(sourceLength) ?? 0) + 1);
     if (hasCodeSpaceInfo && !codeSpaceByteLengths.has(sourceLength)) {
-      sourceLengthOutsideCodeSpaceCount += 1;
+      counters.sourceLengthOutsideCodeSpaceCount += 1;
     }
 
     if (decoded.includes("\uFFFD")) {
-      replacementCharMapCount += 1;
+      counters.replacementCharMapCount += 1;
     }
     if (containsPrivateUseCharacter(decoded)) {
-      privateUseCharMapCount += 1;
+      counters.privateUseCharMapCount += 1;
     }
   }
 
   return {
     invalidEntryCount: parseState.invalidEntryCount,
     truncatedRangeCount: parseState.truncatedRangeCount,
-    sourceLengthOutsideCodeSpaceCount,
-    replacementCharMapCount,
-    privateUseCharMapCount,
+    sourceLengthOutsideCodeSpaceCount: counters.sourceLengthOutsideCodeSpaceCount,
+    replacementCharMapCount: counters.replacementCharMapCount,
+    privateUseCharMapCount: counters.privateUseCharMapCount,
     sourceCodeLengthHistogram: histogram,
   };
 }
@@ -734,44 +760,50 @@ export function hexToString(hex: string): string | null {
     }
 
     if (normalized.length % 4 !== 0) {
-      let result = "";
-      for (let i = 0; i < normalized.length; i += 2) {
-        const byte = Number.parseInt(normalized.slice(i, i + 2), 16);
+      const parts: string[] = [];
+      const idx = { pos: 0 };
+      while (idx.pos < normalized.length) {
+        const byte = Number.parseInt(normalized.slice(idx.pos, idx.pos + 2), 16);
         if (!Number.isFinite(byte)) {
           return null;
         }
-        result += String.fromCodePoint(byte);
+        parts.push(String.fromCodePoint(byte));
+        idx.pos += 2;
       }
-      return result;
+      return parts.join("");
     }
 
     const codeUnits: number[] = [];
-    for (let i = 0; i < normalized.length; i += 4) {
-      const unit = Number.parseInt(normalized.slice(i, i + 4), 16);
+    const parseIdx = { pos: 0 };
+    while (parseIdx.pos < normalized.length) {
+      const unit = Number.parseInt(normalized.slice(parseIdx.pos, parseIdx.pos + 4), 16);
       if (!Number.isFinite(unit)) {
         return null;
       }
       codeUnits.push(unit);
+      parseIdx.pos += 4;
     }
 
-    let result = "";
-    for (let i = 0; i < codeUnits.length; i++) {
-      const codeUnit = codeUnits[i]!;
+    const resultParts: string[] = [];
+    const unitIdx = { pos: 0 };
+    while (unitIdx.pos < codeUnits.length) {
+      const codeUnit = codeUnits[unitIdx.pos]!;
 
-      if (codeUnit >= 0xd800 && codeUnit <= 0xdbff && i + 1 < codeUnits.length) {
-        const low = codeUnits[i + 1]!;
+      if (codeUnit >= 0xd800 && codeUnit <= 0xdbff && unitIdx.pos + 1 < codeUnits.length) {
+        const low = codeUnits[unitIdx.pos + 1]!;
         if (low >= 0xdc00 && low <= 0xdfff) {
           const codePoint = ((codeUnit - 0xd800) << 10) + (low - 0xdc00) + 0x10000;
-          result += String.fromCodePoint(codePoint);
-          i += 1;
+          resultParts.push(String.fromCodePoint(codePoint));
+          unitIdx.pos += 2;
           continue;
         }
       }
 
-      result += String.fromCharCode(codeUnit);
+      resultParts.push(String.fromCharCode(codeUnit));
+      unitIdx.pos++;
     }
 
-    return result;
+    return resultParts.join("");
   } catch {
     return null;
   }

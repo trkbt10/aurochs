@@ -255,6 +255,35 @@ export type PdfText = {
    * - `1`: vertical writing (typically Identity-V)
    */
   readonly writingMode?: 0 | 1;
+
+  // =============================================================================
+  // Edit State (set when text or font has been modified by the editor)
+  // =============================================================================
+
+  /**
+   * Tracks whether this text element has been modified by the editor.
+   *
+   * When present, the writer uses this to decide whether to re-encode
+   * the text (instead of using stale rawBytes) and which font to reference.
+   *
+   * Absent for unmodified text elements parsed from PDF.
+   */
+  readonly editState?: PdfTextEditState;
+};
+
+/**
+ * Edit state for a PdfText element.
+ *
+ * Set by the editor when text content or font is changed.
+ * Consumed by the writer to decide re-encoding strategy.
+ */
+export type PdfTextEditState = {
+  /** Whether the text content has been changed. When true, rawBytes must be re-encoded. */
+  readonly textChanged: boolean;
+  /** Whether the font has been changed. When true, the writer uses resolvedFontFamily. */
+  readonly fontChanged: boolean;
+  /** New font family name if fontChanged is true. */
+  readonly resolvedFontFamily?: string;
 };
 
 /**

@@ -83,7 +83,13 @@ export type {
 export { getPathBounds } from "./path";
 
 // Text domain
-export type { PdfText, PdfTextFontMetrics } from "./text";
+export type { PdfText, PdfTextFontMetrics, PdfTextEditState } from "./text";
+export {
+  withTextContent,
+  withFontFamily,
+  withFontSize,
+  withCharSpacing,
+} from "./text";
 
 // Image domain
 export type { PdfImage } from "./image";

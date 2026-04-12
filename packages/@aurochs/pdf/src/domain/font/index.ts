@@ -76,3 +76,23 @@ export {
   generateFontFaceCss,
   generateFontFaceStyle,
 } from "./font-css-generator";
+
+// Font Provider (central font resolution layer)
+export type {
+  FontSource,
+  ResolvedFont,
+  FontProvider,
+  FontRegistrationInput,
+  FontFallbackStrategy,
+  CreateFontProviderOptions,
+} from "./font-provider";
+export { createFontProvider, createFontProviderForDocument } from "./font-provider";
+
+// Text encoder (re-encoding for edited text)
+export type { TextEncodeResult, TextRun } from "./text-encoder";
+export {
+  encodeTextForFont,
+  buildReverseToUnicodeMap,
+  hexStringToUint8Array,
+  splitTextByEncodability,
+} from "./text-encoder";

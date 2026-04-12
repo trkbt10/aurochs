@@ -39,79 +39,64 @@ export function renderPdfTableNode(table: PdfTable, pageHeight: number): SvgFrag
     }),
   );
 
-  // Render rows and cells
-  // eslint-disable-next-line no-restricted-syntax -- accumulator for Y offset
-  let currentY = tableY;
+  // Render rows and cells — accumulate Y offset through rows, X offset through cells
+  const cellNodes = table.rows.reduce<{ readonly nodes: XmlNode[]; readonly y: number }>(
+    (rowAcc, row) => {
+      const rowNodes = row.cells.reduce<{ readonly nodes: XmlNode[]; readonly x: number }>(
+        (cellAcc, cell, ci) => {
+          const colSpan = cell.colSpan ?? 1;
+          const cellWidth = table.columns.slice(ci, ci + colSpan).reduce((sum, col) => sum + col.width, 0);
+          const rowSpan = cell.rowSpan ?? 1;
+          const cellHeight = row.height * rowSpan;
+          const cellX = cellAcc.x;
+          const cellY = rowAcc.y;
 
-  for (const row of table.rows) {
-    // eslint-disable-next-line no-restricted-syntax -- accumulator for X offset
-    let currentX = tableX;
+          const cellNodes: XmlNode[] = [];
 
-    for (let ci = 0; ci < row.cells.length; ci++) {
-      const cell = row.cells[ci];
-      const colSpan = cell.colSpan ?? 1;
+          if (cell.backgroundColor) {
+            cellNodes.push(svgRect({
+              x: cellX, y: cellY, width: cellWidth, height: cellHeight,
+              fill: cell.backgroundColor, stroke: "none",
+            }));
+          }
 
-      // Compute cell width (sum of spanned columns)
-      // eslint-disable-next-line no-restricted-syntax -- accumulator for width
-      let cellWidth = 0;
-      for (let s = 0; s < colSpan && ci + s < table.columns.length; s++) {
-        cellWidth += table.columns[ci + s].width;
-      }
+          cellNodes.push(svgRect({
+            x: cellX, y: cellY, width: cellWidth, height: cellHeight,
+            fill: "none", stroke: borderColor, strokeWidth: borderWidth * 0.5,
+          }));
 
-      const rowSpan = cell.rowSpan ?? 1;
-      // eslint-disable-next-line no-restricted-syntax -- accumulator for height
-      let cellHeight = row.height;
-      if (rowSpan > 1) {
-        // Sum heights of spanned rows (approximate - uses current row context)
-        cellHeight = row.height * rowSpan;
-      }
+          if (cell.text) {
+            const textX = cellX + 4;
+            const textY = computeTextY(cellY, cellHeight, cell.verticalAlignment);
+            cellNodes.push(svgText(
+              {
+                x: formatSvgNumber(textX),
+                y: formatSvgNumber(textY),
+                "font-size": "10",
+                fill: "#000000",
+                "dominant-baseline": getDominantBaseline(cell.verticalAlignment),
+              },
+              cell.text,
+            ));
+          }
 
-      // Cell background
-      if (cell.backgroundColor) {
-        nodes.push(
-          svgRect({
-            x: currentX, y: currentY,
-            width: cellWidth, height: cellHeight,
-            fill: cell.backgroundColor, stroke: "none",
-          }),
-        );
-      }
-
-      // Cell border
-      nodes.push(
-        svgRect({
-          x: currentX, y: currentY,
-          width: cellWidth, height: cellHeight,
-          fill: "none", stroke: borderColor, strokeWidth: borderWidth * 0.5,
-        }),
+          return {
+            nodes: [...cellAcc.nodes, ...cellNodes],
+            x: cellX + (table.columns[ci]?.width ?? 0),
+          };
+        },
+        { nodes: [], x: tableX },
       );
 
-      // Cell text
-      if (cell.text) {
-        const textX = currentX + 4; // Left padding
-        const textY = computeTextY(currentY, cellHeight, cell.verticalAlignment);
+      return {
+        nodes: [...rowAcc.nodes, ...rowNodes.nodes],
+        y: rowAcc.y + row.height,
+      };
+    },
+    { nodes: [], y: tableY },
+  );
 
-        nodes.push(
-          svgText(
-            {
-              x: formatSvgNumber(textX),
-              y: formatSvgNumber(textY),
-              "font-size": "10",
-              fill: "#000000",
-              "dominant-baseline": getDominantBaseline(cell.verticalAlignment),
-            },
-            cell.text,
-          ),
-        );
-      }
-
-      currentX += table.columns[ci]?.width ?? 0;
-    }
-
-    currentY += row.height;
-  }
-
-  return nodes;
+  return [...nodes, ...cellNodes.nodes];
 }
 
 /**

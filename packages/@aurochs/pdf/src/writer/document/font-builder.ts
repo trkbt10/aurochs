@@ -23,15 +23,12 @@ function isCIDFont(font: PdfEmbeddedFont): boolean {
  * Removes leading slash and optionally subset prefix.
  */
 function normalizeFontName(name: string, removeSubsetPrefix: boolean): string {
-  // eslint-disable-next-line no-restricted-syntax -- conditionally reassigned
-  let clean = name.startsWith("/") ? name.slice(1) : name;
-  if (removeSubsetPrefix) {
-    const plusIndex = clean.indexOf("+");
-    if (plusIndex > 0) {
-      clean = clean.slice(plusIndex + 1);
-    }
+  const withoutSlash = name.startsWith("/") ? name.slice(1) : name;
+  if (!removeSubsetPrefix) {
+    return withoutSlash;
   }
-  return clean;
+  const plusIndex = withoutSlash.indexOf("+");
+  return plusIndex > 0 ? withoutSlash.slice(plusIndex + 1) : withoutSlash;
 }
 
 /**
@@ -122,22 +119,11 @@ export function buildEmbeddedFont(
   const fontFileObjNum = tracker.allocate();
 
   // Determine font file key based on format
-  // eslint-disable-next-line no-restricted-syntax -- assigned in switch
-  let fontFileKey: string;
-  switch (font.format) {
-    case "truetype":
-      fontFileKey = "FontFile2"; // TrueType
-      break;
-    case "opentype":
-    case "cff":
-      fontFileKey = "FontFile3"; // CFF/OpenType
-      break;
-    case "type1":
-      fontFileKey = "FontFile"; // Type 1
-      break;
-    default:
-      fontFileKey = "FontFile2";
-  }
+  const fontFileKey =
+    font.format === "truetype" ? "FontFile2" :
+    font.format === "opentype" || font.format === "cff" ? "FontFile3" :
+    font.format === "type1" ? "FontFile" :
+    "FontFile2";
 
   // Build font file stream
   const fontFileDict = new Map<string, PdfObject>();
@@ -231,29 +217,21 @@ export function buildType0Font(
   const baseFontName = font.baseFontName?.replace(/^\//, "") ??
                        font.fontFamily.replace(/\s+/g, "");
 
-  // Determine font file key based on format
-  // eslint-disable-next-line no-restricted-syntax -- assigned in switch
-  let fontFileKey: string;
-  // eslint-disable-next-line no-restricted-syntax -- assigned in switch
-  let cidFontSubtype: string;
-  switch (font.format) {
-    case "truetype":
-      fontFileKey = "FontFile2";
-      cidFontSubtype = "CIDFontType2";
-      break;
-    case "opentype":
-    case "cff":
-      fontFileKey = "FontFile3";
-      cidFontSubtype = "CIDFontType0";
-      break;
-    case "type1":
-      fontFileKey = "FontFile";
-      cidFontSubtype = "CIDFontType0";
-      break;
-    default:
-      fontFileKey = "FontFile2";
-      cidFontSubtype = "CIDFontType2";
-  }
+  // Determine font file key and CID font subtype based on format
+  const fontFormatInfo = ((): { fontFileKey: string; cidFontSubtype: string } => {
+    switch (font.format) {
+      case "truetype":
+        return { fontFileKey: "FontFile2", cidFontSubtype: "CIDFontType2" };
+      case "opentype":
+      case "cff":
+        return { fontFileKey: "FontFile3", cidFontSubtype: "CIDFontType0" };
+      case "type1":
+        return { fontFileKey: "FontFile", cidFontSubtype: "CIDFontType0" };
+      default:
+        return { fontFileKey: "FontFile2", cidFontSubtype: "CIDFontType2" };
+    }
+  })();
+  const { fontFileKey, cidFontSubtype } = fontFormatInfo;
 
   // Build font file stream
   const fontFileDict = new Map<string, PdfObject>();
@@ -330,10 +308,8 @@ export function buildType0Font(
   tracker.set(cidFontObjNum, serializeIndirectObject(cidFontObjNum, 0, cidFontBytes));
 
   // Build ToUnicode CMap stream if available
-  // eslint-disable-next-line no-restricted-syntax -- conditionally assigned
-  let toUnicodeObjNum: number | undefined;
-  if (font.toUnicode) {
-    toUnicodeObjNum = tracker.allocate();
+  const toUnicodeObjNum = font.toUnicode ? tracker.allocate() : undefined;
+  if (font.toUnicode && toUnicodeObjNum !== undefined) {
     const toUnicodeData = generateToUnicodeStream(font.toUnicode);
     const toUnicodeStream = serializePdfStream({
       dict: new Map(),
@@ -379,29 +355,28 @@ function buildWidthsArray(widths: ReadonlyMap<number, number>): PdfObject[] {
   // Sort CIDs
   const sorted = [...widths.entries()].sort((a, b) => a[0] - b[0]);
 
-  const result: PdfObject[] = [];
-  // eslint-disable-next-line no-restricted-syntax -- loop counter
-  let i = 0;
-
-  while (i < sorted.length) {
-    const startCid = sorted[i]![0];
-    const widthArray: PdfObject[] = [];
-
-    // Find consecutive CIDs
-    // eslint-disable-next-line no-restricted-syntax -- updated in search loop
-    let j = i;
-    while (j < sorted.length && sorted[j]![0] === startCid + (j - i)) {
-      widthArray.push({ type: "number", value: sorted[j]![1] });
-      j++;
+  // Group consecutive CIDs into runs: each run is a starting index and length
+  const groups = sorted.reduce<{ start: number; count: number }[]>((acc, [cid], idx) => {
+    const prev = acc[acc.length - 1];
+    if (prev && cid === sorted[prev.start]![0] + (idx - prev.start)) {
+      // Extend current group
+      return [...acc.slice(0, -1), { start: prev.start, count: prev.count + 1 }];
     }
+    // Start new group
+    return [...acc, { start: idx, count: 1 }];
+  }, []);
 
-    result.push({ type: "number", value: startCid });
-    result.push({ type: "array", items: widthArray });
-
-    i = j;
-  }
-
-  return result;
+  return groups.flatMap(({ start, count }) => {
+    const startCid = sorted[start]![0];
+    const widthArray: PdfObject[] = Array.from({ length: count }, (_, k) => ({
+      type: "number" as const,
+      value: sorted[start + k]![1],
+    }));
+    return [
+      { type: "number" as const, value: startCid },
+      { type: "array" as const, items: widthArray },
+    ];
+  });
 }
 
 /** Build the appropriate font object (Type0 for CID, embedded otherwise). */

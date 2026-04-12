@@ -194,19 +194,16 @@ describe("writePdfDocument", () => {
     // (binary header bytes may cause small offset differences in text vs binary)
     // Check the actual binary position instead
     const xrefBytes = new TextEncoder().encode("xref");
-    // eslint-disable-next-line no-restricted-syntax -- updated in search loop
-    let xrefBinaryPos = -1;
-    for (let i = 0; i <= result.length - 4; i++) {
-      if (
+    const xrefBinaryPos = Array.from(
+      { length: result.length - 3 },
+      (_, i) => i
+    ).findIndex(
+      (i) =>
         result[i] === xrefBytes[0] &&
         result[i + 1] === xrefBytes[1] &&
         result[i + 2] === xrefBytes[2] &&
         result[i + 3] === xrefBytes[3]
-      ) {
-        xrefBinaryPos = i;
-        break;
-      }
-    }
+    );
     expect(xrefBinaryPos).toBe(startxref);
   });
 
@@ -313,8 +310,7 @@ describe("writePdfDocument", () => {
         const contentText = toText(decompressed);
         // Should contain hex string format <82A0>
         expect(contentText).toContain("<82A0>");
-      // eslint-disable-next-line no-restricted-syntax -- decompression may fail, fallback assertion used
-      } catch {
+      } catch (_error: unknown) {
         // If decompression fails, at least verify the font structure is correct
         expect(resultText).toContain("/Subtype /Type0");
       }

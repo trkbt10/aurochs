@@ -33,22 +33,22 @@ export function encodeAscii85(data: Uint8Array): Uint8Array {
     const chunkSize = Math.min(4, remaining);
 
     // Build 32-bit value (big-endian, padded with zeros if needed)
-    // eslint-disable-next-line no-restricted-syntax -- accumulator updated in loop
-    let value = 0;
-    for (let j = 0; j < 4; j++) {
-      value = value * 256 + (j < chunkSize ? data[i + j] : 0);
-    }
+    const value = Array.from({ length: 4 }, (_, j) =>
+      j < chunkSize ? data[i + j] : 0
+    ).reduce((acc, byte) => acc * 256 + byte, 0);
 
     if (value === 0 && chunkSize === 4) {
       // Special case: 4 zero bytes encode as 'z'
       result.push(0x7a); // 'z'
     } else {
       // Convert to base-85
-      const chars: number[] = [];
-      for (let j = 0; j < 5; j++) {
-        chars.unshift((value % 85) + 33);
-        value = Math.floor(value / 85);
-      }
+      const chars = Array.from({ length: 5 }).reduce<{ digits: number[]; remainder: number }>(
+        (acc) => ({
+          digits: [(acc.remainder % 85) + 33, ...acc.digits],
+          remainder: Math.floor(acc.remainder / 85),
+        }),
+        { digits: [], remainder: value },
+      ).digits;
 
       // For partial groups, output only chunkSize + 1 characters
       const outputCount = chunkSize === 4 ? 5 : chunkSize + 1;

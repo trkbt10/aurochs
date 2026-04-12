@@ -109,17 +109,15 @@ export function PdfMultiSelectPanel({ document, selectedIds, pageHeight: _pageHe
   );
 
   const combinedBounds = useMemo(() => {
-    // eslint-disable-next-line no-restricted-syntax -- accumulator updated in loop
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    for (const id of selectedIds) {
-      const b = query.getElementBounds(id);
-      if (!b) { continue; }
-      minX = Math.min(minX, b.x);
-      minY = Math.min(minY, b.y);
-      maxX = Math.max(maxX, b.x + b.width);
-      maxY = Math.max(maxY, b.y + b.height);
-    }
-    return isFinite(minX) ? { x: minX, y: minY, width: maxX - minX, height: maxY - minY } : undefined;
+    const bounds = selectedIds
+      .map((id) => query.getElementBounds(id))
+      .filter((b): b is NonNullable<typeof b> => b !== undefined);
+    if (bounds.length === 0) return undefined;
+    const minX = Math.min(...bounds.map((b) => b.x));
+    const minY = Math.min(...bounds.map((b) => b.y));
+    const maxX = Math.max(...bounds.map((b) => b.x + b.width));
+    const maxY = Math.max(...bounds.map((b) => b.y + b.height));
+    return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
   }, [selectedIds, query]);
 
   const fillValue = useMemo(() => getMixedFill(elements), [elements]);

@@ -326,24 +326,21 @@ function scoreNeighborDirections(texts: readonly PdfText[]): { horizontal: numbe
     const ax = centerX(a);
     const ay = centerY(a);
 
-    // eslint-disable-next-line no-restricted-syntax -- mutable nearest-neighbor scan
-    let nearest: PdfText | null = null;
-    // eslint-disable-next-line no-restricted-syntax -- mutable nearest distance
-    let nearestDist = Infinity;
-
-    for (let j = 0; j < capped.length; j++) {
-      if (i === j) {
-        continue;
-      }
-      const b = capped[j]!;
-      const dx = centerX(b) - ax;
-      const dy = centerY(b) - ay;
-      const dist2 = dx * dx + dy * dy;
-      if (dist2 < nearestDist) {
-        nearestDist = dist2;
-        nearest = b;
-      }
-    }
+    const { nearest } = capped.reduce<{ nearest: PdfText | null; nearestDist: number }>(
+      (acc, b, j) => {
+        if (i === j) {
+          return acc;
+        }
+        const dx = centerX(b) - ax;
+        const dy = centerY(b) - ay;
+        const dist2 = dx * dx + dy * dy;
+        if (dist2 < acc.nearestDist) {
+          return { nearest: b, nearestDist: dist2 };
+        }
+        return acc;
+      },
+      { nearest: null, nearestDist: Infinity },
+    );
 
     if (!nearest) {
       continue;
@@ -531,47 +528,41 @@ function detectGuttersFromXRanges(
   const edgeMarginBins = Math.round(bins * columnEdgeMarginRatio);
   const minGutterBins = Math.max(2, Math.round((pageWidth * minGutterWidthRatio) / binSize));
 
-  const segments: { s: number; e: number; meanOcc: number }[] = [];
-  // eslint-disable-next-line no-restricted-syntax -- mutable segment start index
-  let s = -1;
-  // eslint-disable-next-line no-restricted-syntax -- mutable occupancy sum
-  let sum = 0;
-  // eslint-disable-next-line no-restricted-syntax -- mutable segment count
-  let cnt = 0;
-
-  for (let i = edgeMarginBins; i < bins - edgeMarginBins; i++) {
-    const low = occN[i]! <= gutterOccThreshold;
-    if (low) {
-      if (s < 0) {
-        s = i;
-        sum = occN[i]!;
-        cnt = 1;
-      } else {
-        sum += occN[i]!;
-        cnt++;
+  const scanRange = Array.from({ length: bins - edgeMarginBins - edgeMarginBins }, (_, k) => k + edgeMarginBins);
+  const { segments, pending } = scanRange.reduce<{
+    segments: { s: number; e: number; meanOcc: number }[];
+    pending: { s: number; sum: number; cnt: number } | null;
+  }>(
+    (acc, i) => {
+      const low = occN[i]! <= gutterOccThreshold;
+      if (low) {
+        if (!acc.pending) {
+          return { segments: acc.segments, pending: { s: i, sum: occN[i]!, cnt: 1 } };
+        }
+        return { segments: acc.segments, pending: { s: acc.pending.s, sum: acc.pending.sum + occN[i]!, cnt: acc.pending.cnt + 1 } };
       }
-    } else if (s >= 0) {
-      const e = i;
-      if (e - s >= minGutterBins) {
-        segments.push({ s, e, meanOcc: sum / Math.max(1, cnt) });
+      if (acc.pending) {
+        const e = i;
+        const nextSegments = e - acc.pending.s >= minGutterBins
+          ? [...acc.segments, { s: acc.pending.s, e, meanOcc: acc.pending.sum / Math.max(1, acc.pending.cnt) }]
+          : acc.segments;
+        return { segments: nextSegments, pending: null };
       }
-      s = -1;
-    }
-  }
+      return acc;
+    },
+    { segments: [], pending: null },
+  );
 
-  if (s >= 0) {
-    const e = bins - edgeMarginBins;
-    if (e - s >= minGutterBins) {
-      segments.push({ s, e, meanOcc: sum / Math.max(1, cnt) });
-    }
-  }
+  const finalSegments = pending && (bins - edgeMarginBins) - pending.s >= minGutterBins
+    ? [...segments, { s: pending.s, e: bins - edgeMarginBins, meanOcc: pending.sum / Math.max(1, pending.cnt) }]
+    : segments;
 
-  if (segments.length === 0) {
+  if (finalSegments.length === 0) {
     return [];
   }
 
   const gutters: Gutter[] = [];
-  for (const seg of segments) {
+  for (const seg of finalSegments) {
     const x0 = seg.s * binSize;
     const x1 = seg.e * binSize;
     const xMid = (x0 + x1) / 2;
@@ -597,20 +588,20 @@ function buildColumnIntervals(pageWidth: number, gutters: readonly Gutter[]): { 
   if (gutters.length === 0) {
     return [{ x0: 0, x1: pageWidth }];
   }
-  const intervals: { x0: number; x1: number }[] = [];
-  // eslint-disable-next-line no-restricted-syntax -- mutable position tracker
-  let cur = 0;
-  for (const g of gutters) {
-    const leftEnd = Math.max(cur, g.x0);
-    if (leftEnd - cur > 1) {
-      intervals.push({ x0: cur, x1: leftEnd });
-    }
-    cur = Math.min(pageWidth, g.x1);
-  }
-  if (pageWidth - cur > 1) {
-    intervals.push({ x0: cur, x1: pageWidth });
-  }
-  return intervals.filter((iv) => iv.x1 - iv.x0 > pageWidth * 0.08);
+  const { intervals, cur: finalCur } = gutters.reduce<{ intervals: { x0: number; x1: number }[]; cur: number }>(
+    (acc, g) => {
+      const leftEnd = Math.max(acc.cur, g.x0);
+      const nextIntervals = leftEnd - acc.cur > 1
+        ? [...acc.intervals, { x0: acc.cur, x1: leftEnd }]
+        : acc.intervals;
+      return { intervals: nextIntervals, cur: Math.min(pageWidth, g.x1) };
+    },
+    { intervals: [], cur: 0 },
+  );
+  const allIntervals = pageWidth - finalCur > 1
+    ? [...intervals, { x0: finalCur, x1: pageWidth }]
+    : intervals;
+  return allIntervals.filter((iv) => iv.x1 - iv.x0 > pageWidth * 0.08);
 }
 
 function assignXRangeToColumn(args: {
@@ -626,18 +617,16 @@ function assignXRangeToColumn(args: {
     return -1;
   }
 
-  // eslint-disable-next-line no-restricted-syntax -- mutable best-match index
-  let best = 0;
-  // eslint-disable-next-line no-restricted-syntax -- mutable best overlap score
-  let bestOv = -1;
-  for (let i = 0; i < intervals.length; i++) {
-    const iv = intervals[i]!;
-    const ov = overlap1D({ a0: x0, a1: x1, b0: iv.x0, b1: iv.x1 }) / Math.max(1e-6, Math.min(w, iv.x1 - iv.x0));
-    if (ov > bestOv) {
-      bestOv = ov;
-      best = i;
-    }
-  }
+  const { best } = intervals.reduce<{ best: number; bestOv: number }>(
+    (acc, iv, i) => {
+      const ov = overlap1D({ a0: x0, a1: x1, b0: iv.x0, b1: iv.x1 }) / Math.max(1e-6, Math.min(w, iv.x1 - iv.x0));
+      if (ov > acc.bestOv) {
+        return { best: i, bestOv: ov };
+      }
+      return acc;
+    },
+    { best: 0, bestOv: -1 },
+  );
   return best;
 }
 
@@ -1245,80 +1234,94 @@ function clusterIntoLines(args: {
 
   const items = texts.map((t) => ({ t, baseline: getBaselineY(t) })).sort((a, b) => b.baseline - a.baseline);
 
-  const clusters: PdfText[][] = [];
-  // eslint-disable-next-line no-restricted-syntax -- mutable cluster state for incremental averaging
-  let current: {
-    texts: PdfText[];
-    meanBaseline: number;
-    meanFontSize: number;
-    meanBottom: number;
-    meanTop: number;
-  } | null = null;
+  type ClusterState = {
+    readonly texts: readonly PdfText[];
+    readonly meanBaseline: number;
+    readonly meanFontSize: number;
+    readonly meanBottom: number;
+    readonly meanTop: number;
+  };
 
-  for (const it of items) {
-    const bottom = it.t.y;
-    const top = it.t.y + it.t.height;
+  const { clusters, current: finalCurrent } = items.reduce<{
+    clusters: PdfText[][];
+    current: ClusterState | null;
+  }>(
+    (acc, it) => {
+      const bottom = it.t.y;
+      const top = it.t.y + it.t.height;
 
-    if (!current) {
-      current = {
-        texts: [it.t],
-        meanBaseline: it.baseline,
-        meanFontSize: it.t.fontSize,
-        meanBottom: bottom,
-        meanTop: top,
+      if (!acc.current) {
+        return {
+          clusters: acc.clusters,
+          current: {
+            texts: [it.t],
+            meanBaseline: it.baseline,
+            meanFontSize: it.t.fontSize,
+            meanBottom: bottom,
+            meanTop: top,
+          },
+        };
+      }
+
+      const decision = decideLineClusterMembership({
+        candidateBaseline: it.baseline,
+        clusterBaseline: acc.current.meanBaseline,
+        candidateFontSize: it.t.fontSize,
+        clusterFontSize: acc.current.meanFontSize,
+        candidateBottom: bottom,
+        candidateTop: top,
+        clusterBottom: acc.current.meanBottom,
+        clusterTop: acc.current.meanTop,
+        options: {
+          lineToleranceRatio: options.lineToleranceRatio,
+          minVerticalOverlapRatio: 0.15,
+        },
+      });
+      diagnostics.lineClusterTraces.push({
+        candidateBaseline: it.baseline,
+        clusterBaseline: acc.current.meanBaseline,
+        baselineDistance: decision.baselineDistance,
+        baselineTolerance: decision.baselineTolerance,
+        overlapRatio: decision.overlapRatio,
+        accepted: decision.accept,
+        acceptScore: decision.acceptScore,
+        rejectScore: decision.rejectScore,
+        proposals: decision.proposals,
+      });
+
+      if (!decision.accept) {
+        return {
+          clusters: [...acc.clusters, [...acc.current.texts]],
+          current: {
+            texts: [it.t],
+            meanBaseline: it.baseline,
+            meanFontSize: it.t.fontSize,
+            meanBottom: bottom,
+            meanTop: top,
+          },
+        };
+      }
+
+      const nextTexts = [...acc.current.texts, it.t];
+      const n = nextTexts.length;
+      return {
+        clusters: acc.clusters,
+        current: {
+          texts: nextTexts,
+          meanBaseline: acc.current.meanBaseline + (it.baseline - acc.current.meanBaseline) / n,
+          meanFontSize: acc.current.meanFontSize + (it.t.fontSize - acc.current.meanFontSize) / n,
+          meanBottom: acc.current.meanBottom + (bottom - acc.current.meanBottom) / n,
+          meanTop: acc.current.meanTop + (top - acc.current.meanTop) / n,
+        },
       };
-      continue;
-    }
+    },
+    { clusters: [], current: null },
+  );
 
-    const decision = decideLineClusterMembership({
-      candidateBaseline: it.baseline,
-      clusterBaseline: current.meanBaseline,
-      candidateFontSize: it.t.fontSize,
-      clusterFontSize: current.meanFontSize,
-      candidateBottom: bottom,
-      candidateTop: top,
-      clusterBottom: current.meanBottom,
-      clusterTop: current.meanTop,
-      options: {
-        lineToleranceRatio: options.lineToleranceRatio,
-        minVerticalOverlapRatio: 0.15,
-      },
-    });
-    diagnostics.lineClusterTraces.push({
-      candidateBaseline: it.baseline,
-      clusterBaseline: current.meanBaseline,
-      baselineDistance: decision.baselineDistance,
-      baselineTolerance: decision.baselineTolerance,
-      overlapRatio: decision.overlapRatio,
-      accepted: decision.accept,
-      acceptScore: decision.acceptScore,
-      rejectScore: decision.rejectScore,
-      proposals: decision.proposals,
-    });
-
-    if (!decision.accept) {
-      clusters.push(current.texts);
-      current = {
-        texts: [it.t],
-        meanBaseline: it.baseline,
-        meanFontSize: it.t.fontSize,
-        meanBottom: bottom,
-        meanTop: top,
-      };
-      continue;
-    }
-
-    current.texts.push(it.t);
-    current.meanBaseline = current.meanBaseline + (it.baseline - current.meanBaseline) / current.texts.length;
-    current.meanFontSize = current.meanFontSize + (it.t.fontSize - current.meanFontSize) / current.texts.length;
-    current.meanBottom = current.meanBottom + (bottom - current.meanBottom) / current.texts.length;
-    current.meanTop = current.meanTop + (top - current.meanTop) / current.texts.length;
-  }
-
-  if (current) {
-    clusters.push(current.texts);
-  }
-  return clusters;
+  const allClusters = finalCurrent
+    ? [...clusters, [...finalCurrent.texts]]
+    : clusters;
+  return allClusters;
 }
 
 /**
@@ -1357,34 +1360,30 @@ function splitIntoAdjacentGroups(
   }
 
   const sorted = [...texts].sort((a, b) => a.x - b.x);
-  const groups: PdfText[][] = [];
-  // eslint-disable-next-line no-restricted-syntax -- mutable group accumulator
-  let current: PdfText[] = [sorted[0]!];
 
-  for (let i = 1; i < sorted.length; i++) {
-    const prev = current[current.length - 1]!;
-    const curr = sorted[i]!;
+  const { groups, current: finalGroup } = sorted.slice(1).reduce<{ groups: PdfText[][]; current: PdfText[] }>(
+    (acc, curr) => {
+      const prev = acc.current[acc.current.length - 1]!;
 
-    const gap = curr.x - (prev.x + prev.width);
-    const expectedGap = calculateExpectedGap(prev, curr);
-    const maxGap = expectedGap * options.horizontalGapRatio;
+      const gap = curr.x - (prev.x + prev.width);
+      const expectedGap = calculateExpectedGap(prev, curr);
+      const maxGap = expectedGap * options.horizontalGapRatio;
 
-    const blocked = hasBlockingZoneBetween(prev, curr, blockingZones);
-    // Within a physical line, style changes (font/size/color) are common and should
-    // not force segmentation. Keep segments primarily as spatial groupings so that
-    // later text reconstruction can insert spaces based on gaps instead of using tabs.
-    const sameSegment = !blocked && gap <= maxGap;
+      const blocked = hasBlockingZoneBetween(prev, curr, blockingZones);
+      // Within a physical line, style changes (font/size/color) are common and should
+      // not force segmentation. Keep segments primarily as spatial groupings so that
+      // later text reconstruction can insert spaces based on gaps instead of using tabs.
+      const sameSegment = !blocked && gap <= maxGap;
 
-    if (!sameSegment) {
-      groups.push(current);
-      current = [curr];
-    } else {
-      current.push(curr);
-    }
-  }
+      if (!sameSegment) {
+        return { groups: [...acc.groups, acc.current], current: [curr] };
+      }
+      return { groups: acc.groups, current: [...acc.current, curr] };
+    },
+    { groups: [], current: [sorted[0]!] },
+  );
 
-  groups.push(current);
-  return groups;
+  return [...groups, finalGroup];
 }
 
 /**
@@ -1729,21 +1728,17 @@ function clusterIntoVerticalColumns(texts: readonly PdfText[], options: Required
   for (const text of sorted) {
     const cx = centerX(text);
 
-    // eslint-disable-next-line no-restricted-syntax -- mutable best-match index for nearest-column search
-    let targetIndex = -1;
-    // eslint-disable-next-line no-restricted-syntax -- mutable best-match distance for nearest-column search
-    let targetDist = Infinity;
-
-    for (let i = 0; i < clusters.length; i++) {
-      const cluster = clusters[i]!;
-      const tolerance = Math.max(2, Math.max(cluster.meanWidth, text.width, cluster.meanFontSize * 0.9));
-      const distance = Math.abs(cx - cluster.meanX);
-      if (distance > tolerance || distance >= targetDist) {
-        continue;
-      }
-      targetDist = distance;
-      targetIndex = i;
-    }
+    const { targetIndex } = clusters.reduce<{ targetIndex: number; targetDist: number }>(
+      (acc, cluster, i) => {
+        const tolerance = Math.max(2, Math.max(cluster.meanWidth, text.width, cluster.meanFontSize * 0.9));
+        const distance = Math.abs(cx - cluster.meanX);
+        if (distance > tolerance || distance >= acc.targetDist) {
+          return acc;
+        }
+        return { targetIndex: i, targetDist: distance };
+      },
+      { targetIndex: -1, targetDist: Infinity },
+    );
 
     if (targetIndex < 0) {
       clusters.push({
@@ -1802,32 +1797,27 @@ function splitVerticalColumnToParagraphs(args: {
   }
 
   const sorted = [...columnTexts].sort((a, b) => centerY(b) - centerY(a));
-  const paragraphs: GroupedParagraph[] = [];
-  // eslint-disable-next-line no-restricted-syntax -- mutable paragraph accumulator while scanning a vertical column
-  let current: PdfText[] = [sorted[0]!];
 
-  for (let i = 1; i < sorted.length; i++) {
-    const prev = sorted[i - 1]!;
-    const curr = sorted[i]!;
+  const { paragraphs, current: finalGroup } = sorted.slice(1).reduce<{ paragraphs: GroupedParagraph[]; current: PdfText[] }>(
+    (acc, curr, i) => {
+      const prev = sorted[i]!; // i is 0-based from slice(1), so sorted[i] is the previous element
+      const gap = prev.y - (curr.y + curr.height);
+      const lineHeight = Math.max(prev.height, curr.height);
+      const maxGap = lineHeight * options.verticalGapRatio;
+      const hasBlocker = hasBlockingZoneBetweenVerticalTexts(prev, curr, blockingZones);
+      const sameStyle = hasSameStyle(prev, curr, options);
+      const sameParagraph = !hasBlocker && sameStyle && gap <= maxGap;
 
-    const gap = prev.y - (curr.y + curr.height);
-    const lineHeight = Math.max(prev.height, curr.height);
-    const maxGap = lineHeight * options.verticalGapRatio;
-    const hasBlocker = hasBlockingZoneBetweenVerticalTexts(prev, curr, blockingZones);
-    const sameStyle = hasSameStyle(prev, curr, options);
-    const sameParagraph = !hasBlocker && sameStyle && gap <= maxGap;
+      if (sameParagraph) {
+        return { paragraphs: acc.paragraphs, current: [...acc.current, curr] };
+      }
 
-    if (sameParagraph) {
-      current.push(curr);
-      continue;
-    }
+      return { paragraphs: [...acc.paragraphs, createVerticalParagraph(acc.current)], current: [curr] };
+    },
+    { paragraphs: [], current: [sorted[0]!] },
+  );
 
-    paragraphs.push(createVerticalParagraph(current));
-    current = [curr];
-  }
-
-  paragraphs.push(createVerticalParagraph(current));
-  return paragraphs;
+  return [...paragraphs, createVerticalParagraph(finalGroup)];
 }
 
 function groupVerticalTexts(args: {
@@ -2009,38 +1999,33 @@ function mergeAdjacentLinesWithColumns(args: {
       return aX - bX;
     });
 
-    const merged: GroupedText[] = [];
-    // eslint-disable-next-line no-restricted-syntax -- mutable paragraph accumulator for sequential merge
-    let current: GroupedParagraph[] = [];
+    const { merged, current: finalCurrent } = sorted.reduce<{ merged: GroupedText[]; current: GroupedParagraph[] }>(
+      (acc, paragraph) => {
+        if (acc.current.length === 0) {
+          return { merged: acc.merged, current: [paragraph] };
+        }
+        const prev = acc.current[acc.current.length - 1]!;
+        const hasBlocker = hasBlockingZoneBetweenLines(prev, paragraph, blockingZones) ||
+          crossesRuledRegionBoundary({ line1: prev, line2: paragraph, ruledRegions });
+        if (
+          shouldMergeLines({
+            line1: prev,
+            line2: paragraph,
+            options,
+            blockedByZone: hasBlocker,
+            diagnostics,
+          })
+        ) {
+          return { merged: acc.merged, current: [...acc.current, paragraph] };
+        }
+        return { merged: [...acc.merged, createGroupedText(acc.current)], current: [paragraph] };
+      },
+      { merged: [], current: [] },
+    );
 
-    for (const paragraph of sorted) {
-      if (current.length === 0) {
-        current = [paragraph];
-        continue;
-      }
-      const prev = current[current.length - 1]!;
-      const hasBlocker = hasBlockingZoneBetweenLines(prev, paragraph, blockingZones) ||
-        crossesRuledRegionBoundary({ line1: prev, line2: paragraph, ruledRegions });
-      if (
-        shouldMergeLines({
-          line1: prev,
-          line2: paragraph,
-          options,
-          blockedByZone: hasBlocker,
-          diagnostics,
-        })
-      ) {
-        current.push(paragraph);
-      } else {
-        merged.push(createGroupedText(current));
-        current = [paragraph];
-      }
-    }
-
-    if (current.length > 0) {
-      merged.push(createGroupedText(current));
-    }
-    return merged;
+    return finalCurrent.length > 0
+      ? [...merged, createGroupedText(finalCurrent)]
+      : merged;
   };
 
   const allBounds = paragraphs.map(getParagraphBounds);
@@ -2090,11 +2075,9 @@ function mergeAdjacentLinesWithColumns(args: {
     columns.set(it.column, arr);
   }
 
-  const blocks: GroupedText[] = [];
-
   const mergeColumn = (
     items: readonly { p: GroupedParagraph; b: { minX: number; maxX: number; minY: number; maxY: number } }[],
-  ): void => {
+  ): GroupedText[] => {
     const sorted = [...items].sort((a, b) => {
       const yDiff = b.p.baselineY - a.p.baselineY;
       if (Math.abs(yDiff) > 1) {
@@ -2103,45 +2086,44 @@ function mergeAdjacentLinesWithColumns(args: {
       return a.b.minX - b.b.minX;
     });
 
-    // eslint-disable-next-line no-restricted-syntax -- mutable paragraph accumulator for column merging
-    let current: GroupedParagraph[] = [];
-    for (const it of sorted) {
-      if (current.length === 0) {
-        current = [it.p];
-        continue;
-      }
-      const prev = current[current.length - 1]!;
-      const hasBlocker = hasBlockingZoneBetweenLines(prev, it.p, blockingZones) ||
-        crossesRuledRegionBoundary({ line1: prev, line2: it.p, ruledRegions });
-      if (
-        shouldMergeLines({
-          line1: prev,
-          line2: it.p,
-          options,
-          blockedByZone: hasBlocker,
-          diagnostics,
-        })
-      ) {
-        current.push(it.p);
-      } else {
-        blocks.push(createGroupedText(current));
-        current = [it.p];
-      }
-    }
-    if (current.length > 0) {
-      blocks.push(createGroupedText(current));
-    }
+    const { result, current: finalCurrent } = sorted.reduce<{ result: GroupedText[]; current: GroupedParagraph[] }>(
+      (acc, it) => {
+        if (acc.current.length === 0) {
+          return { result: acc.result, current: [it.p] };
+        }
+        const prev = acc.current[acc.current.length - 1]!;
+        const hasBlocker = hasBlockingZoneBetweenLines(prev, it.p, blockingZones) ||
+          crossesRuledRegionBoundary({ line1: prev, line2: it.p, ruledRegions });
+        if (
+          shouldMergeLines({
+            line1: prev,
+            line2: it.p,
+            options,
+            blockedByZone: hasBlocker,
+            diagnostics,
+          })
+        ) {
+          return { result: acc.result, current: [...acc.current, it.p] };
+        }
+        return { result: [...acc.result, createGroupedText(acc.current)], current: [it.p] };
+      },
+      { result: [], current: [] },
+    );
+
+    return finalCurrent.length > 0
+      ? [...result, createGroupedText(finalCurrent)]
+      : result;
   };
 
   // Merge detected columns (0..N-1) and full-width (-1) separately.
   const columnKeys = [...columns.keys()].sort((a, b) => a - b);
-  for (const key of columnKeys) {
+  const blocks = columnKeys.reduce<GroupedText[]>((acc, key) => {
     const items = columns.get(key);
     if (!items || items.length === 0) {
-      continue;
+      return acc;
     }
-    mergeColumn(items);
-  }
+    return [...acc, ...mergeColumn(items)];
+  }, []);
 
   // Stable-ish output order: top-to-bottom, then left-to-right.
   blocks.sort((a, b) => {
@@ -2437,29 +2419,25 @@ function collapsePositionalCuts(args: {
     return [];
   }
   const sorted = [...cuts].sort((a, b) => a.position - b.position);
-  const out: PositionalCut[] = [];
-  // eslint-disable-next-line no-restricted-syntax -- mutable cluster accumulator
-  let cluster: PositionalCut[] = [sorted[0]!];
-  for (let i = 1; i < sorted.length; i++) {
-    const cut = sorted[i]!;
-    const prev = cluster[cluster.length - 1]!;
-    if (Math.abs(cut.position - prev.position) <= tolerance) {
-      cluster.push(cut);
-      continue;
-    }
-    out.push({
-      position: cluster.reduce((sum, item) => sum + item.position, 0) / cluster.length,
-      spanStart: Math.min(...cluster.map((item) => item.spanStart)),
-      spanEnd: Math.max(...cluster.map((item) => item.spanEnd)),
-    });
-    cluster = [cut];
-  }
-  out.push({
+
+  const collapseCluster = (cluster: readonly PositionalCut[]): PositionalCut => ({
     position: cluster.reduce((sum, item) => sum + item.position, 0) / cluster.length,
     spanStart: Math.min(...cluster.map((item) => item.spanStart)),
     spanEnd: Math.max(...cluster.map((item) => item.spanEnd)),
   });
-  return out;
+
+  const { out, cluster: finalCluster } = sorted.slice(1).reduce<{ out: PositionalCut[]; cluster: PositionalCut[] }>(
+    (acc, cut) => {
+      const prev = acc.cluster[acc.cluster.length - 1]!;
+      if (Math.abs(cut.position - prev.position) <= tolerance) {
+        return { out: acc.out, cluster: [...acc.cluster, cut] };
+      }
+      return { out: [...acc.out, collapseCluster(acc.cluster)], cluster: [cut] };
+    },
+    { out: [], cluster: [sorted[0]!] },
+  );
+
+  return [...out, collapseCluster(finalCluster)];
 }
 
 function selectCutsForCoordinate(args: {

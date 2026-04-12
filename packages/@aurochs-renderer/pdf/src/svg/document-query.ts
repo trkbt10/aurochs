@@ -10,6 +10,8 @@
 
 import type { PdfDocument, PdfPage, PdfElement } from "@aurochs/pdf";
 import { type PdfElementId, parseElementId, createElementId } from "@aurochs/pdf";
+import type { FontProvider } from "@aurochs/pdf/domain/font";
+import { createFontProvider } from "@aurochs/pdf/domain/font";
 import { resolveTextFontMetrics } from "./text-bounds";
 import type { PdfElementBounds } from "./element-bounds";
 import { elementToSvgBounds } from "./element-bounds";
@@ -62,8 +64,13 @@ export type PdfDocumentQuery = {
 
 /**
  * Create a document query from a PdfDocument.
+ *
+ * @param doc - The PDF document to query.
+ * @param fontProvider - FontProvider for font resolution. When omitted,
+ *   a minimal provider (Standard 14 only) is created internally.
  */
-export function createDocumentQuery(doc: PdfDocument): PdfDocumentQuery {
+export function createDocumentQuery(doc: PdfDocument, fontProvider?: FontProvider): PdfDocumentQuery {
+  const resolvedFontProvider = fontProvider ?? createFontProvider();
   const getPage = (pageIndex: number): PdfPage => {
     const page = doc.pages[pageIndex];
     if (!page) { throw new Error(`Page index ${pageIndex} out of bounds (${doc.pages.length} pages)`); }
@@ -92,11 +99,12 @@ export function createDocumentQuery(doc: PdfDocument): PdfDocumentQuery {
     const el = getElement(id);
     if (!el || el.type !== "text") { return undefined; }
     const metrics = resolveTextFontMetrics(el);
+    const resolved = resolvedFontProvider.resolve(el.fontName, el.baseFont);
     return {
-      family: el.baseFont ?? el.fontName,
+      family: resolved.cssFontFamily,
       size: el.fontSize,
-      weight: el.isBold ? "bold" : "normal",
-      style: el.isItalic ? "italic" : "normal",
+      weight: resolved.isBold ? "bold" : "normal",
+      style: resolved.isItalic ? "italic" : "normal",
       ascender: metrics.ascender,
       descender: metrics.descender,
     };

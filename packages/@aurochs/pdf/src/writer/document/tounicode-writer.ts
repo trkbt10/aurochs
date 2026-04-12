@@ -106,41 +106,39 @@ function optimizeMappings(
   const charMappings: [string, string][] = [];
   const rangeMappings: RangeMapping[] = [];
 
-  // eslint-disable-next-line no-restricted-syntax -- loop counter
-  let i = 0;
-  while (i < entries.length) {
-    const [startHex, startUnicode] = entries[i]!;
-    const _byteLen = startHex.length / 2;
-
-    // Try to find consecutive range
-    // eslint-disable-next-line no-restricted-syntax -- updated in search loop
-    let endIdx = i;
-    // eslint-disable-next-line no-restricted-syntax -- updated in search loop
-    let currentUnicode = startUnicode;
-
-    while (endIdx + 1 < entries.length) {
-      const [nextHex, nextUnicode] = entries[endIdx + 1]!;
-
-      // Check if source codes are consecutive
-      if (nextHex.length !== startHex.length) {
-        break;
+  /**
+   * Find the length of a consecutive run starting at `from`.
+   * A run requires same byte-length hex codes, consecutive hex values,
+   * and consecutive Unicode code points.
+   */
+  const findRunLength = (from: number): number => {
+    const [startHex] = entries[from]!;
+    return entries.slice(from + 1).reduce((runEnd, [nextHex, nextUnicode], offset) => {
+      if (runEnd < from + offset) {
+        // Already stopped extending
+        return runEnd;
       }
-
-      const currentHex = entries[endIdx]![0];
-      if (!isConsecutiveHex(currentHex, nextHex)) {
-        break;
+      const currentIdx = from + offset;
+      const [currentHex, currentUnicode] = entries[currentIdx]!;
+      if (
+        nextHex.length !== startHex.length ||
+        !isConsecutiveHex(currentHex, nextHex) ||
+        !isConsecutiveUnicode(currentUnicode, nextUnicode)
+      ) {
+        return runEnd;
       }
+      return from + offset + 1;
+    }, from);
+  };
 
-      // Check if Unicode code points are consecutive
-      if (!isConsecutiveUnicode(currentUnicode, nextUnicode)) {
-        break;
-      }
-
-      currentUnicode = nextUnicode;
-      endIdx++;
+  // Process entries by finding consecutive runs
+  const processEntries = (from: number): void => {
+    if (from >= entries.length) {
+      return;
     }
-
-    const rangeSize = endIdx - i + 1;
+    const [startHex, startUnicode] = entries[from]!;
+    const endIdx = findRunLength(from);
+    const rangeSize = endIdx - from + 1;
 
     if (rangeSize >= 3) {
       // Use bfrange for 3+ consecutive entries
@@ -152,14 +150,15 @@ function optimizeMappings(
       });
     } else {
       // Use bfchar for individual entries
-      for (let j = i; j <= endIdx; j++) {
-        const [srcHex, unicode] = entries[j]!;
+      for (const [srcHex, unicode] of entries.slice(from, endIdx + 1)) {
         charMappings.push([srcHex, unicodeToUtf16BeHex(unicode)]);
       }
     }
 
-    i = endIdx + 1;
-  }
+    processEntries(endIdx + 1);
+  };
+
+  processEntries(0);
 
   return { charMappings, rangeMappings };
 }
@@ -191,24 +190,20 @@ function isConsecutiveUnicode(a: string, b: string): boolean {
  * Convert Unicode string to UTF-16BE hex string.
  */
 function unicodeToUtf16BeHex(str: string): string {
-  // eslint-disable-next-line no-restricted-syntax -- string builder pattern
-  let result = "";
-
-  for (const char of str) {
+  return [...str].map((char) => {
     const cp = char.codePointAt(0)!;
 
     if (cp > 0xFFFF) {
       // Surrogate pair
       const high = 0xD800 + ((cp - 0x10000) >> 10);
       const low = 0xDC00 + ((cp - 0x10000) & 0x3FF);
-      result += high.toString(16).padStart(4, "0").toUpperCase();
-      result += low.toString(16).padStart(4, "0").toUpperCase();
-    } else {
-      result += cp.toString(16).padStart(4, "0").toUpperCase();
+      return (
+        high.toString(16).padStart(4, "0").toUpperCase() +
+        low.toString(16).padStart(4, "0").toUpperCase()
+      );
     }
-  }
-
-  return result;
+    return cp.toString(16).padStart(4, "0").toUpperCase();
+  }).join("");
 }
 
 /**

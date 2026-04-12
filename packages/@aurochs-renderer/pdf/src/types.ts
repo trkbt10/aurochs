@@ -1,5 +1,6 @@
 /** @file Shared types for the PDF renderer package. */
 import type { PdfBuildOptions, PdfContextRewriter, PdfParseOptions } from "@aurochs/pdf/parser/core/pdf-parser";
+import type { FontProvider } from "@aurochs/pdf/domain/font";
 
 export type PdfBinarySource = Uint8Array | ArrayBuffer;
 
@@ -11,6 +12,12 @@ export type PdfSvgRenderOptions = Readonly<{
   readonly includeXmlDeclaration?: boolean;
   /** Element indices to exclude from rendering (for editing overlays). */
   readonly excludeElementIndices?: ReadonlySet<number>;
+  /**
+   * Font provider for font resolution.
+   * When provided, font-family is resolved through the provider.
+   * When omitted, a minimal provider (Standard 14 fonts only) is used internally.
+   */
+  readonly fontProvider?: FontProvider;
 }>;
 
 export type BuildPdfDocumentForRenderArgs = Readonly<{

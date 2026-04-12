@@ -7,6 +7,8 @@
 
 import type { PdfText } from "../../domain/text";
 import type { PdfEmbeddedFont } from "../../domain/document";
+import type { FontProvider } from "../../domain/font/font-provider";
+import { encodeTextForFont, splitTextByEncodability } from "../../domain/font/text-encoder";
 
 /**
  * Format a number for PDF content stream.
@@ -24,33 +26,14 @@ function formatNum(value: number): string {
  * Escapes parentheses and backslashes.
  */
 function escapeTextString(text: string): string {
-  // eslint-disable-next-line no-restricted-syntax -- string builder pattern
-  let result = "";
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i];
-    if (char === "\\") {
-      result += "\\\\";
-    } else if (char === "(") {
-      result += "\\(";
-    } else if (char === ")") {
-      result += "\\)";
-    } else {
-      result += char;
-    }
-  }
-  return result;
+  return text.replace(/[\\()]/g, (ch) => `\\${ch}`);
 }
 
 /**
  * Convert bytes to hex string for CID font text output.
  */
 function bytesToHex(bytes: Uint8Array): string {
-  // eslint-disable-next-line no-restricted-syntax -- string builder pattern
-  let result = "";
-  for (let i = 0; i < bytes.length; i++) {
-    result += bytes[i].toString(16).padStart(2, "0").toUpperCase();
-  }
-  return result;
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0").toUpperCase()).join("");
 }
 
 /**
@@ -79,15 +62,10 @@ function shouldUseHexOutput(
  * Removes leading slash and optionally subset prefix.
  */
 function normalizeFontNameForMatch(name: string, removeSubsetPrefix: boolean): string {
-  // eslint-disable-next-line no-restricted-syntax -- conditionally reassigned
-  let clean = name.startsWith("/") ? name.slice(1) : name;
-  if (removeSubsetPrefix) {
-    const plusIndex = clean.indexOf("+");
-    if (plusIndex > 0) {
-      clean = clean.slice(plusIndex + 1);
-    }
-  }
-  return clean;
+  const withoutSlash = name.startsWith("/") ? name.slice(1) : name;
+  if (!removeSubsetPrefix) return withoutSlash;
+  const plusIndex = withoutSlash.indexOf("+");
+  return plusIndex > 0 ? withoutSlash.slice(plusIndex + 1) : withoutSlash;
 }
 
 /**
@@ -132,6 +110,18 @@ function findEmbeddedFont(
 }
 
 /**
+ * Resolve the baseline position for a text element.
+ * Uses explicit baseline coordinates if available, otherwise approximates from bounding box.
+ */
+function resolveTextPosition(text: PdfText): { readonly x: number; readonly y: number } {
+  if (text.baselineStartX !== undefined && text.baselineStartY !== undefined) {
+    return { x: text.baselineStartX, y: text.baselineStartY };
+  }
+  const descender = text.fontMetrics?.descender ?? -200;
+  return { x: text.x, y: text.y - (descender * text.fontSize / 1000) };
+}
+
+/**
  * Context for text serialization.
  */
 export type TextSerializationContext = {
@@ -145,6 +135,11 @@ export type TextSerializationContext = {
    * When present, CID fonts will use hex string output.
    */
   readonly embeddedFonts?: readonly PdfEmbeddedFont[];
+  /**
+   * Font provider for font resolution and re-encoding.
+   * When present, edited text elements will be re-encoded through this provider.
+   */
+  readonly fontProvider?: FontProvider;
 };
 
 /**
@@ -187,36 +182,18 @@ export function serializeText(
     lines.push(`${formatNum(text.horizontalScaling)} Tz`);
   }
 
-  // Set text position
-  // Use baseline if available, otherwise use bounding box position
-  // eslint-disable-next-line no-restricted-syntax -- branched assignment
-  let posX: number;
-  // eslint-disable-next-line no-restricted-syntax -- branched assignment
-  let posY: number;
-
-  if (text.baselineStartX !== undefined && text.baselineStartY !== undefined) {
-    posX = text.baselineStartX;
-    posY = text.baselineStartY;
-  } else {
-    // Approximate baseline from bounding box
-    // y is bottom edge, baseline is typically at y + descender_offset
-    posX = text.x;
-    const descender = text.fontMetrics?.descender ?? -200;
-    posY = text.y - (descender * text.fontSize / 1000);
-  }
-
-  // Use text matrix for positioning (Tm operator)
-  // Simple case: identity matrix with translation
-  lines.push(`1 0 0 1 ${formatNum(posX)} ${formatNum(posY)} Tm`);
+  // Set text position (Tm operator)
+  const pos = resolveTextPosition(text);
+  lines.push(`1 0 0 1 ${formatNum(pos.x)} ${formatNum(pos.y)} Tm`);
 
   // Show text (Tj operator)
-  // Use hex string for CID fonts to preserve original byte sequence
-  if (shouldUseHexOutput(text, ctx.embeddedFonts) && text.rawBytes) {
-    const hexString = bytesToHex(text.rawBytes);
-    lines.push(`<${hexString}> Tj`);
-  } else {
-    lines.push(`(${escapeTextString(text.text)}) Tj`);
-  }
+  // Strategy:
+  //   1. Unedited CID text with rawBytes → hex output (round-trip preservation)
+  //   2. Edited text with FontProvider → re-encode through provider
+  //   3. Edited CID text without FontProvider → try rawBytes if still present
+  //   4. Fallback → escaped text string
+  const textOutput = resolveTextOutput(text, ctx);
+  lines.push(textOutput);
 
   // End text object
   lines.push("ET");
@@ -236,50 +213,153 @@ export function serializeTextBatch(
     return "";
   }
 
+  type FontState = { readonly font: string; readonly size: number } | undefined;
+
+  const bodyLines = texts.reduce<{ readonly lines: string[]; readonly fontState: FontState }>(
+    (acc, text) => {
+      const fontResource = ctx.fontNameToResource.get(text.fontName) ?? text.fontName;
+      const needsFontSwitch = !acc.fontState || fontResource !== acc.fontState.font || text.fontSize !== acc.fontState.size;
+      if (needsFontSwitch) {
+        acc.lines.push(`/${fontResource} ${formatNum(text.fontSize)} Tf`);
+      }
+
+      const pos = resolveTextPosition(text);
+      acc.lines.push(`1 0 0 1 ${formatNum(pos.x)} ${formatNum(pos.y)} Tm`);
+      acc.lines.push(resolveTextOutput(text, ctx));
+
+      return { lines: acc.lines, fontState: { font: fontResource, size: text.fontSize } };
+    },
+    { lines: [], fontState: undefined },
+  );
+
+  return ["BT", ...bodyLines.lines, "ET"].join("\n");
+}
+
+// =============================================================================
+// Text output resolution
+// =============================================================================
+
+/**
+ * Resolve the PDF text output operators for a PdfText element.
+ *
+ * Decision logic:
+ *   1. If text was edited and FontProvider is available:
+ *      → Try full encoding. If it succeeds, output single Tj.
+ *      → If encoding fails (some characters not in font), split into runs
+ *        and use font fallback with Tf switching per ISO 32000-1 Section 9.4.3.
+ *   2. If text was NOT edited and has rawBytes for a CID font:
+ *      → Use original rawBytes verbatim (round-trip preservation).
+ *   3. Otherwise:
+ *      → Use escaped text string (single-byte font or fallback).
+ */
+function resolveTextOutput(text: PdfText, ctx: TextSerializationContext): string {
+  const isEdited = text.editState?.textChanged === true || text.editState?.fontChanged === true;
+
+  // Case 1: Edited text — re-encode through FontProvider
+  if (isEdited && ctx.fontProvider) {
+    const resolved = ctx.fontProvider.resolve(text.fontName, text.editState?.resolvedFontFamily ?? text.baseFont);
+    const encoded = encodeTextForFont(text.text, resolved);
+
+    if (encoded) {
+      // Full text is encodable by the primary font
+      if (encoded.codeByteWidth === 2) {
+        return `<${bytesToHex(encoded.rawBytes)}> Tj`;
+      }
+      return `(${escapeTextString(text.text)}) Tj`;
+    }
+
+    // Encoding failed for some characters — split into runs and use fallback
+    return resolveTextOutputWithFallback(text, resolved, ctx);
+  }
+
+  // Case 2: Unedited CID text with rawBytes — round-trip preservation
+  if (shouldUseHexOutput(text, ctx.embeddedFonts) && text.rawBytes) {
+    return `<${bytesToHex(text.rawBytes)}> Tj`;
+  }
+
+  // Case 3: Single-byte font or fallback
+  return `(${escapeTextString(text.text)}) Tj`;
+}
+
+/**
+ * Encode text with font fallback: split into runs by encodability,
+ * encode each run with the appropriate font, and emit Tf+Tj pairs.
+ *
+ * Per ISO 32000-1:2008 Section 9.4.3, multiple Tf operators within
+ * a single BT...ET block are valid for switching fonts mid-text.
+ *
+ * The fallback font is resolved through FontProvider.resolveFallback(),
+ * which is DI-injectable. The default falls back to Helvetica (Standard 14).
+ */
+/**
+ * Encode text with font fallback: split into runs by encodability,
+ * encode each run with the appropriate font, and emit Tf+Tj pairs.
+ *
+ * Per ISO 32000-1:2008 Section 9.4.3, multiple Tf operators within
+ * a single BT...ET block are valid for switching fonts mid-text.
+ *
+ * The fallback font is resolved through FontProvider.resolveFallback(),
+ * which is DI-injectable. The default falls back to Helvetica (Standard 14).
+ */
+function resolveTextOutputWithFallback(
+  textElement: PdfText,
+  primaryFont: ResolvedFont,
+  ctx: TextSerializationContext,
+): string {
+  const provider = ctx.fontProvider!;
+  const runs = splitTextByEncodability(textElement.text, primaryFont);
   const lines: string[] = [];
-  // eslint-disable-next-line no-restricted-syntax -- accumulator updated in loop
-  let currentFont: string | null = null;
-  // eslint-disable-next-line no-restricted-syntax -- accumulator updated in loop
-  let currentFontSize: number | null = null;
+  const fontSize = textElement.fontSize;
 
-  lines.push("BT");
+  // Get fallback font (may be undefined if no strategy can handle it)
+  const nonEncodableChars = runs.filter(r => !r.encodable).map(r => r.text).join("");
+  const fallbackFont = nonEncodableChars.length > 0
+    ? provider.resolveFallback(nonEncodableChars, primaryFont)
+    : undefined;
 
-  for (const text of texts) {
-    // Set font if changed
-    const fontResource = ctx.fontNameToResource.get(text.fontName) ?? text.fontName;
-    if (fontResource !== currentFont || text.fontSize !== currentFontSize) {
-      lines.push(`/${fontResource} ${formatNum(text.fontSize)} Tf`);
-      currentFont = fontResource;
-      currentFontSize = text.fontSize;
-    }
+  // Resolve font resource names for Tf operators
+  const primaryResource = findFontResource(primaryFont, ctx.fontNameToResource) ?? textElement.fontName;
+  const fallbackResource = fallbackFont
+    ? findFontResource(fallbackFont, ctx.fontNameToResource) ?? fallbackFont.pdfBaseFont
+    : undefined;
 
-    // Set position
-    // eslint-disable-next-line no-restricted-syntax -- branched assignment
-    let posX: number;
-    // eslint-disable-next-line no-restricted-syntax -- branched assignment
-    let posY: number;
-
-    if (text.baselineStartX !== undefined && text.baselineStartY !== undefined) {
-      posX = text.baselineStartX;
-      posY = text.baselineStartY;
+  for (const run of runs) {
+    if (run.encodable) {
+      // Encode with primary font
+      const encoded = encodeTextForFont(run.text, primaryFont);
+      if (encoded && encoded.codeByteWidth === 2) {
+        lines.push(`<${bytesToHex(encoded.rawBytes)}> Tj`);
+      } else {
+        lines.push(`(${escapeTextString(run.text)}) Tj`);
+      }
+    } else if (fallbackFont && fallbackResource) {
+      // Switch to fallback font (same size), encode, then switch back
+      lines.push(`/${fallbackResource} ${formatNum(fontSize)} Tf`);
+      const encoded = encodeTextForFont(run.text, fallbackFont);
+      if (encoded && encoded.codeByteWidth === 2) {
+        lines.push(`<${bytesToHex(encoded.rawBytes)}> Tj`);
+      } else {
+        lines.push(`(${escapeTextString(run.text)}) Tj`);
+      }
+      // Switch back to primary font
+      lines.push(`/${primaryResource} ${formatNum(fontSize)} Tf`);
     } else {
-      posX = text.x;
-      const descender = text.fontMetrics?.descender ?? -200;
-      posY = text.y - (descender * text.fontSize / 1000);
-    }
-
-    lines.push(`1 0 0 1 ${formatNum(posX)} ${formatNum(posY)} Tm`);
-
-    // Use hex string for CID fonts to preserve original byte sequence
-    if (shouldUseHexOutput(text, ctx.embeddedFonts) && text.rawBytes) {
-      const hexString = bytesToHex(text.rawBytes);
-      lines.push(`<${hexString}> Tj`);
-    } else {
-      lines.push(`(${escapeTextString(text.text)}) Tj`);
+      // No fallback available — output as plain text string (best effort)
+      lines.push(`(${escapeTextString(run.text)}) Tj`);
     }
   }
 
-  lines.push("ET");
-
   return lines.join("\n");
 }
+
+/** Find the PDF resource name (e.g. "F1") for a resolved font. */
+function findFontResource(
+  font: ResolvedFont,
+  fontNameToResource: ReadonlyMap<string, string>,
+): string | undefined {
+  return fontNameToResource.get(font.pdfBaseFont)
+    ?? fontNameToResource.get(font.cssFontFamily);
+}
+
+// Import type for internal use
+type ResolvedFont = import("../../domain/font/font-provider").ResolvedFont;

@@ -20,6 +20,7 @@ import type { MenuEntry } from "@aurochs-ui/ui-components/context-menu";
 import { InspectorPanelWithTabs, type InspectorTab } from "@aurochs-ui/editor-controls/ui";
 import type { PdfDocument, PdfElement, PdfElementId } from "@aurochs/pdf";
 import { parseElementId } from "@aurochs/pdf";
+import { createFontProviderForDocument } from "@aurochs/pdf/domain/font";
 import { renderPdfPageToSvgNode, svgChildrenToJsx, createDocumentQuery } from "@aurochs-renderer/pdf/svg";
 
 import { canUndo, canRedo } from "@aurochs-ui/editor-core/history";
@@ -58,6 +59,12 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
   const [displayZoom, setDisplayZoom] = useState(1);
   const document = state.documentHistory.present;
 
+  // FontProvider: single source of truth for font resolution across all rendering
+  const fontProvider = useMemo(
+    () => createFontProviderForDocument(document),
+    [document.embeddedFonts],
+  );
+
   const handlePageSelect = useCallback(
     (pageIndex: number) => dispatch({ type: "SET_PAGE", pageIndex }),
     [],
@@ -87,7 +94,7 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
     [],
   );
 
-  const query = useMemo(() => createDocumentQuery(document), [document]);
+  const query = useMemo(() => createDocumentQuery(document, fontProvider), [document, fontProvider]);
   const currentPage = document.pages[state.currentPageIndex];
 
   const selectedElement = useMemo(() => {
@@ -104,8 +111,8 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
   const handleClearSelection = useCallback(() => dispatch({ type: "CLEAR_SELECTION" }), []);
 
   const handleStartMove = useCallback(
-    // eslint-disable-next-line custom/max-params -- matches EditorCanvas callback signature
-    (startX: number, startY: number, clientX: number, clientY: number) => dispatch({ type: "START_PENDING_MOVE", startX, startY, startClientX: clientX, startClientY: clientY }),
+    ({ startX, startY, clientX, clientY }: { readonly startX: number; readonly startY: number; readonly clientX: number; readonly clientY: number }) =>
+      dispatch({ type: "START_PENDING_MOVE", startX, startY, startClientX: clientX, startClientY: clientY }),
     [],
   );
   const handleConfirmMove = useCallback(
@@ -246,6 +253,7 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
         <PdfPageListPanel
           pages={document.pages}
           currentPageIndex={state.currentPageIndex}
+          fontProvider={fontProvider}
           onPageSelect={handlePageSelect}
           onAddPage={handleAddPage}
           onDeletePages={handleDeletePages}
@@ -337,9 +345,9 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
 
   const contentChildren = useMemo(() => {
     if (!currentPage) { return null; }
-    const svgNode = renderPdfPageToSvgNode(currentPage, { excludeElementIndices: excludeSet });
+    const svgNode = renderPdfPageToSvgNode(currentPage, { excludeElementIndices: excludeSet, fontProvider });
     return svgChildrenToJsx(svgNode, "pdf-page");
-  }, [currentPage, excludeSet]);
+  }, [currentPage, excludeSet, fontProvider]);
 
   // ---- Text edit controller (PPTX-style: SVG text + cursor + selection in one component) ----
   // Delegates text rendering to renderPdfElementToSvg (same SoT as contentSvg)
@@ -364,6 +372,7 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
         pageHeight={currentPage.height}
         canvasWidth={currentPage.width}
         canvasHeight={currentPage.height}
+        fontProvider={fontProvider}
         onComplete={(text) => dispatch({ type: "COMMIT_TEXT_EDIT", elementId: editingElementId, text })}
         onCancel={() => dispatch({ type: "CANCEL_TEXT_EDIT" })}
       />

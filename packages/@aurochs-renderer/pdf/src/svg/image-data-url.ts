@@ -25,14 +25,14 @@ function applyAlphaChannel(rgba: Uint8ClampedArray, alpha: Uint8Array | undefine
 }
 
 function encodeRawImageToDataUrl(image: PdfImage): string {
-  const rgba = convertToRgba(
-    image.data,
-    image.width,
-    image.height,
-    image.colorSpace,
-    image.bitsPerComponent,
-    { decode: image.decode },
-  );
+  const rgba = convertToRgba({
+    data: image.data,
+    width: image.width,
+    height: image.height,
+    colorSpace: image.colorSpace,
+    bitsPerComponent: image.bitsPerComponent,
+    decode: image.decode,
+  });
   applyAlphaChannel(rgba, image.alpha);
   return encodeRgbaToPngDataUrl(rgba, image.width, image.height);
 }

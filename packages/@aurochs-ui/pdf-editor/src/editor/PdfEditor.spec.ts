@@ -401,25 +401,24 @@ describe("History integration", () => {
 
   it("multiple edits create proper undo stack", () => {
     const doc = createTestDocument();
-    // eslint-disable-next-line no-restricted-syntax -- accumulator updated in loop
-    let history = createHistory(doc);
+    const history0 = createHistory(doc);
 
     // Edit 1
     const doc1 = updateElementInDocument({ document: doc, elementId: createElementId(0, 0), updater: (el) => el.type === "text" ? { ...el, text: "Edit1" } : el });
-    history = pushHistory(history, doc1);
+    const history1 = pushHistory(history0, doc1);
 
     // Edit 2
     const doc2 = updateElementInDocument({ document: doc1, elementId: createElementId(0, 0), updater: (el) => el.type === "text" ? { ...el, text: "Edit2" } : el });
-    history = pushHistory(history, doc2);
+    const history2 = pushHistory(history1, doc2);
 
-    expect((history.present.pages[0].elements[0] as PdfText).text).toBe("Edit2");
+    expect((history2.present.pages[0].elements[0] as PdfText).text).toBe("Edit2");
 
     // Undo once
-    history = undoHistory(history);
-    expect((history.present.pages[0].elements[0] as PdfText).text).toBe("Edit1");
+    const history3 = undoHistory(history2);
+    expect((history3.present.pages[0].elements[0] as PdfText).text).toBe("Edit1");
 
     // Undo twice
-    history = undoHistory(history);
-    expect((history.present.pages[0].elements[0] as PdfText).text).toBe("Hello");
+    const history4 = undoHistory(history3);
+    expect((history4.present.pages[0].elements[0] as PdfText).text).toBe("Hello");
   });
 });

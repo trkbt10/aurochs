@@ -9,6 +9,7 @@ import { useState, useCallback, useEffect, type CSSProperties, type ReactNode } 
 import { colorTokens, spacingTokens, shadowTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { buildPdf } from "@aurochs-builder/pdf";
 import type { PdfDocument } from "@aurochs/pdf";
+import { createFontProviderForDocument } from "@aurochs/pdf/domain/font";
 import { renderPdfPageToSvgNode } from "@aurochs-renderer/pdf/svg";
 import { svgElementToJsx } from "@aurochs-renderer/svg";
 import {
@@ -119,7 +120,8 @@ function renderPdfPage(document: PdfDocument, pageIndex: number): ReactNode {
     return <div style={pageNotFoundStyle}>Page not found</div>;
   }
 
-  const svgNode = renderPdfPageToSvgNode(page);
+  const fontProvider = createFontProviderForDocument(document);
+  const svgNode = renderPdfPageToSvgNode(page, { fontProvider });
   return (
     <div style={pageContainerStyle}>
       {svgElementToJsx(svgNode)}
