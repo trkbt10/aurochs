@@ -5,7 +5,7 @@
 import { pushHistory } from "@aurochs-ui/editor-core/history";
 import { createEmptySelection } from "@aurochs-ui/editor-core/selection";
 import { addPage, removePage, reorderPage, renamePage } from "@aurochs-builder/fig/page-ops";
-import type { FigNodeId } from "@aurochs-builder/fig/types";
+import type { FigNodeId } from "@aurochs/fig/domain";
 import type { HandlerMap } from "./handler-types";
 
 export const PAGE_HANDLERS: HandlerMap = {

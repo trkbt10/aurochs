@@ -2,72 +2,107 @@
  * @file Layer panel
  *
  * Shows the layer tree for the active page.
+ * Uses react-editor-ui's LayerItem component (SoT for layer item rendering).
+ * Format-specific details (icon, label) are injected via props.
  */
 
+import { useCallback, type ReactNode, type PointerEvent as ReactPointerEvent } from "react";
 import { useFigEditor } from "../context/FigEditorContext";
-import type { FigDesignNode, FigNodeId } from "@aurochs-builder/fig/types";
+import type { FigDesignNode, FigNodeId } from "@aurochs/fig/domain";
 import { isSelected } from "@aurochs-ui/editor-core/selection";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
+import { LayerItem } from "react-editor-ui/LayerItem";
+import {
+  RectIcon,
+  EllipseIcon,
+  TextBoxIcon,
+  LineIcon,
+  StarIcon,
+  FolderIcon,
+  DiamondIcon,
+  UnknownShapeIcon,
+} from "@aurochs-ui/ui-components/icons";
+import { iconTokens, colorTokens, fontTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 
-/**
- * Layer tree panel for the fig editor.
- */
-export function LayerPanel() {
-  const { activePage, nodeSelection, dispatch } = useFigEditor();
+// =============================================================================
+// Icon helpers
+// =============================================================================
 
-  if (!activePage) {
-    return <div style={{ padding: 16, color: "#999", fontSize: 12 }}>No page selected</div>;
+const ICON_PROPS = { size: iconTokens.size.sm, strokeWidth: iconTokens.strokeWidth };
+
+function getNodeIcon(type: string): ReactNode {
+  switch (type) {
+    case "FRAME":
+    case "COMPONENT":
+    case "COMPONENT_SET":
+      return <RectIcon {...ICON_PROPS} />;
+    case "GROUP":
+      return <FolderIcon {...ICON_PROPS} />;
+    case "TEXT":
+      return <TextBoxIcon {...ICON_PROPS} />;
+    case "RECTANGLE":
+    case "ROUNDED_RECTANGLE":
+      return <RectIcon {...ICON_PROPS} />;
+    case "ELLIPSE":
+      return <EllipseIcon {...ICON_PROPS} />;
+    case "VECTOR":
+    case "LINE":
+      return <LineIcon {...ICON_PROPS} />;
+    case "STAR":
+      return <StarIcon {...ICON_PROPS} />;
+    case "INSTANCE":
+      return <DiamondIcon {...ICON_PROPS} />;
+    default:
+      return <UnknownShapeIcon {...ICON_PROPS} />;
   }
-
-  return (
-    <div style={{ padding: 8 }}>
-      <div style={{ fontSize: 11, fontWeight: 600, color: "#666", marginBottom: 8 }}>Layers</div>
-      {activePage.children.length === 0 && (
-        <div style={{ fontSize: 12, color: "#999" }}>Empty page</div>
-      )}
-      <LayerTree nodes={activePage.children} depth={0} />
-    </div>
-  );
 }
 
-function LayerTree({ nodes, depth }: { nodes: readonly FigDesignNode[]; depth: number }) {
+// =============================================================================
+// Recursive layer tree
+// =============================================================================
+
+type LayerTreeProps = {
+  readonly nodes: readonly FigDesignNode[];
+  readonly depth: number;
+};
+
+function LayerTree({ nodes, depth }: LayerTreeProps) {
   const { nodeSelection, dispatch } = useFigEditor();
+
+  const handlePointerDown = useCallback(
+    (nodeId: FigNodeId) => (e: ReactPointerEvent) => {
+      const addToSelection = e.shiftKey || e.metaKey || e.ctrlKey;
+      dispatch({
+        type: "SELECT_NODE",
+        nodeId,
+        addToSelection,
+      });
+    },
+    [dispatch],
+  );
 
   return (
     <>
       {[...nodes].reverse().map((node) => {
         const selected = isSelected(nodeSelection, node.id);
+        const hasChildren = node.children != null && node.children.length > 0;
+
         return (
           <div key={node.id}>
-            <div
-              onClick={() =>
-                dispatch({
-                  type: "SELECT_NODE",
-                  nodeId: node.id,
-                  addToSelection: false,
-                })
-              }
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 4,
-                padding: "3px 4px",
-                paddingLeft: depth * 16 + 4,
-                fontSize: 12,
-                cursor: "pointer",
-                borderRadius: 3,
-                backgroundColor: selected ? "#e8e8ff" : "transparent",
-                opacity: node.visible ? 1 : 0.5,
-              }}
-            >
-              <span style={{ fontSize: 10, color: "#aaa", width: 20 }}>
-                {getNodeIcon(node.type)}
-              </span>
-              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {node.name}
-              </span>
-            </div>
-            {node.children && node.children.length > 0 && (
-              <LayerTree nodes={node.children} depth={depth + 1} />
+            <LayerItem
+              id={node.id}
+              label={node.name}
+              icon={getNodeIcon(node.type)}
+              depth={depth}
+              selected={selected}
+              dimmed={!node.visible}
+              hasChildren={hasChildren}
+              onPointerDown={handlePointerDown(node.id as FigNodeId)}
+              showVisibilityToggle={false}
+              showLockToggle={false}
+            />
+            {hasChildren && (
+              <LayerTree nodes={node.children!} depth={depth + 1} />
             )}
           </div>
         );
@@ -76,29 +111,37 @@ function LayerTree({ nodes, depth }: { nodes: readonly FigDesignNode[]; depth: n
   );
 }
 
-function getNodeIcon(type: string): string {
-  switch (type) {
-    case "FRAME":
-    case "COMPONENT":
-    case "COMPONENT_SET":
-      return "#";
-    case "GROUP":
-      return "G";
-    case "TEXT":
-      return "T";
-    case "RECTANGLE":
-    case "ROUNDED_RECTANGLE":
-      return "\u25A1";
-    case "ELLIPSE":
-      return "\u25CB";
-    case "VECTOR":
-    case "LINE":
-      return "/";
-    case "STAR":
-      return "\u2605";
-    case "INSTANCE":
-      return "\u25C7";
-    default:
-      return "\u2022";
+// =============================================================================
+// Component
+// =============================================================================
+
+/**
+ * Layer tree panel for the fig editor.
+ */
+export function LayerPanel() {
+  const { activePage } = useFigEditor();
+
+  if (!activePage) {
+    return (
+      <OptionalPropertySection title="Layers" badge={0} defaultExpanded>
+        <div style={{ padding: `${spacingTokens.xl} ${spacingTokens.lg}`, textAlign: "center", color: colorTokens.text.tertiary, fontSize: fontTokens.size.lg }}>
+          No page selected
+        </div>
+      </OptionalPropertySection>
+    );
   }
+
+  return (
+    <OptionalPropertySection title="Layers" badge={activePage.children.length} defaultExpanded>
+      {activePage.children.length === 0 ? (
+        <div style={{ padding: `${spacingTokens.xl} ${spacingTokens.lg}`, textAlign: "center", color: colorTokens.text.tertiary, fontSize: fontTokens.size.lg }}>
+          Empty page
+        </div>
+      ) : (
+        <div role="tree" aria-label="Layers">
+          <LayerTree nodes={activePage.children} depth={0} />
+        </div>
+      )}
+    </OptionalPropertySection>
+  );
 }

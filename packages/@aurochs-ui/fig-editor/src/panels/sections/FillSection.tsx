@@ -2,16 +2,28 @@
  * @file Fill property section
  *
  * Displays and edits the fill paints of a selected node.
+ * Uses shared UI components for layout and design tokens for styling.
  */
 
-import type { FigDesignNode, FigNodeId } from "@aurochs-builder/fig/types";
+import type { CSSProperties } from "react";
+import type { FigDesignNode } from "@aurochs/fig/domain";
 import type { FigPaint, FigColor } from "@aurochs/fig/types";
 import type { FigEditorAction } from "../../context/fig-editor/types";
+import { FieldRow } from "@aurochs-ui/ui-components/layout";
+import { colorTokens, fontTokens } from "@aurochs-ui/ui-components/design-tokens";
+
+// =============================================================================
+// Types
+// =============================================================================
 
 type FillSectionProps = {
   readonly node: FigDesignNode;
   readonly dispatch: (action: FigEditorAction) => void;
 };
+
+// =============================================================================
+// Color conversion helpers
+// =============================================================================
 
 function colorToHex(color: FigColor): string {
   const r = Math.round(color.r * 255).toString(16).padStart(2, "0");
@@ -50,6 +62,31 @@ function getPaintTypeLabel(paint: FigPaint): string {
   }
 }
 
+// =============================================================================
+// Styles
+// =============================================================================
+
+const emptyStyle: CSSProperties = {
+  fontSize: fontTokens.size.md,
+  color: colorTokens.text.tertiary,
+};
+
+const typeLabel: CSSProperties = {
+  fontSize: fontTokens.size.sm,
+  color: colorTokens.text.secondary,
+  minWidth: 50,
+};
+
+const hexLabel: CSSProperties = {
+  fontSize: fontTokens.size.sm,
+  fontFamily: "monospace",
+  color: colorTokens.text.secondary,
+};
+
+// =============================================================================
+// Component
+// =============================================================================
+
 /**
  * Fill property editor section.
  */
@@ -71,33 +108,29 @@ export function FillSection({ node, dispatch }: FillSectionProps) {
     });
   }
 
+  if (fills.length === 0) {
+    return <div style={emptyStyle}>No fills</div>;
+  }
+
   return (
-    <div style={{ padding: "8px 0" }}>
-      <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 4, color: "#666" }}>Fill</div>
-      {fills.length === 0 && (
-        <div style={{ fontSize: 12, color: "#999" }}>No fills</div>
-      )}
+    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
       {fills.map((fill, i) => {
         const color = getPaintColor(fill);
         return (
-          <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-            <span style={{ fontSize: 11, color: "#888", minWidth: 50 }}>
-              {getPaintTypeLabel(fill)}
-            </span>
+          <FieldRow key={i} gap={8}>
+            <span style={typeLabel}>{getPaintTypeLabel(fill)}</span>
             {color && (
               <input
                 type="color"
                 value={colorToHex(color)}
                 onChange={(e) => updateFillColor(i, hexToColor(e.target.value))}
-                style={{ width: 24, height: 24, border: "none", cursor: "pointer" }}
+                style={{ width: 24, height: 24, border: "none", cursor: "pointer", padding: 0, background: "none" }}
               />
             )}
             {color && (
-              <span style={{ fontSize: 11, fontFamily: "monospace" }}>
-                {colorToHex(color)}
-              </span>
+              <span style={hexLabel}>{colorToHex(color)}</span>
             )}
-          </div>
+          </FieldRow>
         );
       })}
     </div>

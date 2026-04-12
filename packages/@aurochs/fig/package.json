@@ -66,6 +66,10 @@
       "types": "./src/symbols/index.ts",
       "default": "./src/symbols/index.ts"
     },
+    "./domain": {
+      "types": "./src/domain/index.ts",
+      "default": "./src/domain/index.ts"
+    },
     "./roundtrip": {
       "types": "./src/roundtrip/index.ts",
       "default": "./src/roundtrip/index.ts"

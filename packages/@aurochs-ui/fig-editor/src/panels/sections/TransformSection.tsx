@@ -2,16 +2,27 @@
  * @file Transform property section
  *
  * Edits position (x, y), size (width, height), and rotation of the selected node.
+ * Uses Input from ui-components and FieldGroup/FieldRow from ui-components/layout.
  */
 
 import { useCallback } from "react";
-import type { FigDesignNode, FigNodeId } from "@aurochs-builder/fig/types";
+import type { FigDesignNode } from "@aurochs/fig/domain";
 import type { FigEditorAction } from "../../context/fig-editor/types";
+import { Input } from "@aurochs-ui/ui-components/primitives/Input";
+import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
+
+// =============================================================================
+// Types
+// =============================================================================
 
 type TransformSectionProps = {
   readonly node: FigDesignNode;
   readonly dispatch: (action: FigEditorAction) => void;
 };
+
+// =============================================================================
+// Component
+// =============================================================================
 
 /**
  * Transform property editor section.
@@ -65,53 +76,49 @@ export function TransformSection({ node, dispatch }: TransformSectionProps) {
   );
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, padding: "8px 0" }}>
-      <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}>
-        <span style={{ width: 16, color: "#888" }}>X</span>
-        <input
-          type="number"
-          value={x}
-          onChange={(e) => updateTransform("x", Number(e.target.value))}
-          style={{ width: "100%", fontSize: 12, padding: "2px 4px" }}
-        />
-      </label>
-      <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}>
-        <span style={{ width: 16, color: "#888" }}>Y</span>
-        <input
-          type="number"
-          value={y}
-          onChange={(e) => updateTransform("y", Number(e.target.value))}
-          style={{ width: "100%", fontSize: 12, padding: "2px 4px" }}
-        />
-      </label>
-      <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}>
-        <span style={{ width: 16, color: "#888" }}>W</span>
-        <input
-          type="number"
-          value={w}
-          onChange={(e) => updateTransform("w", Number(e.target.value))}
-          style={{ width: "100%", fontSize: 12, padding: "2px 4px" }}
-        />
-      </label>
-      <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}>
-        <span style={{ width: 16, color: "#888" }}>H</span>
-        <input
-          type="number"
-          value={h}
-          onChange={(e) => updateTransform("h", Number(e.target.value))}
-          style={{ width: "100%", fontSize: 12, padding: "2px 4px" }}
-        />
-      </label>
-      <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, gridColumn: "span 2" }}>
-        <span style={{ width: 16, color: "#888" }}>R</span>
-        <input
-          type="number"
-          value={rotation}
-          onChange={(e) => updateTransform("rotation", Number(e.target.value))}
-          style={{ width: "100%", fontSize: 12, padding: "2px 4px" }}
-        />
-        <span style={{ color: "#888" }}>°</span>
-      </label>
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <FieldRow>
+        <FieldGroup label="X" inline labelWidth={16}>
+          <Input
+            type="number"
+            value={x}
+            onChange={(v) => updateTransform("x", v as number)}
+          />
+        </FieldGroup>
+        <FieldGroup label="Y" inline labelWidth={16}>
+          <Input
+            type="number"
+            value={y}
+            onChange={(v) => updateTransform("y", v as number)}
+          />
+        </FieldGroup>
+      </FieldRow>
+      <FieldRow>
+        <FieldGroup label="W" inline labelWidth={16}>
+          <Input
+            type="number"
+            value={w}
+            onChange={(v) => updateTransform("w", v as number)}
+          />
+        </FieldGroup>
+        <FieldGroup label="H" inline labelWidth={16}>
+          <Input
+            type="number"
+            value={h}
+            onChange={(v) => updateTransform("h", v as number)}
+          />
+        </FieldGroup>
+      </FieldRow>
+      <FieldRow>
+        <FieldGroup label="R" inline labelWidth={16}>
+          <Input
+            type="number"
+            value={rotation}
+            onChange={(v) => updateTransform("rotation", v as number)}
+            suffix="°"
+          />
+        </FieldGroup>
+      </FieldRow>
     </div>
   );
 }

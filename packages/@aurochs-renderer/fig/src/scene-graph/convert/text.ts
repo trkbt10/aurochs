@@ -1,8 +1,10 @@
 /**
  * @file Convert Figma TEXT nodes to scene graph TextNode data
+ *
+ * Accepts FigDesignNode (domain object) directly.
  */
 
-import type { FigNode } from "@aurochs/fig/types";
+import type { FigDesignNode } from "@aurochs/fig/domain";
 import type { FigBlob } from "@aurochs/fig/parser";
 import { extractTextProps } from "../../text/layout/extract-props";
 import { getFillColorAndOpacity } from "../../text/layout/fill";
@@ -121,13 +123,13 @@ export type TextConversionResult = {
 };
 
 /**
- * Convert a TEXT node to scene graph text data
+ * Convert a TEXT FigDesignNode to scene graph text data
  *
- * @param node - Figma TEXT node
+ * @param node - FigDesignNode of type TEXT
  * @param blobs - Blob array from .fig file (for derived paths)
  * @returns Text conversion result for scene graph TextNode
  */
-export function convertTextNode(node: FigNode, blobs: readonly FigBlob[]): TextConversionResult {
+export function convertTextNode(node: FigDesignNode, blobs: readonly FigBlob[]): TextConversionResult {
   const props = extractTextProps(node);
   const { color: fillColor, opacity: fillOpacity } = getFillColorAndOpacity(props.fillPaints);
 
@@ -135,8 +137,8 @@ export function convertTextNode(node: FigNode, blobs: readonly FigBlob[]): TextC
   const color = parseHexColor(fillColor);
 
   // Check for derived path data (0% diff rendering)
-  const nodeData = node as Record<string, unknown>;
-  const derivedTextData = nodeData.derivedTextData as DerivedTextData | undefined;
+  // derivedTextData is not modeled on FigDesignNode; it lives in _raw
+  const derivedTextData = node._raw?.derivedTextData as DerivedTextData | undefined;
 
   if (hasDerivedGlyphs(derivedTextData)) {
     const pathData = extractDerivedTextPathData(derivedTextData!, blobs);

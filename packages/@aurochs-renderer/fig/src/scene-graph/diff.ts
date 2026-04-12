@@ -216,12 +216,12 @@ export function diffSceneGraphs(
   const ops: DiffOp[] = [];
 
   // Diff root children
-  diffChildren(
-    prev.root.id,
-    prev.root.children,
-    next.root.children,
-    ops
-  );
+  diffChildren({
+    parentId: prev.root.id,
+    prevChildren: prev.root.children,
+    nextChildren: next.root.children,
+    ops,
+  });
 
   return {
     ops,

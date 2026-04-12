@@ -5,7 +5,7 @@
  * Uses the handler-map pattern for O(1) dispatch.
  */
 
-import type { FigDesignDocument, FigNodeId } from "@aurochs-builder/fig/types";
+import type { FigDesignDocument, FigNodeId } from "@aurochs/fig/domain";
 import type { FigEditorState, FigEditorAction } from "../types";
 import { createSelectMode, createInactiveTextEditState } from "../types";
 import type { HandlerMap, ActionHandler } from "./handler-types";

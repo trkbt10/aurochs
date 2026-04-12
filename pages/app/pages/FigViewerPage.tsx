@@ -6,8 +6,7 @@
  */
 
 import { useCallback, useMemo, useState, useRef } from "react";
-import type { FigDesignDocument, FigDesignNode, FigPage } from "@aurochs-builder/fig/types";
-import type { FigNode } from "@aurochs/fig/types";
+import type { FigDesignDocument, FigDesignNode, FigPage } from "@aurochs/fig/domain";
 import { buildSceneGraph, type BuildSceneGraphOptions } from "@aurochs-renderer/fig/scene-graph";
 import { renderSceneGraphToSvg } from "@aurochs-renderer/fig/svg";
 import { UploadIcon } from "@aurochs-ui/ui-components/icons";
@@ -28,50 +27,6 @@ type Props = {
 // =============================================================================
 // Rendering
 // =============================================================================
-
-/**
- * Convert FigDesignNode to FigNode-like for scene graph building.
- */
-function designNodeToFigNode(node: FigDesignNode): FigNode {
-  const base: Record<string, unknown> = {
-    guid: { sessionID: 0, localID: 0 },
-    type: { value: 0, name: node.type },
-    phase: { value: 1, name: "CREATED" },
-    name: node.name,
-    visible: node.visible,
-    opacity: node.opacity,
-    transform: node.transform,
-    size: node.size,
-    fillPaints: node.fills,
-    strokePaints: node.strokes,
-    strokeWeight: node.strokeWeight,
-    strokeAlign: node.strokeAlign,
-    strokeJoin: node.strokeJoin,
-    strokeCap: node.strokeCap,
-    cornerRadius: node.cornerRadius,
-    rectangleCornerRadii: node.rectangleCornerRadii,
-    effects: node.effects,
-    clipsContent: node.clipsContent,
-    ...node._raw,
-  };
-
-  if (node.textData) {
-    base.characters = node.textData.characters;
-    base.fontSize = node.textData.fontSize;
-    base.fontName = node.textData.fontName;
-    base.textAlignHorizontal = node.textData.textAlignHorizontal;
-    base.textAlignVertical = node.textData.textAlignVertical;
-    base.textAutoResize = node.textData.textAutoResize;
-    base.lineHeight = node.textData.lineHeight;
-    base.letterSpacing = node.textData.letterSpacing;
-  }
-
-  if (node.children && node.children.length > 0) {
-    base.children = node.children.map(designNodeToFigNode);
-  }
-
-  return base as FigNode;
-}
 
 /**
  * Compute the bounding box of all nodes in a page.
@@ -113,10 +68,10 @@ function renderPageSvg(page: FigPage, images: FigDesignDocument["images"]): stri
     return "";
   }
 
-  const figNodes = page.children.map(designNodeToFigNode);
   const bounds = computePageBounds(page.children);
 
-  const sceneGraph = buildSceneGraph(figNodes, {
+  // Pass FigDesignNode children directly — no FigNode conversion needed.
+  const sceneGraph = buildSceneGraph(page.children, {
     blobs: [],
     images: images as BuildSceneGraphOptions["images"],
     canvasSize: { width: bounds.width, height: bounds.height },

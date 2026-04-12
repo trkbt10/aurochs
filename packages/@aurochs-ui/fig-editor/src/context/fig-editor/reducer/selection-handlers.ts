@@ -9,7 +9,7 @@ import {
   addToSelection,
   toggleSelection,
 } from "@aurochs-ui/editor-core/selection";
-import type { FigNodeId } from "@aurochs-builder/fig/types";
+import type { FigNodeId } from "@aurochs/fig/domain";
 import type { HandlerMap } from "./handler-types";
 
 export const SELECTION_HANDLERS: HandlerMap = {

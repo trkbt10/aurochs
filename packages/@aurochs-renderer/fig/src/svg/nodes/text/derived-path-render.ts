@@ -125,11 +125,11 @@ function transformPathCommands(
         break;
       case "C":
         parts.push(
-          `C${transformX(cmd.cp1x)} ${transformY(cmd.cp1y)} ${transformX(cmd.cp2x)} ${transformY(cmd.cp2y)} ${transformX(cmd.x)} ${transformY(cmd.y)}`,
+          `C${transformX(cmd.x1)} ${transformY(cmd.y1)} ${transformX(cmd.x2)} ${transformY(cmd.y2)} ${transformX(cmd.x)} ${transformY(cmd.y)}`,
         );
         break;
       case "Q":
-        parts.push(`Q${transformX(cmd.cpx)} ${transformY(cmd.cpy)} ${transformX(cmd.x)} ${transformY(cmd.y)}`);
+        parts.push(`Q${transformX(cmd.x1)} ${transformY(cmd.y1)} ${transformX(cmd.x)} ${transformY(cmd.y)}`);
         break;
       case "Z":
         parts.push("Z");

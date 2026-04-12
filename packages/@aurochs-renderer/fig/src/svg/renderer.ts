@@ -469,7 +469,7 @@ export async function renderCanvas(
   canvasNode: Pick<FigNode, "children">,
   options?: FigSvgRenderOptions,
 ): Promise<FigSvgRenderResult> {
-  const children = safeChildren(canvasNode);
+  const children = canvasNode.children?.filter((c): c is FigNode => c != null) ?? [];
 
   const defaultWidth = options?.width ?? 800;
   const defaultHeight = options?.height ?? 600;

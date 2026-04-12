@@ -11,7 +11,7 @@ import { useRef, useMemo, useCallback, useState } from "react";
 import type { EditorCanvasHandle, CanvasPageCoords } from "@aurochs-ui/editor-controls/canvas";
 import { EditorCanvas } from "@aurochs-ui/editor-controls/canvas";
 import type { ZoomMode } from "@aurochs-ui/editor-controls/zoom";
-import type { FigNodeId } from "@aurochs-builder/fig/types";
+import type { FigNodeId } from "@aurochs/fig/domain";
 import { useFigEditor } from "../context/FigEditorContext";
 import { FigPageRenderer } from "./FigPageRenderer";
 import { getPageNodeBounds } from "./interaction/bounds";

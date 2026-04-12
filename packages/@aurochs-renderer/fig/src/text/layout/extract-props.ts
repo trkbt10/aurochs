@@ -1,13 +1,16 @@
 /**
- * @file Text property extraction from Figma nodes
+ * @file Text property extraction
+ *
+ * Extracts text rendering properties from either FigDesignNode (domain)
+ * or FigNode (raw parser type). The structural input type `TextNodeInput`
+ * is satisfied by both, allowing a single extraction function to serve
+ * both the scene-graph path and Direct SVG path.
  */
 
-import type { FigNode, FigPaint } from "@aurochs/fig/types";
-import { extractBaseProps } from "../../svg/nodes/extract-props";
+import type { FigPaint, FigMatrix, FigVector } from "@aurochs/fig/types";
 import type {
   ExtractedTextProps,
   FigFontName,
-  FigTextData,
   FigValueWithUnits,
   TextAlignHorizontal,
   TextAlignVertical,
@@ -15,6 +18,41 @@ import type {
   TextDecoration,
 } from "./types";
 import { detectWeight, isItalic, FONT_WEIGHTS } from "../../font";
+
+/**
+ * Structured text data fields.
+ *
+ * These are the text-specific fields that FigDesignNode.textData provides
+ * in a typed form. For FigNode, these fields exist directly on the node
+ * with the same names (accessed via `_raw` fallback or index signature).
+ */
+type TextDataFields = {
+  readonly characters?: string;
+  readonly fontSize?: number;
+  readonly fontName?: FigFontName;
+  readonly letterSpacing?: unknown;
+  readonly lineHeight?: unknown;
+  readonly textAlignHorizontal?: unknown;
+  readonly textAlignVertical?: unknown;
+  readonly textAutoResize?: unknown;
+  readonly textDecoration?: unknown;
+};
+
+export type TextNodeInput = {
+  readonly transform?: FigMatrix;
+  readonly opacity?: number;
+  readonly size?: FigVector;
+  /** Structured text data (FigDesignNode.textData or compatible) */
+  readonly textData?: TextDataFields;
+  /** Raw parser data for fallback field access (FigDesignNode._raw) */
+  readonly _raw?: Record<string, unknown>;
+  /** Domain fill paints (FigDesignNode.fills) */
+  readonly fills?: readonly FigPaint[];
+  /** Raw parser fill paints (FigNode.fillPaints) */
+  readonly fillPaints?: readonly FigPaint[];
+  /** Index signature for FigNode compatibility (additional Kiwi fields) */
+  readonly [key: string]: unknown;
+};
 
 /**
  * Get numeric value from value-with-units structure
@@ -49,25 +87,7 @@ export function getValueWithUnits(val: unknown, defaultValue: number, fontSize?:
 }
 
 /**
- * Get characters from node data
- *
- * Characters can be stored in either:
- * - node.characters (direct)
- * - node.textData.characters (nested)
- */
-function getCharacters(nodeData: Record<string, unknown>): string | undefined {
-  const characters = nodeData.characters as string | undefined;
-  if (characters) {
-    return characters;
-  }
-  const textData = nodeData.textData as FigTextData | undefined;
-  return textData?.characters;
-}
-
-/**
- * Get enum name from Figma enum object
- *
- * Figma enums are stored as { value: number, name: string }
+ * Get enum name from Figma enum object (KiwiEnumValue)
  */
 function getEnumName<T extends string>(enumObj: unknown, defaultValue: T): T {
   if (enumObj && typeof enumObj === "object" && "name" in enumObj) {
@@ -77,58 +97,85 @@ function getEnumName<T extends string>(enumObj: unknown, defaultValue: T): T {
 }
 
 /**
- * Extract text properties from a Figma node
+ * Extract text properties from a FigDesignNode or FigNode.
  *
- * Parses a TEXT node and extracts all relevant properties
- * for SVG rendering.
+ * For FigDesignNode: reads typed `textData` field, falls back to `_raw`.
+ * For FigNode: `textData`/`_raw` are undefined, so all fields fall through
+ * to direct property access via the index signature.
  *
- * @param node - Figma TEXT node
+ * @param node - FigDesignNode or FigNode (structural match via TextNodeInput)
  * @returns Extracted text properties
  */
-export function extractTextProps(node: FigNode): ExtractedTextProps {
-  const { transform, opacity } = extractBaseProps(node);
-  const nodeData = node as Record<string, unknown>;
-  const characters = getCharacters(nodeData);
+export function extractTextProps(node: TextNodeInput): ExtractedTextProps {
+  const transform = node.transform;
+  const opacity = node.opacity ?? 1;
+  const td = node.textData;
+  // For FigDesignNode, _raw holds the raw parser fields.
+  // For FigNode, _raw is undefined so `raw?.xxx` falls through,
+  // and the index signature on TextNodeInput allows direct access as fallback.
+  const raw = node._raw ?? node as Record<string, unknown>;
 
-  // Font size - directly on node in .fig files
-  const fontSize = (nodeData.fontSize as number) ?? 16;
+  // Characters: prefer textData, fall back to _raw.characters (legacy .fig format)
+  const characters =
+    td?.characters ??
+    (raw?.characters as string | undefined) ??
+    "";
 
-  // Font name - has family/style in .fig files
-  const fontName = nodeData.fontName as FigFontName | undefined;
+  // Font size
+  const fontSize =
+    td?.fontSize ??
+    (raw?.fontSize as number | undefined) ??
+    16;
+
+  // Font name
+  const fontName = td?.fontName ?? (raw?.fontName as FigFontName | undefined);
   const fontFamily = fontName?.family ?? "sans-serif";
   const fontWeight = detectWeight(fontName?.style) ?? FONT_WEIGHTS.REGULAR;
   const fontStyle = isItalic(fontName?.style) ? "italic" : undefined;
 
   // Letter spacing
-  const letterSpacing = getValueWithUnits(nodeData.letterSpacing, 0, fontSize);
+  const letterSpacingRaw = td?.letterSpacing ?? raw?.letterSpacing;
+  const letterSpacing = getValueWithUnits(letterSpacingRaw, 0, fontSize);
 
   // Line height (default: 1.2x font size)
-  const lineHeight = getValueWithUnits(nodeData.lineHeight, fontSize * 1.2, fontSize);
+  const lineHeightRaw = td?.lineHeight ?? raw?.lineHeight;
+  const lineHeight = getValueWithUnits(lineHeightRaw, fontSize * 1.2, fontSize);
 
   // Text alignment
-  const textAlignHorizontal = getEnumName<TextAlignHorizontal>(nodeData.textAlignHorizontal, "LEFT");
-  const textAlignVertical = getEnumName<TextAlignVertical>(nodeData.textAlignVertical, "TOP");
+  const textAlignHorizontal = getEnumName<TextAlignHorizontal>(
+    td?.textAlignHorizontal ?? raw?.textAlignHorizontal,
+    "LEFT",
+  );
+  const textAlignVertical = getEnumName<TextAlignVertical>(
+    td?.textAlignVertical ?? raw?.textAlignVertical,
+    "TOP",
+  );
 
   // Size of text box
-  const sizeObj = nodeData.size as { x?: number; y?: number } | undefined;
-  const size = sizeObj ? { width: sizeObj.x ?? 0, height: sizeObj.y ?? 0 } : undefined;
+  const size = node.size ? { width: node.size.x ?? 0, height: node.size.y ?? 0 } : undefined;
 
   // Text auto-resize mode
-  const textAutoResize = getEnumName<TextAutoResize>(nodeData.textAutoResize, "WIDTH_AND_HEIGHT");
+  const textAutoResize = getEnumName<TextAutoResize>(
+    td?.textAutoResize ?? raw?.textAutoResize,
+    "WIDTH_AND_HEIGHT",
+  );
 
   // Text decoration (underline, strikethrough)
-  const textDecoration = getEnumName<TextDecoration>(nodeData.textDecoration, "NONE");
+  const textDecoration = getEnumName<TextDecoration>(
+    td?.textDecoration ?? raw?.textDecoration,
+    "NONE",
+  );
 
   return {
     transform,
-    characters: characters ?? "",
+    characters,
     fontSize,
     fontFamily,
     fontWeight,
     fontStyle,
     letterSpacing: letterSpacing !== 0 ? letterSpacing : undefined,
     lineHeight,
-    fillPaints: nodeData.fillPaints as readonly FigPaint[] | undefined,
+    fillPaints: node.fills ?? node.fillPaints,
     opacity,
     textAlignHorizontal,
     textAlignVertical,

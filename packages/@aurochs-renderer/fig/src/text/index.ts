@@ -33,13 +33,11 @@ export {
 } from "./layout";
 
 export {
-  TextMeasurer,
   createTextMeasurer,
 } from "./measure";
 
 export type {
-  MeasuredLine,
-  MeasureResult,
+  TextMeasurerInstance,
   MeasurementProvider,
   FontSpec,
 } from "./measure";
@@ -50,5 +48,4 @@ export {
 
 export type {
   PathContour,
-  ContourPoint,
 } from "./paths";

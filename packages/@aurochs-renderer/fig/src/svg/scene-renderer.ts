@@ -74,7 +74,7 @@ function createDefsCollector(): SvgDefsCollector {
 function buildFillAttrs(
   fillValue: string,
   opacity: number
-): Record<string, string | number | undefined> {
+): { fill: string; "fill-opacity"?: number } {
   if (opacity < 1) {
     return { fill: fillValue, "fill-opacity": opacity };
   }

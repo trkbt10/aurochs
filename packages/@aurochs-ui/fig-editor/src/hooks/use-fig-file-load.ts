@@ -7,7 +7,7 @@
 
 import { useState, useCallback } from "react";
 import { createFigDesignDocument } from "@aurochs-builder/fig/context";
-import type { FigDesignDocument } from "@aurochs-builder/fig/types";
+import type { FigDesignDocument } from "@aurochs/fig/domain";
 
 type UseFigFileLoadResult = {
   readonly loadFromBuffer: (buffer: Uint8Array) => Promise<FigDesignDocument>;

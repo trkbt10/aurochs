@@ -2,26 +2,51 @@
  * @file Fig editor toolbar
  *
  * Top toolbar with creation tools, undo/redo, and zoom controls.
+ * Uses ToolbarButton from ui-components and shared icons.
  */
 
-import { useCallback } from "react";
+import { useCallback, type ReactNode } from "react";
+import { ToolbarButton, TOOLBAR_BUTTON_ICON_SIZE } from "@aurochs-ui/ui-components/primitives/ToolbarButton";
+import { ToolbarSeparator } from "@aurochs-ui/ui-components/primitives/ToolbarSeparator";
+import {
+  SelectIcon,
+  RectIcon,
+  EllipseIcon,
+  LineIcon,
+  TextBoxIcon,
+  UndoIcon,
+  RedoIcon,
+} from "@aurochs-ui/ui-components/icons";
+import { iconTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { useFigEditor } from "../context/FigEditorContext";
 import type { FigCreationMode } from "../context/fig-editor/types";
+
+// =============================================================================
+// Tool definitions
+// =============================================================================
 
 type ToolDef = {
   readonly mode: FigCreationMode;
   readonly label: string;
   readonly shortcut: string;
+  readonly icon: ReactNode;
 };
 
+const ICON_SIZE = iconTokens.size.sm;
+const ICON_STROKE = iconTokens.strokeWidth;
+
 const TOOLS: readonly ToolDef[] = [
-  { mode: { type: "select" }, label: "Select", shortcut: "V" },
-  { mode: { type: "frame" }, label: "Frame", shortcut: "F" },
-  { mode: { type: "rectangle" }, label: "Rectangle", shortcut: "R" },
-  { mode: { type: "ellipse" }, label: "Ellipse", shortcut: "O" },
-  { mode: { type: "line" }, label: "Line", shortcut: "L" },
-  { mode: { type: "text" }, label: "Text", shortcut: "T" },
+  { mode: { type: "select" }, label: "Select", shortcut: "V", icon: <SelectIcon size={ICON_SIZE} strokeWidth={ICON_STROKE} /> },
+  { mode: { type: "frame" }, label: "Frame", shortcut: "F", icon: <RectIcon size={ICON_SIZE} strokeWidth={ICON_STROKE} /> },
+  { mode: { type: "rectangle" }, label: "Rectangle", shortcut: "R", icon: <RectIcon size={ICON_SIZE} strokeWidth={ICON_STROKE} /> },
+  { mode: { type: "ellipse" }, label: "Ellipse", shortcut: "O", icon: <EllipseIcon size={ICON_SIZE} strokeWidth={ICON_STROKE} /> },
+  { mode: { type: "line" }, label: "Line", shortcut: "L", icon: <LineIcon size={ICON_SIZE} strokeWidth={ICON_STROKE} /> },
+  { mode: { type: "text" }, label: "Text", shortcut: "T", icon: <TextBoxIcon size={ICON_SIZE} strokeWidth={ICON_STROKE} /> },
 ];
+
+// =============================================================================
+// Component
+// =============================================================================
 
 /**
  * Fig editor toolbar component.
@@ -37,69 +62,36 @@ export function FigEditorToolbar() {
   );
 
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 4,
-        padding: "4px 8px",
-        borderBottom: "1px solid #eee",
-        backgroundColor: "#fafafa",
-      }}
-    >
-      {/* Tools */}
+    <div style={{ display: "flex", alignItems: "center", gap: 2, width: "100%" }}>
+      {/* Creation tools */}
       {TOOLS.map((tool) => (
-        <button
+        <ToolbarButton
           key={tool.mode.type}
+          icon={tool.icon}
+          label={`${tool.label} (${tool.shortcut})`}
+          active={creationMode.type === tool.mode.type}
           onClick={() => handleToolClick(tool.mode)}
-          title={`${tool.label} (${tool.shortcut})`}
-          style={{
-            padding: "4px 8px",
-            fontSize: 12,
-            border: "1px solid",
-            borderColor: creationMode.type === tool.mode.type ? "#4444ff" : "#ddd",
-            borderRadius: 4,
-            backgroundColor: creationMode.type === tool.mode.type ? "#eeeeff" : "white",
-            cursor: "pointer",
-          }}
-        >
-          {tool.label}
-        </button>
+          size="sm"
+        />
       ))}
 
-      <div style={{ flex: 1 }} />
+      <ToolbarSeparator />
 
       {/* Undo/Redo */}
-      <button
+      <ToolbarButton
+        icon={<UndoIcon size={ICON_SIZE} strokeWidth={ICON_STROKE} />}
+        label="Undo"
         onClick={() => dispatch({ type: "UNDO" })}
         disabled={!canUndo}
-        style={{
-          padding: "4px 8px",
-          fontSize: 12,
-          border: "1px solid #ddd",
-          borderRadius: 4,
-          cursor: canUndo ? "pointer" : "default",
-          opacity: canUndo ? 1 : 0.3,
-          backgroundColor: "white",
-        }}
-      >
-        Undo
-      </button>
-      <button
+        size="sm"
+      />
+      <ToolbarButton
+        icon={<RedoIcon size={ICON_SIZE} strokeWidth={ICON_STROKE} />}
+        label="Redo"
         onClick={() => dispatch({ type: "REDO" })}
         disabled={!canRedo}
-        style={{
-          padding: "4px 8px",
-          fontSize: 12,
-          border: "1px solid #ddd",
-          borderRadius: 4,
-          cursor: canRedo ? "pointer" : "default",
-          opacity: canRedo ? 1 : 0.3,
-          backgroundColor: "white",
-        }}
-      >
-        Redo
-      </button>
+        size="sm"
+      />
     </div>
   );
 }

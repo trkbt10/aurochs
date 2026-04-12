@@ -29,13 +29,13 @@ export function buildTextAttrs(
 ): SvgTextAttrs {
   const textAnchor = getTextAnchor(props.textAlignHorizontal);
   const x = getAlignedX(props.textAlignHorizontal, props.size?.width);
-  const y = getAlignedY(
-    props.textAlignVertical,
-    props.size?.height,
-    props.fontSize,
+  const y = getAlignedY({
+    align: props.textAlignVertical,
+    height: props.size?.height,
+    fontSize: props.fontSize,
     lineCount,
-    props.lineHeight
-  );
+    lineHeight: props.lineHeight,
+  });
 
   return {
     x,

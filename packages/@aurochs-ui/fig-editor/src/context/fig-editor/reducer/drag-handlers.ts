@@ -10,7 +10,7 @@ import type { SimpleBounds } from "@aurochs-ui/editor-core/geometry";
 import { pushHistory, replacePresent } from "@aurochs-ui/editor-core/history";
 import { updateNode } from "@aurochs-builder/fig/node-ops";
 import { findNodeById } from "@aurochs-builder/fig/node-ops";
-import type { FigNodeId } from "@aurochs-builder/fig/types";
+import type { FigNodeId } from "@aurochs/fig/domain";
 import type { HandlerMap } from "./handler-types";
 import { getNodeBounds } from "../helpers";
 

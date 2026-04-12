@@ -1,14 +1,17 @@
 /**
  * @file Scene graph builder
  *
- * Converts a Figma node tree to a format-agnostic scene graph.
+ * Converts a FigDesignNode tree (domain objects) to a format-agnostic scene graph.
  * The resulting scene graph can be consumed by both SVG and WebGL backends.
+ *
+ * This builder accepts FigDesignNode directly — no intermediate conversion
+ * from the raw parser type (FigNode) is needed. This ensures the renderer
+ * stays in sync with the domain model by construction.
  */
 
-import type { FigNode } from "@aurochs/fig/types";
-import type { FigImage } from "@aurochs/fig/parser";
-import type { FigBlob } from "@aurochs/fig/parser";
-import { guidToString } from "@aurochs/fig/parser";
+import type { FigDesignNode } from "@aurochs/fig/domain";
+import type { FigPaint } from "@aurochs/fig/types";
+import type { FigImage, FigBlob } from "@aurochs/fig/parser";
 import { IDENTITY_MATRIX } from "@aurochs/fig/matrix";
 import {
   extractBaseProps,
@@ -16,7 +19,7 @@ import {
   extractPaintProps,
   extractGeometryProps,
   extractEffectsProps,
-} from "../svg/nodes/extract-props";
+} from "./extract";
 import type {
   SceneGraph,
   SceneNode,
@@ -40,8 +43,8 @@ import type { Fill } from "./types";
 /** Select fill paints based on whether stroke geometry is being used */
 function selectPaintsForFills(
   isStrokeGeometry: boolean,
-  paints: { strokePaints: unknown; fillPaints: unknown },
-  images: ReadonlyMap<string, unknown>
+  paints: { strokePaints: readonly FigPaint[] | undefined; fillPaints: readonly FigPaint[] | undefined },
+  images: ReadonlyMap<string, FigImage>
 ): Fill[] {
   const source = isStrokeGeometry ? paints.strokePaints : paints.fillPaints;
   return convertPaintsToFills(source, images);
@@ -52,7 +55,10 @@ function selectPaintsForFills(
 // =============================================================================
 
 /**
- * Configuration for building a scene graph
+ * Configuration for building a scene graph.
+ *
+ * symbolMap uses FigDesignNode (domain type) — symbol resolution operates
+ * on domain objects, not raw parser types.
  */
 export type BuildSceneGraphOptions = {
   /** Binary blobs from .fig file */
@@ -61,8 +67,8 @@ export type BuildSceneGraphOptions = {
   readonly images: ReadonlyMap<string, FigImage>;
   /** Canvas size */
   readonly canvasSize: { width: number; height: number };
-  /** Symbol map for INSTANCE resolution */
-  readonly symbolMap?: ReadonlyMap<string, FigNode>;
+  /** Symbol map for INSTANCE resolution (domain objects) */
+  readonly symbolMap?: ReadonlyMap<string, FigDesignNode>;
   /** Whether to include hidden nodes */
   readonly showHiddenNodes?: boolean;
 };
@@ -73,32 +79,41 @@ export type BuildSceneGraphOptions = {
 type BuildContext = {
   readonly blobs: readonly FigBlob[];
   readonly images: ReadonlyMap<string, FigImage>;
-  readonly symbolMap: ReadonlyMap<string, FigNode>;
+  readonly symbolMap: ReadonlyMap<string, FigDesignNode>;
   readonly showHiddenNodes: boolean;
   nodeCounter: number;
 };
 
 // =============================================================================
-// Node Type Detection
+// Node Type & ID helpers
 // =============================================================================
 
-function getNodeTypeName(node: FigNode): string {
+/**
+ * Get the node type name from a FigDesignNode.
+ *
+ * FigDesignNode.type is FigNodeType (a string literal from KiwiEnumValue name),
+ * so this is a direct read — no enum unwrapping needed.
+ */
+function getNodeTypeName(node: FigDesignNode): string {
   const type = node.type;
-  if (!type) {return "UNKNOWN";}
-  if (typeof type === "string") {return type;}
+  if (!type) { return "UNKNOWN"; }
+  if (typeof type === "string") { return type; }
+  // KiwiEnumValue fallback
   if (typeof type === "object" && "name" in type) {
     return (type as { name: string }).name;
   }
   return "UNKNOWN";
 }
 
-function getNodeId(node: FigNode, ctx: BuildContext): SceneNodeId {
-  const guid = node.guid;
-  if (guid) {
-    if (typeof guid === "object" && guid !== null) {
-      return createNodeId(guidToString(guid as { sessionID: number; localID: number }));
-    }
-    return createNodeId(String(guid));
+/**
+ * Generate a SceneNodeId from a FigDesignNode.
+ *
+ * FigDesignNode.id is a branded string "sessionID:localID",
+ * which is already unique — use it directly as the SceneNodeId.
+ */
+function getNodeId(node: FigDesignNode, ctx: BuildContext): SceneNodeId {
+  if (node.id) {
+    return createNodeId(node.id);
   }
   return createNodeId(`node-${ctx.nodeCounter++}`);
 }
@@ -132,7 +147,7 @@ function convertTransform(
  * Handles both `rectangleCornerRadii` (per-corner) and `cornerRadius`.
  * When per-corner radii differ, uses the average (scene graph limitation).
  */
-function extractUniformCornerRadius(node: FigNode): number | undefined {
+function extractUniformCornerRadius(node: FigDesignNode): number | undefined {
   const radii = node.rectangleCornerRadii;
   if (radii && radii.length === 4) {
     const allSame = radii[0] === radii[1] && radii[1] === radii[2] && radii[2] === radii[3];
@@ -147,15 +162,15 @@ function extractUniformCornerRadius(node: FigNode): number | undefined {
 // Clipping
 // =============================================================================
 
-function resolveClipsContent(node: FigNode): boolean {
-  const nodeData = node as Record<string, unknown>;
-  // clipsContent is the standard API field
-  if (nodeData.clipsContent !== undefined) {
-    return !!nodeData.clipsContent;
+function resolveClipsContent(node: FigDesignNode): boolean {
+  // FigDesignNode has clipsContent as a first-class field
+  if (node.clipsContent !== undefined) {
+    return node.clipsContent;
   }
-  // frameMaskDisabled is the .fig file field (inverted meaning)
-  if (nodeData.frameMaskDisabled !== undefined) {
-    return !nodeData.frameMaskDisabled;
+  // frameMaskDisabled may be in _raw (inverted meaning)
+  const raw = node._raw;
+  if (raw?.frameMaskDisabled !== undefined) {
+    return !raw.frameMaskDisabled;
   }
   // Default: frames clip, others don't
   const typeName = getNodeTypeName(node);
@@ -166,7 +181,7 @@ function resolveClipsContent(node: FigNode): boolean {
 // Node Builders
 // =============================================================================
 
-function buildGroupNode(node: FigNode, ctx: BuildContext, children: readonly SceneNode[]): GroupNode {
+function buildGroupNode(node: FigDesignNode, ctx: BuildContext, children: readonly SceneNode[]): GroupNode {
   const base = extractBaseProps(node);
   return {
     type: "group",
@@ -180,7 +195,7 @@ function buildGroupNode(node: FigNode, ctx: BuildContext, children: readonly Sce
   };
 }
 
-function buildFrameNode(node: FigNode, ctx: BuildContext, children: readonly SceneNode[]): FrameNode {
+function buildFrameNode(node: FigDesignNode, ctx: BuildContext, children: readonly SceneNode[]): FrameNode {
   const base = extractBaseProps(node);
   const { size } = extractSizeProps(node);
   const { fillPaints, strokePaints, strokeWeight } = extractPaintProps(node);
@@ -207,7 +222,7 @@ function buildFrameNode(node: FigNode, ctx: BuildContext, children: readonly Sce
   };
 }
 
-function buildRectNode(node: FigNode, ctx: BuildContext): RectNode {
+function buildRectNode(node: FigDesignNode, ctx: BuildContext): RectNode {
   const base = extractBaseProps(node);
   const { size } = extractSizeProps(node);
   const { fillPaints, strokePaints, strokeWeight } = extractPaintProps(node);
@@ -230,7 +245,7 @@ function buildRectNode(node: FigNode, ctx: BuildContext): RectNode {
   };
 }
 
-function buildEllipseNode(node: FigNode, ctx: BuildContext): EllipseNode {
+function buildEllipseNode(node: FigDesignNode, ctx: BuildContext): EllipseNode {
   const base = extractBaseProps(node);
   const { size } = extractSizeProps(node);
   const { fillPaints, strokePaints, strokeWeight } = extractPaintProps(node);
@@ -253,15 +268,15 @@ function buildEllipseNode(node: FigNode, ctx: BuildContext): EllipseNode {
   };
 }
 
-function buildVectorNode(node: FigNode, ctx: BuildContext): PathNode {
+function buildVectorNode(node: FigDesignNode, ctx: BuildContext): PathNode {
   const base = extractBaseProps(node);
   const { fillPaints, strokePaints, strokeWeight } = extractPaintProps(node);
   const { fillGeometry, strokeGeometry } = extractGeometryProps(node);
   const { effects } = extractEffectsProps(node);
 
-  // Try vectorPaths first, then fillGeometry, then strokeGeometry
-  const nodeData = node as Record<string, unknown>;
-  const vectorPaths = nodeData.vectorPaths as readonly { data: string; windingRule?: unknown }[] | undefined;
+  // vectorPaths is not a first-class field on FigDesignNode; check _raw
+  const raw = node._raw;
+  const vectorPaths = raw?.vectorPaths as readonly { data: string; windingRule?: unknown }[] | undefined;
 
   const contoursRef = { value: convertVectorPathsToContours(vectorPaths) };
   const isStrokeGeometryRef = { value: false };
@@ -292,10 +307,9 @@ function buildVectorNode(node: FigNode, ctx: BuildContext): PathNode {
   };
 }
 
-function buildTextNode(node: FigNode, ctx: BuildContext): TextNode {
+function buildTextNode(node: FigDesignNode, ctx: BuildContext): TextNode {
   const base = extractBaseProps(node);
   const textData = convertTextNode(node, ctx.blobs);
-  const sizeObj = (node as Record<string, unknown>).size as { x?: number; y?: number } | undefined;
 
   return {
     type: "text",
@@ -305,8 +319,8 @@ function buildTextNode(node: FigNode, ctx: BuildContext): TextNode {
     opacity: base.opacity,
     visible: base.visible,
     effects: [],
-    width: sizeObj?.x ?? 0,
-    height: sizeObj?.y ?? 0,
+    width: node.size?.x ?? 0,
+    height: node.size?.y ?? 0,
     glyphContours: textData.glyphContours,
     decorationContours: textData.decorationContours,
     fill: textData.fill,
@@ -318,7 +332,7 @@ function buildTextNode(node: FigNode, ctx: BuildContext): TextNode {
 // Recursive Builder
 // =============================================================================
 
-function buildNode(node: FigNode, ctx: BuildContext): SceneNode | null {
+function buildNode(node: FigDesignNode, ctx: BuildContext): SceneNode | null {
   const base = extractBaseProps(node);
 
   // Skip hidden nodes unless explicitly shown
@@ -377,7 +391,7 @@ function buildNode(node: FigNode, ctx: BuildContext): SceneNode | null {
   }
 }
 
-function buildChildren(children: readonly FigNode[], ctx: BuildContext): SceneNode[] {
+function buildChildren(children: readonly FigDesignNode[], ctx: BuildContext): SceneNode[] {
   const result: SceneNode[] = [];
   for (const child of children) {
     const node = buildNode(child, ctx);
@@ -393,13 +407,13 @@ function buildChildren(children: readonly FigNode[], ctx: BuildContext): SceneNo
 // =============================================================================
 
 /**
- * Build a scene graph from Figma nodes
+ * Build a scene graph from FigDesignNode domain objects.
  *
- * @param nodes - Root Figma nodes to render
+ * @param nodes - Root FigDesignNode nodes to render
  * @param options - Build configuration
  * @returns Format-agnostic scene graph
  */
-export function buildSceneGraph(nodes: readonly FigNode[], options: BuildSceneGraphOptions): SceneGraph {
+export function buildSceneGraph(nodes: readonly FigDesignNode[], options: BuildSceneGraphOptions): SceneGraph {
   const ctx: BuildContext = {
     blobs: options.blobs,
     images: options.images,

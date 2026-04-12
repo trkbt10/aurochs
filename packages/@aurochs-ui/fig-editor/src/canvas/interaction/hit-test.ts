@@ -5,7 +5,7 @@
  * Walks the node list in reverse z-order (last painted = first hit).
  */
 
-import type { FigDesignNode, FigNodeId } from "@aurochs-builder/fig/types";
+import type { FigDesignNode, FigNodeId } from "@aurochs/fig/domain";
 
 /**
  * Test if a point (in page coordinates) hits a node.

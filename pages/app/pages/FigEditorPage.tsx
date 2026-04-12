@@ -4,7 +4,7 @@
  * Wraps FigEditor with EditorPageLayout for header and back navigation.
  */
 
-import type { FigDesignDocument } from "@aurochs-builder/fig/types";
+import type { FigDesignDocument } from "@aurochs/fig/domain";
 import { FigEditor } from "@aurochs-ui/fig-editor";
 import { EditorPageLayout } from "../components/EditorPageLayout";
 

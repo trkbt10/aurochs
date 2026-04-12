@@ -79,6 +79,10 @@ export default [
         "custom/no-aurochs-office-import-in-aurochs": "error",
         // Prohibit @aurochs-office/* packages from importing @aurochs-builder/*
         "custom/no-aurochs-builder-import-in-aurochs-office": "error",
+        // Prohibit @aurochs-renderer/* packages from importing @aurochs-builder/*
+        "custom/no-builder-import-in-renderer": "error",
+        // Prohibit cross-imports between scene-graph and Direct SVG rendering paths
+        "custom/no-cross-render-path-import": "error",
         // Prohibit re-exporting from other packages
         "custom/no-cross-package-reexport": "error",
         // Prevent disabling no-cross-package-reexport via eslint-disable comments

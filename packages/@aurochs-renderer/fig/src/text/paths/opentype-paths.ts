@@ -130,30 +130,30 @@ export function extractTextPathData(
     if (!lineText) {continue;}
 
     const y = baseY + i * lineHeight;
-    const contour = extractLinePathCommands(
-      lineText,
+    const contour = extractLinePathCommands({
+      text: lineText,
       font,
       fontSize,
       x,
       y,
       align,
-      letterSpacing
-    );
+      letterSpacing,
+    });
 
     if (contour) {
       glyphContours.push(contour);
     }
 
     if (textDecoration === "UNDERLINE") {
-      const rect = createUnderlineRect(
-        lineText,
+      const rect = createUnderlineRect({
+        text: lineText,
         font,
         fontSize,
         x,
         y,
         align,
-        letterSpacing
-      );
+        letterSpacing,
+      });
       if (rect) {
         decorations.push(rect);
       }

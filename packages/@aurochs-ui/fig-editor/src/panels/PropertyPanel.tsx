@@ -2,12 +2,19 @@
  * @file Property panel
  *
  * Right panel displaying properties of the selected node.
+ * Uses OptionalPropertySection for each property group.
  */
 
 import { useFigEditor } from "../context/FigEditorContext";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
+import { colorTokens, fontTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { TransformSection } from "./sections/TransformSection";
 import { FillSection } from "./sections/FillSection";
 import { StrokeSection } from "./sections/StrokeSection";
+
+// =============================================================================
+// Component
+// =============================================================================
 
 /**
  * Property panel for the fig editor.
@@ -20,30 +27,35 @@ export function PropertyPanel() {
 
   if (!primaryNode) {
     return (
-      <div style={{ padding: 16, color: "#999", fontSize: 12, textAlign: "center" }}>
+      <div style={{ padding: `${spacingTokens.xl} ${spacingTokens.lg}`, textAlign: "center", color: colorTokens.text.tertiary, fontSize: fontTokens.size.lg }}>
         Select a layer to edit its properties
       </div>
     );
   }
 
   return (
-    <div style={{ padding: "8px 12px", overflow: "auto" }}>
-      <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8 }}>
-        {primaryNode.name}
-        <span style={{ color: "#999", fontWeight: 400, marginLeft: 8 }}>
-          {primaryNode.type}
-        </span>
-      </div>
+    <div>
+      {/* Node identity header */}
+      <OptionalPropertySection title={primaryNode.name} badge={primaryNode.type} defaultExpanded={false}>
+        <div style={{ fontSize: fontTokens.size.sm, color: colorTokens.text.tertiary }}>
+          ID: {primaryNode.id}
+        </div>
+      </OptionalPropertySection>
 
-      <TransformSection node={primaryNode} dispatch={dispatch} />
+      {/* Transform */}
+      <OptionalPropertySection title="Transform" defaultExpanded>
+        <TransformSection node={primaryNode} dispatch={dispatch} />
+      </OptionalPropertySection>
 
-      <hr style={{ border: "none", borderTop: "1px solid #eee", margin: "4px 0" }} />
+      {/* Fill */}
+      <OptionalPropertySection title="Fill" defaultExpanded>
+        <FillSection node={primaryNode} dispatch={dispatch} />
+      </OptionalPropertySection>
 
-      <FillSection node={primaryNode} dispatch={dispatch} />
-
-      <hr style={{ border: "none", borderTop: "1px solid #eee", margin: "4px 0" }} />
-
-      <StrokeSection node={primaryNode} dispatch={dispatch} />
+      {/* Stroke */}
+      <OptionalPropertySection title="Stroke" defaultExpanded>
+        <StrokeSection node={primaryNode} dispatch={dispatch} />
+      </OptionalPropertySection>
     </div>
   );
 }

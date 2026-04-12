@@ -5,7 +5,7 @@
  * Used for hit testing and selection overlay positioning.
  */
 
-import type { FigDesignNode } from "@aurochs-builder/fig/types";
+import type { FigDesignNode } from "@aurochs/fig/domain";
 
 /**
  * Bounds representation for editor canvas items.

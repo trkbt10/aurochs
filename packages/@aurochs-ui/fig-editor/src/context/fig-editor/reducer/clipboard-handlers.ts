@@ -5,7 +5,7 @@
 import { pushHistory } from "@aurochs-ui/editor-core/history";
 import { createSingleSelection, createEmptySelection } from "@aurochs-ui/editor-core/selection";
 import { addNode, removeNode } from "@aurochs-builder/fig/node-ops";
-import type { FigNodeId, FigDesignNode } from "@aurochs-builder/fig/types";
+import type { FigNodeId, FigDesignNode } from "@aurochs/fig/domain";
 import type { FigClipboardContent } from "../types";
 import type { HandlerMap } from "./handler-types";
 import { findNodesByIds } from "../helpers";

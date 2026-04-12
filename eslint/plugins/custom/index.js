@@ -18,6 +18,8 @@ import maxParams from "./rules/max-params.js";
 import noBareRendererImport from "./rules/no-bare-renderer-import.js";
 import noNodeOnlyImport from "./rules/no-node-only-import.js";
 import noTypeAliasReexport from "./rules/no-type-alias-reexport.js";
+import noBuilderImportInRenderer from "./rules/no-builder-import-in-renderer.js";
+import noCrossRenderPathImport from "./rules/no-cross-render-path-import.js";
 import preferSwitchOrMap from "./rules/prefer-switch-or-map.js";
 export default {
   rules: {
@@ -38,6 +40,8 @@ export default {
     "no-bare-renderer-import": noBareRendererImport,
     "no-node-only-import": noNodeOnlyImport,
     "no-type-alias-reexport": noTypeAliasReexport,
+    "no-builder-import-in-renderer": noBuilderImportInRenderer,
+    "no-cross-render-path-import": noCrossRenderPathImport,
     "prefer-switch-or-map": preferSwitchOrMap,
   },
 };

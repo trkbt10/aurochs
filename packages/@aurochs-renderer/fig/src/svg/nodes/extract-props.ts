@@ -1,8 +1,11 @@
 /**
- * @file Shared property extractors for Figma node renderers
+ * @file Shared property extractors for the direct SVG rendering path
  *
  * Composable extraction functions that eliminate duplication across node renderers.
  * Each function extracts a logical group of properties from a FigNode.
+ *
+ * Note: The scene-graph rendering path uses scene-graph/extract.ts which
+ * accepts FigDesignNode (domain object) instead of FigNode.
  */
 
 import type {
@@ -23,11 +26,6 @@ export type BaseProps = {
   readonly visible: boolean;
 };
 
-
-
-
-
-
 /** Extract base node properties (name, type, visibility) */
 export function extractBaseProps(node: FigNode): BaseProps {
   return {
@@ -43,11 +41,6 @@ export type SizeProps = {
   readonly size: FigVector;
 };
 
-
-
-
-
-
 /** Extract size and transform properties from a node */
 export function extractSizeProps(node: FigNode, fallback?: FigVector): SizeProps {
   return {
@@ -62,11 +55,6 @@ export type PaintProps = {
   readonly strokePaints: readonly FigPaint[] | undefined;
   readonly strokeWeight: FigStrokeWeight | undefined;
 };
-
-
-
-
-
 
 /** Extract fill and stroke paint properties */
 export function extractPaintProps(node: FigNode): PaintProps {
@@ -84,11 +72,6 @@ export type GeometryProps = {
   readonly strokeGeometry: readonly FigFillGeometry[] | undefined;
 };
 
-
-
-
-
-
 /** Extract fill and stroke geometry from a node */
 export function extractGeometryProps(node: FigNode): GeometryProps {
   return {
@@ -102,11 +85,6 @@ export function extractGeometryProps(node: FigNode): GeometryProps {
 export type EffectsProps = {
   readonly effects: readonly FigEffect[] | undefined;
 };
-
-
-
-
-
 
 /** Extract visual effects (shadow, blur) from a node */
 export function extractEffectsProps(node: FigNode): EffectsProps {
@@ -128,13 +106,6 @@ export type ResolvedCornerRadius = {
  *
  * Handles both `rectangleCornerRadii` (per-corner) and `cornerRadius` (uniform).
  * Clamps to `min(width, height) / 2` to ensure circular corners (Figma behaviour).
- * SVG clamps `rx`/`ry` independently, which causes elliptical corners —
- * this function prevents that by pre-clamping to the smaller dimension.
- *
- * When all 4 per-corner radii are equal they collapse to a single uniform
- * radius.  When they differ, the average is used (SVG `<rect>` cannot
- * express per-corner radii; a `<path>` fallback would be needed for full
- * fidelity).
  */
 export function resolveCornerRadius(node: FigNode, size: FigVector): ResolvedCornerRadius {
   const cornerRadii = node.rectangleCornerRadii;
@@ -147,7 +118,6 @@ export function resolveCornerRadius(node: FigNode, size: FigVector): ResolvedCor
     if (allSame) {
       return clamp(cornerRadii[0], maxRadius);
     }
-    // Different corners — use average (SVG <rect> limitation)
     const avg = (cornerRadii[0] + cornerRadii[1] + cornerRadii[2] + cornerRadii[3]) / 4;
     return clamp(avg, maxRadius);
   }

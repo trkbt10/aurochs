@@ -191,16 +191,16 @@ export async function renderTextNodeAsPath(node: FigNode, ctx: PathRenderContext
     if (!lineText) {continue;}
 
     const y = baseY + i * lineHeight;
-    const linePath = renderLineAsPathWithFallback(
-      lineText,
-      font,
-      fallbackFontRef.value?.font,
-      props.fontSize,
+    const linePath = renderLineAsPathWithFallback({
+      text: lineText,
+      primaryFont: font,
+      fallbackFont: fallbackFontRef.value?.font,
+      fontSize: props.fontSize,
       x,
       y,
-      props.textAlignHorizontal,
-      props.letterSpacing,
-    );
+      align: props.textAlignHorizontal,
+      letterSpacing: props.letterSpacing,
+    });
 
     if (linePath) {
       pathElements.push(
@@ -214,15 +214,15 @@ export async function renderTextNodeAsPath(node: FigNode, ctx: PathRenderContext
 
     // Render underline if needed
     if (props.textDecoration === "UNDERLINE") {
-      const underlinePath = renderUnderlinePath(
-        lineText,
+      const underlinePath = renderUnderlinePath({
+        text: lineText,
         font,
-        props.fontSize,
+        fontSize: props.fontSize,
         x,
         y,
-        props.textAlignHorizontal,
-        props.letterSpacing,
-      );
+        align: props.textAlignHorizontal,
+        letterSpacing: props.letterSpacing,
+      });
       if (underlinePath) {
         underlinePaths.push(underlinePath);
       }

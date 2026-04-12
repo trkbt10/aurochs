@@ -1,11 +1,38 @@
 /**
  * @file Page list panel
  *
- * Left panel showing the list of pages with add/delete/select actions.
+ * Left panel showing the list of pages with add/select actions.
+ * Uses shared UI components from ui-components.
  */
 
-import { useCallback } from "react";
+import { useCallback, type CSSProperties } from "react";
+import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
+import { Button } from "@aurochs-ui/ui-components/primitives/Button";
+import { AddIcon } from "@aurochs-ui/ui-components/icons";
+import { colorTokens, fontTokens, spacingTokens, radiusTokens, iconTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { useFigEditor } from "../context/FigEditorContext";
+
+// =============================================================================
+// Styles
+// =============================================================================
+
+const pageItemStyle = (active: boolean): CSSProperties => ({
+  padding: `${spacingTokens.xs} ${spacingTokens.sm}`,
+  fontSize: fontTokens.size.md,
+  cursor: "pointer",
+  borderRadius: radiusTokens.sm,
+  backgroundColor: active
+    ? `var(--selection-primary, ${colorTokens.selection.primary})`
+    : "transparent",
+  color: active
+    ? "#ffffff"
+    : `var(--text-primary, ${colorTokens.text.primary})`,
+  transition: "background-color 150ms ease",
+});
+
+// =============================================================================
+// Component
+// =============================================================================
 
 /**
  * Page list panel for the fig editor.
@@ -18,40 +45,22 @@ export function PageListPanel() {
   }, [dispatch]);
 
   return (
-    <div style={{ padding: 8 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-        <span style={{ fontSize: 11, fontWeight: 600, color: "#666" }}>Pages</span>
-        <button
-          onClick={handleAddPage}
-          style={{
-            background: "none",
-            border: "1px solid #ddd",
-            borderRadius: 4,
-            padding: "2px 8px",
-            fontSize: 11,
-            cursor: "pointer",
-          }}
-        >
-          +
-        </button>
+    <OptionalPropertySection title="Pages" badge={document.pages.length} defaultExpanded>
+      <div style={{ display: "flex", flexDirection: "column", gap: spacingTokens["2xs"] }}>
+        {document.pages.map((page) => (
+          <div
+            key={page.id}
+            onClick={() => dispatch({ type: "SELECT_PAGE", pageId: page.id })}
+            style={pageItemStyle(page.id === activePageId)}
+          >
+            {page.name}
+          </div>
+        ))}
       </div>
-
-      {document.pages.map((page) => (
-        <div
-          key={page.id}
-          onClick={() => dispatch({ type: "SELECT_PAGE", pageId: page.id })}
-          style={{
-            padding: "6px 8px",
-            fontSize: 12,
-            cursor: "pointer",
-            borderRadius: 4,
-            backgroundColor: page.id === activePageId ? "#e8e8ff" : "transparent",
-            marginBottom: 2,
-          }}
-        >
-          {page.name}
-        </div>
-      ))}
-    </div>
+      <Button variant="ghost" size="sm" onClick={handleAddPage}>
+        <AddIcon size={iconTokens.size.sm} strokeWidth={iconTokens.strokeWidth} />
+        <span>Add Page</span>
+      </Button>
+    </OptionalPropertySection>
   );
 }

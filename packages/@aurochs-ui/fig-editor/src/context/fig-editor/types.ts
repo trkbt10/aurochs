@@ -5,7 +5,8 @@
  * Follows the same pattern as PresentationEditorState in pptx-editor.
  */
 
-import type { FigDesignDocument, FigDesignNode, FigPage, FigNodeId, FigPageId, NodeSpec } from "@aurochs-builder/fig/types";
+import type { FigDesignDocument, FigDesignNode, FigPage, FigNodeId, FigPageId } from "@aurochs/fig/domain";
+import type { NodeSpec } from "@aurochs-builder/fig/types";
 import type { UndoRedoHistory } from "@aurochs-ui/editor-core/history";
 import type { SelectionState } from "@aurochs-ui/editor-core/selection";
 import type { DragState, ResizeHandlePosition } from "@aurochs-ui/editor-core/drag-state";

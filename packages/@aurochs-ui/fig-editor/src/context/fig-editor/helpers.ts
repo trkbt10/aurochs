@@ -4,7 +4,7 @@
  * Utility functions used by multiple handler files.
  */
 
-import type { FigDesignNode, FigNodeId, FigPageId, FigDesignDocument, FigPage } from "@aurochs-builder/fig/types";
+import type { FigDesignNode, FigNodeId, FigPageId, FigDesignDocument, FigPage } from "@aurochs/fig/domain";
 import type { SimpleBounds } from "@aurochs-ui/editor-core/geometry";
 import { findNodeById as findInTree } from "@aurochs-builder/fig/node-ops";
 

@@ -361,12 +361,12 @@ export function breakLinesAuto(
     } else {
       // Word is too long, break by character
       const lineCharWidths = charWidths.slice(line.startIndex, line.endIndex);
-      const charLines = breakLinesChar(
-        line.text,
-        lineCharWidths,
+      const charLines = breakLinesChar({
+        text: line.text,
+        charWidths: lineCharWidths,
         maxWidth,
-        maxLines > 0 ? maxLines - results.length : 0
-      );
+        maxLines: maxLines > 0 ? maxLines - results.length : 0,
+      });
       // Adjust indices
       for (const charLine of charLines) {
         results.push({

@@ -7,7 +7,7 @@
 
 import { createContext, useContext, useReducer, useMemo } from "react";
 import type { ReactNode } from "react";
-import type { FigDesignDocument, FigDesignNode, FigNodeId } from "@aurochs-builder/fig/types";
+import type { FigDesignDocument, FigDesignNode, FigNodeId } from "@aurochs/fig/domain";
 import { findNodeById } from "@aurochs-builder/fig/node-ops";
 import { canUndo, canRedo } from "@aurochs-ui/editor-core/history";
 import type { FigEditorContextValue, FigEditorAction } from "./fig-editor/types";

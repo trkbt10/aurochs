@@ -5,7 +5,7 @@
 import { pushHistory } from "@aurochs-ui/editor-core/history";
 import { createSingleSelection, createEmptySelection } from "@aurochs-ui/editor-core/selection";
 import { addNode, removeNode, updateNode, reorderNode } from "@aurochs-builder/fig/node-ops";
-import type { FigNodeId } from "@aurochs-builder/fig/types";
+import type { FigNodeId } from "@aurochs/fig/domain";
 import type { HandlerMap } from "./handler-types";
 
 export const NODE_HANDLERS: HandlerMap = {

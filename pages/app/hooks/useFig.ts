@@ -7,7 +7,7 @@
 import { useCallback } from "react";
 import { useFileLoader } from "./useFileLoader";
 import { createFigDesignDocument, createEmptyFigDesignDocument } from "@aurochs-builder/fig/context";
-import type { FigDesignDocument } from "@aurochs-builder/fig/types";
+import type { FigDesignDocument } from "@aurochs/fig/domain";
 
 type UseFigReturn = {
   readonly status: "idle" | "loading" | "loaded" | "error";
