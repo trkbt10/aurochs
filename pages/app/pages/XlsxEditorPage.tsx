@@ -76,8 +76,6 @@ export function XlsxEditorPage({ workbook: inputWorkbook, fileName, onBack }: Pr
         onWorkbookChange={setCurrentWorkbook}
         grid={{
           ...DEFAULT_SHEET_GRID_METRICS,
-          rowCount: 1_048_576,
-          colCount: 16_384,
           headerSizePx: DEFAULT_SHEET_GRID_METRICS.rowHeaderWidthPx,
           overscanRows: 4,
           overscanCols: 2,

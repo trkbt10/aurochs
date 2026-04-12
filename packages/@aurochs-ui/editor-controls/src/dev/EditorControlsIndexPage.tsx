@@ -31,6 +31,7 @@ export function EditorControlsIndexPage() {
   const goText = useCallback(() => navigate("text"), [navigate]);
   const goSurface = useCallback(() => navigate("surface"), [navigate]);
   const goTable = useCallback(() => navigate("table"), [navigate]);
+  const goShell = useCallback(() => navigate("shell"), [navigate]);
 
   return (
     <div style={containerStyle}>
@@ -40,6 +41,7 @@ export function EditorControlsIndexPage() {
           <Button onClick={goText}>Text</Button>
           <Button onClick={goSurface}>Surface</Button>
           <Button onClick={goTable}>Table</Button>
+          <Button onClick={goShell}>Shell</Button>
         </div>
         <div style={{ fontSize: 12, opacity: 0.75 }}>
           各カテゴリの共通フォーマットエディタをプレビューします。

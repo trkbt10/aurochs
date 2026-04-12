@@ -13,6 +13,7 @@ import type { XlsxWorkbook, XlsxWorksheet } from "../domain/workbook";
 import type { Cell, CellValue } from "../domain/cell/types";
 import type { CellAddress } from "../domain/cell/address";
 import { parseRange, formatCellRef } from "../domain/cell/address";
+import { EXCEL_MAX_ROWS, EXCEL_MAX_COLS } from "../domain/constants";
 import { colIdx, rowIdx } from "../domain/types";
 import type {
   ExcelApplicationObject,
@@ -250,8 +251,8 @@ export function createExcelHostAdapter(state: ExcelAdapterState): HostApi {
             sheetIndex: state.activeSheetIndex,
             startRow: 1,
             startCol: 1,
-            endRow: 1048576, // Excel max rows
-            endCol: 16384, // Excel max columns
+            endRow: EXCEL_MAX_ROWS,
+            endCol: EXCEL_MAX_COLS,
           });
         case "range":
           // Range without arguments - not valid, but return active cell
@@ -423,8 +424,8 @@ function getWorksheetProperty(
         sheetIndex: obj._sheetIndex,
         startRow: 1,
         startCol: 1,
-        endRow: 1048576,
-        endCol: 16384,
+        endRow: EXCEL_MAX_ROWS,
+        endCol: EXCEL_MAX_COLS,
       });
     case "rows":
       return createRangeObject({
@@ -432,8 +433,8 @@ function getWorksheetProperty(
         sheetIndex: obj._sheetIndex,
         startRow: 1,
         startCol: 1,
-        endRow: 1048576,
-        endCol: 16384,
+        endRow: EXCEL_MAX_ROWS,
+        endCol: EXCEL_MAX_COLS,
       });
     case "columns":
       return createRangeObject({
@@ -441,8 +442,8 @@ function getWorksheetProperty(
         sheetIndex: obj._sheetIndex,
         startRow: 1,
         startCol: 1,
-        endRow: 1048576,
-        endCol: 16384,
+        endRow: EXCEL_MAX_ROWS,
+        endCol: EXCEL_MAX_COLS,
       });
     case "usedrange":
       if (sheet.dimension) {

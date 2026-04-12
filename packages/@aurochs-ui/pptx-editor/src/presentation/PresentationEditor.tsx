@@ -76,6 +76,7 @@ import {
   applyParagraphPropertiesToSelection,
 } from "@aurochs-ui/pptx-slide-canvas/slide/text-edit/input-support/run-formatting";
 import { EditorShell, CanvasArea, type EditorPanel } from "@aurochs-ui/editor-controls/editor-shell";
+import { GalleryVerticalIcon, SettingsIcon } from "@aurochs-ui/ui-components/icons";
 import { RIGHT_PANEL_TABS, usePivotTabs } from "../layout";
 import { SelectedElementTab, SlideInfoTab, LayersTab } from "../panels/right-panel";
 import { InspectorPanelWithTabs } from "../panels/inspector";
@@ -1261,6 +1262,7 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
         id: "thumbnails",
         position: "left",
         content: thumbnailComponent,
+        drawerIcon: GalleryVerticalIcon,
         drawerLabel: "Slides",
         scrollable: true,
       });
@@ -1270,6 +1272,7 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
           id: "inspector",
           position: "right",
           content: inspectorComponent,
+          drawerIcon: SettingsIcon,
           drawerLabel: "Inspector",
         });
       }

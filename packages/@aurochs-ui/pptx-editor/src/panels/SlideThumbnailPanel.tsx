@@ -10,6 +10,7 @@ import type { SlideTransition } from "@aurochs-office/pptx/domain/transition";
 import type { SlideId, SlideWithId } from "@aurochs-office/pptx/app";
 import { RELATIONSHIP_TYPES } from "@aurochs-office/pptx/domain";
 import { usePresentationEditor } from "../context/presentation/PresentationEditorContext";
+import { useEditorShellContext } from "@aurochs-ui/editor-controls/editor-shell";
 import { SlideList } from "@aurochs-ui/pptx-viewer/slide-list";
 import { colorTokens } from "@aurochs-ui/ui-components/design-tokens";
 
@@ -72,13 +73,18 @@ function getDefaultLayoutPath(slides: readonly SlideWithId[]): string | undefine
 /** Slide thumbnail panel with full slide management */
 export function SlideThumbnailPanel({ slideWidth, slideHeight, renderThumbnail }: SlideThumbnailPanelProps) {
   const { document, dispatch, activeSlide, slideOperations } = usePresentationEditor();
+  const shell = useEditorShellContext();
 
   // Handle slide click (select)
+  // In drawer mode, selecting a slide is a navigation action — the user
+  // chose their target and now wants to work on the canvas. The drawer
+  // is dismissed automatically so they don't have to close it manually.
   const handleSlideClick = useCallback(
     (slideId: SlideId) => {
       dispatch({ type: "SELECT_SLIDE", slideId });
+      shell?.dismissDrawer("left");
     },
-    [dispatch],
+    [dispatch, shell],
   );
 
   // Handle add slide

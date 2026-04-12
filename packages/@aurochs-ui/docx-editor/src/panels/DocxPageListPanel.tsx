@@ -5,11 +5,12 @@
  * Follows the same pattern as PdfPageListPanel.
  */
 
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import type { PageLayout, LayoutResult } from "@aurochs-office/text-layout";
 import { TextOverlay } from "@aurochs-office/text-layout";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import { ItemList, thumbnailInnerStyle } from "@aurochs-ui/editor-controls/item-list";
+import { useEditorShellContext } from "@aurochs-ui/editor-controls/editor-shell";
 
 // =============================================================================
 // Types
@@ -61,6 +62,16 @@ export function DocxPageListPanel({
   currentPageIndex,
   onPageSelect,
 }: DocxPageListPanelProps) {
+  const shell = useEditorShellContext();
+
+  const handlePageClick = useCallback(
+    (id: number) => {
+      onPageSelect(id);
+      shell?.dismissDrawer("left");
+    },
+    [onPageSelect, shell],
+  );
+
   const items = useMemo(
     () => pages.map((page, i) => ({ id: i, page })),
     [pages],
@@ -79,7 +90,7 @@ export function DocxPageListPanel({
       activeItemId={currentPageIndex}
       itemLabel="ページ"
       renderThumbnail={(item) => <PageThumbnail page={item.page} />}
-      onItemClick={(id) => onPageSelect(id)}
+      onItemClick={handlePageClick}
     />
   );
 }

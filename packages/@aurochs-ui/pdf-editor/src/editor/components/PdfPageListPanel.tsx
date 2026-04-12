@@ -6,7 +6,7 @@
  * as the PPTX slide list.
  */
 
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import type { PdfPage } from "@aurochs/pdf";
 import { PDF_PAGE_SIZES } from "@aurochs/pdf";
 import type { FontProvider, PdfImageUrlResolver } from "@aurochs-renderer/pdf";
@@ -14,6 +14,7 @@ import { renderPdfPageToSvgNode } from "@aurochs-renderer/pdf/svg";
 import { svgElementToJsx } from "@aurochs-renderer/svg";
 import { ItemList } from "@aurochs-ui/editor-controls/item-list";
 import { thumbnailInnerStyle } from "@aurochs-ui/editor-controls/item-list";
+import { useEditorShellContext } from "@aurochs-ui/editor-controls/editor-shell";
 
 // =============================================================================
 // Types
@@ -68,6 +69,18 @@ export function PdfPageListPanel({
   onDuplicatePages,
   onMovePages,
 }: PdfPageListPanelProps) {
+  const shell = useEditorShellContext();
+
+  // Page selection is a navigation action — dismiss the drawer afterward
+  // so the user returns to the canvas without manual close.
+  const handlePageClick = useCallback(
+    (id: number) => {
+      onPageSelect(id);
+      shell?.dismissDrawer("left");
+    },
+    [onPageSelect, shell],
+  );
+
   // Build items with id for the generic ItemList
   const items = useMemo(
     () => pages.map((page, i) => ({ id: i, page })),
@@ -91,7 +104,7 @@ export function PdfPageListPanel({
       activeItemId={currentPageIndex}
       itemLabel="Page"
       renderThumbnail={(item) => <PageThumbnail page={item.page} fontProvider={fontProvider} imageUrlResolver={imageUrlResolver} />}
-      onItemClick={(id) => onPageSelect(id)}
+      onItemClick={handlePageClick}
       onAddItem={onAddPage}
       onDeleteItems={onDeletePages}
       onDuplicateItems={onDuplicatePages}

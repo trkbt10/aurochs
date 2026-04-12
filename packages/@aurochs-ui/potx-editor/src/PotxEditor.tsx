@@ -49,6 +49,7 @@ import { AssetPanel } from "@aurochs-ui/ooxml-components/opc-embedded-assets";
 import type { ColorMapping } from "@aurochs-office/pptx/domain/color/types";
 import type { CustomColor, ExtraColorScheme, FormatScheme } from "@aurochs-office/pptx/domain/theme/types";
 import { EditorShell, type EditorPanel, CanvasArea } from "@aurochs-ui/editor-controls/editor-shell";
+import { GridIcon, SettingsIcon } from "@aurochs-ui/ui-components/icons";
 import { InspectorPanelWithTabs, type InspectorTab } from "@aurochs-ui/editor-controls/ui";
 import { colorTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { ContextMenu, type MenuEntry } from "@aurochs-ui/ui-components";
@@ -796,8 +797,8 @@ function PotxEditorContent({
   }, [activeLayoutData, floatingToolbar, widthNum, heightNum, shapeRenderData, presShapeSelection, presDrag, handlers, slideSizeForRenderer, editedColorContext, fontScheme, enableMarquee, isInteracting, isTextEditing, canvasCursor, creationRect, viewport.scale, handleViewportChange, contextMenuItems, handleContextMenuAction, shapeInfoOverlay, renderedSlide, editingShapeId]);
 
   const panels = useMemo<EditorPanel[]>(() => [
-    { id: "layouts", content: leftPanel, position: "left", size: "180px" },
-    { id: "inspector", content: rightPanel, position: "right", size: "280px" },
+    { id: "layouts", content: leftPanel, position: "left", size: "180px", drawerIcon: GridIcon, drawerLabel: "Layouts" },
+    { id: "inspector", content: rightPanel, position: "right", size: "280px", drawerIcon: SettingsIcon, drawerLabel: "Inspector" },
   ], [leftPanel, rightPanel]);
 
   return (

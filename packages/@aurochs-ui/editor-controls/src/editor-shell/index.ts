@@ -8,3 +8,4 @@ export { useContainerWidth } from "./useContainerWidth";
 export { CanvasArea, type CanvasAreaProps } from "./CanvasArea";
 export { editorContainerStyle, toolbarStyle, gridContainerStyle, bottomBarStyle } from "./editor-styles";
 export { EditorShell } from "./EditorShell";
+export { useEditorShellContext, type EditorShellContextValue } from "./EditorShellContext";

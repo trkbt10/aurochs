@@ -12,6 +12,7 @@ import type { DocxParagraph } from "@aurochs-office/docx/domain/paragraph";
 import type { ContinuousCursorPosition } from "@aurochs-office/text-layout";
 import { useDocumentLayout } from "@aurochs-renderer/docx/react";
 import { EditorShell, type EditorPanel } from "@aurochs-ui/editor-controls/editor-shell";
+import { GalleryVerticalIcon } from "@aurochs-ui/ui-components/icons";
 import { DocumentEditorProvider, useDocumentEditor } from "./context/document/DocumentEditorContext";
 import { DocumentToolbar } from "./panels/DocumentToolbar";
 import { DocxRibbonToolbar } from "./panels/DocxRibbonToolbar";
@@ -111,6 +112,7 @@ function DocxDocumentEditorInner({ toolbarPanel, extraPanels }: { readonly toolb
       resizable: true,
       minSize: 160,
       maxSize: 300,
+      drawerIcon: GalleryVerticalIcon,
       drawerLabel: "Pages",
     },
     ...extraPanels,

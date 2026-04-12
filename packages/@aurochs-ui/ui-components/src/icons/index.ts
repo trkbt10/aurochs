@@ -111,6 +111,7 @@ export {
   Sparkles as FxIcon,
   SquarePen as EditIcon,
   PanelLeft as SidebarIcon,
+  GalleryVertical as GalleryVerticalIcon,
   LayoutGrid as GridIcon,
   Shield as ShieldIcon,
   Share2 as ShareIcon,

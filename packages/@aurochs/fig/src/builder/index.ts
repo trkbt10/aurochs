@@ -15,7 +15,7 @@ export type { Color, Paint, StackPadding, ValueWithUnits, FontName } from "./typ
 
 // Text node builder (from text/)
 export {
-  TextNodeBuilder,
+  type TextNodeBuilder,
   textNode,
   DEFAULT_LINE_HEIGHT,
   DEFAULT_LETTER_SPACING,
@@ -28,7 +28,7 @@ export {
 
 // Frame node builder (from frame/)
 export {
-  FrameNodeBuilder,
+  type FrameNodeBuilder,
   frameNode,
   DEFAULT_SVG_EXPORT_SETTINGS,
   type FrameNodeData,
@@ -37,8 +37,8 @@ export {
 
 // Symbol and Instance builders (from symbol/)
 export {
-  SymbolNodeBuilder,
-  InstanceNodeBuilder,
+  type SymbolNodeBuilder,
+  type InstanceNodeBuilder,
   symbolNode,
   instanceNode,
   type SymbolNodeData,
@@ -95,13 +95,13 @@ export {
 // Shape builders (from shape/)
 export {
   // Builders
-  EllipseNodeBuilder,
-  LineNodeBuilder,
-  StarNodeBuilder,
-  PolygonNodeBuilder,
-  VectorNodeBuilder,
-  RectangleNodeBuilder,
-  RoundedRectangleNodeBuilder,
+  type EllipseNodeBuilder,
+  type LineNodeBuilder,
+  type StarNodeBuilder,
+  type PolygonNodeBuilder,
+  type VectorNodeBuilder,
+  type RectangleNodeBuilder,
+  type RoundedRectangleNodeBuilder,
   // Factory functions
   ellipseNode,
   lineNode,
@@ -124,15 +124,15 @@ export {
 export type { Stroke } from "./types";
 
 // Fig file builder (from node/)
-export { FigFileBuilder, createFigFile } from "./node";
+export { type FigFileBuilder, createFigFile } from "./node";
 
 // Container node builders (from node/)
 export {
-  GroupNodeBuilder,
+  type GroupNodeBuilder,
   groupNode,
-  SectionNodeBuilder,
+  type SectionNodeBuilder,
   sectionNode,
-  BooleanOperationNodeBuilder,
+  type BooleanOperationNodeBuilder,
   booleanNode,
   BOOLEAN_OPERATION_TYPE_VALUES,
   type GroupNodeData,

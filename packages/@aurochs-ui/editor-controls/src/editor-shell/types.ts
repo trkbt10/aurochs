@@ -5,6 +5,7 @@
  */
 
 import type { CSSProperties, ReactNode } from "react";
+import type { IconComponent } from "@aurochs-ui/ui-components/icons";
 
 export type EditorLayoutMode = "desktop" | "tablet" | "mobile";
 
@@ -33,7 +34,13 @@ export type EditorPanel = {
   readonly maxSize?: number;
   /** スクロール可能か */
   readonly scrollable?: boolean;
-  /** ドロワーモードでのラベル (省略時はデフォルト) */
+  /**
+   * ドロワーモードでのトグルボタン用アイコン。
+   * パネルの用途を想起させるアイコンを指定する（例: スライド一覧なら Layers アイコン）。
+   * 省略時はデフォルトのサイドバーアイコンにフォールバック。
+   */
+  readonly drawerIcon?: IconComponent;
+  /** ドロワーモードでのラベル（title/aria-label用） */
   readonly drawerLabel?: string;
   /** パネル内側のスタイル */
   readonly style?: CSSProperties;

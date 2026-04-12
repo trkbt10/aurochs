@@ -8,6 +8,7 @@ import { useMemo, useState, useCallback, type CSSProperties } from "react";
 import type { XlsxWorkbook } from "@aurochs-office/xlsx/domain/workbook";
 import { EditorShell, type EditorPanel } from "@aurochs-ui/editor-controls/editor-shell";
 import { editorShellTokens } from "@aurochs-ui/ui-components/design-tokens";
+import { SettingsIcon } from "@aurochs-ui/ui-components/icons";
 import { InspectorPanelWithTabs } from "@aurochs-ui/editor-controls/ui";
 import { XlsxWorkbookEditorProvider, useXlsxWorkbookEditor } from "../context/workbook/XlsxWorkbookEditorContext";
 import { XlsxSheetGrid, type XlsxGridMetrics } from "./XlsxSheetGrid";
@@ -55,6 +56,7 @@ function XlsxWorkbookEditorInner({ grid }: { readonly grid: XlsxGridMetrics }) {
         ),
         size: editorShellTokens.panel.xlsxFormatPanelSize,
         resizable: false,
+        drawerIcon: SettingsIcon,
         drawerLabel: "Inspector",
       },
     ];

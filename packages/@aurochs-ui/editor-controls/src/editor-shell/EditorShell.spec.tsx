@@ -56,7 +56,7 @@ describe("EditorShell", () => {
     expect(screen.getByText("Bottom Bar")).toBeDefined();
   });
 
-  it("does not render overlay buttons in desktop mode", () => {
+  it("does not render drawer toggle buttons in desktop mode", () => {
     render(
       <EditorShell
         panels={[
@@ -68,8 +68,8 @@ describe("EditorShell", () => {
       </EditorShell>,
     );
 
-    // Desktop mode (width=0 fallback) — no drawer toggle buttons
-    expect(screen.queryByTitle("Toggle Slides")).toBeNull();
-    expect(screen.queryByTitle("Toggle Inspector")).toBeNull();
+    // Desktop mode (width=0 fallback) — no drawer toggle buttons in toolbar
+    expect(screen.queryByTitle("Slides")).toBeNull();
+    expect(screen.queryByTitle("Inspector")).toBeNull();
   });
 });

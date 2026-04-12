@@ -28,6 +28,7 @@ import { canUndo, canRedo } from "@aurochs-ui/editor-core/history";
 import type { ResizeHandlePosition } from "@aurochs-ui/editor-core/drag-state";
 import type { AlignmentType } from "@aurochs-ui/editor-core/alignment";
 import { EditorShell, CanvasArea, type EditorPanel } from "@aurochs-ui/editor-controls/editor-shell";
+import { GalleryVerticalIcon, SettingsIcon } from "@aurochs-ui/ui-components/icons";
 import { PdfPageCanvas } from "./components/PdfPageCanvas";
 import { pdfEditorReducer, createInitialState } from "../modules/editor-state-context/reducer";
 import { usePdfKeyboardShortcuts } from "../modules/editor-state-context/use-keyboard-shortcuts";
@@ -253,6 +254,7 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
       id: "pages",
       position: "left",
       scrollable: true,
+      drawerIcon: GalleryVerticalIcon,
       drawerLabel: "Pages",
       content: (
         <PdfPageListPanel
@@ -273,6 +275,7 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
       position: "right",
       size: "280px",
       scrollable: false,
+      drawerIcon: SettingsIcon,
       drawerLabel: "Inspector",
       content: rightPanelContent,
     },
