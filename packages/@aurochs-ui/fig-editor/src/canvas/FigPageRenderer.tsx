@@ -1,16 +1,19 @@
 /**
  * @file Fig page renderer component
  *
- * Renders all nodes in the current page using the scene graph SVG pipeline.
- * Passes FigDesignNode tree directly to buildSceneGraph — no intermediate
- * conversion to the raw parser type (FigNode) is needed.
+ * Renders all nodes in the current page as React SVG elements.
+ * Uses the scene graph pipeline: FigDesignNode tree → SceneGraph → React JSX.
+ *
+ * Unlike the previous implementation that used dangerouslySetInnerHTML
+ * with an SVG string, this renders proper React elements that participate
+ * in React's reconciliation for efficient incremental updates.
  */
 
 import { useMemo } from "react";
 import type { FigPage } from "@aurochs/fig/domain";
 import type { FigBlob } from "@aurochs/fig/parser";
 import { buildSceneGraph, type BuildSceneGraphOptions } from "@aurochs-renderer/fig/scene-graph";
-import { renderSceneGraphToSvg } from "@aurochs-renderer/fig/svg";
+import { FigSceneRenderer } from "@aurochs-renderer/fig/react";
 
 // =============================================================================
 // Types
@@ -29,13 +32,13 @@ type FigPageRendererProps = {
 // =============================================================================
 
 /**
- * Renders a fig page as SVG content.
+ * Renders a fig page as React SVG elements.
  *
- * This component builds a scene graph from the page's FigDesignNode tree
- * (domain objects) and renders it to an SVG string, which is injected into the DOM.
+ * Builds a scene graph from the page's FigDesignNode tree (domain objects)
+ * and renders it through FigSceneRenderer which produces JSX SVG elements.
  *
- * The SVG output is memoized and only recomputed when the page
- * content, dimensions, or resources change.
+ * The scene graph is memoized and only recomputed when the page content,
+ * dimensions, or resources change.
  */
 export function FigPageRenderer({
   page,
@@ -44,26 +47,21 @@ export function FigPageRenderer({
   images,
   blobs,
 }: FigPageRendererProps) {
-  const svgContent = useMemo(() => {
+  const sceneGraph = useMemo(() => {
     if (page.children.length === 0) {
-      return "";
+      return null;
     }
 
-    // Pass FigDesignNode children directly to buildSceneGraph.
-    // No FigNode conversion needed — the scene graph builder accepts domain objects.
-    const sceneGraph = buildSceneGraph(page.children, {
+    return buildSceneGraph(page.children, {
       blobs: blobs ?? [],
       images: (images ?? new Map()) as BuildSceneGraphOptions["images"],
       canvasSize: { width: canvasWidth, height: canvasHeight },
     });
-
-    return renderSceneGraphToSvg(sceneGraph) as string;
   }, [page.children, canvasWidth, canvasHeight, images, blobs]);
 
-  if (!svgContent) {
+  if (!sceneGraph) {
     return <g />;
   }
 
-  // Inject SVG content (same pattern as pptx-slide-canvas)
-  return <g dangerouslySetInnerHTML={{ __html: svgContent }} />;
+  return <FigSceneRenderer sceneGraph={sceneGraph} />;
 }

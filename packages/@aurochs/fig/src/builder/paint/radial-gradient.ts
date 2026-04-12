@@ -8,6 +8,7 @@ import {
   BLEND_MODE_VALUES,
   type BlendMode,
 } from "../../constants";
+import { radialParamsToTransform } from "./gradient-transform";
 
 /** Radial gradient builder instance */
 export type RadialGradientBuilder = {
@@ -87,17 +88,14 @@ function createRadialGradientBuilder(): RadialGradientBuilder {
     },
 
     build(): GradientPaint {
+      const center = { x: state.centerX, y: state.centerY };
       return {
         type: { value: PAINT_TYPE_VALUES.GRADIENT_RADIAL, name: "GRADIENT_RADIAL" },
         opacity: state.opacity,
         visible: state.visible,
         blendMode: { value: BLEND_MODE_VALUES[state.blendMode], name: state.blendMode },
-        gradientStops: state.stops,
-        gradientHandlePositions: [
-          { x: state.centerX, y: state.centerY },
-          { x: state.centerX + state.radiusX, y: state.centerY },
-          { x: state.centerX, y: state.centerY + state.radiusY },
-        ],
+        stops: state.stops,
+        transform: radialParamsToTransform(center, state.radiusX, state.radiusY),
       };
     },
   };

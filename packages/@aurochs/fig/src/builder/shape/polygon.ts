@@ -2,7 +2,7 @@
  * @file Polygon node builder
  */
 
-import { createBaseShapeState, attachBaseShapeMethods, buildBaseData, type BaseShapeBuilderMethods } from "./base";
+import { createBaseShapeState, attachBaseShapeMethods, buildBaseData, colorOrPaintToPaint, type BaseShapeBuilderMethods } from "./base";
 import type { PolygonNodeData } from "./types";
 import { SHAPE_NODE_TYPES } from "../../constants";
 
@@ -16,7 +16,7 @@ export type PolygonNodeBuilder = BaseShapeBuilderMethods<PolygonNodeBuilder> & {
 function createPolygonNodeBuilder(localID: number, parentID: number): PolygonNodeBuilder {
   const state = createBaseShapeState(localID, parentID);
   state.name = "Polygon";
-  state.fillColor = { r: 0.4, g: 0.6, b: 1, a: 1 };
+  state.fillPaints = [colorOrPaintToPaint({ r: 0.4, g: 0.6, b: 1, a: 1 })];
   const extra = { pointCount: 6 };
 
   const builder = {} as PolygonNodeBuilder;

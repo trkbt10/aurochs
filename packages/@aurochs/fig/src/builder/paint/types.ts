@@ -16,9 +16,27 @@ export type GradientHandles = {
   readonly width?: number; // For radial/angular gradients
 };
 
+/**
+ * Gradient paint as encoded in the Kiwi schema.
+ *
+ * Uses `stops` (ColorStop array) and `transform` (2x3 affine matrix)
+ * — NOT the Figma API's `gradientStops`/`gradientHandlePositions`.
+ *
+ * The transform maps gradient-local coordinates to the shape's
+ * normalized [0,1]×[0,1] space:
+ * - (0,0) in gradient space → the gradient's "end" point
+ * - (1,0) in gradient space → the gradient's "start" point
+ */
 export type GradientPaint = Paint & {
-  readonly gradientStops: readonly GradientStop[];
-  readonly gradientHandlePositions?: readonly { x: number; y: number }[];
+  readonly stops: readonly GradientStop[];
+  readonly transform: {
+    readonly m00: number;
+    readonly m01: number;
+    readonly m02: number;
+    readonly m10: number;
+    readonly m11: number;
+    readonly m12: number;
+  };
 };
 
 export type ImagePaint = Paint & {

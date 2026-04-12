@@ -1,6 +1,10 @@
 /**
- * @file React components for Figma rendering (placeholder)
+ * @file React components for fig scene graph rendering
+ *
+ * Provides React-native SVG rendering of a SceneGraph, replacing
+ * the string-based renderSceneGraphToSvg + dangerouslySetInnerHTML pattern.
  */
 
-// React integration will be added in a future update
-export {};
+export { FigSceneRenderer } from "./FigSceneRenderer";
+export { FigSvgDefsProvider, useFigSvgDefs } from "./context/FigSvgDefsContext";
+export { SceneNodeRenderer } from "./nodes/SceneNodeRenderer";

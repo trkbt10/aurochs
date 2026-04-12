@@ -16,7 +16,7 @@ export type LineNodeBuilder = BaseShapeBuilderMethods<LineNodeBuilder> & {
 function createLineNodeBuilder(localID: number, parentID: number): LineNodeBuilder {
   const state = createBaseShapeState(localID, parentID);
   state.name = "Line";
-  state.fillColor = undefined;
+  state.fillPaints = [];
   state.strokeColor = { r: 0, g: 0, b: 0, a: 1 };
   state.strokeWeight = 1;
   state.height = 0;

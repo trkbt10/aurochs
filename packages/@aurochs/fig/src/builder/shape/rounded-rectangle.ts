@@ -2,7 +2,7 @@
  * @file Rounded rectangle node builder
  */
 
-import { createBaseShapeState, attachBaseShapeMethods, buildBaseData, type BaseShapeBuilderMethods } from "./base";
+import { createBaseShapeState, attachBaseShapeMethods, buildBaseData, colorOrPaintToPaint, type BaseShapeBuilderMethods } from "./base";
 import type { RoundedRectangleNodeData } from "./types";
 import { SHAPE_NODE_TYPES } from "../../constants";
 
@@ -17,7 +17,7 @@ export type RoundedRectangleNodeBuilder = BaseShapeBuilderMethods<RoundedRectang
 function createRoundedRectangleNodeBuilder(localID: number, parentID: number): RoundedRectangleNodeBuilder {
   const state = createBaseShapeState(localID, parentID);
   state.name = "Rectangle";
-  state.fillColor = { r: 0.9, g: 0.9, b: 0.9, a: 1 };
+  state.fillPaints = [colorOrPaintToPaint({ r: 0.9, g: 0.9, b: 0.9, a: 1 })];
   const extra = { cornerRadius: undefined as number | undefined, cornerRadii: undefined as [number, number, number, number] | undefined };
 
   const builder = {} as RoundedRectangleNodeBuilder;

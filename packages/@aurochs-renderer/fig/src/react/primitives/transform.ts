@@ -1,0 +1,24 @@
+/**
+ * @file Transform utility for React renderer
+ */
+
+import type { AffineMatrix } from "../../scene-graph/types";
+
+/**
+ * Convert an AffineMatrix to an SVG transform string.
+ * Returns undefined for identity matrices (avoids unnecessary DOM attribute).
+ */
+export function matrixToSvgTransform(m: AffineMatrix): string | undefined {
+  if (
+    Math.abs(m.m00 - 1) < 1e-6 &&
+    Math.abs(m.m01) < 1e-6 &&
+    Math.abs(m.m02) < 1e-6 &&
+    Math.abs(m.m10) < 1e-6 &&
+    Math.abs(m.m11 - 1) < 1e-6 &&
+    Math.abs(m.m12) < 1e-6
+  ) {
+    return undefined;
+  }
+  // SVG matrix(a, b, c, d, e, f) = matrix(m00, m10, m01, m11, m02, m12)
+  return `matrix(${m.m00},${m.m10},${m.m01},${m.m11},${m.m02},${m.m12})`;
+}

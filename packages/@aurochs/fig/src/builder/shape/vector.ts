@@ -2,7 +2,7 @@
  * @file Vector node builder
  */
 
-import { createBaseShapeState, attachBaseShapeMethods, buildBaseData, type BaseShapeBuilderMethods } from "./base";
+import { createBaseShapeState, attachBaseShapeMethods, buildBaseData, colorOrPaintToPaint, type BaseShapeBuilderMethods } from "./base";
 import type { VectorNodeData } from "./types";
 import { SHAPE_NODE_TYPES, WINDING_RULE_VALUES, type WindingRule } from "../../constants";
 
@@ -31,7 +31,7 @@ function buildVectorData(
 function createVectorNodeBuilder(localID: number, parentID: number): VectorNodeBuilder {
   const state = createBaseShapeState(localID, parentID);
   state.name = "Vector";
-  state.fillColor = { r: 0.5, g: 0.5, b: 0.5, a: 1 };
+  state.fillPaints = [colorOrPaintToPaint({ r: 0.5, g: 0.5, b: 0.5, a: 1 })];
   const extra = { windingRule: "NONZERO" as WindingRule, vectorNetworkBlob: undefined as number | undefined };
 
   const builder = {} as VectorNodeBuilder;

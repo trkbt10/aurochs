@@ -5,7 +5,7 @@
  * For rectangles with rounded corners, use roundedRectNode.
  */
 
-import { createBaseShapeState, attachBaseShapeMethods, buildBaseData, type BaseShapeBuilderMethods } from "./base";
+import { createBaseShapeState, attachBaseShapeMethods, buildBaseData, colorOrPaintToPaint, type BaseShapeBuilderMethods } from "./base";
 import type { RectangleNodeData } from "./types";
 import { SHAPE_NODE_TYPES } from "../../constants";
 
@@ -18,7 +18,7 @@ export type RectangleNodeBuilder = BaseShapeBuilderMethods<RectangleNodeBuilder>
 function createRectangleNodeBuilder(localID: number, parentID: number): RectangleNodeBuilder {
   const state = createBaseShapeState(localID, parentID);
   state.name = "Rectangle";
-  state.fillColor = { r: 0.9, g: 0.9, b: 0.9, a: 1 };
+  state.fillPaints = [colorOrPaintToPaint({ r: 0.9, g: 0.9, b: 0.9, a: 1 })];
 
   const builder = {} as RectangleNodeBuilder;
   Object.assign(builder, attachBaseShapeMethods(state, builder), {

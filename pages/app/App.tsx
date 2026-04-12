@@ -22,6 +22,8 @@ import { TextEditTestPage } from "@aurochs-ui/potx-editor/dev/TextEditTestPage";
 import { PresentationSuitePage } from "./pages/PresentationSuitePage";
 import { FigEditorPage } from "./pages/FigEditorPage";
 import { FigViewerPage } from "./pages/FigViewerPage";
+import { FigRouteGate } from "./components/FigRouteGate";
+import { createDemoFigDesignDocument } from "@aurochs-builder/fig/context";
 import { createDefaultGraphicsState, type PdfDocument as PdfDoc } from "@aurochs/pdf";
 import { convertToPresentationDocument, type PresentationDocument } from "@aurochs-office/pptx/app";
 import "./App.css";
@@ -213,6 +215,10 @@ export function App() {
     navigate("/potx/editor");
   }, [navigate]);
 
+  const loadFigDemo = useCallback(() => {
+    fig.load("demo.fig", createDemoFigDesignDocument);
+  }, [fig]);
+
   const handleFigViewerDemo = useCallback(() => {
     pptx.reset();
     docx.reset();
@@ -220,9 +226,9 @@ export function App() {
     pdf.reset();
     setImportedDocument(null);
     setImportedFileName(null);
-    fig.loadDemo();
+    loadFigDemo();
     navigate("/fig/viewer");
-  }, [pptx, docx, xlsx, pdf, fig, navigate]);
+  }, [pptx, docx, xlsx, pdf, loadFigDemo, navigate]);
 
   const handleFigEditorDemo = useCallback(() => {
     pptx.reset();
@@ -231,9 +237,9 @@ export function App() {
     pdf.reset();
     setImportedDocument(null);
     setImportedFileName(null);
-    fig.loadDemo();
+    loadFigDemo();
     navigate("/fig/editor");
-  }, [pptx, docx, xlsx, pdf, fig, navigate]);
+  }, [pptx, docx, xlsx, pdf, loadFigDemo, navigate]);
 
   const handlePptxSuiteDemo = useCallback(() => {
     setImportedDocument(null);
@@ -489,29 +495,60 @@ export function App() {
     handleBack();
   }, [handleBack, navigate, fig.document]);
 
-  const FigViewerRoute = () => (
-    <FigViewerPage
-      document={fig.document}
-      fileName={fig.fileName}
-      onBack={handleBack}
-      onFileSelect={handleFigFileSelect}
-      onStartEditor={fig.document ? handleStartFigEditor : undefined}
+  const figLoadingContent = (
+    <LandingPage
+      onFileSelect={handleFileSelect}
+      onPptxDemo={handlePptxDemo}
+      onPptxEditorDemo={handlePptxEditorDemo}
+      onDocxDemo={handleDocxDemo}
+      onDocxViewerDemo={handleDocxViewerDemo}
+      onXlsxDemo={handleXlsxDemo}
+      onXlsxViewerDemo={handleXlsxViewerDemo}
+      onPdfViewerDemo={handlePdfViewerDemo}
+      onPdfEditorDemo={handlePdfEditorDemo}
+      onPotxEditorDemo={handlePotxEditorDemo}
+      onPptxSuiteDemo={handlePptxSuiteDemo}
+      onFigViewerDemo={handleFigViewerDemo}
+      onFigEditorDemo={handleFigEditorDemo}
+      isLoading
     />
   );
 
-  const FigEditorRoute = () => {
-    const doc = fig.document;
-    if (!doc) {
-      return <Navigate to="/" replace />;
-    }
-    return (
-      <FigEditorPage
-        document={doc}
-        fileName={fig.fileName ?? "design.fig"}
-        onBack={handleExitFigEditor}
-      />
-    );
-  };
+  const FigViewerRoute = () => (
+    <FigRouteGate
+      fig={fig}
+      onLoadDemo={loadFigDemo}
+      loadingContent={figLoadingContent}
+      errorRedirect="/"
+    >
+      {(document) => (
+        <FigViewerPage
+          document={document}
+          fileName={fig.fileName}
+          onBack={handleBack}
+          onFileSelect={handleFigFileSelect}
+          onStartEditor={handleStartFigEditor}
+        />
+      )}
+    </FigRouteGate>
+  );
+
+  const FigEditorRoute = () => (
+    <FigRouteGate
+      fig={fig}
+      onLoadDemo={loadFigDemo}
+      loadingContent={figLoadingContent}
+      errorRedirect="/"
+    >
+      {(document) => (
+        <FigEditorPage
+          document={document}
+          fileName={fig.fileName ?? "design.fig"}
+          onBack={handleExitFigEditor}
+        />
+      )}
+    </FigRouteGate>
+  );
 
   const PresentationSuiteRoute = () => {
     const activeDocument = importedDocument ?? editorDocument;

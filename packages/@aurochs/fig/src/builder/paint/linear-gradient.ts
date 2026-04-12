@@ -8,6 +8,7 @@ import {
   BLEND_MODE_VALUES,
   type BlendMode,
 } from "../../constants";
+import { linearHandlesToTransform } from "./gradient-transform";
 
 /** Linear gradient builder instance */
 export type LinearGradientBuilder = {
@@ -88,16 +89,15 @@ function createLinearGradientBuilder(): LinearGradientBuilder {
     },
 
     build(): GradientPaint {
+      const start = { x: state.startX, y: state.startY };
+      const end = { x: state.endX, y: state.endY };
       return {
         type: { value: PAINT_TYPE_VALUES.GRADIENT_LINEAR, name: "GRADIENT_LINEAR" },
         opacity: state.opacity,
         visible: state.visible,
         blendMode: { value: BLEND_MODE_VALUES[state.blendMode], name: state.blendMode },
-        gradientStops: state.stops,
-        gradientHandlePositions: [
-          { x: state.startX, y: state.startY },
-          { x: state.endX, y: state.endY },
-        ],
+        stops: state.stops,
+        transform: linearHandlesToTransform(start, end),
       };
     },
   };

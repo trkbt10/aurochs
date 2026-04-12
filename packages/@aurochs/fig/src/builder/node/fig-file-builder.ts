@@ -854,7 +854,27 @@ function _createFigFileBuilder() {
       node.stackSpacing = data.stackSpacing;
     }
     if (data.stackPadding) {
-      node.stackPadding = data.stackPadding;
+      // Kiwi schema encodes padding as individual float fields:
+      //   stackVerticalPadding   = top padding (top == bottom by default)
+      //   stackHorizontalPadding = left padding (left == right by default)
+      //   stackPaddingRight      = override when right ≠ left
+      //   stackPaddingBottom     = override when bottom ≠ top
+      //   stackPadding           = uniform fallback
+      const { top, right, bottom, left } = data.stackPadding;
+      const allEqual = top === right && right === bottom && bottom === left;
+
+      if (allEqual) {
+        node.stackPadding = top;
+      } else {
+        node.stackVerticalPadding = top;
+        node.stackHorizontalPadding = left;
+        if (right !== left) {
+          node.stackPaddingRight = right;
+        }
+        if (bottom !== top) {
+          node.stackPaddingBottom = bottom;
+        }
+      }
     }
     if (data.stackPrimaryAlignItems) {
       node.stackPrimaryAlignItems = data.stackPrimaryAlignItems;

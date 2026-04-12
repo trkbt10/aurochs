@@ -8,6 +8,7 @@ import {
   BLEND_MODE_VALUES,
   type BlendMode,
 } from "../../constants";
+import { axialHandlesToTransform } from "./gradient-transform";
 
 /** Diamond gradient builder instance */
 export type DiamondGradientBuilder = {
@@ -75,17 +76,17 @@ function createDiamondGradientBuilder(): DiamondGradientBuilder {
     },
 
     build(): GradientPaint {
+      const center = { x: state.centerX, y: state.centerY };
+      const xAxisEnd = { x: state.centerX + state.size, y: state.centerY };
+      const yAxisEnd = { x: state.centerX, y: state.centerY + state.size };
+
       return {
         type: { value: PAINT_TYPE_VALUES.GRADIENT_DIAMOND, name: "GRADIENT_DIAMOND" },
         opacity: state.opacity,
         visible: state.visible,
         blendMode: { value: BLEND_MODE_VALUES[state.blendMode], name: state.blendMode },
-        gradientStops: state.stops,
-        gradientHandlePositions: [
-          { x: state.centerX, y: state.centerY },
-          { x: state.centerX + state.size, y: state.centerY },
-          { x: state.centerX, y: state.centerY + state.size },
-        ],
+        stops: state.stops,
+        transform: axialHandlesToTransform(center, xAxisEnd, yAxisEnd),
       };
     },
   };

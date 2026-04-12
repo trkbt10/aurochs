@@ -1,12 +1,14 @@
 /**
  * @file Fig file loading hook
  *
- * Loads .fig files and converts them to FigDesignDocument for the editor.
+ * Loads .fig files and converts them to FigDesignDocument.
+ * This hook is a pure file loader — it does NOT know about demo documents.
+ * Demo fallback is handled at the router level.
  */
 
 import { useCallback } from "react";
 import { useFileLoader } from "./useFileLoader";
-import { createFigDesignDocument, createDemoFigDesignDocument } from "@aurochs-builder/fig/context";
+import { createFigDesignDocument } from "@aurochs-builder/fig/context";
 import type { FigDesignDocument } from "@aurochs/fig/domain";
 
 type UseFigReturn = {
@@ -16,7 +18,8 @@ type UseFigReturn = {
   readonly error: string | null;
   readonly loadFromFile: (file: File) => void;
   readonly loadFromUrl: (url: string, fileName: string) => void;
-  readonly loadDemo: () => void;
+  /** Low-level: load from an arbitrary async producer. */
+  readonly load: (fileName: string, loadFn: () => Promise<FigDesignDocument>) => void;
   readonly reset: () => void;
 };
 
@@ -26,7 +29,7 @@ type UseFigReturn = {
  * Supports loading from:
  * - File object (drag-drop or file picker)
  * - URL (fetch + parse)
- * - Demo (empty document with sample content)
+ * - Arbitrary async producer via load()
  */
 export function useFig(): UseFigReturn {
   const loader = useFileLoader<FigDesignDocument>("Failed to load .fig file");
@@ -55,12 +58,6 @@ export function useFig(): UseFigReturn {
     [loader],
   );
 
-  const loadDemo = useCallback(() => {
-    loader.load("demo.fig", async () => {
-      return createDemoFigDesignDocument();
-    });
-  }, [loader]);
-
   return {
     status: loader.status,
     document: loader.data,
@@ -68,7 +65,7 @@ export function useFig(): UseFigReturn {
     error: loader.error,
     loadFromFile,
     loadFromUrl,
-    loadDemo,
+    load: loader.load,
     reset: loader.reset,
   };
 }

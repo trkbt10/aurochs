@@ -8,6 +8,7 @@ import {
   BLEND_MODE_VALUES,
   type BlendMode,
 } from "../../constants";
+import { axialHandlesToTransform } from "./gradient-transform";
 
 /** Angular gradient builder instance */
 export type AngularGradientBuilder = {
@@ -86,17 +87,17 @@ function createAngularGradientBuilder(): AngularGradientBuilder {
       const sin = Math.sin(rad);
       const radius = 0.5;
 
+      const center = { x: state.centerX, y: state.centerY };
+      const xAxisEnd = { x: state.centerX + cos * radius, y: state.centerY + sin * radius };
+      const yAxisEnd = { x: state.centerX - sin * radius, y: state.centerY + cos * radius };
+
       return {
         type: { value: PAINT_TYPE_VALUES.GRADIENT_ANGULAR, name: "GRADIENT_ANGULAR" },
         opacity: state.opacity,
         visible: state.visible,
         blendMode: { value: BLEND_MODE_VALUES[state.blendMode], name: state.blendMode },
-        gradientStops: state.stops,
-        gradientHandlePositions: [
-          { x: state.centerX, y: state.centerY },
-          { x: state.centerX + cos * radius, y: state.centerY + sin * radius },
-          { x: state.centerX - sin * radius, y: state.centerY + cos * radius },
-        ],
+        stops: state.stops,
+        transform: axialHandlesToTransform(center, xAxisEnd, yAxisEnd),
       };
     },
   };

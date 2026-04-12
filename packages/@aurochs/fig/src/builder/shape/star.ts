@@ -2,7 +2,7 @@
  * @file Star node builder
  */
 
-import { createBaseShapeState, attachBaseShapeMethods, buildBaseData, type BaseShapeBuilderMethods } from "./base";
+import { createBaseShapeState, attachBaseShapeMethods, buildBaseData, colorOrPaintToPaint, type BaseShapeBuilderMethods } from "./base";
 import type { StarNodeData } from "./types";
 import { SHAPE_NODE_TYPES } from "../../constants";
 
@@ -17,7 +17,7 @@ export type StarNodeBuilder = BaseShapeBuilderMethods<StarNodeBuilder> & {
 function createStarNodeBuilder(localID: number, parentID: number): StarNodeBuilder {
   const state = createBaseShapeState(localID, parentID);
   state.name = "Star";
-  state.fillColor = { r: 1, g: 0.8, b: 0, a: 1 };
+  state.fillPaints = [colorOrPaintToPaint({ r: 1, g: 0.8, b: 0, a: 1 })];
   const extra = { pointCount: 5, starInnerRadius: 0.382 };
 
   const builder = {} as StarNodeBuilder;

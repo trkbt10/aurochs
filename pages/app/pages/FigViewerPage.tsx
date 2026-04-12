@@ -3,12 +3,13 @@
  *
  * Read-only viewer for .fig design files.
  * Renders each page as SVG with page navigation and zoom.
+ * Uses React SVG elements (via FigSceneRenderer) instead of dangerouslySetInnerHTML.
  */
 
 import { useCallback, useMemo, useState, useRef } from "react";
 import type { FigDesignDocument, FigDesignNode, FigPage } from "@aurochs/fig/domain";
 import { buildSceneGraph, type BuildSceneGraphOptions } from "@aurochs-renderer/fig/scene-graph";
-import { renderSceneGraphToSvg } from "@aurochs-renderer/fig/svg";
+import { FigSceneRenderer } from "@aurochs-renderer/fig/react";
 import { UploadIcon } from "@aurochs-ui/ui-components/icons";
 import { EditorPageLayout } from "../components/EditorPageLayout";
 
@@ -31,58 +32,135 @@ type Props = {
 /**
  * Compute the bounding box of all nodes in a page.
  */
-function computePageBounds(children: readonly FigDesignNode[]): { x: number; y: number; width: number; height: number } {
+type PageBounds = { x: number; y: number; width: number; height: number };
+
+const EMPTY_PAGE_BOUNDS: PageBounds = { x: 0, y: 0, width: 800, height: 600 };
+
+function computePageBounds(children: readonly FigDesignNode[]): PageBounds {
   if (children.length === 0) {
-    return { x: 0, y: 0, width: 800, height: 600 };
+    return EMPTY_PAGE_BOUNDS;
   }
 
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
+  const extremes = children.reduce(
+    (acc, node) => {
+      const nx = node.transform.m02;
+      const ny = node.transform.m12;
+      return {
+        minX: Math.min(acc.minX, nx),
+        minY: Math.min(acc.minY, ny),
+        maxX: Math.max(acc.maxX, nx + node.size.x),
+        maxY: Math.max(acc.maxY, ny + node.size.y),
+      };
+    },
+    { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity },
+  );
 
-  for (const node of children) {
-    const nx = node.transform.m02;
-    const ny = node.transform.m12;
-    minX = Math.min(minX, nx);
-    minY = Math.min(minY, ny);
-    maxX = Math.max(maxX, nx + node.size.x);
-    maxY = Math.max(maxY, ny + node.size.y);
-  }
-
-  // Add padding
   const padding = 40;
   return {
-    x: minX - padding,
-    y: minY - padding,
-    width: maxX - minX + padding * 2,
-    height: maxY - minY + padding * 2,
+    x: extremes.minX - padding,
+    y: extremes.minY - padding,
+    width: extremes.maxX - extremes.minX + padding * 2,
+    height: extremes.maxY - extremes.minY + padding * 2,
   };
 }
 
+// =============================================================================
+// Page SVG Content Component
+// =============================================================================
+
+type PageSvgContentProps = {
+  readonly page: FigPage;
+  readonly images: FigDesignDocument["images"];
+  readonly bounds: { x: number; y: number; width: number; height: number };
+};
+
 /**
- * Render a page to SVG string.
+ * Renders page content as React SVG elements inside an <svg>.
  */
-function renderPageSvg(page: FigPage, images: FigDesignDocument["images"]): string {
-  if (page.children.length === 0) {
-    return "";
+function PageSvgContent({ page, images, bounds }: PageSvgContentProps) {
+  const sceneGraph = useMemo(() => {
+    if (page.children.length === 0) {
+      return null;
+    }
+    return buildSceneGraph(page.children, {
+      blobs: [],
+      images: images as BuildSceneGraphOptions["images"],
+      canvasSize: { width: bounds.width, height: bounds.height },
+    });
+  }, [page.children, images, bounds.width, bounds.height]);
+
+  if (!sceneGraph) {
+    return null;
   }
 
-  const bounds = computePageBounds(page.children);
-
-  // Pass FigDesignNode children directly — no FigNode conversion needed.
-  const sceneGraph = buildSceneGraph(page.children, {
-    blobs: [],
-    images: images as BuildSceneGraphOptions["images"],
-    canvasSize: { width: bounds.width, height: bounds.height },
-  });
-
-  return renderSceneGraphToSvg(sceneGraph) as string;
+  return (
+    <svg
+      viewBox={`${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`}
+      style={{
+        maxWidth: "100%",
+        maxHeight: "100%",
+        backgroundColor: "white",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+        borderRadius: 4,
+      }}
+    >
+      <FigSceneRenderer sceneGraph={sceneGraph} />
+    </svg>
+  );
 }
 
 // =============================================================================
 // Component
 // =============================================================================
+
+const emptyMessageStyle = { color: "#999", fontSize: 14, marginTop: 80 } as const;
+
+function renderPageContent(
+  document: FigDesignDocument | null,
+  activePage: FigPage | undefined,
+  pageBounds: PageBounds,
+) {
+  if (document && activePage && activePage.children.length > 0) {
+    return (
+      <PageSvgContent
+        page={activePage}
+        images={document.images}
+        bounds={pageBounds}
+      />
+    );
+  }
+  if (!document) {
+    return (
+      <div style={emptyMessageStyle}>
+        No .fig file loaded. Upload a file or try the demo.
+      </div>
+    );
+  }
+  return <div style={emptyMessageStyle}>This page is empty.</div>;
+}
+
+function renderEditButton(onStartEditor: (() => void) | undefined) {
+  if (!onStartEditor) {
+    return undefined;
+  }
+  return (
+    <button
+      type="button"
+      onClick={onStartEditor}
+      style={{
+        padding: "6px 16px",
+        fontSize: 13,
+        backgroundColor: "#4472C4",
+        color: "#fff",
+        border: "none",
+        borderRadius: 4,
+        cursor: "pointer",
+      }}
+    >
+      Edit
+    </button>
+  );
+}
 
 /** Fig viewer page. */
 export function FigViewerPage({ document, fileName, onBack, onFileSelect, onStartEditor }: Props) {
@@ -92,13 +170,6 @@ export function FigViewerPage({ document, fileName, onBack, onFileSelect, onStar
 
   const activePage = document?.pages[activePageIndex];
   const totalPages = document?.pages.length ?? 0;
-
-  const svgContent = useMemo(() => {
-    if (!activePage || !document) {
-      return "";
-    }
-    return renderPageSvg(activePage, document.images);
-  }, [activePage, document]);
 
   const pageBounds = useMemo(() => {
     if (!activePage) {
@@ -152,23 +223,7 @@ export function FigViewerPage({ document, fileName, onBack, onFileSelect, onStar
     setIsDragging(false);
   }, []);
 
-  const headerActions = onStartEditor ? (
-    <button
-      type="button"
-      onClick={onStartEditor}
-      style={{
-        padding: "6px 16px",
-        fontSize: 13,
-        backgroundColor: "#4472C4",
-        color: "#fff",
-        border: "none",
-        borderRadius: 4,
-        cursor: "pointer",
-      }}
-    >
-      Edit
-    </button>
-  ) : undefined;
+  const headerActions = renderEditButton(onStartEditor);
 
   return (
     <EditorPageLayout
@@ -270,27 +325,7 @@ export function FigViewerPage({ document, fileName, onBack, onFileSelect, onStar
           backgroundColor: "#f5f5f5",
         }}
       >
-        {document && svgContent ? (
-          <svg
-            viewBox={`${pageBounds.x} ${pageBounds.y} ${pageBounds.width} ${pageBounds.height}`}
-            style={{
-              maxWidth: "100%",
-              maxHeight: "100%",
-              backgroundColor: "white",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-              borderRadius: 4,
-            }}
-            dangerouslySetInnerHTML={{ __html: svgContent }}
-          />
-        ) : !document ? (
-          <div style={{ color: "#999", fontSize: 14, marginTop: 80 }}>
-            No .fig file loaded. Upload a file or try the demo.
-          </div>
-        ) : (
-          <div style={{ color: "#999", fontSize: 14, marginTop: 80 }}>
-            This page is empty.
-          </div>
-        )}
+        {renderPageContent(document, activePage, pageBounds)}
       </div>
     </EditorPageLayout>
   );

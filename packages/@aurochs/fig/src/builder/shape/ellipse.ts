@@ -2,7 +2,7 @@
  * @file Ellipse node builder
  */
 
-import { createBaseShapeState, attachBaseShapeMethods, buildBaseData, type BaseShapeBuilderMethods } from "./base";
+import { createBaseShapeState, attachBaseShapeMethods, buildBaseData, colorOrPaintToPaint, type BaseShapeBuilderMethods } from "./base";
 import type { EllipseNodeData, ArcData } from "./types";
 import { SHAPE_NODE_TYPES } from "../../constants";
 
@@ -30,7 +30,7 @@ function buildArcData(extra: { arcStartAngle?: number; arcEndAngle?: number; inn
 function createEllipseNodeBuilder(localID: number, parentID: number): EllipseNodeBuilder {
   const state = createBaseShapeState(localID, parentID);
   state.name = "Ellipse";
-  state.fillColor = { r: 0.8, g: 0.8, b: 0.8, a: 1 };
+  state.fillPaints = [colorOrPaintToPaint({ r: 0.8, g: 0.8, b: 0.8, a: 1 })];
   const extra = { arcStartAngle: undefined as number | undefined, arcEndAngle: undefined as number | undefined, innerRadius: 0 };
 
   const builder = {} as EllipseNodeBuilder;

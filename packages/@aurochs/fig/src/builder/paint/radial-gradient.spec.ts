@@ -10,27 +10,28 @@ describe("RadialGradientBuilder", () => {
     const result = radialGradient().build();
 
     expect(result.type).toEqual({ value: PAINT_TYPE_VALUES.GRADIENT_RADIAL, name: "GRADIENT_RADIAL" });
-    expect(result.gradientStops).toHaveLength(2);
-    expect(result.gradientHandlePositions).toHaveLength(3);
+    expect(result.stops).toHaveLength(2);
+    expect(result.transform).toBeDefined();
   });
 
-  it("sets center position", () => {
+  it("sets center position via transform", () => {
     const result = radialGradient().center(0.25, 0.75).build();
 
-    expect(result.gradientHandlePositions![0]).toEqual({ x: 0.25, y: 0.75 });
+    expect(result.transform.m02).toBeCloseTo(0.25);
+    expect(result.transform.m12).toBeCloseTo(0.75);
   });
 
-  it("sets uniform radius", () => {
+  it("sets uniform radius via transform", () => {
     const result = radialGradient().center(0.5, 0.5).radius(0.3).build();
 
-    expect(result.gradientHandlePositions![1].x).toBeCloseTo(0.8);
-    expect(result.gradientHandlePositions![2].y).toBeCloseTo(0.8);
+    expect(result.transform.m00).toBeCloseTo(0.3);
+    expect(result.transform.m11).toBeCloseTo(0.3);
   });
 
-  it("sets elliptical radius", () => {
+  it("sets elliptical radius via transform", () => {
     const result = radialGradient().center(0.5, 0.5).ellipticalRadius(0.4, 0.2).build();
 
-    expect(result.gradientHandlePositions![1].x).toBeCloseTo(0.9);
-    expect(result.gradientHandlePositions![2].y).toBeCloseTo(0.7);
+    expect(result.transform.m00).toBeCloseTo(0.4);
+    expect(result.transform.m11).toBeCloseTo(0.2);
   });
 });

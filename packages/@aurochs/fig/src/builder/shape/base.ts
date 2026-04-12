@@ -33,7 +33,7 @@ export type BaseShapeState = {
   x: number;
   y: number;
   rotation: number;
-  fillColor?: Color;
+  fillPaints: Paint[];
   strokeColor?: Color;
   strokeWeight?: number;
   strokeCap?: StrokeCap;
@@ -61,6 +61,7 @@ export function createBaseShapeState(localID: number, parentID: number): BaseSha
     x: 0,
     y: 0,
     rotation: 0,
+    fillPaints: [],
     visible: true,
     opacity: 1,
   };
@@ -72,7 +73,8 @@ export type BaseShapeBuilderMethods<TBuilder> = {
   size: (width: number, height: number) => TBuilder;
   position: (x: number, y: number) => TBuilder;
   rotation: (degrees: number) => TBuilder;
-  fill: (color: Color) => TBuilder;
+  /** Set fill — accepts a Color (solid) or a Paint object (gradient, image, etc.) */
+  fill: (colorOrPaint: Color | Paint) => TBuilder;
   noFill: () => TBuilder;
   stroke: (color: Color) => TBuilder;
   strokeWeight: (weight: number) => TBuilder;
@@ -97,8 +99,11 @@ export function attachBaseShapeMethods<TBuilder>(state: BaseShapeState, builder:
     size(width: number, height: number) { state.width = width; state.height = height; return builder; },
     position(x: number, y: number) { state.x = x; state.y = y; return builder; },
     rotation(degrees: number) { state.rotation = degrees; return builder; },
-    fill(color: Color) { state.fillColor = color; return builder; },
-    noFill() { state.fillColor = undefined; return builder; },
+    fill(colorOrPaint: Color | Paint) {
+      state.fillPaints = [colorOrPaintToPaint(colorOrPaint)];
+      return builder;
+    },
+    noFill() { state.fillPaints = []; return builder; },
     stroke(color: Color) { state.strokeColor = color; return builder; },
     strokeWeight(weight: number) { state.strokeWeight = weight; return builder; },
     strokeCap(cap: StrokeCap) { state.strokeCap = cap; return builder; },
@@ -116,6 +121,25 @@ export function attachBaseShapeMethods<TBuilder>(state: BaseShapeState, builder:
   };
 }
 
+/** Determine if a value is a Paint object (has `type` with `value` and `name`) */
+function isPaint(value: Color | Paint): value is Paint {
+  return "type" in value && typeof (value as Paint).type === "object";
+}
+
+/** Convert a Color or Paint to a Paint. Colors become SOLID paints. */
+export function colorOrPaintToPaint(colorOrPaint: Color | Paint): Paint {
+  if (isPaint(colorOrPaint)) {
+    return colorOrPaint;
+  }
+  return {
+    type: { value: 0, name: "SOLID" },
+    color: colorOrPaint,
+    opacity: 1,
+    visible: true,
+    blendMode: { value: 1, name: "NORMAL" },
+  };
+}
+
 /** Build the transformation matrix from state */
 function buildTransform(state: BaseShapeState): FigMatrix {
   const translation = createTranslationMatrix(state.x, state.y);
@@ -128,16 +152,7 @@ function buildTransform(state: BaseShapeState): FigMatrix {
 
 /** Build fill paints array from state */
 function buildFillPaints(state: BaseShapeState): readonly Paint[] {
-  if (!state.fillColor) {
-    return [];
-  }
-  return [{
-    type: { value: 0, name: "SOLID" },
-    color: state.fillColor,
-    opacity: 1,
-    visible: true,
-    blendMode: { value: 1, name: "NORMAL" },
-  }];
+  return state.fillPaints;
 }
 
 /** Build stroke paints array from state */
