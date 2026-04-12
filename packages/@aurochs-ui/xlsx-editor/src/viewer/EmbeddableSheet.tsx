@@ -56,11 +56,7 @@ export type EmbeddableSheetProps = {
   readonly style?: CSSProperties;
 };
 
-const DEFAULT_METRICS = {
-  ...DEFAULT_SHEET_GRID_METRICS,
-  rowCount: 50,
-  colCount: 20,
-};
+const DEFAULT_METRICS = DEFAULT_SHEET_GRID_METRICS;
 
 /**
  * Lightweight embeddable sheet viewer.

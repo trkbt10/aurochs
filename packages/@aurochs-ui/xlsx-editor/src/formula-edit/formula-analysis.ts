@@ -13,6 +13,7 @@
 import type { FormulaAstNode } from "@aurochs-office/xlsx/formula/ast";
 import { parseFormula } from "@aurochs-office/xlsx/formula/parser";
 import type { CellAddress, CellRange } from "@aurochs-office/xlsx/domain/cell/address";
+import { EXCEL_MAX_ROWS, EXCEL_MAX_COLS } from "@aurochs-office/xlsx/domain/constants";
 import type { ColIndex, RowIndex } from "@aurochs-office/xlsx/domain/types";
 import { tokenizeFormula } from "./formula-tokenizer";
 import type { FormulaAnalysis, FormulaReferenceToken, FormulaTextToken } from "./types";
@@ -168,7 +169,7 @@ function parseSingleRef(
   const col = columnLettersToIndex(colLetters.toUpperCase());
   const row = Number(rowDigits);
 
-  if (col < 1 || col > 16384 || row < 1 || row > 1048576) {
+  if (col < 1 || col > EXCEL_MAX_COLS || row < 1 || row > EXCEL_MAX_ROWS) {
     return undefined;
   }
 

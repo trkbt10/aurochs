@@ -8,6 +8,7 @@
 import { StrictMode, useState, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import type { XlsxWorkbook } from "@aurochs-office/xlsx/domain/workbook";
+import { EXCEL_MAX_ROWS, EXCEL_MAX_COLS } from "@aurochs-office/xlsx/domain/constants";
 import { XlsxWorkbookEditor } from "../../src";
 
 type HarnessWindow = Window & {
@@ -99,8 +100,8 @@ function Root() {
         onWorkbookChange={() => {}}
         initialSheetIndex={appState.config.sheetIndex ?? 0}
         grid={{
-          rowCount: 1_048_576,
-          colCount: 16_384,
+          rowCount: EXCEL_MAX_ROWS,
+          colCount: EXCEL_MAX_COLS,
           rowHeightPx: 22,
           colWidthPx: 120,
           headerSizePx: 32,

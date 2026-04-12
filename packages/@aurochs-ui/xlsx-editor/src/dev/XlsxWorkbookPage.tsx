@@ -5,6 +5,7 @@
 import { useCallback, useMemo, useState, useRef, type CSSProperties } from "react";
 import { XlsxWorkbookEditor } from "@aurochs-ui/xlsx-editor";
 import type { XlsxWorkbook } from "@aurochs-office/xlsx/domain/workbook";
+import { EXCEL_MAX_ROWS, EXCEL_MAX_COLS } from "@aurochs-office/xlsx/domain/constants";
 import { createDefaultStyleSheet, type XlsxCellXf } from "@aurochs-office/xlsx/domain/style/types";
 import {
   borderId,
@@ -770,11 +771,8 @@ export function XlsxWorkbookPage() {
   const [vbaDialogOpen, setVbaDialogOpen] = useState(false);
 
   const computeInitialGridSize = useCallback((wb: XlsxWorkbook): { rowCount: number; colCount: number } => {
-    const MAX_ROWS = 1_048_576;
-    const MAX_COLS = 16_384;
-
     void wb;
-    return { rowCount: MAX_ROWS, colCount: MAX_COLS };
+    return { rowCount: EXCEL_MAX_ROWS, colCount: EXCEL_MAX_COLS };
   }, []);
 
   const [{ rowCount, colCount }, setGridSize] = useState(() => computeInitialGridSize(workbook));
