@@ -16,7 +16,8 @@ import {
   type PdfParsedDocument,
 } from "./pdf-parser.native";
 
-export type { PdfParseOptions, PdfBuildOptions, PdfParsedPage, PdfParsedDocument, PdfBuildContext } from "./pdf-parser.native";
+export type { PdfParseOptions, PdfBuildOptions, PdfParsedPage, PdfParsedDocument, PdfBuildContext, PdfSourceContext, CreatePdfSourceContextOptions } from "./pdf-parser.native";
+export { createPdfSourceContext, parsePagesFromSourceContext } from "./pdf-parser.native";
 export type PdfParserOptions = PdfParseOptions & PdfBuildOptions;
 
 

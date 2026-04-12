@@ -1,7 +1,8 @@
 /** @file Tests for PDF page SVG rendering. */
 import { Buffer } from "node:buffer";
 import { createDefaultGraphicsState, type PdfGraphicsState, type PdfImage, type PdfPage, type PdfPath, type PdfText } from "@aurochs/pdf/domain";
-import { renderPdfDocumentPageToSvg, renderPdfDocumentToSvgs, renderPdfPageToSvg } from "./render-page-svg";
+import { renderPdfDocumentPageToSvg, renderPdfDocumentToSvgs, renderPdfPageToSvg, renderPdfPageToSvgNode } from "./render-page-svg";
+import { serializeElement } from "@aurochs/xml";
 
 function createGraphicsState(overrides: Partial<PdfGraphicsState> = {}): PdfGraphicsState {
   return {
@@ -215,5 +216,74 @@ describe("renderPdfPageToSvg", () => {
     expect(svg).toContain('writing-mode="vertical-rl"');
     expect(svg).toContain('text-orientation="upright"');
     expect(svg).not.toContain('transform="rotate(');
+  });
+
+  it("uses custom imageUrlResolver for image elements", () => {
+    const pngBytes = Uint8Array.from(
+      Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO2ZQfQAAAAASUVORK5CYII=", "base64"),
+    );
+
+    const image: PdfImage = {
+      type: "image",
+      data: pngBytes,
+      width: 1,
+      height: 1,
+      colorSpace: "DeviceRGB",
+      bitsPerComponent: 8,
+      graphicsState: createGraphicsState({
+        ctm: [100, 0, 0, 50, 20, 10],
+      }),
+    };
+
+    const page: PdfPage = {
+      pageNumber: 1,
+      width: 200,
+      height: 100,
+      elements: [image],
+    };
+
+    const customUrl = "blob:test/custom-123";
+    const resolver = () => customUrl;
+
+    const svgNode = renderPdfPageToSvgNode(page, {
+      backgroundColor: "transparent",
+      imageUrlResolver: resolver,
+    });
+    const svg = serializeElement(svgNode);
+
+    expect(svg).toContain(`href="${customUrl}"`);
+    expect(svg).toContain(`xlink:href="${customUrl}"`);
+    // Should NOT contain a data: URL — the custom resolver was used instead.
+    expect(svg).not.toContain("data:image/png;base64,");
+  });
+
+  it("falls back to data URL when imageUrlResolver is not provided", () => {
+    const pngBytes = Uint8Array.from(
+      Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO2ZQfQAAAAASUVORK5CYII=", "base64"),
+    );
+
+    const image: PdfImage = {
+      type: "image",
+      data: pngBytes,
+      width: 1,
+      height: 1,
+      colorSpace: "DeviceRGB",
+      bitsPerComponent: 8,
+      graphicsState: createGraphicsState({
+        ctm: [100, 0, 0, 50, 20, 10],
+      }),
+    };
+
+    const page: PdfPage = {
+      pageNumber: 1,
+      width: 200,
+      height: 100,
+      elements: [image],
+    };
+
+    const svgNode = renderPdfPageToSvgNode(page, { backgroundColor: "transparent" });
+    const svg = serializeElement(svgNode);
+
+    expect(svg).toContain("data:image/png;base64,");
   });
 });

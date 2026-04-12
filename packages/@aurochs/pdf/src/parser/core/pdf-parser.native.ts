@@ -109,6 +109,161 @@ export type PdfBuildContext = Readonly<{
   readonly buildOptions: Required<PdfBuildOptions>;
 }>;
 
+// =============================================================================
+// Source context — holds the loaded PDF structure and extracted fonts
+// =============================================================================
+
+/**
+ * Intermediate context that captures the expensive one-time work of loading
+ * a PDF binary: structure parsing and font extraction.
+ *
+ * Created by `createPdfSourceContext()`, consumed by `parsePagesFromSourceContext()`
+ * and by the renderer/builder for font resolution and metadata access.
+ *
+ * This separates the "load once" cost from the "parse per page" cost, enabling
+ * incremental page parsing without repeating the structure load.
+ */
+export type PdfSourceContext = Readonly<{
+  /** Total number of pages in the PDF. */
+  readonly pageCount: number;
+  /** Document metadata (title, author, etc.). */
+  readonly metadata: PdfDocument["metadata"];
+  /** Embedded fonts extracted from the PDF. */
+  readonly embeddedFonts: readonly PdfEmbeddedFont[] | undefined;
+  /** Get the dimensions of a page by 1-based page number. */
+  readonly getPageDimensions: (pageNumber: number) => { readonly width: number; readonly height: number } | null;
+}>;
+
+/** Options for creating a source context. */
+export type CreatePdfSourceContextOptions = Readonly<{
+  readonly encryption?: PdfLoadEncryption;
+}>;
+
+/**
+ * Create a source context from raw PDF bytes.
+ *
+ * This performs the expensive one-time work:
+ *  1. Load the PDF binary structure (xref, catalog, page tree)
+ *  2. Extract embedded fonts for metrics
+ *
+ * The returned context can then be passed to `parsePagesFromSourceContext()`
+ * to parse individual pages without repeating this work.
+ */
+export async function createPdfSourceContext(
+  data: Uint8Array | ArrayBuffer,
+  options: CreatePdfSourceContextOptions = {},
+): Promise<PdfSourceContext> {
+  const loaded = await loadPdfSourceInternal(data, options);
+  const context: PdfSourceContext = {
+    pageCount: loaded.nativePages.length,
+    metadata: loaded.metadata,
+    embeddedFonts: loaded.embeddedFonts,
+    getPageDimensions(pageNumber: number) {
+      if (pageNumber < 1 || pageNumber > loaded.nativePages.length) { return null; }
+      return loaded.nativePages[pageNumber - 1]!.getSize();
+    },
+  };
+  sourceContextInternals.set(context, loaded);
+  return context;
+}
+
+/**
+ * Parse specific pages from a source context.
+ *
+ * The source context already holds the loaded PDF structure and fonts,
+ * so this only performs the per-page content stream parsing.
+ */
+export async function parsePagesFromSourceContext(
+  context: PdfSourceContext,
+  pageNumbers: readonly number[],
+  options: Omit<PdfParseOptions, "pages" | "encryption"> = {},
+): Promise<PdfParsedDocument> {
+  // The context must be one created by createPdfSourceContext (internal loaded state).
+  const loaded = sourceContextInternals.get(context);
+  if (!loaded) {
+    throw new Error("Invalid source context: must be created by createPdfSourceContext()");
+  }
+
+  const parseOptions: Required<PdfParseOptions> = { ...DEFAULT_PARSE_OPTIONS, ...options };
+  validateParseOptions(parseOptions);
+
+  const validPageNumbers = pageNumbers.filter((p) => p >= 1 && p <= loaded.nativePages.length);
+  const pages: PdfParsedPage[] = [];
+  for (const pageNum of validPageNumbers) {
+    const nativePage = loaded.nativePages[pageNum - 1]!;
+    const parsedPage = await parsePageSource({
+      page: nativePage,
+      pageNumber: pageNum,
+      parseOptions,
+      embeddedFontMetrics: loaded.embeddedFontMetrics,
+    });
+    pages.push(parsedPage);
+  }
+  return { pages, metadata: loaded.metadata, embeddedFonts: loaded.embeddedFonts };
+}
+
+// --- Internal state management for source contexts ---
+
+type LoadedPdfSource = {
+  readonly nativePages: readonly NativePdfPage[];
+  readonly metadata: PdfDocument["metadata"];
+  readonly embeddedFonts: readonly PdfEmbeddedFont[] | undefined;
+  readonly embeddedFontMetrics: Map<string, { ascender: number; descender: number }>;
+};
+
+/**
+ * WeakMap from PdfSourceContext to internal loaded state.
+ * This ensures the internal NativePdfDocument is not exposed in the public type
+ * while remaining accessible for page parsing.
+ */
+const sourceContextInternals = new WeakMap<PdfSourceContext, LoadedPdfSource>();
+
+async function loadPdfSourceInternal(
+  data: Uint8Array | ArrayBuffer,
+  options: CreatePdfSourceContextOptions,
+): Promise<LoadedPdfSource> {
+  const pdfDoc = await loadNativePdfDocumentForParser(data, {
+    purpose: "parse",
+    encryption: options.encryption ?? { mode: "auto" },
+    updateMetadata: false,
+  });
+
+  function tryExtractEmbeddedFonts() {
+    try {
+      return extractEmbeddedFontsFromNativePages(pdfDoc.getPages());
+    } catch (error) {
+      console.warn("Failed to extract embedded fonts:", error);
+      return [];
+    }
+  }
+  const embeddedFontsRaw = tryExtractEmbeddedFonts();
+
+  const embeddedFontMetrics = new Map<string, { ascender: number; descender: number }>();
+  for (const font of embeddedFontsRaw) {
+    if (font.metrics) {
+      embeddedFontMetrics.set(font.fontFamily, font.metrics);
+    }
+  }
+
+  const nativePages = pdfDoc.getPages();
+  const metadata = pdfDoc.getMetadata();
+  const embeddedFonts = buildEmbeddedFonts(embeddedFontsRaw);
+
+  return { nativePages, metadata, embeddedFonts, embeddedFontMetrics };
+}
+
+function validateParseOptions(options: Required<PdfParseOptions>): void {
+  if (!Number.isFinite(options.softMaskVectorMaxSize) || options.softMaskVectorMaxSize < 0) {
+    throw new Error(`softMaskVectorMaxSize must be >= 0 (got ${options.softMaskVectorMaxSize})`);
+  }
+  if (!Number.isFinite(options.shadingMaxSize) || options.shadingMaxSize < 0) {
+    throw new Error(`shadingMaxSize must be >= 0 (got ${options.shadingMaxSize})`);
+  }
+  if (!Number.isFinite(options.clipPathMaxSize) || options.clipPathMaxSize < 0) {
+    throw new Error(`clipPathMaxSize must be >= 0 (got ${options.clipPathMaxSize})`);
+  }
+}
+
 const DEFAULT_JPX_DECODE: JpxDecodeFn = () => {
   throw new Error("/JPXDecode requires options.jpxDecode");
 };
@@ -177,55 +332,24 @@ export async function parsePdfSourceNative(
   options: PdfParseOptions = {},
 ): Promise<PdfParsedDocument> {
   const parseOptions = { ...DEFAULT_PARSE_OPTIONS, ...options };
-  if (!Number.isFinite(parseOptions.softMaskVectorMaxSize) || parseOptions.softMaskVectorMaxSize < 0) {
-    throw new Error(`softMaskVectorMaxSize must be >= 0 (got ${parseOptions.softMaskVectorMaxSize})`);
-  }
-  if (!Number.isFinite(parseOptions.shadingMaxSize) || parseOptions.shadingMaxSize < 0) {
-    throw new Error(`shadingMaxSize must be >= 0 (got ${parseOptions.shadingMaxSize})`);
-  }
-  if (!Number.isFinite(parseOptions.clipPathMaxSize) || parseOptions.clipPathMaxSize < 0) {
-    throw new Error(`clipPathMaxSize must be >= 0 (got ${parseOptions.clipPathMaxSize})`);
-  }
+  validateParseOptions(parseOptions);
 
-  const pdfDoc = await loadNativePdfDocumentForParser(data, {
-    purpose: "parse",
-    encryption: parseOptions.encryption,
-    updateMetadata: false,
-  });
-
-  // Extract embedded fonts first to get accurate metrics (best-effort).
-  function tryExtractEmbeddedFonts() {
-    try {
-      return extractEmbeddedFontsFromNativePages(pdfDoc.getPages());
-    } catch (error) {
-      console.warn("Failed to extract embedded fonts:", error);
-      return [];
-    }
-  }
-  const embeddedFontsRaw = tryExtractEmbeddedFonts();
-
-  const embeddedFontMetrics = new Map<string, { ascender: number; descender: number }>();
-  for (const font of embeddedFontsRaw) {
-    if (font.metrics) {
-      embeddedFontMetrics.set(font.fontFamily, font.metrics);
-    }
-  }
-
-  const pdfPages = pdfDoc.getPages();
-  const pagesToParse = resolvePagesToParse(parseOptions.pages, pdfPages.length);
+  const loaded = await loadPdfSourceInternal(data, { encryption: parseOptions.encryption });
+  const pagesToParse = resolvePagesToParse(parseOptions.pages, loaded.nativePages.length);
 
   const pages: PdfParsedPage[] = [];
   for (const pageNum of pagesToParse) {
-    const nativePage = pdfPages[pageNum - 1]!;
-    const parsedPage = await parsePageSource({ page: nativePage, pageNumber: pageNum, parseOptions, embeddedFontMetrics });
+    const nativePage = loaded.nativePages[pageNum - 1]!;
+    const parsedPage = await parsePageSource({
+      page: nativePage,
+      pageNumber: pageNum,
+      parseOptions,
+      embeddedFontMetrics: loaded.embeddedFontMetrics,
+    });
     pages.push(parsedPage);
   }
 
-  const metadata = pdfDoc.getMetadata();
-
-  const embeddedFonts = buildEmbeddedFonts(embeddedFontsRaw);
-
-  return { pages, metadata, embeddedFonts };
+  return { pages, metadata: loaded.metadata, embeddedFonts: loaded.embeddedFonts };
 }
 
 /** Context stage: combine parser output with explicit builder options. */

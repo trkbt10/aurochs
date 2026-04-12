@@ -21,7 +21,7 @@ import {
   type ChangeEvent,
 } from "react";
 import type { PdfText } from "@aurochs/pdf";
-import type { FontProvider } from "@aurochs/pdf/domain/font";
+import type { FontProvider } from "@aurochs-renderer/pdf";
 import { renderPdfElementToSvgNodes, resolveTextFontMetrics, resolveTextAnchor } from "@aurochs-renderer/pdf/svg";
 import { svgChildrenToJsx as svgFragmentToJsx } from "@aurochs-renderer/svg";
 import {

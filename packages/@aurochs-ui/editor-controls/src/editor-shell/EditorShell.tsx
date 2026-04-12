@@ -79,6 +79,11 @@ function buildLayerFromPlacement(
 }
 
 // ---------------------------------------------------------------------------
+// Stable center content bridge
+// ---------------------------------------------------------------------------
+
+
+// ---------------------------------------------------------------------------
 // EditorShell
 // ---------------------------------------------------------------------------
 
@@ -99,6 +104,7 @@ export function EditorShell({
   className,
 }: EditorShellProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+
   const containerWidth = useContainerWidth(containerRef);
   const effectiveBreakpoints = breakpoints ?? DEFAULT_EDITOR_LAYOUT_BREAKPOINTS;
 

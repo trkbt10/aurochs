@@ -3,13 +3,19 @@
  *
  * Displays PDF pages with navigation controls.
  * Uses shared ViewerContainer/ViewerContent/ViewerToolbar components.
+ *
+ * Performance: uses PdfRenderSession from @aurochs-renderer/pdf which loads
+ * the PDF structure and extracts fonts once, then parses and builds individual
+ * pages on demand with LRU caching. Images are resolved via PdfImageCache
+ * (Object URL + deferred PNG encoding for raw pixel data).
  */
 
-import { useState, useCallback, useEffect, type CSSProperties, type ReactNode } from "react";
+import { useState, useEffect, useMemo, type CSSProperties, type ReactNode } from "react";
 import { colorTokens, spacingTokens, shadowTokens } from "@aurochs-ui/ui-components/design-tokens";
-import { buildPdf } from "@aurochs-builder/pdf";
-import type { PdfDocument } from "@aurochs/pdf";
-import { createFontProviderForDocument } from "@aurochs/pdf/domain/font";
+import type { PdfPage } from "@aurochs/pdf";
+import type { PdfRenderSession, FontProvider, PdfImageUrlResolver } from "@aurochs-renderer/pdf";
+import { createPdfRenderSession } from "@aurochs-renderer/pdf";
+import { usePdfImageCache } from "@aurochs-renderer/pdf/react";
 import { renderPdfPageToSvgNode } from "@aurochs-renderer/pdf/svg";
 import { svgElementToJsx } from "@aurochs-renderer/svg";
 import {
@@ -35,46 +41,104 @@ export type PdfViewerProps = Readonly<{
 const statusStyle: CSSProperties = { padding: spacingTokens.lg };
 const errorStyle: CSSProperties = { padding: spacingTokens.lg, color: colorTokens.accent.danger };
 const canvasStyle: CSSProperties = { backgroundColor: colorTokens.background.canvas };
-const pageNotFoundStyle: CSSProperties = { color: colorTokens.overlay.lightText };
 const pageContainerStyle: CSSProperties = { backgroundColor: colorTokens.background.primary, boxShadow: shadowTokens.md, flexShrink: 0 };
+
+// =============================================================================
+// Viewer states
+// =============================================================================
 
 type ViewerState =
   | { readonly status: "idle" }
   | { readonly status: "loading" }
-  | { readonly status: "loaded"; readonly document: PdfDocument }
+  | { readonly status: "ready"; readonly session: PdfRenderSession }
   | { readonly status: "error"; readonly message: string };
+
+type PageState =
+  | { readonly status: "idle" }
+  | { readonly status: "loading" }
+  | { readonly status: "loaded"; readonly page: PdfPage }
+  | { readonly status: "error"; readonly message: string };
+
+// =============================================================================
+// Component
+// =============================================================================
 
 /**
  * PDF Viewer component that loads and displays PDF files.
+ *
+ * Creates a PdfRenderSession on initial load, which performs the expensive
+ * one-time work (PDF structure load + font extraction). Individual pages
+ * are then parsed and built on demand via the session, with LRU caching.
  */
 export function PdfViewer({ data, className }: PdfViewerProps): ReactNode {
   const [state, setState] = useState<ViewerState>({ status: "idle" });
+  const [pageState, setPageState] = useState<PageState>({ status: "idle" });
 
-  const totalPages = state.status === "loaded" ? state.document.pages.length : 0;
+  const totalPages = state.status === "ready" ? state.session.pageCount : 0;
   const nav = useItemNavigation({ totalItems: Math.max(1, totalPages) });
 
-  const loadPdf = useCallback(async () => {
+  // Create session: loads PDF structure and extracts fonts once.
+  useEffect(() => {
+    if (state.status !== "idle") { return; }
+    if (!data) {
+      setState({ status: "error", message: "No PDF data provided" });
+      return;
+    }
+
+    let cancelled = false;
     setState({ status: "loading" });
 
-    try {
-      if (data) {
-        const document = await buildPdf({ data });
-        setState({ status: "loaded", document });
-      } else {
-        setState({ status: "error", message: "No PDF data provided" });
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      setState({ status: "error", message });
-    }
-  }, [data]);
+    createPdfRenderSession(data)
+      .then((session) => {
+        if (cancelled) { return; }
+        setState({ status: "ready", session });
+      })
+      .catch((err) => {
+        if (cancelled) { return; }
+        const message = err instanceof Error ? err.message : String(err);
+        setState({ status: "error", message });
+      });
 
-  // Auto-load on mount or when data changes
+    return () => {
+      cancelled = true;
+    };
+  }, [state.status, data]);
+
+  // Dispose session on unmount.
   useEffect(() => {
-    if (state.status === "idle") {
-      loadPdf();
-    }
-  }, [state.status, loadPdf]);
+    if (state.status !== "ready") { return; }
+    return () => { state.session.dispose(); };
+  }, [state]);
+
+  // Build the current page on demand.
+  const currentPageNumber = nav.currentNumber; // 1-based
+
+  useEffect(() => {
+    if (state.status !== "ready") { return; }
+    if (currentPageNumber < 1 || currentPageNumber > state.session.pageCount) { return; }
+
+    let cancelled = false;
+    setPageState({ status: "loading" });
+
+    state.session.buildPage(currentPageNumber)
+      .then((page) => {
+        if (cancelled) { return; }
+        setPageState({ status: "loaded", page });
+      })
+      .catch((err) => {
+        if (cancelled) { return; }
+        const message = err instanceof Error ? err.message : String(err);
+        setPageState({ status: "error", message });
+      });
+
+    return () => { cancelled = true; };
+  }, [state, currentPageNumber]);
+
+  // Image cache: subscribe to session's cache for deferred-encode re-renders.
+  const sessionImageCache = state.status === "ready" ? state.session.imageCache : undefined;
+  const { imageUrlResolver } = usePdfImageCache(sessionImageCache);
+
+  const fontProvider = state.status === "ready" ? state.session.fontProvider : undefined;
 
   return (
     <ViewerContainer className={className}>
@@ -84,7 +148,7 @@ export function PdfViewer({ data, className }: PdfViewerProps): ReactNode {
         <div style={errorStyle}>Error: {state.message}</div>
       )}
 
-      {state.status === "loaded" && (
+      {state.status === "ready" && (
         <>
           <ViewerToolbar
             left={
@@ -106,7 +170,7 @@ export function PdfViewer({ data, className }: PdfViewerProps): ReactNode {
           />
 
           <ViewerContent style={canvasStyle}>
-            {renderPdfPage(state.document, nav.currentIndex)}
+            <PageRenderer pageState={pageState} fontProvider={fontProvider} imageUrlResolver={imageUrlResolver} />
           </ViewerContent>
         </>
       )}
@@ -114,17 +178,34 @@ export function PdfViewer({ data, className }: PdfViewerProps): ReactNode {
   );
 }
 
-function renderPdfPage(document: PdfDocument, pageIndex: number): ReactNode {
-  const page = document.pages[pageIndex];
-  if (!page) {
-    return <div style={pageNotFoundStyle}>Page not found</div>;
+// =============================================================================
+// Page renderer
+// =============================================================================
+
+type PageRendererProps = {
+  readonly pageState: PageState;
+  readonly fontProvider: FontProvider | undefined;
+  readonly imageUrlResolver: PdfImageUrlResolver | undefined;
+};
+
+function PageRenderer({ pageState, fontProvider, imageUrlResolver }: PageRendererProps): ReactNode {
+  const svgJsx = useMemo(() => {
+    if (pageState.status !== "loaded" || !fontProvider) { return null; }
+    const svgNode = renderPdfPageToSvgNode(pageState.page, { fontProvider, imageUrlResolver });
+    return svgElementToJsx(svgNode);
+  }, [pageState, fontProvider, imageUrlResolver]);
+
+  if (pageState.status === "idle" || pageState.status === "loading") {
+    return <div style={statusStyle}>Loading page...</div>;
   }
 
-  const fontProvider = createFontProviderForDocument(document);
-  const svgNode = renderPdfPageToSvgNode(page, { fontProvider });
+  if (pageState.status === "error") {
+    return <div style={errorStyle}>Error: {pageState.message}</div>;
+  }
+
   return (
     <div style={pageContainerStyle}>
-      {svgElementToJsx(svgNode)}
+      {svgJsx}
     </div>
   );
 }

@@ -20,7 +20,8 @@ import type { MenuEntry } from "@aurochs-ui/ui-components/context-menu";
 import { InspectorPanelWithTabs, type InspectorTab } from "@aurochs-ui/editor-controls/ui";
 import type { PdfDocument, PdfElement, PdfElementId } from "@aurochs/pdf";
 import { parseElementId } from "@aurochs/pdf";
-import { createFontProviderForDocument } from "@aurochs/pdf/domain/font";
+import { createFontProviderForDocument } from "@aurochs-renderer/pdf";
+import { usePdfImageCache } from "@aurochs-renderer/pdf/react";
 import { renderPdfPageToSvgNode, svgChildrenToJsx, createDocumentQuery } from "@aurochs-renderer/pdf/svg";
 
 import { canUndo, canRedo } from "@aurochs-ui/editor-core/history";
@@ -64,6 +65,10 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
     () => createFontProviderForDocument(document),
     [document.embeddedFonts],
   );
+
+  // Image cache: caches Object URLs with deferred PNG encoding for raw pixel data.
+  // The hook manages lifecycle (create/dispose) and triggers re-render on encode completion.
+  const { imageUrlResolver } = usePdfImageCache();
 
   const handlePageSelect = useCallback(
     (pageIndex: number) => dispatch({ type: "SET_PAGE", pageIndex }),
@@ -254,6 +259,7 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
           pages={document.pages}
           currentPageIndex={state.currentPageIndex}
           fontProvider={fontProvider}
+          imageUrlResolver={imageUrlResolver}
           onPageSelect={handlePageSelect}
           onAddPage={handleAddPage}
           onDeletePages={handleDeletePages}
@@ -345,9 +351,9 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
 
   const contentChildren = useMemo(() => {
     if (!currentPage) { return null; }
-    const svgNode = renderPdfPageToSvgNode(currentPage, { excludeElementIndices: excludeSet, fontProvider });
+    const svgNode = renderPdfPageToSvgNode(currentPage, { excludeElementIndices: excludeSet, fontProvider, imageUrlResolver });
     return svgChildrenToJsx(svgNode, "pdf-page");
-  }, [currentPage, excludeSet, fontProvider]);
+  }, [currentPage, excludeSet, fontProvider, imageUrlResolver]);
 
   // ---- Text edit controller (PPTX-style: SVG text + cursor + selection in one component) ----
   // Delegates text rendering to renderPdfElementToSvg (same SoT as contentSvg)

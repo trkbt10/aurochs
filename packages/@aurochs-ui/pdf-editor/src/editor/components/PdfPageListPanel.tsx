@@ -9,7 +9,7 @@
 import { useMemo } from "react";
 import type { PdfPage } from "@aurochs/pdf";
 import { PDF_PAGE_SIZES } from "@aurochs/pdf";
-import type { FontProvider } from "@aurochs/pdf/domain/font";
+import type { FontProvider, PdfImageUrlResolver } from "@aurochs-renderer/pdf";
 import { renderPdfPageToSvgNode } from "@aurochs-renderer/pdf/svg";
 import { svgElementToJsx } from "@aurochs-renderer/svg";
 import { ItemList } from "@aurochs-ui/editor-controls/item-list";
@@ -23,6 +23,7 @@ export type PdfPageListPanelProps = {
   readonly pages: readonly PdfPage[];
   readonly currentPageIndex: number;
   readonly fontProvider?: FontProvider;
+  readonly imageUrlResolver?: PdfImageUrlResolver;
   readonly onPageSelect: (pageIndex: number) => void;
   readonly onAddPage?: (atIndex: number) => void;
   readonly onDeletePages?: (pageIndices: readonly number[]) => void;
@@ -39,10 +40,10 @@ type PdfPageItem = {
 // Page Thumbnail
 // =============================================================================
 
-function PageThumbnail({ page, fontProvider }: { readonly page: PdfPage; readonly fontProvider?: FontProvider }) {
+function PageThumbnail({ page, fontProvider, imageUrlResolver }: { readonly page: PdfPage; readonly fontProvider?: FontProvider; readonly imageUrlResolver?: PdfImageUrlResolver }) {
   const svgElement = useMemo(
-    () => svgElementToJsx(renderPdfPageToSvgNode(page, { width: "100%", height: "100%", fontProvider })),
-    [page, fontProvider],
+    () => svgElementToJsx(renderPdfPageToSvgNode(page, { width: "100%", height: "100%", fontProvider, imageUrlResolver })),
+    [page, fontProvider, imageUrlResolver],
   );
   return (
     <div style={thumbnailInnerStyle}>
@@ -60,6 +61,7 @@ export function PdfPageListPanel({
   pages,
   currentPageIndex,
   fontProvider,
+  imageUrlResolver,
   onPageSelect,
   onAddPage,
   onDeletePages,
@@ -88,7 +90,7 @@ export function PdfPageListPanel({
       mode={hasOperations ? "editable" : "readonly"}
       activeItemId={currentPageIndex}
       itemLabel="Page"
-      renderThumbnail={(item) => <PageThumbnail page={item.page} fontProvider={fontProvider} />}
+      renderThumbnail={(item) => <PageThumbnail page={item.page} fontProvider={fontProvider} imageUrlResolver={imageUrlResolver} />}
       onItemClick={(id) => onPageSelect(id)}
       onAddItem={onAddPage}
       onDeleteItems={onDeletePages}

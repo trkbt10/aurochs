@@ -2,3 +2,4 @@
 
 export { PdfPageRenderer, type PdfPageRendererProps } from "./PdfPageRenderer";
 export { PdfDocumentRenderer, type PdfDocumentRendererProps } from "./PdfDocumentRenderer";
+export { usePdfImageCache, type UsePdfImageCacheResult } from "./usePdfImageCache";

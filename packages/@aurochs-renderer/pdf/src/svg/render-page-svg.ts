@@ -21,7 +21,7 @@ import type {
 import type { FontProvider, ResolvedFont } from "@aurochs/pdf/domain/font";
 import { createFontProvider } from "@aurochs/pdf/domain/font";
 import { getPathBounds, getElementRotationDeg } from "@aurochs/pdf";
-import type { PdfSvgRenderOptions } from "../types";
+import type { PdfSvgRenderOptions, PdfImageUrlResolver } from "../types";
 import { toSvgPaint } from "./color-to-svg";
 import { buildPdfImageDataUrl } from "./image-data-url";
 import { formatSvgNumber } from "./number-format";
@@ -404,14 +404,14 @@ function buildImageTransform(ctm: PdfMatrix, pageHeight: number): readonly numbe
   return [xAxis.x, xAxis.y, yAxis.x, yAxis.y, topLeft.x, topLeft.y] as const;
 }
 
-function renderImageNode(image: PdfImage, pageHeight: number, registry: ClipPathRegistry): XmlElement {
+function renderImageNode(image: PdfImage, pageHeight: number, registry: ClipPathRegistry, resolveImageUrl: PdfImageUrlResolver): XmlElement {
   const clipRef = registerClipPath(image.graphicsState.clipBBox, pageHeight, registry);
-  const dataUrl = buildPdfImageDataUrl(image);
+  const imageUrl = resolveImageUrl(image);
   const matrix = buildImageTransform(image.graphicsState.ctm, pageHeight);
 
   const imageEl = svgImage(svgAttrs([
-    ["href", dataUrl],
-    ["xlink:href", dataUrl],
+    ["href", imageUrl],
+    ["xlink:href", imageUrl],
     ["width", "1"],
     ["height", "1"],
     ["preserveAspectRatio", "none"],
@@ -431,7 +431,7 @@ function renderImageNode(image: PdfImage, pageHeight: number, registry: ClipPath
 // Element dispatch
 // =============================================================================
 
-function renderElementNode(element: PdfElement, pageHeight: number, registry: ClipPathRegistry, fontProvider: FontProvider): XmlNode | SvgFragment | null {
+function renderElementNode(element: PdfElement, pageHeight: number, registry: ClipPathRegistry, fontProvider: FontProvider, resolveImageUrl: PdfImageUrlResolver): XmlNode | SvgFragment | null {
   if (element.type === "path") {
     return renderPathNode(element, pageHeight, registry);
   }
@@ -444,7 +444,7 @@ function renderElementNode(element: PdfElement, pageHeight: number, registry: Cl
     return renderPdfTableNode(element, pageHeight);
   }
 
-  return renderImageNode(element, pageHeight, registry);
+  return renderImageNode(element, pageHeight, registry, resolveImageUrl);
 }
 
 // =============================================================================
@@ -457,10 +457,11 @@ function renderElementNode(element: PdfElement, pageHeight: number, registry: Cl
  * Returns a fragment because the element may require clip-path definitions
  * that must be placed in a `<defs>` block alongside the element markup.
  */
-export function renderPdfElementToSvgNodes(element: PdfElement, pageHeight: number, fontProvider?: FontProvider): SvgFragment {
+export function renderPdfElementToSvgNodes(element: PdfElement, pageHeight: number, fontProvider?: FontProvider, imageUrlResolver?: PdfImageUrlResolver): SvgFragment {
   const provider = fontProvider ?? createFontProvider();
+  const resolveImageUrl = imageUrlResolver ?? buildPdfImageDataUrl;
   const registry = createClipPathRegistry();
-  const content = renderElementNode(element, pageHeight, registry, provider);
+  const content = renderElementNode(element, pageHeight, registry, provider, resolveImageUrl);
 
   const nodes: XmlNode[] = [];
 
@@ -507,6 +508,7 @@ export function renderPdfPageToSvgNode(page: PdfPage, options: PdfSvgRenderOptio
   }
 
   const fontProvider = options.fontProvider ?? createFontProvider();
+  const resolveImageUrl: PdfImageUrlResolver = options.imageUrlResolver ?? buildPdfImageDataUrl;
   const registry = createClipPathRegistry();
   const bodyNodes: XmlNode[] = [];
 
@@ -520,7 +522,7 @@ export function renderPdfPageToSvgNode(page: PdfPage, options: PdfSvgRenderOptio
   const excludeSet = options.excludeElementIndices;
   for (let i = 0; i < page.elements.length; i++) {
     if (excludeSet?.has(i)) { continue; }
-    const rendered = renderElementNode(page.elements[i], page.height, registry, fontProvider);
+    const rendered = renderElementNode(page.elements[i], page.height, registry, fontProvider, resolveImageUrl);
     if (rendered !== null) {
       if (Array.isArray(rendered)) {
         bodyNodes.push(...rendered);
