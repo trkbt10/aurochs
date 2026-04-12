@@ -7,7 +7,8 @@
 
 import { deflateRaw } from "pako";
 import { compressZstd } from "../../compression";
-import type { KiwiSchema } from "../../types";
+import { IDENTITY_MATRIX } from "../../matrix";
+import type { FigMatrix, KiwiSchema } from "../../types";
 import { StreamingFigEncoder } from "../../kiwi/stream";
 import figmaSchemaJson from "../figma-schema.json";
 import type { TextNodeData } from "../text";
@@ -102,7 +103,7 @@ function _createFigFileBuilder() {
       name,
     });
     // Add required Document fields for Figma compatibility
-    node.transform = { m00: 1, m01: 0, m02: 0, m10: 0, m11: 1, m12: 0 };
+    node.transform = IDENTITY_MATRIX;
     node.strokeWeight = 0;
     node.strokeAlign = { value: 0, name: "CENTER" };
     node.strokeJoin = { value: 1, name: "BEVEL" };
@@ -124,7 +125,7 @@ function _createFigFileBuilder() {
       name,
     });
     // Add Canvas-specific fields for Figma compatibility
-    node.transform = { m00: 1, m01: 0, m02: 0, m10: 0, m11: 1, m12: 0 };
+    node.transform = IDENTITY_MATRIX;
     node.backgroundOpacity = 1;
     node.strokeWeight = 0;
     node.strokeAlign = { value: 0, name: "CENTER" };
@@ -153,7 +154,7 @@ function _createFigFileBuilder() {
       name: "Internal Only Canvas",
       visible: false,
       opacity: 1,
-      transform: { m00: 1, m01: 0, m02: 0, m10: 0, m11: 1, m12: 0 },
+      transform: IDENTITY_MATRIX,
       strokeWeight: 0,
       strokeAlign: { value: 0, name: "CENTER" },
       strokeJoin: { value: 1, name: "BEVEL" },
@@ -1101,7 +1102,7 @@ function _createFigFileBuilder() {
       if (!resolution) {continue;}
 
       if (resolution.posChanged || resolution.sizeChanged) {
-        const childTransform = child.transform as { m00: number; m01: number; m02: number; m10: number; m11: number; m12: number };
+        const childTransform = child.transform as FigMatrix;
         derived.push({
           guidPath: { guids: [...guidPrefix, childGuid] },
           transform: {

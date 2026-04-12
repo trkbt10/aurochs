@@ -54,6 +54,14 @@
       "types": "./src/constants/index.ts",
       "default": "./src/constants/index.ts"
     },
+    "./color": {
+      "types": "./src/color.ts",
+      "default": "./src/color.ts"
+    },
+    "./matrix": {
+      "types": "./src/matrix.ts",
+      "default": "./src/matrix.ts"
+    },
     "./symbols": {
       "types": "./src/symbols/index.ts",
       "default": "./src/symbols/index.ts"

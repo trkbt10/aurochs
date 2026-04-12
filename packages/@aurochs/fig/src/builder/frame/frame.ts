@@ -2,6 +2,7 @@
  * @file Frame node builder
  */
 
+import { createTranslationMatrix } from "../../matrix";
 import type { Color, StackPadding } from "../types";
 import type { ExportSettings, FrameNodeData } from "./types";
 import {
@@ -174,7 +175,7 @@ function createFrameNodeBuilder(localID: number, parentID: number): FrameNodeBui
         parentID,
         name: state.name,
         size: { x: state.width, y: state.height },
-        transform: { m00: 1, m01: 0, m02: state.x, m10: 0, m11: 1, m12: state.y },
+        transform: createTranslationMatrix(state.x, state.y),
         fillPaints: [{ type: { value: 0, name: "SOLID" }, color: state.fillColor, opacity: 1, visible: true, blendMode: { value: 1, name: "NORMAL" } }],
         visible: true,
         opacity: 1,

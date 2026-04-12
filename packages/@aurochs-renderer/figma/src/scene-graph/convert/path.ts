@@ -2,41 +2,9 @@
  * @file Convert Figma geometry data to scene graph PathContours
  */
 
-import { decodePathCommands, type FigBlob, type PathCommand as FigPathCommand } from "@aurochs/fig/parser";
+import { decodePathCommands, type FigBlob } from "@aurochs/fig/parser";
 import type { FigFillGeometry } from "@aurochs/fig/types";
-import type { PathContour, PathCommand } from "../types";
-
-/**
- * Convert @aurochs/fig PathCommand to scene graph PathCommand
- */
-function convertFigPathCommand(cmd: FigPathCommand): PathCommand {
-  switch (cmd.type) {
-    case "M":
-      return { type: "M", x: cmd.x, y: cmd.y };
-    case "L":
-      return { type: "L", x: cmd.x, y: cmd.y };
-    case "C":
-      return {
-        type: "C",
-        x1: cmd.cp1x,
-        y1: cmd.cp1y,
-        x2: cmd.cp2x,
-        y2: cmd.cp2y,
-        x: cmd.x,
-        y: cmd.y,
-      };
-    case "Q":
-      return {
-        type: "Q",
-        x1: cmd.cpx,
-        y1: cmd.cpy,
-        x: cmd.x,
-        y: cmd.y,
-      };
-    case "Z":
-      return { type: "Z" };
-  }
-}
+import type { PathCommand, PathContour } from "../types";
 
 /**
  * Map Figma winding rule to scene graph format
@@ -141,10 +109,9 @@ export function decodeGeometryToContours(
     const blob = blobs[blobIndex];
     if (!blob) {continue;}
 
-    const figCommands = decodePathCommands(blob);
-    if (figCommands.length === 0) {continue;}
+    const commands = decodePathCommands(blob);
+    if (commands.length === 0) {continue;}
 
-    const commands = figCommands.map(convertFigPathCommand);
     const windingRule = mapWindingRule(geom.windingRule);
 
     contours.push({ commands, windingRule });

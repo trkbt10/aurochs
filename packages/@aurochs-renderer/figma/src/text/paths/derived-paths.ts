@@ -5,7 +5,7 @@
  * These paths achieve exact visual match (0% diff) with Figma's export.
  */
 
-import { decodePathCommands, type FigBlob, type PathCommand as FigPathCommand } from "@aurochs/fig/parser";
+import { decodePathCommands, type FigBlob } from "@aurochs/fig/parser";
 import type { PathCommand } from "../../font/types";
 import type { PathContour, DecorationRect, TextPathResult } from "./types";
 
@@ -54,41 +54,6 @@ export type DerivedTextData = {
   readonly fontMetaData?: readonly unknown[];
   readonly derivedLines?: readonly unknown[];
 };
-
-/**
- * Convert @aurochs/fig PathCommand to font PathCommand format
- *
- * The fig parser uses cp1x/cp1y/cp2x/cp2y and cpx/cpy names.
- * The font module uses x1/y1/x2/y2 names.
- */
-function convertFigPathCommand(cmd: FigPathCommand): PathCommand {
-  switch (cmd.type) {
-    case "M":
-      return { type: "M", x: cmd.x, y: cmd.y };
-    case "L":
-      return { type: "L", x: cmd.x, y: cmd.y };
-    case "C":
-      return {
-        type: "C",
-        x1: cmd.cp1x,
-        y1: cmd.cp1y,
-        x2: cmd.cp2x,
-        y2: cmd.cp2y,
-        x: cmd.x,
-        y: cmd.y,
-      };
-    case "Q":
-      return {
-        type: "Q",
-        x1: cmd.cpx,
-        y1: cmd.cpy,
-        x: cmd.x,
-        y: cmd.y,
-      };
-    case "Z":
-      return { type: "Z" };
-  }
-}
 
 /**
  * Transform normalized glyph path commands to screen coordinates
@@ -156,13 +121,10 @@ export function extractDerivedGlyphCommands(glyph: DerivedGlyph, blobs: readonly
     return null;
   }
 
-  const figCommands = decodePathCommands(blob);
-  if (figCommands.length === 0) {
+  const commands = decodePathCommands(blob);
+  if (commands.length === 0) {
     return null;
   }
-
-  // Convert from fig PathCommand format to font PathCommand format
-  const commands = figCommands.map(convertFigPathCommand);
 
   // Transform to screen coordinates
   return transformGlyphCommands(commands, glyph.position, glyph.fontSize);

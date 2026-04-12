@@ -5,19 +5,15 @@
  * Unlike FRAME, GROUP nodes don't have their own fill or background.
  */
 
+import type { FigMatrix } from "../../types";
+import { createTranslationMatrix, createRotationMatrix, multiplyMatrices } from "../../matrix";
+
 export type GroupNodeData = {
   readonly localID: number;
   readonly parentID: number;
   readonly name: string;
   readonly size?: { x: number; y: number };
-  readonly transform: {
-    m00: number;
-    m01: number;
-    m02: number;
-    m10: number;
-    m11: number;
-    m12: number;
-  };
+  readonly transform: FigMatrix;
   readonly visible: boolean;
   readonly opacity: number;
 };
@@ -42,14 +38,13 @@ function buildGroupSize(state: { width?: number; height?: number }): { x: number
 }
 
 /** Build transform from state */
-function buildGroupTransform(state: { x: number; y: number; rotation: number }): GroupNodeData["transform"] {
+function buildGroupTransform(state: { x: number; y: number; rotation: number }): FigMatrix {
+  const translation = createTranslationMatrix(state.x, state.y);
   if (state.rotation === 0) {
-    return { m00: 1, m01: 0, m02: state.x, m10: 0, m11: 1, m12: state.y };
+    return translation;
   }
   const rad = (state.rotation * Math.PI) / 180;
-  const cos = Math.cos(rad);
-  const sin = Math.sin(rad);
-  return { m00: cos, m01: -sin, m02: state.x, m10: sin, m11: cos, m12: state.y };
+  return multiplyMatrices(translation, createRotationMatrix(rad));
 }
 
 /** Create a group node builder */

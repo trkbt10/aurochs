@@ -2,6 +2,7 @@
  * @file Instance (component instance) node builder
  */
 
+import { createTranslationMatrix } from "../../matrix";
 import type { Color, Paint } from "../types";
 import type { InstanceNodeData } from "./types";
 import {
@@ -101,7 +102,7 @@ function createInstanceNodeBuilder(localID: number, parentID: number, symbolID: 
         name: state.name,
         symbolID: state.symbolID,
         size: { x: state.width, y: state.height },
-        transform: { m00: 1, m01: 0, m02: state.x, m10: 0, m11: 1, m12: state.y },
+        transform: createTranslationMatrix(state.x, state.y),
         visible: state.visible,
         opacity: state.opacity,
         fillPaints: buildFillPaintsOverride(state.fillColor),

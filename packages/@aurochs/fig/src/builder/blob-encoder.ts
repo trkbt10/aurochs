@@ -43,7 +43,7 @@ function writeFloat32(state: BlobBuilderState, value: number): void {
 export function createBlobBuilder(): {
   moveTo: (x: number, y: number) => ReturnType<typeof createBlobBuilder>;
   lineTo: (x: number, y: number) => ReturnType<typeof createBlobBuilder>;
-  cubicTo: (params: { cp1x: number; cp1y: number; cp2x: number; cp2y: number; x: number; y: number }) => ReturnType<typeof createBlobBuilder>;
+  cubicTo: (params: { x1: number; y1: number; x2: number; y2: number; x: number; y: number }) => ReturnType<typeof createBlobBuilder>;
   close: () => ReturnType<typeof createBlobBuilder>;
   build: () => FigBlob;
 } {
@@ -67,12 +67,12 @@ export function createBlobBuilder(): {
     },
 
     /** Cubic bezier curve */
-    cubicTo({ cp1x, cp1y, cp2x, cp2y, x, y }: { cp1x: number; cp1y: number; cp2x: number; cp2y: number; x: number; y: number }) {
+    cubicTo({ x1, y1, x2, y2, x, y }: { x1: number; y1: number; x2: number; y2: number; x: number; y: number }) {
       state.data.push(CMD_CUBIC_TO);
-      writeFloat32(state, cp1x);
-      writeFloat32(state, cp1y);
-      writeFloat32(state, cp2x);
-      writeFloat32(state, cp2y);
+      writeFloat32(state, x1);
+      writeFloat32(state, y1);
+      writeFloat32(state, x2);
+      writeFloat32(state, y2);
       writeFloat32(state, x);
       writeFloat32(state, y);
       return builder;
@@ -132,25 +132,25 @@ export function createRoundedRectBlob(
   builder.lineTo(width - r, 0);
 
   // Top-right corner
-  builder.cubicTo({ cp1x: width - r + c, cp1y: 0, cp2x: width, cp2y: r - c, x: width, y: r });
+  builder.cubicTo({ x1: width - r + c, y1: 0, x2: width, y2: r - c, x: width, y: r });
 
   // Right edge
   builder.lineTo(width, height - r);
 
   // Bottom-right corner
-  builder.cubicTo({ cp1x: width, cp1y: height - r + c, cp2x: width - r + c, cp2y: height, x: width - r, y: height });
+  builder.cubicTo({ x1: width, y1: height - r + c, x2: width - r + c, y2: height, x: width - r, y: height });
 
   // Bottom edge
   builder.lineTo(r, height);
 
   // Bottom-left corner
-  builder.cubicTo({ cp1x: r - c, cp1y: height, cp2x: 0, cp2y: height - r + c, x: 0, y: height - r });
+  builder.cubicTo({ x1: r - c, y1: height, x2: 0, y2: height - r + c, x: 0, y: height - r });
 
   // Left edge
   builder.lineTo(0, r);
 
   // Top-left corner
-  builder.cubicTo({ cp1x: 0, cp1y: r - c, cp2x: r - c, cp2y: 0, x: r, y: 0 });
+  builder.cubicTo({ x1: 0, y1: r - c, x2: r - c, y2: 0, x: r, y: 0 });
 
   builder.close();
 
@@ -175,16 +175,16 @@ export function createEllipseBlob(width: number, height: number): FigBlob {
   builder.moveTo(width, ry);
 
   // Bottom-right quadrant
-  builder.cubicTo({ cp1x: width, cp1y: ry + cy, cp2x: rx + cx, cp2y: height, x: rx, y: height });
+  builder.cubicTo({ x1: width, y1: ry + cy, x2: rx + cx, y2: height, x: rx, y: height });
 
   // Bottom-left quadrant
-  builder.cubicTo({ cp1x: rx - cx, cp1y: height, cp2x: 0, cp2y: ry + cy, x: 0, y: ry });
+  builder.cubicTo({ x1: rx - cx, y1: height, x2: 0, y2: ry + cy, x: 0, y: ry });
 
   // Top-left quadrant
-  builder.cubicTo({ cp1x: 0, cp1y: ry - cy, cp2x: rx - cx, cp2y: 0, x: rx, y: 0 });
+  builder.cubicTo({ x1: 0, y1: ry - cy, x2: rx - cx, y2: 0, x: rx, y: 0 });
 
   // Top-right quadrant (returns to start point)
-  builder.cubicTo({ cp1x: rx + cx, cp1y: 0, cp2x: width, cp2y: ry - cy, x: width, y: ry });
+  builder.cubicTo({ x1: rx + cx, y1: 0, x2: width, y2: ry - cy, x: width, y: ry });
 
   // Note: No close command - Figma paths don't use explicit close
   return builder.build();

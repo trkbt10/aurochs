@@ -9,6 +9,7 @@ import type { FigNode } from "@aurochs/fig/types";
 import type { FigImage } from "@aurochs/fig/parser";
 import type { FigBlob } from "@aurochs/fig/parser";
 import { guidToString } from "@aurochs/fig/parser";
+import { IDENTITY_MATRIX } from "@aurochs/fig/matrix";
 import {
   extractBaseProps,
   extractSizeProps,
@@ -106,7 +107,7 @@ function getNodeId(node: FigNode, ctx: BuildContext): SceneNodeId {
 // Transform Conversion
 // =============================================================================
 
-const IDENTITY: AffineMatrix = { m00: 1, m01: 0, m02: 0, m10: 0, m11: 1, m12: 0 };
+const IDENTITY: AffineMatrix = IDENTITY_MATRIX;
 
 function convertTransform(
   matrix: { m00?: number; m01?: number; m02?: number; m10?: number; m11?: number; m12?: number } | undefined,
@@ -412,7 +413,7 @@ export function buildSceneGraph(nodes: readonly FigNode[], options: BuildSceneGr
   const root: GroupNode = {
     type: "group",
     id: createNodeId("root"),
-    transform: { m00: 1, m01: 0, m02: 0, m10: 0, m11: 1, m12: 0 },
+    transform: IDENTITY_MATRIX,
     opacity: 1,
     visible: true,
     effects: [],

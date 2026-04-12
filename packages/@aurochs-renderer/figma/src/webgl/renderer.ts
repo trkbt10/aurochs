@@ -36,6 +36,7 @@ import {
   type GLContext,
 } from "./fill-renderer";
 import { createTextureCache } from "./texture-cache";
+import { IDENTITY_MATRIX, multiplyMatrices } from "@aurochs/fig/matrix";
 import { beginStencilClip, endStencilClip } from "./clip-mask";
 import {
   tessellateRectStroke,
@@ -71,25 +72,7 @@ export type WebGLRendererOptions = {
 // Matrix Utilities
 // =============================================================================
 
-/**
- * Multiply two 3x3 affine matrices (stored as AffineMatrix)
- * Result = a * b
- */
-function multiplyMatrices(a: AffineMatrix, b: AffineMatrix): AffineMatrix {
-  return {
-    m00: a.m00 * b.m00 + a.m01 * b.m10,
-    m01: a.m00 * b.m01 + a.m01 * b.m11,
-    m02: a.m00 * b.m02 + a.m01 * b.m12 + a.m02,
-    m10: a.m10 * b.m00 + a.m11 * b.m10,
-    m11: a.m10 * b.m01 + a.m11 * b.m11,
-    m12: a.m10 * b.m02 + a.m11 * b.m12 + a.m12,
-  };
-}
-
-const IDENTITY_MATRIX: AffineMatrix = {
-  m00: 1, m01: 0, m02: 0,
-  m10: 0, m11: 1, m12: 0,
-};
+// Matrix operations imported from @aurochs/fig/matrix
 
 // =============================================================================
 // WebGL Renderer

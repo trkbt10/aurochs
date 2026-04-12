@@ -8,6 +8,7 @@
  * - EXCLUDE: Keep only non-overlapping areas
  */
 
+import { createTranslationMatrix } from "../../matrix";
 import type { Color, Paint } from "../types";
 
 export type BooleanOperationType = "UNION" | "SUBTRACT" | "INTERSECT" | "EXCLUDE";
@@ -110,7 +111,7 @@ function createBooleanOperationNodeBuilder(localID: number, parentID: number): B
         name: state.name,
         booleanOperation: { value: BOOLEAN_OPERATION_TYPE_VALUES[state.operation], name: state.operation },
         size: buildBooleanSize(state.width, state.height),
-        transform: { m00: 1, m01: 0, m02: state.x, m10: 0, m11: 1, m12: state.y },
+        transform: createTranslationMatrix(state.x, state.y),
         fillPaints: buildBooleanFillPaints(state.fillColor),
         visible: state.visible,
         opacity: state.opacity,

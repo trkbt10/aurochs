@@ -2,6 +2,8 @@
  * @file Base shape builder shared state and helpers
  */
 
+import type { FigMatrix } from "../../types";
+import { createTranslationMatrix, createRotationMatrix, multiplyMatrices } from "../../matrix";
 import type { Color, Paint, Stroke } from "../types";
 import type { EffectData } from "../effect/types";
 import type { BaseShapeNodeData } from "./types";
@@ -115,14 +117,13 @@ export function attachBaseShapeMethods<TBuilder>(state: BaseShapeState, builder:
 }
 
 /** Build the transformation matrix from state */
-function buildTransform(state: BaseShapeState): { m00: number; m01: number; m02: number; m10: number; m11: number; m12: number } {
+function buildTransform(state: BaseShapeState): FigMatrix {
+  const translation = createTranslationMatrix(state.x, state.y);
   if (state.rotation === 0) {
-    return { m00: 1, m01: 0, m02: state.x, m10: 0, m11: 1, m12: state.y };
+    return translation;
   }
   const rad = (state.rotation * Math.PI) / 180;
-  const cos = Math.cos(rad);
-  const sin = Math.sin(rad);
-  return { m00: cos, m01: -sin, m02: state.x, m10: sin, m11: cos, m12: state.y };
+  return multiplyMatrices(translation, createRotationMatrix(rad));
 }
 
 /** Build fill paints array from state */

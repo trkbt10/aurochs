@@ -1,15 +1,19 @@
 /**
  * @file SVG path data serialization
  *
- * Converts PathCommand arrays to SVG path data strings (d attribute).
- * Used by the SVG backend. WebGL tessellates PathCommand arrays directly.
+ * Re-exports pathCommandsToSvgPath from @aurochs/fig/parser for SVG rendering,
+ * and provides text-specific helpers (decoration rects, text path results).
  */
 
+import { pathCommandsToSvgPath } from "@aurochs/fig/parser";
 import type { PathCommand } from "../../font/types";
 import type { DecorationRect } from "./types";
 
 /**
  * Serialize PathCommand array to SVG path data string
+ *
+ * Uses compact format (no separator between command and coordinates)
+ * for minimal SVG output size.
  *
  * @param commands - Path commands to serialize
  * @param precision - Decimal precision for rounding (default: 5)
@@ -19,36 +23,12 @@ export function pathCommandsToSvgD(
   commands: readonly PathCommand[],
   precision: number = 5
 ): string {
-  const factor = Math.pow(10, precision);
-  const round = (n: number) => Math.round(n * factor) / factor;
-
-  const parts: string[] = [];
-
-  for (const cmd of commands) {
-    switch (cmd.type) {
-      case "M":
-        parts.push(`M${round(cmd.x!)} ${round(cmd.y!)}`);
-        break;
-      case "L":
-        parts.push(`L${round(cmd.x!)} ${round(cmd.y!)}`);
-        break;
-      case "C":
-        parts.push(
-          `C${round(cmd.x1!)} ${round(cmd.y1!)} ${round(cmd.x2!)} ${round(cmd.y2!)} ${round(cmd.x!)} ${round(cmd.y!)}`
-        );
-        break;
-      case "Q":
-        parts.push(
-          `Q${round(cmd.x1!)} ${round(cmd.y1!)} ${round(cmd.x!)} ${round(cmd.y!)}`
-        );
-        break;
-      case "Z":
-        parts.push("Z");
-        break;
-    }
-  }
-
-  return parts.join("");
+  // font/types.ts PathCommand has optional fields; cast is safe because
+  // callers always provide the fields matching the command type.
+  return pathCommandsToSvgPath(commands as Parameters<typeof pathCommandsToSvgPath>[0], {
+    precision,
+    separator: "",
+  });
 }
 
 /**

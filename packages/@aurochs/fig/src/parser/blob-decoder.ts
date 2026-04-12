@@ -15,13 +15,13 @@ const CMD_MOVE_TO = 0x01;
 /** LineTo command (L x y) */
 const CMD_LINE_TO = 0x02;
 
-/** Smooth cubic bezier command (S cp2x cp2y x y) - cp1 is reflected from previous */
+/** Smooth cubic bezier command (S x2 y2 x y) - x1/y1 is reflected from previous */
 const CMD_SMOOTH_CUBIC = 0x03;
 
-/** Full cubic bezier command (C cp1x cp1y cp2x cp2y x y) */
+/** Full cubic bezier command (C x1 y1 x2 y2 x y) */
 const CMD_CUBIC_TO = 0x04;
 
-/** Quadratic bezier command (Q cpx cpy x y) */
+/** Quadratic bezier command (Q x1 y1 x y) */
 const CMD_QUAD_TO = 0x05;
 
 /** Close path command (Z) */
@@ -40,12 +40,16 @@ export type FigBlob = {
 
 /**
  * Decoded path command
+ *
+ * Property names follow SVG path data specification:
+ * - C command: x1 y1 x2 y2 x y (two control points + endpoint)
+ * - Q command: x1 y1 x y (one control point + endpoint)
  */
 export type PathCommand =
   | { readonly type: "M"; readonly x: number; readonly y: number }
   | { readonly type: "L"; readonly x: number; readonly y: number }
-  | { readonly type: "C"; readonly cp1x: number; readonly cp1y: number; readonly cp2x: number; readonly cp2y: number; readonly x: number; readonly y: number }
-  | { readonly type: "Q"; readonly cpx: number; readonly cpy: number; readonly x: number; readonly y: number }
+  | { readonly type: "C"; readonly x1: number; readonly y1: number; readonly x2: number; readonly y2: number; readonly x: number; readonly y: number }
+  | { readonly type: "Q"; readonly x1: number; readonly y1: number; readonly x: number; readonly y: number }
   | { readonly type: "Z" };
 
 // =============================================================================
@@ -77,7 +81,7 @@ function resolveSmoothCp1(
   fallbackY: number,
 ): { x: number; y: number } {
   if (prevCmd && prevCmd.type === "C") {
-    return { x: 2 * prevCmd.x - prevCmd.cp2x, y: 2 * prevCmd.y - prevCmd.cp2y };
+    return { x: 2 * prevCmd.x - prevCmd.x2, y: 2 * prevCmd.y - prevCmd.y2 };
   }
   if (prevCmd && (prevCmd.type === "M" || prevCmd.type === "L")) {
     return { x: prevCmd.x, y: prevCmd.y };
@@ -130,36 +134,33 @@ export function decodePathCommands(blob: FigBlob): readonly PathCommand[] {
       case CMD_SMOOTH_CUBIC: {
         // Smooth cubic bezier (S command) - 4 coordinates
         // cp1 is reflected from the previous command's cp2 (or equals start point)
-        const cp2x = readFloat32();
-        const cp2y = readFloat32();
+        const x2 = readFloat32();
+        const y2 = readFloat32();
         const x = readFloat32();
         const y = readFloat32();
-        // To convert to full cubic, we need the previous end point and cp2
-        // For simplicity, we'll make cp1 equal to start of this segment
-        // This creates a smooth curve when chained
         const prevCmd = commands[commands.length - 1];
-        const cp1 = resolveSmoothCp1(prevCmd, cp2x, cp2y);
-        commands.push({ type: "C", cp1x: cp1.x, cp1y: cp1.y, cp2x, cp2y, x, y });
+        const cp1 = resolveSmoothCp1(prevCmd, x2, y2);
+        commands.push({ type: "C", x1: cp1.x, y1: cp1.y, x2, y2, x, y });
         break;
       }
       case CMD_CUBIC_TO:
       case 0x13: {
         // Full cubic bezier (C command) - 6 coordinates
-        const cp1x = readFloat32();
-        const cp1y = readFloat32();
-        const cp2x = readFloat32();
-        const cp2y = readFloat32();
+        const x1 = readFloat32();
+        const y1 = readFloat32();
+        const x2 = readFloat32();
+        const y2 = readFloat32();
         const x = readFloat32();
         const y = readFloat32();
-        commands.push({ type: "C", cp1x, cp1y, cp2x, cp2y, x, y });
+        commands.push({ type: "C", x1, y1, x2, y2, x, y });
         break;
       }
       case CMD_QUAD_TO: {
-        const cpx = readFloat32();
-        const cpy = readFloat32();
+        const x1 = readFloat32();
+        const y1 = readFloat32();
         const x = readFloat32();
         const y = readFloat32();
-        commands.push({ type: "Q", cpx, cpy, x, y });
+        commands.push({ type: "Q", x1, y1, x, y });
         break;
       }
       case CMD_CLOSE: {
@@ -195,24 +196,49 @@ export function decodePathCommands(blob: FigBlob): readonly PathCommand[] {
 }
 
 /**
+ * Options for SVG path serialization
+ */
+export type SvgPathOptions = {
+  /** Decimal precision (default: 2) */
+  readonly precision?: number;
+  /**
+   * Separator between command letter and coordinates.
+   * - " " (default): "M 0.00 0.00 L 10.00 0.00"
+   * - "" (compact): "M0 0L10 0"
+   */
+  readonly separator?: string;
+};
+
+/**
  * Convert path commands to SVG path string
  */
-export function pathCommandsToSvgPath(commands: readonly PathCommand[], precision = 2): string {
+export function pathCommandsToSvgPath(
+  commands: readonly PathCommand[],
+  options: SvgPathOptions | number = {},
+): string {
+  // backwards compatibility: accept bare precision number
+  const opts: SvgPathOptions = typeof options === "number" ? { precision: options } : options;
+  const precision = opts.precision ?? 2;
+  const sep = opts.separator ?? " ";
+
+  const factor = Math.pow(10, precision);
+  const r = (n: number) => Math.round(n * factor) / factor;
+
   const parts: string[] = [];
 
   for (const cmd of commands) {
     switch (cmd.type) {
       case "M":
-        parts.push(`M ${cmd.x.toFixed(precision)} ${cmd.y.toFixed(precision)}`);
+        parts.push(`M${sep}${r(cmd.x)}${sep}${r(cmd.y)}`);
         break;
       case "L":
-        parts.push(`L ${cmd.x.toFixed(precision)} ${cmd.y.toFixed(precision)}`);
+        parts.push(`L${sep}${r(cmd.x)}${sep}${r(cmd.y)}`);
         break;
       case "C":
-        parts.push(`C ${cmd.cp1x.toFixed(precision)} ${cmd.cp1y.toFixed(precision)} ${cmd.cp2x.toFixed(precision)} ${cmd.cp2y.toFixed(precision)} ${cmd.x.toFixed(precision)} ${cmd.y.toFixed(precision)}`);
+        parts.push(`C${sep}${r(cmd.x1)}${sep}${r(cmd.y1)}${sep}${r(cmd.x2)}${sep}${r(cmd.y2)}${sep}${r(cmd.x)}${sep}${r(cmd.y)}`);
         break;
       case "Q":
-        parts.push(`Q ${cmd.cpx.toFixed(precision)} ${cmd.cpy.toFixed(precision)} ${cmd.x.toFixed(precision)} ${cmd.y.toFixed(precision)}`);
+        parts.push(`Q${sep}${r(cmd.x1)}${sep}${r(cmd.y1)}${sep}${r(cmd.x)}${sep}${r(cmd.y)}`);
         break;
       case "Z":
         parts.push("Z");
@@ -220,7 +246,7 @@ export function pathCommandsToSvgPath(commands: readonly PathCommand[], precisio
     }
   }
 
-  return parts.join(" ");
+  return sep ? parts.join(" ") : parts.join("");
 }
 
 /**

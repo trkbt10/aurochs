@@ -2,6 +2,7 @@
  * @file Text node builder
  */
 
+import { createTranslationMatrix } from "../../matrix";
 import type { Color } from "../types";
 import type { TextNodeData, DerivedTextNodeData } from "./types";
 import {
@@ -123,7 +124,7 @@ function createTextNodeBuilder(localID: number, parentID: number): TextNodeBuild
           postscript: `${state.fontFamily}-${state.fontStyle}`.replace(/\s+/g, ""),
         },
         size: { x: state.width, y: state.height },
-        transform: { m00: 1, m01: 0, m02: state.x, m10: 0, m11: 1, m12: state.y },
+        transform: createTranslationMatrix(state.x, state.y),
         textAlignHorizontal: toEnumValue(state.textAlignH, TEXT_ALIGN_H_VALUES),
         textAlignVertical: toEnumValue(state.textAlignV, TEXT_ALIGN_V_VALUES),
         textAutoResize: { value: TEXT_AUTO_RESIZE_VALUES[state.autoResize], name: state.autoResize },

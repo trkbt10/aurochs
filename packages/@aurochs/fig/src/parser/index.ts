@@ -36,4 +36,4 @@ export {
   decodeBlobToSvgPath,
 } from "./blob-decoder";
 
-export type { FigBlob, PathCommand } from "./blob-decoder";
+export type { FigBlob, PathCommand, SvgPathOptions } from "./blob-decoder";
