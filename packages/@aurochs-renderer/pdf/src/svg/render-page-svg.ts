@@ -19,6 +19,7 @@ import type {
   PdfText,
 } from "@aurochs/pdf/domain";
 import { normalizeFontFamily } from "@aurochs/pdf/domain/font";
+import { getPathBounds, getElementRotationDeg } from "@aurochs/pdf";
 import type { PdfSvgRenderOptions } from "../types";
 import { toSvgPaint } from "./color-to-svg";
 import { buildPdfImageDataUrl } from "./image-data-url";
@@ -170,6 +171,31 @@ function formatDashOffset(strokeEnabled: boolean, dashArray: readonly number[], 
 // Element renderers — produce XmlElement | null
 // =============================================================================
 
+/**
+ * Build an SVG rotation transform string for a path element.
+ *
+ * Path operations are stored in user space (unrotated). When the editor applies
+ * rotation via `rotateElement()`, only the CTM is updated — coordinates remain unchanged.
+ * This function extracts the rotation from the CTM and produces an SVG `rotate()`
+ * transform around the path's bounding box center (in SVG coordinate space),
+ * matching the SelectionBox behavior.
+ *
+ * Returns undefined when rotation is effectively zero (< 0.01°).
+ */
+function buildPathRotationTransform(path: PdfPath, pageHeight: number): string | undefined {
+  const rotationDeg = getElementRotationDeg(path);
+  if (rotationDeg === 0) {
+    return undefined;
+  }
+
+  // Compute center of the path's bounding box in SVG space (Y-flipped).
+  const bounds = getPathBounds(path);
+  const centerX = bounds.x + bounds.width / 2;
+  const centerY = pageHeight - (bounds.y + bounds.height / 2);
+
+  return `rotate(${formatSvgNumber(rotationDeg)} ${formatSvgNumber(centerX)} ${formatSvgNumber(centerY)})`;
+}
+
 function renderPathNode(path: PdfPath, pageHeight: number, registry: ClipPathRegistry): XmlElement | null {
   if (path.paintOp === "clip" || path.paintOp === "none") {
     return null;
@@ -189,6 +215,8 @@ function renderPathNode(path: PdfPath, pageHeight: number, registry: ClipPathReg
   const fillPaint = toSvgPaint(state.fillColor, state.fillAlpha * (state.softMaskAlpha ?? 1));
   const strokePaint = toSvgPaint(state.strokeColor, state.strokeAlpha * (state.softMaskAlpha ?? 1));
 
+  const rotationTransform = buildPathRotationTransform(path, pageHeight);
+
   const attrs = svgAttrs([
     ["d", d],
     ["fill", fillEnabled ? fillPaint.color : "none"],
@@ -201,6 +229,7 @@ function renderPathNode(path: PdfPath, pageHeight: number, registry: ClipPathReg
     ["stroke-opacity", strokeEnabled && strokePaint.opacity < 1 ? formatSvgNumber(strokePaint.opacity) : undefined],
     ["stroke-dasharray", formatDashArray(strokeEnabled, state.dashArray)],
     ["stroke-dashoffset", formatDashOffset(strokeEnabled, state.dashArray, state.dashPhase)],
+    ["transform", rotationTransform],
     ["clip-path", clipRef],
   ]);
 

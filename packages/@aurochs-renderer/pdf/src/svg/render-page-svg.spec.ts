@@ -123,6 +123,62 @@ describe("renderPdfPageToSvg", () => {
     expect(() => renderPdfDocumentPageToSvg(document, 2)).toThrow("out of range");
   });
 
+  it("applies rotation transform to path when CTM has rotation", () => {
+    const path: PdfPath = {
+      type: "path",
+      operations: [
+        { type: "rect", x: 50, y: 20, width: 100, height: 60 },
+      ],
+      paintOp: "fill",
+      graphicsState: createGraphicsState({
+        fillColor: { colorSpace: "DeviceRGB", components: [0, 1, 0] },
+        // CTM with 45° rotation: cos(45°) ≈ 0.7071, sin(45°) ≈ 0.7071
+        // scaleX=1, scaleY=1, rotation=45°
+        ctm: [Math.cos(Math.PI / 4), Math.sin(Math.PI / 4), -Math.sin(Math.PI / 4), Math.cos(Math.PI / 4), 0, 0],
+      }),
+    };
+
+    const page: PdfPage = {
+      pageNumber: 1,
+      width: 200,
+      height: 100,
+      elements: [path],
+    };
+
+    const svg = renderPdfPageToSvg(page, { backgroundColor: "transparent" });
+
+    // The path should have a rotation transform around its bounding box center.
+    // Bounding box in PDF space: x=50, y=20, width=100, height=60
+    // Center in PDF space: (100, 50)
+    // Center in SVG space: (100, pageHeight - 50) = (100, 50)
+    expect(svg).toContain('transform="rotate(45');
+    expect(svg).toContain("100");
+  });
+
+  it("does not apply rotation transform to path when CTM has no rotation", () => {
+    const path: PdfPath = {
+      type: "path",
+      operations: [
+        { type: "moveTo", point: { x: 10, y: 10 } },
+        { type: "lineTo", point: { x: 30, y: 10 } },
+      ],
+      paintOp: "stroke",
+      graphicsState: createGraphicsState(),
+    };
+
+    const page: PdfPage = {
+      pageNumber: 1,
+      width: 200,
+      height: 100,
+      elements: [path],
+    };
+
+    const svg = renderPdfPageToSvg(page, { backgroundColor: "transparent" });
+
+    // No transform attribute should be present on the path
+    expect(svg).not.toContain("transform");
+  });
+
   it("renders vertical writing text without rotating glyphs sideways", () => {
     const text: PdfText = {
       type: "text",
