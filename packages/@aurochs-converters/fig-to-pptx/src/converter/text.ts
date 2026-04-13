@@ -14,9 +14,10 @@
  */
 
 import type { TextData, TextStyleOverride } from "@aurochs/fig/domain";
-import type { FigPaint, FigColor } from "@aurochs/fig/types";
-import type { TextBody, RegularRun, Paragraph, RunProperties } from "@aurochs-office/pptx/domain/text";
-import { pt } from "@aurochs-office/drawing-ml/domain/units";
+import type { FigPaint, FigColor, KiwiEnumValue } from "@aurochs/fig/types";
+import type { TextBody, RegularRun, Paragraph, RunProperties, LineSpacing, TextCaps } from "@aurochs-office/pptx/domain/text";
+import type { Color } from "@aurochs-office/drawing-ml/domain/color";
+import { pt, pct, px } from "@aurochs-office/drawing-ml/domain/units";
 import type { TextAlign, TextAnchor, ParagraphProperties } from "@aurochs-office/pptx/domain/text";
 import { figColorToColor } from "@aurochs-converters/interop-drawing-ml/fig-to-dml";
 
@@ -25,13 +26,22 @@ import { figColorToColor } from "@aurochs-converters/interop-drawing-ml/fig-to-d
  *
  * If characterStyleIDs are present, the per-run structure is faithfully
  * reconstructed from style overrides. Otherwise, each line gets a single run.
+ *
+ * @param textData - The Fig text data
+ * @param nodeFills - The TEXT node's `fills` array.  In Figma, a TEXT node's
+ *   fills represent the **text color** (not the shape background).  We extract
+ *   the first visible SOLID paint and apply it as the base run color.
  */
-export function convertText(textData: TextData): TextBody {
+export function convertText(textData: TextData, nodeFills?: readonly FigPaint[]): TextBody {
   const align = convertTextAlign(textData.textAlignHorizontal);
   const anchor = convertTextAnchor(textData.textAlignVertical);
+  const lineSpacing = convertLineHeight(textData.lineHeight);
+  const baseTextColor = resolveTextColor(nodeFills);
 
   const hasStyleIDs = textData.characterStyleIDs && textData.characterStyleIDs.length > 0;
-  const paragraphs = hasStyleIDs ? buildParagraphsFromStyleIDs(textData, align) : buildSimpleParagraphs(textData, align);
+  const paragraphs = hasStyleIDs
+    ? buildParagraphsFromStyleIDs(textData, align, lineSpacing, baseTextColor)
+    : buildSimpleParagraphs(textData, align, lineSpacing, baseTextColor);
 
   return {
     bodyProperties: {
@@ -47,14 +57,19 @@ export function convertText(textData: TextData): TextBody {
  * Build paragraphs from flat text with no per-character variation.
  * Each line gets a single run with the base style.
  */
-function buildSimpleParagraphs(textData: TextData, align: TextAlign | undefined): Paragraph[] {
+function buildSimpleParagraphs(
+  textData: TextData,
+  align: TextAlign | undefined,
+  lineSpacing: LineSpacing | undefined,
+  baseTextColor: Color | undefined,
+): Paragraph[] {
   const lines = textData.characters.split("\n");
   return lines.map((line) => ({
-    properties: { alignment: align } satisfies ParagraphProperties,
+    properties: { alignment: align, lineSpacing } satisfies ParagraphProperties,
     runs: [{
       type: "text" as const,
       text: line,
-      properties: baseRunProperties(textData),
+      properties: baseRunProperties(textData, baseTextColor),
     }],
   }));
 }
@@ -66,6 +81,8 @@ function buildSimpleParagraphs(textData: TextData, align: TextAlign | undefined)
 function buildParagraphsFromStyleIDs(
   textData: TextData,
   align: TextAlign | undefined,
+  lineSpacing: LineSpacing | undefined,
+  baseTextColor: Color | undefined,
 ): Paragraph[] {
   const chars = textData.characters;
   const styleIDs = textData.characterStyleIDs!;
@@ -78,9 +95,9 @@ function buildParagraphsFromStyleIDs(
   for (let i = 0; i <= chars.length; i++) {
     // Paragraph boundary at "\n" or end of string
     if (i === chars.length || chars[i] === "\n") {
-      const runs = buildRunsForRange({ chars, styleIDs, start: paraStart, end: i, textData, overrideMap });
+      const runs = buildRunsForRange({ chars, styleIDs, start: paraStart, end: i, textData, overrideMap, baseTextColor });
       paragraphs.push({
-        properties: { alignment: align } satisfies ParagraphProperties,
+        properties: { alignment: align, lineSpacing } satisfies ParagraphProperties,
         runs,
       });
       paraStart = i + 1; // skip the "\n"
@@ -97,6 +114,7 @@ type BuildRunsForRangeOptions = {
   readonly end: number;
   readonly textData: TextData;
   readonly overrideMap: ReadonlyMap<number, TextStyleOverride>;
+  readonly baseTextColor: Color | undefined;
 };
 
 /**
@@ -104,14 +122,14 @@ type BuildRunsForRangeOptions = {
  * characters with the same style ID.
  */
 function buildRunsForRange(
-  { chars, styleIDs, start, end, textData, overrideMap }: BuildRunsForRangeOptions,
+  { chars, styleIDs, start, end, textData, overrideMap, baseTextColor }: BuildRunsForRangeOptions,
 ): RegularRun[] {
   if (start >= end) {
     // Empty line — still needs a run (PPTX requires at least one run per paragraph)
     return [{
       type: "text",
       text: "",
-      properties: baseRunProperties(textData),
+      properties: baseRunProperties(textData, baseTextColor),
     }];
   }
 
@@ -127,7 +145,7 @@ function buildRunsForRange(
       runs.push({
         type: "text",
         text: chars.slice(runStart, i),
-        properties: resolveRunProperties(currentStyleID, textData, overrideMap),
+        properties: resolveRunProperties(currentStyleID, textData, overrideMap, baseTextColor),
       });
       runStart = i;
       currentStyleID = sid;
@@ -162,26 +180,33 @@ function resolveRunProperties(
   styleID: number,
   textData: TextData,
   overrideMap: ReadonlyMap<number, TextStyleOverride>,
+  baseTextColor: Color | undefined,
 ): RunProperties {
   if (styleID === 0) {
-    return baseRunProperties(textData);
+    return baseRunProperties(textData, baseTextColor);
   }
 
   const override = overrideMap.get(styleID);
   if (!override) {
     // Unknown style ID — fall back to base
-    return baseRunProperties(textData);
+    return baseRunProperties(textData, baseTextColor);
   }
 
   const fontName = override.fontName ?? textData.fontName;
   const fontSize = override.fontSize ?? textData.fontSize;
+
+  // Text color resolution: override fillPaints → base text color (node fills).
+  // Both are FigPaint[] arrays resolved through the same SoT (resolveTextColor).
+  const color = resolveTextColor(override.fillPaints) ?? baseTextColor;
 
   const props: RunProperties = {
     fontSize: pt(fontSize),
     fontFamily: fontName.family,
     bold: isBoldStyle(fontName.style),
     italic: isItalicStyle(fontName.style),
-    color: resolveOverrideColor(override, textData),
+    color,
+    spacing: convertLetterSpacing(override.letterSpacing ?? textData.letterSpacing, fontSize),
+    caps: convertTextCase(override.textCase ?? textData.textCase),
   };
 
   if (override.textDecoration) {
@@ -200,41 +225,50 @@ function resolveRunProperties(
 /**
  * Build RunProperties from the base TextData style.
  */
-function baseRunProperties(textData: TextData): RunProperties {
+function baseRunProperties(textData: TextData, baseTextColor?: Color): RunProperties {
   return {
     fontSize: pt(textData.fontSize),
     fontFamily: textData.fontName.family,
     bold: isBoldStyle(textData.fontName.style),
     italic: isItalicStyle(textData.fontName.style),
+    color: baseTextColor,
+    spacing: convertLetterSpacing(textData.letterSpacing, textData.fontSize),
+    caps: convertTextCase(textData.textCase),
   };
 }
 
 /**
- * Resolve the color from a style override's fillPaints.
+ * Resolve text color from a FigPaint[] array.
  *
- * In Figma, text color is the first visible SOLID fillPaint.
- * We convert it back to a DrawingML Color for PPTX.
+ * In Figma, text color is determined by the topmost visible SOLID paint
+ * in a fills/fillPaints array.  This is the single source of truth for
+ * text color resolution — used for both:
+ *   - TEXT node's `fills` (base text color)
+ *   - TextStyleOverride's `fillPaints` (per-character override color)
+ *
+ * Returns `undefined` when no visible solid paint exists (the caller
+ * should fall back to the next layer in the cascade, or to the PPTX
+ * theme default).
  */
-function resolveOverrideColor(
-  override: TextStyleOverride,
-  _textData: TextData,
-): ReturnType<typeof figColorToColor> | undefined {
-  const paints = override.fillPaints;
+function resolveTextColor(paints: readonly FigPaint[] | undefined): Color | undefined {
   if (!paints || paints.length === 0) {return undefined;}
 
-  const solidPaint = paints.find((p): p is Extract<FigPaint, { type: "SOLID" }> =>
-    p.type === "SOLID" && p.visible !== false,
-  );
-  if (!solidPaint?.color) {return undefined;}
+  for (let i = paints.length - 1; i >= 0; i--) {
+    const paint = paints[i];
+    if (paint.visible === false) {continue;}
+    const typeName = typeof paint.type === "string" ? paint.type : (paint.type as { name: string }).name;
+    if (typeName === "SOLID" && paint.color) {
+      const figColor: FigColor = {
+        r: paint.color.r,
+        g: paint.color.g,
+        b: paint.color.b,
+        a: (paint.opacity ?? 1) * paint.color.a,
+      };
+      return figColorToColor(figColor);
+    }
+  }
 
-  const figColor: FigColor = {
-    r: solidPaint.color.r,
-    g: solidPaint.color.g,
-    b: solidPaint.color.b,
-    a: solidPaint.opacity ?? solidPaint.color.a,
-  };
-
-  return figColorToColor(figColor);
+  return undefined;
 }
 
 function convertTextAlign(align?: { name: string }): TextAlign | undefined {
@@ -258,18 +292,118 @@ function convertTextAnchor(align?: { name: string }): TextAnchor | undefined {
   }
 }
 
-function convertAutoFit(autoResize?: { name: string }): { type: "none" } | { type: "normal" } | { type: "shape" } {
-  if (!autoResize) {
-    // Figma's default TextAutoResize is WIDTH_AND_HEIGHT (enum value 1),
-    // which means the text box resizes to fit the text content.
-    // In PPTX, spAutoFit is the closest equivalent.
-    return { type: "shape" };
+/**
+ * Convert Figma textAutoResize to PPTX autoFit.
+ *
+ * Figma's textAutoResize controls how the text box resizes in the editor:
+ *   - WIDTH_AND_HEIGHT: box resizes to fit text in both dimensions
+ *   - HEIGHT: width is fixed, height resizes to fit text
+ *   - NONE: box size is fixed, text may overflow
+ *
+ * The .fig file already stores the **computed** box size after auto-resize,
+ * so the PPTX text box should preserve that size exactly.  Using PPTX's
+ * `normAutofit` (shrink font to fit) or `spAutoFit` (resize shape) would
+ * fight the intended size — especially inside a grpSp where the group's
+ * childExtent/extent ratio already handles visual scaling.
+ *
+ * Therefore all modes map to `noAutofit` ("none"): the box stays at the
+ * size computed by Figma, and grpSp scaling handles the visual fit.
+ */
+function convertAutoFit(_autoResize?: { name: string }): { type: "none" } {
+  return { type: "none" };
+}
+
+// =============================================================================
+// Line height / letter spacing conversion
+// =============================================================================
+
+/**
+ * Convert Figma lineHeight to PPTX LineSpacing.
+ *
+ * Figma lineHeight is `{ value, units }` where:
+ *   - units.name === "PERCENT": percentage of font size (e.g., 100 = 100%)
+ *   - units.name === "PIXELS": absolute pixel value
+ *   - units.name === "AUTO" or missing: Figma's default (~120%), omitted in PPTX
+ *
+ * PPTX lineSpacing is:
+ *   - `{ type: "percent", value: Percent }`: value in 1/1000 of a percent (100% = 100000)
+ *     (ECMA-376 §21.1.2.2.10: lnSpc spcPct, value is in 1000ths of a percent)
+ *   - `{ type: "points", value: Points }`: absolute value in points
+ *     (ECMA-376 §21.1.2.2.10: lnSpc spcPts, value is in 100ths of a point)
+ */
+function convertLineHeight(
+  lineHeight: TextData["lineHeight"],
+): LineSpacing | undefined {
+  if (!lineHeight) {return undefined;}
+
+  const unitsName = lineHeight.units?.name;
+  if (!unitsName || unitsName === "AUTO") {return undefined;}
+
+  if (unitsName === "PERCENT") {
+    // Figma: 100 = 100%.  PPTX Percent branded type uses raw percentage (100 = 100%).
+    return { type: "percent", value: pct(lineHeight.value) };
   }
-  switch (autoResize.name) {
-    case "WIDTH_AND_HEIGHT": return { type: "shape" };
-    case "HEIGHT": return { type: "normal" };
-    case "NONE": return { type: "none" };
-    default: return { type: "shape" };
+
+  if (unitsName === "PIXELS") {
+    // Figma: absolute pixels.  PPTX: points (1pt ≈ 1.333px at 96 DPI).
+    return { type: "points", value: pt(lineHeight.value * 0.75) };
+  }
+
+  return undefined;
+}
+
+/**
+ * Convert Figma letterSpacing to PPTX RunProperties.spacing.
+ *
+ * Figma letterSpacing is `{ value, units }` where:
+ *   - units.name === "PERCENT": percentage of font size
+ *   - units.name === "PIXELS": absolute pixel value
+ *
+ * PPTX spacing is in Pixels (branded), representing hundredths of a point
+ * in the OOXML spec (a:spc), but our domain uses Pixels.
+ *
+ * Returns `undefined` when letterSpacing is zero or absent (use PPTX default).
+ */
+function convertLetterSpacing(
+  letterSpacing: TextData["letterSpacing"],
+  fontSize: number,
+): ReturnType<typeof px> | undefined {
+  if (!letterSpacing) {return undefined;}
+
+  const unitsName = letterSpacing.units?.name;
+  if (!unitsName) {return undefined;}
+
+  if (unitsName === "PERCENT") {
+    // Percentage of font size.  0% means no extra spacing → omit.
+    if (letterSpacing.value === 0) {return undefined;}
+    const spacingPx = (letterSpacing.value / 100) * fontSize;
+    return px(spacingPx);
+  }
+
+  if (unitsName === "PIXELS") {
+    if (letterSpacing.value === 0) {return undefined;}
+    return px(letterSpacing.value);
+  }
+
+  return undefined;
+}
+
+/**
+ * Convert Figma textCase to PPTX TextCaps.
+ *
+ * Figma: ORIGINAL, UPPER, LOWER, TITLE, SMALL_CAPS, SMALL_CAPS_FORCED
+ * PPTX:  "none", "all", "small"
+ *
+ * LOWER and TITLE have no PPTX equivalent — they would require transforming
+ * the actual character data, which we leave unchanged.
+ */
+function convertTextCase(textCase?: KiwiEnumValue): TextCaps | undefined {
+  if (!textCase) {return undefined;}
+  switch (textCase.name) {
+    case "UPPER": return "all";
+    case "SMALL_CAPS":
+    case "SMALL_CAPS_FORCED": return "small";
+    default: return undefined;
   }
 }
 

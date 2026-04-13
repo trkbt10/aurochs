@@ -84,8 +84,8 @@ function convertToSpShape(
   const id = nextId(idCounter);
   const transform = figTransformToDml(node.transform, node.size);
   const geometry = convertGeometry(node);
-  const fill = figFillsToDml(node.fills);
-  const line = figStrokeToDml({ strokes: node.strokes, strokeWeight: node.strokeWeight, strokeCap: node.strokeCap, strokeJoin: node.strokeJoin });
+  const fill = figFillsToDml(node.fills, node.opacity);
+  const line = figStrokeToDml({ strokes: node.strokes, strokeWeight: node.strokeWeight, strokeCap: node.strokeCap, strokeJoin: node.strokeJoin, strokeAlign: node.strokeAlign, nodeOpacity: node.opacity });
   const effects = figEffectsToDml(node.effects);
 
   const properties: ShapeProperties = {
@@ -110,8 +110,10 @@ function convertToTextShape(
 ): SpShape {
   const id = nextId(idCounter);
   const transform = figTransformToDml(node.transform, node.size);
-  const fill = figFillsToDml(node.fills);
-  const line = figStrokeToDml({ strokes: node.strokes, strokeWeight: node.strokeWeight, strokeCap: node.strokeCap, strokeJoin: node.strokeJoin });
+  // In Figma, a TEXT node's `fills` represent the **text color** — they style
+  // the characters, not the shape background.  We pass them to convertText()
+  // for run-level color resolution and leave the shape fill empty.
+  const line = figStrokeToDml({ strokes: node.strokes, strokeWeight: node.strokeWeight, strokeCap: node.strokeCap, strokeJoin: node.strokeJoin, strokeAlign: node.strokeAlign, nodeOpacity: node.opacity });
   const effects = figEffectsToDml(node.effects);
 
   return {
@@ -123,11 +125,11 @@ function convertToTextShape(
     properties: {
       transform,
       geometry: { type: "preset", preset: "rect", adjustValues: [] },
-      fill,
+      fill: undefined,
       line,
       effects,
     },
-    textBody: convertText(node.textData!),
+    textBody: convertText(node.textData!, node.fills),
   };
 }
 
@@ -159,8 +161,8 @@ function convertToGroupShape(
   // are visible. If the FRAME has a fill (e.g., cell background), we insert a
   // background rectangle as the first child to carry the visual fill.
   const childShapes: Shape[] = [];
-  const fill = figFillsToDml(node.fills);
-  const line = figStrokeToDml({ strokes: node.strokes, strokeWeight: node.strokeWeight, strokeCap: node.strokeCap, strokeJoin: node.strokeJoin });
+  const fill = figFillsToDml(node.fills, node.opacity);
+  const line = figStrokeToDml({ strokes: node.strokes, strokeWeight: node.strokeWeight, strokeCap: node.strokeCap, strokeJoin: node.strokeJoin, strokeAlign: node.strokeAlign, nodeOpacity: node.opacity });
   if (fill || line) {
     const bgId = nextId(idCounter);
     const bgTransform: Transform = {

@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { ParsedFigFile } from "@aurochs/fig/parser";
 import { buildNodeTree, findNodesByType } from "@aurochs/fig/parser";
 import type { FigNode } from "@aurochs/fig/types";
-import { preResolveSymbols } from "../../src/symbols/symbol-pre-resolver";
+import { preResolveSymbols } from "../../../../@aurochs/fig/src/symbols/symbol-pre-resolver";
 import { renderCanvas } from "../../src/svg/renderer";
 import { createBrowserFontLoader, isBrowserFontLoaderSupported } from "../../src/font-drivers/browser";
 import { createCachingFontLoader } from "../../src/font";

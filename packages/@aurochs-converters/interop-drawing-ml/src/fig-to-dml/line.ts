@@ -16,6 +16,8 @@ type FigStrokeToDmlOptions = {
   readonly strokeWeight: FigStrokeWeight;
   readonly strokeCap?: KiwiEnumValue;
   readonly strokeJoin?: KiwiEnumValue;
+  readonly strokeAlign?: KiwiEnumValue;
+  readonly nodeOpacity?: number;
 };
 
 /**
@@ -23,19 +25,19 @@ type FigStrokeToDmlOptions = {
  * Returns undefined if no visible strokes or zero width.
  */
 export function figStrokeToDml(
-  { strokes, strokeWeight, strokeCap, strokeJoin }: FigStrokeToDmlOptions,
+  { strokes, strokeWeight, strokeCap, strokeJoin, strokeAlign, nodeOpacity }: FigStrokeToDmlOptions,
 ): BaseLine | undefined {
   const width = resolveStrokeWidth(strokeWeight);
   if (width <= 0) {return undefined;}
 
-  const fill = figFillsToDml(strokes);
+  const fill = figFillsToDml(strokes, nodeOpacity ?? 1);
   if (!fill) {return undefined;}
 
   return {
     width: px(width),
     cap: convertCap(strokeCap),
     compound: "sng",
-    alignment: "ctr",
+    alignment: convertAlignment(strokeAlign),
     fill,
     dash: "solid",
     join: convertJoin(strokeJoin),
@@ -66,5 +68,22 @@ function convertJoin(join?: KiwiEnumValue): LineJoin {
     case "ROUND": return "round";
     case "BEVEL": return "bevel";
     default: return "miter";
+  }
+}
+
+/**
+ * Convert Figma stroke alignment to DrawingML line alignment.
+ *
+ * Figma: INSIDE, OUTSIDE, CENTER
+ * DrawingML: "in" (inside), "ctr" (center) — no outside option.
+ *
+ * OUTSIDE falls back to "ctr" because DrawingML has no outside alignment.
+ * @see ECMA-376 §20.1.2.2.24 (algn attribute)
+ */
+function convertAlignment(align?: KiwiEnumValue): "ctr" | "in" {
+  if (!align) {return "ctr";}
+  switch (align.name) {
+    case "INSIDE": return "in";
+    default: return "ctr";
   }
 }

@@ -8,7 +8,7 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseFigFile, buildNodeTree, getNodeType, guidToString, type FigGuid } from "@aurochs/fig/parser";
 import type { FigNode } from "@aurochs/fig/types";
-import type { FigDerivedSymbolData, FigSymbolOverride } from "../src/symbols/symbol-resolver";
+import type { FigDerivedSymbolData, FigSymbolOverride } from "../../../@aurochs/fig/src/symbols/symbol-resolver";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FIG_FILE = path.join(__dirname, "../fixtures/realfiles/apple-ios26.fig");

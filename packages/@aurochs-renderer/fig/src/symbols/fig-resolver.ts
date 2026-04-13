@@ -11,15 +11,15 @@
 import type { FigNode } from "@aurochs/fig/types";
 import { guidToString, getNodeType, safeChildren, type FigGuid } from "@aurochs/fig/parser";
 import { extractSymbolIDPair } from "@aurochs/fig/symbols";
-import { buildGuidTranslationMap, translateOverrides } from "./guid-translation";
-import { resolveInstanceLayout } from "./constraints";
+import { buildGuidTranslationMap, translateOverrides } from "../../../../@aurochs/fig/src/symbols/guid-translation";
+import { resolveInstanceLayout } from "../../../../@aurochs/fig/src/symbols/constraints";
 import {
   getInstanceSymbolOverrides,
   collectComponentPropAssignments,
   cloneSymbolChildren,
   type FigSymbolOverride,
   type FigDerivedSymbolData,
-} from "./symbol-resolver";
+} from "../../../../@aurochs/fig/src/symbols/symbol-resolver";
 
 // =============================================================================
 // Public types

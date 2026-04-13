@@ -14,11 +14,17 @@
  */
 
 import type { FigPage, FigDesignNode, FigDesignDocument } from "@aurochs/fig/domain";
+import type { FigNode } from "@aurochs/fig/types";
+import { buildNodeTree, getNodeType, safeChildren } from "@aurochs/fig/parser";
+import { preResolveSymbols, resolveInstanceNode } from "@aurochs/fig/symbols";
+import { convertFigNode } from "@aurochs-builder/fig/context";
 import type { Slide } from "@aurochs-office/pptx/domain/slide/types";
+import type { Shape, GrpShape } from "@aurochs-office/pptx/domain/shape";
 import type { Presentation } from "@aurochs-office/pptx/domain/presentation/types";
 import type { PresentationDocument, SlideWithId } from "@aurochs-office/pptx/app/presentation-document";
+import type { GroupTransform } from "@aurochs-office/drawing-ml/domain/geometry";
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
-import { px } from "@aurochs-office/drawing-ml/domain/units";
+import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
 import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
 import { figColorToColor } from "@aurochs-converters/interop-drawing-ml/fig-to-dml";
 import { convertNodes, type ShapeIdCounter } from "./shape";
@@ -70,7 +76,12 @@ export function convertDocument(
     });
   }
 
-  const slides: SlideWithId[] = doc.pages.map((page, index) =>
+  // Resolve INSTANCE nodes using the SoT (resolveInstanceNode from @aurochs/fig/symbols).
+  // This requires the parser-level FigNode tree and symbolMap, which are reconstructed
+  // from FigDesignDocument._loaded (the original LoadedFigFile).
+  const resolvedPages = resolveAllInstances(doc);
+
+  const slides: SlideWithId[] = resolvedPages.map((page, index) =>
     convertPage({ page, slideWidth, slideHeight, index }),
   );
 
@@ -102,23 +113,31 @@ type ConvertPageOptions = {
 function convertPage(
   { page, slideWidth, slideHeight, index }: ConvertPageOptions,
 ): SlideWithId {
-  const idCounter: ShapeIdCounter = { value: 0 };
+  // Start at 1 because the slide's spTree root uses id="1".
+  // Shape IDs within a slide must be unique per ECMA-376.
+  const idCounter: ShapeIdCounter = { value: 1 };
 
-  // Compute content bounds for translation
+  // INSTANCE nodes are already resolved by resolveAllInstances() in convertDocument.
+  // Compute content bounds for translation.
   const bounds = computeContentBounds(page.children);
+  const contentWidth = bounds.maxX - bounds.minX;
+  const contentHeight = bounds.maxY - bounds.minY;
 
-  // Translate nodes so their bounding box starts at (0, 0)
-  // and scale to fit within the slide dimensions.
-  const translatedNodes = translateAndScaleNodes({
-    nodes: page.children,
-    bounds,
-    slideWidth,
-    slideHeight,
-  });
+  // Translate so the bounding box origin is at (0, 0).
+  // Do NOT scale node properties (fontSize, strokeWeight, etc.) — scaling
+  // is handled by wrapping all shapes in a grpSp whose childExtent/extent
+  // ratio defines the visual scale, analogous to SVG viewBox.
+  const translatedNodes = translateNodes(page.children, bounds.minX, bounds.minY);
 
-  const shapes = convertNodes(translatedNodes, idCounter);
-
+  const childShapes = convertNodes(translatedNodes, idCounter);
   const background = convertPageBackground(page.backgroundColor);
+
+  // Determine if scaling is needed.
+  const needsScaling = contentWidth > 0 && contentHeight > 0 && !fitsWithinSlide(bounds, slideWidth, slideHeight);
+
+  const shapes: readonly Shape[] = needsScaling
+    ? [wrapInScalingGroup(childShapes, contentWidth, contentHeight, slideWidth, slideHeight, idCounter)]
+    : childShapes;
 
   const slide: Slide = {
     shapes,
@@ -169,125 +188,102 @@ function computeContentBounds(nodes: readonly FigDesignNode[]): {
   return { minX, minY, maxX, maxY };
 }
 
+// =============================================================================
+// Layout — translate + viewBox-style scaling via grpSp
+//
+// Instead of rewriting every node property (fontSize, strokeWeight, cornerRadius,
+// letterSpacing, …) when shrinking content to fit the slide — which is fragile
+// and inevitably misses properties — we use the same approach as SVG's viewBox:
+//
+//   1. Translate nodes so their bounding box starts at (0, 0).
+//   2. Convert nodes to PPTX shapes at their **original** coordinates.
+//   3. Wrap all shapes in a root grpSp whose `childExtent` is the original
+//      content size and `extent` is the slide size (or a contain-fit rect).
+//
+// PPTX's grpSp automatically scales its children to map childExtent → extent,
+// so fontSize, strokeWeight, and every other property are visually scaled
+// without any property rewriting.
+// =============================================================================
+
 /**
- * Translate and uniformly scale nodes to fit within the slide.
- *
- * 1. Translate so the bounding box origin is at (0, 0).
- * 2. Uniformly scale (contain) so all content fits within the slide.
- *
- * This produces new FigDesignNode instances with adjusted transforms/sizes.
+ * Check whether the content bounding box already fits within the slide.
  */
-type TranslateAndScaleNodesOptions = {
-  readonly nodes: readonly FigDesignNode[];
-  readonly bounds: { minX: number; minY: number; maxX: number; maxY: number };
-  readonly slideWidth: number;
-  readonly slideHeight: number;
-};
-
-function translateAndScaleNodes(
-  { nodes, bounds, slideWidth, slideHeight }: TranslateAndScaleNodesOptions,
-): readonly FigDesignNode[] {
-  const contentWidth = bounds.maxX - bounds.minX;
-  const contentHeight = bounds.maxY - bounds.minY;
-
-  if (contentWidth <= 0 || contentHeight <= 0) {return nodes;}
-
-  // Check if content fits within the slide without scaling.
-  // If the bounding box fits within (0,0)-(slideWidth,slideHeight),
-  // no transformation is needed — nodes are already in slide coordinates
-  // (typical for PPTX→Fig→PPTX roundtrip).
-  const fitsWithinSlide =
-    bounds.minX >= 0 && bounds.minY >= 0
+function fitsWithinSlide(
+  bounds: { minX: number; minY: number; maxX: number; maxY: number },
+  slideWidth: number,
+  slideHeight: number,
+): boolean {
+  return bounds.minX >= 0 && bounds.minY >= 0
     && bounds.maxX <= slideWidth && bounds.maxY <= slideHeight;
+}
 
-  if (fitsWithinSlide) {
-    return nodes; // Already in slide coordinate space, no transform needed
-  }
+/**
+ * Translate all top-level nodes so the bounding box starts at (0, 0).
+ * Does NOT scale — coordinates, sizes, and all properties remain unchanged.
+ */
+function translateNodes(
+  nodes: readonly FigDesignNode[],
+  originX: number,
+  originY: number,
+): readonly FigDesignNode[] {
+  if (originX === 0 && originY === 0) {return nodes;}
+  return nodes.map((node) => ({
+    ...node,
+    transform: {
+      ...node.transform,
+      m02: node.transform.m02 - originX,
+      m12: node.transform.m12 - originY,
+    },
+  }));
+}
 
-  // Uniform scale to fit (contain mode) — only shrink, never enlarge.
-  // Enlarging would distort content that was intentionally smaller than the slide.
+/**
+ * Wrap converted shapes in a root grpSp that maps the content's coordinate
+ * space to the slide size via the childExtent / extent ratio.
+ *
+ * This is the PPTX equivalent of SVG's viewBox: the group's child coordinate
+ * space is `contentWidth × contentHeight`, displayed at `displayWidth × displayHeight`
+ * (contain-fit, centered on the slide).
+ */
+function wrapInScalingGroup(
+  children: readonly Shape[],
+  contentWidth: number,
+  contentHeight: number,
+  slideWidth: number,
+  slideHeight: number,
+  idCounter: ShapeIdCounter,
+): GrpShape {
+  // Contain-fit: uniform scale, never enlarge.
   const rawScale = Math.min(slideWidth / contentWidth, slideHeight / contentHeight);
   const scale = Math.min(rawScale, 1);
+  const displayWidth = contentWidth * scale;
+  const displayHeight = contentHeight * scale;
 
-  // Center offset after scaling
-  const scaledWidth = contentWidth * scale;
-  const scaledHeight = contentHeight * scale;
-  const offsetX = (slideWidth - scaledWidth) / 2;
-  const offsetY = (slideHeight - scaledHeight) / 2;
+  // Center on the slide.
+  const offsetX = (slideWidth - displayWidth) / 2;
+  const offsetY = (slideHeight - displayHeight) / 2;
 
-  return nodes.map((node) => translateAndScaleNode({ node, originX: bounds.minX, originY: bounds.minY, scale, offsetX, offsetY }));
-}
-
-/**
- * Translate and scale a single top-level node.
- *
- * We scale by adjusting the node's `size` (not the matrix's scale components),
- * and recursively scale children's positions and sizes. This keeps the matrix's
- * rotation/flip components intact and avoids the mismatch between PPTX's
- * extent (display size = size × matrixScale) and childExtent (local size = size)
- * that would occur if we scaled the matrix instead.
- *
- * For nodes with children (FRAME, GROUP, etc.), child coordinates are in the
- * parent's local space. Scaling the parent's size without scaling children
- * would leave children at their original positions, which would be wrong.
- * So we recursively scale children's positions and sizes as well.
- */
-type TranslateAndScaleNodeOptions = {
-  readonly node: FigDesignNode;
-  readonly originX: number;
-  readonly originY: number;
-  readonly scale: number;
-  readonly offsetX: number;
-  readonly offsetY: number;
-};
-
-function translateAndScaleNode(
-  { node, originX, originY, scale, offsetX, offsetY }: TranslateAndScaleNodeOptions,
-): FigDesignNode {
-  const newM02 = (node.transform.m02 - originX) * scale + offsetX;
-  const newM12 = (node.transform.m12 - originY) * scale + offsetY;
-
-  return {
-    ...node,
-    transform: {
-      ...node.transform,
-      m02: newM02,
-      m12: newM12,
-      // Keep m00/m01/m10/m11 unchanged — scale is applied via size, not matrix
-    },
-    size: {
-      x: node.size.x * scale,
-      y: node.size.y * scale,
-    },
-    // Recursively scale children's positions and sizes
-    children: node.children ? node.children.map((child) => scaleChildNode(child, scale)) : undefined,
+  const groupTransform: GroupTransform = {
+    x: px(offsetX),
+    y: px(offsetY),
+    width: px(displayWidth),
+    height: px(displayHeight),
+    rotation: deg(0),
+    flipH: false,
+    flipV: false,
+    childOffsetX: px(0),
+    childOffsetY: px(0),
+    childExtentWidth: px(contentWidth),
+    childExtentHeight: px(contentHeight),
   };
-}
 
-/**
- * Recursively scale a child node's position and size.
- *
- * Children's coordinates are relative to the parent's local space.
- * When the parent's local space is uniformly scaled, children must be
- * scaled accordingly. We scale their position (m02, m12) and size,
- * and recurse into their children.
- */
-function scaleChildNode(
-  node: FigDesignNode,
-  scale: number,
-): FigDesignNode {
+  const id = String(++idCounter.value);
+
   return {
-    ...node,
-    transform: {
-      ...node.transform,
-      m02: node.transform.m02 * scale,
-      m12: node.transform.m12 * scale,
-    },
-    size: {
-      x: node.size.x * scale,
-      y: node.size.y * scale,
-    },
-    children: node.children ? node.children.map((child) => scaleChildNode(child, scale)) : undefined,
+    type: "grpSp",
+    nonVisual: { id, name: "Content" },
+    properties: { transform: groupTransform },
+    children: children as Shape[],
   };
 }
 
@@ -321,3 +317,105 @@ function createDefaultColorContext(): ColorContext {
     colorMap: { ...DEFAULT_COLOR_MAPPING } as Record<string, string>,
   };
 }
+
+// =============================================================================
+// INSTANCE resolution via SoT (@aurochs/fig/symbols)
+//
+// Resolves all INSTANCE nodes in the document by reconstructing the
+// parser-level FigNode tree from _loaded, running the canonical
+// resolveInstanceNode pipeline, and converting the resolved FigNode
+// tree back to FigDesignNode for the conversion pipeline.
+// =============================================================================
+
+/**
+ * Resolve all INSTANCE nodes in a FigDesignDocument.
+ *
+ * Returns a new array of FigPage with INSTANCE children expanded using
+ * the SoT (resolveInstanceNode from @aurochs/fig/symbols).
+ *
+ * When _loaded is not available (e.g., document was built programmatically),
+ * pages are returned unchanged — no INSTANCE resolution is performed.
+ */
+function resolveAllInstances(doc: FigDesignDocument): readonly FigPage[] {
+  const loaded = doc._loaded;
+  if (!loaded) {
+    // No parser-level data available — return pages as-is.
+    return doc.pages;
+  }
+
+  // Reconstruct parser-level FigNode tree and symbolMap.
+  const tree = buildNodeTree(loaded.nodeChanges);
+
+  // Pre-resolve SYMBOL dependencies (topological sort + nested INSTANCE expansion).
+  const resolvedSymbolCache = preResolveSymbols(tree.nodeMap);
+
+  const resolveCtx = {
+    symbolMap: tree.nodeMap,
+    resolvedSymbolCache,
+  };
+
+  // Walk the DOCUMENT → CANVAS → children hierarchy (same as treeToDocument)
+  // and resolve INSTANCE nodes in each page.
+  const resolvedPages: FigPage[] = [];
+
+  for (const root of tree.roots) {
+    const rootType = getNodeType(root);
+
+    const canvases = rootType === "DOCUMENT"
+      ? safeChildren(root).filter((c) => getNodeType(c) === "CANVAS")
+      : rootType === "CANVAS" ? [root] : [];
+
+    for (const canvas of canvases) {
+      // Find the corresponding FigPage by matching the canvas GUID.
+      const pageIndex = resolvedPages.length;
+      const originalPage = doc.pages[pageIndex];
+      if (!originalPage) { continue; }
+
+      // Resolve INSTANCE nodes in the canvas's children.
+      const resolvedChildren = safeChildren(canvas).map((child) =>
+        resolveNodeRecursive(child, resolveCtx),
+      );
+
+      // Convert resolved FigNode children back to FigDesignNode.
+      const components = new Map<string, FigDesignNode>();
+      const designChildren = resolvedChildren.map((child) =>
+        convertFigNode(child, components),
+      );
+
+      resolvedPages.push({
+        ...originalPage,
+        children: designChildren,
+      });
+    }
+  }
+
+  return resolvedPages;
+}
+
+/**
+ * Recursively resolve INSTANCE nodes in a FigNode tree using the SoT.
+ */
+function resolveNodeRecursive(
+  node: FigNode,
+  ctx: { symbolMap: ReadonlyMap<string, FigNode>; resolvedSymbolCache: ReadonlyMap<string, FigNode> },
+): FigNode {
+  const nodeType = getNodeType(node);
+
+  if (nodeType === "INSTANCE") {
+    const resolved = resolveInstanceNode(node, ctx);
+    // resolved.children are already the expanded SYMBOL children with overrides.
+    // Recurse into them to resolve nested INSTANCEs.
+    const children = resolved.children.map((child) => resolveNodeRecursive(child, ctx));
+    return { ...resolved.node, children } as FigNode;
+  }
+
+  // Not an INSTANCE — recurse into children.
+  const children = safeChildren(node);
+  if (children.length === 0) {
+    return node;
+  }
+
+  const resolvedChildren = children.map((child) => resolveNodeRecursive(child, ctx));
+  return { ...node, children: resolvedChildren } as FigNode;
+}
+

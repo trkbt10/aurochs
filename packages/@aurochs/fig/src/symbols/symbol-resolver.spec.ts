@@ -4,7 +4,7 @@
 
 import type { FigNode } from "@aurochs/fig/types";
 import { cloneSymbolChildren } from "./symbol-resolver";
-import { createFigResolver } from "./fig-resolver";
+import { createFigResolver } from "../../../../@aurochs-renderer/fig/src/symbols/fig-resolver";
 
 /** Type guard that treats a partial object as FigNode for test purposes */
 function isFigNode(obj: unknown): obj is FigNode {

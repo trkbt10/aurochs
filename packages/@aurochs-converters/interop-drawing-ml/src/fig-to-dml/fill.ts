@@ -29,12 +29,16 @@ import { figColorToColor } from "./color";
 /**
  * Convert a Figma fills array to a single DrawingML BaseFill.
  * Returns undefined if no visible fill exists.
+ *
+ * @param nodeOpacity - The node's opacity (0-1). Multiplied into each
+ *   paint's alpha so that a 50% opaque node with a 100% opaque fill
+ *   produces a 50% alpha fill in PPTX.
  */
-export function figFillsToDml(fills: readonly FigPaint[]): BaseFill | undefined {
+export function figFillsToDml(fills: readonly FigPaint[], nodeOpacity = 1): BaseFill | undefined {
   for (let i = fills.length - 1; i >= 0; i--) {
     const paint = fills[i];
     if (!isPaintVisible(paint)) {continue;}
-    const result = convertSinglePaint(paint);
+    const result = convertSinglePaint(paint, nodeOpacity);
     if (result) {return result;}
   }
   return undefined;
@@ -55,9 +59,9 @@ function isPaintVisible(paint: FigPaint): boolean {
   return true;
 }
 
-function convertSinglePaint(paint: FigPaint): BaseFill | undefined {
+function convertSinglePaint(paint: FigPaint, nodeOpacity: number): BaseFill | undefined {
   const typeName = getPaintTypeName(paint);
-  const paintOpacity = paint.opacity ?? 1;
+  const paintOpacity = (paint.opacity ?? 1) * nodeOpacity;
 
   switch (typeName) {
     case "SOLID":
@@ -97,12 +101,13 @@ function applyPaintOpacity(color: FigColor, paintOpacity: number): FigColor {
  */
 function convertLinearGradient(paint: FigGradientPaint, paintOpacity: number): GradientFill {
   const handles = paint.gradientHandlePositions;
-  const computeAngle = () => Math.atan2(handles[1].y - handles[0].y, handles[1].x - handles[0].x) * (180 / Math.PI);
-  const angle = handles.length >= 2 ? computeAngle() : 0;
+  const angle = handles && handles.length >= 2
+    ? Math.atan2(handles[1].y - handles[0].y, handles[1].x - handles[0].x) * (180 / Math.PI)
+    : 0;
 
   return {
     type: "gradientFill",
-    stops: convertGradientStops(paint.gradientStops, paintOpacity),
+    stops: convertGradientStops(paint.gradientStops ?? [], paintOpacity),
     linear: { angle: deg(normalizeAngle(angle)), scaled: false },
     rotWithShape: true,
   };
@@ -114,12 +119,12 @@ function convertLinearGradient(paint: FigGradientPaint, paintOpacity: number): G
  */
 function convertRadialGradient(paint: FigGradientPaint, paintOpacity: number): GradientFill {
   const handles = paint.gradientHandlePositions;
-  const cx = handles.length > 0 ? handles[0].x : 0.5;
-  const cy = handles.length > 0 ? handles[0].y : 0.5;
+  const cx = handles && handles.length > 0 ? handles[0].x : 0.5;
+  const cy = handles && handles.length > 0 ? handles[0].y : 0.5;
 
   return {
     type: "gradientFill",
-    stops: convertGradientStops(paint.gradientStops, paintOpacity),
+    stops: convertGradientStops(paint.gradientStops ?? [], paintOpacity),
     path: {
       path: "circle",
       fillToRect: {
