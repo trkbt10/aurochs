@@ -2,11 +2,27 @@
  * @file Zstandard compression/decompression
  *
  * Uses fzstd for decompression (sync) and zstd-codec for compression (async).
+ *
+ * zstd-codec is loaded lazily via dynamic import() to avoid a bun bundler bug
+ * where the CJS module's `module.ZstdCodec = {}` line is miscompiled into a
+ * reference to an undeclared `module_zstd_codec` variable.
+ * Lazy loading also avoids paying the WASM initialization cost when only
+ * decompression (fzstd, sync) is needed.
  */
 
 import { decompress as fzstdDecompress } from "fzstd";
-import type { ZstdSimple } from "zstd-codec";
-import { ZstdCodec } from "zstd-codec";
+import type { ZstdSimple, ZstdCodecStatic } from "zstd-codec";
+
+/**
+ * Lazily load the ZstdCodec factory from zstd-codec.
+ *
+ * Uses dynamic import() so the module is never statically bundled —
+ * this sidesteps the bun bundler's miscompilation of the CJS wrapper.
+ */
+async function loadZstdCodec(): Promise<ZstdCodecStatic> {
+  const mod = await import("zstd-codec");
+  return mod.ZstdCodec;
+}
 
 /**
  * Decompress zstd data (sync).
@@ -39,7 +55,8 @@ export type ZstdCompressor = {
  *
  * @returns Promise resolving to a ZstdCompressor
  */
-export function createZstdCompressor(): Promise<ZstdCompressor> {
+export async function createZstdCompressor(): Promise<ZstdCompressor> {
+  const ZstdCodec = await loadZstdCodec();
   return new Promise<ZstdCompressor>((resolve, reject) => {
     ZstdCodec.run((binding) => {
       try {

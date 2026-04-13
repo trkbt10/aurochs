@@ -65,6 +65,9 @@ jobs:
           test -f publish/aurochs/dist/pptx/renderer/svg/index.js
           test -f publish/aurochs/dist/cli.js
 
+      - name: Verify CLI loads without errors
+        run: bun run --cwd packages/@aurochs-build/aurochs verify:cli
+
       - name: Upload npm package artifact
         uses: actions/upload-artifact@v4
         with:
