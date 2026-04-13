@@ -27,9 +27,13 @@ export {
   type AlignYOptions,
   getFillColorAndOpacity,
   computeTextLayout,
+  textLayoutToCursorLayout,
   type TextLayout,
   type LayoutLine,
   type ComputeLayoutOptions,
+  type CursorLayoutResult,
+  type CursorLayoutLine,
+  type CursorLayoutSpan,
 } from "./layout";
 
 export {

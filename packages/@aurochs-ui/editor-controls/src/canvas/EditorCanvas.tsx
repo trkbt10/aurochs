@@ -679,6 +679,8 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
       height: "100%",
       cursor: cursor ?? (isPanning || isInteracting ? "grabbing" : "default"),
       backgroundColor: colorTokens.background.tertiary,
+      userSelect: "none",
+      WebkitUserSelect: "none",
     }),
     [cursor, isPanning, isInteracting],
   );

@@ -36,7 +36,11 @@ export { getFillColorAndOpacity } from "./fill";
 // Layout computation
 export {
   computeTextLayout,
+  textLayoutToCursorLayout,
   type TextLayout,
   type LayoutLine,
   type ComputeLayoutOptions,
+  type CursorLayoutResult,
+  type CursorLayoutLine,
+  type CursorLayoutSpan,
 } from "./compute-layout";

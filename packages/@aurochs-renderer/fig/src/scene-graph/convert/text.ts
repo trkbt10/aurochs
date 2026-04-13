@@ -10,7 +10,7 @@ import { extractTextProps } from "../../text/layout/extract-props";
 import { getFillColorAndOpacity } from "../../text/layout/fill";
 import { computeTextLayout } from "../../text/layout/compute-layout";
 import { extractDerivedTextPathData, hasDerivedGlyphs } from "../../text/paths/derived-paths";
-import type { PathContour, Color, FallbackTextData } from "../types";
+import type { PathContour, Color, TextLineLayout } from "../types";
 
 /** Map Figma text decoration value to scene graph text decoration string */
 function mapTextDecoration(decoration: string | undefined): "underline" | "strikethrough" | undefined {
@@ -118,8 +118,8 @@ export type TextConversionResult = {
   readonly decorationContours?: readonly PathContour[];
   /** Text fill color */
   readonly fill: { readonly color: Color; readonly opacity: number };
-  /** Fallback text data (when outlines not available) */
-  readonly fallbackText?: FallbackTextData;
+  /** Text line layout data for SVG <text> rendering */
+  readonly textLineLayout?: TextLineLayout;
 };
 
 /**
@@ -144,10 +144,10 @@ export function convertTextNode(node: FigDesignNode, blobs: readonly FigBlob[]):
     const glyphContours = convertTextContours(pathData.glyphContours);
     const decorationContours = convertDecorationsToContours(pathData.decorations);
 
-    // Also generate fallback text layout for Canvas2D rendering
+    // Also generate text line layout for Canvas2D rendering
     // (glyph outlines may not render well at low resolution via stencil)
     const layout = computeTextLayout({ props });
-    const fallbackText: FallbackTextData = {
+    const textLineLayout: TextLineLayout = {
       lines: layout.lines.map((line) => ({
         text: line.text,
         x: line.x,
@@ -167,14 +167,14 @@ export function convertTextNode(node: FigDesignNode, blobs: readonly FigBlob[]):
       glyphContours,
       decorationContours: decorationContours.length > 0 ? decorationContours : undefined,
       fill: { color, opacity: fillOpacity },
-      fallbackText,
+      textLineLayout,
     };
   }
 
-  // Fallback: provide text layout data for <text> element rendering
+  // Provide text line layout data for <text> element rendering
   const layout = computeTextLayout({ props });
 
-  const fallbackText: FallbackTextData = {
+  const textLineLayout: TextLineLayout = {
     lines: layout.lines.map((line) => ({
       text: line.text,
       x: line.x,
@@ -192,6 +192,6 @@ export function convertTextNode(node: FigDesignNode, blobs: readonly FigBlob[]):
 
   return {
     fill: { color, opacity: fillOpacity },
-    fallbackText,
+    textLineLayout,
   };
 }

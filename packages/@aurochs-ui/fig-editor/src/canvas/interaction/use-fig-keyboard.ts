@@ -2,11 +2,17 @@
  * @file Keyboard shortcut handler for the fig editor
  *
  * Maps keyboard events to editor actions.
+ *
+ * When the event target is an input element (HTMLInputElement or
+ * HTMLTextAreaElement), all shortcuts are bypassed so that text
+ * editing works normally. This is the same guard used by pptx-editor
+ * via isInputTarget() from editor-core/keyboard.
  */
 
 import { useEffect } from "react";
 import type { FigEditorAction } from "../../context/fig-editor/types";
 import type { FigNodeId } from "@aurochs/fig/domain";
+import { isInputTarget } from "@aurochs-ui/editor-core/keyboard";
 
 type UseFigKeyboardOptions = {
   readonly dispatch: (action: FigEditorAction) => void;
@@ -14,6 +20,16 @@ type UseFigKeyboardOptions = {
   readonly selectedIds: readonly FigNodeId[];
   readonly canUndo: boolean;
   readonly canRedo: boolean;
+  /**
+   * Whether inline text editing is currently active.
+   *
+   * When true, ALL keyboard shortcuts are suppressed — the hidden textarea
+   * in the text edit overlay handles all key input. This is a defense-in-depth
+   * guard: normally isInputTarget(e.target) catches textarea focus, but if
+   * focus is briefly lost (React re-render, browser quirk), this prevents
+   * destructive actions like Backspace triggering node deletion.
+   */
+  readonly isTextEditing: boolean;
 };
 
 /**
@@ -25,9 +41,27 @@ export function useFigKeyboard({
   selectedIds,
   canUndo,
   canRedo,
+  isTextEditing,
 }: UseFigKeyboardOptions): void {
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
+      // When an input/textarea has focus (e.g., text editing, property panel inputs),
+      // let all keys pass through to the element. No editor shortcuts should fire.
+      if (isInputTarget(e.target)) {
+        return;
+      }
+
+      // Defense-in-depth: when text editing is active, suppress all editor shortcuts
+      // even if the textarea has lost focus (e.g., brief React re-render race).
+      // The only exception is Escape, which exits text editing.
+      if (isTextEditing) {
+        if (e.key === "Escape") {
+          e.preventDefault();
+          dispatch({ type: "EXIT_TEXT_EDIT" });
+        }
+        return;
+      }
+
       const isMod = e.metaKey || e.ctrlKey;
 
       // Delete/Backspace: delete selected nodes
@@ -114,5 +148,5 @@ export function useFigKeyboard({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [dispatch, hasSelection, selectedIds, canUndo, canRedo]);
+  }, [dispatch, hasSelection, selectedIds, canUndo, canRedo, isTextEditing]);
 }

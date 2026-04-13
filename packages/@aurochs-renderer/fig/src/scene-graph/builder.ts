@@ -418,7 +418,7 @@ function buildTextNode(node: FigDesignNode, ctx: BuildContext): TextNode {
     glyphContours: textData.glyphContours,
     decorationContours: textData.decorationContours,
     fill: textData.fill,
-    fallbackText: textData.fallbackText,
+    textLineLayout: textData.textLineLayout,
   };
 }
 

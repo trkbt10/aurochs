@@ -120,28 +120,28 @@ describe("Scene graph builder - demo document", () => {
   });
 
   describe("Page 2: Typography", () => {
-    it("produces text nodes with fallback text data", () => {
+    it("produces text nodes with textLineLayout text data", () => {
       const sg = sceneGraphs[1];
       const textNodes = findAllByType(sg.root.children, "text");
       expect(textNodes.length).toBeGreaterThan(0);
 
-      // Each text node should have either glyphContours or fallbackText
+      // Each text node should have either glyphContours or textLineLayout
       for (const tn of textNodes) {
         const text = tn as TextNode;
         const hasGlyphs = text.glyphContours && text.glyphContours.length > 0;
-        const hasFallback = text.fallbackText && text.fallbackText.lines.length > 0;
+        const hasFallback = text.textLineLayout && text.textLineLayout.lines.length > 0;
         expect(hasGlyphs || hasFallback).toBe(true);
       }
     });
 
-    it("text nodes have non-empty fallback text content", () => {
+    it("text nodes have non-empty textLineLayout text content", () => {
       const sg = sceneGraphs[1];
       const textNodes = findAllByType(sg.root.children, "text") as TextNode[];
       expect(textNodes.length).toBeGreaterThan(0);
 
       // Debug: check what the text nodes contain
       for (const t of textNodes) {
-        const hasFallback = t.fallbackText !== undefined;
+        const hasFallback = t.textLineLayout !== undefined;
         const hasGlyphs = t.glyphContours && t.glyphContours.length > 0;
         // At least one rendering path should be available
         expect(hasFallback || hasGlyphs).toBe(true);

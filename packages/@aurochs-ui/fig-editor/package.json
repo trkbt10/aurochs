@@ -26,6 +26,14 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./context": {
+      "types": "./src/context/FigEditorContext.tsx",
+      "default": "./src/context/FigEditorContext.tsx"
+    },
+    "./canvas": {
+      "types": "./src/canvas/FigEditorCanvas.tsx",
+      "default": "./src/canvas/FigEditorCanvas.tsx"
     }
   }
 }

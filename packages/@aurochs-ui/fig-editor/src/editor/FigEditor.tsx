@@ -63,11 +63,18 @@ function LeftPanelContent() {
 // =============================================================================
 
 function FigEditorContent() {
-  const { dispatch, nodeSelection, canUndo, canRedo } = useFigEditor();
+  const { dispatch, nodeSelection, canUndo, canRedo, textEdit } = useFigEditor();
   const hasSelection = nodeSelection.selectedIds.length > 0;
 
   // Register keyboard shortcuts
-  useFigKeyboard({ dispatch, hasSelection, selectedIds: nodeSelection.selectedIds, canUndo, canRedo });
+  useFigKeyboard({
+    dispatch,
+    hasSelection,
+    selectedIds: nodeSelection.selectedIds,
+    canUndo,
+    canRedo,
+    isTextEditing: textEdit.type === "active",
+  });
 
   const toolbarContent = useMemo(() => <FigEditorToolbar />, []);
 

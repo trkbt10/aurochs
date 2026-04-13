@@ -1,0 +1,25 @@
+import { defineConfig } from "@playwright/test";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const PORT = 5192;
+
+export default defineConfig({
+  testDir: resolve(__dirname, "spec/e2e"),
+  testMatch: "**/*.e2e.ts",
+  timeout: 30_000,
+  use: {
+    baseURL: `http://localhost:${PORT}`,
+    browserName: "chromium",
+    headless: true,
+    viewport: { width: 1280, height: 720 },
+  },
+  webServer: {
+    command: `npx vite --config spec/e2e/vite.config.ts --port ${PORT} --strictPort`,
+    port: PORT,
+    reuseExistingServer: false,
+    timeout: 15_000,
+    cwd: __dirname,
+  },
+});

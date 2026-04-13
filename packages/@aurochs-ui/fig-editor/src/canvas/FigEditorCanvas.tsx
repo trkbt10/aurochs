@@ -180,6 +180,12 @@ export function FigEditorCanvas() {
 
   const handleItemPointerDown = useCallback(
     (id: string, coords: CanvasPageCoords, _e: React.PointerEvent) => {
+      // If text editing is active, clicking any node exits text edit first.
+      // This prevents the invalid state of "text editing + other node selected".
+      if (textEdit.type === "active") {
+        dispatch({ type: "EXIT_TEXT_EDIT" });
+      }
+
       if (!isSelectMode(creationMode)) {
         return;
       }
@@ -199,7 +205,7 @@ export function FigEditorCanvas() {
         startClientY: coords.clientY,
       });
     },
-    [dispatch, creationMode],
+    [dispatch, creationMode, textEdit],
   );
 
   const handleItemClick = useCallback(
@@ -256,6 +262,11 @@ export function FigEditorCanvas() {
 
   const handleCanvasPointerDown = useCallback(
     (coords: CanvasPageCoords, e: React.PointerEvent) => {
+      // Exit text editing on any canvas background click
+      if (textEdit.type === "active") {
+        dispatch({ type: "EXIT_TEXT_EDIT" });
+      }
+
       if (!isSelectMode(creationMode)) {
         // Start creation drag
         e.preventDefault(); // Suppress marquee in EditorCanvas
@@ -269,7 +280,7 @@ export function FigEditorCanvas() {
       }
       dispatch({ type: "CLEAR_NODE_SELECTION" });
     },
-    [dispatch, creationMode],
+    [dispatch, creationMode, textEdit],
   );
 
   const handleCanvasClick = useCallback(

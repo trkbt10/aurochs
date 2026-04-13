@@ -9,3 +9,4 @@ export { FigSceneRenderer } from "./FigSceneRenderer";
 export { FigSvgDefsProvider, FigSvgIdProvider, useFigSvgDefs } from "./context/FigSvgDefsContext";
 export type { FigSvgIdGenerator } from "./context/FigSvgDefsContext";
 export { SceneNodeRenderer } from "./nodes/SceneNodeRenderer";
+export { FigTextLines } from "./nodes/FigTextLines";

@@ -192,14 +192,14 @@ export type MaskNode = {
 // Text Types
 // =============================================================================
 
-export type FallbackTextLine = {
+export type TextLineBounds = {
   readonly text: string;
   readonly x: number;
   readonly y: number;
 };
 
-export type FallbackTextData = {
-  readonly lines: readonly FallbackTextLine[];
+export type TextLineLayout = {
+  readonly lines: readonly TextLineBounds[];
   readonly fontFamily: string;
   readonly fontSize: number;
   readonly fontWeight?: number;
@@ -279,8 +279,8 @@ export type TextNode = SceneNodeBase & {
   readonly decorationContours?: readonly PathContour[];
   /** Fill color and opacity for text */
   readonly fill: { readonly color: Color; readonly opacity: number };
-  /** Fallback text data when glyph outlines are not available */
-  readonly fallbackText?: FallbackTextData;
+  /** Text line layout for SVG <text> rendering */
+  readonly textLineLayout?: TextLineLayout;
 };
 
 export type ImageNode = SceneNodeBase & {

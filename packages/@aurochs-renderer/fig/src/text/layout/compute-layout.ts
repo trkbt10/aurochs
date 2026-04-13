@@ -14,12 +14,29 @@ import { getAlignedX, getAlignedYWithMetrics } from "./alignment";
 export type LayoutLine = {
   /** Text content of this line */
   readonly text: string;
-  /** X position (considering horizontal alignment) */
+  /**
+   * X position (SVG text-anchor point).
+   *
+   * This is the coordinate used as SVG <text x=...>. Its meaning depends on
+   * the horizontal alignment (textAnchor):
+   * - LEFT/start:  left edge of text
+   * - CENTER/middle: center of text
+   * - RIGHT/end:   right edge of text
+   */
   readonly x: number;
   /** Y position (baseline) */
   readonly y: number;
   /** Line index (0-based) */
   readonly index: number;
+  /**
+   * Estimated pixel width of the line's text content.
+   *
+   * Computed from character count × estimated character width. This is an
+   * approximation suitable for cursor positioning when precise font metrics
+   * are unavailable. Callers with access to canvas.measureText (browser) or
+   * font metrics can override this value for higher accuracy.
+   */
+  readonly estimatedWidth: number;
 };
 
 /**
@@ -244,12 +261,16 @@ export function computeTextLayout(options: ComputeLayoutOptions): TextLayout {
     ascenderRatio,
   });
 
+  // Estimate character width for approximate line width calculation
+  const charWidth = estimateCharWidth(props.fontSize, props.letterSpacing);
+
   // Build laid-out lines
   const lines: LayoutLine[] = textLines.map((text, index) => ({
     text,
     x,
     y: baseY + index * lineHeight,
     index,
+    estimatedWidth: text.length * charWidth,
   }));
 
   return {
@@ -260,4 +281,104 @@ export function computeTextLayout(options: ComputeLayoutOptions): TextLayout {
     lineHeight,
     ascenderRatio,
   };
+}
+
+// =============================================================================
+// Cursor layout conversion
+// =============================================================================
+
+/**
+ * A positioned span for cursor calculation.
+ * (Matches editor-core's LayoutSpanLike structurally)
+ */
+export type CursorLayoutSpan = {
+  readonly text: string;
+  readonly width: number;
+  readonly dx: number;
+  readonly fontSize: number;
+};
+
+/**
+ * A positioned line for cursor calculation.
+ * (Matches editor-core's LayoutLineLike structurally)
+ */
+export type CursorLayoutLine = {
+  readonly spans: readonly CursorLayoutSpan[];
+  readonly x: number;
+  readonly y: number;
+  readonly height: number;
+};
+
+/**
+ * Layout result for cursor calculation.
+ * (Matches editor-core's LayoutResultLike structurally)
+ */
+export type CursorLayoutResult = {
+  readonly paragraphs: readonly {
+    readonly lines: readonly CursorLayoutLine[];
+  }[];
+};
+
+/**
+ * Convert TextLayout's SVG-anchor-based coordinates to left-edge coordinates
+ * for cursor position calculation.
+ *
+ * SVG <text> uses textAnchor for alignment:
+ * - "start" (LEFT): x = left edge of text
+ * - "middle" (CENTER): x = center of text → left edge = x − width/2
+ * - "end" (RIGHT): x = right edge of text → left edge = x − width
+ *
+ * editor-core's cursor positioning expects line.x to be the LEFT edge
+ * and span.width to be the rendered text width.
+ *
+ * This function is the single conversion point between these two coordinate
+ * systems. FigTextEditOverlay calls this instead of performing its own
+ * coordinate arithmetic.
+ *
+ * @param layout - Result of computeTextLayout()
+ * @param getLineTextWidth - Optional function to measure actual text width
+ *   per line (e.g., via canvas.measureText). If not provided, falls back to
+ *   LayoutLine.estimatedWidth. Callers with browser access should provide this
+ *   for accurate cursor placement.
+ * @returns Cursor layout result suitable for editor-core's coordinate-to-cursor functions
+ */
+export function textLayoutToCursorLayout(
+  layout: TextLayout,
+  getLineTextWidth?: (text: string) => number,
+): CursorLayoutResult {
+  const paragraphs = layout.lines.map((line) => {
+    const textWidth = getLineTextWidth
+      ? getLineTextWidth(line.text)
+      : line.estimatedWidth;
+
+    // Convert SVG text-anchor x to left-edge x
+    let leftX: number;
+    switch (layout.alignH) {
+      case "CENTER":
+        leftX = line.x - textWidth / 2;
+        break;
+      case "RIGHT":
+        leftX = line.x - textWidth;
+        break;
+      default: // LEFT, JUSTIFIED
+        leftX = line.x;
+        break;
+    }
+
+    return {
+      lines: [{
+        spans: [{
+          text: line.text,
+          width: textWidth,
+          dx: 0,
+          fontSize: layout.fontSize,
+        }],
+        x: leftX,
+        y: line.y,
+        height: layout.lineHeight,
+      }],
+    };
+  });
+
+  return { paragraphs };
 }

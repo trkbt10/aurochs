@@ -399,7 +399,7 @@ describe("Text tessellation pipeline", () => {
   describe("tessellateTextNode", () => {
     it("returns null when no glyphContours", () => {
       const node = makeTextNode({
-        fallbackText: {
+        textLineLayout: {
           lines: [{ text: "Hello", x: 0, y: 14 }],
           fontFamily: "Inter",
           fontSize: 14,

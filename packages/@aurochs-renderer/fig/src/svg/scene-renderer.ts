@@ -406,12 +406,12 @@ function renderTextNode(node: TextNode, defsCol: SvgDefsCollector): SvgString {
     return pathEl;
   }
 
-  // Fallback: <text> elements
-  if (!node.fallbackText) {
+  // Text line layout: <text> elements
+  if (!node.textLineLayout) {
     return EMPTY_SVG;
   }
 
-  const fb = node.fallbackText;
+  const fb = node.textLineLayout;
   const textAnchor = fb.textAnchor !== "start" ? fb.textAnchor : undefined;
   const textElements: SvgString[] = fb.lines.map((line) =>
     text(

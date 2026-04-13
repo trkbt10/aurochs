@@ -622,7 +622,7 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
       return;
     }
 
-    if (node.fallbackText) {
+    if (node.textLineLayout) {
       const textureKey = `__text_${node.id}`;
       const entryRef = { value: textureCache.getIfCached(textureKey) };
 
