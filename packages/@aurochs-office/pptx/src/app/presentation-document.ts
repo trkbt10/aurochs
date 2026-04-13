@@ -8,6 +8,7 @@
 import type { Slide, Shape, Presentation } from "../domain";
 import type { PackageFile } from "@aurochs-office/opc";
 import type { Theme } from "../domain/theme/types";
+import type { TableStyleList } from "../parser/table/style-parser";
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
@@ -107,6 +108,13 @@ export type PresentationDocument = {
   readonly fontScheme: FontScheme;
   /** Centralized resource store — SoT for all resolved resources (images, charts, diagrams) */
   readonly resourceStore: ResourceStore;
+
+  /**
+   * Table styles from ppt/tableStyles.xml.
+   * Used for resolving style-derived cell fills (banding, header colors, etc.).
+   * @see ECMA-376 Part 1, Section 20.1.4.2 (a:tblStyleLst)
+   */
+  readonly tableStyles?: TableStyleList;
 
   /**
    * Presentation file for PPTX resources.

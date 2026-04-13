@@ -106,6 +106,51 @@ export type FigParentIndex = {
 };
 
 /**
+ * Style override entry within a Kiwi TextData.styleOverrideTable.
+ *
+ * Each entry is a NodeChange with only style-related fields populated.
+ * The `styleID` field identifies which characters use this override
+ * (referenced via TextData.characterStyleIDs).
+ *
+ * @see Kiwi schema: TextData.styleOverrideTable (array of NodeChange)
+ */
+export type FigTextStyleOverrideEntry = {
+  readonly styleID: number;
+  readonly fontSize?: number;
+  readonly fontName?: { readonly family: string; readonly style: string; readonly postscript: string };
+  readonly fillPaints?: readonly FigPaint[];
+  readonly textDecoration?: KiwiEnumValue;
+  readonly textCase?: KiwiEnumValue;
+  readonly lineHeight?: { readonly value: number; readonly units: KiwiEnumValue };
+  readonly letterSpacing?: { readonly value: number; readonly units: KiwiEnumValue };
+  readonly [key: string]: unknown;
+};
+
+/**
+ * Kiwi TextData message as decoded from the binary format.
+ *
+ * Contains the text content plus per-character styling information.
+ * The `characters` field is the same as the NodeChange-level `characters` field.
+ *
+ * @see Kiwi schema: TextData (message type 85)
+ */
+export type FigKiwiTextData = {
+  readonly characters: string;
+  /**
+   * Per-character style ID array. Each element corresponds to a character
+   * and references a styleOverrideTable entry by its styleID field.
+   * ID 0 means "use the node's base style" (no override).
+   */
+  readonly characterStyleIDs?: readonly number[];
+  /**
+   * Style override table. Each entry is a sparse NodeChange with only
+   * style-related fields (fontSize, fontName, fillPaints, etc.).
+   */
+  readonly styleOverrideTable?: readonly FigTextStyleOverrideEntry[];
+  readonly [key: string]: unknown;
+};
+
+/**
  * Fig node as decoded from Kiwi binary format.
  * This represents the raw structure, not a high-level API.
  *
@@ -145,6 +190,12 @@ export type FigNode = {
   readonly blendMode?: string | KiwiEnumValue;
   /** iOS-style corner smoothing (0-1 range) */
   readonly cornerSmoothing?: number;
+  /** Number of points for STAR and REGULAR_POLYGON nodes */
+  readonly pointCount?: number;
+  /** Inner radius ratio for STAR nodes (0-1 range, default 0.382) */
+  readonly starInnerRadius?: number;
+  /** Kiwi TextData message for TEXT nodes (per-character styling) */
+  readonly textData?: FigKiwiTextData;
   /** Children (added by tree-builder, not present in raw Kiwi format) */
   readonly children?: readonly FigNode[];
   /** Additional fields (Kiwi schema has many optional fields) */

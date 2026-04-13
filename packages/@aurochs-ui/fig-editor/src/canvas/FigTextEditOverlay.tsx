@@ -20,11 +20,12 @@
  * SVG renderer is the single source of truth for text appearance.
  */
 
-import { useCallback, useRef, useState, useEffect } from "react";
+import { useCallback, useRef, useState, useEffect, type CSSProperties } from "react";
 import type { FigDesignNode } from "@aurochs/fig/domain";
 import type { FigEditorAction } from "../context/fig-editor/types";
 import { TextEditInputFrame } from "@aurochs-ui/editor-controls/text-edit";
 import { useTextComposition } from "@aurochs-ui/editor-controls/text-edit";
+import { useCanvasViewportRequired } from "@aurochs-ui/editor-controls/canvas";
 import { createInitialCompositionState, type CompositionState } from "@aurochs-ui/editor-core/text-edit";
 
 // =============================================================================
@@ -60,8 +61,25 @@ export function FigTextEditOverlay({
   dispatch,
 }: FigTextEditOverlayProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { screenToPage } = useCanvasViewportRequired();
   const textData = node.textData;
   const currentText = textData?.characters ?? "";
+
+  // --- Click-outside detection ---
+  const handleOverlayPointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      const page = screenToPage(e.clientX, e.clientY);
+      if (!page) return;
+      const b = bounds;
+      const inside =
+        page.pageX >= b.x && page.pageX <= b.x + b.width &&
+        page.pageY >= b.y && page.pageY <= b.y + b.height;
+      if (!inside) {
+        dispatch({ type: "EXIT_TEXT_EDIT" });
+      }
+    },
+    [screenToPage, bounds, dispatch],
+  );
 
   // Focus textarea on mount
   useEffect(() => {
@@ -127,23 +145,28 @@ export function FigTextEditOverlay({
     : undefined;
 
   return (
-    <TextEditInputFrame
-      bounds={bounds}
-      canvasWidth={canvasWidth}
-      canvasHeight={canvasHeight}
-      textareaRef={textareaRef}
-      value={currentText}
-      onChange={handleChange}
-      onKeyDown={handleKeyDown}
-      onCompositionStart={handleCompositionStart}
-      onCompositionUpdate={handleCompositionUpdate}
-      onCompositionEnd={handleCompositionEnd}
-      showFrameOutline
-      showTextSelection
-      textFont={textFont}
+    <div
+      style={{ position: "absolute", inset: 0 } as CSSProperties}
+      onPointerDown={handleOverlayPointerDown}
     >
-      {/* No custom children needed — showTextSelection handles cursor/selection */}
-      {null}
-    </TextEditInputFrame>
+      <TextEditInputFrame
+        bounds={bounds}
+        canvasWidth={canvasWidth}
+        canvasHeight={canvasHeight}
+        textareaRef={textareaRef}
+        value={currentText}
+        onChange={handleChange}
+        onKeyDown={handleKeyDown}
+        onCompositionStart={handleCompositionStart}
+        onCompositionUpdate={handleCompositionUpdate}
+        onCompositionEnd={handleCompositionEnd}
+        showFrameOutline
+        showTextSelection
+        textFont={textFont}
+      >
+        {/* No custom children needed — showTextSelection handles cursor/selection */}
+        {null}
+      </TextEditInputFrame>
+    </div>
   );
 }

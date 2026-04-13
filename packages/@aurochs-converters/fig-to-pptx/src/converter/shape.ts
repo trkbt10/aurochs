@@ -19,8 +19,8 @@ import type { FigDesignNode } from "@aurochs/fig/domain";
 import type { FigImagePaint } from "@aurochs/fig/types";
 import type { Shape, SpShape, GrpShape, PicShape, NonVisualProperties, ShapeProperties } from "@aurochs-office/pptx/domain/shape";
 import type { Transform, GroupTransform } from "@aurochs-office/drawing-ml/domain/geometry";
-import type { Pixels, Percent } from "@aurochs-office/drawing-ml/domain/units";
-import { px, pct } from "@aurochs-office/drawing-ml/domain/units";
+import type { Pixels, Percent, Degrees } from "@aurochs-office/drawing-ml/domain/units";
+import { px, pct, deg } from "@aurochs-office/drawing-ml/domain/units";
 import { figTransformToDml, figFillsToDml, figStrokeToDml, figEffectsToDml } from "@aurochs-converters/interop-drawing-ml/fig-to-dml";
 import { convertGeometry } from "./geometry";
 import { convertText } from "./text";
@@ -138,29 +138,63 @@ function convertToGroupShape(
 ): GrpShape {
   const id = nextId(idCounter);
   const transform = figTransformToDml(node.transform, node.size);
-  const children = convertNodes(node.children!, idCounter);
 
-  // In Figma, child coordinates are relative to the parent frame's origin.
-  // In PPTX, grpSp childOffset/childExtent define the child coordinate space.
-  // Setting childOffset to (0,0) and childExtent to the group's own dimensions
-  // means children's x,y are relative to the group's top-left — matching Figma.
+  // In Figma, child coordinates are relative to the parent frame's local coordinate
+  // system (pre-transform). In PPTX, grpSp childOffset/childExtent define the child
+  // coordinate space, and the extent (from transform) defines the display size.
+  //
+  // childExtent must match the group's local (pre-scale) size — node.size —
+  // because child positions are in local coordinates. If childExtent were set to
+  // the scaled display size (transform.width/height), children would be
+  // incorrectly repositioned due to the implicit rescaling that PPTX applies
+  // when childExtent ≠ extent.
   const groupTransform: GroupTransform = {
     ...transform,
     childOffsetX: px(0) as Pixels,
     childOffsetY: px(0) as Pixels,
-    childExtentWidth: transform.width,
-    childExtentHeight: transform.height,
+    childExtentWidth: px(node.size.x) as Pixels,
+    childExtentHeight: px(node.size.y) as Pixels,
   };
+
+  // PPTX grpSp does not render a fill on the group itself — only child shapes
+  // are visible. If the FRAME has a fill (e.g., cell background), we insert a
+  // background rectangle as the first child to carry the visual fill.
+  const childShapes: Shape[] = [];
+  const fill = figFillsToDml(node.fills);
+  const line = figStrokeToDml(node.strokes, node.strokeWeight, node.strokeCap, node.strokeJoin);
+  if (fill || line) {
+    const bgId = nextId(idCounter);
+    const bgTransform: Transform = {
+      x: px(0) as Pixels,
+      y: px(0) as Pixels,
+      width: px(node.size.x) as Pixels,
+      height: px(node.size.y) as Pixels,
+      rotation: deg(0) as Degrees,
+      flipH: false,
+      flipV: false,
+    };
+    childShapes.push({
+      type: "sp",
+      nonVisual: { id: bgId, name: `${node.name ?? "Frame"} Background` },
+      properties: {
+        transform: bgTransform,
+        geometry: { type: "preset", preset: "rect", adjustValues: [] },
+        fill,
+        line,
+      },
+    });
+  }
+
+  childShapes.push(...convertNodes(node.children!, idCounter));
 
   return {
     type: "grpSp",
     nonVisual: buildNonVisual(id, node),
     properties: {
       transform: groupTransform,
-      fill: figFillsToDml(node.fills),
       effects: figEffectsToDml(node.effects),
     },
-    children,
+    children: childShapes,
   };
 }
 

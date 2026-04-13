@@ -11,13 +11,13 @@
  * 4. Collects COMPONENT/SYMBOL nodes into the components map
  */
 
-import type { FigNode, FigNodeType, FigMatrix, FigVector, FigColor, FigPaint, FigEffect, FigStrokeWeight, KiwiEnumValue } from "@aurochs/fig/types";
+import type { FigNode, FigNodeType, FigMatrix, FigVector, FigColor, FigPaint, FigEffect, FigStrokeWeight, KiwiEnumValue, FigKiwiTextData, FigTextStyleOverrideEntry } from "@aurochs/fig/types";
 import type { NodeTreeResult } from "@aurochs/fig/parser";
 import { getNodeType, safeChildren } from "@aurochs/fig/parser";
 import { getEffectiveSymbolID } from "@aurochs/fig/symbols";
 import type { LoadedFigFile, FigImage, FigMetadata } from "@aurochs/fig/roundtrip";
 import type {
-  FigDesignDocument, FigDesignNode, FigPage, AutoLayoutProps, LayoutConstraints, TextData, SymbolOverride,
+  FigDesignDocument, FigDesignNode, FigPage, AutoLayoutProps, LayoutConstraints, TextData, TextStyleOverride, SymbolOverride,
   BlendMode, DerivedTextData,
   ComponentPropertyDef, ComponentPropertyRef, ComponentPropertyAssignment, ComponentPropertyType, ComponentPropertyNodeField, ComponentPropertyValue,
 } from "../types/document";
@@ -176,15 +176,23 @@ function extractLayoutConstraints(raw: Record<string, unknown>): LayoutConstrain
  * - `raw.textData.characters` (builder-generated files store it in the TextData message)
  */
 function extractTextData(raw: Record<string, unknown>): TextData | undefined {
-  // Resolve characters from direct field or nested textData
+  // Resolve characters from direct field or nested textData.
+  // In real .fig files, characters is a direct NodeChange field.
+  // In builder-generated files, it's inside the textData Kiwi message.
+  const kiwiTextData = raw.textData as FigKiwiTextData | undefined;
   let characters = raw.characters;
   if (typeof characters !== "string") {
-    const td = raw.textData as { characters?: string } | undefined;
-    characters = td?.characters;
+    characters = kiwiTextData?.characters;
   }
   if (typeof characters !== "string") {
     return undefined;
   }
+
+  // Extract characterStyleIDs and styleOverrideTable from the typed Kiwi TextData.
+  const characterStyleIDs = kiwiTextData?.characterStyleIDs;
+  const styleOverrideTable = kiwiTextData?.styleOverrideTable
+    ? convertKiwiOverrideTable(kiwiTextData.styleOverrideTable)
+    : undefined;
 
   return {
     characters,
@@ -197,7 +205,32 @@ function extractTextData(raw: Record<string, unknown>): TextData | undefined {
     textCase: raw.textCase as KiwiEnumValue | undefined,
     lineHeight: raw.lineHeight as TextData["lineHeight"] | undefined,
     letterSpacing: raw.letterSpacing as TextData["letterSpacing"] | undefined,
+    characterStyleIDs: characterStyleIDs && characterStyleIDs.length > 0 ? characterStyleIDs : undefined,
+    styleOverrideTable: styleOverrideTable && styleOverrideTable.length > 0 ? styleOverrideTable : undefined,
   };
+}
+
+/**
+ * Convert Kiwi-level FigTextStyleOverrideEntry to domain TextStyleOverride.
+ *
+ * The Kiwi entries are sparse NodeChange objects. We extract the style-related
+ * subset into the typed domain representation.
+ */
+function convertKiwiOverrideTable(
+  entries: readonly FigTextStyleOverrideEntry[],
+): TextStyleOverride[] {
+  return entries
+    .filter((entry) => entry.styleID !== 0)
+    .map((entry): TextStyleOverride => ({
+      styleID: entry.styleID,
+      fontSize: entry.fontSize,
+      fontName: entry.fontName,
+      fillPaints: entry.fillPaints,
+      textDecoration: entry.textDecoration,
+      textCase: entry.textCase,
+      lineHeight: entry.lineHeight,
+      letterSpacing: entry.letterSpacing,
+    }));
 }
 
 // =============================================================================
@@ -436,8 +469,8 @@ export function convertFigNode(
 
     booleanOperation: raw.booleanOperation as KiwiEnumValue | undefined,
 
-    pointCount: raw.pointCount as number | undefined,
-    starInnerRadius: raw.starInnerRadius as number | undefined,
+    pointCount: node.pointCount,
+    starInnerRadius: node.starInnerRadius,
 
     _raw: collectRawFields(node),
   };

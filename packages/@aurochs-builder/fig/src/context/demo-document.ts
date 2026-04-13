@@ -355,12 +355,37 @@ function buildTypographyPage(
       .build(),
   );
 
+  // Vertical top
+  figFile.addRoundedRectangle(
+    roundedRectNode(id.next(), alignFrameID)
+      .name("vtop-bg")
+      .size(180, 80)
+      .position(260, 20)
+      .fill(LIGHT_GRAY)
+      .cornerRadius(8)
+      .build(),
+  );
+  figFile.addTextNode(
+    textNode(id.next(), alignFrameID)
+      .name("vtop-text")
+      .text("Vertical top\nalignment")
+      .font("Inter", "Regular")
+      .fontSize(14)
+      .color(DARK)
+      .size(180, 80)
+      .position(260, 20)
+      .alignHorizontal("CENTER")
+      .alignVertical("TOP")
+      .autoResize("NONE")
+      .build(),
+  );
+
   // Vertical center
   figFile.addRoundedRectangle(
     roundedRectNode(id.next(), alignFrameID)
       .name("vcenter-bg")
       .size(180, 80)
-      .position(260, 68)
+      .position(260, 116)
       .fill(LIGHT_GRAY)
       .cornerRadius(8)
       .build(),
@@ -368,14 +393,39 @@ function buildTypographyPage(
   figFile.addTextNode(
     textNode(id.next(), alignFrameID)
       .name("vcenter-text")
-      .text("Vertically centered\nin a box")
+      .text("Vertical center\nalignment")
       .font("Inter", "Regular")
       .fontSize(14)
       .color(DARK)
       .size(180, 80)
-      .position(260, 68)
+      .position(260, 116)
       .alignHorizontal("CENTER")
       .alignVertical("CENTER")
+      .autoResize("NONE")
+      .build(),
+  );
+
+  // Vertical bottom
+  figFile.addRoundedRectangle(
+    roundedRectNode(id.next(), alignFrameID)
+      .name("vbottom-bg")
+      .size(180, 80)
+      .position(260, 212)
+      .fill(LIGHT_GRAY)
+      .cornerRadius(8)
+      .build(),
+  );
+  figFile.addTextNode(
+    textNode(id.next(), alignFrameID)
+      .name("vbottom-text")
+      .text("Vertical bottom\nalignment")
+      .font("Inter", "Regular")
+      .fontSize(14)
+      .color(DARK)
+      .size(180, 80)
+      .position(260, 212)
+      .alignHorizontal("CENTER")
+      .alignVertical("BOTTOM")
       .autoResize("NONE")
       .build(),
   );

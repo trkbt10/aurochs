@@ -17,6 +17,7 @@ export type {
   AutoLayoutProps,
   LayoutConstraints,
   TextData,
+  TextStyleOverride,
   SymbolOverride,
   BlendMode,
   DerivedBaseline,

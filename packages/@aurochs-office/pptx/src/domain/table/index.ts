@@ -35,6 +35,8 @@ export {
   resolveSpanWidth,
   resolveSpanHeight,
   isFlagEnabled,
+  getApplicablePartStyles,
+  resolveFillFromParts,
 } from "./resolver";
 
-export type { TableScaleResult } from "./resolver";
+export type { TableScaleResult, CellPositionContext } from "./resolver";

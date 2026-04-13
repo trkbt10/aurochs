@@ -67,6 +67,56 @@ export type TextData = {
   readonly textCase?: KiwiEnumValue;
   readonly lineHeight?: { readonly value: number; readonly units: KiwiEnumValue };
   readonly letterSpacing?: { readonly value: number; readonly units: KiwiEnumValue };
+  /**
+   * Per-character style IDs.
+   *
+   * Each element corresponds to a character in `characters` and references
+   * an entry in `styleOverrideTable` by its `styleID` field.
+   * Characters with the same ID share the same style override.
+   * ID 0 means "use the node's base style" (no override).
+   *
+   * This is a direct representation of Figma's Kiwi TextData.characterStyleIDs.
+   * @see Kiwi schema: TextData.characterStyleIDs
+   */
+  readonly characterStyleIDs?: readonly number[];
+  /**
+   * Style override table.
+   *
+   * Each entry defines a set of style properties (fontSize, fontName,
+   * fillPaints, etc.) that override the node's base style for characters
+   * referencing this entry's `styleID` via `characterStyleIDs`.
+   *
+   * This is a direct representation of Figma's Kiwi TextData.styleOverrideTable.
+   * The entries are sparse subsets of NodeChange — only style-related fields
+   * are present.
+   *
+   * @see Kiwi schema: TextData.styleOverrideTable (array of NodeChange)
+   */
+  readonly styleOverrideTable?: readonly TextStyleOverride[];
+};
+
+/**
+ * A style override entry for per-character text styling.
+ *
+ * In Figma's Kiwi format, this is a NodeChange with only style-related
+ * fields populated. We model the relevant subset here.
+ *
+ * Each override is identified by `styleID`, which is referenced from
+ * `characterStyleIDs`. The fields present in this override replace the
+ * node's base style for the corresponding characters.
+ */
+export type TextStyleOverride = {
+  /** Unique ID referenced by characterStyleIDs. 0 = base style (never in the table). */
+  readonly styleID: number;
+  readonly fontSize?: number;
+  readonly fontName?: { readonly family: string; readonly style: string; readonly postscript: string };
+  readonly fillPaints?: readonly FigPaint[];
+  readonly textDecoration?: KiwiEnumValue;
+  readonly textCase?: KiwiEnumValue;
+  readonly lineHeight?: { readonly value: number; readonly units: KiwiEnumValue };
+  readonly letterSpacing?: { readonly value: number; readonly units: KiwiEnumValue };
+  readonly fontWeight?: number;
+  readonly textStyleId?: number;
 };
 
 // =============================================================================

@@ -35,6 +35,13 @@ export {
   type CanvasPageCoords,
 } from "./EditorCanvas";
 
+// Canvas viewport context (declarative access to coordinate conversion)
+export {
+  useCanvasViewport,
+  useCanvasViewportRequired,
+  type CanvasViewportContextValue,
+} from "./CanvasViewportContext";
+
 // Canvas backgrounds
 export { slideCanvasBackground } from "./SlideCanvasBackground";
 

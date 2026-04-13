@@ -4,24 +4,66 @@
  * DrawingML colors are polymorphic: sRGB, scheme, system, HSL, scRGB, preset.
  * Scheme colors require a ColorContext to resolve to hex.
  *
- * All color specs are resolved to sRGB hex, then converted to RGBA 0-1.
+ * All color specs are resolved to sRGB hex, then color transforms (tint,
+ * shade, lumMod, satMod, etc.) are applied via @aurochs/color (SoT for
+ * color operations). Finally the result is converted to RGBA 0-1.
+ *
  * Alpha comes from ColorTransform.alpha (0-100 → 0-1).
  */
 
 import type { Color, ColorSpec, SchemeColorValue } from "@aurochs-office/drawing-ml/domain/color";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { FigColor } from "@aurochs/fig/types";
+import {
+  applyTint,
+  applyShade,
+  applyLumMod,
+  applyLumOff,
+  applySatMod,
+  hexToRgb,
+  hslToHexString,
+} from "@aurochs/color";
 
 export function dmlColorToFig(color: Color, colorContext?: ColorContext): FigColor {
-  const hex = resolveColorSpec(color.spec, colorContext);
-  const { r, g, b } = hexToRgb(hex);
+  let hex = resolveColorSpec(color.spec, colorContext);
 
-  let alpha = 1;
-  if (color.transform?.alpha !== undefined) {
-    alpha = (color.transform.alpha as number) / 100;
+  // Apply color transforms per ECMA-376 §20.1.2.3 via @aurochs/color SoT
+  const t = color.transform;
+  if (t) {
+    // tint: DrawingML value is Percent (0-100), @aurochs/color expects 0-1
+    if (t.tint !== undefined) {
+      hex = applyTint(hex, (t.tint as number) / 100);
+    }
+
+    // shade: DrawingML value is Percent (0-100), @aurochs/color expects 0-1
+    if (t.shade !== undefined) {
+      hex = applyShade(hex, (t.shade as number) / 100);
+    }
+
+    // lumMod: DrawingML value is Percent (0-100), @aurochs/color expects multiplier
+    if (t.lumMod !== undefined) {
+      hex = applyLumMod(hex, (t.lumMod as number) / 100);
+    }
+
+    // lumOff: DrawingML value is Percent (0-100), @aurochs/color expects 0-1 offset
+    if (t.lumOff !== undefined) {
+      hex = applyLumOff(hex, (t.lumOff as number) / 100);
+    }
+
+    // satMod: DrawingML value is Percent (0-100), @aurochs/color expects multiplier
+    if (t.satMod !== undefined) {
+      hex = applySatMod(hex, (t.satMod as number) / 100);
+    }
   }
 
-  return { r, g, b, a: alpha };
+  const rgb = hexToRgb(hex);
+
+  let alpha = 1;
+  if (t?.alpha !== undefined) {
+    alpha = (t.alpha as number) / 100;
+  }
+
+  return { r: rgb.r / 255, g: rgb.g / 255, b: rgb.b / 255, a: alpha };
 }
 
 function resolveColorSpec(spec: ColorSpec, ctx?: ColorContext): string {
@@ -40,18 +82,18 @@ function resolveColorSpec(spec: ColorSpec, ctx?: ColorContext): string {
       return PRESET_COLORS[spec.value] ?? "000000";
 
     case "hsl": {
-      const h = (spec.hue as number) / 360;
+      // ECMA-376 §20.1.2.3.13: hue is Degrees (0-360), sat/lum are Percent (0-100)
+      // @aurochs/color hslToHexString expects h:0-360, s:0-1, l:0-1
+      const h = spec.hue as number;
       const s = (spec.saturation as number) / 100;
       const l = (spec.luminance as number) / 100;
-      return hslToHex(h, s, l);
+      return hslToHexString({ h, s, l, a: 1 });
     }
 
-    case "scrgb":
-      return (
-        componentToHex(clamp01((spec.red as number) / 100)) +
-        componentToHex(clamp01((spec.green as number) / 100)) +
-        componentToHex(clamp01((spec.blue as number) / 100))
-      );
+    case "scrgb": {
+      const toHex = (v: number) => Math.round(clamp01(v / 100) * 255).toString(16).padStart(2, "0").toUpperCase();
+      return toHex(spec.red as number) + toHex(spec.green as number) + toHex(spec.blue as number);
+    }
 
     default:
       return "000000";
@@ -63,38 +105,8 @@ function resolveSchemeColor(value: SchemeColorValue, ctx: ColorContext): string 
   return ctx.colorScheme[mapped] ?? "000000";
 }
 
-function hexToRgb(hex: string): { r: number; g: number; b: number } {
-  const cleaned = hex.replace("#", "");
-  return {
-    r: parseInt(cleaned.substring(0, 2), 16) / 255,
-    g: parseInt(cleaned.substring(2, 4), 16) / 255,
-    b: parseInt(cleaned.substring(4, 6), 16) / 255,
-  };
-}
-
 function clamp01(v: number): number {
   return v < 0 ? 0 : v > 1 ? 1 : v;
-}
-
-function componentToHex(v: number): string {
-  return Math.round(v * 255).toString(16).padStart(2, "0").toUpperCase();
-}
-
-function hslToHex(h: number, s: number, l: number): string {
-  const c = (1 - Math.abs(2 * l - 1)) * s;
-  const x = c * (1 - Math.abs(((h * 6) % 2) - 1));
-  const m = l - c / 2;
-  let r = 0, g = 0, b = 0;
-  const sector = Math.floor(h * 6) % 6;
-  switch (sector) {
-    case 0: r = c; g = x; break;
-    case 1: r = x; g = c; break;
-    case 2: g = c; b = x; break;
-    case 3: g = x; b = c; break;
-    case 4: r = x; b = c; break;
-    case 5: r = c; b = x; break;
-  }
-  return componentToHex(r + m) + componentToHex(g + m) + componentToHex(b + m);
 }
 
 const PRESET_COLORS: Record<string, string> = {

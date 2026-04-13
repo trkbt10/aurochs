@@ -130,6 +130,27 @@ function designNodeToFigNode(
     if (node.textData.textCase !== undefined) { base.textCase = node.textData.textCase; }
     if (node.textData.lineHeight !== undefined) { base.lineHeight = node.textData.lineHeight; }
     if (node.textData.letterSpacing !== undefined) { base.letterSpacing = node.textData.letterSpacing; }
+
+    // Write characterStyleIDs and styleOverrideTable into the Kiwi textData message.
+    // These are nested inside textData (not flat NodeChange fields).
+    const textDataMsg: Record<string, unknown> = {
+      characters: node.textData.characters,
+      characterStyleIDs: node.textData.characterStyleIDs ?? new Array(node.textData.characters.length).fill(0),
+    };
+    if (node.textData.styleOverrideTable && node.textData.styleOverrideTable.length > 0) {
+      textDataMsg.styleOverrideTable = node.textData.styleOverrideTable.map((entry) => {
+        const nc: Record<string, unknown> = { styleID: entry.styleID };
+        if (entry.fontSize !== undefined) nc.fontSize = entry.fontSize;
+        if (entry.fontName !== undefined) nc.fontName = entry.fontName;
+        if (entry.fillPaints !== undefined) nc.fillPaints = entry.fillPaints;
+        if (entry.textDecoration !== undefined) nc.textDecoration = entry.textDecoration;
+        if (entry.textCase !== undefined) nc.textCase = entry.textCase;
+        if (entry.lineHeight !== undefined) nc.lineHeight = entry.lineHeight;
+        if (entry.letterSpacing !== undefined) nc.letterSpacing = entry.letterSpacing;
+        return nc;
+      });
+    }
+    base.textData = textDataMsg;
   }
 
   // Component/instance

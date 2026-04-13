@@ -39,6 +39,7 @@ import { getTransformString, screenToSlideCoords } from "@aurochs-ui/editor-core
 import type { ViewportTransform, ViewportSize } from "@aurochs-ui/editor-core/viewport";
 import type { ZoomMode } from "@aurochs-ui/editor-controls/zoom";
 import { colorTokens } from "@aurochs-ui/ui-components/design-tokens";
+import { CanvasViewportContext, type CanvasViewportContextValue } from "./CanvasViewportContext";
 
 // =============================================================================
 // Types
@@ -333,6 +334,12 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
         return viewportSize;
       },
     }),
+    [screenToPage, viewport, viewportSize],
+  );
+
+  // --- Viewport context (declarative access for children and viewportOverlay) ---
+  const viewportContextValue = useMemo<CanvasViewportContextValue>(
+    () => ({ screenToPage, viewport, viewportSize }),
     [screenToPage, viewport, viewportSize],
   );
 
@@ -677,6 +684,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
   );
 
   return (
+    <CanvasViewportContext.Provider value={viewportContextValue}>
     <div style={outerContainerStyle} onContextMenu={onContextMenu}>
       <svg
         ref={svgRef}
@@ -791,6 +799,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
         </ViewportOverlay>
       )}
     </div>
+    </CanvasViewportContext.Provider>
   );
 });
 

@@ -179,8 +179,22 @@ function translateAndScaleNodes(
 
   if (contentWidth <= 0 || contentHeight <= 0) return nodes;
 
-  // Uniform scale to fit (contain mode)
-  const scale = Math.min(slideWidth / contentWidth, slideHeight / contentHeight);
+  // Check if content fits within the slide without scaling.
+  // If the bounding box fits within (0,0)-(slideWidth,slideHeight),
+  // no transformation is needed — nodes are already in slide coordinates
+  // (typical for PPTX→Fig→PPTX roundtrip).
+  const fitsWithinSlide =
+    bounds.minX >= 0 && bounds.minY >= 0
+    && bounds.maxX <= slideWidth && bounds.maxY <= slideHeight;
+
+  if (fitsWithinSlide) {
+    return nodes; // Already in slide coordinate space, no transform needed
+  }
+
+  // Uniform scale to fit (contain mode) — only shrink, never enlarge.
+  // Enlarging would distort content that was intentionally smaller than the slide.
+  const rawScale = Math.min(slideWidth / contentWidth, slideHeight / contentHeight);
+  const scale = Math.min(rawScale, 1);
 
   // Center offset after scaling
   const scaledWidth = contentWidth * scale;
@@ -194,11 +208,16 @@ function translateAndScaleNodes(
 /**
  * Translate and scale a single top-level node.
  *
- * Only the node itself is repositioned and scaled — its children are NOT
- * recursively transformed. In Figma's coordinate system, child nodes use
- * the parent's local coordinate space (origin at parent's top-left).
- * Scaling the parent's matrix (m00/m01/m10/m11) is sufficient to make
- * children render at the correct scaled positions.
+ * We scale by adjusting the node's `size` (not the matrix's scale components),
+ * and recursively scale children's positions and sizes. This keeps the matrix's
+ * rotation/flip components intact and avoids the mismatch between PPTX's
+ * extent (display size = size × matrixScale) and childExtent (local size = size)
+ * that would occur if we scaled the matrix instead.
+ *
+ * For nodes with children (FRAME, GROUP, etc.), child coordinates are in the
+ * parent's local space. Scaling the parent's size without scaling children
+ * would leave children at their original positions, which would be wrong.
+ * So we recursively scale children's positions and sizes as well.
  */
 function translateAndScaleNode(
   node: FigDesignNode,
@@ -217,14 +236,45 @@ function translateAndScaleNode(
       ...node.transform,
       m02: newM02,
       m12: newM12,
-      m00: node.transform.m00 * scale,
-      m01: node.transform.m01 * scale,
-      m10: node.transform.m10 * scale,
-      m11: node.transform.m11 * scale,
+      // Keep m00/m01/m10/m11 unchanged — scale is applied via size, not matrix
     },
-    // Children are NOT re-transformed — their coordinates are relative
-    // to this node's local space, and the parent's scaled matrix handles
-    // the visual scaling automatically.
+    size: {
+      x: node.size.x * scale,
+      y: node.size.y * scale,
+    },
+    // Recursively scale children's positions and sizes
+    children: node.children
+      ? node.children.map((child) => scaleChildNode(child, scale))
+      : undefined,
+  };
+}
+
+/**
+ * Recursively scale a child node's position and size.
+ *
+ * Children's coordinates are relative to the parent's local space.
+ * When the parent's local space is uniformly scaled, children must be
+ * scaled accordingly. We scale their position (m02, m12) and size,
+ * and recurse into their children.
+ */
+function scaleChildNode(
+  node: FigDesignNode,
+  scale: number,
+): FigDesignNode {
+  return {
+    ...node,
+    transform: {
+      ...node.transform,
+      m02: node.transform.m02 * scale,
+      m12: node.transform.m12 * scale,
+    },
+    size: {
+      x: node.size.x * scale,
+      y: node.size.y * scale,
+    },
+    children: node.children
+      ? node.children.map((child) => scaleChildNode(child, scale))
+      : undefined,
   };
 }
 

@@ -306,6 +306,33 @@
         "@aurochs-office/docx": "workspace:*",
       },
     },
+    "packages/@aurochs-converters/fig-to-pptx": {
+      "name": "@aurochs-converters/fig-to-pptx",
+      "version": "0.11.0",
+      "dependencies": {
+        "@aurochs-builder/fig": "workspace:*",
+        "@aurochs-converters/core": "workspace:*",
+        "@aurochs-converters/interop-drawing-ml": "workspace:*",
+        "@aurochs-office/drawing-ml": "workspace:*",
+        "@aurochs-office/ooxml": "workspace:*",
+        "@aurochs-office/pptx": "workspace:*",
+        "@aurochs/fig": "workspace:*",
+      },
+    },
+    "packages/@aurochs-converters/interop-drawing-ml": {
+      "name": "@aurochs-converters/interop-drawing-ml",
+      "version": "0.11.0",
+      "dependencies": {
+        "@aurochs-builder/fig": "workspace:*",
+        "@aurochs-office/chart": "workspace:*",
+        "@aurochs-office/diagram": "workspace:*",
+        "@aurochs-office/drawing-ml": "workspace:*",
+        "@aurochs-office/ooxml": "workspace:*",
+        "@aurochs-office/pptx": "workspace:*",
+        "@aurochs-renderer/chart": "workspace:*",
+        "@aurochs/fig": "workspace:*",
+      },
+    },
     "packages/@aurochs-converters/pdf-to-pptx": {
       "name": "@aurochs-converters/pdf-to-pptx",
       "version": "0.11.0",
@@ -337,6 +364,37 @@
         "@aurochs-converters/core": "workspace:*",
         "@aurochs-office/ppt": "workspace:*",
         "@aurochs-office/pptx": "workspace:*",
+      },
+    },
+    "packages/@aurochs-converters/pptx-to-fig": {
+      "name": "@aurochs-converters/pptx-to-fig",
+      "version": "0.11.0",
+      "dependencies": {
+        "@aurochs-builder/fig": "workspace:*",
+        "@aurochs-converters/core": "workspace:*",
+        "@aurochs-converters/interop-drawing-ml": "workspace:*",
+        "@aurochs-office/chart": "workspace:*",
+        "@aurochs-office/drawing-ml": "workspace:*",
+        "@aurochs-office/ooxml": "workspace:*",
+        "@aurochs-office/pptx": "workspace:*",
+        "@aurochs/fig": "workspace:*",
+      },
+    },
+    "packages/@aurochs-converters/unit-tests": {
+      "name": "@aurochs-converters/unit-tests",
+      "version": "0.11.0",
+      "dependencies": {
+        "@aurochs-builder/fig": "workspace:*",
+        "@aurochs-converters/fig-to-pptx": "workspace:*",
+        "@aurochs-converters/interop-drawing-ml": "workspace:*",
+        "@aurochs-converters/pptx-to-fig": "workspace:*",
+        "@aurochs-office/chart": "workspace:*",
+        "@aurochs-office/diagram": "workspace:*",
+        "@aurochs-office/drawing-ml": "workspace:*",
+        "@aurochs-office/ooxml": "workspace:*",
+        "@aurochs-office/pptx": "workspace:*",
+        "@aurochs/fig": "workspace:*",
+        "@aurochs/zip": "workspace:*",
       },
     },
     "packages/@aurochs-converters/xls-to-xlsx": {
@@ -1117,9 +1175,17 @@
 
     "@aurochs-converters/doc-to-docx": ["@aurochs-converters/doc-to-docx@workspace:packages/@aurochs-converters/doc-to-docx"],
 
+    "@aurochs-converters/fig-to-pptx": ["@aurochs-converters/fig-to-pptx@workspace:packages/@aurochs-converters/fig-to-pptx"],
+
+    "@aurochs-converters/interop-drawing-ml": ["@aurochs-converters/interop-drawing-ml@workspace:packages/@aurochs-converters/interop-drawing-ml"],
+
     "@aurochs-converters/pdf-to-pptx": ["@aurochs-converters/pdf-to-pptx@workspace:packages/@aurochs-converters/pdf-to-pptx"],
 
     "@aurochs-converters/ppt-to-pptx": ["@aurochs-converters/ppt-to-pptx@workspace:packages/@aurochs-converters/ppt-to-pptx"],
+
+    "@aurochs-converters/pptx-to-fig": ["@aurochs-converters/pptx-to-fig@workspace:packages/@aurochs-converters/pptx-to-fig"],
+
+    "@aurochs-converters/unit-tests": ["@aurochs-converters/unit-tests@workspace:packages/@aurochs-converters/unit-tests"],
 
     "@aurochs-converters/xls-to-xlsx": ["@aurochs-converters/xls-to-xlsx@workspace:packages/@aurochs-converters/xls-to-xlsx"],
 

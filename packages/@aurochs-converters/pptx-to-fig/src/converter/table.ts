@@ -10,13 +10,15 @@
  * a FRAME with clipsContent=true, renders like a table.
  */
 
-import type { Table, TableRow, TableCell, TableColumn } from "@aurochs-office/pptx/domain/table/types";
+import type { Table, TableRow, TableCell, TableColumn, TableStyle } from "@aurochs-office/pptx/domain/table/types";
 import type { FigDesignNode, FigNodeId } from "@aurochs/fig/domain";
+import type { FigPaint } from "@aurochs/fig/types";
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import { dmlFillToFig, dmlLineTofig, type FigStrokeResult } from "@aurochs-converters/interop-drawing-ml/dml-to-fig";
 import type { CellBorders } from "@aurochs-office/pptx/domain/table/types";
 import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import { EMU_PER_PIXEL } from "@aurochs-office/ooxml/domain/ooxml-units";
+import { getApplicablePartStyles, resolveFillFromParts, type CellPositionContext } from "@aurochs-office/pptx/domain/table/resolver";
 import { convertText } from "./text";
 import type { ConvertContext } from "./shape";
 
@@ -44,19 +46,13 @@ export function convertTableToNodes(
   idCounter: TableIdCounter,
   ctx: ConvertContext,
 ): readonly FigDesignNode[] {
-  if (table.properties.tableStyleId) {
-    // Table style resolution requires TableStyleList from the PPTX theme,
-    // which is not available in the converter context. Cell fills derived
-    // from table styles (banding, firstRow/lastRow etc.) will be missing.
-    console.warn(
-      `[pptx-to-fig] Table uses style "${table.properties.tableStyleId}". ` +
-      `Style-derived cell fills (banding, header colors) are not resolved. ` +
-      `Only explicit cell fills are preserved.`,
-    );
-  }
+  // Resolve table style if available
+  const tableStyle = findTableStyle(table.properties.tableStyleId, ctx);
 
   const columns = table.grid.columns;
   const nodes: FigDesignNode[] = [];
+  const rowCount = table.rows.length;
+  const colCount = columns.length;
 
   // Pre-compute column x-offsets
   const colOffsets: number[] = [0];
@@ -65,7 +61,8 @@ export function convertTableToNodes(
   }
 
   let rowY = 0;
-  for (const row of table.rows) {
+  for (let rowIdx = 0; rowIdx < rowCount; rowIdx++) {
+    const row = table.rows[rowIdx];
     const rowHeight = row.height as number;
 
     for (let colIdx = 0; colIdx < row.cells.length; colIdx++) {
@@ -81,9 +78,15 @@ export function convertTableToNodes(
 
       const cellX = colOffsets[colIdx];
       const cellWidth = computeSpanWidth(colOffsets, colIdx, colSpan, columns.length);
-      const cellHeight = computeSpanHeight(table.rows, rowY, rowSpan, table.rows.indexOf(row));
+      const cellHeight = computeSpanHeight(table.rows, rowY, rowSpan, rowIdx);
 
-      const cellNode = buildCellNode(cell, cellX, rowY, cellWidth, cellHeight, idCounter, ctx);
+      // Resolve cell fill: explicit cell fill takes priority, then style-derived fill
+      const cellFills = resolveCellFills(cell, tableStyle, {
+        rowIdx, colIdx, rowCount, colCount,
+        properties: table.properties,
+      }, ctx);
+
+      const cellNode = buildCellNode(cell, cellX, rowY, cellWidth, cellHeight, cellFills, idCounter, ctx);
       nodes.push(cellNode);
     }
 
@@ -91,6 +94,54 @@ export function convertTableToNodes(
   }
 
   return nodes;
+}
+
+/**
+ * Find the TableStyle for this table from the context's TableStyleList.
+ */
+function findTableStyle(
+  tableStyleId: string | undefined,
+  ctx: ConvertContext,
+): TableStyle | undefined {
+  if (!tableStyleId || !ctx.tableStyles) return undefined;
+  return ctx.tableStyles.styles.find((s) => s.id === tableStyleId);
+}
+
+/**
+ * Resolve the fill paints for a cell.
+ *
+ * Priority (ECMA-376 §21.1.3.11):
+ * 1. Cell-level explicit fill (highest)
+ * 2. Table style-based fill (from applicable part styles)
+ * 3. Table background fill (tblBg)
+ * 4. No fill (transparent)
+ */
+function resolveCellFills(
+  cell: TableCell,
+  tableStyle: TableStyle | undefined,
+  cellPos: CellPositionContext,
+  ctx: ConvertContext,
+): readonly FigPaint[] {
+  // Priority 1: Explicit cell fill
+  if (cell.properties.fill) {
+    return dmlFillToFig(cell.properties.fill, ctx.colorContext);
+  }
+
+  // Priority 2: Style-derived fill
+  if (tableStyle) {
+    const parts = getApplicablePartStyles(tableStyle, cellPos);
+    const styleFill = resolveFillFromParts(parts);
+    if (styleFill) {
+      return dmlFillToFig(styleFill, ctx.colorContext);
+    }
+
+    // Priority 3: Table background
+    if (tableStyle.tblBg) {
+      return dmlFillToFig(tableStyle.tblBg, ctx.colorContext);
+    }
+  }
+
+  return [];
 }
 
 function computeSpanWidth(
@@ -128,11 +179,11 @@ function buildCellNode(
   y: number,
   width: number,
   height: number,
+  fills: readonly FigPaint[],
   idCounter: TableIdCounter,
   ctx: ConvertContext,
 ): FigDesignNode {
   const id = nextId(idCounter);
-  const fills = cell.properties.fill ? dmlFillToFig(cell.properties.fill, ctx.colorContext) : [];
 
   // Resolve cell border as stroke.
   // Fig FRAME supports a single stroke, not per-side borders.
@@ -143,7 +194,7 @@ function buildCellNode(
 
   // Add text content as a child TEXT node
   if (cell.textBody) {
-    const textData = convertText(cell.textBody, ctx.fontScheme);
+    const textData = convertText(cell.textBody, ctx.fontScheme, ctx.colorContext);
     if (textData) {
       const textId = nextId(idCounter);
       const margins = cell.properties.margins;

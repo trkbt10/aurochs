@@ -5,6 +5,7 @@
   "type": "module",
   "sideEffects": false,
   "dependencies": {
+    "@aurochs/color": "workspace:*",
     "@aurochs/fig": "workspace:*",
     "@aurochs-builder/fig": "workspace:*",
     "@aurochs-office/chart": "workspace:*",

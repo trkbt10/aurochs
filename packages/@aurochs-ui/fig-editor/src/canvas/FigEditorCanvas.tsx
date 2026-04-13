@@ -662,29 +662,14 @@ export function FigEditorCanvas() {
     }
 
     return (
-      <div
-        key="text-edit-container"
-        style={{ position: "absolute", inset: 0 }}
-        onPointerDown={(e) => {
-          // Click-outside detection: if click is outside the text bounds, exit editing
-          const page = canvasRef.current?.screenToPage(e.clientX, e.clientY);
-          if (!page) return;
-          const b = bounds;
-          const inside = page.pageX >= b.x && page.pageX <= b.x + b.width &&
-                         page.pageY >= b.y && page.pageY <= b.y + b.height;
-          if (!inside) {
-            dispatch({ type: "EXIT_TEXT_EDIT" });
-          }
-        }}
-      >
-        <FigTextEditOverlay
-          node={editingNode}
-          bounds={bounds}
-          canvasWidth={canvasSize.width}
-          canvasHeight={canvasSize.height}
-          dispatch={dispatch}
-        />
-      </div>
+      <FigTextEditOverlay
+        key="text-edit"
+        node={editingNode}
+        bounds={bounds}
+        canvasWidth={canvasSize.width}
+        canvasHeight={canvasSize.height}
+        dispatch={dispatch}
+      />
     );
   }, [textEdit, activePage, canvasSize, dispatch]);
 

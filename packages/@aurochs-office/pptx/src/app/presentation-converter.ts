@@ -83,6 +83,9 @@ export function convertToPresentationDocument(loaded: LoadedPresentation): Prese
     slideSize,
   };
 
+  // Table styles from ppt/tableStyles.xml — needed for table cell fill resolution
+  const tableStyles = presentation.tableStyles ?? undefined;
+
   return {
     presentation: domainPresentation,
     slides,
@@ -93,6 +96,7 @@ export function convertToPresentationDocument(loaded: LoadedPresentation): Prese
     fontScheme,
     resourceStore,
     presentationFile,
+    tableStyles,
   };
 }
 

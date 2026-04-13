@@ -18,6 +18,7 @@ import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
 import type { FigDesignNode, FigNodeId } from "@aurochs/fig/domain";
 import type { FigPaint } from "@aurochs/fig/types";
 import type { ResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
+import type { TableStyleList } from "@aurochs-office/pptx/parser/table/style-parser";
 import type { Chart } from "@aurochs-office/chart/domain";
 import { dmlTransformToFig, dmlFillToFig, dmlLineTofig, dmlEffectsToFig, type FigTransformResult } from "@aurochs-converters/interop-drawing-ml/dml-to-fig";
 import { diagramShapesToFig, chartToFigNodes } from "@aurochs-converters/interop-drawing-ml/dml-to-fig";
@@ -37,6 +38,7 @@ export type ConvertContext = {
   readonly colorContext?: ColorContext;
   readonly fontScheme?: FontScheme;
   readonly resourceStore?: ResourceStore;
+  readonly tableStyles?: TableStyleList;
 };
 
 /**
@@ -119,7 +121,7 @@ function convertSpShape(
     pointCount: geoResult.pointCount,
     starInnerRadius: geoResult.starInnerRadius,
     effects,
-    textData: shape.textBody ? convertText(shape.textBody, ctx.fontScheme) : undefined,
+    textData: shape.textBody ? convertText(shape.textBody, ctx.fontScheme, ctx.colorContext) : undefined,
   };
 }
 

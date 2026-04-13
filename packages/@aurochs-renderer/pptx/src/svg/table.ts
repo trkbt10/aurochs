@@ -23,7 +23,10 @@ import {
   resolveSpanWidth,
   resolveSpanHeight,
   isFlagEnabled,
+  getApplicablePartStyles,
+  resolveFillFromParts,
 } from "@aurochs-office/pptx/domain/table/resolver";
+import type { CellPositionContext } from "@aurochs-office/pptx/domain/table/resolver";
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
 import { renderFillToStyle, renderLineToStyle } from "./fill";
@@ -36,17 +39,6 @@ import { renderTextSvg } from "./slide-text";
 // =============================================================================
 // Table Style Resolution
 // =============================================================================
-
-/**
- * Cell position context for style resolution
- */
-type CellPositionContext = {
-  readonly rowIdx: number;
-  readonly colIdx: number;
-  readonly rowCount: number;
-  readonly colCount: number;
-  readonly properties: TableProperties;
-};
 
 /**
  * Find table style by ID from style list.
@@ -62,113 +54,6 @@ function findTableStyle(
   }
 
   return tableStyles.styles.find((style) => style.id === tableStyleId);
-}
-
-/**
- * Get applicable part styles for a cell based on its position.
- *
- * Per ECMA-376 Part 1, Section 21.1.3.11, styles are layered with priority:
- * 1. wholeTbl (lowest - base style)
- * 2. band1H/band2H or band1V/band2V (banding)
- * 3. firstRow/lastRow/firstCol/lastCol (special regions)
- * 4. corner cells (seCell/swCell/neCell/nwCell) (highest)
- *
- * Higher priority styles override lower priority styles.
- */
-function getApplicablePartStyles(style: TableStyle, ctx: CellPositionContext): readonly TablePartStyle[] {
-  const parts: TablePartStyle[] = [];
-  const { rowIdx, colIdx, rowCount, colCount, properties } = ctx;
-
-  // Layer 1: wholeTbl (base)
-  if (style.wholeTbl) {
-    parts.push(style.wholeTbl);
-  }
-
-  // Layer 2: Banding (mutually exclusive with special row/col in most cases)
-  const isFirstRowEnabled = isFlagEnabled(properties.firstRow, rowIdx === 0);
-  const isLastRowEnabled = isFlagEnabled(properties.lastRow, rowIdx === rowCount - 1);
-  const isFirstColEnabled = isFlagEnabled(properties.firstCol, colIdx === 0);
-  const isLastColEnabled = isFlagEnabled(properties.lastCol, colIdx === colCount - 1);
-
-  // Horizontal banding (odd/even rows)
-  if (isFlagEnabled(properties.bandRow, true) && !isFirstRowEnabled && !isLastRowEnabled) {
-    // band1H = odd rows (1, 3, 5...), band2H = even rows (2, 4, 6...)
-    // But we need to adjust for firstRow being special
-    const effectiveRowIdx = properties.firstRow ? rowIdx - 1 : rowIdx;
-    if (effectiveRowIdx >= 0) {
-      const isOddRow = effectiveRowIdx % 2 === 0;
-      if (isOddRow && style.band1H) {
-        parts.push(style.band1H);
-      } else if (!isOddRow && style.band2H) {
-        parts.push(style.band2H);
-      }
-    }
-  }
-
-  // Vertical banding (odd/even columns)
-  if (isFlagEnabled(properties.bandCol, true) && !isFirstColEnabled && !isLastColEnabled) {
-    const effectiveColIdx = properties.firstCol ? colIdx - 1 : colIdx;
-    if (effectiveColIdx >= 0) {
-      const isOddCol = effectiveColIdx % 2 === 0;
-      if (isOddCol && style.band1V) {
-        parts.push(style.band1V);
-      } else if (!isOddCol && style.band2V) {
-        parts.push(style.band2V);
-      }
-    }
-  }
-
-  // Layer 3: Special rows and columns
-  if (isFirstRowEnabled && style.firstRow) {
-    parts.push(style.firstRow);
-  }
-  if (isLastRowEnabled && style.lastRow) {
-    parts.push(style.lastRow);
-  }
-  if (isFirstColEnabled && style.firstCol) {
-    parts.push(style.firstCol);
-  }
-  if (isLastColEnabled && style.lastCol) {
-    parts.push(style.lastCol);
-  }
-
-  // Layer 4: Corner cells (highest priority)
-  const isFirstRow = rowIdx === 0 && properties.firstRow;
-  const isLastRow = rowIdx === rowCount - 1 && properties.lastRow;
-  const isFirstCol = colIdx === 0 && properties.firstCol;
-  const isLastCol = colIdx === colCount - 1 && properties.lastCol;
-
-  if (isFirstRow && isFirstCol && style.nwCell) {
-    parts.push(style.nwCell);
-  }
-  if (isFirstRow && isLastCol && style.neCell) {
-    parts.push(style.neCell);
-  }
-  if (isLastRow && isFirstCol && style.swCell) {
-    parts.push(style.swCell);
-  }
-  if (isLastRow && isLastCol && style.seCell) {
-    parts.push(style.seCell);
-  }
-
-  return parts;
-}
-
-/**
- * Resolve cell fill from table style parts.
- * Later parts in the array have higher priority.
- */
-function resolveFillFromParts(parts: readonly TablePartStyle[]): BaseFill | undefined {
-  // Iterate in reverse to get highest priority first
-  for (let i = parts.length - 1; i >= 0; i--) {
-    const part = parts[i];
-    if (part.fill) {
-      return part.fill;
-    }
-    // Note: fillReference would need theme style matrix resolution
-    // For now, we only support direct fills
-  }
-  return undefined;
 }
 
 /**
