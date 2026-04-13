@@ -20,6 +20,7 @@ export {
   MousePointer2 as SelectIcon,
 
   // Basic shapes
+  Frame as FrameIcon,
   Square as RectIcon,
   RectangleHorizontal as RoundRectIcon,
   Circle as EllipseIcon,

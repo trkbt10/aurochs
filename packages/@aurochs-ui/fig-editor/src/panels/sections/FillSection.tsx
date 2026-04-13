@@ -1,28 +1,29 @@
 /**
  * @file Fill property section
  *
- * Displays and edits the fill paints of a selected node.
- * Uses shared UI components for layout and design tokens for styling.
+ * Edits the fill paints of a selected node.
+ * Supports: solid color editing, opacity, add/remove fills.
+ *
+ * Each fill entry shows:
+ * - Color swatch with native color picker
+ * - Hex color value
+ * - Opacity slider
+ * - Remove button
+ *
+ * Uses UPDATE_NODE action with immutable updater functions.
  */
 
-import type { CSSProperties } from "react";
+import { useCallback, type CSSProperties } from "react";
 import type { FigDesignNode } from "@aurochs/fig/domain";
-import type { FigPaint, FigColor } from "@aurochs/fig/types";
+import type { FigPaint, FigColor, KiwiEnumValue } from "@aurochs/fig/types";
 import type { FigEditorAction } from "../../context/fig-editor/types";
 import { FieldRow } from "@aurochs-ui/ui-components/layout";
-import { colorTokens, fontTokens } from "@aurochs-ui/ui-components/design-tokens";
+import { Input } from "@aurochs-ui/ui-components/primitives/Input";
+import { colorTokens, fontTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
+import { AddIcon, CloseIcon } from "@aurochs-ui/ui-components/icons";
 
 // =============================================================================
-// Types
-// =============================================================================
-
-type FillSectionProps = {
-  readonly node: FigDesignNode;
-  readonly dispatch: (action: FigEditorAction) => void;
-};
-
-// =============================================================================
-// Color conversion helpers
+// Color helpers
 // =============================================================================
 
 function colorToHex(color: FigColor): string {
@@ -32,13 +33,13 @@ function colorToHex(color: FigColor): string {
   return `#${r}${g}${b}`;
 }
 
-function hexToColor(hex: string): FigColor {
+function hexToColor(hex: string, alpha = 1): FigColor {
   const h = hex.replace("#", "");
   return {
     r: parseInt(h.substring(0, 2), 16) / 255,
     g: parseInt(h.substring(2, 4), 16) / 255,
     b: parseInt(h.substring(4, 6), 16) / 255,
-    a: 1,
+    a: alpha,
   };
 }
 
@@ -47,6 +48,13 @@ function getPaintColor(paint: FigPaint): FigColor | undefined {
     return paint.color;
   }
   return undefined;
+}
+
+function getPaintOpacity(paint: FigPaint): number {
+  if ("opacity" in paint && typeof paint.opacity === "number") {
+    return paint.opacity;
+  }
+  return 1;
 }
 
 function getPaintTypeLabel(paint: FigPaint): string {
@@ -58,81 +66,209 @@ function getPaintTypeLabel(paint: FigPaint): string {
     case "GRADIENT_ANGULAR": return "Angular";
     case "GRADIENT_DIAMOND": return "Diamond";
     case "IMAGE": return "Image";
-    default: return String(type);
+    default: return String(type ?? "Solid");
   }
+}
+
+/** Default solid white fill for new fills */
+function createDefaultSolidFill(): FigPaint {
+  return {
+    type: { value: 0, name: "SOLID" } as KiwiEnumValue,
+    color: { r: 0.85, g: 0.85, b: 0.85, a: 1 },
+    opacity: 1,
+    visible: true,
+  } as FigPaint;
 }
 
 // =============================================================================
 // Styles
 // =============================================================================
 
-const emptyStyle: CSSProperties = {
-  fontSize: fontTokens.size.md,
-  color: colorTokens.text.tertiary,
+const fillRowStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 6,
+  padding: "2px 0",
 };
 
-const typeLabel: CSSProperties = {
-  fontSize: fontTokens.size.sm,
-  color: colorTokens.text.secondary,
-  minWidth: 50,
+const swatchStyle: CSSProperties = {
+  width: 24,
+  height: 24,
+  border: `1px solid ${colorTokens.border.strong}`,
+  borderRadius: 4,
+  cursor: "pointer",
+  padding: 0,
+  flexShrink: 0,
 };
 
-const hexLabel: CSSProperties = {
+const hexStyle: CSSProperties = {
   fontSize: fontTokens.size.sm,
   fontFamily: "monospace",
   color: colorTokens.text.secondary,
+  minWidth: 60,
+};
+
+const typeStyle: CSSProperties = {
+  fontSize: fontTokens.size.xs,
+  color: colorTokens.text.tertiary,
+  minWidth: 36,
+};
+
+const removeButtonStyle: CSSProperties = {
+  background: "none",
+  border: "none",
+  cursor: "pointer",
+  padding: 2,
+  color: colorTokens.text.tertiary,
+  lineHeight: 0,
+  flexShrink: 0,
+};
+
+const addButtonStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 4,
+  background: "none",
+  border: `1px dashed ${colorTokens.border.primary}`,
+  borderRadius: 4,
+  cursor: "pointer",
+  padding: "4px 8px",
+  color: colorTokens.text.secondary,
+  fontSize: fontTokens.size.sm,
+  width: "100%",
+  justifyContent: "center",
+};
+
+const emptyStyle: CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  gap: 4,
+};
+
+// =============================================================================
+// Props
+// =============================================================================
+
+type FillSectionProps = {
+  readonly node: FigDesignNode;
+  readonly dispatch: (action: FigEditorAction) => void;
 };
 
 // =============================================================================
 // Component
 // =============================================================================
 
-/**
- * Fill property editor section.
- */
 export function FillSection({ node, dispatch }: FillSectionProps) {
   const fills = node.fills;
 
-  function updateFillColor(fillIndex: number, color: FigColor): void {
+  const updateFill = useCallback(
+    (fillIndex: number, updater: (fill: FigPaint) => FigPaint) => {
+      dispatch({
+        type: "UPDATE_NODE",
+        nodeId: node.id,
+        updater: (n) => {
+          const newFills = [...n.fills];
+          const fill = newFills[fillIndex];
+          if (fill) {
+            newFills[fillIndex] = updater(fill);
+          }
+          return { ...n, fills: newFills };
+        },
+      });
+    },
+    [dispatch, node.id],
+  );
+
+  const updateFillColor = useCallback(
+    (fillIndex: number, hex: string) => {
+      updateFill(fillIndex, (fill) => {
+        const currentColor = getPaintColor(fill);
+        const alpha = currentColor?.a ?? 1;
+        return { ...fill, color: hexToColor(hex, alpha) } as FigPaint;
+      });
+    },
+    [updateFill],
+  );
+
+  const updateFillOpacity = useCallback(
+    (fillIndex: number, opacity: number) => {
+      updateFill(fillIndex, (fill) => ({ ...fill, opacity } as FigPaint));
+    },
+    [updateFill],
+  );
+
+  const removeFill = useCallback(
+    (fillIndex: number) => {
+      dispatch({
+        type: "UPDATE_NODE",
+        nodeId: node.id,
+        updater: (n) => ({
+          ...n,
+          fills: n.fills.filter((_, i) => i !== fillIndex),
+        }),
+      });
+    },
+    [dispatch, node.id],
+  );
+
+  const addFill = useCallback(() => {
     dispatch({
       type: "UPDATE_NODE",
       nodeId: node.id,
-      updater: (n) => {
-        const newFills = [...n.fills];
-        const fill = newFills[fillIndex];
-        if (fill && "color" in fill) {
-          newFills[fillIndex] = { ...fill, color } as FigPaint;
-        }
-        return { ...n, fills: newFills };
-      },
+      updater: (n) => ({
+        ...n,
+        fills: [...n.fills, createDefaultSolidFill()],
+      }),
     });
-  }
-
-  if (fills.length === 0) {
-    return <div style={emptyStyle}>No fills</div>;
-  }
+  }, [dispatch, node.id]);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+    <div style={emptyStyle}>
       {fills.map((fill, i) => {
         const color = getPaintColor(fill);
+        const opacity = getPaintOpacity(fill);
+        const typeLabel = getPaintTypeLabel(fill);
+
         return (
-          <FieldRow key={i} gap={8}>
-            <span style={typeLabel}>{getPaintTypeLabel(fill)}</span>
+          <div key={i} style={fillRowStyle}>
+            <span style={typeStyle}>{typeLabel}</span>
             {color && (
               <input
                 type="color"
                 value={colorToHex(color)}
-                onChange={(e) => updateFillColor(i, hexToColor(e.target.value))}
-                style={{ width: 24, height: 24, border: "none", cursor: "pointer", padding: 0, background: "none" }}
+                onChange={(e) => updateFillColor(i, e.target.value)}
+                style={swatchStyle}
               />
             )}
             {color && (
-              <span style={hexLabel}>{colorToHex(color)}</span>
+              <span style={hexStyle}>{colorToHex(color).toUpperCase()}</span>
             )}
-          </FieldRow>
+            <Input
+              type="number"
+              value={Math.round(opacity * 100)}
+              min={0}
+              max={100}
+              step={1}
+              onChange={(v) => updateFillOpacity(i, (v as number) / 100)}
+              width={48}
+              suffix="%"
+            />
+            <button
+              type="button"
+              style={removeButtonStyle}
+              onClick={() => removeFill(i)}
+              title="Remove fill"
+            >
+              <CloseIcon size={12} />
+            </button>
+          </div>
         );
       })}
+
+      <button type="button" style={addButtonStyle} onClick={addFill}>
+        <AddIcon size={12} />
+        Add fill
+      </button>
     </div>
   );
 }

@@ -8,7 +8,7 @@ import { addNode, removeNode, updateNode, reorderNode, findNodeById, findParentN
 import type { FigNodeId, FigDesignNode } from "@aurochs/fig/domain";
 import { nextNodeId, createIdCounter } from "@aurochs-builder/fig/types";
 import type { HandlerMap } from "./handler-types";
-import { getActivePage } from "../helpers";
+import { getActivePage } from "../node-geometry";
 
 export const NODE_HANDLERS: HandlerMap = {
   ADD_NODE(state, action) {

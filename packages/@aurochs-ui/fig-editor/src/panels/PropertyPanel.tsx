@@ -16,6 +16,7 @@ import { CornerRadiusSection } from "./sections/CornerRadiusSection";
 import { EffectsSection } from "./sections/EffectsSection";
 import { AutoLayoutSection } from "./sections/AutoLayoutSection";
 import { ComponentPropertiesSection } from "./sections/ComponentPropertiesSection";
+import { TextPropertiesSection } from "./sections/TextPropertiesSection";
 
 // =============================================================================
 // Component
@@ -83,6 +84,13 @@ export function PropertyPanel() {
       <OptionalPropertySection title="Stroke" defaultExpanded>
         <StrokeSection node={primaryNode} dispatch={dispatch} />
       </OptionalPropertySection>
+
+      {/* Text Properties (TEXT nodes only) */}
+      {primaryNode.textData && (
+        <OptionalPropertySection title="Text" defaultExpanded>
+          <TextPropertiesSection node={primaryNode} dispatch={dispatch} />
+        </OptionalPropertySection>
+      )}
 
       {/* Effects */}
       {primaryNode.effects.length > 0 && (

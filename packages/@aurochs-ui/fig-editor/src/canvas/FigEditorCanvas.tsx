@@ -25,7 +25,7 @@
  * - FigPageRenderer for React-based SVG rendering of the current page
  */
 
-import { useRef, useMemo, useCallback, useState } from "react";
+import { useRef, useMemo, useCallback, useState, useEffect } from "react";
 import type { EditorCanvasHandle, CanvasPageCoords } from "@aurochs-ui/editor-controls/canvas";
 import { EditorCanvas } from "@aurochs-ui/editor-controls/canvas";
 import type { ZoomMode } from "@aurochs-ui/editor-controls/zoom";
@@ -36,6 +36,8 @@ import { useFigEditor } from "../context/FigEditorContext";
 import { FigPageRenderer } from "./FigPageRenderer";
 import { flattenAllNodeBounds } from "./interaction/bounds";
 import { isSelectMode } from "../context/fig-editor/types";
+import { FigTextEditOverlay } from "./FigTextEditOverlay";
+import { computeAbsoluteNodeBounds } from "./interaction/bounds";
 import type { MenuEntry } from "@aurochs-ui/ui-components/context-menu";
 import { ContextMenu } from "@aurochs-ui/ui-components/context-menu";
 
@@ -236,19 +238,116 @@ export function FigEditorCanvas() {
   // Canvas (background) events
   // =========================================================================
 
+  /**
+   * Creation drag state — tracked via ref to avoid re-renders during drag.
+   * When the user is in a creation mode and drags on the canvas background,
+   * we track the start/current page coordinates. On pointer up, we compute
+   * the final rectangle and dispatch COMMIT_CREATION.
+   */
+  const creationDragRef = useRef<{
+    startPageX: number;
+    startPageY: number;
+    currentPageX: number;
+    currentPageY: number;
+  } | null>(null);
+  const [creationPreview, setCreationPreview] = useState<{
+    x: number; y: number; width: number; height: number;
+  } | null>(null);
+
   const handleCanvasPointerDown = useCallback(
-    (_coords: CanvasPageCoords, _e: React.PointerEvent) => {
+    (coords: CanvasPageCoords, e: React.PointerEvent) => {
+      if (!isSelectMode(creationMode)) {
+        // Start creation drag
+        e.preventDefault(); // Suppress marquee in EditorCanvas
+        creationDragRef.current = {
+          startPageX: coords.pageX,
+          startPageY: coords.pageY,
+          currentPageX: coords.pageX,
+          currentPageY: coords.pageY,
+        };
+        return;
+      }
       dispatch({ type: "CLEAR_NODE_SELECTION" });
     },
-    [dispatch],
+    [dispatch, creationMode],
   );
 
   const handleCanvasClick = useCallback(
-    (_coords: CanvasPageCoords, _e: React.MouseEvent) => {
+    (coords: CanvasPageCoords, _e: React.MouseEvent) => {
+      if (!isSelectMode(creationMode)) {
+        // Single click in creation mode: create shape at click position with default size
+        dispatch({
+          type: "COMMIT_CREATION",
+          x: coords.pageX,
+          y: coords.pageY,
+          width: 0,
+          height: 0,
+        });
+        return;
+      }
       dispatch({ type: "CLEAR_NODE_SELECTION" });
     },
-    [dispatch],
+    [dispatch, creationMode],
   );
+
+  // Global pointer listeners for creation drag
+  useEffect(() => {
+    if (isSelectMode(creationMode)) {
+      return;
+    }
+
+    const handlePointerMove = (e: PointerEvent) => {
+      const drag = creationDragRef.current;
+      if (!drag) {
+        return;
+      }
+
+      const pageCoords = canvasRef.current?.screenToPage(e.clientX, e.clientY);
+      if (!pageCoords) {
+        return;
+      }
+
+      drag.currentPageX = pageCoords.pageX;
+      drag.currentPageY = pageCoords.pageY;
+
+      // Update preview rectangle
+      const x = Math.min(drag.startPageX, drag.currentPageX);
+      const y = Math.min(drag.startPageY, drag.currentPageY);
+      const width = Math.abs(drag.currentPageX - drag.startPageX);
+      const height = Math.abs(drag.currentPageY - drag.startPageY);
+      setCreationPreview({ x, y, width, height });
+    };
+
+    const handlePointerUp = () => {
+      const drag = creationDragRef.current;
+      if (!drag) {
+        return;
+      }
+
+      const x = Math.min(drag.startPageX, drag.currentPageX);
+      const y = Math.min(drag.startPageY, drag.currentPageY);
+      const width = Math.abs(drag.currentPageX - drag.startPageX);
+      const height = Math.abs(drag.currentPageY - drag.startPageY);
+
+      creationDragRef.current = null;
+      setCreationPreview(null);
+
+      dispatch({
+        type: "COMMIT_CREATION",
+        x,
+        y,
+        width,
+        height,
+      });
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+    };
+  }, [creationMode, dispatch]);
 
   // =========================================================================
   // Context menu
@@ -542,6 +641,57 @@ export function FigEditorCanvas() {
   // Determine if rotate handle should show
   // =========================================================================
 
+  // =========================================================================
+  // Text edit overlay
+  // =========================================================================
+
+  const textEditOverlay = useMemo(() => {
+    if (textEdit.type !== "active" || !activePage) {
+      return undefined;
+    }
+
+    const editingNodeId = textEdit.nodeId;
+    const editingNode = findNodeById(activePage.children, editingNodeId);
+    if (!editingNode || editingNode.type !== "TEXT") {
+      return undefined;
+    }
+
+    const bounds = computeAbsoluteNodeBounds(activePage.children, editingNodeId);
+    if (!bounds) {
+      return undefined;
+    }
+
+    return (
+      <div
+        key="text-edit-container"
+        style={{ position: "absolute", inset: 0 }}
+        onPointerDown={(e) => {
+          // Click-outside detection: if click is outside the text bounds, exit editing
+          const page = canvasRef.current?.screenToPage(e.clientX, e.clientY);
+          if (!page) return;
+          const b = bounds;
+          const inside = page.pageX >= b.x && page.pageX <= b.x + b.width &&
+                         page.pageY >= b.y && page.pageY <= b.y + b.height;
+          if (!inside) {
+            dispatch({ type: "EXIT_TEXT_EDIT" });
+          }
+        }}
+      >
+        <FigTextEditOverlay
+          node={editingNode}
+          bounds={bounds}
+          canvasWidth={canvasSize.width}
+          canvasHeight={canvasSize.height}
+          dispatch={dispatch}
+        />
+      </div>
+    );
+  }, [textEdit, activePage, canvasSize, dispatch]);
+
+  // =========================================================================
+  // Determine if rotate handle should show
+  // =========================================================================
+
   // In Figma, frames cannot be rotated. Show rotate handle only for non-frame nodes.
   const showRotateHandle = useMemo(() => {
     if (nodeSelection.selectedIds.length === 0) return false;
@@ -587,6 +737,7 @@ export function FigEditorCanvas() {
         onRotateDragEnd={handleRotateDragEnd}
         enableMarquee={isSelectMode(creationMode)}
         onMarqueeSelect={handleMarqueeSelect}
+        viewportOverlay={textEditOverlay}
       >
         {activePage && (
           <FigPageRenderer
@@ -596,6 +747,21 @@ export function FigEditorCanvas() {
             images={document.images}
             blobs={document._loaded?.blobs ?? []}
             symbolMap={document.components}
+          />
+        )}
+
+        {/* Creation drag preview rectangle */}
+        {creationPreview && creationPreview.width > 0 && creationPreview.height > 0 && (
+          <rect
+            x={creationPreview.x}
+            y={creationPreview.y}
+            width={creationPreview.width}
+            height={creationPreview.height}
+            fill="rgba(0, 102, 255, 0.08)"
+            stroke="#0066ff"
+            strokeWidth={1}
+            strokeDasharray="4 2"
+            pointerEvents="none"
           />
         )}
       </EditorCanvas>

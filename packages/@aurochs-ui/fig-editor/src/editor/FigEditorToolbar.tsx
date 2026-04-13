@@ -10,10 +10,13 @@ import { ToolbarButton, TOOLBAR_BUTTON_ICON_SIZE } from "@aurochs-ui/ui-componen
 import { ToolbarSeparator } from "@aurochs-ui/ui-components/primitives/ToolbarSeparator";
 import {
   SelectIcon,
+  FrameIcon,
   RectIcon,
   EllipseIcon,
   LineIcon,
   TextBoxIcon,
+  StarIcon,
+  DiamondIcon,
   UndoIcon,
   RedoIcon,
 } from "@aurochs-ui/ui-components/icons";
@@ -37,10 +40,12 @@ const ICON_STROKE = iconTokens.strokeWidth;
 
 const TOOLS: readonly ToolDef[] = [
   { mode: { type: "select" }, label: "Select", shortcut: "V", icon: <SelectIcon size={ICON_SIZE} strokeWidth={ICON_STROKE} /> },
-  { mode: { type: "frame" }, label: "Frame", shortcut: "F", icon: <RectIcon size={ICON_SIZE} strokeWidth={ICON_STROKE} /> },
+  { mode: { type: "frame" }, label: "Frame", shortcut: "F", icon: <FrameIcon size={ICON_SIZE} strokeWidth={ICON_STROKE} /> },
   { mode: { type: "rectangle" }, label: "Rectangle", shortcut: "R", icon: <RectIcon size={ICON_SIZE} strokeWidth={ICON_STROKE} /> },
   { mode: { type: "ellipse" }, label: "Ellipse", shortcut: "O", icon: <EllipseIcon size={ICON_SIZE} strokeWidth={ICON_STROKE} /> },
   { mode: { type: "line" }, label: "Line", shortcut: "L", icon: <LineIcon size={ICON_SIZE} strokeWidth={ICON_STROKE} /> },
+  { mode: { type: "star" }, label: "Star", shortcut: "", icon: <StarIcon size={ICON_SIZE} strokeWidth={ICON_STROKE} /> },
+  { mode: { type: "polygon" }, label: "Polygon", shortcut: "", icon: <DiamondIcon size={ICON_SIZE} strokeWidth={ICON_STROKE} /> },
   { mode: { type: "text" }, label: "Text", shortcut: "T", icon: <TextBoxIcon size={ICON_SIZE} strokeWidth={ICON_STROKE} /> },
 ];
 

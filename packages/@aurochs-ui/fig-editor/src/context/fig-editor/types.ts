@@ -177,6 +177,13 @@ export type FigEditorAction =
   | { readonly type: "START_CREATE_DRAG"; readonly startX: number; readonly startY: number }
   | { readonly type: "UPDATE_CREATE_DRAG"; readonly currentX: number; readonly currentY: number }
   | { readonly type: "END_CREATE_DRAG" }
+  | {
+      readonly type: "COMMIT_CREATION";
+      readonly x: number;
+      readonly y: number;
+      readonly width: number;
+      readonly height: number;
+    }
 
   // Creation mode
   | { readonly type: "SET_CREATION_MODE"; readonly mode: FigCreationMode }

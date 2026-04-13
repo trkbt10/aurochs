@@ -15,6 +15,7 @@ import { isSelected } from "@aurochs-ui/editor-core/selection";
 import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { LayerItem } from "react-editor-ui/LayerItem";
 import {
+  FrameIcon,
   RectIcon,
   EllipseIcon,
   TextBoxIcon,
@@ -52,6 +53,7 @@ function getNodeIcon(type: string, isInstanceContext: boolean): ReactNode {
 
   switch (type) {
     case "FRAME":
+      return <FrameIcon {...props} />;
     case "COMPONENT":
     case "COMPONENT_SET":
       return <RectIcon {...props} />;

@@ -8,7 +8,7 @@ import { addNode, removeNode } from "@aurochs-builder/fig/node-ops";
 import type { FigNodeId, FigDesignNode } from "@aurochs/fig/domain";
 import type { FigClipboardContent } from "../types";
 import type { HandlerMap } from "./handler-types";
-import { findNodesByIds } from "../helpers";
+import { findNodesByIds } from "../node-geometry";
 
 export const CLIPBOARD_HANDLERS: HandlerMap = {
   COPY(state) {
