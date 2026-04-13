@@ -3,11 +3,14 @@
  *
  * Accepts PPTX, PDF, DOCX, XLSX/XLS files and provides demo buttons
  * for each format with equal visual weight.
+ *
+ * Reads all navigation callbacks and loading state from AppContext.
  */
 
 import { useCallback, useRef, useState, useEffect } from "react";
 import { UploadIcon, GridIcon, EditIcon, ShieldIcon, PlayIcon } from "@aurochs-ui/ui-components/icons";
 import { GitHubIcon, LogoIcon } from "../components/ui";
+import { useAppContext } from "../context/AppContext";
 import "./LandingPage.css";
 
 // =============================================================================
@@ -22,23 +25,6 @@ export type FileSelectResult =
   | { readonly type: "docx"; readonly file: File }
   | { readonly type: "xlsx"; readonly file: File }
   | { readonly type: "fig"; readonly file: File };
-
-type Props = {
-  readonly onFileSelect: (result: FileSelectResult) => void;
-  readonly onPptxDemo: () => void;
-  readonly onPptxEditorDemo: () => void;
-  readonly onDocxDemo: () => void;
-  readonly onDocxViewerDemo: () => void;
-  readonly onXlsxDemo: () => void;
-  readonly onXlsxViewerDemo: () => void;
-  readonly onPdfViewerDemo: () => void;
-  readonly onPdfEditorDemo: () => void;
-  readonly onPotxEditorDemo: () => void;
-  readonly onPptxSuiteDemo: () => void;
-  readonly onFigViewerDemo: () => void;
-  readonly onFigEditorDemo: () => void;
-  readonly isLoading?: boolean;
-};
 
 // =============================================================================
 // Helpers
@@ -86,23 +72,26 @@ function ImportProgressIndicator({ state }: { readonly state: ImportState }) {
 
 /**
  * Unified landing page for aurochs demo — treats PPTX, DOCX, and XLSX equally.
+ *
+ * Pulls all navigation callbacks from AppContext, so it needs no props.
  */
-export function LandingPage({
-  onFileSelect,
-  onPptxDemo,
-  onPptxEditorDemo,
-  onDocxDemo,
-  onDocxViewerDemo,
-  onXlsxDemo,
-  onXlsxViewerDemo,
-  onPdfViewerDemo,
-  onPdfEditorDemo,
-  onPotxEditorDemo,
-  onPptxSuiteDemo,
-  onFigViewerDemo,
-  onFigEditorDemo,
-  isLoading,
-}: Props) {
+export function LandingPage() {
+  const {
+    openFile: onFileSelect,
+    openPptxDemo: onPptxDemo,
+    openPptxEditorDemo: onPptxEditorDemo,
+    openDocxDemo: onDocxDemo,
+    openDocxViewerDemo: onDocxViewerDemo,
+    openXlsxDemo: onXlsxDemo,
+    openXlsxViewerDemo: onXlsxViewerDemo,
+    openPdfViewerDemo: onPdfViewerDemo,
+    openPdfEditorDemo: onPdfEditorDemo,
+    openPotxEditorDemo: onPotxEditorDemo,
+    openPptxSuiteDemo: onPptxSuiteDemo,
+    openFigViewerDemo: onFigViewerDemo,
+    openFigEditorDemo: onFigEditorDemo,
+    isLoading,
+  } = useAppContext();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [mounted, setMounted] = useState(false);
