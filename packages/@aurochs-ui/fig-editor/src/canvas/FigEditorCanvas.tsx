@@ -436,7 +436,7 @@ export function FigEditorCanvas() {
           canvasWidth={canvasSize.width}
           canvasHeight={canvasSize.height}
           images={document.images}
-          blobs={document._loaded?.blobs as any ?? []}
+          blobs={document._loaded?.blobs ?? []}
           symbolMap={document.components}
         />
       )}

@@ -482,15 +482,9 @@ function buildComponentsPage(
       .build(),
   );
 
-  figFile.addRoundedRectangle(
-    roundedRectNode(id.next(), btnSymbolID)
-      .name("bg")
-      .size(140, 44)
-      .position(0, 0)
-      .fill(BLUE)
-      .cornerRadius(8)
-      .build(),
-  );
+  // No separate bg rectangle — the SYMBOL frame itself provides the
+  // background via .background(BLUE). This way overrideBackground()
+  // on INSTANCE nodes directly changes the visible background color.
 
   figFile.addTextNode(
     textNode(id.next(), btnSymbolID)
@@ -655,6 +649,7 @@ function buildComponentsPage(
       .name("Card 2")
       .size(240, 160)
       .position(288, 176)
+      .overrideBackground({ r: 0.95, g: 0.97, b: 1.0, a: 1 }) // light blue tint
       .build(),
   );
 
