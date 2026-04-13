@@ -1,0 +1,23 @@
+{
+  "name": "@aurochs-cli/fig-cli",
+  "version": "0.11.0",
+  "type": "module",
+  "bin": {
+    "fig": "./dist/cli.js"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "bun build src/cli.ts --target bun --outdir dist --packages external",
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-cli/fig-cli/src'"
+  },
+  "dependencies": {
+    "@aurochs/fig": "workspace:*",
+    "@aurochs-renderer/fig": "workspace:*",
+    "@aurochs-cli/cli-core": "workspace:*",
+    "commander": "^14.0.3"
+  }
+}

@@ -5,6 +5,7 @@ import { createProgram as createPptxProgram } from "@aurochs-cli/pptx-cli";
 import { createProgram as createDocxProgram } from "@aurochs-cli/docx-cli";
 import { createProgram as createXlsxProgram } from "@aurochs-cli/xlsx-cli";
 import { createProgram as createPdfProgram } from "@aurochs-cli/pdf-cli";
+import { createProgram as createFigProgram } from "@aurochs-cli/fig-cli";
 import { convert, getSupportedExtensions, getSupportedOutputExtensions, type OutputFormat } from "./convert";
 import pkg from "../package.json";
 
@@ -29,6 +30,7 @@ program.addCommand(createPptxProgram());
 program.addCommand(createDocxProgram());
 program.addCommand(createXlsxProgram());
 program.addCommand(createPdfProgram());
+program.addCommand(createFigProgram());
 
 // -------------------------------------------------------------------------
 // Hook: if -i is specified and no subcommand matched, run conversion
@@ -116,7 +118,9 @@ Examples:
   aurochs -i spreadsheet.xlsx -f svg                    # → SVG (stdout)
   aurochs -i spreadsheet.xlsx -o output.txt             # → ASCII text
   aurochs -i document.doc -o output.md                  # → Markdown (legacy format)
-  aurochs -i report.pdf -o page_%d.svg                  # → SVG per page`,
+  aurochs -i report.pdf -o page_%d.svg                  # → SVG per page
+  aurochs -i design.fig -o frame_%d.svg                 # → SVG per page
+  aurochs -i design.fig                                 # → Markdown (stdout)`,
 );
 
 program.parse();

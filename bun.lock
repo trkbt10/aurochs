@@ -214,13 +214,16 @@
       "dependencies": {
         "@aurochs-builder/pdf": "workspace:*",
         "@aurochs-cli/docx-cli": "workspace:*",
+        "@aurochs-cli/fig-cli": "workspace:*",
         "@aurochs-cli/pdf-cli": "workspace:*",
         "@aurochs-cli/pptx-cli": "workspace:*",
         "@aurochs-cli/xlsx-cli": "workspace:*",
         "@aurochs-renderer/docx": "workspace:*",
+        "@aurochs-renderer/fig": "workspace:*",
         "@aurochs-renderer/pdf": "workspace:*",
         "@aurochs-renderer/pptx": "workspace:*",
         "@aurochs-renderer/xlsx": "workspace:*",
+        "@aurochs/fig": "workspace:*",
         "@aurochs/pdf": "workspace:*",
         "@resvg/resvg-js": "^2.6.2",
         "commander": "^14.0.3",
@@ -243,6 +246,19 @@
         "@aurochs-office/docx": "workspace:*",
         "@aurochs-renderer/docx": "workspace:*",
         "@aurochs/zip": "workspace:*",
+        "commander": "^14.0.3",
+      },
+    },
+    "packages/@aurochs-cli/fig-cli": {
+      "name": "@aurochs-cli/fig-cli",
+      "version": "0.11.0",
+      "bin": {
+        "fig": "./dist/cli.js",
+      },
+      "dependencies": {
+        "@aurochs-cli/cli-core": "workspace:*",
+        "@aurochs-renderer/fig": "workspace:*",
+        "@aurochs/fig": "workspace:*",
         "commander": "^14.0.3",
       },
     },
@@ -330,6 +346,7 @@
         "@aurochs-office/ooxml": "workspace:*",
         "@aurochs-office/pptx": "workspace:*",
         "@aurochs-renderer/chart": "workspace:*",
+        "@aurochs/color": "workspace:*",
         "@aurochs/fig": "workspace:*",
       },
     },
@@ -1164,6 +1181,8 @@
     "@aurochs-cli/cli-core": ["@aurochs-cli/cli-core@workspace:packages/@aurochs-cli/cli-core"],
 
     "@aurochs-cli/docx-cli": ["@aurochs-cli/docx-cli@workspace:packages/@aurochs-cli/docx-cli"],
+
+    "@aurochs-cli/fig-cli": ["@aurochs-cli/fig-cli@workspace:packages/@aurochs-cli/fig-cli"],
 
     "@aurochs-cli/pdf-cli": ["@aurochs-cli/pdf-cli@workspace:packages/@aurochs-cli/pdf-cli"],
 

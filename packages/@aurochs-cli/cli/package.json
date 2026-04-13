@@ -15,13 +15,16 @@
   "dependencies": {
     "@aurochs-builder/pdf": "workspace:*",
     "@aurochs-cli/docx-cli": "workspace:*",
+    "@aurochs-cli/fig-cli": "workspace:*",
     "@aurochs-cli/pdf-cli": "workspace:*",
     "@aurochs-cli/pptx-cli": "workspace:*",
     "@aurochs-cli/xlsx-cli": "workspace:*",
     "@aurochs-renderer/docx": "workspace:*",
+    "@aurochs-renderer/fig": "workspace:*",
     "@aurochs-renderer/pdf": "workspace:*",
     "@aurochs-renderer/pptx": "workspace:*",
     "@aurochs-renderer/xlsx": "workspace:*",
+    "@aurochs/fig": "workspace:*",
     "@aurochs/pdf": "workspace:*",
     "@resvg/resvg-js": "^2.6.2",
     "commander": "^14.0.3"

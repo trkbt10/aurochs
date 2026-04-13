@@ -38,6 +38,11 @@ import type { PdfText } from "@aurochs/pdf/domain";
 import { renderPdfPageMermaid } from "@aurochs-renderer/pdf/mermaid";
 import { renderPdfSourceToSvgs } from "@aurochs-renderer/pdf";
 
+// Fig
+import { parseFigFile, buildNodeTree, findNodesByType, getNodeType, safeChildren } from "@aurochs/fig/parser";
+import type { FigNode } from "@aurochs/fig/types";
+import { renderCanvas } from "@aurochs-renderer/fig/svg";
+
 // PNG (SVG rasterization)
 import { Resvg } from "@resvg/resvg-js";
 
@@ -46,7 +51,7 @@ import { Resvg } from "@resvg/resvg-js";
 // =============================================================================
 
 /** Supported input format, detected from file extension. */
-export type InputFormat = "pptx" | "xlsx" | "docx" | "pdf";
+export type InputFormat = "pptx" | "xlsx" | "docx" | "pdf" | "fig";
 
 /** Supported output format. */
 export type OutputFormat = "markdown" | "svg" | "text" | "png";
@@ -98,6 +103,7 @@ const EXTENSION_MAP: Record<string, { format: InputFormat; legacy: boolean }> = 
   ".docx": { format: "docx", legacy: false },
   ".doc": { format: "docx", legacy: true },
   ".pdf": { format: "pdf", legacy: false },
+  ".fig": { format: "fig", legacy: false },
 };
 
 const OUTPUT_EXTENSION_MAP: Record<string, OutputFormat> = {
@@ -119,6 +125,7 @@ const SUPPORTED_CONVERSIONS: Record<InputFormat, readonly OutputFormat[]> = {
   xlsx: ["markdown", "svg", "text", "png"],
   docx: ["markdown", "svg", "text", "png"],
   pdf: ["markdown", "svg", "png"],
+  fig: ["markdown", "svg", "png"],
 };
 
 function detectInputFormat(filePath: string): { format: InputFormat; legacy: boolean } | undefined {
@@ -292,6 +299,80 @@ async function convertPdfToMarkdown(filePath: string): Promise<ConvertPage[]> {
 }
 
 // =============================================================================
+// Fig converters (shared loader)
+// =============================================================================
+
+async function loadFigForConvert(filePath: string) {
+  const data = new Uint8Array(await fs.readFile(filePath));
+  const parsed = await parseFigFile(data);
+  const tree = buildNodeTree(parsed.nodeChanges);
+  const canvases = findNodesByType(tree.roots, "CANVAS");
+  return { parsed, tree, canvases };
+}
+
+async function convertFigToMarkdown(filePath: string): Promise<ConvertPage[]> {
+  const { parsed, tree, canvases } = await loadFigForConvert(filePath);
+
+  return canvases.map((canvas, i) => {
+    const pageName = canvas.name ?? `Page ${i + 1}`;
+    const header = `## ${pageName}`;
+    const lines: string[] = [];
+
+    function walkNode(node: FigNode, depth: number): void {
+      const nodeType = getNodeType(node);
+      const indent = "  ".repeat(depth);
+
+      if (nodeType === "TEXT") {
+        const characters = node.textData?.characters;
+        if (typeof characters === "string" && characters.length > 0) {
+          lines.push(`${indent}${characters}`);
+        }
+      } else if (nodeType === "FRAME" || nodeType === "SECTION" || nodeType === "COMPONENT") {
+        const name = node.name ?? nodeType;
+        lines.push(`${indent}### ${name}`);
+      }
+
+      for (const child of safeChildren(node)) {
+        walkNode(child, depth + 1);
+      }
+    }
+
+    for (const child of safeChildren(canvas)) {
+      walkNode(child, 0);
+    }
+
+    const content = lines.length > 0 ? `${header}\n\n${lines.join("\n")}` : header;
+    return {
+      index: i + 1,
+      label: pageName,
+      content,
+    };
+  });
+}
+
+async function convertFigToSvg(filePath: string): Promise<ConvertPage[]> {
+  const { parsed, tree, canvases } = await loadFigForConvert(filePath);
+
+  const pages: ConvertPage[] = [];
+  for (let i = 0; i < canvases.length; i++) {
+    const canvas = canvases[i]!;
+    const result = await renderCanvas(canvas, {
+      blobs: parsed.blobs,
+      images: parsed.images,
+      symbolMap: tree.nodeMap,
+      normalizeRootTransform: true,
+    });
+    pages.push({
+      index: i + 1,
+      label: canvas.name ?? `Page ${i + 1}`,
+      content: result.svg,
+    });
+  }
+
+  return pages;
+}
+
+// =============================================================================
 // SVG converters
 // =============================================================================
 
@@ -425,6 +506,7 @@ const MARKDOWN_CONVERTERS: Record<InputFormat, PageConverter> = {
   xlsx: convertXlsxToMarkdown,
   docx: convertDocxToMarkdown,
   pdf: convertPdfToMarkdown,
+  fig: convertFigToMarkdown,
 };
 
 const SVG_CONVERTERS: Record<InputFormat, PageConverter> = {
@@ -432,6 +514,7 @@ const SVG_CONVERTERS: Record<InputFormat, PageConverter> = {
   xlsx: convertXlsxToSvg,
   docx: convertDocxToSvg,
   pdf: convertPdfToSvg,
+  fig: convertFigToSvg,
 };
 
 const TEXT_CONVERTERS: Partial<Record<InputFormat, PageConverter>> = {
