@@ -5,7 +5,6 @@
  * preservation of existing XML attributes through the domain SoT.
  */
 
-import { describe, it, expect } from "vitest";
 import { parseXml, getByPath, getChild, getChildren, getTextContent } from "@aurochs/xml";
 import { createEmptyZipPackage } from "@aurochs/zip";
 import type { Workbook, WorkbookSheet } from "@aurochs-office/xlsx/workbook-parser";
@@ -724,7 +723,7 @@ describe("patchWorkbook — mergeCells", () => {
 
     await patchWorkbook(workbook, [update]);
 
-    const worksheet = readPatchedSheet(workbook);
+    const _worksheet = readPatchedSheet(workbook);
     const sheetXml = workbook.package.readText("xl/worksheets/sheet1.xml")!;
     expect(sheetXml).toContain("<mergeCells");
     expect(sheetXml).toContain('ref="A1:B2"');

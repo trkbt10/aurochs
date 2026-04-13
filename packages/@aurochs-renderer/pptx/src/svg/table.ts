@@ -7,13 +7,11 @@
  * @see ECMA-376 Part 1, Section 21.1.3 - DrawingML Tables
  */
 
-import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
 import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import type {
   Table,
   TableCell,
   TablePartStyle,
-  TableProperties,
   TableStyle,
 } from "@aurochs-office/pptx/domain/table/types";
 import {

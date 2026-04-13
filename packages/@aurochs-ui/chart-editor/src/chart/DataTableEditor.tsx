@@ -15,6 +15,12 @@ import type { EditorProps } from "@aurochs-ui/ui-components/types";
 
 export type DataTableEditorProps = EditorProps<DataTable | undefined>;
 
+
+
+
+
+
+/** Editor component for configuring chart data table display options. */
 export function DataTableEditor({ value, onChange, disabled }: DataTableEditorProps) {
   const dataTable = value ?? {};
 
@@ -53,6 +59,12 @@ export function DataTableEditor({ value, onChange, disabled }: DataTableEditorPr
   );
 }
 
+
+
+
+
+
+/** Creates a default data table configuration with all borders and keys visible. */
 export function createDefaultDataTable(): DataTable {
   return { showHorzBorder: true, showVertBorder: true, showOutline: true, showKeys: true };
 }

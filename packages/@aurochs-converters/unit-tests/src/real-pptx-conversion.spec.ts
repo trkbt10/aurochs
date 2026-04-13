@@ -6,7 +6,7 @@
  * conversion produces correct Fig nodes.
  */
 
-import { describe, it, expect, vi, beforeAll } from "vitest";
+
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { convert as pptxToFig } from "@aurochs-converters/pptx-to-fig";
@@ -41,12 +41,13 @@ async function loadFixture(relativePath: string): Promise<PresentationDocument> 
 }
 
 /** Count all nodes recursively (including nested children) */
-function countNodes(nodes: readonly FigDesignNode[]): number {
+function _countNodes(nodes: readonly FigDesignNode[]): number {
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator for recursive tree count
   let count = 0;
   for (const node of nodes) {
     count++;
     if (node.children) {
-      count += countNodes(node.children);
+      count += _countNodes(node.children);
     }
   }
   return count;
@@ -56,20 +57,20 @@ function countNodes(nodes: readonly FigDesignNode[]): number {
 function findNodesByType(nodes: readonly FigDesignNode[], type: string): FigDesignNode[] {
   const result: FigDesignNode[] = [];
   for (const node of nodes) {
-    if (node.type === type) result.push(node);
-    if (node.children) result.push(...findNodesByType(node.children, type));
+    if (node.type === type) {result.push(node);}
+    if (node.children) {result.push(...findNodesByType(node.children, type));}
   }
   return result;
 }
 
 /** Count shapes by type in a PPTX slide */
-function countShapesByType(shapes: readonly Shape[]): Record<string, number> {
+function _countShapesByType(shapes: readonly Shape[]): Record<string, number> {
   const counts: Record<string, number> = {};
   for (const shape of shapes) {
     const type = shape.type;
     counts[type] = (counts[type] ?? 0) + 1;
     if (shape.type === "grpSp") {
-      const childCounts = countShapesByType(shape.children);
+      const childCounts = _countShapesByType(shape.children);
       for (const [k, v] of Object.entries(childCounts)) {
         counts[k] = (counts[k] ?? 0) + v;
       }
@@ -84,12 +85,14 @@ function countShapesByType(shapes: readonly Shape[]): Record<string, number> {
 
 describe("Table conversion (table_test.pptx)", () => {
   const FIXTURE = "fixtures/poi-test-data/test-data/slideshow/table_test.pptx";
+  // eslint-disable-next-line no-restricted-syntax -- mutable test-suite variables initialized in beforeAll
   let presDoc: PresentationDocument;
+  // eslint-disable-next-line no-restricted-syntax -- mutable test-suite variable initialized in beforeAll
   let figDoc: FigDesignDocument;
 
   beforeAll(async () => {
     const fullPath = fixturePathOf(FIXTURE);
-    if (!existsSync(fullPath)) return;
+    if (!existsSync(fullPath)) {return;}
     presDoc = await loadFixture(FIXTURE);
     figDoc = (await pptxToFig(presDoc)).data;
   });
@@ -161,23 +164,27 @@ describe("Table conversion (table_test.pptx)", () => {
 
 describe("Chart conversion (bar-chart.pptx)", () => {
   const FIXTURE = "fixtures/poi-test-data/test-data/slideshow/bar-chart.pptx";
+  // eslint-disable-next-line no-restricted-syntax -- mutable test-suite variable initialized in beforeAll
   let presDoc: PresentationDocument;
+  // eslint-disable-next-line no-restricted-syntax -- mutable test-suite variable initialized in beforeAll
   let figDoc: FigDesignDocument;
+  // eslint-disable-next-line no-restricted-syntax -- mutable test-suite variable initialized in beforeAll
   let warnMessages: string[];
 
   beforeAll(async () => {
     const fullPath = fixturePathOf(FIXTURE);
-    if (!existsSync(fullPath)) return;
+    if (!existsSync(fullPath)) {return;}
 
     warnMessages = [];
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation((...args) => {
+    const originalWarn = console.warn;
+    console.warn = (...args: unknown[]) => {
       warnMessages.push(args.map(String).join(" "));
-    });
+    };
 
     presDoc = await loadFixture(FIXTURE);
     figDoc = (await pptxToFig(presDoc)).data;
 
-    warnSpy.mockRestore();
+    console.warn = originalWarn;
   });
 
   it("fixture file exists", () => {
@@ -203,24 +210,19 @@ describe("Chart conversion (bar-chart.pptx)", () => {
     // Chart conversion now produces a RECTANGLE child with an IMAGE fill
     // referencing the rendered chart SVG (stored as image/svg+xml in
     // FigDesignDocument.images via the "chart:" prefix).
-    let chartConverted = false;
-    for (const page of figDoc.pages) {
+    const chartConverted = figDoc.pages.some((page) => {
       const frames = findNodesByType(page.children, "FRAME");
-      for (const frame of frames) {
-        if (frame.children && frame.children.length > 0) {
-          const chartChild = frame.children.find((c) => {
-            if (c.type !== "RECTANGLE") return false;
-            return c.fills.some((f) => {
-              const typeName = typeof f.type === "string" ? f.type : f.type.name;
-              return typeName === "IMAGE" && typeof (f as { imageRef?: string }).imageRef === "string" && (f as { imageRef: string }).imageRef.startsWith("chart:");
-            });
+      return frames.some((frame) => {
+        if (!frame.children || frame.children.length === 0) {return false;}
+        return frame.children.some((c) => {
+          if (c.type !== "RECTANGLE") {return false;}
+          return c.fills.some((f) => {
+            const typeName = typeof f.type === "string" ? f.type : f.type.name;
+            return typeName === "IMAGE" && typeof (f as { imageRef?: string }).imageRef === "string" && (f as { imageRef: string }).imageRef.startsWith("chart:");
           });
-          if (chartChild) {
-            chartConverted = true;
-          }
-        }
-      }
-    }
+        });
+      });
+    });
 
     if (!chartConverted) {
       // Should have warned
@@ -244,23 +246,27 @@ describe("Chart conversion (bar-chart.pptx)", () => {
 
 describe("Diagram conversion (smartart-simple.pptx)", () => {
   const FIXTURE = "fixtures/poi-test-data/test-data/slideshow/smartart-simple.pptx";
+  // eslint-disable-next-line no-restricted-syntax -- mutable test-suite variable initialized in beforeAll
   let presDoc: PresentationDocument;
+  // eslint-disable-next-line no-restricted-syntax -- mutable test-suite variable initialized in beforeAll
   let figDoc: FigDesignDocument;
+  // eslint-disable-next-line no-restricted-syntax -- mutable test-suite variable initialized in beforeAll
   let warnMessages: string[];
 
   beforeAll(async () => {
     const fullPath = fixturePathOf(FIXTURE);
-    if (!existsSync(fullPath)) return;
+    if (!existsSync(fullPath)) {return;}
 
     warnMessages = [];
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation((...args) => {
+    const originalWarn = console.warn;
+    console.warn = (...args: unknown[]) => {
       warnMessages.push(args.map(String).join(" "));
-    });
+    };
 
     presDoc = await loadFixture(FIXTURE);
     figDoc = (await pptxToFig(presDoc)).data;
 
-    warnSpy.mockRestore();
+    console.warn = originalWarn;
   });
 
   it("fixture file exists", () => {
@@ -281,16 +287,11 @@ describe("Diagram conversion (smartart-simple.pptx)", () => {
   });
 
   it("diagram is either converted or warned about", () => {
-    let diagramConverted = false;
-    for (const page of figDoc.pages) {
+    const diagramConverted = figDoc.pages.some((page) => {
       const frames = findNodesByType(page.children, "FRAME");
-      for (const frame of frames) {
-        if (frame.children && frame.children.length > 1) {
-          // Multiple children in a FRAME could be diagram shapes
-          diagramConverted = true;
-        }
-      }
-    }
+      // Multiple children in a FRAME could be diagram shapes
+      return frames.some((frame) => frame.children && frame.children.length > 1);
+    });
 
     if (!diagramConverted) {
       const diagramWarns = warnMessages.filter(
@@ -325,24 +326,26 @@ describe("General shape preservation across all fixture types", () => {
 
     it(`${name}: slide count is preserved`, async () => {
       const fullPath = fixturePathOf(fixture);
-      if (!existsSync(fullPath)) return;
+      if (!existsSync(fullPath)) {return;}
 
-      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const originalWarn = console.warn;
+      console.warn = () => {};
       const presDoc = await loadFixture(fixture);
       const figDoc = (await pptxToFig(presDoc)).data;
-      warnSpy.mockRestore();
+      console.warn = originalWarn;
 
       expect(figDoc.pages.length).toBe(presDoc.slides.length);
     });
 
     it(`${name}: no shapes produce null/undefined (no silent drops)`, async () => {
       const fullPath = fixturePathOf(fixture);
-      if (!existsSync(fullPath)) return;
+      if (!existsSync(fullPath)) {return;}
 
-      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const originalWarn2 = console.warn;
+      console.warn = () => {};
       const presDoc = await loadFixture(fixture);
       const figDoc = (await pptxToFig(presDoc)).data;
-      warnSpy.mockRestore();
+      console.warn = originalWarn2;
 
       for (const page of figDoc.pages) {
         for (const node of page.children) {

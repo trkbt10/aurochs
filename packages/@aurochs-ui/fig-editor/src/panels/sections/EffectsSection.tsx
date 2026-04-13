@@ -9,7 +9,6 @@ import type { CSSProperties } from "react";
 import type { FigDesignNode } from "@aurochs/fig/domain";
 import type { FigEffect, FigColor } from "@aurochs/fig/types";
 import { colorTokens, fontTokens } from "@aurochs-ui/ui-components/design-tokens";
-import { FieldRow } from "@aurochs-ui/ui-components/layout";
 
 type EffectsSectionProps = {
   readonly node: FigDesignNode;
@@ -17,7 +16,7 @@ type EffectsSectionProps = {
 
 function getEffectTypeName(effect: FigEffect): string {
   const type = effect.type;
-  if (typeof type === "string") return type;
+  if (typeof type === "string") {return type;}
   if (type && typeof type === "object" && "name" in type) {
     return (type as { name: string }).name;
   }
@@ -39,6 +38,20 @@ function colorToHex(color: FigColor): string {
   const g = Math.round(color.g * 255).toString(16).padStart(2, "0");
   const b = Math.round(color.b * 255).toString(16).padStart(2, "0");
   return `#${r}${g}${b}`;
+}
+
+function getEffectDetail(typeName: string, effect: FigEffect): string {
+  if (typeName === "DROP_SHADOW" || typeName === "INNER_SHADOW") {
+    const ox = effect.offset?.x ?? 0;
+    const oy = effect.offset?.y ?? 0;
+    const r = effect.radius ?? 0;
+    const c = effect.color ? colorToHex(effect.color) : "";
+    return `${ox},${oy} r${r}${c ? ` ${c}` : ""}`;
+  }
+  if (typeName === "LAYER_BLUR" || typeName === "BACKGROUND_BLUR") {
+    return `r${effect.radius ?? 0}`;
+  }
+  return "";
 }
 
 const effectItemStyle: CSSProperties = {
@@ -65,6 +78,12 @@ const emptyStyle: CSSProperties = {
   color: colorTokens.text.tertiary,
 };
 
+
+
+
+
+
+/** Panel section for viewing and editing visual effects on a Figma node. */
 export function EffectsSection({ node }: EffectsSectionProps) {
   const effects = node.effects;
 
@@ -79,16 +98,7 @@ export function EffectsSection({ node }: EffectsSectionProps) {
         const label = formatEffectLabel(typeName);
         const visible = effect.visible !== false;
 
-        let detail = "";
-        if (typeName === "DROP_SHADOW" || typeName === "INNER_SHADOW") {
-          const ox = effect.offset?.x ?? 0;
-          const oy = effect.offset?.y ?? 0;
-          const r = effect.radius ?? 0;
-          const c = effect.color ? colorToHex(effect.color) : "";
-          detail = `${ox},${oy} r${r}${c ? ` ${c}` : ""}`;
-        } else if (typeName === "LAYER_BLUR" || typeName === "BACKGROUND_BLUR") {
-          detail = `r${effect.radius ?? 0}`;
-        }
+        const detail = getEffectDetail(typeName, effect);
 
         return (
           <div key={i} style={{ ...effectItemStyle, opacity: visible ? 1 : 0.4 }}>

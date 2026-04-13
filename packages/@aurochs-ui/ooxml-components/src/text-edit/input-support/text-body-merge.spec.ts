@@ -83,7 +83,7 @@ function getPlainText(body: TextBody): string {
     .map((p) =>
       p.runs
         .map((r) => {
-          if (r.type === "break") return "\n";
+          if (r.type === "break") {return "\n";}
           return r.type === "text" || r.type === "field" ? r.text : "";
         })
         .join(""),

@@ -60,14 +60,13 @@ function makeText(opts: {
     isBold: opts.bold,
     fontMetrics: { ascender: 800, descender: -200 },
     graphicsState: makeGraphicsState(
-      opts.color
-        ? { fillColor: { colorSpace: "DeviceRGB", components: opts.color } }
-        : undefined,
+      opts.color ? { fillColor: { colorSpace: "DeviceRGB", components: opts.color } } : undefined,
     ),
   };
 }
 
-function makeRect(x: number, y: number, w: number, h: number, fill: [number, number, number]): PdfPath {
+type RectParams = { x: number; y: number; w: number; h: number; fill: [number, number, number] };
+function makeRect({ x, y, w, h, fill }: RectParams): PdfPath {
   return {
     type: "path",
     operations: [{ type: "rect", x, y, width: w, height: h }],
@@ -116,9 +115,9 @@ function generatePage(pageNumber: number): PdfPage {
   }
 
   // Decorative rectangles
-  elements.push(makeRect(72, 350, 200, 80, [0.9, 0.93, 1.0]));
-  elements.push(makeRect(300, 350, 200, 80, [1.0, 0.93, 0.9]));
-  elements.push(makeRect(72, 240, 428, 2, [0.7, 0.7, 0.7])); // horizontal rule
+  elements.push(makeRect({ x: 72, y: 350, w: 200, h: 80, fill: [0.9, 0.93, 1.0] }));
+  elements.push(makeRect({ x: 300, y: 350, w: 200, h: 80, fill: [1.0, 0.93, 0.9] }));
+  elements.push(makeRect({ x: 72, y: 240, w: 428, h: 2, fill: [0.7, 0.7, 0.7] })); // horizontal rule
 
   // Styled text elements
   elements.push(makeText({

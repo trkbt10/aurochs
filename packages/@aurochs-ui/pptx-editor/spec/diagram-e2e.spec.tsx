@@ -8,7 +8,7 @@
 
 // @vitest-environment jsdom
 
-/* eslint-disable custom/no-as-outside-guard -- Test file */
+ 
 
 // jsdom lacks SVG text measurement APIs
 if (typeof globalThis.SVGElement !== "undefined") {
@@ -20,7 +20,6 @@ if (typeof globalThis.SVGElement !== "undefined") {
 }
 
 import { render } from "@testing-library/react/pure";
-import { describe, it, expect } from "vitest";
 import type { PresentationDocument } from "@aurochs-office/pptx/app";
 import type { Slide } from "@aurochs-office/pptx/domain";
 import type { ShapeId, ResourceId } from "@aurochs-office/pptx/domain/types";

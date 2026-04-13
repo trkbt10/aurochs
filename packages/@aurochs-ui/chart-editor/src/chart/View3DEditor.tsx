@@ -13,6 +13,12 @@ import type { EditorProps } from "@aurochs-ui/ui-components/types";
 
 export type View3DEditorProps = EditorProps<View3D | undefined>;
 
+
+
+
+
+
+/** Editor component for configuring 3D chart view rotation and perspective settings. */
 export function View3DEditor({ value, onChange, disabled }: View3DEditorProps) {
   const view = value ?? {};
 
@@ -53,6 +59,12 @@ export function View3DEditor({ value, onChange, disabled }: View3DEditorProps) {
   );
 }
 
+
+
+
+
+
+/** Creates a default 3D view configuration with standard rotation angles. */
 export function createDefaultView3D(): View3D {
   return { rotX: deg(15), rotY: deg(20), hPercent: pct(100), depthPercent: pct(100), rAngAx: true, perspective: 30 };
 }

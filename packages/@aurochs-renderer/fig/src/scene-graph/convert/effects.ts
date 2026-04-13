@@ -20,7 +20,7 @@ export function convertEffectsToScene(effects: readonly FigEffect[] | undefined)
   const result: Effect[] = [];
 
   for (const effect of effects) {
-    if (!isEffectVisible(effect)) continue;
+    if (!isEffectVisible(effect)) {continue;}
 
     const typeName = getEffectTypeName(effect);
 

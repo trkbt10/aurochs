@@ -14,7 +14,7 @@
 
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, act, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { FigRouteGate } from "./FigRouteGate";
 import { useFileLoader } from "../hooks/useFileLoader";
@@ -107,7 +107,9 @@ describe("FigRouteGate integration with useFileLoader", () => {
   });
 
   it("gate does NOT re-trigger onLoadDemo when already loading", async () => {
-    const onLoadDemo = vi.fn();
+    // eslint-disable-next-line no-restricted-syntax -- mutation counter in closure, cannot be const
+    let callCount = 0;
+    const onLoadDemo = () => { callCount += 1; };
 
     // Render with "loading" status (simulating: button clicked, load started, then navigated)
     render(
@@ -131,6 +133,6 @@ describe("FigRouteGate integration with useFileLoader", () => {
     );
 
     expect(screen.getByTestId("loading")).toBeDefined();
-    expect(onLoadDemo).not.toHaveBeenCalled();
+    expect(callCount).toBe(0);
   });
 });

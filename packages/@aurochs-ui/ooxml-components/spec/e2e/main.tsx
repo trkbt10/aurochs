@@ -16,7 +16,7 @@
  * - window.__lastComplete: last committed text (on Enter)
  */
 
-import { StrictMode, useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { StrictMode, useState, useCallback, useRef, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import type { TextBody, RunProperties } from "@aurochs-office/pptx/domain";
 import { px, pt } from "@aurochs-office/drawing-ml/domain/units";
@@ -89,6 +89,7 @@ const COLOR_CONTEXT = {
 // =============================================================================
 
 declare global {
+  // eslint-disable-next-line @typescript-eslint/consistent-type-definitions, no-restricted-syntax -- interface required for global declaration merging
   interface Window {
     __textBody: TextBody;
     __lastComplete: string | null;

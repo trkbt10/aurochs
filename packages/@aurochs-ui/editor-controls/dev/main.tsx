@@ -1,3 +1,4 @@
+/** @file Development entry point for the editor controls component library. */
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { HashRouter, Routes, Route } from "react-router-dom";

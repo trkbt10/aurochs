@@ -54,23 +54,22 @@ export function generatePolygonContour(
   return { commands, windingRule: "nonzero" };
 }
 
+type GenerateStarContourOptions = {
+  readonly width: number;
+  readonly height: number;
+  readonly pointCount: number;
+  readonly innerRadiusRatio?: number;
+};
+
 /**
  * Generate a star contour.
  *
  * Alternates between outer radius vertices and inner radius vertices.
  * The inner radius is expressed as a ratio (0-1) of the outer radius,
  * matching Figma's `starInnerRadius` field.
- *
- * @param width - Bounding box width
- * @param height - Bounding box height
- * @param pointCount - Number of outer points (minimum 3)
- * @param innerRadiusRatio - Inner radius as fraction of outer (0-1, default 0.382)
  */
 export function generateStarContour(
-  width: number,
-  height: number,
-  pointCount: number,
-  innerRadiusRatio: number = 0.382,
+  { width, height, pointCount, innerRadiusRatio = 0.382 }: GenerateStarContourOptions,
 ): PathContour {
   const n = Math.max(3, pointCount);
   const cx = width / 2;

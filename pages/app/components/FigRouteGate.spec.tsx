@@ -60,9 +60,11 @@ function renderGate(
 
 describe("FigRouteGate", () => {
   it("calls onLoadDemo when status is idle", () => {
-    const onLoadDemo = vi.fn();
+    // eslint-disable-next-line no-restricted-syntax -- mutable counter: tracks callback invocation count in test
+    let callCount = 0;
+    const onLoadDemo = () => { callCount += 1; };
     renderGate("idle", null, onLoadDemo);
-    expect(onLoadDemo).toHaveBeenCalledOnce();
+    expect(callCount).toBe(1);
   });
 
   it("shows loading content when status is idle", () => {
@@ -76,9 +78,11 @@ describe("FigRouteGate", () => {
   });
 
   it("does NOT call onLoadDemo when status is loading", () => {
-    const onLoadDemo = vi.fn();
+    // eslint-disable-next-line no-restricted-syntax -- mutable counter: tracks callback invocation count in test
+    let callCount = 0;
+    const onLoadDemo = () => { callCount += 1; };
     renderGate("loading", null, onLoadDemo);
-    expect(onLoadDemo).not.toHaveBeenCalled();
+    expect(callCount).toBe(0);
   });
 
   it("renders children with document when status is loaded", () => {
@@ -99,7 +103,9 @@ describe("FigRouteGate", () => {
   });
 
   it("does not call onLoadDemo more than once on re-render", () => {
-    const onLoadDemo = vi.fn();
+    // eslint-disable-next-line no-restricted-syntax -- mutation counter in closure, cannot be const
+    let callCount = 0;
+    const onLoadDemo = () => { callCount += 1; };
     const { rerender } = render(
       <MemoryRouter initialEntries={["/fig"]}>
         <Routes>
@@ -141,6 +147,6 @@ describe("FigRouteGate", () => {
       </MemoryRouter>,
     );
 
-    expect(onLoadDemo).toHaveBeenCalledOnce();
+    expect(callCount).toBe(1);
   });
 });

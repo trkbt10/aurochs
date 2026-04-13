@@ -440,66 +440,73 @@ async function generateFillFixtures(): Promise<void> {
     for (const child of frameData.children) {
       const childID = nextIDRef.value++;
 
-      if (child.shape === "rect") {
-        const builder = roundedRectNode(childID, frameID)
-          .name(child.name)
-          .size(child.width, child.height)
-          .position(child.x, child.y);
+      switch (child.shape) {
+        case "rect": {
+          const builder = roundedRectNode(childID, frameID)
+            .name(child.name)
+            .size(child.width, child.height)
+            .position(child.x, child.y);
 
-        if (child.cornerRadius) {
-          builder.cornerRadius(child.cornerRadius);
+          if (child.cornerRadius) {
+            builder.cornerRadius(child.cornerRadius);
+          }
+
+          if (child.fill) {
+            // Use the paint directly - need to access internal fill method
+            // For now, extract color from paint
+            const fillColor = (child.fill as Paint).color;
+            if (fillColor) {
+              builder.fill(fillColor.r, fillColor.g, fillColor.b, fillColor.a);
+            }
+          } else {
+            builder.noFill();
+          }
+
+          if (child.strokeData) {
+            builder.stroke(child.strokeData.color.r, child.strokeData.color.g, child.strokeData.color.b);
+            builder.strokeWeight(child.strokeData.weight);
+            if (child.strokeData.cap) {
+              builder.strokeCap(child.strokeData.cap);
+            }
+            if (child.strokeData.join) {
+              builder.strokeJoin(child.strokeData.join);
+            }
+            if (child.strokeData.align) {
+              builder.strokeAlign(child.strokeData.align);
+            }
+            if (child.strokeData.dash) {
+              builder.dashPattern(child.strokeData.dash);
+            }
+          }
+
+          figFile.addRoundedRectangle(builder.build());
+          break;
         }
+        case "ellipse": {
+          const builder = ellipseNode(childID, frameID)
+            .name(child.name)
+            .size(child.width, child.height)
+            .position(child.x, child.y);
 
-        if (child.fill) {
-          // Use the paint directly - need to access internal fill method
-          // For now, extract color from paint
-          const fillColor = (child.fill as Paint).color;
-          if (fillColor) {
-            builder.fill(fillColor.r, fillColor.g, fillColor.b, fillColor.a);
+          if (child.fill) {
+            const fillColor = (child.fill as Paint).color;
+            if (fillColor) {
+              builder.fill(fillColor.r, fillColor.g, fillColor.b, fillColor.a);
+            }
+          } else {
+            builder.noFill();
           }
-        } else {
-          builder.noFill();
+
+          if (child.strokeData) {
+            builder.stroke(child.strokeData.color.r, child.strokeData.color.g, child.strokeData.color.b);
+            builder.strokeWeight(child.strokeData.weight);
+          }
+
+          figFile.addEllipse(builder.build());
+          break;
         }
-
-        if (child.strokeData) {
-          builder.stroke(child.strokeData.color.r, child.strokeData.color.g, child.strokeData.color.b);
-          builder.strokeWeight(child.strokeData.weight);
-          if (child.strokeData.cap) {
-            builder.strokeCap(child.strokeData.cap);
-          }
-          if (child.strokeData.join) {
-            builder.strokeJoin(child.strokeData.join);
-          }
-          if (child.strokeData.align) {
-            builder.strokeAlign(child.strokeData.align);
-          }
-          if (child.strokeData.dash) {
-            builder.dashPattern(child.strokeData.dash);
-          }
-        }
-
-        figFile.addRoundedRectangle(builder.build());
-      } else if (child.shape === "ellipse") {
-        const builder = ellipseNode(childID, frameID)
-          .name(child.name)
-          .size(child.width, child.height)
-          .position(child.x, child.y);
-
-        if (child.fill) {
-          const fillColor = (child.fill as Paint).color;
-          if (fillColor) {
-            builder.fill(fillColor.r, fillColor.g, fillColor.b, fillColor.a);
-          }
-        } else {
-          builder.noFill();
-        }
-
-        if (child.strokeData) {
-          builder.stroke(child.strokeData.color.r, child.strokeData.color.g, child.strokeData.color.b);
-          builder.strokeWeight(child.strokeData.weight);
-        }
-
-        figFile.addEllipse(builder.build());
+        default:
+          break;
       }
     }
   });

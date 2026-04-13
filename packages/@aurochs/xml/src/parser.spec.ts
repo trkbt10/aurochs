@@ -331,7 +331,7 @@ describe("XML Parser with actual PPTX files", () => {
       const doc = parseXml("<root><a:t> </a:t></root>");
       const root = doc.children[0];
       expect(isXmlElement(root)).toBe(true);
-      if (!isXmlElement(root)) return;
+      if (!isXmlElement(root)) {return;}
 
       const at = getChild(root, "a:t");
       expect(at).toBeDefined();
@@ -347,7 +347,7 @@ describe("XML Parser with actual PPTX files", () => {
     it("preserves multiple spaces in text content", () => {
       const doc = parseXml("<root><item>  hello  </item></root>");
       const root = doc.children[0];
-      if (!isXmlElement(root)) return;
+      if (!isXmlElement(root)) {return;}
 
       const item = getChild(root, "item");
       const text = item!.children.filter(isXmlText);
@@ -358,7 +358,7 @@ describe("XML Parser with actual PPTX files", () => {
     it("preserves newline-only text between elements", () => {
       const doc = parseXml("<root>\n  <a/>\n  <b/>\n</root>");
       const root = doc.children[0];
-      if (!isXmlElement(root)) return;
+      if (!isXmlElement(root)) {return;}
 
       // Whitespace text nodes between elements should be preserved
       const textNodes = root.children.filter(isXmlText);

@@ -150,12 +150,16 @@ export function renderFallbackTextToCanvas(
 
   // Set text alignment
   ctx.textBaseline = "alphabetic";
-  if (fb.textAnchor === "middle") {
-    ctx.textAlign = "center";
-  } else if (fb.textAnchor === "end") {
-    ctx.textAlign = "right";
-  } else {
-    ctx.textAlign = "left";
+  switch (fb.textAnchor) {
+    case "middle":
+      ctx.textAlign = "center";
+      break;
+    case "end":
+      ctx.textAlign = "right";
+      break;
+    default:
+      ctx.textAlign = "left";
+      break;
   }
 
   // Apply letter spacing if supported

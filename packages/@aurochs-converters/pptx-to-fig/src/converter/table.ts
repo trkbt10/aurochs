@@ -10,10 +10,10 @@
  * a FRAME with clipsContent=true, renders like a table.
  */
 
-import type { Table, TableRow, TableCell, TableColumn, TableStyle } from "@aurochs-office/pptx/domain/table/types";
+import type { Table, TableRow, TableCell, TableStyle } from "@aurochs-office/pptx/domain/table/types";
 import type { FigDesignNode, FigNodeId } from "@aurochs/fig/domain";
 import type { FigPaint } from "@aurochs/fig/types";
-import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
+
 import { dmlFillToFig, dmlLineTofig, type FigStrokeResult } from "@aurochs-converters/interop-drawing-ml/dml-to-fig";
 import type { CellBorders } from "@aurochs-office/pptx/domain/table/types";
 import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
@@ -60,6 +60,7 @@ export function convertTableToNodes(
     colOffsets.push(colOffsets[c] + (columns[c].width));
   }
 
+  // eslint-disable-next-line no-restricted-syntax -- mutable Y position accumulator updated per row in layout loop
   let rowY = 0;
   for (let rowIdx = 0; rowIdx < rowCount; rowIdx++) {
     const row = table.rows[rowIdx];
@@ -67,26 +68,28 @@ export function convertTableToNodes(
 
     for (let colIdx = 0; colIdx < row.cells.length; colIdx++) {
       const cell = row.cells[colIdx];
-      if (colIdx >= columns.length) break;
+      if (colIdx >= columns.length) {break;}
 
       // Handle column/row spans
       const colSpan = cell.properties.colSpan ?? 1;
       const rowSpan = cell.properties.rowSpan ?? 1;
 
       // Skip merge placeholders (horizontalMerge / verticalMerge)
-      if (cell.properties.horizontalMerge || cell.properties.verticalMerge) continue;
+      if (cell.properties.horizontalMerge || cell.properties.verticalMerge) {continue;}
 
       const cellX = colOffsets[colIdx];
-      const cellWidth = computeSpanWidth(colOffsets, colIdx, colSpan, columns.length);
-      const cellHeight = computeSpanHeight(table.rows, rowY, rowSpan, rowIdx);
+      const cellWidth = computeSpanWidth({ colOffsets, startCol: colIdx, span: colSpan, totalCols: columns.length });
+      const cellHeight = computeSpanHeight({ rows: table.rows, startY: rowY, span: rowSpan, startRowIdx: rowIdx });
 
       // Resolve cell fill: explicit cell fill takes priority, then style-derived fill
-      const cellFills = resolveCellFills(cell, tableStyle, {
-        rowIdx, colIdx, rowCount, colCount,
-        properties: table.properties,
-      }, ctx);
+      const cellFills = resolveCellFills({
+        cell,
+        tableStyle,
+        cellPos: { rowIdx, colIdx, rowCount, colCount, properties: table.properties },
+        ctx,
+      });
 
-      const cellNode = buildCellNode(cell, cellX, rowY, cellWidth, cellHeight, cellFills, idCounter, ctx);
+      const cellNode = buildCellNode({ cell, x: cellX, y: rowY, width: cellWidth, height: cellHeight, fills: cellFills, idCounter, ctx });
       nodes.push(cellNode);
     }
 
@@ -103,9 +106,16 @@ function findTableStyle(
   tableStyleId: string | undefined,
   ctx: ConvertContext,
 ): TableStyle | undefined {
-  if (!tableStyleId || !ctx.tableStyles) return undefined;
+  if (!tableStyleId || !ctx.tableStyles) {return undefined;}
   return ctx.tableStyles.styles.find((s) => s.id === tableStyleId);
 }
+
+type ResolveCellFillsOptions = {
+  readonly cell: TableCell;
+  readonly tableStyle: TableStyle | undefined;
+  readonly cellPos: CellPositionContext;
+  readonly ctx: ConvertContext;
+};
 
 /**
  * Resolve the fill paints for a cell.
@@ -117,10 +127,7 @@ function findTableStyle(
  * 4. No fill (transparent)
  */
 function resolveCellFills(
-  cell: TableCell,
-  tableStyle: TableStyle | undefined,
-  cellPos: CellPositionContext,
-  ctx: ConvertContext,
+  { cell, tableStyle, cellPos, ctx }: ResolveCellFillsOptions,
 ): readonly FigPaint[] {
   // Priority 1: Explicit cell fill
   if (cell.properties.fill) {
@@ -144,28 +151,48 @@ function resolveCellFills(
   return [];
 }
 
+type ComputeSpanWidthOptions = {
+  readonly colOffsets: number[];
+  readonly startCol: number;
+  readonly span: number;
+  readonly totalCols: number;
+};
+
 function computeSpanWidth(
-  colOffsets: number[],
-  startCol: number,
-  span: number,
-  totalCols: number,
+  { colOffsets, startCol, span, totalCols }: ComputeSpanWidthOptions,
 ): number {
   const endCol = Math.min(startCol + span, totalCols);
   return colOffsets[endCol] - colOffsets[startCol];
 }
 
+type ComputeSpanHeightOptions = {
+  readonly rows: readonly TableRow[];
+  readonly startY: number;
+  readonly span: number;
+  readonly startRowIdx: number;
+};
+
 function computeSpanHeight(
-  rows: readonly TableRow[],
-  startY: number,
-  span: number,
-  startRowIdx: number,
+  { rows, startY: _startY, span, startRowIdx }: ComputeSpanHeightOptions,
 ): number {
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator summing span row heights in a loop
   let height = 0;
   for (let i = 0; i < span && startRowIdx + i < rows.length; i++) {
     height += rows[startRowIdx + i].height;
   }
   return height;
 }
+
+type BuildCellNodeOptions = {
+  readonly cell: TableCell;
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+  readonly fills: readonly FigPaint[];
+  readonly idCounter: TableIdCounter;
+  readonly ctx: ConvertContext;
+};
 
 /**
  * Build a Fig node for a single table cell.
@@ -174,14 +201,7 @@ function computeSpanHeight(
  * the cell text as a TEXT child node positioned inside.
  */
 function buildCellNode(
-  cell: TableCell,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  fills: readonly FigPaint[],
-  idCounter: TableIdCounter,
-  ctx: ConvertContext,
+  { cell, x, y, width, height, fills, idCounter, ctx }: BuildCellNodeOptions,
 ): FigDesignNode {
   const id = nextId(idCounter);
 
@@ -257,16 +277,16 @@ function resolveCellBorder(
   borders: CellBorders | undefined,
   ctx: ConvertContext,
 ): FigStrokeResult | undefined {
-  if (!borders) return undefined;
+  if (!borders) {return undefined;}
 
   const candidates: (BaseLine | undefined)[] = [
     borders.top, borders.right, borders.bottom, borders.left,
   ];
 
   for (const line of candidates) {
-    if (!line) continue;
+    if (!line) {continue;}
     const result = dmlLineTofig(line, ctx.colorContext);
-    if (result) return result;
+    if (result) {return result;}
   }
 
   return undefined;

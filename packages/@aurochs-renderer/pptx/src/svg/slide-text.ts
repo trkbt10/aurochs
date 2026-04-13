@@ -337,32 +337,39 @@ function renderLineToSvg(
     // Handle text fill (gradient, solid, or noFill)
     // @see ECMA-376 Part 1, Section 20.1.8 (Fill Properties)
     if (span.textFill !== undefined) {
-      if (span.textFill.type === "gradient") {
-        // Create gradient definition
-        const gradId = defsCollector.getNextId("text-grad");
-        const gradDef = createTextGradientDef(span.textFill, gradId);
-        defsCollector.addDef(gradDef);
-        styleAttrs.push(`fill="url(#${gradId})"`);
-      } else if (span.textFill.type === "noFill") {
-        // No fill - transparent text
-        // @see ECMA-376 Part 1, Section 20.1.8.44 (a:noFill)
-        styleAttrs.push(`fill="none"`);
-      } else if (span.textFill.type === "solid") {
-        // Solid fill with alpha
-        if (span.textFill.alpha < 1) {
-          styleAttrs.push(`fill="${span.textFill.color}"`);
-          styleAttrs.push(`fill-opacity="${span.textFill.alpha}"`);
-        } else {
-          styleAttrs.push(`fill="${span.textFill.color}"`);
+      switch (span.textFill.type) {
+        case "gradient": {
+          // Create gradient definition
+          const gradId = defsCollector.getNextId("text-grad");
+          const gradDef = createTextGradientDef(span.textFill, gradId);
+          defsCollector.addDef(gradDef);
+          styleAttrs.push(`fill="url(#${gradId})"`);
+          break;
         }
-      } else if (span.textFill.type === "pattern") {
-        // Pattern fill - fall back to foreground color for SVG string output
-        // (Pattern rendering requires React component for proper SVG defs)
-        styleAttrs.push(`fill="${span.textFill.fgColor}"`);
-      } else if (span.textFill.type === "image") {
-        // Image fill - fall back to black for SVG string output
-        // (Image fill rendering requires React component for proper SVG defs)
-        styleAttrs.push(`fill="#000000"`);
+        case "noFill":
+          // No fill - transparent text
+          // @see ECMA-376 Part 1, Section 20.1.8.44 (a:noFill)
+          styleAttrs.push(`fill="none"`);
+          break;
+        case "solid":
+          // Solid fill with alpha
+          styleAttrs.push(`fill="${span.textFill.color}"`);
+          if (span.textFill.alpha < 1) {
+            styleAttrs.push(`fill-opacity="${span.textFill.alpha}"`);
+          }
+          break;
+        case "pattern":
+          // Pattern fill - fall back to foreground color for SVG string output
+          // (Pattern rendering requires React component for proper SVG defs)
+          styleAttrs.push(`fill="${span.textFill.fgColor}"`);
+          break;
+        case "image":
+          // Image fill - fall back to black for SVG string output
+          // (Image fill rendering requires React component for proper SVG defs)
+          styleAttrs.push(`fill="#000000"`);
+          break;
+        default:
+          break;
       }
     } else {
       // Fall back to span.color

@@ -77,5 +77,5 @@ export function prepareSlide(
   slide: Slide,
   resourceStore: ResourceStore,
 ): Slide {
-  return prepareSlideResources(slide, resourceStore, NULL_FILE_READER, BUILDER_OPTIONS);
+  return prepareSlideResources({ slide, resourceStore, fileReader: NULL_FILE_READER, options: BUILDER_OPTIONS });
 }

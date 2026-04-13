@@ -19,8 +19,3 @@ export type { PdfImageCache, PdfImageUrlStrategy, ImageResolveResult } from "./i
 export { createPdfImageCache, objectUrlStrategy, dataUrlStrategy } from "./image-cache";
 
 export type { PdfImageUrlResolver } from "./types";
-
-// Re-export font provider creation for use by consumers that already have a PdfDocument
-// (e.g., PdfEditor which receives a pre-built document).
-export { createFontProviderForDocument } from "@aurochs/pdf/domain/font";
-export type { FontProvider } from "@aurochs/pdf/domain/font";

@@ -7,10 +7,10 @@ import type { PolygonNodeData } from "./types";
 import { SHAPE_NODE_TYPES } from "../../constants";
 
 /** Polygon node builder instance */
-export type PolygonNodeBuilder = BaseShapeBuilderMethods<PolygonNodeBuilder> & {
+export interface PolygonNodeBuilder extends BaseShapeBuilderMethods<PolygonNodeBuilder> {
   sides: (count: number) => PolygonNodeBuilder;
   build: () => PolygonNodeData;
-};
+}
 
 /** Create a polygon node builder */
 function createPolygonNodeBuilder(localID: number, parentID: number): PolygonNodeBuilder {

@@ -13,5 +13,3 @@ export { PdfPropertyPanel, type PdfPropertyPanelProps } from "./components/PdfPr
 export { PdfPageListPanel, type PdfPageListPanelProps } from "./components/PdfPageListPanel";
 export { PdfLayerPanel, type PdfLayerPanelProps } from "./components/PdfLayerPanel";
 export { PdfMultiSelectPanel, type PdfMultiSelectPanelProps } from "./components/PdfMultiSelectPanel";
-export type { PdfEditorState, PdfTextEditState } from "../modules/editor-state-context/types";
-export { pdfEditorReducer, createInitialState, type PdfEditorAction } from "../modules/editor-state-context/reducer";

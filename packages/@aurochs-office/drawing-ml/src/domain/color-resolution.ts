@@ -546,22 +546,15 @@ function applyColorTransforms(hex: string, transform: ColorTransform): string {
  * @returns Alpha in 0-1 range (1 = fully opaque)
  */
 export function resolveAlpha(color: Color | undefined): number {
-  if (!color?.transform) return 1;
+  if (!color?.transform) {return 1;}
   const t = color.transform;
 
   // Base alpha: if specified, use it; otherwise default is 100% (fully opaque)
-  let alpha = t.alpha !== undefined ? (t.alpha as number) / 100 : 1;
-
   // alphaMod: multiply current alpha by percentage
-  if (t.alphaMod !== undefined) {
-    alpha *= (t.alphaMod as number) / 100;
-  }
-
   // alphaOff: add percentage-point offset
-  if (t.alphaOff !== undefined) {
-    alpha += (t.alphaOff as number) / 100;
-  }
-
+  const base = t.alpha !== undefined ? (t.alpha as number) / 100 : 1;
+  const afterMod = t.alphaMod !== undefined ? base * ((t.alphaMod as number) / 100) : base;
+  const afterOff = t.alphaOff !== undefined ? afterMod + (t.alphaOff as number) / 100 : afterMod;
   // Clamp to [0, 1]
-  return Math.max(0, Math.min(1, alpha));
+  return Math.max(0, Math.min(1, afterOff));
 }

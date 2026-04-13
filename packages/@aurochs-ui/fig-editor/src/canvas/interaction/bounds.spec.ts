@@ -8,7 +8,6 @@
  * 4. Absolute bounds lookup for drag handler coordinate alignment
  */
 
-import { describe, it, expect } from "vitest";
 import type { FigDesignNode, FigNodeId } from "@aurochs/fig/domain";
 import type { FigMatrix } from "@aurochs/fig/types";
 import {

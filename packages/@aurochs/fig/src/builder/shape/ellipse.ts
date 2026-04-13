@@ -7,11 +7,11 @@ import type { EllipseNodeData, ArcData } from "./types";
 import { SHAPE_NODE_TYPES } from "../../constants";
 
 /** Ellipse node builder instance */
-export type EllipseNodeBuilder = BaseShapeBuilderMethods<EllipseNodeBuilder> & {
+export interface EllipseNodeBuilder extends BaseShapeBuilderMethods<EllipseNodeBuilder> {
   arc: (startDegrees: number, endDegrees: number) => EllipseNodeBuilder;
   innerRadius: (ratio: number) => EllipseNodeBuilder;
   build: () => EllipseNodeData;
-};
+}
 
 /** Build arc data from extra state */
 function buildArcData(extra: { arcStartAngle?: number; arcEndAngle?: number; innerRadius: number }): ArcData | undefined {

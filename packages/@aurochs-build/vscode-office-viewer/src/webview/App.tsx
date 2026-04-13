@@ -13,6 +13,12 @@ import { DocxViewer } from "./viewers/DocxViewer";
 import { PdfViewer } from "./viewers/PdfViewer";
 import { ErrorViewer } from "./viewers/ErrorViewer";
 
+
+
+
+
+
+/** Root application component for the VS Code office viewer webview. */
 export function App(): React.JSX.Element {
   const [data, setData] = useState<ExtensionToWebviewMessage | null>(null);
 

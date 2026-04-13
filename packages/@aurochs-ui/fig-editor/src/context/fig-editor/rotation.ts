@@ -66,23 +66,23 @@ export function computePreRotationTopLeft(
   };
 }
 
+type BuildRotatedTransformOptions = {
+  readonly currentTransform: FigMatrix;
+  readonly width: number;
+  readonly height: number;
+  readonly newAngleDeg: number;
+};
+
 /**
  * Build a new transform matrix with the specified rotation angle (in degrees),
  * keeping the node's center at the same world-space position.
  *
  * This is the SoT for all rotation operations (drag commit, panel edit, etc.).
  *
- * @param currentTransform - The node's current transform
- * @param width - Node width
- * @param height - Node height
- * @param newAngleDeg - New rotation angle in degrees
  * @returns New transform matrix with adjusted position
  */
 export function buildRotatedTransform(
-  currentTransform: FigMatrix,
-  width: number,
-  height: number,
-  newAngleDeg: number,
+  { currentTransform, width, height, newAngleDeg }: BuildRotatedTransformOptions,
 ): FigMatrix {
   const halfW = width / 2;
   const halfH = height / 2;

@@ -47,6 +47,16 @@ function collectTextFromNode(node: FigNode): readonly string[] {
   return texts;
 }
 
+function selectCanvases(
+  canvases: readonly FigNode[],
+  selectedPages: readonly number[] | undefined,
+): { index: number; canvas: FigNode }[] {
+  if (selectedPages) {
+    return selectedPages.map((num) => ({ index: num - 1, canvas: canvases[num - 1]! }));
+  }
+  return canvases.map((canvas, index) => ({ index, canvas }));
+}
+
 /** Extract text from fig pages with optional page selection. */
 export async function runExtract(filePath: string, options: ExtractOptions = {}): Promise<Result<ExtractData>> {
   try {
@@ -55,9 +65,7 @@ export async function runExtract(filePath: string, options: ExtractOptions = {})
 
     const selectedPages = parseOptionalPageSelection(options.pages, pageCount);
 
-    const canvases = selectedPages
-      ? selectedPages.map((num) => ({ index: num - 1, canvas: loaded.canvases[num - 1]! }))
-      : loaded.canvases.map((canvas, index) => ({ index, canvas }));
+    const canvases = selectCanvases(loaded.canvases, selectedPages);
 
     const pages = canvases.map(({ index, canvas }) => {
       const texts = collectTextFromNode(canvas);

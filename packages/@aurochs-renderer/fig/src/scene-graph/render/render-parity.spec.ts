@@ -12,7 +12,6 @@
  * 4. New types added to SceneGraph unions cause compile errors if unhandled
  */
 
-import { describe, it, expect } from "vitest";
 import type {
   Fill,
   SolidFill,
@@ -20,10 +19,6 @@ import type {
   RadialGradientFill,
   ImageFill,
   Effect,
-  DropShadowEffect,
-  InnerShadowEffect,
-  LayerBlurEffect,
-  BackgroundBlurEffect,
   Stroke,
   Color,
   AffineMatrix,
@@ -45,6 +40,7 @@ import {
 // =============================================================================
 
 function createIdGenerator(): IdGenerator {
+  // eslint-disable-next-line no-restricted-syntax -- mutable closure counter for sequential ID generation
   let counter = 0;
   return {
     getNextId(prefix: string): string {
@@ -161,6 +157,32 @@ describe("Fill resolution (shared SoT)", () => {
     expect(result.attrs.fill).toBe("#ffffff");
   });
 
+function buildFillForType(type: Fill["type"]): Fill {
+  switch (type) {
+    case "solid":
+      return { type: "solid", color: RED, opacity: 1 };
+    case "linear-gradient":
+      return { type: "linear-gradient", start: { x: 0, y: 0 }, end: { x: 1, y: 0 }, stops: [], opacity: 1 };
+    case "radial-gradient":
+      return { type: "radial-gradient", center: { x: 0.5, y: 0.5 }, radius: 0.5, stops: [], opacity: 1 };
+    case "image":
+      return { type: "image", imageRef: "", data: new Uint8Array(0), mimeType: "image/png", scaleMode: "FILL", opacity: 1 };
+  }
+}
+
+function _buildEffectForType(type: Effect["type"]): Effect {
+  switch (type) {
+    case "drop-shadow":
+      return { type: "drop-shadow", offset: { x: 0, y: 0 }, radius: 0, color: BLACK_50 };
+    case "inner-shadow":
+      return { type: "inner-shadow", offset: { x: 0, y: 0 }, radius: 0, color: BLACK_50 };
+    case "layer-blur":
+      return { type: "layer-blur", radius: 0 };
+    case "background-blur":
+      return { type: "background-blur", radius: 0 };
+  }
+}
+
   /**
    * COMPILE-TIME EXHAUSTIVENESS CHECK
    *
@@ -176,21 +198,7 @@ describe("Fill resolution (shared SoT)", () => {
     const ids = createIdGenerator();
 
     for (const type of allTypes) {
-      let fill: Fill;
-      switch (type) {
-        case "solid":
-          fill = { type: "solid", color: RED, opacity: 1 };
-          break;
-        case "linear-gradient":
-          fill = { type: "linear-gradient", start: { x: 0, y: 0 }, end: { x: 1, y: 0 }, stops: [], opacity: 1 };
-          break;
-        case "radial-gradient":
-          fill = { type: "radial-gradient", center: { x: 0.5, y: 0.5 }, radius: 0.5, stops: [], opacity: 1 };
-          break;
-        case "image":
-          fill = { type: "image", imageRef: "", data: new Uint8Array(0), mimeType: "image/png", scaleMode: "FILL", opacity: 1 };
-          break;
-      }
+      const fill = buildFillForType(type);
       const result = resolveFill(fill, ids);
       expect(result.attrs.fill).toBeDefined();
     }
@@ -310,21 +318,7 @@ describe("Effects resolution (shared SoT)", () => {
     const ids = createIdGenerator();
 
     for (const type of allTypes) {
-      let effect: Effect;
-      switch (type) {
-        case "drop-shadow":
-          effect = { type: "drop-shadow", offset: { x: 0, y: 0 }, radius: 0, color: BLACK_50 };
-          break;
-        case "inner-shadow":
-          effect = { type: "inner-shadow", offset: { x: 0, y: 0 }, radius: 0, color: BLACK_50 };
-          break;
-        case "layer-blur":
-          effect = { type: "layer-blur", radius: 0 };
-          break;
-        case "background-blur":
-          effect = { type: "background-blur", radius: 0 };
-          break;
-      }
+      const effect = buildEffectForType(type);
       // Should not throw
       resolveEffects([effect], ids);
     }

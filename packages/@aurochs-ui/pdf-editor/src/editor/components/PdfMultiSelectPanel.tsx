@@ -96,6 +96,8 @@ function noop() {
   // intentionally empty
 }
 
+const DEFAULT_STROKE_OUTLINE: OutlineFormatting = { width: 1, color: DEFAULT_ELEMENT_COLOR, style: "solid" };
+
 // =============================================================================
 // Component
 // =============================================================================
@@ -112,7 +114,7 @@ export const PdfMultiSelectPanel = memo(function PdfMultiSelectPanel({ document,
     const bounds = selectedIds
       .map((id) => query.getElementBounds(id))
       .filter((b): b is NonNullable<typeof b> => b !== undefined);
-    if (bounds.length === 0) return undefined;
+    if (bounds.length === 0) {return undefined;}
     const minX = Math.min(...bounds.map((b) => b.x));
     const minY = Math.min(...bounds.map((b) => b.y));
     const maxX = Math.max(...bounds.map((b) => b.x + b.width));
@@ -148,6 +150,8 @@ export const PdfMultiSelectPanel = memo(function PdfMultiSelectPanel({ document,
     },
     [onUpdateElements],
   );
+
+  const strokeSectionValue = strokeValue === "mixed" ? DEFAULT_STROKE_OUTLINE : strokeValue;
 
   return (
     <div style={style}>
@@ -185,7 +189,7 @@ export const PdfMultiSelectPanel = memo(function PdfMultiSelectPanel({ document,
 
       <OptionalPropertySection
         title="Stroke"
-        value={strokeValue === "mixed" ? ({ width: 1, color: DEFAULT_ELEMENT_COLOR, style: "solid" } as OutlineFormatting) : strokeValue}
+        value={strokeSectionValue}
         createDefault={() => ({ width: 1, color: DEFAULT_ELEMENT_COLOR, style: "solid" as const })}
         onChange={handleStrokeChange}
         renderEditor={(value, onChange) => <OutlineFormattingEditor value={value} onChange={onChange} />}

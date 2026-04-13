@@ -2,11 +2,11 @@
  * @file Object Tracker Tests
  */
 
-import { PdfObjectTracker } from "./object-tracker";
+import { createPdfObjectTracker } from "./object-tracker";
 
 describe("PdfObjectTracker", () => {
   it("allocates sequential object numbers starting from 1", () => {
-    const tracker = new PdfObjectTracker();
+    const tracker = createPdfObjectTracker();
 
     expect(tracker.allocate()).toBe(1);
     expect(tracker.allocate()).toBe(2);
@@ -14,14 +14,14 @@ describe("PdfObjectTracker", () => {
   });
 
   it("reserves specific object numbers", () => {
-    const tracker = new PdfObjectTracker();
+    const tracker = createPdfObjectTracker();
 
     tracker.reserve(5);
     expect(tracker.allocate()).toBe(6);
   });
 
   it("stores and retrieves object data", () => {
-    const tracker = new PdfObjectTracker();
+    const tracker = createPdfObjectTracker();
     const objNum = tracker.allocate();
     const data = new TextEncoder().encode("test data");
 
@@ -32,7 +32,7 @@ describe("PdfObjectTracker", () => {
   });
 
   it("returns entries sorted by object number", () => {
-    const tracker = new PdfObjectTracker();
+    const tracker = createPdfObjectTracker();
 
     const obj3 = tracker.allocate(); // 1
     const obj1 = tracker.allocate(); // 2
@@ -47,7 +47,7 @@ describe("PdfObjectTracker", () => {
   });
 
   it("calculates correct size", () => {
-    const tracker = new PdfObjectTracker();
+    const tracker = createPdfObjectTracker();
 
     tracker.allocate();
     tracker.allocate();
@@ -58,7 +58,7 @@ describe("PdfObjectTracker", () => {
   });
 
   it("reports not having unset objects", () => {
-    const tracker = new PdfObjectTracker();
+    const tracker = createPdfObjectTracker();
     const objNum = tracker.allocate();
 
     expect(tracker.has(objNum)).toBe(false);

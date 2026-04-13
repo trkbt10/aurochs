@@ -28,6 +28,12 @@ export type BaseProps = {
   readonly visible: boolean;
 };
 
+
+
+
+
+
+/** Extracts base rendering properties (transform, opacity, visibility) from a Figma node. */
 export function extractBaseProps(node: FigDesignNode): BaseProps {
   return {
     transform: node.transform,
@@ -42,6 +48,12 @@ export type SizeProps = {
   readonly size: FigVector;
 };
 
+
+
+
+
+
+/** Extracts size properties from a Figma node, with an optional fallback value. */
 export function extractSizeProps(node: FigDesignNode, fallback?: FigVector): SizeProps {
   return {
     size: node.size ?? fallback ?? { x: 100, y: 100 },
@@ -92,6 +104,12 @@ export type EffectsProps = {
   readonly effects: readonly FigEffect[] | undefined;
 };
 
+
+
+
+
+
+/** Extracts effects properties from a Figma node for rendering. */
 export function extractEffectsProps(node: FigDesignNode): EffectsProps {
   return {
     effects: node.effects,

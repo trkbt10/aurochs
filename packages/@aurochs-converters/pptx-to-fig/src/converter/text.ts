@@ -58,6 +58,7 @@ export function convertText(
   // Phase 1: Flatten paragraphs/runs into a single string, tracking each run's position
   const flatRuns: FlatRun[] = [];
   const lines: string[] = [];
+  // eslint-disable-next-line no-restricted-syntax -- mutable position counter tracking character offset across runs
   let charOffset = 0;
 
   for (let pi = 0; pi < textBody.paragraphs.length; pi++) {
@@ -84,7 +85,7 @@ export function convertText(
   }
 
   const characters = lines.join("\n");
-  if (characters.length === 0) return undefined;
+  if (characters.length === 0) {return undefined;}
 
   // Phase 2: Resolve each run's visual style in Fig terms
   const runStyles: { run: FlatRun; style: ResolvedStyle }[] = flatRuns
@@ -168,12 +169,10 @@ function findDominantStyle(
     }
   }
 
-  let dominant: { style: ResolvedStyle; count: number } | undefined;
-  for (const entry of styleCharCounts.values()) {
-    if (!dominant || entry.count > dominant.count) {
-      dominant = entry;
-    }
-  }
+  const dominant = [...styleCharCounts.values()].reduce<{ style: ResolvedStyle; count: number } | undefined>(
+    (best, entry) => (!best || entry.count > best.count ? entry : best),
+    undefined,
+  );
 
   return dominant!.style;
 }
@@ -184,6 +183,16 @@ function findDominantStyle(
  * Style ID 0 = base (dominant) style, no entry in the override table.
  * Style IDs >= 1 are assigned to each distinct non-dominant style.
  */
+function resolveFontName(
+  style: ResolvedStyle,
+  dominantStyle: ResolvedStyle,
+): { family: string; style: string; postscript: string } | undefined {
+  if (style.fontFamily !== dominantStyle.fontFamily || style.fontStyle !== dominantStyle.fontStyle) {
+    return { family: style.fontFamily, style: style.fontStyle, postscript: style.fontFamily };
+  }
+  return undefined;
+}
+
 function buildStyleMapping(
   characters: string,
   runStyles: readonly { run: FlatRun; style: ResolvedStyle }[],
@@ -194,15 +203,16 @@ function buildStyleMapping(
 
   // Map: style key → assigned ID + override entry
   const overrideMap = new Map<string, { id: number; style: ResolvedStyle }>();
+  // eslint-disable-next-line no-restricted-syntax -- mutable sequential ID counter assigning style IDs in a loop
   let nextId = 1;
 
   for (const { run, style } of runStyles) {
     const key = styleKey(style);
-    if (key === dominantKey) continue; // Base style — ID 0
+    if (key === dominantKey) {continue;} // Base style — ID 0
 
-    let entry = overrideMap.get(key);
-    if (!entry) {
-      entry = { id: nextId++, style };
+    const existing = overrideMap.get(key);
+    const entry = existing ?? { id: nextId++, style };
+    if (!existing) {
       overrideMap.set(key, entry);
     }
 
@@ -218,9 +228,7 @@ function buildStyleMapping(
     const override: TextStyleOverride = {
       styleID: id,
       fontSize: style.fontSize !== dominantStyle.fontSize ? style.fontSize : undefined,
-      fontName: style.fontFamily !== dominantStyle.fontFamily || style.fontStyle !== dominantStyle.fontStyle
-        ? { family: style.fontFamily, style: style.fontStyle, postscript: style.fontFamily }
-        : undefined,
+      fontName: resolveFontName(style, dominantStyle),
       fillPaints: !fillPaintsEqual(style.fillPaints, dominantStyle.fillPaints) ? style.fillPaints : undefined,
       textDecoration: !kiwiEnumEqual(style.textDecoration, dominantStyle.textDecoration) ? style.textDecoration : undefined,
     };
@@ -261,7 +269,7 @@ function resolveRunFillPaints(
   props: RunProperties | undefined,
   colorContext?: ColorContext,
 ): FigPaint[] | undefined {
-  if (!props?.color) return undefined;
+  if (!props?.color) {return undefined;}
   const figColor = dmlColorToFig(props.color, colorContext);
   return [{
     type: "SOLID" as const,
@@ -278,24 +286,24 @@ function fillPaintsEqual(
   a: readonly FigPaint[] | undefined,
   b: readonly FigPaint[] | undefined,
 ): boolean {
-  if (a === b) return true;
-  if (!a || !b) return a === b;
-  if (a.length !== b.length) return false;
+  if (a === b) {return true;}
+  if (!a || !b) {return a === b;}
+  if (a.length !== b.length) {return false;}
   for (let i = 0; i < a.length; i++) {
     const pa = a[i];
     const pb = b[i];
-    if (pa.type !== pb.type) return false;
+    if (pa.type !== pb.type) {return false;}
     if (isSolidPaint(pa) && isSolidPaint(pb)) {
-      if (!colorEqual(pa.color, pb.color)) return false;
-      if ((pa.opacity ?? 1) !== (pb.opacity ?? 1)) return false;
+      if (!colorEqual(pa.color, pb.color)) {return false;}
+      if ((pa.opacity ?? 1) !== (pb.opacity ?? 1)) {return false;}
     }
   }
   return true;
 }
 
 function colorEqual(a: FigColor | undefined, b: FigColor | undefined): boolean {
-  if (a === b) return true;
-  if (!a || !b) return false;
+  if (a === b) {return true;}
+  if (!a || !b) {return false;}
   return Math.abs(a.r - b.r) < 0.001
     && Math.abs(a.g - b.g) < 0.001
     && Math.abs(a.b - b.b) < 0.001
@@ -303,8 +311,8 @@ function colorEqual(a: FigColor | undefined, b: FigColor | undefined): boolean {
 }
 
 function kiwiEnumEqual(a: KiwiEnumValue | undefined, b: KiwiEnumValue | undefined): boolean {
-  if (a === b) return true;
-  if (!a || !b) return false;
+  if (a === b) {return true;}
+  if (!a || !b) {return false;}
   return a.value === b.value;
 }
 
@@ -312,7 +320,7 @@ function kiwiEnumEqual(a: KiwiEnumValue | undefined, b: KiwiEnumValue | undefine
  * Resolve underline/strikethrough from RunProperties to a KiwiEnumValue.
  */
 function resolveTextDecoration(props: RunProperties | undefined): KiwiEnumValue | undefined {
-  if (!props) return undefined;
+  if (!props) {return undefined;}
   if (props.underline && props.underline !== "none") {
     return { value: 1, name: "UNDERLINE" };
   }
@@ -331,7 +339,7 @@ function resolveTextDecoration(props: RunProperties | undefined): KiwiEnumValue 
 function resolveFontFamily(raw: string | undefined, fontScheme?: FontScheme): string {
   if (raw === undefined) {
     const themeBody = fontScheme?.minorFont.latin;
-    if (themeBody) return themeBody;
+    if (themeBody) {return themeBody;}
     return "sans-serif";
   }
 
@@ -344,16 +352,16 @@ function resolveFontFamily(raw: string | undefined, fontScheme?: FontScheme): st
 }
 
 function buildFontStyle(props?: RunProperties): string {
-  if (!props) return "Regular";
-  if (props.bold && props.italic) return "Bold Italic";
-  if (props.bold) return "Bold";
-  if (props.italic) return "Italic";
+  if (!props) {return "Regular";}
+  if (props.bold && props.italic) {return "Bold Italic";}
+  if (props.bold) {return "Bold";}
+  if (props.italic) {return "Italic";}
   return "Regular";
 }
 
 function convertTextAlign(textBody: TextBody): KiwiEnumValue | undefined {
   const align = textBody.paragraphs[0]?.properties?.alignment;
-  if (!align) return undefined;
+  if (!align) {return undefined;}
 
   switch (align) {
     case "left": return { value: 0, name: "LEFT" };
@@ -370,7 +378,7 @@ function convertTextAlign(textBody: TextBody): KiwiEnumValue | undefined {
 
 function convertTextAnchor(textBody: TextBody): KiwiEnumValue | undefined {
   const anchor = textBody.bodyProperties.anchor;
-  if (!anchor) return undefined;
+  if (!anchor) {return undefined;}
 
   switch (anchor) {
     case "top": return { value: 0, name: "TOP" };
@@ -382,7 +390,7 @@ function convertTextAnchor(textBody: TextBody): KiwiEnumValue | undefined {
 
 function convertAutoFit(textBody: TextBody): KiwiEnumValue | undefined {
   const autoFit = textBody.bodyProperties.autoFit;
-  if (!autoFit) return undefined;
+  if (!autoFit) {return undefined;}
 
   switch (autoFit.type) {
     case "shape": return { value: 2, name: "WIDTH_AND_HEIGHT" };

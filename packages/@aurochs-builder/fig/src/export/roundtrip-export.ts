@@ -8,7 +8,7 @@
 
 import { saveFigFile } from "@aurochs/fig/roundtrip";
 import type { LoadedFigFile } from "@aurochs/fig/roundtrip";
-import type { FigDesignDocument } from "../types/document";
+import type { FigDesignDocument } from "@aurochs/fig/domain";
 import type { FigExportResult, FigExportOptions } from "./fig-exporter";
 import { documentToTree } from "../context/document-to-tree";
 

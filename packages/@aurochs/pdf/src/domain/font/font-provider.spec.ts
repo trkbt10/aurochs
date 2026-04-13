@@ -3,7 +3,6 @@
  *
  * Tests for the central font resolution layer.
  */
-import { describe, it, expect } from "vitest";
 import { createFontProvider, createFontProviderForDocument } from "./font-provider";
 import type { FontRegistrationInput, ResolvedFont, FontFallbackStrategy } from "./font-provider";
 
@@ -116,12 +115,7 @@ describe("FontProvider", () => {
 
     it("resolves system font when registered with all properties", () => {
       const provider = createFontProvider({ embeddedFonts: [] });
-      provider.registerSystemFont(
-        "MySystemFont",
-        new Uint8Array([0x00]),
-        "truetype",
-        "font/ttf",
-      );
+      provider.registerSystemFont({ family: "MySystemFont", data: new Uint8Array([0x00]), format: "truetype", mimeType: "font/ttf" });
 
       const resolved = provider.resolve("F1", "MySystemFont");
       expect(resolved.source).toBe("system");
@@ -190,12 +184,7 @@ describe("FontProvider", () => {
 
     it("generates @font-face CSS for system fonts with data", () => {
       const provider = createFontProvider({ embeddedFonts: [] });
-      provider.registerSystemFont(
-        "MyFont",
-        new Uint8Array([0x00]),
-        "truetype",
-        "font/ttf",
-      );
+      provider.registerSystemFont({ family: "MyFont", data: new Uint8Array([0x00]), format: "truetype", mimeType: "font/ttf" });
       const css = provider.getAllFontFaceCss();
 
       expect(css).toContain("@font-face");

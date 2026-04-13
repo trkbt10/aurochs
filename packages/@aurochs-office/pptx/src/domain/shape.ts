@@ -19,6 +19,7 @@ import type { ContentPart } from "./anchor";
 import type { BlipCompression } from "@aurochs-office/ooxml/domain/drawing";
 import type { FontCollectionIndex, StyleMatrixColumnIndex, ShapeId } from "./style-ref";
 import type { Scene3d, Shape3d } from "./three-d";
+import type { ChartType } from "@aurochs-office/chart/domain";
 
 
 // =============================================================================
@@ -376,7 +377,7 @@ export type ChartReference = {
    *
    * @see ECMA-376 Part 1, Section 21.2.2 (chart element types)
    */
-  readonly chartType?: import("@aurochs-office/chart/domain").ChartType;
+  readonly chartType?: ChartType;
 };
 
 /**

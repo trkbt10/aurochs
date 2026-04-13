@@ -14,15 +14,21 @@ export type FigStrokeResult = {
   readonly strokeJoin?: KiwiEnumValue;
 };
 
+
+
+
+
+
+/** Converts a DrawingML line definition to a Figma stroke result. */
 export function dmlLineTofig(
   line: BaseLine | undefined,
   colorContext?: ColorContext,
 ): FigStrokeResult | undefined {
-  if (!line) return undefined;
-  if ((line.width) <= 0) return undefined;
+  if (!line) {return undefined;}
+  if ((line.width) <= 0) {return undefined;}
 
   const strokePaints = dmlFillToFig(line.fill, colorContext);
-  if (strokePaints.length === 0) return undefined;
+  if (strokePaints.length === 0) {return undefined;}
 
   return {
     strokePaints,

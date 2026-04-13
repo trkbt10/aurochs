@@ -108,18 +108,25 @@ export function parseContentTypes(contentTypesXml: XmlDocument): ParsedContentTy
       continue;
     }
 
-    if (child.name === "Default") {
-      const extension = child.attrs.Extension;
-      const contentType = child.attrs.ContentType;
-      if (extension && contentType) {
-        defaults.set(extension.toLowerCase(), contentType);
+    switch (child.name) {
+      case "Default": {
+        const extension = child.attrs.Extension;
+        const contentType = child.attrs.ContentType;
+        if (extension && contentType) {
+          defaults.set(extension.toLowerCase(), contentType);
+        }
+        break;
       }
-    } else if (child.name === "Override") {
-      const partName = child.attrs.PartName;
-      const contentType = child.attrs.ContentType;
-      if (partName && contentType) {
-        overrides.set(partName, contentType);
+      case "Override": {
+        const partName = child.attrs.PartName;
+        const contentType = child.attrs.ContentType;
+        if (partName && contentType) {
+          overrides.set(partName, contentType);
+        }
+        break;
       }
+      default:
+        break;
     }
   }
 

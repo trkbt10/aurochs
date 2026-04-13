@@ -12,6 +12,10 @@ import type { PdfGraphicsState } from "./types";
 // Color Resolution
 // =============================================================================
 
+function resolvePatternColor(color: PdfColor, patternColor: PdfColor | undefined): PdfColor {
+  return color.colorSpace === "Pattern" && patternColor ? patternColor : color;
+}
+
 /**
  * Resolve Pattern color space references in a graphics state to device colors.
  *
@@ -29,12 +33,8 @@ import type { PdfGraphicsState } from "./types";
  * (e.g. rasterization failed or the source PDF uses a pattern only for color).
  */
 export function resolvePatternColors(gs: PdfGraphicsState): PdfGraphicsState {
-  const fillColor = gs.fillColor.colorSpace === "Pattern" && gs.fillPatternColor
-    ? gs.fillPatternColor
-    : gs.fillColor;
-  const strokeColor = gs.strokeColor.colorSpace === "Pattern" && gs.strokePatternColor
-    ? gs.strokePatternColor
-    : gs.strokeColor;
+  const fillColor = resolvePatternColor(gs.fillColor, gs.fillPatternColor);
+  const strokeColor = resolvePatternColor(gs.strokeColor, gs.strokePatternColor);
   if (fillColor === gs.fillColor && strokeColor === gs.strokeColor) {
     return gs;
   }

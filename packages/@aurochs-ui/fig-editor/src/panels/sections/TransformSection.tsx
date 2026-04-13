@@ -74,7 +74,7 @@ export function TransformSection({ node, dispatch }: TransformSectionProps) {
             case "rotation":
               return {
                 ...n,
-                transform: buildRotatedTransform(n.transform, n.size.x, n.size.y, value),
+                transform: buildRotatedTransform({ currentTransform: n.transform, width: n.size.x, height: n.size.y, newAngleDeg: value }),
               };
             default:
               return n;

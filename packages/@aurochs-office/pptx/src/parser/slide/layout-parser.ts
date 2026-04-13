@@ -224,6 +224,12 @@ function resolveBackgroundFromMaster(
   );
 }
 
+
+
+
+
+
+/** Applies the given slide layout attributes to an XML layout document. */
 export function applySlideLayoutAttributes(layoutDoc: XmlDocument, attributes: SlideLayoutAttributes): XmlDocument {
   if (!layoutDoc) {
     throw new Error("applySlideLayoutAttributes requires a layout document.");

@@ -23,8 +23,8 @@ import type { FigStrokeWeight } from "@aurochs/fig/types";
  * and most raster backends apply a uniform stroke width.
  */
 export function resolveStrokeWeight(strokeWeight: FigStrokeWeight | undefined): number {
-  if (strokeWeight === undefined) return 0;
-  if (typeof strokeWeight === "number") return strokeWeight;
+  if (strokeWeight === undefined) {return 0;}
+  if (typeof strokeWeight === "number") {return strokeWeight;}
   const w = strokeWeight as { top?: number; right?: number; bottom?: number; left?: number };
   return Math.max(w.top ?? 0, w.right ?? 0, w.bottom ?? 0, w.left ?? 0);
 }

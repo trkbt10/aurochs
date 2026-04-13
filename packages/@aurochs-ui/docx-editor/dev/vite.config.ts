@@ -1,3 +1,4 @@
+/** @file Vite configuration for the DOCX editor development server. */
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "node:path";

@@ -27,12 +27,17 @@ function getCryptFilterName(dict: PdfDict): string | null {
   if (!filter) {return null;}
 
   const filters: string[] = [];
-  if (filter.type === "name") {
-    filters.push(filter.value);
-  } else if (filter.type === "array") {
-    for (const item of filter.items) {
-      if (item.type === "name") {filters.push(item.value);}
-    }
+  switch (filter.type) {
+    case "name":
+      filters.push(filter.value);
+      break;
+    case "array":
+      for (const item of filter.items) {
+        if (item.type === "name") {filters.push(item.value);}
+      }
+      break;
+    default:
+      break;
   }
 
   const cryptIndices: number[] = [];
@@ -72,12 +77,17 @@ function streamHasCryptIdentity(dict: PdfDict): boolean {
   if (!filter) {return false;}
 
   const filters: string[] = [];
-  if (filter.type === "name") {
-    filters.push(filter.value);
-  } else if (filter.type === "array") {
-    for (const item of filter.items) {
-      if (item.type === "name") {filters.push(item.value);}
-    }
+  switch (filter.type) {
+    case "name":
+      filters.push(filter.value);
+      break;
+    case "array":
+      for (const item of filter.items) {
+        if (item.type === "name") {filters.push(item.value);}
+      }
+      break;
+    default:
+      break;
   }
 
   const cryptIndices: number[] = [];

@@ -17,6 +17,12 @@ import type { FigMatrix, FigVector } from "@aurochs/fig/types";
 import type { Transform } from "@aurochs-office/drawing-ml/domain/geometry";
 import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
 
+
+
+
+
+
+/** Converts a Figma transform matrix and size to a DrawingML transform definition. */
 export function figTransformToDml(matrix: FigMatrix, size: FigVector): Transform {
   const a = matrix.m00;
   const b = matrix.m10;
@@ -44,7 +50,6 @@ export function figTransformToDml(matrix: FigMatrix, size: FigVector): Transform
 }
 
 function normalizeAngle(d: number): number {
-  let a = d % 360;
-  if (a < 0) a += 360;
-  return a;
+  const a = d % 360;
+  return a < 0 ? a + 360 : a;
 }

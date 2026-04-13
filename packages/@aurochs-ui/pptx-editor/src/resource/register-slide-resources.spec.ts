@@ -7,7 +7,6 @@
  * store entry yet.
  */
 
-import { describe, it, expect } from "vitest";
 import type { Slide } from "@aurochs-office/pptx/domain";
 import type { Shape } from "@aurochs-office/pptx/domain";
 import type { ShapeId, ResourceId } from "@aurochs-office/pptx/domain/types";

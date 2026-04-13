@@ -9,11 +9,12 @@
  * fields and ordering that the high-level model doesn't explicitly track.
  */
 
-import type { FigNode, FigGuid, FigParentIndex, FigMatrix, KiwiEnumValue } from "@aurochs/fig/types";
-import type { FigBlob, LoadedFigFile } from "@aurochs/fig/roundtrip";
-import type { FigDesignDocument, FigDesignNode, FigPage } from "../types/document";
-import { parseId } from "../types/node-id";
-import type { FigNodeId, FigPageId } from "../types/node-id";
+import type { FigNode, FigGuid, FigParentIndex, KiwiEnumValue } from "@aurochs/fig/types";
+import type { LoadedFigFile } from "@aurochs/fig/roundtrip";
+import type { FigBlob } from "@aurochs/fig/parser";
+import type { FigDesignDocument, FigDesignNode, FigPage } from "@aurochs/fig/domain";
+import { parseId } from "@aurochs/fig/domain";
+import type { FigNodeId, FigPageId } from "@aurochs/fig/domain";
 
 // =============================================================================
 // Types
@@ -140,13 +141,13 @@ function designNodeToFigNode(
     if (node.textData.styleOverrideTable && node.textData.styleOverrideTable.length > 0) {
       textDataMsg.styleOverrideTable = node.textData.styleOverrideTable.map((entry) => {
         const nc: Record<string, unknown> = { styleID: entry.styleID };
-        if (entry.fontSize !== undefined) nc.fontSize = entry.fontSize;
-        if (entry.fontName !== undefined) nc.fontName = entry.fontName;
-        if (entry.fillPaints !== undefined) nc.fillPaints = entry.fillPaints;
-        if (entry.textDecoration !== undefined) nc.textDecoration = entry.textDecoration;
-        if (entry.textCase !== undefined) nc.textCase = entry.textCase;
-        if (entry.lineHeight !== undefined) nc.lineHeight = entry.lineHeight;
-        if (entry.letterSpacing !== undefined) nc.letterSpacing = entry.letterSpacing;
+        if (entry.fontSize !== undefined) {nc.fontSize = entry.fontSize;}
+        if (entry.fontName !== undefined) {nc.fontName = entry.fontName;}
+        if (entry.fillPaints !== undefined) {nc.fillPaints = entry.fillPaints;}
+        if (entry.textDecoration !== undefined) {nc.textDecoration = entry.textDecoration;}
+        if (entry.textCase !== undefined) {nc.textCase = entry.textCase;}
+        if (entry.lineHeight !== undefined) {nc.lineHeight = entry.lineHeight;}
+        if (entry.letterSpacing !== undefined) {nc.letterSpacing = entry.letterSpacing;}
         return nc;
       });
     }
@@ -171,14 +172,18 @@ function designNodeToFigNode(
 // Flatten Tree
 // =============================================================================
 
+type FlattenPageOptions = {
+  readonly page: FigPage;
+  readonly documentId: FigNodeId;
+  readonly pageIndex: number;
+  readonly result: FigNode[];
+};
+
 /**
  * Flatten a page's node tree into a nodeChanges array.
  */
 function flattenPage(
-  page: FigPage,
-  documentId: FigNodeId,
-  pageIndex: number,
-  result: FigNode[],
+  { page, documentId, pageIndex, result }: FlattenPageOptions,
 ): void {
   // Create CANVAS node
   const canvasGuid = nodeIdToGuid(page.id);
@@ -280,10 +285,10 @@ function applyModificationsToLoaded(
       const docGuid = loaded.nodeChanges.find((n) => n.type?.name === "DOCUMENT")?.guid;
       if (docGuid) {
         const docId = `${docGuid.sessionID}:${docGuid.localID}` as FigNodeId;
-        flattenPage(page, docId, doc.pages.indexOf(page), updatedNodeChanges);
+        flattenPage({ page, documentId: docId, pageIndex: doc.pages.indexOf(page), result: updatedNodeChanges });
       }
     }
-    addNewNodes(page.children, page.id, originalGuids, updatedNodeChanges);
+    addNewNodes({ nodes: page.children, parentId: page.id, originalGuids, result: updatedNodeChanges });
   }
 
   return {
@@ -339,14 +344,18 @@ function mergeCanvasChanges(original: FigNode, currentPage: FigPage): FigNode {
   return merged as FigNode;
 }
 
+type AddNewNodesOptions = {
+  readonly nodes: readonly FigDesignNode[];
+  readonly parentId: FigNodeId | FigPageId;
+  readonly originalGuids: ReadonlySet<string>;
+  readonly result: FigNode[];
+};
+
 /**
  * Add new nodes (not present in original) to the nodeChanges array.
  */
 function addNewNodes(
-  nodes: readonly FigDesignNode[],
-  parentId: FigNodeId | FigPageId,
-  originalGuids: ReadonlySet<string>,
-  result: FigNode[],
+  { nodes, parentId, originalGuids, result }: AddNewNodesOptions,
 ): void {
   for (let i = 0; i < nodes.length; i++) {
     const node = nodes[i];
@@ -354,7 +363,7 @@ function addNewNodes(
       result.push(designNodeToFigNode(node, parentId, i));
     }
     if (node.children) {
-      addNewNodes(node.children, node.id, originalGuids, result);
+      addNewNodes({ nodes: node.children, parentId: node.id, originalGuids, result });
     }
   }
 }
@@ -382,7 +391,7 @@ function buildFreshNodeChanges(doc: FigDesignDocument): DocumentToTreeResult {
 
   // Add pages
   for (let i = 0; i < doc.pages.length; i++) {
-    flattenPage(doc.pages[i], documentId, i, result);
+    flattenPage({ page: doc.pages[i], documentId, pageIndex: i, result });
   }
 
   return {

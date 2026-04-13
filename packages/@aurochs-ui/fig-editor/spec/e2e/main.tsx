@@ -35,16 +35,20 @@ function makeKiwiEnum(name: string, value: number): KiwiEnumValue {
   return { value, name } as KiwiEnumValue;
 }
 
+type MakeTextNodeOptions = {
+  readonly id: string;
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+  readonly text: string;
+  readonly fontSize?: number;
+  readonly fontFamily?: string;
+  readonly fontStyle?: string;
+};
+
 function makeTextNode(
-  id: string,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  text: string,
-  fontSize: number = 16,
-  fontFamily: string = "Inter",
-  fontStyle: string = "Regular",
+  { id, x, y, width, height, text, fontSize = 16, fontFamily = "Inter", fontStyle = "Regular" }: MakeTextNodeOptions,
 ): FigDesignNode {
   return {
     id: id as FigNodeId,
@@ -76,12 +80,16 @@ function makeTextNode(
   } as FigDesignNode;
 }
 
+type MakeRectNodeOptions = {
+  readonly id: string;
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+};
+
 function makeRectNode(
-  id: string,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
+  { id, x, y, width, height }: MakeRectNodeOptions,
 ): FigDesignNode {
   return {
     id: id as FigNodeId,
@@ -114,10 +122,10 @@ const testPage: FigPage = {
   name: "Test Page",
   backgroundColor: { r: 1, g: 1, b: 1, a: 1 },
   children: [
-    makeTextNode("text-hello", 50, 50, 200, 30, "Hello World"),
-    makeTextNode("text-multi", 50, 120, 250, 80, "Line one\nLine two\nLine three", 14),
-    makeTextNode("text-empty", 50, 240, 200, 30, ""),
-    makeRectNode("rect-1", 50, 310, 150, 80),
+    makeTextNode({ id: "text-hello", x: 50, y: 50, width: 200, height: 30, text: "Hello World" }),
+    makeTextNode({ id: "text-multi", x: 50, y: 120, width: 250, height: 80, text: "Line one\nLine two\nLine three", fontSize: 14 }),
+    makeTextNode({ id: "text-empty", x: 50, y: 240, width: 200, height: 30, text: "" }),
+    makeRectNode({ id: "rect-1", x: 50, y: 310, width: 150, height: 80 }),
   ],
 };
 

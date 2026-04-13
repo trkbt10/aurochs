@@ -17,14 +17,24 @@ export type FigTransformResult = {
   readonly size: FigVector;
 };
 
+
+
+
+
+
+/** Converts a DrawingML transform to a Figma transform matrix and bounding box. */
 export function dmlTransformToFig(transform: Transform): FigTransformResult {
   const rotRad = ((transform.rotation) * Math.PI) / 180;
   const cos = Math.cos(rotRad);
   const sin = Math.sin(rotRad);
 
+  // eslint-disable-next-line no-restricted-syntax -- matrix components mutated by conditional flips
   let m00 = cos;
+  // eslint-disable-next-line no-restricted-syntax -- matrix component mutated by conditional flip
   let m01 = -sin;
+  // eslint-disable-next-line no-restricted-syntax -- matrix component mutated by conditional flip
   let m10 = sin;
+  // eslint-disable-next-line no-restricted-syntax -- matrix component mutated by conditional flip
   let m11 = cos;
 
   if (transform.flipH) { m00 = -m00; m10 = -m10; }

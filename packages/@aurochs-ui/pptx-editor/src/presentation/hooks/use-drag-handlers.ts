@@ -220,21 +220,30 @@ export function useDragHandlers({
         return;
       }
 
-      if (drag.type === "move") {
-        const deltaX = coords.x - (drag.startX as number);
-        const deltaY = coords.y - (drag.startY as number);
-        const snapped = getMoveDelta(deltaX, deltaY);
-        dispatch({ type: "PREVIEW_MOVE", dx: px(snapped.dx), dy: px(snapped.dy) });
-      } else if (drag.type === "resize") {
-        const deltaX = coords.x - (drag.startX as number);
-        const deltaY = coords.y - (drag.startY as number);
-        const snapped = getResizeDelta(deltaX, deltaY);
-        dispatch({ type: "PREVIEW_RESIZE", dx: px(snapped.dx), dy: px(snapped.dy) });
-      } else if (drag.type === "rotate") {
-        const centerX = drag.centerX as number;
-        const centerY = drag.centerY as number;
-        const currentAngle = Math.atan2(coords.y - centerY, coords.x - centerX) * (180 / Math.PI);
-        dispatch({ type: "PREVIEW_ROTATE", currentAngle: deg(currentAngle) });
+      switch (drag.type) {
+        case "move": {
+          const deltaX = coords.x - (drag.startX as number);
+          const deltaY = coords.y - (drag.startY as number);
+          const snapped = getMoveDelta(deltaX, deltaY);
+          dispatch({ type: "PREVIEW_MOVE", dx: px(snapped.dx), dy: px(snapped.dy) });
+          break;
+        }
+        case "resize": {
+          const deltaX = coords.x - (drag.startX as number);
+          const deltaY = coords.y - (drag.startY as number);
+          const snapped = getResizeDelta(deltaX, deltaY);
+          dispatch({ type: "PREVIEW_RESIZE", dx: px(snapped.dx), dy: px(snapped.dy) });
+          break;
+        }
+        case "rotate": {
+          const centerX = drag.centerX as number;
+          const centerY = drag.centerY as number;
+          const currentAngle = Math.atan2(coords.y - centerY, coords.x - centerX) * (180 / Math.PI);
+          dispatch({ type: "PREVIEW_ROTATE", currentAngle: deg(currentAngle) });
+          break;
+        }
+        default:
+          break;
       }
     };
 

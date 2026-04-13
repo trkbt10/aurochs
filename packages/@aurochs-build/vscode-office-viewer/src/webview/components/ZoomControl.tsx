@@ -12,6 +12,12 @@ export type ZoomControlProps = {
   readonly onZoomChange: (zoom: number) => void;
 };
 
+
+
+
+
+
+/** Zoom level control component with increment/decrement buttons. */
 export function ZoomControl({ zoom, min, max, step = 5, onZoomChange }: ZoomControlProps): React.JSX.Element {
   const clamp = useCallback(
     (value: number) => Math.max(min, Math.min(max, value)),

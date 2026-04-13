@@ -5,7 +5,6 @@
  * is correct when processed by the diagram tree builder.
  */
 
-import { describe, it, expect } from "vitest";
 import { buildDataModel } from "./data-model-builder";
 import { buildDiagramTree } from "@aurochs-office/diagram/layout-engine";
 import { generateDiagramLayoutResults } from "@aurochs-office/diagram/layout-engine";

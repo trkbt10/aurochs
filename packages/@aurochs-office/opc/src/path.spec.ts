@@ -1,5 +1,6 @@
 /** @file Tests for OPC POSIX path utilities */
 import { buildRelativeTarget, getRelationshipPartPath, isAbsoluteIri } from "./path";
+import { resolveRelationshipTargetPath } from "./relationship-target";
 
 // =============================================================================
 // buildRelativeTarget
@@ -22,8 +23,7 @@ describe("buildRelativeTarget", () => {
     expect(buildRelativeTarget("xl/workbook.xml", "xl/worksheets/sheet1.xml")).toBe("worksheets/sheet1.xml");
   });
 
-  it("is inverse of resolveRelationshipTargetPath for typical cases", async () => {
-    const { resolveRelationshipTargetPath } = await import("./relationship-target");
+  it("is inverse of resolveRelationshipTargetPath for typical cases", () => {
     const source = "xl/worksheets/sheet1.xml";
     const target = "xl/drawings/drawing1.xml";
     const relative = buildRelativeTarget(source, target);
@@ -31,16 +31,14 @@ describe("buildRelativeTarget", () => {
     expect(resolved).toBe(target);
   });
 
-  it("roundtrips through resolve for same-directory parts", async () => {
-    const { resolveRelationshipTargetPath } = await import("./relationship-target");
+  it("roundtrips through resolve for same-directory parts", () => {
     const source = "xl/worksheets/sheet1.xml";
     const target = "xl/worksheets/sheet2.xml";
     const relative = buildRelativeTarget(source, target);
     expect(resolveRelationshipTargetPath(source, relative)).toBe(target);
   });
 
-  it("roundtrips through resolve for deeply nested parts", async () => {
-    const { resolveRelationshipTargetPath } = await import("./relationship-target");
+  it("roundtrips through resolve for deeply nested parts", () => {
     const source = "ppt/slides/slide1.xml";
     const target = "ppt/media/image1.png";
     const relative = buildRelativeTarget(source, target);

@@ -20,7 +20,7 @@ import type { MenuEntry } from "@aurochs-ui/ui-components/context-menu";
 import { InspectorPanelWithTabs, type InspectorTab } from "@aurochs-ui/editor-controls/ui";
 import type { PdfDocument, PdfElement, PdfElementId } from "@aurochs/pdf";
 import { parseElementId } from "@aurochs/pdf";
-import { createFontProviderForDocument } from "@aurochs-renderer/pdf";
+import { createFontProviderForDocument } from "@aurochs/pdf/domain/font";
 import { usePdfImageCache } from "@aurochs-renderer/pdf/react";
 import { renderPdfPageToSvgNode, svgChildrenToJsx, createDocumentQuery } from "@aurochs-renderer/pdf/svg";
 
@@ -49,6 +49,20 @@ export type PdfEditorProps = {
   readonly document: PdfDocument;
   readonly className?: string;
 };
+
+// =============================================================================
+// Helpers
+// =============================================================================
+
+/** Extract the editable text string from a PdfElement, or return null if not editable. */
+function resolveElementText(el: PdfElement): string | null {
+  if (el.type === "text") { return el.text; }
+  if (el.type === "textBlock") {
+    // Concatenate all runs across paragraphs, separated by newlines between paragraphs
+    return el.paragraphs.map((p) => p.runs.map((r) => r.text).join("")).join("\n");
+  }
+  return null;
+}
 
 // =============================================================================
 // Component
@@ -176,15 +190,8 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
     (elementId: PdfElementId) => {
       const el = query.getElement(elementId);
       if (!el) { return; }
-      let text: string;
-      if (el.type === "text") {
-        text = el.text;
-      } else if (el.type === "textBlock") {
-        // Concatenate all runs across paragraphs, separated by newlines between paragraphs
-        text = el.paragraphs.map((p) => p.runs.map((r) => r.text).join("")).join("\n");
-      } else {
-        return;
-      }
+      const text = resolveElementText(el);
+      if (text === null) { return; }
       const bounds = query.getElementBounds(elementId);
       if (!bounds) { return; }
       dispatch({ type: "START_TEXT_EDIT", elementId, text, bounds: { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height } });

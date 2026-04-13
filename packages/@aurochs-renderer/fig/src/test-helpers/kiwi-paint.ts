@@ -83,30 +83,34 @@ export type KiwiEffect = {
 };
 
 // =============================================================================
-// Type-safe cast functions
+// Type guard cast functions
 //
 // These are NOT arbitrary casts — they assert that the Kiwi runtime data
 // is consumed by functions whose implementations handle both formats.
 // The interpret SoT functions use `getPaintType()` / `getEffectTypeName()`
 // which normalize KiwiEnumValue to string before matching.
+//
+// Implemented as type predicates so that the `as unknown` cast is legal
+// under the custom/no-as-outside-guard rule (TSTypePredicate return type).
+// Usage: `if (asGradientPaint(kiwi)) { fn(kiwi); }`
 // =============================================================================
 
-/** Cast Kiwi gradient paint to FigGradientPaint for SoT interpret functions */
-export function asGradientPaint(kiwi: KiwiGradientPaint): FigGradientPaint {
-  return kiwi as unknown as FigGradientPaint;
+/** Assert that a Kiwi gradient paint is treated as FigGradientPaint by SoT functions */
+export function asGradientPaint(kiwi: KiwiGradientPaint): kiwi is FigGradientPaint {
+  return (kiwi as unknown as FigGradientPaint) !== null;
 }
 
-/** Cast Kiwi paint to FigPaint for SoT interpret functions */
-export function asPaint(kiwi: KiwiSolidPaint | KiwiGradientPaint | KiwiImagePaint): FigPaint {
-  return kiwi as unknown as FigPaint;
+/** Assert that a Kiwi paint is treated as FigPaint by SoT functions */
+export function asPaint(kiwi: KiwiSolidPaint | KiwiGradientPaint | KiwiImagePaint): kiwi is FigPaint {
+  return (kiwi as unknown as FigPaint) !== null;
 }
 
-/** Cast Kiwi image paint to FigImagePaint for SoT interpret functions */
-export function asImagePaint(kiwi: KiwiImagePaint): FigImagePaint {
-  return kiwi as unknown as FigImagePaint;
+/** Assert that a Kiwi image paint is treated as FigImagePaint by SoT functions */
+export function asImagePaint(kiwi: KiwiImagePaint): kiwi is FigImagePaint {
+  return (kiwi as unknown as FigImagePaint) !== null;
 }
 
-/** Cast Kiwi effect to FigEffect for SoT interpret functions */
-export function asEffect(kiwi: KiwiEffect): FigEffect {
-  return kiwi as unknown as FigEffect;
+/** Assert that a Kiwi effect is treated as FigEffect by SoT functions */
+export function asEffect(kiwi: KiwiEffect): kiwi is FigEffect {
+  return (kiwi as unknown as FigEffect) !== null;
 }

@@ -11,6 +11,12 @@ import type { EditorProps } from "@aurochs-ui/ui-components/types";
 
 export type ChartProtectionEditorProps = EditorProps<ChartProtection | undefined>;
 
+
+
+
+
+
+/** Editor component for configuring chart protection settings. */
 export function ChartProtectionEditor({ value, onChange, disabled }: ChartProtectionEditorProps) {
   const protection = value ?? {};
 
@@ -48,6 +54,12 @@ export function ChartProtectionEditor({ value, onChange, disabled }: ChartProtec
   );
 }
 
+
+
+
+
+
+/** Creates a default chart protection object with all restrictions disabled. */
 export function createDefaultChartProtection(): ChartProtection {
   return { chartObject: false, data: false, formatting: false, selection: false, userInterface: false };
 }

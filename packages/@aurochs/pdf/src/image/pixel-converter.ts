@@ -116,6 +116,22 @@ export type ConvertToRgbaParams = {
   readonly decode?: readonly number[];
 };
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/** Convert raw pixel data from any supported color space to RGBA. */
 export function convertToRgba(p: ConvertToRgbaParams): Uint8ClampedArray {
   const { data, width, height, colorSpace, bitsPerComponent } = p;
   const pixelCount = width * height;

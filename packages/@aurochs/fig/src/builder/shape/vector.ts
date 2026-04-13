@@ -7,11 +7,11 @@ import type { VectorNodeData } from "./types";
 import { SHAPE_NODE_TYPES, WINDING_RULE_VALUES, type WindingRule } from "../../constants";
 
 /** Vector node builder instance */
-export type VectorNodeBuilder = BaseShapeBuilderMethods<VectorNodeBuilder> & {
+export interface VectorNodeBuilder extends BaseShapeBuilderMethods<VectorNodeBuilder> {
   windingRule: (rule: WindingRule) => VectorNodeBuilder;
   vectorNetworkBlob: (blobIndex: number) => VectorNodeBuilder;
   build: () => VectorNodeData;
-};
+}
 
 /** Build vector data from extra state */
 function buildVectorData(

@@ -17,6 +17,7 @@ import type { FontSpec } from "../../../text/measure/types";
 /**
  * Shared measurement provider instance
  */
+// eslint-disable-next-line no-restricted-syntax -- module-level mutable singleton for lazy-initialized measurement provider
 let measurementProvider: ReturnType<typeof createMeasurementProvider> | null = null;
 
 function getMeasurementProvider() {

@@ -539,10 +539,15 @@ export function serializeTableCell(cell: DocxTableCell): XmlElement {
 
   // Cell content (paragraphs and nested tables)
   for (const content of cell.content) {
-    if (content.type === "paragraph") {
-      children.push(serializeParagraph(content));
-    } else if (content.type === "table") {
-      children.push(serializeTable(content));
+    switch (content.type) {
+      case "paragraph":
+        children.push(serializeParagraph(content));
+        break;
+      case "table":
+        children.push(serializeTable(content));
+        break;
+      default:
+        break;
     }
   }
 

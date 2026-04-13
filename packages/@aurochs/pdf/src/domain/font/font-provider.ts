@@ -16,7 +16,7 @@
 
 import type { CIDOrdering } from "./types";
 import type { EmbeddedFont, EmbeddedFontMetrics, FontFormat } from "./embedded-font";
-import type { PdfEmbeddedFont, PdfFontToUnicode } from "../document/types";
+import type { PdfFontToUnicode } from "../document/types";
 import { fontToDataUrl, generateFontFaceCss } from "./font-css-generator";
 import { normalizeFontFamily } from "./font-name-map";
 import { isBoldFont, isItalicFont } from "./font-style";
@@ -119,12 +119,7 @@ export type FontProvider = {
   /**
    * Register a system/external font (e.g. from user file upload).
    */
-  registerSystemFont(
-    family: string,
-    data: Uint8Array,
-    format: FontFormat,
-    mimeType: string,
-  ): void;
+  registerSystemFont(options: { family: string; data: Uint8Array; format: FontFormat; mimeType: string }): void;
 
   /**
    * Generate combined @font-face CSS for all registered embedded and system fonts.
@@ -220,6 +215,13 @@ export type FontRegistrationInput = {
   readonly codeByteWidth?: 1 | 2;
 };
 
+function resolveToUnicode(
+  toUnicode: FontRegistrationInput["toUnicode"],
+): { byteMapping: ReadonlyMap<string, string>; sourceCodeByteLengths: readonly number[] } | undefined {
+  if (!toUnicode) {return undefined;}
+  return { byteMapping: toUnicode.byteMapping, sourceCodeByteLengths: toUnicode.sourceCodeByteLengths };
+}
+
 function fontInputToResolved(font: FontRegistrationInput): ResolvedFont {
   return {
     source: "embedded",
@@ -230,9 +232,7 @@ function fontInputToResolved(font: FontRegistrationInput): ResolvedFont {
     metrics: font.metrics,
     ordering: font.ordering,
     codeByteWidth: font.codeByteWidth ?? 1,
-    toUnicode: font.toUnicode
-      ? { byteMapping: font.toUnicode.byteMapping, sourceCodeByteLengths: font.toUnicode.sourceCodeByteLengths }
-      : undefined,
+    toUnicode: resolveToUnicode(font.toUnicode),
     isBold: false,
     isItalic: false,
     mimeType: font.mimeType,
@@ -321,22 +321,22 @@ export function createFontProvider(
     // Priority 1: Embedded fonts
     // Try exact baseFontName match first
     const byExact = embeddedByBaseFontName.get(lookupName);
-    if (byExact) return byExact;
+    if (byExact) {return byExact;}
 
     // Try normalized baseFontName match
     const byNormalized = embeddedByBaseFontName.get(normalized);
-    if (byNormalized) return byNormalized;
+    if (byNormalized) {return byNormalized;}
 
     // Try fontFamily match
     const byFamily = embeddedByFamily.get(normalized);
-    if (byFamily) return byFamily;
+    if (byFamily) {return byFamily;}
 
     // Also try matching fontName (resource ID like "F1") if baseFont was provided
     if (baseFont) {
       const byFontName = embeddedByBaseFontName.get(fontName);
-      if (byFontName) return byFontName;
+      if (byFontName) {return byFontName;}
       const byFontNameNorm = embeddedByBaseFontName.get(normalizeForLookup(fontName));
-      if (byFontNameNorm) return byFontNameNorm;
+      if (byFontNameNorm) {return byFontNameNorm;}
     }
 
     // Priority 2: Standard 14 fonts
@@ -354,7 +354,7 @@ export function createFontProvider(
 
     // Priority 3: System fonts
     const system = systemByFamily.get(normalized);
-    if (system) return system;
+    if (system) {return system;}
 
     // Priority 4: Best-effort fallback for unknown fonts.
     // Use the normalized name as-is for CSS font-family (the browser will
@@ -369,12 +369,7 @@ export function createFontProvider(
     };
   }
 
-  function registerSystemFont(
-    family: string,
-    data: Uint8Array,
-    format: FontFormat,
-    mimeType: string,
-  ): void {
+  function registerSystemFont({ family, data, format, mimeType }: { family: string; data: Uint8Array; format: FontFormat; mimeType: string }): void {
     const resolved: ResolvedFont = {
       source: "system",
       cssFontFamily: family,

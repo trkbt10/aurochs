@@ -172,6 +172,7 @@ export function buildRelativeTarget(sourcePart: string, targetPart: string): str
   const targetParts = targetDir === "." ? [] : targetDir.split("/");
 
   // Find common prefix length
+  // eslint-disable-next-line no-restricted-syntax -- mutable counter for while-loop prefix scan; no array method equivalent
   let common = 0;
   while (common < sourceParts.length && common < targetParts.length && sourceParts[common] === targetParts[common]) {
     common++;

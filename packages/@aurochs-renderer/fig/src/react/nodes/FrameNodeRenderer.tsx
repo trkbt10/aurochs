@@ -11,7 +11,7 @@ import { useFigSvgDefs } from "../context/FigSvgDefsContext";
 import type { FigSvgIdGenerator } from "../context/FigSvgDefsContext";
 import { resolveFillAttrs, type FillResult } from "../primitives/fill";
 import { resolveStroke, matrixToSvgTransform } from "../../scene-graph/render";
-import { resolveEffectsFilter, type EffectsResult } from "../primitives/effects";
+import { resolveEffectsFilter } from "../primitives/effects";
 import { SceneNodeRenderer } from "./SceneNodeRenderer";
 
 type Props = {
@@ -111,15 +111,13 @@ function FrameNodeRendererImpl({ node }: Props) {
   const clampedRadius = clampRadius(node.cornerRadius, node.width, node.height);
 
   // Resolve fill for background
-  let fillResult: FillResult = { fill: "none" };
-  if (node.fills.length > 0) {
-    fillResult = resolveFillAttrs(node.fills[node.fills.length - 1], ids);
-  }
+  const lastFill = node.fills.length > 0 ? node.fills[node.fills.length - 1] : undefined;
+  const fillResult: FillResult = lastFill ? resolveFillAttrs(lastFill, ids) : { fill: "none" };
 
   // Collect inline defs
   const defs: ReactNode[] = [];
-  if (fillResult.defElement) defs.push(fillResult.defElement);
-  if (effectsResult?.defElement) defs.push(effectsResult.defElement);
+  if (fillResult.defElement) {defs.push(fillResult.defElement);}
+  if (effectsResult?.defElement) {defs.push(effectsResult.defElement);}
 
   const bgRect = renderBackground(node, fillResult, clampedRadius);
   const childrenContent = renderChildren({

@@ -76,26 +76,36 @@ function extractImagesFromRun(run: DocxRun, images: ImageJson[]): void {
 
 function extractImagesFromParagraph(paragraph: DocxParagraph, images: ImageJson[]): void {
   for (const content of paragraph.content) {
-    if (content.type === "run") {
-      extractImagesFromRun(content, images);
-    } else if (content.type === "hyperlink") {
-      for (const run of content.content) {
-        extractImagesFromRun(run, images);
-      }
+    switch (content.type) {
+      case "run":
+        extractImagesFromRun(content, images);
+        break;
+      case "hyperlink":
+        for (const run of content.content) {
+          extractImagesFromRun(run, images);
+        }
+        break;
+      default:
+        break;
     }
   }
 }
 
 function extractImagesFromContent(content: readonly DocxBlockContent[], images: ImageJson[]): void {
   for (const block of content) {
-    if (block.type === "paragraph") {
-      extractImagesFromParagraph(block, images);
-    } else if (block.type === "table") {
-      for (const row of block.rows) {
-        for (const cell of row.cells) {
-          extractImagesFromContent(cell.content, images);
+    switch (block.type) {
+      case "paragraph":
+        extractImagesFromParagraph(block, images);
+        break;
+      case "table":
+        for (const row of block.rows) {
+          for (const cell of row.cells) {
+            extractImagesFromContent(cell.content, images);
+          }
         }
-      }
+        break;
+      default:
+        break;
     }
   }
 }

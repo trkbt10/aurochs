@@ -34,6 +34,22 @@ export type ChartFramePanelProps = {
 // Component
 // =============================================================================
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/** Property panel for chart frame shapes. */
 export function ChartFramePanel({ shape, chart, onChange, onChartChange }: ChartFramePanelProps) {
   return (
     <>

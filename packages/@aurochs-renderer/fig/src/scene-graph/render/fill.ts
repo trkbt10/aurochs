@@ -8,7 +8,7 @@
  * usable by both string concatenation and React JSX.
  */
 
-import type { Fill, GradientStop, Color } from "../types";
+import type { Fill, GradientStop } from "../types";
 import { colorToHex, uint8ArrayToBase64 } from "./color";
 
 // =============================================================================
@@ -181,7 +181,7 @@ export function resolveFill(fill: Fill, ids: IdGenerator): ResolvedFill {
   }
   // TypeScript exhaustiveness check: if a new Fill type is added to the union,
   // this line will produce a compile error.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+   
   const _exhaustive: never = fill;
   return { attrs: { fill: "none" } };
 }

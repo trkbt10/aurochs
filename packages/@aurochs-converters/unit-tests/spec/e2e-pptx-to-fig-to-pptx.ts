@@ -36,7 +36,8 @@ function toPdf(pptxPath: string, outDir: string): string | null {
       stdio: "pipe",
     });
     return pptxPath.replace(/\.pptx$/, ".pdf");
-  } catch {
+  } catch (error) {
+    console.log(`LibreOffice not available or conversion failed: ${String(error)}`);
     return null;
   }
 }
@@ -116,7 +117,7 @@ async function processFixture(relativePath: string) {
 }
 
 async function main() {
-  if (!existsSync(OUT_DIR)) mkdirSync(OUT_DIR, { recursive: true });
+  if (!existsSync(OUT_DIR)) {mkdirSync(OUT_DIR, { recursive: true });}
 
   for (const fixture of FIXTURES) {
     await processFixture(fixture);

@@ -21,7 +21,6 @@ import {
 } from "./primitives";
 import {
   getEffectTypeName as sharedGetEffectTypeName,
-  isEffectVisible,
   hasEffectOfType,
   getEffectsOfType,
 } from "../effects";
@@ -63,14 +62,26 @@ function computeShadowFilterBounds(
 // =============================================================================
 
 /** Local alias for backward-compat within this file */
-function getEffectType(effect: FigEffect): FigEffectType {
+function _getEffectType(effect: FigEffect): FigEffectType {
   return sharedGetEffectTypeName(effect);
 }
 
+
+
+
+
+
+/** Returns true if the given effects array contains a drop shadow. */
 export function hasDropShadow(effects: readonly FigEffect[] | undefined): boolean {
   return hasEffectOfType(effects, "DROP_SHADOW");
 }
 
+
+
+
+
+
+/** Returns all drop shadow effects from the given effects array. */
 export function getDropShadows(effects: readonly FigEffect[] | undefined): readonly FigEffect[] {
   return getEffectsOfType(effects, "DROP_SHADOW");
 }
@@ -186,10 +197,22 @@ export function createDropShadowFilter(
 // Inner Shadow Filter
 // =============================================================================
 
+
+
+
+
+
+/** Returns true if the given effects array contains an inner shadow. */
 export function hasInnerShadow(effects: readonly FigEffect[] | undefined): boolean {
   return hasEffectOfType(effects, "INNER_SHADOW");
 }
 
+
+
+
+
+
+/** Returns all inner shadow effects from the given effects array. */
 export function getInnerShadows(effects: readonly FigEffect[] | undefined): readonly FigEffect[] {
   return getEffectsOfType(effects, "INNER_SHADOW");
 }
@@ -301,10 +324,22 @@ export function createInnerShadowFilter(
 // Layer Blur Filter
 // =============================================================================
 
+
+
+
+
+
+/** Returns true if the given effects array contains a layer blur. */
 export function hasLayerBlur(effects: readonly FigEffect[] | undefined): boolean {
   return hasEffectOfType(effects, "LAYER_BLUR");
 }
 
+
+
+
+
+
+/** Returns the first layer blur effect from the given effects array. */
 export function getLayerBlur(effects: readonly FigEffect[] | undefined): FigEffect | undefined {
   return getEffectsOfType(effects, "LAYER_BLUR")[0];
 }
@@ -354,10 +389,22 @@ export function createLayerBlurFilter(
 // Background Blur Filter
 // =============================================================================
 
+
+
+
+
+
+/** Returns true if the given effects array contains a background blur. */
 export function hasBackgroundBlur(effects: readonly FigEffect[] | undefined): boolean {
   return hasEffectOfType(effects, "BACKGROUND_BLUR");
 }
 
+
+
+
+
+
+/** Returns the first background blur effect from the given effects array. */
 export function getBackgroundBlur(effects: readonly FigEffect[] | undefined): FigEffect | undefined {
   return getEffectsOfType(effects, "BACKGROUND_BLUR")[0];
 }

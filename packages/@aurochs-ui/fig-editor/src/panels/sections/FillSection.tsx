@@ -17,9 +17,9 @@ import { useCallback, type CSSProperties } from "react";
 import type { FigDesignNode } from "@aurochs/fig/domain";
 import type { FigPaint, FigColor, KiwiEnumValue } from "@aurochs/fig/types";
 import type { FigEditorAction } from "../../context/fig-editor/types";
-import { FieldRow } from "@aurochs-ui/ui-components/layout";
+
 import { Input } from "@aurochs-ui/ui-components/primitives/Input";
-import { colorTokens, fontTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
+import { colorTokens, fontTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { AddIcon, CloseIcon } from "@aurochs-ui/ui-components/icons";
 
 // =============================================================================
@@ -158,6 +158,12 @@ type FillSectionProps = {
 // Component
 // =============================================================================
 
+
+
+
+
+
+/** Panel section for viewing and editing fill paints of a Figma node. */
 export function FillSection({ node, dispatch }: FillSectionProps) {
   const fills = node.fills;
 

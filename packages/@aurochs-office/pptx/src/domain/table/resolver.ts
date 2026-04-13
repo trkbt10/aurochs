@@ -294,7 +294,7 @@ export function resolveFillFromParts(parts: readonly TablePartStyle[]): BaseFill
     // Direct fill takes priority
     if (part.fill) {
       // noFill means explicitly transparent — skip to lower priority parts
-      if (part.fill.type === "noFill") continue;
+      if (part.fill.type === "noFill") {continue;}
       return part.fill;
     }
 

@@ -12,6 +12,22 @@ type ErrorPageProps = {
   readonly onAction: () => void;
 };
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/** Full-page error display with an optional action button. */
 export function ErrorPage({ title, message, buttonLabel, onAction }: ErrorPageProps) {
   return (
     <div className="error-page">

@@ -16,18 +16,12 @@ export const SELECTION_HANDLERS: HandlerMap = {
   SELECT_NODE(state, action) {
     const { nodeId, addToSelection: additive, toggle } = action;
 
-    let nodeSelection;
-    if (toggle) {
-      nodeSelection = toggleSelection({
-        selection: state.nodeSelection,
-        id: nodeId,
-        primaryFallback: "last",
-      });
-    } else if (additive) {
-      nodeSelection = addToSelection(state.nodeSelection, nodeId);
-    } else {
-      nodeSelection = createSingleSelection(nodeId);
-    }
+    const resolveSelection = () => {
+      if (toggle) { return toggleSelection({ selection: state.nodeSelection, id: nodeId, primaryFallback: "last" }); }
+      if (additive) { return addToSelection(state.nodeSelection, nodeId); }
+      return createSingleSelection(nodeId);
+    };
+    const nodeSelection = resolveSelection();
 
     return { ...state, nodeSelection };
   },

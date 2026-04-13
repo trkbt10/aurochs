@@ -10,10 +10,8 @@
 import { loadFigFile } from "@aurochs/fig/roundtrip";
 import type { LoadedFigFile } from "@aurochs/fig/roundtrip";
 import { buildNodeTree } from "@aurochs/fig/parser";
-import type { FigDesignDocument, FigPage } from "../types/document";
-import { DEFAULT_PAGE_BACKGROUND } from "../types/document";
-import type { FigPageId } from "../types/node-id";
-import { toPageId } from "../types/node-id";
+import type { FigDesignDocument, FigPage } from "@aurochs/fig/domain";
+import { DEFAULT_PAGE_BACKGROUND, toPageId } from "@aurochs/fig/domain";
 import { treeToDocument } from "./tree-to-document";
 
 // =============================================================================

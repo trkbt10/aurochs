@@ -52,12 +52,12 @@ function layoutShapeToFigNode(
   const strokeResult = dmlLineTofig(shape.line, colorContext);
   const effects = dmlEffectsToFig(shape.effects, colorContext);
 
-  const cornerRadius = resolveCornerRadius(
-    shape.geometry?.preset,
-    shape.geometry?.adjustValues,
-    size.x,
-    size.y,
-  );
+  const cornerRadius = resolveCornerRadius({
+    preset: shape.geometry?.preset,
+    adjustValues: shape.geometry?.adjustValues,
+    width: size.x,
+    height: size.y,
+  });
 
   return {
     id,
@@ -88,9 +88,13 @@ function layoutTransformToFig(t: LayoutTransform): { transform: FigMatrix; size:
   const cos = Math.cos(rotRad);
   const sin = Math.sin(rotRad);
 
+  // eslint-disable-next-line no-restricted-syntax -- matrix components mutated by conditional flips; cannot be reduced to const without nesting
   let m00 = cos;
+  // eslint-disable-next-line no-restricted-syntax -- matrix component mutated by conditional flip
   let m01 = -sin;
+  // eslint-disable-next-line no-restricted-syntax -- matrix component mutated by conditional flip
   let m10 = sin;
+  // eslint-disable-next-line no-restricted-syntax -- matrix component mutated by conditional flip
   let m11 = cos;
 
   if (t.flipHorizontal) { m00 = -m00; m10 = -m10; }
@@ -106,7 +110,7 @@ function layoutTransformToFig(t: LayoutTransform): { transform: FigMatrix; size:
  * Map DrawingML preset shape type to Fig node type.
  */
 function resolveNodeType(preset?: string): FigNodeType {
-  if (!preset) return "RECTANGLE";
+  if (!preset) {return "RECTANGLE";}
 
   switch (preset) {
     case "rect":
@@ -124,13 +128,20 @@ function resolveNodeType(preset?: string): FigNodeType {
     case "diamond":
       return "REGULAR_POLYGON";
     default:
-      if (preset.startsWith("star")) return "STAR";
+      if (preset.startsWith("star")) {return "STAR";}
       console.warn(
         `[diagram-to-fig] Unknown preset shape type "${preset}". Mapping to RECTANGLE.`,
       );
       return "RECTANGLE";
   }
 }
+
+type ResolveCornerRadiusOptions = {
+  readonly preset?: string;
+  readonly adjustValues?: readonly { name: string; value: number }[];
+  readonly width?: number;
+  readonly height?: number;
+};
 
 /**
  * Extract corner radius for roundRect presets.
@@ -139,16 +150,13 @@ function resolveNodeType(preset?: string): FigNodeType {
  * Fig cornerRadius: absolute pixels.
  */
 function resolveCornerRadius(
-  preset?: string,
-  adjustValues?: readonly { name: string; value: number }[],
-  width?: number,
-  height?: number,
+  { preset, adjustValues, width, height }: ResolveCornerRadiusOptions,
 ): number | undefined {
-  if (preset !== "roundRect") return undefined;
-  if (!adjustValues || !width || !height) return undefined;
+  if (preset !== "roundRect") {return undefined;}
+  if (!adjustValues || !width || !height) {return undefined;}
 
   const adj = adjustValues.find((a) => a.name === "adj");
-  if (!adj) return undefined;
+  if (!adj) {return undefined;}
 
   const minDim = Math.min(width, height);
   return (adj.value / 50000) * minDim;

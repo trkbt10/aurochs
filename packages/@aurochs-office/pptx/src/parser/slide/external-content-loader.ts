@@ -86,14 +86,14 @@ export function createFileReaderFromPackage(
     resolveResource: (id: string) => {
       for (const map of resourceMaps) {
         const target = map.getTarget(id);
-        if (target !== undefined) return target;
+        if (target !== undefined) {return target;}
       }
       return undefined;
     },
     getResourceByType: (relType: string) => {
       for (const map of resourceMaps) {
         const target = map.getTargetByType(relType);
-        if (target !== undefined) return target;
+        if (target !== undefined) {return target;}
       }
       return undefined;
     },
@@ -276,12 +276,9 @@ function enrichDiagramFrame(frame: GraphicFrame, ctx: ContentLoadContext): Graph
   // (dgm:relIds/@r:dm points to a drawing1.xml with pre-baked shapes).
   // If absent, shapes are generated from the data model using the layout engine.
   const preRenderedShapes = tryParseDiagramDrawing(frame, fileReader, resourceStore);
-  const generatedShapes = preRenderedShapes === undefined || preRenderedShapes.length === 0
-    ? tryGenerateDiagramShapes({ frame, dataModel, layoutDefinition, styleDefinition, colorsDefinition })
-    : undefined;
-  const shapes = (preRenderedShapes !== undefined && preRenderedShapes.length > 0)
-    ? preRenderedShapes
-    : generatedShapes;
+  const hasPreRendered = preRenderedShapes !== undefined && preRenderedShapes.length > 0;
+  const diagramArgs = { frame, dataModel, layoutDefinition, styleDefinition, colorsDefinition };
+  const shapes = hasPreRendered ? preRenderedShapes : tryGenerateDiagramShapes(diagramArgs);
 
   if (shapes === undefined || shapes.length === 0) {
     // Do not register empty entries — allow builder to generate shapes later

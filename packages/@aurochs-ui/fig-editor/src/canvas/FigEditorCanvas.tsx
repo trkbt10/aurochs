@@ -94,11 +94,15 @@ const NO_CLAMP = (vp: { translateX: number; translateY: number; scale: number })
  */
 const DRAG_THRESHOLD = 3;
 
+type ExceedsThresholdOptions = {
+  readonly startClientX: number;
+  readonly startClientY: number;
+  readonly clientX: number;
+  readonly clientY: number;
+};
+
 function exceedsThreshold(
-  startClientX: number,
-  startClientY: number,
-  clientX: number,
-  clientY: number,
+  { startClientX, startClientY, clientX, clientY }: ExceedsThresholdOptions,
 ): boolean {
   const dx = clientX - startClientX;
   const dy = clientY - startClientY;
@@ -552,7 +556,7 @@ export function FigEditorCanvas() {
     (coords: CanvasPageCoords) => {
       const d = dragRef.current;
       if (d.type === "pending-move") {
-        if (exceedsThreshold(d.startClientX, d.startClientY, coords.clientX, coords.clientY)) {
+        if (exceedsThreshold({ startClientX: d.startClientX, startClientY: d.startClientY, clientX: coords.clientX, clientY: coords.clientY })) {
           dispatch({ type: "CONFIRM_MOVE" });
           dispatch({
             type: "PREVIEW_MOVE",
@@ -593,7 +597,7 @@ export function FigEditorCanvas() {
     (_handle: ResizeHandlePosition, coords: CanvasPageCoords) => {
       const d = dragRef.current;
       if (d.type === "pending-resize") {
-        if (exceedsThreshold(d.startClientX, d.startClientY, coords.clientX, coords.clientY)) {
+        if (exceedsThreshold({ startClientX: d.startClientX, startClientY: d.startClientY, clientX: coords.clientX, clientY: coords.clientY })) {
           dispatch({ type: "CONFIRM_RESIZE" });
           dispatch({
             type: "PREVIEW_RESIZE",
@@ -634,7 +638,7 @@ export function FigEditorCanvas() {
     (coords: CanvasPageCoords) => {
       const d = dragRef.current;
       if (d.type === "pending-rotate") {
-        if (exceedsThreshold(d.startClientX, d.startClientY, coords.clientX, coords.clientY)) {
+        if (exceedsThreshold({ startClientX: d.startClientX, startClientY: d.startClientY, clientX: coords.clientX, clientY: coords.clientY })) {
           dispatch({ type: "CONFIRM_ROTATE" });
           // Compute angle from center to pointer
           const centerX = (d as { centerX?: number }).centerX ?? 0;
@@ -708,8 +712,8 @@ export function FigEditorCanvas() {
 
   // In Figma, frames cannot be rotated. Show rotate handle only for non-frame nodes.
   const showRotateHandle = useMemo(() => {
-    if (nodeSelection.selectedIds.length === 0) return false;
-    if (!activePage) return false;
+    if (nodeSelection.selectedIds.length === 0) {return false;}
+    if (!activePage) {return false;}
     // If any selected node is a frame/component/symbol, hide rotate
     const frameTypes = new Set(["FRAME", "COMPONENT", "COMPONENT_SET", "SYMBOL"]);
     return !nodeSelection.selectedIds.some((id) => {

@@ -7,6 +7,12 @@ import type { XlsxDataMessage } from "../types";
 import { Toolbar, ToolbarSpacer, ToolbarInfo } from "../components/Toolbar";
 import { ZoomControl } from "../components/ZoomControl";
 
+
+
+
+
+
+/** Viewer component for rendering XLSX spreadsheet data in a tabular layout. */
 export function XlsxViewer({ sheets, fileName }: XlsxDataMessage): React.JSX.Element {
   const [currentSheet, setCurrentSheet] = useState(0);
   const [zoom, setZoom] = useState(100);

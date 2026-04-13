@@ -834,6 +834,7 @@ export function hexToString(hex: string): string | null {
     }
 
     return resultParts.join("");
+  // eslint-disable-next-line no-restricted-syntax -- catch without param: malformed CMap data causes unpredictable exceptions; null return signals parse failure to caller
   } catch {
     return null;
   }

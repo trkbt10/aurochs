@@ -310,7 +310,14 @@ function buildTextTransform(anchor: TextAnchor, textScale: number): string | nul
   );
 }
 
-function renderTextNode(text: PdfText, pageHeight: number, registry: ClipPathRegistry, fontProvider: FontProvider): XmlElement | null {
+type RenderTextNodeOptions = {
+  readonly text: PdfText;
+  readonly pageHeight: number;
+  readonly registry: ClipPathRegistry;
+  readonly fontProvider: FontProvider;
+};
+
+function renderTextNode({ text, pageHeight, registry, fontProvider }: RenderTextNodeOptions): XmlElement | null {
   if (text.text.length === 0) {
     return null;
   }
@@ -381,11 +388,18 @@ function renderTextNode(text: PdfText, pageHeight: number, registry: ClipPathReg
  * preserving its exact positioning, font, and styling. The group wrapper
  * enables the editor to treat the block as a single selectable unit.
  */
-function renderTextBlockNode(block: PdfTextBlock, pageHeight: number, registry: ClipPathRegistry, fontProvider: FontProvider): XmlNode | null {
+type RenderTextBlockNodeOptions = {
+  readonly block: PdfTextBlock;
+  readonly pageHeight: number;
+  readonly registry: ClipPathRegistry;
+  readonly fontProvider: FontProvider;
+};
+
+function renderTextBlockNode({ block, pageHeight, registry, fontProvider }: RenderTextBlockNodeOptions): XmlNode | null {
   const children: XmlNode[] = [];
   for (const para of block.paragraphs) {
     for (const run of para.runs) {
-      const node = renderTextNode(run, pageHeight, registry, fontProvider);
+      const node = renderTextNode({ text: run, pageHeight, registry, fontProvider });
       if (node) {
         children.push(node);
       }
@@ -431,7 +445,14 @@ function buildImageTransform(ctm: PdfMatrix, pageHeight: number): readonly numbe
   return [xAxis.x, xAxis.y, yAxis.x, yAxis.y, topLeft.x, topLeft.y] as const;
 }
 
-function renderImageNode(image: PdfImage, pageHeight: number, registry: ClipPathRegistry, resolveImageUrl: PdfImageUrlResolver): XmlElement {
+type RenderImageNodeOptions = {
+  readonly image: PdfImage;
+  readonly pageHeight: number;
+  readonly registry: ClipPathRegistry;
+  readonly resolveImageUrl: PdfImageUrlResolver;
+};
+
+function renderImageNode({ image, pageHeight, registry, resolveImageUrl }: RenderImageNodeOptions): XmlElement {
   const clipRef = registerClipPath(image.graphicsState.clipBBox, pageHeight, registry);
   const imageUrl = resolveImageUrl(image);
   const matrix = buildImageTransform(image.graphicsState.ctm, pageHeight);
@@ -457,24 +478,32 @@ function renderImageNode(image: PdfImage, pageHeight: number, registry: ClipPath
 // Element dispatch
 // =============================================================================
 
-function renderElementNode(element: PdfElement, pageHeight: number, registry: ClipPathRegistry, fontProvider: FontProvider, resolveImageUrl: PdfImageUrlResolver): XmlNode | SvgFragment | null {
+type RenderElementNodeOptions = {
+  readonly element: PdfElement;
+  readonly pageHeight: number;
+  readonly registry: ClipPathRegistry;
+  readonly fontProvider: FontProvider;
+  readonly resolveImageUrl: PdfImageUrlResolver;
+};
+
+function renderElementNode({ element, pageHeight, registry, fontProvider, resolveImageUrl }: RenderElementNodeOptions): XmlNode | SvgFragment | null {
   if (element.type === "path") {
     return renderPathNode(element, pageHeight, registry);
   }
 
   if (element.type === "text") {
-    return renderTextNode(element, pageHeight, registry, fontProvider);
+    return renderTextNode({ text: element, pageHeight, registry, fontProvider });
   }
 
   if (element.type === "textBlock") {
-    return renderTextBlockNode(element, pageHeight, registry, fontProvider);
+    return renderTextBlockNode({ block: element, pageHeight, registry, fontProvider });
   }
 
   if (element.type === "table") {
     return renderPdfTableNode(element, pageHeight);
   }
 
-  return renderImageNode(element, pageHeight, registry, resolveImageUrl);
+  return renderImageNode({ image: element, pageHeight, registry, resolveImageUrl });
 }
 
 // =============================================================================
@@ -487,11 +516,19 @@ function renderElementNode(element: PdfElement, pageHeight: number, registry: Cl
  * Returns a fragment because the element may require clip-path definitions
  * that must be placed in a `<defs>` block alongside the element markup.
  */
-export function renderPdfElementToSvgNodes(element: PdfElement, pageHeight: number, fontProvider?: FontProvider, imageUrlResolver?: PdfImageUrlResolver): SvgFragment {
+type RenderPdfElementToSvgNodesOptions = {
+  readonly element: PdfElement;
+  readonly pageHeight: number;
+  readonly fontProvider?: FontProvider;
+  readonly imageUrlResolver?: PdfImageUrlResolver;
+};
+
+/** Renders a PDF element to SVG node fragments, using the provided font and image resolvers. */
+export function renderPdfElementToSvgNodes({ element, pageHeight, fontProvider, imageUrlResolver }: RenderPdfElementToSvgNodesOptions): SvgFragment {
   const provider = fontProvider ?? createFontProvider();
   const resolveImageUrl = imageUrlResolver ?? buildPdfImageDataUrl;
   const registry = createClipPathRegistry();
-  const content = renderElementNode(element, pageHeight, registry, provider, resolveImageUrl);
+  const content = renderElementNode({ element, pageHeight, registry, fontProvider: provider, resolveImageUrl });
 
   const nodes: XmlNode[] = [];
 
@@ -552,7 +589,7 @@ export function renderPdfPageToSvgNode(page: PdfPage, options: PdfSvgRenderOptio
   const excludeSet = options.excludeElementIndices;
   for (let i = 0; i < page.elements.length; i++) {
     if (excludeSet?.has(i)) { continue; }
-    const rendered = renderElementNode(page.elements[i], page.height, registry, fontProvider, resolveImageUrl);
+    const rendered = renderElementNode({ element: page.elements[i], pageHeight: page.height, registry, fontProvider, resolveImageUrl });
     if (rendered !== null) {
       if (Array.isArray(rendered)) {
         bodyNodes.push(...rendered);
@@ -595,7 +632,7 @@ export function renderPdfPageToSvgNode(page: PdfPage, options: PdfSvgRenderOptio
  */
 export function renderPdfElementToSvg(element: PdfElement, pageHeight: number, fontProvider?: FontProvider): string {
   const provider = fontProvider ?? createFontProvider();
-  const fragment = renderPdfElementToSvgNodes(element, pageHeight, provider);
+  const fragment = renderPdfElementToSvgNodes({ element, pageHeight, fontProvider: provider });
   return serializeSvgFragment(fragment);
 }
 

@@ -6,7 +6,7 @@
  */
 
 import type { GeometryPathData } from "./geometry-path";
-import { mapWindingRule } from "./geometry-path";
+import { mapWindingRule } from "../geometry";
 import type { FillAttrs } from "./fill";
 import type { StrokeAttrs } from "./stroke";
 import { path, g, type SvgString } from "./primitives";

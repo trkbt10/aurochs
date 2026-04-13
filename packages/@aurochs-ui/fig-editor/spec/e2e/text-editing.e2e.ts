@@ -40,7 +40,7 @@ async function waitForEditor(page: Page): Promise<void> {
     () => {
       const svgs = Array.from(document.querySelectorAll("svg"));
       const canvasSvg = svgs.find((s) => s.getBoundingClientRect().width > 400);
-      if (!canvasSvg) return false;
+      if (!canvasSvg) {return false;}
       // Wait for hit-area rects to appear (transparent rects with fill="transparent")
       return canvasSvg.querySelectorAll("rect[fill='transparent']").length > 0;
     },
@@ -68,11 +68,11 @@ async function getNodeScreenCenter(
       const allSvgs = Array.from(document.querySelectorAll("svg"));
       const svg = allSvgs.reduce<SVGSVGElement | null>((best, curr) => {
         const r = curr.getBoundingClientRect();
-        if (!best) return curr;
+        if (!best) {return curr;}
         const br = best.getBoundingClientRect();
         return r.width * r.height > br.width * br.height ? curr : best;
       }, null);
-      if (!svg) return null;
+      if (!svg) {return null;}
 
       // Find hit-area rect matching the node's bounds
       for (const rect of Array.from(svg.querySelectorAll("rect[fill='transparent']"))) {
@@ -116,7 +116,7 @@ async function doubleClickNode(page: Page, node: typeof HELLO_TEXT): Promise<voi
  *
  * We identify the canvas textarea by checking computed opacity === 0.
  */
-async function getCanvasTextarea(page: Page): Promise<Locator> {
+async function _getCanvasTextarea(page: Page): Promise<Locator> {
   // Find textarea with opacity 0 (the hidden input from TextEditInputFrame)
   return page.locator("textarea").filter({
     has: page.locator("xpath=self::*[contains(@style, 'opacity')]"),
@@ -242,7 +242,7 @@ test.describe("Fig editor text editing", () => {
         const style = window.getComputedStyle(ta);
         return style.opacity === "0";
       });
-      if (!hidden) return null;
+      if (!hidden) {return null;}
       return { start: hidden.selectionStart, end: hidden.selectionEnd };
     });
 
@@ -317,7 +317,7 @@ test.describe("Fig editor text editing", () => {
     const focusedTag = await page.evaluate(() => document.activeElement?.tagName);
     const focusedOpacity = await page.evaluate(() => {
       const el = document.activeElement;
-      if (!el) return "no-focus";
+      if (!el) {return "no-focus";}
       return window.getComputedStyle(el).opacity;
     });
 
@@ -424,10 +424,10 @@ test.describe("Fig editor text editing", () => {
 
     const diagnostics = await page.evaluate(() => {
       const active = document.activeElement;
-      if (!active) return { tag: "none", opacity: "n/a", parentInfo: "n/a" };
+      if (!active) {return { tag: "none", opacity: "n/a", parentInfo: "n/a" };}
 
       const style = window.getComputedStyle(active);
-      const parentClasses = active.parentElement?.className ?? "";
+      const _parentClasses = active.parentElement?.className ?? "";
       const parentStyle = active.parentElement ? window.getComputedStyle(active.parentElement) : null;
 
       return {
@@ -480,10 +480,10 @@ test.describe("Fig editor text editing", () => {
         const allSvgs = Array.from(document.querySelectorAll("svg"));
         const svg = allSvgs.reduce<SVGSVGElement | null>((best, curr) => {
           const r = curr.getBoundingClientRect();
-          if (!best) return curr;
+          if (!best) {return curr;}
           return r.width * r.height > best.getBoundingClientRect().width * best.getBoundingClientRect().height ? curr : best;
         }, null);
-        if (!svg) return null;
+        if (!svg) {return null;}
         for (const rect of Array.from(svg.querySelectorAll("rect[fill='transparent']"))) {
           const rx = parseFloat(rect.getAttribute("x") ?? "");
           const ry = parseFloat(rect.getAttribute("y") ?? "");
@@ -527,7 +527,7 @@ test.describe("Fig editor text editing", () => {
         const style = window.getComputedStyle(ta);
         return style.opacity === "0";
       });
-      if (!hidden) return null;
+      if (!hidden) {return null;}
       return { start: hidden.selectionStart, end: hidden.selectionEnd };
     });
 

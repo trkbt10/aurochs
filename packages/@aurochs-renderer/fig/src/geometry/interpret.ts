@@ -48,7 +48,7 @@ export function extractUniformCornerRadius(
   if (rectangleCornerRadii && rectangleCornerRadii.length === 4) {
     const [tl, tr, br, bl] = rectangleCornerRadii;
     const allSame = tl === tr && tr === br && br === bl;
-    if (allSame) return tl || undefined;
+    if (allSame) {return tl || undefined;}
     const avg = (tl + tr + br + bl) / 4;
     return avg || undefined;
   }
@@ -66,7 +66,7 @@ export function clampCornerRadius(
   width: number,
   height: number,
 ): number | undefined {
-  if (!radius || radius <= 0) return undefined;
+  if (!radius || radius <= 0) {return undefined;}
   return Math.min(radius, Math.min(width, height) / 2);
 }
 
@@ -94,7 +94,7 @@ export function resolveClipsContent(
   frameMaskDisabled: boolean | undefined,
   nodeType: string,
 ): boolean {
-  if (clipsContent !== undefined) return clipsContent;
-  if (frameMaskDisabled !== undefined) return !frameMaskDisabled;
+  if (clipsContent !== undefined) {return clipsContent;}
+  if (frameMaskDisabled !== undefined) {return !frameMaskDisabled;}
   return CLIPPING_NODE_TYPES.has(nodeType);
 }

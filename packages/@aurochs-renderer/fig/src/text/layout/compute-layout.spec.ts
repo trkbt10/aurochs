@@ -2,8 +2,7 @@
  * @file Tests for computeTextLayout and textLayoutToCursorLayout
  */
 
-import { describe, it, expect } from "vitest";
-import { computeTextLayout, textLayoutToCursorLayout, type TextLayout } from "./compute-layout";
+import { computeTextLayout, textLayoutToCursorLayout } from "./compute-layout";
 import type { ExtractedTextProps } from "./types";
 
 // =============================================================================

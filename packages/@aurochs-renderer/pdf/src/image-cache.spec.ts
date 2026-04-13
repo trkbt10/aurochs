@@ -21,7 +21,7 @@
  * - release() is called on dispose
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+
 import {
   createPdfImageCache,
   objectUrlStrategy,
@@ -76,27 +76,65 @@ function flushTimers(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
+/** Simple call-tracking function factory (no-vi alternative to vi.fn). */
+function makeTracker<TRet = void>(): { (...args: unknown[]): TRet; calls: unknown[][]; callCount: number } {
+  const calls: unknown[][] = [];
+  const fn = (...args: unknown[]): TRet => {
+    calls.push(args);
+    fn.callCount = calls.length;
+    return undefined as TRet;
+  };
+  fn.calls = calls;
+  fn.callCount = 0;
+  return fn;
+}
+
+function makeTrackerWithReturn<TArgs extends unknown[], TRet>(impl: (...args: TArgs) => TRet): { (...args: TArgs): TRet; calls: TArgs[]; callCount: number } {
+  const calls: TArgs[] = [];
+  const fn = (...args: TArgs): TRet => {
+    calls.push(args);
+    (fn as { callCount: number }).callCount = calls.length;
+    return impl(...args);
+  };
+  fn.calls = calls;
+  fn.callCount = 0;
+  return fn;
+}
+
 // =============================================================================
 // objectUrlStrategy tests (browser)
 // =============================================================================
 
 describe("PdfImageCache + objectUrlStrategy", () => {
+  // eslint-disable-next-line no-restricted-syntax -- mutable test-suite variable initialized in beforeEach
   let revokedUrls: string[];
+  // eslint-disable-next-line no-restricted-syntax -- mutable test-suite variable initialized in beforeEach
+  let createObjectURLCallCount: number;
+  // eslint-disable-next-line no-restricted-syntax -- mutable test-suite variable for saving/restoring global
+  let originalCreateObjectURL: (typeof URL)["createObjectURL"];
+  // eslint-disable-next-line no-restricted-syntax -- mutable test-suite variable for saving/restoring global
+  let originalRevokeObjectURL: (typeof URL)["revokeObjectURL"];
 
   beforeEach(() => {
     revokedUrls = [];
+    createObjectURLCallCount = 0;
+    originalCreateObjectURL = globalThis.URL.createObjectURL;
+    originalRevokeObjectURL = globalThis.URL.revokeObjectURL;
+    // eslint-disable-next-line no-restricted-syntax -- mutable counter inside mock function closure
     let counter = 0;
-    globalThis.URL.createObjectURL = vi.fn(() => {
+    globalThis.URL.createObjectURL = (_blob: Blob) => {
       counter += 1;
+      createObjectURLCallCount = counter;
       return `blob:test/${counter}`;
-    });
-    globalThis.URL.revokeObjectURL = vi.fn((url: string) => {
+    };
+    globalThis.URL.revokeObjectURL = (url: string) => {
       revokedUrls.push(url);
-    });
+    };
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    globalThis.URL.createObjectURL = originalCreateObjectURL;
+    globalThis.URL.revokeObjectURL = originalRevokeObjectURL;
   });
 
   it("resolves JPEG to an Object URL immediately", () => {
@@ -123,7 +161,7 @@ describe("PdfImageCache + objectUrlStrategy", () => {
     const url1 = cache.resolve(image);
     const url2 = cache.resolve(image);
     expect(url1).toBe(url2);
-    expect(URL.createObjectURL).toHaveBeenCalledTimes(1);
+    expect(createObjectURLCallCount).toBe(1);
     cache.dispose();
   });
 
@@ -164,33 +202,33 @@ describe("PdfImageCache + objectUrlStrategy", () => {
 
   it("notifies subscribers when deferred encoding completes", async () => {
     const cache = createPdfImageCache(objectUrlStrategy());
-    const listener = vi.fn();
+    const listener = makeTracker();
     cache.subscribe(listener);
     cache.resolve(createRawImage());
-    expect(listener).not.toHaveBeenCalled();
+    expect(listener.callCount).toBe(0);
     await flushTimers();
-    expect(listener).toHaveBeenCalledTimes(1);
+    expect(listener.callCount).toBe(1);
     cache.dispose();
   });
 
   it("does not notify after unsubscribe", async () => {
     const cache = createPdfImageCache(objectUrlStrategy());
-    const listener = vi.fn();
+    const listener = makeTracker();
     const unsub = cache.subscribe(listener);
     unsub();
     cache.resolve(createRawImage());
     await flushTimers();
-    expect(listener).not.toHaveBeenCalled();
+    expect(listener.callCount).toBe(0);
     cache.dispose();
   });
 
   it("does not notify for JPEG/PNG (no deferred work)", () => {
     const cache = createPdfImageCache(objectUrlStrategy());
-    const listener = vi.fn();
+    const listener = makeTracker();
     cache.subscribe(listener);
     cache.resolve(createJpegImage());
     cache.resolve(createPngImage());
-    expect(listener).not.toHaveBeenCalled();
+    expect(listener.callCount).toBe(0);
     cache.dispose();
   });
 
@@ -206,12 +244,12 @@ describe("PdfImageCache + objectUrlStrategy", () => {
 
   it("dispose prevents deferred encoding from completing", async () => {
     const cache = createPdfImageCache(objectUrlStrategy());
-    const listener = vi.fn();
+    const listener = makeTracker();
     cache.subscribe(listener);
     cache.resolve(createRawImage());
     cache.dispose();
     await flushTimers();
-    expect(listener).not.toHaveBeenCalled();
+    expect(listener.callCount).toBe(0);
     expect(cache.size()).toBe(0);
   });
 
@@ -276,11 +314,11 @@ describe("PdfImageCache + dataUrlStrategy", () => {
 
   it("subscribe never fires (no deferred work)", async () => {
     const cache = createPdfImageCache(dataUrlStrategy());
-    const listener = vi.fn();
+    const listener = makeTracker();
     cache.subscribe(listener);
     cache.resolve(createRawImage());
     await flushTimers();
-    expect(listener).not.toHaveBeenCalled();
+    expect(listener.callCount).toBe(0);
     cache.dispose();
   });
 
@@ -300,9 +338,11 @@ describe("PdfImageCache + dataUrlStrategy", () => {
 
 describe("PdfImageCache with custom strategy", () => {
   it("delegates resolve to the injected strategy", () => {
+    const resolveTracker = makeTrackerWithReturn((_image: PdfImage) => ({ url: "custom://image-1" }));
+    const releaseTracker = makeTracker();
     const strategy: PdfImageUrlStrategy = {
-      resolve: vi.fn(() => ({ url: "custom://image-1" })),
-      release: vi.fn(),
+      resolve: resolveTracker,
+      release: releaseTracker,
     };
     const cache = createPdfImageCache(strategy);
     const image = createJpegImage();
@@ -310,32 +350,35 @@ describe("PdfImageCache with custom strategy", () => {
     const url = cache.resolve(image);
 
     expect(url).toBe("custom://image-1");
-    expect(strategy.resolve).toHaveBeenCalledWith(image);
+    expect(resolveTracker.calls.length).toBe(1);
+    expect(resolveTracker.calls[0]![0]).toBe(image);
     cache.dispose();
   });
 
   it("calls strategy.release on dispose for each cached URL", () => {
+    const releaseTracker = makeTrackerWithReturn((_url: string) => undefined);
     const strategy: PdfImageUrlStrategy = {
-      resolve: vi.fn(() => ({ url: "custom://img" })),
-      release: vi.fn(),
+      resolve: (_image: PdfImage) => ({ url: "custom://img" }),
+      release: releaseTracker,
     };
     const cache = createPdfImageCache(strategy);
     cache.resolve(createJpegImage());
     cache.dispose();
 
-    expect(strategy.release).toHaveBeenCalledWith("custom://img");
+    expect(releaseTracker.calls.length).toBe(1);
+    expect(releaseTracker.calls[0]![0]).toBe("custom://img");
   });
 
   it("handles deferred results from custom strategy", async () => {
     const strategy: PdfImageUrlStrategy = {
-      resolve: vi.fn(() => ({
+      resolve: (_image: PdfImage) => ({
         url: "placeholder://tmp",
         deferred: Promise.resolve("custom://real"),
-      })),
-      release: vi.fn(),
+      }),
+      release: () => {},
     };
     const cache = createPdfImageCache(strategy);
-    const listener = vi.fn();
+    const listener = makeTracker();
     cache.subscribe(listener);
 
     const image = createRawImage();
@@ -348,17 +391,19 @@ describe("PdfImageCache with custom strategy", () => {
     expect(cache.pending()).toBe(0);
     expect(cache.size()).toBe(1);
     expect(cache.resolve(image)).toBe("custom://real");
-    expect(listener).toHaveBeenCalledTimes(1);
+    expect(listener.callCount).toBe(1);
     cache.dispose();
   });
 
   it("releases deferred URL if cache was disposed before completion", async () => {
+    // eslint-disable-next-line no-restricted-syntax -- mutable variable capturing promise resolver from constructor callback
     let resolveDeferred: (url: string) => void;
     const deferred = new Promise<string>((r) => { resolveDeferred = r; });
 
+    const releaseTracker = makeTrackerWithReturn((_url: string) => undefined);
     const strategy: PdfImageUrlStrategy = {
-      resolve: vi.fn(() => ({ url: "placeholder://tmp", deferred })),
-      release: vi.fn(),
+      resolve: (_image: PdfImage) => ({ url: "placeholder://tmp", deferred }),
+      release: releaseTracker,
     };
     const cache = createPdfImageCache(strategy);
     cache.resolve(createRawImage());
@@ -369,7 +414,7 @@ describe("PdfImageCache with custom strategy", () => {
     await flushTimers();
 
     // The late URL should be released, not cached.
-    expect(strategy.release).toHaveBeenCalledWith("custom://late");
+    expect(releaseTracker.calls.some((args) => args[0] === "custom://late")).toBe(true);
     expect(cache.size()).toBe(0);
   });
 });

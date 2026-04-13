@@ -21,6 +21,7 @@ import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-conte
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
 import type { ResolvedBackgroundFill } from "@aurochs-office/drawing-ml/domain/background-fill";
 import type { TableStyleList } from "@aurochs-office/pptx/parser/table/style-parser";
+import type { WarningCollector } from "@aurochs-office/ooxml";
 
 // =============================================================================
 // Types
@@ -36,7 +37,7 @@ export type RenderContext = {
   readonly slideSize: SlideSize;
   readonly options: RenderOptions;
   readonly colorContext: ColorContext;
-  readonly warnings: import("@aurochs-office/ooxml").WarningCollector;
+  readonly warnings: WarningCollector;
   readonly resolvedBackground?: ResolvedBackgroundFill;
   readonly fontScheme?: FontScheme;
   readonly layoutShapes?: readonly Shape[];
@@ -118,7 +119,7 @@ export function createRenderContext(config: RenderContextConfig): RenderContext 
  *   const archive = resolveArchiveSlideContext(apiSlide);
  *   const ctx = createRenderContext({ slideSize, resourceStore, ...archive });
  */
-function resolveArchiveSlideContext(
+function _resolveArchiveSlideContext(
   apiSlide: ApiSlide,
   renderOptions?: RenderOptions,
 ): ArchiveSlideContext {

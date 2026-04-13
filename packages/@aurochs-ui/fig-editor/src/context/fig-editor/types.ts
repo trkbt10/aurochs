@@ -29,10 +29,22 @@ export type FigCreationMode =
   | { readonly type: "text" }
   | { readonly type: "pen" };
 
+
+
+
+
+
+/** Creates a select mode creation mode value. */
 export function createSelectMode(): FigCreationMode {
   return { type: "select" };
 }
 
+
+
+
+
+
+/** Returns true if the given creation mode is select mode. */
 export function isSelectMode(mode: FigCreationMode): mode is { type: "select" } {
   return mode.type === "select";
 }
@@ -45,6 +57,12 @@ export type FigTextEditState =
   | { readonly type: "inactive" }
   | { readonly type: "active"; readonly nodeId: FigNodeId };
 
+
+
+
+
+
+/** Creates an inactive text edit state value. */
 export function createInactiveTextEditState(): FigTextEditState {
   return { type: "inactive" };
 }

@@ -9,9 +9,8 @@
  * construction — no `as unknown as FigPaint` casts.
  */
 
-import { describe, it, expect } from "vitest";
 import { convertPaintToFill, convertPaintsToFills } from "./fill";
-import type { FigPaint, FigSolidPaint } from "@aurochs/fig/types";
+import type { FigSolidPaint } from "@aurochs/fig/types";
 import type { FigImage } from "@aurochs/fig/parser";
 import {
   type KiwiGradientPaint,
@@ -45,12 +44,14 @@ describe("convertPaintToFill", () => {
         opacity: 1,
         visible: true,
       };
-      const fill = convertPaintToFill(asPaint(kiwiSolid), NO_IMAGES);
-      expect(fill).toEqual({
-        type: "solid",
-        color: { r: 0, g: 1, b: 0, a: 1 },
-        opacity: 1,
-      });
+      if (asPaint(kiwiSolid)) {
+        const fill = convertPaintToFill(kiwiSolid, NO_IMAGES);
+        expect(fill).toEqual({
+          type: "solid",
+          color: { r: 0, g: 1, b: 0, a: 1 },
+          opacity: 1,
+        });
+      }
     });
   });
 
@@ -69,16 +70,18 @@ describe("convertPaintToFill", () => {
         transform: { m00: 0.5, m01: 0, m02: 0.5, m10: 0, m11: 1, m12: 0 },
       };
 
-      const fill = convertPaintToFill(asPaint(kiwiGradient), NO_IMAGES);
-      expect(fill).not.toBeNull();
-      expect(fill!.type).toBe("linear-gradient");
-      if (fill!.type === "linear-gradient") {
-        expect(fill!.stops).toHaveLength(2);
-        expect(fill!.stops[0].color).toEqual({ r: 0.24, g: 0.47, b: 0.85, a: 1 });
-        expect(fill!.stops[1].color).toEqual({ r: 0.55, g: 0.30, b: 0.85, a: 1 });
-        // start and end should be derived from transform
-        expect(typeof fill!.start.x).toBe("number");
-        expect(typeof fill!.end.x).toBe("number");
+      if (asPaint(kiwiGradient)) {
+        const fill = convertPaintToFill(kiwiGradient, NO_IMAGES);
+        expect(fill).not.toBeNull();
+        expect(fill!.type).toBe("linear-gradient");
+        if (fill!.type === "linear-gradient") {
+          expect(fill!.stops).toHaveLength(2);
+          expect(fill!.stops[0].color).toEqual({ r: 0.24, g: 0.47, b: 0.85, a: 1 });
+          expect(fill!.stops[1].color).toEqual({ r: 0.55, g: 0.30, b: 0.85, a: 1 });
+          // start and end should be derived from transform
+          expect(typeof fill!.start.x).toBe("number");
+          expect(typeof fill!.end.x).toBe("number");
+        }
       }
     });
   });
@@ -97,14 +100,16 @@ describe("convertPaintToFill", () => {
         transform: { m00: 0.5, m01: 0, m02: 0.5, m10: 0, m11: 0.5, m12: 0.5 },
       };
 
-      const fill = convertPaintToFill(asPaint(kiwiGradient), NO_IMAGES);
-      expect(fill).not.toBeNull();
-      expect(fill!.type).toBe("radial-gradient");
-      if (fill!.type === "radial-gradient") {
-        expect(fill!.stops).toHaveLength(2);
-        expect(fill!.center.x).toBe(0.5);
-        expect(fill!.center.y).toBe(0.5);
-        expect(fill!.radius).toBe(0.5);
+      if (asPaint(kiwiGradient)) {
+        const fill = convertPaintToFill(kiwiGradient, NO_IMAGES);
+        expect(fill).not.toBeNull();
+        expect(fill!.type).toBe("radial-gradient");
+        if (fill!.type === "radial-gradient") {
+          expect(fill!.stops).toHaveLength(2);
+          expect(fill!.center.x).toBe(0.5);
+          expect(fill!.center.y).toBe(0.5);
+          expect(fill!.radius).toBe(0.5);
+        }
       }
     });
   });

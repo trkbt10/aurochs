@@ -14,6 +14,22 @@ import type { ExtensionToWebviewMessage } from "../webview/types";
 
 export const XLSX_VIEW_TYPE = "aurochs.xlsxViewer";
 
+/** Build the message to send to the webview for an XLSX document. */
+async function buildXlsxMessage(uri: vscode.Uri): Promise<ExtensionToWebviewMessage> {
+  try {
+    const data = await vscode.workspace.fs.readFile(uri);
+    const result = await renderToSheets(uri, new Uint8Array(data));
+    const fileName = uri.path.split("/").pop() ?? "spreadsheet";
+    return { type: "xlsx", fileName, sheets: result.sheets };
+  } catch (err) {
+    return {
+      type: "error",
+      title: "Failed to load spreadsheet",
+      message: err instanceof Error ? err.message : String(err),
+    };
+  }
+}
+
 /**
  * Create an XLSX custom readonly editor provider.
  */
@@ -34,21 +50,7 @@ export function createXlsxEditorProvider(extensionUri: vscode.Uri): vscode.Custo
         extensionUri,
       });
 
-      let message: ExtensionToWebviewMessage;
-      try {
-        const data = await vscode.workspace.fs.readFile(document.uri);
-        const result = await renderToSheets(document.uri, new Uint8Array(data));
-        const fileName = document.uri.path.split("/").pop() ?? "spreadsheet";
-
-        message = { type: "xlsx", fileName, sheets: result.sheets };
-      } catch (err) {
-        message = {
-          type: "error",
-          title: "Failed to load spreadsheet",
-          message: err instanceof Error ? err.message : String(err),
-        };
-      }
-
+      const message = await buildXlsxMessage(document.uri);
       sendWhenReady(webviewPanel.webview, message);
     },
   };

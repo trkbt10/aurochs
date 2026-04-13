@@ -129,6 +129,22 @@ const slideInfoStyle: CSSProperties = {
 // Main Component
 // =============================================================================
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/** Preview page for testing the PPTX viewer with file drag-and-drop. */
 export function PptxViewerPreviewPage() {
   const [loaded, setLoaded] = useState<LoadedData | null>(null);
   const [viewerMode, setViewerMode] = useState<ViewerMode>("slideshare");

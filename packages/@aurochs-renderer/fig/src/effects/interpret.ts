@@ -6,7 +6,7 @@
  * and the SceneGraph builder consume these.
  */
 
-import type { FigEffect, FigEffectType, FigColor } from "@aurochs/fig/types";
+import type { FigEffect, FigEffectType } from "@aurochs/fig/types";
 
 // =============================================================================
 // Effect Type
@@ -19,7 +19,7 @@ import type { FigEffect, FigEffectType, FigColor } from "@aurochs/fig/types";
  */
 export function getEffectTypeName(effect: FigEffect): FigEffectType {
   const type = effect.type;
-  if (typeof type === "string") return type;
+  if (typeof type === "string") {return type;}
   if (type && typeof type === "object" && "name" in type) {
     return type.name;
   }
@@ -59,14 +59,17 @@ const DEFAULT_SHADOW_COLOR = { r: 0, g: 0, b: 0, a: 0.25 };
  * Returns offset, radius, and color in a normalized form usable by
  * both SVG filter construction and SceneGraph effect objects.
  */
+function resolveShadowColor(color: FigEffect["color"]): ShadowParams["color"] {
+  return color ? { r: color.r, g: color.g, b: color.b, a: color.a } : DEFAULT_SHADOW_COLOR;
+}
+
+/** Extracts shadow rendering parameters from a Figma effect definition. */
 export function extractShadowParams(effect: FigEffect): ShadowParams {
   return {
     offsetX: effect.offset?.x ?? 0,
     offsetY: effect.offset?.y ?? 0,
     radius: effect.radius ?? 0,
-    color: effect.color
-      ? { r: effect.color.r, g: effect.color.g, b: effect.color.b, a: effect.color.a }
-      : DEFAULT_SHADOW_COLOR,
+    color: resolveShadowColor(effect.color),
   };
 }
 
@@ -78,7 +81,7 @@ export function extractShadowParams(effect: FigEffect): ShadowParams {
  * Check if effects array has visible effects of a given type.
  */
 export function hasEffectOfType(effects: readonly FigEffect[] | undefined, type: FigEffectType): boolean {
-  if (!effects || effects.length === 0) return false;
+  if (!effects || effects.length === 0) {return false;}
   return effects.some((e) => isEffectVisible(e) && getEffectTypeName(e) === type);
 }
 
@@ -86,6 +89,6 @@ export function hasEffectOfType(effects: readonly FigEffect[] | undefined, type:
  * Get visible effects of a given type.
  */
 export function getEffectsOfType(effects: readonly FigEffect[] | undefined, type: FigEffectType): readonly FigEffect[] {
-  if (!effects || effects.length === 0) return [];
+  if (!effects || effects.length === 0) {return [];}
   return effects.filter((e) => isEffectVisible(e) && getEffectTypeName(e) === type);
 }

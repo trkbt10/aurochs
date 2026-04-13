@@ -55,6 +55,25 @@ export type ParsedNamedColorSpace =
       range: readonly [number, number, number, number];
     }>;
 
+function parseLabRange(page: NativePdfPage, rangeArr: PdfArray | null): readonly [number, number, number, number] {
+  if (rangeArr && rangeArr.items.length >= 4) {
+    const nums = parseNumberArrayLocal(page, rangeArr);
+    if (nums.length >= 4) {
+      return [nums[0] ?? -100, nums[1] ?? 100, nums[2] ?? -100, nums[3] ?? 100];
+    }
+  }
+  return [-100, 100, -100, 100]; // PDF default
+}
+
+function resolveIndexedLookup(obj: PdfObject | undefined): Uint8Array | null {
+  if (obj?.type === "string") { return obj.bytes; }
+  if (obj?.type === "stream") {
+    // eslint-disable-next-line no-restricted-syntax -- catch without param: stream decode failure is non-actionable; null return signals missing lookup table
+    try { return decodePdfStream(obj); } catch { return null; }
+  }
+  return null;
+}
+
 function dictGet(dict: PdfDict, key: string): PdfObject | undefined {
   return dict.map.get(key);
 }
@@ -78,6 +97,30 @@ function asName(obj: PdfObject | undefined): PdfName | null {
 
 function asStream(obj: PdfObject | undefined): PdfStream | null {
   return obj?.type === "stream" ? obj : null;
+}
+
+function resolveColorantName(obj: PdfObject | undefined): string {
+  if (obj?.type === "name") {return obj.value;}
+  if (obj?.type === "string") {return obj.text;}
+  return "Unknown";
+}
+
+/** Parse CalRGB Gamma array, defaulting to [1, 1, 1] */
+function parseCalRGBGamma(page: NativePdfPage, gammaArr: PdfArray | null): readonly [number, number, number] {
+  if (!gammaArr || gammaArr.items.length < 3) {
+    return [1, 1, 1];
+  }
+  const nums = parseNumberArrayLocal(page, gammaArr);
+  return [nums[0] ?? 1, nums[1] ?? 1, nums[2] ?? 1] as const;
+}
+
+/** Parse CalRGB Matrix array, defaulting to identity */
+function parseCalRGBMatrix(page: NativePdfPage, matrixArr: PdfArray | null): readonly number[] {
+  if (!matrixArr) {
+    return [1, 0, 0, 0, 1, 0, 0, 0, 1];
+  }
+  const nums = parseNumberArrayLocal(page, matrixArr);
+  return nums.length === 9 ? nums : [1, 0, 0, 0, 1, 0, 0, 0, 1];
 }
 
 function parseIccProfileSafe(profileStream: PdfStream | null): ParsedIccProfile | null {
@@ -180,8 +223,7 @@ function parseNamedColorSpaceEntry(page: NativePdfPage, entry: PdfObject | undef
   // [/Separation colorantName alternateSpace tintTransform]
   if (head.value === "Separation" && arr.items.length >= 4) {
     const colorantObj = resolve(page, arr.items[1]);
-    const colorantName = colorantObj?.type === "name" ? colorantObj.value
-      : colorantObj?.type === "string" ? colorantObj.text : "Unknown";
+    const colorantName = resolveColorantName(colorantObj);
     const alternate = resolveAlternateDeviceColorSpace(page, arr.items[2]);
     if (!alternate) {return null;}
     const tintTransform = parsePdfFunction(page, arr.items[3]);
@@ -229,12 +271,7 @@ function parseNamedColorSpaceEntry(page: NativePdfPage, entry: PdfObject | undef
 
     // Lookup can be a string (raw bytes) or a stream
     const lookupObj = resolve(page, arr.items[3]);
-    let lookup: Uint8Array | null = null;
-    if (lookupObj?.type === "string") {
-      lookup = lookupObj.bytes;
-    } else if (lookupObj?.type === "stream") {
-      try { lookup = decodePdfStream(lookupObj); } catch { lookup = null; }
-    }
+    const lookup: Uint8Array | null = resolveIndexedLookup(lookupObj);
     if (!lookup) {return null;}
 
     return { kind: "indexed", base, hival, lookup };
@@ -266,21 +303,11 @@ function parseNamedColorSpaceEntry(page: NativePdfPage, entry: PdfObject | undef
       if (wp) {
         const gammaObj = resolve(page, dictGet(params, "Gamma"));
         const gammaArr = asArray(gammaObj);
-        const gamma: readonly [number, number, number] = gammaArr && gammaArr.items.length >= 3
-          ? (() => {
-              const nums = parseNumberArrayLocal(page, gammaArr);
-              return [nums[0] ?? 1, nums[1] ?? 1, nums[2] ?? 1] as const;
-            })()
-          : [1, 1, 1];
+        const gamma: readonly [number, number, number] = parseCalRGBGamma(page, gammaArr);
 
         const matrixObj = resolve(page, dictGet(params, "Matrix"));
         const matrixArr = asArray(matrixObj);
-        const matrix: readonly number[] = matrixArr
-          ? (() => {
-              const nums = parseNumberArrayLocal(page, matrixArr);
-              return nums.length === 9 ? nums : [1, 0, 0, 0, 1, 0, 0, 0, 1];
-            })()
-          : [1, 0, 0, 0, 1, 0, 0, 0, 1];
+        const matrix: readonly number[] = parseCalRGBMatrix(page, matrixArr);
 
         return { kind: "calRgb", whitePoint: wp, gamma, matrix };
       }
@@ -298,13 +325,7 @@ function parseNamedColorSpaceEntry(page: NativePdfPage, entry: PdfObject | undef
       if (wp) {
         const rangeObj = resolve(page, dictGet(params, "Range"));
         const rangeArr = asArray(rangeObj);
-        let range: readonly [number, number, number, number] = [-100, 100, -100, 100]; // PDF default
-        if (rangeArr && rangeArr.items.length >= 4) {
-          const nums = parseNumberArrayLocal(page, rangeArr);
-          if (nums.length >= 4) {
-            range = [nums[0] ?? -100, nums[1] ?? 100, nums[2] ?? -100, nums[3] ?? 100];
-          }
-        }
+        const range = parseLabRange(page, rangeArr);
         return { kind: "lab", whitePoint: wp, range };
       }
     }

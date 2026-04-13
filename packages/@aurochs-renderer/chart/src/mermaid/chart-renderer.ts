@@ -2,7 +2,7 @@
  * @file Render chart data as a fenced Mermaid code block
  */
 
-import { serializeChartToMermaid } from "@aurochs-builder/mermaid";
+import { serializeChartToMermaid } from "@aurochs/mermaid";
 import { wrapInMermaidFence } from "@aurochs/mermaid";
 import type { ChartMermaidParams } from "./types";
 

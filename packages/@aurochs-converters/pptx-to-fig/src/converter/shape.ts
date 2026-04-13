@@ -13,6 +13,7 @@
 import type {
   Shape, SpShape, PicShape, GrpShape, CxnShape, GraphicFrame,
 } from "@aurochs-office/pptx/domain/shape";
+import type { Transform } from "@aurochs-office/drawing-ml/domain/geometry";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
 import type { FigDesignNode, FigNodeId } from "@aurochs/fig/domain";
@@ -22,7 +23,7 @@ import type { TableStyleList } from "@aurochs-office/pptx/parser/table/style-par
 import type { Chart } from "@aurochs-office/chart/domain";
 import type { FigImage } from "@aurochs/fig/parser";
 import { dmlTransformToFig, dmlFillToFig, dmlLineTofig, dmlEffectsToFig, type FigTransformResult } from "@aurochs-converters/interop-drawing-ml/dml-to-fig";
-import { diagramShapesToFig, renderChartToSvg } from "@aurochs-converters/interop-drawing-ml/dml-to-fig";
+import { renderChartToSvg } from "@aurochs-converters/interop-drawing-ml/dml-to-fig";
 import { convertGeometry } from "./geometry";
 import { convertText } from "./text";
 import { convertTableToNodes } from "./table";
@@ -59,7 +60,7 @@ export function convertShapes(
   const nodes: FigDesignNode[] = [];
   for (const shape of shapes) {
     const node = convertShape(shape, idCounter, ctx);
-    if (node) nodes.push(node);
+    if (node) {nodes.push(node);}
   }
   return nodes;
 }
@@ -96,9 +97,7 @@ function convertSpShape(
   ctx: ConvertContext,
 ): FigDesignNode {
   const id = nextId(idCounter);
-  const transform = shape.properties.transform
-    ? dmlTransformToFig(shape.properties.transform)
-    : defaultTransform(shape.nonVisual.name);
+  const transform = resolveShapeTransform(shape.properties.transform, shape.nonVisual.name);
 
   const width = transform.size.x;
   const height = transform.size.y;
@@ -138,9 +137,7 @@ function convertPicShape(
   ctx: ConvertContext,
 ): FigDesignNode {
   const id = nextId(idCounter);
-  const transform = shape.properties.transform
-    ? dmlTransformToFig(shape.properties.transform)
-    : defaultTransform(shape.nonVisual.name);
+  const transform = resolveShapeTransform(shape.properties.transform, shape.nonVisual.name);
 
   const effects = dmlEffectsToFig(shape.properties.effects, ctx.colorContext);
 
@@ -173,9 +170,7 @@ function convertGrpShape(
   ctx: ConvertContext,
 ): FigDesignNode {
   const id = nextId(idCounter);
-  const transform = shape.properties.transform
-    ? dmlTransformToFig(shape.properties.transform)
-    : defaultTransform(shape.nonVisual.name);
+  const transform = resolveShapeTransform(shape.properties.transform, shape.nonVisual.name);
 
   const children = convertShapes(shape.children, idCounter, ctx);
   const fills = shape.properties.fill ? dmlFillToFig(shape.properties.fill, ctx.colorContext) : [];
@@ -203,9 +198,7 @@ function convertCxnShape(
   ctx: ConvertContext,
 ): FigDesignNode {
   const id = nextId(idCounter);
-  const transform = shape.properties.transform
-    ? dmlTransformToFig(shape.properties.transform)
-    : defaultTransform(shape.nonVisual.name);
+  const transform = resolveShapeTransform(shape.properties.transform, shape.nonVisual.name);
 
   const strokeProps = dmlLineTofig(shape.properties.line, ctx.colorContext);
   const effects = dmlEffectsToFig(shape.properties.effects, ctx.colorContext);
@@ -227,6 +220,54 @@ function convertCxnShape(
   };
 }
 
+type ResolveGraphicFrameChildrenOptions = {
+  readonly content: GraphicFrame["content"];
+  readonly shape: GraphicFrame;
+  readonly transform: FigTransformResult;
+  readonly idCounter: NodeIdCounter;
+  readonly ctx: ConvertContext;
+};
+
+/** Resolve the children nodes for a graphic frame based on its content type. */
+function resolveGraphicFrameChildren(
+  { content, shape, transform, idCounter, ctx }: ResolveGraphicFrameChildrenOptions,
+): readonly FigDesignNode[] | undefined {
+  switch (content.type) {
+    case "table":
+      return convertTableToNodes(content.data.table, idCounter, ctx);
+    case "diagram": {
+      const diagramResourceId = content.data.dataResourceId;
+      if (diagramResourceId && ctx.resourceStore) {
+        const entry = ctx.resourceStore.get(diagramResourceId);
+        const diagramContent = entry?.parsed as { shapes?: readonly Shape[] } | undefined;
+        if (diagramContent?.shapes && diagramContent.shapes.length > 0) {
+          return convertShapes(diagramContent.shapes, idCounter, ctx);
+        }
+      }
+      console.warn(
+        `[pptx-to-fig] Diagram content in "${shape.nonVisual.name}" has no pre-generated shapes. Retaining bounding box.`,
+      );
+      return undefined;
+    }
+    case "oleObject": {
+      const pic = content.data.pic;
+      if (pic) {
+        return [createImageNode({ id: nextId(idCounter), name: "OLE Preview", size: transform.size, imageRef: pic.resourceId })];
+      }
+      return undefined;
+    }
+    case "chart":
+      return convertChartContent({ content, shape, transform, idCounter, ctx });
+    case "unknown":
+      console.warn(
+        `[pptx-to-fig] Unknown GraphicFrame content (uri: "${content.uri}") in "${shape.nonVisual.name}". Retaining bounding box.`,
+      );
+      return undefined;
+    default:
+      return undefined;
+  }
+}
+
 function convertGraphicFrame(
   shape: GraphicFrame,
   idCounter: NodeIdCounter,
@@ -235,51 +276,7 @@ function convertGraphicFrame(
   const id = nextId(idCounter);
   const transform = dmlTransformToFig(shape.transform);
   const content = shape.content;
-
-  let children: readonly FigDesignNode[] | undefined;
-
-  switch (content.type) {
-    case "table": {
-      children = convertTableToNodes(
-        content.data.table,
-        idCounter,
-        ctx,
-      );
-      break;
-    }
-    case "diagram": {
-      const diagramResourceId = content.data.dataResourceId;
-      if (diagramResourceId && ctx.resourceStore) {
-        const entry = ctx.resourceStore.get(diagramResourceId);
-        const diagramContent = entry?.parsed as { shapes?: readonly Shape[] } | undefined;
-        if (diagramContent?.shapes && diagramContent.shapes.length > 0) {
-          children = convertShapes(diagramContent.shapes, idCounter, ctx);
-          break;
-        }
-      }
-      console.warn(
-        `[pptx-to-fig] Diagram content in "${shape.nonVisual.name}" has no pre-generated shapes. Retaining bounding box.`,
-      );
-      break;
-    }
-    case "oleObject": {
-      const pic = content.data.pic;
-      if (pic) {
-        children = [createImageNode(nextId(idCounter), "OLE Preview", transform.size, pic.resourceId)];
-      }
-      break;
-    }
-    case "chart": {
-      children = convertChartContent(content, shape, transform, idCounter, ctx);
-      break;
-    }
-    case "unknown": {
-      console.warn(
-        `[pptx-to-fig] Unknown GraphicFrame content (uri: "${content.uri}") in "${shape.nonVisual.name}". Retaining bounding box.`,
-      );
-      break;
-    }
-  }
+  const children = resolveGraphicFrameChildren({ content, shape, transform, idCounter, ctx });
 
   return {
     id: id as FigNodeId,
@@ -298,6 +295,14 @@ function convertGraphicFrame(
   };
 }
 
+type ConvertChartContentOptions = {
+  readonly content: GraphicFrame["content"];
+  readonly shape: GraphicFrame;
+  readonly transform: FigTransformResult;
+  readonly idCounter: NodeIdCounter;
+  readonly ctx: ConvertContext;
+};
+
 /**
  * Convert chart content to Fig design nodes.
  *
@@ -307,13 +312,9 @@ function convertGraphicFrame(
  * (fig renderer, kwix, etc.) without relying on _raw fields.
  */
 function convertChartContent(
-  content: GraphicFrame["content"],
-  shape: GraphicFrame,
-  transform: FigTransformResult,
-  idCounter: NodeIdCounter,
-  ctx: ConvertContext,
+  { content, shape, transform, idCounter, ctx }: ConvertChartContentOptions,
 ): readonly FigDesignNode[] | undefined {
-  if (content.type !== "chart") return undefined;
+  if (content.type !== "chart") {return undefined;}
 
   const chartResourceId = content.data.resourceId;
   if (!chartResourceId || !ctx.resourceStore) {
@@ -332,14 +333,14 @@ function convertChartContent(
     return undefined;
   }
 
-  const result = renderChartToSvg(
-    parsedChart,
-    transform.size.x,
-    transform.size.y,
-    ctx.colorContext,
-    shape.nonVisual.name,
-  );
-  if (!result) return undefined;
+  const result = renderChartToSvg({
+    chart: parsedChart,
+    width: transform.size.x,
+    height: transform.size.y,
+    colorContext: ctx.colorContext,
+    name: shape.nonVisual.name,
+  });
+  if (!result) {return undefined;}
 
   // Store the rendered SVG as an image in the collected images map.
   // SVG is a valid image format that Fig renderers can display via
@@ -352,18 +353,22 @@ function convertChartContent(
     mimeType: "image/svg+xml",
   });
 
-  return [createImageNode(nextId(idCounter), shape.nonVisual.name, transform.size, imageRef)];
+  return [createImageNode({ id: nextId(idCounter), name: shape.nonVisual.name, size: transform.size, imageRef })];
 }
+
+type CreateImageNodeOptions = {
+  readonly id: string;
+  readonly name: string;
+  readonly size: { x: number; y: number };
+  readonly imageRef: string;
+};
 
 /**
  * Create a RECTANGLE node with an IMAGE fill.
  * Shared pattern for OLE previews, charts, and other image-based content.
  */
 function createImageNode(
-  id: string,
-  name: string,
-  size: { x: number; y: number },
-  imageRef: string,
+  { id, name, size, imageRef }: CreateImageNodeOptions,
 ): FigDesignNode {
   const imagePaint: FigPaint = {
     type: "IMAGE",
@@ -390,6 +395,10 @@ function createImageNode(
 function nextId(counter: NodeIdCounter): string {
   const id = ++counter.value;
   return `0:${id}`;
+}
+
+function resolveShapeTransform(transform: Transform | undefined, shapeName: string): FigTransformResult {
+  return transform ? dmlTransformToFig(transform) : defaultTransform(shapeName);
 }
 
 /**

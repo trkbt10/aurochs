@@ -12,6 +12,21 @@ import { serializePdfStream } from "../stream-encoder";
 import type { PdfObjectTracker } from "./object-tracker";
 import { generateToUnicodeStream } from "./tounicode-writer";
 
+/** Map a font format to its PDF FontFile key and CID font subtype. */
+function resolveFontFormatInfo(format: PdfEmbeddedFont["format"]): { fontFileKey: string; cidFontSubtype: string } {
+  switch (format) {
+    case "truetype":
+      return { fontFileKey: "FontFile2", cidFontSubtype: "CIDFontType2" };
+    case "opentype":
+    case "cff":
+      return { fontFileKey: "FontFile3", cidFontSubtype: "CIDFontType0" };
+    case "type1":
+      return { fontFileKey: "FontFile", cidFontSubtype: "CIDFontType0" };
+    default:
+      return { fontFileKey: "FontFile2", cidFontSubtype: "CIDFontType2" };
+  }
+}
+
 /**
  * Check if a font should be built as a Type0 CID font.
  */
@@ -120,11 +135,13 @@ export function buildEmbeddedFont(
   const fontFileObjNum = tracker.allocate();
 
   // Determine font file key based on format
-  const fontFileKey =
-    font.format === "truetype" ? "FontFile2" :
-    font.format === "opentype" || font.format === "cff" ? "FontFile3" :
-    font.format === "type1" ? "FontFile" :
-    "FontFile2";
+  const resolveFontFileKey = () => {
+    if (font.format === "truetype") { return "FontFile2"; }
+    if (font.format === "opentype" || font.format === "cff") { return "FontFile3"; }
+    if (font.format === "type1") { return "FontFile"; }
+    return "FontFile2";
+  };
+  const fontFileKey = resolveFontFileKey();
 
   // Build font file stream
   const fontFileDict = new Map<string, PdfObject>();
@@ -219,20 +236,7 @@ export function buildType0Font(
                        font.fontFamily.replace(/\s+/g, "");
 
   // Determine font file key and CID font subtype based on format
-  const fontFormatInfo = ((): { fontFileKey: string; cidFontSubtype: string } => {
-    switch (font.format) {
-      case "truetype":
-        return { fontFileKey: "FontFile2", cidFontSubtype: "CIDFontType2" };
-      case "opentype":
-      case "cff":
-        return { fontFileKey: "FontFile3", cidFontSubtype: "CIDFontType0" };
-      case "type1":
-        return { fontFileKey: "FontFile", cidFontSubtype: "CIDFontType0" };
-      default:
-        return { fontFileKey: "FontFile2", cidFontSubtype: "CIDFontType2" };
-    }
-  })();
-  const { fontFileKey, cidFontSubtype } = fontFormatInfo;
+  const { fontFileKey, cidFontSubtype } = resolveFontFormatInfo(font.format);
 
   // Build font file stream
   const fontFileDict = new Map<string, PdfObject>();

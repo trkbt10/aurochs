@@ -7,10 +7,10 @@ import type { LineNodeData } from "./types";
 import { SHAPE_NODE_TYPES } from "../../constants";
 
 /** Line node builder instance */
-export type LineNodeBuilder = BaseShapeBuilderMethods<LineNodeBuilder> & {
+export interface LineNodeBuilder extends BaseShapeBuilderMethods<LineNodeBuilder> {
   length: (len: number) => LineNodeBuilder;
   build: () => LineNodeData;
-};
+}
 
 /** Create a line node builder */
 function createLineNodeBuilder(localID: number, parentID: number): LineNodeBuilder {

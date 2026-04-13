@@ -2,7 +2,7 @@
  * @file Render diagram shapes as a fenced Mermaid flowchart
  */
 
-import { serializeDiagramToMermaid } from "@aurochs-builder/mermaid";
+import { serializeDiagramToMermaid } from "@aurochs/mermaid";
 import { wrapInMermaidFence } from "@aurochs/mermaid";
 import type { DiagramMermaidParams } from "./types";
 

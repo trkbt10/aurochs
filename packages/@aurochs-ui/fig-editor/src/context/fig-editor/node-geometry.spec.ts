@@ -7,7 +7,6 @@
  * page coordinates).
  */
 
-import { describe, it, expect } from "vitest";
 import type { FigDesignNode, FigNodeId } from "@aurochs/fig/domain";
 import type { FigMatrix } from "@aurochs/fig/types";
 import { getNodeBounds, getAbsoluteNodeBounds } from "./node-geometry";
@@ -20,14 +19,8 @@ function makeTransform(x: number, y: number): FigMatrix {
   return { m00: 1, m01: 0, m02: x, m10: 0, m11: 1, m12: y };
 }
 
-function makeNode(
-  id: string,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  children?: FigDesignNode[],
-): FigDesignNode {
+type NodeSpec = { id: string; x: number; y: number; w: number; h: number; children?: FigDesignNode[] };
+function makeNode({ id, x, y, w, h, children }: NodeSpec): FigDesignNode {
   return {
     id: id as FigNodeId,
     type: "RECTANGLE" as FigDesignNode["type"],
@@ -50,7 +43,7 @@ function makeNode(
 
 describe("getNodeBounds", () => {
   it("returns local transform coordinates", () => {
-    const node = makeNode("n", 20, 30, 100, 50);
+    const node = makeNode({ id: "n", x: 20, y: 30, w: 100, h: 50 });
     const b = getNodeBounds(node);
     expect(b.x).toBe(20);
     expect(b.y).toBe(30);
@@ -65,7 +58,7 @@ describe("getNodeBounds", () => {
 
 describe("getAbsoluteNodeBounds", () => {
   it("returns local coords for top-level node (same as getNodeBounds)", () => {
-    const node = makeNode("top", 100, 50, 200, 100);
+    const node = makeNode({ id: "top", x: 100, y: 50, w: 200, h: 100 });
     const abs = getAbsoluteNodeBounds([node], "top" as FigNodeId);
     expect(abs).toBeDefined();
     expect(abs!.x).toBe(100);
@@ -73,8 +66,8 @@ describe("getAbsoluteNodeBounds", () => {
   });
 
   it("composes parent + child transforms", () => {
-    const child = makeNode("child", 20, 30, 50, 25);
-    const parent = makeNode("parent", 100, 50, 200, 100, [child]);
+    const child = makeNode({ id: "child", x: 20, y: 30, w: 50, h: 25 });
+    const parent = makeNode({ id: "parent", x: 100, y: 50, w: 200, h: 100, children: [child] });
     const abs = getAbsoluteNodeBounds([parent], "child" as FigNodeId);
     expect(abs!.x).toBe(120);
     expect(abs!.y).toBe(80);
@@ -83,16 +76,16 @@ describe("getAbsoluteNodeBounds", () => {
   });
 
   it("composes three levels of nesting", () => {
-    const gc = makeNode("gc", 5, 10, 10, 10);
-    const child = makeNode("child", 20, 30, 50, 30, [gc]);
-    const parent = makeNode("parent", 100, 50, 200, 100, [child]);
+    const gc = makeNode({ id: "gc", x: 5, y: 10, w: 10, h: 10 });
+    const child = makeNode({ id: "child", x: 20, y: 30, w: 50, h: 30, children: [gc] });
+    const parent = makeNode({ id: "parent", x: 100, y: 50, w: 200, h: 100, children: [child] });
     const abs = getAbsoluteNodeBounds([parent], "gc" as FigNodeId);
     expect(abs!.x).toBe(125); // 100 + 20 + 5
     expect(abs!.y).toBe(90);  // 50 + 30 + 10
   });
 
   it("returns undefined for non-existent node", () => {
-    const node = makeNode("a", 0, 0, 100, 50);
+    const node = makeNode({ id: "a", x: 0, y: 0, w: 100, h: 50 });
     expect(getAbsoluteNodeBounds([node], "missing" as FigNodeId)).toBeUndefined();
   });
 
@@ -101,8 +94,8 @@ describe("getAbsoluteNodeBounds", () => {
     // used getNodeBounds (local coords) for initialBounds, but EditorCanvas
     // displayed selection boxes at absolute coords. This caused the selection
     // box to jump when dragging started.
-    const child = makeNode("child", 20, 30, 50, 25);
-    const parent = makeNode("parent", 100, 50, 200, 100, [child]);
+    const child = makeNode({ id: "child", x: 20, y: 30, w: 50, h: 25 });
+    const parent = makeNode({ id: "parent", x: 100, y: 50, w: 200, h: 100, children: [child] });
 
     const local = getNodeBounds(child);
     const absolute = getAbsoluteNodeBounds([parent], "child" as FigNodeId)!;

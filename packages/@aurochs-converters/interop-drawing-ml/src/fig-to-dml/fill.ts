@@ -33,9 +33,9 @@ import { figColorToColor } from "./color";
 export function figFillsToDml(fills: readonly FigPaint[]): BaseFill | undefined {
   for (let i = fills.length - 1; i >= 0; i--) {
     const paint = fills[i];
-    if (!isPaintVisible(paint)) continue;
+    if (!isPaintVisible(paint)) {continue;}
     const result = convertSinglePaint(paint);
-    if (result) return result;
+    if (result) {return result;}
   }
   return undefined;
 }
@@ -50,8 +50,8 @@ function getPaintTypeName(paint: FigPaint): string {
 }
 
 function isPaintVisible(paint: FigPaint): boolean {
-  if (paint.visible === false) return false;
-  if (paint.opacity !== undefined && paint.opacity <= 0) return false;
+  if (paint.visible === false) {return false;}
+  if (paint.opacity !== undefined && paint.opacity <= 0) {return false;}
   return true;
 }
 
@@ -86,7 +86,7 @@ function convertSolid(paint: FigSolidPaint, paintOpacity: number): SolidFill {
 }
 
 function applyPaintOpacity(color: FigColor, paintOpacity: number): FigColor {
-  if (paintOpacity >= 0.999) return color;
+  if (paintOpacity >= 0.999) {return color;}
   return { ...color, a: color.a * paintOpacity };
 }
 
@@ -97,12 +97,8 @@ function applyPaintOpacity(color: FigColor, paintOpacity: number): FigColor {
  */
 function convertLinearGradient(paint: FigGradientPaint, paintOpacity: number): GradientFill {
   const handles = paint.gradientHandlePositions;
-  let angle = 0;
-  if (handles.length >= 2) {
-    const dx = handles[1].x - handles[0].x;
-    const dy = handles[1].y - handles[0].y;
-    angle = Math.atan2(dy, dx) * (180 / Math.PI);
-  }
+  const computeAngle = () => Math.atan2(handles[1].y - handles[0].y, handles[1].x - handles[0].x) * (180 / Math.PI);
+  const angle = handles.length >= 2 ? computeAngle() : 0;
 
   return {
     type: "gradientFill",
@@ -138,7 +134,7 @@ function convertRadialGradient(paint: FigGradientPaint, paintOpacity: number): G
 }
 
 function convertImage(paint: FigImagePaint): BaseFill | undefined {
-  if (!paint.imageRef) return undefined;
+  if (!paint.imageRef) {return undefined;}
   return {
     type: "blipFill",
     resourceId: `fig-image:${paint.imageRef}`,
@@ -165,7 +161,6 @@ function convertGradientStops(
 }
 
 function normalizeAngle(degrees: number): number {
-  let a = degrees % 360;
-  if (a < 0) a += 360;
-  return a;
+  const a = degrees % 360;
+  return a < 0 ? a + 360 : a;
 }

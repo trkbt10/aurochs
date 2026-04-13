@@ -19,7 +19,6 @@ import {
   cloneSymbolChildren,
   type FigSymbolOverride,
   type FigDerivedSymbolData,
-  type CloneSymbolChildrenOptions,
 } from "./symbol-resolver";
 
 // =============================================================================
@@ -112,11 +111,8 @@ export function createFigResolver(
     const primaryResolved = resolveSymbol(pair.symbolID);
     if (primaryResolved) { allDeps.push(primaryResolved.guidStr); }
 
-    let overrideResolved: { node: FigNode; guidStr: string } | undefined;
-    if (pair.overriddenSymbolID) {
-      overrideResolved = resolveSymbol(pair.overriddenSymbolID);
-      if (overrideResolved) { allDeps.push(overrideResolved.guidStr); }
-    }
+    const overrideResolved = pair.overriddenSymbolID ? resolveSymbol(pair.overriddenSymbolID) : undefined;
+    if (overrideResolved) { allDeps.push(overrideResolved.guidStr); }
 
     return {
       effectiveSymbol: overrideResolved ?? primaryResolved,
@@ -370,16 +366,15 @@ export function createFigResolver(
     const symbolSize = symNode.size;
     const isResized = instanceSize && symbolSize && (instanceSize.x !== symbolSize.x || instanceSize.y !== symbolSize.y);
 
-    let resolvedChildren = children;
     if (isResized) {
       const layout = resolveInstanceLayout({ children, symbolSize: symbolSize!, instanceSize: instanceSize!, derivedSymbolData });
-      resolvedChildren = layout.children;
       if (layout.sizeApplied) {
         (mergedNode as Record<string, unknown>).size = instanceSize;
       }
+      return { node: mergedNode, children: layout.children };
     }
 
-    return { node: mergedNode, children: resolvedChildren };
+    return { node: mergedNode, children };
   }
 
   return {

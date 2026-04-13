@@ -11,13 +11,12 @@
  * - translateAndScaleNodes no-enlarge behavior
  */
 
-import { describe, it, expect } from "vitest";
 import { convert as figToPptx } from "@aurochs-converters/fig-to-pptx";
 import { convert as pptxToFig } from "@aurochs-converters/pptx-to-fig";
-import type { FigDesignDocument, FigDesignNode, FigPage, TextStyleOverride } from "@aurochs/fig/domain";
+import type { FigDesignDocument, FigDesignNode, FigPage } from "@aurochs/fig/domain";
 import type { FigPageId, FigNodeId } from "@aurochs/fig/domain";
 import type { PresentationDocument, SlideWithId } from "@aurochs-office/pptx/app/presentation-document";
-import type { Shape, SpShape, GrpShape, GraphicFrame } from "@aurochs-office/pptx/domain/shape";
+import type { Shape, SpShape, GraphicFrame } from "@aurochs-office/pptx/domain/shape";
 import type { Table, TableStyle } from "@aurochs-office/pptx/domain/table/types";
 import type { TableStyleList } from "@aurochs-office/pptx/parser/table/style-parser";
 import type { Slide } from "@aurochs-office/pptx/domain/slide/types";
@@ -32,7 +31,7 @@ import { dmlColorToFig } from "@aurochs-converters/interop-drawing-ml/dml-to-fig
 // Helpers
 // =============================================================================
 
-function makeTransform(x: number, y: number, w: number, h: number) {
+function makeTransform({ x, y, w, h }: { x: number; y: number; w: number; h: number }) {
   return {
     x: px(x) as Pixels, y: px(y) as Pixels,
     width: px(w) as Pixels, height: px(h) as Pixels,
@@ -89,7 +88,7 @@ describe("Per-character text styling", () => {
       type: "sp",
       nonVisual: { id: "1", name: "TextBox" },
       properties: {
-        transform: makeTransform(50, 50, 300, 40),
+        transform: makeTransform({ x: 50, y: 50, w: 300, h: 40 }),
         geometry: { type: "preset", preset: "rect", adjustValues: [] },
       },
       textBody: {
@@ -116,8 +115,8 @@ describe("Per-character text styling", () => {
     expect(node.textData!.styleOverrideTable!.length).toBeGreaterThan(0);
 
     // The red run should have a different style ID from the black run
-    const helloIDs = new Set(node.textData!.characterStyleIDs!.slice(0, 5));
-    const worldIDs = new Set(node.textData!.characterStyleIDs!.slice(5));
+    const _helloIDs = new Set(node.textData!.characterStyleIDs!.slice(0, 5));
+    const _worldIDs = new Set(node.textData!.characterStyleIDs!.slice(5));
     // They should not all be the same
     const allIDs = new Set(node.textData!.characterStyleIDs!);
     expect(allIDs.size).toBeGreaterThan(1);
@@ -129,7 +128,7 @@ describe("Per-character text styling", () => {
       type: "sp",
       nonVisual: { id: "1", name: "RichText" },
       properties: {
-        transform: makeTransform(50, 50, 300, 40),
+        transform: makeTransform({ x: 50, y: 50, w: 300, h: 40 }),
         geometry: { type: "preset", preset: "rect", adjustValues: [] },
       },
       textBody: {
@@ -156,10 +155,11 @@ describe("Per-character text styling", () => {
       expect(para.runs.length).toBeGreaterThanOrEqual(2);
 
       // Find the red run
-      const redRun = para.runs.find((r) =>
-        r.type === "text" && r.properties?.color?.spec?.type === "srgb"
-        && (r.properties.color.spec as any).value === "FF0000",
-      );
+      const redRun = para.runs.find((r) => {
+        if (r.type !== "text") { return false; }
+        const spec = r.properties?.color?.spec;
+        return spec?.type === "srgb" && spec.value === "FF0000";
+      });
       expect(redRun).toBeDefined();
     }
   });
@@ -169,7 +169,7 @@ describe("Per-character text styling", () => {
       type: "sp",
       nonVisual: { id: "1", name: "Uniform" },
       properties: {
-        transform: makeTransform(50, 50, 200, 30),
+        transform: makeTransform({ x: 50, y: 50, w: 200, h: 30 }),
         geometry: { type: "preset", preset: "rect", adjustValues: [] },
       },
       textBody: {
@@ -272,7 +272,7 @@ describe("Table style resolution", () => {
     const gf: GraphicFrame = {
       type: "graphicFrame",
       nonVisual: { id: "1", name: "StyledTable" },
-      transform: makeTransform(50, 50, 200, 90),
+      transform: makeTransform({ x: 50, y: 50, w: 200, h: 90 }),
       content: { type: "table", data: { table: makeTable("{TEST-STYLE}") } },
     };
 
@@ -293,7 +293,7 @@ describe("Table style resolution", () => {
     const gf: GraphicFrame = {
       type: "graphicFrame",
       nonVisual: { id: "1", name: "BandedTable" },
-      transform: makeTransform(50, 50, 200, 90),
+      transform: makeTransform({ x: 50, y: 50, w: 200, h: 90 }),
       content: { type: "table", data: { table: makeTable("{TEST-STYLE}") } },
     };
 
@@ -335,7 +335,7 @@ describe("Table style resolution", () => {
     const gf: GraphicFrame = {
       type: "graphicFrame",
       nonVisual: { id: "1", name: "RefTable" },
-      transform: makeTransform(50, 50, 200, 30),
+      transform: makeTransform({ x: 50, y: 50, w: 200, h: 30 }),
       content: { type: "table", data: { table } },
     };
 

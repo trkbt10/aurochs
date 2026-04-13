@@ -33,24 +33,26 @@ export function createDocxEditorProvider(extensionUri: vscode.Uri): vscode.Custo
         extensionUri,
       });
 
-      let message: ExtensionToWebviewMessage;
-      try {
-        const data = await vscode.workspace.fs.readFile(document.uri);
-        const html = await renderToHtml(document.uri, new Uint8Array(data));
-        const fileName = document.uri.path.split("/").pop() ?? "document";
-
-        message = { type: "docx", fileName, html };
-      } catch (err) {
-        message = {
-          type: "error",
-          title: "Failed to load document",
-          message: err instanceof Error ? err.message : String(err),
-        };
-      }
-
+      const message = await buildDocxMessage(document.uri);
       sendWhenReady(webviewPanel.webview, message);
     },
   };
+}
+
+/** Build the message to send to the webview for a DOCX document. */
+async function buildDocxMessage(uri: vscode.Uri): Promise<ExtensionToWebviewMessage> {
+  try {
+    const data = await vscode.workspace.fs.readFile(uri);
+    const html = await renderToHtml(uri, new Uint8Array(data));
+    const fileName = uri.path.split("/").pop() ?? "document";
+    return { type: "docx", fileName, html };
+  } catch (err) {
+    return {
+      type: "error",
+      title: "Failed to load document",
+      message: err instanceof Error ? err.message : String(err),
+    };
+  }
 }
 
 /** Render .doc or .docx bytes to HTML. */

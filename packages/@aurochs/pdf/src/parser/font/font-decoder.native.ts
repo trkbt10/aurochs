@@ -583,10 +583,15 @@ function extractEncodingMap(page: NativePdfPage, fontDict: PdfDict): ReadonlyMap
 
   const diffs: (number | string)[] = [];
   for (const item of diffsArr.items) {
-    if (item.type === "number") {
-      diffs.push(Math.trunc(item.value));
-    } else if (item.type === "name") {
-      diffs.push(`/${item.value}`);
+    switch (item.type) {
+      case "number":
+        diffs.push(Math.trunc(item.value));
+        break;
+      case "name":
+        diffs.push(`/${item.value}`);
+        break;
+      default:
+        break;
     }
   }
 

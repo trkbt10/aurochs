@@ -19,6 +19,7 @@
 import type { PdfDocument, PdfPage } from "@aurochs/pdf/domain";
 import type { PdfSourceContext } from "@aurochs/pdf/parser/core/pdf-parser";
 import { createPdfSourceContext, parsePagesFromSourceContext } from "@aurochs/pdf/parser/core/pdf-parser";
+// eslint-disable-next-line custom/no-builder-import-in-renderer -- builder functions construct PdfDocument from parsed page data; this is required by the render session before per-page SVG output can be produced
 import { createPdfBuilderContext, buildPdfFromBuilderContext } from "@aurochs-builder/pdf";
 import { createFontProviderForDocument } from "@aurochs/pdf/domain/font";
 import type { FontProvider } from "@aurochs/pdf/domain/font";
@@ -194,6 +195,18 @@ export function createPdfRenderSessionFromSourceContext(
   // Track in-flight page builds to avoid duplicate work for the same page.
   const inFlightBuilds = new Map<number, Promise<PdfPage>>();
 
+  async function buildSinglePage(pageNumber: number): Promise<PdfPage> {
+    const parsedDoc = await parsePagesFromSourceContext(sourceContext, [pageNumber], { shadingMaxSize });
+    const context = createPdfBuilderContext({ parsedDocument: parsedDoc });
+    const document = buildPdfFromBuilderContext({ context });
+    const page = document.pages[0];
+    if (!page) {
+      throw new Error(`Page ${pageNumber} not found after build`);
+    }
+    lruSet(pageCache, pageNumber, page);
+    return page;
+  }
+
   async function buildPageInternal(pageNumber: number): Promise<PdfPage> {
     if (pageNumber < 1 || pageNumber > sourceContext.pageCount) {
       throw new Error(`Page number ${pageNumber} out of range (1..${sourceContext.pageCount})`);
@@ -207,17 +220,7 @@ export function createPdfRenderSessionFromSourceContext(
     const inFlight = inFlightBuilds.get(pageNumber);
     if (inFlight) { return inFlight; }
 
-    const buildPromise = (async () => {
-      const parsedDoc = await parsePagesFromSourceContext(sourceContext, [pageNumber], { shadingMaxSize });
-      const context = createPdfBuilderContext({ parsedDocument: parsedDoc });
-      const document = buildPdfFromBuilderContext({ context });
-      const page = document.pages[0];
-      if (!page) {
-        throw new Error(`Page ${pageNumber} not found after build`);
-      }
-      lruSet(pageCache, pageNumber, page);
-      return page;
-    })();
+    const buildPromise = buildSinglePage(pageNumber);
 
     inFlightBuilds.set(pageNumber, buildPromise);
     try {

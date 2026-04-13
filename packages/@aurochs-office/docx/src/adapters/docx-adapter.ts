@@ -637,22 +637,27 @@ function extractFloatingImagesFromParagraph(paragraph: DocxParagraph, paragraphI
   const floatingImages: FloatingImageConfig[] = [];
 
   for (const content of paragraph.content) {
-    if (content.type === "run") {
-      for (const rc of content.content) {
-        const floatingImage = createFloatingImageConfig(rc, paragraphIndex);
-        if (floatingImage !== undefined) {
-          floatingImages.push(floatingImage);
-        }
-      }
-    } else if (content.type === "hyperlink") {
-      for (const run of content.content) {
-        for (const rc of run.content) {
+    switch (content.type) {
+      case "run":
+        for (const rc of content.content) {
           const floatingImage = createFloatingImageConfig(rc, paragraphIndex);
           if (floatingImage !== undefined) {
             floatingImages.push(floatingImage);
           }
         }
-      }
+        break;
+      case "hyperlink":
+        for (const run of content.content) {
+          for (const rc of run.content) {
+            const floatingImage = createFloatingImageConfig(rc, paragraphIndex);
+            if (floatingImage !== undefined) {
+              floatingImages.push(floatingImage);
+            }
+          }
+        }
+        break;
+      default:
+        break;
     }
   }
 

@@ -69,11 +69,11 @@ export function PropertyPanel() {
       </OptionalPropertySection>
 
       {/* Corner Radius (only for applicable node types) */}
-      {primaryNode.cornerRadius !== undefined || primaryNode.rectangleCornerRadii !== undefined ? (
+      {(primaryNode.cornerRadius !== undefined || primaryNode.rectangleCornerRadii !== undefined) && (
         <OptionalPropertySection title="Corner Radius" defaultExpanded>
           <CornerRadiusSection node={primaryNode} dispatch={dispatch} />
         </OptionalPropertySection>
-      ) : null}
+      )}
 
       {/* Fill */}
       <OptionalPropertySection title="Fill" defaultExpanded>

@@ -79,7 +79,7 @@ export function resolveComponentProperties(
 // =============================================================================
 
 function formatPropertyValue(value: ComponentPropertyValue | undefined, type: ComponentPropertyType): string {
-  if (!value) return "(none)";
+  if (!value) {return "(none)";}
 
   switch (type) {
     case "BOOL":
@@ -160,6 +160,12 @@ type Props = {
   readonly document: FigDesignDocument;
 };
 
+
+
+
+
+
+/** Panel section for viewing and editing component instance properties. */
 export function ComponentPropertiesSection({ node, document }: Props) {
   const properties = resolveComponentProperties(node, document);
 

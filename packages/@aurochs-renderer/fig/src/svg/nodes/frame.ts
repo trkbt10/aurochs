@@ -9,7 +9,8 @@ import { g, rect, clipPath, path, type SvgString, EMPTY_SVG } from "../primitive
 import { buildTransformAttr } from "../transform";
 import { getFillAttrs, type FillAttrs } from "../fill";
 import { getStrokeAttrs } from "../stroke";
-import { decodePathsFromGeometry, mapWindingRule } from "../geometry-path";
+import { decodePathsFromGeometry } from "../geometry-path";
+import { mapWindingRule } from "../../geometry";
 import { buildPathElements } from "../render-paths";
 import { figColorToHex, getPaintType } from "@aurochs/fig/color";
 import {

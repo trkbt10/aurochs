@@ -44,15 +44,6 @@ export type FigImage = {
   readonly mimeType: string;
 };
 
-/**
- * Blob data — re-exported from parser for single type identity.
- *
- * Previously defined as `Record<string, unknown>` which broke structural
- * compatibility with the parser's `FigBlob = { bytes: readonly number[] }`.
- * This caused `as any` casts wherever roundtrip blobs met parser consumers.
- */
-export type FigBlob = ParserFigBlob;
-
 /** Loaded .fig file data */
 export type LoadedFigFile = {
   /** Original schema (for roundtrip) */
@@ -64,7 +55,7 @@ export type LoadedFigFile = {
   /** Node changes (raw Kiwi format) */
   readonly nodeChanges: FigNode[];
   /** Blobs */
-  readonly blobs: readonly FigBlob[];
+  readonly blobs: readonly ParserFigBlob[];
   /** Images from ZIP */
   readonly images: ReadonlyMap<string, FigImage>;
   /** Metadata from meta.json */
@@ -238,7 +229,7 @@ export async function loadFigFile(data: Uint8Array): Promise<LoadedFigFile> {
   const nodeChanges = [...((message.nodeChanges ?? []) as FigNode[])];
 
   // Extract blobs
-  const blobs = (message.blobs ?? []) as readonly FigBlob[];
+  const blobs = (message.blobs ?? []) as readonly ParserFigBlob[];
 
   // Extract message header (non-node fields, non-blob fields)
   const messageHeader: Record<string, unknown> = {};

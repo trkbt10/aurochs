@@ -56,5 +56,3 @@ export function decodePathsFromGeometry(
 
 
 
-/** Re-export shared winding rule mapper for consumers that import from this module */
-export { mapWindingRule } from "../geometry";

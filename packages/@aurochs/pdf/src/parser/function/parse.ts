@@ -163,9 +163,11 @@ export function parsePdfFunctionType0(page: NativePdfPage, obj: PdfObject | unde
   }
 
   // Decode stream data
+  // eslint-disable-next-line no-restricted-syntax -- mutable before assignment: try/catch is needed to return null on decode failure
   let samples: Uint8Array;
   try {
     samples = decodePdfStream(stream);
+    // eslint-disable-next-line no-restricted-syntax -- catch without param: decodePdfStream throws on malformed streams; null return signals parse failure
   } catch {
     return null;
   }

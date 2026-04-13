@@ -27,18 +27,24 @@ export function buildCharacterPropertiesMap(paragraph: DocxParagraph): (DocxRunP
   const map: (DocxRunProperties | undefined)[] = [];
 
   for (const content of paragraph.content) {
-    if (content.type === "run") {
-      const text = getRunPlainText(content);
-      for (let i = 0; i < text.length; i++) {
-        map.push(content.properties);
-      }
-    } else if (content.type === "hyperlink") {
-      for (const run of content.content) {
-        const text = getRunPlainText(run);
+    switch (content.type) {
+      case "run": {
+        const text = getRunPlainText(content);
         for (let i = 0; i < text.length; i++) {
-          map.push(run.properties);
+          map.push(content.properties);
         }
+        break;
       }
+      case "hyperlink":
+        for (const run of content.content) {
+          const text = getRunPlainText(run);
+          for (let i = 0; i < text.length; i++) {
+            map.push(run.properties);
+          }
+        }
+        break;
+      default:
+        break;
     }
   }
 

@@ -11,21 +11,25 @@ import type { BaseLine, LineCap, LineJoin } from "@aurochs-office/drawing-ml/dom
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import { figFillsToDml } from "./fill";
 
+type FigStrokeToDmlOptions = {
+  readonly strokes: readonly FigPaint[];
+  readonly strokeWeight: FigStrokeWeight;
+  readonly strokeCap?: KiwiEnumValue;
+  readonly strokeJoin?: KiwiEnumValue;
+};
+
 /**
  * Convert Fig stroke properties to a DrawingML BaseLine.
  * Returns undefined if no visible strokes or zero width.
  */
 export function figStrokeToDml(
-  strokes: readonly FigPaint[],
-  strokeWeight: FigStrokeWeight,
-  strokeCap?: KiwiEnumValue,
-  strokeJoin?: KiwiEnumValue,
+  { strokes, strokeWeight, strokeCap, strokeJoin }: FigStrokeToDmlOptions,
 ): BaseLine | undefined {
   const width = resolveStrokeWidth(strokeWeight);
-  if (width <= 0) return undefined;
+  if (width <= 0) {return undefined;}
 
   const fill = figFillsToDml(strokes);
-  if (!fill) return undefined;
+  if (!fill) {return undefined;}
 
   return {
     width: px(width),
@@ -39,7 +43,7 @@ export function figStrokeToDml(
 }
 
 function resolveStrokeWidth(weight: FigStrokeWeight): number {
-  if (typeof weight === "number") return weight;
+  if (typeof weight === "number") {return weight;}
   return Math.max(weight.top, weight.right, weight.bottom, weight.left);
 }
 
@@ -48,7 +52,7 @@ function resolveStrokeWidth(weight: FigStrokeWeight): number {
  * not SVG stroke-linecap. For the cap property, arrows map to "flat".
  */
 function convertCap(cap?: KiwiEnumValue): LineCap {
-  if (!cap) return "flat";
+  if (!cap) {return "flat";}
   switch (cap.name) {
     case "ROUND": return "round";
     case "SQUARE": return "square";
@@ -57,7 +61,7 @@ function convertCap(cap?: KiwiEnumValue): LineCap {
 }
 
 function convertJoin(join?: KiwiEnumValue): LineJoin {
-  if (!join) return "miter";
+  if (!join) {return "miter";}
   switch (join.name) {
     case "ROUND": return "round";
     case "BEVEL": return "bevel";

@@ -11,11 +11,11 @@
  *   4. Font objects are correctly embedded in the output PDF
  */
 
-import { describe, it, expect } from "vitest";
 import * as fs from "node:fs";
 import * as zlib from "node:zlib";
 import { writePdfDocument } from "./document-writer";
 import { createFontProvider } from "../domain/font/font-provider";
+import { encodeTextForFont } from "../domain/font/text-encoder";
 import { withTextContent } from "../domain/text/operations";
 import type { PdfDocument, PdfEmbeddedFont } from "../domain/document";
 import type { PdfText } from "../domain/text";
@@ -65,18 +65,19 @@ function decompressContentStreams(pdfBytes: Uint8Array): string {
   const endstreamMarker = new TextEncoder().encode("endstream");
 
   for (let i = 0; i < pdfBytes.length - streamMarker.length; i++) {
-    if (!bytesMatchAt(pdfBytes, i, streamMarker)) continue;
+    if (!bytesMatchAt(pdfBytes, i, streamMarker)) {continue;}
 
     const streamDataStart = i + streamMarker.length;
 
     for (let k = streamDataStart; k < pdfBytes.length - endstreamMarker.length; k++) {
-      if (!bytesMatchAt(pdfBytes, k, endstreamMarker)) continue;
+      if (!bytesMatchAt(pdfBytes, k, endstreamMarker)) {continue;}
 
       const streamDataEnd = (k > streamDataStart && pdfBytes[k - 1] === 0x0A) ? k - 1 : k;
       const rawStreamBytes = pdfBytes.slice(streamDataStart, streamDataEnd);
       try {
         const decompressed = zlib.inflateSync(rawStreamBytes);
         parts.push(decoder.decode(decompressed));
+      // eslint-disable-next-line no-restricted-syntax -- catch without param: zlib decompression failure falls back to raw bytes; error type is irrelevant here
       } catch {
         parts.push(decoder.decode(rawStreamBytes));
       }
@@ -565,9 +566,7 @@ describe("font embedding: Japanese CJK round-trip", () => {
     type TextSearchResult = { pageIdx: number; elIdx: number; el: PdfText };
     const target: TextSearchResult | undefined = originalDoc.pages.flatMap((page, p) =>
       page.elements.flatMap((el, e): TextSearchResult[] =>
-        el.type === "text" && /[\u3040-\u309F]/.test(el.text) && el.rawBytes
-          ? [{ pageIdx: p, elIdx: e, el }]
-          : [],
+        el.type === "text" && /[\u3040-\u309F]/.test(el.text) && el.rawBytes ? [{ pageIdx: p, elIdx: e, el }] : [],
       ),
     )[0];
 
@@ -590,7 +589,7 @@ describe("font embedding: Japanese CJK round-trip", () => {
 
     // Rebuild document with edited element
     const editedPages = originalDoc.pages.map((page, pi) => {
-      if (pi !== targetPageIdx) return page;
+      if (pi !== targetPageIdx) {return page;}
       return {
         ...page,
         elements: page.elements.map((el, ei) => ei === targetElIdx ? edited : el),
@@ -635,9 +634,7 @@ describe("font embedding: Japanese CJK round-trip", () => {
 
     // Find a character NOT in the ToUnicode mapping
     // U+4E00 (一) — may or may not be in subset, try a rare kanji
-    const { encodeTextForFont } = await import("../domain/font/text-encoder");
-    const { createFontProvider: createFP } = await import("../domain/font/font-provider");
-    const provider = createFP({ embeddedFonts: originalDoc.embeddedFonts });
+    const provider = createFontProvider({ embeddedFonts: originalDoc.embeddedFonts });
     const resolved = provider.resolve(cidFont.fontFamily, cidFont.baseFontName);
 
     // Try encoding a character that is likely NOT in the subset

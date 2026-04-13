@@ -14,7 +14,7 @@
  * so the user sees the most common controls first without scrolling.
  */
 
-import { useCallback, type CSSProperties } from "react";
+import React, { useCallback, type CSSProperties } from "react";
 import { spacingTokens, fontTokens, colorTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { Button, Input, Select, Toggle } from "@aurochs-ui/ui-components/primitives";
 import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
@@ -25,7 +25,6 @@ import type {
   Legend,
   Axis,
   ChartSeries,
-  View3D,
   ChartShapeProperties,
   DataTable,
 } from "@aurochs-office/chart/domain";
@@ -33,7 +32,7 @@ import type { EditorProps, SelectOption } from "@aurochs-ui/ui-components/types"
 
 import { ChartTitleEditor } from "../chart/ChartTitleEditor";
 import { LegendEditor, createDefaultLegend } from "../chart/LegendEditor";
-import { AxisEditor, createDefaultCategoryAxis, createDefaultValueAxis } from "../chart/AxisEditor";
+import { AxisEditor, createDefaultCategoryAxis } from "../chart/AxisEditor";
 import { ChartSeriesEditor, createDefaultBarChartSeries } from "../chart/ChartSeriesEditor";
 import { ChartShapePropertiesEditor } from "../chart/ChartShapePropertiesEditor";
 import { LayoutEditor } from "../chart/LayoutEditor";
@@ -81,9 +80,30 @@ const dispBlanksAsOptions: SelectOption<NonNullable<Chart["dispBlanksAs"]>>[] = 
 ];
 
 // =============================================================================
+// Helpers
+// =============================================================================
+
+function buildLegendContent(props: { legend: Legend | undefined; onChange: (l: Legend) => void; disabled: boolean | undefined }): React.JSX.Element {
+  if (props.legend) {
+    return <LegendEditor value={props.legend} onChange={props.onChange} disabled={props.disabled} />;
+  }
+  return (
+    <Button variant="ghost" onClick={() => props.onChange(createDefaultLegend())} disabled={props.disabled}>
+      Add Legend
+    </Button>
+  );
+}
+
+// =============================================================================
 // Component
 // =============================================================================
 
+
+
+
+
+
+/** Panel editor component for all chart properties and visual options. */
 export function ChartPanelEditor({ value, onChange, disabled, adapters }: ChartPanelEditorProps) {
   const updateField = useCallback(
     <K extends keyof Chart>(field: K, newValue: Chart[K]) => {
@@ -138,9 +158,7 @@ export function ChartPanelEditor({ value, onChange, disabled, adapters }: ChartP
     [value.plotArea.axes, updatePlotArea],
   );
   const handleAddAxis = useCallback(() => {
-    const newId = value.plotArea.axes.length > 0
-      ? Math.max(...value.plotArea.axes.map((a) => a.id)) + 1
-      : 1;
+    const newId = value.plotArea.axes.length > 0 ? Math.max(...value.plotArea.axes.map((a) => a.id)) + 1 : 1;
     updatePlotArea("axes", [
       ...value.plotArea.axes,
       { ...createDefaultCategoryAxis(), id: newId },
@@ -152,6 +170,8 @@ export function ChartPanelEditor({ value, onChange, disabled, adapters }: ChartP
     },
     [value.plotArea.axes, updatePlotArea],
   );
+
+  const legendContent = buildLegendContent({ legend: value.legend, onChange: handleLegendChange, disabled });
 
   return (
     <ChartEditorAdaptersBoundary adapters={adapters}>
@@ -165,13 +185,7 @@ export function ChartPanelEditor({ value, onChange, disabled, adapters }: ChartP
         </OptionalPropertySection>
 
         <OptionalPropertySection title="Legend" defaultExpanded={false}>
-          {value.legend ? (
-            <LegendEditor value={value.legend} onChange={handleLegendChange} disabled={disabled} />
-          ) : (
-            <Button variant="ghost" onClick={() => updateField("legend", createDefaultLegend())} disabled={disabled}>
-              Add Legend
-            </Button>
-          )}
+          {legendContent}
         </OptionalPropertySection>
 
         <FieldRow>

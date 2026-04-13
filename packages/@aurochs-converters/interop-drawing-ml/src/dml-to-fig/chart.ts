@@ -46,24 +46,44 @@ export type ChartConversionResult = {
   readonly height: number;
 };
 
+type RenderChartToSvgOptions = {
+  readonly chart: Chart;
+  readonly width: number;
+  readonly height: number;
+  readonly colorContext?: ColorContext;
+  readonly name?: string;
+};
+
+type TryRenderChartOptions = {
+  readonly chart: Chart;
+  readonly width: number;
+  readonly height: number;
+  readonly ctx: ChartRenderContext;
+  readonly fillResolver: FillResolver;
+  readonly name: string;
+};
+
+/** Attempt to render a chart, returning the SVG string or undefined on failure. */
+function tryRenderChart({ chart, width, height, ctx, fillResolver, name }: TryRenderChartOptions): string | undefined {
+  try {
+    return renderChart({ chart, width, height, ctx, fillResolver });
+  } catch (err) {
+    console.warn(
+      `[chart-to-fig] Failed to render chart "${name}":`,
+      err instanceof Error ? err.message : err,
+    );
+    return undefined;
+  }
+}
+
 /**
  * Render a Chart domain object to SVG.
  *
  * Returns the rendered SVG and dimensions, or undefined if the chart
  * has no renderable data or rendering fails.
- *
- * @param chart - Parsed Chart domain object from ResourceStore
- * @param width - Chart frame width in pixels
- * @param height - Chart frame height in pixels
- * @param colorContext - For resolving theme colors
- * @param name - Shape name (used in warning messages)
  */
 export function renderChartToSvg(
-  chart: Chart,
-  width: number,
-  height: number,
-  colorContext?: ColorContext,
-  name = "Chart",
+  { chart, width, height, colorContext, name = "Chart" }: RenderChartToSvgOptions,
 ): ChartConversionResult | undefined {
   if (chart.plotArea.charts.length === 0) {
     console.warn(`[chart-to-fig] Chart "${name}" has no renderable data.`);
@@ -72,18 +92,10 @@ export function renderChartToSvg(
 
   const ctx = createDefaultChartContext(colorContext);
   const fillResolver = createDefaultFillResolver(colorContext);
-
-  let svg: string;
-  try {
-    svg = renderChart({ chart, width, height, ctx, fillResolver });
-  } catch (err) {
-    console.warn(
-      `[chart-to-fig] Failed to render chart "${name}":`,
-      err instanceof Error ? err.message : err,
-    );
+  const svg = tryRenderChart({ chart, width, height, ctx, fillResolver, name });
+  if (svg === undefined) {
     return undefined;
   }
-
   return { svg, width, height };
 }
 
@@ -97,7 +109,7 @@ function createDefaultChartContext(colorContext?: ColorContext): ChartRenderCont
     getSeriesColor(index: number, explicit?: BaseFill): string {
       if (explicit && explicit.type === "solidFill") {
         const hex = resolveColor(explicit.color, colorContext);
-        if (hex) return `#${hex}`;
+        if (hex) {return `#${hex}`;}
       }
       return `#${DEFAULT_CHART_SERIES_COLORS[index % DEFAULT_CHART_SERIES_COLORS.length]}`;
     },

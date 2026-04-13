@@ -70,11 +70,9 @@ export function usePdfImageCache(externalCache?: PdfImageCache, strategy?: PdfIm
 
   // Create a new function reference each time deferred encoding completes,
   // so consumers that include imageUrlResolver in useMemo deps re-compute.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // tick is intentionally included to produce a new reference on cache updates
   const imageUrlResolver: PdfImageUrlResolver = useCallback(
     (image) => cache.resolve(image),
-    // tick is intentionally included to produce a new reference on cache updates
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [cache, tick],
   );
 

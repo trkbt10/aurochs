@@ -6,12 +6,13 @@
  */
 
 import { createIdleDragState } from "@aurochs-ui/editor-core/drag-state";
+import type { DragState } from "@aurochs-ui/editor-core/drag-state";
 import type { SimpleBounds } from "@aurochs-ui/editor-core/geometry";
 import { calculateResizedDimensions } from "@aurochs-ui/editor-core/geometry";
 import { normalizeAngle } from "@aurochs-ui/editor-core/geometry";
-import { pushHistory, replacePresent } from "@aurochs-ui/editor-core/history";
+import { pushHistory } from "@aurochs-ui/editor-core/history";
 import { updateNode } from "@aurochs-builder/fig/node-ops";
-import type { FigNodeId } from "@aurochs/fig/domain";
+import type { FigDesignDocument, FigNodeId, FigPageId } from "@aurochs/fig/domain";
 import { buildRotatedTransform } from "../rotation";
 import type { HandlerMap } from "./handler-types";
 import { getAbsoluteNodeBounds } from "../node-geometry";
@@ -256,88 +257,11 @@ export const DRAG_HANDLERS: HandlerMap = {
       return { ...state, drag: createIdleDragState() };
     }
 
-    let doc = state.documentHistory.present;
-
-    if (state.drag.type === "move") {
-      const { dx, dy } = state.drag.previewDelta;
-      for (const nodeId of state.drag.shapeIds) {
-        doc = updateNode(doc, pageId, nodeId, (node) => ({
-          ...node,
-          transform: {
-            ...node.transform,
-            m02: node.transform.m02 + dx,
-            m12: node.transform.m12 + dy,
-          },
-        }));
-      }
-    }
-
-    if (state.drag.type === "resize") {
-      const { handle, previewDelta, initialBoundsMap, combinedBounds: cb, aspectLocked } = state.drag;
-      const { dx, dy } = previewDelta;
-
-      // Compute scale factors from the combined bounds resize
-      const { newWidth, newHeight, newX, newY } = calculateResizedDimensions({
-        handle,
-        baseW: cb.width,
-        baseH: cb.height,
-        baseX: cb.x,
-        baseY: cb.y,
-        dx,
-        dy,
-        aspectLocked,
-      });
-
-      const scaleX = cb.width > 0 ? newWidth / cb.width : 1;
-      const scaleY = cb.height > 0 ? newHeight / cb.height : 1;
-
-      for (const nodeId of state.drag.shapeIds) {
-        const initial = initialBoundsMap.get(nodeId);
-        if (!initial) {
-          continue;
-        }
-
-        // Compute new absolute position and size
-        const relX = initial.x - cb.x;
-        const relY = initial.y - cb.y;
-        const absNewX = newX + relX * scaleX;
-        const absNewY = newY + relY * scaleY;
-        const newW = initial.width * scaleX;
-        const newH = initial.height * scaleY;
-
-        // Apply as delta to the local transform (works for non-rotated parents)
-        const absDx = absNewX - initial.x;
-        const absDy = absNewY - initial.y;
-
-        doc = updateNode(doc, pageId, nodeId, (node) => ({
-          ...node,
-          transform: {
-            ...node.transform,
-            m02: node.transform.m02 + absDx,
-            m12: node.transform.m12 + absDy,
-          },
-          size: { x: newW, y: newH },
-        }));
-      }
-    }
-
-    if (state.drag.type === "rotate") {
-      const { previewAngleDelta, initialRotationsMap } = state.drag;
-
-      for (const nodeId of state.drag.shapeIds) {
-        const initialRotation = initialRotationsMap.get(nodeId);
-        if (initialRotation === undefined) {
-          continue;
-        }
-
-        const newAngle = normalizeAngle(initialRotation + previewAngleDelta);
-
-        doc = updateNode(doc, pageId, nodeId, (node) => ({
-          ...node,
-          transform: buildRotatedTransform(node.transform, node.size.x, node.size.y, newAngle),
-        }));
-      }
-    }
+    const doc = applyDragToDocument({
+      doc: state.documentHistory.present,
+      pageId,
+      drag: state.drag,
+    });
 
     return {
       ...state,
@@ -429,6 +353,68 @@ export const DRAG_HANDLERS: HandlerMap = {
 // Helpers
 // =============================================================================
 
+type ApplyDragOptions = {
+  readonly doc: FigDesignDocument;
+  readonly pageId: FigPageId;
+  readonly drag: DragState<FigNodeId>;
+};
+
+function applyDragToDocument({ doc, pageId, drag }: ApplyDragOptions): FigDesignDocument {
+  if (drag.type === "move") {
+    const { dx, dy } = drag.previewDelta;
+    return drag.shapeIds.reduce(
+      (acc, nodeId) => updateNode({ doc: acc, pageId, nodeId, updater: (node) => ({
+        ...node,
+        transform: { ...node.transform, m02: node.transform.m02 + dx, m12: node.transform.m12 + dy },
+      }) }),
+      doc,
+    );
+  }
+
+  if (drag.type === "resize") {
+    const { handle, previewDelta, initialBoundsMap, combinedBounds: cb, aspectLocked } = drag;
+    const { dx, dy } = previewDelta;
+    const { newWidth, newHeight, newX, newY } = calculateResizedDimensions({
+      handle, baseW: cb.width, baseH: cb.height, baseX: cb.x, baseY: cb.y, dx, dy, aspectLocked,
+    });
+    const scaleX = cb.width > 0 ? newWidth / cb.width : 1;
+    const scaleY = cb.height > 0 ? newHeight / cb.height : 1;
+
+    return drag.shapeIds.reduce((acc, nodeId) => {
+      const initial = initialBoundsMap.get(nodeId);
+      if (!initial) { return acc; }
+      const relX = initial.x - cb.x;
+      const relY = initial.y - cb.y;
+      const absNewX = newX + relX * scaleX;
+      const absNewY = newY + relY * scaleY;
+      const newW = initial.width * scaleX;
+      const newH = initial.height * scaleY;
+      const absDx = absNewX - initial.x;
+      const absDy = absNewY - initial.y;
+      return updateNode({ doc: acc, pageId, nodeId, updater: (node) => ({
+        ...node,
+        transform: { ...node.transform, m02: node.transform.m02 + absDx, m12: node.transform.m12 + absDy },
+        size: { x: newW, y: newH },
+      }) });
+    }, doc);
+  }
+
+  if (drag.type === "rotate") {
+    const { previewAngleDelta, initialRotationsMap } = drag;
+    return drag.shapeIds.reduce((acc, nodeId) => {
+      const initialRotation = initialRotationsMap.get(nodeId);
+      if (initialRotation === undefined) { return acc; }
+      const newAngle = normalizeAngle(initialRotation + previewAngleDelta);
+      return updateNode({ doc: acc, pageId, nodeId, updater: (node) => ({
+        ...node,
+        transform: buildRotatedTransform({ currentTransform: node.transform, width: node.size.x, height: node.size.y, newAngleDeg: newAngle }),
+      }) });
+    }, doc);
+  }
+
+  return doc;
+}
+
 function computeCombinedBounds(bounds: readonly SimpleBounds[]): SimpleBounds {
   if (bounds.length === 0) {
     return { x: 0, y: 0, width: 0, height: 0 };
@@ -437,17 +423,15 @@ function computeCombinedBounds(bounds: readonly SimpleBounds[]): SimpleBounds {
     return bounds[0];
   }
 
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
-
-  for (const b of bounds) {
-    minX = Math.min(minX, b.x);
-    minY = Math.min(minY, b.y);
-    maxX = Math.max(maxX, b.x + b.width);
-    maxY = Math.max(maxY, b.y + b.height);
-  }
+  const { minX, minY, maxX, maxY } = bounds.reduce(
+    (acc, b) => ({
+      minX: Math.min(acc.minX, b.x),
+      minY: Math.min(acc.minY, b.y),
+      maxX: Math.max(acc.maxX, b.x + b.width),
+      maxY: Math.max(acc.maxY, b.y + b.height),
+    }),
+    { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity },
+  );
 
   return {
     x: minX,

@@ -34,7 +34,7 @@ export function convertDocument(doc: PresentationDocument): FigDesignDocument {
   const collectedImages = new Map<string, FigImage>();
 
   const pages: FigPage[] = doc.slides.map((slideWithId, index) =>
-    convertSlide(slideWithId, index, idCounter, collectedImages, doc.colorContext, doc.fontScheme, doc.resourceStore, doc.tableStyles),
+    convertSlide({ slideWithId, index, idCounter, collectedImages, docColorContext: doc.colorContext, docFontScheme: doc.fontScheme, resourceStore: doc.resourceStore, tableStyles: doc.tableStyles }),
   );
 
   return {
@@ -45,15 +45,19 @@ export function convertDocument(doc: PresentationDocument): FigDesignDocument {
   };
 }
 
+type ConvertSlideOptions = {
+  readonly slideWithId: SlideWithId;
+  readonly index: number;
+  readonly idCounter: NodeIdCounter;
+  readonly collectedImages: Map<string, FigImage>;
+  readonly docColorContext: ColorContext;
+  readonly docFontScheme: FontScheme;
+  readonly resourceStore: ResourceStore;
+  readonly tableStyles?: TableStyleList;
+};
+
 function convertSlide(
-  slideWithId: SlideWithId,
-  index: number,
-  idCounter: NodeIdCounter,
-  collectedImages: Map<string, FigImage>,
-  docColorContext: ColorContext,
-  docFontScheme: FontScheme,
-  resourceStore: ResourceStore,
-  tableStyles?: TableStyleList,
+  { slideWithId, index, idCounter, collectedImages, docColorContext, docFontScheme, resourceStore, tableStyles }: ConvertSlideOptions,
 ): FigPage {
   const slide = slideWithId.slide;
   const slideColorContext = slideWithId.colorContext ?? docColorContext;
@@ -86,7 +90,7 @@ function convertSlide(
  * Return white for non-solid backgrounds — standard presentation default.
  */
 function convertBackground(fill: BaseFill | undefined, colorContext: ColorContext): FigColor | undefined {
-  if (!fill) return undefined;
+  if (!fill) {return undefined;}
 
   if (fill.type === "solidFill") {
     return dmlColorToFig(fill.color, colorContext);

@@ -12,7 +12,7 @@
  *   no geometry → RECTANGLE (default)
  */
 
-import type { Geometry, PresetGeometry, CustomGeometry, AdjustValue } from "@aurochs-office/drawing-ml/domain/geometry/shape";
+import type { Geometry, PresetGeometry, AdjustValue } from "@aurochs-office/drawing-ml/domain/geometry/shape";
 import type { FigNodeType } from "@aurochs/fig/types";
 
 export type FigGeometryResult = {
@@ -93,9 +93,7 @@ function convertRoundRect(adjustValues: readonly AdjustValue[], width: number, h
   const adj = adjustValues.find((a) => a.name === "adj");
   const minDim = Math.min(width, height);
 
-  const cornerRadius = adj
-    ? (adj.value / 50000) * minDim
-    : minDim * 0.1; // Default ~10% rounding
+  const cornerRadius = adj ? (adj.value / 50000) * minDim : minDim * 0.1; // Default ~10% rounding
 
   return {
     nodeType: "ROUNDED_RECTANGLE",

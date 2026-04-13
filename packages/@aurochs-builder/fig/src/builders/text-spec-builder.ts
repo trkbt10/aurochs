@@ -4,7 +4,7 @@
  * Provides a fluent API for building text NodeSpecs.
  */
 
-import type { FigPaint, FigEffect, KiwiEnumValue } from "@aurochs/fig/types";
+import type { FigPaint, KiwiEnumValue } from "@aurochs/fig/types";
 import type { TextNodeSpec } from "../types/spec-types";
 
 type TextSpecBuilder = {
@@ -23,22 +23,21 @@ type TextSpecBuilder = {
   build(): TextNodeSpec;
 };
 
+type BuildTextFromSpecOptions = {
+  readonly characters: string;
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+};
+
 /**
  * Create a text spec builder with fluent API.
- *
- * @param characters - The text content
- * @param x - X position
- * @param y - Y position
- * @param width - Text box width
- * @param height - Text box height
  */
 export function buildTextFromSpec(
-  characters: string,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
+  { characters, x, y, width, height }: BuildTextFromSpecOptions,
 ): TextSpecBuilder {
+  // eslint-disable-next-line no-restricted-syntax -- mutable builder state cannot be expressed as a return value
   let state: TextNodeSpec = {
     type: "TEXT",
     characters,

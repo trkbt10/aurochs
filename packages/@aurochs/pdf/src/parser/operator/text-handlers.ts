@@ -103,6 +103,22 @@ export type TextDisplacementParams = {
   readonly tjAdjustment?: number;
 };
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/** Calculate horizontal text displacement for writing mode 0 (horizontal text). */
 export function calculateTextDisplacement(p: TextDisplacementParams): number {
   const tjAdj = p.tjAdjustment ?? 0;
   const Th = p.horizontalScaling / 100;
@@ -135,6 +151,22 @@ export type VerticalTextDisplacementParams = {
   readonly tjAdjustment?: number;
 };
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/** Calculate text displacement for writing mode 1 (vertical text). */
 export function calculateVerticalTextDisplacement(p: VerticalTextDisplacementParams): number {
   const defaultW1 = p.defaultVerticalDisplacement ?? -1000;
   const tjAdj = p.tjAdjustment ?? 0;

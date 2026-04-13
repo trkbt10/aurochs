@@ -14,6 +14,7 @@
 import { useCallback, type CSSProperties } from "react";
 import type { FigDesignNode } from "@aurochs/fig/domain";
 import type { TextData } from "@aurochs/fig/domain";
+import type { KiwiEnumValue } from "@aurochs/fig/types";
 import type { FigEditorAction } from "../../context/fig-editor/types";
 import { TextFormattingEditor } from "@aurochs-ui/editor-controls/text";
 import type { TextFormatting, TextFormattingFeatures } from "@aurochs-ui/editor-controls/text";
@@ -80,8 +81,8 @@ const JUSTIFY_TO_H_ALIGN: Record<string, { name: string; value: number }> = {
 // =============================================================================
 
 function kiwiName(value: unknown): string {
-  if (!value) return "";
-  if (typeof value === "string") return value;
+  if (!value) {return "";}
+  if (typeof value === "string") {return value;}
   if (typeof value === "object" && value !== null && "name" in value) {
     return (value as { name: string }).name ?? "";
   }
@@ -89,7 +90,14 @@ function kiwiName(value: unknown): string {
 }
 
 function makeKiwiEnum(name: string, value: number) {
-  return { value, name } as import("@aurochs/fig/types").KiwiEnumValue;
+  return { value, name } as KiwiEnumValue;
+}
+
+type KiwiLineHeight = { readonly value: number; readonly units: KiwiEnumValue };
+const PIXELS_UNITS = { value: 0, name: "PIXELS" } as KiwiEnumValue;
+
+function mergeTextDataLineHeight(existing: KiwiLineHeight | undefined, newValue: number): KiwiLineHeight {
+  return existing ? { ...existing, value: newValue } : { value: newValue, units: PIXELS_UNITS };
 }
 
 // =============================================================================
@@ -136,6 +144,12 @@ type TextPropertiesSectionProps = {
 // Component
 // =============================================================================
 
+
+
+
+
+
+/** Panel section for editing text formatting and layout properties of a Figma text node. */
 export function TextPropertiesSection({ node, dispatch }: TextPropertiesSectionProps) {
   const textData = node.textData;
   if (!textData) {
@@ -148,7 +162,7 @@ export function TextPropertiesSection({ node, dispatch }: TextPropertiesSectionP
         type: "UPDATE_NODE",
         nodeId: node.id,
         updater: (n) => {
-          if (!n.textData) return n;
+          if (!n.textData) {return n;}
           return { ...n, textData: updater(n.textData) };
         },
       });
@@ -190,9 +204,7 @@ export function TextPropertiesSection({ node, dispatch }: TextPropertiesSectionP
         const lineHeightValue = num * textData.fontSize;
         updateTextData((td) => ({
           ...td,
-          lineHeight: td.lineHeight
-            ? { ...td.lineHeight, value: lineHeightValue }
-            : { value: lineHeightValue, units: { value: 0, name: "PIXELS" } },
+          lineHeight: mergeTextDataLineHeight(td.lineHeight, lineHeightValue),
         }));
       }
     },

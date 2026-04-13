@@ -25,22 +25,17 @@ export function convertStrokeToSceneStroke(
   },
 ): Stroke | undefined {
   const width = resolveStrokeWeight(strokeWeight);
-  if (width === 0) return undefined;
+  if (width === 0) {return undefined;}
 
-  if (!paints || paints.length === 0) return undefined;
+  if (!paints || paints.length === 0) {return undefined;}
 
   const firstVisible = paints.find((p) => p.visible !== false);
-  if (!firstVisible) return undefined;
+  if (!firstVisible) {return undefined;}
 
   const paintType = getPaintType(firstVisible);
-  let color: { r: number; g: number; b: number; a: number };
-
-  if (paintType === "SOLID") {
-    const solidPaint = firstVisible as FigPaint & { color: FigColor };
-    color = figColorToSceneColor(solidPaint.color);
-  } else {
-    color = { r: 0, g: 0, b: 0, a: 1 };
-  }
+  const DEFAULT_COLOR = { r: 0, g: 0, b: 0, a: 1 };
+  const resolveColor = () => figColorToSceneColor((firstVisible as FigPaint & { color: FigColor }).color);
+  const color = paintType === "SOLID" ? resolveColor() : DEFAULT_COLOR;
 
   return {
     color,

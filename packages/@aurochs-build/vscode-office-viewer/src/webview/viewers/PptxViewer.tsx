@@ -8,6 +8,12 @@ import { Toolbar, ToolbarSpacer, ToolbarInfo } from "../components/Toolbar";
 import { ZoomControl } from "../components/ZoomControl";
 import { ThumbnailSidebar } from "../components/ThumbnailSidebar";
 
+
+
+
+
+
+/** Viewer component for rendering PPTX slides as SVG images. */
 export function PptxViewer({ slides, width, height }: PptxDataMessage): React.JSX.Element {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [zoom, setZoom] = useState(100);

@@ -7,7 +7,7 @@
 
 import type { PdfText } from "../../domain/text";
 import type { PdfEmbeddedFont } from "../../domain/document";
-import type { FontProvider } from "../../domain/font/font-provider";
+import type { FontProvider, ResolvedFont } from "../../domain/font/font-provider";
 import { DEFAULT_FONT_METRICS } from "../../domain/font/defaults";
 import { encodeTextForFont, splitTextByEncodability } from "../../domain/font/text-encoder";
 
@@ -64,7 +64,7 @@ function shouldUseHexOutput(
  */
 function normalizeFontNameForMatch(name: string, removeSubsetPrefix: boolean): string {
   const withoutSlash = name.startsWith("/") ? name.slice(1) : name;
-  if (!removeSubsetPrefix) return withoutSlash;
+  if (!removeSubsetPrefix) {return withoutSlash;}
   const plusIndex = withoutSlash.indexOf("+");
   return plusIndex > 0 ? withoutSlash.slice(plusIndex + 1) : withoutSlash;
 }
@@ -314,15 +314,13 @@ function resolveTextOutputWithFallback(
 
   // Get fallback font (may be undefined if no strategy can handle it)
   const nonEncodableChars = runs.filter(r => !r.encodable).map(r => r.text).join("");
-  const fallbackFont = nonEncodableChars.length > 0
-    ? provider.resolveFallback(nonEncodableChars, primaryFont)
-    : undefined;
+  const resolveFallbackFont = () => provider.resolveFallback(nonEncodableChars, primaryFont);
+  const fallbackFont = nonEncodableChars.length > 0 ? resolveFallbackFont() : undefined;
 
   // Resolve font resource names for Tf operators
   const primaryResource = findFontResource(primaryFont, ctx.fontNameToResource) ?? textElement.fontName;
-  const fallbackResource = fallbackFont
-    ? findFontResource(fallbackFont, ctx.fontNameToResource) ?? fallbackFont.pdfBaseFont
-    : undefined;
+  const resolveFallbackResource = () => findFontResource(fallbackFont!, ctx.fontNameToResource) ?? fallbackFont!.pdfBaseFont;
+  const fallbackResource = fallbackFont ? resolveFallbackResource() : undefined;
 
   for (const run of runs) {
     if (run.encodable) {
@@ -362,5 +360,3 @@ function findFontResource(
     ?? fontNameToResource.get(font.cssFontFamily);
 }
 
-// Import type for internal use
-type ResolvedFont = import("../../domain/font/font-provider").ResolvedFont;

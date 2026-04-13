@@ -1,3 +1,4 @@
+/** @file End-to-end tests for the ribbon menu editor controls. */
 import { test, expect } from "@playwright/test";
 
 const SHEET_TEXT = "Drag your favourite items into the toolbar...";

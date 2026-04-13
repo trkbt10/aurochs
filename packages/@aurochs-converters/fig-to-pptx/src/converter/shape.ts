@@ -39,7 +39,7 @@ export function convertNodes(
   const shapes: Shape[] = [];
   for (const node of nodes) {
     const shape = convertNode(node, idCounter);
-    if (shape) shapes.push(shape);
+    if (shape) {shapes.push(shape);}
   }
   return shapes;
 }
@@ -55,7 +55,7 @@ export function convertNode(
   idCounter: ShapeIdCounter,
 ): Shape | undefined {
   // Skip non-renderable node types
-  if (isNonRenderableType(node.type)) return undefined;
+  if (isNonRenderableType(node.type)) {return undefined;}
 
   // Check for image fill — becomes PicShape
   const imagePaint = findTopVisibleImagePaint(node);
@@ -85,7 +85,7 @@ function convertToSpShape(
   const transform = figTransformToDml(node.transform, node.size);
   const geometry = convertGeometry(node);
   const fill = figFillsToDml(node.fills);
-  const line = figStrokeToDml(node.strokes, node.strokeWeight, node.strokeCap, node.strokeJoin);
+  const line = figStrokeToDml({ strokes: node.strokes, strokeWeight: node.strokeWeight, strokeCap: node.strokeCap, strokeJoin: node.strokeJoin });
   const effects = figEffectsToDml(node.effects);
 
   const properties: ShapeProperties = {
@@ -111,7 +111,7 @@ function convertToTextShape(
   const id = nextId(idCounter);
   const transform = figTransformToDml(node.transform, node.size);
   const fill = figFillsToDml(node.fills);
-  const line = figStrokeToDml(node.strokes, node.strokeWeight, node.strokeCap, node.strokeJoin);
+  const line = figStrokeToDml({ strokes: node.strokes, strokeWeight: node.strokeWeight, strokeCap: node.strokeCap, strokeJoin: node.strokeJoin });
   const effects = figEffectsToDml(node.effects);
 
   return {
@@ -160,7 +160,7 @@ function convertToGroupShape(
   // background rectangle as the first child to carry the visual fill.
   const childShapes: Shape[] = [];
   const fill = figFillsToDml(node.fills);
-  const line = figStrokeToDml(node.strokes, node.strokeWeight, node.strokeCap, node.strokeJoin);
+  const line = figStrokeToDml({ strokes: node.strokes, strokeWeight: node.strokeWeight, strokeCap: node.strokeCap, strokeJoin: node.strokeJoin });
   if (fill || line) {
     const bgId = nextId(idCounter);
     const bgTransform: Transform = {
@@ -237,9 +237,9 @@ function nextId(counter: ShapeIdCounter): string {
 function findTopVisibleImagePaint(node: FigDesignNode): FigImagePaint | undefined {
   for (let i = node.fills.length - 1; i >= 0; i--) {
     const paint = node.fills[i];
-    if (paint.visible === false) continue;
+    if (paint.visible === false) {continue;}
     const typeName = typeof paint.type === "string" ? paint.type : paint.type.name;
-    if (typeName === "IMAGE") return paint as FigImagePaint;
+    if (typeName === "IMAGE") {return paint as FigImagePaint;}
   }
   return undefined;
 }

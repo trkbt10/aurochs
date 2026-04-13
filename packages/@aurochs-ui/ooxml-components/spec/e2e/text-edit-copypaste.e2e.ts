@@ -96,7 +96,14 @@ type RunDebug = {
 
 /** Get the current runs from the TextBody via window.__getRunsDebug. */
 async function getRuns(page: Page): Promise<RunDebug[]> {
-  return page.evaluate(() => (window as unknown as { __getRunsDebug: () => RunDebug[] }).__getRunsDebug());
+  return page.evaluate(() => {
+    const w = window as Record<string, unknown>;
+    const getRunsDebug = w["__getRunsDebug"];
+    if (typeof getRunsDebug === "function") {
+      return (getRunsDebug as () => RunDebug[])();
+    }
+    return [];
+  });
 }
 
 const MOD = process.platform === "darwin" ? "Meta" : "Control";
@@ -244,6 +251,7 @@ test.describe("TextEditController copy-paste style preservation", () => {
     await page.keyboard.type("X");
     await page.waitForTimeout(200);
 
+    // eslint-disable-next-line no-restricted-syntax -- test value is reassigned after each page interaction
     let value = await getTextareaValue(page);
     expect(value).toBe("Aurochs\nOffice Document ToolkitX");
 
@@ -274,6 +282,7 @@ test.describe("TextEditController copy-paste style preservation", () => {
     await page.keyboard.press(`${MOD}+v`);
     await page.waitForTimeout(300);
 
+    // eslint-disable-next-line no-restricted-syntax -- test value is reassigned after each page interaction
     let value = await getTextareaValue(page);
     expect(value).toBe("Aurochs\nOffice Document ToolkitDocument");
 
@@ -296,6 +305,7 @@ test.describe("TextEditController copy-paste style preservation", () => {
     await page.keyboard.press(`${MOD}+x`);
     await page.waitForTimeout(300);
 
+    // eslint-disable-next-line no-restricted-syntax -- test value is reassigned after each page interaction
     let value = await getTextareaValue(page);
     expect(value).toBe("Aurochs\nOffice  Toolkit");
 
@@ -432,7 +442,7 @@ test.describe("TextEditController copy-paste style preservation", () => {
     // compositionstart → compositionupdate → compositionend
     await page.evaluate(() => {
       const textarea = document.querySelector("textarea") as HTMLTextAreaElement;
-      if (!textarea) return;
+      if (!textarea) {return;}
 
       // Simulate compositionstart
       textarea.dispatchEvent(new CompositionEvent("compositionstart", { data: "" }));
@@ -448,7 +458,7 @@ test.describe("TextEditController copy-paste style preservation", () => {
     // We simulate this by directly typing the committed character.
     await page.evaluate(() => {
       const textarea = document.querySelector("textarea") as HTMLTextAreaElement;
-      if (!textarea) return;
+      if (!textarea) {return;}
       textarea.dispatchEvent(new CompositionEvent("compositionend", { data: "あ" }));
     });
     // Type the committed character (simulating what the browser does after compositionend)
@@ -479,6 +489,7 @@ test.describe("TextEditController copy-paste style preservation", () => {
     await page.keyboard.press(`${MOD}+v`);
     await page.waitForTimeout(300);
 
+    // eslint-disable-next-line no-restricted-syntax -- test value is reassigned after each page interaction
     let value = await getTextareaValue(page);
     expect(value).toBe("Aurochs\nOffice Document ToolkitDocument");
 
@@ -517,6 +528,7 @@ test.describe("TextEditController copy-paste style preservation", () => {
     await page.keyboard.insertText("漢字");
     await page.waitForTimeout(200);
 
+    // eslint-disable-next-line no-restricted-syntax -- test value is reassigned after each page interaction
     let value = await getTextareaValue(page);
     expect(value).toBe("Aurochs\nOffice Document Toolkit漢字");
 

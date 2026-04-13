@@ -17,7 +17,7 @@
  */
 
 import type { FigDesignNode } from "@aurochs/fig/domain";
-import type { FigNodeType } from "@aurochs/fig/types";
+
 import type { Geometry, PresetGeometry, CustomGeometry, AdjustValue } from "@aurochs-office/drawing-ml/domain/geometry/shape";
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
@@ -97,9 +97,7 @@ function convertRoundedRectangleGeometry(node: FigDesignNode): PresetGeometry {
  */
 function convertUniformCornerRadius(radius: number, width: number, height: number): PresetGeometry {
   const minDim = Math.min(width, height);
-  const adjValue = minDim > 0
-    ? Math.min(Math.round((radius / minDim) * 50000), 50000)
-    : 0;
+  const adjValue = minDim > 0 ? Math.min(Math.round((radius / minDim) * 50000), 50000) : 0;
 
   return {
     type: "preset",
@@ -166,7 +164,9 @@ const STAR_PRESETS: readonly { count: number; preset: string }[] = [
 ];
 
 function nearestStarPreset(points: number): string {
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator for min-diff search; STAR_PRESETS has no .reduce-able structure
   let best = STAR_PRESETS[1]; // default star5
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator for min-diff search
   let bestDiff = Infinity;
   for (const entry of STAR_PRESETS) {
     const diff = Math.abs(entry.count - points);

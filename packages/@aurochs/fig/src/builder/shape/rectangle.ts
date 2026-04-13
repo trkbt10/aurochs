@@ -10,9 +10,9 @@ import type { RectangleNodeData } from "./types";
 import { SHAPE_NODE_TYPES } from "../../constants";
 
 /** Rectangle node builder instance */
-export type RectangleNodeBuilder = BaseShapeBuilderMethods<RectangleNodeBuilder> & {
+export interface RectangleNodeBuilder extends BaseShapeBuilderMethods<RectangleNodeBuilder> {
   build: () => RectangleNodeData;
-};
+}
 
 /** Create a rectangle node builder */
 function createRectangleNodeBuilder(localID: number, parentID: number): RectangleNodeBuilder {

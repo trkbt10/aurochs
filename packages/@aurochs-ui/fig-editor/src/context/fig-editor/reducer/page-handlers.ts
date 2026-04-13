@@ -39,9 +39,7 @@ export const PAGE_HANDLERS: HandlerMap = {
     }
 
     // If deleting the active page, switch to first available page
-    const newActivePageId = state.activePageId === action.pageId
-      ? updated.pages[0]?.id
-      : state.activePageId;
+    const newActivePageId = state.activePageId === action.pageId ? updated.pages[0]?.id : state.activePageId;
 
     return {
       ...state,

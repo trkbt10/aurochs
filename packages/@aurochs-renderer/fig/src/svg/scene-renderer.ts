@@ -59,7 +59,6 @@ import {
   // Types
   type ResolvedFill,
   type ResolvedFillDef,
-  type ResolvedFillAttrs,
   type ResolvedStrokeAttrs,
   type ResolvedFilter,
   type ResolvedFilterPrimitive,
@@ -76,6 +75,7 @@ type SvgDefsCollector = IdGenerator & {
 };
 
 function createDefsCollector(): SvgDefsCollector {
+  // eslint-disable-next-line no-restricted-syntax -- mutable closure counter for sequential ID generation
   let counter = 0;
   const collector: SvgDefsCollector = {
     items: [],
@@ -374,6 +374,12 @@ function renderPathNode(node: PathNode, defsCol: SvgDefsCollector): SvgString {
   return pathElements[0];
 }
 
+function buildTextClipAttr(defsCol: SvgDefsCollector, width: number, height: number): string {
+  const clipId = defsCol.generateId("text-clip");
+  defsCol.add(`<clipPath id="${clipId}"><rect x="0" y="0" width="${width}" height="${height}"/></clipPath>`);
+  return `url(#${clipId})`;
+}
+
 function renderTextNode(node: TextNode, defsCol: SvgDefsCollector): SvgString {
   const transformStr = matrixToSvgTransform(node.transform);
   const filterResult = resolveEffects(node.effects, defsCol);
@@ -383,12 +389,7 @@ function renderTextNode(node: TextNode, defsCol: SvgDefsCollector): SvgString {
 
   // Clip text to bounding box when textAutoResize is NONE or TRUNCATE
   const needsClip = node.textAutoResize === "NONE" || node.textAutoResize === "TRUNCATE";
-  let clipAttr: string | undefined;
-  if (needsClip) {
-    const clipId = defsCol.generateId("text-clip");
-    defsCol.add(`<clipPath id="${clipId}"><rect x="0" y="0" width="${node.width}" height="${node.height}"/></clipPath>`);
-    clipAttr = `url(#${clipId})`;
-  }
+  const clipAttr: string | undefined = needsClip ? buildTextClipAttr(defsCol, node.width, node.height) : undefined;
 
   // Glyph contours (pre-outlined paths)
   if (node.glyphContours && node.glyphContours.length > 0) {

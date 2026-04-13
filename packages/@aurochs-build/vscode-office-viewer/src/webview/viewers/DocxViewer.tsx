@@ -7,6 +7,12 @@ import type { DocxDataMessage } from "../types";
 import { Toolbar, ToolbarSpacer, ToolbarInfo } from "../components/Toolbar";
 import { ZoomControl } from "../components/ZoomControl";
 
+
+
+
+
+
+/** Viewer component for rendering DOCX document content as HTML. */
 export function DocxViewer({ html, fileName }: DocxDataMessage): React.JSX.Element {
   const [zoom, setZoom] = useState(100);
 

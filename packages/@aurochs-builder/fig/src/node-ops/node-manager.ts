@@ -5,8 +5,7 @@
  * They never mutate the input document.
  */
 
-import type { FigDesignDocument, FigDesignNode, FigPage } from "../types/document";
-import type { FigNodeId, FigPageId } from "../types/node-id";
+import type { FigDesignDocument, FigDesignNode, FigPage, FigNodeId, FigPageId } from "@aurochs/fig/domain";
 import type { NodeSpec } from "../types/spec-types";
 import { createNodeFromSpec } from "./node-factory";
 import {
@@ -46,26 +45,26 @@ function updatePage(
 // Add Node
 // =============================================================================
 
+type AddNodeOptions = {
+  readonly doc: FigDesignDocument;
+  readonly pageId: FigPageId;
+  readonly parentId: FigNodeId | null;
+  readonly spec: NodeSpec;
+};
+
 /**
  * Add a new node to a page.
  *
- * @param doc - Current document
- * @param pageId - Target page
- * @param parentId - Parent node within the page (null for top-level)
- * @param spec - Node creation specification
  * @returns Updated document and the new node's ID
  */
 export function addNode(
-  doc: FigDesignDocument,
-  pageId: FigPageId,
-  parentId: FigNodeId | null,
-  spec: NodeSpec,
+  { doc, pageId, parentId, spec }: AddNodeOptions,
 ): { readonly doc: FigDesignDocument; readonly nodeId: FigNodeId } {
   const node = createNodeFromSpec(spec);
 
   const updatedDoc = updatePage(doc, pageId, (page) => ({
     ...page,
-    children: insertNodeInTree(page.children, parentId, node),
+    children: insertNodeInTree({ nodes: page.children, parentId, node }),
   }));
 
   return { doc: updatedDoc, nodeId: node.id };
@@ -95,16 +94,20 @@ export function removeNode(
 // Update Node
 // =============================================================================
 
+type UpdateNodeOptions = {
+  readonly doc: FigDesignDocument;
+  readonly pageId: FigPageId;
+  readonly nodeId: FigNodeId;
+  readonly updater: (node: FigDesignNode) => FigDesignNode;
+};
+
 /**
  * Update a node within a page.
  *
  * The updater function receives the current node and returns the updated node.
  */
 export function updateNode(
-  doc: FigDesignDocument,
-  pageId: FigPageId,
-  nodeId: FigNodeId,
-  updater: (node: FigDesignNode) => FigDesignNode,
+  { doc, pageId, nodeId, updater }: UpdateNodeOptions,
 ): FigDesignDocument {
   return updatePage(doc, pageId, (page) => ({
     ...page,
@@ -116,16 +119,18 @@ export function updateNode(
 // Reorder Node
 // =============================================================================
 
+type ReorderNodeOptions = {
+  readonly doc: FigDesignDocument;
+  readonly pageId: FigPageId;
+  readonly nodeId: FigNodeId;
+  readonly direction: "front" | "back" | "forward" | "backward";
+};
+
 /**
  * Reorder a node within its parent's children list.
- *
- * @param direction - "front" | "back" | "forward" | "backward"
  */
 export function reorderNode(
-  doc: FigDesignDocument,
-  pageId: FigPageId,
-  nodeId: FigNodeId,
-  direction: "front" | "back" | "forward" | "backward",
+  { doc, pageId, nodeId, direction }: ReorderNodeOptions,
 ): FigDesignDocument {
   return updatePage(doc, pageId, (page) => ({
     ...page,
@@ -137,6 +142,13 @@ export function reorderNode(
 // Move Node Between Pages
 // =============================================================================
 
+type MoveNodeToPageOptions = {
+  readonly doc: FigDesignDocument;
+  readonly fromPageId: FigPageId;
+  readonly toPageId: FigPageId;
+  readonly nodeId: FigNodeId;
+};
+
 /**
  * Move a node from one page to another.
  *
@@ -144,10 +156,7 @@ export function reorderNode(
  * node on the target page.
  */
 export function moveNodeToPage(
-  doc: FigDesignDocument,
-  fromPageId: FigPageId,
-  toPageId: FigPageId,
-  nodeId: FigNodeId,
+  { doc, fromPageId, toPageId, nodeId }: MoveNodeToPageOptions,
 ): FigDesignDocument {
   // Find the node first
   const sourcePage = findPage(doc, fromPageId);
@@ -160,17 +169,13 @@ export function moveNodeToPage(
     return doc;
   }
 
-  // Remove from source
-  let updated = updatePage(doc, fromPageId, (page) => ({
+  // Remove from source, then add to target
+  const withoutNode = updatePage(doc, fromPageId, (page) => ({
     ...page,
     children: removeNodeFromTree(page.children, nodeId),
   }));
-
-  // Add to target
-  updated = updatePage(updated, toPageId, (page) => ({
+  return updatePage(withoutNode, toPageId, (page) => ({
     ...page,
     children: [...page.children, node],
   }));
-
-  return updated;
 }

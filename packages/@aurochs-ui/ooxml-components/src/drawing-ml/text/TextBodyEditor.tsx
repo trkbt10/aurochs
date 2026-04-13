@@ -139,12 +139,11 @@ const noSelectionStyle: CSSProperties = {
 function getPlainText(runs: readonly TextRun[], maxLength: number): string {
   const texts: string[] = [];
   for (const run of runs) {
-    if (run.type === "text") {
-      texts.push(run.text);
-    } else if (run.type === "break") {
-      texts.push(" ");
-    } else if (run.type === "field") {
-      texts.push(run.text);
+    switch (run.type) {
+      case "text": texts.push(run.text); break;
+      case "break": texts.push(" "); break;
+      case "field": texts.push(run.text); break;
+      default: break;
     }
 
     const currentLength = texts.join("").length;

@@ -140,13 +140,11 @@ async function measureOperation(
  * Measure a higher-level operation that includes settle time.
  * Uses Date.now() on the Node side for simplicity.
  */
-function timedOperation(name: string, operation: () => Promise<void>): Promise<{ name: string; ms: number }> {
-  return (async () => {
-    const start = Date.now();
-    await operation();
-    const ms = Date.now() - start;
-    return { name, ms };
-  })();
+async function _timedOperation(name: string, operation: () => Promise<void>): Promise<{ name: string; ms: number }> {
+  const start = Date.now();
+  await operation();
+  const ms = Date.now() - start;
+  return { name, ms };
 }
 
 // =============================================================================

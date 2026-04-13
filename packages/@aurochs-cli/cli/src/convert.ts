@@ -311,7 +311,7 @@ async function loadFigForConvert(filePath: string) {
 }
 
 async function convertFigToMarkdown(filePath: string): Promise<ConvertPage[]> {
-  const { parsed, tree, canvases } = await loadFigForConvert(filePath);
+  const { parsed: _parsed, tree: _tree, canvases } = await loadFigForConvert(filePath);
 
   return canvases.map((canvas, i) => {
     const pageName = canvas.name ?? `Page ${i + 1}`;

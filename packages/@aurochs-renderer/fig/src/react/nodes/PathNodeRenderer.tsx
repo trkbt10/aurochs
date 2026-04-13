@@ -26,8 +26,8 @@ function PathNodeRendererImpl({ node }: Props) {
 
   // Collect inline defs
   const defs: React.ReactNode[] = [];
-  if (fillResult.defElement) defs.push(fillResult.defElement);
-  if (effectsResult?.defElement) defs.push(effectsResult.defElement);
+  if (fillResult.defElement) {defs.push(fillResult.defElement);}
+  if (effectsResult?.defElement) {defs.push(effectsResult.defElement);}
 
   const pathElements = node.contours.map((contour, i) => (
     <path

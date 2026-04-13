@@ -62,7 +62,7 @@ const DEFAULT_TABS: readonly RibbonTabDef[] = [
 // =============================================================================
 
 const pageStyle: CSSProperties = { display: "flex", flexDirection: "column", height: "100vh", position: "relative" };
-const canvasAreaStyle: CSSProperties = { flex: 1, overflow: "hidden" };
+const _canvasAreaStyle: CSSProperties = { flex: 1, overflow: "hidden" };
 const canvasStyle: CSSProperties = { width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: `var(--bg-canvas, ${colorTokens.background.canvas})`, color: `var(--text-inverse, ${colorTokens.text.inverse})`, fontSize: 13 };
 const logStyle: CSSProperties = { fontSize: 11, fontFamily: "monospace", color: `var(--text-secondary, ${colorTokens.text.secondary})` };
 

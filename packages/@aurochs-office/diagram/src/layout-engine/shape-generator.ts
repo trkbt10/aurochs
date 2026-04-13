@@ -333,14 +333,18 @@ function createLayoutShapeResultFromLayoutNode(
   let isHidden = false;
 
   if (shapeSpec?.type) {
-    if (shapeSpec.type === "none") {
-      // Shape geometry is hidden but text may still be visible
-      isHidden = true;
-    } else if (shapeSpec.type === "conn") {
-      // Connector shape - use line or straight connector
-      shapeType = "line";
-    } else {
-      shapeType = shapeSpec.type as PresetShapeType;
+    switch (shapeSpec.type) {
+      case "none":
+        // Shape geometry is hidden but text may still be visible
+        isHidden = true;
+        break;
+      case "conn":
+        // Connector shape - use line or straight connector
+        shapeType = "line";
+        break;
+      default:
+        shapeType = shapeSpec.type as PresetShapeType;
+        break;
     }
   }
 

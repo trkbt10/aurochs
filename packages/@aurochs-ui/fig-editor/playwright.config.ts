@@ -1,3 +1,4 @@
+/** @file Playwright configuration for fig editor end-to-end tests. */
 import { defineConfig } from "@playwright/test";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";

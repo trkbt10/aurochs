@@ -122,12 +122,17 @@ function serializeSheet(sheet: XlsxWorksheetInput, relationshipId: string): XmlE
   };
 
   // state attribute: visible is omitted, hidden/veryHidden are included
-  if (sheet.state === "hidden") {
-    attrs.state = "hidden";
-  } else if (sheet.state === "veryHidden") {
-    attrs.state = "veryHidden";
+  switch (sheet.state) {
+    case "hidden":
+      attrs.state = "hidden";
+      break;
+    case "veryHidden":
+      attrs.state = "veryHidden";
+      break;
+    default:
+      // "visible" is default, omit it
+      break;
   }
-  // "visible" is default, omit it
 
   // r:id attribute for relationship
   attrs["r:id"] = relationshipId;

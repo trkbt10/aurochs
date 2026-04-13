@@ -487,6 +487,14 @@ function sortRunsByInlineDirection(
 
 type Gutter = { x0: number; x1: number; score: number; xMid: number };
 
+function appendPendingSegment(
+  segments: { s: number; e: number; meanOcc: number }[],
+  pending: { s: number; sum: number; cnt: number },
+  e: number,
+): { s: number; e: number; meanOcc: number }[] {
+  return [...segments, { s: pending.s, e, meanOcc: pending.sum / Math.max(1, pending.cnt) }];
+}
+
 function detectGuttersFromXRanges(
   ranges: readonly { x0: number; x1: number; weight: number }[],
   pageWidth: number,
@@ -544,9 +552,8 @@ function detectGuttersFromXRanges(
       }
       if (acc.pending) {
         const e = i;
-        const nextSegments = e - acc.pending.s >= minGutterBins
-          ? [...acc.segments, { s: acc.pending.s, e, meanOcc: acc.pending.sum / Math.max(1, acc.pending.cnt) }]
-          : acc.segments;
+        const segment = { s: acc.pending.s, e, meanOcc: acc.pending.sum / Math.max(1, acc.pending.cnt) };
+        const nextSegments = e - acc.pending.s >= minGutterBins ? [...acc.segments, segment] : acc.segments;
         return { segments: nextSegments, pending: null };
       }
       return acc;
@@ -554,9 +561,9 @@ function detectGuttersFromXRanges(
     { segments: [], pending: null },
   );
 
-  const finalSegments = pending && (bins - edgeMarginBins) - pending.s >= minGutterBins
-    ? [...segments, { s: pending.s, e: bins - edgeMarginBins, meanOcc: pending.sum / Math.max(1, pending.cnt) }]
-    : segments;
+  const tailGutterEnd = bins - edgeMarginBins;
+  const hasPendingTail = pending !== null && tailGutterEnd - pending.s >= minGutterBins;
+  const finalSegments = hasPendingTail ? appendPendingSegment(segments, pending!, tailGutterEnd) : segments;
 
   if (finalSegments.length === 0) {
     return [];
@@ -592,16 +599,12 @@ function buildColumnIntervals(pageWidth: number, gutters: readonly Gutter[]): { 
   const { intervals, cur: finalCur } = gutters.reduce<{ intervals: { x0: number; x1: number }[]; cur: number }>(
     (acc, g) => {
       const leftEnd = Math.max(acc.cur, g.x0);
-      const nextIntervals = leftEnd - acc.cur > 1
-        ? [...acc.intervals, { x0: acc.cur, x1: leftEnd }]
-        : acc.intervals;
+      const nextIntervals = leftEnd - acc.cur > 1 ? [...acc.intervals, { x0: acc.cur, x1: leftEnd }] : acc.intervals;
       return { intervals: nextIntervals, cur: Math.min(pageWidth, g.x1) };
     },
     { intervals: [], cur: 0 },
   );
-  const allIntervals = pageWidth - finalCur > 1
-    ? [...intervals, { x0: finalCur, x1: pageWidth }]
-    : intervals;
+  const allIntervals = pageWidth - finalCur > 1 ? [...intervals, { x0: finalCur, x1: pageWidth }] : intervals;
   return allIntervals.filter((iv) => iv.x1 - iv.x0 > pageWidth * 0.08);
 }
 
@@ -1319,9 +1322,7 @@ function clusterIntoLines(args: {
     { clusters: [], current: null },
   );
 
-  const allClusters = finalCurrent
-    ? [...clusters, [...finalCurrent.texts]]
-    : clusters;
+  const allClusters = finalCurrent ? [...clusters, [...finalCurrent.texts]] : clusters;
   return allClusters;
 }
 
@@ -2024,9 +2025,7 @@ function mergeAdjacentLinesWithColumns(args: {
       { merged: [], current: [] },
     );
 
-    return finalCurrent.length > 0
-      ? [...merged, createGroupedText(finalCurrent)]
-      : merged;
+    return finalCurrent.length > 0 ? [...merged, createGroupedText(finalCurrent)] : merged;
   };
 
   const allBounds = paragraphs.map(getParagraphBounds);
@@ -2111,9 +2110,7 @@ function mergeAdjacentLinesWithColumns(args: {
       { result: [], current: [] },
     );
 
-    return finalCurrent.length > 0
-      ? [...result, createGroupedText(finalCurrent)]
-      : result;
+    return finalCurrent.length > 0 ? [...result, createGroupedText(finalCurrent)] : result;
   };
 
   // Merge detected columns (0..N-1) and full-width (-1) separately.

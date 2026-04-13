@@ -9,7 +9,9 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
+// eslint-disable-next-line custom/no-builder-import-in-renderer -- this script is a fixture generator that requires building .docx files; it is not part of the renderer implementation
 import { buildDocx } from "@aurochs-builder/docx";
+// eslint-disable-next-line custom/no-builder-import-in-renderer -- this script is a fixture generator that requires building .docx files; it is not part of the renderer implementation
 import type { DocxBuildSpec } from "@aurochs-builder/docx";
 
 const SPEC_DIR = path.dirname(new URL(import.meta.url).pathname);

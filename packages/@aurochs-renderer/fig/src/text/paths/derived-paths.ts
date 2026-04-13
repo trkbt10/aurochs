@@ -9,7 +9,6 @@ import { decodePathCommands, type FigBlob } from "@aurochs/fig/parser";
 import type { PathCommand } from "../../font/types";
 import type { PathContour, DecorationRect, TextPathResult } from "./types";
 import type {
-  DerivedBaseline,
   DerivedGlyph,
   DerivedDecoration,
   DerivedTextData,

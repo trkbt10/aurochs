@@ -2,7 +2,6 @@
  * @file Tests for rotation SoT functions
  */
 
-import { describe, it, expect } from "vitest";
 import {
   extractRotationDeg,
   computeWorldCenter,
@@ -15,7 +14,7 @@ function makeTransform(x: number, y: number): FigMatrix {
   return { m00: 1, m01: 0, m02: x, m10: 0, m11: 1, m12: y };
 }
 
-function makeRotatedTransform(angleDeg: number, x: number, y: number): FigMatrix {
+function _makeRotatedTransform(angleDeg: number, x: number, y: number): FigMatrix {
   const rad = (angleDeg * Math.PI) / 180;
   const cos = Math.cos(rad);
   const sin = Math.sin(rad);
@@ -79,7 +78,7 @@ describe("buildRotatedTransform", () => {
     const w = 50, h = 30;
 
     const centerBefore = computeWorldCenter(t, w, h);
-    const newT = buildRotatedTransform(t, w, h, 45);
+    const newT = buildRotatedTransform({ currentTransform: t, width: w, height: h, newAngleDeg: 45 });
     const centerAfter = computeWorldCenter(newT, w, h);
 
     expect(centerAfter.cx).toBeCloseTo(centerBefore.cx);
@@ -87,11 +86,11 @@ describe("buildRotatedTransform", () => {
   });
 
   it("preserves center when rotating from 30 to 120 degrees", () => {
-    const initial = buildRotatedTransform(makeTransform(100, 200), 50, 30, 30);
+    const initial = buildRotatedTransform({ currentTransform: makeTransform(100, 200), width: 50, height: 30, newAngleDeg: 30 });
     const w = 50, h = 30;
 
     const centerBefore = computeWorldCenter(initial, w, h);
-    const newT = buildRotatedTransform(initial, w, h, 120);
+    const newT = buildRotatedTransform({ currentTransform: initial, width: w, height: h, newAngleDeg: 120 });
     const centerAfter = computeWorldCenter(newT, w, h);
 
     expect(centerAfter.cx).toBeCloseTo(centerBefore.cx);
@@ -100,13 +99,13 @@ describe("buildRotatedTransform", () => {
 
   it("sets correct rotation angle", () => {
     const t = makeTransform(100, 200);
-    const newT = buildRotatedTransform(t, 50, 30, 45);
+    const newT = buildRotatedTransform({ currentTransform: t, width: 50, height: 30, newAngleDeg: 45 });
     expect(extractRotationDeg(newT)).toBeCloseTo(45);
   });
 
   it("returns identity-like matrix for 0 degrees from identity", () => {
     const t = makeTransform(100, 200);
-    const newT = buildRotatedTransform(t, 50, 30, 0);
+    const newT = buildRotatedTransform({ currentTransform: t, width: 50, height: 30, newAngleDeg: 0 });
     expect(newT.m00).toBeCloseTo(1);
     expect(newT.m01).toBeCloseTo(0);
     expect(newT.m10).toBeCloseTo(0);

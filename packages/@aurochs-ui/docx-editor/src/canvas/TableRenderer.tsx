@@ -197,10 +197,10 @@ export function TableRenderer({ table, elementId, isSelected, onCellClick, onCli
 
             if (row.properties?.trHeight) {
               const points = (row.properties.trHeight.val as number) / 20;
-              if (row.properties.trHeight.hRule === "exact") {
-                rowStyle.height = `${points}pt`;
-              } else if (row.properties.trHeight.hRule === "atLeast") {
-                rowStyle.minHeight = `${points}pt`;
+              switch (row.properties.trHeight.hRule) {
+                case "exact": rowStyle.height = `${points}pt`; break;
+                case "atLeast": rowStyle.minHeight = `${points}pt`; break;
+                default: break;
               }
             }
 

@@ -2,9 +2,8 @@
  * @file Verify INSTANCE symbolId resolution against components map
  */
 
-import { describe, it, expect } from "vitest";
 import { createDemoFigDesignDocument } from "./demo-document";
-import type { FigDesignNode } from "../types/document";
+import type { FigDesignNode } from "@aurochs/fig/domain";
 import { getPaintType } from "@aurochs/fig/color";
 import type { FigColor } from "@aurochs/fig/types";
 

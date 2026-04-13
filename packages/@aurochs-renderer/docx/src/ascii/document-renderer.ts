@@ -12,11 +12,10 @@ export function renderDocxAscii(params: DocxAsciiParams): string {
   const sections: string[] = [];
 
   for (const block of blocks) {
-    if (block.type === "paragraph") {
-      const lines = renderParagraphAscii(block, width);
-      sections.push(lines.join("\n"));
-    } else if (block.type === "table") {
-      sections.push(renderDocxTableAscii(block, width));
+    switch (block.type) {
+      case "paragraph": sections.push(renderParagraphAscii(block, width).join("\n")); break;
+      case "table": sections.push(renderDocxTableAscii(block, width)); break;
+      default: break;
     }
   }
 

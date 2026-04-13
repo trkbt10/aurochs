@@ -213,7 +213,12 @@ function warpTransformedImageToPngDataUrl({
   const outWidth = Math.max(1, Math.round(size.width as number));
   const outHeight = Math.max(1, Math.round(size.height as number));
 
-  const srcRgba = convertToRgba(image.data, image.width, image.height, image.colorSpace, image.bitsPerComponent, {
+  const srcRgba = convertToRgba({
+    data: image.data,
+    width: image.width,
+    height: image.height,
+    colorSpace: image.colorSpace,
+    bitsPerComponent: image.bitsPerComponent,
     decode: image.decode,
   });
   applySoftMaskMatteInPlace({
@@ -309,7 +314,7 @@ function encodeRawToPngDataUrl(image: PdfImage): string {
   const { width, height, data, colorSpace, bitsPerComponent, decode } = image;
 
   // Convert raw pixels to RGBA
-  const rgbaData = convertToRgba(data, width, height, colorSpace, bitsPerComponent, { decode });
+  const rgbaData = convertToRgba({ data, width, height, colorSpace, bitsPerComponent, decode });
   applySoftMaskMatteInPlace({ rgbaData, alpha: image.alpha, matte: image.softMaskMatte, colorSpace, width, height });
   applyAlphaMaskInPlace({ rgbaData, alpha: image.alpha, width, height });
 

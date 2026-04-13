@@ -70,6 +70,6 @@ export function resolveEffectsFilter(
   ids: IdGenerator,
 ): EffectsResult | undefined {
   const resolved = sharedResolveEffects(effects, ids);
-  if (!resolved) return undefined;
+  if (!resolved) {return undefined;}
   return toEffectsResult(resolved);
 }

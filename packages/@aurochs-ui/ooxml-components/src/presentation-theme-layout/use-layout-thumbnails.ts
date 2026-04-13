@@ -25,7 +25,7 @@ import { renderSlideSvg } from "@aurochs-renderer/pptx/svg";
 import { createCoreRenderContext } from "@aurochs-renderer/pptx";
 import type { ColorContext, ColorScheme } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
-import type { FormatScheme } from "@aurochs-office/pptx/domain/theme/types";
+
 
 // =============================================================================
 // Types

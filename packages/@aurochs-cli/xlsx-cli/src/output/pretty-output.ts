@@ -554,15 +554,23 @@ export function formatStylesPretty(data: StylesData): string {
   if (data.fills.length > 0) {
     lines.push("", "Fills", "-".repeat(5));
     for (const f of data.fills) {
-      if (f.type === "none") {
-        lines.push(`  [${f.id}] none`);
-      } else if (f.type === "pattern") {
-        const fg = f.fgColor ? ` fg:${formatColorValue(f.fgColor)}` : "";
-        const bg = f.bgColor ? ` bg:${formatColorValue(f.bgColor)}` : "";
-        lines.push(`  [${f.id}] pattern:${f.patternType}${fg}${bg}`);
-      } else if (f.type === "gradient") {
-        const deg = f.degree !== undefined ? ` ${f.degree}deg` : "";
-        lines.push(`  [${f.id}] gradient:${f.gradientType}${deg}`);
+      switch (f.type) {
+        case "none":
+          lines.push(`  [${f.id}] none`);
+          break;
+        case "pattern": {
+          const fg = f.fgColor ? ` fg:${formatColorValue(f.fgColor)}` : "";
+          const bg = f.bgColor ? ` bg:${formatColorValue(f.bgColor)}` : "";
+          lines.push(`  [${f.id}] pattern:${f.patternType}${fg}${bg}`);
+          break;
+        }
+        case "gradient": {
+          const deg = f.degree !== undefined ? ` ${f.degree}deg` : "";
+          lines.push(`  [${f.id}] gradient:${f.gradientType}${deg}`);
+          break;
+        }
+        default:
+          break;
       }
     }
   }

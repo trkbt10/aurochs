@@ -33,7 +33,7 @@ import {
   linearGradient,
   radialGradient,
 } from "@aurochs/fig/builder";
-import type { FigDesignDocument } from "../types/document";
+import type { FigDesignDocument } from "@aurochs/fig/domain";
 import { createFigDesignDocument } from "./fig-context";
 
 // =============================================================================
@@ -464,6 +464,7 @@ function buildTypographyPage(
     { label: "Caption — Smaller text for labels and annotations", size: 12, weight: "Regular" as const },
   ];
 
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator for vertical positioning in a loop
   let yPos = 64;
   for (const entry of sizes) {
     figFile.addTextNode(

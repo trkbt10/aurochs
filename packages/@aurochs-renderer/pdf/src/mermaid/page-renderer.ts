@@ -42,8 +42,8 @@ type TextLine = {
  * increases upward) and then clustered. A new line starts when the Y gap
  * exceeds half the current item's height.
  */
-function groupIntoLines(items: readonly MermaidPdfTextItem[], pageHeight: number): TextLine[] {
-  if (items.length === 0) return [];
+function groupIntoLines(items: readonly MermaidPdfTextItem[], _pageHeight: number): TextLine[] {
+  if (items.length === 0) {return [];}
 
   // Sort top-to-bottom: higher Y first (PDF coordinate: Y increases upward)
   const sorted = [...items].sort((a, b) => {
@@ -56,7 +56,9 @@ function groupIntoLines(items: readonly MermaidPdfTextItem[], pageHeight: number
   });
 
   const lines: TextLine[] = [];
+  // eslint-disable-next-line no-restricted-syntax -- mutable buffer accumulating items for current visual line
   let currentLine: MermaidPdfTextItem[] = [sorted[0]!];
+  // eslint-disable-next-line no-restricted-syntax -- mutable cursor tracking current line's top position
   let currentTop = sorted[0]!.y + sorted[0]!.height;
 
   for (let i = 1; i < sorted.length; i++) {
@@ -94,7 +96,7 @@ function groupIntoLines(items: readonly MermaidPdfTextItem[], pageHeight: number
  * Returns undefined if there are no items.
  */
 function detectBodyFontSize(items: readonly MermaidPdfTextItem[]): number | undefined {
-  if (items.length === 0) return undefined;
+  if (items.length === 0) {return undefined;}
 
   // Count total text length per font size (rounded to 0.5pt) to weight by content amount
   const sizeWeights = new Map<number, number>();
@@ -103,14 +105,10 @@ function detectBodyFontSize(items: readonly MermaidPdfTextItem[]): number | unde
     sizeWeights.set(rounded, (sizeWeights.get(rounded) ?? 0) + item.text.length);
   }
 
-  let maxWeight = 0;
-  let bodySize = items[0]!.fontSize;
-  for (const [size, weight] of sizeWeights) {
-    if (weight > maxWeight) {
-      maxWeight = weight;
-      bodySize = size;
-    }
-  }
+  const bodySize = [...sizeWeights.entries()].reduce(
+    (best, [size, weight]) => (weight > best.weight ? { size, weight } : best),
+    { size: items[0]!.fontSize, weight: 0 },
+  ).size;
 
   return bodySize;
 }
@@ -126,9 +124,9 @@ function detectBodyFontSize(items: readonly MermaidPdfTextItem[]): number | unde
  */
 function fontSizeToHeadingLevel(fontSize: number, bodyFontSize: number): number | undefined {
   const ratio = fontSize / bodyFontSize;
-  if (ratio >= 1.8) return 1;
-  if (ratio >= 1.4) return 2;
-  if (ratio >= 1.15) return 3;
+  if (ratio >= 1.8) {return 1;}
+  if (ratio >= 1.4) {return 2;}
+  if (ratio >= 1.15) {return 3;}
   return undefined;
 }
 
@@ -138,14 +136,14 @@ function fontSizeToHeadingLevel(fontSize: number, bodyFontSize: number): number 
 
 /** Join text items on a line into a single string with appropriate spacing. */
 function joinLineItems(items: readonly MermaidPdfTextItem[]): string {
-  if (items.length === 0) return "";
+  if (items.length === 0) {return "";}
 
   const parts: string[] = [];
 
   for (let i = 0; i < items.length; i++) {
     const item = items[i]!;
     const text = item.text.trim();
-    if (!text) continue;
+    if (!text) {continue;}
 
     // Detect gap between this item and the previous one to insert space
     if (i > 0) {
@@ -159,19 +157,18 @@ function joinLineItems(items: readonly MermaidPdfTextItem[]): string {
     }
 
     // Apply inline formatting
-    let formatted = text;
-    if (item.isBold && item.isItalic) {
-      formatted = `***${text}***`;
-    } else if (item.isBold) {
-      formatted = `**${text}**`;
-    } else if (item.isItalic) {
-      formatted = `*${text}*`;
-    }
-
+    const formatted = applyInlineFormatting(text, item.isBold, item.isItalic);
     parts.push(formatted);
   }
 
   return parts.join("");
+}
+
+function applyInlineFormatting(text: string, isBold?: boolean, isItalic?: boolean): string {
+  if (isBold && isItalic) { return `***${text}***`; }
+  if (isBold) { return `**${text}**`; }
+  if (isItalic) { return `*${text}*`; }
+  return text;
 }
 
 // ---------------------------------------------------------------------------
@@ -180,7 +177,7 @@ function joinLineItems(items: readonly MermaidPdfTextItem[]): string {
 
 /** Render a single PDF page's text items as Markdown. */
 export function renderPdfPageMermaid(page: MermaidPdfPage): string {
-  if (page.textItems.length === 0) return "";
+  if (page.textItems.length === 0) {return "";}
 
   const lines = groupIntoLines(page.textItems, page.height);
   const bodyFontSize = detectBodyFontSize(page.textItems);
@@ -188,7 +185,7 @@ export function renderPdfPageMermaid(page: MermaidPdfPage): string {
 
   for (const line of lines) {
     const text = joinLineItems(line.items);
-    if (!text.trim()) continue;
+    if (!text.trim()) {continue;}
 
     // Detect heading from font size
     if (bodyFontSize !== undefined) {

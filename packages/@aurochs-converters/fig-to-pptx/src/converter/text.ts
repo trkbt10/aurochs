@@ -30,9 +30,8 @@ export function convertText(textData: TextData): TextBody {
   const align = convertTextAlign(textData.textAlignHorizontal);
   const anchor = convertTextAnchor(textData.textAlignVertical);
 
-  const paragraphs = textData.characterStyleIDs && textData.characterStyleIDs.length > 0
-    ? buildParagraphsFromStyleIDs(textData, align)
-    : buildSimpleParagraphs(textData, align);
+  const hasStyleIDs = textData.characterStyleIDs && textData.characterStyleIDs.length > 0;
+  const paragraphs = hasStyleIDs ? buildParagraphsFromStyleIDs(textData, align) : buildSimpleParagraphs(textData, align);
 
   return {
     bodyProperties: {
@@ -73,12 +72,13 @@ function buildParagraphsFromStyleIDs(
   const overrideMap = buildOverrideMap(textData.styleOverrideTable);
 
   const paragraphs: Paragraph[] = [];
+  // eslint-disable-next-line no-restricted-syntax -- mutable index tracking paragraph start within loop
   let paraStart = 0;
 
   for (let i = 0; i <= chars.length; i++) {
     // Paragraph boundary at "\n" or end of string
     if (i === chars.length || chars[i] === "\n") {
-      const runs = buildRunsForRange(chars, styleIDs, paraStart, i, textData, overrideMap);
+      const runs = buildRunsForRange({ chars, styleIDs, start: paraStart, end: i, textData, overrideMap });
       paragraphs.push({
         properties: { alignment: align } satisfies ParagraphProperties,
         runs,
@@ -90,17 +90,21 @@ function buildParagraphsFromStyleIDs(
   return paragraphs;
 }
 
+type BuildRunsForRangeOptions = {
+  readonly chars: string;
+  readonly styleIDs: readonly number[];
+  readonly start: number;
+  readonly end: number;
+  readonly textData: TextData;
+  readonly overrideMap: ReadonlyMap<number, TextStyleOverride>;
+};
+
 /**
  * Build runs for a character range [start, end) by grouping consecutive
  * characters with the same style ID.
  */
 function buildRunsForRange(
-  chars: string,
-  styleIDs: readonly number[],
-  start: number,
-  end: number,
-  textData: TextData,
-  overrideMap: ReadonlyMap<number, TextStyleOverride>,
+  { chars, styleIDs, start, end, textData, overrideMap }: BuildRunsForRangeOptions,
 ): RegularRun[] {
   if (start >= end) {
     // Empty line — still needs a run (PPTX requires at least one run per paragraph)
@@ -112,7 +116,9 @@ function buildRunsForRange(
   }
 
   const runs: RegularRun[] = [];
+  // eslint-disable-next-line no-restricted-syntax -- mutable index tracking run start within loop
   let runStart = start;
+  // eslint-disable-next-line no-restricted-syntax -- mutable cursor tracking current style across characters
   let currentStyleID = styleIDs[start] ?? 0;
 
   for (let i = start + 1; i <= end; i++) {
@@ -211,15 +217,15 @@ function baseRunProperties(textData: TextData): RunProperties {
  */
 function resolveOverrideColor(
   override: TextStyleOverride,
-  textData: TextData,
+  _textData: TextData,
 ): ReturnType<typeof figColorToColor> | undefined {
   const paints = override.fillPaints;
-  if (!paints || paints.length === 0) return undefined;
+  if (!paints || paints.length === 0) {return undefined;}
 
   const solidPaint = paints.find((p): p is Extract<FigPaint, { type: "SOLID" }> =>
     p.type === "SOLID" && p.visible !== false,
   );
-  if (!solidPaint?.color) return undefined;
+  if (!solidPaint?.color) {return undefined;}
 
   const figColor: FigColor = {
     r: solidPaint.color.r,
@@ -232,7 +238,7 @@ function resolveOverrideColor(
 }
 
 function convertTextAlign(align?: { name: string }): TextAlign | undefined {
-  if (!align) return undefined;
+  if (!align) {return undefined;}
   switch (align.name) {
     case "LEFT": return "left";
     case "CENTER": return "center";
@@ -243,7 +249,7 @@ function convertTextAlign(align?: { name: string }): TextAlign | undefined {
 }
 
 function convertTextAnchor(align?: { name: string }): TextAnchor | undefined {
-  if (!align) return undefined;
+  if (!align) {return undefined;}
   switch (align.name) {
     case "TOP": return "top";
     case "CENTER": return "center";

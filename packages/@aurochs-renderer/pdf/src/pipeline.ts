@@ -1,4 +1,5 @@
 /** @file PDF rendering pipeline — parse, build, and render to SVG. */
+// eslint-disable-next-line custom/no-builder-import-in-renderer -- buildPdf constructs the PdfDocument domain model from raw bytes; this is required by the render pipeline before SVG output can be produced
 import { buildPdf } from "@aurochs-builder/pdf";
 import type { PdfDocument } from "@aurochs/pdf/domain";
 import { renderPdfDocumentPageToSvg, renderPdfDocumentToSvgs } from "./svg";

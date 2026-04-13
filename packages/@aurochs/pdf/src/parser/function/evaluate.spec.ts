@@ -2,7 +2,7 @@
  * @file Tests for PDF Function evaluation (FunctionType 0 and 2).
  */
 
-import { describe, expect, it } from "bun:test";
+
 import { evaluatePdfFunctionType0, evaluatePdfFunction } from "./evaluate";
 import type { PdfFunctionType0 } from "./types";
 
@@ -35,9 +35,8 @@ describe("evaluatePdfFunctionType0", () => {
       }
     }
 
-    const range: number[] = opts.range
-      ? [...opts.range]
-      : Array.from({ length: n * 2 }, (_, i) => (i % 2 === 0 ? 0 : 1));
+    const defaultRange = Array.from({ length: n * 2 }, (_, i) => (i % 2 === 0 ? 0 : 1));
+    const range: number[] = opts.range ? [...opts.range] : defaultRange;
     const decode = opts.decode ?? [...range];
 
     return {

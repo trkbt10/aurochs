@@ -27,12 +27,6 @@ import type { ArchiveAccess } from "../../domain/archive-access";
 // Note: DiagramContent type is now defined in domain/shape.ts
 // Import directly from domain instead of parser
 
-/**
- * Diagram parsing context.
- *
- * Uses ArchiveAccess as the base interface for ZIP file access.
- */
-export type DiagramParseContext = ArchiveAccess;
 
 // =============================================================================
 // Diagram Parsing
@@ -253,7 +247,7 @@ function remapElementName(name: string): string {
  * @param ctx - Parsing context with file/resource access
  * @returns Parsed diagram content or undefined
  */
-export function loadDiagram(reference: DiagramReference, ctx: DiagramParseContext): DiagramContent | undefined {
+export function loadDiagram(reference: DiagramReference, ctx: ArchiveAccess): DiagramContent | undefined {
   // Diagrams have multiple files, but the pre-rendered drawing is what we need
   // The drawing file is typically referenced via a relationship from the slide
 

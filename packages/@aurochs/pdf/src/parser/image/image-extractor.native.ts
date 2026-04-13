@@ -156,23 +156,28 @@ export function decodeImageXObjectStreamNative(
       }
 
       const combinedAlpha: { value: Uint8Array | undefined } = { value: alpha };
-      if (maskEntry.kind === "explicit") {
-      combinedAlpha.value = combineAlpha(
-        combinedAlpha.value,
-        decodeExplicitMaskAlpha8({ page: pdfPage, maskStream: maskEntry.stream, width, height }),
-      );
-      } else if (maskEntry.kind === "colorKey") {
-        combinedAlpha.value = combineAlpha(
-          combinedAlpha.value,
-          applyColorKeyMask({
-            data: down.data,
-            width,
-            height,
-            components,
-            bitsPerComponent: 8,
-            ranges: maskEntry.ranges,
-          }),
-        );
+      switch (maskEntry.kind) {
+        case "explicit":
+          combinedAlpha.value = combineAlpha(
+            combinedAlpha.value,
+            decodeExplicitMaskAlpha8({ page: pdfPage, maskStream: maskEntry.stream, width, height }),
+          );
+          break;
+        case "colorKey":
+          combinedAlpha.value = combineAlpha(
+            combinedAlpha.value,
+            applyColorKeyMask({
+              data: down.data,
+              width,
+              height,
+              components,
+              bitsPerComponent: 8,
+              ranges: maskEntry.ranges,
+            }),
+          );
+          break;
+        default:
+          break;
       }
 
       const jpxColorSpace = components === 1 ? "DeviceGray" : components === 3 ? "DeviceRGB" : "DeviceCMYK";
@@ -199,16 +204,21 @@ export function decodeImageXObjectStreamNative(
       const rgb = decodeJpegToRgb(jpegBytes, { expectedWidth: width, expectedHeight: height });
       const data = rgb.data;
       const combinedAlpha: { value: Uint8Array | undefined } = { value: alpha };
-      if (maskEntry.kind === "explicit") {
-      combinedAlpha.value = combineAlpha(
-        combinedAlpha.value,
-        decodeExplicitMaskAlpha8({ page: pdfPage, maskStream: maskEntry.stream, width, height }),
-      );
-      } else if (maskEntry.kind === "colorKey") {
-        combinedAlpha.value = combineAlpha(
-          combinedAlpha.value,
-          applyColorKeyMask({ data, width, height, components: 3, bitsPerComponent: 8, ranges: maskEntry.ranges }),
-        );
+      switch (maskEntry.kind) {
+        case "explicit":
+          combinedAlpha.value = combineAlpha(
+            combinedAlpha.value,
+            decodeExplicitMaskAlpha8({ page: pdfPage, maskStream: maskEntry.stream, width, height }),
+          );
+          break;
+        case "colorKey":
+          combinedAlpha.value = combineAlpha(
+            combinedAlpha.value,
+            applyColorKeyMask({ data, width, height, components: 3, bitsPerComponent: 8, ranges: maskEntry.ranges }),
+          );
+          break;
+        default:
+          break;
       }
       return {
         type: "image",
@@ -240,16 +250,21 @@ export function decodeImageXObjectStreamNative(
         decode,
       });
       const combinedAlpha: { value: Uint8Array | undefined } = { value: alpha };
-      if (maskEntry.kind === "explicit") {
-        combinedAlpha.value = combineAlpha(
-          combinedAlpha.value,
-          decodeExplicitMaskAlpha8({ page: pdfPage, maskStream: maskEntry.stream, width, height }),
-        );
-      } else if (maskEntry.kind === "colorKey") {
-        combinedAlpha.value = combineAlpha(
-          combinedAlpha.value,
-          applyIndexedColorKeyMask({ packedIndices: data, width, height, bitsPerComponent, ranges: maskEntry.ranges, decode }),
-        );
+      switch (maskEntry.kind) {
+        case "explicit":
+          combinedAlpha.value = combineAlpha(
+            combinedAlpha.value,
+            decodeExplicitMaskAlpha8({ page: pdfPage, maskStream: maskEntry.stream, width, height }),
+          );
+          break;
+        case "colorKey":
+          combinedAlpha.value = combineAlpha(
+            combinedAlpha.value,
+            applyIndexedColorKeyMask({ packedIndices: data, width, height, bitsPerComponent, ranges: maskEntry.ranges, decode }),
+          );
+          break;
+        default:
+          break;
       }
       return {
         type: "image",
@@ -275,23 +290,28 @@ export function decodeImageXObjectStreamNative(
       });
 
       const combinedAlpha: { value: Uint8Array | undefined } = { value: alpha };
-      if (maskEntry.kind === "explicit") {
-        combinedAlpha.value = combineAlpha(
-          combinedAlpha.value,
-          decodeExplicitMaskAlpha8({ page: pdfPage, maskStream: maskEntry.stream, width, height }),
-        );
-      } else if (maskEntry.kind === "colorKey") {
-        combinedAlpha.value = combineAlpha(
-          combinedAlpha.value,
-          applyColorKeyMask({
-            data,
-            width,
-            height,
-            components: colorSpaceInfo.components,
-            bitsPerComponent,
-            ranges: maskEntry.ranges,
-          }),
-        );
+      switch (maskEntry.kind) {
+        case "explicit":
+          combinedAlpha.value = combineAlpha(
+            combinedAlpha.value,
+            decodeExplicitMaskAlpha8({ page: pdfPage, maskStream: maskEntry.stream, width, height }),
+          );
+          break;
+        case "colorKey":
+          combinedAlpha.value = combineAlpha(
+            combinedAlpha.value,
+            applyColorKeyMask({
+              data,
+              width,
+              height,
+              components: colorSpaceInfo.components,
+              bitsPerComponent,
+              ranges: maskEntry.ranges,
+            }),
+          );
+          break;
+        default:
+          break;
       }
 
       return {
@@ -319,16 +339,21 @@ export function decodeImageXObjectStreamNative(
       });
 
       const combinedAlpha: { value: Uint8Array | undefined } = { value: alpha };
-      if (maskEntry.kind === "explicit") {
-        combinedAlpha.value = combineAlpha(
-          combinedAlpha.value,
-          decodeExplicitMaskAlpha8({ page: pdfPage, maskStream: maskEntry.stream, width, height }),
-        );
-      } else if (maskEntry.kind === "colorKey") {
-        combinedAlpha.value = combineAlpha(
-          combinedAlpha.value,
-          applyColorKeyMask({ data, width, height, components: 3, bitsPerComponent, ranges: maskEntry.ranges }),
-        );
+      switch (maskEntry.kind) {
+        case "explicit":
+          combinedAlpha.value = combineAlpha(
+            combinedAlpha.value,
+            decodeExplicitMaskAlpha8({ page: pdfPage, maskStream: maskEntry.stream, width, height }),
+          );
+          break;
+        case "colorKey":
+          combinedAlpha.value = combineAlpha(
+            combinedAlpha.value,
+            applyColorKeyMask({ data, width, height, components: 3, bitsPerComponent, ranges: maskEntry.ranges }),
+          );
+          break;
+        default:
+          break;
       }
 
       return {
@@ -356,16 +381,21 @@ export function decodeImageXObjectStreamNative(
       });
 
       const combinedAlpha: { value: Uint8Array | undefined } = { value: alpha };
-      if (maskEntry.kind === "explicit") {
-        combinedAlpha.value = combineAlpha(
-          combinedAlpha.value,
-          decodeExplicitMaskAlpha8({ page: pdfPage, maskStream: maskEntry.stream, width, height }),
-        );
-      } else if (maskEntry.kind === "colorKey") {
-        combinedAlpha.value = combineAlpha(
-          combinedAlpha.value,
-          applyColorKeyMask({ data, width, height, components: 1, bitsPerComponent, ranges: maskEntry.ranges }),
-        );
+      switch (maskEntry.kind) {
+        case "explicit":
+          combinedAlpha.value = combineAlpha(
+            combinedAlpha.value,
+            decodeExplicitMaskAlpha8({ page: pdfPage, maskStream: maskEntry.stream, width, height }),
+          );
+          break;
+        case "colorKey":
+          combinedAlpha.value = combineAlpha(
+            combinedAlpha.value,
+            applyColorKeyMask({ data, width, height, components: 1, bitsPerComponent, ranges: maskEntry.ranges }),
+          );
+          break;
+        default:
+          break;
       }
 
       return {
@@ -393,16 +423,21 @@ export function decodeImageXObjectStreamNative(
       });
 
       const combinedAlpha: { value: Uint8Array | undefined } = { value: alpha };
-      if (maskEntry.kind === "explicit") {
-        combinedAlpha.value = combineAlpha(
-          combinedAlpha.value,
-          decodeExplicitMaskAlpha8({ page: pdfPage, maskStream: maskEntry.stream, width, height }),
-        );
-      } else if (maskEntry.kind === "colorKey") {
-        combinedAlpha.value = combineAlpha(
-          combinedAlpha.value,
-          applyColorKeyMask({ data, width, height, components: 3, bitsPerComponent, ranges: maskEntry.ranges }),
-        );
+      switch (maskEntry.kind) {
+        case "explicit":
+          combinedAlpha.value = combineAlpha(
+            combinedAlpha.value,
+            decodeExplicitMaskAlpha8({ page: pdfPage, maskStream: maskEntry.stream, width, height }),
+          );
+          break;
+        case "colorKey":
+          combinedAlpha.value = combineAlpha(
+            combinedAlpha.value,
+            applyColorKeyMask({ data, width, height, components: 3, bitsPerComponent, ranges: maskEntry.ranges }),
+          );
+          break;
+        default:
+          break;
       }
 
       return {
@@ -429,23 +464,28 @@ export function decodeImageXObjectStreamNative(
       });
 
       const combinedAlpha: { value: Uint8Array | undefined } = { value: alpha };
-      if (maskEntry.kind === "explicit") {
-        combinedAlpha.value = combineAlpha(
-          combinedAlpha.value,
-          decodeExplicitMaskAlpha8({ page: pdfPage, maskStream: maskEntry.stream, width, height }),
-        );
-      } else if (maskEntry.kind === "colorKey") {
-        combinedAlpha.value = combineAlpha(
-          combinedAlpha.value,
-          applyColorKeyMask({
-            data,
-            width,
-            height,
-            components: colorSpaceInfo.components,
-            bitsPerComponent,
-            ranges: maskEntry.ranges,
-          }),
-        );
+      switch (maskEntry.kind) {
+        case "explicit":
+          combinedAlpha.value = combineAlpha(
+            combinedAlpha.value,
+            decodeExplicitMaskAlpha8({ page: pdfPage, maskStream: maskEntry.stream, width, height }),
+          );
+          break;
+        case "colorKey":
+          combinedAlpha.value = combineAlpha(
+            combinedAlpha.value,
+            applyColorKeyMask({
+              data,
+              width,
+              height,
+              components: colorSpaceInfo.components,
+              bitsPerComponent,
+              ranges: maskEntry.ranges,
+            }),
+          );
+          break;
+        default:
+          break;
       }
 
       return {

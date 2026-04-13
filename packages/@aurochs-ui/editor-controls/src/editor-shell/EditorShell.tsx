@@ -11,7 +11,7 @@
  * and avoids obscuring the editing surface.
  */
 
-import { useRef, useMemo, useState, useEffect, useCallback, type CSSProperties } from "react";
+import React, { useRef, useMemo, useState, useEffect, useCallback, type CSSProperties, type ComponentType } from "react";
 import { GridLayout } from "react-panel-layout";
 import type { LayerDefinition } from "react-panel-layout";
 import { SidebarIcon } from "@aurochs-ui/ui-components/icons";
@@ -81,6 +81,30 @@ const drawerToggleActiveStyle: CSSProperties = {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+type DrawerToggleProps = {
+  readonly show: boolean;
+  readonly isOpen: boolean;
+  readonly label: string;
+  readonly onClick: () => void;
+  readonly icon: ComponentType<{ size: number }>;
+};
+
+function buildDrawerToggle({ show, isOpen, label, onClick, icon: Icon }: DrawerToggleProps): React.JSX.Element | null {
+  if (!show) {return null;}
+  return (
+    <button
+      type="button"
+      style={isOpen ? drawerToggleActiveStyle : drawerToggleStyle}
+      onClick={onClick}
+      title={label}
+      aria-label={label}
+      aria-pressed={isOpen}
+    >
+      <Icon size={TOGGLE_ICON_SIZE} />
+    </button>
+  );
+}
 
 function buildLayerFromPlacement(
   id: string,
@@ -266,32 +290,22 @@ export function EditorShell({
     // Left toggle sits at the start of the row, right toggle at the end.
     // If there is no consumer toolbar, the toggles form a minimal toolbar row.
     const LeftIcon = leftPanel?.drawerIcon ?? SidebarIcon;
-    const leftToggle = needsLeftToggle ? (
-      <button
-        type="button"
-        style={leftDrawerOpen ? drawerToggleActiveStyle : drawerToggleStyle}
-        onClick={handleToggleLeftDrawer}
-        title={leftPanel!.drawerLabel ?? "Left panel"}
-        aria-label={leftPanel!.drawerLabel ?? "Left panel"}
-        aria-pressed={leftDrawerOpen}
-      >
-        <LeftIcon size={TOGGLE_ICON_SIZE} />
-      </button>
-    ) : null;
+    const leftToggle = buildDrawerToggle({
+      show: needsLeftToggle,
+      isOpen: leftDrawerOpen,
+      label: leftPanel?.drawerLabel ?? "Left panel",
+      onClick: handleToggleLeftDrawer,
+      icon: LeftIcon,
+    });
 
     const RightIcon = rightPanel?.drawerIcon ?? SidebarIcon;
-    const rightToggle = needsRightToggle ? (
-      <button
-        type="button"
-        style={rightDrawerOpen ? drawerToggleActiveStyle : drawerToggleStyle}
-        onClick={handleToggleRightDrawer}
-        title={rightPanel!.drawerLabel ?? "Right panel"}
-        aria-label={rightPanel!.drawerLabel ?? "Right panel"}
-        aria-pressed={rightDrawerOpen}
-      >
-        <RightIcon size={TOGGLE_ICON_SIZE} />
-      </button>
-    ) : null;
+    const rightToggle = buildDrawerToggle({
+      show: needsRightToggle,
+      isOpen: rightDrawerOpen,
+      label: rightPanel?.drawerLabel ?? "Right panel",
+      onClick: handleToggleRightDrawer,
+      icon: RightIcon,
+    });
 
     return (
       <div style={toolbarRowStyle}>

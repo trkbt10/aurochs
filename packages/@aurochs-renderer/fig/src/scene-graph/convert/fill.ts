@@ -37,7 +37,7 @@ function convertGradientStops(stops: readonly { color: FigColor; position: numbe
 /**
  * Convert hash array to hex string
  */
-function uint8ArrayToBase64(data: Uint8Array): string {
+function _uint8ArrayToBase64(data: Uint8Array): string {
   const binary = Array.from(data, (byte) => String.fromCharCode(byte)).join("");
   return btoa(binary);
 }

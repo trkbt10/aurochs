@@ -11,19 +11,19 @@
  * 4. Collects COMPONENT/SYMBOL nodes into the components map
  */
 
-import type { FigNode, FigNodeType, FigMatrix, FigVector, FigColor, FigPaint, FigEffect, FigStrokeWeight, KiwiEnumValue, FigKiwiTextData, FigTextStyleOverrideEntry } from "@aurochs/fig/types";
+import type { FigNode, FigNodeType, FigMatrix, FigVector, FigColor, FigPaint, FigEffect, KiwiEnumValue, FigKiwiTextData, FigTextStyleOverrideEntry } from "@aurochs/fig/types";
 import type { NodeTreeResult } from "@aurochs/fig/parser";
 import { getNodeType, safeChildren } from "@aurochs/fig/parser";
 import { getEffectiveSymbolID } from "@aurochs/fig/symbols";
-import type { LoadedFigFile, FigImage, FigMetadata } from "@aurochs/fig/roundtrip";
+import type { LoadedFigFile } from "@aurochs/fig/roundtrip";
 import type {
   FigDesignDocument, FigDesignNode, FigPage, AutoLayoutProps, LayoutConstraints, TextData, TextStyleOverride, SymbolOverride,
   BlendMode, DerivedTextData,
   ComponentPropertyDef, ComponentPropertyRef, ComponentPropertyAssignment, ComponentPropertyType, ComponentPropertyNodeField, ComponentPropertyValue,
-} from "../types/document";
-import { DEFAULT_PAGE_BACKGROUND } from "../types/document";
-import { guidToNodeId, guidToPageId } from "../types/node-id";
-import type { FigNodeId, FigPageId } from "../types/node-id";
+} from "@aurochs/fig/domain";
+import { DEFAULT_PAGE_BACKGROUND } from "@aurochs/fig/domain";
+import { guidToNodeId, guidToPageId } from "@aurochs/fig/domain";
+import type { FigNodeId } from "@aurochs/fig/domain";
 
 // =============================================================================
 // Constants
@@ -41,7 +41,7 @@ import type { FigNodeId, FigPageId } from "../types/node-id";
  */
 function resolveSymbolIdForDomain(raw: Record<string, unknown>): FigNodeId | undefined {
   const guid = getEffectiveSymbolID(raw);
-  if (!guid) return undefined;
+  if (!guid) {return undefined;}
   return guidToNodeId(guid);
 }
 
@@ -52,7 +52,7 @@ const IDENTITY_MATRIX: FigMatrix = { m00: 1, m01: 0, m02: 0, m10: 0, m11: 1, m12
 const DEFAULT_SIZE: FigVector = { x: 0, y: 0 };
 
 /** Default color (black) */
-const DEFAULT_COLOR: FigColor = { r: 0, g: 0, b: 0, a: 1 };
+const _DEFAULT_COLOR: FigColor = { r: 0, g: 0, b: 0, a: 1 };
 
 /** Node types that are components */
 const COMPONENT_TYPES: ReadonlySet<string> = new Set(["COMPONENT", "COMPONENT_SET", "SYMBOL"]);
@@ -90,21 +90,26 @@ const MODELED_FIELDS: ReadonlySet<string> = new Set([
 // Blend Mode Extraction
 // =============================================================================
 
+/** Resolve a blend mode value to its string name, handling both string and KiwiEnumValue forms. */
+function resolveBlendModeName(bm: unknown): string | undefined {
+  if (typeof bm === "string") {
+    return bm;
+  }
+  if (typeof bm === "object" && bm !== null && "name" in bm) {
+    return (bm as { name: string }).name;
+  }
+  return undefined;
+}
+
 /**
  * Extract blend mode from raw node data, normalizing KiwiEnumValue to BlendMode string.
  * Returns undefined for PASS_THROUGH/NORMAL (default blend modes don't need storage).
  */
 function extractBlendMode(raw: Record<string, unknown>): BlendMode | undefined {
   const bm = raw.blendMode;
-  if (!bm) return undefined;
+  if (!bm) {return undefined;}
 
-  let name: string | undefined;
-  if (typeof bm === "string") {
-    name = bm;
-  } else if (typeof bm === "object" && "name" in bm) {
-    name = (bm as { name: string }).name;
-  }
-
+  const name = resolveBlendModeName(bm);
   if (!name || name === "PASS_THROUGH" || name === "NORMAL") {
     return undefined;
   }
@@ -180,19 +185,15 @@ function extractTextData(raw: Record<string, unknown>): TextData | undefined {
   // In real .fig files, characters is a direct NodeChange field.
   // In builder-generated files, it's inside the textData Kiwi message.
   const kiwiTextData = raw.textData as FigKiwiTextData | undefined;
-  let characters = raw.characters;
-  if (typeof characters !== "string") {
-    characters = kiwiTextData?.characters;
-  }
+  const characters = typeof raw.characters === "string" ? raw.characters : kiwiTextData?.characters;
   if (typeof characters !== "string") {
     return undefined;
   }
 
   // Extract characterStyleIDs and styleOverrideTable from the typed Kiwi TextData.
   const characterStyleIDs = kiwiTextData?.characterStyleIDs;
-  const styleOverrideTable = kiwiTextData?.styleOverrideTable
-    ? convertKiwiOverrideTable(kiwiTextData.styleOverrideTable)
-    : undefined;
+  const rawOverrideTable = kiwiTextData?.styleOverrideTable;
+  const styleOverrideTable = rawOverrideTable ? convertKiwiOverrideTable(rawOverrideTable) : undefined;
 
   return {
     characters,
@@ -259,13 +260,13 @@ const NODE_FIELD_MAP: Record<number, ComponentPropertyNodeField> = {
 };
 
 function resolveEnumName<T extends string>(v: unknown, map: Record<number, T>): T | undefined {
-  if (v == null) return undefined;
-  if (typeof v === "string") return v as T;
+  if (v == null) {return undefined;}
+  if (typeof v === "string") {return v as T;}
   if (typeof v === "object" && "value" in v) {
     const num = (v as { value: number }).value;
     return map[num];
   }
-  if (typeof v === "number") return map[v];
+  if (typeof v === "number") {return map[v];}
   return undefined;
 }
 
@@ -274,18 +275,18 @@ function resolveEnumName<T extends string>(v: unknown, map: Record<number, T>): 
  */
 function extractComponentPropertyDefs(raw: Record<string, unknown>): readonly ComponentPropertyDef[] | undefined {
   const defs = raw.componentPropDefs as readonly Record<string, unknown>[] | undefined;
-  if (!defs || defs.length === 0) return undefined;
+  if (!defs || defs.length === 0) {return undefined;}
 
   const result: ComponentPropertyDef[] = [];
   for (const def of defs) {
     const id = def.id;
-    if (!id || typeof id !== "object" || !("sessionID" in id)) continue;
+    if (!id || typeof id !== "object" || !("sessionID" in id)) {continue;}
     const guid = id as { sessionID: number; localID: number };
     const name = def.name as string | undefined;
-    if (!name) continue;
+    if (!name) {continue;}
 
     const propType = resolveEnumName(def.type, PROP_TYPE_MAP);
-    if (!propType) continue;
+    if (!propType) {continue;}
 
     result.push({
       id: guidToNodeId(guid),
@@ -305,7 +306,7 @@ function extractComponentPropertyDefs(raw: Record<string, unknown>): readonly Co
  * and strips unknown fields so the domain type doesn't carry opaque Kiwi data.
  */
 function convertPropertyValue(raw: Record<string, unknown> | undefined): ComponentPropertyValue | undefined {
-  if (!raw) return undefined;
+  if (!raw) {return undefined;}
 
   const result: {
     boolValue?: boolean;
@@ -346,16 +347,16 @@ function convertPropertyValue(raw: Record<string, unknown> | undefined): Compone
  */
 function extractComponentPropertyRefs(raw: Record<string, unknown>): readonly ComponentPropertyRef[] | undefined {
   const refs = raw.componentPropRefs as readonly Record<string, unknown>[] | undefined;
-  if (!refs || refs.length === 0) return undefined;
+  if (!refs || refs.length === 0) {return undefined;}
 
   const result: ComponentPropertyRef[] = [];
   for (const ref of refs) {
     const defID = ref.defID;
-    if (!defID || typeof defID !== "object" || !("sessionID" in defID)) continue;
+    if (!defID || typeof defID !== "object" || !("sessionID" in defID)) {continue;}
     const guid = defID as { sessionID: number; localID: number };
 
     const nodeField = resolveEnumName(ref.componentPropNodeField, NODE_FIELD_MAP);
-    if (!nodeField) continue;
+    if (!nodeField) {continue;}
 
     result.push({
       defId: guidToNodeId(guid),
@@ -370,16 +371,16 @@ function extractComponentPropertyRefs(raw: Record<string, unknown>): readonly Co
  */
 function extractComponentPropertyAssignments(raw: Record<string, unknown>): readonly ComponentPropertyAssignment[] | undefined {
   const assigns = raw.componentPropAssignments as readonly Record<string, unknown>[] | undefined;
-  if (!assigns || assigns.length === 0) return undefined;
+  if (!assigns || assigns.length === 0) {return undefined;}
 
   const result: ComponentPropertyAssignment[] = [];
   for (const assign of assigns) {
     const defID = assign.defID;
-    if (!defID || typeof defID !== "object" || !("sessionID" in defID)) continue;
+    if (!defID || typeof defID !== "object" || !("sessionID" in defID)) {continue;}
     const guid = defID as { sessionID: number; localID: number };
 
     const value = convertPropertyValue(assign.value as Record<string, unknown> | undefined);
-    if (!value) continue; // Skip assignments with no recognizable value
+    if (!value) {continue;} // Skip assignments with no recognizable value
 
     result.push({
       defId: guidToNodeId(guid),
@@ -396,16 +397,14 @@ function extractComponentPropertyAssignments(raw: Record<string, unknown>): read
  */
 function collectRawFields(node: FigNode): Record<string, unknown> | undefined {
   const raw: Record<string, unknown> = {};
-  let hasFields = false;
 
   for (const [key, value] of Object.entries(node)) {
     if (!MODELED_FIELDS.has(key) && value !== undefined) {
       raw[key] = value;
-      hasFields = true;
     }
   }
 
-  return hasFields ? raw : undefined;
+  return Object.keys(raw).length > 0 ? raw : undefined;
 }
 
 /**
@@ -423,9 +422,7 @@ export function convertFigNode(
   const id = guidToNodeId(node.guid);
 
   const children = safeChildren(node);
-  const convertedChildren = children.length > 0
-    ? children.map((child) => convertFigNode(child, components))
-    : undefined;
+  const convertedChildren = children.length > 0 ? children.map((child) => convertFigNode(child, components)) : undefined;
 
   const designNode: FigDesignNode = {
     id,

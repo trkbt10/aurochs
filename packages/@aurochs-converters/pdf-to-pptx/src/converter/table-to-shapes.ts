@@ -417,14 +417,17 @@ export function analyzeTableDecorationFromPaths(
           continue;
         }
         if (cur) {
-          if (op.type === "curveTo") {
-            cur = { x: op.end.x, y: op.end.y };
-          } else if (op.type === "curveToV") {
-            cur = { x: op.end.x, y: op.end.y };
-          } else if (op.type === "curveToY") {
-            cur = { x: op.end.x, y: op.end.y };
-          } else if (op.type === "closePath") {
-            /* no-op */
+          switch (op.type) {
+            case "curveTo":
+            case "curveToV":
+            case "curveToY":
+              cur = { x: op.end.x, y: op.end.y };
+              break;
+            case "closePath":
+              /* no-op */
+              break;
+            default:
+              break;
           }
         }
       }

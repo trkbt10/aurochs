@@ -34,12 +34,18 @@ export type GetStrokeAttrsParams = {
   readonly options?: StrokeOptions;
 };
 
+/** Returns SVG stroke attributes derived from Figma paint definitions and stroke weight. */
 export function getStrokeAttrs(params: GetStrokeAttrsParams): StrokeAttrs;
 export function getStrokeAttrs(
   paints: readonly FigPaint[] | undefined,
   strokeWeight: FigStrokeWeight | undefined,
   options?: StrokeOptions,
 ): StrokeAttrs;
+
+
+
+
+
 export function getStrokeAttrs(
   paintsOrParams: readonly FigPaint[] | undefined | GetStrokeAttrsParams,
   strokeWeight?: FigStrokeWeight | undefined,
@@ -109,9 +115,9 @@ export function hasVisibleStroke(
   paints: readonly FigPaint[] | undefined,
   strokeWeight: FigStrokeWeight | undefined,
 ): boolean {
-  if (!paints || paints.length === 0) return false;
-  if (!strokeWeight) return false;
+  if (!paints || paints.length === 0) {return false;}
+  if (!strokeWeight) {return false;}
   const weight = resolveStrokeWeight(strokeWeight);
-  if (weight <= 0) return false;
+  if (weight <= 0) {return false;}
   return paints.some((p) => p.visible !== false);
 }

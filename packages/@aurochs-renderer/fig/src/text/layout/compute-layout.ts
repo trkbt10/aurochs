@@ -139,7 +139,9 @@ function wrapParagraph(text: string, maxWidth: number, charWidth: number): strin
 
   const lines: string[] = [];
   const words = text.split(/( +)/); // Split keeping spaces as separate entries
+  // eslint-disable-next-line no-restricted-syntax -- mutable line buffer for word-wrap; cannot be expressed as pure reduce without complexity
   let currentLine = "";
+  // eslint-disable-next-line no-restricted-syntax -- mutable width accumulator for word-wrap
   let currentWidth = 0;
 
   for (const word of words) {
@@ -255,6 +257,16 @@ function splitTextIntoLines(props: ExtractedTextProps): LineWithParagraph[] {
   return allLines;
 }
 
+function resolveLinesWithParagraph(
+  explicitLines: readonly string[] | undefined,
+  props: ExtractedTextProps,
+): LineWithParagraph[] {
+  if (explicitLines) {
+    return explicitLines.map((text, i) => ({ text, paragraphIndex: i }));
+  }
+  return splitTextIntoLines(props);
+}
+
 /**
  * Compute text layout from extracted properties
  *
@@ -270,9 +282,7 @@ export function computeTextLayout(options: ComputeLayoutOptions): TextLayout {
 
   // Get lines with paragraph origin tracking.
   // If explicit lines are provided (no paragraph info), treat each as its own paragraph.
-  const linesWithParagraph: LineWithParagraph[] = options.lines
-    ? options.lines.map((text, i) => ({ text, paragraphIndex: i }))
-    : splitTextIntoLines(props);
+  const linesWithParagraph: LineWithParagraph[] = resolveLinesWithParagraph(options.lines, props);
 
   // Calculate x position from horizontal alignment
   const x = getAlignedX(props.textAlignHorizontal, props.size?.width);
@@ -373,6 +383,24 @@ export function textLayoutToCursorLayout(
   layout: TextLayout,
   getLineTextWidth?: (text: string) => number,
 ): CursorLayoutResult {
+  return computeCursorLayout(layout, getLineTextWidth);
+}
+
+function computeLeftX(anchorX: number, textWidth: number, alignH: string): number {
+  switch (alignH) {
+    case "CENTER":
+      return anchorX - textWidth / 2;
+    case "RIGHT":
+      return anchorX - textWidth;
+    default: // LEFT, JUSTIFIED
+      return anchorX;
+  }
+}
+
+function computeCursorLayout(
+  layout: TextLayout,
+  getLineTextWidth?: (text: string) => number,
+): CursorLayoutResult {
   // Group layout lines by paragraphIndex.
   // A single source paragraph (\n-delimited) may produce multiple visual lines
   // when word-wrapping is active. editor-core's TextBodyLike uses \n-delimited
@@ -386,23 +414,10 @@ export function textLayoutToCursorLayout(
   const grouped = new Map<number, CursorLayoutLine[]>();
 
   for (const line of layout.lines) {
-    const textWidth = getLineTextWidth
-      ? getLineTextWidth(line.text)
-      : line.estimatedWidth;
+    const textWidth = getLineTextWidth ? getLineTextWidth(line.text) : line.estimatedWidth;
 
     // Convert SVG text-anchor x to left-edge x
-    let leftX: number;
-    switch (layout.alignH) {
-      case "CENTER":
-        leftX = line.x - textWidth / 2;
-        break;
-      case "RIGHT":
-        leftX = line.x - textWidth;
-        break;
-      default: // LEFT, JUSTIFIED
-        leftX = line.x;
-        break;
-    }
+    const leftX = computeLeftX(line.x, textWidth, layout.alignH);
 
     const cursorLine: CursorLayoutLine = {
       spans: [{

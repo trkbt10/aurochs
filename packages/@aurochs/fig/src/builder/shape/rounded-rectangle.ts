@@ -7,11 +7,11 @@ import type { RoundedRectangleNodeData } from "./types";
 import { SHAPE_NODE_TYPES } from "../../constants";
 
 /** Rounded rectangle node builder instance */
-export type RoundedRectangleNodeBuilder = BaseShapeBuilderMethods<RoundedRectangleNodeBuilder> & {
+export interface RoundedRectangleNodeBuilder extends BaseShapeBuilderMethods<RoundedRectangleNodeBuilder> {
   cornerRadius: (radius: number) => RoundedRectangleNodeBuilder;
   corners: (radii: [number, number, number, number]) => RoundedRectangleNodeBuilder;
   build: () => RoundedRectangleNodeData;
-};
+}
 
 /** Create a rounded rectangle node builder */
 function createRoundedRectangleNodeBuilder(localID: number, parentID: number): RoundedRectangleNodeBuilder {

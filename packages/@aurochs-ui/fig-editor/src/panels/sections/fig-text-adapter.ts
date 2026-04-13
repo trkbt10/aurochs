@@ -17,8 +17,19 @@ import type { TextFormatting, ParagraphFormatting, HorizontalAlignment } from "@
 // KiwiEnumValue helpers
 // =============================================================================
 
+type LetterSpacing = { readonly value: number; readonly units: KiwiEnumValue };
+const DEFAULT_LETTER_SPACING_UNITS: KiwiEnumValue = { value: 0, name: "PIXELS" } as KiwiEnumValue;
+
+function mergeLetterSpacing(existing: LetterSpacing | undefined, newValue: number): LetterSpacing {
+  return existing ? { ...existing, value: newValue } : { value: newValue, units: DEFAULT_LETTER_SPACING_UNITS };
+}
+
+function mergeLineHeight(existing: LetterSpacing | undefined, newValue: number): LetterSpacing {
+  return existing ? { ...existing, value: newValue } : { value: newValue, units: DEFAULT_LETTER_SPACING_UNITS };
+}
+
 function kiwiName(value: KiwiEnumValue | undefined): string {
-  if (!value) return "";
+  if (!value) {return "";}
   return typeof value === "string" ? value : value.name ?? "";
 }
 
@@ -50,6 +61,7 @@ export function figTextToFormatting(td: TextData): TextFormatting {
  * Apply a TextFormatting update to TextData, returning the updated TextData.
  */
 export function applyFormattingUpdate(td: TextData, update: Partial<TextFormatting>): TextData {
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator: each conditional block applies one optional field update to the TextData record
   let result = td;
 
   if (update.fontFamily !== undefined) {
@@ -70,8 +82,8 @@ export function applyFormattingUpdate(td: TextData, update: Partial<TextFormatti
     const isBold = update.bold ?? currentStyle.includes("bold");
     const isItalic = update.italic ?? currentStyle.includes("italic");
     const parts: string[] = [];
-    if (isBold) parts.push("Bold");
-    if (isItalic) parts.push("Italic");
+    if (isBold) {parts.push("Bold");}
+    if (isItalic) {parts.push("Italic");}
     const newStyle = parts.length > 0 ? parts.join(" ") : "Regular";
     result = {
       ...result,
@@ -80,11 +92,7 @@ export function applyFormattingUpdate(td: TextData, update: Partial<TextFormatti
   }
 
   if (update.underline !== undefined || update.strikethrough !== undefined) {
-    const decoration = update.strikethrough
-      ? "STRIKETHROUGH"
-      : update.underline
-        ? "UNDERLINE"
-        : "NONE";
+    const decoration = update.strikethrough ? "STRIKETHROUGH" : update.underline ? "UNDERLINE" : "NONE";
     result = {
       ...result,
       textDecoration: makeKiwiEnum(decoration, decoration === "NONE" ? 0 : decoration === "UNDERLINE" ? 1 : 2),
@@ -94,9 +102,7 @@ export function applyFormattingUpdate(td: TextData, update: Partial<TextFormatti
   if (update.letterSpacing !== undefined) {
     result = {
       ...result,
-      letterSpacing: result.letterSpacing
-        ? { ...result.letterSpacing, value: update.letterSpacing }
-        : { value: update.letterSpacing, units: { value: 0, name: "PIXELS" } },
+      letterSpacing: mergeLetterSpacing(result.letterSpacing, update.letterSpacing),
     };
   }
 
@@ -138,6 +144,7 @@ export function figTextToParagraphFormatting(td: TextData): ParagraphFormatting 
  * Apply a ParagraphFormatting update to TextData.
  */
 export function applyParagraphUpdate(td: TextData, update: Partial<ParagraphFormatting>): TextData {
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator: each conditional block applies one optional field update to the TextData record
   let result = td;
 
   if (update.alignment !== undefined) {
@@ -154,9 +161,7 @@ export function applyParagraphUpdate(td: TextData, update: Partial<ParagraphForm
     const lineHeightValue = update.lineSpacing * result.fontSize;
     result = {
       ...result,
-      lineHeight: result.lineHeight
-        ? { ...result.lineHeight, value: lineHeightValue }
-        : { value: lineHeightValue, units: { value: 0, name: "PIXELS" } },
+      lineHeight: mergeLineHeight(result.lineHeight, lineHeightValue),
     };
   }
 
@@ -175,12 +180,24 @@ const AUTO_RESIZE_VALUES: Record<FigTextAutoResize, number> = {
   NONE: 2,
 };
 
+
+
+
+
+
+/** Returns the text auto-resize mode from a Figma TextData node. */
 export function getAutoResize(td: TextData): FigTextAutoResize {
   const name = kiwiName(td.textAutoResize);
-  if (name === "HEIGHT" || name === "NONE") return name;
+  if (name === "HEIGHT" || name === "NONE") {return name;}
   return "WIDTH_AND_HEIGHT";
 }
 
+
+
+
+
+
+/** Converts a FigTextAutoResize mode to its corresponding Kiwi enum value. */
 export function makeAutoResizeEnum(mode: FigTextAutoResize): KiwiEnumValue {
   return makeKiwiEnum(mode, AUTO_RESIZE_VALUES[mode]);
 }

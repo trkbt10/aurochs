@@ -54,7 +54,7 @@ export function useTextEditHandlers({
           return;
         }
         const defaultRunProperties = extractDefaultRunProperties(textEditState.initialTextBody);
-        const newTextBody = mergeTextIntoBody(textEditState.initialTextBody, newText, defaultRunProperties);
+        const newTextBody = mergeTextIntoBody({ originalBody: textEditState.initialTextBody, newText, defaultRunProperties });
         onCommit(textEditState.shapeId, newTextBody);
       }
       onExit();

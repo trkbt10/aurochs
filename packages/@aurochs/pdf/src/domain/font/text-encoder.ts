@@ -52,11 +52,8 @@ export function buildReverseToUnicodeMap(
 // Reverse WinAnsi map (single-byte fonts)
 // =============================================================================
 
-/**
- * Reverse WinAnsi map: Unicode char → byte value.
- * Eagerly initialized at module load (WINANSI_ENCODING is a constant).
- */
-const REVERSE_WINANSI: ReadonlyMap<string, number> = (() => {
+/** Build the reverse WinAnsi map: Unicode char → byte value. */
+function buildReverseWinAnsi(): ReadonlyMap<string, number> {
   const map = new Map<string, number>();
   for (const [code, unicode] of WINANSI_ENCODING) {
     if (!map.has(unicode)) {
@@ -64,7 +61,13 @@ const REVERSE_WINANSI: ReadonlyMap<string, number> = (() => {
     }
   }
   return map;
-})();
+}
+
+/**
+ * Reverse WinAnsi map: Unicode char → byte value.
+ * Eagerly initialized at module load (WINANSI_ENCODING is a constant).
+ */
+const REVERSE_WINANSI: ReadonlyMap<string, number> = buildReverseWinAnsi();
 
 // =============================================================================
 // Encoding result
@@ -195,7 +198,7 @@ export function splitTextByEncodability(
   text: string,
   font: ResolvedFont,
 ): readonly TextRun[] {
-  if (text.length === 0) return [];
+  if (text.length === 0) {return [];}
 
   const runs: TextRun[] = [];
 

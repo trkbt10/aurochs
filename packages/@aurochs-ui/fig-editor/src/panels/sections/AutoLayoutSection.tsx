@@ -6,7 +6,7 @@
  */
 
 import type { CSSProperties } from "react";
-import type { FigDesignNode, AutoLayoutProps } from "@aurochs/fig/domain";
+import type { FigDesignNode } from "@aurochs/fig/domain";
 import type { KiwiEnumValue } from "@aurochs/fig/types";
 import { colorTokens, fontTokens } from "@aurochs-ui/ui-components/design-tokens";
 
@@ -15,7 +15,7 @@ type AutoLayoutSectionProps = {
 };
 
 function enumName(val: KiwiEnumValue | undefined): string {
-  if (!val) return "—";
+  if (!val) {return "—";}
   return val.name ?? String(val.value);
 }
 
@@ -44,6 +44,12 @@ function PropertyRow({ label, value }: { label: string; value: string | number }
   );
 }
 
+
+
+
+
+
+/** Panel section for viewing and editing auto layout properties of a Figma node. */
 export function AutoLayoutSection({ node }: AutoLayoutSectionProps) {
   const al = node.autoLayout;
   if (!al) {
@@ -52,9 +58,7 @@ export function AutoLayoutSection({ node }: AutoLayoutSectionProps) {
 
   const direction = enumName(al.stackMode);
   const padding = al.stackPadding;
-  const paddingStr = padding
-    ? `${padding.top} ${padding.right} ${padding.bottom} ${padding.left}`
-    : "0";
+  const paddingStr = padding ? `${padding.top} ${padding.right} ${padding.bottom} ${padding.left}` : "0";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>

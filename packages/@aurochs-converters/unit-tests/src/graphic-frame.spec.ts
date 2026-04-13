@@ -5,7 +5,7 @@
  * Fig child nodes through the pptx-to-fig conversion pipeline.
  */
 
-import { describe, it, expect, vi } from "vitest";
+
 import { convert as pptxToFig } from "@aurochs-converters/pptx-to-fig";
 import type { PresentationDocument, SlideWithId } from "@aurochs-office/pptx/app/presentation-document";
 import type { Shape, GraphicFrame } from "@aurochs-office/pptx/domain/shape";
@@ -41,7 +41,9 @@ function createPptxDoc(shapes: readonly Shape[]): PresentationDocument {
   };
 }
 
-function makeTransform(x: number, y: number, w: number, h: number) {
+type MakeTransformOptions = { x: number; y: number; w: number; h: number };
+
+function makeTransform({ x, y, w, h }: MakeTransformOptions) {
   return {
     x: px(x) as Pixels, y: px(y) as Pixels,
     width: px(w) as Pixels, height: px(h) as Pixels,
@@ -120,7 +122,7 @@ describe("GraphicFrame table → Fig nodes", () => {
     const graphicFrame: GraphicFrame = {
       type: "graphicFrame",
       nonVisual: { id: "10", name: "Table" },
-      transform: makeTransform(50, 50, 400, 80),
+      transform: makeTransform({ x: 50, y: 50, w: 400, h: 80 }),
       content: { type: "table", data: { table } },
     };
 
@@ -160,32 +162,32 @@ describe("GraphicFrame chart → Fig nodes", () => {
     const graphicFrame: GraphicFrame = {
       type: "graphicFrame",
       nonVisual: { id: "20", name: "Chart" },
-      transform: makeTransform(100, 100, 400, 300),
+      transform: makeTransform({ x: 100, y: 100, w: 400, h: 300 }),
       content: { type: "chart", data: { resourceId: "rId-chart-1" } },
     };
 
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warnCalls: unknown[][] = [];
+    const originalWarn = console.warn;
+    console.warn = (...args: unknown[]) => { warnCalls.push(args); };
 
     const doc = createPptxDoc([graphicFrame]);
     const result = await pptxToFig(doc);
+
+    console.warn = originalWarn;
 
     const frame = result.data.pages[0].children[0];
     expect(frame.type).toBe("FRAME");
     // No children since chart data is not in ResourceStore
     expect(frame.children).toBeUndefined();
 
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining("Chart"),
-    );
-
-    warnSpy.mockRestore();
+    expect(warnCalls.some((args) => String(args[0]).includes("Chart"))).toBe(true);
   });
 
   it("produces Fig children when chart data is in ResourceStore", async () => {
     const doc = createPptxDoc([{
       type: "graphicFrame",
       nonVisual: { id: "21", name: "Bar Chart" },
-      transform: makeTransform(50, 50, 400, 300),
+      transform: makeTransform({ x: 50, y: 50, w: 400, h: 300 }),
       content: { type: "chart", data: { resourceId: "rId-chart-2" } },
     } as GraphicFrame]);
 
@@ -236,26 +238,26 @@ describe("GraphicFrame diagram → Fig nodes", () => {
     const graphicFrame: GraphicFrame = {
       type: "graphicFrame",
       nonVisual: { id: "30", name: "SmartArt" },
-      transform: makeTransform(100, 100, 300, 200),
+      transform: makeTransform({ x: 100, y: 100, w: 300, h: 200 }),
       content: {
         type: "diagram",
         data: { dataResourceId: "rId-diagram-1" },
       },
     };
 
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warnCalls: unknown[][] = [];
+    const originalWarn = console.warn;
+    console.warn = (...args: unknown[]) => { warnCalls.push(args); };
 
     const doc = createPptxDoc([graphicFrame]);
     const result = await pptxToFig(doc);
+
+    console.warn = originalWarn;
 
     const frame = result.data.pages[0].children[0];
     expect(frame.type).toBe("FRAME");
     expect(frame.children).toBeUndefined();
 
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining("Diagram"),
-    );
-
-    warnSpy.mockRestore();
+    expect(warnCalls.some((args) => String(args[0]).includes("Diagram"))).toBe(true);
   });
 });

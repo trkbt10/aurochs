@@ -9,11 +9,9 @@
 import type { LoadedPresentation } from "./pptx-loader";
 import type { PresentationDocument, SlideWithId } from "./presentation-document";
 import type { Presentation as DomainPresentation } from "../domain";
-import type { PackageFile } from "@aurochs-office/opc";
 import type { ExtractedTheme } from "../domain";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
 import { EMPTY_FONT_SCHEME } from "@aurochs-office/ooxml/domain/font-scheme";
-import type { ResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 import { createResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 import type { Slide as ApiSlide } from "./types";
 import { parseSlide } from "../parser/slide/slide-parser";

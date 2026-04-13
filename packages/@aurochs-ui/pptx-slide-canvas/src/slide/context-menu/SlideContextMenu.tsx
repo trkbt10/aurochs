@@ -152,14 +152,12 @@ export function SlideContextMenu({ x, y, primaryShape, selectedShapes, actions, 
           break;
         case "graphicFrame": {
           const content = primaryShape.content;
-          if (content.type === "table") {
-            groups.push(getTableMenuItems());
-          } else if (content.type === "chart") {
-            groups.push(getChartMenuItems());
-          } else if (content.type === "diagram") {
-            groups.push(getDiagramMenuItems());
-          } else if (content.type === "oleObject") {
-            groups.push(getOleObjectMenuItems());
+          switch (content.type) {
+            case "table": groups.push(getTableMenuItems()); break;
+            case "chart": groups.push(getChartMenuItems()); break;
+            case "diagram": groups.push(getDiagramMenuItems()); break;
+            case "oleObject": groups.push(getOleObjectMenuItems()); break;
+            default: break;
           }
           break;
         }

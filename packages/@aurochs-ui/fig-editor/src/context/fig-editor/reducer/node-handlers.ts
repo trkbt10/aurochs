@@ -9,6 +9,14 @@ import type { FigNodeId, FigDesignNode } from "@aurochs/fig/domain";
 import { nextNodeId, createIdCounter } from "@aurochs-builder/fig/types";
 import type { HandlerMap } from "./handler-types";
 import { getActivePage } from "../node-geometry";
+import type { SelectionState } from "@aurochs-ui/editor-core/selection";
+
+function buildNodeSelection(newIds: FigNodeId[]): SelectionState<FigNodeId> {
+  if (newIds.length === 1) {
+    return createSingleSelection(newIds[0]!);
+  }
+  return createMultiSelection({ selectedIds: newIds, primaryId: newIds[0]! });
+}
 
 export const NODE_HANDLERS: HandlerMap = {
   ADD_NODE(state, action) {
@@ -18,7 +26,7 @@ export const NODE_HANDLERS: HandlerMap = {
     }
 
     const doc = state.documentHistory.present;
-    const result = addNode(doc, pageId, action.parentId ?? null, action.spec);
+    const result = addNode({ doc, pageId, parentId: action.parentId ?? null, spec: action.spec });
 
     return {
       ...state,
@@ -33,10 +41,10 @@ export const NODE_HANDLERS: HandlerMap = {
       return state;
     }
 
-    let doc = state.documentHistory.present;
-    for (const nodeId of action.nodeIds) {
-      doc = removeNode(doc, pageId, nodeId);
-    }
+    const doc = action.nodeIds.reduce(
+      (acc, nodeId) => removeNode(acc, pageId, nodeId),
+      state.documentHistory.present,
+    );
 
     return {
       ...state,
@@ -52,7 +60,7 @@ export const NODE_HANDLERS: HandlerMap = {
     }
 
     const doc = state.documentHistory.present;
-    const updated = updateNode(doc, pageId, action.nodeId, action.updater);
+    const updated = updateNode({ doc, pageId, nodeId: action.nodeId, updater: action.updater });
 
     return {
       ...state,
@@ -85,55 +93,50 @@ export const NODE_HANDLERS: HandlerMap = {
      */
     function cloneWithNewIds(node: FigDesignNode, isRoot: boolean): FigDesignNode {
       const newId = nextNodeId(counter);
+      const offsetTransform = { ...node.transform, m02: node.transform.m02 + duplicateOffset, m12: node.transform.m12 + duplicateOffset };
       const cloned: FigDesignNode = {
         ...node,
         id: newId,
-        transform: isRoot
-          ? {
-              ...node.transform,
-              m02: node.transform.m02 + duplicateOffset,
-              m12: node.transform.m12 + duplicateOffset,
-            }
-          : node.transform,
-        children: node.children
-          ? node.children.map((child) => cloneWithNewIds(child, false))
-          : undefined,
+        transform: isRoot ? offsetTransform : node.transform,
+        children: node.children ? node.children.map((child) => cloneWithNewIds(child, false)) : undefined,
       };
       return cloned;
     }
 
-    let updatedPages = doc.pages;
-    for (const nodeId of action.nodeIds) {
-      const original = findNodeById(page.children, nodeId);
-      if (!original) {
-        continue;
-      }
-      const cloned = cloneWithNewIds(original, true);
-      newIds.push(cloned.id);
-
-      // Find parent to insert sibling
-      const parent = findParentNode(page.children, nodeId);
-      const parentId = parent ? parent.id : null;
-
-      updatedPages = updatedPages.map((p) => {
-        if (p.id !== pageId) {
-          return p;
+    const { updatedPages } = action.nodeIds.reduce(
+      (acc, nodeId) => {
+        const original = findNodeById(page.children, nodeId);
+        if (!original) {
+          return acc;
         }
+        const cloned = cloneWithNewIds(original, true);
+        newIds.push(cloned.id);
+
+        // Find parent to insert sibling
+        const parent = findParentNode(page.children, nodeId);
+        const parentId = parent ? parent.id : null;
+
         return {
-          ...p,
-          children: insertNodeInTree(p.children, parentId, cloned),
+          updatedPages: acc.updatedPages.map((p) => {
+            if (p.id !== pageId) {
+              return p;
+            }
+            return {
+              ...p,
+              children: insertNodeInTree({ nodes: p.children, parentId, node: cloned }),
+            };
+          }),
         };
-      });
-    }
+      },
+      { updatedPages: doc.pages },
+    );
 
     const updatedDoc = { ...doc, pages: updatedPages };
 
     return {
       ...state,
       documentHistory: pushHistory(state.documentHistory, updatedDoc),
-      nodeSelection: newIds.length === 1
-        ? createSingleSelection(newIds[0])
-        : createMultiSelection({ selectedIds: newIds, primaryId: newIds[0] }),
+      nodeSelection: buildNodeSelection(newIds),
     };
   },
 
@@ -144,7 +147,7 @@ export const NODE_HANDLERS: HandlerMap = {
     }
 
     const doc = state.documentHistory.present;
-    const updated = reorderNode(doc, pageId, action.nodeId, action.direction);
+    const updated = reorderNode({ doc, pageId, nodeId: action.nodeId, direction: action.direction });
 
     return {
       ...state,

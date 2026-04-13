@@ -84,18 +84,19 @@ export function computeParagraphStyles(paragraph: DocxParagraph): CSSProperties 
     }
     // Line height
     if (properties.spacing.line) {
-      if (properties.spacing.lineRule === "exact") {
-        // Exact line height in twips
-        const points = properties.spacing.line / 20;
-        style.lineHeight = `${points}pt`;
-      } else if (properties.spacing.lineRule === "atLeast") {
-        // Minimum line height
-        const points = properties.spacing.line / 20;
-        style.minHeight = `${points}pt`;
-      } else {
-        // Auto: value is 1/240 of single line spacing
-        const multiple = properties.spacing.line / 240;
-        style.lineHeight = String(multiple);
+      switch (properties.spacing.lineRule) {
+        case "exact":
+          // Exact line height in twips
+          style.lineHeight = `${properties.spacing.line / 20}pt`;
+          break;
+        case "atLeast":
+          // Minimum line height
+          style.minHeight = `${properties.spacing.line / 20}pt`;
+          break;
+        default:
+          // Auto: value is 1/240 of single line spacing
+          style.lineHeight = String(properties.spacing.line / 240);
+          break;
       }
     }
   }

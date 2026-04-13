@@ -8,7 +8,6 @@
  * the useEditorResourceStore hook without creating a new store.
  */
 
-import { describe, it, expect } from "vitest";
 import { renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { createResourceStore } from "@aurochs-office/ooxml/domain/resource-store";

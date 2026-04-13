@@ -220,6 +220,12 @@ const noteStyle: CSSProperties = {
 // Main Component
 // =============================================================================
 
+
+
+
+
+
+/** Preview page component for testing the DOCX viewer with mock document data. */
 export function DocxViewerPreviewPage() {
   const [viewerMode, setViewerMode] = useState<ViewerMode>("full");
 

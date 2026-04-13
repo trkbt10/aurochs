@@ -4,9 +4,9 @@
  * Provides a fluent API for building frame NodeSpecs with auto-layout.
  */
 
-import type { FigPaint, FigEffect, KiwiEnumValue } from "@aurochs/fig/types";
+import type { FigPaint, FigEffect } from "@aurochs/fig/types";
 import type { FrameNodeSpec } from "../types/spec-types";
-import type { AutoLayoutProps } from "../types/document";
+import type { AutoLayoutProps } from "@aurochs/fig/domain";
 
 type FrameSpecBuilder = {
   name(name: string): FrameSpecBuilder;
@@ -24,14 +24,18 @@ type FrameSpecBuilder = {
   build(): FrameNodeSpec;
 };
 
+type BuildFrameFromSpecOptions = {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+};
+
 /**
  * Create a frame spec builder with fluent API.
  */
 export function buildFrameFromSpec(
-  x: number,
-  y: number,
-  width: number,
-  height: number,
+  { x, y, width, height }: BuildFrameFromSpecOptions,
 ): FrameSpecBuilder {
   const state: FrameNodeSpec = {
     type: "FRAME",

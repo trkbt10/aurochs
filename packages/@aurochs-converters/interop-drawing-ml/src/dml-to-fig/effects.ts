@@ -12,11 +12,17 @@ import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-conte
 import type { FigEffect } from "@aurochs/fig/types";
 import { dmlColorToFig } from "./color";
 
+
+
+
+
+
+/** Converts DrawingML effects (shadows, glows, etc.) to Figma-compatible effects. */
 export function dmlEffectsToFig(
   effects: Effects | undefined,
   colorContext?: ColorContext,
 ): readonly FigEffect[] {
-  if (!effects) return [];
+  if (!effects) {return [];}
   const result: FigEffect[] = [];
 
   if (effects.shadow) {

@@ -1,34 +1,18 @@
 /**
  * @file Types barrel export
+ *
+ * Domain types (FigDesignDocument, FigDesignNode, FigPage, FigNodeId, FigPageId,
+ * and domain utilities like guidToNodeId, parseId, etc.) are in @aurochs/fig/domain.
+ * Import them from there directly.
+ *
+ * This file exports only builder-specific types: ID generation utilities and node specs.
  */
-
-export type {
-  FigNodeId,
-  FigPageId,
-} from "./node-id";
 
 export {
   createIdCounter,
   nextNodeId,
   nextPageId,
-  guidToNodeId,
-  guidToPageId,
-  parseId,
-  toNodeId,
-  toPageId,
 } from "./node-id";
-
-export type {
-  FigDesignDocument,
-  FigDesignNode,
-  FigPage,
-  AutoLayoutProps,
-  LayoutConstraints,
-  TextData,
-  SymbolOverride,
-} from "./document";
-
-export { DEFAULT_PAGE_BACKGROUND } from "./document";
 
 export type {
   NodeSpec,

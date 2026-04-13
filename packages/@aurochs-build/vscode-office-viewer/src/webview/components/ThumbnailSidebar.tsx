@@ -13,6 +13,12 @@ export type ThumbnailSidebarProps = {
   readonly labelPrefix: string;
 };
 
+
+
+
+
+
+/** Sidebar component displaying thumbnail previews for each page or slide. */
 export function ThumbnailSidebar({
   svgs,
   activeIndex,

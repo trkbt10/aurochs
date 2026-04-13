@@ -502,13 +502,18 @@ function createNativePdfPages(pageDicts: readonly PdfDict[], resolver: PdfResolv
       if (!contents) {return [];}
       const resolved = resolver.deref(contents);
       const streams: PdfStream[] = [];
-      if (resolved.type === "stream") {
-        streams.push(resolved);
-      } else if (resolved.type === "array") {
-        for (const item of resolved.items) {
-          const obj = resolver.deref(item);
-          if (obj.type === "stream") {streams.push(obj);}
-        }
+      switch (resolved.type) {
+        case "stream":
+          streams.push(resolved);
+          break;
+        case "array":
+          for (const item of resolved.items) {
+            const obj = resolver.deref(item);
+            if (obj.type === "stream") {streams.push(obj);}
+          }
+          break;
+        default:
+          break;
       }
       return streams.map(decodeStream);
     };

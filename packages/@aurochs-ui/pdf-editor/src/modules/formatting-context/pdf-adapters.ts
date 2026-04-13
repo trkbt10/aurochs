@@ -92,7 +92,7 @@ export function applyTextFormattingToPdfElement(element: PdfElement, update: Par
     (el) => update.fontSize !== undefined && update.fontSize > 0 ? { ...el, fontSize: update.fontSize } : el,
     (el) => update.fontFamily !== undefined ? { ...el, baseFont: update.fontFamily, fontName: update.fontFamily } : el,
     (el) => {
-      if (update.textColor === undefined) return el;
+      if (update.textColor === undefined) {return el;}
       const [r, g, b] = hexToRgbComponents(update.textColor);
       return { ...el, graphicsState: { ...el.graphicsState, fillColor: { colorSpace: "DeviceRGB" as const, components: [r, g, b] } } };
     },

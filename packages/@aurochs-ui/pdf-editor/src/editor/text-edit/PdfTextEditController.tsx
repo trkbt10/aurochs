@@ -21,7 +21,7 @@ import {
   type ChangeEvent,
 } from "react";
 import type { PdfText } from "@aurochs/pdf";
-import type { FontProvider } from "@aurochs-renderer/pdf";
+import type { FontProvider } from "@aurochs/pdf/domain/font";
 import { renderPdfElementToSvgNodes, resolveTextFontMetrics, resolveTextAnchor } from "@aurochs-renderer/pdf/svg";
 import { svgChildrenToJsx as svgFragmentToJsx } from "@aurochs-renderer/svg";
 import {
@@ -117,14 +117,16 @@ function getWordRange(text: string, offset: number): { start: number; end: numbe
 // this cursor calculation consume the same low-level values directly.
 // =============================================================================
 
+function createMeasureContext(): CanvasRenderingContext2D | null {
+  if (typeof document === "undefined") {return null;}
+  return document.createElement("canvas").getContext("2d");
+}
+
 /**
  * Canvas 2D context for text measurement.
  * Initialized at module load in browser; null in SSR.
  */
-const measureCtx: CanvasRenderingContext2D | null =
-  typeof document !== "undefined"
-    ? document.createElement("canvas").getContext("2d")
-    : null;
+const measureCtx: CanvasRenderingContext2D | null = createMeasureContext();
 
 function getCanvasCtx(): CanvasRenderingContext2D | null {
   return measureCtx;
@@ -271,7 +273,7 @@ export function PdfTextEditController({
   // that produces contentSvg. This guarantees font/position parity.
   const textSvgNodes = useMemo(() => {
     const liveElement: PdfText = { ...element, text: currentText };
-    return svgFragmentToJsx(renderPdfElementToSvgNodes(liveElement, pageHeight, fontProvider), "text-edit");
+    return svgFragmentToJsx(renderPdfElementToSvgNodes({ element: liveElement, pageHeight, fontProvider }), "text-edit");
   }, [element, currentText, pageHeight, fontProvider]);
 
   // --- Cursor update ---

@@ -118,12 +118,17 @@ export function computeRunStyles(properties: DocxRunProperties | undefined): CSS
   }
 
   // Vertical alignment (superscript/subscript)
-  if (properties.vertAlign === "superscript") {
-    style.verticalAlign = "super";
-    style.fontSize = "0.75em";
-  } else if (properties.vertAlign === "subscript") {
-    style.verticalAlign = "sub";
-    style.fontSize = "0.75em";
+  switch (properties.vertAlign) {
+    case "superscript":
+      style.verticalAlign = "super";
+      style.fontSize = "0.75em";
+      break;
+    case "subscript":
+      style.verticalAlign = "sub";
+      style.fontSize = "0.75em";
+      break;
+    default:
+      break;
   }
 
   // Letter spacing (character spacing in twips: 1 twip = 1/20 point)

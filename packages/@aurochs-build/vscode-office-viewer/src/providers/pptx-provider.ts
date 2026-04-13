@@ -13,6 +13,28 @@ import type { ExtensionToWebviewMessage } from "../webview/types";
 
 export const PPTX_VIEW_TYPE = "aurochs.pptxViewer";
 
+/** Build the message to send to the webview for a PPTX document. */
+async function buildPptxMessage(uri: vscode.Uri): Promise<ExtensionToWebviewMessage> {
+  try {
+    const data = await vscode.workspace.fs.readFile(uri);
+    const result = await renderToSlides(uri, new Uint8Array(data));
+    const fileName = uri.path.split("/").pop() ?? "presentation";
+    return {
+      type: "pptx",
+      fileName,
+      slides: result.slides,
+      width: result.width,
+      height: result.height,
+    };
+  } catch (err) {
+    return {
+      type: "error",
+      title: "Failed to load presentation",
+      message: err instanceof Error ? err.message : String(err),
+    };
+  }
+}
+
 /**
  * Create a PPTX custom readonly editor provider.
  */
@@ -33,27 +55,7 @@ export function createPptxEditorProvider(extensionUri: vscode.Uri): vscode.Custo
         extensionUri,
       });
 
-      let message: ExtensionToWebviewMessage;
-      try {
-        const data = await vscode.workspace.fs.readFile(document.uri);
-        const result = await renderToSlides(document.uri, new Uint8Array(data));
-        const fileName = document.uri.path.split("/").pop() ?? "presentation";
-
-        message = {
-          type: "pptx",
-          fileName,
-          slides: result.slides,
-          width: result.width,
-          height: result.height,
-        };
-      } catch (err) {
-        message = {
-          type: "error",
-          title: "Failed to load presentation",
-          message: err instanceof Error ? err.message : String(err),
-        };
-      }
-
+      const message = await buildPptxMessage(document.uri);
       sendWhenReady(webviewPanel.webview, message);
     },
   };

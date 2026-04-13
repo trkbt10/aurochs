@@ -182,8 +182,8 @@ const resizeHandleStyle: CSSProperties = {
 };
 
 function getModeName(width: number): { mode: string; color: string } {
-  if (width <= 768) return { mode: "mobile", color: "#e06c75" };
-  if (width <= 1024) return { mode: "tablet", color: "#e5c07b" };
+  if (width <= 768) {return { mode: "mobile", color: "#e06c75" };}
+  if (width <= 1024) {return { mode: "tablet", color: "#e5c07b" };}
   return { mode: "desktop", color: "#98c379" };
 }
 
@@ -201,7 +201,7 @@ export function EditorShellPage() {
     dragRef.current = { startX: e.clientX, startWidth: containerWidth };
 
     const handleMouseMove = (ev: MouseEvent) => {
-      if (!dragRef.current) return;
+      if (!dragRef.current) {return;}
       const delta = ev.clientX - dragRef.current.startX;
       const next = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, dragRef.current.startWidth + delta));
       setContainerWidth(next);

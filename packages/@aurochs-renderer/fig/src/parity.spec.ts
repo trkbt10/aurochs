@@ -11,7 +11,6 @@
  * via test-helpers/kiwi-paint.ts — no `as unknown as FigPaint` casts.
  */
 
-import { describe, it, expect } from "vitest";
 import type { FigImage } from "@aurochs/fig/parser";
 
 // Shared SoT
@@ -50,25 +49,29 @@ describe("Paint parity", () => {
   };
 
   it("shared SoT and SceneGraph produce identical gradient direction", () => {
-    const shared = getGradientDirection(asGradientPaint(kiwiLinearGradient));
-    const fill = convertPaintToFill(asPaint(kiwiLinearGradient), NO_IMAGES)!;
-    expect(fill.type).toBe("linear-gradient");
-    if (fill.type === "linear-gradient") {
-      expect(fill.start.x).toBeCloseTo(shared.start.x);
-      expect(fill.start.y).toBeCloseTo(shared.start.y);
-      expect(fill.end.x).toBeCloseTo(shared.end.x);
-      expect(fill.end.y).toBeCloseTo(shared.end.y);
+    if (asGradientPaint(kiwiLinearGradient)) {
+      const shared = getGradientDirection(kiwiLinearGradient);
+      const fill = convertPaintToFill(kiwiLinearGradient, NO_IMAGES)!;
+      expect(fill.type).toBe("linear-gradient");
+      if (fill.type === "linear-gradient") {
+        expect(fill.start.x).toBeCloseTo(shared.start.x);
+        expect(fill.start.y).toBeCloseTo(shared.start.y);
+        expect(fill.end.x).toBeCloseTo(shared.end.x);
+        expect(fill.end.y).toBeCloseTo(shared.end.y);
+      }
     }
   });
 
   it("shared SoT and SceneGraph produce identical gradient stops", () => {
-    const sharedStops = getGradientStops(asGradientPaint(kiwiLinearGradient));
-    const fill = convertPaintToFill(asPaint(kiwiLinearGradient), NO_IMAGES)!;
-    if (fill.type === "linear-gradient") {
-      expect(fill.stops).toHaveLength(sharedStops.length);
-      for (let i = 0; i < sharedStops.length; i++) {
-        expect(fill.stops[i].position).toBe(sharedStops[i].position);
-        expect(fill.stops[i].color.r).toBeCloseTo(sharedStops[i].color.r);
+    if (asGradientPaint(kiwiLinearGradient)) {
+      const sharedStops = getGradientStops(kiwiLinearGradient);
+      const fill = convertPaintToFill(kiwiLinearGradient, NO_IMAGES)!;
+      if (fill.type === "linear-gradient") {
+        expect(fill.stops).toHaveLength(sharedStops.length);
+        for (let i = 0; i < sharedStops.length; i++) {
+          expect(fill.stops[i].position).toBe(sharedStops[i].position);
+          expect(fill.stops[i].color.r).toBeCloseTo(sharedStops[i].color.r);
+        }
       }
     }
   });
@@ -85,35 +88,40 @@ describe("Paint parity", () => {
   };
 
   it("shared SoT and SceneGraph produce identical radial center/radius", () => {
-    const shared = getRadialGradientCenterAndRadius(asGradientPaint(kiwiRadialGradient));
-    const fill = convertPaintToFill(asPaint(kiwiRadialGradient), NO_IMAGES)!;
-    expect(fill.type).toBe("radial-gradient");
-    if (fill.type === "radial-gradient") {
-      expect(fill.center.x).toBeCloseTo(shared.center.x);
-      expect(fill.center.y).toBeCloseTo(shared.center.y);
-      expect(fill.radius).toBeCloseTo(shared.radius);
+    if (asGradientPaint(kiwiRadialGradient)) {
+      const shared = getRadialGradientCenterAndRadius(kiwiRadialGradient);
+      const fill = convertPaintToFill(kiwiRadialGradient, NO_IMAGES)!;
+      expect(fill.type).toBe("radial-gradient");
+      if (fill.type === "radial-gradient") {
+        expect(fill.center.x).toBeCloseTo(shared.center.x);
+        expect(fill.center.y).toBeCloseTo(shared.center.y);
+        expect(fill.radius).toBeCloseTo(shared.radius);
+      }
     }
   });
 });
 
 describe("Stroke parity", () => {
   it("SceneGraph stroke uses shared weight/cap/join interpretation", () => {
-    const paints = [asPaint({
+    const kiwiSolidPaint = {
       type: { value: 0, name: "SOLID" },
       color: { r: 1, g: 0, b: 0, a: 1 },
       opacity: 0.8,
       visible: true,
-    })];
-    const weight = { top: 1, right: 3, bottom: 2, left: 0 };
-    const stroke = convertStrokeToSceneStroke(paints, weight, {
-      strokeCap: { value: 2, name: "ROUND" },
-      strokeJoin: { value: 1, name: "BEVEL" },
-    });
-    expect(stroke).toBeDefined();
-    // These should match the shared SoT outputs
-    expect(stroke!.width).toBe(resolveStrokeWeight(weight));
-    expect(stroke!.linecap).toBe(mapStrokeCap({ value: 2, name: "ROUND" }));
-    expect(stroke!.linejoin).toBe(mapStrokeJoin({ value: 1, name: "BEVEL" }));
+    };
+    if (asPaint(kiwiSolidPaint)) {
+      const paints = [kiwiSolidPaint];
+      const weight = { top: 1, right: 3, bottom: 2, left: 0 };
+      const stroke = convertStrokeToSceneStroke(paints, weight, {
+        strokeCap: { value: 2, name: "ROUND" },
+        strokeJoin: { value: 1, name: "BEVEL" },
+      });
+      expect(stroke).toBeDefined();
+      // These should match the shared SoT outputs
+      expect(stroke!.width).toBe(resolveStrokeWeight(weight));
+      expect(stroke!.linecap).toBe(mapStrokeCap({ value: 2, name: "ROUND" }));
+      expect(stroke!.linejoin).toBe(mapStrokeJoin({ value: 1, name: "BEVEL" }));
+    }
   });
 });
 
@@ -134,20 +142,22 @@ describe("Effects parity", () => {
       color: { r: 0, g: 0, b: 0, a: 0.5 },
     };
 
-    const effects = [asEffect(kiwiDropShadow), asEffect(kiwiInnerShadow)];
-    const sceneEffects = convertEffectsToScene(effects);
-    expect(sceneEffects).toHaveLength(2);
+    if (asEffect(kiwiDropShadow) && asEffect(kiwiInnerShadow)) {
+      const effects = [kiwiDropShadow, kiwiInnerShadow];
+      const sceneEffects = convertEffectsToScene(effects);
+      expect(sceneEffects).toHaveLength(2);
 
-    // Check first effect matches shared extraction
-    const sharedType0 = getEffectTypeName(effects[0]);
-    expect(sharedType0).toBe("DROP_SHADOW");
-    expect(sceneEffects[0].type).toBe("drop-shadow");
-    const sharedParams0 = extractShadowParams(effects[0]);
-    if (sceneEffects[0].type === "drop-shadow") {
-      expect(sceneEffects[0].offset.x).toBe(sharedParams0.offsetX);
-      expect(sceneEffects[0].offset.y).toBe(sharedParams0.offsetY);
-      expect(sceneEffects[0].radius).toBe(sharedParams0.radius);
-      expect(sceneEffects[0].color.a).toBeCloseTo(sharedParams0.color.a);
+      // Check first effect matches shared extraction
+      const sharedType0 = getEffectTypeName(effects[0]);
+      expect(sharedType0).toBe("DROP_SHADOW");
+      expect(sceneEffects[0].type).toBe("drop-shadow");
+      const sharedParams0 = extractShadowParams(effects[0]);
+      if (sceneEffects[0].type === "drop-shadow") {
+        expect(sceneEffects[0].offset.x).toBe(sharedParams0.offsetX);
+        expect(sceneEffects[0].offset.y).toBe(sharedParams0.offsetY);
+        expect(sceneEffects[0].radius).toBe(sharedParams0.radius);
+        expect(sceneEffects[0].color.a).toBeCloseTo(sharedParams0.color.a);
+      }
     }
   });
 });

@@ -167,18 +167,23 @@ function buildTextBodyFromCharacters(characters: string): TextBodyLike {
  * it matches what the browser renders for SVG <text> elements.
  */
 function createCanvasTextMeasurer(fontStr: string): (text: string) => number {
-  let canvasCtx: CanvasRenderingContext2D | null = null;
-  try {
-    canvasCtx = document.createElement("canvas").getContext("2d");
-  } catch {
-    // SSR fallback — return identity that triggers estimatedWidth fallback
-  }
+  const canvasCtx = tryGetCanvasContext();
 
   return (text: string): number => {
-    if (!canvasCtx || text.length === 0) return 0;
+    if (!canvasCtx || text.length === 0) {return 0;}
     canvasCtx.font = fontStr;
     return canvasCtx.measureText(text).width;
   };
+}
+
+function tryGetCanvasContext(): CanvasRenderingContext2D | null {
+  try {
+    return document.createElement("canvas").getContext("2d");
+  // eslint-disable-next-line no-restricted-syntax -- catch without param: error is intentionally discarded; SSR environment lacks canvas API and any error is a non-actionable environment mismatch
+  } catch {
+    // SSR fallback — return null to trigger estimatedWidth fallback
+    return null;
+  }
 }
 
 /**
@@ -193,12 +198,7 @@ function buildFigCursorContext(
   fontSize: number,
   ascenderRatio: number,
 ): CursorCalculationContext {
-  let canvasCtx: CanvasRenderingContext2D | null = null;
-  try {
-    canvasCtx = document.createElement("canvas").getContext("2d");
-  } catch {
-    // SSR fallback
-  }
+  const canvasCtx = tryGetCanvasContext();
 
   const measureSpanTextWidth = (span: LayoutSpanLike, substring: string): number => {
     if (!canvasCtx || span.text.length === 0 || substring.length === 0) {
@@ -243,6 +243,12 @@ type FigTextEditOverlayProps = {
 // Component
 // =============================================================================
 
+
+
+
+
+
+/** Overlay component for in-canvas text editing of a Figma node. */
 export function FigTextEditOverlay({
   node,
   bounds,
@@ -333,8 +339,9 @@ export function FigTextEditOverlay({
   // (user clicked elsewhere) from transient focus loss (React re-render).
   useEffect(() => {
     const ta = textareaRef.current;
-    if (!ta) return;
+    if (!ta) {return;}
 
+    // eslint-disable-next-line no-restricted-syntax -- mutable RAF ID required for RAF/cancel-animation-frame pairing
     let rafId: number | null = null;
 
     const handleBlur = () => {
@@ -349,7 +356,7 @@ export function FigTextEditOverlay({
     ta.addEventListener("blur", handleBlur);
     return () => {
       ta.removeEventListener("blur", handleBlur);
-      if (rafId !== null) cancelAnimationFrame(rafId);
+      if (rafId !== null) {cancelAnimationFrame(rafId);}
     };
   }, [dispatch]);
 
@@ -377,7 +384,7 @@ export function FigTextEditOverlay({
         type: "UPDATE_NODE",
         nodeId: node.id,
         updater: (n) => {
-          if (!n.textData) return n;
+          if (!n.textData) {return n;}
           return { ...n, textData: { ...n.textData, characters: newText } };
         },
       });
@@ -407,7 +414,7 @@ export function FigTextEditOverlay({
 
   // --- IME composition ---
   const initialComposition = createInitialCompositionState();
-  const [composition, setComposition] = useState<CompositionState>(initialComposition);
+  const [_composition, setComposition] = useState<CompositionState>(initialComposition);
   const {
     handleCompositionStart,
     handleCompositionUpdate,
@@ -418,7 +425,7 @@ export function FigTextEditOverlay({
   const handleOverlayPointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
       const page = screenToPage(e.clientX, e.clientY);
-      if (!page) return;
+      if (!page) {return;}
       const b = bounds;
       const inside =
         page.pageX >= b.x && page.pageX <= b.x + b.width &&
@@ -443,13 +450,13 @@ export function FigTextEditOverlay({
   const screenToCharOffset = useCallback(
     (clientX: number, clientY: number): number | null => {
       const svg = svgRef.current;
-      if (!svg) return null;
+      if (!svg) {return null;}
 
       const pt = svg.createSVGPoint();
       pt.x = clientX;
       pt.y = clientY;
       const ctm = svg.getScreenCTM();
-      if (!ctm) return null;
+      if (!ctm) {return null;}
 
       const svgPoint = pt.matrixTransform(ctm.inverse());
       const cursorPos = coordinatesToCursorPosition({
@@ -478,7 +485,7 @@ export function FigTextEditOverlay({
       e.preventDefault();
 
       const ta = textareaRef.current;
-      if (!ta) return;
+      if (!ta) {return;}
 
       const offset = screenToCharOffset(e.clientX, e.clientY);
       if (offset !== null) {
@@ -499,14 +506,14 @@ export function FigTextEditOverlay({
   const handleSvgPointerMove = useCallback(
     (e: React.PointerEvent<SVGSVGElement>) => {
       const anchor = dragAnchorRef.current;
-      if (anchor === null) return;
+      if (anchor === null) {return;}
       e.preventDefault();
 
       const ta = textareaRef.current;
-      if (!ta) return;
+      if (!ta) {return;}
 
       const offset = screenToCharOffset(e.clientX, e.clientY);
-      if (offset === null) return;
+      if (offset === null) {return;}
 
       const start = Math.min(anchor, offset);
       const end = Math.max(anchor, offset);

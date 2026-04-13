@@ -113,12 +113,14 @@ function extractRunText(run: DocxRun): string {
 function extractParagraphText(paragraph: DocxParagraph): string {
   const parts: string[] = [];
   for (const content of paragraph.content) {
-    if (content.type === "run") {
-      parts.push(extractRunText(content));
-    } else if (content.type === "hyperlink") {
-      for (const run of content.content) {
-        parts.push(extractRunText(run));
-      }
+    switch (content.type) {
+      case "run": parts.push(extractRunText(content)); break;
+      case "hyperlink":
+        for (const run of content.content) {
+          parts.push(extractRunText(run));
+        }
+        break;
+      default: break;
     }
   }
   return parts.join("");

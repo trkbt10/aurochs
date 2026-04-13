@@ -119,7 +119,7 @@ function toTextBody(result: LayoutShapeResult): TextBody | undefined {
  * This handles diagram-generated textBody that has paragraphs but no bodyProperties.
  */
 function isPartialTextBody(value: unknown): boolean {
-  if (!value || typeof value !== "object") return false;
+  if (!value || typeof value !== "object") {return false;}
   const v = value as Record<string, unknown>;
   return "paragraphs" in v && Array.isArray(v.paragraphs);
 }

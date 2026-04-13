@@ -16,9 +16,7 @@
 import { convert } from "@aurochs-converters/fig-to-pptx";
 import { exportPptxAsBuffer } from "@aurochs-builder/pptx/export";
 import type { FigDesignDocument, FigDesignNode, FigPage, FigPageId, FigNodeId } from "@aurochs/fig/domain";
-import { DEFAULT_PAGE_BACKGROUND } from "@aurochs-builder/fig";
-import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
-import { px } from "@aurochs-office/drawing-ml/domain/units";
+
 import { createBlankPptxPackageFile } from "@aurochs-converters/pdf-to-pptx/importer/pptx-template";
 import { openPresentation } from "@aurochs-office/pptx/app";
 import { writeFileSync, mkdirSync, existsSync } from "node:fs";
@@ -36,35 +34,49 @@ function createTestFigDocument(): FigDesignDocument {
     backgroundColor: { r: 1, g: 1, b: 1, a: 1 },
     children: [
       // Blue rectangle
-      createRect("0:2", "Blue Rectangle", 50, 50, 200, 120, { r: 0.267, g: 0.447, b: 0.769, a: 1 }),
+      createRect({ id: "0:2", name: "Blue Rectangle", x: 50, y: 50, w: 200, h: 120, color: { r: 0.267, g: 0.447, b: 0.769, a: 1 } }),
 
       // Red ellipse (approximated as rectangle with ellipse node type)
-      createEllipse("0:3", "Red Ellipse", 300, 50, 150, 100, { r: 0.8, g: 0.2, b: 0.2, a: 1 }),
+      createEllipse({ id: "0:3", name: "Red Ellipse", x: 300, y: 50, w: 150, h: 100, color: { r: 0.8, g: 0.2, b: 0.2, a: 1 } }),
 
       // Green rectangle with stroke
-      createRectWithStroke("0:4", "Green Stroked", 50, 220, 180, 80,
-        { r: 0.4, g: 0.8, b: 0.4, a: 1 },
-        { r: 0, g: 0.4, b: 0, a: 1 },
-        3,
-      ),
+      createRectWithStroke({
+        id: "0:4",
+        name: "Green Stroked",
+        x: 50,
+        y: 220,
+        w: 180,
+        h: 80,
+        fillColor: { r: 0.4, g: 0.8, b: 0.4, a: 1 },
+        strokeColor: { r: 0, g: 0.4, b: 0, a: 1 },
+        strokeWidth: 3,
+      }),
 
       // Text node
-      createTextNode("0:5", "Hello from Fig!", 300, 220, 200, 40, 24),
+      createTextNode({ id: "0:5", text: "Hello from Fig!", x: 300, y: 220, w: 200, h: 40, fontSize: 24 }),
 
       // Semi-transparent rectangle
-      createRect("0:6", "Semi-Transparent", 50, 350, 150, 80, { r: 1, g: 0.647, b: 0, a: 0.5 }),
+      createRect({ id: "0:6", name: "Semi-Transparent", x: 50, y: 350, w: 150, h: 80, color: { r: 1, g: 0.647, b: 0, a: 0.5 } }),
 
       // Small text
-      createTextNode("0:7", "Fig → PPTX conversion test", 250, 350, 250, 30, 14),
+      createTextNode({ id: "0:7", text: "Fig → PPTX conversion test", x: 250, y: 350, w: 250, h: 30, fontSize: 14 }),
 
       // Rounded rectangle (via cornerRadius)
-      createRoundedRect("0:8", "Rounded Rect", 50, 460, 180, 60, 15, { r: 0.5, g: 0.3, b: 0.7, a: 1 }),
+      createRoundedRect({ id: "0:8", name: "Rounded Rect", x: 50, y: 460, w: 180, h: 60, radius: 15, color: { r: 0.5, g: 0.3, b: 0.7, a: 1 } }),
 
       // Group with children
-      createGroup("0:9", "Shape Group", 300, 400, 150, 120, [
-        createRect("0:10", "Child 1", 0, 0, 60, 50, { r: 0.9, g: 0.9, b: 0.2, a: 1 }),
-        createRect("0:11", "Child 2", 80, 30, 60, 50, { r: 0.2, g: 0.9, b: 0.9, a: 1 }),
-      ]),
+      createGroup({
+        id: "0:9",
+        name: "Shape Group",
+        x: 300,
+        y: 400,
+        w: 150,
+        h: 120,
+        children: [
+          createRect({ id: "0:10", name: "Child 1", x: 0, y: 0, w: 60, h: 50, color: { r: 0.9, g: 0.9, b: 0.2, a: 1 } }),
+          createRect({ id: "0:11", name: "Child 2", x: 80, y: 30, w: 60, h: 50, color: { r: 0.2, g: 0.9, b: 0.9, a: 1 } }),
+        ],
+      }),
     ],
   };
 
@@ -76,9 +88,18 @@ function createTestFigDocument(): FigDesignDocument {
   };
 }
 
+type CreateRectOptions = {
+  readonly id: string;
+  readonly name: string;
+  readonly x: number;
+  readonly y: number;
+  readonly w: number;
+  readonly h: number;
+  readonly color: { r: number; g: number; b: number; a: number };
+};
+
 function createRect(
-  id: string, name: string, x: number, y: number, w: number, h: number,
-  color: { r: number; g: number; b: number; a: number },
+  { id, name, x, y, w, h, color }: CreateRectOptions,
 ): FigDesignNode {
   return {
     id: id as FigNodeId,
@@ -95,9 +116,18 @@ function createRect(
   };
 }
 
+type CreateEllipseOptions = {
+  readonly id: string;
+  readonly name: string;
+  readonly x: number;
+  readonly y: number;
+  readonly w: number;
+  readonly h: number;
+  readonly color: { r: number; g: number; b: number; a: number };
+};
+
 function createEllipse(
-  id: string, name: string, x: number, y: number, w: number, h: number,
-  color: { r: number; g: number; b: number; a: number },
+  { id, name, x, y, w, h, color }: CreateEllipseOptions,
 ): FigDesignNode {
   return {
     id: id as FigNodeId,
@@ -114,11 +144,20 @@ function createEllipse(
   };
 }
 
+type CreateRectWithStrokeOptions = {
+  readonly id: string;
+  readonly name: string;
+  readonly x: number;
+  readonly y: number;
+  readonly w: number;
+  readonly h: number;
+  readonly fillColor: { r: number; g: number; b: number; a: number };
+  readonly strokeColor: { r: number; g: number; b: number; a: number };
+  readonly strokeWidth: number;
+};
+
 function createRectWithStroke(
-  id: string, name: string, x: number, y: number, w: number, h: number,
-  fillColor: { r: number; g: number; b: number; a: number },
-  strokeColor: { r: number; g: number; b: number; a: number },
-  strokeWidth: number,
+  { id, name, x, y, w, h, fillColor, strokeColor, strokeWidth }: CreateRectWithStrokeOptions,
 ): FigDesignNode {
   return {
     id: id as FigNodeId,
@@ -135,10 +174,19 @@ function createRectWithStroke(
   };
 }
 
+type CreateRoundedRectOptions = {
+  readonly id: string;
+  readonly name: string;
+  readonly x: number;
+  readonly y: number;
+  readonly w: number;
+  readonly h: number;
+  readonly radius: number;
+  readonly color: { r: number; g: number; b: number; a: number };
+};
+
 function createRoundedRect(
-  id: string, name: string, x: number, y: number, w: number, h: number,
-  radius: number,
-  color: { r: number; g: number; b: number; a: number },
+  { id, name, x, y, w, h, radius, color }: CreateRoundedRectOptions,
 ): FigDesignNode {
   return {
     id: id as FigNodeId,
@@ -156,9 +204,18 @@ function createRoundedRect(
   };
 }
 
+type CreateTextNodeOptions = {
+  readonly id: string;
+  readonly text: string;
+  readonly x: number;
+  readonly y: number;
+  readonly w: number;
+  readonly h: number;
+  readonly fontSize: number;
+};
+
 function createTextNode(
-  id: string, text: string, x: number, y: number, w: number, h: number,
-  fontSize: number,
+  { id, text, x, y, w, h, fontSize }: CreateTextNodeOptions,
 ): FigDesignNode {
   return {
     id: id as FigNodeId,
@@ -180,9 +237,18 @@ function createTextNode(
   };
 }
 
+type CreateGroupOptions = {
+  readonly id: string;
+  readonly name: string;
+  readonly x: number;
+  readonly y: number;
+  readonly w: number;
+  readonly h: number;
+  readonly children: FigDesignNode[];
+};
+
 function createGroup(
-  id: string, name: string, x: number, y: number, w: number, h: number,
-  children: FigDesignNode[],
+  { id, name, x, y, w, h, children }: CreateGroupOptions,
 ): FigDesignNode {
   return {
     id: id as FigNodeId,
@@ -206,7 +272,7 @@ function createGroup(
 
 async function main() {
   const outDir = join(import.meta.dir, "__output__");
-  if (!existsSync(outDir)) mkdirSync(outDir, { recursive: true });
+  if (!existsSync(outDir)) {mkdirSync(outDir, { recursive: true });}
 
   console.log("1. Creating test FigDesignDocument...");
   const figDoc = createTestFigDocument();
@@ -252,8 +318,8 @@ async function main() {
     );
     const pdfPath = join(outDir, "fig-to-pptx-test.pdf");
     console.log(`   PDF: ${pdfPath}`);
-  } catch {
-    console.log("   LibreOffice not available or conversion failed. Skipping PDF generation.");
+  } catch (error) {
+    console.log(`   LibreOffice not available or conversion failed: ${String(error)}. Skipping PDF generation.`);
     console.log("   You can manually open the .pptx file to verify.");
   }
 

@@ -187,10 +187,10 @@ export function parsePptDocumentStream(
     const persistAtoms = findChildrenByType(slt.children ?? [], RT.SlidePersistAtom);
     const parsedPersists = persistAtoms.map(a => parseSlidePersistAtom(a));
 
-    if (slt.recInstance === 0) {
-      slidePersists.push(...parsedPersists);
-    } else if (slt.recInstance === 2) {
-      notesPersists.push(...parsedPersists);
+    switch (slt.recInstance) {
+      case 0: slidePersists.push(...parsedPersists); break;
+      case 2: notesPersists.push(...parsedPersists); break;
+      default: break;
     }
   }
 

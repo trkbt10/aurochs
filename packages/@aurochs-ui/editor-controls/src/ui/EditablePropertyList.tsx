@@ -110,13 +110,18 @@ export function InlineRenameLabel({ label, onRename }: InlineRenameLabelProps) {
   }, [editValue, label, onRename]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      handleCommit();
-    } else if (e.key === "Escape") {
-      e.preventDefault();
-      setEditValue(label);
-      setEditing(false);
+    switch (e.key) {
+      case "Enter":
+        e.preventDefault();
+        handleCommit();
+        break;
+      case "Escape":
+        e.preventDefault();
+        setEditValue(label);
+        setEditing(false);
+        break;
+      default:
+        break;
     }
   }, [handleCommit, label]);
 

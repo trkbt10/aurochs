@@ -2,9 +2,9 @@
  * @file Main SVG renderer for Figma nodes
  */
 
-import type { FigNode, FigNodeType } from "@aurochs/fig/types";
+import type { FigNode } from "@aurochs/fig/types";
 import type { FigBlob, FigImage } from "@aurochs/fig/parser";
-import { guidToString, getNodeType, safeChildren } from "@aurochs/fig/parser";
+import { getNodeType, safeChildren } from "@aurochs/fig/parser";
 import type { FigSvgRenderContext, FigSvgRenderResult } from "../types";
 import { createFigSvgRenderContext } from "./context";
 import { svg, defs, g, rect, mask, type SvgString, EMPTY_SVG } from "./primitives";
@@ -265,7 +265,7 @@ const FIGMA_BLEND_MODE_TO_CSS: Record<string, string> = {
 
 function getBlendModeCss(node: FigNode): string | undefined {
   const bm = node.blendMode;
-  if (!bm) return undefined;
+  if (!bm) {return undefined;}
   const name = typeof bm === "string" ? bm : bm.name;
   return FIGMA_BLEND_MODE_TO_CSS[name];
 }

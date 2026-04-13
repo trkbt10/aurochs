@@ -6,11 +6,10 @@
  */
 
 import type { FigMatrix, FigPaint } from "@aurochs/fig/types";
-import type { FigDesignNode } from "../types/document";
+import type { FigDesignNode, FigNodeId } from "@aurochs/fig/domain";
 import type { NodeSpec } from "../types/spec-types";
-import type { FigNodeId } from "../types/node-id";
 import { nextNodeId, createIdCounter } from "../types/node-id";
-import type { AutoLayoutProps } from "../types/document";
+
 
 // =============================================================================
 // Transform Construction
@@ -86,6 +85,7 @@ const DEFAULT_FRAME_FILL: readonly FigPaint[] = [
  * Shared counter for generating node IDs.
  * Uses session 1 for user-created nodes (session 0 is structural).
  */
+// eslint-disable-next-line no-restricted-syntax -- module-level mutable singleton required for resettable ID counter
 let sharedCounter = createIdCounter(1, 1000);
 
 /**

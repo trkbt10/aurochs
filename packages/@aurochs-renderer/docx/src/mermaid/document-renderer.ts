@@ -45,16 +45,18 @@ export function renderDocxMermaid(params: DocxMermaidParams): string {
   const sections: string[] = [];
 
   for (const block of params.blocks) {
-    if (block.type === "paragraph") {
-      const rendered = renderParagraph(block);
-      if (rendered) {
-        sections.push(rendered);
+    switch (block.type) {
+      case "paragraph": {
+        const rendered = renderParagraph(block);
+        if (rendered) { sections.push(rendered); }
+        break;
       }
-    } else if (block.type === "table") {
-      const rendered = renderTable(block);
-      if (rendered) {
-        sections.push(rendered);
+      case "table": {
+        const rendered = renderTable(block);
+        if (rendered) { sections.push(rendered); }
+        break;
       }
+      default: break;
     }
   }
 

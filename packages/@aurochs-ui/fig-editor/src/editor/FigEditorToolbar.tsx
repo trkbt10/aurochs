@@ -6,7 +6,7 @@
  */
 
 import { useCallback, type ReactNode } from "react";
-import { ToolbarButton, TOOLBAR_BUTTON_ICON_SIZE } from "@aurochs-ui/ui-components/primitives/ToolbarButton";
+import { ToolbarButton } from "@aurochs-ui/ui-components/primitives/ToolbarButton";
 import { ToolbarSeparator } from "@aurochs-ui/ui-components/primitives/ToolbarSeparator";
 import {
   SelectIcon,

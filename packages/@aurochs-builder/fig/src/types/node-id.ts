@@ -1,14 +1,13 @@
 /**
- * @file Node ID types and helpers — re-exported from @aurochs/fig/domain
+ * @file Builder-specific ID generation utilities.
  *
- * Domain types (FigNodeId, FigPageId, conversion helpers) live in
- * @aurochs/fig/domain. This module re-exports them for backward
- * compatibility and adds builder-specific ID generation utilities.
+ * Domain types (FigNodeId, FigPageId) and conversion helpers (guidToNodeId, etc.)
+ * live in @aurochs/fig/domain. Import them from there at each usage site.
+ *
+ * This file provides only the builder-specific stateful ID counter machinery.
  */
 
-// Re-export domain types and helpers
-export type { FigNodeId, FigPageId } from "@aurochs/fig/domain";
-export { guidToNodeId, guidToPageId, parseId, toNodeId, toPageId } from "@aurochs/fig/domain";
+import type { FigNodeId, FigPageId } from "@aurochs/fig/domain";
 
 // =============================================================================
 // Builder-specific: ID Generation
@@ -35,8 +34,8 @@ export function createIdCounter(sessionID: number, startLocalID = 1): IdCounter 
 /**
  * Generate the next FigNodeId from a counter, mutating it in place.
  */
-export function nextNodeId(counter: IdCounter): import("@aurochs/fig/domain").FigNodeId {
-  const id = `${counter.sessionID}:${counter.nextLocalID}` as import("@aurochs/fig/domain").FigNodeId;
+export function nextNodeId(counter: IdCounter): FigNodeId {
+  const id = `${counter.sessionID}:${counter.nextLocalID}` as FigNodeId;
   counter.nextLocalID++;
   return id;
 }
@@ -44,8 +43,8 @@ export function nextNodeId(counter: IdCounter): import("@aurochs/fig/domain").Fi
 /**
  * Generate the next FigPageId from a counter, mutating it in place.
  */
-export function nextPageId(counter: IdCounter): import("@aurochs/fig/domain").FigPageId {
-  const id = `${counter.sessionID}:${counter.nextLocalID}` as import("@aurochs/fig/domain").FigPageId;
+export function nextPageId(counter: IdCounter): FigPageId {
+  const id = `${counter.sessionID}:${counter.nextLocalID}` as FigPageId;
   counter.nextLocalID++;
   return id;
 }

@@ -61,6 +61,7 @@ export function resolveEffects(effects: readonly Effect[], ids: IdGenerator): Re
   }
 
   const primitives: ResolvedFilterPrimitive[] = [];
+  // eslint-disable-next-line no-restricted-syntax -- mutable state flag tracking whether shape primitive was established during loop
   let shapeEstablished = false;
 
   for (const effect of effects) {

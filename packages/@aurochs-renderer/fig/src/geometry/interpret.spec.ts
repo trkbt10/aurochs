@@ -4,7 +4,6 @@
  * Verifies the shared geometry functions consumed by both renderers.
  */
 
-import { describe, it, expect } from "vitest";
 import { mapWindingRule, extractUniformCornerRadius, clampCornerRadius, resolveClipsContent } from "./interpret";
 
 describe("mapWindingRule", () => {

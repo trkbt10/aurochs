@@ -5,13 +5,16 @@
  * correctly produces renderable nodes for all content types in the demo.
  */
 
-import { describe, it, expect, beforeAll } from "vitest";
-import { createDemoFigDesignDocument } from "@aurochs-builder/fig/context";
-import type { FigDesignDocument } from "@aurochs/fig/domain";
-import { buildSceneGraph } from "./builder";
-import type { SceneGraph, SceneNode, FrameNode, RectNode, EllipseNode, PathNode, TextNode, GroupNode, Fill } from "./types";
 
+// eslint-disable-next-line custom/no-builder-import-in-renderer -- spec file: uses builder to create test fixture data for renderer integration tests
+import { createDemoFigDesignDocument } from "@aurochs-builder/fig/context";
+import type { FigDesignDocument, FigDesignNode } from "@aurochs/fig/domain";
+import { buildSceneGraph } from "./builder";
+import type { SceneGraph, SceneNode, RectNode, EllipseNode, PathNode, TextNode, Fill } from "./types";
+
+// eslint-disable-next-line no-restricted-syntax -- mutable test-suite variable initialized in beforeAll
 let doc: FigDesignDocument;
+// eslint-disable-next-line no-restricted-syntax -- mutable test-suite variable initialized in beforeAll
 let sceneGraphs: SceneGraph[];
 
 beforeAll(async () => {
@@ -25,12 +28,12 @@ beforeAll(async () => {
   );
 });
 
-function findNodeByName(nodes: readonly SceneNode[], name: string): SceneNode | undefined {
+function _findNodeByName(nodes: readonly SceneNode[], name: string): SceneNode | undefined {
   for (const node of nodes) {
-    if (node.name === name) return node;
+    if (node.name === name) {return node;}
     if ("children" in node && node.children) {
-      const found = findNodeByName(node.children, name);
-      if (found) return found;
+      const found = _findNodeByName(node.children, name);
+      if (found) {return found;}
     }
   }
   return undefined;
@@ -39,7 +42,7 @@ function findNodeByName(nodes: readonly SceneNode[], name: string): SceneNode | 
 function findAllByType(nodes: readonly SceneNode[], type: string): SceneNode[] {
   const result: SceneNode[] = [];
   for (const node of nodes) {
-    if (node.type === type) result.push(node);
+    if (node.type === type) {result.push(node);}
     if ("children" in node && node.children) {
       result.push(...findAllByType(node.children, type));
     }
@@ -106,14 +109,19 @@ describe("Scene graph builder - demo document", () => {
 
       // Verify gradient fills have stops
       for (const gf of gradientFills) {
-        if (gf.type === "linear-gradient") {
-          expect(gf.stops.length).toBeGreaterThanOrEqual(2);
-          expect(typeof gf.start.x).toBe("number");
-          expect(typeof gf.end.x).toBe("number");
-        } else if (gf.type === "radial-gradient") {
-          expect(gf.stops.length).toBeGreaterThanOrEqual(2);
-          expect(typeof gf.center.x).toBe("number");
-          expect(typeof gf.radius).toBe("number");
+        switch (gf.type) {
+          case "linear-gradient":
+            expect(gf.stops.length).toBeGreaterThanOrEqual(2);
+            expect(typeof gf.start.x).toBe("number");
+            expect(typeof gf.end.x).toBe("number");
+            break;
+          case "radial-gradient":
+            expect(gf.stops.length).toBeGreaterThanOrEqual(2);
+            expect(typeof gf.center.x).toBe("number");
+            expect(typeof gf.radius).toBe("number");
+            break;
+          default:
+            break;
         }
       }
     });
@@ -149,11 +157,11 @@ describe("Scene graph builder - demo document", () => {
 
       // Check domain textData on original nodes
       const page = doc.pages[1];
-      function collectTextNodes(nodes: readonly any[]): any[] {
-        const result: any[] = [];
+      function collectTextNodes(nodes: readonly FigDesignNode[]): FigDesignNode[] {
+        const result: FigDesignNode[] = [];
         for (const n of nodes) {
-          if (n.type === "TEXT") result.push(n);
-          if (n.children) result.push(...collectTextNodes(n.children));
+          if (n.type === "TEXT") {result.push(n);}
+          if (n.children) {result.push(...collectTextNodes(n.children));}
         }
         return result;
       }
@@ -180,7 +188,7 @@ describe("Scene graph builder - demo document", () => {
       function collect(nodes: readonly SceneNode[]) {
         for (const n of nodes) {
           allNodes.push(n);
-          if ("children" in n && n.children) collect(n.children);
+          if ("children" in n && n.children) {collect(n.children);}
         }
       }
       collect(sg.root.children);

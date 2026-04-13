@@ -107,7 +107,7 @@ function PptxSlideshowRoute() {
   const { pptx, exitSlideshow } = useAppContext();
   const { slideNumber } = useParams<{ slideNumber: string }>();
 
-  if (!pptx.presentation) return <Navigate to={PATHS.home} replace />;
+  if (!pptx.presentation) {return <Navigate to={PATHS.home} replace />;}
 
   const startSlide = Math.max(1, Number.parseInt(slideNumber ?? "1", 10) || 1);
   return (
@@ -310,6 +310,22 @@ function PptxErrorGate({ children }: { readonly children: React.ReactNode }) {
 // Route tree
 // =============================================================================
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/** Root router component mapping URL paths to page components. */
 export function AppRoutes() {
   return (
     <PptxErrorGate>

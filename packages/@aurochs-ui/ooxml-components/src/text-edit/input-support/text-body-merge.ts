@@ -45,19 +45,37 @@ export type PendingStyledPaste = {
   readonly entries: readonly StyledCharEntry[];
 };
 
+type MergeTextIntoBodyOptions = {
+  readonly originalBody: TextBody;
+  readonly newText: string;
+  readonly defaultRunProperties: RunProperties;
+  readonly pendingStyledPaste?: PendingStyledPaste | null;
+};
+
+/**
+ * Find run properties at the insertion point by scanning backwards from
+ * prefixLength. Returns the properties of the nearest preceding text or field
+ * entry, or defaultProps when none exist.
+ */
+function resolveInsertionRunProperties(
+  entries: readonly TextCharEntry[],
+  prefixLength: number,
+  defaultProps: RunProperties | undefined,
+): RunProperties | undefined {
+  for (let i = prefixLength - 1; i >= 0; i--) {
+    const entry = entries[i];
+    if (entry?.kind === "text" || entry?.kind === "field") {
+      return entry.properties;
+    }
+  }
+  return defaultProps;
+}
+
 /**
  * Merge edited text into original TextBody, preserving styling.
- *
- * @param originalBody - Original TextBody to preserve bodyProperties from
- * @param newText - New plain text content
- * @param defaultRunProperties - Run properties to apply to all new runs (REQUIRED)
- * @param pendingStyledPaste - Optional styled paste context from internal clipboard
  */
 export function mergeTextIntoBody(
-  originalBody: TextBody,
-  newText: string,
-  defaultRunProperties: RunProperties,
-  pendingStyledPaste?: PendingStyledPaste | null,
+  { originalBody, newText, defaultRunProperties, pendingStyledPaste }: MergeTextIntoBodyOptions,
 ): TextBody {
   if (!originalBody) {
     throw new Error("mergeTextIntoBody requires originalBody.");
@@ -235,15 +253,9 @@ function applySingleReplaceEdit({
   // This matches the typical editor behavior: typing inherits the style of the
   // preceding character. Falls back to the textBody-level default only when
   // no preceding text/field character exists (e.g., inserting at the very beginning).
-  const insertionRunProperties: RunProperties | undefined = (() => {
-    for (let i = prefixLength - 1; i >= 0; i--) {
-      const entry = originalEntries[i];
-      if (entry.kind === "text" || entry.kind === "field") {
-        return entry.properties;
-      }
-    }
-    return defaultProps;
-  })();
+  const insertionRunProperties: RunProperties | undefined = resolveInsertionRunProperties(
+    originalEntries, prefixLength, defaultProps,
+  );
 
   const insertedEntries: TextCharEntry[] = Array.from(insertedText).map((char, index) => {
     if (char === "\n") {

@@ -4,7 +4,6 @@
  * Verifies the shared stroke functions consumed by both renderers.
  */
 
-import { describe, it, expect } from "vitest";
 import { resolveStrokeWeight, mapStrokeCap, mapStrokeJoin } from "./interpret";
 
 describe("resolveStrokeWeight", () => {

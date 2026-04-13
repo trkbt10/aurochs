@@ -13,7 +13,7 @@
  */
 
 import type {
-  BaseFill, SolidFill, GradientFill, GradientStop,
+  BaseFill, SolidFill, GradientFill,
   BlipFill, PatternFill,
 } from "@aurochs-office/drawing-ml/domain/fill";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
@@ -23,11 +23,17 @@ import type {
 } from "@aurochs/fig/types";
 import { dmlColorToFig } from "./color";
 
+
+
+
+
+
+/** Converts a DrawingML fill to an array of Figma paint definitions. */
 export function dmlFillToFig(
   fill: BaseFill | undefined,
   colorContext?: ColorContext,
 ): readonly FigPaint[] {
-  if (!fill) return [];
+  if (!fill) {return [];}
 
   switch (fill.type) {
     case "solidFill":

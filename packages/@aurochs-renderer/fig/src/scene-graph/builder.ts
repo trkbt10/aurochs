@@ -41,6 +41,7 @@ import { generateStarContour, generatePolygonContour, generateLineContour } from
 import { extractUniformCornerRadius as sharedExtractUniformCornerRadius, resolveClipsContent as sharedResolveClipsContent } from "../geometry";
 import { convertTextNode } from "./convert/text";
 import type { Fill, PathContour } from "./types";
+import type { TextAutoResize } from "../text/layout/types";
 
 /** Select fill paints based on whether stroke geometry is being used */
 function selectPaintsForFills(
@@ -177,7 +178,7 @@ type ResolvedInstance = {
  * with the actual fills stored on the SYMBOL.
  */
 function hasVisibleFills(fills: readonly FigPaint[] | undefined): boolean {
-  if (!fills || fills.length === 0) return false;
+  if (!fills || fills.length === 0) {return false;}
   return fills.some((p) => p.visible !== false);
 }
 
@@ -341,12 +342,12 @@ function synthesizeContours(node: FigDesignNode): PathContour[] {
 
   switch (typeName) {
     case "STAR":
-      return [generateStarContour(
-        w,
-        h,
-        node.pointCount ?? 5,
-        node.starInnerRadius ?? 0.382,
-      )];
+      return [generateStarContour({
+        width: w,
+        height: h,
+        pointCount: node.pointCount ?? 5,
+        innerRadiusRatio: node.starInnerRadius ?? 0.382,
+      })];
     case "REGULAR_POLYGON":
       return [generatePolygonContour(w, h, node.pointCount ?? 3)];
     case "LINE":
@@ -400,6 +401,19 @@ function buildVectorNode(node: FigDesignNode, ctx: BuildContext): PathNode {
   };
 }
 
+function extractAutoResizeName(rawAutoResize: unknown): string | undefined {
+  if (typeof rawAutoResize === "string") {return rawAutoResize;}
+  return (rawAutoResize as { name?: string } | undefined)?.name;
+}
+
+function resolveTextAutoResize(rawAutoResize: unknown): TextAutoResize {
+  const name = extractAutoResizeName(rawAutoResize);
+  if (name === "NONE" || name === "HEIGHT" || name === "TRUNCATE") {
+    return name;
+  }
+  return "WIDTH_AND_HEIGHT";
+}
+
 function buildTextNode(node: FigDesignNode, ctx: BuildContext): TextNode {
   const base = extractBaseProps(node);
   const { effects } = extractEffectsProps(node);
@@ -407,12 +421,7 @@ function buildTextNode(node: FigDesignNode, ctx: BuildContext): TextNode {
 
   // Resolve textAutoResize from domain textData
   const rawAutoResize = node.textData?.textAutoResize;
-  const autoResizeName = rawAutoResize
-    ? (typeof rawAutoResize === "string" ? rawAutoResize : (rawAutoResize as { name?: string }).name)
-    : undefined;
-  const textAutoResize = (autoResizeName === "NONE" || autoResizeName === "HEIGHT" || autoResizeName === "TRUNCATE")
-    ? autoResizeName
-    : "WIDTH_AND_HEIGHT" as const;
+  const textAutoResize = resolveTextAutoResize(rawAutoResize);
 
   return {
     type: "text",

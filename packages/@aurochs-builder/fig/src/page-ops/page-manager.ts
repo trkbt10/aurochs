@@ -5,10 +5,9 @@
  * Pages map to CANVAS nodes in the .fig format.
  */
 
-import type { FigDesignDocument, FigPage } from "../types/document";
-import { DEFAULT_PAGE_BACKGROUND } from "../types/document";
-import type { FigPageId } from "../types/node-id";
-import { nextPageId, createIdCounter, toPageId } from "../types/node-id";
+import type { FigDesignDocument, FigDesignNode, FigPage, FigPageId } from "@aurochs/fig/domain";
+import { DEFAULT_PAGE_BACKGROUND, toPageId } from "@aurochs/fig/domain";
+import { nextPageId, createIdCounter } from "../types/node-id";
 
 // =============================================================================
 // ID Generation
@@ -18,6 +17,7 @@ import { nextPageId, createIdCounter, toPageId } from "../types/node-id";
  * Shared counter for generating page IDs.
  * Uses session 0 (structural nodes).
  */
+// eslint-disable-next-line no-restricted-syntax -- module-level mutable singleton required for resettable ID counter
 let pageCounter = createIdCounter(0, 100);
 
 /**
@@ -188,8 +188,8 @@ import { nextNodeId } from "../types/node-id";
  * Deep clone a list of design nodes, regenerating all IDs.
  */
 function deepCloneNodes(
-  nodes: readonly import("../types/document").FigDesignNode[],
-): import("../types/document").FigDesignNode[] {
+  nodes: readonly FigDesignNode[],
+): FigDesignNode[] {
   return nodes.map((node) => {
     const newId = nextNodeId(pageCounter);
     return {

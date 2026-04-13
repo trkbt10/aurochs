@@ -71,7 +71,7 @@ export function convertDocument(
   }
 
   const slides: SlideWithId[] = doc.pages.map((page, index) =>
-    convertPage(page, slideWidth, slideHeight, index),
+    convertPage({ page, slideWidth, slideHeight, index }),
   );
 
   const presentation: Presentation = {
@@ -89,14 +89,18 @@ export function convertDocument(
   };
 }
 
+type ConvertPageOptions = {
+  readonly page: FigPage;
+  readonly slideWidth: Pixels;
+  readonly slideHeight: Pixels;
+  readonly index: number;
+};
+
 /**
  * Convert a single Fig page to a SlideWithId.
  */
 function convertPage(
-  page: FigPage,
-  slideWidth: Pixels,
-  slideHeight: Pixels,
-  index: number,
+  { page, slideWidth, slideHeight, index }: ConvertPageOptions,
 ): SlideWithId {
   const idCounter: ShapeIdCounter = { value: 0 };
 
@@ -105,12 +109,12 @@ function convertPage(
 
   // Translate nodes so their bounding box starts at (0, 0)
   // and scale to fit within the slide dimensions.
-  const translatedNodes = translateAndScaleNodes(
-    page.children,
+  const translatedNodes = translateAndScaleNodes({
+    nodes: page.children,
     bounds,
     slideWidth,
     slideHeight,
-  );
+  });
 
   const shapes = convertNodes(translatedNodes, idCounter);
 
@@ -137,9 +141,13 @@ function computeContentBounds(nodes: readonly FigDesignNode[]): {
   maxX: number;
   maxY: number;
 } {
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulators for bounding box computation across nodes
   let minX = Infinity;
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator for bounding box computation
   let minY = Infinity;
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator for bounding box computation
   let maxX = -Infinity;
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator for bounding box computation
   let maxY = -Infinity;
 
   for (const node of nodes) {
@@ -169,16 +177,20 @@ function computeContentBounds(nodes: readonly FigDesignNode[]): {
  *
  * This produces new FigDesignNode instances with adjusted transforms/sizes.
  */
+type TranslateAndScaleNodesOptions = {
+  readonly nodes: readonly FigDesignNode[];
+  readonly bounds: { minX: number; minY: number; maxX: number; maxY: number };
+  readonly slideWidth: number;
+  readonly slideHeight: number;
+};
+
 function translateAndScaleNodes(
-  nodes: readonly FigDesignNode[],
-  bounds: { minX: number; minY: number; maxX: number; maxY: number },
-  slideWidth: number,
-  slideHeight: number,
+  { nodes, bounds, slideWidth, slideHeight }: TranslateAndScaleNodesOptions,
 ): readonly FigDesignNode[] {
   const contentWidth = bounds.maxX - bounds.minX;
   const contentHeight = bounds.maxY - bounds.minY;
 
-  if (contentWidth <= 0 || contentHeight <= 0) return nodes;
+  if (contentWidth <= 0 || contentHeight <= 0) {return nodes;}
 
   // Check if content fits within the slide without scaling.
   // If the bounding box fits within (0,0)-(slideWidth,slideHeight),
@@ -203,7 +215,7 @@ function translateAndScaleNodes(
   const offsetX = (slideWidth - scaledWidth) / 2;
   const offsetY = (slideHeight - scaledHeight) / 2;
 
-  return nodes.map((node) => translateAndScaleNode(node, bounds.minX, bounds.minY, scale, offsetX, offsetY));
+  return nodes.map((node) => translateAndScaleNode({ node, originX: bounds.minX, originY: bounds.minY, scale, offsetX, offsetY }));
 }
 
 /**
@@ -220,13 +232,17 @@ function translateAndScaleNodes(
  * would leave children at their original positions, which would be wrong.
  * So we recursively scale children's positions and sizes as well.
  */
+type TranslateAndScaleNodeOptions = {
+  readonly node: FigDesignNode;
+  readonly originX: number;
+  readonly originY: number;
+  readonly scale: number;
+  readonly offsetX: number;
+  readonly offsetY: number;
+};
+
 function translateAndScaleNode(
-  node: FigDesignNode,
-  originX: number,
-  originY: number,
-  scale: number,
-  offsetX: number,
-  offsetY: number,
+  { node, originX, originY, scale, offsetX, offsetY }: TranslateAndScaleNodeOptions,
 ): FigDesignNode {
   const newM02 = (node.transform.m02 - originX) * scale + offsetX;
   const newM12 = (node.transform.m12 - originY) * scale + offsetY;
@@ -244,9 +260,7 @@ function translateAndScaleNode(
       y: node.size.y * scale,
     },
     // Recursively scale children's positions and sizes
-    children: node.children
-      ? node.children.map((child) => scaleChildNode(child, scale))
-      : undefined,
+    children: node.children ? node.children.map((child) => scaleChildNode(child, scale)) : undefined,
   };
 }
 
@@ -273,9 +287,7 @@ function scaleChildNode(
       x: node.size.x * scale,
       y: node.size.y * scale,
     },
-    children: node.children
-      ? node.children.map((child) => scaleChildNode(child, scale))
-      : undefined,
+    children: node.children ? node.children.map((child) => scaleChildNode(child, scale)) : undefined,
   };
 }
 

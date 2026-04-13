@@ -335,39 +335,46 @@ async function generateEffectFixtures(): Promise<void> {
     for (const child of frameData.children) {
       const childID = nextIDRef.value++;
 
-      if (child.shape === "rect") {
-        const builder = roundedRectNode(childID, frameID)
-          .name(child.name)
-          .size(child.width, child.height)
-          .position(child.x, child.y)
-          .fill({ ...child.fill, a: 1 });
+      switch (child.shape) {
+        case "rect": {
+          const builder = roundedRectNode(childID, frameID)
+            .name(child.name)
+            .size(child.width, child.height)
+            .position(child.x, child.y)
+            .fill({ ...child.fill, a: 1 });
 
-        if (child.cornerRadius) {
-          builder.cornerRadius(child.cornerRadius);
-        }
-        if (child.opacity !== undefined) {
-          builder.opacity(child.opacity);
-        }
-        if (child.effects) {
-          builder.effects(child.effects);
-        }
+          if (child.cornerRadius) {
+            builder.cornerRadius(child.cornerRadius);
+          }
+          if (child.opacity !== undefined) {
+            builder.opacity(child.opacity);
+          }
+          if (child.effects) {
+            builder.effects(child.effects);
+          }
 
-        figFile.addRoundedRectangle(builder.build());
-      } else if (child.shape === "ellipse") {
-        const builder = ellipseNode(childID, frameID)
-          .name(child.name)
-          .size(child.width, child.height)
-          .position(child.x, child.y)
-          .fill({ ...child.fill, a: 1 });
-
-        if (child.opacity !== undefined) {
-          builder.opacity(child.opacity);
+          figFile.addRoundedRectangle(builder.build());
+          break;
         }
-        if (child.effects) {
-          builder.effects(child.effects);
-        }
+        case "ellipse": {
+          const builder = ellipseNode(childID, frameID)
+            .name(child.name)
+            .size(child.width, child.height)
+            .position(child.x, child.y)
+            .fill({ ...child.fill, a: 1 });
 
-        figFile.addEllipse(builder.build());
+          if (child.opacity !== undefined) {
+            builder.opacity(child.opacity);
+          }
+          if (child.effects) {
+            builder.effects(child.effects);
+          }
+
+          figFile.addEllipse(builder.build());
+          break;
+        }
+        default:
+          break;
       }
     }
   });

@@ -123,6 +123,70 @@ export default [
       },
     },
 
+    // Fluent builder types require `interface` for self-referential generics
+    // (TypeScript resolves interface extends lazily, but type aliases eagerly,
+    // making `type A = F<A> & {...}` a circular reference error)
+    {
+      files: ["packages/@aurochs/fig/src/builder/shape/*.ts"],
+      rules: {
+        "@typescript-eslint/consistent-type-definitions": "off",
+        // TSInterfaceDeclaration is required here (see comment above); keep all other selectors
+        "no-restricted-syntax": [
+          "warn",
+          { selector: "ImportExpression", message: "dynamic import() is prohibited" },
+          { selector: "TSImportType", message: "type import() (TS import type expression) is prohibited" },
+          { selector: "ExportAllDeclaration[exported!=null]", message: "export * as is prohibited" },
+          { selector: "ExportAllDeclaration[exportKind='type']", message: "export type * from is prohibited" },
+          {
+            selector:
+              "ClassDeclaration" +
+              ":not(:has(TSClassImplements[expression.name='Error']))" +
+              ":not([superClass.name='Error'])" +
+              ":not([superClass.property.name='Error'])" +
+              ":not([superClass.object.name='globalThis'][superClass.property.name='Error'])",
+            message: "Class implementation is not recommended. Please write as function-based as much as possible.",
+          },
+          {
+            selector:
+              "VariableDeclaration[kind='let']" +
+              ":not(ForStatement > VariableDeclaration)" +
+              ":not(ForInStatement > VariableDeclaration)" +
+              ":not(ForOfStatement > VariableDeclaration)",
+            message:
+              "Use of let is prohibited. If you need to branch, create a separate function and use its return value. If absolutely necessary for performance issues, explicitly use // eslint-disable-next-line.",
+          },
+          {
+            selector: "TSAsExpression TSAnyKeyword",
+            message:
+              "Avoid using 'as any'. Code using 'as any' may indicate incorrect type definitions or a misunderstanding; review it carefully. Resolve this by using appropriate type guards or correct typings instead.",
+          },
+          {
+            selector: "TSTypeAssertion TSAnyKeyword",
+            message:
+              "Avoid using 'as any'. Code using 'as any' may indicate incorrect type definitions or a misunderstanding; review it carefully. Resolve this by using appropriate type guards or correct typings instead.",
+          },
+          {
+            selector: "CatchClause:not([param])",
+            message:
+              "Catch clause must have an error parameter and handle the error properly.",
+          },
+          {
+            selector: "CatchClause > BlockStatement > ExpressionStatement > UnaryExpression[operator='void']",
+            message:
+              "Using 'void' to suppress error handling is prohibited. Handle the error properly or re-throw it.",
+          },
+          {
+            selector: "CallExpression[callee.type='FunctionExpression']",
+            message: "IIFE (Immediately Invoked Function Expression) is prohibited. Extract to a named function instead.",
+          },
+          {
+            selector: "CallExpression[callee.type='ArrowFunctionExpression']",
+            message: "IIFE (Immediately Invoked Function Expression) is prohibited. Extract to a named function instead.",
+          },
+        ],
+      },
+    },
+
     // Tests-only: allow global test APIs so imports are unnecessary
     {
       files: [

@@ -88,6 +88,7 @@ describe("Chart editing integration", () => {
 
   it("chart data update in ResourceStore is readable after UPDATE_SHAPE", () => {
     // 1. Create chart shape
+    // eslint-disable-next-line no-restricted-syntax -- mutable accumulator: state is threaded through successive dispatch() calls in this test
     let state = createPresentationEditorState(createTestDocument());
     state = dispatch(state, {
       type: "ADD_CHART",
@@ -136,7 +137,7 @@ describe("Chart editing integration", () => {
       type: "UPDATE_SHAPE",
       shapeId: shape.nonVisual.id,
       updater: (s) => {
-        if (s.type !== "graphicFrame" || s.content.type !== "chart") return s;
+        if (s.type !== "graphicFrame" || s.content.type !== "chart") {return s;}
         return { ...s, content: { ...s.content, data: { ...s.content.data } } };
       },
     });
@@ -165,6 +166,7 @@ describe("Chart editing integration", () => {
     ];
 
     for (const { creation, ecma } of chartTypes) {
+      // eslint-disable-next-line no-restricted-syntax -- mutable accumulator: state is threaded through successive dispatch() calls in this test
       let state = createPresentationEditorState(createTestDocument());
       state = dispatch(state, {
         type: "ADD_CHART",

@@ -121,10 +121,18 @@ describe("applyConstraintsToChildren", () => {
 // =============================================================================
 
 describe("resolveInstanceLayout", () => {
+  type MakeChildOptions = {
+    readonly guid: { sessionID: number; localID: number };
+    readonly x: number;
+    readonly y: number;
+    readonly w: number;
+    readonly h: number;
+    readonly hConstraint?: number;
+    readonly vConstraint?: number;
+  };
+
   function makeChild(
-    guid: { sessionID: number; localID: number },
-    x: number, y: number, w: number, h: number,
-    hConstraint?: number, vConstraint?: number,
+    { guid, x, y, w, h, hConstraint, vConstraint }: MakeChildOptions,
   ): FigNode {
     const node: Record<string, unknown> = {
       name: "child",
@@ -142,7 +150,7 @@ describe("resolveInstanceLayout", () => {
   }
 
   it("uses derivedSymbolData when GUIDs match", () => {
-    const children = [makeChild({ sessionID: 1, localID: 10 }, 0, 0, 100, 50)];
+    const children = [makeChild({ guid: { sessionID: 1, localID: 10 }, x: 0, y: 0, w: 100, h: 50 })];
     const derived = [
       {
         guidPath: { guids: [{ sessionID: 1, localID: 10 }] },
@@ -158,15 +166,15 @@ describe("resolveInstanceLayout", () => {
 
   it("falls back to constraints when derivedSymbolData GUIDs do not match", () => {
     const children = [
-      makeChild(
-        { sessionID: 1, localID: 10 },
-        0,
-        0,
-        100,
-        50,
-        CONSTRAINT_TYPE_VALUES.STRETCH,
-        CONSTRAINT_TYPE_VALUES.STRETCH,
-      ),
+      makeChild({
+        guid: { sessionID: 1, localID: 10 },
+        x: 0,
+        y: 0,
+        w: 100,
+        h: 50,
+        hConstraint: CONSTRAINT_TYPE_VALUES.STRETCH,
+        vConstraint: CONSTRAINT_TYPE_VALUES.STRETCH,
+      }),
     ];
     // Derived data references a GUID not in children
     const derived = [
@@ -185,15 +193,15 @@ describe("resolveInstanceLayout", () => {
 
   it("falls back to constraints when no derivedSymbolData", () => {
     const children = [
-      makeChild(
-        { sessionID: 1, localID: 10 },
-        10,
-        10,
-        80,
-        30,
-        CONSTRAINT_TYPE_VALUES.STRETCH,
-        CONSTRAINT_TYPE_VALUES.STRETCH,
-      ),
+      makeChild({
+        guid: { sessionID: 1, localID: 10 },
+        x: 10,
+        y: 10,
+        w: 80,
+        h: 30,
+        hConstraint: CONSTRAINT_TYPE_VALUES.STRETCH,
+        vConstraint: CONSTRAINT_TYPE_VALUES.STRETCH,
+      }),
     ];
     const result = resolveInstanceLayout({ children, symbolSize: { x: 100, y: 50 }, instanceSize: { x: 200, y: 100 }, derivedSymbolData: undefined });
     expect(result.sizeApplied).toBe(true);
@@ -202,7 +210,7 @@ describe("resolveInstanceLayout", () => {
   });
 
   it("returns sizeApplied=false when no constraints and no derived data", () => {
-    const children = [makeChild({ sessionID: 1, localID: 10 }, 10, 10, 80, 30)];
+    const children = [makeChild({ guid: { sessionID: 1, localID: 10 }, x: 10, y: 10, w: 80, h: 30 })];
     const result = resolveInstanceLayout({ children, symbolSize: { x: 100, y: 50 }, instanceSize: { x: 200, y: 100 }, derivedSymbolData: undefined });
     expect(result.sizeApplied).toBe(false);
     expect(result.children).toBe(children); // unchanged
@@ -211,16 +219,16 @@ describe("resolveInstanceLayout", () => {
   it("supplements constraints for children NOT covered by partial dsd", () => {
     // Scenario: dsd covers child A but not child B.
     // Child B has STRETCH constraints and should be resized.
-    const childA = makeChild({ sessionID: 1, localID: 10 }, 0, 0, 48, 48);
-    const childB = makeChild(
-      { sessionID: 1, localID: 20 },
-      0,
-      0,
-      48,
-      48,
-      CONSTRAINT_TYPE_VALUES.STRETCH,
-      CONSTRAINT_TYPE_VALUES.STRETCH,
-    );
+    const childA = makeChild({ guid: { sessionID: 1, localID: 10 }, x: 0, y: 0, w: 48, h: 48 });
+    const childB = makeChild({
+      guid: { sessionID: 1, localID: 20 },
+      x: 0,
+      y: 0,
+      w: 48,
+      h: 48,
+      hConstraint: CONSTRAINT_TYPE_VALUES.STRETCH,
+      vConstraint: CONSTRAINT_TYPE_VALUES.STRETCH,
+    });
     // Give childB fillGeometry to verify it gets cleared
     (childB as Record<string, unknown>).fillGeometry = [{ commandsBlob: 0 }];
 

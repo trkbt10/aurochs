@@ -13,6 +13,7 @@ import type { PreviewData } from "../commands/preview";
 import type { InventoryData } from "../commands/inventory";
 import type { TablesData } from "../commands/tables";
 import type { ImagesData } from "../commands/images";
+import type { ShapeJson } from "../serializers/shape-serializer";
 import type { DiffData } from "../commands/diff";
 import type { PptxPatchData } from "@aurochs-builder/pptx";
 
@@ -71,7 +72,7 @@ export function formatListPretty(data: ListData): string {
  * Collect chart shapes from a flat or nested shape tree.
  */
 function collectChartShapes(
-  shapes: readonly import("../serializers/shape-serializer").ShapeJson[],
+  shapes: readonly ShapeJson[],
 ): readonly { readonly resourceId: string; readonly chartType?: string; readonly title?: string }[] {
   const charts: { readonly resourceId: string; readonly chartType?: string; readonly title?: string }[] = [];
   for (const shape of shapes) {

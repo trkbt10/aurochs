@@ -12,7 +12,7 @@ import { createFontProvider } from "../domain/font/font-provider";
 import { serializePdfDict, serializeIndirectObject } from "./object-serializer";
 import { buildXrefSection } from "./xref-builder";
 import {
-  PdfObjectTracker,
+  createPdfObjectTracker,
   buildFonts,
   buildImages,
   buildPage,
@@ -126,7 +126,7 @@ export function writePdfDocument(
     producer = "aurochs-pdf",
   } = options;
 
-  const tracker = new PdfObjectTracker();
+  const tracker = createPdfObjectTracker();
 
   // Create FontProvider (use provided one, or create default from embedded fonts)
   const fontProvider = options.fontProvider ?? createFontProvider({ embeddedFonts: document.embeddedFonts });

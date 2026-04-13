@@ -7,8 +7,7 @@
  */
 
 import type { FigColor, FigPaint, FigEffect, KiwiEnumValue } from "@aurochs/fig/types";
-import type { FigNodeId } from "@aurochs/fig/domain";
-import type { AutoLayoutProps } from "./document";
+import type { FigNodeId, AutoLayoutProps } from "@aurochs/fig/domain";
 
 // =============================================================================
 // Base Spec

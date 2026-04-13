@@ -83,7 +83,7 @@ function PageSvgContent({ page, document: doc, bounds }: PageSvgContentProps) {
       return null;
     }
     return buildSceneGraph(page.children, {
-      blobs: (doc._loaded?.blobs ?? []) as any,
+      blobs: doc._loaded?.blobs ?? [],
       images: doc.images as BuildSceneGraphOptions["images"],
       canvasSize: { width: bounds.width, height: bounds.height },
       symbolMap: doc.components,

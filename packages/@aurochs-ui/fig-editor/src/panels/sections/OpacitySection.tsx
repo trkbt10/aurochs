@@ -12,6 +12,12 @@ type OpacitySectionProps = {
   readonly dispatch: (action: FigEditorAction) => void;
 };
 
+
+
+
+
+
+/** Panel section for editing the opacity of a Figma node. */
 export function OpacitySection({ node, dispatch }: OpacitySectionProps) {
   const opacityPercent = Math.round(node.opacity * 100);
 

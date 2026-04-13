@@ -16,7 +16,6 @@
  *   - Preserving headings, placeholder types, or other PPTX-specific metadata
  */
 
-import { describe, it, expect } from "vitest";
 import { convert as figToPptx } from "@aurochs-converters/fig-to-pptx";
 import { convert as pptxToFig } from "@aurochs-converters/pptx-to-fig";
 import type { FigDesignDocument, FigDesignNode, FigPage } from "@aurochs/fig/domain";
@@ -25,7 +24,7 @@ import type { PresentationDocument, SlideWithId } from "@aurochs-office/pptx/app
 import type { Shape, SpShape } from "@aurochs-office/pptx/domain/shape";
 import type { Slide } from "@aurochs-office/pptx/domain/slide/types";
 import type { Pixels, Degrees } from "@aurochs-office/drawing-ml/domain/units";
-import { px, deg, pct, pt } from "@aurochs-office/drawing-ml/domain/units";
+import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
 import { createResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 import { EMPTY_FONT_SCHEME } from "@aurochs-office/ooxml/domain/font-scheme";
 import { DEFAULT_PAGE_BACKGROUND } from "@aurochs-builder/fig";
@@ -49,7 +48,9 @@ function createFigDocument(nodes: readonly FigDesignNode[]): FigDesignDocument {
   };
 }
 
-function createRectNode(id: string, x: number, y: number, w: number, h: number): FigDesignNode {
+type CreateNodeOptions = { id: string; x: number; y: number; w: number; h: number };
+
+function createRectNode({ id, x, y, w, h }: CreateNodeOptions): FigDesignNode {
   return {
     id: id as FigNodeId,
     type: "RECTANGLE",
@@ -70,7 +71,7 @@ function createRectNode(id: string, x: number, y: number, w: number, h: number):
   };
 }
 
-function createEllipseNode(id: string, x: number, y: number, w: number, h: number): FigDesignNode {
+function createEllipseNode({ id, x, y, w, h }: CreateNodeOptions): FigDesignNode {
   return {
     id: id as FigNodeId,
     type: "ELLIPSE",
@@ -96,7 +97,9 @@ function createEllipseNode(id: string, x: number, y: number, w: number, h: numbe
   };
 }
 
-function createTextNode(id: string, x: number, y: number, text: string): FigDesignNode {
+type CreateTextNodeOptions = { id: string; x: number; y: number; text: string };
+
+function createTextNode({ id, x, y, text }: CreateTextNodeOptions): FigDesignNode {
   return {
     id: id as FigNodeId,
     type: "TEXT",
@@ -141,7 +144,7 @@ function createPptxDocument(shapes: readonly Shape[]): PresentationDocument {
   };
 }
 
-function createPptxRect(id: string, x: number, y: number, w: number, h: number): SpShape {
+function createPptxRect({ id, x, y, w, h }: CreateNodeOptions): SpShape {
   return {
     type: "sp",
     nonVisual: { id, name: `Shape ${id}` },
@@ -167,9 +170,9 @@ function createPptxRect(id: string, x: number, y: number, w: number, h: number):
 describe("Fig → PPTX → Fig roundtrip", () => {
   it("preserves shape count", async () => {
     const figDoc = createFigDocument([
-      createRectNode("0:2", 10, 10, 100, 80),
-      createEllipseNode("0:3", 150, 10, 60, 60),
-      createTextNode("0:4", 10, 120, "Hello World"),
+      createRectNode({ id: "0:2", x: 10, y: 10, w: 100, h: 80 }),
+      createEllipseNode({ id: "0:3", x: 150, y: 10, w: 60, h: 60 }),
+      createTextNode({ id: "0:4", x: 10, y: 120, text: "Hello World" }),
     ]);
 
     const pptxResult = await figToPptx(figDoc);
@@ -182,7 +185,7 @@ describe("Fig → PPTX → Fig roundtrip", () => {
 
   it("preserves rectangle fill color through roundtrip", async () => {
     const figDoc = createFigDocument([
-      createRectNode("0:2", 50, 50, 200, 100),
+      createRectNode({ id: "0:2", x: 50, y: 50, w: 200, h: 100 }),
     ]);
 
     const pptxResult = await figToPptx(figDoc);
@@ -203,7 +206,7 @@ describe("Fig → PPTX → Fig roundtrip", () => {
 
   it("preserves text content through roundtrip", async () => {
     const figDoc = createFigDocument([
-      createTextNode("0:2", 10, 10, "Roundtrip text"),
+      createTextNode({ id: "0:2", x: 10, y: 10, text: "Roundtrip text" }),
     ]);
 
     const pptxResult = await figToPptx(figDoc);
@@ -216,7 +219,7 @@ describe("Fig → PPTX → Fig roundtrip", () => {
 
   it("preserves stroke through roundtrip", async () => {
     const figDoc = createFigDocument([
-      createEllipseNode("0:2", 10, 10, 80, 80),
+      createEllipseNode({ id: "0:2", x: 10, y: 10, w: 80, h: 80 }),
     ]);
 
     const pptxResult = await figToPptx(figDoc);
@@ -235,8 +238,8 @@ describe("Fig → PPTX → Fig roundtrip", () => {
 describe("PPTX → Fig → PPTX roundtrip", () => {
   it("preserves shape count", async () => {
     const pptxDoc = createPptxDocument([
-      createPptxRect("1", 10, 10, 200, 100),
-      createPptxRect("2", 250, 10, 200, 100),
+      createPptxRect({ id: "1", x: 10, y: 10, w: 200, h: 100 }),
+      createPptxRect({ id: "2", x: 250, y: 10, w: 200, h: 100 }),
     ]);
 
     const figResult = await pptxToFig(pptxDoc);
@@ -248,7 +251,7 @@ describe("PPTX → Fig → PPTX roundtrip", () => {
 
   it("preserves solid fill through roundtrip", async () => {
     const pptxDoc = createPptxDocument([
-      createPptxRect("1", 50, 50, 100, 100),
+      createPptxRect({ id: "1", x: 50, y: 50, w: 100, h: 100 }),
     ]);
 
     const figResult = await pptxToFig(pptxDoc);

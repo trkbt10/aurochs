@@ -3,7 +3,6 @@
  *
  * Tests for type-safe PdfText update functions.
  */
-import { describe, it, expect } from "vitest";
 import { withTextContent, withFontFamily, withFontSize, withCharSpacing } from "./operations";
 import type { PdfText } from "./types";
 import { createDefaultGraphicsState } from "../graphics-state";

@@ -310,7 +310,8 @@ describe("writePdfDocument", () => {
         const contentText = toText(decompressed);
         // Should contain hex string format <82A0>
         expect(contentText).toContain("<82A0>");
-      } catch (_error: unknown) {
+      // eslint-disable-next-line no-restricted-syntax -- catch without param: zlib decompression failure is non-actionable in this test; fallback assertion handles it
+      } catch {
         // If decompression fails, at least verify the font structure is correct
         expect(resultText).toContain("/Subtype /Type0");
       }

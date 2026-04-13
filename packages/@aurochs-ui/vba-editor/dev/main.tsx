@@ -1,3 +1,4 @@
+/** @file Development entry point for the VBA editor application. */
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { injectCSSVariables } from "@aurochs-ui/ui-components/design-tokens";

@@ -13,7 +13,8 @@
 import { memo, useState, useEffect, useMemo, type CSSProperties, type ReactNode } from "react";
 import { colorTokens, spacingTokens, shadowTokens } from "@aurochs-ui/ui-components/design-tokens";
 import type { PdfPage } from "@aurochs/pdf";
-import type { PdfRenderSession, FontProvider, PdfImageUrlResolver } from "@aurochs-renderer/pdf";
+import type { FontProvider } from "@aurochs/pdf/domain/font";
+import type { PdfRenderSession, PdfImageUrlResolver } from "@aurochs-renderer/pdf";
 import { createPdfRenderSession } from "@aurochs-renderer/pdf";
 import { usePdfImageCache } from "@aurochs-renderer/pdf/react";
 import { renderPdfPageToSvgNode } from "@aurochs-renderer/pdf/svg";
@@ -95,6 +96,7 @@ export function PdfViewer({ data, className }: PdfViewerProps): ReactNode {
       return;
     }
 
+    // eslint-disable-next-line no-restricted-syntax -- closure cancellation flag: mutated in the useEffect cleanup to prevent stale async state updates
     let cancelled = false;
     setState({ status: "loading" });
 
@@ -128,6 +130,7 @@ export function PdfViewer({ data, className }: PdfViewerProps): ReactNode {
     if (state.status !== "ready") { return; }
     if (currentPageNumber < 1 || currentPageNumber > state.session.pageCount) { return; }
 
+    // eslint-disable-next-line no-restricted-syntax -- closure cancellation flag: mutated in the useEffect cleanup to prevent stale async state updates
     let cancelled = false;
     setPageState({ status: "loading" });
 

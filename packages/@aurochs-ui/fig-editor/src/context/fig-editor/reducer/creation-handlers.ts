@@ -26,6 +26,14 @@ const MIN_CREATION_SIZE = 2;
  */
 const DEFAULT_SHAPE_SIZE = 100;
 
+type BuildNodeSpecFromCreationModeOptions = {
+  readonly mode: FigCreationMode;
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+};
+
 /**
  * Build a NodeSpec from creation mode and drag bounds.
  *
@@ -33,11 +41,7 @@ const DEFAULT_SHAPE_SIZE = 100;
  * The x/y/width/height come from the user's drag gesture on the canvas.
  */
 function buildNodeSpecFromCreationMode(
-  mode: FigCreationMode,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
+  { mode, x, y, width, height }: BuildNodeSpecFromCreationModeOptions,
 ): NodeSpec | null {
   switch (mode.type) {
     case "rectangle":
@@ -91,13 +95,13 @@ export const CREATION_HANDLERS: HandlerMap = {
     const finalWidth = width < MIN_CREATION_SIZE ? DEFAULT_SHAPE_SIZE : width;
     const finalHeight = height < MIN_CREATION_SIZE ? DEFAULT_SHAPE_SIZE : height;
 
-    const spec = buildNodeSpecFromCreationMode(
-      state.creationMode,
+    const spec = buildNodeSpecFromCreationMode({
+      mode: state.creationMode,
       x,
       y,
-      finalWidth,
-      finalHeight,
-    );
+      width: finalWidth,
+      height: finalHeight,
+    });
 
     if (!spec) {
       return {
@@ -108,7 +112,7 @@ export const CREATION_HANDLERS: HandlerMap = {
     }
 
     const doc = state.documentHistory.present;
-    const result = addNode(doc, pageId, null, spec);
+    const result = addNode({ doc, pageId, parentId: null, spec });
 
     return {
       ...state,

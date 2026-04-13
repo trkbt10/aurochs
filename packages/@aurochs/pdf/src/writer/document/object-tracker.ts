@@ -27,69 +27,64 @@ export type PdfObjectEntry = {
  * 3. Call set() with the serialized data
  * 4. After all objects are built, call getAll() to get entries for writing
  */
-export class PdfObjectTracker {
-  private nextObjNum = 1;
-  private entries = new Map<number, PdfObjectEntry>();
+export type PdfObjectTracker = {
+  /** Allocate a new object number. Returns the allocated object number. */
+  allocate(): number;
+  /** Reserve a specific object number. Used when object numbers need to be known before building. */
+  reserve(objNum: number): void;
+  /** Set the data for an allocated object. */
+  set(objNum: number, data: Uint8Array, gen?: number): void;
+  /** Get all object entries sorted by object number. */
+  getAll(): readonly PdfObjectEntry[];
+  /** Get the total number of objects (including free entry 0). Used for xref /Size. */
+  getSize(): number;
+  /** Check if an object number has been set. */
+  has(objNum: number): boolean;
+  /** Get the entry for an object number. */
+  get(objNum: number): PdfObjectEntry | undefined;
+};
 
-  /**
-   * Allocate a new object number.
-   * @returns The allocated object number
-   */
-  allocate(): number {
-    const objNum = this.nextObjNum;
-    this.nextObjNum += 1;
-    return objNum;
-  }
+/**
+ * Create a new PDF object tracker.
+ */
+export function createPdfObjectTracker(): PdfObjectTracker {
+  // eslint-disable-next-line no-restricted-syntax -- mutable counter in closure, incremented by allocate() and reserve()
+  let nextObjNum = 1;
+  const entries = new Map<number, PdfObjectEntry>();
 
-  /**
-   * Reserve a specific object number.
-   * Used when object numbers need to be known before building.
-   * @param objNum - The object number to reserve
-   */
-  reserve(objNum: number): void {
-    if (objNum >= this.nextObjNum) {
-      this.nextObjNum = objNum + 1;
-    }
-  }
+  return {
+    allocate(): number {
+      const objNum = nextObjNum;
+      nextObjNum += 1;
+      return objNum;
+    },
 
-  /**
-   * Set the data for an allocated object.
-   * @param objNum - The object number
-   * @param data - The serialized object data (without obj/endobj wrapper)
-   * @param gen - Generation number (default: 0)
-   */
-  set(objNum: number, data: Uint8Array, gen = 0): void {
-    this.entries.set(objNum, { objNum, gen, data });
-  }
+    reserve(objNum: number): void {
+      if (objNum >= nextObjNum) {
+        nextObjNum = objNum + 1;
+      }
+    },
 
-  /**
-   * Get all object entries sorted by object number.
-   */
-  getAll(): readonly PdfObjectEntry[] {
-    const entries = Array.from(this.entries.values());
-    entries.sort((a, b) => a.objNum - b.objNum);
-    return entries;
-  }
+    set(objNum: number, data: Uint8Array, gen = 0): void {
+      entries.set(objNum, { objNum, gen, data });
+    },
 
-  /**
-   * Get the total number of objects (including free entry 0).
-   * Used for xref /Size.
-   */
-  getSize(): number {
-    return this.nextObjNum;
-  }
+    getAll(): readonly PdfObjectEntry[] {
+      const all = Array.from(entries.values());
+      all.sort((a, b) => a.objNum - b.objNum);
+      return all;
+    },
 
-  /**
-   * Check if an object number has been set.
-   */
-  has(objNum: number): boolean {
-    return this.entries.has(objNum);
-  }
+    getSize(): number {
+      return nextObjNum;
+    },
 
-  /**
-   * Get the entry for an object number.
-   */
-  get(objNum: number): PdfObjectEntry | undefined {
-    return this.entries.get(objNum);
-  }
+    has(objNum: number): boolean {
+      return entries.has(objNum);
+    },
+
+    get(objNum: number): PdfObjectEntry | undefined {
+      return entries.get(objNum);
+    },
+  };
 }

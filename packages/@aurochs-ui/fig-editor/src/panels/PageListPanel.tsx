@@ -21,12 +21,8 @@ const pageItemStyle = (active: boolean): CSSProperties => ({
   fontSize: fontTokens.size.md,
   cursor: "pointer",
   borderRadius: radiusTokens.sm,
-  backgroundColor: active
-    ? `var(--selection-primary, ${colorTokens.selection.primary})`
-    : "transparent",
-  color: active
-    ? "#ffffff"
-    : `var(--text-primary, ${colorTokens.text.primary})`,
+  backgroundColor: active ? `var(--selection-primary, ${colorTokens.selection.primary})` : "transparent",
+  color: active ? "#ffffff" : `var(--text-primary, ${colorTokens.text.primary})`,
   transition: "background-color 150ms ease",
 });
 

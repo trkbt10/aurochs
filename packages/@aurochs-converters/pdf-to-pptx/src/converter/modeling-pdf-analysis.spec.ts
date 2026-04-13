@@ -83,29 +83,38 @@ function getSpShapesWithTextBody(shapes: readonly Shape[]): readonly SpShape[] {
  * Helper to print element info
  */
 function printElement(elem: PdfElement, index: number): void {
-  if (elem.type === "text") {
-    const text = elem as PdfText;
-    const preview = text.text.length > 50 ? text.text.slice(0, 50) + "..." : text.text;
-    console.log(
-      `  [${index}] TEXT: "${preview}" @ (${text.x.toFixed(1)}, ${text.y.toFixed(1)}) ` +
-        `font=${text.fontName} size=${text.fontSize.toFixed(1)}`,
-    );
-  } else if (elem.type === "path") {
-    const path = elem as PdfPath;
-    const fill = path.graphicsState.fillColor;
-    const stroke = path.graphicsState.strokeColor;
-    console.log(
-      `  [${index}] PATH: ops=${path.operations.length} paint=${path.paintOp} ` +
-        `fill=${fill.colorSpace}[${fill.components.join(",")}] ` +
-        `stroke=${stroke.colorSpace}[${stroke.components.join(",")}]`,
-    );
-  } else if (elem.type === "image") {
-    const img = elem as PdfImage;
-    // Image position is in the CTM (transformation matrix)
-    const ctm = img.graphicsState.ctm;
-    const x = ctm[4]; // CTM e component = x translation
-    const y = ctm[5]; // CTM f component = y translation
-    console.log(`  [${index}] IMAGE: ${img.width}x${img.height} @ (${x.toFixed(1)}, ${y.toFixed(1)})`);
+  switch (elem.type) {
+    case "text": {
+      const text = elem as PdfText;
+      const preview = text.text.length > 50 ? text.text.slice(0, 50) + "..." : text.text;
+      console.log(
+        `  [${index}] TEXT: "${preview}" @ (${text.x.toFixed(1)}, ${text.y.toFixed(1)}) ` +
+          `font=${text.fontName} size=${text.fontSize.toFixed(1)}`,
+      );
+      break;
+    }
+    case "path": {
+      const path = elem as PdfPath;
+      const fill = path.graphicsState.fillColor;
+      const stroke = path.graphicsState.strokeColor;
+      console.log(
+        `  [${index}] PATH: ops=${path.operations.length} paint=${path.paintOp} ` +
+          `fill=${fill.colorSpace}[${fill.components.join(",")}] ` +
+          `stroke=${stroke.colorSpace}[${stroke.components.join(",")}]`,
+      );
+      break;
+    }
+    case "image": {
+      const img = elem as PdfImage;
+      // Image position is in the CTM (transformation matrix)
+      const ctm = img.graphicsState.ctm;
+      const x = ctm[4]; // CTM e component = x translation
+      const y = ctm[5]; // CTM f component = y translation
+      console.log(`  [${index}] IMAGE: ${img.width}x${img.height} @ (${x.toFixed(1)}, ${y.toFixed(1)})`);
+      break;
+    }
+    default:
+      break;
   }
 }
 
@@ -404,12 +413,17 @@ describe("modeling.pdf analysis", () => {
       const boundsParts: string[] = [];
       if (p.operations.length > 0) {
         const firstOp = p.operations[0];
-        if (firstOp.type === "rect") {
-          boundsParts.push(
-            ` rect=(${firstOp.x.toFixed(0)},${firstOp.y.toFixed(0)},${firstOp.width.toFixed(0)}x${firstOp.height.toFixed(0)})`,
-          );
-        } else if (firstOp.type === "moveTo") {
-          boundsParts.push(` start=(${firstOp.point.x.toFixed(0)},${firstOp.point.y.toFixed(0)})`);
+        switch (firstOp.type) {
+          case "rect":
+            boundsParts.push(
+              ` rect=(${firstOp.x.toFixed(0)},${firstOp.y.toFixed(0)},${firstOp.width.toFixed(0)}x${firstOp.height.toFixed(0)})`,
+            );
+            break;
+          case "moveTo":
+            boundsParts.push(` start=(${firstOp.point.x.toFixed(0)},${firstOp.point.y.toFixed(0)})`);
+            break;
+          default:
+            break;
         }
       }
       const bounds = boundsParts.join("");

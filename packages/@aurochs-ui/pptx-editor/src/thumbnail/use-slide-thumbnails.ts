@@ -32,6 +32,22 @@ export type SlideThumbnailRenderer = {
 // Hook
 // =============================================================================
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/** Hook that renders slide thumbnails as data-URL SVGs. */
 export function useSlideThumbnails(options: UseSlideThumbnailsOptions): SlideThumbnailRenderer {
   const { slideWidth, slideHeight, slides } = options;
   const slideSize = useMemo(() => ({ width: slideWidth, height: slideHeight }), [slideWidth, slideHeight]);

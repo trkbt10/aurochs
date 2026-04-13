@@ -14,7 +14,6 @@ export {
   findNodesByType,
   type FigMetadata,
   type FigImage,
-  type FigBlob,
   type LoadedFigFile,
   type SaveFigOptions,
 } from "./fig-roundtrip";

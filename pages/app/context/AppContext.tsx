@@ -114,6 +114,22 @@ export function useAppContext(): AppContextValue {
 // Provider
 // =============================================================================
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/** Application context provider that wires up all shared state and navigation. */
 export function AppProvider({ children }: { readonly children: ReactNode }) {
   const navigate = useNavigate();
 
@@ -149,11 +165,11 @@ export function AppProvider({ children }: { readonly children: ReactNode }) {
     (keep: "pptx" | "docx" | "xlsx" | "pdf" | "fig") => {
       setImportedDocument(null);
       setImportedFileName(null);
-      if (keep !== "pptx") pptx.reset();
-      if (keep !== "docx") docx.reset();
-      if (keep !== "xlsx") xlsx.reset();
-      if (keep !== "pdf") pdf.reset();
-      if (keep !== "fig") fig.reset();
+      if (keep !== "pptx") {pptx.reset();}
+      if (keep !== "docx") {docx.reset();}
+      if (keep !== "xlsx") {xlsx.reset();}
+      if (keep !== "pdf") {pdf.reset();}
+      if (keep !== "fig") {fig.reset();}
     },
     [pptx, docx, xlsx, pdf, fig],
   );
@@ -161,8 +177,8 @@ export function AppProvider({ children }: { readonly children: ReactNode }) {
   // ---- Derived state ----
 
   const editorDocument = useMemo(() => {
-    if (importedDocument) return importedDocument;
-    if (!pptx.presentation) return null;
+    if (importedDocument) {return importedDocument;}
+    if (!pptx.presentation) {return null;}
     try {
       return convertToPresentationDocument(pptx.presentation);
     } catch (e) {

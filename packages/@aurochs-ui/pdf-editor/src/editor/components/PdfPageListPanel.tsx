@@ -9,7 +9,8 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PdfPage } from "@aurochs/pdf";
 import { PDF_PAGE_SIZES } from "@aurochs/pdf";
-import type { FontProvider, PdfImageUrlResolver } from "@aurochs-renderer/pdf";
+import type { FontProvider } from "@aurochs/pdf/domain/font";
+import type { PdfImageUrlResolver } from "@aurochs-renderer/pdf";
 import { renderPdfPageToSvgNode } from "@aurochs-renderer/pdf/svg";
 import { svgElementToJsx } from "@aurochs-renderer/svg";
 import { ItemList } from "@aurochs-ui/editor-controls/item-list";

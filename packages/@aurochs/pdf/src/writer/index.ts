@@ -63,7 +63,8 @@ export {
 
 // Document builders
 export {
-  PdfObjectTracker,
+  createPdfObjectTracker,
+  type PdfObjectTracker,
   type PdfObjectEntry,
   buildResourceDict,
   buildEmptyResourceDict,

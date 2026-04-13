@@ -3,7 +3,6 @@
  *
  * Tests for re-encoding Unicode text to PDF byte sequences.
  */
-import { describe, it, expect } from "vitest";
 import { buildReverseToUnicodeMap, encodeTextForFont, hexStringToUint8Array, splitTextByEncodability } from "./text-encoder";
 import type { ResolvedFont } from "./font-provider";
 

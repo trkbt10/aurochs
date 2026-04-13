@@ -23,7 +23,7 @@
  */
 
 import { useRef, useState, useMemo, useCallback, useEffect } from "react";
-import type { TextBody } from "@aurochs-office/pptx/domain";
+
 import { toLayoutInput, layoutTextBody } from "@aurochs-renderer/pptx/text-layout";
 import { createLayoutParagraphMeasurer } from "@aurochs-renderer/pptx/react";
 import {
@@ -176,7 +176,7 @@ export function TextEditController({
   // styles to the inserted region; otherwise insertion-point inheritance is used.
   const currentTextBody = useMemo(() => {
     const pending = pendingStyledPasteRef.current;
-    const result = mergeTextIntoBody(textBody, currentText, defaultRunProperties, pending);
+    const result = mergeTextIntoBody({ originalBody: textBody, newText: currentText, defaultRunProperties, pendingStyledPaste: pending });
     // Clear pending after consumption so subsequent edits don't re-apply it.
     if (pending) {
       pendingStyledPasteRef.current = null;

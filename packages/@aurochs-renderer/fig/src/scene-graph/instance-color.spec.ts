@@ -2,17 +2,17 @@
  * @file Verify INSTANCE color inheritance through scene graph
  */
 
-import { describe, it, expect } from "vitest";
+// eslint-disable-next-line custom/no-builder-import-in-renderer -- spec file: uses builder to create test fixture data for renderer integration tests
 import { createDemoFigDesignDocument } from "@aurochs-builder/fig/context";
 import { buildSceneGraph } from "./builder";
-import type { SceneNode, FrameNode, Fill } from "./types";
+import type { SceneNode, FrameNode } from "./types";
 
 function findSceneNode(nodes: readonly SceneNode[], predicate: (n: SceneNode) => boolean): SceneNode | undefined {
   for (const node of nodes) {
-    if (predicate(node)) return node;
+    if (predicate(node)) {return node;}
     if ("children" in node && node.children) {
       const found = findSceneNode(node.children, predicate);
-      if (found) return found;
+      if (found) {return found;}
     }
   }
   return undefined;

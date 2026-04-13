@@ -1,3 +1,4 @@
+/** @file Development entry point for the UI components library. */
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { injectCSSVariables } from "../src/design-tokens";

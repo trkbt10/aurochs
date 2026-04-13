@@ -21,30 +21,36 @@ import { figColorToColor } from "./color";
  * Returns undefined if nothing to convert.
  */
 export function figEffectsToDml(figEffects: readonly FigEffect[]): Effects | undefined {
-  let shadow: ShadowEffect | undefined;
-  let softEdgeRadius: number | undefined;
+  const visibleEffects = figEffects.filter((e) => e.visible !== false);
+  const shadow = findFirstShadow(visibleEffects);
+  const softEdgeRadius = findFirstSoftEdgeRadius(visibleEffects);
 
-  for (const effect of figEffects) {
-    if (effect.visible === false) continue;
-    const typeName = resolveEffectType(effect);
-
-    if (!shadow && (typeName === "DROP_SHADOW" || typeName === "INNER_SHADOW")) {
-      shadow = convertShadow(effect, typeName);
-    }
-
-    if (softEdgeRadius === undefined && typeName === "LAYER_BLUR") {
-      softEdgeRadius = effect.radius ?? 0;
-    }
-  }
-
-  if (!shadow && softEdgeRadius === undefined) return undefined;
+  if (!shadow && softEdgeRadius === undefined) {return undefined;}
 
   return {
     ...(shadow ? { shadow } : {}),
-    ...(softEdgeRadius !== undefined && softEdgeRadius > 0
-      ? { softEdge: { radius: px(softEdgeRadius) } }
-      : {}),
+    ...(softEdgeRadius !== undefined && softEdgeRadius > 0 ? { softEdge: { radius: px(softEdgeRadius) } } : {}),
   };
+}
+
+function findFirstShadow(effects: readonly FigEffect[]): ShadowEffect | undefined {
+  for (const effect of effects) {
+    const typeName = resolveEffectType(effect);
+    if (typeName === "DROP_SHADOW" || typeName === "INNER_SHADOW") {
+      return convertShadow(effect, typeName);
+    }
+  }
+  return undefined;
+}
+
+function findFirstSoftEdgeRadius(effects: readonly FigEffect[]): number | undefined {
+  for (const effect of effects) {
+    const typeName = resolveEffectType(effect);
+    if (typeName === "LAYER_BLUR") {
+      return effect.radius ?? 0;
+    }
+  }
+  return undefined;
 }
 
 function resolveEffectType(effect: FigEffect): string {
@@ -79,7 +85,6 @@ function convertShadow(effect: FigEffect, typeName: string): ShadowEffect {
 }
 
 function normalizeAngle(d: number): number {
-  let a = d % 360;
-  if (a < 0) a += 360;
-  return a;
+  const a = d % 360;
+  return a < 0 ? a + 360 : a;
 }

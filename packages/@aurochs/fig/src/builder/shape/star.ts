@@ -7,11 +7,11 @@ import type { StarNodeData } from "./types";
 import { SHAPE_NODE_TYPES } from "../../constants";
 
 /** Star node builder instance */
-export type StarNodeBuilder = BaseShapeBuilderMethods<StarNodeBuilder> & {
+export interface StarNodeBuilder extends BaseShapeBuilderMethods<StarNodeBuilder> {
   points: (count: number) => StarNodeBuilder;
   innerRadius: (ratio: number) => StarNodeBuilder;
   build: () => StarNodeData;
-};
+}
 
 /** Create a star node builder */
 function createStarNodeBuilder(localID: number, parentID: number): StarNodeBuilder {

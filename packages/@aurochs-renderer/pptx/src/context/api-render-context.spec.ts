@@ -194,7 +194,7 @@ function createMockZip(): ZipFile {
 describe("createRenderContext", () => {
   it("should create SlideRenderContext from API slide", () => {
     const apiSlide = createMockApiSlide();
-    const slideSize = { width: px(960), height: px(540) };
+    const _slideSize = { width: px(960), height: px(540) };
 
     const ctx = buildRenderContextFromApiSlide(apiSlide);
 
@@ -206,7 +206,7 @@ describe("createRenderContext", () => {
 
   it("should parse theme color scheme correctly", () => {
     const apiSlide = createMockApiSlide();
-    const slideSize = { width: px(960), height: px(540) };
+    const _slideSize = { width: px(960), height: px(540) };
 
     const ctx = buildRenderContextFromApiSlide(apiSlide);
     const colorScheme = ctx.slideRenderContext!.presentation.theme.colorScheme;
@@ -220,7 +220,7 @@ describe("createRenderContext", () => {
 
   it("should parse master color map correctly", () => {
     const apiSlide = createMockApiSlide();
-    const slideSize = { width: px(960), height: px(540) };
+    const _slideSize = { width: px(960), height: px(540) };
 
     const ctx = buildRenderContextFromApiSlide(apiSlide);
     const colorMap = ctx.slideRenderContext!.master.colorMap;
@@ -235,7 +235,7 @@ describe("createRenderContext", () => {
 describe("createRenderContext output", () => {
   it("should create HtmlRenderContext with color context", () => {
     const apiSlide = createMockApiSlide();
-    const slideSize = { width: px(960), height: px(540) };
+    const _slideSize = { width: px(960), height: px(540) };
 
     const ctx = buildRenderContextFromApiSlide(apiSlide);
 
@@ -247,7 +247,7 @@ describe("createRenderContext output", () => {
 
   it("should resolve scheme colors via resolveColor", async () => {
     const apiSlide = createMockApiSlide();
-    const slideSize = { width: px(960), height: px(540) };
+    const _slideSize = { width: px(960), height: px(540) };
 
     const ctx = buildRenderContextFromApiSlide(apiSlide);
     const colorContext = ctx.colorContext;
@@ -273,7 +273,7 @@ describe("createRenderContext output", () => {
 
   it("should include theme colors in colorScheme", () => {
     const apiSlide = createMockApiSlide();
-    const slideSize = { width: px(960), height: px(540) };
+    const _slideSize = { width: px(960), height: px(540) };
 
     const ctx = buildRenderContextFromApiSlide(apiSlide);
     const { colorScheme } = ctx.colorContext;
@@ -287,7 +287,7 @@ describe("createRenderContext output", () => {
 
   it("should include color map in colorContext", () => {
     const apiSlide = createMockApiSlide();
-    const slideSize = { width: px(960), height: px(540) };
+    const _slideSize = { width: px(960), height: px(540) };
 
     const ctx = buildRenderContextFromApiSlide(apiSlide);
     const { colorMap } = ctx.colorContext;
@@ -300,7 +300,7 @@ describe("createRenderContext output", () => {
 
   it("should include font scheme", () => {
     const apiSlide = createMockApiSlide();
-    const slideSize = { width: px(960), height: px(540) };
+    const _slideSize = { width: px(960), height: px(540) };
 
     const ctx = buildRenderContextFromApiSlide(apiSlide);
 
@@ -311,7 +311,7 @@ describe("createRenderContext output", () => {
 
   it("should have resource store", () => {
     const apiSlide = createMockApiSlide();
-    const slideSize = { width: px(960), height: px(540) };
+    const _slideSize = { width: px(960), height: px(540) };
 
     const ctx = buildRenderContextFromApiSlide(apiSlide);
 

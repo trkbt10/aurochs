@@ -148,6 +148,7 @@ export function createPdfImageCache(strategy: PdfImageUrlStrategy): PdfImageCach
   const cache = new Map<Uint8Array, string>();
   const encoding = new Set<Uint8Array>();
   const listeners = new Set<PdfImageCacheListener>();
+  // eslint-disable-next-line no-restricted-syntax -- mutable flag tracking disposal state of the cache closure
   let disposed = false;
 
   function notify(): void {

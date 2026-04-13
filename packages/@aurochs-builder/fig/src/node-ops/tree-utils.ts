@@ -5,8 +5,7 @@
  * nodes within a tree structure.
  */
 
-import type { FigDesignNode } from "../types/document";
-import type { FigNodeId } from "../types/node-id";
+import type { FigDesignNode, FigNodeId } from "@aurochs/fig/domain";
 
 // =============================================================================
 // Find
@@ -73,6 +72,7 @@ export function updateNodeInTree(
   id: FigNodeId,
   updater: (node: FigDesignNode) => FigDesignNode,
 ): readonly FigDesignNode[] {
+  // eslint-disable-next-line no-restricted-syntax -- structural sharing: `changed` flag avoids re-allocating unchanged tree branches
   let changed = false;
   const result = nodes.map((node) => {
     if (node.id === id) {
@@ -106,6 +106,7 @@ export function removeNodeFromTree(
   nodes: readonly FigDesignNode[],
   id: FigNodeId,
 ): readonly FigDesignNode[] {
+  // eslint-disable-next-line no-restricted-syntax -- structural sharing: `changed` flag avoids re-allocating unchanged tree branches
   let changed = false;
   const result: FigDesignNode[] = [];
 
@@ -134,6 +135,13 @@ export function removeNodeFromTree(
 // Insert
 // =============================================================================
 
+type InsertNodeInTreeOptions = {
+  readonly nodes: readonly FigDesignNode[];
+  readonly parentId: FigNodeId | null;
+  readonly node: FigDesignNode;
+  readonly index?: number;
+};
+
 /**
  * Insert a node at a specific position within a parent's children.
  *
@@ -141,10 +149,7 @@ export function removeNodeFromTree(
  * Returns the updated tree, or the original tree if the parent is not found.
  */
 export function insertNodeInTree(
-  nodes: readonly FigDesignNode[],
-  parentId: FigNodeId | null,
-  node: FigDesignNode,
-  index?: number,
+  { nodes, parentId, node, index }: InsertNodeInTreeOptions,
 ): readonly FigDesignNode[] {
   if (parentId === null) {
     // Insert as top-level
@@ -154,6 +159,7 @@ export function insertNodeInTree(
     return result;
   }
 
+  // eslint-disable-next-line no-restricted-syntax -- structural sharing: `changed` flag avoids re-allocating unchanged tree branches
   let changed = false;
   const result = nodes.map((existing) => {
     if (existing.id === parentId) {
@@ -165,7 +171,7 @@ export function insertNodeInTree(
     }
 
     if (existing.children) {
-      const updatedChildren = insertNodeInTree(existing.children, parentId, node, index);
+      const updatedChildren = insertNodeInTree({ nodes: existing.children, parentId, node, index });
       if (updatedChildren !== existing.children) {
         changed = true;
         return { ...existing, children: updatedChildren };
@@ -226,6 +232,7 @@ export function reorderNodeInTree(
   }
 
   // Search in children
+  // eslint-disable-next-line no-restricted-syntax -- structural sharing: `changed` flag avoids re-allocating unchanged tree branches
   let changed = false;
   const result = nodes.map((node) => {
     if (node.children) {

@@ -109,19 +109,25 @@ export function formatShowPretty(data: ShowData): string {
   lines.push(`Content (${data.content.length} blocks):`);
 
   for (const block of data.content) {
-    if (block.type === "paragraph") {
-      const text = block.content
-        .map((c) => ("text" in c ? c.text : ""))
-        .join("")
-        .trim();
-      if (text) {
-        const preview = text.length > 80 ? `${text.slice(0, 77)}...` : text;
-        lines.push(`  [P] ${preview}`);
-      } else {
-        lines.push("  [P] (empty)");
+    switch (block.type) {
+      case "paragraph": {
+        const text = block.content
+          .map((c) => ("text" in c ? c.text : ""))
+          .join("")
+          .trim();
+        if (text) {
+          const preview = text.length > 80 ? `${text.slice(0, 77)}...` : text;
+          lines.push(`  [P] ${preview}`);
+        } else {
+          lines.push("  [P] (empty)");
+        }
+        break;
       }
-    } else if (block.type === "table") {
-      lines.push(`  [T] ${block.rowCount} rows × ${block.colCount} cols`);
+      case "table":
+        lines.push(`  [T] ${block.rowCount} rows × ${block.colCount} cols`);
+        break;
+      default:
+        break;
     }
   }
 

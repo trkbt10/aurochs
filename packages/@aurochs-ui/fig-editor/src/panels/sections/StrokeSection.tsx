@@ -50,8 +50,8 @@ function getStrokePaintOpacity(paint: FigPaint): number {
 }
 
 function getStrokeAlignLabel(align: unknown): string {
-  if (!align) return "";
-  if (typeof align === "string") return align;
+  if (!align) {return "";}
+  if (typeof align === "string") {return align;}
   if (typeof align === "object" && align !== null && "name" in align) {
     return (align as { name: string }).name;
   }
@@ -133,6 +133,12 @@ type StrokeSectionProps = {
 // Component
 // =============================================================================
 
+
+
+
+
+
+/** Panel section for editing stroke properties of a Figma node. */
 export function StrokeSection({ node, dispatch }: StrokeSectionProps) {
   const strokeWeight = typeof node.strokeWeight === "number" ? node.strokeWeight : 0;
   const strokes = node.strokes;

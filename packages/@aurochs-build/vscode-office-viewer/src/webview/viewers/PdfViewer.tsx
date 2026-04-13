@@ -8,6 +8,12 @@ import { Toolbar, ToolbarSpacer, ToolbarInfo } from "../components/Toolbar";
 import { ZoomControl } from "../components/ZoomControl";
 import { ThumbnailSidebar } from "../components/ThumbnailSidebar";
 
+
+
+
+
+
+/** Viewer component for rendering PDF pages as SVG images. */
 export function PdfViewer({ pages }: PdfDataMessage): React.JSX.Element {
   const [currentPage, setCurrentPage] = useState(0);
   const [zoom, setZoom] = useState(100);

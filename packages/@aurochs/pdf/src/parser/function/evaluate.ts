@@ -80,9 +80,7 @@ function readSampleValue(samples: Uint8Array, bitOffset: number, bitsPerSample: 
   if (bitsPerSample === 4) {
     const byteOffset = bitOffset >>> 3;
     const bitInByte = bitOffset & 7;
-    return bitInByte === 0
-      ? ((samples[byteOffset] ?? 0) >>> 4)
-      : ((samples[byteOffset] ?? 0) & 0x0f);
+    return bitInByte === 0 ? ((samples[byteOffset] ?? 0) >>> 4) : ((samples[byteOffset] ?? 0) & 0x0f);
   }
   if (bitsPerSample === 2) {
     const byteOffset = bitOffset >>> 3;
@@ -130,16 +128,11 @@ export function evaluatePdfFunctionType0(fn: PdfFunctionType0, inputs: readonly 
     const eMax = encode[i * 2 + 1] ?? ((size[i] ?? 1) - 1);
     const sizeI = size[i] ?? 1;
 
-    // Linear interpolation: domain → encode range
-    let e: number;
-    if (dMax === dMin) {
-      e = eMin;
-    } else {
-      e = eMin + ((x - dMin) / (dMax - dMin)) * (eMax - eMin);
-    }
-
-    // Clip to valid sample index range
-    e = Math.min(sizeI - 1, Math.max(0, e));
+    // Linear interpolation: domain → encode range, then clip to valid sample index range
+    const e = Math.min(
+      sizeI - 1,
+      Math.max(0, dMax === dMin ? eMin : eMin + ((x - dMin) / (dMax - dMin)) * (eMax - eMin)),
+    );
 
     const e0 = Math.min(sizeI - 2, Math.max(0, Math.floor(e)));
     const frac = e - e0;
@@ -151,6 +144,7 @@ export function evaluatePdfFunctionType0(fn: PdfFunctionType0, inputs: readonly 
   // Samples are in row-major order: last dimension varies fastest.
   const strides: number[] = new Array(m);
   {
+    // eslint-disable-next-line no-restricted-syntax -- mutable stride accumulator: computes row-major strides in reverse dimension order
     let stride = n;
     for (let i = m - 1; i >= 0; i -= 1) {
       strides[i] = stride;
@@ -162,9 +156,12 @@ export function evaluatePdfFunctionType0(fn: PdfFunctionType0, inputs: readonly 
   const result: number[] = new Array(n);
 
   for (let j = 0; j < n; j += 1) {
+    // eslint-disable-next-line no-restricted-syntax -- mutable accumulator: multi-linear interpolation across 2^m corners
     let interpolated = 0;
     for (let corner = 0; corner < cornerCount; corner += 1) {
+      // eslint-disable-next-line no-restricted-syntax -- mutable accumulator: accumulates sample array index across dimensions
       let sampleIndex = 0;
+      // eslint-disable-next-line no-restricted-syntax -- mutable accumulator: accumulates interpolation weight across dimensions
       let weight = 1;
       for (let i = 0; i < m; i += 1) {
         const bit = (corner >>> (m - 1 - i)) & 1;
@@ -181,12 +178,7 @@ export function evaluatePdfFunctionType0(fn: PdfFunctionType0, inputs: readonly 
     // Step 6: Decode
     const decMin = decode[j * 2] ?? 0;
     const decMax = decode[j * 2 + 1] ?? 1;
-    let y: number;
-    if (maxSampleValue === 0) {
-      y = decMin;
-    } else {
-      y = decMin + (interpolated / maxSampleValue) * (decMax - decMin);
-    }
+    const y = maxSampleValue === 0 ? decMin : decMin + (interpolated / maxSampleValue) * (decMax - decMin);
 
     // Step 7: Clip to Range
     const rMin = range[j * 2] ?? 0;

@@ -3,7 +3,8 @@
  */
 
 export {
-  PdfObjectTracker,
+  createPdfObjectTracker,
+  type PdfObjectTracker,
   type PdfObjectEntry,
 } from "./object-tracker";
 

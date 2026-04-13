@@ -8,7 +8,7 @@
 
 import { DEFAULT_COLOR_SCHEME, type SpShape, type CxnShape, type PicShape, type Shape } from "@aurochs-office/pptx/domain";
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
-import type { ShapeId, ResourceId } from "@aurochs-office/pptx/domain/types";
+import type { ShapeId } from "@aurochs-office/pptx/domain/types";
 import { px, deg, pct } from "@aurochs-office/drawing-ml/domain/units";
 import { parseDataUrl } from "@aurochs/buffer";
 import type { CreationPresetShape, CreationMode } from "./creation-types";

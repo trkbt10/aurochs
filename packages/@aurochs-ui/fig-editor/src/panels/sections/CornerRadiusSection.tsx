@@ -18,6 +18,12 @@ const CORNER_RADIUS_TYPES = new Set([
   "RECTANGLE", "ROUNDED_RECTANGLE", "FRAME", "COMPONENT", "SYMBOL",
 ]);
 
+
+
+
+
+
+/** Panel section for editing corner radius properties of a Figma node. */
 export function CornerRadiusSection({ node, dispatch }: CornerRadiusSectionProps) {
   if (!CORNER_RADIUS_TYPES.has(node.type)) {
     return null;

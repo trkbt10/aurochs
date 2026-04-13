@@ -179,10 +179,15 @@ function buildRunStyles(props: DocxRunProperties | undefined): string[] {
     styles.push(`background-color:${highlightToColor(props.highlight)}`);
   }
 
-  if (props.vertAlign === "superscript") {
-    styles.push("vertical-align:super", "font-size:smaller");
-  } else if (props.vertAlign === "subscript") {
-    styles.push("vertical-align:sub", "font-size:smaller");
+  switch (props.vertAlign) {
+    case "superscript":
+      styles.push("vertical-align:super", "font-size:smaller");
+      break;
+    case "subscript":
+      styles.push("vertical-align:sub", "font-size:smaller");
+      break;
+    default:
+      break;
   }
 
   return styles;

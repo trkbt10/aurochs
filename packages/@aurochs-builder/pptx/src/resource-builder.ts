@@ -28,6 +28,12 @@ import { generateDiagramShapes } from "@aurochs-office/pptx/domain/diagram/layou
 // Pure builder functions
 // =============================================================================
 
+
+
+
+
+
+/** Builds a chart resource entry with a default chart for the given chart type. */
 export function buildChartResourceEntry(chartType: ChartType): ResolvedResourceEntry {
   return {
     kind: "chart",
@@ -37,6 +43,12 @@ export function buildChartResourceEntry(chartType: ChartType): ResolvedResourceE
   };
 }
 
+
+
+
+
+
+/** Builds a diagram resource entry from a diagram build spec with explicit dimensions. */
 export function buildDiagramResourceEntry(
   spec: DiagramBuildSpec,
   width: number,
@@ -73,6 +85,13 @@ export type BuilderResourceOptions = {
   readonly resolveDiagramSpec?: (diagramType: DiagramLayoutType) => DiagramBuildSpec | undefined;
 };
 
+type PrepareSlideResourcesOptions = {
+  readonly slide: Slide;
+  readonly resourceStore: ResourceStore;
+  readonly fileReader: FileReader;
+  readonly options?: BuilderResourceOptions;
+};
+
 /**
  * Prepare a slide's ResourceStore for rendering from PPTX archive.
  *
@@ -85,10 +104,7 @@ export type BuilderResourceOptions = {
  * @returns The enriched slide (may differ from input if parser attached data)
  */
 export function prepareSlideResources(
-  slide: Slide,
-  resourceStore: ResourceStore,
-  fileReader: FileReader,
-  options: BuilderResourceOptions = {},
+  { slide, resourceStore, fileReader, options = {} }: PrepareSlideResourcesOptions,
 ): Slide {
   const enrichedSlide = loadSlideExternalContent(slide, fileReader, resourceStore);
   registerBuilderResources(enrichedSlide.shapes, resourceStore, options);

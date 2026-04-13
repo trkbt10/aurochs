@@ -88,15 +88,19 @@ function buildNodeSpec(state: ShapeBuilderState): NodeSpec {
   }
 }
 
+type BuildShapeFromSpecOptions = {
+  readonly shapeType: ShapeType;
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+};
+
 /**
  * Create a shape spec builder with fluent API.
  */
 export function buildShapeFromSpec(
-  shapeType: ShapeType,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
+  { shapeType, x, y, width, height }: BuildShapeFromSpecOptions,
 ): ShapeSpecBuilder {
   const state: ShapeBuilderState = {
     type: shapeType,

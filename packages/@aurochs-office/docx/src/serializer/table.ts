@@ -271,10 +271,10 @@ function serializeTableCell(cell: DocxTableCell): XmlElement {
   if (tcPr) {ch.push(tcPr);}
 
   for (const content of cell.content) {
-    if (content.type === "paragraph") {
-      ch.push(serializeParagraph(content));
-    } else if (content.type === "table") {
-      ch.push(serializeTable(content));
+    switch (content.type) {
+      case "paragraph": ch.push(serializeParagraph(content)); break;
+      case "table": ch.push(serializeTable(content)); break;
+      default: break;
     }
   }
 

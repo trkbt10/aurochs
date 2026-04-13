@@ -183,6 +183,22 @@ const tagStyle: CSSProperties = {
 // Main Component
 // =============================================================================
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/** Preview page for the PPTX slideshow player. */
 export function PptxSlideshowPreviewPage() {
   const [isPlaying, setIsPlaying] = useState(false);
 

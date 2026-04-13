@@ -74,13 +74,13 @@ function renderSpan({ span, x, lineY, dominantBaseline, key }: RenderSpanInput):
 
   // Handle fill
   if (span.textFill !== undefined) {
-    if (span.textFill.type === "noFill") {
-      textProps.fill = "none";
-    } else if (span.textFill.type === "solid") {
-      textProps.fill = span.textFill.color;
-      if (span.textFill.alpha < 1) {
-        textProps.fillOpacity = span.textFill.alpha;
-      }
+    switch (span.textFill.type) {
+      case "noFill": textProps.fill = "none"; break;
+      case "solid":
+        textProps.fill = span.textFill.color;
+        if (span.textFill.alpha < 1) { textProps.fillOpacity = span.textFill.alpha; }
+        break;
+      default: break;
     }
   } else {
     textProps.fill = span.color;

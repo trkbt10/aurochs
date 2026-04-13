@@ -18,6 +18,12 @@ import type { FigColor } from "@aurochs/fig/types";
 import { resolveColor, resolveAlpha } from "@aurochs-office/drawing-ml/domain";
 import { hexToRgb } from "@aurochs/color";
 
+
+
+
+
+
+/** Converts a DrawingML color to a FigColor, resolving theme and scheme references. */
 export function dmlColorToFig(color: Color, colorContext?: ColorContext): FigColor {
   const hex = resolveColor(color, colorContext) ?? "000000";
   const rgb = hexToRgb(hex);

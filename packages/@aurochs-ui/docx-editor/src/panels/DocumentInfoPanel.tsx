@@ -143,10 +143,10 @@ function collectUsedStyleIdsFromTable(table: DocxTable, used: Set<DocxStyleId>) 
   for (const row of table.rows) {
     for (const cell of row.cells) {
       for (const cellContent of cell.content) {
-        if (cellContent.type === "paragraph") {
-          collectUsedStyleIdsFromParagraph(cellContent, used);
-        } else if (cellContent.type === "table") {
-          collectUsedStyleIdsFromTable(cellContent, used);
+        switch (cellContent.type) {
+          case "paragraph": collectUsedStyleIdsFromParagraph(cellContent, used); break;
+          case "table": collectUsedStyleIdsFromTable(cellContent, used); break;
+          default: break;
         }
       }
     }
@@ -159,10 +159,10 @@ function useUsedStyles(document: DocxDocument): readonly DocxStyle[] {
     const used = new Set<DocxStyleId>();
 
     for (const content of document.body.content) {
-      if (content.type === "paragraph") {
-        collectUsedStyleIdsFromParagraph(content, used);
-      } else if (content.type === "table") {
-        collectUsedStyleIdsFromTable(content, used);
+      switch (content.type) {
+        case "paragraph": collectUsedStyleIdsFromParagraph(content, used); break;
+        case "table": collectUsedStyleIdsFromTable(content, used); break;
+        default: break;
       }
     }
 

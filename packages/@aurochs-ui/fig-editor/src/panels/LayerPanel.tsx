@@ -197,6 +197,27 @@ function LayerTree({ nodes, depth, isInstanceContext }: LayerTreeProps) {
   );
 }
 
+function buildLayerContent(
+  children: readonly FigDesignNode[],
+  expandedIds: ReadonlySet<string>,
+  toggleExpand: (id: string) => void,
+): ReactNode {
+  if (children.length === 0) {
+    return (
+      <div style={{ padding: `${spacingTokens.xl} ${spacingTokens.lg}`, textAlign: "center", color: colorTokens.text.tertiary, fontSize: fontTokens.size.lg }}>
+        Empty page
+      </div>
+    );
+  }
+  return (
+    <ExpansionContext.Provider value={{ expandedIds, toggle: toggleExpand }}>
+      <div role="tree" aria-label="Layers">
+        <LayerTree nodes={children} depth={0} isInstanceContext={false} />
+      </div>
+    </ExpansionContext.Provider>
+  );
+}
+
 // =============================================================================
 // Component
 // =============================================================================
@@ -233,19 +254,11 @@ export function LayerPanel() {
     );
   }
 
+  const layerContent = buildLayerContent(activePage.children, expandedIds, toggleExpand);
+
   return (
     <OptionalPropertySection title="Layers" badge={activePage.children.length} defaultExpanded>
-      {activePage.children.length === 0 ? (
-        <div style={{ padding: `${spacingTokens.xl} ${spacingTokens.lg}`, textAlign: "center", color: colorTokens.text.tertiary, fontSize: fontTokens.size.lg }}>
-          Empty page
-        </div>
-      ) : (
-        <ExpansionContext.Provider value={{ expandedIds, toggle: toggleExpand }}>
-          <div role="tree" aria-label="Layers">
-            <LayerTree nodes={activePage.children} depth={0} isInstanceContext={false} />
-          </div>
-        </ExpansionContext.Provider>
-      )}
+      {layerContent}
     </OptionalPropertySection>
   );
 }
