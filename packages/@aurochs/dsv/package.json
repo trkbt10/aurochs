@@ -1,0 +1,46 @@
+{
+  "name": "@aurochs/dsv",
+  "version": "0.11.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "scripts": {
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs/dsv/src'"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./ast": {
+      "types": "./src/ast.ts",
+      "default": "./src/ast.ts"
+    },
+    "./dialect": {
+      "types": "./src/dialect.ts",
+      "default": "./src/dialect.ts"
+    },
+    "./lexer": {
+      "types": "./src/lexer.ts",
+      "default": "./src/lexer.ts"
+    },
+    "./parser": {
+      "types": "./src/parser.ts",
+      "default": "./src/parser.ts"
+    },
+    "./context": {
+      "types": "./src/context.ts",
+      "default": "./src/context.ts"
+    },
+    "./builder": {
+      "types": "./src/builder.ts",
+      "default": "./src/builder.ts"
+    },
+    "./jsonl": {
+      "types": "./src/jsonl.ts",
+      "default": "./src/jsonl.ts"
+    }
+  }
+}
