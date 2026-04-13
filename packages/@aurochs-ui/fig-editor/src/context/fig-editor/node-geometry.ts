@@ -8,30 +8,22 @@ import type { FigDesignNode, FigNodeId, FigPageId, FigDesignDocument, FigPage } 
 import type { FigMatrix } from "@aurochs/fig/types";
 import type { SimpleBounds } from "@aurochs-ui/editor-core/geometry";
 import { findNodeById as findInTree } from "@aurochs-builder/fig/node-ops";
+import { extractRotationDeg, computePreRotationTopLeft } from "./rotation";
 
 /**
  * Get local bounds from a FigDesignNode (position from transform, size from node).
  *
- * The transform m02/m12 represent the translation relative to parent.
- * For top-level nodes this is page-space; for nested nodes this is
- * parent-local coordinates.
+ * Uses the rotation SoT to derive pre-rotation top-left position.
  */
 export function getNodeBounds(node: FigDesignNode): SimpleBounds & { readonly rotation: number } {
-  const rotation = extractRotation(node.transform);
+  const { x, y } = computePreRotationTopLeft(node.transform, node.size.x, node.size.y);
   return {
-    x: node.transform.m02,
-    y: node.transform.m12,
+    x,
+    y,
     width: node.size.x,
     height: node.size.y,
-    rotation,
+    rotation: extractRotationDeg(node.transform),
   };
-}
-
-/**
- * Extract rotation angle in degrees from a FigMatrix.
- */
-function extractRotation(transform: { readonly m00: number; readonly m10: number }): number {
-  return Math.atan2(transform.m10, transform.m00) * (180 / Math.PI);
 }
 
 // =============================================================================
@@ -80,12 +72,13 @@ function findAbsoluteBounds(
   for (const node of nodes) {
     const absTransform = composeTransforms(parentTransform, node.transform);
     if (node.id === targetId) {
+      const { x, y } = computePreRotationTopLeft(absTransform, node.size.x, node.size.y);
       return {
-        x: absTransform.m02,
-        y: absTransform.m12,
+        x,
+        y,
         width: node.size.x,
         height: node.size.y,
-        rotation: extractRotation(absTransform),
+        rotation: extractRotationDeg(absTransform),
       };
     }
     if (node.children) {

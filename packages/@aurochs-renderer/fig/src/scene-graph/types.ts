@@ -5,6 +5,8 @@
  * Both SVG and WebGL backends consume this scene graph.
  */
 
+import type { TextAutoResize } from "../text/layout/types";
+
 // =============================================================================
 // Branded ID Type
 // =============================================================================
@@ -273,6 +275,8 @@ export type TextNode = SceneNodeBase & {
   readonly width: number;
   /** Bounding box height */
   readonly height: number;
+  /** Text auto-resize mode — determines wrapping and overflow behavior */
+  readonly textAutoResize: TextAutoResize;
   /** Pre-outlined glyph path contours (from opentype or derived data) */
   readonly glyphContours?: readonly PathContour[];
   /** Decoration paths (underlines, strikethroughs) as contours */

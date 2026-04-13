@@ -381,6 +381,15 @@ function renderTextNode(node: TextNode, defsCol: SvgDefsCollector): SvgString {
   const fillColor = colorToHex(node.fill.color);
   const fillOpacity = node.fill.opacity;
 
+  // Clip text to bounding box when textAutoResize is NONE or TRUNCATE
+  const needsClip = node.textAutoResize === "NONE" || node.textAutoResize === "TRUNCATE";
+  let clipAttr: string | undefined;
+  if (needsClip) {
+    const clipId = defsCol.generateId("text-clip");
+    defsCol.add(`<clipPath id="${clipId}"><rect x="0" y="0" width="${node.width}" height="${node.height}"/></clipPath>`);
+    clipAttr = `url(#${clipId})`;
+  }
+
   // Glyph contours (pre-outlined paths)
   if (node.glyphContours && node.glyphContours.length > 0) {
     const allD: string[] = [];
@@ -397,13 +406,14 @@ function renderTextNode(node: TextNode, defsCol: SvgDefsCollector): SvgString {
       fill: fillColor,
       "fill-opacity": fillOpacity < 1 ? fillOpacity : undefined,
     });
-    if (transformStr || node.opacity < 1 || filterAttr) {
+    const content = clipAttr ? g({ "clip-path": clipAttr }, pathEl) : pathEl;
+    if (transformStr || node.opacity < 1 || filterAttr || clipAttr) {
       return g(
         { transform: transformStr, opacity: node.opacity < 1 ? node.opacity : undefined, filter: filterAttr },
-        pathEl,
+        content,
       );
     }
-    return pathEl;
+    return content;
   }
 
   // Text line layout: <text> elements
@@ -434,13 +444,17 @@ function renderTextNode(node: TextNode, defsCol: SvgDefsCollector): SvgString {
   if (textElements.length === 0) {
     return EMPTY_SVG;
   }
-  if (transformStr || node.opacity < 1 || filterAttr || textElements.length > 1) {
+
+  const textContent = textElements.length === 1 ? textElements[0] : g({}, ...textElements);
+  const clippedContent = clipAttr ? g({ "clip-path": clipAttr }, textContent) : textContent;
+
+  if (transformStr || node.opacity < 1 || filterAttr || clipAttr) {
     return g(
       { transform: transformStr, opacity: node.opacity < 1 ? node.opacity : undefined, filter: filterAttr },
-      ...textElements,
+      clippedContent,
     );
   }
-  return textElements[0];
+  return clippedContent;
 }
 
 function renderImageNode(_node: ImageNode, _defsCol: SvgDefsCollector): SvgString {

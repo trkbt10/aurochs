@@ -1,53 +1,95 @@
 /**
  * @file Text properties section
  *
- * Edits text-specific properties of a TEXT node:
- * - Text content (multiline textarea)
- * - Font family and style
- * - Font size
- * - Horizontal alignment (LEFT / CENTER / RIGHT / JUSTIFIED)
- * - Vertical alignment (TOP / CENTER / BOTTOM)
- * - Line height
- * - Letter spacing
- * - Text decoration (underline, strikethrough)
+ * Edits text-specific properties of a TEXT node using shared editor controls:
+ * - TextFormattingEditor: font family, size, bold, italic, underline, strikethrough, letter spacing
+ * - TextJustifySection (react-editor-ui): horizontal alignment — same component as PPTX
+ * - Vertical alignment (fig-specific, not in shared controls)
+ * - Auto resize mode (fig-specific)
  *
- * Uses UPDATE_NODE action with immutable updater functions.
- * All text properties are stored in the FigDesignNode.textData field.
+ * Uses the same adapter pattern as pptx-editor:
+ * FigDesignNode.textData ↔ generic TextFormatting ↔ shared editor
  */
 
 import { useCallback, type CSSProperties } from "react";
 import type { FigDesignNode } from "@aurochs/fig/domain";
 import type { TextData } from "@aurochs/fig/domain";
-import type { KiwiEnumValue } from "@aurochs/fig/types";
 import type { FigEditorAction } from "../../context/fig-editor/types";
+import { TextFormattingEditor } from "@aurochs-ui/editor-controls/text";
+import type { TextFormatting, TextFormattingFeatures } from "@aurochs-ui/editor-controls/text";
+import { TextJustifySection } from "react-editor-ui/sections/TextJustifySection";
+import type { TextJustifyData } from "@aurochs-ui/editor-core/adapter-types";
 import { Input } from "@aurochs-ui/ui-components/primitives/Input";
 import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
-import { colorTokens, fontTokens } from "@aurochs-ui/ui-components/design-tokens";
+import { colorTokens } from "@aurochs-ui/ui-components/design-tokens";
 import {
-  AlignLeftIcon,
-  AlignCenterIcon,
-  AlignRightIcon,
-  AlignJustifyIcon,
   AlignTopIcon,
   AlignMiddleIcon,
   AlignBottomIcon,
-  BoldIcon,
-  ItalicIcon,
-  UnderlineIcon,
-  StrikethroughIcon,
 } from "@aurochs-ui/ui-components/icons";
+import {
+  figTextToFormatting,
+  applyFormattingUpdate,
+  getAutoResize,
+  makeAutoResizeEnum,
+  type FigTextAutoResize,
+} from "./fig-text-adapter";
+
+// =============================================================================
+// Feature flags — fig supports a subset of text formatting
+// =============================================================================
+
+const FIG_TEXT_FEATURES: TextFormattingFeatures = {
+  showFontFamily: true,
+  showFontSize: true,
+  showBold: true,
+  showItalic: true,
+  showUnderline: true,
+  showStrikethrough: true,
+  showTextColor: false,
+  showHighlight: false,
+  showSuperSubscript: false,
+  showUnderlineStyle: false,
+  showStrikeStyle: false,
+  showCaps: false,
+  showSpacing: true,
+};
+
+// =============================================================================
+// H-align mapping (Figma enum names ↔ TextJustify values)
+// =============================================================================
+
+type TextJustify = "left" | "center" | "right" | "justify";
+
+const H_ALIGN_TO_JUSTIFY: Record<string, TextJustify> = {
+  LEFT: "left",
+  CENTER: "center",
+  RIGHT: "right",
+  JUSTIFIED: "justify",
+};
+
+const JUSTIFY_TO_H_ALIGN: Record<string, { name: string; value: number }> = {
+  left: { name: "LEFT", value: 0 },
+  center: { name: "CENTER", value: 1 },
+  right: { name: "RIGHT", value: 2 },
+  justify: { name: "JUSTIFIED", value: 3 },
+};
 
 // =============================================================================
 // KiwiEnumValue helpers
 // =============================================================================
 
-function kiwiName(value: KiwiEnumValue | undefined): string {
+function kiwiName(value: unknown): string {
   if (!value) return "";
-  return typeof value === "string" ? value : value.name ?? "";
+  if (typeof value === "string") return value;
+  if (typeof value === "object" && value !== null && "name" in value) {
+    return (value as { name: string }).name ?? "";
+  }
+  return "";
 }
 
-function makeKiwiEnum(name: string, value: number): KiwiEnumValue {
-  return { value, name } as KiwiEnumValue;
+function makeKiwiEnum(name: string, value: number) {
+  return { value, name } as import("@aurochs/fig/types").KiwiEnumValue;
 }
 
 // =============================================================================
@@ -59,7 +101,7 @@ const textareaStyle: CSSProperties = {
   minHeight: "3lh",
   resize: "vertical",
   fontFamily: "inherit",
-  fontSize: fontTokens.size.md,
+  fontSize: "var(--font-size-md, 13px)",
   border: `1px solid ${colorTokens.border.strong}`,
   borderRadius: 4,
   padding: 6,
@@ -80,11 +122,6 @@ const alignButtonStyle = (active: boolean): CSSProperties => ({
   cursor: "pointer",
   lineHeight: 0,
 });
-
-const fontInfoStyle: CSSProperties = {
-  fontSize: fontTokens.size.sm,
-  color: colorTokens.text.secondary,
-};
 
 // =============================================================================
 // Props
@@ -119,31 +156,68 @@ export function TextPropertiesSection({ node, dispatch }: TextPropertiesSectionP
     [dispatch, node.id],
   );
 
-  const hAlign = kiwiName(textData.textAlignHorizontal);
-  const vAlign = kiwiName(textData.textAlignVertical);
-  const fontFamily = textData.fontName.family;
-  const fontStyle = textData.fontName.style;
-  const isBold = fontStyle.toLowerCase().includes("bold");
-  const isItalic = fontStyle.toLowerCase().includes("italic");
-  const decoration = kiwiName(textData.textDecoration);
-  const lineHeight = textData.lineHeight;
-  const letterSpacing = textData.letterSpacing;
-
-  const setHAlign = useCallback(
-    (name: string, value: number) => {
-      updateTextData((td) => ({
-        ...td,
-        textAlignHorizontal: makeKiwiEnum(name, value),
-      }));
+  // --- Shared editor: text run formatting ---
+  const textFormatting = figTextToFormatting(textData);
+  const handleFormattingChange = useCallback(
+    (update: Partial<TextFormatting>) => {
+      updateTextData((td) => applyFormattingUpdate(td, update));
     },
     [updateTextData],
   );
 
+  // --- Horizontal alignment via TextJustifySection (same component as PPTX) ---
+  const hAlign = kiwiName(textData.textAlignHorizontal);
+  const justifyData: TextJustifyData = { align: H_ALIGN_TO_JUSTIFY[hAlign] ?? "left" };
+  const handleJustifyChange = useCallback(
+    (data: TextJustifyData) => {
+      const mapped = JUSTIFY_TO_H_ALIGN[data.align];
+      if (mapped) {
+        updateTextData((td) => ({
+          ...td,
+          textAlignHorizontal: makeKiwiEnum(mapped.name, mapped.value),
+        }));
+      }
+    },
+    [updateTextData],
+  );
+
+  // --- Line spacing ---
+  const lineHeight = textData.lineHeight;
+  const handleLineSpacingChange = useCallback(
+    (v: string | number) => {
+      const num = typeof v === "number" ? v : parseFloat(String(v));
+      if (!isNaN(num) && num > 0) {
+        const lineHeightValue = num * textData.fontSize;
+        updateTextData((td) => ({
+          ...td,
+          lineHeight: td.lineHeight
+            ? { ...td.lineHeight, value: lineHeightValue }
+            : { value: lineHeightValue, units: { value: 0, name: "PIXELS" } },
+        }));
+      }
+    },
+    [updateTextData, textData.fontSize],
+  );
+
+  // --- Vertical alignment (fig-specific) ---
+  const vAlign = kiwiName(textData.textAlignVertical);
   const setVAlign = useCallback(
     (name: string, value: number) => {
       updateTextData((td) => ({
         ...td,
         textAlignVertical: makeKiwiEnum(name, value),
+      }));
+    },
+    [updateTextData],
+  );
+
+  // --- Auto resize (fig-specific) ---
+  const autoResize = getAutoResize(textData);
+  const setAutoResize = useCallback(
+    (mode: FigTextAutoResize) => {
+      updateTextData((td) => ({
+        ...td,
+        textAutoResize: makeAutoResizeEnum(mode),
       }));
     },
     [updateTextData],
@@ -161,96 +235,41 @@ export function TextPropertiesSection({ node, dispatch }: TextPropertiesSectionP
         rows={3}
       />
 
-      {/* Font family & style */}
-      <FieldRow>
-        <FieldGroup label="Font" inline labelWidth={40}>
-          <span style={fontInfoStyle}>
-            {fontFamily} {fontStyle}
-          </span>
-        </FieldGroup>
-      </FieldRow>
+      {/* Run formatting: font, size, bold, italic, underline, strikethrough, spacing */}
+      <TextFormattingEditor
+        value={textFormatting}
+        onChange={handleFormattingChange}
+        features={FIG_TEXT_FEATURES}
+      />
 
-      {/* Font size */}
-      <FieldRow>
-        <FieldGroup label="Size" inline labelWidth={40}>
-          <Input
-            type="number"
-            value={textData.fontSize}
-            min={1}
-            max={1000}
-            step={1}
-            onChange={(v) => {
-              updateTextData((td) => ({ ...td, fontSize: v as number }));
-            }}
-            width={60}
-          />
-        </FieldGroup>
+      {/* Horizontal alignment (react-editor-ui — same component as PPTX) */}
+      <TextJustifySection
+        data={justifyData}
+        onChange={handleJustifyChange}
+        size="sm"
+      />
 
-        {/* Line height */}
-        {lineHeight && (
-          <FieldGroup label="LH" inline labelWidth={24}>
+      {/* Line spacing */}
+      {lineHeight && (
+        <FieldRow>
+          <FieldGroup label="Line" inline labelWidth={40}>
             <Input
               type="number"
-              value={Math.round(lineHeight.value * 100) / 100}
-              min={0}
+              value={Math.round((lineHeight.value / textData.fontSize) * 100) / 100}
+              min={0.5}
+              max={10}
               step={0.1}
-              onChange={(v) => {
-                updateTextData((td) => ({
-                  ...td,
-                  lineHeight: td.lineHeight
-                    ? { ...td.lineHeight, value: v as number }
-                    : undefined,
-                }));
-              }}
-              width={50}
+              onChange={handleLineSpacingChange}
+              width={60}
+              suffix="x"
             />
           </FieldGroup>
-        )}
+        </FieldRow>
+      )}
 
-        {/* Letter spacing */}
-        {letterSpacing && (
-          <FieldGroup label="LS" inline labelWidth={24}>
-            <Input
-              type="number"
-              value={Math.round(letterSpacing.value * 100) / 100}
-              step={0.1}
-              onChange={(v) => {
-                updateTextData((td) => ({
-                  ...td,
-                  letterSpacing: td.letterSpacing
-                    ? { ...td.letterSpacing, value: v as number }
-                    : undefined,
-                }));
-              }}
-              width={50}
-            />
-          </FieldGroup>
-        )}
-      </FieldRow>
-
-      {/* Horizontal alignment */}
+      {/* Vertical alignment (fig-specific) */}
       <FieldRow>
-        <FieldGroup label="H" inline labelWidth={20}>
-          <div style={alignButtonGroupStyle}>
-            <button type="button" style={alignButtonStyle(hAlign === "LEFT")} onClick={() => setHAlign("LEFT", 0)} title="Left">
-              <AlignLeftIcon size={14} />
-            </button>
-            <button type="button" style={alignButtonStyle(hAlign === "CENTER")} onClick={() => setHAlign("CENTER", 1)} title="Center">
-              <AlignCenterIcon size={14} />
-            </button>
-            <button type="button" style={alignButtonStyle(hAlign === "RIGHT")} onClick={() => setHAlign("RIGHT", 2)} title="Right">
-              <AlignRightIcon size={14} />
-            </button>
-            <button type="button" style={alignButtonStyle(hAlign === "JUSTIFIED")} onClick={() => setHAlign("JUSTIFIED", 3)} title="Justify">
-              <AlignJustifyIcon size={14} />
-            </button>
-          </div>
-        </FieldGroup>
-      </FieldRow>
-
-      {/* Vertical alignment */}
-      <FieldRow>
-        <FieldGroup label="V" inline labelWidth={20}>
+        <FieldGroup label="V Align" inline labelWidth={48}>
           <div style={alignButtonGroupStyle}>
             <button type="button" style={alignButtonStyle(vAlign === "TOP")} onClick={() => setVAlign("TOP", 0)} title="Top">
               <AlignTopIcon size={14} />
@@ -265,12 +284,22 @@ export function TextPropertiesSection({ node, dispatch }: TextPropertiesSectionP
         </FieldGroup>
       </FieldRow>
 
-      {/* Decoration indicator */}
-      {decoration && decoration !== "NONE" && (
-        <div style={{ fontSize: fontTokens.size.xs, color: colorTokens.text.tertiary }}>
-          Decoration: {decoration}
-        </div>
-      )}
+      {/* Auto Resize (fig-specific) */}
+      <FieldRow>
+        <FieldGroup label="Resize" inline labelWidth={48}>
+          <div style={alignButtonGroupStyle}>
+            <button type="button" style={alignButtonStyle(autoResize === "WIDTH_AND_HEIGHT")} onClick={() => setAutoResize("WIDTH_AND_HEIGHT")} title="Auto width & height">
+              W+H
+            </button>
+            <button type="button" style={alignButtonStyle(autoResize === "HEIGHT")} onClick={() => setAutoResize("HEIGHT")} title="Fixed width, auto height">
+              H
+            </button>
+            <button type="button" style={alignButtonStyle(autoResize === "NONE")} onClick={() => setAutoResize("NONE")} title="Fixed size (clips overflow)">
+              Fix
+            </button>
+          </div>
+        </FieldGroup>
+      </FieldRow>
     </div>
   );
 }

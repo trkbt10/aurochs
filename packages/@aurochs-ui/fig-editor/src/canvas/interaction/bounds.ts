@@ -16,6 +16,7 @@
 
 import type { FigDesignNode, FigNodeId } from "@aurochs/fig/domain";
 import type { FigMatrix } from "@aurochs/fig/types";
+import { extractRotationDeg as extractRotationDegSoT, computePreRotationTopLeft } from "../../context/fig-editor/rotation";
 
 /**
  * Bounds representation for editor canvas items.
@@ -55,28 +56,20 @@ function composeTransforms(parent: FigMatrix, child: FigMatrix): FigMatrix {
 }
 
 /**
- * Extract rotation angle in degrees from a 2x3 affine matrix.
- *
- * The rotation is encoded in the m00 (cos) and m10 (sin) components.
- */
-function extractRotationDeg(m00: number, m10: number): number {
-  return Math.atan2(m10, m00) * (180 / Math.PI);
-}
-
-/**
  * Calculate bounds for a single design node using an absolute transform.
  *
- * The absolute transform is the composition of all ancestor transforms
- * with the node's own transform.
+ * Uses the rotation SoT to derive the "pre-rotation top-left" position.
+ * See rotation.ts for why (x, y) cannot simply be (m02, m12).
  */
 function getNodeBoundsWithAbsoluteTransform(node: FigDesignNode, absoluteTransform: FigMatrix): NodeBounds {
+  const { x, y } = computePreRotationTopLeft(absoluteTransform, node.size.x, node.size.y);
   return {
     id: node.id,
-    x: absoluteTransform.m02,
-    y: absoluteTransform.m12,
+    x,
+    y,
     width: node.size.x,
     height: node.size.y,
-    rotation: extractRotationDeg(absoluteTransform.m00, absoluteTransform.m10),
+    rotation: extractRotationDegSoT(absoluteTransform),
   };
 }
 

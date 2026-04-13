@@ -405,6 +405,15 @@ function buildTextNode(node: FigDesignNode, ctx: BuildContext): TextNode {
   const { effects } = extractEffectsProps(node);
   const textData = convertTextNode(node, ctx.blobs);
 
+  // Resolve textAutoResize from domain textData
+  const rawAutoResize = node.textData?.textAutoResize;
+  const autoResizeName = rawAutoResize
+    ? (typeof rawAutoResize === "string" ? rawAutoResize : (rawAutoResize as { name?: string }).name)
+    : undefined;
+  const textAutoResize = (autoResizeName === "NONE" || autoResizeName === "HEIGHT" || autoResizeName === "TRUNCATE")
+    ? autoResizeName
+    : "WIDTH_AND_HEIGHT" as const;
+
   return {
     type: "text",
     id: getNodeId(node, ctx),
@@ -415,6 +424,7 @@ function buildTextNode(node: FigDesignNode, ctx: BuildContext): TextNode {
     effects: convertEffectsToScene(effects),
     width: node.size?.x ?? 0,
     height: node.size?.y ?? 0,
+    textAutoResize,
     glyphContours: textData.glyphContours,
     decorationContours: textData.decorationContours,
     fill: textData.fill,

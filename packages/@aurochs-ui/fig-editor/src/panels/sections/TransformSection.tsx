@@ -8,6 +8,7 @@
 import { useCallback } from "react";
 import type { FigDesignNode } from "@aurochs/fig/domain";
 import type { FigEditorAction } from "../../context/fig-editor/types";
+import { extractRotationDeg, computePreRotationTopLeft, buildRotatedTransform } from "../../context/fig-editor/rotation";
 import { Input } from "@aurochs-ui/ui-components/primitives/Input";
 import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
 
@@ -28,13 +29,12 @@ type TransformSectionProps = {
  * Transform property editor section.
  */
 export function TransformSection({ node, dispatch }: TransformSectionProps) {
-  const x = Math.round(node.transform.m02 * 100) / 100;
-  const y = Math.round(node.transform.m12 * 100) / 100;
+  const { x: preRotX, y: preRotY } = computePreRotationTopLeft(node.transform, node.size.x, node.size.y);
+  const x = Math.round(preRotX * 100) / 100;
+  const y = Math.round(preRotY * 100) / 100;
   const w = Math.round(node.size.x * 100) / 100;
   const h = Math.round(node.size.y * 100) / 100;
-  const rotation = Math.round(
-    Math.atan2(node.transform.m10, node.transform.m00) * (180 / Math.PI) * 100,
-  ) / 100;
+  const rotation = Math.round(extractRotationDeg(node.transform) * 100) / 100;
 
   const updateTransform = useCallback(
     (field: "x" | "y" | "w" | "h" | "rotation", value: number) => {
@@ -44,28 +44,38 @@ export function TransformSection({ node, dispatch }: TransformSectionProps) {
         updater: (n) => {
           switch (field) {
             case "x":
-              return { ...n, transform: { ...n.transform, m02: value } };
-            case "y":
-              return { ...n, transform: { ...n.transform, m12: value } };
+            case "y": {
+              // User edits pre-rotation top-left. Derive m02/m12 via rotation SoT.
+              const currentAngle = extractRotationDeg(n.transform);
+              const { x: curX, y: curY } = computePreRotationTopLeft(n.transform, n.size.x, n.size.y);
+              const newX = field === "x" ? value : curX;
+              const newY = field === "y" ? value : curY;
+              const newCx = newX + n.size.x / 2;
+              const newCy = newY + n.size.y / 2;
+              const radians = (currentAngle * Math.PI) / 180;
+              const cos = Math.cos(radians);
+              const sin = Math.sin(radians);
+              const halfW = n.size.x / 2;
+              const halfH = n.size.y / 2;
+              return {
+                ...n,
+                transform: {
+                  m00: cos, m01: -sin,
+                  m02: newCx - cos * halfW + sin * halfH,
+                  m10: sin, m11: cos,
+                  m12: newCy - sin * halfW - cos * halfH,
+                },
+              };
+            }
             case "w":
               return { ...n, size: { ...n.size, x: value } };
             case "h":
               return { ...n, size: { ...n.size, y: value } };
-            case "rotation": {
-              const rad = (value * Math.PI) / 180;
-              const cos = Math.cos(rad);
-              const sin = Math.sin(rad);
+            case "rotation":
               return {
                 ...n,
-                transform: {
-                  ...n.transform,
-                  m00: cos,
-                  m01: -sin,
-                  m10: sin,
-                  m11: cos,
-                },
+                transform: buildRotatedTransform(n.transform, n.size.x, n.size.y, value),
               };
-            }
             default:
               return n;
           }

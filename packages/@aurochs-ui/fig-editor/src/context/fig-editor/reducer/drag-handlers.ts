@@ -12,6 +12,7 @@ import { normalizeAngle } from "@aurochs-ui/editor-core/geometry";
 import { pushHistory, replacePresent } from "@aurochs-ui/editor-core/history";
 import { updateNode } from "@aurochs-builder/fig/node-ops";
 import type { FigNodeId } from "@aurochs/fig/domain";
+import { buildRotatedTransform } from "../rotation";
 import type { HandlerMap } from "./handler-types";
 import { getAbsoluteNodeBounds } from "../node-geometry";
 
@@ -330,19 +331,10 @@ export const DRAG_HANDLERS: HandlerMap = {
         }
 
         const newAngle = normalizeAngle(initialRotation + previewAngleDelta);
-        const radians = (newAngle * Math.PI) / 180;
-        const cos = Math.cos(radians);
-        const sin = Math.sin(radians);
 
         doc = updateNode(doc, pageId, nodeId, (node) => ({
           ...node,
-          transform: {
-            ...node.transform,
-            m00: cos,
-            m01: -sin,
-            m10: sin,
-            m11: cos,
-          },
+          transform: buildRotatedTransform(node.transform, node.size.x, node.size.y, newAngle),
         }));
       }
     }

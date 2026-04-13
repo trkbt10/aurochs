@@ -4,6 +4,9 @@
  * Renders text as:
  * 1. Glyph path contours (when available) — high-fidelity outlines
  * 2. SVG <text> elements via TextLineLayout — browser renders with system fonts
+ *
+ * When textAutoResize is NONE or TRUNCATE, the text is clipped to the
+ * bounding box via a SVG clipPath (matching Figma's behavior).
  */
 
 import { memo } from "react";
@@ -23,6 +26,9 @@ function TextNodeRendererImpl({ node }: Props) {
   const effectsResult = resolveEffectsFilter(node.effects, ids);
   const fillColor = colorToHex(node.fill.color);
   const fillOpacity = node.fill.opacity;
+
+  // Clip text to bounding box when textAutoResize is NONE or TRUNCATE
+  const needsClip = node.textAutoResize === "NONE" || node.textAutoResize === "TRUNCATE";
 
   // Priority 1: Glyph contours (pre-outlined paths)
   if (node.glyphContours && node.glyphContours.length > 0) {
@@ -44,19 +50,25 @@ function TextNodeRendererImpl({ node }: Props) {
       />
     );
 
-    if (transformStr || node.opacity < 1 || effectsResult) {
-      return (
-        <g
-          transform={transformStr}
-          opacity={node.opacity < 1 ? node.opacity : undefined}
-          filter={effectsResult?.filterAttr}
-        >
-          {effectsResult?.defElement && <defs>{effectsResult.defElement}</defs>}
-          {pathEl}
-        </g>
-      );
-    }
-    return pathEl;
+    const clipId = needsClip ? ids.getNextId("text-clip") : undefined;
+
+    return (
+      <g
+        transform={transformStr}
+        opacity={node.opacity < 1 ? node.opacity : undefined}
+        filter={effectsResult?.filterAttr}
+      >
+        {effectsResult?.defElement && <defs>{effectsResult.defElement}</defs>}
+        {clipId && (
+          <defs>
+            <clipPath id={clipId}>
+              <rect x={0} y={0} width={node.width} height={node.height} />
+            </clipPath>
+          </defs>
+        )}
+        {clipId ? <g clipPath={`url(#${clipId})`}>{pathEl}</g> : pathEl}
+      </g>
+    );
   }
 
   // Priority 2: SVG <text> elements via shared FigTextLines component
@@ -72,20 +84,25 @@ function TextNodeRendererImpl({ node }: Props) {
     />
   );
 
-  if (transformStr || node.opacity < 1 || effectsResult || node.textLineLayout.lines.length > 1) {
-    return (
-      <g
-        transform={transformStr}
-        opacity={node.opacity < 1 ? node.opacity : undefined}
-        filter={effectsResult?.filterAttr}
-      >
-        {effectsResult?.defElement && <defs>{effectsResult.defElement}</defs>}
-        {textContent}
-      </g>
-    );
-  }
+  const clipId = needsClip ? ids.getNextId("text-clip") : undefined;
 
-  return textContent;
+  return (
+    <g
+      transform={transformStr}
+      opacity={node.opacity < 1 ? node.opacity : undefined}
+      filter={effectsResult?.filterAttr}
+    >
+      {effectsResult?.defElement && <defs>{effectsResult.defElement}</defs>}
+      {clipId && (
+        <defs>
+          <clipPath id={clipId}>
+            <rect x={0} y={0} width={node.width} height={node.height} />
+          </clipPath>
+        </defs>
+      )}
+      {clipId ? <g clipPath={`url(#${clipId})`}>{textContent}</g> : textContent}
+    </g>
+  );
 }
 
 export const TextNodeRenderer = memo(TextNodeRendererImpl);
