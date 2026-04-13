@@ -264,9 +264,9 @@ const FIGMA_BLEND_MODE_TO_CSS: Record<string, string> = {
 };
 
 function getBlendModeCss(node: FigNode): string | undefined {
-  const bm = (node as Record<string, unknown>).blendMode as { value: number; name: string } | string | undefined;
-  const name = typeof bm === "string" ? bm : bm?.name;
-  if (!name) {return undefined;}
+  const bm = node.blendMode;
+  if (!bm) return undefined;
+  const name = typeof bm === "string" ? bm : bm.name;
   return FIGMA_BLEND_MODE_TO_CSS[name];
 }
 

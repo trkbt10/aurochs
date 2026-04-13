@@ -24,17 +24,13 @@ export {
   extractTextPathData,
 } from "./opentype-paths";
 
-// Derived path extraction
+// Derived path extraction (functions only — types come from @aurochs/fig/domain)
 export {
   transformGlyphCommands,
   extractDerivedGlyphCommands,
   extractDerivedDecorations,
   extractDerivedTextPathData,
   hasDerivedGlyphs,
-  type DerivedBaseline,
-  type DerivedGlyph,
-  type DerivedDecoration,
-  type DerivedTextData,
 } from "./derived-paths";
 
 // SVG serialization

@@ -141,6 +141,10 @@ export type FigNode = {
   readonly backgroundEnabled?: boolean;
   readonly backgroundOpacity?: number;
   readonly documentColorProfile?: KiwiEnumValue;
+  /** Blend mode for compositing */
+  readonly blendMode?: string | KiwiEnumValue;
+  /** iOS-style corner smoothing (0-1 range) */
+  readonly cornerSmoothing?: number;
   /** Children (added by tree-builder, not present in raw Kiwi format) */
   readonly children?: readonly FigNode[];
   /** Additional fields (Kiwi schema has many optional fields) */

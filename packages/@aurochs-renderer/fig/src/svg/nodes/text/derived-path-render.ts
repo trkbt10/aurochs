@@ -7,75 +7,13 @@
  */
 
 import type { FigNode } from "@aurochs/fig/types";
+import type { DerivedTextData, DerivedGlyph, DerivedDecoration } from "@aurochs/fig/domain";
 import { decodePathCommands, type FigBlob, type PathCommand } from "@aurochs/fig/parser";
 import type { FigSvgRenderContext } from "../../../types";
 import { path, g, type SvgString, EMPTY_SVG } from "../../primitives";
 import { buildTransformAttr } from "../../transform";
 import { extractTextProps } from "../../../text/layout/extract-props";
 import { getFillColorAndOpacity } from "../../../text/layout/fill";
-
-/**
- * Baseline data from derivedTextData
- */
-type DerivedBaseline = {
-  readonly position: { x: number; y: number };
-  readonly width: number;
-  readonly lineY: number;
-  readonly lineHeight: number;
-  readonly lineAscent: number;
-  readonly firstCharacter: number;
-  readonly endCharacter: number;
-};
-
-/**
- * Decoration rectangle (for underlines, strikethroughs)
- */
-type DecorationRect = {
-  readonly x: number;
-  readonly y: number;
-  readonly w: number;
-  readonly h: number;
-};
-
-/**
- * Decoration data (underline, strikethrough, etc.)
- */
-type DerivedDecoration = {
-  readonly rects: readonly DecorationRect[];
-  readonly styleID?: number;
-};
-
-/**
- * Derived text data structure from .fig files
- */
-type DerivedTextData = {
-  readonly layoutSize?: { x: number; y: number };
-  readonly baselines?: readonly DerivedBaseline[];
-  readonly glyphs?: readonly DerivedGlyph[];
-  readonly decorations?: readonly DerivedDecoration[];
-  readonly fontMetaData?: readonly unknown[];
-  readonly derivedLines?: readonly unknown[];
-};
-
-/**
- * Glyph data from derivedTextData
- */
-type DerivedGlyph = {
-  /** Index into blobs array for path commands */
-  readonly commandsBlob: number;
-  /** Position of glyph (x, y where y is baseline) */
-  readonly position: { x: number; y: number };
-  /** Font size for this glyph */
-  readonly fontSize: number;
-  /** Character index in text */
-  readonly firstCharacter: number;
-  /** Advance width (normalized 0-1) */
-  readonly advance: number;
-  /** Rotation in radians */
-  readonly rotation?: number;
-  /** Style override index */
-  readonly styleOverrideTable?: number;
-};
 
 /**
  * Render context with blobs for path decoding

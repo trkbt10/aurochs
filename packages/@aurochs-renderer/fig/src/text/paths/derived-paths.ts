@@ -8,52 +8,12 @@
 import { decodePathCommands, type FigBlob } from "@aurochs/fig/parser";
 import type { PathCommand } from "../../font/types";
 import type { PathContour, DecorationRect, TextPathResult } from "./types";
-
-/**
- * Baseline data from derivedTextData
- */
-export type DerivedBaseline = {
-  readonly position: { x: number; y: number };
-  readonly width: number;
-  readonly lineY: number;
-  readonly lineHeight: number;
-  readonly lineAscent: number;
-  readonly firstCharacter: number;
-  readonly endCharacter: number;
-};
-
-/**
- * Glyph data from derivedTextData
- */
-export type DerivedGlyph = {
-  readonly commandsBlob: number;
-  readonly position: { x: number; y: number };
-  readonly fontSize: number;
-  readonly firstCharacter: number;
-  readonly advance: number;
-  readonly rotation?: number;
-  readonly styleOverrideTable?: number;
-};
-
-/**
- * Decoration data from derivedTextData
- */
-export type DerivedDecoration = {
-  readonly rects: readonly { x: number; y: number; w: number; h: number }[];
-  readonly styleID?: number;
-};
-
-/**
- * Derived text data structure from .fig files
- */
-export type DerivedTextData = {
-  readonly layoutSize?: { x: number; y: number };
-  readonly baselines?: readonly DerivedBaseline[];
-  readonly glyphs?: readonly DerivedGlyph[];
-  readonly decorations?: readonly DerivedDecoration[];
-  readonly fontMetaData?: readonly unknown[];
-  readonly derivedLines?: readonly unknown[];
-};
+import type {
+  DerivedBaseline,
+  DerivedGlyph,
+  DerivedDecoration,
+  DerivedTextData,
+} from "@aurochs/fig/domain";
 
 /**
  * Transform normalized glyph path commands to screen coordinates

@@ -18,6 +18,17 @@ export type {
   LayoutConstraints,
   TextData,
   SymbolOverride,
+  BlendMode,
+  DerivedBaseline,
+  DerivedGlyph,
+  DerivedDecoration,
+  DerivedTextData,
+  ComponentPropertyType,
+  ComponentPropertyValue,
+  ComponentPropertyDef,
+  ComponentPropertyNodeField,
+  ComponentPropertyRef,
+  ComponentPropertyAssignment,
 } from "./document";
 
 export { DEFAULT_PAGE_BACKGROUND } from "./document";

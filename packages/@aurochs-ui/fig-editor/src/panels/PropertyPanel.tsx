@@ -15,6 +15,7 @@ import { StrokeSection } from "./sections/StrokeSection";
 import { CornerRadiusSection } from "./sections/CornerRadiusSection";
 import { EffectsSection } from "./sections/EffectsSection";
 import { AutoLayoutSection } from "./sections/AutoLayoutSection";
+import { ComponentPropertiesSection } from "./sections/ComponentPropertiesSection";
 
 // =============================================================================
 // Component
@@ -27,7 +28,7 @@ import { AutoLayoutSection } from "./sections/AutoLayoutSection";
  * or a message prompting selection when nothing is selected.
  */
 export function PropertyPanel() {
-  const { primaryNode, selectedNodes, dispatch } = useFigEditor();
+  const { primaryNode, selectedNodes, dispatch, document } = useFigEditor();
 
   if (!primaryNode) {
     return (
@@ -94,6 +95,13 @@ export function PropertyPanel() {
       {primaryNode.autoLayout && (
         <OptionalPropertySection title="Auto Layout" defaultExpanded>
           <AutoLayoutSection node={primaryNode} />
+        </OptionalPropertySection>
+      )}
+
+      {/* Component Properties (INSTANCE nodes only) */}
+      {primaryNode.symbolId && (
+        <OptionalPropertySection title="Component Properties" defaultExpanded>
+          <ComponentPropertiesSection node={primaryNode} document={document} />
         </OptionalPropertySection>
       )}
     </div>

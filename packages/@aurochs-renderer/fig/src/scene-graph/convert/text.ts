@@ -9,7 +9,7 @@ import type { FigBlob } from "@aurochs/fig/parser";
 import { extractTextProps } from "../../text/layout/extract-props";
 import { getFillColorAndOpacity } from "../../text/layout/fill";
 import { computeTextLayout } from "../../text/layout/compute-layout";
-import { extractDerivedTextPathData, hasDerivedGlyphs, type DerivedTextData } from "../../text/paths/derived-paths";
+import { extractDerivedTextPathData, hasDerivedGlyphs } from "../../text/paths/derived-paths";
 import type { PathContour, Color, FallbackTextData } from "../types";
 
 /** Map Figma text decoration value to scene graph text decoration string */
@@ -137,8 +137,7 @@ export function convertTextNode(node: FigDesignNode, blobs: readonly FigBlob[]):
   const color = parseHexColor(fillColor);
 
   // Check for derived path data (0% diff rendering)
-  // derivedTextData is not modeled on FigDesignNode; it lives in _raw
-  const derivedTextData = node._raw?.derivedTextData as DerivedTextData | undefined;
+  const derivedTextData = node.derivedTextData;
 
   if (hasDerivedGlyphs(derivedTextData)) {
     const pathData = extractDerivedTextPathData(derivedTextData!, blobs);

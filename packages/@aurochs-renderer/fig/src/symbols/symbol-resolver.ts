@@ -621,11 +621,9 @@ export function mergeSymbolProperties(instanceNode: FigNode, symbolNode: FigNode
   if (symbolNode.effects) { merged.effects = symbolNode.effects; }
   if (symbolNode.strokeJoin !== undefined) { merged.strokeJoin = symbolNode.strokeJoin; }
   if (symbolNode.strokeCap !== undefined) { merged.strokeCap = symbolNode.strokeCap; }
-  const symBlendMode = (symbolNode as Record<string, unknown>).blendMode;
-  if (symBlendMode !== undefined) { merged.blendMode = symBlendMode; }
+  if (symbolNode.blendMode !== undefined) { merged.blendMode = symbolNode.blendMode; }
   if (symbolNode.mask !== undefined) { merged.mask = symbolNode.mask; }
-  const symCornerSmoothing = (symbolNode as Record<string, unknown>).cornerSmoothing;
-  if (symCornerSmoothing !== undefined) { merged.cornerSmoothing = symCornerSmoothing; }
+  if (symbolNode.cornerSmoothing !== undefined) { merged.cornerSmoothing = symbolNode.cornerSmoothing; }
   if (symbolNode.size) { merged.size = symbolNode.size; }
   merged.opacity = symbolNode.opacity;
 
