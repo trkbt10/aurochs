@@ -1,11 +1,11 @@
 {
   "name": "@aurochs-build/aurochs",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "private": true,
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "build:cli": "bun build ../../@aurochs-cli/cli/src/cli.ts --target node --outfile ../../../publish/aurochs/dist/cli.js",
+    "build:cli": "bun build ../../@aurochs-cli/cli/src/cli.ts --target node --outdir ../../../publish/aurochs/dist --entry-naming cli.js",
     "verify": "node scripts/verify-exports.mjs"
   },
   "dependencies": {

@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-04-13
+
+### Added
+
+- Fig (Figma) editor with page list, property panels, fill/stroke/transform sections, drill-down selection, duplication, and text editing with cursor and selection handling
+- Fig CLI (`aurochs fig`) with commands for extracting, previewing, and displaying fig file content
+- PPTX-to-Fig converter with comprehensive shape and text handling
+- `@aurochs/dsv` package for CSV, TSV, and JSONL parsing/building
+- PDF function parsing and evaluation engine
+- PDF `PdfTextBlock` for grouped text elements
+- PDF `PdfSourceContext`, `PdfRenderSession`, and deferred image cache
+- PDF `FontProvider` as central font resolution layer
+- PDF pattern color resolution and shading support
+- PDF encryption handling with auto mode and optional encryption in load options
+- Text auto-resize and clipping behavior in TextNodeRenderer
+- Multi-format conversion support and enhanced conversion API
+- Gradient editor components for fill/stroke editing
+- WebGL texture cache management and tessellation tests
+- Symbol font detection and enhanced font metrics handling
+- Rotation transform for path elements in SVG rendering
+- Component properties section and blend mode handling in design nodes
+- Shape spec builder with typed state management and fluent API
+- E2E testing configuration with Vite setup for TextEditController
+
+### Changed
+
+- Fig domain types established in `@aurochs/fig` with enforced dependency direction
+- Drag state separated into `FigDragContext` for performance optimization
+- Styles migrated from CSS modules to inline styles using design tokens
+- XLSX sheet established as single source of truth for rendering
+- XLSX hardcoded dimensions replaced with constants
+- VBA editor migrated to `CodeEditor` from `react-editor-ui`
+- MCP UI migrated from `dangerouslySetInnerHTML` to `SlideRenderer`
+- SVG string pipeline replaced with React component rendering for thumbnails
+- Color resolver imports updated to use domain layer
+- Matrix handling and path command structures refactored
+- Paint handling in shape builders refactored to support multiple paint types
+
+### Fixed
+
+- All lint errors and warnings resolved, TypeScript compilation errors fixed
+- PDF default fill and stroke colors in rasterization
+- CLI build updated to use `--outdir` with `--entry-naming` for native asset compatibility
+
 ## [0.11.0] - 2026-04-10
 
 ### Added
@@ -263,7 +307,8 @@ Project inception.
 - Text body and paragraph rendering
 - Theme and style support
 
-[Unreleased]: https://github.com/trkbt10/aurochs/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/trkbt10/aurochs/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/trkbt10/aurochs/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/trkbt10/aurochs/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/trkbt10/aurochs/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/trkbt10/aurochs/compare/v0.8.0...v0.9.0
