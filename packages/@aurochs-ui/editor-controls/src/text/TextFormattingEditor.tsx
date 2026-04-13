@@ -298,41 +298,35 @@ export function TextFormattingEditor({
 
   return (
     <div className={className} style={style}>
-      {/* Font family + weight (react-editor-ui FontSection) */}
+      {/* Font family + weight (react-editor-ui FontSection — has its own title) */}
       {showFontFamily && (
-        <OptionalPropertySection title="Font" defaultExpanded>
-          <FontSection
-            data={toFontData(value)}
-            onChange={handleFontChange}
-            disabled={disabled}
-            // eslint-disable-next-line custom/no-as-outside-guard -- fontOptions type mismatch with react-editor-ui
-            fontOptions={fontOptions as unknown as { value: string; label: string }[]}
-          />
-        </OptionalPropertySection>
+        <FontSection
+          data={toFontData(value)}
+          onChange={handleFontChange}
+          disabled={disabled}
+          // eslint-disable-next-line custom/no-as-outside-guard -- fontOptions type mismatch with react-editor-ui
+          fontOptions={fontOptions as unknown as { value: string; label: string }[]}
+        />
       )}
 
-      {/* Font size, leading, tracking, kerning (react-editor-ui FontMetricsSection) */}
+      {/* Font size, leading, tracking, kerning (react-editor-ui FontMetricsSection — has its own title) */}
       {showFontSize && (
-        <OptionalPropertySection title="Font Metrics" defaultExpanded>
-          <FontMetricsSection
-            data={toFontMetricsData(value)}
-            onChange={handleFontMetricsChange}
-            size="sm"
-            disabled={disabled}
-          />
-        </OptionalPropertySection>
+        <FontMetricsSection
+          data={toFontMetricsData(value)}
+          onChange={handleFontMetricsChange}
+          size="sm"
+          disabled={disabled}
+        />
       )}
 
-      {/* Caps + underline/strike/super/sub toggles (react-editor-ui CaseTransformSection) */}
+      {/* Caps + underline/strike/super/sub toggles (react-editor-ui CaseTransformSection — has its own title) */}
       {(showCaps || showSuperSubscript) && (
-        <OptionalPropertySection title="Case & Style" defaultExpanded>
-          <CaseTransformSection
-            data={toCaseTransformData(value)}
-            onChange={handleCaseTransformChange}
-            size="sm"
-            disabled={disabled}
-          />
-        </OptionalPropertySection>
+        <CaseTransformSection
+          data={toCaseTransformData(value)}
+          onChange={handleCaseTransformChange}
+          size="sm"
+          disabled={disabled}
+        />
       )}
 
       {/* Color + Highlight */}
