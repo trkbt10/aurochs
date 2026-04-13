@@ -57,13 +57,13 @@ export function convertTableToNodes(
   // Pre-compute column x-offsets
   const colOffsets: number[] = [0];
   for (let c = 0; c < columns.length; c++) {
-    colOffsets.push(colOffsets[c] + (columns[c].width as number));
+    colOffsets.push(colOffsets[c] + (columns[c].width));
   }
 
   let rowY = 0;
   for (let rowIdx = 0; rowIdx < rowCount; rowIdx++) {
     const row = table.rows[rowIdx];
-    const rowHeight = row.height as number;
+    const rowHeight = row.height;
 
     for (let colIdx = 0; colIdx < row.cells.length; colIdx++) {
       const cell = row.cells[colIdx];
@@ -162,7 +162,7 @@ function computeSpanHeight(
 ): number {
   let height = 0;
   for (let i = 0; i < span && startRowIdx + i < rows.length; i++) {
-    height += rows[startRowIdx + i].height as number;
+    height += rows[startRowIdx + i].height;
   }
   return height;
 }
@@ -198,10 +198,10 @@ function buildCellNode(
     if (textData) {
       const textId = nextId(idCounter);
       const margins = cell.properties.margins;
-      const marginLeft = margins ? (margins.left as number) : DEFAULT_CELL_MARGIN_LR;
-      const marginTop = margins ? (margins.top as number) : DEFAULT_CELL_MARGIN_TB;
-      const marginRight = margins ? (margins.right as number) : DEFAULT_CELL_MARGIN_LR;
-      const marginBottom = margins ? (margins.bottom as number) : DEFAULT_CELL_MARGIN_TB;
+      const marginLeft = margins ? (margins.left) : DEFAULT_CELL_MARGIN_LR;
+      const marginTop = margins ? (margins.top) : DEFAULT_CELL_MARGIN_TB;
+      const marginRight = margins ? (margins.right) : DEFAULT_CELL_MARGIN_LR;
+      const marginBottom = margins ? (margins.bottom) : DEFAULT_CELL_MARGIN_TB;
 
       children.push({
         id: textId as FigNodeId,

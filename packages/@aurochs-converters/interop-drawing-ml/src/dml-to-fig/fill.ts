@@ -56,7 +56,7 @@ function convertSolid(fill: SolidFill, ctx?: ColorContext): FigSolidPaint {
 
 function convertGradient(fill: GradientFill, ctx?: ColorContext): FigGradientPaint {
   const stops = fill.stops.map((s): FigGradientStop => ({
-    position: (s.position as number) / 100,
+    position: (s.position) / 100,
     color: dmlColorToFig(s.color, ctx),
   }));
 
@@ -70,7 +70,7 @@ function convertGradient(fill: GradientFill, ctx?: ColorContext): FigGradientPai
 }
 
 function convertLinear(fill: GradientFill, stops: readonly FigGradientStop[]): FigGradientPaint {
-  const angleDeg = (fill.linear?.angle ?? 0) as number;
+  const angleDeg = (fill.linear?.angle ?? 0);
   const angleRad = angleDeg * (Math.PI / 180);
   const dx = Math.cos(angleRad) * 0.5;
   const dy = Math.sin(angleRad) * 0.5;
@@ -92,8 +92,8 @@ function convertLinear(fill: GradientFill, stops: readonly FigGradientStop[]): F
 
 function convertPath(fill: GradientFill, stops: readonly FigGradientStop[]): FigGradientPaint {
   const rect = fill.path?.fillToRect;
-  const cx = rect ? (rect.left as number) / 100 : 0.5;
-  const cy = rect ? (rect.top as number) / 100 : 0.5;
+  const cx = rect ? (rect.left) / 100 : 0.5;
+  const cy = rect ? (rect.top) / 100 : 0.5;
 
   const handles: readonly FigVector[] = [
     { x: cx, y: cy },

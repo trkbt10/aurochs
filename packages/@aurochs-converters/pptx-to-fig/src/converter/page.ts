@@ -18,24 +18,29 @@ import type { FigColor } from "@aurochs/fig/types";
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
 import type { ResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 import type { TableStyleList } from "@aurochs-office/pptx/parser/table/style-parser";
+import type { FigImage } from "@aurochs/fig/parser";
 import { DEFAULT_PAGE_BACKGROUND } from "@aurochs-builder/fig";
 import { dmlColorToFig } from "@aurochs-converters/interop-drawing-ml/dml-to-fig";
 import { convertShapes, type NodeIdCounter, type ConvertContext } from "./shape";
 
 /**
  * Convert a PresentationDocument to a FigDesignDocument.
+ *
+ * Images generated during conversion (e.g. chart SVG renderings) are
+ * collected in a shared Map and merged into the final document's images.
  */
 export function convertDocument(doc: PresentationDocument): FigDesignDocument {
   const idCounter: NodeIdCounter = { value: 0 };
+  const collectedImages = new Map<string, FigImage>();
 
   const pages: FigPage[] = doc.slides.map((slideWithId, index) =>
-    convertSlide(slideWithId, index, idCounter, doc.colorContext, doc.fontScheme, doc.resourceStore, doc.tableStyles),
+    convertSlide(slideWithId, index, idCounter, collectedImages, doc.colorContext, doc.fontScheme, doc.resourceStore, doc.tableStyles),
   );
 
   return {
     pages,
     components: new Map(),
-    images: new Map(),
+    images: collectedImages,
     metadata: null,
   };
 }
@@ -44,6 +49,7 @@ function convertSlide(
   slideWithId: SlideWithId,
   index: number,
   idCounter: NodeIdCounter,
+  collectedImages: Map<string, FigImage>,
   docColorContext: ColorContext,
   docFontScheme: FontScheme,
   resourceStore: ResourceStore,
@@ -58,6 +64,7 @@ function convertSlide(
     fontScheme: slideFontScheme,
     resourceStore,
     tableStyles,
+    collectedImages,
   };
 
   const children = convertShapes(slide.shapes, idCounter, ctx);

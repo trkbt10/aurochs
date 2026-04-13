@@ -228,7 +228,7 @@ function createPolygonCustomGeometry(sides: number, width: number, height: numbe
     const angle = -Math.PI / 2 + (2 * Math.PI * i) / sides;
     const x = cx + rx * Math.cos(angle);
     const y = cy + ry * Math.sin(angle);
-    const point = { x: px(x) as Pixels, y: px(y) as Pixels };
+    const point = { x: px(x), y: px(y) };
 
     if (i === 0) {
       commands.push({ type: "moveTo", point });
@@ -242,8 +242,8 @@ function createPolygonCustomGeometry(sides: number, width: number, height: numbe
     type: "custom",
     paths: [
       {
-        width: px(width) as Pixels,
-        height: px(height) as Pixels,
+        width: px(width),
+        height: px(height),
         fill: "norm",
         stroke: true,
         extrusionOk: false,

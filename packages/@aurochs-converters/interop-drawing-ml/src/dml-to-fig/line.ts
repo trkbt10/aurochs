@@ -19,14 +19,14 @@ export function dmlLineTofig(
   colorContext?: ColorContext,
 ): FigStrokeResult | undefined {
   if (!line) return undefined;
-  if ((line.width as number) <= 0) return undefined;
+  if ((line.width) <= 0) return undefined;
 
   const strokePaints = dmlFillToFig(line.fill, colorContext);
   if (strokePaints.length === 0) return undefined;
 
   return {
     strokePaints,
-    strokeWeight: line.width as number,
+    strokeWeight: line.width,
     strokeCap: convertCap(line.cap),
     strokeJoin: convertJoin(line.join),
   };

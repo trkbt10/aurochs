@@ -1,62 +1,73 @@
 /**
- * @file Chart → FigDesignNode[]
+ * @file Chart → ChartConversionResult
  *
  * Charts don't decompose into shapes at the domain level — the
- * chart renderer produces SVG. We create a single FRAME node
- * containing the chart's visual representation.
+ * chart renderer produces SVG. This module renders the chart to SVG
+ * and returns both the SVG string and a bounding-box specification.
  *
- * The approach:
- * 1. Render the Chart to SVG via @aurochs-renderer/chart
- * 2. Create a FRAME FigDesignNode that carries the SVG as a
- *    renderable child. Since Fig's scene graph supports VECTOR
- *    nodes with path contours, we parse the SVG paths.
+ * The caller (typically pptx-to-fig) is responsible for:
+ * 1. Rasterizing the SVG to a bitmap (platform-dependent: resvg on Node.js,
+ *    canvas on browser)
+ * 2. Registering the image in FigDesignDocument.images
+ * 3. Creating a FigDesignNode with an IMAGE fill referencing the image
  *
- * For cases where the chart rendering pipeline is not available
- * (missing dependencies or context), we emit a warning and return
- * an empty array — the caller (pptx-to-fig) retains the FRAME
- * bounding box.
+ * This separation keeps interop-drawing-ml platform-independent while
+ * ensuring charts are represented as proper Fig images rather than
+ * opaque _raw data.
  */
 
 import type { Chart } from "@aurochs-office/chart/domain";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
-import type { FigDesignNode, FigNodeId } from "@aurochs/fig/domain";
 import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
 import { renderChart } from "@aurochs-renderer/chart/svg";
 import type { ChartRenderContext, FillResolver, ResolvedFill } from "@aurochs-renderer/chart/svg";
+import { resolveColor, resolveAlpha } from "@aurochs-office/drawing-ml/domain";
+import {
+  DEFAULT_CHART_SERIES_COLORS,
+  DEFAULT_CHART_AXIS_COLOR,
+  DEFAULT_CHART_GRIDLINE_COLOR,
+  DEFAULT_CHART_TEXT_COLOR,
+  DEFAULT_CHART_TEXT_STYLE,
+} from "@aurochs-office/pptx/domain";
 
 /**
- * Default accent color palette for chart series.
- * Derived from the standard Office theme (ECMA-376 Annex D).
- */
-const DEFAULT_SERIES_COLORS = [
-  "#4472C4", "#ED7D31", "#A5A5A5", "#FFC000",
-  "#5B9BD5", "#70AD47", "#264478", "#9B57A2",
-];
-
-/**
- * Render a Chart domain object and convert the SVG output to
- * FigDesignNode children.
+ * Result of chart-to-fig conversion.
  *
- * Returns an array of FigDesignNode (typically a single VECTOR node
- * containing the chart's SVG paths). Returns empty array if the
- * chart has no renderable data.
+ * Contains the rendered SVG and dimensions needed to construct
+ * a FigDesignNode with an IMAGE fill. The caller is responsible
+ * for rasterizing the SVG and creating the node.
+ */
+export type ChartConversionResult = {
+  /** Rendered SVG string (complete <svg> element) */
+  readonly svg: string;
+  /** Chart width in pixels */
+  readonly width: number;
+  /** Chart height in pixels */
+  readonly height: number;
+};
+
+/**
+ * Render a Chart domain object to SVG.
+ *
+ * Returns the rendered SVG and dimensions, or undefined if the chart
+ * has no renderable data or rendering fails.
  *
  * @param chart - Parsed Chart domain object from ResourceStore
  * @param width - Chart frame width in pixels
  * @param height - Chart frame height in pixels
  * @param colorContext - For resolving theme colors
- * @param name - Shape name for the chart node
+ * @param name - Shape name (used in warning messages)
  */
-export function chartToFigNodes(
+export function renderChartToSvg(
   chart: Chart,
   width: number,
   height: number,
   colorContext?: ColorContext,
   name = "Chart",
-): readonly FigDesignNode[] {
+): ChartConversionResult | undefined {
   if (chart.plotArea.charts.length === 0) {
     console.warn(`[chart-to-fig] Chart "${name}" has no renderable data.`);
-    return [];
+    return undefined;
   }
 
   const ctx = createDefaultChartContext(colorContext);
@@ -70,63 +81,38 @@ export function chartToFigNodes(
       `[chart-to-fig] Failed to render chart "${name}":`,
       err instanceof Error ? err.message : err,
     );
-    return [];
+    return undefined;
   }
 
-  // The SVG output is a complete <svg> element. We embed it as
-  // a _raw field on a FRAME node so consumers can render it.
-  // Fig's domain model doesn't natively represent arbitrary SVG,
-  // but the _raw field preserves data for roundtrip and the
-  // FRAME gives it a renderable bounding box.
-  const id = "0:chart-0" as FigNodeId;
-
-  return [{
-    id,
-    type: "FRAME",
-    name,
-    visible: true,
-    opacity: 1,
-    transform: { m00: 1, m01: 0, m02: 0, m10: 0, m11: 1, m12: 0 },
-    size: { x: width, y: height },
-    fills: [],
-    strokes: [],
-    strokeWeight: 0,
-    effects: [],
-    clipsContent: true,
-    _raw: { chartSvg: svg },
-  }];
+  return { svg, width, height };
 }
 
 /**
- * Create a default ChartRenderContext that doesn't depend on PPTX
- * rendering infrastructure.
+ * Create a default ChartRenderContext that resolves colors via
+ * the DrawingML color resolution SoT and falls back to theme defaults
+ * from @aurochs-office/pptx/domain/defaults.
  */
 function createDefaultChartContext(colorContext?: ColorContext): ChartRenderContext {
   return {
     getSeriesColor(index: number, explicit?: BaseFill): string {
       if (explicit && explicit.type === "solidFill") {
-        const spec = explicit.color.spec;
-        if (spec.type === "srgb") return `#${spec.value}`;
-        if (spec.type === "scheme" && colorContext) {
-          const mapped = colorContext.colorMap[spec.value] ?? spec.value;
-          const hex = colorContext.colorScheme[mapped];
-          if (hex) return `#${hex}`;
-        }
+        const hex = resolveColor(explicit.color, colorContext);
+        if (hex) return `#${hex}`;
       }
-      return DEFAULT_SERIES_COLORS[index % DEFAULT_SERIES_COLORS.length];
+      return `#${DEFAULT_CHART_SERIES_COLORS[index % DEFAULT_CHART_SERIES_COLORS.length]}`;
     },
     getAxisColor(): string {
-      return "#595959";
+      return `#${DEFAULT_CHART_AXIS_COLOR}`;
     },
     getGridlineColor(): string {
-      return "#D9D9D9";
+      return `#${DEFAULT_CHART_GRIDLINE_COLOR}`;
     },
     getTextStyle() {
       return {
-        fontFamily: "sans-serif",
-        fontSize: 10,
-        fontWeight: "normal",
-        color: "#404040",
+        fontFamily: DEFAULT_CHART_TEXT_STYLE.fontFamily,
+        fontSize: DEFAULT_CHART_TEXT_STYLE.fontSize,
+        fontWeight: DEFAULT_CHART_TEXT_STYLE.fontWeight,
+        color: `#${DEFAULT_CHART_TEXT_COLOR}`,
       };
     },
     warnings: {
@@ -137,39 +123,31 @@ function createDefaultChartContext(colorContext?: ColorContext): ChartRenderCont
   };
 }
 
+/**
+ * Create a FillResolver that delegates color resolution to the
+ * DrawingML color resolution SoT.
+ */
 function createDefaultFillResolver(colorContext?: ColorContext): FillResolver {
   return {
     resolve(fill: BaseFill): ResolvedFill {
       switch (fill.type) {
         case "solidFill": {
-          const spec = fill.color.spec;
-          let hex = "000000";
-          if (spec.type === "srgb") hex = spec.value;
-          else if (spec.type === "scheme" && colorContext) {
-            const mapped = colorContext.colorMap[spec.value] ?? spec.value;
-            hex = colorContext.colorScheme[mapped] ?? "000000";
-          }
-          const alpha = fill.color.transform?.alpha !== undefined
-            ? (fill.color.transform.alpha as number) / 100
-            : 1;
+          const hex = resolveColor(fill.color, colorContext) ?? "000000";
+          const alpha = resolveAlpha(fill.color);
           return { type: "solid", color: { hex: `#${hex}`, alpha } };
         }
         case "noFill":
           return { type: "none" };
         case "gradientFill": {
           const stops = fill.stops.map((s) => {
-            const sSpec = s.color.spec;
-            let sHex = "000000";
-            if (sSpec.type === "srgb") sHex = sSpec.value;
-            const sAlpha = s.color.transform?.alpha !== undefined
-              ? (s.color.transform.alpha as number) / 100
-              : 1;
-            return { color: { hex: `#${sHex}`, alpha: sAlpha }, position: (s.position as number) / 100 };
+            const sHex = resolveColor(s.color, colorContext) ?? "000000";
+            const sAlpha = resolveAlpha(s.color);
+            return { color: { hex: `#${sHex}`, alpha: sAlpha }, position: (s.position) / 100 };
           });
           return {
             type: "gradient",
             stops,
-            angle: fill.linear ? (fill.linear.angle as number) : 0,
+            angle: fill.linear ? (fill.linear.angle) : 0,
             isRadial: !!fill.path,
           };
         }

@@ -18,7 +18,7 @@ export type FigTransformResult = {
 };
 
 export function dmlTransformToFig(transform: Transform): FigTransformResult {
-  const rotRad = ((transform.rotation as number) * Math.PI) / 180;
+  const rotRad = ((transform.rotation) * Math.PI) / 180;
   const cos = Math.cos(rotRad);
   const sin = Math.sin(rotRad);
 
@@ -33,13 +33,13 @@ export function dmlTransformToFig(transform: Transform): FigTransformResult {
   return {
     transform: {
       m00, m01,
-      m02: transform.x as number,
+      m02: transform.x,
       m10, m11,
-      m12: transform.y as number,
+      m12: transform.y,
     },
     size: {
-      x: transform.width as number,
-      y: transform.height as number,
+      x: transform.width,
+      y: transform.height,
     },
   };
 }

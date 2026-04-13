@@ -15,7 +15,6 @@
 
 import type { FigMatrix, FigVector } from "@aurochs/fig/types";
 import type { Transform } from "@aurochs-office/drawing-ml/domain/geometry";
-import type { Pixels, Degrees } from "@aurochs-office/drawing-ml/domain/units";
 import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
 
 export function figTransformToDml(matrix: FigMatrix, size: FigVector): Transform {
@@ -34,11 +33,11 @@ export function figTransformToDml(matrix: FigMatrix, size: FigVector): Transform
   const height = size.y * scaleY;
 
   return {
-    x: px(matrix.m02) as Pixels,
-    y: px(matrix.m12) as Pixels,
-    width: px(Math.abs(width)) as Pixels,
-    height: px(Math.abs(height)) as Pixels,
-    rotation: deg(normalizeAngle(rotation)) as Degrees,
+    x: px(matrix.m02),
+    y: px(matrix.m12),
+    width: px(Math.abs(width)),
+    height: px(Math.abs(height)),
+    rotation: deg(normalizeAngle(rotation)),
     flipH,
     flipV: false,
   };

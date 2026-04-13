@@ -12,7 +12,6 @@
 
 import type { FigEffect } from "@aurochs/fig/types";
 import type { Effects, ShadowEffect } from "@aurochs-office/pptx/domain/effects";
-import type { Pixels, Degrees } from "@aurochs-office/drawing-ml/domain/units";
 import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
 import { figColorToColor } from "./color";
 
@@ -40,14 +39,12 @@ export function figEffectsToDml(figEffects: readonly FigEffect[]): Effects | und
 
   if (!shadow && softEdgeRadius === undefined) return undefined;
 
-  const result: Effects = {};
-  if (shadow) (result as { shadow: ShadowEffect }).shadow = shadow;
-  if (softEdgeRadius !== undefined && softEdgeRadius > 0) {
-    (result as { softEdge: { radius: Pixels } }).softEdge = {
-      radius: px(softEdgeRadius) as Pixels,
-    };
-  }
-  return result;
+  return {
+    ...(shadow ? { shadow } : {}),
+    ...(softEdgeRadius !== undefined && softEdgeRadius > 0
+      ? { softEdge: { radius: px(softEdgeRadius) } }
+      : {}),
+  };
 }
 
 function resolveEffectType(effect: FigEffect): string {
@@ -74,9 +71,9 @@ function convertShadow(effect: FigEffect, typeName: string): ShadowEffect {
   return {
     type: typeName === "DROP_SHADOW" ? "outer" : "inner",
     color: figColorToColor(color),
-    blurRadius: px(effect.radius ?? 0) as Pixels,
-    distance: px(distance) as Pixels,
-    direction: deg(normalizeAngle(directionDeg)) as Degrees,
+    blurRadius: px(effect.radius ?? 0) ,
+    distance: px(distance) ,
+    direction: deg(normalizeAngle(directionDeg)) ,
     rotateWithShape: true,
   };
 }

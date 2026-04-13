@@ -19,8 +19,7 @@ import type { FigDesignNode } from "@aurochs/fig/domain";
 import type { FigImagePaint } from "@aurochs/fig/types";
 import type { Shape, SpShape, GrpShape, PicShape, NonVisualProperties, ShapeProperties } from "@aurochs-office/pptx/domain/shape";
 import type { Transform, GroupTransform } from "@aurochs-office/drawing-ml/domain/geometry";
-import type { Pixels, Percent, Degrees } from "@aurochs-office/drawing-ml/domain/units";
-import { px, pct, deg } from "@aurochs-office/drawing-ml/domain/units";
+import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
 import { figTransformToDml, figFillsToDml, figStrokeToDml, figEffectsToDml } from "@aurochs-converters/interop-drawing-ml/fig-to-dml";
 import { convertGeometry } from "./geometry";
 import { convertText } from "./text";
@@ -150,10 +149,10 @@ function convertToGroupShape(
   // when childExtent ≠ extent.
   const groupTransform: GroupTransform = {
     ...transform,
-    childOffsetX: px(0) as Pixels,
-    childOffsetY: px(0) as Pixels,
-    childExtentWidth: px(node.size.x) as Pixels,
-    childExtentHeight: px(node.size.y) as Pixels,
+    childOffsetX: px(0),
+    childOffsetY: px(0),
+    childExtentWidth: px(node.size.x),
+    childExtentHeight: px(node.size.y),
   };
 
   // PPTX grpSp does not render a fill on the group itself — only child shapes
@@ -165,11 +164,11 @@ function convertToGroupShape(
   if (fill || line) {
     const bgId = nextId(idCounter);
     const bgTransform: Transform = {
-      x: px(0) as Pixels,
-      y: px(0) as Pixels,
-      width: px(node.size.x) as Pixels,
-      height: px(node.size.y) as Pixels,
-      rotation: deg(0) as Degrees,
+      x: px(0),
+      y: px(0),
+      width: px(node.size.x),
+      height: px(node.size.y),
+      rotation: deg(0),
       flipH: false,
       flipV: false,
     };

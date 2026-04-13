@@ -11,7 +11,6 @@
 
 import type { FigColor } from "@aurochs/fig/types";
 import type { Color } from "@aurochs-office/drawing-ml/domain/color";
-import type { Percent } from "@aurochs-office/drawing-ml/domain/units";
 import { pct } from "@aurochs-office/drawing-ml/domain/units";
 
 /**
@@ -31,7 +30,7 @@ export function figColorToColor(figColor: FigColor): Color {
 
   return {
     spec: { type: "srgb", value: hex },
-    transform: { alpha: pct(a * 100) as Percent },
+    transform: { alpha: pct(a * 100) },
   };
 }
 

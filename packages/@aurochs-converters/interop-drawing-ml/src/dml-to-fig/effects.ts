@@ -26,7 +26,7 @@ export function dmlEffectsToFig(
     result.push({
       type: "LAYER_BLUR",
       visible: true,
-      radius: effects.softEdge.radius as number,
+      radius: effects.softEdge.radius,
     });
   }
 
@@ -34,8 +34,8 @@ export function dmlEffectsToFig(
 }
 
 function convertShadow(shadow: ShadowEffect, ctx?: ColorContext): FigEffect {
-  const dist = shadow.distance as number;
-  const dirDeg = shadow.direction as number;
+  const dist = shadow.distance;
+  const dirDeg = shadow.direction;
   const dirRad = dirDeg * (Math.PI / 180);
 
   return {
@@ -46,7 +46,7 @@ function convertShadow(shadow: ShadowEffect, ctx?: ColorContext): FigEffect {
       x: dist * Math.cos(dirRad),
       y: dist * Math.sin(dirRad),
     },
-    radius: shadow.blurRadius as number,
+    radius: shadow.blurRadius,
     spread: 0,
   };
 }

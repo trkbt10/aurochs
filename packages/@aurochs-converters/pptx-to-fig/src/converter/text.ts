@@ -136,7 +136,7 @@ function resolveRunStyle(
   colorContext?: ColorContext,
 ): ResolvedStyle {
   // ECMA-376 §21.1.2.3.12: default font size = 1800 hundredths of a point = 18pt
-  const fontSize = props?.fontSize ? (props.fontSize as number) : 18;
+  const fontSize = props?.fontSize ? (props.fontSize) : 18;
   const fontFamily = resolveFontFamily(props?.fontFamily, fontScheme);
   const fontStyle = buildFontStyle(props);
   const fillPaints = resolveRunFillPaints(props, colorContext);

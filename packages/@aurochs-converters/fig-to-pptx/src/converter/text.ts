@@ -16,7 +16,6 @@
 import type { TextData, TextStyleOverride } from "@aurochs/fig/domain";
 import type { FigPaint, FigColor } from "@aurochs/fig/types";
 import type { TextBody, RegularRun, Paragraph, RunProperties } from "@aurochs-office/pptx/domain/text";
-import type { Points } from "@aurochs-office/drawing-ml/domain/units";
 import { pt } from "@aurochs-office/drawing-ml/domain/units";
 import type { TextAlign, TextAnchor, ParagraphProperties } from "@aurochs-office/pptx/domain/text";
 import { figColorToColor } from "@aurochs-converters/interop-drawing-ml/fig-to-dml";
@@ -172,7 +171,7 @@ function resolveRunProperties(
   const fontSize = override.fontSize ?? textData.fontSize;
 
   const props: RunProperties = {
-    fontSize: pt(fontSize) as Points,
+    fontSize: pt(fontSize),
     fontFamily: fontName.family,
     bold: isBoldStyle(fontName.style),
     italic: isItalicStyle(fontName.style),
@@ -197,7 +196,7 @@ function resolveRunProperties(
  */
 function baseRunProperties(textData: TextData): RunProperties {
   return {
-    fontSize: pt(textData.fontSize) as Points,
+    fontSize: pt(textData.fontSize),
     fontFamily: textData.fontName.family,
     bold: isBoldStyle(textData.fontName.style),
     italic: isItalicStyle(textData.fontName.style),

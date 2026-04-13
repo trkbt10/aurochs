@@ -265,3 +265,75 @@ export const DEFAULT_AUTO_COMPRESS_PICTURES = true;
  * @see ECMA-376-1:2016, Section 19.2.1.26
  */
 export const DEFAULT_BOOKMARK_ID_SEED = 1;
+
+// =============================================================================
+// Chart Rendering Defaults
+// =============================================================================
+
+/**
+ * Default chart series color palette.
+ *
+ * When a chart series has no explicit fill, PowerPoint assigns colors from
+ * the active theme's accent palette. The first 6 entries correspond to
+ * accent1–accent6 of the default Office theme. Entries 7+ are darker/lighter
+ * tint/shade variants that PowerPoint cycles through for additional series.
+ *
+ * These values match the default "Office" theme (Office 2013+).
+ * The 7th and 8th entries are shade variants commonly used by PowerPoint's
+ * built-in chart rendering engine.
+ *
+ * @see ECMA-376 Part 1, Section 21.2 (DrawingML - Charts)
+ * @see DEFAULT_COLOR_SCHEME for the source accent colors
+ */
+export const DEFAULT_CHART_SERIES_COLORS: readonly string[] = [
+  "4472C4", // accent1
+  "ED7D31", // accent2
+  "A5A5A5", // accent3
+  "FFC000", // accent4
+  "5B9BD5", // accent5
+  "70AD47", // accent6
+  "264478", // accent1 shade (darker variant)
+  "9B57A2", // additional series color
+];
+
+/**
+ * Default chart axis line color.
+ *
+ * Per PowerPoint's default chart formatting, axis lines use a medium gray.
+ * This is the default when no explicit axis line style is defined in the chart XML.
+ *
+ * @see ECMA-376 Part 1, Section 21.2.2.15 (c:catAx / c:valAx)
+ */
+export const DEFAULT_CHART_AXIS_COLOR = "595959";
+
+/**
+ * Default chart gridline color.
+ *
+ * PowerPoint's default major gridlines use a light gray. This matches the
+ * default formatting when gridlines are enabled without explicit styling.
+ *
+ * @see ECMA-376 Part 1, Section 21.2.2.106 (c:majorGridlines)
+ */
+export const DEFAULT_CHART_GRIDLINE_COLOR = "D9D9D9";
+
+/**
+ * Default chart text color.
+ *
+ * Chart labels (axis labels, data labels, legend text) default to this
+ * dark gray when no explicit text color is specified.
+ *
+ * @see ECMA-376 Part 1, Section 21.2 (DrawingML - Charts)
+ */
+export const DEFAULT_CHART_TEXT_COLOR = "404040";
+
+/**
+ * Default chart text style.
+ *
+ * PowerPoint's default chart text rendering uses these font properties
+ * when no explicit text style is specified in the chart XML.
+ */
+export const DEFAULT_CHART_TEXT_STYLE = {
+  fontFamily: "Calibri",
+  fontSize: 10,
+  fontWeight: "normal",
+} as const;

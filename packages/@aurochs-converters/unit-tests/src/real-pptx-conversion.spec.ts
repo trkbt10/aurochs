@@ -199,14 +199,22 @@ describe("Chart conversion (bar-chart.pptx)", () => {
   });
 
   it("chart is either converted or warned about", () => {
-    // Check if chart produced children or if a warning was emitted
+    // Check if chart produced children or if a warning was emitted.
+    // Chart conversion now produces a RECTANGLE child with an IMAGE fill
+    // referencing the rendered chart SVG (stored as image/svg+xml in
+    // FigDesignDocument.images via the "chart:" prefix).
     let chartConverted = false;
     for (const page of figDoc.pages) {
       const frames = findNodesByType(page.children, "FRAME");
       for (const frame of frames) {
         if (frame.children && frame.children.length > 0) {
-          // Check if any child has _raw.chartSvg (chart conversion output)
-          const chartChild = frame.children.find((c) => c._raw?.chartSvg);
+          const chartChild = frame.children.find((c) => {
+            if (c.type !== "RECTANGLE") return false;
+            return c.fills.some((f) => {
+              const typeName = typeof f.type === "string" ? f.type : f.type.name;
+              return typeName === "IMAGE" && typeof (f as { imageRef?: string }).imageRef === "string" && (f as { imageRef: string }).imageRef.startsWith("chart:");
+            });
+          });
           if (chartChild) {
             chartConverted = true;
           }

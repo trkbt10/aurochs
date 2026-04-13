@@ -26,7 +26,8 @@ export {
   dmlEffectsToFig,
   dmlTransformToFig,
   diagramShapesToFig,
-  chartToFigNodes,
+  renderChartToSvg,
+  type ChartConversionResult,
   type FigStrokeResult,
   type FigTransformResult,
 } from "./dml-to-fig";

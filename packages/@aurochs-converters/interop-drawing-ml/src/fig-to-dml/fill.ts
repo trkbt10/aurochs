@@ -19,7 +19,6 @@ import type {
 import type {
   BaseFill, GradientStop, GradientFill, SolidFill,
 } from "@aurochs-office/drawing-ml/domain/fill";
-import type { Percent, Degrees } from "@aurochs-office/drawing-ml/domain/units";
 import { pct, deg } from "@aurochs-office/drawing-ml/domain/units";
 import { figColorToColor } from "./color";
 
@@ -108,7 +107,7 @@ function convertLinearGradient(paint: FigGradientPaint, paintOpacity: number): G
   return {
     type: "gradientFill",
     stops: convertGradientStops(paint.gradientStops, paintOpacity),
-    linear: { angle: deg(normalizeAngle(angle)) as Degrees, scaled: false },
+    linear: { angle: deg(normalizeAngle(angle)), scaled: false },
     rotWithShape: true,
   };
 }
@@ -128,10 +127,10 @@ function convertRadialGradient(paint: FigGradientPaint, paintOpacity: number): G
     path: {
       path: "circle",
       fillToRect: {
-        left: pct(cx * 100) as Percent,
-        top: pct(cy * 100) as Percent,
-        right: pct((1 - cx) * 100) as Percent,
-        bottom: pct((1 - cy) * 100) as Percent,
+        left: pct(cx * 100),
+        top: pct(cy * 100),
+        right: pct((1 - cx) * 100),
+        bottom: pct((1 - cy) * 100),
       },
     },
     rotWithShape: true,
@@ -145,10 +144,10 @@ function convertImage(paint: FigImagePaint): BaseFill | undefined {
     resourceId: `fig-image:${paint.imageRef}`,
     stretch: {
       fillRect: {
-        left: pct(0) as Percent,
-        top: pct(0) as Percent,
-        right: pct(0) as Percent,
-        bottom: pct(0) as Percent,
+        left: pct(0),
+        top: pct(0),
+        right: pct(0),
+        bottom: pct(0),
       },
     },
     rotWithShape: true,
@@ -160,7 +159,7 @@ function convertGradientStops(
   paintOpacity: number,
 ): readonly GradientStop[] {
   return stops.map((stop): GradientStop => ({
-    position: pct(stop.position * 100) as Percent,
+    position: pct(stop.position * 100),
     color: figColorToColor(applyPaintOpacity(stop.color, paintOpacity)),
   }));
 }

@@ -8,7 +8,6 @@
 
 import type { FigPaint, FigStrokeWeight, KiwiEnumValue } from "@aurochs/fig/types";
 import type { BaseLine, LineCap, LineJoin } from "@aurochs-office/drawing-ml/domain/line";
-import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import { figFillsToDml } from "./fill";
 
@@ -29,7 +28,7 @@ export function figStrokeToDml(
   if (!fill) return undefined;
 
   return {
-    width: px(width) as Pixels,
+    width: px(width),
     cap: convertCap(strokeCap),
     compound: "sng",
     alignment: "ctr",

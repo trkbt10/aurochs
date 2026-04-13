@@ -25,6 +25,7 @@ import { convertNodes, type ShapeIdCounter } from "./shape";
 import { createResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 import { EMPTY_FONT_SCHEME } from "@aurochs-office/ooxml/domain/font-scheme";
 import { DEFAULT_COLOR_MAPPING } from "@aurochs-office/pptx/domain/color/types";
+import { DEFAULT_COLOR_SCHEME } from "@aurochs-office/pptx/domain";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { FigColor } from "@aurochs/fig/types";
 import { DEFAULT_SLIDE_WIDTH_PX, DEFAULT_SLIDE_HEIGHT_PX } from "@aurochs-office/ooxml/domain/ooxml-units";
@@ -53,8 +54,8 @@ export function convertDocument(
   doc: FigDesignDocument,
   options?: FigToPptxSlideOptions,
 ): PresentationDocument {
-  const slideWidth = options?.slideSize?.width ?? px(DEFAULT_SLIDE_WIDTH_PX) as Pixels;
-  const slideHeight = options?.slideSize?.height ?? px(DEFAULT_SLIDE_HEIGHT_PX) as Pixels;
+  const slideWidth = options?.slideSize?.width ?? px(DEFAULT_SLIDE_WIDTH_PX);
+  const slideHeight = options?.slideSize?.height ?? px(DEFAULT_SLIDE_HEIGHT_PX);
 
   const resourceStore = createResourceStore();
 
@@ -107,8 +108,8 @@ function convertPage(
   const translatedNodes = translateAndScaleNodes(
     page.children,
     bounds,
-    slideWidth as number,
-    slideHeight as number,
+    slideWidth,
+    slideHeight,
   );
 
   const shapes = convertNodes(translatedNodes, idCounter);
@@ -304,20 +305,7 @@ function convertPageBackground(color: FigColor): BaseFill | undefined {
 
 function createDefaultColorContext(): ColorContext {
   return {
-    colorScheme: {
-      dk1: "000000",
-      lt1: "FFFFFF",
-      dk2: "1F497D",
-      lt2: "EEECE1",
-      accent1: "4F81BD",
-      accent2: "C0504D",
-      accent3: "9BBB59",
-      accent4: "8064A2",
-      accent5: "4BACC6",
-      accent6: "F79646",
-      hlink: "0000FF",
-      folHlink: "800080",
-    },
+    colorScheme: { ...DEFAULT_COLOR_SCHEME },
     colorMap: { ...DEFAULT_COLOR_MAPPING } as Record<string, string>,
   };
 }

@@ -524,3 +524,44 @@ function applyColorTransforms(hex: string, transform: ColorTransform): string {
   // Apply terminal transforms (complement, inverse, grayscale)
   return applyTerminalTransform(afterRgb, transform) ?? afterRgb;
 }
+
+// =============================================================================
+// Alpha Resolution
+// =============================================================================
+
+/**
+ * Resolve the effective alpha from a Color's transform.
+ *
+ * Alpha is orthogonal to the RGB color space — resolveColor() handles
+ * only the hex component. This function computes the alpha channel.
+ *
+ * Per ECMA-376 §20.1.2.3:
+ * - alpha: absolute alpha value (Percent 0-100, where 100 = fully opaque)
+ * - alphaMod: multiplier on the current alpha (Percent, as percentage)
+ * - alphaOff: additive offset on the current alpha (Percent, as percentage points)
+ *
+ * Application order per spec: alpha (base) → alphaMod → alphaOff
+ *
+ * @param color - Color domain object (same as resolveColor input)
+ * @returns Alpha in 0-1 range (1 = fully opaque)
+ */
+export function resolveAlpha(color: Color | undefined): number {
+  if (!color?.transform) return 1;
+  const t = color.transform;
+
+  // Base alpha: if specified, use it; otherwise default is 100% (fully opaque)
+  let alpha = t.alpha !== undefined ? (t.alpha as number) / 100 : 1;
+
+  // alphaMod: multiply current alpha by percentage
+  if (t.alphaMod !== undefined) {
+    alpha *= (t.alphaMod as number) / 100;
+  }
+
+  // alphaOff: add percentage-point offset
+  if (t.alphaOff !== undefined) {
+    alpha += (t.alphaOff as number) / 100;
+  }
+
+  // Clamp to [0, 1]
+  return Math.max(0, Math.min(1, alpha));
+}

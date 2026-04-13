@@ -32,7 +32,7 @@ export {
 export type { ColorScheme, ColorMap, ColorContext, ColorResolveContext } from "./color-context";
 
 // Color resolution
-export { resolveColor } from "./color-resolution";
+export { resolveColor, resolveAlpha } from "./color-resolution";
 
 // Fill types
 export type {

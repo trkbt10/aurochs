@@ -11,4 +11,4 @@ export { dmlLineTofig, type FigStrokeResult } from "./line";
 export { dmlEffectsToFig } from "./effects";
 export { dmlTransformToFig, type FigTransformResult } from "./transform";
 export { diagramShapesToFig } from "./diagram";
-export { chartToFigNodes } from "./chart";
+export { renderChartToSvg, type ChartConversionResult } from "./chart";
