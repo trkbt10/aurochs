@@ -1,0 +1,22 @@
+{
+  "name": "@aurochs-converters/unit-tests",
+  "version": "0.11.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "dependencies": {
+    "@aurochs-converters/fig-to-pptx": "workspace:*",
+    "@aurochs-converters/pptx-to-fig": "workspace:*",
+    "@aurochs-converters/interop-drawing-ml": "workspace:*",
+    "@aurochs-builder/fig": "workspace:*",
+    "@aurochs/fig": "workspace:*",
+    "@aurochs-office/drawing-ml": "workspace:*",
+    "@aurochs-office/ooxml": "workspace:*",
+    "@aurochs-office/pptx": "workspace:*"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest --run --config ../../../vitest.config.ts '../../../packages/@aurochs-converters/unit-tests/src'"
+  },
+  "exports": {}
+}

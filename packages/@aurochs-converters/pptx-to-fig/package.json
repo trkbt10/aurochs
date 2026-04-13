@@ -1,0 +1,35 @@
+{
+  "name": "@aurochs-converters/pptx-to-fig",
+  "version": "0.11.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "dependencies": {
+    "@aurochs-builder/fig": "workspace:*",
+    "@aurochs-converters/core": "workspace:*",
+    "@aurochs-converters/interop-drawing-ml": "workspace:*",
+    "@aurochs/fig": "workspace:*",
+    "@aurochs-office/drawing-ml": "workspace:*",
+    "@aurochs-office/ooxml": "workspace:*",
+    "@aurochs-office/pptx": "workspace:*"
+  },
+  "scripts": {
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-converters/pptx-to-fig/src'"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./converter": {
+      "types": "./src/converter/index.ts",
+      "default": "./src/converter/index.ts"
+    },
+    "./converter/*": {
+      "types": "./src/converter/*.ts",
+      "default": "./src/converter/*.ts"
+    }
+  }
+}

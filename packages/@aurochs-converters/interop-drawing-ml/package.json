@@ -1,0 +1,33 @@
+{
+  "name": "@aurochs-converters/interop-drawing-ml",
+  "version": "0.11.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "dependencies": {
+    "@aurochs/fig": "workspace:*",
+    "@aurochs-builder/fig": "workspace:*",
+    "@aurochs-office/drawing-ml": "workspace:*",
+    "@aurochs-office/ooxml": "workspace:*",
+    "@aurochs-office/pptx": "workspace:*"
+  },
+  "scripts": {
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-converters/interop-drawing-ml/src'"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./fig-to-dml": {
+      "types": "./src/fig-to-dml/index.ts",
+      "default": "./src/fig-to-dml/index.ts"
+    },
+    "./dml-to-fig": {
+      "types": "./src/dml-to-fig/index.ts",
+      "default": "./src/dml-to-fig/index.ts"
+    }
+  }
+}
