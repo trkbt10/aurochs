@@ -14,7 +14,7 @@
 
 import type { GraphicsStateOps, OperatorHandler, OperatorHandlerEntry, ParserContext } from "./types";
 import type { PdfColor } from "../../domain";
-import { clamp01 } from "../../domain";
+import { clamp01, DEFAULT_FILL_COLOR, DEFAULT_STROKE_COLOR } from "../../domain";
 import { popNumber, collectColorComponents } from "./stack-ops";
 import {
   evalIccCurve,
@@ -643,7 +643,7 @@ const handleFillColorNWithOptionalName: OperatorHandler = (ctx, gfxOps) => {
       if (pattern.patternType === 1 && pattern.paintType === 2) {
         const base = gfxOps.get().fillPatternUnderlyingColorSpace ?? inferDeviceColorSpaceFromComponentCount(components.length);
         const color = base ? buildDeviceColor(base, components) : null;
-        gfxOps.setFillPatternColor(color ?? { colorSpace: "DeviceRGB", components: [0, 0, 0] });
+        gfxOps.setFillPatternColor(color ?? DEFAULT_FILL_COLOR);
       }
     } else {
       // Pattern color space (`/Pattern`) can be set as: `/Pattern cs /P1 scn`.
@@ -670,7 +670,7 @@ const handleStrokeColorNWithOptionalName: OperatorHandler = (ctx, gfxOps) => {
       if (pattern.patternType === 1 && pattern.paintType === 2) {
         const base = gfxOps.get().strokePatternUnderlyingColorSpace ?? inferDeviceColorSpaceFromComponentCount(components.length);
         const color = base ? buildDeviceColor(base, components) : null;
-        gfxOps.setStrokePatternColor(color ?? { colorSpace: "DeviceRGB", components: [0, 0, 0] });
+        gfxOps.setStrokePatternColor(color ?? DEFAULT_STROKE_COLOR);
       }
     } else {
       gfxOps.setStrokeRgb(0, 0, 0);

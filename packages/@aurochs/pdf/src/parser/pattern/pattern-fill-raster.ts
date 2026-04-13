@@ -17,7 +17,7 @@
  */
 
 import type { PdfBBox, PdfGraphicsState, PdfImage, PdfMatrix, PdfPoint, PdfSoftMask } from "../../domain";
-import { clamp01, invertMatrix, multiplyMatrices, transformPoint } from "../../domain";
+import { clamp01, DEFAULT_FILL_COLOR, invertMatrix, multiplyMatrices, transformPoint } from "../../domain";
 import type { ParsedPath } from "../operator";
 import type { PdfShadingPattern } from "./pattern.types";
 import { rasterizeShadingFill } from "../shading/shading-raster";
@@ -343,7 +343,7 @@ export function rasterizeShadingPatternFillPath(
       softMask: undefined,
       fillPatternName: undefined,
       strokePatternName: undefined,
-      fillColor: { colorSpace: "DeviceRGB", components: [0, 0, 0] },
+      fillColor: DEFAULT_FILL_COLOR,
     } satisfies PdfGraphicsState,
     { shadingMaxSize: options.shadingMaxSize, pageBBox: paintBBox },
   );
