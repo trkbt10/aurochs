@@ -8,10 +8,17 @@
  * - Canvas size derived from actual node bounds (with padding)
  *
  * Selection model (matching Figma):
- * - Single click: selects within current scope (top-level or drilled-down container)
- * - Double-click on frame/group/instance: drills into it (scope → container's children)
- * - Click canvas background / Escape: exit drill-down, clear selection
- * - Layer panel click: directly selects any node at any depth (sets scope automatically)
+ * - Single click selects the deepest (topmost z-order) node at the cursor.
+ *   Clicking inside a frame selects the child element directly, not the
+ *   frame. Clicking empty space inside a frame selects the frame itself.
+ * - Double-click on TEXT nodes enters text editing mode.
+ * - Click canvas background clears selection.
+ * - Right-click shows context menu with copy/paste/duplicate/delete/reorder.
+ *
+ * Implementation: the entire node tree is flattened into absolute-coordinate
+ * hit-area bounds (pre-order traversal). Children's hit areas sit above
+ * their parents in the SVG z-stack, so the browser's native event dispatch
+ * delivers the deepest node's ID on click.
  *
  * Composes:
  * - EditorCanvas (from editor-controls) for viewport, selection, interaction
@@ -27,12 +34,7 @@ import type { FigNodeId, FigDesignNode } from "@aurochs/fig/domain";
 import { findNodeById } from "@aurochs-builder/fig/node-ops";
 import { useFigEditor } from "../context/FigEditorContext";
 import { FigPageRenderer } from "./FigPageRenderer";
-import {
-  getPageNodeBounds,
-  getChildBoundsInScope,
-  computeAbsoluteTransform,
-  computeAbsoluteNodeBounds,
-} from "./interaction/bounds";
+import { flattenAllNodeBounds } from "./interaction/bounds";
 import { isSelectMode } from "../context/fig-editor/types";
 import type { MenuEntry } from "@aurochs-ui/ui-components/context-menu";
 import { ContextMenu } from "@aurochs-ui/ui-components/context-menu";
@@ -45,11 +47,6 @@ import { ContextMenu } from "@aurochs-ui/ui-components/context-menu";
 const MIN_CANVAS_SIZE = 800;
 /** Padding around content for breathing room */
 const CANVAS_PADDING = 200;
-
-/**
- * Node types that can be drilled into (have meaningful children).
- */
-const DRILLABLE_TYPES = new Set(["FRAME", "GROUP", "COMPONENT", "COMPONENT_SET", "SYMBOL", "INSTANCE"]);
 
 /**
  * Compute canvas dimensions that enclose all nodes with padding.
@@ -124,8 +121,8 @@ type ContextMenuState = {
  *
  * Provides the interactive editing surface with:
  * - Rendering of the active page's nodes
- * - Selection via click, multi-select, marquee
- * - Drill-down selection (double-click to enter frames)
+ * - Direct selection of any node at any depth (deepest-first hit testing)
+ * - Multi-select via Shift/Cmd+click and marquee drag
  * - Drag to move, resize, rotate
  * - Right-click context menu
  * - Zoom and pan (unclamped — infinite canvas)
@@ -139,7 +136,6 @@ export function FigEditorCanvas() {
     drag,
     creationMode,
     textEdit,
-    drillDownScope,
   } = useFigEditor();
 
   const canvasRef = useRef<EditorCanvasHandle>(null);
@@ -147,84 +143,28 @@ export function FigEditorCanvas() {
   const [contextMenu, setContextMenu] = useState<ContextMenuState>(null);
 
   // =========================================================================
-  // Item bounds — depends on drill-down scope + selection
+  // Item bounds — flattened tree with absolute coordinates
   // =========================================================================
 
   /**
-   * Compute the set of bounds for the current interaction scope.
+   * Flatten the entire node tree into absolute-coordinate bounds.
    *
-   * This serves two purposes:
-   * 1. Hit areas: transparent SVG rects the user can click/drag
-   * 2. Selection boxes: EditorCanvas looks up selected IDs in this array
+   * Every visible node (containers and leaves alike) gets a hit area.
+   * The array is in pre-order (parent before children), so children's
+   * hit-area rects are rendered AFTER (and thus ON TOP OF) their parents
+   * in the SVG z-stack. Clicking at a position covered by a leaf will
+   * hit the leaf's rect, not the ancestor frame's rect — matching
+   * Figma's "click-through to deepest element" behavior.
    *
-   * The bounds set consists of:
-   * - Scope-level bounds: direct children of the current scope
-   *   (top-level page children when no drill-down, or the drilled-into
-   *   container's children)
-   * - Out-of-scope selected nodes: when the user selects a deeply nested
-   *   node from the layer panel, we must include its absolute bounds so
-   *   EditorCanvas can display the selection box. These are computed by
-   *   walking the tree and composing ancestor transforms.
-   *
-   * This avoids the alternative of flattening all nodes (which would
-   * bypass the drill-down scope model) or modifying EditorCanvas (which
-   * would break the shared component's generality).
+   * Clicking empty space inside a frame (not covered by any child) will
+   * hit the frame's own rect, selecting the frame itself.
    */
   const itemBounds = useMemo(() => {
     if (!activePage) {
       return [];
     }
-
-    // Step 1: Collect scope-level bounds
-    let scopeBounds: readonly { readonly id: string; readonly x: number; readonly y: number; readonly width: number; readonly height: number; readonly rotation: number }[];
-
-    if (drillDownScope) {
-      const scopeNode = findNodeById(activePage.children, drillDownScope.scopeNodeId);
-      if (scopeNode) {
-        const scopeAbsTransform = computeAbsoluteTransform(
-          activePage.children,
-          drillDownScope.scopeNodeId,
-        );
-        if (scopeAbsTransform) {
-          scopeBounds = getChildBoundsInScope(scopeNode, scopeAbsTransform);
-        } else {
-          scopeBounds = getPageNodeBounds(activePage.children);
-        }
-      } else {
-        // Scope node not found — fall back to top level
-        scopeBounds = getPageNodeBounds(activePage.children);
-      }
-    } else {
-      scopeBounds = getPageNodeBounds(activePage.children);
-    }
-
-    // Step 2: Check if any selected node is missing from scope bounds
-    if (nodeSelection.selectedIds.length === 0) {
-      return scopeBounds;
-    }
-
-    const scopeIdSet = new Set(scopeBounds.map((b) => b.id));
-    const missingIds = nodeSelection.selectedIds.filter((id) => !scopeIdSet.has(id));
-
-    if (missingIds.length === 0) {
-      return scopeBounds;
-    }
-
-    // Step 3: Compute absolute bounds for out-of-scope selected nodes
-    const extraBounds: { readonly id: string; readonly x: number; readonly y: number; readonly width: number; readonly height: number; readonly rotation: number }[] = [];
-    for (const id of missingIds) {
-      const bounds = computeAbsoluteNodeBounds(activePage.children, id);
-      if (bounds) {
-        extraBounds.push(bounds);
-      }
-    }
-
-    if (extraBounds.length === 0) {
-      return scopeBounds;
-    }
-
-    return [...scopeBounds, ...extraBounds];
-  }, [activePage, drillDownScope, nodeSelection.selectedIds]);
+    return flattenAllNodeBounds(activePage.children);
+  }, [activePage]);
 
   // Compute canvas size from actual content bounds (always from top-level)
   const canvasSize = useMemo(
@@ -273,11 +213,10 @@ export function FigEditorCanvas() {
   );
 
   /**
-   * Double-click handler: drill into frames/groups/instances.
+   * Double-click handler: enter text editing for TEXT nodes.
    *
-   * When the user double-clicks a container node, we enter drill-down mode,
-   * making its children the selectable targets. For TEXT nodes, we enter
-   * text editing mode instead.
+   * Since clicking already selects the deepest node at the cursor,
+   * double-click's purpose is limited to entering text edit mode.
    */
   const handleDoubleClick = useCallback(
     (id: string, _coords: CanvasPageCoords, _e: React.MouseEvent) => {
@@ -286,20 +225,8 @@ export function FigEditorCanvas() {
       }
 
       const node = findNodeById(activePage.children, id as FigNodeId);
-      if (!node) {
-        return;
-      }
-
-      // TEXT nodes: enter text editing
-      if (node.type === "TEXT") {
+      if (node?.type === "TEXT") {
         dispatch({ type: "ENTER_TEXT_EDIT", nodeId: id as FigNodeId });
-        return;
-      }
-
-      // Container types: drill into children
-      if (DRILLABLE_TYPES.has(node.type) && node.children && node.children.length > 0) {
-        dispatch({ type: "DRILL_INTO", scopeNodeId: id as FigNodeId });
-        return;
       }
     },
     [dispatch, activePage],
@@ -309,44 +236,18 @@ export function FigEditorCanvas() {
   // Canvas (background) events
   // =========================================================================
 
-  /**
-   * Canvas background pointerdown: exit drill-down scope if active.
-   *
-   * Only pointerdown handles scope exit (not click), because EditorCanvas
-   * fires both onCanvasPointerDown and onCanvasClick for the same user
-   * gesture. EXIT_DRILL_DOWN already clears selection, so we don't need
-   * to also dispatch CLEAR_NODE_SELECTION.
-   */
   const handleCanvasPointerDown = useCallback(
     (_coords: CanvasPageCoords, _e: React.PointerEvent) => {
-      if (drillDownScope) {
-        dispatch({ type: "EXIT_DRILL_DOWN" });
-        return;
-      }
       dispatch({ type: "CLEAR_NODE_SELECTION" });
     },
-    [dispatch, drillDownScope],
+    [dispatch],
   );
 
-  /**
-   * Canvas background click: clear selection (when not drilled down).
-   *
-   * When drilled down, EXIT_DRILL_DOWN was already dispatched on pointerdown,
-   * so we check whether the scope has been exited to avoid redundant dispatch.
-   * Since the closure captures the render-time drillDownScope, we guard with
-   * the same check.
-   */
   const handleCanvasClick = useCallback(
     (_coords: CanvasPageCoords, _e: React.MouseEvent) => {
-      // If drillDownScope was active at render time, pointerdown already
-      // dispatched EXIT_DRILL_DOWN. Don't dispatch CLEAR_NODE_SELECTION
-      // again — it would be redundant (EXIT_DRILL_DOWN clears selection).
-      if (drillDownScope) {
-        return;
-      }
       dispatch({ type: "CLEAR_NODE_SELECTION" });
     },
-    [dispatch, drillDownScope],
+    [dispatch],
   );
 
   // =========================================================================

@@ -96,35 +96,53 @@ export function getNodeBoundsForCanvas(node: FigDesignNode): NodeBounds {
  *
  * Returns a flat array of bounds for EditorCanvas's itemBounds prop.
  * Only includes direct children (not deeply nested nodes).
- * Use getNodeBoundsInScope() for drill-down selection.
  */
 export function getPageNodeBounds(nodes: readonly FigDesignNode[]): readonly NodeBounds[] {
   return nodes.map(getNodeBoundsForCanvas);
 }
 
 /**
- * Calculate bounds for direct children of a scope node.
+ * Recursively flatten all nodes in the tree into a flat array of
+ * absolute-coordinate bounds.
  *
- * When the user drills down into a frame/group by double-clicking,
- * we need bounds for that container's direct children, transformed
- * to absolute page coordinates.
+ * The traversal is pre-order (parent before children). Since EditorCanvas
+ * renders hit-area rects in array order, children's hit areas overlap and
+ * sit above their parents in the SVG z-stack. This means clicking at a
+ * position occupied by a leaf node will hit the leaf — not the ancestor
+ * frame — matching Figma's "click-through to deepest element" behavior.
  *
- * @param scopeNode - The container node the user has drilled into
- * @param ancestorTransform - The composed transform from page root to scopeNode (inclusive)
- * @returns Bounds of scopeNode's direct children in page coordinates
+ * Every visible node gets a hit area, including containers (frames,
+ * groups). When the user needs to select a frame itself (rather than a
+ * child inside it), the frame's hit area still exists beneath its
+ * children's hit areas. Clicking an empty region inside the frame (where
+ * no child covers) will therefore select the frame.
+ *
+ * @param nodes - Page's direct children (root of the design tree)
+ * @returns Flat array of NodeBounds in pre-order, with absolute coordinates
  */
-export function getChildBoundsInScope(
-  scopeNode: FigDesignNode,
-  ancestorTransform: FigMatrix,
+export function flattenAllNodeBounds(
+  nodes: readonly FigDesignNode[],
 ): readonly NodeBounds[] {
-  if (!scopeNode.children || scopeNode.children.length === 0) {
-    return [];
-  }
+  const result: NodeBounds[] = [];
+  flattenRecursive(nodes, IDENTITY_MATRIX, result);
+  return result;
+}
 
-  return scopeNode.children.map((child) => {
-    const childAbsoluteTransform = composeTransforms(ancestorTransform, child.transform);
-    return getNodeBoundsWithAbsoluteTransform(child, childAbsoluteTransform);
-  });
+function flattenRecursive(
+  nodes: readonly FigDesignNode[],
+  parentTransform: FigMatrix,
+  out: NodeBounds[],
+): void {
+  for (const node of nodes) {
+    if (!node.visible) {
+      continue;
+    }
+    const absTransform = composeTransforms(parentTransform, node.transform);
+    out.push(getNodeBoundsWithAbsoluteTransform(node, absTransform));
+    if (node.children && node.children.length > 0) {
+      flattenRecursive(node.children, absTransform, out);
+    }
+  }
 }
 
 /**

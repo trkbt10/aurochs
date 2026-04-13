@@ -144,7 +144,7 @@ type LayerTreeProps = {
 };
 
 function LayerTree({ nodes, depth, isInstanceContext }: LayerTreeProps) {
-  const { nodeSelection, dispatch, drillDownScope } = useFigEditor();
+  const { nodeSelection, dispatch } = useFigEditor();
   const { expandedIds, toggle } = useExpansion();
 
   const handlePointerDown = useCallback(
@@ -155,17 +155,6 @@ function LayerTree({ nodes, depth, isInstanceContext }: LayerTreeProps) {
         nodeId,
         addToSelection,
       });
-    },
-    [dispatch],
-  );
-
-  const handleDoubleClick = useCallback(
-    (nodeId: FigNodeId, node: FigDesignNode) => () => {
-      // Double-click on a container: drill into it on the canvas
-      const drillableTypes = new Set(["FRAME", "GROUP", "COMPONENT", "COMPONENT_SET", "SYMBOL", "INSTANCE"]);
-      if (drillableTypes.has(node.type) && node.children && node.children.length > 0) {
-        dispatch({ type: "DRILL_INTO", scopeNodeId: nodeId });
-      }
     },
     [dispatch],
   );
@@ -192,7 +181,6 @@ function LayerTree({ nodes, depth, isInstanceContext }: LayerTreeProps) {
               expanded={expanded}
               onToggle={hasChildren ? () => toggle(node.id) : undefined}
               onPointerDown={handlePointerDown(node.id as FigNodeId)}
-              onDoubleClick={handleDoubleClick(node.id as FigNodeId, node)}
               showVisibilityToggle={false}
               showLockToggle={false}
               badge={isInstance ? <InstanceBadge /> : undefined}

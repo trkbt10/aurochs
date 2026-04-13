@@ -72,7 +72,7 @@ export function useFigKeyboard({
         return;
       }
 
-      // Escape: Clear selection or exit text edit / drill-down
+      // Escape: Clear selection or exit text edit
       if (e.key === "Escape") {
         e.preventDefault();
         dispatch({ type: "EXIT_TEXT_EDIT" });

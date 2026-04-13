@@ -51,37 +51,8 @@ export const SELECTION_HANDLERS: HandlerMap = {
   },
 
   CLEAR_NODE_SELECTION(state) {
-    // If there's a selection, just clear it (stay in drill-down scope).
-    // If already empty, exit drill-down scope.
-    // This matches Figma's Escape behavior:
-    //   1st Escape: clear selection within scope
-    //   2nd Escape: exit drill-down scope
-    if (state.nodeSelection.selectedIds.length > 0) {
-      return {
-        ...state,
-        nodeSelection: createEmptySelection<FigNodeId>(),
-      };
-    }
-
     return {
       ...state,
-      nodeSelection: createEmptySelection<FigNodeId>(),
-      drillDownScope: undefined,
-    };
-  },
-
-  DRILL_INTO(state, action) {
-    return {
-      ...state,
-      drillDownScope: { scopeNodeId: action.scopeNodeId },
-      nodeSelection: createEmptySelection<FigNodeId>(),
-    };
-  },
-
-  EXIT_DRILL_DOWN(state) {
-    return {
-      ...state,
-      drillDownScope: undefined,
       nodeSelection: createEmptySelection<FigNodeId>(),
     };
   },
