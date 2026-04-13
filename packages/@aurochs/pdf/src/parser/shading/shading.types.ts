@@ -5,26 +5,24 @@
  *
  * This lives in the parser layer (not domain) because PPTX output cannot
  * represent shadings directly; we rasterize them to `PdfImage`.
+ *
+ * PDF Function types live in ../function/types.ts — shading references
+ * the canonical PdfFunction type directly.
  */
 
 import type { PdfColorSpace, PdfMatrix } from "../../domain";
+import type { PdfFunction } from "../function/types";
 
-export type PdfShadingFunctionType2 = Readonly<{
-  readonly type: "FunctionType2";
-  readonly c0: readonly number[];
-  readonly c1: readonly number[];
-  readonly n: number;
-  readonly domain?: readonly [number, number];
-}>;
-
-export type PdfShadingFunction = PdfShadingFunctionType2;
+// ---------------------------------------------------------------------------
+// Shading-specific types
+// ---------------------------------------------------------------------------
 
 export type PdfAxialShading = Readonly<{
   readonly shadingType: 2;
   readonly colorSpace: Extract<PdfColorSpace, "DeviceGray" | "DeviceRGB">;
   readonly coords: readonly [number, number, number, number];
   readonly extend: readonly [boolean, boolean];
-  readonly fn: PdfShadingFunction;
+  readonly fn: PdfFunction;
 }>;
 
 export type PdfRadialShading = Readonly<{
@@ -32,7 +30,7 @@ export type PdfRadialShading = Readonly<{
   readonly colorSpace: Extract<PdfColorSpace, "DeviceGray" | "DeviceRGB">;
   readonly coords: readonly [number, number, number, number, number, number];
   readonly extend: readonly [boolean, boolean];
-  readonly fn: PdfShadingFunction;
+  readonly fn: PdfFunction;
 }>;
 
 export type PdfShading = PdfAxialShading | PdfRadialShading;

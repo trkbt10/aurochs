@@ -3,14 +3,19 @@
  *
  * Extract `/Shading` resources from native PDF objects into a parser-friendly model.
  *
- * Supported subset (initial):
- * - ShadingType 2 (axial)
+ * Supported subset:
+ * - ShadingType 2 (axial), ShadingType 3 (radial)
  * - ColorSpace: /DeviceRGB, /DeviceGray
- * - Function: FunctionType 2 (exponential interpolation)
+ * - Function: FunctionType 0 (sampled), FunctionType 2 (exponential interpolation)
  */
 
 import type { NativePdfPage, PdfArray, PdfBool, PdfDict, PdfNumber, PdfObject, PdfStream } from "../../native";
-import type { PdfShading, PdfShadingFunctionType2 } from "./shading.types";
+import type { PdfShading } from "./shading.types";
+import { parsePdfFunction } from "../function/parse";
+
+// =============================================================================
+// Internal helpers for shading-specific parsing
+// =============================================================================
 
 function asDict(obj: PdfObject | undefined): PdfDict | null {
   return obj?.type === "dict" ? obj : null;
@@ -33,14 +38,14 @@ function dictGet(dict: PdfDict, key: string): PdfObject | undefined {
 }
 
 function resolve(page: NativePdfPage, obj: PdfObject | undefined): PdfObject | undefined {
-  if (!obj) {return undefined;}
+  if (!obj) { return undefined; }
   return page.lookup(obj);
 }
 
 function resolveDictOrStreamDict(page: NativePdfPage, obj: PdfObject | undefined): PdfDict | null {
   const resolved = resolve(page, obj);
   const dict = asDict(resolved);
-  if (dict) {return dict;}
+  if (dict) { return dict; }
   const stream = asStream(resolved);
   return stream?.dict ?? null;
 }
@@ -48,12 +53,12 @@ function resolveDictOrStreamDict(page: NativePdfPage, obj: PdfObject | undefined
 function parseNumberArray(page: NativePdfPage, obj: PdfObject | undefined, expectedLen: number): number[] | null {
   const resolved = resolve(page, obj);
   const arr = asArray(resolved);
-  if (!arr) {return null;}
-  if (expectedLen >= 0 && arr.items.length !== expectedLen) {return null;}
+  if (!arr) { return null; }
+  if (expectedLen >= 0 && arr.items.length !== expectedLen) { return null; }
   const nums: number[] = [];
   for (const item of arr.items) {
     const n = asNumber(resolve(page, item))?.value;
-    if (n == null || !Number.isFinite(n)) {return null;}
+    if (n == null || !Number.isFinite(n)) { return null; }
     nums.push(n);
   }
   return nums;
@@ -62,93 +67,46 @@ function parseNumberArray(page: NativePdfPage, obj: PdfObject | undefined, expec
 function parseBoolArray2(page: NativePdfPage, obj: PdfObject | undefined): readonly [boolean, boolean] | null {
   const resolved = resolve(page, obj);
   const arr = asArray(resolved);
-  if (!arr || arr.items.length !== 2) {return null;}
+  if (!arr || arr.items.length !== 2) { return null; }
   const b0 = asBool(resolve(page, arr.items[0]))?.value;
   const b1 = asBool(resolve(page, arr.items[1]))?.value;
-  if (b0 == null || b1 == null) {return null;}
+  if (b0 == null || b1 == null) { return null; }
   return [b0, b1];
 }
 
 function parseColorSpace(page: NativePdfPage, obj: PdfObject | undefined): "DeviceGray" | "DeviceRGB" | null {
   const resolved = resolve(page, obj);
-  if (!resolved) {return null;}
+  if (!resolved) { return null; }
   if (resolved.type === "name") {
-    if (resolved.value === "DeviceGray") {return "DeviceGray";}
-    if (resolved.value === "DeviceRGB") {return "DeviceRGB";}
+    if (resolved.value === "DeviceGray") { return "DeviceGray"; }
+    if (resolved.value === "DeviceRGB") { return "DeviceRGB"; }
     return null;
   }
   // Color space arrays (ICCBased, CalRGB, etc) are not supported yet.
   return null;
 }
 
-export function parseFunctionType2(page: NativePdfPage, obj: PdfObject | undefined): PdfShadingFunctionType2 | null {
-  const dict = resolveDictOrStreamDict(page, obj);
-  if (!dict) {return null;}
-
-  const ft = asNumber(resolve(page, dictGet(dict, "FunctionType")) )?.value;
-  if (ft !== 2) {return null;}
-
-  const c0 = parseNumberArray(page, dictGet(dict, "C0"), -1) ?? [];
-  const c1 = parseNumberArray(page, dictGet(dict, "C1"), -1) ?? [];
-
-  const n = asNumber(resolve(page, dictGet(dict, "N")))?.value;
-  if (n == null || !Number.isFinite(n)) {return null;}
-
-  const domainNums = parseNumberArray(page, dictGet(dict, "Domain"), 2);
-  const parseDomain = (): readonly [number, number] | undefined =>
-    domainNums ? [domainNums[0] ?? 0, domainNums[1] ?? 1] : undefined;
-  const domain = parseDomain();
-
-  return { type: "FunctionType2", c0, c1, n, domain };
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+// =============================================================================
+// Shading object parsing
+// =============================================================================
 
 /** Parse a shading dictionary or stream into a PdfShading object. */
 export function parseShadingObjectNative(page: NativePdfPage, obj: PdfObject | undefined): PdfShading | null {
   const dict = resolveDictOrStreamDict(page, obj);
-  if (!dict) {return null;}
+  if (!dict) { return null; }
 
   const st = asNumber(resolve(page, dictGet(dict, "ShadingType")))?.value;
   const colorSpace = parseColorSpace(page, dictGet(dict, "ColorSpace"));
-  if (!colorSpace) {return null;}
+  if (!colorSpace) { return null; }
 
-  const fn = parseFunctionType2(page, dictGet(dict, "Function"));
-  if (!fn) {return null;}
+  const fn = parsePdfFunction(page, dictGet(dict, "Function"));
+  if (!fn) { return null; }
 
   const extend = parseBoolArray2(page, dictGet(dict, "Extend")) ?? ([false, false] as const);
 
   if (st === 2) {
     const coordsNums = parseNumberArray(page, dictGet(dict, "Coords"), 4);
-    if (!coordsNums) {return null;}
+    if (!coordsNums) { return null; }
     const coords: readonly [number, number, number, number] = [
       coordsNums[0] ?? 0,
       coordsNums[1] ?? 0,
@@ -167,7 +125,7 @@ export function parseShadingObjectNative(page: NativePdfPage, obj: PdfObject | u
 
   if (st === 3) {
     const coordsNums = parseNumberArray(page, dictGet(dict, "Coords"), 6);
-    if (!coordsNums) {return null;}
+    if (!coordsNums) { return null; }
     const coords: readonly [number, number, number, number, number, number] = [
       coordsNums[0] ?? 0,
       coordsNums[1] ?? 0,
@@ -189,42 +147,12 @@ export function parseShadingObjectNative(page: NativePdfPage, obj: PdfObject | u
   return null;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /** Extract shading definitions from PDF page resources. */
 export function extractShadingFromResourcesNative(page: NativePdfPage, resources: PdfDict | null): ReadonlyMap<string, PdfShading> {
-  if (!resources) {return new Map();}
+  if (!resources) { return new Map(); }
 
   const shadingDict = asDict(resolve(page, dictGet(resources, "Shading")));
-  if (!shadingDict || shadingDict.map.size === 0) {return new Map();}
+  if (!shadingDict || shadingDict.map.size === 0) { return new Map(); }
 
   const out = new Map<string, PdfShading>();
   for (const [key, value] of shadingDict.map.entries()) {
@@ -235,36 +163,6 @@ export function extractShadingFromResourcesNative(page: NativePdfPage, resources
   }
   return out;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 /** Extract all shadings from a PDF page's default resources. */
 export function extractShadingNative(page: NativePdfPage): ReadonlyMap<string, PdfShading> {

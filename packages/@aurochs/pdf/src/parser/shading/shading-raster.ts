@@ -9,7 +9,11 @@
 
 import type { PdfBBox, PdfGraphicsState, PdfImage, PdfMatrix, PdfSoftMask } from "../../domain";
 import { clamp01, invertMatrix, multiplyMatrices, transformPoint } from "../../domain";
-import type { PdfShading, PdfShadingFunctionType2, ShadingRasterizeOptions } from "./shading.types";
+import type { PdfShading, ShadingRasterizeOptions } from "./shading.types";
+import {
+  evaluatePdfFunctionType0,
+  evaluatePdfFunctionType2,
+} from "../function/evaluate";
 
 function sampleSoftMaskAlphaInMaskSpace(mask: PdfSoftMask, x: number, y: number): number {
   const [llx, lly, urx, ury] = mask.bbox;
@@ -40,17 +44,6 @@ function computeGridSize(bbox: PdfBBox, maxSize: number): { readonly width: numb
   const width = Math.max(1, Math.round(bw * scale));
   const height = Math.max(1, Math.round(bh * scale));
   return { width, height };
-}
-
-export function evaluateFunctionType2(fn: PdfShadingFunctionType2, t: number, componentCount: number): readonly number[] {
-  const tt = Math.pow(t, fn.n);
-  const out: number[] = [];
-  for (let i = 0; i < componentCount; i += 1) {
-    const c0 = fn.c0[i] ?? 0;
-    const c1 = fn.c1[i] ?? 0;
-    out.push(c0 + tt * (c1 - c0));
-  }
-  return out;
 }
 
 function clamp01OrZero(v: number): number {
@@ -237,15 +230,22 @@ export function rasterizeShadingFill(
       }
 
       const t = clamp01(rawT);
-      const domain = shading.fn.domain ?? ([0, 1] as const);
-      const [d0, d1] = domain;
-      const x = d0 + t * (d1 - d0);
-      const xClamped = clampToDomain(x, shading.fn.domain);
-
       const componentCount = shading.colorSpace === "DeviceRGB" ? 3 : 1;
       const evaluateFunction = (): readonly number[] => {
-        if (shading.fn.type === "FunctionType2") {
-          return evaluateFunctionType2(shading.fn, xClamped, componentCount);
+        const fn = shading.fn;
+        if (fn.type === "FunctionType2") {
+          const domain = fn.domain ?? ([0, 1] as const);
+          const [d0, d1] = domain;
+          const x = d0 + t * (d1 - d0);
+          const xClamped = clampToDomain(x, fn.domain);
+          return evaluatePdfFunctionType2(fn, xClamped, componentCount);
+        }
+        if (fn.type === "FunctionType0") {
+          const d0 = fn.domain[0] ?? 0;
+          const d1 = fn.domain[1] ?? 1;
+          const x = d0 + t * (d1 - d0);
+          const xClamped = Math.min(d1, Math.max(d0, x));
+          return evaluatePdfFunctionType0(fn, [xClamped]);
         }
         return new Array(componentCount).fill(0) as readonly number[];
       };

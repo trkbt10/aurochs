@@ -23,7 +23,7 @@ import {
   type ParsedIccProfile,
 } from "../color/icc-profile.native";
 import type { ParsedNamedColorSpace } from "../color/color-space.native";
-import { evaluateFunctionType2 } from "../shading/shading-raster";
+import { evaluatePdfFunction } from "../function/evaluate";
 
 // =============================================================================
 // Gray Color Handlers
@@ -352,8 +352,9 @@ function alternateComponentsToRgb(
  * Separation → RGB via tintTransform.
  *
  * PDF spec (ISO 32000-1, 8.6.6.4): Separation color spaces have
- * a tintTransform (Type 2 exponential interpolation) that maps a single
- * tint value [0,1] to components in the alternate color space.
+ * a tintTransform that maps a single tint value [0,1] to components
+ * in the alternate color space. The tintTransform can be FunctionType 0
+ * (sampled) or FunctionType 2 (exponential interpolation).
  *
  * tintTransform is null only when the PDF dict/stream could not be
  * resolved (broken reference etc.), which should not occur in a
@@ -366,7 +367,7 @@ function resolveSeparationToRgb(
 ): readonly [number, number, number] | null {
   if (!cs.tintTransform) {return null;}
   const tint = clamp01(components[0] ?? 0);
-  const alternateComps = evaluateFunctionType2(cs.tintTransform, tint, cs.alternateComponents);
+  const alternateComps = evaluatePdfFunction(cs.tintTransform, tint, cs.alternateComponents);
   return alternateComponentsToRgb(cs.alternate, alternateComps);
 }
 
@@ -374,9 +375,8 @@ function resolveSeparationToRgb(
  * DeviceN → RGB via tintTransform.
  *
  * PDF spec (ISO 32000-1, 8.6.6.5): DeviceN has a tintTransform
- * (Type 2 exponential interpolation) that maps tint values to
- * components in the alternate color space. Type 2 is a single-input
- * function, so the first component is used as the input.
+ * that maps tint values to components in the alternate color space.
+ * The first component is used as the input tint value.
  *
  * Returns null only when tintTransform could not be parsed (broken ref).
  */
@@ -386,7 +386,7 @@ function resolveDeviceNToRgb(
 ): readonly [number, number, number] | null {
   if (!cs.tintTransform) {return null;}
   const tint = clamp01(components[0] ?? 0);
-  const alternateComps = evaluateFunctionType2(cs.tintTransform, tint, cs.alternateComponents);
+  const alternateComps = evaluatePdfFunction(cs.tintTransform, tint, cs.alternateComponents);
   return alternateComponentsToRgb(cs.alternate, alternateComps);
 }
 

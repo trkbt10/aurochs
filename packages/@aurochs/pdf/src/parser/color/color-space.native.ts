@@ -5,8 +5,8 @@
 import type { NativePdfPage, PdfArray, PdfDict, PdfName, PdfObject, PdfStream } from "../../native";
 import { decodePdfStream } from "../../native/stream/stream";
 import { parseIccProfile, type ParsedIccProfile } from "./icc-profile.native";
-import { parseFunctionType2 } from "../shading/shading.native";
-import type { PdfShadingFunctionType2 } from "../shading/shading.types";
+import { parsePdfFunction } from "../function/parse";
+import type { PdfFunction } from "../function/types";
 
 type DeviceColorSpace = "DeviceGray" | "DeviceRGB" | "DeviceCMYK";
 
@@ -23,14 +23,14 @@ export type ParsedNamedColorSpace =
       colorantName: string;
       alternate: DeviceColorSpace;
       alternateComponents: number;
-      tintTransform: PdfShadingFunctionType2 | null;
+      tintTransform: PdfFunction | null;
     }>
   | Readonly<{
       kind: "deviceN";
       colorantNames: readonly string[];
       alternate: DeviceColorSpace;
       alternateComponents: number;
-      tintTransform: PdfShadingFunctionType2 | null;
+      tintTransform: PdfFunction | null;
     }>
   | Readonly<{
       kind: "indexed";
@@ -184,7 +184,7 @@ function parseNamedColorSpaceEntry(page: NativePdfPage, entry: PdfObject | undef
       : colorantObj?.type === "string" ? colorantObj.text : "Unknown";
     const alternate = resolveAlternateDeviceColorSpace(page, arr.items[2]);
     if (!alternate) {return null;}
-    const tintTransform = parseFunctionType2(page, arr.items[3]);
+    const tintTransform = parsePdfFunction(page, arr.items[3]);
     return {
       kind: "separation",
       colorantName,
@@ -208,7 +208,7 @@ function parseNamedColorSpaceEntry(page: NativePdfPage, entry: PdfObject | undef
     }
     const alternate = resolveAlternateDeviceColorSpace(page, arr.items[2]);
     if (!alternate) {return null;}
-    const tintTransform = parseFunctionType2(page, arr.items[3]);
+    const tintTransform = parsePdfFunction(page, arr.items[3]);
     return {
       kind: "deviceN",
       colorantNames,
