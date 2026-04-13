@@ -18,7 +18,7 @@ import type { PdfBBox, PdfColor, PdfGraphicsState, PdfImage, PdfMatrix, PdfPathO
 import {
   clamp01,
   cmykToRgb,
-  createDefaultGraphicsState,
+  createGraphicsStateStack,
   grayToRgb,
   invertMatrix,
   multiplyMatrices,
@@ -330,18 +330,15 @@ function parsePatternCellShapes(pattern: PdfTilingPattern): readonly CellShape[]
   type Operand = number | string | readonly (number | string)[];
   // Parser state machine: operandStack accumulates operands until an operator consumes them,
   // currentPath accumulates path operations until a paint operator emits them,
-  // gs is the current graphics state, modified by color/transform operators
+  // gsStack is the canonical GraphicsStateStack managing color/transform state
+  const gsStack = createGraphicsStateStack();
   const parserState: {
     operandStack: Operand[];
     currentPath: PdfPathOp[];
-    gs: PdfGraphicsState;
   } = {
     operandStack: [],
     currentPath: [],
-    gs: createDefaultGraphicsState(),
   };
-
-  const gsStack: PdfGraphicsState[] = [];
 
   const popNumberOperand = (): number | null => {
     const v = parserState.operandStack.length > 0 ? parserState.operandStack[parserState.operandStack.length - 1] : undefined;
@@ -349,29 +346,20 @@ function parsePatternCellShapes(pattern: PdfTilingPattern): readonly CellShape[]
     return typeof v === "number" && Number.isFinite(v) ? v : null;
   };
 
-  const setFillGray = (g: number): void => {
-    parserState.gs = { ...parserState.gs, fillColor: { colorSpace: "DeviceGray", components: [g] } };
-  };
-  const setFillRgb = (r: number, g: number, b: number): void => {
-    parserState.gs = { ...parserState.gs, fillColor: { colorSpace: "DeviceRGB", components: [r, g, b] } };
-  };
-  const setFillCmyk = ({ c, m, y, k }: { readonly c: number; readonly m: number; readonly y: number; readonly k: number }): void => {
-    parserState.gs = { ...parserState.gs, fillColor: { colorSpace: "DeviceCMYK", components: [c, m, y, k] } };
-  };
-
   const emitFill = (fillRule: "nonzero" | "evenodd"): void => {
     if (parserState.currentPath.length === 0) {
       parserState.operandStack = [];
       return;
     }
-    const subpaths = flattenSubpaths(parserState.currentPath, parserState.gs.ctm);
+    const gs = gsStack.get();
+    const subpaths = flattenSubpaths(parserState.currentPath, gs.ctm);
     parserState.currentPath = [];
     parserState.operandStack = [];
     if (subpaths.length === 0) {return;}
     const bounds = computeBoundsFromSubpaths(subpaths);
     if (!bounds) {return;}
-    const rgb = colorToRgbBytes(parserState.gs.fillColor);
-    const alphaByte = Math.round(255 * clamp01(parserState.gs.fillAlpha));
+    const rgb = colorToRgbBytes(gs.fillColor);
+    const alphaByte = Math.round(255 * clamp01(gs.fillAlpha));
     out.push({ subpaths, fillRule, rgb, alphaByte, bounds });
   };
 
@@ -394,13 +382,12 @@ function parsePatternCellShapes(pattern: PdfTilingPattern): readonly CellShape[]
 
     switch (t.value) {
       case "q": {
-        gsStack.push(parserState.gs);
+        gsStack.push();
         parserState.operandStack = [];
         break;
       }
       case "Q": {
-        const prev = gsStack.pop();
-        if (prev) {parserState.gs = prev;}
+        gsStack.pop();
         parserState.operandStack = [];
         break;
       }
@@ -413,14 +400,14 @@ function parsePatternCellShapes(pattern: PdfTilingPattern): readonly CellShape[]
         const a = popNumberOperand();
         if (a == null || b == null || c == null || d == null || e == null || f == null) {return null;}
         const m: PdfMatrix = [a, b, c, d, e, f];
-        parserState.gs = { ...parserState.gs, ctm: multiplyMatrices(m, parserState.gs.ctm) };
+        gsStack.concatMatrix(m);
         parserState.operandStack = [];
         break;
       }
       case "g": {
         const g = popNumberOperand();
         if (g == null) {return null;}
-        setFillGray(g);
+        gsStack.setFillGray(g);
         parserState.operandStack = [];
         break;
       }
@@ -429,7 +416,7 @@ function parsePatternCellShapes(pattern: PdfTilingPattern): readonly CellShape[]
         const g = popNumberOperand();
         const r = popNumberOperand();
         if (r == null || g == null || b == null) {return null;}
-        setFillRgb(r, g, b);
+        gsStack.setFillRgb(r, g, b);
         parserState.operandStack = [];
         break;
       }
@@ -439,7 +426,7 @@ function parsePatternCellShapes(pattern: PdfTilingPattern): readonly CellShape[]
         const m = popNumberOperand();
         const c = popNumberOperand();
         if (c == null || m == null || y == null || k == null) {return null;}
-        setFillCmyk({ c, m, y, k });
+        gsStack.setFillCmyk({ c, m, y, k });
         parserState.operandStack = [];
         break;
       }

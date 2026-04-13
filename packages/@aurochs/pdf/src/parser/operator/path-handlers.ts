@@ -12,7 +12,7 @@
 
 import type { PdfPathOp, PdfPaintOp } from "../../domain";
 import type { PdfBBox, PdfMatrix, PdfPoint, PdfSoftMask } from "../../domain";
-import { IDENTITY_MATRIX, invertMatrix, transformPoint } from "../../domain";
+import { DEFAULT_FILL_COLOR, DEFAULT_STROKE_COLOR, IDENTITY_MATRIX, invertMatrix, transformPoint } from "../../domain";
 import type { PdfPattern } from "../pattern/pattern.types";
 import type {
   ParserContext,
@@ -463,8 +463,8 @@ function rasterizeClipPathToMask({
       softMask: { ...renderGrid, matrix: ctmInv },
       fillAlpha: 1,
       strokeAlpha: 1,
-      fillColor: { colorSpace: "DeviceGray", components: [0] },
-      strokeColor: { colorSpace: "DeviceGray", components: [0] },
+      fillColor: DEFAULT_FILL_COLOR,
+      strokeColor: DEFAULT_STROKE_COLOR,
     },
   };
 
