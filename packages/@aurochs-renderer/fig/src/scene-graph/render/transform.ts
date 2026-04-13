@@ -1,11 +1,13 @@
 /**
- * @file Transform utility for React renderer
+ * @file Transform conversion — shared SoT for SceneGraph AffineMatrix → SVG transform
+ *
+ * Both SVG string and React renderers MUST use this function.
  */
 
-import type { AffineMatrix } from "../../scene-graph/types";
+import type { AffineMatrix } from "../types";
 
 /**
- * Convert an AffineMatrix to an SVG transform string.
+ * Convert an AffineMatrix to an SVG transform attribute string.
  * Returns undefined for identity matrices (avoids unnecessary DOM attribute).
  */
 export function matrixToSvgTransform(m: AffineMatrix): string | undefined {

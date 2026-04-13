@@ -10,9 +10,8 @@ import type { FrameNode, SceneNode } from "../../scene-graph/types";
 import { useFigSvgDefs } from "../context/FigSvgDefsContext";
 import type { FigSvgIdGenerator } from "../context/FigSvgDefsContext";
 import { resolveFillAttrs, type FillResult } from "../primitives/fill";
-import { resolveStrokeAttrs } from "../primitives/stroke";
+import { resolveStroke, matrixToSvgTransform } from "../../scene-graph/render";
 import { resolveEffectsFilter, type EffectsResult } from "../primitives/effects";
-import { matrixToSvgTransform } from "../primitives/transform";
 import { SceneNodeRenderer } from "./SceneNodeRenderer";
 
 type Props = {
@@ -42,7 +41,7 @@ function renderBackground(
   if (node.fills.length === 0) {
     return null;
   }
-  const strokeAttrs = node.stroke ? resolveStrokeAttrs(node.stroke) : {};
+  const strokeAttrs = node.stroke ? resolveStroke(node.stroke) : {};
   return (
     <rect
       x={0}

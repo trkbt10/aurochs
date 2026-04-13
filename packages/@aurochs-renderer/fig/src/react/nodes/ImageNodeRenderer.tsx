@@ -6,8 +6,7 @@
 
 import { memo, useMemo } from "react";
 import type { ImageNode } from "../../scene-graph/types";
-import { matrixToSvgTransform } from "../primitives/transform";
-import { uint8ArrayToBase64 } from "../primitives/color";
+import { matrixToSvgTransform, uint8ArrayToBase64 } from "../../scene-graph/render";
 
 type Props = {
   readonly node: ImageNode;

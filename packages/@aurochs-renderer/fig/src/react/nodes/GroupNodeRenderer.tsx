@@ -6,7 +6,7 @@ import { memo } from "react";
 import type { GroupNode } from "../../scene-graph/types";
 import { useFigSvgDefs } from "../context/FigSvgDefsContext";
 import { resolveEffectsFilter } from "../primitives/effects";
-import { matrixToSvgTransform } from "../primitives/transform";
+import { matrixToSvgTransform } from "../../scene-graph/render";
 import { SceneNodeRenderer } from "./SceneNodeRenderer";
 
 type Props = {

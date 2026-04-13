@@ -6,10 +6,8 @@ import { memo } from "react";
 import type { PathNode } from "../../scene-graph/types";
 import { useFigSvgDefs } from "../context/FigSvgDefsContext";
 import { resolveTopFillAttrs } from "../primitives/fill";
-import { resolveStrokeAttrs } from "../primitives/stroke";
+import { resolveStroke, matrixToSvgTransform, contourToSvgD } from "../../scene-graph/render";
 import { resolveEffectsFilter } from "../primitives/effects";
-import { matrixToSvgTransform } from "../primitives/transform";
-import { contourToSvgD } from "../primitives/path";
 
 type Props = {
   readonly node: PathNode;
@@ -20,7 +18,7 @@ function PathNodeRendererImpl({ node }: Props) {
   const transformStr = matrixToSvgTransform(node.transform);
   const effectsResult = resolveEffectsFilter(node.effects, ids);
   const fillResult = resolveTopFillAttrs(node.fills, ids);
-  const strokeAttrs = node.stroke ? resolveStrokeAttrs(node.stroke) : {};
+  const strokeAttrs = node.stroke ? resolveStroke(node.stroke) : {};
 
   if (node.contours.length === 0) {
     return null;

@@ -1,8 +1,10 @@
 /**
- * @file Path command serialization for React renderer
+ * @file Path serialization — shared SoT for SceneGraph PathContour → SVG d attribute
+ *
+ * Both SVG string and React renderers MUST use this function.
  */
 
-import type { PathContour } from "../../scene-graph/types";
+import type { PathContour } from "../types";
 
 /** Serialize a PathContour to an SVG path `d` attribute string */
 export function contourToSvgD(contour: PathContour): string {

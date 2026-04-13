@@ -1,15 +1,21 @@
 /**
- * @file Stroke rendering for React scene graph renderer
+ * @file Stroke resolution — shared SoT for SceneGraph Stroke → SVG stroke attributes
+ *
+ * Both SVG string and React renderers MUST consume this output.
  */
 
-import type { Stroke } from "../../scene-graph/types";
+import type { Stroke } from "../types";
 import { colorToHex } from "./color";
 
 // =============================================================================
-// Types
+// Resolved Types
 // =============================================================================
 
-type StrokeAttrs = {
+/**
+ * SVG stroke attributes resolved from a SceneGraph Stroke.
+ * Field names match SVG attribute names (camelCase for React, kebab-case consumers convert).
+ */
+export type ResolvedStrokeAttrs = {
   readonly stroke: string;
   readonly strokeWidth: number;
   readonly strokeOpacity?: number;
@@ -19,11 +25,13 @@ type StrokeAttrs = {
 };
 
 // =============================================================================
-// Stroke Resolution
+// Resolution
 // =============================================================================
 
-/** Resolve a Stroke to React SVG props (camelCase attribute names). */
-export function resolveStrokeAttrs(stroke: Stroke): StrokeAttrs {
+/**
+ * Resolve a Stroke to SVG stroke attributes.
+ */
+export function resolveStroke(stroke: Stroke): ResolvedStrokeAttrs {
   return {
     stroke: colorToHex(stroke.color),
     strokeWidth: stroke.width,

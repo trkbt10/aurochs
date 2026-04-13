@@ -1,12 +1,17 @@
 /**
- * @file Effects (shadow, blur) rendering for React scene graph renderer
+ * @file Effects rendering for React scene graph renderer
  *
- * Produces SVG filter elements and returns a filter URL reference.
- * Filter defs are returned directly for inline rendering.
+ * Delegates to the shared SoT in scene-graph/render/effects.ts for all
+ * attribute computation. This file only converts ResolvedFilter → React JSX.
  */
 
 import type { ReactNode } from "react";
-import type { Effect, DropShadowEffect, InnerShadowEffect, LayerBlurEffect } from "../../scene-graph/types";
+import type { Effect } from "../../scene-graph/types";
+import {
+  resolveEffects as sharedResolveEffects,
+  type ResolvedFilter,
+  type ResolvedFilterPrimitive,
+} from "../../scene-graph/render";
 
 type IdGenerator = {
   readonly getNextId: (prefix: string) => string;
@@ -19,109 +24,52 @@ export type EffectsResult = {
   readonly defElement: ReactNode;
 };
 
+// =============================================================================
+// Primitive Rendering (ResolvedFilterPrimitive → React JSX)
+// =============================================================================
+
 /**
- * Mutable accumulator for building SVG filter primitives.
- * Encapsulates key generation and shape-established tracking.
+ * Convert a ResolvedFilterPrimitive to a React JSX element.
+ * Exhaustive switch ensures all primitive types are handled.
  */
-type FilterAccumulator = {
-  readonly primitives: ReactNode[];
-  shapeEstablished: boolean;
-  keyCounter: number;
-};
-
-function createFilterAccumulator(): FilterAccumulator {
-  return { primitives: [], shapeEstablished: false, keyCounter: 0 };
-}
-
-function nextKey(acc: FilterAccumulator): number {
-  return acc.keyCounter++;
-}
-
-function buildColorMatrix(c: { r: number; g: number; b: number; a: number }): string {
-  return `0 0 0 0 ${c.r} 0 0 0 0 ${c.g} 0 0 0 0 ${c.b} 0 0 0 ${c.a} 0`;
-}
-
-const ALPHA_BINARIZE_MATRIX = "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0";
-
-function accumulateDropShadow(acc: FilterAccumulator, effect: DropShadowEffect): void {
-  const stdDev = effect.radius / 2;
-  acc.primitives.push(
-    <feFlood key={nextKey(acc)} floodOpacity={0} result="BackgroundImageFix" />,
-    <feColorMatrix key={nextKey(acc)} in="SourceAlpha" type="matrix" values={ALPHA_BINARIZE_MATRIX} result="hardAlpha" />,
-    <feOffset key={nextKey(acc)} dx={effect.offset.x} dy={effect.offset.y} />,
-    <feGaussianBlur key={nextKey(acc)} stdDeviation={stdDev} />,
-    <feColorMatrix key={nextKey(acc)} type="matrix" values={buildColorMatrix(effect.color)} />,
-    <feBlend key={nextKey(acc)} mode="normal" in2="BackgroundImageFix" />,
-    <feBlend key={nextKey(acc)} mode="normal" in="SourceGraphic" in2="effect" result="shape" />,
-  );
-  acc.shapeEstablished = true;
-}
-
-function accumulateInnerShadow(acc: FilterAccumulator, effect: InnerShadowEffect): void {
-  const stdDev = effect.radius / 2;
-
-  // Establish "shape" base if not set by a preceding drop shadow
-  if (!acc.shapeEstablished) {
-    acc.primitives.push(
-      <feFlood key={nextKey(acc)} floodOpacity={0} result="BackgroundImageFix" />,
-      <feBlend key={nextKey(acc)} mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape" />,
-    );
-    acc.shapeEstablished = true;
+function renderPrimitive(p: ResolvedFilterPrimitive, key: number): ReactNode {
+  switch (p.type) {
+    case "feFlood":
+      return <feFlood key={key} floodOpacity={p.floodOpacity} result={p.result} />;
+    case "feColorMatrix":
+      return <feColorMatrix key={key} in={p.in} type={p.matrixType} values={p.values} result={p.result} />;
+    case "feOffset":
+      return <feOffset key={key} dx={p.dx} dy={p.dy} />;
+    case "feGaussianBlur":
+      return <feGaussianBlur key={key} in={p.in} stdDeviation={p.stdDeviation} />;
+    case "feBlend":
+      return <feBlend key={key} mode={p.mode} in={p.in} in2={p.in2} result={p.result} />;
+    case "feComposite":
+      return <feComposite key={key} in2={p.in2} operator={p.operator} k2={p.k2} k3={p.k3} />;
   }
-
-  acc.primitives.push(
-    <feColorMatrix key={nextKey(acc)} in="SourceAlpha" type="matrix" values={ALPHA_BINARIZE_MATRIX} result="hardAlpha" />,
-    <feOffset key={nextKey(acc)} dx={effect.offset.x} dy={effect.offset.y} />,
-    <feGaussianBlur key={nextKey(acc)} stdDeviation={stdDev} />,
-    <feComposite key={nextKey(acc)} in2="hardAlpha" operator="arithmetic" k2={-1} k3={1} />,
-    <feColorMatrix key={nextKey(acc)} type="matrix" values={buildColorMatrix(effect.color)} />,
-    <feBlend key={nextKey(acc)} mode="normal" in2="shape" result="shape" />,
-  );
 }
 
-function accumulateLayerBlur(acc: FilterAccumulator, effect: LayerBlurEffect): void {
-  const stdDev = effect.radius / 2;
-  acc.primitives.push(
-    <feGaussianBlur key={nextKey(acc)} in="SourceGraphic" stdDeviation={stdDev} />,
-  );
+function toEffectsResult(resolved: ResolvedFilter): EffectsResult {
+  const primitiveElements = resolved.primitives.map((p, i) => renderPrimitive(p, i));
+  return {
+    filterAttr: resolved.filterAttr,
+    defElement: <filter id={resolved.id}>{primitiveElements}</filter>,
+  };
 }
+
+// =============================================================================
+// Public API
+// =============================================================================
 
 /**
- * Produce an SVG filter for the given effects and return the filter URL + def element.
- * Returns undefined if no effects produce filter primitives.
+ * Resolve effects to a filter URL and def element.
+ * Delegates computation to scene-graph/render (shared SoT).
  */
 export function resolveEffectsFilter(
   effects: readonly Effect[],
   ids: IdGenerator,
 ): EffectsResult | undefined {
-  if (effects.length === 0) {
-    return undefined;
-  }
-
-  const acc = createFilterAccumulator();
-
-  for (const effect of effects) {
-    switch (effect.type) {
-      case "drop-shadow":
-        accumulateDropShadow(acc, effect);
-        break;
-      case "inner-shadow":
-        accumulateInnerShadow(acc, effect);
-        break;
-      case "layer-blur":
-        accumulateLayerBlur(acc, effect);
-        break;
-      case "background-blur":
-        // Background blur not supported in SVG filter pipeline
-        break;
-    }
-  }
-
-  if (acc.primitives.length === 0) {
-    return undefined;
-  }
-
-  const id = ids.getNextId("filter");
-  const defElement = <filter id={id}>{acc.primitives}</filter>;
-  return { filterAttr: `url(#${id})`, defElement };
+  const resolved = sharedResolveEffects(effects, ids);
+  if (!resolved) return undefined;
+  return toEffectsResult(resolved);
 }

@@ -6,9 +6,9 @@ import { memo } from "react";
 import type { EllipseNode } from "../../scene-graph/types";
 import { useFigSvgDefs } from "../context/FigSvgDefsContext";
 import { resolveTopFillAttrs } from "../primitives/fill";
-import { resolveStrokeAttrs } from "../primitives/stroke";
+import { resolveStroke } from "../../scene-graph/render";
 import { resolveEffectsFilter } from "../primitives/effects";
-import { matrixToSvgTransform } from "../primitives/transform";
+import { matrixToSvgTransform } from "../../scene-graph/render";
 
 type Props = {
   readonly node: EllipseNode;
@@ -19,7 +19,7 @@ function EllipseNodeRendererImpl({ node }: Props) {
   const transformStr = matrixToSvgTransform(node.transform);
   const effectsResult = resolveEffectsFilter(node.effects, ids);
   const fillResult = resolveTopFillAttrs(node.fills, ids);
-  const strokeAttrs = node.stroke ? resolveStrokeAttrs(node.stroke) : {};
+  const strokeAttrs = node.stroke ? resolveStroke(node.stroke) : {};
 
   // Collect inline defs
   const defs: React.ReactNode[] = [];

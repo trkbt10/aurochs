@@ -10,9 +10,7 @@ import { memo } from "react";
 import type { TextNode } from "../../scene-graph/types";
 import { useFigSvgDefs } from "../context/FigSvgDefsContext";
 import { resolveEffectsFilter } from "../primitives/effects";
-import { matrixToSvgTransform } from "../primitives/transform";
-import { colorToHex } from "../primitives/color";
-import { contourToSvgD } from "../primitives/path";
+import { matrixToSvgTransform, colorToHex, contourToSvgD } from "../../scene-graph/render";
 
 type Props = {
   readonly node: TextNode;

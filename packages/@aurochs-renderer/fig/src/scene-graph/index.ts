@@ -59,6 +59,30 @@ export {
   type SceneGraphDiff,
 } from "./diff";
 
+// Render — shared SoT for SceneGraph → SVG attribute resolution
+// Both SVG string and React renderers MUST consume these exclusively.
+export {
+  colorToHex,
+  uint8ArrayToBase64,
+  matrixToSvgTransform,
+  contourToSvgD,
+  resolveFill,
+  resolveTopFill,
+  resolveStroke,
+  resolveEffects,
+  type ResolvedFill,
+  type ResolvedFillAttrs,
+  type ResolvedFillDef,
+  type ResolvedGradientStop,
+  type ResolvedLinearGradient,
+  type ResolvedRadialGradient,
+  type ResolvedImagePattern,
+  type ResolvedStrokeAttrs,
+  type ResolvedFilter,
+  type ResolvedFilterPrimitive,
+  type IdGenerator,
+} from "./render";
+
 // Converters
 export {
   figColorToSceneColor,
