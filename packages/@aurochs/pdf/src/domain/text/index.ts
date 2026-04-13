@@ -4,7 +4,7 @@
  * Exports types for PDF text handling.
  */
 
-export type { PdfText, PdfTextFontMetrics, PdfTextEditState } from "./types";
+export type { PdfText, PdfTextBlock, PdfTextBlockParagraph, PdfTextFontMetrics, PdfTextEditState } from "./types";
 
 // Domain operations (type-safe PdfText update functions)
 export {

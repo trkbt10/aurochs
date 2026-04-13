@@ -10,7 +10,7 @@
  * (Object URL + deferred PNG encoding for raw pixel data).
  */
 
-import { useState, useEffect, useMemo, type CSSProperties, type ReactNode } from "react";
+import { memo, useState, useEffect, useMemo, type CSSProperties, type ReactNode } from "react";
 import { colorTokens, spacingTokens, shadowTokens } from "@aurochs-ui/ui-components/design-tokens";
 import type { PdfPage } from "@aurochs/pdf";
 import type { PdfRenderSession, FontProvider, PdfImageUrlResolver } from "@aurochs-renderer/pdf";
@@ -200,7 +200,7 @@ type PageRendererProps = {
   readonly imageUrlResolver: PdfImageUrlResolver | undefined;
 };
 
-function PageRenderer({ pageState, fontProvider, imageUrlResolver }: PageRendererProps): ReactNode {
+const PageRenderer = memo(function PageRenderer({ pageState, fontProvider, imageUrlResolver }: PageRendererProps): ReactNode {
   const svgJsx = useMemo(() => {
     if (pageState.status !== "loaded" || !fontProvider) { return null; }
     const svgNode = renderPdfPageToSvgNode(pageState.page, { fontProvider, imageUrlResolver });
@@ -220,4 +220,4 @@ function PageRenderer({ pageState, fontProvider, imageUrlResolver }: PageRendere
       {svgJsx}
     </div>
   );
-}
+});

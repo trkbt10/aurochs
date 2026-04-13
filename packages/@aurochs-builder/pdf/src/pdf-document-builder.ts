@@ -8,7 +8,12 @@ import {
   type PdfPage,
   type PdfPath,
   type PdfText,
+  type PdfTextBlock,
+  type PdfTextBlockParagraph,
   resolvePatternColors,
+  isPdfText,
+  isPdfPath,
+  isPdfImage,
 } from "@aurochs/pdf/domain";
 import { decodeText, DEFAULT_FONT_METRICS, type FontMappings } from "@aurochs/pdf/domain/font";
 import type { ParsedElement, ParsedPath, ParsedText } from "@aurochs/pdf/parser/operator/index";
@@ -21,6 +26,11 @@ import {
   buildPageSpaceSoftMaskForClipMask,
 } from "../../../@aurochs/pdf/src/parser/clip/clip-mask-apply.native";
 import type { PdfBuildContext, PdfBuildOptions } from "@aurochs/pdf/parser/core/pdf-parser";
+import {
+  spatialGrouping,
+  buildBlockingZonesFromPageElements,
+  type GroupedText,
+} from "@aurochs/pdf/services/block-segmentation";
 
 /** Builder stage: build final PdfDocument from a parse/build context. */
 export function buildPdfDocumentFromContext(context: PdfBuildContext): PdfDocument {
@@ -29,12 +39,13 @@ export function buildPdfDocumentFromContext(context: PdfBuildContext): PdfDocume
   }
 
   const pages: PdfPage[] = context.parsedDocument.pages.map((page) => {
-    const elements = convertElements({
+    const rawElements = convertElements({
       parsed: [...page.parsedElements],
       buildOptions: context.buildOptions,
       extractedImages: [...page.extractedImages],
       fontMappings: page.fontMappings,
     });
+    const elements = groupTextElements(rawElements, page.width, page.height);
     return {
       pageNumber: page.pageNumber,
       width: page.width,
@@ -318,4 +329,109 @@ function convertText(parsed: ParsedText, fontMappings: FontMappings): PdfText[] 
   }
 
   return results;
+}
+
+// =============================================================================
+// Text Grouping
+// =============================================================================
+
+/**
+ * Group individual PdfText elements into PdfTextBlock elements using spatial grouping.
+ *
+ * Preserves z-order: each PdfTextBlock is inserted at the position of the first
+ * PdfText run it contains. All individual PdfText elements that were grouped
+ * are replaced by a single PdfTextBlock.
+ *
+ * Non-text elements (paths, images, tables) are used as blocking zones to
+ * prevent grouping across visual barriers.
+ */
+function groupTextElements(elements: PdfElement[], pageWidth: number, pageHeight: number): PdfElement[] {
+  // Collect PdfText elements and non-text elements
+  const textElements: PdfText[] = [];
+  for (const el of elements) {
+    if (isPdfText(el)) {
+      textElements.push(el);
+    }
+  }
+
+  // If there are 0 or 1 text elements, no grouping needed
+  if (textElements.length <= 1) {
+    return elements;
+  }
+
+  // Build blocking zones from non-text elements
+  const paths = elements.filter(isPdfPath);
+  const images = elements.filter(isPdfImage);
+  const blockingZones = buildBlockingZonesFromPageElements({ paths, images });
+
+  // Apply spatial grouping
+  const groups: readonly GroupedText[] = spatialGrouping(textElements, {
+    blockingZones,
+    pageWidth,
+    pageHeight,
+  });
+
+  // Build a Set of all PdfText objects that were grouped
+  // and a Map from the first run of each group to its PdfTextBlock
+  const groupedTextSet = new Set<PdfText>();
+  const firstRunToBlock = new Map<PdfText, PdfTextBlock>();
+
+  for (const group of groups) {
+    const allRuns: PdfText[] = [];
+    const paragraphs: PdfTextBlockParagraph[] = [];
+
+    for (const para of group.paragraphs) {
+      for (const run of para.runs) {
+        allRuns.push(run);
+        groupedTextSet.add(run);
+      }
+      paragraphs.push({
+        runs: para.runs,
+        baselineY: para.baselineY,
+      });
+    }
+
+    if (allRuns.length === 0) { continue; }
+
+    // Single-run groups: keep as individual PdfText (no wrapping overhead)
+    if (allRuns.length === 1) {
+      groupedTextSet.delete(allRuns[0]);
+      continue;
+    }
+
+    const block: PdfTextBlock = {
+      type: "textBlock",
+      x: group.bounds.x,
+      y: group.bounds.y,
+      width: group.bounds.width,
+      height: group.bounds.height,
+      paragraphs,
+      graphicsState: allRuns[0].graphicsState,
+    };
+
+    firstRunToBlock.set(allRuns[0], block);
+  }
+
+  // Rebuild elements array preserving z-order
+  const result: PdfElement[] = [];
+  for (const el of elements) {
+    if (isPdfText(el)) {
+      // If this text is the first run of a block, insert the block
+      const block = firstRunToBlock.get(el);
+      if (block) {
+        result.push(block);
+        continue;
+      }
+      // If this text was grouped (but not the first run), skip it
+      if (groupedTextSet.has(el)) {
+        continue;
+      }
+      // Ungrouped text (single-run group): keep as-is
+      result.push(el);
+    } else {
+      result.push(el);
+    }
+  }
+
+  return result;
 }

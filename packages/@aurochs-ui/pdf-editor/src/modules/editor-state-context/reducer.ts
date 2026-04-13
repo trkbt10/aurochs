@@ -129,7 +129,7 @@ function applyResizeToDom(doc: PdfDocument, drag: ResizeDragState<PdfElementId>,
   return updateElementInDocument({
     document: doc, elementId: shapeId,
     updater: (el) => {
-      if (el.type === "text") {
+      if (el.type === "text" || el.type === "textBlock") {
         // Convert SVG-space bounds to PDF-space (flip Y)
         return { ...el, x: newBounds.x, y: pageHeight - newBounds.y - newBounds.height, width: newBounds.width, height: newBounds.height };
       }
@@ -416,7 +416,24 @@ export function pdfEditorReducer(state: PdfEditorState, action: PdfEditorAction)
       const newDoc = updateElementInDocument({
         document: doc,
         elementId,
-        updater: (el) => el.type === "text" ? withTextContent(el, text) : el,
+        updater: (el) => {
+          if (el.type === "text") { return withTextContent(el, text); }
+          if (el.type === "textBlock") {
+            // Update the first run's text content with the full edited text.
+            // Multi-paragraph editing: split by newline, assign to paragraphs.
+            const lines = text.split("\n");
+            const paragraphs = el.paragraphs.map((para, pi) => {
+              const lineText = lines[pi] ?? "";
+              // Update the first run with the line text, keep other runs empty
+              const runs = para.runs.map((run, ri) =>
+                ri === 0 ? withTextContent(run, lineText) : withTextContent(run, ""),
+              );
+              return { ...para, runs };
+            });
+            return { ...el, paragraphs };
+          }
+          return el;
+        },
       });
       return { ...state, documentHistory: pushHistory(state.documentHistory, newDoc), textEdit: { active: false } };
     }

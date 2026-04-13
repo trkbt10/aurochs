@@ -6,7 +6,7 @@
 
 export type { PdfElement, PdfPage, PdfDocument, PdfEmbeddedFont, PdfFontToUnicode, PdfFontMetrics, PdfTable, PdfTableRow, PdfTableCell } from "./types";
 
-export { PDF_UNITS, PDF_PAGE_SIZES, isPdfPath, isPdfText, isPdfImage, isPdfTable } from "./types";
+export { PDF_UNITS, PDF_PAGE_SIZES, isPdfPath, isPdfText, isPdfTextBlock, isPdfImage, isPdfTable } from "./types";
 
 // Element addressing
 export type { PdfElementId } from "./element-id";

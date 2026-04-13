@@ -12,7 +12,7 @@
  * - onCanvasPointerDown → end text edit on background click
  */
 
-import { useCallback, useMemo, useRef } from "react";
+import { memo, useCallback, useMemo, useRef } from "react";
 import type { PdfPage, PdfElementId } from "@aurochs/pdf";
 import {
   EditorCanvas,
@@ -44,6 +44,7 @@ export type PdfPageCanvasProps = {
   readonly contentChildren: ReactNode;
   readonly viewportOverlay?: ReactNode;
   readonly isTextEditing?: boolean;
+  readonly textEditElementId?: PdfElementId;
   // --- Selection ---
   readonly onSelect: (elementId: PdfElementId, addToSelection: boolean) => void;
   readonly onClearSelection: () => void;
@@ -71,7 +72,7 @@ export type PdfPageCanvasProps = {
 // =============================================================================
 
 /** PdfPageCanvas - PDF editor canvas wrapper around EditorCanvas. */
-export function PdfPageCanvas({
+export const PdfPageCanvas = memo(function PdfPageCanvas({
   page,
   pageIndex,
   selection,
@@ -83,6 +84,7 @@ export function PdfPageCanvas({
   contentChildren,
   viewportOverlay,
   isTextEditing = false,
+  textEditElementId,
   onSelect,
   onClearSelection,
   onSelectMultiple,
@@ -114,17 +116,19 @@ export function PdfPageCanvas({
   const handleItemPointerDown = useCallback(
     (id: string, coords: CanvasPageCoords, e: React.PointerEvent) => {
       if (e.button !== 0) { return; }
-      // End text editing when clicking a different element
-      if (isTextEditing && onEndTextEdit) {
+      const elementId = id as PdfElementId;
+      // End text editing only when clicking a *different* element
+      if (isTextEditing && onEndTextEdit && textEditElementId !== elementId) {
         onEndTextEdit();
       }
-      const elementId = id as PdfElementId;
       if (!isSelected(selection, elementId)) {
         onSelect(elementId, coords.addToSelection);
       }
+      // Don't start move when in text editing mode on the same element
+      if (isTextEditing && textEditElementId === elementId) { return; }
       onStartMove({ startX: coords.pageX, startY: coords.pageY, clientX: coords.clientX, clientY: coords.clientY });
     },
-    [selection, onSelect, onStartMove, isTextEditing, onEndTextEdit],
+    [selection, onSelect, onStartMove, isTextEditing, textEditElementId, onEndTextEdit],
   );
 
   const handleItemDoubleClick = useCallback(
@@ -265,4 +269,4 @@ export function PdfPageCanvas({
       {contentChildren}
     </EditorCanvas>
   );
-}
+});

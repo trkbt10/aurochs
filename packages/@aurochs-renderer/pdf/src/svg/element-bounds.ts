@@ -53,6 +53,18 @@ export function elementToSvgBounds(args: {
     return { id, ...bounds };
   }
 
+  if (element.type === "textBlock") {
+    // Convert block bounds from PDF space (bottom-left origin) to SVG space (top-left origin)
+    return {
+      id,
+      x: element.x,
+      y: pageHeight - element.y - element.height,
+      width: element.width,
+      height: element.height,
+      rotation: 0,
+    };
+  }
+
   if (element.type === "path") {
     const bounds = getPathBounds(element);
     return {

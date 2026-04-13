@@ -286,6 +286,51 @@ export type PdfTextEditState = {
   readonly resolvedFontFamily?: string;
 };
 
+// =============================================================================
+// Text Block (grouped text element)
+// =============================================================================
+
+/**
+ * A text block groups multiple PdfText runs into a single logical element.
+ *
+ * During PDF parsing, each Tj/TJ operator produces an individual PdfText.
+ * Spatial grouping (see `spatialGrouping` in block-segmentation) combines
+ * related runs into a PdfTextBlock that represents a coherent text unit
+ * (e.g., a paragraph, heading, or label).
+ *
+ * This enables the editor to treat grouped text as one selectable/editable
+ * unit rather than individual character fragments.
+ */
+export type PdfTextBlock = {
+  readonly type: "textBlock";
+  /** Bounding box encompassing all text runs in this block (PDF space). */
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+  /** Paragraphs within this block (each typically corresponds to a visual line). */
+  readonly paragraphs: readonly PdfTextBlockParagraph[];
+  /**
+   * Graphics state shared across the block.
+   * Taken from the first run's graphics state. Individual runs may have
+   * their own graphicsState for per-run color/rendering differences.
+   */
+  readonly graphicsState: PdfGraphicsState;
+};
+
+/**
+ * A paragraph within a PdfTextBlock.
+ *
+ * Corresponds to a visual line of text. Contains one or more PdfText runs
+ * that share the same baseline Y coordinate (within tolerance).
+ */
+export type PdfTextBlockParagraph = {
+  /** Text runs in this paragraph, in reading order. */
+  readonly runs: readonly PdfText[];
+  /** Baseline Y coordinate in PDF points (bottom-left origin). */
+  readonly baselineY: number;
+};
+
 /**
  * Font metrics for precise text positioning.
  */

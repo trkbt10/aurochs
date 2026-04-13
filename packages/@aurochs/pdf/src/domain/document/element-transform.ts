@@ -130,6 +130,16 @@ export function scaleElement(
     };
   }
 
+  if (element.type === "textBlock") {
+    return {
+      ...element,
+      x: newBounds.x,
+      y: newBounds.y,
+      width: newBounds.width,
+      height: newBounds.height,
+    };
+  }
+
   if (element.type === "image") {
     const ctm = element.graphicsState.ctm;
     const decomp = decomposeMatrix(ctm);
@@ -162,6 +172,16 @@ export function scaleElement(
 export function moveElement(element: PdfElement, dx: number, dy: number): PdfElement {
   if (element.type === "text") {
     return { ...element, x: element.x + dx, y: element.y - dy };
+  }
+
+  if (element.type === "textBlock") {
+    // Move block bounds and all individual runs within
+    const paragraphs = element.paragraphs.map((para) => ({
+      ...para,
+      runs: para.runs.map((run) => ({ ...run, x: run.x + dx, y: run.y - dy })),
+      baselineY: para.baselineY - dy,
+    }));
+    return { ...element, x: element.x + dx, y: element.y - dy, paragraphs };
   }
 
   if (element.type === "path") {

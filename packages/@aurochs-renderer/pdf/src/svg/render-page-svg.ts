@@ -17,6 +17,7 @@ import type {
   PdfPage,
   PdfPath,
   PdfText,
+  PdfTextBlock,
 } from "@aurochs/pdf/domain";
 import type { FontProvider, ResolvedFont } from "@aurochs/pdf/domain/font";
 import { createFontProvider } from "@aurochs/pdf/domain/font";
@@ -370,6 +371,32 @@ function renderTextNode(text: PdfText, pageHeight: number, registry: ClipPathReg
 }
 
 // =============================================================================
+// Text Block rendering
+// =============================================================================
+
+/**
+ * Render a PdfTextBlock as a `<g>` element containing all its text runs.
+ *
+ * Each run within the block is rendered independently using renderTextNode,
+ * preserving its exact positioning, font, and styling. The group wrapper
+ * enables the editor to treat the block as a single selectable unit.
+ */
+function renderTextBlockNode(block: PdfTextBlock, pageHeight: number, registry: ClipPathRegistry, fontProvider: FontProvider): XmlNode | null {
+  const children: XmlNode[] = [];
+  for (const para of block.paragraphs) {
+    for (const run of para.runs) {
+      const node = renderTextNode(run, pageHeight, registry, fontProvider);
+      if (node) {
+        children.push(node);
+      }
+    }
+  }
+  if (children.length === 0) { return null; }
+  if (children.length === 1) { return children[0]; }
+  return svgGroup({}, children);
+}
+
+// =============================================================================
 // Image rendering
 // =============================================================================
 
@@ -437,6 +464,10 @@ function renderElementNode(element: PdfElement, pageHeight: number, registry: Cl
 
   if (element.type === "text") {
     return renderTextNode(element, pageHeight, registry, fontProvider);
+  }
+
+  if (element.type === "textBlock") {
+    return renderTextBlockNode(element, pageHeight, registry, fontProvider);
   }
 
   if (element.type === "table") {

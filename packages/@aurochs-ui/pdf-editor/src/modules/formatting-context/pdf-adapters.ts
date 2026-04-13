@@ -109,7 +109,7 @@ export type PositionSizeData = PositionData & SizeData;
 
 /** Convert PDF element to position/size data. */
 export function pdfElementToPositionSize(element: PdfElement, pageHeight: number): PositionSizeData {
-  if (element.type === "text") {
+  if (element.type === "text" || element.type === "textBlock") {
     return {
       x: `${element.x.toFixed(1)} pt`,
       y: `${(pageHeight - element.y - element.height).toFixed(1)} pt`,

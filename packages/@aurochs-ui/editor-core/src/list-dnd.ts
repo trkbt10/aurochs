@@ -44,8 +44,9 @@ export function createIdleListDragState<TId>(): ListDragState<TId> {
   return { isDragging: false, draggingIds: [], targetGapIndex: null };
 }
 
-/** Update drag state when hovering over a gap. */
+/** Update drag state when hovering over a gap. Returns same object if gap unchanged. */
 export function updateDragOverGap<TId>(currentState: ListDragState<TId>, gapIndex: number): ListDragState<TId> {
+  if (currentState.targetGapIndex === gapIndex) { return currentState; }
   return { ...currentState, targetGapIndex: gapIndex };
 }
 

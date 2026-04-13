@@ -5,7 +5,7 @@
  * Format-specific details (icon, label) are injected via props.
  */
 
-import { useCallback, useMemo, type PointerEvent as ReactPointerEvent } from "react";
+import { memo, useCallback, useMemo, type PointerEvent as ReactPointerEvent } from "react";
 import type { PdfPage, PdfElement, PdfElementId } from "@aurochs/pdf";
 import { createElementId } from "@aurochs/pdf";
 import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
@@ -37,6 +37,11 @@ function getElementLabel(element: PdfElement, index: number): string {
       const preview = element.text.length > 24 ? element.text.slice(0, 24) + "…" : element.text;
       return preview || `Text ${index + 1}`;
     }
+    case "textBlock": {
+      const fullText = element.paragraphs.flatMap((p) => p.runs.map((r) => r.text)).join("");
+      const preview = fullText.length > 24 ? fullText.slice(0, 24) + "…" : fullText;
+      return preview || `Text Block ${index + 1}`;
+    }
     case "path": return "Path";
     case "image": return "Image";
     case "table": return `Table (${element.rows.length}×${element.columns.length})`;
@@ -47,6 +52,7 @@ function getElementLabel(element: PdfElement, index: number): string {
 function getElementIcon(element: PdfElement) {
   switch (element.type) {
     case "text": return <TextBoxIcon {...ICON_PROPS} />;
+    case "textBlock": return <TextBoxIcon {...ICON_PROPS} />;
     case "image": return <PictureIcon {...ICON_PROPS} />;
     case "path": return <PenIcon {...ICON_PROPS} />;
     case "table": return <TextBoxIcon {...ICON_PROPS} />;
@@ -59,7 +65,7 @@ function getElementIcon(element: PdfElement) {
 // =============================================================================
 
 /** Layer panel for PDF editor, using react-editor-ui LayerItem for each row. */
-export function PdfLayerPanel({
+export const PdfLayerPanel = memo(function PdfLayerPanel({
   page,
   pageIndex,
   selectedElementIds,
@@ -116,4 +122,4 @@ export function PdfLayerPanel({
       </div>
     </OptionalPropertySection>
   );
-}
+});

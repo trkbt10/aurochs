@@ -84,7 +84,7 @@ export type {
 export { getPathBounds } from "./path";
 
 // Text domain
-export type { PdfText, PdfTextFontMetrics, PdfTextEditState } from "./text";
+export type { PdfText, PdfTextBlock, PdfTextBlockParagraph, PdfTextFontMetrics, PdfTextEditState } from "./text";
 export {
   withTextContent,
   withFontFamily,
@@ -97,7 +97,7 @@ export type { PdfImage } from "./image";
 
 // Document domain
 export type { PdfElement, PdfPage, PdfDocument, PdfEmbeddedFont, PdfTable, PdfTableRow, PdfTableCell } from "./document";
-export { PDF_UNITS, PDF_PAGE_SIZES, isPdfPath, isPdfText, isPdfImage, isPdfTable } from "./document";
+export { PDF_UNITS, PDF_PAGE_SIZES, isPdfPath, isPdfText, isPdfTextBlock, isPdfImage, isPdfTable } from "./document";
 
 // Element addressing
 export type { PdfElementId } from "./document";

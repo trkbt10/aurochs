@@ -97,12 +97,15 @@ export function createDocumentQuery(doc: PdfDocument, fontProvider?: FontProvide
 
   const getTextFontInfo = (id: PdfElementId): TextFontInfo | undefined => {
     const el = getElement(id);
-    if (!el || el.type !== "text") { return undefined; }
-    const metrics = resolveTextFontMetrics(el);
-    const resolved = resolvedFontProvider.resolve(el.fontName, el.baseFont);
+    if (!el) { return undefined; }
+    // For textBlock, use the first run's font info
+    const textEl = el.type === "textBlock" ? el.paragraphs[0]?.runs[0] : el.type === "text" ? el : undefined;
+    if (!textEl) { return undefined; }
+    const metrics = resolveTextFontMetrics(textEl);
+    const resolved = resolvedFontProvider.resolve(textEl.fontName, textEl.baseFont);
     return {
       family: resolved.cssFontFamily,
-      size: el.fontSize,
+      size: textEl.fontSize,
       weight: resolved.isBold ? "bold" : "normal",
       style: resolved.isItalic ? "italic" : "normal",
       ascender: metrics.ascender,

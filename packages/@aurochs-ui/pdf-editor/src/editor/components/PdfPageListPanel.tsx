@@ -6,7 +6,7 @@
  * as the PPTX slide list.
  */
 
-import { useCallback, useMemo } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PdfPage } from "@aurochs/pdf";
 import { PDF_PAGE_SIZES } from "@aurochs/pdf";
 import type { FontProvider, PdfImageUrlResolver } from "@aurochs-renderer/pdf";
@@ -41,24 +41,59 @@ type PdfPageItem = {
 // Page Thumbnail
 // =============================================================================
 
-function PageThumbnail({ page, fontProvider, imageUrlResolver }: { readonly page: PdfPage; readonly fontProvider?: FontProvider; readonly imageUrlResolver?: PdfImageUrlResolver }) {
-  const svgElement = useMemo(
-    () => svgElementToJsx(renderPdfPageToSvgNode(page, { width: "100%", height: "100%", fontProvider, imageUrlResolver })),
-    [page, fontProvider, imageUrlResolver],
-  );
+/**
+ * Page thumbnail with IntersectionObserver-based deferred rendering.
+ *
+ * SVG rendering is expensive (renderPdfPageToSvgNode + JSX conversion).
+ * To avoid rendering all page thumbnails upfront when the document has many
+ * pages, the component observes its own visibility and only triggers the
+ * SVG render once the thumbnail scrolls into (or near) the viewport.
+ *
+ * Once rendered, the SVG is kept — we never unmount it on scroll-away,
+ * since the useMemo cache already prevents redundant work and removing
+ * rendered DOM would cause layout flicker on fast scrolling.
+ */
+const PageThumbnail = memo(function PageThumbnail({ page, fontProvider, imageUrlResolver }: { readonly page: PdfPage; readonly fontProvider?: FontProvider; readonly imageUrlResolver?: PdfImageUrlResolver }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [hasBeenVisible, setHasBeenVisible] = useState(false);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || hasBeenVisible) { return; }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setHasBeenVisible(true);
+          observer.disconnect();
+        }
+      },
+      // rootMargin: render slightly before the thumbnail enters the viewport
+      // to avoid flicker during normal scrolling speed.
+      { rootMargin: "200px" },
+    );
+    observer.observe(el);
+    return () => { observer.disconnect(); };
+  }, [hasBeenVisible]);
+
+  const svgElement = useMemo(() => {
+    if (!hasBeenVisible) { return null; }
+    return svgElementToJsx(renderPdfPageToSvgNode(page, { width: "100%", height: "100%", fontProvider, imageUrlResolver }));
+  }, [hasBeenVisible, page, fontProvider, imageUrlResolver]);
+
   return (
-    <div style={thumbnailInnerStyle}>
+    <div ref={containerRef} style={thumbnailInnerStyle}>
       {svgElement}
     </div>
   );
-}
+});
 
 // =============================================================================
 // Component
 // =============================================================================
 
 /** Page list panel with thumbnails for the PDF editor. */
-export function PdfPageListPanel({
+export const PdfPageListPanel = memo(function PdfPageListPanel({
   pages,
   currentPageIndex,
   fontProvider,
@@ -94,6 +129,11 @@ export function PdfPageListPanel({
   // Enable editable mode when any operation callback is provided
   const hasOperations = onAddPage || onDeletePages || onDuplicatePages || onMovePages;
 
+  const renderThumbnail = useCallback(
+    (item: PdfPageItem) => <PageThumbnail page={item.page} fontProvider={fontProvider} imageUrlResolver={imageUrlResolver} />,
+    [fontProvider, imageUrlResolver],
+  );
+
   return (
     <ItemList<PdfPageItem, number>
       items={items}
@@ -103,7 +143,7 @@ export function PdfPageListPanel({
       mode={hasOperations ? "editable" : "readonly"}
       activeItemId={currentPageIndex}
       itemLabel="Page"
-      renderThumbnail={(item) => <PageThumbnail page={item.page} fontProvider={fontProvider} imageUrlResolver={imageUrlResolver} />}
+      renderThumbnail={renderThumbnail}
       onItemClick={handlePageClick}
       onAddItem={onAddPage}
       onDeleteItems={onDeletePages}
@@ -111,4 +151,4 @@ export function PdfPageListPanel({
       onMoveItems={onMovePages}
     />
   );
-}
+});

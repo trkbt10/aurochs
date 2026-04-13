@@ -6,7 +6,7 @@
 
 import type { PdfImage } from "../image";
 import type { PdfPath } from "../path";
-import type { PdfText } from "../text";
+import type { PdfText, PdfTextBlock } from "../text";
 import type { CIDOrdering } from "../font";
 import type { PdfGraphicsState } from "../graphics-state/types";
 
@@ -14,7 +14,7 @@ import type { PdfGraphicsState } from "../graphics-state/types";
 // Element Types
 // =============================================================================
 
-export type PdfElement = PdfPath | PdfText | PdfImage | PdfTable;
+export type PdfElement = PdfPath | PdfText | PdfTextBlock | PdfImage | PdfTable;
 
 // =============================================================================
 // Table Types (synthetic — not native to PDF format)
@@ -269,6 +269,11 @@ export function isPdfPath(element: PdfElement): element is PdfPath {
 /** Type guard for `PdfText` elements. */
 export function isPdfText(element: PdfElement): element is PdfText {
   return element.type === "text";
+}
+
+/** Type guard for `PdfTextBlock` elements. */
+export function isPdfTextBlock(element: PdfElement): element is PdfTextBlock {
+  return element.type === "textBlock";
 }
 
 

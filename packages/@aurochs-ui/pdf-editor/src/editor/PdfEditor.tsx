@@ -175,10 +175,19 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
   const handleDoubleClick = useCallback(
     (elementId: PdfElementId) => {
       const el = query.getElement(elementId);
-      if (el?.type !== "text") { return; }
+      if (!el) { return; }
+      let text: string;
+      if (el.type === "text") {
+        text = el.text;
+      } else if (el.type === "textBlock") {
+        // Concatenate all runs across paragraphs, separated by newlines between paragraphs
+        text = el.paragraphs.map((p) => p.runs.map((r) => r.text).join("")).join("\n");
+      } else {
+        return;
+      }
       const bounds = query.getElementBounds(elementId);
       if (!bounds) { return; }
-      dispatch({ type: "START_TEXT_EDIT", elementId, text: el.text, bounds: { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height } });
+      dispatch({ type: "START_TEXT_EDIT", elementId, text, bounds: { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height } });
     },
     [query],
   );
@@ -199,9 +208,7 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
     [state.currentPageIndex],
   );
 
-  const propertiesContent = renderPropertiesContent();
-
-  function renderPropertiesContent() {
+  const propertiesContent = useMemo(() => {
     if (state.selection.selectedIds.length > 1) {
       return (
         <PdfMultiSelectPanel
@@ -223,7 +230,7 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
         onPageSizeChange={handlePageSizeChange}
       />
     );
-  }
+  }, [state.selection.selectedIds, state.selection.primaryId, document, selectedElement, query, pageWidth, pageHeight, handleUpdateSelectedElements, handleUpdateElement, handlePageSizeChange]);
 
   const inspectorTabs: InspectorTab[] = useMemo(() => [
     { id: "properties", label: "Properties", content: propertiesContent },
@@ -241,45 +248,47 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
     },
   ], [propertiesContent, currentPage, state.currentPageIndex, state.selection.selectedIds, handleSelect, handleClearSelection]);
 
-  const rightPanelContent = (
+  const rightPanelContent = useMemo(() => (
     <InspectorPanelWithTabs
       tabs={inspectorTabs}
       activeTabId={rightTab}
       onActiveTabChange={setRightTab}
     />
-  );
+  ), [inspectorTabs, rightTab]);
 
-  const panels: EditorPanel[] = [
+  const leftPanelContent = useMemo(() => (
+    <PdfPageListPanel
+      pages={document.pages}
+      currentPageIndex={state.currentPageIndex}
+      fontProvider={fontProvider}
+      imageUrlResolver={imageUrlResolver}
+      onPageSelect={handlePageSelect}
+      onAddPage={handleAddPage}
+      onDeletePages={handleDeletePages}
+      onDuplicatePages={handleDuplicatePages}
+      onMovePages={handleMovePages}
+    />
+  ), [document.pages, state.currentPageIndex, fontProvider, imageUrlResolver, handlePageSelect, handleAddPage, handleDeletePages, handleDuplicatePages, handleMovePages]);
+
+  const panels: EditorPanel[] = useMemo(() => [
     {
       id: "pages",
-      position: "left",
+      position: "left" as const,
       scrollable: true,
       drawerIcon: GalleryVerticalIcon,
       drawerLabel: "Pages",
-      content: (
-        <PdfPageListPanel
-          pages={document.pages}
-          currentPageIndex={state.currentPageIndex}
-          fontProvider={fontProvider}
-          imageUrlResolver={imageUrlResolver}
-          onPageSelect={handlePageSelect}
-          onAddPage={handleAddPage}
-          onDeletePages={handleDeletePages}
-          onDuplicatePages={handleDuplicatePages}
-          onMovePages={handleMovePages}
-        />
-      ),
+      content: leftPanelContent,
     },
     {
       id: "right",
-      position: "right",
+      position: "right" as const,
       size: "280px",
       scrollable: false,
       drawerIcon: SettingsIcon,
       drawerLabel: "Inspector",
       content: rightPanelContent,
     },
-  ];
+  ], [leftPanelContent, rightPanelContent]);
 
   // ---- Context menu ----
 
@@ -365,8 +374,14 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
   const textEditElement = useMemo(() => {
     if (!state.textEdit.active) { return undefined; }
     const el = query.getElement(state.textEdit.elementId);
-    if (!el || el.type !== "text") { return undefined; }
-    return el;
+    if (!el) { return undefined; }
+    if (el.type === "text") { return el; }
+    if (el.type === "textBlock") {
+      // Use the first run as the representative element for font/position info.
+      // The actual text content comes from the textEdit state, not this element.
+      return el.paragraphs[0]?.runs[0];
+    }
+    return undefined;
   }, [state.textEdit, query]);
 
   const textEditOverlayNode = renderTextEditOverlay();
@@ -409,6 +424,7 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
           contentChildren={contentChildren}
           viewportOverlay={textEditOverlayNode}
           isTextEditing={state.textEdit.active}
+          textEditElementId={state.textEdit.active ? state.textEdit.elementId : undefined}
           onSelect={handleSelect}
           onClearSelection={handleClearSelection}
           onSelectMultiple={handleSelectMultiple}
@@ -445,12 +461,17 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
   const canRedoNow = canRedo(state.documentHistory);
   const hasSelection = state.selection.selectedIds.length > 0;
 
-  // Text formatting for selected text element
-  const isTextElement = selectedElement?.type === "text";
-  const textFormatting = useMemo<TextFormatting>(
-    () => (isTextElement ? pdfTextAdapter.toGeneric(selectedElement) : {}),
-    [isTextElement, selectedElement],
-  );
+  // Text formatting for selected text element (text or textBlock)
+  const isTextElement = selectedElement?.type === "text" || selectedElement?.type === "textBlock";
+  const textFormatting = useMemo<TextFormatting>(() => {
+    if (!selectedElement) { return {}; }
+    if (selectedElement.type === "text") { return pdfTextAdapter.toGeneric(selectedElement); }
+    if (selectedElement.type === "textBlock") {
+      const firstRun = selectedElement.paragraphs[0]?.runs[0];
+      return firstRun ? pdfTextAdapter.toGeneric(firstRun) : {};
+    }
+    return {};
+  }, [isTextElement, selectedElement]);
 
   const handleTextFormattingChange = useCallback(
     (update: Partial<TextFormatting>) => {
@@ -462,6 +483,14 @@ export function PdfEditor({ document: initialDocument, className }: PdfEditorPro
         type: "UPDATE_ELEMENT",
         elementId,
         updater: (el) => {
+          if (el.type === "textBlock") {
+            // Apply formatting to all runs in the block
+            const paragraphs = el.paragraphs.map((para) => ({
+              ...para,
+              runs: para.runs.map((run) => pdfTextAdapter.applyUpdate(run, update)),
+            }));
+            return { ...el, paragraphs };
+          }
           if (el.type !== "text") {
             return el;
           }

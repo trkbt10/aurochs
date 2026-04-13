@@ -7,7 +7,7 @@
  * - editor-controls OptionalPropertySection pattern
  */
 
-import { useCallback, useMemo, useState, type CSSProperties } from "react";
+import { memo, useCallback, useMemo, useState, type CSSProperties } from "react";
 import { fontTokens } from "@aurochs-ui/ui-components/design-tokens";
 import type { PdfElement, PdfTable, PdfElementId } from "@aurochs/pdf";
 import type { PageSizeData } from "@aurochs-ui/editor-core/adapter-types";
@@ -170,7 +170,7 @@ function PdfTableInspector({ table, elementId, onUpdateElement, disabled }: PdfT
 // =============================================================================
 
 /** Property panel for a selected PDF element with editing support. */
-export function PdfPropertyPanel({ element, elementId, bounds: svgBounds, pageWidth, pageHeight, onUpdateElement, onPageSizeChange, style }: PdfPropertyPanelProps) {
+export const PdfPropertyPanel = memo(function PdfPropertyPanel({ element, elementId, bounds: svgBounds, pageWidth, pageHeight, onUpdateElement, onPageSizeChange, style }: PdfPropertyPanelProps) {
   const canEdit = Boolean(elementId && onUpdateElement);
 
   const updateElement = useCallback(
@@ -188,7 +188,7 @@ export function PdfPropertyPanel({ element, elementId, bounds: svgBounds, pageWi
       const newY = parseFloat(data.y);
       if (Number.isNaN(newX) || Number.isNaN(newY)) { return; }
       updateElement((el) => {
-        if (el.type === "text") { return { ...el, x: newX, y: pageHeight - newY - el.height }; }
+        if (el.type === "text" || el.type === "textBlock") { return { ...el, x: newX, y: pageHeight - newY - el.height }; }
         return el;
       });
     },
@@ -201,7 +201,7 @@ export function PdfPropertyPanel({ element, elementId, bounds: svgBounds, pageWi
       const newH = parseFloat(data.height);
       if (Number.isNaN(newW) || Number.isNaN(newH) || newW <= 0 || newH <= 0) { return; }
       updateElement((el) => {
-        if (el.type === "text") { return { ...el, width: newW, height: newH }; }
+        if (el.type === "text" || el.type === "textBlock") { return { ...el, width: newW, height: newH }; }
         return el;
       });
     },
@@ -298,10 +298,10 @@ export function PdfPropertyPanel({ element, elementId, bounds: svgBounds, pageWi
       </OptionalPropertySection>
 
       {/* Text formatting (shared TextFormattingEditor) */}
-      {element.type === "text" && (
+      {(element.type === "text" || element.type === "textBlock") && (
         <>
           <TextFormattingEditor
-            value={pdfTextToFormatting(element)}
+            value={pdfTextToFormatting(element.type === "textBlock" ? element.paragraphs[0]?.runs[0] ?? element : element)}
             onChange={canEdit ? handleTextFormattingChange : noop}
             disabled={!canEdit}
             features={PDF_TEXT_FEATURES}
@@ -351,7 +351,7 @@ export function PdfPropertyPanel({ element, elementId, bounds: svgBounds, pageWi
       )}
     </div>
   );
-}
+});
 
 // =============================================================================
 // Helpers

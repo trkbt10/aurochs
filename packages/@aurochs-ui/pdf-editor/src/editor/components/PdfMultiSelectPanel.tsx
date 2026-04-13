@@ -6,7 +6,7 @@
  * Follows the same SelectionHeader + OptionalPropertySection pattern as pptx-editor MultiSelectPanel.
  */
 
-import { useCallback, useMemo, type CSSProperties } from "react";
+import { memo, useCallback, useMemo, type CSSProperties } from "react";
 import type { PdfDocument, PdfElement, PdfElementId } from "@aurochs/pdf";
 import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { FillFormattingEditor } from "@aurochs-ui/editor-controls/surface";
@@ -101,7 +101,7 @@ function noop() {
 // =============================================================================
 
 /** Property panel for multi-selected PDF elements. */
-export function PdfMultiSelectPanel({ document, selectedIds, pageHeight: _pageHeight, onUpdateElements, style }: PdfMultiSelectPanelProps) {
+export const PdfMultiSelectPanel = memo(function PdfMultiSelectPanel({ document, selectedIds, pageHeight: _pageHeight, onUpdateElements, style }: PdfMultiSelectPanelProps) {
   const query = useMemo(() => createDocumentQuery(document), [document]);
   const elements = useMemo(
     () => selectedIds.map((id) => query.getElement(id)).filter((el): el is PdfElement => el !== undefined),
@@ -122,7 +122,7 @@ export function PdfMultiSelectPanel({ document, selectedIds, pageHeight: _pageHe
 
   const fillValue = useMemo(() => getMixedFill(elements), [elements]);
   const strokeValue = useMemo(() => getMixedStroke(elements), [elements]);
-  const allText = elements.every((el) => el.type === "text");
+  const allText = elements.every((el) => el.type === "text" || el.type === "textBlock");
   const mixedTextFormatting = useMemo(
     (): TextFormatting => (allText && elements.length > 0 ? pdfTextToFormatting(elements[0]) : {}),
     [allText, elements],
@@ -193,4 +193,4 @@ export function PdfMultiSelectPanel({ document, selectedIds, pageHeight: _pageHe
       />
     </div>
   );
-}
+});
