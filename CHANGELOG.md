@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.1] - 2026-04-13
+
+### Changed
+
+- Move INSTANCE resolution SoT (symbol-resolver, symbol-pre-resolver, guid-translation, constraints) from `@aurochs-renderer/fig` to `@aurochs/fig/symbols` for shared access across renderer and converters
+- Fig-to-PPTX TEXT node fills now map to run-level text color instead of shape background fill
+- Fig-to-PPTX layout scaling uses grpSp childExtent/extent ratio (SVG viewBox equivalent) instead of per-property rewriting
+- Fig-to-PPTX autoFit set to none — Figma's computed box sizes are preserved as-is
+
+### Added
+
+- Fig-to-PPTX lineHeight conversion to ParagraphProperties.lineSpacing
+- Fig-to-PPTX letterSpacing conversion to RunProperties.spacing
+- Fig-to-PPTX textCase conversion to RunProperties.caps (UPPER/SMALL_CAPS)
+- Fig-to-PPTX node opacity multiplied into fill/stroke alpha
+- Fig-to-PPTX strokeAlign (INSIDE/CENTER) mapped to DrawingML line alignment
+
+### Fixed
+
+- Fig-to-PPTX INSTANCE resolution now uses canonical SoT from `@aurochs/fig/symbols` instead of separate re-implementation
+- Fig-to-PPTX shape ID collision with spTree root (IDs now start at 2)
+- Fig-to-PPTX gradient crash when gradientHandlePositions is undefined
+
 ## [0.12.0] - 2026-04-13
 
 ### Added
@@ -307,7 +330,8 @@ Project inception.
 - Text body and paragraph rendering
 - Theme and style support
 
-[Unreleased]: https://github.com/trkbt10/aurochs/compare/v0.12.0...HEAD
+[Unreleased]: https://github.com/trkbt10/aurochs/compare/v0.12.1...HEAD
+[0.12.1]: https://github.com/trkbt10/aurochs/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/trkbt10/aurochs/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/trkbt10/aurochs/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/trkbt10/aurochs/compare/v0.9.0...v0.10.0
