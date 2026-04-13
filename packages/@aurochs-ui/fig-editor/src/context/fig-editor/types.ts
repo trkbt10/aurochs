@@ -206,6 +206,11 @@ export type FigEditorAction =
 
 /**
  * Fig editor context value (exposed to React consumers).
+ *
+ * Note: `drag` state is intentionally excluded from this context.
+ * Drag state updates at mouse-move frequency (40-60Hz) and is provided
+ * via a separate FigDragContext to prevent cascade re-renders.
+ * Use `useFigDrag()` to access drag state where needed.
  */
 export type FigEditorContextValue = {
   readonly dispatch: (action: FigEditorAction) => void;
@@ -215,7 +220,6 @@ export type FigEditorContextValue = {
   readonly selectedNodes: readonly FigDesignNode[];
   readonly primaryNode: FigDesignNode | undefined;
   readonly nodeSelection: SelectionState<FigNodeId>;
-  readonly drag: DragState<FigNodeId>;
   readonly clipboard: FigClipboardContent | undefined;
   readonly canUndo: boolean;
   readonly canRedo: boolean;

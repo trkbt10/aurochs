@@ -30,9 +30,10 @@ import type { EditorCanvasHandle, CanvasPageCoords } from "@aurochs-ui/editor-co
 import { EditorCanvas } from "@aurochs-ui/editor-controls/canvas";
 import type { ZoomMode } from "@aurochs-ui/editor-controls/zoom";
 import type { ResizeHandlePosition } from "@aurochs-ui/editor-core/geometry";
+import type { DragState } from "@aurochs-ui/editor-core/drag-state";
 import type { FigNodeId, FigDesignNode } from "@aurochs/fig/domain";
 import { findNodeById } from "@aurochs-builder/fig/node-ops";
-import { useFigEditor } from "../context/FigEditorContext";
+import { useFigEditor, useFigDrag } from "../context/FigEditorContext";
 import { FigPageRenderer } from "./FigPageRenderer";
 import { flattenAllNodeBounds } from "./interaction/bounds";
 import { isSelectMode } from "../context/fig-editor/types";
@@ -135,10 +136,21 @@ export function FigEditorCanvas() {
     document,
     activePage,
     nodeSelection,
-    drag,
     creationMode,
     textEdit,
   } = useFigEditor();
+
+  // Drag state is in a separate context so that high-frequency preview
+  // updates (PREVIEW_MOVE/RESIZE/ROTATE at 40-60Hz) only re-render this
+  // canvas component, not PropertyPanel/LayerPanel/Toolbar etc.
+  const { drag } = useFigDrag();
+
+  // Keep a ref to the latest drag state so that useCallback handlers
+  // can read it without listing `drag` as a dependency. This prevents
+  // callback identity from changing on every mouse move, which would
+  // cascade re-renders into EditorCanvas's global listener useEffect.
+  const dragRef = useRef<DragState<FigNodeId>>(drag);
+  dragRef.current = drag;
 
   const canvasRef = useRef<EditorCanvasHandle>(null);
   const [zoomMode, setZoomMode] = useState<ZoomMode>("fit");
@@ -538,37 +550,39 @@ export function FigEditorCanvas() {
 
   const handleItemDragMove = useCallback(
     (coords: CanvasPageCoords) => {
-      if (drag.type === "pending-move") {
-        if (exceedsThreshold(drag.startClientX, drag.startClientY, coords.clientX, coords.clientY)) {
+      const d = dragRef.current;
+      if (d.type === "pending-move") {
+        if (exceedsThreshold(d.startClientX, d.startClientY, coords.clientX, coords.clientY)) {
           dispatch({ type: "CONFIRM_MOVE" });
           dispatch({
             type: "PREVIEW_MOVE",
-            dx: coords.pageX - drag.startX,
-            dy: coords.pageY - drag.startY,
+            dx: coords.pageX - d.startX,
+            dy: coords.pageY - d.startY,
           });
         }
         return;
       }
-      if (drag.type === "move") {
+      if (d.type === "move") {
         dispatch({
           type: "PREVIEW_MOVE",
-          dx: coords.pageX - drag.startX,
-          dy: coords.pageY - drag.startY,
+          dx: coords.pageX - d.startX,
+          dy: coords.pageY - d.startY,
         });
       }
     },
-    [dispatch, drag],
+    [dispatch],
   );
 
   const handleItemDragEnd = useCallback(
     (_coords: CanvasPageCoords) => {
-      if (drag.type === "move") {
+      const d = dragRef.current;
+      if (d.type === "move") {
         dispatch({ type: "COMMIT_DRAG" });
       } else {
         dispatch({ type: "END_DRAG" });
       }
     },
-    [dispatch, drag],
+    [dispatch],
   );
 
   // =========================================================================
@@ -577,37 +591,39 @@ export function FigEditorCanvas() {
 
   const handleResizeDragMove = useCallback(
     (_handle: ResizeHandlePosition, coords: CanvasPageCoords) => {
-      if (drag.type === "pending-resize") {
-        if (exceedsThreshold(drag.startClientX, drag.startClientY, coords.clientX, coords.clientY)) {
+      const d = dragRef.current;
+      if (d.type === "pending-resize") {
+        if (exceedsThreshold(d.startClientX, d.startClientY, coords.clientX, coords.clientY)) {
           dispatch({ type: "CONFIRM_RESIZE" });
           dispatch({
             type: "PREVIEW_RESIZE",
-            dx: coords.pageX - drag.startX,
-            dy: coords.pageY - drag.startY,
+            dx: coords.pageX - d.startX,
+            dy: coords.pageY - d.startY,
           });
         }
         return;
       }
-      if (drag.type === "resize") {
+      if (d.type === "resize") {
         dispatch({
           type: "PREVIEW_RESIZE",
-          dx: coords.pageX - drag.startX,
-          dy: coords.pageY - drag.startY,
+          dx: coords.pageX - d.startX,
+          dy: coords.pageY - d.startY,
         });
       }
     },
-    [dispatch, drag],
+    [dispatch],
   );
 
   const handleResizeDragEnd = useCallback(
     (_handle: ResizeHandlePosition, _coords: CanvasPageCoords) => {
-      if (drag.type === "resize") {
+      const d = dragRef.current;
+      if (d.type === "resize") {
         dispatch({ type: "COMMIT_DRAG" });
       } else {
         dispatch({ type: "END_DRAG" });
       }
     },
-    [dispatch, drag],
+    [dispatch],
   );
 
   // =========================================================================
@@ -616,36 +632,38 @@ export function FigEditorCanvas() {
 
   const handleRotateDragMove = useCallback(
     (coords: CanvasPageCoords) => {
-      if (drag.type === "pending-rotate") {
-        if (exceedsThreshold(drag.startClientX, drag.startClientY, coords.clientX, coords.clientY)) {
+      const d = dragRef.current;
+      if (d.type === "pending-rotate") {
+        if (exceedsThreshold(d.startClientX, d.startClientY, coords.clientX, coords.clientY)) {
           dispatch({ type: "CONFIRM_ROTATE" });
           // Compute angle from center to pointer
-          const centerX = (drag as { centerX?: number }).centerX ?? 0;
-          const centerY = (drag as { centerY?: number }).centerY ?? 0;
+          const centerX = (d as { centerX?: number }).centerX ?? 0;
+          const centerY = (d as { centerY?: number }).centerY ?? 0;
           const angle = Math.atan2(coords.pageY - centerY, coords.pageX - centerX) * (180 / Math.PI);
           dispatch({ type: "PREVIEW_ROTATE", currentAngle: angle });
         }
         return;
       }
-      if (drag.type === "rotate") {
-        const centerX = (drag as { centerX?: number }).centerX ?? 0;
-        const centerY = (drag as { centerY?: number }).centerY ?? 0;
+      if (d.type === "rotate") {
+        const centerX = (d as { centerX?: number }).centerX ?? 0;
+        const centerY = (d as { centerY?: number }).centerY ?? 0;
         const angle = Math.atan2(coords.pageY - centerY, coords.pageX - centerX) * (180 / Math.PI);
         dispatch({ type: "PREVIEW_ROTATE", currentAngle: angle });
       }
     },
-    [dispatch, drag],
+    [dispatch],
   );
 
   const handleRotateDragEnd = useCallback(
     (_coords: CanvasPageCoords) => {
-      if (drag.type === "rotate") {
+      const d = dragRef.current;
+      if (d.type === "rotate") {
         dispatch({ type: "COMMIT_DRAG" });
       } else {
         dispatch({ type: "END_DRAG" });
       }
     },
-    [dispatch, drag],
+    [dispatch],
   );
 
   // =========================================================================

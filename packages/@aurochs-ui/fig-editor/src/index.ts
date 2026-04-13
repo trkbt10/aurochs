@@ -8,7 +8,7 @@
 export { FigEditor } from "./editor/FigEditor";
 
 // Context and hooks
-export { FigEditorProvider, useFigEditor, useFigEditorOptional } from "./context/FigEditorContext";
+export { FigEditorProvider, useFigEditor, useFigEditorOptional, useFigDrag } from "./context/FigEditorContext";
 export { useExportFig } from "./hooks/use-export-fig";
 export { useFigFileLoad } from "./hooks/use-fig-file-load";
 
