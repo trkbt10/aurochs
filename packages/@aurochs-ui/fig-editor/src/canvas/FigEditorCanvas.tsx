@@ -7,6 +7,12 @@
  * - No viewport clamping (pan freely in any direction)
  * - Canvas size derived from actual node bounds (with padding)
  *
+ * Selection model (matching Figma):
+ * - Single click: selects within current scope (top-level or drilled-down container)
+ * - Double-click on frame/group/instance: drills into it (scope → container's children)
+ * - Click canvas background / Escape: exit drill-down, clear selection
+ * - Layer panel click: directly selects any node at any depth (sets scope automatically)
+ *
  * Composes:
  * - EditorCanvas (from editor-controls) for viewport, selection, interaction
  * - FigPageRenderer for React-based SVG rendering of the current page
@@ -18,10 +24,18 @@ import { EditorCanvas } from "@aurochs-ui/editor-controls/canvas";
 import type { ZoomMode } from "@aurochs-ui/editor-controls/zoom";
 import type { ResizeHandlePosition } from "@aurochs-ui/editor-core/geometry";
 import type { FigNodeId, FigDesignNode } from "@aurochs/fig/domain";
+import { findNodeById } from "@aurochs-builder/fig/node-ops";
 import { useFigEditor } from "../context/FigEditorContext";
 import { FigPageRenderer } from "./FigPageRenderer";
-import { getPageNodeBounds } from "./interaction/bounds";
+import {
+  getPageNodeBounds,
+  getChildBoundsInScope,
+  computeAbsoluteTransform,
+  computeAbsoluteNodeBounds,
+} from "./interaction/bounds";
 import { isSelectMode } from "../context/fig-editor/types";
+import type { MenuEntry } from "@aurochs-ui/ui-components/context-menu";
+import { ContextMenu } from "@aurochs-ui/ui-components/context-menu";
 
 // =============================================================================
 // Canvas bounds computation
@@ -31,6 +45,11 @@ import { isSelectMode } from "../context/fig-editor/types";
 const MIN_CANVAS_SIZE = 800;
 /** Padding around content for breathing room */
 const CANVAS_PADDING = 200;
+
+/**
+ * Node types that can be drilled into (have meaningful children).
+ */
+const DRILLABLE_TYPES = new Set(["FRAME", "GROUP", "COMPONENT", "COMPONENT_SET", "SYMBOL", "INSTANCE"]);
 
 /**
  * Compute canvas dimensions that enclose all nodes with padding.
@@ -87,6 +106,16 @@ function exceedsThreshold(
 }
 
 // =============================================================================
+// Context menu state
+// =============================================================================
+
+type ContextMenuState = {
+  readonly x: number;
+  readonly y: number;
+  readonly targetId: FigNodeId;
+} | null;
+
+// =============================================================================
 // Component
 // =============================================================================
 
@@ -96,7 +125,9 @@ function exceedsThreshold(
  * Provides the interactive editing surface with:
  * - Rendering of the active page's nodes
  * - Selection via click, multi-select, marquee
+ * - Drill-down selection (double-click to enter frames)
  * - Drag to move, resize, rotate
+ * - Right-click context menu
  * - Zoom and pan (unclamped — infinite canvas)
  */
 export function FigEditorCanvas() {
@@ -108,20 +139,94 @@ export function FigEditorCanvas() {
     drag,
     creationMode,
     textEdit,
+    drillDownScope,
   } = useFigEditor();
 
   const canvasRef = useRef<EditorCanvasHandle>(null);
   const [zoomMode, setZoomMode] = useState<ZoomMode>("fit");
+  const [contextMenu, setContextMenu] = useState<ContextMenuState>(null);
 
-  // Compute item bounds for the canvas
+  // =========================================================================
+  // Item bounds — depends on drill-down scope + selection
+  // =========================================================================
+
+  /**
+   * Compute the set of bounds for the current interaction scope.
+   *
+   * This serves two purposes:
+   * 1. Hit areas: transparent SVG rects the user can click/drag
+   * 2. Selection boxes: EditorCanvas looks up selected IDs in this array
+   *
+   * The bounds set consists of:
+   * - Scope-level bounds: direct children of the current scope
+   *   (top-level page children when no drill-down, or the drilled-into
+   *   container's children)
+   * - Out-of-scope selected nodes: when the user selects a deeply nested
+   *   node from the layer panel, we must include its absolute bounds so
+   *   EditorCanvas can display the selection box. These are computed by
+   *   walking the tree and composing ancestor transforms.
+   *
+   * This avoids the alternative of flattening all nodes (which would
+   * bypass the drill-down scope model) or modifying EditorCanvas (which
+   * would break the shared component's generality).
+   */
   const itemBounds = useMemo(() => {
     if (!activePage) {
       return [];
     }
-    return getPageNodeBounds(activePage.children);
-  }, [activePage]);
 
-  // Compute canvas size from actual content bounds
+    // Step 1: Collect scope-level bounds
+    let scopeBounds: readonly { readonly id: string; readonly x: number; readonly y: number; readonly width: number; readonly height: number; readonly rotation: number }[];
+
+    if (drillDownScope) {
+      const scopeNode = findNodeById(activePage.children, drillDownScope.scopeNodeId);
+      if (scopeNode) {
+        const scopeAbsTransform = computeAbsoluteTransform(
+          activePage.children,
+          drillDownScope.scopeNodeId,
+        );
+        if (scopeAbsTransform) {
+          scopeBounds = getChildBoundsInScope(scopeNode, scopeAbsTransform);
+        } else {
+          scopeBounds = getPageNodeBounds(activePage.children);
+        }
+      } else {
+        // Scope node not found — fall back to top level
+        scopeBounds = getPageNodeBounds(activePage.children);
+      }
+    } else {
+      scopeBounds = getPageNodeBounds(activePage.children);
+    }
+
+    // Step 2: Check if any selected node is missing from scope bounds
+    if (nodeSelection.selectedIds.length === 0) {
+      return scopeBounds;
+    }
+
+    const scopeIdSet = new Set(scopeBounds.map((b) => b.id));
+    const missingIds = nodeSelection.selectedIds.filter((id) => !scopeIdSet.has(id));
+
+    if (missingIds.length === 0) {
+      return scopeBounds;
+    }
+
+    // Step 3: Compute absolute bounds for out-of-scope selected nodes
+    const extraBounds: { readonly id: string; readonly x: number; readonly y: number; readonly width: number; readonly height: number; readonly rotation: number }[] = [];
+    for (const id of missingIds) {
+      const bounds = computeAbsoluteNodeBounds(activePage.children, id);
+      if (bounds) {
+        extraBounds.push(bounds);
+      }
+    }
+
+    if (extraBounds.length === 0) {
+      return scopeBounds;
+    }
+
+    return [...scopeBounds, ...extraBounds];
+  }, [activePage, drillDownScope, nodeSelection.selectedIds]);
+
+  // Compute canvas size from actual content bounds (always from top-level)
   const canvasSize = useMemo(
     () => computeCanvasBoundsFromNodes(activePage?.children ?? []),
     [activePage],
@@ -167,11 +272,34 @@ export function FigEditorCanvas() {
     [dispatch],
   );
 
+  /**
+   * Double-click handler: drill into frames/groups/instances.
+   *
+   * When the user double-clicks a container node, we enter drill-down mode,
+   * making its children the selectable targets. For TEXT nodes, we enter
+   * text editing mode instead.
+   */
   const handleDoubleClick = useCallback(
     (id: string, _coords: CanvasPageCoords, _e: React.MouseEvent) => {
-      const node = activePage?.children.find((n) => n.id === id);
-      if (node?.type === "TEXT") {
+      if (!activePage) {
+        return;
+      }
+
+      const node = findNodeById(activePage.children, id as FigNodeId);
+      if (!node) {
+        return;
+      }
+
+      // TEXT nodes: enter text editing
+      if (node.type === "TEXT") {
         dispatch({ type: "ENTER_TEXT_EDIT", nodeId: id as FigNodeId });
+        return;
+      }
+
+      // Container types: drill into children
+      if (DRILLABLE_TYPES.has(node.type) && node.children && node.children.length > 0) {
+        dispatch({ type: "DRILL_INTO", scopeNodeId: id as FigNodeId });
+        return;
       }
     },
     [dispatch, activePage],
@@ -181,19 +309,145 @@ export function FigEditorCanvas() {
   // Canvas (background) events
   // =========================================================================
 
+  /**
+   * Canvas background pointerdown: exit drill-down scope if active.
+   *
+   * Only pointerdown handles scope exit (not click), because EditorCanvas
+   * fires both onCanvasPointerDown and onCanvasClick for the same user
+   * gesture. EXIT_DRILL_DOWN already clears selection, so we don't need
+   * to also dispatch CLEAR_NODE_SELECTION.
+   */
   const handleCanvasPointerDown = useCallback(
     (_coords: CanvasPageCoords, _e: React.PointerEvent) => {
+      if (drillDownScope) {
+        dispatch({ type: "EXIT_DRILL_DOWN" });
+        return;
+      }
       dispatch({ type: "CLEAR_NODE_SELECTION" });
     },
-    [dispatch],
+    [dispatch, drillDownScope],
   );
 
+  /**
+   * Canvas background click: clear selection (when not drilled down).
+   *
+   * When drilled down, EXIT_DRILL_DOWN was already dispatched on pointerdown,
+   * so we check whether the scope has been exited to avoid redundant dispatch.
+   * Since the closure captures the render-time drillDownScope, we guard with
+   * the same check.
+   */
   const handleCanvasClick = useCallback(
     (_coords: CanvasPageCoords, _e: React.MouseEvent) => {
+      // If drillDownScope was active at render time, pointerdown already
+      // dispatched EXIT_DRILL_DOWN. Don't dispatch CLEAR_NODE_SELECTION
+      // again — it would be redundant (EXIT_DRILL_DOWN clears selection).
+      if (drillDownScope) {
+        return;
+      }
       dispatch({ type: "CLEAR_NODE_SELECTION" });
     },
-    [dispatch],
+    [dispatch, drillDownScope],
   );
+
+  // =========================================================================
+  // Context menu
+  // =========================================================================
+
+  const handleItemContextMenu = useCallback(
+    (id: string, _coords: CanvasPageCoords, e: React.MouseEvent) => {
+      // Select the right-clicked item if not already selected
+      if (!nodeSelection.selectedIds.includes(id as FigNodeId)) {
+        dispatch({
+          type: "SELECT_NODE",
+          nodeId: id as FigNodeId,
+          addToSelection: false,
+        });
+      }
+
+      setContextMenu({
+        x: e.clientX,
+        y: e.clientY,
+        targetId: id as FigNodeId,
+      });
+    },
+    [dispatch, nodeSelection.selectedIds],
+  );
+
+  const handleCanvasContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      // Canvas-level context menu (no item selected) — for now just prevent default
+      setContextMenu(null);
+    },
+    [],
+  );
+
+  const contextMenuItems = useMemo((): readonly MenuEntry[] => {
+    const hasSelection = nodeSelection.selectedIds.length > 0;
+    return [
+      { id: "duplicate", label: "Duplicate", shortcut: "Cmd+D", disabled: !hasSelection },
+      { id: "copy", label: "Copy", shortcut: "Cmd+C", disabled: !hasSelection },
+      { id: "paste", label: "Paste", shortcut: "Cmd+V" },
+      { type: "separator" },
+      { id: "bring-to-front", label: "Bring to Front", disabled: !hasSelection },
+      { id: "bring-forward", label: "Bring Forward", disabled: !hasSelection },
+      { id: "send-backward", label: "Send Backward", disabled: !hasSelection },
+      { id: "send-to-back", label: "Send to Back", disabled: !hasSelection },
+      { type: "separator" },
+      { id: "delete", label: "Delete", shortcut: "Del", disabled: !hasSelection, danger: true },
+    ];
+  }, [nodeSelection.selectedIds.length]);
+
+  const handleContextMenuAction = useCallback(
+    (actionId: string) => {
+      const selectedIds = nodeSelection.selectedIds;
+
+      switch (actionId) {
+        case "duplicate":
+          if (selectedIds.length > 0) {
+            dispatch({ type: "DUPLICATE_NODES", nodeIds: selectedIds });
+          }
+          break;
+        case "copy":
+          dispatch({ type: "COPY" });
+          break;
+        case "paste":
+          dispatch({ type: "PASTE" });
+          break;
+        case "delete":
+          if (selectedIds.length > 0) {
+            dispatch({ type: "DELETE_NODES", nodeIds: selectedIds });
+          }
+          break;
+        case "bring-to-front":
+          if (selectedIds.length === 1) {
+            dispatch({ type: "REORDER_NODE", nodeId: selectedIds[0], direction: "front" });
+          }
+          break;
+        case "bring-forward":
+          if (selectedIds.length === 1) {
+            dispatch({ type: "REORDER_NODE", nodeId: selectedIds[0], direction: "forward" });
+          }
+          break;
+        case "send-backward":
+          if (selectedIds.length === 1) {
+            dispatch({ type: "REORDER_NODE", nodeId: selectedIds[0], direction: "backward" });
+          }
+          break;
+        case "send-to-back":
+          if (selectedIds.length === 1) {
+            dispatch({ type: "REORDER_NODE", nodeId: selectedIds[0], direction: "back" });
+          }
+          break;
+      }
+      setContextMenu(null);
+    },
+    [dispatch, nodeSelection.selectedIds],
+  );
+
+  const handleContextMenuClose = useCallback(() => {
+    setContextMenu(null);
+  }, []);
 
   // =========================================================================
   // Marquee selection
@@ -394,52 +648,66 @@ export function FigEditorCanvas() {
     // If any selected node is a frame/component/symbol, hide rotate
     const frameTypes = new Set(["FRAME", "COMPONENT", "COMPONENT_SET", "SYMBOL"]);
     return !nodeSelection.selectedIds.some((id) => {
-      const node = activePage.children.find((n) => n.id === id);
+      const node = findNodeById(activePage.children, id);
       return node && frameTypes.has(node.type);
     });
   }, [nodeSelection.selectedIds, activePage]);
 
   return (
-    <EditorCanvas
-      ref={canvasRef}
-      canvasWidth={canvasSize.width}
-      canvasHeight={canvasSize.height}
-      clampFn={NO_CLAMP}
-      zoomMode={zoomMode}
-      onZoomModeChange={setZoomMode}
-      itemBounds={itemBounds}
-      selectedIds={nodeSelection.selectedIds}
-      primaryId={nodeSelection.primaryId}
-      drag={drag}
-      isInteracting={drag.type !== "idle"}
-      isTextEditing={textEdit.type === "active"}
-      showRotateHandle={showRotateHandle}
-      onItemPointerDown={handleItemPointerDown}
-      onItemClick={handleItemClick}
-      onItemDoubleClick={handleDoubleClick}
-      onCanvasPointerDown={handleCanvasPointerDown}
-      onCanvasClick={handleCanvasClick}
-      onResizeStart={handleResizeStart}
-      onRotateStart={handleRotateStart}
-      onItemDragMove={handleItemDragMove}
-      onItemDragEnd={handleItemDragEnd}
-      onResizeDragMove={handleResizeDragMove}
-      onResizeDragEnd={handleResizeDragEnd}
-      onRotateDragMove={handleRotateDragMove}
-      onRotateDragEnd={handleRotateDragEnd}
-      enableMarquee={isSelectMode(creationMode)}
-      onMarqueeSelect={handleMarqueeSelect}
-    >
-      {activePage && (
-        <FigPageRenderer
-          page={activePage}
-          canvasWidth={canvasSize.width}
-          canvasHeight={canvasSize.height}
-          images={document.images}
-          blobs={document._loaded?.blobs ?? []}
-          symbolMap={document.components}
+    <>
+      <EditorCanvas
+        ref={canvasRef}
+        canvasWidth={canvasSize.width}
+        canvasHeight={canvasSize.height}
+        clampFn={NO_CLAMP}
+        zoomMode={zoomMode}
+        onZoomModeChange={setZoomMode}
+        itemBounds={itemBounds}
+        selectedIds={nodeSelection.selectedIds}
+        primaryId={nodeSelection.primaryId}
+        drag={drag}
+        isInteracting={drag.type !== "idle"}
+        isTextEditing={textEdit.type === "active"}
+        showRotateHandle={showRotateHandle}
+        onItemPointerDown={handleItemPointerDown}
+        onItemClick={handleItemClick}
+        onItemDoubleClick={handleDoubleClick}
+        onCanvasPointerDown={handleCanvasPointerDown}
+        onCanvasClick={handleCanvasClick}
+        onItemContextMenu={handleItemContextMenu}
+        onContextMenu={handleCanvasContextMenu}
+        onResizeStart={handleResizeStart}
+        onRotateStart={handleRotateStart}
+        onItemDragMove={handleItemDragMove}
+        onItemDragEnd={handleItemDragEnd}
+        onResizeDragMove={handleResizeDragMove}
+        onResizeDragEnd={handleResizeDragEnd}
+        onRotateDragMove={handleRotateDragMove}
+        onRotateDragEnd={handleRotateDragEnd}
+        enableMarquee={isSelectMode(creationMode)}
+        onMarqueeSelect={handleMarqueeSelect}
+      >
+        {activePage && (
+          <FigPageRenderer
+            page={activePage}
+            canvasWidth={canvasSize.width}
+            canvasHeight={canvasSize.height}
+            images={document.images}
+            blobs={document._loaded?.blobs ?? []}
+            symbolMap={document.components}
+          />
+        )}
+      </EditorCanvas>
+
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          items={contextMenuItems}
+          onAction={handleContextMenuAction}
+          onClose={handleContextMenuClose}
         />
       )}
-    </EditorCanvas>
+    </>
   );
 }

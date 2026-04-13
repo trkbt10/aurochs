@@ -13,9 +13,23 @@
 import type { Table, TableRow, TableCell, TableColumn } from "@aurochs-office/pptx/domain/table/types";
 import type { FigDesignNode, FigNodeId } from "@aurochs/fig/domain";
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
-import { dmlFillToFig } from "@aurochs-converters/interop-drawing-ml/dml-to-fig";
+import { dmlFillToFig, dmlLineTofig, type FigStrokeResult } from "@aurochs-converters/interop-drawing-ml/dml-to-fig";
+import type { CellBorders } from "@aurochs-office/pptx/domain/table/types";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
+import { EMU_PER_PIXEL } from "@aurochs-office/ooxml/domain/ooxml-units";
 import { convertText } from "./text";
 import type { ConvertContext } from "./shape";
+
+/**
+ * Default table cell margins per ECMA-376 §21.1.3.17 (tcPr).
+ *
+ * marL/marR default: 91440 EMU = 0.1 inch
+ * marT/marB default: 45720 EMU = 0.05 inch
+ *
+ * Converted to pixels at 96 DPI via EMU_PER_PIXEL (9525 EMU/px).
+ */
+const DEFAULT_CELL_MARGIN_LR = 91440 / EMU_PER_PIXEL; // 9.6 px
+const DEFAULT_CELL_MARGIN_TB = 45720 / EMU_PER_PIXEL; // 4.8 px
 
 export type TableIdCounter = { value: number };
 
@@ -30,6 +44,17 @@ export function convertTableToNodes(
   idCounter: TableIdCounter,
   ctx: ConvertContext,
 ): readonly FigDesignNode[] {
+  if (table.properties.tableStyleId) {
+    // Table style resolution requires TableStyleList from the PPTX theme,
+    // which is not available in the converter context. Cell fills derived
+    // from table styles (banding, firstRow/lastRow etc.) will be missing.
+    console.warn(
+      `[pptx-to-fig] Table uses style "${table.properties.tableStyleId}". ` +
+      `Style-derived cell fills (banding, header colors) are not resolved. ` +
+      `Only explicit cell fills are preserved.`,
+    );
+  }
+
   const columns = table.grid.columns;
   const nodes: FigDesignNode[] = [];
 
@@ -109,6 +134,11 @@ function buildCellNode(
   const id = nextId(idCounter);
   const fills = cell.properties.fill ? dmlFillToFig(cell.properties.fill, ctx.colorContext) : [];
 
+  // Resolve cell border as stroke.
+  // Fig FRAME supports a single stroke, not per-side borders.
+  // We pick the first available border line for the cell's stroke.
+  const borderResult = resolveCellBorder(cell.properties.borders, ctx);
+
   const children: FigDesignNode[] = [];
 
   // Add text content as a child TEXT node
@@ -117,10 +147,10 @@ function buildCellNode(
     if (textData) {
       const textId = nextId(idCounter);
       const margins = cell.properties.margins;
-      const marginLeft = margins ? (margins.left as number) : 0;
-      const marginTop = margins ? (margins.top as number) : 0;
-      const marginRight = margins ? (margins.right as number) : 0;
-      const marginBottom = margins ? (margins.bottom as number) : 0;
+      const marginLeft = margins ? (margins.left as number) : DEFAULT_CELL_MARGIN_LR;
+      const marginTop = margins ? (margins.top as number) : DEFAULT_CELL_MARGIN_TB;
+      const marginRight = margins ? (margins.right as number) : DEFAULT_CELL_MARGIN_LR;
+      const marginBottom = margins ? (margins.bottom as number) : DEFAULT_CELL_MARGIN_TB;
 
       children.push({
         id: textId as FigNodeId,
@@ -157,12 +187,38 @@ function buildCellNode(
     },
     size: { x: width, y: height },
     fills,
-    strokes: [],
-    strokeWeight: 0,
+    strokes: borderResult?.strokePaints ?? [],
+    strokeWeight: borderResult?.strokeWeight ?? 0,
     effects: [],
     clipsContent: true,
     children: children.length > 0 ? children : undefined,
   };
+}
+
+/**
+ * Resolve the first available border line from CellBorders as a Fig stroke.
+ *
+ * Fig FRAME does not support per-side borders. We pick the first
+ * non-empty border (top → right → bottom → left) as the cell's stroke.
+ * If borders have different styles on different sides, only the first is used.
+ */
+function resolveCellBorder(
+  borders: CellBorders | undefined,
+  ctx: ConvertContext,
+): FigStrokeResult | undefined {
+  if (!borders) return undefined;
+
+  const candidates: (BaseLine | undefined)[] = [
+    borders.top, borders.right, borders.bottom, borders.left,
+  ];
+
+  for (const line of candidates) {
+    if (!line) continue;
+    const result = dmlLineTofig(line, ctx.colorContext);
+    if (result) return result;
+  }
+
+  return undefined;
 }
 
 function nextId(counter: TableIdCounter): string {

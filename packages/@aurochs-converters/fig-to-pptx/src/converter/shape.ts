@@ -140,10 +140,14 @@ function convertToGroupShape(
   const transform = figTransformToDml(node.transform, node.size);
   const children = convertNodes(node.children!, idCounter);
 
+  // In Figma, child coordinates are relative to the parent frame's origin.
+  // In PPTX, grpSp childOffset/childExtent define the child coordinate space.
+  // Setting childOffset to (0,0) and childExtent to the group's own dimensions
+  // means children's x,y are relative to the group's top-left — matching Figma.
   const groupTransform: GroupTransform = {
     ...transform,
-    childOffsetX: transform.x,
-    childOffsetY: transform.y,
+    childOffsetX: px(0) as Pixels,
+    childOffsetY: px(0) as Pixels,
     childExtentWidth: transform.width,
     childExtentHeight: transform.height,
   };

@@ -324,4 +324,45 @@ describe("XML Parser with actual PPTX files", () => {
       }
     });
   });
+
+  describe("Whitespace preservation", () => {
+    it("preserves space-only text content inside elements", () => {
+      // ECMA-376 DrawingML: <a:t> </a:t> is a valid space character
+      const doc = parseXml("<root><a:t> </a:t></root>");
+      const root = doc.children[0];
+      expect(isXmlElement(root)).toBe(true);
+      if (!isXmlElement(root)) return;
+
+      const at = getChild(root, "a:t");
+      expect(at).toBeDefined();
+      expect(at!.children.length).toBe(1);
+
+      const textNode = at!.children[0];
+      expect(isXmlText(textNode)).toBe(true);
+      if (isXmlText(textNode)) {
+        expect(textNode.value).toBe(" ");
+      }
+    });
+
+    it("preserves multiple spaces in text content", () => {
+      const doc = parseXml("<root><item>  hello  </item></root>");
+      const root = doc.children[0];
+      if (!isXmlElement(root)) return;
+
+      const item = getChild(root, "item");
+      const text = item!.children.filter(isXmlText);
+      expect(text.length).toBe(1);
+      expect(text[0].value).toBe("  hello  ");
+    });
+
+    it("preserves newline-only text between elements", () => {
+      const doc = parseXml("<root>\n  <a/>\n  <b/>\n</root>");
+      const root = doc.children[0];
+      if (!isXmlElement(root)) return;
+
+      // Whitespace text nodes between elements should be preserved
+      const textNodes = root.children.filter(isXmlText);
+      expect(textNodes.length).toBeGreaterThan(0);
+    });
+  });
 });

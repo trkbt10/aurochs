@@ -6,10 +6,12 @@
 
 import { useEffect } from "react";
 import type { FigEditorAction } from "../../context/fig-editor/types";
+import type { FigNodeId } from "@aurochs/fig/domain";
 
 type UseFigKeyboardOptions = {
   readonly dispatch: (action: FigEditorAction) => void;
   readonly hasSelection: boolean;
+  readonly selectedIds: readonly FigNodeId[];
   readonly canUndo: boolean;
   readonly canRedo: boolean;
 };
@@ -20,6 +22,7 @@ type UseFigKeyboardOptions = {
 export function useFigKeyboard({
   dispatch,
   hasSelection,
+  selectedIds,
   canUndo,
   canRedo,
 }: UseFigKeyboardOptions): void {
@@ -30,7 +33,7 @@ export function useFigKeyboard({
       // Delete/Backspace: delete selected nodes
       if ((e.key === "Delete" || e.key === "Backspace") && hasSelection) {
         e.preventDefault();
-        // The dispatch is handled by the parent that knows selectedIds
+        dispatch({ type: "DELETE_NODES", nodeIds: selectedIds });
         return;
       }
 
@@ -48,6 +51,13 @@ export function useFigKeyboard({
         return;
       }
 
+      // Cmd/Ctrl + D: Duplicate
+      if (isMod && e.key === "d" && hasSelection) {
+        e.preventDefault();
+        dispatch({ type: "DUPLICATE_NODES", nodeIds: selectedIds });
+        return;
+      }
+
       // Cmd/Ctrl + C: Copy
       if (isMod && e.key === "c" && hasSelection) {
         e.preventDefault();
@@ -62,7 +72,7 @@ export function useFigKeyboard({
         return;
       }
 
-      // Escape: Clear selection or exit text edit
+      // Escape: Clear selection or exit text edit / drill-down
       if (e.key === "Escape") {
         e.preventDefault();
         dispatch({ type: "EXIT_TEXT_EDIT" });
@@ -104,5 +114,5 @@ export function useFigKeyboard({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [dispatch, hasSelection, canUndo, canRedo]);
+  }, [dispatch, hasSelection, selectedIds, canUndo, canRedo]);
 }

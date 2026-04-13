@@ -10,6 +10,9 @@
     "@aurochs-converters/interop-drawing-ml": "workspace:*",
     "@aurochs-builder/fig": "workspace:*",
     "@aurochs/fig": "workspace:*",
+    "@aurochs/zip": "workspace:*",
+    "@aurochs-office/chart": "workspace:*",
+    "@aurochs-office/diagram": "workspace:*",
     "@aurochs-office/drawing-ml": "workspace:*",
     "@aurochs-office/ooxml": "workspace:*",
     "@aurochs-office/pptx": "workspace:*"

@@ -7,9 +7,12 @@
   "dependencies": {
     "@aurochs/fig": "workspace:*",
     "@aurochs-builder/fig": "workspace:*",
+    "@aurochs-office/chart": "workspace:*",
+    "@aurochs-office/diagram": "workspace:*",
     "@aurochs-office/drawing-ml": "workspace:*",
     "@aurochs-office/ooxml": "workspace:*",
-    "@aurochs-office/pptx": "workspace:*"
+    "@aurochs-office/pptx": "workspace:*",
+    "@aurochs-renderer/chart": "workspace:*"
   },
   "scripts": {
     "lint": "eslint src",

@@ -49,6 +49,40 @@ export const POINTS_PER_INCH = 72;
 export const OOXML_PERCENT_FACTOR = 100000;
 
 // =============================================================================
+// Default Slide Sizes (EMU)
+// =============================================================================
+
+/**
+ * Default 16:9 widescreen slide width in EMU.
+ * 13.333 inches × 914400 EMU/inch = 12192000 EMU.
+ *
+ * This is the default used by PowerPoint 2013+ for new presentations.
+ *
+ * @see ECMA-376 Part 1, Section 19.3.1.42 (p:sldSz)
+ */
+export const DEFAULT_SLIDE_WIDTH_EMU = 12192000;
+
+/**
+ * Default 16:9 widescreen slide height in EMU.
+ * 7.5 inches × 914400 EMU/inch = 6858000 EMU.
+ *
+ * @see ECMA-376 Part 1, Section 19.3.1.42 (p:sldSz)
+ */
+export const DEFAULT_SLIDE_HEIGHT_EMU = 6858000;
+
+/**
+ * Default 16:9 slide width in CSS pixels at 96 DPI.
+ * 12192000 / 9525 = 1280.
+ */
+export const DEFAULT_SLIDE_WIDTH_PX = DEFAULT_SLIDE_WIDTH_EMU / EMU_PER_PIXEL;
+
+/**
+ * Default 16:9 slide height in CSS pixels at 96 DPI.
+ * 6858000 / 9525 = 720.
+ */
+export const DEFAULT_SLIDE_HEIGHT_PX = DEFAULT_SLIDE_HEIGHT_EMU / EMU_PER_PIXEL;
+
+// =============================================================================
 // Boolean Serialization
 // =============================================================================
 

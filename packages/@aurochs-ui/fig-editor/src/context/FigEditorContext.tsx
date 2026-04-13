@@ -38,7 +38,7 @@ export function FigEditorProvider({ initialDocument, children }: FigEditorProvid
   const [state, dispatch] = useReducer(figEditorReducer, initialDocument, createFigEditorState);
 
   const document = state.documentHistory.present;
-  const { activePageId, nodeSelection, drag, clipboard, creationMode, textEdit } = state;
+  const { activePageId, nodeSelection, drag, clipboard, creationMode, textEdit, drillDownScope } = state;
 
   // Compute active page
   const activePage = useMemo(
@@ -85,6 +85,7 @@ export function FigEditorProvider({ initialDocument, children }: FigEditorProvid
       canRedo: canRedo(state.documentHistory),
       creationMode,
       textEdit,
+      drillDownScope,
     }),
     [
       dispatch,
@@ -99,6 +100,7 @@ export function FigEditorProvider({ initialDocument, children }: FigEditorProvid
       state.documentHistory,
       creationMode,
       textEdit,
+      drillDownScope,
     ],
   );
 

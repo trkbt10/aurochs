@@ -16,7 +16,11 @@ import type { NodeTreeResult } from "@aurochs/fig/parser";
 import { getNodeType, safeChildren } from "@aurochs/fig/parser";
 import { getEffectiveSymbolID } from "@aurochs/fig/symbols";
 import type { LoadedFigFile, FigImage, FigMetadata } from "@aurochs/fig/roundtrip";
-import type { FigDesignDocument, FigDesignNode, FigPage, AutoLayoutProps, LayoutConstraints, TextData, SymbolOverride } from "../types/document";
+import type {
+  FigDesignDocument, FigDesignNode, FigPage, AutoLayoutProps, LayoutConstraints, TextData, SymbolOverride,
+  BlendMode, DerivedTextData,
+  ComponentPropertyDef, ComponentPropertyRef, ComponentPropertyAssignment, ComponentPropertyType, ComponentPropertyNodeField, ComponentPropertyValue,
+} from "../types/document";
 import { DEFAULT_PAGE_BACKGROUND } from "../types/document";
 import { guidToNodeId, guidToPageId } from "../types/node-id";
 import type { FigNodeId, FigPageId } from "../types/node-id";
@@ -62,8 +66,10 @@ const MODELED_FIELDS: ReadonlySet<string> = new Set([
   "name", "visible", "opacity",
   "transform", "size",
   "fillPaints", "strokePaints", "strokeWeight", "strokeAlign", "strokeJoin", "strokeCap",
-  "cornerRadius", "rectangleCornerRadii",
+  "cornerRadius", "rectangleCornerRadii", "cornerSmoothing",
+  "blendMode",
   "effects",
+  "derivedTextData",
   "clipsContent",
   "stackMode", "stackSpacing", "stackPadding",
   "stackPrimaryAlignItems", "stackCounterAlignItems", "stackPrimaryAlignContent",
@@ -74,10 +80,37 @@ const MODELED_FIELDS: ReadonlySet<string> = new Set([
   "textAlignHorizontal", "textAlignVertical", "textAutoResize",
   "textDecoration", "textCase", "lineHeight", "letterSpacing",
   "symbolID", "symbolOverrides",
+  "componentPropDefs", "componentPropRefs", "componentPropAssignments",
   "booleanOperation",
   "pointCount", "starInnerRadius",
   "fillGeometry", "strokeGeometry", "vectorPaths",
 ]);
+
+// =============================================================================
+// Blend Mode Extraction
+// =============================================================================
+
+/**
+ * Extract blend mode from raw node data, normalizing KiwiEnumValue to BlendMode string.
+ * Returns undefined for PASS_THROUGH/NORMAL (default blend modes don't need storage).
+ */
+function extractBlendMode(raw: Record<string, unknown>): BlendMode | undefined {
+  const bm = raw.blendMode;
+  if (!bm) return undefined;
+
+  let name: string | undefined;
+  if (typeof bm === "string") {
+    name = bm;
+  } else if (typeof bm === "object" && "name" in bm) {
+    name = (bm as { name: string }).name;
+  }
+
+  if (!name || name === "PASS_THROUGH" || name === "NORMAL") {
+    return undefined;
+  }
+
+  return name as BlendMode;
+}
 
 // =============================================================================
 // Node Conversion
@@ -167,6 +200,164 @@ function extractTextData(raw: Record<string, unknown>): TextData | undefined {
   };
 }
 
+// =============================================================================
+// Component Property Extraction
+// =============================================================================
+
+/** Map ComponentPropType enum to domain string */
+const PROP_TYPE_MAP: Record<number, ComponentPropertyType> = {
+  0: "BOOL",
+  1: "TEXT",
+  2: "COLOR",
+  3: "INSTANCE_SWAP",
+  4: "VARIANT",
+  5: "NUMBER",
+  6: "IMAGE",
+  7: "SLOT",
+};
+
+/** Map ComponentPropNodeField enum to domain string */
+const NODE_FIELD_MAP: Record<number, ComponentPropertyNodeField> = {
+  0: "VISIBLE",
+  1: "TEXT_DATA",
+  2: "OVERRIDDEN_SYMBOL_ID",
+  3: "INHERIT_FILL_STYLE_ID",
+  4: "SLOT_CONTENT_ID",
+};
+
+function resolveEnumName<T extends string>(v: unknown, map: Record<number, T>): T | undefined {
+  if (v == null) return undefined;
+  if (typeof v === "string") return v as T;
+  if (typeof v === "object" && "value" in v) {
+    const num = (v as { value: number }).value;
+    return map[num];
+  }
+  if (typeof v === "number") return map[v];
+  return undefined;
+}
+
+/**
+ * Extract component property definitions from a SYMBOL/COMPONENT node.
+ */
+function extractComponentPropertyDefs(raw: Record<string, unknown>): readonly ComponentPropertyDef[] | undefined {
+  const defs = raw.componentPropDefs as readonly Record<string, unknown>[] | undefined;
+  if (!defs || defs.length === 0) return undefined;
+
+  const result: ComponentPropertyDef[] = [];
+  for (const def of defs) {
+    const id = def.id;
+    if (!id || typeof id !== "object" || !("sessionID" in id)) continue;
+    const guid = id as { sessionID: number; localID: number };
+    const name = def.name as string | undefined;
+    if (!name) continue;
+
+    const propType = resolveEnumName(def.type, PROP_TYPE_MAP);
+    if (!propType) continue;
+
+    result.push({
+      id: guidToNodeId(guid),
+      name,
+      type: propType,
+      initialValue: convertPropertyValue(def.initialValue as Record<string, unknown> | undefined),
+      sortPosition: def.sortPosition as string | undefined,
+    });
+  }
+  return result.length > 0 ? result : undefined;
+}
+
+/**
+ * Convert a raw Kiwi component property value to the domain type.
+ *
+ * Handles the conversion of raw GUIDs (guidValue) to FigNodeId (referenceValue),
+ * and strips unknown fields so the domain type doesn't carry opaque Kiwi data.
+ */
+function convertPropertyValue(raw: Record<string, unknown> | undefined): ComponentPropertyValue | undefined {
+  if (!raw) return undefined;
+
+  const result: {
+    boolValue?: boolean;
+    textValue?: { characters: string };
+    referenceValue?: FigNodeId;
+    numberValue?: number;
+  } = {};
+
+  if (typeof raw.boolValue === "boolean") {
+    result.boolValue = raw.boolValue;
+  }
+
+  const textVal = raw.textValue as { characters?: string } | undefined;
+  if (textVal?.characters !== undefined) {
+    result.textValue = { characters: textVal.characters };
+  }
+
+  const guidVal = raw.guidValue as { sessionID: number; localID: number } | undefined;
+  if (guidVal && typeof guidVal === "object" && "sessionID" in guidVal) {
+    result.referenceValue = guidToNodeId(guidVal);
+  }
+
+  if (typeof raw.numberValue === "number") {
+    result.numberValue = raw.numberValue;
+  }
+
+  // Return undefined if no known fields were populated
+  if (result.boolValue === undefined && result.textValue === undefined &&
+      result.referenceValue === undefined && result.numberValue === undefined) {
+    return undefined;
+  }
+
+  return result;
+}
+
+/**
+ * Extract component property references from any child node.
+ */
+function extractComponentPropertyRefs(raw: Record<string, unknown>): readonly ComponentPropertyRef[] | undefined {
+  const refs = raw.componentPropRefs as readonly Record<string, unknown>[] | undefined;
+  if (!refs || refs.length === 0) return undefined;
+
+  const result: ComponentPropertyRef[] = [];
+  for (const ref of refs) {
+    const defID = ref.defID;
+    if (!defID || typeof defID !== "object" || !("sessionID" in defID)) continue;
+    const guid = defID as { sessionID: number; localID: number };
+
+    const nodeField = resolveEnumName(ref.componentPropNodeField, NODE_FIELD_MAP);
+    if (!nodeField) continue;
+
+    result.push({
+      defId: guidToNodeId(guid),
+      nodeField,
+    });
+  }
+  return result.length > 0 ? result : undefined;
+}
+
+/**
+ * Extract component property assignments from an INSTANCE node.
+ */
+function extractComponentPropertyAssignments(raw: Record<string, unknown>): readonly ComponentPropertyAssignment[] | undefined {
+  const assigns = raw.componentPropAssignments as readonly Record<string, unknown>[] | undefined;
+  if (!assigns || assigns.length === 0) return undefined;
+
+  const result: ComponentPropertyAssignment[] = [];
+  for (const assign of assigns) {
+    const defID = assign.defID;
+    if (!defID || typeof defID !== "object" || !("sessionID" in defID)) continue;
+    const guid = defID as { sessionID: number; localID: number };
+
+    const value = convertPropertyValue(assign.value as Record<string, unknown> | undefined);
+    if (!value) continue; // Skip assignments with no recognizable value
+
+    result.push({
+      defId: guidToNodeId(guid),
+      value,
+    });
+  }
+  return result.length > 0 ? result : undefined;
+}
+
+// =============================================================================
+
 /**
  * Collect raw fields not modeled in FigDesignNode for roundtrip preservation.
  */
@@ -221,6 +412,9 @@ export function convertFigNode(
 
     cornerRadius: node.cornerRadius,
     rectangleCornerRadii: node.rectangleCornerRadii,
+    cornerSmoothing: raw.cornerSmoothing as number | undefined,
+
+    blendMode: extractBlendMode(raw),
 
     effects: (node.effects ?? []) as readonly FigEffect[],
 
@@ -231,9 +425,14 @@ export function convertFigNode(
     layoutConstraints: extractLayoutConstraints(raw),
 
     textData: nodeType === "TEXT" ? extractTextData(raw) : undefined,
+    derivedTextData: raw.derivedTextData as DerivedTextData | undefined,
 
     symbolId: resolveSymbolIdForDomain(raw),
     overrides: raw.symbolOverrides as readonly SymbolOverride[] | undefined,
+
+    componentPropertyDefs: extractComponentPropertyDefs(raw),
+    componentPropertyRefs: extractComponentPropertyRefs(raw),
+    componentPropertyAssignments: extractComponentPropertyAssignments(raw),
 
     booleanOperation: raw.booleanOperation as KiwiEnumValue | undefined,
 

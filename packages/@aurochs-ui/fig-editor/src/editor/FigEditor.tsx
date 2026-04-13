@@ -67,7 +67,7 @@ function FigEditorContent() {
   const hasSelection = nodeSelection.selectedIds.length > 0;
 
   // Register keyboard shortcuts
-  useFigKeyboard({ dispatch, hasSelection, canUndo, canRedo });
+  useFigKeyboard({ dispatch, hasSelection, selectedIds: nodeSelection.selectedIds, canUndo, canRedo });
 
   const toolbarContent = useMemo(() => <FigEditorToolbar />, []);
 

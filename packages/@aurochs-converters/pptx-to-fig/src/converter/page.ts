@@ -16,6 +16,7 @@ import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-conte
 import type { FigDesignDocument, FigPage, FigPageId } from "@aurochs/fig/domain";
 import type { FigColor } from "@aurochs/fig/types";
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
+import type { ResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 import { DEFAULT_PAGE_BACKGROUND } from "@aurochs-builder/fig";
 import { dmlColorToFig } from "@aurochs-converters/interop-drawing-ml/dml-to-fig";
 import { convertShapes, type NodeIdCounter, type ConvertContext } from "./shape";
@@ -27,7 +28,7 @@ export function convertDocument(doc: PresentationDocument): FigDesignDocument {
   const idCounter: NodeIdCounter = { value: 0 };
 
   const pages: FigPage[] = doc.slides.map((slideWithId, index) =>
-    convertSlide(slideWithId, index, idCounter, doc.colorContext, doc.fontScheme),
+    convertSlide(slideWithId, index, idCounter, doc.colorContext, doc.fontScheme, doc.resourceStore),
   );
 
   return {
@@ -44,6 +45,7 @@ function convertSlide(
   idCounter: NodeIdCounter,
   docColorContext: ColorContext,
   docFontScheme: FontScheme,
+  resourceStore: ResourceStore,
 ): FigPage {
   const slide = slideWithId.slide;
   const slideColorContext = slideWithId.colorContext ?? docColorContext;
@@ -52,6 +54,7 @@ function convertSlide(
   const ctx: ConvertContext = {
     colorContext: slideColorContext,
     fontScheme: slideFontScheme,
+    resourceStore,
   };
 
   const children = convertShapes(slide.shapes, idCounter, ctx);

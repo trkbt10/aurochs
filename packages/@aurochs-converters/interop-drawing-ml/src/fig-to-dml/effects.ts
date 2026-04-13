@@ -56,11 +56,20 @@ function resolveEffectType(effect: FigEffect): string {
 }
 
 function convertShadow(effect: FigEffect, typeName: string): ShadowEffect {
+  // offset is optional — no offset means the shadow sits directly behind the shape
   const ox = effect.offset?.x ?? 0;
   const oy = effect.offset?.y ?? 0;
   const distance = Math.sqrt(ox * ox + oy * oy);
   const directionDeg = Math.atan2(oy, ox) * (180 / Math.PI);
-  const color = effect.color ?? { r: 0, g: 0, b: 0, a: 0.25 };
+
+  if (!effect.color) {
+    console.warn(
+      `[fig-to-dml] Shadow effect of type "${typeName}" has no color. Using opaque black.`,
+    );
+  }
+  // Figma always sets color on shadow effects. If absent, the effect data
+  // is malformed. Use opaque black so the shadow is at least visible.
+  const color = effect.color ?? { r: 0, g: 0, b: 0, a: 1 };
 
   return {
     type: typeName === "DROP_SHADOW" ? "outer" : "inner",

@@ -9,6 +9,7 @@
     "@aurochs-converters/core": "workspace:*",
     "@aurochs-converters/interop-drawing-ml": "workspace:*",
     "@aurochs/fig": "workspace:*",
+    "@aurochs-office/chart": "workspace:*",
     "@aurochs-office/drawing-ml": "workspace:*",
     "@aurochs-office/ooxml": "workspace:*",
     "@aurochs-office/pptx": "workspace:*"

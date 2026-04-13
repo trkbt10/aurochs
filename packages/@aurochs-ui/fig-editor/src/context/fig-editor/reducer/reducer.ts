@@ -49,6 +49,7 @@ export function createFigEditorState(document: FigDesignDocument): FigEditorStat
     clipboard: undefined,
     creationMode: createSelectMode(),
     textEdit: createInactiveTextEditState(),
+    drillDownScope: undefined,
   };
 }
 

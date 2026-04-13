@@ -8,11 +8,18 @@ import { getByPath, getTextByPath } from "@aurochs/xml";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import type { SlideSize } from "../domain";
 import { SLIDE_FACTOR } from "../domain/unit-conversion";
+import { DEFAULT_SLIDE_WIDTH_PX, DEFAULT_SLIDE_HEIGHT_PX } from "@aurochs-office/ooxml/domain/ooxml-units";
 import type { TextStyleLevels } from "../domain/text-style";
 import { parseTextStyleLevels } from "../parser/text/text-style-levels";
 
-/** Default slide size (16:9 aspect ratio at 96 DPI) */
-const DEFAULT_SLIDE_SIZE: SlideSize = { width: px(960), height: px(540) };
+/**
+ * Default slide size: PowerPoint standard 16:9 widescreen.
+ * Derived from ECMA-376 §19.3.1.42 via ooxml-units SoT.
+ */
+const DEFAULT_SLIDE_SIZE: SlideSize = {
+  width: px(DEFAULT_SLIDE_WIDTH_PX),
+  height: px(DEFAULT_SLIDE_HEIGHT_PX),
+};
 
 /**
  * Parse slide size from presentation XML

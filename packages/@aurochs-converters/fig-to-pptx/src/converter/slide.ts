@@ -27,16 +27,19 @@ import { EMPTY_FONT_SCHEME } from "@aurochs-office/ooxml/domain/font-scheme";
 import { DEFAULT_COLOR_MAPPING } from "@aurochs-office/pptx/domain/color/types";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { FigColor } from "@aurochs/fig/types";
+import { DEFAULT_SLIDE_WIDTH_PX, DEFAULT_SLIDE_HEIGHT_PX } from "@aurochs-office/ooxml/domain/ooxml-units";
 
-/** Default slide size: 16:9 widescreen (same as PowerPoint default) */
-const DEFAULT_SLIDE_WIDTH = 960;
-const DEFAULT_SLIDE_HEIGHT = 540;
+// Slide size defaults are derived from the OOXML SoT (ooxml-units).
 
 export type FigToPptxSlideOptions = {
-  /** Fixed slide size. If not provided, computed from content bounds. */
+  /**
+   * Fixed slide size in Pixels (branded).
+   * If not provided, uses the ECMA-376 default 16:9 widescreen
+   * (1280×720 px at 96 DPI).
+   */
   readonly slideSize?: {
-    readonly width: number;
-    readonly height: number;
+    readonly width: Pixels;
+    readonly height: Pixels;
   };
 };
 
@@ -50,8 +53,8 @@ export function convertDocument(
   doc: FigDesignDocument,
   options?: FigToPptxSlideOptions,
 ): PresentationDocument {
-  const slideWidth = px(options?.slideSize?.width ?? DEFAULT_SLIDE_WIDTH) as Pixels;
-  const slideHeight = px(options?.slideSize?.height ?? DEFAULT_SLIDE_HEIGHT) as Pixels;
+  const slideWidth = options?.slideSize?.width ?? px(DEFAULT_SLIDE_WIDTH_PX) as Pixels;
+  const slideHeight = options?.slideSize?.height ?? px(DEFAULT_SLIDE_HEIGHT_PX) as Pixels;
 
   const resourceStore = createResourceStore();
 
@@ -62,7 +65,7 @@ export function convertDocument(
       kind: "image",
       source: "created",
       data: figImage.data.buffer as ArrayBuffer,
-      mimeType: figImage.mimeType ?? "image/png",
+      mimeType: figImage.mimeType,
     });
   }
 
@@ -188,6 +191,15 @@ function translateAndScaleNodes(
   return nodes.map((node) => translateAndScaleNode(node, bounds.minX, bounds.minY, scale, offsetX, offsetY));
 }
 
+/**
+ * Translate and scale a single top-level node.
+ *
+ * Only the node itself is repositioned and scaled — its children are NOT
+ * recursively transformed. In Figma's coordinate system, child nodes use
+ * the parent's local coordinate space (origin at parent's top-left).
+ * Scaling the parent's matrix (m00/m01/m10/m11) is sufficient to make
+ * children render at the correct scaled positions.
+ */
 function translateAndScaleNode(
   node: FigDesignNode,
   originX: number,
@@ -205,15 +217,14 @@ function translateAndScaleNode(
       ...node.transform,
       m02: newM02,
       m12: newM12,
-      // Scale the matrix scale components
       m00: node.transform.m00 * scale,
       m01: node.transform.m01 * scale,
       m10: node.transform.m10 * scale,
       m11: node.transform.m11 * scale,
     },
-    children: node.children?.map((child) =>
-      translateAndScaleNode(child, originX, originY, scale, offsetX, offsetY),
-    ),
+    // Children are NOT re-transformed — their coordinates are relative
+    // to this node's local space, and the parent's scaled matrix handles
+    // the visual scaling automatically.
   };
 }
 

@@ -46,16 +46,18 @@ export function parseXml(input: string): XmlDocument {
 
   /**
    * Parse text node.
+   *
+   * All text content is preserved, including whitespace-only nodes.
+   * ECMA-376 DrawingML text elements (e.g., `<a:t> </a:t>`) require
+   * whitespace preservation — a space-only text node is valid content.
+   *
+   * Format-level whitespace (indentation between elements) is also
+   * preserved here. Consumers that need to skip it should filter
+   * at the application layer.
    */
-  function parseText(): XmlText | null {
+  function parseText(): XmlText {
     const value = currentToken.value.value;
     advance();
-
-    // Skip whitespace-only text at document level
-    if (value.trim().length === 0) {
-      return null;
-    }
-
     return {
       type: "text",
       value,

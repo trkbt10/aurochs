@@ -3,10 +3,12 @@
  *
  * Shows the layer tree for the active page.
  * Uses react-editor-ui's LayerItem component (SoT for layer item rendering).
- * Format-specific details (icon, label) are injected via props.
+ *
+ * INSTANCE nodes and their children (inherited from SYMBOL) are highlighted
+ * with Figma's purple accent color to visually distinguish inherited elements.
  */
 
-import { useCallback, type ReactNode, type PointerEvent as ReactPointerEvent } from "react";
+import { createContext, useCallback, useContext, useState, type ReactNode, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { useFigEditor } from "../context/FigEditorContext";
 import type { FigDesignNode, FigNodeId } from "@aurochs/fig/domain";
 import { isSelected } from "@aurochs-ui/editor-core/selection";
@@ -25,36 +27,105 @@ import {
 import { iconTokens, colorTokens, fontTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 
 // =============================================================================
+// Instance highlight color
+// =============================================================================
+
+/**
+ * Figma uses purple (#9747FF) for component instance indicators.
+ * We use a slightly muted variant for the icon tint and a very subtle
+ * background tint for layer rows that are inside an INSTANCE scope.
+ */
+const INSTANCE_COLOR = "#9747FF";
+const INSTANCE_BG_TINT = "rgba(151, 71, 255, 0.06)";
+const INSTANCE_ICON_COLOR = "#9747FF";
+
+// =============================================================================
 // Icon helpers
 // =============================================================================
 
 const ICON_PROPS = { size: iconTokens.size.sm, strokeWidth: iconTokens.strokeWidth };
 
-function getNodeIcon(type: string): ReactNode {
+function getNodeIcon(type: string, isInstanceContext: boolean): ReactNode {
+  // Instance-context nodes get a purple tint on their icon
+  const color = isInstanceContext ? INSTANCE_ICON_COLOR : undefined;
+  const props = color ? { ...ICON_PROPS, color } : ICON_PROPS;
+
   switch (type) {
     case "FRAME":
     case "COMPONENT":
     case "COMPONENT_SET":
-      return <RectIcon {...ICON_PROPS} />;
+      return <RectIcon {...props} />;
     case "GROUP":
-      return <FolderIcon {...ICON_PROPS} />;
+      return <FolderIcon {...props} />;
     case "TEXT":
-      return <TextBoxIcon {...ICON_PROPS} />;
+      return <TextBoxIcon {...props} />;
     case "RECTANGLE":
     case "ROUNDED_RECTANGLE":
-      return <RectIcon {...ICON_PROPS} />;
+      return <RectIcon {...props} />;
     case "ELLIPSE":
-      return <EllipseIcon {...ICON_PROPS} />;
+      return <EllipseIcon {...props} />;
     case "VECTOR":
     case "LINE":
-      return <LineIcon {...ICON_PROPS} />;
+      return <LineIcon {...props} />;
     case "STAR":
-      return <StarIcon {...ICON_PROPS} />;
+      return <StarIcon {...props} />;
     case "INSTANCE":
-      return <DiamondIcon {...ICON_PROPS} />;
+      // INSTANCE nodes always get the purple diamond icon
+      return <DiamondIcon {...ICON_PROPS} color={INSTANCE_COLOR} />;
     default:
-      return <UnknownShapeIcon {...ICON_PROPS} />;
+      return <UnknownShapeIcon {...props} />;
   }
+}
+
+// =============================================================================
+// Instance badge
+// =============================================================================
+
+const instanceBadgeStyle: CSSProperties = {
+  display: "inline-block",
+  fontSize: "9px",
+  lineHeight: "14px",
+  padding: "0 4px",
+  borderRadius: "3px",
+  backgroundColor: "rgba(151, 71, 255, 0.12)",
+  color: INSTANCE_COLOR,
+  fontWeight: 600,
+  letterSpacing: "0.02em",
+};
+
+function InstanceBadge() {
+  return <span style={instanceBadgeStyle}>Instance</span>;
+}
+
+// =============================================================================
+// Layer item wrapper for instance context tint
+// =============================================================================
+
+const instanceRowStyle: CSSProperties = {
+  backgroundColor: INSTANCE_BG_TINT,
+};
+
+// =============================================================================
+// Expansion state context
+// =============================================================================
+
+/**
+ * Expansion state is managed at the LayerPanel level and provided via context
+ * to all recursive LayerTree instances. This prevents expansion state from
+ * being lost when a parent LayerTree re-renders and remounts its children.
+ */
+type ExpansionState = {
+  readonly expandedIds: ReadonlySet<string>;
+  readonly toggle: (id: string) => void;
+};
+
+const ExpansionContext = createContext<ExpansionState>({
+  expandedIds: new Set(),
+  toggle: () => {},
+});
+
+function useExpansion(): ExpansionState {
+  return useContext(ExpansionContext);
 }
 
 // =============================================================================
@@ -64,10 +135,17 @@ function getNodeIcon(type: string): ReactNode {
 type LayerTreeProps = {
   readonly nodes: readonly FigDesignNode[];
   readonly depth: number;
+  /**
+   * Whether this subtree is inside an INSTANCE node.
+   * When true, all children are rendered with the instance accent color
+   * to indicate they are inherited from a SYMBOL/COMPONENT.
+   */
+  readonly isInstanceContext: boolean;
 };
 
-function LayerTree({ nodes, depth }: LayerTreeProps) {
-  const { nodeSelection, dispatch } = useFigEditor();
+function LayerTree({ nodes, depth, isInstanceContext }: LayerTreeProps) {
+  const { nodeSelection, dispatch, drillDownScope } = useFigEditor();
+  const { expandedIds, toggle } = useExpansion();
 
   const handlePointerDown = useCallback(
     (nodeId: FigNodeId) => (e: ReactPointerEvent) => {
@@ -81,28 +159,46 @@ function LayerTree({ nodes, depth }: LayerTreeProps) {
     [dispatch],
   );
 
+  const handleDoubleClick = useCallback(
+    (nodeId: FigNodeId, node: FigDesignNode) => () => {
+      // Double-click on a container: drill into it on the canvas
+      const drillableTypes = new Set(["FRAME", "GROUP", "COMPONENT", "COMPONENT_SET", "SYMBOL", "INSTANCE"]);
+      if (drillableTypes.has(node.type) && node.children && node.children.length > 0) {
+        dispatch({ type: "DRILL_INTO", scopeNodeId: nodeId });
+      }
+    },
+    [dispatch],
+  );
+
   return (
     <>
       {[...nodes].reverse().map((node) => {
         const selected = isSelected(nodeSelection, node.id);
         const hasChildren = node.children != null && node.children.length > 0;
+        const expanded = expandedIds.has(node.id);
+        const isInstance = node.type === "INSTANCE";
+        const childIsInstanceContext = isInstanceContext || isInstance;
 
         return (
-          <div key={node.id}>
+          <div key={node.id} style={childIsInstanceContext ? instanceRowStyle : undefined}>
             <LayerItem
               id={node.id}
               label={node.name}
-              icon={getNodeIcon(node.type)}
+              icon={getNodeIcon(node.type, isInstanceContext)}
               depth={depth}
               selected={selected}
               dimmed={!node.visible}
               hasChildren={hasChildren}
+              expanded={expanded}
+              onToggle={hasChildren ? () => toggle(node.id) : undefined}
               onPointerDown={handlePointerDown(node.id as FigNodeId)}
+              onDoubleClick={handleDoubleClick(node.id as FigNodeId, node)}
               showVisibilityToggle={false}
               showLockToggle={false}
+              badge={isInstance ? <InstanceBadge /> : undefined}
             />
-            {hasChildren && (
-              <LayerTree nodes={node.children!} depth={depth + 1} />
+            {hasChildren && expanded && (
+              <LayerTree nodes={node.children!} depth={depth + 1} isInstanceContext={childIsInstanceContext} />
             )}
           </div>
         );
@@ -117,9 +213,25 @@ function LayerTree({ nodes, depth }: LayerTreeProps) {
 
 /**
  * Layer tree panel for the fig editor.
+ *
+ * Expansion state is managed here via ExpansionContext so that
+ * recursive LayerTree components share a single stable state store.
  */
 export function LayerPanel() {
   const { activePage } = useFigEditor();
+  const [expandedIds, setExpandedIds] = useState<ReadonlySet<string>>(() => new Set());
+
+  const toggleExpand = useCallback((id: string) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }, []);
 
   if (!activePage) {
     return (
@@ -138,9 +250,11 @@ export function LayerPanel() {
           Empty page
         </div>
       ) : (
-        <div role="tree" aria-label="Layers">
-          <LayerTree nodes={activePage.children} depth={0} />
-        </div>
+        <ExpansionContext.Provider value={{ expandedIds, toggle: toggleExpand }}>
+          <div role="tree" aria-label="Layers">
+            <LayerTree nodes={activePage.children} depth={0} isInstanceContext={false} />
+          </div>
+        </ExpansionContext.Provider>
       )}
     </OptionalPropertySection>
   );

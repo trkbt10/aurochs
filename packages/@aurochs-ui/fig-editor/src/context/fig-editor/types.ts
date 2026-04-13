@@ -64,6 +64,23 @@ export type FigClipboardContent = {
 // =============================================================================
 
 /**
+ * Drill-down scope for canvas interaction.
+ *
+ * Figma's selection model:
+ * - Single click selects top-level nodes
+ * - Double-click on a frame/group/instance enters it ("drill-down")
+ * - Inside a drilled-down scope, clicks select the container's direct children
+ * - Clicking canvas background or pressing Escape exits drill-down
+ *
+ * scopeNodeId is the ID of the container the user has entered.
+ * When undefined, clicks target top-level page children.
+ */
+export type DrillDownScope = {
+  /** The container node the user has drilled into */
+  readonly scopeNodeId: FigNodeId;
+} | undefined;
+
+/**
  * Complete fig editor state.
  */
 export type FigEditorState = {
@@ -74,6 +91,8 @@ export type FigEditorState = {
   readonly clipboard: FigClipboardContent | undefined;
   readonly creationMode: FigCreationMode;
   readonly textEdit: FigTextEditState;
+  /** Drill-down scope for canvas interaction (see DrillDownScope) */
+  readonly drillDownScope: DrillDownScope;
 };
 
 // =============================================================================
@@ -94,6 +113,7 @@ export type FigEditorAction =
   // Node mutations
   | { readonly type: "ADD_NODE"; readonly spec: NodeSpec; readonly parentId?: FigNodeId }
   | { readonly type: "DELETE_NODES"; readonly nodeIds: readonly FigNodeId[] }
+  | { readonly type: "DUPLICATE_NODES"; readonly nodeIds: readonly FigNodeId[] }
   | {
       readonly type: "UPDATE_NODE";
       readonly nodeId: FigNodeId;
@@ -118,6 +138,10 @@ export type FigEditorAction =
       readonly primaryId?: FigNodeId;
     }
   | { readonly type: "CLEAR_NODE_SELECTION" }
+
+  // Drill-down scope
+  | { readonly type: "DRILL_INTO"; readonly scopeNodeId: FigNodeId }
+  | { readonly type: "EXIT_DRILL_DOWN" }
 
   // Drag pending
   | {
@@ -213,4 +237,5 @@ export type FigEditorContextValue = {
   readonly canRedo: boolean;
   readonly creationMode: FigCreationMode;
   readonly textEdit: FigTextEditState;
+  readonly drillDownScope: DrillDownScope;
 };

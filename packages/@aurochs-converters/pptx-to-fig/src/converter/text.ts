@@ -8,9 +8,10 @@
  * We concatenate all runs/paragraphs into one string (newline-separated)
  * and extract the font properties from the first non-empty run.
  *
- * Font resolution: RunProperties.fontFamily may be a theme font
- * reference (e.g., "+mn-lt" for minor Latin). We resolve these
- * via FontScheme when available.
+ * Limitation: Per-run styles (individual run colors, mixed bold/italic
+ * within a paragraph) are reduced to the dominant run's style.
+ * Fig's TextData type does not support per-character formatting.
+ * This is a known information loss.
  */
 
 import type { TextBody, RunProperties } from "@aurochs-office/pptx/domain/text";
@@ -30,6 +31,7 @@ import { resolveThemeFont } from "@aurochs-office/ooxml/domain/font-scheme";
 export function convertText(textBody: TextBody, fontScheme?: FontScheme): TextData | undefined {
   const lines: string[] = [];
   let dominantRun: RunProperties | undefined;
+  let hasMultipleStyles = false;
 
   for (const paragraph of textBody.paragraphs) {
     const lineTexts: string[] = [];
@@ -38,6 +40,13 @@ export function convertText(textBody: TextBody, fontScheme?: FontScheme): TextDa
         lineTexts.push(run.text);
         if (!dominantRun && run.properties) {
           dominantRun = run.properties;
+        } else if (dominantRun && run.properties) {
+          // Detect style variation across runs
+          if (run.properties.bold !== dominantRun.bold
+            || run.properties.italic !== dominantRun.italic
+            || run.properties.color !== dominantRun.color) {
+            hasMultipleStyles = true;
+          }
         }
       }
     }
@@ -46,6 +55,14 @@ export function convertText(textBody: TextBody, fontScheme?: FontScheme): TextDa
 
   const characters = lines.join("\n");
   if (characters.length === 0) return undefined;
+
+  if (hasMultipleStyles) {
+    console.warn(
+      `[pptx-to-fig] Text "${characters.slice(0, 40)}..." has per-run style variations ` +
+      `(mixed bold/italic/color). Fig TextData supports only a single dominant style. ` +
+      `Per-run formatting is lost.`,
+    );
+  }
 
   // ECMA-376 §21.1.2.3.12: default font size is 1800 hundredths of a point = 18pt
   const fontSize = dominantRun?.fontSize
@@ -74,33 +91,19 @@ export function convertText(textBody: TextBody, fontScheme?: FontScheme): TextDa
  *
  * Theme font references start with "+" (e.g., "+mn-lt" for minor Latin).
  * These are resolved via the FontScheme from the presentation theme.
- *
- * If resolution fails (no FontScheme, or the FontScheme has no font for
- * that slot), we return the raw reference string as-is rather than
- * substituting an arbitrary font. The consumer (editor, renderer) can
- * then decide how to handle the unresolved reference in its context.
  */
 function resolveFontFamily(raw: string | undefined, fontScheme?: FontScheme): string {
   if (raw === undefined) {
-    // No font specified at all. ECMA-376 does not mandate a default
-    // typeface — it depends on the rendering application.
-    // We return the minor Latin theme font if available, since body
-    // text is the most common context for omitted fonts.
     const themeBody = fontScheme?.minorFont.latin;
     if (themeBody) return themeBody;
-    // No theme available. Return a descriptive placeholder rather than
-    // silently substituting an unrelated font.
     return "sans-serif";
   }
 
-  // Theme font reference: resolve via FontScheme
   if (raw.startsWith("+")) {
     const resolved = resolveThemeFont(raw, fontScheme);
-    // If resolution fails, preserve the raw reference so it's debuggable
     return resolved ?? raw;
   }
 
-  // Direct typeface name — use as-is
   return raw;
 }
 

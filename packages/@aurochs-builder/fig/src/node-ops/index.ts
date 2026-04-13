@@ -16,7 +16,9 @@ export {
 
 export {
   findNodeById,
+  findParentNode,
   updateNodeInTree,
   removeNodeFromTree,
+  insertNodeInTree,
   flattenNodes,
 } from "./tree-utils";
