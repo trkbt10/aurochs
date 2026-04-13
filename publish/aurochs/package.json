@@ -1,6 +1,6 @@
 {
   "name": "aurochs",
-  "version": "0.12.1",
+  "version": "0.12.2",
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
@@ -182,6 +182,10 @@
   },
   "scripts": {
     "prepublishOnly": "echo 'Run build from @aurochs-build/aurochs first'"
+  },
+  "dependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "zstd-codec": "^0.1.5"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",

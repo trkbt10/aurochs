@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.2] - 2026-04-13
+
+### Fixed
+
+- CLI crashes on `npx aurochs` with `ReferenceError: module_zstd_codec is not defined` caused by bun bundler miscompiling zstd-codec's CJS wrapper
+- CLI crashes on `npx aurochs` with `Error: Cannot require module @resvg/resvg-js-darwin-arm64` — native addon was incorrectly bundled inline
+
+### Changed
+
+- CLI build now externalizes native/WASM packages (`@resvg/resvg-js`, `zstd-codec`) instead of bundling them inline, with proper `dependencies` in published package.json
+- `zstd-codec` import changed from static to dynamic `import()` to avoid bun bundler CJS miscompilation
+- CLI verification script (`verify:cli`) now installs external dependencies and runs under `node` to catch bundler and resolution errors before publish
+
 ## [0.12.1] - 2026-04-13
 
 ### Changed
@@ -330,7 +343,8 @@ Project inception.
 - Text body and paragraph rendering
 - Theme and style support
 
-[Unreleased]: https://github.com/trkbt10/aurochs/compare/v0.12.1...HEAD
+[Unreleased]: https://github.com/trkbt10/aurochs/compare/v0.12.2...HEAD
+[0.12.2]: https://github.com/trkbt10/aurochs/compare/v0.12.1...v0.12.2
 [0.12.1]: https://github.com/trkbt10/aurochs/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/trkbt10/aurochs/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/trkbt10/aurochs/compare/v0.10.0...v0.11.0

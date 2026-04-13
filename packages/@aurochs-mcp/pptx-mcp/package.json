@@ -1,6 +1,6 @@
 {
   "name": "@aurochs-mcp/pptx-mcp",
-  "version": "0.12.1",
+  "version": "0.12.2",
   "type": "module",
   "bin": {
     "pptx-mcp": "./src/index.ts"

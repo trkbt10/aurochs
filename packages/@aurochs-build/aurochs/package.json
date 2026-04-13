@@ -1,11 +1,11 @@
 {
   "name": "@aurochs-build/aurochs",
-  "version": "0.12.1",
+  "version": "0.12.2",
   "private": true,
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "build:cli": "bun build ../../@aurochs-cli/cli/src/cli.ts --target node --outdir ../../../publish/aurochs/dist --entry-naming cli.js",
+    "build:cli": "bun build ../../@aurochs-cli/cli/src/cli.ts --target node --external @resvg/resvg-js --external zstd-codec --outdir ../../../publish/aurochs/dist --entry-naming cli.js",
     "verify": "node scripts/verify-exports.mjs",
     "verify:cli": "node scripts/verify-cli.mjs"
   },
