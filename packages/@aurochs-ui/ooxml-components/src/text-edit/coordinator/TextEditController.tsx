@@ -6,9 +6,24 @@
  * - Visual text is rendered as SVG on top
  * - IME composition (pre-edit) text is displayed with underline
  * - Cursor and selection are overlaid
+ *
+ * Style preservation on copy-paste:
+ * - copy/cut event listeners store per-character styled entries in an
+ *   instance-scoped ref (not module-level, so multiple editors don't collide).
+ * - paste event listener sets a pending styled paste ref without calling
+ *   preventDefault — the browser's native paste proceeds normally, preserving
+ *   the textarea's undo stack and caret position.
+ * - The next mergeTextIntoBody call (triggered by the textarea's change event)
+ *   picks up the pending styled paste and applies per-character styles to the
+ *   inserted region, falling back to insertion-point inheritance when no
+ *   pending paste is present.
+ * - The SoT for the current TextBody is the parent component: onSelectionChange
+ *   propagates the merged result upward, and the parent feeds it back as the
+ *   textBody prop. No secondary state (styledBaseBody) is needed.
  */
 
 import { useRef, useState, useMemo, useCallback, useEffect } from "react";
+import type { TextBody } from "@aurochs-office/pptx/domain";
 import { toLayoutInput, layoutTextBody } from "@aurochs-renderer/pptx/text-layout";
 import { createLayoutParagraphMeasurer } from "@aurochs-renderer/pptx/react";
 import {
@@ -20,7 +35,13 @@ import {
   cursorPositionToOffset,
   offsetToCursorPosition,
 } from "@aurochs-ui/editor-core/text-edit";
-import { mergeTextIntoBody, extractDefaultRunProperties } from "../input-support/text-body-merge";
+import {
+  mergeTextIntoBody,
+  extractDefaultRunProperties,
+  flattenTextBody,
+  type StyledCharEntry,
+  type PendingStyledPaste,
+} from "../input-support/text-body-merge";
 import { colorTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { TextOverlay } from "../text-render/TextOverlay";
 import { CursorCaret } from "@aurochs-ui/ui-components/primitives/CursorCaret";
@@ -134,11 +155,34 @@ export function TextEditController({
   // Extract default run properties from original text body (memoized)
   const defaultRunProperties = useMemo(() => extractDefaultRunProperties(textBody), [textBody]);
 
-  // Compute current TextBody from edited text
-  const currentTextBody = useMemo(
-    () => mergeTextIntoBody(textBody, currentText, defaultRunProperties),
-    [textBody, currentText, defaultRunProperties],
-  );
+  // Instance-scoped internal clipboard for styled text.
+  // Each TextEditController instance has its own clipboard so multiple
+  // editors (PPTX, DOCX, XLSX) mounted simultaneously don't collide.
+  // The plainText field verifies sync with the system clipboard.
+  const internalClipboardRef = useRef<{
+    readonly plainText: string;
+    readonly entries: readonly StyledCharEntry[];
+  } | null>(null);
+
+  // Pending styled paste: set by the paste event listener, consumed by the
+  // next mergeTextIntoBody call (triggered by the textarea's native input event).
+  // Using a ref avoids an extra render cycle — the merge reads it synchronously
+  // within the same render that processes the textarea change.
+  const pendingStyledPasteRef = useRef<PendingStyledPaste | null>(null);
+
+  // Compute current TextBody from edited text.
+  // The textBody prop is the SoT: the parent updates it via onSelectionChange.
+  // If a styled paste is pending, mergeTextIntoBody applies per-character
+  // styles to the inserted region; otherwise insertion-point inheritance is used.
+  const currentTextBody = useMemo(() => {
+    const pending = pendingStyledPasteRef.current;
+    const result = mergeTextIntoBody(textBody, currentText, defaultRunProperties, pending);
+    // Clear pending after consumption so subsequent edits don't re-apply it.
+    if (pending) {
+      pendingStyledPasteRef.current = null;
+    }
+    return result;
+  }, [textBody, currentText, defaultRunProperties]);
 
   // Compute layout result for current text
   const paragraphMeasurer = useMemo(() => createLayoutParagraphMeasurer(), []);
@@ -188,6 +232,30 @@ export function TextEditController({
     updateCursorPosition();
   }, [updateCursorPosition]);
 
+  /**
+   * Store styled entries for the given selection range into the internal clipboard.
+   */
+  const storeStyledSelection = useCallback(
+    (start: number, end: number): void => {
+      if (start === end) {
+        return;
+      }
+      const allEntries = flattenTextBody(currentTextBody);
+      const selectedEntries: StyledCharEntry[] = allEntries.slice(start, end).map((entry) => ({
+        char: entry.char,
+        kind: entry.kind,
+        properties: entry.properties,
+      }));
+      const selectedText = allEntries
+        .slice(start, end)
+        .map((e) => e.char)
+        .join("");
+
+      internalClipboardRef.current = { plainText: selectedText, entries: selectedEntries };
+    },
+    [currentTextBody],
+  );
+
   const copySelection = useCallback(() => {
     const textarea = textareaRef.current;
     if (!textarea) {
@@ -196,19 +264,89 @@ export function TextEditController({
     restoreSelectionSnapshot();
     const start = textarea.selectionStart ?? 0;
     const end = textarea.selectionEnd ?? start;
-    const selectedText = textarea.value.slice(start, end);
-    if (selectedText.length === 0) {
+    if (start === end) {
       return;
     }
 
+    storeStyledSelection(start, end);
+
     if (navigator.clipboard && window.isSecureContext) {
+      const selectedText = textarea.value.slice(start, end);
       navigator.clipboard.writeText(selectedText).catch(() => {
         document.execCommand("copy");
       });
     } else {
       document.execCommand("copy");
     }
-  }, [restoreSelectionSnapshot]);
+  }, [restoreSelectionSnapshot, storeStyledSelection]);
+
+  // Native copy event: store styled entries. No preventDefault.
+  const handleCopy = useCallback(
+    (_event: ClipboardEvent) => {
+      const textarea = textareaRef.current;
+      if (!textarea) {
+        return;
+      }
+      storeStyledSelection(textarea.selectionStart ?? 0, textarea.selectionEnd ?? 0);
+    },
+    [storeStyledSelection],
+  );
+
+  // Native cut event: store styled entries. No preventDefault.
+  const handleCut = useCallback(
+    (_event: ClipboardEvent) => {
+      const textarea = textareaRef.current;
+      if (!textarea) {
+        return;
+      }
+      storeStyledSelection(textarea.selectionStart ?? 0, textarea.selectionEnd ?? 0);
+    },
+    [storeStyledSelection],
+  );
+
+  // Native paste event: if pasted text matches internal clipboard, prepare
+  // pending styled paste for the next merge. No preventDefault — the browser's
+  // native paste proceeds, preserving undo stack and caret position.
+  const handlePaste = useCallback(
+    (event: ClipboardEvent) => {
+      const clipboard = internalClipboardRef.current;
+      const pastedText = event.clipboardData?.getData("text/plain");
+      if (!pastedText || !clipboard) {
+        pendingStyledPasteRef.current = null;
+        return;
+      }
+
+      if (pastedText !== clipboard.plainText) {
+        // System clipboard doesn't match internal clipboard — stale.
+        internalClipboardRef.current = null;
+        pendingStyledPasteRef.current = null;
+        return;
+      }
+
+      pendingStyledPasteRef.current = {
+        plainText: clipboard.plainText,
+        entries: clipboard.entries,
+      };
+    },
+    [],
+  );
+
+  // Attach clipboard event listeners.
+  // These only observe events without interfering with native behavior.
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      return;
+    }
+    textarea.addEventListener("copy", handleCopy);
+    textarea.addEventListener("cut", handleCut);
+    textarea.addEventListener("paste", handlePaste);
+    return () => {
+      textarea.removeEventListener("copy", handleCopy);
+      textarea.removeEventListener("cut", handleCut);
+      textarea.removeEventListener("paste", handlePaste);
+    };
+  }, [handleCopy, handleCut, handlePaste]);
 
   const contextMenuItems: readonly MenuEntry[] = useMemo(() => [{ id: "copy", label: "Copy" }], []);
   const { handleCompositionStart, handleCompositionUpdate, handleCompositionEnd } = useTextComposition({

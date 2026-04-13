@@ -8,7 +8,7 @@
 import type { TextBody, RunProperties, TextRun, ParagraphProperties } from "@aurochs-office/pptx/domain";
 import { getPlainText } from "@aurochs-ui/editor-core/text-edit";
 
-type TextCharEntry = {
+export type TextCharEntry = {
   readonly char: string;
   readonly kind: "text" | "field" | "break" | "paragraph";
   readonly properties: RunProperties | undefined;
@@ -19,16 +19,45 @@ type TextCharEntry = {
 };
 
 /**
+ * Serializable representation of a styled text character for clipboard transfer.
+ * Contains only the data needed to reconstruct styled text on paste.
+ */
+export type StyledCharEntry = {
+  readonly char: string;
+  readonly kind: "text" | "field" | "break" | "paragraph";
+  readonly properties: RunProperties | undefined;
+};
+
+/**
+ * Pending styled paste context.
+ *
+ * When the user copies styled text within the editor, we store per-character
+ * style information. On the next merge (triggered by the textarea's native
+ * paste), we use this to apply the original styles to the inserted region
+ * instead of falling back to insertion-point inheritance.
+ *
+ * The `plainText` field is used to verify the paste matches the copied content.
+ * If the user copies from an external source between our copy and the paste,
+ * the system clipboard text won't match and we discard the stale context.
+ */
+export type PendingStyledPaste = {
+  readonly plainText: string;
+  readonly entries: readonly StyledCharEntry[];
+};
+
+/**
  * Merge edited text into original TextBody, preserving styling.
  *
  * @param originalBody - Original TextBody to preserve bodyProperties from
  * @param newText - New plain text content
  * @param defaultRunProperties - Run properties to apply to all new runs (REQUIRED)
+ * @param pendingStyledPaste - Optional styled paste context from internal clipboard
  */
 export function mergeTextIntoBody(
   originalBody: TextBody,
   newText: string,
   defaultRunProperties: RunProperties,
+  pendingStyledPaste?: PendingStyledPaste | null,
 ): TextBody {
   if (!originalBody) {
     throw new Error("mergeTextIntoBody requires originalBody.");
@@ -52,6 +81,7 @@ export function mergeTextIntoBody(
     defaultProps,
     fallbackParagraphProperties: originalBody.paragraphs[0]?.properties ?? {},
     fallbackParagraphEndProperties: originalBody.paragraphs[0]?.endProperties,
+    pendingStyledPaste: pendingStyledPaste ?? undefined,
   });
   const paragraphs = buildParagraphsFromEntries(mergedEntries, originalBody);
 
@@ -89,7 +119,11 @@ export function extractDefaultRunProperties(textBody: TextBody): RunProperties {
   return firstRun.properties ?? {};
 }
 
-function flattenTextBody(textBody: TextBody): TextCharEntry[] {
+/**
+ * Flatten a TextBody into per-character entries.
+ * Each entry carries its run properties, paragraph properties, and character kind.
+ */
+export function flattenTextBody(textBody: TextBody): TextCharEntry[] {
   const entries: TextCharEntry[] = [];
 
   textBody.paragraphs.forEach((paragraph, paragraphIndex) => {
@@ -157,6 +191,7 @@ type ApplySingleReplaceEditInput = {
   readonly defaultProps: RunProperties | undefined;
   readonly fallbackParagraphProperties: ParagraphProperties;
   readonly fallbackParagraphEndProperties?: RunProperties;
+  readonly pendingStyledPaste?: PendingStyledPaste;
 };
 
 function applySingleReplaceEdit({
@@ -165,6 +200,7 @@ function applySingleReplaceEdit({
   defaultProps,
   fallbackParagraphProperties,
   fallbackParagraphEndProperties,
+  pendingStyledPaste,
 }: ApplySingleReplaceEditInput): TextCharEntry[] {
   const oldText = originalEntries.map((entry) => entry.char).join("");
   const oldLength = oldText.length;
@@ -187,26 +223,93 @@ function applySingleReplaceEdit({
   const insertedParagraphEndProperties =
     paragraphTemplateEntry?.paragraphEndProperties ?? fallbackParagraphEndProperties;
 
-  const insertedEntries: TextCharEntry[] = Array.from(insertedText).map((char) => {
+  // Check if we have a pending styled paste whose text matches the inserted region.
+  // This is the mechanism by which internal copy-paste preserves per-character styles:
+  // the textarea's native paste inserts plain text (preserving the undo stack),
+  // and we apply the stored style information during the subsequent merge.
+  const styledPasteEntries = resolveStyledPasteEntries(insertedText, pendingStyledPaste);
+
+  // Determine run properties for inserted text from the insertion point context.
+  // When the cursor is between two runs (e.g., "Aurochs|Office Document Toolkit"),
+  // we use the properties of the nearest preceding text/field character.
+  // This matches the typical editor behavior: typing inherits the style of the
+  // preceding character. Falls back to the textBody-level default only when
+  // no preceding text/field character exists (e.g., inserting at the very beginning).
+  const insertionRunProperties: RunProperties | undefined = (() => {
+    for (let i = prefixLength - 1; i >= 0; i--) {
+      const entry = originalEntries[i];
+      if (entry.kind === "text" || entry.kind === "field") {
+        return entry.properties;
+      }
+    }
+    return defaultProps;
+  })();
+
+  const insertedEntries: TextCharEntry[] = Array.from(insertedText).map((char, index) => {
     if (char === "\n") {
       return {
         char,
-        kind: "paragraph",
+        kind: "paragraph" as const,
         properties: undefined,
         paragraphProperties: insertedParagraphProperties,
         paragraphEndProperties: insertedParagraphEndProperties,
       };
     }
+
+    // If we have styled paste entries for this position, use the copied style.
+    // Otherwise, inherit from the insertion point (preceding character).
+    const styledEntry = styledPasteEntries?.[index];
+    const properties = styledEntry ? styledEntry.properties : insertionRunProperties;
+
     return {
       char,
-      kind: "text",
-      properties: defaultProps,
+      kind: "text" as const,
+      properties,
       paragraphProperties: insertedParagraphProperties,
       paragraphEndProperties: insertedParagraphEndProperties,
     };
   });
 
   return [...prefixEntries, ...insertedEntries, ...suffixEntries];
+}
+
+/**
+ * Resolve styled paste entries for the inserted text region.
+ *
+ * Returns the styled entries array if the pending paste matches the inserted
+ * text exactly (same characters in same order), or undefined if there's no
+ * match (external paste, stale clipboard, or no pending paste).
+ */
+function resolveStyledPasteEntries(
+  insertedText: string,
+  pendingStyledPaste: PendingStyledPaste | undefined,
+): readonly StyledCharEntry[] | undefined {
+  if (!pendingStyledPaste) {
+    return undefined;
+  }
+  if (pendingStyledPaste.plainText !== insertedText) {
+    return undefined;
+  }
+  if (pendingStyledPaste.entries.length !== insertedText.length) {
+    return undefined;
+  }
+  return pendingStyledPaste.entries;
+}
+
+/**
+ * Compare two RunProperties for value equality.
+ * Uses reference equality first (fast path for entries from the same TextBody),
+ * then falls back to JSON-based deep comparison for entries from clipboard paste
+ * where properties objects are new instances with identical values.
+ */
+function areRunPropertiesEqual(a: RunProperties | undefined, b: RunProperties | undefined): boolean {
+  if (a === b) {
+    return true;
+  }
+  if (a === undefined || b === undefined) {
+    return false;
+  }
+  return JSON.stringify(a) === JSON.stringify(b);
 }
 
 function buildParagraphsFromEntries(entries: TextCharEntry[], originalBody: TextBody): TextBody["paragraphs"] {
@@ -299,7 +402,7 @@ function buildParagraphsFromEntries(entries: TextCharEntry[], originalBody: Text
       const canAppend =
         state.currentRun &&
         state.currentRun.kind === entry.kind &&
-        state.currentRun.properties === entry.properties &&
+        areRunPropertiesEqual(state.currentRun.properties, entry.properties) &&
         state.currentRun.fieldType === entry.fieldType &&
         state.currentRun.fieldId === entry.fieldId;
 
