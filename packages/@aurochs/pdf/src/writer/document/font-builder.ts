@@ -6,6 +6,7 @@
 
 import type { PdfObject } from "../../native/core/types";
 import type { PdfEmbeddedFont } from "../../domain/document";
+import { DEFAULT_FONT_METRICS } from "../../domain/font/defaults";
 import { serializePdfDict, serializeIndirectObject } from "../object-serializer";
 import { serializePdfStream } from "../stream-encoder";
 import type { PdfObjectTracker } from "./object-tracker";
@@ -246,8 +247,10 @@ export function buildType0Font(
   tracker.set(fontFileObjNum, serializeIndirectObject(fontFileObjNum, 0, fontFileStream));
 
   // Get metrics from font or use defaults
-  const ascent = font.metrics?.ascender ?? 800;
-  const descent = font.metrics?.descender ?? -200;
+  const ascent = font.metrics?.ascender ?? DEFAULT_FONT_METRICS.ascender;
+  const descent = font.metrics?.descender ?? DEFAULT_FONT_METRICS.descender;
+  // PDF Reference Table 117: DW (default glyph width for CID fonts) defaults to 1000.
+  // This is NOT the same as DEFAULT_FONT_METRICS.defaultWidth (500, a layout approximation).
   const defaultWidth = font.metrics?.defaultWidth ?? 1000;
 
   // Build font descriptor

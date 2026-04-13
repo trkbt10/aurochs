@@ -6,6 +6,8 @@
  */
 
 import type { FontInfo, FontMappings } from "../types";
+import { containsPrivateUseCharacter } from "../unicode-classification";
+import { isToUnicodeSeverelyCorrupted as checkToUnicodeCorruption } from "../cmap/cmap-parser";
 import { decodeCIDFallback } from "../cid/cid-ordering";
 
 const BYTE_TO_HEX = Array.from({ length: 256 }, (_, value) =>
@@ -51,19 +53,6 @@ function resolveSourceCodeByteLengths(
   return [...inferred].filter((length) => Number.isInteger(length) && length > 0).sort((a, b) => b - a);
 }
 
-function containsPrivateUseCharacter(text: string): boolean {
-  return Array.from(text).some((char) => {
-    const codePoint = char.codePointAt(0);
-    if (codePoint === undefined) {
-      return false;
-    }
-    return (
-      (codePoint >= 0xe000 && codePoint <= 0xf8ff) ||
-      (codePoint >= 0xf0000 && codePoint <= 0xffffd) ||
-      (codePoint >= 0x100000 && codePoint <= 0x10fffd)
-    );
-  });
-}
 
 function decodeCidFallback(args: {
   readonly code: number;
@@ -86,17 +75,15 @@ function resolveCidFallbackOrdering(fontInfo: FontInfo): "Japan1" | "GB1" | "CNS
   return undefined;
 }
 
-function isToUnicodeSeverelyCorrupted(fontInfo: FontInfo): boolean {
+function isFontToUnicodeSeverelyCorrupted(fontInfo: FontInfo): boolean {
   const byteMapping = fontInfo.toUnicodeByteMapping;
   const diagnostics = fontInfo.toUnicodeDiagnostics;
   if (!byteMapping || byteMapping.size === 0 || !diagnostics) {
     return false;
   }
-
-  const total = byteMapping.size;
-  const replacementRatio = diagnostics.replacementCharMapCount / total;
-  const privateUseRatio = diagnostics.privateUseCharMapCount / total;
-  return replacementRatio >= 0.5 || privateUseRatio >= 0.5;
+  return checkToUnicodeCorruption(diagnostics, byteMapping.size, {
+    treatPrivateUseAsCorruption: !fontInfo.isSymbolFont,
+  });
 }
 
 function scoreCharacter(c: number): number {
@@ -311,7 +298,7 @@ export function decodeTextWithFontInfo(rawText: string, fontInfo: FontInfo): str
     cidCodeToUnicodeFallbackMap,
   } = fontInfo;
   const cidFallbackOrdering = resolveCidFallbackOrdering(fontInfo);
-  const severeCidMode = isToUnicodeSeverelyCorrupted(fontInfo) && codeByteWidth === 2;
+  const severeCidMode = isFontToUnicodeSeverelyCorrupted(fontInfo) && codeByteWidth === 2;
 
   // Prefer exact ToUnicode byte mapping when available.
   if (toUnicodeByteMapping && toUnicodeByteMapping.size > 0) {
@@ -325,7 +312,10 @@ export function decodeTextWithFontInfo(rawText: string, fontInfo: FontInfo): str
         ordering: cidFallbackOrdering,
         cidCodeToUnicodeFallbackMap,
         treatReplacementAsMissing: severeCidMode,
-        treatPrivateUseAsMissing: severeCidMode,
+        // Symbol fonts (Wingdings, Symbol, etc.) legitimately use PUA code points.
+        // Even when the ToUnicode CMap is corrupted by other signals (high replacement
+        // ratio), PUA characters in symbol fonts are valid glyph references — not junk.
+        treatPrivateUseAsMissing: severeCidMode && !fontInfo.isSymbolFont,
         allowCidFallbackOnBadToUnicode: severeCidMode,
         allowCidFallbackOnMiss: severeCidMode,
       })

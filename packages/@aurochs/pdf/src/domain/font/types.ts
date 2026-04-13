@@ -105,9 +105,20 @@ export type FontInfo = {
   readonly isBold?: boolean;
   /**
    * Whether the font is italic/oblique.
-   * Detected from FontDescriptor Flags (bit 64) or font name.
+   * Detected from FontDescriptor Flags (bit 7) or font name.
    */
   readonly isItalic?: boolean;
+  /**
+   * Whether the font is a symbol / dingbats font (Wingdings, Symbol, ZapfDingbats, etc.).
+   *
+   * Symbol fonts legitimately map glyphs to the Unicode Private Use Area.
+   * When true, PUA entries in the ToUnicode CMap should NOT be treated as
+   * a corruption signal.
+   *
+   * Detected from BaseFont name heuristics (not the PDF Symbolic flag,
+   * which is also set on CJK and other non-Latin fonts).
+   */
+  readonly isSymbolFont?: boolean;
   /**
    * The actual font name from BaseFont entry.
    * This is the real font name (e.g., "ABCDEF+Arial" or "Helvetica"),

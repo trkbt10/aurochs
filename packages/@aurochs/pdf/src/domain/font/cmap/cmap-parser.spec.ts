@@ -2,7 +2,8 @@
  * @file src/pdf/domain/font/cmap-parser.spec.ts
  */
 
-import { hexToString, parseToUnicodeCMap } from "./cmap-parser";
+import { hexToString, isToUnicodeSeverelyCorrupted, parseToUnicodeCMap } from "./cmap-parser";
+import type { CMapParseDiagnostics } from "./cmap-parser";
 
 function createConsoleWarnSpy(): Readonly<{
   readonly calls: readonly ReadonlyArray<unknown>[];
@@ -195,6 +196,54 @@ describe("parseToUnicodeCMap", () => {
     expect(result.diagnostics.replacementCharMapCount).toBe(1);
     expect(result.diagnostics.privateUseCharMapCount).toBe(1);
     expect(result.diagnostics.sourceCodeLengthHistogram.get(1)).toBe(3);
+  });
+});
+
+describe("isToUnicodeSeverelyCorrupted", () => {
+  function makeDiagnostics(overrides: Partial<CMapParseDiagnostics> = {}): CMapParseDiagnostics {
+    return {
+      invalidEntryCount: 0,
+      truncatedRangeCount: 0,
+      sourceLengthOutsideCodeSpaceCount: 0,
+      replacementCharMapCount: 0,
+      privateUseCharMapCount: 0,
+      sourceCodeLengthHistogram: new Map(),
+      ...overrides,
+    };
+  }
+
+  it("returns false when totalEntries is 0", () => {
+    expect(isToUnicodeSeverelyCorrupted(makeDiagnostics(), 0)).toBe(false);
+  });
+
+  it("returns true when replacement ratio >= 50%", () => {
+    const diag = makeDiagnostics({ replacementCharMapCount: 5 });
+    expect(isToUnicodeSeverelyCorrupted(diag, 10)).toBe(true);
+  });
+
+  it("returns false when replacement ratio < 50%", () => {
+    const diag = makeDiagnostics({ replacementCharMapCount: 4 });
+    expect(isToUnicodeSeverelyCorrupted(diag, 10)).toBe(false);
+  });
+
+  it("returns true when PUA ratio >= 50% (default: treatPrivateUseAsCorruption=true)", () => {
+    const diag = makeDiagnostics({ privateUseCharMapCount: 5 });
+    expect(isToUnicodeSeverelyCorrupted(diag, 10)).toBe(true);
+  });
+
+  it("returns false when PUA ratio >= 50% but treatPrivateUseAsCorruption=false (symbol font)", () => {
+    const diag = makeDiagnostics({ privateUseCharMapCount: 10 });
+    expect(isToUnicodeSeverelyCorrupted(diag, 10, { treatPrivateUseAsCorruption: false })).toBe(false);
+  });
+
+  it("still detects replacement corruption even when PUA is not treated as corruption", () => {
+    const diag = makeDiagnostics({ replacementCharMapCount: 5, privateUseCharMapCount: 10 });
+    expect(isToUnicodeSeverelyCorrupted(diag, 10, { treatPrivateUseAsCorruption: false })).toBe(true);
+  });
+
+  it("returns false when both ratios are below threshold", () => {
+    const diag = makeDiagnostics({ replacementCharMapCount: 2, privateUseCharMapCount: 3 });
+    expect(isToUnicodeSeverelyCorrupted(diag, 10)).toBe(false);
   });
 });
 

@@ -17,10 +17,12 @@ import {
   glyphNameToUnicode,
   isBoldFont,
   isItalicFont,
+  isSymbolFont,
   parseToUnicodeCMap,
   type CIDOrdering,
   type CMapParserOptions,
 } from "../../domain/font";
+import { isToUnicodeSeverelyCorrupted } from "../../domain/font/cmap/cmap-parser";
 import { parseCffCidCharset } from "../../domain/font/cff/cff-cid-parser";
 import {
   buildCidCodeToUnicodeFallbackMap,
@@ -111,13 +113,16 @@ function maybeWarnSuspiciousToUnicode(
 
   const diagnostics = toUnicode.diagnostics;
   const total = toUnicode.byteMapping.size;
-  const replacementRatio = diagnostics.replacementCharMapCount / total;
-  const privateUseRatio = diagnostics.privateUseCharMapCount / total;
   const hasStructuralIssue =
     diagnostics.invalidEntryCount > 0 ||
     diagnostics.truncatedRangeCount > 0 ||
     diagnostics.sourceLengthOutsideCodeSpaceCount > 0;
-  const hasHighCorruptionSignal = replacementRatio >= 0.5 || privateUseRatio >= 0.5;
+  // For symbol fonts, PUA mappings are expected — only replacement chars
+  // count as a corruption signal.
+  const treatPUA = !isSymbolFont(baseFont);
+  const hasHighCorruptionSignal = isToUnicodeSeverelyCorrupted(diagnostics, total, {
+    treatPrivateUseAsCorruption: treatPUA,
+  });
   const suspectedCause = resolveSuspectedToUnicodeCause({
     hasStructuralIssue,
     hasHighCorruptionSignal,
@@ -140,15 +145,20 @@ function maybeWarnSuspiciousToUnicode(
   );
 }
 
-function isSeverelyCorruptedToUnicode(toUnicode: CMapParseResult | null): boolean {
+/**
+ * Check if a ToUnicode CMap is severely corrupted, accounting for the
+ * font's nature (symbol fonts are exempt from PUA corruption heuristics).
+ */
+function checkSeverelyCorruptedToUnicode(
+  toUnicode: CMapParseResult | null,
+  baseFont: string | undefined,
+): boolean {
   if (!toUnicode || toUnicode.byteMapping.size === 0) {
     return false;
   }
-  const diagnostics = toUnicode.diagnostics;
-  const total = toUnicode.byteMapping.size;
-  const replacementRatio = diagnostics.replacementCharMapCount / total;
-  const privateUseRatio = diagnostics.privateUseCharMapCount / total;
-  return replacementRatio >= 0.5 || privateUseRatio >= 0.5;
+  return isToUnicodeSeverelyCorrupted(toUnicode.diagnostics, toUnicode.byteMapping.size, {
+    treatPrivateUseAsCorruption: !isSymbolFont(baseFont),
+  });
 }
 
 function maybeWarnUnrecoverableIdentityCorruption(args: {
@@ -168,7 +178,7 @@ function maybeWarnUnrecoverableIdentityCorruption(args: {
   if (ordering !== "Identity") {
     return;
   }
-  if (!isSeverelyCorruptedToUnicode(toUnicode)) {
+  if (!checkSeverelyCorruptedToUnicode(toUnicode, baseFont)) {
     return;
   }
   if (cidCodeToUnicodeFallbackMap && cidCodeToUnicodeFallbackMap.size > 0) {
@@ -995,7 +1005,7 @@ export function extractFontMappingsFromResourcesNative(
     const metrics = extractFontMetrics(page, fontDict);
     const ordering = extractCIDOrderingFromFontDict(page, fontDict) ?? undefined;
     const allowIdentityHeuristic =
-      !toUnicode || toUnicode.byteMapping.size === 0 || isSeverelyCorruptedToUnicode(toUnicode);
+      !toUnicode || toUnicode.byteMapping.size === 0 || checkSeverelyCorruptedToUnicode(toUnicode, baseFont);
     const cidCodeToUnicodeFallbackMap = buildCidCodeToUnicodeFallbackFromFont({
       page,
       fontDict,
@@ -1034,6 +1044,7 @@ export function extractFontMappingsFromResourcesNative(
       encodingMap,
       isBold,
       isItalic,
+      isSymbolFont: isSymbolFont(baseFont) || undefined,
       baseFont,
     };
 

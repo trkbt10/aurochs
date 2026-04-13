@@ -595,8 +595,8 @@ function maybeApplyTextClipBBox(
   if (mode < 4 || mode > 7) {return;}
 
   const metrics = textState.currentFontMetrics;
-  const ascender = metrics.ascender ?? 800;
-  const descender = metrics.descender ?? -200;
+  const ascender = metrics.ascender;
+  const descender = metrics.descender;
   const size = textRun.effectiveFontSize;
   if (!Number.isFinite(size) || size <= 0) {return;}
 

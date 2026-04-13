@@ -8,6 +8,7 @@
 import type { PdfText } from "../../domain/text";
 import type { PdfEmbeddedFont } from "../../domain/document";
 import type { FontProvider } from "../../domain/font/font-provider";
+import { DEFAULT_FONT_METRICS } from "../../domain/font/defaults";
 import { encodeTextForFont, splitTextByEncodability } from "../../domain/font/text-encoder";
 
 /**
@@ -117,7 +118,7 @@ function resolveTextPosition(text: PdfText): { readonly x: number; readonly y: n
   if (text.baselineStartX !== undefined && text.baselineStartY !== undefined) {
     return { x: text.baselineStartX, y: text.baselineStartY };
   }
-  const descender = text.fontMetrics?.descender ?? -200;
+  const descender = text.fontMetrics?.descender ?? DEFAULT_FONT_METRICS.descender;
   return { x: text.x, y: text.y - (descender * text.fontSize / 1000) };
 }
 

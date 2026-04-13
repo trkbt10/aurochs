@@ -18,6 +18,8 @@ import type { CIDOrdering } from "./types";
 import type { EmbeddedFont, EmbeddedFontMetrics, FontFormat } from "./embedded-font";
 import type { PdfEmbeddedFont, PdfFontToUnicode } from "../document/types";
 import { fontToDataUrl, generateFontFaceCss } from "./font-css-generator";
+import { normalizeFontFamily } from "./font-name-map";
+import { isBoldFont, isItalicFont } from "./font-style";
 
 // =============================================================================
 // Types
@@ -160,25 +162,33 @@ export type FontProvider = {
 // =============================================================================
 
 /**
- * PDF Standard 14 fonts → system CSS font-family mapping.
+ * PDF Standard 14 font names.
  * ISO 32000-1:2008 Section 9.6.2.2.
  */
-const PDF_STANDARD_14: ReadonlyMap<string, { cssFontFamily: string; isBold: boolean; isItalic: boolean }> = new Map([
-  ["Helvetica", { cssFontFamily: "Arial", isBold: false, isItalic: false }],
-  ["Helvetica-Bold", { cssFontFamily: "Arial", isBold: true, isItalic: false }],
-  ["Helvetica-Oblique", { cssFontFamily: "Arial", isBold: false, isItalic: true }],
-  ["Helvetica-BoldOblique", { cssFontFamily: "Arial", isBold: true, isItalic: true }],
-  ["Times-Roman", { cssFontFamily: "Times New Roman", isBold: false, isItalic: false }],
-  ["Times-Bold", { cssFontFamily: "Times New Roman", isBold: true, isItalic: false }],
-  ["Times-Italic", { cssFontFamily: "Times New Roman", isBold: false, isItalic: true }],
-  ["Times-BoldItalic", { cssFontFamily: "Times New Roman", isBold: true, isItalic: true }],
-  ["Courier", { cssFontFamily: "Courier New", isBold: false, isItalic: false }],
-  ["Courier-Bold", { cssFontFamily: "Courier New", isBold: true, isItalic: false }],
-  ["Courier-Oblique", { cssFontFamily: "Courier New", isBold: false, isItalic: true }],
-  ["Courier-BoldOblique", { cssFontFamily: "Courier New", isBold: true, isItalic: true }],
-  ["Symbol", { cssFontFamily: "Symbol", isBold: false, isItalic: false }],
-  ["ZapfDingbats", { cssFontFamily: "Wingdings", isBold: false, isItalic: false }],
-]);
+const PDF_STANDARD_14_NAMES: readonly string[] = [
+  "Helvetica", "Helvetica-Bold", "Helvetica-Oblique", "Helvetica-BoldOblique",
+  "Times-Roman", "Times-Bold", "Times-Italic", "Times-BoldItalic",
+  "Courier", "Courier-Bold", "Courier-Oblique", "Courier-BoldOblique",
+  "Symbol", "ZapfDingbats",
+];
+
+/**
+ * PDF Standard 14 fonts → system CSS font-family + style mapping.
+ * ISO 32000-1:2008 Section 9.6.2.2.
+ *
+ * CSS font-family is derived from {@link normalizeFontFamily} (SoT for name mapping).
+ * Bold/italic flags are derived from {@link isBoldFont}/{@link isItalicFont} (SoT for style detection).
+ */
+const PDF_STANDARD_14: ReadonlyMap<string, { cssFontFamily: string; isBold: boolean; isItalic: boolean }> = new Map(
+  PDF_STANDARD_14_NAMES.map((name) => [
+    name,
+    {
+      cssFontFamily: normalizeFontFamily(name),
+      isBold: isBoldFont(name),
+      isItalic: isItalicFont(name),
+    },
+  ]),
+);
 
 // =============================================================================
 // Internal helpers

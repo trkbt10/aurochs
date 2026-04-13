@@ -16,19 +16,23 @@ export type {
 // Defaults
 export { DEFAULT_FONT_METRICS } from "./defaults";
 
-// Font style detection
-export { normalizeFontName, isBoldFont, isItalicFont } from "./font-style";
+// Font style and classification detection
+export { normalizeFontName, isBoldFont, isItalicFont, isSymbolFont } from "./font-style";
+
+// Unicode character classification
+export { isPrivateUseCodePoint, containsPrivateUseCharacter } from "./unicode-classification";
 
 // Font name normalization
 export { normalizeFontFamily } from "./font-name-map";
 
 // CMap parsing
-export type { CMapParseResult, CMapParserOptions } from "./cmap/cmap-parser";
+export type { CMapParseResult, CMapParseDiagnostics, CMapParserOptions } from "./cmap/cmap-parser";
 export {
   parseToUnicodeCMap,
   parseBfChar,
   parseBfRange,
   hexToString,
+  isToUnicodeSeverelyCorrupted,
 } from "./cmap/cmap-parser";
 
 // Text decoding

@@ -6,6 +6,7 @@
  */
 
 import type { FontMapping } from "../types";
+import { containsPrivateUseCharacter } from "../unicode-classification";
 
 /**
  * Diagnostics captured while parsing ToUnicode CMaps.
@@ -730,18 +731,47 @@ function buildDiagnostics(args: Readonly<{
   };
 }
 
-function containsPrivateUseCharacter(text: string): boolean {
-  return Array.from(text).some((char) => {
-    const codePoint = char.codePointAt(0);
-    if (codePoint === undefined) {
-      return false;
+
+/**
+ * Determine whether ToUnicode diagnostics indicate severe corruption.
+ *
+ * "Severe corruption" means the ToUnicode CMap is unreliable enough that
+ * callers should fall back to CID-based decoding or other alternatives.
+ *
+ * The check is: replacement-character ratio ≥ 50% **OR** private-use ratio
+ * ≥ 50% (when PUA is treated as a corruption signal).
+ *
+ * For **symbol fonts** (Wingdings, Symbol, ZapfDingbats, etc.), PUA mappings
+ * are the correct and expected behaviour — not a corruption signal.  Callers
+ * should pass `treatPrivateUseAsCorruption: false` for such fonts so that
+ * only the replacement-character ratio is evaluated.
+ *
+ * @param diagnostics  - Parse diagnostics from {@link parseToUnicodeCMap}.
+ * @param totalEntries - Total number of entries in the byte mapping.
+ * @param options.treatPrivateUseAsCorruption
+ *   When `true` (default), a high PUA ratio counts as corruption.
+ *   Set to `false` for symbol / dingbats fonts where PUA is legitimate.
+ */
+export function isToUnicodeSeverelyCorrupted(
+  diagnostics: CMapParseDiagnostics,
+  totalEntries: number,
+  options?: { readonly treatPrivateUseAsCorruption?: boolean },
+): boolean {
+  if (totalEntries === 0) {
+    return false;
+  }
+  const treatPUA = options?.treatPrivateUseAsCorruption ?? true;
+  const replacementRatio = diagnostics.replacementCharMapCount / totalEntries;
+  if (replacementRatio >= 0.5) {
+    return true;
+  }
+  if (treatPUA) {
+    const privateUseRatio = diagnostics.privateUseCharMapCount / totalEntries;
+    if (privateUseRatio >= 0.5) {
+      return true;
     }
-    return (
-      (codePoint >= 0xe000 && codePoint <= 0xf8ff) ||
-      (codePoint >= 0xf0000 && codePoint <= 0xffffd) ||
-      (codePoint >= 0x100000 && codePoint <= 0x10fffd)
-    );
-  });
+  }
+  return false;
 }
 
 /**

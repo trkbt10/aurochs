@@ -172,8 +172,8 @@ function computeOrientedBoxForRun(run: TextRun, fontMappings: FontMappings): Ori
   const nx = -uy;
   const ny = ux;
 
-  const ascender = metrics.ascender ?? 800;
-  const descender = metrics.descender ?? -200;
+  const ascender = metrics.ascender;
+  const descender = metrics.descender;
   const size = run.effectiveFontSize;
   if (!Number.isFinite(size) || size <= 0) {return null;}
 

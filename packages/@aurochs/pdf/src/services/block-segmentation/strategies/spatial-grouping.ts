@@ -19,6 +19,7 @@
  */
 
 import type { PdfText } from "../../../domain/text";
+import { DEFAULT_FONT_METRICS } from "../../../domain/font/defaults";
 import type {
   BlockingZone,
   GroupedText,
@@ -285,7 +286,7 @@ function calculateExpectedGap(prev: PdfText, curr: PdfText): number {
 }
 
 function getBaselineY(text: PdfText): number {
-  const descender = text.fontMetrics?.descender ?? -200;
+  const descender = text.fontMetrics?.descender ?? DEFAULT_FONT_METRICS.descender;
   return text.y - (descender * text.fontSize) / 1000;
 }
 
