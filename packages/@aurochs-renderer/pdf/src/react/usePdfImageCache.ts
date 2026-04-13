@@ -15,7 +15,7 @@
  * re-renders when background image encoding completes.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPdfImageCache, objectUrlStrategy, type PdfImageCache, type PdfImageUrlStrategy } from "../image-cache";
 import type { PdfImageUrlResolver } from "../types";
 
@@ -54,7 +54,9 @@ export function usePdfImageCache(externalCache?: PdfImageCache, strategy?: PdfIm
   const isOwned = !externalCache;
 
   // Force re-render when background encoding completes.
-  const [, setTick] = useState(0);
+  // The tick value is used to create a new resolver wrapper so that consumers
+  // using it as a useMemo dependency can detect cache updates.
+  const [tick, setTick] = useState(0);
 
   useEffect(() => {
     const unsub = cache.subscribe(() => setTick((n) => n + 1));
@@ -66,8 +68,18 @@ export function usePdfImageCache(externalCache?: PdfImageCache, strategy?: PdfIm
     };
   }, [cache, isOwned]);
 
+  // Create a new function reference each time deferred encoding completes,
+  // so consumers that include imageUrlResolver in useMemo deps re-compute.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const imageUrlResolver: PdfImageUrlResolver = useCallback(
+    (image) => cache.resolve(image),
+    // tick is intentionally included to produce a new reference on cache updates
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [cache, tick],
+  );
+
   return {
     imageCache: cache,
-    imageUrlResolver: cache.resolve,
+    imageUrlResolver,
   };
 }

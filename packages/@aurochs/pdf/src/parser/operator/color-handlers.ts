@@ -14,6 +14,7 @@
 
 import type { GraphicsStateOps, OperatorHandler, OperatorHandlerEntry, ParserContext } from "./types";
 import type { PdfColor } from "../../domain";
+import { clamp01 } from "../../domain";
 import { popNumber, collectColorComponents } from "./stack-ops";
 import {
   evalIccCurve,
@@ -21,6 +22,8 @@ import {
   makeBradfordAdaptationMatrix,
   type ParsedIccProfile,
 } from "../color/icc-profile.native";
+import type { ParsedNamedColorSpace } from "../color/color-space.native";
+import { evaluateFunctionType2 } from "../shading/shading-raster";
 
 // =============================================================================
 // Gray Color Handlers
@@ -247,30 +250,263 @@ function applyMat3ToXyz(m: readonly number[], v: readonly [number, number, numbe
   ] as const;
 }
 
-function tryApplyIccBasedFillColor(components: readonly number[], ctx: ParserContext, gfxOps: GraphicsStateOps): boolean {
+// =============================================================================
+// Named color space resolution — converts named color space + components to RGB
+// =============================================================================
+
+/**
+ * Resolve a named color space to RGB bytes.
+ *
+ * Handles: ICCBased, Separation (with Type 2 tint transform),
+ * DeviceN (with Type 2 tint transform), Indexed (palette lookup),
+ * CalGray, CalRGB, and Lab.
+ */
+function resolveNamedColorSpaceToRgb(
+  cs: ParsedNamedColorSpace,
+  components: readonly number[],
+): readonly [number, number, number] | null {
+  switch (cs.kind) {
+    case "iccBased":
+      return cs.profile ? iccComponentsToRgbBytes(components, cs.profile, cs.n) : null;
+
+    case "separation":
+      return resolveSeparationToRgb(cs, components);
+
+    case "deviceN":
+      return resolveDeviceNToRgb(cs, components);
+
+    case "indexed":
+      return resolveIndexedToRgb(cs, components);
+
+    case "calGray":
+      return resolveCalGrayToRgb(cs, components);
+
+    case "calRgb":
+      return resolveCalRgbToRgb(cs, components);
+
+    case "lab":
+      return resolveLabToRgb(cs, components);
+
+    case "device":
+      return null; // Device spaces are handled by the component-count inference path
+  }
+}
+
+function tryApplyNamedFillColor(components: readonly number[], ctx: ParserContext, gfxOps: GraphicsStateOps): boolean {
   const csName = gfxOps.get().fillColorSpaceName;
   if (!csName) {return false;}
   const cs = ctx.colorSpaces.get(csName);
-  if (!cs || cs.kind !== "iccBased") {return false;}
-  if (!cs.profile) {return false;}
+  if (!cs) {return false;}
 
-  const rgb = iccComponentsToRgbBytes(components, cs.profile, cs.n);
+  const rgb = resolveNamedColorSpaceToRgb(cs, components);
   if (!rgb) {return false;}
   gfxOps.setFillRgb((rgb[0] ?? 0) / 255, (rgb[1] ?? 0) / 255, (rgb[2] ?? 0) / 255);
   return true;
 }
 
-function tryApplyIccBasedStrokeColor(components: readonly number[], ctx: ParserContext, gfxOps: GraphicsStateOps): boolean {
+function tryApplyNamedStrokeColor(components: readonly number[], ctx: ParserContext, gfxOps: GraphicsStateOps): boolean {
   const csName = gfxOps.get().strokeColorSpaceName;
   if (!csName) {return false;}
   const cs = ctx.colorSpaces.get(csName);
-  if (!cs || cs.kind !== "iccBased") {return false;}
-  if (!cs.profile) {return false;}
+  if (!cs) {return false;}
 
-  const rgb = iccComponentsToRgbBytes(components, cs.profile, cs.n);
+  const rgb = resolveNamedColorSpaceToRgb(cs, components);
   if (!rgb) {return false;}
   gfxOps.setStrokeRgb((rgb[0] ?? 0) / 255, (rgb[1] ?? 0) / 255, (rgb[2] ?? 0) / 255);
   return true;
+}
+
+
+// =============================================================================
+// Separation / DeviceN → RGB via tintTransform
+// =============================================================================
+
+function alternateComponentsToRgb(
+  alternate: "DeviceGray" | "DeviceRGB" | "DeviceCMYK",
+  comps: readonly number[],
+): readonly [number, number, number] {
+  if (alternate === "DeviceGray") {
+    const g = Math.round(clamp01(comps[0] ?? 0) * 255);
+    return [g, g, g];
+  }
+  if (alternate === "DeviceRGB") {
+    return [
+      Math.round(clamp01(comps[0] ?? 0) * 255),
+      Math.round(clamp01(comps[1] ?? 0) * 255),
+      Math.round(clamp01(comps[2] ?? 0) * 255),
+    ];
+  }
+  // DeviceCMYK — naive conversion
+  const c = clamp01(comps[0] ?? 0);
+  const m = clamp01(comps[1] ?? 0);
+  const y = clamp01(comps[2] ?? 0);
+  const k = clamp01(comps[3] ?? 0);
+  return [
+    Math.round((1 - Math.min(1, c + k)) * 255),
+    Math.round((1 - Math.min(1, m + k)) * 255),
+    Math.round((1 - Math.min(1, y + k)) * 255),
+  ];
+}
+
+/**
+ * Separation → RGB via tintTransform.
+ *
+ * PDF spec (ISO 32000-1, 8.6.6.4): Separation color spaces have
+ * a tintTransform (Type 2 exponential interpolation) that maps a single
+ * tint value [0,1] to components in the alternate color space.
+ *
+ * tintTransform is null only when the PDF dict/stream could not be
+ * resolved (broken reference etc.), which should not occur in a
+ * well-formed PDF. Returns null in that case so the caller can fall
+ * through to component-count inference.
+ */
+function resolveSeparationToRgb(
+  cs: Extract<ParsedNamedColorSpace, { kind: "separation" }>,
+  components: readonly number[],
+): readonly [number, number, number] | null {
+  if (!cs.tintTransform) {return null;}
+  const tint = clamp01(components[0] ?? 0);
+  const alternateComps = evaluateFunctionType2(cs.tintTransform, tint, cs.alternateComponents);
+  return alternateComponentsToRgb(cs.alternate, alternateComps);
+}
+
+/**
+ * DeviceN → RGB via tintTransform.
+ *
+ * PDF spec (ISO 32000-1, 8.6.6.5): DeviceN has a tintTransform
+ * (Type 2 exponential interpolation) that maps tint values to
+ * components in the alternate color space. Type 2 is a single-input
+ * function, so the first component is used as the input.
+ *
+ * Returns null only when tintTransform could not be parsed (broken ref).
+ */
+function resolveDeviceNToRgb(
+  cs: Extract<ParsedNamedColorSpace, { kind: "deviceN" }>,
+  components: readonly number[],
+): readonly [number, number, number] | null {
+  if (!cs.tintTransform) {return null;}
+  const tint = clamp01(components[0] ?? 0);
+  const alternateComps = evaluateFunctionType2(cs.tintTransform, tint, cs.alternateComponents);
+  return alternateComponentsToRgb(cs.alternate, alternateComps);
+}
+
+// =============================================================================
+// Indexed → RGB via palette lookup
+// =============================================================================
+
+function resolveIndexedToRgb(
+  cs: Extract<ParsedNamedColorSpace, { kind: "indexed" }>,
+  components: readonly number[],
+): readonly [number, number, number] | null {
+  // Indexed color space: component is a raw integer index (0..hival), not 0..1.
+  const rawIndex = components[0] ?? 0;
+  const clamped = Math.min(cs.hival, Math.max(0, Math.round(rawIndex)));
+  const bpc = cs.base === "DeviceGray" ? 1 : cs.base === "DeviceRGB" ? 3 : 4;
+  const offset = clamped * bpc;
+
+  if (cs.base === "DeviceGray") {
+    const g = cs.lookup[offset] ?? 0;
+    return [g, g, g];
+  }
+  if (cs.base === "DeviceRGB") {
+    return [cs.lookup[offset] ?? 0, cs.lookup[offset + 1] ?? 0, cs.lookup[offset + 2] ?? 0];
+  }
+  // DeviceCMYK — lookup contains raw CMYK bytes (0..255)
+  const c = (cs.lookup[offset] ?? 0) / 255;
+  const m = (cs.lookup[offset + 1] ?? 0) / 255;
+  const y = (cs.lookup[offset + 2] ?? 0) / 255;
+  const k = (cs.lookup[offset + 3] ?? 0) / 255;
+  return [
+    Math.round((1 - Math.min(1, c + k)) * 255),
+    Math.round((1 - Math.min(1, m + k)) * 255),
+    Math.round((1 - Math.min(1, y + k)) * 255),
+  ];
+}
+
+// =============================================================================
+// CalGray / CalRGB / Lab → RGB via CIE conversion
+// =============================================================================
+
+const D65: readonly [number, number, number] = [0.9505, 1, 1.089];
+
+function calGrayToXyz(
+  cs: Extract<ParsedNamedColorSpace, { kind: "calGray" }>,
+  gray: number,
+): readonly [number, number, number] {
+  const A = Math.pow(clamp01(gray), cs.gamma);
+  return [
+    cs.whitePoint[0] * A,
+    cs.whitePoint[1] * A,
+    cs.whitePoint[2] * A,
+  ];
+}
+
+function calRgbToXyz(
+  cs: Extract<ParsedNamedColorSpace, { kind: "calRgb" }>,
+  components: readonly number[],
+): readonly [number, number, number] {
+  const r = Math.pow(clamp01(components[0] ?? 0), cs.gamma[0]);
+  const g = Math.pow(clamp01(components[1] ?? 0), cs.gamma[1]);
+  const b = Math.pow(clamp01(components[2] ?? 0), cs.gamma[2]);
+  const m = cs.matrix;
+  return [
+    (m[0] ?? 1) * r + (m[3] ?? 0) * g + (m[6] ?? 0) * b,
+    (m[1] ?? 0) * r + (m[4] ?? 1) * g + (m[7] ?? 0) * b,
+    (m[2] ?? 0) * r + (m[5] ?? 0) * g + (m[8] ?? 1) * b,
+  ];
+}
+
+function labToXyz(
+  cs: Extract<ParsedNamedColorSpace, { kind: "lab" }>,
+  components: readonly number[],
+): readonly [number, number, number] {
+  const L = components[0] ?? 0; // 0..100
+  const a = components[1] ?? 0; // range[0]..range[1]
+  const b = components[2] ?? 0; // range[2]..range[3]
+
+  const delta = 6 / 29;
+  const finv = (t: number): number =>
+    t > delta ? t * t * t : 3 * delta * delta * (t - 4 / 29);
+
+  const fy = (L + 16) / 116;
+  const fx = fy + a / 500;
+  const fz = fy - b / 200;
+
+  return [
+    cs.whitePoint[0] * finv(fx),
+    cs.whitePoint[1] * finv(fy),
+    cs.whitePoint[2] * finv(fz),
+  ];
+}
+
+function resolveCalGrayToRgb(
+  cs: Extract<ParsedNamedColorSpace, { kind: "calGray" }>,
+  components: readonly number[],
+): readonly [number, number, number] {
+  const xyz = calGrayToXyz(cs, components[0] ?? 0);
+  const adapt = makeBradfordAdaptationMatrix({ srcWhitePoint: cs.whitePoint, dstWhitePoint: D65 });
+  const adapted = applyMat3ToXyz(adapt, xyz);
+  return xyzToSrgbBytes(adapted[0], adapted[1], adapted[2]);
+}
+
+function resolveCalRgbToRgb(
+  cs: Extract<ParsedNamedColorSpace, { kind: "calRgb" }>,
+  components: readonly number[],
+): readonly [number, number, number] {
+  const xyz = calRgbToXyz(cs, components);
+  const adapt = makeBradfordAdaptationMatrix({ srcWhitePoint: cs.whitePoint, dstWhitePoint: D65 });
+  const adapted = applyMat3ToXyz(adapt, xyz);
+  return xyzToSrgbBytes(adapted[0], adapted[1], adapted[2]);
+}
+
+function resolveLabToRgb(
+  cs: Extract<ParsedNamedColorSpace, { kind: "lab" }>,
+  components: readonly number[],
+): readonly [number, number, number] {
+  const xyz = labToXyz(cs, components);
+  const adapt = makeBradfordAdaptationMatrix({ srcWhitePoint: cs.whitePoint, dstWhitePoint: D65 });
+  const adapted = applyMat3ToXyz(adapt, xyz);
+  return xyzToSrgbBytes(adapted[0], adapted[1], adapted[2]);
 }
 
 function iccComponentsToRgbBytes(
@@ -359,7 +595,7 @@ function iccComponentsToRgbBytes(
  */
 const handleFillColorN: OperatorHandler = (ctx, gfxOps) => {
   const [components, newStack] = collectColorComponents(ctx.operandStack);
-  if (!tryApplyIccBasedFillColor(components, ctx, gfxOps)) {
+  if (!tryApplyNamedFillColor(components, ctx, gfxOps)) {
     applyFillColorN(components, gfxOps);
   }
 
@@ -371,7 +607,7 @@ const handleFillColorN: OperatorHandler = (ctx, gfxOps) => {
  */
 const handleStrokeColorN: OperatorHandler = (ctx, gfxOps) => {
   const [components, newStack] = collectColorComponents(ctx.operandStack);
-  if (!tryApplyIccBasedStrokeColor(components, ctx, gfxOps)) {
+  if (!tryApplyNamedStrokeColor(components, ctx, gfxOps)) {
     applyStrokeColorN(components, gfxOps);
   }
 
@@ -417,7 +653,9 @@ const handleFillColorNWithOptionalName: OperatorHandler = (ctx, gfxOps) => {
     }
     return { operandStack: newStack };
   }
-  applyFillColorN(components, gfxOps);
+  if (!tryApplyNamedFillColor(components, ctx, gfxOps)) {
+    applyFillColorN(components, gfxOps);
+  }
   return { operandStack: newStack };
 };
 
@@ -439,7 +677,9 @@ const handleStrokeColorNWithOptionalName: OperatorHandler = (ctx, gfxOps) => {
     }
     return { operandStack: newStack };
   }
-  applyStrokeColorN(components, gfxOps);
+  if (!tryApplyNamedStrokeColor(components, ctx, gfxOps)) {
+    applyStrokeColorN(components, gfxOps);
+  }
   return { operandStack: newStack };
 };
 

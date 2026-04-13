@@ -46,6 +46,16 @@ export type CreatePdfRenderSessionOptions = Readonly<{
    * Use `dataUrlStrategy()` for Node/CLI environments.
    */
   readonly imageStrategy?: PdfImageUrlStrategy;
+  /**
+   * Maximum pixel dimension for rasterizing shading/pattern fills.
+   *
+   * When > 0, PDF shading operators (`sh`) and pattern fill operations
+   * are rasterized to images at parse time. The value limits the
+   * larger of width/height of the generated raster.
+   *
+   * Default: 1024.
+   */
+  readonly shadingMaxSize?: number;
 }>;
 
 /**
@@ -141,6 +151,7 @@ function lruSet<V>(cache: LruCache<V>, key: number, value: V): void {
 // =============================================================================
 
 const DEFAULT_PAGE_CACHE_SIZE = 8;
+const DEFAULT_SHADING_MAX_SIZE = 1024;
 
 /**
  * Create a render session from raw PDF bytes.
@@ -177,6 +188,9 @@ export function createPdfRenderSessionFromSourceContext(
   // Image cache: caches URLs across all page renders using the injected strategy.
   const imageCache = createPdfImageCache(options.imageStrategy ?? objectUrlStrategy());
 
+  // Parse options forwarded to the parser for each page build.
+  const shadingMaxSize = options.shadingMaxSize ?? DEFAULT_SHADING_MAX_SIZE;
+
   // Track in-flight page builds to avoid duplicate work for the same page.
   const inFlightBuilds = new Map<number, Promise<PdfPage>>();
 
@@ -194,7 +208,7 @@ export function createPdfRenderSessionFromSourceContext(
     if (inFlight) { return inFlight; }
 
     const buildPromise = (async () => {
-      const parsedDoc = await parsePagesFromSourceContext(sourceContext, [pageNumber]);
+      const parsedDoc = await parsePagesFromSourceContext(sourceContext, [pageNumber], { shadingMaxSize });
       const context = createPdfBuilderContext({ parsedDocument: parsedDoc });
       const document = buildPdfFromBuilderContext({ context });
       const page = document.pages[0];
@@ -215,7 +229,7 @@ export function createPdfRenderSessionFromSourceContext(
 
   async function buildAllPages(): Promise<PdfDocument> {
     const allPageNumbers = Array.from({ length: sourceContext.pageCount }, (_, i) => i + 1);
-    const parsedDoc = await parsePagesFromSourceContext(sourceContext, allPageNumbers);
+    const parsedDoc = await parsePagesFromSourceContext(sourceContext, allPageNumbers, { shadingMaxSize });
     const context = createPdfBuilderContext({ parsedDocument: parsedDoc });
     const document = buildPdfFromBuilderContext({ context });
 

@@ -81,7 +81,7 @@ function parseColorSpace(page: NativePdfPage, obj: PdfObject | undefined): "Devi
   return null;
 }
 
-function parseFunctionType2(page: NativePdfPage, obj: PdfObject | undefined): PdfShadingFunctionType2 | null {
+export function parseFunctionType2(page: NativePdfPage, obj: PdfObject | undefined): PdfShadingFunctionType2 | null {
   const dict = resolveDictOrStreamDict(page, obj);
   if (!dict) {return null;}
 

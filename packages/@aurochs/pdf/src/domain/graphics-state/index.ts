@@ -13,7 +13,7 @@ export type {
   PdfGraphicsState,
 } from "./types";
 
-export { DEFAULT_FILL_COLOR, DEFAULT_STROKE_COLOR, createDefaultGraphicsState } from "./defaults";
+export { DEFAULT_FILL_COLOR, DEFAULT_STROKE_COLOR, createDefaultGraphicsState, resolvePatternColors } from "./defaults";
 
 export type { GraphicsStateStack } from "./stack";
 export { createGraphicsStateStack } from "./stack";

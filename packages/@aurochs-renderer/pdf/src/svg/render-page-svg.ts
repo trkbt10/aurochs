@@ -411,7 +411,6 @@ function renderImageNode(image: PdfImage, pageHeight: number, registry: ClipPath
 
   const imageEl = svgImage(svgAttrs([
     ["href", imageUrl],
-    ["xlink:href", imageUrl],
     ["width", "1"],
     ["height", "1"],
     ["preserveAspectRatio", "none"],

@@ -40,6 +40,11 @@ function colorToHex(color: PdfColor): string {
       return `#${rgbToHex(rgb[0], rgb[1], rgb[2])}`;
     }
     case "Pattern":
+      // Pattern fills are rasterized at parse time. If a Pattern color
+      // reaches here, the rasterization path was skipped and the caller
+      // should have substituted fillPatternColor when available (see
+      // renderPathNode). For PaintType 1 (colored) patterns where no
+      // base color exists, there is no color information to extract.
       return "#000000";
     default:
       return "#000000";

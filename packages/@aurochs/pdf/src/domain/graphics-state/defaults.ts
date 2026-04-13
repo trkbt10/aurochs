@@ -9,6 +9,39 @@ import type { PdfColor } from "../color";
 import type { PdfGraphicsState } from "./types";
 
 // =============================================================================
+// Color Resolution
+// =============================================================================
+
+/**
+ * Resolve Pattern color space references in a graphics state to device colors.
+ *
+ * When a fill or stroke uses a Pattern color space, the `fillColor`/`strokeColor`
+ * fields contain `{ colorSpace: "Pattern", components: [] }` which carries no
+ * usable color information. The actual base color (for PaintType 2 uncolored
+ * tiling patterns) is stored in `fillPatternColor`/`strokePatternColor`.
+ *
+ * This function produces a graphics state where `fillColor`/`strokeColor` are
+ * always device-space colors that renderers and converters can use directly
+ * without additional dispatch.
+ *
+ * Pattern fills are normally rasterized to PdfImage at parse time. This
+ * resolution is for the residual case where a pattern path was not rasterized
+ * (e.g. rasterization failed or the source PDF uses a pattern only for color).
+ */
+export function resolvePatternColors(gs: PdfGraphicsState): PdfGraphicsState {
+  const fillColor = gs.fillColor.colorSpace === "Pattern" && gs.fillPatternColor
+    ? gs.fillPatternColor
+    : gs.fillColor;
+  const strokeColor = gs.strokeColor.colorSpace === "Pattern" && gs.strokePatternColor
+    ? gs.strokePatternColor
+    : gs.strokeColor;
+  if (fillColor === gs.fillColor && strokeColor === gs.strokeColor) {
+    return gs;
+  }
+  return { ...gs, fillColor, strokeColor };
+}
+
+// =============================================================================
 // Default Colors
 // =============================================================================
 

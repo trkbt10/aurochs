@@ -42,7 +42,7 @@ function computeGridSize(bbox: PdfBBox, maxSize: number): { readonly width: numb
   return { width, height };
 }
 
-function evaluateFunctionType2(fn: PdfShadingFunctionType2, t: number, componentCount: number): readonly number[] {
+export function evaluateFunctionType2(fn: PdfShadingFunctionType2, t: number, componentCount: number): readonly number[] {
   const tt = Math.pow(t, fn.n);
   const out: number[] = [];
   for (let i = 0; i < componentCount; i += 1) {

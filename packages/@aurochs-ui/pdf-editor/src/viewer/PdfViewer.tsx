@@ -77,11 +77,21 @@ export function PdfViewer({ data, className }: PdfViewerProps): ReactNode {
   const totalPages = state.status === "ready" ? state.session.pageCount : 0;
   const nav = useItemNavigation({ totalItems: Math.max(1, totalPages) });
 
+  // Reset to idle when data changes so session can be (re-)created.
+  useEffect(() => {
+    setState((prev) => {
+      // When data arrives (or changes), reset to idle so the session-creation
+      // effect below can pick it up. When data becomes null, also reset.
+      if (prev.status === "idle") { return prev; }
+      return { status: "idle" };
+    });
+  }, [data]);
+
   // Create session: loads PDF structure and extracts fonts once.
   useEffect(() => {
     if (state.status !== "idle") { return; }
     if (!data) {
-      setState({ status: "error", message: "No PDF data provided" });
+      // No data yet — stay idle and wait for data to arrive.
       return;
     }
 
@@ -96,6 +106,7 @@ export function PdfViewer({ data, className }: PdfViewerProps): ReactNode {
       .catch((err) => {
         if (cancelled) { return; }
         const message = err instanceof Error ? err.message : String(err);
+        console.error("[PdfViewer] Failed to create render session:", err);
         setState({ status: "error", message });
       });
 
@@ -128,6 +139,7 @@ export function PdfViewer({ data, className }: PdfViewerProps): ReactNode {
       .catch((err) => {
         if (cancelled) { return; }
         const message = err instanceof Error ? err.message : String(err);
+        console.error(`[PdfViewer] Failed to build page ${currentPageNumber}:`, err);
         setPageState({ status: "error", message });
       });
 

@@ -96,7 +96,7 @@ describe("renderPdfPageToSvg", () => {
     expect(svg).toContain('xmlns:xlink="http://www.w3.org/1999/xlink"');
     expect(svg).toContain("<defs><clipPath id=\"pdf-clip-1\"");
     expect(svg).toContain('<g clip-path="url(#pdf-clip-1)"><image');
-    expect(svg).toContain('xlink:href="data:image/png;base64,');
+    expect(svg).toContain('href="data:image/png;base64,');
     expect(svg).toContain('transform="matrix(100 0 0 50 20 40)"');
     expect(svg).toContain("data:image/png;base64,");
   });
@@ -252,7 +252,6 @@ describe("renderPdfPageToSvg", () => {
     const svg = serializeElement(svgNode);
 
     expect(svg).toContain(`href="${customUrl}"`);
-    expect(svg).toContain(`xlink:href="${customUrl}"`);
     // Should NOT contain a data: URL — the custom resolver was used instead.
     expect(svg).not.toContain("data:image/png;base64,");
   });

@@ -65,6 +65,7 @@ export {
   DEFAULT_STROKE_COLOR,
   createDefaultGraphicsState,
   createGraphicsStateStack,
+  resolvePatternColors,
 } from "./graphics-state";
 
 // Path domain

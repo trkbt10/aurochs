@@ -8,6 +8,7 @@ import {
   type PdfPage,
   type PdfPath,
   type PdfText,
+  resolvePatternColors,
 } from "@aurochs/pdf/domain";
 import { decodeText, DEFAULT_FONT_METRICS, type FontMappings } from "@aurochs/pdf/domain/font";
 import type { ParsedElement, ParsedPath, ParsedText } from "@aurochs/pdf/parser/operator/index";
@@ -166,7 +167,10 @@ function convertPath(parsed: ParsedPath, minComplexity: number): PdfPath | null 
   if (clipBBox && !bboxIntersects(built.bounds, clipBBox)) {
     return null;
   }
-  return builtPathToPdfPath(built);
+  const pdfPath = builtPathToPdfPath(built);
+  // Resolve Pattern color references to device colors so that downstream
+  // renderers/converters can use fillColor/strokeColor directly.
+  return { ...pdfPath, graphicsState: resolvePatternColors(pdfPath.graphicsState) };
 }
 
 function getFontInfo(fontName: string, fontMappings: FontMappings) {
@@ -226,6 +230,7 @@ function convertText(parsed: ParsedText, fontMappings: FontMappings): PdfText[] 
     return [];
   }
 
+  const resolvedGraphicsState = resolvePatternColors(parsed.graphicsState);
   const results: PdfText[] = [];
   const clipBBox = parsed.graphicsState.clipBBox;
 
@@ -300,7 +305,7 @@ function convertText(parsed: ParsedText, fontMappings: FontMappings): PdfText[] 
       baselineStartY: run.y,
       baselineEndX: run.endX,
       baselineEndY: run.endY,
-      graphicsState: parsed.graphicsState,
+      graphicsState: resolvedGraphicsState,
       charSpacing: run.charSpacing,
       wordSpacing: run.wordSpacing,
       horizontalScaling: run.horizontalScaling,
