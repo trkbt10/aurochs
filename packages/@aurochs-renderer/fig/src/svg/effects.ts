@@ -1,5 +1,8 @@
 /**
  * @file Effect rendering for Figma nodes (shadows, blur, etc.)
+ *
+ * Effect type detection and parameter extraction delegate to
+ * the shared SoT in effects/interpret.ts.
  */
 
 import type { FigEffect, FigEffectType } from "@aurochs/fig/types";
@@ -16,7 +19,12 @@ import {
   feMergeNode,
   type SvgString,
 } from "./primitives";
-
+import {
+  getEffectTypeName as sharedGetEffectTypeName,
+  isEffectVisible,
+  hasEffectOfType,
+  getEffectsOfType,
+} from "../effects";
 
 // =============================================================================
 // Filter Bounds Computation
@@ -51,41 +59,20 @@ function computeShadowFilterBounds(
 }
 
 // =============================================================================
-// Effect Helpers
+// Effect Helpers (delegates to shared SoT)
 // =============================================================================
 
-/**
- * Get effect type as string
- */
+/** Local alias for backward-compat within this file */
 function getEffectType(effect: FigEffect): FigEffectType {
-  const type = effect.type;
-  if (typeof type === "string") {
-    return type;
-  }
-  if (type && typeof type === "object" && "name" in type) {
-    return type.name;
-  }
-  return "DROP_SHADOW";
+  return sharedGetEffectTypeName(effect);
 }
 
-/**
- * Check if effects array has visible drop shadows
- */
 export function hasDropShadow(effects: readonly FigEffect[] | undefined): boolean {
-  if (!effects || effects.length === 0) {
-    return false;
-  }
-  return effects.some((e) => e.visible !== false && getEffectType(e) === "DROP_SHADOW");
+  return hasEffectOfType(effects, "DROP_SHADOW");
 }
 
-/**
- * Get drop shadows from effects array
- */
 export function getDropShadows(effects: readonly FigEffect[] | undefined): readonly FigEffect[] {
-  if (!effects || effects.length === 0) {
-    return [];
-  }
-  return effects.filter((e) => e.visible !== false && getEffectType(e) === "DROP_SHADOW");
+  return getEffectsOfType(effects, "DROP_SHADOW");
 }
 
 // =============================================================================
@@ -199,24 +186,12 @@ export function createDropShadowFilter(
 // Inner Shadow Filter
 // =============================================================================
 
-/**
- * Check if effects array has visible inner shadows
- */
 export function hasInnerShadow(effects: readonly FigEffect[] | undefined): boolean {
-  if (!effects || effects.length === 0) {
-    return false;
-  }
-  return effects.some((e) => e.visible !== false && getEffectType(e) === "INNER_SHADOW");
+  return hasEffectOfType(effects, "INNER_SHADOW");
 }
 
-/**
- * Get inner shadows from effects array
- */
 export function getInnerShadows(effects: readonly FigEffect[] | undefined): readonly FigEffect[] {
-  if (!effects || effects.length === 0) {
-    return [];
-  }
-  return effects.filter((e) => e.visible !== false && getEffectType(e) === "INNER_SHADOW");
+  return getEffectsOfType(effects, "INNER_SHADOW");
 }
 
 /**
@@ -326,24 +301,12 @@ export function createInnerShadowFilter(
 // Layer Blur Filter
 // =============================================================================
 
-/**
- * Check if effects array has visible layer blur
- */
 export function hasLayerBlur(effects: readonly FigEffect[] | undefined): boolean {
-  if (!effects || effects.length === 0) {
-    return false;
-  }
-  return effects.some((e) => e.visible !== false && getEffectType(e) === "LAYER_BLUR");
+  return hasEffectOfType(effects, "LAYER_BLUR");
 }
 
-/**
- * Get layer blur effect from effects array
- */
 export function getLayerBlur(effects: readonly FigEffect[] | undefined): FigEffect | undefined {
-  if (!effects || effects.length === 0) {
-    return undefined;
-  }
-  return effects.find((e) => e.visible !== false && getEffectType(e) === "LAYER_BLUR");
+  return getEffectsOfType(effects, "LAYER_BLUR")[0];
 }
 
 /**
@@ -391,26 +354,12 @@ export function createLayerBlurFilter(
 // Background Blur Filter
 // =============================================================================
 
-/**
- * Check if effects array has visible background blur
- */
 export function hasBackgroundBlur(effects: readonly FigEffect[] | undefined): boolean {
-  if (!effects || effects.length === 0) {
-    return false;
-  }
-  return effects.some((e) => e.visible !== false && getEffectType(e) === "BACKGROUND_BLUR");
+  return hasEffectOfType(effects, "BACKGROUND_BLUR");
 }
 
-/**
- * Get background blur effect from effects array
- * Note: Background blur in SVG is limited - it cannot truly blur content behind
- * the element like CSS backdrop-filter. This creates a placeholder filter.
- */
 export function getBackgroundBlur(effects: readonly FigEffect[] | undefined): FigEffect | undefined {
-  if (!effects || effects.length === 0) {
-    return undefined;
-  }
-  return effects.find((e) => e.visible !== false && getEffectType(e) === "BACKGROUND_BLUR");
+  return getEffectsOfType(effects, "BACKGROUND_BLUR")[0];
 }
 
 // =============================================================================

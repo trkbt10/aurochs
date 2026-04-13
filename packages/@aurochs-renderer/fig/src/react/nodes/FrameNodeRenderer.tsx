@@ -2,24 +2,21 @@
  * @file Frame node React renderer
  *
  * Renders frame background, optional clip path, and children.
+ * All defs (gradients, filters, clip paths) are rendered inline.
  */
 
 import { memo, type ReactNode } from "react";
 import type { FrameNode, SceneNode } from "../../scene-graph/types";
 import { useFigSvgDefs } from "../context/FigSvgDefsContext";
-import { resolveFillAttrs } from "../primitives/fill";
+import type { FigSvgIdGenerator } from "../context/FigSvgDefsContext";
+import { resolveFillAttrs, type FillResult } from "../primitives/fill";
 import { resolveStrokeAttrs } from "../primitives/stroke";
-import { resolveEffectsFilter } from "../primitives/effects";
+import { resolveEffectsFilter, type EffectsResult } from "../primitives/effects";
 import { matrixToSvgTransform } from "../primitives/transform";
 import { SceneNodeRenderer } from "./SceneNodeRenderer";
 
 type Props = {
   readonly node: FrameNode;
-};
-
-type DefsApi = {
-  readonly getNextId: (prefix: string) => string;
-  readonly addDef: (id: string, content: ReactNode) => void;
 };
 
 /**
@@ -39,14 +36,12 @@ function clampRadius(
 
 function renderBackground(
   node: FrameNode,
-  defs: DefsApi,
+  fillResult: FillResult,
   clampedRadius: number | undefined,
 ): ReactNode {
   if (node.fills.length === 0) {
     return null;
   }
-  const topFill = node.fills[node.fills.length - 1];
-  const fillAttrs = resolveFillAttrs(topFill, defs);
   const strokeAttrs = node.stroke ? resolveStrokeAttrs(node.stroke) : {};
   return (
     <rect
@@ -56,8 +51,8 @@ function renderBackground(
       height={node.height}
       rx={clampedRadius}
       ry={clampedRadius}
-      fill={fillAttrs.fill}
-      fillOpacity={fillAttrs.fillOpacity}
+      fill={fillResult.fill}
+      fillOpacity={fillResult.fillOpacity}
       {...strokeAttrs}
     />
   );
@@ -69,7 +64,8 @@ type RenderChildrenParams = {
   readonly width: number;
   readonly height: number;
   readonly clampedRadius: number | undefined;
-  readonly defs: DefsApi;
+  readonly ids: FigSvgIdGenerator;
+  readonly defs: ReactNode[];
 };
 
 function renderChildren({
@@ -78,6 +74,7 @@ function renderChildren({
   width,
   height,
   clampedRadius,
+  ids,
   defs,
 }: RenderChildrenParams): ReactNode {
   const childElements = children.map((child) => (
@@ -92,10 +89,9 @@ function renderChildren({
     return <>{childElements}</>;
   }
 
-  const clipId = defs.getNextId("clip");
-  defs.addDef(
-    clipId,
-    <clipPath id={clipId}>
+  const clipId = ids.getNextId("clip");
+  defs.push(
+    <clipPath key={clipId} id={clipId}>
       <rect
         x={0}
         y={0}
@@ -110,27 +106,40 @@ function renderChildren({
 }
 
 function FrameNodeRendererImpl({ node }: Props) {
-  const defs = useFigSvgDefs();
+  const ids = useFigSvgDefs();
   const transformStr = matrixToSvgTransform(node.transform);
-  const filterAttr = resolveEffectsFilter(node.effects, defs);
+  const effectsResult = resolveEffectsFilter(node.effects, ids);
   const clampedRadius = clampRadius(node.cornerRadius, node.width, node.height);
 
-  const bgRect = renderBackground(node, defs, clampedRadius);
+  // Resolve fill for background
+  let fillResult: FillResult = { fill: "none" };
+  if (node.fills.length > 0) {
+    fillResult = resolveFillAttrs(node.fills[node.fills.length - 1], ids);
+  }
+
+  // Collect inline defs
+  const defs: ReactNode[] = [];
+  if (fillResult.defElement) defs.push(fillResult.defElement);
+  if (effectsResult?.defElement) defs.push(effectsResult.defElement);
+
+  const bgRect = renderBackground(node, fillResult, clampedRadius);
   const childrenContent = renderChildren({
     children: node.children,
     clipsContent: node.clipsContent,
     width: node.width,
     height: node.height,
     clampedRadius,
-    defs,
+    ids,
+    defs, // clip path defs will be added here
   });
 
   return (
     <g
       transform={transformStr}
       opacity={node.opacity < 1 ? node.opacity : undefined}
-      filter={filterAttr}
+      filter={effectsResult?.filterAttr}
     >
+      {defs.length > 0 && <defs>{defs}</defs>}
       {bgRect}
       {childrenContent}
     </g>

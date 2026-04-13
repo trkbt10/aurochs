@@ -57,6 +57,7 @@ import { TextEditController, useTextEditHandlers } from "@aurochs-ui/ooxml-compo
 import { isPointInBounds } from "@aurochs-ui/editor-core/geometry";
 import {
   EditorCanvas,
+  slideCanvasBackground,
   type EditorCanvasHandle,
   type EditorCanvasItemBounds,
 } from "@aurochs-ui/editor-controls/canvas";
@@ -751,6 +752,7 @@ function PotxEditorContent({
       <CanvasArea floatingToolbar={floatingToolbar} ref={canvasContainerRef}>
         <EditorCanvas
           ref={canvasRef} canvasWidth={widthNum} canvasHeight={heightNum}
+          canvasBackground={slideCanvasBackground}
           zoomMode={"fit" as ZoomMode} onZoomModeChange={() => {}} onViewportChange={handleViewportChange}
           cursor={canvasCursor}
           itemBounds={shapeRenderData as readonly EditorCanvasItemBounds[]}

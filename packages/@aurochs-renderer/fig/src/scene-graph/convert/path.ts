@@ -1,21 +1,13 @@
 /**
  * @file Convert Figma geometry data to scene graph PathContours
+ *
+ * Winding rule mapping delegates to geometry/interpret.ts (the SoT).
  */
 
 import { decodePathCommands, type FigBlob } from "@aurochs/fig/parser";
 import type { FigFillGeometry } from "@aurochs/fig/types";
+import { mapWindingRule } from "../../geometry";
 import type { PathCommand, PathContour } from "../types";
-
-/**
- * Map Figma winding rule to scene graph format
- */
-function mapWindingRule(rule: unknown): "nonzero" | "evenodd" {
-  const name = typeof rule === "string" ? rule : (rule as { name?: string })?.name;
-  if (name === "EVENODD" || name === "ODD") {
-    return "evenodd";
-  }
-  return "nonzero";
-}
 
 /**
  * Parse SVG path data string into PathCommand array

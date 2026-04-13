@@ -120,9 +120,18 @@ function extractLayoutConstraints(raw: Record<string, unknown>): LayoutConstrain
 
 /**
  * Extract text-specific data from a TEXT node.
+ *
+ * Characters may exist as:
+ * - `raw.characters` (real .fig files from Figma have it as a direct node field)
+ * - `raw.textData.characters` (builder-generated files store it in the TextData message)
  */
 function extractTextData(raw: Record<string, unknown>): TextData | undefined {
-  const characters = raw.characters;
+  // Resolve characters from direct field or nested textData
+  let characters = raw.characters;
+  if (typeof characters !== "string") {
+    const td = raw.textData as { characters?: string } | undefined;
+    characters = td?.characters;
+  }
   if (typeof characters !== "string") {
     return undefined;
   }

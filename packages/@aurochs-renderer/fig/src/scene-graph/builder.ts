@@ -37,8 +37,10 @@ import { convertPaintsToFills } from "./convert/fill";
 import { convertStrokeToSceneStroke } from "./convert/stroke";
 import { convertEffectsToScene } from "./convert/effects";
 import { decodeGeometryToContours, convertVectorPathsToContours } from "./convert/path";
+import { generateStarContour, generatePolygonContour, generateLineContour } from "./convert/shape-geometry";
+import { extractUniformCornerRadius as sharedExtractUniformCornerRadius, resolveClipsContent as sharedResolveClipsContent } from "../geometry";
 import { convertTextNode } from "./convert/text";
-import type { Fill } from "./types";
+import type { Fill, PathContour } from "./types";
 
 /** Select fill paints based on whether stroke geometry is being used */
 function selectPaintsForFills(
@@ -139,42 +141,101 @@ function convertTransform(
 }
 
 // =============================================================================
-// Corner Radius
+// Corner Radius & Clipping (delegates to shared SoT in geometry/)
 // =============================================================================
 
-/**
- * Extract a single uniform corner radius from a node.
- * Handles both `rectangleCornerRadii` (per-corner) and `cornerRadius`.
- * When per-corner radii differ, uses the average (scene graph limitation).
- */
-function extractUniformCornerRadius(node: FigDesignNode): number | undefined {
-  const radii = node.rectangleCornerRadii;
-  if (radii && radii.length === 4) {
-    const allSame = radii[0] === radii[1] && radii[1] === radii[2] && radii[2] === radii[3];
-    if (allSame) {return radii[0] || undefined;}
-    const avg = (radii[0] + radii[1] + radii[2] + radii[3]) / 4;
-    return avg || undefined;
-  }
-  return node.cornerRadius;
+function extractCornerRadius(node: FigDesignNode): number | undefined {
+  return sharedExtractUniformCornerRadius(node.cornerRadius, node.rectangleCornerRadii);
+}
+
+function resolveClipsContent(node: FigDesignNode): boolean {
+  const raw = node._raw;
+  return sharedResolveClipsContent(
+    node.clipsContent,
+    raw?.frameMaskDisabled as boolean | undefined,
+    getNodeTypeName(node),
+  );
 }
 
 // =============================================================================
-// Clipping
+// Instance Resolution
 // =============================================================================
 
-function resolveClipsContent(node: FigDesignNode): boolean {
-  // FigDesignNode has clipsContent as a first-class field
-  if (node.clipsContent !== undefined) {
-    return node.clipsContent;
+/**
+ * Result of resolving an INSTANCE node against its SYMBOL/COMPONENT.
+ */
+type ResolvedInstance = {
+  /** Effective node with visual properties merged from SYMBOL */
+  readonly effectiveNode: FigDesignNode;
+  /** Resolved children (from instance or inherited from symbol) */
+  readonly children: readonly FigDesignNode[];
+};
+
+/**
+ * Check if a fills array is effectively empty (no visible fills).
+ * Instance nodes in Figma .fig files typically have empty fillPaints,
+ * with the actual fills stored on the SYMBOL.
+ */
+function hasVisibleFills(fills: readonly FigPaint[] | undefined): boolean {
+  if (!fills || fills.length === 0) return false;
+  return fills.some((p) => p.visible !== false);
+}
+
+/**
+ * Resolve an INSTANCE node against its SYMBOL/COMPONENT.
+ *
+ * Merges visual properties from the SYMBOL into the INSTANCE:
+ * - fills, strokes, strokeWeight (paint properties)
+ * - cornerRadius, rectangleCornerRadii (geometry)
+ * - effects (drop shadow, blur, etc.)
+ * - clipsContent (frame clipping behaviour)
+ *
+ * The INSTANCE retains its own transform, size, and opacity
+ * (these define placement and scaling of the instance).
+ *
+ * Children are resolved: if the instance has its own children, use those;
+ * otherwise inherit from the SYMBOL.
+ */
+function resolveInstance(
+  node: FigDesignNode,
+  ownChildren: readonly FigDesignNode[],
+  ctx: BuildContext,
+): ResolvedInstance {
+  const symbolId = node.symbolId;
+  if (!symbolId) {
+    return { effectiveNode: node, children: ownChildren };
   }
-  // frameMaskDisabled may be in _raw (inverted meaning)
-  const raw = node._raw;
-  if (raw?.frameMaskDisabled !== undefined) {
-    return !raw.frameMaskDisabled;
+
+  const symbol = ctx.symbolMap.get(symbolId);
+  if (!symbol) {
+    return { effectiveNode: node, children: ownChildren };
   }
-  // Default: frames clip, others don't
-  const typeName = getNodeTypeName(node);
-  return typeName === "FRAME" || typeName === "COMPONENT" || typeName === "COMPONENT_SET";
+
+  // Resolve children
+  const children = ownChildren.length > 0 ? ownChildren : (symbol.children ?? []);
+
+  // Merge visual properties from SYMBOL into INSTANCE.
+  // Instance properties that are empty/default are replaced with symbol values.
+  // Instance properties that are explicitly set take precedence.
+  const effectiveNode: FigDesignNode = {
+    ...node,
+    // Paint: use instance fills only if they contain visible paints
+    fills: hasVisibleFills(node.fills) ? node.fills : symbol.fills,
+    strokes: (node.strokes?.length ?? 0) > 0 ? node.strokes : symbol.strokes,
+    strokeWeight: node.strokeWeight ?? symbol.strokeWeight,
+
+    // Geometry: inherit from symbol if instance doesn't have its own
+    cornerRadius: node.cornerRadius ?? symbol.cornerRadius,
+    rectangleCornerRadii: node.rectangleCornerRadii ?? symbol.rectangleCornerRadii,
+
+    // Effects: inherit from symbol if instance has no effects
+    effects: (node.effects?.length ?? 0) > 0 ? node.effects : symbol.effects,
+
+    // Clipping: inherit from symbol if instance doesn't specify
+    clipsContent: node.clipsContent ?? symbol.clipsContent,
+  };
+
+  return { effectiveNode, children };
 }
 
 // =============================================================================
@@ -183,6 +244,7 @@ function resolveClipsContent(node: FigDesignNode): boolean {
 
 function buildGroupNode(node: FigDesignNode, ctx: BuildContext, children: readonly SceneNode[]): GroupNode {
   const base = extractBaseProps(node);
+  const { effects } = extractEffectsProps(node);
   return {
     type: "group",
     id: getNodeId(node, ctx),
@@ -190,7 +252,7 @@ function buildGroupNode(node: FigDesignNode, ctx: BuildContext, children: readon
     transform: convertTransform(base.transform),
     opacity: base.opacity,
     visible: base.visible,
-    effects: [],
+    effects: convertEffectsToScene(effects),
     children,
   };
 }
@@ -200,7 +262,7 @@ function buildFrameNode(node: FigDesignNode, ctx: BuildContext, children: readon
   const { size } = extractSizeProps(node);
   const { fillPaints, strokePaints, strokeWeight } = extractPaintProps(node);
   const { effects } = extractEffectsProps(node);
-  const cornerRadius = extractUniformCornerRadius(node);
+  const cornerRadius = extractCornerRadius(node);
   const clipsContent = resolveClipsContent(node);
 
   return {
@@ -227,7 +289,7 @@ function buildRectNode(node: FigDesignNode, ctx: BuildContext): RectNode {
   const { size } = extractSizeProps(node);
   const { fillPaints, strokePaints, strokeWeight } = extractPaintProps(node);
   const { effects } = extractEffectsProps(node);
-  const cornerRadius = extractUniformCornerRadius(node);
+  const cornerRadius = extractCornerRadius(node);
 
   return {
     type: "rect",
@@ -268,6 +330,32 @@ function buildEllipseNode(node: FigDesignNode, ctx: BuildContext): EllipseNode {
   };
 }
 
+/**
+ * Synthesize contours from parametric shape properties when no
+ * pre-computed geometry blobs exist (e.g., builder-generated documents).
+ */
+function synthesizeContours(node: FigDesignNode): PathContour[] {
+  const typeName = getNodeTypeName(node);
+  const w = node.size?.x ?? 0;
+  const h = node.size?.y ?? 0;
+
+  switch (typeName) {
+    case "STAR":
+      return [generateStarContour(
+        w,
+        h,
+        node.pointCount ?? 5,
+        node.starInnerRadius ?? 0.382,
+      )];
+    case "REGULAR_POLYGON":
+      return [generatePolygonContour(w, h, node.pointCount ?? 3)];
+    case "LINE":
+      return [generateLineContour(w)];
+    default:
+      return [];
+  }
+}
+
 function buildVectorNode(node: FigDesignNode, ctx: BuildContext): PathNode {
   const base = extractBaseProps(node);
   const { fillPaints, strokePaints, strokeWeight } = extractPaintProps(node);
@@ -286,6 +374,11 @@ function buildVectorNode(node: FigDesignNode, ctx: BuildContext): PathNode {
   if (contoursRef.value.length === 0) {
     contoursRef.value = decodeGeometryToContours(strokeGeometry, ctx.blobs);
     isStrokeGeometryRef.value = contoursRef.value.length > 0;
+  }
+
+  // Last resort: synthesize geometry from parametric shape definition
+  if (contoursRef.value.length === 0) {
+    contoursRef.value = synthesizeContours(node);
   }
 
   // strokeGeometry is Figma's pre-expanded outline of a stroke.
@@ -309,6 +402,7 @@ function buildVectorNode(node: FigDesignNode, ctx: BuildContext): PathNode {
 
 function buildTextNode(node: FigDesignNode, ctx: BuildContext): TextNode {
   const base = extractBaseProps(node);
+  const { effects } = extractEffectsProps(node);
   const textData = convertTextNode(node, ctx.blobs);
 
   return {
@@ -318,7 +412,7 @@ function buildTextNode(node: FigDesignNode, ctx: BuildContext): TextNode {
     transform: convertTransform(base.transform),
     opacity: base.opacity,
     visible: base.visible,
-    effects: [],
+    effects: convertEffectsToScene(effects),
     width: node.size?.x ?? 0,
     height: node.size?.y ?? 0,
     glyphContours: textData.glyphContours,
@@ -353,10 +447,18 @@ function buildNode(node: FigDesignNode, ctx: BuildContext): SceneNode | null {
     case "FRAME":
     case "COMPONENT":
     case "COMPONENT_SET":
-    case "INSTANCE":
     case "SYMBOL": {
       const childNodes = buildChildren(children, ctx);
       return buildFrameNode(node, ctx, childNodes);
+    }
+
+    case "INSTANCE": {
+      // Resolve INSTANCE against its SYMBOL/COMPONENT:
+      // - Merge visual properties (fills, cornerRadius, effects, etc.)
+      // - Inherit children if instance has none
+      const resolved = resolveInstance(node, children, ctx);
+      const childNodes = buildChildren(resolved.children, ctx);
+      return buildFrameNode(resolved.effectiveNode, ctx, childNodes);
     }
 
     case "GROUP":

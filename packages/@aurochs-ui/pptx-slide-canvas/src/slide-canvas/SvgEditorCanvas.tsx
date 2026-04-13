@@ -47,6 +47,7 @@ import {
   EditorCanvas,
   type EditorCanvasHandle,
   type EditorCanvasItemBounds,
+  slideCanvasBackground,
 } from "@aurochs-ui/editor-controls/canvas";
 import type { ViewportTransform } from "@aurochs-ui/editor-core/viewport";
 import { INITIAL_VIEWPORT } from "@aurochs-ui/editor-core/viewport";
@@ -409,6 +410,7 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
         ref={canvasRef}
         canvasWidth={widthNum}
         canvasHeight={heightNum}
+        canvasBackground={slideCanvasBackground}
         zoomMode={zoomMode}
         onZoomModeChange={onZoomModeChange}
         onDisplayZoomChange={onDisplayZoomChange}

@@ -70,24 +70,25 @@ function computePageBounds(children: readonly FigDesignNode[]): PageBounds {
 
 type PageSvgContentProps = {
   readonly page: FigPage;
-  readonly images: FigDesignDocument["images"];
+  readonly document: FigDesignDocument;
   readonly bounds: { x: number; y: number; width: number; height: number };
 };
 
 /**
  * Renders page content as React SVG elements inside an <svg>.
  */
-function PageSvgContent({ page, images, bounds }: PageSvgContentProps) {
+function PageSvgContent({ page, document: doc, bounds }: PageSvgContentProps) {
   const sceneGraph = useMemo(() => {
     if (page.children.length === 0) {
       return null;
     }
     return buildSceneGraph(page.children, {
-      blobs: [],
-      images: images as BuildSceneGraphOptions["images"],
+      blobs: (doc._loaded?.blobs ?? []) as any,
+      images: doc.images as BuildSceneGraphOptions["images"],
       canvasSize: { width: bounds.width, height: bounds.height },
+      symbolMap: doc.components,
     });
-  }, [page.children, images, bounds.width, bounds.height]);
+  }, [page.children, doc, bounds.width, bounds.height]);
 
   if (!sceneGraph) {
     return null;
@@ -124,7 +125,7 @@ function renderPageContent(
     return (
       <PageSvgContent
         page={activePage}
-        images={document.images}
+        document={document}
         bounds={pageBounds}
       />
     );

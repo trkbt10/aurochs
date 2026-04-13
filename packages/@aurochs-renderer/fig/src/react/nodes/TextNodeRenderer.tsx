@@ -8,6 +8,8 @@
 
 import { memo } from "react";
 import type { TextNode } from "../../scene-graph/types";
+import { useFigSvgDefs } from "../context/FigSvgDefsContext";
+import { resolveEffectsFilter } from "../primitives/effects";
 import { matrixToSvgTransform } from "../primitives/transform";
 import { colorToHex } from "../primitives/color";
 import { contourToSvgD } from "../primitives/path";
@@ -17,7 +19,9 @@ type Props = {
 };
 
 function TextNodeRendererImpl({ node }: Props) {
+  const ids = useFigSvgDefs();
   const transformStr = matrixToSvgTransform(node.transform);
+  const effectsResult = resolveEffectsFilter(node.effects, ids);
   const fillColor = colorToHex(node.fill.color);
   const fillOpacity = node.fill.opacity;
 
@@ -41,12 +45,14 @@ function TextNodeRendererImpl({ node }: Props) {
       />
     );
 
-    if (transformStr || node.opacity < 1) {
+    if (transformStr || node.opacity < 1 || effectsResult) {
       return (
         <g
           transform={transformStr}
           opacity={node.opacity < 1 ? node.opacity : undefined}
+          filter={effectsResult?.filterAttr}
         >
+          {effectsResult?.defElement && <defs>{effectsResult.defElement}</defs>}
           {pathEl}
         </g>
       );
@@ -84,12 +90,14 @@ function TextNodeRendererImpl({ node }: Props) {
     return null;
   }
 
-  if (transformStr || node.opacity < 1 || textElements.length > 1) {
+  if (transformStr || node.opacity < 1 || effectsResult || textElements.length > 1) {
     return (
       <g
         transform={transformStr}
         opacity={node.opacity < 1 ? node.opacity : undefined}
+        filter={effectsResult?.filterAttr}
       >
+        {effectsResult?.defElement && <defs>{effectsResult.defElement}</defs>}
         {textElements}
       </g>
     );

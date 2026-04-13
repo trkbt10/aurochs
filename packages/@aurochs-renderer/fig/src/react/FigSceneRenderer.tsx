@@ -13,7 +13,7 @@
 
 import { memo, useMemo } from "react";
 import type { SceneGraph } from "../scene-graph/types";
-import { FigSvgDefsProvider } from "./context/FigSvgDefsContext";
+import { FigSvgIdProvider } from "./context/FigSvgDefsContext";
 import { SceneNodeRenderer } from "./nodes/SceneNodeRenderer";
 
 // =============================================================================
@@ -33,12 +33,15 @@ type FigSceneRendererProps = {
  * Render a scene graph as React SVG elements.
  *
  * This component provides:
- * - FigSvgDefsProvider context for gradient/filter/clip-path defs collection
- * - A <defs> section with all collected definitions
+ * - FigSvgIdProvider context for unique ID generation
  * - Rendered scene graph nodes as JSX SVG elements
  *
- * The output is a <g> element containing <defs> + content,
- * suitable for embedding inside an existing SVG (e.g., EditorCanvas).
+ * Each node renderer produces its own inline <defs> for gradients,
+ * filters, clip-paths, etc. This ensures defs are always present
+ * in the DOM on the first render.
+ *
+ * The output is a <g> element suitable for embedding inside an
+ * existing SVG (e.g., EditorCanvas).
  */
 function FigSceneRendererImpl({ sceneGraph }: FigSceneRendererProps) {
   const rootChildren = sceneGraph.root.children;
@@ -52,14 +55,9 @@ function FigSceneRendererImpl({ sceneGraph }: FigSceneRendererProps) {
   );
 
   return (
-    <FigSvgDefsProvider>
-      {(collectedDefs) => (
-        <g>
-          {collectedDefs && <defs>{collectedDefs}</defs>}
-          {childNodes}
-        </g>
-      )}
-    </FigSvgDefsProvider>
+    <FigSvgIdProvider>
+      <g>{childNodes}</g>
+    </FigSvgIdProvider>
   );
 }
 

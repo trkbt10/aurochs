@@ -2,7 +2,11 @@
  * @file Fill rendering for React scene graph renderer
  *
  * Resolves a scene graph Fill to SVG fill/fill-opacity attributes,
- * registering gradient/pattern defs via useFigSvgDefs.
+ * producing inline <defs> elements for gradients and patterns.
+ *
+ * Each fill that requires a def (gradient, pattern) produces the def
+ * element directly — the caller renders it inline as a sibling <defs>.
+ * This avoids the timing problem of centralized defs collection via refs.
  */
 
 import type { ReactNode } from "react";
@@ -13,22 +17,23 @@ import { colorToHex, uint8ArrayToBase64 } from "./color";
 // Types
 // =============================================================================
 
-type FillAttrs = {
+export type FillResult = {
   readonly fill: string;
   readonly fillOpacity?: number;
+  /** Def element (gradient/pattern) to render in an inline <defs> block */
+  readonly defElement?: ReactNode;
 };
 
-type DefsApi = {
+type IdGenerator = {
   readonly getNextId: (prefix: string) => string;
-  readonly addDef: (id: string, content: ReactNode) => void;
 };
 
-/** Build FillAttrs with optional fillOpacity for non-opaque fills */
-function buildFillAttrs(fillValue: string, opacity: number): FillAttrs {
+/** Build FillResult with optional fillOpacity for non-opaque fills */
+function buildFillResult(fillValue: string, opacity: number, defElement?: ReactNode): FillResult {
   if (opacity < 1) {
-    return { fill: fillValue, fillOpacity: opacity };
+    return { fill: fillValue, fillOpacity: opacity, defElement };
   }
-  return { fill: fillValue };
+  return defElement ? { fill: fillValue, defElement } : { fill: fillValue };
 }
 
 // =============================================================================
@@ -36,19 +41,20 @@ function buildFillAttrs(fillValue: string, opacity: number): FillAttrs {
 // =============================================================================
 
 /**
- * Resolve a Fill to SVG attributes and register any required defs.
+ * Resolve a Fill to SVG attributes and an optional def element.
  *
- * This is a plain function (not a hook) — the defs API is passed explicitly
- * so it can be called from render logic without violating Rules of Hooks.
+ * Unlike the previous version that registered defs via context refs,
+ * this returns the def element directly for inline rendering.
+ * This ensures defs are always present in the DOM on the first render.
  */
-export function resolveFillAttrs(fill: Fill, defs: DefsApi): FillAttrs {
+export function resolveFillAttrs(fill: Fill, ids: IdGenerator): FillResult {
   switch (fill.type) {
     case "solid": {
-      return buildFillAttrs(colorToHex(fill.color), fill.opacity);
+      return buildFillResult(colorToHex(fill.color), fill.opacity);
     }
 
     case "linear-gradient": {
-      const id = defs.getNextId("lg");
+      const id = ids.getNextId("lg");
       const stops = fill.stops.map((s, i) => (
         <stop
           key={i}
@@ -57,8 +63,7 @@ export function resolveFillAttrs(fill: Fill, defs: DefsApi): FillAttrs {
           stopOpacity={s.color.a < 1 ? s.color.a : undefined}
         />
       ));
-      defs.addDef(
-        id,
+      const defElement = (
         <linearGradient
           id={id}
           x1={`${fill.start.x * 100}%`}
@@ -67,13 +72,13 @@ export function resolveFillAttrs(fill: Fill, defs: DefsApi): FillAttrs {
           y2={`${fill.end.y * 100}%`}
         >
           {stops}
-        </linearGradient>,
+        </linearGradient>
       );
-      return buildFillAttrs(`url(#${id})`, fill.opacity);
+      return buildFillResult(`url(#${id})`, fill.opacity, defElement);
     }
 
     case "radial-gradient": {
-      const id = defs.getNextId("rg");
+      const id = ids.getNextId("rg");
       const stops = fill.stops.map((s, i) => (
         <stop
           key={i}
@@ -82,8 +87,7 @@ export function resolveFillAttrs(fill: Fill, defs: DefsApi): FillAttrs {
           stopOpacity={s.color.a < 1 ? s.color.a : undefined}
         />
       ));
-      defs.addDef(
-        id,
+      const defElement = (
         <radialGradient
           id={id}
           cx={`${fill.center.x * 100}%`}
@@ -91,18 +95,18 @@ export function resolveFillAttrs(fill: Fill, defs: DefsApi): FillAttrs {
           r={`${Math.abs(fill.radius) * 100}%`}
         >
           {stops}
-        </radialGradient>,
+        </radialGradient>
       );
-      return buildFillAttrs(`url(#${id})`, fill.opacity);
+      return buildFillResult(`url(#${id})`, fill.opacity, defElement);
     }
 
     case "image": {
-      const id = defs.getNextId("img");
+      const id = ids.getNextId("img");
       const base64 = uint8ArrayToBase64(fill.data);
       const dataUri = `data:${fill.mimeType};base64,${base64}`;
+      let defElement: ReactNode;
       if (fill.width && fill.height) {
-        defs.addDef(
-          id,
+        defElement = (
           <pattern
             id={id}
             patternUnits="userSpaceOnUse"
@@ -117,11 +121,10 @@ export function resolveFillAttrs(fill: Fill, defs: DefsApi): FillAttrs {
               height={fill.height}
               preserveAspectRatio="xMidYMid slice"
             />
-          </pattern>,
+          </pattern>
         );
       } else {
-        defs.addDef(
-          id,
+        defElement = (
           <pattern
             id={id}
             patternContentUnits="objectBoundingBox"
@@ -136,10 +139,10 @@ export function resolveFillAttrs(fill: Fill, defs: DefsApi): FillAttrs {
               height={1}
               preserveAspectRatio="xMidYMid slice"
             />
-          </pattern>,
+          </pattern>
         );
       }
-      return buildFillAttrs(`url(#${id})`, fill.opacity);
+      return buildFillResult(`url(#${id})`, fill.opacity, defElement);
     }
   }
 }
@@ -150,10 +153,10 @@ export function resolveFillAttrs(fill: Fill, defs: DefsApi): FillAttrs {
  */
 export function resolveTopFillAttrs(
   fills: readonly Fill[],
-  defs: DefsApi,
-): FillAttrs {
+  ids: IdGenerator,
+): FillResult {
   if (fills.length > 0) {
-    return resolveFillAttrs(fills[fills.length - 1], defs);
+    return resolveFillAttrs(fills[fills.length - 1], ids);
   }
   return { fill: "none" };
 }

@@ -11,6 +11,7 @@ import { getFillAttrs, type FillAttrs } from "../fill";
 import { getStrokeAttrs, type StrokeAttrs } from "../stroke";
 import type { GeometryPathData } from "../geometry-path";
 import { decodePathsFromGeometry } from "../geometry-path";
+import { mapWindingRule } from "../../geometry";
 import { renderPaths } from "../render-paths";
 import { extractBaseProps, extractPaintProps, extractGeometryProps } from "./extract-props";
 import { figColorToHex, getPaintType } from "@aurochs/fig/color";
@@ -44,7 +45,7 @@ function resolvePaths(sources: PathSources): PathResolution {
 
   // Try vectorPaths first (if available)
   if (vectorPaths && vectorPaths.length > 0) {
-    const paths = vectorPaths.filter((vp) => vp.data).map((vp) => ({ data: vp.data!, windingRule: vp.windingRule }));
+    const paths = vectorPaths.filter((vp) => vp.data).map((vp) => ({ data: vp.data!, windingRule: mapWindingRule(vp.windingRule) }));
     if (paths.length > 0) {
       return { paths, isStrokeGeometry: false };
     }

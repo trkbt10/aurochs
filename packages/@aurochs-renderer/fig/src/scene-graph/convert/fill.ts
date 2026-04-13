@@ -1,10 +1,20 @@
 /**
  * @file Convert Figma paints to scene graph fills
+ *
+ * Consumes shared paint interpretation functions from paint/interpret.ts (the SoT)
+ * to ensure parity with the SVG string renderer's fill handling.
  */
 
-import type { FigPaint, FigColor, FigGradientPaint, FigGradientStop, FigImagePaint } from "@aurochs/fig/types";
+import type { FigPaint, FigColor, FigGradientPaint, FigImagePaint } from "@aurochs/fig/types";
 import type { FigImage } from "@aurochs/fig/parser";
 import { isPlaceholderColor, getPaintType } from "@aurochs/fig/color";
+import {
+  getGradientStops,
+  getGradientDirection,
+  getRadialGradientCenterAndRadius,
+  getImageRef,
+  getScaleMode,
+} from "../../paint";
 import type { Fill, Color, GradientStop } from "../types";
 
 /**
@@ -15,153 +25,21 @@ export function figColorToSceneColor(color: FigColor): Color {
 }
 
 /**
- * Alternative gradient stop format used in .fig files
- */
-type FigGradientStopAlt = {
-  readonly color: FigColor;
-  readonly position: number;
-};
-
-/**
- * Get gradient stops from paint (handles both API and .fig formats)
- */
-function getGradientStops(paint: FigGradientPaint): readonly FigGradientStop[] {
-  if (paint.gradientStops && paint.gradientStops.length > 0) {
-    return paint.gradientStops;
-  }
-  const paintData = paint as Record<string, unknown>;
-  const stops = paintData.stops as readonly FigGradientStopAlt[] | undefined;
-  if (stops && stops.length > 0) {
-    return stops;
-  }
-  return [];
-}
-
-/**
  * Convert gradient stops to scene graph format
  */
-function convertGradientStops(stops: readonly FigGradientStop[]): GradientStop[] {
+function convertGradientStops(stops: readonly { color: FigColor; position: number }[]): GradientStop[] {
   return stops.map((s) => ({
     position: s.position,
     color: figColorToSceneColor(s.color),
   }));
 }
 
-type GradientTransform = { m00?: number; m01?: number; m10?: number; m11?: number; m02?: number; m12?: number };
-
-/**
- * Get gradient direction from transform matrix
- */
-function getGradientDirectionFromTransform(transform: GradientTransform | undefined): {
-  start: { x: number; y: number };
-  end: { x: number; y: number };
-} {
-  if (!transform) {
-    return { start: { x: 0, y: 0 }, end: { x: 0, y: 1 } };
-  }
-  const m00 = transform.m00 ?? 1;
-  const m02 = transform.m02 ?? 0;
-  const m10 = transform.m10 ?? 0;
-  const m12 = transform.m12 ?? 0;
-
-  const grad0X = m02;
-  const grad0Y = m12;
-  const grad1X = m00 + m02;
-  const grad1Y = m10 + m12;
-
-  // Swap start/end to match Figma's visual direction
-  return {
-    start: { x: grad1X, y: grad1Y },
-    end: { x: grad0X, y: grad0Y },
-  };
-}
-
-/**
- * Get gradient direction from paint (handles both API and fig file formats)
- */
-function getGradientDirection(paint: FigGradientPaint): {
-  start: { x: number; y: number };
-  end: { x: number; y: number };
-} {
-  const handles = paint.gradientHandlePositions;
-  if (handles && handles.length >= 2) {
-    return {
-      start: handles[0] ?? { x: 0, y: 0.5 },
-      end: handles[1] ?? { x: 1, y: 0.5 },
-    };
-  }
-  const paintData = paint as Record<string, unknown>;
-  const transform = paintData.transform as GradientTransform | undefined;
-  return getGradientDirectionFromTransform(transform);
-}
-
-/**
- * Get radial gradient center and radius
- */
-function getRadialGradientCenterAndRadius(paint: FigGradientPaint): {
-  center: { x: number; y: number };
-  radius: number;
-} {
-  const handles = paint.gradientHandlePositions;
-  if (handles && handles.length >= 2) {
-    const center = handles[0] ?? { x: 0.5, y: 0.5 };
-    const edge = handles[1] ?? { x: 1, y: 0.5 };
-    const radius = Math.sqrt(Math.pow(edge.x - center.x, 2) + Math.pow(edge.y - center.y, 2));
-    return { center, radius };
-  }
-  const paintData = paint as Record<string, unknown>;
-  const transform = paintData.transform as GradientTransform | undefined;
-  return {
-    center: { x: transform?.m02 ?? 0.5, y: transform?.m12 ?? 0.5 },
-    radius: transform?.m00 ?? 0.5,
-  };
-}
-
 /**
  * Convert hash array to hex string
  */
-function hashArrayToHex(hash: readonly number[]): string {
-  return hash.map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-/**
- * Get image ref from paint
- */
-function getImageRef(paint: FigImagePaint): string | null {
-  if (paint.imageRef) {
-    return paint.imageRef;
-  }
-  const paintData = paint as Record<string, unknown>;
-  const image = paintData.image as { hash?: readonly number[] } | undefined;
-  if (image?.hash && Array.isArray(image.hash) && image.hash.length > 0) {
-    return hashArrayToHex(image.hash);
-  }
-  const imageHash = paintData.imageHash as string | readonly number[] | undefined;
-  if (typeof imageHash === "string") {
-    return imageHash;
-  }
-  if (Array.isArray(imageHash) && imageHash.length > 0) {
-    return hashArrayToHex(imageHash);
-  }
-  return null;
-}
-
-/**
- * Get scale mode from paint
- */
-function getScaleMode(paint: FigImagePaint): string {
-  if (paint.scaleMode) {
-    return paint.scaleMode;
-  }
-  const paintData = paint as Record<string, unknown>;
-  if (paintData.imageScaleMode) {
-    const mode = paintData.imageScaleMode;
-    if (typeof mode === "string") {return mode;}
-    if (typeof mode === "object" && mode && "name" in mode) {
-      return (mode as { name: string }).name;
-    }
-  }
-  return "FILL";
+function uint8ArrayToBase64(data: Uint8Array): string {
+  const binary = Array.from(data, (byte) => String.fromCharCode(byte)).join("");
+  return btoa(binary);
 }
 
 /**
@@ -217,10 +95,10 @@ export function convertPaintToFill(paint: FigPaint, images: ReadonlyMap<string, 
     case "IMAGE": {
       const imagePaint = paint as FigImagePaint;
       const imageRef = getImageRef(imagePaint);
-      if (!imageRef) {return null;}
+      if (!imageRef) { return null; }
 
       const figImage = images.get(imageRef);
-      if (!figImage) {return null;}
+      if (!figImage) { return null; }
 
       return {
         type: "image",

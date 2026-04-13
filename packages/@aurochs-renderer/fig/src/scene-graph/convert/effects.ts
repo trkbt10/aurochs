@@ -1,26 +1,15 @@
 /**
  * @file Convert Figma effects to scene graph Effects
+ *
+ * Consumes shared effect interpretation from effects/interpret.ts (the SoT).
  */
 
 import type { FigEffect } from "@aurochs/fig/types";
+import { getEffectTypeName, isEffectVisible, extractShadowParams } from "../../effects";
 import type { Effect } from "../types";
-import { figColorToSceneColor } from "./fill";
 
 /**
- * Get effect type name from Figma's enum format
- */
-function getEffectTypeName(effect: FigEffect): string {
-  const type = effect.type;
-  if (typeof type === "string") {return type;}
-  if (type && typeof type === "object" && "name" in type) {
-    return (type as { name: string }).name;
-  }
-  return "";
-}
-
-/**
- * Convert Figma effects array to scene graph Effects
- *
+ * Convert Figma effects array to scene graph Effects.
  * Only converts visible effects.
  */
 export function convertEffectsToScene(effects: readonly FigEffect[] | undefined): Effect[] {
@@ -31,51 +20,39 @@ export function convertEffectsToScene(effects: readonly FigEffect[] | undefined)
   const result: Effect[] = [];
 
   for (const effect of effects) {
-    if (effect.visible === false) {continue;}
+    if (!isEffectVisible(effect)) continue;
 
     const typeName = getEffectTypeName(effect);
 
     switch (typeName) {
       case "DROP_SHADOW": {
-        const color = effect.color ? figColorToSceneColor(effect.color) : { r: 0, g: 0, b: 0, a: 0.25 };
+        const p = extractShadowParams(effect);
         result.push({
           type: "drop-shadow",
-          offset: {
-            x: effect.offset?.x ?? 0,
-            y: effect.offset?.y ?? 0,
-          },
-          radius: effect.radius ?? 0,
-          color,
+          offset: { x: p.offsetX, y: p.offsetY },
+          radius: p.radius,
+          color: p.color,
         });
         break;
       }
 
       case "INNER_SHADOW": {
-        const color = effect.color ? figColorToSceneColor(effect.color) : { r: 0, g: 0, b: 0, a: 0.25 };
+        const p = extractShadowParams(effect);
         result.push({
           type: "inner-shadow",
-          offset: {
-            x: effect.offset?.x ?? 0,
-            y: effect.offset?.y ?? 0,
-          },
-          radius: effect.radius ?? 0,
-          color,
+          offset: { x: p.offsetX, y: p.offsetY },
+          radius: p.radius,
+          color: p.color,
         });
         break;
       }
 
       case "LAYER_BLUR":
-        result.push({
-          type: "layer-blur",
-          radius: effect.radius ?? 0,
-        });
+        result.push({ type: "layer-blur", radius: effect.radius ?? 0 });
         break;
 
       case "BACKGROUND_BLUR":
-        result.push({
-          type: "background-blur",
-          radius: effect.radius ?? 0,
-        });
+        result.push({ type: "background-blur", radius: effect.radius ?? 0 });
         break;
     }
   }

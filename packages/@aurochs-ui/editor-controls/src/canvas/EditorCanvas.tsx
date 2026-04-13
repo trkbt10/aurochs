@@ -92,6 +92,11 @@ export type EditorCanvasProps = {
   readonly onZoomModeChange: (mode: ZoomMode) => void;
   readonly onDisplayZoomChange?: (zoom: number) => void;
   readonly onViewportChange?: (viewport: ViewportTransform) => void;
+  /**
+   * Custom viewport clamp function for pan boundaries.
+   * Default: standard slide clamping. Pass `(v) => v` for infinite canvas.
+   */
+  readonly clampFn?: (viewport: ViewportTransform) => ViewportTransform;
 
   // --- Rulers ---
   readonly showRulers?: boolean;
@@ -171,8 +176,18 @@ export type EditorCanvasProps = {
   readonly onDrop?: (e: React.DragEvent) => void;
 
   // --- Styling ---
-  /** Style for the canvas background rect (default: drop-shadow). */
-  readonly canvasBgStyle?: CSSProperties;
+  /**
+   * Canvas background rendered behind content inside the viewport transform.
+   *
+   * For slide-based editors (PPTX): a white rect with drop-shadow representing the "paper".
+   * For infinite-canvas editors (Figma): null or a subtle grid.
+   *
+   * When not provided, no background is rendered (the SVG element's own
+   * backgroundColor serves as the infinite canvas surface).
+   *
+   * The render function receives canvasWidth and canvasHeight for sizing.
+   */
+  readonly canvasBackground?: (size: { width: number; height: number; scale: number }) => ReactNode;
   /** Override cursor (default: "grabbing" during pan/interact, else "default"). */
   readonly cursor?: string;
 };
@@ -221,6 +236,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
     onZoomModeChange,
     onDisplayZoomChange,
     onViewportChange,
+    clampFn,
     showRulers = true,
     rulerThickness: rulerThicknessProp = DEFAULT_RULER_THICKNESS,
     children,
@@ -252,7 +268,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
     viewportOverlay,
     onDragOver,
     onDrop,
-    canvasBgStyle = defaultCanvasBgStyle,
+    canvasBackground,
     cursor,
   },
   ref,
@@ -276,6 +292,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
     zoomMode,
     onZoomModeChange,
     onDisplayZoomChange,
+    clampFn,
   });
 
   // Notify parent of viewport changes
@@ -674,10 +691,10 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
         {/* Canvas viewport group with ruler offset + pan/zoom transform */}
         <g transform={`translate(${rulerThickness}, ${rulerThickness})`}>
           <g transform={getTransformString(viewport)}>
-            {/* Canvas background */}
-            <rect x={0} y={0} width={canvasWidth} height={canvasHeight} fill="white" style={canvasBgStyle} />
+            {/* Canvas background (injected by caller — slide paper, grid, or nothing) */}
+            {canvasBackground?.({ width: canvasWidth, height: canvasHeight, scale: viewport.scale })}
 
-            {/* Content: React children (e.g., SlideRenderer) */}
+            {/* Content: React children (e.g., SlideRenderer, FigSceneRenderer) */}
             {children}
 
             {/* Hit areas for items */}
@@ -747,17 +764,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
               />
             )}
 
-            {/* Canvas boundary */}
-            <rect
-              x={0}
-              y={0}
-              width={canvasWidth}
-              height={canvasHeight}
-              fill="none"
-              stroke="rgba(128, 128, 128, 0.5)"
-              strokeWidth={1 / viewport.scale}
-              pointerEvents="none"
-            />
+            {/* Canvas boundary is part of canvasBackground — no separate rendering here */}
           </g>
         </g>
 
@@ -800,4 +807,3 @@ const outerContainerStyle: CSSProperties = {
 
 const hitAreaStyle: CSSProperties = { cursor: "pointer" };
 const selectionGroupStyle: CSSProperties = { pointerEvents: "auto" };
-const defaultCanvasBgStyle: CSSProperties = { filter: "drop-shadow(0 4px 24px rgba(0, 0, 0, 0.4))" };

@@ -1,12 +1,12 @@
 /**
  * @file Geometry path decoding for Figma nodes
+ *
+ * Winding rule mapping delegates to geometry/interpret.ts (the SoT).
  */
 
 import { decodeBlobToSvgPath, type FigBlob } from "@aurochs/fig/parser";
 import type { FigFillGeometry } from "@aurochs/fig/types";
-
-
-type WindingRule = "NONZERO" | "EVENODD" | "ODD";
+import { mapWindingRule as sharedMapWindingRule, type WindingRule } from "../geometry";
 
 export type GeometryPathData = {
   readonly data: string;
@@ -17,15 +17,8 @@ export type GeometryPathData = {
 // Geometry Decoding
 // =============================================================================
 
-function getGeometryWindingRule(geom: FigFillGeometry): WindingRule | undefined {
-  const rule = geom.windingRule;
-  if (!rule) {
-    return undefined;
-  }
-  if (typeof rule === "string") {
-    return rule as WindingRule;
-  }
-  return rule.name as WindingRule;
+function getGeometryWindingRule(geom: FigFillGeometry): WindingRule {
+  return sharedMapWindingRule(geom.windingRule);
 }
 
 
@@ -63,15 +56,5 @@ export function decodePathsFromGeometry(
 
 
 
-/** Map Figma winding rule to SVG fill-rule attribute */
-export function mapWindingRule(rule: WindingRule | undefined): "nonzero" | "evenodd" | undefined {
-  switch (rule) {
-    case "NONZERO":
-      return "nonzero";
-    case "EVENODD":
-    case "ODD":
-      return "evenodd";
-    default:
-      return undefined;
-  }
-}
+/** Re-export shared winding rule mapper for consumers that import from this module */
+export { mapWindingRule } from "../geometry";

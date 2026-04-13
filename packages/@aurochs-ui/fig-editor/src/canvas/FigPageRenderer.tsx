@@ -10,8 +10,8 @@
  */
 
 import { useMemo } from "react";
-import type { FigPage } from "@aurochs/fig/domain";
-import type { FigBlob } from "@aurochs/fig/parser";
+import type { FigPage, FigDesignNode } from "@aurochs/fig/domain";
+import type { FigImage } from "@aurochs/fig/parser";
 import { buildSceneGraph, type BuildSceneGraphOptions } from "@aurochs-renderer/fig/scene-graph";
 import { FigSceneRenderer } from "@aurochs-renderer/fig/react";
 
@@ -23,8 +23,15 @@ type FigPageRendererProps = {
   readonly page: FigPage;
   readonly canvasWidth: number;
   readonly canvasHeight: number;
-  readonly images?: ReadonlyMap<string, { readonly ref: string; readonly data: Uint8Array; readonly mimeType: string }>;
-  readonly blobs?: readonly FigBlob[];
+  readonly images: ReadonlyMap<string, FigImage>;
+  /**
+   * Binary blobs from .fig file (for path/geometry decoding).
+   * From FigDesignDocument._loaded.blobs — roundtrip format (Record<string, unknown>[])
+   * is compatible with parser FigBlob at runtime ({ bytes: number[] }).
+   */
+  readonly blobs: BuildSceneGraphOptions["blobs"];
+  /** Symbol/component map for INSTANCE resolution */
+  readonly symbolMap?: ReadonlyMap<string, FigDesignNode>;
 };
 
 // =============================================================================
@@ -46,6 +53,7 @@ export function FigPageRenderer({
   canvasHeight,
   images,
   blobs,
+  symbolMap,
 }: FigPageRendererProps) {
   const sceneGraph = useMemo(() => {
     if (page.children.length === 0) {
@@ -53,11 +61,12 @@ export function FigPageRenderer({
     }
 
     return buildSceneGraph(page.children, {
-      blobs: blobs ?? [],
-      images: (images ?? new Map()) as BuildSceneGraphOptions["images"],
+      blobs,
+      images,
       canvasSize: { width: canvasWidth, height: canvasHeight },
+      symbolMap,
     });
-  }, [page.children, canvasWidth, canvasHeight, images, blobs]);
+  }, [page.children, canvasWidth, canvasHeight, images, blobs, symbolMap]);
 
   if (!sceneGraph) {
     return <g />;

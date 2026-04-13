@@ -1,11 +1,21 @@
 /**
- * @file Fill rendering for Figma nodes
+ * @file Fill rendering for Figma nodes (SVG string output)
+ *
+ * Paint interpretation (gradient direction, stops, image refs) is delegated
+ * to the shared SoT in paint/interpret.ts. This file handles only
+ * SVG-string-specific output formatting.
  */
 
 import type { FigPaint, FigColor, FigGradientPaint, FigGradientStop, FigImagePaint } from "@aurochs/fig/types";
 import type { FigSvgRenderContext } from "../types";
 import { linearGradient, radialGradient, stop, pattern, image, type SvgString } from "./primitives";
 import { isPlaceholderColor, figColorToHex, getPaintType } from "@aurochs/fig/color";
+import {
+  getGradientStops as sharedGetGradientStops,
+  getGradientDirection as sharedGetGradientDirection,
+  getRadialGradientCenterAndRadius as sharedGetRadialGradientCenterAndRadius,
+  getImageRef as sharedGetImageRef,
+} from "../paint";
 
 // =============================================================================
 // Fill Attributes
@@ -110,111 +120,8 @@ function paintToFillAttrs(paint: FigPaint, ctx: FigSvgRenderContext, elementSize
 }
 
 // =============================================================================
-// Gradient Creation
+// Gradient Creation (delegates interpretation to shared SoT)
 // =============================================================================
-
-/**
- * Alternative gradient stop format used in .fig files
- */
-type FigGradientStopAlt = {
-  readonly color: FigColor;
-  readonly position: number;
-};
-
-/**
- * Get gradient stops from paint (handles both formats)
- */
-function getGradientStops(paint: FigGradientPaint): readonly FigGradientStop[] {
-  // Try gradientStops first (API format)
-  if (paint.gradientStops && paint.gradientStops.length > 0) {
-    return paint.gradientStops;
-  }
-
-  // Try stops (fig file format)
-  const paintData = paint as Record<string, unknown>;
-  const stops = paintData.stops as readonly FigGradientStopAlt[] | undefined;
-  if (stops && stops.length > 0) {
-    return stops;
-  }
-
-  return [];
-}
-
-/**
- * Get gradient direction from transform matrix
- *
- * Figma's gradient transform matrix maps gradient coordinates to object space.
- * The transform is a 2x3 affine matrix:
- * | m00 m01 m02 |
- * | m10 m11 m12 |
- *
- * In Figma's gradient space:
- * - Point (0, 0) is the gradient start (position 0)
- * - Point (1, 0) is the gradient end (position 1)
- *
- * The transform maps these to object space (normalized 0-1 coordinates).
- * We then reverse the direction to match SVG's expectation that gradients
- * flow from start (offset 0) to end (offset 1).
- */
-type GradientTransform = { m00?: number; m01?: number; m10?: number; m11?: number; m02?: number; m12?: number };
-
-function getGradientDirectionFromTransform(transform: GradientTransform | undefined): {
-  start: { x: number; y: number };
-  end: { x: number; y: number };
-} {
-  if (!transform) {
-    return { start: { x: 0, y: 0 }, end: { x: 0, y: 1 } };
-  }
-
-  const m00 = transform.m00 ?? 1;
-  const _m01 = transform.m01 ?? 0;
-  const m02 = transform.m02 ?? 0;
-  const m10 = transform.m10 ?? 0;
-  const _m11 = transform.m11 ?? 1;
-  const m12 = transform.m12 ?? 0;
-
-  // Map gradient point (0, 0) - start in gradient space
-  const grad0X = m02;
-  const grad0Y = m12;
-
-  // Map gradient point (1, 0) - end in gradient space
-  const grad1X = m00 + m02;
-  const grad1Y = m10 + m12;
-
-  // Figma's gradient runs from (0,0) to (1,0), but the visual direction
-  // might be reversed depending on the transform. The transform here
-  // gives us a -90° rotation, meaning the gradient that was horizontal
-  // is now vertical, running from bottom (grad0) to top (grad1).
-  //
-  // However, for the Cover gradient to match the actual SVG output
-  // (bright blue at TOP, dark blue at BOTTOM), we need to SWAP the
-  // start and end points.
-  return {
-    start: { x: grad1X, y: grad1Y },
-    end: { x: grad0X, y: grad0Y },
-  };
-}
-
-/**
- * Get gradient direction from paint (handles both API and fig file formats)
- */
-function getGradientDirection(paint: FigGradientPaint): {
-  start: { x: number; y: number };
-  end: { x: number; y: number };
-} {
-  const handles = paint.gradientHandlePositions;
-  if (handles && handles.length >= 2) {
-    // API format with handles
-    return {
-      start: handles[0] ?? { x: 0, y: 0.5 },
-      end: handles[1] ?? { x: 1, y: 0.5 },
-    };
-  }
-  // Fig file format with transform matrix
-  const paintData = paint as Record<string, unknown>;
-  const transform = paintData.transform as GradientTransform | undefined;
-  return getGradientDirectionFromTransform(transform);
-}
 
 /**
  * Create a linear gradient def and return its ID
@@ -222,10 +129,8 @@ function getGradientDirection(paint: FigGradientPaint): {
 function createLinearGradient(paint: FigGradientPaint, ctx: FigSvgRenderContext): string {
   const id = ctx.defs.generateId("lg");
 
-  // Get gradient direction
-  const { start, end } = getGradientDirection(paint);
-
-  const stops = createGradientStops(getGradientStops(paint));
+  const { start, end } = sharedGetGradientDirection(paint);
+  const stops = createGradientStops(sharedGetGradientStops(paint));
 
   const gradientDef = linearGradient(
     {
@@ -242,38 +147,11 @@ function createLinearGradient(paint: FigGradientPaint, ctx: FigSvgRenderContext)
   return id;
 }
 
-/**
- * Get radial gradient center and radius from paint
- */
-function getRadialGradientCenterAndRadius(paint: FigGradientPaint): {
-  center: { x: number; y: number };
-  radius: number;
-} {
-  const handles = paint.gradientHandlePositions;
-  if (handles && handles.length >= 2) {
-    // API format with handles
-    const center = handles[0] ?? { x: 0.5, y: 0.5 };
-    const edge = handles[1] ?? { x: 1, y: 0.5 };
-    const radius = Math.sqrt(Math.pow(edge.x - center.x, 2) + Math.pow(edge.y - center.y, 2));
-    return { center, radius };
-  }
-  // Fig file format - use transform
-  const paintData = paint as Record<string, unknown>;
-  const transform = paintData.transform as GradientTransform | undefined;
-  return {
-    center: { x: transform?.m02 ?? 0.5, y: transform?.m12 ?? 0.5 },
-    radius: transform?.m00 ?? 0.5,
-  };
-}
-
-/**
- * Create a radial gradient def and return its ID
- */
 function createRadialGradient(paint: FigGradientPaint, ctx: FigSvgRenderContext): string {
   const id = ctx.defs.generateId("rg");
-  const { center, radius } = getRadialGradientCenterAndRadius(paint);
+  const { center, radius } = sharedGetRadialGradientCenterAndRadius(paint);
 
-  const stops = createGradientStops(getGradientStops(paint));
+  const stops = createGradientStops(sharedGetGradientStops(paint));
 
   const gradientDef = radialGradient(
     {
@@ -339,45 +217,10 @@ function uint8ArrayToBase64(bytes: Uint8Array): string {
 }
 
 /**
- * Convert hash array to hex string
- */
-function hashArrayToHex(hash: readonly number[]): string {
-  return hash.map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-/**
- * Get image ref from paint (handles both API and .fig file formats)
- */
-function getImageRef(paint: FigImagePaint): string | null {
-  // API format: imageRef is a string
-  if (paint.imageRef) {
-    return paint.imageRef;
-  }
-
-  // .fig file format: image.hash is a byte array
-  const paintData = paint as Record<string, unknown>;
-  const image = paintData.image as { hash?: readonly number[] } | undefined;
-  if (image?.hash && Array.isArray(image.hash) && image.hash.length > 0) {
-    return hashArrayToHex(image.hash);
-  }
-
-  // Also check imageHash for older formats
-  const imageHash = paintData.imageHash as string | readonly number[] | undefined;
-  if (typeof imageHash === "string") {
-    return imageHash;
-  }
-  if (Array.isArray(imageHash) && imageHash.length > 0) {
-    return hashArrayToHex(imageHash);
-  }
-
-  return null;
-}
-
-/**
  * Create an image pattern def and return its ID
  */
 function createImagePattern(paint: FigImagePaint, ctx: FigSvgRenderContext, elementSize?: ElementSize): string | null {
-  const imageRef = getImageRef(paint);
+  const imageRef = sharedGetImageRef(paint);
   if (!imageRef) {
     return null;
   }

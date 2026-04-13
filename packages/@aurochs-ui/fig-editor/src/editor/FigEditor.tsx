@@ -25,15 +25,36 @@ type FigEditorProps = {
 };
 
 // =============================================================================
-// Right panel content: properties + layers (pptx-editor pattern)
+// Left panel content: pages (fixed) + layers (scrollable)
 // =============================================================================
 
-function RightPanelContent() {
+const leftPanelStyle: CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  height: "100%",
+  overflow: "hidden",
+};
+
+const layerPanelWrapperStyle: CSSProperties = {
+  flex: 1,
+  minHeight: 0,
+  overflowY: "auto",
+};
+
+/**
+ * Left panel: Pages (compact, always visible) above Layers (scrollable, fills remaining space).
+ *
+ * Using flex layout: PageListPanel gets its natural height,
+ * LayerPanel wrapper takes remaining space with independent scroll.
+ */
+function LeftPanelContent() {
   return (
-    <>
-      <PropertyPanel />
-      <LayerPanel />
-    </>
+    <div style={leftPanelStyle}>
+      <PageListPanel />
+      <div style={layerPanelWrapperStyle}>
+        <LayerPanel />
+      </div>
+    </div>
   );
 }
 
@@ -52,16 +73,16 @@ function FigEditorContent() {
 
   const panels = useMemo((): EditorPanel[] => [
     {
-      id: "pages",
+      id: "pages-layers",
       position: "left",
-      content: <PageListPanel />,
-      drawerLabel: "Pages",
-      scrollable: true,
+      content: <LeftPanelContent />,
+      drawerLabel: "Pages & Layers",
+      scrollable: false,
     },
     {
       id: "inspector",
       position: "right",
-      content: <RightPanelContent />,
+      content: <PropertyPanel />,
       drawerLabel: "Inspector",
       scrollable: true,
     },

@@ -36,6 +36,7 @@ export default [
       ".*/**",
       "**/coverage/**",
       "tmp/**",
+      "**/*.d.ts",
     ],
   },
 

@@ -17,8 +17,17 @@ import {
 } from "@aurochs-ui/editor-core/viewport";
 import { type ZoomMode, isFitMode } from "@aurochs-ui/editor-controls/zoom";
 
+/**
+ * Function that adjusts a viewport after panning to enforce boundaries.
+ * Returns the clamped viewport.
+ *
+ * For slide editors: use the default (clampViewport — keeps slide in view).
+ * For infinite canvas: pass identity function (no clamping).
+ */
+export type ViewportClampFn = (viewport: ViewportTransform) => ViewportTransform;
+
 export type UseSvgViewportOptions = {
-  /** Slide dimensions */
+  /** Canvas content dimensions (for fit-to-view and default clamping) */
   readonly slideSize: SlideSize;
   /** Ruler thickness in pixels */
   readonly rulerThickness: number;
@@ -28,6 +37,12 @@ export type UseSvgViewportOptions = {
   readonly onZoomModeChange?: (mode: ZoomMode) => void;
   /** Callback to report current display zoom value (useful when in fit mode) */
   readonly onDisplayZoomChange?: (zoom: number) => void;
+  /**
+   * Custom viewport clamp function. Called after every pan to enforce boundaries.
+   * Default: clampViewport (prevents content from going off-screen).
+   * Pass `(v) => v` for infinite canvas (no clamping).
+   */
+  readonly clampFn?: ViewportClampFn;
 };
 
 export type UseSvgViewportResult = {
@@ -64,6 +79,7 @@ export function useSvgViewport({
   zoomMode,
   onZoomModeChange,
   onDisplayZoomChange,
+  clampFn: clampFnProp,
 }: UseSvgViewportOptions): UseSvgViewportResult {
   const svgRef = useRef<SVGSVGElement>(null);
   const [viewport, setViewport] = useState<ViewportTransform>(INITIAL_VIEWPORT);
@@ -71,6 +87,13 @@ export function useSvgViewport({
   const [isPanning, setIsPanning] = useState(false);
   const lastPointerRef = useRef({ x: 0, y: 0 });
   const hasInitializedRef = useRef(false);
+
+  // Resolve clamp function: default = standard slide clamping
+  const defaultClampFn = useCallback(
+    (vp: ViewportTransform) => clampViewport({ viewport: vp, viewportSize, slideSize, rulerThickness }),
+    [viewportSize, slideSize, rulerThickness],
+  );
+  const applyClamp = clampFnProp ?? defaultClampFn;
 
   // Calculate fitted viewport for fit mode
   const fittedViewport = useMemo(() => {
@@ -178,11 +201,11 @@ export function useSvgViewport({
 
         setViewport((prev) => {
           const panned = panViewport(prev, dx, dy);
-          return clampViewport({ viewport: panned, viewportSize, slideSize, rulerThickness });
+          return applyClamp(panned);
         });
       }
     },
-    [effectiveViewport.scale, onZoomModeChange, rulerThickness, viewportSize, slideSize],
+    [effectiveViewport.scale, onZoomModeChange, rulerThickness, applyClamp],
   );
 
   // Pan handlers
@@ -208,10 +231,10 @@ export function useSvgViewport({
 
       setViewport((prev) => {
         const panned = panViewport(prev, dx, dy);
-        return clampViewport({ viewport: panned, viewportSize, slideSize, rulerThickness });
+        return applyClamp(panned);
       });
     },
-    [isPanning, viewportSize, slideSize, rulerThickness],
+    [isPanning, applyClamp],
   );
 
   const handlePanEnd = useCallback(() => {

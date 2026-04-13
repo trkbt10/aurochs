@@ -4,6 +4,8 @@
 
 import { memo } from "react";
 import type { GroupNode } from "../../scene-graph/types";
+import { useFigSvgDefs } from "../context/FigSvgDefsContext";
+import { resolveEffectsFilter } from "../primitives/effects";
 import { matrixToSvgTransform } from "../primitives/transform";
 import { SceneNodeRenderer } from "./SceneNodeRenderer";
 
@@ -12,14 +14,16 @@ type Props = {
 };
 
 function GroupNodeRendererImpl({ node }: Props) {
+  const ids = useFigSvgDefs();
   const transformStr = matrixToSvgTransform(node.transform);
+  const effectsResult = resolveEffectsFilter(node.effects, ids);
 
   const children = node.children.map((child) => (
     <SceneNodeRenderer key={child.id} node={child} />
   ));
 
-  // Optimization: unwrap single child if no transform/opacity needed
-  if (!transformStr && node.opacity >= 1 && children.length === 1) {
+  // Optimization: unwrap single child if no transform/opacity/effects needed
+  if (!transformStr && node.opacity >= 1 && !effectsResult && children.length === 1) {
     return <>{children[0]}</>;
   }
 
@@ -27,7 +31,9 @@ function GroupNodeRendererImpl({ node }: Props) {
     <g
       transform={transformStr}
       opacity={node.opacity < 1 ? node.opacity : undefined}
+      filter={effectsResult?.filterAttr}
     >
+      {effectsResult?.defElement && <defs>{effectsResult.defElement}</defs>}
       {children}
     </g>
   );

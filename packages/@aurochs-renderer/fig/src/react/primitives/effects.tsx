@@ -1,15 +1,22 @@
 /**
  * @file Effects (shadow, blur) rendering for React scene graph renderer
  *
- * Registers SVG filter defs and returns a filter URL reference.
+ * Produces SVG filter elements and returns a filter URL reference.
+ * Filter defs are returned directly for inline rendering.
  */
 
 import type { ReactNode } from "react";
 import type { Effect, DropShadowEffect, InnerShadowEffect, LayerBlurEffect } from "../../scene-graph/types";
 
-type DefsApi = {
+type IdGenerator = {
   readonly getNextId: (prefix: string) => string;
-  readonly addDef: (id: string, content: ReactNode) => void;
+};
+
+export type EffectsResult = {
+  /** filter attribute value (e.g. "url(#filter-0)") */
+  readonly filterAttr: string;
+  /** Filter def element to render in an inline <defs> block */
+  readonly defElement: ReactNode;
 };
 
 /**
@@ -80,13 +87,13 @@ function accumulateLayerBlur(acc: FilterAccumulator, effect: LayerBlurEffect): v
 }
 
 /**
- * Register an SVG filter for the given effects and return the filter URL.
+ * Produce an SVG filter for the given effects and return the filter URL + def element.
  * Returns undefined if no effects produce filter primitives.
  */
 export function resolveEffectsFilter(
   effects: readonly Effect[],
-  defs: DefsApi,
-): string | undefined {
+  ids: IdGenerator,
+): EffectsResult | undefined {
   if (effects.length === 0) {
     return undefined;
   }
@@ -114,7 +121,7 @@ export function resolveEffectsFilter(
     return undefined;
   }
 
-  const id = defs.getNextId("filter");
-  defs.addDef(id, <filter id={id}>{acc.primitives}</filter>);
-  return `url(#${id})`;
+  const id = ids.getNextId("filter");
+  const defElement = <filter id={id}>{acc.primitives}</filter>;
+  return { filterAttr: `url(#${id})`, defElement };
 }

@@ -16,6 +16,7 @@ import { useCallback, useMemo, useRef } from "react";
 import type { PdfPage, PdfElementId } from "@aurochs/pdf";
 import {
   EditorCanvas,
+  slideCanvasBackground,
   type EditorCanvasHandle,
   type CanvasPageCoords,
 } from "@aurochs-ui/editor-controls/canvas";
@@ -234,6 +235,7 @@ export function PdfPageCanvas({
       ref={canvasRef}
       canvasWidth={page.width}
       canvasHeight={page.height}
+      canvasBackground={slideCanvasBackground}
       zoomMode={zoomMode}
       onZoomModeChange={onZoomModeChange}
       onDisplayZoomChange={onDisplayZoomChange}

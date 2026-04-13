@@ -31,6 +31,7 @@ import {
 import type { PresentationEditorAction } from "@aurochs-ui/pptx-editor";
 import {
   EditorCanvas,
+  slideCanvasBackground,
   type EditorCanvasHandle,
   type EditorCanvasItemBounds,
 } from "@aurochs-ui/editor-controls/canvas";
@@ -277,6 +278,7 @@ function EditorHarness() {
         ref={canvasRef}
         canvasWidth={width}
         canvasHeight={height}
+        canvasBackground={slideCanvasBackground}
         zoomMode={"fit" as ZoomMode}
         onZoomModeChange={() => {}}
         itemBounds={shapeRenderData as readonly EditorCanvasItemBounds[]}

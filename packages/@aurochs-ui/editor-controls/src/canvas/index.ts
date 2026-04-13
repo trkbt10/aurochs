@@ -25,7 +25,7 @@ export { findItemAtPoint, useCanvasCoords, useGlobalDragListeners } from "./use-
 // Canvas ruler
 export { CanvasRuler, type CanvasRulerProps } from "./CanvasRuler";
 
-// Editor canvas (SoT for both pptx-editor and pdf-editor)
+// Editor canvas
 export {
   EditorCanvas,
   type EditorCanvasHandle,
@@ -35,7 +35,10 @@ export {
   type CanvasPageCoords,
 } from "./EditorCanvas";
 
+// Canvas backgrounds
+export { slideCanvasBackground } from "./SlideCanvasBackground";
+
 // Viewport management (pan/zoom)
-export { useSvgViewport, type UseSvgViewportOptions, type UseSvgViewportResult } from "./use-svg-viewport";
+export { useSvgViewport, type UseSvgViewportOptions, type UseSvgViewportResult, type ViewportClampFn } from "./use-svg-viewport";
 export { SvgRulers, type SvgRulersProps } from "./SvgRulers";
 export { ViewportOverlay, type ViewportOverlayProps } from "./ViewportOverlay";

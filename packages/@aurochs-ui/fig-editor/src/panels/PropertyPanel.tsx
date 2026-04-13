@@ -9,8 +9,12 @@ import { useFigEditor } from "../context/FigEditorContext";
 import { OptionalPropertySection } from "@aurochs-ui/editor-controls/ui";
 import { colorTokens, fontTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { TransformSection } from "./sections/TransformSection";
+import { OpacitySection } from "./sections/OpacitySection";
 import { FillSection } from "./sections/FillSection";
 import { StrokeSection } from "./sections/StrokeSection";
+import { CornerRadiusSection } from "./sections/CornerRadiusSection";
+import { EffectsSection } from "./sections/EffectsSection";
+import { AutoLayoutSection } from "./sections/AutoLayoutSection";
 
 // =============================================================================
 // Component
@@ -23,7 +27,7 @@ import { StrokeSection } from "./sections/StrokeSection";
  * or a message prompting selection when nothing is selected.
  */
 export function PropertyPanel() {
-  const { primaryNode, dispatch } = useFigEditor();
+  const { primaryNode, selectedNodes, dispatch } = useFigEditor();
 
   if (!primaryNode) {
     return (
@@ -33,12 +37,22 @@ export function PropertyPanel() {
     );
   }
 
+  const hasMultipleSelected = selectedNodes.length > 1;
+
   return (
     <div>
       {/* Node identity header */}
-      <OptionalPropertySection title={primaryNode.name} badge={primaryNode.type} defaultExpanded={false}>
+      <OptionalPropertySection
+        title={primaryNode.name}
+        badge={hasMultipleSelected ? `${selectedNodes.length} selected` : primaryNode.type}
+        defaultExpanded={false}
+      >
         <div style={{ fontSize: fontTokens.size.sm, color: colorTokens.text.tertiary }}>
-          ID: {primaryNode.id}
+          <div>Type: {primaryNode.type}</div>
+          <div>ID: {primaryNode.id}</div>
+          {primaryNode.visible === false && (
+            <div style={{ color: colorTokens.text.tertiary, fontStyle: "italic" }}>Hidden</div>
+          )}
         </div>
       </OptionalPropertySection>
 
@@ -46,6 +60,18 @@ export function PropertyPanel() {
       <OptionalPropertySection title="Transform" defaultExpanded>
         <TransformSection node={primaryNode} dispatch={dispatch} />
       </OptionalPropertySection>
+
+      {/* Opacity (only show if not fully opaque or for convenience) */}
+      <OptionalPropertySection title="Opacity" defaultExpanded>
+        <OpacitySection node={primaryNode} dispatch={dispatch} />
+      </OptionalPropertySection>
+
+      {/* Corner Radius (only for applicable node types) */}
+      {primaryNode.cornerRadius !== undefined || primaryNode.rectangleCornerRadii !== undefined ? (
+        <OptionalPropertySection title="Corner Radius" defaultExpanded>
+          <CornerRadiusSection node={primaryNode} dispatch={dispatch} />
+        </OptionalPropertySection>
+      ) : null}
 
       {/* Fill */}
       <OptionalPropertySection title="Fill" defaultExpanded>
@@ -56,6 +82,20 @@ export function PropertyPanel() {
       <OptionalPropertySection title="Stroke" defaultExpanded>
         <StrokeSection node={primaryNode} dispatch={dispatch} />
       </OptionalPropertySection>
+
+      {/* Effects */}
+      {primaryNode.effects.length > 0 && (
+        <OptionalPropertySection title="Effects" badge={primaryNode.effects.length} defaultExpanded>
+          <EffectsSection node={primaryNode} />
+        </OptionalPropertySection>
+      )}
+
+      {/* Auto Layout */}
+      {primaryNode.autoLayout && (
+        <OptionalPropertySection title="Auto Layout" defaultExpanded>
+          <AutoLayoutSection node={primaryNode} />
+        </OptionalPropertySection>
+      )}
     </div>
   );
 }

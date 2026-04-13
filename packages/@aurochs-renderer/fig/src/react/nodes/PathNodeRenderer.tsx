@@ -16,37 +16,43 @@ type Props = {
 };
 
 function PathNodeRendererImpl({ node }: Props) {
-  const defs = useFigSvgDefs();
+  const ids = useFigSvgDefs();
   const transformStr = matrixToSvgTransform(node.transform);
-  const filterAttr = resolveEffectsFilter(node.effects, defs);
-  const fillAttrs = resolveTopFillAttrs(node.fills, defs);
+  const effectsResult = resolveEffectsFilter(node.effects, ids);
+  const fillResult = resolveTopFillAttrs(node.fills, ids);
   const strokeAttrs = node.stroke ? resolveStrokeAttrs(node.stroke) : {};
 
   if (node.contours.length === 0) {
     return null;
   }
 
+  // Collect inline defs
+  const defs: React.ReactNode[] = [];
+  if (fillResult.defElement) defs.push(fillResult.defElement);
+  if (effectsResult?.defElement) defs.push(effectsResult.defElement);
+
   const pathElements = node.contours.map((contour, i) => (
     <path
       key={i}
       d={contourToSvgD(contour)}
       fillRule={contour.windingRule !== "nonzero" ? contour.windingRule : undefined}
-      fill={fillAttrs.fill}
-      fillOpacity={fillAttrs.fillOpacity}
+      fill={fillResult.fill}
+      fillOpacity={fillResult.fillOpacity}
       {...strokeAttrs}
     />
   ));
 
   const needsWrapper =
-    transformStr || node.opacity < 1 || filterAttr || pathElements.length > 1;
+    defs.length > 0 || transformStr || node.opacity < 1 || effectsResult || pathElements.length > 1;
 
   if (needsWrapper) {
     return (
       <g
         transform={transformStr}
         opacity={node.opacity < 1 ? node.opacity : undefined}
-        filter={filterAttr}
+        filter={effectsResult?.filterAttr}
       >
+        {defs.length > 0 && <defs>{defs}</defs>}
         {pathElements}
       </g>
     );
