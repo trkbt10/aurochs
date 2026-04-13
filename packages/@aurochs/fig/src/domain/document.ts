@@ -132,7 +132,17 @@ export type FigDesignNode = {
   readonly textData?: TextData;
 
   // Component/instance specifics
-  readonly symbolId?: string;
+  /**
+   * Reference to the SYMBOL/COMPONENT this INSTANCE resolves to.
+   *
+   * Uses FigNodeId (branded "sessionID:localID" string) — the same type as
+   * the keys of `FigDesignDocument.components`. This type-level guarantee
+   * prevents accidental assignment of raw FigGuid structs or untyped strings.
+   *
+   * Must be produced via `guidToNodeId(getEffectiveSymbolID(raw))` — no
+   * other construction path is valid.
+   */
+  readonly symbolId?: FigNodeId;
   readonly overrides?: readonly SymbolOverride[];
 
   // Boolean operation specifics

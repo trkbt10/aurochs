@@ -6,10 +6,12 @@
  *
  * Both paths consume shared SoT modules (paint/, stroke/, effects/, geometry/),
  * so these tests confirm the wiring is correct and outputs agree.
+ *
+ * Test data uses Kiwi-format types (matching real .fig file decoded output)
+ * via test-helpers/kiwi-paint.ts — no `as unknown as FigPaint` casts.
  */
 
 import { describe, it, expect } from "vitest";
-import type { FigPaint, FigGradientPaint, FigEffect } from "@aurochs/fig/types";
 import type { FigImage } from "@aurochs/fig/parser";
 
 // Shared SoT
@@ -23,10 +25,19 @@ import { convertPaintToFill } from "./scene-graph/convert/fill";
 import { convertEffectsToScene } from "./scene-graph/convert/effects";
 import { convertStrokeToSceneStroke } from "./scene-graph/convert/stroke";
 
+// Type-safe Kiwi test data
+import {
+  type KiwiGradientPaint,
+  type KiwiEffect,
+  asGradientPaint,
+  asPaint,
+  asEffect,
+} from "./test-helpers/kiwi-paint";
+
 const NO_IMAGES: ReadonlyMap<string, FigImage> = new Map();
 
 describe("Paint parity", () => {
-  const kiwiLinearGradientPaint = {
+  const kiwiLinearGradient: KiwiGradientPaint = {
     type: { value: 1, name: "GRADIENT_LINEAR" },
     opacity: 0.9,
     visible: true,
@@ -36,12 +47,11 @@ describe("Paint parity", () => {
       { color: { r: 0.55, g: 0.30, b: 0.85, a: 1 }, position: 1 },
     ],
     transform: { m00: 0, m01: 0, m02: 0.5, m10: -1, m11: 0, m12: 1 },
-  } as unknown as FigPaint;
+  };
 
   it("shared SoT and SceneGraph produce identical gradient direction", () => {
-    const gradPaint = kiwiLinearGradientPaint as unknown as FigGradientPaint;
-    const shared = getGradientDirection(gradPaint);
-    const fill = convertPaintToFill(kiwiLinearGradientPaint, NO_IMAGES)!;
+    const shared = getGradientDirection(asGradientPaint(kiwiLinearGradient));
+    const fill = convertPaintToFill(asPaint(kiwiLinearGradient), NO_IMAGES)!;
     expect(fill.type).toBe("linear-gradient");
     if (fill.type === "linear-gradient") {
       expect(fill.start.x).toBeCloseTo(shared.start.x);
@@ -52,9 +62,8 @@ describe("Paint parity", () => {
   });
 
   it("shared SoT and SceneGraph produce identical gradient stops", () => {
-    const gradPaint = kiwiLinearGradientPaint as unknown as FigGradientPaint;
-    const sharedStops = getGradientStops(gradPaint);
-    const fill = convertPaintToFill(kiwiLinearGradientPaint, NO_IMAGES)!;
+    const sharedStops = getGradientStops(asGradientPaint(kiwiLinearGradient));
+    const fill = convertPaintToFill(asPaint(kiwiLinearGradient), NO_IMAGES)!;
     if (fill.type === "linear-gradient") {
       expect(fill.stops).toHaveLength(sharedStops.length);
       for (let i = 0; i < sharedStops.length; i++) {
@@ -64,7 +73,7 @@ describe("Paint parity", () => {
     }
   });
 
-  const kiwiRadialPaint = {
+  const kiwiRadialGradient: KiwiGradientPaint = {
     type: { value: 2, name: "GRADIENT_RADIAL" },
     opacity: 1,
     visible: true,
@@ -73,12 +82,11 @@ describe("Paint parity", () => {
       { color: { r: 0, g: 0, b: 1, a: 1 }, position: 1 },
     ],
     transform: { m00: 0.5, m02: 0.5, m12: 0.5 },
-  } as unknown as FigPaint;
+  };
 
   it("shared SoT and SceneGraph produce identical radial center/radius", () => {
-    const gradPaint = kiwiRadialPaint as unknown as FigGradientPaint;
-    const shared = getRadialGradientCenterAndRadius(gradPaint);
-    const fill = convertPaintToFill(kiwiRadialPaint, NO_IMAGES)!;
+    const shared = getRadialGradientCenterAndRadius(asGradientPaint(kiwiRadialGradient));
+    const fill = convertPaintToFill(asPaint(kiwiRadialGradient), NO_IMAGES)!;
     expect(fill.type).toBe("radial-gradient");
     if (fill.type === "radial-gradient") {
       expect(fill.center.x).toBeCloseTo(shared.center.x);
@@ -90,12 +98,12 @@ describe("Paint parity", () => {
 
 describe("Stroke parity", () => {
   it("SceneGraph stroke uses shared weight/cap/join interpretation", () => {
-    const paints: FigPaint[] = [{
-      type: "SOLID",
+    const paints = [asPaint({
+      type: { value: 0, name: "SOLID" },
       color: { r: 1, g: 0, b: 0, a: 1 },
       opacity: 0.8,
       visible: true,
-    } as FigPaint];
+    })];
     const weight = { top: 1, right: 3, bottom: 2, left: 0 };
     const stroke = convertStrokeToSceneStroke(paints, weight, {
       strokeCap: { value: 2, name: "ROUND" },
@@ -111,23 +119,22 @@ describe("Stroke parity", () => {
 
 describe("Effects parity", () => {
   it("SceneGraph effects use shared type detection and shadow extraction", () => {
-    const effects: FigEffect[] = [
-      {
-        type: { value: 0, name: "DROP_SHADOW" } as any,
-        visible: true,
-        offset: { x: 2, y: 4 },
-        radius: 8,
-        color: { r: 0, g: 0, b: 0, a: 0.3 },
-      } as FigEffect,
-      {
-        type: { value: 1, name: "INNER_SHADOW" } as any,
-        visible: true,
-        offset: { x: 0, y: 2 },
-        radius: 4,
-        color: { r: 0, g: 0, b: 0, a: 0.5 },
-      } as FigEffect,
-    ];
+    const kiwiDropShadow: KiwiEffect = {
+      type: { value: 0, name: "DROP_SHADOW" },
+      visible: true,
+      offset: { x: 2, y: 4 },
+      radius: 8,
+      color: { r: 0, g: 0, b: 0, a: 0.3 },
+    };
+    const kiwiInnerShadow: KiwiEffect = {
+      type: { value: 1, name: "INNER_SHADOW" },
+      visible: true,
+      offset: { x: 0, y: 2 },
+      radius: 4,
+      color: { r: 0, g: 0, b: 0, a: 0.5 },
+    };
 
+    const effects = [asEffect(kiwiDropShadow), asEffect(kiwiInnerShadow)];
     const sceneEffects = convertEffectsToScene(effects);
     expect(sceneEffects).toHaveLength(2);
 

@@ -4,19 +4,27 @@
  * Verifies that the scene graph fill conversion correctly handles
  * both API-format paints (gradientStops/gradientHandlePositions)
  * and Kiwi-format paints (stops/transform) from the builder.
+ *
+ * Uses test-helpers/kiwi-paint.ts for type-safe Kiwi-format data
+ * construction — no `as unknown as FigPaint` casts.
  */
 
 import { describe, it, expect } from "vitest";
 import { convertPaintToFill, convertPaintsToFills } from "./fill";
-import type { FigPaint } from "@aurochs/fig/types";
+import type { FigPaint, FigSolidPaint } from "@aurochs/fig/types";
 import type { FigImage } from "@aurochs/fig/parser";
+import {
+  type KiwiGradientPaint,
+  type KiwiSolidPaint,
+  asPaint,
+} from "../../test-helpers/kiwi-paint";
 
 const NO_IMAGES: ReadonlyMap<string, FigImage> = new Map();
 
 describe("convertPaintToFill", () => {
   describe("solid paint", () => {
     it("converts SOLID paint with direct type string", () => {
-      const paint: FigPaint = {
+      const paint: FigSolidPaint = {
         type: "SOLID",
         color: { r: 0, g: 0.5, b: 1, a: 1 },
         opacity: 0.8,
@@ -31,13 +39,13 @@ describe("convertPaintToFill", () => {
     });
 
     it("converts SOLID paint with KiwiEnumValue type", () => {
-      const paint = {
+      const kiwiSolid: KiwiSolidPaint = {
         type: { value: 0, name: "SOLID" },
         color: { r: 0, g: 1, b: 0, a: 1 },
         opacity: 1,
         visible: true,
-      } as unknown as FigPaint;
-      const fill = convertPaintToFill(paint, NO_IMAGES);
+      };
+      const fill = convertPaintToFill(asPaint(kiwiSolid), NO_IMAGES);
       expect(fill).toEqual({
         type: "solid",
         color: { r: 0, g: 1, b: 0, a: 1 },
@@ -49,7 +57,7 @@ describe("convertPaintToFill", () => {
   describe("linear gradient (Kiwi format: stops + transform)", () => {
     it("converts builder-generated linear gradient", () => {
       // This is the exact format the builder outputs after Kiwi encode/decode
-      const paint = {
+      const kiwiGradient: KiwiGradientPaint = {
         type: { value: 1, name: "GRADIENT_LINEAR" },
         opacity: 1,
         visible: true,
@@ -59,9 +67,9 @@ describe("convertPaintToFill", () => {
           { color: { r: 0.55, g: 0.30, b: 0.85, a: 1 }, position: 1 },
         ],
         transform: { m00: 0.5, m01: 0, m02: 0.5, m10: 0, m11: 1, m12: 0 },
-      } as unknown as FigPaint;
+      };
 
-      const fill = convertPaintToFill(paint, NO_IMAGES);
+      const fill = convertPaintToFill(asPaint(kiwiGradient), NO_IMAGES);
       expect(fill).not.toBeNull();
       expect(fill!.type).toBe("linear-gradient");
       if (fill!.type === "linear-gradient") {
@@ -77,7 +85,7 @@ describe("convertPaintToFill", () => {
 
   describe("radial gradient (Kiwi format: stops + transform)", () => {
     it("converts builder-generated radial gradient", () => {
-      const paint = {
+      const kiwiGradient: KiwiGradientPaint = {
         type: { value: 2, name: "GRADIENT_RADIAL" },
         opacity: 1,
         visible: true,
@@ -87,9 +95,9 @@ describe("convertPaintToFill", () => {
           { color: { r: 0.90, g: 0.25, b: 0.25, a: 1 }, position: 1 },
         ],
         transform: { m00: 0.5, m01: 0, m02: 0.5, m10: 0, m11: 0.5, m12: 0.5 },
-      } as unknown as FigPaint;
+      };
 
-      const fill = convertPaintToFill(paint, NO_IMAGES);
+      const fill = convertPaintToFill(asPaint(kiwiGradient), NO_IMAGES);
       expect(fill).not.toBeNull();
       expect(fill!.type).toBe("radial-gradient");
       if (fill!.type === "radial-gradient") {
@@ -103,11 +111,9 @@ describe("convertPaintToFill", () => {
 
   describe("invisible paints", () => {
     it("skips paints with visible=false", () => {
-      const paints: FigPaint[] = [
-        { type: "SOLID", color: { r: 1, g: 0, b: 0, a: 1 }, opacity: 1, visible: false } as FigPaint,
-        { type: "SOLID", color: { r: 0, g: 1, b: 0, a: 1 }, opacity: 1, visible: true } as FigPaint,
-      ];
-      const fills = convertPaintsToFills(paints, NO_IMAGES);
+      const hidden: FigSolidPaint = { type: "SOLID", color: { r: 1, g: 0, b: 0, a: 1 }, opacity: 1, visible: false };
+      const visible: FigSolidPaint = { type: "SOLID", color: { r: 0, g: 1, b: 0, a: 1 }, opacity: 1, visible: true };
+      const fills = convertPaintsToFills([hidden, visible], NO_IMAGES);
       expect(fills).toHaveLength(1);
       expect(fills[0].type).toBe("solid");
       if (fills[0].type === "solid") {

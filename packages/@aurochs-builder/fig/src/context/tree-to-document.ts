@@ -14,6 +14,7 @@
 import type { FigNode, FigNodeType, FigMatrix, FigVector, FigColor, FigPaint, FigEffect, FigStrokeWeight, KiwiEnumValue } from "@aurochs/fig/types";
 import type { NodeTreeResult } from "@aurochs/fig/parser";
 import { getNodeType, safeChildren } from "@aurochs/fig/parser";
+import { getEffectiveSymbolID } from "@aurochs/fig/symbols";
 import type { LoadedFigFile, FigImage, FigMetadata } from "@aurochs/fig/roundtrip";
 import type { FigDesignDocument, FigDesignNode, FigPage, AutoLayoutProps, LayoutConstraints, TextData, SymbolOverride } from "../types/document";
 import { DEFAULT_PAGE_BACKGROUND } from "../types/document";
@@ -23,6 +24,22 @@ import type { FigNodeId, FigPageId } from "../types/node-id";
 // =============================================================================
 // Constants
 // =============================================================================
+
+/**
+ * Extract the effective symbol ID from a node's raw data and convert
+ * it to a FigNodeId string suitable for looking up in the components map.
+ *
+ * Delegates to getEffectiveSymbolID (the SoT for INSTANCE → SYMBOL resolution)
+ * which handles both `symbolData.symbolID` (real Figma exports) and top-level
+ * `symbolID` (builder-generated files), plus `overriddenSymbolID` for variants.
+ *
+ * Returns undefined for non-INSTANCE nodes.
+ */
+function resolveSymbolIdForDomain(raw: Record<string, unknown>): FigNodeId | undefined {
+  const guid = getEffectiveSymbolID(raw);
+  if (!guid) return undefined;
+  return guidToNodeId(guid);
+}
 
 /** Identity matrix (no transform) */
 const IDENTITY_MATRIX: FigMatrix = { m00: 1, m01: 0, m02: 0, m10: 0, m11: 1, m12: 0 };
@@ -215,7 +232,7 @@ export function convertFigNode(
 
     textData: nodeType === "TEXT" ? extractTextData(raw) : undefined,
 
-    symbolId: raw.symbolID as string | undefined,
+    symbolId: resolveSymbolIdForDomain(raw),
     overrides: raw.symbolOverrides as readonly SymbolOverride[] | undefined,
 
     booleanOperation: raw.booleanOperation as KiwiEnumValue | undefined,

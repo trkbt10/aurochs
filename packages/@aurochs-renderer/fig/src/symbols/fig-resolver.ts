@@ -187,15 +187,12 @@ export function createFigResolver(
 
   // --- Override GUID translation ---
 
-  function translateIfNeeded<T>(
+  function translateIfNeeded(
     translationMap: ReadonlyMap<string, string>,
-    overrides: T | undefined,
-  ): T | undefined {
+    overrides: readonly FigSymbolOverride[] | undefined,
+  ): readonly FigSymbolOverride[] | undefined {
     if (translationMap.size > 0 && overrides) {
-      return translateOverrides(
-        overrides as unknown as readonly FigSymbolOverride[],
-        translationMap,
-      ) as unknown as T;
+      return translateOverrides(overrides, translationMap);
     }
     return overrides;
   }
@@ -355,7 +352,7 @@ export function createFigResolver(
       rawSymbolOverrides,
     );
     const symbolOverrides = translateIfNeeded(translationMap, rawSymbolOverrides);
-    const derivedSymbolData = translateIfNeeded(translationMap, rawDerivedSymbolData) as FigDerivedSymbolData;
+    const derivedSymbolData = translateIfNeeded(translationMap, rawDerivedSymbolData);
 
     // Self-referencing overrides
     if (symbolOverrides && symbolOverrides.length > 0) {

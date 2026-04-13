@@ -7,6 +7,7 @@
  */
 
 import type { FigColor, FigPaint, FigEffect, KiwiEnumValue } from "@aurochs/fig/types";
+import type { FigNodeId } from "@aurochs/fig/domain";
 import type { AutoLayoutProps } from "./document";
 
 // =============================================================================
@@ -119,7 +120,7 @@ export type ComponentNodeSpec = BaseNodeSpec & {
 
 export type InstanceNodeSpec = BaseNodeSpec & {
   readonly type: "INSTANCE";
-  readonly symbolId: string;
+  readonly symbolId: FigNodeId;
 };
 
 // =============================================================================

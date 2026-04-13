@@ -666,12 +666,12 @@ export function applySelfOverridesToMergedNode(
 /**
  * Translate override GUIDs if the translation map is non-empty.
  */
-function translateOverridesIfNeeded<T>(
+function translateOverridesIfNeeded(
   translationMap: ReadonlyMap<string, string>,
-  overrides: T | undefined,
-): T | undefined {
+  overrides: readonly FigSymbolOverride[] | undefined,
+): readonly FigSymbolOverride[] | undefined {
   if (translationMap.size > 0 && overrides) {
-    return translateOverrides(overrides as unknown as readonly FigSymbolOverride[], translationMap) as unknown as T;
+    return translateOverrides(overrides, translationMap);
   }
   return overrides;
 }
@@ -718,7 +718,7 @@ export function resolveInstanceNode(
     rawSymbolOverrides,
   );
   const symbolOverrides = translateOverridesIfNeeded(translationMap, rawSymbolOverrides);
-  const derivedSymbolData = translateOverridesIfNeeded(translationMap, rawDerivedSymbolData) as FigDerivedSymbolData;
+  const derivedSymbolData = translateOverridesIfNeeded(translationMap, rawDerivedSymbolData);
 
   // 4. Apply self-referencing overrides
   if (symbolOverrides && symbolOverrides.length > 0) {

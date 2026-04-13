@@ -10,6 +10,7 @@
 import { compressZstd, compressDeflateRaw } from "../compression";
 import { decompressDeflateRaw, decompressZstd, detectCompression } from "../compression";
 import type { KiwiSchema, FigNode } from "../types";
+import type { FigBlob as ParserFigBlob } from "../parser/blob-decoder";
 import { StreamingFigEncoder } from "../kiwi/stream";
 import { parseFigHeader, getPayload } from "../parser/header";
 import { splitFigChunks, decodeFigSchema, decodeFigMessage } from "../kiwi/decoder";
@@ -43,8 +44,14 @@ export type FigImage = {
   readonly mimeType: string;
 };
 
-/** Blob data */
-export type FigBlob = Record<string, unknown>;
+/**
+ * Blob data — re-exported from parser for single type identity.
+ *
+ * Previously defined as `Record<string, unknown>` which broke structural
+ * compatibility with the parser's `FigBlob = { bytes: readonly number[] }`.
+ * This caused `as any` casts wherever roundtrip blobs met parser consumers.
+ */
+export type FigBlob = ParserFigBlob;
 
 /** Loaded .fig file data */
 export type LoadedFigFile = {
