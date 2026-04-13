@@ -26,8 +26,17 @@ export type LayoutLine = {
   readonly x: number;
   /** Y position (baseline) */
   readonly y: number;
-  /** Line index (0-based) */
+  /** Line index (0-based, across all paragraphs) */
   readonly index: number;
+  /**
+   * Paragraph index (0-based).
+   *
+   * Tracks which source paragraph (\n-delimited) this line belongs to.
+   * A single paragraph may produce multiple lines when word-wrapping is active.
+   * This is essential for cursor position mapping: editor-core's TextBodyLike
+   * uses paragraph structure, so the cursor layout must group lines by paragraph.
+   */
+  readonly paragraphIndex: number;
   /**
    * Estimated pixel width of the line's text content.
    *
@@ -200,34 +209,48 @@ function wrapParagraph(text: string, maxWidth: number, charWidth: number): strin
 }
 
 /**
- * Split text into lines with optional word wrapping.
+ * A line with its source paragraph index.
+ */
+type LineWithParagraph = {
+  readonly text: string;
+  readonly paragraphIndex: number;
+};
+
+/**
+ * Split text into lines with optional word wrapping, preserving paragraph origin.
+ *
+ * Each output line carries the index of its source paragraph (\n-delimited).
+ * This is essential for cursor position mapping: a single paragraph may produce
+ * multiple visual lines when word-wrapping is active, but editor-core's
+ * TextBodyLike treats each \n-delimited segment as one paragraph.
  *
  * When props.textAutoResize is HEIGHT/NONE/TRUNCATE (fixed width),
  * wraps text at word boundaries using estimated character widths.
  * Otherwise (WIDTH_AND_HEIGHT), only splits at explicit newlines.
  */
-function splitTextIntoLines(props: ExtractedTextProps): string[] {
+function splitTextIntoLines(props: ExtractedTextProps): LineWithParagraph[] {
   const paragraphs = props.characters.split("\n");
 
   if (!isFixedWidth(props.textAutoResize) || !props.size) {
-    // No wrapping — just return paragraphs as lines
-    return paragraphs;
+    return paragraphs.map((text, i) => ({ text, paragraphIndex: i }));
   }
 
   const maxWidth = props.size.width;
   if (maxWidth <= 0) {
-    return paragraphs;
+    return paragraphs.map((text, i) => ({ text, paragraphIndex: i }));
   }
 
   const charWidth = estimateCharWidth(props.fontSize, props.letterSpacing);
   if (charWidth <= 0) {
-    return paragraphs;
+    return paragraphs.map((text, i) => ({ text, paragraphIndex: i }));
   }
 
-  const allLines: string[] = [];
-  for (const paragraph of paragraphs) {
-    const wrapped = wrapParagraph(paragraph, maxWidth, charWidth);
-    allLines.push(...wrapped);
+  const allLines: LineWithParagraph[] = [];
+  for (let i = 0; i < paragraphs.length; i++) {
+    const wrapped = wrapParagraph(paragraphs[i], maxWidth, charWidth);
+    for (const line of wrapped) {
+      allLines.push({ text: line, paragraphIndex: i });
+    }
   }
   return allLines;
 }
@@ -245,8 +268,11 @@ export function computeTextLayout(options: ComputeLayoutOptions): TextLayout {
   const { props, ascenderRatio = DEFAULT_ASCENDER_RATIO } = options;
   const lineHeight = options.lineHeight ?? props.lineHeight;
 
-  // Get lines: explicit array > word-wrapped > plain newline split
-  const textLines = options.lines ?? splitTextIntoLines(props);
+  // Get lines with paragraph origin tracking.
+  // If explicit lines are provided (no paragraph info), treat each as its own paragraph.
+  const linesWithParagraph: LineWithParagraph[] = options.lines
+    ? options.lines.map((text, i) => ({ text, paragraphIndex: i }))
+    : splitTextIntoLines(props);
 
   // Calculate x position from horizontal alignment
   const x = getAlignedX(props.textAlignHorizontal, props.size?.width);
@@ -256,7 +282,7 @@ export function computeTextLayout(options: ComputeLayoutOptions): TextLayout {
     align: props.textAlignVertical,
     height: props.size?.height,
     fontSize: props.fontSize,
-    lineCount: textLines.length,
+    lineCount: linesWithParagraph.length,
     lineHeight,
     ascenderRatio,
   });
@@ -265,12 +291,13 @@ export function computeTextLayout(options: ComputeLayoutOptions): TextLayout {
   const charWidth = estimateCharWidth(props.fontSize, props.letterSpacing);
 
   // Build laid-out lines
-  const lines: LayoutLine[] = textLines.map((text, index) => ({
-    text,
+  const lines: LayoutLine[] = linesWithParagraph.map((lwp, index) => ({
+    text: lwp.text,
     x,
     y: baseY + index * lineHeight,
     index,
-    estimatedWidth: text.length * charWidth,
+    paragraphIndex: lwp.paragraphIndex,
+    estimatedWidth: lwp.text.length * charWidth,
   }));
 
   return {
@@ -346,7 +373,19 @@ export function textLayoutToCursorLayout(
   layout: TextLayout,
   getLineTextWidth?: (text: string) => number,
 ): CursorLayoutResult {
-  const paragraphs = layout.lines.map((line) => {
+  // Group layout lines by paragraphIndex.
+  // A single source paragraph (\n-delimited) may produce multiple visual lines
+  // when word-wrapping is active. editor-core's TextBodyLike uses \n-delimited
+  // paragraphs, so the cursor layout must mirror that structure: each paragraph
+  // contains all the visual lines that originated from the same source paragraph.
+  //
+  // Example: "長文テキスト\n後ろのテキスト" with wrapping:
+  //   paragraph 0: line "長文テ", line "キスト"
+  //   paragraph 1: line "後ろの", line "テキス", line "ト"
+
+  const grouped = new Map<number, CursorLayoutLine[]>();
+
+  for (const line of layout.lines) {
     const textWidth = getLineTextWidth
       ? getLineTextWidth(line.text)
       : line.estimatedWidth;
@@ -365,20 +404,31 @@ export function textLayoutToCursorLayout(
         break;
     }
 
-    return {
-      lines: [{
-        spans: [{
-          text: line.text,
-          width: textWidth,
-          dx: 0,
-          fontSize: layout.fontSize,
-        }],
-        x: leftX,
-        y: line.y,
-        height: layout.lineHeight,
+    const cursorLine: CursorLayoutLine = {
+      spans: [{
+        text: line.text,
+        width: textWidth,
+        dx: 0,
+        fontSize: layout.fontSize,
       }],
+      x: leftX,
+      y: line.y,
+      height: layout.lineHeight,
     };
-  });
+
+    const existing = grouped.get(line.paragraphIndex);
+    if (existing) {
+      existing.push(cursorLine);
+    } else {
+      grouped.set(line.paragraphIndex, [cursorLine]);
+    }
+  }
+
+  // Build paragraphs in order of paragraphIndex
+  const sortedKeys = Array.from(grouped.keys()).sort((a, b) => a - b);
+  const paragraphs = sortedKeys.map((key) => ({
+    lines: grouped.get(key)!,
+  }));
 
   return { paragraphs };
 }

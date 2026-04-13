@@ -122,7 +122,7 @@ describe("textLayoutToCursorLayout", () => {
     expect(span.width).toBe(measuredWidth);
   });
 
-  it("multiline: each line becomes a separate paragraph", () => {
+  it("newline-separated text: each \\n segment becomes a separate paragraph", () => {
     const layout = computeTextLayout({
       props: makeProps({ characters: "AA\nBBBB" }),
     });
@@ -135,6 +135,52 @@ describe("textLayoutToCursorLayout", () => {
     expect(cursor.paragraphs[1].lines[0].spans[0].width).toBeGreaterThan(
       cursor.paragraphs[0].lines[0].spans[0].width,
     );
+  });
+
+  it("word-wrapped text: wrapped lines stay within the same paragraph", () => {
+    // Use a narrow box (60px) with fontSize 16 to force wrapping.
+    // "Hello World" at ~0.55 * 16 = 8.8px/char → "Hello " = 6 chars = 52.8px fits,
+    // "World" wraps to second line. Both belong to paragraph 0.
+    const layout = computeTextLayout({
+      props: makeProps({
+        characters: "Hello World",
+        size: { width: 60, height: 100 },
+        textAutoResize: "NONE",
+      }),
+    });
+
+    // Should have produced multiple layout lines from a single paragraph
+    expect(layout.lines.length).toBeGreaterThan(1);
+    // All lines should have paragraphIndex 0
+    for (const line of layout.lines) {
+      expect(line.paragraphIndex).toBe(0);
+    }
+
+    const cursor = textLayoutToCursorLayout(layout);
+    // Single paragraph with multiple lines
+    expect(cursor.paragraphs).toHaveLength(1);
+    expect(cursor.paragraphs[0].lines.length).toBeGreaterThan(1);
+  });
+
+  it("mixed newlines and wrapping: paragraphs match \\n segments", () => {
+    // "AAAA BBBB\nCC" with width 50 → paragraph 0 wraps into 2+ lines,
+    // paragraph 1 stays as 1 line.
+    const layout = computeTextLayout({
+      props: makeProps({
+        characters: "AAAA BBBB\nCC",
+        size: { width: 50, height: 100 },
+        textAutoResize: "NONE",
+      }),
+    });
+
+    const cursor = textLayoutToCursorLayout(layout);
+    // Exactly 2 paragraphs (matching the 2 \n-delimited segments)
+    expect(cursor.paragraphs).toHaveLength(2);
+    // First paragraph has multiple lines due to wrapping
+    expect(cursor.paragraphs[0].lines.length).toBeGreaterThanOrEqual(2);
+    // Second paragraph has 1 line ("CC" fits in 50px)
+    expect(cursor.paragraphs[1].lines).toHaveLength(1);
+    expect(cursor.paragraphs[1].lines[0].spans[0].text).toBe("CC");
   });
 
   it("span.height equals layout.lineHeight", () => {
