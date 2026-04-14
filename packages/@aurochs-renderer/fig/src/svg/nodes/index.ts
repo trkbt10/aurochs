@@ -4,6 +4,7 @@
 
 export { renderFrameNode } from "./frame";
 export { renderGroupNode } from "./group";
+export { renderBooleanOperationNode } from "./boolean-operation";
 export { renderRectangleNode } from "./rectangle";
 export { renderEllipseNode } from "./ellipse";
 export { renderVectorNode } from "./vector";

@@ -11,6 +11,7 @@ import { svg, defs, g, rect, mask, type SvgString, EMPTY_SVG } from "./primitive
 import {
   renderFrameNode,
   renderGroupNode,
+  renderBooleanOperationNode,
   renderRectangleNode,
   renderEllipseNode,
   renderVectorNode,
@@ -311,8 +312,11 @@ async function renderNode(node: FigNode, ctx: FigSvgRenderContext, warnings: str
       break;
 
     case "GROUP":
-    case "BOOLEAN_OPERATION":
       contentRef.value = renderGroupNode(node, ctx, renderedChildren);
+      break;
+
+    case "BOOLEAN_OPERATION":
+      contentRef.value = renderBooleanOperationNode(node, ctx, renderedChildren);
       break;
 
     case "RECTANGLE":

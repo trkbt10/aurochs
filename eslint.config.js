@@ -25,6 +25,7 @@ export default [
       "**/dist/**",
       "node_modules/**",
       "fixtures/**",
+      "**/vendor/**",
       "demo/**",
       "dist/**",
       "build/**",

@@ -7,7 +7,7 @@ import { useMemo } from "react";
 import type { FigNode } from "@aurochs/fig/types";
 import type { FigMatrix } from "@aurochs/fig/types";
 import { guidToString, getNodeType } from "@aurochs/fig/parser";
-import { IDENTITY_MATRIX, multiplyMatrices, createTranslationMatrix } from "../../src/core/transform";
+import { IDENTITY_MATRIX, multiplyMatrices, createTranslationMatrix } from "@aurochs/fig/matrix";
 import { buildTransformAttr } from "../../src/svg/transform";
 import { getCategoryColor } from "./inspector-constants";
 

@@ -480,8 +480,22 @@ function buildNode(node: FigDesignNode, ctx: BuildContext): SceneNode | null {
       return buildFrameNode(resolved.effectiveNode, ctx, childNodes);
     }
 
-    case "GROUP":
+    case "GROUP": {
+      const childNodes = buildChildren(children, ctx);
+      return buildGroupNode(node, ctx, childNodes);
+    }
+
     case "BOOLEAN_OPERATION": {
+      // If the node has pre-computed fillGeometry (set by Figma), render
+      // the merged path directly instead of rendering children individually.
+      const { fillGeometry, strokeGeometry } = extractGeometryProps(node);
+      const hasMergedGeometry =
+        (fillGeometry && fillGeometry.length > 0) ||
+        (strokeGeometry && strokeGeometry.length > 0);
+      if (hasMergedGeometry) {
+        return buildVectorNode(node, ctx);
+      }
+      // Fallback: no pre-computed geometry, render children as group
       const childNodes = buildChildren(children, ctx);
       return buildGroupNode(node, ctx, childNodes);
     }
