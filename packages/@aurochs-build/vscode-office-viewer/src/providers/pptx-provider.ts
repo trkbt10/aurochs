@@ -8,7 +8,7 @@ import * as vscode from "vscode";
 import { parsePpt } from "@aurochs-office/ppt";
 import { renderPptxSlides, renderPptxSlidesFromFile, type PptxRenderResult } from "../renderers/pptx-renderer";
 import { buildWebviewShell } from "../webview/template";
-import { sendWhenReady } from "./webview-messaging";
+import { createReadyGate } from "./webview-messaging";
 import type { ExtensionToWebviewMessage } from "../webview/types";
 
 export const PPTX_VIEW_TYPE = "aurochs.pptxViewer";
@@ -55,8 +55,11 @@ export function createPptxEditorProvider(extensionUri: vscode.Uri): vscode.Custo
         extensionUri,
       });
 
+      // Register the ready listener BEFORE async work to avoid missing
+      // the webview's "ready" signal during file I/O and rendering.
+      const gate = createReadyGate(webviewPanel.webview);
       const message = await buildPptxMessage(document.uri);
-      sendWhenReady(webviewPanel.webview, message);
+      gate.send(message);
     },
   };
 }

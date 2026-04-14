@@ -21,6 +21,10 @@ declare function acquireVsCodeApi(): {
 
 const vscode = acquireVsCodeApi();
 
+// Expose the VS Code API globally so components can post messages
+// without calling acquireVsCodeApi() again (which throws on second call).
+(globalThis as Record<string, unknown>).__vscodeApi = vscode;
+
 const root = document.getElementById("root");
 if (root) {
   createRoot(root).render(<App />);

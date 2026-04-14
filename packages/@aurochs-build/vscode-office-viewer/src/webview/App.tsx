@@ -6,11 +6,14 @@
  */
 
 import { useState, useEffect } from "react";
-import type { ExtensionToWebviewMessage } from "./types";
+import type { ExtensionToWebviewMessage, PdfPageResponseMessage } from "./types";
+
+/** Messages that determine which viewer to show (excludes streaming page data). */
+type ViewerInitMessage = Exclude<ExtensionToWebviewMessage, PdfPageResponseMessage>;
 import { PptxViewer } from "./viewers/PptxViewer";
 import { XlsxViewer } from "./viewers/XlsxViewer";
 import { DocxViewer } from "./viewers/DocxViewer";
-import { PdfViewer } from "./viewers/PdfViewer";
+import { PdfViewer, PdfIncrementalViewer } from "./viewers/PdfViewer";
 import { ErrorViewer } from "./viewers/ErrorViewer";
 
 
@@ -20,11 +23,17 @@ import { ErrorViewer } from "./viewers/ErrorViewer";
 
 /** Root application component for the VS Code office viewer webview. */
 export function App(): React.JSX.Element {
-  const [data, setData] = useState<ExtensionToWebviewMessage | null>(null);
+  const [data, setData] = useState<ViewerInitMessage | null>(null);
 
   useEffect(() => {
     const handler = (event: MessageEvent<ExtensionToWebviewMessage>) => {
-      setData(event.data);
+      const msg = event.data as ExtensionToWebviewMessage;
+      // Only handle document-level messages that determine which viewer to show.
+      // Per-page messages (pdfPage) are handled by PdfIncrementalViewer directly.
+      if (msg.type === "pdfPage") {
+        return;
+      }
+      setData(msg as ViewerInitMessage);
     };
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
@@ -43,6 +52,8 @@ export function App(): React.JSX.Element {
       return <DocxViewer {...data} />;
     case "pdf":
       return <PdfViewer {...data} />;
+    case "pdfMeta":
+      return <PdfIncrementalViewer {...data} />;
     case "error":
       return <ErrorViewer {...data} />;
   }

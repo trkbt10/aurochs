@@ -9,7 +9,7 @@ import { parseXls } from "@aurochs-office/xls";
 import { renderXlsxHtml } from "../renderers/xlsx-renderer";
 import { renderWorkbookToHtml, type WorkbookHtmlResult } from "@aurochs-renderer/xlsx/html";
 import { buildWebviewShell } from "../webview/template";
-import { sendWhenReady } from "./webview-messaging";
+import { createReadyGate } from "./webview-messaging";
 import type { ExtensionToWebviewMessage } from "../webview/types";
 
 export const XLSX_VIEW_TYPE = "aurochs.xlsxViewer";
@@ -50,8 +50,9 @@ export function createXlsxEditorProvider(extensionUri: vscode.Uri): vscode.Custo
         extensionUri,
       });
 
+      const gate = createReadyGate(webviewPanel.webview);
       const message = await buildXlsxMessage(document.uri);
-      sendWhenReady(webviewPanel.webview, message);
+      gate.send(message);
     },
   };
 }

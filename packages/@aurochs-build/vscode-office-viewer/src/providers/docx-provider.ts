@@ -8,7 +8,7 @@ import * as vscode from "vscode";
 import { parseDoc, convertDocToDocx } from "@aurochs-office/doc";
 import { renderDocxHtml, renderDocxDocumentHtml } from "../renderers/docx-renderer";
 import { buildWebviewShell } from "../webview/template";
-import { sendWhenReady } from "./webview-messaging";
+import { createReadyGate } from "./webview-messaging";
 import type { ExtensionToWebviewMessage } from "../webview/types";
 
 export const DOCX_VIEW_TYPE = "aurochs.docxViewer";
@@ -33,8 +33,9 @@ export function createDocxEditorProvider(extensionUri: vscode.Uri): vscode.Custo
         extensionUri,
       });
 
+      const gate = createReadyGate(webviewPanel.webview);
       const message = await buildDocxMessage(document.uri);
-      sendWhenReady(webviewPanel.webview, message);
+      gate.send(message);
     },
   };
 }

@@ -11,6 +11,8 @@ export type ExtensionToWebviewMessage =
   | XlsxDataMessage
   | DocxDataMessage
   | PdfDataMessage
+  | PdfMetaMessage
+  | PdfPageResponseMessage
   | ErrorMessage;
 
 export type ErrorMessage = {
@@ -20,7 +22,7 @@ export type ErrorMessage = {
 };
 
 /** Message types sent from webview to extension. */
-export type WebviewToExtensionMessage = WebviewReadyMessage;
+export type WebviewToExtensionMessage = WebviewReadyMessage | PdfPageRequestMessage;
 
 export type WebviewReadyMessage = {
   readonly type: "ready";
@@ -55,4 +57,32 @@ export type PdfDataMessage = {
   readonly type: "pdf";
   readonly fileName: string;
   readonly pages: readonly string[];
+};
+
+/**
+ * Sent for large PDFs: delivers only metadata (page count + dimensions)
+ * so the viewer can render immediately without waiting for all pages.
+ * Individual page SVGs are requested on demand via PdfPageRequestMessage.
+ */
+export type PdfMetaMessage = {
+  readonly type: "pdfMeta";
+  readonly fileName: string;
+  readonly pageCount: number;
+  /** First page SVG, pre-rendered for instant display. */
+  readonly firstPageSvg: string;
+};
+
+/** Webview → Extension: request a page's SVG. */
+export type PdfPageRequestMessage = {
+  readonly type: "requestPdfPage";
+  /** 0-based page index. */
+  readonly pageIndex: number;
+};
+
+/** Extension → Webview: response with a rendered page SVG. */
+export type PdfPageResponseMessage = {
+  readonly type: "pdfPage";
+  /** 0-based page index. */
+  readonly pageIndex: number;
+  readonly svg: string;
 };
