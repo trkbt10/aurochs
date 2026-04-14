@@ -50,7 +50,7 @@ type ParsedData = {
   nodeMap: ReadonlyMap<string, FigNode>;
 };
 
-const parsedDataCache: ParsedData | null = null;
+let parsedDataCache: ParsedData | null = null;
 
 async function loadFigFile(): Promise<ParsedData> {
   if (parsedDataCache) {return parsedDataCache;}
@@ -192,11 +192,11 @@ describe("Effect Rendering", () => {
 
       // Output comparison
       console.log(`\n=== ${layerName} ===`);
-      console.log(`Size: ${actualSize.width}x${actualSize.height}`);
+      console.log(`Size: ${actualSizeRef.value.width}x${actualSizeRef.value.height}`);
       if (hasActual) {
-        console.log(`Rects: actual=${actualCounts.rects}, rendered=${renderedCounts.rects}`);
-        console.log(`Ellipses: actual=${actualCounts.ellipses}, rendered=${renderedCounts.ellipses}`);
-        console.log(`Filters: actual=${actualCounts.filters}, rendered=${renderedCounts.filters}`);
+        console.log(`Rects: actual=${actualCountsRef.value.rects}, rendered=${renderedCounts.rects}`);
+        console.log(`Ellipses: actual=${actualCountsRef.value.ellipses}, rendered=${renderedCounts.ellipses}`);
+        console.log(`Filters: actual=${actualCountsRef.value.filters}, rendered=${renderedCounts.filters}`);
       } else {
         console.log(`Rendered: ${renderedCounts.rects} rects, ${renderedCounts.ellipses} ellipses`);
         console.log(

@@ -49,8 +49,8 @@ function svgToPng(svg: string): Buffer {
   return Buffer.from(resvg.render().asPng());
 }
 
-const parsedData: ParsedData | null = null;
-const fontLoader: createCachingFontLoader | null = null;
+let parsedData: ParsedData | null = null;
+let fontLoader: createCachingFontLoader | null = null;
 
 async function setup(): Promise<{ data: ParsedData; fontLoader: createCachingFontLoader }> {
   if (parsedData && fontLoader) {

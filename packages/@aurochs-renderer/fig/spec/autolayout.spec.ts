@@ -46,7 +46,7 @@ type ParsedData = {
   nodeMap: ReadonlyMap<string, FigNode>;
 };
 
-const parsedDataCache: ParsedData | null = null;
+let parsedDataCache: ParsedData | null = null;
 
 async function loadFigFile(): Promise<ParsedData> {
   if (parsedDataCache) {return parsedDataCache;}
@@ -120,7 +120,7 @@ function extractRectPositions(svg: string): Array<{ id: string; x: number; y: nu
 
     // Check for id
     const idMatch = rectStr.match(/\bid="([^"]*)"/);
-    const id = idMatch?.[1] ?? `rect-${index}`;
+    const id = idMatch?.[1] ?? `rect-${indexRef.value}`;
 
     // Get position from x/y attributes
     const xMatch = rectStr.match(/\bx="([^"]*)"/);

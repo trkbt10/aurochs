@@ -41,7 +41,7 @@ type ParsedData = {
   images: ReadonlyMap<string, FigImage>;
   nodeMap: ReadonlyMap<string, FigNode>;
 };
-const parsedDataCache: ParsedData | null = null;
+let parsedDataCache: ParsedData | null = null;
 async function loadFigFile(): Promise<ParsedData> {
   if (parsedDataCache) {return parsedDataCache;}
   if (!fs.existsSync(FIG_FILE)) {
@@ -116,9 +116,9 @@ describe("Rectangle Rendering", () => {
       fs.writeFileSync(path.join(SNAPSHOTS_DIR, fileName), result.svg);
       const rendered = extractShapeElements(result.svg);
       console.log(`\n=== ${layerName} ===`);
-      console.log(`Size: ${actualSize.width}x${actualSize.height}`);
+      console.log(`Size: ${actualSizeRef.value.width}x${actualSizeRef.value.height}`);
       if (hasActual) {
-        console.log(`Elements: actual=${actualShapes.total}, rendered=${rendered.total}`);
+        console.log(`Elements: actual=${actualShapesRef.value.total}, rendered=${rendered.total}`);
       }
       if (result.warnings.length > 0) {
         console.log(`Warnings: ${result.warnings.slice(0, 3).join("; ")}`);

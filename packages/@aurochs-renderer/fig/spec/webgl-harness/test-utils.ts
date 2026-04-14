@@ -82,7 +82,7 @@ export function svgToPng(svg: string, width?: number): Buffer {
 // =============================================================================
 /** Compare two PNG buffers and return difference percentage */
 export function comparePngs(
-  { a, b, frameName, diffPath}: { a: Buffer; b: Buffer; frameName: string; diffPath?: string; }
+  a: Buffer, b: Buffer, frameName: string, diffPath?: string,
 ): CompareResult {
   const imgA = readPng(a);
   const imgBRef = { value: readPng(b) };

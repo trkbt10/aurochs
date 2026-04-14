@@ -15,7 +15,7 @@ type WindowWithRenderSceneGraph = Window & {
 
 const canvas = document.getElementById("canvas") as HTMLCanvasElement;
 
-const renderer: WebGLFigmaRendererInstance | null = null;
+let renderer: WebGLFigmaRendererInstance | null = null;
 
 /**
  * Restore Uint8Array fields that were base64-encoded for JSON transport.

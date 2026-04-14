@@ -48,7 +48,7 @@ type ParsedData = {
   nodeMap: ReadonlyMap<string, FigNode>;
 };
 
-const parsedDataCache: ParsedData | null = null;
+let parsedDataCache: ParsedData | null = null;
 
 async function loadFigFile(): Promise<ParsedData> {
   if (parsedDataCache) {return parsedDataCache;}
@@ -194,11 +194,11 @@ describe("Component Rendering", () => {
 
       // Output comparison
       console.log(`\n=== ${layerName} ===`);
-      console.log(`Size: ${actualSize.width}x${actualSize.height}`);
+      console.log(`Size: ${actualSizeRef.value.width}x${actualSizeRef.value.height}`);
       if (hasActual) {
-        console.log(`Rects: actual=${actualCounts.rects}, rendered=${renderedCounts.rects}`);
-        console.log(`Texts: actual=${actualCounts.texts}, rendered=${renderedCounts.texts}`);
-        console.log(`Groups: actual=${actualCounts.groups}, rendered=${renderedCounts.groups}`);
+        console.log(`Rects: actual=${actualCountsRef.value.rects}, rendered=${renderedCounts.rects}`);
+        console.log(`Texts: actual=${actualCountsRef.value.texts}, rendered=${renderedCounts.texts}`);
+        console.log(`Groups: actual=${actualCountsRef.value.groups}, rendered=${renderedCounts.groups}`);
       } else {
         console.log(
           `Rendered: ${renderedCounts.rects} rects, ${renderedCounts.texts} texts, ${renderedCounts.groups} groups`,
@@ -308,7 +308,7 @@ describe("Symbol Resolution", () => {
       }
     }
 
-    console.log(`Total symbols found: ${symbolCount}`);
+    console.log(`Total symbols found: ${symbolCountRef.value}`);
     expect(symbolCountRef.value).toBe(data.symbols.size);
   });
 });

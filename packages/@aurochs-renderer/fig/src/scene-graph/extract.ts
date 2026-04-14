@@ -71,11 +71,16 @@ export type PaintProps = {
 /**
  * Bridge domain field names (fills/strokes) to the renderer's
  * internal naming (fillPaints/strokePaints).
+ *
+ * Handles both FigDesignNode (.fills/.strokes) and raw FigNode
+ * (.fillPaints/.strokePaints) to support direct rendering of
+ * parser-level nodes without requiring domain conversion.
  */
 export function extractPaintProps(node: FigDesignNode): PaintProps {
+  const raw = node as Record<string, unknown>;
   return {
-    fillPaints: node.fills,
-    strokePaints: node.strokes,
+    fillPaints: node.fills ?? (raw.fillPaints as readonly FigPaint[] | undefined),
+    strokePaints: node.strokes ?? (raw.strokePaints as readonly FigPaint[] | undefined),
     strokeWeight: node.strokeWeight,
   };
 }
@@ -89,9 +94,12 @@ export type GeometryProps = {
 
 /**
  * fillGeometry/strokeGeometry are preserved in _raw (not first-class fields).
+ *
+ * When receiving a raw FigNode (without _raw), reads directly from
+ * the node's own fields.
  */
 export function extractGeometryProps(node: FigDesignNode): GeometryProps {
-  const raw = node._raw;
+  const raw = node._raw ?? (node as Record<string, unknown>);
   return {
     fillGeometry: raw?.fillGeometry as readonly FigFillGeometry[] | undefined,
     strokeGeometry: raw?.strokeGeometry as readonly FigFillGeometry[] | undefined,

@@ -96,7 +96,7 @@ it("list layers", { timeout: 30_000 }, async () => {
 
   // Use includes-based matching for canvas names (they have special chars/spaces)
   function listAllNodes(
-    { node, indent, maxDepth, depth }: { node: FigNode; indent: string; maxDepth: number; depth: number; }
+    node: FigNode, indent: string, maxDepth: number, depth: number,
   ) {
     const nd = node as Record<string, unknown>;
     const size = nd.size as { x?: number; y?: number } | undefined;

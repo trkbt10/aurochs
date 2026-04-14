@@ -99,7 +99,7 @@ function svgToPng(svg: string, width?: number): Buffer {
  * Compare two SVGs visually
  */
 function compareSvgs(
-  { actualSvg, renderedSvg, frameName, options = {} }: { actualSvg: string; renderedSvg: string; frameName: string; options?: { threshold?: number; maxDiffPercent?: number; saveDiff?: boolean }; }
+  actualSvg: string, renderedSvg: string, frameName: string, options: { threshold?: number; maxDiffPercent?: number; saveDiff?: boolean } = {},
 ): CompareResult {
   const { threshold = 0.1, maxDiffPercent = 5.0, saveDiff = false } = options;
 
@@ -169,7 +169,7 @@ function compareSvgs(
 // Data Loading
 // =============================================================================
 
-const parsedDataCache: ParsedData | null = null;
+let parsedDataCache: ParsedData | null = null;
 
 async function getParsedData(): Promise<ParsedData> {
   if (parsedDataCache) {
@@ -224,7 +224,7 @@ function getActualSvgFiles(): string[] {
 }
 
 // Shared font loader instance
-const fontLoader: createCachingFontLoader | null = null;
+let fontLoader: createCachingFontLoader | null = null;
 
 function getFontLoader(): createCachingFontLoader {
   if (!fontLoader) {
@@ -272,7 +272,7 @@ describe("text-comprehensive visual comparison", () => {
   it("loads fixtures", () => {
     expect(dataRef.value.frames.size).toBeGreaterThan(0);
     expect(actualFilesRef.value.length).toBeGreaterThan(0);
-    console.log(`Loaded ${data.frames.size} frames, ${actualFiles.length} actual SVGs`);
+    console.log(`Loaded ${dataRef.value!.frames.size} frames, ${actualFilesRef.value!.length} actual SVGs`);
   });
 
   describe("alignment frames", () => {

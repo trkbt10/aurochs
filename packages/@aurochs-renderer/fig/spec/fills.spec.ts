@@ -57,7 +57,7 @@ type ParsedData = {
   nodeMap: ReadonlyMap<string, FigNode>;
 };
 
-const parsedDataCache: ParsedData | null = null;
+let parsedDataCache: ParsedData | null = null;
 
 async function loadFigFile(): Promise<ParsedData> {
   if (parsedDataCache) {return parsedDataCache;}
@@ -199,14 +199,14 @@ describe("Fill Rendering", () => {
 
       // Output comparison
       console.log(`\n=== ${layerName} ===`);
-      console.log(`Size: ${actualSize.width}x${actualSize.height}`);
+      console.log(`Size: ${actualSizeRef.value.width}x${actualSizeRef.value.height}`);
       if (hasActual) {
         console.log(
-          `Solid fills: actual=${actualFillInfo.solidFills.length}, rendered=${renderedFillInfo.solidFills.length}`,
+          `Solid fills: actual=${actualFillInfoRef.value.solidFills.length}, rendered=${renderedFillInfo.solidFills.length}`,
         );
-        console.log(`Gradients: actual=${actualFillInfo.gradientDefs}, rendered=${renderedFillInfo.gradientDefs}`);
+        console.log(`Gradients: actual=${actualFillInfoRef.value.gradientDefs}, rendered=${renderedFillInfo.gradientDefs}`);
         console.log(
-          `Strokes: actual=${actualFillInfo.strokeColors.length}, rendered=${renderedFillInfo.strokeColors.length}`,
+          `Strokes: actual=${actualFillInfoRef.value.strokeColors.length}, rendered=${renderedFillInfo.strokeColors.length}`,
         );
       } else {
         console.log(

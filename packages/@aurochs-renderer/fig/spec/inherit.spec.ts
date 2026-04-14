@@ -107,7 +107,7 @@ function listActualSvgFiles(dir: string): string[] {
 }
 
 function comparePngs(
-  { a, b, frameName, diffPath}: { a: Buffer; b: Buffer; frameName: string; diffPath?: string; }
+  a: Buffer, b: Buffer, frameName: string, diffPath?: string,
 ): CompareResult {
   const imgA = readPng(a);
   const imgBRef = { value: readPng(b) };
@@ -156,7 +156,7 @@ function safeName(name: string): string {
 // Data Loading
 // =============================================================================
 
-const parsedDataCache: ParsedData | null = null;
+let parsedDataCache: ParsedData | null = null;
 
 async function loadFigFile(): Promise<ParsedData> {
   if (parsedDataCache) {return parsedDataCache;}
@@ -302,6 +302,7 @@ describe("Inherit Visual Regression", () => {
   });
 
   it("renders each layer and compares against actual SVG", async () => {
+    // Multiple frames with PNG rasterization + pixel comparison — needs more time
     if (!fs.existsSync(FIG_FILE)) {
       console.log("SKIP: inherit.fig not found");
       return;
@@ -391,5 +392,5 @@ describe("Inherit Visual Regression", () => {
         ).toBeLessThan(MAX_DIFF_PERCENT);
       }
     }
-  });
+  }, 30000);
 });

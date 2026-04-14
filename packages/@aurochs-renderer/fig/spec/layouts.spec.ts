@@ -62,7 +62,7 @@ type ParsedData = {
   nodeMap: ReadonlyMap<string, FigNode>;
 };
 
-const parsedDataCache: { value: ParsedData | null } = { value: null };
+let parsedDataCache: { value: ParsedData | null } = { value: null };
 
 /**
  * Load and parse the .fig file once

@@ -3,16 +3,15 @@
  */
 
 import { getNodeType } from "@aurochs/fig/parser";
-import type { FigNode, FigVector, FigPaint, FigFillGeometry } from "@aurochs/fig/types";
+import type { FigNode, FigVector, FigFillGeometry } from "@aurochs/fig/types";
 import type { FigSvgRenderContext } from "../../types";
 import { g, rect, clipPath, path, type SvgString, EMPTY_SVG } from "../primitives";
 import { buildTransformAttr } from "../transform";
-import { getFillResult, applyFillResult, type FillAttrs, type ShapeGeometry } from "../fill";
+import { getFillResult, applyFillResult, strokePaintsToFillAttrs, type ShapeGeometry } from "../fill";
 import { getStrokeAttrs } from "../stroke";
 import { decodePathsFromGeometry } from "../geometry-path";
 import { mapWindingRule } from "../../geometry";
 import { buildPathElements } from "../render-paths";
-import { figColorToHex, getPaintType } from "@aurochs/fig/color";
 import {
   extractBaseProps,
   extractSizeProps,
@@ -39,23 +38,6 @@ function resolveClipsContent(node: FigNode): boolean {
     return true;
   }
   return false;
-}
-
-/**
- * Build fill attrs from stroke paints (for strokeGeometry).
- */
-function strokePaintsToFillAttrs(paints: readonly FigPaint[] | undefined): FillAttrs {
-  if (!paints || paints.length === 0) {return { fill: "none" };}
-  const visible = paints.find((p) => p.visible !== false);
-  if (!visible) {return { fill: "none" };}
-  if (getPaintType(visible) === "SOLID") {
-    const solid = visible as FigPaint & { color: { r: number; g: number; b: number; a: number } };
-    const hex = figColorToHex(solid.color);
-    const opacity = visible.opacity ?? 1;
-    if (opacity < 1) {return { fill: hex, "fill-opacity": opacity };}
-    return { fill: hex };
-  }
-  return { fill: "#000000" };
 }
 
 function buildClipShapes(

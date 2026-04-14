@@ -6,10 +6,10 @@
  * SVG-string-specific output formatting.
  */
 
-import type { FigPaint, FigColor, FigGradientPaint, FigGradientStop, FigImagePaint } from "@aurochs/fig/types";
+import type { FigPaint, FigGradientPaint, FigGradientStop, FigImagePaint } from "@aurochs/fig/types";
 import type { FigSvgRenderContext } from "../types";
 import { linearGradient, radialGradient, stop, pattern, image, clipPath, foreignObject, rect, g, unsafeSvg, type SvgString } from "./primitives";
-import { isPlaceholderColor, figColorToHex, getPaintType } from "@aurochs/fig/color";
+import { isPlaceholderColor, figColorToHex, getPaintType, getSolidPaintColor } from "@aurochs/fig/color";
 import {
   getGradientStops as sharedGetGradientStops,
   getGradientDirection as sharedGetGradientDirection,
@@ -85,13 +85,11 @@ function paintToFillAttrs(paint: FigPaint, ctx: FigSvgRenderContext, elementSize
 
   switch (paintType) {
     case "SOLID": {
-      const solidPaint = paint as FigPaint & { color: FigColor };
-      // Check for placeholder color (unresolved external style reference)
-      if (isPlaceholderColor(solidPaint.color)) {
-        return { fill: "none" }; // Skip placeholder colors
+      const color = getSolidPaintColor(paint);
+      if (!color || isPlaceholderColor(color)) {
+        return { fill: "none" };
       }
-      const color = figColorToHex(solidPaint.color);
-      return buildFillWithOpacity(color, opacity);
+      return buildFillWithOpacity(figColorToHex(color), opacity);
     }
 
     case "GRADIENT_LINEAR": {
@@ -204,6 +202,36 @@ export function hasVisibleFill(paints: readonly FigPaint[] | undefined): boolean
     return false;
   }
   return paints.some((p) => p.visible !== false);
+}
+
+// =============================================================================
+// Stroke-as-Fill Conversion
+// =============================================================================
+
+/**
+ * Build fill attributes from stroke paints.
+ *
+ * strokeGeometry is Figma's pre-expanded outline of a stroke.
+ * These paths represent the stroke shape as a filled area, so they must
+ * be filled with the stroke colour instead of being stroked.
+ *
+ * This is a shared utility — previously duplicated across ellipse.ts,
+ * vector.ts, rectangle.ts, and frame.ts.
+ */
+export function strokePaintsToFillAttrs(paints: readonly FigPaint[] | undefined): FillAttrs {
+  if (!paints || paints.length === 0) { return { fill: "none" }; }
+  const visible = paints.find((p) => p.visible !== false);
+  if (!visible) { return { fill: "none" }; }
+
+  const color = getSolidPaintColor(visible);
+  if (color) {
+    const hex = figColorToHex(color);
+    const opacity = visible.opacity ?? 1;
+    if (opacity < 1) { return { fill: hex, "fill-opacity": opacity }; }
+    return { fill: hex };
+  }
+
+  return { fill: "#000000" };
 }
 
 // =============================================================================

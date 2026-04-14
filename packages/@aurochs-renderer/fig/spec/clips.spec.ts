@@ -52,7 +52,7 @@ const FRAME_NAMES = [
 // Data Loading
 // =============================================================================
 
-const cachedData: FixtureData | null = null;
+let cachedData: FixtureData | null = null;
 
 async function loadFixtures() {
   if (cachedData) {return cachedData;}
@@ -105,7 +105,7 @@ describe("Clip rendering (SVG renderer vs Figma export)", () => {
     });
   }
 
-  it("summary", async () => {
+  it("summary", { timeout: 30000 }, async () => {
     const data = await loadFixtures();
     const results: CompareResult[] = [];
 
@@ -133,7 +133,7 @@ describe("Clip rendering (SVG renderer vs Figma export)", () => {
       totalRef.value += r.diffPercent;
     }
     if (results.length > 0) {
-      console.log(`  Average: ${(total / results.length).toFixed(1)}%`);
+      console.log(`  Average: ${(totalRef.value / results.length).toFixed(1)}%`);
     }
   });
 });

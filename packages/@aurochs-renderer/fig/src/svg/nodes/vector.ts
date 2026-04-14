@@ -2,19 +2,18 @@
  * @file Vector node renderer
  */
 
-import type { FigNode, FigVectorPath, FigFillGeometry, FigPaint } from "@aurochs/fig/types";
+import type { FigNode, FigVectorPath, FigFillGeometry } from "@aurochs/fig/types";
 import type { FigBlob } from "@aurochs/fig/parser";
 import type { FigSvgRenderContext } from "../../types";
 import { path as svgPath, g, type SvgString, EMPTY_SVG } from "../primitives";
 import { buildTransformAttr } from "../transform";
-import { getFillResult, applyFillResult, type FillAttrs, type ShapeGeometry } from "../fill";
+import { getFillResult, applyFillResult, strokePaintsToFillAttrs, type FillAttrs, type ShapeGeometry } from "../fill";
 import { getStrokeAttrs, type StrokeAttrs } from "../stroke";
 import type { GeometryPathData } from "../geometry-path";
 import { decodePathsFromGeometry } from "../geometry-path";
 import { mapWindingRule } from "../../geometry";
 import { renderPaths } from "../render-paths";
 import { extractBaseProps, extractSizeProps, extractPaintProps, extractGeometryProps } from "./extract-props";
-import { figColorToHex, getPaintType } from "@aurochs/fig/color";
 
 // =============================================================================
 // Vector Path Types
@@ -68,27 +67,6 @@ function resolvePaths(sources: PathSources): PathResolution {
   }
 
   return { paths: [], isStrokeGeometry: false };
-}
-
-/**
- * Build fill attrs from stroke paints.
- *
- * strokeGeometry is Figma's pre-expanded outline of a stroke.
- * It must be *filled* with the stroke colour instead of being stroked.
- */
-function strokePaintsToFillAttrs(paints: readonly FigPaint[] | undefined): FillAttrs {
-  if (!paints || paints.length === 0) {return { fill: "none" };}
-  const visible = paints.find((p) => p.visible !== false);
-  if (!visible) {return { fill: "none" };}
-
-  if (getPaintType(visible) === "SOLID") {
-    const solid = visible as FigPaint & { color: { r: number; g: number; b: number; a: number } };
-    const hex = figColorToHex(solid.color);
-    const opacity = visible.opacity ?? 1;
-    if (opacity < 1) {return { fill: hex, "fill-opacity": opacity };}
-    return { fill: hex };
-  }
-  return { fill: "#000000" };
 }
 
 /**

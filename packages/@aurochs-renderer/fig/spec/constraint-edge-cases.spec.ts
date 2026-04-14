@@ -127,7 +127,7 @@ function svgToPng(svg: string, width?: number): Buffer {
 }
 
 function compareSvgs(
-  { actualSvg, renderedSvg, frameName, options = {} }: { actualSvg: string; renderedSvg: string; frameName: string; options?: { threshold?: number; maxDiffPercent?: number; saveDiff?: boolean }; }
+  actualSvg: string, renderedSvg: string, frameName: string, options: { threshold?: number; maxDiffPercent?: number; saveDiff?: boolean } = {},
 ): CompareResult {
   const { threshold = 0.1, maxDiffPercent = 5.0, saveDiff = false } = options;
 
@@ -201,7 +201,7 @@ type ParsedData = {
   nodeMap: ReadonlyMap<string, FigNode>;
 };
 
-const parsedDataCache: ParsedData | null = null;
+let parsedDataCache: ParsedData | null = null;
 
 async function loadFigFile(): Promise<ParsedData> {
   if (parsedDataCache) {return parsedDataCache;}
@@ -341,7 +341,7 @@ describe("Constraint Edge Cases", () => {
         totalUnresolvedRef.value += unresolvedWarnings.length;
       }
     }
-    console.log(`Total unresolved across all canvases: ${totalUnresolved}`);
+    console.log(`Total unresolved across all canvases: ${totalUnresolvedRef.value}`);
     expect(totalUnresolvedRef.value).toBe(0);
   });
 
@@ -476,7 +476,7 @@ describe("Constraint Edge Cases", () => {
 
     const avgDiff = results.length > 0 ? totalDiffRef.value / results.length : 0;
     console.log("-".repeat(57));
-    console.log(`Total: ${results.length} frames, ${passed} pass, ${failed} fail, avg ${avgDiff.toFixed(2)}% diff`);
+    console.log(`Total: ${results.length} frames, ${passedRef.value} pass, ${failedRef.value} fail, avg ${avgDiff.toFixed(2)}% diff`);
 
     expect(failedRef.value).toBe(0);
   });

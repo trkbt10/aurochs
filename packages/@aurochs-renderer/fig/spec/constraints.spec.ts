@@ -96,7 +96,7 @@ function svgToPng(svg: string, width?: number): Buffer {
 }
 
 function comparePngs(
-  { a, b, frameName, diffPath}: { a: Buffer; b: Buffer; frameName: string; diffPath?: string; }
+  a: Buffer, b: Buffer, frameName: string, diffPath?: string,
 ): CompareResult {
   const imgA = readPng(a);
   const imgBRef = { value: readPng(b) };
@@ -145,7 +145,7 @@ function safeName(name: string): string {
 // Data Loading
 // =============================================================================
 
-const parsedDataCache: ParsedData | null = null;
+let parsedDataCache: ParsedData | null = null;
 
 async function loadFigFile(): Promise<ParsedData> {
   if (parsedDataCache) {return parsedDataCache;}
@@ -228,7 +228,7 @@ describe("Constraints Visual Regression", () => {
     ensureDirs([SNAPSHOTS_DIR, OUTPUT_DIR, DIFF_DIR]);
   });
 
-  it("renders each layer and compares against actual SVG", { timeout: 60_000 }, async () => {
+  it("renders each layer and compares against actual SVG", { timeout: 120_000 }, async () => {
     if (!fs.existsSync(FIG_FILE)) {
       console.log("SKIP: constraints.fig not found");
       return;

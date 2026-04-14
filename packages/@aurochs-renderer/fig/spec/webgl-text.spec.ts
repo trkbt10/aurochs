@@ -145,7 +145,7 @@ const MAX_DIFF_PERCENT = 30;
 // Data Loading
 // =============================================================================
 
-const cachedData: FixtureData | null = null;
+let cachedData: FixtureData | null = null;
 
 async function loadFixtures() {
   if (cachedData) {return cachedData;}

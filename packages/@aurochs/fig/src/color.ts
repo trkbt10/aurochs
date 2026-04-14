@@ -60,3 +60,23 @@ export function getPaintType(paint: FigPaint): string {
   }
   return "UNKNOWN";
 }
+
+/**
+ * Extract color from a solid paint.
+ *
+ * Returns the FigColor if the paint is SOLID type (in either API string
+ * or Kiwi enum object format), undefined otherwise.
+ *
+ * This encapsulates the KiwiEnumValue type check so callers never need
+ * `as FigPaint & { color: ... }` casts.
+ */
+export function getSolidPaintColor(paint: FigPaint): FigColor | undefined {
+  if (getPaintType(paint) !== "SOLID") {
+    return undefined;
+  }
+  // In both API format (type: "SOLID") and Kiwi format (type: { value, name: "SOLID" }),
+  // FigSolidPaint guarantees a `color` field. But the union type can't narrow
+  // through getPaintType, so we access it via the known structure.
+  const color = (paint as Record<string, unknown>).color as FigColor | undefined;
+  return color;
+}

@@ -61,7 +61,7 @@ const MAX_BASELINE_DIFF_PERCENT = 2;
 // Data Loading
 // =============================================================================
 
-const cachedData: FixtureData | null = null;
+let cachedData: FixtureData | null = null;
 
 async function loadFixtures() {
   if (cachedData) {return cachedData;}

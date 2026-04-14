@@ -2,18 +2,16 @@
  * @file Rectangle node renderer
  */
 
-import type { FigNode, FigPaint } from "@aurochs/fig/types";
+import type { FigNode } from "@aurochs/fig/types";
 
 import type { FigSvgRenderContext } from "../../types";
-import { rect, g, path, type SvgString } from "../primitives";
+import { rect, g, type SvgString } from "../primitives";
 import { buildTransformAttr } from "../transform";
-import { getFillResult, applyFillResult, type FillAttrs, type ShapeGeometry } from "../fill";
+import { getFillResult, applyFillResult, strokePaintsToFillAttrs, type FillAttrs, type ShapeGeometry } from "../fill";
 import { getStrokeAttrs, type StrokeAttrs } from "../stroke";
 import { getFilterAttr } from "../effects";
 import { decodePathsFromGeometry } from "../geometry-path";
-import { mapWindingRule } from "../../geometry";
 import { renderPaths } from "../render-paths";
-import { figColorToHex, getPaintType } from "@aurochs/fig/color";
 import {
   extractBaseProps,
   extractSizeProps,
@@ -22,23 +20,6 @@ import {
   extractEffectsProps,
   resolveCornerRadius,
 } from "./extract-props";
-
-/**
- * Build fill attrs from stroke paints (for strokeGeometry).
- */
-function strokePaintsToFillAttrs(paints: readonly FigPaint[] | undefined): FillAttrs {
-  if (!paints || paints.length === 0) {return { fill: "none" };}
-  const visible = paints.find((p) => p.visible !== false);
-  if (!visible) {return { fill: "none" };}
-  if (getPaintType(visible) === "SOLID") {
-    const solid = visible as FigPaint & { color: { r: number; g: number; b: number; a: number } };
-    const hex = figColorToHex(solid.color);
-    const opacity = visible.opacity ?? 1;
-    if (opacity < 1) {return { fill: hex, "fill-opacity": opacity };}
-    return { fill: hex };
-  }
-  return { fill: "#000000" };
-}
 
 /**
  * Render a RECTANGLE node to SVG

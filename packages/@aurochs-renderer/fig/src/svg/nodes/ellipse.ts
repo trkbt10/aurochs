@@ -10,7 +10,7 @@ import type { FigNode } from "@aurochs/fig/types";
 import type { FigSvgRenderContext } from "../../types";
 import { ellipse, path as svgPath, g, type SvgString } from "../primitives";
 import { buildTransformAttr } from "../transform";
-import { getFillResult, applyFillResult, type FillAttrs, type ShapeGeometry } from "../fill";
+import { getFillResult, applyFillResult, strokePaintsToFillAttrs, type ShapeGeometry } from "../fill";
 import { getStrokeAttrs } from "../stroke";
 import { getFilterAttr } from "../effects";
 import { decodePathsFromGeometry } from "../geometry-path";
@@ -236,13 +236,15 @@ export function renderEllipseNode(node: FigNode, ctx: FigSvgRenderContext): SvgS
     }
   }
 
-  // Priority 1b: strokeGeometry — pre-expanded stroke outlines
+  // Priority 1b: strokeGeometry — pre-expanded stroke outlines.
+  // These are filled shapes tracing the stroke outline, so they must be
+  // filled with the stroke colour (not stroked again).
   if (strokeGeometry && strokeGeometry.length > 0) {
     const paths = decodePathsFromGeometry(strokeGeometry, ctx.blobs);
     if (paths.length > 0) {
       return renderPaths({
         paths,
-        fillAttrs: { fill: "none" },
+        fillAttrs: strokePaintsToFillAttrs(strokePaints),
         strokeAttrs: {},
         transform: transformStr,
         opacity,

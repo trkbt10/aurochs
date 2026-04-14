@@ -15,8 +15,11 @@
  *
  * Detection:
  * 1. `rx=` attribute on rect elements
- * 2. Path data containing both L (straight) and C (curve) commands —
- *    the pattern of a rounded rectangle rendered as a path
+ * 2. Path data matching a rounded rectangle pattern:
+ *    alternating L (straight edge) and C (corner curve) commands,
+ *    with at least 4 of each. This distinguishes rounded rects from
+ *    plain arcs/circles which also use C commands but without L segments
+ *    in the alternating pattern.
  */
 export function hasCornerRadius(svg: string): boolean {
   if (svg.includes("rx=")) {
@@ -26,7 +29,14 @@ export function hasCornerRadius(svg: string): boolean {
   if (pathDMatches) {
     for (const match of pathDMatches) {
       const d = match.slice(3, -1);
-      if (d.includes("L") && d.includes("C")) {
+      // Count L and C commands. A rounded rect has 4 straight edges (L)
+      // and 4 corner curves (C), often with a leading M.
+      // A circle/arc has only C commands (no L), so L count > 0 + C count > 0
+      // is necessary but not sufficient. Require at least 3 of each
+      // to distinguish from simple arcs that happen to end with L.
+      const lCount = (d.match(/L\s/g) || []).length;
+      const cCount = (d.match(/C\s/g) || []).length;
+      if (lCount >= 3 && cCount >= 3) {
         return true;
       }
     }

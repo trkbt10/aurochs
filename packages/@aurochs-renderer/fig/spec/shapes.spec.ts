@@ -63,7 +63,7 @@ type ParsedData = {
   nodeMap: ReadonlyMap<string, FigNode>;
 };
 
-const parsedDataCache: ParsedData | null = null;
+let parsedDataCache: ParsedData | null = null;
 
 async function loadFigFile(): Promise<ParsedData> {
   if (parsedDataCache) {return parsedDataCache;}
@@ -206,15 +206,15 @@ describe("Shape Rendering", () => {
 
       // Output comparison
       console.log(`\n=== ${layerName} ===`);
-      console.log(`Size: ${actualSize.width}x${actualSize.height}`);
+      console.log(`Size: ${actualSizeRef.value.width}x${actualSizeRef.value.height}`);
       if (hasActual) {
-        console.log(`Elements: actual=${actualShapes.total}, rendered=${renderedShapes.total}`);
-        console.log(`  ellipses: ${actualShapes.ellipses} vs ${renderedShapes.ellipses}`);
-        console.log(`  circles: ${actualShapes.circles} vs ${renderedShapes.circles}`);
-        console.log(`  paths: ${actualShapes.paths} vs ${renderedShapes.paths}`);
-        console.log(`  rects: ${actualShapes.rects} vs ${renderedShapes.rects}`);
-        console.log(`  lines: ${actualShapes.lines} vs ${renderedShapes.lines}`);
-        console.log(`  polygons: ${actualShapes.polygons} vs ${renderedShapes.polygons}`);
+        console.log(`Elements: actual=${actualShapesRef.value.total}, rendered=${renderedShapes.total}`);
+        console.log(`  ellipses: ${actualShapesRef.value.ellipses} vs ${renderedShapes.ellipses}`);
+        console.log(`  circles: ${actualShapesRef.value.circles} vs ${renderedShapes.circles}`);
+        console.log(`  paths: ${actualShapesRef.value.paths} vs ${renderedShapes.paths}`);
+        console.log(`  rects: ${actualShapesRef.value.rects} vs ${renderedShapes.rects}`);
+        console.log(`  lines: ${actualShapesRef.value.lines} vs ${renderedShapes.lines}`);
+        console.log(`  polygons: ${actualShapesRef.value.polygons} vs ${renderedShapes.polygons}`);
       } else {
         console.log(`Rendered elements: ${renderedShapes.total}`);
         console.log(`  (No actual SVG for comparison - export from Figma)`);

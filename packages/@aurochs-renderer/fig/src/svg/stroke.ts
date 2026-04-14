@@ -5,8 +5,8 @@
  * to the shared SoT in stroke/interpret.ts.
  */
 
-import type { FigPaint, FigColor, FigStrokeCap, FigStrokeJoin, FigStrokeWeight } from "@aurochs/fig/types";
-import { figColorToHex, getPaintType } from "@aurochs/fig/color";
+import type { FigPaint, FigStrokeCap, FigStrokeJoin, FigStrokeWeight } from "@aurochs/fig/types";
+import { figColorToHex, getSolidPaintColor } from "@aurochs/fig/color";
 import { resolveStrokeWeight, mapStrokeCap, mapStrokeJoin } from "../stroke";
 
 // =============================================================================
@@ -74,9 +74,9 @@ function getStrokeAttrsImpl(
 
   const attrs: StrokeAttrs = {};
 
-  if (getPaintType(visiblePaint) === "SOLID") {
-    const solidPaint = visiblePaint as FigPaint & { color: FigColor };
-    attrs.stroke = figColorToHex(solidPaint.color);
+  const solidColor = getSolidPaintColor(visiblePaint);
+  if (solidColor) {
+    attrs.stroke = figColorToHex(solidColor);
     const opacity = visiblePaint.opacity ?? 1;
     if (opacity < 1) {
       attrs["stroke-opacity"] = opacity;

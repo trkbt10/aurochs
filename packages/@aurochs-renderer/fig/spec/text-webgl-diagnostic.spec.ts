@@ -123,11 +123,11 @@ describe("Text node diagnostics (real .fig data)", () => {
 
     console.log("\n=== Text Node Rendering Path Distribution ===");
     console.log(`  Total text nodes: ${allTextNodes.length}`);
-    console.log(`  With glyphContours only: ${withGlyphContours}`);
-    console.log(`  With fallbackText only: ${withFallbackText}`);
-    console.log(`  With both: ${withBoth}`);
-    console.log(`  With neither (!): ${withNeither}`);
-    console.log(`  Empty glyphContours array (!): ${emptyGlyphContours}`);
+    console.log(`  With glyphContours only: ${withGlyphContoursRef.value}`);
+    console.log(`  With fallbackText only: ${withFallbackTextRef.value}`);
+    console.log(`  With both: ${withBothRef.value}`);
+    console.log(`  With neither (!): ${withNeitherRef.value}`);
+    console.log(`  Empty glyphContours array (!): ${emptyGlyphContoursRef.value}`);
 
     expect(allTextNodes.length).toBeGreaterThan(0);
   });
@@ -172,16 +172,16 @@ describe("Text node diagnostics (real .fig data)", () => {
     }
 
     console.log("\n=== Glyph Contour Tessellation Analysis ===");
-    console.log(`  Nodes with glyphContours: ${totalWithContours}`);
-    console.log(`  Tessellation success: ${tessellationSuccess}`);
-    console.log(`  Tessellation empty (!): ${tessellationEmpty}`);
-    console.log(`  Total contours: ${totalContourCount}`);
-    console.log(`  - Outer (negative area): ${outerContours}`);
-    console.log(`  - Hole (positive area): ${holeContours}`);
-    console.log(`  - Too few points: ${tooFewPoints}`);
-    console.log(`  Total vertices produced: ${totalVertexCount}`);
+    console.log(`  Nodes with glyphContours: ${totalWithContoursRef.value}`);
+    console.log(`  Tessellation success: ${tessellationSuccessRef.value}`);
+    console.log(`  Tessellation empty (!): ${tessellationEmptyRef.value}`);
+    console.log(`  Total contours: ${totalContourCountRef.value}`);
+    console.log(`  - Outer (negative area): ${outerContoursRef.value}`);
+    console.log(`  - Hole (positive area): ${holeContoursRef.value}`);
+    console.log(`  - Too few points: ${tooFewPointsRef.value}`);
+    console.log(`  Total vertices produced: ${totalVertexCountRef.value}`);
     if (tessellationSuccessRef.value > 0) {
-      console.log(`  Avg vertices per node: ${(totalVertexCount / tessellationSuccess).toFixed(0)}`);
+      console.log(`  Avg vertices per node: ${(totalVertexCountRef.value / tessellationSuccessRef.value).toFixed(0)}`);
     }
 
     if (totalWithContoursRef.value > 0) {
@@ -322,8 +322,8 @@ describe("Text node diagnostics (real .fig data)", () => {
       }
 
       console.log(`  ${frame}: ${entries.length} text nodes`);
-      console.log(`    glyphContours: ${withGlyphs} (tess ok: ${tessSuccess}, tess empty: ${tessEmpty})`);
-      console.log(`    fallbackText: ${withFallback}`);
+      console.log(`    glyphContours: ${withGlyphsRef.value} (tess ok: ${tessSuccessRef.value}, tess empty: ${tessEmptyRef.value})`);
+      console.log(`    fallbackText: ${withFallbackRef.value}`);
     }
   });
 });
