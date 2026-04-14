@@ -5,15 +5,15 @@
 import type { FigNode, FigVectorPath, FigFillGeometry, FigPaint } from "@aurochs/fig/types";
 import type { FigBlob } from "@aurochs/fig/parser";
 import type { FigSvgRenderContext } from "../../types";
-import { type SvgString, EMPTY_SVG } from "../primitives";
+import { path as svgPath, type SvgString, EMPTY_SVG } from "../primitives";
 import { buildTransformAttr } from "../transform";
-import { getFillAttrs, type FillAttrs } from "../fill";
+import { getFillResult, applyFillResult, type FillAttrs, type ShapeGeometry } from "../fill";
 import { getStrokeAttrs, type StrokeAttrs } from "../stroke";
 import type { GeometryPathData } from "../geometry-path";
 import { decodePathsFromGeometry } from "../geometry-path";
 import { mapWindingRule } from "../../geometry";
 import { renderPaths } from "../render-paths";
-import { extractBaseProps, extractPaintProps, extractGeometryProps } from "./extract-props";
+import { extractBaseProps, extractSizeProps, extractPaintProps, extractGeometryProps } from "./extract-props";
 import { figColorToHex, getPaintType } from "@aurochs/fig/color";
 
 // =============================================================================
@@ -96,6 +96,7 @@ function strokePaintsToFillAttrs(paints: readonly FigPaint[] | undefined): FillA
  */
 export function renderVectorNode(node: FigNode, ctx: FigSvgRenderContext): SvgString {
   const { transform, opacity } = extractBaseProps(node);
+  const { size } = extractSizeProps(node);
   const { fillPaints, strokePaints, strokeWeight } = extractPaintProps(node);
   const { fillGeometry, strokeGeometry } = extractGeometryProps(node);
   const vectorPaths = node.vectorPaths;
@@ -113,6 +114,16 @@ export function renderVectorNode(node: FigNode, ctx: FigSvgRenderContext): SvgSt
     return EMPTY_SVG;
   }
 
+  // Build clip shapes from paths for complex fill geometry
+  const clipShapes = pathsToRender.map((p) =>
+    svgPath({ d: p.data, "fill-rule": p.windingRule ?? "nonzero", fill: "black" }),
+  );
+  const geometry: ShapeGeometry = {
+    clipShapes,
+    bounds: { x: 0, y: 0, width: size.x, height: size.y },
+  };
+
+  const fillResultRef = { value: undefined as ReturnType<typeof getFillResult> | undefined };
   const fillAttrsRef = { value: undefined as FillAttrs | undefined };
   const strokeAttrsRef = { value: undefined as StrokeAttrs | undefined };
 
@@ -122,15 +133,23 @@ export function renderVectorNode(node: FigNode, ctx: FigSvgRenderContext): SvgSt
     fillAttrsRef.value = strokePaintsToFillAttrs(strokePaints);
     strokeAttrsRef.value = {};
   } else {
-    fillAttrsRef.value = getFillAttrs(fillPaints, ctx);
+    fillResultRef.value = getFillResult(fillPaints, ctx, geometry, {
+      elementSize: { width: size.x, height: size.y },
+    });
+    fillAttrsRef.value = fillResultRef.value.attrs;
     strokeAttrsRef.value = getStrokeAttrs({ paints: strokePaints, strokeWeight });
   }
 
-  return renderPaths({
+  const pathResult = renderPaths({
     paths: pathsToRender,
     fillAttrs: fillAttrsRef.value,
     strokeAttrs: strokeAttrsRef.value,
     transform: transformStr,
     opacity,
   });
+
+  if (fillResultRef.value) {
+    return applyFillResult(fillResultRef.value, pathResult);
+  }
+  return pathResult;
 }

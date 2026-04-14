@@ -455,6 +455,7 @@ function _createFigFileBuilder() {
       horizontalConstraint: data.horizontalConstraint,
       verticalConstraint: data.verticalConstraint,
       effects: data.effects,
+      mask: data.mask,
     });
     // Add fill geometry (required for rendering)
     node.fillGeometry = [{
@@ -492,6 +493,7 @@ function _createFigFileBuilder() {
       horizontalConstraint: data.horizontalConstraint,
       verticalConstraint: data.verticalConstraint,
       effects: data.effects,
+      mask: data.mask,
     });
     nodes.push(node);
     return data.localID;
@@ -525,6 +527,7 @@ function _createFigFileBuilder() {
       horizontalConstraint: data.horizontalConstraint,
       verticalConstraint: data.verticalConstraint,
       effects: data.effects,
+      mask: data.mask,
     });
     nodes.push(node);
     return data.localID;
@@ -557,6 +560,7 @@ function _createFigFileBuilder() {
       horizontalConstraint: data.horizontalConstraint,
       verticalConstraint: data.verticalConstraint,
       effects: data.effects,
+      mask: data.mask,
     });
     nodes.push(node);
     return data.localID;
@@ -590,6 +594,7 @@ function _createFigFileBuilder() {
       horizontalConstraint: data.horizontalConstraint,
       verticalConstraint: data.verticalConstraint,
       effects: data.effects,
+      mask: data.mask,
     });
     nodes.push(node);
     return data.localID;
@@ -627,6 +632,7 @@ function _createFigFileBuilder() {
       horizontalConstraint: data.horizontalConstraint,
       verticalConstraint: data.verticalConstraint,
       effects: data.effects,
+      mask: data.mask,
     });
     // Add fill geometry (required for rendering)
     node.fillGeometry = [{
@@ -673,6 +679,7 @@ function _createFigFileBuilder() {
       horizontalConstraint: data.horizontalConstraint,
       verticalConstraint: data.verticalConstraint,
       effects: data.effects,
+      mask: data.mask,
     });
     // Add fill geometry (required for rendering)
     node.fillGeometry = [{

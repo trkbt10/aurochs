@@ -48,6 +48,7 @@ export type BaseShapeState = {
   horizontalConstraint?: ConstraintType;
   verticalConstraint?: ConstraintType;
   effects?: readonly EffectData[];
+  mask: boolean;
 };
 
 /** Create default base shape state */
@@ -64,6 +65,7 @@ export function createBaseShapeState(localID: number, parentID: number): BaseSha
     fillPaints: [],
     visible: true,
     opacity: 1,
+    mask: false,
   };
 }
 
@@ -90,6 +92,8 @@ export type BaseShapeBuilderMethods<TBuilder> = {
   horizontalConstraint: (constraint: ConstraintType) => TBuilder;
   verticalConstraint: (constraint: ConstraintType) => TBuilder;
   effects: (effects: readonly EffectData[]) => TBuilder;
+  /** Mark this node as a mask for subsequent siblings */
+  mask: (isMask?: boolean) => TBuilder;
 };
 
 /** Attach base shape methods to a builder object */
@@ -118,6 +122,7 @@ export function attachBaseShapeMethods<TBuilder>(state: BaseShapeState, builder:
     horizontalConstraint(constraint: ConstraintType) { state.horizontalConstraint = constraint; return builder; },
     verticalConstraint(constraint: ConstraintType) { state.verticalConstraint = constraint; return builder; },
     effects(e: readonly EffectData[]) { state.effects = e; return builder; },
+    mask(isMask: boolean = true) { state.mask = isMask; return builder; },
   };
 }
 
@@ -192,5 +197,6 @@ export function buildBaseData(state: BaseShapeState): BaseShapeNodeData {
     horizontalConstraint: toEnumValue(state.horizontalConstraint, CONSTRAINT_TYPE_VALUES),
     verticalConstraint: toEnumValue(state.verticalConstraint, CONSTRAINT_TYPE_VALUES),
     effects: state.effects,
+    mask: state.mask || undefined,
   };
 }

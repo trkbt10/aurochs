@@ -452,6 +452,7 @@ export type FigEffectType =
   | "INNER_SHADOW"
   | "DROP_SHADOW"
   | "LAYER_BLUR"
+  | "FOREGROUND_BLUR"
   | "BACKGROUND_BLUR";
 
 /**

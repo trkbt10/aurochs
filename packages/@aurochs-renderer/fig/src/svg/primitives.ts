@@ -415,6 +415,20 @@ export function mask(
   return unsafeSvg(`<mask ${attrStr}>${children.join("")}</mask>`);
 }
 
+/**
+ * Create an SVG foreignObject element
+ *
+ * Used for content that cannot be expressed in SVG natively,
+ * such as CSS conic-gradient for angular gradients.
+ */
+export function foreignObject(
+  attrs: { x: number | string; y: number | string; width: number | string; height: number | string },
+  ...children: readonly SvgString[]
+): SvgString {
+  const attrStr = buildAttrs(attrs);
+  return unsafeSvg(`<foreignObject ${attrStr}>${children.join("")}</foreignObject>`);
+}
+
 // =============================================================================
 // Filters
 // =============================================================================

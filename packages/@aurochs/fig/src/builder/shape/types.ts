@@ -49,6 +49,8 @@ export type BaseShapeNodeData = {
   readonly verticalConstraint?: { value: number; name: ConstraintType };
   // Effects (drop shadow, inner shadow, blur, etc.)
   readonly effects?: readonly EffectData[];
+  // Mask flag — when true, this node acts as a mask for subsequent siblings
+  readonly mask?: boolean;
 };
 
 export type EllipseNodeData = BaseShapeNodeData & {

@@ -8,12 +8,14 @@
 
 import type { FigPaint, FigColor, FigGradientPaint, FigGradientStop, FigImagePaint } from "@aurochs/fig/types";
 import type { FigSvgRenderContext } from "../types";
-import { linearGradient, radialGradient, stop, pattern, image, type SvgString } from "./primitives";
+import { linearGradient, radialGradient, stop, pattern, image, clipPath, foreignObject, rect, g, unsafeSvg, type SvgString } from "./primitives";
 import { isPlaceholderColor, figColorToHex, getPaintType } from "@aurochs/fig/color";
 import {
   getGradientStops as sharedGetGradientStops,
   getGradientDirection as sharedGetGradientDirection,
   getRadialGradientCenterAndRadius as sharedGetRadialGradientCenterAndRadius,
+  getAngularGradientParams as sharedGetAngularGradientParams,
+  getDiamondGradientParams as sharedGetDiamondGradientParams,
   getImageRef as sharedGetImageRef,
 } from "../paint";
 
@@ -324,4 +326,227 @@ function _getPreserveAspectRatio(paint: FigImagePaint): string {
       // Default to FILL behavior for most UI images
       return "xMidYMid slice";
   }
+}
+
+// =============================================================================
+// Advanced Fill Result — supports angular/diamond gradients
+// =============================================================================
+
+/**
+ * Shape geometry descriptor. Needed for complex gradients that require
+ * clipping to the shape (angular, diamond).
+ */
+export type ShapeGeometry = {
+  /** SVG element(s) describing the shape, used as clipPath children */
+  readonly clipShapes: readonly SvgString[];
+  /** Bounding box in the shape's local coordinate system */
+  readonly bounds: { x: number; y: number; width: number; height: number };
+};
+
+/** Simple fill: expressible as SVG fill attributes */
+export type SimpleFillResult = {
+  readonly kind: "simple";
+  readonly attrs: FillAttrs;
+};
+
+/**
+ * Complex fill: requires additional SVG elements prepended before the shape.
+ * The shape itself gets fill="none" so the prepended gradient shows through.
+ */
+export type ComplexFillResult = {
+  readonly kind: "complex";
+  /** SVG elements to prepend before the shape */
+  readonly prependElements: readonly SvgString[];
+  /** The shape's own fill attrs (typically fill="none") */
+  readonly attrs: FillAttrs;
+};
+
+export type FillResult = SimpleFillResult | ComplexFillResult;
+
+/**
+ * Resolve fill for a paint, handling all gradient types including angular/diamond.
+ *
+ * For SOLID, LINEAR, RADIAL, and IMAGE paints, returns SimpleFillResult
+ * (same as getFillAttrs). For ANGULAR and DIAMOND paints, returns
+ * ComplexFillResult with prepended SVG elements.
+ */
+export function getFillResult(
+  paints: readonly FigPaint[] | undefined,
+  ctx: FigSvgRenderContext,
+  geometry: ShapeGeometry,
+  options?: GetFillAttrsOptions,
+): FillResult {
+  if (!paints || paints.length === 0) {
+    return { kind: "simple", attrs: { fill: "none" } };
+  }
+
+  const visiblePaints = paints.filter((p) => p.visible !== false);
+  if (visiblePaints.length === 0) {
+    return { kind: "simple", attrs: { fill: "none" } };
+  }
+
+  const topPaint = visiblePaints[visiblePaints.length - 1];
+  const paintType = getPaintType(topPaint);
+
+  switch (paintType) {
+    case "GRADIENT_ANGULAR":
+      return createAngularGradientFill(
+        topPaint as FigGradientPaint,
+        ctx,
+        geometry,
+      );
+
+    case "GRADIENT_DIAMOND":
+      return createDiamondGradientFill(
+        topPaint as FigGradientPaint,
+        ctx,
+        geometry,
+      );
+
+    default:
+      return {
+        kind: "simple",
+        attrs: paintToFillAttrs(topPaint, ctx, options?.elementSize),
+      };
+  }
+}
+
+/**
+ * Apply a FillResult to a rendered shape element.
+ *
+ * SimpleFillResult: returns the shape element unchanged (fill attrs
+ * were already applied to the element).
+ * ComplexFillResult: wraps the shape in a group with prepended gradient
+ * elements.
+ */
+export function applyFillResult(
+  fillResult: FillResult,
+  shapeElement: SvgString,
+): SvgString {
+  if (fillResult.kind === "simple") {
+    return shapeElement;
+  }
+  return g({}, ...fillResult.prependElements, shapeElement);
+}
+
+// =============================================================================
+// Angular (Conic) Gradient
+// =============================================================================
+
+/**
+ * Create an angular gradient fill using CSS conic-gradient inside
+ * a foreignObject, clipped to the shape geometry.
+ *
+ * This matches Figma's SVG export approach: SVG 1.1 has no conic
+ * gradient primitive, so we use HTML foreignObject with CSS.
+ */
+function createAngularGradientFill(
+  paint: FigGradientPaint,
+  ctx: FigSvgRenderContext,
+  geometry: ShapeGeometry,
+): ComplexFillResult {
+  const stops = sharedGetGradientStops(paint);
+  const { center, startAngle } = sharedGetAngularGradientParams(paint);
+  const { bounds, clipShapes } = geometry;
+
+  // Create clipPath from shape geometry
+  const clipId = ctx.defs.generateId("ag-clip");
+  const clipDef = clipPath({ id: clipId }, ...clipShapes);
+  ctx.defs.add(clipDef);
+
+  // Build CSS conic-gradient string
+  const cssStops = stops
+    .map((s) => `${figColorToHex(s.color)} ${s.position * 360}deg`)
+    .join(", ");
+  const fromAngle = startAngle;
+  const centerX = center.x * 100;
+  const centerY = center.y * 100;
+  const cssGradient = `conic-gradient(from ${fromAngle}deg at ${centerX}% ${centerY}%, ${cssStops})`;
+
+  const opacity = paint.opacity ?? 1;
+  const opacityStyle = opacity < 1 ? `opacity:${opacity};` : "";
+
+  // foreignObject with HTML div carrying the conic gradient
+  const fo = foreignObject(
+    { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height },
+    unsafeSvg(
+      `<div xmlns="http://www.w3.org/1999/xhtml" style="width:100%;height:100%;background:${cssGradient};${opacityStyle}"></div>`,
+    ),
+  );
+
+  const clippedGroup = g({ "clip-path": `url(#${clipId})` }, fo);
+
+  return {
+    kind: "complex",
+    prependElements: [clippedGroup],
+    attrs: { fill: "none" },
+  };
+}
+
+// =============================================================================
+// Diamond Gradient
+// =============================================================================
+
+/**
+ * Create a diamond gradient fill using four mirrored linear gradients,
+ * clipped to the shape geometry.
+ *
+ * Figma exports diamond gradients as four <rect> elements with the
+ * same linearGradient, each mirrored along X/Y axes to create the
+ * diamond pattern.
+ */
+function createDiamondGradientFill(
+  paint: FigGradientPaint,
+  ctx: FigSvgRenderContext,
+  geometry: ShapeGeometry,
+): ComplexFillResult {
+  const stops = sharedGetGradientStops(paint);
+  const { center } = sharedGetDiamondGradientParams(paint);
+  const { bounds, clipShapes } = geometry;
+
+  // Create clipPath from shape geometry
+  const clipId = ctx.defs.generateId("dg-clip");
+  const clipDef = clipPath({ id: clipId }, ...clipShapes);
+  ctx.defs.add(clipDef);
+
+  // Create a linearGradient from center toward edge (diagonal)
+  const lgId = ctx.defs.generateId("dg-lg");
+  const gradientStops = createGradientStops(stops);
+  const lgDef = linearGradient(
+    {
+      id: lgId,
+      x1: "0",
+      y1: "0",
+      x2: `${bounds.width * 0.5}`,
+      y2: `${bounds.height * 0.5}`,
+      gradientUnits: "userSpaceOnUse",
+    },
+    ...gradientStops,
+  );
+  ctx.defs.add(lgDef);
+
+  // Four mirrored rects covering the bounding box
+  const cx = bounds.x + bounds.width * center.x;
+  const cy = bounds.y + bounds.height * center.y;
+  const fillUrl = `url(#${lgId})`;
+  const opacity = paint.opacity ?? 1;
+  const opacityAttr = opacity < 1 ? opacity : undefined;
+
+  const quadrants: SvgString[] = [
+    rect({ x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height, fill: fillUrl, opacity: opacityAttr }),
+    rect({ x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height, fill: fillUrl, opacity: opacityAttr,
+      transform: `translate(${2 * cx}, 0) scale(-1, 1)` }),
+    rect({ x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height, fill: fillUrl, opacity: opacityAttr,
+      transform: `translate(0, ${2 * cy}) scale(1, -1)` }),
+    rect({ x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height, fill: fillUrl, opacity: opacityAttr,
+      transform: `translate(${2 * cx}, ${2 * cy}) scale(-1, -1)` }),
+  ];
+
+  const clippedGroup = g({ "clip-path": `url(#${clipId})` }, ...quadrants);
+
+  return {
+    kind: "complex",
+    prependElements: [clippedGroup],
+    attrs: { fill: "none" },
+  };
 }

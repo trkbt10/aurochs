@@ -7,7 +7,7 @@ import type { FigNode, FigVector, FigPaint, FigFillGeometry } from "@aurochs/fig
 import type { FigSvgRenderContext } from "../../types";
 import { g, rect, clipPath, path, type SvgString, EMPTY_SVG } from "../primitives";
 import { buildTransformAttr } from "../transform";
-import { getFillAttrs, type FillAttrs } from "../fill";
+import { getFillResult, applyFillResult, type FillAttrs, type ShapeGeometry } from "../fill";
 import { getStrokeAttrs } from "../stroke";
 import { decodePathsFromGeometry } from "../geometry-path";
 import { mapWindingRule } from "../../geometry";
@@ -112,29 +112,39 @@ export function renderFrameNode(
   }
 
   const transformStr = buildTransformAttr(transform);
-  const baseFillAttrs = getFillAttrs(fillPaints, ctx, { elementSize: { width: size.x, height: size.y } });
   const baseStrokeAttrs = getStrokeAttrs({ paints: strokePaints, strokeWeight });
 
+  // Shape geometry for complex fills (angular/diamond gradients)
+  const bgClipShape = rect({ x: 0, y: 0, width: size.x, height: size.y, rx, ry, fill: "black" });
+  const bgGeometry: ShapeGeometry = {
+    clipShapes: [bgClipShape],
+    bounds: { x: 0, y: 0, width: size.x, height: size.y },
+  };
+  const fillResult = getFillResult(fillPaints, ctx, bgGeometry, {
+    elementSize: { width: size.x, height: size.y },
+  });
+  const baseFillAttrs = fillResult.attrs;
+
   const elements: SvgString[] = [];
+
+  // Prepend complex fill elements (angular/diamond gradients) if present
+  if (fillResult.kind === "complex") {
+    elements.push(...fillResult.prependElements);
+  }
 
   const decodedFillPaths = fillGeometry ? decodePathsFromGeometry(fillGeometry, ctx.blobs) : [];
   const decodedStrokePaths = strokeGeometry ? decodePathsFromGeometry(strokeGeometry, ctx.blobs) : [];
 
   if (decodedFillPaths.length > 0 && decodedStrokePaths.length > 0) {
-    // Both geometries: render fill paths with fill paints, stroke paths as filled outlines
     elements.push(...buildPathElements(decodedFillPaths, baseFillAttrs, {}));
     const strokeFillAttrs = strokePaintsToFillAttrs(strokePaints);
     elements.push(...buildPathElements(decodedStrokePaths, strokeFillAttrs, {}));
   } else if (decodedFillPaths.length > 0) {
-    // Only fill geometry: apply SVG stroke attrs
     elements.push(...buildPathElements(decodedFillPaths, baseFillAttrs, baseStrokeAttrs));
   } else if (decodedStrokePaths.length > 0) {
-    // Only stroke geometry: fill with stroke color
     const strokeFillAttrs = strokePaintsToFillAttrs(strokePaints);
     elements.push(...buildPathElements(decodedStrokePaths, strokeFillAttrs, {}));
   } else {
-    // Only emit background rect when there's a visible fill or stroke.
-    // Skip invisible rects (fill="none" with no stroke) to avoid noise.
     const hasFill = baseFillAttrs.fill !== "none";
     const hasStroke = baseStrokeAttrs.stroke !== undefined && baseStrokeAttrs.stroke !== "none";
     if (hasFill || hasStroke) {

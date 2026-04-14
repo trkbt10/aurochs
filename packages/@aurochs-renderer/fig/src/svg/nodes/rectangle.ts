@@ -5,12 +5,13 @@
 import type { FigNode, FigPaint } from "@aurochs/fig/types";
 
 import type { FigSvgRenderContext } from "../../types";
-import { rect, g, type SvgString } from "../primitives";
+import { rect, g, path, type SvgString } from "../primitives";
 import { buildTransformAttr } from "../transform";
-import { getFillAttrs, type FillAttrs } from "../fill";
+import { getFillResult, applyFillResult, type FillAttrs, type ShapeGeometry } from "../fill";
 import { getStrokeAttrs, type StrokeAttrs } from "../stroke";
 import { getFilterAttr } from "../effects";
 import { decodePathsFromGeometry } from "../geometry-path";
+import { mapWindingRule } from "../../geometry";
 import { renderPaths } from "../render-paths";
 import { figColorToHex, getPaintType } from "@aurochs/fig/color";
 import {
@@ -51,7 +52,6 @@ export function renderRectangleNode(node: FigNode, ctx: FigSvgRenderContext): Sv
   const { rx, ry } = resolveCornerRadius(node, size);
 
   const transformStr = buildTransformAttr(transform);
-  const baseFillAttrs = getFillAttrs(fillPaints, ctx, { elementSize: { width: size.x, height: size.y } });
   const baseStrokeAttrs = getStrokeAttrs({ paints: strokePaints, strokeWeight });
 
   // Calculate bounds for filter region
@@ -62,12 +62,23 @@ export function renderRectangleNode(node: FigNode, ctx: FigSvgRenderContext): Sv
   // Get filter attribute if effects are present
   const filterAttr = getFilterAttr(effects, ctx, bounds);
 
+  // Shape geometry for complex fills
+  const clipShape = rect({ x: 0, y: 0, width: size.x, height: size.y, rx, ry, fill: "black" });
+  const geometry: ShapeGeometry = {
+    clipShapes: [clipShape],
+    bounds: { x: 0, y: 0, width: size.x, height: size.y },
+  };
+
+  const fillResult = getFillResult(fillPaints, ctx, geometry, {
+    elementSize: { width: size.x, height: size.y },
+  });
+
   const hasFillGeo = fillGeometry && fillGeometry.length > 0;
-  const geometry = hasFillGeo ? fillGeometry : strokeGeometry;
+  const geom = hasFillGeo ? fillGeometry : strokeGeometry;
   const isStrokeGeometry = !hasFillGeo && !!(strokeGeometry && strokeGeometry.length > 0);
 
-  if (geometry && geometry.length > 0) {
-    const paths = decodePathsFromGeometry(geometry, ctx.blobs);
+  if (geom && geom.length > 0) {
+    const paths = decodePathsFromGeometry(geom, ctx.blobs);
     if (paths.length > 0) {
       const fillAttrsRef = { value: undefined as FillAttrs | undefined };
       const strokeAttrsRef = { value: undefined as StrokeAttrs | undefined };
@@ -75,10 +86,11 @@ export function renderRectangleNode(node: FigNode, ctx: FigSvgRenderContext): Sv
         fillAttrsRef.value = strokePaintsToFillAttrs(strokePaints);
         strokeAttrsRef.value = {};
       } else {
-        fillAttrsRef.value = baseFillAttrs;
+        fillAttrsRef.value = fillResult.attrs;
         strokeAttrsRef.value = baseStrokeAttrs;
       }
-      return renderPaths({
+
+      const pathResult = renderPaths({
         paths,
         fillAttrs: fillAttrsRef.value,
         strokeAttrs: strokeAttrsRef.value,
@@ -86,6 +98,8 @@ export function renderRectangleNode(node: FigNode, ctx: FigSvgRenderContext): Sv
         opacity,
         filter: filterAttr,
       });
+
+      return applyFillResult(fillResult, pathResult);
     }
   }
 
@@ -98,13 +112,15 @@ export function renderRectangleNode(node: FigNode, ctx: FigSvgRenderContext): Sv
     ry,
     transform: transformStr || undefined,
     opacity: opacity < 1 ? opacity : undefined,
-    ...baseFillAttrs,
+    ...fillResult.attrs,
     ...baseStrokeAttrs,
   });
 
+  const withFill = applyFillResult(fillResult, rectElement);
+
   if (filterAttr) {
-    return g({ filter: filterAttr }, rectElement);
+    return g({ filter: filterAttr }, withFill);
   }
 
-  return rectElement;
+  return withFill;
 }

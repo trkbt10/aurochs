@@ -146,6 +146,83 @@ export function getRadialGradientCenterAndRadius(paint: FigGradientPaint): Radia
 }
 
 // =============================================================================
+// Angular (Conic) Gradient
+// =============================================================================
+
+export type AngularGradientParams = {
+  /** Center point in object-space (0..1, 0..1) */
+  readonly center: { readonly x: number; readonly y: number };
+  /** Start angle in degrees (0 = right/3 o'clock, clockwise) */
+  readonly startAngle: number;
+};
+
+/**
+ * Get angular gradient center and start angle from a paint.
+ *
+ * Figma's angular gradient transform encodes center position and rotation.
+ * The transform maps gradient space (0,0)–(1,1) to object space.
+ * Center is at (m02, m12) in normalized coords, rotation is derived from
+ * the matrix rotation component.
+ */
+export function getAngularGradientParams(paint: FigGradientPaint): AngularGradientParams {
+  const handles = paint.gradientHandlePositions;
+  if (handles && handles.length >= 2) {
+    const center = handles[0] ?? { x: 0.5, y: 0.5 };
+    const edge = handles[1] ?? { x: 1, y: 0.5 };
+    const angle = Math.atan2(edge.y - center.y, edge.x - center.x) * (180 / Math.PI);
+    return { center, startAngle: angle };
+  }
+
+  const paintData = paint as Record<string, unknown>;
+  const transform = paintData.transform as GradientTransform | undefined;
+  if (!transform) {
+    return { center: { x: 0.5, y: 0.5 }, startAngle: 0 };
+  }
+
+  // Extract center from translation
+  const cx = transform.m02 ?? 0.5;
+  const cy = transform.m12 ?? 0.5;
+
+  // Extract angle from rotation component of the matrix
+  const m00 = transform.m00 ?? 1;
+  const m10 = transform.m10 ?? 0;
+  const angle = Math.atan2(m10, m00) * (180 / Math.PI);
+
+  return { center: { x: cx, y: cy }, startAngle: angle + 90 };
+}
+
+// =============================================================================
+// Diamond Gradient
+// =============================================================================
+
+export type DiamondGradientParams = {
+  /** Center point in object-space (0..1, 0..1) */
+  readonly center: { readonly x: number; readonly y: number };
+};
+
+/**
+ * Get diamond gradient center from a paint.
+ *
+ * Diamond gradients radiate from a center point in a diamond pattern.
+ * The transform maps gradient space to object space; center is at (m02, m12).
+ */
+export function getDiamondGradientParams(paint: FigGradientPaint): DiamondGradientParams {
+  const handles = paint.gradientHandlePositions;
+  if (handles && handles.length >= 1) {
+    return { center: handles[0] ?? { x: 0.5, y: 0.5 } };
+  }
+
+  const paintData = paint as Record<string, unknown>;
+  const transform = paintData.transform as GradientTransform | undefined;
+  return {
+    center: {
+      x: transform?.m02 ?? 0.5,
+      y: transform?.m12 ?? 0.5,
+    },
+  };
+}
+
+// =============================================================================
 // Image Paint
 // =============================================================================
 

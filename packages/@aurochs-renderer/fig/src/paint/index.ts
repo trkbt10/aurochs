@@ -16,9 +16,13 @@ export {
   getGradientDirection,
   getGradientDirectionFromTransform,
   getRadialGradientCenterAndRadius,
+  getAngularGradientParams,
+  getDiamondGradientParams,
   getImageRef,
   getScaleMode,
   type GradientDirection,
   type RadialGradientParams,
+  type AngularGradientParams,
+  type DiamondGradientParams,
   type GradientTransform,
 } from "./interpret";
