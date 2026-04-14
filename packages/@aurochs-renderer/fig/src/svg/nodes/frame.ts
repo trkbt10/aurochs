@@ -155,9 +155,16 @@ export function renderFrameNode(
   // Children
   if (renderedChildren.length > 0) {
     if (clipsContent) {
-      // Create clip path
+      // Create clip path.
+      // Always use <rect rx ry> for the clip shape when cornerRadius is set,
+      // even if fillGeometry exists. fillGeometry from the builder contains
+      // a simple rectangle without corners, so using it would lose the
+      // rounded clipping that Figma applies.
       const clipId = ctx.defs.generateId("clip");
-      const clipGeometry = decodedFillPaths.length > 0 ? fillGeometry : strokeGeometry;
+      const hasCornerRadius = (rx !== undefined && rx > 0) || (ry !== undefined && ry > 0);
+      const clipGeometry = hasCornerRadius
+        ? undefined  // Force <rect rx ry> fallback
+        : (decodedFillPaths.length > 0 ? fillGeometry : strokeGeometry);
       const clipShapes = buildClipShapes({ geometry: clipGeometry, ctx, size, rx, ry });
       const clipDef = clipPath({ id: clipId }, ...clipShapes);
       ctx.defs.add(clipDef);

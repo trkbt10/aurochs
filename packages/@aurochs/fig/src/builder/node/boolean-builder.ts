@@ -50,18 +50,26 @@ export type BooleanOperationNodeBuilder = {
   exclude: () => BooleanOperationNodeBuilder;
   size: (width: number, height: number) => BooleanOperationNodeBuilder;
   position: (x: number, y: number) => BooleanOperationNodeBuilder;
-  fill: (color: Color) => BooleanOperationNodeBuilder;
+  fill: (colorOrPaint: Color | Paint) => BooleanOperationNodeBuilder;
   visible: (v: boolean) => BooleanOperationNodeBuilder;
   opacity: (o: number) => BooleanOperationNodeBuilder;
   build: () => BooleanOperationNodeData;
 };
 
-/** Build fill paints from color */
-function buildBooleanFillPaints(fillColor: Color | undefined): readonly Paint[] | undefined {
-  if (!fillColor) {
+/** Check if value is a Paint (has type with value/name) rather than a plain Color */
+function isPaint(value: Color | Paint): value is Paint {
+  return "type" in value && typeof (value as Paint).type === "object";
+}
+
+/** Build fill paints from color or paint */
+function buildBooleanFillPaints(fill: Color | Paint | undefined): readonly Paint[] | undefined {
+  if (!fill) {
     return undefined;
   }
-  return [{ type: { value: 0, name: "SOLID" }, color: fillColor, opacity: 1, visible: true, blendMode: { value: 1, name: "NORMAL" } }];
+  if (isPaint(fill)) {
+    return [fill];
+  }
+  return [{ type: { value: 0, name: "SOLID" }, color: fill, opacity: 1, visible: true, blendMode: { value: 1, name: "NORMAL" } }];
 }
 
 /** Build size from optional dimensions */
@@ -81,7 +89,7 @@ function createBooleanOperationNodeBuilder(localID: number, parentID: number): B
     height: undefined as number | undefined,
     x: 0,
     y: 0,
-    fillColor: undefined as Color | undefined,
+    fillColor: undefined as Color | Paint | undefined,
     visible: true,
     opacity: 1,
   };
@@ -100,7 +108,7 @@ function createBooleanOperationNodeBuilder(localID: number, parentID: number): B
     exclude() { return builder.operation("EXCLUDE"); },
     size(width: number, height: number) { state.width = width; state.height = height; return builder; },
     position(x: number, y: number) { state.x = x; state.y = y; return builder; },
-    fill(color: Color) { state.fillColor = color; return builder; },
+    fill(colorOrPaint: Color | Paint) { state.fillColor = colorOrPaint; return builder; },
     visible(v: boolean) { state.visible = v; return builder; },
     opacity(o: number) { state.opacity = o; return builder; },
 

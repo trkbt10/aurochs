@@ -329,9 +329,10 @@ export function createInnerShadowFilter(
 
 
 
-/** Returns true if the given effects array contains a layer blur. */
+/** Returns true if the given effects array contains a layer (foreground) blur.
+ * Figma's .fig schema uses "FOREGROUND_BLUR" (value=2) for this effect type. */
 export function hasLayerBlur(effects: readonly FigEffect[] | undefined): boolean {
-  return hasEffectOfType(effects, "LAYER_BLUR");
+  return hasEffectOfType(effects, "FOREGROUND_BLUR");
 }
 
 
@@ -339,9 +340,9 @@ export function hasLayerBlur(effects: readonly FigEffect[] | undefined): boolean
 
 
 
-/** Returns the first layer blur effect from the given effects array. */
+/** Returns the first layer (foreground) blur effect from the given effects array. */
 export function getLayerBlur(effects: readonly FigEffect[] | undefined): FigEffect | undefined {
-  return getEffectsOfType(effects, "LAYER_BLUR")[0];
+  return getEffectsOfType(effects, "FOREGROUND_BLUR")[0];
 }
 
 /**

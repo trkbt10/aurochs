@@ -3010,4 +3010,4 @@ function pathToPathData(path, eps = 1e-4) {
 }
 
 export { FillRule, PathBooleanOperation, arcSegmentToCubics, commandsFromPathData, pathBoolean, pathCubicSegmentSelfIntersection, pathFromCommands, pathFromPathData, pathSegmentBoundingBox, pathSegmentIntersection, pathToCommands, pathToPathData, samplePathSegmentAt };
-//# sourceMappingURL=path-bool.js.map
+// sourcemap removed for vendored build

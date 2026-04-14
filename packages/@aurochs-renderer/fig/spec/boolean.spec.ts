@@ -40,7 +40,7 @@ type ParsedData = {
   images: ReadonlyMap<string, FigImage>;
   nodeMap: ReadonlyMap<string, FigNode>;
 };
-let parsedDataCache: ParsedData | null = null;
+const parsedDataCache: ParsedData | null = null;
 async function loadFigFile(): Promise<ParsedData> {
   if (parsedDataCache) {return parsedDataCache;}
   if (!fs.existsSync(FIG_FILE)) {
@@ -117,10 +117,10 @@ describe("Boolean Operation Rendering", () => {
       fs.writeFileSync(path.join(SNAPSHOTS_DIR, fileName), result.svg);
       const rendered = extractShapeElements(result.svg);
       console.log(`\n=== ${layerName} ===`);
-      console.log(`Size: ${actualSizeRef.value.width}x${actualSizeRef.value.height}`);
+      console.log(`Size: ${actualSize.width}x${actualSize.height}`);
       if (hasActual) {
-        console.log(`Elements: actual=${actualShapesRef.value.total}, rendered=${rendered.total}`);
-        console.log(`  paths: ${actualShapesRef.value.paths} vs ${rendered.paths}`);
+        console.log(`Elements: actual=${actualShapes.total}, rendered=${rendered.total}`);
+        console.log(`  paths: ${actualShapes.paths} vs ${rendered.paths}`);
       }
       if (result.warnings.length > 0) {
         console.log(`Warnings: ${result.warnings.slice(0, 3).join("; ")}`);

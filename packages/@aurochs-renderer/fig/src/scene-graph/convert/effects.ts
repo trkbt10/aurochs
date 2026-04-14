@@ -47,7 +47,7 @@ export function convertEffectsToScene(effects: readonly FigEffect[] | undefined)
         break;
       }
 
-      case "LAYER_BLUR":
+      case "FOREGROUND_BLUR":
         result.push({ type: "layer-blur", radius: effect.radius ?? 0 });
         break;
 

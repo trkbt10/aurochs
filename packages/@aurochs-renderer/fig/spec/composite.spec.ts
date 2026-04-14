@@ -165,11 +165,11 @@ describe("Composite (Boolean Operation) Rendering", () => {
       }
 
       // Determine reference size from actual SVG if available
+      // Actual SVG from Figma export is required
       const actualPath = path.join(ACTUAL_DIR, fileName);
-      const hasActual = fs.existsSync(actualPath);
-      const refSize = hasActual
-        ? getSvgSize(fs.readFileSync(actualPath, "utf-8"))
-        : layer.size;
+      expect(fs.existsSync(actualPath), `Actual SVG not found: ${actualPath}. Export from Figma first.`).toBe(true);
+      const actualSvg = fs.readFileSync(actualPath, "utf-8");
+      const refSize = getSvgSize(actualSvg);
 
       // Render
       const wrapperCanvas: FigNode = {
@@ -195,33 +195,27 @@ describe("Composite (Boolean Operation) Rendering", () => {
       const renderedShapes = countShapeElements(result.svg);
       expect(renderedShapes.total).toBeGreaterThan(0);
 
-      // Compare with actual Figma export if available
-      if (hasActual) {
-        const actualSvg = fs.readFileSync(actualPath, "utf-8");
-        const actualShapes = countShapeElements(actualSvg);
+      // Compare with actual Figma export
+      const actualShapes = countShapeElements(actualSvg);
 
-        console.log(`\n=== ${frameName} ===`);
-        console.log(`  Actual shapes:   ${actualShapes.total} (paths=${actualShapes.paths}, rects=${actualShapes.rects}, ellipses=${actualShapes.ellipses})`);
-        console.log(`  Rendered shapes: ${renderedShapes.total} (paths=${renderedShapes.paths}, rects=${renderedShapes.rects}, ellipses=${renderedShapes.ellipses})`);
+      console.log(`\n=== ${frameName} ===`);
+      console.log(`  Actual shapes:   ${actualShapes.total} (paths=${actualShapes.paths}, rects=${actualShapes.rects}, ellipses=${actualShapes.ellipses})`);
+      console.log(`  Rendered shapes: ${renderedShapes.total} (paths=${renderedShapes.paths}, rects=${renderedShapes.rects}, ellipses=${renderedShapes.ellipses})`);
 
-        // The rendered output should have a similar number of shape elements.
-        // Figma's export typically has 1-2 shapes (background rect + merged path).
-        // If our renderer has many more, it means children are being rendered individually.
-        if (renderedShapes.total > actualShapes.total * 2) {
-          console.warn(
-            `  ⚠ MISMATCH: Rendered has ${renderedShapes.total} shapes vs actual ${actualShapes.total}.` +
-            ` Boolean operation may not be using pre-computed geometry.`,
-          );
-        }
-
-        // Verify shape count matches Figma export
-        // This is the core assertion: if the renderer correctly uses fillGeometry
-        // from the BOOLEAN_OPERATION node, it should produce a similar number of
-        // shape elements as Figma's export.
-        expect(renderedShapes.total).toBeLessThanOrEqual(
-          actualShapes.total * 2 + 1,  // Allow small margin for clipPath/defs paths
+      // The rendered output should have a similar number of shape elements.
+      // Figma's export typically has 1-2 shapes (background rect + merged path).
+      // If our renderer has many more, it means children are being rendered individually.
+      if (renderedShapes.total > actualShapes.total * 2) {
+        console.warn(
+          `  ⚠ MISMATCH: Rendered has ${renderedShapes.total} shapes vs actual ${actualShapes.total}.` +
+          ` Boolean operation may not be using pre-computed geometry.`,
         );
       }
+
+      // Verify shape count matches Figma export
+      expect(renderedShapes.total).toBeLessThanOrEqual(
+        actualShapes.total * 2 + 1,
+      );
 
       if (result.warnings.length > 0) {
         console.log(`  Warnings: ${result.warnings.slice(0, 5).join("; ")}`);
