@@ -88,13 +88,17 @@ export function createProgram(): Command {
 
   program
     .command("extract")
-    .description("Extract data from sheet (CSV or JSON)")
+    .description("Extract data from sheet (CSV, TSV, JSONL, or JSON)")
     .argument("<file>", "XLSX file path")
     .option("--sheet <name>", "Sheet name (default: first sheet)")
-    .option("--format <format>", "Output format (csv|json)", "csv")
+    .option("--format <format>", "Output format (csv|tsv|jsonl|json)", "csv")
     .action(async (file: string, options: { sheet?: string; format?: string }) => {
       const mode = program.opts().output as OutputMode;
-      const format = options.format === "json" ? "json" : "csv";
+      const VALID_FORMATS = ["csv", "tsv", "jsonl", "json"] as const;
+      type ValidFormat = (typeof VALID_FORMATS)[number];
+      const format: ValidFormat = VALID_FORMATS.includes(options.format as ValidFormat)
+        ? (options.format as ValidFormat)
+        : "csv";
       const result = await runExtract(file, { sheet: options.sheet, format });
       output({ result, mode, prettyFormatter: formatExtractPretty });
     });

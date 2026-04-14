@@ -43,6 +43,13 @@ import { parseFigFile, buildNodeTree, findNodesByType, getNodeType, safeChildren
 import type { FigNode } from "@aurochs/fig/types";
 import { renderCanvas } from "@aurochs-renderer/fig/svg";
 
+// DSV / XLSX interop
+import { convertXlsxToDsv, convertDsvToXlsx } from "@aurochs-converters/interop-dsv-xlsx";
+import { buildDsv, buildJsonl, parseDsv } from "@aurochs/dsv";
+import { loadZipPackage } from "@aurochs/zip";
+import { parseXlsxWorkbook } from "@aurochs-office/xlsx/parser";
+import { exportXlsx } from "@aurochs-builder/xlsx/exporter";
+
 // PNG (SVG rasterization)
 import { Resvg } from "@resvg/resvg-js";
 
@@ -51,10 +58,10 @@ import { Resvg } from "@resvg/resvg-js";
 // =============================================================================
 
 /** Supported input format, detected from file extension. */
-export type InputFormat = "pptx" | "xlsx" | "docx" | "pdf" | "fig";
+export type InputFormat = "pptx" | "xlsx" | "docx" | "pdf" | "fig" | "csv" | "tsv";
 
 /** Supported output format. */
-export type OutputFormat = "markdown" | "svg" | "text" | "png";
+export type OutputFormat = "markdown" | "svg" | "text" | "png" | "csv" | "tsv" | "jsonl" | "xlsx";
 
 export type ConvertOptions = {
   /** Output file path. If omitted, result is returned as string (stdout). */
@@ -104,6 +111,8 @@ const EXTENSION_MAP: Record<string, { format: InputFormat; legacy: boolean }> = 
   ".doc": { format: "docx", legacy: true },
   ".pdf": { format: "pdf", legacy: false },
   ".fig": { format: "fig", legacy: false },
+  ".csv": { format: "csv", legacy: false },
+  ".tsv": { format: "tsv", legacy: false },
 };
 
 const OUTPUT_EXTENSION_MAP: Record<string, OutputFormat> = {
@@ -112,6 +121,10 @@ const OUTPUT_EXTENSION_MAP: Record<string, OutputFormat> = {
   ".svg": "svg",
   ".txt": "text",
   ".png": "png",
+  ".csv": "csv",
+  ".tsv": "tsv",
+  ".jsonl": "jsonl",
+  ".xlsx": "xlsx",
 };
 
 /**
@@ -122,10 +135,12 @@ const OUTPUT_EXTENSION_MAP: Record<string, OutputFormat> = {
  */
 const SUPPORTED_CONVERSIONS: Record<InputFormat, readonly OutputFormat[]> = {
   pptx: ["markdown", "svg", "text", "png"],
-  xlsx: ["markdown", "svg", "text", "png"],
+  xlsx: ["markdown", "svg", "text", "png", "csv", "tsv", "jsonl"],
   docx: ["markdown", "svg", "text", "png"],
   pdf: ["markdown", "svg", "png"],
   fig: ["markdown", "svg", "png"],
+  csv: ["xlsx"],
+  tsv: ["xlsx"],
 };
 
 function detectInputFormat(filePath: string): { format: InputFormat; legacy: boolean } | undefined {
@@ -178,7 +193,7 @@ function resolveOutputPaths(
   }
 
   // Multiple pages without %d placeholder
-  const concatenableFormats: OutputFormat[] = ["markdown", "text"];
+  const concatenableFormats: OutputFormat[] = ["markdown", "text", "csv", "tsv", "jsonl"];
   if (concatenableFormats.includes(outputFormat)) {
     // Concatenate into a single file
     return [outputPath];
@@ -485,7 +500,7 @@ async function convertToPng(
   filePath: string,
   inputFormat: InputFormat,
 ): Promise<ConvertPage[]> {
-  const svgConverter = SVG_CONVERTERS[inputFormat];
+  const svgConverter = getConverter(SVG_CONVERTERS, inputFormat, "png");
   const svgPages = await svgConverter(filePath);
 
   return svgPages.map((page) => ({
@@ -496,12 +511,83 @@ async function convertToPng(
 }
 
 // =============================================================================
+// DSV converters (XLSX → CSV/TSV/JSONL, CSV/TSV → XLSX)
+// =============================================================================
+
+/**
+ * Load and parse an XLSX file from disk.
+ */
+async function loadXlsx(filePath: string) {
+  const buffer = await fs.readFile(filePath);
+  const pkg = await loadZipPackage(buffer);
+  const getFileContent = async (path: string): Promise<string | undefined> => {
+    return pkg.readText(path) ?? undefined;
+  };
+  return parseXlsxWorkbook(getFileContent);
+}
+
+async function convertXlsxToCsv(filePath: string): Promise<ConvertPage[]> {
+  const workbook = await loadXlsx(filePath);
+  return workbook.sheets.map((sheet, i) => {
+    const result = convertXlsxToDsv(workbook, { sheetIndex: i, firstRowAsHeaders: true });
+    const content = buildDsv(result.data, { dialect: "csv" });
+    return { index: i + 1, label: sheet.name, content };
+  });
+}
+
+async function convertXlsxToTsv(filePath: string): Promise<ConvertPage[]> {
+  const workbook = await loadXlsx(filePath);
+  return workbook.sheets.map((sheet, i) => {
+    const result = convertXlsxToDsv(workbook, { sheetIndex: i, firstRowAsHeaders: true });
+    const content = buildDsv(result.data, { dialect: "tsv" });
+    return { index: i + 1, label: sheet.name, content };
+  });
+}
+
+async function convertXlsxToJsonl(filePath: string): Promise<ConvertPage[]> {
+  const workbook = await loadXlsx(filePath);
+  return workbook.sheets.map((sheet, i) => {
+    const result = convertXlsxToDsv(workbook, { sheetIndex: i, firstRowAsHeaders: true });
+    const headers = result.data.headers;
+    const objects = result.data.records.map((record) => {
+      const obj: Record<string, unknown> = {};
+      for (let j = 0; j < record.fields.length; j++) {
+        const key = headers?.[j] ?? String(j);
+        obj[key] = record.fields[j].value;
+      }
+      return obj;
+    });
+    const content = buildJsonl(objects);
+    return { index: i + 1, label: sheet.name, content };
+  });
+}
+
+async function convertDsvToXlsxFile(
+  filePath: string,
+  dialect: "csv" | "tsv",
+): Promise<ConvertPage[]> {
+  const text = await fs.readFile(filePath, "utf-8");
+  const doc = parseDsv(text, { dialect });
+  const result = convertDsvToXlsx(doc);
+  const xlsxData = await exportXlsx(result.data);
+  return [{ index: 1, label: "Sheet1", content: Buffer.from(xlsxData) }];
+}
+
+async function convertCsvToXlsx(filePath: string): Promise<ConvertPage[]> {
+  return convertDsvToXlsxFile(filePath, "csv");
+}
+
+async function convertTsvToXlsx(filePath: string): Promise<ConvertPage[]> {
+  return convertDsvToXlsxFile(filePath, "tsv");
+}
+
+// =============================================================================
 // Converter registries
 // =============================================================================
 
 type PageConverter = (filePath: string) => Promise<ConvertPage[]>;
 
-const MARKDOWN_CONVERTERS: Record<InputFormat, PageConverter> = {
+const MARKDOWN_CONVERTERS: Partial<Record<InputFormat, PageConverter>> = {
   pptx: convertPptxToMarkdown,
   xlsx: convertXlsxToMarkdown,
   docx: convertDocxToMarkdown,
@@ -509,7 +595,7 @@ const MARKDOWN_CONVERTERS: Record<InputFormat, PageConverter> = {
   fig: convertFigToMarkdown,
 };
 
-const SVG_CONVERTERS: Record<InputFormat, PageConverter> = {
+const SVG_CONVERTERS: Partial<Record<InputFormat, PageConverter>> = {
   pptx: convertPptxToSvg,
   xlsx: convertXlsxToSvg,
   docx: convertDocxToSvg,
@@ -521,7 +607,23 @@ const TEXT_CONVERTERS: Partial<Record<InputFormat, PageConverter>> = {
   pptx: convertPptxToText,
   xlsx: convertXlsxToText,
   docx: convertDocxToText,
-  // pdf: not supported (no ASCII renderer)
+};
+
+const CSV_CONVERTERS: Partial<Record<InputFormat, PageConverter>> = {
+  xlsx: convertXlsxToCsv,
+};
+
+const TSV_CONVERTERS: Partial<Record<InputFormat, PageConverter>> = {
+  xlsx: convertXlsxToTsv,
+};
+
+const JSONL_CONVERTERS: Partial<Record<InputFormat, PageConverter>> = {
+  xlsx: convertXlsxToJsonl,
+};
+
+const XLSX_CONVERTERS: Partial<Record<InputFormat, PageConverter>> = {
+  csv: convertCsvToXlsx,
+  tsv: convertTsvToXlsx,
 };
 
 // =============================================================================
@@ -561,6 +663,22 @@ function resolveOutputFormat(
 /**
  * Run the appropriate converter for the given input/output format combination.
  */
+/**
+ * Look up a converter from a partial registry, throwing if the combination is unsupported.
+ * (assertConversionSupported is called before this, so the throw is a TypeScript guard.)
+ */
+function getConverter(
+  registry: Partial<Record<InputFormat, PageConverter>>,
+  inputFormat: InputFormat,
+  outputFormat: OutputFormat,
+): PageConverter {
+  const converter = registry[inputFormat];
+  if (!converter) {
+    throw new Error(`Unsupported conversion: ${inputFormat} → ${outputFormat}`);
+  }
+  return converter;
+}
+
 async function runConverter(
   inputPath: string,
   inputFormat: InputFormat,
@@ -568,19 +686,21 @@ async function runConverter(
 ): Promise<ConvertPage[]> {
   switch (outputFormat) {
     case "markdown":
-      return MARKDOWN_CONVERTERS[inputFormat](inputPath);
+      return getConverter(MARKDOWN_CONVERTERS, inputFormat, outputFormat)(inputPath);
     case "svg":
-      return SVG_CONVERTERS[inputFormat](inputPath);
-    case "text": {
-      const converter = TEXT_CONVERTERS[inputFormat];
-      if (!converter) {
-        // This shouldn't happen due to assertConversionSupported, but TypeScript needs it
-        throw new Error(`Unsupported conversion: ${inputFormat} → text`);
-      }
-      return converter(inputPath);
-    }
+      return getConverter(SVG_CONVERTERS, inputFormat, outputFormat)(inputPath);
+    case "text":
+      return getConverter(TEXT_CONVERTERS, inputFormat, outputFormat)(inputPath);
     case "png":
       return convertToPng(inputPath, inputFormat);
+    case "csv":
+      return getConverter(CSV_CONVERTERS, inputFormat, outputFormat)(inputPath);
+    case "tsv":
+      return getConverter(TSV_CONVERTERS, inputFormat, outputFormat)(inputPath);
+    case "jsonl":
+      return getConverter(JSONL_CONVERTERS, inputFormat, outputFormat)(inputPath);
+    case "xlsx":
+      return getConverter(XLSX_CONVERTERS, inputFormat, outputFormat)(inputPath);
   }
 }
 

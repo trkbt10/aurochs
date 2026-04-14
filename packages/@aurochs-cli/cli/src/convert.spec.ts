@@ -22,8 +22,14 @@ describe("getSupportedExtensions", () => {
     expect(extensions).toContain(".pdf");
   });
 
-  it("returns 7 supported extensions", () => {
-    expect(getSupportedExtensions()).toHaveLength(7);
+  it("includes DSV input extensions", () => {
+    const extensions = getSupportedExtensions();
+    expect(extensions).toContain(".csv");
+    expect(extensions).toContain(".tsv");
+  });
+
+  it("returns 10 supported extensions", () => {
+    expect(getSupportedExtensions()).toHaveLength(10);
   });
 });
 
@@ -35,6 +41,10 @@ describe("getSupportedOutputExtensions", () => {
     expect(extensions).toContain(".svg");
     expect(extensions).toContain(".txt");
     expect(extensions).toContain(".png");
+    expect(extensions).toContain(".csv");
+    expect(extensions).toContain(".tsv");
+    expect(extensions).toContain(".jsonl");
+    expect(extensions).toContain(".xlsx");
   });
 });
 
@@ -47,12 +57,25 @@ describe("getSupportedOutputFormats", () => {
     expect(formats).toContain("png");
   });
 
-  it("xlsx supports markdown, svg, text, png", () => {
+  it("xlsx supports markdown, svg, text, png, csv, tsv, jsonl", () => {
     const formats = getSupportedOutputFormats("xlsx");
     expect(formats).toContain("markdown");
     expect(formats).toContain("svg");
     expect(formats).toContain("text");
     expect(formats).toContain("png");
+    expect(formats).toContain("csv");
+    expect(formats).toContain("tsv");
+    expect(formats).toContain("jsonl");
+  });
+
+  it("csv supports xlsx output", () => {
+    const formats = getSupportedOutputFormats("csv");
+    expect(formats).toContain("xlsx");
+  });
+
+  it("tsv supports xlsx output", () => {
+    const formats = getSupportedOutputFormats("tsv");
+    expect(formats).toContain("xlsx");
   });
 
   it("docx supports markdown, svg, text, png", () => {

@@ -1,9 +1,9 @@
 {
-  "name": "@aurochs-cli/xlsx-cli",
+  "name": "@aurochs-cli/tsv-cli",
   "version": "0.12.2",
   "type": "module",
   "bin": {
-    "xlsx": "./dist/cli.js"
+    "tsv": "./dist/cli.js"
   },
   "exports": {
     ".": "./src/index.ts"
@@ -12,16 +12,14 @@
     "build": "bun build src/cli.ts --target bun --outdir dist --packages external",
     "lint": "eslint src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-cli/xlsx-cli/src'"
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-cli/tsv-cli/src'"
   },
   "dependencies": {
     "@aurochs-builder/xlsx": "workspace:*",
     "@aurochs-cli/cli-core": "workspace:*",
     "@aurochs-converters/interop-dsv-xlsx": "workspace:*",
     "@aurochs-office/xlsx": "workspace:*",
-    "@aurochs-renderer/xlsx": "workspace:*",
     "@aurochs/dsv": "workspace:*",
-    "@aurochs/zip": "workspace:*",
     "commander": "^14.0.3"
   }
 }
