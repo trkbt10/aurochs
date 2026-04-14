@@ -10,6 +10,7 @@
  */
 
 import type { CellAddress } from "./address";
+import { cellAddress } from "./address";
 import type { StyleId } from "../types";
 import type { Formula } from "./formula";
 
@@ -176,4 +177,82 @@ export function isDateValue(value: CellValue): value is DateCellValue {
  */
 export function isEmptyValue(value: CellValue): value is EmptyCellValue {
   return value.type === "empty";
+}
+
+// =============================================================================
+// CellValue Constructors
+// =============================================================================
+
+/** Create a string CellValue. */
+export function stringValue(value: string): StringCellValue {
+  return { type: "string", value };
+}
+
+/** Create a number CellValue. */
+export function numberValue(value: number): NumberCellValue {
+  return { type: "number", value };
+}
+
+/** Create a boolean CellValue. */
+export function booleanValue(value: boolean): BooleanCellValue {
+  return { type: "boolean", value };
+}
+
+/** Create an error CellValue. */
+export function errorValue(value: ErrorValue): ErrorCellValue {
+  return { type: "error", value };
+}
+
+/** Create a date CellValue. */
+export function dateValue(value: Date): DateCellValue {
+  return { type: "date", value };
+}
+
+/** The singleton empty CellValue. */
+export const EMPTY_VALUE: EmptyCellValue = { type: "empty" };
+
+// =============================================================================
+// Cell Constructors
+// =============================================================================
+
+/**
+ * Create a Cell at a given (col, row) position with a CellValue.
+ *
+ * @param col - 1-based column index
+ * @param row - 1-based row index
+ * @param value - Cell value
+ * @param options - Optional formula and styleId
+ */
+export function createCell(
+  col: number,
+  row: number,
+  value: CellValue,
+  options?: { readonly formula?: Formula; readonly styleId?: StyleId },
+): Cell {
+  return {
+    address: cellAddress(col, row),
+    value,
+    ...(options?.formula ? { formula: options.formula } : {}),
+    ...(options?.styleId !== undefined ? { styleId: options.styleId } : {}),
+  };
+}
+
+/** Shorthand: create a string Cell. */
+export function stringCell(col: number, row: number, value: string): Cell {
+  return { address: cellAddress(col, row), value: { type: "string", value } };
+}
+
+/** Shorthand: create a number Cell. */
+export function numberCell(col: number, row: number, value: number): Cell {
+  return { address: cellAddress(col, row), value: { type: "number", value } };
+}
+
+/** Shorthand: create a boolean Cell. */
+export function booleanCell(col: number, row: number, value: boolean): Cell {
+  return { address: cellAddress(col, row), value: { type: "boolean", value } };
+}
+
+/** Shorthand: create an empty Cell. */
+export function emptyCell(col: number, row: number): Cell {
+  return { address: cellAddress(col, row), value: EMPTY_VALUE };
 }

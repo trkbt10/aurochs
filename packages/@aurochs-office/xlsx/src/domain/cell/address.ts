@@ -46,6 +46,34 @@ export type CellRange = {
 };
 
 // =============================================================================
+// Factory Functions
+// =============================================================================
+
+/**
+ * Create a relative CellAddress from 1-based column and row indices.
+ *
+ * This is the most common address form when building cells programmatically.
+ * Both `colAbsolute` and `rowAbsolute` are set to `false`.
+ *
+ * @param col - 1-based column index
+ * @param row - 1-based row index
+ *
+ * @example
+ * ```ts
+ * cellAddress(1, 1)  // A1 (relative)
+ * cellAddress(3, 5)  // C5 (relative)
+ * ```
+ */
+export function cellAddress(col: number, row: number): CellAddress {
+  return {
+    col: colIdx(col),
+    row: rowIdx(row),
+    colAbsolute: false,
+    rowAbsolute: false,
+  };
+}
+
+// =============================================================================
 // Column Letter <-> Index Conversion
 // =============================================================================
 

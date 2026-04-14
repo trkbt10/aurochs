@@ -12,8 +12,10 @@
 import type { CellRange } from "./cell/address";
 import type { Cell } from "./cell/types";
 import type { XlsxStyleSheet } from "./style/types";
+import { createDefaultStyleSheet } from "./style/types";
 import type { XlsxTable } from "./table/types";
 import type { RowIndex, ColIndex, StyleId, SheetId } from "./types";
+import { sheetId as createSheetIdBrand } from "./types";
 import type { XlsxConditionalFormatting } from "./conditional-formatting";
 import type { XlsxComment } from "./comment";
 import type { XlsxHyperlink } from "./hyperlink";
@@ -416,3 +418,185 @@ export type XlsxWorkbookChart = {
   /** Parsed chart data */
   readonly chart: Chart;
 };
+
+// =============================================================================
+// OPC Path Convention
+// =============================================================================
+
+/**
+ * Derive the OPC package path for a worksheet from its 1-based sheet number.
+ *
+ * SpreadsheetML uses the convention `xl/worksheets/sheet{N}.xml` where N is
+ * the ordinal position (1-based) of the sheet in the workbook. This is distinct
+ * from `sheetId` — it reflects the physical part path in the ZIP package.
+ *
+ * @param sheetNumber - 1-based ordinal position of the sheet
+ * @returns OPC part path, e.g. "xl/worksheets/sheet1.xml"
+ *
+ * @see ECMA-376 Part 2, Section 9.3 (Relationships)
+ */
+export function worksheetXmlPath(sheetNumber: number): string {
+  return `xl/worksheets/sheet${sheetNumber}.xml`;
+}
+
+// =============================================================================
+// Factory Functions
+// =============================================================================
+
+/**
+ * Input for creating a new worksheet.
+ *
+ * Only the fields that vary between worksheets are required.
+ * Fields with spec-defined defaults (`state`, `dateSystem`) and
+ * derivable fields (`xmlPath`) are optional.
+ */
+export type CreateWorksheetParams = {
+  /** Sheet name (tab name) */
+  readonly name: string;
+  /**
+   * Unique sheet identifier.
+   * When omitted, defaults to `sheetNumber`.
+   */
+  readonly sheetId?: SheetId;
+  /**
+   * 1-based ordinal position of the sheet in the workbook.
+   * Used to derive `xmlPath` and the default `sheetId`.
+   * Defaults to 1.
+   */
+  readonly sheetNumber?: number;
+  /** Rows with cell data */
+  readonly rows: readonly XlsxRow[];
+  /** Visibility state. Defaults to "visible". */
+  readonly state?: "visible" | "hidden" | "veryHidden";
+  /**
+   * Workbook date system. Defaults to "1900".
+   *
+   * This is a workbook-level setting that the worksheet carries for convenience
+   * (e.g., date serial interpretation). When creating worksheets for a workbook,
+   * the workbook factory propagates its dateSystem to all sheets automatically.
+   */
+  readonly dateSystem?: XlsxDateSystem;
+  /** Column definitions */
+  readonly columns?: readonly XlsxColumnDef[];
+  /** Merged cell ranges */
+  readonly mergeCells?: readonly CellRange[];
+  /** Sheet view configuration */
+  readonly sheetView?: XlsxSheetView;
+  /** Default sheet formatting (sheetFormatPr) */
+  readonly sheetFormatPr?: XlsxSheetFormatPr;
+  /** Sheet tab color */
+  readonly tabColor?: XlsxColor;
+  /** Conditional formatting rules */
+  readonly conditionalFormattings?: readonly XlsxConditionalFormatting[];
+  /** Data validation rules */
+  readonly dataValidations?: readonly XlsxDataValidation[];
+  /** Hyperlinks */
+  readonly hyperlinks?: readonly XlsxHyperlink[];
+  /** Auto filter configuration */
+  readonly autoFilter?: XlsxAutoFilter;
+  /** Page setup for printing */
+  readonly pageSetup?: XlsxPageSetup;
+  /** Page margins for printing */
+  readonly pageMargins?: XlsxPageMargins;
+  /** Header and footer for printing */
+  readonly headerFooter?: XlsxHeaderFooter;
+  /** Print options */
+  readonly printOptions?: XlsxPrintOptions;
+  /** Page breaks for printing */
+  readonly pageBreaks?: XlsxPageBreaks;
+  /** Sheet protection settings */
+  readonly sheetProtection?: XlsxSheetProtection;
+  /** Drawing objects (images, shapes, charts) */
+  readonly drawing?: XlsxDrawing;
+};
+
+/**
+ * Create an XlsxWorksheet with sensible defaults.
+ *
+ * Eliminates the need to repeatedly specify boilerplate fields like
+ * `dateSystem`, `state`, and `xmlPath` at every construction site.
+ *
+ * @example
+ * ```typescript
+ * const sheet = createWorksheet({
+ *   name: "Data",
+ *   rows: myRows,
+ * });
+ * // dateSystem: "1900", state: "visible", xmlPath: "xl/worksheets/sheet1.xml"
+ * ```
+ */
+export function createWorksheet(params: CreateWorksheetParams): XlsxWorksheet {
+  const sheetNumber = params.sheetNumber ?? 1;
+
+  return {
+    dateSystem: params.dateSystem ?? "1900",
+    name: params.name,
+    sheetId: params.sheetId ?? createSheetIdBrand(sheetNumber),
+    state: params.state ?? "visible",
+    rows: params.rows,
+    xmlPath: worksheetXmlPath(sheetNumber),
+    ...(params.columns ? { columns: params.columns } : {}),
+    ...(params.mergeCells ? { mergeCells: params.mergeCells } : {}),
+    ...(params.sheetView ? { sheetView: params.sheetView } : {}),
+    ...(params.sheetFormatPr ? { sheetFormatPr: params.sheetFormatPr } : {}),
+    ...(params.tabColor ? { tabColor: params.tabColor } : {}),
+    ...(params.conditionalFormattings ? { conditionalFormattings: params.conditionalFormattings } : {}),
+    ...(params.dataValidations ? { dataValidations: params.dataValidations } : {}),
+    ...(params.hyperlinks ? { hyperlinks: params.hyperlinks } : {}),
+    ...(params.autoFilter ? { autoFilter: params.autoFilter } : {}),
+    ...(params.pageSetup ? { pageSetup: params.pageSetup } : {}),
+    ...(params.pageMargins ? { pageMargins: params.pageMargins } : {}),
+    ...(params.headerFooter ? { headerFooter: params.headerFooter } : {}),
+    ...(params.printOptions ? { printOptions: params.printOptions } : {}),
+    ...(params.pageBreaks ? { pageBreaks: params.pageBreaks } : {}),
+    ...(params.sheetProtection ? { sheetProtection: params.sheetProtection } : {}),
+    ...(params.drawing ? { drawing: params.drawing } : {}),
+  };
+}
+
+/**
+ * Input for creating a new workbook.
+ *
+ * Only `sheets` is required. All other fields have sensible defaults.
+ */
+export type CreateWorkbookParams = {
+  /** Worksheets. */
+  readonly sheets: readonly XlsxWorksheet[];
+  /**
+   * Date system. Defaults to "1900".
+   * When provided, this value is also propagated to sheets that were
+   * created without an explicit dateSystem.
+   */
+  readonly dateSystem?: XlsxDateSystem;
+  /** Workbook styles. Defaults to `createDefaultStyleSheet()`. */
+  readonly styles?: XlsxStyleSheet;
+  /** Shared string table. Defaults to `[]`. */
+  readonly sharedStrings?: readonly string[];
+  /** Named ranges and formulas */
+  readonly definedNames?: readonly XlsxDefinedName[];
+};
+
+/**
+ * Create an XlsxWorkbook with sensible defaults.
+ *
+ * @example
+ * ```typescript
+ * const wb = createWorkbook({
+ *   sheets: [
+ *     createWorksheet({ name: "Sheet1", rows: myRows }),
+ *   ],
+ * });
+ * // dateSystem: "1900", styles: default, sharedStrings: []
+ * ```
+ */
+export function createWorkbook(params: CreateWorkbookParams): XlsxWorkbook {
+  const dateSystem = params.dateSystem ?? "1900";
+
+  return {
+    dateSystem,
+    sheets: params.sheets,
+    styles: params.styles ?? createDefaultStyleSheet(),
+    sharedStrings: params.sharedStrings ?? [],
+    ...(params.definedNames ? { definedNames: params.definedNames } : {}),
+  };
+}

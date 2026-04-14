@@ -109,6 +109,38 @@ export function datePartsToSerial(params: DatePartsToSerialParams): number {
 }
 
 /**
+ * Convert an Excel serial number to an ISO 8601 date or datetime string.
+ *
+ * If the serial has no fractional part (i.e., no time component), returns
+ * a date-only string in `YYYY-MM-DD` format. Otherwise, returns the full
+ * ISO 8601 datetime from `Date.toISOString()`.
+ *
+ * This is the canonical way to produce a machine-readable date string
+ * from an Excel serial number for interchange formats (CSV, JSON, etc.).
+ *
+ * @param serial - Excel serial date number
+ * @param dateSystem - The workbook's date system ("1900" or "1904")
+ * @returns ISO 8601 date string ("2024-01-15") or datetime string ("2024-01-15T12:00:00.000Z")
+ *
+ * @example
+ * ```ts
+ * serialToIsoString(45306, "1900");   // "2024-01-15"
+ * serialToIsoString(45306.5, "1900"); // "2024-01-15T12:00:00.000Z"
+ * ```
+ */
+export function serialToIsoString(serial: number, dateSystem: XlsxDateSystem = "1900"): string {
+  const date = serialToDate(serial, dateSystem);
+  const fractional = serial - Math.floor(serial);
+  if (fractional === 0) {
+    const y = date.getUTCFullYear();
+    const m = String(date.getUTCMonth() + 1).padStart(2, "0");
+    const d = String(date.getUTCDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+  return date.toISOString();
+}
+
+/**
  * Extract date/time components from an Excel serial number.
  *
  * @param serial - Excel serial date number

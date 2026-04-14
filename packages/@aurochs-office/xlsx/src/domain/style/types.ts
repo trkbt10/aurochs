@@ -226,7 +226,9 @@ export type XlsxStyleSheet = {
 // Import constructors for use in factory function
 // Note: We import these dynamically to avoid circular dependency issues
 // and re-export the type constructors from ../types for internal use
-import { numFmtId as createNumFmtId, fontId as createFontId, fillId as createFillId, borderId as createBorderId } from "../types";
+import { numFmtId as createNumFmtId, fontId as createFontId, fillId as createFillId, borderId as createBorderId, styleId as createStyleId } from "../types";
+import type { StyleId } from "../types";
+import { WELL_KNOWN_NUM_FMT_IDS } from "./number-format";
 
 /**
  * Create a default stylesheet with minimal required elements
@@ -291,5 +293,59 @@ export function createDefaultStyleSheet(): XlsxStyleSheet {
     cellXfs: [defaultCellXf],
     cellStyleXfs: [defaultCellStyleXf],
     cellStyles: [defaultCellStyle],
+  };
+}
+
+/**
+ * Result of creating a stylesheet with date/datetime formats appended.
+ */
+export type DateStyleSheet = {
+  /** The stylesheet with date formats appended to cellXfs */
+  readonly styles: XlsxStyleSheet;
+  /** StyleId for date-formatted cells (numFmtId 14: "mm-dd-yy") */
+  readonly dateStyleId: StyleId;
+  /** StyleId for datetime-formatted cells (numFmtId 22: "m/d/yy h:mm") */
+  readonly datetimeStyleId: StyleId;
+};
+
+/**
+ * Create a default stylesheet extended with date and datetime cell formats.
+ *
+ * Appends two cellXf entries to the default stylesheet:
+ * - Index 1: date format (WELL_KNOWN_NUM_FMT_IDS.date = 14)
+ * - Index 2: datetime format (WELL_KNOWN_NUM_FMT_IDS.datetime = 22)
+ *
+ * Returns the stylesheet along with the StyleId values for each,
+ * eliminating the need to manually track cellXf indices.
+ *
+ * @see ECMA-376 Part 4, Section 18.8.10 (cellXfs)
+ * @see ECMA-376 Part 4, Section 18.8.30 (numFmt)
+ */
+export function createDateStyleSheet(): DateStyleSheet {
+  const base = createDefaultStyleSheet();
+
+  const dateCellXf: XlsxCellXf = {
+    numFmtId: createNumFmtId(WELL_KNOWN_NUM_FMT_IDS.date),
+    fontId: createFontId(0),
+    fillId: createFillId(0),
+    borderId: createBorderId(0),
+    applyNumberFormat: true,
+  };
+
+  const datetimeCellXf: XlsxCellXf = {
+    numFmtId: createNumFmtId(WELL_KNOWN_NUM_FMT_IDS.datetime),
+    fontId: createFontId(0),
+    fillId: createFillId(0),
+    borderId: createBorderId(0),
+    applyNumberFormat: true,
+  };
+
+  return {
+    styles: {
+      ...base,
+      cellXfs: [...base.cellXfs, dateCellXf, datetimeCellXf],
+    },
+    dateStyleId: createStyleId(1),
+    datetimeStyleId: createStyleId(2),
   };
 }
