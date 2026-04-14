@@ -333,14 +333,24 @@ function _getPreserveAspectRatio(paint: FigImagePaint): string {
 // =============================================================================
 
 /**
- * Shape geometry descriptor. Needed for complex gradients that require
- * clipping to the shape (angular, diamond).
+ * Shape geometry descriptor. Needed for complex gradients and multi-fill layers.
+ *
+ * `clipShapes` are used for clipPath definitions (angular/diamond gradients).
+ * `renderFillLayer` creates a new shape element with the given fill, used for
+ * multi-fill layer stacking.
  */
 export type ShapeGeometry = {
   /** SVG element(s) describing the shape, used as clipPath children */
   readonly clipShapes: readonly SvgString[];
   /** Bounding box in the shape's local coordinate system */
   readonly bounds: { x: number; y: number; width: number; height: number };
+  /**
+   * Construct a shape element with the specified fill attributes.
+   * Used for multi-fill layers where each layer needs an independent
+   * shape element with its own fill. Must use primitives (rect, ellipse, path)
+   * to preserve SvgString safety.
+   */
+  readonly renderFillLayer: (attrs: FillAttrs) => SvgString;
 };
 
 /** Simple fill: expressible as SVG fill attributes */
@@ -364,11 +374,41 @@ export type ComplexFillResult = {
 export type FillResult = SimpleFillResult | ComplexFillResult;
 
 /**
- * Resolve fill for a paint, handling all gradient types including angular/diamond.
+ * Resolve a single paint to a FillResult.
+ */
+function resolveSinglePaint(
+  paint: FigPaint,
+  ctx: FigSvgRenderContext,
+  geometry: ShapeGeometry,
+  elementSize?: ElementSize,
+): FillResult {
+  const paintType = getPaintType(paint);
+
+  switch (paintType) {
+    case "GRADIENT_ANGULAR":
+      return createAngularGradientFill(paint as FigGradientPaint, ctx, geometry);
+
+    case "GRADIENT_DIAMOND":
+      return createDiamondGradientFill(paint as FigGradientPaint, ctx, geometry);
+
+    default:
+      return {
+        kind: "simple",
+        attrs: paintToFillAttrs(paint, ctx, elementSize),
+      };
+  }
+}
+
+/**
+ * Resolve fill for paints, handling all gradient types and multiple fill layers.
  *
- * For SOLID, LINEAR, RADIAL, and IMAGE paints, returns SimpleFillResult
- * (same as getFillAttrs). For ANGULAR and DIAMOND paints, returns
- * ComplexFillResult with prepended SVG elements.
+ * Single visible paint: resolves directly to SimpleFillResult or ComplexFillResult.
+ * Multiple visible paints: layers them bottom-to-top as prepended shape copies,
+ * each with its own fill. The topmost paint goes on the shape element itself
+ * (or as the final prepend if it's complex).
+ *
+ * Figma stacks fills bottom (index 0) to top (last index). In SVG, later
+ * elements paint over earlier ones, so we emit layers in array order.
  */
 export function getFillResult(
   paints: readonly FigPaint[] | undefined,
@@ -385,30 +425,53 @@ export function getFillResult(
     return { kind: "simple", attrs: { fill: "none" } };
   }
 
-  const topPaint = visiblePaints[visiblePaints.length - 1];
-  const paintType = getPaintType(topPaint);
-
-  switch (paintType) {
-    case "GRADIENT_ANGULAR":
-      return createAngularGradientFill(
-        topPaint as FigGradientPaint,
-        ctx,
-        geometry,
-      );
-
-    case "GRADIENT_DIAMOND":
-      return createDiamondGradientFill(
-        topPaint as FigGradientPaint,
-        ctx,
-        geometry,
-      );
-
-    default:
-      return {
-        kind: "simple",
-        attrs: paintToFillAttrs(topPaint, ctx, options?.elementSize),
-      };
+  // Single paint — no layering needed
+  if (visiblePaints.length === 1) {
+    return resolveSinglePaint(visiblePaints[0], ctx, geometry, options?.elementSize);
   }
+
+  // Multiple paints — layer them.
+  // Bottom layers (indices 0..n-2) become prepended shape copies.
+  // Top layer (index n-1) becomes the shape's own fill attrs.
+  const prependElements: SvgString[] = [];
+
+  // Create a shared clipPath for the shape geometry (used by complex paints)
+  // Also used to clip each layer's shape copy to the correct bounds.
+  for (let i = 0; i < visiblePaints.length - 1; i++) {
+    const layerResult = resolveSinglePaint(visiblePaints[i], ctx, geometry, options?.elementSize);
+
+    if (layerResult.kind === "complex") {
+      prependElements.push(...layerResult.prependElements);
+    } else {
+      prependElements.push(geometry.renderFillLayer(layerResult.attrs));
+    }
+  }
+
+  // Top layer
+  const topResult = resolveSinglePaint(
+    visiblePaints[visiblePaints.length - 1], ctx, geometry, options?.elementSize,
+  );
+
+  if (topResult.kind === "complex") {
+    // Top is also complex — all layers are prepended, shape gets fill="none"
+    prependElements.push(...topResult.prependElements);
+    return {
+      kind: "complex",
+      prependElements,
+      attrs: { fill: "none" },
+    };
+  }
+
+  // Top is simple — lower layers are prepended, top goes on the shape
+  if (prependElements.length > 0) {
+    return {
+      kind: "complex",
+      prependElements,
+      attrs: topResult.attrs,
+    };
+  }
+
+  return topResult;
 }
 
 /**

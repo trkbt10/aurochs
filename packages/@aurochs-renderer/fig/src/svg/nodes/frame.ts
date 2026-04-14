@@ -119,6 +119,7 @@ export function renderFrameNode(
   const bgGeometry: ShapeGeometry = {
     clipShapes: [bgClipShape],
     bounds: { x: 0, y: 0, width: size.x, height: size.y },
+    renderFillLayer: (attrs) => rect({ x: 0, y: 0, width: size.x, height: size.y, rx, ry, ...attrs }),
   };
   const fillResult = getFillResult(fillPaints, ctx, bgGeometry, {
     elementSize: { width: size.x, height: size.y },

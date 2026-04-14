@@ -22,6 +22,7 @@ import {
 } from "@aurochs/fig/parser";
 import type { FigNode } from "@aurochs/fig/types";
 import { renderCanvas } from "../src/svg/renderer";
+import { detectFeatures, countShapeElements, getSvgSize } from "./helpers/svg-feature-detect";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FIXTURES_DIR = path.join(__dirname, "../fixtures/symbol-resolution");
@@ -95,64 +96,6 @@ const DECORATION_FRAMES: Record<string, TestCase> = {
     expectedFeatures: ["corner-radius", "clip-path"],
   },
 };
-
-// =============================================================================
-// SVG Feature Detection
-// =============================================================================
-
-function detectFeatures(svg: string): string[] {
-  const features: string[] = [];
-  if (svg.includes("<linearGradient") || svg.includes("<radialGradient")) {
-    features.push("gradient");
-  }
-  if (svg.includes("<filter") || svg.includes("filter=")) {
-    features.push("filter/effect");
-  }
-  if (svg.includes("<clipPath") || svg.includes("clip-path=")) {
-    features.push("clip-path");
-  }
-  if (hasCornerRadius(svg)) {
-    features.push("corner-radius");
-  }
-  if (svg.includes("stroke=") && !svg.includes('stroke="none"')) {
-    features.push("stroke");
-  }
-  return features;
-}
-
-function hasCornerRadius(svg: string): boolean {
-  if (svg.includes("rx=")) {
-    return true;
-  }
-  // Rounded rect rendered as path: has both L (straight) and C (curve) commands
-  const pathDMatches = svg.match(/d="([^"]+)"/g);
-  if (pathDMatches) {
-    for (const match of pathDMatches) {
-      const d = match.slice(3, -1);
-      if (d.includes("L") && d.includes("C")) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
-function countShapeElements(svg: string): number {
-  const paths = (svg.match(/<path[\s>]/g) || []).length;
-  const rects = (svg.match(/<rect[\s>]/g) || []).length;
-  const ellipses = (svg.match(/<ellipse[\s>]/g) || []).length;
-  const circles = (svg.match(/<circle[\s>]/g) || []).length;
-  return paths + rects + ellipses + circles;
-}
-
-function getSvgSize(svg: string): { width: number; height: number } {
-  const w = svg.match(/width="(\d+(?:\.\d+)?)"/);
-  const h = svg.match(/height="(\d+(?:\.\d+)?)"/);
-  return {
-    width: parseFloat(w?.[1] ?? "100"),
-    height: parseFloat(h?.[1] ?? "100"),
-  };
-}
 
 // =============================================================================
 // Fixture Loading
@@ -251,7 +194,7 @@ describe("Instance Decoration Inheritance", () => {
 
       // Basic validity
       expect(result.svg).toContain("<svg");
-      expect(countShapeElements(result.svg)).toBeGreaterThan(0);
+      expect(countShapeElements(result.svg).total).toBeGreaterThan(0);
 
       // Feature comparison
       const actualFeatures = detectFeatures(actualSvg);
@@ -260,8 +203,8 @@ describe("Instance Decoration Inheritance", () => {
       console.log(`\n=== ${frameName} ===`);
       console.log(`  Actual features:   ${actualFeatures.join(", ") || "none"}`);
       console.log(`  Rendered features: ${renderedFeatures.join(", ") || "none"}`);
-      console.log(`  Actual shapes:   ${countShapeElements(actualSvg)}`);
-      console.log(`  Rendered shapes: ${countShapeElements(result.svg)}`);
+      console.log(`  Actual shapes:   ${countShapeElements(actualSvg).total}`);
+      console.log(`  Rendered shapes: ${countShapeElements(result.svg).total}`);
 
       // Every feature present in the Figma export must be present in the render
       for (const f of actualFeatures) {

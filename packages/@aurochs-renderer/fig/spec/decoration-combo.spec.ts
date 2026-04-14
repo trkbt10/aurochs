@@ -20,6 +20,7 @@ import {
 } from "@aurochs/fig/parser";
 import type { FigNode } from "@aurochs/fig/types";
 import { renderCanvas } from "../src/svg/renderer";
+import { hasCornerRadius, countShapeElements, getSvgSize } from "./helpers/svg-feature-detect";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FIXTURES_DIR = path.join(__dirname, "../fixtures/decoration-combo");
@@ -57,18 +58,6 @@ const FRAME_MAP: Record<string, string> = {
 // SVG Analysis
 // =============================================================================
 
-function countShapeElements(svg: string): {
-  paths: number;
-  rects: number;
-  ellipses: number;
-  total: number;
-} {
-  const paths = (svg.match(/<path[\s>]/g) || []).length;
-  const rects = (svg.match(/<rect[\s>]/g) || []).length;
-  const ellipses = (svg.match(/<ellipse[\s>]/g) || []).length;
-  return { paths, rects, ellipses, total: paths + rects + ellipses };
-}
-
 function hasGradient(svg: string): boolean {
   return svg.includes("<linearGradient") || svg.includes("<radialGradient");
 }
@@ -79,48 +68,6 @@ function hasFilter(svg: string): boolean {
 
 function hasClipPath(svg: string): boolean {
   return svg.includes("<clipPath") || svg.includes("clip-path=");
-}
-
-/**
- * Detect corner radius in SVG output.
- *
- * Figma exports rounded rectangles as `<rect rx="...">`.
- * The renderer may output them as `<path>` with cubic bezier curves
- * that trace the rounded corners — both are valid representations.
- *
- * We detect corner radius by checking for:
- * 1. `rx=` attribute on rect elements
- * 2. Path data with cubic curves (C commands) that follow a pattern
- *    consistent with rounded rectangle corners (L followed by C)
- */
-function hasCornerRadius(svg: string): boolean {
-  // Direct rx attribute
-  if (svg.includes("rx=")) {
-    return true;
-  }
-  // Path with cubic curves following straight lines — rounded rect pattern
-  // A rounded rect path looks like: M ... L ... C ... L ... C ... L ... C ... L ... C ...
-  // Check for at least one "L ... C" transition in path data
-  const pathDMatches = svg.match(/d="([^"]+)"/g);
-  if (pathDMatches) {
-    for (const match of pathDMatches) {
-      const d = match.slice(3, -1);
-      // Rounded rect: has both L and C commands (straight segments + curves at corners)
-      if (/[LC]/.test(d) && d.includes("L") && d.includes("C")) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
-function getSvgSize(svg: string): { width: number; height: number } {
-  const w = svg.match(/width="(\d+(?:\.\d+)?)"/);
-  const h = svg.match(/height="(\d+(?:\.\d+)?)"/);
-  return {
-    width: parseFloat(w?.[1] ?? "100"),
-    height: parseFloat(h?.[1] ?? "100"),
-  };
 }
 
 // =============================================================================

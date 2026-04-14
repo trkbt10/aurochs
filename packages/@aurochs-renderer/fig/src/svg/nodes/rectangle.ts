@@ -67,6 +67,7 @@ export function renderRectangleNode(node: FigNode, ctx: FigSvgRenderContext): Sv
   const geometry: ShapeGeometry = {
     clipShapes: [clipShape],
     bounds: { x: 0, y: 0, width: size.x, height: size.y },
+    renderFillLayer: (attrs) => rect({ x: 0, y: 0, width: size.x, height: size.y, rx, ry, ...attrs }),
   };
 
   const fillResult = getFillResult(fillPaints, ctx, geometry, {

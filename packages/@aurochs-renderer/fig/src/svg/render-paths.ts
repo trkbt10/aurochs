@@ -6,7 +6,6 @@
  */
 
 import type { GeometryPathData } from "./geometry-path";
-import { mapWindingRule } from "../geometry";
 import type { FillAttrs } from "./fill";
 import type { StrokeAttrs } from "./stroke";
 import { path, g, type SvgString } from "./primitives";
@@ -16,6 +15,12 @@ import { path, g, type SvgString } from "./primitives";
  *
  * Used by frame.ts where path elements are pushed into a parent group
  * alongside other elements (background rect, children, etc.).
+ *
+ * Note: GeometryPathData.windingRule is already a mapped WindingRule
+ * ("evenodd" | "nonzero"), produced by decodePathsFromGeometry.
+ * Do NOT re-map it through mapWindingRule — that would convert the
+ * lowercase "evenodd" back to "nonzero" (the function expects uppercase
+ * Figma enum names like "EVENODD" or "ODD").
  */
 export function buildPathElements(
   paths: readonly GeometryPathData[],
@@ -25,7 +30,7 @@ export function buildPathElements(
   return paths.map(({ data, windingRule }) =>
     path({
       d: data,
-      "fill-rule": mapWindingRule(windingRule),
+      "fill-rule": windingRule ?? "nonzero",
       ...fillAttrs,
       ...strokeAttrs,
     }),
@@ -58,7 +63,7 @@ export function renderPaths(params: {
     const { data, windingRule } = paths[0];
     resultRef.value = path({
       d: data,
-      "fill-rule": mapWindingRule(windingRule),
+      "fill-rule": windingRule ?? "nonzero",
       transform: transform || undefined,
       opacity: opacityAttr,
       ...fillAttrs,

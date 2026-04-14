@@ -5,7 +5,7 @@
 import type { FigNode, FigVectorPath, FigFillGeometry, FigPaint } from "@aurochs/fig/types";
 import type { FigBlob } from "@aurochs/fig/parser";
 import type { FigSvgRenderContext } from "../../types";
-import { path as svgPath, type SvgString, EMPTY_SVG } from "../primitives";
+import { path as svgPath, g, type SvgString, EMPTY_SVG } from "../primitives";
 import { buildTransformAttr } from "../transform";
 import { getFillResult, applyFillResult, type FillAttrs, type ShapeGeometry } from "../fill";
 import { getStrokeAttrs, type StrokeAttrs } from "../stroke";
@@ -121,6 +121,13 @@ export function renderVectorNode(node: FigNode, ctx: FigSvgRenderContext): SvgSt
   const geometry: ShapeGeometry = {
     clipShapes,
     bounds: { x: 0, y: 0, width: size.x, height: size.y },
+    renderFillLayer: (attrs) => {
+      // Re-render all paths with the given fill
+      const elements = pathsToRender.map((p) =>
+        svgPath({ d: p.data, "fill-rule": p.windingRule ?? "nonzero", ...attrs }),
+      );
+      return elements.length === 1 ? elements[0] : g({}, ...elements);
+    },
   };
 
   const fillResultRef = { value: undefined as ReturnType<typeof getFillResult> | undefined };

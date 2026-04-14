@@ -5,6 +5,7 @@
  * Outputs ZIP-wrapped format that Figma can open.
  */
 
+import { createHash } from "node:crypto";
 import { deflateRaw } from "pako";
 import { compressZstd } from "../../compression";
 import { IDENTITY_MATRIX } from "../../matrix";
@@ -53,6 +54,11 @@ import { getEffectiveSymbolID } from "../../symbols/effective-symbol-id";
 
 
 
+/** Compute SHA1 hex digest of binary data */
+function computeSha1Hex(data: Uint8Array): string {
+  return createHash("sha1").update(data).digest("hex");
+}
+
 /** Builder for complete .fig files */
 export type FigFileBuilder = ReturnType<typeof _createFigFileBuilder>;
 
@@ -61,6 +67,7 @@ function _createFigFileBuilder() {
   const schema = figmaSchemaJson as KiwiSchema;
   const nodes: Record<string, unknown>[] = [];
   const blobs: Array<{ bytes: number[] }> = [];
+  const images: Map<string, { data: Uint8Array; mimeType: string }> = new Map();
   const nextLocalIDRef = { value: 0 };
   const structuralSessionID = 0;
   const contentSessionID = 1;
@@ -81,6 +88,23 @@ function _createFigFileBuilder() {
    */
   function getBlobs(): ReadonlyArray<{ bytes: number[] }> {
     return blobs;
+  }
+
+  /**
+   * Add an image to the .fig file.
+   *
+   * The image ref is the SHA1 hash of the image data — this is how
+   * Figma identifies images. The returned ref string should be passed
+   * to `imagePaint(ref)` to reference this image in fills.
+   *
+   * @param data - Image binary data (PNG or JPEG)
+   * @param mimeType - MIME type (e.g. "image/png", "image/jpeg")
+   * @returns The SHA1 hex string used as the image ref
+   */
+  function addImage(data: Uint8Array, mimeType: string): string {
+    const hash = computeSha1Hex(data);
+    images.set(hash, { data, mimeType });
+    return hash;
   }
 
   /**
@@ -1305,6 +1329,11 @@ function _createFigFileBuilder() {
     };
     zip.writeText("meta.json", JSON.stringify(meta));
 
+    // Add images to images/ directory
+    for (const [ref, img] of images) {
+      zip.writeBinary(`images/${ref}`, img.data);
+    }
+
     // Always add thumbnail (required by Figma for import)
     const thumbnail = generatePlaceholderThumbnail();
     zip.writeBinary("thumbnail.png", thumbnail);
@@ -1317,6 +1346,7 @@ function _createFigFileBuilder() {
   return {
     addBlob,
     getBlobs,
+    addImage,
     getNextID,
     addDocument,
     addCanvas,
