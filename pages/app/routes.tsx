@@ -262,7 +262,7 @@ function FigViewerRoute() {
 }
 
 function FigEditorRoute() {
-  const { fig, goHome, loadFigDemo } = useAppContext();
+  const { fig, goHome, loadFigFile, loadFigDemo } = useAppContext();
   return (
     <FigRouteGate
       fig={fig}
@@ -275,6 +275,7 @@ function FigEditorRoute() {
           document={document}
           fileName={fig.fileName ?? "design.fig"}
           onBack={goHome}
+          onFileSelect={loadFigFile}
         />
       )}
     </FigRouteGate>

@@ -10,7 +10,7 @@ import { useCallback, useMemo, useState, useRef } from "react";
 import type { FigDesignDocument, FigDesignNode, FigPage } from "@aurochs/fig/domain";
 import { buildSceneGraph, type BuildSceneGraphOptions } from "@aurochs-renderer/fig/scene-graph";
 import { FigSceneRenderer } from "@aurochs-renderer/fig/react";
-import { UploadIcon } from "@aurochs-ui/ui-components/icons";
+import { Button, UploadIcon } from "@aurochs-ui/ui-components";
 import { EditorPageLayout } from "../components/EditorPageLayout";
 
 // =============================================================================
@@ -140,26 +140,36 @@ function renderPageContent(
   return <div style={emptyMessageStyle}>This page is empty.</div>;
 }
 
-function renderEditButton(onStartEditor: (() => void) | undefined) {
-  if (!onStartEditor) {
-    return undefined;
-  }
+type HeaderActionsProps = {
+  readonly onStartEditor?: () => void;
+  readonly fileInputRef: React.RefObject<HTMLInputElement | null>;
+  readonly onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+};
+
+function HeaderActions({ onStartEditor, fileInputRef, onFileChange }: HeaderActionsProps) {
+  const handleOpenClick = useCallback(() => {
+    fileInputRef.current?.click();
+  }, [fileInputRef]);
+
   return (
-    <button
-      type="button"
-      onClick={onStartEditor}
-      style={{
-        padding: "6px 16px",
-        fontSize: 13,
-        backgroundColor: "#4472C4",
-        color: "#fff",
-        border: "none",
-        borderRadius: 4,
-        cursor: "pointer",
-      }}
-    >
-      Edit
-    </button>
+    <div style={{ display: "flex", gap: 8, alignItems: "center", marginLeft: "auto" }}>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".fig"
+        onChange={onFileChange}
+        style={{ display: "none" }}
+      />
+      <Button variant="outline" size="md" onClick={handleOpenClick}>
+        <UploadIcon size={14} />
+        Open File
+      </Button>
+      {onStartEditor && (
+        <Button variant="primary" size="md" onClick={onStartEditor}>
+          Edit
+        </Button>
+      )}
+    </div>
   );
 }
 
@@ -191,6 +201,7 @@ export function FigViewerPage({ document, fileName, onBack, onFileSelect, onStar
     (file: File) => {
       if (file.name.toLowerCase().endsWith(".fig")) {
         onFileSelect?.(file);
+        setActivePageIndex(0);
       }
     },
     [onFileSelect],
@@ -200,6 +211,8 @@ export function FigViewerPage({ document, fileName, onBack, onFileSelect, onStar
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (file) { handleFile(file); }
+      // Reset so the same file can be re-selected
+      e.target.value = "";
     },
     [handleFile],
   );
@@ -224,7 +237,13 @@ export function FigViewerPage({ document, fileName, onBack, onFileSelect, onStar
     setIsDragging(false);
   }, []);
 
-  const headerActions = renderEditButton(onStartEditor);
+  const headerActions = onFileSelect ? (
+    <HeaderActions
+      onStartEditor={onStartEditor}
+      fileInputRef={fileInputRef}
+      onFileChange={handleFileChange}
+    />
+  ) : undefined;
 
   return (
     <EditorPageLayout
@@ -233,35 +252,26 @@ export function FigViewerPage({ document, fileName, onBack, onFileSelect, onStar
       headerActions={headerActions}
       editorContainerStyle={{ display: "flex", flexDirection: "column" }}
     >
-      {/* Upload bar when no file loaded */}
-      {!document && onFileSelect && (
+      {/* Drop zone overlay for drag-and-drop file loading */}
+      {onFileSelect && (
         <div
-          onClick={() => fileInputRef.current?.click()}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           style={{
-            display: "flex",
+            display: isDragging ? "flex" : "none",
+            position: "absolute",
+            inset: 0,
+            zIndex: 10,
             alignItems: "center",
             justifyContent: "center",
-            gap: 8,
-            padding: "10px 16px",
-            backgroundColor: isDragging ? "rgba(68, 114, 196, 0.08)" : "#f8f9fa",
-            borderBottom: "1px solid #e5e5e5",
-            cursor: "pointer",
-            transition: "background-color 0.15s",
+            backgroundColor: "rgba(68, 114, 196, 0.12)",
+            border: "2px dashed rgba(68, 114, 196, 0.4)",
+            pointerEvents: isDragging ? "auto" : "none",
           }}
         >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".fig"
-            onChange={handleFileChange}
-            style={{ display: "none" }}
-          />
-          <UploadIcon size={16} style={{ color: "#666" }} />
-          <span style={{ fontSize: 13, color: "#666" }}>
-            Drop a .fig file here or click to upload
+          <span style={{ fontSize: 16, color: "#4472C4", fontWeight: 500 }}>
+            Drop .fig file to open
           </span>
         </div>
       )}
@@ -275,47 +285,36 @@ export function FigViewerPage({ document, fileName, onBack, onFileSelect, onStar
             justifyContent: "center",
             gap: 12,
             padding: "6px 16px",
-            borderBottom: "1px solid #e5e5e5",
-            backgroundColor: "#fafafa",
+            borderBottom: "1px solid var(--border-subtle, #e5e5e5)",
+            backgroundColor: "var(--bg-secondary, #fafafa)",
             fontSize: 13,
           }}
         >
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onClick={handlePrevPage}
             disabled={activePageIndex === 0}
-            style={{
-              padding: "2px 8px",
-              border: "1px solid #ddd",
-              borderRadius: 4,
-              backgroundColor: "white",
-              cursor: activePageIndex === 0 ? "default" : "pointer",
-              opacity: activePageIndex === 0 ? 0.4 : 1,
-            }}
           >
             Prev
-          </button>
-          <span style={{ color: "#666" }}>
+          </Button>
+          <span style={{ color: "var(--text-secondary, #666)" }}>
             {activePage?.name ?? `Page ${activePageIndex + 1}`} ({activePageIndex + 1} / {totalPages})
           </span>
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onClick={handleNextPage}
             disabled={activePageIndex >= totalPages - 1}
-            style={{
-              padding: "2px 8px",
-              border: "1px solid #ddd",
-              borderRadius: 4,
-              backgroundColor: "white",
-              cursor: activePageIndex >= totalPages - 1 ? "default" : "pointer",
-              opacity: activePageIndex >= totalPages - 1 ? 0.4 : 1,
-            }}
           >
             Next
-          </button>
+          </Button>
         </div>
       )}
 
       {/* SVG content */}
       <div
+        onDragOver={onFileSelect ? handleDragOver : undefined}
         style={{
           flex: 1,
           overflow: "auto",
@@ -324,6 +323,7 @@ export function FigViewerPage({ document, fileName, onBack, onFileSelect, onStar
           alignItems: "flex-start",
           padding: 24,
           backgroundColor: "#f5f5f5",
+          position: "relative",
         }}
       >
         {renderPageContent(document, activePage, pageBounds)}
