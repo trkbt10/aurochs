@@ -254,6 +254,80 @@ export type FigKiwiSymbolData = {
 };
 
 // =============================================================================
+// Component Property Types (Kiwi schema representation)
+// =============================================================================
+
+/**
+ * Component property definition as stored in Kiwi binary format.
+ */
+export type FigComponentPropDef = {
+  readonly id?: FigGuid;
+  readonly name?: string;
+  readonly type?: KiwiEnumValue;
+  readonly initialValue?: FigComponentPropValue;
+  readonly sortPosition?: string;
+  readonly [key: string]: unknown;
+};
+
+/**
+ * Component property value as stored in Kiwi binary format.
+ */
+export type FigComponentPropValue = {
+  readonly boolValue?: boolean;
+  readonly textValue?: { readonly characters: string };
+  readonly guidValue?: FigGuid;
+  readonly numberValue?: number;
+  readonly [key: string]: unknown;
+};
+
+/**
+ * Component property reference as stored in Kiwi binary format.
+ * Binds a node field to a component property definition.
+ */
+export type FigComponentPropRef = {
+  readonly defID?: FigGuid;
+  readonly componentPropNodeField?: KiwiEnumValue;
+  readonly [key: string]: unknown;
+};
+
+// =============================================================================
+// Export Setting (Kiwi schema representation)
+// =============================================================================
+
+/**
+ * Export setting as stored in Kiwi binary format.
+ */
+export type FigExportSetting = {
+  readonly suffix?: string;
+  readonly imageType?: KiwiEnumValue;
+  readonly constraint?: { readonly type?: KiwiEnumValue; readonly value?: number };
+  readonly svgDataName?: boolean;
+  readonly [key: string]: unknown;
+};
+
+// =============================================================================
+// Component Property Assignment (Kiwi schema representation)
+// =============================================================================
+
+/**
+ * Component property assignment as stored in Kiwi binary format.
+ *
+ * Represents an overridden value for a component property on an INSTANCE node.
+ * `defID` references the ComponentPropertyDef on the SYMBOL.
+ */
+export type FigComponentPropAssignment = {
+  readonly defID: FigGuid;
+  readonly value: {
+    readonly boolValue?: boolean;
+    readonly textValue?: {
+      readonly characters: string;
+      readonly lines?: readonly unknown[];
+    };
+    readonly [key: string]: unknown;
+  };
+};
+
+// =============================================================================
 // Node Type
 // =============================================================================
 
@@ -360,11 +434,15 @@ export type FigNode = {
   /** Top-level symbol overrides (builder-generated format) */
   readonly symbolOverrides?: readonly FigKiwiSymbolOverride[];
   /** Derived symbol data (computed transforms for INSTANCE children) */
-  readonly derivedSymbolData?: unknown;
-  /** Component property references (bound property definition IDs) */
-  readonly componentPropertyReferences?: readonly unknown[];
-  /** Component property assignments (overridden values) */
-  readonly componentPropAssignments?: readonly unknown[];
+  readonly derivedSymbolData?: readonly FigKiwiSymbolOverride[];
+  /** Component property references (bound property definition IDs, string format) */
+  readonly componentPropertyReferences?: readonly string[];
+  /** Component property assignments (overridden values on INSTANCE) */
+  readonly componentPropAssignments?: readonly FigComponentPropAssignment[];
+  /** Component property definitions (on SYMBOL/COMPONENT nodes, Kiwi format) */
+  readonly componentPropDefs?: readonly FigComponentPropDef[];
+  /** Component property references on child nodes (binds field to prop def) */
+  readonly componentPropRefs?: readonly FigComponentPropRef[];
 
   // ---- Section fields ----
   /** Whether section contents are hidden (collapsed) */
@@ -381,8 +459,8 @@ export type FigNode = {
   readonly handleMirroring?: KiwiEnumValue;
 
   // ---- Export settings ----
-  /** Export settings for the node */
-  readonly exportSettings?: readonly unknown[];
+  /** Export settings for the node (Kiwi ExportSettings message) */
+  readonly exportSettings?: readonly FigExportSetting[];
 
   // ---- Internal metadata ----
   /** Whether this node is internal-only (e.g., Internal Only Canvas) */

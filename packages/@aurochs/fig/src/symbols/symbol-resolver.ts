@@ -2,7 +2,7 @@
  * @file Symbol resolution for INSTANCE nodes
  */
 
-import type { FigNode, MutableFigNode, FigKiwiSymbolData, FigKiwiSymbolOverride, FigGuidPath } from "@aurochs/fig/types";
+import type { FigNode, MutableFigNode, FigKiwiSymbolData, FigKiwiSymbolOverride, FigGuidPath, FigComponentPropAssignment } from "@aurochs/fig/types";
 import { guidToString, getNodeType, safeChildren, type FigGuid } from "@aurochs/fig/parser";
 import { extractSymbolIDPair } from "@aurochs/fig/symbols";
 import { buildGuidTranslationMap, translateOverrides } from "./guid-translation";
@@ -138,19 +138,8 @@ function deepCloneNode(node: FigNode): MutableFigNode {
   };
 }
 
-/**
- * A single component property assignment (defID → value)
- */
-type ComponentPropAssignment = {
-  readonly defID: FigGuid;
-  readonly value: {
-    readonly textValue?: {
-      readonly characters: string;
-      readonly lines?: readonly unknown[];
-    };
-    readonly [key: string]: unknown;
-  };
-};
+/** Domain alias — SoT is FigComponentPropAssignment in types.ts */
+type ComponentPropAssignment = FigComponentPropAssignment;
 
 /**
  * A component property reference on a node (e.g., TEXT_DATA)

@@ -365,7 +365,7 @@ function buildVectorNode(node: FigDesignNode, ctx: BuildContext): PathNode {
 
   // vectorPaths is not a first-class field on FigDesignNode; check _raw
   const raw = node._raw;
-  const vectorPaths = raw?.vectorPaths as readonly { data: string; windingRule?: unknown }[] | undefined;
+  const vectorPaths = raw?.vectorPaths as readonly { data: string; windingRule?: string | { name?: string } }[] | undefined;
 
   const contoursRef = { value: convertVectorPathsToContours(vectorPaths) };
   const isStrokeGeometryRef = { value: false };

@@ -116,7 +116,7 @@ export function decodeGeometryToContours(
  * Convert vectorPaths (pre-decoded SVG path strings) to PathContours
  */
 export function convertVectorPathsToContours(
-  vectorPaths: readonly { data: string; windingRule?: unknown }[] | undefined,
+  vectorPaths: readonly { data: string; windingRule?: string | { name?: string } }[] | undefined,
 ): PathContour[] {
   if (!vectorPaths || vectorPaths.length === 0) {
     return [];

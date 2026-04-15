@@ -11,7 +11,7 @@
  * 4. Collects COMPONENT/SYMBOL nodes into the components map
  */
 
-import type { FigNode, FigNodeType, FigMatrix, FigVector, FigColor, FigPaint, FigEffect, KiwiEnumValue, FigKiwiTextData, FigTextStyleOverrideEntry } from "@aurochs/fig/types";
+import type { FigNode, FigNodeType, FigMatrix, FigVector, FigColor, FigPaint, FigEffect, KiwiEnumValue, FigKiwiTextData, FigTextStyleOverrideEntry, FigComponentPropValue } from "@aurochs/fig/types";
 import type { NodeTreeResult } from "@aurochs/fig/parser";
 import { getNodeType, safeChildren } from "@aurochs/fig/parser";
 import { getEffectiveSymbolID } from "@aurochs/fig/symbols";
@@ -39,8 +39,8 @@ import type { FigNodeId } from "@aurochs/fig/domain";
  *
  * Returns undefined for non-INSTANCE nodes.
  */
-function resolveSymbolIdForDomain(raw: Record<string, unknown>): FigNodeId | undefined {
-  const guid = getEffectiveSymbolID(raw);
+function resolveSymbolIdForDomain(node: FigNode): FigNodeId | undefined {
+  const guid = getEffectiveSymbolID(node);
   if (!guid) {return undefined;}
   return guidToNodeId(guid);
 }
@@ -91,26 +91,23 @@ const MODELED_FIELDS: ReadonlySet<string> = new Set([
 // =============================================================================
 
 /** Resolve a blend mode value to its string name, handling both string and KiwiEnumValue forms. */
-function resolveBlendModeName(bm: unknown): string | undefined {
+function resolveBlendModeName(bm: string | KiwiEnumValue): string {
   if (typeof bm === "string") {
     return bm;
   }
-  if (typeof bm === "object" && bm !== null && "name" in bm) {
-    return (bm as { name: string }).name;
-  }
-  return undefined;
+  return bm.name;
 }
 
 /**
  * Extract blend mode from raw node data, normalizing KiwiEnumValue to BlendMode string.
  * Returns undefined for PASS_THROUGH/NORMAL (default blend modes don't need storage).
  */
-function extractBlendMode(raw: Record<string, unknown>): BlendMode | undefined {
-  const bm = raw.blendMode;
+function extractBlendMode(node: FigNode): BlendMode | undefined {
+  const bm = node.blendMode;
   if (!bm) {return undefined;}
 
   const name = resolveBlendModeName(bm);
-  if (!name || name === "PASS_THROUGH" || name === "NORMAL") {
+  if (name === "PASS_THROUGH" || name === "NORMAL") {
     return undefined;
   }
 
@@ -131,45 +128,45 @@ function nodeTypeName(node: FigNode): FigNodeType {
 /**
  * Extract AutoLayout properties from a FigNode, if present.
  */
-function extractAutoLayout(raw: Record<string, unknown>): AutoLayoutProps | undefined {
-  const stackMode = raw.stackMode as KiwiEnumValue | undefined;
+function extractAutoLayout(node: FigNode): AutoLayoutProps | undefined {
+  const stackMode = node.stackMode;
   if (!stackMode || stackMode.name === "NONE") {
     return undefined;
   }
   return {
     stackMode,
-    stackSpacing: raw.stackSpacing as number | undefined,
-    stackPadding: raw.stackPadding as AutoLayoutProps["stackPadding"] | undefined,
-    stackPrimaryAlignItems: raw.stackPrimaryAlignItems as KiwiEnumValue | undefined,
-    stackCounterAlignItems: raw.stackCounterAlignItems as KiwiEnumValue | undefined,
-    stackPrimaryAlignContent: raw.stackPrimaryAlignContent as KiwiEnumValue | undefined,
-    stackWrap: raw.stackWrap as boolean | undefined,
-    stackCounterSpacing: raw.stackCounterSpacing as number | undefined,
-    itemReverseZIndex: raw.itemReverseZIndex as boolean | undefined,
+    stackSpacing: node.stackSpacing,
+    stackPadding: node.stackPadding as AutoLayoutProps["stackPadding"] | undefined,
+    stackPrimaryAlignItems: node.stackPrimaryAlignItems,
+    stackCounterAlignItems: node.stackCounterAlignItems,
+    stackPrimaryAlignContent: node.stackPrimaryAlignContent,
+    stackWrap: node.stackWrap,
+    stackCounterSpacing: node.stackCounterSpacing,
+    itemReverseZIndex: node.itemReverseZIndex,
   };
 }
 
 /**
  * Extract layout constraint properties from a FigNode, if present.
  */
-function extractLayoutConstraints(raw: Record<string, unknown>): LayoutConstraints | undefined {
+function extractLayoutConstraints(node: FigNode): LayoutConstraints | undefined {
   const has =
-    raw.stackPositioning !== undefined ||
-    raw.stackPrimarySizing !== undefined ||
-    raw.stackCounterSizing !== undefined ||
-    raw.horizontalConstraint !== undefined ||
-    raw.verticalConstraint !== undefined;
+    node.stackPositioning !== undefined ||
+    node.stackPrimarySizing !== undefined ||
+    node.stackCounterSizing !== undefined ||
+    node.horizontalConstraint !== undefined ||
+    node.verticalConstraint !== undefined;
 
   if (!has) {
     return undefined;
   }
 
   return {
-    stackPositioning: raw.stackPositioning as KiwiEnumValue | undefined,
-    stackPrimarySizing: raw.stackPrimarySizing as KiwiEnumValue | undefined,
-    stackCounterSizing: raw.stackCounterSizing as KiwiEnumValue | undefined,
-    horizontalConstraint: raw.horizontalConstraint as KiwiEnumValue | undefined,
-    verticalConstraint: raw.verticalConstraint as KiwiEnumValue | undefined,
+    stackPositioning: node.stackPositioning,
+    stackPrimarySizing: node.stackPrimarySizing,
+    stackCounterSizing: node.stackCounterSizing,
+    horizontalConstraint: node.horizontalConstraint,
+    verticalConstraint: node.verticalConstraint,
   };
 }
 
@@ -180,12 +177,12 @@ function extractLayoutConstraints(raw: Record<string, unknown>): LayoutConstrain
  * - `raw.characters` (real .fig files from Figma have it as a direct node field)
  * - `raw.textData.characters` (builder-generated files store it in the TextData message)
  */
-function extractTextData(raw: Record<string, unknown>): TextData | undefined {
+function extractTextData(node: FigNode): TextData | undefined {
   // Resolve characters from direct field or nested textData.
   // In real .fig files, characters is a direct NodeChange field.
   // In builder-generated files, it's inside the textData Kiwi message.
-  const kiwiTextData = raw.textData as FigKiwiTextData | undefined;
-  const characters = typeof raw.characters === "string" ? raw.characters : kiwiTextData?.characters;
+  const kiwiTextData = node.textData;
+  const characters = typeof node.characters === "string" ? node.characters : kiwiTextData?.characters;
   if (typeof characters !== "string") {
     return undefined;
   }
@@ -197,15 +194,15 @@ function extractTextData(raw: Record<string, unknown>): TextData | undefined {
 
   return {
     characters,
-    fontSize: (raw.fontSize as number) ?? 12,
-    fontName: (raw.fontName as TextData["fontName"]) ?? { family: "Inter", style: "Regular", postscript: "Inter-Regular" },
-    textAlignHorizontal: raw.textAlignHorizontal as KiwiEnumValue | undefined,
-    textAlignVertical: raw.textAlignVertical as KiwiEnumValue | undefined,
-    textAutoResize: raw.textAutoResize as KiwiEnumValue | undefined,
-    textDecoration: raw.textDecoration as KiwiEnumValue | undefined,
-    textCase: raw.textCase as KiwiEnumValue | undefined,
-    lineHeight: raw.lineHeight as TextData["lineHeight"] | undefined,
-    letterSpacing: raw.letterSpacing as TextData["letterSpacing"] | undefined,
+    fontSize: node.fontSize ?? 12,
+    fontName: node.fontName ?? { family: "Inter", style: "Regular", postscript: "Inter-Regular" },
+    textAlignHorizontal: node.textAlignHorizontal,
+    textAlignVertical: node.textAlignVertical,
+    textAutoResize: node.textAutoResize,
+    textDecoration: node.textDecoration,
+    textCase: node.textCase,
+    lineHeight: node.lineHeight,
+    letterSpacing: node.letterSpacing,
     characterStyleIDs: characterStyleIDs && characterStyleIDs.length > 0 ? characterStyleIDs : undefined,
     styleOverrideTable: styleOverrideTable && styleOverrideTable.length > 0 ? styleOverrideTable : undefined,
   };
@@ -273,27 +270,26 @@ function resolveEnumName<T extends string>(v: unknown, map: Record<number, T>): 
 /**
  * Extract component property definitions from a SYMBOL/COMPONENT node.
  */
-function extractComponentPropertyDefs(raw: Record<string, unknown>): readonly ComponentPropertyDef[] | undefined {
-  const defs = raw.componentPropDefs as readonly Record<string, unknown>[] | undefined;
+function extractComponentPropertyDefs(node: FigNode): readonly ComponentPropertyDef[] | undefined {
+  const defs = node.componentPropDefs;
   if (!defs || defs.length === 0) {return undefined;}
 
   const result: ComponentPropertyDef[] = [];
   for (const def of defs) {
     const id = def.id;
     if (!id || typeof id !== "object" || !("sessionID" in id)) {continue;}
-    const guid = id as { sessionID: number; localID: number };
-    const name = def.name as string | undefined;
+    const name = def.name;
     if (!name) {continue;}
 
     const propType = resolveEnumName(def.type, PROP_TYPE_MAP);
     if (!propType) {continue;}
 
     result.push({
-      id: guidToNodeId(guid),
+      id: guidToNodeId(id),
       name,
       type: propType,
-      initialValue: convertPropertyValue(def.initialValue as Record<string, unknown> | undefined),
-      sortPosition: def.sortPosition as string | undefined,
+      initialValue: convertPropertyValue(def.initialValue),
+      sortPosition: def.sortPosition,
     });
   }
   return result.length > 0 ? result : undefined;
@@ -305,7 +301,7 @@ function extractComponentPropertyDefs(raw: Record<string, unknown>): readonly Co
  * Handles the conversion of raw GUIDs (guidValue) to FigNodeId (referenceValue),
  * and strips unknown fields so the domain type doesn't carry opaque Kiwi data.
  */
-function convertPropertyValue(raw: Record<string, unknown> | undefined): ComponentPropertyValue | undefined {
+function convertPropertyValue(raw: FigComponentPropValue | undefined): ComponentPropertyValue | undefined {
   if (!raw) {return undefined;}
 
   const result: {
@@ -319,14 +315,12 @@ function convertPropertyValue(raw: Record<string, unknown> | undefined): Compone
     result.boolValue = raw.boolValue;
   }
 
-  const textVal = raw.textValue as { characters?: string } | undefined;
-  if (textVal?.characters !== undefined) {
-    result.textValue = { characters: textVal.characters };
+  if (raw.textValue?.characters !== undefined) {
+    result.textValue = { characters: raw.textValue.characters };
   }
 
-  const guidVal = raw.guidValue as { sessionID: number; localID: number } | undefined;
-  if (guidVal && typeof guidVal === "object" && "sessionID" in guidVal) {
-    result.referenceValue = guidToNodeId(guidVal);
+  if (raw.guidValue && typeof raw.guidValue === "object" && "sessionID" in raw.guidValue) {
+    result.referenceValue = guidToNodeId(raw.guidValue);
   }
 
   if (typeof raw.numberValue === "number") {
@@ -345,21 +339,20 @@ function convertPropertyValue(raw: Record<string, unknown> | undefined): Compone
 /**
  * Extract component property references from any child node.
  */
-function extractComponentPropertyRefs(raw: Record<string, unknown>): readonly ComponentPropertyRef[] | undefined {
-  const refs = raw.componentPropRefs as readonly Record<string, unknown>[] | undefined;
+function extractComponentPropertyRefs(node: FigNode): readonly ComponentPropertyRef[] | undefined {
+  const refs = node.componentPropRefs;
   if (!refs || refs.length === 0) {return undefined;}
 
   const result: ComponentPropertyRef[] = [];
   for (const ref of refs) {
     const defID = ref.defID;
     if (!defID || typeof defID !== "object" || !("sessionID" in defID)) {continue;}
-    const guid = defID as { sessionID: number; localID: number };
 
     const nodeField = resolveEnumName(ref.componentPropNodeField, NODE_FIELD_MAP);
     if (!nodeField) {continue;}
 
     result.push({
-      defId: guidToNodeId(guid),
+      defId: guidToNodeId(defID),
       nodeField,
     });
   }
@@ -369,21 +362,20 @@ function extractComponentPropertyRefs(raw: Record<string, unknown>): readonly Co
 /**
  * Extract component property assignments from an INSTANCE node.
  */
-function extractComponentPropertyAssignments(raw: Record<string, unknown>): readonly ComponentPropertyAssignment[] | undefined {
-  const assigns = raw.componentPropAssignments as readonly Record<string, unknown>[] | undefined;
+function extractComponentPropertyAssignments(node: FigNode): readonly ComponentPropertyAssignment[] | undefined {
+  const assigns = node.componentPropAssignments;
   if (!assigns || assigns.length === 0) {return undefined;}
 
   const result: ComponentPropertyAssignment[] = [];
   for (const assign of assigns) {
     const defID = assign.defID;
     if (!defID || typeof defID !== "object" || !("sessionID" in defID)) {continue;}
-    const guid = defID as { sessionID: number; localID: number };
 
-    const value = convertPropertyValue(assign.value as Record<string, unknown> | undefined);
-    if (!value) {continue;} // Skip assignments with no recognizable value
+    const value = convertPropertyValue(assign.value as FigComponentPropValue | undefined);
+    if (!value) {continue;}
 
     result.push({
-      defId: guidToNodeId(guid),
+      defId: guidToNodeId(defID),
       value,
     });
   }
@@ -417,7 +409,6 @@ export function convertFigNode(
   node: FigNode,
   components: Map<string, FigDesignNode>,
 ): FigDesignNode {
-  const raw = node as Record<string, unknown>;
   const nodeType = nodeTypeName(node);
   const id = guidToNodeId(node.guid);
 
@@ -442,29 +433,29 @@ export function convertFigNode(
 
     cornerRadius: node.cornerRadius,
     rectangleCornerRadii: node.rectangleCornerRadii,
-    cornerSmoothing: raw.cornerSmoothing as number | undefined,
+    cornerSmoothing: node.cornerSmoothing,
 
-    blendMode: extractBlendMode(raw),
+    blendMode: extractBlendMode(node),
 
     effects: (node.effects ?? []) as readonly FigEffect[],
 
     children: convertedChildren,
 
     clipsContent: node.clipsContent,
-    autoLayout: extractAutoLayout(raw),
-    layoutConstraints: extractLayoutConstraints(raw),
+    autoLayout: extractAutoLayout(node),
+    layoutConstraints: extractLayoutConstraints(node),
 
-    textData: nodeType === "TEXT" ? extractTextData(raw) : undefined,
-    derivedTextData: raw.derivedTextData as DerivedTextData | undefined,
+    textData: nodeType === "TEXT" ? extractTextData(node) : undefined,
+    derivedTextData: node.derivedTextData as DerivedTextData | undefined,
 
-    symbolId: resolveSymbolIdForDomain(raw),
-    overrides: raw.symbolOverrides as readonly SymbolOverride[] | undefined,
+    symbolId: resolveSymbolIdForDomain(node),
+    overrides: node.symbolOverrides as readonly SymbolOverride[] | undefined,
 
-    componentPropertyDefs: extractComponentPropertyDefs(raw),
-    componentPropertyRefs: extractComponentPropertyRefs(raw),
-    componentPropertyAssignments: extractComponentPropertyAssignments(raw),
+    componentPropertyDefs: extractComponentPropertyDefs(node),
+    componentPropertyRefs: extractComponentPropertyRefs(node),
+    componentPropertyAssignments: extractComponentPropertyAssignments(node),
 
-    booleanOperation: raw.booleanOperation as KiwiEnumValue | undefined,
+    booleanOperation: node.booleanOperation,
 
     pointCount: node.pointCount,
     starInnerRadius: node.starInnerRadius,
@@ -491,7 +482,6 @@ function convertCanvasToPage(
   canvas: FigNode,
   components: Map<string, FigDesignNode>,
 ): FigPage {
-  const raw = canvas as Record<string, unknown>;
   const id = guidToPageId(canvas.guid);
 
   const children = safeChildren(canvas);
@@ -503,7 +493,7 @@ function convertCanvasToPage(
   return {
     id,
     name: canvas.name ?? "Page",
-    backgroundColor: (raw.backgroundColor as FigColor) ?? DEFAULT_PAGE_BACKGROUND,
+    backgroundColor: canvas.backgroundColor ?? DEFAULT_PAGE_BACKGROUND,
     children: convertedChildren,
     _raw: collectRawFields(canvas),
   };
