@@ -322,37 +322,37 @@ async function renderNode(node: FigNode, ctx: FigSvgRenderContext, warnings: str
       break;
 
     case "GROUP":
-      contentRef.value = renderGroupNode(node, ctx, renderedChildren);
+      contentRef.value = renderGroupNode(resolvedNode, ctx, renderedChildren);
       break;
 
     case "BOOLEAN_OPERATION":
-      contentRef.value = renderBooleanOperationNode(node, ctx, renderedChildren);
+      contentRef.value = renderBooleanOperationNode(resolvedNode, ctx, renderedChildren);
       break;
 
     case "RECTANGLE":
     case "ROUNDED_RECTANGLE":
-      contentRef.value = renderRectangleNode(node, ctx);
+      contentRef.value = renderRectangleNode(resolvedNode, ctx);
       break;
 
     case "ELLIPSE":
-      contentRef.value = renderEllipseNode(node, ctx);
+      contentRef.value = renderEllipseNode(resolvedNode, ctx);
       break;
 
     case "VECTOR":
     case "LINE":
     case "STAR":
     case "REGULAR_POLYGON":
-      contentRef.value = renderVectorNode(node, ctx);
+      contentRef.value = renderVectorNode(resolvedNode, ctx);
       break;
 
     case "TEXT":
       // Prefer derived path rendering (exact match with Figma export)
-      if (hasDerivedPathData(node)) {
+      if (hasDerivedPathData(resolvedNode)) {
         const derivedCtx: DerivedPathRenderContext = {
           ...ctx,
           blobs: ctx.blobs,
         };
-        contentRef.value = renderTextNodeFromDerivedData(node, derivedCtx);
+        contentRef.value = renderTextNodeFromDerivedData(resolvedNode, derivedCtx);
         break;
       }
       // Fallback to opentype.js path rendering if fontLoader is available
@@ -361,14 +361,14 @@ async function renderNode(node: FigNode, ctx: FigSvgRenderContext, warnings: str
           ...ctx,
           fontLoader: ctx.fontLoader,
         };
-        const pathResult = await renderTextNodeAsPath(node, pathCtx);
+        const pathResult = await renderTextNodeAsPath(resolvedNode, pathCtx);
         if (pathResult !== EMPTY_SVG) {
           contentRef.value = pathResult;
           break;
         }
         // Font not available — fall through to <text> rendering
       }
-      contentRef.value = renderTextNode(node, ctx);
+      contentRef.value = renderTextNode(resolvedNode, ctx);
       break;
 
     default:
@@ -407,8 +407,10 @@ async function renderNode(node: FigNode, ctx: FigSvgRenderContext, warnings: str
     }
   }
 
-  // Apply node-level blend mode as CSS mix-blend-mode
-  const blendModeCss = getBlendModeCss(node);
+  // Apply node-level blend mode as CSS mix-blend-mode.
+  // Use resolvedNode (not original node) so that INSTANCE nodes inherit
+  // the SYMBOL's blendMode when merged via mergeProperties.
+  const blendModeCss = getBlendModeCss(resolvedNode);
   if (blendModeCss) {
     return g({ style: `mix-blend-mode:${blendModeCss}` }, result);
   }

@@ -163,7 +163,9 @@ export function createFigResolver(
     if (symbolNode.mask !== undefined) { merged.mask = symbolNode.mask; }
     if (symbolNode.cornerSmoothing !== undefined) { merged.cornerSmoothing = symbolNode.cornerSmoothing; }
     if (symbolNode.size) { merged.size = symbolNode.size; }
-    merged.opacity = symbolNode.opacity;
+    // Inherit SYMBOL opacity only when defined; preserve INSTANCE opacity otherwise.
+    // Self-overrides (applySelfOverrides) may later restore the INSTANCE's own opacity.
+    if (symbolNode.opacity !== undefined) { merged.opacity = symbolNode.opacity; }
 
     return merged;
   }

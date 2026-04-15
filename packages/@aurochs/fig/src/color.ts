@@ -12,8 +12,9 @@ import type { FigColor, FigPaint, FigSolidPaint } from "./types";
 // =============================================================================
 
 /**
- * Check if color is a placeholder (pure red r:1, g:0, b:0)
- * Figma uses this as placeholder when external style references cannot be resolved
+ * @deprecated Pure red (#ff0000) is a valid color, not a reliable placeholder
+ * indicator. Style resolution (resolveNodeStyleIds) handles stale paint caches
+ * before rendering. Do not use this to suppress color output.
  */
 export function isPlaceholderColor(color: FigColor): boolean {
   return color.r === 1 && color.g === 0 && color.b === 0;

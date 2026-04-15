@@ -161,6 +161,63 @@ export type FigKiwiTextData = {
   readonly [key: string]: unknown;
 };
 
+// =============================================================================
+// Derived Text Data Types (Kiwi schema representation)
+// =============================================================================
+
+/**
+ * Baseline data from Kiwi derivedTextData.
+ * Each baseline represents a line of text with its position and metrics.
+ */
+export type FigDerivedBaseline = {
+  readonly position: FigVector;
+  readonly width: number;
+  readonly lineY: number;
+  readonly lineHeight: number;
+  readonly lineAscent: number;
+  readonly firstCharacter: number;
+  readonly endCharacter: number;
+};
+
+/**
+ * Glyph data from Kiwi derivedTextData.
+ * Each glyph references a blob index containing its path commands.
+ */
+export type FigDerivedGlyph = {
+  readonly commandsBlob: number;
+  readonly position: FigVector;
+  readonly fontSize: number;
+  readonly firstCharacter: number;
+  readonly advance: number;
+  readonly rotation?: number;
+  readonly styleOverrideTable?: number;
+};
+
+/**
+ * Decoration data from Kiwi derivedTextData (underlines, strikethroughs).
+ */
+export type FigDerivedDecoration = {
+  readonly rects: readonly { readonly x: number; readonly y: number; readonly w: number; readonly h: number }[];
+  readonly styleID?: number;
+};
+
+/**
+ * Pre-computed text rendering data from Kiwi binary format.
+ * Contains glyph outlines, baselines, and decorations for path-based text rendering.
+ */
+export type FigDerivedTextData = {
+  readonly layoutSize?: FigVector;
+  readonly baselines?: readonly FigDerivedBaseline[];
+  readonly glyphs?: readonly FigDerivedGlyph[];
+  readonly decorations?: readonly FigDerivedDecoration[];
+  readonly fontMetaData?: readonly unknown[];
+  readonly derivedLines?: readonly unknown[];
+};
+
+// =============================================================================
+// Node Type
+// =============================================================================
+
 /**
  * Fig node as decoded from Kiwi binary format.
  * This represents the raw structure, not a high-level API.
@@ -189,6 +246,8 @@ export type FigNode = {
   readonly fillGeometry?: readonly FigFillGeometry[];
   readonly strokeGeometry?: readonly FigFillGeometry[];
   readonly vectorPaths?: readonly FigVectorPath[];
+  /** Vector data including network blob and per-path style overrides */
+  readonly vectorData?: FigVectorData;
   readonly effects?: readonly FigEffect[];
   /** Style reference for fill paint (Kiwi schema field 332) */
   readonly styleIdForFill?: FigStyleId;
@@ -234,12 +293,8 @@ export type FigNode = {
   readonly letterSpacing?: FigValueWithUnits;
   /** Kiwi TextData message for TEXT nodes (per-character styling) */
   readonly textData?: FigKiwiTextData;
-  /** Derived text data for path-based text rendering */
-  readonly derivedTextData?: {
-    readonly layoutSize?: FigVector;
-    readonly baselines?: readonly unknown[];
-    readonly glyphs?: readonly unknown[];
-  };
+  /** Pre-computed text rendering data (glyph outlines, baselines, decorations) */
+  readonly derivedTextData?: FigDerivedTextData;
 
   // ---- Ellipse fields ----
   /** Arc data for partial ellipse/donut shapes */
@@ -568,6 +623,35 @@ export type FigFillGeometry = {
   readonly windingRule?: KiwiEnumValue | string;
   readonly commandsBlob?: number;
   readonly styleID?: number;
+};
+
+/**
+ * Per-path style override entry in vectorData.styleOverrideTable.
+ *
+ * Each entry overrides fill/stroke properties for geometry paths
+ * whose styleID matches this entry's styleID field.
+ * Analogous to TextData.styleOverrideTable for text styling.
+ */
+export type FigVectorStyleOverride = {
+  readonly styleID: number;
+  readonly fillPaints?: readonly FigPaint[];
+  readonly strokePaints?: readonly FigPaint[];
+  readonly styleIdForFill?: FigStyleId;
+  readonly styleIdForStrokeFill?: FigStyleId;
+  readonly [key: string]: unknown;
+};
+
+/**
+ * Vector data as stored in Kiwi binary format.
+ *
+ * Contains the vector network blob, normalized size, and per-path
+ * style overrides for VECTOR nodes.
+ */
+export type FigVectorData = {
+  readonly vectorNetworkBlob?: number;
+  readonly normalizedSize?: FigVector;
+  readonly styleOverrideTable?: readonly FigVectorStyleOverride[];
+  readonly [key: string]: unknown;
 };
 
 /**

@@ -11,6 +11,8 @@ import { mapWindingRule as sharedMapWindingRule, type WindingRule } from "../geo
 export type GeometryPathData = {
   readonly data: string;
   readonly windingRule?: WindingRule;
+  /** Style override ID from FigFillGeometry. 0 = base style, >0 = override. */
+  readonly styleID?: number;
 };
 
 // =============================================================================
@@ -42,6 +44,7 @@ export function decodePathsFromGeometry(
           paths.push({
             data,
             windingRule: getGeometryWindingRule(geom),
+            styleID: geom.styleID,
           });
         }
       }

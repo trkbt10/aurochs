@@ -7,7 +7,7 @@
 
 import type { FigPaint, FigColor, FigGradientPaint, FigImagePaint } from "@aurochs/fig/types";
 import type { FigImage } from "@aurochs/fig/parser";
-import { isPlaceholderColor, getPaintType } from "@aurochs/fig/color";
+import { getPaintType } from "@aurochs/fig/color";
 import {
   getGradientStops,
   getGradientDirection,
@@ -56,9 +56,6 @@ export function convertPaintToFill(paint: FigPaint, images: ReadonlyMap<string, 
   switch (paintType) {
     case "SOLID": {
       const solidPaint = paint as FigPaint & { color: FigColor };
-      if (isPlaceholderColor(solidPaint.color)) {
-        return null;
-      }
       return {
         type: "solid",
         color: figColorToSceneColor(solidPaint.color),

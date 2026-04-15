@@ -18,7 +18,7 @@ export {
 } from "./tessellation";
 
 // Shaders
-export { ShaderCache, type ShaderProgramName } from "./shaders";
+export { createShaderCache, type ShaderCache, type ShaderProgramName } from "./shaders";
 
 // Fill rendering
 export {

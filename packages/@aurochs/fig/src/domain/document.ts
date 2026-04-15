@@ -12,7 +12,10 @@
  * These are domain types consumed by renderer, builder, and editor.
  */
 
-import type { FigNodeType, FigMatrix, FigVector, FigColor, FigPaint, FigEffect, FigStrokeWeight, FigFontName, KiwiEnumValue } from "../types";
+import type {
+  FigNodeType, FigMatrix, FigVector, FigColor, FigPaint, FigEffect, FigStrokeWeight, FigFontName, KiwiEnumValue,
+  FigDerivedBaseline, FigDerivedGlyph, FigDerivedDecoration, FigDerivedTextData,
+} from "../types";
 import type { LoadedFigFile, FigImage, FigMetadata } from "../roundtrip";
 import type { FigNodeId, FigPageId } from "./node-id";
 
@@ -153,60 +156,14 @@ export type BlendMode =
 // =============================================================================
 
 /**
- * Baseline data from derivedTextData.
- *
- * Each baseline represents a line of text with its position and metrics.
- * Stored in the .fig binary for pre-computed text layout.
+ * Domain aliases for Kiwi-level derived text data types.
+ * SoT is in types.ts (FigDerived* types); these are re-exports for
+ * backward compatibility with domain consumers.
  */
-export type DerivedBaseline = {
-  readonly position: { readonly x: number; readonly y: number };
-  readonly width: number;
-  readonly lineY: number;
-  readonly lineHeight: number;
-  readonly lineAscent: number;
-  readonly firstCharacter: number;
-  readonly endCharacter: number;
-};
-
-/**
- * Glyph data from derivedTextData.
- *
- * Each glyph references a blob index containing its path commands,
- * positioned and sized for rendering.
- */
-export type DerivedGlyph = {
-  readonly commandsBlob: number;
-  readonly position: { readonly x: number; readonly y: number };
-  readonly fontSize: number;
-  readonly firstCharacter: number;
-  readonly advance: number;
-  readonly rotation?: number;
-  readonly styleOverrideTable?: number;
-};
-
-/**
- * Decoration data from derivedTextData (underlines, strikethroughs).
- */
-export type DerivedDecoration = {
-  readonly rects: readonly { readonly x: number; readonly y: number; readonly w: number; readonly h: number }[];
-  readonly styleID?: number;
-};
-
-/**
- * Pre-computed text rendering data from .fig files.
- *
- * Contains glyph outlines, baselines, and decorations for 0% diff
- * text rendering. When present, renderers use this instead of
- * font measurement for exact Figma-parity output.
- */
-export type DerivedTextData = {
-  readonly layoutSize?: { readonly x: number; readonly y: number };
-  readonly baselines?: readonly DerivedBaseline[];
-  readonly glyphs?: readonly DerivedGlyph[];
-  readonly decorations?: readonly DerivedDecoration[];
-  readonly fontMetaData?: readonly unknown[];
-  readonly derivedLines?: readonly unknown[];
-};
+export type DerivedBaseline = FigDerivedBaseline;
+export type DerivedGlyph = FigDerivedGlyph;
+export type DerivedDecoration = FigDerivedDecoration;
+export type DerivedTextData = FigDerivedTextData;
 
 // =============================================================================
 // Component/Instance Data Types

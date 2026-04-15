@@ -9,7 +9,7 @@
 import type { FigPaint, FigGradientPaint, FigGradientStop, FigImagePaint } from "@aurochs/fig/types";
 import type { FigSvgRenderContext } from "../types";
 import { linearGradient, radialGradient, stop, pattern, image, clipPath, foreignObject, rect, g, unsafeSvg, type SvgString } from "./primitives";
-import { isPlaceholderColor, figColorToHex, getPaintType, getSolidPaintColor } from "@aurochs/fig/color";
+import { figColorToHex, getPaintType, getSolidPaintColor } from "@aurochs/fig/color";
 import {
   getGradientStops as sharedGetGradientStops,
   getGradientDirection as sharedGetGradientDirection,
@@ -131,9 +131,14 @@ export function paintToFillAttrs(paint: FigPaint, ctx: FigSvgRenderContext, elem
   switch (paintType) {
     case "SOLID": {
       const color = getSolidPaintColor(paint);
-      if (!color || isPlaceholderColor(color)) {
+      if (!color) {
         return { fill: "none" };
       }
+      // Note: #ff0000 (r=1,g=0,b=0) was previously treated as a "placeholder"
+      // color, but this is incorrect. Pure red is a valid color that users
+      // intentionally set. Style ID resolution (resolveNodeStyleIds) handles
+      // stale cached paints before rendering, so any color reaching this point
+      // is authoritative.
       return buildFillWithOpacity(figColorToHex(color), opacity);
     }
 

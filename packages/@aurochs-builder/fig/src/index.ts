@@ -5,7 +5,7 @@
  * Provides FigDesignDocument model, CRUD operations, and export pipeline.
  */
 
-// Types
+// Domain types (re-exported from @aurochs/fig/domain for convenience)
 export type {
   FigNodeId,
   FigPageId,
@@ -16,11 +16,15 @@ export type {
   LayoutConstraints,
   TextData,
   SymbolOverride,
+} from "@aurochs/fig/domain";
+
+export { DEFAULT_PAGE_BACKGROUND } from "@aurochs/fig/domain";
+
+// Builder-specific types
+export type {
   NodeSpec,
   BaseNodeSpec,
 } from "./types";
-
-export { DEFAULT_PAGE_BACKGROUND } from "./types";
 
 // Context
 export {
