@@ -2,11 +2,12 @@
  * @file Symbol resolution for INSTANCE nodes
  */
 
-import type { FigNode } from "@aurochs/fig/types";
+import type { FigNode, MutableFigNode } from "@aurochs/fig/types";
 import { guidToString, getNodeType, safeChildren, type FigGuid } from "@aurochs/fig/parser";
 import { extractSymbolIDPair } from "@aurochs/fig/symbols";
 import { buildGuidTranslationMap, translateOverrides } from "./guid-translation";
 import { resolveInstanceLayout } from "./constraints";
+import { resolveStyleIdOnMutableNode, type FigStyleRegistry } from "./style-registry";
 
 // =============================================================================
 // Types
@@ -144,7 +145,7 @@ export function resolveInstanceReferences(
 /**
  * Deep clone a FigNode and its children
  */
-function deepCloneNode(node: FigNode): FigNode {
+function deepCloneNode(node: FigNode): MutableFigNode {
   const children = safeChildren(node);
   if (children.length === 0) {
     return { ...node };
@@ -185,6 +186,8 @@ export type CloneSymbolChildrenOptions = {
   readonly derivedSymbolData?: FigDerivedSymbolData;
   /** Component property assignments from the INSTANCE node and its overrides */
   readonly componentPropAssignments?: readonly ComponentPropAssignment[];
+  /** Style registry for resolving styleIdForFill overrides to fillPaints */
+  readonly styleRegistry?: FigStyleRegistry;
 };
 
 /**
@@ -203,9 +206,11 @@ export function cloneSymbolChildren(symbolNode: FigNode, options?: CloneSymbolCh
   // Deep clone children
   const cloned = children.map((child) => deepCloneNode(child));
 
+  const registry = options?.styleRegistry;
+
   // Apply symbol overrides (property overrides)
   if (options?.symbolOverrides && options.symbolOverrides.length > 0) {
-    applyOverrides(cloned, options.symbolOverrides);
+    applyOverrides(cloned, options.symbolOverrides, registry);
   }
 
   // Resolve component property assignments (text overrides — deletes stale derivedTextData)
@@ -217,7 +222,7 @@ export function cloneSymbolChildren(symbolNode: FigNode, options?: CloneSymbolCh
   // Apply derived symbol data LAST (provides fresh sizes, transforms, AND derivedTextData
   // with correct glyph paths for overridden text)
   if (options?.derivedSymbolData && options.derivedSymbolData.length > 0) {
-    applyOverrides(cloned, options.derivedSymbolData);
+    applyOverrides(cloned, options.derivedSymbolData, registry);
   }
 
   // Clean up stale derivedTextData that may have been re-added by derivedSymbolData.
@@ -283,7 +288,7 @@ export function collectComponentPropAssignments(
  *   derivedSymbolData application.
  */
 function applyComponentPropAssignments(
-  nodes: FigNode[],
+  nodes: MutableFigNode[],
   assignments: readonly ComponentPropAssignment[],
   textOverrideGuids?: Set<string>,
 ): void {
@@ -295,9 +300,8 @@ function applyComponentPropAssignments(
     assignMap.set(guidToString(a.defID), a);
   }
 
-  function walk(node: FigNode): void {
-    const nodeData = node as Record<string, unknown>;
-    const propRefs = nodeData.componentPropRefs as readonly ComponentPropRef[] | undefined;
+  function walk(node: MutableFigNode): void {
+    const propRefs = node.componentPropRefs as readonly ComponentPropRef[] | undefined;
 
     if (propRefs) {
       for (const ref of propRefs) {
@@ -309,33 +313,32 @@ function applyComponentPropAssignments(
           if (assignment?.value.textValue) {
             const tv = assignment.value.textValue;
             // Update textData with overridden characters
-            const existingTextData = nodeData.textData as Record<string, unknown> | undefined;
-            nodeData.textData = {
+            const existingTextData = node.textData as Record<string, unknown> | undefined;
+            node.textData = {
               ...(existingTextData ?? {}),
               characters: tv.characters,
               lines: tv.lines ?? existingTextData?.lines,
-            };
+            } as typeof node.textData;
             // Also set top-level characters for renderers that check it
-            nodeData.characters = tv.characters;
+            node.characters = tv.characters;
             // Clear derivedTextData — its glyph paths correspond to the
             // original text, not the overridden content.  Removing it forces
             // the renderer to fall back to <text> element rendering.
             // NOTE: derivedSymbolData applied later may re-add stale derivedTextData;
             // cleanupStaleDerivedTextData() handles that in cloneSymbolChildren.
-            delete nodeData.derivedTextData;
+            delete node.derivedTextData;
             // Track this node so we can re-delete stale derivedTextData
             // if it gets re-added by derivedSymbolData application.
-            const guid = nodeData.guid as FigGuid | undefined;
-            if (textOverrideGuids && guid) {
-              textOverrideGuids.add(guidToString(guid));
+            if (textOverrideGuids && node.guid) {
+              textOverrideGuids.add(guidToString(node.guid));
             }
           }
         } else if (ref.componentPropNodeField?.name === "VISIBLE") {
           if (assignment) {
             // Explicit CPA value
             const boolVal = assignment.value.boolValue;
-            if (boolVal !== undefined) {
-              nodeData.visible = boolVal;
+            if (typeof boolVal === "boolean") {
+              node.visible = boolVal;
             }
           }
         } else if (ref.componentPropNodeField?.name === "OVERRIDDEN_SYMBOL_ID") {
@@ -346,7 +349,7 @@ function applyComponentPropAssignments(
           if (assignment) {
             const guidVal = assignment.value.guidValue as FigGuid | undefined;
             if (guidVal) {
-              nodeData.overriddenSymbolID = guidVal;
+              node.overriddenSymbolID = guidVal;
             }
           }
         }
@@ -354,7 +357,7 @@ function applyComponentPropAssignments(
     }
 
     // Recurse
-    for (const child of safeChildren(node)) {
+    for (const child of safeChildren(node) as MutableFigNode[]) {
       walk(child);
     }
   }
@@ -377,14 +380,12 @@ function applyComponentPropAssignments(
  * derivedTextData. This function walks the tree and re-deletes
  * derivedTextData on any node whose GUID was recorded as text-overridden.
  */
-function cleanupStaleDerivedTextData(nodes: FigNode[], cpaGuids: Set<string>): void {
-  function walk(node: FigNode): void {
-    const nd = node as Record<string, unknown>;
-    const guid = nd.guid as FigGuid | undefined;
-    if (guid && cpaGuids.has(guidToString(guid)) && nd.derivedTextData) {
-      delete nd.derivedTextData;
+function cleanupStaleDerivedTextData(nodes: MutableFigNode[], cpaGuids: Set<string>): void {
+  function walk(node: MutableFigNode): void {
+    if (node.guid && cpaGuids.has(guidToString(node.guid)) && node.derivedTextData) {
+      delete node.derivedTextData;
     }
-    for (const child of safeChildren(node)) {
+    for (const child of safeChildren(node) as MutableFigNode[]) {
       walk(child);
     }
   }
@@ -405,9 +406,9 @@ function cleanupStaleDerivedTextData(nodes: FigNode[], cpaGuids: Set<string>): v
  * may be too small. This bottom-up pass ensures containers are at least as
  * large as their largest child on each axis.
  */
-function expandContainersToFitChildren(nodes: FigNode[]): void {
+function expandContainersToFitChildren(nodes: MutableFigNode[]): void {
   for (const node of nodes) {
-    const children = safeChildren(node) as FigNode[];
+    const children = safeChildren(node) as MutableFigNode[];
     if (children.length === 0) {continue;}
 
     // Skip INSTANCE nodes: their children come from pre-resolution and
@@ -418,23 +419,20 @@ function expandContainersToFitChildren(nodes: FigNode[]): void {
     // Recurse first (bottom-up)
     expandContainersToFitChildren(children);
 
-    const nd = node as Record<string, unknown>;
-    const nodeSize = nd.size as { x: number; y: number } | undefined;
+    const nodeSize = node.size;
     if (!nodeSize) {continue;}
 
     const maxChildWidthRef = { value: 0 };
     const maxChildHeightRef = { value: 0 };
     for (const child of children) {
-      const cd = child as Record<string, unknown>;
-      const childSize = cd.size as { x: number; y: number } | undefined;
-      if (childSize) {
-        maxChildWidthRef.value = Math.max(maxChildWidthRef.value, childSize.x);
-        maxChildHeightRef.value = Math.max(maxChildHeightRef.value, childSize.y);
+      if (child.size) {
+        maxChildWidthRef.value = Math.max(maxChildWidthRef.value, child.size.x);
+        maxChildHeightRef.value = Math.max(maxChildHeightRef.value, child.size.y);
       }
     }
 
     if (maxChildWidthRef.value > nodeSize.x || maxChildHeightRef.value > nodeSize.y) {
-      nd.size = {
+      node.size = {
         x: Math.max(nodeSize.x, maxChildWidthRef.value),
         y: Math.max(nodeSize.y, maxChildHeightRef.value),
       };
@@ -455,7 +453,7 @@ function expandContainersToFitChildren(nodes: FigNode[]): void {
  *   remaining path is propagated as `derivedSymbolData` on that node so the
  *   override is applied when the nested instance is resolved later.
  */
-function applyOverrides(nodes: FigNode[], overrides: readonly FigSymbolOverride[]): void {
+function applyOverrides(nodes: MutableFigNode[], overrides: readonly FigSymbolOverride[], styleRegistry?: FigStyleRegistry): void {
   // Separate direct (depth-1) and nested (depth-N>1) overrides
   // Direct overrides are MERGED: multiple entries for the same GUID combine their properties
   const directMap = new Map<string, FigSymbolOverride>();
@@ -490,9 +488,8 @@ function applyOverrides(nodes: FigNode[], overrides: readonly FigSymbolOverride[
     }
   }
 
-  function applyToNode(node: FigNode): void {
-    const nodeData = node as Record<string, unknown>;
-    const guid = nodeData.guid as FigGuid | undefined;
+  function applyToNode(node: MutableFigNode): void {
+    const guid = node.guid;
 
     if (guid) {
       const guidStr = guidToString(guid);
@@ -505,19 +502,25 @@ function applyOverrides(nodes: FigNode[], overrides: readonly FigSymbolOverride[
           if (key === "componentPropAssignments") {
             // Merge CPA arrays: existing entries + override entries.
             // Override entries with the same defID take precedence.
-            const existing = nodeData.componentPropAssignments as ComponentPropAssignment[] | undefined;
+            const existing = node[key] as ComponentPropAssignment[] | undefined;
             const incoming = value as ComponentPropAssignment[];
             if (existing && existing.length > 0) {
               const incomingKeys = new Set(incoming.map((a) => guidToString(a.defID)));
               const merged = existing.filter((a) => !incomingKeys.has(guidToString(a.defID)));
               merged.push(...incoming);
-              nodeData[key] = merged;
+              node[key] = merged;
             } else {
-              nodeData[key] = value;
+              node[key] = value;
             }
           } else {
-            nodeData[key] = value;
+            node[key] = value;
           }
+        }
+
+        // If the override set styleIdForFill or styleIdForStrokeFill,
+        // resolve them to actual fillPaints/strokePaints now.
+        if (styleRegistry && (direct.styleIdForFill !== undefined || direct.styleIdForStrokeFill !== undefined)) {
+          resolveStyleIdOnMutableNode(node, styleRegistry);
         }
       }
 
@@ -527,22 +530,22 @@ function applyOverrides(nodes: FigNode[], overrides: readonly FigSymbolOverride[
         const nodeType = getNodeType(node);
         if (nodeType === "INSTANCE") {
           // INSTANCE: store as derivedSymbolData for resolveInstance() to consume
-          const existing = nodeData.derivedSymbolData as FigSymbolOverride[] | undefined;
-          nodeData.derivedSymbolData = [...(existing ?? []), ...nested];
+          const existing = node.derivedSymbolData as FigSymbolOverride[] | undefined;
+          node.derivedSymbolData = [...(existing ?? []), ...nested];
         } else {
           // Non-INSTANCE container (FRAME, GROUP, etc.): apply recursively
           // to children immediately, since these nodes don't go through
           // resolveInstance() and derivedSymbolData would be lost.
-          const containerChildren = safeChildren(node) as FigNode[];
+          const containerChildren = safeChildren(node) as MutableFigNode[];
           if (containerChildren.length > 0) {
-            applyOverrides(containerChildren, nested);
+            applyOverrides(containerChildren, nested, styleRegistry);
           }
         }
       }
     }
 
     // Recurse to children
-    for (const child of safeChildren(node)) {
+    for (const child of safeChildren(node) as MutableFigNode[]) {
       applyToNode(child);
     }
   }
@@ -575,6 +578,7 @@ export type ResolvedInstanceNode = {
 export type InstanceResolveContext = {
   readonly symbolMap: ReadonlyMap<string, FigNode>;
   readonly resolvedSymbolCache?: ReadonlyMap<string, FigNode>;
+  readonly styleRegistry?: FigStyleRegistry;
 };
 
 /**
@@ -587,8 +591,8 @@ export type InstanceResolveContext = {
  * Instance-specific overrides go through symbolOverrides/derivedSymbolData,
  * which are applied separately via cloneSymbolChildren.
  */
-export function mergeSymbolProperties(instanceNode: FigNode, symbolNode: FigNode): FigNode {
-  const merged: Record<string, unknown> = { ...instanceNode };
+export function mergeSymbolProperties(instanceNode: FigNode, symbolNode: FigNode): MutableFigNode {
+  const merged: MutableFigNode = { ...instanceNode };
 
   // SYMBOL's visual properties always override INSTANCE-level values.
   if (symbolNode.fillPaints) { merged.fillPaints = symbolNode.fillPaints; }
@@ -625,7 +629,7 @@ export function mergeSymbolProperties(instanceNode: FigNode, symbolNode: FigNode
   if (symbolNode.size) { merged.size = symbolNode.size; }
   merged.opacity = symbolNode.opacity;
 
-  return merged as FigNode;
+  return merged;
 }
 
 /**
@@ -637,16 +641,19 @@ const SELF_OVERRIDE_PROPERTIES = new Set([
   "effects", "opacity", "visible", "cornerRadius", "rectangleCornerRadii",
   "blendMode", "clipsContent", "frameMaskDisabled", "mask", "cornerSmoothing",
   "backgroundColor", "backgroundEnabled", "backgroundOpacity",
+  "styleIdForFill", "styleIdForStrokeFill",
 ]);
 
 /**
  * Apply self-referencing symbolOverrides to the merged INSTANCE node.
  */
 export function applySelfOverridesToMergedNode(
-  mergedNode: Record<string, unknown>,
+  mergedNode: MutableFigNode,
   overrides: readonly FigSymbolOverride[],
   symbolGuidStr: string,
+  styleRegistry?: FigStyleRegistry,
 ): void {
+  let hasStyleIdOverride = false;
   for (const ov of overrides) {
     const guids = ov.guidPath?.guids;
     if (!guids || guids.length !== 1) { continue; }
@@ -655,7 +662,13 @@ export function applySelfOverridesToMergedNode(
       if (key === "guidPath") { continue; }
       if (!SELF_OVERRIDE_PROPERTIES.has(key)) { continue; }
       mergedNode[key] = value;
+      if (key === "styleIdForFill" || key === "styleIdForStrokeFill") {
+        hasStyleIdOverride = true;
+      }
     }
+  }
+  if (hasStyleIdOverride && styleRegistry) {
+    resolveStyleIdOnMutableNode(mergedNode, styleRegistry);
   }
 }
 
@@ -718,7 +731,7 @@ export function resolveInstanceNode(
 
   // 4. Apply self-referencing overrides
   if (symbolOverrides && symbolOverrides.length > 0) {
-    applySelfOverridesToMergedNode(mergedNode as Record<string, unknown>, symbolOverrides, guidToString(symNode.guid));
+    applySelfOverridesToMergedNode(mergedNode, symbolOverrides, guidToString(symNode.guid), ctx.styleRegistry);
   }
 
   // 5. Clone SYMBOL children with overrides
@@ -727,6 +740,7 @@ export function resolveInstanceNode(
     symbolOverrides,
     derivedSymbolData,
     componentPropAssignments: componentPropAssignments.length > 0 ? componentPropAssignments : undefined,
+    styleRegistry: ctx.styleRegistry,
   });
 
   // 6. Layout resolution for resized instances
@@ -737,7 +751,7 @@ export function resolveInstanceNode(
   if (isResized) {
     const layout = resolveInstanceLayout({ children, symbolSize: symbolSize!, instanceSize: instanceSize!, derivedSymbolData });
     if (layout.sizeApplied) {
-      (mergedNode as Record<string, unknown>).size = instanceSize;
+      mergedNode.size = instanceSize;
     }
     return { node: mergedNode, children: layout.children };
   }

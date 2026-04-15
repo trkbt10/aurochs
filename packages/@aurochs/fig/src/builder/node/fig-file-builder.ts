@@ -5,7 +5,8 @@
  * Outputs ZIP-wrapped format that Figma can open.
  */
 
-import { createHash } from "node:crypto";
+// node:crypto is imported lazily to avoid Vite browser externalization errors.
+// WebCrypto (globalThis.crypto.subtle) is preferred when available.
 import { deflateRaw } from "pako";
 import { compressZstd } from "../../compression";
 import { IDENTITY_MATRIX } from "../../matrix";
@@ -54,8 +55,25 @@ import { getEffectiveSymbolID } from "../../symbols/effective-symbol-id";
 
 
 
-/** Compute SHA1 hex digest of binary data */
-function computeSha1Hex(data: Uint8Array): string {
+/**
+ * Compute SHA1 hex digest of binary data.
+ *
+ * Uses WebCrypto API (crypto.subtle) when available — works in browsers
+ * and Node.js 15+. Falls back to Node.js `node:crypto` for older runtimes.
+ */
+async function computeSha1Hex(data: Uint8Array): Promise<string> {
+  // Prefer WebCrypto (browser + modern Node.js)
+  if (typeof globalThis.crypto?.subtle?.digest === "function") {
+    // Use a copy via ArrayBuffer to satisfy TypeScript's BufferSource constraint
+    const buffer = new ArrayBuffer(data.byteLength);
+    new Uint8Array(buffer).set(data);
+    const hashBuffer = await globalThis.crypto.subtle.digest("SHA-1", buffer);
+    const hashArray = new Uint8Array(hashBuffer);
+    return Array.from(hashArray, (b) => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  // Fallback: Node.js crypto (lazy import to avoid Vite externalization)
+  const { createHash } = await import("node:crypto");
   return createHash("sha1").update(data).digest("hex");
 }
 
@@ -101,8 +119,8 @@ function _createFigFileBuilder() {
    * @param mimeType - MIME type (e.g. "image/png", "image/jpeg")
    * @returns The SHA1 hex string used as the image ref
    */
-  function addImage(data: Uint8Array, mimeType: string): string {
-    const hash = computeSha1Hex(data);
+  async function addImage(data: Uint8Array, mimeType: string): Promise<string> {
+    const hash = await computeSha1Hex(data);
     images.set(hash, { data, mimeType });
     return hash;
   }

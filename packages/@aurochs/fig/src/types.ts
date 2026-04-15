@@ -99,6 +99,17 @@ export type FigGuid = {
   readonly localID: number;
 };
 
+/**
+ * Style reference as stored in Kiwi binary format.
+ *
+ * Corresponds to the Kiwi schema `StyleId` message (typeId 108).
+ * References a shared style definition (fill style, stroke style, etc.)
+ * via its GUID.
+ */
+export type FigStyleId = {
+  readonly guid: FigGuid;
+};
+
 /** Parent index as stored in Kiwi binary format */
 export type FigParentIndex = {
   readonly guid: FigGuid;
@@ -179,6 +190,12 @@ export type FigNode = {
   readonly strokeGeometry?: readonly FigFillGeometry[];
   readonly vectorPaths?: readonly FigVectorPath[];
   readonly effects?: readonly FigEffect[];
+  /** Style reference for fill paint (Kiwi schema field 332) */
+  readonly styleIdForFill?: FigStyleId;
+  /** Style reference for stroke paint (Kiwi schema field 333) */
+  readonly styleIdForStrokeFill?: FigStyleId;
+  /** Stroke dash pattern */
+  readonly strokeDashes?: readonly number[];
   readonly mask?: boolean;
   readonly clipsContent?: boolean;
   readonly frameMaskDisabled?: boolean;
@@ -200,6 +217,20 @@ export type FigNode = {
   readonly children?: readonly FigNode[];
   /** Additional fields (Kiwi schema has many optional fields) */
   readonly [key: string]: unknown;
+};
+
+/**
+ * Mutable version of FigNode for use in clone-and-mutate operations.
+ *
+ * `deepCloneNode` creates a shallow copy of a FigNode. The resulting
+ * object is structurally identical but needs to be mutated by
+ * `applyOverrides`, `applyComponentPropAssignments`, etc.
+ *
+ * Using this type instead of `Record<string, unknown>` preserves
+ * type safety while allowing mutation.
+ */
+export type MutableFigNode = {
+  -readonly [K in keyof FigNode]: FigNode[K];
 };
 
 /** Fig document tree (high-level, for tree building) */
@@ -353,7 +384,30 @@ export type FigSolidPaint = FigPaintBase & {
 };
 
 /**
+ * Gradient paint transform matrix.
+ *
+ * Maps gradient space → normalized object space (0..1, 0..1).
+ * Same structure as FigMatrix but fields are optional because the
+ * Kiwi binary format may omit identity components.
+ *
+ * Gradient space convention:
+ *   (1, 0) → gradient start (0% stop position)
+ *   (0, 0) → gradient end (100% stop position)
+ */
+export type FigGradientTransform = {
+  readonly m00?: number; // a (scale x) — default 1
+  readonly m01?: number; // c (skew x) — default 0
+  readonly m02?: number; // tx (translate x) — default 0
+  readonly m10?: number; // b (skew y) — default 0
+  readonly m11?: number; // d (scale y) — default 1
+  readonly m12?: number; // ty (translate y) — default 0
+};
+
+/**
  * Gradient paint
+ *
+ * Supports both API format (gradientHandlePositions, gradientStops)
+ * and Kiwi format (transform, stops).
  */
 export type FigGradientPaint = FigPaintBase & {
   readonly type:
@@ -361,9 +415,24 @@ export type FigGradientPaint = FigPaintBase & {
     | "GRADIENT_RADIAL"
     | "GRADIENT_ANGULAR"
     | "GRADIENT_DIAMOND";
-  readonly gradientHandlePositions: readonly FigVector[];
-  readonly gradientStops: readonly FigGradientStop[];
+  /** API format: gradient handle positions (start, end, width handle) */
+  readonly gradientHandlePositions?: readonly FigVector[];
+  /** API format: gradient color stops */
+  readonly gradientStops?: readonly FigGradientStop[];
+  /** Kiwi format: 2x3 affine transform mapping gradient space → normalized object space */
+  readonly transform?: FigGradientTransform;
+  /** Kiwi format: gradient color stops (equivalent to gradientStops) */
+  readonly stops?: readonly FigGradientStop[];
 };
+
+/**
+ * Image paint transform.
+ *
+ * Controls how the image is positioned and scaled within the element.
+ * Uses the same 2x3 affine matrix structure as gradient transforms.
+ * The transform maps image space → normalized object space (0..1, 0..1).
+ */
+export type FigImageTransform = FigGradientTransform;
 
 /**
  * Image paint
@@ -372,6 +441,10 @@ export type FigImagePaint = FigPaintBase & {
   readonly type: "IMAGE";
   readonly scaleMode?: "FILL" | "FIT" | "CROP" | "TILE";
   readonly imageRef?: string;
+  /** Kiwi format: image scale mode as KiwiEnumValue */
+  readonly imageScaleMode?: KiwiEnumValue;
+  /** 2x3 affine transform for image positioning within the element */
+  readonly transform?: FigImageTransform;
 };
 
 /**

@@ -13,7 +13,8 @@ import type { GeometryPathData } from "../geometry-path";
 import { decodePathsFromGeometry } from "../geometry-path";
 import { mapWindingRule } from "../../geometry";
 import { renderPaths } from "../render-paths";
-import { extractBaseProps, extractSizeProps, extractPaintProps, extractGeometryProps } from "./extract-props";
+import { extractBaseProps, extractSizeProps, extractPaintProps, extractGeometryProps, extractEffectsProps } from "./extract-props";
+import { getFilterAttr } from "../effects";
 
 // =============================================================================
 // Vector Path Types
@@ -77,9 +78,14 @@ export function renderVectorNode(node: FigNode, ctx: FigSvgRenderContext): SvgSt
   const { size } = extractSizeProps(node);
   const { fillPaints, strokePaints, strokeWeight } = extractPaintProps(node);
   const { fillGeometry, strokeGeometry } = extractGeometryProps(node);
+  const { effects } = extractEffectsProps(node);
   const vectorPaths = node.vectorPaths;
 
   const transformStr = buildTransformAttr(transform);
+
+  const tx = transform?.m02 ?? 0;
+  const ty = transform?.m12 ?? 0;
+  const filterAttr = getFilterAttr(effects, ctx, { x: tx, y: ty, width: size.x, height: size.y });
 
   const { paths: pathsToRender, isStrokeGeometry } = resolvePaths({
     vectorPaths,
@@ -131,6 +137,7 @@ export function renderVectorNode(node: FigNode, ctx: FigSvgRenderContext): SvgSt
     strokeAttrs: strokeAttrsRef.value,
     transform: transformStr,
     opacity,
+    filter: filterAttr,
   });
 
   if (fillResultRef.value) {

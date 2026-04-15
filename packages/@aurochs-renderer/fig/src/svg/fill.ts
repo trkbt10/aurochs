@@ -20,6 +20,47 @@ import {
 } from "../paint";
 
 // =============================================================================
+// Paint Blend Mode
+// =============================================================================
+
+/**
+ * Map Figma blend mode names to CSS mix-blend-mode values.
+ *
+ * PASS_THROUGH and NORMAL have no CSS equivalent — they use the default
+ * compositing (source-over), so we return undefined.
+ */
+const PAINT_BLEND_MODE_TO_CSS: Record<string, string> = {
+  DARKEN: "darken",
+  MULTIPLY: "multiply",
+  LINEAR_BURN: "plus-darker",
+  COLOR_BURN: "color-burn",
+  LIGHTEN: "lighten",
+  SCREEN: "screen",
+  LINEAR_DODGE: "plus-lighter",
+  COLOR_DODGE: "color-dodge",
+  OVERLAY: "overlay",
+  SOFT_LIGHT: "soft-light",
+  HARD_LIGHT: "hard-light",
+  DIFFERENCE: "difference",
+  EXCLUSION: "exclusion",
+  HUE: "hue",
+  SATURATION: "saturation",
+  COLOR: "color",
+  LUMINOSITY: "luminosity",
+};
+
+/**
+ * Get CSS mix-blend-mode from a paint's blendMode field.
+ * Returns undefined for NORMAL / PASS_THROUGH / unset.
+ */
+export function getPaintBlendModeCss(paint: FigPaint): string | undefined {
+  const bm = paint.blendMode;
+  if (!bm) { return undefined; }
+  const name = typeof bm === "string" ? bm : bm.name;
+  return PAINT_BLEND_MODE_TO_CSS[name];
+}
+
+// =============================================================================
 // Fill Attributes
 // =============================================================================
 
@@ -94,13 +135,13 @@ function paintToFillAttrs(paint: FigPaint, ctx: FigSvgRenderContext, elementSize
 
     case "GRADIENT_LINEAR": {
       const gradientPaint = paint as FigGradientPaint;
-      const gradientId = createLinearGradient(gradientPaint, ctx);
+      const gradientId = createLinearGradient(gradientPaint, ctx, elementSize);
       return buildFillWithOpacity(`url(#${gradientId})`, opacity);
     }
 
     case "GRADIENT_RADIAL": {
       const gradientPaint = paint as FigGradientPaint;
-      const gradientId = createRadialGradient(gradientPaint, ctx);
+      const gradientId = createRadialGradient(gradientPaint, ctx, elementSize);
       return buildFillWithOpacity(`url(#${gradientId})`, opacity);
     }
 
@@ -126,12 +167,58 @@ function paintToFillAttrs(paint: FigPaint, ctx: FigSvgRenderContext, elementSize
 /**
  * Create a linear gradient def and return its ID
  */
-function createLinearGradient(paint: FigGradientPaint, ctx: FigSvgRenderContext): string {
+function createLinearGradient(paint: FigGradientPaint, ctx: FigSvgRenderContext, elementSize?: ElementSize): string {
   const id = ctx.defs.generateId("lg");
-
-  const { start, end } = sharedGetGradientDirection(paint);
   const stops = createGradientStops(sharedGetGradientStops(paint));
 
+  // When elementSize is available, compute final userSpaceOnUse coordinates
+  // directly from Figma's paint transform, matching Figma's SVG export format.
+  //
+  // Figma's gradient transform maps gradient space to normalized object space (0..1):
+  //   (1, 0) → start point (0% stop) = (m00 + m02, m10 + m12)
+  //   (0, 0) → end point (100% stop)  = (m02, m12)
+  //
+  // SVG linearGradient maps:
+  //   (x1, y1) = 0% stop position (start)
+  //   (x2, y2) = 100% stop position (end)
+  //
+  // To convert from normalized → pixel coordinates: multiply by elementSize.
+  const transform = paint.transform;
+
+  if (elementSize && transform) {
+    const w = elementSize.width;
+    const h = elementSize.height;
+
+    // Start (0% stop): gradient space (1, 0) → normalized → pixel
+    const startNormX = (transform.m00 ?? 1) + (transform.m02 ?? 0);
+    const startNormY = (transform.m10 ?? 0) + (transform.m12 ?? 0);
+    const x1 = startNormX * w;
+    const y1 = startNormY * h;
+
+    // End (100% stop): gradient space (0, 0) → normalized → pixel
+    const endNormX = transform.m02 ?? 0;
+    const endNormY = transform.m12 ?? 0;
+    const x2 = endNormX * w;
+    const y2 = endNormY * h;
+
+    const gradientDef = linearGradient(
+      {
+        id,
+        x1: `${x1}`,
+        y1: `${y1}`,
+        x2: `${x2}`,
+        y2: `${y2}`,
+        gradientUnits: "userSpaceOnUse",
+      },
+      ...stops,
+    );
+
+    ctx.defs.add(gradientDef);
+    return id;
+  }
+
+  // Fallback: objectBoundingBox with percentage coordinates
+  const { start, end } = sharedGetGradientDirection(paint);
   const gradientDef = linearGradient(
     {
       id,
@@ -147,12 +234,79 @@ function createLinearGradient(paint: FigGradientPaint, ctx: FigSvgRenderContext)
   return id;
 }
 
-function createRadialGradient(paint: FigGradientPaint, ctx: FigSvgRenderContext): string {
+function createRadialGradient(paint: FigGradientPaint, ctx: FigSvgRenderContext, elementSize?: ElementSize): string {
   const id = ctx.defs.generateId("rg");
-  const { center, radius } = sharedGetRadialGradientCenterAndRadius(paint);
-
   const stops = createGradientStops(sharedGetGradientStops(paint));
 
+  // When elementSize is available, use userSpaceOnUse with a gradientTransform
+  // derived from the paint's transform matrix. This matches Figma's export format:
+  //   cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse"
+  //   gradientTransform="translate(...) scale(...)"
+  //
+  // The paint's transform maps gradient space → normalized object space (0..1).
+  // Multiplying by elementSize converts to pixel coordinates for userSpaceOnUse.
+  const transform = paint.transform;
+
+  if (elementSize && transform) {
+    const w = elementSize.width;
+    const h = elementSize.height;
+
+    // Figma's paint transform maps gradient space → normalized object space.
+    // For radial gradients, the gradient is defined on a unit circle centered
+    // at (0.5, 0.5) with radius 0.5 in gradient space. The transform positions
+    // and shapes this circle into the element.
+    //
+    // To produce the SVG gradientTransform:
+    //   1. Compute center in pixel coordinates: transform × (0.5, 0.5) × elementSize
+    //   2. Decompose the 2×2 rotation+scale part into angle + radii
+    //   3. Emit translate(cx, cy) rotate(angle) scale(rx, ry)
+
+    const m00 = transform.m00 ?? 1;
+    const m01 = transform.m01 ?? 0;
+    const m02 = transform.m02 ?? 0;
+    const m10 = transform.m10 ?? 0;
+    const m11 = transform.m11 ?? 1;
+    const m12 = transform.m12 ?? 0;
+
+    // Center: transform × (0.5, 0.5) → normalized → pixel
+    const cx = (m00 * 0.5 + m01 * 0.5 + m02) * w;
+    const cy = (m10 * 0.5 + m11 * 0.5 + m12) * h;
+
+    // The 2×2 part [m00, m01; m10, m11] encodes rotation + non-uniform scale.
+    // Column vectors scaled by elementSize give the ellipse axes:
+    //   axis1 = (m00 * w, m10 * h) × 0.5
+    //   axis2 = (m01 * w, m11 * h) × 0.5
+    // The SVG radial gradient with rotate + scale needs the angle and axis lengths.
+
+    const ax1x = m00 * w * 0.5;
+    const ax1y = m10 * h * 0.5;
+    const ax2x = m01 * w * 0.5;
+    const ax2y = m11 * h * 0.5;
+
+    const r1 = Math.sqrt(ax1x * ax1x + ax1y * ax1y);
+    const r2 = Math.sqrt(ax2x * ax2x + ax2y * ax2y);
+
+    // Rotation angle from the first axis
+    const angle = Math.atan2(ax1y, ax1x) * (180 / Math.PI);
+
+    const gradientDef = radialGradient(
+      {
+        id,
+        cx: "0",
+        cy: "0",
+        r: "1",
+        gradientUnits: "userSpaceOnUse",
+        gradientTransform: `translate(${cx} ${cy}) rotate(${angle}) scale(${r1} ${r2})`,
+      },
+      ...stops,
+    );
+
+    ctx.defs.add(gradientDef);
+    return id;
+  }
+
+  // Fallback: objectBoundingBox (no transform available)
+  const { center, radius } = sharedGetRadialGradientCenterAndRadius(paint);
   const gradientDef = radialGradient(
     {
       id,
@@ -215,18 +369,24 @@ export function hasVisibleFill(paints: readonly FigPaint[] | undefined): boolean
  * These paths represent the stroke shape as a filled area, so they must
  * be filled with the stroke colour instead of being stroked.
  *
+ * Figma layers paints bottom (index 0) to top (last index), so the
+ * topmost (last) visible paint determines the visible fill colour.
+ *
  * This is a shared utility — previously duplicated across ellipse.ts,
  * vector.ts, rectangle.ts, and frame.ts.
  */
 export function strokePaintsToFillAttrs(paints: readonly FigPaint[] | undefined): FillAttrs {
   if (!paints || paints.length === 0) { return { fill: "none" }; }
-  const visible = paints.find((p) => p.visible !== false);
-  if (!visible) { return { fill: "none" }; }
 
-  const color = getSolidPaintColor(visible);
+  // Use the last (topmost) visible paint — Figma layers bottom-to-top
+  const visiblePaints = paints.filter((p) => p.visible !== false);
+  if (visiblePaints.length === 0) { return { fill: "none" }; }
+
+  const topPaint = visiblePaints[visiblePaints.length - 1];
+  const color = getSolidPaintColor(topPaint);
   if (color) {
     const hex = figColorToHex(color);
-    const opacity = visible.opacity ?? 1;
+    const opacity = topPaint.opacity ?? 1;
     if (opacity < 1) { return { fill: hex, "fill-opacity": opacity }; }
     return { fill: hex };
   }
@@ -264,6 +424,42 @@ function createImagePattern(paint: FigImagePaint, ctx: FigSvgRenderContext, elem
   return createPatternFromImage({ figImage, paint, ctx, elementSize });
 }
 
+type ImageDimensions = { readonly width: number; readonly height: number };
+
+/**
+ * Extract pixel dimensions from image binary data.
+ *
+ * Supports JPEG (SOF0/SOF2 markers) and PNG (IHDR chunk).
+ * Returns undefined if the format is unrecognized.
+ */
+function getImageDimensions(data: Uint8Array, mimeType: string): ImageDimensions | undefined {
+  if (mimeType === "image/png" && data.length >= 24) {
+    // PNG IHDR: bytes 16-19 = width (big-endian), 20-23 = height
+    const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+    const width = view.getUint32(16);
+    const height = view.getUint32(20);
+    if (width > 0 && height > 0) {
+      return { width, height };
+    }
+  }
+
+  if (mimeType === "image/jpeg" || mimeType === "image/jpg") {
+    // JPEG: scan for SOF0 (0xFFC0) or SOF2 (0xFFC2) marker
+    for (let i = 0; i < data.length - 9; i++) {
+      if (data[i] === 0xFF && (data[i + 1] === 0xC0 || data[i + 1] === 0xC2)) {
+        const view = new DataView(data.buffer, data.byteOffset + i + 5, 4);
+        const height = view.getUint16(0);
+        const width = view.getUint16(2);
+        if (width > 0 && height > 0) {
+          return { width, height };
+        }
+      }
+    }
+  }
+
+  return undefined;
+}
+
 type CreatePatternParams = {
   readonly figImage: { data: Uint8Array; mimeType: string };
   readonly paint: FigImagePaint;
@@ -272,18 +468,50 @@ type CreatePatternParams = {
 };
 
 /**
- * Create a pattern element from an image
+ * Create a pattern element from an image.
+ *
+ * Figma's SVG export uses `patternContentUnits="objectBoundingBox"` and
+ * positions the image via a `<use transform="translate(tx ty) scale(sx [sy])"/>`
+ * where sx/sy map image pixels to the 0..1 objectBoundingBox space.
+ *
+ * For FILL mode: scale by the shorter axis to cover the element, then
+ * center-crop the excess. For STRETCH: scale both axes independently.
  */
 function createPatternFromImage(params: CreatePatternParams): string {
-  const { figImage, paint: _paint, ctx, elementSize: _elementSize } = params;
+  const { figImage, paint, ctx, elementSize } = params;
   const id = ctx.defs.generateId("img");
 
   // Convert image data to base64 data URI
   const base64 = uint8ArrayToBase64(figImage.data);
   const dataUri = `data:${figImage.mimeType};base64,${base64}`;
 
-  // Use objectBoundingBox to match Figma's SVG export behavior:
-  // the image stretches to fill the element's bounding box exactly.
+  const imgDim = getImageDimensions(figImage.data, figImage.mimeType);
+  const scaleMode = getScaleMode(paint);
+
+  // Compute image transform in objectBoundingBox space (0..1)
+  const imgTransform = computeImagePatternTransform(
+    imgDim,
+    elementSize,
+    scaleMode,
+    paint.transform,
+  );
+
+  const patternContent = imgTransform
+    ? image({
+        href: dataUri,
+        width: imgDim?.width ?? 1,
+        height: imgDim?.height ?? 1,
+        transform: imgTransform,
+      })
+    : image({
+        href: dataUri,
+        x: 0,
+        y: 0,
+        width: 1,
+        height: 1,
+        preserveAspectRatio: "none",
+      });
+
   const patternDef = pattern(
     {
       id,
@@ -291,42 +519,151 @@ function createPatternFromImage(params: CreatePatternParams): string {
       width: 1,
       height: 1,
     },
-    image({
-      href: dataUri,
-      x: 0,
-      y: 0,
-      width: 1,
-      height: 1,
-      preserveAspectRatio: "none",
-    }),
+    patternContent,
   );
 
   ctx.defs.add(patternDef);
   return id;
 }
 
-type ScaleMode = "FILL" | "FIT" | "CROP" | "TILE";
-
 /**
- * Extract scale mode from imageScaleMode field
+ * Compute the SVG transform for an image inside a pattern with
+ * `patternContentUnits="objectBoundingBox"`.
+ *
+ * In objectBoundingBox space, the element spans (0,0)–(1,1).
+ * The image needs to be scaled from its pixel dimensions into this space.
+ *
+ * Figma's paint.transform maps image normalised coordinates (0..1)
+ * to element normalised coordinates (0..1). In the SVG pattern we need
+ * the inverse: element → image (pixel). The combined transform for the
+ * `<image>` element is therefore:
+ *
+ *     T_svg = inv(paint.transform) × diag(1/imgW, 1/imgH)
+ *
+ * For FILL mode with an identity paint.transform this simplifies to a
+ * uniform scale (cover) with centre-crop offset.
+ *
+ * Returns a transform string or undefined if image dimensions are unavailable.
  */
-function extractImageScaleMode(imageScaleMode: { name?: string } | string): ScaleMode | undefined {
-  if (typeof imageScaleMode === "string") {
-    return imageScaleMode as ScaleMode;
+function computeImagePatternTransform(
+  imgDim: ImageDimensions | undefined,
+  elementSize: ElementSize | undefined,
+  scaleMode: ScaleMode | undefined,
+  paintTransform: FigImagePaint["transform"],
+): string | undefined {
+  if (!imgDim || imgDim.width <= 0 || imgDim.height <= 0) {
+    return undefined;
   }
-  return imageScaleMode.name as ScaleMode | undefined;
+
+  const imgW = imgDim.width;
+  const imgH = imgDim.height;
+
+  // Extract paint transform components (identity if unset)
+  const pm00 = paintTransform?.m00 ?? 1;
+  const pm01 = paintTransform?.m01 ?? 0;
+  const pm10 = paintTransform?.m10 ?? 0;
+  const pm11 = paintTransform?.m11 ?? 1;
+  const pm02 = paintTransform?.m02 ?? 0;
+  const pm12 = paintTransform?.m12 ?? 0;
+
+  const isIdentity =
+    pm00 === 1 && pm01 === 0 && pm10 === 0 && pm11 === 1 && pm02 === 0 && pm12 === 0;
+
+  // ------------------------------------------------------------------
+  // FILL with identity transform: cover + centre-crop
+  //
+  // In objectBoundingBox space, 1 unit in X = elemWidth pixels,
+  // 1 unit in Y = elemHeight pixels. To maintain the image's aspect
+  // ratio (uniform pixel scale), the oBB scale must be non-uniform:
+  //
+  //   pixelScale = max(elemW/imgW, elemH/imgH)   // cover both axes
+  //   sx_obb = pixelScale / elemW
+  //   sy_obb = pixelScale / elemH
+  //
+  // The resulting image dimensions in oBB space are then used to
+  // compute the centering offset.
+  // ------------------------------------------------------------------
+  if (scaleMode === "FILL" && isIdentity && elementSize) {
+    const pixelScale = Math.max(
+      elementSize.width / imgW,
+      elementSize.height / imgH,
+    );
+
+    const sx = pixelScale / elementSize.width;
+    const sy = pixelScale / elementSize.height;
+    const obbW = imgW * sx;
+    const obbH = imgH * sy;
+    const tx = -(obbW - 1) / 2;
+    const ty = -(obbH - 1) / 2;
+
+    if (sx === sy) {
+      if (tx === 0 && ty === 0) {
+        return `scale(${sx})`;
+      }
+      return `translate(${tx} ${ty}) scale(${sx})`;
+    }
+    return `matrix(${sx} 0 0 ${sy} ${tx} ${ty})`;
+  }
+
+  // ------------------------------------------------------------------
+  // General case: inv(paintTransform) × diag(1/imgW, 1/imgH)
+  //
+  // paint.transform is a 2×3 affine matrix [a c tx; b d ty].
+  // Invert the 2×2 part and compose with diag(1/imgW, 1/imgH).
+  // ------------------------------------------------------------------
+  const det = pm00 * pm11 - pm01 * pm10;
+  if (Math.abs(det) < 1e-12) {
+    // Degenerate transform — fall back to simple stretch
+    return undefined;
+  }
+
+  // inv(2×2): [d/det, -c/det; -b/det, a/det]
+  // inv translation: inv(2×2) × [-tx, -ty]
+  const invA = pm11 / det;
+  const invB = -pm10 / det;
+  const invC = -pm01 / det;
+  const invD = pm00 / det;
+  const invTx = invA * (-pm02) + invC * (-pm12);
+  const invTy = invB * (-pm02) + invD * (-pm12);
+
+  // Compose with diag(1/imgW, 1/imgH): multiply the inv matrix on the right
+  const sa = invA / imgW;
+  const sb = invB / imgW;
+  const sc = invC / imgH;
+  const sd = invD / imgH;
+  // Translation components are not scaled by image size (already in OBB space)
+  const stx = invTx;
+  const sty = invTy;
+
+  // Emit the most compact transform string
+  if (sb === 0 && sc === 0) {
+    // Axis-aligned: use translate + scale or just scale
+    if (stx === 0 && sty === 0) {
+      if (sa === sd) {
+        return `scale(${sa})`;
+      }
+      return `scale(${sa} ${sd})`;
+    }
+    return `matrix(${sa} 0 0 ${sd} ${stx} ${sty})`;
+  }
+
+  return `matrix(${sa} ${sb} ${sc} ${sd} ${stx} ${sty})`;
 }
 
+type ScaleMode = "FILL" | "FIT" | "CROP" | "TILE" | "STRETCH";
+
 /**
- * Get scale mode from paint
+ * Get scale mode from paint.
+ *
+ * Figma's API format uses `scaleMode` (string literal).
+ * Kiwi binary format uses `imageScaleMode` (KiwiEnumValue with .name).
  */
 function getScaleMode(paint: FigImagePaint): ScaleMode | undefined {
   if (paint.scaleMode) {
     return paint.scaleMode;
   }
-  const paintData = paint as Record<string, unknown>;
-  if (paintData.imageScaleMode) {
-    return extractImageScaleMode(paintData.imageScaleMode as { name?: string } | string);
+  if (paint.imageScaleMode) {
+    return paint.imageScaleMode.name as ScaleMode | undefined;
   }
   return undefined;
 }
@@ -463,26 +800,49 @@ export function getFillResult(
   // Top layer (index n-1) becomes the shape's own fill attrs.
   const prependElements: SvgString[] = [];
 
-  // Create a shared clipPath for the shape geometry (used by complex paints)
-  // Also used to clip each layer's shape copy to the correct bounds.
+  /**
+   * Wrap an SVG element with mix-blend-mode if the paint has a non-default blendMode.
+   * Figma paints can individually specify blend modes (HUE, LUMINOSITY, etc.)
+   * that affect how they composite with layers below.
+   */
+  function wrapWithBlendMode(element: SvgString, paint: FigPaint): SvgString {
+    const blendCss = getPaintBlendModeCss(paint);
+    if (blendCss) {
+      return g({ style: `mix-blend-mode:${blendCss}` }, element);
+    }
+    return element;
+  }
+
   for (let i = 0; i < visiblePaints.length - 1; i++) {
-    const layerResult = resolveSinglePaint(visiblePaints[i], ctx, geometry, options?.elementSize);
+    const paint = visiblePaints[i];
+    const layerResult = resolveSinglePaint(paint, ctx, geometry, options?.elementSize);
 
     if (layerResult.kind === "complex") {
-      prependElements.push(...layerResult.prependElements);
+      // Complex layers may have multiple prepend elements — wrap the group
+      const blendCss = getPaintBlendModeCss(paint);
+      if (blendCss) {
+        prependElements.push(g({ style: `mix-blend-mode:${blendCss}` }, ...layerResult.prependElements));
+      } else {
+        prependElements.push(...layerResult.prependElements);
+      }
     } else {
-      prependElements.push(geometry.renderFillLayer(layerResult.attrs));
+      const fillLayer = geometry.renderFillLayer(layerResult.attrs);
+      prependElements.push(wrapWithBlendMode(fillLayer, paint));
     }
   }
 
   // Top layer
-  const topResult = resolveSinglePaint(
-    visiblePaints[visiblePaints.length - 1], ctx, geometry, options?.elementSize,
-  );
+  const topPaint = visiblePaints[visiblePaints.length - 1];
+  const topResult = resolveSinglePaint(topPaint, ctx, geometry, options?.elementSize);
+  const topBlendCss = getPaintBlendModeCss(topPaint);
 
   if (topResult.kind === "complex") {
     // Top is also complex — all layers are prepended, shape gets fill="none"
-    prependElements.push(...topResult.prependElements);
+    if (topBlendCss) {
+      prependElements.push(g({ style: `mix-blend-mode:${topBlendCss}` }, ...topResult.prependElements));
+    } else {
+      prependElements.push(...topResult.prependElements);
+    }
     return {
       kind: "complex",
       prependElements,
@@ -492,6 +852,15 @@ export function getFillResult(
 
   // Top is simple — lower layers are prepended, top goes on the shape
   if (prependElements.length > 0) {
+    if (topBlendCss) {
+      // Top layer also has blend mode — must prepend it too with blend
+      prependElements.push(wrapWithBlendMode(geometry.renderFillLayer(topResult.attrs), topPaint));
+      return {
+        kind: "complex",
+        prependElements,
+        attrs: { fill: "none" },
+      };
+    }
     return {
       kind: "complex",
       prependElements,

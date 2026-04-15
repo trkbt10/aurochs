@@ -6,12 +6,14 @@
  * using SVG arc commands instead of an <ellipse> element.
  */
 
-import type { FigNode } from "@aurochs/fig/types";
+import type { FigNode, FigPaint } from "@aurochs/fig/types";
 import type { FigSvgRenderContext } from "../../types";
 import { ellipse, path as svgPath, g, type SvgString } from "../primitives";
 import { buildTransformAttr } from "../transform";
-import { getFillResult, applyFillResult, strokePaintsToFillAttrs, type ShapeGeometry } from "../fill";
-import { getStrokeAttrs } from "../stroke";
+import { getFillResult, applyFillResult, strokePaintsToFillAttrs, getPaintBlendModeCss, type ShapeGeometry } from "../fill";
+import { getStrokeAttrs, type StrokeAttrs } from "../stroke";
+import { figColorToHex, getSolidPaintColor } from "@aurochs/fig/color";
+import { resolveStrokeWeight } from "../../stroke";
 import { getFilterAttr } from "../effects";
 import { decodePathsFromGeometry } from "../geometry-path";
 import { renderPaths } from "../render-paths";
@@ -22,6 +24,82 @@ import {
   extractGeometryProps,
   extractEffectsProps,
 } from "./extract-props";
+
+// =============================================================================
+// Multi-paint stroke layers
+// =============================================================================
+
+/**
+ * Build individual stroke layer elements for multi-paint strokes.
+ *
+ * Figma supports multiple stroke paints layered bottom-to-top, each with its
+ * own color, opacity, and blend mode. For example, Activity Rings use:
+ *   - Paint 1: bright color (e.g. #F41E5A)
+ *   - Paint 2: black with opacity 0.8 and mix-blend-mode:multiply
+ *
+ * SVG doesn't support multiple strokes on one element, so we render a separate
+ * path element for each visible stroke paint.
+ *
+ * Returns empty array if there are 0 or 1 visible paints (the caller should
+ * use the normal single-stroke path in that case).
+ */
+function buildStrokeLayers(
+  d: string,
+  strokePaints: readonly FigPaint[] | undefined,
+  strokeWeightRaw: import("@aurochs/fig/types").FigStrokeWeight | undefined,
+  transformStr: string | undefined,
+): SvgString[] {
+  if (!strokePaints || !strokeWeightRaw) { return []; }
+  const visiblePaints = strokePaints.filter((p) => p.visible !== false);
+  if (visiblePaints.length <= 1) { return []; }
+
+  const weight = resolveStrokeWeight(strokeWeightRaw);
+  if (weight <= 0) { return []; }
+
+  const layers: SvgString[] = [];
+  for (const paint of visiblePaints) {
+    const color = getSolidPaintColor(paint);
+    if (!color) { continue; }
+
+    const hex = figColorToHex(color);
+    const paintOpacity = paint.opacity ?? 1;
+    const blendCss = getPaintBlendModeCss(paint);
+
+    const attrs: Record<string, string | number | undefined> = {
+      d,
+      fill: "none",
+      stroke: hex,
+      "stroke-width": weight,
+      "stroke-opacity": paintOpacity < 1 ? paintOpacity : undefined,
+      "stroke-linecap": "round",
+      transform: transformStr || undefined,
+    };
+
+    const pathEl = svgPath(attrs);
+
+    if (blendCss) {
+      layers.push(g({ style: `mix-blend-mode:${blendCss}` }, pathEl));
+    } else {
+      layers.push(pathEl);
+    }
+  }
+
+  return layers;
+}
+
+/**
+ * Build a full-circle SVG path using two semicircular arcs.
+ * Used when we need a `d` attribute for stroke layer rendering on full ellipses.
+ */
+function buildFullCirclePath(cx: number, cy: number, rx: number, ry: number): string {
+  // Two semicircles: top → bottom → top
+  return [
+    `M ${cx + rx} ${cy}`,
+    `A ${rx} ${ry} 0 1 1 ${cx - rx} ${cy}`,
+    `A ${rx} ${ry} 0 1 1 ${cx + rx} ${cy}`,
+    "Z",
+  ].join(" ");
+}
 
 // =============================================================================
 // Arc Data
@@ -236,24 +314,20 @@ export function renderEllipseNode(node: FigNode, ctx: FigSvgRenderContext): SvgS
     }
   }
 
-  // Priority 1b: strokeGeometry — pre-expanded stroke outlines.
-  // These are filled shapes tracing the stroke outline, so they must be
-  // filled with the stroke colour (not stroked again).
-  if (strokeGeometry && strokeGeometry.length > 0) {
-    const paths = decodePathsFromGeometry(strokeGeometry, ctx.blobs);
-    if (paths.length > 0) {
-      return renderPaths({
-        paths,
-        fillAttrs: strokePaintsToFillAttrs(strokePaints),
-        strokeAttrs: {},
-        transform: transformStr,
-        opacity,
-        filter: filterAttr,
-      });
-    }
-  }
-
-  // Priority 2: arcData — generate arc path from parameters
+  // Priority 1b: arcData — generate arc/ellipse path with stroke attributes.
+  //
+  // When an ELLIPSE has arcData (partial arc or donut), we generate the path
+  // from the arc parameters and apply stroke directly, rather than using
+  // strokeGeometry (pre-expanded outline). This avoids two problems:
+  //
+  // 1. strokeGeometry filled paths get clipped by parent clipPath, cutting off
+  //    strokes that extend beyond the element bounds (e.g. Activity Rings).
+  //    SVG stroke on a <path>/<ellipse> naturally extends beyond the element
+  //    bbox, matching Figma's rendering.
+  //
+  // 2. Multi-paint strokes (e.g. color + black with multiply blend) require
+  //    layered rendering. With strokeGeometry we can only apply one fill color.
+  //    With stroke attributes, we render one shape per stroke paint.
   const arcData = getArcData(node);
   if (arcData) {
     const d = buildArcPath(cx, cy, cx, cy, arcData);
@@ -268,21 +342,57 @@ export function renderEllipseNode(node: FigNode, ctx: FigSvgRenderContext): SvgS
       elementSize: { width: size.x, height: size.y },
     });
 
+    // Build stroke layers: each visible stroke paint becomes a separate element
+    // to support multi-paint strokes with blend modes (e.g. color + black multiply)
+    const strokeLayers = buildStrokeLayers(d, strokePaints, strokeWeight, transformStr);
+
     const arcElement = svgPath({
       d,
       "fill-rule": "evenodd",
       transform: transformStr || undefined,
       opacity: opacity < 1 ? opacity : undefined,
       ...fillResult.attrs,
-      ...strokeAttrs,
+      ...(strokeLayers.length === 0 ? strokeAttrs : {}),
     });
 
     const withFill = applyFillResult(fillResult, arcElement);
+    const elements: SvgString[] = [withFill, ...strokeLayers];
+    const result = elements.length === 1 ? elements[0] : g(
+      { opacity: opacity < 1 ? opacity : undefined },
+      ...elements,
+    );
 
     if (filterAttr) {
-      return g({ filter: filterAttr }, withFill);
+      return g({ filter: filterAttr }, result);
     }
-    return withFill;
+    return result;
+  }
+
+  // Priority 1c: strokeGeometry — pre-expanded stroke outlines.
+  //
+  // Used only when:
+  // - No arcData (already handled above)
+  // - Not a stroke-only full circle with multiple paints, which should use
+  //   Priority 3's multi-paint stroke layer approach instead.
+  //
+  // Stroke-only full circles (fillPaints empty, strokePaints present) rendered
+  // via strokeGeometry get clipped by parent clipPath, cutting off the stroke
+  // that extends beyond the element bounds. Using <ellipse stroke> avoids this
+  // because SVG stroke naturally extends beyond the bbox.
+  const isStrokeOnlyCircle = (!fillPaints || fillPaints.length === 0 || !fillPaints.some(p => p.visible !== false))
+    && strokePaints && strokePaints.length > 0;
+  if (!isStrokeOnlyCircle && strokeGeometry && strokeGeometry.length > 0) {
+    const paths = decodePathsFromGeometry(strokeGeometry, ctx.blobs);
+    if (paths.length > 0) {
+      return renderPaths({
+        paths,
+        fillAttrs: strokePaintsToFillAttrs(strokePaints),
+        strokeAttrs: {},
+        transform: transformStr,
+        opacity,
+        filter: filterAttr,
+      });
+    }
   }
 
   // Priority 3: Standard full ellipse
@@ -297,6 +407,12 @@ export function renderEllipseNode(node: FigNode, ctx: FigSvgRenderContext): SvgS
     elementSize: { width: size.x, height: size.y },
   });
 
+  // Build multi-paint stroke layers for full ellipses (same approach as arcs).
+  // Full-circle ellipses that are stroke-only (e.g. Activity Ring dark backgrounds)
+  // need layered stroke rendering to match Figma's multi-paint stroke stacking.
+  const fullCirclePath = buildFullCirclePath(cx, cy, cx, cy);
+  const ellipseStrokeLayers = buildStrokeLayers(fullCirclePath, strokePaints, strokeWeight, transformStr);
+
   const ellipseElement = ellipse({
     cx,
     cy,
@@ -305,10 +421,22 @@ export function renderEllipseNode(node: FigNode, ctx: FigSvgRenderContext): SvgS
     transform: transformStr || undefined,
     opacity: opacity < 1 ? opacity : undefined,
     ...fillResult.attrs,
-    ...strokeAttrs,
+    ...(ellipseStrokeLayers.length === 0 ? strokeAttrs : {}),
   });
 
   const withFill = applyFillResult(fillResult, ellipseElement);
+
+  if (ellipseStrokeLayers.length > 0) {
+    const elements: SvgString[] = [withFill, ...ellipseStrokeLayers];
+    const result = g(
+      { opacity: opacity < 1 ? opacity : undefined },
+      ...elements,
+    );
+    if (filterAttr) {
+      return g({ filter: filterAttr }, result);
+    }
+    return result;
+  }
 
   if (filterAttr) {
     return g({ filter: filterAttr }, withFill);

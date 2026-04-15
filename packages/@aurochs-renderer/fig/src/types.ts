@@ -3,6 +3,7 @@
  */
 
 import type { FigBlob, FigImage } from "@aurochs/fig/parser";
+import type { FigStyleRegistry } from "@aurochs/fig/symbols";
 
 import type { FontLoader } from "./font";
 import type { FigResolver } from "./symbols/fig-resolver";
@@ -43,6 +44,8 @@ export type FigSvgRenderContext = {
   readonly resolver?: FigResolver;
   /** Font loader for path-based text rendering */
   readonly fontLoader?: FontLoader;
+  /** Style registry for resolving stale fillPaints via styleIdForFill */
+  readonly styleRegistry: FigStyleRegistry;
 };
 
 /**
@@ -58,6 +61,8 @@ export type FigSvgRenderContextConfig = {
   readonly resolver?: FigResolver;
   /** Font loader for path-based text rendering */
   readonly fontLoader?: FontLoader;
+  /** Style registry for resolving stale fillPaints via styleIdForFill */
+  readonly styleRegistry?: FigStyleRegistry;
 };
 
 /**

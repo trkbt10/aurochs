@@ -15,6 +15,7 @@ import type {
   TextAlignHorizontal,
   TextAlignVertical,
   TextAutoResize,
+  TextCase,
   TextDecoration,
 } from "./types";
 import { detectWeight, isItalic, FONT_WEIGHTS } from "../../font";
@@ -97,6 +98,32 @@ function getEnumName<T extends string>(enumObj: unknown, defaultValue: T): T {
 }
 
 /**
+ * Apply textCase transformation to characters.
+ *
+ * Figma's textCase controls how the text is displayed without
+ * modifying the underlying character data. The transformation must
+ * be applied before rendering.
+ */
+function applyTextCase(characters: string, textCase: TextCase): string {
+  switch (textCase) {
+    case "UPPER":
+      return characters.toUpperCase();
+    case "LOWER":
+      return characters.toLowerCase();
+    case "TITLE":
+      // Capitalize first letter of each word
+      return characters.replace(/\b\w/g, (c) => c.toUpperCase());
+    case "SMALL_CAPS":
+    case "SMALL_CAPS_FORCED":
+      // Small caps is an OpenType feature, not a simple text transform.
+      // For path rendering, uppercase is a reasonable approximation.
+      return characters.toUpperCase();
+    default:
+      return characters;
+  }
+}
+
+/**
  * Extract text properties from a FigDesignNode or FigNode.
  *
  * For FigDesignNode: reads typed `textData` field, falls back to `_raw`.
@@ -166,9 +193,19 @@ export function extractTextProps(node: TextNodeInput): ExtractedTextProps {
     "NONE",
   );
 
+  // Text case transformation (UPPER, LOWER, TITLE, etc.)
+  const textCase = getEnumName<TextCase>(
+    td?.textCase ?? raw?.textCase,
+    "ORIGINAL",
+  );
+
+  // Apply textCase to the extracted characters.
+  // The .fig file stores the original text; textCase controls display.
+  const transformedCharacters = applyTextCase(characters, textCase);
+
   return {
     transform,
-    characters,
+    characters: transformedCharacters,
     fontSize,
     fontFamily,
     fontWeight,

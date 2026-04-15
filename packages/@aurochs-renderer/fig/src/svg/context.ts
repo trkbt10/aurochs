@@ -3,6 +3,7 @@
  */
 
 import type { DefsCollector, FigSvgRenderContext, FigSvgRenderContextConfig } from "../types";
+import { EMPTY_FIG_STYLE_REGISTRY } from "../../../../@aurochs/fig/src/symbols/style-registry";
 
 // =============================================================================
 // Defs Collector
@@ -44,6 +45,7 @@ export function createFigSvgRenderContext(
     showHiddenNodes: config?.showHiddenNodes ?? false,
     resolver: config?.resolver,
     fontLoader: config?.fontLoader,
+    styleRegistry: config?.styleRegistry ?? EMPTY_FIG_STYLE_REGISTRY,
   };
 }
 

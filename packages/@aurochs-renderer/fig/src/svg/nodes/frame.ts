@@ -17,8 +17,10 @@ import {
   extractSizeProps,
   extractPaintProps,
   extractGeometryProps,
+  extractEffectsProps,
   resolveCornerRadius,
 } from "./extract-props";
+import { getFilterAttr } from "../effects";
 
 function resolveClipsContent(node: FigNode): boolean {
   // Explicit clipsContent (set by mergeSymbolProperties or API clients)
@@ -86,6 +88,7 @@ export function renderFrameNode(
   const { size } = extractSizeProps(node);
   const { fillPaints, strokePaints, strokeWeight } = extractPaintProps(node);
   const { fillGeometry, strokeGeometry } = extractGeometryProps(node);
+  const { effects } = extractEffectsProps(node);
   const { rx, ry } = resolveCornerRadius(node, size);
   const clipsContent = resolveClipsContent(node);
 
@@ -95,6 +98,10 @@ export function renderFrameNode(
 
   const transformStr = buildTransformAttr(transform);
   const baseStrokeAttrs = getStrokeAttrs({ paints: strokePaints, strokeWeight });
+
+  const tx = transform?.m02 ?? 0;
+  const ty = transform?.m12 ?? 0;
+  const filterAttr = getFilterAttr(effects, ctx, { x: tx, y: ty, width: size.x, height: size.y });
 
   // Shape geometry for complex fills (angular/diamond gradients)
   const bgClipShape = rect({ x: 0, y: 0, width: size.x, height: size.y, rx, ry, fill: "black" });
@@ -115,8 +122,22 @@ export function renderFrameNode(
     elements.push(...fillResult.prependElements);
   }
 
-  const decodedFillPaths = fillGeometry ? decodePathsFromGeometry(fillGeometry, ctx.blobs) : [];
   const decodedStrokePaths = strokeGeometry ? decodePathsFromGeometry(strokeGeometry, ctx.blobs) : [];
+
+  const hasCornerRadius = (rx !== undefined && rx > 0) || (ry !== undefined && ry > 0);
+  const rawDecodedFillPaths = fillGeometry ? decodePathsFromGeometry(fillGeometry, ctx.blobs) : [];
+
+  // When cornerRadius is set, the fill geometry may be a stale simple rectangle
+  // inherited from a SYMBOL (without rounded corners). Detect this by checking
+  // whether the decoded path data contains any curve commands (C, c, A, a).
+  // If it's straight lines only and cornerRadius is set, the geometry doesn't
+  // reflect the actual rounded shape — fall back to <rect rx ry>.
+  const fillPathsHaveCurves = rawDecodedFillPaths.some((p) =>
+    /[CcAa]/.test(p.data),
+  );
+  const decodedFillPaths = (hasCornerRadius && !fillPathsHaveCurves)
+    ? []  // Discard straight-only fill geometry; use <rect rx ry> instead
+    : rawDecodedFillPaths;
 
   if (decodedFillPaths.length > 0 && decodedStrokePaths.length > 0) {
     elements.push(...buildPathElements(decodedFillPaths, baseFillAttrs, {}));
@@ -125,6 +146,14 @@ export function renderFrameNode(
   } else if (decodedFillPaths.length > 0) {
     elements.push(...buildPathElements(decodedFillPaths, baseFillAttrs, baseStrokeAttrs));
   } else if (decodedStrokePaths.length > 0) {
+    // No fill geometry — render background rect + stroke geometry separately
+    const hasFill = baseFillAttrs.fill !== "none";
+    if (hasFill) {
+      elements.push(rect({
+        x: 0, y: 0, width: size.x, height: size.y, rx, ry,
+        ...baseFillAttrs,
+      }));
+    }
     const strokeFillAttrs = strokePaintsToFillAttrs(strokePaints);
     elements.push(...buildPathElements(decodedStrokePaths, strokeFillAttrs, {}));
   } else {
@@ -174,6 +203,7 @@ export function renderFrameNode(
     {
       transform: transformStr || undefined,
       opacity: opacity < 1 ? opacity : undefined,
+      filter: filterAttr,
     },
     ...elements,
   );

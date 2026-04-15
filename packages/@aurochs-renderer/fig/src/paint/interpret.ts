@@ -10,7 +10,7 @@
  * - Kiwi (.fig) format: transform matrix, stops array
  */
 
-import type { FigGradientPaint, FigGradientStop, FigImagePaint, FigColor } from "@aurochs/fig/types";
+import type { FigGradientPaint, FigGradientStop, FigGradientTransform, FigImagePaint } from "@aurochs/fig/types";
 
 // =============================================================================
 // Types
@@ -26,23 +26,11 @@ export type RadialGradientParams = {
   readonly radius: number;
 };
 
-export type GradientTransform = {
-  readonly m00?: number;
-  readonly m01?: number;
-  readonly m10?: number;
-  readonly m11?: number;
-  readonly m02?: number;
-  readonly m12?: number;
-};
-
 /**
- * Alternative gradient stop format used in .fig files (Kiwi encoding).
- * Identical structure to FigGradientStop but found under `stops` instead of `gradientStops`.
+ * @deprecated Use FigGradientTransform from @aurochs/fig/types instead.
+ * Kept for backward compatibility with external consumers.
  */
-type KiwiGradientStop = {
-  readonly color: FigColor;
-  readonly position: number;
-};
+export type GradientTransform = FigGradientTransform;
 
 // =============================================================================
 // Gradient Stops
@@ -52,16 +40,14 @@ type KiwiGradientStop = {
  * Extract gradient stops from a paint, handling both API and Kiwi formats.
  *
  * API format: `paint.gradientStops` — array of { color, position }
- * Kiwi format: `(paint as any).stops` — same structure, different field name
+ * Kiwi format: `paint.stops` — same structure, different field name
  */
 export function getGradientStops(paint: FigGradientPaint): readonly FigGradientStop[] {
   if (paint.gradientStops && paint.gradientStops.length > 0) {
     return paint.gradientStops;
   }
-  const paintData = paint as Record<string, unknown>;
-  const stops = paintData.stops as readonly KiwiGradientStop[] | undefined;
-  if (stops && stops.length > 0) {
-    return stops;
+  if (paint.stops && paint.stops.length > 0) {
+    return paint.stops;
   }
   return [];
 }
@@ -114,9 +100,7 @@ export function getGradientDirection(paint: FigGradientPaint): GradientDirection
       end: handles[1] ?? { x: 1, y: 0.5 },
     };
   }
-  const paintData = paint as Record<string, unknown>;
-  const transform = paintData.transform as GradientTransform | undefined;
-  return getGradientDirectionFromTransform(transform);
+  return getGradientDirectionFromTransform(paint.transform);
 }
 
 // =============================================================================
@@ -137,8 +121,7 @@ export function getRadialGradientCenterAndRadius(paint: FigGradientPaint): Radia
     const radius = Math.sqrt(Math.pow(edge.x - center.x, 2) + Math.pow(edge.y - center.y, 2));
     return { center, radius };
   }
-  const paintData = paint as Record<string, unknown>;
-  const transform = paintData.transform as GradientTransform | undefined;
+  const transform = paint.transform;
   return {
     center: { x: transform?.m02 ?? 0.5, y: transform?.m12 ?? 0.5 },
     radius: transform?.m00 ?? 0.5,
@@ -173,8 +156,7 @@ export function getAngularGradientParams(paint: FigGradientPaint): AngularGradie
     return { center, startAngle: angle };
   }
 
-  const paintData = paint as Record<string, unknown>;
-  const transform = paintData.transform as GradientTransform | undefined;
+  const transform = paint.transform;
   if (!transform) {
     return { center: { x: 0.5, y: 0.5 }, startAngle: 0 };
   }
@@ -212,8 +194,7 @@ export function getDiamondGradientParams(paint: FigGradientPaint): DiamondGradie
     return { center: handles[0] ?? { x: 0.5, y: 0.5 } };
   }
 
-  const paintData = paint as Record<string, unknown>;
-  const transform = paintData.transform as GradientTransform | undefined;
+  const transform = paint.transform;
   return {
     center: {
       x: transform?.m02 ?? 0.5,

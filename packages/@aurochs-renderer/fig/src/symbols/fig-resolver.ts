@@ -8,7 +8,7 @@
  * クロージャで状態を閉じ込め、prototype チェーンや this バインディングを排除する。
  */
 
-import type { FigNode } from "@aurochs/fig/types";
+import type { FigNode, MutableFigNode } from "@aurochs/fig/types";
 import { guidToString, getNodeType, safeChildren, type FigGuid } from "@aurochs/fig/parser";
 import { extractSymbolIDPair } from "@aurochs/fig/symbols";
 import { buildGuidTranslationMap, translateOverrides } from "../../../../@aurochs/fig/src/symbols/guid-translation";
@@ -17,9 +17,15 @@ import {
   getInstanceSymbolOverrides,
   collectComponentPropAssignments,
   cloneSymbolChildren,
+  applySelfOverridesToMergedNode,
   type FigSymbolOverride,
   type FigDerivedSymbolData,
 } from "../../../../@aurochs/fig/src/symbols/symbol-resolver";
+import {
+  buildFigStyleRegistry,
+  resolveStyleIdOnMutableNode,
+  type FigStyleRegistry,
+} from "../../../../@aurochs/fig/src/symbols/style-registry";
 
 // =============================================================================
 // Public types
@@ -64,6 +70,7 @@ const SELF_OVERRIDE_PROPERTIES = new Set([
   "effects", "opacity", "visible", "cornerRadius", "rectangleCornerRadii",
   "blendMode", "clipsContent", "frameMaskDisabled", "mask", "cornerSmoothing",
   "backgroundColor", "backgroundEnabled", "backgroundOpacity",
+  "styleIdForFill", "styleIdForStrokeFill",
 ]);
 
 const SYMBOL_NODE_TYPES = new Set(["SYMBOL", "COMPONENT", "COMPONENT_SET"]);
@@ -84,6 +91,7 @@ export function createFigResolver(
   symbolMap: ReadonlyMap<string, FigNode>,
 ): FigResolver {
   const warnings: string[] = [];
+  const styleRegistry = buildFigStyleRegistry(symbolMap);
 
   // --- Symbol lookup (with localID fallback) ---
 
@@ -122,8 +130,8 @@ export function createFigResolver(
 
   // --- Property merge ---
 
-  function mergeProperties(instanceNode: FigNode, symbolNode: FigNode): FigNode {
-    const merged: Record<string, unknown> = { ...instanceNode };
+  function mergeProperties(instanceNode: FigNode, symbolNode: FigNode): MutableFigNode {
+    const merged: MutableFigNode = { ...instanceNode };
 
     if (symbolNode.fillPaints) { merged.fillPaints = symbolNode.fillPaints; }
     if (symbolNode.strokePaints) { merged.strokePaints = symbolNode.strokePaints; }
@@ -157,16 +165,17 @@ export function createFigResolver(
     if (symbolNode.size) { merged.size = symbolNode.size; }
     merged.opacity = symbolNode.opacity;
 
-    return merged as FigNode;
+    return merged;
   }
 
   // --- Self-referencing overrides ---
 
   function applySelfOverrides(
-    mergedNode: Record<string, unknown>,
+    mergedNode: MutableFigNode,
     overrides: readonly FigSymbolOverride[],
     symbolGuidStr: string,
   ): void {
+    let hasStyleIdOverride = false;
     for (const ov of overrides) {
       const guids = ov.guidPath?.guids;
       if (!guids || guids.length !== 1) { continue; }
@@ -175,7 +184,13 @@ export function createFigResolver(
         if (key === "guidPath") { continue; }
         if (!SELF_OVERRIDE_PROPERTIES.has(key)) { continue; }
         mergedNode[key] = value;
+        if (key === "styleIdForFill" || key === "styleIdForStrokeFill") {
+          hasStyleIdOverride = true;
+        }
       }
+    }
+    if (hasStyleIdOverride) {
+      resolveStyleIdOnMutableNode(mergedNode, styleRegistry);
     }
   }
 
@@ -350,7 +365,7 @@ export function createFigResolver(
 
     // Self-referencing overrides
     if (symbolOverrides && symbolOverrides.length > 0) {
-      applySelfOverrides(mergedNode as Record<string, unknown>, symbolOverrides, guidToString(symNode.guid));
+      applySelfOverrides(mergedNode, symbolOverrides, guidToString(symNode.guid));
     }
 
     // Clone children with overrides
@@ -359,6 +374,7 @@ export function createFigResolver(
       symbolOverrides,
       derivedSymbolData,
       componentPropAssignments: componentPropAssignments.length > 0 ? componentPropAssignments : undefined,
+      styleRegistry,
     });
 
     // Layout resolution for resized instances
@@ -369,7 +385,7 @@ export function createFigResolver(
     if (isResized) {
       const layout = resolveInstanceLayout({ children, symbolSize: symbolSize!, instanceSize: instanceSize!, derivedSymbolData });
       if (layout.sizeApplied) {
-        (mergedNode as Record<string, unknown>).size = instanceSize;
+        mergedNode.size = instanceSize;
       }
       return { node: mergedNode, children: layout.children };
     }

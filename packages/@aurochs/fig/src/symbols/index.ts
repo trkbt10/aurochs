@@ -48,3 +48,11 @@ export {
 export {
   resolveInstanceLayout,
 } from "./constraints";
+
+export {
+  buildFigStyleRegistry,
+  resolveNodeStyleIds,
+  resolveStyleIdOnMutableNode,
+  EMPTY_FIG_STYLE_REGISTRY,
+  type FigStyleRegistry,
+} from "./style-registry";

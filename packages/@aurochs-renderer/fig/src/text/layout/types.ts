@@ -55,6 +55,17 @@ export type TextAutoResize = "WIDTH_AND_HEIGHT" | "HEIGHT" | "NONE" | "TRUNCATE"
 export type TextDecoration = "NONE" | "UNDERLINE" | "STRIKETHROUGH";
 
 /**
+ * Text case transformation.
+ *
+ * ORIGINAL: no transformation (display characters as stored)
+ * UPPER: convert to uppercase
+ * LOWER: convert to lowercase
+ * TITLE: capitalize first letter of each word
+ * SMALL_CAPS / SMALL_CAPS_FORCED: OpenType small-caps feature
+ */
+export type TextCase = "ORIGINAL" | "UPPER" | "LOWER" | "TITLE" | "SMALL_CAPS" | "SMALL_CAPS_FORCED";
+
+/**
  * Size of text box
  */
 export type TextBoxSize = {

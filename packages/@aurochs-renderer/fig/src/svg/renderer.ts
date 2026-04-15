@@ -25,6 +25,7 @@ import {
 } from "./nodes/text/derived-path-render";
 import { createFigResolver, type ResolvedInstanceNode } from "../symbols/fig-resolver";
 import type { FontLoader } from "../font";
+import { buildFigStyleRegistry, resolveNodeStyleIds, type FigStyleRegistry } from "../../../../@aurochs/fig/src/symbols/style-registry";
 
 // =============================================================================
 // Transform Normalization
@@ -146,6 +147,9 @@ export async function renderFigToSvg(
 
   const warnings: string[] = [];
 
+  // Build style registry for resolving stale fillPaints via styleIdForFill
+  const styleRegistry = options?.symbolMap ? buildFigStyleRegistry(options.symbolMap) : undefined;
+
   // Create resolver if symbolMap is provided
   const resolver = options?.symbolMap ? createFigResolver(options.symbolMap) : undefined;
   if (resolver) {
@@ -159,6 +163,7 @@ export async function renderFigToSvg(
     showHiddenNodes: options?.showHiddenNodes,
     resolver,
     fontLoader: options?.fontLoader,
+    styleRegistry,
   });
   const nodesToRender = getNodesToRender(nodes, options?.normalizeRootTransform);
 
@@ -288,7 +293,11 @@ async function renderNode(node: FigNode, ctx: FigSvgRenderContext, warnings: str
 
   // For INSTANCE nodes, resolve children from SYMBOL and inherit properties
   const resolution = resolveInstance({ node, nodeType, ctx, warnings });
-  const resolvedNode = resolution.node;
+
+  // Resolve stale fillPaints/strokePaints via styleIdForFill/styleIdForStrokeFill.
+  // Nodes may carry a styleId that references a newer color than their cached fillPaints.
+  const resolvedNode = resolveNodeStyleIds(resolution.node, ctx.styleRegistry);
+
   const resolvedChildren = resolution.children;
   const renderedChildren = await renderChildrenWithMasks(resolvedChildren, ctx, warnings);
 
@@ -351,8 +360,12 @@ async function renderNode(node: FigNode, ctx: FigSvgRenderContext, warnings: str
           ...ctx,
           fontLoader: ctx.fontLoader,
         };
-        contentRef.value = await renderTextNodeAsPath(node, pathCtx);
-        break;
+        const pathResult = await renderTextNodeAsPath(node, pathCtx);
+        if (pathResult !== EMPTY_SVG) {
+          contentRef.value = pathResult;
+          break;
+        }
+        // Font not available — fall through to <text> rendering
       }
       contentRef.value = renderTextNode(node, ctx);
       break;
