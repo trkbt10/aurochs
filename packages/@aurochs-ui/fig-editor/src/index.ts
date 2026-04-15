@@ -38,3 +38,8 @@ export { LayerPanel } from "./panels/LayerPanel";
 
 // Toolbar
 export { FigEditorToolbar } from "./editor/FigEditorToolbar";
+
+// Inspector (Fig-specific category registry, adapters, and view component)
+export { FIG_NODE_CATEGORY_REGISTRY, FIG_LEGEND_ORDER } from "./inspector";
+export { getRootNormalizationTransform, collectFigBoxes, figNodeToInspectorTree } from "./inspector";
+export { FigInspectorView, type FigInspectorViewProps } from "./inspector";

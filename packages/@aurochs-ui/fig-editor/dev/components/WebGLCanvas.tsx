@@ -3,8 +3,8 @@
  */
 
 import { useRef, useEffect } from "react";
-import type { SceneGraph } from "../../src/scene-graph/types";
-import { createWebGLFigmaRenderer, type WebGLFigmaRendererInstance } from "../../src/webgl/renderer";
+import type { SceneGraph } from "@aurochs-renderer/fig/scene-graph";
+import { createWebGLFigmaRenderer, type WebGLFigmaRendererInstance } from "@aurochs-renderer/fig/webgl";
 
 type Props = {
   readonly sceneGraph: SceneGraph | null;
@@ -12,22 +12,15 @@ type Props = {
   readonly height: number;
 };
 
-
-
-
-
-
 /** WebGL canvas that renders a SceneGraph */
 export function WebGLCanvas({ sceneGraph, width, height }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<WebGLFigmaRendererInstance | null>(null);
 
-  // Single effect: init renderer + render scene graph + cleanup
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || !sceneGraph) {return;}
+    if (!canvas || !sceneGraph) return;
 
-    // Create renderer (gets a new GL context each time canvas changes)
     if (!rendererRef.current) {
       try {
         rendererRef.current = createWebGLFigmaRenderer({
@@ -45,7 +38,6 @@ export function WebGLCanvas({ sceneGraph, width, height }: Props) {
     renderSceneAsync(renderer, sceneGraph);
   }, [sceneGraph, width, height]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       rendererRef.current?.dispose();
@@ -56,17 +48,12 @@ export function WebGLCanvas({ sceneGraph, width, height }: Props) {
   return (
     <canvas
       ref={canvasRef}
-      style={{
-        maxWidth: "100%",
-        height: "auto",
-        display: "block",
-      }}
+      style={{ maxWidth: "100%", height: "auto", display: "block" }}
     />
   );
 }
 
-/** Prepare and render a scene graph asynchronously */
-async function renderSceneAsync(renderer: WebGLFigmaRenderer, sceneGraph: SceneGraph) {
+async function renderSceneAsync(renderer: WebGLFigmaRendererInstance, sceneGraph: SceneGraph) {
   try {
     await renderer.prepareScene(sceneGraph);
     renderer.render(sceneGraph);

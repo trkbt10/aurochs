@@ -80,6 +80,10 @@
     "./table-operations": {
       "types": "./src/table-operations.ts",
       "default": "./src/table-operations.ts"
+    },
+    "./inspector-types": {
+      "types": "./src/inspector-types.ts",
+      "default": "./src/inspector-types.ts"
     }
   }
 }

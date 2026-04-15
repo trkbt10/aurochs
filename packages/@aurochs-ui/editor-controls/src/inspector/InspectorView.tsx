@@ -1,29 +1,65 @@
 /**
- * @file Inspector mode container - renders SVG preview with bounding box overlay,
- * CSS-based pan/zoom, tooltip, zoom indicator, and tree panel.
+ * @file Inspector view container.
+ *
+ * Integrates BoundingBoxOverlay, InspectorTreePanel, CategoryLegend, and NodeTooltip
+ * into a complete inspector experience with pan/zoom viewport.
+ *
+ * This is a convenience component for the common case. Each sub-component
+ * can also be used independently for custom layouts.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { FigNode } from "@aurochs/fig/types";
-import { CATEGORY_COLORS, CATEGORY_LABELS, type NodeCategory } from "./inspector-constants";
-import { getCategoryColor } from "./inspector-constants";
-import { InspectorOverlay, collectBoxes, getRootNormalizationTransform, type BoxInfo } from "./InspectorOverlay";
-import { InspectorTreeView } from "./InspectorTreeView";
+import type { InspectorBoxInfo, InspectorTreeNode, NodeCategoryRegistry } from "@aurochs-ui/editor-core/inspector-types";
+import { BoundingBoxOverlay } from "./BoundingBoxOverlay";
+import { InspectorTreePanel } from "./InspectorTreePanel";
+import { CategoryLegend } from "./CategoryLegend";
+import { NodeTooltip } from "./NodeTooltip";
 
-type Props = {
-  readonly frameNode: FigNode;
-  readonly frameWidth: number;
-  readonly frameHeight: number;
+// =============================================================================
+// Props
+// =============================================================================
+
+export type InspectorViewProps = {
+  /** Category registry for color resolution (DI) */
+  readonly registry: NodeCategoryRegistry;
+  /** Bounding boxes to display in the overlay */
+  readonly boxes: readonly InspectorBoxInfo[];
+  /** Root node for the tree panel */
+  readonly treeRoot: InspectorTreeNode;
+  /** Content width in logical units */
+  readonly contentWidth: number;
+  /** Content height in logical units */
+  readonly contentHeight: number;
+  /** Whether to show hidden nodes */
   readonly showHiddenNodes: boolean;
-  readonly svgHtml: string;
-  readonly isRendering: boolean;
+  /**
+   * Content to render in the viewport (e.g. SVG preview).
+   * Rendered underneath the bounding box overlay.
+   */
+  readonly children: React.ReactNode;
+  /** Whether the content is currently rendering (shows loading state) */
+  readonly isRendering?: boolean;
+  /**
+   * Category IDs to display in the legend, in order.
+   * If omitted, all categories from the registry are displayed.
+   */
+  readonly legendOrder?: readonly string[];
+  /** Width of the tree panel in CSS pixels. Default: 380 */
+  readonly treePanelWidth?: number;
 };
+
+// =============================================================================
+// Constants
+// =============================================================================
 
 const MIN_ZOOM = 0.1;
 const MAX_ZOOM = 20;
 const ZOOM_SENSITIVITY = 0.001;
+const TOOLTIP_OFFSET = 12;
 
-const LEGEND_CATEGORIES: NodeCategory[] = ["container", "instance", "shape", "text", "structural", "special"];
+// =============================================================================
+// Styles
+// =============================================================================
 
 const viewStyles = {
   container: {
@@ -32,26 +68,6 @@ const viewStyles = {
     flex: 1,
     gap: "12px",
     minHeight: 0,
-  },
-  legend: {
-    display: "flex",
-    gap: "12px",
-    flexWrap: "wrap" as const,
-    padding: "8px 12px",
-    background: "rgba(255, 255, 255, 0.03)",
-    borderRadius: "8px",
-  },
-  legendItem: {
-    display: "flex",
-    alignItems: "center",
-    gap: "6px",
-    fontSize: "12px",
-    color: "#94a3b8",
-  },
-  legendSwatch: {
-    width: "12px",
-    height: "12px",
-    borderRadius: "3px",
   },
   content: {
     display: "flex",
@@ -71,42 +87,17 @@ const viewStyles = {
     transformOrigin: "0 0",
     position: "relative" as const,
   },
-  svgContainer: {
-    display: "block",
-  },
   emptyState: {
     padding: "40px",
     textAlign: "center" as const,
     color: "#64748b",
   },
   treePanel: {
-    width: "380px",
     flexShrink: 0,
     overflow: "hidden",
     background: "rgba(255, 255, 255, 0.03)",
     borderRadius: "12px",
     minHeight: 0,
-  },
-  tooltip: {
-    position: "absolute" as const,
-    pointerEvents: "none" as const,
-    background: "rgba(0, 0, 0, 0.85)",
-    color: "#e2e8f0",
-    padding: "6px 10px",
-    borderRadius: "6px",
-    fontSize: "12px",
-    whiteSpace: "nowrap" as const,
-    zIndex: 10,
-    display: "flex",
-    gap: "8px",
-    alignItems: "center",
-  },
-  tooltipType: {
-    fontSize: "10px",
-    fontWeight: 600,
-    padding: "1px 5px",
-    borderRadius: "3px",
-    color: "#fff",
   },
   zoomIndicator: {
     position: "absolute" as const,
@@ -123,16 +114,36 @@ const viewStyles = {
   },
 };
 
+// =============================================================================
+// Component
+// =============================================================================
 
-
-
-
-
-/** Inspector view with node tree and overlay */
-export function InspectorView({ frameNode, frameWidth, frameHeight, showHiddenNodes, svgHtml, isRendering }: Props) {
+/**
+ * Complete inspector view with viewport, overlay, tree panel, legend, and tooltip.
+ *
+ * Features:
+ * - Wheel zoom (cursor-centric)
+ * - Space+drag or middle-click pan
+ * - Double-click to reset zoom/pan
+ * - Synchronized highlight/hover between overlay and tree
+ * - Tooltip on hover
+ * - Zoom indicator (click to reset)
+ */
+export function InspectorView({
+  registry,
+  boxes,
+  treeRoot,
+  contentWidth,
+  contentHeight,
+  showHiddenNodes,
+  children,
+  isRendering = false,
+  legendOrder,
+  treePanelWidth = 380,
+}: InspectorViewProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
 
-  // Inspector interaction state
+  // Interaction state
   const [highlightedNodeId, setHighlightedNodeId] = useState<string | null>(null);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 
@@ -144,35 +155,29 @@ export function InspectorView({ frameNode, frameWidth, frameHeight, showHiddenNo
   const panStartRef = useRef({ x: 0, y: 0 });
   const spaceHeldRef = useRef(false);
 
-  // Tooltip
+  // Tooltip position
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
 
-  // Boxes for tooltip lookup (normalized to match SVG rendering)
-  const initialTransform = useMemo(() => getRootNormalizationTransform(frameNode), [frameNode]);
-  const boxes = useMemo(
-    () => collectBoxes(frameNode, initialTransform, showHiddenNodes),
-    [frameNode, initialTransform, showHiddenNodes],
-  );
-
-  const hoveredBox: BoxInfo | null = useMemo(
+  // Hovered box for tooltip
+  const hoveredBox: InspectorBoxInfo | null = useMemo(
     () => (hoveredNodeId ? (boxes.find((b) => b.nodeId === hoveredNodeId) ?? null) : null),
     [boxes, hoveredNodeId],
   );
 
-  // Reset zoom/pan when frame changes
+  // Reset state when content changes
   useEffect(() => {
     setZoom(1);
     setPan({ x: 0, y: 0 });
     setHighlightedNodeId(null);
-  }, [frameNode]);
+  }, [treeRoot]);
 
   // Track Space key for pan mode
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === "Space") {spaceHeldRef.current = true;}
+      if (e.code === "Space") spaceHeldRef.current = true;
     };
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.code === "Space") {spaceHeldRef.current = false;}
+      if (e.code === "Space") spaceHeldRef.current = false;
     };
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
@@ -185,13 +190,11 @@ export function InspectorView({ frameNode, frameWidth, frameHeight, showHiddenNo
   // Wheel zoom (passive: false to allow preventDefault)
   useEffect(() => {
     const el = viewportRef.current;
-    if (!el) {return;}
+    if (!el) return;
 
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
       const rect = el.getBoundingClientRect();
-
-      // Cursor position relative to viewport (CSS pixels)
       const cursorX = e.clientX - rect.left;
       const cursorY = e.clientY - rect.top;
 
@@ -200,8 +203,6 @@ export function InspectorView({ frameNode, frameWidth, frameHeight, showHiddenNo
         const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, prevZoom * factor));
 
         // Adjust pan so cursor stays over the same content point
-        // Content point under cursor: (cursorX - pan.x) / prevZoom
-        // After zoom, to keep same point: newPan.x = cursorX - contentX * newZoom
         setPan((prevPan) => {
           const contentX = (cursorX - prevPan.x) / prevZoom;
           const contentY = (cursorY - prevPan.y) / prevZoom;
@@ -222,11 +223,9 @@ export function InspectorView({ frameNode, frameWidth, frameHeight, showHiddenNo
   // Pan drag (mouse move/up on window)
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      if (!isDraggingRef.current) {return;}
-
+      if (!isDraggingRef.current) return;
       const dx = e.clientX - dragStartRef.current.x;
       const dy = e.clientY - dragStartRef.current.y;
-
       setPan({
         x: panStartRef.current.x + dx,
         y: panStartRef.current.y + dy,
@@ -270,7 +269,10 @@ export function InspectorView({ frameNode, frameWidth, frameHeight, showHiddenNo
   // Tooltip tracking
   const handleViewportMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    setTooltipPos({ x: e.clientX - rect.left + 12, y: e.clientY - rect.top + 12 });
+    setTooltipPos({
+      x: e.clientX - rect.left + TOOLTIP_OFFSET,
+      y: e.clientY - rect.top + TOOLTIP_OFFSET,
+    });
   }, []);
 
   // Node interaction
@@ -293,21 +295,14 @@ export function InspectorView({ frameNode, frameWidth, frameHeight, showHiddenNo
     transform: `scale(${zoom})`,
     marginLeft: pan.x,
     marginTop: pan.y,
-    width: frameWidth,
-    height: frameHeight,
+    width: contentWidth,
+    height: contentHeight,
   };
 
   return (
     <div style={viewStyles.container}>
       {/* Legend */}
-      <div style={viewStyles.legend}>
-        {LEGEND_CATEGORIES.map((cat) => (
-          <div key={cat} style={viewStyles.legendItem}>
-            <div style={{ ...viewStyles.legendSwatch, background: CATEGORY_COLORS[cat] }} />
-            <span>{CATEGORY_LABELS[cat]}</span>
-          </div>
-        ))}
-      </div>
+      <CategoryLegend registry={registry} order={legendOrder} />
 
       {/* Content */}
       <div style={viewStyles.content}>
@@ -324,38 +319,34 @@ export function InspectorView({ frameNode, frameWidth, frameHeight, showHiddenNo
         >
           {/* Transform layer */}
           <div style={transformStyle}>
-            {/* Rendered SVG preview */}
-            {renderSvgPreview(isRendering, svgHtml)}
+            {/* User-provided content (e.g. SVG preview) */}
+            {isRendering ? (
+              <div style={viewStyles.emptyState}>Rendering...</div>
+            ) : (
+              children
+            )}
 
             {/* Inspector overlay (stacked on top) */}
-            <InspectorOverlay
-              frameNode={frameNode}
-              frameWidth={frameWidth}
-              frameHeight={frameHeight}
+            <BoundingBoxOverlay
+              boxes={boxes}
+              registry={registry}
+              viewportWidth={contentWidth}
+              viewportHeight={contentHeight}
               highlightedNodeId={highlightedNodeId}
               hoveredNodeId={hoveredNodeId}
               onNodeHover={handleNodeHover}
               onNodeClick={handleNodeClick}
-              showHiddenNodes={showHiddenNodes}
             />
           </div>
 
           {/* Tooltip (fixed to viewport, outside transform) */}
           {hoveredBox && tooltipPos && !isDraggingRef.current && (
-            <div style={{ ...viewStyles.tooltip, left: tooltipPos.x, top: tooltipPos.y }}>
-              <span
-                style={{
-                  ...viewStyles.tooltipType,
-                  background: getCategoryColor(hoveredBox.nodeType),
-                }}
-              >
-                {hoveredBox.nodeType}
-              </span>
-              <span>{hoveredBox.nodeName}</span>
-              <span style={{ color: "#64748b" }}>
-                {Math.round(hoveredBox.width)}x{Math.round(hoveredBox.height)}
-              </span>
-            </div>
+            <NodeTooltip
+              box={hoveredBox}
+              registry={registry}
+              x={tooltipPos.x}
+              y={tooltipPos.y}
+            />
           )}
 
           {/* Zoom indicator */}
@@ -365,9 +356,10 @@ export function InspectorView({ frameNode, frameWidth, frameHeight, showHiddenNo
         </div>
 
         {/* Tree panel */}
-        <div style={viewStyles.treePanel}>
-          <InspectorTreeView
-            rootNode={frameNode}
+        <div style={{ ...viewStyles.treePanel, width: treePanelWidth }}>
+          <InspectorTreePanel
+            rootNode={treeRoot}
+            registry={registry}
             highlightedNodeId={highlightedNodeId}
             hoveredNodeId={hoveredNodeId}
             onNodeHover={handleNodeHover}
@@ -378,12 +370,4 @@ export function InspectorView({ frameNode, frameWidth, frameHeight, showHiddenNo
       </div>
     </div>
   );
-}
-
-/** Render SVG preview or loading state */
-function renderSvgPreview(isRendering: boolean, svgHtml: string) {
-  if (isRendering) {
-    return <div style={viewStyles.emptyState}>Rendering...</div>;
-  }
-  return <div style={viewStyles.svgContainer} dangerouslySetInnerHTML={{ __html: svgHtml }} />;
 }

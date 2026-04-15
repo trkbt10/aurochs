@@ -79,3 +79,17 @@ export type { SelectionBoxVariant } from "./canvas";
 export { SelectionBox, type SelectionBoxProps } from "./canvas";
 export { ResizeHandle as CanvasResizeHandle, type ResizeHandleProps as CanvasResizeHandleProps } from "./canvas";
 export { RotateHandle as CanvasRotateHandle, type RotateHandleProps as CanvasRotateHandleProps } from "./canvas";
+
+// Inspector components (node structure visualization)
+export {
+  BoundingBoxOverlay,
+  type BoundingBoxOverlayProps,
+  InspectorTreePanel,
+  type InspectorTreePanelProps,
+  CategoryLegend,
+  type CategoryLegendProps,
+  NodeTooltip,
+  type NodeTooltipProps,
+  InspectorView,
+  type InspectorViewProps,
+} from "./inspector";

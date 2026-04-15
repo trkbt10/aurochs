@@ -142,3 +142,18 @@ export type {
   PositionData,
   SizeData,
 } from "./adapter-types";
+
+// Inspector types (SoT)
+export type {
+  NodeCategoryConfig,
+  NodeCategoryRegistry,
+  AffineTransform,
+  InspectorBoxInfo,
+  InspectorTreeNode,
+} from "./inspector-types";
+export {
+  IDENTITY_TRANSFORM,
+  resolveNodeColor,
+  resolveNodeLabel,
+  affineToSvgTransform,
+} from "./inspector-types";

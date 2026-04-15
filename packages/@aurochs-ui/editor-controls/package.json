@@ -110,6 +110,10 @@
     "./ribbon-menu": {
       "types": "./src/ribbon-menu/index.ts",
       "default": "./src/ribbon-menu/index.ts"
+    },
+    "./inspector": {
+      "types": "./src/inspector/index.ts",
+      "default": "./src/inspector/index.ts"
     }
   }
 }
