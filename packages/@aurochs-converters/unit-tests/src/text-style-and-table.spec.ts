@@ -24,7 +24,7 @@ import type { Pixels, Degrees, Points } from "@aurochs-office/drawing-ml/domain/
 import { px, deg, pt } from "@aurochs-office/drawing-ml/domain/units";
 import { createResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 import { EMPTY_FONT_SCHEME } from "@aurochs-office/ooxml/domain/font-scheme";
-import { DEFAULT_PAGE_BACKGROUND } from "@aurochs-builder/fig";
+import { DEFAULT_PAGE_BACKGROUND } from "@aurochs/fig/domain";
 import { dmlColorToFig } from "@aurochs-converters/interop-drawing-ml/dml-to-fig";
 
 // =============================================================================

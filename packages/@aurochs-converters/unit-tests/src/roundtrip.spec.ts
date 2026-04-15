@@ -27,7 +27,7 @@ import type { Pixels, Degrees } from "@aurochs-office/drawing-ml/domain/units";
 import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
 import { createResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 import { EMPTY_FONT_SCHEME } from "@aurochs-office/ooxml/domain/font-scheme";
-import { DEFAULT_PAGE_BACKGROUND } from "@aurochs-builder/fig";
+import { DEFAULT_PAGE_BACKGROUND } from "@aurochs/fig/domain";
 
 // =============================================================================
 // Test Fixtures

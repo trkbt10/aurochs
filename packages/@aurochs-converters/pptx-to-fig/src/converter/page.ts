@@ -19,7 +19,7 @@ import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
 import type { ResourceStore } from "@aurochs-office/ooxml/domain/resource-store";
 import type { TableStyleList } from "@aurochs-office/pptx/parser/table/style-parser";
 import type { FigImage } from "@aurochs/fig/parser";
-import { DEFAULT_PAGE_BACKGROUND } from "@aurochs-builder/fig";
+import { DEFAULT_PAGE_BACKGROUND } from "@aurochs/fig/domain";
 import { dmlColorToFig } from "@aurochs-converters/interop-drawing-ml/dml-to-fig";
 import { convertShapes, type NodeIdCounter, type ConvertContext } from "./shape";
 
