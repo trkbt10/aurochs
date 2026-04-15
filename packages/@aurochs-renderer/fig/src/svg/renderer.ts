@@ -26,6 +26,7 @@ import {
 import { createFigResolver, type ResolvedInstanceNode } from "../symbols/fig-resolver";
 import type { FontLoader } from "../font";
 import { buildFigStyleRegistry, resolveNodeStyleIds, type FigStyleRegistry } from "../../../../@aurochs/fig/src/symbols/style-registry";
+import { getFilterAttr } from "./effects";
 
 // =============================================================================
 // Transform Normalization
@@ -317,7 +318,7 @@ async function renderNode(node: FigNode, ctx: FigSvgRenderContext, warnings: str
     case "COMPONENT_SET":
     case "INSTANCE":
     case "SYMBOL":
-      contentRef.value = renderFrameNode(resolvedNode, ctx, renderedChildren);
+      contentRef.value = renderFrameNode(resolvedNode, ctx, renderedChildren, resolvedChildren);
       break;
 
     case "GROUP":
@@ -380,12 +381,38 @@ async function renderNode(node: FigNode, ctx: FigSvgRenderContext, warnings: str
       break;
   }
 
+  // ---- Common post-processing (SoT for effects and blend mode) ----
+  //
+  // Effects (shadows, blur) and blend mode are applied here as the single
+  // source of truth, rather than in each individual node renderer.
+  // This ensures TEXT, GROUP, BOOLEAN_OPERATION, and any future node types
+  // automatically receive effects support.
+
+  let result = contentRef.value;
+
+  // Apply effects (shadows, blur) via SVG filter
+  // Skip for DOCUMENT and CANVAS which are structural containers
+  if (nodeType !== "DOCUMENT" && nodeType !== "CANVAS") {
+    const effects = resolvedNode.effects;
+    if (effects && effects.length > 0) {
+      const transform = resolvedNode.transform;
+      const size = resolvedNode.size;
+      const tx = transform?.m02 ?? 0;
+      const ty = transform?.m12 ?? 0;
+      const bounds = { x: tx, y: ty, width: size?.x ?? 0, height: size?.y ?? 0 };
+      const filterAttr = getFilterAttr(effects, ctx, bounds);
+      if (filterAttr) {
+        result = g({ filter: filterAttr }, result);
+      }
+    }
+  }
+
   // Apply node-level blend mode as CSS mix-blend-mode
   const blendModeCss = getBlendModeCss(node);
   if (blendModeCss) {
-    return g({ style: `mix-blend-mode:${blendModeCss}` }, contentRef.value);
+    return g({ style: `mix-blend-mode:${blendModeCss}` }, result);
   }
-  return contentRef.value;
+  return result;
 }
 
 // =============================================================================

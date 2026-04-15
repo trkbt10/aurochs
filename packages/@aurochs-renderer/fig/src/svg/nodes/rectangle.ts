@@ -9,7 +9,6 @@ import { rect, g, type SvgString } from "../primitives";
 import { buildTransformAttr } from "../transform";
 import { getFillResult, applyFillResult, strokePaintsToFillAttrs, type FillAttrs, type ShapeGeometry } from "../fill";
 import { getStrokeAttrs, type StrokeAttrs } from "../stroke";
-import { getFilterAttr } from "../effects";
 import { decodePathsFromGeometry } from "../geometry-path";
 import { renderPaths } from "../render-paths";
 import {
@@ -17,7 +16,6 @@ import {
   extractSizeProps,
   extractPaintProps,
   extractGeometryProps,
-  extractEffectsProps,
   resolveCornerRadius,
 } from "./extract-props";
 
@@ -27,21 +25,12 @@ import {
 export function renderRectangleNode(node: FigNode, ctx: FigSvgRenderContext): SvgString {
   const { transform, opacity } = extractBaseProps(node);
   const { size } = extractSizeProps(node);
-  const { fillPaints, strokePaints, strokeWeight } = extractPaintProps(node);
+  const { fillPaints, strokePaints, strokeWeight, strokeCap, strokeJoin, strokeDashes } = extractPaintProps(node);
   const { fillGeometry, strokeGeometry } = extractGeometryProps(node);
-  const { effects } = extractEffectsProps(node);
   const { rx, ry } = resolveCornerRadius(node, size);
 
   const transformStr = buildTransformAttr(transform);
-  const baseStrokeAttrs = getStrokeAttrs({ paints: strokePaints, strokeWeight });
-
-  // Calculate bounds for filter region
-  const tx = transform?.m02 ?? 0;
-  const ty = transform?.m12 ?? 0;
-  const bounds = { x: tx, y: ty, width: size.x, height: size.y };
-
-  // Get filter attribute if effects are present
-  const filterAttr = getFilterAttr(effects, ctx, bounds);
+  const baseStrokeAttrs = getStrokeAttrs({ paints: strokePaints, strokeWeight, options: { strokeCap, strokeJoin, dashPattern: strokeDashes } });
 
   // Shape geometry for complex fills
   const clipShape = rect({ x: 0, y: 0, width: size.x, height: size.y, rx, ry, fill: "black" });
@@ -78,7 +67,6 @@ export function renderRectangleNode(node: FigNode, ctx: FigSvgRenderContext): Sv
         strokeAttrs: strokeAttrsRef.value,
         transform: transformStr,
         opacity,
-        filter: filterAttr,
       });
 
       return applyFillResult(fillResult, pathResult);
@@ -99,10 +87,6 @@ export function renderRectangleNode(node: FigNode, ctx: FigSvgRenderContext): Sv
   });
 
   const withFill = applyFillResult(fillResult, rectElement);
-
-  if (filterAttr) {
-    return g({ filter: filterAttr }, withFill);
-  }
 
   return withFill;
 }

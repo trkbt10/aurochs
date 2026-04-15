@@ -5,9 +5,11 @@
  * to the shared SoT in stroke/interpret.ts.
  */
 
-import type { FigPaint, FigStrokeCap, FigStrokeJoin, FigStrokeWeight } from "@aurochs/fig/types";
-import { figColorToHex, getSolidPaintColor } from "@aurochs/fig/color";
+import type { FigPaint, FigGradientPaint, FigStrokeCap, FigStrokeJoin, FigStrokeWeight } from "@aurochs/fig/types";
+import { figColorToHex, getSolidPaintColor, getPaintType } from "@aurochs/fig/color";
 import { resolveStrokeWeight, mapStrokeCap, mapStrokeJoin } from "../stroke";
+import type { FigSvgRenderContext } from "../types";
+import { paintToFillAttrs } from "./fill";
 
 // =============================================================================
 // Stroke Attributes
@@ -26,6 +28,10 @@ export type StrokeOptions = {
   readonly strokeCap?: FigStrokeCap;
   readonly strokeJoin?: FigStrokeJoin;
   readonly dashPattern?: readonly number[];
+  /** Render context — required for gradient stroke support */
+  readonly ctx?: FigSvgRenderContext;
+  /** Element size — required for gradient stroke transform computation */
+  readonly elementSize?: { width: number; height: number };
 };
 
 export type GetStrokeAttrsParams = {
@@ -81,8 +87,30 @@ function getStrokeAttrsImpl(
     if (opacity < 1) {
       attrs["stroke-opacity"] = opacity;
     }
+  } else if (options?.ctx) {
+    // Non-solid paint (gradient, image) — resolve via the fill pipeline which
+    // creates gradient/pattern defs and returns a url(#id) reference.
+    // The url() works for both SVG fill and stroke attributes.
+    const resolved = paintToFillAttrs(visiblePaint, options.ctx, options.elementSize);
+    attrs.stroke = resolved.fill;
+    if (resolved["fill-opacity"] !== undefined) {
+      attrs["stroke-opacity"] = resolved["fill-opacity"];
+    }
   } else {
-    attrs.stroke = "#000000";
+    // No context available to resolve gradient — use paint's first color stop
+    // as a reasonable approximation rather than arbitrary black.
+    const paintType = getPaintType(visiblePaint);
+    if (paintType.startsWith("GRADIENT")) {
+      const gradPaint = visiblePaint as FigGradientPaint;
+      const stops = gradPaint.gradientStops ?? gradPaint.stops;
+      if (stops && stops.length > 0) {
+        attrs.stroke = figColorToHex(stops[0].color);
+      } else {
+        attrs.stroke = "#000000";
+      }
+    } else {
+      attrs.stroke = "#000000";
+    }
   }
 
   attrs["stroke-width"] = resolveStrokeWeight(strokeWeight);

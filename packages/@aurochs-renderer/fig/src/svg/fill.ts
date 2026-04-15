@@ -118,9 +118,13 @@ function buildFillWithOpacity(fill: string, opacity: number): FillAttrs {
 type ElementSize = { width: number; height: number };
 
 /**
- * Convert a single paint to fill attributes
+ * Convert a single paint to fill attributes.
+ *
+ * Exported for reuse by stroke rendering (gradient strokes use the same
+ * gradient defs mechanism — the result's `fill` value can be used as
+ * SVG `stroke` since both accept `url(#id)` references).
  */
-function paintToFillAttrs(paint: FigPaint, ctx: FigSvgRenderContext, elementSize?: ElementSize): FillAttrs {
+export function paintToFillAttrs(paint: FigPaint, ctx: FigSvgRenderContext, elementSize?: ElementSize): FillAttrs {
   const opacity = paint.opacity ?? 1;
   const paintType = getPaintType(paint);
 

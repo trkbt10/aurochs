@@ -41,6 +41,10 @@ export type GradientPaint = Paint & {
 
 export type ImagePaint = Paint & {
   readonly imageRef?: string;
+  /** Kiwi format: image data reference */
+  readonly image?: { readonly hash: readonly number[] };
+  /** Kiwi format: image scale mode as enum value */
+  readonly imageScaleMode?: { readonly value: number; readonly name: ScaleMode };
   readonly scaleMode?: { value: number; name: ScaleMode };
   readonly imageTransform?: {
     m00: number;

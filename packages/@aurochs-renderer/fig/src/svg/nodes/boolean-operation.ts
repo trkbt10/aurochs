@@ -603,11 +603,11 @@ export function renderBooleanOperationNode(
     const paths = decodePathsFromGeometry(fillGeometry, ctx.blobs);
     if (paths.length > 0) {
       const { transform, opacity } = extractBaseProps(node);
-      const { fillPaints, strokePaints, strokeWeight } = extractPaintProps(node);
+      const { fillPaints, strokePaints, strokeWeight, strokeCap, strokeJoin, strokeDashes } = extractPaintProps(node);
       return renderPaths({
         paths,
         fillAttrs: getFillAttrs(fillPaints, ctx),
-        strokeAttrs: getStrokeAttrs({ paints: strokePaints, strokeWeight }),
+        strokeAttrs: getStrokeAttrs({ paints: strokePaints, strokeWeight, options: { strokeCap, strokeJoin, dashPattern: strokeDashes } }),
         transform: buildTransformAttr(transform),
         opacity,
       });
@@ -620,9 +620,9 @@ export function renderBooleanOperationNode(
 
   if (resultPaths && resultPaths.length > 0) {
     const { transform, opacity } = extractBaseProps(node);
-    const { fillPaints, strokePaints, strokeWeight } = extractPaintProps(node);
+    const { fillPaints, strokePaints, strokeWeight, strokeCap, strokeJoin, strokeDashes } = extractPaintProps(node);
     const fillAttrs = getFillAttrs(fillPaints, ctx);
-    const strokeAttrs = getStrokeAttrs({ paints: strokePaints, strokeWeight });
+    const strokeAttrs = getStrokeAttrs({ paints: strokePaints, strokeWeight, options: { strokeCap, strokeJoin, dashPattern: strokeDashes } });
     const transformStr = buildTransformAttr(transform);
     const opacityAttr = opacity < 1 ? opacity : undefined;
 

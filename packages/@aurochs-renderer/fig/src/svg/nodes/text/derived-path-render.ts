@@ -145,8 +145,7 @@ function renderGlyphPath(glyph: DerivedGlyph, blobs: readonly FigBlob[], precisi
  */
 export function renderTextNodeFromDerivedData(node: FigNode, ctx: DerivedPathRenderContext): SvgString {
   const props = extractTextProps(node);
-  const nodeData = node as Record<string, unknown>;
-  const derivedTextData = nodeData.derivedTextData as DerivedTextData | undefined;
+  const derivedTextData = node.derivedTextData as DerivedTextData | undefined;
 
   // No derived data - fallback to empty
   if (!derivedTextData?.glyphs || derivedTextData.glyphs.length === 0) {
@@ -201,9 +200,8 @@ export function renderTextNodeFromDerivedData(node: FigNode, ctx: DerivedPathRen
  * Check if a text node has derived path data available
  */
 export function hasDerivedPathData(node: FigNode): boolean {
-  const nodeData = node as Record<string, unknown>;
-  const derivedTextData = nodeData.derivedTextData as DerivedTextData | undefined;
-  return !!(derivedTextData?.glyphs && derivedTextData.glyphs.length > 0);
+  const dtd = node.derivedTextData;
+  return !!(dtd?.glyphs && dtd.glyphs.length > 0);
 }
 
 /**

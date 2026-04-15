@@ -7,11 +7,17 @@
  * both the scene-graph path and Direct SVG path.
  */
 
-import type { FigPaint, FigMatrix, FigVector } from "@aurochs/fig/types";
 import type {
-  ExtractedTextProps,
+  FigPaint,
+  FigMatrix,
+  FigVector,
   FigFontName,
   FigValueWithUnits,
+  KiwiEnumValue,
+  FigNode,
+} from "@aurochs/fig/types";
+import type {
+  ExtractedTextProps,
   TextAlignHorizontal,
   TextAlignVertical,
   TextAutoResize,
@@ -23,22 +29,32 @@ import { detectWeight, isItalic, FONT_WEIGHTS } from "../../font";
 /**
  * Structured text data fields.
  *
- * These are the text-specific fields that FigDesignNode.textData provides
- * in a typed form. For FigNode, these fields exist directly on the node
- * with the same names (accessed via `_raw` fallback or index signature).
+ * Picked from FigNode's text-related fields. This is the same set of fields
+ * that FigDesignNode.textData provides in domain form, and that FigNode
+ * carries directly on the node object.
+ *
+ * SoT: FigNode type in @aurochs/fig/types.
  */
-type TextDataFields = {
-  readonly characters?: string;
-  readonly fontSize?: number;
-  readonly fontName?: FigFontName;
-  readonly letterSpacing?: unknown;
-  readonly lineHeight?: unknown;
-  readonly textAlignHorizontal?: unknown;
-  readonly textAlignVertical?: unknown;
-  readonly textAutoResize?: unknown;
-  readonly textDecoration?: unknown;
-};
+type TextDataFields = Pick<FigNode,
+  | "characters"
+  | "fontSize"
+  | "fontName"
+  | "letterSpacing"
+  | "lineHeight"
+  | "textAlignHorizontal"
+  | "textAlignVertical"
+  | "textAutoResize"
+  | "textDecoration"
+  | "textCase"
+>;
 
+/**
+ * Input for extractTextProps.
+ *
+ * Accepted by both FigDesignNode (scene-graph path) and FigNode (direct SVG path).
+ * FigDesignNode provides `textData` (structured) and `_raw` (raw Kiwi fields).
+ * FigNode carries all text fields directly and satisfies this via Pick + index sig.
+ */
 export type TextNodeInput = {
   readonly transform?: FigMatrix;
   readonly opacity?: number;
@@ -46,7 +62,7 @@ export type TextNodeInput = {
   /** Structured text data (FigDesignNode.textData or compatible) */
   readonly textData?: TextDataFields;
   /** Raw parser data for fallback field access (FigDesignNode._raw) */
-  readonly _raw?: Record<string, unknown>;
+  readonly _raw?: TextDataFields;
   /** Domain fill paints (FigDesignNode.fills) */
   readonly fills?: readonly FigPaint[];
   /** Raw parser fill paints (FigNode.fillPaints) */
@@ -66,23 +82,22 @@ export type TextNodeInput = {
  * @param fontSize - Font size for percent calculations
  * @returns Resolved numeric value
  */
-export function getValueWithUnits(val: unknown, defaultValue: number, fontSize?: number): number {
+export function getValueWithUnits(val: FigValueWithUnits | number | undefined, defaultValue: number, fontSize?: number): number {
   if (typeof val === "number") {
     return val;
   }
   if (val && typeof val === "object" && "value" in val) {
-    const vwu = val as FigValueWithUnits;
-    const units = vwu.units;
+    const units = val.units;
     const unitsName = typeof units === "string" ? units : units?.name;
 
     if (unitsName === "PERCENT" && fontSize) {
-      return (vwu.value / 100) * fontSize;
+      return (val.value / 100) * fontSize;
     }
     // RAW = unitless em-relative multiplier (e.g., lineHeight 1.4 = 1.4 × fontSize)
     if (unitsName === "RAW" && fontSize) {
-      return vwu.value * fontSize;
+      return val.value * fontSize;
     }
-    return vwu.value;
+    return val.value;
   }
   return defaultValue;
 }
@@ -90,9 +105,12 @@ export function getValueWithUnits(val: unknown, defaultValue: number, fontSize?:
 /**
  * Get enum name from Figma enum object (KiwiEnumValue)
  */
-function getEnumName<T extends string>(enumObj: unknown, defaultValue: T): T {
+function getEnumName<T extends string>(enumObj: KiwiEnumValue | string | undefined, defaultValue: T): T {
+  if (typeof enumObj === "string") {
+    return enumObj as T;
+  }
   if (enumObj && typeof enumObj === "object" && "name" in enumObj) {
-    return (enumObj as { name: T }).name;
+    return enumObj.name as T;
   }
   return defaultValue;
 }
@@ -138,24 +156,18 @@ export function extractTextProps(node: TextNodeInput): ExtractedTextProps {
   const opacity = node.opacity ?? 1;
   const td = node.textData;
   // For FigDesignNode, _raw holds the raw parser fields.
-  // For FigNode, _raw is undefined so `raw?.xxx` falls through,
-  // and the index signature on TextNodeInput allows direct access as fallback.
-  const raw = node._raw ?? node as Record<string, unknown>;
+  // For FigNode, _raw is undefined so `raw?.xxx` falls through to the
+  // node itself (which carries the same fields via FigNode type).
+  const raw = node._raw ?? node as TextDataFields;
 
-  // Characters: prefer textData, fall back to _raw.characters (legacy .fig format)
-  const characters =
-    td?.characters ??
-    (raw?.characters as string | undefined) ??
-    "";
+  // Characters
+  const characters = td?.characters ?? raw?.characters ?? "";
 
   // Font size
-  const fontSize =
-    td?.fontSize ??
-    (raw?.fontSize as number | undefined) ??
-    16;
+  const fontSize = td?.fontSize ?? raw?.fontSize ?? 16;
 
   // Font name
-  const fontName = td?.fontName ?? (raw?.fontName as FigFontName | undefined);
+  const fontName = td?.fontName ?? raw?.fontName;
   const fontFamily = fontName?.family ?? "sans-serif";
   const fontWeight = detectWeight(fontName?.style) ?? FONT_WEIGHTS.REGULAR;
   const fontStyle = isItalic(fontName?.style) ? "italic" : undefined;

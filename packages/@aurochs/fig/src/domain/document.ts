@@ -12,7 +12,7 @@
  * These are domain types consumed by renderer, builder, and editor.
  */
 
-import type { FigNodeType, FigMatrix, FigVector, FigColor, FigPaint, FigEffect, FigStrokeWeight, KiwiEnumValue } from "../types";
+import type { FigNodeType, FigMatrix, FigVector, FigColor, FigPaint, FigEffect, FigStrokeWeight, FigFontName, KiwiEnumValue } from "../types";
 import type { LoadedFigFile, FigImage, FigMetadata } from "../roundtrip";
 import type { FigNodeId, FigPageId } from "./node-id";
 
@@ -109,7 +109,7 @@ export type TextStyleOverride = {
   /** Unique ID referenced by characterStyleIDs. 0 = base style (never in the table). */
   readonly styleID: number;
   readonly fontSize?: number;
-  readonly fontName?: { readonly family: string; readonly style: string; readonly postscript: string };
+  readonly fontName?: FigFontName;
   readonly fillPaints?: readonly FigPaint[];
   readonly textDecoration?: KiwiEnumValue;
   readonly textCase?: KiwiEnumValue;

@@ -128,12 +128,12 @@ export type FigParentIndex = {
 export type FigTextStyleOverrideEntry = {
   readonly styleID: number;
   readonly fontSize?: number;
-  readonly fontName?: { readonly family: string; readonly style: string; readonly postscript: string };
+  readonly fontName?: FigFontName;
   readonly fillPaints?: readonly FigPaint[];
   readonly textDecoration?: KiwiEnumValue;
   readonly textCase?: KiwiEnumValue;
-  readonly lineHeight?: { readonly value: number; readonly units: KiwiEnumValue };
-  readonly letterSpacing?: { readonly value: number; readonly units: KiwiEnumValue };
+  readonly lineHeight?: FigValueWithUnits;
+  readonly letterSpacing?: FigValueWithUnits;
   readonly [key: string]: unknown;
 };
 
@@ -211,8 +211,44 @@ export type FigNode = {
   readonly pointCount?: number;
   /** Inner radius ratio for STAR nodes (0-1 range, default 0.382) */
   readonly starInnerRadius?: number;
+  // ---- Text fields ----
+  /** Text characters content */
+  readonly characters?: string;
+  /** Font size in pixels */
+  readonly fontSize?: number;
+  /** Font family and style */
+  readonly fontName?: FigFontName;
+  /** Horizontal text alignment */
+  readonly textAlignHorizontal?: KiwiEnumValue;
+  /** Vertical text alignment */
+  readonly textAlignVertical?: KiwiEnumValue;
+  /** Text auto-resize mode */
+  readonly textAutoResize?: KiwiEnumValue;
+  /** Text decoration (underline, strikethrough) */
+  readonly textDecoration?: KiwiEnumValue;
+  /** Text case transformation (UPPER, LOWER, TITLE, etc.) */
+  readonly textCase?: KiwiEnumValue;
+  /** Line height with units */
+  readonly lineHeight?: FigValueWithUnits;
+  /** Letter spacing with units */
+  readonly letterSpacing?: FigValueWithUnits;
   /** Kiwi TextData message for TEXT nodes (per-character styling) */
   readonly textData?: FigKiwiTextData;
+  /** Derived text data for path-based text rendering */
+  readonly derivedTextData?: {
+    readonly layoutSize?: FigVector;
+    readonly baselines?: readonly unknown[];
+    readonly glyphs?: readonly unknown[];
+  };
+
+  // ---- Ellipse fields ----
+  /** Arc data for partial ellipse/donut shapes */
+  readonly arcData?: {
+    readonly startingAngle: number;
+    readonly endingAngle: number;
+    readonly innerRadius: number;
+  };
+
   /** Children (added by tree-builder, not present in raw Kiwi format) */
   readonly children?: readonly FigNode[];
   /** Additional fields (Kiwi schema has many optional fields) */
@@ -321,6 +357,28 @@ export type FigMatrix = {
 export type FigVector = {
   readonly x: number;
   readonly y: number;
+};
+
+/**
+ * Value with units (used for lineHeight, letterSpacing).
+ *
+ * Kiwi encoding: `{ value: number, units: KiwiEnumValue }`.
+ * Units enum values: PIXELS, PERCENT, AUTO.
+ */
+export type FigValueWithUnits = {
+  readonly value: number;
+  readonly units: KiwiEnumValue;
+};
+
+/**
+ * Font name reference.
+ *
+ * Kiwi encoding stores `family`, `style`, and optionally `postscript`.
+ */
+export type FigFontName = {
+  readonly family: string;
+  readonly style: string;
+  readonly postscript?: string;
 };
 
 // =============================================================================
@@ -439,12 +497,18 @@ export type FigImageTransform = FigGradientTransform;
  */
 export type FigImagePaint = FigPaintBase & {
   readonly type: "IMAGE";
-  readonly scaleMode?: "FILL" | "FIT" | "CROP" | "TILE";
+  /** API format: image reference string */
   readonly imageRef?: string;
+  /** API format: scale mode */
+  readonly scaleMode?: "FILL" | "FIT" | "CROP" | "TILE";
   /** Kiwi format: image scale mode as KiwiEnumValue */
   readonly imageScaleMode?: KiwiEnumValue;
   /** 2x3 affine transform for image positioning within the element */
   readonly transform?: FigImageTransform;
+  /** Kiwi format: image data reference (hash-based) */
+  readonly image?: { readonly hash?: readonly number[] };
+  /** Kiwi format: alternative image hash (string or byte array) */
+  readonly imageHash?: string | readonly number[];
 };
 
 /**

@@ -24,17 +24,14 @@ export function guidToString(guid: FigGuid | undefined): string {
  * Extract GUID from a node
  */
 function getNodeGuid(node: FigNode): FigGuid | undefined {
-  const nodeData = node as Record<string, unknown>;
-  return nodeData.guid as FigGuid | undefined;
+  return node.guid;
 }
 
 /**
  * Extract parent GUID from a node
  */
 function getParentGuid(node: FigNode): FigGuid | undefined {
-  const nodeData = node as Record<string, unknown>;
-  const parentIndex = nodeData.parentIndex as { guid?: FigGuid } | undefined;
-  return parentIndex?.guid;
+  return node.parentIndex?.guid;
 }
 
 /**
@@ -134,15 +131,16 @@ export function buildNodeTree(nodeChanges: readonly FigNode[]): NodeTreeResult {
  * Get node type as string
  */
 export function getNodeType(node: FigNode): string {
-  const nodeData = node as Record<string, unknown>;
-  const type = nodeData.type;
+  const type = node.type;
 
-  if (typeof type === "string") {
-    return type;
+  // KiwiEnumValue has { value, name } — return the name string
+  if (typeof type === "object" && "name" in type) {
+    return type.name;
   }
 
-  if (type && typeof type === "object" && "name" in type) {
-    return (type as { name: string }).name;
+  // API format: string literal
+  if (typeof type === "string") {
+    return type;
   }
 
   return "UNKNOWN";

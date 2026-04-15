@@ -1,25 +1,14 @@
 /**
  * @file Text node type definitions
+ *
+ * SoT for font/value types: @aurochs/fig/types (FigFontName, FigValueWithUnits).
+ * This file re-exports them for convenience and defines text-layout-specific types.
  */
 
-import type { FigMatrix, FigPaint } from "@aurochs/fig/types";
+import type { FigMatrix, FigPaint, FigFontName, FigValueWithUnits } from "@aurochs/fig/types";
 
-/**
- * Font name structure from .fig files
- */
-export type FigFontName = {
-  readonly family?: string;
-  readonly style?: string;
-  readonly postscript?: string;
-};
-
-/**
- * Value with units structure
- */
-export type FigValueWithUnits = {
-  readonly value: number;
-  readonly units?: { value: number; name: string } | string;
-};
+// Re-export SoT types so existing consumers don't break
+export type { FigFontName, FigValueWithUnits };
 
 /**
  * Text data structure from .fig files

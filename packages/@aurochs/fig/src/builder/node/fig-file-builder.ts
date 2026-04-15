@@ -11,6 +11,8 @@ import { deflateRaw } from "pako";
 import { compressZstd } from "../../compression";
 import { IDENTITY_MATRIX } from "../../matrix";
 import type { FigMatrix, KiwiSchema } from "../../types";
+import type { BuilderNode, KiwiDerivedSymbolEntry, KiwiGuid, KiwiSymbolData } from "./builder-node-types";
+import { toKiwiRecord } from "./builder-node-types";
 import { StreamingFigEncoder } from "../../kiwi/stream";
 import figmaSchemaJson from "../figma-schema.json";
 import type { TextNodeData } from "../text";
@@ -83,7 +85,7 @@ export type FigFileBuilder = ReturnType<typeof _createFigFileBuilder>;
 /** Internal factory for FigFileBuilder */
 function _createFigFileBuilder() {
   const schema = figmaSchemaJson as KiwiSchema;
-  const nodes: Record<string, unknown>[] = [];
+  const nodes: BuilderNode[] = [];
   const blobs: Array<{ bytes: number[] }> = [];
   const images: Map<string, { data: Uint8Array; mimeType: string }> = new Map();
   const nextLocalIDRef = { value: 0 };
@@ -185,7 +187,7 @@ function _createFigFileBuilder() {
   function addInternalCanvas(parentID: number): number {
     const localID = getNextID();
     nodeSessionIDs.set(localID, structuralSessionID);
-    const node: Record<string, unknown> = {
+    const node: BuilderNode = {
       guid: { sessionID: structuralSessionID, localID },
       phase: { value: 0, name: "CREATED" },
       parentIndex: {
@@ -420,7 +422,7 @@ function _createFigFileBuilder() {
       opacity: data.opacity,
     });
     // Add boolean operation specific field
-    (node as Record<string, unknown>).booleanOperation = data.booleanOperation;
+    node.booleanOperation = data.booleanOperation;
     nodes.push(node);
     return data.localID;
   }
@@ -454,7 +456,7 @@ function _createFigFileBuilder() {
       fillPaints: data.fillPaints,
     });
     if (data.derivedTextData) {
-      (node as Record<string, unknown>).derivedTextData = data.derivedTextData;
+      node.derivedTextData = data.derivedTextData;
     }
     nodes.push(node);
     return data.localID;
@@ -742,10 +744,10 @@ function _createFigFileBuilder() {
     parentID: number;
     type: number;
     name: string;
-  }): Record<string, unknown> {
+  }): BuilderNode {
     const typeName = getTypeName(data.type);
 
-    const node: Record<string, unknown> = {
+    const node: BuilderNode = {
       guid: { sessionID: structuralSessionID, localID: data.localID },
       phase: { value: 0, name: "CREATED" },
       type: { value: data.type, name: typeName },
@@ -849,14 +851,16 @@ function _createFigFileBuilder() {
     rectangleCornerRadii?: readonly [number, number, number, number];
     // Effects
     effects?: readonly EffectData[];
-  }): Record<string, unknown> {
+    // Mask
+    mask?: boolean;
+  }): BuilderNode {
     const typeName = getTypeName(data.type);
 
     // Register this content node with contentSessionID
     nodeSessionIDs.set(data.localID, contentSessionID);
 
     // Content nodes use contentSessionID (1) for their own guid
-    const node: Record<string, unknown> = {
+    const node: BuilderNode = {
       guid: { sessionID: contentSessionID, localID: data.localID },
       phase: { value: 0, name: "CREATED" },
       type: { value: data.type, name: typeName },
@@ -964,10 +968,9 @@ function _createFigFileBuilder() {
     // Symbol/Instance fields — symbolID must be wrapped in symbolData
     // (NodeChange schema has symbolData: SymbolData, not a direct symbolID field)
     if (data.symbolID) {
-      const symbolDataObj: Record<string, unknown> = { symbolID: data.symbolID };
-      if (data.overriddenSymbolID) {
-        symbolDataObj.overriddenSymbolID = data.overriddenSymbolID;
-      }
+      const symbolDataObj: KiwiSymbolData = data.overriddenSymbolID
+        ? { symbolID: data.symbolID, overriddenSymbolID: data.overriddenSymbolID }
+        : { symbolID: data.symbolID };
       node.symbolData = symbolDataObj;
     }
     if (data.componentPropertyReferences && data.componentPropertyReferences.length > 0) {
@@ -1059,6 +1062,11 @@ function _createFigFileBuilder() {
       node.effects = data.effects;
     }
 
+    // Mask layer (node acts as a clipping mask for subsequent siblings)
+    if (data.mask === true) {
+      node.mask = true;
+    }
+
     return node;
   }
 
@@ -1093,20 +1101,16 @@ function _createFigFileBuilder() {
    */
   function computeDerivedSymbolData(): void {
     // Index: localID → node
-    const nodeByLocalID = new Map<number, Record<string, unknown>>();
+    const nodeByLocalID = new Map<number, BuilderNode>();
     for (const node of nodes) {
-      const guid = node.guid as { sessionID: number; localID: number } | undefined;
-      if (guid) {
-        nodeByLocalID.set(guid.localID, node);
-      }
+      nodeByLocalID.set(node.guid.localID, node);
     }
 
     // Index: parentLocalID → child nodes
-    const childrenByParent = new Map<number, Record<string, unknown>[]>();
+    const childrenByParent = new Map<number, BuilderNode[]>();
     for (const node of nodes) {
-      const pi = node.parentIndex as { guid: { localID: number } } | undefined;
-      if (pi) {
-        const parentID = pi.guid.localID;
+      if (node.parentIndex) {
+        const parentID = node.parentIndex.guid.localID;
         const existing = childrenByParent.get(parentID);
         if (!existing) {
           childrenByParent.set(parentID, [node]);
@@ -1117,21 +1121,20 @@ function _createFigFileBuilder() {
     }
 
     for (const node of nodes) {
-      const nodeType = node.type as { value: number } | undefined;
-      if (nodeType?.value !== NODE_TYPE_VALUES.INSTANCE) {continue;}
+      if (node.type.value !== NODE_TYPE_VALUES.INSTANCE) {continue;}
 
-      const effectiveID = getEffectiveSymbolID(node);
+      const effectiveID = getEffectiveSymbolID(toKiwiRecord(node));
       if (!effectiveID) {continue;}
 
       const symNode = nodeByLocalID.get(effectiveID.localID);
       if (!symNode) {continue;}
 
-      const instSize = node.size as { x: number; y: number } | undefined;
-      const symSize = symNode.size as { x: number; y: number } | undefined;
+      const instSize = node.size;
+      const symSize = symNode.size;
       if (!instSize || !symSize) {continue;}
       if (instSize.x === symSize.x && instSize.y === symSize.y) {continue;}
 
-      const derived: Record<string, unknown>[] = [];
+      const derived: KiwiDerivedSymbolEntry[] = [];
       computeDerivedRecursive({
         symbolLocalID: effectiveID.localID, symSize, instSize,
         guidPrefix: [], derived, nodeByLocalID, childrenByParent, depth: 0,
@@ -1152,10 +1155,10 @@ function _createFigFileBuilder() {
     symbolLocalID: number;
     symSize: { x: number; y: number };
     instSize: { x: number; y: number };
-    guidPrefix: { sessionID: number; localID: number }[];
-    derived: Record<string, unknown>[];
-    nodeByLocalID: Map<number, Record<string, unknown>>;
-    childrenByParent: Map<number, Record<string, unknown>[]>;
+    guidPrefix: KiwiGuid[];
+    derived: KiwiDerivedSymbolEntry[];
+    nodeByLocalID: Map<number, BuilderNode>;
+    childrenByParent: Map<number, BuilderNode[]>;
     depth: number;
   }): void {
     const { symbolLocalID, symSize, instSize, guidPrefix, derived, nodeByLocalID, childrenByParent, depth } = params;
@@ -1164,36 +1167,36 @@ function _createFigFileBuilder() {
     const symChildren = childrenByParent.get(symbolLocalID) ?? [];
 
     for (const child of symChildren) {
-      const childGuid = child.guid as { sessionID: number; localID: number } | undefined;
-      if (!childGuid) {continue;}
+      const childGuid = child.guid;
 
-      const resolution = resolveChildConstraints(child, symSize, instSize);
+      const resolution = resolveChildConstraints(toKiwiRecord(child), symSize, instSize);
       if (!resolution) {continue;}
 
       if (resolution.posChanged || resolution.sizeChanged) {
-        const childTransform = child.transform as FigMatrix;
-        derived.push({
-          guidPath: { guids: [...guidPrefix, childGuid] },
-          transform: {
-            m00: childTransform.m00,
-            m01: childTransform.m01,
-            m02: resolution.posX,
-            m10: childTransform.m10,
-            m11: childTransform.m11,
-            m12: resolution.posY,
-          },
-          size: { x: resolution.dimX, y: resolution.dimY },
-        });
+        const childTransform = child.transform;
+        if (childTransform) {
+          derived.push({
+            guidPath: { guids: [...guidPrefix, childGuid] },
+            transform: {
+              m00: childTransform.m00,
+              m01: childTransform.m01,
+              m02: resolution.posX,
+              m10: childTransform.m10,
+              m11: childTransform.m11,
+              m12: resolution.posY,
+            },
+            size: { x: resolution.dimX, y: resolution.dimY },
+          });
+        }
       }
 
       // If this child is an INSTANCE that got resized, recurse into its symbol
-      const childType = child.type as { value: number } | undefined;
-      if (childType?.value === NODE_TYPE_VALUES.INSTANCE && resolution.sizeChanged) {
-        const childSymID = getEffectiveSymbolID(child);
+      if (child.type.value === NODE_TYPE_VALUES.INSTANCE && resolution.sizeChanged) {
+        const childSymID = getEffectiveSymbolID(toKiwiRecord(child));
         if (childSymID) {
           const childSymNode = nodeByLocalID.get(childSymID.localID);
           if (childSymNode) {
-            const childSymSize = childSymNode.size as { x: number; y: number } | undefined;
+            const childSymSize = childSymNode.size;
             if (childSymSize) {
               computeDerivedRecursive({
                 symbolLocalID: childSymID.localID,
@@ -1233,7 +1236,7 @@ function _createFigFileBuilder() {
     });
 
     for (const node of nodes) {
-      encoder.writeNodeChange(node);
+      encoder.writeNodeChange(toKiwiRecord(node));
     }
 
     const messageData = encoder.finalize();
@@ -1280,7 +1283,7 @@ function _createFigFileBuilder() {
     });
 
     for (const node of nodes) {
-      encoder.writeNodeChange(node);
+      encoder.writeNodeChange(toKiwiRecord(node));
     }
 
     const messageData = encoder.finalize();

@@ -503,12 +503,28 @@ export function feGaussianBlur(attrs: {
 }
 
 /**
+ * Create an feMorphology element
+ *
+ * operator="dilate" expands the shape (positive spread),
+ * operator="erode" shrinks it (negative spread).
+ */
+export function feMorphology(attrs: {
+  in?: string;
+  operator: "dilate" | "erode";
+  radius: number | string;
+  result?: string;
+}): SvgString {
+  const attrStr = buildAttrs(attrs);
+  return unsafeSvg(`<feMorphology ${attrStr}/>`);
+}
+
+/**
  * Create an feBlend element
  */
 export function feBlend(attrs: {
   in?: string;
   in2?: string;
-  mode?: "normal" | "multiply" | "screen" | "overlay" | "darken" | "lighten";
+  mode?: string;
   result?: string;
 }): SvgString {
   const attrStr = buildAttrs(attrs);

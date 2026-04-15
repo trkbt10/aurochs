@@ -39,11 +39,12 @@ export function buildPathElements(
 
 /**
  * Render decoded geometry paths to SVG with single/multi-path grouping,
- * transform, opacity, and optional filter wrapping.
+ * transform, and opacity.
  *
  * Single path: attrs applied directly to `<path>`.
  * Multiple paths: wrapped in `<g>` with transform/opacity, each path gets fill/stroke.
- * Filter (if provided): outer `<g filter="...">` wraps everything.
+ *
+ * Effects (filters) are applied at the renderNode level, not here.
  */
 export function renderPaths(params: {
   readonly paths: readonly GeometryPathData[];
@@ -51,17 +52,14 @@ export function renderPaths(params: {
   readonly strokeAttrs: StrokeAttrs;
   readonly transform?: string;
   readonly opacity?: number;
-  readonly filter?: string;
 }): SvgString {
-  const { paths, fillAttrs, strokeAttrs, transform, opacity, filter } = params;
+  const { paths, fillAttrs, strokeAttrs, transform, opacity } = params;
 
   const opacityAttr = opacity !== undefined && opacity < 1 ? opacity : undefined;
 
-  const resultRef = { value: undefined as SvgString | undefined };
-
   if (paths.length === 1) {
     const { data, windingRule } = paths[0];
-    resultRef.value = path({
+    return path({
       d: data,
       "fill-rule": windingRule ?? "nonzero",
       transform: transform || undefined,
@@ -69,19 +67,14 @@ export function renderPaths(params: {
       ...fillAttrs,
       ...strokeAttrs,
     });
-  } else {
-    const elements = buildPathElements(paths, fillAttrs, strokeAttrs);
-    resultRef.value = g(
-      {
-        transform: transform || undefined,
-        opacity: opacityAttr,
-      },
-      ...elements,
-    );
   }
 
-  if (filter) {
-    return g({ filter }, resultRef.value);
-  }
-  return resultRef.value;
+  const elements = buildPathElements(paths, fillAttrs, strokeAttrs);
+  return g(
+    {
+      transform: transform || undefined,
+      opacity: opacityAttr,
+    },
+    ...elements,
+  );
 }

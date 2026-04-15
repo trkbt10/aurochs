@@ -226,12 +226,10 @@ export function getImageRef(paint: FigImagePaint): string | null {
   if (paint.imageRef) {
     return paint.imageRef;
   }
-  const paintData = paint as Record<string, unknown>;
-  const image = paintData.image as { hash?: readonly number[] } | undefined;
-  if (image?.hash && Array.isArray(image.hash) && image.hash.length > 0) {
-    return hashArrayToHex(image.hash);
+  if (paint.image?.hash && Array.isArray(paint.image.hash) && paint.image.hash.length > 0) {
+    return hashArrayToHex(paint.image.hash);
   }
-  const imageHash = paintData.imageHash as string | readonly number[] | undefined;
+  const imageHash = paint.imageHash;
   if (typeof imageHash === "string") {
     return imageHash;
   }
@@ -248,13 +246,8 @@ export function getScaleMode(paint: FigImagePaint): string {
   if (paint.scaleMode) {
     return paint.scaleMode;
   }
-  const paintData = paint as Record<string, unknown>;
-  if (paintData.imageScaleMode) {
-    const mode = paintData.imageScaleMode;
-    if (typeof mode === "string") { return mode; }
-    if (typeof mode === "object" && mode && "name" in mode) {
-      return (mode as { name: string }).name;
-    }
+  if (paint.imageScaleMode) {
+    return paint.imageScaleMode.name;
   }
   return "FILL";
 }

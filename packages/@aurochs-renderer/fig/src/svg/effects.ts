@@ -13,10 +13,14 @@ import {
   feColorMatrix,
   feOffset,
   feGaussianBlur,
+  feMorphology,
   feBlend,
   feComposite,
   feMerge,
   feMergeNode,
+  g as gPrim,
+  foreignObject,
+  unsafeSvg,
   type SvgString,
 } from "./primitives";
 import {
@@ -24,6 +28,43 @@ import {
   hasEffectOfType,
   getEffectsOfType,
 } from "../effects";
+
+// =============================================================================
+// Effect Blend Mode
+// =============================================================================
+
+/**
+ * Resolve an effect's blendMode to an SVG feBlend mode string.
+ *
+ * SVG 2 feBlend supports CSS blend modes: normal, multiply, screen, darken,
+ * lighten, overlay, color-dodge, color-burn, hard-light, soft-light,
+ * difference, exclusion, hue, saturation, color, luminosity.
+ */
+const EFFECT_BLEND_MODE_TO_SVG: Record<string, string> = {
+  NORMAL: "normal",
+  DARKEN: "darken",
+  MULTIPLY: "multiply",
+  COLOR_BURN: "color-burn",
+  LIGHTEN: "lighten",
+  SCREEN: "screen",
+  COLOR_DODGE: "color-dodge",
+  OVERLAY: "overlay",
+  SOFT_LIGHT: "soft-light",
+  HARD_LIGHT: "hard-light",
+  DIFFERENCE: "difference",
+  EXCLUSION: "exclusion",
+  HUE: "hue",
+  SATURATION: "saturation",
+  COLOR: "color",
+  LUMINOSITY: "luminosity",
+};
+
+function getEffectBlendMode(effect: FigEffect): string {
+  const bm = effect.blendMode;
+  if (!bm) { return "normal"; }
+  const name = typeof bm === "string" ? bm : bm.name;
+  return EFFECT_BLEND_MODE_TO_SVG[name] ?? "normal";
+}
 
 // =============================================================================
 // Filter Bounds Computation
@@ -139,6 +180,17 @@ export function createDropShadowFilter(
       }),
     );
 
+    // Apply spread (expand/shrink shadow outline before blur)
+    const spread = shadow.spread ?? 0;
+    if (spread !== 0) {
+      primitives.push(
+        feMorphology({
+          operator: spread > 0 ? "dilate" : "erode",
+          radius: Math.abs(spread),
+        }),
+      );
+    }
+
     // Apply blur (stdDeviation = radius / 2 for Gaussian blur to match Figma)
     const stdDeviation = (shadow.radius ?? 0) / 2;
     primitives.push(
@@ -157,10 +209,10 @@ export function createDropShadowFilter(
       }),
     );
 
-    // Blend with previous result
+    // Blend with previous result using the effect's blend mode
     primitives.push(
       feBlend({
-        mode: "normal",
+        mode: getEffectBlendMode(shadow),
         in2: previousResult,
         result: shadowResult,
       }),
@@ -410,6 +462,39 @@ export function getBackgroundBlur(effects: readonly FigEffect[] | undefined): Fi
   return getEffectsOfType(effects, "BACKGROUND_BLUR")[0];
 }
 
+/**
+ * Create a background blur element using foreignObject + backdrop-filter.
+ *
+ * SVG has no native background blur primitive. Figma's SVG export uses
+ * `<foreignObject>` containing a `<div>` with CSS `backdrop-filter: blur(Npx)`.
+ * The foreignObject is clipped to the node's shape using a clipPath.
+ *
+ * @param blurRadius - Blur radius in pixels
+ * @param bounds - Element bounds (x, y, width, height)
+ * @param clipId - ID of a clipPath that defines the node's shape
+ * @param ctx - Render context for generating IDs
+ * @returns SVG element(s) for the background blur, or null if no blur
+ */
+export function createBackgroundBlurElement(
+  blurRadius: number,
+  bounds: { x: number; y: number; width: number; height: number },
+  clipId: string,
+  ctx: FigSvgRenderContext,
+): SvgString | null {
+  if (blurRadius <= 0) { return null; }
+
+  // Wrap in a group clipped to the node's shape
+  const foContent = unsafeSvg(
+    `<div xmlns="http://www.w3.org/1999/xhtml" style="backdrop-filter:blur(${blurRadius}px);width:100%;height:100%"></div>`
+  );
+  const fo = foreignObject(
+    { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height },
+    foContent,
+  );
+
+  return gPrim({ "clip-path": `url(#${clipId})` }, fo);
+}
+
 // =============================================================================
 // Combined Filter Creation
 // =============================================================================
@@ -481,6 +566,17 @@ export function createCombinedFilter(
         }),
       );
 
+      // Apply spread (expand/shrink shadow outline before blur)
+      const spread = shadow.spread ?? 0;
+      if (spread !== 0) {
+        primitives.push(
+          feMorphology({
+            operator: spread > 0 ? "dilate" : "erode",
+            radius: Math.abs(spread),
+          }),
+        );
+      }
+
       const stdDeviation = (shadow.radius ?? 0) / 2;
       primitives.push(feGaussianBlur({ stdDeviation }));
 
@@ -495,7 +591,7 @@ export function createCombinedFilter(
 
       primitives.push(
         feBlend({
-          mode: "normal",
+          mode: getEffectBlendMode(shadow),
           in2: shadowResultRef.value,
           result: currentResult,
         }),
@@ -570,7 +666,7 @@ export function createCombinedFilter(
       // Blend inner shadow onto current result
       primitives.push(
         feBlend({
-          mode: "normal",
+          mode: getEffectBlendMode(shadow),
           in: prefix + "inner",
           in2: lastResultRef.value,
           result: prefix + "result",

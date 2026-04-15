@@ -14,7 +14,6 @@ import { getFillResult, applyFillResult, strokePaintsToFillAttrs, getPaintBlendM
 import { getStrokeAttrs, type StrokeAttrs } from "../stroke";
 import { figColorToHex, getSolidPaintColor } from "@aurochs/fig/color";
 import { resolveStrokeWeight } from "../../stroke";
-import { getFilterAttr } from "../effects";
 import { decodePathsFromGeometry } from "../geometry-path";
 import { renderPaths } from "../render-paths";
 import {
@@ -22,7 +21,6 @@ import {
   extractSizeProps,
   extractPaintProps,
   extractGeometryProps,
-  extractEffectsProps,
 } from "./extract-props";
 
 // =============================================================================
@@ -230,7 +228,6 @@ type EllipsePathRenderParams = {
   readonly strokeAttrs: ReturnType<typeof getStrokeAttrs>;
   readonly transformStr: string;
   readonly opacity: number;
-  readonly filterAttr: string | undefined;
   readonly ctx: FigSvgRenderContext;
   readonly size: { x: number; y: number };
 };
@@ -242,7 +239,7 @@ function renderEllipseFromPaths(
   paths: ReturnType<typeof decodePathsFromGeometry>,
   params: EllipsePathRenderParams,
 ): SvgString {
-  const { fillPaints, strokeAttrs, transformStr, opacity, filterAttr, ctx, size } = params;
+  const { fillPaints, strokeAttrs, transformStr, opacity, ctx, size } = params;
 
   const clipShapes = paths.map((p) =>
     svgPath({ d: p.data, "fill-rule": p.windingRule ?? "nonzero", fill: "black" }),
@@ -268,7 +265,6 @@ function renderEllipseFromPaths(
     strokeAttrs,
     transform: transformStr,
     opacity,
-    filter: filterAttr,
   });
 
   return applyFillResult(fillResult, pathResult);
@@ -288,28 +284,21 @@ function renderEllipseFromPaths(
 export function renderEllipseNode(node: FigNode, ctx: FigSvgRenderContext): SvgString {
   const { transform, opacity } = extractBaseProps(node);
   const { size } = extractSizeProps(node);
-  const { fillPaints, strokePaints, strokeWeight } = extractPaintProps(node);
+  const { fillPaints, strokePaints, strokeWeight, strokeCap, strokeJoin, strokeDashes } = extractPaintProps(node);
   const { fillGeometry, strokeGeometry } = extractGeometryProps(node);
-  const { effects } = extractEffectsProps(node);
 
   const transformStr = buildTransformAttr(transform);
-  const strokeAttrs = getStrokeAttrs({ paints: strokePaints, strokeWeight });
+  const strokeAttrs = getStrokeAttrs({ paints: strokePaints, strokeWeight, options: { strokeCap, strokeJoin, dashPattern: strokeDashes } });
 
   const cx = size.x / 2;
   const cy = size.y / 2;
-
-  // Calculate bounds for filter region
-  const tx = transform?.m02 ?? 0;
-  const ty = transform?.m12 ?? 0;
-  const bounds = { x: tx, y: ty, width: size.x, height: size.y };
-  const filterAttr = getFilterAttr(effects, ctx, bounds);
 
   // Priority 1a: fillGeometry — pre-computed fill paths (supports arcs, donuts)
   if (fillGeometry && fillGeometry.length > 0) {
     const paths = decodePathsFromGeometry(fillGeometry, ctx.blobs);
     if (paths.length > 0) {
       return renderEllipseFromPaths(paths, {
-        fillPaints, strokeAttrs, transformStr, opacity, filterAttr, ctx, size,
+        fillPaints, strokeAttrs, transformStr, opacity, ctx, size,
       });
     }
   }
@@ -362,9 +351,6 @@ export function renderEllipseNode(node: FigNode, ctx: FigSvgRenderContext): SvgS
       ...elements,
     );
 
-    if (filterAttr) {
-      return g({ filter: filterAttr }, result);
-    }
     return result;
   }
 
@@ -390,8 +376,7 @@ export function renderEllipseNode(node: FigNode, ctx: FigSvgRenderContext): SvgS
         strokeAttrs: {},
         transform: transformStr,
         opacity,
-        filter: filterAttr,
-      });
+          });
     }
   }
 
@@ -432,14 +417,7 @@ export function renderEllipseNode(node: FigNode, ctx: FigSvgRenderContext): SvgS
       { opacity: opacity < 1 ? opacity : undefined },
       ...elements,
     );
-    if (filterAttr) {
-      return g({ filter: filterAttr }, result);
-    }
     return result;
-  }
-
-  if (filterAttr) {
-    return g({ filter: filterAttr }, withFill);
   }
 
   return withFill;

@@ -5,7 +5,7 @@
  * FigColor is defined in types.ts — this module provides operations on it.
  */
 
-import type { FigColor, FigPaint } from "./types";
+import type { FigColor, FigPaint, FigSolidPaint } from "./types";
 
 // =============================================================================
 // Color Predicates
@@ -74,9 +74,10 @@ export function getSolidPaintColor(paint: FigPaint): FigColor | undefined {
   if (getPaintType(paint) !== "SOLID") {
     return undefined;
   }
-  // In both API format (type: "SOLID") and Kiwi format (type: { value, name: "SOLID" }),
-  // FigSolidPaint guarantees a `color` field. But the union type can't narrow
-  // through getPaintType, so we access it via the known structure.
-  const color = (paint as Record<string, unknown>).color as FigColor | undefined;
-  return color;
+  // getPaintType normalizes the KiwiEnumValue type to a string and confirmed SOLID.
+  // FigSolidPaint has a required `color` field. The union can't narrow via
+  // getPaintType (which operates on string/KiwiEnumValue duality), so we narrow
+  // explicitly: if the color field exists, use it.
+  const solid = paint as FigSolidPaint;
+  return solid.color;
 }

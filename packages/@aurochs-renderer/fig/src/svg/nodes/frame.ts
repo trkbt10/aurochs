@@ -9,6 +9,7 @@ import { g, rect, clipPath, path, type SvgString, EMPTY_SVG } from "../primitive
 import { buildTransformAttr } from "../transform";
 import { getFillResult, applyFillResult, strokePaintsToFillAttrs, type ShapeGeometry } from "../fill";
 import { getStrokeAttrs } from "../stroke";
+import { resolveStrokeWeight } from "../../stroke";
 import { decodePathsFromGeometry } from "../geometry-path";
 import { mapWindingRule } from "../../geometry";
 import { buildPathElements } from "../render-paths";
@@ -17,10 +18,8 @@ import {
   extractSizeProps,
   extractPaintProps,
   extractGeometryProps,
-  extractEffectsProps,
   resolveCornerRadius,
 } from "./extract-props";
-import { getFilterAttr } from "../effects";
 
 function resolveClipsContent(node: FigNode): boolean {
   // Explicit clipsContent (set by mergeSymbolProperties or API clients)
@@ -42,8 +41,41 @@ function resolveClipsContent(node: FigNode): boolean {
   return false;
 }
 
+/**
+ * Compute the maximum stroke overhang from child nodes.
+ *
+ * Figma's "Clip content" clips the position of child frames but does NOT
+ * clip stroke overhang — strokes that extend beyond the child's bounding
+ * box are still visible even when clipsContent is true.
+ *
+ * In SVG, clipPath clips everything including strokes. To match Figma's
+ * behaviour, the clipPath rect must be expanded by the maximum stroke
+ * overhang (strokeWeight / 2) of any child node.
+ */
+function getMaxChildStrokeOverhang(childNodes: readonly FigNode[] | undefined): number {
+  if (!childNodes || childNodes.length === 0) { return 0; }
+  let maxOverhang = 0;
+  for (const child of childNodes) {
+    if (child.strokeWeight !== undefined && child.strokePaints && child.strokePaints.length > 0) {
+      const weight = resolveStrokeWeight(child.strokeWeight);
+      const overhang = weight / 2;
+      if (overhang > maxOverhang) {
+        maxOverhang = overhang;
+      }
+    }
+  }
+  return maxOverhang;
+}
+
 function buildClipShapes(
-  { geometry, ctx, size, rx, ry }: { geometry: readonly FigFillGeometry[] | undefined; ctx: FigSvgRenderContext; size: FigVector; rx: number | undefined; ry: number | undefined; }
+  { geometry, ctx, size, rx, ry, margin }: {
+    geometry: readonly FigFillGeometry[] | undefined;
+    ctx: FigSvgRenderContext;
+    size: FigVector;
+    rx: number | undefined;
+    ry: number | undefined;
+    margin?: number;
+  }
 ): readonly SvgString[] {
   if (geometry) {
     const paths = decodePathsFromGeometry(geometry, ctx.blobs);
@@ -57,14 +89,15 @@ function buildClipShapes(
       );
     }
   }
+  const m = margin ?? 0;
   return [
     rect({
-      x: 0,
-      y: 0,
-      width: size.x,
-      height: size.y,
-      rx,
-      ry,
+      x: -m,
+      y: -m,
+      width: size.x + 2 * m,
+      height: size.y + 2 * m,
+      rx: rx !== undefined ? rx + m : undefined,
+      ry: ry !== undefined ? ry + m : undefined,
       fill: "black",
     }),
   ];
@@ -83,12 +116,12 @@ export function renderFrameNode(
   node: FigNode,
   ctx: FigSvgRenderContext,
   renderedChildren: readonly SvgString[],
+  childNodes?: readonly FigNode[],
 ): SvgString {
   const { transform, opacity, visible } = extractBaseProps(node);
   const { size } = extractSizeProps(node);
-  const { fillPaints, strokePaints, strokeWeight } = extractPaintProps(node);
+  const { fillPaints, strokePaints, strokeWeight, strokeCap, strokeJoin, strokeDashes } = extractPaintProps(node);
   const { fillGeometry, strokeGeometry } = extractGeometryProps(node);
-  const { effects } = extractEffectsProps(node);
   const { rx, ry } = resolveCornerRadius(node, size);
   const clipsContent = resolveClipsContent(node);
 
@@ -97,11 +130,7 @@ export function renderFrameNode(
   }
 
   const transformStr = buildTransformAttr(transform);
-  const baseStrokeAttrs = getStrokeAttrs({ paints: strokePaints, strokeWeight });
-
-  const tx = transform?.m02 ?? 0;
-  const ty = transform?.m12 ?? 0;
-  const filterAttr = getFilterAttr(effects, ctx, { x: tx, y: ty, width: size.x, height: size.y });
+  const baseStrokeAttrs = getStrokeAttrs({ paints: strokePaints, strokeWeight, options: { strokeCap, strokeJoin, dashPattern: strokeDashes } });
 
   // Shape geometry for complex fills (angular/diamond gradients)
   const bgClipShape = rect({ x: 0, y: 0, width: size.x, height: size.y, rx, ry, fill: "black" });
@@ -187,7 +216,8 @@ export function renderFrameNode(
       const clipGeometry = hasCornerRadius
         ? undefined  // Force <rect rx ry> fallback
         : (decodedFillPaths.length > 0 ? fillGeometry : strokeGeometry);
-      const clipShapes = buildClipShapes({ geometry: clipGeometry, ctx, size, rx, ry });
+      const strokeMargin = getMaxChildStrokeOverhang(childNodes);
+      const clipShapes = buildClipShapes({ geometry: clipGeometry, ctx, size, rx, ry, margin: strokeMargin });
       const clipDef = clipPath({ id: clipId }, ...clipShapes);
       ctx.defs.add(clipDef);
 
@@ -203,7 +233,6 @@ export function renderFrameNode(
     {
       transform: transformStr || undefined,
       opacity: opacity < 1 ? opacity : undefined,
-      filter: filterAttr,
     },
     ...elements,
   );
