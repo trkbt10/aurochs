@@ -8,7 +8,7 @@
  * クロージャで状態を閉じ込め、prototype チェーンや this バインディングを排除する。
  */
 
-import type { FigNode, MutableFigNode } from "@aurochs/fig/types";
+import type { FigNode, MutableFigNode, FigKiwiSymbolOverride } from "@aurochs/fig/types";
 import { guidToString, getNodeType, safeChildren, type FigGuid } from "@aurochs/fig/parser";
 import { extractSymbolIDPair } from "@aurochs/fig/symbols";
 import { buildGuidTranslationMap, translateOverrides } from "../../../../@aurochs/fig/src/symbols/guid-translation";
@@ -18,7 +18,6 @@ import {
   collectComponentPropAssignments,
   cloneSymbolChildren,
   applySelfOverridesToMergedNode,
-  type FigSymbolOverride,
   type FigDerivedSymbolData,
 } from "../../../../@aurochs/fig/src/symbols/symbol-resolver";
 import {
@@ -174,7 +173,7 @@ export function createFigResolver(
 
   function applySelfOverrides(
     mergedNode: MutableFigNode,
-    overrides: readonly FigSymbolOverride[],
+    overrides: readonly FigKiwiSymbolOverride[],
     symbolGuidStr: string,
   ): void {
     let hasStyleIdOverride = false;
@@ -200,8 +199,8 @@ export function createFigResolver(
 
   function translateIfNeeded(
     translationMap: ReadonlyMap<string, string>,
-    overrides: readonly FigSymbolOverride[] | undefined,
-  ): readonly FigSymbolOverride[] | undefined {
+    overrides: readonly FigKiwiSymbolOverride[] | undefined,
+  ): readonly FigKiwiSymbolOverride[] | undefined {
     if (translationMap.size > 0 && overrides) {
       return translateOverrides(overrides, translationMap);
     }

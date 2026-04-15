@@ -10,20 +10,14 @@ import { resolveInstanceLayout } from "./constraints";
 import { resolveStyleIdOnMutableNode, type FigStyleRegistry } from "./style-registry";
 
 // =============================================================================
-// Types (domain aliases — SoT is types.ts)
+// Types
 // =============================================================================
 
-/** Domain alias for FigKiwiSymbolData */
-export type FigSymbolData = FigKiwiSymbolData;
-/** Domain alias for FigKiwiSymbolOverride */
-export type FigSymbolOverride = FigKiwiSymbolOverride;
-export type { FigGuidPath };
-
 /**
- * Derived symbol data structure for transform overrides.
- * Contains computed transforms for INSTANCE child nodes.
+ * Derived symbol data: array of FigKiwiSymbolOverride entries
+ * that carry computed transforms for INSTANCE child nodes.
  */
-export type FigDerivedSymbolData = readonly FigSymbolOverride[];
+export type FigDerivedSymbolData = readonly FigKiwiSymbolOverride[];
 
 // =============================================================================
 // Symbol Override Extraction
@@ -38,7 +32,7 @@ export type FigDerivedSymbolData = readonly FigSymbolOverride[];
  */
 export function getInstanceSymbolOverrides(
   nodeData: FigNode,
-): readonly FigSymbolOverride[] | undefined {
+): readonly FigKiwiSymbolOverride[] | undefined {
   if (nodeData.symbolData?.symbolOverrides) {
     return nodeData.symbolData.symbolOverrides;
   }
@@ -138,8 +132,6 @@ function deepCloneNode(node: FigNode): MutableFigNode {
   };
 }
 
-/** Domain alias — SoT is FigComponentPropAssignment in types.ts */
-type ComponentPropAssignment = FigComponentPropAssignment;
 
 /**
  * A component property reference on a node (e.g., TEXT_DATA)
@@ -153,10 +145,10 @@ type ComponentPropRef = {
  * Options for cloning symbol children
  */
 export type CloneSymbolChildrenOptions = {
-  readonly symbolOverrides?: readonly FigSymbolOverride[];
+  readonly symbolOverrides?: readonly FigKiwiSymbolOverride[];
   readonly derivedSymbolData?: FigDerivedSymbolData;
   /** Component property assignments from the INSTANCE node and its overrides */
-  readonly componentPropAssignments?: readonly ComponentPropAssignment[];
+  readonly componentPropAssignments?: readonly FigComponentPropAssignment[];
   /** Style registry for resolving styleIdForFill overrides to fillPaints */
   readonly styleRegistry?: FigStyleRegistry;
 };
@@ -221,11 +213,11 @@ export function cloneSymbolChildren(symbolNode: FigNode, options?: CloneSymbolCh
  */
 export function collectComponentPropAssignments(
   instanceData: FigNode,
-): readonly ComponentPropAssignment[] {
-  const result: ComponentPropAssignment[] = [];
+): readonly FigComponentPropAssignment[] {
+  const result: FigComponentPropAssignment[] = [];
 
   // Instance-level assignments
-  const instanceAssign = instanceData.componentPropAssignments as readonly ComponentPropAssignment[] | undefined;
+  const instanceAssign = instanceData.componentPropAssignments as readonly FigComponentPropAssignment[] | undefined;
   if (instanceAssign) {
     result.push(...instanceAssign);
   }
@@ -236,7 +228,7 @@ export function collectComponentPropAssignments(
     for (const ov of overrides) {
       // FigKiwiSymbolOverride carries arbitrary node properties via index signature
       const ovAssign = ov.componentPropAssignments as
-        | readonly ComponentPropAssignment[]
+        | readonly FigComponentPropAssignment[]
         | undefined;
       if (ovAssign) {
         result.push(...ovAssign);
@@ -261,13 +253,13 @@ export function collectComponentPropAssignments(
  */
 function applyComponentPropAssignments(
   nodes: MutableFigNode[],
-  assignments: readonly ComponentPropAssignment[],
+  assignments: readonly FigComponentPropAssignment[],
   textOverrideGuids?: Set<string>,
 ): void {
   if (assignments.length === 0) {return;}
 
   // Build defID → assignment map
-  const assignMap = new Map<string, ComponentPropAssignment>();
+  const assignMap = new Map<string, FigComponentPropAssignment>();
   for (const a of assignments) {
     assignMap.set(guidToString(a.defID), a);
   }
@@ -425,11 +417,11 @@ function expandContainersToFitChildren(nodes: MutableFigNode[]): void {
  *   remaining path is propagated as `derivedSymbolData` on that node so the
  *   override is applied when the nested instance is resolved later.
  */
-function applyOverrides(nodes: MutableFigNode[], overrides: readonly FigSymbolOverride[], styleRegistry?: FigStyleRegistry): void {
+function applyOverrides(nodes: MutableFigNode[], overrides: readonly FigKiwiSymbolOverride[], styleRegistry?: FigStyleRegistry): void {
   // Separate direct (depth-1) and nested (depth-N>1) overrides
   // Direct overrides are MERGED: multiple entries for the same GUID combine their properties
-  const directMap = new Map<string, FigSymbolOverride>();
-  const nestedMap = new Map<string, FigSymbolOverride[]>();
+  const directMap = new Map<string, FigKiwiSymbolOverride>();
+  const nestedMap = new Map<string, FigKiwiSymbolOverride[]>();
 
   for (const override of overrides) {
     const guids = override.guidPath?.guids;
@@ -447,7 +439,7 @@ function applyOverrides(nodes: MutableFigNode[], overrides: readonly FigSymbolOv
     } else {
       // Multi-level: key by first GUID, strip it from the path
       const firstKey = guidToString(guids[0]);
-      const shortened: FigSymbolOverride = {
+      const shortened: FigKiwiSymbolOverride = {
         ...override,
         guidPath: { guids: guids.slice(1) },
       };
@@ -474,8 +466,8 @@ function applyOverrides(nodes: MutableFigNode[], overrides: readonly FigSymbolOv
           if (key === "componentPropAssignments") {
             // Merge CPA arrays: existing entries + override entries.
             // Override entries with the same defID take precedence.
-            const existing = node[key] as ComponentPropAssignment[] | undefined;
-            const incoming = value as ComponentPropAssignment[];
+            const existing = node[key] as FigComponentPropAssignment[] | undefined;
+            const incoming = value as FigComponentPropAssignment[];
             if (existing && existing.length > 0) {
               const incomingKeys = new Set(incoming.map((a) => guidToString(a.defID)));
               const merged = existing.filter((a) => !incomingKeys.has(guidToString(a.defID)));
@@ -502,7 +494,7 @@ function applyOverrides(nodes: MutableFigNode[], overrides: readonly FigSymbolOv
         const nodeType = getNodeType(node);
         if (nodeType === "INSTANCE") {
           // INSTANCE: store as derivedSymbolData for resolveInstance() to consume
-          const existing = node.derivedSymbolData as FigSymbolOverride[] | undefined;
+          const existing = node.derivedSymbolData as FigKiwiSymbolOverride[] | undefined;
           node.derivedSymbolData = [...(existing ?? []), ...nested];
         } else {
           // Non-INSTANCE container (FRAME, GROUP, etc.): apply recursively
@@ -621,7 +613,7 @@ const SELF_OVERRIDE_PROPERTIES = new Set([
  */
 export function applySelfOverridesToMergedNode(
   mergedNode: MutableFigNode,
-  overrides: readonly FigSymbolOverride[],
+  overrides: readonly FigKiwiSymbolOverride[],
   symbolGuidStr: string,
   styleRegistry?: FigStyleRegistry,
 ): void {
@@ -649,8 +641,8 @@ export function applySelfOverridesToMergedNode(
  */
 function translateOverridesIfNeeded(
   translationMap: ReadonlyMap<string, string>,
-  overrides: readonly FigSymbolOverride[] | undefined,
-): readonly FigSymbolOverride[] | undefined {
+  overrides: readonly FigKiwiSymbolOverride[] | undefined,
+): readonly FigKiwiSymbolOverride[] | undefined {
   if (translationMap.size > 0 && overrides) {
     return translateOverrides(overrides, translationMap);
   }

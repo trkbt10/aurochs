@@ -27,10 +27,7 @@ export {
   type InstanceResolveContext,
   type InstanceResolution,
   type CloneSymbolChildrenOptions,
-  type FigSymbolData,
   type FigDerivedSymbolData,
-  type FigSymbolOverride,
-  type FigGuidPath,
 } from "./symbol-resolver";
 
 export {

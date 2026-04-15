@@ -5,7 +5,7 @@
  */
 
 import { decodePathCommands, type FigBlob } from "@aurochs/fig/parser";
-import type { FigFillGeometry } from "@aurochs/fig/types";
+import type { FigFillGeometry, FigVectorPath } from "@aurochs/fig/types";
 import { mapWindingRule } from "../../geometry";
 import type { PathCommand, PathContour } from "../types";
 
@@ -116,7 +116,7 @@ export function decodeGeometryToContours(
  * Convert vectorPaths (pre-decoded SVG path strings) to PathContours
  */
 export function convertVectorPathsToContours(
-  vectorPaths: readonly { data: string; windingRule?: string | { name?: string } }[] | undefined,
+  vectorPaths: readonly FigVectorPath[] | undefined,
 ): PathContour[] {
   if (!vectorPaths || vectorPaths.length === 0) {
     return [];
@@ -125,7 +125,7 @@ export function convertVectorPathsToContours(
   return vectorPaths
     .filter((vp) => vp.data)
     .map((vp) => ({
-      commands: parseSvgPathD(vp.data),
+      commands: parseSvgPathD(vp.data!),
       windingRule: mapWindingRule(vp.windingRule),
     }));
 }

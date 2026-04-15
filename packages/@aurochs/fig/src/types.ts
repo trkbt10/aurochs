@@ -852,9 +852,13 @@ export type FigVectorData = {
 
 /**
  * Vector path as stored in Kiwi binary format.
+ *
+ * The windingRule can be:
+ * - A string literal ("NONZERO", "EVENODD", "ODD") in builder-generated files
+ * - A KiwiEnumValue ({ value, name }) in real .fig files
  */
 export type FigVectorPath = {
-  readonly windingRule?: "NONZERO" | "EVENODD" | "ODD";
+  readonly windingRule?: string | KiwiEnumValue;
   readonly data?: string;
 };
 

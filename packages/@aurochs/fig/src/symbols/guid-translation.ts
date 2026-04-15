@@ -11,7 +11,7 @@
 
 import type { FigNode } from "@aurochs/fig/types";
 import { getNodeType, guidToString, safeChildren, type FigGuid } from "@aurochs/fig/parser";
-import type { FigSymbolOverride } from "./symbol-resolver";
+import type { FigKiwiSymbolOverride } from "@aurochs/fig/types";
 
 // =============================================================================
 // Types
@@ -70,7 +70,7 @@ function collectDescendantInfo(nodes: readonly FigNode[]): DescendantInfo[] {
  * Collect all unique first-level GUIDs from override entries.
  * "First-level" = the first GUID in each guidPath.guids array.
  */
-function collectOverrideGuids(...overrideSets: (readonly FigSymbolOverride[] | undefined)[]): Map<string, FigGuid> {
+function collectOverrideGuids(...overrideSets: (readonly FigKiwiSymbolOverride[] | undefined)[]): Map<string, FigGuid> {
   const map = new Map<string, FigGuid>();
   for (const overrides of overrideSets) {
     if (!overrides) {continue;}
@@ -94,7 +94,7 @@ function collectOverrideGuids(...overrideSets: (readonly FigSymbolOverride[] | u
  * - `componentPropAssignments` in any entry → INSTANCE
  * - Has depth-2+ entries → CONTAINER (FRAME/INSTANCE with children)
  */
-function detectTypeHints(...overrideSets: (readonly FigSymbolOverride[] | undefined)[]): Map<string, string> {
+function detectTypeHints(...overrideSets: (readonly FigKiwiSymbolOverride[] | undefined)[]): Map<string, string> {
   // Per GUID: track depth-1 keys and whether it has depth-2+ entries
   const guidInfo = new Map<string, { depth1Keys: Set<string>; hasChildren: boolean }>();
 
@@ -143,7 +143,7 @@ function detectTypeHints(...overrideSets: (readonly FigSymbolOverride[] | undefi
  * (especially when the INSTANCE hasn't been resized).
  */
 function extractOverrideSizes(
-  ...overrideSets: (readonly FigSymbolOverride[] | undefined)[]
+  ...overrideSets: (readonly FigKiwiSymbolOverride[] | undefined)[]
 ): Map<string, { x: number; y: number }> {
   const sizes = new Map<string, { x: number; y: number }>();
   for (const overrides of overrideSets) {
@@ -192,8 +192,8 @@ function parseGuidString(guidStr: string): FigGuid {
  */
 export function buildGuidTranslationMap(
   symbolDescendants: readonly FigNode[],
-  derivedSymbolData: readonly FigSymbolOverride[] | undefined,
-  symbolOverrides: readonly FigSymbolOverride[] | undefined,
+  derivedSymbolData: readonly FigKiwiSymbolOverride[] | undefined,
+  symbolOverrides: readonly FigKiwiSymbolOverride[] | undefined,
 ): GuidTranslationMap {
   const descendants = collectDescendantInfo(symbolDescendants);
   if (descendants.length === 0) {return new Map();}
@@ -489,7 +489,7 @@ export function buildGuidTranslationMap(
 /**
  * Detect override GUIDs that have `overriddenSymbolID` set at depth-1.
  */
-function collectOverriddenSymbolIDGuids(overrides: readonly FigSymbolOverride[] | undefined): Set<string> {
+function collectOverriddenSymbolIDGuids(overrides: readonly FigKiwiSymbolOverride[] | undefined): Set<string> {
   const guids = new Set<string>();
   if (!overrides) {return guids;}
   for (const entry of overrides) {
@@ -511,7 +511,7 @@ function collectOverriddenSymbolIDGuids(overrides: readonly FigSymbolOverride[] 
  * evidence (overriddenSymbolID targets should be visible) and corrects them.
  */
 function _fixAdjacentSiblingSwaps(
-  { result, descendants, localIdToDescInfo, symbolOverrides }: { result: Map<string, string>; descendants: DescendantInfo[]; localIdToDescInfo: Map<number, DescendantInfo>; symbolOverrides: readonly FigSymbolOverride[] | undefined; }
+  { result, descendants, localIdToDescInfo, symbolOverrides }: { result: Map<string, string>; descendants: DescendantInfo[]; localIdToDescInfo: Map<number, DescendantInfo>; symbolOverrides: readonly FigKiwiSymbolOverride[] | undefined; }
 ): void {
   const overriddenGuids = collectOverriddenSymbolIDGuids(symbolOverrides);
   if (overriddenGuids.size === 0) {return;}
@@ -569,9 +569,9 @@ function _fixAdjacentSiblingSwaps(
  * Entries whose first GUID has no translation are kept unchanged.
  */
 export function translateOverrides(
-  overrides: readonly FigSymbolOverride[],
+  overrides: readonly FigKiwiSymbolOverride[],
   translationMap: GuidTranslationMap,
-): readonly FigSymbolOverride[] {
+): readonly FigKiwiSymbolOverride[] {
   if (translationMap.size === 0) {return overrides;}
 
   return overrides.map((entry) => {
