@@ -296,12 +296,12 @@ function applyComponentPropAssignments(
           if (assignment?.value.textValue) {
             const tv = assignment.value.textValue;
             // Update textData with overridden characters
-            const existingTextData = node.textData as Record<string, unknown> | undefined;
+            const existingTextData = node.textData;
             node.textData = {
-              ...(existingTextData ?? {}),
+              ...(existingTextData ?? { characters: "" }),
               characters: tv.characters,
               lines: tv.lines ?? existingTextData?.lines,
-            } as typeof node.textData;
+            };
             // Also set top-level characters for renderers that check it
             node.characters = tv.characters;
             // Clear derivedTextData — its glyph paths correspond to the
@@ -686,8 +686,6 @@ export function resolveInstanceNode(
   node: FigNode,
   ctx: InstanceResolveContext,
 ): ResolvedInstanceNode {
-  const nodeRecord = node as Record<string, unknown>;
-
   // 1. Resolve INSTANCE → SYMBOL
   const resolution = resolveInstanceReferences(node, ctx.symbolMap);
   if (!resolution.effectiveSymbol) {
@@ -702,8 +700,8 @@ export function resolveInstanceNode(
   const mergedNode = mergeSymbolProperties(node, symNode);
 
   // 3. Translate override GUIDs
-  const rawSymbolOverrides = getInstanceSymbolOverrides(nodeRecord);
-  const rawDerivedSymbolData = nodeRecord.derivedSymbolData as FigDerivedSymbolData | undefined;
+  const rawSymbolOverrides = getInstanceSymbolOverrides(node);
+  const rawDerivedSymbolData = node.derivedSymbolData as FigDerivedSymbolData | undefined;
   const translationMap = buildGuidTranslationMap(
     safeChildren(originalSymNode),
     rawDerivedSymbolData,
@@ -718,7 +716,7 @@ export function resolveInstanceNode(
   }
 
   // 5. Clone SYMBOL children with overrides
-  const componentPropAssignments = collectComponentPropAssignments(nodeRecord);
+  const componentPropAssignments = collectComponentPropAssignments(node);
   const children = cloneSymbolChildren(symNode, {
     symbolOverrides,
     derivedSymbolData,

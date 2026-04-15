@@ -86,7 +86,7 @@ export function extractSymbolIDPair(
   nodeData: SymbolIDSource,
 ): SymbolIDPair | undefined {
   // --- symbolID ---
-  const symbolData = nodeData.symbolData as Record<string, unknown> | undefined;
+  const symbolData = nodeData.symbolData;
   const symbolID = resolveGuid(symbolData, nodeData, "symbolID");
 
   if (!symbolID) {return undefined;}

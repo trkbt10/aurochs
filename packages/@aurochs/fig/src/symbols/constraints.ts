@@ -162,10 +162,9 @@ export function resolveInstanceLayout(
 
   // Strategy 2: constraint-based resolution
   const hasConstraints = children.some((child) => {
-    const nd = child as Record<string, unknown>;
     return (
-      getConstraintValue(nd.horizontalConstraint) !== CONSTRAINT_TYPE_VALUES.MIN ||
-      getConstraintValue(nd.verticalConstraint) !== CONSTRAINT_TYPE_VALUES.MIN
+      getConstraintValue(child.horizontalConstraint) !== CONSTRAINT_TYPE_VALUES.MIN ||
+      getConstraintValue(child.verticalConstraint) !== CONSTRAINT_TYPE_VALUES.MIN
     );
   });
 
@@ -190,26 +189,24 @@ function supplementConstraints(
   { children, symbolSize, instanceSize, coveredGuids }: { children: readonly FigNode[]; symbolSize: { x: number; y: number }; instanceSize: { x: number; y: number }; coveredGuids: Set<string>; }
 ): readonly FigNode[] {
   return children.map((child) => {
-    const nd = child as Record<string, unknown>;
-    const cg = nd.guid as { sessionID: number; localID: number } | undefined;
-    const guidKey = cg ? guidToString(cg) : undefined;
+    const guidKey = child.guid ? guidToString(child.guid) : undefined;
 
     // Skip children already handled by dsd
     if (guidKey && coveredGuids.has(guidKey)) {return child;}
 
     // Skip children without constraints
     if (
-      getConstraintValue(nd.horizontalConstraint) === CONSTRAINT_TYPE_VALUES.MIN &&
-      getConstraintValue(nd.verticalConstraint) === CONSTRAINT_TYPE_VALUES.MIN
+      getConstraintValue(child.horizontalConstraint) === CONSTRAINT_TYPE_VALUES.MIN &&
+      getConstraintValue(child.verticalConstraint) === CONSTRAINT_TYPE_VALUES.MIN
     ) {
       return child;
     }
 
-    const resolution = resolveChildConstraints(nd, symbolSize, instanceSize);
+    const resolution = resolveChildConstraints(child, symbolSize, instanceSize);
     if (!resolution) {return child;}
     if (!resolution.posChanged && !resolution.sizeChanged) {return child;}
 
-    const result: Record<string, unknown> = {
+    const result: MutableFigNode = {
       ...child,
       transform: {
         ...child.transform,
@@ -223,10 +220,10 @@ function supplementConstraints(
     };
 
     if (resolution.sizeChanged) {
-      delete result.fillGeometry;
-      delete result.strokeGeometry;
+      result.fillGeometry = undefined;
+      result.strokeGeometry = undefined;
     }
 
-    return result as FigNode;
+    return result;
   });
 }
