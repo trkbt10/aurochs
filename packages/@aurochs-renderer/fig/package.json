@@ -16,7 +16,6 @@
     "lint": "eslint src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-renderer/fig/src'",
-    "dev:demo": "vite --config demo/vite.config.ts",
     "snapshot:generate": "bun run scripts/generate-snapshots.ts",
     "test:webgl": "vitest run --config ../../../vitest.config.ts '../../../packages/@aurochs-renderer/fig/spec/webgl-shapes.spec.ts' '../../../packages/@aurochs-renderer/fig/spec/webgl-fills.spec.ts' '../../../packages/@aurochs-renderer/fig/spec/webgl-effects.spec.ts' '../../../packages/@aurochs-renderer/fig/spec/webgl-visual.spec.ts' '../../../packages/@aurochs-renderer/fig/spec/webgl-text.spec.ts'",
     "test:webgl:update": "rm -f fixtures/webgl-*/baseline/*.png && vitest run --config ../../../vitest.config.ts '../../../packages/@aurochs-renderer/fig/spec/webgl-shapes.spec.ts' '../../../packages/@aurochs-renderer/fig/spec/webgl-fills.spec.ts' '../../../packages/@aurochs-renderer/fig/spec/webgl-effects.spec.ts' '../../../packages/@aurochs-renderer/fig/spec/webgl-visual.spec.ts' '../../../packages/@aurochs-renderer/fig/spec/webgl-text.spec.ts'"

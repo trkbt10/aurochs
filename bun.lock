@@ -213,18 +213,24 @@
       },
       "dependencies": {
         "@aurochs-builder/pdf": "workspace:*",
+        "@aurochs-builder/xlsx": "workspace:*",
         "@aurochs-cli/docx-cli": "workspace:*",
         "@aurochs-cli/fig-cli": "workspace:*",
         "@aurochs-cli/pdf-cli": "workspace:*",
         "@aurochs-cli/pptx-cli": "workspace:*",
+        "@aurochs-cli/tsv-cli": "workspace:*",
         "@aurochs-cli/xlsx-cli": "workspace:*",
+        "@aurochs-converters/interop-dsv-xlsx": "workspace:*",
+        "@aurochs-office/xlsx": "workspace:*",
         "@aurochs-renderer/docx": "workspace:*",
         "@aurochs-renderer/fig": "workspace:*",
         "@aurochs-renderer/pdf": "workspace:*",
         "@aurochs-renderer/pptx": "workspace:*",
         "@aurochs-renderer/xlsx": "workspace:*",
+        "@aurochs/dsv": "workspace:*",
         "@aurochs/fig": "workspace:*",
         "@aurochs/pdf": "workspace:*",
+        "@aurochs/zip": "workspace:*",
         "@resvg/resvg-js": "^2.6.2",
         "commander": "^14.0.3",
       },
@@ -294,6 +300,21 @@
         "commander": "^14.0.3",
       },
     },
+    "packages/@aurochs-cli/tsv-cli": {
+      "name": "@aurochs-cli/tsv-cli",
+      "version": "0.12.2",
+      "bin": {
+        "tsv": "./dist/cli.js",
+      },
+      "dependencies": {
+        "@aurochs-builder/xlsx": "workspace:*",
+        "@aurochs-cli/cli-core": "workspace:*",
+        "@aurochs-converters/interop-dsv-xlsx": "workspace:*",
+        "@aurochs-office/xlsx": "workspace:*",
+        "@aurochs/dsv": "workspace:*",
+        "commander": "^14.0.3",
+      },
+    },
     "packages/@aurochs-cli/xlsx-cli": {
       "name": "@aurochs-cli/xlsx-cli",
       "version": "0.12.2",
@@ -303,8 +324,10 @@
       "dependencies": {
         "@aurochs-builder/xlsx": "workspace:*",
         "@aurochs-cli/cli-core": "workspace:*",
+        "@aurochs-converters/interop-dsv-xlsx": "workspace:*",
         "@aurochs-office/xlsx": "workspace:*",
         "@aurochs-renderer/xlsx": "workspace:*",
+        "@aurochs/dsv": "workspace:*",
         "@aurochs/zip": "workspace:*",
         "commander": "^14.0.3",
       },
@@ -348,6 +371,16 @@
         "@aurochs-renderer/chart": "workspace:*",
         "@aurochs/color": "workspace:*",
         "@aurochs/fig": "workspace:*",
+      },
+    },
+    "packages/@aurochs-converters/interop-dsv-xlsx": {
+      "name": "@aurochs-converters/interop-dsv-xlsx",
+      "version": "0.12.2",
+      "dependencies": {
+        "@aurochs-builder/xlsx": "workspace:*",
+        "@aurochs-converters/core": "workspace:*",
+        "@aurochs-office/xlsx": "workspace:*",
+        "@aurochs/dsv": "workspace:*",
       },
     },
     "packages/@aurochs-converters/pdf-to-pptx": {
@@ -1192,6 +1225,8 @@
 
     "@aurochs-cli/pptx-cli": ["@aurochs-cli/pptx-cli@workspace:packages/@aurochs-cli/pptx-cli"],
 
+    "@aurochs-cli/tsv-cli": ["@aurochs-cli/tsv-cli@workspace:packages/@aurochs-cli/tsv-cli"],
+
     "@aurochs-cli/xlsx-cli": ["@aurochs-cli/xlsx-cli@workspace:packages/@aurochs-cli/xlsx-cli"],
 
     "@aurochs-converters/core": ["@aurochs-converters/core@workspace:packages/@aurochs-converters/core"],
@@ -1201,6 +1236,8 @@
     "@aurochs-converters/fig-to-pptx": ["@aurochs-converters/fig-to-pptx@workspace:packages/@aurochs-converters/fig-to-pptx"],
 
     "@aurochs-converters/interop-drawing-ml": ["@aurochs-converters/interop-drawing-ml@workspace:packages/@aurochs-converters/interop-drawing-ml"],
+
+    "@aurochs-converters/interop-dsv-xlsx": ["@aurochs-converters/interop-dsv-xlsx@workspace:packages/@aurochs-converters/interop-dsv-xlsx"],
 
     "@aurochs-converters/pdf-to-pptx": ["@aurochs-converters/pdf-to-pptx@workspace:packages/@aurochs-converters/pdf-to-pptx"],
 
