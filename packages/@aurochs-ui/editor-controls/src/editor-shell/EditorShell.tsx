@@ -11,7 +11,15 @@
  * and avoids obscuring the editing surface.
  */
 
-import React, { useRef, useMemo, useState, useEffect, useCallback, type CSSProperties, type ComponentType } from "react";
+import React, {
+  useRef,
+  useMemo,
+  useState,
+  useEffect,
+  useCallback,
+  type CSSProperties,
+  type ComponentType,
+} from "react";
 import { GridLayout } from "react-panel-layout";
 import type { LayerDefinition } from "react-panel-layout";
 import { SidebarIcon } from "@aurochs-ui/ui-components/icons";
@@ -28,12 +36,14 @@ import { EditorShellContextProvider, type EditorShellContextValue } from "./Edit
 // ---------------------------------------------------------------------------
 
 const leftPanelWrapperStyle: CSSProperties = {
+  background: `var(--bg-primary, ${colorTokens.background.primary})`,
   height: "100%",
   borderRight: `1px solid var(--border-subtle, ${colorTokens.border.subtle})`,
   overflow: "hidden",
 };
 
 const rightPanelWrapperStyle: CSSProperties = {
+  background: `var(--bg-primary, ${colorTokens.background.primary})`,
   height: "100%",
   borderLeft: `1px solid var(--border-subtle, ${colorTokens.border.subtle})`,
   overflow: "hidden",
@@ -91,7 +101,9 @@ type DrawerToggleProps = {
 };
 
 function buildDrawerToggle({ show, isOpen, label, onClick, icon: Icon }: DrawerToggleProps): React.JSX.Element | null {
-  if (!show) {return null;}
+  if (!show) {
+    return null;
+  }
   return (
     <button
       type="button"
@@ -342,10 +354,13 @@ export function EditorShell({
     }
   }, []);
 
-  const shellContext = useMemo<EditorShellContextValue>(() => ({
-    mode: responsiveMode,
-    dismissDrawer,
-  }), [responsiveMode, dismissDrawer]);
+  const shellContext = useMemo<EditorShellContextValue>(
+    () => ({
+      mode: responsiveMode,
+      dismissDrawer,
+    }),
+    [responsiveMode, dismissDrawer],
+  );
 
   return (
     <EditorShellContextProvider value={shellContext}>
