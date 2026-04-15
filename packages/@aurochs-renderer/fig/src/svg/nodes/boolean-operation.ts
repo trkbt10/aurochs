@@ -51,9 +51,7 @@ type BooleanOpType = "UNION" | "SUBTRACT" | "INTERSECT" | "EXCLUDE";
  *   value 3 → EXCLUDE   (Kiwi name may say "XOR")
  */
 function getBooleanOpType(node: FigNode): BooleanOpType {
-  const op = (node as Record<string, unknown>).booleanOperation as
-    | { value: number; name?: string }
-    | undefined;
+  const op = node.booleanOperation;
 
   if (!op) {
     return "UNION";
@@ -419,8 +417,8 @@ function synthesizeSvgPath(
 }
 
 function synthesizeStarPath(w: number, h: number, node: FigNode): string {
-  const n = Math.max(3, (node as Record<string, unknown>).pointCount as number ?? 5);
-  const innerRatio = (node as Record<string, unknown>).starInnerRadius as number ?? 0.382;
+  const n = Math.max(3, node.pointCount ?? 5);
+  const innerRatio = node.starInnerRadius ?? 0.382;
   const cx = w / 2;
   const cy = h / 2;
   const outerRx = w / 2;
@@ -445,7 +443,7 @@ function synthesizeStarPath(w: number, h: number, node: FigNode): string {
 }
 
 function synthesizePolygonPath(w: number, h: number, node: FigNode): string {
-  const n = Math.max(3, (node as Record<string, unknown>).pointCount as number ?? 3);
+  const n = Math.max(3, node.pointCount ?? 3);
   const cx = w / 2;
   const cy = h / 2;
   const rx = w / 2;

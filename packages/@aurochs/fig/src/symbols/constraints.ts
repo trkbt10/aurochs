@@ -10,7 +10,7 @@
  * - resolveInstanceLayout: strategy selection (derived vs constraint)
  */
 
-import type { FigNode } from "@aurochs/fig/types";
+import type { FigNode, MutableFigNode } from "@aurochs/fig/types";
 import { CONSTRAINT_TYPE_VALUES } from "@aurochs/fig/constants";
 import { guidToString } from "@aurochs/fig/parser";
 import { getConstraintValue, resolveChildConstraints } from "@aurochs/fig/symbols";
@@ -38,7 +38,7 @@ export function applyConstraintsToChildren(
   instanceSize: { x: number; y: number },
 ): readonly FigNode[] {
   return children.map((child) => {
-    const resolution = resolveChildConstraints(child as Record<string, unknown>, symbolSize, instanceSize);
+    const resolution = resolveChildConstraints(child, symbolSize, instanceSize);
 
     // No transform/size — skip
     if (!resolution) {return child;}
@@ -46,7 +46,7 @@ export function applyConstraintsToChildren(
     // Nothing changed — skip
     if (!resolution.posChanged && !resolution.sizeChanged) {return child;}
 
-    const result: Record<string, unknown> = {
+    const result: MutableFigNode = {
       ...child,
       transform: {
         ...child.transform,
@@ -62,11 +62,11 @@ export function applyConstraintsToChildren(
     // When size changes, clear pre-baked geometry so the renderer
     // falls back to size-based shape rendering (rect, ellipse, etc.)
     if (resolution.sizeChanged) {
-      delete result.fillGeometry;
-      delete result.strokeGeometry;
+      result.fillGeometry = undefined;
+      result.strokeGeometry = undefined;
     }
 
-    return result as FigNode;
+    return result;
   });
 }
 
@@ -86,8 +86,7 @@ function isDerivedDataApplicable(derivedSymbolData: FigDerivedSymbolData, childr
     if (!firstGuid) {return false;}
     const key = guidToString(firstGuid);
     return children.some((child) => {
-      const cg = (child as Record<string, unknown>).guid as { sessionID: number; localID: number } | undefined;
-      return cg != null && guidToString(cg) === key;
+      return child.guid != null && guidToString(child.guid) === key;
     });
   });
 }
@@ -107,10 +106,10 @@ function clearDerivedGeometry(derivedSymbolData: FigDerivedSymbolData, children:
     if (!targetGuid) {continue;}
     const targetKey = guidToString(targetGuid);
     for (const child of children) {
-      const cg = (child as Record<string, unknown>).guid as { sessionID: number; localID: number } | undefined;
-      if (cg && guidToString(cg) === targetKey) {
-        delete (child as Record<string, unknown>).fillGeometry;
-        delete (child as Record<string, unknown>).strokeGeometry;
+      if (child.guid && guidToString(child.guid) === targetKey) {
+        // Children are MutableFigNode clones from cloneSymbolChildren
+        (child as MutableFigNode).fillGeometry = undefined;
+        (child as MutableFigNode).strokeGeometry = undefined;
         matched.add(targetKey);
       }
     }

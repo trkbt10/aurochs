@@ -116,7 +116,7 @@ type ArcData = {
  * a full circle (start=0, end=2π), in which case a regular ellipse is used.
  */
 function getArcData(node: FigNode): ArcData | undefined {
-  const raw = (node as Record<string, unknown>).arcData as ArcData | undefined;
+  const raw = node.arcData;
   if (!raw) {
     return undefined;
   }

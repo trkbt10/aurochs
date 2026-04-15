@@ -112,7 +112,7 @@ export function createFigResolver(
   // --- INSTANCE reference resolution ---
 
   function resolveReferences(node: FigNode): InstanceResolution {
-    const pair = extractSymbolIDPair(node as Record<string, unknown>);
+    const pair = extractSymbolIDPair(node);
     if (!pair) { return { effectiveSymbol: undefined, allDependencyGuids: [] }; }
 
     const allDeps: string[] = [];
@@ -340,8 +340,6 @@ export function createFigResolver(
   const resolvedCache = preResolve();
 
   function resolveInstance(node: FigNode): ResolvedInstanceNode {
-    const nodeRecord = node as Record<string, unknown>;
-
     const resolution = resolveReferences(node);
     if (!resolution.effectiveSymbol) {
       return { node, children: safeChildren(node) };
@@ -355,8 +353,8 @@ export function createFigResolver(
     const mergedNode = mergeProperties(node, symNode);
 
     // Translate override GUIDs
-    const rawSymbolOverrides = getInstanceSymbolOverrides(nodeRecord);
-    const rawDerivedSymbolData = nodeRecord.derivedSymbolData as FigDerivedSymbolData | undefined;
+    const rawSymbolOverrides = getInstanceSymbolOverrides(node);
+    const rawDerivedSymbolData = node.derivedSymbolData as FigDerivedSymbolData | undefined;
     const translationMap = buildGuidTranslationMap(
       safeChildren(originalSymNode),
       rawDerivedSymbolData,
@@ -371,7 +369,7 @@ export function createFigResolver(
     }
 
     // Clone children with overrides
-    const componentPropAssignments = collectComponentPropAssignments(nodeRecord);
+    const componentPropAssignments = collectComponentPropAssignments(node);
     const children = cloneSymbolChildren(symNode, {
       symbolOverrides,
       derivedSymbolData,

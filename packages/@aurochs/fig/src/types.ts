@@ -215,6 +215,45 @@ export type FigDerivedTextData = {
 };
 
 // =============================================================================
+// Symbol/Instance Data Types (Kiwi schema representation)
+// =============================================================================
+
+/**
+ * GUID path for targeting nested nodes in symbol overrides.
+ */
+export type FigGuidPath = {
+  readonly guids: readonly FigGuid[];
+};
+
+/**
+ * Symbol override entry as stored in Kiwi binary format.
+ *
+ * Each entry targets a specific child node (via guidPath) and overrides
+ * one or more of its properties. The overridden properties are the same
+ * fields as FigNode (fillPaints, opacity, visible, etc.).
+ *
+ * The index signature is required because overrides carry arbitrary
+ * node properties as their payload — this is inherent to the Kiwi schema.
+ */
+export type FigKiwiSymbolOverride = {
+  readonly guidPath: FigGuidPath;
+  readonly [key: string]: unknown;
+};
+
+/**
+ * Symbol data message as stored in Kiwi binary format.
+ *
+ * Contains the SYMBOL/COMPONENT reference and override data
+ * for INSTANCE nodes.
+ */
+export type FigKiwiSymbolData = {
+  readonly symbolID?: FigGuid;
+  readonly overriddenSymbolID?: FigGuid;
+  readonly symbolOverrides?: readonly FigKiwiSymbolOverride[];
+  readonly [key: string]: unknown;
+};
+
+// =============================================================================
 // Node Type
 // =============================================================================
 
@@ -266,10 +305,89 @@ export type FigNode = {
   readonly blendMode?: string | KiwiEnumValue;
   /** iOS-style corner smoothing (0-1 range) */
   readonly cornerSmoothing?: number;
+
+  // ---- AutoLayout (frame-level) ----
+  /** Stack (auto-layout) direction: VERTICAL or HORIZONTAL */
+  readonly stackMode?: KiwiEnumValue;
+  /** Spacing between stack children (px) */
+  readonly stackSpacing?: number;
+  /** Padding: number (uniform) or per-side object */
+  readonly stackPadding?: number;
+  /** Vertical padding (legacy shorthand, Kiwi field) */
+  readonly stackVerticalPadding?: number;
+  /** Horizontal padding (legacy shorthand, Kiwi field) */
+  readonly stackHorizontalPadding?: number;
+  /** Right padding override */
+  readonly stackPaddingRight?: number;
+  /** Bottom padding override */
+  readonly stackPaddingBottom?: number;
+  /** Primary axis alignment */
+  readonly stackPrimaryAlignItems?: KiwiEnumValue;
+  /** Counter axis alignment */
+  readonly stackCounterAlignItems?: KiwiEnumValue;
+  /** Primary axis content distribution */
+  readonly stackPrimaryAlignContent?: KiwiEnumValue;
+  /** Whether children wrap to next line */
+  readonly stackWrap?: boolean;
+  /** Spacing between wrapped rows/columns */
+  readonly stackCounterSpacing?: number;
+  /** Reverse z-order of children */
+  readonly itemReverseZIndex?: boolean;
+
+  // ---- AutoLayout (child-level) ----
+  /** How this child is positioned in the parent stack (AUTO or ABSOLUTE) */
+  readonly stackPositioning?: KiwiEnumValue;
+  /** How this child sizes on primary axis (FIXED, HUG, FILL) */
+  readonly stackPrimarySizing?: KiwiEnumValue;
+  /** How this child sizes on counter axis (FIXED, HUG, FILL) */
+  readonly stackCounterSizing?: KiwiEnumValue;
+  /** Horizontal constraint for non-auto-layout positioning */
+  readonly horizontalConstraint?: KiwiEnumValue;
+  /** Vertical constraint for non-auto-layout positioning */
+  readonly verticalConstraint?: KiwiEnumValue;
+
+  // ---- Boolean operation ----
+  /** Boolean operation type (UNION, SUBTRACT, INTERSECT, EXCLUDE) */
+  readonly booleanOperation?: KiwiEnumValue;
+
+  // ---- Symbol/Instance fields ----
+  /** Symbol data for INSTANCE nodes (symbolID, overrides) */
+  readonly symbolData?: FigKiwiSymbolData;
+  /** Top-level symbolID (builder-generated format) */
+  readonly symbolID?: FigGuid;
+  /** Overridden symbol ID for variant swapping */
+  readonly overriddenSymbolID?: FigGuid;
+  /** Top-level symbol overrides (builder-generated format) */
+  readonly symbolOverrides?: readonly FigKiwiSymbolOverride[];
+  /** Derived symbol data (computed transforms for INSTANCE children) */
+  readonly derivedSymbolData?: unknown;
+  /** Component property references (bound property definition IDs) */
+  readonly componentPropertyReferences?: readonly unknown[];
+  /** Component property assignments (overridden values) */
+  readonly componentPropAssignments?: readonly unknown[];
+
+  // ---- Section fields ----
+  /** Whether section contents are hidden (collapsed) */
+  readonly sectionContentsHidden?: boolean;
+
+  // ---- Shape fields ----
   /** Number of points for STAR and REGULAR_POLYGON nodes */
   readonly pointCount?: number;
   /** Inner radius ratio for STAR nodes (0-1 range, default 0.382) */
   readonly starInnerRadius?: number;
+  /** Stroke dash pattern (separate from strokeDashes for legacy compat) */
+  readonly dashPattern?: readonly number[];
+  /** Handle mirroring mode for vector point handles */
+  readonly handleMirroring?: KiwiEnumValue;
+
+  // ---- Export settings ----
+  /** Export settings for the node */
+  readonly exportSettings?: readonly unknown[];
+
+  // ---- Internal metadata ----
+  /** Whether this node is internal-only (e.g., Internal Only Canvas) */
+  readonly internalOnly?: boolean;
+
   // ---- Text fields ----
   /** Text characters content */
   readonly characters?: string;

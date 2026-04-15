@@ -12,6 +12,7 @@
  *   4. Detect position / size changes
  */
 
+import type { FigNode, KiwiEnumValue } from "../types";
 import { CONSTRAINT_TYPE_VALUES } from "../constants/layout";
 import { resolveConstraintAxis } from "./constraint-axis";
 
@@ -38,12 +39,11 @@ export type ChildConstraintResolution = {
  * Returns `CONSTRAINT_TYPE_VALUES.MIN` (0) as default when the field is
  * absent, not an object, or has no `.value`.
  */
-export function getConstraintValue(constraintField: unknown): number {
-  if (!constraintField || typeof constraintField !== "object") {
+export function getConstraintValue(constraintField: KiwiEnumValue | undefined): number {
+  if (!constraintField) {
     return CONSTRAINT_TYPE_VALUES.MIN;
   }
-  const val = (constraintField as { value?: number }).value;
-  return val ?? CONSTRAINT_TYPE_VALUES.MIN;
+  return constraintField.value ?? CONSTRAINT_TYPE_VALUES.MIN;
 }
 
 // =============================================================================
@@ -56,18 +56,28 @@ export function getConstraintValue(constraintField: unknown): number {
  * Returns `null` when the child has no `transform` or `size` —
  * callers should skip such children.
  */
+/**
+ * Minimal shape for constraint resolution.
+ * Accepts both FigNode (production) and partial test objects.
+ */
+type ConstraintChild = {
+  readonly horizontalConstraint?: KiwiEnumValue;
+  readonly verticalConstraint?: KiwiEnumValue;
+  readonly transform?: { readonly m02?: number; readonly m12?: number };
+  readonly size?: { readonly x?: number; readonly y?: number };
+  readonly [key: string]: unknown;
+};
+
 export function resolveChildConstraints(
-  child: Record<string, unknown>,
+  child: ConstraintChild,
   parentOrigSize: { x: number; y: number },
   parentNewSize: { x: number; y: number },
 ): ChildConstraintResolution | null {
   const hVal = getConstraintValue(child.horizontalConstraint);
   const vVal = getConstraintValue(child.verticalConstraint);
 
-  const transform = child.transform as
-    | { m02?: number; m12?: number }
-    | undefined;
-  const size = child.size as { x?: number; y?: number } | undefined;
+  const transform = child.transform;
+  const size = child.size;
 
   if (!transform || !size) {return null;}
 

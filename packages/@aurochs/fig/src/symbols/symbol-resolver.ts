@@ -2,7 +2,7 @@
  * @file Symbol resolution for INSTANCE nodes
  */
 
-import type { FigNode, MutableFigNode } from "@aurochs/fig/types";
+import type { FigNode, MutableFigNode, FigKiwiSymbolData, FigKiwiSymbolOverride, FigGuidPath } from "@aurochs/fig/types";
 import { guidToString, getNodeType, safeChildren, type FigGuid } from "@aurochs/fig/parser";
 import { extractSymbolIDPair } from "@aurochs/fig/symbols";
 import { buildGuidTranslationMap, translateOverrides } from "./guid-translation";
@@ -10,37 +10,20 @@ import { resolveInstanceLayout } from "./constraints";
 import { resolveStyleIdOnMutableNode, type FigStyleRegistry } from "./style-registry";
 
 // =============================================================================
-// Types
+// Types (domain aliases — SoT is types.ts)
 // =============================================================================
 
-/**
- * Symbol data structure from INSTANCE nodes
- */
-export type FigSymbolData = {
-  readonly symbolID: FigGuid;
-  readonly symbolOverrides?: readonly FigSymbolOverride[];
-};
+/** Domain alias for FigKiwiSymbolData */
+export type FigSymbolData = FigKiwiSymbolData;
+/** Domain alias for FigKiwiSymbolOverride */
+export type FigSymbolOverride = FigKiwiSymbolOverride;
+export type { FigGuidPath };
 
 /**
- * Derived symbol data structure for transform overrides
- * This contains computed transforms for INSTANCE child nodes
+ * Derived symbol data structure for transform overrides.
+ * Contains computed transforms for INSTANCE child nodes.
  */
 export type FigDerivedSymbolData = readonly FigSymbolOverride[];
-
-/**
- * Symbol override entry
- */
-export type FigSymbolOverride = {
-  readonly guidPath: FigGuidPath;
-  readonly [key: string]: unknown;
-};
-
-/**
- * GUID path for targeting nested nodes
- */
-export type FigGuidPath = {
-  readonly guids: readonly FigGuid[];
-};
 
 // =============================================================================
 // Symbol Override Extraction
@@ -54,13 +37,12 @@ export type FigGuidPath = {
  * - `symbolOverrides` at node's top level (builder-generated files)
  */
 export function getInstanceSymbolOverrides(
-  nodeData: Record<string, unknown>,
+  nodeData: FigNode,
 ): readonly FigSymbolOverride[] | undefined {
-  const symbolData = nodeData.symbolData as FigSymbolData | undefined;
-  if (symbolData?.symbolOverrides) {
-    return symbolData.symbolOverrides;
+  if (nodeData.symbolData?.symbolOverrides) {
+    return nodeData.symbolData.symbolOverrides;
   }
-  return nodeData.symbolOverrides as readonly FigSymbolOverride[] | undefined;
+  return nodeData.symbolOverrides;
 }
 
 // =============================================================================
@@ -120,7 +102,7 @@ export function resolveInstanceReferences(
   node: FigNode,
   symbolMap: ReadonlyMap<string, FigNode>,
 ): InstanceResolution {
-  const pair = extractSymbolIDPair(node as Record<string, unknown>);
+  const pair = extractSymbolIDPair(node);
   if (!pair) { return { effectiveSymbol: undefined, allDependencyGuids: [] }; }
 
   const allDeps: string[] = [];
@@ -249,7 +231,7 @@ export function cloneSymbolChildren(symbolNode: FigNode, options?: CloneSymbolCh
  * 2. `componentPropAssignments` found inside `symbolOverrides` entries
  */
 export function collectComponentPropAssignments(
-  instanceData: Record<string, unknown>,
+  instanceData: FigNode,
 ): readonly ComponentPropAssignment[] {
   const result: ComponentPropAssignment[] = [];
 
@@ -263,7 +245,8 @@ export function collectComponentPropAssignments(
   const overrides = getInstanceSymbolOverrides(instanceData);
   if (overrides) {
     for (const ov of overrides) {
-      const ovAssign = (ov as Record<string, unknown>).componentPropAssignments as
+      // FigKiwiSymbolOverride carries arbitrary node properties via index signature
+      const ovAssign = ov.componentPropAssignments as
         | readonly ComponentPropAssignment[]
         | undefined;
       if (ovAssign) {

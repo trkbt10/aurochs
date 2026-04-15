@@ -13,7 +13,7 @@
  * (renderer, pre-resolver, builder) uses the same code path.
  */
 
-import type { FigGuid } from "../types";
+import type { FigGuid, FigNode, FigKiwiSymbolData } from "../types";
 
 // =============================================================================
 // Types
@@ -23,6 +23,20 @@ import type { FigGuid } from "../types";
 export type SymbolIDPair = {
   readonly symbolID: FigGuid;
   readonly overriddenSymbolID?: FigGuid;
+};
+
+/**
+ * Minimal shape accepted by extractSymbolIDPair.
+ *
+ * Accepts both FigNode (production) and plain objects (tests).
+ * The typed fields mirror FigNode's symbolData/symbolID/overriddenSymbolID
+ * but are all optional to support partial test data.
+ */
+type SymbolIDSource = {
+  readonly symbolData?: FigKiwiSymbolData | Record<string, unknown>;
+  readonly symbolID?: FigGuid;
+  readonly overriddenSymbolID?: FigGuid;
+  readonly [key: string]: unknown;
 };
 
 // =============================================================================
@@ -36,14 +50,15 @@ function isGuid(v: unknown): v is FigGuid {
 /** Resolve a GUID field from either symbolData or nodeData */
 function resolveGuid(
   symbolData: Record<string, unknown> | undefined,
-  nodeData: Record<string, unknown>,
-  field: string,
+  nodeData: SymbolIDSource,
+  field: "symbolID" | "overriddenSymbolID",
 ): FigGuid | undefined {
   if (symbolData && isGuid(symbolData[field])) {
     return symbolData[field] as FigGuid;
   }
-  if (isGuid(nodeData[field])) {
-    return nodeData[field] as FigGuid;
+  const directValue = nodeData[field];
+  if (isGuid(directValue)) {
+    return directValue;
   }
   return undefined;
 }
@@ -61,13 +76,14 @@ function buildSymbolIDPair(symbolID: FigGuid, overriddenSymbolID: FigGuid | unde
 // =============================================================================
 
 /**
- * Extract the raw symbolID / overriddenSymbolID pair from a node record.
+ * Extract the raw symbolID / overriddenSymbolID pair from a node.
  *
+ * Accepts FigNode or any object with the appropriate shape (for tests).
  * Returns `undefined` when no symbolID is present (i.e. the node is not
  * an INSTANCE, or the data is malformed).
  */
 export function extractSymbolIDPair(
-  nodeData: Record<string, unknown>,
+  nodeData: SymbolIDSource,
 ): SymbolIDPair | undefined {
   // --- symbolID ---
   const symbolData = nodeData.symbolData as Record<string, unknown> | undefined;
@@ -90,7 +106,7 @@ export function extractSymbolIDPair(
  * or COMPONENT an INSTANCE should resolve to.
  */
 export function getEffectiveSymbolID(
-  nodeData: Record<string, unknown>,
+  nodeData: SymbolIDSource,
 ): FigGuid | undefined {
   const pair = extractSymbolIDPair(nodeData);
   if (!pair) {return undefined;}

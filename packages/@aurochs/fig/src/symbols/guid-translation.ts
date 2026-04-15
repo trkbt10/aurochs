@@ -44,15 +44,14 @@ function collectDescendantInfo(nodes: readonly FigNode[]): DescendantInfo[] {
   const result: DescendantInfo[] = [];
 
   function walk(node: FigNode): void {
-    const nodeData = node as Record<string, unknown>;
-    const guid = nodeData.guid as FigGuid | undefined;
+    const guid = node.guid;
     if (guid) {
-      const size = nodeData.size as { x: number; y: number } | undefined;
+      const size = node.size;
       result.push({
         guid,
         guidStr: guidToString(guid),
         nodeType: getNodeType(node),
-        visible: nodeData.visible !== false,
+        visible: node.visible !== false,
         size: size ? { x: size.x, y: size.y } : undefined,
       });
     }
@@ -152,7 +151,7 @@ function extractOverrideSizes(
     for (const entry of overrides) {
       const guids = entry.guidPath?.guids;
       if (!guids || guids.length !== 1) {continue;}
-      const size = (entry as Record<string, unknown>).size as { x: number; y: number } | undefined;
+      const size = entry.size as { x: number; y: number } | undefined;
       if (!size) {continue;}
       const key = guidToString(guids[0]);
       if (!sizes.has(key)) {
@@ -496,7 +495,7 @@ function collectOverriddenSymbolIDGuids(overrides: readonly FigSymbolOverride[] 
   for (const entry of overrides) {
     const firstGuid = entry.guidPath?.guids?.[0];
     if (!firstGuid) {continue;}
-    if ((entry as Record<string, unknown>).overriddenSymbolID !== undefined) {
+    if (entry.overriddenSymbolID !== undefined) {
       guids.add(guidToString(firstGuid));
     }
   }

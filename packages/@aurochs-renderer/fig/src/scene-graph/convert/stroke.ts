@@ -4,7 +4,7 @@
  * Consumes shared stroke interpretation from stroke/interpret.ts (the SoT).
  */
 
-import type { FigPaint, FigColor, FigStrokeWeight } from "@aurochs/fig/types";
+import type { FigPaint, FigColor, FigStrokeWeight, KiwiEnumValue } from "@aurochs/fig/types";
 import { getPaintType } from "@aurochs/fig/color";
 import { resolveStrokeWeight, mapStrokeCap, mapStrokeJoin } from "../../stroke";
 import type { Stroke } from "../types";
@@ -19,8 +19,8 @@ export function convertStrokeToSceneStroke(
   paints: readonly FigPaint[] | undefined,
   strokeWeight: FigStrokeWeight | undefined,
   options?: {
-    strokeCap?: unknown;
-    strokeJoin?: unknown;
+    strokeCap?: string | KiwiEnumValue;
+    strokeJoin?: string | KiwiEnumValue;
     dashPattern?: readonly number[];
   },
 ): Stroke | undefined {

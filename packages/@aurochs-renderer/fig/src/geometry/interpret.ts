@@ -16,8 +16,8 @@ export type WindingRule = "nonzero" | "evenodd";
  *
  * Handles string ("NONZERO", "EVENODD") and KiwiEnumValue ({ name: "NONZERO" }).
  */
-export function mapWindingRule(rule: unknown): WindingRule {
-  const name = typeof rule === "string" ? rule : (rule as { name?: string } | null)?.name;
+export function mapWindingRule(rule: string | { name?: string } | null | undefined): WindingRule {
+  const name = typeof rule === "string" ? rule : rule?.name;
   if (name === "EVENODD" || name === "ODD") {
     return "evenodd";
   }
