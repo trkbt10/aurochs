@@ -1,28 +1,46 @@
 /**
  * @file SVG scene graph renderer
  *
- * Renders a SceneGraph to an SVG string. Works through the same shared
- * render module (scene-graph/render/) as the React renderer, ensuring
- * both produce identical visual output from the same SceneGraph.
+ * Renders a SceneGraph to an SVG string via the RenderTree intermediate
+ * representation. All attribute resolution is performed by the RenderTree
+ * resolver — this file only formats pre-resolved data to SVG strings.
  *
- * ## SoT Architecture
+ * ## Architecture
  *
- * All attribute computation (fill, stroke, effects, transform, path) is
- * delegated to scene-graph/render/. This file only handles SVG string
- * formatting (concatenating element tags from resolved attributes).
+ * ```
+ * SceneGraph
+ *     ↓ resolveRenderTree()
+ * RenderTree (fully resolved)
+ *     ↓ formatRenderTree() [this file]
+ * SVG string
+ * ```
+ *
+ * This ensures parity with the React renderer, which formats the same
+ * RenderTree to JSX elements.
  */
 
-import type {
-  SceneGraph,
-  SceneNode,
-  GroupNode,
-  FrameNode,
-  RectNode,
-  EllipseNode,
-  PathNode,
-  TextNode,
-  ImageNode,
-} from "../scene-graph/types";
+import type { SceneGraph } from "../scene-graph/types";
+import {
+  resolveRenderTree,
+  type RenderTree,
+  type RenderNode,
+  type RenderGroupNode,
+  type RenderFrameNode,
+  type RenderRectNode,
+  type RenderEllipseNode,
+  type RenderPathNode,
+  type RenderTextNode,
+  type RenderImageNode,
+  type RenderDef,
+  type ResolvedFillResult,
+  type ResolvedWrapperAttrs,
+  type ClipPathShape,
+} from "../scene-graph/render-tree";
+
+import type { ResolvedStrokeAttrs } from "../scene-graph/render";
+
+import type { ResolvedFilterPrimitive } from "../scene-graph/render";
+
 import {
   svg,
   g,
@@ -47,116 +65,23 @@ import {
   type SvgString,
   EMPTY_SVG,
 } from "./primitives";
-import {
-  // Shared SoT functions
-  colorToHex,
-  matrixToSvgTransform,
-  contourToSvgD,
-  resolveFill,
-  resolveTopFill,
-  resolveStroke,
-  resolveEffects,
-  // Types
-  type ResolvedFill,
-  type ResolvedFillDef,
-  type ResolvedStrokeAttrs,
-  type ResolvedFilter,
-  type ResolvedFilterPrimitive,
-  type IdGenerator,
-} from "../scene-graph/render";
 
 // =============================================================================
-// Render Context
+// Def Formatting
 // =============================================================================
 
-type SvgDefsCollector = IdGenerator & {
-  items: SvgString[];
-  add(def: SvgString): void;
-};
-
-function createDefsCollector(): SvgDefsCollector {
-  // eslint-disable-next-line no-restricted-syntax -- mutable closure counter for sequential ID generation
-  let counter = 0;
-  const collector: SvgDefsCollector = {
-    items: [],
-    getNextId(prefix: string): string {
-      return `${prefix}-${counter++}`;
-    },
-    add(def: SvgString): void {
-      collector.items.push(def);
-    },
-  };
-  return collector;
+function formatClipPathShape(shape: ClipPathShape): SvgString {
+  return rect({
+    x: shape.x,
+    y: shape.y,
+    width: shape.width,
+    height: shape.height,
+    rx: shape.rx,
+    ry: shape.ry,
+  });
 }
 
-// =============================================================================
-// Fill Def Rendering (ResolvedFillDef → SvgString)
-// =============================================================================
-
-function renderFillDef(def: ResolvedFillDef, defsCol: SvgDefsCollector): void {
-  switch (def.type) {
-    case "linear-gradient": {
-      const stops = def.stops.map((s) =>
-        stop({
-          offset: s.offset,
-          "stop-color": s.stopColor,
-          "stop-opacity": s.stopOpacity,
-        }),
-      );
-      defsCol.add(linearGradient({ id: def.id, x1: def.x1, y1: def.y1, x2: def.x2, y2: def.y2 }, ...stops));
-      break;
-    }
-    case "radial-gradient": {
-      const stops = def.stops.map((s) =>
-        stop({
-          offset: s.offset,
-          "stop-color": s.stopColor,
-          "stop-opacity": s.stopOpacity,
-        }),
-      );
-      defsCol.add(radialGradient({ id: def.id, cx: def.cx, cy: def.cy, r: def.r }, ...stops));
-      break;
-    }
-    case "image": {
-      defsCol.add(
-        pattern(
-          {
-            id: def.id,
-            patternContentUnits: def.patternContentUnits === "objectBoundingBox" ? "objectBoundingBox" : undefined,
-            patternUnits: def.patternContentUnits === "userSpaceOnUse" ? "userSpaceOnUse" : undefined,
-            width: def.width,
-            height: def.height,
-          },
-          image({
-            href: def.dataUri,
-            x: 0,
-            y: 0,
-            width: def.imageWidth,
-            height: def.imageHeight,
-            preserveAspectRatio: def.preserveAspectRatio,
-          }),
-        ),
-      );
-      break;
-    }
-  }
-}
-
-function renderResolvedFill(resolved: ResolvedFill, defsCol: SvgDefsCollector): { fill: string; "fill-opacity"?: number } {
-  if (resolved.def) {
-    renderFillDef(resolved.def, defsCol);
-  }
-  return {
-    fill: resolved.attrs.fill,
-    "fill-opacity": resolved.attrs.fillOpacity,
-  };
-}
-
-// =============================================================================
-// Filter Rendering (ResolvedFilter → SvgString)
-// =============================================================================
-
-function renderFilterPrimitive(p: ResolvedFilterPrimitive): SvgString {
+function formatFilterPrimitive(p: ResolvedFilterPrimitive): SvgString {
   switch (p.type) {
     case "feFlood":
       return feFlood({ "flood-opacity": p.floodOpacity, result: p.result });
@@ -188,17 +113,79 @@ function renderFilterPrimitive(p: ResolvedFilterPrimitive): SvgString {
   }
 }
 
-function renderResolvedFilter(resolved: ResolvedFilter, defsCol: SvgDefsCollector): string {
-  const primitives = resolved.primitives.map((p) => renderFilterPrimitive(p));
-  defsCol.add(filter({ id: resolved.id }, ...primitives));
-  return resolved.filterAttr;
+function formatDef(def: RenderDef): SvgString {
+  switch (def.type) {
+    case "linear-gradient": {
+      const d = def.def;
+      const stops = d.stops.map((s) =>
+        stop({
+          offset: s.offset,
+          "stop-color": s.stopColor,
+          "stop-opacity": s.stopOpacity,
+        }),
+      );
+      return linearGradient({ id: d.id, x1: d.x1, y1: d.y1, x2: d.x2, y2: d.y2 }, ...stops);
+    }
+    case "radial-gradient": {
+      const d = def.def;
+      const stops = d.stops.map((s) =>
+        stop({
+          offset: s.offset,
+          "stop-color": s.stopColor,
+          "stop-opacity": s.stopOpacity,
+        }),
+      );
+      return radialGradient({ id: d.id, cx: d.cx, cy: d.cy, r: d.r }, ...stops);
+    }
+    case "pattern": {
+      const d = def.def;
+      return pattern(
+        {
+          id: d.id,
+          patternContentUnits: d.patternContentUnits === "objectBoundingBox" ? "objectBoundingBox" : undefined,
+          patternUnits: d.patternContentUnits === "userSpaceOnUse" ? "userSpaceOnUse" : undefined,
+          width: d.width,
+          height: d.height,
+        },
+        image({
+          href: d.dataUri,
+          x: 0,
+          y: 0,
+          width: d.imageWidth,
+          height: d.imageHeight,
+          preserveAspectRatio: d.preserveAspectRatio,
+        }),
+      );
+    }
+    case "filter": {
+      const f = def.filter;
+      const primitives = f.primitives.map((p) => formatFilterPrimitive(p));
+      return filter({ id: f.id }, ...primitives);
+    }
+    case "clip-path": {
+      return clipPath({ id: def.id }, formatClipPathShape(def.shape));
+    }
+  }
+}
+
+function formatDefs(renderDefs: readonly RenderDef[]): SvgString {
+  if (renderDefs.length === 0) { return EMPTY_SVG; }
+  const formatted = renderDefs.map(formatDef);
+  return defs(...formatted);
 }
 
 // =============================================================================
-// Stroke Rendering
+// Fill/Stroke Attribute Formatting
 // =============================================================================
 
-function resolvedStrokeToSvgAttrs(attrs: ResolvedStrokeAttrs): Record<string, string | number | undefined> {
+function fillToSvgAttrs(fill: ResolvedFillResult): { fill: string; "fill-opacity"?: number } {
+  return {
+    fill: fill.attrs.fill,
+    "fill-opacity": fill.attrs.fillOpacity,
+  };
+}
+
+function strokeToSvgAttrs(attrs: ResolvedStrokeAttrs): Record<string, string | number | undefined> {
   return {
     stroke: attrs.stroke,
     "stroke-width": attrs.strokeWidth,
@@ -209,60 +196,48 @@ function resolvedStrokeToSvgAttrs(attrs: ResolvedStrokeAttrs): Record<string, st
   };
 }
 
-// =============================================================================
-// Corner Radius (shared with geometry/)
-// =============================================================================
-
-function clampRadius(
-  radius: number | undefined,
-  width: number,
-  height: number,
-): number | undefined {
-  if (!radius || radius <= 0) { return undefined; }
-  return Math.min(radius, Math.min(width, height) / 2);
+function wrapperAttrs(w: ResolvedWrapperAttrs): { transform?: string; opacity?: number; filter?: string } {
+  return {
+    transform: w.transform,
+    opacity: w.opacity,
+    filter: w.filterAttr,
+  };
 }
 
 // =============================================================================
-// Node Renderers
+// Node Formatters
 // =============================================================================
 
-function renderGroupNode(node: GroupNode, defsCol: SvgDefsCollector): SvgString {
-  const children = node.children.map((child) => renderNode(child, defsCol));
-  const transformStr = matrixToSvgTransform(node.transform);
-  const filterResult = resolveEffects(node.effects, defsCol);
-  const filterAttr = filterResult ? renderResolvedFilter(filterResult, defsCol) : undefined;
+function formatGroupNode(node: RenderGroupNode): SvgString {
+  const children = node.children.map(formatNode);
+  const defsStr = formatDefs(node.defs);
 
-  if (!transformStr && node.opacity >= 1 && !filterAttr && children.length === 1) {
+  // Optimization: unwrap single child if no wrapper attrs needed
+  if (node.canUnwrapSingleChild && children.length === 1 && node.defs.length === 0) {
     return children[0];
   }
 
-  return g(
-    {
-      transform: transformStr,
-      opacity: node.opacity < 1 ? node.opacity : undefined,
-      filter: filterAttr,
-    },
-    ...children,
-  );
+  const parts: SvgString[] = [];
+  if (defsStr !== EMPTY_SVG) { parts.push(defsStr); }
+  parts.push(...children);
+
+  return g(wrapperAttrs(node.wrapper), ...parts);
 }
 
-function renderFrameNode(node: FrameNode, defsCol: SvgDefsCollector): SvgString {
-  const elements: SvgString[] = [];
-  const transformStr = matrixToSvgTransform(node.transform);
-  const filterResult = resolveEffects(node.effects, defsCol);
-  const filterAttr = filterResult ? renderResolvedFilter(filterResult, defsCol) : undefined;
-  const clampedRadius = clampRadius(node.cornerRadius, node.width, node.height);
+function formatFrameNode(node: RenderFrameNode): SvgString {
+  const parts: SvgString[] = [];
+  const defsStr = formatDefs(node.defs);
+  if (defsStr !== EMPTY_SVG) { parts.push(defsStr); }
 
   // Background fill
-  if (node.fills.length > 0) {
-    const fillResolved = resolveFill(node.fills[node.fills.length - 1], defsCol);
-    const fillAttrs = renderResolvedFill(fillResolved, defsCol);
-    const strokeAttrs = node.stroke ? resolvedStrokeToSvgAttrs(resolveStroke(node.stroke)) : {};
-    elements.push(
+  if (node.background) {
+    const fillAttrs = fillToSvgAttrs(node.background.fill);
+    const strokeAttrs = node.background.stroke ? strokeToSvgAttrs(node.background.stroke) : {};
+    parts.push(
       rect({
         x: 0, y: 0,
         width: node.width, height: node.height,
-        rx: clampedRadius, ry: clampedRadius,
+        rx: node.cornerRadius, ry: node.cornerRadius,
         ...fillAttrs,
         ...strokeAttrs,
       } as Parameters<typeof rect>[0]),
@@ -270,63 +245,41 @@ function renderFrameNode(node: FrameNode, defsCol: SvgDefsCollector): SvgString 
   }
 
   // Children (with optional clipping)
-  const childElements = node.children.map((child) => renderNode(child, defsCol));
-  if (node.clipsContent && childElements.length > 0) {
-    const clipId = defsCol.getNextId("clip");
-    defsCol.add(
-      clipPath(
-        { id: clipId },
-        rect({ x: 0, y: 0, width: node.width, height: node.height, rx: clampedRadius, ry: clampedRadius }),
-      ),
-    );
-    elements.push(g({ "clip-path": `url(#${clipId})` }, ...childElements));
+  const childElements = node.children.map(formatNode);
+  if (node.childClipId && childElements.length > 0) {
+    parts.push(g({ "clip-path": `url(#${node.childClipId})` }, ...childElements));
   } else {
-    elements.push(...childElements);
+    parts.push(...childElements);
   }
 
-  return g(
-    {
-      transform: transformStr,
-      opacity: node.opacity < 1 ? node.opacity : undefined,
-      filter: filterAttr,
-    },
-    ...elements,
-  );
+  return g(wrapperAttrs(node.wrapper), ...parts);
 }
 
-function renderRectNode(node: RectNode, defsCol: SvgDefsCollector): SvgString {
-  const transformStr = matrixToSvgTransform(node.transform);
-  const filterResult = resolveEffects(node.effects, defsCol);
-  const filterAttr = filterResult ? renderResolvedFilter(filterResult, defsCol) : undefined;
-  const fillResolved = resolveTopFill(node.fills, defsCol);
-  const fillAttrs = renderResolvedFill(fillResolved, defsCol);
-  const strokeAttrs = node.stroke ? resolvedStrokeToSvgAttrs(resolveStroke(node.stroke)) : {};
-  const clampedRadius = clampRadius(node.cornerRadius, node.width, node.height);
+function formatRectNode(node: RenderRectNode): SvgString {
+  const fillAttrs = fillToSvgAttrs(node.fill);
+  const strokeAttrs = node.stroke ? strokeToSvgAttrs(node.stroke) : {};
 
   const rectEl = rect({
     x: 0, y: 0,
     width: node.width, height: node.height,
-    rx: clampedRadius, ry: clampedRadius,
+    rx: node.cornerRadius, ry: node.cornerRadius,
     ...fillAttrs,
     ...strokeAttrs,
   } as Parameters<typeof rect>[0]);
 
-  if (transformStr || node.opacity < 1 || filterAttr) {
-    return g(
-      { transform: transformStr, opacity: node.opacity < 1 ? node.opacity : undefined, filter: filterAttr },
-      rectEl,
-    );
+  if (node.needsWrapper) {
+    const defsStr = formatDefs(node.defs);
+    const parts: SvgString[] = [];
+    if (defsStr !== EMPTY_SVG) { parts.push(defsStr); }
+    parts.push(rectEl);
+    return g(wrapperAttrs(node.wrapper), ...parts);
   }
   return rectEl;
 }
 
-function renderEllipseNode(node: EllipseNode, defsCol: SvgDefsCollector): SvgString {
-  const transformStr = matrixToSvgTransform(node.transform);
-  const filterResult = resolveEffects(node.effects, defsCol);
-  const filterAttr = filterResult ? renderResolvedFilter(filterResult, defsCol) : undefined;
-  const fillResolved = resolveTopFill(node.fills, defsCol);
-  const fillAttrs = renderResolvedFill(fillResolved, defsCol);
-  const strokeAttrs = node.stroke ? resolvedStrokeToSvgAttrs(resolveStroke(node.stroke)) : {};
+function formatEllipseNode(node: RenderEllipseNode): SvgString {
+  const fillAttrs = fillToSvgAttrs(node.fill);
+  const strokeAttrs = node.stroke ? strokeToSvgAttrs(node.stroke) : {};
 
   const ellipseEl = ellipse({
     cx: node.cx, cy: node.cy, rx: node.rx, ry: node.ry,
@@ -334,27 +287,24 @@ function renderEllipseNode(node: EllipseNode, defsCol: SvgDefsCollector): SvgStr
     ...strokeAttrs,
   } as Parameters<typeof ellipse>[0]);
 
-  if (transformStr || node.opacity < 1 || filterAttr) {
-    return g(
-      { transform: transformStr, opacity: node.opacity < 1 ? node.opacity : undefined, filter: filterAttr },
-      ellipseEl,
-    );
+  if (node.needsWrapper) {
+    const defsStr = formatDefs(node.defs);
+    const parts: SvgString[] = [];
+    if (defsStr !== EMPTY_SVG) { parts.push(defsStr); }
+    parts.push(ellipseEl);
+    return g(wrapperAttrs(node.wrapper), ...parts);
   }
   return ellipseEl;
 }
 
-function renderPathNode(node: PathNode, defsCol: SvgDefsCollector): SvgString {
-  const transformStr = matrixToSvgTransform(node.transform);
-  const filterResult = resolveEffects(node.effects, defsCol);
-  const filterAttr = filterResult ? renderResolvedFilter(filterResult, defsCol) : undefined;
-  const fillResolved = resolveTopFill(node.fills, defsCol);
-  const fillAttrs = renderResolvedFill(fillResolved, defsCol);
-  const strokeAttrs = node.stroke ? resolvedStrokeToSvgAttrs(resolveStroke(node.stroke)) : {};
+function formatPathNode(node: RenderPathNode): SvgString {
+  const fillAttrs = fillToSvgAttrs(node.fill);
+  const strokeAttrs = node.stroke ? strokeToSvgAttrs(node.stroke) : {};
 
-  const pathElements: SvgString[] = node.contours.map((contour) =>
+  const pathElements: SvgString[] = node.paths.map((p) =>
     path({
-      d: contourToSvgD(contour),
-      "fill-rule": contour.windingRule !== "nonzero" ? contour.windingRule : undefined,
+      d: p.d,
+      "fill-rule": p.fillRule,
       ...fillAttrs,
       ...strokeAttrs,
     } as Parameters<typeof path>[0]),
@@ -364,73 +314,53 @@ function renderPathNode(node: PathNode, defsCol: SvgDefsCollector): SvgString {
     return EMPTY_SVG;
   }
 
-  const needsWrapper = transformStr || node.opacity < 1 || filterAttr || pathElements.length > 1;
-  if (needsWrapper) {
-    return g(
-      { transform: transformStr, opacity: node.opacity < 1 ? node.opacity : undefined, filter: filterAttr },
-      ...pathElements,
-    );
+  if (node.needsWrapper) {
+    const defsStr = formatDefs(node.defs);
+    const parts: SvgString[] = [];
+    if (defsStr !== EMPTY_SVG) { parts.push(defsStr); }
+    parts.push(...pathElements);
+    return g(wrapperAttrs(node.wrapper), ...parts);
   }
   return pathElements[0];
 }
 
-function buildTextClipAttr(defsCol: SvgDefsCollector, width: number, height: number): string {
-  const clipId = defsCol.generateId("text-clip");
-  defsCol.add(`<clipPath id="${clipId}"><rect x="0" y="0" width="${width}" height="${height}"/></clipPath>`);
-  return `url(#${clipId})`;
-}
+function formatTextNode(node: RenderTextNode): SvgString {
+  const defsStr = formatDefs(node.defs);
 
-function renderTextNode(node: TextNode, defsCol: SvgDefsCollector): SvgString {
-  const transformStr = matrixToSvgTransform(node.transform);
-  const filterResult = resolveEffects(node.effects, defsCol);
-  const filterAttr = filterResult ? renderResolvedFilter(filterResult, defsCol) : undefined;
-  const fillColor = colorToHex(node.fill.color);
-  const fillOpacity = node.fill.opacity;
-
-  // Clip text to bounding box when textAutoResize is NONE or TRUNCATE
-  const needsClip = node.textAutoResize === "NONE" || node.textAutoResize === "TRUNCATE";
-  const clipAttr: string | undefined = needsClip ? buildTextClipAttr(defsCol, node.width, node.height) : undefined;
-
-  // Glyph contours (pre-outlined paths)
-  if (node.glyphContours && node.glyphContours.length > 0) {
-    const allD: string[] = [];
-    for (const contour of node.glyphContours) {
-      allD.push(contourToSvgD(contour));
-    }
-    if (node.decorationContours) {
-      for (const contour of node.decorationContours) {
-        allD.push(contourToSvgD(contour));
-      }
+  if (node.content.mode === "glyphs") {
+    if (node.content.d === "") {
+      return EMPTY_SVG;
     }
     const pathEl = path({
-      d: allD.join(""),
-      fill: fillColor,
-      "fill-opacity": fillOpacity < 1 ? fillOpacity : undefined,
+      d: node.content.d,
+      fill: node.fillColor,
+      "fill-opacity": node.fillOpacity,
     });
-    const content = clipAttr ? g({ "clip-path": clipAttr }, pathEl) : pathEl;
-    if (transformStr || node.opacity < 1 || filterAttr || clipAttr) {
-      return g(
-        { transform: transformStr, opacity: node.opacity < 1 ? node.opacity : undefined, filter: filterAttr },
-        content,
-      );
-    }
-    return content;
+    const content = node.textClipId
+      ? g({ "clip-path": `url(#${node.textClipId})` }, pathEl)
+      : pathEl;
+
+    const parts: SvgString[] = [];
+    if (defsStr !== EMPTY_SVG) { parts.push(defsStr); }
+    parts.push(content);
+
+    return g(wrapperAttrs(node.wrapper), ...parts);
   }
 
   // Text line layout: <text> elements
-  if (!node.textLineLayout) {
+  const fb = node.content.layout;
+  if (fb.lines.length === 0) {
     return EMPTY_SVG;
   }
 
-  const fb = node.textLineLayout;
   const textAnchor = fb.textAnchor !== "start" ? fb.textAnchor : undefined;
   const textElements: SvgString[] = fb.lines.map((line) =>
     text(
       {
         x: line.x,
         y: line.y,
-        fill: fillColor,
-        "fill-opacity": fillOpacity < 1 ? fillOpacity : undefined,
+        fill: node.fillColor,
+        "fill-opacity": node.fillOpacity,
         "font-family": fb.fontFamily,
         "font-size": fb.fontSize,
         "font-weight": fb.fontWeight,
@@ -442,75 +372,91 @@ function renderTextNode(node: TextNode, defsCol: SvgDefsCollector): SvgString {
     ),
   );
 
-  if (textElements.length === 0) {
-    return EMPTY_SVG;
-  }
-
   const textContent = textElements.length === 1 ? textElements[0] : g({}, ...textElements);
-  const clippedContent = clipAttr ? g({ "clip-path": clipAttr }, textContent) : textContent;
+  const clippedContent = node.textClipId
+    ? g({ "clip-path": `url(#${node.textClipId})` }, textContent)
+    : textContent;
 
-  if (transformStr || node.opacity < 1 || filterAttr || clipAttr) {
-    return g(
-      { transform: transformStr, opacity: node.opacity < 1 ? node.opacity : undefined, filter: filterAttr },
-      clippedContent,
-    );
-  }
-  return clippedContent;
+  const parts: SvgString[] = [];
+  if (defsStr !== EMPTY_SVG) { parts.push(defsStr); }
+  parts.push(clippedContent);
+
+  return g(wrapperAttrs(node.wrapper), ...parts);
 }
 
-function renderImageNode(_node: ImageNode, _defsCol: SvgDefsCollector): SvgString {
-  // TODO: Implement image node rendering via shared render module
-  return EMPTY_SVG;
-}
-
-function renderNode(node: SceneNode, defsCol: SvgDefsCollector): SvgString {
-  if (!node.visible) {
+function formatImageNode(node: RenderImageNode): SvgString {
+  if (!node.dataUri) {
     return EMPTY_SVG;
   }
+
+  const imageEl = image({
+    href: node.dataUri,
+    x: 0,
+    y: 0,
+    width: node.width,
+    height: node.height,
+    preserveAspectRatio: "xMidYMid slice",
+  });
+
+  if (node.needsWrapper) {
+    return g(wrapperAttrs(node.wrapper), imageEl);
+  }
+  return imageEl;
+}
+
+function formatNode(node: RenderNode): SvgString {
   switch (node.type) {
     case "group":
-      return renderGroupNode(node, defsCol);
+      return formatGroupNode(node);
     case "frame":
-      return renderFrameNode(node, defsCol);
+      return formatFrameNode(node);
     case "rect":
-      return renderRectNode(node, defsCol);
+      return formatRectNode(node);
     case "ellipse":
-      return renderEllipseNode(node, defsCol);
+      return formatEllipseNode(node);
     case "path":
-      return renderPathNode(node, defsCol);
+      return formatPathNode(node);
     case "text":
-      return renderTextNode(node, defsCol);
+      return formatTextNode(node);
     case "image":
-      return renderImageNode(node, defsCol);
+      return formatImageNode(node);
   }
 }
 
 // =============================================================================
-// Public API
+// RenderTree → SVG string
+// =============================================================================
+
+/**
+ * Format a RenderTree to an SVG string.
+ *
+ * This is a pure formatter — no attribute resolution happens here.
+ * All rendering decisions were made by resolveRenderTree().
+ */
+export function formatRenderTreeToSvg(renderTree: RenderTree): SvgString {
+  const children = renderTree.children.map(formatNode);
+
+  return svg(
+    {
+      width: renderTree.width,
+      height: renderTree.height,
+      viewBox: `0 0 ${renderTree.width} ${renderTree.height}`,
+    },
+    ...children,
+  );
+}
+
+// =============================================================================
+// Public API (backward-compatible)
 // =============================================================================
 
 /**
  * Render a scene graph to SVG string.
  *
- * Uses the same shared render module as the React renderer,
- * ensuring both produce identical visual output.
+ * Resolves the SceneGraph to a RenderTree, then formats to SVG.
+ * This is the backward-compatible entry point.
  */
 export function renderSceneGraphToSvg(sceneGraph: SceneGraph): SvgString {
-  const defsCol = createDefsCollector();
-
-  const children = sceneGraph.root.children.map((child) =>
-    renderNode(child, defsCol),
-  );
-
-  const defsSection = defsCol.items.length > 0 ? defs(...defsCol.items) : EMPTY_SVG;
-
-  return svg(
-    {
-      width: sceneGraph.width,
-      height: sceneGraph.height,
-      viewBox: `0 0 ${sceneGraph.width} ${sceneGraph.height}`,
-    },
-    defsSection,
-    ...children,
-  );
+  const renderTree = resolveRenderTree(sceneGraph);
+  return formatRenderTreeToSvg(renderTree);
 }

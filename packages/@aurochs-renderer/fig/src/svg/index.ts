@@ -66,4 +66,5 @@ export {
 
 export {
   renderSceneGraphToSvg,
+  formatRenderTreeToSvg,
 } from "./scene-renderer";

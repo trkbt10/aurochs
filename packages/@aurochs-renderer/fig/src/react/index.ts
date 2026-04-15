@@ -1,11 +1,17 @@
 /**
  * @file React components for fig scene graph rendering
  *
- * Provides React-native SVG rendering of a SceneGraph, replacing
- * the string-based renderSceneGraphToSvg + dangerouslySetInnerHTML pattern.
+ * Provides React-native SVG rendering via the RenderTree intermediate
+ * representation. SceneGraph → RenderTree → React SVG elements.
  */
 
-export { FigSceneRenderer } from "./FigSceneRenderer";
+// Top-level renderers
+export { FigSceneRenderer, FigRenderTreeRenderer } from "./FigSceneRenderer";
+
+// RenderTree-based node components
+export { RenderNodeComponent } from "./nodes/RenderNodeComponent";
+
+// Legacy SceneNode-based components (backward compatibility)
 export { FigSvgDefsProvider, FigSvgIdProvider, useFigSvgDefs } from "./context/FigSvgDefsContext";
 export type { FigSvgIdGenerator } from "./context/FigSvgDefsContext";
 export { SceneNodeRenderer } from "./nodes/SceneNodeRenderer";

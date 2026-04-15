@@ -83,6 +83,35 @@ export {
   type IdGenerator,
 } from "./render";
 
+// RenderTree — intermediate representation for SVG/React/WebGL backends
+export {
+  resolveRenderTree,
+  type RenderTree,
+  type RenderNode,
+  type RenderNodeBase,
+  type RenderGroupNode,
+  type RenderFrameNode,
+  type RenderFrameBackground,
+  type RenderRectNode,
+  type RenderEllipseNode,
+  type RenderPathNode,
+  type RenderPathContour,
+  type RenderTextNode,
+  type RenderTextGlyphs,
+  type RenderTextLines,
+  type RenderImageNode,
+  type RenderDef,
+  type RenderGradientDef,
+  type RenderLinearGradientDef,
+  type RenderRadialGradientDef,
+  type RenderFilterDef,
+  type RenderClipPathDef,
+  type RenderPatternDef,
+  type ClipPathShape,
+  type ResolvedWrapperAttrs,
+  type ResolvedFillResult,
+} from "./render-tree";
+
 // Converters
 export {
   figColorToSceneColor,

@@ -1,9 +1,20 @@
 /**
  * @file WebGL Figma Renderer
  *
- * Renders a SceneGraph to a WebGL canvas. Supports solid fills, gradients,
- * images, clipping, strokes, and glyph outlines through stencil-based
- * path rendering.
+ * Renders a SceneGraph to a WebGL canvas via the RenderTree intermediate
+ * representation. The RenderTree provides structural decisions (visibility,
+ * composition, clipping); the WebGL renderer performs GL-specific operations
+ * (tessellation, shader programs, stencil clipping, framebuffer effects).
+ *
+ * ## Architecture
+ *
+ * ```
+ * SceneGraph
+ *     ↓ resolveRenderTree()
+ * RenderTree (structural decisions resolved)
+ *     ↓ WebGL renderer [this file]
+ * GL draw calls (tessellation, shaders, stencil, framebuffer)
+ * ```
  */
 
 import type {
@@ -22,6 +33,20 @@ import type {
   Color,
   LayerBlurEffect,
 } from "../scene-graph/types";
+
+import {
+  resolveRenderTree,
+  type RenderTree,
+  type RenderNode,
+  type RenderGroupNode,
+  type RenderFrameNode,
+  type RenderRectNode,
+  type RenderEllipseNode,
+  type RenderPathNode,
+  type RenderTextNode,
+  type RenderImageNode,
+} from "../scene-graph/render-tree";
+
 import { createShaderCache } from "./shaders";
 import {
   generateRectVertices,
@@ -69,19 +94,8 @@ export type WebGLRendererOptions = {
 };
 
 // =============================================================================
-// Matrix Utilities
-// =============================================================================
-
-// Matrix operations imported from @aurochs/fig/matrix
-
-// =============================================================================
 // WebGL Renderer
 // =============================================================================
-
-
-
-
-
 
 /** WebGL renderer instance for Figma scene graphs */
 export type WebGLFigmaRendererInstance = {
@@ -92,16 +106,19 @@ export type WebGLFigmaRendererInstance = {
 
 /** Create a WebGL renderer for Figma scene graphs */
 export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFigmaRendererInstance {
-  const gl = options.canvas.getContext("webgl", {
+  const glOrNull = options.canvas.getContext("webgl", {
     antialias: options.antialias ?? true,
     alpha: true,
     premultipliedAlpha: false,
     stencil: true,
   });
 
-  if (!gl) {
+  if (!glOrNull) {
     throw new Error("WebGL not supported");
   }
+
+  // Reassign after null guard so TypeScript narrows correctly in closures
+  const gl: WebGLRenderingContext = glOrNull;
 
   const pixelRatio = options.pixelRatio ?? (typeof window !== "undefined" ? window.devicePixelRatio : 1);
   const shaders = createShaderCache(gl);
@@ -137,13 +154,21 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
     };
   }
 
-  async function walkForImages(node: SceneNode): Promise<void> {
-    if (node.type === "image") {
-      await textureCache.getOrCreate(node.imageRef, node.data, node.mimeType);
+  // =========================================================================
+  // Image preloading (walks source SceneNodes via RenderTree)
+  // =========================================================================
+
+  async function walkForImages(node: RenderNode): Promise<void> {
+    const src = node.source;
+
+    if (src.type === "image") {
+      const imgNode = src as ImageNode;
+      await textureCache.getOrCreate(imgNode.imageRef, imgNode.data, imgNode.mimeType);
     }
 
-    if ("fills" in node) {
-      for (const fill of node.fills) {
+    if ("fills" in src) {
+      const fills = (src as FrameNode | RectNode | EllipseNode | PathNode).fills;
+      for (const fill of fills) {
         if (fill.type === "image") {
           await textureCache.getOrCreate(fill.imageRef, fill.data, fill.mimeType);
         }
@@ -151,11 +176,16 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
     }
 
     if ("children" in node) {
-      for (const child of node.children) {
+      const containerNode = node as RenderGroupNode | RenderFrameNode;
+      for (const child of containerNode.children) {
         await walkForImages(child);
       }
     }
   }
+
+  // =========================================================================
+  // Effect helpers
+  // =========================================================================
 
   function findLayerBlur(node: SceneNode): LayerBlurEffect | null {
     if (!("effects" in node)) {return null;}
@@ -274,8 +304,8 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
         };
         drawSolidFill({ ctx: getGlContext(), vertices: vertices, color: effect.color, transform: offsetTransform, opacity: opacity * effect.color.a });
       } else {
-        const canvasW = width * pixelRatio;
-        const canvasH = height * pixelRatio;
+        const canvasW = width.value * pixelRatio;
+        const canvasH = height.value * pixelRatio;
         effectsRenderer.renderDropShadow({
           canvasWidth: canvasW,
           canvasHeight: canvasH,
@@ -299,8 +329,8 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
     for (const effect of node.effects) {
       if (effect.type !== "inner-shadow") {continue;}
 
-      const canvasW = width * pixelRatio;
-      const canvasH = height * pixelRatio;
+      const canvasW = width.value * pixelRatio;
+      const canvasH = height.value * pixelRatio;
       effectsRenderer.renderInnerShadow({
         canvasWidth: canvasW,
         canvasHeight: canvasH,
@@ -346,13 +376,13 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
         });
       } else {
         const earcutVertices = tessellateContours(
-          (node as PathNode).contours ?? [],
+          (node as unknown as PathNode).contours ?? [],
           0.25,
           false
         );
         if (earcutVertices.length > 0) {
-          const canvasW = width * pixelRatio;
-          const canvasH = height * pixelRatio;
+          const canvasW = width.value * pixelRatio;
+          const canvasH = height.value * pixelRatio;
           effectsRenderer.renderDropShadow({
             canvasWidth: canvasW,
             canvasHeight: canvasH,
@@ -367,58 +397,62 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
     }
   }
 
-  function renderNode(
-    node: SceneNode,
+  // =========================================================================
+  // RenderTree traversal — uses RenderNode for structure, source for GL data
+  // =========================================================================
+
+  function renderRenderNode(
+    node: RenderNode,
     parentTransform: AffineMatrix,
     parentOpacity: number
   ): void {
-    if (!node.visible) {return;}
+    // RenderTree already excludes invisible nodes, so no visibility check needed
 
-    const worldTransform = multiplyMatrices(parentTransform, node.transform);
-    const worldOpacity = parentOpacity * node.opacity;
+    const worldTransform = multiplyMatrices(parentTransform, node.source.transform);
+    const worldOpacity = parentOpacity * node.source.opacity;
 
-    const layerBlur = findLayerBlur(node);
+    const layerBlur = findLayerBlur(node.source);
     if (layerBlur) {
       renderWithLayerBlur({ node, worldTransform, worldOpacity, effect: layerBlur });
       return;
     }
 
-    renderNodeDirect(node, worldTransform, worldOpacity);
+    renderRenderNodeDirect(node, worldTransform, worldOpacity);
   }
 
-  function renderNodeDirect(
-    node: SceneNode,
+  function renderRenderNodeDirect(
+    node: RenderNode,
     worldTransform: AffineMatrix,
     worldOpacity: number
   ): void {
     switch (node.type) {
       case "group":
-        renderGroup(node, worldTransform, worldOpacity);
+        renderGroupFromTree(node, worldTransform, worldOpacity);
         break;
       case "frame":
-        renderFrame(node, worldTransform, worldOpacity);
+        renderFrameFromTree(node, worldTransform, worldOpacity);
         break;
       case "rect":
-        renderRect(node, worldTransform, worldOpacity);
+        renderRectFromTree(node, worldTransform, worldOpacity);
         break;
       case "ellipse":
-        renderEllipse(node, worldTransform, worldOpacity);
+        renderEllipseFromTree(node, worldTransform, worldOpacity);
         break;
       case "path":
-        renderPath(node, worldTransform, worldOpacity);
+        renderPathFromTree(node, worldTransform, worldOpacity);
         break;
       case "text":
-        renderText(node, worldTransform, worldOpacity);
+        renderTextFromTree(node, worldTransform, worldOpacity);
         break;
       case "image":
-        renderImage(node, worldTransform, worldOpacity);
+        renderImageFromTree(node, worldTransform, worldOpacity);
         break;
     }
   }
 
   function renderWithLayerBlur(
     { node, worldTransform, worldOpacity, effect }: {
-      node: SceneNode; worldTransform: AffineMatrix; worldOpacity: number; effect: LayerBlurEffect;
+      node: RenderNode; worldTransform: AffineMatrix; worldOpacity: number; effect: LayerBlurEffect;
     }
   ): void {
     const canvasW = width.value * pixelRatio;
@@ -429,7 +463,7 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
     const wasClipActive = clipActive.value;
     clipActive.value = false;
 
-    renderNodeDirect(node, worldTransform, worldOpacity);
+    renderRenderNodeDirect(node, worldTransform, worldOpacity);
 
     clipActive.value = wasClipActive;
 
@@ -446,41 +480,46 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
     effectsRenderer.endLayerCaptureAndBlur({ canvasWidth: canvasW, canvasHeight: canvasH, effect, pixelRatio });
   }
 
-  function renderGroup(node: GroupNode, transform: AffineMatrix, opacity: number): void {
+  // =========================================================================
+  // Node-type renderers (read source SceneNode for GL-specific data)
+  // =========================================================================
+
+  function renderGroupFromTree(node: RenderGroupNode, transform: AffineMatrix, opacity: number): void {
     for (const child of node.children) {
-      renderNode(child, transform, opacity);
+      renderRenderNode(child, transform, opacity);
     }
   }
 
-  function renderFrame(node: FrameNode, transform: AffineMatrix, opacity: number): void {
-    const elementSize = { width: node.width, height: node.height };
-    const vertices = generateRectVertices(node.width, node.height, node.cornerRadius);
+  function renderFrameFromTree(node: RenderFrameNode, transform: AffineMatrix, opacity: number): void {
+    const src = node.source as FrameNode;
+    const elementSize = { width: src.width, height: src.height };
+    const vertices = generateRectVertices(src.width, src.height, src.cornerRadius);
 
-    renderDropShadows({ node, vertices, transform, opacity });
+    renderDropShadows({ node: src, vertices, transform, opacity });
 
-    if (node.fills.length > 0) {
-      for (const fill of node.fills) {
+    if (src.fills.length > 0) {
+      for (const fill of src.fills) {
         drawFill({ vertices, fill, transform, opacity, elementSize });
       }
     }
 
-    renderInnerShadows({ node, vertices, transform, opacity });
+    renderInnerShadows({ node: src, vertices, transform, opacity });
 
-    if (node.stroke && node.stroke.width > 0) {
-      const strokeVerts = tessellateRectStroke({ w: node.width, h: node.height, cornerRadius: node.cornerRadius ?? 0, strokeWidth: node.stroke.width });
+    if (src.stroke && src.stroke.width > 0) {
+      const strokeVerts = tessellateRectStroke({ w: src.width, h: src.height, cornerRadius: src.cornerRadius ?? 0, strokeWidth: src.stroke.width });
       if (strokeVerts.length > 0) {
-        drawSolidFill({ ctx: getGlContext(), vertices: strokeVerts, color: node.stroke.color, transform: transform, opacity: opacity * node.stroke.opacity });
+        drawSolidFill({ ctx: getGlContext(), vertices: strokeVerts, color: src.stroke.color, transform: transform, opacity: opacity * src.stroke.opacity });
       }
     }
 
     const wasClipActive = clipActive.value;
     const wasClipStencilValid = clipStencilValid.value;
-    if (node.clipsContent) {
-      const clipShape = node.clip ?? {
+    if (src.clipsContent) {
+      const clipShape = src.clip ?? {
         type: "rect" as const,
-        width: node.width,
-        height: node.height,
-        cornerRadius: node.cornerRadius,
+        width: src.width,
+        height: src.height,
+        cornerRadius: src.cornerRadius,
       };
       beginStencilClip({ gl, clip: clipShape, _positionBuffer: positionBuffer, drawVertices: (verts) => {
         drawSolidFill({ ctx: getGlContext(), vertices: verts, color: { r: 0, g: 0, b: 0, a: 1 }, transform: transform, opacity: 1 });
@@ -490,66 +529,69 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
     }
 
     for (const child of node.children) {
-      renderNode(child, transform, opacity);
+      renderRenderNode(child, transform, opacity);
     }
 
-    if (node.clipsContent) {
+    if (src.clipsContent) {
       endStencilClip(gl);
       clipActive.value = wasClipActive;
       clipStencilValid.value = wasClipActive ? false : wasClipStencilValid;
     }
   }
 
-  function renderRect(node: RectNode, transform: AffineMatrix, opacity: number): void {
-    const elementSize = { width: node.width, height: node.height };
-    const vertices = generateRectVertices(node.width, node.height, node.cornerRadius);
+  function renderRectFromTree(node: RenderRectNode, transform: AffineMatrix, opacity: number): void {
+    const src = node.source as RectNode;
+    const elementSize = { width: src.width, height: src.height };
+    const vertices = generateRectVertices(src.width, src.height, src.cornerRadius);
 
-    renderDropShadows({ node, vertices, transform, opacity });
+    renderDropShadows({ node: src, vertices, transform, opacity });
 
-    if (node.fills.length > 0) {
-      for (const fill of node.fills) {
+    if (src.fills.length > 0) {
+      for (const fill of src.fills) {
         drawFill({ vertices, fill, transform, opacity, elementSize });
       }
     }
 
-    renderInnerShadows({ node, vertices, transform, opacity });
+    renderInnerShadows({ node: src, vertices, transform, opacity });
 
-    if (node.stroke && node.stroke.width > 0) {
-      const strokeVerts = tessellateRectStroke({ w: node.width, h: node.height, cornerRadius: node.cornerRadius ?? 0, strokeWidth: node.stroke.width });
+    if (src.stroke && src.stroke.width > 0) {
+      const strokeVerts = tessellateRectStroke({ w: src.width, h: src.height, cornerRadius: src.cornerRadius ?? 0, strokeWidth: src.stroke.width });
       if (strokeVerts.length > 0) {
-        drawSolidFill({ ctx: getGlContext(), vertices: strokeVerts, color: node.stroke.color, transform: transform, opacity: opacity * node.stroke.opacity });
+        drawSolidFill({ ctx: getGlContext(), vertices: strokeVerts, color: src.stroke.color, transform: transform, opacity: opacity * src.stroke.opacity });
       }
     }
   }
 
-  function renderEllipse(node: EllipseNode, transform: AffineMatrix, opacity: number): void {
-    const elementSize = { width: node.rx * 2, height: node.ry * 2 };
-    const vertices = generateEllipseVertices({ cx: node.cx, cy: node.cy, rx: node.rx, ry: node.ry });
+  function renderEllipseFromTree(node: RenderEllipseNode, transform: AffineMatrix, opacity: number): void {
+    const src = node.source as EllipseNode;
+    const elementSize = { width: src.rx * 2, height: src.ry * 2 };
+    const vertices = generateEllipseVertices({ cx: src.cx, cy: src.cy, rx: src.rx, ry: src.ry });
 
-    renderDropShadows({ node, vertices, transform, opacity });
+    renderDropShadows({ node: src, vertices, transform, opacity });
 
-    if (node.fills.length > 0) {
-      for (const fill of node.fills) {
+    if (src.fills.length > 0) {
+      for (const fill of src.fills) {
         drawFill({ vertices, fill, transform, opacity, elementSize });
       }
     }
 
-    renderInnerShadows({ node, vertices, transform, opacity });
+    renderInnerShadows({ node: src, vertices, transform, opacity });
 
-    if (node.stroke && node.stroke.width > 0) {
-      const strokeVerts = tessellateEllipseStroke({ cx: node.cx, cy: node.cy, rx: node.rx, ry: node.ry, strokeWidth: node.stroke.width });
+    if (src.stroke && src.stroke.width > 0) {
+      const strokeVerts = tessellateEllipseStroke({ cx: src.cx, cy: src.cy, rx: src.rx, ry: src.ry, strokeWidth: src.stroke.width });
       if (strokeVerts.length > 0) {
-        drawSolidFill({ ctx: getGlContext(), vertices: strokeVerts, color: node.stroke.color, transform: transform, opacity: opacity * node.stroke.opacity });
+        drawSolidFill({ ctx: getGlContext(), vertices: strokeVerts, color: src.stroke.color, transform: transform, opacity: opacity * src.stroke.opacity });
       }
     }
   }
 
-  function renderPath(node: PathNode, transform: AffineMatrix, opacity: number): void {
-    if (node.contours.length === 0) {return;}
+  function renderPathFromTree(node: RenderPathNode, transform: AffineMatrix, opacity: number): void {
+    const src = node.source as PathNode;
+    if (src.contours.length === 0) {return;}
 
     const didDropShadowsRef = { value: false };
 
-    for (const contour of node.contours) {
+    for (const contour of src.contours) {
       const needsStencil = contour.windingRule === "evenodd";
 
       if (needsStencil) {
@@ -559,23 +601,23 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
           const coverQuad = generateCoverQuad(bounds);
           const elementSize = { width: bounds.maxX - bounds.minX, height: bounds.maxY - bounds.minY };
           if (!didDropShadowsRef.value) {
-            renderDropShadowsStencil({ node, fanVertices, coverQuad, bounds, transform, opacity });
+            renderDropShadowsStencil({ node: src, fanVertices, coverQuad, bounds, transform, opacity });
             didDropShadowsRef.value = true;
           }
-          if (node.fills.length > 0) {
-            drawStencilFill({ fanVertices, coverQuad, transform, opacity, elementSize, fills: node.fills });
+          if (src.fills.length > 0) {
+            drawStencilFill({ fanVertices, coverQuad, transform, opacity, elementSize, fills: src.fills });
           }
         }
       } else {
         const vertices = tessellateContours([contour], 0.25);
         if (vertices.length > 0) {
           if (!didDropShadowsRef.value) {
-            renderDropShadows({ node, vertices, transform, opacity });
+            renderDropShadows({ node: src, vertices, transform, opacity });
             didDropShadowsRef.value = true;
           }
-          if (node.fills.length > 0) {
+          if (src.fills.length > 0) {
             const elementSize = computeBoundingBox(vertices);
-            for (const fill of node.fills) {
+            for (const fill of src.fills) {
               drawFill({ vertices, fill, transform, opacity, elementSize });
             }
           }
@@ -583,25 +625,26 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
       }
     }
 
-    if (node.stroke && node.stroke.width > 0) {
-      const strokeVerts = tessellatePathStroke(node.contours, node.stroke.width);
+    if (src.stroke && src.stroke.width > 0) {
+      const strokeVerts = tessellatePathStroke(src.contours, src.stroke.width);
       if (strokeVerts.length > 0) {
-        drawSolidFill({ ctx: getGlContext(), vertices: strokeVerts, color: node.stroke.color, transform: transform, opacity: opacity * node.stroke.opacity });
+        drawSolidFill({ ctx: getGlContext(), vertices: strokeVerts, color: src.stroke.color, transform: transform, opacity: opacity * src.stroke.opacity });
       }
     }
   }
 
-  function renderText(node: TextNode, transform: AffineMatrix, opacity: number): void {
+  function renderTextFromTree(node: RenderTextNode, transform: AffineMatrix, opacity: number): void {
+    const src = node.source as TextNode;
     const ctx = getGlContext();
-    const color = node.fill.color;
-    const fillOpacity = node.fill.opacity;
+    const color = src.fill.color;
+    const fillOpacity = src.fill.opacity;
 
-    if (node.glyphContours && node.glyphContours.length > 0) {
-      const vertices = tessellateContours(node.glyphContours, 0.1, true);
+    if (src.glyphContours && src.glyphContours.length > 0) {
+      const vertices = tessellateContours(src.glyphContours, 0.1, true);
       if (vertices.length > 0) {
         drawSolidFill({ ctx: ctx, vertices: vertices, color: color, transform: transform, opacity: opacity * fillOpacity });
       } else {
-        const prepared = prepareFanTriangles(node.glyphContours, 0.1);
+        const prepared = prepareFanTriangles(src.glyphContours, 0.1);
         if (prepared) {
           const { fanVertices, bounds } = prepared;
           const coverQuad = generateCoverQuad(bounds);
@@ -613,8 +656,8 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
         }
       }
 
-      if (node.decorationContours && node.decorationContours.length > 0) {
-        const decVertices = tessellateContours(node.decorationContours, 0.1, true);
+      if (src.decorationContours && src.decorationContours.length > 0) {
+        const decVertices = tessellateContours(src.decorationContours, 0.1, true);
         if (decVertices.length > 0) {
           drawSolidFill({ ctx: ctx, vertices: decVertices, color: color, transform: transform, opacity: opacity * fillOpacity });
         }
@@ -622,20 +665,20 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
       return;
     }
 
-    if (node.textLineLayout) {
-      const textureKey = `__text_${node.id}`;
+    if (src.textLineLayout) {
+      const textureKey = `__text_${src.id}`;
       const entryRef = { value: textureCache.getIfCached(textureKey) };
 
       if (!entryRef.value) {
-        const canvas = renderFallbackTextToCanvas(node);
+        const canvas = renderFallbackTextToCanvas(src);
         if (canvas) {
           entryRef.value = textureCache.createFromCanvas(textureKey, canvas);
         }
       }
 
       if (entryRef.value) {
-        const w = node.width > 0 ? node.width : entryRef.value.width;
-        const h = node.height > 0 ? node.height : entryRef.value.height;
+        const w = src.width > 0 ? src.width : entryRef.value.width;
+        const h = src.height > 0 ? src.height : entryRef.value.height;
         const vertices = generateRectVertices(w, h);
         const elementSize = { width: w, height: h };
         drawImageFill({ ctx, vertices, texture: entryRef.value.texture, transform, opacity: opacity * fillOpacity, elementSize });
@@ -643,21 +686,25 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
     }
   }
 
-  function renderImage(node: ImageNode, transform: AffineMatrix, opacity: number): void {
-    const entry = textureCache.getIfCached(node.imageRef);
+  function renderImageFromTree(node: RenderImageNode, transform: AffineMatrix, opacity: number): void {
+    const src = node.source as ImageNode;
+    const entry = textureCache.getIfCached(src.imageRef);
     if (!entry) {return;}
 
-    const vertices = generateRectVertices(node.width, node.height);
-    const elementSize = { width: node.width, height: node.height };
+    const vertices = generateRectVertices(src.width, src.height);
+    const elementSize = { width: src.width, height: src.height };
     drawImageFill({
       ctx: getGlContext(), vertices, texture: entry.texture, transform, opacity, elementSize,
-      options: { imageWidth: entry.width, imageHeight: entry.height, scaleMode: node.scaleMode },
+      options: { imageWidth: entry.width, imageHeight: entry.height, scaleMode: src.scaleMode },
     });
   }
 
   return {
     async prepareScene(scene: SceneGraph): Promise<void> {
-      await walkForImages(scene.root);
+      const renderTree = resolveRenderTree(scene);
+      for (const child of renderTree.children) {
+        await walkForImages(child);
+      }
     },
 
     render(scene: SceneGraph): void {
@@ -677,7 +724,11 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
 
       clipActive.value = false;
       clipStencilValid.value = false;
-      renderNode(scene.root, IDENTITY_MATRIX, 1);
+
+      const renderTree = resolveRenderTree(scene);
+      for (const child of renderTree.children) {
+        renderRenderNode(child, IDENTITY_MATRIX, 1);
+      }
     },
 
     dispose(): void {
