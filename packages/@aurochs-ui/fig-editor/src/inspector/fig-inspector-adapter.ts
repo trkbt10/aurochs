@@ -5,6 +5,7 @@
 
 import type { FigNode } from "@aurochs/fig/types";
 import type { FigMatrix } from "@aurochs/fig/types";
+import type { FigDesignNode } from "@aurochs/fig/domain";
 import { guidToString, getNodeType } from "@aurochs/fig/parser";
 import { IDENTITY_MATRIX, multiplyMatrices, createTranslationMatrix } from "@aurochs/fig/matrix";
 import type { AffineTransform, InspectorBoxInfo, InspectorTreeNode } from "@aurochs-ui/editor-core/inspector-types";
@@ -96,7 +97,9 @@ export function collectFigBoxes(
 // =============================================================================
 
 /**
- * Convert a FigNode tree to an InspectorTreeNode tree.
+ * Convert a low-level FigNode tree to an InspectorTreeNode tree.
+ *
+ * Use this with ParsedFigFile data (renderer debug, raw node trees).
  */
 export function figNodeToInspectorTree(node: FigNode): InspectorTreeNode {
   const nodeData = node as Record<string, unknown>;
@@ -111,5 +114,23 @@ export function figNodeToInspectorTree(node: FigNode): InspectorTreeNode {
     opacity: node.opacity ?? 1,
     visible: node.visible !== false,
     children: (node.children ?? []).map(figNodeToInspectorTree),
+  };
+}
+
+/**
+ * Convert a high-level FigDesignNode tree to an InspectorTreeNode tree.
+ *
+ * Use this with FigDesignDocument data (FigEditor context).
+ */
+export function designNodeToInspectorTree(node: FigDesignNode): InspectorTreeNode {
+  return {
+    id: node.id,
+    name: node.name,
+    nodeType: node.type,
+    width: node.size.x,
+    height: node.size.y,
+    opacity: node.opacity,
+    visible: node.visible,
+    children: (node.children ?? []).map(designNodeToInspectorTree),
   };
 }

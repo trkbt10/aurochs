@@ -10,5 +10,6 @@ export {
   getRootNormalizationTransform,
   collectFigBoxes,
   figNodeToInspectorTree,
+  designNodeToInspectorTree,
 } from "./fig-inspector-adapter";
 export { FigInspectorView, type FigInspectorViewProps } from "./FigInspectorView";

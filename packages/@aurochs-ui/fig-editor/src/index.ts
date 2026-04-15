@@ -35,11 +35,12 @@ export { FigPageRenderer } from "./canvas/FigPageRenderer";
 export { PropertyPanel } from "./panels/PropertyPanel";
 export { PageListPanel } from "./panels/PageListPanel";
 export { LayerPanel } from "./panels/LayerPanel";
+export { FigInspectorPanel, type FigInspectorPanelProps } from "./panels/FigInspectorPanel";
 
 // Toolbar
 export { FigEditorToolbar } from "./editor/FigEditorToolbar";
 
 // Inspector (Fig-specific category registry, adapters, and view component)
 export { FIG_NODE_CATEGORY_REGISTRY, FIG_LEGEND_ORDER } from "./inspector";
-export { getRootNormalizationTransform, collectFigBoxes, figNodeToInspectorTree } from "./inspector";
+export { getRootNormalizationTransform, collectFigBoxes, figNodeToInspectorTree, designNodeToInspectorTree } from "./inspector";
 export { FigInspectorView, type FigInspectorViewProps } from "./inspector";

@@ -1,21 +1,15 @@
 /**
  * @file Tooltip showing node metadata on hover.
- *
- * Positioned absolutely within its parent container (the viewport).
- * Displays node type (colored badge), name, and dimensions.
  */
 
 import type { InspectorBoxInfo, NodeCategoryRegistry } from "@aurochs-ui/editor-core/inspector-types";
 import { resolveNodeColor } from "@aurochs-ui/editor-core/inspector-types";
+import { colorTokens, fontTokens, spacingTokens, radiusTokens, shadowTokens } from "@aurochs-ui/ui-components/design-tokens";
 
 export type NodeTooltipProps = {
-  /** The box info of the hovered node */
   readonly box: InspectorBoxInfo;
-  /** Category registry for color resolution */
   readonly registry: NodeCategoryRegistry;
-  /** Position relative to the viewport container (CSS pixels) */
   readonly x: number;
-  /** Position relative to the viewport container (CSS pixels) */
   readonly y: number;
 };
 
@@ -23,30 +17,30 @@ const tooltipStyles = {
   container: {
     position: "absolute" as const,
     pointerEvents: "none" as const,
-    background: "rgba(0, 0, 0, 0.85)",
-    color: "#e2e8f0",
-    padding: "6px 10px",
-    borderRadius: "6px",
-    fontSize: "12px",
+    backgroundColor: "rgba(0, 0, 0, 0.85)",
+    color: colorTokens.text.inverse,
+    padding: `${spacingTokens["xs-plus"]} ${spacingTokens.sm}`,
+    borderRadius: radiusTokens.md,
+    fontSize: fontTokens.size.md,
     whiteSpace: "nowrap" as const,
     zIndex: 10,
     display: "flex",
-    gap: "8px",
+    gap: spacingTokens.sm,
     alignItems: "center",
+    boxShadow: shadowTokens.md,
   },
   typeBadge: {
-    fontSize: "10px",
-    fontWeight: 600,
-    padding: "1px 5px",
-    borderRadius: "3px",
-    color: "#fff",
+    fontSize: fontTokens.size.xs,
+    fontWeight: fontTokens.weight.semibold,
+    padding: `1px ${spacingTokens.xs}`,
+    borderRadius: radiusTokens.xs,
+    color: colorTokens.text.inverse,
   },
   dims: {
-    color: "#64748b",
+    opacity: 0.6,
   },
 };
 
-/** Tooltip displaying node type, name, and dimensions. */
 export function NodeTooltip({ box, registry, x, y }: NodeTooltipProps) {
   const color = resolveNodeColor(registry, box.nodeType);
 

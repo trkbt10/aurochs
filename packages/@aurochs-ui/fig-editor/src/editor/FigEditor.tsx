@@ -22,6 +22,24 @@ import { useFigKeyboard } from "../canvas/interaction/use-fig-keyboard";
 
 type FigEditorProps = {
   readonly initialDocument: FigDesignDocument;
+  /**
+   * Custom panel configuration. If omitted, the default panels are used
+   * (Pages & Layers on left, Properties on right).
+   *
+   * Use this to add, remove, or replace panels — e.g. adding FigInspectorPanel.
+   *
+   * @example
+   * ```tsx
+   * <FigEditor
+   *   initialDocument={doc}
+   *   panels={[
+   *     { id: "layers", position: "left", content: <LayerPanel />, drawerLabel: "Layers" },
+   *     { id: "inspector", position: "right", content: <FigInspectorPanel />, drawerLabel: "Inspector" },
+   *   ]}
+   * />
+   * ```
+   */
+  readonly panels?: EditorPanel[];
 };
 
 // =============================================================================
@@ -62,7 +80,25 @@ function LeftPanelContent() {
 // Inner Component (uses context)
 // =============================================================================
 
-function FigEditorContent() {
+/** Default panel configuration for FigEditor. */
+const DEFAULT_PANELS: EditorPanel[] = [
+  {
+    id: "pages-layers",
+    position: "left",
+    content: <LeftPanelContent />,
+    drawerLabel: "Pages & Layers",
+    scrollable: false,
+  },
+  {
+    id: "properties",
+    position: "right",
+    content: <PropertyPanel />,
+    drawerLabel: "Properties",
+    scrollable: true,
+  },
+];
+
+function FigEditorContent({ panels }: { readonly panels?: EditorPanel[] }) {
   const { dispatch, nodeSelection, canUndo, canRedo, textEdit } = useFigEditor();
   const hasSelection = nodeSelection.selectedIds.length > 0;
 
@@ -77,26 +113,10 @@ function FigEditorContent() {
   });
 
   const toolbarContent = useMemo(() => <FigEditorToolbar />, []);
-
-  const panels = useMemo((): EditorPanel[] => [
-    {
-      id: "pages-layers",
-      position: "left",
-      content: <LeftPanelContent />,
-      drawerLabel: "Pages & Layers",
-      scrollable: false,
-    },
-    {
-      id: "inspector",
-      position: "right",
-      content: <PropertyPanel />,
-      drawerLabel: "Inspector",
-      scrollable: true,
-    },
-  ], []);
+  const resolvedPanels = panels ?? DEFAULT_PANELS;
 
   return (
-    <EditorShell toolbar={toolbarContent} panels={panels}>
+    <EditorShell toolbar={toolbarContent} panels={resolvedPanels}>
       <CanvasArea>
         <FigEditorCanvas />
       </CanvasArea>
@@ -130,11 +150,11 @@ const containerStyle: CSSProperties = {
  * <FigEditor initialDocument={doc} />
  * ```
  */
-export function FigEditor({ initialDocument }: FigEditorProps) {
+export function FigEditor({ initialDocument, panels }: FigEditorProps) {
   return (
     <FigEditorProvider initialDocument={initialDocument}>
       <div style={containerStyle}>
-        <FigEditorContent />
+        <FigEditorContent panels={panels} />
       </div>
     </FigEditorProvider>
   );

@@ -15,6 +15,7 @@ import { createFigDesignDocument, createEmptyFigDesignDocument } from "@aurochs-
 import { Button, Tabs, injectCSSVariables, colorTokens, spacingTokens, fontTokens, radiusTokens } from "@aurochs-ui/ui-components";
 import { FigEditor } from "../src/editor/FigEditor";
 import { FileDropZone } from "./components/FileDropZone";
+import { EDITOR_PANELS_WITH_INSPECTOR } from "./components/EditorWithInspectorPanels";
 import { RendererDebugView } from "./components/RendererDebugView";
 
 injectCSSVariables();
@@ -36,10 +37,11 @@ type LoadedFile = {
 // =============================================================================
 
 const appStyle: CSSProperties = {
-  minHeight: "100vh",
+  height: "100%",
   display: "flex",
   flexDirection: "column",
-  backgroundColor: colorTokens.background.canvas,
+  overflow: "hidden",
+  backgroundColor: colorTokens.background.secondary,
   color: colorTokens.text.primary,
 };
 
@@ -87,6 +89,8 @@ const mainPaddedStyle: CSSProperties = {
   display: "flex",
   flexDirection: "column",
   padding: spacingTokens.lg,
+  minHeight: 0,
+  overflow: "auto",
 };
 
 const errorStyle: CSSProperties = {
@@ -187,7 +191,7 @@ function App() {
             label: "Editor",
             content: (
               <div style={mainStyle}>
-                <FigEditor initialDocument={loadedFile.document} />
+                <FigEditor initialDocument={loadedFile.document} panels={EDITOR_PANELS_WITH_INSPECTOR} />
               </div>
             ),
           },
