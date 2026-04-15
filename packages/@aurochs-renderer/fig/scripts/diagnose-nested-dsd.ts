@@ -9,15 +9,16 @@ import { fileURLToPath } from "node:url";
 import { parseFigFile, buildNodeTree, getNodeType, guidToString, type FigGuid } from "@aurochs/fig/parser";
 import type { FigNode } from "@aurochs/fig/types";
 import { getEffectiveSymbolID } from "@aurochs/fig/symbols";
-import { buildGuidTranslationMap, translateOverrides } from "../../../@aurochs/fig/src/symbols/guid-translation";
 import {
+  buildGuidTranslationMap,
+  translateOverrides,
   cloneSymbolChildren,
   collectComponentPropAssignments,
   getInstanceSymbolOverrides,
   resolveSymbolGuidStr,
+  preResolveSymbols,
   type FigDerivedSymbolData,
-} from "../../../@aurochs/fig/src/symbols/symbol-resolver";
-import { preResolveSymbols } from "../../../@aurochs/fig/src/symbols/symbol-pre-resolver";
+} from "@aurochs/fig/symbols";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FIG_FILE = path.join(__dirname, "../fixtures/realfiles/apple-ios26.fig");
 type NodeData = Record<string, unknown>;

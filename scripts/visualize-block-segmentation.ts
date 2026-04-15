@@ -16,23 +16,25 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { readPng, writePng, createPngImage, type PngImage } from "@aurochs/png";
-import { parsePdf } from "../packages/@aurochs/pdf/src/parser/core/pdf-parser";
-import type { PdfText } from "../packages/@aurochs/pdf/src/domain/text";
-import type { PdfPath } from "../packages/@aurochs/pdf/src/domain/path";
-import { spatialGrouping } from "../packages/@aurochs/pdf/src/services/block-segmentation/strategies/spatial-grouping";
-import type { GroupedText } from "../packages/@aurochs/pdf/src/services/block-segmentation/contracts/types";
-import { visualizeBlockSegmentation } from "../packages/@aurochs/pdf/src/services/block-segmentation/visualization/block-segmentation-visualizer";
-import { normalizePageElementsForDisplay } from "../packages/@aurochs/pdf/src/services/block-segmentation/visualization/page-coordinate-normalization";
-import { buildBlockingZonesFromPageElements } from "../packages/@aurochs/pdf/src/services/block-segmentation/strategies/blocking-zones";
+import { parsePdf } from "@aurochs/pdf/parser/core/pdf-parser";
+import type { PdfText } from "@aurochs/pdf/domain/text";
+import type { PdfPath } from "@aurochs/pdf/domain/path";
+import {
+  spatialGrouping,
+  buildBlockingZonesFromPageElements,
+  type GroupedText,
+} from "@aurochs/pdf/services/block-segmentation";
+import { visualizeBlockSegmentation } from "@aurochs/pdf/services/block-segmentation/visualization/block-segmentation-visualizer";
+import { normalizePageElementsForDisplay } from "@aurochs/pdf/services/block-segmentation/visualization/page-coordinate-normalization";
 import {
   inferTableFromGroupedText,
   type InferredTable,
   type TableInferenceOptions,
-} from "../packages/@aurochs-converters/pdf-to-pptx/src/converter/table-inference";
+} from "@aurochs-converters/pdf-to-pptx/converter/table-inference";
 import {
   detectTableRegionsFromPaths,
   type TableRegion,
-} from "../packages/@aurochs-converters/pdf-to-pptx/src/converter/table-detection";
+} from "@aurochs-converters/pdf-to-pptx/converter/table-detection";
 
 type CliArgs = {
   readonly pdfPath: string;

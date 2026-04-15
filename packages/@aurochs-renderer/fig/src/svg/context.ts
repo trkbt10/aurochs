@@ -3,7 +3,7 @@
  */
 
 import type { DefsCollector, FigSvgRenderContext, FigSvgRenderContextConfig } from "../types";
-import { EMPTY_FIG_STYLE_REGISTRY } from "../../../../@aurochs/fig/src/symbols/style-registry";
+import { EMPTY_FIG_STYLE_REGISTRY } from "@aurochs/fig/symbols";
 
 // =============================================================================
 // Defs Collector

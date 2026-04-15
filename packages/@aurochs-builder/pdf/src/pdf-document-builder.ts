@@ -18,13 +18,13 @@ import {
 import { decodeText, DEFAULT_FONT_METRICS, type FontMappings } from "@aurochs/pdf/domain/font";
 import type { ParsedElement, ParsedPath, ParsedText } from "@aurochs/pdf/parser/operator/index";
 import { buildPath, builtPathToPdfPath } from "@aurochs/pdf/parser/path/path-builder";
-import { rasterizeSoftMaskedFillPath } from "../../../@aurochs/pdf/src/parser/soft-mask/soft-mask-raster.native";
-import { applyGraphicsSoftMaskToPdfImage } from "../../../@aurochs/pdf/src/parser/soft-mask/soft-mask-apply.native";
-import { rasterizeSoftMaskedText } from "../../../@aurochs/pdf/src/parser/soft-mask/soft-mask-text-raster.native";
+import { rasterizeSoftMaskedFillPath } from "@aurochs/pdf/parser/soft-mask/soft-mask-raster.native";
+import { applyGraphicsSoftMaskToPdfImage } from "@aurochs/pdf/parser/soft-mask/soft-mask-apply.native";
+import { rasterizeSoftMaskedText } from "@aurochs/pdf/parser/soft-mask/soft-mask-text-raster.native";
 import {
   applyGraphicsClipMaskToPdfImage,
   buildPageSpaceSoftMaskForClipMask,
-} from "../../../@aurochs/pdf/src/parser/clip/clip-mask-apply.native";
+} from "@aurochs/pdf/parser/clip/clip-mask-apply.native";
 import type { PdfBuildContext, PdfBuildOptions } from "@aurochs/pdf/parser/core/pdf-parser";
 import {
   spatialGrouping,

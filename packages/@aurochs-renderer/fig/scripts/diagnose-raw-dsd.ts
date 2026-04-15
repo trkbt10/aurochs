@@ -7,15 +7,15 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseFigFile, buildNodeTree, getNodeType, guidToString, type FigGuid } from "@aurochs/fig/parser";
-import type { FigNode } from "@aurochs/fig/types";
-import type { FigDerivedSymbolData, FigSymbolOverride } from "../../../@aurochs/fig/src/symbols/symbol-resolver";
+import type { FigNode, FigKiwiSymbolOverride } from "@aurochs/fig/types";
+import type { FigDerivedSymbolData } from "@aurochs/fig/symbols";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FIG_FILE = path.join(__dirname, "../fixtures/realfiles/apple-ios26.fig");
 
 type NodeData = Record<string, unknown>;
 
-function dumpOverride(entry: FigSymbolOverride, indent: string): void {
+function dumpOverride(entry: FigKiwiSymbolOverride, indent: string): void {
   const guids = entry.guidPath?.guids ?? [];
   const guidPath = guids.map((g) => guidToString(g)).join(" → ");
   const e = entry as Record<string, unknown>;
@@ -87,7 +87,7 @@ async function main() {
 
   if (rawDSD) {
     // Group by first GUID session
-    const bySession = new Map<number, FigSymbolOverride[]>();
+    const bySession = new Map<number, FigKiwiSymbolOverride[]>();
     for (const entry of rawDSD) {
       const firstGuid = entry.guidPath?.guids?.[0];
       if (firstGuid) {

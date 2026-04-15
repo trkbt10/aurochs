@@ -11,20 +11,19 @@
 import type { FigNode, MutableFigNode, FigKiwiSymbolOverride } from "@aurochs/fig/types";
 import { guidToString, getNodeType, safeChildren, type FigGuid } from "@aurochs/fig/parser";
 import { extractSymbolIDPair } from "@aurochs/fig/symbols";
-import { buildGuidTranslationMap, translateOverrides } from "../../../../@aurochs/fig/src/symbols/guid-translation";
-import { resolveInstanceLayout } from "../../../../@aurochs/fig/src/symbols/constraints";
 import {
+  buildGuidTranslationMap,
+  translateOverrides,
+  resolveInstanceLayout,
   getInstanceSymbolOverrides,
   collectComponentPropAssignments,
   cloneSymbolChildren,
   applySelfOverridesToMergedNode,
-  type FigDerivedSymbolData,
-} from "../../../../@aurochs/fig/src/symbols/symbol-resolver";
-import {
   buildFigStyleRegistry,
   resolveStyleIdOnMutableNode,
+  type FigDerivedSymbolData,
   type FigStyleRegistry,
-} from "../../../../@aurochs/fig/src/symbols/style-registry";
+} from "@aurochs/fig/symbols";
 
 // =============================================================================
 // Public types

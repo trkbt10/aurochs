@@ -29,7 +29,7 @@ import {
 } from "@aurochs/fig/parser";
 import type { FigNode } from "@aurochs/fig/types";
 import { renderCanvas } from "../src/svg/renderer";
-import { preResolveSymbols } from "../../../@aurochs/fig/src/symbols/symbol-pre-resolver";
+import { preResolveSymbols } from "@aurochs/fig/symbols";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FIXTURES_DIR = path.join(__dirname, "../fixtures/symbol-resolution");
