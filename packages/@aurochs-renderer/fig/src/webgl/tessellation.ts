@@ -9,6 +9,132 @@ import earcut from "earcut";
 import type { PathContour, PathCommand } from "../scene-graph/types";
 
 // =============================================================================
+// SVG Arc → Cubic Bezier Conversion
+// =============================================================================
+
+type CubicSegment = {
+  x0: number; y0: number;
+  x1: number; y1: number;
+  x2: number; y2: number;
+  x3: number; y3: number;
+};
+
+/**
+ * Convert an SVG elliptical arc to cubic bezier segments.
+ *
+ * Implements the SVG spec arc-to-center parameterization, then splits
+ * the arc into segments of ≤π/4 radians, each approximated by a cubic bezier.
+ */
+function arcToCubicBeziers(
+  x0: number, y0: number,
+  rxIn: number, ryIn: number,
+  rotationDeg: number,
+  largeArc: boolean, sweep: boolean,
+  x: number, y: number,
+): CubicSegment[] {
+  // Degenerate cases
+  if (x0 === x && y0 === y) { return []; }
+  let rx = Math.abs(rxIn);
+  let ry = Math.abs(ryIn);
+  if (rx === 0 || ry === 0) {
+    // Treat as line
+    return [{ x0, y0, x1: x0, y1: y0, x2: x, y2: y, x3: x, y3: y }];
+  }
+
+  const phi = (rotationDeg * Math.PI) / 180;
+  const cosPhi = Math.cos(phi);
+  const sinPhi = Math.sin(phi);
+
+  // Step 1: Compute (x1', y1') — rotated midpoint
+  const dx = (x0 - x) / 2;
+  const dy = (y0 - y) / 2;
+  const x1p = cosPhi * dx + sinPhi * dy;
+  const y1p = -sinPhi * dx + cosPhi * dy;
+
+  // Step 2: Adjust radii if too small
+  const x1pSq = x1p * x1p;
+  const y1pSq = y1p * y1p;
+  let rxSq = rx * rx;
+  let rySq = ry * ry;
+  const lambda = x1pSq / rxSq + y1pSq / rySq;
+  if (lambda > 1) {
+    const sqrtLambda = Math.sqrt(lambda);
+    rx *= sqrtLambda;
+    ry *= sqrtLambda;
+    rxSq = rx * rx;
+    rySq = ry * ry;
+  }
+
+  // Step 3: Compute center point (cx', cy')
+  const num = Math.max(0, rxSq * rySq - rxSq * y1pSq - rySq * x1pSq);
+  const den = rxSq * y1pSq + rySq * x1pSq;
+  const sq = den > 0 ? Math.sqrt(num / den) : 0;
+  const sign = largeArc === sweep ? -1 : 1;
+  const cxp = sign * sq * (rx * y1p / ry);
+  const cyp = sign * sq * -(ry * x1p / rx);
+
+  // Step 4: Compute center (cx, cy) in original coordinates
+  const cx = cosPhi * cxp - sinPhi * cyp + (x0 + x) / 2;
+  const cy = sinPhi * cxp + cosPhi * cyp + (y0 + y) / 2;
+
+  // Step 5: Compute start and sweep angles
+  const ux = (x1p - cxp) / rx;
+  const uy = (y1p - cyp) / ry;
+  const vx = (-x1p - cxp) / rx;
+  const vy = (-y1p - cyp) / ry;
+
+  const theta1 = Math.atan2(uy, ux);
+  let dTheta = Math.atan2(vy * ux - vx * uy, vx * ux + vy * uy);
+
+  if (!sweep && dTheta > 0) { dTheta -= 2 * Math.PI; }
+  if (sweep && dTheta < 0) { dTheta += 2 * Math.PI; }
+
+  // Step 6: Split into segments of at most π/4. This keeps ellipse arc
+  // approximation error below the raster threshold used in SVG comparison.
+  const maxSegmentAngle = Math.PI / 4;
+  const segCount = Math.max(1, Math.ceil(Math.abs(dTheta) / maxSegmentAngle));
+  const segAngle = dTheta / segCount;
+
+  const segments: CubicSegment[] = [];
+  let prevX = x0;
+  let prevY = y0;
+
+  for (let i = 0; i < segCount; i++) {
+    const a1 = theta1 + i * segAngle;
+    const a2 = theta1 + (i + 1) * segAngle;
+
+    // Unit circle arc → cubic bezier control points
+    const alpha = Math.sin(segAngle) * (Math.sqrt(4 + 3 * Math.tan(segAngle / 2) ** 2) - 1) / 3;
+
+    const cos1 = Math.cos(a1), sin1 = Math.sin(a1);
+    const cos2 = Math.cos(a2), sin2 = Math.sin(a2);
+
+    // Control points on the unit circle, scaled by radii
+    const ep1x = rx * cos1, ep1y = ry * sin1;
+    const ep2x = rx * cos2, ep2y = ry * sin2;
+
+    const cp1x = ep1x - alpha * rx * sin1;
+    const cp1y = ep1y + alpha * ry * cos1;
+    const cp2x = ep2x + alpha * rx * sin2;
+    const cp2y = ep2y - alpha * ry * cos2;
+
+    // Rotate back and translate to center
+    const bx1 = cosPhi * cp1x - sinPhi * cp1y + cx;
+    const by1 = sinPhi * cp1x + cosPhi * cp1y + cy;
+    const bx2 = cosPhi * cp2x - sinPhi * cp2y + cx;
+    const by2 = sinPhi * cp2x + cosPhi * cp2y + cy;
+    const bx3 = cosPhi * ep2x - sinPhi * ep2y + cx;
+    const by3 = sinPhi * ep2x + cosPhi * ep2y + cy;
+
+    segments.push({ x0: prevX, y0: prevY, x1: bx1, y1: by1, x2: bx2, y2: by2, x3: bx3, y3: by3 });
+    prevX = bx3;
+    prevY = by3;
+  }
+
+  return segments;
+}
+
+// =============================================================================
 // Bezier Flattening
 // =============================================================================
 
@@ -158,6 +284,29 @@ export function flattenPathCommands(
         currentXRef.value = cmd.x;
         currentYRef.value = cmd.y;
         break;
+
+      case "A": {
+        // SVG Arc → approximate with cubic bezier segments
+        const arcCubics = arcToCubicBeziers(
+          currentXRef.value, currentYRef.value,
+          cmd.rx, cmd.ry, cmd.rotation,
+          cmd.largeArc, cmd.sweep,
+          cmd.x, cmd.y,
+        );
+        for (const seg of arcCubics) {
+          flattenCubicBezier({
+            x0: seg.x0, y0: seg.y0,
+            x1: seg.x1, y1: seg.y1,
+            x2: seg.x2, y2: seg.y2,
+            x3: seg.x3, y3: seg.y3,
+            tolerance,
+            points,
+          });
+        }
+        currentXRef.value = cmd.x;
+        currentYRef.value = cmd.y;
+        break;
+      }
 
       case "Z":
         if (currentXRef.value !== startXRef.value || currentYRef.value !== startYRef.value) {

@@ -39,12 +39,12 @@ export const gaussianBlurFragmentShader = `
     // u_radius = per-pass sigma (in texels)
     float sigma = max(u_radius, 0.001);
     float invTwoSigmaSq = -0.5 / (sigma * sigma);
-    // spacing: cover ±3σ with 13 taps → spacing = σ/2, clamped to ≥1 texel
-    float spacing = max(sigma * 0.5, 1.0);
 
-    // 13-tap Gaussian kernel (i = -6..6)
-    for (float i = -6.0; i <= 6.0; i += 1.0) {
-      float d = i * spacing;
+    // 25-tap integer-spaced Gaussian kernel. applyGaussianBlur splits large
+    // radii into smaller sigma passes, so this covers the useful tail while
+    // staying close to SVG feGaussianBlur output.
+    for (float i = -12.0; i <= 12.0; i += 1.0) {
+      float d = i;
       float weight = exp(invTwoSigmaSq * d * d);
       vec2 offset = u_direction * u_texelSize * d;
       color += texture2D(u_texture, v_texCoord + offset) * weight;
@@ -134,6 +134,10 @@ export type EffectsRendererInstance = {
   renderInnerShadow(params: { canvasWidth: number; canvasHeight: number; effect: InnerShadowEffect; pixelRatio: number; renderSilhouette: () => void }): void;
   beginLayerCapture(canvasWidth: number, canvasHeight: number): Framebuffer;
   endLayerCaptureAndBlur(params: { canvasWidth: number; canvasHeight: number; effect: LayerBlurEffect; pixelRatio: number }): void;
+  /** Blit the captured layer FBO to screen with the given opacity (no blur). Returns false if blit shader unavailable. */
+  blitLayerWithOpacity(params: { canvasWidth: number; canvasHeight: number; opacity: number }): boolean;
+  /** Check if the blit shader is available (can be compiled in this GL context). */
+  isBlitAvailable(): boolean;
   applyGaussianBlur(source: Framebuffer, radius: number): Framebuffer;
   dispose(): void;
 };
@@ -152,22 +156,42 @@ export function createEffectsRenderer(gl: WebGLRenderingContext): EffectsRendere
   const shapeFBO = { value: null as Framebuffer | null };
   const layerFBO = { value: null as Framebuffer | null };
 
-  function compileProgram(vertexSrc: string, fragmentSrc: string): WebGLProgram {
-    const vs = gl.createShader(gl.VERTEX_SHADER)!;
+  function compileProgram(vertexSrc: string, fragmentSrc: string): WebGLProgram | null {
+    const vs = gl.createShader(gl.VERTEX_SHADER);
+    if (!vs) { return null; }
     gl.shaderSource(vs, vertexSrc);
     gl.compileShader(vs);
+    if (!gl.getShaderParameter(vs, gl.COMPILE_STATUS)) {
+      console.warn("Vertex shader compile error:", gl.getShaderInfoLog(vs));
+      gl.deleteShader(vs);
+      return null;
+    }
 
-    const fs = gl.createShader(gl.FRAGMENT_SHADER)!;
+    const fs = gl.createShader(gl.FRAGMENT_SHADER);
+    if (!fs) { gl.deleteShader(vs); return null; }
     gl.shaderSource(fs, fragmentSrc);
     gl.compileShader(fs);
+    if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) {
+      console.warn("Fragment shader compile error:", gl.getShaderInfoLog(fs));
+      gl.deleteShader(vs);
+      gl.deleteShader(fs);
+      return null;
+    }
 
-    const program = gl.createProgram()!;
+    const program = gl.createProgram();
+    if (!program) { gl.deleteShader(vs); gl.deleteShader(fs); return null; }
     gl.attachShader(program, vs);
     gl.attachShader(program, fs);
     gl.linkProgram(program);
 
     gl.deleteShader(vs);
     gl.deleteShader(fs);
+
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+      console.warn("Program link error:", gl.getProgramInfoLog(program));
+      gl.deleteProgram(program);
+      return null;
+    }
 
     return program;
   }
@@ -235,10 +259,23 @@ export function createEffectsRenderer(gl: WebGLRenderingContext): EffectsRendere
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
 
+  function withStencilDisabled<T>(operation: () => T): T {
+    const wasStencilEnabled = gl.isEnabled(gl.STENCIL_TEST);
+    gl.disable(gl.STENCIL_TEST);
+    try {
+      return operation();
+    } finally {
+      if (wasStencilEnabled) {
+        gl.enable(gl.STENCIL_TEST);
+      }
+    }
+  }
+
   function drawBlurPass(
     { sourceTexture, width, height, dirX, dirY, radius }: { sourceTexture: WebGLTexture; width: number; height: number; dirX: number; dirY: number; radius: number }
   ): void {
-    const program = blurProgram!;
+    const program = blurProgram.value;
+    if (!program) { return; }
     gl.useProgram(program);
 
     gl.activeTexture(gl.TEXTURE0);
@@ -264,19 +301,23 @@ export function createEffectsRenderer(gl: WebGLRenderingContext): EffectsRendere
     const height = source.height;
     const currentSourceRef = { value: source as Framebuffer };
 
-    for (let p = 0; p < numPasses; p++) {
-      bindFramebuffer(gl, tempFBO1.value!);
-      gl.clearColor(0, 0, 0, 0);
-      gl.clear(gl.COLOR_BUFFER_BIT);
-      drawBlurPass({ sourceTexture: currentSourceRef.value.texture, width, height, dirX: 1, dirY: 0, radius: sigmaPerPass });
+    withStencilDisabled(() => {
+      for (let p = 0; p < numPasses; p++) {
+        bindFramebuffer(gl, tempFBO1.value!);
+        gl.colorMask(true, true, true, true);
+        gl.clearColor(0, 0, 0, 0);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        drawBlurPass({ sourceTexture: currentSourceRef.value.texture, width, height, dirX: 1, dirY: 0, radius: sigmaPerPass });
 
-      bindFramebuffer(gl, tempFBO2.value!);
-      gl.clearColor(0, 0, 0, 0);
-      gl.clear(gl.COLOR_BUFFER_BIT);
-      drawBlurPass({ sourceTexture: tempFBO1.value!.texture, width, height, dirX: 0, dirY: 1, radius: sigmaPerPass });
+        bindFramebuffer(gl, tempFBO2.value!);
+        gl.colorMask(true, true, true, true);
+        gl.clearColor(0, 0, 0, 0);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        drawBlurPass({ sourceTexture: tempFBO1.value!.texture, width, height, dirX: 0, dirY: 1, radius: sigmaPerPass });
 
-      currentSourceRef.value = tempFBO2.value!;
-    }
+        currentSourceRef.value = tempFBO2.value!;
+      }
+    });
 
     bindFramebuffer(gl, null);
 
@@ -306,7 +347,8 @@ export function createEffectsRenderer(gl: WebGLRenderingContext): EffectsRendere
       bindFramebuffer(gl, null);
       gl.viewport(0, 0, canvasWidth, canvasHeight);
 
-      const program = compositeProgram.value!;
+      const program = compositeProgram.value;
+      if (!program) { bindFramebuffer(gl, null); gl.viewport(0, 0, canvasWidth, canvasHeight); return; }
       gl.useProgram(program);
 
       gl.activeTexture(gl.TEXTURE0);
@@ -361,7 +403,8 @@ export function createEffectsRenderer(gl: WebGLRenderingContext): EffectsRendere
       bindFramebuffer(gl, null);
       gl.viewport(0, 0, canvasWidth, canvasHeight);
 
-      const program = innerShadowProgram.value!;
+      const program = innerShadowProgram.value;
+      if (!program) { bindFramebuffer(gl, null); gl.viewport(0, 0, canvasWidth, canvasHeight); return; }
       gl.useProgram(program);
 
       gl.activeTexture(gl.TEXTURE0);
@@ -404,6 +447,9 @@ export function createEffectsRenderer(gl: WebGLRenderingContext): EffectsRendere
 
       bindFramebuffer(gl, layerFBO.value!);
       gl.viewport(0, 0, canvasWidth, canvasHeight);
+      gl.disable(gl.STENCIL_TEST);
+      gl.colorMask(true, true, true, true);
+      gl.stencilMask(0xff);
       gl.clearColor(0, 0, 0, 0);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
 
@@ -421,7 +467,8 @@ export function createEffectsRenderer(gl: WebGLRenderingContext): EffectsRendere
       bindFramebuffer(gl, null);
       gl.viewport(0, 0, canvasWidth, canvasHeight);
 
-      const program = blitProgram.value!;
+      const program = blitProgram.value;
+      if (!program) { bindFramebuffer(gl, null); gl.viewport(0, 0, canvasWidth, canvasHeight); return; }
       gl.useProgram(program);
 
       gl.activeTexture(gl.TEXTURE0);
@@ -429,12 +476,55 @@ export function createEffectsRenderer(gl: WebGLRenderingContext): EffectsRendere
       gl.uniform1i(gl.getUniformLocation(program, "u_texture"), 0);
       gl.uniform1f(gl.getUniformLocation(program, "u_opacity"), 1.0);
 
+      // Use premultiplied alpha blending for the blit.
+      // The blur pass samples non-premultiplied RGBA from the FBO, so the
+      // blurred edge pixels have color darkened by alpha (e.g. transparent
+      // black (0,0,0,0) mixed with red (0.9,0.2,0.2,1) produces dark edges).
+      // Using ONE instead of SRC_ALPHA for the source factor treats the
+      // texture as premultiplied, which matches SVG filter compositing.
+      gl.enable(gl.BLEND);
+      gl.blendFuncSeparate(
+        gl.ONE, gl.ONE_MINUS_SRC_ALPHA,
+        gl.ONE, gl.ONE_MINUS_SRC_ALPHA
+      );
+      drawFullscreenQuad(program);
+
+      // Restore standard non-premultiplied blending for subsequent draws
+      gl.blendFuncSeparate(
+        gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA,
+        gl.ONE, gl.ONE_MINUS_SRC_ALPHA
+      );
+    },
+
+    blitLayerWithOpacity(
+      { canvasWidth, canvasHeight, opacity }: { canvasWidth: number; canvasHeight: number; opacity: number }
+    ): boolean {
+      ensureBlitProgram();
+
+      bindFramebuffer(gl, null);
+      gl.viewport(0, 0, canvasWidth, canvasHeight);
+
+      const program = blitProgram.value;
+      if (!program) { return false; }
+      gl.useProgram(program);
+
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, layerFBO.value!.texture);
+      gl.uniform1i(gl.getUniformLocation(program, "u_texture"), 0);
+      gl.uniform1f(gl.getUniformLocation(program, "u_opacity"), opacity);
+
       gl.enable(gl.BLEND);
       gl.blendFuncSeparate(
         gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA,
         gl.ONE, gl.ONE_MINUS_SRC_ALPHA
       );
       drawFullscreenQuad(program);
+      return true;
+    },
+
+    isBlitAvailable(): boolean {
+      ensureBlitProgram();
+      return blitProgram.value !== null;
     },
 
     applyGaussianBlur,

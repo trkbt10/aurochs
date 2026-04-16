@@ -16,7 +16,7 @@ import type { PathCommand, PathContour } from "../types";
  */
 export function parseSvgPathD(d: string): PathCommand[] {
   const commands: PathCommand[] = [];
-  const re = /([MLHVCQZ])\s*((?:[^MLHVCQZ]*)?)/gi;
+  const re = /([MLHVCQAZ])\s*((?:[^MLHVCQAZ]*)?)/gi;
   const matchRef = { value: undefined as RegExpExecArray | null | undefined };
   const currentXRef = { value: 0 };
   const currentYRef = { value: 0 };
@@ -72,6 +72,32 @@ export function parseSvgPathD(d: string): PathCommand[] {
           y: currentYRef.value,
         });
         break;
+      case "A": {
+        // SVG Arc: A rx ry x-rotation large-arc-flag sweep-flag x y
+        // May have multiple coordinate sets
+        for (let ai = 0; ai + 6 < args.length; ai += 7) {
+          const arcRx = args[ai];
+          const arcRy = args[ai + 1];
+          const rotation = args[ai + 2];
+          const largeArc = args[ai + 3] !== 0;
+          const sweep = args[ai + 4] !== 0;
+          const endX = args[ai + 5];
+          const endY = args[ai + 6];
+          currentXRef.value = endX;
+          currentYRef.value = endY;
+          commands.push({
+            type: "A",
+            rx: arcRx,
+            ry: arcRy,
+            rotation,
+            largeArc,
+            sweep,
+            x: endX,
+            y: endY,
+          });
+        }
+        break;
+      }
       case "Z":
         commands.push({ type: "Z" });
         break;

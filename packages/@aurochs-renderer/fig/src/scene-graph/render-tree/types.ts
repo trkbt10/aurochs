@@ -142,6 +142,8 @@ export type RenderStrokeMaskDef = {
   readonly type: "stroke-mask";
   readonly id: string;
   readonly shape: ClipPathShape;
+  /** Stroke alignment — determines whether the mask shows inside or outside the shape. */
+  readonly strokeAlign: "INSIDE" | "OUTSIDE";
 };
 
 export type RenderDef =

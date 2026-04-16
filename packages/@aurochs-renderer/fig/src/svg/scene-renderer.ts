@@ -310,11 +310,21 @@ function formatDef(def: RenderDef): SvgString {
       );
     }
     case "stroke-mask": {
-      // Stroke-align mask: white filled shape that clips the doubled stroke
+      // Stroke-align mask for INSIDE/OUTSIDE stroke clipping.
+      // INSIDE: white filled shape → only stroke inside the shape is visible.
+      // OUTSIDE: inverted mask — large white rect with black shape cutout → only stroke outside is visible.
       const shape = formatClipPathShape(def.shape);
+      if (def.strokeAlign === "OUTSIDE") {
+        // Invert: large white background with black shape hole
+        return mask(
+          { id: def.id, style: "mask-type:luminance" },
+          rect({ x: -100, y: -100, width: 10000, height: 10000, fill: "white" }),
+          g({ fill: "black" }, shape),
+        );
+      }
       return mask(
-        { id: def.id, fill: "white" },
-        shape,
+        { id: def.id, style: "mask-type:luminance" },
+        g({ fill: "white" }, shape),
       );
     }
   }

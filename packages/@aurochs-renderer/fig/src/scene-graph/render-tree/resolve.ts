@@ -506,7 +506,7 @@ function resolveStrokeRendering(
   // INSIDE/OUTSIDE stroke → masked
   if (result.attrs.strokeAlign && maskClipShape) {
     const maskId = ids.getNextId("stroke-mask");
-    defs.push({ type: "stroke-mask", id: maskId, shape: maskClipShape });
+    defs.push({ type: "stroke-mask", id: maskId, shape: maskClipShape, strokeAlign: result.attrs.strokeAlign });
     return { mode: "masked", attrs: result.attrs, maskId, shape };
   }
 
