@@ -22,13 +22,21 @@ export type {
   RenderGradientDef,
   RenderLinearGradientDef,
   RenderRadialGradientDef,
+  RenderAngularGradientDef,
+  RenderDiamondGradientDef,
   RenderFilterDef,
   RenderClipPathDef,
   RenderPatternDef,
+  RenderMaskDef,
+  RenderMask,
   ClipPathShape,
   ResolvedWrapperAttrs,
   ResolvedFillResult,
+  ResolvedFillLayer,
 } from "./types";
+
+// Wrapper field registry (SoT for ResolvedWrapperAttrs exhaustiveness)
+export { WRAPPER_ATTRS_FIELDS } from "./types";
 
 // Resolver
 export { resolveRenderTree } from "./resolve";

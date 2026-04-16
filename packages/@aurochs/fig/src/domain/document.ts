@@ -15,6 +15,7 @@
 import type {
   FigNodeType, FigMatrix, FigVector, FigColor, FigPaint, FigEffect, FigStrokeWeight, FigFontName, KiwiEnumValue,
   FigDerivedBaseline, FigDerivedGlyph, FigDerivedDecoration, FigDerivedTextData,
+  FigVectorPath, FigVectorData,
 } from "../types";
 import type { LoadedFigFile, FigImage, FigMetadata } from "../roundtrip";
 import type { FigNodeId, FigPageId } from "./node-id";
@@ -62,7 +63,7 @@ export type LayoutConstraints = {
 export type TextData = {
   readonly characters: string;
   readonly fontSize: number;
-  readonly fontName: { readonly family: string; readonly style: string; readonly postscript: string };
+  readonly fontName: { readonly family: string; readonly style: string; readonly postscript?: string };
   readonly textAlignHorizontal?: KiwiEnumValue;
   readonly textAlignVertical?: KiwiEnumValue;
   readonly textAutoResize?: KiwiEnumValue;
@@ -171,11 +172,137 @@ export type DerivedTextData = FigDerivedTextData;
 
 /**
  * Symbol override for an instance node.
+ *
+ * guidPath is the Kiwi FigGuidPath structure as-is — no conversion.
+ * Each guid in the path identifies a target node in the symbol tree.
+ * The remaining fields are the overridden properties (same structure
+ * as FigNode fields: fillPaints, opacity, visible, transform, size, etc.).
  */
 export type SymbolOverride = {
-  readonly guidPath: string;
+  readonly guidPath: { readonly guids: readonly { readonly sessionID: number; readonly localID: number }[] };
   readonly [key: string]: unknown;
 };
+
+/**
+ * Mutable version of FigDesignNode for override application.
+ *
+ * After deep-cloning, overrides need to mutate specific fields.
+ * This type makes all fields writable while preserving the field names
+ * so that property access is type-safe (no `as Record<string, unknown>`).
+ */
+export type MutableFigDesignNode = { -readonly [K in keyof FigDesignNode]: FigDesignNode[K] };
+
+/**
+ * Check whether a SymbolOverride's guidPath is valid (non-null, non-empty).
+ */
+export function isValidOverridePath(override: SymbolOverride): boolean {
+  const gp = override.guidPath;
+  return gp != null && gp.guids != null && gp.guids.length > 0;
+}
+
+/**
+ * Check whether a SymbolOverride targets a specific node (self-override).
+ *
+ * A self-override has exactly one guid in the path, matching the given ID.
+ */
+export function isSelfOverride(override: SymbolOverride, nodeId: string): boolean {
+  const guids = override.guidPath?.guids;
+  if (!guids || guids.length !== 1) { return false; }
+  return `${guids[0].sessionID}:${guids[0].localID}` === nodeId;
+}
+
+/**
+ * Convert a SymbolOverride's guidPath to an array of "sessionID:localID" strings.
+ */
+export function overridePathToIds(override: SymbolOverride): readonly string[] {
+  return override.guidPath.guids.map((g) => `${g.sessionID}:${g.localID}`);
+}
+
+/**
+ * Iterate over the property entries of a SymbolOverride, skipping guidPath.
+ */
+export function* overrideEntries(override: SymbolOverride): Generator<[string, unknown]> {
+  for (const [key, value] of Object.entries(override)) {
+    if (key === "guidPath") { continue; }
+    yield [key, value];
+  }
+}
+
+/**
+ * Apply override properties to a mutable FigDesignNode.
+ *
+ * Maps raw FigNode field names to FigDesignNode field names
+ * (fillPaints → fills, strokePaints → strokes) and applies
+ * only known visual override properties.
+ */
+export function applyOverrideToNode(
+  target: MutableFigDesignNode,
+  override: SymbolOverride,
+  options?: { skipDerivedTextData?: boolean },
+): void {
+  for (const [key, value] of overrideEntries(override)) {
+    switch (key) {
+      // Paint field name mapping (Kiwi → domain)
+      case "fillPaints":
+        target.fills = value as readonly FigPaint[];
+        break;
+      case "strokePaints":
+        target.strokes = value as readonly FigPaint[];
+        break;
+      // Direct mappings — same name in Kiwi and domain
+      case "visible":
+        target.visible = value as boolean;
+        break;
+      case "opacity":
+        target.opacity = value as number;
+        break;
+      case "effects":
+        target.effects = value as readonly FigEffect[];
+        break;
+      case "cornerRadius":
+        target.cornerRadius = value as number | undefined;
+        break;
+      case "rectangleCornerRadii":
+        target.rectangleCornerRadii = value as readonly number[] | undefined;
+        break;
+      case "blendMode":
+        target.blendMode = value as MutableFigDesignNode["blendMode"];
+        break;
+      case "strokeWeight":
+        target.strokeWeight = value as FigStrokeWeight;
+        break;
+      case "strokeJoin":
+        target.strokeJoin = value as KiwiEnumValue | undefined;
+        break;
+      case "strokeCap":
+        target.strokeCap = value as KiwiEnumValue | undefined;
+        break;
+      case "clipsContent":
+        target.clipsContent = value as boolean | undefined;
+        break;
+      case "cornerSmoothing":
+        target.cornerSmoothing = value as number | undefined;
+        break;
+      // Layout fields (from derivedSymbolData)
+      case "transform":
+        target.transform = value as FigMatrix;
+        break;
+      case "size":
+        target.size = value as FigVector;
+        break;
+      // Geometry (cleared/updated on resize)
+      case "fillGeometry":
+      case "strokeGeometry":
+        // These are Kiwi blob references — preserve in _raw, not domain fields
+        break;
+      case "derivedTextData":
+        if (!options?.skipDerivedTextData) {
+          target.derivedTextData = value as DerivedTextData | undefined;
+        }
+        break;
+    }
+  }
+}
 
 // =============================================================================
 // Component Property Types
@@ -320,9 +447,37 @@ export type FigDesignNode = {
   readonly strokeJoin?: KiwiEnumValue;
   readonly strokeCap?: KiwiEnumValue;
 
+  /** Stroke dash pattern (e.g., [4, 2] for dashed stroke) */
+  readonly strokeDashes?: readonly number[];
+
   // Geometry
   readonly cornerRadius?: number;
   readonly rectangleCornerRadii?: readonly number[];
+
+  /** Whether this node is a mask for its siblings */
+  readonly mask?: boolean;
+
+  /**
+   * Ellipse arc data for partial arcs and donuts.
+   * When present, the ellipse is rendered as a path.
+   */
+  readonly arcData?: {
+    readonly startingAngle?: number;
+    readonly endingAngle?: number;
+    readonly innerRadius?: number;
+  };
+
+  /**
+   * Pre-decoded SVG path strings (vectorPaths from Kiwi binary).
+   * Priority source for VECTOR/LINE/STAR/POLYGON geometry.
+   */
+  readonly vectorPaths?: readonly FigVectorPath[];
+
+  /**
+   * Vector data including per-path style override table.
+   * Used for per-contour fill overrides on VECTOR nodes.
+   */
+  readonly vectorData?: FigVectorData;
   /** iOS-style corner smoothing (0 = none, 1 = full) */
   readonly cornerSmoothing?: number;
 
@@ -368,6 +523,19 @@ export type FigDesignNode = {
    */
   readonly symbolId?: FigNodeId;
   readonly overrides?: readonly SymbolOverride[];
+
+  /**
+   * Figma's pre-computed layout data for resized INSTANCE children.
+   *
+   * When an INSTANCE has a different size than its SYMBOL, Figma computes
+   * adjusted positions/sizes for each child based on constraints. This
+   * pre-computed data is stored as override entries (same structure as
+   * symbolOverrides) targeting child nodes with transform/size fields.
+   *
+   * Used by resolveInstance to adjust child layout. Falls back to
+   * constraint resolution when absent.
+   */
+  readonly derivedSymbolData?: readonly SymbolOverride[];
 
   /**
    * Component property definitions (on SYMBOL/COMPONENT nodes).

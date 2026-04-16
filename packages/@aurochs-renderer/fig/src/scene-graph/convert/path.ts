@@ -82,17 +82,25 @@ export function parseSvgPathD(d: string): PathCommand[] {
 }
 
 /**
+ * Decoded contour with optional geometry-level styleID.
+ * The styleID references vectorData.styleOverrideTable for per-path fill overrides.
+ */
+export type DecodedContour = PathContour & {
+  readonly geometryStyleId?: number;
+};
+
+/**
  * Decode fill geometry blobs to PathContour arrays
  */
 export function decodeGeometryToContours(
   fillGeometry: readonly FigFillGeometry[] | undefined,
   blobs: readonly FigBlob[],
-): PathContour[] {
+): DecodedContour[] {
   if (!fillGeometry || fillGeometry.length === 0) {
     return [];
   }
 
-  const contours: PathContour[] = [];
+  const contours: DecodedContour[] = [];
 
   for (const geom of fillGeometry) {
     const blobIndex = geom.commandsBlob;
@@ -106,7 +114,11 @@ export function decodeGeometryToContours(
 
     const windingRule = mapWindingRule(geom.windingRule);
 
-    contours.push({ commands, windingRule });
+    contours.push({
+      commands,
+      windingRule,
+      geometryStyleId: geom.styleID,
+    });
   }
 
   return contours;

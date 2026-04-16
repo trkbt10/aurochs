@@ -30,15 +30,22 @@ function createMockContext(): { ctx: FigSvgRenderContext; data: MockContextData 
   const mutableDefs: string[] = data.defs as string[];
   const idCounters: Record<string, number> = {};
 
-  const ctx = {
+  const ctx: FigSvgRenderContext = {
     defs: {
       generateId: (prefix: string) => {
         idCounters[prefix] = (idCounters[prefix] ?? 0) + 1;
         return `${prefix}_${idCounters[prefix]}`;
       },
-      add: (def: string) => mutableDefs.push(def),
+      add: (def: string) => { mutableDefs.push(def); },
+      getAll: () => mutableDefs,
+      hasAny: () => mutableDefs.length > 0,
     },
-  } as FigSvgRenderContext;
+    canvasSize: { width: 100, height: 100 },
+    blobs: [],
+    images: new Map(),
+    showHiddenNodes: false,
+    styleRegistry: { fills: new Map(), strokes: new Map() },
+  };
 
   return { ctx, data };
 }
@@ -137,7 +144,7 @@ describe("hasLayerBlur", () => {
 
   it("returns true for visible layer blur", () => {
     const effects: FigEffect[] = [
-      { type: "LAYER_BLUR", visible: true, radius: 10 },
+      { type: "FOREGROUND_BLUR", visible: true, radius: 10 },
     ];
     expect(hasLayerBlur(effects)).toBe(true);
   });
@@ -151,7 +158,7 @@ describe("getLayerBlur", () => {
   it("returns first visible layer blur", () => {
     const effects: FigEffect[] = [
       { type: "DROP_SHADOW", visible: true, radius: 4 },
-      { type: "LAYER_BLUR", visible: true, radius: 10 },
+      { type: "FOREGROUND_BLUR", visible: true, radius: 10 },
     ];
     const result = getLayerBlur(effects);
     expect(result).toBeDefined();
@@ -260,14 +267,14 @@ describe("createInnerShadowFilter", () => {
 describe("createLayerBlurFilter", () => {
   it("returns null for zero radius", () => {
     const { ctx } = createMockContext();
-    const blur: FigEffect = { type: "LAYER_BLUR", visible: true, radius: 0 };
+    const blur: FigEffect = { type: "FOREGROUND_BLUR", visible: true, radius: 0 };
     const result = createLayerBlurFilter(blur, ctx, mockBounds);
     expect(result).toBeNull();
   });
 
   it("creates filter with gaussian blur", () => {
     const { ctx } = createMockContext();
-    const blur: FigEffect = { type: "LAYER_BLUR", visible: true, radius: 10 };
+    const blur: FigEffect = { type: "FOREGROUND_BLUR", visible: true, radius: 10 };
     const result = createLayerBlurFilter(blur, ctx, mockBounds);
     expect(result).not.toBeNull();
     expect(result?.id).toContain("layer-blur");
@@ -300,7 +307,7 @@ describe("createCombinedFilter", () => {
     const { ctx } = createMockContext();
     const effects: FigEffect[] = [
       { type: "DROP_SHADOW", visible: true, radius: 4 },
-      { type: "LAYER_BLUR", visible: true, radius: 8 },
+      { type: "FOREGROUND_BLUR", visible: true, radius: 8 },
     ];
     const result = createCombinedFilter(effects, ctx, mockBounds);
     expect(result?.def).toContain("feGaussianBlur");
@@ -341,7 +348,7 @@ describe("getFilterAttr", () => {
   it("returns url reference for layer blur", () => {
     const { ctx } = createMockContext();
     const effects: FigEffect[] = [
-      { type: "LAYER_BLUR", visible: true, radius: 10 },
+      { type: "FOREGROUND_BLUR", visible: true, radius: 10 },
     ];
     const result = getFilterAttr(effects, ctx, mockBounds);
     expect(result).toMatch(/^url\(#layer-blur_\d+\)$/);

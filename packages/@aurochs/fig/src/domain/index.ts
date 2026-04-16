@@ -19,6 +19,7 @@ export type {
   TextData,
   TextStyleOverride,
   SymbolOverride,
+  MutableFigDesignNode,
   BlendMode,
   DerivedBaseline,
   DerivedGlyph,
@@ -32,4 +33,11 @@ export type {
   ComponentPropertyAssignment,
 } from "./document";
 
-export { DEFAULT_PAGE_BACKGROUND } from "./document";
+export {
+  DEFAULT_PAGE_BACKGROUND,
+  isValidOverridePath,
+  isSelfOverride,
+  overridePathToIds,
+  overrideEntries,
+  applyOverrideToNode,
+} from "./document";

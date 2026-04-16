@@ -10,7 +10,7 @@
  * - resolveInstanceLayout: strategy selection (derived vs constraint)
  */
 
-import type { FigNode, MutableFigNode } from "@aurochs/fig/types";
+import type { FigNode, FigMatrix, MutableFigNode } from "@aurochs/fig/types";
 import { CONSTRAINT_TYPE_VALUES } from "@aurochs/fig/constants";
 import { guidToString } from "@aurochs/fig/parser";
 import { getConstraintValue, resolveChildConstraints } from "@aurochs/fig/symbols";
@@ -49,7 +49,7 @@ export function applyConstraintsToChildren(
     const result: MutableFigNode = {
       ...child,
       transform: {
-        ...child.transform,
+        ...(child.transform ?? { m00: 1, m01: 0, m02: 0, m10: 0, m11: 1, m12: 0 } satisfies FigMatrix),
         m02: resolution.posX,
         m12: resolution.posY,
       },
@@ -209,7 +209,7 @@ function supplementConstraints(
     const result: MutableFigNode = {
       ...child,
       transform: {
-        ...child.transform,
+        ...(child.transform ?? { m00: 1, m01: 0, m02: 0, m10: 0, m11: 1, m12: 0 } satisfies FigMatrix),
         m02: resolution.posX,
         m12: resolution.posY,
       },

@@ -247,7 +247,7 @@ describe("FallbackMeasurementProvider", () => {
   });
 
   it("measures character widths", () => {
-    const widths = provider.measureCharWidths("ABC", font);
+    const widths = provider.measureCharWidths!("ABC", font);
 
     expect(widths).toHaveLength(3);
     expect(widths.every((w) => w > 0)).toBe(true);
@@ -255,7 +255,7 @@ describe("FallbackMeasurementProvider", () => {
 
   it("uses fixed width for monospace fonts", () => {
     const monoFont: FontSpec = { fontFamily: "Courier", fontSize: 16 };
-    const widths = provider.measureCharWidths("ABC", monoFont);
+    const widths = provider.measureCharWidths!("ABC", monoFont);
 
     // All characters should have the same width
     expect(widths[0]).toBe(widths[1]);
@@ -281,29 +281,29 @@ describe("TextMeasurer", () => {
 
   beforeEach(() => {
     mockProviderRef.value = {
-      measureText: () => ({
+      measureText: vi.fn(() => ({
         width: 50,
         height: 20,
         ascent: 16,
         descent: 4,
-      }),
-      measureCharWidths: (text: string) =>
-        Array(text.length).fill(10),
+      })),
+      measureCharWidths: vi.fn((text: string) =>
+        Array(text.length).fill(10)),
     };
-    measurerRef.value = createTextMeasurer({ provider: mockProviderRef.value });
+    measurerRef.value = createTextMeasurer({ provider: mockProviderRef.value! });
   });
 
   it("measures single line text", () => {
     const font: FontSpec = { fontFamily: "Arial", fontSize: 16 };
-    const result = measurerRef.value.measureText("Hello", font);
+    const result = measurerRef.value!.measureText("Hello", font);
 
     expect(result.width).toBe(50);
-    expect(mockProviderRef.value.measureText).toHaveBeenCalledWith("Hello", font);
+    expect(mockProviderRef.value!.measureText).toHaveBeenCalledWith("Hello", font);
   });
 
   it("measures multi-line text with line breaking", () => {
     const font: FontSpec = { fontFamily: "Arial", fontSize: 16 };
-    const result = measurerRef.value.measureMultiLine("Hello World", font, {
+    const result = measurerRef.value!.measureMultiLine("Hello World", font, {
       maxWidth: 55,
     });
 
@@ -314,14 +314,14 @@ describe("TextMeasurer", () => {
 
   it("calculates total height based on line count", () => {
     const font: FontSpec = { fontFamily: "Arial", fontSize: 16 };
-    const result = measurerRef.value.measureMultiLine("A B C", font, { maxWidth: 15 });
+    const result = measurerRef.value!.measureMultiLine("A B C", font, { maxWidth: 15 });
 
     expect(result.totalHeight).toBe(result.lines.length * result.lineHeight);
   });
 
   it("measures substring", () => {
     const font: FontSpec = { fontFamily: "Arial", fontSize: 16 };
-    const result = measurerRef.value.measureSubstring("Hello World", 0, 5, font);
+    const result = measurerRef.value!.measureSubstring({ text: "Hello World", start: 0, end: 5, font });
 
     // measureSubstring should return width for "Hello" (5 chars * 10px = 50)
     expect(result).toBe(50);
@@ -331,28 +331,28 @@ describe("TextMeasurer", () => {
     const font: FontSpec = { fontFamily: "Arial", fontSize: 16 };
 
     // Each char is 10px wide, so position 25 should be in the 3rd character
-    const index = measurerRef.value.findCharIndexAtX("ABCDE", 25, font);
+    const index = measurerRef.value!.findCharIndexAtX("ABCDE", 25, font);
 
     expect(index).toBe(2); // 0-indexed, should be "C"
   });
 
   it("returns 0 for negative x", () => {
     const font: FontSpec = { fontFamily: "Arial", fontSize: 16 };
-    const index = measurerRef.value.findCharIndexAtX("ABC", -10, font);
+    const index = measurerRef.value!.findCharIndexAtX("ABC", -10, font);
 
     expect(index).toBe(0);
   });
 
   it("returns text length for x beyond text", () => {
     const font: FontSpec = { fontFamily: "Arial", fontSize: 16 };
-    const index = measurerRef.value.findCharIndexAtX("ABC", 100, font);
+    const index = measurerRef.value!.findCharIndexAtX("ABC", 100, font);
 
     expect(index).toBe(3);
   });
 
   it("gets character x position", () => {
     const font: FontSpec = { fontFamily: "Arial", fontSize: 16 };
-    const charX = measurerRef.value.getCharX("Hello", 2, font);
+    const charX = measurerRef.value!.getCharX("Hello", 2, font);
 
     // getCharX for index 2 should measure "He" → 2 chars * 10px = 20 width
     expect(charX).toBe(50); // measureText returns width: 50 for any input
@@ -363,13 +363,15 @@ describe("createTextMeasurer", () => {
   it("creates a text measurer with default config", () => {
     const measurer = createTextMeasurer();
 
-    expect(measurer).toBeInstanceOf(TextMeasurer);
+    expect(measurer).toBeDefined();
+    expect(typeof measurer.measureText).toBe("function");
   });
 
   it("accepts custom line break mode", () => {
     const measurer = createTextMeasurer({ defaultLineBreakMode: "word" });
 
-    expect(measurer).toBeInstanceOf(TextMeasurer);
+    expect(measurer).toBeDefined();
+    expect(typeof measurer.measureText).toBe("function");
   });
 });
 

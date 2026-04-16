@@ -7,7 +7,7 @@
  * or React elements. Each consumer formats them for its own output.
  */
 
-import type { Effect, Color } from "../types";
+import type { Effect, Color, BlendMode } from "../types";
 
 // =============================================================================
 // Resolved Filter Primitive Types
@@ -23,7 +23,8 @@ export type ResolvedFilterPrimitive =
   | { readonly type: "feOffset"; readonly dx: number; readonly dy: number }
   | { readonly type: "feGaussianBlur"; readonly in?: string; readonly stdDeviation: number }
   | { readonly type: "feBlend"; readonly mode: string; readonly in?: string; readonly in2?: string; readonly result?: string }
-  | { readonly type: "feComposite"; readonly in2: string; readonly operator: string; readonly k2: number; readonly k3: number };
+  | { readonly type: "feComposite"; readonly in2: string; readonly operator: string; readonly k2: number; readonly k3: number }
+  | { readonly type: "feMorphology"; readonly operator: "dilate" | "erode"; readonly radius: number };
 
 /**
  * Complete resolved filter with all primitives and the filter ID.
@@ -41,6 +42,26 @@ type IdGenerator = {
 // =============================================================================
 // Resolution
 // =============================================================================
+
+/**
+ * Convert a BlendMode to SVG feBlend mode string.
+ * Returns "normal" when no blend mode is specified.
+ */
+function effectBlendModeToSvg(bm: BlendMode | undefined): string {
+  if (!bm) { return "normal"; }
+  // SVG feBlend supports: normal, multiply, screen, darken, lighten, overlay
+  // For unsupported modes, fall back to "normal"
+  switch (bm) {
+    case "multiply":
+    case "screen":
+    case "darken":
+    case "lighten":
+    case "overlay":
+      return bm;
+    default:
+      return "normal";
+  }
+}
 
 const ALPHA_BINARIZE_MATRIX = "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0";
 
@@ -68,13 +89,24 @@ export function resolveEffects(effects: readonly Effect[], ids: IdGenerator): Re
     switch (effect.type) {
       case "drop-shadow": {
         const stdDev = effect.radius / 2;
+        const blendMode = effectBlendModeToSvg(effect.blendMode);
         primitives.push(
           { type: "feFlood", floodOpacity: 0, result: "BackgroundImageFix" },
           { type: "feColorMatrix", in: "SourceAlpha", matrixType: "matrix", values: ALPHA_BINARIZE_MATRIX, result: "hardAlpha" },
+        );
+        // Spread: feMorphology dilate (positive) or erode (negative) before offset
+        if (effect.spread && effect.spread !== 0) {
+          primitives.push({
+            type: "feMorphology",
+            operator: effect.spread > 0 ? "dilate" : "erode",
+            radius: Math.abs(effect.spread),
+          });
+        }
+        primitives.push(
           { type: "feOffset", dx: effect.offset.x, dy: effect.offset.y },
           { type: "feGaussianBlur", stdDeviation: stdDev },
           { type: "feColorMatrix", matrixType: "matrix", values: buildColorMatrix(effect.color) },
-          { type: "feBlend", mode: "normal", in2: "BackgroundImageFix" },
+          { type: "feBlend", mode: blendMode, in2: "BackgroundImageFix" },
           { type: "feBlend", mode: "normal", in: "SourceGraphic", in2: "effect", result: "shape" },
         );
         shapeEstablished = true;
@@ -83,6 +115,7 @@ export function resolveEffects(effects: readonly Effect[], ids: IdGenerator): Re
 
       case "inner-shadow": {
         const stdDev = effect.radius / 2;
+        const blendMode = effectBlendModeToSvg(effect.blendMode);
         if (!shapeEstablished) {
           primitives.push(
             { type: "feFlood", floodOpacity: 0, result: "BackgroundImageFix" },
@@ -96,7 +129,7 @@ export function resolveEffects(effects: readonly Effect[], ids: IdGenerator): Re
           { type: "feGaussianBlur", stdDeviation: stdDev },
           { type: "feComposite", in2: "hardAlpha", operator: "arithmetic", k2: -1, k3: 1 },
           { type: "feColorMatrix", matrixType: "matrix", values: buildColorMatrix(effect.color) },
-          { type: "feBlend", mode: "normal", in2: "shape", result: "shape" },
+          { type: "feBlend", mode: blendMode, in2: "shape", result: "shape" },
         );
         break;
       }

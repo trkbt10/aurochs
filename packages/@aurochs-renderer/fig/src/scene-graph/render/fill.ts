@@ -8,7 +8,7 @@
  * usable by both string concatenation and React JSX.
  */
 
-import type { Fill, GradientStop } from "../types";
+import type { Fill, GradientStop, AffineMatrix } from "../types";
 import { colorToHex, uint8ArrayToBase64 } from "./color";
 
 // =============================================================================
@@ -43,6 +43,15 @@ export type ResolvedLinearGradient = {
   readonly x2: string;
   readonly y2: string;
   readonly stops: readonly ResolvedGradientStop[];
+  /** When "userSpaceOnUse", x1/y1/x2/y2 are pixel coordinates */
+  readonly gradientUnits?: "userSpaceOnUse";
+  /**
+   * Raw Figma gradient transform matrix — preserved for finalization.
+   * finalizeGradientDefs() converts this to userSpaceOnUse pixel coords
+   * using the element's bounding box size.
+   * After finalization, this field is cleared (set to undefined).
+   */
+  readonly gradientTransform?: AffineMatrix;
 };
 
 /**
@@ -55,6 +64,13 @@ export type ResolvedRadialGradient = {
   readonly cy: string;
   readonly r: string;
   readonly stops: readonly ResolvedGradientStop[];
+  /** When "userSpaceOnUse", cx/cy/r are pixel coordinates */
+  readonly gradientUnits?: "userSpaceOnUse";
+  /**
+   * SVG gradientTransform string (after finalization) or raw AffineMatrix
+   * (before finalization). After finalizeGradientDefs(), this is a string.
+   */
+  readonly gradientTransform?: string | AffineMatrix;
 };
 
 /**
@@ -70,6 +86,33 @@ export type ResolvedImagePattern = {
   readonly imageWidth: number;
   readonly imageHeight: number;
   readonly preserveAspectRatio: string;
+  /** SVG patternTransform string (from image transform matrix) */
+  readonly patternTransform?: string;
+};
+
+/**
+ * An angular (conic) gradient def.
+ * Rendered via foreignObject + CSS conic-gradient (SVG) or shader (WebGL).
+ */
+export type ResolvedAngularGradient = {
+  readonly type: "angular-gradient";
+  readonly id: string;
+  readonly cx: string;
+  readonly cy: string;
+  readonly rotation: number;
+  readonly stops: readonly ResolvedGradientStop[];
+};
+
+/**
+ * A diamond gradient def.
+ * Rendered via four mirrored gradient rects (SVG) or shader (WebGL).
+ */
+export type ResolvedDiamondGradient = {
+  readonly type: "diamond-gradient";
+  readonly id: string;
+  readonly cx: string;
+  readonly cy: string;
+  readonly stops: readonly ResolvedGradientStop[];
 };
 
 /**
@@ -79,6 +122,8 @@ export type ResolvedImagePattern = {
 export type ResolvedFillDef =
   | ResolvedLinearGradient
   | ResolvedRadialGradient
+  | ResolvedAngularGradient
+  | ResolvedDiamondGradient
   | ResolvedImagePattern;
 
 /**
@@ -100,6 +145,10 @@ export type IdGenerator = {
 // =============================================================================
 // Resolution functions
 // =============================================================================
+
+function matrixToPatternTransform(m: AffineMatrix): string {
+  return `matrix(${m.m00},${m.m10},${m.m01},${m.m11},${m.m02},${m.m12})`;
+}
 
 function resolveGradientStops(stops: readonly GradientStop[]): ResolvedGradientStop[] {
   return stops.map((s) => ({
@@ -139,6 +188,7 @@ export function resolveFill(fill: Fill, ids: IdGenerator): ResolvedFill {
           x2: `${fill.end.x * 100}%`,
           y2: `${fill.end.y * 100}%`,
           stops: resolveGradientStops(fill.stops),
+          gradientTransform: fill.gradientTransform,
         },
       };
     }
@@ -153,6 +203,36 @@ export function resolveFill(fill: Fill, ids: IdGenerator): ResolvedFill {
           cx: `${fill.center.x * 100}%`,
           cy: `${fill.center.y * 100}%`,
           r: `${Math.abs(fill.radius) * 100}%`,
+          stops: resolveGradientStops(fill.stops),
+          gradientTransform: fill.gradientTransform,
+        },
+      };
+    }
+
+    case "angular-gradient": {
+      const id = ids.getNextId("ag");
+      return {
+        attrs: buildAttrs(`url(#${id})`, fill.opacity),
+        def: {
+          type: "angular-gradient",
+          id,
+          cx: `${fill.center.x * 100}%`,
+          cy: `${fill.center.y * 100}%`,
+          rotation: fill.rotation,
+          stops: resolveGradientStops(fill.stops),
+        },
+      };
+    }
+
+    case "diamond-gradient": {
+      const id = ids.getNextId("dg");
+      return {
+        attrs: buildAttrs(`url(#${id})`, fill.opacity),
+        def: {
+          type: "diamond-gradient",
+          id,
+          cx: `${fill.center.x * 100}%`,
+          cy: `${fill.center.y * 100}%`,
           stops: resolveGradientStops(fill.stops),
         },
       };
@@ -175,6 +255,7 @@ export function resolveFill(fill: Fill, ids: IdGenerator): ResolvedFill {
           imageWidth: hasExplicitSize ? fill.width! : 1,
           imageHeight: hasExplicitSize ? fill.height! : 1,
           preserveAspectRatio: "xMidYMid slice",
+          patternTransform: fill.imageTransform ? matrixToPatternTransform(fill.imageTransform) : undefined,
         },
       };
     }

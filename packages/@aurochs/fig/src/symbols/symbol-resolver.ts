@@ -474,7 +474,7 @@ function applyOverrides(nodes: MutableFigNode[], overrides: readonly FigKiwiSymb
               merged.push(...incoming);
               node[key] = merged;
             } else {
-              node[key] = value;
+              node[key] = value as FigComponentPropAssignment[];
             }
           } else {
             node[key] = value;

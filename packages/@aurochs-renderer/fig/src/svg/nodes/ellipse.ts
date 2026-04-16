@@ -63,7 +63,7 @@ function buildStrokeLayers(
     const paintOpacity = paint.opacity ?? 1;
     const blendCss = getPaintBlendModeCss(paint);
 
-    const attrs: Record<string, string | number | undefined> = {
+    const pathEl = svgPath({
       d,
       fill: "none",
       stroke: hex,
@@ -71,9 +71,7 @@ function buildStrokeLayers(
       "stroke-opacity": paintOpacity < 1 ? paintOpacity : undefined,
       "stroke-linecap": "round",
       transform: transformStr || undefined,
-    };
-
-    const pathEl = svgPath(attrs);
+    });
 
     if (blendCss) {
       layers.push(g({ style: `mix-blend-mode:${blendCss}` }, pathEl));

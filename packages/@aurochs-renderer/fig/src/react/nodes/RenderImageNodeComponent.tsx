@@ -4,6 +4,7 @@
 
 import { memo } from "react";
 import type { RenderImageNode } from "../../scene-graph/render-tree";
+import { RenderWrapper } from "../primitives/wrapper";
 
 type Props = {
   readonly node: RenderImageNode;
@@ -27,12 +28,9 @@ function RenderImageNodeComponentImpl({ node }: Props) {
 
   if (node.needsWrapper) {
     return (
-      <g
-        transform={node.wrapper.transform}
-        opacity={node.wrapper.opacity}
-      >
+      <RenderWrapper wrapper={node.wrapper}>
         {imageEl}
-      </g>
+      </RenderWrapper>
     );
   }
 

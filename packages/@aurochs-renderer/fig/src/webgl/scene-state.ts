@@ -20,6 +20,7 @@ import type {
   Color,
   Effect,
   ClipShape,
+  CornerRadius,
 } from "../scene-graph/types";
 import type { SceneGraphDiff, DiffOp } from "../scene-graph/diff";
 import {
@@ -27,6 +28,14 @@ import {
   generateEllipseVertices,
   tessellateContours,
 } from "./tessellation";
+
+/** Extract uniform radius from CornerRadius (per-corner → average for WebGL) */
+function uniformRadiusForGL(cr: CornerRadius | undefined): number | undefined {
+  if (cr === undefined) { return undefined; }
+  if (typeof cr === "number") { return cr; }
+  const avg = (cr[0] + cr[1] + cr[2] + cr[3]) / 4;
+  return avg > 0 ? avg : undefined;
+}
 
 /** Resolve cornerRadius from a changes object or fall back to existing value */
 function resolveCornerRadius(
@@ -148,20 +157,20 @@ export function createSceneState(): SceneStateInstance {
         base.childIds = node.children.map((c) => c.id);
         base.width = node.width;
         base.height = node.height;
-        base.cornerRadius = node.cornerRadius;
+        base.cornerRadius = uniformRadiusForGL(node.cornerRadius);
         base.clipsContent = node.clipsContent;
         if (node.fills.length > 0) {
           base.fill = node.fills[node.fills.length - 1];
-          base.vertices = generateRectVertices(node.width, node.height, node.cornerRadius);
+          base.vertices = generateRectVertices(node.width, node.height, uniformRadiusForGL(node.cornerRadius));
         }
         break;
       case "rect":
         base.width = node.width;
         base.height = node.height;
-        base.cornerRadius = node.cornerRadius;
+        base.cornerRadius = uniformRadiusForGL(node.cornerRadius);
         if (node.fills.length > 0) {
           base.fill = node.fills[node.fills.length - 1];
-          base.vertices = generateRectVertices(node.width, node.height, node.cornerRadius);
+          base.vertices = generateRectVertices(node.width, node.height, uniformRadiusForGL(node.cornerRadius));
         }
         break;
       case "ellipse":

@@ -381,6 +381,7 @@ export function pattern(
     height: string | number;
     patternUnits?: "userSpaceOnUse" | "objectBoundingBox";
     patternContentUnits?: "userSpaceOnUse" | "objectBoundingBox";
+    patternTransform?: string;
     preserveAspectRatio?: string;
   },
   ...children: readonly SvgString[]

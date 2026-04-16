@@ -54,6 +54,40 @@ const RED: Color = { r: 1, g: 0, b: 0, a: 1 };
 const BLACK_50: Color = { r: 0, g: 0, b: 0, a: 0.5 };
 
 // =============================================================================
+// Test Helpers
+// =============================================================================
+
+function buildFillForType(type: Fill["type"]): Fill {
+  switch (type) {
+    case "solid":
+      return { type: "solid", color: RED, opacity: 1 };
+    case "linear-gradient":
+      return { type: "linear-gradient", start: { x: 0, y: 0 }, end: { x: 1, y: 0 }, stops: [], opacity: 1 };
+    case "radial-gradient":
+      return { type: "radial-gradient", center: { x: 0.5, y: 0.5 }, radius: 0.5, stops: [], opacity: 1 };
+    case "image":
+      return { type: "image", imageRef: "", data: new Uint8Array(0), mimeType: "image/png", scaleMode: "FILL", opacity: 1 };
+    case "angular-gradient":
+      return { type: "angular-gradient", center: { x: 0.5, y: 0.5 }, rotation: 0, stops: [], opacity: 1 };
+    case "diamond-gradient":
+      return { type: "diamond-gradient", center: { x: 0.5, y: 0.5 }, stops: [], opacity: 1 };
+  }
+}
+
+function buildEffectForType(type: Effect["type"]): Effect {
+  switch (type) {
+    case "drop-shadow":
+      return { type: "drop-shadow", offset: { x: 0, y: 0 }, radius: 0, color: BLACK_50 };
+    case "inner-shadow":
+      return { type: "inner-shadow", offset: { x: 0, y: 0 }, radius: 0, color: BLACK_50 };
+    case "layer-blur":
+      return { type: "layer-blur", radius: 0 };
+    case "background-blur":
+      return { type: "background-blur", radius: 0 };
+  }
+}
+
+// =============================================================================
 // Fill Resolution Tests
 // =============================================================================
 
@@ -156,32 +190,6 @@ describe("Fill resolution (shared SoT)", () => {
 
     expect(result.attrs.fill).toBe("#ffffff");
   });
-
-function buildFillForType(type: Fill["type"]): Fill {
-  switch (type) {
-    case "solid":
-      return { type: "solid", color: RED, opacity: 1 };
-    case "linear-gradient":
-      return { type: "linear-gradient", start: { x: 0, y: 0 }, end: { x: 1, y: 0 }, stops: [], opacity: 1 };
-    case "radial-gradient":
-      return { type: "radial-gradient", center: { x: 0.5, y: 0.5 }, radius: 0.5, stops: [], opacity: 1 };
-    case "image":
-      return { type: "image", imageRef: "", data: new Uint8Array(0), mimeType: "image/png", scaleMode: "FILL", opacity: 1 };
-  }
-}
-
-function _buildEffectForType(type: Effect["type"]): Effect {
-  switch (type) {
-    case "drop-shadow":
-      return { type: "drop-shadow", offset: { x: 0, y: 0 }, radius: 0, color: BLACK_50 };
-    case "inner-shadow":
-      return { type: "inner-shadow", offset: { x: 0, y: 0 }, radius: 0, color: BLACK_50 };
-    case "layer-blur":
-      return { type: "layer-blur", radius: 0 };
-    case "background-blur":
-      return { type: "background-blur", radius: 0 };
-  }
-}
 
   /**
    * COMPILE-TIME EXHAUSTIVENESS CHECK

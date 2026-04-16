@@ -5,6 +5,7 @@
 import { memo } from "react";
 import type { RenderTextNode } from "../../scene-graph/render-tree";
 import { formatRenderDefs } from "../primitives/render-defs";
+import { RenderWrapper } from "../primitives/wrapper";
 import { FigTextLines } from "./FigTextLines";
 
 type Props = {
@@ -29,16 +30,12 @@ function RenderTextNodeComponentImpl({ node }: Props) {
     );
 
     return (
-      <g
-        transform={node.wrapper.transform}
-        opacity={node.wrapper.opacity}
-        filter={node.wrapper.filterAttr}
-      >
+      <RenderWrapper wrapper={node.wrapper}>
         {defsEl}
         {node.textClipId
           ? <g clipPath={`url(#${node.textClipId})`}>{pathEl}</g>
           : pathEl}
-      </g>
+      </RenderWrapper>
     );
   }
 
@@ -56,16 +53,12 @@ function RenderTextNodeComponentImpl({ node }: Props) {
   );
 
   return (
-    <g
-      transform={node.wrapper.transform}
-      opacity={node.wrapper.opacity}
-      filter={node.wrapper.filterAttr}
-    >
+    <RenderWrapper wrapper={node.wrapper}>
       {defsEl}
       {node.textClipId
         ? <g clipPath={`url(#${node.textClipId})`}>{textContent}</g>
         : textContent}
-    </g>
+    </RenderWrapper>
   );
 }
 

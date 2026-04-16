@@ -58,7 +58,7 @@ describe("OpentypeMeasurementProvider", () => {
 
     if (fontAvailableRef.value) {
       // Preload the font
-      await providerRef.value.preloadFont({ fontFamily: "Inter", fontSize: 16 });
+      await providerRef.value!.preloadFont({ fontFamily: "Inter", fontSize: 16 });
     }
   });
 
@@ -75,7 +75,7 @@ describe("OpentypeMeasurementProvider", () => {
       return;
     }
 
-    const metrics = providerRef.value.getFontMetrics({ fontFamily: "Inter", fontSize: 16 });
+    const metrics = providerRef.value!.getFontMetrics({ fontFamily: "Inter", fontSize: 16 });
 
     console.log("Inter font metrics:", {
       unitsPerEm: metrics.unitsPerEm,
@@ -95,7 +95,7 @@ describe("OpentypeMeasurementProvider", () => {
       return;
     }
 
-    const ratio = providerRef.value.getAscenderRatio({ fontFamily: "Inter", fontSize: 16 });
+    const ratio = providerRef.value!.getAscenderRatio({ fontFamily: "Inter", fontSize: 16 });
 
     console.log(`Inter ascender ratio: ${ratio}`);
 
@@ -110,7 +110,7 @@ describe("OpentypeMeasurementProvider", () => {
       return;
     }
 
-    const measurement = providerRef.value.measureText("Hello", {
+    const measurement = providerRef.value!.measureText("Hello", {
       fontFamily: "Inter",
       fontSize: 16,
     });
@@ -129,7 +129,7 @@ describe("OpentypeMeasurementProvider", () => {
       return;
     }
 
-    const widths = providerRef.value.measureCharWidths("ABC", {
+    const widths = providerRef.value!.measureCharWidths!("ABC", {
       fontFamily: "Inter",
       fontSize: 16,
     });

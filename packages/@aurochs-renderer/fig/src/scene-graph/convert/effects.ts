@@ -7,6 +7,7 @@
 import type { FigEffect } from "@aurochs/fig/types";
 import { getEffectTypeName, isEffectVisible, extractShadowParams } from "../../effects";
 import type { Effect } from "../types";
+import { convertFigmaBlendMode } from "./blend-mode";
 
 /**
  * Convert Figma effects array to scene graph Effects.
@@ -23,6 +24,7 @@ export function convertEffectsToScene(effects: readonly FigEffect[] | undefined)
     if (!isEffectVisible(effect)) {continue;}
 
     const typeName = getEffectTypeName(effect);
+    const blendMode = convertFigmaBlendMode(effect.blendMode);
 
     switch (typeName) {
       case "DROP_SHADOW": {
@@ -32,6 +34,8 @@ export function convertEffectsToScene(effects: readonly FigEffect[] | undefined)
           offset: { x: p.offsetX, y: p.offsetY },
           radius: p.radius,
           color: p.color,
+          spread: effect.spread ?? undefined,
+          blendMode,
         });
         break;
       }
@@ -43,6 +47,8 @@ export function convertEffectsToScene(effects: readonly FigEffect[] | undefined)
           offset: { x: p.offsetX, y: p.offsetY },
           radius: p.radius,
           color: p.color,
+          spread: effect.spread ?? undefined,
+          blendMode,
         });
         break;
       }

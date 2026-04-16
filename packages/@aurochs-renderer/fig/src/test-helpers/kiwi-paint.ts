@@ -15,7 +15,7 @@
  * Both are valid inputs to the interpret functions.
  */
 
-import type { FigColor, FigPaint, FigGradientPaint, FigImagePaint, FigEffect } from "@aurochs/fig/types";
+import type { FigColor, FigPaintBase, FigPaint, FigGradientPaint, FigImagePaint, FigEffect } from "@aurochs/fig/types";
 
 // =============================================================================
 // KiwiEnumValue
@@ -25,6 +25,10 @@ type KiwiEnumValue = { readonly value: number; readonly name: string };
 
 // =============================================================================
 // Kiwi-format Paint Types
+//
+// These extend FigPaintBase so TypeScript knows they are structurally
+// valid paint objects. The `type` field is KiwiEnumValue which is
+// already part of FigPaintBase's `type` union.
 // =============================================================================
 
 /**
@@ -33,10 +37,8 @@ type KiwiEnumValue = { readonly value: number; readonly name: string };
  * Structurally compatible with what `getGradientDirection()`,
  * `getGradientStops()`, etc. actually consume at runtime.
  */
-export type KiwiGradientPaint = {
+export type KiwiGradientPaint = FigPaintBase & {
   readonly type: KiwiEnumValue;
-  readonly opacity?: number;
-  readonly visible?: boolean;
   readonly blendMode?: KiwiEnumValue;
   readonly stops: readonly { readonly color: FigColor; readonly position: number }[];
   readonly transform?: {
@@ -52,27 +54,25 @@ export type KiwiGradientPaint = {
 /**
  * Kiwi-format solid paint.
  */
-export type KiwiSolidPaint = {
+export type KiwiSolidPaint = FigPaintBase & {
   readonly type: KiwiEnumValue;
   readonly color: FigColor;
-  readonly opacity?: number;
-  readonly visible?: boolean;
   readonly blendMode?: KiwiEnumValue;
 };
 
 /**
  * Kiwi-format image paint.
  */
-export type KiwiImagePaint = {
+export type KiwiImagePaint = FigPaintBase & {
   readonly type: KiwiEnumValue;
-  readonly opacity?: number;
-  readonly visible?: boolean;
   readonly imageRef?: string;
   readonly imageScaleMode?: KiwiEnumValue;
 };
 
 /**
  * Kiwi-format effect.
+ * Extends the shape that FigEffect accepts (type as KiwiEnumValue is
+ * part of the FigEffect union's base type field).
  */
 export type KiwiEffect = {
   readonly type: KiwiEnumValue;
@@ -90,27 +90,28 @@ export type KiwiEffect = {
 // The interpret SoT functions use `getPaintType()` / `getEffectTypeName()`
 // which normalize KiwiEnumValue to string before matching.
 //
-// Implemented as type predicates so that the `as unknown` cast is legal
-// under the custom/no-as-outside-guard rule (TSTypePredicate return type).
-// Usage: `if (asGradientPaint(kiwi)) { fn(kiwi); }`
+// Since Kiwi types now extend FigPaintBase, KiwiGradientPaint IS-A
+// FigPaintBase, and the type predicates narrow to the specific Fig subtypes.
 // =============================================================================
 
 /** Assert that a Kiwi gradient paint is treated as FigGradientPaint by SoT functions */
-export function asGradientPaint(kiwi: KiwiGradientPaint): kiwi is FigGradientPaint {
-  return (kiwi as unknown as FigGradientPaint) !== null;
+export function asGradientPaint(kiwi: KiwiGradientPaint): kiwi is KiwiGradientPaint & FigGradientPaint {
+  return kiwi !== null;
 }
 
-/** Assert that a Kiwi paint is treated as FigPaint by SoT functions */
-export function asPaint(kiwi: KiwiSolidPaint | KiwiGradientPaint | KiwiImagePaint): kiwi is FigPaint {
-  return (kiwi as unknown as FigPaint) !== null;
+/** Cast a Kiwi paint to FigPaint for use in SoT functions */
+export function asPaint(kiwi: KiwiSolidPaint | KiwiGradientPaint | KiwiImagePaint): FigPaint {
+  // Kiwi paint types extend FigPaintBase, which is part of the FigPaint union.
+  // The interpret SoT functions normalize type via getPaintType() at runtime.
+  return kiwi as FigPaintBase as FigPaint;
 }
 
 /** Assert that a Kiwi image paint is treated as FigImagePaint by SoT functions */
-export function asImagePaint(kiwi: KiwiImagePaint): kiwi is FigImagePaint {
-  return (kiwi as unknown as FigImagePaint) !== null;
+export function asImagePaint(kiwi: KiwiImagePaint): kiwi is KiwiImagePaint & FigImagePaint {
+  return kiwi !== null;
 }
 
 /** Assert that a Kiwi effect is treated as FigEffect by SoT functions */
-export function asEffect(kiwi: KiwiEffect): kiwi is FigEffect {
-  return (kiwi as unknown as FigEffect) !== null;
+export function asEffect(kiwi: KiwiEffect): kiwi is KiwiEffect & FigEffect {
+  return kiwi !== null;
 }

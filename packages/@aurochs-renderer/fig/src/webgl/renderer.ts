@@ -77,6 +77,15 @@ import {
   FILL_STENCIL_MASK,
   type Bounds,
 } from "./stencil-fill";
+import type { CornerRadius } from "../scene-graph/types";
+
+/** Extract uniform radius from CornerRadius (per-corner → average for WebGL) */
+function uniformRadiusForGL(cr: CornerRadius | undefined): number | undefined {
+  if (cr === undefined) { return undefined; }
+  if (typeof cr === "number") { return cr; }
+  const avg = (cr[0] + cr[1] + cr[2] + cr[3]) / 4;
+  return avg || undefined;
+}
 
 // =============================================================================
 // Types
@@ -225,6 +234,34 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
             options: { imageWidth: entry.width, imageHeight: entry.height, scaleMode: fill.scaleMode },
           });
         }
+        break;
+      }
+
+      case "angular-gradient": {
+        // Angular (conic) gradient: WebGL fallback — render as radial gradient
+        // using the same stops. True conic rendering requires a dedicated shader.
+        const fallbackFill: Fill = {
+          type: "radial-gradient",
+          center: fill.center,
+          radius: 0.5,
+          stops: fill.stops,
+          opacity: fill.opacity,
+        };
+        drawRadialGradientFill({ ctx, vertices, fill: fallbackFill, transform, opacity, elementSize });
+        break;
+      }
+
+      case "diamond-gradient": {
+        // Diamond gradient: WebGL fallback — render as radial gradient.
+        // True diamond rendering requires a dedicated shader.
+        const fallbackFill: Fill = {
+          type: "radial-gradient",
+          center: fill.center,
+          radius: 0.5,
+          stops: fill.stops,
+          opacity: fill.opacity,
+        };
+        drawRadialGradientFill({ ctx, vertices, fill: fallbackFill, transform, opacity, elementSize });
         break;
       }
     }
@@ -493,7 +530,8 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
   function renderFrameFromTree(node: RenderFrameNode, transform: AffineMatrix, opacity: number): void {
     const src = node.source as FrameNode;
     const elementSize = { width: src.width, height: src.height };
-    const vertices = generateRectVertices(src.width, src.height, src.cornerRadius);
+    const uniformCR = uniformRadiusForGL(src.cornerRadius);
+    const vertices = generateRectVertices(src.width, src.height, uniformCR);
 
     renderDropShadows({ node: src, vertices, transform, opacity });
 
@@ -506,7 +544,7 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
     renderInnerShadows({ node: src, vertices, transform, opacity });
 
     if (src.stroke && src.stroke.width > 0) {
-      const strokeVerts = tessellateRectStroke({ w: src.width, h: src.height, cornerRadius: src.cornerRadius ?? 0, strokeWidth: src.stroke.width });
+      const strokeVerts = tessellateRectStroke({ w: src.width, h: src.height, cornerRadius: uniformCR ?? 0, strokeWidth: src.stroke.width });
       if (strokeVerts.length > 0) {
         drawSolidFill({ ctx: getGlContext(), vertices: strokeVerts, color: src.stroke.color, transform: transform, opacity: opacity * src.stroke.opacity });
       }
@@ -542,7 +580,8 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
   function renderRectFromTree(node: RenderRectNode, transform: AffineMatrix, opacity: number): void {
     const src = node.source as RectNode;
     const elementSize = { width: src.width, height: src.height };
-    const vertices = generateRectVertices(src.width, src.height, src.cornerRadius);
+    const uniformCR = uniformRadiusForGL(src.cornerRadius);
+    const vertices = generateRectVertices(src.width, src.height, uniformCR);
 
     renderDropShadows({ node: src, vertices, transform, opacity });
 
@@ -555,7 +594,7 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
     renderInnerShadows({ node: src, vertices, transform, opacity });
 
     if (src.stroke && src.stroke.width > 0) {
-      const strokeVerts = tessellateRectStroke({ w: src.width, h: src.height, cornerRadius: src.cornerRadius ?? 0, strokeWidth: src.stroke.width });
+      const strokeVerts = tessellateRectStroke({ w: src.width, h: src.height, cornerRadius: uniformCR ?? 0, strokeWidth: src.stroke.width });
       if (strokeVerts.length > 0) {
         drawSolidFill({ ctx: getGlContext(), vertices: strokeVerts, color: src.stroke.color, transform: transform, opacity: opacity * src.stroke.opacity });
       }

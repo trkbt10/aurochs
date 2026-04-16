@@ -23,14 +23,14 @@ type Props = {
  * SVG clamps rx/ry independently; Figma uses min(width, height) / 2.
  */
 function clampRadius(
-  radius: number | undefined,
+  radius: number | readonly [number, number, number, number] | undefined,
   width: number,
   height: number,
 ): number | undefined {
-  if (!radius || radius <= 0) {
-    return undefined;
-  }
-  return Math.min(radius, Math.min(width, height) / 2);
+  if (radius === undefined) { return undefined; }
+  const r = typeof radius === "number" ? radius : (radius[0] + radius[1] + radius[2] + radius[3]) / 4;
+  if (r <= 0) { return undefined; }
+  return Math.min(r, Math.min(width, height) / 2);
 }
 
 function renderBackground(

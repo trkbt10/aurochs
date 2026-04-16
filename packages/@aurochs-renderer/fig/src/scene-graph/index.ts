@@ -15,8 +15,11 @@ export type {
   SolidFill,
   LinearGradientFill,
   RadialGradientFill,
+  AngularGradientFill,
+  DiamondGradientFill,
   ImageFill,
   Stroke,
+  StrokeLayer,
   Effect,
   DropShadowEffect,
   InnerShadowEffect,
@@ -24,6 +27,8 @@ export type {
   BackgroundBlurEffect,
   PathCommand,
   PathContour,
+  CornerRadius,
+  ArcData,
   ClipShape,
   RectClip,
   PathClip,
@@ -40,6 +45,7 @@ export type {
   ImageNode,
   SceneNode,
   SceneGraph,
+  BlendMode,
 } from "./types";
 
 export { createNodeId } from "./types";

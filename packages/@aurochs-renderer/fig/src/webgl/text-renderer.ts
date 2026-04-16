@@ -104,15 +104,15 @@ function wrapLine(
  * Creates a texture from canvas-rendered text for nodes without glyph outlines.
  * The texture can then be drawn as a textured quad in WebGL.
  *
- * @param node - Scene graph text node with fallbackText
+ * @param node - Scene graph text node with textLineLayout
  * @returns Canvas element with rendered text, or null
  */
 export function renderFallbackTextToCanvas(
   node: TextNode
 ): HTMLCanvasElement | null {
-  if (!node.fallbackText) {return null;}
+  if (!node.textLineLayout) {return null;}
 
-  const fb = node.fallbackText;
+  const fb = node.textLineLayout;
   if (fb.lines.length === 0) {return null;}
 
   const canvas = document.createElement("canvas");

@@ -45,13 +45,23 @@ export {
   type ResolvedGradientStop,
   type ResolvedLinearGradient,
   type ResolvedRadialGradient,
+  type ResolvedAngularGradient,
+  type ResolvedDiamondGradient,
   type ResolvedImagePattern,
   type IdGenerator,
 } from "./fill";
 
 export {
+  finalizeGradientDefs,
+  type ElementSize,
+} from "./gradient-finalize";
+
+export {
   resolveStroke,
+  resolveStrokeResult,
   type ResolvedStrokeAttrs,
+  type ResolvedStrokeLayer,
+  type ResolvedStrokeResult,
 } from "./stroke";
 
 export {

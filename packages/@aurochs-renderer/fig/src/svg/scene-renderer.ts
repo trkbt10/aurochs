@@ -37,7 +37,7 @@ import {
   type ClipPathShape,
 } from "../scene-graph/render-tree";
 
-import type { ResolvedStrokeAttrs } from "../scene-graph/render";
+import type { ResolvedStrokeAttrs, ResolvedAngularGradient, ResolvedDiamondGradient } from "../scene-graph/render";
 
 import type { ResolvedFilterPrimitive } from "../scene-graph/render";
 
@@ -50,6 +50,7 @@ import {
   ellipse,
   text,
   clipPath,
+  mask,
   linearGradient,
   radialGradient,
   stop,
@@ -62,6 +63,9 @@ import {
   feOffset,
   feBlend,
   feComposite,
+  feMorphology,
+  foreignObject,
+  unsafeSvg,
   type SvgString,
   EMPTY_SVG,
 } from "./primitives";
@@ -71,6 +75,9 @@ import {
 // =============================================================================
 
 function formatClipPathShape(shape: ClipPathShape): SvgString {
+  if (shape.kind === "path") {
+    return path({ d: shape.d });
+  }
   return rect({
     x: shape.x,
     y: shape.y,
@@ -110,7 +117,101 @@ function formatFilterPrimitive(p: ResolvedFilterPrimitive): SvgString {
         k2: p.k2,
         k3: p.k3,
       });
+    case "feMorphology":
+      return feMorphology({
+        operator: p.operator,
+        radius: p.radius,
+      });
   }
+}
+
+/**
+ * Build a CSS conic-gradient() string from an angular gradient def.
+ *
+ * Figma's angular gradient starts from the rotation angle and distributes
+ * stops around the full circle. CSS conic-gradient uses "from Xdeg at cx cy".
+ */
+function buildConicGradientCSS(d: ResolvedAngularGradient): string {
+  const fromDeg = (d.rotation * 180) / Math.PI;
+  const stopParts = d.stops.map((s) => {
+    const opacity = s.stopOpacity !== undefined ? s.stopOpacity : 1;
+    // Parse hex color for rgba
+    const hex = s.stopColor;
+    if (opacity < 1) {
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      return `rgba(${r},${g},${b},${opacity}) ${s.offset}`;
+    }
+    return `${hex} ${s.offset}`;
+  });
+  return `conic-gradient(from ${fromDeg}deg at ${d.cx} ${d.cy}, ${stopParts.join(", ")})`;
+}
+
+/**
+ * Build a CSS background for a diamond gradient approximation.
+ *
+ * Diamond gradient radiates from center in a diamond (rhombus) shape.
+ * This is approximated with four linear gradients masked by clip-paths,
+ * but for SVG pattern usage we use a single CSS representation.
+ * The approximation uses four linear gradients composited together.
+ */
+function buildDiamondGradientCSS(d: ResolvedDiamondGradient): string {
+  // Diamond gradient: stops radiate from center outward in diamond shape.
+  // Approximation: use four linear-gradients from center to each edge,
+  // combined with CSS gradient layering.
+  const stopParts = d.stops.map((s) => {
+    const opacity = s.stopOpacity !== undefined ? s.stopOpacity : 1;
+    const hex = s.stopColor;
+    if (opacity < 1) {
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      return `rgba(${r},${g},${b},${opacity})`;
+    }
+    return hex;
+  });
+
+  // Use first and last stop colors as center and edge
+  const center = stopParts[0] ?? "transparent";
+  const edge = stopParts[stopParts.length - 1] ?? "transparent";
+
+  // Four triangular regions from center, each with a linear gradient
+  // This creates a diamond-like fallback. True diamond needs a shader.
+  return `radial-gradient(ellipse 50% 50% at ${d.cx} ${d.cy}, ${center}, ${edge})`;
+}
+
+/**
+ * Format an angular gradient def as a foreignObject pattern.
+ *
+ * SVG has no native conic/angular gradient. We use a <pattern> containing
+ * a <foreignObject> with a CSS conic-gradient div inside.
+ */
+function formatAngularGradientDef(d: ResolvedAngularGradient): SvgString {
+  const css = buildConicGradientCSS(d);
+  const inner = foreignObject(
+    { x: 0, y: 0, width: 1, height: 1 },
+    unsafeSvg(`<div xmlns="http://www.w3.org/1999/xhtml" style="width:100%;height:100%;background:${css}"></div>`),
+  );
+  return pattern(
+    { id: d.id, patternContentUnits: "objectBoundingBox", width: 1, height: 1 },
+    inner,
+  );
+}
+
+/**
+ * Format a diamond gradient def as a foreignObject pattern.
+ */
+function formatDiamondGradientDef(d: ResolvedDiamondGradient): SvgString {
+  const css = buildDiamondGradientCSS(d);
+  const inner = foreignObject(
+    { x: 0, y: 0, width: 1, height: 1 },
+    unsafeSvg(`<div xmlns="http://www.w3.org/1999/xhtml" style="width:100%;height:100%;background:${css}"></div>`),
+  );
+  return pattern(
+    { id: d.id, patternContentUnits: "objectBoundingBox", width: 1, height: 1 },
+    inner,
+  );
 }
 
 function formatDef(def: RenderDef): SvgString {
@@ -124,7 +225,7 @@ function formatDef(def: RenderDef): SvgString {
           "stop-opacity": s.stopOpacity,
         }),
       );
-      return linearGradient({ id: d.id, x1: d.x1, y1: d.y1, x2: d.x2, y2: d.y2 }, ...stops);
+      return linearGradient({ id: d.id, x1: d.x1, y1: d.y1, x2: d.x2, y2: d.y2, gradientUnits: d.gradientUnits }, ...stops);
     }
     case "radial-gradient": {
       const d = def.def;
@@ -135,18 +236,32 @@ function formatDef(def: RenderDef): SvgString {
           "stop-opacity": s.stopOpacity,
         }),
       );
-      return radialGradient({ id: d.id, cx: d.cx, cy: d.cy, r: d.r }, ...stops);
+      return radialGradient({
+        id: d.id, cx: d.cx, cy: d.cy, r: d.r,
+        gradientUnits: d.gradientUnits,
+        gradientTransform: typeof d.gradientTransform === "string" ? d.gradientTransform : undefined,
+      }, ...stops);
+    }
+    case "angular-gradient": {
+      return formatAngularGradientDef(def.def);
+    }
+    case "diamond-gradient": {
+      return formatDiamondGradientDef(def.def);
     }
     case "pattern": {
       const d = def.def;
+      const patternAttrs: Record<string, string | number | undefined> = {
+        id: d.id,
+        patternContentUnits: d.patternContentUnits === "objectBoundingBox" ? "objectBoundingBox" : undefined,
+        patternUnits: d.patternContentUnits === "userSpaceOnUse" ? "userSpaceOnUse" : undefined,
+        width: d.width,
+        height: d.height,
+      };
+      if (d.patternTransform) {
+        patternAttrs.patternTransform = d.patternTransform;
+      }
       return pattern(
-        {
-          id: d.id,
-          patternContentUnits: d.patternContentUnits === "objectBoundingBox" ? "objectBoundingBox" : undefined,
-          patternUnits: d.patternContentUnits === "userSpaceOnUse" ? "userSpaceOnUse" : undefined,
-          width: d.width,
-          height: d.height,
-        },
+        patternAttrs as Parameters<typeof pattern>[0],
         image({
           href: d.dataUri,
           x: 0,
@@ -164,6 +279,13 @@ function formatDef(def: RenderDef): SvgString {
     }
     case "clip-path": {
       return clipPath({ id: def.id }, formatClipPathShape(def.shape));
+    }
+    case "mask": {
+      const maskContent = formatNode(def.maskContent);
+      return mask(
+        { id: def.id, style: "mask-type:luminance" },
+        g({ fill: "white" }, maskContent),
+      );
     }
   }
 }
@@ -196,12 +318,249 @@ function strokeToSvgAttrs(attrs: ResolvedStrokeAttrs): Record<string, string | n
   };
 }
 
-function wrapperAttrs(w: ResolvedWrapperAttrs): { transform?: string; opacity?: number; filter?: string } {
+/**
+ * Convert wrapper attrs + mask to SVG attribute record.
+ *
+ * Every field of ResolvedWrapperAttrs must be consumed here.
+ * The shared WRAPPER_ATTRS_FIELDS registry (in render-tree/types.ts)
+ * enforces that ResolvedWrapperAttrs and this function stay in sync
+ * — if a field is added to the type but not the registry, the
+ * `satisfies` on the registry definition fails.
+ */
+function wrapperAttrs(node: { wrapper: ResolvedWrapperAttrs; mask?: { maskAttr: string } }): Record<string, string | number | undefined> {
+  const w = node.wrapper;
   return {
     transform: w.transform,
     opacity: w.opacity,
     filter: w.filterAttr,
+    mask: node.mask?.maskAttr,
+    style: w.blendMode ? `mix-blend-mode:${w.blendMode}` : undefined,
   };
+}
+
+// =============================================================================
+// Corner Radius Helpers
+// =============================================================================
+
+import type { CornerRadius, BlendMode } from "../scene-graph/types";
+import type { ResolvedFillLayer } from "../scene-graph/render-tree";
+import type { ResolvedStrokeLayer } from "../scene-graph/render";
+
+/**
+ * Build a rounded rect SVG path d string for per-corner radii.
+ */
+function buildRoundedRectPathD(w: number, h: number, radii: readonly [number, number, number, number]): string {
+  const [tl, tr, br, bl] = radii;
+  const parts = [
+    `M ${tl} 0`,
+    `L ${w - tr} 0`,
+    tr > 0 ? `A ${tr} ${tr} 0 0 1 ${w} ${tr}` : "",
+    `L ${w} ${h - br}`,
+    br > 0 ? `A ${br} ${br} 0 0 1 ${w - br} ${h}` : "",
+    `L ${bl} ${h}`,
+    bl > 0 ? `A ${bl} ${bl} 0 0 1 0 ${h - bl}` : "",
+    `L 0 ${tl}`,
+    tl > 0 ? `A ${tl} ${tl} 0 0 1 ${tl} 0` : "",
+    "Z",
+  ];
+  return parts.filter(Boolean).join(" ");
+}
+
+/**
+ * Render a rectangle shape, using <rect> for uniform radius or <path> for per-corner.
+ */
+function formatRectShape(
+  w: number, h: number, cr: CornerRadius | undefined,
+  fillAttrs: Record<string, string | number | undefined>,
+  strokeAttrs: Record<string, string | number | undefined>,
+): SvgString {
+  if (cr !== undefined && typeof cr !== "number") {
+    return path({
+      d: buildRoundedRectPathD(w, h, cr),
+      ...fillAttrs,
+      ...strokeAttrs,
+    } as Parameters<typeof path>[0]);
+  }
+  return rect({
+    x: 0, y: 0,
+    width: w, height: h,
+    rx: cr, ry: cr,
+    ...fillAttrs,
+    ...strokeAttrs,
+  } as Parameters<typeof rect>[0]);
+}
+
+// =============================================================================
+// Multi-fill Layer Helpers
+// =============================================================================
+
+function blendModeStyle(bm: BlendMode | undefined): string | undefined {
+  return bm ? `mix-blend-mode:${bm}` : undefined;
+}
+
+/**
+ * Render stacked rect shapes for multi-paint fills.
+ * Each fill layer becomes its own rect/path element, bottom-to-top.
+ */
+function formatMultiFillRectLayers(
+  layers: readonly ResolvedFillLayer[],
+  w: number, h: number, cr: CornerRadius | undefined,
+  strokeAttrs: Record<string, string | number | undefined>,
+): SvgString[] {
+  return layers.map((layer, i) => {
+    const fillAttrs = {
+      fill: layer.attrs.fill,
+      "fill-opacity": layer.attrs.fillOpacity,
+    };
+    // Only last layer gets stroke
+    const sAttrs = i === layers.length - 1 ? strokeAttrs : {};
+    const style = blendModeStyle(layer.blendMode);
+    if (cr !== undefined && typeof cr !== "number") {
+      return path({
+        d: buildRoundedRectPathD(w, h, cr),
+        ...fillAttrs,
+        ...sAttrs,
+        style,
+      } as Parameters<typeof path>[0]);
+    }
+    return rect({
+      x: 0, y: 0,
+      width: w, height: h,
+      rx: cr, ry: cr,
+      ...fillAttrs,
+      ...sAttrs,
+      style,
+    } as Parameters<typeof rect>[0]);
+  });
+}
+
+/**
+ * Render stacked ellipse shapes for multi-paint fills.
+ */
+function formatMultiFillEllipseLayers(
+  layers: readonly ResolvedFillLayer[],
+  cx: number, cy: number, rx: number, ry: number,
+  strokeAttrs: Record<string, string | number | undefined>,
+): SvgString[] {
+  return layers.map((layer, i) => {
+    const fillAttrs = {
+      fill: layer.attrs.fill,
+      "fill-opacity": layer.attrs.fillOpacity,
+    };
+    const sAttrs = i === layers.length - 1 ? strokeAttrs : {};
+    const style = blendModeStyle(layer.blendMode);
+    return ellipse({
+      cx, cy, rx, ry,
+      ...fillAttrs,
+      ...sAttrs,
+      style,
+    } as Parameters<typeof ellipse>[0]);
+  });
+}
+
+/**
+ * Render stacked path shapes for multi-paint fills.
+ */
+function formatMultiFillPathLayers(
+  layers: readonly ResolvedFillLayer[],
+  paths: readonly { d: string; fillRule?: "evenodd" }[],
+  strokeAttrs: Record<string, string | number | undefined>,
+): SvgString[] {
+  const result: SvgString[] = [];
+  for (let li = 0; li < layers.length; li++) {
+    const layer = layers[li];
+    const fillAttrs = {
+      fill: layer.attrs.fill,
+      "fill-opacity": layer.attrs.fillOpacity,
+    };
+    const sAttrs = li === layers.length - 1 ? strokeAttrs : {};
+    const style = blendModeStyle(layer.blendMode);
+    for (const p of paths) {
+      result.push(path({
+        d: p.d,
+        "fill-rule": p.fillRule,
+        ...fillAttrs,
+        ...sAttrs,
+        style,
+      } as Parameters<typeof path>[0]));
+    }
+  }
+  return result;
+}
+
+// =============================================================================
+// Multi-stroke Layer Helpers
+// =============================================================================
+
+/**
+ * Render stacked rect strokes for multi-paint stroke layers.
+ * Each stroke layer draws the same shape outline with its own color/gradient and blend mode.
+ */
+function formatMultiStrokeRectLayers(
+  layers: readonly ResolvedStrokeLayer[],
+  w: number, h: number, cr: CornerRadius | undefined,
+): SvgString[] {
+  return layers.map((layer) => {
+    const sAttrs = strokeToSvgAttrs(layer.attrs);
+    const style = blendModeStyle(layer.blendMode);
+    if (cr !== undefined && typeof cr !== "number") {
+      return path({
+        d: buildRoundedRectPathD(w, h, cr),
+        fill: "none",
+        ...sAttrs,
+        style,
+      } as Parameters<typeof path>[0]);
+    }
+    return rect({
+      x: 0, y: 0, width: w, height: h, rx: cr, ry: cr,
+      fill: "none",
+      ...sAttrs,
+      style,
+    } as Parameters<typeof rect>[0]);
+  });
+}
+
+/**
+ * Render stacked ellipse strokes for multi-paint stroke layers.
+ */
+function formatMultiStrokeEllipseLayers(
+  layers: readonly ResolvedStrokeLayer[],
+  cx: number, cy: number, rx: number, ry: number,
+): SvgString[] {
+  return layers.map((layer) => {
+    const sAttrs = strokeToSvgAttrs(layer.attrs);
+    const style = blendModeStyle(layer.blendMode);
+    return ellipse({
+      cx, cy, rx, ry,
+      fill: "none",
+      ...sAttrs,
+      style,
+    } as Parameters<typeof ellipse>[0]);
+  });
+}
+
+/**
+ * Render stacked path strokes for multi-paint stroke layers.
+ */
+function formatMultiStrokePathLayers(
+  layers: readonly ResolvedStrokeLayer[],
+  paths: readonly { d: string; fillRule?: "evenodd" }[],
+): SvgString[] {
+  const result: SvgString[] = [];
+  for (const layer of layers) {
+    const sAttrs = strokeToSvgAttrs(layer.attrs);
+    const style = blendModeStyle(layer.blendMode);
+    for (const p of paths) {
+      result.push(path({
+        d: p.d,
+        "fill-rule": p.fillRule,
+        fill: "none",
+        ...sAttrs,
+        style,
+      } as Parameters<typeof path>[0]));
+    }
+  }
+  return result;
 }
 
 // =============================================================================
@@ -221,7 +580,7 @@ function formatGroupNode(node: RenderGroupNode): SvgString {
   if (defsStr !== EMPTY_SVG) { parts.push(defsStr); }
   parts.push(...children);
 
-  return g(wrapperAttrs(node.wrapper), ...parts);
+  return g(wrapperAttrs(node), ...parts);
 }
 
 function formatFrameNode(node: RenderFrameNode): SvgString {
@@ -229,19 +588,25 @@ function formatFrameNode(node: RenderFrameNode): SvgString {
   const defsStr = formatDefs(node.defs);
   if (defsStr !== EMPTY_SVG) { parts.push(defsStr); }
 
-  // Background fill
+  // Background fill (multi-paint layers or single fill)
   if (node.background) {
-    const fillAttrs = fillToSvgAttrs(node.background.fill);
-    const strokeAttrs = node.background.stroke ? strokeToSvgAttrs(node.background.stroke) : {};
-    parts.push(
-      rect({
-        x: 0, y: 0,
-        width: node.width, height: node.height,
-        rx: node.cornerRadius, ry: node.cornerRadius,
-        ...fillAttrs,
-        ...strokeAttrs,
-      } as Parameters<typeof rect>[0]),
-    );
+    const singleStrokeAttrs = node.background.strokeLayers
+      ? {} // stroke rendered as separate layers below
+      : (node.background.stroke ? strokeToSvgAttrs(node.background.stroke) : {});
+    if (node.background.fillLayers) {
+      parts.push(...formatMultiFillRectLayers(
+        node.background.fillLayers, node.width, node.height, node.cornerRadius, singleStrokeAttrs,
+      ));
+    } else {
+      const fillAttrs = fillToSvgAttrs(node.background.fill);
+      parts.push(formatRectShape(node.width, node.height, node.cornerRadius, fillAttrs, singleStrokeAttrs));
+    }
+    // Multi-paint stroke layers (rendered after fill)
+    if (node.background.strokeLayers) {
+      parts.push(...formatMultiStrokeRectLayers(
+        node.background.strokeLayers, node.width, node.height, node.cornerRadius,
+      ));
+    }
   }
 
   // Children (with optional clipping)
@@ -252,74 +617,129 @@ function formatFrameNode(node: RenderFrameNode): SvgString {
     parts.push(...childElements);
   }
 
-  return g(wrapperAttrs(node.wrapper), ...parts);
+  return g(wrapperAttrs(node), ...parts);
 }
 
 function formatRectNode(node: RenderRectNode): SvgString {
+  const singleStrokeAttrs = node.strokeLayers
+    ? {} // stroke rendered as separate layers below
+    : (node.stroke ? strokeToSvgAttrs(node.stroke) : {});
+
+  if (node.fillLayers) {
+    const defsStr = formatDefs(node.defs);
+    const parts: SvgString[] = [];
+    if (defsStr !== EMPTY_SVG) { parts.push(defsStr); }
+    parts.push(...formatMultiFillRectLayers(
+      node.fillLayers, node.width, node.height, node.cornerRadius, singleStrokeAttrs,
+    ));
+    if (node.strokeLayers) {
+      parts.push(...formatMultiStrokeRectLayers(
+        node.strokeLayers, node.width, node.height, node.cornerRadius,
+      ));
+    }
+    return g(wrapperAttrs(node), ...parts);
+  }
+
   const fillAttrs = fillToSvgAttrs(node.fill);
-  const strokeAttrs = node.stroke ? strokeToSvgAttrs(node.stroke) : {};
+  const rectEl = formatRectShape(node.width, node.height, node.cornerRadius, fillAttrs, singleStrokeAttrs);
 
-  const rectEl = rect({
-    x: 0, y: 0,
-    width: node.width, height: node.height,
-    rx: node.cornerRadius, ry: node.cornerRadius,
-    ...fillAttrs,
-    ...strokeAttrs,
-  } as Parameters<typeof rect>[0]);
-
-  if (node.needsWrapper) {
+  if (node.needsWrapper || node.strokeLayers) {
     const defsStr = formatDefs(node.defs);
     const parts: SvgString[] = [];
     if (defsStr !== EMPTY_SVG) { parts.push(defsStr); }
     parts.push(rectEl);
-    return g(wrapperAttrs(node.wrapper), ...parts);
+    if (node.strokeLayers) {
+      parts.push(...formatMultiStrokeRectLayers(
+        node.strokeLayers, node.width, node.height, node.cornerRadius,
+      ));
+    }
+    return g(wrapperAttrs(node), ...parts);
   }
   return rectEl;
 }
 
 function formatEllipseNode(node: RenderEllipseNode): SvgString {
-  const fillAttrs = fillToSvgAttrs(node.fill);
-  const strokeAttrs = node.stroke ? strokeToSvgAttrs(node.stroke) : {};
+  const singleStrokeAttrs = node.strokeLayers
+    ? {}
+    : (node.stroke ? strokeToSvgAttrs(node.stroke) : {});
 
+  if (node.fillLayers) {
+    const defsStr = formatDefs(node.defs);
+    const parts: SvgString[] = [];
+    if (defsStr !== EMPTY_SVG) { parts.push(defsStr); }
+    parts.push(...formatMultiFillEllipseLayers(
+      node.fillLayers, node.cx, node.cy, node.rx, node.ry, singleStrokeAttrs,
+    ));
+    if (node.strokeLayers) {
+      parts.push(...formatMultiStrokeEllipseLayers(
+        node.strokeLayers, node.cx, node.cy, node.rx, node.ry,
+      ));
+    }
+    return g(wrapperAttrs(node), ...parts);
+  }
+
+  const fillAttrs = fillToSvgAttrs(node.fill);
   const ellipseEl = ellipse({
     cx: node.cx, cy: node.cy, rx: node.rx, ry: node.ry,
     ...fillAttrs,
-    ...strokeAttrs,
+    ...singleStrokeAttrs,
   } as Parameters<typeof ellipse>[0]);
 
-  if (node.needsWrapper) {
+  if (node.needsWrapper || node.strokeLayers) {
     const defsStr = formatDefs(node.defs);
     const parts: SvgString[] = [];
     if (defsStr !== EMPTY_SVG) { parts.push(defsStr); }
     parts.push(ellipseEl);
-    return g(wrapperAttrs(node.wrapper), ...parts);
+    if (node.strokeLayers) {
+      parts.push(...formatMultiStrokeEllipseLayers(
+        node.strokeLayers, node.cx, node.cy, node.rx, node.ry,
+      ));
+    }
+    return g(wrapperAttrs(node), ...parts);
   }
   return ellipseEl;
 }
 
 function formatPathNode(node: RenderPathNode): SvgString {
-  const fillAttrs = fillToSvgAttrs(node.fill);
-  const strokeAttrs = node.stroke ? strokeToSvgAttrs(node.stroke) : {};
+  const singleStrokeAttrs = node.strokeLayers
+    ? {}
+    : (node.stroke ? strokeToSvgAttrs(node.stroke) : {});
 
-  const pathElements: SvgString[] = node.paths.map((p) =>
-    path({
-      d: p.d,
-      "fill-rule": p.fillRule,
-      ...fillAttrs,
-      ...strokeAttrs,
-    } as Parameters<typeof path>[0]),
-  );
-
-  if (pathElements.length === 0) {
+  if (node.paths.length === 0) {
     return EMPTY_SVG;
   }
 
-  if (node.needsWrapper) {
+  if (node.fillLayers) {
+    const defsStr = formatDefs(node.defs);
+    const parts: SvgString[] = [];
+    if (defsStr !== EMPTY_SVG) { parts.push(defsStr); }
+    parts.push(...formatMultiFillPathLayers(node.fillLayers, node.paths, singleStrokeAttrs));
+    if (node.strokeLayers) {
+      parts.push(...formatMultiStrokePathLayers(node.strokeLayers, node.paths));
+    }
+    return g(wrapperAttrs(node), ...parts);
+  }
+
+  const defaultFillAttrs = fillToSvgAttrs(node.fill);
+  const pathElements: SvgString[] = node.paths.map((p) => {
+    const fa = p.fillOverride ? fillToSvgAttrs(p.fillOverride) : defaultFillAttrs;
+    return path({
+      d: p.d,
+      "fill-rule": p.fillRule,
+      ...fa,
+      ...singleStrokeAttrs,
+    } as Parameters<typeof path>[0]);
+  });
+
+  if (node.needsWrapper || node.strokeLayers) {
     const defsStr = formatDefs(node.defs);
     const parts: SvgString[] = [];
     if (defsStr !== EMPTY_SVG) { parts.push(defsStr); }
     parts.push(...pathElements);
-    return g(wrapperAttrs(node.wrapper), ...parts);
+    if (node.strokeLayers) {
+      parts.push(...formatMultiStrokePathLayers(node.strokeLayers, node.paths));
+    }
+    return g(wrapperAttrs(node), ...parts);
   }
   return pathElements[0];
 }
@@ -344,7 +764,7 @@ function formatTextNode(node: RenderTextNode): SvgString {
     if (defsStr !== EMPTY_SVG) { parts.push(defsStr); }
     parts.push(content);
 
-    return g(wrapperAttrs(node.wrapper), ...parts);
+    return g(wrapperAttrs(node), ...parts);
   }
 
   // Text line layout: <text> elements
@@ -381,7 +801,7 @@ function formatTextNode(node: RenderTextNode): SvgString {
   if (defsStr !== EMPTY_SVG) { parts.push(defsStr); }
   parts.push(clippedContent);
 
-  return g(wrapperAttrs(node.wrapper), ...parts);
+  return g(wrapperAttrs(node), ...parts);
 }
 
 function formatImageNode(node: RenderImageNode): SvgString {
@@ -399,7 +819,7 @@ function formatImageNode(node: RenderImageNode): SvgString {
   });
 
   if (node.needsWrapper) {
-    return g(wrapperAttrs(node.wrapper), imageEl);
+    return g(wrapperAttrs(node), imageEl);
   }
   return imageEl;
 }

@@ -40,6 +40,7 @@ function makeTextNode(overrides: Partial<TextNode> = {}): TextNode {
     effects: [],
     width: 100,
     height: 20,
+    textAutoResize: "WIDTH_AND_HEIGHT",
     fill: { color: { r: 0, g: 0, b: 0, a: 1 }, opacity: 1 },
     ...overrides,
   };
@@ -185,13 +186,13 @@ function simulateYFlippedRect(
 describe("Text tessellation pipeline", () => {
   describe("winding convention verification", () => {
     it("outerRect has negative signedArea (OUTER)", () => {
-      const coords = flattenPathCommands(outerRect(0, 0, 10, 10).commands);
+      const coords = flattenPathCommands(outerRect({ x: 0, y: 0, w: 10, h: 10 }).commands);
       const area = signedArea(coords);
       expect(area).toBeLessThan(0);
     });
 
     it("holeRect has positive signedArea (HOLE)", () => {
-      const coords = flattenPathCommands(holeRect(0, 0, 10, 10).commands);
+      const coords = flattenPathCommands(holeRect({ x: 0, y: 0, w: 10, h: 10 }).commands);
       const area = signedArea(coords);
       expect(area).toBeGreaterThan(0);
     });
@@ -334,15 +335,15 @@ describe("Text tessellation pipeline", () => {
       const contours: PathContour[] = [];
 
       // 'H' - three rects
-      contours.push(simulateYFlippedRect(10, baselineY, 0, 0, 0.15, 0.7, fontSize, true));
-      contours.push(simulateYFlippedRect(10, baselineY, 0.35, 0, 0.15, 0.7, fontSize, true));
-      contours.push(simulateYFlippedRect(10, baselineY, 0.15, 0.3, 0.2, 0.1, fontSize, true));
+      contours.push(simulateYFlippedRect({ posX: 10, baselineY, normX: 0, normY: 0, normW: 0.15, normH: 0.7, fontSize, cwInFontSpace: true }));
+      contours.push(simulateYFlippedRect({ posX: 10, baselineY, normX: 0.35, normY: 0, normW: 0.15, normH: 0.7, fontSize, cwInFontSpace: true }));
+      contours.push(simulateYFlippedRect({ posX: 10, baselineY, normX: 0.15, normY: 0.3, normW: 0.2, normH: 0.1, fontSize, cwInFontSpace: true }));
 
       // 'e' - outer
-      contours.push(simulateYFlippedRect(20, baselineY, 0, 0, 0.4, 0.5, fontSize, true));
+      contours.push(simulateYFlippedRect({ posX: 20, baselineY, normX: 0, normY: 0, normW: 0.4, normH: 0.5, fontSize, cwInFontSpace: true }));
 
       // 'l' - single rect
-      contours.push(simulateYFlippedRect(28, baselineY, 0, 0, 0.15, 0.7, fontSize, true));
+      contours.push(simulateYFlippedRect({ posX: 28, baselineY, normX: 0, normY: 0, normW: 0.15, normH: 0.7, fontSize, cwInFontSpace: true }));
 
       const vertices = tessellateContours(contours);
       expect(vertices.length).toBe(60); // 5 rects × 12
@@ -605,7 +606,7 @@ describe("Text tessellation pipeline", () => {
     it("tessellates 100 glyph contours efficiently", () => {
       const contours: PathContour[] = [];
       for (let i = 0; i < 100; i++) {
-        contours.push(outerRect(i * 8, 0, 6, 14));
+        contours.push(outerRect({ x: i * 8, y: 0, w: 6, h: 14 }));
       }
 
       const start = performance.now();

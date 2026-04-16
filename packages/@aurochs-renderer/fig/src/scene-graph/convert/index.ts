@@ -9,3 +9,4 @@ export { convertStrokeToSceneStroke } from "./stroke";
 export { convertEffectsToScene } from "./effects";
 export { parseSvgPathD, decodeGeometryToContours, convertVectorPathsToContours } from "./path";
 export { convertTextNode, type TextConversionResult } from "./text";
+export { convertFigmaBlendMode } from "./blend-mode";

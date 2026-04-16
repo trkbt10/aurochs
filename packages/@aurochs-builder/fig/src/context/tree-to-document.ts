@@ -45,6 +45,24 @@ function resolveSymbolIdForDomain(node: FigNode): FigNodeId | undefined {
   return guidToNodeId(guid);
 }
 
+/** Node types that clip content by default in Figma. */
+const CLIPPING_NODE_TYPES: ReadonlySet<string> = new Set(["FRAME", "COMPONENT", "COMPONENT_SET"]);
+
+/**
+ * Resolve clipsContent for domain model.
+ *
+ * Normalizes the Kiwi-level `frameMaskDisabled` (inverted semantics)
+ * into a simple boolean, with correct defaults per node type.
+ * After this, the domain model's `clipsContent` is authoritative and
+ * no consumer needs to read `frameMaskDisabled` from `_raw`.
+ */
+function resolveClipsContentForDomain(node: FigNode, nodeType: string): boolean | undefined {
+  if (node.clipsContent !== undefined) { return node.clipsContent; }
+  if (node.frameMaskDisabled !== undefined) { return !node.frameMaskDisabled; }
+  if (CLIPPING_NODE_TYPES.has(nodeType)) { return true; }
+  return undefined;
+}
+
 /** Identity matrix (no transform) */
 const IDENTITY_MATRIX: FigMatrix = { m00: 1, m01: 0, m02: 0, m10: 0, m11: 1, m12: 0 };
 
@@ -65,12 +83,12 @@ const MODELED_FIELDS: ReadonlySet<string> = new Set([
   "guid", "parentIndex", "children", "type", "phase",
   "name", "visible", "opacity",
   "transform", "size",
-  "fillPaints", "strokePaints", "strokeWeight", "strokeAlign", "strokeJoin", "strokeCap",
+  "fillPaints", "strokePaints", "strokeWeight", "strokeAlign", "strokeJoin", "strokeCap", "strokeDashes",
   "cornerRadius", "rectangleCornerRadii", "cornerSmoothing",
   "blendMode",
   "effects",
   "derivedTextData",
-  "clipsContent",
+  "clipsContent", "frameMaskDisabled",
   "stackMode", "stackSpacing", "stackPadding",
   "stackPrimaryAlignItems", "stackCounterAlignItems", "stackPrimaryAlignContent",
   "stackWrap", "stackCounterSpacing", "itemReverseZIndex",
@@ -79,11 +97,14 @@ const MODELED_FIELDS: ReadonlySet<string> = new Set([
   "characters", "fontSize", "fontName",
   "textAlignHorizontal", "textAlignVertical", "textAutoResize",
   "textDecoration", "textCase", "lineHeight", "letterSpacing",
-  "symbolID", "symbolOverrides",
+  "symbolID", "symbolOverrides", "derivedSymbolData",
   "componentPropDefs", "componentPropRefs", "componentPropAssignments",
+  "mask",
+  "arcData",
+  "vectorPaths", "vectorData",
   "booleanOperation",
   "pointCount", "starInnerRadius",
-  "fillGeometry", "strokeGeometry", "vectorPaths",
+  "fillGeometry", "strokeGeometry",
 ]);
 
 // =============================================================================
@@ -430,6 +451,7 @@ export function convertFigNode(
     strokeAlign: node.strokeAlign,
     strokeJoin: node.strokeJoin,
     strokeCap: node.strokeCap,
+    strokeDashes: node.strokeDashes,
 
     cornerRadius: node.cornerRadius,
     rectangleCornerRadii: node.rectangleCornerRadii,
@@ -441,7 +463,7 @@ export function convertFigNode(
 
     children: convertedChildren,
 
-    clipsContent: node.clipsContent,
+    clipsContent: resolveClipsContentForDomain(node, nodeType),
     autoLayout: extractAutoLayout(node),
     layoutConstraints: extractLayoutConstraints(node),
 
@@ -450,10 +472,16 @@ export function convertFigNode(
 
     symbolId: resolveSymbolIdForDomain(node),
     overrides: node.symbolOverrides as readonly SymbolOverride[] | undefined,
+    derivedSymbolData: node.derivedSymbolData as readonly SymbolOverride[] | undefined,
 
     componentPropertyDefs: extractComponentPropertyDefs(node),
     componentPropertyRefs: extractComponentPropertyRefs(node),
     componentPropertyAssignments: extractComponentPropertyAssignments(node),
+
+    mask: node.mask ?? undefined,
+    arcData: node.arcData,
+    vectorPaths: node.vectorPaths,
+    vectorData: node.vectorData,
 
     booleanOperation: node.booleanOperation,
 

@@ -66,6 +66,9 @@ export type PaintProps = {
   readonly fillPaints: readonly FigPaint[] | undefined;
   readonly strokePaints: readonly FigPaint[] | undefined;
   readonly strokeWeight: FigStrokeWeight | undefined;
+  readonly strokeCap: import("@aurochs/fig/types").KiwiEnumValue | undefined;
+  readonly strokeJoin: import("@aurochs/fig/types").KiwiEnumValue | undefined;
+  readonly strokeDashes: readonly number[] | undefined;
 };
 
 /**
@@ -82,6 +85,9 @@ export function extractPaintProps(node: FigDesignNode): PaintProps {
     fillPaints: node.fills ?? (raw.fillPaints as readonly FigPaint[] | undefined),
     strokePaints: node.strokes ?? (raw.strokePaints as readonly FigPaint[] | undefined),
     strokeWeight: node.strokeWeight,
+    strokeCap: node.strokeCap,
+    strokeJoin: node.strokeJoin,
+    strokeDashes: node.strokeDashes,
   };
 }
 
