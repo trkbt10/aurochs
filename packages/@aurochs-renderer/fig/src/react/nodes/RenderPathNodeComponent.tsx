@@ -5,7 +5,7 @@
 import { memo } from "react";
 import type { RenderPathNode } from "../../scene-graph/render-tree";
 import { ShapeShell } from "../primitives/shape-shell";
-import { MultiFillPathLayers, MultiStrokePathLayers } from "../primitives/multi-fill";
+import { getPathStrokeAttrs, PathStrokeElements } from "../primitives/stroke-rendering";
 
 type Props = {
   readonly node: RenderPathNode;
@@ -16,16 +16,26 @@ function RenderPathNodeComponentImpl({ node }: Props) {
     return null;
   }
 
-  if (node.fillLayers || node.strokeLayers) {
-    const strokeForFill = node.strokeLayers ? undefined : node.stroke;
+  const sr = node.strokeRendering;
+  const uniformStrokeAttrs = getPathStrokeAttrs(sr);
+
+  if (node.fillLayers || sr) {
     return (
       <ShapeShell wrapper={node.wrapper} defs={node.defs} backgroundBlur={node.backgroundBlur} mask={node.mask}>
         {node.fillLayers ? (
-          <MultiFillPathLayers
-            layers={node.fillLayers}
-            paths={node.paths}
-            stroke={strokeForFill}
-          />
+          node.fillLayers.map((layer, i) =>
+            node.paths.map((p, j) => (
+              <path
+                key={`${i}-${j}`}
+                d={p.d}
+                fillRule={p.fillRule}
+                fill={layer.attrs.fill}
+                fillOpacity={layer.attrs.fillOpacity}
+                style={layer.blendMode ? { mixBlendMode: layer.blendMode as React.CSSProperties["mixBlendMode"] } : undefined}
+                {...(i === node.fillLayers!.length - 1 ? (uniformStrokeAttrs ?? {}) : {})}
+              />
+            )),
+          )
         ) : (
           node.paths.map((p, i) => {
             const fa = p.fillOverride ?? node.fill;
@@ -36,17 +46,12 @@ function RenderPathNodeComponentImpl({ node }: Props) {
                 fillRule={p.fillRule}
                 fill={fa.attrs.fill}
                 fillOpacity={fa.attrs.fillOpacity}
-                {...(strokeForFill ?? {})}
+                {...(uniformStrokeAttrs ?? {})}
               />
             );
           })
         )}
-        {node.strokeLayers && (
-          <MultiStrokePathLayers
-            layers={node.strokeLayers}
-            paths={node.paths}
-          />
-        )}
+        {sr && <PathStrokeElements rendering={sr} paths={node.paths} />}
       </ShapeShell>
     );
   }
@@ -60,7 +65,7 @@ function RenderPathNodeComponentImpl({ node }: Props) {
         fillRule={p.fillRule}
         fill={fa.attrs.fill}
         fillOpacity={fa.attrs.fillOpacity}
-        {...(node.stroke ?? {})}
+        {...(uniformStrokeAttrs ?? {})}
       />
     );
   });

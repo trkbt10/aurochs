@@ -6,18 +6,18 @@ import { memo } from "react";
 import type { RenderRectNode } from "../../scene-graph/render-tree";
 import { ShapeShell } from "../primitives/shape-shell";
 import { RectShape } from "../primitives/rect-shape";
-import { MultiFillRectLayers, MultiStrokeRectLayers } from "../primitives/multi-fill";
-import { MaskedRectStroke } from "../primitives/stroke-rendering";
+import { MultiFillRectLayers } from "../primitives/multi-fill";
+import { getRectStrokeAttrs, RectStrokeElements } from "../primitives/stroke-rendering";
 
 type Props = {
   readonly node: RenderRectNode;
 };
 
 function RenderRectNodeComponentImpl({ node }: Props) {
-  const hasStrokeMask = !!node.strokeMaskId;
+  const sr = node.strokeRendering;
+  const uniformStrokeAttrs = getRectStrokeAttrs(sr);
 
-  if (node.fillLayers || node.strokeLayers || hasStrokeMask) {
-    const strokeForFill = (node.strokeLayers || hasStrokeMask) ? undefined : node.stroke;
+  if (node.fillLayers || sr) {
     return (
       <ShapeShell wrapper={node.wrapper} defs={node.defs} backgroundBlur={node.backgroundBlur} mask={node.mask}>
         {node.fillLayers ? (
@@ -26,7 +26,7 @@ function RenderRectNodeComponentImpl({ node }: Props) {
             width={node.width}
             height={node.height}
             cornerRadius={node.cornerRadius}
-            stroke={strokeForFill}
+            stroke={uniformStrokeAttrs}
           />
         ) : (
           <RectShape
@@ -35,26 +35,10 @@ function RenderRectNodeComponentImpl({ node }: Props) {
             cornerRadius={node.cornerRadius}
             fill={node.fill.attrs.fill}
             fillOpacity={node.fill.attrs.fillOpacity}
-            {...(strokeForFill ?? {})}
+            {...(uniformStrokeAttrs ?? {})}
           />
         )}
-        {hasStrokeMask && node.stroke && (
-          <MaskedRectStroke
-            maskId={node.strokeMaskId!}
-            stroke={node.stroke}
-            width={node.width}
-            height={node.height}
-            cornerRadius={node.cornerRadius}
-          />
-        )}
-        {node.strokeLayers && (
-          <MultiStrokeRectLayers
-            layers={node.strokeLayers}
-            width={node.width}
-            height={node.height}
-            cornerRadius={node.cornerRadius}
-          />
-        )}
+        {sr && <RectStrokeElements rendering={sr} width={node.width} height={node.height} cornerRadius={node.cornerRadius} />}
       </ShapeShell>
     );
   }
@@ -66,7 +50,7 @@ function RenderRectNodeComponentImpl({ node }: Props) {
       cornerRadius={node.cornerRadius}
       fill={node.fill.attrs.fill}
       fillOpacity={node.fill.attrs.fillOpacity}
-      {...(node.stroke ?? {})}
+      {...(uniformStrokeAttrs ?? {})}
     />
   );
 

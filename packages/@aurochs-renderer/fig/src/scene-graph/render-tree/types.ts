@@ -295,29 +295,34 @@ export type RenderFrameNode = RenderNodeBase & {
   readonly cornerRadius?: CornerRadius;
 };
 
+/**
+ * Stroke rendering instruction — discriminated union.
+ *
+ * Resolver determines the mode; backends format without branching logic.
+ * This is the SoT for how strokes are drawn — adding a new mode here
+ * forces both SVG and React backends to handle it (exhaustive switch).
+ */
+export type StrokeRendering =
+  | { readonly mode: "uniform"; readonly attrs: ResolvedStrokeAttrs }
+  | { readonly mode: "masked"; readonly attrs: ResolvedStrokeAttrs; readonly maskId: string }
+  | { readonly mode: "layers"; readonly layers: readonly ResolvedStrokeLayer[] }
+  | {
+      readonly mode: "individual";
+      readonly sides: {
+        readonly top: number;
+        readonly right: number;
+        readonly bottom: number;
+        readonly left: number;
+      };
+      readonly color: string;
+      readonly opacity?: number;
+    };
+
 export type RenderFrameBackground = {
   readonly fill: ResolvedFillResult;
   readonly fillLayers?: readonly ResolvedFillLayer[];
-  readonly stroke?: ResolvedStrokeAttrs;
-  readonly strokeLayers?: readonly ResolvedStrokeLayer[];
-  /**
-   * Mask ID for INSIDE/OUTSIDE stroke clipping on frames.
-   */
-  readonly strokeMaskId?: string;
-  /**
-   * Per-side stroke rendering data. When present, each side of the frame
-   * is rendered as a separate line with its own stroke-width, instead of
-   * a single rect with uniform stroke-width. The stroke color comes from
-   * the resolved stroke attrs.
-   */
-  readonly individualStrokes?: {
-    readonly top: number;
-    readonly right: number;
-    readonly bottom: number;
-    readonly left: number;
-    readonly strokeColor: string;
-    readonly strokeOpacity?: number;
-  };
+  /** Stroke rendering — single discriminated union replaces stroke/strokeLayers/strokeMaskId/individualStrokes */
+  readonly strokeRendering?: StrokeRendering;
 };
 
 // -- Rect --
@@ -327,20 +332,11 @@ export type RenderRectNode = RenderNodeBase & {
   readonly width: number;
   readonly height: number;
   readonly cornerRadius?: CornerRadius;
-  /** Per-side stroke data (same as RenderFrameBackground.individualStrokes) */
-  readonly individualStrokes?: RenderFrameBackground["individualStrokes"];
-  /**
-   * Mask ID for INSIDE/OUTSIDE stroke clipping.
-   * When present, the stroked shape is wrapped in a mask that clips the
-   * stroke to the interior (INSIDE) or exterior (OUTSIDE) of the path.
-   */
-  readonly strokeMaskId?: string;
   readonly fill: ResolvedFillResult;
   /** All fill layers for multi-paint rendering (length >= 2 means stacked fills) */
   readonly fillLayers?: readonly ResolvedFillLayer[];
-  readonly stroke?: ResolvedStrokeAttrs;
-  /** Stroke layers for gradient/multi-paint strokes */
-  readonly strokeLayers?: readonly ResolvedStrokeLayer[];
+  /** Stroke rendering — single discriminated union */
+  readonly strokeRendering?: StrokeRendering;
   /** Whether a wrapper <g> is needed (transform, opacity, filter, or defs present) */
   readonly needsWrapper: boolean;
   // Source data for WebGL
@@ -358,8 +354,7 @@ export type RenderEllipseNode = RenderNodeBase & {
   readonly ry: number;
   readonly fill: ResolvedFillResult;
   readonly fillLayers?: readonly ResolvedFillLayer[];
-  readonly stroke?: ResolvedStrokeAttrs;
-  readonly strokeLayers?: readonly ResolvedStrokeLayer[];
+  readonly strokeRendering?: StrokeRendering;
   readonly needsWrapper: boolean;
   // Source data for WebGL
   readonly sourceFills: readonly Fill[];
@@ -374,8 +369,7 @@ export type RenderPathNode = RenderNodeBase & {
   readonly paths: readonly RenderPathContour[];
   readonly fill: ResolvedFillResult;
   readonly fillLayers?: readonly ResolvedFillLayer[];
-  readonly stroke?: ResolvedStrokeAttrs;
-  readonly strokeLayers?: readonly ResolvedStrokeLayer[];
+  readonly strokeRendering?: StrokeRendering;
   readonly needsWrapper: boolean;
   // Source data for WebGL
   readonly sourceContours: readonly PathContour[];

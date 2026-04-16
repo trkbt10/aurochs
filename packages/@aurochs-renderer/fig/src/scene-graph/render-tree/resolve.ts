@@ -467,21 +467,44 @@ function collectGradientDef(def: ResolvedFill["def"], defs: RenderDef[]): void {
 }
 
 /**
- * Resolve stroke with gradient/multi-paint support.
- * Collects gradient defs from stroke layers.
+ * Resolve a Stroke to a StrokeRendering instruction.
+ *
+ * Determines the rendering mode from the stroke data:
+ * - layers (multi-paint) → mode:"layers"
+ * - strokeAlign INSIDE/OUTSIDE → mode:"masked" (mask def is added)
+ * - otherwise → mode:"uniform"
+ *
+ * Individual stroke weights are handled separately at the node level
+ * (Frame/Rect with individualStrokeWeights).
  */
-function resolveStrokeWithLayers(
-  stroke: import("../types").Stroke, ids: IdGenerator, defs: RenderDef[],
-): { attrs: import("../render").ResolvedStrokeAttrs; layers?: readonly ResolvedStrokeLayer[] } {
+function resolveStrokeRendering(
+  stroke: import("../types").Stroke,
+  ids: IdGenerator,
+  defs: RenderDef[],
+  /** Shape for stroke-align mask (required for INSIDE/OUTSIDE) */
+  maskShape?: import("./types").ClipPathShape,
+): import("./types").StrokeRendering {
   const result = resolveStrokeResult(stroke, ids);
-  if (result.layers) {
+
+  // Multi-paint stroke layers
+  if (result.layers && result.layers.length > 0) {
     for (const layer of result.layers) {
       if (layer.gradientDef) {
         collectGradientDef(layer.gradientDef, defs);
       }
     }
+    return { mode: "layers", layers: result.layers };
   }
-  return { attrs: result.attrs, layers: result.layers };
+
+  // INSIDE/OUTSIDE stroke → masked
+  if (result.attrs.strokeAlign && maskShape) {
+    const maskId = ids.getNextId("stroke-mask");
+    defs.push({ type: "stroke-mask", id: maskId, shape: maskShape });
+    return { mode: "masked", attrs: result.attrs, maskId };
+  }
+
+  // Uniform stroke
+  return { mode: "uniform", attrs: result.attrs };
 }
 
 // =============================================================================
@@ -514,44 +537,34 @@ function resolveFrameNode(node: FrameNode, ids: IdGenerator): RenderFrameNode {
   const clampedRadius = clampRadius(node.cornerRadius, node.width, node.height);
 
   // Background fill and stroke — resolved independently.
-  // A frame may have stroke without fills, or fills without stroke.
   const hasFills = node.fills.length > 0;
-  const strokeResult = node.stroke ? resolveStrokeWithLayers(node.stroke, ids, defs) : undefined;
+  const maskShape = buildClipShape(node.width, node.height, clampedRadius);
 
-  let background: RenderFrameBackground | null = null;
-  if (hasFills || strokeResult) {
+  // Determine stroke rendering mode
+  let strokeRendering: import("./types").StrokeRendering | undefined;
+  if (node.individualStrokeWeights && node.stroke) {
+    const result = resolveStrokeResult(node.stroke, ids);
+    strokeRendering = {
+      mode: "individual",
+      sides: node.individualStrokeWeights,
+      color: result.attrs.stroke,
+      opacity: result.attrs.strokeOpacity,
+    };
+  } else if (node.stroke) {
+    strokeRendering = resolveStrokeRendering(node.stroke, ids, defs, maskShape);
+  }
+
+  let background: import("./types").RenderFrameBackground | null = null;
+  if (hasFills || strokeRendering) {
     const fillResult = hasFills
       ? resolveFillResult(node.fills[node.fills.length - 1], ids, defs)
       : { attrs: { fill: "none" as const } };
     const fillLayers = hasFills ? resolveAllFillLayers(node.fills, ids, defs) : undefined;
-    // Resolve per-side stroke weights if present
-    const individualStrokes = node.individualStrokeWeights && strokeResult
-      ? {
-          ...node.individualStrokeWeights,
-          strokeColor: strokeResult.attrs.stroke ?? "none",
-          strokeOpacity: strokeResult.attrs.strokeOpacity,
-        }
-      : undefined;
-
-    // Stroke-align mask for INSIDE/OUTSIDE strokes
-    let strokeMaskId: string | undefined;
-    if (strokeResult?.attrs.strokeAlign && !individualStrokes) {
-      strokeMaskId = ids.getNextId("stroke-mask");
-      defs.push({
-        type: "stroke-mask",
-        id: strokeMaskId,
-        shape: buildClipShape(node.width, node.height, clampedRadius),
-      });
-    }
 
     background = {
       fill: fillResult,
       fillLayers,
-      // When individual strokes are active, the uniform stroke is replaced
-      stroke: individualStrokes ? undefined : strokeResult?.attrs,
-      strokeLayers: individualStrokes ? undefined : strokeResult?.layers,
-      strokeMaskId,
-      individualStrokes,
+      strokeRendering,
     };
   }
 
@@ -622,7 +635,10 @@ function resolveRectNode(node: RectNode, ids: IdGenerator): RenderRectNode {
   const clampedRadius = clampRadius(node.cornerRadius, node.width, node.height);
   const fillResult = resolveTopFillResult(node.fills, ids, defs);
   const fillLayers = resolveAllFillLayers(node.fills, ids, defs);
-  const strokeResult = node.stroke ? resolveStrokeWithLayers(node.stroke, ids, defs) : undefined;
+  const maskShape = buildClipShape(node.width, node.height, clampedRadius);
+  const strokeRendering = node.stroke
+    ? resolveStrokeRendering(node.stroke, ids, defs, maskShape)
+    : undefined;
 
   finalizeDefs(defs, { width: node.width, height: node.height });
 
@@ -630,19 +646,8 @@ function resolveRectNode(node: RectNode, ids: IdGenerator): RenderRectNode {
     node.effects, { x: 0, y: 0, width: node.width, height: node.height }, ids, defs,
   );
 
-  // Stroke-align mask for INSIDE/OUTSIDE
-  let strokeMaskId: string | undefined;
-  if (strokeResult?.attrs.strokeAlign) {
-    strokeMaskId = ids.getNextId("stroke-mask");
-    defs.push({
-      type: "stroke-mask",
-      id: strokeMaskId,
-      shape: buildClipShape(node.width, node.height, clampedRadius),
-    });
-  }
-
   const mask = resolveMask(node, ids, defs);
-  const needsWrapper = !!(wrapper.transform || node.opacity < 1 || wrapper.filterAttr || defs.length > 0 || fillLayers || strokeResult?.layers || backgroundBlur || mask || strokeMaskId);
+  const needsWrapper = !!(wrapper.transform || node.opacity < 1 || wrapper.filterAttr || defs.length > 0 || fillLayers || strokeRendering || backgroundBlur || mask);
 
   return {
     type: "rect",
@@ -655,9 +660,7 @@ function resolveRectNode(node: RectNode, ids: IdGenerator): RenderRectNode {
     cornerRadius: clampedRadius,
     fill: fillResult,
     fillLayers,
-    stroke: strokeResult?.attrs,
-    strokeLayers: strokeResult?.layers,
-    strokeMaskId,
+    strokeRendering,
     needsWrapper,
     sourceFills: node.fills,
     sourceStroke: node.stroke,
@@ -671,7 +674,7 @@ function resolveEllipseNode(node: EllipseNode, ids: IdGenerator): RenderEllipseN
   const { wrapper } = resolveWrapper(node, ids, defs);
   const fillResult = resolveTopFillResult(node.fills, ids, defs);
   const fillLayers = resolveAllFillLayers(node.fills, ids, defs);
-  const strokeResult = node.stroke ? resolveStrokeWithLayers(node.stroke, ids, defs) : undefined;
+  const strokeRendering = node.stroke ? resolveStrokeRendering(node.stroke, ids, defs) : undefined;
 
   const ellipseSize = { width: node.rx * 2, height: node.ry * 2 };
 
@@ -686,7 +689,7 @@ function resolveEllipseNode(node: EllipseNode, ids: IdGenerator): RenderEllipseN
     const paths: RenderPathContour[] = [{ d, fillRule: "evenodd" }];
     finalizeDefs(defs, ellipseSize);
     const needsWrapper = !!(
-      wrapper.transform || node.opacity < 1 || wrapper.filterAttr || defs.length > 0 || fillLayers || strokeResult?.layers || backgroundBlur || mask
+      wrapper.transform || node.opacity < 1 || wrapper.filterAttr || defs.length > 0 || fillLayers || strokeRendering || backgroundBlur || mask
     );
     return {
       type: "path",
@@ -697,8 +700,7 @@ function resolveEllipseNode(node: EllipseNode, ids: IdGenerator): RenderEllipseN
       paths,
       fill: fillResult,
       fillLayers,
-      stroke: strokeResult?.attrs,
-      strokeLayers: strokeResult?.layers,
+      strokeRendering,
       needsWrapper,
       sourceContours: [],
       sourceFills: node.fills,
@@ -709,7 +711,7 @@ function resolveEllipseNode(node: EllipseNode, ids: IdGenerator): RenderEllipseN
   }
 
   finalizeDefs(defs, ellipseSize);
-  const needsWrapper = !!(wrapper.transform || node.opacity < 1 || wrapper.filterAttr || defs.length > 0 || fillLayers || strokeResult?.layers || backgroundBlur || mask);
+  const needsWrapper = !!(wrapper.transform || node.opacity < 1 || wrapper.filterAttr || defs.length > 0 || fillLayers || strokeRendering || backgroundBlur || mask);
 
   return {
     type: "ellipse",
@@ -723,8 +725,7 @@ function resolveEllipseNode(node: EllipseNode, ids: IdGenerator): RenderEllipseN
     ry: node.ry,
     fill: fillResult,
     fillLayers,
-    stroke: strokeResult?.attrs,
-    strokeLayers: strokeResult?.layers,
+    strokeRendering,
     needsWrapper,
     sourceFills: node.fills,
     sourceStroke: node.stroke,
@@ -738,7 +739,7 @@ function resolvePathNode(node: PathNode, ids: IdGenerator): RenderPathNode {
   const { wrapper } = resolveWrapper(node, ids, defs);
   const fillResult = resolveTopFillResult(node.fills, ids, defs);
   const fillLayers = resolveAllFillLayers(node.fills, ids, defs);
-  const strokeResult = node.stroke ? resolveStrokeWithLayers(node.stroke, ids, defs) : undefined;
+  const strokeRendering = node.stroke ? resolveStrokeRendering(node.stroke, ids, defs) : undefined;
 
   const paths: RenderPathContour[] = node.contours.map((contour) => {
     const base: RenderPathContour = {
@@ -764,7 +765,7 @@ function resolvePathNode(node: PathNode, ids: IdGenerator): RenderPathNode {
 
   const needsWrapper = !!(
     wrapper.transform || node.opacity < 1 || wrapper.filterAttr ||
-    defs.length > 0 || paths.length > 1 || fillLayers || strokeResult?.layers || backgroundBlur || mask
+    defs.length > 0 || paths.length > 1 || fillLayers || strokeRendering || backgroundBlur || mask
   );
 
   return {
@@ -776,8 +777,7 @@ function resolvePathNode(node: PathNode, ids: IdGenerator): RenderPathNode {
     paths,
     fill: fillResult,
     fillLayers,
-    stroke: strokeResult?.attrs,
-    strokeLayers: strokeResult?.layers,
+    strokeRendering,
     needsWrapper,
     sourceContours: node.contours,
     sourceFills: node.fills,

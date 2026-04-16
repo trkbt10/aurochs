@@ -418,8 +418,8 @@ describe("resolveRenderTree — stroke layers", () => {
     const tree = resolveRenderTree(sg);
 
     const node = tree.children[0] as RenderRectNode;
-    expect(node.stroke).toBeDefined();
-    expect(node.strokeLayers).toBeUndefined();
+    expect(node.strokeRendering).toBeDefined();
+    expect(node.strokeRendering!.mode).toBe("uniform");
   });
 
   it("resolves multi-paint stroke as layers", () => {
@@ -445,11 +445,14 @@ describe("resolveRenderTree — stroke layers", () => {
     const tree = resolveRenderTree(sg);
 
     const node = tree.children[0] as RenderRectNode;
-    expect(node.strokeLayers).toBeDefined();
-    expect(node.strokeLayers).toHaveLength(2);
-    expect(node.strokeLayers![0].attrs.stroke).toBe("#000000");
-    expect(node.strokeLayers![1].attrs.stroke).toBe("#ff0000");
-    expect(node.strokeLayers![1].blendMode).toBe("multiply");
+    expect(node.strokeRendering).toBeDefined();
+    expect(node.strokeRendering!.mode).toBe("layers");
+    if (node.strokeRendering!.mode === "layers") {
+      expect(node.strokeRendering!.layers).toHaveLength(2);
+      expect(node.strokeRendering!.layers[0].attrs.stroke).toBe("#000000");
+      expect(node.strokeRendering!.layers[1].attrs.stroke).toBe("#ff0000");
+      expect(node.strokeRendering!.layers[1].blendMode).toBe("multiply");
+    }
   });
 });
 

@@ -7,9 +7,9 @@ import type { RenderFrameNode } from "../../scene-graph/render-tree";
 import { formatRenderDefs } from "../primitives/render-defs";
 import { RenderWrapper } from "../primitives/wrapper";
 import { RectShape } from "../primitives/rect-shape";
-import { MultiFillRectLayers, MultiStrokeRectLayers } from "../primitives/multi-fill";
+import { MultiFillRectLayers } from "../primitives/multi-fill";
 import { BackgroundBlurElement } from "../primitives/background-blur";
-import { MaskedRectStroke, IndividualStrokeLines } from "../primitives/stroke-rendering";
+import { getRectStrokeAttrs, RectStrokeElements } from "../primitives/stroke-rendering";
 import { RenderNodeComponent } from "./RenderNodeComponent";
 
 type Props = {
@@ -18,19 +18,12 @@ type Props = {
 
 function RenderFrameNodeComponentImpl({ node }: Props) {
   const defsEl = formatRenderDefs(node.defs);
+  const sr = node.background?.strokeRendering;
+  const uniformStrokeAttrs = getRectStrokeAttrs(sr);
 
-  // Background rect (multi-paint layers or single fill + stroke layers)
+  // Background rect
   let bgRect: ReactNode = null;
-  let bgStrokeLayers: ReactNode = null;
-  let bgStrokeMasked: ReactNode = null;
-  let bgIndividualStrokes: ReactNode = null;
   if (node.background) {
-    // When strokeMaskId is set, stroke is rendered separately under a mask
-    const hasStrokeMask = !!node.background.strokeMaskId;
-    const strokeForFill = (node.background.strokeLayers || hasStrokeMask)
-      ? undefined
-      : node.background.stroke;
-
     if (node.background.fillLayers) {
       bgRect = (
         <MultiFillRectLayers
@@ -38,7 +31,7 @@ function RenderFrameNodeComponentImpl({ node }: Props) {
           width={node.width}
           height={node.height}
           cornerRadius={node.cornerRadius}
-          stroke={strokeForFill}
+          stroke={uniformStrokeAttrs}
         />
       );
     } else {
@@ -50,39 +43,7 @@ function RenderFrameNodeComponentImpl({ node }: Props) {
           cornerRadius={node.cornerRadius}
           fill={fill.attrs.fill}
           fillOpacity={fill.attrs.fillOpacity}
-          {...(strokeForFill ?? {})}
-        />
-      );
-    }
-
-    // Stroke rendering: masked (INSIDE/OUTSIDE), multi-layer, or individual
-    if (hasStrokeMask && node.background.stroke) {
-      bgStrokeMasked = (
-        <MaskedRectStroke
-          maskId={node.background.strokeMaskId!}
-          stroke={node.background.stroke}
-          width={node.width}
-          height={node.height}
-          cornerRadius={node.cornerRadius}
-        />
-      );
-    } else if (node.background.strokeLayers) {
-      bgStrokeLayers = (
-        <MultiStrokeRectLayers
-          layers={node.background.strokeLayers}
-          width={node.width}
-          height={node.height}
-          cornerRadius={node.cornerRadius}
-        />
-      );
-    }
-
-    if (node.background.individualStrokes) {
-      bgIndividualStrokes = (
-        <IndividualStrokeLines
-          strokes={node.background.individualStrokes}
-          width={node.width}
-          height={node.height}
+          {...(uniformStrokeAttrs ?? {})}
         />
       );
     }
@@ -108,9 +69,7 @@ function RenderFrameNodeComponentImpl({ node }: Props) {
     <RenderWrapper wrapper={node.wrapper} mask={node.mask}>
       {defsEl}
       {bgRect}
-      {bgStrokeMasked}
-      {bgStrokeLayers}
-      {bgIndividualStrokes}
+      {sr && <RectStrokeElements rendering={sr} width={node.width} height={node.height} cornerRadius={node.cornerRadius} />}
       {node.backgroundBlur && <BackgroundBlurElement blur={node.backgroundBlur} />}
       {childrenContent}
     </RenderWrapper>

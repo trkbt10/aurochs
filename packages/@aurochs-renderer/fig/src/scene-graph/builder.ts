@@ -410,48 +410,26 @@ function applyPropsRecursive(
  * Apply derivedSymbolData (pre-computed layout) to cloned children.
  *
  * Each entry targets a child node via guidPath and updates layout properties
- * (transform, size, geometry). Avoids overwriting derivedTextData on nodes
- * whose text was already changed by componentPropertyAssignments (it would
- * contain stale glyph paths for the old text).
+ * (transform, size, geometry).
+ *
+ * derivedTextData in derivedSymbolData is Figma's re-computed glyph paths
+ * for the text AFTER all CPA changes have been applied. This is the correct
+ * source for patheized text on CPA-modified text nodes — it supersedes the
+ * cleared derivedTextData.
  */
 function applyDerivedSymbolData(
   children: FigDesignNode[],
   derivedData: readonly SymbolOverride[],
 ): void {
-  const textChangedIds = new Set<string>();
-  collectTextChangedNodes(children, textChangedIds);
-
   for (const entry of derivedData) {
     if (!isValidOverridePath(entry)) { continue; }
 
     const target = findNodeByOverridePath(children, entry);
     if (!target) { continue; }
 
-    applyOverrideToNode(
-      target as MutableFigDesignNode,
-      entry,
-      { skipDerivedTextData: textChangedIds.has(target.id) },
-    );
-  }
-}
-
-/**
- * Collect IDs of nodes whose derivedTextData has been cleared
- * (indicating text was changed by componentPropertyAssignments).
- */
-function collectTextChangedNodes(
-  nodes: readonly FigDesignNode[],
-  ids: Set<string>,
-): void {
-  for (const node of nodes) {
-    if (node.derivedTextData === undefined && node.textData) {
-      // A TEXT node without derivedTextData — may have been cleared
-      // by CPA. We track it to avoid re-adding stale data.
-      ids.add(node.id);
-    }
-    if (node.children) {
-      collectTextChangedNodes(node.children, ids);
-    }
+    // Always apply derivedTextData from derivedSymbolData — it contains
+    // re-computed glyph paths for the current text content (after CPA).
+    applyOverrideToNode(target as MutableFigDesignNode, entry);
   }
 }
 
