@@ -33,6 +33,18 @@ export type ResolvedFilter = {
   readonly id: string;
   readonly filterAttr: string;
   readonly primitives: readonly ResolvedFilterPrimitive[];
+  /**
+   * Filter region in userSpaceOnUse coordinates.
+   * Required to prevent shadow/blur clipping — SVG's default filter region
+   * (10% margin) is too small for large offsets or blur radii.
+   * Set by the caller (resolveWrapper) which knows the element bounds.
+   */
+  readonly filterBounds?: {
+    readonly x: number;
+    readonly y: number;
+    readonly width: number;
+    readonly height: number;
+  };
 };
 
 type IdGenerator = {
@@ -76,7 +88,11 @@ function buildColorMatrix(c: Color): string {
  * handling it here will produce a TypeScript compile error (via the
  * never check at the bottom of the switch).
  */
-export function resolveEffects(effects: readonly Effect[], ids: IdGenerator): ResolvedFilter | undefined {
+export function resolveEffects(
+  effects: readonly Effect[],
+  ids: IdGenerator,
+  elementBounds?: { x: number; y: number; width: number; height: number },
+): ResolvedFilter | undefined {
   if (effects.length === 0) {
     return undefined;
   }
@@ -160,9 +176,53 @@ export function resolveEffects(effects: readonly Effect[], ids: IdGenerator): Re
   }
 
   const id = ids.getNextId("filter");
+
+  // Compute filter bounds from shadow offsets/radii to prevent clipping
+  const filterBounds = elementBounds ? computeFilterBounds(effects, elementBounds) : undefined;
+
   return {
     id,
     filterAttr: `url(#${id})`,
     primitives,
+    filterBounds,
   };
+}
+
+/**
+ * Compute filter region as the union of element bounds and all shadow regions.
+ *
+ * Each shadow extends the region by its offset + blur radius.
+ * Without this, SVG's default 10% filter margin clips large shadows.
+ */
+function computeFilterBounds(
+  effects: readonly Effect[],
+  bounds: { x: number; y: number; width: number; height: number },
+): { x: number; y: number; width: number; height: number } {
+  let minX = bounds.x;
+  let minY = bounds.y;
+  let maxX = bounds.x + bounds.width;
+  let maxY = bounds.y + bounds.height;
+
+  for (const effect of effects) {
+    if (effect.type === "drop-shadow" || effect.type === "inner-shadow") {
+      const offsetX = effect.offset.x;
+      const offsetY = effect.offset.y;
+      const blurExpansion = effect.radius; // 2 × stdDeviation = 2 × (radius/2) = radius
+      const spreadExpansion = effect.spread ?? 0;
+      const totalExpansion = blurExpansion + Math.abs(spreadExpansion);
+
+      minX = Math.min(minX, bounds.x + offsetX - totalExpansion);
+      minY = Math.min(minY, bounds.y + offsetY - totalExpansion);
+      maxX = Math.max(maxX, bounds.x + bounds.width + offsetX + totalExpansion);
+      maxY = Math.max(maxY, bounds.y + bounds.height + offsetY + totalExpansion);
+    } else if (effect.type === "layer-blur") {
+      const expand = effect.radius;
+      minX -= expand;
+      minY -= expand;
+      maxX += expand;
+      maxY += expand;
+    }
+  }
+
+  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
 }

@@ -8,7 +8,7 @@
 import type { FigPaint, FigColor, FigStrokeWeight, FigGradientPaint, KiwiEnumValue } from "@aurochs/fig/types";
 import { getPaintType } from "@aurochs/fig/color";
 import { resolveStrokeWeight, mapStrokeCap, mapStrokeJoin } from "../../stroke";
-import type { Stroke, StrokeLayer, LinearGradientFill, RadialGradientFill } from "../types";
+import type { Stroke, StrokeLayer, StrokeAlign, LinearGradientFill, RadialGradientFill } from "../types";
 import { figColorToSceneColor } from "./fill";
 import {
   getGradientStops,
@@ -97,6 +97,7 @@ export function convertStrokeToSceneStroke(
     strokeCap?: string | KiwiEnumValue;
     strokeJoin?: string | KiwiEnumValue;
     dashPattern?: readonly number[];
+    strokeAlign?: string | KiwiEnumValue;
   },
 ): Stroke | undefined {
   const width = resolveStrokeWeight(strokeWeight);
@@ -126,6 +127,8 @@ export function convertStrokeToSceneStroke(
     ? visiblePaints.map(buildStrokeLayer)
     : undefined;
 
+  const align = resolveStrokeAlign(options?.strokeAlign);
+
   return {
     color: primaryColor,
     width,
@@ -134,5 +137,13 @@ export function convertStrokeToSceneStroke(
     linejoin: mapStrokeJoin(options?.strokeJoin),
     dashPattern: options?.dashPattern?.length ? options.dashPattern : undefined,
     layers,
+    align,
   };
+}
+
+function resolveStrokeAlign(raw: string | KiwiEnumValue | undefined): StrokeAlign | undefined {
+  if (!raw) { return undefined; }
+  const name = typeof raw === "string" ? raw : raw.name;
+  if (name === "INSIDE" || name === "OUTSIDE") { return name; }
+  return undefined; // CENTER is the SVG default, no need to store
 }

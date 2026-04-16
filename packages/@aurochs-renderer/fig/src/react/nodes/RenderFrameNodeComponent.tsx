@@ -9,6 +9,7 @@ import { RenderWrapper } from "../primitives/wrapper";
 import { RectShape } from "../primitives/rect-shape";
 import { MultiFillRectLayers, MultiStrokeRectLayers } from "../primitives/multi-fill";
 import { BackgroundBlurElement } from "../primitives/background-blur";
+import { MaskedRectStroke, IndividualStrokeLines } from "../primitives/stroke-rendering";
 import { RenderNodeComponent } from "./RenderNodeComponent";
 
 type Props = {
@@ -21,8 +22,12 @@ function RenderFrameNodeComponentImpl({ node }: Props) {
   // Background rect (multi-paint layers or single fill + stroke layers)
   let bgRect: ReactNode = null;
   let bgStrokeLayers: ReactNode = null;
+  let bgStrokeMasked: ReactNode = null;
+  let bgIndividualStrokes: ReactNode = null;
   if (node.background) {
-    const strokeForFill = node.background.strokeLayers
+    // When strokeMaskId is set, stroke is rendered separately under a mask
+    const hasStrokeMask = !!node.background.strokeMaskId;
+    const strokeForFill = (node.background.strokeLayers || hasStrokeMask)
       ? undefined
       : node.background.stroke;
 
@@ -50,13 +55,34 @@ function RenderFrameNodeComponentImpl({ node }: Props) {
       );
     }
 
-    if (node.background.strokeLayers) {
+    // Stroke rendering: masked (INSIDE/OUTSIDE), multi-layer, or individual
+    if (hasStrokeMask && node.background.stroke) {
+      bgStrokeMasked = (
+        <MaskedRectStroke
+          maskId={node.background.strokeMaskId!}
+          stroke={node.background.stroke}
+          width={node.width}
+          height={node.height}
+          cornerRadius={node.cornerRadius}
+        />
+      );
+    } else if (node.background.strokeLayers) {
       bgStrokeLayers = (
         <MultiStrokeRectLayers
           layers={node.background.strokeLayers}
           width={node.width}
           height={node.height}
           cornerRadius={node.cornerRadius}
+        />
+      );
+    }
+
+    if (node.background.individualStrokes) {
+      bgIndividualStrokes = (
+        <IndividualStrokeLines
+          strokes={node.background.individualStrokes}
+          width={node.width}
+          height={node.height}
         />
       );
     }
@@ -82,7 +108,9 @@ function RenderFrameNodeComponentImpl({ node }: Props) {
     <RenderWrapper wrapper={node.wrapper} mask={node.mask}>
       {defsEl}
       {bgRect}
+      {bgStrokeMasked}
       {bgStrokeLayers}
+      {bgIndividualStrokes}
       {node.backgroundBlur && <BackgroundBlurElement blur={node.backgroundBlur} />}
       {childrenContent}
     </RenderWrapper>

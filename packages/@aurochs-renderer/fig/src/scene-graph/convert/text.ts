@@ -129,9 +129,33 @@ export type TextConversionResult = {
  * @param blobs - Blob array from .fig file (for derived paths)
  * @returns Text conversion result for scene graph TextNode
  */
+/**
+ * Convert font variation axes to CSS font-variation-settings value.
+ * Figma stores axis tags as 4-byte integers (e.g. 0x77676874 = "wght").
+ */
+function buildFontVariationSettings(
+  variations: readonly { readonly axisTag: number; readonly axisValue: number }[] | undefined,
+): string | undefined {
+  if (!variations || variations.length === 0) { return undefined; }
+
+  const parts: string[] = [];
+  for (const v of variations) {
+    // Convert 4-byte integer to 4-char ASCII tag
+    const tag = String.fromCharCode(
+      (v.axisTag >> 24) & 0xFF,
+      (v.axisTag >> 16) & 0xFF,
+      (v.axisTag >> 8) & 0xFF,
+      v.axisTag & 0xFF,
+    );
+    parts.push(`'${tag}' ${v.axisValue}`);
+  }
+  return parts.length > 0 ? parts.join(", ") : undefined;
+}
+
 export function convertTextNode(node: FigDesignNode, blobs: readonly FigBlob[]): TextConversionResult {
   const props = extractTextProps(node);
   const { color: fillColor, opacity: fillOpacity } = getFillColorAndOpacity(props.fillPaints);
+  const fontVariationSettings = buildFontVariationSettings(node.textData?.fontVariations);
 
   // Parse fill color
   const color = parseHexColor(fillColor);
@@ -161,6 +185,7 @@ export function convertTextNode(node: FigDesignNode, blobs: readonly FigBlob[]):
       lineHeight: layout.lineHeight,
       textAnchor: getTextAnchor(props.textAlignHorizontal),
       textDecoration: mapTextDecoration(props.textDecoration),
+      fontVariationSettings,
     };
 
     return {
@@ -188,6 +213,7 @@ export function convertTextNode(node: FigDesignNode, blobs: readonly FigBlob[]):
     lineHeight: layout.lineHeight,
     textAnchor: getTextAnchor(props.textAlignHorizontal),
     textDecoration: mapTextDecoration(props.textDecoration),
+    fontVariationSettings,
   };
 
   return {

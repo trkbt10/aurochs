@@ -19,6 +19,7 @@ import type {
 } from "../types";
 import type { LoadedFigFile, FigImage, FigMetadata } from "../roundtrip";
 import type { FigNodeId, FigPageId } from "./node-id";
+import { guidToNodeId } from "./node-id";
 
 // =============================================================================
 // AutoLayout Types
@@ -328,6 +329,80 @@ export function applyOverrideToNode(
         if (!options?.skipDerivedTextData) {
           target.derivedTextData = value as DerivedTextData | undefined;
         }
+        break;
+
+      // Style ID references — resolved to fills/strokes via style registry
+      // (resolution happens in the builder after all overrides are applied)
+      case "styleIdForFill":
+        target.styleIdForFill = value as FigStyleId | undefined;
+        break;
+      case "styleIdForStrokeFill":
+        target.styleIdForStrokeFill = value as FigStyleId | undefined;
+        break;
+
+      // Per-corner radius (Figma's individual corner fields)
+      // These are combined into rectangleCornerRadii for rendering.
+      case "rectangleTopLeftCornerRadius":
+      case "rectangleTopRightCornerRadius":
+      case "rectangleBottomLeftCornerRadius":
+      case "rectangleBottomRightCornerRadius": {
+        // Update the rectangleCornerRadii array with the individual value
+        const radii = target.rectangleCornerRadii
+          ? [...target.rectangleCornerRadii]
+          : [target.cornerRadius ?? 0, target.cornerRadius ?? 0, target.cornerRadius ?? 0, target.cornerRadius ?? 0];
+        const idx = key === "rectangleTopLeftCornerRadius" ? 0
+          : key === "rectangleTopRightCornerRadius" ? 1
+          : key === "rectangleBottomRightCornerRadius" ? 2
+          : 3; // bottomLeft
+        radii[idx] = value as number;
+        target.rectangleCornerRadii = radii;
+        break;
+      }
+
+      // Per-side stroke weights
+      case "borderTopWeight":
+      case "borderRightWeight":
+      case "borderBottomWeight":
+      case "borderLeftWeight": {
+        const sw = target.individualStrokeWeights ?? { top: target.strokeWeight as number ?? 0, right: target.strokeWeight as number ?? 0, bottom: target.strokeWeight as number ?? 0, left: target.strokeWeight as number ?? 0 };
+        const side = key === "borderTopWeight" ? "top"
+          : key === "borderRightWeight" ? "right"
+          : key === "borderBottomWeight" ? "bottom"
+          : "left";
+        target.individualStrokeWeights = { ...sw, [side]: value as number };
+        break;
+      }
+
+      // Layout constraint override
+      case "stackPositioning": {
+        const lc = target.layoutConstraints ?? {};
+        target.layoutConstraints = { ...lc, stackPositioning: value as KiwiEnumValue };
+        break;
+      }
+
+      // Stroke dashes
+      case "strokeDashes":
+        target.strokeDashes = value as readonly number[] | undefined;
+        break;
+
+      // Name (metadata, not visual — but included for completeness)
+      case "name":
+        target.name = value as string;
+        break;
+
+      // Instance swap via override — changes the symbol this INSTANCE resolves to.
+      // The value is a FigGuid { sessionID, localID } from the Kiwi binary.
+      // Convert to FigNodeId using the domain's canonical conversion.
+      case "overriddenSymbolID": {
+        const guid = value as { readonly sessionID: number; readonly localID: number } | undefined;
+        if (guid) {
+          target.symbolId = guidToNodeId(guid);
+        }
+        break;
+      }
+
+      // Non-visual properties (editor state) — accepted but not rendered
+      case "locked":
         break;
     }
   }

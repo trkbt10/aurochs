@@ -192,11 +192,20 @@ export type StrokeLayer = {
   readonly blendMode?: BlendMode;
 };
 
+export type StrokeAlign = "CENTER" | "INSIDE" | "OUTSIDE";
+
 export type Stroke = {
   readonly width: number;
   readonly linecap: "butt" | "round" | "square";
   readonly linejoin: "miter" | "round" | "bevel";
   readonly dashPattern?: readonly number[];
+  /**
+   * Stroke alignment relative to the path.
+   * - CENTER (default): stroke straddles the path (SVG default)
+   * - INSIDE: stroke is drawn inside the shape (requires mask in SVG)
+   * - OUTSIDE: stroke is drawn outside the shape (requires mask in SVG)
+   */
+  readonly align?: StrokeAlign;
   /** Primary layer (first visible stroke paint) */
   readonly color: Color;
   readonly opacity: number;
@@ -357,6 +366,11 @@ export type TextLineLayout = {
   readonly lineHeight: number;
   readonly textAnchor: "start" | "middle" | "end";
   readonly textDecoration?: "underline" | "strikethrough";
+  /**
+   * CSS font-variation-settings value for variable fonts.
+   * e.g. "'wght' 700, 'wdth' 100"
+   */
+  readonly fontVariationSettings?: string;
 };
 
 // =============================================================================
@@ -454,6 +468,8 @@ export type TextNode = SceneNodeBase & {
    * to cap height rather than full ascent, affecting vertical positioning.
    */
   readonly leadingTrim?: string;
+  /** Hyperlink URL — wraps the text in an SVG <a> element */
+  readonly hyperlink?: string;
   /** Pre-outlined glyph path contours (from opentype or derived data) */
   readonly glyphContours?: readonly PathContour[];
   /** Decoration paths (underlines, strikethroughs) as contours */

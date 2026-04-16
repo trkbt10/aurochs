@@ -46,6 +46,7 @@ function FigTextLinesImpl({ textLineLayout, fill, fillOpacity }: FigTextLinesPro
           fontStyle={fb.fontStyle}
           letterSpacing={fb.letterSpacing}
           textAnchor={textAnchor}
+          style={fb.fontVariationSettings ? { fontVariationSettings: fb.fontVariationSettings } : undefined}
         >
           {line.text}
         </text>

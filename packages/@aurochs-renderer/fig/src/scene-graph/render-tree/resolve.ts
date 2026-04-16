@@ -267,13 +267,34 @@ function getMaxChildStrokeOverhang(children: readonly SceneNode[]): number {
 // Helper: Resolve wrapper attributes
 // =============================================================================
 
+/**
+ * Extract element bounds from a SceneNode for filter region computation.
+ * Returns { x:0, y:0, width, height } — in the node's local coordinate space.
+ */
+function getNodeBounds(node: SceneNode): { x: number; y: number; width: number; height: number } | undefined {
+  switch (node.type) {
+    case "frame":
+    case "rect":
+    case "text":
+    case "image":
+      return { x: 0, y: 0, width: node.width, height: node.height };
+    case "ellipse":
+      return { x: 0, y: 0, width: node.rx * 2, height: node.ry * 2 };
+    case "path":
+      return node.width && node.height ? { x: 0, y: 0, width: node.width, height: node.height } : undefined;
+    case "group":
+      return undefined; // groups have no intrinsic bounds
+  }
+}
+
 function resolveWrapper(
   node: SceneNode,
   ids: IdGenerator,
   defs: RenderDef[],
 ): { wrapper: ResolvedWrapperAttrs; filter?: ResolvedFilter } {
+  const elementBounds = getNodeBounds(node);
   const transformStr = matrixToSvgTransform(node.transform);
-  const filterResult = resolveEffects(node.effects, ids);
+  const filterResult = resolveEffects(node.effects, ids, elementBounds);
 
   if (filterResult) {
     defs.push({ type: "filter", filter: filterResult });
@@ -512,12 +533,24 @@ function resolveFrameNode(node: FrameNode, ids: IdGenerator): RenderFrameNode {
         }
       : undefined;
 
+    // Stroke-align mask for INSIDE/OUTSIDE strokes
+    let strokeMaskId: string | undefined;
+    if (strokeResult?.attrs.strokeAlign && !individualStrokes) {
+      strokeMaskId = ids.getNextId("stroke-mask");
+      defs.push({
+        type: "stroke-mask",
+        id: strokeMaskId,
+        shape: buildClipShape(node.width, node.height, clampedRadius),
+      });
+    }
+
     background = {
       fill: fillResult,
       fillLayers,
       // When individual strokes are active, the uniform stroke is replaced
       stroke: individualStrokes ? undefined : strokeResult?.attrs,
       strokeLayers: individualStrokes ? undefined : strokeResult?.layers,
+      strokeMaskId,
       individualStrokes,
     };
   }
@@ -596,8 +629,20 @@ function resolveRectNode(node: RectNode, ids: IdGenerator): RenderRectNode {
   const backgroundBlur = resolveBackgroundBlur(
     node.effects, { x: 0, y: 0, width: node.width, height: node.height }, ids, defs,
   );
+
+  // Stroke-align mask for INSIDE/OUTSIDE
+  let strokeMaskId: string | undefined;
+  if (strokeResult?.attrs.strokeAlign) {
+    strokeMaskId = ids.getNextId("stroke-mask");
+    defs.push({
+      type: "stroke-mask",
+      id: strokeMaskId,
+      shape: buildClipShape(node.width, node.height, clampedRadius),
+    });
+  }
+
   const mask = resolveMask(node, ids, defs);
-  const needsWrapper = !!(wrapper.transform || node.opacity < 1 || wrapper.filterAttr || defs.length > 0 || fillLayers || strokeResult?.layers || backgroundBlur || mask);
+  const needsWrapper = !!(wrapper.transform || node.opacity < 1 || wrapper.filterAttr || defs.length > 0 || fillLayers || strokeResult?.layers || backgroundBlur || mask || strokeMaskId);
 
   return {
     type: "rect",
@@ -612,6 +657,7 @@ function resolveRectNode(node: RectNode, ids: IdGenerator): RenderRectNode {
     fillLayers,
     stroke: strokeResult?.attrs,
     strokeLayers: strokeResult?.layers,
+    strokeMaskId,
     needsWrapper,
     sourceFills: node.fills,
     sourceStroke: node.stroke,
@@ -747,8 +793,10 @@ function resolveTextNode(node: TextNode, ids: IdGenerator): RenderTextNode {
   const fillColor = colorToHex(node.fill.color);
   const fillOpacity = node.fill.opacity < 1 ? node.fill.opacity : undefined;
 
-  // Clip text to bounding box when textAutoResize is NONE or TRUNCATE
-  const needsClip = node.textAutoResize === "NONE" || node.textAutoResize === "TRUNCATE";
+  // Clip text to bounding box when textAutoResize is NONE/TRUNCATE,
+  // or when textTruncation is ENDING (text overflows with ellipsis)
+  const needsClip = node.textAutoResize === "NONE" || node.textAutoResize === "TRUNCATE"
+    || node.textTruncation === "ENDING";
   let textClipId: string | undefined;
   if (needsClip) {
     textClipId = ids.getNextId("text-clip");
@@ -800,6 +848,7 @@ function resolveTextNode(node: TextNode, ids: IdGenerator): RenderTextNode {
     textClipId,
     textTruncation: node.textTruncation,
     leadingTrim: node.leadingTrim,
+    hyperlink: node.hyperlink,
     content,
     sourceGlyphContours: node.glyphContours,
     sourceDecorationContours: node.decorationContours,

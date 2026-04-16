@@ -133,12 +133,24 @@ export type ResolvedFillLayer = {
  * Each def carries its type and all resolved attributes, so backends
  * can format it without any computation.
  */
+/**
+ * Stroke-align mask: a simple shape mask used for INSIDE/OUTSIDE stroke clipping.
+ * The mask contains a white filled shape that matches the node's geometry,
+ * so the doubled stroke is clipped to the correct side.
+ */
+export type RenderStrokeMaskDef = {
+  readonly type: "stroke-mask";
+  readonly id: string;
+  readonly shape: ClipPathShape;
+};
+
 export type RenderDef =
   | RenderGradientDef
   | RenderFilterDef
   | RenderClipPathDef
   | RenderPatternDef
-  | RenderMaskDef;
+  | RenderMaskDef
+  | RenderStrokeMaskDef;
 
 export type RenderMaskDef = {
   readonly type: "mask";
@@ -289,6 +301,10 @@ export type RenderFrameBackground = {
   readonly stroke?: ResolvedStrokeAttrs;
   readonly strokeLayers?: readonly ResolvedStrokeLayer[];
   /**
+   * Mask ID for INSIDE/OUTSIDE stroke clipping on frames.
+   */
+  readonly strokeMaskId?: string;
+  /**
    * Per-side stroke rendering data. When present, each side of the frame
    * is rendered as a separate line with its own stroke-width, instead of
    * a single rect with uniform stroke-width. The stroke color comes from
@@ -313,6 +329,12 @@ export type RenderRectNode = RenderNodeBase & {
   readonly cornerRadius?: CornerRadius;
   /** Per-side stroke data (same as RenderFrameBackground.individualStrokes) */
   readonly individualStrokes?: RenderFrameBackground["individualStrokes"];
+  /**
+   * Mask ID for INSIDE/OUTSIDE stroke clipping.
+   * When present, the stroked shape is wrapped in a mask that clips the
+   * stroke to the interior (INSIDE) or exterior (OUTSIDE) of the path.
+   */
+  readonly strokeMaskId?: string;
   readonly fill: ResolvedFillResult;
   /** All fill layers for multi-paint rendering (length >= 2 means stacked fills) */
   readonly fillLayers?: readonly ResolvedFillLayer[];
@@ -388,6 +410,8 @@ export type RenderTextNode = RenderNodeBase & {
   readonly textTruncation?: string;
   /** Leading trim mode (e.g. "CAP_HEIGHT") */
   readonly leadingTrim?: string;
+  /** Hyperlink URL — wraps the text content in an SVG <a> element */
+  readonly hyperlink?: string;
   /** Rendering mode: outlined glyphs or fallback text lines */
   readonly content: RenderTextGlyphs | RenderTextLines;
   // Source data for WebGL

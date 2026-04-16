@@ -49,6 +49,7 @@ import {
   defs,
   path,
   rect,
+  circle,
   ellipse,
   text,
   clipPath,
@@ -66,6 +67,7 @@ import {
   feBlend,
   feComposite,
   feMorphology,
+  line,
   foreignObject,
   unsafeSvg,
   type SvgString,
@@ -285,7 +287,16 @@ function formatDef(def: RenderDef): SvgString {
     case "filter": {
       const f = def.filter;
       const primitives = f.primitives.map((p) => formatFilterPrimitive(p));
-      return filter({ id: f.id }, ...primitives);
+      const filterAttrs: Record<string, string | number | undefined> = { id: f.id };
+      if (f.filterBounds) {
+        filterAttrs.x = f.filterBounds.x;
+        filterAttrs.y = f.filterBounds.y;
+        filterAttrs.width = f.filterBounds.width;
+        filterAttrs.height = f.filterBounds.height;
+        filterAttrs.filterUnits = "userSpaceOnUse";
+        filterAttrs["color-interpolation-filters"] = "sRGB";
+      }
+      return filter(filterAttrs as Parameters<typeof filter>[0], ...primitives);
     }
     case "clip-path": {
       return clipPath({ id: def.id }, formatClipPathShape(def.shape));
@@ -295,6 +306,14 @@ function formatDef(def: RenderDef): SvgString {
       return mask(
         { id: def.id, style: "mask-type:luminance" },
         g({ fill: "white" }, maskContent),
+      );
+    }
+    case "stroke-mask": {
+      // Stroke-align mask: white filled shape that clips the doubled stroke
+      const shape = formatClipPathShape(def.shape);
+      return mask(
+        { id: def.id, fill: "white" },
+        shape,
       );
     }
   }
@@ -612,37 +631,62 @@ function formatIndividualStrokes(
   height: number,
 ): SvgString[] {
   const result: SvgString[] = [];
-  const baseAttrs = {
-    stroke: strokes.strokeColor,
-    "stroke-opacity": strokes.strokeOpacity,
-  };
 
-  // Top
   if (strokes.top > 0) {
-    result.push(unsafeSvg(
-      `<line x1="0" y1="0" x2="${width}" y2="0" stroke="${strokes.strokeColor}"${strokes.strokeOpacity !== undefined ? ` stroke-opacity="${strokes.strokeOpacity}"` : ""} stroke-width="${strokes.top}"/>`,
-    ));
+    result.push(line({
+      x1: 0, y1: 0, x2: width, y2: 0,
+      stroke: strokes.strokeColor,
+      "stroke-opacity": strokes.strokeOpacity,
+      "stroke-width": strokes.top,
+    }));
   }
-  // Right
   if (strokes.right > 0) {
-    result.push(unsafeSvg(
-      `<line x1="${width}" y1="0" x2="${width}" y2="${height}" stroke="${strokes.strokeColor}"${strokes.strokeOpacity !== undefined ? ` stroke-opacity="${strokes.strokeOpacity}"` : ""} stroke-width="${strokes.right}"/>`,
-    ));
+    result.push(line({
+      x1: width, y1: 0, x2: width, y2: height,
+      stroke: strokes.strokeColor,
+      "stroke-opacity": strokes.strokeOpacity,
+      "stroke-width": strokes.right,
+    }));
   }
-  // Bottom
   if (strokes.bottom > 0) {
-    result.push(unsafeSvg(
-      `<line x1="0" y1="${height}" x2="${width}" y2="${height}" stroke="${strokes.strokeColor}"${strokes.strokeOpacity !== undefined ? ` stroke-opacity="${strokes.strokeOpacity}"` : ""} stroke-width="${strokes.bottom}"/>`,
-    ));
+    result.push(line({
+      x1: 0, y1: height, x2: width, y2: height,
+      stroke: strokes.strokeColor,
+      "stroke-opacity": strokes.strokeOpacity,
+      "stroke-width": strokes.bottom,
+    }));
   }
-  // Left
   if (strokes.left > 0) {
-    result.push(unsafeSvg(
-      `<line x1="0" y1="0" x2="0" y2="${height}" stroke="${strokes.strokeColor}"${strokes.strokeOpacity !== undefined ? ` stroke-opacity="${strokes.strokeOpacity}"` : ""} stroke-width="${strokes.left}"/>`,
-    ));
+    result.push(line({
+      x1: 0, y1: 0, x2: 0, y2: height,
+      stroke: strokes.strokeColor,
+      "stroke-opacity": strokes.strokeOpacity,
+      "stroke-width": strokes.left,
+    }));
   }
 
   return result;
+}
+
+// =============================================================================
+// Stroke Align Mask Helper
+// =============================================================================
+
+/**
+ * Render a stroked rect shape inside a mask for INSIDE/OUTSIDE stroke alignment.
+ *
+ * The mask clips the doubled stroke to the interior (INSIDE) or exterior
+ * (OUTSIDE) of the shape. Shared between frame and rect formatters.
+ */
+function formatMaskedRectStroke(
+  strokeMaskId: string,
+  stroke: import("../scene-graph/render").ResolvedStrokeAttrs,
+  width: number,
+  height: number,
+  cornerRadius: CornerRadius | undefined,
+): SvgString {
+  const maskedEl = formatRectShape(width, height, cornerRadius, { fill: "none" }, strokeToSvgAttrs(stroke));
+  return g({ mask: `url(#${strokeMaskId})` }, maskedEl);
 }
 
 // =============================================================================
@@ -701,21 +745,29 @@ function formatFrameNode(node: RenderFrameNode): SvgString {
     const singleStrokeAttrs = node.background.strokeLayers
       ? {} // stroke rendered as separate layers below
       : (node.background.stroke ? strokeToSvgAttrs(node.background.stroke) : {});
+    // When strokeMaskId is set, stroke is rendered separately under a mask.
+    // Fill shape has no stroke attrs in that case.
+    const fillStrokeAttrs = node.background.strokeMaskId ? {} : singleStrokeAttrs;
+
     if (node.background.fillLayers) {
       parts.push(...formatMultiFillRectLayers(
-        node.background.fillLayers, node.width, node.height, node.cornerRadius, singleStrokeAttrs,
+        node.background.fillLayers, node.width, node.height, node.cornerRadius, fillStrokeAttrs,
       ));
     } else {
       const fillAttrs = fillToSvgAttrs(node.background.fill);
-      parts.push(formatRectShape(node.width, node.height, node.cornerRadius, fillAttrs, singleStrokeAttrs));
+      parts.push(formatRectShape(node.width, node.height, node.cornerRadius, fillAttrs, fillStrokeAttrs));
     }
-    // Multi-paint stroke layers (rendered after fill)
-    if (node.background.strokeLayers) {
+
+    // Stroke rendering (uniform, multi-paint, per-side, or align-masked)
+    if (node.background.strokeMaskId && node.background.stroke) {
+      parts.push(formatMaskedRectStroke(
+        node.background.strokeMaskId, node.background.stroke, node.width, node.height, node.cornerRadius,
+      ));
+    } else if (node.background.strokeLayers) {
       parts.push(...formatMultiStrokeRectLayers(
         node.background.strokeLayers, node.width, node.height, node.cornerRadius,
       ));
     }
-    // Per-side stroke rendering
     if (node.background.individualStrokes) {
       parts.push(...formatIndividualStrokes(
         node.background.individualStrokes, node.width, node.height,
@@ -740,15 +792,19 @@ function formatFrameNode(node: RenderFrameNode): SvgString {
 }
 
 function formatRectNode(node: RenderRectNode): SvgString {
-  const singleStrokeAttrs = node.strokeLayers
-    ? {} // stroke rendered as separate layers below
+  // When strokeMaskId is set, stroke is rendered under a mask (INSIDE/OUTSIDE)
+  const hasStrokeMask = !!node.strokeMaskId;
+  const singleStrokeAttrs = (node.strokeLayers || hasStrokeMask)
+    ? {} // stroke rendered separately
     : (node.stroke ? strokeToSvgAttrs(node.stroke) : {});
 
   if (node.fillLayers) {
     const content: SvgString[] = [
       ...formatMultiFillRectLayers(node.fillLayers, node.width, node.height, node.cornerRadius, singleStrokeAttrs),
     ];
-    if (node.strokeLayers) {
+    if (hasStrokeMask && node.stroke) {
+      content.push(formatMaskedRectStroke(node.strokeMaskId!, node.stroke, node.width, node.height, node.cornerRadius));
+    } else if (node.strokeLayers) {
       content.push(...formatMultiStrokeRectLayers(node.strokeLayers, node.width, node.height, node.cornerRadius));
     }
     return assembleShapeNode(node, content);
@@ -759,7 +815,9 @@ function formatRectNode(node: RenderRectNode): SvgString {
 
   if (node.needsWrapper || node.strokeLayers) {
     const content: SvgString[] = [rectEl];
-    if (node.strokeLayers) {
+    if (hasStrokeMask && node.stroke) {
+      content.push(formatMaskedRectStroke(node.strokeMaskId!, node.stroke, node.width, node.height, node.cornerRadius));
+    } else if (node.strokeLayers) {
       content.push(...formatMultiStrokeRectLayers(node.strokeLayers, node.width, node.height, node.cornerRadius));
     }
     return assembleShapeNode(node, content);
@@ -783,11 +841,19 @@ function formatEllipseNode(node: RenderEllipseNode): SvgString {
   }
 
   const fillAttrs = fillToSvgAttrs(node.fill);
-  const ellipseEl = ellipse({
-    cx: node.cx, cy: node.cy, rx: node.rx, ry: node.ry,
-    ...fillAttrs,
-    ...singleStrokeAttrs,
-  } as Parameters<typeof ellipse>[0]);
+  // Use <circle> when rx === ry (matches Figma's SVG export behavior)
+  const isCircle = node.rx === node.ry;
+  const ellipseEl = isCircle
+    ? circle({
+        cx: node.cx, cy: node.cy, r: node.rx,
+        ...fillAttrs,
+        ...singleStrokeAttrs,
+      } as Parameters<typeof circle>[0])
+    : ellipse({
+        cx: node.cx, cy: node.cy, rx: node.rx, ry: node.ry,
+        ...fillAttrs,
+        ...singleStrokeAttrs,
+      } as Parameters<typeof ellipse>[0]);
 
   if (node.needsWrapper || node.strokeLayers) {
     const content: SvgString[] = [ellipseEl];
@@ -846,14 +912,17 @@ function formatTextNode(node: RenderTextNode): SvgString {
     if (node.content.d === "") {
       return EMPTY_SVG;
     }
-    const pathEl = path({
+    let glyphContent: SvgString = path({
       d: node.content.d,
       fill: node.fillColor,
       "fill-opacity": node.fillOpacity,
     });
+    if (node.hyperlink) {
+      glyphContent = unsafeSvg(`<a href="${node.hyperlink}">${glyphContent}</a>`);
+    }
     const content = node.textClipId
-      ? g({ "clip-path": `url(#${node.textClipId})` }, pathEl)
-      : pathEl;
+      ? g({ "clip-path": `url(#${node.textClipId})` }, glyphContent)
+      : glyphContent;
 
     const parts: SvgString[] = [];
     if (defsStr !== EMPTY_SVG) { parts.push(defsStr); }
@@ -869,6 +938,10 @@ function formatTextNode(node: RenderTextNode): SvgString {
   }
 
   const textAnchor = fb.textAnchor !== "start" ? fb.textAnchor : undefined;
+  const fontVarStyle = fb.fontVariationSettings
+    ? `font-variation-settings:${fb.fontVariationSettings}`
+    : undefined;
+
   const textElements: SvgString[] = fb.lines.map((line) =>
     text(
       {
@@ -882,12 +955,19 @@ function formatTextNode(node: RenderTextNode): SvgString {
         "font-style": fb.fontStyle,
         "letter-spacing": fb.letterSpacing,
         "text-anchor": textAnchor,
+        style: fontVarStyle,
       },
       line.text,
     ),
   );
 
-  const textContent = textElements.length === 1 ? textElements[0] : g({}, ...textElements);
+  let textContent: SvgString = textElements.length === 1 ? textElements[0] : g({}, ...textElements);
+
+  // Wrap in hyperlink if present
+  if (node.hyperlink) {
+    textContent = unsafeSvg(`<a href="${node.hyperlink}">${textContent}</a>`);
+  }
+
   const clippedContent = node.textClipId
     ? g({ "clip-path": `url(#${node.textClipId})` }, textContent)
     : textContent;

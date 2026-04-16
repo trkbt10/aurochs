@@ -28,6 +28,7 @@ export type {
   RenderClipPathDef,
   RenderPatternDef,
   RenderMaskDef,
+  RenderStrokeMaskDef,
   RenderMask,
   ClipPathShape,
   ResolvedWrapperAttrs,

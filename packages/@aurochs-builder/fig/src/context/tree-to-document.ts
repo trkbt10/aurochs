@@ -14,7 +14,7 @@
 import type { FigNode, FigNodeType, FigMatrix, FigVector, FigColor, FigPaint, FigEffect, KiwiEnumValue, FigKiwiTextData, FigTextStyleOverrideEntry, FigComponentPropValue } from "@aurochs/fig/types";
 import type { NodeTreeResult } from "@aurochs/fig/parser";
 import { getNodeType, safeChildren, guidToString } from "@aurochs/fig/parser";
-import { getEffectiveSymbolID, buildFigStyleRegistry } from "@aurochs/fig/symbols";
+import { getEffectiveSymbolID, buildFigStyleRegistry, getInstanceSymbolOverrides } from "@aurochs/fig/symbols";
 import type { LoadedFigFile } from "@aurochs/fig/roundtrip";
 import type {
   FigDesignDocument, FigDesignNode, FigPage, AutoLayoutProps, LayoutConstraints, TextData, TextStyleOverride, SymbolOverride,
@@ -80,6 +80,39 @@ const COMPONENT_TYPES: ReadonlySet<string> = new Set(["COMPONENT", "COMPONENT_SE
  * Extract per-side stroke weights from Kiwi node data.
  * Returns undefined when all sides are equal or no per-side data exists.
  */
+/**
+ * Build rectangleCornerRadii from Figma's per-corner fields or the array field.
+ *
+ * Real Figma .fig files store per-corner values as individual fields
+ * (rectangleTopLeftCornerRadius, etc.) NOT as a rectangleCornerRadii array.
+ * Builder-generated files may use rectangleCornerRadii directly.
+ */
+function extractCornerRadii(node: FigNode): readonly number[] | undefined {
+  // Prefer the explicit array if present
+  if (node.rectangleCornerRadii && node.rectangleCornerRadii.length === 4) {
+    return node.rectangleCornerRadii;
+  }
+
+  // Build from individual fields (real Figma .fig format)
+  const tl = node.rectangleTopLeftCornerRadius;
+  const tr = node.rectangleTopRightCornerRadius;
+  const br = node.rectangleBottomRightCornerRadius;
+  const bl = node.rectangleBottomLeftCornerRadius;
+
+  if (tl === undefined && tr === undefined && br === undefined && bl === undefined) {
+    return undefined;
+  }
+
+  const radii = [tl ?? 0, tr ?? 0, br ?? 0, bl ?? 0];
+
+  // If all corners are the same, don't store (cornerRadius handles uniform)
+  if (radii[0] === radii[1] && radii[1] === radii[2] && radii[2] === radii[3]) {
+    return undefined;
+  }
+
+  return radii;
+}
+
 function extractIndividualStrokeWeights(node: FigNode): FigDesignNode["individualStrokeWeights"] {
   if (!node.borderStrokeWeightsIndependent && node.borderTopWeight === undefined) {
     return undefined;
@@ -110,6 +143,9 @@ const MODELED_FIELDS: ReadonlySet<string> = new Set([
   "borderTopWeight", "borderRightWeight", "borderBottomWeight", "borderLeftWeight", "borderStrokeWeightsIndependent",
   "styleIdForFill", "styleIdForStrokeFill",
   "cornerRadius", "rectangleCornerRadii", "cornerSmoothing",
+  "rectangleTopLeftCornerRadius", "rectangleTopRightCornerRadius",
+  "rectangleBottomLeftCornerRadius", "rectangleBottomRightCornerRadius",
+  "dashPattern",
   "blendMode",
   "effects",
   "derivedTextData",
@@ -123,8 +159,8 @@ const MODELED_FIELDS: ReadonlySet<string> = new Set([
   "characters", "fontSize", "fontName",
   "textAlignHorizontal", "textAlignVertical", "textAutoResize",
   "textDecoration", "textCase", "lineHeight", "letterSpacing",
-  "textTruncation", "leadingTrim", "fontVariations", "hyperlink",
-  "symbolID", "symbolOverrides", "derivedSymbolData",
+  "textTruncation", "leadingTrim", "fontVariations", "hyperlink", "textTracking",
+  "symbolID", "symbolOverrides", "symbolData", "derivedSymbolData",
   "componentPropDefs", "componentPropRefs", "componentPropAssignments",
   "mask",
   "arcData",
@@ -506,11 +542,11 @@ export function convertFigNode(
     strokeAlign: node.strokeAlign,
     strokeJoin: node.strokeJoin,
     strokeCap: node.strokeCap,
-    strokeDashes: node.strokeDashes,
+    strokeDashes: node.strokeDashes ?? node.dashPattern,
     individualStrokeWeights: extractIndividualStrokeWeights(node),
 
     cornerRadius: node.cornerRadius,
-    rectangleCornerRadii: node.rectangleCornerRadii,
+    rectangleCornerRadii: extractCornerRadii(node),
     cornerSmoothing: node.cornerSmoothing,
 
     blendMode: extractBlendMode(node),
@@ -527,7 +563,7 @@ export function convertFigNode(
     derivedTextData: node.derivedTextData as DerivedTextData | undefined,
 
     symbolId: resolveSymbolIdForDomain(node),
-    overrides: node.symbolOverrides as readonly SymbolOverride[] | undefined,
+    overrides: getInstanceSymbolOverrides(node) as readonly SymbolOverride[] | undefined,
     derivedSymbolData: node.derivedSymbolData as readonly SymbolOverride[] | undefined,
 
     componentPropertyDefs: extractComponentPropertyDefs(node),

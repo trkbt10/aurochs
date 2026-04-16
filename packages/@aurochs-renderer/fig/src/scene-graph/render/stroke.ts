@@ -23,6 +23,11 @@ export type ResolvedStrokeAttrs = {
   readonly strokeLinecap?: "round" | "square";
   readonly strokeLinejoin?: "round" | "bevel";
   readonly strokeDasharray?: string;
+  /**
+   * Stroke alignment. When INSIDE or OUTSIDE, the SVG stroke-width is
+   * doubled and a mask clips the stroke to the correct side of the path.
+   */
+  readonly strokeAlign?: "INSIDE" | "OUTSIDE";
 };
 
 /**
@@ -51,12 +56,26 @@ export type ResolvedStrokeResult = {
 // Resolution
 // =============================================================================
 
+/**
+ * SVG stroke width for the given alignment.
+ * INSIDE/OUTSIDE strokes are rendered at 2× width; a mask clips to the correct half.
+ */
+function alignedStrokeWidth(width: number, align: Stroke["align"]): number {
+  return (align === "INSIDE" || align === "OUTSIDE") ? width * 2 : width;
+}
+
+/** Normalize StrokeAlign to the subset stored on resolved attrs (CENTER → undefined). */
+function resolvedAlign(align: Stroke["align"]): ResolvedStrokeAttrs["strokeAlign"] {
+  return align === "INSIDE" || align === "OUTSIDE" ? align : undefined;
+}
+
 function buildStrokeAttrsBase(stroke: Stroke): Omit<ResolvedStrokeAttrs, "stroke" | "strokeOpacity"> {
   return {
-    strokeWidth: stroke.width,
+    strokeWidth: alignedStrokeWidth(stroke.width, stroke.align),
     strokeLinecap: stroke.linecap !== "butt" ? stroke.linecap : undefined,
     strokeLinejoin: stroke.linejoin !== "miter" ? stroke.linejoin : undefined,
     strokeDasharray: stroke.dashPattern?.join(" "),
+    strokeAlign: resolvedAlign(stroke.align),
   };
 }
 
@@ -66,11 +85,12 @@ function buildStrokeAttrsBase(stroke: Stroke): Omit<ResolvedStrokeAttrs, "stroke
 export function resolveStroke(stroke: Stroke): ResolvedStrokeAttrs {
   return {
     stroke: colorToHex(stroke.color),
-    strokeWidth: stroke.width,
+    strokeWidth: alignedStrokeWidth(stroke.width, stroke.align),
     strokeOpacity: stroke.opacity < 1 ? stroke.opacity : undefined,
     strokeLinecap: stroke.linecap !== "butt" ? stroke.linecap : undefined,
     strokeLinejoin: stroke.linejoin !== "miter" ? stroke.linejoin : undefined,
     strokeDasharray: stroke.dashPattern?.join(" "),
+    strokeAlign: resolvedAlign(stroke.align),
   };
 }
 

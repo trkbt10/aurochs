@@ -309,6 +309,7 @@ function applySymbolOverridesToChildren(
   children: FigDesignNode[],
   overrides: readonly import("@aurochs/fig/domain").SymbolOverride[],
   symbolId: string,
+  styleRegistry: import("@aurochs/fig/domain").FigStyleRegistry,
 ): void {
   for (const override of overrides) {
     if (!isValidOverridePath(override)) { continue; }
@@ -317,7 +318,18 @@ function applySymbolOverridesToChildren(
     const target = findNodeByOverridePath(children, override);
     if (!target) { continue; }
 
-    applyOverrideToNode(target as MutableFigDesignNode, override);
+    const mutable = target as MutableFigDesignNode;
+    applyOverrideToNode(mutable, override);
+
+    // Resolve styleIdForFill / styleIdForStrokeFill after override application
+    if (mutable.styleIdForFill) {
+      const resolved = styleRegistry.fills.get(guidToString(mutable.styleIdForFill.guid));
+      if (resolved) { mutable.fills = resolved; }
+    }
+    if (mutable.styleIdForStrokeFill) {
+      const resolved = styleRegistry.strokes.get(guidToString(mutable.styleIdForStrokeFill.guid));
+      if (resolved) { mutable.strokes = resolved; }
+    }
   }
 }
 
@@ -600,7 +612,7 @@ function resolveInstance(
 
   // Apply per-child overrides from symbolOverrides
   if (node.overrides && node.overrides.length > 0) {
-    applySymbolOverridesToChildren(children, node.overrides, symbolId);
+    applySymbolOverridesToChildren(children, node.overrides, symbolId, ctx.styleRegistry);
   }
 
   // ── Step 4: Component property assignments ──
@@ -697,7 +709,7 @@ function buildGroupNode(node: FigDesignNode, ctx: BuildContext, children: readon
 function buildFrameNode(node: FigDesignNode, ctx: BuildContext, children: readonly SceneNode[]): FrameNode {
   const base = extractBaseProps(node);
   const { size } = extractSizeProps(node);
-  const { fillPaints, strokePaints, strokeWeight, strokeCap, strokeJoin, strokeDashes } = extractPaintProps(node);
+  const { fillPaints, strokePaints, strokeWeight, strokeCap, strokeJoin, strokeDashes, strokeAlign } = extractPaintProps(node);
   const { effects } = extractEffectsProps(node);
   const cornerRadius = extractCornerRadius(node);
   const clipsContent = resolveClipsContent(node);
@@ -715,7 +727,7 @@ function buildFrameNode(node: FigDesignNode, ctx: BuildContext, children: readon
     height: size.y,
     cornerRadius,
     fills: convertPaintsToFills(fillPaints, ctx.images),
-    stroke: convertStrokeToSceneStroke(strokePaints, strokeWeight, { strokeCap, strokeJoin, dashPattern: strokeDashes }),
+    stroke: convertStrokeToSceneStroke(strokePaints, strokeWeight, { strokeCap, strokeJoin, dashPattern: strokeDashes, strokeAlign }),
     individualStrokeWeights: node.individualStrokeWeights,
     clipsContent,
     children,
@@ -726,7 +738,7 @@ function buildFrameNode(node: FigDesignNode, ctx: BuildContext, children: readon
 function buildRectNode(node: FigDesignNode, ctx: BuildContext): RectNode {
   const base = extractBaseProps(node);
   const { size } = extractSizeProps(node);
-  const { fillPaints, strokePaints, strokeWeight, strokeCap, strokeJoin, strokeDashes } = extractPaintProps(node);
+  const { fillPaints, strokePaints, strokeWeight, strokeCap, strokeJoin, strokeDashes, strokeAlign } = extractPaintProps(node);
   const { effects } = extractEffectsProps(node);
   const cornerRadius = extractCornerRadius(node);
 
@@ -743,7 +755,7 @@ function buildRectNode(node: FigDesignNode, ctx: BuildContext): RectNode {
     height: size.y,
     cornerRadius,
     fills: convertPaintsToFills(fillPaints, ctx.images),
-    stroke: convertStrokeToSceneStroke(strokePaints, strokeWeight, { strokeCap, strokeJoin, dashPattern: strokeDashes }),
+    stroke: convertStrokeToSceneStroke(strokePaints, strokeWeight, { strokeCap, strokeJoin, dashPattern: strokeDashes, strokeAlign }),
     individualStrokeWeights: node.individualStrokeWeights,
   };
 }
@@ -751,7 +763,7 @@ function buildRectNode(node: FigDesignNode, ctx: BuildContext): RectNode {
 function buildEllipseNode(node: FigDesignNode, ctx: BuildContext): EllipseNode {
   const base = extractBaseProps(node);
   const { size } = extractSizeProps(node);
-  const { fillPaints, strokePaints, strokeWeight, strokeCap, strokeJoin, strokeDashes } = extractPaintProps(node);
+  const { fillPaints, strokePaints, strokeWeight, strokeCap, strokeJoin, strokeDashes, strokeAlign } = extractPaintProps(node);
   const { effects } = extractEffectsProps(node);
 
   return {
@@ -768,7 +780,7 @@ function buildEllipseNode(node: FigDesignNode, ctx: BuildContext): EllipseNode {
     rx: size.x / 2,
     ry: size.y / 2,
     fills: convertPaintsToFills(fillPaints, ctx.images),
-    stroke: convertStrokeToSceneStroke(strokePaints, strokeWeight, { strokeCap, strokeJoin, dashPattern: strokeDashes }),
+    stroke: convertStrokeToSceneStroke(strokePaints, strokeWeight, { strokeCap, strokeJoin, dashPattern: strokeDashes, strokeAlign }),
     arcData: extractArcData(node),
   };
 }
@@ -884,7 +896,7 @@ function applyStyleOverrides(
 
 function buildVectorNode(node: FigDesignNode, ctx: BuildContext): PathNode {
   const base = extractBaseProps(node);
-  const { fillPaints, strokePaints, strokeWeight, strokeCap, strokeJoin, strokeDashes } = extractPaintProps(node);
+  const { fillPaints, strokePaints, strokeWeight, strokeCap, strokeJoin, strokeDashes, strokeAlign } = extractPaintProps(node);
   const { fillGeometry, strokeGeometry } = extractGeometryProps(node);
   const { effects } = extractEffectsProps(node);
 
@@ -911,7 +923,7 @@ function buildVectorNode(node: FigDesignNode, ctx: BuildContext): PathNode {
   // strokeGeometry is Figma's pre-expanded outline of a stroke.
   // It should be *filled* with the stroke colour, not stroked again.
   const fills = selectPaintsForFills(isStrokeGeometryRef.value, { strokePaints, fillPaints }, ctx.images);
-  const stroke = isStrokeGeometryRef.value ? undefined : convertStrokeToSceneStroke(strokePaints, strokeWeight, { strokeCap, strokeJoin, dashPattern: strokeDashes });
+  const stroke = isStrokeGeometryRef.value ? undefined : convertStrokeToSceneStroke(strokePaints, strokeWeight, { strokeCap, strokeJoin, dashPattern: strokeDashes, strokeAlign });
 
   const { size } = extractSizeProps(node);
   return {
@@ -975,6 +987,7 @@ function buildTextNode(node: FigDesignNode, ctx: BuildContext): TextNode {
     textAutoResize,
     textTruncation: extractEnumName(node.textData?.textTruncation),
     leadingTrim: extractEnumName(node.textData?.leadingTrim),
+    hyperlink: node.textData?.hyperlink?.url,
     glyphContours: textData.glyphContours,
     decorationContours: textData.decorationContours,
     fill: textData.fill,
@@ -1161,7 +1174,7 @@ function buildBooleanOperationNode(
   resultPaths: string[],
 ): PathNode {
   const base = extractBaseProps(node);
-  const { fillPaints, strokePaints, strokeWeight, strokeCap, strokeJoin, strokeDashes } = extractPaintProps(node);
+  const { fillPaints, strokePaints, strokeWeight, strokeCap, strokeJoin, strokeDashes, strokeAlign } = extractPaintProps(node);
   const { effects } = extractEffectsProps(node);
 
   const contours: PathContour[] = resultPaths.map((d) => ({
@@ -1180,7 +1193,7 @@ function buildBooleanOperationNode(
     blendMode: convertBlendMode(node),
     contours,
     fills: convertPaintsToFills(fillPaints, ctx.images),
-    stroke: convertStrokeToSceneStroke(strokePaints, strokeWeight, { strokeCap, strokeJoin, dashPattern: strokeDashes }),
+    stroke: convertStrokeToSceneStroke(strokePaints, strokeWeight, { strokeCap, strokeJoin, dashPattern: strokeDashes, strokeAlign }),
   };
 }
 

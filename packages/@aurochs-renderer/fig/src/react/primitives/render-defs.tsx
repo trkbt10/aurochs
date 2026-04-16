@@ -169,7 +169,21 @@ function formatDiamondGradientDef(def: RenderDiamondGradientDef): ReactNode {
 function formatFilterDef(def: RenderFilterDef): ReactNode {
   const f = def.filter;
   const primitiveElements = f.primitives.map((p, i) => formatFilterPrimitive(p, i));
-  return <filter key={f.id} id={f.id}>{primitiveElements}</filter>;
+  const bounds = f.filterBounds;
+  return (
+    <filter
+      key={f.id}
+      id={f.id}
+      x={bounds?.x}
+      y={bounds?.y}
+      width={bounds?.width}
+      height={bounds?.height}
+      filterUnits={bounds ? "userSpaceOnUse" : undefined}
+      colorInterpolationFilters={bounds ? "sRGB" : undefined}
+    >
+      {primitiveElements}
+    </filter>
+  );
 }
 
 function formatClipPathDef(def: RenderClipPathDef): ReactNode {
@@ -236,6 +250,12 @@ function formatDef(def: RenderDef): ReactNode {
       return formatPatternDef(def);
     case "mask":
       return formatMaskDef(def);
+    case "stroke-mask":
+      return (
+        <mask key={def.id} id={def.id} fill="white">
+          {formatClipPathShape(def.shape)}
+        </mask>
+      );
   }
 }
 

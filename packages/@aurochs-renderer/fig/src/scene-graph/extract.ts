@@ -69,6 +69,7 @@ export type PaintProps = {
   readonly strokeCap: import("@aurochs/fig/types").KiwiEnumValue | undefined;
   readonly strokeJoin: import("@aurochs/fig/types").KiwiEnumValue | undefined;
   readonly strokeDashes: readonly number[] | undefined;
+  readonly strokeAlign: import("@aurochs/fig/types").KiwiEnumValue | undefined;
 };
 
 /**
@@ -88,6 +89,7 @@ export function extractPaintProps(node: FigDesignNode): PaintProps {
     strokeCap: node.strokeCap,
     strokeJoin: node.strokeJoin,
     strokeDashes: node.strokeDashes,
+    strokeAlign: node.strokeAlign,
   };
 }
 

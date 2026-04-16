@@ -356,6 +356,11 @@ export type FigNode = {
   readonly strokeCap?: KiwiEnumValue;
   readonly cornerRadius?: number;
   readonly rectangleCornerRadii?: readonly number[];
+  /** Individual corner radius fields (real .fig format — alternative to array) */
+  readonly rectangleTopLeftCornerRadius?: number;
+  readonly rectangleTopRightCornerRadius?: number;
+  readonly rectangleBottomRightCornerRadius?: number;
+  readonly rectangleBottomLeftCornerRadius?: number;
   readonly fillGeometry?: readonly FigFillGeometry[];
   readonly strokeGeometry?: readonly FigFillGeometry[];
   readonly vectorPaths?: readonly FigVectorPath[];

@@ -49,7 +49,17 @@ function RenderEllipseNodeComponentImpl({ node }: Props) {
     );
   }
 
-  const ellipseEl = (
+  const isCircle = node.rx === node.ry;
+  const ellipseEl = isCircle ? (
+    <circle
+      cx={node.cx}
+      cy={node.cy}
+      r={node.rx}
+      fill={node.fill.attrs.fill}
+      fillOpacity={node.fill.attrs.fillOpacity}
+      {...(node.stroke ?? {})}
+    />
+  ) : (
     <ellipse
       cx={node.cx}
       cy={node.cy}
