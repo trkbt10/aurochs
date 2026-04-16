@@ -36,6 +36,7 @@ export type {
   ResolvedFillLayer,
   RenderBackgroundBlur,
   StrokeRendering,
+  StrokeShape,
 } from "./types";
 
 // Wrapper field registry (SoT for ResolvedWrapperAttrs exhaustiveness)

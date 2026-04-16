@@ -68,6 +68,7 @@ import {
   feComposite,
   feMorphology,
   line,
+  a as svgAnchor,
   foreignObject,
   unsafeSvg,
   type SvgString,
@@ -620,8 +621,6 @@ function formatBackgroundBlur(bgBlur: RenderBackgroundBlur): SvgString {
 // StrokeRendering Formatter
 // =============================================================================
 
-import type { StrokeRendering } from "../scene-graph/render-tree";
-
 /**
  * Get stroke attrs for the fill shape element (uniform mode only).
  * Other modes return empty — strokes are rendered as separate elements.
@@ -631,48 +630,69 @@ function getUniformStrokeAttrs(sr: StrokeRendering | undefined): Record<string, 
   return strokeToSvgAttrs(sr.attrs);
 }
 
+import type { StrokeRendering, StrokeShape } from "../scene-graph/render-tree";
+
 /**
- * Format separate stroke elements for a rect/frame shape.
- * Returns empty array for uniform mode (handled via attrs on fill element).
+ * Format a stroked shape element from StrokeShape + stroke attrs.
  */
-function formatRectStrokeRendering(
-  sr: StrokeRendering,
-  width: number,
-  height: number,
-  cornerRadius: CornerRadius | undefined,
-): SvgString[] {
-  switch (sr.mode) {
-    case "uniform":
-      return []; // Applied as attrs on fill element
-
-    case "masked": {
-      const maskedEl = formatRectShape(width, height, cornerRadius, { fill: "none" }, strokeToSvgAttrs(sr.attrs));
-      return [g({ mask: `url(#${sr.maskId})` }, maskedEl)];
+function formatStrokedShape(shape: StrokeShape, sAttrs: Record<string, string | number | undefined>): SvgString {
+  switch (shape.kind) {
+    case "rect":
+      return formatRectShape(shape.width, shape.height, shape.cornerRadius, { fill: "none" }, sAttrs);
+    case "ellipse":
+      return shape.rx === shape.ry
+        ? circle({ cx: shape.cx, cy: shape.cy, r: shape.rx, fill: "none", ...sAttrs } as Parameters<typeof circle>[0])
+        : ellipse({ cx: shape.cx, cy: shape.cy, rx: shape.rx, ry: shape.ry, fill: "none", ...sAttrs } as Parameters<typeof ellipse>[0]);
+    case "path": {
+      const els = shape.paths.map((p) =>
+        path({ d: p.d, "fill-rule": p.fillRule, fill: "none", ...sAttrs } as Parameters<typeof path>[0]),
+      );
+      return els.length === 1 ? els[0] : g({}, ...els);
     }
-
-    case "layers":
-      return formatMultiStrokeRectLayers(sr.layers, width, height, cornerRadius);
-
-    case "individual":
-      return formatIndividualStrokes(sr, width, height);
   }
 }
 
 /**
- * Format individual stroke lines from StrokeRendering.
+ * Format multi-paint stroke layers from StrokeShape.
  */
-function formatIndividualStrokes(
-  sr: StrokeRendering & { mode: "individual" },
-  width: number,
-  height: number,
-): SvgString[] {
-  const result: SvgString[] = [];
-  const { sides, color, opacity } = sr;
-  if (sides.top > 0) result.push(line({ x1: 0, y1: 0, x2: width, y2: 0, stroke: color, "stroke-opacity": opacity, "stroke-width": sides.top }));
-  if (sides.right > 0) result.push(line({ x1: width, y1: 0, x2: width, y2: height, stroke: color, "stroke-opacity": opacity, "stroke-width": sides.right }));
-  if (sides.bottom > 0) result.push(line({ x1: 0, y1: height, x2: width, y2: height, stroke: color, "stroke-opacity": opacity, "stroke-width": sides.bottom }));
-  if (sides.left > 0) result.push(line({ x1: 0, y1: 0, x2: 0, y2: height, stroke: color, "stroke-opacity": opacity, "stroke-width": sides.left }));
-  return result;
+function formatStrokeLayersForShape(layers: readonly import("../scene-graph/render").ResolvedStrokeLayer[], shape: StrokeShape): SvgString[] {
+  switch (shape.kind) {
+    case "rect":
+      return formatMultiStrokeRectLayers(layers, shape.width, shape.height, shape.cornerRadius);
+    case "ellipse":
+      return formatMultiStrokeEllipseLayers(layers, shape.cx, shape.cy, shape.rx, shape.ry);
+    case "path":
+      return formatMultiStrokePathLayers(layers, shape.paths);
+  }
+}
+
+/**
+ * Format separate stroke elements from a StrokeRendering union.
+ *
+ * This is the SINGLE stroke rendering function for the SVG backend.
+ * All node formatters delegate here — no stroke logic elsewhere.
+ */
+function formatStrokeRendering(sr: StrokeRendering): SvgString[] {
+  switch (sr.mode) {
+    case "uniform":
+      return [];
+
+    case "masked":
+      return [g({ mask: `url(#${sr.maskId})` }, formatStrokedShape(sr.shape, strokeToSvgAttrs(sr.attrs)))];
+
+    case "layers":
+      return formatStrokeLayersForShape(sr.layers, sr.shape);
+
+    case "individual": {
+      const result: SvgString[] = [];
+      const { sides, color, opacity, width: w, height: h } = sr;
+      if (sides.top > 0) result.push(line({ x1: 0, y1: 0, x2: w, y2: 0, stroke: color, "stroke-opacity": opacity, "stroke-width": sides.top }));
+      if (sides.right > 0) result.push(line({ x1: w, y1: 0, x2: w, y2: h, stroke: color, "stroke-opacity": opacity, "stroke-width": sides.right }));
+      if (sides.bottom > 0) result.push(line({ x1: 0, y1: h, x2: w, y2: h, stroke: color, "stroke-opacity": opacity, "stroke-width": sides.bottom }));
+      if (sides.left > 0) result.push(line({ x1: 0, y1: 0, x2: 0, y2: h, stroke: color, "stroke-opacity": opacity, "stroke-width": sides.left }));
+      return result;
+    }
+  }
 }
 
 // =============================================================================
@@ -740,7 +760,7 @@ function formatFrameNode(node: RenderFrameNode): SvgString {
     }
 
     if (sr) {
-      parts.push(...formatRectStrokeRendering(sr, node.width, node.height, node.cornerRadius));
+      parts.push(...formatStrokeRendering(sr));
     }
   }
 
@@ -767,7 +787,7 @@ function formatRectNode(node: RenderRectNode): SvgString {
       ? formatMultiFillRectLayers(node.fillLayers, node.width, node.height, node.cornerRadius, fillStrokeAttrs)
       : [formatRectShape(node.width, node.height, node.cornerRadius, fillToSvgAttrs(node.fill), fillStrokeAttrs)];
     if (sr) {
-      content.push(...formatRectStrokeRendering(sr, node.width, node.height, node.cornerRadius));
+      content.push(...formatStrokeRendering(sr));
     }
     return assembleShapeNode(node, content);
   }
@@ -785,18 +805,15 @@ function formatEllipseNode(node: RenderEllipseNode): SvgString {
   const fillStrokeAttrs = getUniformStrokeAttrs(sr);
   const isCircle = node.rx === node.ry;
 
-  // Ellipse stroke rendering for layers mode
-  const ellipseStrokeElements = (sr?.mode === "layers")
-    ? formatMultiStrokeEllipseLayers(sr.layers, node.cx, node.cy, node.rx, node.ry)
-    : [];
-
   if (node.fillLayers || sr) {
     const content: SvgString[] = node.fillLayers
       ? formatMultiFillEllipseLayers(node.fillLayers, node.cx, node.cy, node.rx, node.ry, fillStrokeAttrs)
       : [isCircle
           ? circle({ cx: node.cx, cy: node.cy, r: node.rx, ...fillToSvgAttrs(node.fill), ...fillStrokeAttrs } as Parameters<typeof circle>[0])
           : ellipse({ cx: node.cx, cy: node.cy, rx: node.rx, ry: node.ry, ...fillToSvgAttrs(node.fill), ...fillStrokeAttrs } as Parameters<typeof ellipse>[0])];
-    content.push(...ellipseStrokeElements);
+    if (sr) {
+      content.push(...formatStrokeRendering(sr));
+    }
     return assembleShapeNode(node, content);
   }
 
@@ -818,10 +835,6 @@ function formatPathNode(node: RenderPathNode): SvgString {
 
   const sr = node.strokeRendering;
   const fillStrokeAttrs = getUniformStrokeAttrs(sr);
-  const pathStrokeElements = (sr?.mode === "layers")
-    ? formatMultiStrokePathLayers(sr.layers, node.paths)
-    : [];
-
   if (node.fillLayers || sr) {
     const content: SvgString[] = node.fillLayers
       ? formatMultiFillPathLayers(node.fillLayers, node.paths, fillStrokeAttrs)
@@ -829,7 +842,7 @@ function formatPathNode(node: RenderPathNode): SvgString {
           const fa = p.fillOverride ? fillToSvgAttrs(p.fillOverride) : fillToSvgAttrs(node.fill);
           return path({ d: p.d, "fill-rule": p.fillRule, ...fa, ...fillStrokeAttrs } as Parameters<typeof path>[0]);
         });
-    content.push(...pathStrokeElements);
+    if (sr) { content.push(...formatStrokeRendering(sr)); }
     return assembleShapeNode(node, content);
   }
 
@@ -858,7 +871,7 @@ function formatTextNode(node: RenderTextNode): SvgString {
       "fill-opacity": node.fillOpacity,
     });
     if (node.hyperlink) {
-      glyphContent = unsafeSvg(`<a href="${node.hyperlink}">${glyphContent}</a>`);
+      glyphContent = svgAnchor({ href: node.hyperlink }, glyphContent);
     }
     const content = node.textClipId
       ? g({ "clip-path": `url(#${node.textClipId})` }, glyphContent)
@@ -905,7 +918,7 @@ function formatTextNode(node: RenderTextNode): SvgString {
 
   // Wrap in hyperlink if present
   if (node.hyperlink) {
-    textContent = unsafeSvg(`<a href="${node.hyperlink}">${textContent}</a>`);
+    textContent = svgAnchor({ href: node.hyperlink }, textContent);
   }
 
   const clippedContent = node.textClipId

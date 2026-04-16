@@ -90,9 +90,14 @@ function clampRadius(
     if (radius <= 0) { return undefined; }
     return Math.min(radius, max);
   }
-  // Per-corner: clamp each
-  const clamped = radius.map((r) => Math.min(r, max)) as unknown as readonly [number, number, number, number];
-  if (clamped.every((r) => r === 0)) { return undefined; }
+  // Per-corner: clamp each — explicit tuple to avoid `as unknown as`
+  const clamped: readonly [number, number, number, number] = [
+    Math.min(radius[0], max),
+    Math.min(radius[1], max),
+    Math.min(radius[2], max),
+    Math.min(radius[3], max),
+  ];
+  if (clamped[0] === 0 && clamped[1] === 0 && clamped[2] === 0 && clamped[3] === 0) { return undefined; }
   return clamped;
 }
 
@@ -481,8 +486,10 @@ function resolveStrokeRendering(
   stroke: import("../types").Stroke,
   ids: IdGenerator,
   defs: RenderDef[],
-  /** Shape for stroke-align mask (required for INSIDE/OUTSIDE) */
-  maskShape?: import("./types").ClipPathShape,
+  /** Shape descriptor for non-uniform stroke modes */
+  shape: import("./types").StrokeShape,
+  /** Clip shape for stroke-align mask (required for INSIDE/OUTSIDE) */
+  maskClipShape?: import("./types").ClipPathShape,
 ): import("./types").StrokeRendering {
   const result = resolveStrokeResult(stroke, ids);
 
@@ -493,14 +500,14 @@ function resolveStrokeRendering(
         collectGradientDef(layer.gradientDef, defs);
       }
     }
-    return { mode: "layers", layers: result.layers };
+    return { mode: "layers", layers: result.layers, shape };
   }
 
   // INSIDE/OUTSIDE stroke → masked
-  if (result.attrs.strokeAlign && maskShape) {
+  if (result.attrs.strokeAlign && maskClipShape) {
     const maskId = ids.getNextId("stroke-mask");
-    defs.push({ type: "stroke-mask", id: maskId, shape: maskShape });
-    return { mode: "masked", attrs: result.attrs, maskId };
+    defs.push({ type: "stroke-mask", id: maskId, shape: maskClipShape });
+    return { mode: "masked", attrs: result.attrs, maskId, shape };
   }
 
   // Uniform stroke
@@ -549,9 +556,12 @@ function resolveFrameNode(node: FrameNode, ids: IdGenerator): RenderFrameNode {
       sides: node.individualStrokeWeights,
       color: result.attrs.stroke,
       opacity: result.attrs.strokeOpacity,
+      width: node.width,
+      height: node.height,
     };
   } else if (node.stroke) {
-    strokeRendering = resolveStrokeRendering(node.stroke, ids, defs, maskShape);
+    const strokeShape: import("./types").StrokeShape = { kind: "rect", width: node.width, height: node.height, cornerRadius: clampedRadius };
+    strokeRendering = resolveStrokeRendering(node.stroke, ids, defs, strokeShape, maskShape);
   }
 
   let background: import("./types").RenderFrameBackground | null = null;
@@ -635,9 +645,10 @@ function resolveRectNode(node: RectNode, ids: IdGenerator): RenderRectNode {
   const clampedRadius = clampRadius(node.cornerRadius, node.width, node.height);
   const fillResult = resolveTopFillResult(node.fills, ids, defs);
   const fillLayers = resolveAllFillLayers(node.fills, ids, defs);
-  const maskShape = buildClipShape(node.width, node.height, clampedRadius);
+  const maskClipShape = buildClipShape(node.width, node.height, clampedRadius);
+  const rectStrokeShape: import("./types").StrokeShape = { kind: "rect", width: node.width, height: node.height, cornerRadius: clampedRadius };
   const strokeRendering = node.stroke
-    ? resolveStrokeRendering(node.stroke, ids, defs, maskShape)
+    ? resolveStrokeRendering(node.stroke, ids, defs, rectStrokeShape, maskClipShape)
     : undefined;
 
   finalizeDefs(defs, { width: node.width, height: node.height });
@@ -674,7 +685,8 @@ function resolveEllipseNode(node: EllipseNode, ids: IdGenerator): RenderEllipseN
   const { wrapper } = resolveWrapper(node, ids, defs);
   const fillResult = resolveTopFillResult(node.fills, ids, defs);
   const fillLayers = resolveAllFillLayers(node.fills, ids, defs);
-  const strokeRendering = node.stroke ? resolveStrokeRendering(node.stroke, ids, defs) : undefined;
+  const ellipseStrokeShape: import("./types").StrokeShape = { kind: "ellipse", cx: node.cx, cy: node.cy, rx: node.rx, ry: node.ry };
+  const strokeRendering = node.stroke ? resolveStrokeRendering(node.stroke, ids, defs, ellipseStrokeShape) : undefined;
 
   const ellipseSize = { width: node.rx * 2, height: node.ry * 2 };
 
@@ -739,7 +751,6 @@ function resolvePathNode(node: PathNode, ids: IdGenerator): RenderPathNode {
   const { wrapper } = resolveWrapper(node, ids, defs);
   const fillResult = resolveTopFillResult(node.fills, ids, defs);
   const fillLayers = resolveAllFillLayers(node.fills, ids, defs);
-  const strokeRendering = node.stroke ? resolveStrokeRendering(node.stroke, ids, defs) : undefined;
 
   const paths: RenderPathContour[] = node.contours.map((contour) => {
     const base: RenderPathContour = {
@@ -752,6 +763,9 @@ function resolvePathNode(node: PathNode, ids: IdGenerator): RenderPathNode {
     }
     return base;
   });
+
+  const pathStrokeShape: import("./types").StrokeShape = { kind: "path", paths };
+  const strokeRendering = node.stroke ? resolveStrokeRendering(node.stroke, ids, defs, pathStrokeShape) : undefined;
 
   const pathSize = node.width && node.height ? { width: node.width, height: node.height } : undefined;
   if (pathSize) {

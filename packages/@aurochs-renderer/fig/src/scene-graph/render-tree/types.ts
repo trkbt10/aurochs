@@ -296,16 +296,31 @@ export type RenderFrameNode = RenderNodeBase & {
 };
 
 /**
+ * Shape descriptor for stroke rendering.
+ *
+ * Contains all geometric parameters needed to draw the stroked shape.
+ * Backends format this to their output (SVG string / React JSX)
+ * without needing to know the parent node type.
+ */
+export type StrokeShape =
+  | { readonly kind: "rect"; readonly width: number; readonly height: number; readonly cornerRadius?: CornerRadius }
+  | { readonly kind: "ellipse"; readonly cx: number; readonly cy: number; readonly rx: number; readonly ry: number }
+  | { readonly kind: "path"; readonly paths: readonly { readonly d: string; readonly fillRule?: "evenodd" }[] };
+
+/**
  * Stroke rendering instruction — discriminated union.
  *
- * Resolver determines the mode; backends format without branching logic.
- * This is the SoT for how strokes are drawn — adding a new mode here
- * forces both SVG and React backends to handle it (exhaustive switch).
+ * Resolver determines the mode AND the shape; backends format without
+ * branching on node type. This is the SoT for how strokes are drawn —
+ * adding a new mode here forces both SVG and React backends to handle it.
+ *
+ * Every non-uniform mode carries the shape to stroke, so backends never
+ * need to reconstruct shape parameters from the parent node.
  */
 export type StrokeRendering =
   | { readonly mode: "uniform"; readonly attrs: ResolvedStrokeAttrs }
-  | { readonly mode: "masked"; readonly attrs: ResolvedStrokeAttrs; readonly maskId: string }
-  | { readonly mode: "layers"; readonly layers: readonly ResolvedStrokeLayer[] }
+  | { readonly mode: "masked"; readonly attrs: ResolvedStrokeAttrs; readonly maskId: string; readonly shape: StrokeShape }
+  | { readonly mode: "layers"; readonly layers: readonly ResolvedStrokeLayer[]; readonly shape: StrokeShape }
   | {
       readonly mode: "individual";
       readonly sides: {
@@ -316,6 +331,8 @@ export type StrokeRendering =
       };
       readonly color: string;
       readonly opacity?: number;
+      readonly width: number;
+      readonly height: number;
     };
 
 export type RenderFrameBackground = {

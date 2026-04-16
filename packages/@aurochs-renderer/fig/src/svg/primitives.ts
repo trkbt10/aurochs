@@ -417,6 +417,17 @@ export function mask(
 }
 
 /**
+ * Create an SVG anchor element
+ */
+export function a(
+  attrs: { href: string; target?: string },
+  ...children: readonly SvgString[]
+): SvgString {
+  const attrStr = buildAttrs(attrs);
+  return unsafeSvg(`<a ${attrStr}>${children.join("")}</a>`);
+}
+
+/**
  * Create an SVG foreignObject element
  *
  * Used for content that cannot be expressed in SVG natively,

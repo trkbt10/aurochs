@@ -306,7 +306,7 @@ function findNodeById(nodes: readonly FigDesignNode[], id: string): FigDesignNod
  * Properties follow the same structure as FigDesignNode fields.
  */
 function applySymbolOverridesToChildren(
-  children: FigDesignNode[],
+  children: readonly FigDesignNode[],
   overrides: readonly import("@aurochs/fig/domain").SymbolOverride[],
   symbolId: string,
   styleRegistry: import("@aurochs/fig/domain").FigStyleRegistry,
@@ -340,7 +340,7 @@ function applySymbolOverridesToChildren(
  * on child nodes (text content, visibility, instance swap).
  */
 function applyComponentPropertyAssignments(
-  children: FigDesignNode[],
+  children: readonly FigDesignNode[],
   assignments: readonly import("@aurochs/fig/domain").ComponentPropertyAssignment[],
   symbol: FigDesignNode,
 ): void {
@@ -357,7 +357,7 @@ function applyComponentPropertyAssignments(
 }
 
 function applyPropsRecursive(
-  nodes: FigDesignNode[],
+  nodes: readonly FigDesignNode[],
   assignmentMap: ReadonlyMap<string, import("@aurochs/fig/domain").ComponentPropertyValue>,
   _symbol: FigDesignNode,
 ): void {
@@ -400,7 +400,7 @@ function applyPropsRecursive(
     }
 
     if (node.children) {
-      applyPropsRecursive(node.children as FigDesignNode[], assignmentMap, _symbol);
+      applyPropsRecursive(node.children, assignmentMap, _symbol);
     }
   }
 }
@@ -418,7 +418,7 @@ function applyPropsRecursive(
  * cleared derivedTextData.
  */
 function applyDerivedSymbolData(
-  children: FigDesignNode[],
+  children: readonly FigDesignNode[],
   derivedData: readonly SymbolOverride[],
 ): void {
   for (const entry of derivedData) {
@@ -441,7 +441,7 @@ function applyDerivedSymbolData(
  * horizontal/vertical constraint settings.
  */
 function applyConstraintResolution(
-  children: FigDesignNode[],
+  children: readonly FigDesignNode[],
   symbolSize: { x: number; y: number },
   instanceSize: { x: number; y: number },
 ): void {
@@ -581,7 +581,7 @@ function resolveInstance(
   // ── Step 3: Clone children with overrides ──
   // INSTANCE children in .fig are typically empty — SYMBOL children are used.
   // When INSTANCE has own children (rare), those take precedence.
-  let children: FigDesignNode[];
+  let children: readonly FigDesignNode[];
   if (ownChildren.length > 0) {
     children = ownChildren.map(deepCloneDesignNode);
   } else {
@@ -629,18 +629,14 @@ function resolveInstance(
  * be built into scene graph nodes.
  */
 function resolveNestedInstances(
-  children: FigDesignNode[],
+  children: readonly FigDesignNode[],
   ctx: BuildContext,
-): FigDesignNode[] {
+): readonly FigDesignNode[] {
   return children.map((child) => {
     const typeName = getNodeTypeName(child);
     if (typeName !== "INSTANCE") {
-      // Recurse into non-INSTANCE children that may contain nested INSTANCE
       if (child.children && child.children.length > 0) {
-        const resolvedGrandchildren = resolveNestedInstances(
-          child.children as FigDesignNode[],
-          ctx,
-        );
+        const resolvedGrandchildren = resolveNestedInstances(child.children, ctx);
         if (resolvedGrandchildren !== child.children) {
           const updated: MutableFigDesignNode = { ...child, children: resolvedGrandchildren };
           return updated;
@@ -649,16 +645,11 @@ function resolveNestedInstances(
       return child;
     }
 
-    // Resolve nested INSTANCE
     const resolved = resolveInstance(child, child.children ?? [], ctx);
-
-    // Flatten: convert to a non-INSTANCE node with resolved children.
-    // The type is changed to FRAME so that buildNode treats it as a
-    // frame container rather than attempting to resolve it again.
     const flattened: MutableFigDesignNode = {
       ...resolved.effectiveNode,
       type: "FRAME",
-      children: resolveNestedInstances(resolved.children as FigDesignNode[], ctx),
+      children: resolveNestedInstances(resolved.children, ctx),
     };
     return flattened;
   });

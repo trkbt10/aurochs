@@ -1,179 +1,110 @@
 /**
  * @file Stroke rendering — single source of truth for React stroke output
  *
- * Consumes the StrokeRendering discriminated union from RenderTree.
- * All shape components (Frame, Rect, Ellipse, Path) delegate stroke
- * rendering here — no stroke logic in individual node components.
+ * Consumes StrokeRendering (with embedded StrokeShape) from RenderTree.
+ * No node-type-specific logic — the shape is described by StrokeShape,
+ * and all node components delegate here via a single call.
  *
- * SVG counterpart: formatStrokeRendering in svg/scene-renderer.ts
+ * SVG counterpart: formatStrokeRendering() in svg/scene-renderer.ts.
+ * Both consume the same StrokeRendering type — structural parity is
+ * enforced by TypeScript's exhaustive switch.
  */
 
 import type { ReactNode } from "react";
-import type { StrokeRendering } from "../../scene-graph/render-tree";
-import type { CornerRadius } from "../../scene-graph/types";
+import type { StrokeRendering, StrokeShape } from "../../scene-graph/render-tree";
+import type { ResolvedStrokeAttrs } from "../../scene-graph/render";
 import { RectShape } from "./rect-shape";
 
-type RectStrokeProps = {
-  readonly rendering: StrokeRendering;
-  readonly width: number;
-  readonly height: number;
-  readonly cornerRadius?: CornerRadius;
-};
-
 /**
- * Render stroke for a rect/frame shape.
- *
- * Returns SVG elements for the stroke, or null if mode is "uniform"
- * (uniform strokes are applied as attributes on the fill shape itself).
- *
- * For "uniform" mode, returns the stroke attrs to apply on the fill element.
+ * Get stroke attrs for uniform mode (apply directly on the fill shape).
+ * Non-uniform modes return undefined — strokes are rendered separately.
  */
-/**
- * Get stroke attrs for uniform mode (to apply on the fill shape element).
- * Other modes return undefined (strokes rendered as separate elements).
- */
-export function getRectStrokeAttrs(
-  rendering: StrokeRendering | undefined,
-): import("../../scene-graph/render").ResolvedStrokeAttrs | undefined {
-  if (!rendering || rendering.mode !== "uniform") { return undefined; }
-  return rendering.attrs;
+export function getUniformStrokeAttrs(
+  sr: StrokeRendering | undefined,
+): ResolvedStrokeAttrs | undefined {
+  if (!sr || sr.mode !== "uniform") { return undefined; }
+  return sr.attrs;
 }
 
 /**
- * Render separate stroke elements for non-uniform modes.
- * Returns null for "uniform" mode (handled via attrs).
+ * Render a stroked shape element from StrokeShape + stroke attrs.
  */
-export function RectStrokeElements({ rendering, width, height, cornerRadius }: RectStrokeProps): ReactNode {
-  switch (rendering.mode) {
+function StrokedShape({ shape, stroke }: { shape: StrokeShape; stroke: ResolvedStrokeAttrs }): ReactNode {
+  const sAttrs = {
+    stroke: stroke.stroke,
+    strokeWidth: stroke.strokeWidth,
+    strokeOpacity: stroke.strokeOpacity,
+    strokeLinecap: stroke.strokeLinecap,
+    strokeLinejoin: stroke.strokeLinejoin,
+    strokeDasharray: stroke.strokeDasharray,
+  };
+
+  switch (shape.kind) {
+    case "rect":
+      return <RectShape width={shape.width} height={shape.height} cornerRadius={shape.cornerRadius} fill="none" {...sAttrs} />;
+    case "ellipse":
+      return shape.rx === shape.ry
+        ? <circle cx={shape.cx} cy={shape.cy} r={shape.rx} fill="none" {...sAttrs} />
+        : <ellipse cx={shape.cx} cy={shape.cy} rx={shape.rx} ry={shape.ry} fill="none" {...sAttrs} />;
+    case "path":
+      return (
+        <>
+          {shape.paths.map((p, i) => (
+            <path key={i} d={p.d} fillRule={p.fillRule} fill="none" {...sAttrs} />
+          ))}
+        </>
+      );
+  }
+}
+
+/**
+ * Render separate stroke elements from StrokeRendering.
+ * Returns null for uniform mode (handled via attrs on fill shape).
+ *
+ * This is the SINGLE stroke rendering component for the React backend.
+ * All node components call this — no stroke logic elsewhere.
+ */
+export function StrokeRenderingElements({ sr }: { sr: StrokeRendering }): ReactNode {
+  switch (sr.mode) {
     case "uniform":
-      return null; // Applied as attrs on fill element
+      return null;
 
     case "masked":
       return (
-        <g mask={`url(#${rendering.maskId})`}>
-          <RectShape
-            width={width}
-            height={height}
-            cornerRadius={cornerRadius}
-            fill="none"
-            stroke={rendering.attrs.stroke}
-            strokeWidth={rendering.attrs.strokeWidth}
-            strokeOpacity={rendering.attrs.strokeOpacity}
-          />
+        <g mask={`url(#${sr.maskId})`}>
+          <StrokedShape shape={sr.shape} stroke={sr.attrs} />
         </g>
       );
 
     case "layers":
       return (
         <>
-          {rendering.layers.map((layer, i) => (
-            <RectShape
-              key={i}
-              width={width}
-              height={height}
-              cornerRadius={cornerRadius}
-              fill="none"
-              stroke={layer.attrs.stroke}
-              strokeWidth={layer.attrs.strokeWidth}
-              strokeOpacity={layer.attrs.strokeOpacity}
-              style={layer.blendMode ? { mixBlendMode: layer.blendMode as React.CSSProperties["mixBlendMode"] } : undefined}
-            />
-          ))}
+          {sr.layers.map((layer, i) => {
+            const lAttrs: ResolvedStrokeAttrs = {
+              stroke: layer.attrs.stroke,
+              strokeWidth: layer.attrs.strokeWidth,
+              strokeOpacity: layer.attrs.strokeOpacity,
+              strokeLinecap: layer.attrs.strokeLinecap,
+              strokeLinejoin: layer.attrs.strokeLinejoin,
+              strokeDasharray: layer.attrs.strokeDasharray,
+            };
+            return (
+              <g key={i} style={layer.blendMode ? { mixBlendMode: layer.blendMode as React.CSSProperties["mixBlendMode"] } : undefined}>
+                <StrokedShape shape={sr.shape} stroke={lAttrs} />
+              </g>
+            );
+          })}
         </>
       );
 
     case "individual":
       return (
         <>
-          {rendering.sides.top > 0 && <line x1={0} y1={0} x2={width} y2={0} stroke={rendering.color} strokeOpacity={rendering.opacity} strokeWidth={rendering.sides.top} />}
-          {rendering.sides.right > 0 && <line x1={width} y1={0} x2={width} y2={height} stroke={rendering.color} strokeOpacity={rendering.opacity} strokeWidth={rendering.sides.right} />}
-          {rendering.sides.bottom > 0 && <line x1={0} y1={height} x2={width} y2={height} stroke={rendering.color} strokeOpacity={rendering.opacity} strokeWidth={rendering.sides.bottom} />}
-          {rendering.sides.left > 0 && <line x1={0} y1={0} x2={0} y2={height} stroke={rendering.color} strokeOpacity={rendering.opacity} strokeWidth={rendering.sides.left} />}
+          {sr.sides.top > 0 && <line x1={0} y1={0} x2={sr.width} y2={0} stroke={sr.color} strokeOpacity={sr.opacity} strokeWidth={sr.sides.top} />}
+          {sr.sides.right > 0 && <line x1={sr.width} y1={0} x2={sr.width} y2={sr.height} stroke={sr.color} strokeOpacity={sr.opacity} strokeWidth={sr.sides.right} />}
+          {sr.sides.bottom > 0 && <line x1={0} y1={sr.height} x2={sr.width} y2={sr.height} stroke={sr.color} strokeOpacity={sr.opacity} strokeWidth={sr.sides.bottom} />}
+          {sr.sides.left > 0 && <line x1={0} y1={0} x2={0} y2={sr.height} stroke={sr.color} strokeOpacity={sr.opacity} strokeWidth={sr.sides.left} />}
         </>
       );
   }
-}
-
-type EllipseStrokeProps = {
-  readonly rendering: StrokeRendering;
-  readonly cx: number;
-  readonly cy: number;
-  readonly rx: number;
-  readonly ry: number;
-};
-
-/**
- * Get stroke attrs for uniform mode on ellipse.
- */
-export function getEllipseStrokeAttrs(
-  rendering: StrokeRendering | undefined,
-): Record<string, string | number | undefined> | undefined {
-  return getRectStrokeAttrs(rendering); // Same logic
-}
-
-/**
- * Render separate stroke elements for non-uniform ellipse modes.
- */
-export function EllipseStrokeElements({ rendering, cx, cy, rx, ry }: EllipseStrokeProps): ReactNode {
-  if (rendering.mode === "uniform") { return null; }
-  if (rendering.mode === "layers") {
-    return (
-      <>
-        {rendering.layers.map((layer, i) => (
-          <ellipse
-            key={i}
-            cx={cx} cy={cy} rx={rx} ry={ry}
-            fill="none"
-            stroke={layer.attrs.stroke}
-            strokeWidth={layer.attrs.strokeWidth}
-            strokeOpacity={layer.attrs.strokeOpacity}
-            style={layer.blendMode ? { mixBlendMode: layer.blendMode as React.CSSProperties["mixBlendMode"] } : undefined}
-          />
-        ))}
-      </>
-    );
-  }
-  return null;
-}
-
-type PathStrokeProps = {
-  readonly rendering: StrokeRendering;
-  readonly paths: readonly { readonly d: string; readonly fillRule?: "evenodd" }[];
-};
-
-/**
- * Get stroke attrs for uniform mode on path.
- */
-export function getPathStrokeAttrs(
-  rendering: StrokeRendering | undefined,
-): Record<string, string | number | undefined> | undefined {
-  return getRectStrokeAttrs(rendering);
-}
-
-/**
- * Render separate stroke elements for non-uniform path modes.
- */
-export function PathStrokeElements({ rendering, paths }: PathStrokeProps): ReactNode {
-  if (rendering.mode === "uniform") { return null; }
-  if (rendering.mode === "layers") {
-    return (
-      <>
-        {rendering.layers.map((layer, i) =>
-          paths.map((p, j) => (
-            <path
-              key={`${i}-${j}`}
-              d={p.d}
-              fillRule={p.fillRule}
-              fill="none"
-              stroke={layer.attrs.stroke}
-              strokeWidth={layer.attrs.strokeWidth}
-              strokeOpacity={layer.attrs.strokeOpacity}
-              style={layer.blendMode ? { mixBlendMode: layer.blendMode as React.CSSProperties["mixBlendMode"] } : undefined}
-            />
-          )),
-        )}
-      </>
-    );
-  }
-  return null;
 }
