@@ -4,8 +4,7 @@
 
 import { memo } from "react";
 import type { RenderPathNode } from "../../scene-graph/render-tree";
-import { formatRenderDefs } from "../primitives/render-defs";
-import { RenderWrapper } from "../primitives/wrapper";
+import { ShapeShell } from "../primitives/shape-shell";
 import { MultiFillPathLayers, MultiStrokePathLayers } from "../primitives/multi-fill";
 
 type Props = {
@@ -20,8 +19,7 @@ function RenderPathNodeComponentImpl({ node }: Props) {
   if (node.fillLayers || node.strokeLayers) {
     const strokeForFill = node.strokeLayers ? undefined : node.stroke;
     return (
-      <RenderWrapper wrapper={node.wrapper}>
-        {formatRenderDefs(node.defs)}
+      <ShapeShell wrapper={node.wrapper} defs={node.defs} backgroundBlur={node.backgroundBlur} mask={node.mask}>
         {node.fillLayers ? (
           <MultiFillPathLayers
             layers={node.fillLayers}
@@ -49,7 +47,7 @@ function RenderPathNodeComponentImpl({ node }: Props) {
             paths={node.paths}
           />
         )}
-      </RenderWrapper>
+      </ShapeShell>
     );
   }
 
@@ -69,10 +67,9 @@ function RenderPathNodeComponentImpl({ node }: Props) {
 
   if (node.needsWrapper) {
     return (
-      <RenderWrapper wrapper={node.wrapper}>
-        {formatRenderDefs(node.defs)}
+      <ShapeShell wrapper={node.wrapper} defs={node.defs} backgroundBlur={node.backgroundBlur} mask={node.mask}>
         {pathElements}
-      </RenderWrapper>
+      </ShapeShell>
     );
   }
 

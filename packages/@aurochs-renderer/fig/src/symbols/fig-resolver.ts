@@ -22,8 +22,8 @@ import {
   buildFigStyleRegistry,
   resolveStyleIdOnMutableNode,
   type FigDerivedSymbolData,
-  type FigStyleRegistry,
 } from "@aurochs/fig/symbols";
+import type { FigStyleRegistry } from "@aurochs/fig/domain";
 
 // =============================================================================
 // Public types

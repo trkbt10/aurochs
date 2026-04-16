@@ -33,6 +33,7 @@ import {
   resolveStrokeResult,
   resolveEffects,
   finalizeGradientDefs,
+  finalizeImagePatternDefs,
   type IdGenerator,
   type ResolvedFill,
   type ResolvedFilter,
@@ -55,7 +56,10 @@ import type {
   ResolvedFillLayer,
   RenderFrameBackground,
   RenderPathContour,
+  RenderBackgroundBlur,
 } from "./types";
+
+import type { BackgroundBlurEffect } from "../types";
 
 // =============================================================================
 // ID Generator
@@ -287,6 +291,86 @@ function resolveWrapper(
 }
 
 // =============================================================================
+// Helper: Finalize defs with element size
+// =============================================================================
+
+/**
+ * Finalize all size-dependent defs (gradient coordinates and image patterns)
+ * for a given element size. Called once per node resolver.
+ */
+function finalizeDefs(defs: RenderDef[], elementSize: { width: number; height: number }): void {
+  finalizeGradientDefs(defs, elementSize);
+  finalizeImagePatternDefs(defs, elementSize);
+}
+
+// =============================================================================
+// Helper: Resolve mask
+// =============================================================================
+
+/**
+ * Resolve a node's mask (if present) into a RenderMask reference and
+ * a RenderMaskDef in the defs array.
+ *
+ * Masks can be applied to ANY node type (group, frame, rect, ellipse,
+ * path, text, image). This helper is called by every node resolver.
+ */
+function resolveMask(
+  node: SceneNode,
+  ids: IdGenerator,
+  defs: RenderDef[],
+): import("./types").RenderMask | undefined {
+  if (!node.mask) {
+    return undefined;
+  }
+  const maskId = ids.getNextId("mask");
+  const resolvedMaskContent = resolveNode(node.mask.maskContent, ids);
+  if (!resolvedMaskContent) {
+    return undefined;
+  }
+  defs.push({ type: "mask", id: maskId, maskContent: resolvedMaskContent });
+  return { maskAttr: `url(#${maskId})` };
+}
+
+// =============================================================================
+// Helper: Resolve background blur
+// =============================================================================
+
+/**
+ * Extract background blur effect from a node's effects and produce
+ * a RenderBackgroundBlur instruction with a clip path.
+ *
+ * Background blur cannot be expressed as an SVG filter — it requires
+ * foreignObject + CSS backdrop-filter, clipped to the node's shape.
+ */
+function resolveBackgroundBlur(
+  effects: readonly import("../types").Effect[],
+  bounds: { x: number; y: number; width: number; height: number },
+  ids: IdGenerator,
+  defs: RenderDef[],
+): RenderBackgroundBlur | undefined {
+  const bgBlur = effects.find(
+    (e): e is BackgroundBlurEffect => e.type === "background-blur",
+  );
+  if (!bgBlur || bgBlur.radius <= 0) {
+    return undefined;
+  }
+
+  // Create a clip path for the foreignObject (same shape as the node)
+  const clipId = ids.getNextId("bg-blur-clip");
+  defs.push({
+    type: "clip-path",
+    id: clipId,
+    shape: { kind: "rect", x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height },
+  });
+
+  return {
+    radius: bgBlur.radius,
+    clipId,
+    bounds,
+  };
+}
+
+// =============================================================================
 // Helper: Resolve fill and collect defs
 // =============================================================================
 
@@ -388,17 +472,7 @@ function resolveGroupNode(node: GroupNode, ids: IdGenerator): RenderGroupNode {
   const { wrapper } = resolveWrapper(node, ids, defs);
 
   const children = resolveChildren(node.children, ids);
-
-  // Resolve mask if present
-  let mask: RenderGroupNode["mask"] | undefined;
-  if (node.mask) {
-    const maskId = ids.getNextId("mask");
-    const resolvedMaskContent = resolveNode(node.mask.maskContent, ids);
-    if (resolvedMaskContent) {
-      defs.push({ type: "mask", id: maskId, maskContent: resolvedMaskContent });
-      mask = { maskAttr: `url(#${maskId})` };
-    }
-  }
+  const mask = resolveMask(node, ids, defs);
 
   return {
     type: "group",
@@ -418,18 +492,33 @@ function resolveFrameNode(node: FrameNode, ids: IdGenerator): RenderFrameNode {
   const { wrapper } = resolveWrapper(node, ids, defs);
   const clampedRadius = clampRadius(node.cornerRadius, node.width, node.height);
 
-  // Background fill
+  // Background fill and stroke — resolved independently.
+  // A frame may have stroke without fills, or fills without stroke.
+  const hasFills = node.fills.length > 0;
+  const strokeResult = node.stroke ? resolveStrokeWithLayers(node.stroke, ids, defs) : undefined;
+
   let background: RenderFrameBackground | null = null;
-  if (node.fills.length > 0) {
-    const lastFill = node.fills[node.fills.length - 1];
-    const fillResult = resolveFillResult(lastFill, ids, defs);
-    const fillLayers = resolveAllFillLayers(node.fills, ids, defs);
-    const strokeResult = node.stroke ? resolveStrokeWithLayers(node.stroke, ids, defs) : undefined;
+  if (hasFills || strokeResult) {
+    const fillResult = hasFills
+      ? resolveFillResult(node.fills[node.fills.length - 1], ids, defs)
+      : { attrs: { fill: "none" as const } };
+    const fillLayers = hasFills ? resolveAllFillLayers(node.fills, ids, defs) : undefined;
+    // Resolve per-side stroke weights if present
+    const individualStrokes = node.individualStrokeWeights && strokeResult
+      ? {
+          ...node.individualStrokeWeights,
+          strokeColor: strokeResult.attrs.stroke ?? "none",
+          strokeOpacity: strokeResult.attrs.strokeOpacity,
+        }
+      : undefined;
+
     background = {
       fill: fillResult,
       fillLayers,
-      stroke: strokeResult?.attrs,
-      strokeLayers: strokeResult?.layers,
+      // When individual strokes are active, the uniform stroke is replaced
+      stroke: individualStrokes ? undefined : strokeResult?.attrs,
+      strokeLayers: individualStrokes ? undefined : strokeResult?.layers,
+      individualStrokes,
     };
   }
 
@@ -468,7 +557,14 @@ function resolveFrameNode(node: FrameNode, ids: IdGenerator): RenderFrameNode {
   }
 
   // Finalize gradient coordinates using element size
-  finalizeGradientDefs(defs, { width: node.width, height: node.height });
+  finalizeDefs(defs, { width: node.width, height: node.height });
+
+  // Background blur (foreignObject + backdrop-filter, separate from filter pipeline)
+  const backgroundBlur = resolveBackgroundBlur(
+    node.effects, { x: 0, y: 0, width: node.width, height: node.height }, ids, defs,
+  );
+
+  const mask = resolveMask(node, ids, defs);
 
   return {
     type: "frame",
@@ -482,6 +578,8 @@ function resolveFrameNode(node: FrameNode, ids: IdGenerator): RenderFrameNode {
     width: node.width,
     height: node.height,
     cornerRadius: clampedRadius,
+    backgroundBlur,
+    mask,
   };
 }
 
@@ -493,8 +591,13 @@ function resolveRectNode(node: RectNode, ids: IdGenerator): RenderRectNode {
   const fillLayers = resolveAllFillLayers(node.fills, ids, defs);
   const strokeResult = node.stroke ? resolveStrokeWithLayers(node.stroke, ids, defs) : undefined;
 
-  finalizeGradientDefs(defs, { width: node.width, height: node.height });
-  const needsWrapper = !!(wrapper.transform || node.opacity < 1 || wrapper.filterAttr || defs.length > 0 || fillLayers || strokeResult?.layers);
+  finalizeDefs(defs, { width: node.width, height: node.height });
+
+  const backgroundBlur = resolveBackgroundBlur(
+    node.effects, { x: 0, y: 0, width: node.width, height: node.height }, ids, defs,
+  );
+  const mask = resolveMask(node, ids, defs);
+  const needsWrapper = !!(wrapper.transform || node.opacity < 1 || wrapper.filterAttr || defs.length > 0 || fillLayers || strokeResult?.layers || backgroundBlur || mask);
 
   return {
     type: "rect",
@@ -512,6 +615,8 @@ function resolveRectNode(node: RectNode, ids: IdGenerator): RenderRectNode {
     needsWrapper,
     sourceFills: node.fills,
     sourceStroke: node.stroke,
+    backgroundBlur,
+    mask,
   };
 }
 
@@ -524,13 +629,18 @@ function resolveEllipseNode(node: EllipseNode, ids: IdGenerator): RenderEllipseN
 
   const ellipseSize = { width: node.rx * 2, height: node.ry * 2 };
 
+  const backgroundBlur = resolveBackgroundBlur(
+    node.effects, { x: 0, y: 0, ...ellipseSize }, ids, defs,
+  );
+  const mask = resolveMask(node, ids, defs);
+
   // If arc data is present, resolve as a path node
   if (node.arcData) {
     const d = buildEllipseArcPathD(node.cx, node.cy, node.rx, node.ry, node.arcData);
     const paths: RenderPathContour[] = [{ d, fillRule: "evenodd" }];
-    finalizeGradientDefs(defs, ellipseSize);
+    finalizeDefs(defs, ellipseSize);
     const needsWrapper = !!(
-      wrapper.transform || node.opacity < 1 || wrapper.filterAttr || defs.length > 0 || fillLayers || strokeResult?.layers
+      wrapper.transform || node.opacity < 1 || wrapper.filterAttr || defs.length > 0 || fillLayers || strokeResult?.layers || backgroundBlur || mask
     );
     return {
       type: "path",
@@ -547,11 +657,13 @@ function resolveEllipseNode(node: EllipseNode, ids: IdGenerator): RenderEllipseN
       sourceContours: [],
       sourceFills: node.fills,
       sourceStroke: node.stroke,
+      backgroundBlur,
+      mask,
     };
   }
 
-  finalizeGradientDefs(defs, ellipseSize);
-  const needsWrapper = !!(wrapper.transform || node.opacity < 1 || wrapper.filterAttr || defs.length > 0 || fillLayers || strokeResult?.layers);
+  finalizeDefs(defs, ellipseSize);
+  const needsWrapper = !!(wrapper.transform || node.opacity < 1 || wrapper.filterAttr || defs.length > 0 || fillLayers || strokeResult?.layers || backgroundBlur || mask);
 
   return {
     type: "ellipse",
@@ -570,6 +682,8 @@ function resolveEllipseNode(node: EllipseNode, ids: IdGenerator): RenderEllipseN
     needsWrapper,
     sourceFills: node.fills,
     sourceStroke: node.stroke,
+    backgroundBlur,
+    mask,
   };
 }
 
@@ -592,13 +706,19 @@ function resolvePathNode(node: PathNode, ids: IdGenerator): RenderPathNode {
     return base;
   });
 
-  if (node.width && node.height) {
-    finalizeGradientDefs(defs, { width: node.width, height: node.height });
+  const pathSize = node.width && node.height ? { width: node.width, height: node.height } : undefined;
+  if (pathSize) {
+    finalizeDefs(defs, pathSize);
   }
+
+  const backgroundBlur = pathSize
+    ? resolveBackgroundBlur(node.effects, { x: 0, y: 0, ...pathSize }, ids, defs)
+    : undefined;
+  const mask = resolveMask(node, ids, defs);
 
   const needsWrapper = !!(
     wrapper.transform || node.opacity < 1 || wrapper.filterAttr ||
-    defs.length > 0 || paths.length > 1 || fillLayers || strokeResult?.layers
+    defs.length > 0 || paths.length > 1 || fillLayers || strokeResult?.layers || backgroundBlur || mask
   );
 
   return {
@@ -616,6 +736,8 @@ function resolvePathNode(node: PathNode, ids: IdGenerator): RenderPathNode {
     sourceContours: node.contours,
     sourceFills: node.fills,
     sourceStroke: node.stroke,
+    backgroundBlur,
+    mask,
   };
 }
 
@@ -663,6 +785,8 @@ function resolveTextNode(node: TextNode, ids: IdGenerator): RenderTextNode {
     content = { mode: "glyphs", d: "" };
   }
 
+  const mask = resolveMask(node, ids, defs);
+
   return {
     type: "text",
     id: node.id,
@@ -674,6 +798,8 @@ function resolveTextNode(node: TextNode, ids: IdGenerator): RenderTextNode {
     fillColor,
     fillOpacity,
     textClipId,
+    textTruncation: node.textTruncation,
+    leadingTrim: node.leadingTrim,
     content,
     sourceGlyphContours: node.glyphContours,
     sourceDecorationContours: node.decorationContours,
@@ -681,6 +807,7 @@ function resolveTextNode(node: TextNode, ids: IdGenerator): RenderTextNode {
     sourceFillOpacity: node.fill.opacity,
     sourceTextLineLayout: node.textLineLayout,
     sourceTextAutoResize: node.textAutoResize,
+    mask,
   };
 }
 
@@ -694,7 +821,8 @@ function resolveImageNode(node: ImageNode, ids: IdGenerator): RenderImageNode {
     dataUri = `data:${node.mimeType};base64,${base64}`;
   }
 
-  const needsWrapper = !!(wrapper.transform || node.opacity < 1);
+  const mask = resolveMask(node, ids, defs);
+  const needsWrapper = !!(wrapper.transform || node.opacity < 1 || mask);
 
   return {
     type: "image",
@@ -705,12 +833,33 @@ function resolveImageNode(node: ImageNode, ids: IdGenerator): RenderImageNode {
     width: node.width,
     height: node.height,
     dataUri,
+    preserveAspectRatio: resolvePreserveAspectRatio(node.scaleMode),
     needsWrapper,
     sourceImageRef: node.imageRef,
     sourceData: node.data,
     sourceMimeType: node.mimeType,
     sourceScaleMode: node.scaleMode,
+    mask,
   };
+}
+
+/**
+ * Convert Figma scaleMode to SVG preserveAspectRatio.
+ */
+function resolvePreserveAspectRatio(scaleMode: string): string {
+  switch (scaleMode) {
+    case "FIT":
+      return "xMidYMid meet";
+    case "FILL":
+    case "CROP":
+      return "xMidYMid slice";
+    case "TILE":
+      return "none";
+    case "STRETCH":
+      return "none";
+    default:
+      return "xMidYMid slice";
+  }
 }
 
 // =============================================================================

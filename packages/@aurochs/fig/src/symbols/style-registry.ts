@@ -15,20 +15,9 @@
  * override application.
  */
 
-import type { FigNode, MutableFigNode, FigPaint, FigStyleId } from "../types";
+import type { FigNode, MutableFigNode, FigPaint } from "../types";
+import type { FigStyleRegistry } from "../domain/document";
 import { guidToString } from "@aurochs/fig/parser";
-
-// =============================================================================
-// Types
-// =============================================================================
-
-/**
- * Maps style GUID strings to their resolved paint arrays.
- */
-export type FigStyleRegistry = {
-  readonly fills: ReadonlyMap<string, readonly FigPaint[]>;
-  readonly strokes: ReadonlyMap<string, readonly FigPaint[]>;
-};
 
 // =============================================================================
 // Construction
@@ -158,8 +147,3 @@ export function resolveStyleIdOnMutableNode(
   }
 }
 
-/** Empty style registry — no styles to resolve */
-export const EMPTY_FIG_STYLE_REGISTRY: FigStyleRegistry = {
-  fills: new Map(),
-  strokes: new Map(),
-};

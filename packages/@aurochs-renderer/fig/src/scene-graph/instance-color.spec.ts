@@ -24,7 +24,7 @@ describe("INSTANCE color inheritance in scene graph", () => {
     const compPage = doc.pages.find((p) => p.name === "Components & Effects")!;
 
     const sg = buildSceneGraph(compPage.children, {
-      blobs: doc._loaded?.blobs ?? [],
+      blobs: doc.blobs,
       images: doc.images,
       canvasSize: { width: 1200, height: 800 },
       symbolMap: doc.components,
@@ -51,7 +51,7 @@ describe("INSTANCE color inheritance in scene graph", () => {
     const compPage = doc.pages.find((p) => p.name === "Components & Effects")!;
 
     const sg = buildSceneGraph(compPage.children, {
-      blobs: doc._loaded?.blobs ?? [],
+      blobs: doc.blobs,
       images: doc.images,
       canvasSize: { width: 1200, height: 800 },
       symbolMap: doc.components,
@@ -78,7 +78,7 @@ describe("INSTANCE color inheritance in scene graph", () => {
     const compPage = doc.pages.find((p) => p.name === "Components & Effects")!;
 
     const sg = buildSceneGraph(compPage.children, {
-      blobs: doc._loaded?.blobs ?? [],
+      blobs: doc.blobs,
       images: doc.images,
       canvasSize: { width: 1200, height: 800 },
       symbolMap: doc.components,
@@ -95,7 +95,7 @@ describe("INSTANCE color inheritance in scene graph", () => {
     const compPage = doc.pages.find((p) => p.name === "Components & Effects")!;
 
     const sg = buildSceneGraph(compPage.children, {
-      blobs: doc._loaded?.blobs ?? [],
+      blobs: doc.blobs,
       images: doc.images,
       canvasSize: { width: 1200, height: 800 },
       symbolMap: doc.components,

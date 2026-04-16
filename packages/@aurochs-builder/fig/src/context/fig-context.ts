@@ -11,7 +11,7 @@ import { loadFigFile } from "@aurochs/fig/roundtrip";
 import type { LoadedFigFile } from "@aurochs/fig/roundtrip";
 import { buildNodeTree } from "@aurochs/fig/parser";
 import type { FigDesignDocument, FigPage } from "@aurochs/fig/domain";
-import { DEFAULT_PAGE_BACKGROUND, toPageId } from "@aurochs/fig/domain";
+import { DEFAULT_PAGE_BACKGROUND, EMPTY_FIG_STYLE_REGISTRY, toPageId } from "@aurochs/fig/domain";
 import { treeToDocument } from "./tree-to-document";
 
 // =============================================================================
@@ -66,6 +66,8 @@ export function createEmptyFigDesignDocument(pageName = "Page 1"): FigDesignDocu
     pages: [page],
     components: new Map(),
     images: new Map(),
+    blobs: [],
     metadata: null,
+    styleRegistry: EMPTY_FIG_STYLE_REGISTRY,
   };
 }

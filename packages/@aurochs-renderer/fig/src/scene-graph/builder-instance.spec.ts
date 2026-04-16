@@ -135,7 +135,7 @@ describe("INSTANCE resolution — property merge", () => {
     const sg = buildWithSymbols([instance], symbolMap);
 
     const frame = sg.root.children[0] as FrameNode;
-    // Should keep BLUE fill from instance
+    // Should keep BLUE fill from instance (visible paints take precedence)
     expect(frame.fills.length).toBeGreaterThan(0);
     if (frame.fills[0].type === "solid") {
       expect(frame.fills[0].color.b).toBe(1); // blue

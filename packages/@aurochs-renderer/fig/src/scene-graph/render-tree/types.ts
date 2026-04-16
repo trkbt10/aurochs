@@ -220,6 +220,22 @@ export type ClipPathShape = ClipPathRectShape | ClipPathPathShape;
 /**
  * Base for all render nodes.
  */
+/**
+ * Background blur rendering info.
+ *
+ * Background blur cannot be expressed as an SVG filter — it uses
+ * foreignObject + CSS backdrop-filter. This data is carried separately
+ * from the filter pipeline so backends can render it appropriately.
+ */
+export type RenderBackgroundBlur = {
+  /** Blur radius in pixels */
+  readonly radius: number;
+  /** Clip path ID that defines the node's shape (for clipping the foreignObject) */
+  readonly clipId: string;
+  /** Element bounds */
+  readonly bounds: { readonly x: number; readonly y: number; readonly width: number; readonly height: number };
+};
+
 export type RenderNodeBase = {
   /** Original SceneNode ID */
   readonly id: SceneNodeId;
@@ -231,6 +247,11 @@ export type RenderNodeBase = {
   readonly source: SceneNode;
   /** Mask applied to this node (from parent's mask processing) */
   readonly mask?: RenderMask;
+  /**
+   * Background blur info — rendered via foreignObject + CSS backdrop-filter.
+   * Present only on nodes that have a BACKGROUND_BLUR effect.
+   */
+  readonly backgroundBlur?: RenderBackgroundBlur;
 };
 
 // -- Group --
@@ -267,6 +288,20 @@ export type RenderFrameBackground = {
   readonly fillLayers?: readonly ResolvedFillLayer[];
   readonly stroke?: ResolvedStrokeAttrs;
   readonly strokeLayers?: readonly ResolvedStrokeLayer[];
+  /**
+   * Per-side stroke rendering data. When present, each side of the frame
+   * is rendered as a separate line with its own stroke-width, instead of
+   * a single rect with uniform stroke-width. The stroke color comes from
+   * the resolved stroke attrs.
+   */
+  readonly individualStrokes?: {
+    readonly top: number;
+    readonly right: number;
+    readonly bottom: number;
+    readonly left: number;
+    readonly strokeColor: string;
+    readonly strokeOpacity?: number;
+  };
 };
 
 // -- Rect --
@@ -276,6 +311,8 @@ export type RenderRectNode = RenderNodeBase & {
   readonly width: number;
   readonly height: number;
   readonly cornerRadius?: CornerRadius;
+  /** Per-side stroke data (same as RenderFrameBackground.individualStrokes) */
+  readonly individualStrokes?: RenderFrameBackground["individualStrokes"];
   readonly fill: ResolvedFillResult;
   /** All fill layers for multi-paint rendering (length >= 2 means stacked fills) */
   readonly fillLayers?: readonly ResolvedFillLayer[];
@@ -343,6 +380,14 @@ export type RenderTextNode = RenderNodeBase & {
   readonly fillOpacity?: number;
   /** Clip path ID when textAutoResize is NONE or TRUNCATE */
   readonly textClipId?: string;
+  /**
+   * When "ENDING", text is truncated with ellipsis.
+   * SVG backend applies text-overflow:ellipsis via foreignObject for <text> mode,
+   * or relies on clip for glyph mode.
+   */
+  readonly textTruncation?: string;
+  /** Leading trim mode (e.g. "CAP_HEIGHT") */
+  readonly leadingTrim?: string;
   /** Rendering mode: outlined glyphs or fallback text lines */
   readonly content: RenderTextGlyphs | RenderTextLines;
   // Source data for WebGL
@@ -373,6 +418,8 @@ export type RenderImageNode = RenderNodeBase & {
   readonly height: number;
   /** Data URI for SVG/React (base64-encoded) */
   readonly dataUri?: string;
+  /** Resolved SVG preserveAspectRatio from Figma scaleMode */
+  readonly preserveAspectRatio: string;
   readonly needsWrapper: boolean;
   // Source data for WebGL
   readonly sourceImageRef: string;

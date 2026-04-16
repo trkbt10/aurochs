@@ -14,6 +14,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { FigRouteGate } from "./FigRouteGate";
 import type { FigDesignDocument } from "@aurochs/fig/domain";
+import { EMPTY_FIG_STYLE_REGISTRY } from "@aurochs/fig/domain";
 
 afterEach(cleanup);
 
@@ -23,7 +24,9 @@ function createMockDocument(): FigDesignDocument {
     pages: [],
     components: new Map(),
     images: new Map(),
+    blobs: [],
     metadata: null,
+    styleRegistry: EMPTY_FIG_STYLE_REGISTRY,
   } as FigDesignDocument;
 }
 

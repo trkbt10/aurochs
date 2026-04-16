@@ -83,10 +83,11 @@ function PageSvgContent({ page, document: doc, bounds }: PageSvgContentProps) {
       return null;
     }
     return buildSceneGraph(page.children, {
-      blobs: doc._loaded?.blobs ?? [],
+      blobs: doc.blobs,
       images: doc.images as BuildSceneGraphOptions["images"],
       canvasSize: { width: bounds.width, height: bounds.height },
       symbolMap: doc.components,
+      styleRegistry: doc.styleRegistry,
     });
   }, [page.children, doc, bounds.width, bounds.height]);
 

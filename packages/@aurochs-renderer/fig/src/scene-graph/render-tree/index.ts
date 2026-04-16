@@ -33,6 +33,7 @@ export type {
   ResolvedWrapperAttrs,
   ResolvedFillResult,
   ResolvedFillLayer,
+  RenderBackgroundBlur,
 } from "./types";
 
 // Wrapper field registry (SoT for ResolvedWrapperAttrs exhaustiveness)

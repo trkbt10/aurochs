@@ -10,7 +10,7 @@
  */
 
 import { useMemo } from "react";
-import type { FigPage, FigDesignNode } from "@aurochs/fig/domain";
+import type { FigPage, FigDesignNode, FigStyleRegistry } from "@aurochs/fig/domain";
 import type { FigImage } from "@aurochs/fig/parser";
 import { buildSceneGraph, type BuildSceneGraphOptions } from "@aurochs-renderer/fig/scene-graph";
 import { FigSceneRenderer } from "@aurochs-renderer/fig/react";
@@ -24,14 +24,12 @@ type FigPageRendererProps = {
   readonly canvasWidth: number;
   readonly canvasHeight: number;
   readonly images: ReadonlyMap<string, FigImage>;
-  /**
-   * Binary blobs from .fig file (for path/geometry decoding).
-   * From FigDesignDocument._loaded.blobs — roundtrip format (Record<string, unknown>[])
-   * is compatible with parser FigBlob at runtime ({ bytes: number[] }).
-   */
+  /** Binary blobs for geometry decoding (from FigDesignDocument.blobs) */
   readonly blobs: BuildSceneGraphOptions["blobs"];
   /** Symbol/component map for INSTANCE resolution */
   readonly symbolMap?: ReadonlyMap<string, FigDesignNode>;
+  /** Style registry for per-path style override resolution */
+  readonly styleRegistry?: FigStyleRegistry;
 };
 
 // =============================================================================
@@ -54,6 +52,7 @@ export function FigPageRenderer({
   images,
   blobs,
   symbolMap,
+  styleRegistry,
 }: FigPageRendererProps) {
   const sceneGraph = useMemo(() => {
     if (page.children.length === 0) {
@@ -65,8 +64,9 @@ export function FigPageRenderer({
       images,
       canvasSize: { width: canvasWidth, height: canvasHeight },
       symbolMap,
+      styleRegistry,
     });
-  }, [page.children, canvasWidth, canvasHeight, images, blobs, symbolMap]);
+  }, [page.children, canvasWidth, canvasHeight, images, blobs, symbolMap, styleRegistry]);
 
   if (!sceneGraph) {
     return <g />;

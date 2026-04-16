@@ -15,7 +15,7 @@
 import type {
   FigNodeType, FigMatrix, FigVector, FigColor, FigPaint, FigEffect, FigStrokeWeight, FigFontName, KiwiEnumValue,
   FigDerivedBaseline, FigDerivedGlyph, FigDerivedDecoration, FigDerivedTextData,
-  FigVectorPath, FigVectorData,
+  FigVectorPath, FigVectorData, FigStyleId, FigFillGeometry,
 } from "../types";
 import type { LoadedFigFile, FigImage, FigMetadata } from "../roundtrip";
 import type { FigNodeId, FigPageId } from "./node-id";
@@ -51,6 +51,10 @@ export type LayoutConstraints = {
   readonly stackCounterSizing?: KiwiEnumValue;
   readonly horizontalConstraint?: KiwiEnumValue;
   readonly verticalConstraint?: KiwiEnumValue;
+  /** AutoLayout child cross-axis alignment override (STRETCH, etc.) */
+  readonly stackChildAlignSelf?: KiwiEnumValue;
+  /** AutoLayout child primary-axis grow factor (0 = fixed, 1 = fill) */
+  readonly stackChildPrimaryGrow?: number;
 };
 
 // =============================================================================
@@ -97,6 +101,29 @@ export type TextData = {
    * @see Kiwi schema: TextData.styleOverrideTable (array of NodeChange)
    */
   readonly styleOverrideTable?: readonly TextStyleOverride[];
+
+  /**
+   * Text truncation mode.
+   * ENDING = truncate with ellipsis at the end.
+   */
+  readonly textTruncation?: KiwiEnumValue;
+
+  /**
+   * Leading (line spacing) trim mode.
+   * CAP_HEIGHT = trim leading to cap height rather than full ascent.
+   */
+  readonly leadingTrim?: KiwiEnumValue;
+
+  /**
+   * Variable font axis values (e.g. weight, width).
+   * Empty array when no variations are applied.
+   */
+  readonly fontVariations?: readonly { readonly axisTag: number; readonly axisValue: number }[];
+
+  /**
+   * Hyperlink URL attached to this text node.
+   */
+  readonly hyperlink?: { readonly url?: string };
 };
 
 /**
@@ -290,10 +317,12 @@ export function applyOverrideToNode(
       case "size":
         target.size = value as FigVector;
         break;
-      // Geometry (cleared/updated on resize)
+      // Geometry (blob references — indices into document blobs array)
       case "fillGeometry":
+        target.fillGeometry = value as readonly FigFillGeometry[] | undefined;
+        break;
       case "strokeGeometry":
-        // These are Kiwi blob references — preserve in _raw, not domain fields
+        target.strokeGeometry = value as readonly FigFillGeometry[] | undefined;
         break;
       case "derivedTextData":
         if (!options?.skipDerivedTextData) {
@@ -450,7 +479,49 @@ export type FigDesignNode = {
   /** Stroke dash pattern (e.g., [4, 2] for dashed stroke) */
   readonly strokeDashes?: readonly number[];
 
+  /**
+   * Per-side stroke weights for frames/rectangles.
+   * When borderStrokeWeightsIndependent is true, each side may have
+   * a different stroke width. SVG renders this as separate stroked
+   * paths per side rather than a single stroke-width attribute.
+   */
+  readonly individualStrokeWeights?: {
+    readonly top: number;
+    readonly right: number;
+    readonly bottom: number;
+    readonly left: number;
+  };
+
+  /**
+   * Style reference for fill paint (Kiwi schema field 332).
+   *
+   * When present, references a shared fill style whose GUID identifies
+   * a style definition node in the document. The `fills` field may
+   * contain stale cached paints — consumers should resolve via a
+   * FigStyleRegistry when this field is present.
+   *
+   * At domain construction time (`treeToDocument`), fills are pre-resolved
+   * from the registry so this field serves as provenance metadata.
+   * At render time, vector per-path overrides may also carry styleIdForFill
+   * which needs runtime resolution via the registry.
+   */
+  readonly styleIdForFill?: FigStyleId;
+
+  /**
+   * Style reference for stroke paint (Kiwi schema field 333).
+   * Same semantics as styleIdForFill but for strokes.
+   */
+  readonly styleIdForStrokeFill?: FigStyleId;
+
   // Geometry
+  /**
+   * Fill geometry: blob references for decoded path commands.
+   * Each entry's commandsBlob is an index into the document's blobs array.
+   */
+  readonly fillGeometry?: readonly FigFillGeometry[];
+  /** Stroke geometry: pre-expanded stroke outlines as blob references. */
+  readonly strokeGeometry?: readonly FigFillGeometry[];
+
   readonly cornerRadius?: number;
   readonly rectangleCornerRadii?: readonly number[];
 
@@ -561,6 +632,8 @@ export type FigDesignNode = {
   // Star/polygon specifics
   readonly pointCount?: number;
   readonly starInnerRadius?: number;
+  /** Star inner scale factor (0-1). Alternative to starInnerRadius for controlling inner vertex positions. */
+  readonly starInnerScale?: number;
 
   /**
    * Raw Kiwi node data preserved for roundtrip fidelity.
@@ -589,6 +662,28 @@ export type FigPage = {
 };
 
 // =============================================================================
+// Style Registry
+// =============================================================================
+
+/**
+ * Maps style GUID strings to their resolved paint arrays.
+ *
+ * Built from (styleIdForFill, fillPaints) pairs found across all nodes
+ * in a document. Used to resolve stale paint caches when nodes or
+ * per-path overrides reference shared styles.
+ */
+export type FigStyleRegistry = {
+  readonly fills: ReadonlyMap<string, readonly FigPaint[]>;
+  readonly strokes: ReadonlyMap<string, readonly FigPaint[]>;
+};
+
+/** Empty style registry — no styles to resolve */
+export const EMPTY_FIG_STYLE_REGISTRY: FigStyleRegistry = {
+  fills: new Map(),
+  strokes: new Map(),
+};
+
+// =============================================================================
 // Design Document
 // =============================================================================
 
@@ -602,14 +697,45 @@ export const DEFAULT_PAGE_BACKGROUND: FigColor = { r: 0.9607843, g: 0.9607843, b
  *
  * Analogous to PresentationDocument in the PPTX pipeline.
  */
+/**
+ * Binary blob data for geometry decoding.
+ *
+ * Blobs are binary arrays containing encoded path commands, glyph outlines,
+ * and other binary geometry data referenced by fillGeometry/strokeGeometry
+ * indices on design nodes. Structurally identical to parser FigBlob —
+ * defined separately to avoid domain → parser dependency.
+ */
+export type FigDesignBlob = {
+  readonly bytes: readonly number[];
+};
+
 export type FigDesignDocument = {
   readonly pages: readonly FigPage[];
   /** Components (SYMBOL/COMPONENT nodes) indexed by their node ID */
   readonly components: ReadonlyMap<string, FigDesignNode>;
   /** Images extracted from the .fig ZIP */
   readonly images: ReadonlyMap<string, FigImage>;
+  /**
+   * Binary blobs for geometry decoding (fillGeometry/strokeGeometry,
+   * derived text paths, etc.). Indexed by blob reference numbers on nodes.
+   */
+  readonly blobs: readonly FigDesignBlob[];
   /** File metadata (name, export date, etc.) */
   readonly metadata: FigMetadata | null;
+
+  /**
+   * Style registry mapping style GUIDs to resolved paint arrays.
+   *
+   * Built during domain conversion from (styleIdForFill, fillPaints) pairs
+   * found across all nodes in the document. Consumers use this to resolve
+   * per-path style overrides in vector data (vectorData.styleOverrideTable)
+   * where an entry's `styleIdForFill` references a shared style.
+   *
+   * Node-level fills/strokes are pre-resolved during domain conversion,
+   * so this registry is primarily needed for vector per-path overrides
+   * that carry `styleIdForFill` references.
+   */
+  readonly styleRegistry: FigStyleRegistry;
 
   /**
    * Original loaded file data for roundtrip export.

@@ -194,11 +194,12 @@ function formatPatternDef(def: RenderPatternDef): ReactNode {
     >
       <image
         href={d.dataUri}
-        x={0}
-        y={0}
+        x={d.imageTransform ? undefined : 0}
+        y={d.imageTransform ? undefined : 0}
         width={d.imageWidth}
         height={d.imageHeight}
         preserveAspectRatio={d.preserveAspectRatio}
+        transform={d.imageTransform}
       />
     </pattern>
   );

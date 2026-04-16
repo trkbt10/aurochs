@@ -368,6 +368,12 @@ export type FigNode = {
   readonly styleIdForStrokeFill?: FigStyleId;
   /** Stroke dash pattern */
   readonly strokeDashes?: readonly number[];
+  /** Per-side stroke weights (Figma "Independent stroke weights" feature) */
+  readonly borderTopWeight?: number;
+  readonly borderRightWeight?: number;
+  readonly borderBottomWeight?: number;
+  readonly borderLeftWeight?: number;
+  readonly borderStrokeWeightsIndependent?: boolean;
   readonly mask?: boolean;
   readonly clipsContent?: boolean;
   readonly frameMaskDisabled?: boolean;
@@ -419,6 +425,10 @@ export type FigNode = {
   readonly horizontalConstraint?: KiwiEnumValue;
   /** Vertical constraint for non-auto-layout positioning */
   readonly verticalConstraint?: KiwiEnumValue;
+  /** AutoLayout child cross-axis alignment override (STRETCH, AUTO, etc.) */
+  readonly stackChildAlignSelf?: KiwiEnumValue;
+  /** AutoLayout child primary-axis grow factor (0 = fixed, 1 = fill container) */
+  readonly stackChildPrimaryGrow?: number;
 
   // ---- Boolean operation ----
   /** Boolean operation type (UNION, SUBTRACT, INTERSECT, EXCLUDE) */
@@ -453,6 +463,8 @@ export type FigNode = {
   readonly pointCount?: number;
   /** Inner radius ratio for STAR nodes (0-1 range, default 0.382) */
   readonly starInnerRadius?: number;
+  /** Star inner scale factor (0-1). Controls inner vertex positions relative to outer. */
+  readonly starInnerScale?: number;
   /** Stroke dash pattern (separate from strokeDashes for legacy compat) */
   readonly dashPattern?: readonly number[];
   /** Handle mirroring mode for vector point handles */
@@ -487,6 +499,14 @@ export type FigNode = {
   readonly lineHeight?: FigValueWithUnits;
   /** Letter spacing with units */
   readonly letterSpacing?: FigValueWithUnits;
+  /** Text truncation mode (ENDING = ellipsis at end) */
+  readonly textTruncation?: KiwiEnumValue;
+  /** Leading trim mode (CAP_HEIGHT = trim to cap height) */
+  readonly leadingTrim?: KiwiEnumValue;
+  /** Variable font axis values */
+  readonly fontVariations?: readonly { readonly axisTag: number; readonly axisValue: number }[];
+  /** Hyperlink data */
+  readonly hyperlink?: { readonly url?: string };
   /** Kiwi TextData message for TEXT nodes (per-character styling) */
   readonly textData?: FigKiwiTextData;
   /** Pre-computed text rendering data (glyph outlines, baselines, decorations) */

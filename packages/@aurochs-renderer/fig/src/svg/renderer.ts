@@ -25,7 +25,8 @@ import {
 } from "./nodes/text/derived-path-render";
 import { createFigResolver, type ResolvedInstanceNode } from "../symbols/fig-resolver";
 import type { FontLoader } from "../font";
-import { buildFigStyleRegistry, resolveNodeStyleIds, type FigStyleRegistry } from "@aurochs/fig/symbols";
+import type { FigStyleRegistry } from "@aurochs/fig/domain";
+import { buildFigStyleRegistry, resolveNodeStyleIds } from "@aurochs/fig/symbols";
 import { getFilterAttr } from "./effects";
 
 // =============================================================================

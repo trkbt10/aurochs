@@ -21,7 +21,7 @@ beforeAll(async () => {
   doc = await createDemoFigDesignDocument();
   sceneGraphs = doc.pages.map((page) =>
     buildSceneGraph(page.children, {
-      blobs: doc._loaded?.blobs ?? [],
+      blobs: doc.blobs,
       images: doc.images,
       canvasSize: { width: 1200, height: 800 },
     }),

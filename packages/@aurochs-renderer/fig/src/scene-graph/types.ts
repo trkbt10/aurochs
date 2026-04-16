@@ -388,6 +388,17 @@ export type FrameNode = SceneNodeBase & {
   readonly cornerRadius?: CornerRadius;
   readonly fills: readonly Fill[];
   readonly stroke?: Stroke;
+  /**
+   * Per-side stroke weights. When set, each side of the frame's border
+   * has an independent stroke width. SVG renders each side as a separate
+   * stroked line rather than a single stroke-width on the rect.
+   */
+  readonly individualStrokeWeights?: {
+    readonly top: number;
+    readonly right: number;
+    readonly bottom: number;
+    readonly left: number;
+  };
   readonly clipsContent: boolean;
   readonly children: readonly SceneNode[];
 };
@@ -399,6 +410,8 @@ export type RectNode = SceneNodeBase & {
   readonly cornerRadius?: CornerRadius;
   readonly fills: readonly Fill[];
   readonly stroke?: Stroke;
+  /** Per-side stroke weights (same as FrameNode) */
+  readonly individualStrokeWeights?: FrameNode["individualStrokeWeights"];
 };
 
 export type EllipseNode = SceneNodeBase & {
@@ -431,6 +444,16 @@ export type TextNode = SceneNodeBase & {
   readonly height: number;
   /** Text auto-resize mode — determines wrapping and overflow behavior */
   readonly textAutoResize: TextAutoResize;
+  /**
+   * Text truncation mode. When "ENDING", text that overflows the bounding box
+   * is truncated with an ellipsis ("...").
+   */
+  readonly textTruncation?: string;
+  /**
+   * Leading trim mode. When "CAP_HEIGHT", the text's leading is trimmed
+   * to cap height rather than full ascent, affecting vertical positioning.
+   */
+  readonly leadingTrim?: string;
   /** Pre-outlined glyph path contours (from opentype or derived data) */
   readonly glyphContours?: readonly PathContour[];
   /** Decoration paths (underlines, strikethroughs) as contours */

@@ -3,7 +3,7 @@
  */
 
 import type { FigBlob, FigImage } from "@aurochs/fig/parser";
-import type { FigStyleRegistry } from "@aurochs/fig/symbols";
+import type { FigStyleRegistry } from "@aurochs/fig/domain";
 
 import type { FontLoader } from "./font";
 import type { FigResolver } from "./symbols/fig-resolver";

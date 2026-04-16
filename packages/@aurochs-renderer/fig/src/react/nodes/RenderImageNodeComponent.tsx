@@ -22,13 +22,13 @@ function RenderImageNodeComponentImpl({ node }: Props) {
       y={0}
       width={node.width}
       height={node.height}
-      preserveAspectRatio="xMidYMid slice"
+      preserveAspectRatio={node.preserveAspectRatio}
     />
   );
 
   if (node.needsWrapper) {
     return (
-      <RenderWrapper wrapper={node.wrapper}>
+      <RenderWrapper wrapper={node.wrapper} mask={node.mask}>
         {imageEl}
       </RenderWrapper>
     );

@@ -31,10 +31,13 @@ export type {
   ComponentPropertyNodeField,
   ComponentPropertyRef,
   ComponentPropertyAssignment,
+  FigStyleRegistry,
+  FigDesignBlob,
 } from "./document";
 
 export {
   DEFAULT_PAGE_BACKGROUND,
+  EMPTY_FIG_STYLE_REGISTRY,
   isValidOverridePath,
   isSelfOverride,
   overridePathToIds,

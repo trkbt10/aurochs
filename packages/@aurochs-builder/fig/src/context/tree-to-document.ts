@@ -13,15 +13,16 @@
 
 import type { FigNode, FigNodeType, FigMatrix, FigVector, FigColor, FigPaint, FigEffect, KiwiEnumValue, FigKiwiTextData, FigTextStyleOverrideEntry, FigComponentPropValue } from "@aurochs/fig/types";
 import type { NodeTreeResult } from "@aurochs/fig/parser";
-import { getNodeType, safeChildren } from "@aurochs/fig/parser";
-import { getEffectiveSymbolID } from "@aurochs/fig/symbols";
+import { getNodeType, safeChildren, guidToString } from "@aurochs/fig/parser";
+import { getEffectiveSymbolID, buildFigStyleRegistry } from "@aurochs/fig/symbols";
 import type { LoadedFigFile } from "@aurochs/fig/roundtrip";
 import type {
   FigDesignDocument, FigDesignNode, FigPage, AutoLayoutProps, LayoutConstraints, TextData, TextStyleOverride, SymbolOverride,
   BlendMode, DerivedTextData,
   ComponentPropertyDef, ComponentPropertyRef, ComponentPropertyAssignment, ComponentPropertyType, ComponentPropertyNodeField, ComponentPropertyValue,
+  FigStyleRegistry,
 } from "@aurochs/fig/domain";
-import { DEFAULT_PAGE_BACKGROUND } from "@aurochs/fig/domain";
+import { DEFAULT_PAGE_BACKGROUND, EMPTY_FIG_STYLE_REGISTRY } from "@aurochs/fig/domain";
 import { guidToNodeId, guidToPageId } from "@aurochs/fig/domain";
 import type { FigNodeId } from "@aurochs/fig/domain";
 
@@ -76,6 +77,28 @@ const _DEFAULT_COLOR: FigColor = { r: 0, g: 0, b: 0, a: 1 };
 const COMPONENT_TYPES: ReadonlySet<string> = new Set(["COMPONENT", "COMPONENT_SET", "SYMBOL"]);
 
 /**
+ * Extract per-side stroke weights from Kiwi node data.
+ * Returns undefined when all sides are equal or no per-side data exists.
+ */
+function extractIndividualStrokeWeights(node: FigNode): FigDesignNode["individualStrokeWeights"] {
+  if (!node.borderStrokeWeightsIndependent && node.borderTopWeight === undefined) {
+    return undefined;
+  }
+  const top = node.borderTopWeight ?? 0;
+  const right = node.borderRightWeight ?? 0;
+  const bottom = node.borderBottomWeight ?? 0;
+  const left = node.borderLeftWeight ?? 0;
+
+  // If all sides are equal, don't store individual weights
+  // (the uniform strokeWeight already covers this case)
+  if (top === right && right === bottom && bottom === left) {
+    return undefined;
+  }
+
+  return { top, right, bottom, left };
+}
+
+/**
  * Fields that are explicitly modeled in FigDesignNode and should be
  * excluded from the _raw preservation bag.
  */
@@ -84,6 +107,8 @@ const MODELED_FIELDS: ReadonlySet<string> = new Set([
   "name", "visible", "opacity",
   "transform", "size",
   "fillPaints", "strokePaints", "strokeWeight", "strokeAlign", "strokeJoin", "strokeCap", "strokeDashes",
+  "borderTopWeight", "borderRightWeight", "borderBottomWeight", "borderLeftWeight", "borderStrokeWeightsIndependent",
+  "styleIdForFill", "styleIdForStrokeFill",
   "cornerRadius", "rectangleCornerRadii", "cornerSmoothing",
   "blendMode",
   "effects",
@@ -93,17 +118,19 @@ const MODELED_FIELDS: ReadonlySet<string> = new Set([
   "stackPrimaryAlignItems", "stackCounterAlignItems", "stackPrimaryAlignContent",
   "stackWrap", "stackCounterSpacing", "itemReverseZIndex",
   "stackPositioning", "stackPrimarySizing", "stackCounterSizing",
+  "stackChildAlignSelf", "stackChildPrimaryGrow",
   "horizontalConstraint", "verticalConstraint",
   "characters", "fontSize", "fontName",
   "textAlignHorizontal", "textAlignVertical", "textAutoResize",
   "textDecoration", "textCase", "lineHeight", "letterSpacing",
+  "textTruncation", "leadingTrim", "fontVariations", "hyperlink",
   "symbolID", "symbolOverrides", "derivedSymbolData",
   "componentPropDefs", "componentPropRefs", "componentPropAssignments",
   "mask",
   "arcData",
   "vectorPaths", "vectorData",
   "booleanOperation",
-  "pointCount", "starInnerRadius",
+  "pointCount", "starInnerRadius", "starInnerScale",
   "fillGeometry", "strokeGeometry",
 ]);
 
@@ -176,7 +203,9 @@ function extractLayoutConstraints(node: FigNode): LayoutConstraints | undefined 
     node.stackPrimarySizing !== undefined ||
     node.stackCounterSizing !== undefined ||
     node.horizontalConstraint !== undefined ||
-    node.verticalConstraint !== undefined;
+    node.verticalConstraint !== undefined ||
+    node.stackChildAlignSelf !== undefined ||
+    node.stackChildPrimaryGrow !== undefined;
 
   if (!has) {
     return undefined;
@@ -188,6 +217,8 @@ function extractLayoutConstraints(node: FigNode): LayoutConstraints | undefined 
     stackCounterSizing: node.stackCounterSizing,
     horizontalConstraint: node.horizontalConstraint,
     verticalConstraint: node.verticalConstraint,
+    stackChildAlignSelf: node.stackChildAlignSelf,
+    stackChildPrimaryGrow: node.stackChildPrimaryGrow,
   };
 }
 
@@ -226,6 +257,10 @@ function extractTextData(node: FigNode): TextData | undefined {
     letterSpacing: node.letterSpacing,
     characterStyleIDs: characterStyleIDs && characterStyleIDs.length > 0 ? characterStyleIDs : undefined,
     styleOverrideTable: styleOverrideTable && styleOverrideTable.length > 0 ? styleOverrideTable : undefined,
+    textTruncation: node.textTruncation,
+    leadingTrim: node.leadingTrim,
+    fontVariations: node.fontVariations,
+    hyperlink: node.hyperlink,
   };
 }
 
@@ -429,12 +464,32 @@ function collectRawFields(node: FigNode): Record<string, unknown> | undefined {
 export function convertFigNode(
   node: FigNode,
   components: Map<string, FigDesignNode>,
+  styleRegistry: FigStyleRegistry = EMPTY_FIG_STYLE_REGISTRY,
 ): FigDesignNode {
   const nodeType = nodeTypeName(node);
   const id = guidToNodeId(node.guid);
 
   const children = safeChildren(node);
-  const convertedChildren = children.length > 0 ? children.map((child) => convertFigNode(child, components)) : undefined;
+  const convertedChildren = children.length > 0 ? children.map((child) => convertFigNode(child, components, styleRegistry)) : undefined;
+
+  // Resolve fills/strokes: when styleIdForFill/styleIdForStrokeFill is present,
+  // the node's cached fillPaints/strokePaints may be stale. Use the style
+  // registry to get the authoritative paints from the style definition node.
+  let fills = (node.fillPaints ?? []) as readonly FigPaint[];
+  let strokes = (node.strokePaints ?? []) as readonly FigPaint[];
+
+  if (node.styleIdForFill) {
+    const resolved = styleRegistry.fills.get(guidToString(node.styleIdForFill.guid));
+    if (resolved) {
+      fills = resolved;
+    }
+  }
+  if (node.styleIdForStrokeFill) {
+    const resolved = styleRegistry.strokes.get(guidToString(node.styleIdForStrokeFill.guid));
+    if (resolved) {
+      strokes = resolved;
+    }
+  }
 
   const designNode: FigDesignNode = {
     id,
@@ -445,13 +500,14 @@ export function convertFigNode(
     transform: node.transform ?? IDENTITY_MATRIX,
     size: node.size ?? DEFAULT_SIZE,
 
-    fills: (node.fillPaints ?? []) as readonly FigPaint[],
-    strokes: (node.strokePaints ?? []) as readonly FigPaint[],
+    fills,
+    strokes,
     strokeWeight: node.strokeWeight ?? 0,
     strokeAlign: node.strokeAlign,
     strokeJoin: node.strokeJoin,
     strokeCap: node.strokeCap,
     strokeDashes: node.strokeDashes,
+    individualStrokeWeights: extractIndividualStrokeWeights(node),
 
     cornerRadius: node.cornerRadius,
     rectangleCornerRadii: node.rectangleCornerRadii,
@@ -478,6 +534,12 @@ export function convertFigNode(
     componentPropertyRefs: extractComponentPropertyRefs(node),
     componentPropertyAssignments: extractComponentPropertyAssignments(node),
 
+    styleIdForFill: node.styleIdForFill,
+    styleIdForStrokeFill: node.styleIdForStrokeFill,
+
+    fillGeometry: node.fillGeometry,
+    strokeGeometry: node.strokeGeometry,
+
     mask: node.mask ?? undefined,
     arcData: node.arcData,
     vectorPaths: node.vectorPaths,
@@ -487,6 +549,7 @@ export function convertFigNode(
 
     pointCount: node.pointCount,
     starInnerRadius: node.starInnerRadius,
+    starInnerScale: node.starInnerScale,
 
     _raw: collectRawFields(node),
   };
@@ -509,11 +572,12 @@ export function convertFigNode(
 function convertCanvasToPage(
   canvas: FigNode,
   components: Map<string, FigDesignNode>,
+  styleRegistry: FigStyleRegistry,
 ): FigPage {
   const id = guidToPageId(canvas.guid);
 
   const children = safeChildren(canvas);
-  const convertedChildren = children.map((child) => convertFigNode(child, components));
+  const convertedChildren = children.map((child) => convertFigNode(child, components, styleRegistry));
 
   // Collect component definitions from all children
   collectComponentsRecursive(convertedChildren, components);
@@ -555,12 +619,37 @@ function collectComponentsRecursive(
  * @param loaded - Loaded file data (for images, metadata, and roundtrip preservation)
  * @returns High-level design document
  */
+/**
+ * Collect all FigNodes in a tree into a flat Map keyed by GUID string.
+ * Used to build the style registry before domain conversion.
+ */
+function collectNodeMap(roots: readonly FigNode[]): ReadonlyMap<string, FigNode> {
+  const map = new Map<string, FigNode>();
+  function walk(node: FigNode): void {
+    if (node.guid) {
+      map.set(guidToString(node.guid), node);
+    }
+    for (const child of safeChildren(node)) {
+      walk(child);
+    }
+  }
+  for (const root of roots) {
+    walk(root);
+  }
+  return map;
+}
+
 export function treeToDocument(
   tree: NodeTreeResult,
   loaded: LoadedFigFile,
 ): FigDesignDocument {
   const components = new Map<string, FigDesignNode>();
   const pages: FigPage[] = [];
+
+  // Build style registry from the raw FigNode tree BEFORE domain conversion.
+  // This resolves styleIdForFill/styleIdForStrokeFill GUIDs to authoritative paints.
+  const nodeMap = collectNodeMap(tree.roots);
+  const styleRegistry = nodeMap.size > 0 ? buildFigStyleRegistry(nodeMap) : EMPTY_FIG_STYLE_REGISTRY;
 
   // Walk roots to find DOCUMENT → CANVAS structure
   for (const root of tree.roots) {
@@ -570,12 +659,12 @@ export function treeToDocument(
       // DOCUMENT node: iterate CANVAS children
       for (const canvas of safeChildren(root)) {
         if (getNodeType(canvas) === "CANVAS") {
-          pages.push(convertCanvasToPage(canvas, components));
+          pages.push(convertCanvasToPage(canvas, components, styleRegistry));
         }
       }
     } else if (rootType === "CANVAS") {
       // Standalone CANVAS (unusual but handle gracefully)
-      pages.push(convertCanvasToPage(root, components));
+      pages.push(convertCanvasToPage(root, components, styleRegistry));
     }
   }
 
@@ -583,7 +672,9 @@ export function treeToDocument(
     pages,
     components,
     images: loaded.images,
+    blobs: loaded.blobs,
     metadata: loaded.metadata,
+    styleRegistry,
     _loaded: loaded,
   };
 }

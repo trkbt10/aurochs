@@ -8,6 +8,7 @@ import { formatRenderDefs } from "../primitives/render-defs";
 import { RenderWrapper } from "../primitives/wrapper";
 import { RectShape } from "../primitives/rect-shape";
 import { MultiFillRectLayers, MultiStrokeRectLayers } from "../primitives/multi-fill";
+import { BackgroundBlurElement } from "../primitives/background-blur";
 import { RenderNodeComponent } from "./RenderNodeComponent";
 
 type Props = {
@@ -78,10 +79,11 @@ function RenderFrameNodeComponentImpl({ node }: Props) {
   }
 
   return (
-    <RenderWrapper wrapper={node.wrapper}>
+    <RenderWrapper wrapper={node.wrapper} mask={node.mask}>
       {defsEl}
       {bgRect}
       {bgStrokeLayers}
+      {node.backgroundBlur && <BackgroundBlurElement blur={node.backgroundBlur} />}
       {childrenContent}
     </RenderWrapper>
   );

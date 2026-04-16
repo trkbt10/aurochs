@@ -30,7 +30,7 @@ function RenderTextNodeComponentImpl({ node }: Props) {
     );
 
     return (
-      <RenderWrapper wrapper={node.wrapper}>
+      <RenderWrapper wrapper={node.wrapper} mask={node.mask}>
         {defsEl}
         {node.textClipId
           ? <g clipPath={`url(#${node.textClipId})`}>{pathEl}</g>
@@ -53,7 +53,7 @@ function RenderTextNodeComponentImpl({ node }: Props) {
   );
 
   return (
-    <RenderWrapper wrapper={node.wrapper}>
+    <RenderWrapper wrapper={node.wrapper} mask={node.mask}>
       {defsEl}
       {node.textClipId
         ? <g clipPath={`url(#${node.textClipId})`}>{textContent}</g>

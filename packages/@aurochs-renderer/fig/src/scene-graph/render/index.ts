@@ -57,6 +57,10 @@ export {
 } from "./gradient-finalize";
 
 export {
+  finalizeImagePatternDefs,
+} from "./image-pattern-finalize";
+
+export {
   resolveStroke,
   resolveStrokeResult,
   type ResolvedStrokeAttrs,

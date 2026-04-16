@@ -4,8 +4,7 @@
 
 import { memo } from "react";
 import type { RenderRectNode } from "../../scene-graph/render-tree";
-import { formatRenderDefs } from "../primitives/render-defs";
-import { RenderWrapper } from "../primitives/wrapper";
+import { ShapeShell } from "../primitives/shape-shell";
 import { RectShape } from "../primitives/rect-shape";
 import { MultiFillRectLayers, MultiStrokeRectLayers } from "../primitives/multi-fill";
 
@@ -17,8 +16,7 @@ function RenderRectNodeComponentImpl({ node }: Props) {
   if (node.fillLayers || node.strokeLayers) {
     const strokeForFill = node.strokeLayers ? undefined : node.stroke;
     return (
-      <RenderWrapper wrapper={node.wrapper}>
-        {formatRenderDefs(node.defs)}
+      <ShapeShell wrapper={node.wrapper} defs={node.defs} backgroundBlur={node.backgroundBlur} mask={node.mask}>
         {node.fillLayers ? (
           <MultiFillRectLayers
             layers={node.fillLayers}
@@ -45,7 +43,7 @@ function RenderRectNodeComponentImpl({ node }: Props) {
             cornerRadius={node.cornerRadius}
           />
         )}
-      </RenderWrapper>
+      </ShapeShell>
     );
   }
 
@@ -62,10 +60,9 @@ function RenderRectNodeComponentImpl({ node }: Props) {
 
   if (node.needsWrapper) {
     return (
-      <RenderWrapper wrapper={node.wrapper}>
-        {formatRenderDefs(node.defs)}
+      <ShapeShell wrapper={node.wrapper} defs={node.defs} backgroundBlur={node.backgroundBlur} mask={node.mask}>
         {rectEl}
-      </RenderWrapper>
+      </ShapeShell>
     );
   }
 

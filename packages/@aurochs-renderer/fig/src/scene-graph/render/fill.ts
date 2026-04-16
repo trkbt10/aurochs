@@ -88,6 +88,16 @@ export type ResolvedImagePattern = {
   readonly preserveAspectRatio: string;
   /** SVG patternTransform string (from image transform matrix) */
   readonly patternTransform?: string;
+  /**
+   * Image element transform (computed by finalizeImagePatternDefs).
+   * When set, the image uses its natural pixel dimensions with this
+   * transform mapping to objectBoundingBox 0..1 space.
+   */
+  readonly imageTransform?: string;
+  /** Scale mode for image pattern finalization */
+  readonly scaleMode?: string;
+  /** Source paint transform (AffineMatrix) for finalization */
+  readonly sourceTransform?: import("../types").AffineMatrix;
 };
 
 /**
@@ -242,20 +252,26 @@ export function resolveFill(fill: Fill, ids: IdGenerator): ResolvedFill {
       const id = ids.getNextId("img");
       const base64 = uint8ArrayToBase64(fill.data);
       const dataUri = `data:${fill.mimeType};base64,${base64}`;
-      const hasExplicitSize = fill.width !== undefined && fill.height !== undefined && fill.width > 0 && fill.height > 0;
       return {
         attrs: buildAttrs(`url(#${id})`, fill.opacity),
         def: {
           type: "image",
           id,
           dataUri,
-          patternContentUnits: hasExplicitSize ? "userSpaceOnUse" : "objectBoundingBox",
-          width: hasExplicitSize ? fill.width! : 1,
-          height: hasExplicitSize ? fill.height! : 1,
-          imageWidth: hasExplicitSize ? fill.width! : 1,
-          imageHeight: hasExplicitSize ? fill.height! : 1,
-          preserveAspectRatio: "xMidYMid slice",
+          // objectBoundingBox: 1 unit = element dimension.
+          // Image uses natural pixel dims with a computed transform
+          // (set by finalizeImagePatternDefs after element size is known).
+          // Before finalization: simple 0..1 stretch fallback.
+          patternContentUnits: "objectBoundingBox",
+          width: 1,
+          height: 1,
+          imageWidth: 1,
+          imageHeight: 1,
+          preserveAspectRatio: "none",
           patternTransform: fill.imageTransform ? matrixToPatternTransform(fill.imageTransform) : undefined,
+          // Preserved for finalizeImagePatternDefs
+          scaleMode: fill.scaleMode,
+          sourceTransform: fill.imageTransform,
         },
       };
     }

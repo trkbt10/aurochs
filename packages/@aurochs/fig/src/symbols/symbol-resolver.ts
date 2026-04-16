@@ -7,7 +7,8 @@ import { guidToString, getNodeType, safeChildren, type FigGuid } from "@aurochs/
 import { extractSymbolIDPair } from "@aurochs/fig/symbols";
 import { buildGuidTranslationMap, translateOverrides } from "./guid-translation";
 import { resolveInstanceLayout } from "./constraints";
-import { resolveStyleIdOnMutableNode, type FigStyleRegistry } from "./style-registry";
+import type { FigStyleRegistry } from "../domain/document";
+import { resolveStyleIdOnMutableNode } from "./style-registry";
 
 // =============================================================================
 // Types

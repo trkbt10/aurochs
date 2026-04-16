@@ -35,6 +35,8 @@ import {
   type ResolvedFillResult,
   type ResolvedWrapperAttrs,
   type ClipPathShape,
+  type RenderBackgroundBlur,
+  type RenderNodeBase,
 } from "../scene-graph/render-tree";
 
 import type { ResolvedStrokeAttrs, ResolvedAngularGradient, ResolvedDiamondGradient } from "../scene-graph/render";
@@ -260,16 +262,24 @@ function formatDef(def: RenderDef): SvgString {
       if (d.patternTransform) {
         patternAttrs.patternTransform = d.patternTransform;
       }
+      // When imageTransform is set (by finalizeImagePatternDefs),
+      // the image uses natural pixel dimensions with the transform
+      // mapping to objectBoundingBox space. Otherwise, simple stretch.
+      const imgAttrs: Record<string, string | number | undefined> = {
+        href: d.dataUri,
+        width: d.imageWidth,
+        height: d.imageHeight,
+        preserveAspectRatio: d.preserveAspectRatio,
+      };
+      if (d.imageTransform) {
+        imgAttrs.transform = d.imageTransform;
+      } else {
+        imgAttrs.x = 0;
+        imgAttrs.y = 0;
+      }
       return pattern(
         patternAttrs as Parameters<typeof pattern>[0],
-        image({
-          href: d.dataUri,
-          x: 0,
-          y: 0,
-          width: d.imageWidth,
-          height: d.imageHeight,
-          preserveAspectRatio: d.preserveAspectRatio,
-        }),
+        image(imgAttrs as Parameters<typeof image>[0]),
       );
     }
     case "filter": {
@@ -564,6 +574,104 @@ function formatMultiStrokePathLayers(
 }
 
 // =============================================================================
+// Background Blur Formatter
+// =============================================================================
+
+/**
+ * Format a background blur effect as foreignObject + CSS backdrop-filter.
+ *
+ * SVG has no native background blur. Figma's SVG export uses a foreignObject
+ * containing a div with `backdrop-filter: blur(Npx)`, clipped to the node's
+ * shape via a clipPath.
+ */
+function formatBackgroundBlur(bgBlur: RenderBackgroundBlur): SvgString {
+  const foContent = unsafeSvg(
+    `<div xmlns="http://www.w3.org/1999/xhtml" style="backdrop-filter:blur(${bgBlur.radius}px);width:100%;height:100%"></div>`,
+  );
+  const fo = foreignObject(
+    { x: bgBlur.bounds.x, y: bgBlur.bounds.y, width: bgBlur.bounds.width, height: bgBlur.bounds.height },
+    foContent,
+  );
+  return g({ "clip-path": `url(#${bgBlur.clipId})` }, fo);
+}
+
+// =============================================================================
+// Individual Stroke Formatter
+// =============================================================================
+
+/**
+ * Render per-side strokes as individual <line> elements.
+ *
+ * When a frame/rect has different stroke widths per side, SVG cannot
+ * express this with a single stroke-width. Instead, each visible side
+ * is rendered as a separate line with its own stroke-width.
+ */
+function formatIndividualStrokes(
+  strokes: NonNullable<import("../scene-graph/render-tree").RenderFrameBackground["individualStrokes"]>,
+  width: number,
+  height: number,
+): SvgString[] {
+  const result: SvgString[] = [];
+  const baseAttrs = {
+    stroke: strokes.strokeColor,
+    "stroke-opacity": strokes.strokeOpacity,
+  };
+
+  // Top
+  if (strokes.top > 0) {
+    result.push(unsafeSvg(
+      `<line x1="0" y1="0" x2="${width}" y2="0" stroke="${strokes.strokeColor}"${strokes.strokeOpacity !== undefined ? ` stroke-opacity="${strokes.strokeOpacity}"` : ""} stroke-width="${strokes.top}"/>`,
+    ));
+  }
+  // Right
+  if (strokes.right > 0) {
+    result.push(unsafeSvg(
+      `<line x1="${width}" y1="0" x2="${width}" y2="${height}" stroke="${strokes.strokeColor}"${strokes.strokeOpacity !== undefined ? ` stroke-opacity="${strokes.strokeOpacity}"` : ""} stroke-width="${strokes.right}"/>`,
+    ));
+  }
+  // Bottom
+  if (strokes.bottom > 0) {
+    result.push(unsafeSvg(
+      `<line x1="0" y1="${height}" x2="${width}" y2="${height}" stroke="${strokes.strokeColor}"${strokes.strokeOpacity !== undefined ? ` stroke-opacity="${strokes.strokeOpacity}"` : ""} stroke-width="${strokes.bottom}"/>`,
+    ));
+  }
+  // Left
+  if (strokes.left > 0) {
+    result.push(unsafeSvg(
+      `<line x1="0" y1="0" x2="0" y2="${height}" stroke="${strokes.strokeColor}"${strokes.strokeOpacity !== undefined ? ` stroke-opacity="${strokes.strokeOpacity}"` : ""} stroke-width="${strokes.left}"/>`,
+    ));
+  }
+
+  return result;
+}
+
+// =============================================================================
+// Shape Node Assembly
+// =============================================================================
+
+/**
+ * Assemble a shape node's parts into a wrapped SVG group.
+ *
+ * All shape nodes (rect, ellipse, path, frame) share the same final assembly:
+ * 1. Prepend defs
+ * 2. Append background blur (if present)
+ * 3. Wrap in <g> with wrapper attrs
+ *
+ * This prevents scattered backgroundBlur/defs handling across every formatter.
+ */
+function assembleShapeNode(
+  node: { readonly defs: readonly RenderDef[]; readonly backgroundBlur?: RenderBackgroundBlur } & RenderNodeBase,
+  shapeContent: readonly SvgString[],
+): SvgString {
+  const parts: SvgString[] = [];
+  const defsStr = formatDefs(node.defs);
+  if (defsStr !== EMPTY_SVG) { parts.push(defsStr); }
+  parts.push(...shapeContent);
+  if (node.backgroundBlur) { parts.push(formatBackgroundBlur(node.backgroundBlur)); }
+  return g(wrapperAttrs(node), ...parts);
+}
+
+// =============================================================================
 // Node Formatters
 // =============================================================================
 
@@ -607,6 +715,17 @@ function formatFrameNode(node: RenderFrameNode): SvgString {
         node.background.strokeLayers, node.width, node.height, node.cornerRadius,
       ));
     }
+    // Per-side stroke rendering
+    if (node.background.individualStrokes) {
+      parts.push(...formatIndividualStrokes(
+        node.background.individualStrokes, node.width, node.height,
+      ));
+    }
+  }
+
+  // Background blur (foreignObject + backdrop-filter, before children)
+  if (node.backgroundBlur) {
+    parts.push(formatBackgroundBlur(node.backgroundBlur));
   }
 
   // Children (with optional clipping)
@@ -626,34 +745,24 @@ function formatRectNode(node: RenderRectNode): SvgString {
     : (node.stroke ? strokeToSvgAttrs(node.stroke) : {});
 
   if (node.fillLayers) {
-    const defsStr = formatDefs(node.defs);
-    const parts: SvgString[] = [];
-    if (defsStr !== EMPTY_SVG) { parts.push(defsStr); }
-    parts.push(...formatMultiFillRectLayers(
-      node.fillLayers, node.width, node.height, node.cornerRadius, singleStrokeAttrs,
-    ));
+    const content: SvgString[] = [
+      ...formatMultiFillRectLayers(node.fillLayers, node.width, node.height, node.cornerRadius, singleStrokeAttrs),
+    ];
     if (node.strokeLayers) {
-      parts.push(...formatMultiStrokeRectLayers(
-        node.strokeLayers, node.width, node.height, node.cornerRadius,
-      ));
+      content.push(...formatMultiStrokeRectLayers(node.strokeLayers, node.width, node.height, node.cornerRadius));
     }
-    return g(wrapperAttrs(node), ...parts);
+    return assembleShapeNode(node, content);
   }
 
   const fillAttrs = fillToSvgAttrs(node.fill);
   const rectEl = formatRectShape(node.width, node.height, node.cornerRadius, fillAttrs, singleStrokeAttrs);
 
   if (node.needsWrapper || node.strokeLayers) {
-    const defsStr = formatDefs(node.defs);
-    const parts: SvgString[] = [];
-    if (defsStr !== EMPTY_SVG) { parts.push(defsStr); }
-    parts.push(rectEl);
+    const content: SvgString[] = [rectEl];
     if (node.strokeLayers) {
-      parts.push(...formatMultiStrokeRectLayers(
-        node.strokeLayers, node.width, node.height, node.cornerRadius,
-      ));
+      content.push(...formatMultiStrokeRectLayers(node.strokeLayers, node.width, node.height, node.cornerRadius));
     }
-    return g(wrapperAttrs(node), ...parts);
+    return assembleShapeNode(node, content);
   }
   return rectEl;
 }
@@ -664,18 +773,13 @@ function formatEllipseNode(node: RenderEllipseNode): SvgString {
     : (node.stroke ? strokeToSvgAttrs(node.stroke) : {});
 
   if (node.fillLayers) {
-    const defsStr = formatDefs(node.defs);
-    const parts: SvgString[] = [];
-    if (defsStr !== EMPTY_SVG) { parts.push(defsStr); }
-    parts.push(...formatMultiFillEllipseLayers(
-      node.fillLayers, node.cx, node.cy, node.rx, node.ry, singleStrokeAttrs,
-    ));
+    const content: SvgString[] = [
+      ...formatMultiFillEllipseLayers(node.fillLayers, node.cx, node.cy, node.rx, node.ry, singleStrokeAttrs),
+    ];
     if (node.strokeLayers) {
-      parts.push(...formatMultiStrokeEllipseLayers(
-        node.strokeLayers, node.cx, node.cy, node.rx, node.ry,
-      ));
+      content.push(...formatMultiStrokeEllipseLayers(node.strokeLayers, node.cx, node.cy, node.rx, node.ry));
     }
-    return g(wrapperAttrs(node), ...parts);
+    return assembleShapeNode(node, content);
   }
 
   const fillAttrs = fillToSvgAttrs(node.fill);
@@ -686,16 +790,11 @@ function formatEllipseNode(node: RenderEllipseNode): SvgString {
   } as Parameters<typeof ellipse>[0]);
 
   if (node.needsWrapper || node.strokeLayers) {
-    const defsStr = formatDefs(node.defs);
-    const parts: SvgString[] = [];
-    if (defsStr !== EMPTY_SVG) { parts.push(defsStr); }
-    parts.push(ellipseEl);
+    const content: SvgString[] = [ellipseEl];
     if (node.strokeLayers) {
-      parts.push(...formatMultiStrokeEllipseLayers(
-        node.strokeLayers, node.cx, node.cy, node.rx, node.ry,
-      ));
+      content.push(...formatMultiStrokeEllipseLayers(node.strokeLayers, node.cx, node.cy, node.rx, node.ry));
     }
-    return g(wrapperAttrs(node), ...parts);
+    return assembleShapeNode(node, content);
   }
   return ellipseEl;
 }
@@ -710,14 +809,13 @@ function formatPathNode(node: RenderPathNode): SvgString {
   }
 
   if (node.fillLayers) {
-    const defsStr = formatDefs(node.defs);
-    const parts: SvgString[] = [];
-    if (defsStr !== EMPTY_SVG) { parts.push(defsStr); }
-    parts.push(...formatMultiFillPathLayers(node.fillLayers, node.paths, singleStrokeAttrs));
+    const content: SvgString[] = [
+      ...formatMultiFillPathLayers(node.fillLayers, node.paths, singleStrokeAttrs),
+    ];
     if (node.strokeLayers) {
-      parts.push(...formatMultiStrokePathLayers(node.strokeLayers, node.paths));
+      content.push(...formatMultiStrokePathLayers(node.strokeLayers, node.paths));
     }
-    return g(wrapperAttrs(node), ...parts);
+    return assembleShapeNode(node, content);
   }
 
   const defaultFillAttrs = fillToSvgAttrs(node.fill);
@@ -732,14 +830,11 @@ function formatPathNode(node: RenderPathNode): SvgString {
   });
 
   if (node.needsWrapper || node.strokeLayers) {
-    const defsStr = formatDefs(node.defs);
-    const parts: SvgString[] = [];
-    if (defsStr !== EMPTY_SVG) { parts.push(defsStr); }
-    parts.push(...pathElements);
+    const content: SvgString[] = [...pathElements];
     if (node.strokeLayers) {
-      parts.push(...formatMultiStrokePathLayers(node.strokeLayers, node.paths));
+      content.push(...formatMultiStrokePathLayers(node.strokeLayers, node.paths));
     }
-    return g(wrapperAttrs(node), ...parts);
+    return assembleShapeNode(node, content);
   }
   return pathElements[0];
 }
@@ -815,7 +910,7 @@ function formatImageNode(node: RenderImageNode): SvgString {
     y: 0,
     width: node.width,
     height: node.height,
-    preserveAspectRatio: "xMidYMid slice",
+    preserveAspectRatio: node.preserveAspectRatio,
   });
 
   if (node.needsWrapper) {

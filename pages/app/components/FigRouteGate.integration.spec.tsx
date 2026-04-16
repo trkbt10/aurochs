@@ -19,6 +19,7 @@ import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { FigRouteGate } from "./FigRouteGate";
 import { useFileLoader } from "../hooks/useFileLoader";
 import type { FigDesignDocument } from "@aurochs/fig/domain";
+import { EMPTY_FIG_STYLE_REGISTRY } from "@aurochs/fig/domain";
 
 afterEach(cleanup);
 
@@ -27,7 +28,9 @@ function createMockDocument(): FigDesignDocument {
     pages: [{ id: "p1" as never, name: "Page 1", backgroundColor: { r: 1, g: 1, b: 1, a: 1 }, children: [] }],
     components: new Map(),
     images: new Map(),
+    blobs: [],
     metadata: null,
+    styleRegistry: EMPTY_FIG_STYLE_REGISTRY,
   } as FigDesignDocument;
 }
 

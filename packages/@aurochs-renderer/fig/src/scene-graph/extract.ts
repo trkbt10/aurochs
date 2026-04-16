@@ -72,18 +72,18 @@ export type PaintProps = {
 };
 
 /**
- * Bridge domain field names (fills/strokes) to the renderer's
- * internal naming (fillPaints/strokePaints).
+ * Extract paint properties from a FigDesignNode.
  *
- * Handles both FigDesignNode (.fills/.strokes) and raw FigNode
- * (.fillPaints/.strokePaints) to support direct rendering of
- * parser-level nodes without requiring domain conversion.
+ * Uses domain field names (fills/strokes) which are the authoritative
+ * paint source — already resolved from styleIdForFill during domain
+ * construction. The renderer-internal naming (fillPaints/strokePaints)
+ * is preserved in the return type for backward compatibility with
+ * conversion functions that expect those names.
  */
 export function extractPaintProps(node: FigDesignNode): PaintProps {
-  const raw = node as Record<string, unknown>;
   return {
-    fillPaints: node.fills ?? (raw.fillPaints as readonly FigPaint[] | undefined),
-    strokePaints: node.strokes ?? (raw.strokePaints as readonly FigPaint[] | undefined),
+    fillPaints: node.fills,
+    strokePaints: node.strokes,
     strokeWeight: node.strokeWeight,
     strokeCap: node.strokeCap,
     strokeJoin: node.strokeJoin,
@@ -99,16 +99,17 @@ export type GeometryProps = {
 };
 
 /**
- * fillGeometry/strokeGeometry are preserved in _raw (not first-class fields).
+ * Extract fillGeometry/strokeGeometry from a FigDesignNode.
  *
- * When receiving a raw FigNode (without _raw), reads directly from
- * the node's own fields.
+ * These are domain fields containing blob references (indices into
+ * the document's blobs array). Now first-class domain fields, so
+ * they participate in deep clone, override application, and
+ * INSTANCE child inheritance.
  */
 export function extractGeometryProps(node: FigDesignNode): GeometryProps {
-  const raw = node._raw ?? (node as Record<string, unknown>);
   return {
-    fillGeometry: raw?.fillGeometry as readonly FigFillGeometry[] | undefined,
-    strokeGeometry: raw?.strokeGeometry as readonly FigFillGeometry[] | undefined,
+    fillGeometry: node.fillGeometry,
+    strokeGeometry: node.strokeGeometry,
   };
 }
 

@@ -763,8 +763,9 @@ export function FigEditorCanvas() {
             canvasWidth={canvasSize.width}
             canvasHeight={canvasSize.height}
             images={document.images}
-            blobs={document._loaded?.blobs ?? []}
+            blobs={document.blobs}
             symbolMap={document.components}
+            styleRegistry={document.styleRegistry}
           />
         )}
 

@@ -50,6 +50,4 @@ export {
   buildFigStyleRegistry,
   resolveNodeStyleIds,
   resolveStyleIdOnMutableNode,
-  EMPTY_FIG_STYLE_REGISTRY,
-  type FigStyleRegistry,
 } from "./style-registry";

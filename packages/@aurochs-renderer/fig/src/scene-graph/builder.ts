@@ -9,15 +9,17 @@
  * stays in sync with the domain model by construction.
  */
 
-import type { FigDesignNode, SymbolOverride, MutableFigDesignNode } from "@aurochs/fig/domain";
+import type { FigDesignNode, SymbolOverride, MutableFigDesignNode, FigStyleRegistry } from "@aurochs/fig/domain";
 import {
   isValidOverridePath,
   isSelfOverride,
   overridePathToIds,
   overrideEntries,
   applyOverrideToNode,
+  EMPTY_FIG_STYLE_REGISTRY,
 } from "@aurochs/fig/domain";
 import type { FigPaint, FigVectorPath } from "@aurochs/fig/types";
+import { guidToString } from "@aurochs/fig/parser";
 import type { FigImage, FigBlob } from "@aurochs/fig/parser";
 import { IDENTITY_MATRIX } from "@aurochs/fig/matrix";
 import {
@@ -106,6 +108,15 @@ export type BuildSceneGraphOptions = {
   readonly symbolMap?: ReadonlyMap<string, FigDesignNode>;
   /** Whether to include hidden nodes */
   readonly showHiddenNodes?: boolean;
+  /**
+   * Style registry for resolving per-path style overrides.
+   *
+   * Node-level styleIdForFill/styleIdForStrokeFill is pre-resolved during
+   * domain conversion (fills/strokes already authoritative). This registry
+   * is needed for vector per-path overrides where
+   * vectorData.styleOverrideTable[n].styleIdForFill references a shared style.
+   */
+  readonly styleRegistry?: FigStyleRegistry;
 };
 
 /**
@@ -115,6 +126,7 @@ type BuildContext = {
   readonly blobs: readonly FigBlob[];
   readonly images: ReadonlyMap<string, FigImage>;
   readonly symbolMap: ReadonlyMap<string, FigDesignNode>;
+  readonly styleRegistry: FigStyleRegistry;
   readonly showHiddenNodes: boolean;
   nodeCounter: number;
 };
@@ -505,48 +517,80 @@ function resolveInstance(
   }
 
   // ── Step 1: Property merge ──
-  // Inherit SYMBOL's visual properties where INSTANCE has no explicit value.
-  const effectiveNode: FigDesignNode = {
+  // Inherit ALL of SYMBOL's visual properties into the INSTANCE frame.
+  // The INSTANCE retains its own transform (placement) and size (may differ).
+  // Self-overrides in Step 2 may then restore INSTANCE-specific values.
+  const instanceSize = node.size;
+  const symbolSize = symbol.size;
+  const sameSize = instanceSize.x === symbolSize.x && instanceSize.y === symbolSize.y;
+
+  const merged: MutableFigDesignNode = {
     ...node,
-    // Paint
+
+    // Paint — SYMBOL provides baseline; INSTANCE fills/strokes take precedence
+    // when they contain visible paints (e.g. overrideBackground sets fillPaints
+    // directly on the INSTANCE node). Self-overrides (Step 2) may further modify.
     fills: hasVisibleFills(node.fills) ? node.fills : symbol.fills,
     strokes: (node.strokes?.length ?? 0) > 0 ? node.strokes : symbol.strokes,
     strokeWeight: node.strokeWeight ?? symbol.strokeWeight,
     strokeJoin: node.strokeJoin ?? symbol.strokeJoin,
     strokeCap: node.strokeCap ?? symbol.strokeCap,
+    strokeDashes: node.strokeDashes ?? symbol.strokeDashes,
 
-    // Geometry
-    cornerRadius: node.cornerRadius ?? symbol.cornerRadius,
-    rectangleCornerRadii: node.rectangleCornerRadii ?? symbol.rectangleCornerRadii,
-    cornerSmoothing: node.cornerSmoothing ?? symbol.cornerSmoothing,
+    // Geometry — inherit from SYMBOL
+    cornerRadius: symbol.cornerRadius ?? node.cornerRadius,
+    rectangleCornerRadii: symbol.rectangleCornerRadii ?? node.rectangleCornerRadii,
+    cornerSmoothing: symbol.cornerSmoothing ?? node.cornerSmoothing,
 
-    // Effects
-    effects: (node.effects?.length ?? 0) > 0 ? node.effects : symbol.effects,
+    // fillGeometry/strokeGeometry — inherit only when same size
+    // (geometry is resolution-dependent; different size invalidates it)
+    fillGeometry: sameSize ? (symbol.fillGeometry ?? node.fillGeometry) : node.fillGeometry,
+    strokeGeometry: sameSize ? (symbol.strokeGeometry ?? node.strokeGeometry) : node.strokeGeometry,
 
-    // Blend mode (INSTANCE may be PASS_THROUGH → inherit from SYMBOL)
-    blendMode: node.blendMode ?? symbol.blendMode,
+    // Effects — SYMBOL is authoritative
+    effects: symbol.effects,
 
-    // Opacity: INSTANCE retains its own (for placement), but if not set, inherit
-    // Note: opacity is always set (default 1), so this is effectively a no-op
-    // unless the instance has opacity=1 and symbol has a different value.
+    // Compositing
+    blendMode: symbol.blendMode ?? node.blendMode,
+    opacity: symbol.opacity ?? node.opacity,
+    mask: symbol.mask ?? node.mask,
 
-    // Clipping
+    // Container
     clipsContent: node.clipsContent ?? symbol.clipsContent,
+
+    // Size — use SYMBOL's size for frame rendering;
+    // INSTANCE size is used for constraint resolution later
+    size: symbol.size,
   };
 
   // ── Step 2: Self-overrides ──
-  // Apply overrides where guidPath targets the symbol/instance frame itself.
+  // Apply overrides where guidPath targets the SYMBOL frame itself.
+  // This restores INSTANCE-specific values (e.g. different fills, opacity)
+  // that were overwritten by the SYMBOL merge in Step 1.
   if (node.overrides && node.overrides.length > 0) {
     for (const override of node.overrides) {
       if (!isSelfOverride(override, symbolId) && !isSelfOverride(override, node.id)) {
         continue;
       }
-      applyOverrideToNode(effectiveNode as MutableFigDesignNode, override);
+      applyOverrideToNode(merged, override);
+    }
+    // If self-overrides set styleIdForFill/styleIdForStrokeFill,
+    // resolve the fills/strokes from the style registry
+    if (merged.styleIdForFill) {
+      const resolved = ctx.styleRegistry.fills.get(guidToString(merged.styleIdForFill.guid));
+      if (resolved) { merged.fills = resolved; }
+    }
+    if (merged.styleIdForStrokeFill) {
+      const resolved = ctx.styleRegistry.strokes.get(guidToString(merged.styleIdForStrokeFill.guid));
+      if (resolved) { merged.strokes = resolved; }
     }
   }
 
+  const effectiveNode: FigDesignNode = merged;
+
   // ── Step 3: Clone children with overrides ──
-  // Use own children if available, otherwise deep-clone from SYMBOL.
+  // INSTANCE children in .fig are typically empty — SYMBOL children are used.
+  // When INSTANCE has own children (rare), those take precedence.
   let children: FigDesignNode[];
   if (ownChildren.length > 0) {
     children = ownChildren.map(deepCloneDesignNode);
@@ -565,24 +609,69 @@ function resolveInstance(
   }
 
   // ── Step 5: Derived symbol data (pre-computed layout for resized instances) ──
-  // When the instance has a different size than the symbol, Figma computes
-  // adjusted transform/size values for each child. These are stored as
-  // override entries targeting child nodes.
   if (node.derivedSymbolData && node.derivedSymbolData.length > 0) {
     applyDerivedSymbolData(children, node.derivedSymbolData);
   }
 
   // ── Step 6: Constraint resolution for resized instances ──
-  // When instance size differs from symbol size and no derivedSymbolData
-  // provides pre-computed layout, apply constraint-based resolution.
-  const instanceSize = node.size;
-  const symbolSize = symbol.size;
   const sizeChanged = instanceSize.x !== symbolSize.x || instanceSize.y !== symbolSize.y;
-  if (sizeChanged && (!node.derivedSymbolData || node.derivedSymbolData.length === 0)) {
-    applyConstraintResolution(children, symbolSize, instanceSize);
+  if (sizeChanged) {
+    if (!node.derivedSymbolData || node.derivedSymbolData.length === 0) {
+      applyConstraintResolution(children, symbolSize, instanceSize);
+    }
+    // Update the effective node's size to the INSTANCE size for frame rendering
+    (effectiveNode as MutableFigDesignNode).size = instanceSize;
   }
 
+  // ── Step 7: Recursively resolve nested INSTANCE children ──
+  // Children inherited from SYMBOL may themselves be INSTANCE nodes.
+  // These must be resolved against the same symbolMap.
+  children = resolveNestedInstances(children, ctx);
+
   return { effectiveNode, children };
+}
+
+/**
+ * Recursively resolve INSTANCE nodes within a children array.
+ *
+ * When SYMBOL children contain nested INSTANCE nodes, those must be
+ * resolved (property merge + override + children) before they can
+ * be built into scene graph nodes.
+ */
+function resolveNestedInstances(
+  children: FigDesignNode[],
+  ctx: BuildContext,
+): FigDesignNode[] {
+  return children.map((child) => {
+    const typeName = getNodeTypeName(child);
+    if (typeName !== "INSTANCE") {
+      // Recurse into non-INSTANCE children that may contain nested INSTANCE
+      if (child.children && child.children.length > 0) {
+        const resolvedGrandchildren = resolveNestedInstances(
+          child.children as FigDesignNode[],
+          ctx,
+        );
+        if (resolvedGrandchildren !== child.children) {
+          const updated: MutableFigDesignNode = { ...child, children: resolvedGrandchildren };
+          return updated;
+        }
+      }
+      return child;
+    }
+
+    // Resolve nested INSTANCE
+    const resolved = resolveInstance(child, child.children ?? [], ctx);
+
+    // Flatten: convert to a non-INSTANCE node with resolved children.
+    // The type is changed to FRAME so that buildNode treats it as a
+    // frame container rather than attempting to resolve it again.
+    const flattened: MutableFigDesignNode = {
+      ...resolved.effectiveNode,
+      type: "FRAME",
+      children: resolveNestedInstances(resolved.children as FigDesignNode[], ctx),
+    };
+    return flattened;
+  });
 }
 
 // =============================================================================
@@ -627,6 +716,7 @@ function buildFrameNode(node: FigDesignNode, ctx: BuildContext, children: readon
     cornerRadius,
     fills: convertPaintsToFills(fillPaints, ctx.images),
     stroke: convertStrokeToSceneStroke(strokePaints, strokeWeight, { strokeCap, strokeJoin, dashPattern: strokeDashes }),
+    individualStrokeWeights: node.individualStrokeWeights,
     clipsContent,
     children,
     clip: clipsContent ? { type: "rect", width: size.x, height: size.y, cornerRadius } : undefined,
@@ -654,6 +744,7 @@ function buildRectNode(node: FigDesignNode, ctx: BuildContext): RectNode {
     cornerRadius,
     fills: convertPaintsToFills(fillPaints, ctx.images),
     stroke: convertStrokeToSceneStroke(strokePaints, strokeWeight, { strokeCap, strokeJoin, dashPattern: strokeDashes }),
+    individualStrokeWeights: node.individualStrokeWeights,
   };
 }
 
@@ -713,7 +804,8 @@ function synthesizeContours(node: FigDesignNode): PathContour[] {
         width: w,
         height: h,
         pointCount: node.pointCount ?? 5,
-        innerRadiusRatio: node.starInnerRadius ?? 0.382,
+        // starInnerScale (newer format) takes precedence over starInnerRadius
+        innerRadiusRatio: node.starInnerScale ?? node.starInnerRadius ?? 0.382,
       })];
     case "REGULAR_POLYGON":
       return [generatePolygonContour(w, h, node.pointCount ?? 3)];
@@ -725,8 +817,39 @@ function synthesizeContours(node: FigDesignNode): PathContour[] {
 }
 
 /**
+ * Resolve the effective fill paints for a vector per-path style override entry.
+ *
+ * Resolution priority (matching the old SVG renderer's resolveStyleOverrideFillPaints):
+ * 1. If the entry has styleIdForFill, resolve via the style registry
+ * 2. Otherwise, use the entry's own fillPaints
+ * 3. If neither, return undefined (use base fill)
+ */
+function resolveOverrideEntryPaints(
+  entry: { readonly fillPaints?: readonly FigPaint[]; readonly styleIdForFill?: { readonly guid: { readonly sessionID: number; readonly localID: number } } },
+  styleRegistry: FigStyleRegistry,
+): readonly FigPaint[] | undefined {
+  // Priority 1: styleIdForFill via style registry
+  if (entry.styleIdForFill) {
+    const resolved = styleRegistry.fills.get(guidToString(entry.styleIdForFill.guid));
+    if (resolved) {
+      return resolved;
+    }
+  }
+
+  // Priority 2: inline fillPaints
+  if (entry.fillPaints && entry.fillPaints.length > 0) {
+    return entry.fillPaints;
+  }
+
+  return undefined;
+}
+
+/**
  * Apply per-path style overrides from vectorData.styleOverrideTable.
  * Maps each contour's geometryStyleId to a fill override.
+ *
+ * Resolves both inline fillPaints and styleIdForFill references
+ * (via style registry) — matching the old SVG renderer's behavior.
  */
 function applyStyleOverrides(
   contours: readonly DecodedContour[],
@@ -742,8 +865,9 @@ function applyStyleOverrides(
 
   const overrideMap = new Map<number, Fill>();
   for (const entry of overrideTable) {
-    if (entry.fillPaints && entry.fillPaints.length > 0) {
-      const fills = convertPaintsToFills(entry.fillPaints, ctx.images);
+    const paints = resolveOverrideEntryPaints(entry, ctx.styleRegistry);
+    if (paints) {
+      const fills = convertPaintsToFills(paints, ctx.images);
       if (fills.length > 0) {
         overrideMap.set(entry.styleID, fills[fills.length - 1]);
       }
@@ -807,9 +931,17 @@ function buildVectorNode(node: FigDesignNode, ctx: BuildContext): PathNode {
   };
 }
 
+/** Extract the name string from a KiwiEnumValue or return the string as-is. */
+function extractEnumName(value: unknown): string | undefined {
+  if (typeof value === "string") { return value; }
+  if (value && typeof value === "object" && "name" in value) {
+    return (value as { name: string }).name;
+  }
+  return undefined;
+}
+
 function extractAutoResizeName(rawAutoResize: unknown): string | undefined {
-  if (typeof rawAutoResize === "string") {return rawAutoResize;}
-  return (rawAutoResize as { name?: string } | undefined)?.name;
+  return extractEnumName(rawAutoResize);
 }
 
 function resolveTextAutoResize(rawAutoResize: unknown): TextAutoResize {
@@ -841,6 +973,8 @@ function buildTextNode(node: FigDesignNode, ctx: BuildContext): TextNode {
     width: node.size?.x ?? 0,
     height: node.size?.y ?? 0,
     textAutoResize,
+    textTruncation: extractEnumName(node.textData?.textTruncation),
+    leadingTrim: extractEnumName(node.textData?.leadingTrim),
     glyphContours: textData.glyphContours,
     decorationContours: textData.decorationContours,
     fill: textData.fill,
@@ -1137,6 +1271,13 @@ function buildNode(node: FigDesignNode, ctx: BuildContext): SceneNode | null {
     case "TEXT":
       return buildTextNode(node, ctx);
 
+    // IMAGE nodes in .fig are rectangles with image fills.
+    // The image data lives in the fills array as an IMAGE paint.
+    // Render as a rect node — the image fill is handled by the
+    // fill conversion pipeline (convertPaintsToFills → ImageFill).
+    case "IMAGE":
+      return buildRectNode(node, ctx);
+
     default:
       // Unknown node type - try to render children as group
       if (children.length > 0) {
@@ -1245,6 +1386,7 @@ export function buildSceneGraph(nodes: readonly FigDesignNode[], options: BuildS
     blobs: options.blobs,
     images: options.images,
     symbolMap: options.symbolMap ?? new Map(),
+    styleRegistry: options.styleRegistry ?? EMPTY_FIG_STYLE_REGISTRY,
     showHiddenNodes: options.showHiddenNodes ?? false,
     nodeCounter: 0,
   };
