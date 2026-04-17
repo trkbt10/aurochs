@@ -10,8 +10,8 @@
 import { deflateRaw } from "pako";
 import { compressZstd } from "../../compression";
 import { IDENTITY_MATRIX } from "../../matrix";
-import type { FigMatrix, KiwiSchema } from "../../types";
-import type { BuilderNode, KiwiDerivedSymbolEntry, KiwiGuid, KiwiSymbolData } from "./builder-node-types";
+import type { KiwiSchema } from "../../types";
+import type { BuilderNode, KiwiDerivedSymbolEntry, KiwiGuid } from "./builder-node-types";
 import { toKiwiRecord } from "./builder-node-types";
 import { StreamingFigEncoder } from "../../kiwi/stream";
 import figmaSchemaJson from "../figma-schema.json";
@@ -228,10 +228,13 @@ function _createFigFileBuilder() {
       size: data.size,
       transform: data.transform,
       fillPaints: data.fillPaints,
+      strokePaints: data.strokePaints,
+      strokeWeight: data.strokeWeight,
       visible: data.visible,
       opacity: data.opacity,
       clipsContent: data.clipsContent,
       cornerRadius: data.cornerRadius,
+      effects: data.effects,
       // AutoLayout - frame level
       stackMode: data.stackMode,
       stackSpacing: data.stackSpacing,
@@ -250,7 +253,7 @@ function _createFigFileBuilder() {
       verticalConstraint: data.verticalConstraint,
     });
     // Add required FRAME fields for Figma compatibility
-    node.strokeWeight = 1;
+    node.strokeWeight = data.strokeWeight ?? 1;
     node.strokeAlign = { value: 1, name: "INSIDE" };
     node.strokeJoin = { value: 0, name: "MITER" };
     node.frameMaskDisabled = false;
@@ -968,10 +971,11 @@ function _createFigFileBuilder() {
     // Symbol/Instance fields — symbolID must be wrapped in symbolData
     // (NodeChange schema has symbolData: SymbolData, not a direct symbolID field)
     if (data.symbolID) {
-      const symbolDataObj: KiwiSymbolData = data.overriddenSymbolID
-        ? { symbolID: data.symbolID, overriddenSymbolID: data.overriddenSymbolID }
-        : { symbolID: data.symbolID };
-      node.symbolData = symbolDataObj;
+      if (data.overriddenSymbolID) {
+        node.symbolData = { symbolID: data.symbolID, overriddenSymbolID: data.overriddenSymbolID };
+      } else {
+        node.symbolData = { symbolID: data.symbolID };
+      }
     }
     if (data.componentPropertyReferences && data.componentPropertyReferences.length > 0) {
       node.componentPropertyReferences = data.componentPropertyReferences;

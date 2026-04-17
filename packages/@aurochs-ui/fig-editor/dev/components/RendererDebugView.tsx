@@ -8,6 +8,9 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import type { ParsedFigFile } from "@aurochs/fig/parser";
 import { parseFigFile, buildNodeTree, findNodesByType } from "@aurochs/fig/parser";
+import { loadFigFile } from "@aurochs/fig/roundtrip";
+import { treeToDocument } from "@aurochs-builder/fig/context";
+import type { FigDesignDocument, FigDesignNode } from "@aurochs/fig/domain";
 import type { FigNode } from "@aurochs/fig/types";
 import { preResolveSymbols } from "@aurochs/fig/symbols";
 import { renderCanvas } from "@aurochs-renderer/fig/svg";
@@ -206,24 +209,35 @@ const fontLoader = createCachingFontLoader(browserFontLoader);
 
 export function RendererDebugView({ raw }: Props) {
   const [parsedFile, setParsedFile] = useState<ParsedFigFile | null>(null);
+  const [designDoc, setDesignDoc] = useState<FigDesignDocument | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (raw.length === 0) { setParsedFile(null); return; }
+    if (raw.length === 0) { setParsedFile(null); setDesignDoc(null); return; }
     let cancelled = false;
-    parseFigFile(raw).then(
-      (result) => { if (!cancelled) setParsedFile(result); },
+
+    // Parse both low-level (for SVG renderer) and domain (for WebGL/SceneGraph)
+    Promise.all([
+      parseFigFile(raw),
+      loadFigFile(raw).then((loaded) => {
+        const tree = buildNodeTree(loaded.nodeChanges);
+        return treeToDocument(tree, loaded);
+      }),
+    ]).then(
+      ([parsed, doc]) => {
+        if (!cancelled) { setParsedFile(parsed); setDesignDoc(doc); }
+      },
       (err) => { if (!cancelled) setParseError(err instanceof Error ? err.message : String(err)); },
     );
     return () => { cancelled = true; };
   }, [raw]);
 
   if (parseError) return <div style={loadingStyle}>Parse error: {parseError}</div>;
-  if (!parsedFile) return <div style={loadingStyle}>Parsing .fig for renderer debug...</div>;
-  return <RendererDebugContent parsedFile={parsedFile} />;
+  if (!parsedFile || !designDoc) return <div style={loadingStyle}>Parsing .fig for renderer debug...</div>;
+  return <RendererDebugContent parsedFile={parsedFile} designDoc={designDoc} />;
 }
 
-function RendererDebugContent({ parsedFile }: { parsedFile: ParsedFigFile }) {
+function RendererDebugContent({ parsedFile, designDoc }: { parsedFile: ParsedFigFile; designDoc: FigDesignDocument }) {
   const [selectedCanvasIndex, setSelectedCanvasIndex] = useState(0);
   const [selectedFrameIndex, setSelectedFrameIndex] = useState(0);
   const [showHiddenNodes, setShowHiddenNodes] = useState(false);
@@ -266,18 +280,42 @@ function RendererDebugContent({ parsedFile }: { parsedFile: ParsedFigFile }) {
     [currentCanvas],
   );
 
+  // Build SceneGraph for WebGL from the domain document (FigDesignNode).
+  // The domain pipeline (loadFigFile → treeToDocument → FigDesignDocument) ensures
+  // fills, strokes, effects, and other properties are correctly resolved.
   const sceneGraph = useMemo(() => {
     if (rendererMode !== "webgl" || !currentFrame) return null;
     try {
-      const node = currentFrame.node;
-      const transform = node.transform;
-      const normalizedNode = transform ? ({ ...node, transform: { ...transform, m02: 0, m12: 0 } } as FigNode) : node;
-      return buildSceneGraph([normalizedNode], { blobs: parsedFile.blobs, images: parsedFile.images, canvasSize: { width: currentFrame.width, height: currentFrame.height }, symbolMap, showHiddenNodes });
+      // Find the corresponding FigDesignNode in the domain document
+      const frameName = currentFrame.name;
+      const canvasName = currentCanvas?.name;
+      let designNode: FigDesignNode | undefined;
+      for (const page of designDoc.pages) {
+        if (canvasName && page.name !== canvasName) continue;
+        designNode = page.children.find((c) => c.name === frameName);
+        if (designNode) break;
+      }
+      if (!designNode) {
+        console.warn(`Design node not found for frame "${frameName}"`);
+        return null;
+      }
+      const transform = designNode.transform;
+      const normalizedNode: FigDesignNode = transform
+        ? { ...designNode, transform: { ...transform, m02: 0, m12: 0 } }
+        : designNode;
+      return buildSceneGraph([normalizedNode], {
+        blobs: designDoc.blobs,
+        images: designDoc.images,
+        canvasSize: { width: currentFrame.width, height: currentFrame.height },
+        symbolMap: designDoc.components,
+        styleRegistry: designDoc.styleRegistry,
+        showHiddenNodes,
+      });
     } catch (e) {
       console.error("Failed to build scene graph:", e);
       return null;
     }
-  }, [rendererMode, currentFrame, parsedFile.blobs, parsedFile.images, symbolMap, showHiddenNodes]);
+  }, [rendererMode, currentFrame, currentCanvas, designDoc, showHiddenNodes]);
 
   useEffect(() => {
     if (!currentFrame) { setRenderResult({ svg: "", warnings: [] }); return; }

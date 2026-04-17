@@ -6,11 +6,11 @@ export const linearGradientVertexShader = `
   attribute vec2 a_position;
   uniform mat3 u_transform;
   uniform vec2 u_resolution;
-  varying vec2 v_position;
+  varying vec2 v_localPosition;
 
   void main() {
     vec3 transformed = u_transform * vec3(a_position, 1.0);
-    v_position = transformed.xy;
+    v_localPosition = a_position;
     vec2 clipSpace = (transformed.xy / u_resolution) * 2.0 - 1.0;
     gl_Position = vec4(clipSpace * vec2(1.0, -1.0), 0.0, 1.0);
   }
@@ -30,18 +30,19 @@ export const linearGradientFragmentShader = `
   uniform int u_stopCount;
   uniform float u_opacity;
   uniform vec2 u_elementSize;
+  uniform vec2 u_elementOrigin;
 
-  varying vec2 v_position;
+  varying vec2 v_localPosition;
 
   void main() {
     // Normalize position to element-local coordinates (0..1)
-    vec2 localPos = v_position / u_elementSize;
+    vec2 localPos = (v_localPosition - u_elementOrigin) / u_elementSize;
 
     // Project onto gradient axis
     vec2 gradDir = u_gradientEnd - u_gradientStart;
     float gradLen = length(gradDir);
     if (gradLen < 0.001) {
-      gl_FragColor = vec4(u_stops[0].yzw, u_stopAlphas[0].x) * u_opacity;
+      gl_FragColor = vec4(u_stops[0].yzw, u_stopAlphas[0].x * u_opacity);
       return;
     }
 
@@ -69,6 +70,6 @@ export const linearGradientFragmentShader = `
       }
     }
 
-    gl_FragColor = vec4(color, alpha) * u_opacity;
+    gl_FragColor = vec4(color, alpha * u_opacity);
   }
 `;

@@ -12,10 +12,6 @@
 
 import type { FigGradientPaint, FigGradientStop, FigGradientTransform, FigImagePaint } from "@aurochs/fig/types";
 
-// =============================================================================
-// Types
-// =============================================================================
-
 export type GradientDirection = {
   readonly start: { readonly x: number; readonly y: number };
   readonly end: { readonly x: number; readonly y: number };
@@ -25,12 +21,6 @@ export type RadialGradientParams = {
   readonly center: { readonly x: number; readonly y: number };
   readonly radius: number;
 };
-
-/**
- * @deprecated Use FigGradientTransform from @aurochs/fig/types instead.
- * Kept for backward compatibility with external consumers.
- */
-export type GradientTransform = FigGradientTransform;
 
 // =============================================================================
 // Gradient Stops
@@ -65,7 +55,7 @@ export function getGradientStops(paint: FigGradientPaint): readonly FigGradientS
  *
  * The start/end are swapped to match SVG's visual direction expectation.
  */
-export function getGradientDirectionFromTransform(transform: GradientTransform | undefined): GradientDirection {
+export function getGradientDirectionFromTransform(transform: FigGradientTransform | undefined): GradientDirection {
   if (!transform) {
     return { start: { x: 0, y: 0 }, end: { x: 0, y: 1 } };
   }
@@ -244,10 +234,33 @@ export function getImageRef(paint: FigImagePaint): string | null {
  */
 export function getScaleMode(paint: FigImagePaint): string {
   if (paint.scaleMode) {
-    return paint.scaleMode;
+    if (typeof paint.scaleMode === "string") {
+      return paint.scaleMode;
+    }
+    return paint.scaleMode.name;
   }
   if (paint.imageScaleMode) {
     return paint.imageScaleMode.name;
   }
   return "FILL";
+}
+
+/**
+ * Get image transform from either raw Kiwi or API/builder field names.
+ */
+export function getImageTransform(paint: FigImagePaint): FigImagePaint["transform"] {
+  if (paint.transform) {
+    return paint.transform;
+  }
+  return paint.imageTransform;
+}
+
+/**
+ * Get tile scaling factor from an image paint.
+ */
+export function getScalingFactor(paint: FigImagePaint): number | undefined {
+  if (typeof paint.scalingFactor === "number" && paint.scalingFactor > 0) {
+    return paint.scalingFactor;
+  }
+  return undefined;
 }

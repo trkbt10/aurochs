@@ -104,7 +104,7 @@ export type LinearGradientFillParams = {
   fill: Extract<Fill, { type: "linear-gradient" }>;
   transform: AffineMatrix;
   opacity: number;
-  elementSize: { width: number; height: number };
+  elementSize: { width: number; height: number; x?: number; y?: number };
 };
 
 /** Draw a linear gradient fill using WebGL */
@@ -148,8 +148,13 @@ export function drawLinearGradientFill(
   );
   gl.uniform2f(
     gl.getUniformLocation(program, "u_elementSize"),
-    elementSize.width * pixelRatio,
-    elementSize.height * pixelRatio
+    elementSize.width,
+    elementSize.height
+  );
+  gl.uniform2f(
+    gl.getUniformLocation(program, "u_elementOrigin"),
+    elementSize.x ?? 0,
+    elementSize.y ?? 0
   );
   gl.uniform1f(gl.getUniformLocation(program, "u_opacity"), opacity * fill.opacity);
 
@@ -194,7 +199,7 @@ export type RadialGradientFillParams = {
   fill: Extract<Fill, { type: "radial-gradient" }>;
   transform: AffineMatrix;
   opacity: number;
-  elementSize: { width: number; height: number };
+  elementSize: { width: number; height: number; x?: number; y?: number };
 };
 
 /** Draw a radial gradient fill using WebGL */
@@ -227,7 +232,8 @@ export function drawRadialGradientFill(
 
   gl.uniform2f(gl.getUniformLocation(program, "u_center"), fill.center.x, fill.center.y);
   gl.uniform1f(gl.getUniformLocation(program, "u_radius"), fill.radius);
-  gl.uniform2f(gl.getUniformLocation(program, "u_elementSize"), elementSize.width * pixelRatio, elementSize.height * pixelRatio);
+  gl.uniform2f(gl.getUniformLocation(program, "u_elementSize"), elementSize.width, elementSize.height);
+  gl.uniform2f(gl.getUniformLocation(program, "u_elementOrigin"), elementSize.x ?? 0, elementSize.y ?? 0);
   gl.uniform1f(gl.getUniformLocation(program, "u_opacity"), opacity * fill.opacity);
 
   const stopCount = Math.min(fill.stops.length, 8);
@@ -253,6 +259,8 @@ export type ImageFillOptions = {
   readonly imageHeight?: number;
   /** Figma scale mode: FILL (cover+crop), FIT (contain), STRETCH (default) */
   readonly scaleMode?: string;
+  /** TILE scale multiplier */
+  readonly scalingFactor?: number;
 };
 
 
@@ -305,12 +313,13 @@ export function drawImageFill(
   gl.uniform1i(gl.getUniformLocation(program, "u_texture"), 0);
 
   // Compute UV scale/offset based on scaleMode
-  const { texScale, texOffset } = computeImageUV({
+  const { texScale, texOffset, repeat, clipTransparent } = computeImageUV({
     elementW: elementSize.width,
     elementH: elementSize.height,
     imageW: options?.imageWidth ?? elementSize.width,
     imageH: options?.imageHeight ?? elementSize.height,
     scaleMode: options?.scaleMode ?? "STRETCH",
+    scalingFactor: options?.scalingFactor,
   });
 
   gl.uniform2f(
@@ -323,6 +332,8 @@ export function drawImageFill(
     texOffset.x,
     texOffset.y
   );
+  gl.uniform1i(gl.getUniformLocation(program, "u_repeat"), repeat ? 1 : 0);
+  gl.uniform1i(gl.getUniformLocation(program, "u_clipTransparent"), clipTransparent ? 1 : 0);
   gl.uniform1f(gl.getUniformLocation(program, "u_opacity"), opacity);
 
   gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 2);
@@ -345,12 +356,18 @@ type ImageUVParams = {
   imageW: number;
   imageH: number;
   scaleMode: string;
+  scalingFactor?: number;
 };
 
 /** Compute UV scale and offset for image fills */
-function computeImageUV(
-  { elementW, elementH, imageW, imageH, scaleMode }: ImageUVParams
-): { texScale: { x: number; y: number }; texOffset: { x: number; y: number } } {
+export function computeImageUV(
+  { elementW, elementH, imageW, imageH, scaleMode, scalingFactor }: ImageUVParams
+): {
+  texScale: { x: number; y: number };
+  texOffset: { x: number; y: number };
+  repeat: boolean;
+  clipTransparent: boolean;
+} {
   if (scaleMode === "FILL" && imageW > 0 && imageH > 0) {
     const imageAR = imageW / imageH;
     const elementAR = elementW / elementH;
@@ -361,6 +378,8 @@ function computeImageUV(
       return {
         texScale: { x: uvWidth / elementW, y: 1 / elementH },
         texOffset: { x: (1 - uvWidth) / 2, y: 0 },
+        repeat: false,
+        clipTransparent: false,
       };
     } else {
       // Image taller than element: full width, crop height
@@ -368,6 +387,8 @@ function computeImageUV(
       return {
         texScale: { x: 1 / elementW, y: uvHeight / elementH },
         texOffset: { x: 0, y: (1 - uvHeight) / 2 },
+        repeat: false,
+        clipTransparent: false,
       };
     }
   }
@@ -383,6 +404,8 @@ function computeImageUV(
       return {
         texScale: { x: 1 / elementW, y: 1 / visibleH },
         texOffset: { x: 0, y: -padding / visibleH },
+        repeat: false,
+        clipTransparent: true,
       };
     } else {
       // Image taller: fit height, pillarbox width
@@ -391,13 +414,27 @@ function computeImageUV(
       return {
         texScale: { x: 1 / visibleW, y: 1 / elementH },
         texOffset: { x: -padding / visibleW, y: 0 },
+        repeat: false,
+        clipTransparent: true,
       };
     }
+  }
+
+  if (scaleMode === "TILE" && imageW > 0 && imageH > 0) {
+    const tileScale = scalingFactor ?? 1;
+    return {
+      texScale: { x: 1 / (imageW * tileScale), y: 1 / (imageH * tileScale) },
+      texOffset: { x: 0, y: 0 },
+      repeat: true,
+      clipTransparent: false,
+    };
   }
 
   // STRETCH (default): map 0..w → 0..1
   return {
     texScale: { x: 1 / elementW, y: 1 / elementH },
     texOffset: { x: 0, y: 0 },
+    repeat: false,
+    clipTransparent: false,
   };
 }

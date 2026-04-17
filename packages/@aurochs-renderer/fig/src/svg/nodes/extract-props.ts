@@ -71,7 +71,7 @@ export type PaintProps = {
 /** Extract fill and stroke paint properties */
 export function extractPaintProps(node: FigNode): PaintProps {
   return {
-    fillPaints: node.fillPaints,
+    fillPaints: resolveFillPaints(node),
     strokePaints: node.strokePaints,
     strokeWeight: node.strokeWeight,
     strokeCap: enumName<FigStrokeCap>(node.strokeCap),
@@ -79,6 +79,17 @@ export function extractPaintProps(node: FigNode): PaintProps {
     strokeAlign: enumName(node.strokeAlign),
     strokeDashes: node.strokeDashes,
   };
+}
+
+/** Resolve frame background paints when raw FigNode fillPaints is empty. */
+function resolveFillPaints(node: FigNode): readonly FigPaint[] | undefined {
+  if (node.fillPaints && node.fillPaints.length > 0) {
+    return node.fillPaints;
+  }
+  if (node.backgroundPaints && node.backgroundPaints.length > 0) {
+    return node.backgroundPaints;
+  }
+  return node.fillPaints;
 }
 
 // ---- Geometry properties (fillGeometry, strokeGeometry) ----

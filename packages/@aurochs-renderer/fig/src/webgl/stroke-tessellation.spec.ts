@@ -1,6 +1,7 @@
 /** @file Stroke tessellation tests */
 import {
   tessellateRectStroke,
+  tessellateRectAlignedStroke,
   tessellateEllipseStroke,
   tessellatePathStroke,
 } from "./stroke-tessellation";
@@ -46,6 +47,32 @@ describe("tessellateRectStroke", () => {
       expect(verts[i]).toBeLessThanOrEqual(w + hw + 0.01);
       expect(verts[i + 1]).toBeGreaterThanOrEqual(-hw - 0.01);
       expect(verts[i + 1]).toBeLessThanOrEqual(h + hw + 0.01);
+    }
+  });
+});
+
+describe("tessellateRectAlignedStroke", () => {
+  it("keeps inside stroke vertices within the original rectangle", () => {
+    const verts = tessellateRectAlignedStroke({ w: 100, h: 80, cornerRadius: 0, strokeWidth: 4, align: "INSIDE" });
+
+    expect(verts.length).toBeGreaterThan(0);
+    for (let i = 0; i < verts.length; i += 2) {
+      expect(verts[i]).toBeGreaterThanOrEqual(-0.01);
+      expect(verts[i]).toBeLessThanOrEqual(100.01);
+      expect(verts[i + 1]).toBeGreaterThanOrEqual(-0.01);
+      expect(verts[i + 1]).toBeLessThanOrEqual(80.01);
+    }
+  });
+
+  it("places outside stroke vertices around the original rectangle", () => {
+    const verts = tessellateRectAlignedStroke({ w: 100, h: 80, cornerRadius: 0, strokeWidth: 4, align: "OUTSIDE" });
+
+    expect(verts.length).toBeGreaterThan(0);
+    for (let i = 0; i < verts.length; i += 2) {
+      expect(verts[i]).toBeGreaterThanOrEqual(-4.01);
+      expect(verts[i]).toBeLessThanOrEqual(104.01);
+      expect(verts[i + 1]).toBeGreaterThanOrEqual(-4.01);
+      expect(verts[i + 1]).toBeLessThanOrEqual(84.01);
     }
   });
 });
@@ -136,5 +163,40 @@ describe("tessellatePathStroke", () => {
 
     const verts = tessellatePathStroke([contour], 3);
     expect(verts.length).toBeGreaterThan(0);
+  });
+
+  it("splits dashed path strokes into dash segment geometry", () => {
+    const contour: PathContour = {
+      commands: [
+        { type: "M", x: 0, y: 0 },
+        { type: "L", x: 100, y: 0 },
+      ],
+      windingRule: "nonzero",
+    };
+
+    const verts = tessellatePathStroke([contour], 4, { dashPattern: [10, 10] });
+
+    expect(verts.length).toBe(60);
+    for (let i = 0; i < verts.length; i += 2) {
+      expect(verts[i]).toBeGreaterThanOrEqual(-0.01);
+      expect(verts[i]).toBeLessThanOrEqual(90.01);
+      expect(verts[i + 1]).toBeGreaterThanOrEqual(-2.01);
+      expect(verts[i + 1]).toBeLessThanOrEqual(2.01);
+    }
+  });
+
+  it("supports dashed rectangle strokes", () => {
+    const solid = tessellateRectStroke({ w: 100, h: 80, cornerRadius: 0, strokeWidth: 4 });
+    const dashed = tessellateRectStroke({
+      w: 100,
+      h: 80,
+      cornerRadius: 0,
+      strokeWidth: 4,
+      dashPattern: [12, 8],
+    });
+
+    expect(dashed.length).toBeGreaterThan(0);
+    expect(dashed.length % 6).toBe(0);
+    expect(dashed.length).toBeGreaterThan(solid.length);
   });
 });

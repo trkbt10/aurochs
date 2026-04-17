@@ -13,10 +13,11 @@ import {
   getGradientDirection,
   getRadialGradientCenterAndRadius,
   getImageRef,
+  getImageTransform,
   getScaleMode,
+  getScalingFactor,
 } from "../../paint";
 import type { Fill, Color, GradientStop, BlendMode, AffineMatrix } from "../types";
-import type { FigGradientTransform } from "@aurochs/fig/types";
 import { convertFigmaBlendMode } from "./blend-mode";
 
 /**
@@ -177,8 +178,9 @@ export function convertPaintToFill(paint: FigPaint, images: ReadonlyMap<string, 
 
       // Extract image transform if present
       let imageTransform: AffineMatrix | undefined;
-      if (imagePaint.transform) {
-        const t = imagePaint.transform;
+      const sourceImageTransform = getImageTransform(imagePaint);
+      if (sourceImageTransform) {
+        const t = sourceImageTransform;
         imageTransform = {
           m00: t.m00 ?? 1,
           m01: t.m01 ?? 0,
@@ -197,6 +199,7 @@ export function convertPaintToFill(paint: FigPaint, images: ReadonlyMap<string, 
         scaleMode: getScaleMode(imagePaint),
         opacity,
         blendMode,
+        scalingFactor: getScalingFactor(imagePaint),
         imageTransform,
       };
     }

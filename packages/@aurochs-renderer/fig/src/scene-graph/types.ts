@@ -157,6 +157,8 @@ export type ImageFill = {
   readonly blendMode?: BlendMode;
   readonly width?: number;
   readonly height?: number;
+  /** Tile scale multiplier for TILE image fills. */
+  readonly scalingFactor?: number;
   /** Natural image dimensions (from PNG/JPEG header) */
   readonly naturalWidth?: number;
   readonly naturalHeight?: number;

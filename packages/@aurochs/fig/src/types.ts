@@ -349,6 +349,8 @@ export type FigNode = {
   readonly transform?: FigMatrix;
   readonly size?: FigVector;
   readonly fillPaints?: readonly FigPaint[];
+  /** Frame background paints used by real Figma exports. */
+  readonly backgroundPaints?: readonly FigPaint[];
   readonly strokePaints?: readonly FigPaint[];
   readonly strokeWeight?: FigStrokeWeight;
   readonly strokeAlign?: KiwiEnumValue;
@@ -776,11 +778,15 @@ export type FigImagePaint = FigPaintBase & {
   /** API format: image reference string */
   readonly imageRef?: string;
   /** API format: scale mode */
-  readonly scaleMode?: "FILL" | "FIT" | "CROP" | "TILE";
+  readonly scaleMode?: "FILL" | "FIT" | "CROP" | "TILE" | KiwiEnumValue;
   /** Kiwi format: image scale mode as KiwiEnumValue */
   readonly imageScaleMode?: KiwiEnumValue;
   /** 2x3 affine transform for image positioning within the element */
   readonly transform?: FigImageTransform;
+  /** API/builder format: 2x3 affine transform for image positioning. */
+  readonly imageTransform?: FigImageTransform;
+  /** TILE scale multiplier. */
+  readonly scalingFactor?: number;
   /** Kiwi format: image data reference (hash-based) */
   readonly image?: { readonly hash?: readonly number[] };
   /** Kiwi format: alternative image hash (string or byte array) */

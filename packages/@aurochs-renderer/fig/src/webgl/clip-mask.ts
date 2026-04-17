@@ -5,17 +5,9 @@
  * Bits 0-6 (0x7F) are reserved for stencil-based path fill (see stencil-fill.ts).
  */
 
-import type { ClipShape, CornerRadius } from "../scene-graph/types";
+import type { ClipShape } from "../scene-graph/types";
 import { generateRectVertices, tessellateContours } from "./tessellation";
 import { CLIP_STENCIL_BIT } from "./stencil-fill";
-
-/** Extract uniform radius from CornerRadius (per-corner → average for WebGL) */
-function uniformRadiusForGL(cr: CornerRadius | undefined): number | undefined {
-  if (cr === undefined) { return undefined; }
-  if (typeof cr === "number") { return cr; }
-  const avg = (cr[0] + cr[1] + cr[2] + cr[3]) / 4;
-  return avg > 0 ? avg : undefined;
-}
 
 /**
  * Begin a stencil clip region
@@ -38,7 +30,7 @@ export function beginStencilClip(
 
   const verticesRef = { value: undefined as Float32Array | undefined };
   if (clip.type === "rect") {
-    verticesRef.value = generateRectVertices(clip.width, clip.height, uniformRadiusForGL(clip.cornerRadius));
+    verticesRef.value = generateRectVertices(clip.width, clip.height, clip.cornerRadius);
   } else {
     verticesRef.value = tessellateContours(clip.contours);
   }

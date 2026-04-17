@@ -26,6 +26,7 @@ export function WebGLCanvas({ sceneGraph, width, height }: Props) {
         rendererRef.current = createWebGLFigmaRenderer({
           canvas,
           antialias: true,
+          pixelRatio: 1,
           backgroundColor: { r: 1, g: 1, b: 1, a: 1 },
         });
       } catch (e) {
@@ -35,7 +36,7 @@ export function WebGLCanvas({ sceneGraph, width, height }: Props) {
     }
 
     const renderer = rendererRef.current;
-    renderSceneAsync(renderer, sceneGraph);
+    renderSceneAsync(renderer, canvas, sceneGraph);
   }, [sceneGraph, width, height]);
 
   useEffect(() => {
@@ -48,16 +49,27 @@ export function WebGLCanvas({ sceneGraph, width, height }: Props) {
   return (
     <canvas
       ref={canvasRef}
-      style={{ maxWidth: "100%", height: "auto", display: "block" }}
+      style={{ maxWidth: "100%", display: "block" }}
     />
   );
 }
 
-async function renderSceneAsync(renderer: WebGLFigmaRendererInstance, sceneGraph: SceneGraph) {
+async function renderSceneAsync(
+  renderer: WebGLFigmaRendererInstance,
+  canvas: HTMLCanvasElement,
+  sceneGraph: SceneGraph,
+) {
   try {
     await renderer.prepareScene(sceneGraph);
     renderer.render(sceneGraph);
+    syncCanvasCssSize(canvas);
   } catch (e) {
     console.error("WebGL render error:", e);
   }
+}
+
+function syncCanvasCssSize(canvas: HTMLCanvasElement): void {
+  canvas.style.width = `${canvas.width}px`;
+  canvas.style.height = `${canvas.height}px`;
+  canvas.style.aspectRatio = `${canvas.width} / ${canvas.height}`;
 }

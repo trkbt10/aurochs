@@ -17,6 +17,7 @@ import {
   getAngularGradientParams as sharedGetAngularGradientParams,
   getDiamondGradientParams as sharedGetDiamondGradientParams,
   getImageRef as sharedGetImageRef,
+  getImageTransform as sharedGetImageTransform,
 } from "../paint";
 
 // =============================================================================
@@ -502,24 +503,38 @@ function createPatternFromImage(params: CreatePatternParams): string {
     imgDim,
     elementSize,
     scaleMode,
-    paint.transform,
+    sharedGetImageTransform(paint),
   );
 
-  const patternContent = imgTransform
-    ? image({
-        href: dataUri,
-        width: imgDim?.width ?? 1,
-        height: imgDim?.height ?? 1,
-        transform: imgTransform,
-      })
-    : image({
-        href: dataUri,
-        x: 0,
-        y: 0,
+  if (imgTransform) {
+    const patternContent = image({
+      href: dataUri,
+      width: imgDim?.width ?? 1,
+      height: imgDim?.height ?? 1,
+      transform: imgTransform,
+    });
+    const patternDef = pattern(
+      {
+        id,
+        patternContentUnits: "objectBoundingBox",
         width: 1,
         height: 1,
-        preserveAspectRatio: "none",
-      });
+      },
+      patternContent,
+    );
+
+    ctx.defs.add(patternDef);
+    return id;
+  }
+
+  const patternContent = image({
+    href: dataUri,
+    x: 0,
+    y: 0,
+    width: 1,
+    height: 1,
+    preserveAspectRatio: "none",
+  });
 
   const patternDef = pattern(
     {
@@ -554,6 +569,7 @@ function createPatternFromImage(params: CreatePatternParams): string {
  *
  * Returns a transform string or undefined if image dimensions are unavailable.
  */
+// eslint-disable-next-line custom/max-params -- direct SVG legacy helper mirrors Figma image paint inputs.
 function computeImagePatternTransform(
   imgDim: ImageDimensions | undefined,
   elementSize: ElementSize | undefined,
@@ -669,7 +685,10 @@ type ScaleMode = "FILL" | "FIT" | "CROP" | "TILE" | "STRETCH";
  */
 function getScaleMode(paint: FigImagePaint): ScaleMode | undefined {
   if (paint.scaleMode) {
-    return paint.scaleMode;
+    if (typeof paint.scaleMode === "string") {
+      return paint.scaleMode;
+    }
+    return paint.scaleMode.name as ScaleMode | undefined;
   }
   if (paint.imageScaleMode) {
     return paint.imageScaleMode.name as ScaleMode | undefined;
@@ -750,6 +769,7 @@ export type FillResult = SimpleFillResult | ComplexFillResult;
 /**
  * Resolve a single paint to a FillResult.
  */
+// eslint-disable-next-line custom/max-params -- direct SVG legacy helper keeps fill resolution call sites compact.
 function resolveSinglePaint(
   paint: FigPaint,
   ctx: FigSvgRenderContext,
@@ -784,6 +804,7 @@ function resolveSinglePaint(
  * Figma stacks fills bottom (index 0) to top (last index). In SVG, later
  * elements paint over earlier ones, so we emit layers in array order.
  */
+// eslint-disable-next-line custom/max-params -- exported direct SVG API used by node renderers.
 export function getFillResult(
   paints: readonly FigPaint[] | undefined,
   ctx: FigSvgRenderContext,

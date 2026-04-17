@@ -96,6 +96,8 @@ export type ResolvedImagePattern = {
   readonly imageTransform?: string;
   /** Scale mode for image pattern finalization */
   readonly scaleMode?: string;
+  /** Tile scale multiplier for TILE image fills */
+  readonly scalingFactor?: number;
   /** Source paint transform (AffineMatrix) for finalization */
   readonly sourceTransform?: import("../types").AffineMatrix;
 };
@@ -271,6 +273,7 @@ export function resolveFill(fill: Fill, ids: IdGenerator): ResolvedFill {
           patternTransform: fill.imageTransform ? matrixToPatternTransform(fill.imageTransform) : undefined,
           // Preserved for finalizeImagePatternDefs
           scaleMode: fill.scaleMode,
+          scalingFactor: fill.scalingFactor,
           sourceTransform: fill.imageTransform,
         },
       };

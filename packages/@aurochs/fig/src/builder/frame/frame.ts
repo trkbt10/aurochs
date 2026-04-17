@@ -3,7 +3,8 @@
  */
 
 import { createTranslationMatrix } from "../../matrix";
-import type { Color, StackPadding } from "../types";
+import type { Color, Paint, StackPadding, Stroke } from "../types";
+import type { EffectData } from "../effect/types";
 import type { ExportSettings, FrameNodeData } from "./types";
 import {
   IMAGE_TYPE_VALUES,
@@ -22,6 +23,26 @@ import {
   type StackSizing,
   type ConstraintType,
 } from "../../constants";
+
+function solidPaint(color: Color): Paint {
+  return {
+    type: { value: 0, name: "SOLID" },
+    color,
+    opacity: 1,
+    visible: true,
+    blendMode: { value: 1, name: "NORMAL" },
+  };
+}
+
+function solidStroke(color: Color): Stroke {
+  return {
+    type: { value: 0, name: "SOLID" },
+    color,
+    opacity: 1,
+    visible: true,
+    blendMode: { value: 1, name: "NORMAL" },
+  };
+}
 
 /**
  * Default SVG export settings (matches Figma's defaults)
@@ -49,6 +70,11 @@ export type FrameNodeBuilder = {
   size: (width: number, height: number) => FrameNodeBuilder;
   position: (x: number, y: number) => FrameNodeBuilder;
   background: (c: Color) => FrameNodeBuilder;
+  fill: (paint: Paint) => FrameNodeBuilder;
+  stroke: (color: Color) => FrameNodeBuilder;
+  strokeWeight: (weight: number) => FrameNodeBuilder;
+  opacity: (o: number) => FrameNodeBuilder;
+  effects: (effects: readonly EffectData[]) => FrameNodeBuilder;
   clipsContent: (clips: boolean) => FrameNodeBuilder;
   cornerRadius: (radius: number) => FrameNodeBuilder;
   autoLayout: (mode: StackMode) => FrameNodeBuilder;
@@ -79,7 +105,11 @@ function createFrameNodeBuilder(localID: number, parentID: number): FrameNodeBui
     height: 100,
     x: 0,
     y: 0,
-    fillColor: { r: 1, g: 1, b: 1, a: 1 } as Color,
+    fillPaints: [solidPaint({ r: 1, g: 1, b: 1, a: 1 })],
+    strokeColor: undefined as Color | undefined,
+    strokeWeight: undefined as number | undefined,
+    opacity: 1,
+    effects: undefined as readonly EffectData[] | undefined,
     clipsContent: true,
     cornerRadius: undefined as number | undefined,
     exportSettings: [] as ExportSettings[],
@@ -103,7 +133,12 @@ function createFrameNodeBuilder(localID: number, parentID: number): FrameNodeBui
     name(n: string) { state.name = n; return builder; },
     size(width: number, height: number) { state.width = width; state.height = height; return builder; },
     position(x: number, y: number) { state.x = x; state.y = y; return builder; },
-    background(c: Color) { state.fillColor = c; return builder; },
+    background(c: Color) { state.fillPaints = [solidPaint(c)]; return builder; },
+    fill(paint: Paint) { state.fillPaints = [paint]; return builder; },
+    stroke(color: Color) { state.strokeColor = color; return builder; },
+    strokeWeight(weight: number) { state.strokeWeight = weight; return builder; },
+    opacity(o: number) { state.opacity = o; return builder; },
+    effects(e: readonly EffectData[]) { state.effects = e; return builder; },
     clipsContent(clips: boolean) { state.clipsContent = clips; return builder; },
     cornerRadius(radius: number) { state.cornerRadius = radius; return builder; },
     /** Set the auto-layout mode (direction) */
@@ -176,12 +211,15 @@ function createFrameNodeBuilder(localID: number, parentID: number): FrameNodeBui
         name: state.name,
         size: { x: state.width, y: state.height },
         transform: createTranslationMatrix(state.x, state.y),
-        fillPaints: [{ type: { value: 0, name: "SOLID" }, color: state.fillColor, opacity: 1, visible: true, blendMode: { value: 1, name: "NORMAL" } }],
+        fillPaints: state.fillPaints,
+        strokePaints: state.strokeColor ? [solidStroke(state.strokeColor)] : undefined,
+        strokeWeight: state.strokeWeight ?? 0,
         visible: true,
-        opacity: 1,
+        opacity: state.opacity,
         clipsContent: state.clipsContent,
         cornerRadius: state.cornerRadius,
         exportSettings: state.exportSettings.length > 0 ? state.exportSettings : undefined,
+        effects: state.effects,
         stackMode: toEnumValue(state.stackMode, STACK_MODE_VALUES),
         stackSpacing: state.stackSpacing,
         stackPadding: state.stackPadding,

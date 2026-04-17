@@ -3,6 +3,8 @@
  */
 
 import { frameNode } from "./frame";
+import { dropShadow, effects } from "../effect";
+import { solidPaint } from "../paint";
 
 describe("FrameNodeBuilder", () => {
   it("creates basic frame with defaults", () => {
@@ -34,6 +36,25 @@ describe("FrameNodeBuilder", () => {
     expect(node.fillPaints[0].color).toEqual({ r: 0.9, g: 0.9, b: 0.9, a: 1 });
     expect(node.clipsContent).toBe(false);
     expect(node.cornerRadius).toBe(8);
+  });
+
+  it("sets frame-level opacity, effects, stroke, and explicit fill paint", () => {
+    const shadow = effects(dropShadow().offset(0, 4).blur(12));
+    const fill = solidPaint({ r: 0.2, g: 0.4, b: 0.8, a: 1 }).opacity(0.7).build();
+
+    const node = frameNode(1, 0)
+      .fill(fill)
+      .opacity(0.5)
+      .effects(shadow)
+      .stroke({ r: 1, g: 0, b: 0, a: 1 })
+      .strokeWeight(4)
+      .build();
+
+    expect(node.fillPaints).toEqual([fill]);
+    expect(node.opacity).toBe(0.5);
+    expect(node.effects).toEqual(shadow);
+    expect(node.strokePaints?.[0].color).toEqual({ r: 1, g: 0, b: 0, a: 1 });
+    expect(node.strokeWeight).toBe(4);
   });
 
   describe("AutoLayout - Frame Level", () => {

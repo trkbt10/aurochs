@@ -12,11 +12,19 @@
  * applied via finalizeImagePatternDefs after element size is known.
  */
 
-import type { ResolvedFillDef } from "./fill";
 import type { AffineMatrix } from "../types";
+import type { RenderDef } from "../render-tree/types";
 import { getImageDimensions, type ImageDimensions } from "./image-dimensions";
 
 type ElementSize = { readonly width: number; readonly height: number };
+type ImagePatternLayout = {
+  readonly patternWidth: number;
+  readonly patternHeight: number;
+  readonly imageWidth: number;
+  readonly imageHeight: number;
+  readonly preserveAspectRatio: string;
+  readonly imageTransform: string;
+};
 
 /**
  * Finalize image pattern defs with element size.
@@ -29,7 +37,7 @@ type ElementSize = { readonly width: number; readonly height: number };
  * finalizeGradientDefs for consistency).
  */
 export function finalizeImagePatternDefs(
-  defs: import("../render-tree/types").RenderDef[],
+  defs: RenderDef[],
   elementSize: ElementSize,
 ): void {
   for (let i = 0; i < defs.length; i++) {
@@ -40,7 +48,7 @@ export function finalizeImagePatternDefs(
     if (pattern.type !== "image") { continue; }
 
     // Extract image dimensions from the base64 data
-    const imgDim = extractDimensionsFromDataUri(pattern.dataUri, pattern);
+    const imgDim = extractDimensionsFromDataUri(pattern.dataUri);
 
     if (!imgDim) {
       // Can't determine image size — use objectBoundingBox stretch fallback
@@ -48,15 +56,15 @@ export function finalizeImagePatternDefs(
       continue;
     }
 
-    // Compute the pattern image transform
-    const imageTransform = computeImagePatternTransform(
+    const layout = computeImagePatternLayout({
       imgDim,
       elementSize,
-      pattern.scaleMode,
-      pattern.sourceTransform,
-    );
+      scaleMode: pattern.scaleMode,
+      paintTransform: pattern.sourceTransform,
+      scalingFactor: pattern.scalingFactor,
+    });
 
-    if (imageTransform) {
+    if (layout) {
       // Replace the pattern def with finalized version
       defs[i] = {
         type: "pattern",
@@ -64,10 +72,12 @@ export function finalizeImagePatternDefs(
           ...pattern,
           // In objectBoundingBox space, the image uses its natural pixel dimensions
           // and the transform maps those pixels to 0..1 space
-          imageWidth: imgDim.width,
-          imageHeight: imgDim.height,
-          preserveAspectRatio: "none",
-          imageTransform,
+          width: layout.patternWidth,
+          height: layout.patternHeight,
+          imageWidth: layout.imageWidth,
+          imageHeight: layout.imageHeight,
+          preserveAspectRatio: layout.preserveAspectRatio,
+          imageTransform: layout.imageTransform,
         },
       };
     }
@@ -79,7 +89,6 @@ export function finalizeImagePatternDefs(
  */
 function extractDimensionsFromDataUri(
   dataUri: string,
-  pattern: { readonly scaleMode?: string },
 ): ImageDimensions | undefined {
   // Determine mimeType from the data URI
   const mimeMatch = dataUri.match(/^data:([^;]+);base64,/);
@@ -116,14 +125,21 @@ function extractDimensionsFromDataUri(
  * For general case with paint transform:
  *   T = inv(paintTransform) × diag(1/imgW, 1/imgH)
  */
-function computeImagePatternTransform(
-  imgDim: ImageDimensions,
-  elementSize: ElementSize,
-  scaleMode: string | undefined,
-  paintTransform: AffineMatrix | undefined,
-): string | undefined {
+type ImagePatternLayoutParams = {
+  readonly imgDim: ImageDimensions;
+  readonly elementSize: ElementSize;
+  readonly scaleMode: string | undefined;
+  readonly paintTransform: AffineMatrix | undefined;
+  readonly scalingFactor: number | undefined;
+};
+
+function computeImagePatternLayout(params: ImagePatternLayoutParams): ImagePatternLayout | undefined {
+  const { imgDim, elementSize, scaleMode, paintTransform, scalingFactor } = params;
   const imgW = imgDim.width;
   const imgH = imgDim.height;
+  if (imgW <= 0 || imgH <= 0 || elementSize.width <= 0 || elementSize.height <= 0) {
+    return undefined;
+  }
 
   // Extract paint transform components (identity if unset)
   const pm00 = paintTransform?.m00 ?? 1;
@@ -136,27 +152,28 @@ function computeImagePatternTransform(
   const isIdentity =
     pm00 === 1 && pm01 === 0 && pm10 === 0 && pm11 === 1 && pm02 === 0 && pm12 === 0;
 
-  // FILL with identity transform: cover + centre-crop
   if (scaleMode === "FILL" && isIdentity) {
-    const pixelScale = Math.max(
-      elementSize.width / imgW,
-      elementSize.height / imgH,
-    );
+    return createScaledImagePatternLayout({
+      imgW,
+      imgH,
+      elementSize,
+      pixelScale: Math.max(elementSize.width / imgW, elementSize.height / imgH),
+      centerMode: "crop",
+    });
+  }
 
-    const sx = pixelScale / elementSize.width;
-    const sy = pixelScale / elementSize.height;
-    const obbW = imgW * sx;
-    const obbH = imgH * sy;
-    const tx = -(obbW - 1) / 2;
-    const ty = -(obbH - 1) / 2;
+  if (scaleMode === "FIT" && isIdentity) {
+    return createScaledImagePatternLayout({
+      imgW,
+      imgH,
+      elementSize,
+      pixelScale: Math.min(elementSize.width / imgW, elementSize.height / imgH),
+      centerMode: "letterbox",
+    });
+  }
 
-    if (sx === sy) {
-      if (tx === 0 && ty === 0) {
-        return `scale(${sx})`;
-      }
-      return `translate(${tx} ${ty}) scale(${sx})`;
-    }
-    return `matrix(${sx} 0 0 ${sy} ${tx} ${ty})`;
+  if (scaleMode === "TILE" && isIdentity) {
+    return createTiledImagePatternLayout({ imgW, imgH, elementSize, scalingFactor });
   }
 
   // General case: inv(paintTransform) × diag(1/imgW, 1/imgH)
@@ -179,6 +196,95 @@ function computeImagePatternTransform(
   const stx = invTx;
   const sty = invTy;
 
+  return {
+    patternWidth: 1,
+    patternHeight: 1,
+    imageWidth: imgW,
+    imageHeight: imgH,
+    preserveAspectRatio: "none",
+    imageTransform: formatImageTransform({ sa, sb, sc, sd, stx, sty }),
+  };
+}
+
+type ScaledImagePatternParams = {
+  readonly imgW: number;
+  readonly imgH: number;
+  readonly elementSize: ElementSize;
+  readonly pixelScale: number;
+  readonly centerMode: "crop" | "letterbox";
+};
+
+/** Create a one-pattern image layout for FILL/FIT modes. */
+function createScaledImagePatternLayout(params: ScaledImagePatternParams): ImagePatternLayout {
+  const { imgW, imgH, elementSize, pixelScale, centerMode } = params;
+  const sx = pixelScale / elementSize.width;
+  const sy = pixelScale / elementSize.height;
+  const obbW = imgW * sx;
+  const obbH = imgH * sy;
+  const tx = computeCenteredOffset(obbW, centerMode);
+  const ty = computeCenteredOffset(obbH, centerMode);
+
+  return {
+    patternWidth: 1,
+    patternHeight: 1,
+    imageWidth: imgW,
+    imageHeight: imgH,
+    preserveAspectRatio: "none",
+    imageTransform: formatImageTransform({ sa: sx, sb: 0, sc: 0, sd: sy, stx: tx, sty: ty }),
+  };
+}
+
+type TiledImagePatternParams = {
+  readonly imgW: number;
+  readonly imgH: number;
+  readonly elementSize: ElementSize;
+  readonly scalingFactor: number | undefined;
+};
+
+/** Create a repeating pattern layout for TILE mode. */
+function createTiledImagePatternLayout(params: TiledImagePatternParams): ImagePatternLayout {
+  const { imgW, imgH, elementSize } = params;
+  const scale = params.scalingFactor ?? 1;
+  const patternWidth = (imgW * scale) / elementSize.width;
+  const patternHeight = (imgH * scale) / elementSize.height;
+
+  return {
+    patternWidth,
+    patternHeight,
+    imageWidth: imgW,
+    imageHeight: imgH,
+    preserveAspectRatio: "none",
+    imageTransform: formatImageTransform({
+      sa: scale / elementSize.width,
+      sb: 0,
+      sc: 0,
+      sd: scale / elementSize.height,
+      stx: 0,
+      sty: 0,
+    }),
+  };
+}
+
+/** Compute centered image offset for objectBoundingBox image size. */
+function computeCenteredOffset(size: number, centerMode: "crop" | "letterbox"): number {
+  if (centerMode === "crop") {
+    return -(size - 1) / 2;
+  }
+  return (1 - size) / 2;
+}
+
+type ImageTransformParts = {
+  readonly sa: number;
+  readonly sb: number;
+  readonly sc: number;
+  readonly sd: number;
+  readonly stx: number;
+  readonly sty: number;
+};
+
+/** Format SVG image transform from matrix components. */
+function formatImageTransform(parts: ImageTransformParts): string {
+  const { sa, sb, sc, sd, stx, sty } = parts;
   if (sb === 0 && sc === 0) {
     if (stx === 0 && sty === 0) {
       if (sa === sd) {

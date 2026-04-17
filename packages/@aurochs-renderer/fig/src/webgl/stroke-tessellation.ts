@@ -105,9 +105,127 @@ function thickenPolyline(points: readonly number[], halfWidth: number): Float32A
   return new Float32Array(triangles);
 }
 
+type StrokeDashOptions = {
+  readonly dashPattern?: readonly number[];
+};
+
+type PathStrokeOptions = StrokeDashOptions & {
+  readonly tolerance?: number;
+};
+
+function normalizeDashPattern(dashPattern: readonly number[] | undefined): number[] | undefined {
+  if (!dashPattern) { return undefined; }
+  const positive = dashPattern.filter((value) => Number.isFinite(value) && value > 0);
+  if (positive.length === 0) { return undefined; }
+  if (positive.length % 2 === 0) { return positive; }
+  return [...positive, ...positive];
+}
+
+function samePoint(
+  { ax, ay, bx, by }: { ax: number; ay: number; bx: number; by: number },
+): boolean {
+  return Math.abs(ax - bx) < 0.001 && Math.abs(ay - by) < 0.001;
+}
+
+function appendDrawnDashPoint(
+  { current, x, y }: { current: number[]; x: number; y: number },
+): void {
+  if (current.length === 0) {
+    current.push(x, y);
+    return;
+  }
+  const lastX = current[current.length - 2];
+  const lastY = current[current.length - 1];
+  if (!samePoint({ ax: lastX, ay: lastY, bx: x, by: y })) {
+    current.push(x, y);
+  }
+}
+
+function pushCompletedDashSegment(
+  { segments, current }: { segments: number[][]; current: number[] },
+): void {
+  if (current.length >= 4) {
+    segments.push([...current]);
+  }
+  current.length = 0;
+}
+
+function splitPolylineByDashPattern(
+  points: readonly number[],
+  dashPattern: readonly number[] | undefined,
+): number[][] {
+  const pattern = normalizeDashPattern(dashPattern);
+  if (!pattern) { return [Array.from(points)]; }
+
+  const segments: number[][] = [];
+  const current: number[] = [];
+  const dashIndexRef = { value: 0 };
+  const remainingRef = { value: pattern[0] };
+  const drawRef = { value: true };
+
+  for (let i = 0; i < points.length - 2; i += 2) {
+    const x0 = points[i];
+    const y0 = points[i + 1];
+    const x1 = points[i + 2];
+    const y1 = points[i + 3];
+    const dx = x1 - x0;
+    const dy = y1 - y0;
+    const segmentLength = Math.sqrt(dx * dx + dy * dy);
+    if (segmentLength <= 0) { continue; }
+
+    const offsetRef = { value: 0 };
+    while (offsetRef.value < segmentLength) {
+      const step = Math.min(remainingRef.value, segmentLength - offsetRef.value);
+      const startT = offsetRef.value / segmentLength;
+      const endT = (offsetRef.value + step) / segmentLength;
+      const sx = x0 + dx * startT;
+      const sy = y0 + dy * startT;
+      const ex = x0 + dx * endT;
+      const ey = y0 + dy * endT;
+
+      if (drawRef.value) {
+        appendDrawnDashPoint({ current, x: sx, y: sy });
+        appendDrawnDashPoint({ current, x: ex, y: ey });
+      }
+
+      offsetRef.value += step;
+      remainingRef.value -= step;
+
+      if (remainingRef.value <= 0.001) {
+        if (drawRef.value) {
+          pushCompletedDashSegment({ segments, current });
+        }
+        dashIndexRef.value = (dashIndexRef.value + 1) % pattern.length;
+        remainingRef.value = pattern[dashIndexRef.value];
+        drawRef.value = dashIndexRef.value % 2 === 0;
+      }
+    }
+  }
+
+  pushCompletedDashSegment({ segments, current });
+  return segments;
+}
+
+function thickenDashedPolyline(
+  { points, halfWidth, dashPattern }: { points: readonly number[]; halfWidth: number; dashPattern?: readonly number[] },
+): Float32Array {
+  const dashedSegments = splitPolylineByDashPattern(points, dashPattern);
+  const vertexBuffers = dashedSegments.map((segment) => thickenPolyline(segment, halfWidth));
+  const totalLength = vertexBuffers.reduce((sum, vertices) => sum + vertices.length, 0);
+  const result = new Float32Array(totalLength);
+  const offsetRef = { value: 0 };
+  for (const vertices of vertexBuffers) {
+    result.set(vertices, offsetRef.value);
+    offsetRef.value += vertices.length;
+  }
+  return result;
+}
+
 // =============================================================================
 // Rectangle Stroke
 // =============================================================================
+
+type RectStrokeAlign = "INSIDE" | "OUTSIDE";
 
 /**
  * Tessellate a rectangle stroke as outer ring minus inner ring.
@@ -119,8 +237,19 @@ function thickenPolyline(points: readonly number[], halfWidth: number): Float32A
  * @returns Float32Array of triangle vertices
  */
 export function tessellateRectStroke(
-  { w, h, cornerRadius, strokeWidth }: { w: number; h: number; cornerRadius: number; strokeWidth: number; }
+  { w, h, cornerRadius, strokeWidth, dashPattern }: {
+    w: number;
+    h: number;
+    cornerRadius: number;
+    strokeWidth: number;
+    dashPattern?: readonly number[];
+  }
 ): Float32Array {
+  if (strokeWidth <= 0) { return new Float32Array(0); }
+  if (dashPattern) {
+    return tessellateDashedRectStroke({ w, h, cornerRadius, strokeWidth, dashPattern });
+  }
+
   const hw = strokeWidth / 2;
 
   if (!cornerRadius || cornerRadius <= 0) {
@@ -152,6 +281,21 @@ export function tessellateRectStroke(
   return tessellateRing(outer, inner);
 }
 
+/**
+ * Tessellate an aligned rectangle stroke as direct ring geometry.
+ */
+export function tessellateRectAlignedStroke(
+  { w, h, cornerRadius, strokeWidth, align }: { w: number; h: number; cornerRadius: number; strokeWidth: number; align: RectStrokeAlign; }
+): Float32Array {
+  if (strokeWidth <= 0) { return new Float32Array(0); }
+
+  if (!cornerRadius || cornerRadius <= 0) {
+    return tessellateSharpRectAlignedStroke({ w, h, strokeWidth, align });
+  }
+
+  return tessellateRoundedRectAlignedStroke({ w, h, cornerRadius, strokeWidth, align });
+}
+
 // =============================================================================
 // Ellipse Stroke
 // =============================================================================
@@ -160,8 +304,23 @@ export function tessellateRectStroke(
  * Tessellate an ellipse stroke as outer ring minus inner ring.
  */
 export function tessellateEllipseStroke(
-  { cx, cy, rx, ry, strokeWidth, segments = 64 }: { cx: number; cy: number; rx: number; ry: number; strokeWidth: number; segments?: number; }
+  { cx, cy, rx, ry, strokeWidth, segments = 64, dashPattern }: {
+    cx: number;
+    cy: number;
+    rx: number;
+    ry: number;
+    strokeWidth: number;
+    segments?: number;
+    dashPattern?: readonly number[];
+  }
 ): Float32Array {
+  if (strokeWidth <= 0) { return new Float32Array(0); }
+  if (dashPattern) {
+    const points = ellipsePoints({ cx, cy, rx, ry, segments });
+    points.push(points[0], points[1]);
+    return thickenDashedPolyline({ points, halfWidth: strokeWidth / 2, dashPattern });
+  }
+
   const hw = strokeWidth / 2;
   const outerRx = rx + hw;
   const outerRy = ry + hw;
@@ -190,9 +349,12 @@ export function tessellateEllipseStroke(
 export function tessellatePathStroke(
   contours: readonly PathContour[],
   strokeWidth: number,
-  tolerance: number = 0.25
+  options: number | PathStrokeOptions = 0.25
 ): Float32Array {
+  if (strokeWidth <= 0) { return new Float32Array(0); }
   const halfWidth = strokeWidth / 2;
+  const tolerance = typeof options === "number" ? options : options.tolerance ?? 0.25;
+  const dashPattern = typeof options === "number" ? undefined : options.dashPattern;
   const allVertices: Float32Array[] = [];
   const totalLengthRef = { value: 0 };
 
@@ -200,7 +362,7 @@ export function tessellatePathStroke(
     const flatCoords = flattenPathCommands(contour.commands, tolerance);
     if (flatCoords.length < 4) {continue;}
 
-    const vertices = thickenPolyline(flatCoords, halfWidth);
+    const vertices = thickenDashedPolyline({ points: flatCoords, halfWidth, dashPattern });
     if (vertices.length > 0) {
       allVertices.push(vertices);
       totalLengthRef.value += vertices.length;
@@ -218,6 +380,34 @@ export function tessellatePathStroke(
   return result;
 }
 
+function rectCenterlinePoints(
+  { w, h, cornerRadius }: { w: number; h: number; cornerRadius: number },
+): number[] {
+  if (!cornerRadius || cornerRadius <= 0) {
+    return [0, 0, w, 0, w, h, 0, h, 0, 0];
+  }
+  const r = Math.min(cornerRadius, w / 2, h / 2);
+  const points = roundedRectPoints({ w, h, r, offX: 0, offY: 0, segments: 8 });
+  points.push(points[0], points[1]);
+  return points;
+}
+
+function tessellateDashedRectStroke(
+  { w, h, cornerRadius, strokeWidth, dashPattern }: {
+    w: number;
+    h: number;
+    cornerRadius: number;
+    strokeWidth: number;
+    dashPattern: readonly number[];
+  },
+): Float32Array {
+  return thickenDashedPolyline({
+    points: rectCenterlinePoints({ w, h, cornerRadius }),
+    halfWidth: strokeWidth / 2,
+    dashPattern,
+  });
+}
+
 // =============================================================================
 // Helpers
 // =============================================================================
@@ -231,6 +421,69 @@ function rectPoints(
     offX + w, offY + h,
     offX, offY + h,
   ];
+}
+
+function tessellateSharpRectAlignedStroke(
+  { w, h, strokeWidth, align }: { w: number; h: number; strokeWidth: number; align: RectStrokeAlign; }
+): Float32Array {
+  if (align === "OUTSIDE") {
+    return tessellateRing(
+      rectPoints({ w: w + strokeWidth * 2, h: h + strokeWidth * 2, offX: -strokeWidth, offY: -strokeWidth }),
+      rectPoints({ w, h, offX: 0, offY: 0 })
+    );
+  }
+
+  const innerW = w - strokeWidth * 2;
+  const innerH = h - strokeWidth * 2;
+  const outer = rectPoints({ w, h, offX: 0, offY: 0 });
+  if (innerW <= 0 || innerH <= 0) {
+    const indices = triangulate(outer);
+    return indicesToVertices(outer, indices);
+  }
+
+  return tessellateRing(
+    outer,
+    rectPoints({ w: innerW, h: innerH, offX: strokeWidth, offY: strokeWidth })
+  );
+}
+
+function tessellateRoundedRectAlignedStroke(
+  { w, h, cornerRadius, strokeWidth, align }: { w: number; h: number; cornerRadius: number; strokeWidth: number; align: RectStrokeAlign; }
+): Float32Array {
+  const segments = 8;
+  if (align === "OUTSIDE") {
+    return tessellateRing(
+      roundedRectPoints({
+        w: w + strokeWidth * 2,
+        h: h + strokeWidth * 2,
+        r: cornerRadius + strokeWidth,
+        offX: -strokeWidth,
+        offY: -strokeWidth,
+        segments,
+      }),
+      roundedRectPoints({ w, h, r: cornerRadius, offX: 0, offY: 0, segments })
+    );
+  }
+
+  const innerW = w - strokeWidth * 2;
+  const innerH = h - strokeWidth * 2;
+  const outer = roundedRectPoints({ w, h, r: cornerRadius, offX: 0, offY: 0, segments });
+  if (innerW <= 0 || innerH <= 0) {
+    const indices = triangulate(outer);
+    return indicesToVertices(outer, indices);
+  }
+
+  return tessellateRing(
+    outer,
+    roundedRectPoints({
+      w: innerW,
+      h: innerH,
+      r: Math.max(cornerRadius - strokeWidth, 0),
+      offX: strokeWidth,
+      offY: strokeWidth,
+      segments,
+    })
+  );
 }
 
 function roundedRectPoints(

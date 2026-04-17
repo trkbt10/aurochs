@@ -105,6 +105,26 @@
       "types": "./src/parser/path/path-builder.ts",
       "default": "./src/parser/path/path-builder.ts"
     },
+    "./parser/operator/index": {
+      "types": "./src/parser/operator/index.ts",
+      "default": "./src/parser/operator/index.ts"
+    },
+    "./parser/soft-mask/soft-mask-raster.native": {
+      "types": "./src/parser/soft-mask/soft-mask-raster.native.ts",
+      "default": "./src/parser/soft-mask/soft-mask-raster.native.ts"
+    },
+    "./parser/soft-mask/soft-mask-apply.native": {
+      "types": "./src/parser/soft-mask/soft-mask-apply.native.ts",
+      "default": "./src/parser/soft-mask/soft-mask-apply.native.ts"
+    },
+    "./parser/soft-mask/soft-mask-text-raster.native": {
+      "types": "./src/parser/soft-mask/soft-mask-text-raster.native.ts",
+      "default": "./src/parser/soft-mask/soft-mask-text-raster.native.ts"
+    },
+    "./parser/clip/clip-mask-apply.native": {
+      "types": "./src/parser/clip/clip-mask-apply.native.ts",
+      "default": "./src/parser/clip/clip-mask-apply.native.ts"
+    },
     "./parser/*": {
       "types": "./src/parser/*.ts",
       "default": "./src/parser/*.ts"

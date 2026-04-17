@@ -11,7 +11,7 @@
  * 4. Collects COMPONENT/SYMBOL nodes into the components map
  */
 
-import type { FigNode, FigNodeType, FigMatrix, FigVector, FigColor, FigPaint, FigEffect, KiwiEnumValue, FigKiwiTextData, FigTextStyleOverrideEntry, FigComponentPropValue } from "@aurochs/fig/types";
+import type { FigNode, FigNodeType, FigMatrix, FigVector, FigColor, FigPaint, FigEffect, KiwiEnumValue, FigTextStyleOverrideEntry, FigComponentPropValue } from "@aurochs/fig/types";
 import type { NodeTreeResult } from "@aurochs/fig/parser";
 import { getNodeType, safeChildren, guidToString } from "@aurochs/fig/parser";
 import { getEffectiveSymbolID, buildFigStyleRegistry, getInstanceSymbolOverrides } from "@aurochs/fig/symbols";
@@ -76,6 +76,36 @@ const _DEFAULT_COLOR: FigColor = { r: 0, g: 0, b: 0, a: 1 };
 /** Node types that are components */
 const COMPONENT_TYPES: ReadonlySet<string> = new Set(["COMPONENT", "COMPONENT_SET", "SYMBOL"]);
 
+/** True when a paint list carries at least one paint entry. */
+function hasPaintEntries(paints: readonly FigPaint[] | undefined): paints is readonly FigPaint[] {
+  return paints !== undefined && paints.length > 0;
+}
+
+/** Resolve node fills from styles, frame backgrounds, then legacy fillPaints. */
+function resolveNodeFills(node: FigNode, styleRegistry: FigStyleRegistry): readonly FigPaint[] {
+  if (node.styleIdForFill) {
+    const resolved = styleRegistry.fills.get(guidToString(node.styleIdForFill.guid));
+    if (resolved) {
+      return resolved;
+    }
+  }
+  if (hasPaintEntries(node.backgroundPaints)) {
+    return node.backgroundPaints;
+  }
+  return node.fillPaints ?? [];
+}
+
+/** Resolve node strokes from styles, then legacy strokePaints. */
+function resolveNodeStrokes(node: FigNode, styleRegistry: FigStyleRegistry): readonly FigPaint[] {
+  if (node.styleIdForStrokeFill) {
+    const resolved = styleRegistry.strokes.get(guidToString(node.styleIdForStrokeFill.guid));
+    if (resolved) {
+      return resolved;
+    }
+  }
+  return node.strokePaints ?? [];
+}
+
 /**
  * Extract per-side stroke weights from Kiwi node data.
  * Returns undefined when all sides are equal or no per-side data exists.
@@ -139,7 +169,7 @@ const MODELED_FIELDS: ReadonlySet<string> = new Set([
   "guid", "parentIndex", "children", "type", "phase",
   "name", "visible", "opacity",
   "transform", "size",
-  "fillPaints", "strokePaints", "strokeWeight", "strokeAlign", "strokeJoin", "strokeCap", "strokeDashes",
+  "fillPaints", "backgroundPaints", "strokePaints", "strokeWeight", "strokeAlign", "strokeJoin", "strokeCap", "strokeDashes",
   "borderTopWeight", "borderRightWeight", "borderBottomWeight", "borderLeftWeight", "borderStrokeWeightsIndependent",
   "styleIdForFill", "styleIdForStrokeFill",
   "cornerRadius", "rectangleCornerRadii", "cornerSmoothing",
@@ -508,24 +538,8 @@ export function convertFigNode(
   const children = safeChildren(node);
   const convertedChildren = children.length > 0 ? children.map((child) => convertFigNode(child, components, styleRegistry)) : undefined;
 
-  // Resolve fills/strokes: when styleIdForFill/styleIdForStrokeFill is present,
-  // the node's cached fillPaints/strokePaints may be stale. Use the style
-  // registry to get the authoritative paints from the style definition node.
-  let fills = (node.fillPaints ?? []) as readonly FigPaint[];
-  let strokes = (node.strokePaints ?? []) as readonly FigPaint[];
-
-  if (node.styleIdForFill) {
-    const resolved = styleRegistry.fills.get(guidToString(node.styleIdForFill.guid));
-    if (resolved) {
-      fills = resolved;
-    }
-  }
-  if (node.styleIdForStrokeFill) {
-    const resolved = styleRegistry.strokes.get(guidToString(node.styleIdForStrokeFill.guid));
-    if (resolved) {
-      strokes = resolved;
-    }
-  }
+  const fills = resolveNodeFills(node, styleRegistry);
+  const strokes = resolveNodeStrokes(node, styleRegistry);
 
   const designNode: FigDesignNode = {
     id,

@@ -3,6 +3,10 @@
  *
  * Common functions for loading .fig fixtures, rendering SVG/WebGL,
  * and comparing output images via pixelmatch.
+ *
+ * Uses the correct pipeline:
+ *   loadFigFile → buildNodeTree → treeToDocument → FigDesignDocument
+ *   → buildSceneGraph (FigDesignNode[]) → RenderTree → SVG/WebGL
  */
 import * as fs from "node:fs";
 import { Resvg } from "@resvg/resvg-js";
@@ -10,39 +14,46 @@ import pixelmatch from "pixelmatch";
 import { readPng, writePng, createPngImage } from "@aurochs/png";
 import { createServer, type ViteDevServer } from "vite";
 import puppeteer, { type Browser, type Page } from "puppeteer";
-import { parseFigFile, buildNodeTree, findNodesByType, type FigBlob, type FigImage } from "@aurochs/fig/parser";
-import type { FigNode } from "@aurochs/fig/types";
+import { loadFigFile } from "@aurochs/fig/roundtrip";
+import { buildNodeTree } from "@aurochs/fig/parser";
+import { treeToDocument } from "@aurochs-builder/fig/context";
+import type { FigDesignNode, FigDesignDocument } from "@aurochs/fig/domain";
 import { buildSceneGraph } from "../../src/scene-graph/builder";
 import type { SceneGraph } from "../../src/scene-graph/types";
+
 // =============================================================================
 // Types
 // =============================================================================
+
 export type FrameInfo = {
   name: string;
-  node: FigNode;
+  node: FigDesignNode;
   width: number;
   height: number;
 };
+
 export type CompareResult = {
   frameName: string;
   diffPercent: number;
   diffPixels: number;
   totalPixels: number;
 };
+
 export type FixtureData = {
   frames: Map<string, FrameInfo>;
-  blobs: readonly FigBlob[];
-  images: ReadonlyMap<string, FigImage>;
-  nodeMap: ReadonlyMap<string, FigNode>;
+  document: FigDesignDocument;
 };
+
 export type WebGLHarness = {
   server: ViteDevServer;
   browser: Browser;
   page: Page;
 };
+
 // =============================================================================
 // File Utilities
 // =============================================================================
+
 /** Ensure directories exist, creating them if necessary */
 export function ensureDirs(dirs: string[]): void {
   for (const dir of dirs) {
@@ -51,13 +62,16 @@ export function ensureDirs(dirs: string[]): void {
     }
   }
 }
+
 /** Convert a frame name to a safe filename */
 export function safeName(name: string): string {
   return name.replace(/[^a-zA-Z0-9-_]/g, "_");
 }
+
 // =============================================================================
 // SVG Rendering
 // =============================================================================
+
 /** Convert SVG string to PNG buffer using resvg */
 export function svgToPng(svg: string, width?: number): Buffer {
   const opts: {
@@ -65,10 +79,16 @@ export function svgToPng(svg: string, width?: number): Buffer {
     font?: { loadSystemFonts: boolean };
     shapeRendering?: 0 | 1 | 2;
     textRendering?: 0 | 1 | 2;
+    background?: string;
   } = {
     font: { loadSystemFonts: true },
     shapeRendering: 2,
     textRendering: 2,
+    // White background to match WebGL canvas clear color.
+    // Without this, resvg renders transparent areas as (0,0,0,0),
+    // while WebGL clears to white (255,255,255,255), causing
+    // pixelmatch to report 100% diff on any empty region.
+    background: "#ffffff",
   };
   if (width !== undefined) {
     opts.fitTo = { mode: "width", value: width };
@@ -77,9 +97,11 @@ export function svgToPng(svg: string, width?: number): Buffer {
   const pngData = resvg.render();
   return Buffer.from(pngData.asPng());
 }
+
 // =============================================================================
 // Image Comparison
 // =============================================================================
+
 /** Compare two PNG buffers and return difference percentage */
 export function comparePngs(
   a: Buffer, b: Buffer, frameName: string, diffPath?: string,
@@ -119,39 +141,34 @@ export function comparePngs(
     totalPixels,
   };
 }
+
 // =============================================================================
-// Node Normalization
+// Fixture Loading — correct pipeline via FigDesignDocument
 // =============================================================================
+
 /**
- * Normalize root frame transform to (0,0) for consistent rendering
- */
-export function normalizeRootNode(node: FigNode): FigNode {
-  const nodeData = node as Record<string, unknown>;
-  const transform = nodeData.transform as { m02?: number; m12?: number } | undefined;
-  if (!transform) {return node;}
-  return { ...node, transform: { ...transform, m02: 0, m12: 0 } } as FigNode;
-}
-// =============================================================================
-// Fixture Loading
-// =============================================================================
-/**
- * Load and parse a .fig fixture file into frames.
+ * Load and parse a .fig fixture file into frames via the full domain pipeline.
+ *
+ * Pipeline: loadFigFile → buildNodeTree → treeToDocument → FigDesignDocument
  *
  * @param figPath - Absolute path to the .fig file
  * @param canvasFilter - Optional canvas name to filter (e.g. "Twitter")
  */
 export async function loadFigFixture(figPath: string, canvasFilter?: string): Promise<FixtureData> {
   const data = fs.readFileSync(figPath);
-  const parsed = await parseFigFile(new Uint8Array(data));
-  const { roots, nodeMap } = buildNodeTree(parsed.nodeChanges);
+  const loaded = await loadFigFile(new Uint8Array(data));
+  const tree = buildNodeTree(loaded.nodeChanges);
+  const document = treeToDocument(tree, loaded);
+
   const frames = new Map<string, FrameInfo>();
-  const canvases = findNodesByType(roots, "CANVAS");
-  const targetCanvases = canvasFilter ? canvases.filter((c) => c.name === canvasFilter) : canvases;
-  for (const canvas of targetCanvases) {
-    for (const child of canvas.children ?? []) {
+  const targetPages = canvasFilter
+    ? document.pages.filter((p) => p.name === canvasFilter)
+    : document.pages;
+
+  for (const page of targetPages) {
+    for (const child of page.children) {
       const name = child.name ?? "unnamed";
-      const nodeData = child as Record<string, unknown>;
-      const size = nodeData.size as { x?: number; y?: number } | undefined;
+      const size = child.size;
       frames.set(name, {
         name,
         node: child,
@@ -160,24 +177,43 @@ export async function loadFigFixture(figPath: string, canvasFilter?: string): Pr
       });
     }
   }
-  return { frames, blobs: parsed.blobs, images: parsed.images, nodeMap };
+
+  return { frames, document };
 }
+
 /**
- * Build a SceneGraph from a single frame
+ * Normalize a root frame's transform to (0,0) for consistent rendering.
+ */
+function normalizeRootNode(node: FigDesignNode): FigDesignNode {
+  if (!node.transform) { return node; }
+  return {
+    ...node,
+    transform: { ...node.transform, m02: 0, m12: 0 },
+  };
+}
+
+/**
+ * Build a SceneGraph from a single frame (FigDesignNode).
+ *
+ * Uses the correct domain pipeline — FigDesignNode carries properly
+ * resolved fills, strokes, effects, etc.
  */
 export function buildFrameSceneGraph(frame: FrameInfo, data: FixtureData): SceneGraph {
   const normalizedNode = normalizeRootNode(frame.node);
   return buildSceneGraph([normalizedNode], {
-    blobs: data.blobs,
-    images: data.images,
+    blobs: data.document.blobs,
+    images: data.document.images,
     canvasSize: { width: frame.width, height: frame.height },
-    symbolMap: data.nodeMap,
+    symbolMap: data.document.components,
+    styleRegistry: data.document.styleRegistry,
     showHiddenNodes: false,
   });
 }
+
 // =============================================================================
 // WebGL Capture
 // =============================================================================
+
 /**
  * JSON replacer that converts Uint8Array to `{ __base64: "..." }` for transport
  */
@@ -187,6 +223,7 @@ function uint8ArrayReplacer(_key: string, value: unknown): unknown {
   }
   return value;
 }
+
 /**
  * Capture WebGL-rendered output from a SceneGraph via Puppeteer
  */
@@ -198,34 +235,42 @@ export async function captureWebGL(page: Page, sceneGraph: SceneGraph): Promise<
   const base64 = dataUrl.replace(/^data:image\/png;base64,/, "");
   return Buffer.from(base64, "base64");
 }
+
 // =============================================================================
 // Harness Lifecycle
 // =============================================================================
+
 /**
  * Start the WebGL test harness (Vite dev server + Puppeteer browser)
  */
 export async function startHarness(harnessConfigPath: string): Promise<WebGLHarness> {
   const server = await createServer({
     configFile: harnessConfigPath,
-    server: { port: 0, strictPort: false },
+    server: { host: "127.0.0.1", port: 0, strictPort: false },
   });
   const info = await server.listen();
   const address = info.httpServer?.address();
   if (!address || typeof address === "string") {
     throw new Error("Failed to get server address");
   }
-  const serverUrl = `http://localhost:${(address as { port: number }).port}`;
+  const serverUrl = `http://127.0.0.1:${(address as { port: number }).port}`;
   const browser = await puppeteer.launch({
     headless: true,
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
   });
   const page = await browser.newPage();
+  page.on("console", msg => {
+    if (msg.type() === "error" || msg.type() === "warn") {
+      console.error(`  [browser ${msg.type()}] ${msg.text()}`);
+    }
+  });
   await page.goto(serverUrl, { waitUntil: "networkidle0" });
   await page.waitForFunction(() => document.title === "ready", {
     timeout: 15000,
   });
   return { server, browser, page };
 }
+
 /**
  * Stop the WebGL test harness
  */
@@ -233,9 +278,11 @@ export async function stopHarness(harness: WebGLHarness): Promise<void> {
   await harness.browser?.close();
   await harness.server?.close();
 }
+
 // =============================================================================
 // Summary Printing
 // =============================================================================
+
 /**
  * Print a categorized summary of comparison results
  */
@@ -243,7 +290,7 @@ export function printCategorySummary(title: string, categoryResults: Map<string,
   console.log(`\n=== ${title} ===\n`);
   const allResults: CompareResult[] = [];
   for (const [category, results] of categoryResults) {
-    if (results.length === 0) {continue;}
+    if (results.length === 0) { continue; }
     const avg = results.reduce((sum, r) => sum + r.diffPercent, 0) / results.length;
     const max = Math.max(...results.map((r) => r.diffPercent));
     const min = Math.min(...results.map((r) => r.diffPercent));

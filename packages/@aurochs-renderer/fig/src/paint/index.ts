@@ -19,10 +19,11 @@ export {
   getAngularGradientParams,
   getDiamondGradientParams,
   getImageRef,
+  getImageTransform,
   getScaleMode,
+  getScalingFactor,
   type GradientDirection,
   type RadialGradientParams,
   type AngularGradientParams,
   type DiamondGradientParams,
-  type GradientTransform,
 } from "./interpret";

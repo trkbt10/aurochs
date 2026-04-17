@@ -6,7 +6,7 @@
  */
 
 import earcut from "earcut";
-import type { PathContour, PathCommand } from "../scene-graph/types";
+import type { CornerRadius, PathContour, PathCommand } from "../scene-graph/types";
 
 // =============================================================================
 // SVG Arc → Cubic Bezier Conversion
@@ -19,6 +19,18 @@ type CubicSegment = {
   x3: number; y3: number;
 };
 
+type SvgArcParams = {
+  readonly x0: number;
+  readonly y0: number;
+  readonly rxIn: number;
+  readonly ryIn: number;
+  readonly rotationDeg: number;
+  readonly largeArc: boolean;
+  readonly sweep: boolean;
+  readonly x: number;
+  readonly y: number;
+};
+
 /**
  * Convert an SVG elliptical arc to cubic bezier segments.
  *
@@ -26,11 +38,7 @@ type CubicSegment = {
  * the arc into segments of ≤π/4 radians, each approximated by a cubic bezier.
  */
 function arcToCubicBeziers(
-  x0: number, y0: number,
-  rxIn: number, ryIn: number,
-  rotationDeg: number,
-  largeArc: boolean, sweep: boolean,
-  x: number, y: number,
+  { x0, y0, rxIn, ryIn, rotationDeg, largeArc, sweep, x, y }: SvgArcParams,
 ): CubicSegment[] {
   // Degenerate cases
   if (x0 === x && y0 === y) { return []; }
@@ -89,9 +97,9 @@ function arcToCubicBeziers(
   if (!sweep && dTheta > 0) { dTheta -= 2 * Math.PI; }
   if (sweep && dTheta < 0) { dTheta += 2 * Math.PI; }
 
-  // Step 6: Split into segments of at most π/4. This keeps ellipse arc
+  // Step 6: Split into segments of at most π/16. This keeps ellipse arc
   // approximation error below the raster threshold used in SVG comparison.
-  const maxSegmentAngle = Math.PI / 4;
+  const maxSegmentAngle = Math.PI / 16;
   const segCount = Math.max(1, Math.ceil(Math.abs(dTheta) / maxSegmentAngle));
   const segAngle = dTheta / segCount;
 
@@ -287,12 +295,17 @@ export function flattenPathCommands(
 
       case "A": {
         // SVG Arc → approximate with cubic bezier segments
-        const arcCubics = arcToCubicBeziers(
-          currentXRef.value, currentYRef.value,
-          cmd.rx, cmd.ry, cmd.rotation,
-          cmd.largeArc, cmd.sweep,
-          cmd.x, cmd.y,
-        );
+        const arcCubics = arcToCubicBeziers({
+          x0: currentXRef.value,
+          y0: currentYRef.value,
+          rxIn: cmd.rx,
+          ryIn: cmd.ry,
+          rotationDeg: cmd.rotation,
+          largeArc: cmd.largeArc,
+          sweep: cmd.sweep,
+          x: cmd.x,
+          y: cmd.y,
+        });
         for (const seg of arcCubics) {
           flattenCubicBezier({
             x0: seg.x0, y0: seg.y0,
@@ -549,9 +562,10 @@ export function tessellateContours(
 export function generateRectVertices(
   width: number,
   height: number,
-  cornerRadius?: number
+  cornerRadius?: CornerRadius
 ): Float32Array {
-  if (!cornerRadius || cornerRadius <= 0) {
+  const radii = normalizeCornerRadii({ width, height, cornerRadius });
+  if (radii.every((r) => r <= 0)) {
     // Simple rectangle: 2 triangles
     return new Float32Array([
       0, 0, width, 0, width, height,
@@ -559,45 +573,7 @@ export function generateRectVertices(
     ]);
   }
 
-  // Rounded rectangle: approximate arcs with line segments
-  // Traces CW: top-right → right edge → bottom-right → bottom edge →
-  //            bottom-left → left edge → top-left → top edge (close)
-  const r = Math.min(cornerRadius, width / 2, height / 2);
-  const segments = 8; // segments per corner
-  const points: number[] = [];
-
-  // Top-right corner: (width-r, 0) → (width, r)
-  for (let i = segments; i >= 0; i--) {
-    const angle = (Math.PI / 2) * (i / segments);
-    points.push(
-      width - r + r * Math.cos(angle),
-      r - r * Math.sin(angle)
-    );
-  }
-  // Bottom-right corner: (width, height-r) → (width-r, height)
-  for (let i = segments; i >= 0; i--) {
-    const angle = (Math.PI / 2) * (i / segments);
-    points.push(
-      width - r + r * Math.sin(angle),
-      height - r + r * Math.cos(angle)
-    );
-  }
-  // Bottom-left corner: (r, height) → (0, height-r)
-  for (let i = segments; i >= 0; i--) {
-    const angle = (Math.PI / 2) * (i / segments);
-    points.push(
-      r - r * Math.cos(angle),
-      height - r + r * Math.sin(angle)
-    );
-  }
-  // Top-left corner: (0, r) → (r, 0)
-  for (let i = segments; i >= 0; i--) {
-    const angle = (Math.PI / 2) * (i / segments);
-    points.push(
-      r - r * Math.sin(angle),
-      r - r * Math.cos(angle)
-    );
-  }
+  const points = roundedRectFillPoints({ width, height, radii, segments: 8 });
 
   const indices = triangulate(points);
   const vertices = new Float32Array(indices.length * 2);
@@ -607,6 +583,99 @@ export function generateRectVertices(
   }
 
   return vertices;
+}
+
+function normalizeCornerRadii(
+  { width, height, cornerRadius }: { width: number; height: number; cornerRadius?: CornerRadius },
+): readonly [number, number, number, number] {
+  const maxRadius = Math.min(width / 2, height / 2);
+  if (cornerRadius === undefined) {
+    return [0, 0, 0, 0];
+  }
+  if (typeof cornerRadius === "number") {
+    const radius = Math.max(0, Math.min(cornerRadius, maxRadius));
+    return [radius, radius, radius, radius];
+  }
+  return [
+    Math.max(0, Math.min(cornerRadius[0], maxRadius)),
+    Math.max(0, Math.min(cornerRadius[1], maxRadius)),
+    Math.max(0, Math.min(cornerRadius[2], maxRadius)),
+    Math.max(0, Math.min(cornerRadius[3], maxRadius)),
+  ];
+}
+
+function pushRoundedCornerPoints(
+  { points, cx, cy, radius, startAngle, endAngle, segments }: {
+    points: number[];
+    cx: number;
+    cy: number;
+    radius: number;
+    startAngle: number;
+    endAngle: number;
+    segments: number;
+  },
+): void {
+  if (radius <= 0) {
+    points.push(cx, cy);
+    return;
+  }
+
+  for (let i = 0; i <= segments; i++) {
+    const t = i / segments;
+    const angle = startAngle + (endAngle - startAngle) * t;
+    points.push(cx + radius * Math.cos(angle), cy + radius * Math.sin(angle));
+  }
+}
+
+function roundedRectFillPoints(
+  { width, height, radii, segments }: {
+    width: number;
+    height: number;
+    radii: readonly [number, number, number, number];
+    segments: number;
+  },
+): number[] {
+  const [tl, tr, br, bl] = radii;
+  const points: number[] = [];
+
+  pushRoundedCornerPoints({
+    points,
+    cx: width - tr,
+    cy: tr,
+    radius: tr,
+    startAngle: -Math.PI / 2,
+    endAngle: 0,
+    segments,
+  });
+  pushRoundedCornerPoints({
+    points,
+    cx: width - br,
+    cy: height - br,
+    radius: br,
+    startAngle: 0,
+    endAngle: Math.PI / 2,
+    segments,
+  });
+  pushRoundedCornerPoints({
+    points,
+    cx: bl,
+    cy: height - bl,
+    radius: bl,
+    startAngle: Math.PI / 2,
+    endAngle: Math.PI,
+    segments,
+  });
+  pushRoundedCornerPoints({
+    points,
+    cx: tl,
+    cy: tl,
+    radius: tl,
+    startAngle: Math.PI,
+    endAngle: Math.PI * 1.5,
+    segments,
+  });
+
+  return points;
 }
 
 /** Parameters for generating ellipse vertices */

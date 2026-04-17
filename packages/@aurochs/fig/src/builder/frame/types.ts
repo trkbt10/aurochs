@@ -2,7 +2,8 @@
  * @file Frame node and export settings type definitions
  */
 
-import type { Paint, StackPadding } from "../types";
+import type { Paint, StackPadding, Stroke } from "../types";
+import type { EffectData } from "../effect/types";
 import type {
   StackMode,
   StackAlign,
@@ -46,11 +47,14 @@ export type FrameNodeData = {
     m12: number;
   };
   readonly fillPaints: readonly Paint[];
+  readonly strokePaints?: readonly Stroke[];
+  readonly strokeWeight?: number;
   readonly visible: boolean;
   readonly opacity: number;
   readonly clipsContent: boolean;
   readonly cornerRadius?: number;
   readonly exportSettings?: readonly ExportSettings[];
+  readonly effects?: readonly EffectData[];
 
   // AutoLayout - frame level
   readonly stackMode?: { value: number; name: StackMode };

@@ -6,11 +6,11 @@ export const radialGradientVertexShader = `
   attribute vec2 a_position;
   uniform mat3 u_transform;
   uniform vec2 u_resolution;
-  varying vec2 v_position;
+  varying vec2 v_localPosition;
 
   void main() {
     vec3 transformed = u_transform * vec3(a_position, 1.0);
-    v_position = transformed.xy;
+    v_localPosition = a_position;
     vec2 clipSpace = (transformed.xy / u_resolution) * 2.0 - 1.0;
     gl_Position = vec4(clipSpace * vec2(1.0, -1.0), 0.0, 1.0);
   }
@@ -26,11 +26,12 @@ export const radialGradientFragmentShader = `
   uniform int u_stopCount;
   uniform float u_opacity;
   uniform vec2 u_elementSize;
+  uniform vec2 u_elementOrigin;
 
-  varying vec2 v_position;
+  varying vec2 v_localPosition;
 
   void main() {
-    vec2 localPos = v_position / u_elementSize;
+    vec2 localPos = (v_localPosition - u_elementOrigin) / u_elementSize;
     float dist = length(localPos - u_center);
     float t = clamp(dist / max(u_radius, 0.001), 0.0, 1.0);
 
@@ -53,6 +54,6 @@ export const radialGradientFragmentShader = `
       }
     }
 
-    gl_FragColor = vec4(color, alpha) * u_opacity;
+    gl_FragColor = vec4(color, alpha * u_opacity);
   }
 `;

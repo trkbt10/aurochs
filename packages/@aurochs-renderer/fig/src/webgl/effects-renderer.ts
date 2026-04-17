@@ -40,18 +40,29 @@ export const gaussianBlurFragmentShader = `
     float sigma = max(u_radius, 0.001);
     float invTwoSigmaSq = -0.5 / (sigma * sigma);
 
-    // 25-tap integer-spaced Gaussian kernel. applyGaussianBlur splits large
+    // 33-tap integer-spaced Gaussian kernel. applyGaussianBlur splits large
     // radii into smaller sigma passes, so this covers the useful tail while
     // staying close to SVG feGaussianBlur output.
-    for (float i = -12.0; i <= 12.0; i += 1.0) {
+    //
+    // Blur in premultiplied-alpha space to prevent dark halos at transparent
+    // edges. SVG feGaussianBlur operates on premultiplied color channels.
+    for (float i = -16.0; i <= 16.0; i += 1.0) {
       float d = i;
       float weight = exp(invTwoSigmaSq * d * d);
       vec2 offset = u_direction * u_texelSize * d;
-      color += texture2D(u_texture, v_texCoord + offset) * weight;
+      vec4 s = texture2D(u_texture, v_texCoord + offset);
+      // Premultiply: prevent transparent-black from darkening the blur
+      s.rgb *= s.a;
+      color += s * weight;
       totalWeight += weight;
     }
 
-    gl_FragColor = color / totalWeight;
+    color /= totalWeight;
+    // Un-premultiply
+    if (color.a > 0.001) {
+      color.rgb /= color.a;
+    }
+    gl_FragColor = color;
   }
 `;
 
@@ -124,7 +135,10 @@ export const blitFragmentShader = `
 
   void main() {
     vec4 texel = texture2D(u_texture, v_texCoord);
-    gl_FragColor = texel * u_opacity;
+    // Apply opacity to alpha channel only — RGB stays unchanged.
+    // This matches SVG's <g opacity="X"> which reduces layer visibility
+    // without darkening the colors.
+    gl_FragColor = vec4(texel.rgb, texel.a * u_opacity);
   }
 `;
 
@@ -499,7 +513,16 @@ export function createEffectsRenderer(gl: WebGLRenderingContext): EffectsRendere
     blitLayerWithOpacity(
       { canvasWidth, canvasHeight, opacity }: { canvasWidth: number; canvasHeight: number; opacity: number }
     ): boolean {
+      ensureResources(canvasWidth, canvasHeight);
       ensureBlitProgram();
+
+      // Use the same path as endLayerCaptureAndBlur: route through
+      // applyGaussianBlur (radius=0 = identity copy) so that the texture
+      // is read from tempFBO2 instead of directly from layerFBO.
+      // This avoids a subtle issue where layerFBO's texture cannot be
+      // reliably sampled in some WebGL implementations after being used
+      // as a render target in the same draw sequence.
+      const copied = applyGaussianBlur(layerFBO.value!, 0);
 
       bindFramebuffer(gl, null);
       gl.viewport(0, 0, canvasWidth, canvasHeight);
@@ -509,7 +532,7 @@ export function createEffectsRenderer(gl: WebGLRenderingContext): EffectsRendere
       gl.useProgram(program);
 
       gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, layerFBO.value!.texture);
+      gl.bindTexture(gl.TEXTURE_2D, copied.texture);
       gl.uniform1i(gl.getUniformLocation(program, "u_texture"), 0);
       gl.uniform1f(gl.getUniformLocation(program, "u_opacity"), opacity);
 
@@ -519,6 +542,12 @@ export function createEffectsRenderer(gl: WebGLRenderingContext): EffectsRendere
         gl.ONE, gl.ONE_MINUS_SRC_ALPHA
       );
       drawFullscreenQuad(program);
+
+      // Restore standard blending
+      gl.blendFuncSeparate(
+        gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA,
+        gl.ONE, gl.ONE_MINUS_SRC_ALPHA
+      );
       return true;
     },
 

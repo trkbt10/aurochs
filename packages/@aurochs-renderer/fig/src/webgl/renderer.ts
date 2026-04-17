@@ -36,6 +36,7 @@ import type {
   LayerBlurEffect,
   Effect,
   PathContour,
+  ClipShape,
 } from "../scene-graph/types";
 
 import {
@@ -70,6 +71,7 @@ import { IDENTITY_MATRIX, multiplyMatrices } from "@aurochs/fig/matrix";
 import { beginStencilClip, endStencilClip } from "./clip-mask";
 import {
   tessellateRectStroke,
+  tessellateRectAlignedStroke,
   tessellateEllipseStroke,
   tessellatePathStroke,
 } from "./stroke-tessellation";
@@ -83,7 +85,7 @@ import {
   type Bounds,
 } from "./stencil-fill";
 import type { CornerRadius } from "../scene-graph/types";
-import { parseSvgPathD } from "../scene-graph/convert/path";
+import { svgPathDToContours } from "./path-contours";
 
 /** Extract uniform radius from CornerRadius (per-corner → average for WebGL) */
 function uniformRadiusForGL(cr: CornerRadius | undefined): number | undefined {
@@ -260,7 +262,12 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
           drawImageFill({
             ctx, vertices, texture: entry.texture, transform,
             opacity: opacity * fill.opacity, elementSize,
-            options: { imageWidth: entry.width, imageHeight: entry.height, scaleMode: fill.scaleMode },
+            options: {
+              imageWidth: entry.width,
+              imageHeight: entry.height,
+              scaleMode: fill.scaleMode,
+              scalingFactor: fill.scalingFactor,
+            },
           });
         }
         break;
@@ -490,6 +497,16 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
     return { r, g, b, a };
   }
 
+  function parseStrokeDasharray(dasharray: string | undefined): readonly number[] | undefined {
+    if (!dasharray) { return undefined; }
+    const pattern = dasharray
+      .split(/[\s,]+/)
+      .map((part) => Number(part))
+      .filter((value) => Number.isFinite(value) && value > 0);
+    if (pattern.length === 0) { return undefined; }
+    return pattern;
+  }
+
   /**
    * Render strokes from the StrokeRendering discriminated union.
    * This is the single stroke rendering path for all node types.
@@ -517,9 +534,24 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
         if (doubledWidth <= 0) { return; }
 
         const isInside = sr.attrs.strokeAlign === "INSIDE";
+        if (sr.shape.kind === "rect") {
+          const alignedStrokeVerts = tessellateRectAlignedStroke({
+            w: sr.shape.width,
+            h: sr.shape.height,
+            cornerRadius: uniformRadiusForGL(sr.shape.cornerRadius) ?? 0,
+            strokeWidth: doubledWidth / 2,
+            align: isInside ? "INSIDE" : "OUTSIDE",
+          });
+          drawSolidFill({ ctx: getGlContext(), vertices: alignedStrokeVerts, color, transform, opacity: opacity * strokeOpacity });
+          break;
+        }
 
         // Tessellate the doubled-width stroke
-        const strokeVerts = tessellateStrokeShapeFromSR(sr.shape, doubledWidth);
+        const strokeVerts = tessellateStrokeShapeFromSR(
+          sr.shape,
+          doubledWidth,
+          parseStrokeDasharray(sr.attrs.strokeDasharray),
+        );
         if (strokeVerts.length === 0) { break; }
 
         // Tessellate the fill shape for stencil mask
@@ -591,7 +623,11 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
           const strokeOpacity = layer.attrs.strokeOpacity ?? 1;
           if (strokeWidth <= 0) { continue; }
 
-          const strokeVerts = tessellateStrokeShapeFromSR(sr.shape, strokeWidth);
+          const strokeVerts = tessellateStrokeShapeFromSR(
+            sr.shape,
+            strokeWidth,
+            parseStrokeDasharray(layer.attrs.strokeDasharray),
+          );
           if (strokeVerts.length > 0) {
             drawSolidFill({ ctx: getGlContext(), vertices: strokeVerts, color, transform, opacity: opacity * strokeOpacity });
           }
@@ -650,14 +686,13 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
   ): Float32Array {
     switch (shape.kind) {
       case "rect": {
-        const cr = uniformRadiusForGL(shape.cornerRadius);
-        return generateRectVertices(shape.width, shape.height, cr);
+        return generateRectVertices(shape.width, shape.height, shape.cornerRadius);
       }
       case "ellipse":
         return generateEllipseVertices({ cx: shape.cx, cy: shape.cy, rx: shape.rx, ry: shape.ry });
       case "path": {
-        const contours: PathContour[] = shape.paths.map((p) => ({
-          commands: parseSvgPathD(p.d),
+        const contours: PathContour[] = shape.paths.flatMap((p) => svgPathDToContours({
+          d: p.d,
           windingRule: p.fillRule ?? "nonzero",
         }));
         return tessellateContours(contours, 0.25, true);
@@ -668,14 +703,15 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
   function tessellateStrokeShapeFromSR(
     shape: import("../scene-graph/render-tree/types").StrokeShape,
     strokeWidth: number,
+    dashPattern?: readonly number[],
   ): Float32Array {
     switch (shape.kind) {
       case "rect": {
         const cr = uniformRadiusForGL(shape.cornerRadius);
-        return tessellateRectStroke({ w: shape.width, h: shape.height, cornerRadius: cr ?? 0, strokeWidth });
+        return tessellateRectStroke({ w: shape.width, h: shape.height, cornerRadius: cr ?? 0, strokeWidth, dashPattern });
       }
       case "ellipse":
-        return tessellateEllipseStroke({ cx: shape.cx, cy: shape.cy, rx: shape.rx, ry: shape.ry, strokeWidth });
+        return tessellateEllipseStroke({ cx: shape.cx, cy: shape.cy, rx: shape.rx, ry: shape.ry, strokeWidth, dashPattern });
       case "path":
         // Path strokes need the original contours for tessellation.
         // StrokeShape.path carries SVG d strings; we need PathContour objects.
@@ -689,14 +725,17 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
    * and the caller knows the shape geometry.
    */
   function renderUniformStroke(
-    sr: StrokeRendering & { mode: "uniform" },
-    sourceStroke: { width: number; color: Color; opacity: number } | undefined,
-    shapeVerticesFactory: (strokeWidth: number) => Float32Array,
-    transform: AffineMatrix,
-    opacity: number,
+    { sr, sourceStroke, shapeVerticesFactory, transform, opacity }: {
+      sr: StrokeRendering & { mode: "uniform" };
+      sourceStroke: { width: number; color: Color; opacity: number; dashPattern?: readonly number[] } | undefined;
+      shapeVerticesFactory: (strokeWidth: number, dashPattern?: readonly number[]) => Float32Array;
+      transform: AffineMatrix;
+      opacity: number;
+    },
   ): void {
     if (!sourceStroke || sourceStroke.width <= 0) { return; }
-    const strokeVerts = shapeVerticesFactory(sourceStroke.width);
+    const dashPattern = sourceStroke.dashPattern ?? parseStrokeDasharray(sr.attrs.strokeDasharray);
+    const strokeVerts = shapeVerticesFactory(sourceStroke.width, dashPattern);
     if (strokeVerts.length > 0) {
       drawSolidFill({
         ctx: getGlContext(), vertices: strokeVerts,
@@ -728,13 +767,10 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
       return;
     }
 
-    // TODO: Group opacity FBO isolation — disabled until blit pipeline
-    // handles stencil-state correctly for nested groups. Without this,
-    // overlapping children under group opacity double-blend (~3% diff).
-    // if ((node.type === "group" || node.type === "frame") && nodeOpacity < 1) {
-    //   const didRender = tryRenderWithGroupOpacity({ node, worldTransform, parentOpacity, nodeOpacity });
-    //   if (didRender) { return; }
-    // }
+    if ((node.type === "group" || node.type === "frame") && nodeOpacity < 1) {
+      const didRender = tryRenderWithGroupOpacity({ node, worldTransform, parentOpacity, nodeOpacity });
+      if (didRender) { return; }
+    }
 
     renderRenderNodeDirect(node, worldTransform, worldOpacity);
   }
@@ -894,11 +930,56 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
     }
   }
 
+  function getFrameClipData(
+    { clipDef, node, transform }: {
+      clipDef: import("../scene-graph/render-tree/types").RenderClipPathDef | undefined;
+      node: RenderFrameNode;
+      transform: AffineMatrix;
+    },
+  ): { clip: ClipShape; transform: AffineMatrix } {
+    if (clipDef?.shape.kind === "path") {
+      return {
+        clip: { type: "path", contours: svgPathDToContours({ d: clipDef.shape.d }) },
+        transform,
+      };
+    }
+
+    if (clipDef?.shape.kind === "rect") {
+      const clipTransform: AffineMatrix = {
+        m00: transform.m00,
+        m01: transform.m01,
+        m02: transform.m02 + clipDef.shape.x,
+        m10: transform.m10,
+        m11: transform.m11,
+        m12: transform.m12 + clipDef.shape.y,
+      };
+      return {
+        clip: {
+          type: "rect",
+          width: clipDef.shape.width,
+          height: clipDef.shape.height,
+          cornerRadius: clipDef.shape.rx,
+        },
+        transform: clipTransform,
+      };
+    }
+
+    return {
+      clip: {
+        type: "rect",
+        width: node.width,
+        height: node.height,
+        cornerRadius: node.cornerRadius,
+      },
+      transform,
+    };
+  }
+
   function renderFrameFromTree(node: RenderFrameNode, transform: AffineMatrix, opacity: number): void {
     // Use RenderTree fields for dimensions and corner radius
     const elementSize = { width: node.width, height: node.height };
     const uniformCR = uniformRadiusForGL(node.cornerRadius);
-    const vertices = generateRectVertices(node.width, node.height, uniformCR);
+    const vertices = generateRectVertices(node.width, node.height, node.cornerRadius);
     const effects = getSourceEffects(node);
 
     // Check if node has visible content — SVG filters operate on rendered content,
@@ -931,14 +1012,21 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
       const sr = node.background.strokeRendering;
       if (sr.mode === "uniform") {
         // Uniform stroke on frame: tessellate rect stroke
-        const sourceStroke = node.source as { stroke?: { width: number; color: Color; opacity: number } };
+        const sourceStroke = node.source as { stroke?: { width: number; color: Color; opacity: number; dashPattern?: readonly number[] } };
         if (sourceStroke.stroke && sourceStroke.stroke.width > 0) {
-          renderUniformStroke(
+          renderUniformStroke({
             sr,
-            sourceStroke.stroke,
-            (sw) => tessellateRectStroke({ w: node.width, h: node.height, cornerRadius: uniformCR ?? 0, strokeWidth: sw }),
-            transform, opacity,
-          );
+            sourceStroke: sourceStroke.stroke,
+            shapeVerticesFactory: (sw, dashPattern) => tessellateRectStroke({
+              w: node.width,
+              h: node.height,
+              cornerRadius: uniformCR ?? 0,
+              strokeWidth: sw,
+              dashPattern,
+            }),
+            transform,
+            opacity,
+          });
         }
       } else {
         renderStrokeRendering(sr, transform, opacity);
@@ -955,23 +1043,9 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
         (d): d is import("../scene-graph/render-tree/types").RenderClipPathDef =>
           d.type === "clip-path" && d.id === node.childClipId
       );
-      const clipW = clipDef?.shape.kind === "rect" ? clipDef.shape.width : node.width;
-      const clipH = clipDef?.shape.kind === "rect" ? clipDef.shape.height : node.height;
-      const clipX = clipDef?.shape.kind === "rect" ? clipDef.shape.x : 0;
-      const clipY = clipDef?.shape.kind === "rect" ? clipDef.shape.y : 0;
-      const clipRx = clipDef?.shape.kind === "rect" ? clipDef.shape.rx : undefined;
-      const clipShape = {
-        type: "rect" as const,
-        width: clipW,
-        height: clipH,
-        cornerRadius: clipRx !== undefined ? clipRx : node.cornerRadius,
-      };
-      // Offset clip by x/y if the clip def has non-zero origin (expanded clip)
-      const clipTransform: AffineMatrix = (clipX !== 0 || clipY !== 0)
-        ? { m00: transform.m00, m01: transform.m01, m02: transform.m02 + clipX, m10: transform.m10, m11: transform.m11, m12: transform.m12 + clipY }
-        : transform;
-      beginStencilClip({ gl, clip: clipShape, _positionBuffer: positionBuffer, drawVertices: (verts) => {
-        drawSolidFill({ ctx: getGlContext(), vertices: verts, color: { r: 0, g: 0, b: 0, a: 1 }, transform: clipTransform, opacity: 1 });
+      const clipData = getFrameClipData({ clipDef, node, transform });
+      beginStencilClip({ gl, clip: clipData.clip, _positionBuffer: positionBuffer, drawVertices: (verts) => {
+        drawSolidFill({ ctx: getGlContext(), vertices: verts, color: { r: 0, g: 0, b: 0, a: 1 }, transform: clipData.transform, opacity: 1 });
       } });
       clipActive.value = true;
       clipStencilValid.value = true;
@@ -992,7 +1066,7 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
     // Use RenderTree fields for dimensions
     const elementSize = { width: node.width, height: node.height };
     const uniformCR = uniformRadiusForGL(node.cornerRadius);
-    const vertices = generateRectVertices(node.width, node.height, uniformCR);
+    const vertices = generateRectVertices(node.width, node.height, node.cornerRadius);
     const effects = getSourceEffects(node);
 
     // Skip effects when node has no visible content (fill=none + no stroke → empty silhouette)
@@ -1015,12 +1089,19 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
     if (node.strokeRendering) {
       const sr = node.strokeRendering;
       if (sr.mode === "uniform") {
-        renderUniformStroke(
+        renderUniformStroke({
           sr,
-          node.sourceStroke ? { width: node.sourceStroke.width, color: node.sourceStroke.color, opacity: node.sourceStroke.opacity } : undefined,
-          (sw) => tessellateRectStroke({ w: node.width, h: node.height, cornerRadius: uniformCR ?? 0, strokeWidth: sw }),
-          transform, opacity,
-        );
+          sourceStroke: node.sourceStroke,
+          shapeVerticesFactory: (sw, dashPattern) => tessellateRectStroke({
+            w: node.width,
+            h: node.height,
+            cornerRadius: uniformCR ?? 0,
+            strokeWidth: sw,
+            dashPattern,
+          }),
+          transform,
+          opacity,
+        });
       } else {
         renderStrokeRendering(sr, transform, opacity);
       }
@@ -1049,12 +1130,20 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
     if (node.strokeRendering) {
       const sr = node.strokeRendering;
       if (sr.mode === "uniform") {
-        renderUniformStroke(
+        renderUniformStroke({
           sr,
-          node.sourceStroke ? { width: node.sourceStroke.width, color: node.sourceStroke.color, opacity: node.sourceStroke.opacity } : undefined,
-          (sw) => tessellateEllipseStroke({ cx: node.cx, cy: node.cy, rx: node.rx, ry: node.ry, strokeWidth: sw }),
-          transform, opacity,
-        );
+          sourceStroke: node.sourceStroke,
+          shapeVerticesFactory: (sw, dashPattern) => tessellateEllipseStroke({
+            cx: node.cx,
+            cy: node.cy,
+            rx: node.rx,
+            ry: node.ry,
+            strokeWidth: sw,
+            dashPattern,
+          }),
+          transform,
+          opacity,
+        });
       } else {
         renderStrokeRendering(sr, transform, opacity);
       }
@@ -1070,43 +1159,36 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
     const effects = getSourceEffects(node);
 
     // Parse RenderTree SVG paths to PathContours for tessellation
-    const parsedContours: PathContour[] = node.paths.map((rp) => ({
-      commands: parseSvgPathD(rp.d),
+    const parsedContours: PathContour[] = node.paths.flatMap((rp) => svgPathDToContours({
+      d: rp.d,
       windingRule: rp.fillRule ?? "nonzero",
     }));
 
     const hasVisibleContent = node.sourceFills.length > 0 || !!node.strokeRendering;
-    const didDropShadowsRef = { value: false };
 
-    for (const contour of parsedContours) {
-      const needsStencil = contour.windingRule === "evenodd";
-
-      if (needsStencil) {
-        const prepared = prepareFanTriangles([contour]);
-        if (prepared) {
-          const { fanVertices, bounds } = prepared;
-          const coverQuad = generateCoverQuad(bounds);
-          const elementSize = { width: bounds.maxX - bounds.minX, height: bounds.maxY - bounds.minY };
-          if (!didDropShadowsRef.value && hasVisibleContent) {
-            renderDropShadowsStencil({ effects, fanVertices, coverQuad, bounds, contours: parsedContours, transform, opacity });
-            didDropShadowsRef.value = true;
-          }
-          if (node.sourceFills.length > 0) {
-            drawStencilFill({ fanVertices, coverQuad, transform, opacity, elementSize, fills: node.sourceFills });
-          }
+    if (parsedContours.some((contour) => contour.windingRule === "evenodd")) {
+      const prepared = prepareFanTriangles(parsedContours);
+      if (prepared) {
+        const { fanVertices, bounds } = prepared;
+        const coverQuad = generateCoverQuad(bounds);
+        const elementSize = { width: bounds.maxX - bounds.minX, height: bounds.maxY - bounds.minY };
+        if (hasVisibleContent) {
+          renderDropShadowsStencil({ effects, fanVertices, coverQuad, bounds, contours: parsedContours, transform, opacity });
         }
-      } else {
-        // autoDetectWinding=true: paths may use either CW or CCW convention
-        const vertices = tessellateContours([contour], 0.25, true);
-        if (vertices.length > 0) {
-          if (!didDropShadowsRef.value && hasVisibleContent) {
-            renderDropShadows({ effects, vertices, transform, opacity });
-            didDropShadowsRef.value = true;
-          }
-          if (node.sourceFills.length > 0) {
-            const elementSize = computeBoundingBox(vertices);
-            drawAllFills({ vertices, fills: node.sourceFills, transform, opacity, elementSize });
-          }
+        if (node.sourceFills.length > 0) {
+          drawStencilFill({ fanVertices, coverQuad, transform, opacity, elementSize, fills: node.sourceFills });
+        }
+      }
+    } else {
+      // autoDetectWinding=true: paths may use either CW or CCW convention.
+      const vertices = tessellateContours(parsedContours, 0.25, true);
+      if (vertices.length > 0) {
+        if (hasVisibleContent) {
+          renderDropShadows({ effects, vertices, transform, opacity });
+        }
+        if (node.sourceFills.length > 0) {
+          const elementSize = computeBoundingBox(vertices);
+          drawAllFills({ vertices, fills: node.sourceFills, transform, opacity, elementSize });
         }
       }
     }
@@ -1115,7 +1197,9 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
     if (node.strokeRendering) {
       const sr = node.strokeRendering;
       if (sr.mode === "uniform" && node.sourceStroke && node.sourceStroke.width > 0) {
-        const strokeVerts = tessellatePathStroke(parsedContours, node.sourceStroke.width);
+        const strokeVerts = tessellatePathStroke(parsedContours, node.sourceStroke.width, {
+          dashPattern: node.sourceStroke.dashPattern,
+        });
         if (strokeVerts.length > 0) {
           drawSolidFill({
             ctx: getGlContext(), vertices: strokeVerts,
@@ -1127,7 +1211,9 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
         for (const layer of sr.layers) {
           const strokeWidth = layer.attrs.strokeWidth ?? 1;
           if (strokeWidth <= 0) { continue; }
-          const strokeVerts = tessellatePathStroke(parsedContours, strokeWidth);
+          const strokeVerts = tessellatePathStroke(parsedContours, strokeWidth, {
+            dashPattern: parseStrokeDasharray(layer.attrs.strokeDasharray),
+          });
           if (strokeVerts.length > 0) {
             const color = hexToColor(layer.attrs.stroke);
             drawSolidFill({
@@ -1138,7 +1224,9 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
           }
         }
       } else if (sr.mode === "masked" && node.sourceStroke && node.sourceStroke.width > 0) {
-        const strokeVerts = tessellatePathStroke(parsedContours, node.sourceStroke.width);
+        const strokeVerts = tessellatePathStroke(parsedContours, node.sourceStroke.width, {
+          dashPattern: node.sourceStroke.dashPattern,
+        });
         if (strokeVerts.length > 0) {
           drawSolidFill({
             ctx: getGlContext(), vertices: strokeVerts,
@@ -1161,17 +1249,14 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
       // Glyph path: parse the SVG path d string (SoT) and tessellate
       if (node.content.d.length === 0) { return; }
 
-      const glyphContour: PathContour = {
-        commands: parseSvgPathD(node.content.d),
-        windingRule: "nonzero",
-      };
+      const glyphContours = svgPathDToContours({ d: node.content.d });
 
-      const vertices = tessellateContours([glyphContour], 0.1, true);
+      const vertices = tessellateContours(glyphContours, 0.1, true);
       if (vertices.length > 0) {
         drawSolidFill({ ctx, vertices, color, transform, opacity: opacity * fillOpacity });
       } else {
         // Fallback to stencil fill for complex glyph paths
-        const prepared = prepareFanTriangles([glyphContour], 0.1);
+        const prepared = prepareFanTriangles(glyphContours, 0.1);
         if (prepared) {
           const { fanVertices, bounds } = prepared;
           const coverQuad = generateCoverQuad(bounds);
@@ -1267,8 +1352,8 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
 // Helpers
 // =============================================================================
 
-function computeBoundingBox(vertices: Float32Array): { width: number; height: number } {
-  if (vertices.length === 0) { return { width: 0, height: 0 }; }
+function computeBoundingBox(vertices: Float32Array): { x: number; y: number; width: number; height: number } {
+  if (vertices.length === 0) { return { x: 0, y: 0, width: 0, height: 0 }; }
 
   let minX = Infinity;
   let minY = Infinity;
@@ -1285,6 +1370,8 @@ function computeBoundingBox(vertices: Float32Array): { width: number; height: nu
   }
 
   return {
+    x: minX,
+    y: minY,
     width: maxX - minX,
     height: maxY - minY,
   };

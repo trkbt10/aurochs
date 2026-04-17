@@ -1,0 +1,168 @@
+/** @file WebGL FBO rendering smoke tests */
+import * as path from "node:path";
+import { fileURLToPath } from "node:url";
+import {
+  startHarness,
+  stopHarness,
+  type WebGLHarness,
+} from "../../spec/webgl-harness/test-utils";
+
+type Pixel = readonly [number, number, number, number];
+
+type FboDiagnosticResult = {
+  readonly fboPixel: Pixel;
+  readonly blurredPixel: Pixel;
+  readonly layerPixel: Pixel;
+  readonly defaultFramebufferPixel: Pixel;
+  readonly didBlit: boolean;
+};
+
+type ModuleUrls = {
+  readonly framebuffer: string;
+  readonly effectsRenderer: string;
+  readonly shaders: string;
+  readonly fillRenderer: string;
+};
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const HARNESS_CONFIG = path.resolve(__dirname, "../../spec/webgl-harness/vite.config.ts");
+const FBO_SIZE = 64;
+
+function toViteFsUrl(filePath: string): string {
+  return `/@fs/${filePath}`;
+}
+
+function makeModuleUrls(): ModuleUrls {
+  return {
+    framebuffer: toViteFsUrl(path.resolve(__dirname, "framebuffer.ts")),
+    effectsRenderer: toViteFsUrl(path.resolve(__dirname, "effects-renderer.ts")),
+    shaders: toViteFsUrl(path.resolve(__dirname, "shaders/index.ts")),
+    fillRenderer: toViteFsUrl(path.resolve(__dirname, "fill-renderer.ts")),
+  };
+}
+
+function expectNonZero(pixel: Pixel): void {
+  expect(pixel[0] + pixel[1] + pixel[2] + pixel[3]).toBeGreaterThan(0);
+}
+
+describe("WebGL FBO rendering", () => {
+  const harnessRef = { value: undefined as WebGLHarness | undefined };
+
+  beforeAll(async () => {
+    harnessRef.value = await startHarness(HARNESS_CONFIG);
+  }, 30000);
+
+  afterAll(async () => {
+    if (harnessRef.value) {
+      await stopHarness(harnessRef.value);
+    }
+  });
+
+  it("draws, blurs, and blits non-empty FBO content", async () => {
+    const result = await harnessRef.value!.page.evaluate(
+      async ({ moduleUrls, size }: { moduleUrls: ModuleUrls; size: number }): Promise<FboDiagnosticResult> => {
+        const framebufferModule = await import(moduleUrls.framebuffer) as typeof import("./framebuffer");
+        const effectsModule = await import(moduleUrls.effectsRenderer) as typeof import("./effects-renderer");
+        const shaderModule = await import(moduleUrls.shaders) as typeof import("./shaders");
+        const fillModule = await import(moduleUrls.fillRenderer) as typeof import("./fill-renderer");
+
+        const canvas = document.createElement("canvas");
+        canvas.width = size;
+        canvas.height = size;
+        document.body.appendChild(canvas);
+
+        const glOrNull = canvas.getContext("webgl", {
+          alpha: true,
+          antialias: false,
+          premultipliedAlpha: false,
+          preserveDrawingBuffer: true,
+          stencil: true,
+        });
+        if (!glOrNull) {
+          throw new Error("WebGL not supported");
+        }
+        const gl = glOrNull;
+        const shaders = shaderModule.createShaderCache(gl);
+        const positionBuffer = gl.createBuffer();
+        if (!positionBuffer) {
+          throw new Error("Failed to create position buffer");
+        }
+        const effectsRenderer = effectsModule.createEffectsRenderer(gl);
+        const quad = new Float32Array([
+          16, 16, 48, 16, 48, 48,
+          16, 16, 48, 48, 16, 48,
+        ]);
+        const identity = { m00: 1, m01: 0, m02: 0, m10: 0, m11: 1, m12: 0 };
+        const ctx = { gl, shaders, positionBuffer, width: size, height: size, pixelRatio: 1 };
+
+        const readCenterPixel = (): Pixel => {
+          const pixel = new Uint8Array(4);
+          gl.readPixels(size / 2, size / 2, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+          return [pixel[0], pixel[1], pixel[2], pixel[3]];
+        };
+
+        const drawSolidQuad = (): void => {
+          fillModule.drawSolidFill({
+            ctx,
+            vertices: quad,
+            color: { r: 1, g: 0, b: 0, a: 1 },
+            transform: identity,
+            opacity: 1,
+          });
+        };
+
+        const poisonStencilState = (): void => {
+          gl.enable(gl.STENCIL_TEST);
+          gl.stencilFunc(gl.EQUAL, 0x80, 0x80);
+          gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);
+        };
+
+        const layerFbo = framebufferModule.createFramebufferWithStencil(gl, size, size);
+        framebufferModule.bindFramebuffer(gl, layerFbo);
+        gl.disable(gl.STENCIL_TEST);
+        gl.colorMask(true, true, true, true);
+        gl.clearColor(0, 0, 0, 0);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
+        drawSolidQuad();
+        const fboPixel = readCenterPixel();
+
+        poisonStencilState();
+        const blurred = effectsRenderer.applyGaussianBlur(layerFbo, 4);
+        framebufferModule.bindFramebuffer(gl, blurred);
+        const blurredPixel = readCenterPixel();
+
+        poisonStencilState();
+        effectsRenderer.beginLayerCapture(size, size);
+        drawSolidQuad();
+        const layerPixel = readCenterPixel();
+
+        gl.disable(gl.STENCIL_TEST);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.viewport(0, 0, size, size);
+        gl.clearColor(0, 0, 0, 0);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
+        const didBlit = effectsRenderer.blitLayerWithOpacity({
+          canvasWidth: size,
+          canvasHeight: size,
+          opacity: 1,
+        });
+        const defaultFramebufferPixel = readCenterPixel();
+
+        effectsRenderer.dispose();
+        shaders.dispose();
+        framebufferModule.deleteFramebuffer(gl, layerFbo);
+        gl.deleteBuffer(positionBuffer);
+        canvas.remove();
+
+        return { fboPixel, blurredPixel, layerPixel, defaultFramebufferPixel, didBlit };
+      },
+      { moduleUrls: makeModuleUrls(), size: FBO_SIZE },
+    );
+
+    expectNonZero(result.fboPixel);
+    expectNonZero(result.blurredPixel);
+    expectNonZero(result.layerPixel);
+    expect(result.didBlit).toBe(true);
+    expectNonZero(result.defaultFramebufferPixel);
+  }, 30000);
+});

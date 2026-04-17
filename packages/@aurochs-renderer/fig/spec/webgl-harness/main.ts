@@ -15,7 +15,20 @@ type WindowWithRenderSceneGraph = Window & {
 
 const canvas = document.getElementById("canvas") as HTMLCanvasElement;
 
-let renderer: WebGLFigmaRendererInstance | null = null;
+// Pre-create WebGL context with preserveDrawingBuffer so toDataURL works
+// after FBO operations. This must be done before any renderer creates the context,
+// because getContext returns the same context if already created.
+const preCtx = canvas.getContext("webgl", {
+  antialias: true,
+  alpha: true,
+  premultipliedAlpha: false,
+  stencil: true,
+  preserveDrawingBuffer: true,
+});
+if (preCtx) {
+  console.warn("[harness] WebGL context preserveDrawingBuffer:",
+    preCtx.getContextAttributes()?.preserveDrawingBuffer);
+}
 
 /**
  * Restore Uint8Array fields that were base64-encoded for JSON transport.
@@ -59,30 +72,37 @@ function isRecord(obj: unknown): obj is Record<string, unknown> {
 
 if (isRenderableWindow(window)) {
   window.renderSceneGraph = async (json: string): Promise<string> => {
-  const sceneGraph = JSON.parse(json) as SceneGraph;
+    const sceneGraph = JSON.parse(json) as SceneGraph;
 
-  // Restore Uint8Array fields from base64
-  const sceneRecord = isRecord(sceneGraph) ? sceneGraph : {};
-  restoreUint8Arrays(sceneRecord);
+    // Restore Uint8Array fields from base64
+    const sceneRecord = isRecord(sceneGraph) ? sceneGraph : {};
+    restoreUint8Arrays(sceneRecord);
 
-  canvas.width = sceneGraph.width;
-  canvas.height = sceneGraph.height;
-  canvas.style.width = `${sceneGraph.width}px`;
-  canvas.style.height = `${sceneGraph.height}px`;
+    canvas.width = sceneGraph.width;
+    canvas.height = sceneGraph.height;
+    canvas.style.width = `${sceneGraph.width}px`;
+    canvas.style.height = `${sceneGraph.height}px`;
 
-  if (!renderer) {
-    renderer = createWebGLFigmaRenderer({
+    // Create a fresh renderer for each frame to prevent state contamination.
+    // If one frame's effects shader fails, the next frame starts clean.
+    const renderer = createWebGLFigmaRenderer({
       canvas,
       pixelRatio: 1,
       antialias: true,
       backgroundColor: { r: 1, g: 1, b: 1, a: 1 },
     });
-  }
 
-  await renderer.prepareScene(sceneGraph);
-  renderer.render(sceneGraph);
+    try {
+      await renderer.prepareScene(sceneGraph);
+      renderer.render(sceneGraph);
 
-  return canvas.toDataURL("image/png");
+    } catch (err) {
+      console.error("WebGL render error:", (err as Error).message);
+    } finally {
+      renderer.dispose();
+    }
+
+    return canvas.toDataURL("image/png");
   };
 }
 

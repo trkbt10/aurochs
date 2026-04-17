@@ -24,11 +24,18 @@ export const texturedFragmentShader = `
   uniform float u_opacity;
   uniform vec2 u_texScale;
   uniform vec2 u_texOffset;
+  uniform bool u_repeat;
+  uniform bool u_clipTransparent;
 
   varying vec2 v_texCoord;
 
   void main() {
     vec2 uv = v_texCoord * u_texScale + u_texOffset;
+    if (u_repeat) {
+      uv = fract(uv);
+    } else if (u_clipTransparent && (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0)) {
+      discard;
+    }
     vec4 texColor = texture2D(u_texture, uv);
     gl_FragColor = texColor * u_opacity;
   }
