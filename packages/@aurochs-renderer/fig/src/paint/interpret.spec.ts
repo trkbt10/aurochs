@@ -80,18 +80,32 @@ describe("getGradientDirection", () => {
     expect(dir.end).toEqual({ x: 1, y: 1 });
   });
 
-  it("reads from transform matrix (Kiwi format)", () => {
+  it("rejects a rank-deficient transform matrix (Kiwi format)", () => {
+    // m00 = m01 = 0 → upper-2×2 determinant is zero: grad_x would be
+    // constant across the whole element, so the direction is undefined.
+    // The SSoT refuses to invent one rather than silently produce a
+    // visually wrong gradient.
     const raw = {
       type: { value: 1, name: "GRADIENT_LINEAR" },
       transform: { m00: 0, m01: 0, m02: 0.5, m10: -1, m11: 0, m12: 1 },
     };
     if (asGradientPaint(raw)) {
+      expect(() => getGradientDirection(raw)).toThrow(/non-invertible|det=0/);
+    }
+  });
+
+  it("reads from transform matrix (Kiwi format, invertible 90° rotation)", () => {
+    // Real case: Flighty World map. paint.transform rotates object space
+    // 90° so grad_x = obj_y. Expected direction in normalized object
+    // space: start at obj_y=0 (top), end at obj_y=1 (bottom).
+    const raw = {
+      type: { value: 1, name: "GRADIENT_LINEAR" },
+      transform: { m00: 0, m01: 1, m02: 0, m10: -1, m11: 0, m12: 1 },
+    };
+    if (asGradientPaint(raw)) {
       const dir = getGradientDirection(raw);
-      // grad0 = (m02, m12) = (0.5, 1), grad1 = (m00+m02, m10+m12) = (0.5, 0)
-      // swapped: start = grad1, end = grad0
-      expect(dir.start.x).toBeCloseTo(0.5);
-      expect(dir.start.y).toBeCloseTo(0);
-      expect(dir.end.x).toBeCloseTo(0.5);
+      expect(dir.start.y).toBeCloseTo(0); // top = 0% stop
+      expect(dir.end.y).toBeCloseTo(1);   // bottom = 100% stop
     }
   });
 });

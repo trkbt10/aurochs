@@ -493,21 +493,41 @@ function resolveStrokeRendering(
 ): import("./types").StrokeRendering {
   const result = resolveStrokeResult(stroke, ids);
 
-  // Multi-paint stroke layers
-  if (result.layers && result.layers.length > 0) {
+  // Collect gradient defs from any layer up-front so both the "layers"
+  // path and the "masked" path below see the <linearGradient> / mask def
+  // in the parent's defs array.
+  if (result.layers) {
     for (const layer of result.layers) {
       if (layer.gradientDef) {
         collectGradientDef(layer.gradientDef, defs);
       }
     }
+  }
+
+  // True multi-paint stroke (two or more visible paints stacked): render
+  // as layered <use> elements so each paint gets its own blend mode. One
+  // layer is not "multi-paint" — it's a single paint that happens to
+  // need a gradient def, and should still participate in the strokeAlign
+  // mask machinery below.
+  if (result.layers && result.layers.length >= 2) {
     return { mode: "layers", layers: result.layers, shape };
   }
 
-  // INSIDE/OUTSIDE stroke → masked
+  // INSIDE/OUTSIDE stroke → masked. Single-layer gradient strokes flow
+  // through here too, which means the stroke attrs already point at the
+  // gradient url(#lg-N) from the collected def above.
   if (result.attrs.strokeAlign && maskClipShape) {
     const maskId = ids.getNextId("stroke-mask");
     defs.push({ type: "stroke-mask", id: maskId, shape: maskClipShape, strokeAlign: result.attrs.strokeAlign });
     return { mode: "masked", attrs: result.attrs, maskId, shape };
+  }
+
+  // Single-layer gradient without strokeAlign — emit as a regular
+  // "layers" rendering so the gradient fill is still attached to the
+  // stroke. Without this branch a single-layer gradient with CENTER
+  // alignment would fall through to "uniform" and lose the gradient.
+  if (result.layers && result.layers.length === 1) {
+    return { mode: "layers", layers: result.layers, shape };
   }
 
   // Uniform stroke

@@ -144,7 +144,11 @@ function convertSymbolMap(
 ): ReadonlyMap<string, FigDesignNode> {
   const out = new Map<string, FigDesignNode>();
   for (const [key, node] of symbolMap) {
-    out.set(key, convertFigNode(node, components, styleRegistry));
+    // Pass the raw symbolMap so per-node INSTANCE override GUIDs are
+    // translated into the SYMBOL-descendant namespace during conversion.
+    // Without this, nested INSTANCE overrides inside SYMBOL definitions
+    // (rare but present) silently drop their overrides.
+    out.set(key, convertFigNode(node, components, styleRegistry, symbolMap));
   }
   return out;
 }
@@ -176,7 +180,7 @@ export async function renderFigToSvg(
     ? convertSymbolMap(rawSymbolMap, components, styleRegistry)
     : new Map<string, FigDesignNode>();
 
-  const designNodes: FigDesignNode[] = nodes.map((n) => convertFigNode(n, components, styleRegistry));
+  const designNodes: FigDesignNode[] = nodes.map((n) => convertFigNode(n, components, styleRegistry, rawSymbolMap));
 
   // Merge symbol definitions discovered while converting root nodes with
   // those that came via the symbolMap option. Later entries (from the
@@ -202,6 +206,12 @@ export async function renderFigToSvg(
     images,
     canvasSize: { width, height },
     symbolMap: mergedSymbolMap,
+    // The raw (Kiwi) symbolMap is needed so the scene-graph builder
+    // can recompute buildGuidTranslationMap for nested INSTANCE
+    // children. Without it, multi-level override paths silently fail
+    // (see Close Button xmark regression analysis in
+    // scene-graph/builder.ts::applyDerivedSymbolData).
+    rawSymbolMap: rawSymbolMap ?? new Map(),
     showHiddenNodes: options.showHiddenNodes === true,
     styleRegistry,
     warnings,

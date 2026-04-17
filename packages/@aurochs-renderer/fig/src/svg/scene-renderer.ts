@@ -134,11 +134,15 @@ function formatFilterPrimitive(p: ResolvedFilterPrimitive): SvgString {
 /**
  * Build a CSS conic-gradient() string from an angular gradient def.
  *
- * Figma's angular gradient starts from the rotation angle and distributes
- * stops around the full circle. CSS conic-gradient uses "from Xdeg at cx cy".
+ * `d.rotation` is already in **degrees** (as emitted by
+ * `getAngularGradientParams` — the upstream SoT). The previous
+ * implementation multiplied by 180/π assuming radians, which produced
+ * garbage "from" angles (a 45° rotation became 8100deg, modulo into
+ * random-looking values on some browsers) and effectively randomised
+ * the stop placement. CSS conic-gradient uses "from Xdeg at cx cy".
  */
 function buildConicGradientCSS(d: ResolvedAngularGradient): string {
-  const fromDeg = (d.rotation * 180) / Math.PI;
+  const fromDeg = d.rotation;
   const stopParts = d.stops.map((s) => {
     const opacity = s.stopOpacity !== undefined ? s.stopOpacity : 1;
     // Parse hex color for rgba

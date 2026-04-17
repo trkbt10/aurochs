@@ -12,6 +12,8 @@ import {
   getGradientStops,
   getGradientDirection,
   getRadialGradientCenterAndRadius,
+  getAngularGradientParams,
+  getDiamondGradientParams,
   getImageRef,
   getImageTransform,
   getScaleMode,
@@ -83,17 +85,6 @@ function extractGradientTransform(gradientPaint: FigGradientPaint): AffineMatrix
   return m;
 }
 
-/**
- * Get angular gradient rotation from gradient handle positions.
- */
-function getAngularGradientRotation(gradientPaint: FigGradientPaint): number {
-  const handles = gradientPaint.gradientHandlePositions;
-  if (!handles || handles.length < 2) { return 0; }
-  const dx = handles[1].x - handles[0].x;
-  const dy = handles[1].y - handles[0].y;
-  return Math.atan2(dy, dx);
-}
-
 export function convertPaintToFill(paint: FigPaint, images: ReadonlyMap<string, FigImage>): Fill | null {
   const opacity = paint.opacity ?? 1;
   const paintType = getPaintType(paint);
@@ -142,22 +133,31 @@ export function convertPaintToFill(paint: FigPaint, images: ReadonlyMap<string, 
 
     case "GRADIENT_ANGULAR": {
       const gradientPaint = paint as FigGradientPaint;
-      const { center } = getRadialGradientCenterAndRadius(gradientPaint);
+      // The angular-gradient centre is NOT `(m02, m12)` of paint.transform:
+      // the Kiwi matrix maps object→gradient space, and `(m02, m12) =
+      // T·(0,0)` is the gradient-space image of the object-space origin,
+      // which for a rotated paint lies far outside the element (see
+      // `getAngularGradientParams` for the derivation). For conic
+      // gradients the centre in object space is always `(0.5, 0.5)`;
+      // only the rotation angle varies.
+      const { center, startAngle } = getAngularGradientParams(gradientPaint);
       const stops = convertGradientStops(getGradientStops(gradientPaint));
-      const rotation = getAngularGradientRotation(gradientPaint);
       return {
         type: "angular-gradient",
         center,
         stops,
         opacity,
         blendMode,
-        rotation,
+        rotation: startAngle,
       };
     }
 
     case "GRADIENT_DIAMOND": {
       const gradientPaint = paint as FigGradientPaint;
-      const { center } = getRadialGradientCenterAndRadius(gradientPaint);
+      // Diamond gradients, like angular, are centred on the object —
+      // delegating to the dedicated helper keeps the convention
+      // explicit and consistent with angular.
+      const { center } = getDiamondGradientParams(gradientPaint);
       const stops = convertGradientStops(getGradientStops(gradientPaint));
       return {
         type: "diamond-gradient",

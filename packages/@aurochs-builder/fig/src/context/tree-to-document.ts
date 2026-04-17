@@ -14,7 +14,14 @@
 import type { FigNode, FigNodeType, FigMatrix, FigVector, FigColor, FigPaint, FigEffect, KiwiEnumValue, FigTextStyleOverrideEntry, FigComponentPropValue } from "@aurochs/fig/types";
 import type { NodeTreeResult } from "@aurochs/fig/parser";
 import { getNodeType, safeChildren, guidToString } from "@aurochs/fig/parser";
-import { getEffectiveSymbolID, buildFigStyleRegistry, getInstanceSymbolOverrides } from "@aurochs/fig/symbols";
+import {
+  getEffectiveSymbolID,
+  buildFigStyleRegistry,
+  getInstanceSymbolOverrides,
+  buildGuidTranslationMap,
+  translateOverrides,
+  resolveSymbolGuidStr,
+} from "@aurochs/fig/symbols";
 import type { LoadedFigFile } from "@aurochs/fig/roundtrip";
 import type {
   FigDesignDocument, FigDesignNode, FigPage, AutoLayoutProps, LayoutConstraints, TextData, TextStyleOverride, SymbolOverride,
@@ -522,21 +529,99 @@ function collectRawFields(node: FigNode): Record<string, unknown> | undefined {
 }
 
 /**
+ * Translate INSTANCE override GUIDs into the SYMBOL-descendant GUID
+ * namespace using the SSoT in @aurochs/fig/symbols. Without this step,
+ * INSTANCE-scoped override paths (e.g. 127:58385) never match the
+ * SYMBOL's own child GUIDs (e.g. 15:848) and every per-INSTANCE
+ * override is silently dropped at apply time — producing the "all
+ * Contact avatars show the same photo" regression.
+ *
+ * Returns the INSTANCE's overrides and derivedSymbolData remapped into
+ * the SYMBOL namespace, paired so callers can persist both.
+ */
+function translateInstanceOverrides(
+  instanceNode: FigNode,
+  symbolMap: ReadonlyMap<string, FigNode> | undefined,
+): {
+  overrides: readonly SymbolOverride[] | undefined;
+  derivedSymbolData: readonly SymbolOverride[] | undefined;
+} {
+  const rawOverrides = getInstanceSymbolOverrides(instanceNode);
+  const rawDerivedSymbolData = instanceNode.derivedSymbolData;
+
+  if (!symbolMap) {
+    return {
+      overrides: rawOverrides as readonly SymbolOverride[] | undefined,
+      derivedSymbolData: rawDerivedSymbolData as readonly SymbolOverride[] | undefined,
+    };
+  }
+
+  const effectiveGuid = getEffectiveSymbolID(instanceNode);
+  if (!effectiveGuid) {
+    return {
+      overrides: rawOverrides as readonly SymbolOverride[] | undefined,
+      derivedSymbolData: rawDerivedSymbolData as readonly SymbolOverride[] | undefined,
+    };
+  }
+  const effectiveSymbol = resolveSymbolGuidStr(effectiveGuid, symbolMap);
+  if (!effectiveSymbol) {
+    return {
+      overrides: rawOverrides as readonly SymbolOverride[] | undefined,
+      derivedSymbolData: rawDerivedSymbolData as readonly SymbolOverride[] | undefined,
+    };
+  }
+
+  const translationMap = buildGuidTranslationMap(
+    safeChildren(effectiveSymbol.node),
+    rawDerivedSymbolData,
+    rawOverrides,
+    instanceNode.componentPropAssignments,
+    symbolMap,
+  );
+
+  const translatedOverrides = rawOverrides
+    ? (translateOverrides(rawOverrides, translationMap) as readonly SymbolOverride[])
+    : undefined;
+  const translatedDerived = rawDerivedSymbolData
+    ? (translateOverrides(rawDerivedSymbolData, translationMap) as readonly SymbolOverride[])
+    : undefined;
+
+  return { overrides: translatedOverrides, derivedSymbolData: translatedDerived };
+}
+
+/**
  * Convert a raw FigNode to a FigDesignNode, recursively converting children.
  *
  * @param node - Raw Kiwi node from parser
  * @param components - Mutable map to collect component definitions
+ * @param styleRegistry - Style ID → paint map for resolving styleIdForFill
+ * @param symbolMap - Full Kiwi node map. Required to translate INSTANCE
+ *   override GUIDs into the SYMBOL-descendant namespace (SSoT:
+ *   `buildGuidTranslationMap`). Omit only when callers do not care about
+ *   per-INSTANCE overrides (e.g. converting a single SYMBOL definition
+ *   out of context) — all production paths that render INSTANCE nodes
+ *   MUST pass the complete nodeMap or per-INSTANCE overrides silently
+ *   fail.
  */
 export function convertFigNode(
   node: FigNode,
   components: Map<string, FigDesignNode>,
   styleRegistry: FigStyleRegistry = EMPTY_FIG_STYLE_REGISTRY,
+  symbolMap?: ReadonlyMap<string, FigNode>,
 ): FigDesignNode {
   const nodeType = nodeTypeName(node);
   const id = guidToNodeId(node.guid);
 
   const children = safeChildren(node);
-  const convertedChildren = children.length > 0 ? children.map((child) => convertFigNode(child, components, styleRegistry)) : undefined;
+  const convertedChildren = children.length > 0 ? children.map((child) => convertFigNode(child, components, styleRegistry, symbolMap)) : undefined;
+
+  const { overrides: translatedOverrides, derivedSymbolData: translatedDerivedSymbolData } =
+    nodeType === "INSTANCE"
+      ? translateInstanceOverrides(node, symbolMap)
+      : {
+          overrides: getInstanceSymbolOverrides(node) as readonly SymbolOverride[] | undefined,
+          derivedSymbolData: node.derivedSymbolData as readonly SymbolOverride[] | undefined,
+        };
 
   const fills = resolveNodeFills(node, styleRegistry);
   const strokes = resolveNodeStrokes(node, styleRegistry);
@@ -577,8 +662,8 @@ export function convertFigNode(
     derivedTextData: node.derivedTextData as DerivedTextData | undefined,
 
     symbolId: resolveSymbolIdForDomain(node),
-    overrides: getInstanceSymbolOverrides(node) as readonly SymbolOverride[] | undefined,
-    derivedSymbolData: node.derivedSymbolData as readonly SymbolOverride[] | undefined,
+    overrides: translatedOverrides,
+    derivedSymbolData: translatedDerivedSymbolData,
 
     componentPropertyDefs: extractComponentPropertyDefs(node),
     componentPropertyRefs: extractComponentPropertyRefs(node),
@@ -623,11 +708,12 @@ function convertCanvasToPage(
   canvas: FigNode,
   components: Map<string, FigDesignNode>,
   styleRegistry: FigStyleRegistry,
+  symbolMap?: ReadonlyMap<string, FigNode>,
 ): FigPage {
   const id = guidToPageId(canvas.guid);
 
   const children = safeChildren(canvas);
-  const convertedChildren = children.map((child) => convertFigNode(child, components, styleRegistry));
+  const convertedChildren = children.map((child) => convertFigNode(child, components, styleRegistry, symbolMap));
 
   // Collect component definitions from all children
   collectComponentsRecursive(convertedChildren, components);
@@ -709,12 +795,12 @@ export function treeToDocument(
       // DOCUMENT node: iterate CANVAS children
       for (const canvas of safeChildren(root)) {
         if (getNodeType(canvas) === "CANVAS") {
-          pages.push(convertCanvasToPage(canvas, components, styleRegistry));
+          pages.push(convertCanvasToPage(canvas, components, styleRegistry, nodeMap));
         }
       }
     } else if (rootType === "CANVAS") {
       // Standalone CANVAS (unusual but handle gracefully)
-      pages.push(convertCanvasToPage(root, components, styleRegistry));
+      pages.push(convertCanvasToPage(root, components, styleRegistry, nodeMap));
     }
   }
 

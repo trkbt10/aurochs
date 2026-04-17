@@ -76,22 +76,39 @@ function m(t: FigGradientTransform | undefined, field: keyof FigGradientTransfor
 /**
  * Compute SVG linear gradient endpoints from a Figma paint transform.
  *
- * Figma's gradient-space convention (verified against actual exports):
- *   Gradient-space point (1, 0) corresponds to the 0% stop (start handle).
- *   Gradient-space point (0, 0) corresponds to the 100% stop (end handle).
- * The paint.transform matrix maps gradient space → normalized object
- * space (coordinates in [0, 1]). Multiplying by (width, height) yields
- * user-space pixel coordinates for SVG's `userSpaceOnUse`.
+ * Figma's gradient-space convention (derived by inverting actual Figma
+ * exports — see spec for World-map and Flair test vectors):
  *
- * Verification: Flighty 4×4 World map, paint.transform =
- * [[0, 1, 0], [-1, 0, 1]], element size 370×124.4. Figma's actual export
- * emits x1=0-ish (top), y1=0 (top, mint/0% stop), x2=0 (top-ish x), y2=124.4
- * (bottom, pink/100% stop) — i.e. (1,0) maps to the top (0% stop) and
- * (0,0) maps to the bottom (100% stop). Flipping this convention produces
- * upside-down gradients that cascade through OVERLAY / HUE blends.
+ *   (grad_x, grad_y) = (m00·obj_x + m01·obj_y + m02,
+ *                       m10·obj_x + m11·obj_y + m12)
  *
- * Returns `undefined` when transform is missing — callers should fall back
- * to objectBoundingBox form.
+ * The transform maps object-space (0..1, 0..1) → gradient space. Linear
+ * gradient stops sit on the grad_x axis only:
+ *
+ *   grad_x = 0  →  0% stop (first stop in paint.stops)
+ *   grad_x = 1  →  100% stop (last stop in paint.stops)
+ *
+ * To emit a <linearGradient>, we need one object-space point on the
+ * `grad_x = 0` line (→ x1, y1) and one on the `grad_x = 1` line (→ x2,
+ * y2). The gradient-space origin (0, 0) and (1, 0) back-map through the
+ * matrix's inverse to give these points.
+ *
+ * Verification (spec): World map (90° rotation) produces a vertical
+ * top→bottom gradient; Flair (identity-x, squashed-y) produces a
+ * horizontal left→right gradient. Both match Figma's actual SVG output
+ * direction.
+ *
+ * Returns `undefined` when the paint has no transform — callers use the
+ * objectBoundingBox (0%..100%) form as the authoritative no-transform
+ * behaviour, not as a fallback for failed math.
+ *
+ * Throws on a non-invertible 2×2 upper block. A zero determinant means
+ * `grad_x` does not depend on object position (grad_x is constant
+ * across the whole element), so "0% stop line" vs "100% stop line" is
+ * mathematically undefined — no direction we emit would be correct.
+ * We refuse to invent one. Figma does not emit such matrices for valid
+ * linear-gradient paints; callers receiving this error should treat the
+ * paint as malformed rather than silently accept a wrong direction.
  */
 export function linearGradientAttrs(
   paint: FigGradientPaint,
@@ -108,15 +125,49 @@ export function linearGradientAttrs(
   const m11 = m(t, "m11", 1);
   const m12 = m(t, "m12", 0);
 
-  // 0% stop: gradient (1, 0) → normalized (m00 + m02, m10 + m12) → pixel
-  const x1 = (m00 + m02) * w;
-  const y1 = (m10 + m12) * h;
+  // Invert the 2×2 upper block of the Kiwi matrix to back-map
+  // gradient-space endpoints into object space.
+  //   [[m00 m01 m02],    inv (upper 2×2):
+  //    [m10 m11 m12]]       1/det · [[ m11  -m01],
+  //                                  [-m10   m00]]
+  //   translation inverse:  -inv2x2 · (m02, m12)
+  const det = m00 * m11 - m01 * m10;
+  if (det === 0) {
+    throw new Error(
+      `linearGradientAttrs: paint.transform has zero determinant ` +
+        `(m00=${m00}, m01=${m01}, m10=${m10}, m11=${m11}). ` +
+        `grad_x cannot vary across the object — the gradient direction ` +
+        `is undefined. Figma does not emit such matrices for valid ` +
+        `linear-gradient paints.`,
+    );
+  }
 
-  // 100% stop: gradient (0, 0) → normalized (m02, m12) → pixel
-  const x2 = m02 * w;
-  const y2 = m12 * h;
+  const invDet = 1 / det;
+  const inv00 = m11 * invDet;
+  const inv01 = -m01 * invDet;
+  const inv10 = -m10 * invDet;
+  const inv11 = m00 * invDet;
+  // Full inverse translation: -inv2x2 · (m02, m12). We only need the
+  // left column (grad_x=0 → object space origin) and inv00/inv10
+  // (gradient-x unit-vector image in object space) — the y-column of
+  // the inverse (inv01, inv11) enters only through invTx/invTy.
+  const invTx = -(inv00 * m02 + inv01 * m12);
+  const invTy = -(inv10 * m02 + inv11 * m12);
 
-  return { x1, y1, x2, y2, gradientUnits: "userSpaceOnUse" };
+  // Back-map gradient (0, 0) → object space → pixel (0% stop line)
+  // Back-map gradient (1, 0) → object space → pixel (100% stop line)
+  const objX0 = invTx;
+  const objY0 = invTy;
+  const objX1 = inv00 + invTx;
+  const objY1 = inv10 + invTy;
+
+  return {
+    x1: objX0 * w,
+    y1: objY0 * h,
+    x2: objX1 * w,
+    y2: objY1 * h,
+    gradientUnits: "userSpaceOnUse",
+  };
 }
 
 // =============================================================================

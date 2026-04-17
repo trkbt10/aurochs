@@ -45,7 +45,8 @@ describe("Paint parity", () => {
       { color: { r: 0.24, g: 0.47, b: 0.85, a: 1 }, position: 0 },
       { color: { r: 0.55, g: 0.30, b: 0.85, a: 1 }, position: 1 },
     ],
-    transform: { m00: 0, m01: 0, m02: 0.5, m10: -1, m11: 0, m12: 1 },
+    // 90° rotation — matches the Flighty World-map paint. det = +1.
+    transform: { m00: 6.123234e-17, m01: 1, m02: 0, m10: -1, m11: 6.123234e-17, m12: 1 },
   };
 
   it("shared SoT and SceneGraph produce identical gradient direction", () => {

@@ -18,8 +18,14 @@ import {
   applyOverrideToNode,
 } from "@aurochs/fig/domain";
 import type { FigPaint, FigVectorPath } from "@aurochs/fig/types";
-import { guidToString } from "@aurochs/fig/parser";
-import type { FigImage, FigBlob } from "@aurochs/fig/parser";
+import { guidToString, safeChildren } from "@aurochs/fig/parser";
+import type { FigImage, FigBlob, FigGuid } from "@aurochs/fig/parser";
+import {
+  getEffectiveSymbolID,
+  resolveSymbolGuidStr,
+  getInstanceSymbolOverrides,
+  buildGuidTranslationMap,
+} from "@aurochs/fig/symbols";
 import { IDENTITY_MATRIX } from "@aurochs/fig/matrix";
 import {
   extractBaseProps,
@@ -113,6 +119,26 @@ export type BuildSceneGraphOptions = {
   readonly canvasSize: { width: number; height: number };
   /** Symbol map for INSTANCE resolution. Pass `new Map()` when absent. */
   readonly symbolMap: ReadonlyMap<string, FigDesignNode>;
+  /**
+   * Raw (Kiwi) symbol map used to build per-INSTANCE GUID translation
+   * maps when multi-level derivedSymbolData entries must be cascaded
+   * into nested INSTANCE children.
+   *
+   * Pass the complete raw `nodeMap` whenever the tree contains nested
+   * INSTANCE nodes whose outer parents carry overrides that target
+   * inner-INSTANCE descendants (e.g., Close Button → Close → Symbol 1
+   * → TEXT in Figma's Activity View component). Without it,
+   * multi-level override paths silently fail to match because the
+   * inner-INSTANCE guids remain in their INSTANCE-scoped namespace
+   * instead of being translated into the SYMBOL-scoped namespace used
+   * by the resolved children tree.
+   *
+   * Optional because pure-domain callers (unit tests, synthetic trees
+   * without nested overrides) have no raw source to pass. When
+   * omitted, multi-level override promotion is skipped — same
+   * behaviour as before this option was introduced.
+   */
+  readonly rawSymbolMap?: ReadonlyMap<string, import("@aurochs/fig/types").FigNode>;
   /** Whether to include nodes with `visible: false`. */
   readonly showHiddenNodes: boolean;
   /**
@@ -136,6 +162,7 @@ type BuildContext = {
   readonly blobs: readonly FigBlob[];
   readonly images: ReadonlyMap<string, FigImage>;
   readonly symbolMap: ReadonlyMap<string, FigDesignNode>;
+  readonly rawSymbolMap: ReadonlyMap<string, import("@aurochs/fig/types").FigNode> | undefined;
   readonly styleRegistry: FigStyleRegistry;
   readonly showHiddenNodes: boolean;
   readonly warnings: string[];
@@ -379,12 +406,27 @@ function applyPropsRecursive(
         const mutable = node as MutableFigDesignNode;
         switch (ref.nodeField) {
           case "TEXT_DATA": {
-            // Override text content from textValue.characters
+            // Override text content from textValue.characters.
+            //
+            // When the new characters differ from the node's existing
+            // ones we must invalidate `derivedTextData`: the cached
+            // glyph contours were computed for the old text and no
+            // longer match. But when the CPA re-asserts the same
+            // string (common for variant INSTANCEs whose CPA redeclares
+            // the SYMBOL's default), clearing dtd throws away a
+            // perfectly valid pre-computed glyph path — and we have no
+            // way to recompute it without opentype.js fallback, which
+            // produces a different glyph (viewfinder vs person.2 for
+            // U+10026C). Preserving dtd when the characters match is
+            // correct because dsd won't re-supply the dtd for a leaf
+            // TEXT whose text didn't actually change.
             const textChars = assignedValue.textValue?.characters;
             if (textChars !== undefined && node.textData) {
+              const prevChars = node.textData.characters;
               mutable.textData = { ...node.textData, characters: textChars };
-              // Clear stale derived text data since text changed
-              mutable.derivedTextData = undefined;
+              if (textChars !== prevChars) {
+                mutable.derivedTextData = undefined;
+              }
             }
             break;
           }
@@ -429,17 +471,234 @@ function applyPropsRecursive(
 function applyDerivedSymbolData(
   children: readonly FigDesignNode[],
   derivedData: readonly SymbolOverride[],
+  ctx: BuildContext,
 ): void {
   for (const entry of derivedData) {
     if (!isValidOverridePath(entry)) { continue; }
 
     const target = findNodeByOverridePath(children, entry);
-    if (!target) { continue; }
+    if (target) {
+      applyOverrideToNode(target as MutableFigDesignNode, entry);
+      continue;
+    }
 
-    // Always apply derivedTextData from derivedSymbolData — it contains
-    // re-computed glyph paths for the current text content (after CPA).
-    applyOverrideToNode(target as MutableFigDesignNode, entry);
+    // Target not found directly. Two cases where we can still
+    // successfully apply the override via cascade into a nested
+    // INSTANCE:
+    //
+    //  (A) Multi-level path [childId, ..., descendantGuid]: find the
+    //      direct child INSTANCE at childId, translate the tail
+    //      guids into the child's SYMBOL namespace, attach the
+    //      remaining path to the child's own derivedSymbolData.
+    //
+    //  (B) Single-guid path [descendantGuid] that doesn't match any
+    //      direct child: the guid belongs to a *grandchild* of one
+    //      of our INSTANCE children. Try each INSTANCE child: build
+    //      its translation map seeded with this guid and see if it
+    //      maps to one of that child's SYMBOL descendants. If yes,
+    //      attach the translated entry to that INSTANCE's dsd so the
+    //      next nested resolveInstance call picks it up.
+    //
+    // Both cases are exercised by the Close Button xmark chain
+    // (Close Button → Close → Symbol 1 → TEXT): the outer CB emits
+    // a 3-level path (case A), Close's own dsd then holds a 2-level
+    // entry (another A), and finally Symbol 1 receives a 1-level
+    // entry that still needs translation to match its SYMBOL
+    // descendants (case B).
+    const ids = overridePathToIds(entry);
+    const guids = entry.guidPath?.guids ?? [];
+
+    if (ids.length >= 2) {
+      // Case A
+      const directChildId = ids[0];
+      const directChild = findDirectChildById(children, directChildId);
+      if (!directChild || getNodeTypeName(directChild) !== "INSTANCE") { continue; }
+
+      const translatedTail = translateRemainingPathToSymbolNamespace(
+        directChild,
+        guids.slice(1),
+        ctx,
+      );
+      if (!translatedTail) { continue; }
+
+      const promoted: SymbolOverride = {
+        ...entry,
+        guidPath: { guids: translatedTail } as SymbolOverride["guidPath"],
+      };
+      const mutableChild = directChild as MutableFigDesignNode;
+      const existing = mutableChild.derivedSymbolData ?? [];
+      mutableChild.derivedSymbolData = [...existing, promoted];
+      continue;
+    }
+
+    if (ids.length === 1) {
+      // Case B — try each INSTANCE child in order; attach to the
+      // first one whose translation map resolves this guid to one
+      // of its own SYMBOL descendants.
+      let attached = false;
+      for (const child of children) {
+        if (getNodeTypeName(child) !== "INSTANCE") { continue; }
+        const translatedTail = translateRemainingPathToSymbolNamespace(
+          child,
+          guids,
+          ctx,
+        );
+        if (!translatedTail || translatedTail === guids) { continue; }
+
+        // Only attach if translation produced a guid that actually
+        // matches one of this child's resolved SYMBOL descendants
+        // — otherwise we might mis-attribute the override.
+        const newFirstId = guidToString(translatedTail[0]);
+        if (!symbolHasDescendantId(child, newFirstId, ctx)) { continue; }
+
+        const promoted: SymbolOverride = {
+          ...entry,
+          guidPath: { guids: translatedTail } as SymbolOverride["guidPath"],
+        };
+        const mutableChild = child as MutableFigDesignNode;
+        const existing = mutableChild.derivedSymbolData ?? [];
+        mutableChild.derivedSymbolData = [...existing, promoted];
+        attached = true;
+        break;
+      }
+      if (!attached) { continue; }
+    }
   }
+}
+
+/**
+ * Check whether a given id appears among the SYMBOL descendants of
+ * an INSTANCE (walking through nested INSTANCEs' SYMBOLs as well).
+ * Used by case-B promotion to avoid attaching overrides to a child
+ * whose translation map coincidentally mapped the guid but whose
+ * subtree doesn't actually contain that descendant.
+ */
+function symbolHasDescendantId(
+  instance: FigDesignNode,
+  targetId: string,
+  ctx: BuildContext,
+): boolean {
+  if (!instance.symbolId) { return false; }
+  const symbol = ctx.symbolMap.get(instance.symbolId);
+  if (!symbol) { return false; }
+  return walkContainsId(symbol.children ?? [], targetId, ctx);
+}
+
+function walkContainsId(
+  nodes: readonly FigDesignNode[],
+  targetId: string,
+  ctx: BuildContext,
+  depth = 0,
+): boolean {
+  if (depth > 10) { return false; }
+  for (const n of nodes) {
+    if (n.id === targetId) { return true; }
+    if (n.children && n.children.length > 0) {
+      if (walkContainsId(n.children, targetId, ctx, depth + 1)) { return true; }
+    }
+    // Recurse through nested INSTANCE's SYMBOL
+    if (getNodeTypeName(n) === "INSTANCE" && n.symbolId) {
+      const sym = ctx.symbolMap.get(n.symbolId);
+      if (sym && walkContainsId(sym.children ?? [], targetId, ctx, depth + 1)) { return true; }
+    }
+  }
+  return false;
+}
+
+function findDirectChildById(
+  children: readonly FigDesignNode[],
+  id: string,
+): FigDesignNode | undefined {
+  for (const child of children) {
+    if (child.id === id) { return child; }
+  }
+  return undefined;
+}
+
+/**
+ * Translate the tail guids of a multi-level override path into the
+ * SYMBOL-scoped namespace used by the child INSTANCE's resolved
+ * descendants.
+ *
+ * Only the first guid of the tail is translated — the same
+ * "level-at-a-time" convention as the top-level
+ * `translateOverrides` in @aurochs/fig/symbols. Deeper levels are
+ * handled by subsequent nested resolveInstance calls recursively.
+ */
+function translateRemainingPathToSymbolNamespace(
+  childInstance: FigDesignNode,
+  tailGuids: readonly FigGuid[],
+  ctx: BuildContext,
+): readonly FigGuid[] | undefined {
+  if (tailGuids.length === 0) { return undefined; }
+  if (!childInstance.symbolId) { return undefined; }
+  if (!ctx.rawSymbolMap) { return undefined; }
+
+  const rawChildInstance = ctx.rawSymbolMap.get(childInstance.id);
+  if (!rawChildInstance) {
+    // The INSTANCE isn't in the raw map (may happen for synthetic
+    // test trees). Without the raw node we can't build the
+    // translation map; skip this promotion — better to drop the
+    // override than apply one on the wrong node.
+    return undefined;
+  }
+
+  const effectiveGuid = getEffectiveSymbolID(rawChildInstance);
+  if (!effectiveGuid) { return undefined; }
+
+  const resolvedSymbol = resolveSymbolGuidStr(effectiveGuid, ctx.rawSymbolMap);
+  if (!resolvedSymbol) { return undefined; }
+
+  // Seed the translation map with a synthetic override whose first
+  // guid is `tailGuids[0]`. `buildGuidTranslationMap` derives its
+  // mapping from the set of override guids it's asked about — without
+  // this seed the child INSTANCE's own (empty) dsd/overrides produce
+  // an empty map and we'd fall through to "no translation".
+  //
+  // Example: outer Close Button's dsd targets
+  // `[Close_guid, inner_guid=5432:23135, text_guid=5426:2011]`.
+  // After first-level translation and promotion into Close's tail,
+  // the INSTANCE-scoped `5432:23135` must resolve to the
+  // SYMBOL-scoped `15:407`. Close itself has no overrides, so the map
+  // is empty unless we tell buildGuidTranslationMap "I need 5432:23135
+  // matched". With the seeded entry in place, its localID-based
+  // heuristics map it to SYMBOL descendant 15:407.
+  const seed: import("@aurochs/fig/types").FigKiwiSymbolOverride = {
+    guidPath: { guids: [tailGuids[0]] },
+  } as unknown as import("@aurochs/fig/types").FigKiwiSymbolOverride;
+  const seededOverrides = [
+    ...(getInstanceSymbolOverrides(rawChildInstance) ?? []),
+    seed,
+  ];
+
+  const translationMap = buildGuidTranslationMap(
+    safeChildren(resolvedSymbol.node),
+    rawChildInstance.derivedSymbolData,
+    seededOverrides,
+    rawChildInstance.componentPropAssignments,
+    ctx.rawSymbolMap,
+  );
+
+  if (translationMap.size === 0) {
+    return tailGuids;
+  }
+
+  const firstTailStr = guidToString(tailGuids[0]);
+  const mapped = translationMap.get(firstTailStr);
+  if (!mapped) {
+    return tailGuids;
+  }
+
+  return [parseGuidStr(mapped), ...tailGuids.slice(1)];
+}
+
+/**
+ * Parse a "sessionID:localID" string back into a FigGuid, mirroring
+ * the private helper in `@aurochs/fig/symbols/guid-translation`.
+ */
+function parseGuidStr(s: string): FigGuid {
+  const [session, local] = s.split(":");
+  return { sessionID: Number(session), localID: Number(local) };
 }
 
 /**
@@ -622,18 +881,23 @@ function resolveInstance(
 
   // ── Step 5: Derived symbol data (pre-computed layout for resized instances) ──
   if (node.derivedSymbolData && node.derivedSymbolData.length > 0) {
-    applyDerivedSymbolData(children, node.derivedSymbolData);
+    applyDerivedSymbolData(children, node.derivedSymbolData, ctx);
   }
 
   // ── Step 6: Constraint resolution for resized instances ──
   // Mirrors `resolveInstanceLayout` in @aurochs/fig/symbols: the INSTANCE
-  // size is only honoured when there is a mechanism to redistribute the
-  // children to the new extent — either authored constraint settings or
-  // pre-computed derivedSymbolData. Without either, the instance falls back
-  // to the SYMBOL's size; applying the INSTANCE size unconditionally would
-  // clip or stretch children relative to a layout they were not designed
-  // for, producing the "tighter rounded clip" / "3 different-sized
-  // buttons" regressions.
+  // size is honoured when either (a) there is a mechanism to redistribute
+  // the SYMBOL's children to the new extent — authored constraint
+  // settings or pre-computed derivedSymbolData — or (b) the SYMBOL has
+  // no children, so there is nothing to redistribute and the INSTANCE
+  // size can be applied directly (leaf INSTANCE — typical of icon /
+  // shape components).
+  //
+  // Without any of these conditions, the instance falls back to the
+  // SYMBOL's size; applying the INSTANCE size unconditionally would
+  // clip or stretch children relative to a layout they were not
+  // designed for, producing the "tighter rounded clip" / "3 different-
+  // sized buttons" regressions.
   const sizeChanged = instanceSize.x !== symbolSize.x || instanceSize.y !== symbolSize.y;
   if (sizeChanged) {
     const hasDerivedData = node.derivedSymbolData !== undefined && node.derivedSymbolData.length > 0;
@@ -645,9 +909,16 @@ function resolveInstance(
       // redistribute it to the INSTANCE extent.
       return (hc !== undefined && hc.name !== "MIN") || (vc !== undefined && vc.name !== "MIN");
     });
+    // Leaf INSTANCE: SYMBOL has no children to redistribute, so applying
+    // the INSTANCE size is unambiguous — there is no layout to disturb.
+    // This covers the "Icon=Messages" case where the SYMBOL is a single
+    // shape (66×66) but every INSTANCE sits in a 20×20 slot authored
+    // on the parent. Without this branch the SYMBOL size leaks through
+    // and every such icon renders at the SYMBOL's intrinsic size.
+    const isLeafInstance = children.length === 0;
 
-    if (hasDerivedData || hasConstraints) {
-      if (!hasDerivedData) {
+    if (hasDerivedData || hasConstraints || isLeafInstance) {
+      if (!hasDerivedData && !isLeafInstance) {
         applyConstraintResolution(children, symbolSize, instanceSize);
       }
       effectiveNode.size = instanceSize;
@@ -1411,6 +1682,7 @@ export function buildSceneGraph(nodes: readonly FigDesignNode[], options: BuildS
     blobs: options.blobs,
     images: options.images,
     symbolMap: options.symbolMap,
+    rawSymbolMap: options.rawSymbolMap ?? undefined,
     styleRegistry: options.styleRegistry,
     showHiddenNodes: options.showHiddenNodes,
     warnings: options.warnings,
