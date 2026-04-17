@@ -58,7 +58,7 @@ function convertStrokeGradient(paint: FigGradientPaint): LinearGradientFill | Ra
 function buildStrokeLayer(paint: FigPaint): StrokeLayer {
   const paintType = getPaintType(paint);
   const DEFAULT_COLOR = { r: 0, g: 0, b: 0, a: 1 };
-  const blendMode = convertFigmaBlendMode((paint as Record<string, unknown>).blendMode as string | undefined);
+  const blendMode = convertFigmaBlendMode(paint.blendMode);
 
   if (paintType === "SOLID") {
     const solidPaint = paint as FigPaint & { color: FigColor };

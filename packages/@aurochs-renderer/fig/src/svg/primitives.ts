@@ -112,10 +112,14 @@ export function defs(...children: readonly SvgString[]): SvgString {
 }
 
 /**
- * Create an SVG path element
+ * Shared SVG paint attributes (fill + stroke) for shape-like elements.
+ *
+ * Exported as a reusable attribute shape so call sites can build well-typed
+ * fill/stroke objects without resorting to `Record<string, ...>` bags and
+ * downstream casts. `path` / `rect` / `circle` / `ellipse` all accept a
+ * superset of these.
  */
-export function path(attrs: {
-  d: string;
+export type SvgPaintAttrs = {
   fill?: string;
   stroke?: string;
   "stroke-width"?: number | string;
@@ -129,7 +133,12 @@ export function path(attrs: {
   class?: string;
   style?: string;
   opacity?: number | string;
-}): SvgString {
+};
+
+/**
+ * Create an SVG path element
+ */
+export function path(attrs: SvgPaintAttrs & { d: string }): SvgString {
   const attrStr = buildAttrs(attrs);
   return unsafeSvg(`<path ${attrStr}/>`);
 }
@@ -137,23 +146,14 @@ export function path(attrs: {
 /**
  * Create an SVG rect element
  */
-export function rect(attrs: {
+export function rect(attrs: SvgPaintAttrs & {
   x?: number | string;
   y?: number | string;
   width: number | string;
   height: number | string;
   rx?: number | string;
   ry?: number | string;
-  fill?: string;
-  stroke?: string;
-  "stroke-width"?: number | string;
-  "fill-opacity"?: number | string;
-  "stroke-opacity"?: number | string;
-  transform?: string;
   filter?: string;
-  class?: string;
-  style?: string;
-  opacity?: number | string;
 }): SvgString {
   const attrStr = buildAttrs(attrs);
   return unsafeSvg(`<rect ${attrStr}/>`);
@@ -409,7 +409,21 @@ export function clipPath(
  * Create an SVG mask element
  */
 export function mask(
-  attrs: { id: string; x?: string; y?: string; width?: string; height?: string; style?: string },
+  attrs: {
+    id: string;
+    x?: string;
+    y?: string;
+    width?: string;
+    height?: string;
+    style?: string;
+    /**
+     * Defaults to `objectBoundingBox` per SVG spec. Figma's own export
+     * uses `userSpaceOnUse` with absolute-coordinate mask content, which
+     * is usually the intent when the mask's shapes carry real pixel
+     * positions rather than BB-relative ones.
+     */
+    maskUnits?: "userSpaceOnUse" | "objectBoundingBox";
+  },
   ...children: readonly SvgString[]
 ): SvgString {
   const attrStr = buildAttrs(attrs);

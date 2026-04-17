@@ -11,6 +11,7 @@ import { compressZstd, compressDeflateRaw } from "../compression";
 import { decompressDeflateRaw, decompressZstd, detectCompression } from "../compression";
 import type { KiwiSchema, FigNode } from "../types";
 import type { FigBlob as ParserFigBlob } from "../parser/blob-decoder";
+import type { FigImage } from "../parser/fig-file";
 import { StreamingFigEncoder } from "../kiwi/stream";
 import { parseFigHeader, getPayload } from "../parser/header";
 import { splitFigChunks, decodeFigSchema, decodeFigMessage } from "../kiwi/decoder";
@@ -37,12 +38,11 @@ export type FigMetadata = {
   readonly exportedAt?: string;
 };
 
-/** Image data */
-export type FigImage = {
-  readonly ref: string;
-  readonly data: Uint8Array;
-  readonly mimeType: string;
-};
+// FigImage is the SoT type from the parser. Re-export the same identity so
+// callers that consume the roundtrip loader's `images` field and callers
+// that consume the parser's `images` field hand around the same type —
+// that erases the need for `as FigImage` casts at integration points.
+export type { FigImage } from "../parser/fig-file";
 
 /** Loaded .fig file data */
 export type LoadedFigFile = {

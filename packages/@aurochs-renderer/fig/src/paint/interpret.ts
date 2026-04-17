@@ -80,7 +80,7 @@ export function getGradientDirectionFromTransform(transform: FigGradientTransfor
  * Get gradient direction from a paint, handling both API and Kiwi formats.
  *
  * API format: `paint.gradientHandlePositions` — [start, end, ...]
- * Kiwi format: `(paint as any).transform` — 2x3 affine matrix
+ * Kiwi format: `paint.transform` — 2x3 affine matrix
  */
 export function getGradientDirection(paint: FigGradientPaint): GradientDirection {
   const handles = paint.gradientHandlePositions;
@@ -257,10 +257,15 @@ export function getImageTransform(paint: FigImagePaint): FigImagePaint["transfor
 
 /**
  * Get tile scaling factor from an image paint.
+ *
+ * API format uses `scalingFactor`. Kiwi binary format uses `scale`.
  */
 export function getScalingFactor(paint: FigImagePaint): number | undefined {
   if (typeof paint.scalingFactor === "number" && paint.scalingFactor > 0) {
     return paint.scalingFactor;
+  }
+  if (typeof paint.scale === "number" && paint.scale > 0) {
+    return paint.scale;
   }
   return undefined;
 }

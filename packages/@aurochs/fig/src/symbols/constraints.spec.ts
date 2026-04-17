@@ -263,24 +263,24 @@ describe("resolveInstanceLayout", () => {
 
   it("does not touch dsd-covered children during constraint supplementation", () => {
     // Both children covered by dsd — no constraint supplementation needed
-    const childA = makeChild(
-      { sessionID: 1, localID: 10 },
-      0,
-      0,
-      100,
-      50,
-      CONSTRAINT_TYPE_VALUES.STRETCH,
-      CONSTRAINT_TYPE_VALUES.STRETCH,
-    );
-    const childB = makeChild(
-      { sessionID: 1, localID: 20 },
-      0,
-      0,
-      100,
-      50,
-      CONSTRAINT_TYPE_VALUES.STRETCH,
-      CONSTRAINT_TYPE_VALUES.STRETCH,
-    );
+    const childA = makeChild({
+      guid: { sessionID: 1, localID: 10 },
+      x: 0,
+      y: 0,
+      w: 100,
+      h: 50,
+      hConstraint: CONSTRAINT_TYPE_VALUES.STRETCH,
+      vConstraint: CONSTRAINT_TYPE_VALUES.STRETCH,
+    });
+    const childB = makeChild({
+      guid: { sessionID: 1, localID: 20 },
+      x: 0,
+      y: 0,
+      w: 100,
+      h: 50,
+      hConstraint: CONSTRAINT_TYPE_VALUES.STRETCH,
+      vConstraint: CONSTRAINT_TYPE_VALUES.STRETCH,
+    });
 
     const derived = [
       {

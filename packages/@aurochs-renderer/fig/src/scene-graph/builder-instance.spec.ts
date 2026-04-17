@@ -12,7 +12,7 @@
 import { buildSceneGraph, type BuildSceneGraphOptions } from "./builder";
 import type { FrameNode, GroupNode } from "./types";
 import type { FigDesignNode } from "@aurochs/fig/domain";
-import { toNodeId } from "@aurochs/fig/domain";
+import { toNodeId, EMPTY_FIG_STYLE_REGISTRY } from "@aurochs/fig/domain";
 import type { FigPaint, FigEffect } from "@aurochs/fig/types";
 
 // =============================================================================
@@ -82,6 +82,9 @@ function buildWithSymbols(
     images: new Map(),
     canvasSize: { width: 200, height: 200 },
     symbolMap,
+    styleRegistry: EMPTY_FIG_STYLE_REGISTRY,
+    showHiddenNodes: false,
+    warnings: [],
   };
   return buildSceneGraph(nodes, options);
 }
@@ -116,7 +119,14 @@ describe("INSTANCE resolution — property merge", () => {
     expect(frame.fills[0].type).toBe("solid");
   });
 
-  it("keeps INSTANCE fills when they contain visible paints", () => {
+  it("SYMBOL fills always win over directly-set INSTANCE fills", () => {
+    // Per mergeSymbolProperties (SoT in @aurochs/fig/symbols):
+    // SYMBOL visual properties override INSTANCE-level values. An
+    // INSTANCE that carries its own `fills` array cannot override the
+    // SYMBOL's by direct field assignment — that path is not how Figma
+    // exports instance variations. INSTANCE-specific paint changes must
+    // travel through `symbolOverrides` (self-referencing guidPath) so the
+    // change is declarative, which Step 2 of resolveInstance handles.
     const symbol = makeNode({
       id: "0:1",
       type: "COMPONENT",
@@ -128,6 +138,8 @@ describe("INSTANCE resolution — property merge", () => {
       id: "0:2",
       type: "INSTANCE",
       symbolId: nid("0:1"),
+      // Directly-set INSTANCE fills are an author artefact and should NOT
+      // override the SYMBOL.
       fills: [BLUE_FILL],
     });
 
@@ -135,10 +147,10 @@ describe("INSTANCE resolution — property merge", () => {
     const sg = buildWithSymbols([instance], symbolMap);
 
     const frame = sg.root.children[0] as FrameNode;
-    // Should keep BLUE fill from instance (visible paints take precedence)
     expect(frame.fills.length).toBeGreaterThan(0);
     if (frame.fills[0].type === "solid") {
-      expect(frame.fills[0].color.b).toBe(1); // blue
+      expect(frame.fills[0].color.r).toBe(1); // red — from SYMBOL
+      expect(frame.fills[0].color.b).toBe(0);
     }
   });
 

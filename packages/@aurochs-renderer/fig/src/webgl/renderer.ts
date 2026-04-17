@@ -192,14 +192,13 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
       }
     }
 
-    // Frame backgrounds may have image fills
+    // Frame backgrounds may have image fills. RenderFrameNode exposes
+    // `sourceFills` directly (same shape as RenderRectNode.sourceFills),
+    // so backends don't need to peek into the source SceneNode.
     if (node.type === "frame") {
-      const src = node.source;
-      if ("fills" in src) {
-        for (const fill of (src as { fills: readonly Fill[] }).fills) {
-          if (fill.type === "image") {
-            await textureCache.getOrCreate(fill.imageRef, fill.data, fill.mimeType);
-          }
+      for (const fill of node.sourceFills) {
+        if (fill.type === "image") {
+          await textureCache.getOrCreate(fill.imageRef, fill.data, fill.mimeType);
         }
       }
     }
@@ -220,12 +219,11 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
   /**
    * Extract effects from a RenderNode's source.
    * WebGL renders effects (drop shadow, inner shadow, layer blur) using
-   * GPU-native FBO operations, not SVG filters. So we read raw effects
-   * from the source SceneNode.
+   * GPU-native FBO operations, not SVG filters. SceneNodeBase guarantees
+   * an `effects` field on every SceneNode variant, so no cast is needed.
    */
   function getSourceEffects(node: RenderNodeBase): readonly Effect[] {
-    const src = node.source;
-    return "effects" in src ? (src as { effects: readonly Effect[] }).effects : [];
+    return node.source.effects;
   }
 
   function findLayerBlur(node: RenderNodeBase): LayerBlurEffect | null {
@@ -993,13 +991,9 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
       renderDropShadows({ effects, vertices, transform, opacity });
     }
 
-    // Background fills — use source fills for GPU draw data
+    // Background fills — use source fills for GPU draw data.
     if (node.background) {
-      const src = node.source;
-      if ("fills" in src) {
-        const fills = (src as { fills: readonly Fill[] }).fills;
-        drawAllFills({ vertices, fills, transform, opacity, elementSize });
-      }
+      drawAllFills({ vertices, fills: node.sourceFills, transform, opacity, elementSize });
     }
 
     // Inner shadows (after fills, before strokes) — only if visible content
@@ -1011,12 +1005,12 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
     if (node.background?.strokeRendering) {
       const sr = node.background.strokeRendering;
       if (sr.mode === "uniform") {
-        // Uniform stroke on frame: tessellate rect stroke
-        const sourceStroke = node.source as { stroke?: { width: number; color: Color; opacity: number; dashPattern?: readonly number[] } };
-        if (sourceStroke.stroke && sourceStroke.stroke.width > 0) {
+        // Uniform stroke: tessellate rect stroke using RenderFrameNode.sourceStroke.
+        const sourceStroke = node.sourceStroke;
+        if (sourceStroke && sourceStroke.width > 0) {
           renderUniformStroke({
             sr,
-            sourceStroke: sourceStroke.stroke,
+            sourceStroke,
             shapeVerticesFactory: (sw, dashPattern) => tessellateRectStroke({
               w: node.width,
               h: node.height,
@@ -1275,13 +1269,13 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
       const textureKey = `__text_${node.id}`;
       const entryRef = { value: textureCache.getIfCached(textureKey) };
 
-      if (!entryRef.value) {
-        const srcText = node.source as { textLineLayout?: unknown };
-        if (srcText.textLineLayout) {
-          const canvas = renderFallbackTextToCanvas(node.source as Parameters<typeof renderFallbackTextToCanvas>[0]);
-          if (canvas) {
-            entryRef.value = textureCache.createFromCanvas(textureKey, canvas);
-          }
+      if (!entryRef.value && node.sourceTextLineLayout) {
+        // RenderTextNode.sourceTextLineLayout is already resolved by the
+        // scene-graph pipeline; the Canvas fallback renderer consumes the
+        // same TextNode shape, so we can hand the source through directly.
+        const canvas = renderFallbackTextToCanvas(node.source);
+        if (canvas) {
+          entryRef.value = textureCache.createFromCanvas(textureKey, canvas);
         }
       }
 

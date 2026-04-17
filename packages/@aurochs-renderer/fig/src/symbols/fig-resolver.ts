@@ -1,49 +1,35 @@
 /**
  * @file FigResolver — INSTANCE → SYMBOL 解決のドメインオブジェクト
  *
- * symbolMap（GUID→SYMBOLノード）を保持し、INSTANCE解決に必要な
- * 全操作をメソッドとして提供する。
+ * 責務:
+ *  1. SYMBOL依存関係をトポロジカルソートし、INSTANCEを事前展開したキャッシュを保持
+ *  2. style registry の保持
+ *  3. 解決ロジック本体は @aurochs/fig/symbols の `resolveInstanceNode`
+ *     (SSoT) に完全委譲する。このラッパは「symbolMap と resolvedCache と
+ *     styleRegistry を毎回渡すのを省略する」ためだけに存在する。
  *
- * createFigResolver() で生成。class ではなく関数ベースのオブジェクトを返す。
- * クロージャで状態を閉じ込め、prototype チェーンや this バインディングを排除する。
+ * DRY方針:
+ *  resolveInstance / resolveReferences / resolveSymbol は全て
+ *  @aurochs/fig/symbols 側の関数を呼び出すだけ。ここで独自ロジックを
+ *  書いてはいけない。
  */
 
-import type { FigNode, MutableFigNode, FigKiwiSymbolOverride } from "@aurochs/fig/types";
-import { guidToString, getNodeType, safeChildren, type FigGuid } from "@aurochs/fig/parser";
-import { extractSymbolIDPair } from "@aurochs/fig/symbols";
+import type { FigNode } from "@aurochs/fig/types";
+import { getNodeType, safeChildren, type FigGuid } from "@aurochs/fig/parser";
 import {
-  buildGuidTranslationMap,
-  translateOverrides,
-  resolveInstanceLayout,
-  getInstanceSymbolOverrides,
-  collectComponentPropAssignments,
-  cloneSymbolChildren,
-  applySelfOverridesToMergedNode,
+  resolveInstanceNode,
+  resolveInstanceReferences,
+  resolveSymbolGuidStr,
   buildFigStyleRegistry,
-  resolveStyleIdOnMutableNode,
-  type FigDerivedSymbolData,
+  type ResolvedInstanceNode,
+  type InstanceResolution,
 } from "@aurochs/fig/symbols";
-import type { FigStyleRegistry } from "@aurochs/fig/domain";
 
 // =============================================================================
 // Public types
 // =============================================================================
 
-/**
- * Resolved INSTANCE references.
- */
-export type InstanceResolution = {
-  readonly effectiveSymbol: { readonly node: FigNode; readonly guidStr: string } | undefined;
-  readonly allDependencyGuids: readonly string[];
-};
-
-/**
- * Result of resolving an INSTANCE node into renderable content.
- */
-export type ResolvedInstanceNode = {
-  readonly node: FigNode;
-  readonly children: readonly FigNode[];
-};
+export type { ResolvedInstanceNode, InstanceResolution } from "@aurochs/fig/symbols";
 
 /**
  * INSTANCE → SYMBOL 解決のドメインオブジェクト。
@@ -63,15 +49,141 @@ export type FigResolver = {
 // Internal constants
 // =============================================================================
 
-const SELF_OVERRIDE_PROPERTIES = new Set([
-  "fillPaints", "strokePaints", "strokeWeight", "strokeJoin", "strokeCap",
-  "effects", "opacity", "visible", "cornerRadius", "rectangleCornerRadii",
-  "blendMode", "clipsContent", "frameMaskDisabled", "mask", "cornerSmoothing",
-  "backgroundColor", "backgroundEnabled", "backgroundOpacity",
-  "styleIdForFill", "styleIdForStrokeFill",
-]);
-
 const SYMBOL_NODE_TYPES = new Set(["SYMBOL", "COMPONENT", "COMPONENT_SET"]);
+
+// =============================================================================
+// Pre-resolution: clone SYMBOL trees with nested INSTANCE children expanded
+// so lookups don't pay the cost of cloning on every call.
+// =============================================================================
+
+function cloneAndExpand(
+  node: FigNode,
+  symbolMap: ReadonlyMap<string, FigNode>,
+  cache: Map<string, FigNode>,
+  expanding: Set<string>,
+): FigNode {
+  const nodeType = getNodeType(node);
+
+  if (nodeType === "INSTANCE") {
+    const resolution = resolveInstanceReferences(node, symbolMap);
+    if (resolution.effectiveSymbol) {
+      const { guidStr: symGuid, node: symNodeDirect } = resolution.effectiveSymbol;
+      if (!expanding.has(symGuid)) {
+        const sym = cache.get(symGuid) ?? symNodeDirect;
+        expanding.add(symGuid);
+        const expanded: FigNode = {
+          ...node,
+          children: safeChildren(sym).map((c) => cloneAndExpand(c, symbolMap, cache, expanding)),
+        };
+        expanding.delete(symGuid);
+        return expanded;
+      }
+    }
+  }
+
+  const children = safeChildren(node);
+  if (children.length === 0) {
+    return { ...node };
+  }
+  return {
+    ...node,
+    children: children.map((c) => cloneAndExpand(c, symbolMap, cache, expanding)),
+  };
+}
+
+function walkTree(node: FigNode, visitor: (n: FigNode) => void): void {
+  visitor(node);
+  for (const child of safeChildren(node)) {
+    walkTree(child, visitor);
+  }
+}
+
+function buildDependencyGraph(
+  symbolMap: ReadonlyMap<string, FigNode>,
+): { resolveOrder: string[]; circularWarnings: string[] } {
+  const dependencies = new Map<string, Set<string>>();
+  const allSymbolIds = new Set<string>();
+
+  for (const [guidStr, node] of symbolMap) {
+    if (!SYMBOL_NODE_TYPES.has(getNodeType(node))) { continue; }
+    allSymbolIds.add(guidStr);
+
+    const deps = new Set<string>();
+    for (const child of safeChildren(node)) {
+      walkTree(child, (n) => {
+        if (getNodeType(n) !== "INSTANCE") { return; }
+        const resolution = resolveInstanceReferences(n, symbolMap);
+        for (const depGuid of resolution.allDependencyGuids) {
+          deps.add(depGuid);
+        }
+      });
+    }
+
+    const validDeps = new Set<string>();
+    for (const dep of deps) {
+      const depNode = symbolMap.get(dep);
+      if (depNode && SYMBOL_NODE_TYPES.has(getNodeType(depNode))) {
+        validDeps.add(dep);
+      }
+    }
+    validDeps.delete(guidStr);
+    dependencies.set(guidStr, validDeps);
+  }
+
+  const depCount = new Map<string, number>();
+  for (const id of allSymbolIds) {
+    depCount.set(id, (dependencies.get(id) ?? new Set()).size);
+  }
+
+  const queue: string[] = [];
+  for (const [id, count] of depCount) {
+    if (count === 0) { queue.push(id); }
+  }
+
+  const resolveOrder: string[] = [];
+  const circularWarnings: string[] = [];
+
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    resolveOrder.push(current);
+    for (const [id, deps] of dependencies) {
+      if (deps.has(current) && depCount.has(id)) {
+        const newCount = (depCount.get(id) ?? 0) - 1;
+        depCount.set(id, newCount);
+        if (newCount === 0) { queue.push(id); }
+      }
+    }
+  }
+
+  for (const id of allSymbolIds) {
+    if (!resolveOrder.includes(id)) {
+      const node = symbolMap.get(id);
+      circularWarnings.push(`Circular dependency detected for SYMBOL "${node?.name ?? id}" (${id})`);
+      resolveOrder.push(id);
+    }
+  }
+
+  return { resolveOrder, circularWarnings };
+}
+
+function preResolve(
+  symbolMap: ReadonlyMap<string, FigNode>,
+  warnings: string[],
+): ReadonlyMap<string, FigNode> {
+  const { resolveOrder, circularWarnings } = buildDependencyGraph(symbolMap);
+  for (const w of circularWarnings) { warnings.push(w); }
+
+  const cache = new Map<string, FigNode>();
+  const expanding = new Set<string>();
+
+  for (const symbolId of resolveOrder) {
+    const originalSymbol = symbolMap.get(symbolId);
+    if (!originalSymbol) { continue; }
+    cache.set(symbolId, cloneAndExpand(originalSymbol, symbolMap, cache, expanding));
+  }
+
+  return cache;
+}
 
 // =============================================================================
 // Factory
@@ -90,305 +202,20 @@ export function createFigResolver(
 ): FigResolver {
   const warnings: string[] = [];
   const styleRegistry = buildFigStyleRegistry(symbolMap);
+  const resolvedSymbolCache = preResolve(symbolMap, warnings);
 
-  // --- Symbol lookup (with localID fallback) ---
+  // Full INSTANCE resolution delegates to the SSoT in @aurochs/fig/symbols.
+  // We only pre-bind the context (symbolMap + cache + styleRegistry).
+  function resolveInstance(node: FigNode): ResolvedInstanceNode {
+    return resolveInstanceNode(node, { symbolMap, resolvedSymbolCache, styleRegistry });
+  }
 
   function resolveSymbol(guid: FigGuid): { node: FigNode; guidStr: string } | undefined {
-    const exactKey = guidToString(guid);
-    const exact = symbolMap.get(exactKey);
-    if (exact) { return { node: exact, guidStr: exactKey }; }
-
-    const localIdSuffix = `:${guid.localID}`;
-    for (const [key, node] of symbolMap) {
-      if (key.endsWith(localIdSuffix)) {
-        return { node, guidStr: key };
-      }
-    }
-    return undefined;
+    return resolveSymbolGuidStr(guid, symbolMap);
   }
-
-  // --- INSTANCE reference resolution ---
 
   function resolveReferences(node: FigNode): InstanceResolution {
-    const pair = extractSymbolIDPair(node);
-    if (!pair) { return { effectiveSymbol: undefined, allDependencyGuids: [] }; }
-
-    const allDeps: string[] = [];
-    const primaryResolved = resolveSymbol(pair.symbolID);
-    if (primaryResolved) { allDeps.push(primaryResolved.guidStr); }
-
-    const overrideResolved = pair.overriddenSymbolID ? resolveSymbol(pair.overriddenSymbolID) : undefined;
-    if (overrideResolved) { allDeps.push(overrideResolved.guidStr); }
-
-    return {
-      effectiveSymbol: overrideResolved ?? primaryResolved,
-      allDependencyGuids: allDeps,
-    };
-  }
-
-  // --- Property merge ---
-
-  function mergeProperties(instanceNode: FigNode, symbolNode: FigNode): MutableFigNode {
-    const merged: MutableFigNode = { ...instanceNode };
-
-    if (symbolNode.fillPaints) { merged.fillPaints = symbolNode.fillPaints; }
-    if (symbolNode.strokePaints) { merged.strokePaints = symbolNode.strokePaints; }
-    if (symbolNode.strokeWeight !== undefined) { merged.strokeWeight = symbolNode.strokeWeight; }
-    if (symbolNode.cornerRadius !== undefined) { merged.cornerRadius = symbolNode.cornerRadius; }
-    if (symbolNode.rectangleCornerRadii) { merged.rectangleCornerRadii = symbolNode.rectangleCornerRadii; }
-
-    const instSize = instanceNode.size;
-    const symSize = symbolNode.size;
-    const sameSize = instSize && symSize && instSize.x === symSize.x && instSize.y === symSize.y;
-    if (symbolNode.fillGeometry && sameSize) { merged.fillGeometry = symbolNode.fillGeometry; }
-    if (symbolNode.strokeGeometry && sameSize) { merged.strokeGeometry = symbolNode.strokeGeometry; }
-
-    const instanceHasOwnClip = instanceNode.frameMaskDisabled !== undefined || instanceNode.clipsContent !== undefined;
-    if (!instanceHasOwnClip) {
-      if (symbolNode.frameMaskDisabled !== undefined) {
-        merged.frameMaskDisabled = symbolNode.frameMaskDisabled;
-      } else if (symbolNode.clipsContent !== undefined) {
-        merged.clipsContent = symbolNode.clipsContent;
-      } else {
-        merged.frameMaskDisabled = false;
-      }
-    }
-
-    if (symbolNode.effects) { merged.effects = symbolNode.effects; }
-    if (symbolNode.strokeJoin !== undefined) { merged.strokeJoin = symbolNode.strokeJoin; }
-    if (symbolNode.strokeCap !== undefined) { merged.strokeCap = symbolNode.strokeCap; }
-    if (symbolNode.blendMode !== undefined) { merged.blendMode = symbolNode.blendMode; }
-    if (symbolNode.mask !== undefined) { merged.mask = symbolNode.mask; }
-    if (symbolNode.cornerSmoothing !== undefined) { merged.cornerSmoothing = symbolNode.cornerSmoothing; }
-    if (symbolNode.size) { merged.size = symbolNode.size; }
-    // Inherit SYMBOL opacity only when defined; preserve INSTANCE opacity otherwise.
-    // Self-overrides (applySelfOverrides) may later restore the INSTANCE's own opacity.
-    if (symbolNode.opacity !== undefined) { merged.opacity = symbolNode.opacity; }
-
-    return merged;
-  }
-
-  // --- Self-referencing overrides ---
-
-  function applySelfOverrides(
-    mergedNode: MutableFigNode,
-    overrides: readonly FigKiwiSymbolOverride[],
-    symbolGuidStr: string,
-  ): void {
-    let hasStyleIdOverride = false;
-    for (const ov of overrides) {
-      const guids = ov.guidPath?.guids;
-      if (!guids || guids.length !== 1) { continue; }
-      if (guidToString(guids[0]) !== symbolGuidStr) { continue; }
-      for (const [key, value] of Object.entries(ov)) {
-        if (key === "guidPath") { continue; }
-        if (!SELF_OVERRIDE_PROPERTIES.has(key)) { continue; }
-        mergedNode[key] = value;
-        if (key === "styleIdForFill" || key === "styleIdForStrokeFill") {
-          hasStyleIdOverride = true;
-        }
-      }
-    }
-    if (hasStyleIdOverride) {
-      resolveStyleIdOnMutableNode(mergedNode, styleRegistry);
-    }
-  }
-
-  // --- Override GUID translation ---
-
-  function translateIfNeeded(
-    translationMap: ReadonlyMap<string, string>,
-    overrides: readonly FigKiwiSymbolOverride[] | undefined,
-  ): readonly FigKiwiSymbolOverride[] | undefined {
-    if (translationMap.size > 0 && overrides) {
-      return translateOverrides(overrides, translationMap);
-    }
-    return overrides;
-  }
-
-  // --- Tree walking ---
-
-  function walkTree(node: FigNode, visitor: (n: FigNode) => void): void {
-    visitor(node);
-    for (const child of safeChildren(node)) {
-      walkTree(child, visitor);
-    }
-  }
-
-  // --- Pre-resolution: clone with INSTANCE expansion ---
-
-  function cloneAndExpand(node: FigNode, cache: Map<string, FigNode>, expanding: Set<string>): FigNode {
-    const nodeType = getNodeType(node);
-
-    if (nodeType === "INSTANCE") {
-      const resolution = resolveReferences(node);
-      if (resolution.effectiveSymbol) {
-        const { guidStr: symGuid, node: symNodeDirect } = resolution.effectiveSymbol;
-        if (!expanding.has(symGuid)) {
-          const sym = cache.get(symGuid) ?? symNodeDirect;
-          expanding.add(symGuid);
-          const expanded: FigNode = {
-            ...node,
-            children: safeChildren(sym).map((c) => cloneAndExpand(c, cache, expanding)),
-          };
-          expanding.delete(symGuid);
-          return expanded;
-        }
-      }
-    }
-
-    const children = safeChildren(node);
-    if (children.length === 0) {
-      return { ...node };
-    }
-    return {
-      ...node,
-      children: children.map((c) => cloneAndExpand(c, cache, expanding)),
-    };
-  }
-
-  // --- Pre-resolution: dependency graph + topological sort ---
-
-  function buildDependencyGraph(): { resolveOrder: string[]; circularWarnings: string[] } {
-    const dependencies = new Map<string, Set<string>>();
-    const allSymbolIds = new Set<string>();
-
-    for (const [guidStr, node] of symbolMap) {
-      if (!SYMBOL_NODE_TYPES.has(getNodeType(node))) { continue; }
-      allSymbolIds.add(guidStr);
-
-      const deps = new Set<string>();
-      for (const child of safeChildren(node)) {
-        walkTree(child, (n) => {
-          if (getNodeType(n) !== "INSTANCE") { return; }
-          const resolution = resolveReferences(n);
-          for (const depGuid of resolution.allDependencyGuids) {
-            deps.add(depGuid);
-          }
-        });
-      }
-
-      const validDeps = new Set<string>();
-      for (const dep of deps) {
-        const depNode = symbolMap.get(dep);
-        if (depNode && SYMBOL_NODE_TYPES.has(getNodeType(depNode))) {
-          validDeps.add(dep);
-        }
-      }
-      validDeps.delete(guidStr);
-      dependencies.set(guidStr, validDeps);
-    }
-
-    const depCount = new Map<string, number>();
-    for (const id of allSymbolIds) {
-      depCount.set(id, (dependencies.get(id) ?? new Set()).size);
-    }
-
-    const queue: string[] = [];
-    for (const [id, count] of depCount) {
-      if (count === 0) { queue.push(id); }
-    }
-
-    const resolveOrder: string[] = [];
-    const circularWarnings: string[] = [];
-
-    while (queue.length > 0) {
-      const current = queue.shift()!;
-      resolveOrder.push(current);
-      for (const [id, deps] of dependencies) {
-        if (deps.has(current) && depCount.has(id)) {
-          const newCount = (depCount.get(id) ?? 0) - 1;
-          depCount.set(id, newCount);
-          if (newCount === 0) { queue.push(id); }
-        }
-      }
-    }
-
-    for (const id of allSymbolIds) {
-      if (!resolveOrder.includes(id)) {
-        const node = symbolMap.get(id);
-        circularWarnings.push(`Circular dependency detected for SYMBOL "${node?.name ?? id}" (${id})`);
-        resolveOrder.push(id);
-      }
-    }
-
-    return { resolveOrder, circularWarnings };
-  }
-
-  // --- Pre-resolution: execute ---
-
-  function preResolve(): ReadonlyMap<string, FigNode> {
-    const { resolveOrder, circularWarnings } = buildDependencyGraph();
-    for (const w of circularWarnings) { warnings.push(w); }
-
-    const cache = new Map<string, FigNode>();
-    const expanding = new Set<string>();
-
-    for (const symbolId of resolveOrder) {
-      const originalSymbol = symbolMap.get(symbolId);
-      if (!originalSymbol) { continue; }
-      cache.set(symbolId, cloneAndExpand(originalSymbol, cache, expanding));
-    }
-
-    return cache;
-  }
-
-  // --- Full INSTANCE resolution pipeline ---
-
-  const resolvedCache = preResolve();
-
-  function resolveInstance(node: FigNode): ResolvedInstanceNode {
-    const resolution = resolveReferences(node);
-    if (!resolution.effectiveSymbol) {
-      return { node, children: safeChildren(node) };
-    }
-
-    const { node: resolvedSymNode, guidStr: resolvedGuidStr } = resolution.effectiveSymbol;
-    const symNode = resolvedCache.get(resolvedGuidStr) ?? resolvedSymNode;
-    const originalSymNode = resolvedSymNode;
-
-    // Merge SYMBOL properties into INSTANCE
-    const mergedNode = mergeProperties(node, symNode);
-
-    // Translate override GUIDs
-    const rawSymbolOverrides = getInstanceSymbolOverrides(node);
-    const rawDerivedSymbolData = node.derivedSymbolData as FigDerivedSymbolData | undefined;
-    const translationMap = buildGuidTranslationMap(
-      safeChildren(originalSymNode),
-      rawDerivedSymbolData,
-      rawSymbolOverrides,
-    );
-    const symbolOverrides = translateIfNeeded(translationMap, rawSymbolOverrides);
-    const derivedSymbolData = translateIfNeeded(translationMap, rawDerivedSymbolData);
-
-    // Self-referencing overrides
-    if (symbolOverrides && symbolOverrides.length > 0) {
-      applySelfOverrides(mergedNode, symbolOverrides, guidToString(symNode.guid));
-    }
-
-    // Clone children with overrides
-    const componentPropAssignments = collectComponentPropAssignments(node);
-    const children = cloneSymbolChildren(symNode, {
-      symbolOverrides,
-      derivedSymbolData,
-      componentPropAssignments: componentPropAssignments.length > 0 ? componentPropAssignments : undefined,
-      styleRegistry,
-    });
-
-    // Layout resolution for resized instances
-    const instanceSize = node.size;
-    const symbolSize = symNode.size;
-    const isResized = instanceSize && symbolSize && (instanceSize.x !== symbolSize.x || instanceSize.y !== symbolSize.y);
-
-    if (isResized) {
-      const layout = resolveInstanceLayout({ children, symbolSize: symbolSize!, instanceSize: instanceSize!, derivedSymbolData });
-      if (layout.sizeApplied) {
-        mergedNode.size = instanceSize;
-      }
-      return { node: mergedNode, children: layout.children };
-    }
-
-    return { node: mergedNode, children };
+    return resolveInstanceReferences(node, symbolMap);
   }
 
   return {

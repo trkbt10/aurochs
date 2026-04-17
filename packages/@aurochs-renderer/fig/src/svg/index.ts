@@ -3,12 +3,6 @@
  */
 
 export {
-  createDefsCollector,
-  createFigSvgRenderContext,
-  createEmptyFigSvgRenderContext,
-} from "./context";
-
-export {
   type SvgString,
   unsafeSvg,
   EMPTY_SVG,
@@ -36,33 +30,10 @@ export {
 } from "./transform";
 
 export {
-  type FillAttrs,
-  getFillAttrs,
-  hasVisibleFill,
-} from "./fill";
-
-export {
-  type StrokeAttrs,
-  type StrokeOptions,
-  type GetStrokeAttrsParams,
-  getStrokeAttrs,
-  hasVisibleStroke,
-} from "./stroke";
-
-export {
   type FigSvgRenderOptions,
   renderFigToSvg,
   renderCanvas,
 } from "./renderer";
-
-export {
-  renderFrameNode,
-  renderGroupNode,
-  renderRectangleNode,
-  renderEllipseNode,
-  renderVectorNode,
-  renderTextNode,
-} from "./nodes";
 
 export {
   renderSceneGraphToSvg,

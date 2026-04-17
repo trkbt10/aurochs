@@ -98,6 +98,9 @@ function createImagePaintBuilder(imageRef: string): ImagePaintBuilder {
     },
 
     build(): ImagePaint {
+      // Kiwi format stores `imageScaleMode`; API format stores `scaleMode`.
+      // Emit both so consumers reading either field get the same value.
+      const scaleModeValue = { value: SCALE_MODE_VALUES[state.scaleMode], name: state.scaleMode };
       return {
         type: { value: PAINT_TYPE_VALUES.IMAGE, name: "IMAGE" },
         opacity: state.opacity,
@@ -108,7 +111,8 @@ function createImagePaintBuilder(imageRef: string): ImagePaintBuilder {
           hash: hexToBytes(state.imageRef),
         },
         imageRef: state.imageRef,
-        imageScaleMode: { value: SCALE_MODE_VALUES[state.scaleMode], name: state.scaleMode },
+        imageScaleMode: scaleModeValue,
+        scaleMode: scaleModeValue,
         rotation: state.rotation !== 0 ? state.rotation : undefined,
         scalingFactor: state.scalingFactor !== 1 ? state.scalingFactor : undefined,
         filters: state.filters,

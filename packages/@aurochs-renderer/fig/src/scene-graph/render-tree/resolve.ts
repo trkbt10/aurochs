@@ -636,6 +636,11 @@ function resolveFrameNode(node: FrameNode, ids: IdGenerator): RenderFrameNode {
     cornerRadius: clampedRadius,
     backgroundBlur,
     mask,
+    // Surface source fills/stroke at the RenderNode level so WebGL / other
+    // backends never discriminate `node.source.type` — consistent with
+    // RenderRectNode / RenderEllipseNode.
+    sourceFills: node.fills,
+    sourceStroke: node.stroke,
   };
 }
 

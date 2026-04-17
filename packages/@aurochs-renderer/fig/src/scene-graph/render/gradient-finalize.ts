@@ -22,9 +22,14 @@
  *   ResolvedFillDef (with userSpaceOnUse pixel coordinates)
  */
 
+import type { FigGradientPaint } from "@aurochs/fig/types";
 import type { AffineMatrix } from "../types";
 import type { ResolvedFillDef, ResolvedLinearGradient, ResolvedRadialGradient } from "./fill";
 import type { RenderDef } from "../render-tree/types";
+import {
+  linearGradientAttrs as svgLinearGradientAttrs,
+  radialGradientAttrs as svgRadialGradientAttrs,
+} from "../../paint/svg-gradient-transform";
 
 /**
  * Element bounding box for gradient coordinate computation.
@@ -61,11 +66,9 @@ export function finalizeGradientDefs(
 /**
  * Convert a linear gradient from objectBoundingBox to userSpaceOnUse.
  *
- * Figma's gradient transform maps gradient space → normalized object space:
- *   (1, 0) → start (0% stop) = (m00 + m02, m10 + m12)
- *   (0, 0) → end (100% stop) = (m02, m12)
- *
- * Multiplying by elementSize converts to pixel coordinates.
+ * Delegates to the SSoT in paint/svg-gradient-transform.ts. This wrapper
+ * only adapts the local ResolvedLinearGradient shape onto a minimal
+ * FigGradientPaint so the SSoT can run.
  */
 function finalizeLinearGradient(
   def: ResolvedLinearGradient,
@@ -74,20 +77,19 @@ function finalizeLinearGradient(
   const gt = def.gradientTransform as AffineMatrix | undefined;
   if (!gt) { return undefined; }
 
-  const w = elementSize.width;
-  const h = elementSize.height;
-  const x1 = (gt.m00 + gt.m02) * w;
-  const y1 = (gt.m10 + gt.m12) * h;
-  const x2 = gt.m02 * w;
-  const y2 = gt.m12 * h;
+  const attrs = svgLinearGradientAttrs(
+    { transform: gt } as FigGradientPaint,
+    { width: elementSize.width, height: elementSize.height },
+  );
+  if (!attrs) { return undefined; }
 
   return {
     ...def,
-    x1: `${x1}`,
-    y1: `${y1}`,
-    x2: `${x2}`,
-    y2: `${y2}`,
-    gradientUnits: "userSpaceOnUse",
+    x1: `${attrs.x1}`,
+    y1: `${attrs.y1}`,
+    x2: `${attrs.x2}`,
+    y2: `${attrs.y2}`,
+    gradientUnits: attrs.gradientUnits,
     gradientTransform: undefined, // Consumed — coordinates are now in pixels
   };
 }
@@ -95,8 +97,7 @@ function finalizeLinearGradient(
 /**
  * Convert a radial gradient from objectBoundingBox to userSpaceOnUse.
  *
- * Decomposes the 2x2 rotation+scale part of the transform matrix into
- * center, angle, and ellipse radii for SVG gradientTransform.
+ * Delegates to the SSoT in paint/svg-gradient-transform.ts.
  */
 function finalizeRadialGradient(
   def: ResolvedRadialGradient,
@@ -105,28 +106,18 @@ function finalizeRadialGradient(
   const gt = def.gradientTransform as AffineMatrix | undefined;
   if (!gt) { return undefined; }
 
-  const w = elementSize.width;
-  const h = elementSize.height;
-
-  // Center: transform × (0.5, 0.5) → pixel
-  const cx = (gt.m00 * 0.5 + gt.m01 * 0.5 + gt.m02) * w;
-  const cy = (gt.m10 * 0.5 + gt.m11 * 0.5 + gt.m12) * h;
-
-  // Axis vectors scaled by element size
-  const ax1x = gt.m00 * w * 0.5;
-  const ax1y = gt.m10 * h * 0.5;
-  const ax2x = gt.m01 * w * 0.5;
-  const ax2y = gt.m11 * h * 0.5;
-  const r1 = Math.sqrt(ax1x * ax1x + ax1y * ax1y);
-  const r2 = Math.sqrt(ax2x * ax2x + ax2y * ax2y);
-  const angle = Math.atan2(ax1y, ax1x) * (180 / Math.PI);
+  const attrs = svgRadialGradientAttrs(
+    { transform: gt } as FigGradientPaint,
+    { width: elementSize.width, height: elementSize.height },
+  );
+  if (!attrs) { return undefined; }
 
   return {
     ...def,
-    cx: "0",
-    cy: "0",
-    r: "1",
-    gradientUnits: "userSpaceOnUse",
-    gradientTransform: `translate(${cx} ${cy}) rotate(${angle}) scale(${r1} ${r2})`,
+    cx: attrs.cx,
+    cy: attrs.cy,
+    r: attrs.r,
+    gradientUnits: attrs.gradientUnits,
+    gradientTransform: attrs.gradientTransform,
   };
 }

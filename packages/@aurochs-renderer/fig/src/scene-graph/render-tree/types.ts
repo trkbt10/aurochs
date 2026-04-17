@@ -52,6 +52,13 @@ import type {
   Color,
   TextLineLayout,
   SceneNode,
+  GroupNode,
+  FrameNode,
+  RectNode,
+  EllipseNode,
+  PathNode,
+  TextNode,
+  ImageNode,
   Effect,
   BlendMode,
   MaskNode,
@@ -250,15 +257,30 @@ export type RenderBackgroundBlur = {
   readonly bounds: { readonly x: number; readonly y: number; readonly width: number; readonly height: number };
 };
 
-export type RenderNodeBase = {
+/**
+ * Base shape shared by every RenderNode.
+ *
+ * `source` is the typed SceneNode this render node was resolved from.
+ * Specialized RenderXxxNode types narrow `source` to their matching
+ * SceneNode variant (e.g. RenderFrameNode carries `source: FrameNode`),
+ * so backends can reach scene-graph-resolved data without runtime
+ * discrimination on `source.type`.
+ */
+export type RenderNodeBase<TSource extends SceneNode = SceneNode> = {
   /** Original SceneNode ID */
   readonly id: SceneNodeId;
   /** Resolved wrapper attributes (transform, opacity, filter, blendMode) */
   readonly wrapper: ResolvedWrapperAttrs;
   /** Inline defs needed by this node (gradients, filters, clip-paths) */
   readonly defs: readonly RenderDef[];
-  /** Original SceneNode reference (for WebGL and other backends that need raw data) */
-  readonly source: SceneNode;
+  /**
+   * Original SceneNode reference.
+   *
+   * Specialized RenderXxxNode types use the generic to narrow this to the
+   * exact SceneNode variant (FrameNode / RectNode / TextNode / ...). This
+   * eliminates the need for backends to do `source as { … }` casts.
+   */
+  readonly source: TSource;
   /** Mask applied to this node (from parent's mask processing) */
   readonly mask?: RenderMask;
   /**
@@ -270,7 +292,7 @@ export type RenderNodeBase = {
 
 // -- Group --
 
-export type RenderGroupNode = RenderNodeBase & {
+export type RenderGroupNode = RenderNodeBase<GroupNode> & {
   readonly type: "group";
   readonly children: readonly RenderNode[];
   /**
@@ -282,7 +304,7 @@ export type RenderGroupNode = RenderNodeBase & {
 
 // -- Frame --
 
-export type RenderFrameNode = RenderNodeBase & {
+export type RenderFrameNode = RenderNodeBase<FrameNode> & {
   readonly type: "frame";
   /** Background rect (null if no fills) */
   readonly background: RenderFrameBackground | null;
@@ -295,6 +317,14 @@ export type RenderFrameNode = RenderNodeBase & {
   readonly height: number;
   /** Clamped corner radius */
   readonly cornerRadius?: CornerRadius;
+  /**
+   * Source fills for backend-specific draw data (e.g. WebGL GPU fills).
+   * Parity with RenderRectNode/RenderEllipseNode — backends should never
+   * discriminate `node.source.type` to reach these.
+   */
+  readonly sourceFills: readonly Fill[];
+  /** Source stroke for backend-specific draw data. */
+  readonly sourceStroke?: Stroke;
 };
 
 /**
@@ -346,7 +376,7 @@ export type RenderFrameBackground = {
 
 // -- Rect --
 
-export type RenderRectNode = RenderNodeBase & {
+export type RenderRectNode = RenderNodeBase<RectNode> & {
   readonly type: "rect";
   readonly width: number;
   readonly height: number;
@@ -365,7 +395,7 @@ export type RenderRectNode = RenderNodeBase & {
 
 // -- Ellipse --
 
-export type RenderEllipseNode = RenderNodeBase & {
+export type RenderEllipseNode = RenderNodeBase<EllipseNode> & {
   readonly type: "ellipse";
   readonly cx: number;
   readonly cy: number;
@@ -382,7 +412,7 @@ export type RenderEllipseNode = RenderNodeBase & {
 
 // -- Path --
 
-export type RenderPathNode = RenderNodeBase & {
+export type RenderPathNode = RenderNodeBase<PathNode | EllipseNode> & {
   readonly type: "path";
   /** Resolved SVG path data per contour */
   readonly paths: readonly RenderPathContour[];
@@ -407,7 +437,7 @@ export type RenderPathContour = {
 
 // -- Text --
 
-export type RenderTextNode = RenderNodeBase & {
+export type RenderTextNode = RenderNodeBase<TextNode> & {
   readonly type: "text";
   readonly width: number;
   readonly height: number;
@@ -449,7 +479,7 @@ export type RenderTextLines = {
 
 // -- Image --
 
-export type RenderImageNode = RenderNodeBase & {
+export type RenderImageNode = RenderNodeBase<ImageNode> & {
   readonly type: "image";
   readonly width: number;
   readonly height: number;

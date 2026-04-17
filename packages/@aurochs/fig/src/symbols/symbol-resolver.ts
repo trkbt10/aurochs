@@ -2,7 +2,7 @@
  * @file Symbol resolution for INSTANCE nodes
  */
 
-import type { FigNode, MutableFigNode, FigKiwiSymbolData, FigKiwiSymbolOverride, FigGuidPath, FigComponentPropAssignment } from "@aurochs/fig/types";
+import type { FigNode, MutableFigNode, FigKiwiSymbolData, FigKiwiSymbolOverride, FigGuidPath, FigComponentPropAssignment, FigDerivedTextData } from "@aurochs/fig/types";
 import { guidToString, getNodeType, safeChildren, type FigGuid } from "@aurochs/fig/parser";
 import { extractSymbolIDPair } from "@aurochs/fig/symbols";
 import { buildGuidTranslationMap, translateOverrides } from "./guid-translation";
@@ -152,6 +152,8 @@ export type CloneSymbolChildrenOptions = {
   readonly componentPropAssignments?: readonly FigComponentPropAssignment[];
   /** Style registry for resolving styleIdForFill overrides to fillPaints */
   readonly styleRegistry?: FigStyleRegistry;
+  /** SYMBOL lookup for deeper weight-based GUID translation */
+  readonly symbolMap?: ReadonlyMap<string, FigNode>;
 };
 
 /**
@@ -172,9 +174,11 @@ export function cloneSymbolChildren(symbolNode: FigNode, options?: CloneSymbolCh
 
   const registry = options?.styleRegistry;
 
+  const symbolMap = options?.symbolMap;
+
   // Apply symbol overrides (property overrides)
   if (options?.symbolOverrides && options.symbolOverrides.length > 0) {
-    applyOverrides(cloned, options.symbolOverrides, registry);
+    applyOverrides(cloned, options.symbolOverrides, registry, symbolMap);
   }
 
   // Resolve component property assignments (text overrides — deletes stale derivedTextData)
@@ -184,18 +188,22 @@ export function cloneSymbolChildren(symbolNode: FigNode, options?: CloneSymbolCh
   }
 
   // Apply derived symbol data LAST (provides fresh sizes, transforms, AND derivedTextData
-  // with correct glyph paths for overridden text)
+  // with correct glyph paths for overridden text).
+  //
+  // Figma bakes the overridden text's glyph paths into derivedSymbolData at
+  // export time — so the derivedTextData here corresponds to the CPA-overridden
+  // characters, not the SYMBOL's default text. After CPA clears the SYMBOL's
+  // stale derivedTextData, the DSD re-adds the correct pre-rasterized glyphs.
   if (options?.derivedSymbolData && options.derivedSymbolData.length > 0) {
-    applyOverrides(cloned, options.derivedSymbolData, registry);
+    applyOverrides(cloned, options.derivedSymbolData, registry, symbolMap);
   }
 
-  // Clean up stale derivedTextData that may have been re-added by derivedSymbolData.
-  // When CPA overrides text content (deleting derivedTextData), the subsequent
-  // applyOverrides with derivedSymbolData blindly re-applies all properties including
-  // stale derivedTextData with glyph paths for the ORIGINAL text.
-  if (textOverrideGuids.size > 0) {
-    cleanupStaleDerivedTextData(cloned, textOverrideGuids);
-  }
+  // Clean up stale derivedTextData:
+  //  1. CPA-overridden TEXT nodes whose glyphs weren't re-supplied by DSD.
+  //  2. Any TEXT node whose derivedTextData glyph count grossly mismatches
+  //     its final characters — this catches cases where GUID translation
+  //     paired an override's derivedTextData with the wrong TEXT sibling.
+  cleanupStaleDerivedTextData(cloned, textOverrideGuids, options?.derivedSymbolData);
 
   // Post-process: expand containers to fit their children.
   // When override GUIDs partially apply (e.g., child sizes updated but parent size
@@ -277,8 +285,15 @@ function applyComponentPropAssignments(
         if (ref.componentPropNodeField?.name === "TEXT_DATA") {
           if (assignment?.value.textValue) {
             const tv = assignment.value.textValue;
-            // Update textData with overridden characters
+            // No-op detection: when CPA characters equal the node's existing
+            // characters, the override is redundant. Keep derivedTextData so
+            // its pre-rasterized glyph paths survive (used by the renderer to
+            // avoid font fallback for private-use codepoints like SF Symbols).
             const existingTextData = node.textData;
+            const existingChars = existingTextData?.characters ?? node.characters ?? "";
+            const isNoOp = existingChars === tv.characters;
+
+            // Update textData with overridden characters
             node.textData = {
               ...(existingTextData ?? { characters: "" }),
               characters: tv.characters,
@@ -286,16 +301,20 @@ function applyComponentPropAssignments(
             };
             // Also set top-level characters for renderers that check it
             node.characters = tv.characters;
-            // Clear derivedTextData — its glyph paths correspond to the
-            // original text, not the overridden content.  Removing it forces
-            // the renderer to fall back to <text> element rendering.
-            // NOTE: derivedSymbolData applied later may re-add stale derivedTextData;
-            // cleanupStaleDerivedTextData() handles that in cloneSymbolChildren.
-            delete node.derivedTextData;
-            // Track this node so we can re-delete stale derivedTextData
-            // if it gets re-added by derivedSymbolData application.
-            if (textOverrideGuids && node.guid) {
-              textOverrideGuids.add(guidToString(node.guid));
+
+            if (!isNoOp) {
+              // Clear derivedTextData — its glyph paths correspond to the
+              // original text, not the overridden content. Removing it forces
+              // the renderer to fall back to <text> element rendering.
+              // NOTE: derivedSymbolData applied later may re-add stale
+              // derivedTextData; cleanupStaleDerivedTextData() handles that
+              // in cloneSymbolChildren.
+              delete node.derivedTextData;
+              // Track this node so we can re-delete stale derivedTextData
+              // if it gets re-added by derivedSymbolData application.
+              if (textOverrideGuids && node.guid) {
+                textOverrideGuids.add(guidToString(node.guid));
+              }
             }
           }
         } else if (ref.componentPropNodeField?.name === "VISIBLE") {
@@ -345,10 +364,103 @@ function applyComponentPropAssignments(
  * derivedTextData. This function walks the tree and re-deletes
  * derivedTextData on any node whose GUID was recorded as text-overridden.
  */
-function cleanupStaleDerivedTextData(nodes: MutableFigNode[], cpaGuids: Set<string>): void {
+function cleanupStaleDerivedTextData(
+  nodes: MutableFigNode[],
+  cpaGuids: Set<string>,
+  derivedSymbolData: readonly FigKiwiSymbolOverride[] | undefined,
+): void {
+  // Collect depth-1 override GUIDs that set `derivedTextData` — these are
+  // the overrides that carry fresh, post-CPA glyph paths. Any CPA-targeted
+  // node whose GUID is ALSO in this set should keep its derivedTextData.
+  const freshDerivedGuids = new Set<string>();
+  if (derivedSymbolData) {
+    for (const entry of derivedSymbolData) {
+      const guids = entry.guidPath?.guids;
+      if (!guids || guids.length !== 1) continue;
+      if (entry.derivedTextData !== undefined) {
+        freshDerivedGuids.add(guidToString(guids[0]));
+      }
+    }
+  }
+
+  function countCodePoints(s: string): number {
+    // Spread iterates by Unicode codepoints (not UTF-16 units), so emoji and
+    // SF Symbols (surrogate pair codepoints) count as 1 each.
+    return [...s].length;
+  }
+
+  function derivedMatchesCharacters(
+    dtd: FigDerivedTextData | undefined,
+    characters: string | undefined,
+  ): boolean {
+    if (!dtd || typeof characters !== "string") return false;
+    const cpCount = countCodePoints(characters);
+    const lines = dtd.derivedLines;
+    if (Array.isArray(lines)) {
+      const sum = lines.reduce(
+        (acc, l) => acc + (typeof l.characters === "string" ? countCodePoints(l.characters) : 0),
+        0,
+      );
+      if (sum === cpCount) return true;
+    }
+    const glyphs = dtd.glyphs;
+    if (Array.isArray(glyphs) && glyphs.length === cpCount) return true;
+    return false;
+  }
+
+  /**
+   * Whether Figma's derivedTextData indicates runtime truncation was applied.
+   * When truncated, glyph count != source character count is EXPECTED —
+   * keeping derivedTextData lets the renderer draw Figma's exact truncated
+   * output instead of re-laying out the full (overflowing) characters.
+   */
+  function isTruncated(dtd: FigDerivedTextData | undefined): boolean {
+    return typeof dtd?.truncationStartIndex === "number" && dtd.truncationStartIndex >= 0;
+  }
+
+  // Detect text that requires Figma's pre-rasterized glyphs because the
+  // codepoints live in the Unicode Private-Use Area (e.g. Apple SF Symbols).
+  // For such text, the `characters` string cannot be rendered from a normal
+  // font — we must preserve derivedTextData.
+  function containsPrivateUseCodepoint(s: string): boolean {
+    for (const ch of s) {
+      const cp = ch.codePointAt(0) ?? 0;
+      // BMP PUA: U+E000–U+F8FF
+      // Supplementary PUA-A: U+F0000–U+FFFFD
+      // Supplementary PUA-B: U+100000–U+10FFFD
+      if ((cp >= 0xE000 && cp <= 0xF8FF) || (cp >= 0xF0000 && cp <= 0x10FFFD)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   function walk(node: MutableFigNode): void {
-    if (node.guid && cpaGuids.has(guidToString(node.guid)) && node.derivedTextData) {
-      delete node.derivedTextData;
+    if (node.guid && node.derivedTextData) {
+      const key = guidToString(node.guid);
+      const cpaTarget = cpaGuids.has(key);
+      const chars = node.characters ?? node.textData?.characters;
+      const matches = derivedMatchesCharacters(node.derivedTextData, chars);
+      const hasPUA = typeof chars === "string" && containsPrivateUseCodepoint(chars);
+      const truncated = isTruncated(node.derivedTextData);
+
+      // Drop derivedTextData when:
+      //  1. The glyph data grossly mismatches the final characters (codepoint
+      //     count differs) AND Figma did not mark the text as runtime-
+      //     truncated. A truncation mismatch is expected — Figma's glyphs
+      //     represent the cut-and-ellipsized output, not the source string.
+      //  2. CPA overrode the text and the text does NOT contain private-use
+      //     codepoints. Even if glyph count matches, Figma's pre-computed
+      //     glyphs may correspond to a wrong sibling (e.g. same-length name).
+      //     Fall back to text rendering which re-layouts with the final
+      //     characters. Private-use codepoints (SF Symbols) and truncated
+      //     text must keep the derivedTextData since no font can reconstruct
+      //     them (PUA) or reproduce the exact truncation (ellipsis).
+      const mismatchByLength = typeof chars === "string" && !matches && !truncated;
+      const riskyCpaKeep = cpaTarget && matches && !hasPUA && !truncated;
+      if (mismatchByLength || riskyCpaKeep) {
+        delete node.derivedTextData;
+      }
     }
     for (const child of safeChildren(node) as MutableFigNode[]) {
       walk(child);
@@ -418,7 +530,12 @@ function expandContainersToFitChildren(nodes: MutableFigNode[]): void {
  *   remaining path is propagated as `derivedSymbolData` on that node so the
  *   override is applied when the nested instance is resolved later.
  */
-function applyOverrides(nodes: MutableFigNode[], overrides: readonly FigKiwiSymbolOverride[], styleRegistry?: FigStyleRegistry): void {
+function applyOverrides(
+  nodes: MutableFigNode[],
+  overrides: readonly FigKiwiSymbolOverride[],
+  styleRegistry?: FigStyleRegistry,
+  symbolMap?: ReadonlyMap<string, FigNode>,
+): void {
   // Separate direct (depth-1) and nested (depth-N>1) overrides
   // Direct overrides are MERGED: multiple entries for the same GUID combine their properties
   const directMap = new Map<string, FigKiwiSymbolOverride>();
@@ -501,9 +618,20 @@ function applyOverrides(nodes: MutableFigNode[], overrides: readonly FigKiwiSymb
           // Non-INSTANCE container (FRAME, GROUP, etc.): apply recursively
           // to children immediately, since these nodes don't go through
           // resolveInstance() and derivedSymbolData would be lost.
+          //
+          // The propagated `nested` entries still use source-namespace GUIDs
+          // at their first level. Rebuild a translation map against this
+          // container's descendants so depth-1 DSD entries can find their
+          // local targets. Without this, source GUIDs like `3176:15094`
+          // never match local Action INSTANCEs, and depth-N entries routed
+          // through them don't reach the right Action.
           const containerChildren = safeChildren(node) as MutableFigNode[];
           if (containerChildren.length > 0) {
-            applyOverrides(containerChildren, nested, styleRegistry);
+            const subTranslation = buildGuidTranslationMap(containerChildren, nested, undefined, undefined, symbolMap);
+            const translatedNested = subTranslation.size > 0
+              ? translateOverrides(nested, subTranslation)
+              : nested;
+            applyOverrides(containerChildren, translatedNested, styleRegistry, symbolMap);
           }
         }
       }
@@ -682,12 +810,19 @@ export function resolveInstanceNode(
   const mergedNode = mergeSymbolProperties(node, symNode);
 
   // 3. Translate override GUIDs
+  // CPA is collected BEFORE translation because Phase 1.3 content-signature
+  // reconciliation in buildGuidTranslationMap uses CPA character counts to
+  // disambiguate TEXT/INSTANCE descendants that collide under localID offset
+  // matching (e.g. 6 flat source action slots vs. 2 nested local groups).
+  const componentPropAssignments = collectComponentPropAssignments(node);
   const rawSymbolOverrides = getInstanceSymbolOverrides(node);
   const rawDerivedSymbolData = node.derivedSymbolData as FigDerivedSymbolData | undefined;
   const translationMap = buildGuidTranslationMap(
     safeChildren(originalSymNode),
     rawDerivedSymbolData,
     rawSymbolOverrides,
+    componentPropAssignments.length > 0 ? componentPropAssignments : undefined,
+    ctx.symbolMap,
   );
   const symbolOverrides = translateOverridesIfNeeded(translationMap, rawSymbolOverrides);
   const derivedSymbolData = translateOverridesIfNeeded(translationMap, rawDerivedSymbolData);
@@ -698,12 +833,12 @@ export function resolveInstanceNode(
   }
 
   // 5. Clone SYMBOL children with overrides
-  const componentPropAssignments = collectComponentPropAssignments(node);
   const children = cloneSymbolChildren(symNode, {
     symbolOverrides,
     derivedSymbolData,
     componentPropAssignments: componentPropAssignments.length > 0 ? componentPropAssignments : undefined,
     styleRegistry: ctx.styleRegistry,
+    symbolMap: ctx.symbolMap,
   });
 
   // 6. Layout resolution for resized instances

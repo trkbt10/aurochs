@@ -1,48 +1,59 @@
 /**
  * @file Main SVG renderer for Figma nodes
+ *
+ * This is the SSoT entry point for rendering `FigNode` trees to SVG.
+ * It routes through the unified pipeline used by all backends:
+ *
+ *   FigNode[] → convertFigNode → FigDesignNode[]
+ *             → buildSceneGraph → SceneGraph
+ *             → resolveRenderTree → RenderTree
+ *             → formatRenderTreeToSvg → SVG string
+ *
+ * The RenderTree is the format-agnostic intermediate representation shared
+ * with the React and WebGL backends. Having one pipeline means any change
+ * to rendering semantics (effects, masks, strokes, gradients, etc.) is made
+ * in a single place (`scene-graph/render-tree/resolve.ts`) and all backends
+ * inherit it.
+ *
+ * ## Input contract
+ *
+ * `renderFigToSvg` requires the caller to supply canvas dimensions and a
+ * full set of source assets (blobs, images, and — when INSTANCE nodes are
+ * present — the raw `symbolMap`). There are no implicit defaults: a missing
+ * `blobs` array is not the same as "empty blobs", and a missing canvas size
+ * is not `800x600`. If you don't have these, use `renderCanvas` (which
+ * derives the size from the canvas children) or compute them explicitly.
  */
 
 import type { FigNode } from "@aurochs/fig/types";
 import type { FigBlob, FigImage } from "@aurochs/fig/parser";
-import { getNodeType, safeChildren } from "@aurochs/fig/parser";
-import type { FigSvgRenderContext, FigSvgRenderResult } from "../types";
-import { createFigSvgRenderContext } from "./context";
-import { svg, defs, g, rect, mask, type SvgString, EMPTY_SVG } from "./primitives";
-import {
-  renderFrameNode,
-  renderGroupNode,
-  renderBooleanOperationNode,
-  renderRectangleNode,
-  renderEllipseNode,
-  renderVectorNode,
-  renderTextNode,
-} from "./nodes";
-import { renderTextNodeAsPath, type PathRenderContext } from "./nodes/text/path-render";
-import {
-  renderTextNodeFromDerivedData,
-  hasDerivedPathData,
-  type DerivedPathRenderContext,
-} from "./nodes/text/derived-path-render";
-import { createFigResolver, type ResolvedInstanceNode } from "../symbols/fig-resolver";
+import type { FigSvgRenderResult } from "../types";
+import type { SvgString } from "./primitives";
 import type { FontLoader } from "../font";
-import type { FigStyleRegistry } from "@aurochs/fig/domain";
-import { buildFigStyleRegistry, resolveNodeStyleIds } from "@aurochs/fig/symbols";
-import { getFilterAttr } from "./effects";
+import type { FigDesignNode, FigStyleRegistry } from "@aurochs/fig/domain";
+import { EMPTY_FIG_STYLE_REGISTRY } from "@aurochs/fig/domain";
+import { buildFigStyleRegistry } from "@aurochs/fig/symbols";
+import { convertFigNode } from "@aurochs-builder/fig/context";
+import { buildSceneGraph } from "../scene-graph/builder";
+import { resolveRenderTree } from "../scene-graph/render-tree";
+import { formatRenderTreeToSvg } from "./scene-renderer";
 
 // =============================================================================
 // Transform Normalization
 // =============================================================================
 
-/** Apply GUID translation to overrides if translation map is non-empty */
 /**
- * Get the root frame's transform offset (translation component)
+ * Get the minimum (x, y) of all root node translations.
+ *
+ * `?? 0` on m02/m12 reflects the Kiwi binary schema: an omitted translation
+ * field encodes the value 0 (the identity translation). This is a schema
+ * invariant, not a runtime fallback.
  */
 function getRootFrameOffset(nodes: readonly FigNode[]): { x: number; y: number } {
   if (nodes.length === 0) {
     return { x: 0, y: 0 };
   }
 
-  // Find the minimum x and y from all root node transforms
   const { minX, minY } = nodes.reduce(
     (acc, node) => {
       const transform = node.transform;
@@ -64,39 +75,20 @@ function getRootFrameOffset(nodes: readonly FigNode[]): { x: number; y: number }
 }
 
 /**
- * Normalize node transform by removing the root offset
+ * Normalize a FigDesignNode's transform by removing the root offset.
  */
-function normalizeNodeTransform(node: FigNode, offset: { x: number; y: number }): FigNode {
+function normalizeDesignNodeTransform(node: FigDesignNode, offset: { x: number; y: number }): FigDesignNode {
   if (offset.x === 0 && offset.y === 0) {
     return node;
   }
-
-  const transform = node.transform;
-
-  if (!transform) {
-    return node;
-  }
-
-  // Create a new node with normalized transform
   return {
     ...node,
     transform: {
-      ...transform,
-      m02: (transform.m02 ?? 0) - offset.x,
-      m12: (transform.m12 ?? 0) - offset.y,
+      ...node.transform,
+      m02: node.transform.m02 - offset.x,
+      m12: node.transform.m12 - offset.y,
     },
-  } as FigNode;
-}
-
-/**
- * Get nodes to render, optionally normalizing root transforms
- */
-function getNodesToRender(nodes: readonly FigNode[], normalizeRootTransform?: boolean): readonly FigNode[] {
-  if (!normalizeRootTransform) {
-    return nodes;
-  }
-  const offset = getRootFrameOffset(nodes);
-  return nodes.map((node) => normalizeNodeTransform(node, offset));
+  };
 }
 
 // =============================================================================
@@ -104,26 +96,32 @@ function getNodesToRender(nodes: readonly FigNode[], normalizeRootTransform?: bo
 // =============================================================================
 
 /**
- * Options for rendering Figma nodes to SVG
+ * Required inputs for rendering Figma nodes to SVG.
+ *
+ * Every field here represents information that cannot be invented by the
+ * renderer — the caller must supply it or the render is undefined.
  */
 export type FigSvgRenderOptions = {
-  /** Width of the output SVG */
-  readonly width?: number;
-  /** Height of the output SVG */
-  readonly height?: number;
-  /** Background color (CSS color string) */
+  /** Canvas width in SVG user units. */
+  readonly width: number;
+  /** Canvas height in SVG user units. */
+  readonly height: number;
+  /** Binary blobs from the parsed .fig file (required for path geometry). */
+  readonly blobs: readonly FigBlob[];
+  /** Image map from the parsed .fig file (required for IMAGE paints). */
+  readonly images: ReadonlyMap<string, FigImage>;
+  /** Optional background color (CSS color string). */
   readonly backgroundColor?: string;
-  /** Blobs from parsed .fig file for path decoding */
-  readonly blobs?: readonly FigBlob[];
-  /** Images from parsed .fig file for image fills */
-  readonly images?: ReadonlyMap<string, FigImage>;
-  /** Normalize root transform to (0, 0) - useful when rendering a single frame */
+  /** Translate roots so the top-left is at (0, 0). */
   readonly normalizeRootTransform?: boolean;
-  /** Show hidden nodes (visible: false) - useful for viewing style definitions */
+  /** Include nodes with `visible: false` (for style inspection views). */
   readonly showHiddenNodes?: boolean;
-  /** Symbol map for INSTANCE node resolution (from buildNodeTree) */
+  /** Raw symbolMap from `buildNodeTree` (required for INSTANCE resolution). */
   readonly symbolMap?: ReadonlyMap<string, FigNode>;
-  /** Font loader for path-based text rendering (enables high-precision text) */
+  /**
+   * Font loader for path-based text rendering. Not yet threaded through the
+   * RenderTree pipeline — see Task #5 of the SSoT migration.
+   */
   readonly fontLoader?: FontLoader;
 };
 
@@ -132,82 +130,87 @@ export type FigSvgRenderOptions = {
 // =============================================================================
 
 /**
- * Render Figma nodes to SVG
- *
- * Supports path-based text rendering when fontLoader is provided.
- *
- * @param nodes - Array of Figma nodes to render
- * @param options - Render options
- * @returns SVG render result with warnings
+ * Convert every entry of a FigNode symbolMap to a FigDesignNode, using the
+ * same styleRegistry so symbols and instance roots resolve their fills/
+ * strokes through the identical registry path. All entries must be converted
+ * (not only the directly referenced ones) because nested INSTANCE resolution
+ * in `buildSceneGraph` walks the converted map; any entry missed here would
+ * surface as an "INSTANCE symbol not found" warning.
+ */
+function convertSymbolMap(
+  symbolMap: ReadonlyMap<string, FigNode>,
+  components: Map<string, FigDesignNode>,
+  styleRegistry: FigStyleRegistry,
+): ReadonlyMap<string, FigDesignNode> {
+  const out = new Map<string, FigDesignNode>();
+  for (const [key, node] of symbolMap) {
+    out.set(key, convertFigNode(node, components, styleRegistry));
+  }
+  return out;
+}
+
+/**
+ * Render Figma nodes to SVG.
  */
 export async function renderFigToSvg(
   nodes: readonly FigNode[],
-  options?: FigSvgRenderOptions,
+  options: FigSvgRenderOptions,
 ): Promise<FigSvgRenderResult> {
-  const width = options?.width ?? 800;
-  const height = options?.height ?? 600;
-
+  const { width, height, blobs, images } = options;
   const warnings: string[] = [];
 
-  // Build style registry for resolving stale fillPaints via styleIdForFill
-  const styleRegistry = options?.symbolMap ? buildFigStyleRegistry(options.symbolMap) : undefined;
+  // Build style registry from the raw FigNode symbolMap BEFORE domain
+  // conversion. The registry resolves styleIdForFill/styleIdForStrokeFill
+  // references to authoritative paints during convertFigNode, and is also
+  // passed to buildSceneGraph for per-path vector style overrides.
+  const rawSymbolMap = options.symbolMap;
+  const styleRegistry: FigStyleRegistry = rawSymbolMap
+    ? buildFigStyleRegistry(rawSymbolMap)
+    : EMPTY_FIG_STYLE_REGISTRY;
 
-  // Create resolver if symbolMap is provided
-  const resolver = options?.symbolMap ? createFigResolver(options.symbolMap) : undefined;
-  if (resolver) {
-    warnings.push(...resolver.warnings);
+  // Convert all parser nodes (including symbol definitions) into domain
+  // objects. `components` is populated as a side-effect by convertFigNode
+  // whenever it encounters a COMPONENT/COMPONENT_SET/SYMBOL.
+  const components = new Map<string, FigDesignNode>();
+  const designSymbolMap = rawSymbolMap
+    ? convertSymbolMap(rawSymbolMap, components, styleRegistry)
+    : new Map<string, FigDesignNode>();
+
+  const designNodes: FigDesignNode[] = nodes.map((n) => convertFigNode(n, components, styleRegistry));
+
+  // Merge symbol definitions discovered while converting root nodes with
+  // those that came via the symbolMap option. Later entries (from the
+  // explicit symbolMap) win — they are the authoritative ones.
+  const mergedSymbolMap = new Map<string, FigDesignNode>(components);
+  for (const [key, node] of designSymbolMap) {
+    mergedSymbolMap.set(key, node);
   }
 
-  const ctx = createFigSvgRenderContext({
+  // Optional root transform normalization. Offsets are computed from the
+  // raw FigNode transforms (pre-conversion); apply the same offset to each
+  // corresponding converted FigDesignNode. Both arrays are in the same
+  // order because `designNodes` is produced by `nodes.map(convertFigNode)`.
+  const normalizedNodes = options.normalizeRootTransform
+    ? (() => {
+      const offset = getRootFrameOffset(nodes);
+      return designNodes.map((n) => normalizeDesignNodeTransform(n, offset));
+    })()
+    : designNodes;
+
+  const sceneGraph = buildSceneGraph(normalizedNodes, {
+    blobs,
+    images,
     canvasSize: { width, height },
-    blobs: options?.blobs ?? [],
-    images: options?.images ?? new Map(),
-    showHiddenNodes: options?.showHiddenNodes,
-    resolver,
-    fontLoader: options?.fontLoader,
+    symbolMap: mergedSymbolMap,
+    showHiddenNodes: options.showHiddenNodes === true,
     styleRegistry,
+    warnings,
   });
-  const nodesToRender = getNodesToRender(nodes, options?.normalizeRootTransform);
 
-  const renderedNodes: SvgString[] = [];
-  for (const node of nodesToRender) {
-    try {
-      const rendered = await renderNode(node, ctx, warnings);
-      renderedNodes.push(rendered);
-    } catch (error) {
-      warnings.push(`Failed to render node "${node.name ?? "unknown"}": ${error}`);
-      renderedNodes.push(EMPTY_SVG);
-    }
-  }
-
-  const content: SvgString[] = [];
-
-  if (ctx.defs.hasAny()) {
-    content.push(defs(...(ctx.defs.getAll() as SvgString[])));
-  }
-
-  if (options?.backgroundColor) {
-    content.push(
-      rect({
-        x: 0,
-        y: 0,
-        width,
-        height,
-        fill: options.backgroundColor,
-      }),
-    );
-  }
-
-  content.push(...renderedNodes);
-
-  const svgOutput = svg(
-    {
-      width,
-      height,
-      viewBox: `0 0 ${width} ${height}`,
-    },
-    ...content,
-  );
+  const renderTree = resolveRenderTree(sceneGraph);
+  const svgOutput: SvgString = formatRenderTreeToSvg(renderTree, {
+    backgroundColor: options.backgroundColor,
+  });
 
   return {
     svg: svgOutput,
@@ -216,316 +219,92 @@ export async function renderFigToSvg(
 }
 
 // =============================================================================
-// Node Rendering
+// Canvas Convenience Wrapper
 // =============================================================================
 
 /**
- * Check if a node is a mask layer
+ * Options for `renderCanvas`. Width/height are derived from the canvas
+ * children unless overridden, and root transforms are always normalized to
+ * (0, 0) — that behaviour is the defining characteristic of a "canvas"
+ * render and is not optional. Callers that need absolute-coordinate output
+ * must use `renderFigToSvg` directly.
  */
-function isMaskNode(node: FigNode): boolean {
-  return node.mask === true;
-}
-
-/**
- * Result of resolving an INSTANCE node against its SYMBOL
- */
-/**
- * Resolve an INSTANCE node to renderable content.
- * Delegates to resolveInstanceNode() in symbol-resolver (the SoT for resolution).
- */
-function resolveInstance(
-  { node, nodeType, ctx, warnings }: { node: FigNode; nodeType: string; ctx: FigSvgRenderContext; warnings: string[]; }
-): ResolvedInstanceNode {
-  if (nodeType !== "INSTANCE") {
-    return { node, children: safeChildren(node) };
-  }
-
-  if (!ctx.resolver) {
-    const warning = "Resolver missing: INSTANCE nodes will not be resolved (pass symbolMap to renderFigToSvg).";
-    if (!warnings.includes(warning)) {
-      warnings.push(warning);
-    }
-    return { node, children: safeChildren(node) };
-  }
-
-  return ctx.resolver.resolveInstance(node);
-}
-
-const FIGMA_BLEND_MODE_TO_CSS: Record<string, string> = {
-  DARKEN: "darken",
-  MULTIPLY: "multiply",
-  LINEAR_BURN: "plus-darker",
-  COLOR_BURN: "color-burn",
-  LIGHTEN: "lighten",
-  SCREEN: "screen",
-  LINEAR_DODGE: "plus-lighter",
-  COLOR_DODGE: "color-dodge",
-  OVERLAY: "overlay",
-  SOFT_LIGHT: "soft-light",
-  HARD_LIGHT: "hard-light",
-  DIFFERENCE: "difference",
-  EXCLUSION: "exclusion",
-  HUE: "hue",
-  SATURATION: "saturation",
-  COLOR: "color",
-  LUMINOSITY: "luminosity",
+export type FigCanvasRenderOptions = Omit<FigSvgRenderOptions, "width" | "height" | "normalizeRootTransform"> & {
+  /** Override the derived canvas width. */
+  readonly width?: number;
+  /** Override the derived canvas height. */
+  readonly height?: number;
 };
 
-function getBlendModeCss(node: FigNode): string | undefined {
-  const bm = node.blendMode;
-  if (!bm) {return undefined;}
-  const name = typeof bm === "string" ? bm : bm.name;
-  return FIGMA_BLEND_MODE_TO_CSS[name];
-}
-
 /**
- * Render a single Figma node to SVG
- *
- * @param node - The Figma node to render
- * @param ctx - Render context
- * @param warnings - Array to collect warnings
- * @returns SVG string for the node
+ * Compute canvas bounds from the extent of its children. Throws when no
+ * child has a transform + size — an unmeasurable canvas has no default we
+ * can safely invent.
  */
-async function renderNode(node: FigNode, ctx: FigSvgRenderContext, warnings: string[]): Promise<SvgString> {
-  const nodeType = getNodeType(node);
-
-  if (node.visible === false && !ctx.showHiddenNodes) {
-    return EMPTY_SVG;
-  }
-
-  // For INSTANCE nodes, resolve children from SYMBOL and inherit properties
-  const resolution = resolveInstance({ node, nodeType, ctx, warnings });
-
-  // Resolve stale fillPaints/strokePaints via styleIdForFill/styleIdForStrokeFill.
-  // Nodes may carry a styleId that references a newer color than their cached fillPaints.
-  const resolvedNode = resolveNodeStyleIds(resolution.node, ctx.styleRegistry);
-
-  const resolvedChildren = resolution.children;
-  const renderedChildren = await renderChildrenWithMasks(resolvedChildren, ctx, warnings);
-
-  const contentRef = { value: undefined as SvgString | undefined };
-  switch (nodeType) {
-    case "DOCUMENT":
-      contentRef.value = g({}, ...renderedChildren);
-      break;
-
-    case "CANVAS":
-      contentRef.value = g({}, ...renderedChildren);
-      break;
-
-    case "FRAME":
-    case "SECTION":
-    case "COMPONENT":
-    case "COMPONENT_SET":
-    case "INSTANCE":
-    case "SYMBOL":
-      contentRef.value = renderFrameNode(resolvedNode, ctx, renderedChildren, resolvedChildren);
-      break;
-
-    case "GROUP":
-      contentRef.value = renderGroupNode(resolvedNode, ctx, renderedChildren);
-      break;
-
-    case "BOOLEAN_OPERATION":
-      contentRef.value = renderBooleanOperationNode(resolvedNode, ctx, renderedChildren);
-      break;
-
-    case "RECTANGLE":
-    case "ROUNDED_RECTANGLE":
-      contentRef.value = renderRectangleNode(resolvedNode, ctx);
-      break;
-
-    case "ELLIPSE":
-      contentRef.value = renderEllipseNode(resolvedNode, ctx);
-      break;
-
-    case "VECTOR":
-    case "LINE":
-    case "STAR":
-    case "REGULAR_POLYGON":
-      contentRef.value = renderVectorNode(resolvedNode, ctx);
-      break;
-
-    case "TEXT":
-      // Prefer derived path rendering (exact match with Figma export)
-      if (hasDerivedPathData(resolvedNode)) {
-        const derivedCtx: DerivedPathRenderContext = {
-          ...ctx,
-          blobs: ctx.blobs,
-        };
-        contentRef.value = renderTextNodeFromDerivedData(resolvedNode, derivedCtx);
-        break;
-      }
-      // Fallback to opentype.js path rendering if fontLoader is available
-      if (ctx.fontLoader) {
-        const pathCtx: PathRenderContext = {
-          ...ctx,
-          fontLoader: ctx.fontLoader,
-        };
-        const pathResult = await renderTextNodeAsPath(resolvedNode, pathCtx);
-        if (pathResult !== EMPTY_SVG) {
-          contentRef.value = pathResult;
-          break;
-        }
-        // Font not available — fall through to <text> rendering
-      }
-      contentRef.value = renderTextNode(resolvedNode, ctx);
-      break;
-
-    default:
-      if (renderedChildren.length > 0) {
-        contentRef.value = g({}, ...renderedChildren);
-        break;
-      }
-      warnings.push(`Unknown node type: ${nodeType}`);
-      contentRef.value = EMPTY_SVG;
-      break;
-  }
-
-  // ---- Common post-processing (SoT for effects and blend mode) ----
-  //
-  // Effects (shadows, blur) and blend mode are applied here as the single
-  // source of truth, rather than in each individual node renderer.
-  // This ensures TEXT, GROUP, BOOLEAN_OPERATION, and any future node types
-  // automatically receive effects support.
-
-  let result = contentRef.value;
-
-  // Apply effects (shadows, blur) via SVG filter
-  // Skip for DOCUMENT and CANVAS which are structural containers
-  if (nodeType !== "DOCUMENT" && nodeType !== "CANVAS") {
-    const effects = resolvedNode.effects;
-    if (effects && effects.length > 0) {
-      const transform = resolvedNode.transform;
-      const size = resolvedNode.size;
-      const tx = transform?.m02 ?? 0;
-      const ty = transform?.m12 ?? 0;
-      const bounds = { x: tx, y: ty, width: size?.x ?? 0, height: size?.y ?? 0 };
-      const filterAttr = getFilterAttr(effects, ctx, bounds);
-      if (filterAttr) {
-        result = g({ filter: filterAttr }, result);
-      }
-    }
-  }
-
-  // Apply node-level blend mode as CSS mix-blend-mode.
-  // Use resolvedNode (not original node) so that INSTANCE nodes inherit
-  // the SYMBOL's blendMode when merged via mergeProperties.
-  const blendModeCss = getBlendModeCss(resolvedNode);
-  if (blendModeCss) {
-    return g({ style: `mix-blend-mode:${blendModeCss}` }, result);
-  }
-  return result;
-}
-
-// =============================================================================
-// Mask Processing
-// =============================================================================
-
-/**
- * Process children with mask support
- *
- * When a child has mask: true, it becomes a mask for subsequent siblings.
- * The mask node itself is not rendered as visible content.
- */
-async function renderChildrenWithMasks(
-  children: readonly FigNode[],
-  ctx: FigSvgRenderContext,
-  warnings: string[],
-): Promise<readonly SvgString[]> {
-  const result: SvgString[] = [];
-  const currentMaskIdRef = { value: null as string | null };
-  const maskedContentRef = { value: [] as SvgString[] };
-
-  for (const child of children) {
-    if (child.visible === false && !ctx.showHiddenNodes) {
-      continue;
-    }
-
-    if (isMaskNode(child)) {
-      // Flush existing masked content
-      if (currentMaskIdRef.value && maskedContentRef.value.length > 0) {
-        result.push(g({ mask: `url(#${currentMaskIdRef.value})` }, ...maskedContentRef.value));
-        maskedContentRef.value = [];
-      }
-
-      const maskContent = await renderNode(child, ctx, warnings);
-      if (maskContent !== EMPTY_SVG) {
-        const maskId = ctx.defs.generateId("mask");
-        const maskDef = mask({ id: maskId, style: "mask-type:luminance" }, g({ fill: "white" }, maskContent));
-        ctx.defs.add(maskDef);
-        currentMaskIdRef.value = maskId;
-      }
-    } else {
-      const rendered = await renderNode(child, ctx, warnings);
-      if (rendered !== EMPTY_SVG) {
-        if (currentMaskIdRef.value) {
-          maskedContentRef.value.push(rendered);
-        } else {
-          result.push(rendered);
-        }
-      }
-    }
-  }
-
-  // Final flush
-  if (currentMaskIdRef.value && maskedContentRef.value.length > 0) {
-    result.push(g({ mask: `url(#${currentMaskIdRef.value})` }, ...maskedContentRef.value));
-  }
-
-  return result;
-}
-
-// =============================================================================
-// Convenience Functions
-// =============================================================================
-
-/**
- * Calculate canvas bounds from children
- */
-function calculateCanvasBounds(
-  children: readonly FigNode[],
-  defaultWidth: number,
-  defaultHeight: number,
-): { width: number; height: number } {
+function calculateCanvasBounds(children: readonly FigNode[]): { width: number; height: number } {
   const bounds = children.reduce(
     (acc, child) => {
-      const transform = child.transform;
-      const size = child.size;
-
+      const { transform, size } = child;
       if (transform && size) {
+        // m02/m12/x/y can be omitted in the Kiwi binary schema, which the
+        // schema defines as 0 — treat them as such when computing extent.
         const right = (transform.m02 ?? 0) + (size.x ?? 0);
         const bottom = (transform.m12 ?? 0) + (size.y ?? 0);
         return {
           width: Math.max(acc.width, right),
           height: Math.max(acc.height, bottom),
+          measured: true,
         };
       }
       return acc;
     },
-    { width: defaultWidth, height: defaultHeight },
+    { width: 0, height: 0, measured: false },
   );
 
-  return bounds;
+  if (!bounds.measured) {
+    throw new Error(
+      "renderCanvas: cannot derive canvas size — no child has both `transform` and `size`. Pass explicit `width`/`height`.",
+    );
+  }
+  return { width: bounds.width, height: bounds.height };
 }
 
 /**
- * Render a single canvas (page) from Figma nodes
+ * Render a single canvas (page) from Figma nodes. Width/height are derived
+ * from the extent of the canvas children unless overridden. The root
+ * transforms are normalized to (0, 0) by default since canvas rendering
+ * typically targets a self-contained viewport.
  */
 export async function renderCanvas(
   canvasNode: Pick<FigNode, "children">,
-  options?: FigSvgRenderOptions,
+  options: FigCanvasRenderOptions,
 ): Promise<FigSvgRenderResult> {
+  // `.children` is optional in the parser type (kiwi-level "no value"); an
+  // absent array is semantically an empty canvas, not an error.
   const children = canvasNode.children?.filter((c): c is FigNode => c != null) ?? [];
 
-  const defaultWidth = options?.width ?? 800;
-  const defaultHeight = options?.height ?? 600;
-  const bounds = calculateCanvasBounds(children, defaultWidth, defaultHeight);
+  const explicitW = options.width;
+  const explicitH = options.height;
+
+  let width: number;
+  let height: number;
+  if (explicitW !== undefined && explicitH !== undefined) {
+    width = explicitW;
+    height = explicitH;
+  } else {
+    const bounds = calculateCanvasBounds(children);
+    width = explicitW ?? bounds.width;
+    height = explicitH ?? bounds.height;
+  }
 
   return renderFigToSvg(children, {
     ...options,
-    width: options?.width ?? bounds.width,
-    height: options?.height ?? bounds.height,
-    normalizeRootTransform: options?.normalizeRootTransform ?? true,
+    width,
+    height,
+    // Canvas rendering always normalizes root transforms to (0, 0). This
+    // is the defining characteristic of the `renderCanvas` entry point —
+    // see the FigCanvasRenderOptions docstring. Callers that need absolute
+    // coordinates must use `renderFigToSvg` directly.
+    normalizeRootTransform: true,
   });
 }

@@ -149,20 +149,21 @@ function computeImagePatternLayout(params: ImagePatternLayoutParams): ImagePatte
   const pm02 = paintTransform?.m02 ?? 0;
   const pm12 = paintTransform?.m12 ?? 0;
 
-  const isIdentity =
-    pm00 === 1 && pm01 === 0 && pm10 === 0 && pm11 === 1 && pm02 === 0 && pm12 === 0;
-
-  if (scaleMode === "FILL" && isIdentity) {
-    return createScaledImagePatternLayout({
-      imgW,
-      imgH,
-      elementSize,
-      pixelScale: Math.max(elementSize.width / imgW, elementSize.height / imgH),
-      centerMode: "crop",
-    });
+  // Figma's SVG export for FILL/FIT/STRETCH computes the scale purely from
+  // element × image dimensions and ignores paint.transform. paint.transform
+  // is only applied for CROP mode. This matches Figma's own SVG output.
+  if (scaleMode === "STRETCH") {
+    return {
+      patternWidth: 1,
+      patternHeight: 1,
+      imageWidth: imgW,
+      imageHeight: imgH,
+      preserveAspectRatio: "none",
+      imageTransform: formatImageTransform({ sa: 1 / imgW, sb: 0, sc: 0, sd: 1 / imgH, stx: 0, sty: 0 }),
+    };
   }
 
-  if (scaleMode === "FIT" && isIdentity) {
+  if (scaleMode === "FIT") {
     return createScaledImagePatternLayout({
       imgW,
       imgH,
@@ -172,11 +173,22 @@ function computeImagePatternLayout(params: ImagePatternLayoutParams): ImagePatte
     });
   }
 
-  if (scaleMode === "TILE" && isIdentity) {
+  if (scaleMode === "FILL" || scaleMode === undefined) {
+    return createScaledImagePatternLayout({
+      imgW,
+      imgH,
+      elementSize,
+      pixelScale: Math.max(elementSize.width / imgW, elementSize.height / imgH),
+      centerMode: "crop",
+    });
+  }
+
+  if (scaleMode === "TILE") {
     return createTiledImagePatternLayout({ imgW, imgH, elementSize, scalingFactor });
   }
 
-  // General case: inv(paintTransform) × diag(1/imgW, 1/imgH)
+  // CROP (and any other explicit mode with paint.transform) — invert paint transform.
+  // inv(paintTransform) × diag(1/imgW, 1/imgH)
   const det = pm00 * pm11 - pm01 * pm10;
   if (Math.abs(det) < 1e-12) {
     return undefined;
@@ -282,18 +294,50 @@ type ImageTransformParts = {
   readonly sty: number;
 };
 
+/**
+ * Format a number with 7 significant digits.
+ * (Used for SVG numeric attributes / transform values.)
+ */
+function fmt(n: number): string {
+  if (!Number.isFinite(n)) { return "0"; }
+  if (n === 0) { return "0"; }
+  const s = n.toPrecision(7);
+  const asNum = Number.parseFloat(s);
+  if (Number.isInteger(asNum)) { return String(asNum); }
+  return s.includes(".") ? s.replace(/0+$/, "").replace(/\.$/, "") : s;
+}
+
+/**
+ * Round *up* to 6 significant digits, preserving sign direction.
+ *
+ * Some SVG renderers (notably resvg) mishandle the edge case where an image
+ * inside an objectBoundingBox pattern has its oBB size equal to exactly 1.0
+ * (image exactly fills pattern tile). Adding a tiny positive bias via
+ * upward rounding avoids that degenerate case while being visually
+ * indistinguishable. Matches Figma's own SVG export precision.
+ */
+function fmtUp(n: number): string {
+  if (!Number.isFinite(n) || n === 0) { return fmt(n); }
+  const abs = Math.abs(n);
+  const magnitude = Math.pow(10, Math.ceil(Math.log10(abs)) - 6);
+  const rounded = (n > 0 ? Math.ceil(n / magnitude) : Math.floor(n / magnitude)) * magnitude;
+  return fmt(rounded);
+}
+
 /** Format SVG image transform from matrix components. */
 function formatImageTransform(parts: ImageTransformParts): string {
   const { sa, sb, sc, sd, stx, sty } = parts;
   if (sb === 0 && sc === 0) {
+    const sax = fmtUp(sa);
+    const sdx = fmtUp(sd);
     if (stx === 0 && sty === 0) {
-      if (sa === sd) {
-        return `scale(${sa})`;
+      if (sax === sdx) {
+        return `scale(${sax})`;
       }
-      return `scale(${sa} ${sd})`;
+      return `scale(${sax} ${sdx})`;
     }
-    return `matrix(${sa} 0 0 ${sd} ${stx} ${sty})`;
+    return `matrix(${sax} 0 0 ${sdx} ${fmt(stx)} ${fmt(sty)})`;
   }
 
-  return `matrix(${sa} ${sb} ${sc} ${sd} ${stx} ${sty})`;
+  return `matrix(${fmt(sa)} ${fmt(sb)} ${fmt(sc)} ${fmt(sd)} ${fmt(stx)} ${fmt(sty)})`;
 }

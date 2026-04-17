@@ -52,10 +52,22 @@ export function hasCornerRadius(svg: string): boolean {
  */
 export function detectFeatures(svg: string): string[] {
   const features: string[] = [];
-  if (svg.includes("<linearGradient") || svg.includes("<radialGradient")) {
+  // Gradient can be emitted as a native SVG `<linearGradient>` /
+  // `<radialGradient>`, or as a CSS `background: linear-gradient(...)` /
+  // `radial-gradient(...)` inside a `<foreignObject>`. The latter is how
+  // the scene-graph renderer emits angular/diamond gradients that have no
+  // direct SVG primitive — treat both as the same visual feature.
+  const svgGradient = svg.includes("<linearGradient") || svg.includes("<radialGradient");
+  const cssGradient = /background:\s*(?:linear|radial)-gradient\(/.test(svg);
+  if (svgGradient || cssGradient) {
     features.push("gradient");
   }
-  if (svg.includes("conic-gradient") || svg.includes("conicalGradient")) {
+  // Conic gradient has no direct SVG primitive; Figma emits
+  // `<conicalGradient>` while the scene-graph renderer emits a
+  // `<foreignObject>` wrapping a `<div>` with `background: conic-gradient(...)`.
+  const svgConic = svg.includes("<conicalGradient");
+  const cssConic = /background:\s*conic-gradient\(/.test(svg);
+  if (svgConic || cssConic) {
     features.push("conic-gradient");
   }
   if (svg.includes("<pattern") || svg.includes("data:image")) {

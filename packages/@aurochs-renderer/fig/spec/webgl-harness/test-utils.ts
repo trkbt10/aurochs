@@ -207,6 +207,7 @@ export function buildFrameSceneGraph(frame: FrameInfo, data: FixtureData): Scene
     symbolMap: data.document.components,
     styleRegistry: data.document.styleRegistry,
     showHiddenNodes: false,
+    warnings: [],
   });
 }
 

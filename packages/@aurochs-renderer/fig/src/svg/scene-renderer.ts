@@ -72,6 +72,7 @@ import {
   foreignObject,
   unsafeSvg,
   type SvgString,
+  type SvgPaintAttrs,
   EMPTY_SVG,
 } from "./primitives";
 
@@ -100,7 +101,7 @@ function formatFilterPrimitive(p: ResolvedFilterPrimitive): SvgString {
     case "feColorMatrix":
       return feColorMatrix({
         in: p.in,
-        type: p.matrixType as Parameters<typeof feColorMatrix>[0]["type"],
+        type: p.matrixType,
         values: p.values,
         result: p.result,
       });
@@ -110,7 +111,7 @@ function formatFilterPrimitive(p: ResolvedFilterPrimitive): SvgString {
       return feGaussianBlur({ in: p.in, stdDeviation: p.stdDeviation });
     case "feBlend":
       return feBlend({
-        mode: p.mode as Parameters<typeof feBlend>[0]["mode"],
+        mode: p.mode,
         in: p.in,
         in2: p.in2,
         result: p.result,
@@ -118,7 +119,7 @@ function formatFilterPrimitive(p: ResolvedFilterPrimitive): SvgString {
     case "feComposite":
       return feComposite({
         in2: p.in2,
-        operator: p.operator as Parameters<typeof feComposite>[0]["operator"],
+        operator: p.operator,
         k2: p.k2,
         k3: p.k3,
       });
@@ -255,49 +256,50 @@ function formatDef(def: RenderDef): SvgString {
     }
     case "pattern": {
       const d = def.def;
-      const patternAttrs: Record<string, string | number | undefined> = {
+      const patternAttrs: Parameters<typeof pattern>[0] = {
         id: d.id,
         patternContentUnits: d.patternContentUnits === "objectBoundingBox" ? "objectBoundingBox" : undefined,
         patternUnits: d.patternContentUnits === "userSpaceOnUse" ? "userSpaceOnUse" : undefined,
         width: d.width,
         height: d.height,
+        patternTransform: d.patternTransform,
       };
-      if (d.patternTransform) {
-        patternAttrs.patternTransform = d.patternTransform;
-      }
       // When imageTransform is set (by finalizeImagePatternDefs),
       // the image uses natural pixel dimensions with the transform
       // mapping to objectBoundingBox space. Otherwise, simple stretch.
-      const imgAttrs: Record<string, string | number | undefined> = {
-        href: d.dataUri,
-        width: d.imageWidth,
-        height: d.imageHeight,
-        preserveAspectRatio: d.preserveAspectRatio,
-      };
-      if (d.imageTransform) {
-        imgAttrs.transform = d.imageTransform;
-      } else {
-        imgAttrs.x = 0;
-        imgAttrs.y = 0;
-      }
-      return pattern(
-        patternAttrs as Parameters<typeof pattern>[0],
-        image(imgAttrs as Parameters<typeof image>[0]),
-      );
+      const imgAttrs: Parameters<typeof image>[0] = d.imageTransform
+        ? {
+            href: d.dataUri,
+            width: d.imageWidth,
+            height: d.imageHeight,
+            preserveAspectRatio: d.preserveAspectRatio,
+            transform: d.imageTransform,
+          }
+        : {
+            href: d.dataUri,
+            width: d.imageWidth,
+            height: d.imageHeight,
+            preserveAspectRatio: d.preserveAspectRatio,
+            x: 0,
+            y: 0,
+          };
+      return pattern(patternAttrs, image(imgAttrs));
     }
     case "filter": {
       const f = def.filter;
       const primitives = f.primitives.map((p) => formatFilterPrimitive(p));
-      const filterAttrs: Record<string, string | number | undefined> = { id: f.id };
-      if (f.filterBounds) {
-        filterAttrs.x = f.filterBounds.x;
-        filterAttrs.y = f.filterBounds.y;
-        filterAttrs.width = f.filterBounds.width;
-        filterAttrs.height = f.filterBounds.height;
-        filterAttrs.filterUnits = "userSpaceOnUse";
-        filterAttrs["color-interpolation-filters"] = "sRGB";
-      }
-      return filter(filterAttrs as Parameters<typeof filter>[0], ...primitives);
+      const filterAttrs: Parameters<typeof filter>[0] = f.filterBounds
+        ? {
+            id: f.id,
+            x: f.filterBounds.x,
+            y: f.filterBounds.y,
+            width: f.filterBounds.width,
+            height: f.filterBounds.height,
+            filterUnits: "userSpaceOnUse",
+            "color-interpolation-filters": "sRGB",
+          }
+        : { id: f.id };
+      return filter(filterAttrs, ...primitives);
     }
     case "clip-path": {
       return clipPath({ id: def.id }, formatClipPathShape(def.shape));
@@ -411,15 +413,15 @@ function buildRoundedRectPathD(w: number, h: number, radii: readonly [number, nu
  */
 function formatRectShape(
   w: number, h: number, cr: CornerRadius | undefined,
-  fillAttrs: Record<string, string | number | undefined>,
-  strokeAttrs: Record<string, string | number | undefined>,
+  fillAttrs: SvgPaintAttrs,
+  strokeAttrs: SvgPaintAttrs,
 ): SvgString {
   if (cr !== undefined && typeof cr !== "number") {
     return path({
       d: buildRoundedRectPathD(w, h, cr),
       ...fillAttrs,
       ...strokeAttrs,
-    } as Parameters<typeof path>[0]);
+    });
   }
   return rect({
     x: 0, y: 0,
@@ -427,7 +429,7 @@ function formatRectShape(
     rx: cr, ry: cr,
     ...fillAttrs,
     ...strokeAttrs,
-  } as Parameters<typeof rect>[0]);
+  });
 }
 
 // =============================================================================
@@ -445,15 +447,15 @@ function blendModeStyle(bm: BlendMode | undefined): string | undefined {
 function formatMultiFillRectLayers(
   layers: readonly ResolvedFillLayer[],
   w: number, h: number, cr: CornerRadius | undefined,
-  strokeAttrs: Record<string, string | number | undefined>,
+  strokeAttrs: SvgPaintAttrs,
 ): SvgString[] {
-  return layers.map((layer, i) => {
-    const fillAttrs = {
+  return layers.map((layer, i): SvgString => {
+    const fillAttrs: SvgPaintAttrs = {
       fill: layer.attrs.fill,
       "fill-opacity": layer.attrs.fillOpacity,
     };
     // Only last layer gets stroke
-    const sAttrs = i === layers.length - 1 ? strokeAttrs : {};
+    const sAttrs: SvgPaintAttrs = i === layers.length - 1 ? strokeAttrs : {};
     const style = blendModeStyle(layer.blendMode);
     if (cr !== undefined && typeof cr !== "number") {
       return path({
@@ -461,7 +463,7 @@ function formatMultiFillRectLayers(
         ...fillAttrs,
         ...sAttrs,
         style,
-      } as Parameters<typeof path>[0]);
+      });
     }
     return rect({
       x: 0, y: 0,
@@ -470,7 +472,7 @@ function formatMultiFillRectLayers(
       ...fillAttrs,
       ...sAttrs,
       style,
-    } as Parameters<typeof rect>[0]);
+    });
   });
 }
 
@@ -986,13 +988,42 @@ function formatNode(node: RenderNode): SvgString {
 // =============================================================================
 
 /**
+ * Options for SVG formatting of a RenderTree.
+ */
+export type FormatRenderTreeToSvgOptions = {
+  /**
+   * Optional canvas background color (CSS color string). When provided,
+   * emitted as a full-canvas <rect> before children — matches the original
+   * SVG renderer's output ordering (defs are on nodes, not root-level).
+   */
+  readonly backgroundColor?: string;
+};
+
+/**
  * Format a RenderTree to an SVG string.
  *
  * This is a pure formatter — no attribute resolution happens here.
  * All rendering decisions were made by resolveRenderTree().
  */
-export function formatRenderTreeToSvg(renderTree: RenderTree): SvgString {
+export function formatRenderTreeToSvg(
+  renderTree: RenderTree,
+  options?: FormatRenderTreeToSvgOptions,
+): SvgString {
   const children = renderTree.children.map(formatNode);
+
+  const body: SvgString[] = [];
+  if (options?.backgroundColor) {
+    body.push(
+      rect({
+        x: 0,
+        y: 0,
+        width: renderTree.width,
+        height: renderTree.height,
+        fill: options.backgroundColor,
+      }),
+    );
+  }
+  body.push(...children);
 
   return svg(
     {
@@ -1000,7 +1031,7 @@ export function formatRenderTreeToSvg(renderTree: RenderTree): SvgString {
       height: renderTree.height,
       viewBox: `0 0 ${renderTree.width} ${renderTree.height}`,
     },
-    ...children,
+    ...body,
   );
 }
 

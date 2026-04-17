@@ -27,9 +27,16 @@ type FigPageRendererProps = {
   /** Binary blobs for geometry decoding (from FigDesignDocument.blobs) */
   readonly blobs: BuildSceneGraphOptions["blobs"];
   /** Symbol/component map for INSTANCE resolution */
-  readonly symbolMap?: ReadonlyMap<string, FigDesignNode>;
-  /** Style registry for per-path style override resolution */
-  readonly styleRegistry?: FigStyleRegistry;
+  /**
+   * Symbol map for INSTANCE resolution. Pass an empty Map when the page
+   * has no INSTANCE references — the component does not silently default.
+   */
+  readonly symbolMap: ReadonlyMap<string, FigDesignNode>;
+  /**
+   * Style registry for per-path style override resolution. Pass
+   * `EMPTY_FIG_STYLE_REGISTRY` when the page carries no shared styles.
+   */
+  readonly styleRegistry: FigStyleRegistry;
 };
 
 // =============================================================================
@@ -65,6 +72,8 @@ export function FigPageRenderer({
       canvasSize: { width: canvasWidth, height: canvasHeight },
       symbolMap,
       styleRegistry,
+      showHiddenNodes: false,
+      warnings: [],
     });
   }, [page.children, canvasWidth, canvasHeight, images, blobs, symbolMap, styleRegistry]);
 

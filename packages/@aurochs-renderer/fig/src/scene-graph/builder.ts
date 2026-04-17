@@ -16,7 +16,6 @@ import {
   overridePathToIds,
   overrideEntries,
   applyOverrideToNode,
-  EMPTY_FIG_STYLE_REGISTRY,
 } from "@aurochs/fig/domain";
 import type { FigPaint, FigVectorPath } from "@aurochs/fig/types";
 import { guidToString } from "@aurochs/fig/parser";
@@ -97,26 +96,37 @@ function selectPaintsForFills(
  * symbolMap uses FigDesignNode (domain type) — symbol resolution operates
  * on domain objects, not raw parser types.
  */
+/**
+ * Configuration for `buildSceneGraph`. Every field is required: the builder
+ * does not invent defaults. If an input is genuinely absent for a call
+ * site (e.g. a tree without INSTANCE nodes needs no symbolMap), the caller
+ * passes the explicit "empty" value (`new Map()`, `[]`, `EMPTY_FIG_STYLE_
+ * REGISTRY`, `false`) so intent is visible at the call site and never
+ * hidden inside the builder.
+ */
 export type BuildSceneGraphOptions = {
-  /** Binary blobs from .fig file */
+  /** Binary blobs from .fig file. Pass `[]` if the tree has no path data. */
   readonly blobs: readonly FigBlob[];
-  /** Image lookup map */
+  /** Image lookup map. Pass `new Map()` if no IMAGE paints are present. */
   readonly images: ReadonlyMap<string, FigImage>;
-  /** Canvas size */
+  /** Canvas size. */
   readonly canvasSize: { width: number; height: number };
-  /** Symbol map for INSTANCE resolution (domain objects) */
-  readonly symbolMap?: ReadonlyMap<string, FigDesignNode>;
-  /** Whether to include hidden nodes */
-  readonly showHiddenNodes?: boolean;
+  /** Symbol map for INSTANCE resolution. Pass `new Map()` when absent. */
+  readonly symbolMap: ReadonlyMap<string, FigDesignNode>;
+  /** Whether to include nodes with `visible: false`. */
+  readonly showHiddenNodes: boolean;
   /**
-   * Style registry for resolving per-path style overrides.
-   *
-   * Node-level styleIdForFill/styleIdForStrokeFill is pre-resolved during
-   * domain conversion (fills/strokes already authoritative). This registry
-   * is needed for vector per-path overrides where
-   * vectorData.styleOverrideTable[n].styleIdForFill references a shared style.
+   * Style registry for per-path style overrides (vectorData
+   * styleOverrideTable → styleIdForFill/styleIdForStrokeFill resolution).
+   * Pass `EMPTY_FIG_STYLE_REGISTRY` when the tree carries no shared styles.
    */
-  readonly styleRegistry?: FigStyleRegistry;
+  readonly styleRegistry: FigStyleRegistry;
+  /**
+   * Mutable array for warnings emitted during construction (missing
+   * INSTANCE symbols, unknown node types, etc.). Pass a fresh `[]` to
+   * collect, or a shared array to aggregate across multiple builds.
+   */
+  readonly warnings: string[];
 };
 
 /**
@@ -128,6 +138,7 @@ type BuildContext = {
   readonly symbolMap: ReadonlyMap<string, FigDesignNode>;
   readonly styleRegistry: FigStyleRegistry;
   readonly showHiddenNodes: boolean;
+  readonly warnings: string[];
   nodeCounter: number;
 };
 
@@ -142,14 +153,10 @@ type BuildContext = {
  * so this is a direct read — no enum unwrapping needed.
  */
 function getNodeTypeName(node: FigDesignNode): string {
-  const type = node.type;
-  if (!type) { return "UNKNOWN"; }
-  if (typeof type === "string") { return type; }
-  // KiwiEnumValue fallback
-  if (typeof type === "object" && "name" in type) {
-    return (type as { name: string }).name;
-  }
-  return "UNKNOWN";
+  // FigDesignNode.type is `FigNodeType`, a string-literal union produced by
+  // `convertFigNode` during domain conversion. The KiwiEnumValue object
+  // shape exists only at the parser level and never reaches this layer.
+  return node.type;
 }
 
 /**
@@ -233,13 +240,15 @@ type ResolvedInstance = {
 };
 
 /**
- * Check if a fills array is effectively empty (no visible fills).
- * Instance nodes in Figma .fig files typically have empty fillPaints,
- * with the actual fills stored on the SYMBOL.
+ * Check whether a paint array is declared (i.e. the Kiwi field was present
+ * on the original node). An explicitly empty array still counts as
+ * "declared" — the node author chose "no paint". An absent array means
+ * "inherit from elsewhere" (e.g. SYMBOL). This matches the semantics of
+ * `mergeSymbolProperties` in @aurochs/fig/symbols, which checks
+ * `if (symbolNode.fillPaints)` — truthy only when declared.
  */
-function hasVisibleFills(fills: readonly FigPaint[] | undefined): boolean {
-  if (!fills || fills.length === 0) {return false;}
-  return fills.some((p) => p.visible !== false);
+function hasPaintDeclaration(paints: readonly FigPaint[] | undefined): boolean {
+  return paints !== undefined && paints.length > 0;
 }
 
 
@@ -503,13 +512,21 @@ function resolveInstance(
 
   const symbol = ctx.symbolMap.get(symbolId);
   if (!symbol) {
+    const warning = `INSTANCE symbol not found in symbolMap: id=${symbolId}`;
+    if (!ctx.warnings.includes(warning)) {
+      ctx.warnings.push(warning);
+    }
     return { effectiveNode: node, children: ownChildren };
   }
 
   // ── Step 1: Property merge ──
-  // Inherit ALL of SYMBOL's visual properties into the INSTANCE frame.
-  // The INSTANCE retains its own transform (placement) and size (may differ).
-  // Self-overrides in Step 2 may then restore INSTANCE-specific values.
+  // This mirrors `mergeSymbolProperties` in @aurochs/fig/symbols (the SoT
+  // for FigNode-level INSTANCE resolution): SYMBOL's visual properties
+  // always override INSTANCE-level values. Any INSTANCE-specific paint,
+  // stroke, or visual tweak arrives via self-referencing `symbolOverrides`
+  // which are applied in Step 2. Reading directly-set INSTANCE `fillPaints`
+  // here would treat author tooling artefacts (e.g. a stale copy on the
+  // INSTANCE frame) as authoritative and diverge from Figma's own export.
   const instanceSize = node.size;
   const symbolSize = symbol.size;
   const sameSize = instanceSize.x === symbolSize.x && instanceSize.y === symbolSize.y;
@@ -517,15 +534,16 @@ function resolveInstance(
   const merged: MutableFigDesignNode = {
     ...node,
 
-    // Paint — SYMBOL provides baseline; INSTANCE fills/strokes take precedence
-    // when they contain visible paints (e.g. overrideBackground sets fillPaints
-    // directly on the INSTANCE node). Self-overrides (Step 2) may further modify.
-    fills: hasVisibleFills(node.fills) ? node.fills : symbol.fills,
-    strokes: (node.strokes?.length ?? 0) > 0 ? node.strokes : symbol.strokes,
-    strokeWeight: node.strokeWeight ?? symbol.strokeWeight,
-    strokeJoin: node.strokeJoin ?? symbol.strokeJoin,
-    strokeCap: node.strokeCap ?? symbol.strokeCap,
-    strokeDashes: node.strokeDashes ?? symbol.strokeDashes,
+    // Paint — SYMBOL wins unconditionally when it declares paints. The
+    // INSTANCE's fills/strokes are only used when the SYMBOL has none
+    // (this preserves the stand-alone-INSTANCE case where no SYMBOL paint
+    // exists at all).
+    fills: hasPaintDeclaration(symbol.fills) ? symbol.fills : node.fills,
+    strokes: hasPaintDeclaration(symbol.strokes) ? symbol.strokes : node.strokes,
+    strokeWeight: symbol.strokeWeight ?? node.strokeWeight,
+    strokeJoin: symbol.strokeJoin ?? node.strokeJoin,
+    strokeCap: symbol.strokeCap ?? node.strokeCap,
+    strokeDashes: symbol.strokeDashes ?? node.strokeDashes,
 
     // Geometry — inherit from SYMBOL
     cornerRadius: symbol.cornerRadius ?? node.cornerRadius,
@@ -576,7 +594,11 @@ function resolveInstance(
     }
   }
 
-  const effectiveNode: FigDesignNode = merged;
+  // `merged` is mutated by Step 6 (size adjustment) and is the `effectiveNode`
+  // returned to the caller. Keeping the mutable type here avoids an `as`
+  // cast downstream — the cast would be a symptom that the type pipeline
+  // is hiding which values are still in flux versus fully resolved.
+  const effectiveNode: MutableFigDesignNode = merged;
 
   // ── Step 3: Clone children with overrides ──
   // INSTANCE children in .fig are typically empty — SYMBOL children are used.
@@ -604,13 +626,33 @@ function resolveInstance(
   }
 
   // ── Step 6: Constraint resolution for resized instances ──
+  // Mirrors `resolveInstanceLayout` in @aurochs/fig/symbols: the INSTANCE
+  // size is only honoured when there is a mechanism to redistribute the
+  // children to the new extent — either authored constraint settings or
+  // pre-computed derivedSymbolData. Without either, the instance falls back
+  // to the SYMBOL's size; applying the INSTANCE size unconditionally would
+  // clip or stretch children relative to a layout they were not designed
+  // for, producing the "tighter rounded clip" / "3 different-sized
+  // buttons" regressions.
   const sizeChanged = instanceSize.x !== symbolSize.x || instanceSize.y !== symbolSize.y;
   if (sizeChanged) {
-    if (!node.derivedSymbolData || node.derivedSymbolData.length === 0) {
-      applyConstraintResolution(children, symbolSize, instanceSize);
+    const hasDerivedData = node.derivedSymbolData !== undefined && node.derivedSymbolData.length > 0;
+    const hasConstraints = children.some((child) => {
+      const hc = child.layoutConstraints?.horizontalConstraint;
+      const vc = child.layoutConstraints?.verticalConstraint;
+      // Anything other than MIN/MIN means the child has an explicit layout
+      // rule authored against the SYMBOL extent, so it is valid to
+      // redistribute it to the INSTANCE extent.
+      return (hc !== undefined && hc.name !== "MIN") || (vc !== undefined && vc.name !== "MIN");
+    });
+
+    if (hasDerivedData || hasConstraints) {
+      if (!hasDerivedData) {
+        applyConstraintResolution(children, symbolSize, instanceSize);
+      }
+      effectiveNode.size = instanceSize;
     }
-    // Update the effective node's size to the INSTANCE size for frame rendering
-    (effectiveNode as MutableFigDesignNode).size = instanceSize;
+    // Otherwise: keep SYMBOL size and the original child layout.
   }
 
   // ── Step 7: Recursively resolve nested INSTANCE children ──
@@ -916,7 +958,8 @@ function buildVectorNode(node: FigDesignNode, ctx: BuildContext): PathNode {
 function extractEnumName(value: unknown): string | undefined {
   if (typeof value === "string") { return value; }
   if (value && typeof value === "object" && "name" in value) {
-    return (value as { name: string }).name;
+    const name = (value as Record<string, unknown>).name;
+    return typeof name === "string" ? name : undefined;
   }
   return undefined;
 }
@@ -1085,7 +1128,7 @@ function computeBooleanResultFromNode(
   node: FigDesignNode,
   ctx: BuildContext,
 ): string[] | undefined {
-  const children = (node.children ?? []) as readonly FigDesignNode[];
+  const children: readonly FigDesignNode[] = node.children ?? [];
   const childPaths = collectChildPathsForBoolean(children, ctx);
 
   if (childPaths.length === 0) { return undefined; }
@@ -1367,9 +1410,10 @@ export function buildSceneGraph(nodes: readonly FigDesignNode[], options: BuildS
   const ctx: BuildContext = {
     blobs: options.blobs,
     images: options.images,
-    symbolMap: options.symbolMap ?? new Map(),
-    styleRegistry: options.styleRegistry ?? EMPTY_FIG_STYLE_REGISTRY,
-    showHiddenNodes: options.showHiddenNodes ?? false,
+    symbolMap: options.symbolMap,
+    styleRegistry: options.styleRegistry,
+    showHiddenNodes: options.showHiddenNodes,
+    warnings: options.warnings,
     nodeCounter: 0,
   };
 

@@ -28,6 +28,9 @@ describe("INSTANCE color inheritance in scene graph", () => {
       images: doc.images,
       canvasSize: { width: 1200, height: 800 },
       symbolMap: doc.components,
+      styleRegistry: doc.styleRegistry,
+      showHiddenNodes: false,
+      warnings: [],
     });
 
     // Find the "Default" button instance
@@ -46,7 +49,16 @@ describe("INSTANCE color inheritance in scene graph", () => {
     }
   }, 30_000);
 
-  it("overrideBackground INSTANCE uses its own fills", async () => {
+  it("overrideBackground on an INSTANCE does NOT override SYMBOL fills", async () => {
+    // Historic context: the `.overrideBackground(c)` builder shortcut writes
+    // the colour straight into `fillPaints` on the INSTANCE node. Figma's
+    // real export ignores that channel — INSTANCE frames render with the
+    // SYMBOL's paints, and any per-instance colour variation must go
+    // through `symbolOverrides` (self-referencing guidPath). This test
+    // pins the SSoT-aligned behaviour (builder.ts resolveInstance follows
+    // `mergeSymbolProperties` in @aurochs/fig/symbols), so that the
+    // shortcut is explicitly a no-op and callers are forced to use the
+    // override mechanism that Figma actually honours.
     const doc = await createDemoFigDesignDocument();
     const compPage = doc.pages.find((p) => p.name === "Components & Effects")!;
 
@@ -55,21 +67,24 @@ describe("INSTANCE color inheritance in scene graph", () => {
       images: doc.images,
       canvasSize: { width: 1200, height: 800 },
       symbolMap: doc.components,
+      styleRegistry: doc.styleRegistry,
+      showHiddenNodes: false,
+      warnings: [],
     });
 
-    // Find the "Danger" button instance (overrideBackground(RED))
     const dangerBtn = findSceneNode(sg.root.children, (n) => n.name === "Danger") as FrameNode | undefined;
     expect(dangerBtn, "Danger button instance should exist in scene graph").toBeDefined();
     expect(dangerBtn!.type).toBe("frame");
     expect(dangerBtn!.fills.length).toBeGreaterThan(0);
 
-    // Danger button should have RED fill from overrideBackground
-    // RED = { r: 0.90, g: 0.25, b: 0.25, a: 1 }
+    // The Danger instance declares overrideBackground(RED) but the SYMBOL
+    // (ButtonBase) declares BLUE = { r: 0.24, g: 0.47, b: 0.85 }. SYMBOL
+    // wins under the SoT-aligned rule.
     const topFill = dangerBtn!.fills[dangerBtn!.fills.length - 1];
     expect(topFill.type).toBe("solid");
     if (topFill.type === "solid") {
-      expect(topFill.color.r).toBeCloseTo(0.9, 1);
-      expect(topFill.color.g).toBeCloseTo(0.25, 1);
+      expect(topFill.color.r).toBeCloseTo(0.24, 1);
+      expect(topFill.color.b).toBeCloseTo(0.85, 1);
     }
   }, 30_000);
 
@@ -82,6 +97,9 @@ describe("INSTANCE color inheritance in scene graph", () => {
       images: doc.images,
       canvasSize: { width: 1200, height: 800 },
       symbolMap: doc.components,
+      styleRegistry: doc.styleRegistry,
+      showHiddenNodes: false,
+      warnings: [],
     });
 
     // Default button should have children (bg rect + label text)
@@ -99,6 +117,9 @@ describe("INSTANCE color inheritance in scene graph", () => {
       images: doc.images,
       canvasSize: { width: 1200, height: 800 },
       symbolMap: doc.components,
+      styleRegistry: doc.styleRegistry,
+      showHiddenNodes: false,
+      warnings: [],
     });
 
     const defaultBtn = findSceneNode(sg.root.children, (n) => n.name === "Default") as FrameNode | undefined;

@@ -101,41 +101,56 @@ async function loadFigFile(): Promise<ParsedData> {
   return parsedDataCache;
 }
 
-/** Extract rect positions from SVG (handles both x/y attributes and transform) */
+/**
+ * Extract rect positions from SVG. Walks the element tree left-to-right and
+ * accumulates translations from ancestor `<g transform="matrix(1,0,0,1,tx,ty)">`
+ * groups so that children wrapped in `<g transform>` report their absolute
+ * position. The scene-graph renderer emits `<g transform>` + `<rect x=0 y=0>`
+ * rather than the Figma-style flat `<rect x=abs y=abs>`, and this helper
+ * normalises both forms onto the same absolute-coordinate comparison axis.
+ */
 function extractRectPositions(svg: string): Array<{ id: string; x: number; y: number; width: number; height: number }> {
   const results: Array<{ id: string; x: number; y: number; width: number; height: number }> = [];
-  // Match all rects (with or without id)
-  const rectRegex = /<rect[^>]*>/g;
-  const matchRef = { value: undefined as RegExpExecArray | null | undefined };
+  const tokenRegex = /<g[^>]*>|<\/g>|<rect[^>]*\/?>/g;
+  const stack: Array<{ tx: number; ty: number }> = [{ tx: 0, ty: 0 }];
   const indexRef = { value: 0 };
 
-  while ((matchRef.value = rectRegex.exec(svg)) !== null) {
-    const rectStr = matchRef.value[0];
+  const matrixOf = (s: string): { tx: number; ty: number } => {
+    const m = s.match(/transform="matrix\(1,\s*0,\s*0,\s*1,\s*([\d.-]+),\s*([\d.-]+)\)"/);
+    return m ? { tx: parseFloat(m[1]), ty: parseFloat(m[2]) } : { tx: 0, ty: 0 };
+  };
 
-    // Skip background rects (first rect or rects that fill the whole viewBox)
-    const wMatch = rectStr.match(/\bwidth="([^"]*)"/);
-    const hMatch = rectStr.match(/\bheight="([^"]*)"/);
+  const matchRef = { value: undefined as RegExpExecArray | null | undefined };
+  while ((matchRef.value = tokenRegex.exec(svg)) !== null) {
+    const tok = matchRef.value[0];
+    if (tok.startsWith("</g>")) {
+      if (stack.length > 1) { stack.pop(); }
+      continue;
+    }
+    if (tok.startsWith("<g")) {
+      const parent = stack[stack.length - 1];
+      const local = matrixOf(tok);
+      stack.push({ tx: parent.tx + local.tx, ty: parent.ty + local.ty });
+      continue;
+    }
+
+    // <rect ...>
+    const wMatch = tok.match(/\bwidth="([^"]*)"/);
+    const hMatch = tok.match(/\bheight="([^"]*)"/);
     const width = parseFloat(wMatch?.[1] ?? "0");
     const height = parseFloat(hMatch?.[1] ?? "0");
 
-    // Check for id
-    const idMatch = rectStr.match(/\bid="([^"]*)"/);
+    const idMatch = tok.match(/\bid="([^"]*)"/);
     const id = idMatch?.[1] ?? `rect-${indexRef.value}`;
 
-    // Get position from x/y attributes
-    const xMatch = rectStr.match(/\bx="([^"]*)"/);
-    const yMatch = rectStr.match(/\by="([^"]*)"/);
-    const xRef = { value: parseFloat(xMatch?.[1] ?? "0") };
-    const yRef = { value: parseFloat(yMatch?.[1] ?? "0") };
+    const xMatch = tok.match(/\bx="([^"]*)"/);
+    const yMatch = tok.match(/\by="([^"]*)"/);
+    const ancestor = stack[stack.length - 1];
+    const local = matrixOf(tok);
+    const x = parseFloat(xMatch?.[1] ?? "0") + ancestor.tx + local.tx;
+    const y = parseFloat(yMatch?.[1] ?? "0") + ancestor.ty + local.ty;
 
-    // Check for transform="matrix(1, 0, 0, 1, tx, ty)"
-    const transformMatch = rectStr.match(/transform="matrix\(1,\s*0,\s*0,\s*1,\s*([\d.-]+),\s*([\d.-]+)\)"/);
-    if (transformMatch) {
-      xRef.value += parseFloat(transformMatch[1]);
-      yRef.value += parseFloat(transformMatch[2]);
-    }
-
-    results.push({ id, x: xRef.value, y: yRef.value, width, height });
+    results.push({ id, x, y, width, height });
     indexRef.value++;
   }
 

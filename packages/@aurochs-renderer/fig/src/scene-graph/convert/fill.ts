@@ -54,11 +54,11 @@ function _uint8ArrayToBase64(data: Uint8Array): string {
  */
 /**
  * Extract paint-level blend mode from a FigPaint.
- * The blendMode field can be a string or KiwiEnumValue.
+ * The blendMode field is typed `string | KiwiEnumValue` on FigPaintBase;
+ * `convertFigmaBlendMode` accepts both shapes.
  */
 function extractPaintBlendMode(paint: FigPaint): BlendMode | undefined {
-  const raw = paint as Record<string, unknown>;
-  return convertFigmaBlendMode(raw.blendMode as string | { name: string } | undefined);
+  return convertFigmaBlendMode(paint.blendMode);
 }
 
 /**

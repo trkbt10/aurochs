@@ -13,17 +13,45 @@ import type { Effect, Color, BlendMode } from "../types";
 // Resolved Filter Primitive Types
 // =============================================================================
 
+/** SVG feColorMatrix `type` attribute values (see SVG spec). */
+export type FeColorMatrixType = "matrix" | "saturate" | "hueRotate" | "luminanceToAlpha";
+
+/**
+ * SVG feBlend `mode` attribute values (CSS blend modes supported by SVG).
+ * Intersection of SVG spec values and CSS <blend-mode> values.
+ */
+export type FeBlendMode =
+  | "normal"
+  | "multiply"
+  | "screen"
+  | "overlay"
+  | "darken"
+  | "lighten"
+  | "color-dodge"
+  | "color-burn"
+  | "hard-light"
+  | "soft-light"
+  | "difference"
+  | "exclusion"
+  | "hue"
+  | "saturation"
+  | "color"
+  | "luminosity";
+
+/** SVG feComposite `operator` attribute values. */
+export type FeCompositeOperator = "over" | "in" | "out" | "atop" | "xor" | "arithmetic";
+
 /**
  * A resolved SVG filter primitive.
  * Each variant corresponds to an SVG filter element with all attributes computed.
  */
 export type ResolvedFilterPrimitive =
   | { readonly type: "feFlood"; readonly floodOpacity: number; readonly result: string }
-  | { readonly type: "feColorMatrix"; readonly in?: string; readonly matrixType: string; readonly values: string; readonly result?: string }
+  | { readonly type: "feColorMatrix"; readonly in?: string; readonly matrixType: FeColorMatrixType; readonly values: string; readonly result?: string }
   | { readonly type: "feOffset"; readonly dx: number; readonly dy: number }
   | { readonly type: "feGaussianBlur"; readonly in?: string; readonly stdDeviation: number }
-  | { readonly type: "feBlend"; readonly mode: string; readonly in?: string; readonly in2?: string; readonly result?: string }
-  | { readonly type: "feComposite"; readonly in2: string; readonly operator: string; readonly k2: number; readonly k3: number }
+  | { readonly type: "feBlend"; readonly mode: FeBlendMode; readonly in?: string; readonly in2?: string; readonly result?: string }
+  | { readonly type: "feComposite"; readonly in2: string; readonly operator: FeCompositeOperator; readonly k2: number; readonly k3: number }
   | { readonly type: "feMorphology"; readonly operator: "dilate" | "erode"; readonly radius: number };
 
 /**
@@ -57,12 +85,12 @@ type IdGenerator = {
 
 /**
  * Convert a BlendMode to SVG feBlend mode string.
- * Returns "normal" when no blend mode is specified.
+ * Returns "normal" when no blend mode is specified. Unsupported values
+ * (SVG feBlend only supports a subset of CSS blend modes) fall back to
+ * "normal" so renderers never emit an illegal attribute value.
  */
-function effectBlendModeToSvg(bm: BlendMode | undefined): string {
+function effectBlendModeToSvg(bm: BlendMode | undefined): FeBlendMode {
   if (!bm) { return "normal"; }
-  // SVG feBlend supports: normal, multiply, screen, darken, lighten, overlay
-  // For unsupported modes, fall back to "normal"
   switch (bm) {
     case "multiply":
     case "screen":

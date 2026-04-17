@@ -10,8 +10,10 @@
  * - Fill colors
  */
 
-// Main render function
-export { renderTextNode } from "./render";
+// Unified text-rendering entry point (SoT formatter).
+// Consumers should prefer `formatTextRenderingToSvg(resolveTextRendering(node, ctx))`
+// over the legacy renderX() entry points below.
+export { formatTextRenderingToSvg } from "./format-rendering";
 
 // SVG-specific alignment
 export { getTextAnchor, type SvgTextAnchor } from "./alignment";
@@ -19,7 +21,8 @@ export { getTextAnchor, type SvgTextAnchor } from "./alignment";
 // Attribute building
 export { buildTextAttrs } from "./attrs";
 
-// Path-based text rendering
+// Path-based text rendering using opentype.js (font-driver fallback).
+// Still needed for the lines-mode branch where no derived glyphs exist.
 export {
   renderTextNodeAsPath,
   batchRenderTextNodesAsPaths,
@@ -28,7 +31,8 @@ export {
   type PathRenderContext,
 } from "./path-render";
 
-// Derived path rendering (uses pre-computed paths from .fig files)
+// Derived path rendering — legacy wrappers. New code should use the SoT:
+// `resolveTextRendering(node, { blobs })` + `formatTextRenderingToSvg(rendering)`.
 export {
   renderTextNodeFromDerivedData,
   renderTextNodeWithDerivedFallback,

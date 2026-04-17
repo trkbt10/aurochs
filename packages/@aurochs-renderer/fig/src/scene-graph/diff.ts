@@ -75,11 +75,14 @@ function shallowEqual(a: unknown, b: unknown): boolean {
 }
 
 /**
- * Get children of a node (if it has them)
+ * Get children of a node (if it has them).
+ *
+ * The `type` discriminant narrows `node` to `GroupNode | FrameNode`,
+ * both of which declare `children`. No cast needed.
  */
 function getChildren(node: SceneNode): readonly SceneNode[] | undefined {
   if (node.type === "group" || node.type === "frame") {
-    return (node as GroupNode | FrameNode).children;
+    return node.children;
   }
   return undefined;
 }

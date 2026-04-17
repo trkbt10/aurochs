@@ -5,6 +5,7 @@
   "type": "module",
   "sideEffects": false,
   "dependencies": {
+    "@aurochs-builder/fig": "workspace:*",
     "@aurochs/fig": "workspace:*",
     "@aurochs/zip": "workspace:*"
   },

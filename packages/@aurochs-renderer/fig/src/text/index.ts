@@ -53,3 +53,16 @@ export {
 export type {
   PathContour,
 } from "./paths";
+
+// Unified text rendering SoT
+export {
+  resolveTextRendering,
+} from "./rendering";
+
+export type {
+  TextRendering,
+  TextRenderingEmpty,
+  TextRenderingGlyphs,
+  TextRenderingLines,
+  ResolveTextContext,
+} from "./rendering";

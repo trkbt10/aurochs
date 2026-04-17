@@ -250,9 +250,16 @@ export function pathCommandsToSvgPath(
 }
 
 /**
- * Decode a commands blob directly to SVG path string
+ * Decode a commands blob directly to SVG path string.
+ *
+ * Precision defaults to 4 decimal places to match Figma's own SVG export
+ * precision. Lower precision (e.g. 2) causes 1px-scale shifts in paths
+ * that cascade into visibly wrong gradient colours — a path rendered 1px
+ * off-centre samples a different part of the underlying radial fill, and
+ * any OVERLAY / HUE / LUMINOSITY blend on top composites against the
+ * wrong base colour.
  */
-export function decodeBlobToSvgPath(blob: FigBlob, precision = 2): string {
+export function decodeBlobToSvgPath(blob: FigBlob, precision = 4): string {
   const commands = decodePathCommands(blob);
   return pathCommandsToSvgPath(commands, precision);
 }

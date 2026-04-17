@@ -84,10 +84,12 @@ function PageSvgContent({ page, document: doc, bounds }: PageSvgContentProps) {
     }
     return buildSceneGraph(page.children, {
       blobs: doc.blobs,
-      images: doc.images as BuildSceneGraphOptions["images"],
+      images: doc.images,
       canvasSize: { width: bounds.width, height: bounds.height },
       symbolMap: doc.components,
       styleRegistry: doc.styleRegistry,
+      showHiddenNodes: false,
+      warnings: [],
     });
   }, [page.children, doc, bounds.width, bounds.height]);
 

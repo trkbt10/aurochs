@@ -145,7 +145,10 @@ function renderGlyphPath(glyph: DerivedGlyph, blobs: readonly FigBlob[], precisi
  */
 export function renderTextNodeFromDerivedData(node: FigNode, ctx: DerivedPathRenderContext): SvgString {
   const props = extractTextProps(node);
-  const derivedTextData = node.derivedTextData as DerivedTextData | undefined;
+  // FigNode.derivedTextData is already typed as FigDerivedTextData | undefined;
+  // the local alias `DerivedTextData` from @aurochs/fig/domain is structurally
+  // the same type, so no cast is needed.
+  const derivedTextData: DerivedTextData | undefined = node.derivedTextData;
 
   // No derived data - fallback to empty
   if (!derivedTextData?.glyphs || derivedTextData.glyphs.length === 0) {

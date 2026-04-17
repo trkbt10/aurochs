@@ -202,16 +202,59 @@ export type FigDerivedDecoration = {
 };
 
 /**
+ * Per-line derived data in Kiwi derivedTextData.
+ *
+ * Each entry corresponds to one visually rendered line (after wrapping,
+ * truncation, and BIDI resolution). The `characters` field — when present —
+ * holds the substring of the source string displayed on that line; this is
+ * the primary cue renderers use to detect line breaks vs. the source's own
+ * `\n`-split text.
+ */
+export type FigDerivedLine = {
+  readonly directionality?: KiwiEnumValue;
+  readonly characters?: string;
+  readonly baselinePosition?: FigVector;
+  readonly width?: number;
+};
+
+/**
+ * Per-font metadata stored alongside glyphs.
+ *
+ * Figma records the actual font family/style used for each glyph so that
+ * renderers can reconstruct the exact line-height and baseline metrics,
+ * even when the consuming environment does not have the font installed.
+ */
+export type FigFontMetaData = {
+  readonly key?: {
+    readonly family?: string;
+    readonly style?: string;
+    readonly postscript?: string;
+  };
+  readonly fontLineHeight?: number;
+  readonly fontStyle?: KiwiEnumValue;
+  readonly fontWeight?: number;
+  /** Digest hash for font identity (opaque). */
+  readonly fontDigest?: readonly number[];
+};
+
+/**
  * Pre-computed text rendering data from Kiwi binary format.
  * Contains glyph outlines, baselines, and decorations for path-based text rendering.
+ *
+ * `truncationStartIndex` (when >= 0) marks the codepoint index where the
+ * displayed text begins showing truncation. `truncatedHeight` is the height
+ * at which the text was cut (for multi-line truncation).
  */
 export type FigDerivedTextData = {
   readonly layoutSize?: FigVector;
   readonly baselines?: readonly FigDerivedBaseline[];
   readonly glyphs?: readonly FigDerivedGlyph[];
   readonly decorations?: readonly FigDerivedDecoration[];
-  readonly fontMetaData?: readonly unknown[];
-  readonly derivedLines?: readonly unknown[];
+  readonly fontMetaData?: readonly FigFontMetaData[];
+  readonly derivedLines?: readonly FigDerivedLine[];
+  readonly truncationStartIndex?: number;
+  readonly truncatedHeight?: number;
+  readonly logicalIndexToCharacterOffsetMap?: readonly number[];
 };
 
 // =============================================================================
@@ -229,15 +272,60 @@ export type FigGuidPath = {
  * Symbol override entry as stored in Kiwi binary format.
  *
  * Each entry targets a specific child node (via guidPath) and overrides
- * one or more of its properties. The overridden properties are the same
- * fields as FigNode (fillPaints, opacity, visible, etc.).
+ * one or more of its properties. Structurally an override is a guidPath
+ * plus a payload of typed FigNode-shaped fields.
  *
- * The index signature is required because overrides carry arbitrary
- * node properties as their payload — this is inherent to the Kiwi schema.
+ * We cannot literally write `Partial<FigNode>` here because FigNode contains
+ * `derivedSymbolData: FigKiwiSymbolOverride[]` — that circularity causes
+ * TypeScript to widen field accesses back to `unknown`. Instead we maintain
+ * `FigKiwiSymbolOverridePayload` as the SoT for "which FigNode fields may
+ * appear in an override" and keep it in sync with FigNode by construction.
  */
-export type FigKiwiSymbolOverride = {
+export type FigKiwiSymbolOverridePayload = {
+  readonly name?: string;
+  readonly visible?: boolean;
+  readonly opacity?: number;
+  readonly blendMode?: KiwiEnumValue;
+  readonly mask?: boolean;
+  readonly clipsContent?: boolean;
+  readonly frameMaskDisabled?: boolean;
+  readonly transform?: FigMatrix;
+  readonly size?: FigVector;
+  readonly fillPaints?: readonly FigPaint[];
+  readonly strokePaints?: readonly FigPaint[];
+  readonly strokeWeight?: FigStrokeWeight;
+  readonly strokeJoin?: KiwiEnumValue;
+  readonly strokeCap?: FigStrokeCap;
+  readonly strokeAlign?: KiwiEnumValue;
+  readonly strokeDashes?: readonly number[];
+  readonly borderTopWeight?: number;
+  readonly borderRightWeight?: number;
+  readonly borderBottomWeight?: number;
+  readonly borderLeftWeight?: number;
+  readonly borderStrokeWeightsIndependent?: boolean;
+  readonly cornerRadius?: number;
+  readonly rectangleCornerRadii?: readonly number[];
+  readonly rectangleTopLeftCornerRadius?: number;
+  readonly rectangleTopRightCornerRadius?: number;
+  readonly rectangleBottomLeftCornerRadius?: number;
+  readonly rectangleBottomRightCornerRadius?: number;
+  readonly rectangleCornerRadiiIndependent?: boolean;
+  readonly fillGeometry?: readonly FigFillGeometry[];
+  readonly strokeGeometry?: readonly FigFillGeometry[];
+  readonly vectorPaths?: readonly FigVectorPath[];
+  readonly vectorData?: FigVectorData;
+  readonly effects?: readonly FigEffect[];
+  readonly styleIdForFill?: FigStyleId;
+  readonly styleIdForStrokeFill?: FigStyleId;
+  readonly characters?: string;
+  readonly textData?: FigKiwiTextData;
+  readonly derivedTextData?: FigDerivedTextData;
+  readonly componentPropAssignments?: readonly FigComponentPropAssignment[];
+  readonly overriddenSymbolID?: FigGuid;
+};
+
+export type FigKiwiSymbolOverride = FigKiwiSymbolOverridePayload & {
   readonly guidPath: FigGuidPath;
-  readonly [key: string]: unknown;
 };
 
 /**
@@ -785,8 +873,19 @@ export type FigImagePaint = FigPaintBase & {
   readonly transform?: FigImageTransform;
   /** API/builder format: 2x3 affine transform for image positioning. */
   readonly imageTransform?: FigImageTransform;
-  /** TILE scale multiplier. */
+  /**
+   * Multiplier on the natural image size (TILE tile scale, or user-adjusted
+   * scale for FILL/FIT/CROP). API format uses `scalingFactor`; Kiwi binary
+   * stores `scale`.
+   */
   readonly scalingFactor?: number;
+  /** Kiwi-format multiplier. Semantics match `scalingFactor`. */
+  readonly scale?: number;
+  /**
+   * Rotation of the image in radians, applied about the element center.
+   * Kiwi binary field.
+   */
+  readonly rotation?: number;
   /** Kiwi format: image data reference (hash-based) */
   readonly image?: { readonly hash?: readonly number[] };
   /** Kiwi format: alternative image hash (string or byte array) */

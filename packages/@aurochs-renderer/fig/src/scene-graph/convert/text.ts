@@ -6,10 +6,7 @@
 
 import type { FigDesignNode } from "@aurochs/fig/domain";
 import type { FigBlob } from "@aurochs/fig/parser";
-import { extractTextProps } from "../../text/layout/extract-props";
-import { getFillColorAndOpacity } from "../../text/layout/fill";
-import { computeTextLayout } from "../../text/layout/compute-layout";
-import { extractDerivedTextPathData, hasDerivedGlyphs } from "../../text/paths/derived-paths";
+import { resolveTextRendering, type TextRendering } from "../../text/rendering";
 import type { PathContour, Color, TextLineLayout } from "../types";
 
 /** Map Figma text decoration value to scene graph text decoration string */
@@ -24,61 +21,41 @@ function mapTextDecoration(decoration: string | undefined): "underline" | "strik
 }
 
 /**
- * Convert text path contours from text/paths format to scene graph format
+ * Normalize path contours from the shared text SoT to the scene-graph
+ * `PathContour` shape (which requires windingRule).
+ *
+ * The SoT returns backend-agnostic contours whose commands already have
+ * all coordinate fields populated (the SoT itself builds them). This
+ * function just stamps in the winding rule and narrows the command union.
  */
-function convertTextContours(
-  textContours: readonly {
-    commands: readonly { type: string; x?: number; y?: number; x1?: number; y1?: number; x2?: number; y2?: number }[];
-  }[],
-): PathContour[] {
-  return textContours.map((contour) => ({
-    commands: contour.commands.map((cmd) => {
+function normalizeContours(contours: readonly {
+  readonly commands: readonly {
+    readonly type: "M" | "L" | "C" | "Q" | "Z";
+    readonly x?: number; readonly y?: number;
+    readonly x1?: number; readonly y1?: number;
+    readonly x2?: number; readonly y2?: number;
+  }[];
+}[]): PathContour[] {
+  return contours.map((c) => ({
+    commands: c.commands.map((cmd) => {
       switch (cmd.type) {
-        case "M":
-          return { type: "M" as const, x: cmd.x!, y: cmd.y! };
-        case "L":
-          return { type: "L" as const, x: cmd.x!, y: cmd.y! };
-        case "C":
-          return {
-            type: "C" as const,
-            x1: cmd.x1!,
-            y1: cmd.y1!,
-            x2: cmd.x2!,
-            y2: cmd.y2!,
-            x: cmd.x!,
-            y: cmd.y!,
-          };
-        case "Q":
-          return {
-            type: "Q" as const,
-            x1: cmd.x1!,
-            y1: cmd.y1!,
-            x: cmd.x!,
-            y: cmd.y!,
-          };
+        case "M": return { type: "M" as const, x: cmd.x ?? 0, y: cmd.y ?? 0 };
+        case "L": return { type: "L" as const, x: cmd.x ?? 0, y: cmd.y ?? 0 };
+        case "C": return {
+          type: "C" as const,
+          x1: cmd.x1 ?? 0, y1: cmd.y1 ?? 0,
+          x2: cmd.x2 ?? 0, y2: cmd.y2 ?? 0,
+          x: cmd.x ?? 0, y: cmd.y ?? 0,
+        };
+        case "Q": return {
+          type: "Q" as const,
+          x1: cmd.x1 ?? 0, y1: cmd.y1 ?? 0,
+          x: cmd.x ?? 0, y: cmd.y ?? 0,
+        };
         case "Z":
-        default:
-          return { type: "Z" as const };
+        default: return { type: "Z" as const };
       }
     }),
-    windingRule: "nonzero" as const,
-  }));
-}
-
-/**
- * Convert decoration rectangles to PathContours
- */
-function convertDecorationsToContours(
-  decorations: readonly { x: number; y: number; width: number; height: number }[],
-): PathContour[] {
-  return decorations.map((rect) => ({
-    commands: [
-      { type: "M" as const, x: rect.x, y: rect.y },
-      { type: "L" as const, x: rect.x + rect.width, y: rect.y },
-      { type: "L" as const, x: rect.x + rect.width, y: rect.y + rect.height },
-      { type: "L" as const, x: rect.x, y: rect.y + rect.height },
-      { type: "Z" as const },
-    ],
     windingRule: "nonzero" as const,
   }));
 }
@@ -153,54 +130,60 @@ function buildFontVariationSettings(
 }
 
 export function convertTextNode(node: FigDesignNode, blobs: readonly FigBlob[]): TextConversionResult {
-  const props = extractTextProps(node);
-  const { color: fillColor, opacity: fillOpacity } = getFillColorAndOpacity(props.fillPaints);
+  // Delegate resolution to the unified text rendering SoT. This is the only
+  // place (alongside svg/renderer.ts) that decides glyphs-vs-lines strategy.
+  const rendering = resolveTextRendering(node, { blobs });
   const fontVariationSettings = buildFontVariationSettings(node.textData?.fontVariations);
 
-  // Parse fill color
-  const color = parseHexColor(fillColor);
-
-  // Check for derived path data (0% diff rendering)
-  const derivedTextData = node.derivedTextData;
-
-  if (hasDerivedGlyphs(derivedTextData)) {
-    const pathData = extractDerivedTextPathData(derivedTextData!, blobs);
-    const glyphContours = convertTextContours(pathData.glyphContours);
-    const decorationContours = convertDecorationsToContours(pathData.decorations);
-
-    // Also generate text line layout for Canvas2D rendering
-    // (glyph outlines may not render well at low resolution via stencil)
-    const layout = computeTextLayout({ props });
-    const textLineLayout: TextLineLayout = {
-      lines: layout.lines.map((line) => ({
-        text: line.text,
-        x: line.x,
-        y: line.y,
-      })),
-      fontFamily: props.fontFamily,
-      fontSize: props.fontSize,
-      fontWeight: props.fontWeight,
-      fontStyle: props.fontStyle,
-      letterSpacing: props.letterSpacing,
-      lineHeight: layout.lineHeight,
-      textAnchor: getTextAnchor(props.textAlignHorizontal),
-      textDecoration: mapTextDecoration(props.textDecoration),
-      fontVariationSettings,
+  if (rendering.kind === "empty") {
+    // Scene-graph downstream expects a fill + textLineLayout even for empty
+    // text. Build a minimal, empty line layout so the renderer emits nothing.
+    const empty: TextLineLayout = {
+      lines: [],
+      fontFamily: "sans-serif",
+      fontSize: 16,
+      fontWeight: undefined,
+      fontStyle: undefined,
+      letterSpacing: undefined,
+      lineHeight: 16,
+      textAnchor: "start",
     };
+    return {
+      fill: { color: { r: 0, g: 0, b: 0, a: 1 }, opacity: 0 },
+      textLineLayout: empty,
+    };
+  }
 
+  const props = rendering.props;
+  const color = parseHexColor(rendering.fillColor);
+
+  const textLineLayout: TextLineLayout = buildTextLineLayout(rendering, props, fontVariationSettings);
+
+  if (rendering.kind === "glyphs") {
+    const glyphContours = normalizeContours(rendering.glyphContours);
+    const decorationContours = normalizeContours(rendering.decorationContours);
     return {
       glyphContours,
       decorationContours: decorationContours.length > 0 ? decorationContours : undefined,
-      fill: { color, opacity: fillOpacity },
+      fill: { color, opacity: rendering.fillOpacity },
       textLineLayout,
     };
   }
 
-  // Provide text line layout data for <text> element rendering
-  const layout = computeTextLayout({ props });
+  return {
+    fill: { color, opacity: rendering.fillOpacity },
+    textLineLayout,
+  };
+}
 
-  const textLineLayout: TextLineLayout = {
-    lines: layout.lines.map((line) => ({
+/** Build the scene-graph TextLineLayout from a resolved TextRendering. */
+function buildTextLineLayout(
+  rendering: Exclude<TextRendering, { kind: "empty" }>,
+  props: import("../../text/layout/types").ExtractedTextProps,
+  fontVariationSettings: string | undefined,
+): TextLineLayout {
+  return {
+    lines: rendering.layout.lines.map((line) => ({
       text: line.text,
       x: line.x,
       y: line.y,
@@ -210,14 +193,9 @@ export function convertTextNode(node: FigDesignNode, blobs: readonly FigBlob[]):
     fontWeight: props.fontWeight,
     fontStyle: props.fontStyle,
     letterSpacing: props.letterSpacing,
-    lineHeight: layout.lineHeight,
+    lineHeight: rendering.layout.lineHeight,
     textAnchor: getTextAnchor(props.textAlignHorizontal),
     textDecoration: mapTextDecoration(props.textDecoration),
     fontVariationSettings,
-  };
-
-  return {
-    fill: { color, opacity: fillOpacity },
-    textLineLayout,
   };
 }
