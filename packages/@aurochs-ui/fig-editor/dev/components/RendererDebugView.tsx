@@ -5,7 +5,7 @@
  * Uses ParsedFigFile (low-level) for direct renderer access.
  */
 
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState, useCallback, type CSSProperties } from "react";
 import type { ParsedFigFile } from "@aurochs/fig/parser";
 import { parseFigFile, buildNodeTree, findNodesByType } from "@aurochs/fig/parser";
 import { loadFigFile } from "@aurochs/fig/roundtrip";
@@ -19,7 +19,20 @@ import { createCachingFontLoader } from "@aurochs-renderer/fig/font";
 import { buildSceneGraph } from "@aurochs-renderer/fig/scene-graph";
 import type { SceneGraph } from "@aurochs-renderer/fig/scene-graph";
 import { Button, Select, Tabs, Toggle, colorTokens, spacingTokens, fontTokens, radiusTokens } from "@aurochs-ui/ui-components";
-import { FigInspectorView } from "../../src/inspector/FigInspectorView";
+import {
+  InspectorCanvasOverlay,
+  InspectorTreePanel,
+  CategoryLegend,
+} from "@aurochs-ui/editor-controls/inspector";
+import {
+  collectFigBoxes,
+  figNodeToInspectorTree,
+  getRootNormalizationTransform,
+} from "../../src/inspector/fig-inspector-adapter";
+import {
+  FIG_NODE_CATEGORY_REGISTRY,
+  FIG_LEGEND_ORDER,
+} from "../../src/inspector/fig-node-categories";
 import { WebGLCanvas } from "./WebGLCanvas";
 
 // =============================================================================
@@ -389,7 +402,7 @@ function RendererDebugContent({ parsedFile, designDoc }: { parsedFile: ParsedFig
       {/* Content */}
       <div style={contentStyle}>
         {inspectorEnabled && rendererMode === "svg" && currentFrame ? (
-          <FigInspectorView
+          <InspectorDebugComposition
             frameNode={currentFrame.node}
             frameWidth={currentFrame.width}
             frameHeight={currentFrame.height}
@@ -436,6 +449,146 @@ function RendererDebugContent({ parsedFile, designDoc }: { parsedFile: ParsedFig
             </div>
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+// =============================================================================
+// InspectorDebugComposition
+// =============================================================================
+
+type InspectorDebugCompositionProps = {
+  readonly frameNode: FigNode;
+  readonly frameWidth: number;
+  readonly frameHeight: number;
+  readonly showHiddenNodes: boolean;
+  readonly svgHtml: string;
+  readonly isRendering: boolean;
+};
+
+const inspectorLayoutStyle: CSSProperties = {
+  flex: 1,
+  display: "flex",
+  gap: spacingTokens.md,
+  minHeight: 0,
+};
+
+const inspectorMainStyle: CSSProperties = {
+  flex: 1,
+  display: "flex",
+  flexDirection: "column",
+  gap: spacingTokens.sm,
+  minHeight: 0,
+};
+
+const inspectorCanvasStyle: CSSProperties = {
+  position: "relative",
+  flex: 1,
+  overflow: "auto",
+  backgroundColor: colorTokens.background.primary,
+  borderRadius: radiusTokens.md,
+  border: `1px solid ${colorTokens.border.subtle}`,
+  padding: spacingTokens.md,
+};
+
+const inspectorStageStyle: CSSProperties = {
+  position: "relative",
+  display: "inline-block",
+};
+
+const inspectorOverlaySvgStyle: CSSProperties = {
+  position: "absolute",
+  inset: 0,
+  pointerEvents: "none",
+};
+
+const inspectorTreeStyle: CSSProperties = {
+  width: 320,
+  flexShrink: 0,
+  overflow: "hidden",
+  backgroundColor: colorTokens.background.secondary,
+  borderRadius: radiusTokens.md,
+  border: `1px solid ${colorTokens.border.subtle}`,
+};
+
+/**
+ * Composes the shared inspector parts (overlay + tree + legend) around
+ * the SVG produced by renderCanvas. Lives in the dev app only — the
+ * real editor uses FigInspectorOverlay inside FigEditorCanvas instead.
+ */
+function InspectorDebugComposition({
+  frameNode,
+  frameWidth,
+  frameHeight,
+  showHiddenNodes,
+  svgHtml,
+  isRendering,
+}: InspectorDebugCompositionProps) {
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
+
+  const initialTransform = useMemo(
+    () => getRootNormalizationTransform(frameNode),
+    [frameNode],
+  );
+
+  const boxes = useMemo(
+    () => collectFigBoxes(frameNode, initialTransform, showHiddenNodes),
+    [frameNode, initialTransform, showHiddenNodes],
+  );
+
+  const treeRoot = useMemo(() => figNodeToInspectorTree(frameNode), [frameNode]);
+
+  const handleNodeClick = useCallback((id: string) => {
+    setHighlightedId((prev) => (prev === id ? null : id));
+  }, []);
+
+  const handleHover = useCallback((id: string | null) => {
+    setHoveredId(id);
+  }, []);
+
+  return (
+    <div style={inspectorLayoutStyle}>
+      <div style={inspectorMainStyle}>
+        <CategoryLegend registry={FIG_NODE_CATEGORY_REGISTRY} order={FIG_LEGEND_ORDER} />
+        <div style={inspectorCanvasStyle}>
+          <div style={inspectorStageStyle}>
+            {isRendering ? (
+              <div style={emptyStateStyle}>Rendering...</div>
+            ) : (
+              <div dangerouslySetInnerHTML={{ __html: svgHtml }} />
+            )}
+            <svg
+              style={inspectorOverlaySvgStyle}
+              viewBox={`0 0 ${frameWidth} ${frameHeight}`}
+              width={frameWidth}
+              height={frameHeight}
+              preserveAspectRatio="xMinYMin meet"
+            >
+              <InspectorCanvasOverlay
+                boxes={boxes}
+                registry={FIG_NODE_CATEGORY_REGISTRY}
+                highlightedNodeId={highlightedId}
+                hoveredNodeId={hoveredId}
+                onNodeHover={handleHover}
+                onNodeClick={handleNodeClick}
+                interactive
+              />
+            </svg>
+          </div>
+        </div>
+      </div>
+      <div style={inspectorTreeStyle}>
+        <InspectorTreePanel
+          rootNode={treeRoot}
+          registry={FIG_NODE_CATEGORY_REGISTRY}
+          highlightedNodeId={highlightedId}
+          hoveredNodeId={hoveredId}
+          onNodeHover={handleHover}
+          onNodeClick={handleNodeClick}
+          showHiddenNodes={showHiddenNodes}
+        />
       </div>
     </div>
   );

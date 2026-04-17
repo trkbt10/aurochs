@@ -33,9 +33,19 @@ function needsTextWrapping(props: ExtractedTextProps): boolean {
 /**
  * Break text into lines based on width using opentype.js font metrics
  */
-function breakTextWithFont(
-  { text, font, fontSize, maxWidth, letterSpacing}: { text: string; font: AbstractFont; fontSize: number; maxWidth: number; letterSpacing?: number; }
-): readonly string[] {
+function breakTextWithFont({
+  text,
+  font,
+  fontSize,
+  maxWidth,
+  letterSpacing,
+}: {
+  text: string;
+  font: AbstractFont;
+  fontSize: number;
+  maxWidth: number;
+  letterSpacing?: number;
+}): readonly string[] {
   const scale = fontSize / font.unitsPerEm;
   const spacing = letterSpacing ?? 0;
   const lines: string[] = [];
@@ -104,7 +114,13 @@ function getTextLinesForPath(props: ExtractedTextProps, font: AbstractFont): rea
       continue;
     }
 
-    const brokenLines = breakTextWithFont({ text: explicitLine, font, fontSize: props.fontSize, maxWidth, letterSpacing: props.letterSpacing });
+    const brokenLines = breakTextWithFont({
+      text: explicitLine,
+      font,
+      fontSize: props.fontSize,
+      maxWidth,
+      letterSpacing: props.letterSpacing,
+    });
 
     for (const line of brokenLines) {
       allLines.push(line);
@@ -188,7 +204,9 @@ export async function renderTextNodeAsPath(node: FigNode, ctx: PathRenderContext
 
   for (let i = 0; i < lines.length; i++) {
     const lineText = lines[i];
-    if (!lineText) {continue;}
+    if (!lineText) {
+      continue;
+    }
 
     const y = baseY + i * lineHeight;
     const linePath = renderLineAsPathWithFallback({
@@ -323,9 +341,17 @@ function segmentTextByFont(
 /**
  * Calculate width of a text segment
  */
-function calculateSegmentWidth(
-  { text, font, fontSize, letterSpacing}: { text: string; font: AbstractFont; fontSize: number; letterSpacing?: number; }
-): number {
+function calculateSegmentWidth({
+  text,
+  font,
+  fontSize,
+  letterSpacing,
+}: {
+  text: string;
+  font: AbstractFont;
+  fontSize: number;
+  letterSpacing?: number;
+}): number {
   const scale = fontSize / font.unitsPerEm;
   const widthRef = { value: 0 };
   for (let i = 0; i < text.length; i++) {
@@ -340,49 +366,27 @@ function calculateSegmentWidth(
 }
 
 /**
- * Render a single line of text as SVG path data
- */
-function _renderLineAsPath(
-  { text, font, fontSize, x, y, align, letterSpacing}: { text: string; font: AbstractFont; fontSize: number; x: number; y: number; align: "LEFT" | "CENTER" | "RIGHT" | "JUSTIFIED"; letterSpacing?: number; }
-): string | null {
-  const scale = fontSize / font.unitsPerEm;
-
-  // Calculate text width for alignment
-  const totalWidthRef3 = { value: 0 };
-  for (let i = 0; i < text.length; i++) {
-    const glyph = font.charToGlyph(text[i]);
-    const advanceWidth = glyph.advanceWidth ?? 0;
-    totalWidthRef3.value += advanceWidth * scale;
-    if (letterSpacing && i < text.length - 1) {
-      totalWidthRef3.value += letterSpacing;
-    }
-  }
-
-  // Adjust x for alignment
-  const adjustedXRef2 = { value: x };
-  if (align === "CENTER") {
-    adjustedXRef2.value = x - totalWidthRef3.value / 2;
-  } else if (align === "RIGHT") {
-    adjustedXRef2.value = x - totalWidthRef3.value;
-  }
-
-  // Convert text to path
-  const openTypePath = font.getPath(text, adjustedXRef2.value, y, fontSize, {
-    letterSpacing: letterSpacing ?? 0,
-  });
-
-  // Convert quadratic beziers (Q) to cubic beziers (C) to match Figma's export format
-  // Figma exports TrueType fonts with cubic curves for better compatibility
-  const pathData = convertQuadraticToCubic(openTypePath, 5);
-  return pathData || null;
-}
-
-/**
  * Render a single line of text as SVG path data with font fallback
  */
-function renderLineAsPathWithFallback(
-  { text, primaryFont, fallbackFont, fontSize, x, y, align, letterSpacing}: { text: string; primaryFont: AbstractFont; fallbackFont: AbstractFont | undefined; fontSize: number; x: number; y: number; align: "LEFT" | "CENTER" | "RIGHT" | "JUSTIFIED"; letterSpacing?: number; }
-): string | null {
+function renderLineAsPathWithFallback({
+  text,
+  primaryFont,
+  fallbackFont,
+  fontSize,
+  x,
+  y,
+  align,
+  letterSpacing,
+}: {
+  text: string;
+  primaryFont: AbstractFont;
+  fallbackFont: AbstractFont | undefined;
+  fontSize: number;
+  x: number;
+  y: number;
+  align: "LEFT" | "CENTER" | "RIGHT" | "JUSTIFIED";
+  letterSpacing?: number;
+}): string | null {
   const segments = segmentTextByFont(text, primaryFont, fallbackFont);
 
   if (segments.length === 0) {
@@ -430,9 +434,23 @@ function renderLineAsPathWithFallback(
  * Figma renders underlines as rectangles positioned below the text baseline.
  * The underline thickness and position are calculated based on font metrics.
  */
-function renderUnderlinePath(
-  { text, font, fontSize, x, y, align, letterSpacing}: { text: string; font: AbstractFont; fontSize: number; x: number; y: number; align: "LEFT" | "CENTER" | "RIGHT" | "JUSTIFIED"; letterSpacing?: number; }
-): string | null {
+function renderUnderlinePath({
+  text,
+  font,
+  fontSize,
+  x,
+  y,
+  align,
+  letterSpacing,
+}: {
+  text: string;
+  font: AbstractFont;
+  fontSize: number;
+  x: number;
+  y: number;
+  align: "LEFT" | "CENTER" | "RIGHT" | "JUSTIFIED";
+  letterSpacing?: number;
+}): string | null {
   if (!text.trim()) {
     return null;
   }

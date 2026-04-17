@@ -5,7 +5,7 @@
  * This is the main entry point for embedding the fig editor.
  */
 
-import { useMemo, type CSSProperties } from "react";
+import { useMemo, type CSSProperties, type ReactNode } from "react";
 import type { FigDesignDocument } from "@aurochs/fig/domain";
 import { EditorShell, CanvasArea, type EditorPanel } from "@aurochs-ui/editor-controls/editor-shell";
 import { FigEditorProvider, useFigEditor } from "../context/FigEditorContext";
@@ -40,6 +40,24 @@ type FigEditorProps = {
    * ```
    */
   readonly panels?: EditorPanel[];
+  /**
+   * Optional overlay rendered inside the canvas page-coordinate space,
+   * above the rendered page and below selection chrome.
+   *
+   * Intended for inspection overlays (e.g. FigInspectorOverlay).
+   * Toggling and conditional rendering are the caller's responsibility —
+   * pass `null` to hide.
+   *
+   * @example
+   * ```tsx
+   * const [inspect, setInspect] = useState(false);
+   * <FigEditor
+   *   initialDocument={doc}
+   *   canvasOverlay={inspect ? <FigInspectorOverlay /> : null}
+   * />
+   * ```
+   */
+  readonly canvasOverlay?: ReactNode;
 };
 
 // =============================================================================
@@ -98,7 +116,13 @@ const DEFAULT_PANELS: EditorPanel[] = [
   },
 ];
 
-function FigEditorContent({ panels }: { readonly panels?: EditorPanel[] }) {
+function FigEditorContent({
+  panels,
+  canvasOverlay,
+}: {
+  readonly panels?: EditorPanel[];
+  readonly canvasOverlay?: ReactNode;
+}) {
   const { dispatch, nodeSelection, canUndo, canRedo, textEdit } = useFigEditor();
   const hasSelection = nodeSelection.selectedIds.length > 0;
 
@@ -118,7 +142,7 @@ function FigEditorContent({ panels }: { readonly panels?: EditorPanel[] }) {
   return (
     <EditorShell toolbar={toolbarContent} panels={resolvedPanels}>
       <CanvasArea>
-        <FigEditorCanvas />
+        <FigEditorCanvas canvasOverlay={canvasOverlay} />
       </CanvasArea>
     </EditorShell>
   );
@@ -150,11 +174,11 @@ const containerStyle: CSSProperties = {
  * <FigEditor initialDocument={doc} />
  * ```
  */
-export function FigEditor({ initialDocument, panels }: FigEditorProps) {
+export function FigEditor({ initialDocument, panels, canvasOverlay }: FigEditorProps) {
   return (
     <FigEditorProvider initialDocument={initialDocument}>
       <div style={containerStyle}>
-        <FigEditorContent panels={panels} />
+        <FigEditorContent panels={panels} canvasOverlay={canvasOverlay} />
       </div>
     </FigEditorProvider>
   );

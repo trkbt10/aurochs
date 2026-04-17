@@ -21,13 +21,15 @@
  * ```
  */
 
-import { useMemo, type CSSProperties } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import { colorTokens, fontTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { InspectorTreePanel } from "@aurochs-ui/editor-controls/inspector";
 import { CategoryLegend } from "@aurochs-ui/editor-controls/inspector";
 import { useFigEditor } from "../context/FigEditorContext";
 import { FIG_NODE_CATEGORY_REGISTRY, FIG_LEGEND_ORDER } from "../inspector/fig-node-categories";
 import { designNodeToInspectorTree } from "../inspector/fig-inspector-adapter";
+import { useFigInspectorContextOptional } from "../inspector/FigInspectorContext";
+import type { FigNodeId } from "@aurochs/fig/domain";
 
 // =============================================================================
 // Props
@@ -87,6 +89,8 @@ export function FigInspectorPanel({
   onNodeHover,
 }: FigInspectorPanelProps) {
   const { activePage, nodeSelection, dispatch } = useFigEditor();
+  const inspectorCtx = useFigInspectorContextOptional();
+  const [localHoveredId, setLocalHoveredId] = useState<FigNodeId | null>(null);
 
   // Convert active page children to inspector tree
   const treeRoot = useMemo(() => {
@@ -107,6 +111,7 @@ export function FigInspectorPanel({
 
   // Use controlled highlight or fall back to editor selection
   const highlightedNodeId = controlledHighlightedId ?? nodeSelection.primaryId ?? null;
+  const hoveredId = inspectorCtx ? inspectorCtx.hoveredId : localHoveredId;
 
   const handleNodeClick = (nodeId: string) => {
     if (onNodeHighlight) {
@@ -118,6 +123,12 @@ export function FigInspectorPanel({
   };
 
   const handleNodeHover = (nodeId: string | null) => {
+    const typed = (nodeId as FigNodeId | null) ?? null;
+    if (inspectorCtx) {
+      inspectorCtx.setHoveredId(typed);
+    } else {
+      setLocalHoveredId(typed);
+    }
     onNodeHover?.(nodeId);
   };
 
@@ -133,7 +144,7 @@ export function FigInspectorPanel({
           rootNode={treeRoot}
           registry={FIG_NODE_CATEGORY_REGISTRY}
           highlightedNodeId={highlightedNodeId}
-          hoveredNodeId={null}
+          hoveredNodeId={hoveredId}
           onNodeHover={handleNodeHover}
           onNodeClick={handleNodeClick}
           showHiddenNodes={showHiddenNodes}

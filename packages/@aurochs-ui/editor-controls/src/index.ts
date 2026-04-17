@@ -90,6 +90,6 @@ export {
   type CategoryLegendProps,
   NodeTooltip,
   type NodeTooltipProps,
-  InspectorView,
-  type InspectorViewProps,
+  InspectorCanvasOverlay,
+  type InspectorCanvasOverlayProps,
 } from "./inspector";

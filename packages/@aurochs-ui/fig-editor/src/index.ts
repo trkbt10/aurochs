@@ -36,11 +36,27 @@ export { PropertyPanel } from "./panels/PropertyPanel";
 export { PageListPanel } from "./panels/PageListPanel";
 export { LayerPanel } from "./panels/LayerPanel";
 export { FigInspectorPanel, type FigInspectorPanelProps } from "./panels/FigInspectorPanel";
+export {
+  FigInspectorDetailsPanel,
+  type FigInspectorDetailsPanelProps,
+  type DetailSectionRenderer,
+  FIG_DETAIL_SECTIONS,
+  DetailSection,
+  DetailRow,
+  DetailSwatch,
+} from "./panels/FigInspectorDetailsPanel";
 
 // Toolbar
 export { FigEditorToolbar } from "./editor/FigEditorToolbar";
 
-// Inspector (Fig-specific category registry, adapters, and view component)
+// Inspector (Fig-specific category registry, adapters, overlay, panel)
 export { FIG_NODE_CATEGORY_REGISTRY, FIG_LEGEND_ORDER } from "./inspector";
-export { getRootNormalizationTransform, collectFigBoxes, figNodeToInspectorTree, designNodeToInspectorTree } from "./inspector";
-export { FigInspectorView, type FigInspectorViewProps } from "./inspector";
+export {
+  getRootNormalizationTransform,
+  collectFigBoxes,
+  collectDesignBoxes,
+  figNodeToInspectorTree,
+  designNodeToInspectorTree,
+} from "./inspector";
+export { FigInspectorOverlay, type FigInspectorOverlayProps } from "./inspector";
+export { FigInspectorProvider, useFigInspectorContextOptional } from "./inspector";

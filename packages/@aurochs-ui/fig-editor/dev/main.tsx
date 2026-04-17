@@ -8,14 +8,21 @@
  * Both modes share the same .fig file loading pipeline.
  */
 
-import { useState, useCallback, type CSSProperties } from "react";
+import { useMemo, useState, useCallback, type CSSProperties } from "react";
 import { createRoot } from "react-dom/client";
 import type { FigDesignDocument } from "@aurochs/fig/domain";
 import { createFigDesignDocument, createEmptyFigDesignDocument } from "@aurochs-builder/fig";
-import { Button, Tabs, injectCSSVariables, colorTokens, spacingTokens, fontTokens, radiusTokens } from "@aurochs-ui/ui-components";
+import type { EditorPanel } from "@aurochs-ui/editor-controls/editor-shell";
+import { Button, Tabs, Toggle, injectCSSVariables, colorTokens, spacingTokens, fontTokens, radiusTokens } from "@aurochs-ui/ui-components";
 import { FigEditor } from "../src/editor/FigEditor";
+import { PageListPanel } from "../src/panels/PageListPanel";
+import { LayerPanel } from "../src/panels/LayerPanel";
+import { PropertyPanel } from "../src/panels/PropertyPanel";
+import { FigInspectorPanel } from "../src/panels/FigInspectorPanel";
+import { FigInspectorDetailsPanel } from "../src/panels/FigInspectorDetailsPanel";
+import { FigInspectorOverlay } from "../src/inspector/FigInspectorOverlay";
+import { FigInspectorProvider } from "../src/inspector/FigInspectorContext";
 import { FileDropZone } from "./components/FileDropZone";
-import { EDITOR_PANELS_WITH_INSPECTOR } from "./components/EditorWithInspectorPanels";
 import { RendererDebugView } from "./components/RendererDebugView";
 
 injectCSSVariables();
@@ -110,6 +117,96 @@ const tabsContainerStyle: CSSProperties = {
   minHeight: 0,
 };
 
+const leftPanelStyle: CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  height: "100%",
+  overflow: "hidden",
+};
+
+const layerPanelWrapperStyle: CSSProperties = {
+  flex: 1,
+  minHeight: 0,
+  overflowY: "auto",
+};
+
+const rightPanelStyle: CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  height: "100%",
+  overflow: "hidden",
+};
+
+const rightTabsStyle: CSSProperties = {
+  flex: 1,
+  minHeight: 0,
+  overflow: "hidden",
+};
+
+const inspectorTabStyle: CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  height: "100%",
+  minHeight: 0,
+};
+
+const inspectorTreeWrapperStyle: CSSProperties = {
+  flex: "0 0 45%",
+  minHeight: 0,
+  overflow: "hidden",
+  display: "flex",
+  flexDirection: "column",
+};
+
+const inspectorDetailsWrapperStyle: CSSProperties = {
+  flex: 1,
+  minHeight: 0,
+  overflowY: "auto",
+  borderTop: `1px solid ${colorTokens.border.primary}`,
+};
+
+function InspectorTabContent() {
+  return (
+    <div style={inspectorTabStyle}>
+      <div style={inspectorTreeWrapperStyle}>
+        <FigInspectorPanel />
+      </div>
+      <div style={inspectorDetailsWrapperStyle}>
+        <FigInspectorDetailsPanel />
+      </div>
+    </div>
+  );
+}
+
+function LeftPanelContent() {
+  return (
+    <div style={leftPanelStyle}>
+      <PageListPanel />
+      <div style={layerPanelWrapperStyle}>
+        <LayerPanel />
+      </div>
+    </div>
+  );
+}
+
+type RightTab = "inspector" | "properties";
+
+function RightPanelContent() {
+  return (
+    <div style={rightPanelStyle}>
+      <Tabs<RightTab>
+        items={[
+          { id: "inspector", label: "Inspector", content: <InspectorTabContent /> },
+          { id: "properties", label: "Properties", content: <PropertyPanel /> },
+        ]}
+        defaultValue="inspector"
+        size="sm"
+        style={rightTabsStyle}
+      />
+    </div>
+  );
+}
+
 // =============================================================================
 // App
 // =============================================================================
@@ -119,6 +216,27 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [mode, setMode] = useState<DevMode>("editor");
+  const [inspectorOverlayEnabled, setInspectorOverlayEnabled] = useState(false);
+
+  const editorPanels = useMemo<EditorPanel[]>(
+    () => [
+      {
+        id: "pages-layers",
+        position: "left",
+        content: <LeftPanelContent />,
+        drawerLabel: "Pages & Layers",
+        scrollable: false,
+      },
+      {
+        id: "inspector-properties",
+        position: "right",
+        content: <RightPanelContent />,
+        drawerLabel: "Inspector",
+        scrollable: false,
+      },
+    ],
+    [],
+  );
 
   const handleFile = useCallback(async (file: File) => {
     setIsLoading(true);
@@ -179,6 +297,13 @@ function App() {
           <span style={fileNameStyle}>{loadedFile.fileName}</span>
         </div>
         <div style={headerRightStyle}>
+          {mode === "editor" && (
+            <Toggle
+              checked={inspectorOverlayEnabled}
+              onChange={setInspectorOverlayEnabled}
+              label="Inspect overlay"
+            />
+          )}
           <Button variant="ghost" size="sm" onClick={handleClose}>
             Close
           </Button>
@@ -191,7 +316,13 @@ function App() {
             label: "Editor",
             content: (
               <div style={mainStyle}>
-                <FigEditor initialDocument={loadedFile.document} panels={EDITOR_PANELS_WITH_INSPECTOR} />
+                <FigInspectorProvider>
+                  <FigEditor
+                    initialDocument={loadedFile.document}
+                    panels={editorPanels}
+                    canvasOverlay={inspectorOverlayEnabled ? <FigInspectorOverlay /> : null}
+                  />
+                </FigInspectorProvider>
               </div>
             ),
           },

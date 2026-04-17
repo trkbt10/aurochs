@@ -9,7 +9,9 @@ export { FIG_NODE_CATEGORY_REGISTRY, FIG_LEGEND_ORDER } from "./fig-node-categor
 export {
   getRootNormalizationTransform,
   collectFigBoxes,
+  collectDesignBoxes,
   figNodeToInspectorTree,
   designNodeToInspectorTree,
 } from "./fig-inspector-adapter";
-export { FigInspectorView, type FigInspectorViewProps } from "./FigInspectorView";
+export { FigInspectorOverlay, type FigInspectorOverlayProps } from "./FigInspectorOverlay";
+export { FigInspectorProvider, useFigInspectorContextOptional } from "./FigInspectorContext";

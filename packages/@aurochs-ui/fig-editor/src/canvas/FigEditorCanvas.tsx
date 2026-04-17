@@ -25,7 +25,7 @@
  * - FigPageRenderer for React-based SVG rendering of the current page
  */
 
-import { useRef, useMemo, useCallback, useState, useEffect } from "react";
+import { useRef, useMemo, useCallback, useState, useEffect, type ReactNode } from "react";
 import type { EditorCanvasHandle, CanvasPageCoords } from "@aurochs-ui/editor-controls/canvas";
 import { EditorCanvas } from "@aurochs-ui/editor-controls/canvas";
 import type { ZoomMode } from "@aurochs-ui/editor-controls/zoom";
@@ -133,8 +133,17 @@ type ContextMenuState = {
  * - Drag to move, resize, rotate
  * - Right-click context menu
  * - Zoom and pan (unclamped — infinite canvas)
+ *
+ * @param canvasOverlay Optional React node rendered inside the canvas
+ * page coordinate space, above the page content and below selection
+ * chrome. Intended for inspection overlays (e.g. FigInspectorOverlay).
+ * Toggling the overlay is the caller's responsibility.
  */
-export function FigEditorCanvas() {
+type FigEditorCanvasProps = {
+  readonly canvasOverlay?: ReactNode;
+};
+
+export function FigEditorCanvas({ canvasOverlay }: FigEditorCanvasProps = {}) {
   const {
     dispatch,
     document,
@@ -768,6 +777,9 @@ export function FigEditorCanvas() {
             styleRegistry={document.styleRegistry}
           />
         )}
+
+        {/* Inspector / custom canvas overlay (page-coord space) */}
+        {canvasOverlay}
 
         {/* Creation drag preview rectangle */}
         {creationPreview && creationPreview.width > 0 && creationPreview.height > 0 && (

@@ -92,6 +92,42 @@ export function collectFigBoxes(
   return boxes;
 }
 
+/**
+ * Recursively collect bounding box info for a FigDesignNode tree.
+ *
+ * Used by the editor-canvas overlay where the document is already
+ * in the high-level domain representation. Matches the same semantics
+ * as collectFigBoxes (transform compounding, hidden-node gating) but
+ * reads fields directly off FigDesignNode.
+ */
+export function collectDesignBoxes(
+  nodes: readonly FigDesignNode[],
+  showHiddenNodes: boolean,
+  parentTransform: FigMatrix = IDENTITY_MATRIX,
+): InspectorBoxInfo[] {
+  const result: InspectorBoxInfo[] = [];
+  for (const node of nodes) {
+    if (!showHiddenNodes && !node.visible) {
+      continue;
+    }
+    const transform = multiplyMatrices(parentTransform, node.transform);
+    if (node.size.x > 0 && node.size.y > 0) {
+      result.push({
+        nodeId: node.id,
+        nodeType: node.type,
+        nodeName: node.name,
+        transform: figMatrixToAffine(transform),
+        width: node.size.x,
+        height: node.size.y,
+      });
+    }
+    if (node.children && node.children.length > 0) {
+      result.push(...collectDesignBoxes(node.children, showHiddenNodes, transform));
+    }
+  }
+  return result;
+}
+
 // =============================================================================
 // Tree node conversion
 // =============================================================================
