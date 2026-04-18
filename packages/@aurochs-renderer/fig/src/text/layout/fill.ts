@@ -2,8 +2,8 @@
  * @file Text fill color handling
  */
 
-import type { FigPaint, FigColor } from "@aurochs/fig/types";
-import { figColorToHex, getPaintType } from "@aurochs/fig/color";
+import type { FigPaint } from "@aurochs/fig/types";
+import { figColorToHex, asSolidPaint } from "@aurochs/fig/color";
 import type { FillColorResult } from "./types";
 
 /**
@@ -30,11 +30,10 @@ export function getFillColorAndOpacity(paints: readonly FigPaint[] | undefined):
     return DEFAULT_FILL;
   }
 
-  if (getPaintType(firstPaint) !== "SOLID") {
+  const solidPaint = asSolidPaint(firstPaint);
+  if (!solidPaint) {
     return DEFAULT_FILL;
   }
-
-  const solidPaint = firstPaint as FigPaint & { color: FigColor };
 
   return {
     color: figColorToHex(solidPaint.color),

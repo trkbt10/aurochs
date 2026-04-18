@@ -50,6 +50,22 @@ export type SceneGraphDiff = {
 // =============================================================================
 
 /**
+ * View an object value as a string-keyed record for property
+ * enumeration.
+ *
+ * TypeScript doesn't narrow `unknown` to `Record<string, unknown>`
+ * even after `typeof v === "object" && v !== null`, and the caller
+ * only ever uses the result for `Object.keys` + indexed access —
+ * both of which are safe on any non-null object. This helper isolates
+ * the unavoidable type widening into one place so the comparison
+ * functions below never sprinkle `as Record<string, unknown>` casts
+ * around their bodies.
+ */
+function asRecord(v: object): Record<string, unknown> {
+  return v as Record<string, unknown>;
+}
+
+/**
  * Check if two values are shallowly equal
  */
 function shallowEqual(a: unknown, b: unknown): boolean {
@@ -66,8 +82,8 @@ function shallowEqual(a: unknown, b: unknown): boolean {
   }
 
   // For objects, compare own keys
-  const aObj = a as Record<string, unknown>;
-  const bObj = b as Record<string, unknown>;
+  const aObj = asRecord(a);
+  const bObj = asRecord(b);
   const aKeys = Object.keys(aObj);
   const bKeys = Object.keys(bObj);
   if (aKeys.length !== bKeys.length) {return false;}
@@ -100,8 +116,8 @@ function compareNodeProperties(prev: SceneNode, next: SceneNode): Partial<SceneN
   const hasChangesRef = { value: false };
 
   // Compare all properties except id, type, and children
-  const nextObj = next as Record<string, unknown>;
-  const prevObj = prev as Record<string, unknown>;
+  const nextObj = asRecord(next);
+  const prevObj = asRecord(prev);
 
   for (const key of Object.keys(nextObj)) {
     if (key === "id" || key === "type" || key === "children") {continue;}

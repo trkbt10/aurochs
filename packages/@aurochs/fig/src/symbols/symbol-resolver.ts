@@ -672,6 +672,14 @@ export type InstanceResolveContext = {
   readonly symbolMap: ReadonlyMap<string, FigNode>;
   readonly resolvedSymbolCache?: ReadonlyMap<string, FigNode>;
   readonly styleRegistry?: FigStyleRegistry;
+  /**
+   * Optional blob array for GUID translation size fallback. When an
+   * INSTANCE override targets a descendant with only fillGeometry (no
+   * explicit size), decoding the blob yields the node's authored
+   * dimensions — required to disambiguate sibling descendants of
+   * different sizes (e.g. multi-avatar Contact variant).
+   */
+  readonly blobs?: readonly import("@aurochs/fig/parser").FigBlob[];
 };
 
 /**
@@ -823,6 +831,7 @@ export function resolveInstanceNode(
     rawSymbolOverrides,
     componentPropAssignments.length > 0 ? componentPropAssignments : undefined,
     ctx.symbolMap,
+    ctx.blobs,
   );
   const symbolOverrides = translateOverridesIfNeeded(translationMap, rawSymbolOverrides);
   const derivedSymbolData = translateOverridesIfNeeded(translationMap, rawDerivedSymbolData);

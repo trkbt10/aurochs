@@ -18,19 +18,26 @@ import type {
  * Transform normalized glyph path commands to screen coordinates
  *
  * Blob paths are stored in normalized coordinates (0-1 range).
- * - x_screen = position.x + (normalized_x * fontSize)
- * - y_screen = round(position.y) - (normalized_y * fontSize)
+ * - x_screen = position.x + alignmentOffset.x + (normalized_x * fontSize)
+ * - y_screen = round(position.y + alignmentOffset.y) - (normalized_y * fontSize)
  *
  * Y-axis is flipped: normalized space y increases upward (from baseline),
  * screen space y increases downward.
+ *
+ * `alignmentOffset` accounts for the translation Figma applies when the
+ * resolved text block (`derivedTextData.layoutSize`) is smaller than the
+ * TEXT node's own box and alignment is not top-left. For single-codepoint
+ * SF Symbol glyphs this is often the difference between a raw (x,y) in the
+ * glyph's pre-layout coordinate and the centered rendering Figma exports.
  */
 export function transformGlyphCommands(
   commands: readonly PathCommand[],
   position: { x: number; y: number },
   fontSize: number,
+  alignmentOffset: { x: number; y: number } = { x: 0, y: 0 },
 ): PathCommand[] {
-  const baselineY = Math.round(position.y);
-  const tx = (x: number) => position.x + x * fontSize;
+  const baselineY = Math.round(position.y + alignmentOffset.y);
+  const tx = (x: number) => position.x + alignmentOffset.x + x * fontSize;
   const ty = (y: number) => baselineY - y * fontSize;
 
   return commands.map((cmd): PathCommand => {
@@ -68,9 +75,14 @@ export function transformGlyphCommands(
  *
  * @param glyph - Derived glyph data
  * @param blobs - Blob array from .fig file
+ * @param alignmentOffset - Translation to apply on top of `glyph.position`
  * @returns PathCommand array in screen coordinates, or null
  */
-export function extractDerivedGlyphCommands(glyph: DerivedGlyph, blobs: readonly FigBlob[]): PathCommand[] | null {
+export function extractDerivedGlyphCommands(
+  glyph: DerivedGlyph,
+  blobs: readonly FigBlob[],
+  alignmentOffset: { x: number; y: number } = { x: 0, y: 0 },
+): PathCommand[] | null {
   if (glyph.commandsBlob === undefined || glyph.commandsBlob >= blobs.length) {
     return null;
   }
@@ -86,13 +98,16 @@ export function extractDerivedGlyphCommands(glyph: DerivedGlyph, blobs: readonly
   }
 
   // Transform to screen coordinates
-  return transformGlyphCommands(commands, glyph.position, glyph.fontSize);
+  return transformGlyphCommands(commands, glyph.position, glyph.fontSize, alignmentOffset);
 }
 
 /**
  * Extract decoration rectangles from derived text data
  */
-export function extractDerivedDecorations(decorations: readonly DerivedDecoration[] | undefined): DecorationRect[] {
+export function extractDerivedDecorations(
+  decorations: readonly DerivedDecoration[] | undefined,
+  alignmentOffset: { x: number; y: number } = { x: 0, y: 0 },
+): DecorationRect[] {
   if (!decorations || decorations.length === 0) {
     return [];
   }
@@ -101,8 +116,8 @@ export function extractDerivedDecorations(decorations: readonly DerivedDecoratio
   for (const decoration of decorations) {
     for (const rect of decoration.rects) {
       result.push({
-        x: rect.x,
-        y: rect.y,
+        x: rect.x + alignmentOffset.x,
+        y: rect.y + alignmentOffset.y,
         width: rect.w,
         height: rect.h,
       });
@@ -116,24 +131,29 @@ export function extractDerivedDecorations(decorations: readonly DerivedDecoratio
  *
  * @param derivedTextData - Derived text data from .fig node
  * @param blobs - Blob array from .fig file
+ * @param alignmentOffset - Translation to apply on top of every glyph's
+ *   `position`, accounting for the difference between the node's text box
+ *   and the resolved `layoutSize`. Must include alignment-aware offsets
+ *   for both decorations (applied as-is) and glyphs (passed through).
  * @returns TextPathResult with glyph contours and decorations
  */
 export function extractDerivedTextPathData(
   derivedTextData: DerivedTextData,
   blobs: readonly FigBlob[],
+  alignmentOffset: { x: number; y: number } = { x: 0, y: 0 },
 ): TextPathResult {
   const glyphContours: PathContour[] = [];
 
   if (derivedTextData.glyphs) {
     for (const glyph of derivedTextData.glyphs) {
-      const commands = extractDerivedGlyphCommands(glyph, blobs);
+      const commands = extractDerivedGlyphCommands(glyph, blobs, alignmentOffset);
       if (commands && commands.length > 0) {
         glyphContours.push({ commands });
       }
     }
   }
 
-  const decorations = extractDerivedDecorations(derivedTextData.decorations);
+  const decorations = extractDerivedDecorations(derivedTextData.decorations, alignmentOffset);
 
   return { glyphContours, decorations };
 }

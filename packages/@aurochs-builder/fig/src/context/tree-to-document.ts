@@ -21,6 +21,7 @@ import {
   buildGuidTranslationMap,
   translateOverrides,
   resolveSymbolGuidStr,
+  styleRefKeys,
 } from "@aurochs/fig/symbols";
 import type { LoadedFigFile } from "@aurochs/fig/roundtrip";
 import type {
@@ -88,14 +89,25 @@ function hasPaintEntries(paints: readonly FigPaint[] | undefined): paints is rea
   return paints !== undefined && paints.length > 0;
 }
 
+/**
+ * Look up a paint array in a style registry, trying each key the
+ * reference carries (guid first, then assetRef.key).
+ */
+function lookupPaintByRef(
+  ref: FigNode["styleIdForFill"],
+  map: ReadonlyMap<string, readonly FigPaint[]>,
+): readonly FigPaint[] | undefined {
+  for (const k of styleRefKeys(ref)) {
+    const v = map.get(k);
+    if (v) return v;
+  }
+  return undefined;
+}
+
 /** Resolve node fills from styles, frame backgrounds, then legacy fillPaints. */
 function resolveNodeFills(node: FigNode, styleRegistry: FigStyleRegistry): readonly FigPaint[] {
-  if (node.styleIdForFill) {
-    const resolved = styleRegistry.fills.get(guidToString(node.styleIdForFill.guid));
-    if (resolved) {
-      return resolved;
-    }
-  }
+  const resolved = lookupPaintByRef(node.styleIdForFill, styleRegistry.fills);
+  if (resolved) return resolved;
   if (hasPaintEntries(node.backgroundPaints)) {
     return node.backgroundPaints;
   }
@@ -104,12 +116,8 @@ function resolveNodeFills(node: FigNode, styleRegistry: FigStyleRegistry): reado
 
 /** Resolve node strokes from styles, then legacy strokePaints. */
 function resolveNodeStrokes(node: FigNode, styleRegistry: FigStyleRegistry): readonly FigPaint[] {
-  if (node.styleIdForStrokeFill) {
-    const resolved = styleRegistry.strokes.get(guidToString(node.styleIdForStrokeFill.guid));
-    if (resolved) {
-      return resolved;
-    }
-  }
+  const resolved = lookupPaintByRef(node.styleIdForStrokeFill, styleRegistry.strokes);
+  if (resolved) return resolved;
   return node.strokePaints ?? [];
 }
 
@@ -542,6 +550,7 @@ function collectRawFields(node: FigNode): Record<string, unknown> | undefined {
 function translateInstanceOverrides(
   instanceNode: FigNode,
   symbolMap: ReadonlyMap<string, FigNode> | undefined,
+  blobs: readonly import("@aurochs/fig/parser").FigBlob[] | undefined,
 ): {
   overrides: readonly SymbolOverride[] | undefined;
   derivedSymbolData: readonly SymbolOverride[] | undefined;
@@ -550,25 +559,16 @@ function translateInstanceOverrides(
   const rawDerivedSymbolData = instanceNode.derivedSymbolData;
 
   if (!symbolMap) {
-    return {
-      overrides: rawOverrides as readonly SymbolOverride[] | undefined,
-      derivedSymbolData: rawDerivedSymbolData as readonly SymbolOverride[] | undefined,
-    };
+    return { overrides: rawOverrides, derivedSymbolData: rawDerivedSymbolData };
   }
 
   const effectiveGuid = getEffectiveSymbolID(instanceNode);
   if (!effectiveGuid) {
-    return {
-      overrides: rawOverrides as readonly SymbolOverride[] | undefined,
-      derivedSymbolData: rawDerivedSymbolData as readonly SymbolOverride[] | undefined,
-    };
+    return { overrides: rawOverrides, derivedSymbolData: rawDerivedSymbolData };
   }
   const effectiveSymbol = resolveSymbolGuidStr(effectiveGuid, symbolMap);
   if (!effectiveSymbol) {
-    return {
-      overrides: rawOverrides as readonly SymbolOverride[] | undefined,
-      derivedSymbolData: rawDerivedSymbolData as readonly SymbolOverride[] | undefined,
-    };
+    return { overrides: rawOverrides, derivedSymbolData: rawDerivedSymbolData };
   }
 
   const translationMap = buildGuidTranslationMap(
@@ -577,13 +577,14 @@ function translateInstanceOverrides(
     rawOverrides,
     instanceNode.componentPropAssignments,
     symbolMap,
+    blobs,
   );
 
   const translatedOverrides = rawOverrides
-    ? (translateOverrides(rawOverrides, translationMap) as readonly SymbolOverride[])
+    ? translateOverrides(rawOverrides, translationMap)
     : undefined;
   const translatedDerived = rawDerivedSymbolData
-    ? (translateOverrides(rawDerivedSymbolData, translationMap) as readonly SymbolOverride[])
+    ? translateOverrides(rawDerivedSymbolData, translationMap)
     : undefined;
 
   return { overrides: translatedOverrides, derivedSymbolData: translatedDerived };
@@ -608,19 +609,27 @@ export function convertFigNode(
   components: Map<string, FigDesignNode>,
   styleRegistry: FigStyleRegistry = EMPTY_FIG_STYLE_REGISTRY,
   symbolMap?: ReadonlyMap<string, FigNode>,
+  /**
+   * Optional blob array — when passed, INSTANCE override GUID translation
+   * can use `fillGeometry` blob extents to disambiguate sibling targets
+   * of different sizes (e.g. the two avatars in a multi-avatar Contact
+   * variant). Without it, overrides lacking an explicit `size` field
+   * fall back to sorted-localID pairing which mis-swaps such siblings.
+   */
+  blobs?: readonly import("@aurochs/fig/parser").FigBlob[],
 ): FigDesignNode {
   const nodeType = nodeTypeName(node);
   const id = guidToNodeId(node.guid);
 
   const children = safeChildren(node);
-  const convertedChildren = children.length > 0 ? children.map((child) => convertFigNode(child, components, styleRegistry, symbolMap)) : undefined;
+  const convertedChildren = children.length > 0 ? children.map((child) => convertFigNode(child, components, styleRegistry, symbolMap, blobs)) : undefined;
 
   const { overrides: translatedOverrides, derivedSymbolData: translatedDerivedSymbolData } =
     nodeType === "INSTANCE"
-      ? translateInstanceOverrides(node, symbolMap)
+      ? translateInstanceOverrides(node, symbolMap, blobs)
       : {
-          overrides: getInstanceSymbolOverrides(node) as readonly SymbolOverride[] | undefined,
-          derivedSymbolData: node.derivedSymbolData as readonly SymbolOverride[] | undefined,
+          overrides: getInstanceSymbolOverrides(node),
+          derivedSymbolData: node.derivedSymbolData,
         };
 
   const fills = resolveNodeFills(node, styleRegistry);
@@ -709,11 +718,12 @@ function convertCanvasToPage(
   components: Map<string, FigDesignNode>,
   styleRegistry: FigStyleRegistry,
   symbolMap?: ReadonlyMap<string, FigNode>,
+  blobs?: readonly import("@aurochs/fig/parser").FigBlob[],
 ): FigPage {
   const id = guidToPageId(canvas.guid);
 
   const children = safeChildren(canvas);
-  const convertedChildren = children.map((child) => convertFigNode(child, components, styleRegistry, symbolMap));
+  const convertedChildren = children.map((child) => convertFigNode(child, components, styleRegistry, symbolMap, blobs));
 
   // Collect component definitions from all children
   collectComponentsRecursive(convertedChildren, components);

@@ -15,8 +15,29 @@ const CMD_MOVE_TO = 0x01;
 /** LineTo command (L x y) */
 const CMD_LINE_TO = 0x02;
 
-/** Smooth cubic bezier command (S x2 y2 x y) - x1/y1 is reflected from previous */
-const CMD_SMOOTH_CUBIC = 0x03;
+/**
+ * Quadratic bezier command (0x03) - encoded as (Qx, Qy, P1x, P1y).
+ *
+ * Used exclusively by glyph outline blobs (identified by a leading 0x00
+ * header byte — glyph blobs start "00 01 ...", vector blobs start "01 ..."):
+ * TrueType fonts natively store outlines as quadratic Béziers with a single
+ * off-curve control point between on-curve points. Figma preserves this
+ * quadratic encoding for glyph blobs and emits the equivalent cubic only at
+ * SVG export time via the standard quad→cubic elevation:
+ *   cubic_cp1 = P0 + 2/3 · (Q − P0)
+ *   cubic_cp2 = P1 + 2/3 · (Q − P1)
+ * Evidence for this interpretation (blob 817 of edge-cases.fig, the
+ * reading-glasses SF Symbol): blob M = (0.6196, -0.0366), first 0x03 payload
+ * x2 = (0.5391, -0.0366), end = (0.4683, -0.0063). Treating the payload as
+ * (Q, P1) and applying the elevation above yields cp1 = (0.5659, -0.0366),
+ * which matches Figma's own SVG export (29.9106, 41.6226) exactly after the
+ * glyph transform (scale = fontSize 17, offset derived from position). The
+ * earlier SVG-"smooth cubic" interpretation reflects cp1 to the M point,
+ * producing a visible ~1.3% raster diff on any glyph.
+ * Vector geometry blobs never emit 0x03 — they exclusively use 0x04 full
+ * cubics — so this re-interpretation is safe across blob classes.
+ */
+const CMD_QUAD_TO_GLYPH = 0x03;
 
 /** Full cubic bezier command (C x1 y1 x2 y2 x y) */
 const CMD_CUBIC_TO = 0x04;
@@ -57,7 +78,7 @@ export type PathCommand =
 // =============================================================================
 
 /** Known command byte values for skip recovery */
-const KNOWN_COMMANDS = new Set([CMD_MOVE_TO, CMD_LINE_TO, CMD_SMOOTH_CUBIC, CMD_CUBIC_TO, CMD_QUAD_TO, CMD_CLOSE, 0x13]);
+const KNOWN_COMMANDS = new Set([CMD_MOVE_TO, CMD_LINE_TO, CMD_QUAD_TO_GLYPH, CMD_CUBIC_TO, CMD_QUAD_TO, CMD_CLOSE, 0x13]);
 
 /**
  * Find the next known command byte within 30 bytes, returns -1 if not found
@@ -73,17 +94,25 @@ function findNextKnownCommand(bytes: readonly number[], startOffset: number): nu
 }
 
 /**
- * Resolve cp1 for a smooth cubic bezier from the previous command
+ * Determine the current point (last emitted endpoint) required to elevate a
+ * glyph quadratic Bézier (P0, Q, P1) into an SVG cubic Bézier.
+ *
+ * The current point is the endpoint of the most recently emitted command:
+ * - after M/L: its (x, y) is the new pen position
+ * - after C/Q: the command's (x, y) endpoint
+ * - at the start of a blob (no previous command): fall back to Q itself,
+ *   which degenerates the curve into a line from Q to P1 and is safer than
+ *   silently emitting an undefined starting point.
  */
-function resolveSmoothCp1(
+function getCurrentPoint(
   prevCmd: PathCommand | undefined,
   fallbackX: number,
   fallbackY: number,
 ): { x: number; y: number } {
-  if (prevCmd && prevCmd.type === "C") {
-    return { x: 2 * prevCmd.x - prevCmd.x2, y: 2 * prevCmd.y - prevCmd.y2 };
+  if (!prevCmd) {
+    return { x: fallbackX, y: fallbackY };
   }
-  if (prevCmd && (prevCmd.type === "M" || prevCmd.type === "L")) {
+  if (prevCmd.type === "M" || prevCmd.type === "L" || prevCmd.type === "C" || prevCmd.type === "Q") {
     return { x: prevCmd.x, y: prevCmd.y };
   }
   return { x: fallbackX, y: fallbackY };
@@ -131,16 +160,22 @@ export function decodePathCommands(blob: FigBlob): readonly PathCommand[] {
         commands.push({ type: "L", x, y });
         break;
       }
-      case CMD_SMOOTH_CUBIC: {
-        // Smooth cubic bezier (S command) - 4 coordinates
-        // cp1 is reflected from the previous command's cp2 (or equals start point)
-        const x2 = readFloat32();
-        const y2 = readFloat32();
+      case CMD_QUAD_TO_GLYPH: {
+        // Glyph quadratic Bézier - payload is (Qx, Qy, P1x, P1y).
+        // Elevate to cubic using the standard degree-elevation formulas so
+        // downstream SVG consumers that only understand cubics get pixel-
+        // accurate curves matching Figma's own export.
+        const qx = readFloat32();
+        const qy = readFloat32();
         const x = readFloat32();
         const y = readFloat32();
         const prevCmd = commands[commands.length - 1];
-        const cp1 = resolveSmoothCp1(prevCmd, x2, y2);
-        commands.push({ type: "C", x1: cp1.x, y1: cp1.y, x2, y2, x, y });
+        const p0 = getCurrentPoint(prevCmd, qx, qy);
+        const x1 = p0.x + (2 / 3) * (qx - p0.x);
+        const y1 = p0.y + (2 / 3) * (qy - p0.y);
+        const x2 = x + (2 / 3) * (qx - x);
+        const y2 = y + (2 / 3) * (qy - y);
+        commands.push({ type: "C", x1, y1, x2, y2, x, y });
         break;
       }
       case CMD_CUBIC_TO:

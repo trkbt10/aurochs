@@ -106,8 +106,32 @@ export type FigGuid = {
  * References a shared style definition (fill style, stroke style, etc.)
  * via its GUID.
  */
+/**
+ * A shared-style reference.
+ *
+ * `guid` points to a style definition node in the same file. `assetRef`
+ * (team-library key + version) points to a style imported from another
+ * Figma file. A single reference may carry either, both, or neither.
+ *
+ * Resolution order used by the style registry: prefer `guid` (same-file
+ * reference is authoritative). Fall back to `assetRef.key`, which we
+ * match against any node in the same file whose own `key` equals the
+ * asset key — Figma emits such "proxy" style-definition nodes on the
+ * Internal Only Canvas so asset-referenced styles resolve locally.
+ */
 export type FigStyleId = {
-  readonly guid: FigGuid;
+  readonly guid?: FigGuid;
+  readonly assetRef?: FigAssetRef;
+};
+
+/**
+ * Team-library asset identifier (Kiwi schema `AssetRef`, typeId 105).
+ * `key` is the stable content hash of the asset; `version` encodes the
+ * library version at import time.
+ */
+export type FigAssetRef = {
+  readonly key: string;
+  readonly version?: string;
 };
 
 /** Parent index as stored in Kiwi binary format */
@@ -548,6 +572,24 @@ export type FigNode = {
   readonly componentPropDefs?: readonly FigComponentPropDef[];
   /** Component property references on child nodes (binds field to prop def) */
   readonly componentPropRefs?: readonly FigComponentPropRef[];
+
+  // ---- Style-definition fields (shared-style proxy nodes) ----
+  /**
+   * Style classification for nodes that ARE style definitions (rather than
+   * consumers). A style-definition node's own `fillPaints` / `strokePaints`
+   * is the authoritative paint value for the referenced style, and its
+   * `key` matches the `assetRef.key` of every consumer's `styleIdForFill` /
+   * `styleIdForStrokeFill`. Figma places such nodes on the Internal Only
+   * Canvas so they do not render as visible content.
+   */
+  readonly styleType?: KiwiEnumValue;
+  /**
+   * Team-library asset key for a node that is a style or component
+   * definition. Used to resolve `styleIdForFill.assetRef.key` references
+   * to their local style-definition node when the asset was imported from
+   * another Figma file.
+   */
+  readonly key?: string;
 
   // ---- Section fields ----
   /** Whether section contents are hidden (collapsed) */

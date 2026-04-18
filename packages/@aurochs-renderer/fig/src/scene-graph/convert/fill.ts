@@ -5,9 +5,14 @@
  * to ensure parity with the SVG string renderer's fill handling.
  */
 
-import type { FigPaint, FigColor, FigGradientPaint, FigImagePaint } from "@aurochs/fig/types";
+import type { FigPaint, FigColor, FigGradientPaint } from "@aurochs/fig/types";
 import type { FigImage } from "@aurochs/fig/parser";
-import { getPaintType } from "@aurochs/fig/color";
+import {
+  getPaintType,
+  asGradientPaint,
+  asImagePaint,
+  asSolidPaint,
+} from "@aurochs/fig/color";
 import {
   getGradientStops,
   getGradientDirection,
@@ -92,7 +97,8 @@ export function convertPaintToFill(paint: FigPaint, images: ReadonlyMap<string, 
 
   switch (paintType) {
     case "SOLID": {
-      const solidPaint = paint as FigPaint & { color: FigColor };
+      const solidPaint = asSolidPaint(paint);
+      if (!solidPaint) { return null; }
       return {
         type: "solid",
         color: figColorToSceneColor(solidPaint.color),
@@ -102,7 +108,8 @@ export function convertPaintToFill(paint: FigPaint, images: ReadonlyMap<string, 
     }
 
     case "GRADIENT_LINEAR": {
-      const gradientPaint = paint as FigGradientPaint;
+      const gradientPaint = asGradientPaint(paint);
+      if (!gradientPaint) { return null; }
       const { start, end } = getGradientDirection(gradientPaint);
       const stops = convertGradientStops(getGradientStops(gradientPaint));
       return {
@@ -117,7 +124,8 @@ export function convertPaintToFill(paint: FigPaint, images: ReadonlyMap<string, 
     }
 
     case "GRADIENT_RADIAL": {
-      const gradientPaint = paint as FigGradientPaint;
+      const gradientPaint = asGradientPaint(paint);
+      if (!gradientPaint) { return null; }
       const { center, radius } = getRadialGradientCenterAndRadius(gradientPaint);
       const stops = convertGradientStops(getGradientStops(gradientPaint));
       return {
@@ -132,7 +140,8 @@ export function convertPaintToFill(paint: FigPaint, images: ReadonlyMap<string, 
     }
 
     case "GRADIENT_ANGULAR": {
-      const gradientPaint = paint as FigGradientPaint;
+      const gradientPaint = asGradientPaint(paint);
+      if (!gradientPaint) { return null; }
       // The angular-gradient centre is NOT `(m02, m12)` of paint.transform:
       // the Kiwi matrix maps object→gradient space, and `(m02, m12) =
       // T·(0,0)` is the gradient-space image of the object-space origin,
@@ -153,7 +162,8 @@ export function convertPaintToFill(paint: FigPaint, images: ReadonlyMap<string, 
     }
 
     case "GRADIENT_DIAMOND": {
-      const gradientPaint = paint as FigGradientPaint;
+      const gradientPaint = asGradientPaint(paint);
+      if (!gradientPaint) { return null; }
       // Diamond gradients, like angular, are centred on the object —
       // delegating to the dedicated helper keeps the convention
       // explicit and consistent with angular.
@@ -169,7 +179,8 @@ export function convertPaintToFill(paint: FigPaint, images: ReadonlyMap<string, 
     }
 
     case "IMAGE": {
-      const imagePaint = paint as FigImagePaint;
+      const imagePaint = asImagePaint(paint);
+      if (!imagePaint) { return null; }
       const imageRef = getImageRef(imagePaint);
       if (!imageRef) { return null; }
 

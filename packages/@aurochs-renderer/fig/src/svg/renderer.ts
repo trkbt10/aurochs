@@ -141,6 +141,7 @@ function convertSymbolMap(
   symbolMap: ReadonlyMap<string, FigNode>,
   components: Map<string, FigDesignNode>,
   styleRegistry: FigStyleRegistry,
+  blobs: readonly FigBlob[] | undefined,
 ): ReadonlyMap<string, FigDesignNode> {
   const out = new Map<string, FigDesignNode>();
   for (const [key, node] of symbolMap) {
@@ -148,7 +149,9 @@ function convertSymbolMap(
     // translated into the SYMBOL-descendant namespace during conversion.
     // Without this, nested INSTANCE overrides inside SYMBOL definitions
     // (rare but present) silently drop their overrides.
-    out.set(key, convertFigNode(node, components, styleRegistry, symbolMap));
+    // `blobs` enables fillGeometry-based size disambiguation during
+    // GUID translation (multi-avatar sibling case).
+    out.set(key, convertFigNode(node, components, styleRegistry, symbolMap, blobs));
   }
   return out;
 }
@@ -177,10 +180,10 @@ export async function renderFigToSvg(
   // whenever it encounters a COMPONENT/COMPONENT_SET/SYMBOL.
   const components = new Map<string, FigDesignNode>();
   const designSymbolMap = rawSymbolMap
-    ? convertSymbolMap(rawSymbolMap, components, styleRegistry)
+    ? convertSymbolMap(rawSymbolMap, components, styleRegistry, blobs)
     : new Map<string, FigDesignNode>();
 
-  const designNodes: FigDesignNode[] = nodes.map((n) => convertFigNode(n, components, styleRegistry, rawSymbolMap));
+  const designNodes: FigDesignNode[] = nodes.map((n) => convertFigNode(n, components, styleRegistry, rawSymbolMap, blobs));
 
   // Merge symbol definitions discovered while converting root nodes with
   // those that came via the symbolMap option. Later entries (from the

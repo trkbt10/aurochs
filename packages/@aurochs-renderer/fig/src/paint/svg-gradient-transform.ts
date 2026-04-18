@@ -18,7 +18,7 @@
  * possible, so pixelmatch diffs shrink to aliasing-only variance.
  */
 
-import type { FigGradientPaint, FigGradientTransform } from "@aurochs/fig/types";
+import type { FigGradientTransform } from "@aurochs/fig/types";
 
 // =============================================================================
 // Types
@@ -111,10 +111,10 @@ function m(t: FigGradientTransform | undefined, field: keyof FigGradientTransfor
  * paint as malformed rather than silently accept a wrong direction.
  */
 export function linearGradientAttrs(
-  paint: FigGradientPaint,
+  transform: FigGradientTransform | undefined,
   elementSize: ElementSize,
 ): SvgLinearGradientAttrs | undefined {
-  const t = paint.transform;
+  const t = transform;
   if (!t) return undefined;
   const { width: w, height: h } = elementSize;
 
@@ -203,10 +203,10 @@ export function linearGradientAttrs(
  * rx / ry are the lengths of these axes. angle is atan2(axis1.y, axis1.x).
  */
 export function radialGradientAttrs(
-  paint: FigGradientPaint,
+  transform: FigGradientTransform | undefined,
   elementSize: ElementSize,
 ): SvgRadialGradientAttrs | undefined {
-  const t = paint.transform;
+  const t = transform;
   if (!t) return undefined;
   const { width: w, height: h } = elementSize;
 

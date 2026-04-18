@@ -5,8 +5,8 @@
  * Supports gradient strokes and multi-paint stroke layers.
  */
 
-import type { FigPaint, FigColor, FigStrokeWeight, FigGradientPaint, KiwiEnumValue } from "@aurochs/fig/types";
-import { getPaintType } from "@aurochs/fig/color";
+import type { FigPaint, FigStrokeWeight, FigGradientPaint, KiwiEnumValue } from "@aurochs/fig/types";
+import { getPaintType, asGradientPaint, asSolidPaint } from "@aurochs/fig/color";
 import { resolveStrokeWeight, mapStrokeCap, mapStrokeJoin } from "../../stroke";
 import type { Stroke, StrokeLayer, StrokeAlign, LinearGradientFill, RadialGradientFill, AffineMatrix } from "../types";
 import { figColorToSceneColor } from "./fill";
@@ -103,22 +103,27 @@ function buildStrokeLayer(paint: FigPaint): StrokeLayer {
   const blendMode = convertFigmaBlendMode(paint.blendMode);
 
   if (paintType === "SOLID") {
-    const solidPaint = paint as FigPaint & { color: FigColor };
-    return {
-      color: figColorToSceneColor(solidPaint.color),
-      opacity: paint.opacity ?? 1,
-      blendMode,
-    };
+    const solidPaint = asSolidPaint(paint);
+    if (solidPaint) {
+      return {
+        color: figColorToSceneColor(solidPaint.color),
+        opacity: paint.opacity ?? 1,
+        blendMode,
+      };
+    }
   }
 
   if (paintType === "GRADIENT_LINEAR" || paintType === "GRADIENT_RADIAL") {
-    const gradientFill = convertStrokeGradient(paint as FigGradientPaint);
-    return {
-      color: DEFAULT_COLOR,
-      opacity: paint.opacity ?? 1,
-      gradientFill,
-      blendMode,
-    };
+    const gradientPaint = asGradientPaint(paint);
+    if (gradientPaint) {
+      const gradientFill = convertStrokeGradient(gradientPaint);
+      return {
+        color: DEFAULT_COLOR,
+        opacity: paint.opacity ?? 1,
+        gradientFill,
+        blendMode,
+      };
+    }
   }
 
   return { color: DEFAULT_COLOR, opacity: paint.opacity ?? 1, blendMode };
@@ -152,10 +157,10 @@ export function convertStrokeToSceneStroke(
 
   // Primary layer (first visible paint)
   const primary = visiblePaints[0];
-  const primaryType = getPaintType(primary);
   const DEFAULT_COLOR = { r: 0, g: 0, b: 0, a: 1 };
-  const primaryColor = primaryType === "SOLID"
-    ? figColorToSceneColor((primary as FigPaint & { color: FigColor }).color)
+  const primarySolid = asSolidPaint(primary);
+  const primaryColor = primarySolid
+    ? figColorToSceneColor(primarySolid.color)
     : DEFAULT_COLOR;
 
   // Multi-paint layers (when >1 visible paint), or single gradient paint

@@ -22,7 +22,6 @@
  *   ResolvedFillDef (with userSpaceOnUse pixel coordinates)
  */
 
-import type { FigGradientPaint } from "@aurochs/fig/types";
 import type { AffineMatrix } from "../types";
 import type { ResolvedFillDef, ResolvedLinearGradient, ResolvedRadialGradient } from "./fill";
 import type { RenderDef } from "../render-tree/types";
@@ -30,6 +29,24 @@ import {
   linearGradientAttrs as svgLinearGradientAttrs,
   radialGradientAttrs as svgRadialGradientAttrs,
 } from "../../paint/svg-gradient-transform";
+
+/**
+ * Extract the raw affine matrix from a ResolvedGradient's
+ * `gradientTransform` field.
+ *
+ * Before finalization the field carries an `AffineMatrix`; after it's
+ * an SVG string. The callers below only ever operate on the
+ * pre-finalized shape, so we pull out the matrix if present and
+ * return undefined when the def has already been consumed (string) or
+ * was never given a transform.
+ */
+function gradientMatrixFromDef(
+  value: string | AffineMatrix | undefined,
+): AffineMatrix | undefined {
+  if (value === undefined) { return undefined; }
+  if (typeof value === "string") { return undefined; }
+  return value;
+}
 
 /**
  * Element bounding box for gradient coordinate computation.
@@ -74,13 +91,13 @@ function finalizeLinearGradient(
   def: ResolvedLinearGradient,
   elementSize: ElementSize,
 ): ResolvedLinearGradient | undefined {
-  const gt = def.gradientTransform as AffineMatrix | undefined;
+  const gt = gradientMatrixFromDef(def.gradientTransform);
   if (!gt) { return undefined; }
 
-  const attrs = svgLinearGradientAttrs(
-    { transform: gt } as FigGradientPaint,
-    { width: elementSize.width, height: elementSize.height },
-  );
+  const attrs = svgLinearGradientAttrs(gt, {
+    width: elementSize.width,
+    height: elementSize.height,
+  });
   if (!attrs) { return undefined; }
 
   return {
@@ -103,13 +120,13 @@ function finalizeRadialGradient(
   def: ResolvedRadialGradient,
   elementSize: ElementSize,
 ): ResolvedRadialGradient | undefined {
-  const gt = def.gradientTransform as AffineMatrix | undefined;
+  const gt = gradientMatrixFromDef(def.gradientTransform);
   if (!gt) { return undefined; }
 
-  const attrs = svgRadialGradientAttrs(
-    { transform: gt } as FigGradientPaint,
-    { width: elementSize.width, height: elementSize.height },
-  );
+  const attrs = svgRadialGradientAttrs(gt, {
+    width: elementSize.width,
+    height: elementSize.height,
+  });
   if (!attrs) { return undefined; }
 
   return {

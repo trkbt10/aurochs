@@ -25,6 +25,7 @@ import {
   resolveSymbolGuidStr,
   getInstanceSymbolOverrides,
   buildGuidTranslationMap,
+  styleRefKeys,
 } from "@aurochs/fig/symbols";
 import { IDENTITY_MATRIX } from "@aurochs/fig/matrix";
 import {
@@ -230,12 +231,19 @@ function convertTransform(
 function extractCornerRadius(node: FigDesignNode): CornerRadius | undefined {
   const radii = node.rectangleCornerRadii;
   if (radii && radii.length === 4) {
-    const [tl, tr, br, bl] = radii;
+    // Build the tuple explicitly so TS keeps the literal 4-tuple type
+    // without a cast. Each index is known to exist because
+    // `radii.length === 4` narrows the array to a readonly[number, ...].
+    const tl = radii[0];
+    const tr = radii[1];
+    const br = radii[2];
+    const bl = radii[3];
     // All same → collapse to uniform
     if (tl === tr && tr === br && br === bl) {
       return tl || undefined;
     }
-    return [tl, tr, br, bl] as readonly [number, number, number, number];
+    const tuple: readonly [number, number, number, number] = [tl, tr, br, bl];
+    return tuple;
   }
   return node.cornerRadius;
 }
@@ -258,12 +266,19 @@ function resolveClipsContent(node: FigDesignNode): boolean {
 
 /**
  * Result of resolving an INSTANCE node against its SYMBOL/COMPONENT.
+ *
+ * `children` is a mutable tree of cloned nodes — every step in the
+ * resolution pipeline (overrides, CPA, derived-symbol-data, constraint
+ * reflow) mutates these clones. Exposing the mutable type on the
+ * returned children lets the caller continue mutating (e.g. a nested
+ * INSTANCE resolution can promote overrides into a child's dsd)
+ * without re-casting at every use site.
  */
 type ResolvedInstance = {
   /** Effective node with visual properties merged from SYMBOL */
   readonly effectiveNode: FigDesignNode;
   /** Resolved children (from instance or inherited from symbol) */
-  readonly children: readonly FigDesignNode[];
+  readonly children: readonly MutableFigDesignNode[];
 };
 
 /**
@@ -281,8 +296,15 @@ function hasPaintDeclaration(paints: readonly FigPaint[] | undefined): boolean {
 
 /**
  * Deep clone a FigDesignNode tree.
+ *
+ * Returns `MutableFigDesignNode` — every cloned node is intended to
+ * be mutated by the override / CPA / dsd pipelines below. Returning
+ * the readonly type would force every mutation site to re-cast
+ * (`node as MutableFigDesignNode`), which both clutters the code and
+ * hides the fact that clones exist precisely to be mutated. The input
+ * stays readonly; only the output is declared mutable.
  */
-function deepCloneDesignNode(node: FigDesignNode): FigDesignNode {
+function deepCloneDesignNode(node: FigDesignNode): MutableFigDesignNode {
   if (!node.children || node.children.length === 0) {
     return { ...node };
   }
@@ -298,14 +320,22 @@ function deepCloneDesignNode(node: FigDesignNode): FigDesignNode {
  * Each guid in the path targets one level deeper:
  *   guids[0] selects among the top-level children,
  *   guids[1] selects among that child's children, etc.
+ *
+ * Both the input and the return value are `MutableFigDesignNode`
+ * because every caller either mutates the found node directly
+ * (applyOverrideToNode / derivedSymbolData pipeline) or promotes the
+ * entry into a mutable child's dsd array. Declaring the type as
+ * mutable up-front removes every downstream `as MutableFigDesignNode`
+ * cast — the type system now expresses that these functions operate
+ * on a deep clone, not on a shared read-only tree.
  */
 function findNodeByOverridePath(
-  nodes: readonly FigDesignNode[],
+  nodes: readonly MutableFigDesignNode[],
   override: SymbolOverride,
-): FigDesignNode | undefined {
+): MutableFigDesignNode | undefined {
   const ids = overridePathToIds(override);
-  let current: readonly FigDesignNode[] = nodes;
-  let found: FigDesignNode | undefined;
+  let current: readonly MutableFigDesignNode[] = nodes;
+  let found: MutableFigDesignNode | undefined;
 
   for (const id of ids) {
     found = undefined;
@@ -319,16 +349,39 @@ function findNodeByOverridePath(
       found = findNodeById(current, id);
       if (!found) { return undefined; }
     }
-    current = found.children ?? [];
+    // `MutableFigDesignNode.children` is typed as
+    // `readonly FigDesignNode[] | undefined` (the mapped type only
+    // strips readonly from direct keys, not array element types).
+    // We know the tree was produced by `deepCloneDesignNode`, so
+    // every child is mutable too — assert via a helper rather than
+    // casting at each use site.
+    current = mutableChildren(found);
   }
   return found;
 }
 
-function findNodeById(nodes: readonly FigDesignNode[], id: string): FigDesignNode | undefined {
+function mutableChildren(
+  node: MutableFigDesignNode,
+): readonly MutableFigDesignNode[] {
+  const cs = node.children;
+  if (!cs) { return []; }
+  // Deep clones produced by `deepCloneDesignNode` own every descendant,
+  // so widening the element type to MutableFigDesignNode is a
+  // no-op at runtime and a precise statement of ownership at the
+  // type level. Every other path that builds `children` arrays in
+  // this file does so from deepCloneDesignNode output — keeping that
+  // invariant is part of the SSoT we enforce here.
+  return cs as readonly MutableFigDesignNode[];
+}
+
+function findNodeById(
+  nodes: readonly MutableFigDesignNode[],
+  id: string,
+): MutableFigDesignNode | undefined {
   for (const node of nodes) {
     if (node.id === id) { return node; }
     if (node.children) {
-      const found = findNodeById(node.children, id);
+      const found = findNodeById(mutableChildren(node), id);
       if (found) { return found; }
     }
   }
@@ -342,7 +395,7 @@ function findNodeById(nodes: readonly FigDesignNode[], id: string): FigDesignNod
  * Properties follow the same structure as FigDesignNode fields.
  */
 function applySymbolOverridesToChildren(
-  children: readonly FigDesignNode[],
+  children: readonly MutableFigDesignNode[],
   overrides: readonly import("@aurochs/fig/domain").SymbolOverride[],
   symbolId: string,
   styleRegistry: import("@aurochs/fig/domain").FigStyleRegistry,
@@ -354,19 +407,35 @@ function applySymbolOverridesToChildren(
     const target = findNodeByOverridePath(children, override);
     if (!target) { continue; }
 
-    const mutable = target as MutableFigDesignNode;
-    applyOverrideToNode(mutable, override);
+    applyOverrideToNode(target, override);
 
-    // Resolve styleIdForFill / styleIdForStrokeFill after override application
-    if (mutable.styleIdForFill) {
-      const resolved = styleRegistry.fills.get(guidToString(mutable.styleIdForFill.guid));
-      if (resolved) { mutable.fills = resolved; }
-    }
-    if (mutable.styleIdForStrokeFill) {
-      const resolved = styleRegistry.strokes.get(guidToString(mutable.styleIdForStrokeFill.guid));
-      if (resolved) { mutable.strokes = resolved; }
-    }
+    // Resolve styleIdForFill / styleIdForStrokeFill after override application.
+    // A style reference may carry a local `guid` and/or a team-library
+    // `assetRef.key`; resolveStyleRef tries both via styleRefKeys.
+    const targetFills = resolveStyleRef(target.styleIdForFill, styleRegistry.fills);
+    if (targetFills) target.fills = targetFills;
+    const targetStrokes = resolveStyleRef(target.styleIdForStrokeFill, styleRegistry.strokes);
+    if (targetStrokes) target.strokes = targetStrokes;
   }
+}
+
+/**
+ * Resolve a style reference to a paint array via the registry.
+ *
+ * A `FigStyleId` may carry up to two keys: a local `guid` (same-file
+ * definition) and an `assetRef.key` (team-library import). The registry
+ * stores both namespaces in a single map, so we try each key in turn and
+ * return the first hit. Returns undefined when neither key resolves.
+ */
+function resolveStyleRef(
+  ref: { readonly guid?: { readonly sessionID: number; readonly localID: number }; readonly assetRef?: { readonly key: string } } | undefined,
+  map: ReadonlyMap<string, readonly FigPaint[]>,
+): readonly FigPaint[] | undefined {
+  for (const k of styleRefKeys(ref)) {
+    const v = map.get(k);
+    if (v) return v;
+  }
+  return undefined;
 }
 
 /**
@@ -376,7 +445,7 @@ function applySymbolOverridesToChildren(
  * on child nodes (text content, visibility, instance swap).
  */
 function applyComponentPropertyAssignments(
-  children: readonly FigDesignNode[],
+  children: readonly MutableFigDesignNode[],
   assignments: readonly import("@aurochs/fig/domain").ComponentPropertyAssignment[],
   symbol: FigDesignNode,
 ): void {
@@ -393,7 +462,7 @@ function applyComponentPropertyAssignments(
 }
 
 function applyPropsRecursive(
-  nodes: readonly FigDesignNode[],
+  nodes: readonly MutableFigDesignNode[],
   assignmentMap: ReadonlyMap<string, import("@aurochs/fig/domain").ComponentPropertyValue>,
   _symbol: FigDesignNode,
 ): void {
@@ -403,7 +472,6 @@ function applyPropsRecursive(
         const assignedValue = assignmentMap.get(ref.defId);
         if (assignedValue === undefined) { continue; }
 
-        const mutable = node as MutableFigDesignNode;
         switch (ref.nodeField) {
           case "TEXT_DATA": {
             // Override text content from textValue.characters.
@@ -423,9 +491,9 @@ function applyPropsRecursive(
             const textChars = assignedValue.textValue?.characters;
             if (textChars !== undefined && node.textData) {
               const prevChars = node.textData.characters;
-              mutable.textData = { ...node.textData, characters: textChars };
+              node.textData = { ...node.textData, characters: textChars };
               if (textChars !== prevChars) {
-                mutable.derivedTextData = undefined;
+                node.derivedTextData = undefined;
               }
             }
             break;
@@ -434,7 +502,7 @@ function applyPropsRecursive(
             // Toggle visibility from boolValue
             const boolVal = assignedValue.boolValue;
             if (boolVal !== undefined) {
-              mutable.visible = boolVal;
+              node.visible = boolVal;
             }
             break;
           }
@@ -442,7 +510,7 @@ function applyPropsRecursive(
             // Instance swap: change the symbolId from referenceValue
             const refVal = assignedValue.referenceValue;
             if (refVal !== undefined) {
-              mutable.symbolId = refVal;
+              node.symbolId = refVal;
             }
             break;
           }
@@ -451,7 +519,7 @@ function applyPropsRecursive(
     }
 
     if (node.children) {
-      applyPropsRecursive(node.children, assignmentMap, _symbol);
+      applyPropsRecursive(mutableChildren(node), assignmentMap, _symbol);
     }
   }
 }
@@ -469,7 +537,7 @@ function applyPropsRecursive(
  * cleared derivedTextData.
  */
 function applyDerivedSymbolData(
-  children: readonly FigDesignNode[],
+  children: readonly MutableFigDesignNode[],
   derivedData: readonly SymbolOverride[],
   ctx: BuildContext,
 ): void {
@@ -478,7 +546,7 @@ function applyDerivedSymbolData(
 
     const target = findNodeByOverridePath(children, entry);
     if (target) {
-      applyOverrideToNode(target as MutableFigDesignNode, entry);
+      applyOverrideToNode(target, entry);
       continue;
     }
 
@@ -523,11 +591,10 @@ function applyDerivedSymbolData(
 
       const promoted: SymbolOverride = {
         ...entry,
-        guidPath: { guids: translatedTail } as SymbolOverride["guidPath"],
+        guidPath: { guids: translatedTail },
       };
-      const mutableChild = directChild as MutableFigDesignNode;
-      const existing = mutableChild.derivedSymbolData ?? [];
-      mutableChild.derivedSymbolData = [...existing, promoted];
+      const existing = directChild.derivedSymbolData ?? [];
+      directChild.derivedSymbolData = [...existing, promoted];
       continue;
     }
 
@@ -553,11 +620,10 @@ function applyDerivedSymbolData(
 
         const promoted: SymbolOverride = {
           ...entry,
-          guidPath: { guids: translatedTail } as SymbolOverride["guidPath"],
+          guidPath: { guids: translatedTail },
         };
-        const mutableChild = child as MutableFigDesignNode;
-        const existing = mutableChild.derivedSymbolData ?? [];
-        mutableChild.derivedSymbolData = [...existing, promoted];
+        const existing = child.derivedSymbolData ?? [];
+        child.derivedSymbolData = [...existing, promoted];
         attached = true;
         break;
       }
@@ -606,9 +672,9 @@ function walkContainsId(
 }
 
 function findDirectChildById(
-  children: readonly FigDesignNode[],
+  children: readonly MutableFigDesignNode[],
   id: string,
-): FigDesignNode | undefined {
+): MutableFigDesignNode | undefined {
   for (const child of children) {
     if (child.id === id) { return child; }
   }
@@ -663,9 +729,12 @@ function translateRemainingPathToSymbolNamespace(
   // is empty unless we tell buildGuidTranslationMap "I need 5432:23135
   // matched". With the seeded entry in place, its localID-based
   // heuristics map it to SYMBOL descendant 15:407.
+  // `FigKiwiSymbolOverride` = `FigKiwiSymbolOverridePayload & { guidPath }`.
+  // Every field of the payload is optional, so an object with only
+  // `guidPath` is a structurally valid override. No cast needed.
   const seed: import("@aurochs/fig/types").FigKiwiSymbolOverride = {
     guidPath: { guids: [tailGuids[0]] },
-  } as unknown as import("@aurochs/fig/types").FigKiwiSymbolOverride;
+  };
   const seededOverrides = [
     ...(getInstanceSymbolOverrides(rawChildInstance) ?? []),
     seed,
@@ -677,6 +746,7 @@ function translateRemainingPathToSymbolNamespace(
     seededOverrides,
     rawChildInstance.componentPropAssignments,
     ctx.rawSymbolMap,
+    ctx.blobs,
   );
 
   if (translationMap.size === 0) {
@@ -709,7 +779,7 @@ function parseGuidStr(s: string): FigGuid {
  * horizontal/vertical constraint settings.
  */
 function applyConstraintResolution(
-  children: readonly FigDesignNode[],
+  children: readonly MutableFigDesignNode[],
   symbolSize: { x: number; y: number },
   instanceSize: { x: number; y: number },
 ): void {
@@ -731,10 +801,8 @@ function applyConstraintResolution(
     if (!resolution) { continue; }
     if (!resolution.posChanged && !resolution.sizeChanged) { continue; }
 
-    const mutable = child as MutableFigDesignNode;
-
     // Update transform (position)
-    mutable.transform = {
+    child.transform = {
       ...child.transform,
       m02: resolution.posX,
       m12: resolution.posY,
@@ -742,7 +810,7 @@ function applyConstraintResolution(
 
     // Update size
     if (resolution.sizeChanged) {
-      mutable.size = { x: resolution.dimX, y: resolution.dimY };
+      child.size = { x: resolution.dimX, y: resolution.dimY };
     }
   }
 }
@@ -841,16 +909,12 @@ function resolveInstance(
       }
       applyOverrideToNode(merged, override);
     }
-    // If self-overrides set styleIdForFill/styleIdForStrokeFill,
-    // resolve the fills/strokes from the style registry
-    if (merged.styleIdForFill) {
-      const resolved = ctx.styleRegistry.fills.get(guidToString(merged.styleIdForFill.guid));
-      if (resolved) { merged.fills = resolved; }
-    }
-    if (merged.styleIdForStrokeFill) {
-      const resolved = ctx.styleRegistry.strokes.get(guidToString(merged.styleIdForStrokeFill.guid));
-      if (resolved) { merged.strokes = resolved; }
-    }
+    // If self-overrides set styleIdForFill/styleIdForStrokeFill, resolve
+    // through guid or assetRef.key via the style registry.
+    const mergedFills = resolveStyleRef(merged.styleIdForFill, ctx.styleRegistry.fills);
+    if (mergedFills) merged.fills = mergedFills;
+    const mergedStrokes = resolveStyleRef(merged.styleIdForStrokeFill, ctx.styleRegistry.strokes);
+    if (mergedStrokes) merged.strokes = mergedStrokes;
   }
 
   // `merged` is mutated by Step 6 (size adjustment) and is the `effectiveNode`
@@ -862,7 +926,13 @@ function resolveInstance(
   // ── Step 3: Clone children with overrides ──
   // INSTANCE children in .fig are typically empty — SYMBOL children are used.
   // When INSTANCE has own children (rare), those take precedence.
-  let children: readonly FigDesignNode[];
+  //
+  // `children` is typed as `MutableFigDesignNode[]` because every
+  // subsequent pipeline step (overrides, CPA, dsd, constraint
+  // resolution) mutates these clones. Declaring the type here removes
+  // the `as MutableFigDesignNode` casts that would otherwise appear in
+  // each step.
+  let children: readonly MutableFigDesignNode[];
   if (ownChildren.length > 0) {
     children = ownChildren.map(deepCloneDesignNode);
   } else {
@@ -942,14 +1012,14 @@ function resolveInstance(
  * be built into scene graph nodes.
  */
 function resolveNestedInstances(
-  children: readonly FigDesignNode[],
+  children: readonly MutableFigDesignNode[],
   ctx: BuildContext,
-): readonly FigDesignNode[] {
+): readonly MutableFigDesignNode[] {
   return children.map((child) => {
     const typeName = getNodeTypeName(child);
     if (typeName !== "INSTANCE") {
       if (child.children && child.children.length > 0) {
-        const resolvedGrandchildren = resolveNestedInstances(child.children, ctx);
+        const resolvedGrandchildren = resolveNestedInstances(mutableChildren(child), ctx);
         if (resolvedGrandchildren !== child.children) {
           const updated: MutableFigDesignNode = { ...child, children: resolvedGrandchildren };
           return updated;
@@ -1119,16 +1189,18 @@ function synthesizeContours(node: FigDesignNode): PathContour[] {
  * 3. If neither, return undefined (use base fill)
  */
 function resolveOverrideEntryPaints(
-  entry: { readonly fillPaints?: readonly FigPaint[]; readonly styleIdForFill?: { readonly guid: { readonly sessionID: number; readonly localID: number } } },
+  entry: {
+    readonly fillPaints?: readonly FigPaint[];
+    readonly styleIdForFill?: {
+      readonly guid?: { readonly sessionID: number; readonly localID: number };
+      readonly assetRef?: { readonly key: string };
+    };
+  },
   styleRegistry: FigStyleRegistry,
 ): readonly FigPaint[] | undefined {
-  // Priority 1: styleIdForFill via style registry
-  if (entry.styleIdForFill) {
-    const resolved = styleRegistry.fills.get(guidToString(entry.styleIdForFill.guid));
-    if (resolved) {
-      return resolved;
-    }
-  }
+  // Priority 1: styleIdForFill via style registry (guid or assetRef.key)
+  const resolved = resolveStyleRef(entry.styleIdForFill, styleRegistry.fills);
+  if (resolved) return resolved;
 
   // Priority 2: inline fillPaints
   if (entry.fillPaints && entry.fillPaints.length > 0) {
@@ -1229,7 +1301,9 @@ function buildVectorNode(node: FigDesignNode, ctx: BuildContext): PathNode {
 function extractEnumName(value: unknown): string | undefined {
   if (typeof value === "string") { return value; }
   if (value && typeof value === "object" && "name" in value) {
-    const name = (value as Record<string, unknown>).name;
+    // `"name" in value` narrows to `value & { name: unknown }`, so
+    // `value.name` is safely `unknown` without any cast.
+    const name: unknown = value.name;
     return typeof name === "string" ? name : undefined;
   }
   return undefined;
@@ -1488,6 +1562,72 @@ function parseSvgPathDToCommands(d: string): PathContour["commands"][number][] {
 }
 
 // =============================================================================
+// Auto-layout stretch (narrow)
+// =============================================================================
+
+/**
+ * Apply the Figma auto-layout `stackChildAlignSelf=STRETCH` rule.
+ *
+ * When the parent FRAME is an auto-layout container (stackMode VERTICAL or
+ * HORIZONTAL) and a child has `stackChildAlignSelf=STRETCH`, the child's
+ * counter-axis (horizontal for VERTICAL stack, vertical for HORIZONTAL)
+ * dimension resolves to the parent's content area on that axis.
+ *
+ * Scope is deliberately narrow: this only handles the COUNTER-axis stretch,
+ * not the primary-axis grow / SPACE_BETWEEN / primary-axis sizing rules
+ * (those belong to Task #39's full auto-layout implementation). The
+ * narrow fix is enough to correct the visible Activity View list-row
+ * separator regression, where `_Separator` carries `stackChildAlignSelf=
+ * STRETCH` and its stored size (e.g. 129×1, copied from an unrelated
+ * SYMBOL default) is smaller than the parent list-row's inner width.
+ *
+ * Returns a new children array with stretched sizes applied; children
+ * that don't match the stretch condition are returned unchanged so
+ * reference equality holds for the common case.
+ */
+export function applyCounterAxisStretch(
+  parent: FigDesignNode,
+  children: readonly FigDesignNode[],
+): readonly FigDesignNode[] {
+  const autoLayout = parent.autoLayout;
+  if (!autoLayout) return children;
+  const modeName = autoLayout.stackMode?.name;
+  if (modeName !== "VERTICAL" && modeName !== "HORIZONTAL") return children;
+
+  // Parent's content area = size minus padding (Kiwi stackPadding stores
+  // a single uniform number; per-side fields live on the raw node but the
+  // domain only carries the uniform value). When no stackPadding is set
+  // the content area equals the parent's own size.
+  const pad = typeof autoLayout.stackPadding === "number" ? autoLayout.stackPadding : 0;
+  const pSize = parent.size;
+  if (!pSize) return children;
+  const counterAxis = modeName === "VERTICAL" ? "x" : "y";
+  const counterContent = (counterAxis === "x" ? pSize.x : pSize.y) - pad * 2;
+  if (counterContent <= 0) return children;
+
+  let changed = false;
+  const out: FigDesignNode[] = [];
+  for (const child of children) {
+    const alignSelf = child.layoutConstraints?.stackChildAlignSelf?.name;
+    if (alignSelf !== "STRETCH" || !child.size) {
+      out.push(child);
+      continue;
+    }
+    const current = counterAxis === "x" ? child.size.x : child.size.y;
+    if (Math.abs(current - counterContent) < 0.5) {
+      out.push(child);
+      continue;
+    }
+    const newSize = counterAxis === "x"
+      ? { x: counterContent, y: child.size.y }
+      : { x: child.size.x, y: counterContent };
+    out.push({ ...child, size: newSize });
+    changed = true;
+  }
+  return changed ? out : children;
+}
+
+// =============================================================================
 // Recursive Builder
 // =============================================================================
 
@@ -1514,7 +1654,8 @@ function buildNode(node: FigDesignNode, ctx: BuildContext): SceneNode | null {
     case "COMPONENT":
     case "COMPONENT_SET":
     case "SYMBOL": {
-      const childNodes = buildChildren(children, ctx);
+      const stretched = applyCounterAxisStretch(node, children);
+      const childNodes = buildChildren(stretched, ctx);
       return buildFrameNode(node, ctx, childNodes);
     }
 
@@ -1523,7 +1664,8 @@ function buildNode(node: FigDesignNode, ctx: BuildContext): SceneNode | null {
       // - Merge visual properties (fills, cornerRadius, effects, etc.)
       // - Inherit children if instance has none
       const resolved = resolveInstance(node, children, ctx);
-      const childNodes = buildChildren(resolved.children, ctx);
+      const stretched = applyCounterAxisStretch(resolved.effectiveNode, resolved.children);
+      const childNodes = buildChildren(stretched, ctx);
       return buildFrameNode(resolved.effectiveNode, ctx, childNodes);
     }
 

@@ -65,7 +65,18 @@ export function finalizeImagePatternDefs(
     });
 
     if (layout) {
-      // Replace the pattern def with finalized version
+      // Replace the pattern def with finalized version.
+      //
+      // `patternTransform` is cleared because the finalized layout
+      // expresses all positioning through `imageTransform` (which
+      // transforms the inner <image> element). Leaving the
+      // pre-finalization `patternTransform` (the raw paint.transform)
+      // stacks two transforms — the wanted `imageTransform` AND the
+      // outer pattern transform — squashing/offsetting the image
+      // (e.g. Contact Avatar image was being vertically scaled to
+      // 0.87 and translated down by 0.063 because patternTransform
+      // was a residual of the raw paint.transform rather than an
+      // identity).
       defs[i] = {
         type: "pattern",
         def: {
@@ -78,6 +89,7 @@ export function finalizeImagePatternDefs(
           imageHeight: layout.imageHeight,
           preserveAspectRatio: layout.preserveAspectRatio,
           imageTransform: layout.imageTransform,
+          patternTransform: undefined,
         },
       };
     }

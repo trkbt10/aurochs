@@ -10,7 +10,7 @@
  */
 
 import type { FigNode, FigComponentPropAssignment, FigDerivedTextData } from "@aurochs/fig/types";
-import { getNodeType, guidToString, safeChildren, type FigGuid } from "@aurochs/fig/parser";
+import { getNodeType, guidToString, safeChildren, decodePathCommands, type FigGuid, type FigBlob, type PathCommand } from "@aurochs/fig/parser";
 import type { FigKiwiSymbolOverride } from "@aurochs/fig/types";
 
 /**
@@ -323,9 +323,45 @@ function extractShapeSignals(
 
 /**
  * Score a descendant for compatibility with a SHAPE-hinted override.
- * Higher score = better match.
+ * Higher score = better match. Negative score disqualifies the
+ * descendant as a map target.
+ *
+ * Dimension compatibility: overrides authored against a specific node
+ * carry a `size` that either matches the target's SYMBOL-declared
+ * size (no layout reflow) or expresses a constraint-driven rescale
+ * that keeps ratios close to the original. Mis-mapped overrides —
+ * e.g. a sibling variant's Separator dsd (`299x1`) landing on the
+ * current variant's 70×70 icon FRAME — exhibit factor ratios an order
+ * of magnitude apart on the two axes. We reject those outright to
+ * prevent the mis-mapping from collapsing unrelated nodes.
  */
-function scoreShapeMatch(desc: DescendantInfo, signal: ShapeSignal | undefined): number {
+function scoreShapeMatch(
+  desc: DescendantInfo,
+  signal: ShapeSignal | undefined,
+  overrideSize?: { readonly x: number; readonly y: number },
+): number {
+  if (overrideSize && desc.size && desc.size.x > 0 && desc.size.y > 0 && overrideSize.x > 0 && overrideSize.y > 0) {
+    const rx = overrideSize.x / desc.size.x;
+    const ry = overrideSize.y / desc.size.y;
+    // Disqualify "wildly non-uniform" shape mismatches.
+    //
+    // A legitimate Figma layout reflow either preserves both axes
+    // (ratios close to 1) or scales both by a comparable factor
+    // (constraint-driven resize typically has rx/ry ratios within
+    // an order of magnitude of each other). The "shape-swap"
+    // signature of a cross-variant mis-mapping is an override whose
+    // one axis grows ≥2× while the other collapses to ≤10% of the
+    // target's authored size — e.g. a Separator (299×1) override
+    // being mapped to a 129×52 Title (2.32× wide, 0.019× tall) or
+    // to a 70×70 icon FRAME (4.27× wide, 0.014× tall). We reject
+    // these so the mis-mapping doesn't collapse unrelated nodes.
+    //
+    // Uniform shrinks/grows (e.g. 0.22×/0.22×) are NOT disqualified
+    // because they are the normal product of constraint-driven
+    // resizing a SYMBOL to a smaller INSTANCE extent.
+    const oneAxisSquashed = (rx >= 2 && ry <= 0.1) || (ry >= 2 && rx <= 0.1);
+    if (oneAxisSquashed) return -1;
+  }
   if (!signal) return 0;
   let score = 0;
   if (signal.hasImageFill && desc.hasImageFill) score += 10;
@@ -500,20 +536,105 @@ function computeLocalInstanceSignatures(
  * on the target node, which often matches the node's original size
  * (especially when the INSTANCE hasn't been resized).
  */
+/**
+ * Compute the axis-aligned bounding box of a decoded path.
+ *
+ * Returns undefined when the path has no on-curve endpoints, matching the
+ * "no size signal available" contract of `extractOverrideSizes`.
+ */
+function pathCommandsExtent(cmds: readonly PathCommand[]): { x: number; y: number } | undefined {
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const c of cmds) {
+    if (c.type === "M" || c.type === "L") {
+      if (c.x < minX) minX = c.x;
+      if (c.x > maxX) maxX = c.x;
+      if (c.y < minY) minY = c.y;
+      if (c.y > maxY) maxY = c.y;
+    } else if (c.type === "C") {
+      for (const v of [c.x, c.x1, c.x2]) {
+        if (v < minX) minX = v;
+        if (v > maxX) maxX = v;
+      }
+      for (const v of [c.y, c.y1, c.y2]) {
+        if (v < minY) minY = v;
+        if (v > maxY) maxY = v;
+      }
+    } else if (c.type === "Q") {
+      for (const v of [c.x, c.x1]) {
+        if (v < minX) minX = v;
+        if (v > maxX) maxX = v;
+      }
+      for (const v of [c.y, c.y1]) {
+        if (v < minY) minY = v;
+        if (v > maxY) maxY = v;
+      }
+    }
+  }
+  if (minX === Infinity) return undefined;
+  return { x: maxX - minX, y: maxY - minY };
+}
+
 function extractOverrideSizes(
-  ...overrideSets: (readonly FigKiwiSymbolOverride[] | undefined)[]
+  overrideSets: readonly (readonly FigKiwiSymbolOverride[] | undefined)[],
+  blobs?: readonly FigBlob[],
 ): Map<string, { x: number; y: number }> {
   const sizes = new Map<string, { x: number; y: number }>();
+
+  // First pass: collect explicit `size` fields and determine which
+  // depth-1 guids carry an IMAGE fill (across any entry for that guid).
+  // The image-fill flag gates the blob-size fallback to the Avatar case
+  // only — see rationale below.
+  const imageFillGuids = new Set<string>();
   for (const overrides of overrideSets) {
-    if (!overrides) {continue;}
+    if (!overrides) continue;
     for (const entry of overrides) {
       const guids = entry.guidPath?.guids;
-      if (!guids || guids.length !== 1) {continue;}
-      const size = entry.size;
-      if (!size) {continue;}
+      if (!guids || guids.length !== 1) continue;
       const key = guidToString(guids[0]);
-      if (!sizes.has(key)) {
-        sizes.set(key, { x: size.x, y: size.y });
+      if (entry.size && !sizes.has(key)) {
+        sizes.set(key, { x: entry.size.x, y: entry.size.y });
+      }
+      if (Array.isArray(entry.fillPaints)) {
+        for (const p of entry.fillPaints) {
+          const t = typeof p.type === "string" ? p.type : p.type?.name;
+          if (t === "IMAGE") { imageFillGuids.add(key); break; }
+        }
+      }
+    }
+  }
+
+  // Second pass: fallback to the fillGeometry blob bounding box, but
+  // only when the entry's depth-1 guid also carries an IMAGE fill
+  // (tracked above). This scopes the blob-size inference to the one
+  // case that actually needs it: image-fill overrides routing to
+  // sibling descendants of different sizes (Contact "People=2"
+  // variant's Avatar 1 ↔ Avatar 2), without perturbing pure-geometry
+  // overrides whose blob extent may legitimately differ from the
+  // matched descendant's authored size (Toolbar 44×44 buttons nested
+  // in Button Groups of varying local sizes).
+  //
+  // Only trust shape-style blobs (leading byte 0x01 = M). Glyph
+  // blobs have the `00 01 ...` header and encode coordinates in
+  // glyph-space (~1.5×1.0), which do NOT match the containing
+  // TEXT node's pixel size.
+  if (!blobs) return sizes;
+  for (const overrides of overrideSets) {
+    if (!overrides) continue;
+    for (const entry of overrides) {
+      const guids = entry.guidPath?.guids;
+      if (!guids || guids.length !== 1) continue;
+      const key = guidToString(guids[0]);
+      if (sizes.has(key)) continue;
+      if (!imageFillGuids.has(key)) continue;
+      const fg = entry.fillGeometry?.[0];
+      const blobIdx = fg?.commandsBlob;
+      if (typeof blobIdx !== "number" || blobIdx < 0 || blobIdx >= blobs.length) continue;
+      const blob = blobs[blobIdx];
+      if (!blob || blob.bytes.length === 0) continue;
+      if (blob.bytes[0] !== 0x01) continue;
+      const extent = pathCommandsExtent(decodePathCommands(blob));
+      if (extent && extent.x > 0 && extent.y > 0) {
+        sizes.set(key, extent);
       }
     }
   }
@@ -565,6 +686,15 @@ export function buildGuidTranslationMap(
    * Passing nodeMap lets Phase 0 count the resolved-descendant weight.
    */
   symbolMap?: ReadonlyMap<string, FigNode>,
+  /**
+   * Optional blob array from the parsed .fig file. When supplied,
+   * overrides that carry a fillGeometry reference but no explicit
+   * `size` field can still contribute size information via the path
+   * blob's bounding box — essential for disambiguating sibling
+   * descendants of different sizes (e.g. two avatars in a multi-avatar
+   * Contact variant).
+   */
+  blobs?: readonly FigBlob[],
 ): GuidTranslationMap {
   const descendants = collectDescendantInfoWithCPA(symbolDescendants, componentPropAssignments);
   if (descendants.length === 0) {return new Map();}
@@ -771,7 +901,7 @@ export function buildGuidTranslationMap(
   // the target descendant's original size, freeing them for better matching
   // in subsequent phases.
   {
-    const overrideSizes = extractOverrideSizes(derivedSymbolData, symbolOverrides);
+    const overrideSizes = extractOverrideSizes([derivedSymbolData, symbolOverrides], blobs);
     const descByGuidStr = new Map<string, DescendantInfo>();
     for (const d of descendants) {
       descByGuidStr.set(d.guidStr, d);
@@ -794,6 +924,51 @@ export function buildGuidTranslationMap(
     }
 
     for (const key of toRemove) {
+      result.delete(key);
+    }
+  }
+
+  // ── Phase 1 validation (type compat): remove SHAPE-hinted mappings
+  // that landed on a TEXT node via the majority-vote offset.
+  //
+  // A SHAPE override carries paint-shape data (fillPaints, fillGeometry,
+  // corner-radius properties) that only makes sense on a shape node
+  // (FRAME / RECTANGLE / ELLIPSE / VECTOR / LINE / STAR / etc.).
+  // Applying it to a TEXT node corrupts the text's styling — e.g. an
+  // image-fill paint lands on text and makes it invisible.
+  //
+  // Example: Contact "People=2" variant in edge-cases.fig has
+  // session-127 overrides including 127:58425 (hint TEXT → targets the
+  // Names TEXT) and 127:58426 (hint SHAPE with image fill → targets an
+  // Avatar FRAME). The best-offset tiebreaker maximises the TEXT match,
+  // which lands 127:58426 onto the adjacent "Number of People" TEXT.
+  // Removing this mismatch frees 127:58426 for Phase 1.85's shape-
+  // signal scoring.
+  //
+  // Scope is narrowed to SHAPE→TEXT only (not every type-mismatch),
+  // because TEXT/INSTANCE/CONTAINER→other mismatches are routinely
+  // corrected later by Phase 1.3/1.5 content-signature / typed matching
+  // and an over-aggressive eviction here breaks multi-level dsd
+  // cascades that depend on those later phases' keeping the Phase 1
+  // offset-aligned guesses intact (e.g. Activity View - iPhone's
+  // intermediate INSTANCE guids threading action-icon glyph overrides
+  // through 8+ Action INSTANCEs).
+  {
+    const descByGuidStr = new Map<string, DescendantInfo>();
+    for (const d of descendants) {
+      descByGuidStr.set(d.guidStr, d);
+    }
+    const toRemoveType: string[] = [];
+    for (const [overrideGuidStr, descGuidStr] of result) {
+      const hint = typeHints.get(overrideGuidStr);
+      if (hint !== "SHAPE") continue;
+      const desc = descByGuidStr.get(descGuidStr);
+      if (!desc) continue;
+      if (desc.nodeType === "TEXT") {
+        toRemoveType.push(overrideGuidStr);
+      }
+    }
+    for (const key of toRemoveType) {
       result.delete(key);
     }
   }
@@ -913,7 +1088,7 @@ export function buildGuidTranslationMap(
   // This phase uses DSD entry sizes to match unmapped GUIDs to descendants
   // with matching original sizes.
   {
-    const overrideSizes = extractOverrideSizes(derivedSymbolData, symbolOverrides);
+    const overrideSizes = extractOverrideSizes([derivedSymbolData, symbolOverrides], blobs);
     const claimed = new Set(result.values());
 
     // Collect ALL unmapped override GUIDs that have a depth-1 size
@@ -970,6 +1145,7 @@ export function buildGuidTranslationMap(
   // even when a specific property hint exists.
   {
     const claimedAfter175 = new Set(result.values());
+    const shapeOverrideSizes = extractOverrideSizes([derivedSymbolData, symbolOverrides], blobs);
     for (const [, guids] of bySession) {
       const unmapped = guids.filter((g) => !result.has(guidToString(g)));
       const shapeUnmapped = unmapped.filter((g) => typeHints.get(guidToString(g)) === "SHAPE");
@@ -985,11 +1161,14 @@ export function buildGuidTranslationMap(
       for (const ov of orderedUnmapped) {
         const ovKey = guidToString(ov);
         const signal = shapeSignals.get(ovKey);
+        const overrideSize = shapeOverrideSizes.get(ovKey);
         let best: DescendantInfo | undefined;
         let bestScore = -1;
         for (const d of candidates) {
           if (!remaining.has(d.guidStr)) continue;
-          const score = scoreShapeMatch(d, signal);
+          const score = scoreShapeMatch(d, signal, overrideSize);
+          // Negative score means "disqualify" — treat as no match.
+          if (score < 0) continue;
           if (score > bestScore || (score === bestScore && best && d.guid.localID < best.guid.localID)) {
             bestScore = score;
             best = d;
@@ -1061,17 +1240,20 @@ export function buildGuidTranslationMap(
       const candidates = unclaimed.length >= hintGuids.length ? unclaimed : allCandidatesRef.value;
 
       if (hint === "SHAPE") {
-        // Score-based match using shape signals
+        // Score-based match using shape signals + size compatibility
+        const phase2OverrideSizes = extractOverrideSizes([derivedSymbolData, symbolOverrides], blobs);
         const remaining = new Set(candidates.map((d) => d.guidStr));
         const sortedGuids = [...hintGuids].sort((a, b) => a.localID - b.localID);
         for (const ov of sortedGuids) {
           const ovKey = guidToString(ov);
           const signal = shapeSignals.get(ovKey);
+          const overrideSize = phase2OverrideSizes.get(ovKey);
           let best: DescendantInfo | undefined;
           let bestScore = -1;
           for (const d of candidates) {
             if (!remaining.has(d.guidStr)) continue;
-            const score = scoreShapeMatch(d, signal);
+            const score = scoreShapeMatch(d, signal, overrideSize);
+            if (score < 0) continue;
             if (score > bestScore || (score === bestScore && best && d.guid.localID < best.guid.localID)) {
               bestScore = score;
               best = d;

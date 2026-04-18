@@ -29,6 +29,57 @@ import type {
 const ELLIPSIS_CHAR = "\u2026";
 
 /**
+ * Compute the in-box translation Figma applies when the resolved glyph
+ * run (`derivedTextData.layoutSize`) is smaller than the TEXT node's own
+ * box, given the node's alignment.
+ *
+ * The raw `glyph.position` coordinates stored in derivedTextData are in
+ * the layout's own top-left-origin coordinate space. Figma's own SVG
+ * export translates those into the node box according to text alignment:
+ *   LEFT   → +0
+ *   CENTER → +(boxSize - layoutSize) / 2
+ *   RIGHT  → +(boxSize - layoutSize)
+ * (vertical: TOP / CENTER / BOTTOM analogously.)
+ *
+ * Skipping this offset produces a visible shift for any TEXT node whose
+ * rendered run is narrower/shorter than the box (e.g. single SF Symbol
+ * glyphs in a 70×70 icon box that resolve to a 44×44 layout).
+ *
+ * When `layoutSize` is missing or matches the box, the offset is (0,0)
+ * and this is a no-op.
+ */
+function computeDerivedAlignmentOffset(
+  layoutSize: { readonly x: number; readonly y: number } | undefined,
+  boxSize: { readonly width: number; readonly height: number } | undefined,
+  textAlignH: "LEFT" | "CENTER" | "RIGHT" | "JUSTIFIED" | undefined,
+  textAlignV: "TOP" | "CENTER" | "BOTTOM" | undefined,
+): { x: number; y: number } {
+  if (!layoutSize || !boxSize) {
+    return { x: 0, y: 0 };
+  }
+  const dx = boxSize.width - layoutSize.x;
+  const dy = boxSize.height - layoutSize.y;
+  // Only shift when the box is larger than the resolved run. A smaller box
+  // than the run means the run overflows; Figma's raw glyph positions in
+  // that case already reflect the clipped layout, so don't add an offset.
+  const offsetX = dx <= 0
+    ? 0
+    : textAlignH === "CENTER"
+      ? dx / 2
+      : textAlignH === "RIGHT"
+        ? dx
+        : 0;
+  const offsetY = dy <= 0
+    ? 0
+    : textAlignV === "CENTER"
+      ? dy / 2
+      : textAlignV === "BOTTOM"
+        ? dy
+        : 0;
+  return { x: offsetX, y: offsetY };
+}
+
+/**
  * Resolve a text truncation directive from a FigNode.
  *
  * Figma stores textTruncation at the node level and, when truncation was
@@ -197,7 +248,13 @@ export function resolveTextRendering(
   // Figma has already applied truncation to the glyph positions, so we pass
   // the truncation metadata through unchanged.
   if (ctx.blobs && hasDerivedGlyphs(dtd)) {
-    const pathData = extractDerivedTextPathData(dtd!, ctx.blobs);
+    const alignmentOffset = computeDerivedAlignmentOffset(
+      dtd?.layoutSize,
+      props.size,
+      props.textAlignHorizontal,
+      props.textAlignVertical,
+    );
+    const pathData = extractDerivedTextPathData(dtd!, ctx.blobs, alignmentOffset);
     if (pathData.glyphContours.length > 0 || pathData.decorations.length > 0) {
       const layout = computeTextLayout({ props });
       const glyphs: TextRenderingGlyphs = {

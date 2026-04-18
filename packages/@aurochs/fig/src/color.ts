@@ -5,7 +5,7 @@
  * FigColor is defined in types.ts — this module provides operations on it.
  */
 
-import type { FigColor, FigPaint, FigSolidPaint } from "./types";
+import type { FigColor, FigPaint, FigSolidPaint, FigGradientPaint, FigImagePaint } from "./types";
 
 // =============================================================================
 // Color Predicates
@@ -81,4 +81,56 @@ export function getSolidPaintColor(paint: FigPaint): FigColor | undefined {
   // explicitly: if the color field exists, use it.
   const solid = paint as FigSolidPaint;
   return solid.color;
+}
+
+// =============================================================================
+// Paint Narrowing Helpers (SSoT for FigPaint → variant)
+// =============================================================================
+//
+// FigPaint is a union whose discriminator (`type`) can be either a string
+// literal or a KiwiEnumValue object. TypeScript's built-in narrowing
+// handles string-literal discriminants but not mixed string | object
+// discriminants, so downstream code would otherwise pepper the codebase
+// with `paint as FigGradientPaint` / `paint as FigImagePaint` casts.
+//
+// Centralising the narrowing in these helpers makes the unchecked cast
+// happen in exactly one place per variant, where the invariant
+// ("getPaintType returned the right tag, therefore the variant's
+// optional fields are present") can be documented and enforced once.
+// Every caller that previously wrote `paint as FigGradientPaint` now
+// calls `asGradientPaint(paint)` and gets back a typed variant or
+// undefined.
+
+/**
+ * Narrow a paint to `FigGradientPaint` when its type is one of the
+ * gradient tags. Returns undefined otherwise.
+ */
+export function asGradientPaint(paint: FigPaint): FigGradientPaint | undefined {
+  const t = getPaintType(paint);
+  if (t === "GRADIENT_LINEAR" || t === "GRADIENT_RADIAL" || t === "GRADIENT_ANGULAR" || t === "GRADIENT_DIAMOND") {
+    return paint as FigGradientPaint;
+  }
+  return undefined;
+}
+
+/**
+ * Narrow a paint to `FigImagePaint` when its type is IMAGE.
+ * Returns undefined otherwise.
+ */
+export function asImagePaint(paint: FigPaint): FigImagePaint | undefined {
+  if (getPaintType(paint) !== "IMAGE") {
+    return undefined;
+  }
+  return paint as FigImagePaint;
+}
+
+/**
+ * Narrow a paint to `FigSolidPaint` when its type is SOLID.
+ * Returns undefined otherwise.
+ */
+export function asSolidPaint(paint: FigPaint): FigSolidPaint | undefined {
+  if (getPaintType(paint) !== "SOLID") {
+    return undefined;
+  }
+  return paint as FigSolidPaint;
 }

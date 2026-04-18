@@ -199,15 +199,22 @@ function preResolve(
  */
 export function createFigResolver(
   symbolMap: ReadonlyMap<string, FigNode>,
+  /**
+   * Optional blob array forwarded into the symbol resolver so
+   * GUID translation can decode fillGeometry blobs for size
+   * disambiguation. Callers that have `blobs` available (renderer,
+   * tree-to-document) should pass them.
+   */
+  blobs?: readonly import("@aurochs/fig/parser").FigBlob[],
 ): FigResolver {
   const warnings: string[] = [];
   const styleRegistry = buildFigStyleRegistry(symbolMap);
   const resolvedSymbolCache = preResolve(symbolMap, warnings);
 
   // Full INSTANCE resolution delegates to the SSoT in @aurochs/fig/symbols.
-  // We only pre-bind the context (symbolMap + cache + styleRegistry).
+  // We only pre-bind the context (symbolMap + cache + styleRegistry + blobs).
   function resolveInstance(node: FigNode): ResolvedInstanceNode {
-    return resolveInstanceNode(node, { symbolMap, resolvedSymbolCache, styleRegistry });
+    return resolveInstanceNode(node, { symbolMap, resolvedSymbolCache, styleRegistry, blobs });
   }
 
   function resolveSymbol(guid: FigGuid): { node: FigNode; guidStr: string } | undefined {
