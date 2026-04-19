@@ -2,7 +2,7 @@
  * @file Tree builder for reconstructing node hierarchy from flat nodeChanges
  */
 
-import type { FigNode } from "../types";
+import type { FigNode, FigNodeType } from "../types";
 
 /**
  * GUID identifier for a node
@@ -128,19 +128,29 @@ export function buildNodeTree(nodeChanges: readonly FigNode[]): NodeTreeResult {
 }
 
 /**
- * Get node type as string
+ * Get the node type as the canonical domain string-union `FigNodeType`.
+ *
+ * Return type is `FigNodeType | "UNKNOWN"`: this lets every caller's
+ * equality / switch compare against `FIG_NODE_TYPE.*` (or literal-narrowed
+ * string) with TypeScript enforcing typo-safety. Returning `string`
+ * here would silently widen every consumer's comparison and defeat
+ * the SSoT the `FigNodeType` union provides.
  */
-export function getNodeType(node: FigNode): string {
+export function getNodeType(node: FigNode): FigNodeType | "UNKNOWN" {
   const type = node.type;
 
-  // KiwiEnumValue has { value, name } — return the name string
+  // KiwiEnumValue has { value, name } — return the name string.
+  // The Kiwi schema constrains `name` to the FigNodeType set, so the
+  // runtime string matches the domain union. Passing it through without
+  // a runtime validator is consistent with how other Kiwi enum values
+  // reach the domain layer.
   if (typeof type === "object" && "name" in type) {
-    return type.name;
+    return type.name as FigNodeType;
   }
 
   // API format: string literal
   if (typeof type === "string") {
-    return type;
+    return type as FigNodeType;
   }
 
   return "UNKNOWN";

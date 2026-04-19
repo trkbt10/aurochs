@@ -8,6 +8,7 @@
  */
 
 import type { Effect, Color, BlendMode } from "../types";
+import type { IdGenerator } from "./fill";
 
 // =============================================================================
 // Resolved Filter Primitive Types
@@ -84,9 +85,6 @@ export type ResolvedFilter = {
   };
 };
 
-type IdGenerator = {
-  readonly getNextId: (prefix: string) => string;
-};
 
 // =============================================================================
 // Resolution

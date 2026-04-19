@@ -65,12 +65,32 @@ import type { BackgroundBlurEffect } from "../types";
 // ID Generator
 // =============================================================================
 
+/**
+ * Module-level monotonic counter — every `createIdGenerator()` call gets a
+ * distinct `generation` prefix so IDs never collide across renders or
+ * across concurrently-mounted `FigSceneRenderer` instances in the same DOM.
+ *
+ * Why this matters: SVG `<mask>` / `<clipPath>` / `<filter>` references use
+ * a document-wide namespace (`url(#stroke-mask-0)` resolves against the
+ * whole HTML document, not the containing SVG). Two scene renderers that
+ * each produced `stroke-mask-0` would collide, and which definition wins
+ * for a given reference is undefined — producing the observed
+ * zoom-alternating clip-regression on fig-editor (Link 190:3213 and any
+ * other ELLIPSE-with-OUTSIDE-stroke on Cover / Components pages).
+ *
+ * Keeping the `generation` portion out of the node tree data (it's only
+ * assigned at resolve time) means the SceneGraph itself stays pure.
+ */
+// eslint-disable-next-line no-restricted-syntax -- module-scoped counter guarantees unique IDs across renderer instances
+let resolverGeneration = 0;
+
 function createIdGenerator(): IdGenerator {
-  // eslint-disable-next-line no-restricted-syntax -- mutable closure counter for sequential ID generation
+  const generation = resolverGeneration++;
+  // eslint-disable-next-line no-restricted-syntax -- per-generation counter for ID sequencing
   let counter = 0;
   return {
     getNextId(prefix: string): string {
-      return `${prefix}-${counter++}`;
+      return `${prefix}-g${generation}-${counter++}`;
     },
   };
 }

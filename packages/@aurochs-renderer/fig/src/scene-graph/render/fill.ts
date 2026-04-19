@@ -163,6 +163,23 @@ export type ResolvedFill = {
 // ID Generator interface
 // =============================================================================
 
+/**
+ * SSoT ID generator interface for SVG defs (gradient, pattern, mask,
+ * filter, clip-path, stroke-mask, etc.).
+ *
+ * The canonical implementation lives in
+ * `scene-graph/render-tree/resolve.ts` and uses a module-level
+ * `resolverGeneration` counter so every call to `createIdGenerator()`
+ * produces a disjoint ID namespace (`${prefix}-g${gen}-${seq}`). This
+ * guarantees no two scene-renderer instances mounted in the same HTML
+ * document can emit colliding `<mask id="…">` definitions — a subtle
+ * bug that caused Bento Link (190:3213) to lose its clip under certain
+ * editor zoom states.
+ *
+ * Test specs may supply a simpler counter for unit-level isolation; any
+ * production code that needs an ID generator MUST route through
+ * resolveRenderTree rather than instantiating one ad-hoc.
+ */
 export type IdGenerator = {
   readonly getNextId: (prefix: string) => string;
 };

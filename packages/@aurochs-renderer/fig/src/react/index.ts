@@ -12,6 +12,4 @@ export { FigSceneRenderer, FigRenderTreeRenderer } from "./FigSceneRenderer";
 export { RenderNodeComponent } from "./nodes/RenderNodeComponent";
 
 // Shared components
-export { FigSvgDefsProvider, FigSvgIdProvider, useFigSvgDefs } from "./context/FigSvgDefsContext";
-export type { FigSvgIdGenerator } from "./context/FigSvgDefsContext";
 export { FigTextLines } from "./nodes/FigTextLines";

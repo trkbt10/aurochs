@@ -14,4 +14,4 @@
 // Renderer-specific types
 // =============================================================================
 
-export type { DefsCollector, FigSvgRenderContext, FigSvgRenderContextConfig, FigSvgRenderResult } from "./types";
+export type { FigSvgRenderContext, FigSvgRenderContextConfig, FigSvgRenderResult } from "./types";

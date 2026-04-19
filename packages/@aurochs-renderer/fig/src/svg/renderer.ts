@@ -209,12 +209,6 @@ export async function renderFigToSvg(
     images,
     canvasSize: { width, height },
     symbolMap: mergedSymbolMap,
-    // The raw (Kiwi) symbolMap is needed so the scene-graph builder
-    // can recompute buildGuidTranslationMap for nested INSTANCE
-    // children. Without it, multi-level override paths silently fail
-    // (see Close Button xmark regression analysis in
-    // scene-graph/builder.ts::applyDerivedSymbolData).
-    rawSymbolMap: rawSymbolMap ?? new Map(),
     showHiddenNodes: options.showHiddenNodes === true,
     styleRegistry,
     warnings,

@@ -12,6 +12,7 @@
  */
 
 import type { FigNode, FigNodeType, FigMatrix, FigVector, FigColor, FigPaint, FigEffect, KiwiEnumValue, FigTextStyleOverrideEntry, FigComponentPropValue } from "@aurochs/fig/types";
+import { FIG_NODE_TYPE } from "@aurochs/fig/types";
 import type { NodeTreeResult } from "@aurochs/fig/parser";
 import { getNodeType, safeChildren, guidToString } from "@aurochs/fig/parser";
 import {
@@ -19,7 +20,6 @@ import {
   buildFigStyleRegistry,
   getInstanceSymbolOverrides,
   buildGuidTranslationMap,
-  translateOverrides,
   resolveSymbolGuidStr,
   styleRefKeys,
 } from "@aurochs/fig/symbols";
@@ -55,7 +55,11 @@ function resolveSymbolIdForDomain(node: FigNode): FigNodeId | undefined {
 }
 
 /** Node types that clip content by default in Figma. */
-const CLIPPING_NODE_TYPES: ReadonlySet<string> = new Set(["FRAME", "COMPONENT", "COMPONENT_SET"]);
+const CLIPPING_NODE_TYPES: ReadonlySet<FigNodeType> = new Set([
+  FIG_NODE_TYPE.FRAME,
+  FIG_NODE_TYPE.COMPONENT,
+  FIG_NODE_TYPE.COMPONENT_SET,
+]);
 
 /**
  * Resolve clipsContent for domain model.
@@ -65,7 +69,7 @@ const CLIPPING_NODE_TYPES: ReadonlySet<string> = new Set(["FRAME", "COMPONENT", 
  * After this, the domain model's `clipsContent` is authoritative and
  * no consumer needs to read `frameMaskDisabled` from `_raw`.
  */
-function resolveClipsContentForDomain(node: FigNode, nodeType: string): boolean | undefined {
+function resolveClipsContentForDomain(node: FigNode, nodeType: FigNodeType): boolean | undefined {
   if (node.clipsContent !== undefined) { return node.clipsContent; }
   if (node.frameMaskDisabled !== undefined) { return !node.frameMaskDisabled; }
   if (CLIPPING_NODE_TYPES.has(nodeType)) { return true; }
@@ -82,7 +86,11 @@ const DEFAULT_SIZE: FigVector = { x: 0, y: 0 };
 const _DEFAULT_COLOR: FigColor = { r: 0, g: 0, b: 0, a: 1 };
 
 /** Node types that are components */
-const COMPONENT_TYPES: ReadonlySet<string> = new Set(["COMPONENT", "COMPONENT_SET", "SYMBOL"]);
+const COMPONENT_TYPES: ReadonlySet<FigNodeType> = new Set([
+  FIG_NODE_TYPE.COMPONENT,
+  FIG_NODE_TYPE.COMPONENT_SET,
+  FIG_NODE_TYPE.SYMBOL,
+]);
 
 /** True when a paint list carries at least one paint entry. */
 function hasPaintEntries(paints: readonly FigPaint[] | undefined): paints is readonly FigPaint[] {
@@ -162,20 +170,24 @@ function extractIndividualStrokeWeights(node: FigNode): FigDesignNode["individua
   if (!node.borderStrokeWeightsIndependent && node.borderTopWeight === undefined) {
     return undefined;
   }
-  // Sides whose per-side weight is absent inherit the uniform `strokeWeight`.
-  // Falling back to 0 (as done previously) would turn a uniform stroke into
-  // a 1-sided border on FRAMEs where Figma only stamped `borderTopWeight`
-  // (leftover editor metadata). Passport (Bento 116:377) reports
-  // `borderTopWeight=8` but all four sides render as 1px in Figma — the
-  // other three weights are unset and should default to the uniform value.
-  const defaultWeight = typeof node.strokeWeight === "number" ? node.strokeWeight : 0;
-  const top = node.borderTopWeight ?? defaultWeight;
-  const right = node.borderRightWeight ?? defaultWeight;
-  const bottom = node.borderBottomWeight ?? defaultWeight;
-  const left = node.borderLeftWeight ?? defaultWeight;
+  // Figma semantics when `borderStrokeWeightsIndependent=true`:
+  //   - a defined per-side weight renders at that exact width
+  //   - an undefined per-side weight means **0** (no border on that side)
+  //   - `strokeWeight` is the uniform value shown in Figma's inspector but
+  //     NOT used as a fallback for missing sides
+  //
+  // Pattern in Bento file: "Spine" / "Line 1-3" / "Header" have only
+  // `borderBottomWeight` set with others undefined — these are bottom-
+  // only accent rules. "Passport" has only `borderTopWeight=8` — a
+  // top-only accent strip. A prior fix that fell back to `strokeWeight`
+  // here turned those single-side accents into full 4-sided borders.
+  const top = node.borderTopWeight ?? 0;
+  const right = node.borderRightWeight ?? 0;
+  const bottom = node.borderBottomWeight ?? 0;
+  const left = node.borderLeftWeight ?? 0;
 
-  // If all sides are equal, don't store individual weights
-  // (the uniform strokeWeight already covers this case)
+  // If all sides are equal, don't store individual weights (the uniform
+  // `strokeWeight` already covers the case).
   if (top === right && right === bottom && bottom === left) {
     return undefined;
   }
@@ -544,32 +556,42 @@ function collectRawFields(node: FigNode): Record<string, unknown> | undefined {
 }
 
 /**
- * Translate INSTANCE override GUIDs into the SYMBOL-descendant GUID
- * namespace using the SSoT in @aurochs/fig/symbols. Without this step,
- * INSTANCE-scoped override paths (e.g. 127:58385) never match the
- * SYMBOL's own child GUIDs (e.g. 15:848) and every per-INSTANCE
- * override is silently dropped at apply time — producing the "all
- * Contact avatars show the same photo" regression.
+ * Resolve override guid paths carried by a node into the SYMBOL
+ * descendant namespace the scene-graph builder will look them up in.
  *
- * Returns the INSTANCE's overrides and derivedSymbolData remapped into
- * the SYMBOL namespace, paired so callers can persist both.
+ * This is the SoT for "which slot does this override address". It
+ * handles every node type uniformly: non-INSTANCE nodes have no
+ * overrides to resolve, INSTANCE nodes have their paths rewritten
+ * once and verbatim. Callers do not branch on node.type.
+ *
+ * SSoT invariants:
+ *   - Every resolved guid on every path is in the namespace it will be
+ *     looked up in. No downstream `buildGuidTranslationMap` call exists.
+ *   - Single pass per path: no "first-level vs tail" asymmetry, no
+ *     deferred secondary resolution.
+ *   - COMPONENT_SET variant semantics: when a sibling entry declares
+ *     `overriddenSymbolID` for an INSTANCE along the path, subsequent
+ *     guids are resolved in the variant's namespace.
  */
-function translateInstanceOverrides(
-  instanceNode: FigNode,
+function resolveOverridePaths(
+  node: FigNode,
   symbolMap: ReadonlyMap<string, FigNode> | undefined,
   blobs: readonly import("@aurochs/fig/parser").FigBlob[] | undefined,
 ): {
   overrides: readonly SymbolOverride[] | undefined;
   derivedSymbolData: readonly SymbolOverride[] | undefined;
 } {
-  const rawOverrides = getInstanceSymbolOverrides(instanceNode);
-  const rawDerivedSymbolData = instanceNode.derivedSymbolData;
+  const rawOverrides = getInstanceSymbolOverrides(node);
+  const rawDerivedSymbolData = node.derivedSymbolData;
 
+  // Non-INSTANCE nodes (or INSTANCE nodes without a resolvable SYMBOL in
+  // the map) return their raw carries unchanged. `getInstanceSymbolOverrides`
+  // returns undefined for non-INSTANCE nodes so the output is always
+  // shaped to what the domain node expects.
   if (!symbolMap) {
     return { overrides: rawOverrides, derivedSymbolData: rawDerivedSymbolData };
   }
-
-  const effectiveGuid = getEffectiveSymbolID(instanceNode);
+  const effectiveGuid = getEffectiveSymbolID(node);
   if (!effectiveGuid) {
     return { overrides: rawOverrides, derivedSymbolData: rawDerivedSymbolData };
   }
@@ -578,23 +600,141 @@ function translateInstanceOverrides(
     return { overrides: rawOverrides, derivedSymbolData: rawDerivedSymbolData };
   }
 
-  const translationMap = buildGuidTranslationMap(
-    safeChildren(effectiveSymbol.node),
-    rawDerivedSymbolData,
-    rawOverrides,
+  const resolve = (
+    entries: readonly import("@aurochs/fig/types").FigKiwiSymbolOverride[],
+  ): readonly SymbolOverride[] =>
+    resolveEntryPaths(entries, effectiveSymbol.node, node, symbolMap, blobs);
+
+  return {
+    overrides: rawOverrides ? resolve(rawOverrides) : undefined,
+    derivedSymbolData: rawDerivedSymbolData ? resolve(rawDerivedSymbolData) : undefined,
+  };
+}
+
+/**
+ * Walk each override path through the INSTANCE chain once, rewriting
+ * guids into the namespace of the SYMBOL at each level. Variant
+ * switches declared in `entries` are honoured so multi-level paths
+ * descend into the variant's SYMBOL, not the default variant.
+ */
+function resolveEntryPaths(
+  entries: readonly import("@aurochs/fig/types").FigKiwiSymbolOverride[],
+  symbolRoot: FigNode,
+  instanceNode: FigNode,
+  symbolMap: ReadonlyMap<string, FigNode>,
+  blobs: readonly import("@aurochs/fig/parser").FigBlob[] | undefined,
+): readonly SymbolOverride[] {
+  const topMap = buildGuidTranslationMap(
+    safeChildren(symbolRoot),
+    instanceNode.derivedSymbolData,
+    getInstanceSymbolOverrides(instanceNode),
     instanceNode.componentPropAssignments,
     symbolMap,
     blobs,
   );
 
-  const translatedOverrides = rawOverrides
-    ? translateOverrides(rawOverrides, translationMap)
-    : undefined;
-  const translatedDerived = rawDerivedSymbolData
-    ? translateOverrides(rawDerivedSymbolData, translationMap)
-    : undefined;
+  // `resolvedSlotGuid → variantSymbolGuid`: a sibling single-guid entry
+  // with `overriddenSymbolID` announces that the INSTANCE at
+  // `resolvedSlotGuid` is running the named variant. Multi-level paths
+  // that pass through the same slot descend into the variant's SYMBOL.
+  const variantAt = new Map<string, string>();
+  for (const entry of entries) {
+    const guids = entry.guidPath?.guids;
+    if (!guids || guids.length !== 1) { continue; }
+    if (!entry.overriddenSymbolID) { continue; }
+    const src = guidToString(guids[0]);
+    const resolved = topMap.get(src) ?? src;
+    variantAt.set(
+      resolved,
+      `${entry.overriddenSymbolID.sessionID}:${entry.overriddenSymbolID.localID}`,
+    );
+  }
 
-  return { overrides: translatedOverrides, derivedSymbolData: translatedDerived };
+  return entries.map((entry) =>
+    resolveEntryPath(entry, topMap, symbolRoot, symbolMap, blobs, variantAt),
+  );
+}
+
+/**
+ * Resolve every guid on a single entry's path from the INSTANCE's
+ * namespace into the SYMBOL descendant namespace at each level.
+ */
+function resolveEntryPath(
+  entry: import("@aurochs/fig/types").FigKiwiSymbolOverride,
+  topMap: import("@aurochs/fig/symbols").GuidTranslationMap,
+  symbolRoot: FigNode,
+  symbolMap: ReadonlyMap<string, FigNode>,
+  blobs: readonly import("@aurochs/fig/parser").FigBlob[] | undefined,
+  variantAt: ReadonlyMap<string, string>,
+): SymbolOverride {
+  const guids = entry.guidPath?.guids;
+  if (!guids || guids.length === 0) { return entry; }
+
+  const resolved: { sessionID: number; localID: number }[] = [];
+  let levelMap = topMap;
+  let levelSymbolRoot: FigNode | undefined = symbolRoot;
+
+  for (let i = 0; i < guids.length; i++) {
+    const src = guidToString(guids[i]);
+    const resolvedStr = levelMap.get(src) ?? src;
+    resolved.push(parseGuidToFigGuid(resolvedStr));
+
+    if (i === guids.length - 1 || !levelSymbolRoot) { break; }
+
+    const target = findDescendantByGuid(levelSymbolRoot, resolvedStr);
+    if (!target) { break; }
+    if (getNodeType(target) !== FIG_NODE_TYPE.INSTANCE) { continue; }
+
+    const variantGuidStr = variantAt.get(resolvedStr);
+    const nestedSymbolGuid = variantGuidStr
+      ? parseGuidToFigGuid(variantGuidStr)
+      : getEffectiveSymbolID(target);
+    if (!nestedSymbolGuid) { break; }
+    const nestedSymbol = resolveSymbolGuidStr(nestedSymbolGuid, symbolMap);
+    if (!nestedSymbol) { break; }
+
+    // Seed the next-level translation map with the subsequent guid so
+    // `buildGuidTranslationMap`'s heuristics can place it even when
+    // the nested INSTANCE declares no own overrides.
+    const seed: import("@aurochs/fig/types").FigKiwiSymbolOverride = {
+      guidPath: { guids: [guids[i + 1]] },
+    };
+    const seeded = [
+      ...(getInstanceSymbolOverrides(target) ?? []),
+      seed,
+    ];
+
+    levelMap = buildGuidTranslationMap(
+      safeChildren(nestedSymbol.node),
+      target.derivedSymbolData,
+      seeded,
+      target.componentPropAssignments,
+      symbolMap,
+      blobs,
+    );
+    levelSymbolRoot = nestedSymbol.node;
+  }
+
+  return {
+    ...entry,
+    guidPath: { guids: resolved },
+  };
+}
+
+function findDescendantByGuid(root: FigNode, guidStr: string): FigNode | undefined {
+  const stack: FigNode[] = [...safeChildren(root)];
+  while (stack.length > 0) {
+    const n = stack.pop();
+    if (!n) { continue; }
+    if (guidToString(n.guid) === guidStr) { return n; }
+    for (const c of safeChildren(n)) { stack.push(c); }
+  }
+  return undefined;
+}
+
+function parseGuidToFigGuid(guidStr: string): import("@aurochs/fig/parser").FigGuid {
+  const [sessionStr, localStr] = guidStr.split(":");
+  return { sessionID: Number(sessionStr), localID: Number(localStr) };
 }
 
 /**
@@ -631,13 +771,8 @@ export function convertFigNode(
   const children = safeChildren(node);
   const convertedChildren = children.length > 0 ? children.map((child) => convertFigNode(child, components, styleRegistry, symbolMap, blobs)) : undefined;
 
-  const { overrides: translatedOverrides, derivedSymbolData: translatedDerivedSymbolData } =
-    nodeType === "INSTANCE"
-      ? translateInstanceOverrides(node, symbolMap, blobs)
-      : {
-          overrides: getInstanceSymbolOverrides(node),
-          derivedSymbolData: node.derivedSymbolData,
-        };
+  const { overrides: resolvedOverrides, derivedSymbolData: resolvedDerivedSymbolData } =
+    resolveOverridePaths(node, symbolMap, blobs);
 
   const fills = resolveNodeFills(node, styleRegistry);
   const strokes = resolveNodeStrokes(node, styleRegistry);
@@ -678,8 +813,8 @@ export function convertFigNode(
     derivedTextData: node.derivedTextData as DerivedTextData | undefined,
 
     symbolId: resolveSymbolIdForDomain(node),
-    overrides: translatedOverrides,
-    derivedSymbolData: translatedDerivedSymbolData,
+    overrides: resolvedOverrides,
+    derivedSymbolData: resolvedDerivedSymbolData,
 
     componentPropertyDefs: extractComponentPropertyDefs(node),
     componentPropertyRefs: extractComponentPropertyRefs(node),

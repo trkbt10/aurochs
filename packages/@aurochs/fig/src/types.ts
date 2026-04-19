@@ -737,39 +737,47 @@ export type FigBuildInput = {
 // =============================================================================
 
 /**
- * Known Figma node types
+ * Known Figma node types.
+ *
+ * SSoT — every `FigNodeType` comparison / switch / Set member must refer
+ * to the `FIG_NODE_TYPE.*` constants below. Raw string literals such as
+ * `"INSTANCE"` are forbidden in consumers because a typo silently
+ * compiles against the widened string type.
  */
-export type FigNodeType =
-  | "DOCUMENT"
-  | "CANVAS"
-  | "FRAME"
-  | "GROUP"
-  | "RECTANGLE"
-  | "ROUNDED_RECTANGLE"
-  | "ELLIPSE"
-  | "VECTOR"
-  | "TEXT"
-  | "LINE"
-  | "BOOLEAN_OPERATION"
-  | "COMPONENT"
-  | "COMPONENT_SET"
-  | "INSTANCE"
-  | "SYMBOL"
-  | "STAR"
-  | "REGULAR_POLYGON"
-  | "SLICE"
-  | "STICKY"
-  | "CONNECTOR"
-  | "SHAPE_WITH_TEXT"
-  | "CODE_BLOCK"
-  | "STAMP"
-  | "WIDGET"
-  | "EMBED"
-  | "LINK_UNFURL"
-  | "MEDIA"
-  | "SECTION"
-  | "TABLE"
-  | "TABLE_CELL";
+export const FIG_NODE_TYPE = {
+  DOCUMENT: "DOCUMENT",
+  CANVAS: "CANVAS",
+  FRAME: "FRAME",
+  GROUP: "GROUP",
+  RECTANGLE: "RECTANGLE",
+  ROUNDED_RECTANGLE: "ROUNDED_RECTANGLE",
+  ELLIPSE: "ELLIPSE",
+  VECTOR: "VECTOR",
+  TEXT: "TEXT",
+  LINE: "LINE",
+  BOOLEAN_OPERATION: "BOOLEAN_OPERATION",
+  COMPONENT: "COMPONENT",
+  COMPONENT_SET: "COMPONENT_SET",
+  INSTANCE: "INSTANCE",
+  SYMBOL: "SYMBOL",
+  STAR: "STAR",
+  REGULAR_POLYGON: "REGULAR_POLYGON",
+  SLICE: "SLICE",
+  STICKY: "STICKY",
+  CONNECTOR: "CONNECTOR",
+  SHAPE_WITH_TEXT: "SHAPE_WITH_TEXT",
+  CODE_BLOCK: "CODE_BLOCK",
+  STAMP: "STAMP",
+  WIDGET: "WIDGET",
+  EMBED: "EMBED",
+  LINK_UNFURL: "LINK_UNFURL",
+  MEDIA: "MEDIA",
+  SECTION: "SECTION",
+  TABLE: "TABLE",
+  TABLE_CELL: "TABLE_CELL",
+} as const;
+
+export type FigNodeType = typeof FIG_NODE_TYPE[keyof typeof FIG_NODE_TYPE];
 
 // =============================================================================
 // Figma Geometry Types

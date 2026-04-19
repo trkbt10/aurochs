@@ -8,6 +8,7 @@ import { useCallback, useState, type CSSProperties, type KeyboardEvent } from "r
 import { FieldGroup } from "@aurochs-ui/ui-components/layout";
 import { ParagraphPropertiesEditor, createDefaultParagraphProperties } from "./ParagraphPropertiesEditor";
 import type { TextBody, Paragraph, ParagraphProperties, TextRun } from "@aurochs-office/pptx/domain/text";
+import { px } from "@aurochs-office/drawing-ml/domain/units";
 import type { EditorProps } from "@aurochs-ui/ui-components/types";
 
 // =============================================================================
@@ -355,10 +356,10 @@ export function createDefaultTextBody(): TextBody {
       overflow: "overflow",
       autoFit: { type: "none" },
       insets: {
-        left: 0 as never,
-        top: 0 as never,
-        right: 0 as never,
-        bottom: 0 as never,
+        left: px(0),
+        top: px(0),
+        right: px(0),
+        bottom: px(0),
       },
     },
     paragraphs: [

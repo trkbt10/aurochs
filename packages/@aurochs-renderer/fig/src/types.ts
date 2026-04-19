@@ -13,25 +13,22 @@ import type { FigResolver } from "./symbols/fig-resolver";
 // =============================================================================
 
 /**
- * SVG defs collector for gradients, patterns, clip paths
- */
-export type DefsCollector = {
-  /** Add a def element (raw SVG string) */
-  readonly add: (def: string) => void;
-  /** Generate unique ID for a def */
-  readonly generateId: (prefix: string) => string;
-  /** Get all collected defs */
-  readonly getAll: () => readonly string[];
-  /** Check if any defs were collected */
-  readonly hasAny: () => boolean;
-};
-
-/**
- * SVG render context for Figma nodes
+ * Render context for the legacy text-path helpers
+ * (`renderTextNodeAsPath` / `renderDerivedPathText`).
+ *
+ * These helpers predate the `SceneGraph` → `RenderTree` pipeline and only
+ * consume `fontLoader` + `blobs`. All other fields are carried so call sites
+ * can share a context object across helpers, but SVG defs and IDs for
+ * gradients / masks / clip-paths are NOT produced here — those flow through
+ * `scene-graph/render-tree/resolve.ts` which is the single source of truth
+ * for SVG def IDs (see `IdGenerator` in `scene-graph/render/fill.ts`).
+ *
+ * Keeping `FigSvgRenderContext` scoped to text-path rendering preserves a
+ * single ID-generation pathway for the three rendering backends
+ * (SVG / React / WebGL) and prevents the ID-namespace split that caused
+ * the Link 190:3213 zoom-dependent clip regression.
  */
 export type FigSvgRenderContext = {
-  /** Defs collector for gradients, patterns, etc. */
-  readonly defs: DefsCollector;
   /** Canvas size for viewport */
   readonly canvasSize: { width: number; height: number };
   /** Blobs from parsed .fig file for path decoding */

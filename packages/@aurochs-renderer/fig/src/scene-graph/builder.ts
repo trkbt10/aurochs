@@ -17,15 +17,9 @@ import {
   applyOverrideToNode,
 } from "@aurochs/fig/domain";
 import type { FigPaint, FigVectorPath } from "@aurochs/fig/types";
-import { guidToString, safeChildren } from "@aurochs/fig/parser";
-import type { FigImage, FigBlob, FigGuid } from "@aurochs/fig/parser";
-import {
-  getEffectiveSymbolID,
-  resolveSymbolGuidStr,
-  getInstanceSymbolOverrides,
-  buildGuidTranslationMap,
-  styleRefKeys,
-} from "@aurochs/fig/symbols";
+import { FIG_NODE_TYPE } from "@aurochs/fig/types";
+import type { FigImage, FigBlob } from "@aurochs/fig/parser";
+import { styleRefKeys } from "@aurochs/fig/symbols";
 import { IDENTITY_MATRIX } from "@aurochs/fig/matrix";
 import {
   extractBaseProps,
@@ -119,26 +113,6 @@ export type BuildSceneGraphOptions = {
   readonly canvasSize: { width: number; height: number };
   /** Symbol map for INSTANCE resolution. Pass `new Map()` when absent. */
   readonly symbolMap: ReadonlyMap<string, FigDesignNode>;
-  /**
-   * Raw (Kiwi) symbol map used to build per-INSTANCE GUID translation
-   * maps when multi-level derivedSymbolData entries must be cascaded
-   * into nested INSTANCE children.
-   *
-   * Pass the complete raw `nodeMap` whenever the tree contains nested
-   * INSTANCE nodes whose outer parents carry overrides that target
-   * inner-INSTANCE descendants (e.g., Close Button → Close → Symbol 1
-   * → TEXT in Figma's Activity View component). Without it,
-   * multi-level override paths silently fail to match because the
-   * inner-INSTANCE guids remain in their INSTANCE-scoped namespace
-   * instead of being translated into the SYMBOL-scoped namespace used
-   * by the resolved children tree.
-   *
-   * Optional because pure-domain callers (unit tests, synthetic trees
-   * without nested overrides) have no raw source to pass. When
-   * omitted, multi-level override promotion is skipped — same
-   * behaviour as before this option was introduced.
-   */
-  readonly rawSymbolMap?: ReadonlyMap<string, import("@aurochs/fig/types").FigNode>;
   /** Whether to include nodes with `visible: false`. */
   readonly showHiddenNodes: boolean;
   /**
@@ -156,13 +130,16 @@ export type BuildSceneGraphOptions = {
 };
 
 /**
- * Internal build context
+ * Internal build context — pure-domain. The scene-graph builder does
+ * not read raw FigNode, does not translate override guid paths, and
+ * does not perform GUID translation. All such work is the
+ * responsibility of the domain-convert layer
+ * (`@aurochs-builder/fig/context`).
  */
 type BuildContext = {
   readonly blobs: readonly FigBlob[];
   readonly images: ReadonlyMap<string, FigImage>;
   readonly symbolMap: ReadonlyMap<string, FigDesignNode>;
-  readonly rawSymbolMap: ReadonlyMap<string, import("@aurochs/fig/types").FigNode> | undefined;
   readonly styleRegistry: FigStyleRegistry;
   readonly showHiddenNodes: boolean;
   readonly warnings: string[];
@@ -273,7 +250,7 @@ function resolveClipsContent(node: FigDesignNode): boolean {
  * INSTANCE resolution can promote overrides into a child's dsd)
  * without re-casting at every use site.
  */
-type ResolvedInstance = {
+type ResolvedDesignInstance = {
   /** Effective node with visual properties merged from SYMBOL */
   readonly effectiveNode: FigDesignNode;
   /** Resolved children (from instance or inherited from symbol) */
@@ -390,33 +367,58 @@ function findNodeById(
 /**
  * Apply symbol overrides to cloned children.
  *
- * Each override specifies a guidPath (target node) and properties to replace.
- * Properties follow the same structure as FigDesignNode fields.
+ * Applied in two passes:
+ *
+ * Pass 1: variant switches (`overriddenSymbolID` on a single-guid path).
+ * The targeted INSTANCE has its `symbolId` replaced with the variant
+ * and its `children` re-cloned from the new variant's SYMBOL. The
+ * domain-convert layer has already re-keyed each multi-level override's
+ * tail guids into the variant's namespace (see `translateEntryFull` in
+ * `@aurochs-builder/fig/context`), so Pass 2 finds its targets
+ * directly against the freshly cloned children.
+ *
+ * Pass 2: property overrides. Each non-variant override locates its
+ * target by the already-translated path and has its fields applied.
  */
 function applySymbolOverridesToChildren(
   children: readonly MutableFigDesignNode[],
   overrides: readonly import("@aurochs/fig/domain").SymbolOverride[],
   symbolId: string,
   styleRegistry: import("@aurochs/fig/domain").FigStyleRegistry,
+  symbolMap: ReadonlyMap<string, FigDesignNode>,
   warnings: string[],
 ): void {
+  // Pass 1: variant switches.
+  for (const override of overrides) {
+    if (!isValidOverridePath(override)) { continue; }
+    if (isSelfOverride(override, symbolId)) { continue; }
+    if (!override.overriddenSymbolID) { continue; }
+    if (overridePathToIds(override).length !== 1) { continue; }
+
+    const target = findNodeByOverridePath(children, override);
+    if (!target || getNodeTypeName(target) !== FIG_NODE_TYPE.INSTANCE) { continue; }
+
+    applyOverrideToNode(target, override);
+
+    const newSymId = `${override.overriddenSymbolID.sessionID}:${override.overriddenSymbolID.localID}`;
+    const variantSymbol = symbolMap.get(newSymId);
+    if (variantSymbol) {
+      const mutableTarget: MutableFigDesignNode = target;
+      mutableTarget.children =
+        (variantSymbol.children ?? []).map(deepCloneDesignNode);
+    }
+  }
+
+  // Pass 2: property overrides against the variant-switched tree.
   for (const override of overrides) {
     if (!isValidOverridePath(override)) {
-      // A malformed override can silently drop per-child customisation.
-      // Surface it so consumers can diagnose missing fills/strokes on
-      // specific INSTANCE children.
       const w = `symbolOverride has no guidPath — skipped (symbolId=${symbolId})`;
       if (!warnings.includes(w)) { warnings.push(w); }
       continue;
     }
-    if (isSelfOverride(override, symbolId)) {
-      // Self-overrides (override.guidPath targets the SYMBOL itself) are
-      // applied in resolveInstance Step 2 ("applied to INSTANCE itself"),
-      // not here in the per-child pass. Skipping is correct, but surface
-      // it so a mis-routed override is visible in the warnings stream
-      // rather than silently disappearing on both sides.
-      const w = `symbolOverride is self-override (targets SYMBOL itself) — handled by Step 2, skipped in child pass (symbolId=${symbolId})`;
-      if (!warnings.includes(w)) { warnings.push(w); }
+    if (isSelfOverride(override, symbolId)) { continue; }
+    // Pass 1 handled single-guid variant switches.
+    if (override.overriddenSymbolID && overridePathToIds(override).length === 1) {
       continue;
     }
 
@@ -430,13 +432,10 @@ function applySymbolOverridesToChildren(
 
     applyOverrideToNode(target, override);
 
-    // Resolve styleIdForFill / styleIdForStrokeFill after override application.
-    // A style reference may carry a local `guid` and/or a team-library
-    // `assetRef.key`; resolveStyleRef tries both via styleRefKeys.
     const targetFills = resolveStyleRef(target.styleIdForFill, styleRegistry.fills);
-    if (targetFills) target.fills = targetFills;
+    if (targetFills) { target.fills = targetFills; }
     const targetStrokes = resolveStyleRef(target.styleIdForStrokeFill, styleRegistry.strokes);
-    if (targetStrokes) target.strokes = targetStrokes;
+    if (targetStrokes) { target.strokes = targetStrokes; }
   }
 }
 
@@ -560,236 +559,19 @@ function applyPropsRecursive(
 function applyDerivedSymbolData(
   children: readonly MutableFigDesignNode[],
   derivedData: readonly SymbolOverride[],
-  ctx: BuildContext,
+  _ctx: BuildContext,
 ): void {
+  // SSoT: every guid on every path has already been resolved into the
+  // SYMBOL descendant namespace at domain-convert time (see
+  // `resolveOverridePaths` in `@aurochs-builder/fig/context`). The
+  // scene-graph builder looks up paths verbatim — no cascading, no
+  // translation, no promotion of entries into nested INSTANCEs.
   for (const entry of derivedData) {
     if (!isValidOverridePath(entry)) { continue; }
-
     const target = findNodeByOverridePath(children, entry);
-    if (target) {
-      applyOverrideToNode(target, entry);
-      continue;
-    }
-
-    // Target not found directly. Two cases where we can still
-    // successfully apply the override via cascade into a nested
-    // INSTANCE:
-    //
-    //  (A) Multi-level path [childId, ..., descendantGuid]: find the
-    //      direct child INSTANCE at childId, translate the tail
-    //      guids into the child's SYMBOL namespace, attach the
-    //      remaining path to the child's own derivedSymbolData.
-    //
-    //  (B) Single-guid path [descendantGuid] that doesn't match any
-    //      direct child: the guid belongs to a *grandchild* of one
-    //      of our INSTANCE children. Try each INSTANCE child: build
-    //      its translation map seeded with this guid and see if it
-    //      maps to one of that child's SYMBOL descendants. If yes,
-    //      attach the translated entry to that INSTANCE's dsd so the
-    //      next nested resolveInstance call picks it up.
-    //
-    // Both cases are exercised by the Close Button xmark chain
-    // (Close Button → Close → Symbol 1 → TEXT): the outer CB emits
-    // a 3-level path (case A), Close's own dsd then holds a 2-level
-    // entry (another A), and finally Symbol 1 receives a 1-level
-    // entry that still needs translation to match its SYMBOL
-    // descendants (case B).
-    const ids = overridePathToIds(entry);
-    const guids = entry.guidPath?.guids ?? [];
-
-    if (ids.length >= 2) {
-      // Case A
-      const directChildId = ids[0];
-      const directChild = findDirectChildById(children, directChildId);
-      if (!directChild || getNodeTypeName(directChild) !== "INSTANCE") { continue; }
-
-      const translatedTail = translateRemainingPathToSymbolNamespace(
-        directChild,
-        guids.slice(1),
-        ctx,
-      );
-      if (!translatedTail) { continue; }
-
-      const promoted: SymbolOverride = {
-        ...entry,
-        guidPath: { guids: translatedTail },
-      };
-      const existing = directChild.derivedSymbolData ?? [];
-      directChild.derivedSymbolData = [...existing, promoted];
-      continue;
-    }
-
-    if (ids.length === 1) {
-      // Case B — try each INSTANCE child in order; attach to the
-      // first one whose translation map resolves this guid to one
-      // of its own SYMBOL descendants.
-      let attached = false;
-      for (const child of children) {
-        if (getNodeTypeName(child) !== "INSTANCE") { continue; }
-        const translatedTail = translateRemainingPathToSymbolNamespace(
-          child,
-          guids,
-          ctx,
-        );
-        if (!translatedTail || translatedTail === guids) { continue; }
-
-        // Only attach if translation produced a guid that actually
-        // matches one of this child's resolved SYMBOL descendants
-        // — otherwise we might mis-attribute the override.
-        const newFirstId = guidToString(translatedTail[0]);
-        if (!symbolHasDescendantId(child, newFirstId, ctx)) { continue; }
-
-        const promoted: SymbolOverride = {
-          ...entry,
-          guidPath: { guids: translatedTail },
-        };
-        const existing = child.derivedSymbolData ?? [];
-        child.derivedSymbolData = [...existing, promoted];
-        attached = true;
-        break;
-      }
-      if (!attached) { continue; }
-    }
+    if (!target) { continue; }
+    applyOverrideToNode(target, entry);
   }
-}
-
-/**
- * Check whether a given id appears among the SYMBOL descendants of
- * an INSTANCE (walking through nested INSTANCEs' SYMBOLs as well).
- * Used by case-B promotion to avoid attaching overrides to a child
- * whose translation map coincidentally mapped the guid but whose
- * subtree doesn't actually contain that descendant.
- */
-function symbolHasDescendantId(
-  instance: FigDesignNode,
-  targetId: string,
-  ctx: BuildContext,
-): boolean {
-  if (!instance.symbolId) { return false; }
-  const symbol = ctx.symbolMap.get(instance.symbolId);
-  if (!symbol) { return false; }
-  return walkContainsId(symbol.children ?? [], targetId, ctx);
-}
-
-function walkContainsId(
-  nodes: readonly FigDesignNode[],
-  targetId: string,
-  ctx: BuildContext,
-  depth = 0,
-): boolean {
-  if (depth > 10) { return false; }
-  for (const n of nodes) {
-    if (n.id === targetId) { return true; }
-    if (n.children && n.children.length > 0) {
-      if (walkContainsId(n.children, targetId, ctx, depth + 1)) { return true; }
-    }
-    // Recurse through nested INSTANCE's SYMBOL
-    if (getNodeTypeName(n) === "INSTANCE" && n.symbolId) {
-      const sym = ctx.symbolMap.get(n.symbolId);
-      if (sym && walkContainsId(sym.children ?? [], targetId, ctx, depth + 1)) { return true; }
-    }
-  }
-  return false;
-}
-
-function findDirectChildById(
-  children: readonly MutableFigDesignNode[],
-  id: string,
-): MutableFigDesignNode | undefined {
-  for (const child of children) {
-    if (child.id === id) { return child; }
-  }
-  return undefined;
-}
-
-/**
- * Translate the tail guids of a multi-level override path into the
- * SYMBOL-scoped namespace used by the child INSTANCE's resolved
- * descendants.
- *
- * Only the first guid of the tail is translated — the same
- * "level-at-a-time" convention as the top-level
- * `translateOverrides` in @aurochs/fig/symbols. Deeper levels are
- * handled by subsequent nested resolveInstance calls recursively.
- */
-function translateRemainingPathToSymbolNamespace(
-  childInstance: FigDesignNode,
-  tailGuids: readonly FigGuid[],
-  ctx: BuildContext,
-): readonly FigGuid[] | undefined {
-  if (tailGuids.length === 0) { return undefined; }
-  if (!childInstance.symbolId) { return undefined; }
-  if (!ctx.rawSymbolMap) { return undefined; }
-
-  const rawChildInstance = ctx.rawSymbolMap.get(childInstance.id);
-  if (!rawChildInstance) {
-    // The INSTANCE isn't in the raw map (may happen for synthetic
-    // test trees). Without the raw node we can't build the
-    // translation map; skip this promotion — better to drop the
-    // override than apply one on the wrong node.
-    return undefined;
-  }
-
-  const effectiveGuid = getEffectiveSymbolID(rawChildInstance);
-  if (!effectiveGuid) { return undefined; }
-
-  const resolvedSymbol = resolveSymbolGuidStr(effectiveGuid, ctx.rawSymbolMap);
-  if (!resolvedSymbol) { return undefined; }
-
-  // Seed the translation map with a synthetic override whose first
-  // guid is `tailGuids[0]`. `buildGuidTranslationMap` derives its
-  // mapping from the set of override guids it's asked about — without
-  // this seed the child INSTANCE's own (empty) dsd/overrides produce
-  // an empty map and we'd fall through to "no translation".
-  //
-  // Example: outer Close Button's dsd targets
-  // `[Close_guid, inner_guid=5432:23135, text_guid=5426:2011]`.
-  // After first-level translation and promotion into Close's tail,
-  // the INSTANCE-scoped `5432:23135` must resolve to the
-  // SYMBOL-scoped `15:407`. Close itself has no overrides, so the map
-  // is empty unless we tell buildGuidTranslationMap "I need 5432:23135
-  // matched". With the seeded entry in place, its localID-based
-  // heuristics map it to SYMBOL descendant 15:407.
-  // `FigKiwiSymbolOverride` = `FigKiwiSymbolOverridePayload & { guidPath }`.
-  // Every field of the payload is optional, so an object with only
-  // `guidPath` is a structurally valid override. No cast needed.
-  const seed: import("@aurochs/fig/types").FigKiwiSymbolOverride = {
-    guidPath: { guids: [tailGuids[0]] },
-  };
-  const seededOverrides = [
-    ...(getInstanceSymbolOverrides(rawChildInstance) ?? []),
-    seed,
-  ];
-
-  const translationMap = buildGuidTranslationMap(
-    safeChildren(resolvedSymbol.node),
-    rawChildInstance.derivedSymbolData,
-    seededOverrides,
-    rawChildInstance.componentPropAssignments,
-    ctx.rawSymbolMap,
-    ctx.blobs,
-  );
-
-  if (translationMap.size === 0) {
-    return tailGuids;
-  }
-
-  const firstTailStr = guidToString(tailGuids[0]);
-  const mapped = translationMap.get(firstTailStr);
-  if (!mapped) {
-    return tailGuids;
-  }
-
-  return [parseGuidStr(mapped), ...tailGuids.slice(1)];
-}
-
-/**
- * Parse a "sessionID:localID" string back into a FigGuid, mirroring
- * the private helper in `@aurochs/fig/symbols/guid-translation`.
- */
-function parseGuidStr(s: string): FigGuid {
-  const [session, local] = s.split(":");
-  return { sessionID: Number(session), localID: Number(local) };
 }
 
 /**
@@ -848,11 +630,11 @@ function applyConstraintResolution(
  *
  * The INSTANCE retains its own transform and size (these define placement).
  */
-function resolveInstance(
+function resolveDesignInstance(
   node: FigDesignNode,
   ownChildren: readonly FigDesignNode[],
   ctx: BuildContext,
-): ResolvedInstance {
+): ResolvedDesignInstance {
   const symbolId = node.symbolId;
   if (!symbolId) {
     return { effectiveNode: node, children: ownChildren };
@@ -962,7 +744,7 @@ function resolveInstance(
 
   // Apply per-child overrides from symbolOverrides
   if (node.overrides && node.overrides.length > 0) {
-    applySymbolOverridesToChildren(children, node.overrides, symbolId, ctx.styleRegistry, ctx.warnings);
+    applySymbolOverridesToChildren(children, node.overrides, symbolId, ctx.styleRegistry, ctx.symbolMap, ctx.warnings);
   }
 
   // ── Step 4: Component property assignments ──
@@ -1038,7 +820,7 @@ function resolveNestedInstances(
 ): readonly MutableFigDesignNode[] {
   return children.map((child) => {
     const typeName = getNodeTypeName(child);
-    if (typeName !== "INSTANCE") {
+    if (typeName !== FIG_NODE_TYPE.INSTANCE) {
       if (child.children && child.children.length > 0) {
         const resolvedGrandchildren = resolveNestedInstances(mutableChildren(child), ctx);
         if (resolvedGrandchildren !== child.children) {
@@ -1049,7 +831,7 @@ function resolveNestedInstances(
       return child;
     }
 
-    const resolved = resolveInstance(child, child.children ?? [], ctx);
+    const resolved = resolveDesignInstance(child, child.children ?? [], ctx);
     const flattened: MutableFigDesignNode = {
       ...resolved.effectiveNode,
       type: "FRAME",
@@ -1708,7 +1490,7 @@ function buildNode(node: FigDesignNode, ctx: BuildContext): SceneNode | null {
       // Resolve INSTANCE against its SYMBOL/COMPONENT:
       // - Merge visual properties (fills, cornerRadius, effects, etc.)
       // - Inherit children if instance has none
-      const resolved = resolveInstance(node, children, ctx);
+      const resolved = resolveDesignInstance(node, children, ctx);
       const stretched = applyCounterAxisStretch(resolved.effectiveNode, resolved.children);
       const childNodes = buildChildren(stretched, ctx);
       return buildFrameNode(resolved.effectiveNode, ctx, childNodes);
@@ -1869,7 +1651,6 @@ export function buildSceneGraph(nodes: readonly FigDesignNode[], options: BuildS
     blobs: options.blobs,
     images: options.images,
     symbolMap: options.symbolMap,
-    rawSymbolMap: options.rawSymbolMap ?? undefined,
     styleRegistry: options.styleRegistry,
     showHiddenNodes: options.showHiddenNodes,
     warnings: options.warnings,

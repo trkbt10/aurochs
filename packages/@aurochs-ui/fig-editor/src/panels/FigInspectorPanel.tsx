@@ -118,7 +118,7 @@ export function FigInspectorPanel({
       onNodeHighlight(highlightedNodeId === nodeId ? null : nodeId);
     } else {
       // Default: drive editor selection
-      dispatch({ type: "SELECT_NODE", nodeId: nodeId as never, addToSelection: false });
+      dispatch({ type: "SELECT_NODE", nodeId: nodeId as FigNodeId, addToSelection: false });
     }
   };
 

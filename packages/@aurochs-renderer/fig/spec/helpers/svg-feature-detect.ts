@@ -54,23 +54,35 @@ export function detectFeatures(svg: string): string[] {
   const features: string[] = [];
   // Gradient can be emitted as a native SVG `<linearGradient>` /
   // `<radialGradient>`, or as a CSS `background: linear-gradient(...)` /
-  // `radial-gradient(...)` inside a `<foreignObject>`. The latter is how
-  // the scene-graph renderer emits angular/diamond gradients that have no
-  // direct SVG primitive — treat both as the same visual feature.
+  // `radial-gradient(...)` inside a `<foreignObject>`. Angular/diamond
+  // gradients are now emitted as sectored SVG `<path>` elements inside
+  // a `<pattern>` because Chromium refuses to render foreignObject
+  // inside a pattern. Any of these counts as a "gradient" visual.
   const svgGradient = svg.includes("<linearGradient") || svg.includes("<radialGradient");
   const cssGradient = /background:\s*(?:linear|radial)-gradient\(/.test(svg);
-  if (svgGradient || cssGradient) {
+  const sectoredGradient = /<pattern[^>]*>[\s\S]*?<path[^>]*fill="rgb\(/.test(svg);
+  if (svgGradient || cssGradient || sectoredGradient) {
     features.push("gradient");
   }
-  // Conic gradient has no direct SVG primitive; Figma emits
-  // `<conicalGradient>` while the scene-graph renderer emits a
-  // `<foreignObject>` wrapping a `<div>` with `background: conic-gradient(...)`.
+  // Conic gradient has no direct SVG primitive. Emitted as:
+  //   1. Figma export: `<conicalGradient>`
+  //   2. Older renderer: `<foreignObject>` + CSS `conic-gradient`
+  //   3. Current renderer: sectored SVG paths inside a `<pattern>` (this
+  //      approximation is necessary because Chromium does not render
+  //      `<foreignObject>` when nested in `<pattern>`)
+  // The sectored approximation shows up as a <pattern> containing many
+  // `<path ... fill="rgb(...)">` elements without any `<image>` child.
   const svgConic = svg.includes("<conicalGradient");
   const cssConic = /background:\s*conic-gradient\(/.test(svg);
-  if (svgConic || cssConic) {
+  const sectoredConic = /<pattern[^>]*>[\s\S]*?<path[^>]*fill="rgb\(/.test(svg)
+    && !svg.match(/<pattern[^>]*>[\s\S]*?<image/);
+  if (svgConic || cssConic || sectoredConic) {
     features.push("conic-gradient");
   }
-  if (svg.includes("<pattern") || svg.includes("data:image")) {
+  // Treat as image-pattern only when a pattern contains a raster image
+  // (not a sectored conic approximation).
+  const hasImagePattern = /<pattern[^>]*>[\s\S]*?<image/.test(svg) || svg.includes("data:image");
+  if (hasImagePattern) {
     features.push("image");
   }
   if (svg.includes("<filter") || svg.includes("filter=")) {

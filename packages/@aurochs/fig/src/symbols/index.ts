@@ -40,6 +40,7 @@ export {
 export {
   buildGuidTranslationMap,
   translateOverrides,
+  type GuidTranslationMap,
 } from "./guid-translation";
 
 export {
