@@ -48,11 +48,6 @@ export function figFillsToDml(fills: readonly FigPaint[], nodeOpacity = 1): Base
 // Internal
 // =============================================================================
 
-function getPaintTypeName(paint: FigPaint): string {
-  const t = paint.type;
-  return typeof t === "string" ? t : t.name;
-}
-
 function isPaintVisible(paint: FigPaint): boolean {
   if (paint.visible === false) {return false;}
   if (paint.opacity !== undefined && paint.opacity <= 0) {return false;}
@@ -60,25 +55,22 @@ function isPaintVisible(paint: FigPaint): boolean {
 }
 
 function convertSinglePaint(paint: FigPaint, nodeOpacity: number): BaseFill | undefined {
-  const typeName = getPaintTypeName(paint);
   const paintOpacity = (paint.opacity ?? 1) * nodeOpacity;
 
-  switch (typeName) {
+  switch (paint.type) {
     case "SOLID":
-      return convertSolid(paint as FigSolidPaint, paintOpacity);
+      return convertSolid(paint, paintOpacity);
     case "GRADIENT_LINEAR":
-      return convertLinearGradient(paint as FigGradientPaint, paintOpacity);
+      return convertLinearGradient(paint, paintOpacity);
     case "GRADIENT_RADIAL":
-      return convertRadialGradient(paint as FigGradientPaint, paintOpacity);
+      return convertRadialGradient(paint, paintOpacity);
     case "GRADIENT_ANGULAR":
     case "GRADIENT_DIAMOND":
       // Angular/diamond have no direct DrawingML equivalent.
       // Fall back to linear as best-effort.
-      return convertLinearGradient(paint as FigGradientPaint, paintOpacity);
+      return convertLinearGradient(paint, paintOpacity);
     case "IMAGE":
-      return convertImage(paint as FigImagePaint);
-    default:
-      return undefined;
+      return convertImage(paint);
   }
 }
 

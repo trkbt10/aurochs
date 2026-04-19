@@ -460,8 +460,17 @@ describe("resolveRenderTree — stroke layers", () => {
 // Effect blend mode tests
 // =============================================================================
 
-describe("resolveRenderTree — effect blend mode", () => {
-  it("applies blend mode to drop shadow feBlend", () => {
+describe("resolveRenderTree — drop shadow z-order", () => {
+  it("shadow is placed BEHIND SourceGraphic (not composited on top)", () => {
+    // Regression for "Clear check" VECTOR (Bento 187:1379) bug: a prior
+    // implementation composited the shadow on top of SourceGraphic via
+    // feBlend when effect.blendMode !== "normal", producing a shadow that
+    // visually appeared IN FRONT of the fill. The correct SVG recipe is
+    // feMerge(shadow, SourceGraphic): first node painted bottom, second
+    // on top. Figma's per-effect blendMode (MULTIPLY/SCREEN/etc.) cannot
+    // be applied inside an SVG filter without backdrop access, so we
+    // intentionally drop the blend-mode nuance in favour of correct
+    // z-order.
     const rect: RectNode = {
       type: "rect",
       id: createNodeId("rect-shadow-blend"),
@@ -483,16 +492,19 @@ describe("resolveRenderTree — effect blend mode", () => {
     const tree = resolveRenderTree(sg);
 
     const node = tree.children[0] as RenderRectNode;
-    // Filter should exist
     const filterDefs = node.defs.filter((d) => d.type === "filter");
     expect(filterDefs).toHaveLength(1);
-    // Check that the blend mode made it into the filter primitives
     const filterDef = filterDefs[0];
     if (filterDef.type === "filter") {
-      const blendPrimitives = filterDef.filter.primitives.filter(
-        (p) => p.type === "feBlend" && p.mode === "multiply",
-      );
-      expect(blendPrimitives.length).toBeGreaterThan(0);
+      const prims = filterDef.filter.primitives;
+      // Last primitive must be feMerge with (shadow, SourceGraphic) in
+      // that order — this is what guarantees z-order.
+      const last = prims[prims.length - 1];
+      expect(last.type).toBe("feMerge");
+      if (last.type === "feMerge") {
+        expect(last.nodes.length).toBe(2);
+        expect(last.nodes[1]).toBe("SourceGraphic");
+      }
     }
   });
 });

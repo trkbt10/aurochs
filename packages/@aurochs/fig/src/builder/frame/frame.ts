@@ -97,36 +97,66 @@ export type FrameNodeBuilder = {
   build: () => FrameNodeData;
 };
 
+type FrameBuilderState = {
+  name: string;
+  width: number;
+  height: number;
+  x: number;
+  y: number;
+  fillPaints: Paint[];
+  strokeColor: Color | undefined;
+  strokeWeight: number | undefined;
+  opacity: number;
+  effects: readonly EffectData[] | undefined;
+  clipsContent: boolean;
+  cornerRadius: number | undefined;
+  exportSettings: ExportSettings[];
+  stackMode: StackMode | undefined;
+  stackSpacing: number | undefined;
+  stackPadding: StackPadding | undefined;
+  stackPrimaryAlignItems: StackAlign | undefined;
+  stackCounterAlignItems: StackAlign | undefined;
+  stackPrimaryAlignContent: StackAlign | undefined;
+  stackWrap: boolean | undefined;
+  stackCounterSpacing: number | undefined;
+  itemReverseZIndex: boolean | undefined;
+  stackPositioning: StackPositioning | undefined;
+  stackPrimarySizing: StackSizing | undefined;
+  stackCounterSizing: StackSizing | undefined;
+  horizontalConstraint: ConstraintType | undefined;
+  verticalConstraint: ConstraintType | undefined;
+};
+
 /** Create a frame node builder */
 function createFrameNodeBuilder(localID: number, parentID: number): FrameNodeBuilder {
-  const state = {
+  const state: FrameBuilderState = {
     name: "Frame",
     width: 200,
     height: 100,
     x: 0,
     y: 0,
     fillPaints: [solidPaint({ r: 1, g: 1, b: 1, a: 1 })],
-    strokeColor: undefined as Color | undefined,
-    strokeWeight: undefined as number | undefined,
+    strokeColor: undefined,
+    strokeWeight: undefined,
     opacity: 1,
-    effects: undefined as readonly EffectData[] | undefined,
+    effects: undefined,
     clipsContent: true,
-    cornerRadius: undefined as number | undefined,
-    exportSettings: [] as ExportSettings[],
-    stackMode: undefined as StackMode | undefined,
-    stackSpacing: undefined as number | undefined,
-    stackPadding: undefined as StackPadding | undefined,
-    stackPrimaryAlignItems: undefined as StackAlign | undefined,
-    stackCounterAlignItems: undefined as StackAlign | undefined,
-    stackPrimaryAlignContent: undefined as StackAlign | undefined,
-    stackWrap: undefined as boolean | undefined,
-    stackCounterSpacing: undefined as number | undefined,
-    itemReverseZIndex: undefined as boolean | undefined,
-    stackPositioning: undefined as StackPositioning | undefined,
-    stackPrimarySizing: undefined as StackSizing | undefined,
-    stackCounterSizing: undefined as StackSizing | undefined,
-    horizontalConstraint: undefined as ConstraintType | undefined,
-    verticalConstraint: undefined as ConstraintType | undefined,
+    cornerRadius: undefined,
+    exportSettings: [],
+    stackMode: undefined,
+    stackSpacing: undefined,
+    stackPadding: undefined,
+    stackPrimaryAlignItems: undefined,
+    stackCounterAlignItems: undefined,
+    stackPrimaryAlignContent: undefined,
+    stackWrap: undefined,
+    stackCounterSpacing: undefined,
+    itemReverseZIndex: undefined,
+    stackPositioning: undefined,
+    stackPrimarySizing: undefined,
+    stackCounterSizing: undefined,
+    horizontalConstraint: undefined,
+    verticalConstraint: undefined,
   };
 
   const builder: FrameNodeBuilder = {

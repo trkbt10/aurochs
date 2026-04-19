@@ -15,6 +15,7 @@ import type { FigImage } from "../parser/fig-file";
 import { StreamingFigEncoder } from "../kiwi/stream";
 import { parseFigHeader, getPayload } from "../parser/header";
 import { splitFigChunks, decodeFigSchema, decodeFigMessage } from "../kiwi/decoder";
+import { normaliseNodeChanges, denormaliseNodeForEncode } from "../parser/normalize";
 import { loadZipPackage, createEmptyZipPackage } from "@aurochs/zip";
 import { buildFigHeader } from "../builder/header";
 import { encodeFigSchema } from "../builder/node/schema-encoder";
@@ -225,8 +226,12 @@ export async function loadFigFile(data: Uint8Array): Promise<LoadedFigFile> {
   const schema = decodeFigSchema(schemaData);
   const message = decodeFigMessage(schema, messageData, "Message");
 
-  // Extract node changes (mutable copy)
-  const nodeChanges = [...((message.nodeChanges ?? []) as FigNode[])];
+  // Extract node changes — same SSoT kiwi→domain normalisation as
+  // parser/fig-file.ts. After this, enum-shaped Kiwi fields (type,
+  // blendMode, strokeCap, strokeJoin, strokeAlign, scaleMode) are the
+  // domain string form.
+  const rawNodes = Array.isArray(message.nodeChanges) ? message.nodeChanges : [];
+  const nodeChanges = [...normaliseNodeChanges(rawNodes)];
 
   // Extract blobs
   const blobs = (message.blobs ?? []) as readonly ParserFigBlob[];
@@ -314,9 +319,11 @@ export async function saveFigFile(loaded: LoadedFigFile, options?: SaveFigOption
 
   encoder.writeHeader(headerFields);
 
-  // Write node changes
+  // Write node changes — denormalise domain-string enums back to
+  // `{ value, name }` shape for the Kiwi encoder. This is the inverse
+  // of the parser's normalisation pass.
   for (const node of loaded.nodeChanges) {
-    encoder.writeNodeChange(node as Record<string, unknown>);
+    encoder.writeNodeChange(denormaliseNodeForEncode(node));
   }
 
   const messageData = encoder.finalize();

@@ -58,7 +58,8 @@ export type BooleanOperationNodeBuilder = {
 
 /** Check if value is a Paint (has type with value/name) rather than a plain Color */
 function isPaint(value: Color | Paint): value is Paint {
-  return "type" in value && typeof (value as Paint).type === "object";
+  if (!("type" in value)) { return false; }
+  return typeof value.type === "object";
 }
 
 /** Build fill paints from color or paint */
@@ -80,16 +81,28 @@ function buildBooleanSize(width: number | undefined, height: number | undefined)
   return undefined;
 }
 
+type BooleanBuilderState = {
+  name: string;
+  operation: BooleanOperationType;
+  width: number | undefined;
+  height: number | undefined;
+  x: number;
+  y: number;
+  fillColor: Color | Paint | undefined;
+  visible: boolean;
+  opacity: number;
+};
+
 /** Create a boolean operation node builder */
 function createBooleanOperationNodeBuilder(localID: number, parentID: number): BooleanOperationNodeBuilder {
-  const state = {
+  const state: BooleanBuilderState = {
     name: "Boolean",
-    operation: "UNION" as BooleanOperationType,
-    width: undefined as number | undefined,
-    height: undefined as number | undefined,
+    operation: "UNION",
+    width: undefined,
+    height: undefined,
     x: 0,
     y: 0,
-    fillColor: undefined as Color | Paint | undefined,
+    fillColor: undefined,
     visible: true,
     opacity: 1,
   };

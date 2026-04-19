@@ -5,7 +5,14 @@
  * Supports gradient strokes and multi-paint stroke layers.
  */
 
-import type { FigPaint, FigStrokeWeight, FigGradientPaint, KiwiEnumValue } from "@aurochs/fig/types";
+import type {
+  FigPaint,
+  FigStrokeWeight,
+  FigGradientPaint,
+  FigStrokeCap,
+  FigStrokeJoin,
+  FigStrokeAlign,
+} from "@aurochs/fig/types";
 import { getPaintType, asGradientPaint, asSolidPaint } from "@aurochs/fig/color";
 import { resolveStrokeWeight, mapStrokeCap, mapStrokeJoin } from "../../stroke";
 import type { Stroke, StrokeLayer, StrokeAlign, LinearGradientFill, RadialGradientFill, AffineMatrix } from "../types";
@@ -141,10 +148,10 @@ export function convertStrokeToSceneStroke(
   paints: readonly FigPaint[] | undefined,
   strokeWeight: FigStrokeWeight | undefined,
   options?: {
-    strokeCap?: string | KiwiEnumValue;
-    strokeJoin?: string | KiwiEnumValue;
+    strokeCap?: FigStrokeCap;
+    strokeJoin?: FigStrokeJoin;
     dashPattern?: readonly number[];
-    strokeAlign?: string | KiwiEnumValue;
+    strokeAlign?: FigStrokeAlign;
   },
 ): Stroke | undefined {
   const width = resolveStrokeWeight(strokeWeight);
@@ -188,9 +195,8 @@ export function convertStrokeToSceneStroke(
   };
 }
 
-function resolveStrokeAlign(raw: string | KiwiEnumValue | undefined): StrokeAlign | undefined {
+function resolveStrokeAlign(raw: FigStrokeAlign | undefined): StrokeAlign | undefined {
   if (!raw) { return undefined; }
-  const name = typeof raw === "string" ? raw : raw.name;
-  if (name === "INSIDE" || name === "OUTSIDE") { return name; }
+  if (raw === "INSIDE" || raw === "OUTSIDE") { return raw; }
   return undefined; // CENTER is the SVG default, no need to store
 }

@@ -14,115 +14,106 @@
  * with stackMode=VERTICAL and stackChildAlignSelf=STRETCH; without
  * this rule the separator renders at 129 wide instead of stretching
  * across the full row.
+ *
+ * Tests construct only the fields the function reads, via the exported
+ * `StretchParent` / `StretchChild` interfaces — no casts.
  */
 
 import { describe, it, expect } from "vitest";
-import { applyCounterAxisStretch } from "./builder";
-import type { FigDesignNode } from "@aurochs/fig/domain";
+import { applyCounterAxisStretch, type StretchParent, type StretchChild } from "./builder";
 
-function frame(overrides: Partial<FigDesignNode>): FigDesignNode {
+type Parent = StretchParent;
+type Child = StretchChild & { readonly name: string };
+
+function parent(
+  size: { x: number; y: number },
+  mode?: "VERTICAL" | "HORIZONTAL" | "NONE",
+  stackPadding?: number | { top: number; right: number; bottom: number; left: number },
+): Parent {
   return {
-    id: overrides.id ?? "frame",
-    kind: "FRAME",
-    name: overrides.name ?? "frame",
-    visible: true,
-    opacity: 1,
-    transform: { m00: 1, m01: 0, m02: 0, m10: 0, m11: 1, m12: 0 },
-    size: overrides.size ?? { x: 100, y: 100 },
-    children: overrides.children ?? [],
-    ...overrides,
-  } as FigDesignNode;
+    size,
+    autoLayout: mode
+      ? { stackMode: { name: mode }, stackPadding }
+      : undefined,
+  };
 }
 
-function child(size: { x: number; y: number }, stackChildAlignSelf?: "STRETCH"): FigDesignNode {
+function child(
+  name: string,
+  size: { x: number; y: number },
+  stretch?: boolean,
+): Child {
   return {
-    id: "child",
-    kind: "FRAME",
-    name: "child",
-    visible: true,
-    opacity: 1,
-    transform: { m00: 1, m01: 0, m02: 0, m10: 0, m11: 1, m12: 0 },
+    name,
     size,
-    children: [],
-    layoutConstraints: stackChildAlignSelf
-      ? { stackChildAlignSelf: { value: 3, name: stackChildAlignSelf } }
-      : undefined,
-  } as FigDesignNode;
+    layoutConstraints: stretch ? { stackChildAlignSelf: { name: "STRETCH" } } : undefined,
+  };
 }
 
 describe("applyCounterAxisStretch", () => {
   it("stretches a STRETCH child's X dimension when parent stackMode=VERTICAL", () => {
-    const parent = frame({
-      size: { x: 370, y: 52 },
-      autoLayout: { stackMode: { value: 1, name: "VERTICAL" } },
-    });
-    const c = child({ x: 129, y: 1 }, "STRETCH");
-    const out = applyCounterAxisStretch(parent, [c]);
+    const p = parent({ x: 370, y: 52 }, "VERTICAL");
+    const c = child("c", { x: 129, y: 1 }, true);
+    const out = applyCounterAxisStretch(p, [c]);
     expect(out[0].size).toEqual({ x: 370, y: 1 });
   });
 
   it("stretches a STRETCH child's Y dimension when parent stackMode=HORIZONTAL", () => {
-    const parent = frame({
-      size: { x: 52, y: 370 },
-      autoLayout: { stackMode: { value: 2, name: "HORIZONTAL" } },
-    });
-    const c = child({ x: 1, y: 129 }, "STRETCH");
-    const out = applyCounterAxisStretch(parent, [c]);
+    const p = parent({ x: 52, y: 370 }, "HORIZONTAL");
+    const c = child("c", { x: 1, y: 129 }, true);
+    const out = applyCounterAxisStretch(p, [c]);
     expect(out[0].size).toEqual({ x: 1, y: 370 });
   });
 
-  it("subtracts stackPadding from the content area on the counter axis", () => {
-    const parent = frame({
-      size: { x: 370, y: 52 },
-      autoLayout: {
-        stackMode: { value: 1, name: "VERTICAL" },
-        stackPadding: 20, // uniform padding
-      },
-    });
-    const c = child({ x: 129, y: 1 }, "STRETCH");
-    const out = applyCounterAxisStretch(parent, [c]);
+  it("subtracts uniform stackPadding from the content area on the counter axis", () => {
+    const p = parent({ x: 370, y: 52 }, "VERTICAL", 20);
+    const c = child("c", { x: 129, y: 1 }, true);
+    const out = applyCounterAxisStretch(p, [c]);
     // 370 - 20*2 = 330
     expect(out[0].size).toEqual({ x: 330, y: 1 });
   });
 
+  it("subtracts per-side stackPadding (VERTICAL uses left+right)", () => {
+    const p = parent({ x: 370, y: 52 }, "VERTICAL", { top: 8, right: 15, bottom: 8, left: 5 });
+    const c = child("c", { x: 129, y: 1 }, true);
+    const out = applyCounterAxisStretch(p, [c]);
+    // 370 - (5 + 15) = 350
+    expect(out[0].size).toEqual({ x: 350, y: 1 });
+  });
+
+  it("subtracts per-side stackPadding (HORIZONTAL uses top+bottom)", () => {
+    const p = parent({ x: 52, y: 370 }, "HORIZONTAL", { top: 12, right: 8, bottom: 3, left: 8 });
+    const c = child("c", { x: 1, y: 129 }, true);
+    const out = applyCounterAxisStretch(p, [c]);
+    // 370 - (12 + 3) = 355
+    expect(out[0].size).toEqual({ x: 1, y: 355 });
+  });
+
   it("leaves non-STRETCH children untouched", () => {
-    const parent = frame({
-      size: { x: 370, y: 52 },
-      autoLayout: { stackMode: { value: 1, name: "VERTICAL" } },
-    });
-    const c = child({ x: 129, y: 1 }); // no stackChildAlignSelf
-    const out = applyCounterAxisStretch(parent, [c]);
-    // Reference-equal when nothing changes (small perf / GC win).
-    expect(out).toBe([c].length === out.length && out[0] === c ? out : out);
+    const p = parent({ x: 370, y: 52 }, "VERTICAL");
+    const c = child("c", { x: 129, y: 1 });
+    const out = applyCounterAxisStretch(p, [c]);
     expect(out[0]).toBe(c);
   });
 
   it("does nothing when parent has no auto-layout", () => {
-    const parent = frame({ size: { x: 370, y: 52 } });
-    const c = child({ x: 129, y: 1 }, "STRETCH");
-    const out = applyCounterAxisStretch(parent, [c]);
+    const p = parent({ x: 370, y: 52 });
+    const c = child("c", { x: 129, y: 1 }, true);
+    const out = applyCounterAxisStretch(p, [c]);
     expect(out[0]).toBe(c);
   });
 
   it("does nothing when parent stackMode is NONE", () => {
-    const parent = frame({
-      size: { x: 370, y: 52 },
-      autoLayout: { stackMode: { value: 0, name: "NONE" } },
-    });
-    const c = child({ x: 129, y: 1 }, "STRETCH");
-    const out = applyCounterAxisStretch(parent, [c]);
+    const p = parent({ x: 370, y: 52 }, "NONE");
+    const c = child("c", { x: 129, y: 1 }, true);
+    const out = applyCounterAxisStretch(p, [c]);
     expect(out[0]).toBe(c);
   });
 
   it("returns the original array by reference when no child changed", () => {
-    const parent = frame({
-      size: { x: 370, y: 52 },
-      autoLayout: { stackMode: { value: 1, name: "VERTICAL" } },
-    });
-    const c1 = child({ x: 100, y: 10 });
-    const c2 = child({ x: 100, y: 10 });
-    const input = [c1, c2];
-    const out = applyCounterAxisStretch(parent, input);
+    const p = parent({ x: 370, y: 52 }, "VERTICAL");
+    const input: readonly Child[] = [child("c1", { x: 100, y: 10 }), child("c2", { x: 100, y: 10 })];
+    const out = applyCounterAxisStretch(p, input);
     expect(out).toBe(input);
   });
 });

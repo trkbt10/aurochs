@@ -47,17 +47,28 @@ export type ImagePaintBuilder = {
   build: () => ImagePaint;
 };
 
+type ImagePaintBuilderState = {
+  imageRef: string;
+  scaleMode: ScaleMode;
+  opacity: number;
+  visible: boolean;
+  blendMode: BlendMode;
+  rotation: number;
+  scalingFactor: number;
+  filters: ImagePaint["filters"];
+};
+
 /** Create an image paint builder */
 function createImagePaintBuilder(imageRef: string): ImagePaintBuilder {
-  const state = {
+  const state: ImagePaintBuilderState = {
     imageRef,
-    scaleMode: "FILL" as ScaleMode,
+    scaleMode: "FILL",
     opacity: 1,
     visible: true,
-    blendMode: "NORMAL" as BlendMode,
+    blendMode: "NORMAL",
     rotation: 0,
     scalingFactor: 1,
-    filters: undefined as ImagePaint["filters"],
+    filters: undefined,
   };
 
   const builder: ImagePaintBuilder = {

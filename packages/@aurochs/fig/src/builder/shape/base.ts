@@ -128,7 +128,8 @@ export function attachBaseShapeMethods<TBuilder>(state: BaseShapeState, builder:
 
 /** Determine if a value is a Paint object (has `type` with `value` and `name`) */
 function isPaint(value: Color | Paint): value is Paint {
-  return "type" in value && typeof (value as Paint).type === "object";
+  if (!("type" in value)) { return false; }
+  return typeof value.type === "object";
 }
 
 /** Convert a Color or Paint to a Paint. Colors become SOLID paints. */

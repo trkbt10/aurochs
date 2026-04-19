@@ -162,10 +162,17 @@ function extractIndividualStrokeWeights(node: FigNode): FigDesignNode["individua
   if (!node.borderStrokeWeightsIndependent && node.borderTopWeight === undefined) {
     return undefined;
   }
-  const top = node.borderTopWeight ?? 0;
-  const right = node.borderRightWeight ?? 0;
-  const bottom = node.borderBottomWeight ?? 0;
-  const left = node.borderLeftWeight ?? 0;
+  // Sides whose per-side weight is absent inherit the uniform `strokeWeight`.
+  // Falling back to 0 (as done previously) would turn a uniform stroke into
+  // a 1-sided border on FRAMEs where Figma only stamped `borderTopWeight`
+  // (leftover editor metadata). Passport (Bento 116:377) reports
+  // `borderTopWeight=8` but all four sides render as 1px in Figma — the
+  // other three weights are unset and should default to the uniform value.
+  const defaultWeight = typeof node.strokeWeight === "number" ? node.strokeWeight : 0;
+  const top = node.borderTopWeight ?? defaultWeight;
+  const right = node.borderRightWeight ?? defaultWeight;
+  const bottom = node.borderBottomWeight ?? defaultWeight;
+  const left = node.borderLeftWeight ?? defaultWeight;
 
   // If all sides are equal, don't store individual weights
   // (the uniform strokeWeight already covers this case)

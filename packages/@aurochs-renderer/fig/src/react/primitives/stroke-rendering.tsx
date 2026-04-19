@@ -15,15 +15,25 @@ import type { StrokeRendering, StrokeShape } from "../../scene-graph/render-tree
 import type { ResolvedStrokeAttrs } from "../../scene-graph/render";
 import { RectShape } from "./rect-shape";
 
+/** SVG-DOM-safe subset of ResolvedStrokeAttrs — excludes `strokeAlign`,
+ * which is scene-graph metadata (INSIDE/OUTSIDE) not an SVG attribute.
+ * Spreading the full ResolvedStrokeAttrs to a DOM element causes React
+ * to warn about an unknown `strokeAlign` prop and attaches it to the
+ * DOM as a string. Callers use this type when passing attrs to a JSX
+ * SVG element via `{...attrs}`. */
+export type UniformStrokeDomAttrs = Omit<ResolvedStrokeAttrs, "strokeAlign">;
+
 /**
  * Get stroke attrs for uniform mode (apply directly on the fill shape).
  * Non-uniform modes return undefined — strokes are rendered separately.
+ * The returned attrs omit `strokeAlign` (scene-graph metadata, not SVG).
  */
 export function getUniformStrokeAttrs(
   sr: StrokeRendering | undefined,
-): ResolvedStrokeAttrs | undefined {
+): UniformStrokeDomAttrs | undefined {
   if (!sr || sr.mode !== "uniform") { return undefined; }
-  return sr.attrs;
+  const { strokeAlign: _ignored, ...domAttrs } = sr.attrs;
+  return domAttrs;
 }
 
 /**

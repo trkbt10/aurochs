@@ -211,7 +211,16 @@ export type FigDerivedGlyph = {
   readonly commandsBlob: number;
   readonly position: FigVector;
   readonly fontSize: number;
-  readonly firstCharacter: number;
+  /**
+   * Source-string codepoint index of this glyph. Optional because
+   * Figma's layout engine inserts synthetic glyphs (most notably the
+   * ellipsis for `textTruncation=ENDING`) that do not correspond to
+   * any source codepoint — those carry `firstCharacter = undefined`.
+   * Renderers use this to distinguish "real" text glyphs from
+   * synthetic insertions during post-layout filtering (e.g.
+   * truncation tail suppression in `extractDerivedTextPathData`).
+   */
+  readonly firstCharacter?: number;
   readonly advance: number;
   readonly rotation?: number;
   readonly styleOverrideTable?: number;
@@ -309,7 +318,8 @@ export type FigKiwiSymbolOverridePayload = {
   readonly name?: string;
   readonly visible?: boolean;
   readonly opacity?: number;
-  readonly blendMode?: KiwiEnumValue;
+  // Domain BlendMode string union — same SSoT rule as stroke enums.
+  readonly blendMode?: BlendMode;
   readonly mask?: boolean;
   readonly clipsContent?: boolean;
   readonly frameMaskDisabled?: boolean;
@@ -318,9 +328,14 @@ export type FigKiwiSymbolOverridePayload = {
   readonly fillPaints?: readonly FigPaint[];
   readonly strokePaints?: readonly FigPaint[];
   readonly strokeWeight?: FigStrokeWeight;
-  readonly strokeJoin?: KiwiEnumValue;
+  // Stroke enums are the **domain** string-union representation across
+  // FigNode, FigKiwiSymbolOverride, and FigDesignNode. The parser
+  // converts raw Kiwi `{ value, name }` to the string at input, and
+  // the builder maps back at emission. There is only one in-memory
+  // shape per concept — no `KiwiEnumValue | string` unions anywhere.
+  readonly strokeJoin?: FigStrokeJoin;
   readonly strokeCap?: FigStrokeCap;
-  readonly strokeAlign?: KiwiEnumValue;
+  readonly strokeAlign?: FigStrokeAlign;
   readonly strokeDashes?: readonly number[];
   readonly borderTopWeight?: number;
   readonly borderRightWeight?: number;
@@ -465,9 +480,14 @@ export type FigNode = {
   readonly backgroundPaints?: readonly FigPaint[];
   readonly strokePaints?: readonly FigPaint[];
   readonly strokeWeight?: FigStrokeWeight;
-  readonly strokeAlign?: KiwiEnumValue;
-  readonly strokeJoin?: KiwiEnumValue;
-  readonly strokeCap?: KiwiEnumValue;
+  // Stroke enums use domain string-unions (FigStroke{Join,Cap,Align})
+  // across FigNode, FigKiwiSymbolOverride, FigDesignNode, and
+  // SymbolOverride. The parser converts raw Kiwi `{ value, name }`
+  // to the string at input time; the builder emits the `{ value,
+  // name }` form back at output time. No mixed shapes in memory.
+  readonly strokeAlign?: FigStrokeAlign;
+  readonly strokeJoin?: FigStrokeJoin;
+  readonly strokeCap?: FigStrokeCap;
   readonly cornerRadius?: number;
   readonly rectangleCornerRadii?: readonly number[];
   /** Individual corner radius fields (real .fig format — alternative to array) */
@@ -500,8 +520,8 @@ export type FigNode = {
   readonly backgroundEnabled?: boolean;
   readonly backgroundOpacity?: number;
   readonly documentColorProfile?: KiwiEnumValue;
-  /** Blend mode for compositing */
-  readonly blendMode?: string | KiwiEnumValue;
+  /** Blend mode for compositing (domain string-union SSoT). */
+  readonly blendMode?: BlendMode;
   /** iOS-style corner smoothing (0-1 range) */
   readonly cornerSmoothing?: number;
 
@@ -657,8 +677,17 @@ export type FigNode = {
     readonly innerRadius: number;
   };
 
-  /** Children (added by tree-builder, not present in raw Kiwi format) */
-  readonly children?: readonly FigNode[];
+  /**
+   * Children (added by tree-builder, not present in raw Kiwi format).
+   *
+   * The element type is `FigNode | undefined | null` because real .fig
+   * files encountered in the wild have sparse arrays: Figma's edit
+   * history can leave deleted-node slots as `undefined` and some
+   * library fixtures carry explicit `null` placeholders. All
+   * tree-walking code must go through `safeChildren`, which filters
+   * both out at the boundary (`c != null` covers both cases).
+   */
+  readonly children?: readonly (FigNode | null | undefined)[];
   /** Additional fields (Kiwi schema has many optional fields) */
   readonly [key: string]: unknown;
 };
@@ -829,16 +858,19 @@ export type FigGradientStop = {
 };
 
 /**
- * Base paint interface
+ * Base paint interface.
  *
- * The type and blendMode fields accept both string literals (API format)
- * and KiwiEnumValue objects (binary .fig format).
+ * `type` and `blendMode` are SSoT string unions across the fig package.
+ * Kiwi binary stores these as `KiwiEnumValue { value, name }`; the
+ * parser normalises to the string name at input time and the builder
+ * rebuilds the enum shape at output time. No in-memory paint carries
+ * the raw enum shape.
  */
 export type FigPaintBase = {
-  readonly type: FigPaintType | KiwiEnumValue;
+  readonly type: FigPaintType;
   readonly visible?: boolean;
   readonly opacity?: number;
-  readonly blendMode?: string | KiwiEnumValue;
+  readonly blendMode?: BlendMode;
 };
 
 /**
@@ -903,14 +935,17 @@ export type FigImageTransform = FigGradientTransform;
 /**
  * Image paint
  */
+/** Image paint scale mode — SSoT string union. */
+export type FigImageScaleMode = "FILL" | "FIT" | "CROP" | "TILE" | "STRETCH";
+
 export type FigImagePaint = FigPaintBase & {
   readonly type: "IMAGE";
   /** API format: image reference string */
   readonly imageRef?: string;
-  /** API format: scale mode */
-  readonly scaleMode?: "FILL" | "FIT" | "CROP" | "TILE" | KiwiEnumValue;
-  /** Kiwi format: image scale mode as KiwiEnumValue */
-  readonly imageScaleMode?: KiwiEnumValue;
+  /** API format: scale mode (SSoT string). Parser normalises Kiwi enum to string. */
+  readonly scaleMode?: FigImageScaleMode;
+  /** Kiwi format: image scale mode — same semantic as scaleMode, string form. */
+  readonly imageScaleMode?: FigImageScaleMode;
   /** 2x3 affine transform for image positioning within the element */
   readonly transform?: FigImageTransform;
   /** API/builder format: 2x3 affine transform for image positioning. */
@@ -935,13 +970,19 @@ export type FigImagePaint = FigPaintBase & {
 };
 
 /**
- * Union of all paint types
+ * Union of all paint types. Discriminated by the `type` string so
+ * TypeScript can narrow via `paint.type === "SOLID"` etc.
+ *
+ * Historically this union also included the bare `FigPaintBase`, used
+ * as a catch-all for unrecognised paint kinds coming out of the kiwi
+ * decoder. That shape is no longer representable: the parser layer
+ * normalises every `type` field to a `FigPaintType` literal, and
+ * anything it cannot normalise is rejected at the parser boundary.
  */
 export type FigPaint =
   | FigSolidPaint
   | FigGradientPaint
-  | FigImagePaint
-  | FigPaintBase;
+  | FigImagePaint;
 
 // =============================================================================
 // Figma Stroke Types
@@ -958,6 +999,35 @@ export type FigStrokeWeight =
       readonly bottom: number;
       readonly left: number;
     };
+
+/**
+ * Blend mode string literals matching SVG/CSS mix-blend-mode values.
+ *
+ * SSoT for blend-mode representation across the fig package. Kiwi
+ * stores a `KiwiEnumValue { value, name }`; parser normalises to this
+ * string at input time and the builder maps back at output. No
+ * in-memory Fig* type carries the raw enum shape.
+ */
+export type BlendMode =
+  | "PASS_THROUGH"
+  | "NORMAL"
+  | "DARKEN"
+  | "MULTIPLY"
+  | "LINEAR_BURN"
+  | "COLOR_BURN"
+  | "LIGHTEN"
+  | "SCREEN"
+  | "LINEAR_DODGE"
+  | "COLOR_DODGE"
+  | "OVERLAY"
+  | "SOFT_LIGHT"
+  | "HARD_LIGHT"
+  | "DIFFERENCE"
+  | "EXCLUSION"
+  | "HUE"
+  | "SATURATION"
+  | "COLOR"
+  | "LUMINOSITY";
 
 /**
  * Stroke cap type
@@ -1058,6 +1128,6 @@ export type FigEffect = {
   readonly offset?: FigVector;
   readonly radius?: number;
   readonly spread?: number;
-  readonly blendMode?: string | KiwiEnumValue;
+  readonly blendMode?: BlendMode;
   readonly showShadowBehindNode?: boolean;
 };

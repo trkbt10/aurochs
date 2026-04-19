@@ -22,19 +22,29 @@ export type DiamondGradientBuilder = {
   build: () => GradientPaint;
 };
 
+type DiamondGradientBuilderState = {
+  stops: GradientStop[];
+  centerX: number;
+  centerY: number;
+  size: number;
+  opacity: number;
+  visible: boolean;
+  blendMode: BlendMode;
+};
+
 /** Create a diamond gradient builder */
 function createDiamondGradientBuilder(): DiamondGradientBuilder {
-  const state = {
+  const state: DiamondGradientBuilderState = {
     stops: [
       { color: { r: 1, g: 1, b: 1, a: 1 }, position: 0 },
       { color: { r: 0, g: 0, b: 0, a: 1 }, position: 1 },
-    ] as GradientStop[],
+    ],
     centerX: 0.5,
     centerY: 0.5,
     size: 0.5,
     opacity: 1,
     visible: true,
-    blendMode: "NORMAL" as BlendMode,
+    blendMode: "NORMAL",
   };
 
   const builder: DiamondGradientBuilder = {

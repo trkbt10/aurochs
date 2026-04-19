@@ -15,6 +15,9 @@ import type {
   FigPaint,
   FigVector,
   FigStrokeWeight,
+  FigStrokeCap,
+  FigStrokeJoin,
+  FigStrokeAlign,
   FigFillGeometry,
   FigEffect,
 } from "@aurochs/fig/types";
@@ -66,10 +69,10 @@ export type PaintProps = {
   readonly fillPaints: readonly FigPaint[] | undefined;
   readonly strokePaints: readonly FigPaint[] | undefined;
   readonly strokeWeight: FigStrokeWeight | undefined;
-  readonly strokeCap: import("@aurochs/fig/types").KiwiEnumValue | undefined;
-  readonly strokeJoin: import("@aurochs/fig/types").KiwiEnumValue | undefined;
+  readonly strokeCap: FigStrokeCap | undefined;
+  readonly strokeJoin: FigStrokeJoin | undefined;
   readonly strokeDashes: readonly number[] | undefined;
-  readonly strokeAlign: import("@aurochs/fig/types").KiwiEnumValue | undefined;
+  readonly strokeAlign: FigStrokeAlign | undefined;
 };
 
 /**

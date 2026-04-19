@@ -47,8 +47,18 @@ export function convertGeometry(node: FigDesignNode): Geometry | undefined {
     case "COMPONENT_SET":
     case "INSTANCE":
     case "SYMBOL":
-      // Container nodes use rect geometry when they have fills/strokes
-      return hasVisualProperties(node) ? createPreset("rect") : undefined;
+      // Container nodes use rect geometry when they have fills/strokes.
+      // Honour cornerRadius so rounded frames don't degrade to sharp rects
+      // (a FRAME built with .cornerRadius(16).background(white) must appear
+      // rounded in PPTX, not square).
+      if (!hasVisualProperties(node)) {return undefined;}
+      if (node.rectangleCornerRadii) {
+        return convertIndividualCornerRadii(node.rectangleCornerRadii, node.size.x, node.size.y);
+      }
+      if (node.cornerRadius && node.cornerRadius > 0) {
+        return convertUniformCornerRadius(node.cornerRadius, node.size.x, node.size.y);
+      }
+      return createPreset("rect");
     case "VECTOR":
     case "BOOLEAN_OPERATION":
       // Vector nodes could have custom paths, but the high-level

@@ -12,14 +12,39 @@ import {
 } from "./registry";
 import type { ShapeSpec, ImageSpec, ConnectorSpec, GroupSpec, TableSpec, TableCellSpec } from "../types";
 
-// Minimal BuildContext for sync builders that don't need a real ZipPackage
+/**
+ * Minimal in-memory ZipPackage mock for sync builders that never
+ * touch the unused surface. Every method in the `ZipPackage`
+ * contract is implemented here — no casts — so tests that graduate
+ * to read/write flows just get deterministic default behaviour
+ * instead of a `TypeError: undefined is not a function` at the
+ * call site.
+ */
 function createMockZipPackage(): BuildContext["zipPackage"] {
-  // eslint-disable-next-line custom/no-as-outside-guard -- test mock
+  const textStore = new Map<string, string>();
+  const binaryStore = new Map<string, ArrayBuffer>();
   return {
-    readText: () => null,
-    writeText: () => {},
-    listFiles: () => [],
-  } as unknown as BuildContext["zipPackage"];
+    readText: (p) => textStore.get(p) ?? null,
+    readBinary: (p) => binaryStore.get(p) ?? null,
+    exists: (p) => textStore.has(p) || binaryStore.has(p),
+    listFiles: () => [...textStore.keys(), ...binaryStore.keys()],
+    writeText: (p, content) => { textStore.set(p, content); },
+    writeBinary: (p, content) => {
+      const buf = content instanceof Uint8Array
+        ? content.buffer.slice(content.byteOffset, content.byteOffset + content.byteLength)
+        : content;
+      binaryStore.set(p, buf);
+    },
+    remove: (p) => { textStore.delete(p); binaryStore.delete(p); },
+    toBlob: async () => new Blob([]),
+    toArrayBuffer: async () => new ArrayBuffer(0),
+    asPresentationFile: () => ({
+      readText: (p: string) => textStore.get(p) ?? null,
+      readBinary: (p: string) => binaryStore.get(p) ?? null,
+      exists: (p: string) => textStore.has(p) || binaryStore.has(p),
+      listFiles: () => [...textStore.keys(), ...binaryStore.keys()],
+    }),
+  };
 }
 
 function createMockCtx(overrides?: Partial<BuildContext>): BuildContext {

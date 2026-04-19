@@ -162,19 +162,10 @@ export function rect(attrs: SvgPaintAttrs & {
 /**
  * Create an SVG circle element
  */
-export function circle(attrs: {
+export function circle(attrs: SvgPaintAttrs & {
   cx: number | string;
   cy: number | string;
   r: number | string;
-  fill?: string;
-  stroke?: string;
-  "stroke-width"?: number | string;
-  "fill-opacity"?: number | string;
-  "stroke-opacity"?: number | string;
-  transform?: string;
-  class?: string;
-  style?: string;
-  opacity?: number | string;
 }): SvgString {
   const attrStr = buildAttrs(attrs);
   return unsafeSvg(`<circle ${attrStr}/>`);
@@ -183,21 +174,12 @@ export function circle(attrs: {
 /**
  * Create an SVG ellipse element
  */
-export function ellipse(attrs: {
+export function ellipse(attrs: SvgPaintAttrs & {
   cx: number | string;
   cy: number | string;
   rx: number | string;
   ry: number | string;
-  fill?: string;
-  stroke?: string;
-  "stroke-width"?: number | string;
-  "fill-opacity"?: number | string;
-  "stroke-opacity"?: number | string;
-  transform?: string;
   filter?: string;
-  class?: string;
-  style?: string;
-  opacity?: number | string;
 }): SvgString {
   const attrStr = buildAttrs(attrs);
   return unsafeSvg(`<ellipse ${attrStr}/>`);

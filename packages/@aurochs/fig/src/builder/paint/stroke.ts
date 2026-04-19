@@ -31,19 +31,32 @@ export type StrokeBuilder = {
   build: () => StrokeData;
 };
 
+type StrokeBuilderState = {
+  color: Color;
+  weight: number;
+  cap: StrokeCap;
+  join: StrokeJoin;
+  align: StrokeAlign;
+  dashPattern: number[] | undefined;
+  miterLimit: number;
+  opacity: number;
+  visible: boolean;
+  blendMode: BlendMode;
+};
+
 /** Create a stroke builder */
 function createStrokeBuilder(color: Color = { r: 0, g: 0, b: 0, a: 1 }): StrokeBuilder {
-  const state = {
+  const state: StrokeBuilderState = {
     color,
     weight: 1,
-    cap: "NONE" as StrokeCap,
-    join: "MITER" as StrokeJoin,
-    align: "CENTER" as StrokeAlign,
-    dashPattern: undefined as number[] | undefined,
+    cap: "NONE",
+    join: "MITER",
+    align: "CENTER",
+    dashPattern: undefined,
     miterLimit: 4,
     opacity: 1,
     visible: true,
-    blendMode: "NORMAL" as BlendMode,
+    blendMode: "NORMAL",
   };
 
   const builder: StrokeBuilder = {

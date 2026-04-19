@@ -13,8 +13,10 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { transformGlyphCommands } from "./derived-paths";
+import { transformGlyphCommands, extractDerivedTextPathData } from "./derived-paths";
 import type { PathCommand } from "../../font/types";
+import type { FigBlob } from "@aurochs/fig/parser";
+import type { DerivedTextData } from "@aurochs/fig/domain";
 
 describe("transformGlyphCommands", () => {
   const commands: PathCommand[] = [
@@ -54,5 +56,77 @@ describe("transformGlyphCommands", () => {
     const m = out[0];
     if (m.type !== "M") throw new Error("expected M");
     expect(m.y).toBeCloseTo(41.6226, 3);
+  });
+});
+
+/**
+ * extractDerivedTextPathData: glyph-mode truncation.
+ *
+ * Figma carries the complete source-text glyph set in derivedTextData even
+ * when the node has textTruncation=ENDING. The `truncationStartIndex`
+ * marks the codepoint past which glyphs should no longer render — an
+ * ellipsis glyph (with `firstCharacter === undefined`) is inserted by
+ * Figma at the visible cut-off. The renderer must filter out any glyph
+ * whose `firstCharacter >= truncationStartIndex` so the trailing source
+ * characters (e.g. " to" in "Add Bookmark to...") don't leak past the
+ * ellipsis.
+ */
+describe("extractDerivedTextPathData: glyph-mode truncation", () => {
+  // Minimal blob matching a single M at (0, 0). All that matters for
+  // these tests is that decoded commands are non-empty so the glyph
+  // appears in the output.
+  const minimalBlob: FigBlob = {
+    bytes: [0x01, 0, 0, 0, 0, 0, 0, 0, 0],
+  };
+
+  function glyph(firstCharacter: number | undefined, x: number, y: number) {
+    return {
+      commandsBlob: 0,
+      position: { x, y },
+      fontSize: 10,
+      firstCharacter,
+      advance: 1,
+      rotation: 0,
+    };
+  }
+
+  it("drops glyphs whose firstCharacter >= truncationStartIndex", () => {
+    const dtd: DerivedTextData = {
+      truncationStartIndex: 2,
+      glyphs: [
+        glyph(0, 0, 0),
+        glyph(1, 10, 0),
+        glyph(2, 20, 0), // should be dropped
+        glyph(3, 30, 0), // should be dropped
+      ],
+    };
+    const out = extractDerivedTextPathData(dtd, [minimalBlob]);
+    expect(out.glyphContours.length).toBe(2);
+  });
+
+  it("keeps the ellipsis glyph whose firstCharacter is undefined", () => {
+    const dtd: DerivedTextData = {
+      truncationStartIndex: 2,
+      glyphs: [
+        glyph(0, 0, 0),
+        glyph(1, 10, 0),
+        glyph(undefined, 20, 0), // ellipsis — must be kept
+        glyph(2, 30, 0), // must be dropped
+      ],
+    };
+    const out = extractDerivedTextPathData(dtd, [minimalBlob]);
+    expect(out.glyphContours.length).toBe(3);
+  });
+
+  it("renders all glyphs when truncationStartIndex is absent or negative", () => {
+    const dtd: DerivedTextData = {
+      glyphs: [
+        glyph(0, 0, 0),
+        glyph(1, 10, 0),
+        glyph(2, 20, 0),
+      ],
+    };
+    const out = extractDerivedTextPathData(dtd, [minimalBlob]);
+    expect(out.glyphContours.length).toBe(3);
   });
 });

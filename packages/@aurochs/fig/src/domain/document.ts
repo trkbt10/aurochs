@@ -13,7 +13,7 @@
  */
 
 import type {
-  FigNodeType, FigMatrix, FigVector, FigColor, FigPaint, FigEffect, FigStrokeWeight, FigFontName, KiwiEnumValue,
+  FigNodeType, FigMatrix, FigVector, FigColor, FigPaint, FigEffect, FigStrokeWeight, FigStrokeCap, FigStrokeJoin, FigStrokeAlign, FigFontName, KiwiEnumValue,
   FigDerivedBaseline, FigDerivedGlyph, FigDerivedDecoration, FigDerivedTextData,
   FigVectorPath, FigVectorData, FigStyleId, FigFillGeometry,
 } from "../types";
@@ -157,28 +157,13 @@ export type TextStyleOverride = {
 
 /**
  * Blend mode string literals matching SVG/CSS mix-blend-mode values.
- * In Kiwi format, stored as KiwiEnumValue; in domain, normalized to string.
+ *
+ * Re-exported from `@aurochs/fig/types` where the SSoT lives. Kept as
+ * an alias here because the domain module is the public import
+ * surface for downstream consumers that don't want to reach into the
+ * parser types file.
  */
-export type BlendMode =
-  | "PASS_THROUGH"
-  | "NORMAL"
-  | "DARKEN"
-  | "MULTIPLY"
-  | "LINEAR_BURN"
-  | "COLOR_BURN"
-  | "LIGHTEN"
-  | "SCREEN"
-  | "LINEAR_DODGE"
-  | "COLOR_DODGE"
-  | "OVERLAY"
-  | "SOFT_LIGHT"
-  | "HARD_LIGHT"
-  | "DIFFERENCE"
-  | "EXCLUSION"
-  | "HUE"
-  | "SATURATION"
-  | "COLOR"
-  | "LUMINOSITY";
+export type BlendMode = import("../types").BlendMode;
 
 // =============================================================================
 // Derived Text Data (for high-fidelity text rendering)
@@ -206,10 +191,79 @@ export type DerivedTextData = FigDerivedTextData;
  * The remaining fields are the overridden properties (same structure
  * as FigNode fields: fillPaints, opacity, visible, transform, size, etc.).
  */
+/**
+ * Field-level payload for a SymbolOverride.
+ *
+ * Each property here carries the type the override can legally assign.
+ * Modelling the payload as a typed record (not `[key: string]: unknown`)
+ * lets `applyOverrideToNode`'s switch narrow the value by its key at
+ * compile time — removing the per-field `value as <T>` casts that
+ * previously silenced the checker.
+ *
+ * Field names mirror the raw Kiwi schema for ease of mapping. When a
+ * Kiwi field name differs from the domain counterpart (e.g.
+ * `fillPaints` → FigDesignNode.fills), applyOverrideToNode handles the
+ * rename; the input type stays faithful to the .fig format.
+ */
+export type SymbolOverrideFields = {
+  // Paint sources (Kiwi names — renamed to fills/strokes at apply time).
+  readonly fillPaints?: readonly FigPaint[];
+  readonly strokePaints?: readonly FigPaint[];
+  readonly backgroundPaints?: readonly FigPaint[];
+  // Visibility / opacity.
+  readonly visible?: boolean;
+  readonly opacity?: number;
+  // Effects.
+  readonly effects?: readonly FigEffect[];
+  // Geometry.
+  readonly transform?: FigMatrix;
+  readonly size?: FigVector;
+  readonly fillGeometry?: readonly FigFillGeometry[];
+  readonly strokeGeometry?: readonly FigFillGeometry[];
+  // Corner radius (uniform + per-corner).
+  readonly cornerRadius?: number;
+  readonly rectangleCornerRadii?: readonly number[];
+  readonly rectangleTopLeftCornerRadius?: number;
+  readonly rectangleTopRightCornerRadius?: number;
+  readonly rectangleBottomLeftCornerRadius?: number;
+  readonly rectangleBottomRightCornerRadius?: number;
+  // Stroke metrics. Domain string-union unified across FigNode,
+  // FigKiwiSymbolOverride, FigDesignNode, and SymbolOverride.
+  readonly strokeWeight?: FigStrokeWeight;
+  readonly strokeJoin?: FigStrokeJoin;
+  readonly strokeCap?: FigStrokeCap;
+  readonly strokeDashes?: readonly number[];
+  readonly borderTopWeight?: number;
+  readonly borderRightWeight?: number;
+  readonly borderBottomWeight?: number;
+  readonly borderLeftWeight?: number;
+  // Clipping / cosmetic.
+  readonly clipsContent?: boolean;
+  readonly cornerSmoothing?: number;
+  readonly blendMode?: BlendMode;
+  // Text-derived.
+  readonly derivedTextData?: DerivedTextData;
+  // Style references.
+  readonly styleIdForFill?: FigStyleId;
+  readonly styleIdForStrokeFill?: FigStyleId;
+  // Auto-layout per-child.
+  readonly stackPositioning?: KiwiEnumValue;
+  // Metadata.
+  readonly name?: string;
+  readonly locked?: boolean;
+  // Instance swap.
+  readonly overriddenSymbolID?: { readonly sessionID: number; readonly localID: number };
+};
+
 export type SymbolOverride = {
   readonly guidPath: { readonly guids: readonly { readonly sessionID: number; readonly localID: number }[] };
-  readonly [key: string]: unknown;
-};
+} & SymbolOverrideFields;
+
+/** Keys of SymbolOverrideFields — the legal override field-name set. */
+export type SymbolOverrideFieldKey = keyof SymbolOverrideFields;
+
+/** Helper: the value type a given override field may carry. */
+export type SymbolOverrideFieldValue<K extends SymbolOverrideFieldKey> = SymbolOverrideFields[K];
 
 /**
  * Mutable version of FigDesignNode for override application.
@@ -247,14 +301,71 @@ export function overridePathToIds(override: SymbolOverride): readonly string[] {
 }
 
 /**
- * Iterate over the property entries of a SymbolOverride, skipping guidPath.
+ * Exhaustive truth-map for SymbolOverride field keys.
+ *
+ * Using the `satisfies Record<SymbolOverrideFieldKey, true>` clause,
+ * TypeScript rejects compilation if any member of the
+ * `SymbolOverrideFieldKey` union is missing from this object literal.
+ * The object doubles as the runtime iteration source: `Object.keys`
+ * on a literal object returns its keys typed as `string`, and
+ * TypeScript widens them, so iteration uses a `keyof typeof` narrow
+ * at the callsite — no assertion required.
  */
-export function* overrideEntries(override: SymbolOverride): Generator<[string, unknown]> {
-  for (const [key, value] of Object.entries(override)) {
-    if (key === "guidPath") { continue; }
-    yield [key, value];
+const SYMBOL_OVERRIDE_FIELD_KEY_SET = {
+  fillPaints: true, strokePaints: true, backgroundPaints: true,
+  visible: true, opacity: true, effects: true,
+  transform: true, size: true,
+  fillGeometry: true, strokeGeometry: true,
+  cornerRadius: true, rectangleCornerRadii: true,
+  rectangleTopLeftCornerRadius: true, rectangleTopRightCornerRadius: true,
+  rectangleBottomLeftCornerRadius: true, rectangleBottomRightCornerRadius: true,
+  strokeWeight: true, strokeJoin: true, strokeCap: true, strokeDashes: true,
+  borderTopWeight: true, borderRightWeight: true, borderBottomWeight: true, borderLeftWeight: true,
+  clipsContent: true, cornerSmoothing: true, blendMode: true,
+  derivedTextData: true,
+  styleIdForFill: true, styleIdForStrokeFill: true,
+  stackPositioning: true,
+  name: true, locked: true,
+  overriddenSymbolID: true,
+} satisfies Record<SymbolOverrideFieldKey, true>;
+
+/**
+ * Type-guard predicate: is `key` a legal SymbolOverride field name?
+ *
+ * Uses `in` against the typed key-set object; `SYMBOL_OVERRIDE_FIELD
+ * _KEY_SET` is declared `satisfies Record<SymbolOverrideFieldKey,
+ * true>`, so TypeScript's narrowing recognises that when the `in`
+ * check succeeds the argument is one of those keys.
+ */
+function isOverrideFieldKey(key: string): key is SymbolOverrideFieldKey {
+  return key in SYMBOL_OVERRIDE_FIELD_KEY_SET;
+}
+
+/**
+ * Iterate override field names that actually have a defined value.
+ *
+ * The type-guard predicate `isOverrideFieldKey` narrows the loop
+ * variable from `string` to `SymbolOverrideFieldKey` without any
+ * assertion; inside the loop body the compiler then tracks
+ * `override[key]` as `SymbolOverrideFields[typeof key]` automatically.
+ */
+export function* overrideFieldKeys(override: SymbolOverride): Generator<SymbolOverrideFieldKey> {
+  for (const key of Object.keys(SYMBOL_OVERRIDE_FIELD_KEY_SET)) {
+    if (!isOverrideFieldKey(key)) continue;
+    if (override[key] === undefined) continue;
+    yield key;
   }
 }
+
+// The previous `overrideEntries` iterator yielded `[key, value]` pairs
+// and lost the key→value correlation through Object.entries, forcing
+// callers into `value as <FieldType>` casts. It was replaced by
+// `overrideFieldKeys` above: consumers iterate keys and read
+// `override[key]`, and TypeScript tracks each value as
+// `SymbolOverrideFields[typeof key]` automatically — no assertions
+// anywhere in the apply loop. The entries iterator was unused outside
+// of that loop, so it is removed entirely rather than preserved for
+// API compatibility.
 
 /**
  * Apply override properties to a mutable FigDesignNode.
@@ -262,151 +373,201 @@ export function* overrideEntries(override: SymbolOverride): Generator<[string, u
  * Maps raw FigNode field names to FigDesignNode field names
  * (fillPaints → fills, strokePaints → strokes) and applies
  * only known visual override properties.
+ *
+ * The switch iterates over `overrideFieldKeys`, and each branch
+ * accesses `override[key]` so TypeScript narrows the value to
+ * `SymbolOverrideFields[key]` automatically — no `as` casts.
+ *
+ * The individualStrokeWeights helper is pulled out because its
+ * starting value depends on target.strokeWeight's polymorphic type
+ * (number | FigStrokeWeight object); the narrow is done once inside
+ * the helper so the switch stays flat.
  */
 export function applyOverrideToNode(
   target: MutableFigDesignNode,
   override: SymbolOverride,
   options?: { skipDerivedTextData?: boolean },
 ): void {
-  for (const [key, value] of overrideEntries(override)) {
+  for (const key of overrideFieldKeys(override)) {
     switch (key) {
       // Paint field name mapping (Kiwi → domain)
-      case "fillPaints":
-        target.fills = value as readonly FigPaint[];
+      case "fillPaints": {
+        const v = override.fillPaints;
+        if (v !== undefined) target.fills = v;
         break;
-      case "strokePaints":
-        target.strokes = value as readonly FigPaint[];
+      }
+      case "strokePaints": {
+        const v = override.strokePaints;
+        if (v !== undefined) target.strokes = v;
         break;
-      // Direct mappings — same name in Kiwi and domain
-      case "visible":
-        target.visible = value as boolean;
+      }
+      case "backgroundPaints": {
+        // backgroundPaints has no direct slot on FigDesignNode today
+        // (fills handles frame-background rendering), so accept-and-
+        // ignore. Kept in the switch for exhaustiveness.
         break;
-      case "opacity":
-        target.opacity = value as number;
+      }
+      case "visible": {
+        const v = override.visible;
+        if (v !== undefined) target.visible = v;
         break;
-      case "effects":
-        target.effects = value as readonly FigEffect[];
+      }
+      case "opacity": {
+        const v = override.opacity;
+        if (v !== undefined) target.opacity = v;
         break;
-      case "cornerRadius":
-        target.cornerRadius = value as number | undefined;
+      }
+      case "effects": {
+        const v = override.effects;
+        if (v !== undefined) target.effects = v;
         break;
-      case "rectangleCornerRadii":
-        target.rectangleCornerRadii = value as readonly number[] | undefined;
+      }
+      case "cornerRadius": {
+        target.cornerRadius = override.cornerRadius;
         break;
-      case "blendMode":
-        target.blendMode = value as MutableFigDesignNode["blendMode"];
+      }
+      case "rectangleCornerRadii": {
+        target.rectangleCornerRadii = override.rectangleCornerRadii;
         break;
-      case "strokeWeight":
-        target.strokeWeight = value as FigStrokeWeight;
+      }
+      case "blendMode": {
+        target.blendMode = override.blendMode;
         break;
-      case "strokeJoin":
-        target.strokeJoin = value as KiwiEnumValue | undefined;
+      }
+      case "strokeWeight": {
+        const v = override.strokeWeight;
+        if (v !== undefined) target.strokeWeight = v;
         break;
-      case "strokeCap":
-        target.strokeCap = value as KiwiEnumValue | undefined;
+      }
+      case "strokeJoin": {
+        target.strokeJoin = override.strokeJoin;
         break;
-      case "clipsContent":
-        target.clipsContent = value as boolean | undefined;
+      }
+      case "strokeCap": {
+        target.strokeCap = override.strokeCap;
         break;
-      case "cornerSmoothing":
-        target.cornerSmoothing = value as number | undefined;
+      }
+      case "clipsContent": {
+        target.clipsContent = override.clipsContent;
         break;
-      // Layout fields (from derivedSymbolData)
-      case "transform":
-        target.transform = value as FigMatrix;
+      }
+      case "cornerSmoothing": {
+        target.cornerSmoothing = override.cornerSmoothing;
         break;
-      case "size":
-        target.size = value as FigVector;
+      }
+      case "transform": {
+        const v = override.transform;
+        if (v !== undefined) target.transform = v;
         break;
-      // Geometry (blob references — indices into document blobs array)
-      case "fillGeometry":
-        target.fillGeometry = value as readonly FigFillGeometry[] | undefined;
+      }
+      case "size": {
+        const v = override.size;
+        if (v !== undefined) target.size = v;
         break;
-      case "strokeGeometry":
-        target.strokeGeometry = value as readonly FigFillGeometry[] | undefined;
+      }
+      case "fillGeometry": {
+        target.fillGeometry = override.fillGeometry;
         break;
-      case "derivedTextData":
+      }
+      case "strokeGeometry": {
+        target.strokeGeometry = override.strokeGeometry;
+        break;
+      }
+      case "derivedTextData": {
         if (!options?.skipDerivedTextData) {
-          target.derivedTextData = value as DerivedTextData | undefined;
+          target.derivedTextData = override.derivedTextData;
         }
         break;
-
-      // Style ID references — resolved to fills/strokes via style registry
-      // (resolution happens in the builder after all overrides are applied)
-      case "styleIdForFill":
-        target.styleIdForFill = value as FigStyleId | undefined;
+      }
+      case "styleIdForFill": {
+        target.styleIdForFill = override.styleIdForFill;
         break;
-      case "styleIdForStrokeFill":
-        target.styleIdForStrokeFill = value as FigStyleId | undefined;
+      }
+      case "styleIdForStrokeFill": {
+        target.styleIdForStrokeFill = override.styleIdForStrokeFill;
         break;
+      }
 
-      // Per-corner radius (Figma's individual corner fields)
-      // These are combined into rectangleCornerRadii for rendering.
       case "rectangleTopLeftCornerRadius":
       case "rectangleTopRightCornerRadius":
       case "rectangleBottomLeftCornerRadius":
       case "rectangleBottomRightCornerRadius": {
-        // Update the rectangleCornerRadii array with the individual value
+        const v = override[key];
+        if (typeof v !== "number") break;
         const radii = target.rectangleCornerRadii
           ? [...target.rectangleCornerRadii]
           : [target.cornerRadius ?? 0, target.cornerRadius ?? 0, target.cornerRadius ?? 0, target.cornerRadius ?? 0];
         const idx = key === "rectangleTopLeftCornerRadius" ? 0
           : key === "rectangleTopRightCornerRadius" ? 1
           : key === "rectangleBottomRightCornerRadius" ? 2
-          : 3; // bottomLeft
-        radii[idx] = value as number;
+          : 3;
+        radii[idx] = v;
         target.rectangleCornerRadii = radii;
         break;
       }
 
-      // Per-side stroke weights
       case "borderTopWeight":
       case "borderRightWeight":
       case "borderBottomWeight":
       case "borderLeftWeight": {
-        const sw = target.individualStrokeWeights ?? { top: target.strokeWeight as number ?? 0, right: target.strokeWeight as number ?? 0, bottom: target.strokeWeight as number ?? 0, left: target.strokeWeight as number ?? 0 };
+        const v = override[key];
+        if (typeof v !== "number") break;
+        const base = uniformStrokeWeight(target.strokeWeight);
+        const sw = target.individualStrokeWeights ?? { top: base, right: base, bottom: base, left: base };
         const side = key === "borderTopWeight" ? "top"
           : key === "borderRightWeight" ? "right"
           : key === "borderBottomWeight" ? "bottom"
           : "left";
-        target.individualStrokeWeights = { ...sw, [side]: value as number };
+        target.individualStrokeWeights = { ...sw, [side]: v };
         break;
       }
 
-      // Layout constraint override
       case "stackPositioning": {
+        const v = override.stackPositioning;
+        if (v === undefined) break;
         const lc = target.layoutConstraints ?? {};
-        target.layoutConstraints = { ...lc, stackPositioning: value as KiwiEnumValue };
+        target.layoutConstraints = { ...lc, stackPositioning: v };
         break;
       }
 
-      // Stroke dashes
-      case "strokeDashes":
-        target.strokeDashes = value as readonly number[] | undefined;
+      case "strokeDashes": {
+        target.strokeDashes = override.strokeDashes;
         break;
+      }
 
-      // Name (metadata, not visual — but included for completeness)
-      case "name":
-        target.name = value as string;
+      case "name": {
+        const v = override.name;
+        if (v !== undefined) target.name = v;
         break;
+      }
 
-      // Instance swap via override — changes the symbol this INSTANCE resolves to.
-      // The value is a FigGuid { sessionID, localID } from the Kiwi binary.
-      // Convert to FigNodeId using the domain's canonical conversion.
       case "overriddenSymbolID": {
-        const guid = value as { readonly sessionID: number; readonly localID: number } | undefined;
+        const guid = override.overriddenSymbolID;
         if (guid) {
           target.symbolId = guidToNodeId(guid);
         }
         break;
       }
 
-      // Non-visual properties (editor state) — accepted but not rendered
       case "locked":
         break;
     }
   }
 }
+
+/**
+ * Resolve a polymorphic strokeWeight to a plain number for use as the
+ * seed of an `individualStrokeWeights` tuple. FigStrokeWeight is a
+ * union of `number` and `{ value: number }` — TypeScript narrows via
+ * typeof / 'in' without any cast.
+ */
+function uniformStrokeWeight(sw: FigStrokeWeight | undefined): number {
+  if (sw == null) return 0;
+  if (typeof sw === "number") return sw;
+  if (typeof sw === "object" && "value" in sw && typeof sw.value === "number") return sw.value;
+  return 0;
+}
+
 
 // =============================================================================
 // Component Property Types
@@ -547,9 +708,10 @@ export type FigDesignNode = {
   readonly fills: readonly FigPaint[];
   readonly strokes: readonly FigPaint[];
   readonly strokeWeight: FigStrokeWeight;
-  readonly strokeAlign?: KiwiEnumValue;
-  readonly strokeJoin?: KiwiEnumValue;
-  readonly strokeCap?: KiwiEnumValue;
+  // Stroke enums — domain string-unions, matching FigNode / SymbolOverride.
+  readonly strokeAlign?: FigStrokeAlign;
+  readonly strokeJoin?: FigStrokeJoin;
+  readonly strokeCap?: FigStrokeCap;
 
   /** Stroke dash pattern (e.g., [4, 2] for dashed stroke) */
   readonly strokeDashes?: readonly number[];

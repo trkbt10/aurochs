@@ -11,9 +11,10 @@
 
 import type { ReactNode } from "react";
 import type { ResolvedFillLayer } from "../../scene-graph/render-tree";
-import type { ResolvedStrokeAttrs, ResolvedStrokeLayer } from "../../scene-graph/render";
+import type { ResolvedStrokeLayer } from "../../scene-graph/render";
 import type { CornerRadius, BlendMode } from "../../scene-graph/types";
 import { RectShape } from "./rect-shape";
+import type { UniformStrokeDomAttrs } from "./stroke-rendering";
 
 function blendModeStyle(bm: BlendMode | undefined): React.CSSProperties | undefined {
   return bm ? { mixBlendMode: bm as React.CSSProperties["mixBlendMode"] } : undefined;
@@ -24,7 +25,7 @@ type MultiFillRectLayersProps = {
   readonly width: number;
   readonly height: number;
   readonly cornerRadius?: CornerRadius;
-  readonly stroke?: ResolvedStrokeAttrs;
+  readonly stroke?: UniformStrokeDomAttrs;
 };
 
 export function MultiFillRectLayers({ layers, width, height, cornerRadius, stroke }: MultiFillRectLayersProps): ReactNode {
@@ -52,7 +53,7 @@ type MultiFillEllipseLayersProps = {
   readonly cy: number;
   readonly rx: number;
   readonly ry: number;
-  readonly stroke?: ResolvedStrokeAttrs;
+  readonly stroke?: UniformStrokeDomAttrs;
 };
 
 export function MultiFillEllipseLayers({ layers, cx, cy, rx, ry, stroke }: MultiFillEllipseLayersProps): ReactNode {
@@ -78,7 +79,7 @@ export function MultiFillEllipseLayers({ layers, cx, cy, rx, ry, stroke }: Multi
 type MultiFillPathLayersProps = {
   readonly layers: readonly ResolvedFillLayer[];
   readonly paths: readonly { d: string; fillRule?: "evenodd" }[];
-  readonly stroke?: ResolvedStrokeAttrs;
+  readonly stroke?: UniformStrokeDomAttrs;
 };
 
 export function MultiFillPathLayers({ layers, paths, stroke }: MultiFillPathLayersProps): ReactNode {

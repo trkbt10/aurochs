@@ -7,7 +7,7 @@
 
 import { useCallback, type CSSProperties } from "react";
 import type { FigDesignNode } from "@aurochs/fig/domain";
-import type { FigPaint, FigColor, KiwiEnumValue } from "@aurochs/fig/types";
+import type { FigPaint, FigColor } from "@aurochs/fig/types";
 import type { FigEditorAction } from "../../context/fig-editor/types";
 import { Input } from "@aurochs-ui/ui-components/primitives/Input";
 import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
@@ -49,22 +49,17 @@ function getStrokePaintOpacity(paint: FigPaint): number {
   return 1;
 }
 
-function getStrokeAlignLabel(align: unknown): string {
-  if (!align) {return "";}
-  if (typeof align === "string") {return align;}
-  if (typeof align === "object" && align !== null && "name" in align) {
-    return (align as { name: string }).name;
-  }
-  return "";
+function getStrokeAlignLabel(align: FigDesignNode["strokeAlign"]): string {
+  return align ?? "";
 }
 
 function createDefaultStrokePaint(): FigPaint {
   return {
-    type: { value: 0, name: "SOLID" } as KiwiEnumValue,
+    type: "SOLID",
     color: { r: 0, g: 0, b: 0, a: 1 },
     opacity: 1,
     visible: true,
-  } as FigPaint;
+  };
 }
 
 // =============================================================================

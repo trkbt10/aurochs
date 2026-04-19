@@ -391,10 +391,20 @@ describe("Slide Editing E2E - UI Rendering", () => {
           { type: "COMMIT_DRAG" },
         ]);
 
-        // Verify rotation in DOM via the hit area's parent group transform
+        // Verify rotation in DOM via the hit area's parent group transform.
+        // The hit area is nested inside an <svg> tree, so its
+        // parentElement is an SVGGElement. `parentElement` declares a
+        // broader `HTMLElement | null` return type in lib.dom, so we
+        // narrow via `instanceof SVGGElement` rather than a cast — the
+        // runtime check both documents the expectation and fails loudly
+        // if the DOM structure ever drifts.
         const { getHitArea, unmount } = renderCanvas(rotated);
         const hitArea = getHitArea(id)!;
-        const parentG = hitArea.parentElement as unknown as SVGGElement;
+        const parent = hitArea.parentElement;
+        if (!(parent instanceof SVGGElement)) {
+          throw new Error("hit area is not wrapped by an <g>");
+        }
+        const parentG: SVGGElement = parent;
         const transform = parentG.getAttribute("transform") ?? "";
 
         // The parent g should have a rotate transform

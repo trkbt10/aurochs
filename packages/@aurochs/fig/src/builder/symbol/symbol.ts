@@ -39,29 +39,52 @@ export type SymbolNodeBuilder = {
   build: () => SymbolNodeData;
 };
 
+type SymbolBuilderState = {
+  name: string;
+  width: number;
+  height: number;
+  x: number;
+  y: number;
+  fillColor: Color;
+  clipsContent: boolean;
+  cornerRadius: number | undefined;
+  visible: boolean;
+  opacity: number;
+  exportSettings: ExportSettings[];
+  stackMode: StackMode | undefined;
+  stackSpacing: number | undefined;
+  stackPadding: StackPadding | undefined;
+  stackPrimaryAlignItems: StackAlign | undefined;
+  stackCounterAlignItems: StackAlign | undefined;
+  stackPrimaryAlignContent: StackAlign | undefined;
+  stackWrap: boolean | undefined;
+  stackCounterSpacing: number | undefined;
+  itemReverseZIndex: boolean | undefined;
+};
+
 /** Create a symbol node builder */
 function createSymbolNodeBuilder(localID: number, parentID: number): SymbolNodeBuilder {
-  const state = {
+  const state: SymbolBuilderState = {
     name: "Component",
     width: 200,
     height: 100,
     x: 0,
     y: 0,
-    fillColor: { r: 1, g: 1, b: 1, a: 1 } as Color,
+    fillColor: { r: 1, g: 1, b: 1, a: 1 },
     clipsContent: true,
-    cornerRadius: undefined as number | undefined,
+    cornerRadius: undefined,
     visible: true,
     opacity: 1,
-    exportSettings: [] as ExportSettings[],
-    stackMode: undefined as StackMode | undefined,
-    stackSpacing: undefined as number | undefined,
-    stackPadding: undefined as StackPadding | undefined,
-    stackPrimaryAlignItems: undefined as StackAlign | undefined,
-    stackCounterAlignItems: undefined as StackAlign | undefined,
-    stackPrimaryAlignContent: undefined as StackAlign | undefined,
-    stackWrap: undefined as boolean | undefined,
-    stackCounterSpacing: undefined as number | undefined,
-    itemReverseZIndex: undefined as boolean | undefined,
+    exportSettings: [],
+    stackMode: undefined,
+    stackSpacing: undefined,
+    stackPadding: undefined,
+    stackPrimaryAlignItems: undefined,
+    stackCounterAlignItems: undefined,
+    stackPrimaryAlignContent: undefined,
+    stackWrap: undefined,
+    stackCounterSpacing: undefined,
+    itemReverseZIndex: undefined,
   };
 
   const builder: SymbolNodeBuilder = {

@@ -44,8 +44,8 @@ describe("path-render", () => {
 
   describe("renderTextNodeAsPath", () => {
     it("renders simple text as path", async () => {
-      const node = {
-        type: { value: 0, name: "TEXT" },
+      const node: FigNode = {
+        type: { value: 8, name: "TEXT" },
         name: "test",
         characters: "Hello",
         fontSize: 16,
@@ -56,7 +56,7 @@ describe("path-render", () => {
         fillPaints: [{ type: { value: 0, name: "SOLID" }, color: { r: 0, g: 0, b: 0, a: 1 }, opacity: 1 }],
         guid: { sessionID: 0, localID: 0 },
         phase: { value: 1, name: "CREATED" },
-      } satisfies Partial<FigNode> as unknown as FigNode;
+      };
 
       const ctx: PathRenderContext = {
         canvasSize: { width: 100, height: 30 },
@@ -82,14 +82,14 @@ describe("path-render", () => {
     });
 
     it("returns empty for empty characters", async () => {
-      const node = {
-        type: { value: 0, name: "TEXT" },
+      const node: FigNode = {
+        type: { value: 8, name: "TEXT" },
         name: "test",
         characters: "",
         fontSize: 16,
         guid: { sessionID: 0, localID: 0 },
         phase: { value: 1, name: "CREATED" },
-      } satisfies Partial<FigNode> as unknown as FigNode;
+      };
 
       const ctx: PathRenderContext = {
         canvasSize: { width: 100, height: 30 },

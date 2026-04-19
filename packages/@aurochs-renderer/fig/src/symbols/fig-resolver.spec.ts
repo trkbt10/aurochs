@@ -44,22 +44,22 @@ describe("FigResolver", () => {
     const symGuid = { sessionID: 1, localID: 10 };
     const symbol = makeSymbol(symGuid, [
       { guid: { sessionID: 1, localID: 11 }, type: { value: 10, name: "RECTANGLE" }, name: "Rect" },
-    ], { strokeJoin: { value: 2, name: "ROUND" } });
+    ], { strokeJoin: "ROUND" });
     const instance = makeInstance({ sessionID: 1, localID: 20 }, symGuid);
 
     const resolver = createFigResolver(new Map([["1:10", symbol]]));
     const result = resolver.resolveInstance(instance);
-    expect(result.node.strokeJoin).toEqual({ value: 2, name: "ROUND" });
+    expect(result.node.strokeJoin).toBe("ROUND");
   });
 
   it("resolveInstance inherits blendMode from SYMBOL", () => {
     const symGuid = { sessionID: 1, localID: 10 };
-    const symbol = makeSymbol(symGuid, [], { blendMode: { value: 3, name: "MULTIPLY" } });
+    const symbol = makeSymbol(symGuid, [], { blendMode: "MULTIPLY" });
     const instance = makeInstance({ sessionID: 1, localID: 20 }, symGuid);
 
     const resolver = createFigResolver(new Map([["1:10", symbol]]));
     const result = resolver.resolveInstance(instance);
-    expect((result.node as Record<string, unknown>).blendMode).toEqual({ value: 3, name: "MULTIPLY" });
+    expect(result.node.blendMode).toBe("MULTIPLY");
   });
 
   it("resolveInstance applies self-referencing fill override", () => {

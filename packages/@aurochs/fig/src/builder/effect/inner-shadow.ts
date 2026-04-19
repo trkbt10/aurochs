@@ -21,16 +21,26 @@ export type InnerShadowBuilder = {
   build: () => ShadowEffectData;
 };
 
+type InnerShadowBuilderState = {
+  color: Color;
+  offsetX: number;
+  offsetY: number;
+  radius: number;
+  spread: number;
+  visible: boolean;
+  blendMode: BlendMode;
+};
+
 /** Create an inner shadow builder */
 function createInnerShadowBuilder(): InnerShadowBuilder {
-  const state = {
-    color: { r: 0, g: 0, b: 0, a: 0.25 } as Color,
+  const state: InnerShadowBuilderState = {
+    color: { r: 0, g: 0, b: 0, a: 0.25 },
     offsetX: 0,
     offsetY: 2,
     radius: 4,
     spread: 0,
     visible: true,
-    blendMode: "NORMAL" as BlendMode,
+    blendMode: "NORMAL",
   };
 
   const builder: InnerShadowBuilder = {

@@ -17,13 +17,20 @@ export type SolidPaintBuilder = {
   build: () => Paint;
 };
 
+type SolidPaintBuilderState = {
+  color: Color;
+  opacity: number;
+  visible: boolean;
+  blendMode: BlendMode;
+};
+
 /** Create a solid paint builder with given color */
 function createSolidPaintBuilder(color: Color): SolidPaintBuilder {
-  const state = {
+  const state: SolidPaintBuilderState = {
     color,
     opacity: 1,
     visible: true,
-    blendMode: "NORMAL" as BlendMode,
+    blendMode: "NORMAL",
   };
 
   const builder: SolidPaintBuilder = {

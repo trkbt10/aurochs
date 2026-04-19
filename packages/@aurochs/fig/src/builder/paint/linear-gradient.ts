@@ -22,20 +22,31 @@ export type LinearGradientBuilder = {
   build: () => GradientPaint;
 };
 
+type LinearGradientBuilderState = {
+  stops: GradientStop[];
+  startX: number;
+  startY: number;
+  endX: number;
+  endY: number;
+  opacity: number;
+  visible: boolean;
+  blendMode: BlendMode;
+};
+
 /** Create a linear gradient builder */
 function createLinearGradientBuilder(): LinearGradientBuilder {
-  const state = {
+  const state: LinearGradientBuilderState = {
     stops: [
       { color: { r: 0, g: 0, b: 0, a: 1 }, position: 0 },
       { color: { r: 1, g: 1, b: 1, a: 1 }, position: 1 },
-    ] as GradientStop[],
+    ],
     startX: 0,
     startY: 0.5,
     endX: 1,
     endY: 0.5,
     opacity: 1,
     visible: true,
-    blendMode: "NORMAL" as BlendMode,
+    blendMode: "NORMAL",
   };
 
   const builder: LinearGradientBuilder = {

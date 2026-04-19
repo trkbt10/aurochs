@@ -26,9 +26,27 @@ type WrapperProps = {
  * MUST express wrapper attributes through the same set of fields.
  */
 export function RenderWrapper({ wrapper, mask, children }: WrapperProps) {
-  const style = wrapper.blendMode
+  const style: React.CSSProperties | undefined = wrapper.blendMode
     ? { mixBlendMode: wrapper.blendMode as React.CSSProperties["mixBlendMode"] }
     : undefined;
+
+  // When this node has a blend mode, also isolate this element's OWN
+  // stacking context so a SIBLING with mix-blend-mode:screen blends
+  // against its proper backdrop (the parent FRAME's fill) rather than
+  // leaking up through the stacking tree and blending against page
+  // background. Without isolation, SCREEN/MULTIPLY/etc. can silently
+  // produce "no visible effect" when the backdrop the blend sees is
+  // not the one the designer intended.
+  //
+  // We also attach `isolation: isolate` to any wrapper whose children
+  // might contain blend-moded descendants. The cheapest heuristic is
+  // to always attach it when the wrapper carries a filter or itself
+  // has a blendMode — both cases imply the wrapper is a compositing
+  // boundary in Figma's render model.
+  const needsIsolation = wrapper.blendMode || wrapper.filterAttr;
+  const finalStyle: React.CSSProperties | undefined = needsIsolation
+    ? { ...(style ?? {}), isolation: "isolate" as const }
+    : style;
 
   return (
     <g
@@ -36,7 +54,7 @@ export function RenderWrapper({ wrapper, mask, children }: WrapperProps) {
       opacity={wrapper.opacity}
       filter={wrapper.filterAttr}
       mask={mask?.maskAttr}
-      style={style}
+      style={finalStyle}
     >
       {children}
     </g>

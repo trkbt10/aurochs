@@ -9,6 +9,7 @@ import { decompressDeflateRaw, decompressZstd } from "./decompress";
 import { detectCompression } from "../compression";
 import { loadZipPackage } from "@aurochs/zip";
 import type { FigBlob } from "./blob-decoder";
+import { normaliseNodeChanges, asBlobArray } from "./normalize";
 
 // =============================================================================
 // Parsed Fig File Result
@@ -225,11 +226,14 @@ function parseRawFigData(data: Uint8Array, images: ReadonlyMap<string, FigImage>
   // Decode message
   const message = decodeFigMessage(schema, messageData, "Message");
 
-  // Extract node changes
-  const nodeChanges = (message.nodeChanges ?? []) as readonly FigNode[];
+  // Extract node changes — normalise Kiwi enum-shaped fields to their
+  // domain SSoT strings in-place. After this the array shape matches
+  // `readonly FigNode[]` without further casts.
+  const rawNodes = Array.isArray(message.nodeChanges) ? message.nodeChanges : [];
+  const nodeChanges = normaliseNodeChanges(rawNodes);
 
   // Extract blobs
-  const blobs = (message.blobs ?? []) as readonly FigBlob[];
+  const blobs = asBlobArray(message.blobs);
 
   return {
     schema,

@@ -327,6 +327,35 @@ function resolveWrapper(
 function finalizeDefs(defs: RenderDef[], elementSize: { width: number; height: number }): void {
   finalizeGradientDefs(defs, elementSize);
   finalizeImagePatternDefs(defs, elementSize);
+  finalizeAngularDiamondGradientDefs(defs, elementSize);
+}
+
+/**
+ * Stamp each angular/diamond gradient def with the concrete element
+ * size. The SVG emitter needs pixel dimensions to place the
+ * `<foreignObject>` that hosts the CSS conic-gradient; pattern
+ * `objectBoundingBox` units don't propagate into foreignObject's
+ * x/y/width/height, so without pixel dimensions the gradient
+ * collapses to a 1×1-pixel region and renders invisibly.
+ */
+function finalizeAngularDiamondGradientDefs(
+  defs: RenderDef[],
+  elementSize: { width: number; height: number },
+): void {
+  for (let i = 0; i < defs.length; i++) {
+    const def = defs[i];
+    if (def.type === "angular-gradient") {
+      defs[i] = {
+        type: "angular-gradient",
+        def: { ...def.def, elementWidth: elementSize.width, elementHeight: elementSize.height },
+      };
+    } else if (def.type === "diamond-gradient") {
+      defs[i] = {
+        type: "diamond-gradient",
+        def: { ...def.def, elementWidth: elementSize.width, elementHeight: elementSize.height },
+      };
+    }
+  }
 }
 
 // =============================================================================
@@ -367,12 +396,21 @@ function resolveMask(
  *
  * Background blur cannot be expressed as an SVG filter — it requires
  * foreignObject + CSS backdrop-filter, clipped to the node's shape.
+ *
+ * The `shape` parameter controls the clip geometry. When omitted we
+ * fall back to a rectangle matching `bounds` — this matches the legacy
+ * behaviour but produces a square blur region for non-rectangular
+ * nodes (e.g. an ELLIPSE Container would look square because the blur
+ * bleeds outside the circular silhouette). Callers for ellipse / path
+ * nodes pass a shape matching the silhouette so the backdrop-filter
+ * is clipped to the visible outline.
  */
 function resolveBackgroundBlur(
   effects: readonly import("../types").Effect[],
   bounds: { x: number; y: number; width: number; height: number },
   ids: IdGenerator,
   defs: RenderDef[],
+  shape?: import("./types").ClipPathShape,
 ): RenderBackgroundBlur | undefined {
   const bgBlur = effects.find(
     (e): e is BackgroundBlurEffect => e.type === "background-blur",
@@ -383,10 +421,13 @@ function resolveBackgroundBlur(
 
   // Create a clip path for the foreignObject (same shape as the node)
   const clipId = ids.getNextId("bg-blur-clip");
+  const clipShape: import("./types").ClipPathShape = shape ?? {
+    kind: "rect", x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height,
+  };
   defs.push({
     type: "clip-path",
     id: clipId,
-    shape: { kind: "rect", x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height },
+    shape: clipShape,
   });
 
   return {
@@ -406,15 +447,25 @@ function resolveFillResult(fill: Fill, ids: IdGenerator, defs: RenderDef[]): Res
   return {
     attrs: resolved.attrs,
     def: resolved.def,
+    // Carry paint-level blendMode through so single-fill rendering
+    // (formatRectShape / formatEllipseShape) can emit the correct
+    // `mix-blend-mode` style. Multi-fill already flows through
+    // `ResolvedFillLayer`'s own blendMode.
+    blendMode: fill.blendMode,
   };
 }
 
 function resolveTopFillResult(fills: readonly Fill[], ids: IdGenerator, defs: RenderDef[]): ResolvedFillResult {
   const resolved = resolveTopFill(fills, ids);
   collectFillDef(resolved, defs);
+  // When topmost fill gets used here (single-visible path), preserve
+  // its paint-level blend mode too — the fills array may still have
+  // only one visible entry but that entry could be e.g. OVERLAY.
+  const topVisible = fills.find((f) => f.opacity !== 0);
   return {
     attrs: resolved.attrs,
     def: resolved.def,
+    blendMode: topVisible?.blendMode,
   };
 }
 
@@ -571,6 +622,20 @@ function resolveFrameNode(node: FrameNode, ids: IdGenerator): RenderFrameNode {
   let strokeRendering: import("./types").StrokeRendering | undefined;
   if (node.individualStrokeWeights && node.stroke) {
     const result = resolveStrokeResult(node.stroke, ids);
+    // When the stroke paint is a gradient, collect its <linearGradient>
+    // / <radialGradient> def into the parent's defs so the url(#lg-N)
+    // reference in `result.attrs.stroke` actually resolves. Without
+    // this, a FRAME with individualStrokeWeights + gradient stroke
+    // renders as `stroke="url(#lg-5)"` with no matching def — the
+    // browser falls back to the default (black) or nothing at all,
+    // depending on the engine.
+    if (result.layers) {
+      for (const layer of result.layers) {
+        if (layer.gradientDef) {
+          collectGradientDef(layer.gradientDef, defs);
+        }
+      }
+    }
     strokeRendering = {
       mode: "individual",
       sides: node.individualStrokeWeights,
@@ -635,9 +700,13 @@ function resolveFrameNode(node: FrameNode, ids: IdGenerator): RenderFrameNode {
   // Finalize gradient coordinates using element size
   finalizeDefs(defs, { width: node.width, height: node.height });
 
-  // Background blur (foreignObject + backdrop-filter, separate from filter pipeline)
+  // Background blur (foreignObject + backdrop-filter, separate from filter
+  // pipeline). Pass the FRAME's rounded-rect shape so the backdrop clip
+  // honours cornerRadius (otherwise a rounded FRAME with background blur
+  // would show a square blur area bleeding past the rounded corners).
   const backgroundBlur = resolveBackgroundBlur(
     node.effects, { x: 0, y: 0, width: node.width, height: node.height }, ids, defs,
+    maskShape,
   );
 
   const mask = resolveMask(node, ids, defs);
@@ -680,6 +749,7 @@ function resolveRectNode(node: RectNode, ids: IdGenerator): RenderRectNode {
 
   const backgroundBlur = resolveBackgroundBlur(
     node.effects, { x: 0, y: 0, width: node.width, height: node.height }, ids, defs,
+    maskClipShape,
   );
 
   const mask = resolveMask(node, ids, defs);
@@ -711,12 +781,26 @@ function resolveEllipseNode(node: EllipseNode, ids: IdGenerator): RenderEllipseN
   const fillResult = resolveTopFillResult(node.fills, ids, defs);
   const fillLayers = resolveAllFillLayers(node.fills, ids, defs);
   const ellipseStrokeShape: import("./types").StrokeShape = { kind: "ellipse", cx: node.cx, cy: node.cy, rx: node.rx, ry: node.ry };
-  const strokeRendering = node.stroke ? resolveStrokeRendering(node.stroke, ids, defs, ellipseStrokeShape) : undefined;
+  // INSIDE/OUTSIDE stroke needs an ellipse-shaped mask to clip the doubled
+  // stroke width to the correct half. Without this, an INSIDE stroke bleeds
+  // outside the ellipse (the user's PFP case — avatar stroke appeared
+  // to clip the circle) and an OUTSIDE stroke appears centred.
+  const ellipseMaskShape: import("./types").ClipPathShape = {
+    kind: "ellipse", cx: node.cx, cy: node.cy, rx: node.rx, ry: node.ry,
+  };
+  const strokeRendering = node.stroke
+    ? resolveStrokeRendering(node.stroke, ids, defs, ellipseStrokeShape, ellipseMaskShape)
+    : undefined;
 
   const ellipseSize = { width: node.rx * 2, height: node.ry * 2 };
 
+  // Pass ellipse shape so the backdrop-filter is clipped to the actual
+  // ellipse silhouette, not a rect. Otherwise an ELLIPSE with a
+  // background-blur effect renders as a square blur area (user's
+  // Bento "Container" bug — ID 133:964).
   const backgroundBlur = resolveBackgroundBlur(
     node.effects, { x: 0, y: 0, ...ellipseSize }, ids, defs,
+    ellipseMaskShape,
   );
   const mask = resolveMask(node, ids, defs);
 
@@ -790,15 +874,26 @@ function resolvePathNode(node: PathNode, ids: IdGenerator): RenderPathNode {
   });
 
   const pathStrokeShape: import("./types").StrokeShape = { kind: "path", paths };
-  const strokeRendering = node.stroke ? resolveStrokeRendering(node.stroke, ids, defs, pathStrokeShape) : undefined;
+  // INSIDE/OUTSIDE stroke needs a shape-matching mask; for paths the mask
+  // uses the same contour data drawn as a clip-path (so the doubled
+  // stroke width is clipped to the correct side of the path).
+  const pathMaskShape: import("./types").ClipPathShape = {
+    kind: "path",
+    d: paths.map((p) => p.d).join(" "),
+  };
+  const strokeRendering = node.stroke
+    ? resolveStrokeRendering(node.stroke, ids, defs, pathStrokeShape, pathMaskShape)
+    : undefined;
 
   const pathSize = node.width && node.height ? { width: node.width, height: node.height } : undefined;
   if (pathSize) {
     finalizeDefs(defs, pathSize);
   }
 
+  // Pass path shape so backdrop-filter clips to the actual contour, not
+  // the node's bounding rect (matches ELLIPSE/FRAME behaviour).
   const backgroundBlur = pathSize
-    ? resolveBackgroundBlur(node.effects, { x: 0, y: 0, ...pathSize }, ids, defs)
+    ? resolveBackgroundBlur(node.effects, { x: 0, y: 0, ...pathSize }, ids, defs, pathMaskShape)
     : undefined;
   const mask = resolveMask(node, ids, defs);
 

@@ -86,6 +86,7 @@ export function collectFigBoxes(
   }
 
   for (const child of node.children ?? []) {
+    if (child === null || child === undefined) continue;
     boxes.push(...collectFigBoxes(child, transform, showHiddenNodes));
   }
 
@@ -149,7 +150,9 @@ export function figNodeToInspectorTree(node: FigNode): InspectorTreeNode {
     height: size?.y ?? 0,
     opacity: node.opacity ?? 1,
     visible: node.visible !== false,
-    children: (node.children ?? []).map(figNodeToInspectorTree),
+    children: (node.children ?? [])
+      .filter((child): child is FigNode => child !== null && child !== undefined)
+      .map(figNodeToInspectorTree),
   };
 }
 

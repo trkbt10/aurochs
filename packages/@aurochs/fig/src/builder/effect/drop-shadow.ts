@@ -22,16 +22,27 @@ export type DropShadowBuilder = {
   build: () => ShadowEffectData;
 };
 
+type DropShadowBuilderState = {
+  color: Color;
+  offsetX: number;
+  offsetY: number;
+  radius: number;
+  spread: number;
+  visible: boolean;
+  blendMode: BlendMode;
+  showBehindNode: boolean;
+};
+
 /** Create a drop shadow builder */
 function createDropShadowBuilder(): DropShadowBuilder {
-  const state = {
-    color: { r: 0, g: 0, b: 0, a: 0.25 } as Color,
+  const state: DropShadowBuilderState = {
+    color: { r: 0, g: 0, b: 0, a: 0.25 },
     offsetX: 0,
     offsetY: 4,
     radius: 4,
     spread: 0,
     visible: true,
-    blendMode: "NORMAL" as BlendMode,
+    blendMode: "NORMAL",
     showBehindNode: false,
   };
 

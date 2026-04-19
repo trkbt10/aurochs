@@ -23,20 +23,31 @@ export type RadialGradientBuilder = {
   build: () => GradientPaint;
 };
 
+type RadialGradientBuilderState = {
+  stops: GradientStop[];
+  centerX: number;
+  centerY: number;
+  radiusX: number;
+  radiusY: number;
+  opacity: number;
+  visible: boolean;
+  blendMode: BlendMode;
+};
+
 /** Create a radial gradient builder */
 function createRadialGradientBuilder(): RadialGradientBuilder {
-  const state = {
+  const state: RadialGradientBuilderState = {
     stops: [
       { color: { r: 1, g: 1, b: 1, a: 1 }, position: 0 },
       { color: { r: 0, g: 0, b: 0, a: 1 }, position: 1 },
-    ] as GradientStop[],
+    ],
     centerX: 0.5,
     centerY: 0.5,
     radiusX: 0.5,
     radiusY: 0.5,
     opacity: 1,
     visible: true,
-    blendMode: "NORMAL" as BlendMode,
+    blendMode: "NORMAL",
   };
 
   const builder: RadialGradientBuilder = {

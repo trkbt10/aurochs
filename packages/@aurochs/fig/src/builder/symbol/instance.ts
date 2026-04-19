@@ -56,9 +56,28 @@ export type InstanceNodeBuilder = {
   build: () => InstanceNodeData;
 };
 
+type InstanceBuilderState = {
+  name: string;
+  symbolID: SymbolID;
+  width: number;
+  height: number;
+  x: number;
+  y: number;
+  visible: boolean;
+  opacity: number;
+  fillColor: Color | undefined;
+  componentPropertyRefs: string[];
+  overriddenSymbolID: SymbolID | undefined;
+  stackPositioning: StackPositioning | undefined;
+  stackPrimarySizing: StackSizing | undefined;
+  stackCounterSizing: StackSizing | undefined;
+  horizontalConstraint: ConstraintType | undefined;
+  verticalConstraint: ConstraintType | undefined;
+};
+
 /** Create an instance node builder */
 function createInstanceNodeBuilder(localID: number, parentID: number, symbolID: number | SymbolID): InstanceNodeBuilder {
-  const state = {
+  const state: InstanceBuilderState = {
     name: "Instance",
     symbolID: normalizeSymbolID(symbolID),
     width: 100,
@@ -67,14 +86,14 @@ function createInstanceNodeBuilder(localID: number, parentID: number, symbolID: 
     y: 0,
     visible: true,
     opacity: 1,
-    fillColor: undefined as Color | undefined,
-    componentPropertyRefs: [] as string[],
-    overriddenSymbolID: undefined as SymbolID | undefined,
-    stackPositioning: undefined as StackPositioning | undefined,
-    stackPrimarySizing: undefined as StackSizing | undefined,
-    stackCounterSizing: undefined as StackSizing | undefined,
-    horizontalConstraint: undefined as ConstraintType | undefined,
-    verticalConstraint: undefined as ConstraintType | undefined,
+    fillColor: undefined,
+    componentPropertyRefs: [],
+    overriddenSymbolID: undefined,
+    stackPositioning: undefined,
+    stackPrimarySizing: undefined,
+    stackCounterSizing: undefined,
+    horizontalConstraint: undefined,
+    verticalConstraint: undefined,
   };
 
   const builder: InstanceNodeBuilder = {

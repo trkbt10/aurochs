@@ -14,7 +14,6 @@ import {
   isValidOverridePath,
   isSelfOverride,
   overridePathToIds,
-  overrideEntries,
   applyOverrideToNode,
 } from "@aurochs/fig/domain";
 import type { FigPaint, FigVectorPath } from "@aurochs/fig/types";
@@ -399,13 +398,35 @@ function applySymbolOverridesToChildren(
   overrides: readonly import("@aurochs/fig/domain").SymbolOverride[],
   symbolId: string,
   styleRegistry: import("@aurochs/fig/domain").FigStyleRegistry,
+  warnings: string[],
 ): void {
   for (const override of overrides) {
-    if (!isValidOverridePath(override)) { continue; }
-    if (isSelfOverride(override, symbolId)) { continue; }
+    if (!isValidOverridePath(override)) {
+      // A malformed override can silently drop per-child customisation.
+      // Surface it so consumers can diagnose missing fills/strokes on
+      // specific INSTANCE children.
+      const w = `symbolOverride has no guidPath — skipped (symbolId=${symbolId})`;
+      if (!warnings.includes(w)) { warnings.push(w); }
+      continue;
+    }
+    if (isSelfOverride(override, symbolId)) {
+      // Self-overrides (override.guidPath targets the SYMBOL itself) are
+      // applied in resolveInstance Step 2 ("applied to INSTANCE itself"),
+      // not here in the per-child pass. Skipping is correct, but surface
+      // it so a mis-routed override is visible in the warnings stream
+      // rather than silently disappearing on both sides.
+      const w = `symbolOverride is self-override (targets SYMBOL itself) — handled by Step 2, skipped in child pass (symbolId=${symbolId})`;
+      if (!warnings.includes(w)) { warnings.push(w); }
+      continue;
+    }
 
     const target = findNodeByOverridePath(children, override);
-    if (!target) { continue; }
+    if (!target) {
+      const ids = overridePathToIds(override).join(" → ");
+      const w = `symbolOverride target node not found in INSTANCE children (guidPath=${ids}, symbolId=${symbolId})`;
+      if (!warnings.includes(w)) { warnings.push(w); }
+      continue;
+    }
 
     applyOverrideToNode(target, override);
 
@@ -941,7 +962,7 @@ function resolveInstance(
 
   // Apply per-child overrides from symbolOverrides
   if (node.overrides && node.overrides.length > 0) {
-    applySymbolOverridesToChildren(children, node.overrides, symbolId, ctx.styleRegistry);
+    applySymbolOverridesToChildren(children, node.overrides, symbolId, ctx.styleRegistry, ctx.warnings);
   }
 
   // ── Step 4: Component property assignments ──
@@ -1584,29 +1605,53 @@ function parseSvgPathDToCommands(d: string): PathContour["commands"][number][] {
  * Returns a new children array with stretched sizes applied; children
  * that don't match the stretch condition are returned unchanged so
  * reference equality holds for the common case.
+ *
+ * The function only reads the subset of FigDesignNode captured by the
+ * `StretchParent` / `StretchChild` interfaces below, so it can be
+ * unit-tested with minimal literal structures without casting.
  */
-export function applyCounterAxisStretch(
-  parent: FigDesignNode,
-  children: readonly FigDesignNode[],
-): readonly FigDesignNode[] {
+export type StretchParent = {
+  readonly size?: { readonly x: number; readonly y: number };
+  readonly autoLayout?: {
+    readonly stackMode?: { readonly name?: string };
+    readonly stackPadding?: number | { readonly top: number; readonly right: number; readonly bottom: number; readonly left: number };
+  };
+};
+export type StretchChild = {
+  readonly size?: { readonly x: number; readonly y: number };
+  readonly layoutConstraints?: {
+    readonly stackChildAlignSelf?: { readonly name?: string };
+  };
+};
+
+export function applyCounterAxisStretch<C extends StretchChild>(
+  parent: StretchParent,
+  children: readonly C[],
+): readonly C[] {
   const autoLayout = parent.autoLayout;
   if (!autoLayout) return children;
   const modeName = autoLayout.stackMode?.name;
   if (modeName !== "VERTICAL" && modeName !== "HORIZONTAL") return children;
 
-  // Parent's content area = size minus padding (Kiwi stackPadding stores
-  // a single uniform number; per-side fields live on the raw node but the
-  // domain only carries the uniform value). When no stackPadding is set
-  // the content area equals the parent's own size.
-  const pad = typeof autoLayout.stackPadding === "number" ? autoLayout.stackPadding : 0;
+  // Parent's content area = size minus padding. `stackPadding` may be a
+  // uniform number (Kiwi shorthand) OR a per-side `{top,right,bottom,
+  // left}` object (domain expanded form); both are honoured here.
+  // When no stackPadding is set the content area equals the parent's size.
+  let padCounter = 0;
+  const sp = autoLayout.stackPadding;
+  if (typeof sp === "number") {
+    padCounter = sp * 2;
+  } else if (sp && typeof sp === "object") {
+    padCounter = modeName === "VERTICAL" ? sp.left + sp.right : sp.top + sp.bottom;
+  }
   const pSize = parent.size;
   if (!pSize) return children;
   const counterAxis = modeName === "VERTICAL" ? "x" : "y";
-  const counterContent = (counterAxis === "x" ? pSize.x : pSize.y) - pad * 2;
+  const counterContent = (counterAxis === "x" ? pSize.x : pSize.y) - padCounter;
   if (counterContent <= 0) return children;
 
   let changed = false;
-  const out: FigDesignNode[] = [];
+  const out: C[] = [];
   for (const child of children) {
     const alignSelf = child.layoutConstraints?.stackChildAlignSelf?.name;
     if (alignSelf !== "STRETCH" || !child.size) {

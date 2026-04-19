@@ -44,7 +44,11 @@ function makeNode(
   return node;
 }
 
-function makeSymbol(localID: number, children: FigNode[], name?: string): FigNode {
+function makeSymbol(
+  localID: number,
+  children: readonly (FigNode | null | undefined)[],
+  name?: string,
+): FigNode {
   return makeNode(localID, "SYMBOL", { name: name ?? `Symbol-${localID}`, children });
 }
 
@@ -378,8 +382,11 @@ describe("preResolveSymbols", () => {
     // Real .fig files can have sparse children arrays with undefined entries
     // caused by deleted nodes or malformed data.
     // deepCloneWithExpansion must not crash on these.
-    // eslint-disable-next-line custom/no-as-outside-guard -- intentionally sparse array with undefined entries to test robustness of deepCloneWithExpansion
-    const children = [makeRect(11, "ValidRect"), undefined as unknown as FigNode, makeRect(12, "AnotherRect")];
+    const children: readonly (FigNode | null | undefined)[] = [
+      makeRect(11, "ValidRect"),
+      undefined,
+      makeRect(12, "AnotherRect"),
+    ];
     const sym = makeSymbol(10, children, "SparseSymbol");
     const symbolMap = new Map([[guidStr(10), sym]]);
 
@@ -399,8 +406,10 @@ describe("preResolveSymbols", () => {
   it("handles INSTANCE expansion when referenced SYMBOL has undefined children entries", () => {
     // SYMBOL B has sparse children, SYMBOL A contains INSTANCE of B.
     // The expansion of A's INSTANCE should not crash when cloning B's children.
-    // eslint-disable-next-line custom/no-as-outside-guard -- intentionally sparse array with undefined entries to test robustness of deepCloneWithExpansion
-    const sparseChildren = [makeRect(21, "InnerRect"), undefined as unknown as FigNode];
+    const sparseChildren: readonly (FigNode | null | undefined)[] = [
+      makeRect(21, "InnerRect"),
+      undefined,
+    ];
     const symB = makeSymbol(20, sparseChildren, "SymbolB");
     const symA = makeSymbol(10, [makeInstance(11, 20)], "SymbolA");
     const symbolMap = new Map([
@@ -422,8 +431,10 @@ describe("preResolveSymbols", () => {
   });
 
   it("handles SYMBOL with null children entries", () => {
-    // eslint-disable-next-line custom/no-as-outside-guard -- intentionally null entry to test null-safety of deepCloneWithExpansion
-    const children = [null as unknown as FigNode, makeRect(11, "ValidRect")];
+    const children: readonly (FigNode | null | undefined)[] = [
+      null,
+      makeRect(11, "ValidRect"),
+    ];
     const sym = makeSymbol(10, children, "NullChildSymbol");
     const symbolMap = new Map([[guidStr(10), sym]]);
 

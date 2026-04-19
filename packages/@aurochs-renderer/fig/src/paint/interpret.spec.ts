@@ -16,14 +16,33 @@ import {
 } from "./interpret";
 import type { FigGradientPaint, FigImagePaint } from "@aurochs/fig/types";
 
-/** Type guard for partial/Kiwi-format gradient paint fixtures in tests */
-function asGradientPaint(value: unknown): value is FigGradientPaint {
-  return (value as unknown as FigGradientPaint) !== null;
+/**
+ * Structural type guards for paint-shaped fixtures used in these tests.
+ *
+ * The tests construct partial / Kiwi-format paint objects via literal
+ * expressions and need a narrowing helper that TypeScript's control-flow
+ * analysis respects. The previous implementations were `as unknown as X`
+ * disguised as guards — they pass the predicate regardless of the
+ * value's shape. These replacements check the minimum structural
+ * signature that distinguishes each paint variant: a gradient has a
+ * `gradientStops` array AND/OR `gradientHandlePositions`, an image has
+ * an `imageRef` or `image` (or `scaleMode`).
+ *
+ * Kept permissive on the membership check (`in`) because test fixtures
+ * mix API and Kiwi-format fields, but never a plain `!== null`.
+ */
+function isObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null;
 }
 
-/** Type guard for partial/Kiwi-format image paint fixtures in tests */
+function asGradientPaint(value: unknown): value is FigGradientPaint {
+  if (!isObject(value)) return false;
+  return "gradientStops" in value || "gradientHandlePositions" in value || "stops" in value;
+}
+
 function asImagePaint(value: unknown): value is FigImagePaint {
-  return (value as unknown as FigImagePaint) !== null;
+  if (!isObject(value)) return false;
+  return "imageRef" in value || "image" in value || "scaleMode" in value;
 }
 
 describe("getGradientStops", () => {

@@ -117,6 +117,18 @@ export const WRAPPER_ATTRS_FIELDS = {
 export type ResolvedFillResult = {
   readonly attrs: ResolvedFillAttrs;
   readonly def?: ResolvedFillDef;
+  /**
+   * Paint-level blend mode from the original Fill.blendMode.
+   *
+   * When a Figma paint carries a non-NORMAL blend mode (e.g. OVERLAY,
+   * HUE, LUMINOSITY), the SVG output must emit `style="mix-blend-mode:
+   * <mode>"` on the element that draws the paint. Without this, paints
+   * like the Flighty Passport's GRADIENT_RADIAL overlays drop to a
+   * plain flat colour and the composite vibrancy (purple → magenta →
+   * pink) is lost. Multi-fill layers carry the same field via
+   * `ResolvedFillLayer`; single-fill results propagate through here.
+   */
+  readonly blendMode?: BlendMode;
 };
 
 /**
@@ -232,7 +244,15 @@ export type ClipPathPathShape = {
   readonly d: string;
 };
 
-export type ClipPathShape = ClipPathRectShape | ClipPathPathShape;
+export type ClipPathEllipseShape = {
+  readonly kind: "ellipse";
+  readonly cx: number;
+  readonly cy: number;
+  readonly rx: number;
+  readonly ry: number;
+};
+
+export type ClipPathShape = ClipPathRectShape | ClipPathPathShape | ClipPathEllipseShape;
 
 // =============================================================================
 // RenderNode — discriminated union of all renderable instructions

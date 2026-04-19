@@ -5,21 +5,13 @@
  * platform-agnostic intermediate values. Both the SVG string renderer
  * and the SceneGraph builder consume these.
  *
- * Handles both string enum values (API format) and KiwiEnumValue
- * objects ({ value, name } — .fig file format).
+ * Consumes domain-level string unions (FigStrokeCap, FigStrokeJoin).
+ * Parser normalises Kiwi `{ value, name }` to the string name at input
+ * time; the builder materialises the enum shape on output. No consumer
+ * in the render pipeline needs to handle the raw enum shape.
  */
 
-import type { FigStrokeWeight, KiwiEnumValue } from "@aurochs/fig/types";
-
-/** Accepted enum input: string literal, KiwiEnumValue, or undefined */
-type EnumInput = string | KiwiEnumValue | null | undefined;
-
-/** Extract the name string from an enum input */
-function enumName(input: EnumInput): string | undefined {
-  if (typeof input === "string") return input;
-  if (input && typeof input === "object" && "name" in input) return input.name;
-  return undefined;
-}
+import type { FigStrokeWeight, FigStrokeCap, FigStrokeJoin } from "@aurochs/fig/types";
 
 // =============================================================================
 // Stroke Weight
@@ -47,13 +39,11 @@ export type SvgStrokeCap = "butt" | "round" | "square";
 /**
  * Map Figma stroke cap to SVG linecap value.
  *
- * Accepts both string ("NONE", "ROUND", ...) and KiwiEnumValue ({ name: "ROUND" }).
  * Arrow caps (LINE_ARROW, TRIANGLE_ARROW) fall back to "butt" — arrow markers
  * require separate SVG marker definitions not handled here.
  */
-export function mapStrokeCap(cap: EnumInput): SvgStrokeCap {
-  const name = enumName(cap);
-  switch (name) {
+export function mapStrokeCap(cap: FigStrokeCap | undefined | null): SvgStrokeCap {
+  switch (cap) {
     case "ROUND":
       return "round";
     case "SQUARE":
@@ -74,13 +64,10 @@ export type SvgStrokeJoin = "miter" | "round" | "bevel";
 
 /**
  * Map Figma stroke join to SVG linejoin value.
- *
- * Accepts both string and KiwiEnumValue.
  * Default is "miter" (SVG default and Figma default).
  */
-export function mapStrokeJoin(join: EnumInput): SvgStrokeJoin {
-  const name = enumName(join);
-  switch (name) {
+export function mapStrokeJoin(join: FigStrokeJoin | undefined | null): SvgStrokeJoin {
+  switch (join) {
     case "ROUND":
       return "round";
     case "BEVEL":

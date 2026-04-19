@@ -4,8 +4,8 @@
 
 import { createDemoFigDesignDocument } from "./demo-document";
 import type { FigDesignNode } from "@aurochs/fig/domain";
-import { getPaintType } from "@aurochs/fig/color";
-import type { FigColor } from "@aurochs/fig/types";
+import { asSolidPaint } from "@aurochs/fig/color";
+import type { FigPaint, FigColor } from "@aurochs/fig/types";
 
 function findAllNodes(nodes: readonly FigDesignNode[]): FigDesignNode[] {
   const result: FigDesignNode[] = [];
@@ -18,18 +18,8 @@ function findAllNodes(nodes: readonly FigDesignNode[]): FigDesignNode[] {
   return result;
 }
 
-/**
- * Extract color from a FigPaint using the SoT getPaintType() for type narrowing.
- * FigPaint.type can be a string literal or KiwiEnumValue, so direct
- * discriminated union narrowing doesn't work. We use getPaintType() to
- * normalize the type, then access the color field which exists on solid paints.
- */
-function extractSolidColor(paint: { readonly type: unknown; readonly color?: FigColor }): FigColor | undefined {
-  const paintType = getPaintType(paint as Parameters<typeof getPaintType>[0]);
-  if (paintType === "SOLID") {
-    return paint.color;
-  }
-  return undefined;
+function extractSolidColor(paint: FigPaint): FigColor | undefined {
+  return asSolidPaint(paint)?.color;
 }
 
 describe("INSTANCE symbolId resolution", () => {

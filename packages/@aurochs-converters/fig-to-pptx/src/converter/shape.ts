@@ -174,12 +174,15 @@ function convertToGroupShape(
       flipH: false,
       flipV: false,
     };
+    // Background must carry the frame's corner radius so a rounded
+    // FRAME with children emits a rounded background, not a sharp rect.
+    const bgGeometry = convertGeometry(node) ?? { type: "preset" as const, preset: "rect" as const, adjustValues: [] };
     childShapes.push({
       type: "sp",
       nonVisual: { id: bgId, name: `${node.name ?? "Frame"} Background` },
       properties: {
         transform: bgTransform,
-        geometry: { type: "preset", preset: "rect", adjustValues: [] },
+        geometry: bgGeometry,
         fill,
         line,
       },

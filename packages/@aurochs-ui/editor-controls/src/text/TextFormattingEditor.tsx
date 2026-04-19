@@ -304,8 +304,12 @@ export function TextFormattingEditor({
           data={toFontData(value)}
           onChange={handleFontChange}
           disabled={disabled}
-          // eslint-disable-next-line custom/no-as-outside-guard -- fontOptions type mismatch with react-editor-ui
-          fontOptions={fontOptions as unknown as { value: string; label: string }[]}
+          // react-editor-ui's FontSection declares `fontOptions` as
+          // mutable `{value;label}[]`, but our hook produces the safer
+          // `readonly FontOption[]`. We assign the readonly slice into
+          // a fresh mutable array — no cast, just a copy — so the
+          // prop contract is honoured without losing our immutability.
+          fontOptions={fontOptions.map((o) => ({ value: o.value, label: o.label }))}
         />
       )}
 

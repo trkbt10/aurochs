@@ -145,7 +145,28 @@ export function extractDerivedTextPathData(
   const glyphContours: PathContour[] = [];
 
   if (derivedTextData.glyphs) {
+    // When the node has `truncationStartIndex >= 0`, Figma's layout engine
+    // has already inserted an ellipsis glyph (the one with
+    // `firstCharacter === undefined`) in the position where truncation
+    // happens. The glyphs for source characters with
+    // `firstCharacter >= truncationStartIndex` are still present in the
+    // array — Figma carries the full source text in the glyph set and
+    // relies on the renderer to suppress the post-truncation tail.
+    //
+    // Our SVG clip-path trims glyphs that overflow the text box's y
+    // extent, but glyphs that overflow horizontally within the same
+    // line (or wrap to extra lines beyond the truncated line) slip
+    // through — e.g. "Add Bookmark to..." glyphs place ` to` after
+    // the ellipsis on the same line, and remain visible in the 78×30
+    // TEXT box. The fix: drop any glyph whose `firstCharacter` is at or
+    // past `truncationStartIndex`. The ellipsis glyph itself carries
+    // `firstCharacter === undefined` and is preserved.
+    const truncStart = derivedTextData.truncationStartIndex;
+    const hasTrunc = typeof truncStart === "number" && truncStart >= 0;
     for (const glyph of derivedTextData.glyphs) {
+      if (hasTrunc && typeof glyph.firstCharacter === "number" && glyph.firstCharacter >= truncStart) {
+        continue;
+      }
       const commands = extractDerivedGlyphCommands(glyph, blobs, alignmentOffset);
       if (commands && commands.length > 0) {
         glyphContours.push({ commands });

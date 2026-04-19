@@ -40,9 +40,9 @@ export const DEFAULT_LETTER_SPACING = {
 /**
  * Default auto resize mode
  */
-export const DEFAULT_AUTO_RESIZE = {
+export const DEFAULT_AUTO_RESIZE: { value: number; name: TextAutoResize } = {
   value: TEXT_AUTO_RESIZE_VALUES.WIDTH_AND_HEIGHT,
-  name: "WIDTH_AND_HEIGHT" as TextAutoResize,
+  name: "WIDTH_AND_HEIGHT",
 };
 
 /** Text node builder instance */
@@ -67,9 +67,32 @@ export type TextNodeBuilder = {
   build: () => TextNodeData;
 };
 
+type TextBuilderState = {
+  name: string;
+  characters: string;
+  fontSize: number;
+  fontFamily: string;
+  fontStyle: string;
+  width: number;
+  height: number;
+  x: number;
+  y: number;
+  textAlignH: TextAlignHorizontal | undefined;
+  textAlignV: TextAlignVertical | undefined;
+  autoResize: TextAutoResize;
+  decoration: TextDecoration | undefined;
+  textCase: TextCase | undefined;
+  lineHeight: { value: number; unit: NumberUnits };
+  letterSpacing: { value: number; unit: NumberUnits };
+  fillColor: Color;
+  visible: boolean;
+  opacity: number;
+  derivedTextData: DerivedTextNodeData | undefined;
+};
+
 /** Create a text node builder */
 function createTextNodeBuilder(localID: number, parentID: number): TextNodeBuilder {
-  const state = {
+  const state: TextBuilderState = {
     name: "Text",
     characters: "",
     fontSize: 12,
@@ -79,17 +102,17 @@ function createTextNodeBuilder(localID: number, parentID: number): TextNodeBuild
     height: 50,
     x: 0,
     y: 0,
-    textAlignH: undefined as TextAlignHorizontal | undefined,
-    textAlignV: undefined as TextAlignVertical | undefined,
-    autoResize: "WIDTH_AND_HEIGHT" as TextAutoResize,
-    decoration: undefined as TextDecoration | undefined,
-    textCase: undefined as TextCase | undefined,
-    lineHeight: { value: 100, unit: "PERCENT" as NumberUnits },
-    letterSpacing: { value: 0, unit: "PERCENT" as NumberUnits },
-    fillColor: { r: 0, g: 0, b: 0, a: 1 } as Color,
+    textAlignH: undefined,
+    textAlignV: undefined,
+    autoResize: "WIDTH_AND_HEIGHT",
+    decoration: undefined,
+    textCase: undefined,
+    lineHeight: { value: 100, unit: "PERCENT" },
+    letterSpacing: { value: 0, unit: "PERCENT" },
+    fillColor: { r: 0, g: 0, b: 0, a: 1 },
     visible: true,
     opacity: 1,
-    derivedTextData: undefined as DerivedTextNodeData | undefined,
+    derivedTextData: undefined,
   };
 
   const builder: TextNodeBuilder = {

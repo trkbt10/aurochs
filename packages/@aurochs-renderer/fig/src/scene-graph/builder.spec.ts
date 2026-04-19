@@ -10,7 +10,7 @@
 import { createDemoFigDesignDocument } from "@aurochs-builder/fig/context";
 import type { FigDesignDocument, FigDesignNode } from "@aurochs/fig/domain";
 import { buildSceneGraph } from "./builder";
-import type { SceneGraph, SceneNode, RectNode, EllipseNode, PathNode, TextNode, Fill } from "./types";
+import type { SceneGraph, SceneNode, RectNode, EllipseNode, PathNode, TextNode, FrameNode, Fill } from "./types";
 
 // eslint-disable-next-line no-restricted-syntax -- mutable test-suite variable initialized in beforeAll
 let doc: FigDesignDocument;
@@ -206,6 +206,51 @@ describe("Scene graph builder - demo document", () => {
           expect(["drop-shadow", "inner-shadow", "layer-blur", "background-blur"]).toContain(eff.type);
         }
       }
+    });
+  });
+
+  describe("FRAME decoration preservation", () => {
+    function collectFrames(nodes: readonly SceneNode[]): FrameNode[] {
+      const result: FrameNode[] = [];
+      for (const n of nodes) {
+        if (n.type === "frame") {result.push(n);}
+        if ("children" in n && n.children) {result.push(...collectFrames(n.children));}
+      }
+      return result;
+    }
+
+    it("every FRAME built with .background(color) has a solid fill in the scene graph", () => {
+      // Page 0 "Shapes & Fills" has FRAMEs built with .background(WHITE) —
+      // each artboard FRAME calls .background(WHITE) in demo-document.ts.
+      // If fills drop between builder and scene graph, this test fails.
+      const sg = sceneGraphs[0];
+      const frames = collectFrames(sg.root.children);
+      expect(frames.length).toBeGreaterThan(0);
+
+      const namedArtboards = frames.filter((f) => f.name === "Basic Shapes" || f.name === "Gradient Fills");
+      expect(namedArtboards.length).toBeGreaterThan(0);
+      for (const f of namedArtboards) {
+        expect(f.fills.length, `FRAME "${f.name}" must carry its .background(WHITE) fill`).toBeGreaterThan(0);
+        const solid = f.fills.find((fill) => fill.type === "solid");
+        expect(solid, `FRAME "${f.name}" fill must be a solid paint`).toBeDefined();
+      }
+    });
+
+    it("FRAME decoration survives through to SVG output", async () => {
+      // End-to-end: the SVG string must contain the FRAME's fill colour.
+      // .background(WHITE) emits r=g=b=1 → "#ffffff" or "rgb(255,255,255)".
+      const { renderSceneGraphToSvg } = await import("../svg/scene-renderer");
+      const sg = sceneGraphs[0];
+      const svg = renderSceneGraphToSvg(sg);
+      const frames = collectFrames(sg.root.children);
+      const whiteFrame = frames.find((f) =>
+        f.name === "Basic Shapes" &&
+        f.fills.some((fill) => fill.type === "solid" && fill.color.r === 1 && fill.color.g === 1 && fill.color.b === 1),
+      );
+      expect(whiteFrame, "Demo Basic Shapes FRAME must have WHITE solid fill").toBeDefined();
+      // SVG must mention white somewhere — either as hex or named.
+      const mentionsWhite = /#ffffff|#fff\b|rgb\(255, ?255, ?255\)|white/i.test(svg);
+      expect(mentionsWhite, "FRAME background fill must appear in SVG output").toBe(true);
     });
   });
 });

@@ -222,14 +222,30 @@ export type BuilderNode = {
 
   // ---- Boolean operation ----
   booleanOperation?: KiwiEnum;
+
+  /**
+   * Index signature so BuilderNode is structurally assignable to
+   * `Record<string, unknown>`. The Kiwi encoder iterates schema-driven
+   * field names and needs the record shape; with this signature the
+   * encoder and the SSoT type share the same surface directly —
+   * `toKiwiRecord` becomes a plain identity that documents intent
+   * without loss of field-level type-safety inside the builder.
+   *
+   * `unknown` (not `never` or a concrete union) because the schema
+   * may declare fields that are not yet modelled here and forcing a
+   * tighter index type would require casting at the write sites.
+   */
+  [field: string]: unknown;
 };
 
 /**
- * Cast a BuilderNode to the Kiwi encoder's expected type.
+ * Pass a BuilderNode into code that expects `Record<string, unknown>`.
  *
- * The Kiwi encoder processes fields by schema-defined name lookup,
- * so the cast is safe — unknown fields are simply ignored.
+ * With BuilderNode's explicit index signature the value is already
+ * structurally `Record<string, unknown>`, so this is an identity —
+ * kept as a named function so the intent ("this is a Kiwi-encoder
+ * boundary") remains visible at call sites.
  */
 export function toKiwiRecord(node: BuilderNode): Record<string, unknown> {
-  return node as unknown as Record<string, unknown>;
+  return node;
 }

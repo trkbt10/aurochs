@@ -105,6 +105,14 @@ export type ResolvedImagePattern = {
 /**
  * An angular (conic) gradient def.
  * Rendered via foreignObject + CSS conic-gradient (SVG) or shader (WebGL).
+ *
+ * `elementWidth` / `elementHeight` are set by `finalizeAngularDiamondGradientDefs`
+ * once the parent element size is known. They are needed because the SVG
+ * <foreignObject> inside the <pattern> cannot use objectBoundingBox units —
+ * its x/y/width/height are always in user-space pixels. Keeping the pattern
+ * as a 1×1 bounding-box pattern (as we did previously) shrunk the
+ * conic-gradient DIV to a single pixel and produced an invisible fill
+ * (Hologram FRAME bug — ID 126:420).
  */
 export type ResolvedAngularGradient = {
   readonly type: "angular-gradient";
@@ -113,11 +121,14 @@ export type ResolvedAngularGradient = {
   readonly cy: string;
   readonly rotation: number;
   readonly stops: readonly ResolvedGradientStop[];
+  readonly elementWidth?: number;
+  readonly elementHeight?: number;
 };
 
 /**
  * A diamond gradient def.
  * Rendered via four mirrored gradient rects (SVG) or shader (WebGL).
+ * Same `elementWidth/elementHeight` contract as the angular variant.
  */
 export type ResolvedDiamondGradient = {
   readonly type: "diamond-gradient";
@@ -125,6 +136,8 @@ export type ResolvedDiamondGradient = {
   readonly cx: string;
   readonly cy: string;
   readonly stops: readonly ResolvedGradientStop[];
+  readonly elementWidth?: number;
+  readonly elementHeight?: number;
 };
 
 /**

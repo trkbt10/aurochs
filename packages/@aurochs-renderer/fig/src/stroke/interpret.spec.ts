@@ -37,10 +37,6 @@ describe("mapStrokeCap", () => {
     expect(mapStrokeCap("LINE_ARROW")).toBe("butt");
   });
 
-  it("handles KiwiEnumValue", () => {
-    expect(mapStrokeCap({ value: 2, name: "ROUND" })).toBe("round");
-  });
-
   it("defaults to butt for unknown", () => {
     expect(mapStrokeCap(undefined)).toBe("butt");
     expect(mapStrokeCap(null)).toBe("butt");
@@ -58,10 +54,6 @@ describe("mapStrokeJoin", () => {
 
   it("maps BEVEL to bevel", () => {
     expect(mapStrokeJoin("BEVEL")).toBe("bevel");
-  });
-
-  it("handles KiwiEnumValue", () => {
-    expect(mapStrokeJoin({ value: 1, name: "ROUND" })).toBe("round");
   });
 
   it("defaults to miter for unknown", () => {

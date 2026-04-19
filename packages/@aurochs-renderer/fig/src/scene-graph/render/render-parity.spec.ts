@@ -276,10 +276,14 @@ describe("Effects resolution (shared SoT)", () => {
     const result = resolveEffects(effects, ids);
 
     expect(result).toBeDefined();
-    expect(result!.filterAttr).toBe("url(#filter-0)");
-    expect(result!.primitives.length).toBeGreaterThan(0);
-    // Should have feFlood, feColorMatrix, feOffset, feGaussianBlur, feColorMatrix, feBlend, feBlend
-    expect(result!.primitives).toHaveLength(7);
+    // Filter ID format: "filter-N". Exact N varies because each named
+    // primitive result also consumes an ID. We assert the filterAttr
+    // references some filter-N id.
+    expect(result!.filterAttr).toMatch(/^url\(#filter-\d+\)$/);
+    // Canonical drop-shadow recipe (Figma-compatible, antialiasing-safe):
+    //   feFlood, feComposite(in), feOffset, feGaussianBlur, feMerge.
+    expect(result!.primitives).toHaveLength(5);
+    expect(result!.primitives[4].type).toBe("feMerge");
   });
 
   it("resolves inner shadow", () => {
@@ -293,8 +297,11 @@ describe("Effects resolution (shared SoT)", () => {
     const result = resolveEffects(effects, ids);
 
     expect(result).toBeDefined();
-    // Should have shape setup (2) + inner shadow primitives (6) = 8
-    expect(result!.primitives).toHaveLength(8);
+    // Canonical Figma-style inner-shadow recipe emits 6 primitives:
+    //   feFlood, feComposite(in), feOffset, feGaussianBlur, feComposite(out), feMerge.
+    expect(result!.primitives).toHaveLength(6);
+    // And the final primitive must be feMerge so SourceGraphic shows through.
+    expect(result!.primitives[5].type).toBe("feMerge");
   });
 
   it("resolves layer blur", () => {
@@ -344,6 +351,21 @@ describe("Color conversion (shared SoT)", () => {
     expect(colorToHex({ r: 0, g: 0, b: 1, a: 1 })).toBe("#0000ff");
     expect(colorToHex({ r: 0, g: 0, b: 0, a: 1 })).toBe("#000000");
     expect(colorToHex({ r: 1, g: 1, b: 1, a: 1 })).toBe("#ffffff");
+  });
+
+  it("handles float32 precision loss on boundary values", () => {
+    // Kiwi encodes colors as float32. Exact 0.9 becomes 0.8999999..., so
+    // naively 0.9 * 255 = 229.4999... would round down to 229 (#e5). The
+    // half-ULP epsilon in channelToByte ensures these boundary values round
+    // to the intended byte (230 = 0xe6). Same for 0.7 → 0.69999.. → 179.
+    const buf = new ArrayBuffer(4);
+    const f32 = new Float32Array(buf);
+    f32[0] = 0.9;
+    expect(colorToHex({ r: f32[0], g: 0, b: 0, a: 1 })).toBe("#e60000");
+    f32[0] = 0.7;
+    expect(colorToHex({ r: 0, g: f32[0], b: 0, a: 1 })).toBe("#00b300");
+    // And channels that don't hit the .5 boundary must remain untouched.
+    expect(colorToHex({ r: 0.5, g: 0.25, b: 0.75, a: 1 })).toBe("#8040bf");
   });
 });
 

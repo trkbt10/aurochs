@@ -290,19 +290,12 @@ export function getImageRef(paint: FigImagePaint): string | null {
 }
 
 /**
- * Get scale mode from an image paint.
+ * Get scale mode from an image paint. Both `scaleMode` and
+ * `imageScaleMode` are SSoT string unions; the parser normalises the
+ * Kiwi enum shape at file-read time.
  */
 export function getScaleMode(paint: FigImagePaint): string {
-  if (paint.scaleMode) {
-    if (typeof paint.scaleMode === "string") {
-      return paint.scaleMode;
-    }
-    return paint.scaleMode.name;
-  }
-  if (paint.imageScaleMode) {
-    return paint.imageScaleMode.name;
-  }
-  return "FILL";
+  return paint.scaleMode ?? paint.imageScaleMode ?? "FILL";
 }
 
 /**

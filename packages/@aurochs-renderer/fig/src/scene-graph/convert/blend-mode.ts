@@ -7,13 +7,16 @@
  * - convert/effects.ts (effect-level blendMode)
  */
 
+import type { BlendMode as FigBlendMode } from "@aurochs/fig/types";
 import type { BlendMode } from "../types";
 
 /**
- * Maps Figma blend mode names to CSS mix-blend-mode values.
- * PASS_THROUGH and NORMAL produce undefined (no explicit CSS needed).
+ * Maps Figma blend mode names (SSoT domain type) to CSS mix-blend-mode
+ * values. PASS_THROUGH, NORMAL, HUE, SATURATION, COLOR, LUMINOSITY fall
+ * through to undefined when a CSS equivalent is not defined here; the
+ * Partial record keeps the exhaustive source the domain type.
  */
-const FIGMA_BLEND_MODE_TO_CSS: Record<string, BlendMode> = {
+const FIGMA_BLEND_MODE_TO_CSS: Partial<Record<FigBlendMode, BlendMode>> = {
   DARKEN: "darken",
   MULTIPLY: "multiply",
   LINEAR_BURN: "plus-darker",
@@ -34,21 +37,12 @@ const FIGMA_BLEND_MODE_TO_CSS: Record<string, BlendMode> = {
 };
 
 /**
- * Convert a Figma blend mode value (string or KiwiEnumValue) to CSS BlendMode.
- * Returns undefined for NORMAL / PASS_THROUGH / unknown.
- */
-/**
- * Convert a Figma blend mode value (string or KiwiEnumValue) to CSS BlendMode.
- * Returns undefined for NORMAL / PASS_THROUGH / unknown.
- *
- * Input is always a Figma-level name (MULTIPLY, DARKEN, etc.) or a
- * KiwiEnumValue with a .name field. This function is the single boundary
- * where Figma vocabulary is translated to CSS vocabulary.
+ * Convert a Figma blend mode (SSoT domain string) to CSS BlendMode.
+ * Returns undefined for NORMAL / PASS_THROUGH / unmapped names.
  */
 export function convertFigmaBlendMode(
-  blendMode: string | { name: string } | undefined,
+  blendMode: FigBlendMode | undefined,
 ): BlendMode | undefined {
   if (!blendMode) { return undefined; }
-  const name = typeof blendMode === "string" ? blendMode : blendMode.name;
-  return FIGMA_BLEND_MODE_TO_CSS[name];
+  return FIGMA_BLEND_MODE_TO_CSS[blendMode];
 }

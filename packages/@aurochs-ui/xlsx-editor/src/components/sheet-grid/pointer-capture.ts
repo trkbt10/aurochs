@@ -11,8 +11,15 @@ type PointerCaptureTarget = HTMLElement & {
 };
 
 function isPointerCaptureTarget(el: HTMLElement): el is PointerCaptureTarget {
-  const maybe = el as unknown as { setPointerCapture?: unknown; releasePointerCapture?: unknown };
-  return typeof maybe.setPointerCapture === "function" && typeof maybe.releasePointerCapture === "function";
+  // lib.dom types these as non-optional methods, but certain test DOMs
+  // (notably older jsdom builds) omit them. A plain `typeof` probe on
+  // the declared properties is enough at runtime — no cast required
+  // because HTMLElement already exposes the identifiers at the type
+  // level.
+  return (
+    typeof el.setPointerCapture === "function" &&
+    typeof el.releasePointerCapture === "function"
+  );
 }
 
 /**

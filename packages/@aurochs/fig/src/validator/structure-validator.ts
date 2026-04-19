@@ -107,11 +107,18 @@ export async function validateFigFile(
 }
 
 function getTypeName(node: FigNode): string {
-  const type = node.type as { name?: string } | undefined;
-  return type?.name ?? "UNKNOWN";
+  return node.type?.name ?? "UNKNOWN";
 }
 
-const REQUIRED_FIELDS: Record<string, string[]> = {
+/**
+ * Required-field sets per node type. Keys are `keyof FigNode` so the
+ * TypeScript compiler rejects typos and dropped fields at edit time —
+ * this is the SSoT for which FigNode fields Figma requires per node
+ * role. Fields are listed even when they are already non-optional on
+ * FigNode, because runtime .fig data coming from parsing can still be
+ * incomplete when a malformed file is supplied.
+ */
+const REQUIRED_FIELDS = {
   DOCUMENT: [
     "guid",
     "phase",
@@ -157,7 +164,7 @@ const REQUIRED_FIELDS: Record<string, string[]> = {
     "fillPaints",
     "frameMaskDisabled",
   ],
-};
+} as const satisfies Record<string, readonly (keyof FigNode)[]>;
 
 type ValidateNodeFieldsOptions = {
   readonly nodeType: string;
@@ -166,15 +173,21 @@ type ValidateNodeFieldsOptions = {
   readonly errors: ValidationError[];
 };
 
+function isKnownNodeType(nodeType: string): nodeType is keyof typeof REQUIRED_FIELDS {
+  return nodeType in REQUIRED_FIELDS;
+}
+
 function validateNodeFields(options: ValidateNodeFieldsOptions): void {
   const { nodeType, generated, reference, errors } = options;
-  const genData = generated as Record<string, unknown>;
-  const refData = reference as Record<string, unknown>;
 
-  // Check required fields exist
-  const requiredFields = REQUIRED_FIELDS[nodeType] ?? [];
+  // Check required fields exist. `in` on a FigNode narrows nothing
+  // extra here — we only need presence, which is correctly expressed
+  // by the `<field> in <node>` operator over the typed record.
+  const requiredFields: readonly (keyof FigNode)[] = isKnownNodeType(nodeType)
+    ? REQUIRED_FIELDS[nodeType]
+    : [];
   for (const field of requiredFields) {
-    if (!(field in genData) && field in refData) {
+    if (!(field in generated) && field in reference) {
       errors.push({
         path: `nodes.${nodeType}.${field}`,
         expected: "exists",
@@ -184,12 +197,13 @@ function validateNodeFields(options: ValidateNodeFieldsOptions): void {
     }
   }
 
-  // Check guid structure
-  if (genData.guid && refData.guid) {
-    const genGuid = genData.guid as Record<string, unknown>;
-    const _refGuid = refData.guid as Record<string, unknown>;
-
-    if (!("sessionID" in genGuid) || !("localID" in genGuid)) {
+  // Check guid structure — FigNode.guid is FigGuid { sessionID, localID }
+  // already, so the TS shape is guaranteed. The runtime check covers
+  // malformed parsed files; we still use the FigGuid field access for
+  // the reference read.
+  if (generated.guid && reference.guid) {
+    const genGuid = generated.guid;
+    if (genGuid.sessionID === undefined || genGuid.localID === undefined) {
       errors.push({
         path: `nodes.${nodeType}.guid`,
         expected: { sessionID: "number", localID: "number" },
@@ -200,10 +214,8 @@ function validateNodeFields(options: ValidateNodeFieldsOptions): void {
   }
 
   // Check parentIndex structure (for non-DOCUMENT nodes)
-  if (nodeType !== "DOCUMENT" && genData.parentIndex && refData.parentIndex) {
-    const genPI = genData.parentIndex as Record<string, unknown>;
-    const _refPI = refData.parentIndex as Record<string, unknown>;
-
+  if (nodeType !== "DOCUMENT" && generated.parentIndex && reference.parentIndex) {
+    const genPI = generated.parentIndex;
     if (!genPI.guid || !genPI.position) {
       errors.push({
         path: `nodes.${nodeType}.parentIndex`,
@@ -215,38 +227,44 @@ function validateNodeFields(options: ValidateNodeFieldsOptions): void {
   }
 
   // Check type structure
-  if (genData.type && refData.type) {
-    const genType = genData.type as Record<string, unknown>;
-    const refType = refData.type as Record<string, unknown>;
-
-    if (genType.value !== refType.value) {
+  if (generated.type && reference.type) {
+    if (generated.type.value !== reference.type.value) {
       errors.push({
         path: `nodes.${nodeType}.type.value`,
-        expected: refType.value,
-        actual: genType.value,
+        expected: reference.type.value,
+        actual: generated.type.value,
         message: `${nodeType} type value mismatch`,
       });
     }
   }
 
-  // Check enum field structures (strokeAlign, strokeJoin, etc.)
-  const enumFields = ["strokeAlign", "strokeJoin", "phase", "documentColorProfile"];
-  for (const field of enumFields) {
-    if (field in genData && field in refData) {
-      const genVal = genData[field] as Record<string, unknown> | undefined;
-      const refVal = refData[field] as Record<string, unknown> | undefined;
+  // Check enum field structures. These are KiwiEnumValue-shaped on
+  // FigNode (strokeAlign/strokeJoin are domain strings now, phase and
+  // documentColorProfile remain KiwiEnumValue). We validate only the
+  // kiwi-shaped ones here — strokeAlign/strokeJoin are strings and
+  // therefore correct by construction.
+  validateEnumValue({ node: generated, field: "phase", nodeType, errors });
+  validateEnumValue({ node: generated, field: "documentColorProfile", nodeType, errors });
+}
 
-      if (genVal && refVal && typeof genVal === "object" && typeof refVal === "object") {
-        if (!("value" in genVal) || !("name" in genVal)) {
-          errors.push({
-            path: `nodes.${nodeType}.${field}`,
-            expected: { value: "number", name: "string" },
-            actual: genVal,
-            message: `${nodeType} ${field} should be enum {value, name}`,
-          });
-        }
-      }
-    }
+type EnumFieldOptions = {
+  readonly node: FigNode;
+  readonly field: "phase" | "documentColorProfile";
+  readonly nodeType: string;
+  readonly errors: ValidationError[];
+};
+
+function validateEnumValue(options: EnumFieldOptions): void {
+  const { node, field, nodeType, errors } = options;
+  const value = node[field];
+  if (value === undefined) return;
+  if (value.value === undefined || value.name === undefined) {
+    errors.push({
+      path: `nodes.${nodeType}.${field}`,
+      expected: { value: "number", name: "string" },
+      actual: value,
+      message: `${nodeType} ${field} should be enum {value, name}`,
+    });
   }
 }
 

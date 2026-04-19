@@ -22,9 +22,19 @@ export type AngularGradientBuilder = {
   build: () => GradientPaint;
 };
 
+type AngularGradientBuilderState = {
+  stops: GradientStop[];
+  centerX: number;
+  centerY: number;
+  rotation: number;
+  opacity: number;
+  visible: boolean;
+  blendMode: BlendMode;
+};
+
 /** Create an angular gradient builder */
 function createAngularGradientBuilder(): AngularGradientBuilder {
-  const state = {
+  const state: AngularGradientBuilderState = {
     stops: [
       { color: { r: 1, g: 0, b: 0, a: 1 }, position: 0 },
       { color: { r: 1, g: 1, b: 0, a: 1 }, position: 0.17 },
@@ -33,13 +43,13 @@ function createAngularGradientBuilder(): AngularGradientBuilder {
       { color: { r: 0, g: 0, b: 1, a: 1 }, position: 0.67 },
       { color: { r: 1, g: 0, b: 1, a: 1 }, position: 0.83 },
       { color: { r: 1, g: 0, b: 0, a: 1 }, position: 1 },
-    ] as GradientStop[],
+    ],
     centerX: 0.5,
     centerY: 0.5,
     rotation: 0,
     opacity: 1,
     visible: true,
-    blendMode: "NORMAL" as BlendMode,
+    blendMode: "NORMAL",
   };
 
   const builder: AngularGradientBuilder = {

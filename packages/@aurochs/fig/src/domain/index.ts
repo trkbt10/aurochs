@@ -41,6 +41,6 @@ export {
   isValidOverridePath,
   isSelfOverride,
   overridePathToIds,
-  overrideEntries,
+  overrideFieldKeys,
   applyOverrideToNode,
 } from "./document";

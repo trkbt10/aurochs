@@ -13,16 +13,53 @@ import type { AbstractFont, FontLoadOptions, LoadedFont } from "../../font/types
 import { CJK_FALLBACK_FONTS } from "../../font/helpers";
 
 /**
- * Parse font data and cast to AbstractFont
+ * Parse font data and return as AbstractFont.
  *
- * opentype.js Font type is compatible with AbstractFont interface.
- * This function provides a type-safe way to convert.
+ * opentype.js' `Font` class is structurally a superset of `AbstractFont`
+ * (it exposes `unitsPerEm`, `ascender`, `descender`, `charToGlyph`,
+ * `getPath`, and optional `tables` with the same shapes). We narrow via
+ * a runtime-checked mapping to the minimal `AbstractFont` surface — no
+ * casts — so the compatibility contract is verified per field instead
+ * of being asserted with `as`.
  */
 function parseOpentypeAsAbstractFont(data: ArrayBuffer): AbstractFont {
   const font = parseFont(data);
-  // opentype.js Font satisfies AbstractFont interface
-  // eslint-disable-next-line custom/no-as-outside-guard -- opentype.js Font is compatible with AbstractFont
-  return font as unknown as AbstractFont;
+  const wrapped: AbstractFont = {
+    unitsPerEm: font.unitsPerEm,
+    ascender: font.ascender,
+    descender: font.descender,
+    charToGlyph(char: string) {
+      const g = font.charToGlyph(char);
+      return {
+        index: g.index,
+        advanceWidth: g.advanceWidth,
+        getPath(x: number, y: number, fontSize: number) {
+          const path = g.getPath(x, y, fontSize);
+          return {
+            commands: path.commands,
+            // opentype.js requires an explicit decimal-place count; the
+            // AbstractFont contract makes it optional. Default to 4 so
+            // callers that omit the arg match opentype.js' built-in
+            // precision for hinted outlines.
+            toPathData(decimalPlaces?: number) {
+              return path.toPathData(decimalPlaces ?? 4);
+            },
+          };
+        },
+      };
+    },
+    getPath(text: string, x: number, y: number, fontSize: number, options?: { letterSpacing?: number }) {
+      const path = font.getPath(text, x, y, fontSize, options);
+      return {
+        commands: path.commands,
+        toPathData(decimalPlaces?: number) {
+          return path.toPathData(decimalPlaces ?? 4);
+        },
+      };
+    },
+    tables: font.tables,
+  };
+  return wrapped;
 }
 
 /**

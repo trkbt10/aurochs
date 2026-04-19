@@ -141,10 +141,11 @@ export function renderFallbackTextToCanvas(
   const fontWeight = fb.fontWeight ?? 400;
   ctx.font = `${fontStyle} ${fontWeight} ${fb.fontSize}px ${fb.fontFamily}`;
 
-  // Set fill color
-  const r = Math.round(node.fill.color.r * 255);
-  const g = Math.round(node.fill.color.g * 255);
-  const b = Math.round(node.fill.color.b * 255);
+  // Set fill color. Epsilon absorbs float32 precision loss from kiwi-encoded
+  // colors so 0.9 rounds to 230, not 229 (see scene-graph/render/color.ts).
+  const r = Math.round(node.fill.color.r * 255 + 1e-4);
+  const g = Math.round(node.fill.color.g * 255 + 1e-4);
+  const b = Math.round(node.fill.color.b * 255 + 1e-4);
   const a = node.fill.opacity;
   ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${a})`;
 

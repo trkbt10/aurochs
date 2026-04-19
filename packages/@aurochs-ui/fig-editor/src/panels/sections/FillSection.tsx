@@ -15,7 +15,7 @@
 
 import { useCallback, type CSSProperties } from "react";
 import type { FigDesignNode } from "@aurochs/fig/domain";
-import type { FigPaint, FigColor, KiwiEnumValue } from "@aurochs/fig/types";
+import type { FigPaint, FigColor } from "@aurochs/fig/types";
 import type { FigEditorAction } from "../../context/fig-editor/types";
 
 import { Input } from "@aurochs-ui/ui-components/primitives/Input";
@@ -58,26 +58,24 @@ function getPaintOpacity(paint: FigPaint): number {
 }
 
 function getPaintTypeLabel(paint: FigPaint): string {
-  const type = typeof paint.type === "string" ? paint.type : paint.type?.name;
-  switch (type) {
+  switch (paint.type) {
     case "SOLID": return "Solid";
     case "GRADIENT_LINEAR": return "Linear";
     case "GRADIENT_RADIAL": return "Radial";
     case "GRADIENT_ANGULAR": return "Angular";
     case "GRADIENT_DIAMOND": return "Diamond";
     case "IMAGE": return "Image";
-    default: return String(type ?? "Solid");
   }
 }
 
 /** Default solid white fill for new fills */
 function createDefaultSolidFill(): FigPaint {
   return {
-    type: { value: 0, name: "SOLID" } as KiwiEnumValue,
+    type: "SOLID",
     color: { r: 0.85, g: 0.85, b: 0.85, a: 1 },
     opacity: 1,
     visible: true,
-  } as FigPaint;
+  };
 }
 
 // =============================================================================

@@ -32,7 +32,10 @@ function createVectorNodeBuilder(localID: number, parentID: number): VectorNodeB
   const state = createBaseShapeState(localID, parentID);
   state.name = "Vector";
   state.fillPaints = [colorOrPaintToPaint({ r: 0.5, g: 0.5, b: 0.5, a: 1 })];
-  const extra = { windingRule: "NONZERO" as WindingRule, vectorNetworkBlob: undefined as number | undefined };
+  const extra: { windingRule: WindingRule; vectorNetworkBlob: number | undefined } = {
+    windingRule: "NONZERO",
+    vectorNetworkBlob: undefined,
+  };
 
   const builder = {} as VectorNodeBuilder;
   Object.assign(builder, attachBaseShapeMethods(state, builder), {

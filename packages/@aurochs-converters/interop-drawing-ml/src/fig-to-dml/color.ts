@@ -50,6 +50,8 @@ function clamp01(v: number): number {
 }
 
 function componentToHex(value01: number): string {
-  const byte = Math.round(value01 * 255);
+  // 1e-4 epsilon absorbs float32 precision loss from kiwi-encoded colors
+  // (e.g. 0.9 → 0.8999.. which would otherwise round *255 down to 229).
+  const byte = Math.round(value01 * 255 + 1e-4);
   return byte.toString(16).padStart(2, "0").toUpperCase();
 }

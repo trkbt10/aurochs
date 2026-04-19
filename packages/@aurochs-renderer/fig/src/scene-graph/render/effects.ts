@@ -46,13 +46,22 @@ export type FeCompositeOperator = "over" | "in" | "out" | "atop" | "xor" | "arit
  * Each variant corresponds to an SVG filter element with all attributes computed.
  */
 export type ResolvedFilterPrimitive =
-  | { readonly type: "feFlood"; readonly floodOpacity: number; readonly result: string }
+  | { readonly type: "feFlood"; readonly floodColor?: string; readonly floodOpacity: number; readonly result: string }
   | { readonly type: "feColorMatrix"; readonly in?: string; readonly matrixType: FeColorMatrixType; readonly values: string; readonly result?: string }
-  | { readonly type: "feOffset"; readonly dx: number; readonly dy: number }
-  | { readonly type: "feGaussianBlur"; readonly in?: string; readonly stdDeviation: number }
+  | { readonly type: "feOffset"; readonly in?: string; readonly dx: number; readonly dy: number; readonly result?: string }
+  | { readonly type: "feGaussianBlur"; readonly in?: string; readonly stdDeviation: number; readonly result?: string }
   | { readonly type: "feBlend"; readonly mode: FeBlendMode; readonly in?: string; readonly in2?: string; readonly result?: string }
-  | { readonly type: "feComposite"; readonly in2: string; readonly operator: FeCompositeOperator; readonly k2: number; readonly k3: number }
-  | { readonly type: "feMorphology"; readonly operator: "dilate" | "erode"; readonly radius: number };
+  | {
+      readonly type: "feComposite";
+      readonly in?: string;
+      readonly in2: string;
+      readonly operator: FeCompositeOperator;
+      readonly k2?: number;
+      readonly k3?: number;
+      readonly result?: string;
+    }
+  | { readonly type: "feMorphology"; readonly operator: "dilate" | "erode"; readonly radius: number }
+  | { readonly type: "feMerge"; readonly nodes: readonly string[] };
 
 /**
  * Complete resolved filter with all primitives and the filter ID.
@@ -110,6 +119,18 @@ function buildColorMatrix(c: Color): string {
 }
 
 /**
+ * Format a 0–1 color as CSS `rgb(r, g, b)` for SVG `flood-color`.
+ * Uses the same half-ULP epsilon as colorToHex so float32 kiwi-encoded
+ * channels round consistently across the rendering stack.
+ */
+function colorToRgb(c: Color): string {
+  const r = Math.round(c.r * 255 + 1e-4);
+  const g = Math.round(c.g * 255 + 1e-4);
+  const b = Math.round(c.b * 255 + 1e-4);
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+/**
  * Resolve effects to a filter definition.
  *
  * This is the exhaustive handler — adding a new Effect type without
@@ -132,13 +153,40 @@ export function resolveEffects(
   for (const effect of effects) {
     switch (effect.type) {
       case "drop-shadow": {
+        // Canonical drop-shadow recipe (matches Figma SVG export):
+        //   feFlood(color, α) → feComposite(in=SourceAlpha, in)
+        //   → optional feMorphology(spread)
+        //   → feOffset → feGaussianBlur
+        //   → feMerge(shadow, SourceGraphic)       [shadow FIRST, source on top]
+        //
+        // feMerge with two nodes performs a <feMerge>-style overlay: the
+        // first node is painted at the bottom, the second on top. This
+        // preserves the natural "shadow behind shape" z-order. Previously
+        // a branch attempted `feBlend(shadow, SourceGraphic)` for non-normal
+        // blendMode, which collapsed both into a single composite and
+        // produced a shadow that appeared ON TOP of the fill (user's
+        // "Clear check" bug report).
+        //
+        // Note: Figma's per-effect blendMode (MULTIPLY, SCREEN, etc.) is
+        // intentionally NOT applied at the filter level. It would require
+        // backdrop-aware compositing that SVG filters don't support
+        // directly. The `mix-blend-mode` CSS property on a separate shadow
+        // element would be a more accurate approximation; for now the
+        // shadow composites normally over the backdrop. Losing the blend
+        // mode nuance is a smaller visual error than inverting z-order.
         const stdDev = effect.radius / 2;
-        const blendMode = effectBlendModeToSvg(effect.blendMode);
+        const floodResult = ids.getNextId("drop-flood");
+        const coloredResult = ids.getNextId("drop-colored");
+        const maybeSpread = effect.spread && effect.spread !== 0
+          ? ids.getNextId("drop-spread")
+          : coloredResult;
+        const offsetResult = ids.getNextId("drop-offset");
+        const blurResult = ids.getNextId("drop-blur");
+
         primitives.push(
-          { type: "feFlood", floodOpacity: 0, result: "BackgroundImageFix" },
-          { type: "feColorMatrix", in: "SourceAlpha", matrixType: "matrix", values: ALPHA_BINARIZE_MATRIX, result: "hardAlpha" },
+          { type: "feFlood", floodColor: colorToRgb(effect.color), floodOpacity: effect.color.a, result: floodResult },
+          { type: "feComposite", in: floodResult, in2: "SourceAlpha", operator: "in", result: coloredResult },
         );
-        // Spread: feMorphology dilate (positive) or erode (negative) before offset
         if (effect.spread && effect.spread !== 0) {
           primitives.push({
             type: "feMorphology",
@@ -147,34 +195,43 @@ export function resolveEffects(
           });
         }
         primitives.push(
-          { type: "feOffset", dx: effect.offset.x, dy: effect.offset.y },
-          { type: "feGaussianBlur", stdDeviation: stdDev },
-          { type: "feColorMatrix", matrixType: "matrix", values: buildColorMatrix(effect.color) },
-          { type: "feBlend", mode: blendMode, in2: "BackgroundImageFix" },
-          { type: "feBlend", mode: "normal", in: "SourceGraphic", in2: "effect", result: "shape" },
+          { type: "feOffset", in: maybeSpread, dx: effect.offset.x, dy: effect.offset.y, result: offsetResult },
+          { type: "feGaussianBlur", in: offsetResult, stdDeviation: stdDev, result: blurResult },
+          { type: "feMerge", nodes: [blurResult, "SourceGraphic"] },
         );
         shapeEstablished = true;
         break;
       }
 
       case "inner-shadow": {
+        // Canonical SVG inner-shadow recipe (matches Figma's own SVG export):
+        //   1. Flood the filter region with the shadow colour at its alpha.
+        //   2. Keep only the portion over the source shape (feComposite "in").
+        //   3. Offset and blur that silhouette.
+        //   4. Subtract the original source alpha — the parts of the blurred
+        //      shadow that remain AFTER subtraction are exactly the pixels
+        //      that fell outside the shape, which visually read as "inside"
+        //      when composited over the shape.
+        //   5. Merge the source graphic under the inner shadow.
+        //
+        // Previously we binarized SourceAlpha via a feColorMatrix with a
+        // 127× multiplier ("hardAlpha"), which destroyed antialiasing on
+        // rounded corners and produced a dark halo along curved edges.
         const stdDev = effect.radius / 2;
-        const blendMode = effectBlendModeToSvg(effect.blendMode);
-        if (!shapeEstablished) {
-          primitives.push(
-            { type: "feFlood", floodOpacity: 0, result: "BackgroundImageFix" },
-            { type: "feBlend", mode: "normal", in: "SourceGraphic", in2: "BackgroundImageFix", result: "shape" },
-          );
-          shapeEstablished = true;
-        }
+        const floodResult = ids.getNextId("inner-flood");
+        const coloredResult = ids.getNextId("inner-colored");
+        const offsetResult = ids.getNextId("inner-offset");
+        const blurResult = ids.getNextId("inner-blur");
+        const innerResult = ids.getNextId("inner");
         primitives.push(
-          { type: "feColorMatrix", in: "SourceAlpha", matrixType: "matrix", values: ALPHA_BINARIZE_MATRIX, result: "hardAlpha" },
-          { type: "feOffset", dx: effect.offset.x, dy: effect.offset.y },
-          { type: "feGaussianBlur", stdDeviation: stdDev },
-          { type: "feComposite", in2: "hardAlpha", operator: "arithmetic", k2: -1, k3: 1 },
-          { type: "feColorMatrix", matrixType: "matrix", values: buildColorMatrix(effect.color) },
-          { type: "feBlend", mode: blendMode, in2: "shape", result: "shape" },
+          { type: "feFlood", floodColor: colorToRgb(effect.color), floodOpacity: effect.color.a, result: floodResult },
+          { type: "feComposite", in: floodResult, in2: "SourceAlpha", operator: "in", result: coloredResult },
+          { type: "feOffset", in: coloredResult, dx: effect.offset.x, dy: effect.offset.y, result: offsetResult },
+          { type: "feGaussianBlur", in: offsetResult, stdDeviation: stdDev, result: blurResult },
+          { type: "feComposite", in: blurResult, in2: "SourceAlpha", operator: "out", result: innerResult },
+          { type: "feMerge", nodes: ["SourceGraphic", innerResult] },
         );
+        shapeEstablished = true;
         break;
       }
 
