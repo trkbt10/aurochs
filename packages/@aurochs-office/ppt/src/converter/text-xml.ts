@@ -3,7 +3,7 @@
  */
 
 import type { PptTextBody, PptTextParagraph, PptTextRun } from "../domain/types";
-import { escapeXml } from "./presentation-xml";
+import { escapeXml } from "@aurochs/xml";
 
 /**
  * Generate `<a:txBody>` XML from a PptTextBody.

@@ -49,11 +49,26 @@ import { CONTENT_TYPES } from "@aurochs-office/pptx/domain";
 import { serializeColor } from "../patcher/serializer/color";
 import {
   serializeRelationships,
-  serializeContentTypes,
-  STANDARD_CONTENT_TYPE_DEFAULTS,
-  type ContentTypeEntry,
   type OpcRelationship,
 } from "@aurochs-office/opc";
+import {
+  buildContentTypes as buildContentTypesOfficeLayer,
+  buildAppProperties as buildAppPropertiesOfficeLayer,
+  buildRootRels as buildRootRelsOfficeLayer,
+  buildPresentation as buildPresentationOfficeLayer,
+  buildPresentationRels as buildPresentationRelsOfficeLayer,
+  buildSlideRels as buildSlideRelsOfficeLayer,
+  buildLayoutRels as buildLayoutRelsOfficeLayer,
+  buildMasterRels as buildMasterRelsOfficeLayer,
+  buildBlankSlide as buildBlankSlideOfficeLayer,
+  buildEmptyGroupSpPr,
+  buildRootNvGrpSpPr as buildNvGrpSpPr,
+  buildClrMapOvr,
+  type BuildContentTypesOptions as OfficeBuildContentTypesOptions,
+  type BuildPresentationOptions as OfficeBuildPresentationOptions,
+  type BuildPresentationRelsOptions as OfficeBuildPresentationRelsOptions,
+  type BuildSlideRelsOptions as OfficeBuildSlideRelsOptions,
+} from "@aurochs-office/pptx/builders";
 import {
   OFFICE_RELATIONSHIP_TYPES,
   OFFICE_NAMESPACES,
@@ -140,206 +155,63 @@ const DEFAULT_SLIDE_SIZE_EMU = {
 const PX_TO_EMU = 914400 / 96;
 
 // =============================================================================
-// OPC Part Builders
+// OPC Part Builders — re-export the office-layer SoT
+//
+// The authoritative builders for OPC scaffolding parts live in
+// `@aurochs-office/pptx/builders`. Re-export them here so the
+// `@aurochs-builder/pptx/builders` public surface stays unchanged for
+// downstream consumers (pdf-to-pptx, fig-to-pptx, etc.).
 // =============================================================================
 
-/**
- * Build the package root relationships (_rels/.rels) wiring the
- * presentation as the OPC main document and docProps/app.xml as the
- * extended-properties part.
- */
-export function buildRootRels(): XmlDocument {
-  const rels: OpcRelationship[] = [
-    { id: "rId1", type: OFFICE_RELATIONSHIP_TYPES.officeDocument, target: "ppt/presentation.xml" },
-    { id: "rId2", type: OFFICE_RELATIONSHIP_TYPES.extendedProperties, target: "docProps/app.xml" },
-  ];
-  return { children: [serializeRelationships(rels)] };
-}
-
-type BuildContentTypesOptions = {
-  readonly layoutCount: number;
-  /** Total slide count whose Override entries to register. Defaults to 1. */
-  readonly slideCount?: number;
-};
+export const buildRootRels = buildRootRelsOfficeLayer;
+export const buildAppProperties = buildAppPropertiesOfficeLayer;
+export const buildContentTypes = buildContentTypesOfficeLayer;
+export type BuildContentTypesOptions = OfficeBuildContentTypesOptions;
+export const buildLayoutRels = buildLayoutRelsOfficeLayer;
+export const buildMasterRels = buildMasterRelsOfficeLayer;
 
 /**
- * Build the [Content_Types].xml document covering the standard set of
- * PPTX parts (presentation, slides, layouts, master, theme).
- */
-export function buildContentTypes(options: BuildContentTypesOptions): XmlDocument {
-  const slideCount = options.slideCount ?? 1;
-  if (!Number.isInteger(slideCount) || slideCount < 1) {
-    throw new Error(`buildContentTypes: slideCount must be a positive integer, got ${slideCount}`);
-  }
-  const entries: ContentTypeEntry[] = [
-    ...STANDARD_CONTENT_TYPE_DEFAULTS,
-    { kind: "override", partName: "/ppt/presentation.xml", contentType: CONTENT_TYPES.PRESENTATION },
-    { kind: "override", partName: "/ppt/slideMasters/slideMaster1.xml", contentType: CONTENT_TYPES.SLIDE_MASTER },
-    { kind: "override", partName: "/ppt/theme/theme1.xml", contentType: CONTENT_TYPES.THEME },
-  ];
-  for (let i = 1; i <= options.layoutCount; i++) {
-    entries.push({ kind: "override", partName: `/ppt/slideLayouts/slideLayout${i}.xml`, contentType: CONTENT_TYPES.SLIDE_LAYOUT });
-  }
-  for (let i = 1; i <= slideCount; i++) {
-    entries.push({ kind: "override", partName: `/ppt/slides/slide${i}.xml`, contentType: CONTENT_TYPES.SLIDE });
-  }
-  return { children: [serializeContentTypes(entries)] };
-}
-
-/** Build docProps/app.xml with the canonical extended-properties skeleton. */
-export function buildAppProperties(): XmlDocument {
-  return {
-    children: [
-      createElement("Properties", { xmlns: OFFICE_NAMESPACES.extendedProperties }, [
-        createElement("AppVersion", {}, [createText("16.0")]),
-      ]),
-    ],
-  };
-}
-
-/**
- * Build the presentation part's relationships (ppt/_rels/presentation.xml.rels).
+ * Build the presentation part's relationships.
  *
- * Includes:
- *   rId1            → slideMaster1.xml
- *   rId2..rId(1+N)  → slides/slide{1..N}.xml
- *   rId(2+N)        → theme/theme1.xml
+ * Backwards-compatible signature: accepts a slide count (number) or a
+ * full options object. The number form is preserved because most
+ * downstream callers just need to vary the slide count.
  *
- * The theme edge from the presentation part is required for PowerPoint
- * to open the file without showing the "couldn't read some content"
- * recovery dialog, even though the slide master also references the
- * same theme.
+ * @see ECMA-376 Part 2, §9.3 (Relationships)
  */
-export function buildPresentationRels(slideCount: number = 1): XmlDocument {
-  if (!Number.isInteger(slideCount) || slideCount < 1) {
-    throw new Error(`buildPresentationRels: slideCount must be a positive integer, got ${slideCount}`);
+export function buildPresentationRels(arg: number | OfficeBuildPresentationRelsOptions = 1): XmlDocument {
+  if (typeof arg === "number") {
+    return buildPresentationRelsOfficeLayer({ slideCount: arg });
   }
-  const rels: OpcRelationship[] = [
-    { id: "rId1", type: RELATIONSHIP_TYPES.SLIDE_MASTER, target: "slideMasters/slideMaster1.xml" },
-  ];
-  for (let i = 1; i <= slideCount; i++) {
-    rels.push({ id: `rId${i + 1}`, type: RELATIONSHIP_TYPES.SLIDE, target: `slides/slide${i}.xml` });
-  }
-  rels.push({ id: `rId${slideCount + 2}`, type: RELATIONSHIP_TYPES.THEME, target: "theme/theme1.xml" });
-  return { children: [serializeRelationships(rels)] };
+  return buildPresentationRelsOfficeLayer(arg);
 }
 
 /**
- * Build slide master relationships: rId1..rIdN reference each layout
- * in the deck, and the final relationship references the theme.
+ * Options for buildSlideRels — either reference a layout by canonical
+ * 1-based index or supply an explicit target path. Re-exported from
+ * the office-layer SoT.
  */
-export function buildMasterRels(layoutCount: number): XmlDocument {
-  if (!Number.isInteger(layoutCount) || layoutCount < 1) {
-    throw new Error(`buildMasterRels: layoutCount must be a positive integer, got ${layoutCount}`);
-  }
-  const rels: OpcRelationship[] = [];
-  for (let i = 1; i <= layoutCount; i++) {
-    rels.push({ id: `rId${i}`, type: RELATIONSHIP_TYPES.SLIDE_LAYOUT, target: `../slideLayouts/slideLayout${i}.xml` });
-  }
-  rels.push({ id: `rId${layoutCount + 1}`, type: RELATIONSHIP_TYPES.THEME, target: "../theme/theme1.xml" });
-  return { children: [serializeRelationships(rels)] };
-}
-
-/** Build a slide layout's relationships (single edge to the master). */
-export function buildLayoutRels(): XmlDocument {
-  const rels: OpcRelationship[] = [
-    { id: "rId1", type: RELATIONSHIP_TYPES.SLIDE_MASTER, target: "../slideMasters/slideMaster1.xml" },
-  ];
-  return { children: [serializeRelationships(rels)] };
-}
+export type BuildSlideRelsOptions = OfficeBuildSlideRelsOptions;
 
 /**
- * Build a slide's relationships pointing at slideLayout{layoutIndex}.xml
- * (the layout the slide is bound to). Defaults to slideLayout1.
+ * Build a slide's relationships pointing at the slide layout it is
+ * bound to. Delegates to the office-layer SoT.
  */
-export function buildSlideRels(layoutIndex: number = 1): XmlDocument {
-  if (!Number.isInteger(layoutIndex) || layoutIndex < 1) {
-    throw new Error(`buildSlideRels: layoutIndex must be a positive integer, got ${layoutIndex}`);
-  }
-  const rels: OpcRelationship[] = [
-    { id: "rId1", type: RELATIONSHIP_TYPES.SLIDE_LAYOUT, target: `../slideLayouts/slideLayout${layoutIndex}.xml` },
-  ];
-  return { children: [serializeRelationships(rels)] };
+export function buildSlideRels(arg?: number | OfficeBuildSlideRelsOptions): XmlDocument {
+  return buildSlideRelsOfficeLayer(arg);
 }
 
 // =============================================================================
 // PresentationML Part Builders
 // =============================================================================
 
-function buildEmptyGroupSpPr(): XmlElement {
-  return createElement("p:grpSpPr", {}, [
-    createElement("a:xfrm", {}, [
-      createElement("a:off", { x: "0", y: "0" }),
-      createElement("a:ext", { cx: "0", cy: "0" }),
-      createElement("a:chOff", { x: "0", y: "0" }),
-      createElement("a:chExt", { cx: "0", cy: "0" }),
-    ]),
-  ]);
-}
-
-function buildNvGrpSpPr(): XmlElement {
-  return createElement("p:nvGrpSpPr", {}, [
-    createElement("p:cNvPr", { id: "1", name: "" }),
-    createElement("p:cNvGrpSpPr"),
-    createElement("p:nvPr"),
-  ]);
-}
-
-function slideSizeToEmu(slideSize?: { readonly width: number; readonly height: number }): Record<string, string> {
-  if (!slideSize) { return DEFAULT_SLIDE_SIZE_EMU; }
-  return {
-    cx: String(Math.round(slideSize.width * PX_TO_EMU)),
-    cy: String(Math.round(slideSize.height * PX_TO_EMU)),
-  };
-}
-
-/** Default A4-portrait notes page size in EMUs (ECMA-376 default). */
-const DEFAULT_NOTES_SIZE_EMU = { cx: "6858000", cy: "9144000" } as const;
-
-/** First slide ID per ECMA-376 §19.7.4 (ST_SlideId minimum). */
-const SLIDE_ID_BASE = 256;
-
-type BuildPresentationOptions = {
-  readonly slideSize?: { readonly width: number; readonly height: number };
-  /** Total number of slides referenced by the presentation. Defaults to 1. */
-  readonly slideCount?: number;
-};
-
 /**
  * Build the presentation part (ECMA-376 §19.2.1.26 CT_Presentation).
  *
- * Element order matches the schema sequence so PowerPoint accepts the
- * file without repair: sldMasterIdLst, sldIdLst, sldSz, notesSz,
- * defaultTextStyle. notesSz is REQUIRED by the schema; omitting it
- * triggers PowerPoint's recovery flow.
+ * Delegates to the office-layer SoT.
  */
-export function buildPresentation(options?: BuildPresentationOptions): XmlDocument {
-  const slideCount = options?.slideCount ?? 1;
-  if (!Number.isInteger(slideCount) || slideCount < 1) {
-    throw new Error(`buildPresentation: slideCount must be a positive integer, got ${slideCount}`);
-  }
-  const sldIds: XmlElement[] = [];
-  for (let i = 0; i < slideCount; i++) {
-    sldIds.push(
-      createElement("p:sldId", { id: String(SLIDE_ID_BASE + i), "r:id": `rId${i + 2}` }),
-    );
-  }
-  return {
-    children: [
-      createElement("p:presentation", PPTX_XMLNS, [
-        createElement("p:sldMasterIdLst", {}, [
-          createElement("p:sldMasterId", { id: SLIDE_MASTER_ID, "r:id": "rId1" }),
-        ]),
-        createElement("p:sldIdLst", {}, sldIds),
-        createElement("p:sldSz", slideSizeToEmu(options?.slideSize)),
-        createElement("p:notesSz", DEFAULT_NOTES_SIZE_EMU),
-        createElement("p:defaultTextStyle", {}, [
-          createElement("a:defPPr", {}, [createElement("a:defRPr", { sz: "1800" })]),
-        ]),
-      ]),
-    ],
-  };
-}
+export const buildPresentation = buildPresentationOfficeLayer;
+export type BuildPresentationOptions = OfficeBuildPresentationOptions;
 
 /**
  * Build the slide master part (ECMA-376 §19.3.1.42).
@@ -417,13 +289,9 @@ export function buildLayoutDocument(entry: LayoutExportEntry): XmlDocument {
 
   // p:clrMapOvr §19.3.1.7
   if (entry.colorMapOverride?.type === "override") {
-    sldLayoutChildren.push(
-      createElement("p:clrMapOvr", {}, [createElement("a:overrideClrMapping", entry.colorMapOverride.mappings as Record<string, string>)]),
-    );
+    sldLayoutChildren.push(buildClrMapOvr(entry.colorMapOverride.mappings as Record<string, string>));
   } else {
-    sldLayoutChildren.push(
-      createElement("p:clrMapOvr", {}, [createElement("a:masterClrMapping")]),
-    );
+    sldLayoutChildren.push(buildClrMapOvr());
   }
 
   return { children: [createElement("p:sldLayout", attrs, sldLayoutChildren)] };
@@ -431,22 +299,9 @@ export function buildLayoutDocument(entry: LayoutExportEntry): XmlDocument {
 
 /**
  * Build an empty p:sld document with a blank spTree and a master
- * color-map override. This is the canonical "no content yet" slide
- * used by any builder that wants to author shapes by patching the
- * spTree afterwards.
+ * color-map override. Delegates to the office-layer SoT.
  */
-export function buildBlankSlide(): XmlDocument {
-  return {
-    children: [
-      createElement("p:sld", PPTX_XMLNS, [
-        createElement("p:cSld", {}, [
-          createElement("p:spTree", {}, [buildNvGrpSpPr(), buildEmptyGroupSpPr()]),
-        ]),
-        createElement("p:clrMapOvr", {}, [createElement("a:masterClrMapping")]),
-      ]),
-    ],
-  };
-}
+export const buildBlankSlide = buildBlankSlideOfficeLayer;
 
 // =============================================================================
 // Theme XML Builder — §20.1.6.9 (a:theme)
@@ -515,8 +370,13 @@ export function buildThemeXml(options: BuildThemeXmlOptions): XmlDocument {
   };
 }
 
-/** Serialize ObjectDefaultProperties to a:spDef/a:lnDef/a:txDef element. */
-function serializeObjectDefaultElement(name: string, props: ObjectDefaultProperties): XmlElement {
+/**
+ * Serialize a single `ObjectDefaultProperties` block to its container
+ * element (`<a:spDef>`, `<a:lnDef>`, or `<a:txDef>`).
+ *
+ * @see ECMA-376 Part 1, §20.1.6.10 (a:spDef / a:lnDef / a:txDef)
+ */
+export function serializeObjectDefaultElement(name: "a:spDef" | "a:lnDef" | "a:txDef", props: ObjectDefaultProperties): XmlElement {
   const children: XmlElement[] = [];
   if (props.shapeProperties) {
     const spPrChildren: XmlElement[] = [];
@@ -529,8 +389,17 @@ function serializeObjectDefaultElement(name: string, props: ObjectDefaultPropert
   return createElement(name, {}, children);
 }
 
-/** Build a:objectDefaults children from domain ObjectDefaults. */
-function buildObjectDefaultsChildren(od: ObjectDefaults): XmlElement[] {
+/**
+ * Build the children of `<a:objectDefaults>` from a domain
+ * `ObjectDefaults`.
+ *
+ * The returned array carries 0..3 elements (one each for `<a:spDef>`,
+ * `<a:lnDef>`, `<a:txDef>`) — callers wrap them in
+ * `<a:objectDefaults>` only when the array is non-empty.
+ *
+ * @see ECMA-376 Part 1, §20.1.6.7 (a:objectDefaults)
+ */
+export function buildObjectDefaultsChildren(od: ObjectDefaults): XmlElement[] {
   const children: XmlElement[] = [];
   if (od.shapeDefault) { children.push(serializeObjectDefaultElement("a:spDef", od.shapeDefault)); }
   if (od.lineDefault) { children.push(serializeObjectDefaultElement("a:lnDef", od.lineDefault)); }
@@ -571,8 +440,18 @@ function serializeTextLevelStyleElement(name: string, level: TextLevelStyle): Xm
   return createElement(name);
 }
 
-/** Serialize TextStyleLevels to a named container element (p:titleStyle, a:lstStyle, etc.). */
-function serializeTextStyleLevelsElement(containerName: string, levels: TextStyleLevels): XmlElement {
+/**
+ * Serialize TextStyleLevels to a named container element.
+ *
+ * Used for `p:titleStyle`/`p:bodyStyle`/`p:otherStyle` (master text
+ * styles, ECMA-376 §19.3.1.51) and `a:lstStyle` (object defaults
+ * §20.1.6.7 and theme overrides). The container element name is the
+ * caller's responsibility because the same level structure appears
+ * under many parent names.
+ *
+ * @see ECMA-376 §21.1.2.4 (TextListStyle) for the level layout.
+ */
+export function serializeTextStyleLevelsElement(containerName: string, levels: TextStyleLevels): XmlElement {
   const children: XmlElement[] = [];
   for (let i = 0; i < LEVEL_KEYS.length; i++) {
     const level = levels[LEVEL_KEYS[i]];
@@ -641,8 +520,17 @@ function exportOptionsToTheme(options: ThemeExportOptions): Theme {
   };
 }
 
-/** Default format scheme with placeholder fills per ECMA-376 §20.1.4.1.14. */
-function defaultFormatScheme(): FormatScheme {
+/**
+ * Build the default format scheme.
+ *
+ * Emits 3 placeholder-color fills, 3 placeholder-color stroked lines
+ * (subtle/moderate/intense), 3 effect-style stubs, and 3 background
+ * fills — exactly the minimum needed to satisfy ECMA-376
+ * §20.1.4.1.14 and the PowerPoint reader.
+ *
+ * @see ECMA-376 Part 1, §20.1.4.1.14 (a:fmtScheme)
+ */
+export function defaultFormatScheme(): FormatScheme {
   const phFill: BaseFill = { type: "solidFill", color: { spec: { type: "scheme", value: "phClr" } } };
   const phLine = (w: number): BaseLine => ({
     width: px(w) as Pixels,
@@ -667,28 +555,56 @@ function defaultFormatScheme(): FormatScheme {
 
 /**
  * Convert a hex string to a Color domain object.
- * ColorScheme stores resolved hex values — these are always srgb.
+ *
+ * Theme color-scheme entries always serialise as `<a:srgbClr val="...">`
+ * regardless of how the parser obtained them; this helper keeps the
+ * call sites in `buildClrSchemeElement` / `buildExtraColorScheme`
+ * concise.
  */
 function hexToColor(hex: string): Color {
   return { spec: { type: "srgb", value: hex } };
 }
 
 /**
- * Build 12 color scheme children from hex color values.
- * ColorScheme is Record<string, string> — resolved hex values from parser.
- * Uses serializeColor (SoT) for XML generation.
+ * Build the children of an `<a:clrScheme>` element from a 12-slot
+ * color scheme.
+ *
+ * @see ECMA-376 Part 1, §20.1.6.2 (CT_ColorScheme)
  */
-function buildColorSchemeChildren(cs: Readonly<Record<SchemeColorName, string>>): XmlElement[] {
+export function buildColorSchemeChildren(cs: Readonly<Record<SchemeColorName, string>>): XmlElement[] {
   return SCHEME_COLOR_NAMES.map((key) =>
     createElement(`a:${key}`, {}, [serializeColor(hexToColor(cs[key]))]),
   );
+}
+
+/**
+ * Build a complete `<a:clrScheme name="...">` element from a 12-slot
+ * color scheme.
+ *
+ * @see ECMA-376 Part 1, §20.1.6.2 (CT_ColorScheme)
+ */
+export function buildColorSchemeElement(
+  name: string,
+  cs: Readonly<Record<SchemeColorName, string>>,
+): XmlElement {
+  return createElement("a:clrScheme", { name }, buildColorSchemeChildren(cs));
 }
 
 // =============================================================================
 // Font Scheme — §20.1.4.1.18
 // =============================================================================
 
-function buildFontElement(prefix: string, font: FontScheme["majorFont"]): XmlElement {
+/**
+ * Build a single `<a:majorFont>` or `<a:minorFont>` element under
+ * `<a:fontScheme>` from a domain `FontSpec`.
+ *
+ * @param prefix - either `"major"` or `"minor"` — the resulting tag is
+ *   `a:${prefix}Font`.
+ *
+ * @see ECMA-376 Part 1, §20.1.4.1.16 (a:majorFont)
+ * @see ECMA-376 Part 1, §20.1.4.1.17 (a:minorFont)
+ */
+export function buildFontElement(prefix: "major" | "minor", font: FontScheme["majorFont"]): XmlElement {
   const children: XmlElement[] = [];
   if (font.latin) { children.push(createElement("a:latin", { typeface: font.latin })); }
   if (font.eastAsian) { children.push(createElement("a:ea", { typeface: font.eastAsian })); }
@@ -696,12 +612,34 @@ function buildFontElement(prefix: string, font: FontScheme["majorFont"]): XmlEle
   return createElement(`a:${prefix}Font`, {}, children);
 }
 
+/**
+ * Build the `<a:fontScheme>` container with both `majorFont` and
+ * `minorFont` children populated from the domain `FontScheme`.
+ *
+ * @see ECMA-376 Part 1, §20.1.4.1.18 (a:fontScheme)
+ */
+export function buildFontSchemeElement(name: string, fontScheme: FontScheme): XmlElement {
+  return createElement("a:fontScheme", { name }, [
+    buildFontElement("major", fontScheme.majorFont),
+    buildFontElement("minor", fontScheme.minorFont),
+  ]);
+}
+
 // =============================================================================
 // Format Scheme — §20.1.4.1.14
 // =============================================================================
 
-/** Build a:fmtScheme from domain FormatScheme (SoT). Serializes domain types back to XML. */
-function buildFormatSchemeFromDomain(name: string, fmt: FormatScheme): XmlElement {
+/**
+ * Build the `<a:fmtScheme>` element from a domain `FormatScheme`.
+ *
+ * The domain shape is fixed at three fill / line / effect / bgFill
+ * style entries — emit each as a positional child of the standard
+ * `fillStyleLst` / `lnStyleLst` / `effectStyleLst` / `bgFillStyleLst`
+ * containers per the schema sequence.
+ *
+ * @see ECMA-376 Part 1, §20.1.4.1.14 (a:fmtScheme)
+ */
+export function buildFormatSchemeFromDomain(name: string, fmt: FormatScheme): XmlElement {
   const effectStyleElements = fmt.effectStyles.map((e) => {
     const effectChild = e ? serializeEffects(e) : null;
     return createElement("a:effectStyle", {}, effectChild ? [effectChild] : [createElement("a:effectLst")]);
@@ -719,11 +657,24 @@ function buildFormatSchemeFromDomain(name: string, fmt: FormatScheme): XmlElemen
 // Extra Color Schemes — §20.1.6.5
 // =============================================================================
 
-function buildExtraColorSchemeList(schemes: readonly ExtraColorScheme[]): XmlElement {
+/**
+ * Build the `<a:extraClrSchemeLst>` container from an array of
+ * domain extra-color-scheme entries. Returns an empty list element
+ * when the input is empty (callers may choose to skip emission).
+ *
+ * @see ECMA-376 Part 1, §20.1.6.5 (a:extraClrSchemeLst)
+ */
+export function buildExtraColorSchemeList(schemes: readonly ExtraColorScheme[]): XmlElement {
   return createElement("a:extraClrSchemeLst", {}, schemes.map(buildExtraColorScheme));
 }
 
-function buildExtraColorScheme(scheme: ExtraColorScheme): XmlElement {
+/**
+ * Build a single `<a:extraClrScheme>` entry containing a clrScheme
+ * + clrMap pair.
+ *
+ * @see ECMA-376 Part 1, §20.1.6.5 (a:extraClrSchemeLst)
+ */
+export function buildExtraColorScheme(scheme: ExtraColorScheme): XmlElement {
   const clrSchemeAttrs: Record<string, string> = {};
   if (scheme.name) { clrSchemeAttrs.name = scheme.name; }
 
@@ -755,7 +706,16 @@ function customColorToColor(c: CustomColor): Color {
   return { spec: { type: "system", value: c.systemColor ?? "windowText" } };
 }
 
-function buildCustomColorsList(customColors?: readonly CustomColor[]): XmlElement[] {
+/**
+ * Build the `<a:custClrLst>` container (returns 0 or 1 elements).
+ *
+ * Returns an empty array when no custom colors are provided so the
+ * caller can spread the result into a parent's children without an
+ * extra `if`.
+ *
+ * @see ECMA-376 Part 1, §20.1.6.3 (a:custClrLst)
+ */
+export function buildCustomColorsList(customColors?: readonly CustomColor[]): XmlElement[] {
   if (!customColors || customColors.length === 0) {
     return [];
   }

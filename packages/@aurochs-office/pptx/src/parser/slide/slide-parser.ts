@@ -20,7 +20,7 @@ import type {
   SlideTransition,
   TransitionType,
 } from "../../domain/index";
-import { getAttr, getByPath, getChild, getChildren, type XmlDocument, type XmlElement } from "@aurochs/xml";
+import { getAttr, getByPath, getChild, getChildren, isXmlElement, type XmlDocument, type XmlElement } from "@aurochs/xml";
 import type { ColorMap } from "@aurochs-office/drawing-ml/domain/color-context";
 import { parseFillFromParent } from "../graphics/fill-parser";
 import type { FormatScheme } from "../../domain/theme/types";
@@ -340,19 +340,15 @@ type TransitionTypeInfo = {
 
 function findTransitionType(element: XmlElement): TransitionTypeInfo {
   for (const child of element.children) {
-    if (typeof child !== "object" || !("type" in child)) {
+    if (!isXmlElement(child)) {
       continue;
     }
-    const el = child as XmlElement;
-    if (el.type !== "element") {
+    if (!child.name.startsWith("p:")) {
       continue;
     }
-    if (!el.name.startsWith("p:")) {
-      continue;
-    }
-    const transType = el.name.substring(2) as TransitionType;
+    const transType = child.name.substring(2) as TransitionType;
     if (isTransitionType(transType)) {
-      return { type: transType, element: el };
+      return { type: transType, element: child };
     }
   }
 

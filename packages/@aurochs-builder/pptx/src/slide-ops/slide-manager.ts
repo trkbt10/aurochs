@@ -28,6 +28,7 @@ import { CONTENT_TYPES, RELATIONSHIP_TYPES } from "@aurochs-office/pptx/domain";
 import { createEmptyZipPackage, isBinaryFile, type ZipPackage } from "@aurochs/zip";
 import { addSlideToList, removeSlideFromList, reorderSlideInList } from "./parts/presentation";
 import { generateSlideId, generateSlideRId } from "./slide-id-manager";
+import { buildBlankSlide, buildSlideRels } from "../builders";
 
 export type SlideAddResult = {
   readonly doc: PresentationDocument;
@@ -75,8 +76,6 @@ type RelationshipEntry = {
 const PRESENTATION_XML_PATH = "ppt/presentation.xml";
 const PRESENTATION_RELS_PATH = "ppt/_rels/presentation.xml.rels";
 const CONTENT_TYPES_PATH = "[Content_Types].xml";
-
-const RELS_XMLNS = "http://schemas.openxmlformats.org/package/2006/relationships";
 
 // =============================================================================
 // Presentation File Helpers
@@ -293,57 +292,20 @@ function requireSlideLayoutPath(pkg: ZipPackage, layoutPath: string): void {
   }
 }
 
+/**
+ * Local adapters that route through the canonical builders so this
+ * module does not duplicate XML construction. Kept as wrappers to
+ * preserve the existing callsite shapes.
+ */
 function buildBlankSlideXml(): XmlDocument {
-  return {
-    children: [
-      createElement(
-        "p:sld",
-        {
-          "xmlns:a": "http://schemas.openxmlformats.org/drawingml/2006/main",
-          "xmlns:r": "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
-          "xmlns:p": "http://schemas.openxmlformats.org/presentationml/2006/main",
-        },
-        [
-          createElement("p:cSld", {}, [
-            createElement("p:spTree", {}, [
-              createElement("p:nvGrpSpPr", {}, [
-                createElement("p:cNvPr", { id: "1", name: "" }),
-                createElement("p:cNvGrpSpPr"),
-                createElement("p:nvPr"),
-              ]),
-              createElement("p:grpSpPr", {}, [
-                createElement("a:xfrm", {}, [
-                  createElement("a:off", { x: "0", y: "0" }),
-                  createElement("a:ext", { cx: "0", cy: "0" }),
-                  createElement("a:chOff", { x: "0", y: "0" }),
-                  createElement("a:chExt", { cx: "0", cy: "0" }),
-                ]),
-              ]),
-            ]),
-          ]),
-          createElement("p:clrMapOvr", {}, [createElement("a:masterClrMapping")]),
-        ],
-      ),
-    ],
-  };
+  return buildBlankSlide();
 }
 
 function buildSlideRelsXml(layoutPath: string): XmlDocument {
   if (!layoutPath.startsWith("ppt/")) {
     throw new Error(`SlideManager: layoutPath must be a ppt/ path, got: ${layoutPath}`);
   }
-  const targetFromSlides = `../${layoutPath.slice("ppt/".length)}`;
-  return {
-    children: [
-      createElement("Relationships", { xmlns: RELS_XMLNS }, [
-        createElement("Relationship", {
-          Id: "rId1",
-          Type: RELATIONSHIP_TYPES.SLIDE_LAYOUT,
-          Target: targetFromSlides,
-        }),
-      ]),
-    ],
-  };
+  return buildSlideRels({ layoutTarget: layoutPath });
 }
 
 function findSlidePartTarget(presentationRelsXml: XmlDocument, rId: string): string {

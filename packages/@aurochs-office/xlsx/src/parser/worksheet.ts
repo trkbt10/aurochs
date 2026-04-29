@@ -52,7 +52,7 @@ import { parseBooleanAttr, parseFloatAttr, parseIntAttr } from "./primitive";
 import { parsePageSetup, parsePageMargins, parseHeaderFooter, parsePrintOptions } from "./page-setup";
 import { parseSheetProtection } from "./protection";
 import type { XmlElement } from "@aurochs/xml";
-import { getAttr, getChild, getChildren, getTextContent } from "@aurochs/xml";
+import { getAttr, getChild, getChildren, getTextContent, isXmlElement } from "@aurochs/xml";
 
 // =============================================================================
 // Page Breaks Parsing
@@ -126,8 +126,8 @@ function parseSparklineGroups(worksheetElement: XmlElement): readonly XlsxSparkl
   for (const extEl of extElements) {
     // Look for sparklineGroups element (x14 namespace)
     const sparklineGroupsEl = extEl.children.find(
-      (child) => child.type === "element" && child.name.endsWith(":sparklineGroups"),
-    ) as XmlElement | undefined;
+      (child): child is XmlElement => isXmlElement(child) && child.name.endsWith(":sparklineGroups"),
+    );
 
     if (!sparklineGroupsEl) {
       // Also try without namespace prefix
@@ -149,8 +149,8 @@ function parseSparklineGroupsElement(sparklineGroupsEl: XmlElement): readonly Xl
 
   // Find all sparklineGroup elements (may have x14 prefix)
   const groupElements = sparklineGroupsEl.children.filter(
-    (child) => child.type === "element" && (child.name === "sparklineGroup" || child.name.endsWith(":sparklineGroup")),
-  ) as XmlElement[];
+    (child): child is XmlElement => isXmlElement(child) && (child.name === "sparklineGroup" || child.name.endsWith(":sparklineGroup")),
+  );
 
   for (const groupEl of groupElements) {
     const group = parseSparklineGroup(groupEl);
@@ -168,8 +168,8 @@ function parseSparklineGroup(groupEl: XmlElement): XlsxSparklineGroup | undefine
 
   // Find sparklines container
   const sparklinesEl = groupEl.children.find(
-    (child) => child.type === "element" && (child.name === "sparklines" || child.name.endsWith(":sparklines")),
-  ) as XmlElement | undefined;
+    (child): child is XmlElement => isXmlElement(child) && (child.name === "sparklines" || child.name.endsWith(":sparklines")),
+  );
 
   if (!sparklinesEl) {
     return undefined;
@@ -177,17 +177,17 @@ function parseSparklineGroup(groupEl: XmlElement): XlsxSparklineGroup | undefine
 
   const sparklines: XlsxSparkline[] = [];
   const sparklineElements = sparklinesEl.children.filter(
-    (child) => child.type === "element" && (child.name === "sparkline" || child.name.endsWith(":sparkline")),
-  ) as XmlElement[];
+    (child): child is XmlElement => isXmlElement(child) && (child.name === "sparkline" || child.name.endsWith(":sparkline")),
+  );
 
   for (const sparklineEl of sparklineElements) {
     // Get formula (f) and cell reference (sqref) elements
     const fEl = sparklineEl.children.find(
-      (child) => child.type === "element" && (child.name === "f" || child.name.endsWith(":f")),
-    ) as XmlElement | undefined;
+      (child): child is XmlElement => isXmlElement(child) && (child.name === "f" || child.name.endsWith(":f")),
+    );
     const sqrefEl = sparklineEl.children.find(
-      (child) => child.type === "element" && (child.name === "sqref" || child.name.endsWith(":sqref")),
-    ) as XmlElement | undefined;
+      (child): child is XmlElement => isXmlElement(child) && (child.name === "sqref" || child.name.endsWith(":sqref")),
+    );
 
     const f = fEl ? getTextContent(fEl) : undefined;
     const sqref = sqrefEl ? getTextContent(sqrefEl) : undefined;
@@ -237,8 +237,8 @@ function parseSparklineGroup(groupEl: XmlElement): XlsxSparklineGroup | undefine
 
 function parseSparklineColor(groupEl: XmlElement, colorName: string): XlsxColor | undefined {
   const colorEl = groupEl.children.find(
-    (child) => child.type === "element" && (child.name === colorName || child.name.endsWith(`:${colorName}`)),
-  ) as XmlElement | undefined;
+    (child): child is XmlElement => isXmlElement(child) && (child.name === colorName || child.name.endsWith(`:${colorName}`)),
+  );
 
   if (!colorEl) {
     return undefined;

@@ -7,7 +7,7 @@
  */
 
 import type { XmlElement } from "@aurochs/xml";
-import { getAttr, getChild, getChildren, getTextContent } from "@aurochs/xml";
+import { getAttr, getChild, getChildren, getTextContent, isXmlElement } from "@aurochs/xml";
 import { parseBooleanAttr, parseFloatAttr, parseIntAttr } from "../primitive";
 import type {
   XlsxPivotCacheDefinition,
@@ -50,7 +50,7 @@ function parseSharedItems(sharedItemsEl: XmlElement | undefined): readonly XlsxP
   }
   const items: XlsxPivotCacheItem[] = [];
   for (const child of sharedItemsEl.children) {
-    if (typeof child !== "object" || child.type !== "element") {
+    if (!isXmlElement(child)) {
       continue;
     }
     items.push(parseCacheItem(child));
@@ -172,7 +172,7 @@ function parseRecordValue(valueElement: XmlElement): XlsxPivotRecordValue {
 function parseRecord(recordElement: XmlElement): XlsxPivotRecord {
   const values: XlsxPivotRecordValue[] = [];
   for (const child of recordElement.children) {
-    if (typeof child !== "object" || child.type !== "element") {
+    if (!isXmlElement(child)) {
       continue;
     }
     values.push(parseRecordValue(child));

@@ -66,6 +66,36 @@ export const PRESENTATIONML_CONTENT_TYPES = {
   slideMaster: "application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml",
   /** Notes slide */
   notesSlide: "application/vnd.openxmlformats-officedocument.presentationml.notesSlide+xml",
+  /**
+   * Notes master.
+   *
+   * @see ECMA-376 Part 1, §19.3.1.27 (CT_NotesMaster)
+   */
+  notesMaster: "application/vnd.openxmlformats-officedocument.presentationml.notesMaster+xml",
+  /**
+   * Handout master.
+   *
+   * @see ECMA-376 Part 1, §19.3.1.24 (CT_HandoutMaster)
+   */
+  handoutMaster: "application/vnd.openxmlformats-officedocument.presentationml.handoutMaster+xml",
+  /**
+   * Presentation properties part (presProps.xml).
+   *
+   * @see ECMA-376 Part 1, §19.2.1.45 (CT_PresentationPr)
+   */
+  presProps: "application/vnd.openxmlformats-officedocument.presentationml.presProps+xml",
+  /**
+   * View properties part (viewProps.xml).
+   *
+   * @see ECMA-376 Part 1, §19.2.1.50 (CT_ViewPr)
+   */
+  viewProps: "application/vnd.openxmlformats-officedocument.presentationml.viewProps+xml",
+  /**
+   * Table styles part (tableStyles.xml).
+   *
+   * @see ECMA-376 Part 1, §14.2.9 (Table Styles Part)
+   */
+  tableStyles: "application/vnd.openxmlformats-officedocument.presentationml.tableStyles+xml",
   /** Comments */
   comments: "application/vnd.openxmlformats-officedocument.presentationml.comments+xml",
   /** Comment authors */
@@ -124,6 +154,24 @@ export const DRAWINGML_CONTENT_TYPES = {
   chart: "application/vnd.openxmlformats-officedocument.drawingml.chart+xml",
   /** Drawing (SpreadsheetML / WordprocessingML) */
   drawing: "application/vnd.openxmlformats-officedocument.drawing+xml",
+} as const;
+
+// =============================================================================
+// OPC Document Properties Content Types
+// =============================================================================
+
+/**
+ * OPC document-property content types (docProps/*.xml).
+ *
+ * @see ECMA-376 Part 2, §11 (OPC Document Properties)
+ */
+export const OPC_PROPERTY_CONTENT_TYPES = {
+  /** docProps/core.xml — OPC core properties (§11.3) */
+  coreProperties: "application/vnd.openxmlformats-package.core-properties+xml",
+  /** docProps/app.xml — Office extended properties */
+  extendedProperties: "application/vnd.openxmlformats-officedocument.extended-properties+xml",
+  /** docProps/custom.xml — document-level custom properties */
+  customProperties: "application/vnd.openxmlformats-officedocument.custom-properties+xml",
 } as const;
 
 // =============================================================================

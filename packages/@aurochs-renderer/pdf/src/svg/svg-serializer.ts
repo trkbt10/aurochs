@@ -11,7 +11,7 @@
  */
 
 import type { XmlNode } from "@aurochs/xml";
-import { escapeXml, serializeElement } from "@aurochs/xml";
+import { escapeXml, isXmlElement, serializeElement } from "@aurochs/xml";
 import type { SvgFragment } from "./svg-node";
 
 /**
@@ -33,7 +33,7 @@ export function serializeSvgFragment(fragment: SvgFragment): string {
  * Serialize a single SVG node (element or text) to an XML string.
  */
 export function serializeSvgNode(node: XmlNode): string {
-  if (node.type === "element") {
+  if (isXmlElement(node)) {
     return serializeElement(node);
   }
   return escapeXml(node.value);

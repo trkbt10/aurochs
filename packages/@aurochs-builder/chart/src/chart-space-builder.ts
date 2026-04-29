@@ -7,7 +7,7 @@
  * @see ECMA-376 Part 1, Section 21.2.2.27 (chartSpace)
  */
 
-import { createElement, type XmlDocument, type XmlElement } from "@aurochs/xml";
+import { createElement, createText, type XmlDocument, type XmlElement } from "@aurochs/xml";
 
 /**
  * Supported chart types for building new charts
@@ -136,17 +136,17 @@ function buildDefaultSeries(): XmlElement {
   return createElement("c:ser", {}, [
     createElement("c:idx", { val: "0" }),
     createElement("c:order", { val: "0" }),
-    createElement("c:tx", {}, [createElement("c:v", {}, [{ type: "text", value: "Series 1" }])]),
+    createElement("c:tx", {}, [createElement("c:v", {}, [createText("Series 1")])]),
     createElement("c:cat", {}, [
       createElement("c:strLit", {}, [
         createElement("c:ptCount", { val: "1" }),
-        createElement("c:pt", { idx: "0" }, [createElement("c:v", {}, [{ type: "text", value: "A" }])]),
+        createElement("c:pt", { idx: "0" }, [createElement("c:v", {}, [createText("A")])]),
       ]),
     ]),
     createElement("c:val", {}, [
       createElement("c:numLit", {}, [
         createElement("c:ptCount", { val: "1" }),
-        createElement("c:pt", { idx: "0" }, [createElement("c:v", {}, [{ type: "text", value: "1" }])]),
+        createElement("c:pt", { idx: "0" }, [createElement("c:v", {}, [createText("1")])]),
       ]),
     ]),
   ]);
@@ -159,17 +159,17 @@ function buildDefaultScatterSeries(): XmlElement {
   return createElement("c:ser", {}, [
     createElement("c:idx", { val: "0" }),
     createElement("c:order", { val: "0" }),
-    createElement("c:tx", {}, [createElement("c:v", {}, [{ type: "text", value: "Series 1" }])]),
+    createElement("c:tx", {}, [createElement("c:v", {}, [createText("Series 1")])]),
     createElement("c:xVal", {}, [
       createElement("c:numLit", {}, [
         createElement("c:ptCount", { val: "1" }),
-        createElement("c:pt", { idx: "0" }, [createElement("c:v", {}, [{ type: "text", value: "1" }])]),
+        createElement("c:pt", { idx: "0" }, [createElement("c:v", {}, [createText("1")])]),
       ]),
     ]),
     createElement("c:yVal", {}, [
       createElement("c:numLit", {}, [
         createElement("c:ptCount", { val: "1" }),
-        createElement("c:pt", { idx: "0" }, [createElement("c:v", {}, [{ type: "text", value: "1" }])]),
+        createElement("c:pt", { idx: "0" }, [createElement("c:v", {}, [createText("1")])]),
       ]),
     ]),
   ]);
@@ -182,23 +182,23 @@ function buildDefaultBubbleSeries(): XmlElement {
   return createElement("c:ser", {}, [
     createElement("c:idx", { val: "0" }),
     createElement("c:order", { val: "0" }),
-    createElement("c:tx", {}, [createElement("c:v", {}, [{ type: "text", value: "Series 1" }])]),
+    createElement("c:tx", {}, [createElement("c:v", {}, [createText("Series 1")])]),
     createElement("c:xVal", {}, [
       createElement("c:numLit", {}, [
         createElement("c:ptCount", { val: "1" }),
-        createElement("c:pt", { idx: "0" }, [createElement("c:v", {}, [{ type: "text", value: "1" }])]),
+        createElement("c:pt", { idx: "0" }, [createElement("c:v", {}, [createText("1")])]),
       ]),
     ]),
     createElement("c:yVal", {}, [
       createElement("c:numLit", {}, [
         createElement("c:ptCount", { val: "1" }),
-        createElement("c:pt", { idx: "0" }, [createElement("c:v", {}, [{ type: "text", value: "1" }])]),
+        createElement("c:pt", { idx: "0" }, [createElement("c:v", {}, [createText("1")])]),
       ]),
     ]),
     createElement("c:bubbleSize", {}, [
       createElement("c:numLit", {}, [
         createElement("c:ptCount", { val: "1" }),
-        createElement("c:pt", { idx: "0" }, [createElement("c:v", {}, [{ type: "text", value: "10" }])]),
+        createElement("c:pt", { idx: "0" }, [createElement("c:v", {}, [createText("10")])]),
       ]),
     ]),
   ]);
@@ -327,17 +327,17 @@ function buildStockChart(): XmlElement {
     createElement("c:ser", {}, [
       createElement("c:idx", { val: String(idx) }),
       createElement("c:order", { val: String(idx) }),
-      createElement("c:tx", {}, [createElement("c:v", {}, [{ type: "text", value: name }])]),
+      createElement("c:tx", {}, [createElement("c:v", {}, [createText(name)])]),
       createElement("c:cat", {}, [
         createElement("c:strLit", {}, [
           createElement("c:ptCount", { val: "1" }),
-          createElement("c:pt", { idx: "0" }, [createElement("c:v", {}, [{ type: "text", value: "Day 1" }])]),
+          createElement("c:pt", { idx: "0" }, [createElement("c:v", {}, [createText("Day 1")])]),
         ]),
       ]),
       createElement("c:val", {}, [
         createElement("c:numLit", {}, [
           createElement("c:ptCount", { val: "1" }),
-          createElement("c:pt", { idx: "0" }, [createElement("c:v", {}, [{ type: "text", value: "100" }])]),
+          createElement("c:pt", { idx: "0" }, [createElement("c:v", {}, [createText("100")])]),
         ]),
       ]),
     ]);

@@ -4,7 +4,7 @@
 
 import type { PptShape, PptFill, PptLine, PptTransform, PptTable, PptPicture, PptTextBody } from "../domain/types";
 import { buildTextBodyXml } from "./text-xml";
-import { escapeXml } from "./presentation-xml";
+import { escapeXml } from "@aurochs/xml";
 
 const _shapeIdCounter = { value: 2 }; // Start at 2 (1 is reserved for group container)
 

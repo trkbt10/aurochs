@@ -7,7 +7,7 @@
  */
 
 import type { XmlElement, XmlNode } from "@aurochs/xml";
-import { createElement } from "@aurochs/xml";
+import { createElement, createText } from "@aurochs/xml";
 import type { DocxDrawing, DocxInlineDrawing, DocxAnchorDrawing, DocxPositionH, DocxPositionV, DocxWrapType } from "@aurochs-office/docx/domain/drawing";
 import type { DrawingPicture, DrawingExtent, NonVisualDrawingProps, DrawingTransform } from "@aurochs-office/ooxml/domain/drawing";
 
@@ -152,11 +152,11 @@ function serializePositionH(pos: DocxPositionH): XmlElement {
   const children: XmlNode[] = [];
   if (pos.posOffset !== undefined) {
     children.push(
-      createElement("wp:posOffset", {}, [{ type: "text", value: String(pos.posOffset) }])
+      createElement("wp:posOffset", {}, [createText(String(pos.posOffset))])
     );
   } else if (pos.align) {
     children.push(
-      createElement("wp:align", {}, [{ type: "text", value: pos.align }])
+      createElement("wp:align", {}, [createText(pos.align)])
     );
   }
   return createElement("wp:positionH", { relativeFrom: pos.relativeFrom }, children);
@@ -166,11 +166,11 @@ function serializePositionV(pos: DocxPositionV): XmlElement {
   const children: XmlNode[] = [];
   if (pos.posOffset !== undefined) {
     children.push(
-      createElement("wp:posOffset", {}, [{ type: "text", value: String(pos.posOffset) }])
+      createElement("wp:posOffset", {}, [createText(String(pos.posOffset))])
     );
   } else if (pos.align) {
     children.push(
-      createElement("wp:align", {}, [{ type: "text", value: pos.align }])
+      createElement("wp:align", {}, [createText(pos.align)])
     );
   }
   return createElement("wp:positionV", { relativeFrom: pos.relativeFrom }, children);

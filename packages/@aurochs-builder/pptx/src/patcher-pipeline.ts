@@ -9,7 +9,7 @@
 import { loadPptxBundleFromBuffer } from "@aurochs-office/pptx/app/pptx-loader";
 import { openPresentation } from "@aurochs-office/pptx/app";
 import { parseSlide } from "@aurochs-office/pptx/parser/slide/slide-parser";
-import { parseXml, serializeDocument, isXmlElement, isXmlText, type XmlNode } from "@aurochs/xml";
+import { parseXml, serializeDocument, createText, isXmlElement, isXmlText, type XmlNode } from "@aurochs/xml";
 import { getByPath } from "@aurochs/xml";
 import type { ZipPackage } from "@aurochs/zip";
 
@@ -155,7 +155,7 @@ function replaceTextInNode(opts: TextReplaceOptions, node: XmlNode): { node: Xml
     if (isTextField && isXmlText(child)) {
       const replaced = replaceTextContent(opts, child.value);
       if (replaced !== undefined) {
-        newChildren.push({ type: "text", value: replaced });
+        newChildren.push(createText(replaced));
         changed = true;
       } else {
         newChildren.push(child);

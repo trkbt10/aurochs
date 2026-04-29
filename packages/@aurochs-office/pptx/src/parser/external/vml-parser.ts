@@ -8,7 +8,7 @@
  * @see ECMA-376 Part 4 (VML - Vector Markup Language)
  */
 
-import { getByPath, getChild, getChildren, getAttr, type XmlDocument, type XmlElement } from "@aurochs/xml";
+import { getByPath, getChild, getChildren, getAttr, isXmlElement, type XmlDocument, type XmlElement } from "@aurochs/xml";
 
 /**
  * Result of VML image lookup
@@ -79,26 +79,19 @@ export function findVmlShapeImage(
 function findShapeById(root: XmlElement, spid: string): XmlElement | undefined {
   // Check all v:shape elements
   for (const child of root.children) {
-    if (typeof child !== "object" || child === null) {
+    if (!isXmlElement(child)) {
       continue;
     }
-    if (!("type" in child)) {
-      continue;
-    }
-    if (child.type !== "element") {
-      continue;
-    }
-    const el = child as XmlElement;
-    if (el.name === "v:shape") {
+    if (child.name === "v:shape") {
       // Check o:spid attribute (primary match for OLE objects)
-      const oSpid = getAttr(el, "o:spid");
+      const oSpid = getAttr(child, "o:spid");
       if (oSpid === spid) {
-        return el;
+        return child;
       }
       // Fallback to id attribute
-      const id = getAttr(el, "id");
+      const id = getAttr(child, "id");
       if (id === spid) {
-        return el;
+        return child;
       }
     }
   }

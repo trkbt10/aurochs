@@ -12,6 +12,7 @@ import { getBasename } from "@aurochs/xml";
 import {
   PRESENTATIONML_CONTENT_TYPES,
   DRAWINGML_CONTENT_TYPES,
+  OPC_PROPERTY_CONTENT_TYPES,
   parseContentTypes as opcParseContentTypes,
 } from "@aurochs-office/opc";
 
@@ -59,7 +60,23 @@ export const CONTENT_TYPES = {
   SLIDE_MASTER: PRESENTATIONML_CONTENT_TYPES.slideMaster,
   THEME: DRAWINGML_CONTENT_TYPES.theme,
   NOTES: PRESENTATIONML_CONTENT_TYPES.notesSlide,
+  /** Notes master (§19.3.1.27 CT_NotesMaster) */
+  NOTES_MASTER: PRESENTATIONML_CONTENT_TYPES.notesMaster,
+  /** Handout master (§19.3.1.24 CT_HandoutMaster) */
+  HANDOUT_MASTER: PRESENTATIONML_CONTENT_TYPES.handoutMaster,
   PRESENTATION: PRESENTATIONML_CONTENT_TYPES.presentation,
+  /** Presentation properties part (§19.2.1.45 CT_PresentationPr) */
+  PRES_PROPS: PRESENTATIONML_CONTENT_TYPES.presProps,
+  /** View properties part (§19.2.1.50 CT_ViewPr) */
+  VIEW_PROPS: PRESENTATIONML_CONTENT_TYPES.viewProps,
+  /** Table styles part (§14.2.9) */
+  TABLE_STYLES: PRESENTATIONML_CONTENT_TYPES.tableStyles,
+  /** OPC core properties (§11.3) */
+  CORE_PROPERTIES: OPC_PROPERTY_CONTENT_TYPES.coreProperties,
+  /** Office extended properties (docProps/app.xml) */
+  EXTENDED_PROPERTIES: OPC_PROPERTY_CONTENT_TYPES.extendedProperties,
+  /** Office custom properties */
+  CUSTOM_PROPERTIES: OPC_PROPERTY_CONTENT_TYPES.customProperties,
 } as const;
 
 // =============================================================================

@@ -6,7 +6,7 @@
  * @see ECMA-376 Part 1, Section 19.5 - Animation
  */
 
-import { createElement, type XmlElement } from "@aurochs/xml";
+import { createElement, createText, type XmlElement } from "@aurochs/xml";
 import { serializeColor } from "./color";
 import type {
   Timing,
@@ -246,7 +246,7 @@ function serializeCommonBehavior(
 
   if ("attribute" in node && node.attribute) {
     children.push(
-      createElement("p:attrNameLst", {}, [createElement("p:attrName", {}, [{ type: "text", value: node.attribute }])]),
+      createElement("p:attrNameLst", {}, [createElement("p:attrName", {}, [createText(node.attribute)])]),
     );
   }
 

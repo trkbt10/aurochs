@@ -6,7 +6,7 @@
  * @see docs/plans/pptx-export/phase-9-master-layout-theme.md
  */
 
-import { createElement, getChild, updateDocumentRoot, replaceChildByName, type XmlDocument, type XmlElement } from "@aurochs/xml";
+import { createElement, getChild, isXmlElement, updateDocumentRoot, replaceChildByName, type XmlDocument, type XmlElement } from "@aurochs/xml";
 import type { ParagraphProperties, TextStyleLevels } from "@aurochs-office/pptx/domain";
 import type { ShapeChange } from "../core/shape-differ";
 import { patchSlideXml } from "../slide/slide-patcher";
@@ -23,7 +23,7 @@ function upsertDirectChild(parent: XmlElement, childName: string, child: XmlElem
     return replaceChildByName(parent, childName, child);
   }
 
-  const extLstIndex = parent.children.findIndex((c) => c.type === "element" && c.name === "p:extLst");
+  const extLstIndex = parent.children.findIndex((c) => isXmlElement(c) && c.name === "p:extLst");
   const insertIndex = extLstIndex === -1 ? parent.children.length : extLstIndex;
   const nextChildren = [...parent.children];
   nextChildren.splice(insertIndex, 0, child);

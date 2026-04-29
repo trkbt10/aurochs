@@ -1,5 +1,5 @@
 /** @file Table serializer for a:tbl element */
-import { createElement, type XmlElement } from "@aurochs/xml";
+import { createElement, createText, type XmlElement } from "@aurochs/xml";
 import type {
   Table,
   TableCell,
@@ -48,7 +48,7 @@ function serializeTableProperties(props: TableProperties): XmlElement {
     }
   }
   if (props.tableStyleId) {
-    children.push(createElement("a:tableStyleId", {}, [{ type: "text", value: props.tableStyleId }]));
+    children.push(createElement("a:tableStyleId", {}, [createText(props.tableStyleId)]));
   }
 
   return createElement("a:tblPr", attrs, children);

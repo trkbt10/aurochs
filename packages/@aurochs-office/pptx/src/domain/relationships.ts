@@ -42,6 +42,20 @@ export const RELATIONSHIP_TYPES = {
   HYPERLINK: OFFICE_RELATIONSHIP_TYPES.hyperlink,
   /** Notes slide relationship */
   NOTES: PRESENTATIONML_RELATIONSHIP_TYPES.notesSlide,
+  /** Notes master relationship (§19.3.1.27) */
+  NOTES_MASTER: PRESENTATIONML_RELATIONSHIP_TYPES.notesMaster,
+  /** Handout master relationship (§19.3.1.24) */
+  HANDOUT_MASTER: PRESENTATIONML_RELATIONSHIP_TYPES.handoutMaster,
+  /** Presentation properties relationship (§19.2.1.45 presProps.xml) */
+  PRES_PROPS: PRESENTATIONML_RELATIONSHIP_TYPES.presProps,
+  /** View properties relationship (§19.2.1.50 viewProps.xml) */
+  VIEW_PROPS: PRESENTATIONML_RELATIONSHIP_TYPES.viewProps,
+  /** Table styles relationship (§14.2.9 tableStyles.xml) */
+  TABLE_STYLES: PRESENTATIONML_RELATIONSHIP_TYPES.tableStyles,
+  /** OPC core properties relationship (§11.3 docProps/core.xml) */
+  CORE_PROPERTIES: OFFICE_RELATIONSHIP_TYPES.coreProperties,
+  /** OPC extended properties relationship (docProps/app.xml) */
+  EXTENDED_PROPERTIES: OFFICE_RELATIONSHIP_TYPES.extendedProperties,
   /** Diagram drawing relationship (DrawingML diagrams) */
   DIAGRAM_DRAWING: PRESENTATIONML_RELATIONSHIP_TYPES.diagramDrawing,
   /** VML drawing relationship */

@@ -8,7 +8,7 @@
  */
 
 import type { XmlElement, XmlNode } from "@aurochs/xml";
-import { createElement } from "@aurochs/xml";
+import { createElement, createText } from "@aurochs/xml";
 import type {
   DocxRunProperties,
   DocxRunFonts,
@@ -342,7 +342,7 @@ export function serializeRunProperties(props: DocxRunProperties | undefined): Xm
 export function serializeRunContent(content: DocxRunContent): XmlElement {
   switch (content.type) {
     case "text":
-      return createElement("w:t", { "xml:space": "preserve" }, [{ type: "text", value: content.value }]);
+      return createElement("w:t", { "xml:space": "preserve" }, [createText(content.value)]);
     case "tab":
       return createElement("w:tab");
     case "break":
@@ -356,7 +356,7 @@ export function serializeRunContent(content: DocxRunContent): XmlElement {
       return createElement("w:fldChar", attrs);
     }
     case "instrText":
-      return createElement("w:instrText", { "xml:space": "preserve" }, [{ type: "text", value: content.value }]);
+      return createElement("w:instrText", { "xml:space": "preserve" }, [createText(content.value)]);
     case "drawing":
       return serializeDrawing(content.drawing);
   }

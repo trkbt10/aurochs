@@ -6,7 +6,9 @@
   "sideEffects": false,
   "dependencies": {
     "@aurochs-office/cfb": "workspace:*",
+    "@aurochs-office/opc": "workspace:*",
     "@aurochs-office/pptx": "workspace:*",
+    "@aurochs/xml": "workspace:*",
     "@aurochs/zip": "workspace:*"
   },
   "scripts": {

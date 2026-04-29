@@ -6,7 +6,7 @@
  * @see ECMA-376 Part 4, Section 20.5 (SpreadsheetML Drawings)
  */
 
-import { createElement, type XmlElement, type XmlNode } from "@aurochs/xml";
+import { createElement, createText, type XmlElement, type XmlNode } from "@aurochs/xml";
 import type {
   XlsxDrawing,
   XlsxDrawingAnchor,
@@ -42,10 +42,10 @@ function serializeCellAnchorOffset(
   offset: XlsxCellAnchorOffset,
 ): XmlElement {
   return createElement(tagName, {}, [
-    createElement("xdr:col", {}, [{ type: "text", value: String(offset.col) }]),
-    createElement("xdr:colOff", {}, [{ type: "text", value: String(offset.colOff) }]),
-    createElement("xdr:row", {}, [{ type: "text", value: String(offset.row) }]),
-    createElement("xdr:rowOff", {}, [{ type: "text", value: String(offset.rowOff) }]),
+    createElement("xdr:col", {}, [createText(String(offset.col))]),
+    createElement("xdr:colOff", {}, [createText(String(offset.colOff))]),
+    createElement("xdr:row", {}, [createText(String(offset.row))]),
+    createElement("xdr:rowOff", {}, [createText(String(offset.rowOff))]),
   ]);
 }
 
@@ -128,7 +128,7 @@ function serializeShape(shape: XlsxShape): XmlElement {
         createElement("a:bodyPr", {}, []),
         createElement("a:p", {}, [
           createElement("a:r", {}, [
-            createElement("a:t", {}, [{ type: "text", value: shape.txBody }]),
+            createElement("a:t", {}, [createText(shape.txBody)]),
           ]),
         ]),
       ]),

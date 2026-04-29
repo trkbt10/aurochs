@@ -10,7 +10,7 @@
  * @see ECMA-376 Part 4, Section 18.3.1.55 (mergeCells)
  */
 
-import type { XmlElement, XmlNode } from "@aurochs/xml";
+import { createElement, createText, type XmlElement, type XmlNode } from "@aurochs/xml";
 import type { XlsxRow, XlsxColumnDef, XlsxSheetView, XlsxPane, XlsxSelection } from "@aurochs-office/xlsx/domain/workbook";
 import type { XlsxWorksheetInput } from "./builder-types";
 import type { CellRange } from "@aurochs-office/xlsx/domain/cell/address";
@@ -783,13 +783,13 @@ function serializeDataValidation(dv: XlsxDataValidation): XmlElement {
 
   const children: XmlNode[] = [];
   if (dv.formula1 !== undefined) {
-    children.push({ type: "element", name: "formula1", attrs: {}, children: [{ type: "text", value: dv.formula1 }] });
+    children.push(createElement("formula1", {}, [createText(dv.formula1)]));
   }
   if (dv.formula2 !== undefined) {
-    children.push({ type: "element", name: "formula2", attrs: {}, children: [{ type: "text", value: dv.formula2 }] });
+    children.push(createElement("formula2", {}, [createText(dv.formula2)]));
   }
 
-  return { type: "element", name: "dataValidation", attrs, children };
+  return createElement("dataValidation", attrs, children);
 }
 
 /**
@@ -915,7 +915,7 @@ export function serializeHeaderFooter(hf: XlsxHeaderFooter): XmlElement {
   const children: XmlNode[] = [];
   const addTextEl = (name: string, text?: string) => {
     if (text !== undefined) {
-      children.push({ type: "element", name, attrs: {}, children: [{ type: "text", value: text }] });
+      children.push(createElement(name, {}, [createText(text)]));
     }
   };
   addTextEl("oddHeader", hf.oddHeader);

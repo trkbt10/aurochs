@@ -11,7 +11,7 @@
 
 import type { Cell, CellValue } from "@aurochs-office/xlsx/domain/cell/types";
 import type { Formula, DataTableFormula } from "@aurochs-office/xlsx/domain/cell/formula";
-import type { XmlElement, XmlNode } from "@aurochs/xml";
+import { createElement, createText, type XmlElement, type XmlNode } from "@aurochs/xml";
 import { serializeCellRef, serializeRef, serializeBoolean } from "./units";
 
 // =============================================================================
@@ -272,12 +272,7 @@ export function serializeCell(cell: Cell, sharedStrings: SharedStringTable): Xml
 
   // Value element (if present)
   if (valueResult.v !== undefined) {
-    children.push({
-      type: "element",
-      name: "v",
-      attrs: {},
-      children: [{ type: "text", value: valueResult.v }],
-    });
+    children.push(createElement("v", {}, [createText(valueResult.v)]));
   }
 
   // Inline string element (if present)

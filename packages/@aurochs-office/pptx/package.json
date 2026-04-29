@@ -32,6 +32,14 @@
       "types": "./src/app/index.ts",
       "default": "./src/app/index.ts"
     },
+    "./builders": {
+      "types": "./src/builders/index.ts",
+      "default": "./src/builders/index.ts"
+    },
+    "./builders/*": {
+      "types": "./src/builders/*.ts",
+      "default": "./src/builders/*.ts"
+    },
     "./*": {
       "types": "./src/*.ts",
       "default": "./src/*.ts"

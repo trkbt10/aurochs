@@ -48,8 +48,20 @@ export const OFFICE_RELATIONSHIP_TYPES = {
   vbaProject: "http://schemas.microsoft.com/office/2006/relationships/vbaProject",
   /** Drawing relationship (worksheet/slide → drawing part) */
   drawing: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing",
-  /** Extended properties relationship */
+  /** Extended properties relationship (docProps/app.xml) */
   extendedProperties: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties",
+  /**
+   * Core properties relationship (docProps/core.xml).
+   *
+   * @see ECMA-376 Part 2, §11.3 (Core Properties Part)
+   */
+  coreProperties: "http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties",
+  /**
+   * Custom properties relationship (docProps/custom.xml).
+   *
+   * @see ECMA-376 Part 2, §11.3 (Document-level Custom Properties)
+   */
+  customProperties: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/custom-properties",
 } as const;
 
 // =============================================================================
@@ -80,6 +92,24 @@ export const PRESENTATIONML_RELATIONSHIP_TYPES = {
   commentAuthors: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/commentAuthors",
   /** Diagram drawing relationship (DrawingML diagrams) */
   diagramDrawing: "http://schemas.microsoft.com/office/2007/relationships/diagramDrawing",
+  /**
+   * Presentation properties part (ppt/presProps.xml).
+   *
+   * @see ECMA-376 Part 1, §19.2.1.45 (CT_PresentationPr)
+   */
+  presProps: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/presProps",
+  /**
+   * View properties part (ppt/viewProps.xml).
+   *
+   * @see ECMA-376 Part 1, §19.2.1.50 (CT_ViewPr)
+   */
+  viewProps: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/viewProps",
+  /**
+   * Table styles part (ppt/tableStyles.xml).
+   *
+   * @see ECMA-376 Part 1, §14.2.9 (Table Styles Part)
+   */
+  tableStyles: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/tableStyles",
 } as const;
 
 // =============================================================================

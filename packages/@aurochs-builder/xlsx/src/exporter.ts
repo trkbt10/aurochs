@@ -12,7 +12,7 @@
  * @see MS-OFFMACRO2 (Office Macro-Enabled File Format)
  */
 
-import { createElement, parseXml, type XmlElement, type XmlNode } from "@aurochs/xml";
+import { createElement, createText, parseXml, type XmlElement, type XmlNode } from "@aurochs/xml";
 import { createEmptyZipPackage, isBinaryFile, type ZipPackage } from "@aurochs/zip";
 import type { XlsxDrawingAnchor, XlsxDrawingContent } from "@aurochs-office/xlsx/domain/drawing/types";
 import {
@@ -428,7 +428,7 @@ export function generateWorkbookRels(
  */
 export function generateSharedStrings(sharedStrings: readonly string[]): XmlElement {
   const children: XmlNode[] = sharedStrings.map((str) =>
-    createElement("si", {}, [createElement("t", {}, [{ type: "text", value: str }])]),
+    createElement("si", {}, [createElement("t", {}, [createText(str)])]),
   );
 
   return createElement(

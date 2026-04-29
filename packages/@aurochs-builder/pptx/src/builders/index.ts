@@ -84,8 +84,21 @@ export {
   buildLayoutRels,
   buildBlankSlide,
   buildSlideRels,
+  // Theme component sub-builders (per ECMA-376 §20.1.4 / §20.1.6)
+  buildColorSchemeChildren,
+  buildColorSchemeElement,
+  buildFontElement,
+  buildFontSchemeElement,
+  buildFormatSchemeFromDomain,
+  defaultFormatScheme,
+  buildExtraColorSchemeList,
+  buildExtraColorScheme,
+  buildCustomColorsList,
+  buildObjectDefaultsChildren,
+  serializeObjectDefaultElement,
+  serializeTextStyleLevelsElement,
 } from "./theme-exporter";
-export type { ThemeExportOptions, LayoutExportEntry, BuildThemeXmlOptions } from "./theme-exporter";
+export type { ThemeExportOptions, LayoutExportEntry, BuildThemeXmlOptions, BuildSlideRelsOptions } from "./theme-exporter";
 
 // Chart builders
 export { applyChartUpdates } from "./chart-builder";

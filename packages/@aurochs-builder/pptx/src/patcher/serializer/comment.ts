@@ -6,7 +6,7 @@
  * @see ECMA-376 Part 1, Section 19.4 - Comments
  */
 
-import { createElement, type XmlDocument, type XmlElement } from "@aurochs/xml";
+import { createElement, createText, type XmlDocument, type XmlElement } from "@aurochs/xml";
 import type {
   Comment,
   CommentAuthor,
@@ -50,7 +50,7 @@ export function serializeComment(comment: Comment): XmlElement {
   }
 
   if (comment.text) {
-    children.push(createElement("p:text", {}, [{ type: "text", value: comment.text }]));
+    children.push(createElement("p:text", {}, [createText(comment.text)]));
   }
 
   return createElement("p:cm", attrs, children);

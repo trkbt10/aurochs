@@ -18,18 +18,16 @@ import {
 } from "@aurochs/xml";
 import { readXmlOrThrow, writeXml } from "./xml-io";
 import { PRESENTATIONML_CONTENT_TYPES, PRESENTATIONML_RELATIONSHIP_TYPES } from "@aurochs-office/opc";
+import { buildBlankSlide, buildSlideRels } from "../builders";
 
 const PRESENTATION_XML_PATH = "ppt/presentation.xml";
 const PRESENTATION_RELS_PATH = "ppt/_rels/presentation.xml.rels";
 const CONTENT_TYPES_PATH = "[Content_Types].xml";
 
 const SLIDE_REL_TYPE = PRESENTATIONML_RELATIONSHIP_TYPES.slide;
-const SLIDE_LAYOUT_REL_TYPE = PRESENTATIONML_RELATIONSHIP_TYPES.slideLayout;
 const NOTES_REL_TYPE = PRESENTATIONML_RELATIONSHIP_TYPES.notesSlide;
 const SLIDE_CONTENT_TYPE = PRESENTATIONML_CONTENT_TYPES.slide;
 const NOTES_CONTENT_TYPE = PRESENTATIONML_CONTENT_TYPES.notesSlide;
-
-const RELS_XMLNS = "http://schemas.openxmlformats.org/package/2006/relationships";
 
 // =============================================================================
 // Types
@@ -357,62 +355,20 @@ function removeOverride(contentTypesXml: XmlDocument, partName: string): XmlDocu
 }
 
 // =============================================================================
-// Blank Slide Builder
+// Blank Slide / Slide Rels — delegated to @aurochs-builder/pptx/builders SoT
 // =============================================================================
 
+/**
+ * Local adapters that route through the canonical builders so this
+ * module does not duplicate XML construction. Kept as wrappers to
+ * preserve the existing callsite shapes.
+ */
 function buildBlankSlideXml(): XmlDocument {
-  return {
-    children: [
-      createElement(
-        "p:sld",
-        {
-          "xmlns:a": "http://schemas.openxmlformats.org/drawingml/2006/main",
-          "xmlns:r": "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
-          "xmlns:p": "http://schemas.openxmlformats.org/presentationml/2006/main",
-        },
-        [
-          createElement("p:cSld", {}, [
-            createElement("p:spTree", {}, [
-              createElement("p:nvGrpSpPr", {}, [
-                createElement("p:cNvPr", { id: "1", name: "" }),
-                createElement("p:cNvGrpSpPr"),
-                createElement("p:nvPr"),
-              ]),
-              createElement("p:grpSpPr", {}, [
-                createElement("a:xfrm", {}, [
-                  createElement("a:off", { x: "0", y: "0" }),
-                  createElement("a:ext", { cx: "0", cy: "0" }),
-                  createElement("a:chOff", { x: "0", y: "0" }),
-                  createElement("a:chExt", { cx: "0", cy: "0" }),
-                ]),
-              ]),
-            ]),
-          ]),
-          createElement("p:clrMapOvr", {}, [createElement("a:masterClrMapping")]),
-        ],
-      ),
-    ],
-  };
-}
-
-function normalizeLayoutPath(layoutPath: string): string {
-  return layoutPath.startsWith("ppt/") ? `../${layoutPath.slice(4)}` : layoutPath;
+  return buildBlankSlide();
 }
 
 function buildSlideRelsXml(layoutPath: string): XmlDocument {
-  const targetFromSlides = normalizeLayoutPath(layoutPath);
-
-  return {
-    children: [
-      createElement("Relationships", { xmlns: RELS_XMLNS }, [
-        createElement("Relationship", {
-          Id: "rId1",
-          Type: SLIDE_LAYOUT_REL_TYPE,
-          Target: targetFromSlides,
-        }),
-      ]),
-    ],
-  };
+  return buildSlideRels({ layoutTarget: layoutPath });
 }
 
 // =============================================================================

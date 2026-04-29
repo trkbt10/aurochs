@@ -8,7 +8,7 @@
  */
 
 import type { XmlDocument, XmlElement } from "@aurochs/xml";
-import { getByPath, getChild } from "@aurochs/xml";
+import { getByPath, getChild, isXmlElement } from "@aurochs/xml";
 import type { SlideLayoutType } from "../../domain/slide/types";
 import type { Shape, Background } from "../../domain";
 import type { PlaceholderContext, MasterStylesInfo } from "../context";
@@ -75,7 +75,7 @@ function updateChildElement(
   // eslint-disable-next-line no-restricted-syntax -- mutable flag tracking whether child was found and replaced
   let updated = false;
   const children = element.children.map((child) => {
-    if (child.type !== "element") {
+    if (!isXmlElement(child)) {
       return child;
     }
     if (child.name !== childName) {
@@ -255,7 +255,7 @@ export function applySlideLayoutAttributes(layoutDoc: XmlDocument, attributes: S
   return {
     ...layoutDoc,
     children: layoutDoc.children.map((child) => {
-      if (child.type !== "element") {
+      if (!isXmlElement(child)) {
         return child;
       }
       return child.name === "p:sldLayout" ? updatedLayoutWithName : child;

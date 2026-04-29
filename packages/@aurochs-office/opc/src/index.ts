@@ -139,6 +139,7 @@ export {
   IMAGE_EXTENSION_TO_CONTENT_TYPE,
   inferExtensionFromMediaContentType,
   normalizeMediaContentType,
+  OPC_PROPERTY_CONTENT_TYPES,
 } from "./ooxml-content-types";
 export type { MediaContentType } from "./ooxml-content-types";
 

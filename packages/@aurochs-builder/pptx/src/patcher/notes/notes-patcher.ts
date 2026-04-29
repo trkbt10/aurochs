@@ -8,6 +8,7 @@
 
 import {
   createElement,
+  createText,
   getByPath,
   getChild,
   getChildren,
@@ -62,7 +63,7 @@ function createNotesSlideDocument(slideRId: string, text: string): XmlDocument {
     createElement("a:p", {}, [
       createElement("a:r", {}, [
         createElement("a:rPr", { lang: "en-US" }),
-        createElement("a:t", {}, [{ type: "text", value: text }]),
+        createElement("a:t", {}, [createText(text)]),
       ]),
       createElement("a:endParaRPr", { lang: "en-US" }),
     ]),
@@ -174,7 +175,7 @@ function updateNotesText(notesDoc: XmlDocument, text: string): XmlDocument {
     createElement("a:p", {}, [
       createElement("a:r", {}, [
         createElement("a:rPr", { lang: "en-US" }),
-        createElement("a:t", {}, [{ type: "text", value: text }]),
+        createElement("a:t", {}, [createText(text)]),
       ]),
       createElement("a:endParaRPr", { lang: "en-US" }),
     ]),
