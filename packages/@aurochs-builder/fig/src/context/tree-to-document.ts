@@ -15,6 +15,7 @@ import type { FigNode, FigNodeType, FigMatrix, FigVector, FigColor, FigPaint, Fi
 import { FIG_NODE_TYPE } from "@aurochs/fig/types";
 import type { NodeTreeResult } from "@aurochs/fig/parser";
 import { getNodeType, safeChildren, guidToString } from "@aurochs/fig/parser";
+import { dfsById } from "@aurochs/fig/tree";
 import {
   getEffectiveSymbolID,
   buildFigStyleRegistry,
@@ -602,13 +603,61 @@ function resolveOverridePaths(
 
   const resolve = (
     entries: readonly import("@aurochs/fig/types").FigKiwiSymbolOverride[],
-  ): readonly SymbolOverride[] =>
-    resolveEntryPaths(entries, effectiveSymbol.node, node, symbolMap, blobs);
+  ): readonly SymbolOverride[] => {
+    const effGuidStr = guidToString(effectiveGuid);
+    // Two-stage filter — both stages use the single slot-lookup
+    // primitive `findInKiwiTree` so every "is guid X reachable?"
+    // question is answered the same way.
+    //
+    // Stage 1: raw authored first guid must exist somewhere in the
+    // file (as a symbol root or anywhere in any symbol's subtree).
+    // This drops Figma authoring residue: guids from a TEXT that was
+    // later rewritten, rich-text style IDs that aren't tree nodes, or
+    // cross-file paste artefacts. Without this, the translation
+    // primitive's majority-vote heuristic maps them onto arbitrary
+    // descendants.
+    //
+    // Stage 2: post-resolve first guid must be the INSTANCE's
+    // effective SYMBOL (self-override) or a descendant of its subtree.
+    // This drops cross-symbol authoring mistakes that survive Stage 1
+    // because the guid exists but belongs to an unrelated SYMBOL.
+    const filtered = entries.filter((e) => guidExistsInFile(e.guidPath?.guids?.[0], symbolMap));
+    const resolved = resolveEntryPaths(filtered, effectiveSymbol.node, node, symbolMap, blobs);
+    return resolved.filter((entry) => guidReachableInSymbol(
+      entry.guidPath?.guids?.[0],
+      effectiveSymbol.node,
+      effGuidStr,
+    ));
+  };
 
   return {
     overrides: rawOverrides ? resolve(rawOverrides) : undefined,
     derivedSymbolData: rawDerivedSymbolData ? resolve(rawDerivedSymbolData) : undefined,
   };
+}
+
+function guidReachableInSymbol(
+  guid: { readonly sessionID: number; readonly localID: number } | undefined,
+  symbolRoot: FigNode,
+  symbolIdStr: string,
+): boolean {
+  if (!guid) { return true; } // empty path — treated as no constraint
+  const s = `${guid.sessionID}:${guid.localID}`;
+  if (s === symbolIdStr) { return true; }
+  return findInKiwiTree(symbolRoot, s) !== undefined;
+}
+
+function guidExistsInFile(
+  guid: { readonly sessionID: number; readonly localID: number } | undefined,
+  symbolMap: ReadonlyMap<string, FigNode>,
+): boolean {
+  if (!guid) { return true; }
+  const s = `${guid.sessionID}:${guid.localID}`;
+  if (symbolMap.has(s)) { return true; }
+  for (const root of symbolMap.values()) {
+    if (findInKiwiTree(root, s)) { return true; }
+  }
+  return false;
 }
 
 /**
@@ -624,7 +673,7 @@ function resolveEntryPaths(
   symbolMap: ReadonlyMap<string, FigNode>,
   blobs: readonly import("@aurochs/fig/parser").FigBlob[] | undefined,
 ): readonly SymbolOverride[] {
-  const topMap = buildGuidTranslationMap(
+  const primaryMap = buildGuidTranslationMap(
     safeChildren(symbolRoot),
     instanceNode.derivedSymbolData,
     getInstanceSymbolOverrides(instanceNode),
@@ -632,6 +681,19 @@ function resolveEntryPaths(
     symbolMap,
     blobs,
   );
+
+  // Fallback: offset-based mapping anchored at the self-override.
+  // When authored overrides carry consecutive localIDs (typical of
+  // Figma's INSTANCE GUID allocation — the SYMBOL itself at base and
+  // the override slots at base+1, base+2, ...) and the primitive
+  // heuristic couldn't group them under one session (e.g. SYMBOL has
+  // descendants across multiple sessions), we match by DFS order.
+  // `primaryMap` wins whenever it holds a key; fallback only fills the
+  // holes.
+  const effGuidStr = `${(instanceNode.symbolData?.symbolID ?? instanceNode.symbolID)?.sessionID ?? 0}:${(instanceNode.symbolData?.symbolID ?? instanceNode.symbolID)?.localID ?? 0}`;
+  const fallbackMap = buildOffsetFallbackMap(entries, symbolRoot, effGuidStr);
+
+  const levelMap: import("@aurochs/fig/symbols").GuidTranslationMap = mergeMaps(primaryMap, fallbackMap);
 
   // `resolvedSlotGuid → variantSymbolGuid`: a sibling single-guid entry
   // with `overriddenSymbolID` announces that the INSTANCE at
@@ -643,7 +705,7 @@ function resolveEntryPaths(
     if (!guids || guids.length !== 1) { continue; }
     if (!entry.overriddenSymbolID) { continue; }
     const src = guidToString(guids[0]);
-    const resolved = topMap.get(src) ?? src;
+    const resolved = levelMap.get(src) ?? src;
     variantAt.set(
       resolved,
       `${entry.overriddenSymbolID.sessionID}:${entry.overriddenSymbolID.localID}`,
@@ -651,8 +713,89 @@ function resolveEntryPaths(
   }
 
   return entries.map((entry) =>
-    resolveEntryPath(entry, topMap, symbolRoot, symbolMap, blobs, variantAt),
+    resolveEntryPath(entry, levelMap, symbolRoot, symbolMap, blobs, variantAt),
   );
+}
+
+/**
+ * Build an offset-anchored fallback mapping: when the override set
+ * contains a self-override at `[symbolId]` and subsequent authored
+ * guids have consecutive localIDs, pair each consecutive authored guid
+ * with the next descendant in DFS order.
+ *
+ * This recovers the addressing convention Figma uses when its
+ * majority-vote heuristic has insufficient cross-session signal to
+ * group the override GUIDs. Without it, authored overrides targeting
+ * SYMBOL descendants across different Kiwi session IDs fail to
+ * resolve, producing `target node not found` warnings.
+ */
+function buildOffsetFallbackMap(
+  entries: readonly import("@aurochs/fig/types").FigKiwiSymbolOverride[],
+  symbolRoot: FigNode,
+  symbolIdStr: string,
+): ReadonlyMap<string, string> {
+  // Collect all unique override first-guids. Figma authoring allocates
+  // override slot GUIDs sequentially — we pair each authored guid with
+  // a descendant in DFS order, using localID as tiebreaker within the
+  // authoring session. Groups by session ID so authors using separate
+  // Kiwi sessions for the SYMBOL vs slot allocation still match.
+  const [symSessionStr] = symbolIdStr.split(":");
+  const anchorSession = Number(symSessionStr);
+
+  const seen = new Set<string>();
+  const sameSession: { str: string; local: number }[] = [];
+  for (const e of entries) {
+    const g = e.guidPath?.guids?.[0];
+    if (!g) { continue; }
+    const s = guidToString(g);
+    if (seen.has(s)) { continue; }
+    if (s === symbolIdStr) { continue; } // self-override, handled elsewhere
+    seen.add(s);
+    if (g.sessionID === anchorSession) {
+      sameSession.push({ str: s, local: g.localID });
+    }
+  }
+
+  // Only accept same-session candidates. Cross-session authored guids
+  // are ambiguous (could be historical slot IDs, rich-text style IDs,
+  // cross-component paste residue) — mapping them against DFS order
+  // produces false-positive slot matches that overwrite legitimate
+  // SYMBOL descendant guids. Reject them here so the downstream
+  // `overrideReachable` filter can drop them cleanly.
+  const candidates: { str: string; local: number }[] = sameSession.slice().sort((a, b) => a.local - b.local);
+  if (candidates.length === 0) { return new Map(); }
+
+  // DFS descendants of the SYMBOL frame.
+  const descendants: FigNode[] = [];
+  const stack = [...safeChildren(symbolRoot)];
+  while (stack.length > 0) {
+    const n = stack.shift();
+    if (!n) { continue; }
+    descendants.push(n);
+    for (const c of safeChildren(n)) { stack.push(c); }
+  }
+
+  // Pair each authored guid with the next descendant in DFS order.
+  // Figma's authoring allocates sequentially — position i in the
+  // candidates list corresponds to descendant position i.
+  const result = new Map<string, string>();
+  const max = Math.min(candidates.length, descendants.length);
+  for (let i = 0; i < max; i++) {
+    result.set(candidates[i].str, guidToString(descendants[i].guid));
+  }
+  return result;
+}
+
+function mergeMaps(
+  primary: import("@aurochs/fig/symbols").GuidTranslationMap,
+  fallback: ReadonlyMap<string, string>,
+): import("@aurochs/fig/symbols").GuidTranslationMap {
+  if (fallback.size === 0) { return primary; }
+  const merged = new Map(primary);
+  for (const [k, v] of fallback) {
+    if (!merged.has(k)) { merged.set(k, v); }
+  }
+  return merged;
 }
 
 /**
@@ -676,12 +819,23 @@ function resolveEntryPath(
 
   for (let i = 0; i < guids.length; i++) {
     const src = guidToString(guids[i]);
-    const resolvedStr = levelMap.get(src) ?? src;
+    // Identity preference: if the source guid already appears as a
+    // descendant of the current SYMBOL, treat it as already-resolved
+    // and do not consult the translation map. Without this check, the
+    // heuristic in `buildGuidTranslationMap` can re-map a valid
+    // descendant guid to a different descendant (because cross-session
+    // override groups collapse under its majority-vote logic), pointing
+    // multi-level paths at the wrong slot. See SDS Dialog variant swap
+    // `[192:31517 → 315:31895 → 2072:9434]` where `315:31895` is a
+    // direct child of the variant SYMBOL but was rewritten to a
+    // sibling TEXT.
+    const alreadyDescendant = levelSymbolRoot !== undefined && findInKiwiTree(levelSymbolRoot, src) !== undefined;
+    const resolvedStr = alreadyDescendant ? src : (levelMap.get(src) ?? src);
     resolved.push(parseGuidToFigGuid(resolvedStr));
 
     if (i === guids.length - 1 || !levelSymbolRoot) { break; }
 
-    const target = findDescendantByGuid(levelSymbolRoot, resolvedStr);
+    const target = findInKiwiTree(levelSymbolRoot, resolvedStr);
     if (!target) { break; }
     if (getNodeType(target) !== FIG_NODE_TYPE.INSTANCE) { continue; }
 
@@ -704,7 +858,7 @@ function resolveEntryPath(
       seed,
     ];
 
-    levelMap = buildGuidTranslationMap(
+    const primaryLevelMap = buildGuidTranslationMap(
       safeChildren(nestedSymbol.node),
       target.derivedSymbolData,
       seeded,
@@ -712,6 +866,15 @@ function resolveEntryPath(
       symbolMap,
       blobs,
     );
+
+    // Offset-based fallback at each level. Nested INSTANCE's own
+    // authoring session anchor is its effective SYMBOL id. When the
+    // primitive's heuristic fails (e.g. single seed guid, no majority
+    // vote signal), pair tail guids against DFS descendants by localID
+    // order. Same-session-priority policy applies at every level.
+    const nestedAnchorStr = `${nestedSymbolGuid.sessionID}:${nestedSymbolGuid.localID}`;
+    const nestedFallback = buildOffsetFallbackMap(seeded, nestedSymbol.node, nestedAnchorStr);
+    levelMap = mergeMaps(primaryLevelMap, nestedFallback);
     levelSymbolRoot = nestedSymbol.node;
   }
 
@@ -721,15 +884,20 @@ function resolveEntryPath(
   };
 }
 
-function findDescendantByGuid(root: FigNode, guidStr: string): FigNode | undefined {
-  const stack: FigNode[] = [...safeChildren(root)];
-  while (stack.length > 0) {
-    const n = stack.pop();
-    if (!n) { continue; }
-    if (guidToString(n.guid) === guidStr) { return n; }
-    for (const c of safeChildren(n)) { stack.push(c); }
-  }
-  return undefined;
+/**
+ * FigNode-tree slot lookup: delegates to the generic SoT primitive
+ * `dfsById` in `@aurochs/fig/tree`. This type-ties the primitive to
+ * the raw Kiwi `FigNode` shape via the `getId` / `getChildren`
+ * extractors. Every reach/exist check at the FigNode layer in this
+ * module MUST go through this wrapper, which in turn routes to
+ * `dfsById` — the repo-wide SoT for DFS-by-id. Inline re-implementation
+ * is banned by the ESLint rule `custom/no-inline-dfs-by-id`.
+ */
+function findInKiwiTree(root: FigNode, guidStr: string): FigNode | undefined {
+  return dfsById(safeChildren(root), guidStr, {
+    getId: (n) => guidToString(n.guid),
+    getChildren: (n) => safeChildren(n),
+  });
 }
 
 function parseGuidToFigGuid(guidStr: string): import("@aurochs/fig/parser").FigGuid {

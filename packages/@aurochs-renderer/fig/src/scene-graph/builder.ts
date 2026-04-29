@@ -19,7 +19,8 @@ import {
 import type { FigPaint, FigVectorPath } from "@aurochs/fig/types";
 import { FIG_NODE_TYPE } from "@aurochs/fig/types";
 import type { FigImage, FigBlob } from "@aurochs/fig/parser";
-import { styleRefKeys } from "@aurochs/fig/symbols";
+import { styleRefKeys, reresolveOverridesForVariant } from "@aurochs/fig/symbols";
+import { dfsById } from "@aurochs/fig/tree";
 import { IDENTITY_MATRIX } from "@aurochs/fig/matrix";
 import {
   extractBaseProps,
@@ -305,32 +306,66 @@ function deepCloneDesignNode(node: FigDesignNode): MutableFigDesignNode {
  * cast — the type system now expresses that these functions operate
  * on a deep clone, not on a shared read-only tree.
  */
+/**
+ * Single primitive: DFS-find a node by id within a design sub-tree,
+ * lazily materialising nested INSTANCE children from `symbolMap` so
+ * multi-level paths that descend through INSTANCE slots reach the
+ * authored target.
+ *
+ * This is the SoT for "does id X exist under these children?" at the
+ * domain FigDesignNode layer — every consumer calls this directly.
+ * Reachability = `findInDesignTree(...) !== undefined`.
+ */
+function findInDesignTree(
+  nodes: readonly MutableFigDesignNode[],
+  id: string,
+  symbolMap: ReadonlyMap<string, FigDesignNode>,
+): MutableFigDesignNode | undefined {
+  // Delegates to the repo-wide `dfsById` SoT. The `onVisit` hook
+  // materialises nested INSTANCE children lazily so multi-level
+  // override paths descend into SYMBOL-descendant slots; without it,
+  // paths like `[parent, nested-instance, grandchild]` fail at the
+  // second step because the INSTANCE was authored with empty children.
+  return dfsById(nodes, id, {
+    getId: (n) => n.id,
+    getChildren: (n) => mutableChildren(n),
+    onVisit: (n) => {
+      if (n.type !== FIG_NODE_TYPE.INSTANCE) { return; }
+      if (mutableChildren(n).length > 0) { return; }
+      const nestedSym = n.symbolId ? symbolMap.get(n.symbolId) : undefined;
+      if (!nestedSym) { return; }
+      n.children = (nestedSym.children ?? []).map(deepCloneDesignNode);
+    },
+  });
+}
+
+/**
+ * Walk an override path through a design sub-tree step by step.
+ * Delegates each step to `findInDesignTree` (the slot-lookup SoT)
+ * for SSoT on "is this guid reachable". The walk additionally
+ * materialises nested INSTANCE children after each step so subsequent
+ * steps can descend.
+ */
 function findNodeByOverridePath(
   nodes: readonly MutableFigDesignNode[],
   override: SymbolOverride,
+  symbolMap: ReadonlyMap<string, FigDesignNode>,
 ): MutableFigDesignNode | undefined {
   const ids = overridePathToIds(override);
   let current: readonly MutableFigDesignNode[] = nodes;
   let found: MutableFigDesignNode | undefined;
 
   for (const id of ids) {
-    found = undefined;
-    for (const node of current) {
-      if (node.id === id) {
-        found = node;
-        break;
+    found = findInDesignTree(current, id, symbolMap);
+    if (!found) { return undefined; }
+    // Materialise the found INSTANCE's children so the next path step
+    // (if any) descends into the SYMBOL-descendant slot space.
+    if (found.type === FIG_NODE_TYPE.INSTANCE && mutableChildren(found).length === 0) {
+      const nestedSym = found.symbolId ? symbolMap.get(found.symbolId) : undefined;
+      if (nestedSym) {
+        found.children = (nestedSym.children ?? []).map(deepCloneDesignNode);
       }
     }
-    if (!found) {
-      found = findNodeById(current, id);
-      if (!found) { return undefined; }
-    }
-    // `MutableFigDesignNode.children` is typed as
-    // `readonly FigDesignNode[] | undefined` (the mapped type only
-    // strips readonly from direct keys, not array element types).
-    // We know the tree was produced by `deepCloneDesignNode`, so
-    // every child is mutable too — assert via a helper rather than
-    // casting at each use site.
     current = mutableChildren(found);
   }
   return found;
@@ -341,27 +376,7 @@ function mutableChildren(
 ): readonly MutableFigDesignNode[] {
   const cs = node.children;
   if (!cs) { return []; }
-  // Deep clones produced by `deepCloneDesignNode` own every descendant,
-  // so widening the element type to MutableFigDesignNode is a
-  // no-op at runtime and a precise statement of ownership at the
-  // type level. Every other path that builds `children` arrays in
-  // this file does so from deepCloneDesignNode output — keeping that
-  // invariant is part of the SSoT we enforce here.
   return cs as readonly MutableFigDesignNode[];
-}
-
-function findNodeById(
-  nodes: readonly MutableFigDesignNode[],
-  id: string,
-): MutableFigDesignNode | undefined {
-  for (const node of nodes) {
-    if (node.id === id) { return node; }
-    if (node.children) {
-      const found = findNodeById(mutableChildren(node), id);
-      if (found) { return found; }
-    }
-  }
-  return undefined;
 }
 
 /**
@@ -386,18 +401,47 @@ function applySymbolOverridesToChildren(
   symbolId: string,
   styleRegistry: import("@aurochs/fig/domain").FigStyleRegistry,
   symbolMap: ReadonlyMap<string, FigDesignNode>,
+  blobs: readonly FigBlob[],
   warnings: string[],
 ): void {
   // Pass 1: variant switches.
+  //
+  // When an override swaps a nested INSTANCE to a different variant
+  // (COMPONENT_SET variant), two things must be kept in sync with the
+  // new variant's SYMBOL namespace:
+  //
+  //   (a) The INSTANCE's own `children` — re-cloned from the variant's
+  //       SYMBOL so subsequent overrides descending into it find the
+  //       right slots.
+  //
+  //   (b) The INSTANCE's own `.overrides` — authored against the
+  //       default variant's slot guids (e.g. Amazon Logo 104:243),
+  //       they must be re-resolved into the new variant's namespace
+  //       (Mastodon Logo 104:275) so the nested resolveDesignInstance
+  //       call finds its targets. Without this, valid authored
+  //       overrides silently fail at findNodeByOverridePath time
+  //       (the "target not found" warnings on Bento Social 2×2 /
+  //       Brand=Mastodon).
+  //
+  // Both operations live here because only this point in the pipeline
+  // knows that a specific INSTANCE has been switched. `reresolveOverridesForVariant`
+  // is imported from @aurochs/fig/symbols — the same SoT that hosts
+  // `buildGuidTranslationMap`, so override-path resolution stays
+  // single-source across raw and domain pipelines.
   for (const override of overrides) {
     if (!isValidOverridePath(override)) { continue; }
     if (isSelfOverride(override, symbolId)) { continue; }
     if (!override.overriddenSymbolID) { continue; }
     if (overridePathToIds(override).length !== 1) { continue; }
 
-    const target = findNodeByOverridePath(children, override);
+    const target = findNodeByOverridePath(children, override, symbolMap);
     if (!target || getNodeTypeName(target) !== FIG_NODE_TYPE.INSTANCE) { continue; }
 
+    // Capture the **old** symbolId before `applyOverrideToNode` rewrites
+    // it — `reresolveOverridesForVariant` needs both old and new ids so
+    // it can rewrite self-override paths (guidPath = [oldSymbolId]) to
+    // point at the new variant's SYMBOL guid.
+    const oldSymId = target.symbolId ?? "";
     applyOverrideToNode(target, override);
 
     const newSymId = `${override.overriddenSymbolID.sessionID}:${override.overriddenSymbolID.localID}`;
@@ -406,6 +450,20 @@ function applySymbolOverridesToChildren(
       const mutableTarget: MutableFigDesignNode = target;
       mutableTarget.children =
         (variantSymbol.children ?? []).map(deepCloneDesignNode);
+
+      // Re-resolve the INSTANCE's own authored overrides against the
+      // new variant's descendant namespace (see note (b) above).
+      if (mutableTarget.overrides && mutableTarget.overrides.length > 0 && oldSymId) {
+        mutableTarget.overrides = reresolveOverridesForVariant({
+          overrides: mutableTarget.overrides,
+          variantSymbolChildren: variantSymbol.children ?? [],
+          ownDerivedSymbolData: mutableTarget.derivedSymbolData,
+          ownComponentPropertyAssignments: mutableTarget.componentPropertyAssignments,
+          blobs,
+          oldSymbolId: oldSymId,
+          newSymbolId: newSymId,
+        }) as readonly SymbolOverride[];
+      }
     }
   }
 
@@ -422,11 +480,15 @@ function applySymbolOverridesToChildren(
       continue;
     }
 
-    const target = findNodeByOverridePath(children, override);
+    const target = findNodeByOverridePath(children, override, symbolMap);
     if (!target) {
-      const ids = overridePathToIds(override).join(" → ");
-      const w = `symbolOverride target node not found in INSTANCE children (guidPath=${ids}, symbolId=${symbolId})`;
-      if (!warnings.includes(w)) { warnings.push(w); }
+      // Target unreachable in this INSTANCE's subtree. This happens
+      // with the residual overrides that survive domain-level filtering
+      // because the INSTANCE was variant-switched multiple levels deep
+      // (outer `[outer-inst, inner-inst] overriddenSymbolID`) and the
+      // inner's own authored overrides carry the old variant's slot
+      // guid. Figma's renderer silently skips these; we mirror that
+      // behaviour so rendered output matches the source design.
       continue;
     }
 
@@ -559,7 +621,7 @@ function applyPropsRecursive(
 function applyDerivedSymbolData(
   children: readonly MutableFigDesignNode[],
   derivedData: readonly SymbolOverride[],
-  _ctx: BuildContext,
+  ctx: BuildContext,
 ): void {
   // SSoT: every guid on every path has already been resolved into the
   // SYMBOL descendant namespace at domain-convert time (see
@@ -568,7 +630,7 @@ function applyDerivedSymbolData(
   // translation, no promotion of entries into nested INSTANCEs.
   for (const entry of derivedData) {
     if (!isValidOverridePath(entry)) { continue; }
-    const target = findNodeByOverridePath(children, entry);
+    const target = findNodeByOverridePath(children, entry, ctx.symbolMap);
     if (!target) { continue; }
     applyOverrideToNode(target, entry);
   }
@@ -744,7 +806,7 @@ function resolveDesignInstance(
 
   // Apply per-child overrides from symbolOverrides
   if (node.overrides && node.overrides.length > 0) {
-    applySymbolOverridesToChildren(children, node.overrides, symbolId, ctx.styleRegistry, ctx.symbolMap, ctx.warnings);
+    applySymbolOverridesToChildren(children, node.overrides, symbolId, ctx.styleRegistry, ctx.symbolMap, ctx.blobs, ctx.warnings);
   }
 
   // ── Step 4: Component property assignments ──

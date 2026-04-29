@@ -77,6 +77,10 @@
     "./test-helpers": {
       "types": "./src/kiwi/test-helpers.ts",
       "default": "./src/kiwi/test-helpers.ts"
+    },
+    "./tree": {
+      "types": "./src/tree/index.ts",
+      "default": "./src/tree/index.ts"
     }
   },
   "dependencies": {

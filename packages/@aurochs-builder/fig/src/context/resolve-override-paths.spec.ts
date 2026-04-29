@@ -49,6 +49,9 @@ function symbolNode(localID: number, name: string, children: readonly FigNode[])
     phase: { value: 1, name: "CREATED" },
     type: { value: 14, name: FIG_NODE_TYPE.SYMBOL },
     name,
+    // safeChildren / tree-walkers read `children` directly (not
+    // `childGuids`), so the spec tree must inline the child FigNodes.
+    children,
     childGuids: children.map((c) => c.guid),
   };
 }
@@ -72,10 +75,14 @@ function instanceNode(
 }
 
 describe("resolveOverridePaths — SSoT for override path resolution", () => {
-  it("override count is preserved (no silent dropping during resolution)", () => {
-    // SSoT invariant: `resolveOverridePaths` is a name-and-namespace
-    // rewrite, not a filter. Every override authored on the INSTANCE
-    // must survive through to `FigDesignNode.overrides`.
+  it("overrides that resolve to reachable slots are kept; phantoms are dropped", () => {
+    // SSoT invariant: `resolveOverridePaths` rewrites guid paths into
+    // the SYMBOL-descendant namespace and drops entries that have no
+    // reachable target anywhere in the file's symbolMap. Figma's own
+    // renderer silently skips such phantom overrides (authoring
+    // residue from deleted slots or rewritten TEXT rich-text ranges),
+    // and so does the resolver — the scene-graph builder never sees
+    // structurally-unresolvable entries.
     const logoRaw = vectorNode(100, "Logo");
     const brandSym = symbolNode(10, "Brand", [logoRaw]);
     const symbolMap = new Map<string, FigNode>([
@@ -84,19 +91,17 @@ describe("resolveOverridePaths — SSoT for override path resolution", () => {
     ]);
 
     const instance = instanceNode(1, "Brand", guid(10, 10), [
-      { guidPath: { guids: [guid(20, 200)] }, styleIdForFill: { guid: guid(1, 958) } },
-      { guidPath: { guids: [guid(20, 201)] }, styleIdForFill: { guid: guid(1, 959) } },
-      { guidPath: { guids: [guid(20, 202)] } },
+      // Reachable: targets the SYMBOL's Logo descendant after
+      // translation (guid 10:100 is a descendant of brandSym).
+      { guidPath: { guids: [guid(10, 100)] }, styleIdForFill: { guid: guid(1, 958) } },
+      // Phantom: guid 999:999 is nowhere in the symbolMap; drop.
+      { guidPath: { guids: [guid(999, 999)] } },
     ]);
 
     const components = new Map<string, FigDesignNode>();
     const node = convertFigNode(instance, components, EMPTY_STYLE_REGISTRY, symbolMap, []);
-    expect(node.overrides?.length).toBe(3);
-    // Each resolved path must still have exactly one guid (path length
-    // is preserved — resolution rewrites guids, doesn't add or remove).
-    for (const ov of node.overrides!) {
-      expect(ov.guidPath?.guids.length).toBe(1);
-    }
+    expect(node.overrides?.length).toBe(1);
+    expect(node.overrides![0].guidPath?.guids[0]).toEqual(guid(10, 100));
   });
 
   it("non-INSTANCE nodes carry raw overrides / dsd untouched", () => {

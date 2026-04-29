@@ -69,6 +69,10 @@ function findAbsoluteBounds(
   targetId: FigNodeId,
   parentTransform: FigMatrix,
 ): (SimpleBounds & { readonly rotation: number }) | undefined {
+  /* eslint-disable custom/no-inline-dfs-by-id -- path-accumulating walk:
+   composes ancestor transforms along the path to produce absolute bounds
+   for the found node. `dfsById` returns only the node, not the composed
+   transform chain, so this cannot be expressed as a plain lookup. */
   for (const node of nodes) {
     const absTransform = composeTransforms(parentTransform, node.transform);
     if (node.id === targetId) {
@@ -88,6 +92,7 @@ function findAbsoluteBounds(
       }
     }
   }
+  /* eslint-enable custom/no-inline-dfs-by-id */
   return undefined;
 }
 

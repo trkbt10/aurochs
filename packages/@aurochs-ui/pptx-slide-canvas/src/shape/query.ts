@@ -26,9 +26,8 @@ export function findShapeById(shapes: readonly Shape[], id: ShapeId): Shape | un
 export function findShapeByIdWithParents(
   shapes: readonly Shape[],
   id: ShapeId,
-  parentGroups: readonly GrpShape[] = [],
 ): { shape: Shape; parentGroups: readonly GrpShape[] } | undefined {
-  const result = genericFindShapeByIdWithParents(shapes, id, parentGroups);
+  const result = genericFindShapeByIdWithParents(shapes, id);
   if (!result) {
     return undefined;
   }

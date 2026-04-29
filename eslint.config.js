@@ -70,6 +70,15 @@ export default [
       rules: {
         "custom/ternary-length": "error",
         "custom/prefer-node-protocol": "error",
+        // `as any`, `as unknown`, and `as never` are all SSoT escape
+        // hatches. The rule enforces `as any` / `as unknown` as
+        // errors today; `as never` detection is implemented in the
+        // rule but not yet opted in here because ~60 pre-existing
+        // `as never` sites (mostly tests) still need per-case
+        // migration to proper domain objects. When the sweep is
+        // finished, flip the options to
+        //   ["error", { targets: ["any", "unknown", "never"] }]
+        // and remove this comment.
         "custom/no-as-outside-guard": "error",
         "custom/no-nested-try": "error",
         "custom/no-iife-in-anonymous": "error",
@@ -103,6 +112,33 @@ export default [
         // Prohibit trivial type alias re-exports (export type X = ImportedY)
         "custom/no-type-alias-reexport": "error",
         "custom/prefer-switch-or-map": "warn",
+        // `toKiwiRecord` is the builder's Kiwi-encoder boundary helper —
+        // it MUST only be imported / called from
+        // packages/@aurochs/fig/src/builder/**. Any other caller is
+        // laundering typed BuilderNode into Record<string, unknown>,
+        // which re-opens the SSoT escape hatch the helper replaced.
+        "custom/no-to-kiwi-record-outside-builder": "error",
+        // `buildGuidTranslationMap` / `translateOverrides` /
+        // `getInstanceSymbolOverrides` / `getEffectiveSymbolID` /
+        // `resolveSymbolGuidStr` from `@aurochs/fig/symbols` are the
+        // low-level symbol-resolution primitives. Only 3 paths may
+        // import them (plus specs and debug scripts):
+        //   - `@aurochs-builder/fig/src/context/` — the domain
+        //     override-path resolution SoT (`resolveOverridePaths`)
+        //   - `@aurochs/fig/src/symbols/` — the primitives'
+        //     implementation and the FigNode-level resolver
+        //     (`resolveInstanceNode`)
+        //   - `@aurochs-renderer/fig/src/symbols/` — the fig-viewer's
+        //     context-bound closure wrapping `resolveInstanceNode`
+        // Every other caller fragments the override-resolution SoT.
+        "custom/no-guid-translation-outside-resolver": "error",
+        // Inline DFS-by-id is banned — use `dfsById` in
+        // `@aurochs/fig/tree` as the single SoT. Any new consumer
+        // MUST route through a thin type-tying wrapper that delegates
+        // to the primitive, ensuring a single bug fix or semantic
+        // tweak propagates to every caller and divergent copies
+        // cannot silently accumulate.
+        "custom/no-inline-dfs-by-id": "error",
         // Prohibit direct Accordion/PropertySection in inspector panels; use OptionalPropertySection
         // Spread from modular groups
         ...rulesJSDoc,

@@ -6,55 +6,61 @@
  */
 
 import type { FigDesignNode, FigNodeId } from "@aurochs/fig/domain";
+import { dfsById } from "@aurochs/fig/tree";
 
 // =============================================================================
 // Find
 // =============================================================================
 
 /**
- * Find a node by ID anywhere in a tree of nodes.
- * Returns undefined if not found.
+ * Find a node by ID anywhere in a tree of nodes. Returns undefined if
+ * not found.
+ *
+ * Implementation delegates to the repo-wide `dfsById` SoT in
+ * `@aurochs/fig/tree`. Inline DFS-by-id is banned by the ESLint rule
+ * `custom/no-inline-dfs-by-id`; every consumer MUST route through a
+ * thin type-tying wrapper like this one.
  */
 export function findNodeById(
   nodes: readonly FigDesignNode[],
   id: FigNodeId,
 ): FigDesignNode | undefined {
-  for (const node of nodes) {
-    if (node.id === id) {
-      return node;
-    }
-    if (node.children) {
-      const found = findNodeById(node.children, id);
-      if (found) {
-        return found;
-      }
-    }
-  }
-  return undefined;
+  return dfsById(nodes, id, {
+    getId: (n) => n.id,
+    getChildren: (n) => n.children ?? [],
+  });
 }
 
 /**
- * Find the parent of a node by ID.
- * Returns undefined if the node is a top-level child or not found.
+ * Find the parent of a node by ID. Returns undefined if the node is a
+ * top-level child or not found.
+ *
+ * Implementation: locate the child via the `dfsById` SoT, then return
+ * the parent that was captured during the walk. `onVisit` is the only
+ * place in the DFS where we observe the pre-descent parent, so we use
+ * it to record the candidate parent before recursion continues.
  */
 export function findParentNode(
   nodes: readonly FigDesignNode[],
   id: FigNodeId,
 ): FigDesignNode | undefined {
-  for (const node of nodes) {
-    if (node.children) {
-      for (const child of node.children) {
-        if (child.id === id) {
-          return node;
-        }
+  // eslint-disable-next-line no-restricted-syntax -- mutable reference captured by closure to surface DFS parent
+  const parentRef: { value: FigDesignNode | undefined } = { value: undefined };
+  dfsById(nodes, id, {
+    getId: (n) => n.id,
+    getChildren: (n) => n.children ?? [],
+    // Before descending into `n`'s children, tentatively mark `n` as
+    // the candidate parent. If the DFS matches one of its direct
+    // children, `n` is the answer; matches deeper in the tree
+    // overwrite `parentRef.value` with the nearer parent.
+    onVisit: (n) => {
+      const children = n.children;
+      if (children && children.some((c) => c.id === id)) {
+        parentRef.value = n;
       }
-      const found = findParentNode(node.children, id);
-      if (found) {
-        return found;
-      }
-    }
-  }
-  return undefined;
+    },
+  });
+  return parentRef.value;
 }
 
 // =============================================================================
@@ -110,6 +116,11 @@ export function removeNodeFromTree(
   let changed = false;
   const result: FigDesignNode[] = [];
 
+  /* eslint-disable custom/no-inline-dfs-by-id -- structural tree transform
+   (produces a new tree with the target node excised), not a slot lookup.
+   The `dfsById` SoT returns a single node; the transform here walks every
+   branch building a rebuilt tree with structural sharing. Different
+   contract from find-style lookup. */
   for (const node of nodes) {
     if (node.id === id) {
       changed = true;
@@ -127,6 +138,7 @@ export function removeNodeFromTree(
 
     result.push(node);
   }
+  /* eslint-enable custom/no-inline-dfs-by-id */
 
   return changed ? result : nodes;
 }

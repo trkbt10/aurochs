@@ -16,6 +16,7 @@
 
 import type { FigDesignNode, FigNodeId } from "@aurochs/fig/domain";
 import type { FigMatrix } from "@aurochs/fig/types";
+import { dfsById } from "@aurochs/fig/tree";
 import { extractRotationDeg as extractRotationDegSoT, computePreRotationTopLeft } from "../../context/fig-editor/rotation";
 
 /**
@@ -149,6 +150,10 @@ export function computeAbsoluteTransform(
   targetId: FigNodeId,
   parentTransform: FigMatrix = IDENTITY_MATRIX,
 ): FigMatrix | undefined {
+  /* eslint-disable custom/no-inline-dfs-by-id -- this is a path-accumulating
+   walk (returns composed transform, not node) and cannot be expressed as a
+   plain `dfsById` lookup: the result depends on the chain of parent
+   transforms along the found path, which the DFS SoT does not track. */
   for (const node of nodes) {
     const nodeAbsTransform = composeTransforms(parentTransform, node.transform);
     if (node.id === targetId) {
@@ -161,6 +166,7 @@ export function computeAbsoluteTransform(
       }
     }
   }
+  /* eslint-enable custom/no-inline-dfs-by-id */
   return undefined;
 }
 
@@ -186,6 +192,10 @@ function computeAbsoluteNodeBoundsInner(
   targetId: FigNodeId,
   parentTransform: FigMatrix,
 ): NodeBounds | undefined {
+  /* eslint-disable custom/no-inline-dfs-by-id -- path-accumulating walk:
+   combines ancestor transforms along the path to the match to produce
+   absolute bounds. `dfsById` returns only the node, not the composed
+   transform chain, so this remains a bespoke walker. */
   for (const node of nodes) {
     const nodeAbsTransform = composeTransforms(parentTransform, node.transform);
     if (node.id === targetId) {
@@ -198,6 +208,7 @@ function computeAbsoluteNodeBoundsInner(
       }
     }
   }
+  /* eslint-enable custom/no-inline-dfs-by-id */
   return undefined;
 }
 
@@ -211,18 +222,16 @@ export function findParentId(
   nodes: readonly FigDesignNode[],
   targetId: FigNodeId,
 ): FigNodeId | undefined {
-  for (const node of nodes) {
-    if (node.children) {
-      for (const child of node.children) {
-        if (child.id === targetId) {
-          return node.id as FigNodeId;
-        }
+  const parentRef: { value: FigNodeId | undefined } = { value: undefined };
+  dfsById(nodes, targetId, {
+    getId: (n) => n.id,
+    getChildren: (n) => n.children ?? [],
+    onVisit: (n) => {
+      const children = n.children;
+      if (children && children.some((c) => c.id === targetId)) {
+        parentRef.value = n.id as FigNodeId;
       }
-      const found = findParentId(node.children, targetId);
-      if (found !== undefined) {
-        return found;
-      }
-    }
-  }
-  return undefined;
+    },
+  });
+  return parentRef.value;
 }

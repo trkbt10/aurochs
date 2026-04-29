@@ -44,6 +44,13 @@ export {
 } from "./guid-translation";
 
 export {
+  reresolveOverridesForVariant,
+  type DesignNodeShape,
+  type DesignSymbolOverrideShape,
+  type DesignComponentPropertyAssignmentShape,
+} from "./design-override-resolver";
+
+export {
   resolveInstanceLayout,
 } from "./constraints";
 
