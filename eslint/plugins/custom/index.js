@@ -21,6 +21,9 @@ import noTypeAliasReexport from "./rules/no-type-alias-reexport.js";
 import noBuilderImportInRenderer from "./rules/no-builder-import-in-renderer.js";
 import noCrossRenderPathImport from "./rules/no-cross-render-path-import.js";
 import preferSwitchOrMap from "./rules/prefer-switch-or-map.js";
+import noToKiwiRecordOutsideBuilder from "./rules/no-to-kiwi-record-outside-builder.js";
+import noGuidTranslationOutsideResolver from "./rules/no-guid-translation-outside-resolver.js";
+import noInlineDfsById from "./rules/no-inline-dfs-by-id.js";
 export default {
   rules: {
     "ternary-length": ternaryLength,
@@ -43,5 +46,8 @@ export default {
     "no-builder-import-in-renderer": noBuilderImportInRenderer,
     "no-cross-render-path-import": noCrossRenderPathImport,
     "prefer-switch-or-map": preferSwitchOrMap,
+    "no-to-kiwi-record-outside-builder": noToKiwiRecordOutsideBuilder,
+    "no-guid-translation-outside-resolver": noGuidTranslationOutsideResolver,
+    "no-inline-dfs-by-id": noInlineDfsById,
   },
 };
