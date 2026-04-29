@@ -49,7 +49,18 @@ export function figTransformToDml(matrix: FigMatrix, size: FigVector): Transform
   };
 }
 
+/**
+ * Wrap a degree value into the half-open range [0, 360).
+ *
+ * Naive `(d % 360) + 360` for negative inputs can land on a value
+ * arbitrarily close to 360 (e.g. when `d` is a near-zero negative
+ * floating-point value like `-1e-15`), which then rounds to exactly
+ * `360°` downstream. ECMA-376 ST_PositiveFixedAngle excludes 360
+ * and PowerPoint flags `rot="21600000"` as out of range. Snap such
+ * boundary cases back to 0.
+ */
 function normalizeAngle(d: number): number {
   const a = d % 360;
-  return a < 0 ? a + 360 : a;
+  const wrapped = a < 0 ? a + 360 : a;
+  return wrapped >= 360 || wrapped < 0 ? 0 : wrapped;
 }

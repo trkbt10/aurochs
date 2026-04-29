@@ -143,7 +143,12 @@ const PX_TO_EMU = 914400 / 96;
 // OPC Part Builders
 // =============================================================================
 
-function buildRootRels(): XmlDocument {
+/**
+ * Build the package root relationships (_rels/.rels) wiring the
+ * presentation as the OPC main document and docProps/app.xml as the
+ * extended-properties part.
+ */
+export function buildRootRels(): XmlDocument {
   const rels: OpcRelationship[] = [
     { id: "rId1", type: OFFICE_RELATIONSHIP_TYPES.officeDocument, target: "ppt/presentation.xml" },
     { id: "rId2", type: OFFICE_RELATIONSHIP_TYPES.extendedProperties, target: "docProps/app.xml" },
@@ -151,21 +156,38 @@ function buildRootRels(): XmlDocument {
   return { children: [serializeRelationships(rels)] };
 }
 
-function buildContentTypes(layoutCount: number): XmlDocument {
+type BuildContentTypesOptions = {
+  readonly layoutCount: number;
+  /** Total slide count whose Override entries to register. Defaults to 1. */
+  readonly slideCount?: number;
+};
+
+/**
+ * Build the [Content_Types].xml document covering the standard set of
+ * PPTX parts (presentation, slides, layouts, master, theme).
+ */
+export function buildContentTypes(options: BuildContentTypesOptions): XmlDocument {
+  const slideCount = options.slideCount ?? 1;
+  if (!Number.isInteger(slideCount) || slideCount < 1) {
+    throw new Error(`buildContentTypes: slideCount must be a positive integer, got ${slideCount}`);
+  }
   const entries: ContentTypeEntry[] = [
     ...STANDARD_CONTENT_TYPE_DEFAULTS,
     { kind: "override", partName: "/ppt/presentation.xml", contentType: CONTENT_TYPES.PRESENTATION },
-    { kind: "override", partName: "/ppt/slides/slide1.xml", contentType: CONTENT_TYPES.SLIDE },
     { kind: "override", partName: "/ppt/slideMasters/slideMaster1.xml", contentType: CONTENT_TYPES.SLIDE_MASTER },
     { kind: "override", partName: "/ppt/theme/theme1.xml", contentType: CONTENT_TYPES.THEME },
   ];
-  for (let i = 1; i <= layoutCount; i++) {
+  for (let i = 1; i <= options.layoutCount; i++) {
     entries.push({ kind: "override", partName: `/ppt/slideLayouts/slideLayout${i}.xml`, contentType: CONTENT_TYPES.SLIDE_LAYOUT });
+  }
+  for (let i = 1; i <= slideCount; i++) {
+    entries.push({ kind: "override", partName: `/ppt/slides/slide${i}.xml`, contentType: CONTENT_TYPES.SLIDE });
   }
   return { children: [serializeContentTypes(entries)] };
 }
 
-function buildAppProperties(): XmlDocument {
+/** Build docProps/app.xml with the canonical extended-properties skeleton. */
+export function buildAppProperties(): XmlDocument {
   return {
     children: [
       createElement("Properties", { xmlns: OFFICE_NAMESPACES.extendedProperties }, [
@@ -175,15 +197,41 @@ function buildAppProperties(): XmlDocument {
   };
 }
 
-function buildPresentationRels(): XmlDocument {
+/**
+ * Build the presentation part's relationships (ppt/_rels/presentation.xml.rels).
+ *
+ * Includes:
+ *   rId1            → slideMaster1.xml
+ *   rId2..rId(1+N)  → slides/slide{1..N}.xml
+ *   rId(2+N)        → theme/theme1.xml
+ *
+ * The theme edge from the presentation part is required for PowerPoint
+ * to open the file without showing the "couldn't read some content"
+ * recovery dialog, even though the slide master also references the
+ * same theme.
+ */
+export function buildPresentationRels(slideCount: number = 1): XmlDocument {
+  if (!Number.isInteger(slideCount) || slideCount < 1) {
+    throw new Error(`buildPresentationRels: slideCount must be a positive integer, got ${slideCount}`);
+  }
   const rels: OpcRelationship[] = [
     { id: "rId1", type: RELATIONSHIP_TYPES.SLIDE_MASTER, target: "slideMasters/slideMaster1.xml" },
-    { id: "rId2", type: RELATIONSHIP_TYPES.SLIDE, target: "slides/slide1.xml" },
   ];
+  for (let i = 1; i <= slideCount; i++) {
+    rels.push({ id: `rId${i + 1}`, type: RELATIONSHIP_TYPES.SLIDE, target: `slides/slide${i}.xml` });
+  }
+  rels.push({ id: `rId${slideCount + 2}`, type: RELATIONSHIP_TYPES.THEME, target: "theme/theme1.xml" });
   return { children: [serializeRelationships(rels)] };
 }
 
-function buildMasterRels(layoutCount: number): XmlDocument {
+/**
+ * Build slide master relationships: rId1..rIdN reference each layout
+ * in the deck, and the final relationship references the theme.
+ */
+export function buildMasterRels(layoutCount: number): XmlDocument {
+  if (!Number.isInteger(layoutCount) || layoutCount < 1) {
+    throw new Error(`buildMasterRels: layoutCount must be a positive integer, got ${layoutCount}`);
+  }
   const rels: OpcRelationship[] = [];
   for (let i = 1; i <= layoutCount; i++) {
     rels.push({ id: `rId${i}`, type: RELATIONSHIP_TYPES.SLIDE_LAYOUT, target: `../slideLayouts/slideLayout${i}.xml` });
@@ -192,16 +240,24 @@ function buildMasterRels(layoutCount: number): XmlDocument {
   return { children: [serializeRelationships(rels)] };
 }
 
-function buildLayoutRels(): XmlDocument {
+/** Build a slide layout's relationships (single edge to the master). */
+export function buildLayoutRels(): XmlDocument {
   const rels: OpcRelationship[] = [
     { id: "rId1", type: RELATIONSHIP_TYPES.SLIDE_MASTER, target: "../slideMasters/slideMaster1.xml" },
   ];
   return { children: [serializeRelationships(rels)] };
 }
 
-function buildSlideRels(): XmlDocument {
+/**
+ * Build a slide's relationships pointing at slideLayout{layoutIndex}.xml
+ * (the layout the slide is bound to). Defaults to slideLayout1.
+ */
+export function buildSlideRels(layoutIndex: number = 1): XmlDocument {
+  if (!Number.isInteger(layoutIndex) || layoutIndex < 1) {
+    throw new Error(`buildSlideRels: layoutIndex must be a positive integer, got ${layoutIndex}`);
+  }
   const rels: OpcRelationship[] = [
-    { id: "rId1", type: RELATIONSHIP_TYPES.SLIDE_LAYOUT, target: "../slideLayouts/slideLayout1.xml" },
+    { id: "rId1", type: RELATIONSHIP_TYPES.SLIDE_LAYOUT, target: `../slideLayouts/slideLayout${layoutIndex}.xml` },
   ];
   return { children: [serializeRelationships(rels)] };
 }
@@ -237,17 +293,46 @@ function slideSizeToEmu(slideSize?: { readonly width: number; readonly height: n
   };
 }
 
-function buildPresentation(slideSize?: { readonly width: number; readonly height: number }): XmlDocument {
+/** Default A4-portrait notes page size in EMUs (ECMA-376 default). */
+const DEFAULT_NOTES_SIZE_EMU = { cx: "6858000", cy: "9144000" } as const;
+
+/** First slide ID per ECMA-376 §19.7.4 (ST_SlideId minimum). */
+const SLIDE_ID_BASE = 256;
+
+type BuildPresentationOptions = {
+  readonly slideSize?: { readonly width: number; readonly height: number };
+  /** Total number of slides referenced by the presentation. Defaults to 1. */
+  readonly slideCount?: number;
+};
+
+/**
+ * Build the presentation part (ECMA-376 §19.2.1.26 CT_Presentation).
+ *
+ * Element order matches the schema sequence so PowerPoint accepts the
+ * file without repair: sldMasterIdLst, sldIdLst, sldSz, notesSz,
+ * defaultTextStyle. notesSz is REQUIRED by the schema; omitting it
+ * triggers PowerPoint's recovery flow.
+ */
+export function buildPresentation(options?: BuildPresentationOptions): XmlDocument {
+  const slideCount = options?.slideCount ?? 1;
+  if (!Number.isInteger(slideCount) || slideCount < 1) {
+    throw new Error(`buildPresentation: slideCount must be a positive integer, got ${slideCount}`);
+  }
+  const sldIds: XmlElement[] = [];
+  for (let i = 0; i < slideCount; i++) {
+    sldIds.push(
+      createElement("p:sldId", { id: String(SLIDE_ID_BASE + i), "r:id": `rId${i + 2}` }),
+    );
+  }
   return {
     children: [
       createElement("p:presentation", PPTX_XMLNS, [
-        createElement("p:sldIdLst", {}, [
-          createElement("p:sldId", { id: "256", "r:id": "rId2" }),
-        ]),
         createElement("p:sldMasterIdLst", {}, [
           createElement("p:sldMasterId", { id: SLIDE_MASTER_ID, "r:id": "rId1" }),
         ]),
-        createElement("p:sldSz", slideSizeToEmu(slideSize)),
+        createElement("p:sldIdLst", {}, sldIds),
+        createElement("p:sldSz", slideSizeToEmu(options?.slideSize)),
+        createElement("p:notesSz", DEFAULT_NOTES_SIZE_EMU),
         createElement("p:defaultTextStyle", {}, [
           createElement("a:defPPr", {}, [createElement("a:defRPr", { sz: "1800" })]),
         ]),
@@ -256,7 +341,15 @@ function buildPresentation(slideSize?: { readonly width: number; readonly height
   };
 }
 
-function buildSlideMaster(options: ThemeExportOptions, layoutCount: number): XmlDocument {
+/**
+ * Build the slide master part (ECMA-376 §19.3.1.42).
+ *
+ * The schema requires p:clrMap and p:sldLayoutIdLst — both are emitted
+ * here using the canonical identity color mapping (or the override
+ * supplied via options.colorMapping) and the rId range allocated by
+ * buildMasterRels.
+ */
+export function buildSlideMaster(options: ThemeExportOptions, layoutCount: number): XmlDocument {
   const clrMap = options.colorMapping ?? DEFAULT_COLOR_MAPPING;
 
   // p:cSld children: optional p:bg, then p:spTree
@@ -271,17 +364,18 @@ function buildSlideMaster(options: ThemeExportOptions, layoutCount: number): Xml
   }
 
   cSldChildren.push(
-    createElement("p:spTree", {}, [buildNvGrpSpPr(), createElement("p:grpSpPr")]),
+    createElement("p:spTree", {}, [buildNvGrpSpPr(), buildEmptyGroupSpPr()]),
   );
 
-  // p:txStyles §19.3.1.51 — serialize domain MasterTextStyles to XML
+  // p:txStyles §19.3.1.51 — serialize domain MasterTextStyles to XML.
+  // PowerPoint expects all three children (title, body, other) to be
+  // present even when empty; emit stubs when the domain doesn't supply
+  // a level set.
   const txStylesChildren: XmlElement[] = [];
   const mts = options.masterTextStyles;
   txStylesChildren.push(mts?.titleStyle ? serializeTextStyleLevelsElement("p:titleStyle", mts.titleStyle) : createElement("p:titleStyle"));
   txStylesChildren.push(mts?.bodyStyle ? serializeTextStyleLevelsElement("p:bodyStyle", mts.bodyStyle) : createElement("p:bodyStyle"));
-  if (mts?.otherStyle) {
-    txStylesChildren.push(serializeTextStyleLevelsElement("p:otherStyle", mts.otherStyle));
-  }
+  txStylesChildren.push(mts?.otherStyle ? serializeTextStyleLevelsElement("p:otherStyle", mts.otherStyle) : createElement("p:otherStyle"));
 
   return {
     children: [
@@ -300,7 +394,7 @@ function buildSlideMaster(options: ThemeExportOptions, layoutCount: number): Xml
 }
 
 /** Build a slide layout document from export data (ECMA-376 §19.3.1.39). */
-function buildLayoutDocument(entry: LayoutExportEntry): XmlDocument {
+export function buildLayoutDocument(entry: LayoutExportEntry): XmlDocument {
   const attrs: Record<string, string> = { ...PPTX_XMLNS, type: entry.type };
   if (entry.matchingName) { attrs.matchingName = entry.matchingName; }
   if (entry.showMasterShapes === false) { attrs.showMasterSp = "0"; }
@@ -335,7 +429,13 @@ function buildLayoutDocument(entry: LayoutExportEntry): XmlDocument {
   return { children: [createElement("p:sldLayout", attrs, sldLayoutChildren)] };
 }
 
-function buildBlankSlide(): XmlDocument {
+/**
+ * Build an empty p:sld document with a blank spTree and a master
+ * color-map override. This is the canonical "no content yet" slide
+ * used by any builder that wants to author shapes by patching the
+ * spTree afterwards.
+ */
+export function buildBlankSlide(): XmlDocument {
   return {
     children: [
       createElement("p:sld", PPTX_XMLNS, [
@@ -484,12 +584,48 @@ function serializeTextStyleLevelsElement(containerName: string, levels: TextStyl
 }
 
 /** Adapter: build theme XML from ThemeExportOptions (delegates to buildThemeXml). */
-function buildThemeFromExportOptions(options: ThemeExportOptions): XmlDocument {
+export function buildThemeFromExportOptions(options: ThemeExportOptions): XmlDocument {
   return buildThemeXml({
     name: options.name,
     theme: exportOptionsToTheme(options),
     fontSchemeName: options.fontSchemeName,
   });
+}
+
+/** Office's stock 12-slot color scheme used by Office's "Office" theme. */
+const DEFAULT_THEME_COLOR_SCHEME: Readonly<Record<SchemeColorName, string>> = {
+  dk1: "000000",
+  lt1: "FFFFFF",
+  dk2: "44546A",
+  lt2: "E7E6E6",
+  accent1: "5B9BD5",
+  accent2: "ED7D31",
+  accent3: "A5A5A5",
+  accent4: "FFC000",
+  accent5: "4472C4",
+  accent6: "70AD47",
+  hlink: "0563C1",
+  folHlink: "954F72",
+};
+
+/**
+ * Build a complete ThemeExportOptions populated with Office defaults.
+ *
+ * Use this when a builder needs a full theme but does not have one to
+ * supply (e.g. when synthesising a blank deck). Each call returns a
+ * fresh object so the caller may mutate/override fields freely.
+ */
+export function defaultThemeExportOptions(name: string = "Office"): ThemeExportOptions {
+  return {
+    name,
+    colorScheme: { ...DEFAULT_THEME_COLOR_SCHEME },
+    fontScheme: {
+      majorFont: { latin: "Calibri Light" },
+      minorFont: { latin: "Calibri" },
+    },
+    formatScheme: defaultFormatScheme(),
+    colorMapping: { ...DEFAULT_COLOR_MAPPING },
+  };
 }
 
 /** Convert ThemeExportOptions to Theme domain type for buildThemeXml. */
@@ -662,10 +798,10 @@ export async function exportThemeAsPotx(options: ThemeExportOptions): Promise<Bl
   const layoutCount = layouts.length;
 
   writeXml(pkg, "_rels/.rels", buildRootRels());
-  writeXml(pkg, "[Content_Types].xml", buildContentTypes(layoutCount));
+  writeXml(pkg, "[Content_Types].xml", buildContentTypes({ layoutCount, slideCount: 1 }));
   writeXml(pkg, "docProps/app.xml", buildAppProperties());
-  writeXml(pkg, "ppt/presentation.xml", buildPresentation(options.slideSize));
-  writeXml(pkg, "ppt/_rels/presentation.xml.rels", buildPresentationRels());
+  writeXml(pkg, "ppt/presentation.xml", buildPresentation({ slideSize: options.slideSize, slideCount: 1 }));
+  writeXml(pkg, "ppt/_rels/presentation.xml.rels", buildPresentationRels(1));
   writeXml(pkg, "ppt/theme/theme1.xml", buildThemeFromExportOptions(options));
   writeXml(pkg, "ppt/slideMasters/slideMaster1.xml", buildSlideMaster(options, layoutCount));
   writeXml(pkg, "ppt/slideMasters/_rels/slideMaster1.xml.rels", buildMasterRels(layoutCount));

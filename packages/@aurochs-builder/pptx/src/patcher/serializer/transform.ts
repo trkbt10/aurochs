@@ -20,6 +20,20 @@ function degreesToAngleUnitsString(valueDeg: number): string {
   return String(Math.round(valueDeg * ANGLE_UNITS_PER_DEGREE));
 }
 
+/**
+ * Collapse 360°·k (geometric identity rotations) to 0° while
+ * preserving the sign of any other rotation. ECMA-376 ST_Angle
+ * accepts negative values, so existing behaviour for `rot="-2700000"`
+ * is kept intact; only exact multiples of 360° (which serialise to
+ * `rot="21600000"` and friends, outside ST_PositiveFixedAngle's
+ * [0, 21600000) range) are folded to 0.
+ */
+function normalizeRotation(valueDeg: number): number {
+  if (!Number.isFinite(valueDeg)) {return 0;}
+  if (valueDeg !== 0 && valueDeg % 360 === 0) {return 0;}
+  return valueDeg;
+}
+
 function buildOffElement(transform: Transform): XmlElement {
   return createElement("a:off", {
     x: pixelsToEmuString(Number(transform.x)),
@@ -37,9 +51,14 @@ function buildExtElement(transform: Transform): XmlElement {
 function buildTransformAttrs(transform: Transform): Record<string, string> {
   const attrs: Record<string, string> = {};
 
-  // Rotation (in 60000ths of a degree)
-  if (Number(transform.rotation) !== 0) {
-    attrs.rot = degreesToAngleUnitsString(Number(transform.rotation));
+  // Rotation (in 60000ths of a degree). Wrap into [0, 360) — PowerPoint
+  // treats 360° identically to 0° but ECMA-376 ST_PositiveFixedAngle
+  // is a half-open range [0, 21600000), so emitting exactly 360° is
+  // technically out of range. 0 is the normal form; non-zero values
+  // become the modulo-21600000 equivalent.
+  const normalized = normalizeRotation(Number(transform.rotation));
+  if (normalized !== 0) {
+    attrs.rot = degreesToAngleUnitsString(normalized);
   }
 
   // Flip attributes (only write when true)
@@ -82,8 +101,11 @@ export function patchTransformElement(existingXfrm: XmlElement, transform: Trans
   const attrs: Record<string, string> = { ...existingXfrm.attrs };
 
   // Rotation: set when non-zero, otherwise remove to match writer behavior.
-  if (Number(transform.rotation) !== 0) {
-    attrs.rot = degreesToAngleUnitsString(Number(transform.rotation));
+  // Normalize to [0, 360) so 360° (== 21600000 angle units, out-of-range
+  // in ST_PositiveFixedAngle) is written as no rotation.
+  const normalized = normalizeRotation(Number(transform.rotation));
+  if (normalized !== 0) {
+    attrs.rot = degreesToAngleUnitsString(normalized);
   } else {
     delete attrs.rot;
   }

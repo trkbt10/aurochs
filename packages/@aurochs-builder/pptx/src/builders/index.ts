@@ -66,8 +66,25 @@ export { applySlideTransition } from "./transition-builder";
 // Theme builders
 export { applyThemeEditsToPackage, applyThemeEditsToThemeXml } from "./theme-builder";
 
-// Theme exporter
-export { exportThemeAsPotx, getThemeFileName, buildThemeXml } from "./theme-exporter";
+// Theme exporter / blank-deck builders (SoT)
+export {
+  exportThemeAsPotx,
+  getThemeFileName,
+  buildThemeXml,
+  buildThemeFromExportOptions,
+  defaultThemeExportOptions,
+  buildRootRels,
+  buildContentTypes,
+  buildAppProperties,
+  buildPresentation,
+  buildPresentationRels,
+  buildSlideMaster,
+  buildMasterRels,
+  buildLayoutDocument,
+  buildLayoutRels,
+  buildBlankSlide,
+  buildSlideRels,
+} from "./theme-exporter";
 export type { ThemeExportOptions, LayoutExportEntry, BuildThemeXmlOptions } from "./theme-exporter";
 
 // Chart builders
