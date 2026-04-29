@@ -14,7 +14,7 @@
 
 import type {
   FigPaint, FigSolidPaint, FigGradientPaint,
-  FigImagePaint, FigGradientStop, FigColor,
+  FigImagePaint, FigGradientStop, FigGradientTransform, FigColor,
 } from "@aurochs/fig/types";
 import type {
   BaseFill, GradientStop, GradientFill, SolidFill,
@@ -89,34 +89,44 @@ function applyPaintOpacity(color: FigColor, paintOpacity: number): FigColor {
 /**
  * Figma linear gradient: two handle positions (start, end) in 0-1.
  * DrawingML linear gradient: rotation angle in degrees.
- * angle = atan2(dy, dx).
+ *
+ * Both API form (gradientHandlePositions) and Kiwi binary form
+ * (transform) are supported. .fig files loaded via the parser
+ * carry the Kiwi form; documents constructed via the API carry
+ * the handle form. We accept either.
  */
-function convertLinearGradient(paint: FigGradientPaint, paintOpacity: number): GradientFill {
-  const handles = paint.gradientHandlePositions;
-  const angle = handles && handles.length >= 2
-    ? Math.atan2(handles[1].y - handles[0].y, handles[1].x - handles[0].x) * (180 / Math.PI)
-    : 0;
+function convertLinearGradient(paint: FigGradientPaint, paintOpacity: number): BaseFill | undefined {
+  const stops = resolveStops(paint);
+  const fallback = solidFromStops(stops, paintOpacity);
+  if (stops.length < 2) {return fallback;}
+
+  const axis = resolveLinearAxis(paint);
+  const angle = Math.atan2(axis.end.y - axis.start.y, axis.end.x - axis.start.x) * (180 / Math.PI);
 
   return {
     type: "gradientFill",
-    stops: convertGradientStops(paint.gradientStops ?? [], paintOpacity),
+    stops: convertGradientStops(stops, paintOpacity),
     linear: { angle: deg(normalizeAngle(angle)), scaled: false },
     rotWithShape: true,
   };
 }
 
 /**
- * Figma radial gradient: handle[0] = center.
+ * Figma radial gradient: handle[0] = center (or transform.m02, m12).
  * DrawingML path gradient with "circle": fillToRect defines the center.
  */
-function convertRadialGradient(paint: FigGradientPaint, paintOpacity: number): GradientFill {
-  const handles = paint.gradientHandlePositions;
-  const cx = handles && handles.length > 0 ? handles[0].x : 0.5;
-  const cy = handles && handles.length > 0 ? handles[0].y : 0.5;
+function convertRadialGradient(paint: FigGradientPaint, paintOpacity: number): BaseFill | undefined {
+  const stops = resolveStops(paint);
+  const fallback = solidFromStops(stops, paintOpacity);
+  if (stops.length < 2) {return fallback;}
+
+  const center = resolveRadialCenter(paint);
+  const cx = clampUnit(center.x);
+  const cy = clampUnit(center.y);
 
   return {
     type: "gradientFill",
-    stops: convertGradientStops(paint.gradientStops ?? [], paintOpacity),
+    stops: convertGradientStops(stops, paintOpacity),
     path: {
       path: "circle",
       fillToRect: {
@@ -127,6 +137,79 @@ function convertRadialGradient(paint: FigGradientPaint, paintOpacity: number): G
       },
     },
     rotWithShape: true,
+  };
+}
+
+/**
+ * Read gradient stops from API form (`gradientStops`) first, falling
+ * back to Kiwi form (`stops`). Domain-level paints loaded from a .fig
+ * file populate `stops`; programmatically constructed paints use
+ * `gradientStops`.
+ */
+function resolveStops(paint: FigGradientPaint): readonly FigGradientStop[] {
+  if (paint.gradientStops && paint.gradientStops.length > 0) {return paint.gradientStops;}
+  if (paint.stops && paint.stops.length > 0) {return paint.stops;}
+  return [];
+}
+
+/**
+ * Resolve a linear gradient's start/end points in shape-normalized
+ * 0-1 coordinates from either form.
+ *
+ * Kiwi convention (see FigGradientTransform doc):
+ *   gradient (1, 0) → start (0% stop)
+ *   gradient (0, 0) → end   (100% stop)
+ * so given the 2x3 affine [m00 m01 m02; m10 m11 m12]:
+ *   start = (m02 + m00, m12 + m10)
+ *   end   = (m02,        m12)
+ */
+function resolveLinearAxis(
+  paint: FigGradientPaint,
+): { readonly start: { readonly x: number; readonly y: number }; readonly end: { readonly x: number; readonly y: number } } {
+  const handles = paint.gradientHandlePositions;
+  if (handles && handles.length >= 2) {
+    return { start: handles[0], end: handles[1] };
+  }
+  const t = paint.transform;
+  if (t) {
+    const m00 = t.m00 ?? 1;
+    const m02 = t.m02 ?? 0;
+    const m10 = t.m10 ?? 0;
+    const m12 = t.m12 ?? 0;
+    return { start: { x: m02 + m00, y: m12 + m10 }, end: { x: m02, y: m12 } };
+  }
+  return { start: { x: 0, y: 0 }, end: { x: 1, y: 0 } };
+}
+
+/**
+ * Resolve a radial gradient's center in shape-normalized 0-1
+ * coordinates from either form. For Kiwi radial transforms, the
+ * center is encoded in the translation (m02, m12).
+ */
+function resolveRadialCenter(paint: FigGradientPaint): { readonly x: number; readonly y: number } {
+  const handles = paint.gradientHandlePositions;
+  if (handles && handles.length > 0) {return handles[0];}
+  const t: FigGradientTransform | undefined = paint.transform;
+  if (t) {return { x: t.m02 ?? 0.5, y: t.m12 ?? 0.5 };}
+  return { x: 0.5, y: 0.5 };
+}
+
+function clampUnit(v: number): number {
+  if (v < 0) {return 0;}
+  if (v > 1) {return 1;}
+  return v;
+}
+
+/**
+ * When a gradient has 0 or 1 stops it cannot be expressed as a
+ * valid DrawingML gradFill (gsLst requires ≥ 2 stops). Fall back
+ * to a solid fill from the single stop, or undefined when empty.
+ */
+function solidFromStops(stops: readonly FigGradientStop[], paintOpacity: number): SolidFill | undefined {
+  if (stops.length === 0) {return undefined;}
+  return {
+    type: "solidFill",
+    color: figColorToColor(applyPaintOpacity(stops[0].color, paintOpacity)),
   };
 }
 

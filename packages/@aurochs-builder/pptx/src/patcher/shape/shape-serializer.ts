@@ -206,11 +206,28 @@ function serializeSpShape(shape: SpShape): XmlElement {
   if (style) {
     children.push(style);
   }
-  if (shape.textBody) {
-    children.push(serializeTextBody(shape.textBody));
-  }
+  // PowerPoint flags <p:sp> without <p:txBody> as a repair candidate
+  // even though CT_Shape marks txBody as minOccurs=0. Emit a stub
+  // text body for shapes that don't carry one.
+  children.push(shape.textBody ? serializeTextBody(shape.textBody) : emptyTextBody());
 
   return createElement("p:sp", {}, children);
+}
+
+/**
+ * Empty <p:txBody> stub equivalent to PowerPoint's repair output:
+ *   <p:txBody>
+ *     <a:bodyPr/>
+ *     <a:lstStyle/>
+ *     <a:p><a:endParaRPr lang="en-US"/></a:p>
+ *   </p:txBody>
+ */
+function emptyTextBody(): XmlElement {
+  return createElement("p:txBody", {}, [
+    createElement("a:bodyPr"),
+    createElement("a:lstStyle"),
+    createElement("a:p", {}, [createElement("a:endParaRPr", { lang: "en-US" })]),
+  ]);
 }
 
 function serializeCNvPr(nonVisual: NonVisualProperties): XmlElement {

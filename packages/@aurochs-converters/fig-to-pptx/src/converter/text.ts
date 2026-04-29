@@ -256,8 +256,7 @@ function resolveTextColor(paints: readonly FigPaint[] | undefined): Color | unde
   for (let i = paints.length - 1; i >= 0; i--) {
     const paint = paints[i];
     if (paint.visible === false) {continue;}
-    const typeName = typeof paint.type === "string" ? paint.type : (paint.type as { name: string }).name;
-    if (typeName === "SOLID" && paint.color) {
+    if (paint.type === "SOLID") {
       const figColor: FigColor = {
         r: paint.color.r,
         g: paint.color.g,

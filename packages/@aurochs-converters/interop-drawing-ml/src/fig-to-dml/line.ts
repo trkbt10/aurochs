@@ -6,7 +6,7 @@
  * We use the maximum — ensures no visual clipping.
  */
 
-import type { FigPaint, FigStrokeWeight, KiwiEnumValue } from "@aurochs/fig/types";
+import type { FigPaint, FigStrokeWeight, FigStrokeCap, FigStrokeJoin, FigStrokeAlign } from "@aurochs/fig/types";
 import type { BaseLine, LineCap, LineJoin } from "@aurochs-office/drawing-ml/domain/line";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import { figFillsToDml } from "./fill";
@@ -14,9 +14,9 @@ import { figFillsToDml } from "./fill";
 type FigStrokeToDmlOptions = {
   readonly strokes: readonly FigPaint[];
   readonly strokeWeight: FigStrokeWeight;
-  readonly strokeCap?: KiwiEnumValue;
-  readonly strokeJoin?: KiwiEnumValue;
-  readonly strokeAlign?: KiwiEnumValue;
+  readonly strokeCap?: FigStrokeCap;
+  readonly strokeJoin?: FigStrokeJoin;
+  readonly strokeAlign?: FigStrokeAlign;
   readonly nodeOpacity?: number;
 };
 
@@ -53,18 +53,18 @@ function resolveStrokeWidth(weight: FigStrokeWeight): number {
  * Fig stroke caps include arrow types — those are line-end markers,
  * not SVG stroke-linecap. For the cap property, arrows map to "flat".
  */
-function convertCap(cap?: KiwiEnumValue): LineCap {
+function convertCap(cap?: FigStrokeCap): LineCap {
   if (!cap) {return "flat";}
-  switch (cap.name) {
+  switch (cap) {
     case "ROUND": return "round";
     case "SQUARE": return "square";
     default: return "flat";
   }
 }
 
-function convertJoin(join?: KiwiEnumValue): LineJoin {
+function convertJoin(join?: FigStrokeJoin): LineJoin {
   if (!join) {return "miter";}
-  switch (join.name) {
+  switch (join) {
     case "ROUND": return "round";
     case "BEVEL": return "bevel";
     default: return "miter";
@@ -80,9 +80,9 @@ function convertJoin(join?: KiwiEnumValue): LineJoin {
  * OUTSIDE falls back to "ctr" because DrawingML has no outside alignment.
  * @see ECMA-376 §20.1.2.2.24 (algn attribute)
  */
-function convertAlignment(align?: KiwiEnumValue): "ctr" | "in" {
+function convertAlignment(align?: FigStrokeAlign): "ctr" | "in" {
   if (!align) {return "ctr";}
-  switch (align.name) {
+  switch (align) {
     case "INSIDE": return "in";
     default: return "ctr";
   }

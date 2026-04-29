@@ -243,8 +243,7 @@ function findTopVisibleImagePaint(node: FigDesignNode): FigImagePaint | undefine
   for (let i = node.fills.length - 1; i >= 0; i--) {
     const paint = node.fills[i];
     if (paint.visible === false) {continue;}
-    const typeName = typeof paint.type === "string" ? paint.type : paint.type.name;
-    if (typeName === "IMAGE") {return paint as FigImagePaint;}
+    if (paint.type === "IMAGE") {return paint;}
   }
   return undefined;
 }

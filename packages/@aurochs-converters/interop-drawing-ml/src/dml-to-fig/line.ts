@@ -4,14 +4,14 @@
 
 import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
-import type { FigPaint, FigStrokeWeight, KiwiEnumValue } from "@aurochs/fig/types";
+import type { FigPaint, FigStrokeWeight, FigStrokeCap, FigStrokeJoin } from "@aurochs/fig/types";
 import { dmlFillToFig } from "./fill";
 
 export type FigStrokeResult = {
   readonly strokePaints: readonly FigPaint[];
   readonly strokeWeight: FigStrokeWeight;
-  readonly strokeCap?: KiwiEnumValue;
-  readonly strokeJoin?: KiwiEnumValue;
+  readonly strokeCap?: FigStrokeCap;
+  readonly strokeJoin?: FigStrokeJoin;
 };
 
 
@@ -38,18 +38,18 @@ export function dmlLineTofig(
   };
 }
 
-function convertCap(cap: string): KiwiEnumValue {
+function convertCap(cap: string): FigStrokeCap {
   switch (cap) {
-    case "round": return { value: 2, name: "ROUND" };
-    case "square": return { value: 3, name: "SQUARE" };
-    default: return { value: 1, name: "NONE" };
+    case "round": return "ROUND";
+    case "square": return "SQUARE";
+    default: return "NONE";
   }
 }
 
-function convertJoin(join: string): KiwiEnumValue {
+function convertJoin(join: string): FigStrokeJoin {
   switch (join) {
-    case "round": return { value: 2, name: "ROUND" };
-    case "bevel": return { value: 3, name: "BEVEL" };
-    default: return { value: 1, name: "MITER" };
+    case "round": return "ROUND";
+    case "bevel": return "BEVEL";
+    default: return "MITER";
   }
 }

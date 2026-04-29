@@ -72,6 +72,11 @@ const MINIMAL_THEME = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
   </a:themeElements>
 </a:theme>`;
 
+// Slide master schema (ECMA-376 §19.3.1.42 CT_SlideMaster) requires
+// p:clrMap and p:sldLayoutIdLst. Without them PowerPoint rewrites
+// the part on open. The clrMap is the canonical identity mapping.
+// sldLayoutIdLst must reference at least the layout we wire in
+// buildMasterRelsXml (rId2, by convention).
 const MINIMAL_SLIDE_MASTER = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:sldMaster
   xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
@@ -80,12 +85,15 @@ const MINIMAL_SLIDE_MASTER = `<?xml version="1.0" encoding="UTF-8" standalone="y
   <p:cSld>
     <p:spTree>
       <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
-      <p:grpSpPr/>
+      <p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/><a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>
     </p:spTree>
   </p:cSld>
+  <p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/>
+  <p:sldLayoutIdLst><p:sldLayoutId id="2147483649" r:id="rId1"/></p:sldLayoutIdLst>
   <p:txStyles>
     <p:titleStyle/>
     <p:bodyStyle/>
+    <p:otherStyle/>
   </p:txStyles>
 </p:sldMaster>`;
 
@@ -106,11 +114,18 @@ const MINIMAL_SLIDE_LAYOUT = `<?xml version="1.0" encoding="UTF-8" standalone="y
   <p:cSld>
     <p:spTree>
       <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
-      <p:grpSpPr/>
+      <p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/><a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>
     </p:spTree>
   </p:cSld>
+  <p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr>
 </p:sldLayout>`;
 
+// Slide root grpSpPr requires an xfrm (PowerPoint's strict reader
+// flags an empty <p:grpSpPr/> as a repair candidate even though
+// ECMA-376 marks it minOccurs=0). Identity off/ext/chOff/chExt is
+// the canonical "no transform" form for the spTree root. Slides
+// also require <p:clrMapOvr> after <p:cSld> — without it PowerPoint
+// rebuilds the part on open.
 const BLANK_SLIDE_XML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:sld
   xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
@@ -119,9 +134,10 @@ const BLANK_SLIDE_XML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
   <p:cSld>
     <p:spTree>
       <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
-      <p:grpSpPr/>
+      <p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/><a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>
     </p:spTree>
   </p:cSld>
+  <p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr>
 </p:sld>`;
 
 /** Create a minimal blank PPTX `PackageFile` with the given slide count/size. */
@@ -212,6 +228,9 @@ function buildPresentationXml(slideCount: number, sizeEmu: Readonly<{ cx: string
     `<p:sldMasterIdLst><p:sldMasterId id="${SLIDE_MASTER_ID}" r:id="rId1"/></p:sldMasterIdLst>` +
     `<p:sldIdLst>${sldIds.join("")}</p:sldIdLst>` +
     `<p:sldSz cx="${sizeEmu.cx}" cy="${sizeEmu.cy}"/>` +
+    // notesSz is REQUIRED by CT_Presentation (ECMA-376 §19.2.1.26).
+    // Use the standard 7.5"×10" portrait page (6858000×9144000 EMU).
+    `<p:notesSz cx="6858000" cy="9144000"/>` +
     `<p:defaultTextStyle><a:defPPr><a:defRPr sz="1800"/></a:defPPr></p:defaultTextStyle>` +
     `</p:presentation>`
   );
@@ -269,11 +288,18 @@ function buildLayoutRelsXml(): string {
 }
 
 function buildMasterRelsXml(): string {
+  // Master must own a slideLayout relationship that matches the
+  // sldLayoutIdLst inside the master XML (rId1 → slideLayout1).
+  // Theme follows as rId2.
   return (
     `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
     `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">` +
     `<Relationship ` +
     `Id="rId1" ` +
+    `Type="${RELATIONSHIP_TYPES.SLIDE_LAYOUT}" ` +
+    `Target="../slideLayouts/slideLayout1.xml"/>` +
+    `<Relationship ` +
+    `Id="rId2" ` +
     `Type="${RELATIONSHIP_TYPES.THEME}" ` +
     `Target="../theme/theme1.xml"/>` +
     `</Relationships>`

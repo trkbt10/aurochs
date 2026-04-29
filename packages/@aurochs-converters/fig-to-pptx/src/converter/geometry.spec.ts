@@ -8,7 +8,8 @@
  */
 
 import { convertGeometry } from "./geometry";
-import type { FigDesignNode, FigNodeId, FigPaint } from "@aurochs/fig/domain";
+import type { FigDesignNode, FigNodeId } from "@aurochs/fig/domain";
+import type { FigPaint } from "@aurochs/fig/types";
 
 const WHITE_PAINT: FigPaint = {
   type: "SOLID",
@@ -20,14 +21,11 @@ const WHITE_PAINT: FigPaint = {
 function frameNode(partial: Partial<FigDesignNode> = {}): FigDesignNode {
   return {
     id: "1:1" as FigNodeId,
-    parentId: null,
     type: "FRAME",
     name: "Frame",
     visible: true,
     opacity: 1,
     blendMode: "NORMAL",
-    locked: false,
-    absoluteBoundingBox: null,
     transform: { m00: 1, m01: 0, m02: 0, m10: 0, m11: 1, m12: 0 },
     size: { x: 100, y: 80 },
     fills: [WHITE_PAINT],
