@@ -212,13 +212,19 @@ function formatAngularGradientDef(def: RenderAngularGradientDef): ReactNode {
   const cy = parseFloat(d.cy) * (d.cy.endsWith("%") ? h / 100 : 1) || (h / 2);
   const radius = Math.hypot(w, h);
   const fromDeg = d.rotation - 90;
-  const SECTORS = 64;
+  const SECTORS = 256;
+  // No overlap (mirrors svg/scene-renderer.ts) — original 0.3° caused
+  // double-coverage colour artefacts at sector boundaries. Empirical
+  // testing shows 0.0–0.05° all produce equivalent pixel-diff in
+  // resvg-js; pick 0.0 for simplicity. Bg bleed-through is not visible
+  // at 256 sectors.
+  const OVERLAP_DEG = 0.0;
   const paths: ReactNode[] = [];
   for (let i = 0; i < SECTORS; i++) {
     const a0 = (i / SECTORS) * 360 + fromDeg;
     const a1 = ((i + 1) / SECTORS) * 360 + fromDeg;
-    const a0r = (a0 - 0.3) * Math.PI / 180;
-    const a1r = (a1 + 0.3) * Math.PI / 180;
+    const a0r = (a0 - OVERLAP_DEG) * Math.PI / 180;
+    const a1r = (a1 + OVERLAP_DEG) * Math.PI / 180;
     const x0 = cx + Math.cos(a0r) * radius;
     const y0 = cy + Math.sin(a0r) * radius;
     const x1 = cx + Math.cos(a1r) * radius;
@@ -228,8 +234,14 @@ function formatAngularGradientDef(def: RenderAngularGradientDef): ReactNode {
     const pathD = `M${cx},${cy} L${x0},${y0} L${x1},${y1} Z`;
     paths.push(<path key={i} d={pathD} fill={color} />);
   }
+  // See `svg/scene-renderer.ts:formatAngularGradientDef` for the
+  // tile-size rationale: with `patternUnits="userSpaceOnUse"` a tile
+  // sized to (w × h) clips every sector triangle whose bbox extends
+  // beyond the element extent. Using 2×radius ensures the full sweep
+  // fits within the tile so no sector gets clipped.
+  const tileSize = Math.ceil(radius * 2);
   return (
-    <pattern key={d.id} id={d.id} patternUnits="userSpaceOnUse" width={w} height={h}>
+    <pattern key={d.id} id={d.id} patternUnits="userSpaceOnUse" width={tileSize} height={tileSize}>
       {paths}
     </pattern>
   );

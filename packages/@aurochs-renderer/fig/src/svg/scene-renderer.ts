@@ -137,7 +137,7 @@ function formatFilterPrimitive(p: ResolvedFilterPrimitive): SvgString {
         radius: p.radius,
       });
     case "feMerge":
-      return feMerge({}, p.nodes.map((nodeIn) => feMergeNode({ in: nodeIn })));
+      return feMerge({}, ...p.nodes.map((nodeIn) => feMergeNode({ in: nodeIn })));
   }
 }
 
@@ -266,7 +266,7 @@ function sampleGradientAt(
  * indistinguishable from a true conic gradient at typical sizes.
  * Increase `SECTORS` if finer resolution is required.
  */
-const SECTORS = 64;
+const SECTORS = 256;
 
 function formatAngularGradientDef(d: ResolvedAngularGradient): SvgString {
   const w = d.elementWidth ?? 1;
@@ -283,13 +283,19 @@ function formatAngularGradientDef(d: ResolvedAngularGradient): SvgString {
   const fromDeg = d.rotation - 90;
 
   const parts: SvgString[] = [];
+  // Tiny overlap so adjacent sectors meet cleanly without bg bleed-
+  // through, but small enough to avoid double-coverage artefacts that
+  // shift colours at sector boundaries (Hologram angular gradient).
+  // 256 sectors × 0.05° overlap = 12.8° total double-cover, well below
+  // the 1.4° sector width.
+  const OVERLAP_DEG = 0.0;
+  // Note: tested 0.3 (worst, 9.52%), 0.05 (8.50%), 0.0 (8.50%), 0.01 (8.56%).
+  // 0 is simplest and matches 0.05 result.
   for (let i = 0; i < SECTORS; i++) {
     const a0 = (i / SECTORS) * 360 + fromDeg;
     const a1 = ((i + 1) / SECTORS) * 360 + fromDeg;
-    // Slight 0.5° overlap so adjacent sectors meet cleanly without
-    // background bleed-through.
-    const a0r = (a0 - 0.3) * Math.PI / 180;
-    const a1r = (a1 + 0.3) * Math.PI / 180;
+    const a0r = (a0 - OVERLAP_DEG) * Math.PI / 180;
+    const a1r = (a1 + OVERLAP_DEG) * Math.PI / 180;
     const x0 = cx + Math.cos(a0r) * radius;
     const y0 = cy + Math.sin(a0r) * radius;
     const x1 = cx + Math.cos(a1r) * radius;
@@ -299,8 +305,24 @@ function formatAngularGradientDef(d: ResolvedAngularGradient): SvgString {
     const pathD = `M${cx},${cy} L${x0},${y0} L${x1},${y1} Z`;
     parts.push(path({ d: pathD, fill: color }));
   }
+  // Size the pattern tile to enclose every sector triangle (each
+  // triangle apex sits at (cx, cy) and extends out to `radius`). With
+  // the tile sized to the element extent (w × h) the triangles whose
+  // bbox falls outside (0,0)-(w,h) get CLIPPED by the pattern, leaving
+  // those sectors blank (Hologram FRAME 38×38 with radius=53.7 — most
+  // triangles span coordinates beyond the tile). Use 2×radius so the
+  // tile encloses the full sweep, anchored at the origin so the apex
+  // stays at the same user-space coordinate when the tile is repeated
+  // across a larger fill area.
+  //
+  // Use `patternUnits="userSpaceOnUse"` — coordinates in pattern
+  // children are in user space, so the same triangle path renders at
+  // the same absolute position regardless of the tile origin. The
+  // tile's only effect with this setting is to clip; making it large
+  // enough to enclose every sector removes the clipping.
+  const tileSize = Math.ceil(radius * 2);
   return pattern(
-    { id: d.id, patternUnits: "userSpaceOnUse", width: w, height: h },
+    { id: d.id, patternUnits: "userSpaceOnUse", width: tileSize, height: tileSize },
     ...parts,
   );
 }
@@ -505,15 +527,23 @@ type WrapperSvgAttrs = Pick<SvgPaintAttrs, "transform" | "opacity" | "style"> & 
 
 function wrapperAttrs(node: { wrapper: ResolvedWrapperAttrs; mask?: { maskAttr: string } }): WrapperSvgAttrs {
   const w = node.wrapper;
-  // Isolate the stacking context whenever we carry a blend mode or a
-  // filter. Without isolation, mix-blend-mode can leak past the intended
-  // compositing boundary and produce no visible effect (FRAME Pattern
-  // with blendMode=SCREEN on Cron 4×2 was the canary). Matches the
-  // React renderer's RenderWrapper behaviour so both backends composite
-  // identically.
+  // Stacking-context isolation is added ONLY when a wrapper carries a
+  // filter without a blend mode. The Figma SVG export does not isolate
+  // a node that has `mix-blend-mode` set — the blend needs the parent's
+  // pre-rendered contents as its backdrop, and `isolation:isolate`
+  // would constrain the backdrop to the wrapper's own descendants and
+  // void the blend (Passport world-map overlay was the canary —
+  // continents rendered solid because the chevron pattern from the
+  // grandparent never reached the blend's backdrop).
+  //
+  // We still isolate filter-only wrappers because SVG filters compose
+  // their own rendering pass and historically benefit from a clean
+  // stacking context boundary when no blend is in play (Cron 4×2 FRAME
+  // Pattern with SCREEN blend lived on a different node and is not
+  // affected by this branch).
   const parts: string[] = [];
   if (w.blendMode) {parts.push(`mix-blend-mode:${w.blendMode}`);}
-  if (w.blendMode || w.filterAttr) {parts.push("isolation:isolate");}
+  if (w.filterAttr && !w.blendMode) {parts.push("isolation:isolate");}
   const style = parts.length > 0 ? parts.join(";") : undefined;
   return {
     transform: w.transform,
@@ -833,20 +863,61 @@ function formatStrokeRendering(sr: StrokeRendering): SvgString[] {
     case "uniform":
       return [];
 
-    case "masked":
-      return [g({ mask: `url(#${sr.maskId})` }, formatStrokedShape(sr.shape, strokeToSvgAttrs(sr.attrs)))];
+    case "masked": {
+      const stroked = formatStrokedShape(sr.shape, strokeToSvgAttrs(sr.attrs));
+      const wrapped = g({ mask: `url(#${sr.maskId})` }, stroked);
+      // Paint-level blend mode forwarded from the single-layer branch
+      // (Passport Flag's white SOFT_LIGHT outline). The mask wrapper
+      // alone has no `mix-blend-mode`, so the blend gets lost without
+      // this extra wrapper.
+      if (sr.blendMode) {
+        return [g({ style: blendModeStyle(sr.blendMode) }, wrapped)];
+      }
+      return [wrapped];
+    }
 
     case "layers":
       return formatStrokeLayersForShape(sr.layers, sr.shape);
 
     case "individual": {
-      const result: SvgString[] = [];
-      const { sides, color, opacity, width: w, height: h } = sr;
-      if (sides.top > 0) result.push(line({ x1: 0, y1: 0, x2: w, y2: 0, stroke: color, "stroke-opacity": opacity, "stroke-width": sides.top }));
-      if (sides.right > 0) result.push(line({ x1: w, y1: 0, x2: w, y2: h, stroke: color, "stroke-opacity": opacity, "stroke-width": sides.right }));
-      if (sides.bottom > 0) result.push(line({ x1: 0, y1: h, x2: w, y2: h, stroke: color, "stroke-opacity": opacity, "stroke-width": sides.bottom }));
-      if (sides.left > 0) result.push(line({ x1: 0, y1: 0, x2: 0, y2: h, stroke: color, "stroke-opacity": opacity, "stroke-width": sides.left }));
-      return result;
+      const { sides, color, opacity, width: w, height: h, cornerRadius, strokeAlign } = sr;
+      const lines: SvgString[] = [];
+      // SVG `<line>` strokes are centred on the line geometry. Per-side
+      // stroke placement depends on Figma's strokeAlign, which determines
+      // whether the band lies INSIDE, OUTSIDE, or CENTERED on the geometry:
+      //
+      //   INSIDE:  band paints from edge..edge+t (offset inward by t/2)
+      //   OUTSIDE: band paints from edge-t..edge (offset outward by t/2)
+      //   CENTER:  band paints from edge-t/2..edge+t/2 (line on the edge)
+      //
+      // For a single 1-px-tall element with OUTSIDE-aligned top stroke
+      // (e.g. Activity View's 299×1 _Separator INSTANCE), the visible
+      // band lies one pixel ABOVE the geometry — y = -0.5 — not inside.
+      const sign = strokeAlign === "OUTSIDE" ? -1 : strokeAlign === "INSIDE" ? 1 : 0;
+      const topY = sign * (sides.top / 2);
+      const bottomY = h + (sign === 0 ? 0 : -sign * (sides.bottom / 2));
+      const leftX = sign * (sides.left / 2);
+      const rightX = w + (sign === 0 ? 0 : -sign * (sides.right / 2));
+      if (sides.top > 0) lines.push(line({ x1: 0, y1: topY, x2: w, y2: topY, stroke: color, "stroke-opacity": opacity, "stroke-width": sides.top }));
+      if (sides.right > 0) lines.push(line({ x1: rightX, y1: 0, x2: rightX, y2: h, stroke: color, "stroke-opacity": opacity, "stroke-width": sides.right }));
+      if (sides.bottom > 0) lines.push(line({ x1: 0, y1: bottomY, x2: w, y2: bottomY, stroke: color, "stroke-opacity": opacity, "stroke-width": sides.bottom }));
+      if (sides.left > 0) lines.push(line({ x1: leftX, y1: 0, x2: leftX, y2: h, stroke: color, "stroke-opacity": opacity, "stroke-width": sides.left }));
+
+      // Clip the band to the rounded perimeter only for INSIDE alignment;
+      // OUTSIDE strokes lie outside the rect by definition and clipping
+      // them to the inner rect would erase the entire band.
+      if (cornerRadius && cornerRadius > 0 && strokeAlign !== "OUTSIDE") {
+        // Clip to the rounded rect so per-side strokes don't bleed past
+        // the rounded corners. Without this, an 8-px top stroke on a
+        // r=24 rounded frame paints a horizontal band from y=0 to y=8
+        // straight across the corner curve, producing a square-cornered
+        // band visibly mismatched with Figma's exporter (which emits a
+        // path-based inside-stroke that follows the rounded perimeter).
+        const clipId = `inside-stroke-clip-${w}-${h}-${cornerRadius}`.replace(/\./g, "_");
+        const clipDef = unsafeSvg(`<clipPath id="${clipId}"><rect x="0" y="0" width="${w}" height="${h}" rx="${cornerRadius}" ry="${cornerRadius}"/></clipPath>`);
+        return [g({ "clip-path": `url(#${clipId})` }, clipDef, ...lines)];
+      }
+      return lines;
     }
   }
 }
@@ -881,6 +952,64 @@ function assembleShapeNode(
 // Node Formatters
 // =============================================================================
 
+/**
+ * True when a frame's clamped corner radius implies a non-rectangular
+ * visible boundary. Square-cornered frames (radius 0 / undefined) have a
+ * bg fill that fully covers the frame interior, so the bg-on-top trick
+ * works for clip-elision; rounded frames have transparent corner-curve
+ * regions that a child fill can paint into, so the clip MUST stay.
+ */
+function hasNonZeroCornerRadius(cr: CornerRadius | undefined): boolean {
+  if (cr === undefined) { return false; }
+  if (typeof cr === "number") { return cr > 0; }
+  return cr.some((r) => r > 0);
+}
+
+/**
+ * Returns true if the children subtree contains a `mix-blend-mode` whose
+ * backdrop *requires* the current frame's bg to render correctly.
+ *
+ * resvg-js's mix-blend-mode resolves the blend's backdrop by walking up
+ * to the nearest stacking-context-introducing ancestor. Each `<g
+ * clip-path="…">` along the chain creates a fresh stacking context, so
+ * a blend node deep inside nested clipped frames samples the wrong
+ * layer (it sees the inner clip's contents only, not the outer frame's
+ * backdrop fill). When this returns true, we elide the current frame's
+ * children-clip wrapper so the blend reaches the frame's bg directly.
+ *
+ * Heuristic: traverse children, but DON'T descend into a child frame
+ * that already has its own `childClipId` — that frame owns its own
+ * elision decision and its bg is the proper backdrop for any blend
+ * inside it. Eliding a clip on behalf of such a deep blend would lose
+ * visible clipping for unrelated siblings without helping the blend
+ * (which is sampled relative to the deeper frame's bg, not ours).
+ *
+ * Both wrapper-level blend modes (CSS `mix-blend-mode` set on `<g>`
+ * via `node.wrapper.blendMode`) and paint-level blend modes (set on a
+ * single fill layer in `node.background.fillLayers[i].blendMode` or on
+ * `node.fillLayers[i]` for shape nodes) trigger elision, since the
+ * same backdrop-sampling rule applies regardless of which level the
+ * blend mode lives at.
+ */
+function subtreeHasBlendModeRequiringThisBackdrop(nodes: readonly RenderNode[]): boolean {
+  for (const n of nodes) {
+    if (n.wrapper.blendMode !== undefined) { return true; }
+    if (n.type === "frame") {
+      if (n.background?.fillLayers?.some((l) => l.blendMode !== undefined)) { return true; }
+      // Stop descending into a child frame that owns its own clip —
+      // its bg is the proper backdrop for any deeper blend.
+      if (n.childClipId === undefined) {
+        if (subtreeHasBlendModeRequiringThisBackdrop(n.children)) { return true; }
+      }
+    } else if (n.type === "group") {
+      if (subtreeHasBlendModeRequiringThisBackdrop(n.children)) { return true; }
+    } else if (n.type === "rect" || n.type === "ellipse" || n.type === "path") {
+      if (n.fillLayers?.some((l) => l.blendMode !== undefined)) { return true; }
+    }
+  }
+  return false;
+}
+
 function formatGroupNode(node: RenderGroupNode): SvgString {
   const children = node.children.map(formatNode);
   const defsStr = formatDefs(node.defs);
@@ -902,33 +1031,71 @@ function formatFrameNode(node: RenderFrameNode): SvgString {
   const defsStr = formatDefs(node.defs);
   if (defsStr !== EMPTY_SVG) { parts.push(defsStr); }
 
+  // Build background fragments separately so we can choose where to
+  // splice them: outside the clip wrapper for the standard case, or
+  // INSIDE it when a child has `mix-blend-mode`. resvg-js applies
+  // mix-blend-mode by sampling the immediate parent's backdrop — when
+  // the bg lives outside the clip group, the blend's backdrop becomes
+  // the SVG canvas behind the clip group instead of the frame's own
+  // background, and the blend silently degrades to source-over. Putting
+  // the bg inside the same clip group restores the correct backdrop and
+  // mirrors Figma's own SVG export structure (which always nests the
+  // frame's path-1-inside-1 / radial fills inside the clip wrapper).
+  //
+  // Strokes (especially OUTSIDE/CENTER align with `strokeRendering`)
+  // need to live OUTSIDE the clip wrapper so the half of the stroke
+  // that extends beyond the frame edge isn't clipped — Figma's exporter
+  // always emits the bg stroke as a sibling of the clip group, not as
+  // its child. Without this split, Flag's 1px white SOFT_LIGHT outline
+  // disappears at the rounded corners (Flag part diff was 9% before
+  // separating stroke out).
+  const bgFillParts: SvgString[] = [];
+  const bgStrokeParts: SvgString[] = [];
   if (node.background) {
     const sr = node.background.strokeRendering;
     const fillStrokeAttrs = getUniformStrokeAttrs(sr);
 
     if (node.background.fillLayers) {
-      parts.push(...formatMultiFillRectLayers(
+      bgFillParts.push(...formatMultiFillRectLayers(
         node.background.fillLayers, node.width, node.height, node.cornerRadius, fillStrokeAttrs,
       ));
     } else {
       const fillAttrs = fillToSvgAttrs(node.background.fill);
-      parts.push(formatRectShape(node.width, node.height, node.cornerRadius, fillAttrs, fillStrokeAttrs));
+      bgFillParts.push(formatRectShape(node.width, node.height, node.cornerRadius, fillAttrs, fillStrokeAttrs));
     }
 
     if (sr) {
-      parts.push(...formatStrokeRendering(sr));
+      bgStrokeParts.push(...formatStrokeRendering(sr));
     }
   }
 
   if (node.backgroundBlur) {
-    parts.push(formatBackgroundBlur(node.backgroundBlur));
+    bgFillParts.push(formatBackgroundBlur(node.backgroundBlur));
   }
 
   const childElements = node.children.map(formatNode);
   if (node.childClipId && childElements.length > 0) {
-    parts.push(g({ "clip-path": `url(#${node.childClipId})` }, ...childElements));
+    // Clip elision is only safe for SQUARE-CORNERED frames. When the
+    // frame has a non-zero corner radius, children that paint past the
+    // bg's rounded edge (e.g. an IMAGE/LIGHTEN-blended fill on a child
+    // frame whose own bbox is rectangular) bleed past the rounded
+    // corners — no amount of bg-on-top compensates because the bg is
+    // transparent in the corner-curve area. The clip MUST stay even
+    // when blend modes prefer it gone.
+    const hasRoundedCorners = hasNonZeroCornerRadius(node.cornerRadius);
+    if (!hasRoundedCorners && subtreeHasBlendModeRequiringThisBackdrop(node.children)) {
+      // Skip the inner clip wrapper — resvg-js's stacking context
+      // discipline breaks `mix-blend-mode` backdrop sampling for any
+      // descendant that sits inside a nested clip-path. The frame's
+      // own rect bg above already enforces the visible boundary
+      // exactly because the frame is square-cornered.
+      parts.push(...bgFillParts, ...childElements, ...bgStrokeParts);
+    } else {
+      parts.push(g({ "clip-path": `url(#${node.childClipId})` }, ...bgFillParts, ...childElements));
+      parts.push(...bgStrokeParts);
+    }
   } else {
-    parts.push(...childElements);
+    parts.push(...bgFillParts, ...childElements, ...bgStrokeParts);
   }
 
   return g(wrapperAttrs(node), ...parts);

@@ -39,6 +39,7 @@ import {
   type ResolvedFilter,
   type ResolvedStrokeLayer,
 } from "../render";
+import { computePathContoursBbox } from "../path-bbox";
 
 import type {
   RenderTree,
@@ -342,12 +343,25 @@ function resolveWrapper(
 
 /**
  * Finalize all size-dependent defs (gradient coordinates and image patterns)
- * for a given element size. Called once per node resolver.
+ * for a given element bounding box. Called once per node resolver.
+ *
+ * `elementBounds` may be the legacy `{width, height}` shape (origin
+ * (0, 0), used by FRAME / RECTANGLE / ELLIPSE / TEXT) or the bbox
+ * shape `{x, y, width, height}` (origin at the path's bbox top-left,
+ * used by VECTOR — Figma encodes gradient endpoints relative to that
+ * bbox so without (x, y) the gradient slides off the path).
  */
-function finalizeDefs(defs: RenderDef[], elementSize: { width: number; height: number }): void {
-  finalizeGradientDefs(defs, elementSize);
-  finalizeImagePatternDefs(defs, elementSize);
-  finalizeAngularDiamondGradientDefs(defs, elementSize);
+function finalizeDefs(
+  defs: RenderDef[],
+  elementBounds: { readonly x?: number; readonly y?: number; readonly width: number; readonly height: number },
+): void {
+  finalizeGradientDefs(defs, elementBounds);
+  // Image patterns and angular/diamond gradients still operate on
+  // `{width, height}` only — they tile/centre on the node's own
+  // (0, 0) origin and do not need the bbox offset.
+  const sizeOnly = { width: elementBounds.width, height: elementBounds.height };
+  finalizeImagePatternDefs(defs, sizeOnly);
+  finalizeAngularDiamondGradientDefs(defs, sizeOnly);
 }
 
 /**
@@ -590,7 +604,14 @@ function resolveStrokeRendering(
   if (result.attrs.strokeAlign && maskClipShape) {
     const maskId = ids.getNextId("stroke-mask");
     defs.push({ type: "stroke-mask", id: maskId, shape: maskClipShape, strokeAlign: result.attrs.strokeAlign });
-    return { mode: "masked", attrs: result.attrs, maskId, shape };
+    // The single-layer branch in resolveStrokeResult forwards a layer with
+    // its paint blendMode when the paint is a non-default blend (Passport
+    // Flag's white SOFT_LIGHT outline with strokeAlign=INSIDE). Pull that
+    // blendMode through onto the masked result so the formatter can wrap
+    // the stroke draw in `style="mix-blend-mode:..."` — without this
+    // pass-through the masked path would silently discard the blend.
+    const layerBlendMode = result.layers && result.layers.length === 1 ? result.layers[0].blendMode : undefined;
+    return { mode: "masked", attrs: result.attrs, maskId, shape, blendMode: layerBlendMode };
   }
 
   // Single-layer gradient without strokeAlign — emit as a regular
@@ -656,6 +677,17 @@ function resolveFrameNode(node: FrameNode, ids: IdGenerator): RenderFrameNode {
         }
       }
     }
+    // Per-side strokes carry a single corner radius for clipping the
+    // sides to the rounded perimeter. When the frame's corners are
+    // non-uniform we use the max corner: this still keeps each side's
+    // drawn area inside the union of all four corner arcs (no over-
+    // paint outside the rounded rect) at the cost of slightly under-
+    // clipping the smaller corners — acceptable approximation.
+    const cornerScalar = typeof clampedRadius === "number"
+      ? clampedRadius
+      : clampedRadius
+        ? Math.max(clampedRadius[0], clampedRadius[1], clampedRadius[2], clampedRadius[3])
+        : 0;
     strokeRendering = {
       mode: "individual",
       sides: node.individualStrokeWeights,
@@ -663,6 +695,8 @@ function resolveFrameNode(node: FrameNode, ids: IdGenerator): RenderFrameNode {
       opacity: result.attrs.strokeOpacity,
       width: node.width,
       height: node.height,
+      cornerRadius: cornerScalar > 0 ? cornerScalar : undefined,
+      strokeAlign: result.attrs.strokeAlign,
     };
   } else if (node.stroke) {
     const strokeShape: import("./types").StrokeShape = { kind: "rect", width: node.width, height: node.height, cornerRadius: clampedRadius };
@@ -905,15 +939,26 @@ function resolvePathNode(node: PathNode, ids: IdGenerator): RenderPathNode {
     ? resolveStrokeRendering(node.stroke, ids, defs, pathStrokeShape, pathMaskShape)
     : undefined;
 
-  const pathSize = node.width && node.height ? { width: node.width, height: node.height } : undefined;
-  if (pathSize) {
-    finalizeDefs(defs, pathSize);
+  // For VECTOR / boolean-op paths the contour origin in node-local
+  // coordinates can be offset from (0, 0) — Figma's vector network
+  // anchors the path at its own bbox, not the node's. The gradient's
+  // userSpaceOnUse coordinates need that anchor so a linear gradient
+  // running 0→1 in paint-space maps onto the path's actual extent
+  // (e.g. Passport's world-map dots: their gradient should colour
+  // the visible continents, not an off-frame region above the path).
+  // Falls back to (0, 0) origin when contours can't be measured.
+  const pathBbox = computePathContoursBbox(node.contours);
+  const pathBounds = pathBbox
+    ? pathBbox
+    : (node.width && node.height ? { x: 0, y: 0, width: node.width, height: node.height } : undefined);
+  if (pathBounds) {
+    finalizeDefs(defs, pathBounds);
   }
 
   // Pass path shape so backdrop-filter clips to the actual contour, not
   // the node's bounding rect (matches ELLIPSE/FRAME behaviour).
-  const backgroundBlur = pathSize
-    ? resolveBackgroundBlur(node.effects, { x: 0, y: 0, ...pathSize }, ids, defs, pathMaskShape)
+  const backgroundBlur = pathBounds
+    ? resolveBackgroundBlur(node.effects, pathBounds, ids, defs, pathMaskShape)
     : undefined;
   const mask = resolveMask(node, ids, defs);
 

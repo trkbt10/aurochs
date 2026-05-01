@@ -302,6 +302,48 @@ export type FigGuidPath = {
 };
 
 /**
+ * Variable-data binding entry — one mapping from a node field to a
+ * Figma variable's value. Carried by overrides whose authored value
+ * came from a Figma variable rather than a literal.
+ *
+ * `variableData` mirrors the Kiwi `VariableData` message: the
+ * authored value plus its declared and resolved data types. The inner
+ * `value` slot is intentionally `unknown` here because the full
+ * `VariableAnyValue` union (literal / alias / expression / ...) is
+ * the SoT for variable resolution itself; we surface only the
+ * structural envelope until the resolver SoT lands (task #16).
+ */
+export type FigKiwiVariableData = {
+  readonly value?: unknown;
+  readonly dataType?: KiwiEnumValue;
+  readonly resolvedDataType?: KiwiEnumValue;
+};
+
+export type FigKiwiVariableDataMapEntry = {
+  readonly nodeField?: number;
+  readonly variableData?: FigKiwiVariableData;
+  readonly variableField?: KiwiEnumValue;
+};
+
+export type FigKiwiVariableDataMap = {
+  readonly entries: readonly FigKiwiVariableDataMapEntry[];
+};
+
+/**
+ * `variableModeBySetMap` lists which mode a variable-set is currently
+ * pinned to — e.g. "Mode=Light" for the iOS color set. Each entry
+ * names a `variableSetID` and a `variableModeID`.
+ */
+export type FigKiwiVariableModeBySetMapEntry = {
+  readonly variableSetID?: { readonly assetRef?: { readonly key: string; readonly version?: string } };
+  readonly variableModeID?: FigGuid;
+};
+
+export type FigKiwiVariableModeBySetMap = {
+  readonly entries: readonly FigKiwiVariableModeBySetMapEntry[];
+};
+
+/**
  * Symbol override entry as stored in Kiwi binary format.
  *
  * Each entry targets a specific child node (via guidPath) and overrides
@@ -361,6 +403,20 @@ export type FigKiwiSymbolOverridePayload = {
   readonly derivedTextData?: FigDerivedTextData;
   readonly componentPropAssignments?: readonly FigComponentPropAssignment[];
   readonly overriddenSymbolID?: FigGuid;
+  // Variable / parameter consumption (component property bindings).
+  //
+  // Schema: `Map<entries[]>`. Each entry binds a Figma variable to a
+  // node field. The full payload (`variableData.value` chain) is only
+  // needed by RESOLVE_VARIANT evaluation; until that lands the entries
+  // are preserved verbatim and only field-level presence is consumed
+  // by the self-override detector.
+  readonly variableConsumptionMap?: FigKiwiVariableDataMap;
+  readonly parameterConsumptionMap?: FigKiwiVariableDataMap;
+  readonly variableModeBySetMap?: FigKiwiVariableModeBySetMap;
+  // Authoring-only metadata fields the parser preserves verbatim.
+  readonly stackPositioning?: KiwiEnumValue;
+  readonly stackPrimarySizing?: KiwiEnumValue;
+  readonly overrideLevel?: number;
 };
 
 export type FigKiwiSymbolOverride = FigKiwiSymbolOverridePayload & {
@@ -668,6 +724,14 @@ export type FigNode = {
   readonly textData?: FigKiwiTextData;
   /** Pre-computed text rendering data (glyph outlines, baselines, decorations) */
   readonly derivedTextData?: FigDerivedTextData;
+
+  /**
+   * Override key — Figma's stable identifier used by SYMBOL-side overrides
+   * to address descendant slots. Different from `guid` (instance-side).
+   * DSD `guidPath` entries reference this key, so slot-resolution must
+   * fall back to `overrideKey` matching when a literal `guid` lookup fails.
+   */
+  readonly overrideKey?: FigGuid;
 
   // ---- Ellipse fields ----
   /** Arc data for partial ellipse/donut shapes */

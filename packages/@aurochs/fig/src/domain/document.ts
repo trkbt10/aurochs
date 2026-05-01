@@ -15,7 +15,7 @@
 import type {
   FigNodeType, FigMatrix, FigVector, FigColor, FigPaint, FigEffect, FigStrokeWeight, FigStrokeCap, FigStrokeJoin, FigStrokeAlign, FigFontName, KiwiEnumValue,
   FigDerivedBaseline, FigDerivedGlyph, FigDerivedDecoration, FigDerivedTextData,
-  FigVectorPath, FigVectorData, FigStyleId, FigFillGeometry,
+  FigVectorPath, FigVectorData, FigStyleId, FigFillGeometry, FigGuid,
 } from "../types";
 import type { LoadedFigFile, FigImage, FigMetadata } from "../roundtrip";
 import type { FigNodeId, FigPageId } from "./node-id";
@@ -253,6 +253,22 @@ export type SymbolOverrideFields = {
   readonly locked?: boolean;
   // Instance swap.
   readonly overriddenSymbolID?: { readonly sessionID: number; readonly localID: number };
+  // Nested-INSTANCE CPA carry-through.
+  //
+  // When a SYMBOL's authored design embeds an INSTANCE that itself
+  // carries componentPropAssignments, Figma's exporter ships those
+  // assignments inside a symbolOverride entry whose guidPath addresses
+  // the embedded INSTANCE. The override needs to deliver the CPA to
+  // the embedded INSTANCE so its descendants (e.g. an inner Symbol
+  // [TEXT] with a matching componentPropertyRef) can apply the value.
+  //
+  // Concrete case: Activity View's Close Button INSTANCE carries a
+  // symbolOverride at guidPath `[5432:23135]` whose only payload is a
+  // `componentPropAssignments` entry setting `defID 5429:12 →
+  // characters="􀆄"` (xmark glyph). Without this field, the override
+  // is silently dropped and the inner TEXT keeps the SYMBOL-default
+  // glyph (viewfinder bracket).
+  readonly componentPropertyAssignments?: readonly ComponentPropertyAssignment[];
 };
 
 export type SymbolOverride = {
@@ -327,6 +343,7 @@ const SYMBOL_OVERRIDE_FIELD_KEY_SET = {
   stackPositioning: true,
   name: true, locked: true,
   overriddenSymbolID: true,
+  componentPropertyAssignments: true,
 } satisfies Record<SymbolOverrideFieldKey, true>;
 
 /**
@@ -476,6 +493,26 @@ export function applyOverrideToNode(
       case "derivedTextData": {
         if (!options?.skipDerivedTextData) {
           target.derivedTextData = override.derivedTextData;
+        }
+        break;
+      }
+      case "componentPropertyAssignments": {
+        // Merge override CPAs into the target's existing CPAs by defId.
+        // Override entries with the same defId take precedence.
+        // Mirrors the symbol-resolver's CPA merge in applyOverrides
+        // (kiwi side) so both pipelines deliver overridden CPAs to the
+        // embedded INSTANCE consistently.
+        const incoming = override.componentPropertyAssignments;
+        if (incoming === undefined) break;
+        const existing = target.componentPropertyAssignments;
+        if (!existing || existing.length === 0) {
+          target.componentPropertyAssignments = incoming;
+        } else {
+          const incomingDefIds = new Set(incoming.map((a) => a.defId));
+          target.componentPropertyAssignments = [
+            ...existing.filter((a) => !incomingDefIds.has(a.defId)),
+            ...incoming,
+          ];
         }
         break;
       }
@@ -871,6 +908,18 @@ export type FigDesignNode = {
   readonly starInnerRadius?: number;
   /** Star inner scale factor (0-1). Alternative to starInnerRadius for controlling inner vertex positions. */
   readonly starInnerScale?: number;
+
+  /**
+   * Override key — Figma's stable cross-INSTANCE identifier for this
+   * SYMBOL-descendant slot. When this node is the target of an override
+   * or DSD entry, the entry's `guidPath` references the overrideKey,
+   * not the node's own GUID. The slot-lookup pipeline must match
+   * against `overrideKey` in addition to `id` so DSD entries authored
+   * against the SYMBOL-side key resolve to the cloned descendant in an
+   * INSTANCE expansion (e.g. Action 3 [15:943] DSD path 5591:26671 →
+   * Title TEXT 15:874 whose overrideKey is 5591:26671).
+   */
+  readonly overrideKey?: FigGuid;
 
   /**
    * Raw Kiwi node data preserved for roundtrip fidelity.

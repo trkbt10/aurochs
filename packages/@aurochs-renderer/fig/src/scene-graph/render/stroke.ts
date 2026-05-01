@@ -128,6 +128,29 @@ export function resolveStrokeResult(stroke: Stroke, ids: IdGenerator): ResolvedS
           }],
         };
       }
+      // Single SOLID layer with a defined (non-default) paint blend mode:
+      // the uniform-stroke path emits stroke attrs without `mix-blend-mode`,
+      // which would silently drop Figma's per-paint stroke blend
+      // (Passport Flag's white SOFT_LIGHT outline). The BlendMode union
+      // does not include "normal" — convertFigmaBlendMode maps NORMAL to
+      // undefined, so a defined `layer.blendMode` is by construction a
+      // non-default blend. Emitting a single-layer result routes through
+      // the layered renderer, which wraps the stroke draw in a styled
+      // element and preserves the blend mode.
+      if (layer.blendMode) {
+        const base = buildStrokeAttrsBase(stroke);
+        return {
+          attrs,
+          layers: [{
+            attrs: {
+              ...base,
+              stroke: colorToHex(layer.color),
+              strokeOpacity: layer.opacity < 1 ? layer.opacity : undefined,
+            },
+            blendMode: layer.blendMode,
+          }],
+        };
+      }
     }
     return { attrs };
   }

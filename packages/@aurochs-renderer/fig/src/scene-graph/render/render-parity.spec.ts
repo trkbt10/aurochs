@@ -286,6 +286,45 @@ describe("Effects resolution (shared SoT)", () => {
     expect(result!.primitives[4].type).toBe("feMerge");
   });
 
+  it("resolves SHARP drop shadow (radius=0) using Figma's hardAlpha-out recipe", () => {
+    const effects: Effect[] = [{
+      type: "drop-shadow",
+      offset: { x: -1, y: 0 },
+      radius: 0,
+      color: BLACK_50,
+    }];
+    const ids = createIdGenerator();
+    const result = resolveEffects(effects, ids);
+
+    expect(result).toBeDefined();
+    // Sharp recipe (matches Figma's exact SVG export shape):
+    //   1. feColorMatrix (SourceAlpha → hardAlpha via 127× binarisation)
+    //   2. feOffset (offsets hardAlpha — NOT SourceAlpha — so the AA fringe
+    //      cannot survive the upcoming "out" composite and reduce the
+    //      sliver's alpha to 50% of full).
+    //   3. feComposite (out, in2=hardAlpha) — keeps offset hardAlpha
+    //      where hardAlpha is NOT, producing the 1-px sliver at α=1.
+    //   4. feFlood (shadow colour at full opacity, fills the filter region).
+    //   5. feComposite (in, in2=composited) — masks the flood to the sliver.
+    //   6. feMerge (composites tinted shadow under SourceGraphic).
+    expect(result!.primitives).toHaveLength(6);
+    expect(result!.primitives[0].type).toBe("feColorMatrix");
+    expect(result!.primitives[1].type).toBe("feOffset");
+    // Critical: the offset's input MUST be the binarised hardAlpha,
+    // not the anti-aliased SourceAlpha. Operating on SourceAlpha here
+    // bakes the source's anti-aliased edge into the offset sliver, and
+    // after feComposite "out" against hardAlpha the sliver retains the
+    // 0.5..0.99 AA values instead of a clean 1.0.
+    const offsetPrim = result!.primitives[1];
+    if (offsetPrim.type === "feOffset") {
+      expect(offsetPrim.in).toBe(result!.primitives[0].type === "feColorMatrix" ? result!.primitives[0].result : undefined);
+    }
+    expect(result!.primitives[2].type).toBe("feComposite");
+    expect(result!.primitives[3].type).toBe("feFlood");
+    expect(result!.primitives[4].type).toBe("feComposite");
+    expect(result!.primitives[5].type).toBe("feMerge");
+  });
+
   it("resolves inner shadow", () => {
     const effects: Effect[] = [{
       type: "inner-shadow",

@@ -45,6 +45,26 @@ function convertGradientStops(stops: readonly { color: FigColor; position: numbe
 }
 
 /**
+ * Returns true when every gradient stop has alpha == 0. Such gradients
+ * are visually identity — they leave the backdrop untouched — and Figma's
+ * own SVG exporter omits them. Emitting them adds no visible pixels but
+ * does add an extra <rect>+<radialGradient> definition into our output,
+ * which has been observed to nudge resvg-js's rendering of subsequent
+ * blend-mode layers (notably the `mix-blend-mode:hue` overlay used by
+ * Passport bg) and inflate Passport diff. Match the exporter's behavior
+ * by skipping fully-transparent gradient stops at convert time.
+ */
+function isFullyTransparentGradient(
+  stops: readonly { color: FigColor; position: number }[],
+): boolean {
+  if (stops.length === 0) { return true; }
+  for (const s of stops) {
+    if (s.color.a > 0) { return false; }
+  }
+  return true;
+}
+
+/**
  * Convert hash array to hex string
  */
 function _uint8ArrayToBase64(data: Uint8Array): string {
@@ -110,8 +130,10 @@ export function convertPaintToFill(paint: FigPaint, images: ReadonlyMap<string, 
     case "GRADIENT_LINEAR": {
       const gradientPaint = asGradientPaint(paint);
       if (!gradientPaint) { return null; }
+      const rawStops = getGradientStops(gradientPaint);
+      if (isFullyTransparentGradient(rawStops)) { return null; }
       const { start, end } = getGradientDirection(gradientPaint);
-      const stops = convertGradientStops(getGradientStops(gradientPaint));
+      const stops = convertGradientStops(rawStops);
       return {
         type: "linear-gradient",
         start,
@@ -126,8 +148,10 @@ export function convertPaintToFill(paint: FigPaint, images: ReadonlyMap<string, 
     case "GRADIENT_RADIAL": {
       const gradientPaint = asGradientPaint(paint);
       if (!gradientPaint) { return null; }
+      const rawStops = getGradientStops(gradientPaint);
+      if (isFullyTransparentGradient(rawStops)) { return null; }
       const { center, radius } = getRadialGradientCenterAndRadius(gradientPaint);
-      const stops = convertGradientStops(getGradientStops(gradientPaint));
+      const stops = convertGradientStops(rawStops);
       return {
         type: "radial-gradient",
         center,
@@ -142,6 +166,8 @@ export function convertPaintToFill(paint: FigPaint, images: ReadonlyMap<string, 
     case "GRADIENT_ANGULAR": {
       const gradientPaint = asGradientPaint(paint);
       if (!gradientPaint) { return null; }
+      const rawStops = getGradientStops(gradientPaint);
+      if (isFullyTransparentGradient(rawStops)) { return null; }
       // The angular-gradient centre is NOT `(m02, m12)` of paint.transform:
       // the Kiwi matrix maps object→gradient space, and `(m02, m12) =
       // T·(0,0)` is the gradient-space image of the object-space origin,
@@ -150,7 +176,7 @@ export function convertPaintToFill(paint: FigPaint, images: ReadonlyMap<string, 
       // gradients the centre in object space is always `(0.5, 0.5)`;
       // only the rotation angle varies.
       const { center, startAngle } = getAngularGradientParams(gradientPaint);
-      const stops = convertGradientStops(getGradientStops(gradientPaint));
+      const stops = convertGradientStops(rawStops);
       return {
         type: "angular-gradient",
         center,
@@ -164,11 +190,13 @@ export function convertPaintToFill(paint: FigPaint, images: ReadonlyMap<string, 
     case "GRADIENT_DIAMOND": {
       const gradientPaint = asGradientPaint(paint);
       if (!gradientPaint) { return null; }
+      const rawStops = getGradientStops(gradientPaint);
+      if (isFullyTransparentGradient(rawStops)) { return null; }
       // Diamond gradients, like angular, are centred on the object —
       // delegating to the dedicated helper keeps the convention
       // explicit and consistent with angular.
       const { center } = getDiamondGradientParams(gradientPaint);
-      const stops = convertGradientStops(getGradientStops(gradientPaint));
+      const stops = convertGradientStops(rawStops);
       return {
         type: "diamond-gradient",
         center,

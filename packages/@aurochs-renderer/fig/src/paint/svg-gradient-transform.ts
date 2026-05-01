@@ -60,6 +60,28 @@ export type ElementSize = {
   readonly height: number;
 };
 
+/**
+ * Bounds for a paint-bearing element in user space. `(x, y)` is the
+ * top-left of the element's bbox; `(width, height)` is its extent.
+ *
+ * For FRAME / RECTANGLE / ELLIPSE / TEXT the bbox is anchored at
+ * `(0, 0)` because the node's own coordinate system places its
+ * top-left there. For VECTOR (paths whose first command is offset
+ * inside the node) the bbox is anchored at the path's bbox top-left,
+ * which Figma's gradient transform also uses as the gradient origin.
+ *
+ * The default `width`/`height` constructors below treat callers that
+ * pass only `{ width, height }` as `(0, 0, w, h)` for backward
+ * compatibility — every existing call site implicitly assumes a
+ * (0, 0)-anchored element.
+ */
+export type ElementBounds = {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+};
+
 // =============================================================================
 // Transform extraction
 // =============================================================================
@@ -112,11 +134,19 @@ function m(t: FigGradientTransform | undefined, field: keyof FigGradientTransfor
  */
 export function linearGradientAttrs(
   transform: FigGradientTransform | undefined,
-  elementSize: ElementSize,
+  elementBounds: ElementSize | ElementBounds,
 ): SvgLinearGradientAttrs | undefined {
   const t = transform;
   if (!t) return undefined;
-  const { width: w, height: h } = elementSize;
+  // Accept the legacy `{width, height}` form (origin (0, 0)) and the
+  // bounds form `{x, y, width, height}` (origin (x, y) — required for
+  // VECTOR paths whose contour bbox is offset inside the node's
+  // coordinate system; gradient origin then sits at the bbox top-left,
+  // not at path-local (0, 0)).
+  const bx = "x" in elementBounds ? elementBounds.x : 0;
+  const by = "y" in elementBounds ? elementBounds.y : 0;
+  const w = elementBounds.width;
+  const h = elementBounds.height;
 
   const m00 = m(t, "m00", 1);
   const m01 = m(t, "m01", 0);
@@ -125,47 +155,59 @@ export function linearGradientAttrs(
   const m11 = m(t, "m11", 1);
   const m12 = m(t, "m12", 0);
 
-  // Invert the 2×2 upper block of the Kiwi matrix to back-map
-  // gradient-space endpoints into object space.
-  //   [[m00 m01 m02],    inv (upper 2×2):
-  //    [m10 m11 m12]]       1/det · [[ m11  -m01],
-  //                                  [-m10   m00]]
-  //   translation inverse:  -inv2x2 · (m02, m12)
+  // Linear gradients use the OPPOSITE matrix direction from radial:
+  //
+  // For linear, paint.transform maps OBJ-space → GRAD-space (1D parameter):
+  //   grad_x = m00 * obj_x + m01 * obj_y + m02
+  //
+  // Stops live on the grad_x axis (grad_y is unused). To emit SVG endpoints
+  // we need object-space points where `grad_x = 0` (stop-0%) and `grad_x = 1`
+  // (stop-100%). These come from the inverse mapping.
+  //
+  // For radial, paint.transform maps GRAD-space → OBJ-space (the unit
+  // circle becomes the gradient ellipse). The two conventions are opposites
+  // because linear and radial parametrize gradient space differently —
+  // verified against actual Figma exports for World map (vertical, 90°
+  // rotation) and Flair (horizontal, identity-x) in edge-cases.fig.
+  //
+  // The 2×2 upper block must be invertible (det ≠ 0). A zero determinant
+  // means grad_x is constant across the element, making "0% line" vs "100%
+  // line" undefined; we throw rather than emit a wrong direction.
   const det = m00 * m11 - m01 * m10;
   if (det === 0) {
     throw new Error(
-      `linearGradientAttrs: paint.transform has zero determinant ` +
-        `(m00=${m00}, m01=${m01}, m10=${m10}, m11=${m11}). ` +
-        `grad_x cannot vary across the object — the gradient direction ` +
-        `is undefined. Figma does not emit such matrices for valid ` +
-        `linear-gradient paints.`,
+      `linearGradientAttrs: non-invertible paint.transform (det=0). ` +
+        `m=[[${m00}, ${m01}, ${m02}], [${m10}, ${m11}, ${m12}]]. ` +
+        `Caller must treat this paint as malformed.`,
     );
   }
 
-  const invDet = 1 / det;
-  const inv00 = m11 * invDet;
-  const inv01 = -m01 * invDet;
-  const inv10 = -m10 * invDet;
-  const inv11 = m00 * invDet;
-  // Full inverse translation: -inv2x2 · (m02, m12). We only need the
-  // left column (grad_x=0 → object space origin) and inv00/inv10
-  // (gradient-x unit-vector image in object space) — the y-column of
-  // the inverse (inv01, inv11) enters only through invTx/invTy.
-  const invTx = -(inv00 * m02 + inv01 * m12);
-  const invTy = -(inv10 * m02 + inv11 * m12);
-
-  // Back-map gradient (0, 0) → object space → pixel (0% stop line)
-  // Back-map gradient (1, 0) → object space → pixel (100% stop line)
-  const objX0 = invTx;
-  const objY0 = invTy;
-  const objX1 = inv00 + invTx;
-  const objY1 = inv10 + invTy;
+  // Inverse of the 2×2 upper block, applied to gradient-space points
+  // (0, 0) and (1, 0) — translated by (-m02, -m12) first.
+  //
+  //   [obj_x]   1   [ m11  -m01] [grad_x - m02]
+  //   [obj_y] = - · [-m10   m00] [grad_y - m12]
+  //             d
+  //
+  // Where d = det = m00·m11 − m01·m10.
+  //
+  // grad-space (0, 0) → obj-space (a, b):
+  //   a = (m11·(-m02) - m01·(-m12)) / d = (m01·m12 - m11·m02) / d
+  //   b = (-m10·(-m02) + m00·(-m12)) / d = (m10·m02 - m00·m12) / d
+  //
+  // grad-space (1, 0) → obj-space (c, d_):
+  //   c = (m11·(1 - m02) - m01·(-m12)) / d = (m11 - m11·m02 + m01·m12) / d
+  //   d_ = (-m10·(1 - m02) + m00·(-m12)) / d = (-m10 + m10·m02 - m00·m12) / d
+  const a = (m01 * m12 - m11 * m02) / det;
+  const b = (m10 * m02 - m00 * m12) / det;
+  const c = (m11 - m11 * m02 + m01 * m12) / det;
+  const d_ = (-m10 + m10 * m02 - m00 * m12) / det;
 
   return {
-    x1: objX0 * w,
-    y1: objY0 * h,
-    x2: objX1 * w,
-    y2: objY1 * h,
+    x1: bx + a * w,
+    y1: by + b * h,
+    x2: bx + c * w,
+    y2: by + d_ * h,
     gradientUnits: "userSpaceOnUse",
   };
 }
@@ -204,11 +246,14 @@ export function linearGradientAttrs(
  */
 export function radialGradientAttrs(
   transform: FigGradientTransform | undefined,
-  elementSize: ElementSize,
+  elementBounds: ElementSize | ElementBounds,
 ): SvgRadialGradientAttrs | undefined {
   const t = transform;
   if (!t) return undefined;
-  const { width: w, height: h } = elementSize;
+  const bx = "x" in elementBounds ? elementBounds.x : 0;
+  const by = "y" in elementBounds ? elementBounds.y : 0;
+  const w = elementBounds.width;
+  const h = elementBounds.height;
 
   const m00 = m(t, "m00", 1);
   const m01 = m(t, "m01", 0);
@@ -217,8 +262,10 @@ export function radialGradientAttrs(
   const m11 = m(t, "m11", 1);
   const m12 = m(t, "m12", 0);
 
-  const cx = (m00 * 0.5 + m01 * 0.5 + m02) * w;
-  const cy = (m10 * 0.5 + m11 * 0.5 + m12) * h;
+  // Centre offset by the bbox origin so VECTOR paths whose bbox is
+  // not at (0, 0) still see the gradient ellipse positioned over them.
+  const cx = bx + (m00 * 0.5 + m01 * 0.5 + m02) * w;
+  const cy = by + (m10 * 0.5 + m11 * 0.5 + m12) * h;
 
   const ax1x = m00 * w * 0.5;
   const ax1y = m10 * h * 0.5;

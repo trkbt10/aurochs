@@ -107,14 +107,38 @@ export function StrokeRenderingElements({ sr }: { sr: StrokeRendering }): ReactN
         </>
       );
 
-    case "individual":
-      return (
+    case "individual": {
+      // sign mirrors svg/scene-renderer.ts: +1 INSIDE, -1 OUTSIDE, 0 CENTER.
+      // Required so OUTSIDE-aligned per-side strokes (e.g. the 299×1
+      // _Separator INSTANCE between Activity View Action rows) paint
+      // their band ABOVE the geometry instead of inside it.
+      const sign = sr.strokeAlign === "OUTSIDE" ? -1 : sr.strokeAlign === "INSIDE" ? 1 : 0;
+      const topY = sign * (sr.sides.top / 2);
+      const bottomY = sr.height + (sign === 0 ? 0 : -sign * (sr.sides.bottom / 2));
+      const leftX = sign * (sr.sides.left / 2);
+      const rightX = sr.width + (sign === 0 ? 0 : -sign * (sr.sides.right / 2));
+      const lines = (
         <>
-          {sr.sides.top > 0 && <line x1={0} y1={0} x2={sr.width} y2={0} stroke={sr.color} strokeOpacity={sr.opacity} strokeWidth={sr.sides.top} />}
-          {sr.sides.right > 0 && <line x1={sr.width} y1={0} x2={sr.width} y2={sr.height} stroke={sr.color} strokeOpacity={sr.opacity} strokeWidth={sr.sides.right} />}
-          {sr.sides.bottom > 0 && <line x1={0} y1={sr.height} x2={sr.width} y2={sr.height} stroke={sr.color} strokeOpacity={sr.opacity} strokeWidth={sr.sides.bottom} />}
-          {sr.sides.left > 0 && <line x1={0} y1={0} x2={0} y2={sr.height} stroke={sr.color} strokeOpacity={sr.opacity} strokeWidth={sr.sides.left} />}
+          {sr.sides.top > 0 && <line x1={0} y1={topY} x2={sr.width} y2={topY} stroke={sr.color} strokeOpacity={sr.opacity} strokeWidth={sr.sides.top} />}
+          {sr.sides.right > 0 && <line x1={rightX} y1={0} x2={rightX} y2={sr.height} stroke={sr.color} strokeOpacity={sr.opacity} strokeWidth={sr.sides.right} />}
+          {sr.sides.bottom > 0 && <line x1={0} y1={bottomY} x2={sr.width} y2={bottomY} stroke={sr.color} strokeOpacity={sr.opacity} strokeWidth={sr.sides.bottom} />}
+          {sr.sides.left > 0 && <line x1={leftX} y1={0} x2={leftX} y2={sr.height} stroke={sr.color} strokeOpacity={sr.opacity} strokeWidth={sr.sides.left} />}
         </>
       );
+      if (sr.cornerRadius && sr.cornerRadius > 0 && sr.strokeAlign !== "OUTSIDE") {
+        const clipId = `inside-stroke-clip-${sr.width}-${sr.height}-${sr.cornerRadius}`.replace(/\./g, "_");
+        return (
+          <g clipPath={`url(#${clipId})`}>
+            <defs>
+              <clipPath id={clipId}>
+                <rect x={0} y={0} width={sr.width} height={sr.height} rx={sr.cornerRadius} ry={sr.cornerRadius} />
+              </clipPath>
+            </defs>
+            {lines}
+          </g>
+        );
+      }
+      return lines;
+    }
   }
 }

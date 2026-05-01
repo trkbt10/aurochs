@@ -145,33 +145,95 @@ export function resolveEffects(
   }
 
   const primitives: ResolvedFilterPrimitive[] = [];
-  // eslint-disable-next-line no-restricted-syntax -- mutable state flag tracking whether shape primitive was established during loop
-  let shapeEstablished = false;
+  // Names of every drop-shadow result produced during the loop, in
+  // declaration order. The terminal feMerge composites all of them
+  // beneath SourceGraphic so multiple shadows accumulate instead of
+  // each one overpainting the previous (matches Figma's SVG export
+  // which chains `effect1_dropShadow → effect2_dropShadow → ...`).
+  const dropShadowResults: string[] = [];
 
   for (const effect of effects) {
     switch (effect.type) {
       case "drop-shadow": {
+        const isSharp = effect.radius === 0 && (!effect.spread || effect.spread === 0);
+        const blendMode = effectBlendModeToSvg(effect.blendMode);
+
+        if (isSharp) {
+          // Sharp drop-shadow recipe (Figma's exact SVG export shape, used
+          // for 1px edge highlights like the world-map continents in
+          // Flighty 4×4). Three key differences from the blurred recipe:
+          //
+          //   1. SourceAlpha is binarised via a 127×alpha colorMatrix
+          //      ("hardAlpha"). With anti-aliased edges, the 127× clamp
+          //      makes any non-zero alpha → 1, producing a hard mask.
+          //
+          //   2. **hardAlpha (not SourceAlpha) is offset**. Using
+          //      SourceAlpha here would bake the source's anti-aliased
+          //      edge into the offset sliver — after feComposite "out"
+          //      against the binarised hardAlpha, the sliver retains
+          //      the 0.5..0.99 AA values instead of a clean 1.0, so the
+          //      tinted shadow ends up ~30-50% transparent at the very
+          //      pixels Figma draws at full opacity. Operating on
+          //      hardAlpha keeps the sliver cleanly at α=1.0.
+          //
+          //   3. The offset hardAlpha is then composited with
+          //      operator="out" against hardAlpha. "out" means *keep
+          //      offsetHardAlpha where hardAlpha is NOT* — the result is
+          //      exactly the 1px sliver that the offset exposed beyond
+          //      the original shape edge, at full alpha.
+          //
+          // For tinting we use feFlood + feComposite operator="in" rather
+          // than the feColorMatrix approach Figma's exporter uses. The
+          // colorMatrix `[0 0 0 0 c.r ...]` form sets RGB to constants
+          // while keeping the input alpha — at fully-transparent pixels
+          // the output is `(c.r, c.g, c.b, 0)`. resvg-js's feMerge then
+          // leaks those RGB constants through to the composited result
+          // even though the alpha is zero, painting the entire filter
+          // region with the shadow colour. feFlood + composite-in instead
+          // produces pre-multiplied output `(c.r·α, c.g·α, c.b·α, α)`
+          // with α=0 everywhere outside the sliver, eliminating the leak.
+          const c = effect.color;
+          const hardAlphaResult = ids.getNextId("hardAlpha");
+          const offsetAlphaResult = ids.getNextId("drop-offset-alpha");
+          const compositedResult = ids.getNextId("drop-composited");
+          const floodResult = ids.getNextId("drop-flood");
+          const tintedResult = ids.getNextId("drop-tinted");
+          primitives.push(
+            { type: "feColorMatrix", in: "SourceAlpha", matrixType: "matrix", values: "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0", result: hardAlphaResult },
+            { type: "feOffset", in: hardAlphaResult, dx: effect.offset.x, dy: effect.offset.y, result: offsetAlphaResult },
+            { type: "feComposite", in: offsetAlphaResult, in2: hardAlphaResult, operator: "out", result: compositedResult },
+            { type: "feFlood", floodColor: colorToRgb(c), floodOpacity: c.a, result: floodResult },
+            { type: "feComposite", in: floodResult, in2: compositedResult, operator: "in", result: tintedResult },
+          );
+          if (blendMode !== "normal") {
+            const blendedResult = ids.getNextId("drop-blended");
+            primitives.push({
+              type: "feBlend",
+              mode: blendMode,
+              in: tintedResult,
+              in2: "SourceGraphic",
+              result: blendedResult,
+            });
+            dropShadowResults.push(blendedResult);
+          } else {
+            dropShadowResults.push(tintedResult);
+          }
+          break;
+        }
+
         // Canonical drop-shadow recipe (matches Figma SVG export):
         //   feFlood(color, α) → feComposite(in=SourceAlpha, in)
         //   → optional feMorphology(spread)
-        //   → feOffset → feGaussianBlur
-        //   → feMerge(shadow, SourceGraphic)       [shadow FIRST, source on top]
+        //   → feOffset → feGaussianBlur → result = drop-blur-N
         //
-        // feMerge with two nodes performs a <feMerge>-style overlay: the
-        // first node is painted at the bottom, the second on top. This
-        // preserves the natural "shadow behind shape" z-order. Previously
-        // a branch attempted `feBlend(shadow, SourceGraphic)` for non-normal
-        // blendMode, which collapsed both into a single composite and
-        // produced a shadow that appeared ON TOP of the fill (user's
-        // "Clear check" bug report).
+        // When per-effect blendMode is non-default, blend the shadow
+        // with SourceGraphic via feBlend (mode=overlay/etc.) to produce
+        // Figma's chromatic chromatic effect. The blended result then
+        // takes the shadow's slot in the final feMerge.
         //
-        // Note: Figma's per-effect blendMode (MULTIPLY, SCREEN, etc.) is
-        // intentionally NOT applied at the filter level. It would require
-        // backdrop-aware compositing that SVG filters don't support
-        // directly. The `mix-blend-mode` CSS property on a separate shadow
-        // element would be a more accurate approximation; for now the
-        // shadow composites normally over the backdrop. Losing the blend
-        // mode nuance is a smaller visual error than inverting z-order.
+        // When blendMode is default (NORMAL/undefined), feed the raw
+        // blur result into the terminal feMerge so multiple shadows
+        // accumulate beneath SourceGraphic.
         const stdDev = effect.radius / 2;
         const floodResult = ids.getNextId("drop-flood");
         const coloredResult = ids.getNextId("drop-colored");
@@ -195,9 +257,23 @@ export function resolveEffects(
         primitives.push(
           { type: "feOffset", in: maybeSpread, dx: effect.offset.x, dy: effect.offset.y, result: offsetResult },
           { type: "feGaussianBlur", in: offsetResult, stdDeviation: stdDev, result: blurResult },
-          { type: "feMerge", nodes: [blurResult, "SourceGraphic"] },
         );
-        shapeEstablished = true;
+
+        // feBlend supports: normal, multiply, screen, darken, lighten, overlay
+        // For these modes, blend the shadow with SourceGraphic.
+        if (blendMode !== "normal") {
+          const blendedResult = ids.getNextId("drop-blended");
+          primitives.push({
+            type: "feBlend",
+            mode: blendMode,
+            in: blurResult,
+            in2: "SourceGraphic",
+            result: blendedResult,
+          });
+          dropShadowResults.push(blendedResult);
+        } else {
+          dropShadowResults.push(blurResult);
+        }
         break;
       }
 
@@ -229,7 +305,6 @@ export function resolveEffects(
           { type: "feComposite", in: blurResult, in2: "SourceAlpha", operator: "out", result: innerResult },
           { type: "feMerge", nodes: ["SourceGraphic", innerResult] },
         );
-        shapeEstablished = true;
         break;
       }
 
@@ -252,6 +327,17 @@ export function resolveEffects(
         void _exhaustive;
       }
     }
+  }
+
+  // Composite every drop shadow under the source graphic in a single
+  // terminal feMerge so multiple shadows accumulate. With one shadow
+  // this produces feMerge[blur, SourceGraphic] (the prior shape); with
+  // N shadows it produces feMerge[blur1, blur2, ..., SourceGraphic].
+  if (dropShadowResults.length > 0) {
+    primitives.push({
+      type: "feMerge",
+      nodes: [...dropShadowResults, "SourceGraphic"],
+    });
   }
 
   if (primitives.length === 0) {
@@ -294,10 +380,51 @@ function computeFilterBounds(
       const spreadExpansion = effect.spread ?? 0;
       const totalExpansion = blurExpansion + Math.abs(spreadExpansion);
 
-      minX = Math.min(minX, bounds.x + offsetX - totalExpansion);
-      minY = Math.min(minY, bounds.y + offsetY - totalExpansion);
-      maxX = Math.max(maxX, bounds.x + bounds.width + offsetX + totalExpansion);
-      maxY = Math.max(maxY, bounds.y + bounds.height + offsetY + totalExpansion);
+      // Filter region expansion mirrors Figma's SVG exporter. There are
+      // two regimes depending on blend mode:
+      //
+      // NORMAL blend (Thumbnail's drop-shadow, Avatar shadow, etc.):
+      //   The shadow blur kernel reaches the full radius on EACH side,
+      //   shifted by the offset. Expansion per side = radius ± offset.
+      //   Negative expansion clamps to 0. This produces actual's filter
+      //   region for Thumbnail (offset 0,2 radius 16): top=14, bottom=18,
+      //   left=16, right=16. Verified against actual filter0_d_15_1188:
+      //   x=0 y=0 width=96 height=96 around a rect at (16,14)+64×64.
+      //
+      // Non-NORMAL blend (OVERLAY-blended Passport pink-band):
+      //   The shadow paints colour through compositing. A radius-equal
+      //   expansion in the opposite-of-offset direction (the "ghost"
+      //   side of the shadow) bleeds the tint into pixels outside the
+      //   rounded corner — Passport's filter used to start at y=-20
+      //   painting 4 rows above the rect's rounded top edge. For these
+      //   effects we collapse the opposite-direction expansion to 0:
+      //   a downward shadow (offsetY > 0) gets upExpand = 0.
+      //
+      // Detection: drop-shadow effect carries `blendMode` directly. We
+      // use the resolved Effect type's blendMode field — when undefined
+      // or "normal" use the symmetric rule, otherwise the asymmetric
+      // (#22, #38). Inner-shadow follows the same blend convention.
+      // NORMAL blend is encoded as undefined in the BlendMode type — see
+      // scene-graph/types.ts:57. Any defined blend mode uses the
+      // asymmetric expansion rule.
+      const isNormalBlend = effect.blendMode === undefined;
+      const upExpand = isNormalBlend
+        ? Math.max(0, totalExpansion - offsetY)
+        : (offsetY > 0 ? 0 : (totalExpansion - offsetY));
+      const downExpand = isNormalBlend
+        ? Math.max(0, totalExpansion + offsetY)
+        : (offsetY < 0 ? 0 : (totalExpansion + offsetY));
+      const leftExpand = isNormalBlend
+        ? Math.max(0, totalExpansion - offsetX)
+        : (offsetX > 0 ? 0 : (totalExpansion - offsetX));
+      const rightExpand = isNormalBlend
+        ? Math.max(0, totalExpansion + offsetX)
+        : (offsetX < 0 ? 0 : (totalExpansion + offsetX));
+
+      minX = Math.min(minX, bounds.x - leftExpand);
+      minY = Math.min(minY, bounds.y - upExpand);
+      maxX = Math.max(maxX, bounds.x + bounds.width + rightExpand);
+      maxY = Math.max(maxY, bounds.y + bounds.height + downExpand);
     } else if (effect.type === "layer-blur") {
       const expand = effect.radius;
       minX -= expand;

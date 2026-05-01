@@ -21,6 +21,77 @@ import { resolveStyleIdOnMutableNode } from "./style-registry";
 export type FigDerivedSymbolData = readonly FigKiwiSymbolOverride[];
 
 // =============================================================================
+// Self-override classification
+// =============================================================================
+
+/**
+ * Field-name set that an authored INSTANCE may override on its own
+ * SYMBOL root (the "self" slot).
+ *
+ * These are the only fields Figma's authoring UI lets you set
+ * directly on an INSTANCE without descending into a SYMBOL
+ * descendant: the INSTANCE's display name, its outer size, and the
+ * variable / parameter bindings that drive component-property
+ * resolution for the SYMBOL it points at. Any override entry whose
+ * defined field-set is a subset of this list addresses the INSTANCE
+ * itself, not a descendant of its SYMBOL.
+ */
+export const INSTANCE_SELF_OVERRIDE_FIELDS: ReadonlySet<keyof FigKiwiSymbolOverride> = new Set([
+  "name",
+  "size",
+  "variableConsumptionMap",
+  "parameterConsumptionMap",
+]);
+
+/**
+ * Iterate the override-payload keys that are actually defined on a
+ * given entry. Yields keys typed as `keyof FigKiwiSymbolOverride`,
+ * so callers consume them with the same type-safety as a struct
+ * traversal — no `Record<string, unknown>` widening or `as any`.
+ *
+ * `guidPath` and `overriddenSymbolID` are routing fields (the entry's
+ * "where to" / "instance-swap target") and never carry a slot-payload
+ * meaning; they are excluded from the iteration so a self-override
+ * detector doesn't have to special-case them at the call site.
+ */
+export function* kiwiOverridePayloadKeys(
+  entry: FigKiwiSymbolOverride,
+): Generator<keyof FigKiwiSymbolOverride> {
+  const ROUTING_KEYS: ReadonlySet<keyof FigKiwiSymbolOverride> = new Set([
+    "guidPath",
+    "overriddenSymbolID",
+  ]);
+  // Object.keys gives us the runtime field set the parser actually emitted.
+  // The cast narrows the loop variable from `string` to the legal
+  // payload-key type — sound because the parser only emits keys
+  // declared on `FigKiwiSymbolOverridePayload`.
+  for (const key of Object.keys(entry) as (keyof FigKiwiSymbolOverride)[]) {
+    if (ROUTING_KEYS.has(key)) continue;
+    if (entry[key] === undefined) continue;
+    yield key;
+  }
+}
+
+/**
+ * `true` when the override addresses the INSTANCE itself (single-guid
+ * path with only INSTANCE-self fields). Used by both the raw and
+ * domain resolver layers to re-route self-overrides onto the SYMBOL
+ * root before the GUID translation primitive runs, so the
+ * majority-vote heuristic doesn't pull them onto a sibling
+ * descendant.
+ */
+export function isInstanceSelfOverride(entry: FigKiwiSymbolOverride): boolean {
+  const guids = entry.guidPath?.guids;
+  if (!guids || guids.length !== 1) return false;
+  let hasField = false;
+  for (const key of kiwiOverridePayloadKeys(entry)) {
+    if (!INSTANCE_SELF_OVERRIDE_FIELDS.has(key)) return false;
+    hasField = true;
+  }
+  return hasField;
+}
+
+// =============================================================================
 // Symbol Override Extraction
 // =============================================================================
 
@@ -823,22 +894,84 @@ export function resolveInstanceNode(
   // disambiguate TEXT/INSTANCE descendants that collide under localID offset
   // matching (e.g. 6 flat source action slots vs. 2 nested local groups).
   const componentPropAssignments = collectComponentPropAssignments(node);
-  const rawSymbolOverrides = getInstanceSymbolOverrides(node);
-  const rawDerivedSymbolData = node.derivedSymbolData as FigDerivedSymbolData | undefined;
-  const translationMap = buildGuidTranslationMap(
+  const rawSymbolOverridesUntouched = getInstanceSymbolOverrides(node);
+  // Re-route self-override entries (single-guid path carrying only
+  // INSTANCE-only fields like name/size/variableConsumptionMap/
+  // parameterConsumptionMap) onto the SYMBOL root before the
+  // translation primitive runs. Otherwise the majority-vote heuristic
+  // can pull a self-override onto a sibling descendant — e.g. Contact
+  // INSTANCE 15:958's [127:58424] name="Contact" would land on Names
+  // FRAME 15:837 and rename it to "Contact", corrupting downstream
+  // walks that match by `node.name === "Contact"` (Activity View
+  // diagnose-script). Mirrors the same fix in domain-side
+  // resolveOverridePaths (`@aurochs-builder/fig:tree-to-document.ts`).
+  const symRootGuid = symNode.guid;
+  const rerouteSelfOverrides = <T extends FigKiwiSymbolOverride>(entries: readonly T[] | undefined): readonly T[] | undefined => {
+    if (!entries || !symRootGuid) return entries;
+    let changed = false;
+    const out: T[] = [];
+    for (const e of entries) {
+      if (isInstanceSelfOverride(e)) {
+        out.push({ ...e, guidPath: { guids: [symRootGuid] } } as T);
+        changed = true;
+      } else {
+        out.push(e);
+      }
+    }
+    return changed ? out : entries;
+  };
+  const rawSymbolOverrides = rerouteSelfOverrides(rawSymbolOverridesUntouched);
+  const rawDerivedSymbolData = rerouteSelfOverrides(node.derivedSymbolData as FigDerivedSymbolData | undefined);
+  // Strip self-override entries (path = SYMBOL root) BEFORE translation
+  // and BEFORE building the translation map — `buildGuidTranslationMap`'s
+  // majority-vote heuristic treats every override guid as a descendant
+  // candidate, so a SYMBOL-root entry forces a `root → child` mapping
+  // (Contact 15:910's rerouted self-override `[15:844]` → 15:849 Icon
+  // slot) which then re-routes *other* entries onto the wrong slot when
+  // translated. Self-overrides apply only to the INSTANCE's merged node
+  // (handled directly by `applySelfOverridesToMergedNode` using the
+  // *un-translated* rerouted path).
+  const symRootGuidStr = symRootGuid ? `${symRootGuid.sessionID}:${symRootGuid.localID}` : "";
+  const isSelfOverrideTargetingRoot = (e: FigKiwiSymbolOverride): boolean => {
+    const guids = e.guidPath?.guids;
+    if (!guids || guids.length !== 1) return false;
+    return `${guids[0].sessionID}:${guids[0].localID}` === symRootGuidStr;
+  };
+  const partition = <T extends FigKiwiSymbolOverride>(entries: readonly T[] | undefined): { selves: readonly T[]; rest: readonly T[] } => {
+    const selves: T[] = [];
+    const rest: T[] = [];
+    for (const e of entries ?? []) {
+      if (isSelfOverrideTargetingRoot(e)) selves.push(e);
+      else rest.push(e);
+    }
+    return { selves, rest };
+  };
+  // Self-overrides bypass translation entirely; the rest go through
+  // the primitive so descendant guids land in SYMBOL namespace.
+  const ovPart = partition(rawSymbolOverrides);
+  const dsdPart = partition(rawDerivedSymbolData);
+  // Re-build translation map *without* the self-overrides — they
+  // shouldn't influence the heuristic at all.
+  const translationMapNoSelf = buildGuidTranslationMap(
     safeChildren(originalSymNode),
-    rawDerivedSymbolData,
-    rawSymbolOverrides,
+    dsdPart.rest as FigDerivedSymbolData,
+    ovPart.rest,
     componentPropAssignments.length > 0 ? componentPropAssignments : undefined,
     ctx.symbolMap,
     ctx.blobs,
   );
-  const symbolOverrides = translateOverridesIfNeeded(translationMap, rawSymbolOverrides);
-  const derivedSymbolData = translateOverridesIfNeeded(translationMap, rawDerivedSymbolData);
+  const symbolOverrides = translateOverridesIfNeeded(translationMapNoSelf, ovPart.rest);
+  const derivedSymbolData = translateOverridesIfNeeded(translationMapNoSelf, dsdPart.rest);
+  // Self-overrides keep their `[SYMBOL root]` path for
+  // applySelfOverridesToMergedNode below.
+  const symbolSelfOverrides = ovPart.selves;
 
-  // 4. Apply self-referencing overrides
-  if (symbolOverrides && symbolOverrides.length > 0) {
-    applySelfOverridesToMergedNode(mergedNode, symbolOverrides, guidToString(symNode.guid), ctx.styleRegistry);
+  // 4. Apply self-referencing overrides — only the entries we
+  // partitioned out above (path = SYMBOL root). They never went
+  // through the translation primitive so they keep their authored
+  // INSTANCE-only fields intact.
+  if (symbolSelfOverrides.length > 0) {
+    applySelfOverridesToMergedNode(mergedNode, symbolSelfOverrides, guidToString(symNode.guid), ctx.styleRegistry);
   }
 
   // 5. Clone SYMBOL children with overrides

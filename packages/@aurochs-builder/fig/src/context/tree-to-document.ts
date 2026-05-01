@@ -23,6 +23,7 @@ import {
   buildGuidTranslationMap,
   resolveSymbolGuidStr,
   styleRefKeys,
+  isInstanceSelfOverride,
 } from "@aurochs/fig/symbols";
 import type { LoadedFigFile } from "@aurochs/fig/roundtrip";
 import type {
@@ -276,16 +277,57 @@ function nodeTypeName(node: FigNode): FigNodeType {
 
 /**
  * Extract AutoLayout properties from a FigNode, if present.
+ *
+ * Padding lives in several places depending on the .fig source:
+ *   - `stackPadding`: an object `{ top, right, bottom, left }` (domain
+ *     expanded form, sometimes emitted by builders)
+ *   - `stackHorizontalPadding` / `stackVerticalPadding`: shorthand
+ *     pre-2019 schema; horizontal applies to left+right, vertical to
+ *     top+bottom
+ *   - `stackPaddingTop` / `stackPaddingRight` / `stackPaddingBottom` /
+ *     `stackPaddingLeft`: per-side fields (real .fig files from
+ *     post-2020 Figma, e.g. Toolbar - Top in edge-cases.fig)
+ *
+ * We resolve them into a single `{top,right,bottom,left}` object so
+ * downstream layout code reads padding from one place. Missing sides
+ * default to the relevant shorthand (vertical → top+bottom,
+ * horizontal → left+right) and finally to 0.
  */
 function extractAutoLayout(node: FigNode): AutoLayoutProps | undefined {
   const stackMode = node.stackMode;
   if (!stackMode || stackMode.name === "NONE") {
     return undefined;
   }
+  // Resolve per-side padding from the Kiwi schema's overlapping fields.
+  //
+  // Per-side overrides (Right / Bottom) — when present — supersede the
+  // legacy axis-uniform pair (Horizontal / Vertical). The Kiwi schema
+  // does not expose `stackPaddingTop` / `stackPaddingLeft`; those sides
+  // always come from the legacy `Vertical` / `Horizontal` shorthand.
+  const ph = node.stackHorizontalPadding;
+  const pv = node.stackVerticalPadding;
+  const top = pv ?? 0;
+  const right = node.stackPaddingRight ?? ph ?? 0;
+  const bottom = node.stackPaddingBottom ?? pv ?? 0;
+  const left = ph ?? 0;
+  // Raw `stackPadding` is the uniform-on-all-sides scalar from the
+  // Kiwi schema. When that is set, every per-side override above
+  // already accounts for it via the `?? ph ?? 0` fallback chain on
+  // each side, so we just need to materialise the per-side bag once
+  // any side has a non-zero value.
+  let stackPadding: AutoLayoutProps["stackPadding"] | undefined;
+  const uniform = node.stackPadding;
+  const padTop = top || uniform || 0;
+  const padRight = right || uniform || 0;
+  const padBottom = bottom || uniform || 0;
+  const padLeft = left || uniform || 0;
+  if (padTop || padRight || padBottom || padLeft) {
+    stackPadding = { top: padTop, right: padRight, bottom: padBottom, left: padLeft };
+  }
   return {
     stackMode,
     stackSpacing: node.stackSpacing,
-    stackPadding: node.stackPadding as AutoLayoutProps["stackPadding"] | undefined,
+    stackPadding,
     stackPrimaryAlignItems: node.stackPrimaryAlignItems,
     stackCounterAlignItems: node.stackCounterAlignItems,
     stackPrimaryAlignContent: node.stackPrimaryAlignContent,
@@ -601,28 +643,115 @@ function resolveOverridePaths(
     return { overrides: rawOverrides, derivedSymbolData: rawDerivedSymbolData };
   }
 
+  // Compute ghost sessions across both `rawOverrides` and
+  // `rawDerivedSymbolData` so a session that uses 1 entry in each
+  // (overrides+dsd combined ≥ 2) still passes Stage 1. The
+  // session-counts-per-resolve approach mis-classified single-entry
+  // overrides like Action 3-1's `[126:58332]` (overrides) +
+  // `[126:59453]` (dsd) as phantoms because each `resolve` call only
+  // saw a count of 1. Sharing the count across both arrays restores
+  // the SF-Symbol glyph override that addresses 15:871 (the `Symbol`
+  // text inside Action button SYMBOLs).
+  const sharedGhostSessions = new Set<number>();
+  {
+    const combined = [
+      ...(rawOverrides ?? []),
+      ...(rawDerivedSymbolData ?? []),
+    ];
+    const sessionCounts = new Map<number, number>();
+    for (const e of combined) {
+      const g = e.guidPath?.guids?.[0];
+      if (!g) continue;
+      sessionCounts.set(g.sessionID, (sessionCounts.get(g.sessionID) ?? 0) + 1);
+    }
+    for (const [sessionID, count] of sessionCounts) {
+      if (count >= 2) sharedGhostSessions.add(sessionID);
+    }
+  }
   const resolve = (
     entries: readonly import("@aurochs/fig/types").FigKiwiSymbolOverride[],
   ): readonly SymbolOverride[] => {
     const effGuidStr = guidToString(effectiveGuid);
-    // Two-stage filter — both stages use the single slot-lookup
-    // primitive `findInKiwiTree` so every "is guid X reachable?"
-    // question is answered the same way.
+    // Two-stage filter:
     //
-    // Stage 1: raw authored first guid must exist somewhere in the
-    // file (as a symbol root or anywhere in any symbol's subtree).
-    // This drops Figma authoring residue: guids from a TEXT that was
-    // later rewritten, rich-text style IDs that aren't tree nodes, or
-    // cross-file paste artefacts. Without this, the translation
-    // primitive's majority-vote heuristic maps them onto arbitrary
-    // descendants.
+    // Stage 1: the raw first guid must either exist in the file OR
+    // belong to a "ghost session" that the entries collectively use
+    // for at least two slots. The ghost-session escape hatch lets
+    // INSTANCE-on-INSTANCE authoring through: Figma allocates
+    // per-instance slot guids in a fresh session (e.g. session 127
+    // for INSTANCEs living in a frame whose nodes were authored
+    // later) that never appears in the file's node graph but still
+    // identifies real descendants once the translation primitive
+    // session-maps it. Without the escape hatch, every Contact
+    // avatar override silently vanished and every contact rendered
+    // with the SYMBOL's default avatar. The "≥ 2 entries share the
+    // session" constraint distinguishes a real ghost session from a
+    // single-shot phantom (authoring residue from rewritten TEXT,
+    // stale rich-text style IDs, cross-file paste artefacts) that
+    // the majority-vote heuristic would otherwise mis-route to an
+    // arbitrary descendant.
     //
     // Stage 2: post-resolve first guid must be the INSTANCE's
-    // effective SYMBOL (self-override) or a descendant of its subtree.
-    // This drops cross-symbol authoring mistakes that survive Stage 1
-    // because the guid exists but belongs to an unrelated SYMBOL.
-    const filtered = entries.filter((e) => guidExistsInFile(e.guidPath?.guids?.[0], symbolMap));
-    const resolved = resolveEntryPaths(filtered, effectiveSymbol.node, node, symbolMap, blobs);
+    // effective SYMBOL (self-override) or a descendant of its
+    // subtree. This drops cross-symbol authoring mistakes that
+    // survive Stage 1 because the guid exists but belongs to an
+    // unrelated SYMBOL.
+    // Use the *shared* ghost sessions computed once at the top across
+    // overrides + dsd; see the comment block above for why.
+    const ghostSessions = sharedGhostSessions;
+    // Detect self-override: a single-guid path whose entry carries
+    // *INSTANCE-only* fields (name / size / variableConsumptionMap /
+    // parameterConsumptionMap) and no slot-level paint or geometry
+    // changes. Figma stores INSTANCE name/size in the same overrides
+    // array but addresses them with the *INSTANCE's* own ghost guid,
+    // not the SYMBOL root's guid. The translation primitive cannot
+    // recognise that without help, and would otherwise route the entry
+    // onto a sibling descendant (e.g. Contact INSTANCE 15:958's
+    // [127:58424] name="Contact" landing on the Names FRAME 15:837 and
+    // renaming it to "Contact" — which then collides with the parent
+    // Contact INSTANCE's own name and corrupts walks that match by
+    // `node.name === "Contact"`).
+    //
+    // The classifier is shared with the raw resolver — see
+    // `isInstanceSelfOverride` in `@aurochs/fig/symbols`. Centralising
+    // it ensures both pipelines treat the same authoring shape as a
+    // self-override (routing it to the SYMBOL root) and avoid the
+    // diverging-SoT failure mode (e.g. the Contact `[127:58424]` →
+    // Names FRAME mis-route fixed before).
+    const filtered = entries.filter((e) => {
+      const g = e.guidPath?.guids?.[0];
+      if (!g) return true;
+      if (guidExistsInFile(g, symbolMap)) return true;
+      return ghostSessions.has(g.sessionID);
+    });
+    // Re-route self-override entries' paths to the SYMBOL root before
+    // running the translation primitive so they don't get pulled into
+    // a sibling descendant by majority-vote.
+    const rerouted = filtered.map((e) => {
+      if (!isInstanceSelfOverride(e)) return e;
+      // If the entry's path-first guid resolves to a real descendant in
+      // the SYMBOL — either by GUID match or by `overrideKey` match —
+      // it is NOT a self-override; it's a per-descendant size/name pin
+      // that happens to use only INSTANCE-self field names. Examples:
+      // Action SYMBOL's Title FRAME has overrideKey 5591:26670 and gets
+      // a single-field `{size: 299×52}` DSD entry. Re-routing that to
+      // the SYMBOL root corrupts the Action's primary-axis layout
+      // (Title.size becomes 370 instead of 299, and the inner
+      // _Separator stretches to 370 too, breaking iOS list separators
+      // for Action 5/4-1/2-1/3-1).
+      const firstGuid = e.guidPath?.guids?.[0];
+      if (firstGuid) {
+        const s = `${firstGuid.sessionID}:${firstGuid.localID}`;
+        // Already an exact GUID match in the SYMBOL — leave as-is.
+        if (findInKiwiTree(effectiveSymbol.node, s) !== undefined) return e;
+        // Or matches a descendant's overrideKey (Figma's stable
+        // SYMBOL-side slot identifier).
+        if (overrideKeyExistsInSymbol(effectiveSymbol.node, s)) return e;
+      }
+      const newPath = { guids: [effectiveGuid] };
+      return { ...e, guidPath: newPath };
+    });
+    const resolved = resolveEntryPaths(rerouted, effectiveSymbol.node, node, symbolMap, blobs);
     return resolved.filter((entry) => guidReachableInSymbol(
       entry.guidPath?.guids?.[0],
       effectiveSymbol.node,
@@ -850,9 +979,18 @@ function resolveEntryPath(
     // Seed the next-level translation map with the subsequent guid so
     // `buildGuidTranslationMap`'s heuristics can place it even when
     // the nested INSTANCE declares no own overrides.
-    const seed: import("@aurochs/fig/types").FigKiwiSymbolOverride = {
-      guidPath: { guids: [guids[i + 1]] },
-    };
+    //
+    // When the next guid is the entry's leaf, also propagate the
+    // entry's `size` field so Phase 1.5's size-aware matching can
+    // resolve it correctly. Without the size, Phase 1.5 falls back to
+    // positional sort and may pick a sibling descendant of mismatched
+    // size (e.g. Activity View's 44×44 Close Button override mis-
+    // routed onto the Message TEXT 199×18 because they're both TEXTs
+    // in localID order).
+    const isLastLevel = i + 1 === guids.length - 1;
+    const seed: import("@aurochs/fig/types").FigKiwiSymbolOverride = isLastLevel
+      ? { guidPath: { guids: [guids[i + 1]] }, size: entry.size, fillGeometry: entry.fillGeometry }
+      : { guidPath: { guids: [guids[i + 1]] } };
     const seeded = [
       ...(getInstanceSymbolOverrides(target) ?? []),
       seed,
@@ -878,9 +1016,31 @@ function resolveEntryPath(
     levelSymbolRoot = nestedSymbol.node;
   }
 
+  // Convert kiwi `componentPropAssignments` (raw) into the domain
+  // `componentPropertyAssignments` shape so `applyOverrideToNode` can
+  // consume it. Without this rewrite the override field is silently
+  // dropped — see edge-cases.fig Close Button (Activity View) where the
+  // Symbol 1 INSTANCE's `defID 5429:12 → characters="􀆄"` (xmark glyph)
+  // ships as a `[5432:23135] componentPropAssignments` symbolOverride
+  // and is the only carrier of the xmark CPA into the inner TEXT.
+  const kiwiCpa = entry.componentPropAssignments;
+  let convertedCpa: readonly ComponentPropertyAssignment[] | undefined;
+  if (kiwiCpa && kiwiCpa.length > 0) {
+    const out: ComponentPropertyAssignment[] = [];
+    for (const a of kiwiCpa) {
+      const defID = a.defID;
+      if (!defID || typeof defID !== "object" || !("sessionID" in defID)) continue;
+      const value = convertPropertyValue(a.value as FigComponentPropValue | undefined);
+      if (!value) continue;
+      out.push({ defId: guidToNodeId(defID), value });
+    }
+    if (out.length > 0) convertedCpa = out;
+  }
+
   return {
     ...entry,
     guidPath: { guids: resolved },
+    ...(convertedCpa ? { componentPropertyAssignments: convertedCpa } : {}),
   };
 }
 
@@ -898,6 +1058,27 @@ function findInKiwiTree(root: FigNode, guidStr: string): FigNode | undefined {
     getId: (n) => guidToString(n.guid),
     getChildren: (n) => safeChildren(n),
   });
+}
+
+/**
+ * `true` when any descendant of `root` has an `overrideKey` matching
+ * the given `guid` string. Figma authors DSD entries against a
+ * descendant's SYMBOL-side `overrideKey` (a stable identifier shared
+ * across every INSTANCE that descends from the same SYMBOL); the
+ * descendant's own `guid` is freshly assigned per clone. When a DSD
+ * entry's first-guid matches a descendant's `overrideKey`, the entry
+ * targets that descendant — NOT the SYMBOL root — and must NOT be
+ * misclassified as a self-override even when its payload happens to
+ * be a single INSTANCE-self field name like `size`.
+ */
+function overrideKeyExistsInSymbol(root: FigNode, guidStr: string): boolean {
+  return dfsById(safeChildren(root), guidStr, {
+    getId: (n) => {
+      const ok = (n as { overrideKey?: { sessionID: number; localID: number } }).overrideKey;
+      return ok ? `${ok.sessionID}:${ok.localID}` : "";
+    },
+    getChildren: (n) => safeChildren(n),
+  }) !== undefined;
 }
 
 function parseGuidToFigGuid(guidStr: string): import("@aurochs/fig/parser").FigGuid {
@@ -1004,6 +1185,8 @@ export function convertFigNode(
     pointCount: node.pointCount,
     starInnerRadius: node.starInnerRadius,
     starInnerScale: node.starInnerScale,
+
+    overrideKey: node.overrideKey,
 
     _raw: collectRawFields(node),
   };

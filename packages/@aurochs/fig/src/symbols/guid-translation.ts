@@ -67,6 +67,15 @@ export type GuidTranslationMap = ReadonlyMap<string, string>;
 type DescendantInfo = {
   guid: FigGuid;
   guidStr: string;
+  /**
+   * SYMBOL-side stable identifier (`overrideKey` field on the raw FigNode).
+   * When present, this is the GUID that override entries reference for
+   * cross-INSTANCE-stable slot addressing (e.g. Action 3's `Title` TEXT
+   * has `overrideKey: 5591:26671`; the DSD path `5591:26671` resolves
+   * here even though the TEXT's own GUID is `15:874`).
+   */
+  overrideKey?: FigGuid;
+  overrideKeyStr?: string;
   nodeType: string;
   visible: boolean;
   size?: { x: number; y: number };
@@ -132,9 +141,12 @@ function collectDescendantInfoWithCPA(
       const countCP = (s: string): number => [...s].length;
       const expectedCharCount = resolveExpectedCharCount(node, defToChars, countCP);
 
+      const overrideKey = node.overrideKey;
       result.push({
         guid,
         guidStr: guidToString(guid),
+        overrideKey,
+        overrideKeyStr: overrideKey ? guidToString(overrideKey) : undefined,
         nodeType: getNodeType(node),
         visible: node.visible !== false,
         size: size ? { x: size.x, y: size.y } : undefined,
@@ -707,6 +719,21 @@ export function buildGuidTranslationMap(
   const allMatch = [...overrideGuids.keys()].every((key) => descendantSet.has(key));
   if (allMatch) {return new Map();}
 
+  // Build overrideKey → descendant GUID lookup. Figma authors DSD entries
+  // against the SYMBOL-side `overrideKey` (a stable identifier shared
+  // across every INSTANCE that descends from the same SYMBOL); the
+  // descendant's own GUID is freshly assigned on each clone. When the
+  // override guidPath matches a descendant's overrideKey we have a
+  // direct, exact translation that supersedes the sibling-pairing
+  // heuristics below (Action 3-1 Title TEXT — overrideKey 5591:26671 →
+  // descendant 15:874 — only resolves through this lookup).
+  const directOverrideKeyMap = new Map<string, string>();
+  for (const d of descendants) {
+    if (d.overrideKeyStr && !directOverrideKeyMap.has(d.overrideKeyStr)) {
+      directOverrideKeyMap.set(d.overrideKeyStr, d.guidStr);
+    }
+  }
+
   // Build localID lookup: localID → descendant GUID string
   const localIdToDescendant = new Map<number, string>();
   for (const d of descendants) {
@@ -729,6 +756,44 @@ export function buildGuidTranslationMap(
   const result = new Map<string, string>();
 
   const typeHints = detectTypeHints(derivedSymbolData, symbolOverrides);
+
+  // ── Phase Zero: Direct overrideKey resolution ──
+  //
+  // Override entries authored by Figma carry the SYMBOL-side
+  // `overrideKey` of their target slot in `guidPath.guids[0]`. The
+  // descendant tree retains the same `overrideKey` on the cloned
+  // SYMBOL-descendant slot (its own `guid` is fresh per-clone). When a
+  // descendant has a matching `overrideKey`, that pairing is exact —
+  // no sibling-pairing or majority-vote heuristic can do better. Lock
+  // it before any later phase so heuristics don't steal the slot.
+  //
+  // The `lockedKeys` set is consulted by Phase 1.3 / 1.5 / 2 / 3 / 4 / 5
+  // before evicting or overwriting an entry — Phase Zero pairings are
+  // exact and must survive every later heuristic.
+  const lockedKeys = new Set<string>();
+  for (const [guidStr, _] of overrideGuids) {
+    if (result.has(guidStr)) continue;
+    const directDescendant = directOverrideKeyMap.get(guidStr);
+    if (directDescendant) {
+      result.set(guidStr, directDescendant);
+      lockedKeys.add(guidStr);
+    }
+  }
+
+  // Small-descendant short-circuit: when the descendant set is too narrow
+  // for heuristics to reliably distinguish targets (typically a FRAME
+  // container with 2-3 children), skip the later phases. Heuristic
+  // mappings with too few candidates routinely route an override to the
+  // wrong sibling — e.g. Toolbar's back-button SYMBOL exposes only 2
+  // descendants (BG, Text), and an inner-Mask override path
+  // `[5575:75442]` (deep grandchild) gets mistakenly mapped to BG by
+  // sibling-pairing heuristics, applying a 196×196 size to BG instead
+  // of clipping the actual Mask. With only Phase Zero (direct
+  // overrideKey matches), entries that don't map stay untranslated and
+  // descend naturally to the deeper INSTANCE that owns them.
+  if (descendants.length <= 3) {
+    return result;
+  }
 
   // ── Phase 0: Heavyweight CONTAINER priority ──
   //
@@ -900,11 +965,44 @@ export function buildGuidTranslationMap(
   // Detect and remove mappings where the DSD entry size grossly mismatches
   // the target descendant's original size, freeing them for better matching
   // in subsequent phases.
+  //
+  // Exception (SoT for "trust the session-wide offset"): when at least
+  // 3 entries of the same session already agree on a single offset
+  // (== Phase 1 actually committed to that offset), spare any entry
+  // that aligns with that offset from size-based eviction. The DSD
+  // size disagreement is then a legitimate signal that the descendant
+  // was resized inside the INSTANCE (e.g. Toolbar - Top's "Trailing"
+  // 194×44 → 44×44 because only one child Button Group remains
+  // visible). The lower threshold (3) follows Phase 1's own
+  // ≥3-entries threshold for committing to an offset.
   {
     const overrideSizes = extractOverrideSizes([derivedSymbolData, symbolOverrides], blobs);
     const descByGuidStr = new Map<string, DescendantInfo>();
     for (const d of descendants) {
       descByGuidStr.set(d.guidStr, d);
+    }
+
+    // Compute per-session consensus offset from current `result`.
+    const sessionConsensusOffset = new Map<number, number>();
+    {
+      const offsetCountsBySession = new Map<number, Map<number, number>>();
+      for (const [overrideGuidStr, descGuidStr] of result) {
+        const [sidStr, ovLidStr] = overrideGuidStr.split(":");
+        const [, descLidStr] = descGuidStr.split(":");
+        const sid = Number(sidStr);
+        const off = Number(ovLidStr) - Number(descLidStr);
+        const counts = offsetCountsBySession.get(sid) ?? new Map<number, number>();
+        counts.set(off, (counts.get(off) ?? 0) + 1);
+        offsetCountsBySession.set(sid, counts);
+      }
+      for (const [sid, counts] of offsetCountsBySession) {
+        let bestOff = 0;
+        let bestCount = 0;
+        for (const [off, c] of counts) {
+          if (c > bestCount) { bestCount = c; bestOff = off; }
+        }
+        if (bestCount >= 3) sessionConsensusOffset.set(sid, bestOff);
+      }
     }
 
     const toRemove: string[] = [];
@@ -919,6 +1017,13 @@ export function buildGuidTranslationMap(
       const widthRatio = Math.max(dsdSize.x, desc.size.x) / Math.max(1, Math.min(dsdSize.x, desc.size.x));
       const heightRatio = Math.max(dsdSize.y, desc.size.y) / Math.max(1, Math.min(dsdSize.y, desc.size.y));
       if (widthRatio > 1.5 || heightRatio > 1.5) {
+        const [sidStr, ovLidStr] = overrideGuidStr.split(":");
+        const [, descLidStr] = descGuidStr.split(":");
+        const sid = Number(sidStr);
+        const off = Number(ovLidStr) - Number(descLidStr);
+        const consensus = sessionConsensusOffset.get(sid);
+        if (consensus !== undefined && consensus === off) {continue;}
+        if (lockedKeys.has(overrideGuidStr)) continue;
         toRemove.push(overrideGuidStr);
       }
     }
@@ -960,6 +1065,7 @@ export function buildGuidTranslationMap(
     }
     const toRemoveType: string[] = [];
     for (const [overrideGuidStr, descGuidStr] of result) {
+      if (lockedKeys.has(overrideGuidStr)) continue;
       const hint = typeHints.get(overrideGuidStr);
       if (hint !== "SHAPE") continue;
       const desc = descByGuidStr.get(descGuidStr);
@@ -1000,6 +1106,7 @@ export function buildGuidTranslationMap(
         // (e.g. source flat 6 actions vs local nested 2×(4+2) actions).
         const toEvict: string[] = [];
         for (const [src, loc] of result) {
+          if (lockedKeys.has(src)) continue;
           const srcSig = sourceContentSig.get(src);
           const locSig = localSigs.get(loc);
           if (srcSig !== undefined && locSig !== undefined && srcSig !== locSig) {
@@ -1049,7 +1156,13 @@ export function buildGuidTranslationMap(
   // When Phase 1 only partially maps a session (non-contiguous localIDs),
   // map remaining typed GUIDs to unclaimed descendants of the same type.
   //
-  // - TEXT/INSTANCE: simple sorted-localID positional matching
+  // - TEXT/INSTANCE: size-aware matching when override carries an explicit
+  //   `size` field; otherwise sorted-localID positional fallback.
+  //   Size-aware matching is the SoT here because Phase 1's offset
+  //   heuristic only fits the majority — leftover GUIDs whose offset
+  //   doesn't align (e.g. Action 4's [5591:32473] addressing the
+  //   App Name TEXT 78×30 instead of the SF Symbol TEXT 70×70 the
+  //   positional sort would land on) need a stronger signal.
   // - SHAPE: property-based scoring (image-fill / corner-radius hints) with
   //   tiebreaker by sorted localID
   //
@@ -1057,6 +1170,7 @@ export function buildGuidTranslationMap(
   // Phase 1.75 has a chance to consume size-matched overrides (separator
   // lines, etc.) whose size uniquely identifies their descendant target.
   const shapeSignals = extractShapeSignals(derivedSymbolData, symbolOverrides);
+  const phase1_5OverrideSizes = extractOverrideSizes([derivedSymbolData, symbolOverrides], blobs);
   for (const [, guids] of bySession) {
     if (guids.length < 3) {continue;}
     const unmapped = guids.filter((g) => !result.has(guidToString(g)));
@@ -1071,13 +1185,44 @@ export function buildGuidTranslationMap(
       const typedDescendants = descendants.filter((d) => matchesTypeHint(targetType, d.nodeType));
       const unclaimed = typedDescendants.filter((d) => !phase1Targets.has(d.guidStr));
 
+      // Greedy size-aware matching: for each unmapped override (sorted
+      // by localID for determinism), pick the unclaimed descendant
+      // whose size best matches the override's `size` field. When the
+      // override carries no explicit size, fall back to positional
+      // matching (the next unclaimed descendant in localID order),
+      // which preserves Phase 1.5's prior behaviour for overrides
+      // that don't expose size.
       const sortedUnmapped = [...typedUnmapped].sort((a, b) => a.localID - b.localID);
-      const sortedUnclaimed = [...unclaimed].sort((a, b) => a.guid.localID - b.guid.localID);
-      for (let i = 0; i < sortedUnmapped.length && i < sortedUnclaimed.length; i++) {
-        const key = guidToString(sortedUnmapped[i]);
-        const value = sortedUnclaimed[i].guidStr;
-        result.set(key, value);
-        phase1Targets.add(value);
+      const remainingDesc = new Set(unclaimed.map((d) => d.guidStr));
+      const descByGuidStrLocal = new Map<string, DescendantInfo>();
+      for (const d of unclaimed) descByGuidStrLocal.set(d.guidStr, d);
+
+      for (const ov of sortedUnmapped) {
+        const ovKey = guidToString(ov);
+        const ovSize = phase1_5OverrideSizes.get(ovKey);
+        let chosen: DescendantInfo | undefined;
+        if (ovSize) {
+          // Pick the descendant whose size differs least from ovSize.
+          let bestDiff = Infinity;
+          for (const dGuidStr of remainingDesc) {
+            const d = descByGuidStrLocal.get(dGuidStr);
+            if (!d?.size) continue;
+            const diff = Math.abs(d.size.x - ovSize.x) + Math.abs(d.size.y - ovSize.y);
+            if (diff < bestDiff) { bestDiff = diff; chosen = d; }
+          }
+        }
+        if (!chosen) {
+          // Positional fallback: pick the next unclaimed in localID
+          // order — preserves Phase 1.5's prior shape for overrides
+          // without an explicit size signal.
+          const sortedRem = [...remainingDesc].map((g) => descByGuidStrLocal.get(g)).filter((d): d is DescendantInfo => !!d);
+          sortedRem.sort((a, b) => a.guid.localID - b.guid.localID);
+          chosen = sortedRem[0];
+        }
+        if (!chosen) break;
+        result.set(ovKey, chosen.guidStr);
+        phase1Targets.add(chosen.guidStr);
+        remainingDesc.delete(chosen.guidStr);
       }
     }
   }
@@ -1266,14 +1411,44 @@ export function buildGuidTranslationMap(
           }
         }
       } else {
-        // Sort both override GUIDs and candidates by localID, match positionally
+        // Size-aware greedy matching for TEXT/INSTANCE/UNKNOWN hints.
+        //
+        // When the override carries an explicit `size` field, prefer
+        // the candidate whose size matches. Multi-level path leaves
+        // seeded by `resolveEntryPath` with the original entry's size
+        // rely on this branch — without it, a 44×44 Close Button
+        // override at depth 4 lands on the next available descendant
+        // by localID order (the deeper Message TEXT 199×18) instead
+        // of the size-matching INSTANCE.
+        const phase2Sizes = extractOverrideSizes([derivedSymbolData, symbolOverrides], blobs);
         const sortedGuids = [...hintGuids].sort((a, b) => a.localID - b.localID);
-        const sortedCandidates = [...candidates].sort((a, b) => a.guid.localID - b.guid.localID);
+        const remaining = new Set(candidates.map((d) => d.guidStr));
+        const descByGuidStrLocal = new Map<string, DescendantInfo>();
+        for (const d of candidates) descByGuidStrLocal.set(d.guidStr, d);
 
-        for (let i = 0; i < sortedGuids.length; i++) {
-          if (i < sortedCandidates.length) {
-            result.set(guidToString(sortedGuids[i]), sortedCandidates[i].guidStr);
+        for (const ov of sortedGuids) {
+          const ovKey = guidToString(ov);
+          const ovSize = phase2Sizes.get(ovKey);
+          let chosen: DescendantInfo | undefined;
+          if (ovSize) {
+            let bestDiff = Infinity;
+            for (const dGuidStr of remaining) {
+              const d = descByGuidStrLocal.get(dGuidStr);
+              if (!d?.size) continue;
+              const diff = Math.abs(d.size.x - ovSize.x) + Math.abs(d.size.y - ovSize.y);
+              if (diff < bestDiff) { bestDiff = diff; chosen = d; }
+            }
           }
+          if (!chosen) {
+            const sortedRem = [...remaining]
+              .map((g) => descByGuidStrLocal.get(g))
+              .filter((d): d is DescendantInfo => !!d)
+              .sort((a, b) => a.guid.localID - b.guid.localID);
+            chosen = sortedRem[0];
+          }
+          if (!chosen) break;
+          result.set(ovKey, chosen.guidStr);
+          remaining.delete(chosen.guidStr);
         }
       }
     }
@@ -1314,14 +1489,16 @@ export function buildGuidTranslationMap(
       }
 
       // Pair-wise swap: for every pair of mismatched entries, check whether
-      // swapping their destinations resolves both.
+      // swapping their destinations resolves both. Skip pairs that involve
+      // a locked Phase Zero mapping — those are exact matches and must
+      // not be reassigned by glyph-count heuristics.
       const fixed = new Set<string>();
       for (let i = 0; i < mismatches.length; i++) {
         const a = mismatches[i];
-        if (fixed.has(a.ovKey)) continue;
+        if (fixed.has(a.ovKey) || lockedKeys.has(a.ovKey)) continue;
         for (let j = i + 1; j < mismatches.length; j++) {
           const b = mismatches[j];
-          if (fixed.has(b.ovKey)) continue;
+          if (fixed.has(b.ovKey) || lockedKeys.has(b.ovKey)) continue;
           const descA = descByGuid.get(a.currentDst);
           const descB = descByGuid.get(b.currentDst);
           if (!descA || !descB) continue;
@@ -1344,7 +1521,7 @@ export function buildGuidTranslationMap(
       // derivedTextData intact).
       const claimed = new Set(result.values());
       for (const m of mismatches) {
-        if (fixed.has(m.ovKey)) continue;
+        if (fixed.has(m.ovKey) || lockedKeys.has(m.ovKey)) continue;
         let unclaimed: DescendantInfo | undefined;
         let anyMatch: DescendantInfo | undefined;
         for (const d of descendants) {
@@ -1370,6 +1547,50 @@ export function buildGuidTranslationMap(
       }
     }
   }
+
+  // ── Phase 5: Exact-size re-route ──
+  //
+  // Re-route a mapping when an UNCLAIMED descendant matches the
+  // override's size exactly while the current target's size is far
+  // off. The earlier session-offset heuristic can land a single entry
+  // on a wrong-typed sibling (Activity View Header's [5591:68057]
+  // 44×44 Close Button override → Message TEXT 199×18 because all 6
+  // other session entries shared the same offset). When the truly
+  // correct slot — same size, currently unclaimed — exists alongside,
+  // moving the mapping is unambiguously right and doesn't disturb
+  // the legitimate single-entry resize cases (Toolbar Trailing
+  // 194×44 → 44×44 has no co-resident exact-size sibling).
+  {
+    const phase5Sizes = extractOverrideSizes([derivedSymbolData, symbolOverrides], blobs);
+    const descByGuidStr = new Map<string, DescendantInfo>();
+    for (const d of descendants) descByGuidStr.set(d.guidStr, d);
+    const claimed = new Set(result.values());
+
+    for (const [overrideGuidStr, descGuidStr] of result) {
+      const ovSize = phase5Sizes.get(overrideGuidStr);
+      if (!ovSize) continue;
+      const desc = descByGuidStr.get(descGuidStr);
+      if (!desc?.size) continue;
+      const currentDiff = Math.abs(ovSize.x - desc.size.x) + Math.abs(ovSize.y - desc.size.y);
+      if (currentDiff <= 4) continue; // already a near-exact match
+
+      // Look for an unclaimed descendant whose size matches the
+      // override exactly (diff ≤ 1 px on each axis combined).
+      for (const d of descendants) {
+        if (claimed.has(d.guidStr)) continue;
+        if (!d.size) continue;
+        const diff = Math.abs(ovSize.x - d.size.x) + Math.abs(ovSize.y - d.size.y);
+        if (diff <= 1 && diff < currentDiff) {
+          // Reroute: swap claim
+          result.set(overrideGuidStr, d.guidStr);
+          claimed.delete(descGuidStr);
+          claimed.add(d.guidStr);
+          break;
+        }
+      }
+    }
+  }
+
 
   return result;
 }

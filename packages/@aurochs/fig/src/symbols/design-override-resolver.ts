@@ -49,10 +49,20 @@ export type DesignNodeShape = {
   readonly children?: readonly DesignNodeShape[];
 };
 
+/**
+ * Structural subset of the override entries the variant re-resolver
+ * passes through to the GUID translation primitive. The primitive
+ * reads `guidPath` and `overriddenSymbolID`; every other field on the
+ * authored override is forwarded verbatim to the produced
+ * `FigKiwiSymbolOverride` payload. Using the canonical Kiwi payload
+ * type as the trailing extension keeps the field names and types
+ * aligned with the SoT, which removes the previous index-signature
+ * `[k: string]: unknown` pattern.
+ */
 export type DesignSymbolOverrideShape = {
   readonly guidPath?: { readonly guids: readonly { readonly sessionID: number; readonly localID: number }[] };
   readonly overriddenSymbolID?: { readonly sessionID: number; readonly localID: number };
-} & { readonly [k: string]: unknown };
+} & Partial<Omit<FigKiwiSymbolOverride, "guidPath" | "overriddenSymbolID">>;
 
 export type DesignComponentPropertyAssignmentShape = {
   readonly defId: string;
@@ -147,26 +157,36 @@ function applyMapToPath(
 }
 
 function toRawOverride(o: DesignSymbolOverrideShape): FigKiwiSymbolOverride {
-  // Structural re-shape: Kiwi's FigKiwiSymbolOverride is also
-  // `{ guidPath, ...payload }` with optional fields, so a domain
-  // `DesignSymbolOverrideShape` is already compatible. The pass-through
-  // is typed via `FigKiwiSymbolOverride` locally so the primitive sees
-  // the expected shape without a runtime copy.
-  return o as unknown as FigKiwiSymbolOverride;
+  // FigKiwiSymbolOverride requires `guidPath`; DesignSymbolOverrideShape
+  // makes it optional because the upstream variant re-resolver may be
+  // handed entries pre-filtered for self-overrides (where the path has
+  // already been rewritten elsewhere). When absent, fall back to the
+  // empty path; the translation primitive treats that as "no
+  // descendant" and yields the entry unchanged.
+  const guidPath = o.guidPath ?? { guids: [] };
+  return { ...o, guidPath };
 }
 
 /**
  * Build the minimal raw-FigNode shape that `buildGuidTranslationMap`
  * reads from a descendant. Fields it ignores are left undefined so we
  * never fabricate synthetic data.
+ *
+ * Both required FigNode metadata fields (`guid`, `phase`, `type`) are
+ * supplied. `phase` is the Kiwi authoring-status enum the parser
+ * stamps on every node; it is never read by the translation
+ * primitive, so the canonical "live" value is appropriate as a
+ * placeholder when feeding domain content back through the SoT.
  */
 function designNodeToRawShape(node: DesignNodeShape): import("../types").FigNode {
   // Domain FigPaint carries `type` as a string literal (union). The
   // raw-side `buildGuidTranslationMap` reads `p.type` and tolerates
   // both string and `{ name }` — we feed strings, which is supported.
   const hasImageFill = node.fills?.some((p) => p.type === "IMAGE") ?? false;
-  const raw = {
+  const PHASE_LIVE: import("../types").KiwiEnumValue = { value: 0, name: "LIVE" };
+  return {
     guid: parseGuid(node.id),
+    phase: PHASE_LIVE,
     type: { value: 0, name: node.type },
     name: node.name,
     visible: node.visible,
@@ -184,23 +204,27 @@ function designNodeToRawShape(node: DesignNodeShape): import("../types").FigNode
     })),
     childGuids: node.children?.map((c) => parseGuid(c.id)),
   };
-  return raw as unknown as import("../types").FigNode;
 }
 
 function designCPAToRawShape(
   a: DesignComponentPropertyAssignmentShape,
 ): FigComponentPropAssignment {
-  const raw = {
+  // FigComponentPropAssignment.value carries an open `[k]: unknown`
+  // index signature, so the `referenceValue` (and any other authored
+  // value-channel) lives in the schema-flexible portion. The typed
+  // surface (`boolValue`, `textValue`) is filled directly from the
+  // domain shape; `referenceValue` parses the guid string back into
+  // the Kiwi shape.
+  return {
     defID: parseGuid(a.defId),
     value: {
-      textValue: a.value.textValue,
       boolValue: a.value.boolValue,
+      textValue: a.value.textValue,
       referenceValue: a.value.referenceValue
         ? parseGuid(a.value.referenceValue)
         : undefined,
     },
   };
-  return raw as unknown as FigComponentPropAssignment;
 }
 
 function parseGuid(id: string): { sessionID: number; localID: number } {

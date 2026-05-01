@@ -50,8 +50,16 @@ function gradientMatrixFromDef(
 
 /**
  * Element bounding box for gradient coordinate computation.
+ *
+ * `width`/`height` is required. `x`/`y` defaults to (0, 0) for the
+ * common case (FRAME / RECTANGLE / ELLIPSE / TEXT — origin sits at the
+ * node's top-left). VECTOR paths whose contour bbox is offset inside
+ * the node must pass `(bbox.x, bbox.y)` so the gradient origin lines
+ * up with the path's actual extent (Figma's paint.transform encodes
+ * gradient endpoints relative to that bbox, not to path-local 0,0).
  */
 export type ElementSize = { readonly width: number; readonly height: number };
+export type ElementBounds = { readonly x: number; readonly y: number; readonly width: number; readonly height: number };
 
 /**
  * Finalize gradient defs by converting from objectBoundingBox to
@@ -62,17 +70,17 @@ export type ElementSize = { readonly width: number; readonly height: number };
  */
 export function finalizeGradientDefs(
   defs: RenderDef[],
-  elementSize: ElementSize,
+  elementBounds: ElementSize | ElementBounds,
 ): void {
   for (let i = 0; i < defs.length; i++) {
     const def = defs[i];
     if (def.type === "linear-gradient") {
-      const finalized = finalizeLinearGradient(def.def, elementSize);
+      const finalized = finalizeLinearGradient(def.def, elementBounds);
       if (finalized) {
         defs[i] = { type: "linear-gradient", def: finalized } as RenderDef;
       }
     } else if (def.type === "radial-gradient") {
-      const finalized = finalizeRadialGradient(def.def, elementSize);
+      const finalized = finalizeRadialGradient(def.def, elementBounds);
       if (finalized) {
         defs[i] = { type: "radial-gradient", def: finalized } as RenderDef;
       }
@@ -89,15 +97,12 @@ export function finalizeGradientDefs(
  */
 function finalizeLinearGradient(
   def: ResolvedLinearGradient,
-  elementSize: ElementSize,
+  elementBounds: ElementSize | ElementBounds,
 ): ResolvedLinearGradient | undefined {
   const gt = gradientMatrixFromDef(def.gradientTransform);
   if (!gt) { return undefined; }
 
-  const attrs = svgLinearGradientAttrs(gt, {
-    width: elementSize.width,
-    height: elementSize.height,
-  });
+  const attrs = svgLinearGradientAttrs(gt, elementBounds);
   if (!attrs) { return undefined; }
 
   return {
@@ -118,15 +123,12 @@ function finalizeLinearGradient(
  */
 function finalizeRadialGradient(
   def: ResolvedRadialGradient,
-  elementSize: ElementSize,
+  elementBounds: ElementSize | ElementBounds,
 ): ResolvedRadialGradient | undefined {
   const gt = gradientMatrixFromDef(def.gradientTransform);
   if (!gt) { return undefined; }
 
-  const attrs = svgRadialGradientAttrs(gt, {
-    width: elementSize.width,
-    height: elementSize.height,
-  });
+  const attrs = svgRadialGradientAttrs(gt, elementBounds);
   if (!attrs) { return undefined; }
 
   return {

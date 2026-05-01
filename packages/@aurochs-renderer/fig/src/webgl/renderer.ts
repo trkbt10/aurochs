@@ -634,36 +634,57 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
       }
 
       case "individual": {
-        // Per-side stroke weights: draw each side separately
+        // Per-side stroke weights with strokeAlign-aware band placement.
+        //
+        // INSIDE  (sign=+1): bands stack inside the rect (top   y=0..top,
+        //                                                 bottom y=h-bottom..h, ...)
+        // OUTSIDE (sign=-1): bands stack outside     (top y=-top..0, bottom y=h..h+bottom, ...)
+        // CENTER  (sign= 0): bands straddle the edge (top y=-top/2..+top/2, ...)
+        //
+        // Mirrors svg/scene-renderer.ts and react/primitives/stroke-rendering.tsx.
         const color = hexToColor(sr.color);
         const strokeOpacity = sr.opacity ?? 1;
         const { top, right, bottom, left } = sr.sides;
         const w = sr.width;
         const h = sr.height;
+        const sign = sr.strokeAlign === "OUTSIDE" ? -1 : sr.strokeAlign === "INSIDE" ? 1 : 0;
+        // Top-left of each side's band, in local node coords.
+        const topY = sign === 1 ? 0 : sign === -1 ? -top : -top / 2;
+        const bottomY = sign === 1 ? h - bottom : sign === -1 ? h : h - bottom / 2;
+        const leftX = sign === 1 ? 0 : sign === -1 ? -left : -left / 2;
+        const rightX = sign === 1 ? w - right : sign === -1 ? w : w - right / 2;
 
         // Top border
         if (top > 0) {
+          const offsetTransform: AffineMatrix = {
+            m00: transform.m00, m01: transform.m01, m02: transform.m02,
+            m10: transform.m10, m11: transform.m11, m12: transform.m12 + topY,
+          };
           const verts = generateRectVertices(w, top);
-          drawSolidFill({ ctx: getGlContext(), vertices: verts, color, transform, opacity: opacity * strokeOpacity });
+          drawSolidFill({ ctx: getGlContext(), vertices: verts, color, transform: offsetTransform, opacity: opacity * strokeOpacity });
         }
         // Bottom border
         if (bottom > 0) {
           const offsetTransform: AffineMatrix = {
             m00: transform.m00, m01: transform.m01, m02: transform.m02,
-            m10: transform.m10, m11: transform.m11, m12: transform.m12 + (h - bottom),
+            m10: transform.m10, m11: transform.m11, m12: transform.m12 + bottomY,
           };
           const verts = generateRectVertices(w, bottom);
           drawSolidFill({ ctx: getGlContext(), vertices: verts, color, transform: offsetTransform, opacity: opacity * strokeOpacity });
         }
         // Left border
         if (left > 0) {
+          const offsetTransform: AffineMatrix = {
+            m00: transform.m00, m01: transform.m01, m02: transform.m02 + leftX,
+            m10: transform.m10, m11: transform.m11, m12: transform.m12,
+          };
           const verts = generateRectVertices(left, h);
-          drawSolidFill({ ctx: getGlContext(), vertices: verts, color, transform, opacity: opacity * strokeOpacity });
+          drawSolidFill({ ctx: getGlContext(), vertices: verts, color, transform: offsetTransform, opacity: opacity * strokeOpacity });
         }
         // Right border
         if (right > 0) {
           const offsetTransform: AffineMatrix = {
-            m00: transform.m00, m01: transform.m01, m02: transform.m02 + (w - right),
+            m00: transform.m00, m01: transform.m01, m02: transform.m02 + rightX,
             m10: transform.m10, m11: transform.m11, m12: transform.m12,
           };
           const verts = generateRectVertices(right, h);

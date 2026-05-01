@@ -371,7 +371,7 @@ export type StrokeShape =
  */
 export type StrokeRendering =
   | { readonly mode: "uniform"; readonly attrs: ResolvedStrokeAttrs }
-  | { readonly mode: "masked"; readonly attrs: ResolvedStrokeAttrs; readonly maskId: string; readonly shape: StrokeShape }
+  | { readonly mode: "masked"; readonly attrs: ResolvedStrokeAttrs; readonly maskId: string; readonly shape: StrokeShape; readonly blendMode?: import("../types").BlendMode }
   | { readonly mode: "layers"; readonly layers: readonly ResolvedStrokeLayer[]; readonly shape: StrokeShape }
   | {
       readonly mode: "individual";
@@ -385,6 +385,23 @@ export type StrokeRendering =
       readonly opacity?: number;
       readonly width: number;
       readonly height: number;
+      /** Frame corner radius. Required so the per-side stroke lines can be
+       * clipped to the rounded perimeter; otherwise a thick top stroke
+       * (e.g. Passport's 8-px gradient band) bleeds straight across the
+       * corner and paints pixels outside the rounded rect. */
+      readonly cornerRadius?: number;
+      /** Stroke alignment relative to each side's edge. Determines where
+       * the stroke band paints relative to the geometric edge:
+       *   INSIDE  → band lies inside  the rect (each line offset inward  by t/2)
+       *   OUTSIDE → band lies outside the rect (each line offset outward by t/2)
+       *   CENTER (undefined here) → band is centred on the edge (line ON the edge)
+       *
+       * Required because Figma's `_Separator` (a 299×1 OUTSIDE-stroked
+       * INSTANCE used between Action rows) places its visible 1px band
+       * one pixel ABOVE the geometry. Treating its individual top stroke
+       * as INSIDE paints into the row's interior instead.
+       */
+      readonly strokeAlign?: "INSIDE" | "OUTSIDE";
     };
 
 export type RenderFrameBackground = {

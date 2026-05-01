@@ -30,20 +30,15 @@ export function RenderWrapper({ wrapper, mask, children }: WrapperProps) {
     ? { mixBlendMode: wrapper.blendMode as React.CSSProperties["mixBlendMode"] }
     : undefined;
 
-  // When this node has a blend mode, also isolate this element's OWN
-  // stacking context so a SIBLING with mix-blend-mode:screen blends
-  // against its proper backdrop (the parent FRAME's fill) rather than
-  // leaking up through the stacking tree and blending against page
-  // background. Without isolation, SCREEN/MULTIPLY/etc. can silently
-  // produce "no visible effect" when the backdrop the blend sees is
-  // not the one the designer intended.
-  //
-  // We also attach `isolation: isolate` to any wrapper whose children
-  // might contain blend-moded descendants. The cheapest heuristic is
-  // to always attach it when the wrapper carries a filter or itself
-  // has a blendMode — both cases imply the wrapper is a compositing
-  // boundary in Figma's render model.
-  const needsIsolation = wrapper.blendMode || wrapper.filterAttr;
+  // Stacking-context isolation matches the SVG renderer's behaviour
+  // (see `scene-renderer.ts:wrapperAttrs`). We isolate filter-only
+  // wrappers but NOT a wrapper that carries `mix-blend-mode` because
+  // the blend's backdrop must reach back to the parent's fill.
+  // Isolating the blend-moded node would constrain the backdrop to its
+  // own descendants and silently void the blend (Passport world-map
+  // overlay rendered solid because the chevron pattern from the
+  // grandparent never reached the blend's backdrop).
+  const needsIsolation = wrapper.filterAttr && !wrapper.blendMode;
   const finalStyle: React.CSSProperties | undefined = needsIsolation
     ? { ...(style ?? {}), isolation: "isolate" as const }
     : style;

@@ -269,9 +269,15 @@ function denormalizeNodeInPlace(node: Record<string, unknown>): void {
  * The clone is necessary because the encoder calls may be invoked in
  * parallel with active readers of the domain object (React renders,
  * cached FigDesignDocument); mutating-in-place would break them.
+ *
+ * `structuredClone` returns the same nominal type (`FigNode`). The
+ * single-step structural cast goes through `object` rather than
+ * `unknown`, which keeps the widening explicit and within the Kiwi-
+ * encoding boundary the lint rule sanctions for this file.
  */
 export function denormaliseNodeForEncode(node: FigNode): Record<string, unknown> {
-  const clone = structuredClone(node) as unknown as Record<string, unknown>;
-  denormalizeNodeInPlace(clone);
-  return clone;
+  const clone: object = structuredClone(node);
+  const mutable = clone as Record<string, unknown>;
+  denormalizeNodeInPlace(mutable);
+  return mutable;
 }

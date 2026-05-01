@@ -170,14 +170,24 @@ export function convertStrokeToSceneStroke(
     ? figColorToSceneColor(primarySolid.color)
     : DEFAULT_COLOR;
 
-  // Multi-paint layers (when >1 visible paint), or single gradient paint
+  // Multi-paint layers (when >1 visible paint), single gradient paint
   // (gradient stroke requires layers because the primary color/opacity alone
-  // cannot express gradient stroke — the gradient def must be in a layer).
+  // cannot express gradient stroke — the gradient def must be in a layer),
+  // or single SOLID paint with a non-NORMAL blend mode (Passport Flag's
+  // SOFT_LIGHT white outline; the uniform stroke path drops paint-level
+  // blend modes since they aren't part of ResolvedStrokeAttrs).
   const hasGradientPaint = visiblePaints.some((p) => {
     const t = getPaintType(p);
     return t === "GRADIENT_LINEAR" || t === "GRADIENT_RADIAL";
   });
-  const layers = (visiblePaints.length > 1 || hasGradientPaint)
+  // BlendMode union doesn't include "normal" — convertFigmaBlendMode
+  // returns undefined for NORMAL/missing, so any defined value is a
+  // non-default blend that needs the layered renderer to preserve it.
+  const hasNonNormalBlend = visiblePaints.some((p) => {
+    const bm = convertFigmaBlendMode(p.blendMode);
+    return bm !== undefined;
+  });
+  const layers = (visiblePaints.length > 1 || hasGradientPaint || hasNonNormalBlend)
     ? visiblePaints.map(buildStrokeLayer)
     : undefined;
 

@@ -15,6 +15,7 @@ import {
   isSelfOverride,
   overridePathToIds,
   applyOverrideToNode,
+  overrideFieldKeys,
 } from "@aurochs/fig/domain";
 import type { FigPaint, FigVectorPath } from "@aurochs/fig/types";
 import { FIG_NODE_TYPE } from "@aurochs/fig/types";
@@ -29,6 +30,7 @@ import {
   extractGeometryProps,
   extractEffectsProps,
 } from "./extract";
+import { applyAutoLayoutPrimaryAxis } from "./autolayout-primary";
 import type {
   SceneGraph,
   SceneNode,
@@ -46,6 +48,7 @@ import { convertPaintsToFills } from "./convert/fill";
 import { convertStrokeToSceneStroke } from "./convert/stroke";
 import { convertEffectsToScene } from "./convert/effects";
 import { decodeGeometryToContours, convertVectorPathsToContours, parseSvgPathD, type DecodedContour } from "./convert/path";
+import { reconstructStrokeCenterline } from "./convert/stroke-geometry-centerline";
 import { generateStarContour, generatePolygonContour, generateLineContour } from "./convert/shape-geometry";
 import { extractUniformCornerRadius as sharedExtractUniformCornerRadius, resolveClipsContent as sharedResolveClipsContent } from "../geometry";
 import { convertTextNode } from "./convert/text";
@@ -137,6 +140,28 @@ export type BuildSceneGraphOptions = {
  * responsibility of the domain-convert layer
  * (`@aurochs-builder/fig/context`).
  */
+/**
+ * Mutable design node augmented with scene-graph-internal bookkeeping
+ * fields that don't belong on the public Figma domain type but need to
+ * travel with the node through `deepCloneDesignNode` (spread copy so
+ * Set references are shared with clones — a clone of an already-pinned
+ * node remains pinned).
+ */
+type SceneBuilderNode = MutableFigDesignNode & {
+  /**
+   * DSD field-name set recording which `size` / `transform` field has
+   * been applied by an outer cascade. Inner cascades consult this to
+   * avoid clobbering the closer-to-root pin with a SYMBOL-default
+   * layout value. See `applyDerivedSymbolData` doc-block for the
+   * Figma autolayout reasoning behind this seal.
+   *
+   * Long-term replacement: read `stackPrimarySizing` / `stackCounterSizing`
+   * directly during the autolayout pass (task #9) so we no longer need
+   * runtime cascade tracking.
+   */
+  __pinnedDsdFields?: Set<string>;
+};
+
 type BuildContext = {
   readonly blobs: readonly FigBlob[];
   readonly images: ReadonlyMap<string, FigImage>;
@@ -321,13 +346,32 @@ function findInDesignTree(
   id: string,
   symbolMap: ReadonlyMap<string, FigDesignNode>,
 ): MutableFigDesignNode | undefined {
-  // Delegates to the repo-wide `dfsById` SoT. The `onVisit` hook
-  // materialises nested INSTANCE children lazily so multi-level
-  // override paths descend into SYMBOL-descendant slots; without it,
-  // paths like `[parent, nested-instance, grandchild]` fail at the
-  // second step because the INSTANCE was authored with empty children.
-  return dfsById(nodes, id, {
+  // First try exact GUID match. Override entries authored against the
+  // node's own GUID resolve here.
+  const directHit = dfsById(nodes, id, {
     getId: (n) => n.id,
+    getChildren: (n) => mutableChildren(n),
+    onVisit: (n) => {
+      if (n.type !== FIG_NODE_TYPE.INSTANCE) { return; }
+      if (mutableChildren(n).length > 0) { return; }
+      const nestedSym = n.symbolId ? symbolMap.get(n.symbolId) : undefined;
+      if (!nestedSym) { return; }
+      n.children = (nestedSym.children ?? []).map(deepCloneDesignNode);
+    },
+  });
+  if (directHit) { return directHit; }
+
+  // Fall back to `overrideKey` match. Figma's DSD entries on an INSTANCE
+  // address its SYMBOL-side slots by overrideKey, not by the cloned
+  // descendant's freshly-assigned GUID. The cloned children retain the
+  // original SYMBOL-descendant overrideKey so we can locate them.
+  // Action 3 [15:943]'s DSD path 5591:26671 → Title TEXT 15:874
+  // (overrideKey=5591:26671) only matches via this path.
+  return dfsById(nodes, id, {
+    getId: (n) => {
+      const ok = n.overrideKey;
+      return ok ? `${ok.sessionID}:${ok.localID}` : "";
+    },
     getChildren: (n) => mutableChildren(n),
     onVisit: (n) => {
       if (n.type !== FIG_NODE_TYPE.INSTANCE) { return; }
@@ -350,7 +394,7 @@ function findNodeByOverridePath(
   nodes: readonly MutableFigDesignNode[],
   override: SymbolOverride,
   symbolMap: ReadonlyMap<string, FigDesignNode>,
-): MutableFigDesignNode | undefined {
+): SceneBuilderNode | undefined {
   const ids = overridePathToIds(override);
   let current: readonly MutableFigDesignNode[] = nodes;
   let found: MutableFigDesignNode | undefined;
@@ -368,9 +412,30 @@ function findNodeByOverridePath(
     }
     current = mutableChildren(found);
   }
+  // SceneBuilderNode is a structural extension of MutableFigDesignNode
+  // (the only added field is the optional __pinnedDsdFields). Every
+  // MutableFigDesignNode satisfies that shape with the field absent, so
+  // the widening is type-sound.
   return found;
 }
 
+/**
+ * Sole gateway for "view a MutableFigDesignNode's children as mutable".
+ *
+ * `MutableFigDesignNode = -readonly { … }` only removes the *outer*
+ * `readonly` modifier on each property; the array element type
+ * `readonly FigDesignNode[]` keeps its own readonly. A deeply-mutable
+ * mapped type would have to recurse — the recursion explodes
+ * because FigDesignNode contains many nested `readonly`-marked
+ * structures unrelated to children.
+ *
+ * Centralising the structural widening here means the cast appears
+ * exactly once in the package; every consumer goes through this
+ * function. The runtime invariant — children we look at via this
+ * gateway have already been deep-cloned by `deepCloneDesignNode` and
+ * are safe to mutate — is enforced by the caller-side discipline of
+ * the override / DSD pipeline, not by the type system.
+ */
 function mutableChildren(
   node: MutableFigDesignNode,
 ): readonly MutableFigDesignNode[] {
@@ -618,22 +683,153 @@ function applyPropsRecursive(
  * source for patheized text on CPA-modified text nodes — it supersedes the
  * cleared derivedTextData.
  */
+/**
+ * SoT for DSD application across nested INSTANCE re-resolution.
+ *
+ * Figma's auto-layout sizing model (encoded on each layout-aware node
+ * as `stackPrimarySizing` / `stackCounterSizing`, with values FIXED /
+ * HUG / FILL) governs which DSD entry is authoritative for a given
+ * descendant's size:
+ *
+ *   - FIXED nodes have their size determined by the **closest
+ *     enclosing INSTANCE that pinned it** (and Figma writes that pin
+ *     into the outer INSTANCE's DSD as a `size` field on the
+ *     descendant's path).
+ *   - SYMBOL-time DSD entries on intermediate INSTANCEs encode the
+ *     descendant's size **before** that pin (the SYMBOL-default
+ *     layout). When an outer INSTANCE wraps and pins, the inner
+ *     INSTANCE's DSD must yield to the outer.
+ *
+ * We therefore record (per node) the fields any DSD apply has
+ * touched. A later DSD apply — including the inner cascade triggered
+ * by `resolveNestedInstances` — checks the record and strips fields
+ * the closer ancestor has already pinned before forwarding the entry.
+ *
+ * The record lives on the design node as a non-enumerable property so
+ * it survives `deepCloneDesignNode` (spread copies it by reference);
+ * a clone of an already-pinned node remains pinned.
+ *
+ * `outer=true/false` is informational: we always record, always honour.
+ * The flag is kept in the signature so callers can opt-in to *not*
+ * recording in the future (e.g. when applying a deliberate SYMBOL-
+ * default override) without breaking the contract.
+ */
 function applyDerivedSymbolData(
   children: readonly MutableFigDesignNode[],
   derivedData: readonly SymbolOverride[],
   ctx: BuildContext,
+  outer: boolean = true,
 ): void {
-  // SSoT: every guid on every path has already been resolved into the
-  // SYMBOL descendant namespace at domain-convert time (see
-  // `resolveOverridePaths` in `@aurochs-builder/fig/context`). The
-  // scene-graph builder looks up paths verbatim — no cascading, no
-  // translation, no promotion of entries into nested INSTANCEs.
   for (const entry of derivedData) {
     if (!isValidOverridePath(entry)) { continue; }
     const target = findNodeByOverridePath(children, entry, ctx.symbolMap);
     if (!target) { continue; }
+    target.__pinnedDsdFields ??= new Set<string>();
+    const pinned = target.__pinnedDsdFields;
+    // Strip fields the closer ancestor has already pinned (size,
+    // transform, derivedTextData) when this is the inner cascade.
+    // Honouring the seal in both directions would let an inner cascade
+    // undo an authoritative outer pin.
+    //
+    if (!outer) {
+      const sizeConflict = entry.size !== undefined && pinned.has("size");
+      const transformConflict = entry.transform !== undefined && pinned.has("transform");
+      if (sizeConflict || transformConflict) {
+        const stripped = stripOverrideFields(entry, sizeConflict, transformConflict);
+        if (stripped === undefined) continue;
+        applyOverrideToNode(target, stripped);
+        continue;
+      }
+    }
     applyOverrideToNode(target, entry);
+    if (entry.size !== undefined) pinned.add("size");
+    if (entry.transform !== undefined) pinned.add("transform");
+    // Outer-cascade `derivedTextData` propagation.
+    //
+    // When this entry's path descended through an INSTANCE chain (i.e.
+    // length > 1), the outer cascade's `derivedTextData` write may be
+    // overwritten by an inner INSTANCE's *authored* DSD targeting the
+    // same descendant — Close SYMBOL's authored Symbol 1 INSTANCE
+    // 15:407 has DSD `[15:290] → blob=673` (default-state glyph)
+    // which fires during Symbol 1 buildNode and clobbers the outer
+    // cascade's CPA-rebaked blob=740 (xmark).
+    //
+    // The kiwi-side resolver (`@aurochs/fig/symbols:applyOverrides`)
+    // avoids this by appending propagated entries to the descendant
+    // INSTANCE's own `derivedSymbolData` array — array-order with
+    // `{...existing, ...override}` last-wins-merge means the outer
+    // cascade's entry wins.
+    //
+    // Mirror that behaviour here for the dtd-bearing case: when a
+    // multi-guid path's penultimate node is an INSTANCE and the entry
+    // carries `derivedTextData`, also append a single-guid copy
+    // (path = [final-guid]) onto that INSTANCE's `derivedSymbolData`.
+    // That copy will be re-applied last during the inner INSTANCE's
+    // own step-5, overruling the inner's authored DSD.
+    if (
+      entry.derivedTextData !== undefined
+      && entry.guidPath?.guids
+      && entry.guidPath.guids.length >= 2
+    ) {
+      // Locate the penultimate node in the path (the descendant
+      // INSTANCE whose buildNode will later process its own DSD).
+      const ids = overridePathToIds(entry);
+      const penultimateIds = ids.slice(0, -1);
+      const finalGuid = entry.guidPath.guids[entry.guidPath.guids.length - 1];
+      let walker: readonly MutableFigDesignNode[] = children;
+      let pen: MutableFigDesignNode | undefined;
+      for (const id of penultimateIds) {
+        pen = findInDesignTree(walker, id, ctx.symbolMap);
+        if (!pen) break;
+        if (pen.type === FIG_NODE_TYPE.INSTANCE && mutableChildren(pen).length === 0) {
+          const nestedSym = pen.symbolId ? ctx.symbolMap.get(pen.symbolId) : undefined;
+          if (nestedSym) pen.children = (nestedSym.children ?? []).map(deepCloneDesignNode);
+        }
+        walker = mutableChildren(pen);
+      }
+      if (pen && pen.type === FIG_NODE_TYPE.INSTANCE) {
+        const forwarded: SymbolOverride = {
+          guidPath: { guids: [finalGuid] },
+          derivedTextData: entry.derivedTextData,
+        };
+        // Append AFTER any authored DSDs so it wins last-wins-merge in
+        // the inner's step-5 (mirrors kiwi resolver line 687).
+        pen.derivedSymbolData = [...(pen.derivedSymbolData ?? []), forwarded];
+      }
+    }
   }
+}
+
+/**
+ * Build a copy of a SymbolOverride with `size` and/or `transform`
+ * dropped. Returns `undefined` when the resulting override would carry
+ * no actionable fields (only routing fields like guidPath remain).
+ *
+ * Iterates `overrideFieldKeys`, the SoT helper for "which override fields
+ * are present and defined". This avoids any ad-hoc Record-of-unknown
+ * casting and keeps the legal-key set in lock-step with the
+ * `SymbolOverrideFields` type definition.
+ */
+function stripOverrideFields(
+  entry: SymbolOverride,
+  dropSize: boolean,
+  dropTransform: boolean,
+  dropDerivedTextData: boolean = false,
+): SymbolOverride | undefined {
+  const stripped: SymbolOverride = {
+    ...entry,
+    ...(dropSize ? { size: undefined } : {}),
+    ...(dropTransform ? { transform: undefined } : {}),
+    ...(dropDerivedTextData ? { derivedTextData: undefined } : {}),
+  };
+  for (const key of overrideFieldKeys(stripped)) {
+    // overriddenSymbolID is a routing field (instance swap) — present
+    // even on otherwise-empty entries; skip it. Every other present
+    // key is an actionable override.
+    if (key === "overriddenSymbolID") continue;
+    return stripped;
+  }
+  return undefined;
 }
 
 /**
@@ -694,8 +890,24 @@ function applyConstraintResolution(
  */
 function resolveDesignInstance(
   node: FigDesignNode,
-  ownChildren: readonly FigDesignNode[],
+  /**
+   * Pre-cloned mutable children from an outer cascade, or an empty
+   * array when this is the first resolve and we should clone from
+   * `symbol.children`. Caller contract: every node in this array is
+   * already a deep clone — the resolver mutates them in place via
+   * `applyOverrideToNode` / `applyDerivedSymbolData`.
+   */
+  ownChildren: readonly MutableFigDesignNode[],
   ctx: BuildContext,
+  /**
+   * `true` when this resolve is called from `resolveNestedInstances`
+   * (i.e. an outer INSTANCE has already cascaded its DSD over our
+   * descendants). Inner cascade then honours fields the outer pinned
+   * so a nested SYMBOL's SYMBOL-default DSD doesn't overwrite the
+   * post-outer-resize values. The top-level call from `buildNode`
+   * passes `false`.
+   */
+  nested: boolean = false,
 ): ResolvedDesignInstance {
   const symbolId = node.symbolId;
   if (!symbolId) {
@@ -799,8 +1011,19 @@ function resolveDesignInstance(
   // each step.
   let children: readonly MutableFigDesignNode[];
   if (ownChildren.length > 0) {
-    children = ownChildren.map(deepCloneDesignNode);
+    // ownChildren are the *already-resolved* clones an outer INSTANCE
+    // handed us (via resolveNestedInstances). They are not shared with
+    // any other resolve pass, so we must NOT deep-clone them again —
+    // re-cloning produces fresh node objects that lose any per-node
+    // bookkeeping the outer cascade attached (e.g. the seal WeakSets in
+    // `applyDerivedSymbolData` that prevent this inner DSD from
+    // overwriting outer-pinned size/transform with the SYMBOL-default
+    // layout).
+    children = ownChildren;
   } else {
+    // SYMBOL children, on the other hand, are read-only and shared
+    // across every INSTANCE that references the SYMBOL. We must clone
+    // before mutating.
     children = (symbol.children ?? []).map(deepCloneDesignNode);
   }
 
@@ -815,8 +1038,12 @@ function resolveDesignInstance(
   }
 
   // ── Step 5: Derived symbol data (pre-computed layout for resized instances) ──
+  // `outer = !nested` — the top-level resolve owns its INSTANCE's
+  // resize and is the SoT for that descendant's pinned fields. A
+  // nested re-resolve (via `resolveNestedInstances`) skips fields the
+  // outer cascade already pinned (see applyDerivedSymbolData docs).
   if (node.derivedSymbolData && node.derivedSymbolData.length > 0) {
-    applyDerivedSymbolData(children, node.derivedSymbolData, ctx);
+    applyDerivedSymbolData(children, node.derivedSymbolData, ctx, !nested);
   }
 
   // ── Step 6: Constraint resolution for resized instances ──
@@ -857,6 +1084,20 @@ function resolveDesignInstance(
         applyConstraintResolution(children, symbolSize, instanceSize);
       }
       effectiveNode.size = instanceSize;
+      // When the INSTANCE is shrunk below the SYMBOL's bounds AND the
+      // SYMBOL's children would extend past that shrunken extent, Figma
+      // visually clips the overflow (Toolbar - Top's back button: the
+      // 78×36 State=Default SYMBOL inside a DSD-shrunk 36×36 slot
+      // exposes only the chevron, not the "Label" text). Without
+      // clipsContent the SYMBOL's children render past the slot and the
+      // hidden label leaks back into the visible output. The clip applies
+      // only when the SYMBOL is genuinely larger than the INSTANCE — for
+      // grow cases the original SYMBOL fits inside.
+      const symbolLargerThanInstance =
+        symbolSize.x - instanceSize.x > 0.5 || symbolSize.y - instanceSize.y > 0.5;
+      if (symbolLargerThanInstance && effectiveNode.clipsContent !== true) {
+        effectiveNode.clipsContent = true;
+      }
     }
     // Otherwise: keep SYMBOL size and the original child layout.
   }
@@ -893,7 +1134,7 @@ function resolveNestedInstances(
       return child;
     }
 
-    const resolved = resolveDesignInstance(child, child.children ?? [], ctx);
+    const resolved = resolveDesignInstance(child, mutableChildren(child), ctx, /* nested */ true);
     const flattened: MutableFigDesignNode = {
       ...resolved.effectiveNode,
       type: "FRAME",
@@ -1136,13 +1377,40 @@ function buildVectorNode(node: FigDesignNode, ctx: BuildContext): PathNode {
     contoursRef.value = synthesizeContours(node) as DecodedContour[];
   }
 
+  // For thin (≈≤1.5px) center-aligned strokes the pre-expanded outline
+  // rasterizes with subtly different antialiasing than a centerline stroke.
+  // Figma's SVG exporter emits the centerline directly, so we reverse the
+  // expansion when the strokeGeometry matches the documented thin-stroke
+  // pattern. Falls back to fill-the-outline when reconstruction fails.
+  const scalarWeight = typeof strokeWeight === "number"
+    ? strokeWeight
+    : strokeWeight !== undefined
+      ? Math.max(strokeWeight.top, strokeWeight.right, strokeWeight.bottom, strokeWeight.left)
+      : 0;
+  const reconstructedRef = { value: false };
+  if (isStrokeGeometryRef.value && strokeAlign === "CENTER" && scalarWeight > 0 && scalarWeight <= 1.5) {
+    const centerline = reconstructStrokeCenterline(contoursRef.value, scalarWeight);
+    if (centerline) {
+      contoursRef.value = centerline;
+      reconstructedRef.value = true;
+    }
+  }
+
   // Apply per-path style overrides from vectorData
   const resolvedContours = applyStyleOverrides(contoursRef.value, node, ctx);
 
   // strokeGeometry is Figma's pre-expanded outline of a stroke.
-  // It should be *filled* with the stroke colour, not stroked again.
-  const fills = selectPaintsForFills(isStrokeGeometryRef.value, { strokePaints, fillPaints }, ctx.images);
-  const stroke = isStrokeGeometryRef.value ? undefined : convertStrokeToSceneStroke(strokePaints, strokeWeight, { strokeCap, strokeJoin, dashPattern: strokeDashes, strokeAlign });
+  // It should be *filled* with the stroke colour, not stroked again —
+  // unless we successfully reconstructed the centerline above, in which
+  // case the strokeGeometry is gone and we render the centerline as a
+  // proper stroke.
+  const treatAsFill = isStrokeGeometryRef.value && !reconstructedRef.value;
+  const fills = reconstructedRef.value
+    ? []
+    : selectPaintsForFills(treatAsFill, { strokePaints, fillPaints }, ctx.images);
+  const stroke = treatAsFill
+    ? undefined
+    : convertStrokeToSceneStroke(strokePaints, strokeWeight, { strokeCap, strokeJoin, dashPattern: strokeDashes, strokeAlign });
 
   const { size } = extractSizeProps(node);
   return {
@@ -1552,9 +1820,40 @@ function buildNode(node: FigDesignNode, ctx: BuildContext): SceneNode | null {
       // Resolve INSTANCE against its SYMBOL/COMPONENT:
       // - Merge visual properties (fills, cornerRadius, effects, etc.)
       // - Inherit children if instance has none
-      const resolved = resolveDesignInstance(node, children, ctx);
+      //
+      // Top-level callers pass `node.children` straight from the input
+      // tree, which is read-only and shared with the input. Clone here
+      // so the resolver may safely mutate. Empty input is handled
+      // inside the resolver (clones from `symbol.children`).
+      const ownChildren = children.length > 0
+        ? children.map(deepCloneDesignNode)
+        : [];
+      const resolved = resolveDesignInstance(node, ownChildren, ctx);
       const stretched = applyCounterAxisStretch(resolved.effectiveNode, resolved.children);
-      const childNodes = buildChildren(stretched, ctx);
+      // Primary-axis re-solve gate (SoT for "when does our layout solver
+      // override authored child positions"):
+      //
+      //   1. INSTANCE size differs from SYMBOL size (sizeChanged) AND
+      //   2. DSD does NOT pin a direct child's transform.
+      //
+      // (1) ensures we only touch instances that were actually resized
+      // (otherwise SYMBOL-time positions are still valid). (2) honours
+      // Figma's pre-computed layout when present — DSD that carries a
+      // `transform` on a depth-1 path is Figma's resolved post-resize
+      // value and must not be clobbered.
+      const symId = node.symbolId;
+      const symSize = symId ? ctx.symbolMap.get(symId)?.size : undefined;
+      const sizeChanged = symSize !== undefined && (
+        Math.abs(symSize.x - resolved.effectiveNode.size.x) > 0.5 ||
+        Math.abs(symSize.y - resolved.effectiveNode.size.y) > 0.5
+      );
+      const dsdPinsTransform = (node.derivedSymbolData ?? []).some((e) =>
+        e.transform !== undefined && (e.guidPath?.guids?.length ?? 0) === 1,
+      );
+      const positioned = (sizeChanged && !dsdPinsTransform)
+        ? applyAutoLayoutPrimaryAxis(resolved.effectiveNode, stretched)
+        : stretched;
+      const childNodes = buildChildren(positioned, ctx);
       return buildFrameNode(resolved.effectiveNode, ctx, childNodes);
     }
 
