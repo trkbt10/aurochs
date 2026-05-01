@@ -302,19 +302,88 @@ export type FigGuidPath = {
 };
 
 /**
+ * `VariableID` references a Figma variable, either local (sessionID +
+ * localID, like any other GUID) or imported from a published library
+ * (`assetRef`). The library-asset form cannot be resolved from a
+ * single .fig file — its value is opaque to local evaluation.
+ */
+export type FigVariableID =
+  | FigGuid
+  | { readonly assetRef: { readonly key: string; readonly version?: string } };
+
+/**
+ * `Expression` mirrors the Kiwi `Expression` message. Wraps an
+ * `expressionFunction` (RESOLVE_VARIANT / NEGATE / MULTIPLY / ...)
+ * with a list of argument `VariableData` payloads.
+ */
+export type FigVariableExpression = {
+  readonly expressionFunction: KiwiEnumValue;
+  readonly expressionArguments?: readonly FigKiwiVariableData[];
+};
+
+/**
+ * One key/value pair inside a `VariableMapValue`. Used by RESOLVE_VARIANT
+ * to bind a property name (e.g. "BG Context") to its resolved variable
+ * data, optionally tagged by `guidKey` for unique identification across
+ * library boundaries.
+ */
+export type FigVariableMapEntry = {
+  readonly key: string;
+  readonly value?: FigKiwiVariableData;
+  readonly guidKey?: FigGuid;
+};
+
+export type FigVariableMap = {
+  readonly values?: readonly FigVariableMapEntry[];
+};
+
+/**
+ * Kiwi-shape `VariableAnyValue`: at most one of these fields is set,
+ * matching the schema's "oneof" semantics expressed via field
+ * presence. Consumers should not branch on this type directly —
+ * project it through `projectVariableAnyValue` (see
+ * `@aurochs/fig/symbols`) into the `FigVariableAnyValue` discriminated
+ * union and then `switch (kind)`.
+ */
+export type FigKiwiVariableAnyValue = {
+  readonly boolValue?: boolean;
+  readonly textValue?: string;
+  readonly floatValue?: number;
+  readonly alias?: FigVariableID;
+  readonly colorValue?: FigColor;
+  readonly expressionValue?: FigVariableExpression;
+  readonly mapValue?: FigVariableMap;
+};
+
+/**
+ * Discriminated union of every variant the Kiwi `VariableAnyValue`
+ * message can carry. The `kind` discriminator is synthetic — the Kiwi
+ * representation uses field presence (`FigKiwiVariableAnyValue`) — but
+ * downstream consumers (resolvers, renderer) want a single
+ * switchable shape, so we project the schema's "exactly one of" rule
+ * onto a typed union here.
+ */
+export type FigVariableAnyValue =
+  | { readonly kind: "bool"; readonly value: boolean }
+  | { readonly kind: "text"; readonly value: string }
+  | { readonly kind: "float"; readonly value: number }
+  | { readonly kind: "alias"; readonly value: FigVariableID }
+  | { readonly kind: "color"; readonly value: FigColor }
+  | { readonly kind: "expression"; readonly value: FigVariableExpression }
+  | { readonly kind: "map"; readonly value: FigVariableMap };
+
+/**
  * Variable-data binding entry — one mapping from a node field to a
  * Figma variable's value. Carried by overrides whose authored value
  * came from a Figma variable rather than a literal.
  *
  * `variableData` mirrors the Kiwi `VariableData` message: the
  * authored value plus its declared and resolved data types. The inner
- * `value` slot is intentionally `unknown` here because the full
- * `VariableAnyValue` union (literal / alias / expression / ...) is
- * the SoT for variable resolution itself; we surface only the
- * structural envelope until the resolver SoT lands (task #16).
+ * `value` slot is the Kiwi-shape `FigKiwiVariableAnyValue`; project
+ * via `projectVariableAnyValue` for the discriminated union form.
  */
 export type FigKiwiVariableData = {
-  readonly value?: unknown;
+  readonly value?: FigKiwiVariableAnyValue;
   readonly dataType?: KiwiEnumValue;
   readonly resolvedDataType?: KiwiEnumValue;
 };
@@ -648,6 +717,19 @@ export type FigNode = {
   readonly componentPropDefs?: readonly FigComponentPropDef[];
   /** Component property references on child nodes (binds field to prop def) */
   readonly componentPropRefs?: readonly FigComponentPropRef[];
+
+  // ---- Variable consumption (RESOLVE_VARIANT, color binding, etc.) ----
+  /**
+   * Per-field variable bindings on this INSTANCE. The expression form
+   * (RESOLVE_VARIANT, NEGATE, ...) drives variant selection and dynamic
+   * value resolution. See `@aurochs/fig/symbols/variable-resolution` for
+   * the evaluator that consumes this field.
+   */
+  readonly variableConsumptionMap?: FigKiwiVariableDataMap;
+  /** Component-property variable bindings (parameter form). */
+  readonly parameterConsumptionMap?: FigKiwiVariableDataMap;
+  /** Active mode per variable-set referenced by this INSTANCE / its ancestors. */
+  readonly variableModeBySetMap?: FigKiwiVariableModeBySetMap;
 
   // ---- Style-definition fields (shared-style proxy nodes) ----
   /**

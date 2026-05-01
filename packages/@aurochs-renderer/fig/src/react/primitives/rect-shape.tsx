@@ -1,11 +1,16 @@
 /**
  * @file Rectangle shape for React — handles both uniform and per-corner radius
  *
- * SoT for rendering rect shapes in React. Uses <rect> for uniform radius,
- * <path> for per-corner radii.
+ * Sharp-cornered rects (cornerRadius undefined or 0) emit `<rect>`. Rounded
+ * rects emit `<path>` with cubic Bézier corners — the path-d builder is
+ * the shared SoT (scene-graph/render/rounded-rect-path) used by the SVG
+ * scene renderer and the RenderTree clip-path resolver. Using `<rect rx>`
+ * for rounded corners would rasterise at slightly different sub-pixels
+ * from Figma's exporter and produce AA-only diff regressions.
  */
 
 import type { CornerRadius } from "../../scene-graph/types";
+import { buildRoundedRectPathD } from "../../scene-graph/render/rounded-rect-path";
 
 type RectShapeProps = {
   readonly width: number;
@@ -16,26 +21,14 @@ type RectShapeProps = {
   readonly [key: string]: unknown;
 };
 
-function buildRoundedRectPathD(w: number, h: number, radii: readonly [number, number, number, number]): string {
-  const [tl, tr, br, bl] = radii;
-  const parts = [
-    `M ${tl} 0`,
-    `L ${w - tr} 0`,
-    tr > 0 ? `A ${tr} ${tr} 0 0 1 ${w} ${tr}` : "",
-    `L ${w} ${h - br}`,
-    br > 0 ? `A ${br} ${br} 0 0 1 ${w - br} ${h}` : "",
-    `L ${bl} ${h}`,
-    bl > 0 ? `A ${bl} ${bl} 0 0 1 0 ${h - bl}` : "",
-    `L 0 ${tl}`,
-    tl > 0 ? `A ${tl} ${tl} 0 0 1 ${tl} 0` : "",
-    "Z",
-  ];
-  return parts.filter(Boolean).join(" ");
-}
-
 export function RectShape({ width, height, cornerRadius, ...rest }: RectShapeProps) {
   if (cornerRadius !== undefined && typeof cornerRadius !== "number") {
     const d = buildRoundedRectPathD(width, height, cornerRadius);
+    return <path d={d} {...rest} />;
+  }
+
+  if (cornerRadius !== undefined && cornerRadius > 0) {
+    const d = buildRoundedRectPathD(width, height, [cornerRadius, cornerRadius, cornerRadius, cornerRadius]);
     return <path d={d} {...rest} />;
   }
 
@@ -45,8 +38,6 @@ export function RectShape({ width, height, cornerRadius, ...rest }: RectShapePro
       y={0}
       width={width}
       height={height}
-      rx={cornerRadius}
-      ry={cornerRadius}
       {...rest}
     />
   );

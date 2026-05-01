@@ -221,32 +221,58 @@ export function resolveEffects(
           break;
         }
 
-        // Canonical drop-shadow recipe (matches Figma SVG export):
-        //   feFlood(color, α) → feComposite(in=SourceAlpha, in)
-        //   → optional feMorphology(spread)
-        //   → feOffset → feGaussianBlur → result = drop-blur-N
+        // Canonical drop-shadow recipe (matches Figma's exact SVG export):
         //
-        // When per-effect blendMode is non-default, blend the shadow
-        // with SourceGraphic via feBlend (mode=overlay/etc.) to produce
-        // Figma's chromatic chromatic effect. The blended result then
-        // takes the shadow's slot in the final feMerge.
+        //   feColorMatrix(SourceAlpha, 127×) → hardAlpha
+        //   feOffset(hardAlpha, dx, dy)      → offsetAlpha
+        //   feGaussianBlur(offsetAlpha)      → blurredAlpha
+        //   if blendMode != normal:
+        //     feComposite(blurredAlpha, in2=hardAlpha, op="out")
+        //                                   → outsideAlpha (sliver outside shape)
+        //   feColorMatrix(... , [0..r 0..g 0..b 0..0..a])
+        //                                   → tinted RGBA shadow
         //
-        // When blendMode is default (NORMAL/undefined), feed the raw
-        // blur result into the terminal feMerge so multiple shadows
-        // accumulate beneath SourceGraphic.
+        // Recipe is mode-dependent because Figma's exporter is. For NORMAL
+        // blend the shadow is just blurred-offset hardAlpha tinted; the
+        // shadow shows through translucent sources (e.g. fill-opacity=0.7
+        // rounded rect over its own shadow — without inside-shadow alpha
+        // the rect appears too light). For non-NORMAL blends (OVERLAY etc.)
+        // the inside-shadow tint would mix into the rounded-corner AA edge
+        // pixels, producing the Passport/Flighty pink halo. The composite-
+        // out step removes the inside-shape tint so only the outside sliver
+        // remains for blend-mode mixing.
+        //
+        // For tinting we use feColorMatrix (Figma's exporter form). The
+        // matrix `[0..r 0..g 0..b 0..0..a]` writes RGB constants and scales
+        // the input alpha by `a`. After the "out" composite, alpha is non-
+        // zero only in the outside sliver, so the leak that drove the sharp
+        // recipe to feFlood+composite-in does not occur here.
+        //
+        // Spread support: feMorphology dilate/erode is applied between the
+        // hardAlpha→offset chain and the blur step.
         const stdDev = effect.radius / 2;
-        const floodResult = ids.getNextId("drop-flood");
-        const coloredResult = ids.getNextId("drop-colored");
-        const maybeSpread = effect.spread && effect.spread !== 0
-          ? ids.getNextId("drop-spread")
-          : coloredResult;
-        const offsetResult = ids.getNextId("drop-offset");
-        const blurResult = ids.getNextId("drop-blur");
+        const c = effect.color;
+        const hardAlphaResult = ids.getNextId("hardAlpha");
+        const tintedResult = ids.getNextId("drop-tinted");
 
-        primitives.push(
-          { type: "feFlood", floodColor: colorToRgb(effect.color), floodOpacity: effect.color.a, result: floodResult },
-          { type: "feComposite", in: floodResult, in2: "SourceAlpha", operator: "in", result: coloredResult },
-        );
+        primitives.push({
+          type: "feColorMatrix",
+          in: "SourceAlpha",
+          matrixType: "matrix",
+          values: ALPHA_BINARIZE_MATRIX,
+          result: hardAlphaResult,
+        });
+        // Figma's exporter chains feOffset → feMorphology(if spread) →
+        // feGaussianBlur with implicit pass-through (no `in`/`result`),
+        // each consuming the previous primitive's output. We mirror that
+        // shape: feOffset reads hardAlpha explicitly; feMorphology and
+        // feGaussianBlur omit `in` so they consume the prior result.
+        primitives.push({
+          type: "feOffset",
+          in: hardAlphaResult,
+          dx: effect.offset.x,
+          dy: effect.offset.y,
+        });
         if (effect.spread && effect.spread !== 0) {
           primitives.push({
             type: "feMorphology",
@@ -254,25 +280,38 @@ export function resolveEffects(
             radius: Math.abs(effect.spread),
           });
         }
-        primitives.push(
-          { type: "feOffset", in: maybeSpread, dx: effect.offset.x, dy: effect.offset.y, result: offsetResult },
-          { type: "feGaussianBlur", in: offsetResult, stdDeviation: stdDev, result: blurResult },
-        );
+        primitives.push({ type: "feGaussianBlur", stdDeviation: stdDev });
 
-        // feBlend supports: normal, multiply, screen, darken, lighten, overlay
-        // For these modes, blend the shadow with SourceGraphic.
         if (blendMode !== "normal") {
-          const blendedResult = ids.getNextId("drop-blended");
-          primitives.push({
-            type: "feBlend",
-            mode: blendMode,
-            in: blurResult,
-            in2: "SourceGraphic",
-            result: blendedResult,
-          });
-          dropShadowResults.push(blendedResult);
+          const compositedResult = ids.getNextId("drop-composited");
+          primitives.push(
+            { type: "feComposite", in2: hardAlphaResult, operator: "out", result: compositedResult },
+            { type: "feColorMatrix", in: compositedResult, matrixType: "matrix", values: buildColorMatrix(c), result: tintedResult },
+            {
+              type: "feBlend",
+              mode: blendMode,
+              in: tintedResult,
+              in2: "SourceGraphic",
+              result: ids.getNextId("drop-blended"),
+            },
+          );
+          // The blended result is the last-pushed primitive's result.
+          const last = primitives[primitives.length - 1];
+          if (last.type === "feBlend" && last.result) {
+            dropShadowResults.push(last.result);
+          }
         } else {
-          dropShadowResults.push(blurResult);
+          // NORMAL blend: blurred-hardAlpha is tinted directly with no
+          // composite-out. The resulting tinted shadow includes both
+          // the outside sliver AND the blurred inside-shape alpha, the
+          // latter of which shows through translucent sources.
+          primitives.push({
+            type: "feColorMatrix",
+            matrixType: "matrix",
+            values: buildColorMatrix(c),
+            result: tintedResult,
+          });
+          dropShadowResults.push(tintedResult);
         }
         break;
       }
@@ -395,18 +434,9 @@ function computeFilterBounds(
       //   The shadow paints colour through compositing. A radius-equal
       //   expansion in the opposite-of-offset direction (the "ghost"
       //   side of the shadow) bleeds the tint into pixels outside the
-      //   rounded corner — Passport's filter used to start at y=-20
-      //   painting 4 rows above the rect's rounded top edge. For these
-      //   effects we collapse the opposite-direction expansion to 0:
-      //   a downward shadow (offsetY > 0) gets upExpand = 0.
-      //
-      // Detection: drop-shadow effect carries `blendMode` directly. We
-      // use the resolved Effect type's blendMode field — when undefined
-      // or "normal" use the symmetric rule, otherwise the asymmetric
-      // (#22, #38). Inner-shadow follows the same blend convention.
-      // NORMAL blend is encoded as undefined in the BlendMode type — see
-      // scene-graph/types.ts:57. Any defined blend mode uses the
-      // asymmetric expansion rule.
+      //   rounded corner. For these effects we collapse the opposite-
+      //   direction expansion to 0: a downward shadow (offsetY > 0)
+      //   gets upExpand = 0.
       const isNormalBlend = effect.blendMode === undefined;
       const upExpand = isNormalBlend
         ? Math.max(0, totalExpansion - offsetY)

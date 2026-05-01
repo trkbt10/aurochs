@@ -9,6 +9,7 @@ import { buildGuidTranslationMap, translateOverrides } from "./guid-translation"
 import { resolveInstanceLayout } from "./constraints";
 import type { FigStyleRegistry } from "../domain/document";
 import { resolveStyleIdOnMutableNode } from "./style-registry";
+import { resolveVariantOverride } from "./variable-resolution";
 
 // =============================================================================
 // Types
@@ -163,6 +164,19 @@ export type InstanceResolution = {
  *
  * This is the single source of truth for "INSTANCE → SYMBOL" resolution.
  * Both dependency graph building, clone expansion, and rendering use this.
+ *
+ * Resolution order:
+ *   1. `overriddenSymbolID` (explicit author-set variant override).
+ *   2. `symbolID` + RESOLVE_VARIANT (variable-driven variant selection
+ *      via `variableConsumptionMap`).
+ *   3. `symbolID` (the static reference).
+ *
+ * `RESOLVE_VARIANT` only fires when the INSTANCE has no
+ * `overriddenSymbolID` AND its `symbolID`'s parent is a variant
+ * container (COMPONENT_SET or sibling-FRAME pattern). Most fixtures
+ * have all properties resolving to library-only aliases, in which
+ * case the evaluator bails and we fall through to step 3 — this is
+ * the same behaviour the renderer had before this evaluator landed.
  */
 export function resolveInstanceReferences(
   node: FigNode,
@@ -180,8 +194,23 @@ export function resolveInstanceReferences(
   const overrideResolved = pair.overriddenSymbolID ? resolveOverride() : undefined;
   if (overrideResolved) { allDeps.push(overrideResolved.guidStr); }
 
+  // Variant resolution via RESOLVE_VARIANT: only when no explicit
+  // `overriddenSymbolID` was authored. We need the resolved primary
+  // SYMBOL to walk to its variant container.
+  let variantResolved: { node: FigNode; guidStr: string } | undefined;
+  if (!overrideResolved && primaryResolved) {
+    const variantOutcome = resolveVariantOverride(node, primaryResolved.node, symbolMap);
+    if (variantOutcome.resolvedSymbolID) {
+      const resolved = resolveSymbolGuidStr(variantOutcome.resolvedSymbolID, symbolMap);
+      if (resolved) {
+        variantResolved = resolved;
+        allDeps.push(resolved.guidStr);
+      }
+    }
+  }
+
   return {
-    effectiveSymbol: overrideResolved ?? primaryResolved,
+    effectiveSymbol: overrideResolved ?? variantResolved ?? primaryResolved,
     allDependencyGuids: allDeps,
   };
 }
@@ -412,7 +441,7 @@ function applyComponentPropAssignments(
     }
 
     // Recurse
-    for (const child of safeChildren(node) as MutableFigNode[]) {
+    for (const child of mutableChildren(node)) {
       walk(child);
     }
   }
@@ -533,7 +562,7 @@ function cleanupStaleDerivedTextData(
         delete node.derivedTextData;
       }
     }
-    for (const child of safeChildren(node) as MutableFigNode[]) {
+    for (const child of mutableChildren(node)) {
       walk(child);
     }
   }
@@ -556,7 +585,7 @@ function cleanupStaleDerivedTextData(
  */
 function expandContainersToFitChildren(nodes: MutableFigNode[]): void {
   for (const node of nodes) {
-    const children = safeChildren(node) as MutableFigNode[];
+    const children = mutableChildren(node);
     if (children.length === 0) {continue;}
 
     // Skip INSTANCE nodes: their children come from pre-resolution and
@@ -593,13 +622,107 @@ function expandContainersToFitChildren(nodes: MutableFigNode[]): void {
 // =============================================================================
 
 /**
+ * View a mutable FigNode's children as `MutableFigNode[]`.
+ *
+ * `MutableFigNode = -readonly { … }` lifts the outer per-property
+ * `readonly` modifier but the array element type stays
+ * `readonly FigNode[]`. The clones we work with were produced by
+ * `deepCloneNode` and are safe to mutate; this helper centralises the
+ * single structural assertion required to view them as such, so
+ * `applyOverrides` and friends don't sprinkle `as MutableFigNode[]`
+ * casts at every recursion site.
+ */
+function mutableChildren(node: MutableFigNode): MutableFigNode[] {
+  const cs = node.children;
+  if (!cs) {
+    return [];
+  }
+  // The runtime invariant — these `cs` entries were deep-cloned by
+  // `deepCloneNode` and are mutable in practice — is enforced by the
+  // pipeline's caller-side discipline, not the type system. The cast
+  // is the single bridge from "outer-mutable but element-readonly" to
+  // "fully mutable element-array" that the resolver loop actually
+  // needs to write through.
+  return cs as MutableFigNode[];
+}
+
+/**
+ * Apply a single Kiwi-shape override's payload onto a mutable FigNode.
+ *
+ * Iterates the override's payload keys via `kiwiOverridePayloadKeys`
+ * (the SSoT helper for "which Kiwi fields are present and not routing
+ * fields"). The two field-application patterns are:
+ *
+ *   - `componentPropAssignments`: merge by `defID` (incoming wins per
+ *     defID, otherwise existing entries are preserved).
+ *   - every other key: overwrite the node's slot wholesale.
+ *
+ * Each `node[key] = override[key]` assignment is statically typed
+ * because both sides resolve through `keyof FigKiwiSymbolOverride`,
+ * which `keyof MutableFigNode` is a superset of (the override's payload
+ * keys are exactly the FigNode fields that overrides may target).
+ */
+function applyKiwiOverrideToNode(node: MutableFigNode, override: FigKiwiSymbolOverride): void {
+  // The kiwi→FigNode field-name correspondence: `FigKiwiSymbolOverridePayload`
+  // is a strict subset of FigNode's override-eligible fields, so every
+  // payload key from `kiwiOverridePayloadKeys` (which already filters
+  // out routing fields and undefined values) names a slot on the node
+  // with an assignment-compatible value type. TypeScript cannot prove
+  // that generically, so the single Record-of-unknown assertion below
+  // is the SSoT for that structural correspondence.
+  const nodeRecord = node as Record<string, unknown>;
+  for (const key of kiwiOverridePayloadKeys(override)) {
+    if (key === "componentPropAssignments") {
+      const incoming = override.componentPropAssignments;
+      if (!incoming) {
+        continue;
+      }
+      const existing = node.componentPropAssignments;
+      if (existing && existing.length > 0) {
+        const incomingKeys = new Set(incoming.map((a) => guidToString(a.defID)));
+        const merged = existing.filter((a) => !incomingKeys.has(guidToString(a.defID)));
+        node.componentPropAssignments = [...merged, ...incoming];
+      } else {
+        node.componentPropAssignments = incoming;
+      }
+      continue;
+    }
+    nodeRecord[key] = override[key];
+  }
+}
+
+/**
  * Apply symbol overrides to cloned nodes.
  *
- * Handles both single-level and multi-level guidPaths:
- * - Single-level (guids.length === 1): Applied directly to matching node
- * - Multi-level (guids.length > 1): First GUID targets an intermediate node;
- *   remaining path is propagated as `derivedSymbolData` on that node so the
- *   override is applied when the nested instance is resolved later.
+ * Each override carries a `guidPath` that names a slot relative to the
+ * cloned tree's root. The algorithm walks the path one guid at a time:
+ *
+ *   1. If the path has length 1, the matching descendant is the target
+ *      and the override's payload is applied via
+ *      `applyKiwiOverrideToNode`. Direct entries with the same target
+ *      merge (later entries overwrite earlier ones per field).
+ *
+ *   2. If the path is longer, the walker descends into the child
+ *      identified by `guidPath[0]`:
+ *       - When that child is an INSTANCE, the path-tail is appended to
+ *         its `derivedSymbolData` slot; the inner `resolveInstance`
+ *         pass picks it up later and re-runs the same walker against
+ *         the instance's own SYMBOL descendants.
+ *       - When that child is a non-INSTANCE container (FRAME, GROUP,
+ *         …), the walker recurses into its `children` with the
+ *         path-tail still untouched; descendant lookups happen step by
+ *         step against the local children's own GUIDs, so no runtime
+ *         path re-translation is needed.
+ *
+ * This is the same forwarding pattern as the renderer-side
+ * `forwardOverrideToDescendantInstance`. The two pipelines share the
+ * single SSoT semantic: "carry a payload to the INSTANCE that owns
+ * the final slot". The renderer-side helper takes one penultimate-walk
+ * because the renderer's design-tree path is already in the local
+ * namespace; the kiwi-side walker takes the same step-wise descent
+ * because the kiwi tree's per-step guids are also in the local
+ * children's namespace. Neither side performs runtime path
+ * re-translation.
  */
 function applyOverrides(
   nodes: MutableFigNode[],
@@ -607,116 +730,103 @@ function applyOverrides(
   styleRegistry?: FigStyleRegistry,
   symbolMap?: ReadonlyMap<string, FigNode>,
 ): void {
-  // Separate direct (depth-1) and nested (depth-N>1) overrides
-  // Direct overrides are MERGED: multiple entries for the same GUID combine their properties
-  const directMap = new Map<string, FigKiwiSymbolOverride>();
-  const nestedMap = new Map<string, FigKiwiSymbolOverride[]>();
-
   for (const override of overrides) {
-    const guids = override.guidPath?.guids;
-    if (!guids || guids.length === 0) {continue;}
-
-    if (guids.length === 1) {
-      const key = guidToString(guids[0]);
-      const existing = directMap.get(key);
-      if (existing) {
-        // Merge: later entries' properties override earlier ones
-        directMap.set(key, { ...existing, ...override });
-      } else {
-        directMap.set(key, override);
-      }
-    } else {
-      // Multi-level: key by first GUID, strip it from the path
-      const firstKey = guidToString(guids[0]);
-      const shortened: FigKiwiSymbolOverride = {
-        ...override,
-        guidPath: { guids: guids.slice(1) },
-      };
-      const arrRef = { value: nestedMap.get(firstKey) };
-      if (!arrRef.value) {
-        arrRef.value = [];
-        nestedMap.set(firstKey, arrRef.value);
-      }
-      arrRef.value.push(shortened);
-    }
+    applyOverrideAtPath(nodes, override, styleRegistry, symbolMap);
   }
+}
 
-  function applyToNode(node: MutableFigNode): void {
-    const guid = node.guid;
-
-    if (guid) {
-      const guidStr = guidToString(guid);
-
-      // Apply direct override
-      const direct = directMap.get(guidStr);
-      if (direct) {
-        for (const [key, value] of Object.entries(direct)) {
-          if (key === "guidPath") {continue;}
-          if (key === "componentPropAssignments") {
-            // Merge CPA arrays: existing entries + override entries.
-            // Override entries with the same defID take precedence.
-            const existing = node[key] as FigComponentPropAssignment[] | undefined;
-            const incoming = value as FigComponentPropAssignment[];
-            if (existing && existing.length > 0) {
-              const incomingKeys = new Set(incoming.map((a) => guidToString(a.defID)));
-              const merged = existing.filter((a) => !incomingKeys.has(guidToString(a.defID)));
-              merged.push(...incoming);
-              node[key] = merged;
-            } else {
-              node[key] = value as FigComponentPropAssignment[];
-            }
-          } else {
-            node[key] = value;
-          }
-        }
-
-        // If the override set styleIdForFill or styleIdForStrokeFill,
-        // resolve them to actual fillPaints/strokePaints now.
-        if (styleRegistry && (direct.styleIdForFill !== undefined || direct.styleIdForStrokeFill !== undefined)) {
-          resolveStyleIdOnMutableNode(node, styleRegistry);
-        }
-      }
-
-      // Propagate nested overrides
-      const nested = nestedMap.get(guidStr);
-      if (nested && nested.length > 0) {
-        const nodeType = getNodeType(node);
-        if (nodeType === "INSTANCE") {
-          // INSTANCE: store as derivedSymbolData for resolveInstance() to consume
-          const existing = node.derivedSymbolData as FigKiwiSymbolOverride[] | undefined;
-          node.derivedSymbolData = [...(existing ?? []), ...nested];
-        } else {
-          // Non-INSTANCE container (FRAME, GROUP, etc.): apply recursively
-          // to children immediately, since these nodes don't go through
-          // resolveInstance() and derivedSymbolData would be lost.
-          //
-          // The propagated `nested` entries still use source-namespace GUIDs
-          // at their first level. Rebuild a translation map against this
-          // container's descendants so depth-1 DSD entries can find their
-          // local targets. Without this, source GUIDs like `3176:15094`
-          // never match local Action INSTANCEs, and depth-N entries routed
-          // through them don't reach the right Action.
-          const containerChildren = safeChildren(node) as MutableFigNode[];
-          if (containerChildren.length > 0) {
-            const subTranslation = buildGuidTranslationMap(containerChildren, nested, undefined, undefined, symbolMap);
-            const translatedNested = subTranslation.size > 0
-              ? translateOverrides(nested, subTranslation)
-              : nested;
-            applyOverrides(containerChildren, translatedNested, styleRegistry, symbolMap);
-          }
-        }
-      }
-    }
-
-    // Recurse to children
-    for (const child of safeChildren(node) as MutableFigNode[]) {
-      applyToNode(child);
-    }
+/**
+ * Walk `override.guidPath` through `nodes`, applying the override at
+ * its target slot. See `applyOverrides` for the full algorithm.
+ *
+ * Returns silently when any step fails to find its target — a
+ * misaddressed override is a soft no-op (mirrors the renderer-side
+ * helper's "target unreachable" branch).
+ */
+function applyOverrideAtPath(
+  nodes: readonly MutableFigNode[],
+  override: FigKiwiSymbolOverride,
+  styleRegistry?: FigStyleRegistry,
+  symbolMap?: ReadonlyMap<string, FigNode>,
+): void {
+  const guids = override.guidPath?.guids;
+  if (!guids || guids.length === 0) {
+    return;
   }
+  // Locate the descendant whose guid equals `guids[0]` anywhere in
+  // the subtree. Kiwi-side overrides may address slots at any depth,
+  // not just depth 1. Subsequent guids descend into that
+  // descendant's immediate children one step at a time.
+  const headStr = guidToString(guids[0]);
+  const child = findDescendantByGuid(nodes, headStr);
+  if (!child) {
+    return;
+  }
+  if (guids.length === 1) {
+    applyDirectOverride(child, override, styleRegistry);
+    return;
+  }
+  // Multi-guid: forward the tail to the INSTANCE that owns it.
+  const tail: FigKiwiSymbolOverride = {
+    ...override,
+    guidPath: { guids: guids.slice(1) },
+  };
+  if (getNodeType(child) === "INSTANCE") {
+    // INSTANCE boundary: the inner `resolveInstance` will run this
+    // walker again against its own SYMBOL descendants. Append the
+    // tail onto its DSD so the inner pass picks it up.
+    child.derivedSymbolData = [...(child.derivedSymbolData ?? []), tail];
+    return;
+  }
+  // Non-INSTANCE container: descend with the tail untouched.
+  applyOverrideAtPath(mutableChildren(child), tail, styleRegistry, symbolMap);
+}
 
+/**
+ * Apply a depth-1 override's payload to its target node, and resolve
+ * any styleId references it set into concrete paint arrays.
+ */
+function applyDirectOverride(
+  node: MutableFigNode,
+  override: FigKiwiSymbolOverride,
+  styleRegistry: FigStyleRegistry | undefined,
+): void {
+  applyKiwiOverrideToNode(node, override);
+  if (styleRegistry && (override.styleIdForFill !== undefined || override.styleIdForStrokeFill !== undefined)) {
+    resolveStyleIdOnMutableNode(node, styleRegistry);
+  }
+}
+
+/**
+ * Find a descendant whose `guid` (as `sessionID:localID` string)
+ * equals `guidStr`, searching the whole subtree of `nodes`.
+ *
+ * Kiwi-side overrides may address slots authored anywhere in the
+ * SYMBOL's descendant tree, not just at depth 1. The applier's
+ * walk semantically matches the renderer-side `findInDesignTree`
+ * (which itself is a DFS through `dfsById`).
+ *
+ * After the matched node is returned, subsequent path steps
+ * descend into ITS immediate children — so the walk is actually
+ * "deep DFS for path[0], then stepwise descent for path[1..]".
+ * The result is the same shape as the renderer-side helper while
+ * keeping kiwi-side concerns (no design-namespace pre-resolution)
+ * intact.
+ */
+function findDescendantByGuid(
+  nodes: readonly MutableFigNode[],
+  guidStr: string,
+): MutableFigNode | undefined {
   for (const node of nodes) {
-    applyToNode(node);
+    if (node.guid && guidToString(node.guid) === guidStr) {
+      return node;
+    }
+    const found = findDescendantByGuid(mutableChildren(node), guidStr);
+    if (found) {
+      return found;
+    }
   }
+  return undefined;
 }
 
 // =============================================================================

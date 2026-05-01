@@ -64,3 +64,10 @@ export {
   styleRefKey,
   styleRefKeys,
 } from "./style-registry";
+
+export {
+  projectVariableAnyValue,
+  findVariableConsumptionExpression,
+  resolveVariantOverride,
+  type ResolveVariantResult,
+} from "./variable-resolution";

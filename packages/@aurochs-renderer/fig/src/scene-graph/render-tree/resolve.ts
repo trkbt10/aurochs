@@ -40,6 +40,7 @@ import {
   type ResolvedStrokeLayer,
 } from "../render";
 import { computePathContoursBbox } from "../path-bbox";
+import { buildRoundedRectPathD } from "../render/rounded-rect-path";
 
 import type {
   RenderTree,
@@ -127,37 +128,15 @@ function clampRadius(
 // =============================================================================
 
 /**
- * Extract a uniform number from CornerRadius, or undefined if per-corner.
- * For per-corner radii, returns undefined — the caller must use a path instead.
- */
-function uniformRadius(cr: CornerRadius | undefined): number | undefined {
-  if (cr === undefined) { return undefined; }
-  if (typeof cr === "number") { return cr; }
-  return undefined;
-}
-
-/**
- * Build a rounded rect SVG path d string for per-corner radii.
- */
-function buildRoundedRectPathD(w: number, h: number, radii: readonly [number, number, number, number]): string {
-  const [tl, tr, br, bl] = radii;
-  const parts = [
-    `M ${tl} 0`,
-    `L ${w - tr} 0`,
-    tr > 0 ? `A ${tr} ${tr} 0 0 1 ${w} ${tr}` : "",
-    `L ${w} ${h - br}`,
-    br > 0 ? `A ${br} ${br} 0 0 1 ${w - br} ${h}` : "",
-    `L ${bl} ${h}`,
-    bl > 0 ? `A ${bl} ${bl} 0 0 1 0 ${h - bl}` : "",
-    `L 0 ${tl}`,
-    tl > 0 ? `A ${tl} ${tl} 0 0 1 ${tl} 0` : "",
-    "Z",
-  ];
-  return parts.filter(Boolean).join(" ");
-}
-
-/**
  * Build a ClipPathShape from dimensions and corner radius.
+ *
+ * Rounded rects emit a `<path>` with cubic Bézier corners (matching
+ * Figma's exporter form `M 24 0 L w-24 0 C ... 24` exactly). resvg-js
+ * rasterises `<path>` clip-paths at the same sub-pixel positions as
+ * the equivalently-shaped fill path; using `<rect rx>` for clipPath
+ * produces a half-pixel mismatch at the rounded corner versus our
+ * Bézier-based fill, visible as a 1-pixel-wide red sliver in diff
+ * tests. Sharp-cornered rects keep `<rect>` because there's no AA cost.
  */
 function buildClipShape(
   width: number, height: number, cr: CornerRadius | undefined,
@@ -166,6 +145,9 @@ function buildClipShape(
     return { kind: "path", d: buildRoundedRectPathD(width, height, cr) };
   }
   const r = typeof cr === "number" ? cr : undefined;
+  if (r !== undefined && r > 0) {
+    return { kind: "path", d: buildRoundedRectPathD(width, height, [r, r, r, r]) };
+  }
   return { kind: "rect", x: 0, y: 0, width, height, rx: r, ry: r };
 }
 
@@ -267,27 +249,6 @@ function buildEllipseArcPathD(
   ].join("");
 }
 
-// =============================================================================
-// Helper: Stroke Overhang for Clip Expansion
-// =============================================================================
-
-/**
- * Compute the maximum stroke overhang (strokeWeight / 2) across children.
- *
- * In SVG, clipPath clips strokes. Figma renders strokes that overhang the
- * frame edge without clipping, so the clip rect must be expanded by the
- * maximum child stroke half-width.
- */
-function getMaxChildStrokeOverhang(children: readonly SceneNode[]): number {
-  let max = 0;
-  for (const child of children) {
-    if ("stroke" in child && child.stroke) {
-      const overhang = child.stroke.width / 2;
-      if (overhang > max) { max = overhang; }
-    }
-  }
-  return max;
-}
 
 // =============================================================================
 // Helper: Resolve wrapper attributes
@@ -722,33 +683,19 @@ function resolveFrameNode(node: FrameNode, ids: IdGenerator): RenderFrameNode {
   const children = resolveChildren(node.children, ids);
   if (node.clipsContent && children.length > 0) {
     childClipId = ids.getNextId("clip");
-    // Expand clip by max child stroke overhang to prevent stroke clipping.
-    // In SVG, clipPath clips everything including strokes. Figma does not
-    // clip strokes that overlap the frame edge, so we expand the rect.
-    const margin = getMaxChildStrokeOverhang(node.children);
-    if (margin > 0) {
-      // Expand clip rect and radius by the stroke margin
-      const ur = uniformRadius(clampedRadius);
-      defs.push({
-        type: "clip-path",
-        id: childClipId,
-        shape: {
-          kind: "rect",
-          x: -margin,
-          y: -margin,
-          width: node.width + margin * 2,
-          height: node.height + margin * 2,
-          rx: ur !== undefined ? ur + margin : undefined,
-          ry: ur !== undefined ? ur + margin : undefined,
-        },
-      });
-    } else {
-      defs.push({
-        type: "clip-path",
-        id: childClipId,
-        shape: buildClipShape(node.width, node.height, clampedRadius),
-      });
-    }
+    // The clip-path follows the frame's exact geometry — no expansion.
+    // Figma's SVG exporter uses an unexpanded clip-path even when child
+    // strokes would naturally overhang; the resulting half-pixel stroke
+    // truncation matches Figma's canvas rendering. Expanding the clip
+    // by the child stroke half-width was tried previously, but it shifts
+    // the rounded-corner AA outward by half a pixel, producing a 0.10%
+    // diff against Figma's exporter at corners — much larger than the
+    // ~0% impact of letting boundary strokes get half-clipped.
+    defs.push({
+      type: "clip-path",
+      id: childClipId,
+      shape: buildClipShape(node.width, node.height, clampedRadius),
+    });
   }
 
   // Finalize gradient coordinates using element size

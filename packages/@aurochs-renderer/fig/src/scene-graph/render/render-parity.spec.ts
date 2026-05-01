@@ -265,7 +265,7 @@ describe("Effects resolution (shared SoT)", () => {
     expect(result).toBeUndefined();
   });
 
-  it("resolves drop shadow", () => {
+  it("resolves NORMAL-blend drop shadow", () => {
     const effects: Effect[] = [{
       type: "drop-shadow",
       offset: { x: 2, y: 4 },
@@ -276,14 +276,62 @@ describe("Effects resolution (shared SoT)", () => {
     const result = resolveEffects(effects, ids);
 
     expect(result).toBeDefined();
-    // Filter ID format: "filter-N". Exact N varies because each named
-    // primitive result also consumes an ID. We assert the filterAttr
-    // references some filter-N id.
     expect(result!.filterAttr).toMatch(/^url\(#filter-\d+\)$/);
-    // Canonical drop-shadow recipe (Figma-compatible, antialiasing-safe):
-    //   feFlood, feComposite(in), feOffset, feGaussianBlur, feMerge.
+    // NORMAL-blend recipe matches Figma's exporter for shadows without
+    // a per-effect blend mode — no composite-out so blurred-hardAlpha
+    // shadow shows through translucent sources:
+    //   1. feColorMatrix (SourceAlpha → hardAlpha)
+    //   2. feOffset
+    //   3. feGaussianBlur
+    //   4. feColorMatrix → tinted RGBA shadow
+    //   5. feMerge (composites shadow under SourceGraphic)
     expect(result!.primitives).toHaveLength(5);
+    expect(result!.primitives[0].type).toBe("feColorMatrix");
+    expect(result!.primitives[1].type).toBe("feOffset");
+    expect(result!.primitives[2].type).toBe("feGaussianBlur");
+    expect(result!.primitives[3].type).toBe("feColorMatrix");
     expect(result!.primitives[4].type).toBe("feMerge");
+  });
+
+  it("resolves OVERLAY-blend drop shadow with composite-out", () => {
+    const effects: Effect[] = [{
+      type: "drop-shadow",
+      offset: { x: 0, y: 4 },
+      radius: 24,
+      color: BLACK_50,
+      blendMode: "overlay",
+    }];
+    const ids = createIdGenerator();
+    const result = resolveEffects(effects, ids);
+
+    expect(result).toBeDefined();
+    // Non-NORMAL recipe adds composite-out + final feBlend with the
+    // configured mode. The composite-out is what prevents shadow tint
+    // from leaking through translucent rounded-corner AA edges into
+    // OVERLAY-blended sources (Passport/Flighty pink-halo regression).
+    //   1. feColorMatrix (SourceAlpha → hardAlpha)
+    //   2. feOffset
+    //   3. feGaussianBlur
+    //   4. feComposite (out, in2=hardAlpha)
+    //   5. feColorMatrix → tinted RGBA shadow
+    //   6. feBlend (mode=overlay, in2=SourceGraphic)
+    //   7. feMerge
+    expect(result!.primitives).toHaveLength(7);
+    expect(result!.primitives[0].type).toBe("feColorMatrix");
+    expect(result!.primitives[1].type).toBe("feOffset");
+    expect(result!.primitives[2].type).toBe("feGaussianBlur");
+    expect(result!.primitives[3].type).toBe("feComposite");
+    expect(result!.primitives[4].type).toBe("feColorMatrix");
+    expect(result!.primitives[5].type).toBe("feBlend");
+    expect(result!.primitives[6].type).toBe("feMerge");
+    const composite = result!.primitives[3];
+    if (composite.type === "feComposite") {
+      expect(composite.operator).toBe("out");
+    }
+    const blend = result!.primitives[5];
+    if (blend.type === "feBlend") {
+      expect(blend.mode).toBe("overlay");
+    }
   });
 
   it("resolves SHARP drop shadow (radius=0) using Figma's hardAlpha-out recipe", () => {

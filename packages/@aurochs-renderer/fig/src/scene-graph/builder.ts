@@ -384,39 +384,82 @@ function findInDesignTree(
 }
 
 /**
- * Walk an override path through a design sub-tree step by step.
- * Delegates each step to `findInDesignTree` (the slot-lookup SoT)
- * for SSoT on "is this guid reachable". The walk additionally
- * materialises nested INSTANCE children after each step so subsequent
- * steps can descend.
+ * Materialise a found INSTANCE's children from its SYMBOL when they
+ * are empty. The path-walker calls this after each successful step so
+ * the next step has descendants to descend into; without it, a
+ * multi-guid override addressing slots inside a freshly-cloned but
+ * unexpanded INSTANCE would dead-end on the second guid.
+ *
+ * SoT for "after a path-walk lands on an INSTANCE, expose its
+ * SYMBOL-descendant slot tree". `findInDesignTree`'s own `onVisit`
+ * hook expands intermediate INSTANCEs during the DFS but skips the
+ * matched node itself (DFS short-circuits on match before invoking
+ * onVisit), so this function is the second half of the
+ * pair-with-findInDesignTree.
+ */
+function expandInstanceChildrenIfEmpty(
+  found: MutableFigDesignNode,
+  symbolMap: ReadonlyMap<string, FigDesignNode>,
+): void {
+  if (found.type !== FIG_NODE_TYPE.INSTANCE) {
+    return;
+  }
+  if (mutableChildren(found).length > 0) {
+    return;
+  }
+  const nestedSym = found.symbolId ? symbolMap.get(found.symbolId) : undefined;
+  if (!nestedSym) {
+    return;
+  }
+  found.children = (nestedSym.children ?? []).map(deepCloneDesignNode);
+}
+
+/**
+ * Walk a sequence of GUID-strings through a design sub-tree, returning
+ * the node located at the requested step (last element of `ids`).
+ *
+ * Each step delegates to `findInDesignTree` (the slot-lookup SoT) and
+ * to `expandInstanceChildrenIfEmpty` (the materialization SoT) so the
+ * entire override-path traversal is a single shared algorithm. Both
+ * `findNodeByOverridePath` (uses the full path) and
+ * `forwardOverrideToDescendantInstance` (uses path[0..length-1]) call
+ * this same walker — the only difference is which slice of the path
+ * they pass in.
+ *
+ * Returns `undefined` when any step fails to find its target.
+ */
+function walkOverridePathIds(
+  nodes: readonly MutableFigDesignNode[],
+  ids: readonly string[],
+  symbolMap: ReadonlyMap<string, FigDesignNode>,
+): MutableFigDesignNode | undefined {
+  let current: readonly MutableFigDesignNode[] = nodes;
+  let found: MutableFigDesignNode | undefined;
+  for (const id of ids) {
+    found = findInDesignTree(current, id, symbolMap);
+    if (!found) {
+      return undefined;
+    }
+    expandInstanceChildrenIfEmpty(found, symbolMap);
+    current = mutableChildren(found);
+  }
+  return found;
+}
+
+/**
+ * Resolve the descendant a multi-guid override addresses. Convenience
+ * wrapper around `walkOverridePathIds` that takes the override directly.
+ *
+ * Returns the matched `MutableFigDesignNode` widened to
+ * `SceneBuilderNode` because the caller writes `__pinnedDsdFields`
+ * onto it; the widening is sound because that field is optional.
  */
 function findNodeByOverridePath(
   nodes: readonly MutableFigDesignNode[],
   override: SymbolOverride,
   symbolMap: ReadonlyMap<string, FigDesignNode>,
 ): SceneBuilderNode | undefined {
-  const ids = overridePathToIds(override);
-  let current: readonly MutableFigDesignNode[] = nodes;
-  let found: MutableFigDesignNode | undefined;
-
-  for (const id of ids) {
-    found = findInDesignTree(current, id, symbolMap);
-    if (!found) { return undefined; }
-    // Materialise the found INSTANCE's children so the next path step
-    // (if any) descends into the SYMBOL-descendant slot space.
-    if (found.type === FIG_NODE_TYPE.INSTANCE && mutableChildren(found).length === 0) {
-      const nestedSym = found.symbolId ? symbolMap.get(found.symbolId) : undefined;
-      if (nestedSym) {
-        found.children = (nestedSym.children ?? []).map(deepCloneDesignNode);
-      }
-    }
-    current = mutableChildren(found);
-  }
-  // SceneBuilderNode is a structural extension of MutableFigDesignNode
-  // (the only added field is the optional __pinnedDsdFields). Every
-  // MutableFigDesignNode satisfies that shape with the field absent, so
-  // the widening is type-sound.
-  return found;
+  return walkOverridePathIds(nodes, overridePathToIds(override), symbolMap);
 }
 
 /**
@@ -558,6 +601,11 @@ function applySymbolOverridesToChildren(
     }
 
     applyOverrideToNode(target, override);
+
+    // Forward multi-guid overrides through the INSTANCE chain so the
+    // inner INSTANCE's resolve pass picks them up on freshly-cloned
+    // descendants. SSoT: `forwardOverrideToDescendantInstance`.
+    forwardOverrideToDescendantInstance(override, children, symbolMap, "overrides");
 
     const targetFills = resolveStyleRef(target.styleIdForFill, styleRegistry.fills);
     if (targetFills) { target.fills = targetFills; }
@@ -744,60 +792,96 @@ function applyDerivedSymbolData(
     applyOverrideToNode(target, entry);
     if (entry.size !== undefined) pinned.add("size");
     if (entry.transform !== undefined) pinned.add("transform");
-    // Outer-cascade `derivedTextData` propagation.
+    // Forward multi-guid DSD entries through the INSTANCE chain so the
+    // inner INSTANCE's Step 5 (applyDerivedSymbolData) picks them up
+    // on freshly-cloned descendants. The forwarded copy is appended
+    // AFTER any authored DSDs so it wins last-wins-merge.
     //
-    // When this entry's path descended through an INSTANCE chain (i.e.
-    // length > 1), the outer cascade's `derivedTextData` write may be
-    // overwritten by an inner INSTANCE's *authored* DSD targeting the
-    // same descendant — Close SYMBOL's authored Symbol 1 INSTANCE
-    // 15:407 has DSD `[15:290] → blob=673` (default-state glyph)
-    // which fires during Symbol 1 buildNode and clobbers the outer
-    // cascade's CPA-rebaked blob=740 (xmark).
+    // Concrete cases that require this:
+    //   - `derivedTextData`: Close SYMBOL's authored Symbol 1 INSTANCE
+    //     15:407 has DSD `[15:290] → blob=673` which would clobber
+    //     the outer CPA-rebaked blob=740 (xmark) without forwarding.
+    //   - `visible` and other payload fields: Toolbar - Top Button
+    //     Group 1 hides the inner Label TEXT via a depth-2 path.
     //
-    // The kiwi-side resolver (`@aurochs/fig/symbols:applyOverrides`)
-    // avoids this by appending propagated entries to the descendant
-    // INSTANCE's own `derivedSymbolData` array — array-order with
-    // `{...existing, ...override}` last-wins-merge means the outer
-    // cascade's entry wins.
-    //
-    // Mirror that behaviour here for the dtd-bearing case: when a
-    // multi-guid path's penultimate node is an INSTANCE and the entry
-    // carries `derivedTextData`, also append a single-guid copy
-    // (path = [final-guid]) onto that INSTANCE's `derivedSymbolData`.
-    // That copy will be re-applied last during the inner INSTANCE's
-    // own step-5, overruling the inner's authored DSD.
-    if (
-      entry.derivedTextData !== undefined
-      && entry.guidPath?.guids
-      && entry.guidPath.guids.length >= 2
-    ) {
-      // Locate the penultimate node in the path (the descendant
-      // INSTANCE whose buildNode will later process its own DSD).
-      const ids = overridePathToIds(entry);
-      const penultimateIds = ids.slice(0, -1);
-      const finalGuid = entry.guidPath.guids[entry.guidPath.guids.length - 1];
-      let walker: readonly MutableFigDesignNode[] = children;
-      let pen: MutableFigDesignNode | undefined;
-      for (const id of penultimateIds) {
-        pen = findInDesignTree(walker, id, ctx.symbolMap);
-        if (!pen) break;
-        if (pen.type === FIG_NODE_TYPE.INSTANCE && mutableChildren(pen).length === 0) {
-          const nestedSym = pen.symbolId ? ctx.symbolMap.get(pen.symbolId) : undefined;
-          if (nestedSym) pen.children = (nestedSym.children ?? []).map(deepCloneDesignNode);
-        }
-        walker = mutableChildren(pen);
-      }
-      if (pen && pen.type === FIG_NODE_TYPE.INSTANCE) {
-        const forwarded: SymbolOverride = {
-          guidPath: { guids: [finalGuid] },
-          derivedTextData: entry.derivedTextData,
-        };
-        // Append AFTER any authored DSDs so it wins last-wins-merge in
-        // the inner's step-5 (mirrors kiwi resolver line 687).
-        pen.derivedSymbolData = [...(pen.derivedSymbolData ?? []), forwarded];
-      }
+    // SSoT: `forwardOverrideToDescendantInstance` (mirrored on the
+    // `applySymbolOverridesToChildren` Pass 2 side).
+    forwardOverrideToDescendantInstance(entry, children, ctx.symbolMap, "derivedSymbolData");
+  }
+}
+
+/**
+ * Which slot on a descendant INSTANCE should an outer-cascade override
+ * be appended to? Both `overrides` and `derivedSymbolData` are arrays
+ * of `SymbolOverride`, but the inner INSTANCE's resolve pass iterates
+ * them in different steps — the caller picks the right one.
+ */
+type ForwardingSlot = "overrides" | "derivedSymbolData";
+
+/**
+ * Forward an outer-cascade override down to the penultimate INSTANCE
+ * in its `guidPath`, so the inner INSTANCE's own resolve pass re-applies
+ * the override and beats any authored `[finalGuid]` entry the inner
+ * already carries.
+ *
+ * Why this is the SSoT for outer-cascade propagation: when a
+ * multi-guid override descends through INSTANCE chains, the inner
+ * INSTANCE's `resolveDesignInstance` clones fresh from its SYMBOL when
+ * `ownChildren` are empty, AND `resolveNestedInstances` flattens the
+ * inner INSTANCE to a FRAME after resolution. Both points discard
+ * outer-cascade mutations on intermediate descendants. Appending a
+ * single-guid copy onto the inner INSTANCE's own `overrides` /
+ * `derivedSymbolData` survives both: the inner resolve picks it up
+ * during its own Pass 2 / Step 5, applying the outer cascade's payload
+ * to a freshly-cloned descendant.
+ *
+ * The two callers (`applySymbolOverridesToChildren` Pass 2 and
+ * `applyDerivedSymbolData`) only differ in which slot they target:
+ *   - Pass 2 forwards to `overrides` (inner runs Pass 2 again)
+ *   - DSD forwards to `derivedSymbolData` (inner runs Step 5 again)
+ *
+ * Returns `true` when a forwarded entry was appended, `false`
+ * otherwise (path too short, no payload, penultimate node not an
+ * INSTANCE, or path broken).
+ */
+function forwardOverrideToDescendantInstance(
+  override: SymbolOverride,
+  children: readonly MutableFigDesignNode[],
+  symbolMap: ReadonlyMap<string, FigDesignNode>,
+  slot: ForwardingSlot,
+): boolean {
+  const guids = override.guidPath?.guids;
+  if (!guids || guids.length < 2) {
+    return false;
+  }
+  // Payload check: at least one non-routing field must be set.
+  // `overriddenSymbolID` alone is a variant-swap directive the inner
+  // INSTANCE already resolves through its own pipeline; forwarding it
+  // would be a no-op.
+  let hasPayload = false;
+  for (const key of overrideFieldKeys(override)) {
+    if (key !== "overriddenSymbolID") {
+      hasPayload = true;
+      break;
     }
   }
+  if (!hasPayload) {
+    return false;
+  }
+  const ids = overridePathToIds(override);
+  const finalGuid = guids[guids.length - 1];
+  // Walk to the penultimate node via the shared override-path walker.
+  const pen = walkOverridePathIds(children, ids.slice(0, -1), symbolMap);
+  if (!pen || pen.type !== FIG_NODE_TYPE.INSTANCE) {
+    return false;
+  }
+  const forwarded: SymbolOverride = { ...override, guidPath: { guids: [finalGuid] } };
+  if (slot === "overrides") {
+    pen.overrides = [...(pen.overrides ?? []), forwarded];
+  } else {
+    pen.derivedSymbolData = [...(pen.derivedSymbolData ?? []), forwarded];
+  }
+  return true;
 }
 
 /**
@@ -1442,12 +1526,8 @@ function extractEnumName(value: unknown): string | undefined {
   return undefined;
 }
 
-function extractAutoResizeName(rawAutoResize: unknown): string | undefined {
-  return extractEnumName(rawAutoResize);
-}
-
 function resolveTextAutoResize(rawAutoResize: unknown): TextAutoResize {
-  const name = extractAutoResizeName(rawAutoResize);
+  const name = extractEnumName(rawAutoResize);
   if (name === "NONE" || name === "HEIGHT" || name === "TRUNCATE") {
     return name;
   }

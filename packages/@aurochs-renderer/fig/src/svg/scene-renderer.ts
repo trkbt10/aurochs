@@ -562,28 +562,18 @@ import type { CornerRadius, BlendMode } from "../scene-graph/types";
 import type { ResolvedFillLayer } from "../scene-graph/render-tree";
 import type { ResolvedStrokeLayer } from "../scene-graph/render";
 
-/**
- * Build a rounded rect SVG path d string for per-corner radii.
- */
-function buildRoundedRectPathD(w: number, h: number, radii: readonly [number, number, number, number]): string {
-  const [tl, tr, br, bl] = radii;
-  const parts = [
-    `M ${tl} 0`,
-    `L ${w - tr} 0`,
-    tr > 0 ? `A ${tr} ${tr} 0 0 1 ${w} ${tr}` : "",
-    `L ${w} ${h - br}`,
-    br > 0 ? `A ${br} ${br} 0 0 1 ${w - br} ${h}` : "",
-    `L ${bl} ${h}`,
-    bl > 0 ? `A ${bl} ${bl} 0 0 1 0 ${h - bl}` : "",
-    `L 0 ${tl}`,
-    tl > 0 ? `A ${tl} ${tl} 0 0 1 ${tl} 0` : "",
-    "Z",
-  ];
-  return parts.filter(Boolean).join(" ");
-}
+import { buildRoundedRectPathD } from "../scene-graph/render/rounded-rect-path";
 
 /**
- * Render a rectangle shape, using <rect> for uniform radius or <path> for per-corner.
+ * Render a rectangle shape.
+ *
+ * Sharp-cornered rects (cr === undefined or 0) use `<rect>` because
+ * there's no AA cost and `<rect>` produces smaller markup. Rounded
+ * rects always use `<path>` with cubic Bézier corners — matching
+ * Figma's SVG exporter's exact path d-string ensures the rounded
+ * corner AA aligns to the same sub-pixels as actual exports, which
+ * SVG's `<rect rx>` (rasterised by resvg-js via arc primitives) does
+ * not consistently match.
  */
 function formatRectShape(
   w: number, h: number, cr: CornerRadius | undefined,
@@ -597,10 +587,16 @@ function formatRectShape(
       ...strokeAttrs,
     });
   }
+  if (cr !== undefined && cr > 0) {
+    return path({
+      d: buildRoundedRectPathD(w, h, [cr, cr, cr, cr]),
+      ...fillAttrs,
+      ...strokeAttrs,
+    });
+  }
   return rect({
     x: 0, y: 0,
     width: w, height: h,
-    rx: cr, ry: cr,
     ...fillAttrs,
     ...strokeAttrs,
   });
@@ -639,10 +635,17 @@ function formatMultiFillRectLayers(
         style,
       });
     }
+    if (cr !== undefined && cr > 0) {
+      return path({
+        d: buildRoundedRectPathD(w, h, [cr, cr, cr, cr]),
+        ...fillAttrs,
+        ...sAttrs,
+        style,
+      });
+    }
     return rect({
       x: 0, y: 0,
       width: w, height: h,
-      rx: cr, ry: cr,
       ...fillAttrs,
       ...sAttrs,
       style,

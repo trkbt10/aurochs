@@ -608,8 +608,12 @@ function collectRawFields(node: FigNode): Record<string, unknown> | undefined {
  * once and verbatim. Callers do not branch on node.type.
  *
  * SSoT invariants:
- *   - Every resolved guid on every path is in the namespace it will be
- *     looked up in. No downstream `buildGuidTranslationMap` call exists.
+ *   - Every resolved guid on every path is in the FigDesignNode
+ *     namespace the renderer's `findNodeByOverridePath` looks up in.
+ *     The kiwi-side runtime resolver (`@aurochs/fig/symbols/symbol-resolver`)
+ *     may still call `buildGuidTranslationMap` for its own re-translation
+ *     of nested-cascade DSDs onto local children — that's a separate
+ *     concern from this initial path resolution.
  *   - Single pass per path: no "first-level vs tail" asymmetry, no
  *     deferred secondary resolution.
  *   - COMPONENT_SET variant semantics: when a sibling entry declares
