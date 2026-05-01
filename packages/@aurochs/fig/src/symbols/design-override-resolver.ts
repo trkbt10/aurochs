@@ -20,7 +20,7 @@
  * export from here.
  */
 
-import type { FigKiwiSymbolOverride, FigComponentPropAssignment, FigPaint, FigVector, FigNodeType } from "../types";
+import type { FigKiwiSymbolOverride, FigComponentPropAssignment, FigPaint, FigVector, FigNodeType, FigNode, KiwiEnumValue } from "../types";
 import type { FigBlob } from "../parser";
 import { buildGuidTranslationMap, type GuidTranslationMap } from "./guid-translation";
 
@@ -178,12 +178,12 @@ function toRawOverride(o: DesignSymbolOverrideShape): FigKiwiSymbolOverride {
  * primitive, so the canonical "live" value is appropriate as a
  * placeholder when feeding domain content back through the SoT.
  */
-function designNodeToRawShape(node: DesignNodeShape): import("../types").FigNode {
+function designNodeToRawShape(node: DesignNodeShape): FigNode {
   // Domain FigPaint carries `type` as a string literal (union). The
   // raw-side `buildGuidTranslationMap` reads `p.type` and tolerates
   // both string and `{ name }` — we feed strings, which is supported.
   const hasImageFill = node.fills?.some((p) => p.type === "IMAGE") ?? false;
-  const PHASE_LIVE: import("../types").KiwiEnumValue = { value: 0, name: "LIVE" };
+  const PHASE_LIVE: KiwiEnumValue = { value: 0, name: "LIVE" };
   return {
     guid: parseGuid(node.id),
     phase: PHASE_LIVE,

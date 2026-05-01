@@ -20,6 +20,8 @@ import type {
   Fill,
   CornerRadius,
   ArcData,
+  Effect,
+  Stroke,
 } from "../types";
 
 import {
@@ -59,6 +61,10 @@ import type {
   RenderFrameBackground,
   RenderPathContour,
   RenderBackgroundBlur,
+  RenderMask,
+  ClipPathShape,
+  StrokeShape,
+  StrokeRendering,
 } from "./types";
 
 import type { BackgroundBlurEffect } from "../types";
@@ -368,7 +374,7 @@ function resolveMask(
   node: SceneNode,
   ids: IdGenerator,
   defs: RenderDef[],
-): import("./types").RenderMask | undefined {
+): RenderMask | undefined {
   if (!node.mask) {
     return undefined;
   }
@@ -401,11 +407,11 @@ function resolveMask(
  * is clipped to the visible outline.
  */
 function resolveBackgroundBlur(
-  effects: readonly import("../types").Effect[],
+  effects: readonly Effect[],
   bounds: { x: number; y: number; width: number; height: number },
   ids: IdGenerator,
   defs: RenderDef[],
-  shape?: import("./types").ClipPathShape,
+  shape?: ClipPathShape,
 ): RenderBackgroundBlur | undefined {
   const bgBlur = effects.find(
     (e): e is BackgroundBlurEffect => e.type === "background-blur",
@@ -416,7 +422,7 @@ function resolveBackgroundBlur(
 
   // Create a clip path for the foreignObject (same shape as the node)
   const clipId = ids.getNextId("bg-blur-clip");
-  const clipShape: import("./types").ClipPathShape = shape ?? {
+  const clipShape: ClipPathShape = shape ?? {
     kind: "rect", x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height,
   };
   defs.push({
@@ -529,14 +535,14 @@ function collectGradientDef(def: ResolvedFill["def"], defs: RenderDef[]): void {
  * (Frame/Rect with individualStrokeWeights).
  */
 function resolveStrokeRendering(
-  stroke: import("../types").Stroke,
+  stroke: Stroke,
   ids: IdGenerator,
   defs: RenderDef[],
   /** Shape descriptor for non-uniform stroke modes */
-  shape: import("./types").StrokeShape,
+  shape: StrokeShape,
   /** Clip shape for stroke-align mask (required for INSIDE/OUTSIDE) */
-  maskClipShape?: import("./types").ClipPathShape,
-): import("./types").StrokeRendering {
+  maskClipShape?: ClipPathShape,
+): StrokeRendering {
   const result = resolveStrokeResult(stroke, ids);
 
   // Collect gradient defs from any layer up-front so both the "layers"
@@ -621,7 +627,7 @@ function resolveFrameNode(node: FrameNode, ids: IdGenerator): RenderFrameNode {
   const maskShape = buildClipShape(node.width, node.height, clampedRadius);
 
   // Determine stroke rendering mode
-  let strokeRendering: import("./types").StrokeRendering | undefined;
+  let strokeRendering: StrokeRendering | undefined;
   if (node.individualStrokeWeights && node.stroke) {
     const result = resolveStrokeResult(node.stroke, ids);
     // When the stroke paint is a gradient, collect its <linearGradient>
@@ -660,11 +666,11 @@ function resolveFrameNode(node: FrameNode, ids: IdGenerator): RenderFrameNode {
       strokeAlign: result.attrs.strokeAlign,
     };
   } else if (node.stroke) {
-    const strokeShape: import("./types").StrokeShape = { kind: "rect", width: node.width, height: node.height, cornerRadius: clampedRadius };
+    const strokeShape: StrokeShape = { kind: "rect", width: node.width, height: node.height, cornerRadius: clampedRadius };
     strokeRendering = resolveStrokeRendering(node.stroke, ids, defs, strokeShape, maskShape);
   }
 
-  let background: import("./types").RenderFrameBackground | null = null;
+  let background: RenderFrameBackground | null = null;
   if (hasFills || strokeRendering) {
     const fillResult = hasFills
       ? resolveFillResult(node.fills[node.fills.length - 1], ids, defs)
@@ -741,7 +747,7 @@ function resolveRectNode(node: RectNode, ids: IdGenerator): RenderRectNode {
   const fillResult = resolveTopFillResult(node.fills, ids, defs);
   const fillLayers = resolveAllFillLayers(node.fills, ids, defs);
   const maskClipShape = buildClipShape(node.width, node.height, clampedRadius);
-  const rectStrokeShape: import("./types").StrokeShape = { kind: "rect", width: node.width, height: node.height, cornerRadius: clampedRadius };
+  const rectStrokeShape: StrokeShape = { kind: "rect", width: node.width, height: node.height, cornerRadius: clampedRadius };
   const strokeRendering = node.stroke
     ? resolveStrokeRendering(node.stroke, ids, defs, rectStrokeShape, maskClipShape)
     : undefined;
@@ -781,12 +787,12 @@ function resolveEllipseNode(node: EllipseNode, ids: IdGenerator): RenderEllipseN
   const { wrapper } = resolveWrapper(node, ids, defs);
   const fillResult = resolveTopFillResult(node.fills, ids, defs);
   const fillLayers = resolveAllFillLayers(node.fills, ids, defs);
-  const ellipseStrokeShape: import("./types").StrokeShape = { kind: "ellipse", cx: node.cx, cy: node.cy, rx: node.rx, ry: node.ry };
+  const ellipseStrokeShape: StrokeShape = { kind: "ellipse", cx: node.cx, cy: node.cy, rx: node.rx, ry: node.ry };
   // INSIDE/OUTSIDE stroke needs an ellipse-shaped mask to clip the doubled
   // stroke width to the correct half. Without this, an INSIDE stroke bleeds
   // outside the ellipse (the user's PFP case — avatar stroke appeared
   // to clip the circle) and an OUTSIDE stroke appears centred.
-  const ellipseMaskShape: import("./types").ClipPathShape = {
+  const ellipseMaskShape: ClipPathShape = {
     kind: "ellipse", cx: node.cx, cy: node.cy, rx: node.rx, ry: node.ry,
   };
   const strokeRendering = node.stroke
@@ -874,11 +880,11 @@ function resolvePathNode(node: PathNode, ids: IdGenerator): RenderPathNode {
     return base;
   });
 
-  const pathStrokeShape: import("./types").StrokeShape = { kind: "path", paths };
+  const pathStrokeShape: StrokeShape = { kind: "path", paths };
   // INSIDE/OUTSIDE stroke needs a shape-matching mask; for paths the mask
   // uses the same contour data drawn as a clip-path (so the doubled
   // stroke width is clipped to the correct side of the path).
-  const pathMaskShape: import("./types").ClipPathShape = {
+  const pathMaskShape: ClipPathShape = {
     kind: "path",
     d: paths.map((p) => p.d).join(" "),
   };

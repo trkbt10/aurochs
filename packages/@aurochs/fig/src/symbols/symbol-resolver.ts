@@ -3,7 +3,7 @@
  */
 
 import type { FigNode, MutableFigNode, FigKiwiSymbolData, FigKiwiSymbolOverride, FigGuidPath, FigComponentPropAssignment, FigDerivedTextData } from "@aurochs/fig/types";
-import { guidToString, getNodeType, safeChildren, type FigGuid } from "@aurochs/fig/parser";
+import { guidToString, getNodeType, safeChildren, type FigGuid, type FigBlob } from "@aurochs/fig/parser";
 import { extractSymbolIDPair } from "@aurochs/fig/symbols";
 import { buildGuidTranslationMap, translateOverrides } from "./guid-translation";
 import { resolveInstanceLayout } from "./constraints";
@@ -860,7 +860,7 @@ export type InstanceResolveContext = {
    * dimensions — required to disambiguate sibling descendants of
    * different sizes (e.g. multi-avatar Contact variant).
    */
-  readonly blobs?: readonly import("@aurochs/fig/parser").FigBlob[];
+  readonly blobs?: readonly FigBlob[];
 };
 
 /**

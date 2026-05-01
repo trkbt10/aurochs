@@ -51,6 +51,8 @@ import {
   type RenderImageNode,
   type RenderNodeBase,
   type StrokeRendering,
+  type StrokeShape,
+  type RenderClipPathDef,
 } from "../scene-graph/render-tree";
 
 import { createShaderCache } from "./shaders";
@@ -694,7 +696,7 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
    * by the node renderer using sourceContours directly.
    */
   function tessellateShapeForStencil(
-    shape: import("../scene-graph/render-tree/types").StrokeShape,
+    shape: StrokeShape,
   ): Float32Array {
     switch (shape.kind) {
       case "rect": {
@@ -713,7 +715,7 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
   }
 
   function tessellateStrokeShapeFromSR(
-    shape: import("../scene-graph/render-tree/types").StrokeShape,
+    shape: StrokeShape,
     strokeWidth: number,
     dashPattern?: readonly number[],
   ): Float32Array {
@@ -944,7 +946,7 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
 
   function getFrameClipData(
     { clipDef, node, transform }: {
-      clipDef: import("../scene-graph/render-tree/types").RenderClipPathDef | undefined;
+      clipDef: RenderClipPathDef | undefined;
       node: RenderFrameNode;
       transform: AffineMatrix;
     },
@@ -1048,7 +1050,7 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
     if (node.childClipId) {
       // Find the clip-path def for this child clip
       const clipDef = node.defs.find(
-        (d): d is import("../scene-graph/render-tree/types").RenderClipPathDef =>
+        (d): d is RenderClipPathDef =>
           d.type === "clip-path" && d.id === node.childClipId
       );
       const clipData = getFrameClipData({ clipDef, node, transform });

@@ -102,22 +102,52 @@ async function loadFigFile(): Promise<ParsedData> {
 }
 
 /**
- * Extract rect positions from SVG. Walks the element tree left-to-right and
- * accumulates translations from ancestor `<g transform="matrix(1,0,0,1,tx,ty)">`
+ * Extract rect-like positions from SVG. Walks the element tree left-to-right
+ * and accumulates translations from ancestor `<g transform="matrix(1,0,0,1,tx,ty)">`
  * groups so that children wrapped in `<g transform>` report their absolute
- * position. The scene-graph renderer emits `<g transform>` + `<rect x=0 y=0>`
- * rather than the Figma-style flat `<rect x=abs y=abs>`, and this helper
- * normalises both forms onto the same absolute-coordinate comparison axis.
+ * position. Captures both `<rect>` elements AND `<path>` elements whose
+ * d-string is a rounded-rect (the rounded-rect SVG path-d emitted by our
+ * renderer for any non-zero corner radius — see scene-graph/render/
+ * rounded-rect-path.ts). Sharp-cornered shapes still emit `<rect>`.
  */
 function extractRectPositions(svg: string): Array<{ id: string; x: number; y: number; width: number; height: number }> {
   const results: Array<{ id: string; x: number; y: number; width: number; height: number }> = [];
-  const tokenRegex = /<g[^>]*>|<\/g>|<rect[^>]*\/?>/g;
+  const tokenRegex = /<g[^>]*>|<\/g>|<rect[^>]*\/?>|<path[^>]*\/?>/g;
   const stack: Array<{ tx: number; ty: number }> = [{ tx: 0, ty: 0 }];
   const indexRef = { value: 0 };
 
   const matrixOf = (s: string): { tx: number; ty: number } => {
     const m = s.match(/transform="matrix\(1,\s*0,\s*0,\s*1,\s*([\d.-]+),\s*([\d.-]+)\)"/);
     return m ? { tx: parseFloat(m[1]), ty: parseFloat(m[2]) } : { tx: 0, ty: 0 };
+  };
+
+  // Rounded-rect path d-string parser. Our builder emits, for tl=tr=br=bl=r:
+  //   "M r 0 L w-r 0 C ... w r L w h-r C ... w-r h L r h C ... 0 h-r L 0 r C ... r 0 Z"
+  // Extracting the rect's logical (x, y, width, height): the rightmost X
+  // coordinate is `w` (occurs as the second number in `L w h-br`); the
+  // bottom Y coordinate is `h`; (x, y) is the path's own origin.
+  const parseRoundedRectPath = (d: string): { x: number; y: number; width: number; height: number } | undefined => {
+    // Match the M command to find origin, and the L w h-br line (third L)
+    // for width/height. Path must end with Z.
+    if (!d.endsWith("Z")) { return undefined; }
+    // M tlX tlY pattern (first move-to)
+    const mMatch = d.match(/^M\s*([-\d.]+)\s+([-\d.]+)/);
+    if (!mMatch) { return undefined; }
+    // Find all L commands. The first L after M is the top edge; the last
+    // L (before final Z) is along the left edge back up.
+    const lMatches = Array.from(d.matchAll(/L\s*([-\d.]+)\s+([-\d.]+)/g));
+    if (lMatches.length < 4) { return undefined; }
+    // Top-left corner is at (origin.x, origin.y). The right edge X is
+    // the second L's first number (L w h-br). The bottom edge Y is the
+    // third L's second number (L bl h).
+    const rightX = parseFloat(lMatches[1][1]);
+    const bottomY = parseFloat(lMatches[2][2]);
+    // Path origin is the smallest x/y among all M and L commands.
+    const allXs = [parseFloat(mMatch[1]), ...lMatches.map((m) => parseFloat(m[1]))];
+    const allYs = [parseFloat(mMatch[2]), ...lMatches.map((m) => parseFloat(m[2]))];
+    const minX = Math.min(...allXs);
+    const minY = Math.min(...allYs);
+    return { x: minX, y: minY, width: rightX - minX, height: bottomY - minY };
   };
 
   const matchRef = { value: undefined as RegExpExecArray | null | undefined };
@@ -134,19 +164,35 @@ function extractRectPositions(svg: string): Array<{ id: string; x: number; y: nu
       continue;
     }
 
+    const idMatch = tok.match(/\bid="([^"]*)"/);
+    const id = idMatch?.[1] ?? `shape-${indexRef.value}`;
+    const ancestor = stack[stack.length - 1];
+    const local = matrixOf(tok);
+
+    if (tok.startsWith("<path")) {
+      const dMatch = tok.match(/\bd="([^"]*)"/);
+      if (!dMatch) { continue; }
+      const parsed = parseRoundedRectPath(dMatch[1]);
+      if (!parsed) { continue; } // not a rounded-rect path, skip
+      results.push({
+        id,
+        x: parsed.x + ancestor.tx + local.tx,
+        y: parsed.y + ancestor.ty + local.ty,
+        width: parsed.width,
+        height: parsed.height,
+      });
+      indexRef.value++;
+      continue;
+    }
+
     // <rect ...>
     const wMatch = tok.match(/\bwidth="([^"]*)"/);
     const hMatch = tok.match(/\bheight="([^"]*)"/);
     const width = parseFloat(wMatch?.[1] ?? "0");
     const height = parseFloat(hMatch?.[1] ?? "0");
 
-    const idMatch = tok.match(/\bid="([^"]*)"/);
-    const id = idMatch?.[1] ?? `rect-${indexRef.value}`;
-
     const xMatch = tok.match(/\bx="([^"]*)"/);
     const yMatch = tok.match(/\by="([^"]*)"/);
-    const ancestor = stack[stack.length - 1];
-    const local = matrixOf(tok);
     const x = parseFloat(xMatch?.[1] ?? "0") + ancestor.tx + local.tx;
     const y = parseFloat(yMatch?.[1] ?? "0") + ancestor.ty + local.ty;
 

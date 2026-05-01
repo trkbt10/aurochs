@@ -130,7 +130,8 @@ describe("edge-cases.fig pixel parity", () => {
  * filename without `.svg`. Ceilings reflect the achieved baseline:
  *
  *   Thumbnail        0.25%  (subpixel font/icon residual at AA floor)
- *   Toolbar - Top    0.12%  (RESOLVE_VARIANT not yet evaluated)
+ *   Toolbar - Top    0.09%  (residual chevron glyph; library-side
+ *                            derivedTextData override not yet applied)
  *   all others       0.00%
  *
  * The 0.05–0.10 cushion above the achieved value absorbs sub-pixel
@@ -158,7 +159,7 @@ const ACTIVITY_PART_DIFF_CEILINGS: Record<string, number> = {
   "Overlay - Alerts": 0.05,
   "Status bar": 0.05,
   Thumbnail: 0.35,
-  "Toolbar - Top": 0.20,
+  "Toolbar - Top": 0.15,
 };
 
 describe("edge-cases.fig Activity View parts pixel parity", () => {

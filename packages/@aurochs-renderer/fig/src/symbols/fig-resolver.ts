@@ -17,7 +17,7 @@
  */
 
 import type { FigNode } from "@aurochs/fig/types";
-import type { FigGuid } from "@aurochs/fig/parser";
+import type { FigGuid, FigBlob } from "@aurochs/fig/parser";
 import {
   resolveInstanceNode,
   resolveInstanceReferences,
@@ -69,7 +69,7 @@ export function createFigResolver(
    * disambiguation. Callers that have `blobs` available (renderer,
    * tree-to-document) should pass them.
    */
-  blobs?: readonly import("@aurochs/fig/parser").FigBlob[],
+  blobs?: readonly FigBlob[],
 ): FigResolver {
   const warnings: string[] = [];
   const styleRegistry = buildFigStyleRegistry(symbolMap);

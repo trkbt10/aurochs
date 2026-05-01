@@ -9,7 +9,14 @@
  * stays in sync with the domain model by construction.
  */
 
-import type { FigDesignNode, SymbolOverride, MutableFigDesignNode, FigStyleRegistry } from "@aurochs/fig/domain";
+import type {
+  FigDesignNode,
+  SymbolOverride,
+  MutableFigDesignNode,
+  FigStyleRegistry,
+  ComponentPropertyAssignment,
+  ComponentPropertyValue,
+} from "@aurochs/fig/domain";
 import {
   isValidOverridePath,
   isSelfOverride,
@@ -505,9 +512,9 @@ function mutableChildren(
  */
 function applySymbolOverridesToChildren(
   children: readonly MutableFigDesignNode[],
-  overrides: readonly import("@aurochs/fig/domain").SymbolOverride[],
+  overrides: readonly SymbolOverride[],
   symbolId: string,
-  styleRegistry: import("@aurochs/fig/domain").FigStyleRegistry,
+  styleRegistry: FigStyleRegistry,
   symbolMap: ReadonlyMap<string, FigDesignNode>,
   blobs: readonly FigBlob[],
   warnings: string[],
@@ -641,13 +648,13 @@ function resolveStyleRef(
  */
 function applyComponentPropertyAssignments(
   children: readonly MutableFigDesignNode[],
-  assignments: readonly import("@aurochs/fig/domain").ComponentPropertyAssignment[],
+  assignments: readonly ComponentPropertyAssignment[],
   symbol: FigDesignNode,
 ): void {
   if (assignments.length === 0) { return; }
 
   // Build a map from defId → assigned value
-  const assignmentMap = new Map<string, import("@aurochs/fig/domain").ComponentPropertyValue>();
+  const assignmentMap = new Map<string, ComponentPropertyValue>();
   for (const assign of assignments) {
     assignmentMap.set(assign.defId, assign.value);
   }
@@ -658,7 +665,7 @@ function applyComponentPropertyAssignments(
 
 function applyPropsRecursive(
   nodes: readonly MutableFigDesignNode[],
-  assignmentMap: ReadonlyMap<string, import("@aurochs/fig/domain").ComponentPropertyValue>,
+  assignmentMap: ReadonlyMap<string, ComponentPropertyValue>,
   _symbol: FigDesignNode,
 ): void {
   for (const node of nodes) {

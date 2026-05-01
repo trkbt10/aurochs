@@ -7,6 +7,7 @@
 import type { FigDesignNode } from "@aurochs/fig/domain";
 import type { FigBlob } from "@aurochs/fig/parser";
 import { resolveTextRendering, type TextRendering } from "../../text/rendering";
+import type { ExtractedTextProps } from "../../text/layout/types";
 import type { PathContour, Color, TextLineLayout } from "../types";
 
 /** Map Figma text decoration value to scene graph text decoration string */
@@ -179,7 +180,7 @@ export function convertTextNode(node: FigDesignNode, blobs: readonly FigBlob[]):
 /** Build the scene-graph TextLineLayout from a resolved TextRendering. */
 function buildTextLineLayout(
   rendering: Exclude<TextRendering, { kind: "empty" }>,
-  props: import("../../text/layout/types").ExtractedTextProps,
+  props: ExtractedTextProps,
   fontVariationSettings: string | undefined,
 ): TextLineLayout {
   return {

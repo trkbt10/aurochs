@@ -139,12 +139,16 @@ describe("FRAME decoration preservation — end-to-end through SVG", () => {
   });
 
   it("FRAME corner radius appears in SVG output", async () => {
-    // frame-corner-clip has cornerRadius 16 — renders as rx/ry or clipPath with rounded rect.
+    // frame-corner-clip has cornerRadius 16 — renders as rx/ry, an arc
+    // command (per-corner radii), or a cubic Bézier rounded-rect path.
     const svg = await renderFrame(fixture, "frame-corner-clip");
-    // Must reference 16 as rx/ry or in a clipPath path.
     const hasRx = /rx="16"/.test(svg);
-    const hasRoundedPath = /A\s*16[, ]16/.test(svg);
-    expect(hasRx || hasRoundedPath, "Corner radius 16 must appear as rx or arc in SVG").toBe(true);
+    const hasArc = /A\s*16[, ]16/.test(svg);
+    // Cubic Bézier: rounded-rect path passes through (16, 0) and (0, 16)
+    // for a top-left corner. Match either L line or C cubic with 16 in
+    // the relevant slots.
+    const hasBezier = /L\s+16\s+0|L\s+0\s+16|C\s+0\s+\S+\s+\S+\s+0\s+16/.test(svg);
+    expect(hasRx || hasArc || hasBezier, "Corner radius 16 must appear as rx, arc, or cubic Bézier in SVG").toBe(true);
   });
 
   it("FRAME drop-shadow effect appears in SVG output", async () => {
@@ -175,10 +179,11 @@ describe("FRAME decoration preservation — end-to-end through SVG", () => {
     expect(svg).toMatch(/fill="#ffffff"|fill="white"|fill="rgb\(255, ?255, ?255\)"/i);
     // Stroke
     expect(svg).toMatch(/stroke="#0d0d0d"|stroke="rgb\(13, ?13, ?13\)"/i);
-    // cornerRadius 10
+    // cornerRadius 10 — appears as rx/ry, A arc, or cubic Bézier rounded-rect.
     const hasRx = /rx="10"/.test(svg);
-    const hasRoundedPath = /A\s*10[, ]10/.test(svg);
-    expect(hasRx || hasRoundedPath, "Corner radius 10 must appear in SVG").toBe(true);
+    const hasArc = /A\s*10[, ]10/.test(svg);
+    const hasBezier = /L\s+10\s+0|L\s+0\s+10|C\s+0\s+\S+\s+\S+\s+0\s+10/.test(svg);
+    expect(hasRx || hasArc || hasBezier, "Corner radius 10 must appear in SVG").toBe(true);
   });
 
   it("nested FRAMEs both render their fills", async () => {

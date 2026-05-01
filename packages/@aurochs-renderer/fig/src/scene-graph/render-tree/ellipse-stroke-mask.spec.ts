@@ -10,19 +10,20 @@
  */
 
 import { resolveRenderTree } from "./resolve";
-import type { SceneGraph, EllipseNode } from "../types";
+import type { SceneGraph, EllipseNode, SceneNode, SceneNodeId } from "../types";
+import type { FigImage } from "@aurochs/fig/parser";
 
-const EMPTY_IMAGES = new Map<string, import("@aurochs/fig/parser").FigImage>();
+const EMPTY_IMAGES = new Map<string, FigImage>();
 
-function makeSceneGraph(nodes: readonly import("../types").SceneNode[]): SceneGraph {
-  return { root: { type: "group", id: "root" as import("../types").SceneNodeId, name: "root", transform: { m00: 1, m01: 0, m02: 0, m10: 0, m11: 1, m12: 0 }, opacity: 1, visible: true, effects: [], blendMode: undefined, children: nodes }, blobs: [], images: EMPTY_IMAGES };
+function makeSceneGraph(nodes: readonly SceneNode[]): SceneGraph {
+  return { root: { type: "group", id: "root" as SceneNodeId, name: "root", transform: { m00: 1, m01: 0, m02: 0, m10: 0, m11: 1, m12: 0 }, opacity: 1, visible: true, effects: [], blendMode: undefined, children: nodes }, blobs: [], images: EMPTY_IMAGES };
 }
 
 describe("ELLIPSE stroke rendering", () => {
   it("INSIDE-aligned stroke produces an ellipse-shaped stroke-mask def", () => {
     const ellipse: EllipseNode = {
       type: "ellipse",
-      id: "e1" as import("../types").SceneNodeId,
+      id: "e1" as SceneNodeId,
       name: "avatar",
       transform: { m00: 1, m01: 0, m02: 0, m10: 0, m11: 1, m12: 0 },
       opacity: 1,
@@ -72,7 +73,7 @@ describe("ELLIPSE stroke rendering", () => {
   it("OUTSIDE-aligned stroke produces an ellipse mask with OUTSIDE alignment", () => {
     const ellipse: EllipseNode = {
       type: "ellipse",
-      id: "e2" as import("../types").SceneNodeId,
+      id: "e2" as SceneNodeId,
       name: "container",
       transform: { m00: 1, m01: 0, m02: 0, m10: 0, m11: 1, m12: 0 },
       opacity: 1,
@@ -112,7 +113,7 @@ describe("ELLIPSE stroke rendering", () => {
     // "Container" bug (133:964).
     const ellipse: EllipseNode = {
       type: "ellipse",
-      id: "e-bg" as import("../types").SceneNodeId,
+      id: "e-bg" as SceneNodeId,
       name: "container",
       transform: { m00: 1, m01: 0, m02: 0, m10: 0, m11: 1, m12: 0 },
       opacity: 1,
@@ -137,7 +138,7 @@ describe("ELLIPSE stroke rendering", () => {
   it("CENTER-aligned stroke does NOT emit a stroke-mask def (uniform mode)", () => {
     const ellipse: EllipseNode = {
       type: "ellipse",
-      id: "e3" as import("../types").SceneNodeId,
+      id: "e3" as SceneNodeId,
       name: "plain",
       transform: { m00: 1, m01: 0, m02: 0, m10: 0, m11: 1, m12: 0 },
       opacity: 1,

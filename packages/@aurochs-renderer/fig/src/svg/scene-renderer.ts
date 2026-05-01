@@ -844,7 +844,7 @@ function formatStrokedShape(shape: StrokeShape, sAttrs: StrokeSvgAttrs): SvgStri
 /**
  * Format multi-paint stroke layers from StrokeShape.
  */
-function formatStrokeLayersForShape(layers: readonly import("../scene-graph/render").ResolvedStrokeLayer[], shape: StrokeShape): SvgString[] {
+function formatStrokeLayersForShape(layers: readonly ResolvedStrokeLayer[], shape: StrokeShape): SvgString[] {
   switch (shape.kind) {
     case "rect":
       return formatMultiStrokeRectLayers(layers, shape.width, shape.height, shape.cornerRadius);

@@ -16,6 +16,7 @@ import type {
   FigNodeType, FigMatrix, FigVector, FigColor, FigPaint, FigEffect, FigStrokeWeight, FigStrokeCap, FigStrokeJoin, FigStrokeAlign, FigFontName, KiwiEnumValue,
   FigDerivedBaseline, FigDerivedGlyph, FigDerivedDecoration, FigDerivedTextData,
   FigVectorPath, FigVectorData, FigStyleId, FigFillGeometry, FigGuid,
+  BlendMode,
 } from "../types";
 import type { LoadedFigFile, FigImage, FigMetadata } from "../roundtrip";
 import type { FigNodeId, FigPageId } from "./node-id";
@@ -155,15 +156,9 @@ export type TextStyleOverride = {
 // Blend Mode
 // =============================================================================
 
-/**
- * Blend mode string literals matching SVG/CSS mix-blend-mode values.
- *
- * Re-exported from `@aurochs/fig/types` where the SSoT lives. Kept as
- * an alias here because the domain module is the public import
- * surface for downstream consumers that don't want to reach into the
- * parser types file.
- */
-export type BlendMode = import("../types").BlendMode;
+// BlendMode lives in `@aurochs/fig/types` (SSoT). Consumers must import
+// directly from there — re-exporting through this module would create a
+// second import surface and obscure the SSoT chain.
 
 // =============================================================================
 // Derived Text Data (for high-fidelity text rendering)

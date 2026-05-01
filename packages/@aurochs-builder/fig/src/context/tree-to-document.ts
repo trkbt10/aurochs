@@ -11,9 +11,13 @@
  * 4. Collects COMPONENT/SYMBOL nodes into the components map
  */
 
-import type { FigNode, FigNodeType, FigMatrix, FigVector, FigColor, FigPaint, FigEffect, KiwiEnumValue, FigTextStyleOverrideEntry, FigComponentPropValue } from "@aurochs/fig/types";
+import type {
+  FigNode, FigNodeType, FigMatrix, FigVector, FigColor, FigPaint, FigEffect,
+  KiwiEnumValue, FigTextStyleOverrideEntry, FigComponentPropValue,
+  FigKiwiSymbolOverride,
+} from "@aurochs/fig/types";
 import { FIG_NODE_TYPE } from "@aurochs/fig/types";
-import type { NodeTreeResult } from "@aurochs/fig/parser";
+import type { NodeTreeResult, FigBlob, FigGuid } from "@aurochs/fig/parser";
 import { getNodeType, safeChildren, guidToString } from "@aurochs/fig/parser";
 import { dfsById } from "@aurochs/fig/tree";
 import {
@@ -25,13 +29,15 @@ import {
   styleRefKeys,
   isInstanceSelfOverride,
 } from "@aurochs/fig/symbols";
+import type { GuidTranslationMap } from "@aurochs/fig/symbols";
 import type { LoadedFigFile } from "@aurochs/fig/roundtrip";
 import type {
   FigDesignDocument, FigDesignNode, FigPage, AutoLayoutProps, LayoutConstraints, TextData, TextStyleOverride, SymbolOverride,
-  BlendMode, DerivedTextData,
+  DerivedTextData,
   ComponentPropertyDef, ComponentPropertyRef, ComponentPropertyAssignment, ComponentPropertyType, ComponentPropertyNodeField, ComponentPropertyValue,
   FigStyleRegistry,
 } from "@aurochs/fig/domain";
+import type { BlendMode } from "@aurochs/fig/types";
 import { DEFAULT_PAGE_BACKGROUND, EMPTY_FIG_STYLE_REGISTRY } from "@aurochs/fig/domain";
 import { guidToNodeId, guidToPageId } from "@aurochs/fig/domain";
 import type { FigNodeId } from "@aurochs/fig/domain";
@@ -623,7 +629,7 @@ function collectRawFields(node: FigNode): Record<string, unknown> | undefined {
 function resolveOverridePaths(
   node: FigNode,
   symbolMap: ReadonlyMap<string, FigNode> | undefined,
-  blobs: readonly import("@aurochs/fig/parser").FigBlob[] | undefined,
+  blobs: readonly FigBlob[] | undefined,
 ): {
   overrides: readonly SymbolOverride[] | undefined;
   derivedSymbolData: readonly SymbolOverride[] | undefined;
@@ -673,7 +679,7 @@ function resolveOverridePaths(
     }
   }
   const resolve = (
-    entries: readonly import("@aurochs/fig/types").FigKiwiSymbolOverride[],
+    entries: readonly FigKiwiSymbolOverride[],
   ): readonly SymbolOverride[] => {
     const effGuidStr = guidToString(effectiveGuid);
     // Two-stage filter:
@@ -800,11 +806,11 @@ function guidExistsInFile(
  * descend into the variant's SYMBOL, not the default variant.
  */
 function resolveEntryPaths(
-  entries: readonly import("@aurochs/fig/types").FigKiwiSymbolOverride[],
+  entries: readonly FigKiwiSymbolOverride[],
   symbolRoot: FigNode,
   instanceNode: FigNode,
   symbolMap: ReadonlyMap<string, FigNode>,
-  blobs: readonly import("@aurochs/fig/parser").FigBlob[] | undefined,
+  blobs: readonly FigBlob[] | undefined,
 ): readonly SymbolOverride[] {
   const primaryMap = buildGuidTranslationMap(
     safeChildren(symbolRoot),
@@ -826,7 +832,7 @@ function resolveEntryPaths(
   const effGuidStr = `${(instanceNode.symbolData?.symbolID ?? instanceNode.symbolID)?.sessionID ?? 0}:${(instanceNode.symbolData?.symbolID ?? instanceNode.symbolID)?.localID ?? 0}`;
   const fallbackMap = buildOffsetFallbackMap(entries, symbolRoot, effGuidStr);
 
-  const levelMap: import("@aurochs/fig/symbols").GuidTranslationMap = mergeMaps(primaryMap, fallbackMap);
+  const levelMap: GuidTranslationMap = mergeMaps(primaryMap, fallbackMap);
 
   // `resolvedSlotGuid → variantSymbolGuid`: a sibling single-guid entry
   // with `overriddenSymbolID` announces that the INSTANCE at
@@ -863,7 +869,7 @@ function resolveEntryPaths(
  * resolve, producing `target node not found` warnings.
  */
 function buildOffsetFallbackMap(
-  entries: readonly import("@aurochs/fig/types").FigKiwiSymbolOverride[],
+  entries: readonly FigKiwiSymbolOverride[],
   symbolRoot: FigNode,
   symbolIdStr: string,
 ): ReadonlyMap<string, string> {
@@ -920,9 +926,9 @@ function buildOffsetFallbackMap(
 }
 
 function mergeMaps(
-  primary: import("@aurochs/fig/symbols").GuidTranslationMap,
+  primary: GuidTranslationMap,
   fallback: ReadonlyMap<string, string>,
-): import("@aurochs/fig/symbols").GuidTranslationMap {
+): GuidTranslationMap {
   if (fallback.size === 0) { return primary; }
   const merged = new Map(primary);
   for (const [k, v] of fallback) {
@@ -936,11 +942,11 @@ function mergeMaps(
  * namespace into the SYMBOL descendant namespace at each level.
  */
 function resolveEntryPath(
-  entry: import("@aurochs/fig/types").FigKiwiSymbolOverride,
-  topMap: import("@aurochs/fig/symbols").GuidTranslationMap,
+  entry: FigKiwiSymbolOverride,
+  topMap: GuidTranslationMap,
   symbolRoot: FigNode,
   symbolMap: ReadonlyMap<string, FigNode>,
-  blobs: readonly import("@aurochs/fig/parser").FigBlob[] | undefined,
+  blobs: readonly FigBlob[] | undefined,
   variantAt: ReadonlyMap<string, string>,
 ): SymbolOverride {
   const guids = entry.guidPath?.guids;
@@ -992,7 +998,7 @@ function resolveEntryPath(
     // routed onto the Message TEXT 199×18 because they're both TEXTs
     // in localID order).
     const isLastLevel = i + 1 === guids.length - 1;
-    const seed: import("@aurochs/fig/types").FigKiwiSymbolOverride = isLastLevel
+    const seed: FigKiwiSymbolOverride = isLastLevel
       ? { guidPath: { guids: [guids[i + 1]] }, size: entry.size, fillGeometry: entry.fillGeometry }
       : { guidPath: { guids: [guids[i + 1]] } };
     const seeded = [
@@ -1085,7 +1091,7 @@ function overrideKeyExistsInSymbol(root: FigNode, guidStr: string): boolean {
   }) !== undefined;
 }
 
-function parseGuidToFigGuid(guidStr: string): import("@aurochs/fig/parser").FigGuid {
+function parseGuidToFigGuid(guidStr: string): FigGuid {
   const [sessionStr, localStr] = guidStr.split(":");
   return { sessionID: Number(sessionStr), localID: Number(localStr) };
 }
@@ -1116,7 +1122,7 @@ export function convertFigNode(
    * variant). Without it, overrides lacking an explicit `size` field
    * fall back to sorted-localID pairing which mis-swaps such siblings.
    */
-  blobs?: readonly import("@aurochs/fig/parser").FigBlob[],
+  blobs?: readonly FigBlob[],
 ): FigDesignNode {
   const nodeType = nodeTypeName(node);
   const id = guidToNodeId(node.guid);
@@ -1215,7 +1221,7 @@ function convertCanvasToPage(
   components: Map<string, FigDesignNode>,
   styleRegistry: FigStyleRegistry,
   symbolMap?: ReadonlyMap<string, FigNode>,
-  blobs?: readonly import("@aurochs/fig/parser").FigBlob[],
+  blobs?: readonly FigBlob[],
 ): FigPage {
   const id = guidToPageId(canvas.guid);
 

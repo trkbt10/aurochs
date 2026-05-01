@@ -99,7 +99,7 @@ export type ResolvedImagePattern = {
   /** Tile scale multiplier for TILE image fills */
   readonly scalingFactor?: number;
   /** Source paint transform (AffineMatrix) for finalization */
-  readonly sourceTransform?: import("../types").AffineMatrix;
+  readonly sourceTransform?: AffineMatrix;
 };
 
 /**

@@ -16,6 +16,7 @@ import { loadXlsxWorkbook } from "../utils/xlsx-loader";
 import { getSheetRange } from "@aurochs-office/xlsx/domain/sheet-utils";
 import { convertXlsxToDsv } from "@aurochs-converters/interop-dsv-xlsx";
 import { buildDsv, buildJsonl } from "@aurochs/dsv";
+import type { DsvDocument } from "@aurochs/dsv";
 
 // =============================================================================
 // Types
@@ -44,7 +45,7 @@ export type ExtractOptions = {
  * When headers are absent, uses 0-based column index as key.
  */
 function dsvRecordsToObjects(
-  doc: import("@aurochs/dsv").DsvDocument,
+  doc: DsvDocument,
 ): Record<string, unknown>[] {
   const headers = doc.headers;
   return doc.records.map((record) => {

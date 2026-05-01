@@ -10,6 +10,7 @@
 import { createDemoFigDesignDocument } from "@aurochs-builder/fig/context";
 import type { FigDesignDocument, FigDesignNode } from "@aurochs/fig/domain";
 import { buildSceneGraph } from "./builder";
+import { renderSceneGraphToSvg } from "../svg/scene-renderer";
 import type { SceneGraph, SceneNode, RectNode, EllipseNode, PathNode, TextNode, FrameNode, Fill } from "./types";
 
 // eslint-disable-next-line no-restricted-syntax -- mutable test-suite variable initialized in beforeAll
@@ -236,10 +237,9 @@ describe("Scene graph builder - demo document", () => {
       }
     });
 
-    it("FRAME decoration survives through to SVG output", async () => {
+    it("FRAME decoration survives through to SVG output", () => {
       // End-to-end: the SVG string must contain the FRAME's fill colour.
       // .background(WHITE) emits r=g=b=1 → "#ffffff" or "rgb(255,255,255)".
-      const { renderSceneGraphToSvg } = await import("../svg/scene-renderer");
       const sg = sceneGraphs[0];
       const svg = renderSceneGraphToSvg(sg);
       const frames = collectFrames(sg.root.children);

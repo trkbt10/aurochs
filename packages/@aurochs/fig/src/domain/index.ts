@@ -20,7 +20,6 @@ export type {
   TextStyleOverride,
   SymbolOverride,
   MutableFigDesignNode,
-  BlendMode,
   DerivedBaseline,
   DerivedGlyph,
   DerivedDecoration,

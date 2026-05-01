@@ -10,15 +10,16 @@
  */
 
 import { renderSceneGraphToSvg } from "./scene-renderer";
-import type { SceneGraph, FrameNode } from "../scene-graph/types";
+import type { SceneGraph, FrameNode, SceneNode, SceneNodeId } from "../scene-graph/types";
+import type { FigImage } from "@aurochs/fig/parser";
 
 const IDENTITY = { m00: 1, m01: 0, m02: 0, m10: 0, m11: 1, m12: 0 };
-const EMPTY_IMAGES = new Map<string, import("@aurochs/fig/parser").FigImage>();
+const EMPTY_IMAGES = new Map<string, FigImage>();
 
-function makeSceneGraph(children: readonly import("../scene-graph/types").SceneNode[]): SceneGraph {
+function makeSceneGraph(children: readonly SceneNode[]): SceneGraph {
   return {
     root: {
-      type: "group", id: "root" as import("../scene-graph/types").SceneNodeId,
+      type: "group", id: "root" as SceneNodeId,
       name: "root", transform: IDENTITY, opacity: 1, visible: true,
       effects: [], blendMode: undefined, children,
     },
@@ -30,7 +31,7 @@ describe("Angular gradient — sectored SVG rendering", () => {
   it("emits SVG-native <path> sectors inside a pattern (no foreignObject)", () => {
     const frame: FrameNode = {
       type: "frame",
-      id: "f1" as import("../scene-graph/types").SceneNodeId,
+      id: "f1" as SceneNodeId,
       name: "Hologram",
       transform: IDENTITY,
       opacity: 1,
@@ -74,7 +75,7 @@ describe("Angular gradient — sectored SVG rendering", () => {
   it("sector colours sample across all declared stops", () => {
     const frame: FrameNode = {
       type: "frame",
-      id: "f2" as import("../scene-graph/types").SceneNodeId,
+      id: "f2" as SceneNodeId,
       name: "Spectrum",
       transform: IDENTITY,
       opacity: 1,
@@ -120,7 +121,7 @@ describe("Diamond gradient — sectored rendering", () => {
   it("emits concentric diamond paths", () => {
     const frame: FrameNode = {
       type: "frame",
-      id: "f3" as import("../scene-graph/types").SceneNodeId,
+      id: "f3" as SceneNodeId,
       name: "Diamond",
       transform: IDENTITY,
       opacity: 1,
