@@ -11,6 +11,15 @@
 import type { TextNode, Color, PathContour } from "../scene-graph/types";
 import { tessellateContours } from "./tessellation";
 
+/**
+ * Type predicate: does this 2D context expose the (modern) `letterSpacing`
+ * setter? The TS DOM lib doesn't always include it depending on `lib`
+ * target, so detect at runtime and narrow without a structural cast.
+ */
+function hasLetterSpacing(ctx: CanvasRenderingContext2D): ctx is CanvasRenderingContext2D & { letterSpacing: string } {
+  return "letterSpacing" in ctx;
+}
+
 /** Tessellate decoration contours or return empty array if none */
 function tessellateDecorationsOrEmpty(
   contours: readonly PathContour[] | undefined,
@@ -163,9 +172,14 @@ export function renderFallbackTextToCanvas(
       break;
   }
 
-  // Apply letter spacing if supported
-  if (fb.letterSpacing && "letterSpacing" in ctx) {
-    (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = `${fb.letterSpacing}px`;
+  // Apply letter spacing if supported.
+  //
+  // `CanvasRenderingContext2D.letterSpacing` is a baseline-supported
+  // setter in modern browsers but the TS DOM lib doesn't always expose
+  // it (depends on the lib target). Narrow via an indexed-access type
+  // guard so the assignment doesn't need a structural cast.
+  if (fb.letterSpacing && hasLetterSpacing(ctx)) {
+    ctx.letterSpacing = `${fb.letterSpacing}px`;
   }
 
   // Render each line, with word wrapping if the node has a fixed width

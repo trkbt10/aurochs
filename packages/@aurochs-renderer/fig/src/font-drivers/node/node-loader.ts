@@ -140,10 +140,22 @@ function isFontFile(filename: string): boolean {
 /**
  * Get font info from a font file
  */
+/**
+ * Read a font file and parse it via opentype.js.
+ *
+ * Node's `Buffer.buffer` is typed as `ArrayBufferLike` (so it accepts
+ * SharedArrayBuffer-backed buffers, which `readFileSync` never produces),
+ * but opentype.js's `parseFont` only accepts `ArrayBuffer`. The single
+ * cast at this boundary tags Node's runtime guarantee onto the type.
+ */
+function readFontFile(fontPath: string): ReturnType<typeof parseFont> {
+  const data = fs.readFileSync(fontPath);
+  return parseFont(data.buffer as ArrayBuffer);
+}
+
 async function getFontInfo(fontPath: string): Promise<FontFileInfo | null> {
   try {
-    const data = fs.readFileSync(fontPath);
-    const font = parseFont(data.buffer as ArrayBuffer);
+    const font = readFontFile(fontPath);
 
     // Get font family name - try standard name first, fall back to preferredFamily
     const names = toNameRecord(font.names);
@@ -281,8 +293,7 @@ export function createNodeFontLoader(
 
     // Load the font
     try {
-      const data = fs.readFileSync(bestMatch.path);
-      const font = toLoadedFontType(parseFont(data.buffer as ArrayBuffer));
+      const font = toLoadedFontType(readFontFile(bestMatch.path));
 
       return {
         font,

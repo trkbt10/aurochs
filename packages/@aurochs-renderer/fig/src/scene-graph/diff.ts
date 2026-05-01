@@ -24,11 +24,43 @@ export type RemoveOp = {
   readonly nodeId: SceneNodeId;
 };
 
-export type UpdateOp = {
-  readonly type: "update";
-  readonly nodeId: SceneNodeId;
-  readonly changes: Partial<SceneNode>;
-};
+/**
+ * Per-node-type update: the discriminator (`nodeType`) lets consumers
+ * narrow `changes` to the matching `Partial<T>` without an `as` cast.
+ *
+ * Distributive over `SceneNode` so the union resolves to e.g.
+ * `{ nodeType: "rect"; changes: Partial<RectNode> } | …`.
+ */
+export type UpdateOp = SceneNode extends infer T
+  ? T extends SceneNode
+    ? {
+        readonly type: "update";
+        readonly nodeId: SceneNodeId;
+        readonly nodeType: T["type"];
+        readonly changes: Partial<T>;
+      }
+    : never
+  : never;
+
+/**
+ * Build a per-node-type UpdateOp from the source node and its diff
+ * payload. The runtime value of `nodeType` matches `node.type`, which
+ * is what consumers switch on to recover the variant statically.
+ *
+ * The single cast here is the bridge between the structural diff
+ * (which produced `Partial<SceneNode>` after dynamic key comparison)
+ * and the discriminated `UpdateOp` shape. The `nodeType` runtime tag
+ * we attach guarantees the cast lines up — comparison only emitted
+ * keys that exist on `node`'s variant.
+ */
+function makeUpdateOp(node: SceneNode, changes: Partial<SceneNode>): UpdateOp {
+  return {
+    type: "update",
+    nodeId: node.id,
+    nodeType: node.type,
+    changes,
+  } as UpdateOp;
+}
 
 export type ReorderOp = {
   readonly type: "reorder";
@@ -189,11 +221,10 @@ function diffChildren(
       // Existing node - check for property changes
       const changes = compareNodeProperties(prevEntry.node, nextChild);
       if (changes) {
-        ops.push({
-          type: "update",
-          nodeId: nextChild.id,
-          changes,
-        });
+        // The op's `nodeType` discriminator carries the variant tag so
+        // consumers (e.g. WebGL state mutator) can narrow the changes
+        // payload to its matching `Partial<T>` without `as` casts.
+        ops.push(makeUpdateOp(nextChild, changes));
       }
 
       // Check for reorder

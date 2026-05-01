@@ -74,7 +74,7 @@ type FontData = {
 };
 
 type WindowWithLocalFonts = Window & {
-  queryLocalFonts?: (options?: { postscriptNames?: string[] }) => Promise<FontData[]>;
+  queryLocalFonts: (options?: { postscriptNames?: string[] }) => Promise<FontData[]>;
 };
 
 /**
@@ -134,10 +134,20 @@ function weightDistance(requested: number, actual: number): number {
 }
 
 /**
- * Check if Local Font Access API is available
+ * Check if Local Font Access API is available.
  */
 export function isBrowserFontLoaderSupported(): boolean {
   return typeof window !== "undefined" && "queryLocalFonts" in window;
+}
+
+/**
+ * Type guard: narrow `window` to `WindowWithLocalFonts`. The Local Font
+ * Access API isn't part of the standard DOM lib types, so we attach the
+ * extension signature via a structural narrowing instead of an `as`
+ * cast at every call site.
+ */
+function hasLocalFontsApi(w: Window): w is WindowWithLocalFonts {
+  return "queryLocalFonts" in w;
 }
 
 /** Browser font loader with permission tracking */
@@ -180,13 +190,13 @@ export function createBrowserFontLoader(): BrowserFontLoaderInstance {
   const permissionGrantedRef = { value: false };
 
   async function buildFontIndex(): Promise<void> {
-    if (!isBrowserFontLoaderSupported()) {
+    if (typeof window === "undefined" || !hasLocalFontsApi(window)) {
       fontIndexRef.value = new Map();
       return;
     }
 
     try {
-      const fonts = await (window as WindowWithLocalFonts).queryLocalFonts!();
+      const fonts = await window.queryLocalFonts();
       permissionGrantedRef.value = true;
 
       // Index by family name (lowercase)

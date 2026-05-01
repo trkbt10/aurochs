@@ -1263,7 +1263,7 @@ function extractArcData(node: FigDesignNode): ArcData | undefined {
  * Synthesize contours from parametric shape properties when no
  * pre-computed geometry blobs exist (e.g., builder-generated documents).
  */
-function synthesizeContours(node: FigDesignNode): PathContour[] {
+function synthesizeContours(node: FigDesignNode): DecodedContour[] {
   const typeName = getNodeTypeName(node);
   const w = node.size?.x ?? 0;
   const h = node.size?.y ?? 0;
@@ -1362,7 +1362,7 @@ function buildVectorNode(node: FigDesignNode, ctx: BuildContext): PathNode {
 
   const vectorPaths = node.vectorPaths;
 
-  const contoursRef = { value: convertVectorPathsToContours(vectorPaths) as DecodedContour[] };
+  const contoursRef = { value: convertVectorPathsToContours(vectorPaths) };
   const isStrokeGeometryRef = { value: false };
   if (contoursRef.value.length === 0) {
     contoursRef.value = decodeGeometryToContours(fillGeometry, ctx.blobs);
@@ -1374,7 +1374,7 @@ function buildVectorNode(node: FigDesignNode, ctx: BuildContext): PathNode {
 
   // Last resort: synthesize geometry from parametric shape definition
   if (contoursRef.value.length === 0) {
-    contoursRef.value = synthesizeContours(node) as DecodedContour[];
+    contoursRef.value = synthesizeContours(node);
   }
 
   // For thin (≈≤1.5px) center-aligned strokes the pre-expanded outline

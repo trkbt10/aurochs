@@ -155,7 +155,7 @@ export function decodeGeometryToContours(
  */
 export function convertVectorPathsToContours(
   vectorPaths: readonly FigVectorPath[] | undefined,
-): PathContour[] {
+): DecodedContour[] {
   if (!vectorPaths || vectorPaths.length === 0) {
     return [];
   }

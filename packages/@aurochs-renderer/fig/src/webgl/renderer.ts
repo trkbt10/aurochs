@@ -182,20 +182,14 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
       await textureCache.getOrCreate(node.sourceImageRef, node.sourceData, node.sourceMimeType);
     }
 
-    // Shape nodes may have image fills in their sourceFills
-    if ("sourceFills" in node) {
-      const fills = (node as RenderRectNode | RenderEllipseNode | RenderPathNode).sourceFills;
-      for (const fill of fills) {
-        if (fill.type === "image") {
-          await textureCache.getOrCreate(fill.imageRef, fill.data, fill.mimeType);
-        }
-      }
-    }
-
-    // Frame backgrounds may have image fills. RenderFrameNode exposes
-    // `sourceFills` directly (same shape as RenderRectNode.sourceFills),
-    // so backends don't need to peek into the source SceneNode.
-    if (node.type === "frame") {
+    // Shape and frame nodes share `sourceFills`. Walk all variants that
+    // expose that field uniformly so any image fill is registered.
+    if (
+      node.type === "rect" ||
+      node.type === "ellipse" ||
+      node.type === "path" ||
+      node.type === "frame"
+    ) {
       for (const fill of node.sourceFills) {
         if (fill.type === "image") {
           await textureCache.getOrCreate(fill.imageRef, fill.data, fill.mimeType);
@@ -203,10 +197,9 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
       }
     }
 
-    // Recurse into children
-    if ("children" in node) {
-      const containerNode = node as RenderGroupNode | RenderFrameNode;
-      for (const child of containerNode.children) {
+    // Recurse into children (group / frame are the only container variants).
+    if (node.type === "group" || node.type === "frame") {
+      for (const child of node.children) {
         await walkForImages(child);
       }
     }
@@ -1333,7 +1326,16 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
     render(scene: SceneGraph): void {
       width.value = scene.width;
       height.value = scene.height;
-      const canvas = gl.canvas as HTMLCanvasElement;
+      const canvas = gl.canvas;
+      // The renderer's `style.width/height` calls below require the
+      // DOM-attached `HTMLCanvasElement`. `WebGL{,2}RenderingContext.canvas`
+      // is typed `HTMLCanvasElement | OffscreenCanvas`; a runtime check
+      // narrows to the DOM variant without an `as` cast and surfaces a
+      // clear error if the renderer is ever wired to an OffscreenCanvas
+      // (which would silently lose the CSS sizing).
+      if (!(canvas instanceof HTMLCanvasElement)) {
+        throw new Error("WebGL renderer: gl.canvas is not an HTMLCanvasElement (OffscreenCanvas not supported)");
+      }
       canvas.width = scene.width * pixelRatio;
       canvas.height = scene.height * pixelRatio;
       canvas.style.width = `${scene.width}px`;

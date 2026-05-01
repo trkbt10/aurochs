@@ -104,15 +104,18 @@ export function detectWeight(style: string | undefined): FontWeight | undefined 
  * @returns Closest standard weight (100, 200, ..., 900)
  */
 export function normalizeWeight(weight: number): FontWeight {
-  const weights = Object.values(FONT_WEIGHTS);
-  const closestRef = { value: FONT_WEIGHTS.REGULAR as FontWeight };
+  // `Object.values` widens `as const` value types to `number[]`, so we
+  // re-tag the array element type to the discriminated `FontWeight`
+  // union that the function's return type promises.
+  const weights: readonly FontWeight[] = Object.values(FONT_WEIGHTS);
+  const closestRef: { value: FontWeight } = { value: FONT_WEIGHTS.REGULAR };
   const minDiffRef = { value: Math.abs(weight - closestRef.value) };
 
   for (const w of weights) {
     const diff = Math.abs(weight - w);
     if (diff < minDiffRef.value) {
       minDiffRef.value = diff;
-      closestRef.value = w as FontWeight;
+      closestRef.value = w;
     }
   }
 

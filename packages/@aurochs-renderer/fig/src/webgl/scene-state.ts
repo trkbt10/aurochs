@@ -9,12 +9,7 @@ import type {
   SceneGraph,
   SceneNode,
   SceneNodeId,
-  GroupNode,
-  FrameNode,
-  EllipseNode,
-  PathNode,
   PathContour,
-  TextNode,
   AffineMatrix,
   Fill,
   Color,
@@ -35,17 +30,6 @@ function uniformRadiusForGL(cr: CornerRadius | undefined): number | undefined {
   if (typeof cr === "number") { return cr; }
   const avg = (cr[0] + cr[1] + cr[2] + cr[3]) / 4;
   return avg > 0 ? avg : undefined;
-}
-
-/** Resolve cornerRadius from a changes object or fall back to existing value */
-function resolveCornerRadius(
-  changes: Record<string, unknown>,
-  fallback: number | undefined
-): number | undefined {
-  if ("cornerRadius" in changes) {
-    return changes.cornerRadius as number | undefined;
-  }
-  return fallback;
 }
 
 /** Tessellate contours if they exist and are non-empty, otherwise return null */
@@ -209,8 +193,7 @@ export function createSceneState(): SceneStateInstance {
     const state = createNodeState(node);
     nodes.set(node.id, state);
     if (node.type === "group" || node.type === "frame") {
-      const children = (node as GroupNode | FrameNode).children;
-      for (const child of children) {
+      for (const child of node.children) {
         processNode(child);
       }
     }
@@ -223,62 +206,6 @@ export function createSceneState(): SceneStateInstance {
       removeNodeRecursive(childId);
     }
     nodes.delete(id);
-  }
-
-  function checkGeometryChange(
-    state: NodeGPUState,
-    changes: Record<string, unknown>
-  ): boolean {
-    switch (state.type) {
-      case "rect":
-      case "frame":
-        return "width" in changes || "height" in changes || "cornerRadius" in changes;
-      case "ellipse":
-        return "cx" in changes || "cy" in changes || "rx" in changes || "ry" in changes;
-      case "path":
-        return "contours" in changes;
-      default:
-        return false;
-    }
-  }
-
-  function retessellate(
-    state: NodeGPUState,
-    changes: Record<string, unknown>
-  ): void {
-    switch (state.type) {
-      case "rect":
-      case "frame": {
-        const w = (changes.width as number | undefined) ?? state.width;
-        const h = (changes.height as number | undefined) ?? state.height;
-        const cornerRadius = resolveCornerRadius(changes, state.cornerRadius);
-        state.width = w;
-        state.height = h;
-        state.cornerRadius = cornerRadius;
-        if (state.fill) {
-          state.vertices = generateRectVertices(w, h, cornerRadius);
-        }
-        break;
-      }
-      case "ellipse": {
-        const node = changes as Partial<EllipseNode>;
-        const cx = node.cx ?? 0;
-        const cy = node.cy ?? 0;
-        const rx = node.rx ?? 0;
-        const ry = node.ry ?? 0;
-        if (state.fill) {
-          state.vertices = generateEllipseVertices({ cx, cy, rx, ry });
-        }
-        break;
-      }
-      case "path": {
-        const contours = changes.contours as PathNode["contours"] | undefined;
-        if (contours && contours.length > 0 && state.fill) {
-          state.vertices = tessellateContours(contours);
-        }
-        break;
-      }
-    }
   }
 
   function collectDrawList(nodeId: SceneNodeId, list: NodeGPUState[]): void {
@@ -310,49 +237,131 @@ export function createSceneState(): SceneStateInstance {
 
   function applyUpdate(op: Extract<DiffOp, { type: "update" }>): void {
     const state = nodes.get(op.nodeId);
-    if (!state) {return;}
-    const changes = op.changes as Record<string, unknown>;
-    if ("transform" in changes) {
-      state.transform = changes.transform as AffineMatrix;
+    if (!state) {
+      return;
     }
-    if ("opacity" in changes) {
-      state.opacity = changes.opacity as number;
+    // SceneNodeBase common fields — every UpdateOp variant carries
+    // `changes: Partial<T>` for a single SceneNode subtype, but the
+    // SceneNodeBase fields below exist on every subtype, so accessing
+    // them on the union of partials is safe.
+    const baseChanges = op.changes;
+    if (baseChanges.transform !== undefined) {
+      state.transform = baseChanges.transform;
     }
-    if ("visible" in changes) {
-      state.visible = changes.visible as boolean;
+    if (baseChanges.opacity !== undefined) {
+      state.opacity = baseChanges.opacity;
     }
-    if ("effects" in changes) {
-      (state as { effects: readonly Effect[] }).effects = changes.effects as readonly Effect[];
+    if (baseChanges.visible !== undefined) {
+      state.visible = baseChanges.visible;
     }
-    if ("clip" in changes) {
-      state.clip = changes.clip as ClipShape | undefined;
+    if (baseChanges.effects !== undefined) {
+      state.effects = baseChanges.effects;
     }
-    const needsRetessellation = checkGeometryChange(state, changes);
-    if (needsRetessellation) {
-      retessellate(state, changes);
+    if ("clip" in baseChanges) {
+      state.clip = baseChanges.clip;
     }
-    if ("fills" in changes) {
-      const fills = changes.fills as readonly Fill[];
-      state.fill = fills.length > 0 ? fills[fills.length - 1] : null;
+    // Variant-specific fields use `op.nodeType` for narrowing — the
+    // discriminator built into `UpdateOp` aligns the variant tag with
+    // the corresponding `Partial<T>` payload type.
+    switch (op.nodeType) {
+      case "rect": {
+        const c = op.changes;
+        applyGeometryRetessellation(state, c.width, c.height, c.cornerRadius);
+        applyFillsUpdate(state, c.fills);
+        break;
+      }
+      case "frame": {
+        const c = op.changes;
+        applyGeometryRetessellation(state, c.width, c.height, c.cornerRadius);
+        applyFillsUpdate(state, c.fills);
+        if (c.clipsContent !== undefined) {
+          state.clipsContent = c.clipsContent;
+        }
+        break;
+      }
+      case "ellipse": {
+        const c = op.changes;
+        if (c.cx !== undefined || c.cy !== undefined || c.rx !== undefined || c.ry !== undefined) {
+          if (state.fill) {
+            state.vertices = generateEllipseVertices({
+              cx: c.cx ?? 0,
+              cy: c.cy ?? 0,
+              rx: c.rx ?? 0,
+              ry: c.ry ?? 0,
+            });
+          }
+        }
+        applyFillsUpdate(state, c.fills);
+        break;
+      }
+      case "path": {
+        const c = op.changes;
+        if (c.contours !== undefined && c.contours.length > 0 && state.fill) {
+          state.vertices = tessellateContours(c.contours);
+        }
+        applyFillsUpdate(state, c.fills);
+        break;
+      }
+      case "text": {
+        const c = op.changes;
+        if (c.fill !== undefined) {
+          state.textFillColor = c.fill.color;
+          state.textFillOpacity = c.fill.opacity;
+        }
+        if (c.glyphContours !== undefined) {
+          state.vertices = tessellateContoursOrNull(c.glyphContours);
+        }
+        break;
+      }
+      case "image": {
+        const c = op.changes;
+        if (c.imageRef !== undefined) {
+          state.imageRef = c.imageRef;
+        }
+        if (c.data !== undefined) {
+          state.imageData = c.data;
+        }
+        break;
+      }
+      case "group":
+        // No variant-specific fields to update beyond the common base.
+        break;
     }
-    if ("fill" in changes && state.type === "text") {
-      const fill = changes.fill as { color: Color; opacity: number };
-      state.textFillColor = fill.color;
-      state.textFillOpacity = fill.opacity;
+  }
+
+  /**
+   * Re-tessellate rect / frame geometry when any of width / height /
+   * cornerRadius changed. Mutates `state` in place.
+   */
+  function applyGeometryRetessellation(
+    state: NodeGPUState,
+    width: number | undefined,
+    height: number | undefined,
+    cornerRadius: CornerRadius | undefined,
+  ): void {
+    if (width === undefined && height === undefined && cornerRadius === undefined) {
+      return;
     }
-    if ("glyphContours" in changes) {
-      const contours = changes.glyphContours as TextNode["glyphContours"];
-      state.vertices = tessellateContoursOrNull(contours);
+    const w = width ?? state.width;
+    const h = height ?? state.height;
+    const cr = cornerRadius !== undefined ? uniformRadiusForGL(cornerRadius) : state.cornerRadius;
+    state.width = w;
+    state.height = h;
+    state.cornerRadius = cr;
+    if (state.fill) {
+      state.vertices = generateRectVertices(w, h, cr);
     }
-    if ("imageRef" in changes) {
-      state.imageRef = changes.imageRef as string;
+  }
+
+  /**
+   * Apply a fills update — the shape's fill is the topmost paint, or
+   * `null` when the array is empty.
+   */
+  function applyFillsUpdate(state: NodeGPUState, fills: readonly Fill[] | undefined): void {
+    if (fills === undefined) {
+      return;
     }
-    if ("data" in changes) {
-      state.imageData = changes.data as Uint8Array;
-    }
-    if ("clipsContent" in changes) {
-      state.clipsContent = changes.clipsContent as boolean;
-    }
+    state.fill = fills.length > 0 ? fills[fills.length - 1] : null;
   }
 
   function applyReorder(op: Extract<DiffOp, { type: "reorder" }>): void {

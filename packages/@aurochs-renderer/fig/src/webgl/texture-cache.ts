@@ -49,6 +49,10 @@ export function createTextureCache(gl: WebGLRenderingContext): TextureCache {
         return existing;
       }
 
+      // `Uint8Array<ArrayBufferLike>` is structurally a valid `BlobPart`
+      // (BufferSource), but TS lib variants disagree on the assignability
+      // due to recent ArrayBuffer-vs-SharedArrayBuffer narrowing. Keep
+      // the cast scoped to this single boundary.
       const blob = new Blob([data as BlobPart], { type: mimeType });
       const bitmapRef = { value: undefined as ImageBitmap | undefined };
       try {

@@ -77,12 +77,12 @@ export function finalizeGradientDefs(
     if (def.type === "linear-gradient") {
       const finalized = finalizeLinearGradient(def.def, elementBounds);
       if (finalized) {
-        defs[i] = { type: "linear-gradient", def: finalized } as RenderDef;
+        defs[i] = { type: "linear-gradient", def: finalized };
       }
     } else if (def.type === "radial-gradient") {
       const finalized = finalizeRadialGradient(def.def, elementBounds);
       if (finalized) {
-        defs[i] = { type: "radial-gradient", def: finalized } as RenderDef;
+        defs[i] = { type: "radial-gradient", def: finalized };
       }
     }
   }
