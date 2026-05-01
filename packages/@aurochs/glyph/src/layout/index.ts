@@ -13,7 +13,7 @@ export {
   type LayoutDeps,
 } from "./text";
 
-export { layoutTextAsync, terminateWorker } from "./text-async";
+export { layoutTextAsync, terminateWorker, configureGlyphWorker, type GlyphWorkerCtor } from "./text-async";
 
 export {
   setKerningTable,

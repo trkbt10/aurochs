@@ -38,7 +38,7 @@ export { clearGlyphCache, getGlyphCacheStats } from "./extraction/glyph-cache";
 // =============================================================================
 
 export { layoutText, measureTextWidth as glyphMeasureTextWidth, getTextBounds } from "./layout/text";
-export { layoutTextAsync } from "./layout/text-async";
+export { layoutTextAsync, configureGlyphWorker, type GlyphWorkerCtor } from "./layout/text-async";
 
 // =============================================================================
 // Metrics (statistical fallback, works anywhere)

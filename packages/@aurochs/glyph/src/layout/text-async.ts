@@ -1,7 +1,23 @@
 /**
  * @file Async Text Layout Engine using glyph contours
  *
- * Uses Web Worker for glyph extraction to avoid blocking main thread.
+ * Uses a Web Worker for glyph extraction to avoid blocking the main thread
+ * when one is configured. The worker constructor is supplied via dependency
+ * injection (`configureGlyphWorker`); this package does not bundle a worker
+ * loader because doing so would couple it to one bundler's worker import
+ * convention (Vite's `?worker` query, webpack's `new Worker(new URL(...))`,
+ * Bun's `Bun.file(...)`, etc.).
+ *
+ * Callers in browser environments wire up the worker constructor like:
+ *
+ * ```ts
+ * import { configureGlyphWorker } from "@aurochs/glyph";
+ * import GlyphWorker from "@aurochs/glyph/glyph.worker?worker";
+ * configureGlyphWorker(GlyphWorker);
+ * ```
+ *
+ * Without that call (Node.js, tests, environments without Worker support)
+ * the layout falls back to synchronous extraction on the main thread.
  */
 
 import type {
@@ -47,88 +63,71 @@ type PendingRequest = {
   reject: (error: Error) => void;
 };
 
+/** Worker constructor type — `new GlyphWorkerCtor()` yields a Worker. */
+export type GlyphWorkerCtor = new () => Worker;
+
 /** Module-level worker state managed via mutable ref objects to avoid let. */
 const workerRef = { value: null as Worker | null };
 const requestIdRef = { value: 0 };
 const pendingRequests = new Map<number, PendingRequest>();
-const workerFailedRef = { value: false };
-const workerConstructorRef = { value: null as ((new () => Worker) | null) };
+const workerConstructorRef = { value: null as GlyphWorkerCtor | null };
 
 /**
- * Load a Vite worker module at runtime.
- * Separated to encapsulate the runtime module resolution that requires dynamic import.
+ * Register the Worker constructor used for off-main-thread glyph extraction.
+ *
+ * Must be called once at application startup, before `layoutTextAsync` is
+ * invoked. Without this call the layout falls back to synchronous extraction.
+ *
+ * The constructor is bundler-specific:
+ *   - Vite:    `import GlyphWorker from "@aurochs/glyph/glyph.worker?worker"`
+ *   - webpack: `new Worker(new URL("...", import.meta.url))` wrapped in a class
+ *   - Bun:     similar URL-based worker construction
+ *
+ * Keeping this as a DI seam means `@aurochs/glyph` itself stays
+ * bundler-agnostic and has no compile-time dependency on Vite's `?worker`
+ * query string.
  */
-async function importWorkerModule(): Promise<{ default: new () => Worker }> {
-  // Vite-specific ?worker suffix triggers bundler worker handling
-  return Function('return import("../extraction/glyph.worker?worker")')();
-}
-
-/**
- * Lazy-load the worker constructor using Vite's worker import.
- * This avoids module load failures in non-Vite environments (tests).
- */
-async function loadWorkerConstructor(): Promise<(new () => Worker) | null> {
-  if (workerConstructorRef.value !== null) {
-    return workerConstructorRef.value;
-  }
-  if (workerFailedRef.value) {
-    return null;
-  }
-  try {
-    const module = await importWorkerModule();
-    workerConstructorRef.value = module.default;
-    return workerConstructorRef.value;
-  } catch (importError: unknown) {
-    // Non-Vite environment (tests, Node.js)
-    console.debug("Worker import failed:", importError);
-    workerFailedRef.value = true;
-    return null;
-  }
+export function configureGlyphWorker(ctor: GlyphWorkerCtor): void {
+  workerConstructorRef.value = ctor;
 }
 
 function getWorker(): Worker | null {
   if (workerRef.value) {
     return workerRef.value;
   }
-  if (workerFailedRef.value || workerConstructorRef.value === null) {
+  if (workerConstructorRef.value === null) {
     return null;
   }
   if (typeof Worker === "undefined") {
     return null;
   }
 
-  try {
-    const Ctor = workerConstructorRef.value;
-    const w = new Ctor();
+  const Ctor = workerConstructorRef.value;
+  const w = new Ctor();
 
-    w.onmessage = (event: MessageEvent<WorkerResponse>) => {
-      const pending = pendingRequests.get(event.data.id);
-      if (!pending) {
-        return;
-      }
-      pendingRequests.delete(event.data.id);
-      if (event.data.type === "glyphResult") {
-        pending.resolve(event.data.glyph);
-        return;
-      }
-      pending.reject(new Error(event.data.message));
-    };
+  w.onmessage = (event: MessageEvent<WorkerResponse>) => {
+    const pending = pendingRequests.get(event.data.id);
+    if (!pending) {
+      return;
+    }
+    pendingRequests.delete(event.data.id);
+    if (event.data.type === "glyphResult") {
+      pending.resolve(event.data.glyph);
+      return;
+    }
+    pending.reject(new Error(event.data.message));
+  };
 
-    w.onerror = (error: ErrorEvent) => {
-      console.warn("Glyph worker error:", error);
-      for (const [id, pending] of pendingRequests) {
-        pending.reject(new Error("Worker error"));
-        pendingRequests.delete(id);
-      }
-    };
+  w.onerror = (error: ErrorEvent) => {
+    console.warn("Glyph worker error:", error);
+    for (const [id, pending] of pendingRequests) {
+      pending.reject(new Error("Worker error"));
+      pendingRequests.delete(id);
+    }
+  };
 
-    workerRef.value = w;
-    return workerRef.value;
-  } catch (error) {
-    console.warn("Failed to initialize glyph worker:", error);
-    workerFailedRef.value = true;
-    return null;
-  }
+  workerRef.value = w;
+  return workerRef.value;
 }
 
 async function extractGlyphAsync(char: string, fontFamily: string, style: GlyphStyleKey): Promise<GlyphContour> {
@@ -145,8 +144,6 @@ async function extractGlyphAsync(char: string, fontFamily: string, style: GlyphS
     return glyph;
   }
 
-  // Try to load worker constructor on first call
-  await loadWorkerConstructor();
   const w = getWorker();
   if (!w) {
     // Fallback to sync extraction
