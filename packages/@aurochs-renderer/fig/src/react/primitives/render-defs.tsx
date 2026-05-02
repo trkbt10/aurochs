@@ -55,7 +55,7 @@ function formatFilterPrimitive(p: ResolvedFilterPrimitive, key: number): ReactNo
     case "feComposite":
       return <feComposite key={key} in={p.in} in2={p.in2} operator={p.operator} k2={p.k2} k3={p.k3} result={p.result} />;
     case "feMorphology":
-      return <feMorphology key={key} operator={p.operator} radius={p.radius} />;
+      return <feMorphology key={key} in={p.in} operator={p.operator} radius={p.radius} result={p.result} />;
     case "feMerge":
       return (
         <feMerge key={key}>

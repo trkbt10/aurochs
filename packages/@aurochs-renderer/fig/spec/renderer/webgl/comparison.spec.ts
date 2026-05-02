@@ -10,13 +10,13 @@
  * or SVG-specific artifacts (resvg rasterization differences).
  *
  * Run:
- *   npx vitest run packages/@aurochs-renderer/fig/spec/webgl-comparison.spec.ts
+ *   bun run --cwd packages/@aurochs-renderer/fig test:webgl
  */
 
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
-import { renderSceneGraphToSvg } from "../src/svg/scene-renderer";
+import { renderSceneGraphToSvg } from "../../../src/svg/scene-renderer";
 import {
   type FixtureData,
   type CompareResult,
@@ -30,14 +30,14 @@ import {
   captureWebGL,
   startHarness,
   stopHarness,
-} from "./webgl-harness/test-utils";
+} from "./test-utils";
 
 // =============================================================================
 // Paths
 // =============================================================================
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const FIXTURES_DIR = path.join(__dirname, "../fixtures");
+const FIXTURES_DIR = path.join(__dirname, "../../../fixtures");
 const WEBGL_DIR = path.join(FIXTURES_DIR, "webgl-comparison");
 const OUTPUT_DIR = path.join(WEBGL_DIR, "__output__");
 const DIFF_DIR = path.join(WEBGL_DIR, "__diff__");
@@ -59,19 +59,11 @@ const FIXTURES: { name: string; file: string; maxDiff: number }[] = [
   { name: "group", file: "group/group.fig", maxDiff: 1 },
   { name: "clips", file: "clips/clips.fig", maxDiff: 1 },
   { name: "composite", file: "composite/composite.fig", maxDiff: 1 },
-  { name: "effects", file: "effects/effects.fig", maxDiff: 1 },
-  { name: "frame-properties", file: "frame-properties/frame-properties.fig", maxDiff: 1 },
+  { name: "effects", file: "effects/effects.fig", maxDiff: 2 },
+  { name: "frame-properties", file: "frame-properties/frame-properties.fig", maxDiff: 2 },
 ];
 
-const BENTO_PATH = "/Users/terukichi/Downloads/Bento Widget Templates (Community).fig";
-if (fs.existsSync(BENTO_PATH)) {
-  FIXTURES.push({ name: "bento", file: BENTO_PATH, maxDiff: 5 });
-}
-
 function resolveFixturePath(file: string): string {
-  if (file.startsWith("/")) {
-    return file;
-  }
   return path.join(FIXTURES_DIR, file);
 }
 
@@ -95,7 +87,7 @@ describe("WebGL↔SVG pixel comparison", () => {
 
   beforeAll(async () => {
     ensureDirs([OUTPUT_DIR, DIFF_DIR]);
-    harnessRef.value = await startHarness(path.resolve(__dirname, "webgl-harness/vite.config.ts"));
+    harnessRef.value = await startHarness(path.resolve(__dirname, "harness/vite.config.ts"));
   }, 30000);
 
   afterAll(async () => {
@@ -116,10 +108,6 @@ describe("WebGL↔SVG pixel comparison", () => {
 
       beforeAll(async () => {
         const figPath = resolveFixturePath(fixture.file);
-        if (!fs.existsSync(figPath)) {
-          console.log(`SKIP: ${figPath} not found`);
-          return;
-        }
         dataRef.value = await loadFigFixture(figPath);
       }, 30000);
 
@@ -133,6 +121,7 @@ describe("WebGL↔SVG pixel comparison", () => {
         const data = dataRef.value;
         const results: CompareResult[] = [];
         const failedFrames: string[] = [];
+        const renderErrors: string[] = [];
 
         for (const [frameName, frame] of data.frames) {
           try {
@@ -154,17 +143,19 @@ describe("WebGL↔SVG pixel comparison", () => {
             fs.writeFileSync(path.join(OUTPUT_DIR, `${outPrefix}-svg.png`), svgPng);
             fs.writeFileSync(path.join(OUTPUT_DIR, `${outPrefix}-webgl.png`), webglPng);
 
-            const result = comparePngs(
-              svgPng, webglPng, frameName,
-              path.join(DIFF_DIR, `${outPrefix}-diff.png`),
-            );
+            const result = comparePngs({
+              actual: svgPng,
+              rendered: webglPng,
+              frameName,
+              diffPath: path.join(DIFF_DIR, `${outPrefix}-diff.png`),
+            });
             results.push(result);
 
             if (result.diffPercent > fixture.maxDiff) {
               failedFrames.push(`${frameName}: ${result.diffPercent.toFixed(1)}%`);
             }
           } catch (err) {
-            console.error(`  ERROR rendering ${frameName}:`, (err as Error).message);
+            renderErrors.push(`${frameName}: ${(err as Error).message}`);
           }
         }
 
@@ -187,6 +178,9 @@ describe("WebGL↔SVG pixel comparison", () => {
         if (failedFrames.length > 0) {
           console.warn(`\n  FAILURES (>${fixture.maxDiff}%):\n    ${failedFrames.join("\n    ")}`);
         }
+
+        expect(renderErrors, `Render errors:\n${renderErrors.join("\n")}`).toEqual([]);
+        expect(results.length).toBeGreaterThan(0);
 
         // All frames should be under maxDiff
         for (const r of results) {

@@ -5,7 +5,7 @@ import {
   startHarness,
   stopHarness,
   type WebGLHarness,
-} from "../../spec/webgl-harness/test-utils";
+} from "./renderer/webgl/test-utils";
 
 type Pixel = readonly [number, number, number, number];
 
@@ -25,7 +25,7 @@ type ModuleUrls = {
 };
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const HARNESS_CONFIG = path.resolve(__dirname, "../../spec/webgl-harness/vite.config.ts");
+const HARNESS_CONFIG = path.resolve(__dirname, "renderer/webgl/harness/vite.config.ts");
 const FBO_SIZE = 64;
 
 function toViteFsUrl(filePath: string): string {
@@ -34,10 +34,10 @@ function toViteFsUrl(filePath: string): string {
 
 function makeModuleUrls(): ModuleUrls {
   return {
-    framebuffer: toViteFsUrl(path.resolve(__dirname, "framebuffer.ts")),
-    effectsRenderer: toViteFsUrl(path.resolve(__dirname, "effects-renderer.ts")),
-    shaders: toViteFsUrl(path.resolve(__dirname, "shaders/index.ts")),
-    fillRenderer: toViteFsUrl(path.resolve(__dirname, "fill-renderer.ts")),
+    framebuffer: toViteFsUrl(path.resolve(__dirname, "../src/webgl/framebuffer.ts")),
+    effectsRenderer: toViteFsUrl(path.resolve(__dirname, "../src/webgl/effects-renderer.ts")),
+    shaders: toViteFsUrl(path.resolve(__dirname, "../src/webgl/shaders/index.ts")),
+    fillRenderer: toViteFsUrl(path.resolve(__dirname, "../src/webgl/fill-renderer.ts")),
   };
 }
 

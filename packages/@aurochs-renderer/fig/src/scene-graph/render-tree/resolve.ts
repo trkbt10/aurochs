@@ -20,7 +20,6 @@ import type {
   Fill,
   CornerRadius,
   ArcData,
-  Effect,
   Stroke,
 } from "../types";
 
@@ -31,7 +30,6 @@ import {
   contourToSvgD,
   resolveFill,
   resolveTopFill,
-  resolveStroke,
   resolveStrokeResult,
   resolveEffects,
   finalizeGradientDefs,
@@ -39,9 +37,9 @@ import {
   type IdGenerator,
   type ResolvedFill,
   type ResolvedFilter,
-  type ResolvedStrokeLayer,
 } from "../render";
 import { computePathContoursBbox } from "../path-bbox";
+import { buildEffectStack, type ResolvedEffectStack } from "../render/effect-stack";
 import { buildRoundedRectPathD } from "../render/rounded-rect-path";
 
 import type {
@@ -66,8 +64,6 @@ import type {
   StrokeShape,
   StrokeRendering,
 } from "./types";
-
-import type { BackgroundBlurEffect } from "../types";
 
 // =============================================================================
 // ID Generator
@@ -284,10 +280,11 @@ function resolveWrapper(
   node: SceneNode,
   ids: IdGenerator,
   defs: RenderDef[],
-): { wrapper: ResolvedWrapperAttrs; filter?: ResolvedFilter } {
+): { wrapper: ResolvedWrapperAttrs; effectStack: ResolvedEffectStack; filter?: ResolvedFilter } {
   const elementBounds = getNodeBounds(node);
   const transformStr = matrixToSvgTransform(node.transform);
-  const filterResult = resolveEffects(node.effects, ids, elementBounds);
+  const effectStack = buildEffectStack(node.effects);
+  const filterResult = resolveEffects(effectStack.foregroundEffects, ids, elementBounds);
 
   if (filterResult) {
     defs.push({ type: "filter", filter: filterResult });
@@ -300,6 +297,7 @@ function resolveWrapper(
       filterAttr: filterResult?.filterAttr,
       blendMode: node.blendMode,
     },
+    effectStack,
     filter: filterResult ?? undefined,
   };
 }
@@ -407,15 +405,13 @@ function resolveMask(
  * is clipped to the visible outline.
  */
 function resolveBackgroundBlur(
-  effects: readonly Effect[],
+  effectStack: ResolvedEffectStack,
   bounds: { x: number; y: number; width: number; height: number },
   ids: IdGenerator,
   defs: RenderDef[],
   shape?: ClipPathShape,
 ): RenderBackgroundBlur | undefined {
-  const bgBlur = effects.find(
-    (e): e is BackgroundBlurEffect => e.type === "background-blur",
-  );
+  const bgBlur = effectStack.backgroundBlur;
   if (!bgBlur || bgBlur.radius <= 0) {
     return undefined;
   }
@@ -619,7 +615,7 @@ function resolveGroupNode(node: GroupNode, ids: IdGenerator): RenderGroupNode {
 
 function resolveFrameNode(node: FrameNode, ids: IdGenerator): RenderFrameNode {
   const defs: RenderDef[] = [];
-  const { wrapper } = resolveWrapper(node, ids, defs);
+  const { wrapper, effectStack } = resolveWrapper(node, ids, defs);
   const clampedRadius = clampRadius(node.cornerRadius, node.width, node.height);
 
   // Background fill and stroke — resolved independently.
@@ -712,7 +708,7 @@ function resolveFrameNode(node: FrameNode, ids: IdGenerator): RenderFrameNode {
   // honours cornerRadius (otherwise a rounded FRAME with background blur
   // would show a square blur area bleeding past the rounded corners).
   const backgroundBlur = resolveBackgroundBlur(
-    node.effects, { x: 0, y: 0, width: node.width, height: node.height }, ids, defs,
+    effectStack, { x: 0, y: 0, width: node.width, height: node.height }, ids, defs,
     maskShape,
   );
 
@@ -742,7 +738,7 @@ function resolveFrameNode(node: FrameNode, ids: IdGenerator): RenderFrameNode {
 
 function resolveRectNode(node: RectNode, ids: IdGenerator): RenderRectNode {
   const defs: RenderDef[] = [];
-  const { wrapper } = resolveWrapper(node, ids, defs);
+  const { wrapper, effectStack } = resolveWrapper(node, ids, defs);
   const clampedRadius = clampRadius(node.cornerRadius, node.width, node.height);
   const fillResult = resolveTopFillResult(node.fills, ids, defs);
   const fillLayers = resolveAllFillLayers(node.fills, ids, defs);
@@ -755,7 +751,7 @@ function resolveRectNode(node: RectNode, ids: IdGenerator): RenderRectNode {
   finalizeDefs(defs, { width: node.width, height: node.height });
 
   const backgroundBlur = resolveBackgroundBlur(
-    node.effects, { x: 0, y: 0, width: node.width, height: node.height }, ids, defs,
+    effectStack, { x: 0, y: 0, width: node.width, height: node.height }, ids, defs,
     maskClipShape,
   );
 
@@ -784,7 +780,7 @@ function resolveRectNode(node: RectNode, ids: IdGenerator): RenderRectNode {
 
 function resolveEllipseNode(node: EllipseNode, ids: IdGenerator): RenderEllipseNode | RenderPathNode {
   const defs: RenderDef[] = [];
-  const { wrapper } = resolveWrapper(node, ids, defs);
+  const { wrapper, effectStack } = resolveWrapper(node, ids, defs);
   const fillResult = resolveTopFillResult(node.fills, ids, defs);
   const fillLayers = resolveAllFillLayers(node.fills, ids, defs);
   const ellipseStrokeShape: StrokeShape = { kind: "ellipse", cx: node.cx, cy: node.cy, rx: node.rx, ry: node.ry };
@@ -806,7 +802,7 @@ function resolveEllipseNode(node: EllipseNode, ids: IdGenerator): RenderEllipseN
   // background-blur effect renders as a square blur area (user's
   // Bento "Container" bug — ID 133:964).
   const backgroundBlur = resolveBackgroundBlur(
-    node.effects, { x: 0, y: 0, ...ellipseSize }, ids, defs,
+    effectStack, { x: 0, y: 0, ...ellipseSize }, ids, defs,
     ellipseMaskShape,
   );
   const mask = resolveMask(node, ids, defs);
@@ -864,7 +860,7 @@ function resolveEllipseNode(node: EllipseNode, ids: IdGenerator): RenderEllipseN
 
 function resolvePathNode(node: PathNode, ids: IdGenerator): RenderPathNode {
   const defs: RenderDef[] = [];
-  const { wrapper } = resolveWrapper(node, ids, defs);
+  const { wrapper, effectStack } = resolveWrapper(node, ids, defs);
   const fillResult = resolveTopFillResult(node.fills, ids, defs);
   const fillLayers = resolveAllFillLayers(node.fills, ids, defs);
 
@@ -911,7 +907,7 @@ function resolvePathNode(node: PathNode, ids: IdGenerator): RenderPathNode {
   // Pass path shape so backdrop-filter clips to the actual contour, not
   // the node's bounding rect (matches ELLIPSE/FRAME behaviour).
   const backgroundBlur = pathBounds
-    ? resolveBackgroundBlur(node.effects, pathBounds, ids, defs, pathMaskShape)
+    ? resolveBackgroundBlur(effectStack, pathBounds, ids, defs, pathMaskShape)
     : undefined;
   const mask = resolveMask(node, ids, defs);
 

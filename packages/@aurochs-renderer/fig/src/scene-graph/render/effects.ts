@@ -61,7 +61,7 @@ export type ResolvedFilterPrimitive =
       readonly k3?: number;
       readonly result?: string;
     }
-  | { readonly type: "feMorphology"; readonly operator: "dilate" | "erode"; readonly radius: number }
+  | { readonly type: "feMorphology"; readonly in?: string; readonly operator: "dilate" | "erode"; readonly radius: number; readonly result?: string }
   | { readonly type: "feMerge"; readonly nodes: readonly string[] };
 
 /**
@@ -104,6 +104,16 @@ function effectBlendModeToSvg(bm: BlendMode | undefined): FeBlendMode {
     case "darken":
     case "lighten":
     case "overlay":
+    case "color-dodge":
+    case "color-burn":
+    case "hard-light":
+    case "soft-light":
+    case "difference":
+    case "exclusion":
+    case "hue":
+    case "saturation":
+    case "color":
+    case "luminosity":
       return bm;
     default:
       return "normal";
@@ -114,6 +124,18 @@ const ALPHA_BINARIZE_MATRIX = "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0";
 
 function buildColorMatrix(c: Color): string {
   return `0 0 0 0 ${c.r} 0 0 0 0 ${c.g} 0 0 0 0 ${c.b} 0 0 0 ${c.a} 0`;
+}
+
+function resolveNegativeDirectionExpansion(isNormalBlend: boolean, totalExpansion: number, offset: number): number {
+  if (isNormalBlend) { return Math.max(0, totalExpansion - offset); }
+  if (offset > 0) { return 0; }
+  return totalExpansion - offset;
+}
+
+function resolvePositiveDirectionExpansion(isNormalBlend: boolean, totalExpansion: number, offset: number): number {
+  if (isNormalBlend) { return Math.max(0, totalExpansion + offset); }
+  if (offset < 0) { return 0; }
+  return totalExpansion + offset;
 }
 
 /**
@@ -282,23 +304,27 @@ export function resolveEffects(
         }
         primitives.push({ type: "feGaussianBlur", stdDeviation: stdDev });
 
-        if (blendMode !== "normal") {
+        if (blendMode !== "normal" || effect.showShadowBehindNode === false) {
           const compositedResult = ids.getNextId("drop-composited");
           primitives.push(
             { type: "feComposite", in2: hardAlphaResult, operator: "out", result: compositedResult },
             { type: "feColorMatrix", in: compositedResult, matrixType: "matrix", values: buildColorMatrix(c), result: tintedResult },
-            {
+          );
+          if (blendMode !== "normal") {
+            primitives.push({
               type: "feBlend",
               mode: blendMode,
               in: tintedResult,
               in2: "SourceGraphic",
               result: ids.getNextId("drop-blended"),
-            },
-          );
-          // The blended result is the last-pushed primitive's result.
-          const last = primitives[primitives.length - 1];
-          if (last.type === "feBlend" && last.result) {
-            dropShadowResults.push(last.result);
+            });
+            // The blended result is the last-pushed primitive's result.
+            const last = primitives[primitives.length - 1];
+            if (last.type === "feBlend" && last.result) {
+              dropShadowResults.push(last.result);
+            }
+          } else {
+            dropShadowResults.push(tintedResult);
           }
         } else {
           // NORMAL blend: blurred-hardAlpha is tinted directly with no
@@ -334,16 +360,39 @@ export function resolveEffects(
         const floodResult = ids.getNextId("inner-flood");
         const coloredResult = ids.getNextId("inner-colored");
         const offsetResult = ids.getNextId("inner-offset");
+        const spreadResult = ids.getNextId("inner-spread");
         const blurResult = ids.getNextId("inner-blur");
         const innerResult = ids.getNextId("inner");
         primitives.push(
           { type: "feFlood", floodColor: colorToRgb(effect.color), floodOpacity: effect.color.a, result: floodResult },
           { type: "feComposite", in: floodResult, in2: "SourceAlpha", operator: "in", result: coloredResult },
           { type: "feOffset", in: coloredResult, dx: effect.offset.x, dy: effect.offset.y, result: offsetResult },
-          { type: "feGaussianBlur", in: offsetResult, stdDeviation: stdDev, result: blurResult },
-          { type: "feComposite", in: blurResult, in2: "SourceAlpha", operator: "out", result: innerResult },
-          { type: "feMerge", nodes: ["SourceGraphic", innerResult] },
         );
+        if (effect.spread && effect.spread !== 0) {
+          primitives.push({
+            type: "feMorphology",
+            in: offsetResult,
+            operator: effect.spread > 0 ? "dilate" : "erode",
+            radius: Math.abs(effect.spread),
+            result: spreadResult,
+          });
+        }
+        primitives.push(
+          { type: "feGaussianBlur", in: effect.spread && effect.spread !== 0 ? spreadResult : offsetResult, stdDeviation: stdDev, result: blurResult },
+          { type: "feComposite", in: blurResult, in2: "SourceAlpha", operator: "out", result: innerResult },
+        );
+        const innerBlendMode = effectBlendModeToSvg(effect.blendMode);
+        if (innerBlendMode !== "normal") {
+          primitives.push({
+            type: "feBlend",
+            mode: innerBlendMode,
+            in: innerResult,
+            in2: "SourceGraphic",
+            result: ids.getNextId("inner-blended"),
+          });
+        } else {
+          primitives.push({ type: "feMerge", nodes: ["SourceGraphic", innerResult] });
+        }
         break;
       }
 
@@ -438,18 +487,10 @@ function computeFilterBounds(
       //   direction expansion to 0: a downward shadow (offsetY > 0)
       //   gets upExpand = 0.
       const isNormalBlend = effect.blendMode === undefined;
-      const upExpand = isNormalBlend
-        ? Math.max(0, totalExpansion - offsetY)
-        : (offsetY > 0 ? 0 : (totalExpansion - offsetY));
-      const downExpand = isNormalBlend
-        ? Math.max(0, totalExpansion + offsetY)
-        : (offsetY < 0 ? 0 : (totalExpansion + offsetY));
-      const leftExpand = isNormalBlend
-        ? Math.max(0, totalExpansion - offsetX)
-        : (offsetX > 0 ? 0 : (totalExpansion - offsetX));
-      const rightExpand = isNormalBlend
-        ? Math.max(0, totalExpansion + offsetX)
-        : (offsetX < 0 ? 0 : (totalExpansion + offsetX));
+      const upExpand = resolveNegativeDirectionExpansion(isNormalBlend, totalExpansion, offsetY);
+      const downExpand = resolvePositiveDirectionExpansion(isNormalBlend, totalExpansion, offsetY);
+      const leftExpand = resolveNegativeDirectionExpansion(isNormalBlend, totalExpansion, offsetX);
+      const rightExpand = resolvePositiveDirectionExpansion(isNormalBlend, totalExpansion, offsetX);
 
       minX = Math.min(minX, bounds.x - leftExpand);
       minY = Math.min(minY, bounds.y - upExpand);

@@ -133,8 +133,10 @@ function formatFilterPrimitive(p: ResolvedFilterPrimitive): SvgString {
       });
     case "feMorphology":
       return feMorphology({
+        in: p.in,
         operator: p.operator,
         radius: p.radius,
+        result: p.result,
       });
     case "feMerge":
       return feMerge({}, ...p.nodes.map((nodeIn) => feMergeNode({ in: nodeIn })));

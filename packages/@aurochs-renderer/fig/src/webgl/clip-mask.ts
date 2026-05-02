@@ -32,7 +32,7 @@ export function beginStencilClip(
   if (clip.type === "rect") {
     verticesRef.value = generateRectVertices(clip.width, clip.height, clip.cornerRadius);
   } else {
-    verticesRef.value = tessellateContours(clip.contours);
+    verticesRef.value = tessellateContours(clip.contours, 0.25, true);
   }
 
   drawVertices(verticesRef.value);

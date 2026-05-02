@@ -16,10 +16,11 @@ import { createServer, type ViteDevServer } from "vite";
 import puppeteer, { type Browser, type Page } from "puppeteer";
 import { loadFigFile } from "@aurochs/fig/roundtrip";
 import { buildNodeTree } from "@aurochs/fig/parser";
+// eslint-disable-next-line custom/no-builder-import-in-renderer -- WebGL visual specs need the canonical .fig fixture domain conversion path.
 import { treeToDocument } from "@aurochs-builder/fig/context";
 import type { FigDesignNode, FigDesignDocument } from "@aurochs/fig/domain";
-import { buildSceneGraph } from "../../src/scene-graph/builder";
-import type { SceneGraph } from "../../src/scene-graph/types";
+import { buildSceneGraph } from "../../../src/scene-graph/builder";
+import type { SceneGraph } from "../../../src/scene-graph/types";
 
 // =============================================================================
 // Types
@@ -48,6 +49,13 @@ export type WebGLHarness = {
   server: ViteDevServer;
   browser: Browser;
   page: Page;
+};
+
+export type ComparePngsParams = {
+  readonly actual: Buffer;
+  readonly rendered: Buffer;
+  readonly frameName: string;
+  readonly diffPath?: string;
 };
 
 // =============================================================================
@@ -104,10 +112,10 @@ export function svgToPng(svg: string, width?: number): Buffer {
 
 /** Compare two PNG buffers and return difference percentage */
 export function comparePngs(
-  a: Buffer, b: Buffer, frameName: string, diffPath?: string,
+  { actual, rendered, frameName, diffPath }: ComparePngsParams,
 ): CompareResult {
-  const imgA = readPng(a);
-  const imgBRef = { value: readPng(b) };
+  const imgA = readPng(actual);
+  const imgBRef = { value: readPng(rendered) };
   // Resize if dimensions don't match
   if (imgBRef.value.width !== imgA.width || imgBRef.value.height !== imgA.height) {
     const resized = createPngImage({ width: imgA.width, height: imgA.height });
@@ -142,6 +150,15 @@ export function comparePngs(
   };
 }
 
+function selectFixturePages(
+  { document, canvasFilter }: { document: FigDesignDocument; canvasFilter?: string },
+): readonly FigDesignDocument["pages"][number][] {
+  if (!canvasFilter) {
+    return document.pages;
+  }
+  return document.pages.filter((page) => page.name === canvasFilter);
+}
+
 // =============================================================================
 // Fixture Loading — correct pipeline via FigDesignDocument
 // =============================================================================
@@ -161,9 +178,7 @@ export async function loadFigFixture(figPath: string, canvasFilter?: string): Pr
   const document = treeToDocument(tree, loaded);
 
   const frames = new Map<string, FrameInfo>();
-  const targetPages = canvasFilter
-    ? document.pages.filter((p) => p.name === canvasFilter)
-    : document.pages;
+  const targetPages = selectFixturePages({ document, canvasFilter });
 
   for (const page of targetPages) {
     for (const child of page.children) {

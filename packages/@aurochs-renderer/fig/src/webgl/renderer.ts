@@ -79,12 +79,13 @@ import {
 } from "./stroke-tessellation";
 import { renderFallbackTextToCanvas } from "./text-renderer";
 import { createEffectsRenderer } from "./effects-renderer";
+import { buildEffectStack, renderShapeEffectStack } from "../scene-graph/render/effect-stack";
+import { createWebGLEffectRendering } from "./effect-rendering";
 import {
   prepareFanTriangles,
   generateCoverQuad,
   CLIP_STENCIL_BIT,
   FILL_STENCIL_MASK,
-  type Bounds,
 } from "./stencil-fill";
 import type { CornerRadius } from "../scene-graph/types";
 import { svgPathDToContours } from "./path-contours";
@@ -219,13 +220,6 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
    */
   function getSourceEffects(node: RenderNodeBase): readonly Effect[] {
     return node.source.effects;
-  }
-
-  function findLayerBlur(node: RenderNodeBase): LayerBlurEffect | null {
-    for (const effect of getSourceEffects(node)) {
-      if (effect.type === "layer-blur" && effect.radius > 0) { return effect; }
-    }
-    return null;
   }
 
   function drawFill(
@@ -364,113 +358,15 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
     }
   }
 
-  // =========================================================================
-  // Effect rendering — reads raw effects from source for GPU rendering
-  // =========================================================================
-
-  function renderDropShadows(
-    { effects, vertices, transform, opacity }: {
-      effects: readonly Effect[]; vertices: Float32Array; transform: AffineMatrix; opacity: number;
-    }
-  ): void {
-    for (const effect of effects) {
-      if (effect.type !== "drop-shadow") { continue; }
-
-      if (effect.radius <= 0) {
-        const offsetTransform: AffineMatrix = {
-          m00: transform.m00,
-          m01: transform.m01,
-          m02: transform.m02 + effect.offset.x,
-          m10: transform.m10,
-          m11: transform.m11,
-          m12: transform.m12 + effect.offset.y,
-        };
-        drawSolidFill({ ctx: getGlContext(), vertices, color: effect.color, transform: offsetTransform, opacity: opacity * effect.color.a });
-      } else {
-        const canvasW = width.value * pixelRatio;
-        const canvasH = height.value * pixelRatio;
-        effectsRenderer.renderDropShadow({
-          canvasWidth: canvasW,
-          canvasHeight: canvasH,
-          effect,
-          pixelRatio,
-          renderSilhouette: () => {
-            drawSolidFill({ ctx: getGlContext(), vertices, color: { r: 1, g: 1, b: 1, a: 1 }, transform, opacity: 1 });
-          },
-        });
-      }
-    }
-  }
-
-  function renderInnerShadows(
-    { effects, vertices, transform }: {
-      effects: readonly Effect[]; vertices: Float32Array; transform: AffineMatrix;
-    }
-  ): void {
-    for (const effect of effects) {
-      if (effect.type !== "inner-shadow") { continue; }
-
-      const canvasW = width.value * pixelRatio;
-      const canvasH = height.value * pixelRatio;
-      effectsRenderer.renderInnerShadow({
-        canvasWidth: canvasW,
-        canvasHeight: canvasH,
-        effect,
-        pixelRatio,
-        renderSilhouette: () => {
-          drawSolidFill({ ctx: getGlContext(), vertices, color: { r: 1, g: 1, b: 1, a: 1 }, transform, opacity: 1 });
-        },
-      });
-    }
-  }
-
-  function renderDropShadowsStencil(
-    { effects, fanVertices, coverQuad, bounds, contours, transform, opacity }: {
-      effects: readonly Effect[]; fanVertices: Float32Array; coverQuad: Float32Array;
-      bounds: Bounds; contours: readonly PathContour[]; transform: AffineMatrix; opacity: number;
-    }
-  ): void {
-    const elementSize = { width: bounds.maxX - bounds.minX, height: bounds.maxY - bounds.minY };
-
-    for (const effect of effects) {
-      if (effect.type !== "drop-shadow") { continue; }
-
-      const offsetTransform: AffineMatrix = {
-        m00: transform.m00,
-        m01: transform.m01,
-        m02: transform.m02 + effect.offset.x,
-        m10: transform.m10,
-        m11: transform.m11,
-        m12: transform.m12 + effect.offset.y,
-      };
-
-      if (effect.radius <= 0) {
-        drawStencilFill({
-          fanVertices,
-          coverQuad,
-          transform: offsetTransform,
-          opacity: opacity * effect.color.a,
-          elementSize,
-          fills: [{ type: "solid", color: effect.color, opacity: 1 }],
-        });
-      } else {
-        const earcutVertices = tessellateContours(contours, 0.25, false);
-        if (earcutVertices.length > 0) {
-          const canvasW = width.value * pixelRatio;
-          const canvasH = height.value * pixelRatio;
-          effectsRenderer.renderDropShadow({
-            canvasWidth: canvasW,
-            canvasHeight: canvasH,
-            effect,
-            pixelRatio,
-            renderSilhouette: () => {
-              drawSolidFill({ ctx: getGlContext(), vertices: earcutVertices, color: { r: 1, g: 1, b: 1, a: 1 }, transform, opacity: 1 });
-            },
-          });
-        }
-      }
-    }
-  }
+  const effectRendering = createWebGLEffectRendering({
+    getGlContext,
+    effectsRenderer,
+    pixelRatio,
+    canvasWidth: () => width.value * pixelRatio,
+    canvasHeight: () => height.value * pixelRatio,
+    isClipStencilRequired: () => clipActive.value && clipStencilValid.value,
+    drawStencilFill,
+  });
 
   // =========================================================================
   // Stroke rendering — uses StrokeRendering discriminated union from RenderTree
@@ -775,7 +671,8 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
     const nodeOpacity = node.wrapper.opacity ?? 1;
     const worldOpacity = parentOpacity * nodeOpacity;
 
-    const layerBlur = findLayerBlur(node);
+    const effectStack = buildEffectStack(getSourceEffects(node));
+    const layerBlur = effectStack.layerBlur;
     if (layerBlur) {
       renderWithLayerBlur({ node, worldTransform, worldOpacity, effect: layerBlur });
       return;
@@ -1002,46 +899,42 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
     const hasStroke = !!node.background?.strokeRendering;
     const hasVisibleContent = hasFills || hasStroke;
 
-    // Drop shadows (before fills) — only if node has visible content
-    if (hasVisibleContent) {
-      renderDropShadows({ effects, vertices, transform, opacity });
-    }
-
-    // Background fills — use source fills for GPU draw data.
-    if (node.background) {
-      drawAllFills({ vertices, fills: node.sourceFills, transform, opacity, elementSize });
-    }
-
-    // Inner shadows (after fills, before strokes) — only if visible content
-    if (hasVisibleContent) {
-      renderInnerShadows({ effects, vertices, transform });
-    }
-
-    // Stroke — use StrokeRendering from RenderTree
-    if (node.background?.strokeRendering) {
-      const sr = node.background.strokeRendering;
-      if (sr.mode === "uniform") {
-        // Uniform stroke: tessellate rect stroke using RenderFrameNode.sourceStroke.
-        const sourceStroke = node.sourceStroke;
-        if (sourceStroke && sourceStroke.width > 0) {
-          renderUniformStroke({
-            sr,
-            sourceStroke,
-            shapeVerticesFactory: (sw, dashPattern) => tessellateRectStroke({
-              w: node.width,
-              h: node.height,
-              cornerRadius: uniformCR ?? 0,
-              strokeWidth: sw,
-              dashPattern,
-            }),
-            transform,
-            opacity,
-          });
+    effectRendering.renderVertexShapeEffectStack({
+      effects,
+      hasVisibleContent,
+      vertices,
+      transform,
+      opacity,
+      renderContent: () => {
+        if (node.background) {
+          drawAllFills({ vertices, fills: node.sourceFills, transform, opacity, elementSize });
         }
-      } else {
+      },
+      renderStroke: () => {
+        if (!node.background?.strokeRendering) { return; }
+        const sr = node.background.strokeRendering;
+        if (sr.mode === "uniform") {
+          const sourceStroke = node.sourceStroke;
+          if (sourceStroke && sourceStroke.width > 0) {
+            renderUniformStroke({
+              sr,
+              sourceStroke,
+              shapeVerticesFactory: (sw, dashPattern) => tessellateRectStroke({
+                w: node.width,
+                h: node.height,
+                cornerRadius: uniformCR ?? 0,
+                strokeWidth: sw,
+                dashPattern,
+              }),
+              transform,
+              opacity,
+            });
+          }
+          return;
+        }
         renderStrokeRendering(sr, transform, opacity);
-      }
-    }
+      },
+    });
 
     // Children with clip — use RenderTree's clip-path def (which may be expanded
     // by child stroke overhang to prevent stroke clipping at frame edges)
@@ -1082,40 +975,39 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
     // Skip effects when node has no visible content (fill=none + no stroke → empty silhouette)
     const hasVisibleContent = node.sourceFills.length > 0 || !!node.strokeRendering;
 
-    if (hasVisibleContent) {
-      renderDropShadows({ effects, vertices, transform, opacity });
-    }
-
-    // Draw all fills (multi-paint) using sourceFills
-    if (node.sourceFills.length > 0) {
-      drawAllFills({ vertices, fills: node.sourceFills, transform, opacity, elementSize });
-    }
-
-    if (hasVisibleContent) {
-      renderInnerShadows({ effects, vertices, transform });
-    }
-
-    // Stroke from StrokeRendering
-    if (node.strokeRendering) {
-      const sr = node.strokeRendering;
-      if (sr.mode === "uniform") {
-        renderUniformStroke({
-          sr,
-          sourceStroke: node.sourceStroke,
-          shapeVerticesFactory: (sw, dashPattern) => tessellateRectStroke({
-            w: node.width,
-            h: node.height,
-            cornerRadius: uniformCR ?? 0,
-            strokeWidth: sw,
-            dashPattern,
-          }),
-          transform,
-          opacity,
-        });
-      } else {
+    effectRendering.renderVertexShapeEffectStack({
+      effects,
+      hasVisibleContent,
+      vertices,
+      transform,
+      opacity,
+      renderContent: () => {
+        if (node.sourceFills.length > 0) {
+          drawAllFills({ vertices, fills: node.sourceFills, transform, opacity, elementSize });
+        }
+      },
+      renderStroke: () => {
+        if (!node.strokeRendering) { return; }
+        const sr = node.strokeRendering;
+        if (sr.mode === "uniform") {
+          renderUniformStroke({
+            sr,
+            sourceStroke: node.sourceStroke,
+            shapeVerticesFactory: (sw, dashPattern) => tessellateRectStroke({
+              w: node.width,
+              h: node.height,
+              cornerRadius: uniformCR ?? 0,
+              strokeWidth: sw,
+              dashPattern,
+            }),
+            transform,
+            opacity,
+          });
+          return;
+        }
         renderStrokeRendering(sr, transform, opacity);
-      }
-    }
+      },
+    });
   }
 
   function renderEllipseFromTree(node: RenderEllipseNode, transform: AffineMatrix, opacity: number): void {
@@ -1125,37 +1017,90 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
 
     const hasVisibleContent = node.sourceFills.length > 0 || !!node.strokeRendering;
 
-    if (hasVisibleContent) {
-      renderDropShadows({ effects, vertices, transform, opacity });
-    }
-
-    if (node.sourceFills.length > 0) {
-      drawAllFills({ vertices, fills: node.sourceFills, transform, opacity, elementSize });
-    }
-
-    if (hasVisibleContent) {
-      renderInnerShadows({ effects, vertices, transform });
-    }
-
-    if (node.strokeRendering) {
-      const sr = node.strokeRendering;
-      if (sr.mode === "uniform") {
-        renderUniformStroke({
-          sr,
-          sourceStroke: node.sourceStroke,
-          shapeVerticesFactory: (sw, dashPattern) => tessellateEllipseStroke({
-            cx: node.cx,
-            cy: node.cy,
-            rx: node.rx,
-            ry: node.ry,
-            strokeWidth: sw,
-            dashPattern,
-          }),
-          transform,
-          opacity,
-        });
-      } else {
+    effectRendering.renderVertexShapeEffectStack({
+      effects,
+      hasVisibleContent,
+      vertices,
+      transform,
+      opacity,
+      renderContent: () => {
+        if (node.sourceFills.length > 0) {
+          drawAllFills({ vertices, fills: node.sourceFills, transform, opacity, elementSize });
+        }
+      },
+      renderStroke: () => {
+        if (!node.strokeRendering) { return; }
+        const sr = node.strokeRendering;
+        if (sr.mode === "uniform") {
+          renderUniformStroke({
+            sr,
+            sourceStroke: node.sourceStroke,
+            shapeVerticesFactory: (sw, dashPattern) => tessellateEllipseStroke({
+              cx: node.cx,
+              cy: node.cy,
+              rx: node.rx,
+              ry: node.ry,
+              strokeWidth: sw,
+              dashPattern,
+            }),
+            transform,
+            opacity,
+          });
+          return;
+        }
         renderStrokeRendering(sr, transform, opacity);
+      },
+    });
+  }
+
+  function renderPathStrokeFromTree(
+    { node, contours, transform, opacity }: {
+      node: RenderPathNode; contours: readonly PathContour[]; transform: AffineMatrix; opacity: number;
+    },
+  ): void {
+    if (!node.strokeRendering) { return; }
+    const sr = node.strokeRendering;
+    if (sr.mode === "uniform" && node.sourceStroke && node.sourceStroke.width > 0) {
+      const strokeVerts = tessellatePathStroke(contours, node.sourceStroke.width, {
+        dashPattern: node.sourceStroke.dashPattern,
+      });
+      if (strokeVerts.length > 0) {
+        drawSolidFill({
+          ctx: getGlContext(), vertices: strokeVerts,
+          color: node.sourceStroke.color, transform,
+          opacity: opacity * node.sourceStroke.opacity,
+        });
+      }
+      return;
+    }
+    if (sr.mode === "layers") {
+      for (const layer of sr.layers) {
+        const strokeWidth = layer.attrs.strokeWidth ?? 1;
+        if (strokeWidth <= 0) { continue; }
+        const strokeVerts = tessellatePathStroke(contours, strokeWidth, {
+          dashPattern: parseStrokeDasharray(layer.attrs.strokeDasharray),
+        });
+        if (strokeVerts.length > 0) {
+          const color = hexToColor(layer.attrs.stroke);
+          drawSolidFill({
+            ctx: getGlContext(), vertices: strokeVerts,
+            color, transform,
+            opacity: opacity * (layer.attrs.strokeOpacity ?? 1),
+          });
+        }
+      }
+      return;
+    }
+    if (sr.mode === "masked" && node.sourceStroke && node.sourceStroke.width > 0) {
+      const strokeVerts = tessellatePathStroke(contours, node.sourceStroke.width, {
+        dashPattern: node.sourceStroke.dashPattern,
+      });
+      if (strokeVerts.length > 0) {
+        drawSolidFill({
+          ctx: getGlContext(), vertices: strokeVerts,
+          color: node.sourceStroke.color, transform,
+          opacity: opacity * node.sourceStroke.opacity,
+        });
       }
     }
   }
@@ -1167,6 +1112,7 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
     // that have no sourceContours.
     if (node.paths.length === 0) { return; }
     const effects = getSourceEffects(node);
+    const effectStack = buildEffectStack(effects);
 
     // Parse RenderTree SVG paths to PathContours for tessellation
     const parsedContours: PathContour[] = node.paths.flatMap((rp) => svgPathDToContours({
@@ -1176,76 +1122,53 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
 
     const hasVisibleContent = node.sourceFills.length > 0 || !!node.strokeRendering;
 
-    if (parsedContours.some((contour) => contour.windingRule === "evenodd")) {
-      const prepared = prepareFanTriangles(parsedContours);
-      if (prepared) {
-        const { fanVertices, bounds } = prepared;
-        const coverQuad = generateCoverQuad(bounds);
-        const elementSize = { width: bounds.maxX - bounds.minX, height: bounds.maxY - bounds.minY };
-        if (hasVisibleContent) {
-          renderDropShadowsStencil({ effects, fanVertices, coverQuad, bounds, contours: parsedContours, transform, opacity });
-        }
-        if (node.sourceFills.length > 0) {
-          drawStencilFill({ fanVertices, coverQuad, transform, opacity, elementSize, fills: node.sourceFills });
-        }
-      }
-    } else {
-      // autoDetectWinding=true: paths may use either CW or CCW convention.
-      const vertices = tessellateContours(parsedContours, 0.25, true);
-      if (vertices.length > 0) {
-        if (hasVisibleContent) {
-          renderDropShadows({ effects, vertices, transform, opacity });
-        }
-        if (node.sourceFills.length > 0) {
-          const elementSize = computeBoundingBox(vertices);
-          drawAllFills({ vertices, fills: node.sourceFills, transform, opacity, elementSize });
-        }
-      }
-    }
+    const usesEvenOddFill = parsedContours.some((contour) => contour.windingRule === "evenodd");
+    const prepared = usesEvenOddFill ? prepareFanTriangles(parsedContours) : null;
+    const pathVertices = usesEvenOddFill ? new Float32Array(0) : tessellateContours(parsedContours, 0.25, true);
+    const backgroundMaskVertices = tessellateContours(parsedContours, 0.25, true);
 
-    // Path stroke: tessellate from parsed contours (same SoT as fill)
-    if (node.strokeRendering) {
-      const sr = node.strokeRendering;
-      if (sr.mode === "uniform" && node.sourceStroke && node.sourceStroke.width > 0) {
-        const strokeVerts = tessellatePathStroke(parsedContours, node.sourceStroke.width, {
-          dashPattern: node.sourceStroke.dashPattern,
-        });
-        if (strokeVerts.length > 0) {
-          drawSolidFill({
-            ctx: getGlContext(), vertices: strokeVerts,
-            color: node.sourceStroke.color, transform,
-            opacity: opacity * node.sourceStroke.opacity,
-          });
+    renderShapeEffectStack({
+      stack: effectStack,
+      hasVisibleContent,
+      renderBackgroundBlur: (effect) => {
+        if (backgroundMaskVertices.length > 0) {
+          effectRendering.renderBackgroundBlurMask({ effect, vertices: backgroundMaskVertices, transform });
         }
-      } else if (sr.mode === "layers") {
-        for (const layer of sr.layers) {
-          const strokeWidth = layer.attrs.strokeWidth ?? 1;
-          if (strokeWidth <= 0) { continue; }
-          const strokeVerts = tessellatePathStroke(parsedContours, strokeWidth, {
-            dashPattern: parseStrokeDasharray(layer.attrs.strokeDasharray),
-          });
-          if (strokeVerts.length > 0) {
-            const color = hexToColor(layer.attrs.stroke);
-            drawSolidFill({
-              ctx: getGlContext(), vertices: strokeVerts,
-              color, transform,
-              opacity: opacity * (layer.attrs.strokeOpacity ?? 1),
-            });
-          }
+      },
+      renderDropShadows: (sourceEffects) => {
+        if (prepared) {
+          const { fanVertices, bounds } = prepared;
+          const coverQuad = generateCoverQuad(bounds);
+          effectRendering.renderDropShadowsStencil({ effects: sourceEffects, fanVertices, coverQuad, bounds, contours: parsedContours, transform, opacity });
+          return;
         }
-      } else if (sr.mode === "masked" && node.sourceStroke && node.sourceStroke.width > 0) {
-        const strokeVerts = tessellatePathStroke(parsedContours, node.sourceStroke.width, {
-          dashPattern: node.sourceStroke.dashPattern,
-        });
-        if (strokeVerts.length > 0) {
-          drawSolidFill({
-            ctx: getGlContext(), vertices: strokeVerts,
-            color: node.sourceStroke.color, transform,
-            opacity: opacity * node.sourceStroke.opacity,
-          });
+        if (pathVertices.length > 0) {
+          effectRendering.renderDropShadows({ effects: sourceEffects, vertices: pathVertices, transform, opacity });
         }
-      }
-    }
+      },
+      renderContent: () => {
+        if (node.sourceFills.length === 0) { return; }
+        if (prepared) {
+          const { fanVertices, bounds } = prepared;
+          const coverQuad = generateCoverQuad(bounds);
+          const elementSize = { width: bounds.maxX - bounds.minX, height: bounds.maxY - bounds.minY };
+          drawStencilFill({ fanVertices, coverQuad, transform, opacity, elementSize, fills: node.sourceFills });
+          return;
+        }
+        if (pathVertices.length > 0) {
+          const elementSize = computeBoundingBox(pathVertices);
+          drawAllFills({ vertices: pathVertices, fills: node.sourceFills, transform, opacity, elementSize });
+        }
+      },
+      renderInnerShadows: (sourceEffects) => {
+        if (backgroundMaskVertices.length > 0) {
+          effectRendering.renderInnerShadows({ effects: sourceEffects, vertices: backgroundMaskVertices, transform });
+        }
+      },
+      renderStroke: () => {
+        renderPathStrokeFromTree({ node, contours: parsedContours, transform, opacity });
+      },
+    });
   }
 
   function renderTextFromTree(node: RenderTextNode, transform: AffineMatrix, opacity: number): void {

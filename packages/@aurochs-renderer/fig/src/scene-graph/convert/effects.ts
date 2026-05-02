@@ -36,6 +36,7 @@ export function convertEffectsToScene(effects: readonly FigEffect[] | undefined)
           color: p.color,
           spread: effect.spread ?? undefined,
           blendMode,
+          showShadowBehindNode: effect.showShadowBehindNode,
         });
         break;
       }
@@ -54,6 +55,7 @@ export function convertEffectsToScene(effects: readonly FigEffect[] | undefined)
       }
 
       case "FOREGROUND_BLUR":
+      case "LAYER_BLUR":
         result.push({ type: "layer-blur", radius: effect.radius ?? 0 });
         break;
 

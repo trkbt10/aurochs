@@ -21,7 +21,7 @@ import {
   comparePngs,
   loadFigFixture,
   buildFrameSceneGraph,
-} from "./webgl-harness/test-utils";
+} from "./renderer/webgl/test-utils";
 
 // =============================================================================
 // Paths
@@ -98,7 +98,12 @@ describe("Clip rendering (SVG renderer vs Figma export)", () => {
 
       // Compare
       const safe = safeName(frameName);
-      const result = comparePngs(actualPng, renderedPng, frameName, path.join(DIFF_DIR, `${safe}-diff.png`));
+      const result = comparePngs({
+        actual: actualPng,
+        rendered: renderedPng,
+        frameName,
+        diffPath: path.join(DIFF_DIR, `${safe}-diff.png`),
+      });
 
       console.log(`  ${frameName}: Figma↔SVGRenderer diff = ${result.diffPercent.toFixed(1)}%`);
       expect(result.diffPercent).toBeLessThan(10);
@@ -123,7 +128,7 @@ describe("Clip rendering (SVG renderer vs Figma export)", () => {
       const actualPng = svgToPng(actualSvg, frame.width);
       const renderedPng = svgToPng(renderedSvg, frame.width);
 
-      results.push(comparePngs(actualPng, renderedPng, frameName));
+      results.push(comparePngs({ actual: actualPng, rendered: renderedPng, frameName }));
     }
 
     console.log("\n=== Clip Rendering: Figma vs SVG Renderer ===");
