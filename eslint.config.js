@@ -139,6 +139,11 @@ export default [
         // tweak propagates to every caller and divergent copies
         // cannot silently accumulate.
         "custom/no-inline-dfs-by-id": "error",
+        // Forbid hand-rolling `${guid.sessionID}:${guid.localID}` template
+        // literals — `guidToString` (or `ctx.guidString`) is the SoT for
+        // the GUID-stringify format. Inline copies bypass the cache layer
+        // and silently fork the format.
+        "custom/no-inline-guid-format": "error",
         // Prohibit direct Accordion/PropertySection in inspector panels; use OptionalPropertySection
         // Spread from modular groups
         ...rulesJSDoc,
