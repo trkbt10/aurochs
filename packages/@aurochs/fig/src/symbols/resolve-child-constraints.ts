@@ -12,7 +12,7 @@
  *   4. Detect position / size changes
  */
 
-import type { FigNode, KiwiEnumValue } from "../types";
+import type { KiwiEnumValue } from "../types";
 import { CONSTRAINT_TYPE_VALUES } from "../constants/layout";
 import { resolveConstraintAxis } from "./constraint-axis";
 
@@ -39,11 +39,12 @@ export type ChildConstraintResolution = {
  * Returns `CONSTRAINT_TYPE_VALUES.MIN` (0) as default when the field is
  * absent, not an object, or has no `.value`.
  */
-export function getConstraintValue(constraintField: KiwiEnumValue | undefined): number {
-  if (!constraintField) {
+export function getConstraintValue(constraintField: unknown): number {
+  if (typeof constraintField !== "object" || constraintField === null) {
     return CONSTRAINT_TYPE_VALUES.MIN;
   }
-  return constraintField.value ?? CONSTRAINT_TYPE_VALUES.MIN;
+  const value = (constraintField as { readonly value?: unknown }).value;
+  return typeof value === "number" ? value : CONSTRAINT_TYPE_VALUES.MIN;
 }
 
 // =============================================================================

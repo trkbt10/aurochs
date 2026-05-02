@@ -38,6 +38,7 @@ function renderNodeReact(node: FigDesignNode, w: number, h: number): string {
     blobs: doc.blobs,
     images: doc.images,
     canvasSize: { width: w, height: h },
+    viewport: { x: 0, y: 0, width: w, height: h },
     symbolMap: doc.components,
     styleRegistry: doc.styleRegistry,
     showHiddenNodes: false,

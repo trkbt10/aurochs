@@ -1331,10 +1331,10 @@ export function formatRenderTreeToSvg(
   if (options?.backgroundColor) {
     body.push(
       rect({
-        x: 0,
-        y: 0,
-        width: renderTree.width,
-        height: renderTree.height,
+        x: renderTree.viewport.x,
+        y: renderTree.viewport.y,
+        width: renderTree.viewport.width,
+        height: renderTree.viewport.height,
         fill: options.backgroundColor,
       }),
     );
@@ -1345,7 +1345,7 @@ export function formatRenderTreeToSvg(
     {
       width: renderTree.width,
       height: renderTree.height,
-      viewBox: `0 0 ${renderTree.width} ${renderTree.height}`,
+      viewBox: `${renderTree.viewport.x} ${renderTree.viewport.y} ${renderTree.viewport.width} ${renderTree.viewport.height}`,
     },
     ...body,
   );

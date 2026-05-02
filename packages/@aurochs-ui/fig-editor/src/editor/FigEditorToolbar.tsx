@@ -17,12 +17,14 @@ import {
   TextBoxIcon,
   StarIcon,
   DiamondIcon,
+  DownloadIcon,
   UndoIcon,
   RedoIcon,
 } from "@aurochs-ui/ui-components/icons";
 import { iconTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { useFigEditor } from "../context/FigEditorContext";
 import type { FigCreationMode } from "../context/fig-editor/types";
+import { useExportFig } from "../hooks/use-export-fig";
 
 // =============================================================================
 // Tool definitions
@@ -58,6 +60,7 @@ const TOOLS: readonly ToolDef[] = [
  */
 export function FigEditorToolbar() {
   const { dispatch, canUndo, canRedo, creationMode } = useFigEditor();
+  const { exportDocument, isExporting } = useExportFig();
 
   const handleToolClick = useCallback(
     (mode: FigCreationMode) => {
@@ -65,6 +68,19 @@ export function FigEditorToolbar() {
     },
     [dispatch],
   );
+
+  const handleExportClick = useCallback(() => {
+    void exportDocument().then((result) => {
+      const data = new Uint8Array(result.data);
+      const blob = new Blob([data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength)], { type: "application/octet-stream" });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = "document.fig";
+      anchor.click();
+      URL.revokeObjectURL(url);
+    });
+  }, [exportDocument]);
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 2, width: "100%" }}>
@@ -95,6 +111,16 @@ export function FigEditorToolbar() {
         label="Redo"
         onClick={() => dispatch({ type: "REDO" })}
         disabled={!canRedo}
+        size="sm"
+      />
+
+      <ToolbarSeparator />
+
+      <ToolbarButton
+        icon={<DownloadIcon size={ICON_SIZE} strokeWidth={ICON_STROKE} />}
+        label="Export .fig"
+        onClick={handleExportClick}
+        disabled={isExporting}
         size="sm"
       />
     </div>

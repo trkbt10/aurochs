@@ -320,6 +320,7 @@ function RendererDebugContent({ parsedFile, designDoc }: { parsedFile: ParsedFig
         blobs: designDoc.blobs,
         images: designDoc.images,
         canvasSize: { width: currentFrame.width, height: currentFrame.height },
+        viewport: { x: 0, y: 0, width: currentFrame.width, height: currentFrame.height },
         symbolMap: designDoc.components,
         styleRegistry: designDoc.styleRegistry,
         showHiddenNodes,

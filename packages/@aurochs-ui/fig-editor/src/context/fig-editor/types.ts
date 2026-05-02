@@ -123,6 +123,9 @@ export type FigEditorAction =
       readonly nodeId: FigNodeId;
       readonly direction: "front" | "back" | "forward" | "backward";
     }
+  | { readonly type: "RENAME_NODE"; readonly nodeId: FigNodeId; readonly name: string }
+  | { readonly type: "GROUP_SELECTION" }
+  | { readonly type: "MAKE_COMPONENT_FROM_SELECTION" }
 
   // Selection
   | {

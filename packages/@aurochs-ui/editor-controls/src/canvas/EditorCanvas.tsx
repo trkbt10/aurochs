@@ -106,6 +106,8 @@ export type EditorCanvasProps = {
   // --- Content ---
   /** React children rendered inside the viewport transform group (e.g., SlideRenderer). */
   readonly children?: ReactNode;
+  /** HTML/canvas content rendered behind the SVG overlay in the same page-coordinate viewport. */
+  readonly viewportContent?: ReactNode;
   /** Embedded font CSS (@font-face declarations) injected as <style> in SVG. */
   readonly embeddedFontCss?: string;
 
@@ -241,6 +243,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
     showRulers = true,
     rulerThickness: rulerThicknessProp = DEFAULT_RULER_THICKNESS,
     children,
+    viewportContent,
     embeddedFontCss,
     itemBounds,
     selectedIds,
@@ -675,10 +678,11 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
   const svgStyle: CSSProperties = useMemo(
     () => ({
       display: "block",
+      position: "absolute",
+      inset: 0,
       width: "100%",
       height: "100%",
       cursor: cursor ?? (isPanning || isInteracting ? "grabbing" : "default"),
-      backgroundColor: colorTokens.background.tertiary,
       userSelect: "none",
       WebkitUserSelect: "none",
     }),
@@ -688,6 +692,20 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
   return (
     <CanvasViewportContext.Provider value={viewportContextValue}>
     <div style={outerContainerStyle} onContextMenu={onContextMenu}>
+      {viewportContent && (
+        <div
+          style={{
+            ...viewportContentStyle,
+            left: rulerThickness,
+            top: rulerThickness,
+            width: canvasWidth,
+            height: canvasHeight,
+            transform: `translate(${viewport.translateX}px, ${viewport.translateY}px) scale(${viewport.scale})`,
+          }}
+        >
+          {viewportContent}
+        </div>
+      )}
       <svg
         ref={svgRef}
         style={svgStyle}
@@ -704,7 +722,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
             {/* Canvas background (injected by caller — slide paper, grid, or nothing) */}
             {canvasBackground?.({ width: canvasWidth, height: canvasHeight, scale: viewport.scale })}
 
-            {/* Content: React children (e.g., SlideRenderer, FigSceneRenderer) */}
+            {/* Content rendered by React children (e.g., SlideRenderer or editor overlays). */}
             {children}
 
             {/* Hit areas for items */}
@@ -739,6 +757,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
                   variant={hasMultiSelection ? "primary" : primaryId === bounds.id ? "primary" : "secondary"}
                   showResizeHandles={!isTextEditing && !hasMultiSelection && primaryId === bounds.id}
                   showRotateHandle={!isTextEditing && showRotateHandle && !hasMultiSelection && primaryId === bounds.id}
+                  viewportScale={viewport.scale}
                   onResizeStart={handleResizeStart}
                   onRotateStart={handleRotateStart}
                 />
@@ -753,6 +772,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
                   height={multiSelectionBounds.height}
                   variant="multi"
                   showRotateHandle={showRotateHandle}
+                  viewportScale={viewport.scale}
                   onResizeStart={handleResizeStart}
                   onRotateStart={handleRotateStart}
                 />
@@ -814,7 +834,13 @@ const outerContainerStyle: CSSProperties = {
   width: "100%",
   height: "100%",
   overflow: "hidden",
+  backgroundColor: colorTokens.background.tertiary,
 };
 
 const hitAreaStyle: CSSProperties = { cursor: "pointer" };
 const selectionGroupStyle: CSSProperties = { pointerEvents: "auto" };
+const viewportContentStyle: CSSProperties = {
+  position: "absolute",
+  transformOrigin: "0 0",
+  pointerEvents: "none",
+};

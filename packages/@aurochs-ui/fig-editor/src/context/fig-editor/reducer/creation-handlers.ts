@@ -120,6 +120,7 @@ export const CREATION_HANDLERS: HandlerMap = {
       nodeSelection: createSingleSelection(result.nodeId),
       drag: createIdleDragState(),
       creationMode: createSelectMode(),
+      textEdit: state.creationMode.type === "text" ? { type: "active", nodeId: result.nodeId } : state.textEdit,
     };
   },
 };

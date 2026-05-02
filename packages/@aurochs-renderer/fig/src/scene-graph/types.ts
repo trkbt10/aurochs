@@ -509,6 +509,16 @@ export type SceneNode =
 export type SceneGraph = {
   readonly width: number;
   readonly height: number;
+  /**
+   * World-space window shown by the output surface. `width`/`height` remain
+   * the surface size; `viewport` is the viewBox-style world rectangle.
+   */
+  readonly viewport?: {
+    readonly x: number;
+    readonly y: number;
+    readonly width: number;
+    readonly height: number;
+  };
   readonly backgroundColor?: Color;
   readonly root: GroupNode;
   readonly defs?: readonly string[];

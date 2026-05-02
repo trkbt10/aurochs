@@ -38,7 +38,7 @@ function createNodeWithoutType(guid: FigGuid): FigNode {
   const node = {
     guid,
     phase: { value: 0, name: "CREATED" },
-  } as FigNode;
+  } as unknown as FigNode;
   return node;
 }
 
@@ -48,7 +48,7 @@ function createLegacyStringTypeNode(stringType: string, guid: FigGuid): FigNode 
     type: stringType,
     guid,
     phase: { value: 0, name: "CREATED" },
-  } as FigNode;
+  } as unknown as FigNode;
   return node;
 }
 
@@ -91,15 +91,19 @@ describe("tree-builder", () => {
       ];
 
       const result = buildNodeTree(nodes);
+      const root = result.roots[0]!;
+      const page = root.children![0]!;
+      const frame = page.children![0]!;
+      const rect = frame.children![0]!;
 
       expect(result.roots).toHaveLength(1);
-      expect(result.roots[0].name).toBe("Doc");
-      expect(result.roots[0].children).toHaveLength(1);
-      expect(result.roots[0].children![0].name).toBe("Page 1");
-      expect(result.roots[0].children![0].children).toHaveLength(1);
-      expect(result.roots[0].children![0].children![0].name).toBe("Frame A");
-      expect(result.roots[0].children![0].children![0].children).toHaveLength(1);
-      expect(result.roots[0].children![0].children![0].children![0].name).toBe("Rect");
+      expect(root.name).toBe("Doc");
+      expect(root.children).toHaveLength(1);
+      expect(page.name).toBe("Page 1");
+      expect(page.children).toHaveLength(1);
+      expect(frame.name).toBe("Frame A");
+      expect(frame.children).toHaveLength(1);
+      expect(rect.name).toBe("Rect");
     });
 
     it("handles multiple roots", () => {

@@ -1,19 +1,18 @@
 /**
  * @file Fig page renderer component
  *
- * Renders all nodes in the current page as React SVG elements.
- * Uses the scene graph pipeline: FigDesignNode tree → SceneGraph → React JSX.
- *
- * Unlike the previous implementation that used dangerouslySetInnerHTML
- * with an SVG string, this renders proper React elements that participate
- * in React's reconciliation for efficient incremental updates.
+ * Selects the concrete fig renderer backend consumed by the React editor
+ * shell. React owns mounting and editor chrome; node pixels come from the
+ * SVG or WebGL backend.
  */
 
-import { useMemo } from "react";
 import type { FigPage, FigDesignNode, FigStyleRegistry } from "@aurochs/fig/domain";
 import type { FigImage } from "@aurochs/fig/parser";
-import { buildSceneGraph, type BuildSceneGraphOptions } from "@aurochs-renderer/fig/scene-graph";
-import { FigSceneRenderer } from "@aurochs-renderer/fig/react";
+import type { BuildSceneGraphOptions, SceneGraph } from "@aurochs-renderer/fig/scene-graph";
+import { useFigSceneGraph } from "./use-fig-scene-graph";
+import { FigWebGLViewportCanvas } from "./FigWebGLViewportCanvas";
+import { FigSvgViewportImage } from "./FigSvgViewportImage";
+import type { FigEditorRendererKind } from "./renderer-kind";
 
 // =============================================================================
 // Types
@@ -37,6 +36,10 @@ type FigPageRendererProps = {
    * `EMPTY_FIG_STYLE_REGISTRY` when the page carries no shared styles.
    */
   readonly styleRegistry: FigStyleRegistry;
+  readonly renderer?: FigEditorRendererKind;
+  readonly sceneGraph?: SceneGraph | null;
+  readonly viewportX?: number;
+  readonly viewportY?: number;
 };
 
 // =============================================================================
@@ -44,10 +47,10 @@ type FigPageRendererProps = {
 // =============================================================================
 
 /**
- * Renders a fig page as React SVG elements.
+ * Renders a fig page through the selected renderer backend.
  *
  * Builds a scene graph from the page's FigDesignNode tree (domain objects)
- * and renders it through FigSceneRenderer which produces JSX SVG elements.
+ * and hands that scene graph to either the SVG or WebGL backend layer.
  *
  * The scene graph is memoized and only recomputed when the page content,
  * dimensions, or resources change.
@@ -60,26 +63,22 @@ export function FigPageRenderer({
   blobs,
   symbolMap,
   styleRegistry,
+  renderer = "svg",
+  sceneGraph: sceneGraphProp,
+  viewportX = 0,
+  viewportY = 0,
 }: FigPageRendererProps) {
-  const sceneGraph = useMemo(() => {
-    if (page.children.length === 0) {
-      return null;
-    }
-
-    return buildSceneGraph(page.children, {
-      blobs,
-      images,
-      canvasSize: { width: canvasWidth, height: canvasHeight },
-      symbolMap,
-      styleRegistry,
-      showHiddenNodes: false,
-      warnings: [],
-    });
-  }, [page.children, canvasWidth, canvasHeight, images, blobs, symbolMap, styleRegistry]);
+  const builtSceneGraph = useFigSceneGraph({ page, canvasWidth, canvasHeight, viewportX, viewportY, images, blobs, symbolMap, styleRegistry });
+  const sceneGraph = sceneGraphProp ?? builtSceneGraph;
 
   if (!sceneGraph) {
     return <g />;
   }
 
-  return <FigSceneRenderer sceneGraph={sceneGraph} />;
+  switch (renderer) {
+    case "svg":
+      return <FigSvgViewportImage sceneGraph={sceneGraph} />;
+    case "webgl":
+      return <FigWebGLViewportCanvas sceneGraph={sceneGraph} />;
+  }
 }

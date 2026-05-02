@@ -30,6 +30,7 @@ export { figEditorReducer, createFigEditorState } from "./context/fig-editor/red
 // Canvas components (for composition)
 export { FigEditorCanvas } from "./canvas/FigEditorCanvas";
 export { FigPageRenderer } from "./canvas/FigPageRenderer";
+export type { FigEditorRendererKind } from "./canvas/renderer-kind";
 
 // Panels (for composition)
 export { PropertyPanel } from "./panels/PropertyPanel";

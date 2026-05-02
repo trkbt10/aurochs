@@ -81,6 +81,7 @@ function buildWithSymbols(
     blobs: [],
     images: new Map(),
     canvasSize: { width: 200, height: 200 },
+    viewport: { x: 0, y: 0, width: 200, height: 200 },
     symbolMap,
     styleRegistry: EMPTY_FIG_STYLE_REGISTRY,
     showHiddenNodes: false,

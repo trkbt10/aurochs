@@ -1117,10 +1117,17 @@ function resolveChildren(children: readonly SceneNode[], ids: IdGenerator): Rend
 export function resolveRenderTree(sceneGraph: SceneGraph): RenderTree {
   const ids = createIdGenerator();
   const children = resolveChildren(sceneGraph.root.children, ids);
+  const viewport = sceneGraph.viewport ?? {
+    x: 0,
+    y: 0,
+    width: sceneGraph.width,
+    height: sceneGraph.height,
+  };
 
   return {
     width: sceneGraph.width,
     height: sceneGraph.height,
+    viewport,
     children,
   };
 }

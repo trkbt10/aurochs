@@ -331,6 +331,28 @@ function matchesTypeHint(hint: string | undefined, nodeType: string): boolean {
   return false;
 }
 
+function getPhase2CandidatesByHint(
+  { hint, descendants, descendantsByType }: {
+    readonly hint: string;
+    readonly descendants: readonly SymbolDescendant[];
+    readonly descendantsByType: ReadonlyMap<string, readonly SymbolDescendant[]>;
+  },
+): readonly SymbolDescendant[] {
+  if (hint === "TEXT") {
+    return descendantsByType.get("TEXT") ?? [];
+  }
+  if (hint === "INSTANCE") {
+    return descendantsByType.get("INSTANCE") ?? [];
+  }
+  if (hint === "CONTAINER") {
+    return [...(descendantsByType.get("FRAME") ?? []), ...(descendantsByType.get("INSTANCE") ?? [])];
+  }
+  if (hint === "SHAPE") {
+    return descendants.filter((d) => SHAPE_NODE_TYPES.has(d.nodeType));
+  }
+  return descendants;
+}
+
 /**
  * Extract richer signals from depth-1 overrides for SHAPE matching.
  * Signals indicate which kind of shape the override targets.
@@ -1287,24 +1309,13 @@ export function buildGuidTranslationMap(
 
     for (const [hint, hintGuids] of byHint) {
       // Get candidate descendants matching the type hint
-      const allCandidatesRef = { value: undefined as SymbolDescendant[] | undefined };
-      if (hint === "TEXT") {
-        allCandidatesRef.value = descendantsByType.get("TEXT") ?? [];
-      } else if (hint === "INSTANCE") {
-        allCandidatesRef.value = descendantsByType.get("INSTANCE") ?? [];
-      } else if (hint === "CONTAINER") {
-        allCandidatesRef.value = [...(descendantsByType.get("FRAME") ?? []), ...(descendantsByType.get("INSTANCE") ?? [])];
-      } else if (hint === "SHAPE") {
-        allCandidatesRef.value = descendants.filter((d) => SHAPE_NODE_TYPES.has(d.nodeType));
-      } else {
-        allCandidatesRef.value = descendants;
-      }
+      const allCandidates = getPhase2CandidatesByHint({ hint, descendants, descendantsByType });
 
-      if (allCandidatesRef.value.length === 0) {continue;}
+      if (allCandidates.length === 0) {continue;}
 
       // Prefer descendants NOT already claimed by Phase 1
-      const unclaimed = allCandidatesRef.value.filter((c) => !phase1Targets.has(c.guidStr));
-      const candidates = unclaimed.length >= hintGuids.length ? unclaimed : allCandidatesRef.value;
+      const unclaimed = allCandidates.filter((c) => !phase1Targets.has(c.guidStr));
+      const candidates = unclaimed.length >= hintGuids.length ? unclaimed : allCandidates;
 
       if (hint === "SHAPE") {
         // Score-based match using shape signals + size compatibility

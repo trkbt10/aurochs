@@ -28,7 +28,11 @@ function nodeType(name: FigNodeType): KiwiEnumValue<FigNodeType> {
 function makeNode(
   localID: number,
   type: FigNodeType,
-  opts?: { name?: string; children?: FigNode[]; symbolData?: { symbolID: { sessionID: number; localID: number } } },
+  opts?: {
+    name?: string;
+    children?: readonly (FigNode | null | undefined)[];
+    symbolData?: { symbolID: { sessionID: number; localID: number } };
+  },
 ): FigNode {
   const node: FigNode = {
     guid: { sessionID: 1, localID },
@@ -73,7 +77,12 @@ function makeInstanceTopLevel(localID: number, symbolLocalID: number, name?: str
 
 /** Create a SYMBOL node with a specific sessionID (for testing sessionID mismatch) */
 function makeSymbolWithSession(
-  { sessionID, localID, children, name}: { sessionID: number; localID: number; children: FigNode[]; name?: string; }
+  { sessionID, localID, children, name}: {
+    sessionID: number;
+    localID: number;
+    children: readonly (FigNode | null | undefined)[];
+    name?: string;
+  }
 ): FigNode {
   return {
     guid: { sessionID, localID },
@@ -223,10 +232,11 @@ describe("preResolveSymbols", () => {
 
     const resolved = cache.get(guidStr(10))!;
     expect(resolved.children).toHaveLength(1);
-    expect(resolved.children![0].name).toBe("MyRect");
+    const resolvedChild = resolved.children![0]!;
+    expect(resolvedChild.name).toBe("MyRect");
     // Must be a clone, not the original
     expect(resolved).not.toBe(sym);
-    expect(resolved.children![0]).not.toBe(rect);
+    expect(resolvedChild).not.toBe(rect);
   });
 
   it("resolves 1-level nesting: A → INSTANCE of B → B's children expanded", () => {
@@ -242,10 +252,10 @@ describe("preResolveSymbols", () => {
 
     const resolvedA = cache.get(guidStr(10))!;
     // A's child is the INSTANCE, which should now have B's children expanded
-    const instanceInA = resolvedA.children![0];
+    const instanceInA = resolvedA.children![0]!;
     expect(instanceInA.children).toBeDefined();
     expect(instanceInA.children!.length).toBe(1);
-    expect(instanceInA.children![0].name).toBe("InnerRect");
+    expect(instanceInA.children![0]!.name).toBe("InnerRect");
   });
 
   it("resolves 2-level nesting: A → B → C", () => {
@@ -263,13 +273,13 @@ describe("preResolveSymbols", () => {
 
     // A → INSTANCE of B → (B's INSTANCE of C expanded → C's children)
     const resolvedA = cache.get(guidStr(10))!;
-    const instanceB = resolvedA.children![0];
+    const instanceB = resolvedA.children![0]!;
     expect(instanceB.children).toBeDefined();
     // instanceB is the expanded B, its child is the INSTANCE of C
-    const instanceC = instanceB.children![0];
+    const instanceC = instanceB.children![0]!;
     expect(instanceC.children).toBeDefined();
     expect(instanceC.children!.length).toBe(1);
-    expect(instanceC.children![0].name).toBe("DeepEllipse");
+    expect(instanceC.children![0]!.name).toBe("DeepEllipse");
   });
 
   it("does not mutate original nodes", () => {
@@ -319,7 +329,7 @@ describe("preResolveSymbols", () => {
     expect(cache.size).toBe(1);
     // The INSTANCE referencing missing SYMBOL should be cloned without expansion
     const resolved = cache.get(guidStr(10))!;
-    const instance = resolved.children![0];
+    const instance = resolved.children![0]!;
     // No children were expanded (SYMBOL not found)
     expect(instance.children).toBeUndefined();
     expect(warnings).toEqual([]);
@@ -358,10 +368,10 @@ describe("preResolveSymbols", () => {
     expect(cache.size).toBe(2);
 
     const resolvedA = cache.get(guidStr(10))!;
-    const instanceInA = resolvedA.children![0];
+    const instanceInA = resolvedA.children![0]!;
     expect(instanceInA.children).toBeDefined();
     expect(instanceInA.children!.length).toBe(1);
-    expect(instanceInA.children![0].name).toBe("InnerRect");
+    expect(instanceInA.children![0]!.name).toBe("InnerRect");
   });
 
   it("handles SYMBOL whose children array contains undefined entries", () => {
@@ -383,10 +393,10 @@ describe("preResolveSymbols", () => {
     const cache = preResolveSymbols(symbolMap);
     const resolved = cache.get(guidStr(10))!;
     // undefined entries should be filtered out, leaving only valid nodes
-    const validChildren = resolved.children!.filter((c) => c != null);
+    const validChildren = resolved.children!.filter((c): c is FigNode => c != null);
     expect(validChildren.length).toBe(2);
-    expect(validChildren[0].name).toBe("ValidRect");
-    expect(validChildren[1].name).toBe("AnotherRect");
+    expect(validChildren[0]!.name).toBe("ValidRect");
+    expect(validChildren[1]!.name).toBe("AnotherRect");
   });
 
   it("handles INSTANCE expansion when referenced SYMBOL has undefined children entries", () => {
@@ -409,11 +419,11 @@ describe("preResolveSymbols", () => {
 
     const cache = preResolveSymbols(symbolMap);
     const resolvedA = cache.get(guidStr(10))!;
-    const instanceInA = resolvedA.children![0];
+    const instanceInA = resolvedA.children![0]!;
     // Expanded INSTANCE should contain only the valid child from B
-    const validChildren = instanceInA.children!.filter((c) => c != null);
+    const validChildren = instanceInA.children!.filter((c): c is FigNode => c != null);
     expect(validChildren.length).toBe(1);
-    expect(validChildren[0].name).toBe("InnerRect");
+    expect(validChildren[0]!.name).toBe("InnerRect");
   });
 
   it("handles SYMBOL with null children entries", () => {
@@ -430,8 +440,8 @@ describe("preResolveSymbols", () => {
 
     const cache = preResolveSymbols(symbolMap);
     const resolved = cache.get(guidStr(10))!;
-    const validChildren = resolved.children!.filter((c) => c != null);
+    const validChildren = resolved.children!.filter((c): c is FigNode => c != null);
     expect(validChildren.length).toBe(1);
-    expect(validChildren[0].name).toBe("ValidRect");
+    expect(validChildren[0]!.name).toBe("ValidRect");
   });
 });

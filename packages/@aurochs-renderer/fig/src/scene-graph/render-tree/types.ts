@@ -558,5 +558,11 @@ export type RenderNode =
 export type RenderTree = {
   readonly width: number;
   readonly height: number;
+  readonly viewport: {
+    readonly x: number;
+    readonly y: number;
+    readonly width: number;
+    readonly height: number;
+  };
   readonly children: readonly RenderNode[];
 };

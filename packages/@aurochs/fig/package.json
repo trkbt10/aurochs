@@ -6,7 +6,7 @@
   "sideEffects": false,
   "scripts": {
     "lint": "eslint src",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit --rootDir ../../..",
     "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs/fig/src'"
   },
   "exports": {

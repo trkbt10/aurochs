@@ -23,15 +23,15 @@ import {
   styleRefKey,
   styleRefKeys,
 } from "./style-registry";
-import type { FigNode } from "../types";
+import type { FigNode, FigPaint } from "../types";
 
-function solidPaint(r: number, g: number, b: number) {
+function solidPaint(r: number, g: number, b: number): FigPaint {
   return {
-    type: { value: 0, name: "SOLID" as const },
+    type: "SOLID",
     color: { r, g, b, a: 1 },
     opacity: 1,
     visible: true,
-    blendMode: { value: 1, name: "NORMAL" as const },
+    blendMode: "NORMAL",
   };
 }
 

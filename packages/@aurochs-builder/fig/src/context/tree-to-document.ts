@@ -1179,6 +1179,10 @@ export function convertFigNode(
 // Page Conversion
 // =============================================================================
 
+function isUserVisibleCanvas(canvas: FigNode): boolean {
+  return canvas.visible !== false && canvas.internalOnly !== true;
+}
+
 /**
  * Convert a CANVAS FigNode to a FigPage.
  */
@@ -1273,11 +1277,11 @@ export function treeToDocument(
     if (rootType === "DOCUMENT") {
       // DOCUMENT node: iterate CANVAS children
       for (const canvas of ctx.safeChildren(root)) {
-        if (getNodeType(canvas) === "CANVAS") {
+        if (getNodeType(canvas) === "CANVAS" && isUserVisibleCanvas(canvas)) {
           pages.push(convertCanvasToPage(ctx, canvas, components, styleRegistry, nodeMap));
         }
       }
-    } else if (rootType === "CANVAS") {
+    } else if (rootType === "CANVAS" && isUserVisibleCanvas(root)) {
       // Standalone CANVAS (unusual but handle gracefully)
       pages.push(convertCanvasToPage(ctx, root, components, styleRegistry, nodeMap));
     }

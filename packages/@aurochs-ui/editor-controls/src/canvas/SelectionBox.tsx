@@ -13,7 +13,6 @@
 import type { ResizeHandlePosition } from "@aurochs-ui/editor-core/geometry";
 import type { SelectionBoxVariant } from "./types";
 import { ResizeHandle } from "./ResizeHandle";
-import { RotateHandle } from "./RotateHandle";
 import { colorTokens } from "@aurochs-ui/ui-components/design-tokens";
 
 // =============================================================================
@@ -37,6 +36,8 @@ export type SelectionBoxProps = {
   readonly showResizeHandles?: boolean;
   /** Whether rotate handle is shown (only for primary variant, default: true) */
   readonly showRotateHandle?: boolean;
+  /** Current viewport scale; selection chrome stays screen-sized. */
+  readonly viewportScale?: number;
   /** Handle resize start */
   readonly onResizeStart?: (handle: ResizeHandlePosition, e: React.PointerEvent) => void;
   /** Handle rotate start */
@@ -50,7 +51,7 @@ export type SelectionBoxProps = {
 const SELECTION_COLOR_PRIMARY = colorTokens.selection.primary;
 const SELECTION_COLOR_SECONDARY = colorTokens.selection.secondary;
 const SELECTION_STROKE_WIDTH = 2;
-const ROTATE_HANDLE_OFFSET = 24;
+const ROTATE_HIT_SLOP = 12;
 
 /**
  * Variant-specific styling
@@ -98,10 +99,14 @@ export function SelectionBox({
   variant,
   showResizeHandles = true,
   showRotateHandle = true,
+  viewportScale = 1,
   onResizeStart,
   onRotateStart,
 }: SelectionBoxProps) {
   const style = VARIANT_STYLES[variant];
+  const safeScale = viewportScale > 0 ? viewportScale : 1;
+  const strokeWidth = SELECTION_STROKE_WIDTH / safeScale;
+  const rotateHitSlop = ROTATE_HIT_SLOP / safeScale;
   const centerX = x + width / 2;
   const centerY = y + height / 2;
 
@@ -135,42 +140,47 @@ export function SelectionBox({
         height={height}
         fill="none"
         stroke={style.color}
-        strokeWidth={SELECTION_STROKE_WIDTH}
+        strokeWidth={strokeWidth}
         strokeDasharray={style.strokeDasharray}
+        vectorEffect="non-scaling-stroke"
         pointerEvents="none"
       />
+
+      {/* Figma-like rotation zones: grab just outside any edge instead of a visible top arrow. */}
+      {shouldShowRotateHandle && (
+        <g
+          fill="none"
+          stroke="transparent"
+          strokeWidth={rotateHitSlop}
+          style={{ cursor: "grab" }}
+          pointerEvents="stroke"
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            onRotateStart?.(e);
+          }}
+        >
+          <line x1={x} y1={y - rotateHitSlop / 2} x2={x + width} y2={y - rotateHitSlop / 2} />
+          <line x1={x + width + rotateHitSlop / 2} y1={y} x2={x + width + rotateHitSlop / 2} y2={y + height} />
+          <line x1={x} y1={y + height + rotateHitSlop / 2} x2={x + width} y2={y + height + rotateHitSlop / 2} />
+          <line x1={x - rotateHitSlop / 2} y1={y} x2={x - rotateHitSlop / 2} y2={y + height} />
+        </g>
+      )}
 
       {/* Resize handles */}
       {shouldShowResizeHandles && (
         <>
           {/* Corner handles */}
-          <ResizeHandle position="nw" x={x} y={y} onPointerDown={(e) => onResizeStart?.("nw", e)} />
-          <ResizeHandle position="ne" x={x + width} y={y} onPointerDown={(e) => onResizeStart?.("ne", e)} />
-          <ResizeHandle position="se" x={x + width} y={y + height} onPointerDown={(e) => onResizeStart?.("se", e)} />
-          <ResizeHandle position="sw" x={x} y={y + height} onPointerDown={(e) => onResizeStart?.("sw", e)} />
+          <ResizeHandle position="nw" x={x} y={y} viewportScale={safeScale} onPointerDown={(e) => onResizeStart?.("nw", e)} />
+          <ResizeHandle position="ne" x={x + width} y={y} viewportScale={safeScale} onPointerDown={(e) => onResizeStart?.("ne", e)} />
+          <ResizeHandle position="se" x={x + width} y={y + height} viewportScale={safeScale} onPointerDown={(e) => onResizeStart?.("se", e)} />
+          <ResizeHandle position="sw" x={x} y={y + height} viewportScale={safeScale} onPointerDown={(e) => onResizeStart?.("sw", e)} />
 
           {/* Edge handles */}
-          <ResizeHandle position="n" x={x + width / 2} y={y} onPointerDown={(e) => onResizeStart?.("n", e)} />
-          <ResizeHandle position="e" x={x + width} y={y + height / 2} onPointerDown={(e) => onResizeStart?.("e", e)} />
-          <ResizeHandle position="s" x={x + width / 2} y={y + height} onPointerDown={(e) => onResizeStart?.("s", e)} />
-          <ResizeHandle position="w" x={x} y={y + height / 2} onPointerDown={(e) => onResizeStart?.("w", e)} />
-        </>
-      )}
-
-      {/* Rotate handle */}
-      {shouldShowRotateHandle && (
-        <>
-          {/* Line from top center to rotate handle */}
-          <line
-            x1={x + width / 2}
-            y1={y}
-            x2={x + width / 2}
-            y2={y - ROTATE_HANDLE_OFFSET}
-            stroke={style.color}
-            strokeWidth={1}
-            pointerEvents="none"
-          />
-          <RotateHandle x={x + width / 2} y={y - ROTATE_HANDLE_OFFSET} onPointerDown={onRotateStart} />
+          <ResizeHandle position="n" x={x + width / 2} y={y} viewportScale={safeScale} onPointerDown={(e) => onResizeStart?.("n", e)} />
+          <ResizeHandle position="e" x={x + width} y={y + height / 2} viewportScale={safeScale} onPointerDown={(e) => onResizeStart?.("e", e)} />
+          <ResizeHandle position="s" x={x + width / 2} y={y + height} viewportScale={safeScale} onPointerDown={(e) => onResizeStart?.("s", e)} />
+          <ResizeHandle position="w" x={x} y={y + height / 2} viewportScale={safeScale} onPointerDown={(e) => onResizeStart?.("w", e)} />
         </>
       )}
     </g>

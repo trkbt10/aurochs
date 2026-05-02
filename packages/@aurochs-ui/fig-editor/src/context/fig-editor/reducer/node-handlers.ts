@@ -10,12 +10,100 @@ import { nextNodeId, createIdCounter } from "@aurochs-builder/fig/types";
 import type { HandlerMap } from "./handler-types";
 import { getActivePage } from "../node-geometry";
 import type { SelectionState } from "@aurochs-ui/editor-core/selection";
+import type { FigEditorState } from "../types";
 
 function buildNodeSelection(newIds: FigNodeId[]): SelectionState<FigNodeId> {
   if (newIds.length === 1) {
     return createSingleSelection(newIds[0]!);
   }
   return createMultiSelection({ selectedIds: newIds, primaryId: newIds[0]! });
+}
+
+function getNodeParentId(nodes: readonly FigDesignNode[], nodeId: FigNodeId): FigNodeId | null | undefined {
+  if (nodes.some((node) => node.id === nodeId)) {
+    return null;
+  }
+  return findParentNode(nodes, nodeId)?.id;
+}
+
+function getSiblingList(pageChildren: readonly FigDesignNode[], parentId: FigNodeId | null): readonly FigDesignNode[] {
+  if (parentId === null) {
+    return pageChildren;
+  }
+  return findNodeById(pageChildren, parentId)?.children ?? [];
+}
+
+function computeGroupBounds(nodes: readonly FigDesignNode[]): { x: number; y: number; width: number; height: number } {
+  const left = Math.min(...nodes.map((node) => node.transform.m02));
+  const top = Math.min(...nodes.map((node) => node.transform.m12));
+  const right = Math.max(...nodes.map((node) => node.transform.m02 + node.size.x));
+  const bottom = Math.max(...nodes.map((node) => node.transform.m12 + node.size.y));
+  return { x: left, y: top, width: right - left, height: bottom - top };
+}
+
+function wrapSelectedSiblings(
+  pageChildren: readonly FigDesignNode[],
+  selectedIds: readonly FigNodeId[],
+  wrapperType: "GROUP" | "COMPONENT",
+): { readonly children: readonly FigDesignNode[]; readonly wrapper: FigDesignNode } | null {
+  if (selectedIds.length === 0) {
+    return null;
+  }
+  const parentId = getNodeParentId(pageChildren, selectedIds[0]!);
+  if (parentId === undefined || !selectedIds.every((id) => getNodeParentId(pageChildren, id) === parentId)) {
+    return null;
+  }
+
+  const siblings = getSiblingList(pageChildren, parentId);
+  const selectedSet = new Set(selectedIds);
+  const selectedNodes = siblings.filter((node) => selectedSet.has(node.id));
+  if (selectedNodes.length === 0) {
+    return null;
+  }
+
+  const bounds = computeGroupBounds(selectedNodes);
+  const counter = createIdCounter(Date.now());
+  const wrapperId = nextNodeId(counter);
+  const wrapper: FigDesignNode = {
+    id: wrapperId,
+    type: wrapperType,
+    name: wrapperType === "GROUP" ? "Group" : "Component",
+    visible: true,
+    opacity: 1,
+    transform: { m00: 1, m01: 0, m02: bounds.x, m10: 0, m11: 1, m12: bounds.y },
+    size: { x: bounds.width, y: bounds.height },
+    fills: [],
+    strokes: [],
+    strokeWeight: 0,
+    effects: [],
+    clipsContent: wrapperType === "COMPONENT" ? true : undefined,
+    children: selectedNodes.map((node) => ({
+      ...node,
+      transform: {
+        ...node.transform,
+        m02: node.transform.m02 - bounds.x,
+        m12: node.transform.m12 - bounds.y,
+      },
+    })),
+  };
+
+  const firstSelectedIndex = siblings.findIndex((node) => selectedSet.has(node.id));
+  const nextSiblings: FigDesignNode[] = [];
+  for (let index = 0; index < siblings.length; index += 1) {
+    const node = siblings[index]!;
+    if (index === firstSelectedIndex) {
+      nextSiblings.push(wrapper);
+    }
+    if (!selectedSet.has(node.id)) {
+      nextSiblings.push(node);
+    }
+  }
+
+  const children = parentId === null
+    ? nextSiblings
+    : pageChildren.map((node) => node.id === parentId ? { ...node, children: nextSiblings } : node);
+
+  return { children, wrapper };
 }
 
 export const NODE_HANDLERS: HandlerMap = {
@@ -154,4 +242,56 @@ export const NODE_HANDLERS: HandlerMap = {
       documentHistory: pushHistory(state.documentHistory, updated),
     };
   },
+
+  RENAME_NODE(state, action) {
+    const pageId = state.activePageId;
+    if (!pageId) {
+      return state;
+    }
+    const doc = updateNode({
+      doc: state.documentHistory.present,
+      pageId,
+      nodeId: action.nodeId,
+      updater: (node) => ({ ...node, name: action.name }),
+    });
+    return { ...state, documentHistory: pushHistory(state.documentHistory, doc) };
+  },
+
+  GROUP_SELECTION(state) {
+    return wrapSelection(state, "GROUP");
+  },
+
+  MAKE_COMPONENT_FROM_SELECTION(state) {
+    return wrapSelection(state, "COMPONENT");
+  },
 };
+
+function wrapSelection(
+  state: FigEditorState,
+  wrapperType: "GROUP" | "COMPONENT",
+): FigEditorState {
+  const pageId = state.activePageId;
+  if (!pageId || state.nodeSelection.selectedIds.length === 0) {
+    return state;
+  }
+  const doc = state.documentHistory.present;
+  const page = getActivePage(doc, pageId);
+  if (!page) {
+    return state;
+  }
+
+  const wrapped = wrapSelectedSiblings(page.children, state.nodeSelection.selectedIds, wrapperType);
+  if (!wrapped) {
+    return state;
+  }
+
+  const pages = doc.pages.map((p) => p.id === pageId ? { ...p, children: wrapped.children } : p);
+  const components = wrapperType === "COMPONENT"
+    ? new Map([...doc.components, [wrapped.wrapper.id, wrapped.wrapper]])
+    : doc.components;
+  return {
+    ...state,
+    documentHistory: pushHistory(state.documentHistory, { ...doc, pages, components }),
+    nodeSelection: createSingleSelection(wrapped.wrapper.id),
+  };
+}

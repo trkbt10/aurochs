@@ -45,6 +45,16 @@ function renderFullPage(): string {
   );
 }
 
+function decodeRenderedSvgBackend(html: string): string {
+  const srcMatch = html.match(/<img[^>]+\bsrc="([^"]+)"/);
+  expect(srcMatch, "FigPageRenderer must consume the SVG backend as an image layer").not.toBeNull();
+
+  const src = srcMatch![1].replace(/&amp;/g, "&");
+  const prefix = "data:image/svg+xml;charset=utf-8,";
+  expect(src.startsWith(prefix), "SVG backend image layer must use an encoded SVG data URL").toBe(true);
+  return decodeURIComponent(src.slice(prefix.length));
+}
+
 describe("FigPageRenderer — real .fig file path (fig-editor production path)", () => {
   it("loads the fixture as a FigDesignDocument with the expected FRAMEs", () => {
     expect(doc.pages.length).toBeGreaterThan(0);
@@ -60,43 +70,44 @@ describe("FigPageRenderer — real .fig file path (fig-editor production path)",
   });
 
   it("FRAME fills survive createFigDesignDocument → FigPageRenderer", () => {
-    const html = renderFullPage();
+    const svg = decodeRenderedSvgBackend(renderFullPage());
     // frame-bg-fill: {r:0.2,g:0.5,b:0.9} → #3380e6.
-    expect(html, "frame-bg-fill's blue background must reach the DOM").toMatch(
+    expect(svg, "frame-bg-fill's blue background must reach the SVG backend output").toMatch(
       /fill="#3380e6"|fill="rgb\(51, ?128, ?230\)"/i,
     );
   });
 
   it("FRAME stroke survives (frame-stroke: stroke=#0d0d0d width=4)", () => {
-    const html = renderFullPage();
-    expect(html).toMatch(/stroke="#0d0d0d"/i);
+    const svg = decodeRenderedSvgBackend(renderFullPage());
+    expect(svg).toMatch(/stroke="#0d0d0d"/i);
     // INSIDE stroke → masked + 2× width = 8, or centred = 4.
-    expect(html).toMatch(/stroke-width="[48]"/);
+    expect(svg).toMatch(/stroke-width="[48]"/);
   });
 
   it("FRAME drop-shadow & inner-shadow produce <filter> elements", () => {
-    const html = renderFullPage();
-    expect(html, "frame-drop-shadow + frame-inner-shadow must produce filters").toMatch(/<filter\b/);
-    // The canonical recipes must NOT use the alpha-binarize hack.
-    expect(html).not.toContain("0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0");
+    const svg = decodeRenderedSvgBackend(renderFullPage());
+    expect(svg, "frame-drop-shadow + frame-inner-shadow must produce filters").toMatch(/<filter\b/);
+    // The SVG backend intentionally mirrors Figma export's hardAlpha
+    // drop-shadow recipe.
+    expect(svg).toContain("0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0");
   });
 
   it("FRAME cornerRadius survives (frame-corner-clip: cr=16)", () => {
-    const html = renderFullPage();
-    // rx=16 must appear on a frame-corner-clip rect.
-    expect(html).toMatch(/rx="16"/);
+    const svg = decodeRenderedSvgBackend(renderFullPage());
+    // Rounded frames are normalized to paths in the shared shape pipeline.
+    expect(svg).toMatch(/M 16 0 L 134 0 C/);
   });
 
   it("nested FRAME fills both render", () => {
-    const html = renderFullPage();
+    const svg = decodeRenderedSvgBackend(renderFullPage());
     // frame-nested has inner fill {r:0.9,g:0.3,b:0.3} → #e64d4d.
-    expect(html).toMatch(/#e64d4d|rgb\(230, ?77, ?77\)/i);
+    expect(svg).toMatch(/#e64d4d|rgb\(230, ?77, ?77\)/i);
   });
 
   it("does not leak strokeAlign as DOM attribute", () => {
-    const html = renderFullPage();
-    expect(html).not.toContain("strokeAlign=");
-    expect(html).not.toContain("strokealign=");
+    const svg = decodeRenderedSvgBackend(renderFullPage());
+    expect(svg).not.toContain("strokeAlign=");
+    expect(svg).not.toContain("strokealign=");
   });
 
   it("emits SVG filter/clipPath elements in proper camelCase (NOT lowercased)", () => {
@@ -104,15 +115,15 @@ describe("FigPageRenderer — real .fig file path (fig-editor production path)",
     // If React lowercases them to <fefload>, <clippath> etc., the browser
     // treats them as unknown elements and no filtering/clipping happens —
     // this is exactly how FRAME decorations disappear on screen.
-    const html = renderFullPage();
+    const svg = decodeRenderedSvgBackend(renderFullPage());
     // Must find the SVG camelCase form.
-    expect(html, "feFlood must render as SVG camelCase tag").toMatch(/<feFlood\b/);
-    expect(html, "feMerge must render as SVG camelCase tag").toMatch(/<feMerge\b/);
-    expect(html, "feMergeNode must render as SVG camelCase tag").toMatch(/<feMergeNode\b/);
-    expect(html, "clipPath must render as SVG camelCase tag").toMatch(/<clipPath\b/);
+    expect(svg, "feFlood must render as SVG camelCase tag").toMatch(/<feFlood\b/);
+    expect(svg, "feMerge must render as SVG camelCase tag").toMatch(/<feMerge\b/);
+    expect(svg, "feMergeNode must render as SVG camelCase tag").toMatch(/<feMergeNode\b/);
+    expect(svg, "clipPath must render as SVG camelCase tag").toMatch(/<clipPath\b/);
     // Must NOT find lowercased variants.
-    expect(html).not.toMatch(/<feflood\b/);
-    expect(html).not.toMatch(/<femerge\b/);
-    expect(html).not.toMatch(/<clippath\b/);
+    expect(svg).not.toMatch(/<feflood\b/);
+    expect(svg).not.toMatch(/<femerge\b/);
+    expect(svg).not.toMatch(/<clippath\b/);
   });
 });

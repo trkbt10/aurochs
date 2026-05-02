@@ -8,7 +8,7 @@
  * with Figma's purple accent color to visually distinguish inherited elements.
  */
 
-import { createContext, useCallback, useContext, useState, type ReactNode, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
+import { createContext, useCallback, useContext, useState, type ReactNode, type CSSProperties, type PointerEvent as ReactPointerEvent, type KeyboardEvent } from "react";
 import { useFigEditor } from "../context/FigEditorContext";
 import type { FigDesignNode, FigNodeId } from "@aurochs/fig/domain";
 import { isSelected } from "@aurochs-ui/editor-core/selection";
@@ -107,6 +107,16 @@ const instanceRowStyle: CSSProperties = {
   backgroundColor: INSTANCE_BG_TINT,
 };
 
+const renameInputStyle: CSSProperties = {
+  width: "100%",
+  height: 20,
+  border: `1px solid ${colorTokens.selection.primary}`,
+  borderRadius: 3,
+  fontSize: fontTokens.size.md,
+  padding: "0 4px",
+  outline: "none",
+};
+
 // =============================================================================
 // Expansion state context
 // =============================================================================
@@ -148,6 +158,8 @@ type LayerTreeProps = {
 function LayerTree({ nodes, depth, isInstanceContext }: LayerTreeProps) {
   const { nodeSelection, dispatch } = useFigEditor();
   const { expandedIds, toggle } = useExpansion();
+  const [editingId, setEditingId] = useState<FigNodeId | null>(null);
+  const [editingName, setEditingName] = useState("");
 
   const handlePointerDown = useCallback(
     (nodeId: FigNodeId) => (e: ReactPointerEvent) => {
@@ -161,6 +173,27 @@ function LayerTree({ nodes, depth, isInstanceContext }: LayerTreeProps) {
     [dispatch],
   );
 
+  const beginRename = useCallback((node: FigDesignNode) => {
+    setEditingId(node.id);
+    setEditingName(node.name);
+  }, []);
+
+  const commitRename = useCallback((nodeId: FigNodeId) => {
+    const name = editingName.trim();
+    if (name.length > 0) {
+      dispatch({ type: "RENAME_NODE", nodeId, name });
+    }
+    setEditingId(null);
+  }, [dispatch, editingName]);
+
+  const handleRenameKeyDown = useCallback((nodeId: FigNodeId) => (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      commitRename(nodeId);
+    } else if (e.key === "Escape") {
+      setEditingId(null);
+    }
+  }, [commitRename]);
+
   return (
     <>
       {[...nodes].reverse().map((node) => {
@@ -169,24 +202,41 @@ function LayerTree({ nodes, depth, isInstanceContext }: LayerTreeProps) {
         const expanded = expandedIds.has(node.id);
         const isInstance = node.type === "INSTANCE";
         const childIsInstanceContext = isInstanceContext || isInstance;
+        const isEditing = editingId === node.id;
 
         return (
           <div key={node.id} style={childIsInstanceContext ? instanceRowStyle : undefined}>
-            <LayerItem
-              id={node.id}
-              label={node.name}
-              icon={getNodeIcon(node.type, isInstanceContext)}
-              depth={depth}
-              selected={selected}
-              dimmed={!node.visible}
-              hasChildren={hasChildren}
-              expanded={expanded}
-              onToggle={hasChildren ? () => toggle(node.id) : undefined}
-              onPointerDown={handlePointerDown(node.id as FigNodeId)}
-              showVisibilityToggle={false}
-              showLockToggle={false}
-              badge={isInstance ? <InstanceBadge /> : undefined}
-            />
+            {isEditing ? (
+              <div style={{ paddingLeft: 8 + depth * 16, paddingRight: 6, paddingTop: 2, paddingBottom: 2 }}>
+                <input
+                  autoFocus
+                  value={editingName}
+                  aria-label={`Rename ${node.name}`}
+                  style={renameInputStyle}
+                  onChange={(e) => setEditingName(e.currentTarget.value)}
+                  onBlur={() => commitRename(node.id)}
+                  onKeyDown={handleRenameKeyDown(node.id)}
+                />
+              </div>
+            ) : (
+              <div onDoubleClick={() => beginRename(node)}>
+                <LayerItem
+                  id={node.id}
+                  label={node.name}
+                  icon={getNodeIcon(node.type, isInstanceContext)}
+                  depth={depth}
+                  selected={selected}
+                  dimmed={!node.visible}
+                  hasChildren={hasChildren}
+                  expanded={expanded}
+                  onToggle={hasChildren ? () => toggle(node.id) : undefined}
+                  onPointerDown={handlePointerDown(node.id as FigNodeId)}
+                  showVisibilityToggle={false}
+                  showLockToggle={false}
+                  badge={isInstance ? <InstanceBadge /> : undefined}
+                />
+              </div>
+            )}
             {hasChildren && expanded && (
               <LayerTree nodes={node.children!} depth={depth + 1} isInstanceContext={childIsInstanceContext} />
             )}

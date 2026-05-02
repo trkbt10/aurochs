@@ -5,17 +5,9 @@
 import type { FigNode } from "@aurochs/fig/types";
 import { cloneSymbolChildren } from "./symbol-resolver";
 
-/** Type guard that treats a partial object as FigNode for test purposes */
-function isFigNode(obj: unknown): obj is FigNode {
-  return typeof obj === "object" && obj !== null;
-}
-
 /** Create a FigNode from partial data for testing */
 function createTestNode(data: Record<string, unknown>): FigNode {
-  if (isFigNode(data)) {
-    return data;
-  }
-  throw new Error("Invalid test node data");
+  return data as unknown as FigNode;
 }
 
 describe("cloneSymbolChildren", () => {
@@ -51,10 +43,10 @@ describe("cloneSymbolChildren", () => {
     const result = cloneSymbolChildren(symbolNode);
 
     expect(result).toHaveLength(2);
-    expect(result[0]).not.toBe(child1);
-    expect(result[1]).not.toBe(child2);
-    expect(result[0].name).toBe("Rect1");
-    expect(result[1].name).toBe("Rect2");
+    expect(result[0]!).not.toBe(child1);
+    expect(result[1]!).not.toBe(child2);
+    expect(result[0]!.name).toBe("Rect1");
+    expect(result[1]!.name).toBe("Rect2");
   });
 
   it("deep clones nested children", () => {
@@ -80,9 +72,9 @@ describe("cloneSymbolChildren", () => {
     const result = cloneSymbolChildren(symbolNode);
 
     expect(result).toHaveLength(1);
-    expect(result[0].children).toHaveLength(1);
-    expect(result[0].children![0].name).toBe("Circle");
-    expect(result[0].children![0]).not.toBe(grandchild);
+    expect(result[0]!.children).toHaveLength(1);
+    expect(result[0]!.children![0]!.name).toBe("Circle");
+    expect(result[0]!.children![0]).not.toBe(grandchild);
   });
 
   it("applies symbolOverrides to matching children", () => {
@@ -108,7 +100,7 @@ describe("cloneSymbolChildren", () => {
     });
 
     expect(result).toHaveLength(1);
-    expect(result[0].name).toBe("OverriddenName");
+    expect(result[0]!.name).toBe("OverriddenName");
   });
 
   it("applies componentPropAssignments to TEXT children", () => {
@@ -142,7 +134,7 @@ describe("cloneSymbolChildren", () => {
     });
 
     expect(result).toHaveLength(1);
-    expect((result[0] as Record<string, unknown>).characters).toBe("Overridden");
+    expect((result[0]! as Record<string, unknown>).characters).toBe("Overridden");
   });
 
   it("propagates depth-N symbolOverrides to nested INSTANCE children", () => {
@@ -179,14 +171,14 @@ describe("cloneSymbolChildren", () => {
     // as derivedSymbolData on the INSTANCE node (not symbolOverrides).
     // When the INSTANCE is later resolved during rendering, resolveInstance()
     // picks up derivedSymbolData and applies the overrides to the INSTANCE's children.
-    const instanceResult = result[0] as Record<string, unknown>;
+    const instanceResult = result[0]! as Record<string, unknown>;
     const propagated = instanceResult.derivedSymbolData as Array<Record<string, unknown>>;
     expect(propagated).toBeDefined();
     expect(propagated.length).toBeGreaterThan(0);
     // The shortened override should target localID 30 (the nested TEXT child)
-    const firstEntry = propagated[0] as { guidPath: { guids: Array<{ localID: number }> }; name: string };
+    const firstEntry = propagated[0]! as { guidPath: { guids: Array<{ localID: number }> }; name: string };
     expect(firstEntry.guidPath.guids).toHaveLength(1);
-    expect(firstEntry.guidPath.guids[0].localID).toBe(30);
+    expect(firstEntry.guidPath.guids[0]!.localID).toBe(30);
     expect(firstEntry.name).toBe("DeepOverride");
   });
 
@@ -220,7 +212,7 @@ describe("cloneSymbolChildren", () => {
     });
 
     expect(result).toHaveLength(1);
-    expect(result[0].visible).toBe(false);
+    expect(result[0]!.visible).toBe(false);
   });
 
   it("applies componentPropAssignments OVERRIDDEN_SYMBOL_ID", () => {
@@ -253,7 +245,7 @@ describe("cloneSymbolChildren", () => {
     });
 
     expect(result).toHaveLength(1);
-    const resultNode = result[0] as Record<string, unknown>;
+    const resultNode = result[0]! as Record<string, unknown>;
     expect(resultNode.overriddenSymbolID).toEqual(newSymbolGuid);
   });
 
@@ -290,7 +282,7 @@ describe("cloneSymbolChildren", () => {
     });
 
     expect(result).toHaveLength(1);
-    const resultNode = result[0] as Record<string, unknown>;
+    const resultNode = result[0]! as Record<string, unknown>;
     expect(resultNode.characters).toBe("Overridden Text");
     const textData = resultNode.textData as Record<string, unknown>;
     expect(textData.characters).toBe("Overridden Text");
@@ -298,4 +290,3 @@ describe("cloneSymbolChildren", () => {
     expect(resultNode.derivedTextData).toBeUndefined();
   });
 });
-

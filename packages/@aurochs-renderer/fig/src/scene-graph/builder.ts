@@ -122,6 +122,8 @@ export type BuildSceneGraphOptions = {
   readonly images: ReadonlyMap<string, FigImage>;
   /** Canvas size. */
   readonly canvasSize: { width: number; height: number };
+  /** World-space window to render into the output canvas. */
+  readonly viewport: { x: number; y: number; width: number; height: number };
   /** Symbol map for INSTANCE resolution. Pass `new Map()` when absent. */
   readonly symbolMap: ReadonlyMap<string, FigDesignNode>;
   /** Whether to include nodes with `visible: false`. */
@@ -2117,6 +2119,7 @@ export function buildSceneGraph(nodes: readonly FigDesignNode[], options: BuildS
   return {
     width: options.canvasSize.width,
     height: options.canvasSize.height,
+    viewport: options.viewport,
     root,
     version: 1,
   };

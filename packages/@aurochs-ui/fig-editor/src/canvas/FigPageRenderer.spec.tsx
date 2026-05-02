@@ -1,18 +1,16 @@
 /**
  * @file FigPageRenderer integration test
  *
- * Ensures that the real fig-editor rendering component (FigPageRenderer)
- * emits FRAME fills / stroke / effects in its React output when rendering
- * the demo document. Catches regressions where decorations silently stop
- * rendering in the editor canvas.
+ * Ensures the fig-editor renderer shell consumes selectable renderer
+ * backends instead of duplicating a third React rendering path.
  */
 
 import { renderToStaticMarkup } from "react-dom/server";
 import { createElement } from "react";
-// eslint-disable-next-line custom/no-builder-import-in-renderer -- spec file: validate editor rendering against demo
 import { createDemoFigDesignDocument } from "@aurochs-builder/fig/context";
 import type { FigDesignDocument, FigPage } from "@aurochs/fig/domain";
 import { FigPageRenderer } from "./FigPageRenderer";
+import type { FigEditorRendererKind } from "./renderer-kind";
 
 // eslint-disable-next-line no-restricted-syntax -- initialized in beforeAll
 let doc: FigDesignDocument;
@@ -21,47 +19,49 @@ beforeAll(async () => {
   doc = await createDemoFigDesignDocument();
 });
 
-function renderPage(page: FigPage, w: number, h: number): string {
+function renderPage(
+  { page, width, height, renderer }: {
+    readonly page: FigPage;
+    readonly width: number;
+    readonly height: number;
+    readonly renderer?: FigEditorRendererKind;
+  },
+): string {
   return renderToStaticMarkup(
     createElement(FigPageRenderer, {
       page,
-      canvasWidth: w,
-      canvasHeight: h,
+      canvasWidth: width,
+      canvasHeight: height,
       images: doc.images,
       blobs: doc.blobs,
       symbolMap: doc.components,
       styleRegistry: doc.styleRegistry,
+      renderer,
     }),
   );
 }
 
-describe("FigPageRenderer — FRAME decoration reaches React DOM", () => {
-  it("renders FRAME .background(WHITE) as a #ffffff fill rect", () => {
-    const html = renderPage(doc.pages[0], 1200, 800);
-    // The demo Page 0 "Shapes & Fills" has multiple FRAMEs each with
-    // .background(WHITE). At least one #ffffff fill must appear.
-    expect(html).toMatch(/<rect[^>]+fill="#ffffff"/i);
+describe("FigPageRenderer — selectable renderer backend shell", () => {
+  it("defaults to the SVG backend layer", () => {
+    const html = renderPage({ page: doc.pages[0], width: 1200, height: 800 });
+    expect(html).toContain("<img");
+    expect(html).toContain("data:image/svg+xml");
   });
 
-  it("renders gradient fills as <linearGradient> or <radialGradient> defs", () => {
-    const html = renderPage(doc.pages[0], 1200, 800);
-    expect(html).toMatch(/<(linearGradient|radialGradient)\b/);
+  it("does not emit a React SVG scene tree in the editor renderer shell", () => {
+    const html = renderPage({ page: doc.pages[0], width: 1200, height: 800 });
+    expect(html).not.toMatch(/<rect[^>]+fill="#ffffff"/i);
+    expect(html).not.toMatch(/<(linearGradient|radialGradient)\b/);
   });
 
-  it("renders effects as <filter> with canonical inner-shadow primitives", () => {
-    // Page 2 (Components & Effects) has drop-shadow / inner-shadow nodes.
-    const html = renderPage(doc.pages[2], 1200, 800);
-    expect(html, "filter element must appear when effects are present").toMatch(/<filter\b/);
-    // The previously-broken ALPHA_BINARIZE_MATRIX must not appear.
-    expect(html).not.toContain("0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0");
+  it("can explicitly render through the SVG backend layer", () => {
+    const html = renderPage({ page: doc.pages[0], width: 1200, height: 800, renderer: "svg" });
+    expect(html).toContain("<img");
+    expect(html).toContain("data:image/svg+xml");
   });
 
-  it("does not emit unknown strokeAlign prop onto DOM elements", () => {
-    const html = renderPage(doc.pages[0], 1200, 800);
-    // strokeAlign is scene-graph metadata (INSIDE/OUTSIDE), not an SVG
-    // attribute. It must never reach the DOM where it would trigger
-    // React's "unknown prop" warning and clutter the HTML with garbage.
-    expect(html, "strokeAlign must never appear as a DOM attribute").not.toContain("strokeAlign=");
-    expect(html).not.toContain("strokealign=");
+  it("can render through the WebGL backend layer shell", () => {
+    const html = renderPage({ page: doc.pages[0], width: 1200, height: 800, renderer: "webgl" });
+    expect(html).toContain("<canvas");
   });
 });

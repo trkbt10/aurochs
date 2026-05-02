@@ -219,6 +219,7 @@ export function buildFrameSceneGraph(frame: FrameInfo, data: FixtureData): Scene
     blobs: data.document.blobs,
     images: data.document.images,
     canvasSize: { width: frame.width, height: frame.height },
+    viewport: { x: 0, y: 0, width: frame.width, height: frame.height },
     symbolMap: data.document.components,
     styleRegistry: data.document.styleRegistry,
     showHiddenNodes: false,

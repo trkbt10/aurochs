@@ -101,26 +101,17 @@ const HIDDEN_TEXTAREA_STYLE: CSSProperties = {
 
 function buildContainerStyle({
   bounds,
-  canvasWidth,
-  canvasHeight,
   showFrameOutline,
 }: {
   readonly bounds: TextEditBounds;
-  readonly canvasWidth: number;
-  readonly canvasHeight: number;
   readonly showFrameOutline: boolean;
 }): CSSProperties {
-  const left = (bounds.x / canvasWidth) * 100;
-  const top = (bounds.y / canvasHeight) * 100;
-  const width = (bounds.width / canvasWidth) * 100;
-  const height = (bounds.height / canvasHeight) * 100;
-
   return {
     position: "absolute",
-    left: `${left}%`,
-    top: `${top}%`,
-    width: `${width}%`,
-    height: `${height}%`,
+    left: bounds.x,
+    top: bounds.y,
+    width: bounds.width,
+    height: bounds.height,
     transform: bounds.rotation !== 0 ? `rotate(${bounds.rotation}deg)` : undefined,
     transformOrigin: "center center",
     boxSizing: "border-box",
@@ -141,8 +132,6 @@ function buildContainerStyle({
  */
 export function TextEditInputFrame({
   bounds,
-  canvasWidth,
-  canvasHeight,
   textareaRef,
   value,
   onChange,
@@ -158,7 +147,7 @@ export function TextEditInputFrame({
   textFont,
   children,
 }: TextEditInputFrameProps) {
-  const containerStyle = buildContainerStyle({ bounds, canvasWidth, canvasHeight, showFrameOutline });
+  const containerStyle = buildContainerStyle({ bounds, showFrameOutline });
   const handleMouseDown: MouseEventHandler<HTMLTextAreaElement> = (event) => {
     if (event.button !== 0) {
       onNonPrimaryMouseDown?.(event);

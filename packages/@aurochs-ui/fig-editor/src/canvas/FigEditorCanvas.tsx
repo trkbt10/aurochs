@@ -22,7 +22,7 @@
  *
  * Composes:
  * - EditorCanvas (from editor-controls) for viewport, selection, interaction
- * - FigPageRenderer for React-based SVG rendering of the current page
+ * - FigPageRenderer for the selected SVG/WebGL backend layer
  */
 
 import { useRef, useMemo, useCallback, useState, useEffect, type ReactNode } from "react";
@@ -35,6 +35,8 @@ import type { FigNodeId, FigDesignNode } from "@aurochs/fig/domain";
 import { findNodeById } from "@aurochs-builder/fig/node-ops";
 import { useFigEditor, useFigDrag } from "../context/FigEditorContext";
 import { FigPageRenderer } from "./FigPageRenderer";
+import type { FigEditorRendererKind } from "./renderer-kind";
+import { useFigSceneGraph } from "./use-fig-scene-graph";
 import { flattenAllNodeBounds } from "./interaction/bounds";
 import { isSelectMode } from "../context/fig-editor/types";
 import { FigTextEditOverlay } from "./FigTextEditOverlay";
@@ -58,26 +60,48 @@ const CANVAS_PADDING = 200;
  * size is the bounding box of all content + padding.
  * This ensures fit-to-view works correctly for any page content.
  */
-function computeCanvasBoundsFromNodes(nodes: readonly FigDesignNode[]): { width: number; height: number } {
+function computeCanvasBoundsFromNodes(nodes: readonly FigDesignNode[]): {
+  width: number;
+  height: number;
+  renderX: number;
+  renderY: number;
+  renderWidth: number;
+  renderHeight: number;
+} {
   if (nodes.length === 0) {
-    return { width: MIN_CANVAS_SIZE, height: MIN_CANVAS_SIZE };
+    return {
+      width: MIN_CANVAS_SIZE,
+      height: MIN_CANVAS_SIZE,
+      renderX: 0,
+      renderY: 0,
+      renderWidth: MIN_CANVAS_SIZE,
+      renderHeight: MIN_CANVAS_SIZE,
+    };
   }
 
   const extremes = nodes.reduce(
     (acc, node) => {
+      const left = node.transform.m02;
+      const top = node.transform.m12;
       const right = node.transform.m02 + node.size.x;
       const bottom = node.transform.m12 + node.size.y;
       return {
+        minLeft: Math.min(acc.minLeft, left),
+        minTop: Math.min(acc.minTop, top),
         maxRight: Math.max(acc.maxRight, right),
         maxBottom: Math.max(acc.maxBottom, bottom),
       };
     },
-    { maxRight: 0, maxBottom: 0 },
+    { minLeft: 0, minTop: 0, maxRight: 0, maxBottom: 0 },
   );
 
   return {
     width: Math.max(MIN_CANVAS_SIZE, extremes.maxRight + CANVAS_PADDING),
     height: Math.max(MIN_CANVAS_SIZE, extremes.maxBottom + CANVAS_PADDING),
+    renderX: extremes.minLeft - CANVAS_PADDING,
+    renderY: extremes.minTop - CANVAS_PADDING,
+    renderWidth: Math.max(MIN_CANVAS_SIZE, extremes.maxRight - extremes.minLeft + CANVAS_PADDING * 2),
+    renderHeight: Math.max(MIN_CANVAS_SIZE, extremes.maxBottom - extremes.minTop + CANVAS_PADDING * 2),
   };
 }
 
@@ -141,9 +165,11 @@ type ContextMenuState = {
  */
 type FigEditorCanvasProps = {
   readonly canvasOverlay?: ReactNode;
+  readonly renderer?: FigEditorRendererKind;
 };
 
-export function FigEditorCanvas({ canvasOverlay }: FigEditorCanvasProps = {}) {
+/** Render the interactive fig editor canvas with selectable renderer backends. */
+export function FigEditorCanvas({ canvasOverlay, renderer = "svg" }: FigEditorCanvasProps = {}) {
   const {
     dispatch,
     document,
@@ -198,6 +224,18 @@ export function FigEditorCanvas({ canvasOverlay }: FigEditorCanvasProps = {}) {
     () => computeCanvasBoundsFromNodes(activePage?.children ?? []),
     [activePage],
   );
+
+  const sceneGraph = useFigSceneGraph({
+    page: activePage,
+    canvasWidth: canvasSize.renderWidth,
+    canvasHeight: canvasSize.renderHeight,
+    viewportX: canvasSize.renderX,
+    viewportY: canvasSize.renderY,
+    images: document.images,
+    blobs: document.blobs,
+    symbolMap: document.components,
+    styleRegistry: document.styleRegistry,
+  });
 
   // =========================================================================
   // Item events
@@ -425,6 +463,9 @@ export function FigEditorCanvas({ canvasOverlay }: FigEditorCanvasProps = {}) {
       { id: "copy", label: "Copy", shortcut: "Cmd+C", disabled: !hasSelection },
       { id: "paste", label: "Paste", shortcut: "Cmd+V" },
       { type: "separator" },
+      { id: "group", label: "Group Selection", shortcut: "Cmd+G", disabled: nodeSelection.selectedIds.length === 0 },
+      { id: "make-component", label: "Create Component", disabled: nodeSelection.selectedIds.length === 0 },
+      { type: "separator" },
       { id: "bring-to-front", label: "Bring to Front", disabled: !hasSelection },
       { id: "bring-forward", label: "Bring Forward", disabled: !hasSelection },
       { id: "send-backward", label: "Send Backward", disabled: !hasSelection },
@@ -454,6 +495,12 @@ export function FigEditorCanvas({ canvasOverlay }: FigEditorCanvasProps = {}) {
           if (selectedIds.length > 0) {
             dispatch({ type: "DELETE_NODES", nodeIds: selectedIds });
           }
+          break;
+        case "group":
+          dispatch({ type: "GROUP_SELECTION" });
+          break;
+        case "make-component":
+          dispatch({ type: "MAKE_COMPONENT_FROM_SELECTION" });
           break;
         case "bring-to-front":
           if (selectedIds.length === 1) {
@@ -731,6 +778,27 @@ export function FigEditorCanvas({ canvasOverlay }: FigEditorCanvasProps = {}) {
     });
   }, [nodeSelection.selectedIds, activePage]);
 
+  const viewportContent = useMemo(() => {
+    if (!activePage || !sceneGraph) {
+      return undefined;
+    }
+    return (
+      <FigPageRenderer
+        page={activePage}
+        canvasWidth={canvasSize.renderWidth}
+        canvasHeight={canvasSize.renderHeight}
+        images={document.images}
+        blobs={document.blobs}
+        symbolMap={document.components}
+        styleRegistry={document.styleRegistry}
+        renderer={renderer}
+        sceneGraph={sceneGraph}
+        viewportX={canvasSize.renderX}
+        viewportY={canvasSize.renderY}
+      />
+    );
+  }, [activePage, sceneGraph, renderer, canvasSize, document.images, document.blobs, document.components, document.styleRegistry]);
+
   return (
     <>
       <EditorCanvas
@@ -765,19 +833,8 @@ export function FigEditorCanvas({ canvasOverlay }: FigEditorCanvasProps = {}) {
         enableMarquee={isSelectMode(creationMode)}
         onMarqueeSelect={handleMarqueeSelect}
         viewportOverlay={textEditOverlay}
+        viewportContent={viewportContent}
       >
-        {activePage && (
-          <FigPageRenderer
-            page={activePage}
-            canvasWidth={canvasSize.width}
-            canvasHeight={canvasSize.height}
-            images={document.images}
-            blobs={document.blobs}
-            symbolMap={document.components}
-            styleRegistry={document.styleRegistry}
-          />
-        )}
-
         {/* Inspector / custom canvas overlay (page-coord space) */}
         {canvasOverlay}
 

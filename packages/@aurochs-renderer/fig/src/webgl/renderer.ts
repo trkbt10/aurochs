@@ -1276,8 +1276,13 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
       clipStencilValid.value = false;
 
       const renderTree = resolveRenderTree(scene);
+      const viewportTransform = {
+        ...IDENTITY_MATRIX,
+        m02: -renderTree.viewport.x,
+        m12: -renderTree.viewport.y,
+      };
       for (const child of renderTree.children) {
-        renderRenderNode(child, IDENTITY_MATRIX, 1);
+        renderRenderNode(child, viewportTransform, 1);
       }
     },
 

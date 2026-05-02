@@ -25,6 +25,7 @@ beforeAll(async () => {
       blobs: doc.blobs,
       images: doc.images,
       canvasSize: { width: 1200, height: 800 },
+      viewport: { x: 0, y: 0, width: 1200, height: 800 },
       symbolMap: doc.components,
       styleRegistry: doc.styleRegistry,
       showHiddenNodes: false,

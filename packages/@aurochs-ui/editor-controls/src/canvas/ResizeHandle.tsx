@@ -19,6 +19,8 @@ export type ResizeHandleProps = {
   readonly x: number;
   /** Y coordinate */
   readonly y: number;
+  /** Current viewport scale; keeps the handle's screen size constant. */
+  readonly viewportScale?: number;
   /** Pointer down handler */
   readonly onPointerDown?: (e: React.PointerEvent) => void;
 };
@@ -53,19 +55,21 @@ const CURSOR_MAP: Record<ResizeHandlePosition, string> = {
 /**
  * A resize handle for shape manipulation.
  */
-export function ResizeHandle({ position, x, y, onPointerDown }: ResizeHandleProps) {
-  const halfSize = HANDLE_SIZE / 2;
+export function ResizeHandle({ position, x, y, viewportScale = 1, onPointerDown }: ResizeHandleProps) {
+  const safeScale = viewportScale > 0 ? viewportScale : 1;
+  const size = HANDLE_SIZE / safeScale;
+  const halfSize = size / 2;
   const cursor = CURSOR_MAP[position];
 
   return (
     <rect
       x={x - halfSize}
       y={y - halfSize}
-      width={HANDLE_SIZE}
-      height={HANDLE_SIZE}
+      width={size}
+      height={size}
       fill={HANDLE_FILL}
       stroke={HANDLE_STROKE}
-      strokeWidth={HANDLE_STROKE_WIDTH}
+      strokeWidth={HANDLE_STROKE_WIDTH / safeScale}
       style={{ cursor }}
       onPointerDown={(e) => {
         e.stopPropagation();

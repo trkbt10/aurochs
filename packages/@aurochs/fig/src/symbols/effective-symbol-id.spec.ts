@@ -56,7 +56,7 @@ describe("extractSymbolIDPair", () => {
   it("returns undefined when no symbolID", () => {
     expect(extractSymbolIDPair({})).toBeUndefined();
     expect(extractSymbolIDPair({ symbolData: {} })).toBeUndefined();
-    expect(extractSymbolIDPair({ symbolID: "not a guid" })).toBeUndefined();
+    expect(extractSymbolIDPair({ symbolID: "not a guid" } as unknown as Parameters<typeof extractSymbolIDPair>[0])).toBeUndefined();
   });
 
   it("omits overriddenSymbolID when not present", () => {
