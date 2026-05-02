@@ -18,6 +18,7 @@ import type { PathContour } from "../paths/types";
 import type { ExtractedTextProps, TextAlignHorizontal, TextAlignVertical } from "../layout/types";
 import type { TextLayout } from "../layout/compute-layout";
 import type { FigMatrix } from "@aurochs/fig/types";
+import type { AbstractFont } from "../../font/types";
 
 /**
  * Resolved per-line-height metric for line-mode rendering.
@@ -33,6 +34,23 @@ export type ResolvedFontMetrics = {
   /** Multiplier: line height in ems (e.g. 1.32). Never 0. */
   readonly fontLineHeight: number;
 };
+
+/**
+ * Request shape for synchronous glyph-outline font resolution.
+ *
+ * Font loading itself is intentionally outside the text resolver. Callers that
+ * want renderer-independent outlines must preload/cache fonts and pass this
+ * resolver explicitly; absence keeps missing outlines visible to WebGL instead
+ * of hiding them behind renderer-local drawing paths.
+ */
+export type TextFontResolveRequest = {
+  readonly props: ExtractedTextProps;
+  readonly fontFamily: string;
+  readonly fontWeight: number | undefined;
+  readonly fontStyle: string | undefined;
+};
+
+export type TextFontResolver = (request: TextFontResolveRequest) => AbstractFont | undefined;
 
 /**
  * Fully resolved text rendering — discriminated union by strategy.

@@ -20,10 +20,8 @@
 
 import { resolveRenderTree } from "./resolve";
 import type { SceneGraph, EllipseNode, SceneNodeId, SceneNode } from "../types";
-import type { FigImage } from "@aurochs/fig/parser";
 import type { RenderTree, RenderNode } from "./types";
 
-const EMPTY_IMAGES = new Map<string, FigImage>();
 const IDENTITY = { m00: 1, m01: 0, m02: 0, m10: 0, m11: 1, m12: 0 };
 
 function makeEllipseWithOutsideStroke(id: string): EllipseNode {
@@ -51,12 +49,14 @@ function makeEllipseWithOutsideStroke(id: string): EllipseNode {
 
 function makeSceneGraph(nodes: readonly SceneNode[]): SceneGraph {
   return {
+    width: 20,
+    height: 20,
+    version: 1,
     root: {
       type: "group", id: "root" as SceneNodeId, name: "root",
       transform: IDENTITY, opacity: 1, visible: true,
       effects: [], blendMode: undefined, children: nodes,
     },
-    blobs: [], images: EMPTY_IMAGES,
   };
 }
 
@@ -64,7 +64,9 @@ function collectDefIds(tree: RenderTree): string[] {
   const ids: string[] = [];
   function walk(node: RenderNode): void {
     if ("defs" in node && node.defs) {
-      for (const d of node.defs) { ids.push(d.id); }
+      for (const d of node.defs) {
+        if ("id" in d) { ids.push(d.id); }
+      }
     }
     if ("children" in node && node.children) {
       for (const c of node.children) { walk(c); }

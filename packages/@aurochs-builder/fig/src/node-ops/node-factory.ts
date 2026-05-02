@@ -185,6 +185,12 @@ function applyTypeSpecificFields(base: FigDesignNode, spec: NodeSpec): FigDesign
         pointCount: spec.pointCount ?? 3,
       };
 
+    case "VECTOR":
+      return {
+        ...base,
+        vectorPaths: spec.vectorPaths,
+      };
+
     case "TEXT":
       return {
         ...base,

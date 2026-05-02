@@ -17,7 +17,6 @@ import { renderCanvas } from "@aurochs-renderer/fig/svg";
 import { createBrowserFontLoader, isBrowserFontLoaderSupported } from "@aurochs-renderer/fig/font-drivers/browser";
 import { createCachingFontLoader } from "@aurochs-renderer/fig/font";
 import { buildSceneGraph } from "@aurochs-renderer/fig/scene-graph";
-import type { SceneGraph } from "@aurochs-renderer/fig/scene-graph";
 import { Button, Select, Tabs, Toggle, colorTokens, spacingTokens, fontTokens, radiusTokens } from "@aurochs-ui/ui-components";
 import {
   InspectorCanvasOverlay,
@@ -33,6 +32,7 @@ import {
   FIG_NODE_CATEGORY_REGISTRY,
   FIG_LEGEND_ORDER,
 } from "../../src/inspector/fig-node-categories";
+import { useFigTextFontResolver } from "../../src/canvas/use-fig-text-font-resolver";
 import { WebGLCanvas } from "./WebGLCanvas";
 
 // =============================================================================
@@ -280,6 +280,14 @@ function RendererDebugContent({ parsedFile, designDoc }: { parsedFile: ParsedFig
   const combinedWarnings = useMemo(() => [...symbolResolveWarnings, ...renderResult.warnings], [symbolResolveWarnings, renderResult.warnings]);
   const currentCanvas = canvases[selectedCanvasIndex];
   const currentFrame = currentCanvas?.frames[selectedFrameIndex];
+  const currentDesignPage = useMemo(
+    () => designDoc.pages.find((page) => !currentCanvas || page.name === currentCanvas.name),
+    [designDoc.pages, currentCanvas],
+  );
+  const textFontResolver = useFigTextFontResolver({
+    page: currentDesignPage,
+    fontLoader: fontAccessGranted ? fontLoader : undefined,
+  });
 
   // Page select options
   const pageOptions = useMemo(
@@ -324,12 +332,14 @@ function RendererDebugContent({ parsedFile, designDoc }: { parsedFile: ParsedFig
         symbolMap: designDoc.components,
         styleRegistry: designDoc.styleRegistry,
         showHiddenNodes,
+        warnings: [],
+        textFontResolver,
       });
     } catch (e) {
       console.error("Failed to build scene graph:", e);
       return null;
     }
-  }, [rendererMode, currentFrame, currentCanvas, designDoc, showHiddenNodes]);
+  }, [rendererMode, currentFrame, currentCanvas, designDoc, showHiddenNodes, textFontResolver]);
 
   useEffect(() => {
     if (!currentFrame) { setRenderResult({ svg: "", warnings: [] }); return; }

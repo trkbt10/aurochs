@@ -578,12 +578,6 @@ export function FigTextEditOverlay({
           <style>{CARET_BLINK_KEYFRAMES}</style>
 
           {/*
-            White background to occlude the original SVG text beneath.
-            The overlay completely covers the original text node area.
-          */}
-          <rect x={0} y={0} width={boundsWidth} height={boundsHeight} fill="white" />
-
-          {/*
             Text re-rendered using FigTextLines — the SAME component
             used by TextNodeRenderer for normal display.
           */}

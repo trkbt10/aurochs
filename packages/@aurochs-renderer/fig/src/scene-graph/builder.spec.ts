@@ -30,6 +30,7 @@ beforeAll(async () => {
       styleRegistry: doc.styleRegistry,
       showHiddenNodes: false,
       warnings: [],
+      textFontResolver: undefined,
     }),
   );
 });

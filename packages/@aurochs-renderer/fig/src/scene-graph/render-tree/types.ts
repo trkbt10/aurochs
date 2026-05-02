@@ -492,7 +492,7 @@ export type RenderTextNode = RenderNodeBase<TextNode> & {
   readonly leadingTrim?: string;
   /** Hyperlink URL — wraps the text content in an SVG <a> element */
   readonly hyperlink?: string;
-  /** Rendering mode: outlined glyphs or fallback text lines */
+  /** Rendering mode: outlined glyphs or resolved text line layout */
   readonly content: RenderTextGlyphs | RenderTextLines;
   // Source data for WebGL
   readonly sourceGlyphContours?: readonly PathContour[];

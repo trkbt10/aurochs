@@ -37,12 +37,14 @@ import { useFigEditor, useFigDrag } from "../context/FigEditorContext";
 import { FigPageRenderer } from "./FigPageRenderer";
 import type { FigEditorRendererKind } from "./renderer-kind";
 import { useFigSceneGraph } from "./use-fig-scene-graph";
-import { flattenAllNodeBounds } from "./interaction/bounds";
+import { useFigTextFontResolver } from "./use-fig-text-font-resolver";
+import { filterMarqueeSelectionByHierarchy, flattenAllNodeBounds } from "./interaction/bounds";
 import { isSelectMode } from "../context/fig-editor/types";
 import { FigTextEditOverlay } from "./FigTextEditOverlay";
 import { computeAbsoluteNodeBounds } from "./interaction/bounds";
 import type { MenuEntry } from "@aurochs-ui/ui-components/context-menu";
 import { ContextMenu } from "@aurochs-ui/ui-components/context-menu";
+import type { CachingFontLoader } from "@aurochs-renderer/fig/font";
 
 // =============================================================================
 // Canvas bounds computation
@@ -166,10 +168,11 @@ type ContextMenuState = {
 type FigEditorCanvasProps = {
   readonly canvasOverlay?: ReactNode;
   readonly renderer?: FigEditorRendererKind;
+  readonly fontLoader?: CachingFontLoader;
 };
 
 /** Render the interactive fig editor canvas with selectable renderer backends. */
-export function FigEditorCanvas({ canvasOverlay, renderer = "svg" }: FigEditorCanvasProps = {}) {
+export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }: FigEditorCanvasProps = {}) {
   const {
     dispatch,
     document,
@@ -193,6 +196,7 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg" }: FigEditorCa
 
   const canvasRef = useRef<EditorCanvasHandle>(null);
   const [zoomMode, setZoomMode] = useState<ZoomMode>("fit");
+  const [viewportScale, setViewportScale] = useState(1);
   const [contextMenu, setContextMenu] = useState<ContextMenuState>(null);
 
   // =========================================================================
@@ -224,6 +228,7 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg" }: FigEditorCa
     () => computeCanvasBoundsFromNodes(activePage?.children ?? []),
     [activePage],
   );
+  const textFontResolver = useFigTextFontResolver({ page: activePage, fontLoader });
 
   const sceneGraph = useFigSceneGraph({
     page: activePage,
@@ -235,6 +240,7 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg" }: FigEditorCa
     blobs: document.blobs,
     symbolMap: document.components,
     styleRegistry: document.styleRegistry,
+    textFontResolver,
   });
 
   // =========================================================================
@@ -242,7 +248,7 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg" }: FigEditorCa
   // =========================================================================
 
   const handleItemPointerDown = useCallback(
-    (id: string, coords: CanvasPageCoords, _e: React.PointerEvent) => {
+    (id: string, coords: CanvasPageCoords, e: React.PointerEvent) => {
       // If text editing is active, clicking any node exits text edit first.
       // This prevents the invalid state of "text editing + other node selected".
       if (textEdit.type === "active") {
@@ -250,6 +256,14 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg" }: FigEditorCa
       }
 
       if (!isSelectMode(creationMode)) {
+        e.preventDefault();
+        e.stopPropagation();
+        creationDragRef.current = {
+          startPageX: coords.pageX,
+          startPageY: coords.pageY,
+          currentPageX: coords.pageX,
+          currentPageY: coords.pageY,
+        };
         return;
       }
 
@@ -273,6 +287,9 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg" }: FigEditorCa
 
   const handleItemClick = useCallback(
     (id: string, coords: CanvasPageCoords, _e: React.MouseEvent) => {
+      if (!isSelectMode(creationMode)) {
+        return;
+      }
       dispatch({
         type: "SELECT_NODE",
         nodeId: id as FigNodeId,
@@ -280,7 +297,7 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg" }: FigEditorCa
         toggle: coords.toggle,
       });
     },
-    [dispatch],
+    [creationMode, dispatch],
   );
 
   /**
@@ -465,6 +482,7 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg" }: FigEditorCa
       { type: "separator" },
       { id: "group", label: "Group Selection", shortcut: "Cmd+G", disabled: nodeSelection.selectedIds.length === 0 },
       { id: "make-component", label: "Create Component", disabled: nodeSelection.selectedIds.length === 0 },
+      { id: "outline", label: "Outline Selection", disabled: nodeSelection.selectedIds.length === 0 },
       { type: "separator" },
       { id: "bring-to-front", label: "Bring to Front", disabled: !hasSelection },
       { id: "bring-forward", label: "Bring Forward", disabled: !hasSelection },
@@ -501,6 +519,9 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg" }: FigEditorCa
           break;
         case "make-component":
           dispatch({ type: "MAKE_COMPONENT_FROM_SELECTION" });
+          break;
+        case "outline":
+          dispatch({ type: "OUTLINE_SELECTION" });
           break;
         case "bring-to-front":
           if (selectedIds.length === 1) {
@@ -544,11 +565,15 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg" }: FigEditorCa
       },
       additive: boolean,
     ) => {
-      if (result.itemIds.length > 0) {
+      const selectableIds = activePage
+        ? filterMarqueeSelectionByHierarchy(activePage.children, result.itemIds)
+        : result.itemIds;
+
+      if (selectableIds.length > 0) {
         if (additive) {
           // Add to existing selection
           const existingIds = new Set(nodeSelection.selectedIds);
-          const newIds = result.itemIds.filter((id) => !existingIds.has(id as FigNodeId));
+          const newIds = selectableIds.filter((id) => !existingIds.has(id as FigNodeId));
           if (newIds.length > 0) {
             dispatch({
               type: "SELECT_MULTIPLE_NODES",
@@ -561,15 +586,15 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg" }: FigEditorCa
         } else {
           dispatch({
             type: "SELECT_MULTIPLE_NODES",
-            nodeIds: result.itemIds as FigNodeId[],
-            primaryId: result.itemIds[0] as FigNodeId,
+            nodeIds: selectableIds as FigNodeId[],
+            primaryId: selectableIds[0] as FigNodeId,
           });
         }
       } else if (!additive) {
         dispatch({ type: "CLEAR_NODE_SELECTION" });
       }
     },
-    [dispatch, nodeSelection.selectedIds],
+    [activePage, dispatch, nodeSelection.selectedIds],
   );
 
   // =========================================================================
@@ -795,9 +820,11 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg" }: FigEditorCa
         sceneGraph={sceneGraph}
         viewportX={canvasSize.renderX}
         viewportY={canvasSize.renderY}
+        viewportScale={viewportScale}
+        textFontResolver={textFontResolver}
       />
     );
-  }, [activePage, sceneGraph, renderer, canvasSize, document.images, document.blobs, document.components, document.styleRegistry]);
+  }, [activePage, sceneGraph, renderer, canvasSize, document.images, document.blobs, document.components, document.styleRegistry, viewportScale, textFontResolver]);
 
   return (
     <>
@@ -808,6 +835,7 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg" }: FigEditorCa
         clampFn={NO_CLAMP}
         zoomMode={zoomMode}
         onZoomModeChange={setZoomMode}
+        onViewportChange={(viewport) => setViewportScale(viewport.scale)}
         itemBounds={itemBounds}
         selectedIds={nodeSelection.selectedIds}
         primaryId={nodeSelection.primaryId}

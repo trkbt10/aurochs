@@ -32,6 +32,7 @@ describe("INSTANCE color inheritance in scene graph", () => {
       styleRegistry: doc.styleRegistry,
       showHiddenNodes: false,
       warnings: [],
+      textFontResolver: undefined,
     });
 
     // Find the "Default" button instance
@@ -72,6 +73,7 @@ describe("INSTANCE color inheritance in scene graph", () => {
       styleRegistry: doc.styleRegistry,
       showHiddenNodes: false,
       warnings: [],
+      textFontResolver: undefined,
     });
 
     const dangerBtn = findSceneNode(sg.root.children, (n) => n.name === "Danger") as FrameNode | undefined;
@@ -103,6 +105,7 @@ describe("INSTANCE color inheritance in scene graph", () => {
       styleRegistry: doc.styleRegistry,
       showHiddenNodes: false,
       warnings: [],
+      textFontResolver: undefined,
     });
 
     // Default button should have children (bg rect + label text)
@@ -124,6 +127,7 @@ describe("INSTANCE color inheritance in scene graph", () => {
       styleRegistry: doc.styleRegistry,
       showHiddenNodes: false,
       warnings: [],
+      textFontResolver: undefined,
     });
 
     const defaultBtn = findSceneNode(sg.root.children, (n) => n.name === "Default") as FrameNode | undefined;

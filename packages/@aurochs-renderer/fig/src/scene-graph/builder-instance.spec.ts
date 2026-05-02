@@ -86,6 +86,7 @@ function buildWithSymbols(
     styleRegistry: EMPTY_FIG_STYLE_REGISTRY,
     showHiddenNodes: false,
     warnings: [],
+    textFontResolver: undefined,
   };
   return buildSceneGraph(nodes, options);
 }

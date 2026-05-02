@@ -17,6 +17,7 @@ import type { TextNodeInput } from "../layout/extract-props";
 import { getFillColorAndOpacity } from "../layout/fill";
 import { computeTextLayout } from "../layout/compute-layout";
 import { extractDerivedTextPathData, hasDerivedGlyphs } from "../paths/derived-paths";
+import { extractTextPathData } from "../paths/opentype-paths";
 import type { PathContour } from "../paths/types";
 import type {
   TextRendering,
@@ -24,6 +25,7 @@ import type {
   TextRenderingLines,
   TextTruncation,
   ResolvedFontMetrics,
+  TextFontResolver,
 } from "./types";
 
 /** Unicode single-codepoint ellipsis (U+2026). */
@@ -179,6 +181,7 @@ function applyTruncation(source: string, truncation: TextTruncation): string {
  */
 export type ResolveTextContext = {
   readonly blobs?: readonly FigBlob[];
+  readonly fontResolver?: TextFontResolver;
 };
 
 /**
@@ -199,6 +202,59 @@ function decorationsToContours(
       { type: "Z" as const },
     ],
   }));
+}
+
+function resolveFontGlyphRendering(params: {
+  readonly displayProps: ReturnType<typeof extractTextProps>;
+  readonly layout: ReturnType<typeof computeTextLayout>;
+  readonly fillColor: string;
+  readonly fillOpacity: number;
+  readonly truncation: TextTruncation | undefined;
+  readonly fontResolver: TextFontResolver | undefined;
+}): TextRenderingGlyphs | undefined {
+  const { displayProps, layout, fillColor, fillOpacity, truncation, fontResolver } = params;
+  if (!fontResolver) {
+    return undefined;
+  }
+  const firstLine = layout.lines[0];
+  if (!firstLine) {
+    return undefined;
+  }
+  const font = fontResolver({
+    props: displayProps,
+    fontFamily: displayProps.fontFamily,
+    fontWeight: displayProps.fontWeight,
+    fontStyle: displayProps.fontStyle,
+  });
+  if (!font) {
+    return undefined;
+  }
+  const pathData = extractTextPathData({
+    lines: layout.lines.map((line) => line.text),
+    font,
+    fontSize: displayProps.fontSize,
+    x: firstLine.x,
+    baseY: firstLine.y,
+    lineHeight: layout.lineHeight,
+    align: displayProps.textAlignHorizontal,
+    letterSpacing: displayProps.letterSpacing,
+    textDecoration: displayProps.textDecoration,
+  });
+  if (pathData.glyphContours.length === 0 && pathData.decorations.length === 0) {
+    return undefined;
+  }
+  return {
+    kind: "glyphs",
+    glyphContours: pathData.glyphContours,
+    decorationContours: decorationsToContours(pathData.decorations),
+    fillColor,
+    fillOpacity,
+    transform: displayProps.transform,
+    opacity: displayProps.opacity,
+    props: displayProps,
+    layout,
+    truncation,
+  };
 }
 
 /**
@@ -277,9 +333,8 @@ export function resolveTextRendering(
     }
   }
 
-  // Lines mode: if truncation applies, rewrite characters before layout so
-  // that renderers emit the cut-and-ellipsized string directly (avoiding
-  // overflow beyond the text box).
+  // Lines mode source: if truncation applies, rewrite characters before
+  // layout so renderers emit the cut-and-ellipsized string directly.
   const displayProps = truncation
     ? { ...props, characters: applyTruncation(props.characters, truncation) }
     : props;
@@ -292,6 +347,18 @@ export function resolveTextRendering(
     props: displayProps,
     lines: explicitLines,
   });
+
+  const fontGlyphs = resolveFontGlyphRendering({
+    displayProps,
+    layout,
+    fillColor,
+    fillOpacity,
+    truncation,
+    fontResolver: ctx.fontResolver,
+  });
+  if (fontGlyphs) {
+    return fontGlyphs;
+  }
 
   const lines: TextRenderingLines = {
     kind: "lines",

@@ -235,3 +235,36 @@ export function findParentId(
   });
   return parentRef.value;
 }
+
+/**
+ * Filter marquee hits so container ancestors do not get selected together
+ * with their descendants.
+ *
+ * A marquee rect can intersect a FRAME/COMPONENT and one or more children at
+ * the same time. For editing, the child hit is the first-class selection; the
+ * ancestor container remains selectable by dragging only over its empty area.
+ */
+export function filterMarqueeSelectionByHierarchy(
+  nodes: readonly FigDesignNode[],
+  itemIds: readonly string[],
+): readonly string[] {
+  const selected = new Set(itemIds);
+  const ancestorsWithSelectedDescendant = new Set<string>();
+
+  const visit = (node: FigDesignNode, ancestors: readonly string[]) => {
+    if (selected.has(node.id)) {
+      for (const ancestor of ancestors) {
+        ancestorsWithSelectedDescendant.add(ancestor);
+      }
+    }
+    for (const child of node.children ?? []) {
+      visit(child, [...ancestors, node.id]);
+    }
+  };
+
+  for (const node of nodes) {
+    visit(node, []);
+  }
+
+  return itemIds.filter((id) => !ancestorsWithSelectedDescendant.has(id));
+}

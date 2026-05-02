@@ -63,6 +63,7 @@ export function useFigKeyboard({
       }
 
       const isMod = e.metaKey || e.ctrlKey;
+      const key = e.key.toLowerCase();
 
       // Delete/Backspace: delete selected nodes
       if ((e.key === "Delete" || e.key === "Backspace") && hasSelection) {
@@ -72,37 +73,49 @@ export function useFigKeyboard({
       }
 
       // Cmd/Ctrl + Z: Undo
-      if (isMod && e.key === "z" && !e.shiftKey && canUndo) {
+      if (isMod && key === "z" && !e.shiftKey && canUndo) {
         e.preventDefault();
         dispatch({ type: "UNDO" });
         return;
       }
 
       // Cmd/Ctrl + Shift + Z: Redo
-      if (isMod && e.key === "z" && e.shiftKey && canRedo) {
+      if (isMod && key === "z" && e.shiftKey && canRedo) {
         e.preventDefault();
         dispatch({ type: "REDO" });
         return;
       }
 
       // Cmd/Ctrl + D: Duplicate
-      if (isMod && e.key === "d" && hasSelection) {
+      if (isMod && key === "d" && hasSelection) {
         e.preventDefault();
         dispatch({ type: "DUPLICATE_NODES", nodeIds: selectedIds });
         return;
       }
 
       // Cmd/Ctrl + C: Copy
-      if (isMod && e.key === "c" && hasSelection) {
+      if (isMod && key === "c" && hasSelection) {
         e.preventDefault();
         dispatch({ type: "COPY" });
         return;
       }
 
       // Cmd/Ctrl + V: Paste
-      if (isMod && e.key === "v") {
+      if (isMod && key === "v") {
         e.preventDefault();
         dispatch({ type: "PASTE" });
+        return;
+      }
+
+      if (isMod && key === "g" && hasSelection) {
+        e.preventDefault();
+        dispatch({ type: "GROUP_SELECTION" });
+        return;
+      }
+
+      if (isMod && e.altKey && key === "k" && hasSelection) {
+        e.preventDefault();
+        dispatch({ type: "MAKE_COMPONENT_FROM_SELECTION" });
         return;
       }
 

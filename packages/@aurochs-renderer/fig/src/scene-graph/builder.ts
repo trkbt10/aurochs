@@ -63,6 +63,7 @@ import type { Fill, PathContour, BlendMode, MaskNode, CornerRadius, ArcData } fr
 import { convertFigmaBlendMode } from "./convert/blend-mode";
 import { resolveChildConstraints } from "@aurochs/fig/symbols";
 import type { TextAutoResize } from "../text/layout/types";
+import type { TextFontResolver } from "../text/rendering";
 import {
   pathFromPathData,
   pathToPathData,
@@ -140,6 +141,11 @@ export type BuildSceneGraphOptions = {
    * collect, or a shared array to aggregate across multiple builds.
    */
   readonly warnings: string[];
+  /**
+   * Optional preloaded font resolver for converting line text to glyph
+   * outlines. Pass `undefined` when the caller has no synchronous font cache.
+   */
+  readonly textFontResolver: TextFontResolver | undefined;
 };
 
 /**
@@ -178,6 +184,7 @@ type BuildContext = {
   readonly styleRegistry: FigStyleRegistry;
   readonly showHiddenNodes: boolean;
   readonly warnings: string[];
+  readonly textFontResolver: TextFontResolver | undefined;
   nodeCounter: number;
 };
 
@@ -1543,7 +1550,10 @@ function resolveTextAutoResize(rawAutoResize: unknown): TextAutoResize {
 function buildTextNode(node: FigDesignNode, ctx: BuildContext): TextNode {
   const base = extractBaseProps(node);
   const { effects } = extractEffectsProps(node);
-  const textData = convertTextNode(node, ctx.blobs);
+  const textData = convertTextNode(node, {
+    blobs: ctx.blobs,
+    fontResolver: ctx.textFontResolver,
+  });
 
   // Resolve textAutoResize from domain textData
   const rawAutoResize = node.textData?.textAutoResize;
@@ -2101,6 +2111,7 @@ export function buildSceneGraph(nodes: readonly FigDesignNode[], options: BuildS
     styleRegistry: options.styleRegistry,
     showHiddenNodes: options.showHiddenNodes,
     warnings: options.warnings,
+    textFontResolver: options.textFontResolver,
     nodeCounter: 0,
   };
 

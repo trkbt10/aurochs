@@ -7,6 +7,7 @@
  */
 
 export { resolveTextRendering } from "./resolve";
+export { createCachedTextFontResolver, type CachedTextFontSource } from "./cached-font-resolver";
 export type { ResolveTextContext } from "./resolve";
 export type {
   TextRendering,
@@ -15,4 +16,6 @@ export type {
   TextRenderingLines,
   TextTruncation,
   ResolvedFontMetrics,
+  TextFontResolveRequest,
+  TextFontResolver,
 } from "./types";

@@ -39,6 +39,9 @@ import { iconTokens, colorTokens, fontTokens, spacingTokens } from "@aurochs-ui/
 const INSTANCE_COLOR = "#9747FF";
 const INSTANCE_BG_TINT = "rgba(151, 71, 255, 0.06)";
 const INSTANCE_ICON_COLOR = "#9747FF";
+const FRAME_BG_TINT = "rgba(36, 142, 255, 0.05)";
+const COMPONENT_BG_TINT = "rgba(151, 71, 255, 0.08)";
+const SYMBOL_BG_TINT = "rgba(16, 185, 129, 0.07)";
 
 // =============================================================================
 // Icon helpers
@@ -80,32 +83,74 @@ function getNodeIcon(type: string, isInstanceContext: boolean): ReactNode {
 }
 
 // =============================================================================
-// Instance badge
+// Layer badges / row styling
 // =============================================================================
 
-const instanceBadgeStyle: CSSProperties = {
+const layerBadgeBaseStyle: CSSProperties = {
   display: "inline-block",
   fontSize: "9px",
   lineHeight: "14px",
   padding: "0 4px",
   borderRadius: "3px",
-  backgroundColor: "rgba(151, 71, 255, 0.12)",
-  color: INSTANCE_COLOR,
   fontWeight: 600,
   letterSpacing: "0.02em",
 };
 
-function InstanceBadge() {
-  return <span style={instanceBadgeStyle}>Instance</span>;
+function LayerBadge({ label, color }: { readonly label: string; readonly color: string }) {
+  return (
+    <span
+      style={{
+        ...layerBadgeBaseStyle,
+        backgroundColor: `${color}1f`,
+        color,
+      }}
+    >
+      {label}
+    </span>
+  );
 }
-
-// =============================================================================
-// Layer item wrapper for instance context tint
-// =============================================================================
 
 const instanceRowStyle: CSSProperties = {
   backgroundColor: INSTANCE_BG_TINT,
 };
+
+function getLayerRowStyle(node: FigDesignNode, isInstanceContext: boolean): CSSProperties | undefined {
+  if (isInstanceContext || node.type === "INSTANCE") {
+    return instanceRowStyle;
+  }
+  switch (node.type) {
+    case "FRAME":
+      return { backgroundColor: FRAME_BG_TINT };
+    case "COMPONENT":
+    case "COMPONENT_SET":
+      return { backgroundColor: COMPONENT_BG_TINT };
+    case "SYMBOL":
+      return { backgroundColor: SYMBOL_BG_TINT };
+    default:
+      return undefined;
+  }
+}
+
+function getLayerBadge(node: FigDesignNode, isInstanceContext: boolean): ReactNode | undefined {
+  if (node.type === "INSTANCE") {
+    return <LayerBadge label="Instance" color={INSTANCE_COLOR} />;
+  }
+  if (isInstanceContext) {
+    return <LayerBadge label="Inherited" color={INSTANCE_COLOR} />;
+  }
+  switch (node.type) {
+    case "FRAME":
+      return <LayerBadge label="Frame" color="#248EFF" />;
+    case "COMPONENT":
+      return <LayerBadge label="Component" color="#9747FF" />;
+    case "COMPONENT_SET":
+      return <LayerBadge label="Set" color="#9747FF" />;
+    case "SYMBOL":
+      return <LayerBadge label="Symbol" color="#10B981" />;
+    default:
+      return undefined;
+  }
+}
 
 const renameInputStyle: CSSProperties = {
   width: "100%",
@@ -203,9 +248,11 @@ function LayerTree({ nodes, depth, isInstanceContext }: LayerTreeProps) {
         const isInstance = node.type === "INSTANCE";
         const childIsInstanceContext = isInstanceContext || isInstance;
         const isEditing = editingId === node.id;
+        const rowStyle = getLayerRowStyle(node, isInstanceContext);
+        const badge = getLayerBadge(node, isInstanceContext);
 
         return (
-          <div key={node.id} style={childIsInstanceContext ? instanceRowStyle : undefined}>
+          <div key={node.id} style={rowStyle}>
             {isEditing ? (
               <div style={{ paddingLeft: 8 + depth * 16, paddingRight: 6, paddingTop: 2, paddingBottom: 2 }}>
                 <input
@@ -233,7 +280,7 @@ function LayerTree({ nodes, depth, isInstanceContext }: LayerTreeProps) {
                   onPointerDown={handlePointerDown(node.id as FigNodeId)}
                   showVisibilityToggle={false}
                   showLockToggle={false}
-                  badge={isInstance ? <InstanceBadge /> : undefined}
+                  badge={badge}
                 />
               </div>
             )}

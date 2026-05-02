@@ -13,6 +13,7 @@ import { useFigSceneGraph } from "./use-fig-scene-graph";
 import { FigWebGLViewportCanvas } from "./FigWebGLViewportCanvas";
 import { FigSvgViewportImage } from "./FigSvgViewportImage";
 import type { FigEditorRendererKind } from "./renderer-kind";
+import type { TextFontResolver } from "@aurochs-renderer/fig/text";
 
 // =============================================================================
 // Types
@@ -40,6 +41,8 @@ type FigPageRendererProps = {
   readonly sceneGraph?: SceneGraph | null;
   readonly viewportX?: number;
   readonly viewportY?: number;
+  readonly viewportScale?: number;
+  readonly textFontResolver?: TextFontResolver;
 };
 
 // =============================================================================
@@ -67,8 +70,10 @@ export function FigPageRenderer({
   sceneGraph: sceneGraphProp,
   viewportX = 0,
   viewportY = 0,
+  viewportScale = 1,
+  textFontResolver,
 }: FigPageRendererProps) {
-  const builtSceneGraph = useFigSceneGraph({ page, canvasWidth, canvasHeight, viewportX, viewportY, images, blobs, symbolMap, styleRegistry });
+  const builtSceneGraph = useFigSceneGraph({ page, canvasWidth, canvasHeight, viewportX, viewportY, images, blobs, symbolMap, styleRegistry, textFontResolver });
   const sceneGraph = sceneGraphProp ?? builtSceneGraph;
 
   if (!sceneGraph) {
@@ -79,6 +84,6 @@ export function FigPageRenderer({
     case "svg":
       return <FigSvgViewportImage sceneGraph={sceneGraph} />;
     case "webgl":
-      return <FigWebGLViewportCanvas sceneGraph={sceneGraph} />;
+      return <FigWebGLViewportCanvas sceneGraph={sceneGraph} viewportScale={viewportScale} />;
   }
 }

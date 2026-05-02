@@ -32,12 +32,20 @@ export {
 // Text rendering
 export {
   tessellateTextNode,
-  renderFallbackTextToCanvas,
   type TessellatedText,
 } from "./text-renderer";
 
 // Texture cache
 export { createTextureCache, type TextureCache, type TextureEntry } from "./texture-cache";
+export {
+  imageTextureResource,
+  type TextureResource,
+  type TextureResourceId,
+  type ImageTextureResource,
+} from "./texture-resource";
+
+// Viewport backing-store policy
+export { resolveWebGLViewportPixelRatio, type WebGLViewportPixelRatioInput } from "./viewport-pixel-ratio";
 
 // Framebuffer
 export {

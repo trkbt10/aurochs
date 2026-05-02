@@ -16,6 +16,7 @@ import {
   flattenAllNodeBounds,
   computeAbsoluteTransform,
   computeAbsoluteNodeBounds,
+  filterMarqueeSelectionByHierarchy,
 } from "./bounds";
 
 // =============================================================================
@@ -245,6 +246,26 @@ describe("flattenAllNodeBounds", () => {
     expect(gcBounds.y).toBe(125);
     expect(gcBounds.width).toBe(10);
     expect(gcBounds.height).toBe(10);
+  });
+});
+
+describe("filterMarqueeSelectionByHierarchy", () => {
+  it("drops a selected frame ancestor when its child is also selected", () => {
+    const child = makeNode("child", { x: 20, y: 20 });
+    const frame = makeNode("frame", { type: "FRAME", x: 0, y: 0, w: 200, h: 160, children: [child] });
+
+    const result = filterMarqueeSelectionByHierarchy([frame], ["frame", "child"]);
+
+    expect(result).toEqual(["child"]);
+  });
+
+  it("keeps a frame hit when the marquee only covers empty frame area", () => {
+    const child = makeNode("child", { x: 20, y: 20 });
+    const frame = makeNode("frame", { type: "FRAME", x: 0, y: 0, w: 200, h: 160, children: [child] });
+
+    const result = filterMarqueeSelectionByHierarchy([frame], ["frame"]);
+
+    expect(result).toEqual(["frame"]);
   });
 });
 

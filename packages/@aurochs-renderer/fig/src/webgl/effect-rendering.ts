@@ -26,7 +26,7 @@ type DrawStencilFillParams = {
 export type WebGLEffectRenderingParams = {
   readonly getGlContext: () => GLContext;
   readonly effectsRenderer: EffectsRendererInstance;
-  readonly pixelRatio: number;
+  readonly pixelRatio: () => number;
   readonly canvasWidth: () => number;
   readonly canvasHeight: () => number;
   readonly isClipStencilRequired: () => boolean;
@@ -87,7 +87,7 @@ export function createWebGLEffectRendering(params: WebGLEffectRenderingParams): 
       canvasWidth: params.canvasWidth(),
       canvasHeight: params.canvasHeight(),
       effect,
-      pixelRatio: params.pixelRatio,
+      pixelRatio: params.pixelRatio(),
       requireClipStencil: params.isClipStencilRequired(),
       renderMask: () => {
         drawSolidFill({
@@ -129,7 +129,7 @@ export function createWebGLEffectRendering(params: WebGLEffectRenderingParams): 
         canvasWidth: params.canvasWidth(),
         canvasHeight: params.canvasHeight(),
         effect,
-        pixelRatio: params.pixelRatio,
+        pixelRatio: params.pixelRatio(),
         renderSilhouette: () => {
           drawSolidFill({ ctx: params.getGlContext(), vertices, color: WHITE, transform, opacity: 1 });
         },
@@ -151,7 +151,7 @@ export function createWebGLEffectRendering(params: WebGLEffectRenderingParams): 
         canvasWidth: params.canvasWidth(),
         canvasHeight: params.canvasHeight(),
         effect,
-        pixelRatio: params.pixelRatio,
+        pixelRatio: params.pixelRatio(),
         renderSilhouette: () => {
           drawSolidFill({ ctx: params.getGlContext(), vertices, color: WHITE, transform, opacity: 1 });
         },
@@ -202,7 +202,7 @@ export function createWebGLEffectRendering(params: WebGLEffectRenderingParams): 
           canvasWidth: params.canvasWidth(),
           canvasHeight: params.canvasHeight(),
           effect,
-          pixelRatio: params.pixelRatio,
+          pixelRatio: params.pixelRatio(),
           renderSilhouette: () => {
             drawSolidFill({ ctx: params.getGlContext(), vertices: earcutVertices, color: WHITE, transform, opacity: 1 });
           },

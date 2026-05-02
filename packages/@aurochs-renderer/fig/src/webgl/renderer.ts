@@ -69,6 +69,7 @@ import {
   type GLContext,
 } from "./fill-renderer";
 import { createTextureCache } from "./texture-cache";
+import { imageTextureResource } from "./texture-resource";
 import { IDENTITY_MATRIX, multiplyMatrices } from "@aurochs/fig/matrix";
 import { beginStencilClip, endStencilClip } from "./clip-mask";
 import {
@@ -77,7 +78,6 @@ import {
   tessellateEllipseStroke,
   tessellatePathStroke,
 } from "./stroke-tessellation";
-import { renderFallbackTextToCanvas } from "./text-renderer";
 import { createEffectsRenderer } from "./effects-renderer";
 import { buildEffectStack, renderShapeEffectStack } from "../scene-graph/render/effect-stack";
 import { createWebGLEffectRendering } from "./effect-rendering";
@@ -121,6 +121,7 @@ export type WebGLRendererOptions = {
 export type WebGLFigmaRendererInstance = {
   prepareScene(scene: SceneGraph): Promise<void>;
   render(scene: SceneGraph): void;
+  setPixelRatio(pixelRatio: number): void;
   dispose(): void;
 };
 
@@ -141,7 +142,7 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
   // Reassign after null guard so TypeScript narrows correctly in closures
   const gl: WebGLRenderingContext = glOrNull;
 
-  const pixelRatio = options.pixelRatio ?? (typeof window !== "undefined" ? window.devicePixelRatio : 1);
+  const pixelRatioRef = { value: options.pixelRatio ?? (typeof window !== "undefined" ? window.devicePixelRatio : 1) };
   const shaders = createShaderCache(gl);
   const backgroundColor = options.backgroundColor ?? { r: 1, g: 1, b: 1, a: 1 };
   const textureCache = createTextureCache(gl);
@@ -171,7 +172,7 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
       positionBuffer,
       width: width.value,
       height: height.value,
-      pixelRatio,
+      pixelRatio: pixelRatioRef.value,
     };
   }
 
@@ -182,7 +183,7 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
   async function walkForImages(node: RenderNode): Promise<void> {
     // Image nodes carry source data for texture creation
     if (node.type === "image") {
-      await textureCache.getOrCreate(node.sourceImageRef, node.sourceData, node.sourceMimeType);
+      await textureCache.getOrCreate(imageTextureResource(node.sourceImageRef), node.sourceData, node.sourceMimeType);
     }
 
     // Shape and frame nodes share `sourceFills`. Walk all variants that
@@ -195,7 +196,7 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
     ) {
       for (const fill of node.sourceFills) {
         if (fill.type === "image") {
-          await textureCache.getOrCreate(fill.imageRef, fill.data, fill.mimeType);
+          await textureCache.getOrCreate(imageTextureResource(fill.imageRef), fill.data, fill.mimeType);
         }
       }
     }
@@ -244,7 +245,7 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
         break;
 
       case "image": {
-        const entry = textureCache.getIfCached(fill.imageRef);
+        const entry = textureCache.getIfCached(imageTextureResource(fill.imageRef));
         if (entry) {
           drawImageFill({
             ctx, vertices, texture: entry.texture, transform,
@@ -361,9 +362,9 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
   const effectRendering = createWebGLEffectRendering({
     getGlContext,
     effectsRenderer,
-    pixelRatio,
-    canvasWidth: () => width.value * pixelRatio,
-    canvasHeight: () => height.value * pixelRatio,
+    pixelRatio: () => pixelRatioRef.value,
+    canvasWidth: () => width.value * pixelRatioRef.value,
+    canvasHeight: () => height.value * pixelRatioRef.value,
     isClipStencilRequired: () => clipActive.value && clipStencilValid.value,
     drawStencilFill,
   });
@@ -709,8 +710,8 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
       node: RenderNode; worldTransform: AffineMatrix; parentOpacity: number; nodeOpacity: number;
     }
   ): boolean {
-    const canvasW = width.value * pixelRatio;
-    const canvasH = height.value * pixelRatio;
+    const canvasW = width.value * pixelRatioRef.value;
+    const canvasH = height.value * pixelRatioRef.value;
 
     // Pre-check: blit shader must be available to composite FBO content
     if (!effectsRenderer.isBlitAvailable()) {
@@ -796,8 +797,8 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
       node: RenderNode; worldTransform: AffineMatrix; worldOpacity: number; effect: LayerBlurEffect;
     }
   ): void {
-    const canvasW = width.value * pixelRatio;
-    const canvasH = height.value * pixelRatio;
+    const canvasW = width.value * pixelRatioRef.value;
+    const canvasH = height.value * pixelRatioRef.value;
 
     let fboCreated = true;
     try {
@@ -827,7 +828,7 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
 
     restoreOuterClipStencil(wasClipActive);
 
-    effectsRenderer.endLayerCaptureAndBlur({ canvasWidth: canvasW, canvasHeight: canvasH, effect, pixelRatio });
+    effectsRenderer.endLayerCaptureAndBlur({ canvasWidth: canvasW, canvasHeight: canvasH, effect, pixelRatio: pixelRatioRef.value });
   }
 
   // =========================================================================
@@ -1203,33 +1204,16 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
       return;
     }
 
-    // Lines mode: render text via Canvas 2D texture fallback
+    // Lines mode intentionally does not render in WebGL. Text must arrive as
+    // glyph contours for GPU rendering; Canvas2D texture substitution hides
+    // missing glyph data and diverges from fig as the source of truth.
     if (node.content.mode === "lines") {
-      const textureKey = `__text_${node.id}`;
-      const entryRef = { value: textureCache.getIfCached(textureKey) };
-
-      if (!entryRef.value && node.sourceTextLineLayout) {
-        // RenderTextNode.sourceTextLineLayout is already resolved by the
-        // scene-graph pipeline; the Canvas fallback renderer consumes the
-        // same TextNode shape, so we can hand the source through directly.
-        const canvas = renderFallbackTextToCanvas(node.source);
-        if (canvas) {
-          entryRef.value = textureCache.createFromCanvas(textureKey, canvas);
-        }
-      }
-
-      if (entryRef.value) {
-        const w = node.width > 0 ? node.width : entryRef.value.width;
-        const h = node.height > 0 ? node.height : entryRef.value.height;
-        const vertices = generateRectVertices(w, h);
-        const elementSize = { width: w, height: h };
-        drawImageFill({ ctx, vertices, texture: entryRef.value.texture, transform, opacity: opacity * fillOpacity, elementSize });
-      }
+      return;
     }
   }
 
   function renderImageFromTree(node: RenderImageNode, transform: AffineMatrix, opacity: number): void {
-    const entry = textureCache.getIfCached(node.sourceImageRef);
+    const entry = textureCache.getIfCached(imageTextureResource(node.sourceImageRef));
     if (!entry) { return; }
 
     const vertices = generateRectVertices(node.width, node.height);
@@ -1261,8 +1245,8 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
       if (!(canvas instanceof HTMLCanvasElement)) {
         throw new Error("WebGL renderer: gl.canvas is not an HTMLCanvasElement (OffscreenCanvas not supported)");
       }
-      canvas.width = scene.width * pixelRatio;
-      canvas.height = scene.height * pixelRatio;
+      canvas.width = Math.ceil(scene.width * pixelRatioRef.value);
+      canvas.height = Math.ceil(scene.height * pixelRatioRef.value);
       canvas.style.width = `${scene.width}px`;
       canvas.style.height = `${scene.height}px`;
 
@@ -1284,6 +1268,10 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
       for (const child of renderTree.children) {
         renderRenderNode(child, viewportTransform, 1);
       }
+    },
+
+    setPixelRatio(pixelRatio: number): void {
+      pixelRatioRef.value = Math.max(1, pixelRatio);
     },
 
     dispose(): void {

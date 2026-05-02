@@ -12,6 +12,8 @@ import { createSingleSelection } from "@aurochs-ui/editor-core/selection";
 import { createIdleDragState } from "@aurochs-ui/editor-core/drag-state";
 import { addNode } from "@aurochs-builder/fig/node-ops";
 import type { NodeSpec } from "@aurochs-builder/fig/types";
+import type { FigDesignNode, FigNodeId } from "@aurochs/fig/domain";
+import type { FigMatrix } from "@aurochs/fig/types";
 import type { HandlerMap } from "./handler-types";
 import { createSelectMode, type FigCreationMode } from "../types";
 
@@ -25,6 +27,8 @@ const MIN_CREATION_SIZE = 2;
  * Default dimensions for shapes created by single click (no drag).
  */
 const DEFAULT_SHAPE_SIZE = 100;
+const CONTAINER_TYPES = new Set<FigDesignNode["type"]>(["FRAME", "COMPONENT", "COMPONENT_SET", "SYMBOL"]);
+const IDENTITY_MATRIX: FigMatrix = { m00: 1, m01: 0, m02: 0, m10: 0, m11: 1, m12: 0 };
 
 type BuildNodeSpecFromCreationModeOptions = {
   readonly mode: FigCreationMode;
@@ -75,6 +79,59 @@ function buildNodeSpecFromCreationMode(
   }
 }
 
+function composeTransforms(parent: FigMatrix, child: FigMatrix): FigMatrix {
+  return {
+    m00: parent.m00 * child.m00 + parent.m01 * child.m10,
+    m01: parent.m00 * child.m01 + parent.m01 * child.m11,
+    m02: parent.m00 * child.m02 + parent.m01 * child.m12 + parent.m02,
+    m10: parent.m10 * child.m00 + parent.m11 * child.m10,
+    m11: parent.m10 * child.m01 + parent.m11 * child.m11,
+    m12: parent.m10 * child.m02 + parent.m11 * child.m12 + parent.m12,
+  };
+}
+
+function pointToLocal(transform: FigMatrix, x: number, y: number): { readonly x: number; readonly y: number } | undefined {
+  const det = transform.m00 * transform.m11 - transform.m01 * transform.m10;
+  if (Math.abs(det) < 1e-9) {
+    return undefined;
+  }
+  const dx = x - transform.m02;
+  const dy = y - transform.m12;
+  return {
+    x: (transform.m11 * dx - transform.m01 * dy) / det,
+    y: (-transform.m10 * dx + transform.m00 * dy) / det,
+  };
+}
+
+function findDeepestContainingContainer(
+  nodes: readonly FigDesignNode[],
+  x: number,
+  y: number,
+  parentTransform: FigMatrix = IDENTITY_MATRIX,
+): { readonly nodeId: FigNodeId; readonly transform: FigMatrix } | undefined {
+  for (let index = nodes.length - 1; index >= 0; index -= 1) {
+    const node = nodes[index]!;
+    if (!node.visible) {
+      continue;
+    }
+    const absTransform = composeTransforms(parentTransform, node.transform);
+    const nested = node.children
+      ? findDeepestContainingContainer(node.children, x, y, absTransform)
+      : undefined;
+    if (nested) {
+      return nested;
+    }
+    if (!CONTAINER_TYPES.has(node.type)) {
+      continue;
+    }
+    const local = pointToLocal(absTransform, x, y);
+    if (local && local.x >= 0 && local.y >= 0 && local.x <= node.size.x && local.y <= node.size.y) {
+      return { nodeId: node.id, transform: absTransform };
+    }
+  }
+  return undefined;
+}
+
 export const CREATION_HANDLERS: HandlerMap = {
   SET_CREATION_MODE(state, action) {
     return {
@@ -95,10 +152,19 @@ export const CREATION_HANDLERS: HandlerMap = {
     const finalWidth = width < MIN_CREATION_SIZE ? DEFAULT_SHAPE_SIZE : width;
     const finalHeight = height < MIN_CREATION_SIZE ? DEFAULT_SHAPE_SIZE : height;
 
+    const doc = state.documentHistory.present;
+    const page = doc.pages.find((p) => p.id === pageId);
+    if (!page) {
+      return { ...state, drag: createIdleDragState(), creationMode: createSelectMode() };
+    }
+
+    const parent = findDeepestContainingContainer(page.children, x, y);
+    const localOrigin = parent ? pointToLocal(parent.transform, x, y) : undefined;
+
     const spec = buildNodeSpecFromCreationMode({
       mode: state.creationMode,
-      x,
-      y,
+      x: localOrigin?.x ?? x,
+      y: localOrigin?.y ?? y,
       width: finalWidth,
       height: finalHeight,
     });
@@ -111,8 +177,7 @@ export const CREATION_HANDLERS: HandlerMap = {
       };
     }
 
-    const doc = state.documentHistory.present;
-    const result = addNode({ doc, pageId, parentId: null, spec });
+    const result = addNode({ doc, pageId, parentId: parent?.nodeId ?? null, spec });
 
     return {
       ...state,

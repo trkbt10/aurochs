@@ -224,6 +224,7 @@ export function buildFrameSceneGraph(frame: FrameInfo, data: FixtureData): Scene
     styleRegistry: data.document.styleRegistry,
     showHiddenNodes: false,
     warnings: [],
+    textFontResolver: undefined,
   });
 }
 

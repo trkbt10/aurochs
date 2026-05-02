@@ -53,7 +53,7 @@ describe("path-render", () => {
         size: { x: 100, y: 30 },
         textAlignHorizontal: { value: 0, name: "LEFT" },
         textAlignVertical: { value: 0, name: "TOP" },
-        fillPaints: [{ type: { value: 0, name: "SOLID" }, color: { r: 0, g: 0, b: 0, a: 1 }, opacity: 1 }],
+        fillPaints: [{ type: "SOLID", color: { r: 0, g: 0, b: 0, a: 1 }, opacity: 1 }],
         guid: { sessionID: 0, localID: 0 },
         phase: { value: 1, name: "CREATED" },
       };

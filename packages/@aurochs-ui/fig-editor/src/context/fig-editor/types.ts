@@ -126,6 +126,7 @@ export type FigEditorAction =
   | { readonly type: "RENAME_NODE"; readonly nodeId: FigNodeId; readonly name: string }
   | { readonly type: "GROUP_SELECTION" }
   | { readonly type: "MAKE_COMPONENT_FROM_SELECTION" }
+  | { readonly type: "OUTLINE_SELECTION" }
 
   // Selection
   | {

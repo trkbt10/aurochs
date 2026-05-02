@@ -213,6 +213,7 @@ export async function renderFigToSvg(
     showHiddenNodes: options.showHiddenNodes === true,
     styleRegistry,
     warnings,
+    textFontResolver: undefined,
   });
 
   const renderTree = resolveRenderTree(sceneGraph);

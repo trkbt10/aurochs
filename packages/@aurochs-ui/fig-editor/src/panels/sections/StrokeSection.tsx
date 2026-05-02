@@ -7,10 +7,12 @@
 
 import { useCallback, type CSSProperties } from "react";
 import type { FigDesignNode } from "@aurochs/fig/domain";
-import type { FigPaint, FigColor } from "@aurochs/fig/types";
+import type { FigPaint, FigColor, FigPaintType, FigGradientStop } from "@aurochs/fig/types";
 import type { FigEditorAction } from "../../context/fig-editor/types";
 import { Input } from "@aurochs-ui/ui-components/primitives/Input";
+import { Select } from "@aurochs-ui/ui-components/primitives/Select";
 import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
+import type { SelectOption } from "@aurochs-ui/ui-components/types";
 import { colorTokens, fontTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { AddIcon, CloseIcon } from "@aurochs-ui/ui-components/icons";
 
@@ -62,15 +64,82 @@ function createDefaultStrokePaint(): FigPaint {
   };
 }
 
+const strokePaintTypeOptions: readonly SelectOption<FigPaint["type"]>[] = [
+  { value: "SOLID", label: "Solid" },
+  { value: "GRADIENT_LINEAR", label: "Linear" },
+  { value: "GRADIENT_RADIAL", label: "Radial" },
+  { value: "GRADIENT_ANGULAR", label: "Angular" },
+  { value: "GRADIENT_DIAMOND", label: "Diamond" },
+  { value: "IMAGE", label: "Image" },
+];
+
+function createDefaultGradientStroke(type: Extract<FigPaintType, `GRADIENT_${string}`>): FigPaint {
+  return {
+    type,
+    visible: true,
+    opacity: 1,
+    gradientStops: [
+      { position: 0, color: { r: 0, g: 0, b: 0, a: 1 } },
+      { position: 1, color: { r: 0.2, g: 0.45, b: 1, a: 1 } },
+    ],
+    gradientHandlePositions: [
+      { x: 0, y: 0.5 },
+      { x: 1, y: 0.5 },
+      { x: 0, y: 1 },
+    ],
+  };
+}
+
+function createDefaultImageStroke(): FigPaint {
+  return {
+    type: "IMAGE",
+    visible: true,
+    opacity: 1,
+    imageRef: "",
+    scaleMode: "FILL",
+  };
+}
+
+function createDefaultStrokePaintOfType(type: FigPaint["type"]): FigPaint {
+  if (type === "SOLID") {
+    return createDefaultStrokePaint();
+  }
+  if (type === "IMAGE") {
+    return createDefaultImageStroke();
+  }
+  return createDefaultGradientStroke(type);
+}
+
+function getGradientStops(paint: FigPaint): readonly FigGradientStop[] {
+  if (paint.type === "SOLID" || paint.type === "IMAGE") {
+    return [];
+  }
+  return paint.gradientStops ?? paint.stops ?? [];
+}
+
 // =============================================================================
 // Styles
 // =============================================================================
 
 const strokeRowStyle: CSSProperties = {
   display: "flex",
+  flexDirection: "column",
+  gap: 6,
+  padding: "4px 0",
+};
+
+const strokeHeaderStyle: CSSProperties = {
+  display: "flex",
   alignItems: "center",
   gap: 6,
-  padding: "2px 0",
+  width: "100%",
+};
+
+const strokeInlineStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 6,
+  width: "100%",
 };
 
 const swatchStyle: CSSProperties = {
@@ -186,6 +255,32 @@ export function StrokeSection({ node, dispatch }: StrokeSectionProps) {
     [updateStrokePaint],
   );
 
+  const updateStrokeType = useCallback(
+    (strokeIndex: number, type: FigPaint["type"]) => {
+      updateStrokePaint(strokeIndex, (paint) => ({ ...createDefaultStrokePaintOfType(type), opacity: getStrokePaintOpacity(paint), visible: paint.visible }));
+    },
+    [updateStrokePaint],
+  );
+
+  const updateGradientStopColor = useCallback(
+    (strokeIndex: number, stopIndex: number, hex: string) => {
+      updateStrokePaint(strokeIndex, (paint) => {
+        const stops = getGradientStops(paint);
+        if (stops.length === 0) { return paint; }
+        const nextStops = stops.map((stop, i) => i === stopIndex ? { ...stop, color: hexToColor(hex, stop.color.a) } : stop);
+        return { ...paint, gradientStops: nextStops, stops: nextStops } as FigPaint;
+      });
+    },
+    [updateStrokePaint],
+  );
+
+  const updateImageRef = useCallback(
+    (strokeIndex: number, imageRef: string) => {
+      updateStrokePaint(strokeIndex, (paint) => ({ ...paint, imageRef } as FigPaint));
+    },
+    [updateStrokePaint],
+  );
+
   const removeStroke = useCallback(
     (strokeIndex: number) => {
       dispatch({
@@ -240,38 +335,64 @@ export function StrokeSection({ node, dispatch }: StrokeSectionProps) {
       {strokes.map((stroke, i) => {
         const color = getStrokeColor(stroke);
         const opacity = getStrokePaintOpacity(stroke);
+        const gradientStops = getGradientStops(stroke);
 
         return (
           <div key={i} style={strokeRowStyle}>
+            <div style={strokeHeaderStyle}>
+              <Select value={stroke.type} onChange={(type) => updateStrokeType(i, type)} options={strokePaintTypeOptions} />
+              <Input
+                type="number"
+                value={Math.round(opacity * 100)}
+                min={0}
+                max={100}
+                step={1}
+                onChange={(v) => updateStrokeOpacity(i, (v as number) / 100)}
+                width={52}
+                suffix="%"
+              />
+              <button
+                type="button"
+                style={removeButtonStyle}
+                onClick={() => removeStroke(i)}
+                title="Remove stroke"
+              >
+                <CloseIcon size={12} />
+              </button>
+            </div>
             {color && (
-              <input
-                type="color"
-                value={colorToHex(color)}
-                onChange={(e) => updateStrokeColor(i, e.target.value)}
-                style={swatchStyle}
+              <div style={strokeInlineStyle}>
+                <input
+                  type="color"
+                  value={colorToHex(color)}
+                  onChange={(e) => updateStrokeColor(i, e.target.value)}
+                  style={swatchStyle}
+                />
+                <span style={hexStyle}>{colorToHex(color).toUpperCase()}</span>
+              </div>
+            )}
+            {gradientStops.length > 0 && (
+              <div style={strokeInlineStyle}>
+                {gradientStops.map((stop, stopIndex) => (
+                  <input
+                    key={stopIndex}
+                    aria-label={`Stroke gradient stop ${stopIndex + 1}`}
+                    type="color"
+                    value={colorToHex(stop.color)}
+                    onChange={(e) => updateGradientStopColor(i, stopIndex, e.target.value)}
+                    style={swatchStyle}
+                  />
+                ))}
+              </div>
+            )}
+            {stroke.type === "IMAGE" && (
+              <Input
+                type="text"
+                value={stroke.imageRef ?? ""}
+                placeholder="imageRef"
+                onChange={(v) => updateImageRef(i, String(v))}
               />
             )}
-            {color && (
-              <span style={hexStyle}>{colorToHex(color).toUpperCase()}</span>
-            )}
-            <Input
-              type="number"
-              value={Math.round(opacity * 100)}
-              min={0}
-              max={100}
-              step={1}
-              onChange={(v) => updateStrokeOpacity(i, (v as number) / 100)}
-              width={48}
-              suffix="%"
-            />
-            <button
-              type="button"
-              style={removeButtonStyle}
-              onClick={() => removeStroke(i)}
-              title="Remove stroke"
-            >
-              <CloseIcon size={12} />
-            </button>
           </div>
         );
       })}

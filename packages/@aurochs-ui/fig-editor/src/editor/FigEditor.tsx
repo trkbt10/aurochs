@@ -15,6 +15,8 @@ import { PageListPanel } from "../panels/PageListPanel";
 import { PropertyPanel } from "../panels/PropertyPanel";
 import { LayerPanel } from "../panels/LayerPanel";
 import { useFigKeyboard } from "../canvas/interaction/use-fig-keyboard";
+import type { FigEditorRendererKind } from "../canvas/renderer-kind";
+import type { CachingFontLoader } from "@aurochs-renderer/fig/font";
 
 // =============================================================================
 // Types
@@ -58,6 +60,10 @@ type FigEditorProps = {
    * ```
    */
   readonly canvasOverlay?: ReactNode;
+  /** Renderer backend used for the inert page layer. React remains the editor shell. */
+  readonly renderer?: FigEditorRendererKind;
+  /** Optional preloaded/caching font loader used to outline text for WebGL. */
+  readonly fontLoader?: CachingFontLoader;
 };
 
 // =============================================================================
@@ -119,9 +125,13 @@ const DEFAULT_PANELS: EditorPanel[] = [
 function FigEditorContent({
   panels,
   canvasOverlay,
+  renderer,
+  fontLoader,
 }: {
   readonly panels?: EditorPanel[];
   readonly canvasOverlay?: ReactNode;
+  readonly renderer?: FigEditorRendererKind;
+  readonly fontLoader?: CachingFontLoader;
 }) {
   const { dispatch, nodeSelection, canUndo, canRedo, textEdit } = useFigEditor();
   const hasSelection = nodeSelection.selectedIds.length > 0;
@@ -142,7 +152,7 @@ function FigEditorContent({
   return (
     <EditorShell toolbar={toolbarContent} panels={resolvedPanels}>
       <CanvasArea>
-        <FigEditorCanvas canvasOverlay={canvasOverlay} />
+        <FigEditorCanvas canvasOverlay={canvasOverlay} renderer={renderer} fontLoader={fontLoader} />
       </CanvasArea>
     </EditorShell>
   );
@@ -174,11 +184,11 @@ const containerStyle: CSSProperties = {
  * <FigEditor initialDocument={doc} />
  * ```
  */
-export function FigEditor({ initialDocument, panels, canvasOverlay }: FigEditorProps) {
+export function FigEditor({ initialDocument, panels, canvasOverlay, renderer, fontLoader }: FigEditorProps) {
   return (
     <FigEditorProvider initialDocument={initialDocument}>
       <div style={containerStyle}>
-        <FigEditorContent panels={panels} canvasOverlay={canvasOverlay} />
+        <FigEditorContent panels={panels} canvasOverlay={canvasOverlay} renderer={renderer} fontLoader={fontLoader} />
       </div>
     </FigEditorProvider>
   );

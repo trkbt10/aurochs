@@ -39,6 +39,7 @@ function renderReact(doc: FigDesignDocument, node: FigDesignNode, w: number, h: 
     styleRegistry: doc.styleRegistry,
     showHiddenNodes: false,
     warnings: [],
+    textFontResolver: undefined,
   });
   return renderToStaticMarkup(createElement(FigSceneRenderer, { sceneGraph: sg }));
 }
@@ -117,7 +118,12 @@ describe("FigSceneRenderer — React path FRAME decoration", () => {
     // FRAME default strokeAlign=INSIDE + stroke emits one.
     function findWithStroke(nodes: readonly FigDesignNode[]): FigDesignNode | undefined {
       for (const n of nodes) {
-        if (n.strokes && n.strokes.length > 0 && n.strokeWeight && n.strokeWeight > 0) {return n;}
+        if (
+          n.strokes &&
+          n.strokes.length > 0 &&
+          typeof n.strokeWeight === "number" &&
+          n.strokeWeight > 0
+        ) {return n;}
         if (n.children) {
           const f = findWithStroke(n.children);
           if (f) {return f;}

@@ -6,7 +6,7 @@
 
 import type { FigDesignNode } from "@aurochs/fig/domain";
 import type { FigBlob } from "@aurochs/fig/parser";
-import { resolveTextRendering, type TextRendering } from "../../text/rendering";
+import { resolveTextRendering, type TextFontResolver, type TextRendering } from "../../text/rendering";
 import type { ExtractedTextProps } from "../../text/layout/types";
 import type { PathContour, Color, TextLineLayout } from "../types";
 
@@ -100,6 +100,11 @@ export type TextConversionResult = {
   readonly textLineLayout?: TextLineLayout;
 };
 
+export type TextConversionOptions = {
+  readonly blobs: readonly FigBlob[];
+  readonly fontResolver?: TextFontResolver;
+};
+
 /**
  * Convert a TEXT FigDesignNode to scene graph text data
  *
@@ -130,10 +135,13 @@ function buildFontVariationSettings(
   return parts.length > 0 ? parts.join(", ") : undefined;
 }
 
-export function convertTextNode(node: FigDesignNode, blobs: readonly FigBlob[]): TextConversionResult {
+export function convertTextNode(node: FigDesignNode, options: TextConversionOptions): TextConversionResult {
   // Delegate resolution to the unified text rendering SoT. This is the only
   // place (alongside svg/renderer.ts) that decides glyphs-vs-lines strategy.
-  const rendering = resolveTextRendering(node, { blobs });
+  const rendering = resolveTextRendering(node, {
+    blobs: options.blobs,
+    fontResolver: options.fontResolver,
+  });
   const fontVariationSettings = buildFontVariationSettings(node.textData?.fontVariations);
 
   if (rendering.kind === "empty") {

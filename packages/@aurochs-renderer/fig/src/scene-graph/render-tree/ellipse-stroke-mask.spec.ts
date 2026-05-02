@@ -11,12 +11,14 @@
 
 import { resolveRenderTree } from "./resolve";
 import type { SceneGraph, EllipseNode, SceneNode, SceneNodeId } from "../types";
-import type { FigImage } from "@aurochs/fig/parser";
-
-const EMPTY_IMAGES = new Map<string, FigImage>();
 
 function makeSceneGraph(nodes: readonly SceneNode[]): SceneGraph {
-  return { root: { type: "group", id: "root" as SceneNodeId, name: "root", transform: { m00: 1, m01: 0, m02: 0, m10: 0, m11: 1, m12: 0 }, opacity: 1, visible: true, effects: [], blendMode: undefined, children: nodes }, blobs: [], images: EMPTY_IMAGES };
+  return {
+    width: 100,
+    height: 100,
+    version: 1,
+    root: { type: "group", id: "root" as SceneNodeId, name: "root", transform: { m00: 1, m01: 0, m02: 0, m10: 0, m11: 1, m12: 0 }, opacity: 1, visible: true, effects: [], blendMode: undefined, children: nodes },
+  };
 }
 
 describe("ELLIPSE stroke rendering", () => {

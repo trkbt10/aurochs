@@ -57,6 +57,8 @@ export type {
 // Unified text rendering SoT
 export {
   resolveTextRendering,
+  createCachedTextFontResolver,
+  type CachedTextFontSource,
 } from "./rendering";
 
 export type {
@@ -65,4 +67,6 @@ export type {
   TextRenderingGlyphs,
   TextRenderingLines,
   ResolveTextContext,
+  TextFontResolveRequest,
+  TextFontResolver,
 } from "./rendering";

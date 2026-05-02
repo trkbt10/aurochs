@@ -11,19 +11,19 @@
 
 import { renderSceneGraphToSvg } from "./scene-renderer";
 import type { SceneGraph, FrameNode, SceneNode, SceneNodeId } from "../scene-graph/types";
-import type { FigImage } from "@aurochs/fig/parser";
 
 const IDENTITY = { m00: 1, m01: 0, m02: 0, m10: 0, m11: 1, m12: 0 };
-const EMPTY_IMAGES = new Map<string, FigImage>();
 
 function makeSceneGraph(children: readonly SceneNode[]): SceneGraph {
   return {
+    width: 120,
+    height: 120,
+    version: 1,
     root: {
       type: "group", id: "root" as SceneNodeId,
       name: "root", transform: IDENTITY, opacity: 1, visible: true,
       effects: [], blendMode: undefined, children,
     },
-    blobs: [], images: EMPTY_IMAGES,
   };
 }
 
@@ -45,8 +45,8 @@ describe("Angular gradient — sectored SVG rendering", () => {
         {
           type: "angular-gradient",
           center: { x: 0.5, y: 0.5 },
-          radius: 0.5,
           rotation: 0,
+          opacity: 1,
           stops: [
             { position: 0, color: { r: 0.75, g: 0.89, b: 0.97, a: 1 } },
             { position: 0.5, color: { r: 0.96, g: 0.90, b: 0.88, a: 1 } },
@@ -88,8 +88,8 @@ describe("Angular gradient — sectored SVG rendering", () => {
         {
           type: "angular-gradient",
           center: { x: 0.5, y: 0.5 },
-          radius: 0.5,
           rotation: 0,
+          opacity: 1,
           stops: [
             { position: 0, color: { r: 1, g: 0, b: 0, a: 1 } },
             { position: 0.5, color: { r: 0, g: 1, b: 0, a: 1 } },
@@ -134,7 +134,7 @@ describe("Diamond gradient — sectored rendering", () => {
         {
           type: "diamond-gradient",
           center: { x: 0.5, y: 0.5 },
-          radius: 0.5,
+          opacity: 1,
           stops: [
             { position: 0, color: { r: 1, g: 1, b: 1, a: 1 } },
             { position: 1, color: { r: 0, g: 0, b: 0, a: 1 } },

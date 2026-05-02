@@ -49,6 +49,8 @@ export function createFontCache(): FontCache {
 
 /** Caching wrapper for font loaders */
 export type CachingFontLoader = FontLoader & {
+  /** Read a loaded font without triggering I/O or permission prompts. */
+  getCachedFont(options: FontLoadOptions): LoadedFont | undefined;
   /** Clear the font cache */
   clearCache(): void;
 };
@@ -100,6 +102,10 @@ export function createCachingFontLoader(innerLoader: FontLoader): CachingFontLoa
       }
 
       return undefined;
+    },
+
+    getCachedFont(options) {
+      return fontCache.get(options);
     },
 
     clearCache() {

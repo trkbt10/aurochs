@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import type { FigPage, FigDesignNode, FigStyleRegistry } from "@aurochs/fig/domain";
 import type { FigImage } from "@aurochs/fig/parser";
 import { buildSceneGraph, type BuildSceneGraphOptions } from "@aurochs-renderer/fig/scene-graph";
+import type { TextFontResolver } from "@aurochs-renderer/fig/text";
 
 export type UseFigSceneGraphParams = {
   readonly page: FigPage | null | undefined;
@@ -15,6 +16,7 @@ export type UseFigSceneGraphParams = {
   readonly blobs: BuildSceneGraphOptions["blobs"];
   readonly symbolMap: ReadonlyMap<string, FigDesignNode>;
   readonly styleRegistry: FigStyleRegistry;
+  readonly textFontResolver?: TextFontResolver;
 };
 
 /** Build the renderer-neutral SceneGraph consumed by React, SVG, and WebGL. */
@@ -28,6 +30,7 @@ export function useFigSceneGraph({
   blobs,
   symbolMap,
   styleRegistry,
+  textFontResolver,
 }: UseFigSceneGraphParams) {
   return useMemo(() => {
     if (!page || page.children.length === 0) {
@@ -43,6 +46,7 @@ export function useFigSceneGraph({
       styleRegistry,
       showHiddenNodes: false,
       warnings: [],
+      textFontResolver,
     });
-  }, [page, canvasWidth, canvasHeight, viewportX, viewportY, images, blobs, symbolMap, styleRegistry]);
+  }, [page, canvasWidth, canvasHeight, viewportX, viewportY, images, blobs, symbolMap, styleRegistry, textFontResolver]);
 }

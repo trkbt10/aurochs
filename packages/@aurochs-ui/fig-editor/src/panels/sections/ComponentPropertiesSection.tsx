@@ -9,11 +9,15 @@
 import type {
   FigDesignNode,
   FigDesignDocument,
+  FigNodeId,
   ComponentPropertyDef,
   ComponentPropertyAssignment,
   ComponentPropertyValue,
   ComponentPropertyType,
 } from "@aurochs/fig/domain";
+import { useCallback } from "react";
+import type { FigEditorAction } from "../../context/fig-editor/types";
+import { Input } from "@aurochs-ui/ui-components/primitives/Input";
 import { colorTokens, fontTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 
 // =============================================================================
@@ -158,16 +162,29 @@ const styles = {
 type Props = {
   readonly node: FigDesignNode;
   readonly document: FigDesignDocument;
+  readonly dispatch: (action: FigEditorAction) => void;
 };
 
-
-
-
-
-
 /** Panel section for viewing and editing component instance properties. */
-export function ComponentPropertiesSection({ node, document }: Props) {
+export function ComponentPropertiesSection({ node, document, dispatch }: Props) {
   const properties = resolveComponentProperties(node, document);
+  const updateAssignment = useCallback(
+    (defId: FigNodeId, value: ComponentPropertyValue) => {
+      dispatch({
+        type: "UPDATE_NODE",
+        nodeId: node.id,
+        updater: (current) => {
+          const assignments = current.componentPropertyAssignments ?? [];
+          const exists = assignments.some((assignment) => assignment.defId === defId);
+          const next = exists
+            ? assignments.map((assignment) => assignment.defId === defId ? { ...assignment, value } : assignment)
+            : [...assignments, { defId, value }];
+          return { ...current, componentPropertyAssignments: next };
+        },
+      });
+    },
+    [dispatch, node.id],
+  );
 
   if (properties.length === 0) {
     const symbol = node.symbolId ? document.components.get(node.symbolId) : undefined;
@@ -198,19 +215,83 @@ export function ComponentPropertiesSection({ node, document }: Props) {
             {prop.def.name}
             <span style={styles.badge}>{prop.def.type}</span>
           </span>
-          <span style={{
-            ...styles.value,
-            ...(prop.isOverridden ? styles.overridden : {}),
-          }}>
-            {formatPropertyValue(prop.value, prop.def.type)}
-            {prop.isOverridden && (
-              <span style={{ ...styles.badge, backgroundColor: colorTokens.accent.secondary }}>
-                override
-              </span>
-            )}
-          </span>
+          <ComponentPropertyValueEditor
+            prop={prop}
+            onChange={(value) => updateAssignment(prop.def.id, value)}
+          />
         </div>
       ))}
     </div>
   );
+}
+
+function ComponentPropertyValueEditor(
+  { prop, onChange }: {
+    readonly prop: ResolvedComponentProperty;
+    readonly onChange: (value: ComponentPropertyValue) => void;
+  },
+) {
+  const value = prop.value;
+  const badge = prop.isOverridden ? (
+    <span style={{ ...styles.badge, backgroundColor: colorTokens.accent.secondary }}>
+      override
+    </span>
+  ) : null;
+
+  switch (prop.def.type) {
+    case "BOOL":
+      return (
+        <span style={styles.value}>
+          <input
+            type="checkbox"
+            checked={value?.boolValue ?? false}
+            onChange={(e) => onChange({ boolValue: e.currentTarget.checked })}
+          />
+          {badge}
+        </span>
+      );
+    case "TEXT":
+    case "VARIANT":
+      return (
+        <span style={{ ...styles.value, ...(prop.isOverridden ? styles.overridden : {}) }}>
+          <Input
+            type="text"
+            value={value?.textValue?.characters ?? ""}
+            onChange={(v) => onChange({ textValue: { characters: String(v) } })}
+          />
+          {badge}
+        </span>
+      );
+    case "NUMBER":
+      return (
+        <span style={{ ...styles.value, ...(prop.isOverridden ? styles.overridden : {}) }}>
+          <Input
+            type="number"
+            value={value?.numberValue ?? 0}
+            onChange={(v) => onChange({ numberValue: v as number })}
+          />
+          {badge}
+        </span>
+      );
+    case "INSTANCE_SWAP":
+      return (
+        <span style={{ ...styles.value, ...(prop.isOverridden ? styles.overridden : {}) }}>
+          <Input
+            type="text"
+            value={value?.referenceValue ?? ""}
+            onChange={(v) => onChange({ referenceValue: String(v) as FigNodeId })}
+          />
+          {badge}
+        </span>
+      );
+    case "COLOR":
+    case "IMAGE":
+    case "SLOT":
+      return (
+        <span style={{ ...styles.value, ...(prop.isOverridden ? styles.overridden : {}) }}>
+          {formatPropertyValue(value, prop.def.type)}
+          {badge}
+        </span>
+      );
+  }
 }

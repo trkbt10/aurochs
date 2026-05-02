@@ -17,6 +17,9 @@ import { EffectsSection } from "./sections/EffectsSection";
 import { AutoLayoutSection } from "./sections/AutoLayoutSection";
 import { ComponentPropertiesSection } from "./sections/ComponentPropertiesSection";
 import { TextPropertiesSection } from "./sections/TextPropertiesSection";
+import { VectorPathSection } from "./sections/VectorPathSection";
+import { LayoutConstraintsSection } from "./sections/LayoutConstraintsSection";
+import { OutlineSection } from "./sections/OutlineSection";
 
 // =============================================================================
 // Component
@@ -85,6 +88,10 @@ export function PropertyPanel() {
         <StrokeSection node={primaryNode} dispatch={dispatch} />
       </OptionalPropertySection>
 
+      <OptionalPropertySection title="Outline" defaultExpanded>
+        <OutlineSection node={primaryNode} dispatch={dispatch} />
+      </OptionalPropertySection>
+
       {/* Text Properties (TEXT nodes only) */}
       {primaryNode.textData && (
         <OptionalPropertySection title="Text" defaultExpanded>
@@ -92,24 +99,33 @@ export function PropertyPanel() {
         </OptionalPropertySection>
       )}
 
-      {/* Effects */}
-      {primaryNode.effects.length > 0 && (
-        <OptionalPropertySection title="Effects" badge={primaryNode.effects.length} defaultExpanded>
-          <EffectsSection node={primaryNode} />
+      {(primaryNode.type === "VECTOR" || primaryNode.vectorPaths) && (
+        <OptionalPropertySection title="Vector Paths" defaultExpanded>
+          <VectorPathSection node={primaryNode} dispatch={dispatch} />
         </OptionalPropertySection>
       )}
 
+      {/* Effects */}
+      <OptionalPropertySection title="Effects" badge={primaryNode.effects.length} defaultExpanded>
+        <EffectsSection node={primaryNode} dispatch={dispatch} />
+      </OptionalPropertySection>
+
       {/* Auto Layout */}
-      {primaryNode.autoLayout && (
+      {(primaryNode.type === "FRAME" || primaryNode.type === "COMPONENT" || primaryNode.autoLayout) && (
         <OptionalPropertySection title="Auto Layout" defaultExpanded>
-          <AutoLayoutSection node={primaryNode} />
+          <AutoLayoutSection node={primaryNode} dispatch={dispatch} />
         </OptionalPropertySection>
       )}
+
+      {/* Child layout constraints */}
+      <OptionalPropertySection title="Layout Constraints" defaultExpanded={false}>
+        <LayoutConstraintsSection node={primaryNode} dispatch={dispatch} />
+      </OptionalPropertySection>
 
       {/* Component Properties (INSTANCE nodes only) */}
       {primaryNode.symbolId && (
         <OptionalPropertySection title="Component Properties" defaultExpanded>
-          <ComponentPropertiesSection node={primaryNode} document={document} />
+          <ComponentPropertiesSection node={primaryNode} document={document} dispatch={dispatch} />
         </OptionalPropertySection>
       )}
     </div>

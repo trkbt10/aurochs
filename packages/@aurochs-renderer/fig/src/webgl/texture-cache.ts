@@ -4,6 +4,8 @@
  * Caches textures by image reference to avoid redundant uploads.
  */
 
+import type { TextureResource } from "./texture-resource";
+
 export type TextureEntry = {
   readonly texture: WebGLTexture;
   readonly width: number;
@@ -18,13 +20,11 @@ export type TextureEntry = {
  */
 export type TextureCache = {
   /** Get or create a texture from image data */
-  getOrCreate(imageRef: string, data: Uint8Array, mimeType: string): Promise<TextureEntry | null>;
+  getOrCreate(resource: TextureResource, data: Uint8Array, mimeType: string): Promise<TextureEntry | null>;
   /** Synchronous lookup for an already-cached texture */
-  getIfCached(imageRef: string): TextureEntry | null;
-  /** Create a texture from an HTMLCanvasElement (synchronous) */
-  createFromCanvas(key: string, canvas: HTMLCanvasElement): TextureEntry | null;
+  getIfCached(resource: TextureResource): TextureEntry | null;
   /** Release a texture reference */
-  release(imageRef: string): void;
+  release(resource: TextureResource): void;
   /** Dispose all cached textures */
   dispose(): void;
 };
@@ -42,8 +42,8 @@ export function createTextureCache(gl: WebGLRenderingContext): TextureCache {
   }
 
   return {
-    async getOrCreate(imageRef, data, mimeType) {
-      const existing = cache.get(imageRef);
+    async getOrCreate(resource, data, mimeType) {
+      const existing = cache.get(resource.id);
       if (existing) {
         existing.refCount++;
         return existing;
@@ -80,47 +80,22 @@ export function createTextureCache(gl: WebGLRenderingContext): TextureCache {
       };
 
       bitmapRef.value.close();
-      cache.set(imageRef, entry);
+      cache.set(resource.id, entry);
       return entry;
     },
 
-    getIfCached(imageRef) {
-      return cache.get(imageRef) ?? null;
+    getIfCached(resource) {
+      return cache.get(resource.id) ?? null;
     },
 
-    createFromCanvas(key, canvas) {
-      const existing = cache.get(key);
-      if (existing) {
-        existing.refCount++;
-        return existing;
-      }
-
-      const texture = gl.createTexture();
-      if (!texture) {return null;}
-
-      gl.bindTexture(gl.TEXTURE_2D, texture);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
-      configureTextureParams();
-
-      const entry: TextureEntry = {
-        texture,
-        width: canvas.width,
-        height: canvas.height,
-        refCount: 1,
-      };
-
-      cache.set(key, entry);
-      return entry;
-    },
-
-    release(imageRef) {
-      const entry = cache.get(imageRef);
+    release(resource) {
+      const entry = cache.get(resource.id);
       if (!entry) {return;}
 
       entry.refCount--;
       if (entry.refCount <= 0) {
         gl.deleteTexture(entry.texture);
-        cache.delete(imageRef);
+        cache.delete(resource.id);
       }
     },
 

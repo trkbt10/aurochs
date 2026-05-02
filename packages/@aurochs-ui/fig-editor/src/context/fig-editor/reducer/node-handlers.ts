@@ -4,13 +4,14 @@
 
 import { pushHistory } from "@aurochs-ui/editor-core/history";
 import { createSingleSelection, createMultiSelection, createEmptySelection } from "@aurochs-ui/editor-core/selection";
-import { addNode, removeNode, updateNode, reorderNode, findNodeById, findParentNode, insertNodeInTree } from "@aurochs-builder/fig/node-ops";
+import { addNode, removeNode, updateNode, reorderNode, findNodeById, findParentNode, insertNodeInTree, updateNodeInTree } from "@aurochs-builder/fig/node-ops";
 import type { FigNodeId, FigDesignNode } from "@aurochs/fig/domain";
 import { nextNodeId, createIdCounter } from "@aurochs-builder/fig/types";
 import type { HandlerMap } from "./handler-types";
 import { getActivePage } from "../node-geometry";
 import type { SelectionState } from "@aurochs-ui/editor-core/selection";
 import type { FigEditorState } from "../types";
+import { outlineNode } from "./outline-node";
 
 function buildNodeSelection(newIds: FigNodeId[]): SelectionState<FigNodeId> {
   if (newIds.length === 1) {
@@ -31,6 +32,17 @@ function getSiblingList(pageChildren: readonly FigDesignNode[], parentId: FigNod
     return pageChildren;
   }
   return findNodeById(pageChildren, parentId)?.children ?? [];
+}
+
+function replaceSiblingList(
+  pageChildren: readonly FigDesignNode[],
+  parentId: FigNodeId | null,
+  nextSiblings: readonly FigDesignNode[],
+): readonly FigDesignNode[] {
+  if (parentId === null) {
+    return nextSiblings;
+  }
+  return updateNodeInTree(pageChildren, parentId, (parent) => ({ ...parent, children: nextSiblings }));
 }
 
 function computeGroupBounds(nodes: readonly FigDesignNode[]): { x: number; y: number; width: number; height: number } {
@@ -99,9 +111,7 @@ function wrapSelectedSiblings(
     }
   }
 
-  const children = parentId === null
-    ? nextSiblings
-    : pageChildren.map((node) => node.id === parentId ? { ...node, children: nextSiblings } : node);
+  const children = replaceSiblingList(pageChildren, parentId, nextSiblings);
 
   return { children, wrapper };
 }
@@ -263,6 +273,34 @@ export const NODE_HANDLERS: HandlerMap = {
 
   MAKE_COMPONENT_FROM_SELECTION(state) {
     return wrapSelection(state, "COMPONENT");
+  },
+
+  OUTLINE_SELECTION(state) {
+    const pageId = state.activePageId;
+    if (!pageId || state.nodeSelection.selectedIds.length === 0) {
+      return state;
+    }
+    const doc = state.documentHistory.present;
+    let changed = false;
+    const outlined = state.nodeSelection.selectedIds.reduce((acc, nodeId) => {
+      return updateNode({
+        doc: acc,
+        pageId,
+        nodeId,
+        updater: (node) => {
+          const next = outlineNode(node, doc);
+          if (next) {
+            changed = true;
+            return next;
+          }
+          return node;
+        },
+      });
+    }, doc);
+
+    return !changed
+      ? state
+      : { ...state, documentHistory: pushHistory(state.documentHistory, outlined) };
   },
 };
 

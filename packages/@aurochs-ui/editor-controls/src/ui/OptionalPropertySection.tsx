@@ -102,6 +102,8 @@ const contentWrapperStyle = (expanded: boolean): CSSProperties => ({
   overflow: "hidden",
   maxHeight: expanded ? "2000px" : "0",
   opacity: expanded ? 1 : 0,
+  visibility: expanded ? "visible" : "hidden",
+  pointerEvents: expanded ? "auto" : "none",
   transition: "max-height 200ms ease, opacity 150ms ease",
 });
 
@@ -207,7 +209,7 @@ export function OptionalPropertySection<T>(props: OptionalPropertySectionProps<T
           <ChevronRightIcon size={iconTokens.size.sm} strokeWidth={iconTokens.strokeWidth} />
         </div>
       </div>
-      <div style={contentWrapperStyle(expanded)}>
+      <div style={contentWrapperStyle(expanded)} aria-hidden={!expanded}>
         <div style={contentStyle}>{content}</div>
       </div>
     </div>

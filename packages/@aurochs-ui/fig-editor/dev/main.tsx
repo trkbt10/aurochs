@@ -13,8 +13,9 @@ import { createRoot } from "react-dom/client";
 import type { FigDesignDocument } from "@aurochs/fig/domain";
 import { createFigDesignDocument, createEmptyFigDesignDocument } from "@aurochs-builder/fig";
 import type { EditorPanel } from "@aurochs-ui/editor-controls/editor-shell";
-import { Button, Tabs, Toggle, injectCSSVariables, colorTokens, spacingTokens, fontTokens, radiusTokens } from "@aurochs-ui/ui-components";
+import { Button, Select, Tabs, Toggle, injectCSSVariables, colorTokens, spacingTokens, fontTokens, radiusTokens } from "@aurochs-ui/ui-components";
 import { FigEditor } from "../src/editor/FigEditor";
+import type { FigEditorRendererKind } from "../src/canvas/renderer-kind";
 import { PageListPanel } from "../src/panels/PageListPanel";
 import { LayerPanel } from "../src/panels/LayerPanel";
 import { PropertyPanel } from "../src/panels/PropertyPanel";
@@ -32,6 +33,11 @@ injectCSSVariables();
 // =============================================================================
 
 type DevMode = "editor" | "renderer-debug";
+
+const editorRendererOptions = [
+  { value: "svg", label: "SVG" },
+  { value: "webgl", label: "WebGL" },
+] satisfies readonly { readonly value: FigEditorRendererKind; readonly label: string }[];
 
 type LoadedFile = {
   readonly document: FigDesignDocument;
@@ -217,6 +223,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [mode, setMode] = useState<DevMode>("editor");
   const [inspectorOverlayEnabled, setInspectorOverlayEnabled] = useState(false);
+  const [editorRenderer, setEditorRenderer] = useState<FigEditorRendererKind>("svg");
 
   const editorPanels = useMemo<EditorPanel[]>(
     () => [
@@ -298,11 +305,14 @@ function App() {
         </div>
         <div style={headerRightStyle}>
           {mode === "editor" && (
-            <Toggle
-              checked={inspectorOverlayEnabled}
-              onChange={setInspectorOverlayEnabled}
-              label="Inspect overlay"
-            />
+            <>
+              <Select value={editorRenderer} onChange={setEditorRenderer} options={editorRendererOptions} style={{ width: 96 }} />
+              <Toggle
+                checked={inspectorOverlayEnabled}
+                onChange={setInspectorOverlayEnabled}
+                label="Inspect overlay"
+              />
+            </>
           )}
           <Button variant="ghost" size="sm" onClick={handleClose}>
             Close
@@ -321,6 +331,7 @@ function App() {
                     initialDocument={loadedFile.document}
                     panels={editorPanels}
                     canvasOverlay={inspectorOverlayEnabled ? <FigInspectorOverlay /> : null}
+                    renderer={editorRenderer}
                   />
                 </FigInspectorProvider>
               </div>

@@ -15,10 +15,12 @@
 
 import { useCallback, type CSSProperties } from "react";
 import type { FigDesignNode } from "@aurochs/fig/domain";
-import type { FigPaint, FigColor } from "@aurochs/fig/types";
+import type { FigPaint, FigColor, FigPaintType, FigGradientStop } from "@aurochs/fig/types";
 import type { FigEditorAction } from "../../context/fig-editor/types";
 
 import { Input } from "@aurochs-ui/ui-components/primitives/Input";
+import { Select } from "@aurochs-ui/ui-components/primitives/Select";
+import type { SelectOption } from "@aurochs-ui/ui-components/types";
 import { colorTokens, fontTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { AddIcon, CloseIcon } from "@aurochs-ui/ui-components/icons";
 
@@ -57,17 +59,6 @@ function getPaintOpacity(paint: FigPaint): number {
   return 1;
 }
 
-function getPaintTypeLabel(paint: FigPaint): string {
-  switch (paint.type) {
-    case "SOLID": return "Solid";
-    case "GRADIENT_LINEAR": return "Linear";
-    case "GRADIENT_RADIAL": return "Radial";
-    case "GRADIENT_ANGULAR": return "Angular";
-    case "GRADIENT_DIAMOND": return "Diamond";
-    case "IMAGE": return "Image";
-  }
-}
-
 /** Default solid white fill for new fills */
 function createDefaultSolidFill(): FigPaint {
   return {
@@ -78,15 +69,82 @@ function createDefaultSolidFill(): FigPaint {
   };
 }
 
+const paintTypeOptions: readonly SelectOption<FigPaint["type"]>[] = [
+  { value: "SOLID", label: "Solid" },
+  { value: "GRADIENT_LINEAR", label: "Linear" },
+  { value: "GRADIENT_RADIAL", label: "Radial" },
+  { value: "GRADIENT_ANGULAR", label: "Angular" },
+  { value: "GRADIENT_DIAMOND", label: "Diamond" },
+  { value: "IMAGE", label: "Image" },
+];
+
+function createDefaultGradientFill(type: Extract<FigPaintType, `GRADIENT_${string}`>): FigPaint {
+  return {
+    type,
+    visible: true,
+    opacity: 1,
+    gradientStops: [
+      { position: 0, color: { r: 0.2, g: 0.45, b: 1, a: 1 } },
+      { position: 1, color: { r: 0.8, g: 0.25, b: 0.9, a: 1 } },
+    ],
+    gradientHandlePositions: [
+      { x: 0, y: 0.5 },
+      { x: 1, y: 0.5 },
+      { x: 0, y: 1 },
+    ],
+  };
+}
+
+function createDefaultImageFill(): FigPaint {
+  return {
+    type: "IMAGE",
+    visible: true,
+    opacity: 1,
+    imageRef: "",
+    scaleMode: "FILL",
+  };
+}
+
+function createDefaultPaint(type: FigPaint["type"]): FigPaint {
+  if (type === "SOLID") {
+    return createDefaultSolidFill();
+  }
+  if (type === "IMAGE") {
+    return createDefaultImageFill();
+  }
+  return createDefaultGradientFill(type);
+}
+
+function getGradientStops(paint: FigPaint): readonly FigGradientStop[] {
+  if (paint.type === "SOLID" || paint.type === "IMAGE") {
+    return [];
+  }
+  return paint.gradientStops ?? paint.stops ?? [];
+}
+
 // =============================================================================
 // Styles
 // =============================================================================
 
 const fillRowStyle: CSSProperties = {
   display: "flex",
+  flexDirection: "column",
+  gap: 6,
+  padding: "4px 0",
+};
+
+const paintHeaderStyle: CSSProperties = {
+  display: "flex",
   alignItems: "center",
   gap: 6,
-  padding: "2px 0",
+  width: "100%",
+};
+
+const paintInlineStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 6,
+  width: "100%",
 };
 
 const swatchStyle: CSSProperties = {
@@ -104,12 +162,6 @@ const hexStyle: CSSProperties = {
   fontFamily: "monospace",
   color: colorTokens.text.secondary,
   minWidth: 60,
-};
-
-const typeStyle: CSSProperties = {
-  fontSize: fontTokens.size.xs,
-  color: colorTokens.text.tertiary,
-  minWidth: 36,
 };
 
 const removeButtonStyle: CSSProperties = {
@@ -201,6 +253,32 @@ export function FillSection({ node, dispatch }: FillSectionProps) {
     [updateFill],
   );
 
+  const updateFillType = useCallback(
+    (fillIndex: number, type: FigPaint["type"]) => {
+      updateFill(fillIndex, (fill) => ({ ...createDefaultPaint(type), opacity: getPaintOpacity(fill), visible: fill.visible }));
+    },
+    [updateFill],
+  );
+
+  const updateGradientStopColor = useCallback(
+    (fillIndex: number, stopIndex: number, hex: string) => {
+      updateFill(fillIndex, (fill) => {
+        const stops = getGradientStops(fill);
+        if (stops.length === 0) { return fill; }
+        const nextStops = stops.map((stop, i) => i === stopIndex ? { ...stop, color: hexToColor(hex, stop.color.a) } : stop);
+        return { ...fill, gradientStops: nextStops, stops: nextStops } as FigPaint;
+      });
+    },
+    [updateFill],
+  );
+
+  const updateImageRef = useCallback(
+    (fillIndex: number, imageRef: string) => {
+      updateFill(fillIndex, (fill) => ({ ...fill, imageRef } as FigPaint));
+    },
+    [updateFill],
+  );
+
   const removeFill = useCallback(
     (fillIndex: number) => {
       dispatch({
@@ -231,40 +309,64 @@ export function FillSection({ node, dispatch }: FillSectionProps) {
       {fills.map((fill, i) => {
         const color = getPaintColor(fill);
         const opacity = getPaintOpacity(fill);
-        const typeLabel = getPaintTypeLabel(fill);
+        const gradientStops = getGradientStops(fill);
 
         return (
           <div key={i} style={fillRowStyle}>
-            <span style={typeStyle}>{typeLabel}</span>
+            <div style={paintHeaderStyle}>
+              <Select value={fill.type} onChange={(type) => updateFillType(i, type)} options={paintTypeOptions} />
+              <Input
+                type="number"
+                value={Math.round(opacity * 100)}
+                min={0}
+                max={100}
+                step={1}
+                onChange={(v) => updateFillOpacity(i, (v as number) / 100)}
+                width={52}
+                suffix="%"
+              />
+              <button
+                type="button"
+                style={removeButtonStyle}
+                onClick={() => removeFill(i)}
+                title="Remove fill"
+              >
+                <CloseIcon size={12} />
+              </button>
+            </div>
             {color && (
-              <input
-                type="color"
-                value={colorToHex(color)}
-                onChange={(e) => updateFillColor(i, e.target.value)}
-                style={swatchStyle}
+              <div style={paintInlineStyle}>
+                <input
+                  type="color"
+                  value={colorToHex(color)}
+                  onChange={(e) => updateFillColor(i, e.target.value)}
+                  style={swatchStyle}
+                />
+                <span style={hexStyle}>{colorToHex(color).toUpperCase()}</span>
+              </div>
+            )}
+            {gradientStops.length > 0 && (
+              <div style={paintInlineStyle}>
+                {gradientStops.map((stop, stopIndex) => (
+                  <input
+                    key={stopIndex}
+                    aria-label={`Gradient stop ${stopIndex + 1}`}
+                    type="color"
+                    value={colorToHex(stop.color)}
+                    onChange={(e) => updateGradientStopColor(i, stopIndex, e.target.value)}
+                    style={swatchStyle}
+                  />
+                ))}
+              </div>
+            )}
+            {fill.type === "IMAGE" && (
+              <Input
+                type="text"
+                value={fill.imageRef ?? ""}
+                placeholder="imageRef"
+                onChange={(v) => updateImageRef(i, String(v))}
               />
             )}
-            {color && (
-              <span style={hexStyle}>{colorToHex(color).toUpperCase()}</span>
-            )}
-            <Input
-              type="number"
-              value={Math.round(opacity * 100)}
-              min={0}
-              max={100}
-              step={1}
-              onChange={(v) => updateFillOpacity(i, (v as number) / 100)}
-              width={48}
-              suffix="%"
-            />
-            <button
-              type="button"
-              style={removeButtonStyle}
-              onClick={() => removeFill(i)}
-              title="Remove fill"
-            >
-              <CloseIcon size={12} />
-            </button>
           </div>
         );
       })}
