@@ -11,7 +11,7 @@
 
 import type { FigNode, FigGuid, FigParentIndex, KiwiEnumValue } from "@aurochs/fig/types";
 import type { LoadedFigFile } from "@aurochs/fig/roundtrip";
-import type { FigBlob } from "@aurochs/fig/parser";
+import { guidToString, type FigBlob } from "@aurochs/fig/parser";
 import type { FigDesignDocument, FigDesignNode, FigPage } from "@aurochs/fig/domain";
 import { parseId } from "@aurochs/fig/domain";
 import type { FigNodeId, FigPageId } from "@aurochs/fig/domain";
@@ -252,7 +252,7 @@ function applyModificationsToLoaded(
       continue;
     }
 
-    const guidStr = `${guid.sessionID}:${guid.localID}`;
+    const guidStr = guidToString(guid);
     const currentNode = currentNodes.get(guidStr);
 
     if (currentNode) {
@@ -275,7 +275,7 @@ function applyModificationsToLoaded(
   const originalGuids = new Set(
     loaded.nodeChanges
       .filter((n) => n.guid)
-      .map((n) => `${n.guid.sessionID}:${n.guid.localID}`),
+      .map((n) => guidToString(n.guid)),
   );
 
   for (const page of doc.pages) {
@@ -284,7 +284,7 @@ function applyModificationsToLoaded(
       // Find document GUID from first root
       const docGuid = loaded.nodeChanges.find((n) => n.type?.name === "DOCUMENT")?.guid;
       if (docGuid) {
-        const docId = `${docGuid.sessionID}:${docGuid.localID}` as FigNodeId;
+        const docId = guidToString(docGuid) as FigNodeId;
         flattenPage({ page, documentId: docId, pageIndex: doc.pages.indexOf(page), result: updatedNodeChanges });
       }
     }

@@ -81,6 +81,14 @@
     "./tree": {
       "types": "./src/tree/index.ts",
       "default": "./src/tree/index.ts"
+    },
+    "./diagnostics": {
+      "types": "./src/diagnostics/index.ts",
+      "default": "./src/diagnostics/index.ts"
+    },
+    "./diagnostics/defensive": {
+      "types": "./src/diagnostics/defensive.ts",
+      "default": "./src/diagnostics/defensive.ts"
     }
   },
   "dependencies": {

@@ -10,6 +10,7 @@
 
 import type { FigNode } from "@aurochs/fig/types";
 import { getNodeType, safeChildren } from "@aurochs/fig/parser";
+import { walkTree as walkTreeGeneric } from "@aurochs/fig/tree";
 import { resolveInstanceReferences } from "./symbol-resolver";
 
 // =============================================================================
@@ -31,17 +32,11 @@ export type ResolvedSymbolCache = ReadonlyMap<string, FigNode>;
 // Tree walking
 // =============================================================================
 
-/**
- * Walk a node tree, calling `visitor` on every node (depth-first).
- */
-function walkTree(
-  node: FigNode,
-  visitor: (n: FigNode) => void,
-): void {
-  visitor(node);
-  for (const child of safeChildren(node)) {
-    walkTree(child, visitor);
-  }
+// Tree-walk primitive lives at `@aurochs/fig/tree:walkTree` — the
+// previous private helper here was a duplicate. The local wrapper
+// below adapts the generic primitive to single-root callers.
+function walkTree(node: FigNode, visitor: (n: FigNode) => void): void {
+  walkTreeGeneric([node], visitor, { getChildren: safeChildren });
 }
 
 // =============================================================================

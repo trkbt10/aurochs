@@ -22,6 +22,7 @@ export type { ParsedFigFile, FigImage } from "./fig-file";
 export {
   buildNodeTree,
   guidToString,
+  parseGuidString,
   getNodeType,
   findNodesByType,
   findNodeByGuid,

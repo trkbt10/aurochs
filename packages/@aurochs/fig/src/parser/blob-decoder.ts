@@ -94,28 +94,33 @@ function findNextKnownCommand(bytes: readonly number[], startOffset: number): nu
 }
 
 /**
- * Determine the current point (last emitted endpoint) required to elevate a
- * glyph quadratic Bézier (P0, Q, P1) into an SVG cubic Bézier.
+ * Determine the current point (the most recently emitted endpoint)
+ * required to elevate a glyph quadratic Bézier (P0, Q, P1) into an
+ * SVG cubic Bézier.
  *
- * The current point is the endpoint of the most recently emitted command:
- * - after M/L: its (x, y) is the new pen position
- * - after C/Q: the command's (x, y) endpoint
- * - at the start of a blob (no previous command): fall back to Q itself,
- *   which degenerates the curve into a line from Q to P1 and is safer than
- *   silently emitting an undefined starting point.
+ * Well-formed glyph blobs always begin with `M` and only emit a
+ * glyph quadratic after at least one `M`/`L`/`C`/`Q`. Earlier
+ * versions carried two fallback branches — "no prev command" and
+ * "prev command has no endpoint (`Z`)" — that returned the
+ * curve-degenerating value (Q itself) instead of throwing.
+ * Calibration showed both branches were dead across the production
+ * fixture corpus and the existing test suite; per "don't guess;
+ * resolve correctly or fail loudly" the fallbacks were removed.
+ * Reaching either branch now means the blob is malformed and
+ * deserves a parse error rather than silently rendered garbage.
  */
-function getCurrentPoint(
-  prevCmd: PathCommand | undefined,
-  fallbackX: number,
-  fallbackY: number,
-): { x: number; y: number } {
+function getCurrentPoint(prevCmd: PathCommand | undefined): { x: number; y: number } {
   if (!prevCmd) {
-    return { x: fallbackX, y: fallbackY };
+    throw new Error(
+      "blob-decoder: glyph quadratic Bézier appears at the start of a blob — expected a preceding M command",
+    );
   }
   if (prevCmd.type === "M" || prevCmd.type === "L" || prevCmd.type === "C" || prevCmd.type === "Q") {
     return { x: prevCmd.x, y: prevCmd.y };
   }
-  return { x: fallbackX, y: fallbackY };
+  throw new Error(
+    `blob-decoder: glyph quadratic Bézier follows unsupported prev command type "${prevCmd.type}"`,
+  );
 }
 
 /**
@@ -170,7 +175,7 @@ export function decodePathCommands(blob: FigBlob): readonly PathCommand[] {
         const x = readFloat32();
         const y = readFloat32();
         const prevCmd = commands[commands.length - 1];
-        const p0 = getCurrentPoint(prevCmd, qx, qy);
+        const p0 = getCurrentPoint(prevCmd);
         const x1 = p0.x + (2 / 3) * (qx - p0.x);
         const y1 = p0.y + (2 / 3) * (qy - p0.y);
         const x2 = x + (2 / 3) * (qx - x);

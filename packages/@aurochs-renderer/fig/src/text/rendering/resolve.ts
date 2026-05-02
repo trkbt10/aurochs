@@ -11,6 +11,7 @@
 import type { FigBlob } from "@aurochs/fig/parser";
 import type { DerivedTextData } from "@aurochs/fig/domain";
 import type { KiwiEnumValue, FigDerivedTextData, FigFontMetaData } from "@aurochs/fig/types";
+import { defensiveMark } from "@aurochs/fig/diagnostics/defensive";
 import { extractTextProps } from "../layout/extract-props";
 import type { TextNodeInput } from "../layout/extract-props";
 import { getFillColorAndOpacity } from "../layout/fill";
@@ -121,6 +122,9 @@ function derivedLineStrings(dtd: FigDerivedTextData | undefined): readonly strin
   for (const l of lines) {
     if (typeof l.characters !== "string") {
       // A single missing line invalidates the set — don't mix derived & guessed lines.
+      defensiveMark("text-resolve:derived-lines:partial-set-invalidated", {
+        lineCount: lines.length,
+      });
       return undefined;
     }
     out.push(l.characters);

@@ -23,6 +23,7 @@ import type {
   FigNode,
 } from "../types";
 import { FIG_NODE_TYPE } from "../types";
+import { guidToString } from "../parser";
 
 function guid(sessionID: number, localID: number): FigGuid {
   return { sessionID, localID };
@@ -62,7 +63,7 @@ function instanceNode(g: FigGuid, symbolID: FigGuid, vcm: FigKiwiVariableDataMap
 function buildSymbolMap(nodes: readonly FigNode[]): Map<string, FigNode> {
   const map = new Map<string, FigNode>();
   for (const n of nodes) {
-    map.set(`${n.guid.sessionID}:${n.guid.localID}`, n);
+    map.set(guidToString(n.guid), n);
   }
   return map;
 }

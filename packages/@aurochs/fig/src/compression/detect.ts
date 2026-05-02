@@ -3,6 +3,7 @@
  */
 
 import { ZSTD_MAGIC, type CompressionType } from "./types";
+import { defensiveMark } from "../diagnostics/defensive";
 
 /**
  * Detect compression type from data magic bytes.
@@ -26,5 +27,8 @@ export function detectCompression(data: Uint8Array): CompressionType {
   }
 
   // Otherwise assume deflate (raw deflate has no header to detect)
+  defensiveMark("compression:detect:deflate-default-assumption", {
+    firstBytes: `${data[0]?.toString(16)},${data[1]?.toString(16)},${data[2]?.toString(16)},${data[3]?.toString(16)}`,
+  });
   return "deflate";
 }

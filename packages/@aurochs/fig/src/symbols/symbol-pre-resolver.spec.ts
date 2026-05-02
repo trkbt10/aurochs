@@ -340,25 +340,11 @@ describe("preResolveSymbols", () => {
     expect(cache.has(guidStr(50))).toBe(false);
   });
 
-  it("resolves INSTANCE despite sessionID mismatch (localID fallback)", () => {
-    // SYMBOL has sessionID=0, INSTANCE references sessionID=1
-    const symB = makeSymbolWithSession({ sessionID: 0, localID: 20, children: [makeRect(21, "InnerRect")], name: "SymbolB" });
-    const symA = makeSymbolWithSession({ sessionID: 0, localID: 10, children: [makeInstanceMismatch({ localID: 11, refSessionID: 1, symbolLocalID: 20 })], name: "SymbolA" });
-    const symbolMap = new Map([
-      ["0:10", symA],
-      ["0:20", symB],
-    ]);
-
-    const cache = preResolveSymbols(symbolMap);
-    expect(cache.size).toBe(2);
-
-    const resolvedA = cache.get("0:10")!;
-    const instanceInA = resolvedA.children![0];
-    // The INSTANCE should have resolved B's children despite sessionID mismatch
-    expect(instanceInA.children).toBeDefined();
-    expect(instanceInA.children!.length).toBe(1);
-    expect(instanceInA.children![0].name).toBe("InnerRect");
-  });
+  // (Test removed: "resolves INSTANCE despite sessionID mismatch
+  // (localID fallback)". The corresponding production fallback in
+  // `symbol-map-lookup` was deleted after calibration showed zero
+  // fires across the production fixture corpus — see that file's
+  // header comment for rationale.)
 
   it("resolves INSTANCE with top-level symbolID (builder-generated format)", () => {
     const symB = makeSymbol(20, [makeRect(21, "InnerRect")], "SymbolB");

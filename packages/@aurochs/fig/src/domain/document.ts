@@ -21,6 +21,7 @@ import type {
 import type { LoadedFigFile, FigImage, FigMetadata } from "../roundtrip";
 import type { FigNodeId, FigPageId } from "./node-id";
 import { guidToNodeId } from "./node-id";
+import { guidToString } from "../parser";
 
 // =============================================================================
 // AutoLayout Types
@@ -301,14 +302,14 @@ export function isValidOverridePath(override: SymbolOverride): boolean {
 export function isSelfOverride(override: SymbolOverride, nodeId: string): boolean {
   const guids = override.guidPath?.guids;
   if (!guids || guids.length !== 1) { return false; }
-  return `${guids[0].sessionID}:${guids[0].localID}` === nodeId;
+  return guidToString(guids[0]) === nodeId;
 }
 
 /**
  * Convert a SymbolOverride's guidPath to an array of "sessionID:localID" strings.
  */
 export function overridePathToIds(override: SymbolOverride): readonly string[] {
-  return override.guidPath.guids.map((g) => `${g.sessionID}:${g.localID}`);
+  return override.guidPath.guids.map(guidToString);
 }
 
 /**

@@ -4,6 +4,7 @@
 
 import type { FigNode, MutableFigNode, FigKiwiSymbolData, FigKiwiSymbolOverride, FigGuidPath, FigComponentPropAssignment, FigDerivedTextData } from "@aurochs/fig/types";
 import { guidToString, getNodeType, safeChildren, type FigGuid, type FigBlob } from "@aurochs/fig/parser";
+import { walkTree } from "@aurochs/fig/tree";
 import { extractSymbolIDPair } from "@aurochs/fig/symbols";
 import { buildGuidTranslationMap, translateOverrides } from "./guid-translation";
 import { resolveInstanceLayout } from "./constraints";
@@ -118,24 +119,12 @@ export function getInstanceSymbolOverrides(
 
 /**
  * Resolve a GUID string from symbolMap, with localID fallback.
- * Returns both the resolved node and the actual key in the map.
+ * Re-exported from `./symbol-map-lookup` — that's the SoT module.
+ * (Kept as a re-export here so external consumers that imported it
+ * from `symbol-resolver`/`@aurochs/fig/symbols` don't break.)
  */
-export function resolveSymbolGuidStr(
-  symbolID: FigGuid,
-  symbolMap: ReadonlyMap<string, FigNode>,
-): { node: FigNode; guidStr: string } | undefined {
-  const exactKey = guidToString(symbolID);
-  const exact = symbolMap.get(exactKey);
-  if (exact) {return { node: exact, guidStr: exactKey };}
-
-  const localIdSuffix = `:${symbolID.localID}`;
-  for (const [key, node] of symbolMap) {
-    if (key.endsWith(localIdSuffix)) {
-      return { node, guidStr: key };
-    }
-  }
-  return undefined;
-}
+import { resolveSymbolGuidStr, type SymbolMapResolution } from "./symbol-map-lookup";
+export { resolveSymbolGuidStr, type SymbolMapResolution };
 
 // =============================================================================
 // INSTANCE reference resolution — Single Source of Truth
@@ -373,82 +362,75 @@ function applyComponentPropAssignments(
     assignMap.set(guidToString(a.defID), a);
   }
 
-  function walk(node: MutableFigNode): void {
+  // Walk via the SoT primitive (`@aurochs/fig/tree:walkTree`) — the
+  // visitor below carries the per-node CPA application logic. The
+  // recursion shape is shared with every other "visit every fig
+  // node" caller in the codebase.
+  walkTree(nodes, (node) => {
     const propRefs = node.componentPropRefs as readonly ComponentPropRef[] | undefined;
+    if (!propRefs) { return; }
+    for (const ref of propRefs) {
+      const defKey = guidToString(ref.defID);
+      const assignment = assignMap.get(defKey);
 
-    if (propRefs) {
-      for (const ref of propRefs) {
-        const defKey = guidToString(ref.defID);
-        const assignment = assignMap.get(defKey);
+      // Apply based on field type
+      if (ref.componentPropNodeField?.name === "TEXT_DATA") {
+        if (assignment?.value.textValue) {
+          const tv = assignment.value.textValue;
+          // No-op detection: when CPA characters equal the node's existing
+          // characters, the override is redundant. Keep derivedTextData so
+          // its pre-rasterized glyph paths survive (used by the renderer to
+          // avoid font fallback for private-use codepoints like SF Symbols).
+          const existingTextData = node.textData;
+          const existingChars = existingTextData?.characters ?? node.characters ?? "";
+          const isNoOp = existingChars === tv.characters;
 
-        // Apply based on field type
-        if (ref.componentPropNodeField?.name === "TEXT_DATA") {
-          if (assignment?.value.textValue) {
-            const tv = assignment.value.textValue;
-            // No-op detection: when CPA characters equal the node's existing
-            // characters, the override is redundant. Keep derivedTextData so
-            // its pre-rasterized glyph paths survive (used by the renderer to
-            // avoid font fallback for private-use codepoints like SF Symbols).
-            const existingTextData = node.textData;
-            const existingChars = existingTextData?.characters ?? node.characters ?? "";
-            const isNoOp = existingChars === tv.characters;
+          // Update textData with overridden characters
+          node.textData = {
+            ...(existingTextData ?? { characters: "" }),
+            characters: tv.characters,
+            lines: tv.lines ?? existingTextData?.lines,
+          };
+          // Also set top-level characters for renderers that check it
+          node.characters = tv.characters;
 
-            // Update textData with overridden characters
-            node.textData = {
-              ...(existingTextData ?? { characters: "" }),
-              characters: tv.characters,
-              lines: tv.lines ?? existingTextData?.lines,
-            };
-            // Also set top-level characters for renderers that check it
-            node.characters = tv.characters;
-
-            if (!isNoOp) {
-              // Clear derivedTextData — its glyph paths correspond to the
-              // original text, not the overridden content. Removing it forces
-              // the renderer to fall back to <text> element rendering.
-              // NOTE: derivedSymbolData applied later may re-add stale
-              // derivedTextData; cleanupStaleDerivedTextData() handles that
-              // in cloneSymbolChildren.
-              delete node.derivedTextData;
-              // Track this node so we can re-delete stale derivedTextData
-              // if it gets re-added by derivedSymbolData application.
-              if (textOverrideGuids && node.guid) {
-                textOverrideGuids.add(guidToString(node.guid));
-              }
+          if (!isNoOp) {
+            // Clear derivedTextData — its glyph paths correspond to the
+            // original text, not the overridden content. Removing it forces
+            // the renderer to fall back to <text> element rendering.
+            // NOTE: derivedSymbolData applied later may re-add stale
+            // derivedTextData; cleanupStaleDerivedTextData() handles that
+            // in cloneSymbolChildren.
+            delete node.derivedTextData;
+            // Track this node so we can re-delete stale derivedTextData
+            // if it gets re-added by derivedSymbolData application.
+            if (textOverrideGuids && node.guid) {
+              textOverrideGuids.add(guidToString(node.guid));
             }
           }
-        } else if (ref.componentPropNodeField?.name === "VISIBLE") {
-          if (assignment) {
-            // Explicit CPA value
-            const boolVal = assignment.value.boolValue;
-            if (typeof boolVal === "boolean") {
-              node.visible = boolVal;
-            }
+        }
+      } else if (ref.componentPropNodeField?.name === "VISIBLE") {
+        if (assignment) {
+          // Explicit CPA value
+          const boolVal = assignment.value.boolValue;
+          if (typeof boolVal === "boolean") {
+            node.visible = boolVal;
           }
-        } else if (ref.componentPropNodeField?.name === "OVERRIDDEN_SYMBOL_ID") {
-          // Instance swap via component property: the CPA value specifies
-          // which SYMBOL/COMPONENT this nested INSTANCE should resolve to.
-          // Set overriddenSymbolID so that resolveInstance() → getEffectiveSymbolID()
-          // picks up the swapped component during lazy rendering resolution.
-          if (assignment) {
-            const guidVal = assignment.value.guidValue as FigGuid | undefined;
-            if (guidVal) {
-              node.overriddenSymbolID = guidVal;
-            }
+        }
+      } else if (ref.componentPropNodeField?.name === "OVERRIDDEN_SYMBOL_ID") {
+        // Instance swap via component property: the CPA value specifies
+        // which SYMBOL/COMPONENT this nested INSTANCE should resolve to.
+        // Set overriddenSymbolID so that resolveInstance() → getEffectiveSymbolID()
+        // picks up the swapped component during lazy rendering resolution.
+        if (assignment) {
+          const guidVal = assignment.value.guidValue as FigGuid | undefined;
+          if (guidVal) {
+            node.overriddenSymbolID = guidVal;
           }
         }
       }
     }
-
-    // Recurse
-    for (const child of mutableChildren(node)) {
-      walk(child);
-    }
-  }
-
-  for (const node of nodes) {
-    walk(node);
-  }
+  }, { getChildren: mutableChildren });
 }
 
 // =============================================================================
@@ -535,40 +517,33 @@ function cleanupStaleDerivedTextData(
     return false;
   }
 
-  function walk(node: MutableFigNode): void {
-    if (node.guid && node.derivedTextData) {
-      const key = guidToString(node.guid);
-      const cpaTarget = cpaGuids.has(key);
-      const chars = node.characters ?? node.textData?.characters;
-      const matches = derivedMatchesCharacters(node.derivedTextData, chars);
-      const hasPUA = typeof chars === "string" && containsPrivateUseCodepoint(chars);
-      const truncated = isTruncated(node.derivedTextData);
+  walkTree(nodes, (node) => {
+    if (!node.guid || !node.derivedTextData) { return; }
+    const key = guidToString(node.guid);
+    const cpaTarget = cpaGuids.has(key);
+    const chars = node.characters ?? node.textData?.characters;
+    const matches = derivedMatchesCharacters(node.derivedTextData, chars);
+    const hasPUA = typeof chars === "string" && containsPrivateUseCodepoint(chars);
+    const truncated = isTruncated(node.derivedTextData);
 
-      // Drop derivedTextData when:
-      //  1. The glyph data grossly mismatches the final characters (codepoint
-      //     count differs) AND Figma did not mark the text as runtime-
-      //     truncated. A truncation mismatch is expected — Figma's glyphs
-      //     represent the cut-and-ellipsized output, not the source string.
-      //  2. CPA overrode the text and the text does NOT contain private-use
-      //     codepoints. Even if glyph count matches, Figma's pre-computed
-      //     glyphs may correspond to a wrong sibling (e.g. same-length name).
-      //     Fall back to text rendering which re-layouts with the final
-      //     characters. Private-use codepoints (SF Symbols) and truncated
-      //     text must keep the derivedTextData since no font can reconstruct
-      //     them (PUA) or reproduce the exact truncation (ellipsis).
-      const mismatchByLength = typeof chars === "string" && !matches && !truncated;
-      const riskyCpaKeep = cpaTarget && matches && !hasPUA && !truncated;
-      if (mismatchByLength || riskyCpaKeep) {
-        delete node.derivedTextData;
-      }
+    // Drop derivedTextData when:
+    //  1. The glyph data grossly mismatches the final characters (codepoint
+    //     count differs) AND Figma did not mark the text as runtime-
+    //     truncated. A truncation mismatch is expected — Figma's glyphs
+    //     represent the cut-and-ellipsized output, not the source string.
+    //  2. CPA overrode the text and the text does NOT contain private-use
+    //     codepoints. Even if glyph count matches, Figma's pre-computed
+    //     glyphs may correspond to a wrong sibling (e.g. same-length name).
+    //     Fall back to text rendering which re-layouts with the final
+    //     characters. Private-use codepoints (SF Symbols) and truncated
+    //     text must keep the derivedTextData since no font can reconstruct
+    //     them (PUA) or reproduce the exact truncation (ellipsis).
+    const mismatchByLength = typeof chars === "string" && !matches && !truncated;
+    const riskyCpaKeep = cpaTarget && matches && !hasPUA && !truncated;
+    if (mismatchByLength || riskyCpaKeep) {
+      delete node.derivedTextData;
     }
-    for (const child of mutableChildren(node)) {
-      walk(child);
-    }
-  }
-  for (const node of nodes) {
-    walk(node);
-  }
+  }, { getChildren: mutableChildren });
 }
 
 // =============================================================================
@@ -1041,11 +1016,11 @@ export function resolveInstanceNode(
   // translated. Self-overrides apply only to the INSTANCE's merged node
   // (handled directly by `applySelfOverridesToMergedNode` using the
   // *un-translated* rerouted path).
-  const symRootGuidStr = symRootGuid ? `${symRootGuid.sessionID}:${symRootGuid.localID}` : "";
+  const symRootGuidStr = guidToString(symRootGuid);
   const isSelfOverrideTargetingRoot = (e: FigKiwiSymbolOverride): boolean => {
     const guids = e.guidPath?.guids;
     if (!guids || guids.length !== 1) return false;
-    return `${guids[0].sessionID}:${guids[0].localID}` === symRootGuidStr;
+    return guidToString(guids[0]) === symRootGuidStr;
   };
   const partition = <T extends FigKiwiSymbolOverride>(entries: readonly T[] | undefined): { selves: readonly T[]; rest: readonly T[] } => {
     const selves: T[] = [];
@@ -1063,7 +1038,7 @@ export function resolveInstanceNode(
   // Re-build translation map *without* the self-overrides — they
   // shouldn't influence the heuristic at all.
   const translationMapNoSelf = buildGuidTranslationMap(
-    safeChildren(originalSymNode),
+    originalSymNode,
     dsdPart.rest as FigDerivedSymbolData,
     ovPart.rest,
     componentPropAssignments.length > 0 ? componentPropAssignments : undefined,

@@ -26,7 +26,7 @@ import {
 } from "@aurochs/fig/domain";
 import type { FigPaint, FigVectorPath } from "@aurochs/fig/types";
 import { FIG_NODE_TYPE } from "@aurochs/fig/types";
-import type { FigImage, FigBlob } from "@aurochs/fig/parser";
+import { guidToString, type FigImage, type FigBlob } from "@aurochs/fig/parser";
 import { styleRefKeys, reresolveOverridesForVariant } from "@aurochs/fig/symbols";
 import { dfsById } from "@aurochs/fig/tree";
 import { IDENTITY_MATRIX } from "@aurochs/fig/matrix";
@@ -375,10 +375,7 @@ function findInDesignTree(
   // Action 3 [15:943]'s DSD path 5591:26671 → Title TEXT 15:874
   // (overrideKey=5591:26671) only matches via this path.
   return dfsById(nodes, id, {
-    getId: (n) => {
-      const ok = n.overrideKey;
-      return ok ? `${ok.sessionID}:${ok.localID}` : "";
-    },
+    getId: (n) => guidToString(n.overrideKey),
     getChildren: (n) => mutableChildren(n),
     onVisit: (n) => {
       if (n.type !== FIG_NODE_TYPE.INSTANCE) { return; }
@@ -559,7 +556,7 @@ function applySymbolOverridesToChildren(
     const oldSymId = target.symbolId ?? "";
     applyOverrideToNode(target, override);
 
-    const newSymId = `${override.overriddenSymbolID.sessionID}:${override.overriddenSymbolID.localID}`;
+    const newSymId = guidToString(override.overriddenSymbolID);
     const variantSymbol = symbolMap.get(newSymId);
     if (variantSymbol) {
       const mutableTarget: MutableFigDesignNode = target;

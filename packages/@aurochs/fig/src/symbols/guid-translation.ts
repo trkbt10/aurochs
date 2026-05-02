@@ -9,9 +9,12 @@
  * that applyOverrides() and isDerivedDataApplicable() can match them.
  */
 
-import type { FigNode, FigComponentPropAssignment, FigDerivedTextData } from "@aurochs/fig/types";
-import { getNodeType, guidToString, safeChildren, decodePathCommands, type FigGuid, type FigBlob, type PathCommand } from "@aurochs/fig/parser";
+import type { FigNode, FigComponentPropAssignment } from "@aurochs/fig/types";
+import { getNodeType, parseGuidString, decodePathCommands, type FigGuid, type FigBlob, type PathCommand } from "@aurochs/fig/parser";
 import type { FigKiwiSymbolOverride } from "@aurochs/fig/types";
+import { createFigResolveContext, type FigResolveContext, type SymbolDescendant } from "./resolve-context";
+import { walkTree } from "@aurochs/fig/tree";
+import { defensiveMark } from "../diagnostics/defensive";
 
 /**
  * Extract the final "characters" for a CPA assignment, if any.
@@ -24,37 +27,59 @@ function cpaCharacters(a: FigComponentPropAssignment): string | undefined {
 }
 
 /**
- * Determine a TEXT descendant's final displayed character count.
- *
- * A TEXT node's `componentPropRefs` may bind it to a CPA defID via the
- * TEXT_DATA field. When the parent instance assigned a value to that defID,
- * the final characters come from CPA. Otherwise, fall back to the node's
- * own `characters` or `textData.characters`.
- *
- * Codepoint count (not UTF-16 unit count) is returned because glyph arrays
- * in derivedTextData are keyed by codepoint, and SF Symbols / emoji occupy
- * one codepoint but two UTF-16 units.
+ * Build a `defID → codepoint count` map from an INSTANCE's CPA. The
+ * map is the per-INSTANCE input that lets `expectedCharCountOf`
+ * resolve a TEXT descendant's CPA-bound length. Codepoint counts
+ * (not UTF-16 unit counts) because `derivedTextData` glyph arrays
+ * are keyed by codepoint — SF Symbols / emoji occupy one codepoint
+ * but two UTF-16 units, and a count mismatch would mis-route the
+ * override.
  */
-function resolveExpectedCharCount(
-  node: FigNode,
-  defToChars: ReadonlyMap<string, string>,
-  countCP: (s: string) => number,
+function buildCpaCharCounts(
+  ctx: FigResolveContext,
+  componentPropAssignments: readonly FigComponentPropAssignment[] | undefined,
+): ReadonlyMap<string, number> {
+  if (!componentPropAssignments || componentPropAssignments.length === 0) {
+    return EMPTY_CPA_CHAR_COUNTS;
+  }
+  const out = new Map<string, number>();
+  for (const a of componentPropAssignments) {
+    const chars = cpaCharacters(a);
+    if (a.defID && typeof chars === "string") {
+      out.set(ctx.guidString(a.defID), [...chars].length);
+    }
+  }
+  return out.size > 0 ? out : EMPTY_CPA_CHAR_COUNTS;
+}
+const EMPTY_CPA_CHAR_COUNTS: ReadonlyMap<string, number> = new Map();
+
+/**
+ * SoT for "what is this descendant's expected codepoint count?".
+ *
+ * Resolves at the use site (no precomputed parallel descendant
+ * array). For a TEXT descendant whose `componentPropRefs` bind it to
+ * a CPA defID via `TEXT_DATA`, the final glyph count comes from CPA.
+ * Otherwise the descendant's own `ownCharCount` (computed once from
+ * the SYMBOL's own characters and cached on the bundle) is the
+ * answer. Returns `undefined` when neither is available.
+ */
+function expectedCharCountOf(
+  ctx: FigResolveContext,
+  desc: SymbolDescendant,
+  cpaCharCounts: ReadonlyMap<string, number>,
 ): number | undefined {
-  if (getNodeType(node) === "TEXT" && defToChars.size > 0) {
-    const propRefs = node.componentPropRefs;
+  if (cpaCharCounts.size > 0 && desc.nodeType === "TEXT") {
+    const propRefs = desc.node.componentPropRefs;
     if (propRefs) {
       for (const ref of propRefs) {
         if (ref.componentPropNodeField?.name !== "TEXT_DATA") continue;
         if (!ref.defID) continue;
-        const chars = defToChars.get(guidToString(ref.defID));
-        if (typeof chars === "string") {
-          return countCP(chars);
-        }
+        const cnt = cpaCharCounts.get(ctx.guidString(ref.defID));
+        if (typeof cnt === "number") { return cnt; }
       }
     }
   }
-  const ownChars = node.characters ?? node.textData?.characters;
-  return typeof ownChars === "string" ? countCP(ownChars) : undefined;
+  return desc.ownCharCount;
 }
 
 // =============================================================================
@@ -64,204 +89,223 @@ function resolveExpectedCharCount(
 /** Override GUID string → SYMBOL descendant GUID string */
 export type GuidTranslationMap = ReadonlyMap<string, string>;
 
-type DescendantInfo = {
-  guid: FigGuid;
-  guidStr: string;
-  /**
-   * SYMBOL-side stable identifier (`overrideKey` field on the raw FigNode).
-   * When present, this is the GUID that override entries reference for
-   * cross-INSTANCE-stable slot addressing (e.g. Action 3's `Title` TEXT
-   * has `overrideKey: 5591:26671`; the DSD path `5591:26671` resolves
-   * here even though the TEXT's own GUID is `15:874`).
-   */
-  overrideKey?: FigGuid;
-  overrideKeyStr?: string;
-  nodeType: string;
-  visible: boolean;
-  size?: { x: number; y: number };
-  /** Expected character count for TEXT nodes (after CPA resolution, if applicable) */
-  expectedCharCount?: number;
-  /** Descendant carries these property signals (used for better override matching) */
-  hasImageFill?: boolean;
-  hasCornerRadius?: boolean;
-}
+/**
+ * SYMBOL descendant signal used by every phase below — `SymbolDescendant`
+ * from `./resolve-context`. Reused as the SoT shape; we no longer
+ * carry a parallel "enriched" type (the previous `SymbolDescendant` /
+ * `enrichDescendantsWithCpa` pair created two representations of the
+ * same fact, which is a SoT violation: any change to descendant
+ * shape would have to be made in both places). CPA-aware expected
+ * char counts are now resolved at the use site via
+ * `expectedCharCountOf(desc, cpaCharCounts)`, so there is exactly
+ * one descendant struct shared by SYMBOL-side caching and INSTANCE-
+ * side phases.
+ */
 
 // =============================================================================
 // Helpers
 // =============================================================================
 
+// Descendant info comes from `ctx.symbolDescendants(symbolRoot)`
+// (`SymbolDescendant[]`). No "enriched" parallel array — CPA-aware
+// expected character counts are queried lazily via
+// `expectedCharCountOf(...)` at the use site, so we keep one
+// canonical descendant struct.
+
 /**
- * Collect all descendant GUIDs + types from a list of nodes via DFS walk.
+ * Single SoT walk of overrideSets — produces every aggregate phase
+ * downstream consumes.
  *
- * Walks the full subtree because Figma DSD entries' first-level GUIDs
- * can target nodes at any depth (not just direct children).
- * The majority-vote offset and size-group matching phases use this data
- * to find the best mapping.
- */
-function collectDescendantInfo(nodes: readonly FigNode[]): DescendantInfo[] {
-  return collectDescendantInfoWithCPA(nodes, undefined);
-}
-
-function collectDescendantInfoWithCPA(
-  nodes: readonly FigNode[],
-  componentPropAssignments: readonly FigComponentPropAssignment[] | undefined,
-): DescendantInfo[] {
-  // Build defID → characters map
-  const defToChars = new Map<string, string>();
-  if (componentPropAssignments) {
-    for (const a of componentPropAssignments) {
-      const chars = cpaCharacters(a);
-      if (a.defID && typeof chars === "string") {
-        defToChars.set(guidToString(a.defID), chars);
-      }
-    }
-  }
-
-  const result: DescendantInfo[] = [];
-
-  function walk(node: FigNode): void {
-    const guid = node.guid;
-    if (guid) {
-      const size = node.size;
-      const fillPaints = node.fillPaints;
-      const hasImageFill = Array.isArray(fillPaints)
-        && fillPaints.some((p) => {
-          const t = typeof p.type === "string" ? p.type : p.type?.name;
-          return t === "IMAGE";
-        });
-      const hasCornerRadius =
-        (typeof node.cornerRadius === "number" && node.cornerRadius > 0) ||
-        Array.isArray(node.rectangleCornerRadii) ||
-        typeof node.rectangleTopLeftCornerRadius === "number";
-
-      // Expected character count (codepoints): if this TEXT has a
-      // componentPropRef whose defID matches a CPA assignment, use that
-      // CPA's character codepoint count. Otherwise fall back to the node's
-      // own characters.
-      const countCP = (s: string): number => [...s].length;
-      const expectedCharCount = resolveExpectedCharCount(node, defToChars, countCP);
-
-      const overrideKey = node.overrideKey;
-      result.push({
-        guid,
-        guidStr: guidToString(guid),
-        overrideKey,
-        overrideKeyStr: overrideKey ? guidToString(overrideKey) : undefined,
-        nodeType: getNodeType(node),
-        visible: node.visible !== false,
-        size: size ? { x: size.x, y: size.y } : undefined,
-        expectedCharCount,
-        hasImageFill,
-        hasCornerRadius,
-      });
-    }
-    for (const child of safeChildren(node)) {
-      walk(child);
-    }
-  }
-
-  for (const node of nodes) {
-    walk(node);
-  }
-  return result;
-}
-
-/**
- * Collect all unique first-level GUIDs from override entries.
- * "First-level" = the first GUID in each guidPath.guids array.
- */
-function collectOverrideGuids(...overrideSets: (readonly FigKiwiSymbolOverride[] | undefined)[]): Map<string, FigGuid> {
-  const map = new Map<string, FigGuid>();
-  for (const overrides of overrideSets) {
-    if (!overrides) {continue;}
-    for (const entry of overrides) {
-      const firstGuid = entry.guidPath?.guids?.[0];
-      if (firstGuid) {
-        const key = guidToString(firstGuid);
-        if (!map.has(key)) {
-          map.set(key, firstGuid);
-        }
-      }
-    }
-  }
-  return map;
-}
-
-/**
- * Detect type hints for override GUIDs based on override entry properties.
+ * Five distinct helpers used to walk the same `overrideSets` array
+ * independently — `collectOverrideGuids` / `detectTypeHints` /
+ * `extractShapeSignals` / `extractContainerContentSignature` /
+ * `extractOverrideGlyphSummaries`. Same iteration, same key
+ * derivation, five fresh Maps. This is a textbook SoT violation:
+ * each helper "owned" a different facet of the same data, so adding
+ * a new facet meant adding a sixth walk.
  *
- * - `derivedTextData` at depth 1 → TEXT
- * - `componentPropAssignments` in any entry → INSTANCE
- * - Has depth-2+ entries → CONTAINER (FRAME/INSTANCE with children)
+ * `analyzeOverrideSets` does it once. Each entry is dispatched by
+ * depth and field once, accumulating into the relevant per-key
+ * sub-map. New facets get a new field on `OverrideAnalysis` and a
+ * branch inside this loop — never a fresh walk.
  */
-function detectTypeHints(...overrideSets: (readonly FigKiwiSymbolOverride[] | undefined)[]): Map<string, string> {
-  // Per GUID: track depth-1 keys and whether it has depth-2+ entries
-  const guidInfo = new Map<string, { depth1Keys: Set<string>; hasChildren: boolean }>();
+export type OverrideAnalysis = {
+  readonly firstGuids: ReadonlyMap<string, FigGuid>;
+  readonly entryCount: ReadonlyMap<string, number>;
+  readonly typeHints: ReadonlyMap<string, string>;
+  readonly shapeSignals: ReadonlyMap<string, ShapeSignal>;
+  readonly glyphSummaries: ReadonlyMap<string, GlyphSummary>;
+  readonly containerContentSig: ReadonlyMap<string, number>;
+  /**
+   * `firstGuids` partitioned by Kiwi session ID. Phase 1's
+   * majority-vote loop iterates these groups; previously the grouping
+   * was rebuilt inline at the top of `buildGuidTranslationMap` from
+   * `overrideGuids.values()`, which was a redundant re-derivation of
+   * data this analyzer already produces.
+   */
+  readonly firstGuidsBySession: ReadonlyMap<number, readonly FigGuid[]>;
+  /**
+   * Single-guid override entries that carry an `overriddenSymbolID` —
+   * `rawFirstGuidStr → variantSymbolGuidStr`. These announce a
+   * variant-switch on the slot at the (untranslated) first-guid.
+   * Consumers translate the key through the resolved level map at
+   * the use site; the raw mapping itself is a function of the
+   * entries alone, so it lives on the analysis bundle instead of
+   * being rebuilt by a separate walk in `resolveEntryPaths`.
+   */
+  readonly singleGuidVariantOverrides: ReadonlyMap<string, string>;
+};
+
+/** Properties unique to shape-like nodes (FRAME / RECTANGLE / etc.). */
+const SHAPE_ONLY_PROPS: readonly string[] = [
+  "fillGeometry",
+  "strokeGeometry",
+  "cornerRadius",
+  "rectangleCornerRadii",
+  "rectangleTopLeftCornerRadius",
+  "rectangleTopRightCornerRadius",
+  "rectangleBottomLeftCornerRadius",
+  "rectangleBottomRightCornerRadius",
+  "rectangleCornerRadiiIndependent",
+  "borderTopWeight",
+  "borderRightWeight",
+  "borderBottomWeight",
+  "borderLeftWeight",
+  "borderStrokeWeightsIndependent",
+  "arcData",
+  "vectorPaths",
+  "vectorData",
+];
+/** Paint-only properties — leaf shape/container heuristic. */
+const PAINT_PROPS: readonly string[] = ["fillPaints", "strokePaints", "strokeWeight", "effects"];
+
+export function analyzeOverrideSets(
+  ctx: FigResolveContext,
+  ...overrideSets: (readonly FigKiwiSymbolOverride[] | undefined)[]
+): OverrideAnalysis {
+  const firstGuids = new Map<string, FigGuid>();
+  const entryCount = new Map<string, number>();
+  // Type-hints accumulator: depth-1 keys + has-children flag per first-guid.
+  const guidTypeInfo = new Map<string, { depth1Keys: Set<string>; hasChildren: boolean }>();
+  const shapeSignals = new Map<string, ShapeSignal>();
+  const glyphSummaries = new Map<string, GlyphSummary>();
+  const containerContentSig = new Map<string, number>();
+  const singleGuidVariantOverrides = new Map<string, string>();
 
   for (const overrides of overrideSets) {
-    if (!overrides) {continue;}
+    if (!overrides) { continue; }
     for (const entry of overrides) {
-      const firstGuid = entry.guidPath?.guids?.[0];
-      if (!firstGuid) {continue;}
-      const key = guidToString(firstGuid);
-      const infoRef = { value: guidInfo.get(key) };
-      if (!infoRef.value) {
-        infoRef.value = { depth1Keys: new Set(), hasChildren: false };
-        guidInfo.set(key, infoRef.value);
-      }
-      const depth = entry.guidPath.guids.length;
+      const guids = entry.guidPath?.guids;
+      if (!guids || guids.length === 0) { continue; }
+      const firstGuid = guids[0];
+      const key = ctx.guidString(firstGuid);
+      const depth = guids.length;
+
+      if (!firstGuids.has(key)) { firstGuids.set(key, firstGuid); }
+      entryCount.set(key, (entryCount.get(key) ?? 0) + 1);
+
+      let info = guidTypeInfo.get(key);
+      if (!info) { info = { depth1Keys: new Set(), hasChildren: false }; guidTypeInfo.set(key, info); }
       if (depth === 1) {
         for (const k of Object.keys(entry)) {
-          if (k !== "guidPath") {infoRef.value.depth1Keys.add(k);}
+          if (k !== "guidPath") { info.depth1Keys.add(k); }
+        }
+      } else {
+        info.hasChildren = true;
+      }
+
+      if (depth === 1) {
+        // Variant override: single-guid path with `overriddenSymbolID` —
+        // record raw first-guid → variant SYMBOL guid string. Caller
+        // (resolveEntryPaths in tree-to-document) translates the key
+        // through the resolved level map at use site.
+        if (entry.overriddenSymbolID) {
+          singleGuidVariantOverrides.set(key, ctx.guidString(entry.overriddenSymbolID));
+        }
+
+        // Shape signals (paint kind / corner radius).
+        let sig = shapeSignals.get(key);
+        if (!sig) { sig = { hasImageFill: false, hasCornerRadius: false }; shapeSignals.set(key, sig); }
+        const fp = entry.fillPaints;
+        if (Array.isArray(fp)) {
+          for (const p of fp) {
+            const t = typeof p.type === "string" ? p.type : p.type?.name;
+            if (t === "IMAGE") { sig.hasImageFill = true; break; }
+          }
+        }
+        if (
+          (typeof entry.cornerRadius === "number" && entry.cornerRadius > 0) ||
+          Array.isArray(entry.rectangleCornerRadii) ||
+          typeof entry.rectangleTopLeftCornerRadius === "number" ||
+          entry.rectangleCornerRadiiIndependent === true
+        ) {
+          sig.hasCornerRadius = true;
+        }
+
+        // Glyph summary from depth-1 derivedTextData (first wins).
+        const dtd = entry.derivedTextData;
+        if (dtd && !glyphSummaries.has(key)) {
+          const isTruncated = typeof dtd.truncationStartIndex === "number" && dtd.truncationStartIndex >= 0;
+          let total = 0;
+          if (Array.isArray(dtd.derivedLines)) {
+            total = dtd.derivedLines.reduce<number>((acc, l) => acc + (l.characters?.length ?? 0), 0);
+          }
+          if (total === 0 && Array.isArray(dtd.glyphs)) { total = dtd.glyphs.length; }
+          if (total > 0) { glyphSummaries.set(key, { glyphCount: total, isTruncated }); }
+        }
+      } else {
+        // Container content signature from depth-2+ derivedTextData (max glyph count wins).
+        const dtd = entry.derivedTextData;
+        if (dtd) {
+          let glyphs = 0;
+          if (Array.isArray(dtd.derivedLines)) {
+            glyphs = dtd.derivedLines.reduce<number>((acc, l) => acc + (l.characters?.length ?? 0), 0);
+          }
+          if (glyphs === 0 && Array.isArray(dtd.glyphs)) { glyphs = dtd.glyphs.length; }
+          if (glyphs > 1) {
+            const prev = containerContentSig.get(key) ?? 0;
+            if (glyphs > prev) { containerContentSig.set(key, glyphs); }
+          }
         }
       }
-      if (depth > 1) {
-        infoRef.value.hasChildren = true;
-      }
     }
   }
 
-  // Properties unique to shape-like nodes (FRAME / RECTANGLE / ROUNDED_RECTANGLE
-  // / ELLIPSE / VECTOR / LINE / STAR / REGULAR_POLYGON). If any of these appear
-  // at depth-1 without children, the override targets a shape node.
-  const SHAPE_ONLY_PROPS = [
-    "fillGeometry",
-    "strokeGeometry",
-    "cornerRadius",
-    "rectangleCornerRadii",
-    "rectangleTopLeftCornerRadius",
-    "rectangleTopRightCornerRadius",
-    "rectangleBottomLeftCornerRadius",
-    "rectangleBottomRightCornerRadius",
-    "rectangleCornerRadiiIndependent",
-    "borderTopWeight",
-    "borderRightWeight",
-    "borderBottomWeight",
-    "borderLeftWeight",
-    "borderStrokeWeightsIndependent",
-    "arcData",
-    "vectorPaths",
-    "vectorData",
-  ];
-  const PAINT_PROPS = ["fillPaints", "strokePaints", "strokeWeight", "effects"];
-
-  const hints = new Map<string, string>();
-  for (const [guidStr, info] of guidInfo) {
+  // Post-process type hints from accumulated info.
+  const typeHints = new Map<string, string>();
+  for (const [guidStr, info] of guidTypeInfo) {
     if (info.depth1Keys.has("derivedTextData") && !info.hasChildren) {
-      hints.set(guidStr, "TEXT");
+      typeHints.set(guidStr, "TEXT");
     } else if (info.depth1Keys.has("componentPropAssignments")) {
-      hints.set(guidStr, "INSTANCE");
+      typeHints.set(guidStr, "INSTANCE");
     } else if (info.hasChildren) {
-      hints.set(guidStr, "CONTAINER");
+      typeHints.set(guidStr, "CONTAINER");
     } else if (SHAPE_ONLY_PROPS.some((p) => info.depth1Keys.has(p))) {
-      // Shape-specific property present without nested children → leaf shape
-      hints.set(guidStr, "SHAPE");
+      typeHints.set(guidStr, "SHAPE");
     } else if (PAINT_PROPS.some((p) => info.depth1Keys.has(p))) {
-      // Only paint-like properties — could be any shape/container leaf
-      hints.set(guidStr, "SHAPE");
+      typeHints.set(guidStr, "SHAPE");
     }
   }
-  return hints;
+
+  // Partition firstGuids by sessionID — derived in the same SoT walk
+  // so callers don't re-iterate `overrideGuids.values()` themselves.
+  const firstGuidsBySession = new Map<number, FigGuid[]>();
+  for (const guid of firstGuids.values()) {
+    const bucket = firstGuidsBySession.get(guid.sessionID);
+    if (bucket) { bucket.push(guid); }
+    else { firstGuidsBySession.set(guid.sessionID, [guid]); }
+  }
+
+  return {
+    firstGuids,
+    entryCount,
+    typeHints,
+    shapeSignals,
+    glyphSummaries,
+    containerContentSig,
+    firstGuidsBySession,
+    singleGuidVariantOverrides,
+  };
 }
 
 /** Node types that match the "SHAPE" type hint */
@@ -296,42 +340,9 @@ type ShapeSignal = {
   hasCornerRadius: boolean;
 };
 
-function extractShapeSignals(
-  ...overrideSets: (readonly FigKiwiSymbolOverride[] | undefined)[]
-): Map<string, ShapeSignal> {
-  const signals = new Map<string, ShapeSignal>();
-  for (const overrides of overrideSets) {
-    if (!overrides) continue;
-    for (const entry of overrides) {
-      const guids = entry.guidPath?.guids;
-      if (!guids || guids.length !== 1) continue;
-      const key = guidToString(guids[0]);
-      const existing = signals.get(key) ?? { hasImageFill: false, hasCornerRadius: false };
-
-      // fillPaints is now correctly typed via FigKiwiSymbolOverride ⊃ Partial<FigNode>.
-      const fp = entry.fillPaints;
-      if (Array.isArray(fp)) {
-        for (const p of fp) {
-          const t = typeof p.type === "string" ? p.type : p.type?.name;
-          if (t === "IMAGE") {
-            existing.hasImageFill = true;
-            break;
-          }
-        }
-      }
-      if (
-        (typeof entry.cornerRadius === "number" && entry.cornerRadius > 0) ||
-        Array.isArray(entry.rectangleCornerRadii) ||
-        typeof entry.rectangleTopLeftCornerRadius === "number" ||
-        entry.rectangleCornerRadiiIndependent === true
-      ) {
-        existing.hasCornerRadius = true;
-      }
-      signals.set(key, existing);
-    }
-  }
-  return signals;
-}
+// `extractShapeSignals` was a separate walk producing
+// `Map<string, ShapeSignal>`. Now produced as part of
+// `analyzeOverrideSets` (`overrideAnalysis.shapeSignals`).
 
 /**
  * Score a descendant for compatibility with a SHAPE-hinted override.
@@ -348,7 +359,7 @@ function extractShapeSignals(
  * prevent the mis-mapping from collapsing unrelated nodes.
  */
 function scoreShapeMatch(
-  desc: DescendantInfo,
+  desc: SymbolDescendant,
   signal: ShapeSignal | undefined,
   overrideSize?: { readonly x: number; readonly y: number },
 ): number {
@@ -396,103 +407,20 @@ type GlyphSummary = {
   readonly isTruncated: boolean;
 };
 
-/**
- * Extract glyph summaries from depth-1 override entries carrying derivedTextData.
- * Keyed by first GUID string. Used to disambiguate TEXT descendants when
- * multiple override GUIDs could map to the same set of TEXT nodes.
- */
-function extractOverrideGlyphSummaries(
-  ...overrideSets: (readonly FigKiwiSymbolOverride[] | undefined)[]
-): Map<string, GlyphSummary> {
-  const summaries = new Map<string, GlyphSummary>();
-  for (const overrides of overrideSets) {
-    if (!overrides) continue;
-    for (const entry of overrides) {
-      const guids = entry.guidPath?.guids;
-      if (!guids || guids.length !== 1) continue;
-      const dtd: FigDerivedTextData | undefined = entry.derivedTextData;
-      if (!dtd) continue;
-      const key = guidToString(guids[0]);
-      if (summaries.has(key)) continue;
-
-      const isTruncated = typeof dtd.truncationStartIndex === "number" && dtd.truncationStartIndex >= 0;
-
-      // Prefer counting by derivedLines.characters (handles multi-line / unicode better)
-      if (Array.isArray(dtd.derivedLines)) {
-        const total = dtd.derivedLines.reduce<number>(
-          (acc, l) => acc + (l.characters?.length ?? 0),
-          0,
-        );
-        if (total > 0) {
-          summaries.set(key, { glyphCount: total, isTruncated });
-          continue;
-        }
-      }
-      if (Array.isArray(dtd.glyphs)) {
-        summaries.set(key, { glyphCount: dtd.glyphs.length, isTruncated });
-      }
-    }
-  }
-  return summaries;
-}
-
-/**
- * Backward-compat shim — glyph count only (drops truncation flag). Used by
- * legacy callers that predate `extractOverrideGlyphSummaries`.
- */
-function extractOverrideGlyphCounts(
-  ...overrideSets: (readonly FigKiwiSymbolOverride[] | undefined)[]
-): Map<string, number> {
-  const counts = new Map<string, number>();
-  for (const [k, s] of extractOverrideGlyphSummaries(...overrideSets)) {
-    counts.set(k, s.glyphCount);
-  }
-  return counts;
-}
-
-/**
- * Extract a "content signature" for each first-level override GUID by
- * gathering the glyph counts of its depth-2 derivedTextData entries.
- *
- * When a DSD routes through `A / B / ...glyphs...`, A is a container GUID
- * whose children carry identifying text. The set of {glyphCount} values
- * across A's depth-2 entries is a fingerprint: matching A's fingerprint
- * against a local descendant's CPA-derived character counts lets us
- * identify A semantically rather than by brittle localID offset.
- *
- * We return the MAXIMUM glyph count — typically the Title text, which is
- * the longest and most distinctive. (Icon TEXTs are always 1 glyph.)
- */
-function extractContainerContentSignature(
-  ...overrideSets: (readonly FigKiwiSymbolOverride[] | undefined)[]
-): Map<string, number> {
-  const maxGlyph = new Map<string, number>();
-  for (const overrides of overrideSets) {
-    if (!overrides) continue;
-    for (const entry of overrides) {
-      const guids = entry.guidPath?.guids;
-      if (!guids || guids.length < 2) continue;
-      const dtd = entry.derivedTextData;
-      if (!dtd) continue;
-      let glyphs = 0;
-      if (Array.isArray(dtd.derivedLines)) {
-        glyphs = dtd.derivedLines.reduce<number>((acc, l) => acc + (l.characters?.length ?? 0), 0);
-      }
-      if (glyphs === 0 && Array.isArray(dtd.glyphs)) glyphs = dtd.glyphs.length;
-      if (glyphs <= 1) continue; // skip single-glyph icon TEXTs
-      const firstKey = guidToString(guids[0]);
-      const prev = maxGlyph.get(firstKey) ?? 0;
-      if (glyphs > prev) maxGlyph.set(firstKey, glyphs);
-    }
-  }
-  return maxGlyph;
-}
+// `extractOverrideGlyphSummaries`, `extractOverrideGlyphCounts`, and
+// `extractContainerContentSignature` were separate walks producing the
+// glyph-summary, glyph-count, and depth-2 content-signature maps
+// respectively. All three are now produced as fields on
+// `analyzeOverrideSets`'s output (`glyphSummaries`,
+// `containerContentSig`); the glyph-count projection is one
+// `Map.set` loop at its single use site.
 
 /**
  * Extract CPA character counts keyed by defID.
  * Used to compute a local descendant's expected Title character count.
  */
 function extractCpaCharCounts(
+  ctx: FigResolveContext,
   assignments: readonly FigComponentPropAssignment[] | undefined,
 ): Map<string, number> {
   const counts = new Map<string, number>();
@@ -501,7 +429,7 @@ function extractCpaCharCounts(
     if (!a.defID) continue;
     const chars = a.value?.textValue?.characters;
     if (typeof chars === "string") {
-      counts.set(guidToString(a.defID), [...chars].length);
+      counts.set(ctx.guidString(a.defID), [...chars].length);
     }
   }
   return counts;
@@ -515,28 +443,25 @@ function extractCpaCharCounts(
  * source slot maps to this local descendant.
  */
 function computeLocalInstanceSignatures(
+  ctx: FigResolveContext,
   symbolDescendants: readonly FigNode[],
 ): Map<string, number> {
   const sigs = new Map<string, number>();
-  function walk(node: FigNode): void {
+  walkTree(symbolDescendants, (node) => {
     const guid = node.guid;
-    if (guid && getNodeType(node) === "INSTANCE") {
-      const cpa = node.componentPropAssignments;
-      if (cpa && cpa.length > 0) {
-        let maxChars = 0;
-        for (const a of cpa) {
-          const chars = a.value?.textValue?.characters;
-          if (typeof chars === "string") {
-            const c = [...chars].length;
-            if (c > maxChars) maxChars = c;
-          }
-        }
-        if (maxChars > 1) sigs.set(guidToString(guid), maxChars);
+    if (!guid || getNodeType(node) !== "INSTANCE") { return; }
+    const cpa = node.componentPropAssignments;
+    if (!cpa || cpa.length === 0) { return; }
+    let maxChars = 0;
+    for (const a of cpa) {
+      const chars = a.value?.textValue?.characters;
+      if (typeof chars === "string") {
+        const c = [...chars].length;
+        if (c > maxChars) { maxChars = c; }
       }
     }
-    for (const c of safeChildren(node)) walk(c);
-  }
-  for (const n of symbolDescendants) walk(n);
+    if (maxChars > 1) { sigs.set(ctx.guidString(guid), maxChars); }
+  }, { getChildren: ctx.safeChildren });
   return sigs;
 }
 
@@ -587,6 +512,7 @@ function pathCommandsExtent(cmds: readonly PathCommand[]): { x: number; y: numbe
 }
 
 function extractOverrideSizes(
+  ctx: FigResolveContext,
   overrideSets: readonly (readonly FigKiwiSymbolOverride[] | undefined)[],
   blobs?: readonly FigBlob[],
 ): Map<string, { x: number; y: number }> {
@@ -602,7 +528,7 @@ function extractOverrideSizes(
     for (const entry of overrides) {
       const guids = entry.guidPath?.guids;
       if (!guids || guids.length !== 1) continue;
-      const key = guidToString(guids[0]);
+      const key = ctx.guidString(guids[0]);
       if (entry.size && !sizes.has(key)) {
         sizes.set(key, { x: entry.size.x, y: entry.size.y });
       }
@@ -635,7 +561,7 @@ function extractOverrideSizes(
     for (const entry of overrides) {
       const guids = entry.guidPath?.guids;
       if (!guids || guids.length !== 1) continue;
-      const key = guidToString(guids[0]);
+      const key = ctx.guidString(guids[0]);
       if (sizes.has(key)) continue;
       if (!imageFillGuids.has(key)) continue;
       const fg = entry.fillGeometry?.[0];
@@ -653,17 +579,6 @@ function extractOverrideSizes(
   return sizes;
 }
 
-/**
- * Parse "sessionID:localID" string back to FigGuid.
- */
-function parseGuidString(guidStr: string): FigGuid {
-  const idx = guidStr.indexOf(":");
-  return {
-    sessionID: Number(guidStr.slice(0, idx)),
-    localID: Number(guidStr.slice(idx + 1)),
-  };
-}
-
 // =============================================================================
 // Public API
 // =============================================================================
@@ -676,7 +591,12 @@ function parseGuidString(guidStr: string): FigGuid {
  * 2. Remaining GUIDs: type-based matching using override property hints
  *    (derivedTextData → TEXT, componentPropAssignments → INSTANCE, etc.)
  *
- * @param symbolDescendants  Direct children of the SYMBOL node (walked recursively)
+ * @param symbolRoot         The SYMBOL frame whose descendants are being mapped
+ *        into. Pass the FigNode root (not its children array) so the
+ *        function can fetch a cached descendant bundle from the
+ *        `FigResolveContext` — sharing one DFS walk + four
+ *        Map/Set allocations across every INSTANCE that targets the
+ *        same SYMBOL.
  * @param derivedSymbolData  Pre-computed layout overrides from INSTANCE
  * @param symbolOverrides    Property overrides from INSTANCE
  * @param componentPropAssignments  Instance CPA (used to disambiguate TEXT
@@ -686,7 +606,7 @@ function parseGuidString(guidStr: string): FigGuid {
  * @returns Map from override GUID string to SYMBOL descendant GUID string
  */
 export function buildGuidTranslationMap(
-  symbolDescendants: readonly FigNode[],
+  symbolRoot: FigNode,
   derivedSymbolData: readonly FigKiwiSymbolOverride[] | undefined,
   symbolOverrides: readonly FigKiwiSymbolOverride[] | undefined,
   componentPropAssignments?: readonly FigComponentPropAssignment[],
@@ -707,55 +627,87 @@ export function buildGuidTranslationMap(
    * Contact variant).
    */
   blobs?: readonly FigBlob[],
+  /**
+   * Scoped resolve context — owns the GUID-string interner for this
+   * conversion. When the caller already has a context (e.g.
+   * `treeToDocument` shares one across the whole document), pass it
+   * here so cached GUID strings are shared across every INSTANCE that
+   * targets the same SYMBOL. Default: a one-shot context covering
+   * just this single call.
+   */
+  ctx: FigResolveContext = createFigResolveContext(),
+  /**
+   * Pre-computed `analyzeOverrideSets(...)` result. When the caller
+   * already has the analysis (e.g. it inspected
+   * `singleGuidVariantOverrides` to build a variant map for the same
+   * INSTANCE), pass it in to share the single SoT walk and avoid
+   * re-walking `derivedSymbolData` / `symbolOverrides` here. When
+   * omitted, the function computes the analysis itself.
+   */
+  precomputedAnalysis?: OverrideAnalysis,
 ): GuidTranslationMap {
-  const descendants = collectDescendantInfoWithCPA(symbolDescendants, componentPropAssignments);
-  if (descendants.length === 0) {return new Map();}
+  // SYMBOL-side derived state — fetched once per SYMBOL and shared by
+  // every INSTANCE that targets it. Replaces what used to be one DFS
+  // walk + four fresh Maps/Sets per call. `descendants` is the SoT
+  // descendant array; CPA-aware glyph counts are queried lazily via
+  // `expectedCharCountOf(desc, cpaCharCounts)` at the few use sites
+  // that need them.
+  const bundle = ctx.symbolDescendants(symbolRoot);
+  const descendants = bundle.descendants;
+  if (descendants.length === 0) { return new Map(); }
+  const symbolDescendants = ctx.safeChildren(symbolRoot);
+  const cpaCharCounts = buildCpaCharCounts(ctx, componentPropAssignments);
 
-  const overrideGuids = collectOverrideGuids(derivedSymbolData, symbolOverrides);
+  // SoT walk: every signal `buildGuidTranslationMap` needs from the
+  // overrideSets is computed in `analyzeOverrideSets` in one pass.
+  // Phases below read from this struct instead of re-walking.
+  const overrideAnalysis = precomputedAnalysis ?? analyzeOverrideSets(ctx, derivedSymbolData, symbolOverrides);
+  const overrideGuids = overrideAnalysis.firstGuids;
   if (overrideGuids.size === 0) {return new Map();}
 
+  // SoT: derive `overrideSizes` ONCE for this call. The previous code
+  // re-derived it inside seven different phase blocks with identical
+  // arguments — same input, same output, seven times. Consolidating
+  // here lets every phase consult the same Map. (Lazy via the
+  // closure so we still skip the work for short-circuited cases like
+  // "all GUIDs already match" below.)
+  let cachedOverrideSizes: Map<string, { x: number; y: number }> | undefined;
+  const getOverrideSizes = (): Map<string, { x: number; y: number }> => {
+    if (!cachedOverrideSizes) {
+      cachedOverrideSizes = extractOverrideSizes(ctx, [derivedSymbolData, symbolOverrides], blobs);
+    }
+    return cachedOverrideSizes;
+  };
+
   // Check if override GUIDs already match descendants — no translation needed
-  const descendantSet = new Set(descendants.map((d) => d.guidStr));
+  const descendantSet = bundle.guidSet;
   const allMatch = [...overrideGuids.keys()].every((key) => descendantSet.has(key));
   if (allMatch) {return new Map();}
 
-  // Build overrideKey → descendant GUID lookup. Figma authors DSD entries
-  // against the SYMBOL-side `overrideKey` (a stable identifier shared
-  // across every INSTANCE that descends from the same SYMBOL); the
-  // descendant's own GUID is freshly assigned on each clone. When the
-  // override guidPath matches a descendant's overrideKey we have a
-  // direct, exact translation that supersedes the sibling-pairing
-  // heuristics below (Action 3-1 Title TEXT — overrideKey 5591:26671 →
-  // descendant 15:874 — only resolves through this lookup).
-  const directOverrideKeyMap = new Map<string, string>();
-  for (const d of descendants) {
-    if (d.overrideKeyStr && !directOverrideKeyMap.has(d.overrideKeyStr)) {
-      directOverrideKeyMap.set(d.overrideKeyStr, d.guidStr);
-    }
-  }
+  // Both maps are SYMBOL-pure — read straight from the cached bundle
+  // instead of re-deriving them per call. `directOverrideKeyMap` is the
+  // overrideKey → descendant GUID lookup the Figma authoring uses for
+  // stable cross-INSTANCE addressing; `localIdToDescendant` is the
+  // localID-only fallback used by Phase 1's offset heuristics.
+  const directOverrideKeyMap = bundle.directOverrideKeyMap;
+  const localIdToDescendant = bundle.localIdToDescendant;
+  // Single SoT for "descendant by guidStr" — straight off the bundle.
+  // Multiple phases below used to rebuild this Map (`descByGuidStr` /
+  // `descByGuid`) from `descendants` per call. Same SYMBOL, same Map,
+  // five fresh allocations. Reading from `bundle.guidToDesc` keeps the
+  // lookup in one place per SYMBOL across every INSTANCE that targets
+  // it.
+  const descByGuidStr = bundle.guidToDesc;
 
-  // Build localID lookup: localID → descendant GUID string
-  const localIdToDescendant = new Map<number, string>();
-  for (const d of descendants) {
-    if (!localIdToDescendant.has(d.guid.localID)) {
-      localIdToDescendant.set(d.guid.localID, d.guidStr);
-    }
-  }
-
-  // Group override GUIDs by sessionID
-  const bySession = new Map<number, FigGuid[]>();
-  for (const guid of overrideGuids.values()) {
-    const arrRef4 = { value: bySession.get(guid.sessionID) };
-    if (!arrRef4.value) {
-      arrRef4.value = [];
-      bySession.set(guid.sessionID, arrRef4.value);
-    }
-    arrRef4.value.push(guid);
-  }
+  // Override GUIDs partitioned by sessionID — straight off the
+  // single SoT walk in `analyzeOverrideSets`. The earlier inline
+  // grouping derived the same data from `overrideGuids.values()` and
+  // duplicated the bucket-allocate-and-push idiom.
+  const bySession = overrideAnalysis.firstGuidsBySession;
 
   const result = new Map<string, string>();
 
-  const typeHints = detectTypeHints(derivedSymbolData, symbolOverrides);
+  const typeHints = overrideAnalysis.typeHints;
 
   // ── Phase Zero: Direct overrideKey resolution ──
   //
@@ -792,6 +744,11 @@ export function buildGuidTranslationMap(
   // overrideKey matches), entries that don't map stay untranslated and
   // descend naturally to the deeper INSTANCE that owns them.
   if (descendants.length <= 3) {
+    defensiveMark("guid-translation:small-descendant-short-circuit", {
+      descendantCount: descendants.length,
+      overrideCount: overrideGuids.size,
+      phaseZeroResolved: result.size,
+    });
     return result;
   }
 
@@ -809,16 +766,11 @@ export function buildGuidTranslationMap(
   // when there is a single uncontested INSTANCE candidate — or pick the
   // INSTANCE with the most direct/grand children as a heuristic.
   {
-    const entryCount = new Map<string, number>();
-    for (const overrides of [derivedSymbolData, symbolOverrides]) {
-      if (!overrides) continue;
-      for (const entry of overrides) {
-        const first = entry.guidPath?.guids?.[0];
-        if (!first) continue;
-        const key = guidToString(first);
-        entryCount.set(key, (entryCount.get(key) ?? 0) + 1);
-      }
-    }
+    // SoT: read the per-key counts straight from the single
+    // override-analysis bundle. The earlier inline loop was a
+    // faithful duplicate — same iteration, same key derivation, same
+    // accumulator shape.
+    const entryCount = overrideAnalysis.entryCount;
     // Sort by descending entry count — the heaviest first.
     const rankedOverrides = [...overrideGuids.entries()]
       .filter(([k]) => {
@@ -828,47 +780,14 @@ export function buildGuidTranslationMap(
       })
       .sort((a, b) => (entryCount.get(b[0]) ?? 0) - (entryCount.get(a[0]) ?? 0));
 
-    if (rankedOverrides.length > 0) {
-      // Count descendants under each top-level INSTANCE/FRAME.
-      // An INSTANCE's direct children are typically empty in the stored tree
-      // (the SYMBOL is inlined only on demand). When we have nodeMap, resolve
-      // the referenced SYMBOL recursively so INSTANCE weights reflect real
-      // content size — Activity View - iPhone's direct target has just 2
-      // INSTANCE children, but recursing through those exposes the full tree.
-      const topLevelWeight = new Map<string, number>();
-      const getEffectiveNode = (n: FigNode): FigNode => {
-        if (getNodeType(n) !== "INSTANCE" || !symbolMap) return n;
-        const sid = n.symbolData?.symbolID ?? n.overriddenSymbolID;
-        if (!sid) return n;
-        const key = guidToString(sid);
-        const sym = symbolMap.get(key);
-        if (sym) return sym;
-        const suffix = `:${sid.localID}`;
-        for (const [k, v] of symbolMap) {
-          if (k.endsWith(suffix)) return v;
-        }
-        return n;
-      };
-      const countRecursive = (n: FigNode, depth: number, seen: Set<string>): number => {
-        if (depth > 6) return 1;
-        const effective = getEffectiveNode(n);
-        const guid = effective.guid;
-        if (guid) {
-          const key = guidToString(guid);
-          if (seen.has(key)) return 0;
-          seen.add(key);
-        }
-        let total = 1;
-        for (const c of safeChildren(effective)) {
-          total += countRecursive(c, depth + 1, seen);
-        }
-        return total;
-      };
-      for (const top of symbolDescendants) {
-        const topGuid = top.guid;
-        if (!topGuid) continue;
-        topLevelWeight.set(guidToString(topGuid), countRecursive(top, 0, new Set()));
-      }
+    if (rankedOverrides.length > 0 && symbolMap) {
+      // Per-SYMBOL top-level weights — fetched from ctx so every
+      // INSTANCE that targets the same SYMBOL shares the same Map
+      // (and the recursive expansion runs once per SYMBOL, not once
+      // per INSTANCE call). The previous inline version recomputed
+      // the recursive walk + duplicated `getEffectiveSymbolID` /
+      // `resolveSymbolGuidStr` per call.
+      const topLevelWeight = ctx.symbolTopLevelWeights(symbolRoot, symbolMap);
       const claimed = new Set<string>();
       for (const [overGuidStr] of rankedOverrides) {
         // Find the heaviest unclaimed top-level FRAME/INSTANCE descendant.
@@ -895,13 +814,11 @@ export function buildGuidTranslationMap(
 
   // ── Phase 1: Sessions with 3+ GUIDs — majority-vote offset ──
 
-  // Build descendant lookup by localID → DescendantInfo
-  const localIdToDescInfo = new Map<number, DescendantInfo>();
-  for (const d of descendants) {
-    if (!localIdToDescInfo.has(d.guid.localID)) {
-      localIdToDescInfo.set(d.guid.localID, d);
-    }
-  }
+  // SYMBOL-pure: take the cached lookup straight from the bundle. The
+  // type-tiebreaker downstream only reads `nodeType`, which is a
+  // SYMBOL-side fact — no INSTANCE / CPA dependence, no need to
+  // re-allocate per call.
+  const localIdToDescInfo = bundle.localIdToDescInfo;
 
   for (const [, guids] of bySession) {
     if (guids.length < 3) {continue;}
@@ -935,7 +852,7 @@ export function buildGuidTranslationMap(
           const targetLocalID = overrideGuid.localID - offset;
           const descInfo = localIdToDescInfo.get(targetLocalID);
           if (!descInfo) {continue;}
-          const hint = typeHints.get(guidToString(overrideGuid));
+          const hint = typeHints.get(ctx.guidString(overrideGuid));
           if (hint === "TEXT" && descInfo.nodeType === "TEXT") {typeScoreRef.value++;}
           else if (hint === "INSTANCE" && descInfo.nodeType === "INSTANCE") {typeScoreRef.value++;}
           else if (hint === "CONTAINER" && (descInfo.nodeType === "FRAME" || descInfo.nodeType === "INSTANCE"))
@@ -954,7 +871,7 @@ export function buildGuidTranslationMap(
       const targetLocalID = overrideGuid.localID - bestOffsetRef.value;
       const descendantGuidStr = localIdToDescendant.get(targetLocalID);
       if (descendantGuidStr && !phase0Claimed.has(descendantGuidStr)) {
-        result.set(guidToString(overrideGuid), descendantGuidStr);
+        result.set(ctx.guidString(overrideGuid), descendantGuidStr);
       }
     }
   }
@@ -976,11 +893,8 @@ export function buildGuidTranslationMap(
   // visible). The lower threshold (3) follows Phase 1's own
   // ≥3-entries threshold for committing to an offset.
   {
-    const overrideSizes = extractOverrideSizes([derivedSymbolData, symbolOverrides], blobs);
-    const descByGuidStr = new Map<string, DescendantInfo>();
-    for (const d of descendants) {
-      descByGuidStr.set(d.guidStr, d);
-    }
+    const overrideSizes = getOverrideSizes();
+    // (Top-level `descByGuidStr` is shared across phases — see header.)
 
     // Compute per-session consensus offset from current `result`.
     const sessionConsensusOffset = new Map<number, number>();
@@ -1028,8 +942,13 @@ export function buildGuidTranslationMap(
       }
     }
 
-    for (const key of toRemove) {
-      result.delete(key);
+    if (toRemove.length > 0) {
+      defensiveMark("guid-translation:phase-1-validation:size-mismatch-evict", {
+        evicted: toRemove.length,
+      });
+      for (const key of toRemove) {
+        result.delete(key);
+      }
     }
   }
 
@@ -1059,10 +978,7 @@ export function buildGuidTranslationMap(
   // intermediate INSTANCE guids threading action-icon glyph overrides
   // through 8+ Action INSTANCEs).
   {
-    const descByGuidStr = new Map<string, DescendantInfo>();
-    for (const d of descendants) {
-      descByGuidStr.set(d.guidStr, d);
-    }
+    // (Top-level `descByGuidStr` is shared across phases — see header.)
     const toRemoveType: string[] = [];
     for (const [overrideGuidStr, descGuidStr] of result) {
       if (lockedKeys.has(overrideGuidStr)) continue;
@@ -1074,8 +990,13 @@ export function buildGuidTranslationMap(
         toRemoveType.push(overrideGuidStr);
       }
     }
-    for (const key of toRemoveType) {
-      result.delete(key);
+    if (toRemoveType.length > 0) {
+      defensiveMark("guid-translation:phase-1-validation:shape-on-text-evict", {
+        evicted: toRemoveType.length,
+      });
+      for (const key of toRemoveType) {
+        result.delete(key);
+      }
     }
   }
 
@@ -1096,9 +1017,9 @@ export function buildGuidTranslationMap(
   // Only reassigns existing mappings when the new mapping has a strictly
   // better signature match; does not evict mappings with no candidate.
   {
-    const sourceContentSig = extractContainerContentSignature(derivedSymbolData, symbolOverrides);
+    const sourceContentSig = overrideAnalysis.containerContentSig;
     if (sourceContentSig.size > 0) {
-      const localSigs = computeLocalInstanceSignatures(symbolDescendants);
+      const localSigs = computeLocalInstanceSignatures(ctx, symbolDescendants);
       if (localSigs.size > 0) {
         // Step 1: Evict type-mismatched Phase 1 mappings. When Phase 1's
         // offset-vote puts a sig-X source onto a sig-Y local (X ≠ Y), that
@@ -1113,7 +1034,12 @@ export function buildGuidTranslationMap(
             toEvict.push(src);
           }
         }
-        for (const k of toEvict) result.delete(k);
+        if (toEvict.length > 0) {
+          defensiveMark("guid-translation:phase-1.3:type-mismatch-evict", {
+            evicted: toEvict.length,
+          });
+          for (const k of toEvict) result.delete(k);
+        }
 
         // Step 2: Greedy assignment by matching signatures.
         // For each source GUID with a signature, pick the unclaimed local
@@ -1169,17 +1095,17 @@ export function buildGuidTranslationMap(
   // Order: TEXT → INSTANCE first, then SHAPE. SHAPE is deferred until
   // Phase 1.75 has a chance to consume size-matched overrides (separator
   // lines, etc.) whose size uniquely identifies their descendant target.
-  const shapeSignals = extractShapeSignals(derivedSymbolData, symbolOverrides);
-  const phase1_5OverrideSizes = extractOverrideSizes([derivedSymbolData, symbolOverrides], blobs);
+  const shapeSignals = overrideAnalysis.shapeSignals;
+  const phase1_5OverrideSizes = getOverrideSizes();
   for (const [, guids] of bySession) {
     if (guids.length < 3) {continue;}
-    const unmapped = guids.filter((g) => !result.has(guidToString(g)));
+    const unmapped = guids.filter((g) => !result.has(ctx.guidString(g)));
     if (unmapped.length === 0) {continue;}
 
     const phase1Targets = new Set(result.values());
 
     for (const targetType of ["TEXT", "INSTANCE"] as const) {
-      const typedUnmapped = unmapped.filter((g) => typeHints.get(guidToString(g)) === targetType);
+      const typedUnmapped = unmapped.filter((g) => typeHints.get(ctx.guidString(g)) === targetType);
       if (typedUnmapped.length === 0) {continue;}
 
       const typedDescendants = descendants.filter((d) => matchesTypeHint(targetType, d.nodeType));
@@ -1188,38 +1114,34 @@ export function buildGuidTranslationMap(
       // Greedy size-aware matching: for each unmapped override (sorted
       // by localID for determinism), pick the unclaimed descendant
       // whose size best matches the override's `size` field. When the
-      // override carries no explicit size, fall back to positional
-      // matching (the next unclaimed descendant in localID order),
-      // which preserves Phase 1.5's prior behaviour for overrides
-      // that don't expose size.
+      // override carries no explicit size, leave it unmapped — the
+      // earlier "positional fallback by localID" branch was a pure
+      // guess (no signal to verify the pairing) and produced 90 fires
+      // across the corpus, all of which travelled through the
+      // downstream `guidReachableInSymbol` filter without independent
+      // verification. Per CLAUDE.md "don't guess; resolve correctly
+      // or drop", entries without a size signal stay unmapped here
+      // and either get rescued by a later signal-bearing phase or
+      // are dropped by the entry-reach filter.
       const sortedUnmapped = [...typedUnmapped].sort((a, b) => a.localID - b.localID);
       const remainingDesc = new Set(unclaimed.map((d) => d.guidStr));
-      const descByGuidStrLocal = new Map<string, DescendantInfo>();
+      const descByGuidStrLocal = new Map<string, SymbolDescendant>();
       for (const d of unclaimed) descByGuidStrLocal.set(d.guidStr, d);
 
       for (const ov of sortedUnmapped) {
-        const ovKey = guidToString(ov);
+        const ovKey = ctx.guidString(ov);
         const ovSize = phase1_5OverrideSizes.get(ovKey);
-        let chosen: DescendantInfo | undefined;
-        if (ovSize) {
-          // Pick the descendant whose size differs least from ovSize.
-          let bestDiff = Infinity;
-          for (const dGuidStr of remainingDesc) {
-            const d = descByGuidStrLocal.get(dGuidStr);
-            if (!d?.size) continue;
-            const diff = Math.abs(d.size.x - ovSize.x) + Math.abs(d.size.y - ovSize.y);
-            if (diff < bestDiff) { bestDiff = diff; chosen = d; }
-          }
+        if (!ovSize) { continue; }
+        // Pick the descendant whose size differs least from ovSize.
+        let chosen: SymbolDescendant | undefined;
+        let bestDiff = Infinity;
+        for (const dGuidStr of remainingDesc) {
+          const d = descByGuidStrLocal.get(dGuidStr);
+          if (!d?.size) continue;
+          const diff = Math.abs(d.size.x - ovSize.x) + Math.abs(d.size.y - ovSize.y);
+          if (diff < bestDiff) { bestDiff = diff; chosen = d; }
         }
-        if (!chosen) {
-          // Positional fallback: pick the next unclaimed in localID
-          // order — preserves Phase 1.5's prior shape for overrides
-          // without an explicit size signal.
-          const sortedRem = [...remainingDesc].map((g) => descByGuidStrLocal.get(g)).filter((d): d is DescendantInfo => !!d);
-          sortedRem.sort((a, b) => a.guid.localID - b.guid.localID);
-          chosen = sortedRem[0];
-        }
-        if (!chosen) break;
+        if (!chosen) continue;
         result.set(ovKey, chosen.guidStr);
         phase1Targets.add(chosen.guidStr);
         remainingDesc.delete(chosen.guidStr);
@@ -1233,7 +1155,7 @@ export function buildGuidTranslationMap(
   // This phase uses DSD entry sizes to match unmapped GUIDs to descendants
   // with matching original sizes.
   {
-    const overrideSizes = extractOverrideSizes([derivedSymbolData, symbolOverrides], blobs);
+    const overrideSizes = getOverrideSizes();
     const claimed = new Set(result.values());
 
     // Collect ALL unmapped override GUIDs that have a depth-1 size
@@ -1290,10 +1212,10 @@ export function buildGuidTranslationMap(
   // even when a specific property hint exists.
   {
     const claimedAfter175 = new Set(result.values());
-    const shapeOverrideSizes = extractOverrideSizes([derivedSymbolData, symbolOverrides], blobs);
+    const shapeOverrideSizes = getOverrideSizes();
     for (const [, guids] of bySession) {
-      const unmapped = guids.filter((g) => !result.has(guidToString(g)));
-      const shapeUnmapped = unmapped.filter((g) => typeHints.get(guidToString(g)) === "SHAPE");
+      const unmapped = guids.filter((g) => !result.has(ctx.guidString(g)));
+      const shapeUnmapped = unmapped.filter((g) => typeHints.get(ctx.guidString(g)) === "SHAPE");
       if (shapeUnmapped.length === 0) continue;
 
       const candidates = descendants.filter(
@@ -1304,10 +1226,10 @@ export function buildGuidTranslationMap(
       const remaining = new Set(candidates.map((d) => d.guidStr));
       const orderedUnmapped = [...shapeUnmapped].sort((a, b) => a.localID - b.localID);
       for (const ov of orderedUnmapped) {
-        const ovKey = guidToString(ov);
+        const ovKey = ctx.guidString(ov);
         const signal = shapeSignals.get(ovKey);
         const overrideSize = shapeOverrideSizes.get(ovKey);
-        let best: DescendantInfo | undefined;
+        let best: SymbolDescendant | undefined;
         let bestScore = -1;
         for (const d of candidates) {
           if (!remaining.has(d.guidStr)) continue;
@@ -1336,7 +1258,7 @@ export function buildGuidTranslationMap(
   const phase1Targets = new Set(result.values());
 
   // Group descendants by type
-  const descendantsByType = new Map<string, DescendantInfo[]>();
+  const descendantsByType = new Map<string, SymbolDescendant[]>();
   for (const d of descendants) {
     const arrRef2 = { value: descendantsByType.get(d.nodeType) };
     if (!arrRef2.value) {
@@ -1352,7 +1274,7 @@ export function buildGuidTranslationMap(
     // Group this session's GUIDs by type hint
     const byHint = new Map<string, FigGuid[]>();
     for (const guid of guids) {
-      const guidStr = guidToString(guid);
+      const guidStr = ctx.guidString(guid);
       if (result.has(guidStr)) {continue;} // already mapped
       const hint = typeHints.get(guidStr) ?? "UNKNOWN";
       const arrRef = { value: byHint.get(hint) };
@@ -1365,7 +1287,7 @@ export function buildGuidTranslationMap(
 
     for (const [hint, hintGuids] of byHint) {
       // Get candidate descendants matching the type hint
-      const allCandidatesRef = { value: undefined as DescendantInfo[] | undefined };
+      const allCandidatesRef = { value: undefined as SymbolDescendant[] | undefined };
       if (hint === "TEXT") {
         allCandidatesRef.value = descendantsByType.get("TEXT") ?? [];
       } else if (hint === "INSTANCE") {
@@ -1386,14 +1308,14 @@ export function buildGuidTranslationMap(
 
       if (hint === "SHAPE") {
         // Score-based match using shape signals + size compatibility
-        const phase2OverrideSizes = extractOverrideSizes([derivedSymbolData, symbolOverrides], blobs);
+        const phase2OverrideSizes = getOverrideSizes();
         const remaining = new Set(candidates.map((d) => d.guidStr));
         const sortedGuids = [...hintGuids].sort((a, b) => a.localID - b.localID);
         for (const ov of sortedGuids) {
-          const ovKey = guidToString(ov);
+          const ovKey = ctx.guidString(ov);
           const signal = shapeSignals.get(ovKey);
           const overrideSize = phase2OverrideSizes.get(ovKey);
-          let best: DescendantInfo | undefined;
+          let best: SymbolDescendant | undefined;
           let bestScore = -1;
           for (const d of candidates) {
             if (!remaining.has(d.guidStr)) continue;
@@ -1420,44 +1342,37 @@ export function buildGuidTranslationMap(
         // override at depth 4 lands on the next available descendant
         // by localID order (the deeper Message TEXT 199×18) instead
         // of the size-matching INSTANCE.
-        const phase2Sizes = extractOverrideSizes([derivedSymbolData, symbolOverrides], blobs);
+        //
+        // The earlier "positional fallback by localID" branch (used
+        // when the override carried no size) was removed for the same
+        // reason as Phase 1.5's: 1390 corpus fires with no verifiable
+        // signal that the pairing is correct. Entries without size
+        // stay unmapped and let the entry-reach filter drop them.
+        const phase2Sizes = getOverrideSizes();
         const sortedGuids = [...hintGuids].sort((a, b) => a.localID - b.localID);
         const remaining = new Set(candidates.map((d) => d.guidStr));
-        const descByGuidStrLocal = new Map<string, DescendantInfo>();
+        const descByGuidStrLocal = new Map<string, SymbolDescendant>();
         for (const d of candidates) descByGuidStrLocal.set(d.guidStr, d);
 
         for (const ov of sortedGuids) {
-          const ovKey = guidToString(ov);
+          const ovKey = ctx.guidString(ov);
           const ovSize = phase2Sizes.get(ovKey);
-          let chosen: DescendantInfo | undefined;
-          if (ovSize) {
-            let bestDiff = Infinity;
-            for (const dGuidStr of remaining) {
-              const d = descByGuidStrLocal.get(dGuidStr);
-              if (!d?.size) continue;
-              const diff = Math.abs(d.size.x - ovSize.x) + Math.abs(d.size.y - ovSize.y);
-              if (diff < bestDiff) { bestDiff = diff; chosen = d; }
-            }
+          if (!ovSize) { continue; }
+          let chosen: SymbolDescendant | undefined;
+          let bestDiff = Infinity;
+          for (const dGuidStr of remaining) {
+            const d = descByGuidStrLocal.get(dGuidStr);
+            if (!d?.size) continue;
+            const diff = Math.abs(d.size.x - ovSize.x) + Math.abs(d.size.y - ovSize.y);
+            if (diff < bestDiff) { bestDiff = diff; chosen = d; }
           }
-          if (!chosen) {
-            const sortedRem = [...remaining]
-              .map((g) => descByGuidStrLocal.get(g))
-              .filter((d): d is DescendantInfo => !!d)
-              .sort((a, b) => a.guid.localID - b.guid.localID);
-            chosen = sortedRem[0];
-          }
-          if (!chosen) break;
+          if (!chosen) continue;
           result.set(ovKey, chosen.guidStr);
           remaining.delete(chosen.guidStr);
         }
       }
     }
   }
-
-  // ── Phase 3: Fix adjacent sibling swaps ──
-  // Disabled: correct mapping increases diff because variant SYMBOL rendering
-  // is not yet accurate enough. Re-enable when variant rendering improves.
-  // fixAdjacentSiblingSwaps(result, descendants, localIdToDescInfo, symbolOverrides);
 
   // ── Phase 4: TEXT glyph-count fixup ──
   //
@@ -1467,10 +1382,18 @@ export function buildGuidTranslationMap(
   // count. If a pair of TEXT mappings within the same session are swapped
   // (i.e. swapping them restores consistency), swap them.
   {
-    const glyphCounts = extractOverrideGlyphCounts(derivedSymbolData, symbolOverrides);
+    // Derive plain glyph-count map from the analysis bundle's
+    // glyphSummaries (single SoT for "what the overrideSets say
+    // about glyph counts"). The legacy `extractOverrideGlyphCounts`
+    // helper was a thin wrapper that walked the data a second time
+    // — replaced by this projection.
+    const glyphCounts = new Map<string, number>();
+    for (const [k, s] of overrideAnalysis.glyphSummaries) {
+      glyphCounts.set(k, s.glyphCount);
+    }
     if (glyphCounts.size > 0) {
-      const descByGuid = new Map<string, DescendantInfo>();
-      for (const d of descendants) descByGuid.set(d.guidStr, d);
+      // (Top-level `descByGuidStr` is shared across phases — read directly.)
+      const descByGuid = descByGuidStr;
 
       // For each override GUID mapped to a TEXT descendant with an expected
       // char count, check mismatch.
@@ -1481,36 +1404,21 @@ export function buildGuidTranslationMap(
         if (glyphs === undefined) continue;
         const desc = descByGuid.get(dstGuidStr);
         if (!desc || desc.nodeType !== "TEXT") continue;
-        const expected = desc.expectedCharCount;
+        const expected = expectedCharCountOf(ctx, desc, cpaCharCounts);
         if (typeof expected !== "number") continue;
         if (expected !== glyphs) {
           mismatches.push({ ovKey, currentDst: dstGuidStr, expected, glyphs });
         }
       }
 
-      // Pair-wise swap: for every pair of mismatched entries, check whether
-      // swapping their destinations resolves both. Skip pairs that involve
-      // a locked Phase Zero mapping — those are exact matches and must
-      // not be reassigned by glyph-count heuristics.
+      // (Pair-wise swap branch removed — calibration showed 0 fires
+      // across both the production fixture corpus and the existing
+      // test suite. The hypothesis was "two TEXT mappings within the
+      // same session may have been transposed and swapping restores
+      // consistency"; in real input the single-mismatch reroute below
+      // handles every mismatch primary leaves behind, so the swap
+      // branch was dead defensive code.)
       const fixed = new Set<string>();
-      for (let i = 0; i < mismatches.length; i++) {
-        const a = mismatches[i];
-        if (fixed.has(a.ovKey) || lockedKeys.has(a.ovKey)) continue;
-        for (let j = i + 1; j < mismatches.length; j++) {
-          const b = mismatches[j];
-          if (fixed.has(b.ovKey) || lockedKeys.has(b.ovKey)) continue;
-          const descA = descByGuid.get(a.currentDst);
-          const descB = descByGuid.get(b.currentDst);
-          if (!descA || !descB) continue;
-          if (a.glyphs === descB.expectedCharCount && b.glyphs === descA.expectedCharCount) {
-            result.set(a.ovKey, b.currentDst);
-            result.set(b.ovKey, a.currentDst);
-            fixed.add(a.ovKey);
-            fixed.add(b.ovKey);
-            break;
-          }
-        }
-      }
 
       // Single-mismatch reroute: for each remaining mismatch, look for a
       // TEXT descendant whose expectedCharCount matches the override's
@@ -1522,11 +1430,11 @@ export function buildGuidTranslationMap(
       const claimed = new Set(result.values());
       for (const m of mismatches) {
         if (fixed.has(m.ovKey) || lockedKeys.has(m.ovKey)) continue;
-        let unclaimed: DescendantInfo | undefined;
-        let anyMatch: DescendantInfo | undefined;
+        let unclaimed: SymbolDescendant | undefined;
+        let anyMatch: SymbolDescendant | undefined;
         for (const d of descendants) {
           if (d.nodeType !== "TEXT") continue;
-          if (d.expectedCharCount !== m.glyphs) continue;
+          if (expectedCharCountOf(ctx, d, cpaCharCounts) !== m.glyphs) continue;
           if (!anyMatch) anyMatch = d;
           if (!claimed.has(d.guidStr) || d.guidStr === m.currentDst) {
             unclaimed = d;
@@ -1534,6 +1442,9 @@ export function buildGuidTranslationMap(
           }
         }
         if (unclaimed && unclaimed.guidStr !== m.currentDst) {
+          defensiveMark("guid-translation:phase-4:single-mismatch-reroute", {
+            ovKey: m.ovKey,
+          });
           result.set(m.ovKey, unclaimed.guidStr);
           claimed.add(unclaimed.guidStr);
           fixed.add(m.ovKey);
@@ -1541,6 +1452,9 @@ export function buildGuidTranslationMap(
           // A correct target exists but is claimed by another (likely
           // duplicate) override. Drop this mismatched mapping so it
           // doesn't apply stale glyphs to the wrong TEXT node.
+          defensiveMark("guid-translation:phase-4:drop-on-claimed", {
+            ovKey: m.ovKey,
+          });
           result.delete(m.ovKey);
           fixed.add(m.ovKey);
         }
@@ -1561,9 +1475,8 @@ export function buildGuidTranslationMap(
   // the legitimate single-entry resize cases (Toolbar Trailing
   // 194×44 → 44×44 has no co-resident exact-size sibling).
   {
-    const phase5Sizes = extractOverrideSizes([derivedSymbolData, symbolOverrides], blobs);
-    const descByGuidStr = new Map<string, DescendantInfo>();
-    for (const d of descendants) descByGuidStr.set(d.guidStr, d);
+    const phase5Sizes = getOverrideSizes();
+    // (Top-level `descByGuidStr` is shared across phases — see header.)
     const claimed = new Set(result.values());
 
     for (const [overrideGuidStr, descGuidStr] of result) {
@@ -1582,6 +1495,11 @@ export function buildGuidTranslationMap(
         const diff = Math.abs(ovSize.x - d.size.x) + Math.abs(ovSize.y - d.size.y);
         if (diff <= 1 && diff < currentDiff) {
           // Reroute: swap claim
+          defensiveMark("guid-translation:phase-5:exact-size-reroute", {
+            overrideGuidStr,
+            from: descGuidStr,
+            to: d.guidStr,
+          });
           result.set(overrideGuidStr, d.guidStr);
           claimed.delete(descGuidStr);
           claimed.add(d.guidStr);
@@ -1596,79 +1514,6 @@ export function buildGuidTranslationMap(
 }
 
 /**
- * Detect override GUIDs that have `overriddenSymbolID` set at depth-1.
- */
-function collectOverriddenSymbolIDGuids(overrides: readonly FigKiwiSymbolOverride[] | undefined): Set<string> {
-  const guids = new Set<string>();
-  if (!overrides) {return guids;}
-  for (const entry of overrides) {
-    const firstGuid = entry.guidPath?.guids?.[0];
-    if (!firstGuid) {continue;}
-    if (entry.overriddenSymbolID !== undefined) {
-      guids.add(guidToString(firstGuid));
-    }
-  }
-  return guids;
-}
-
-/**
- * Fix adjacent sibling swaps in the translation map.
- *
- * When two INSTANCE descendants have adjacent localIDs but their order in
- * the tree differs from the override GUID allocation order, the offset
- * algorithm swaps them. This function detects such swaps using semantic
- * evidence (overriddenSymbolID targets should be visible) and corrects them.
- */
-function _fixAdjacentSiblingSwaps(
-  { result, descendants, localIdToDescInfo, symbolOverrides }: { result: Map<string, string>; descendants: DescendantInfo[]; localIdToDescInfo: Map<number, DescendantInfo>; symbolOverrides: readonly FigKiwiSymbolOverride[] | undefined; }
-): void {
-  const overriddenGuids = collectOverriddenSymbolIDGuids(symbolOverrides);
-  if (overriddenGuids.size === 0) {return;}
-
-  // Build descendant guidStr → DescendantInfo lookup
-  const descByGuidStr = new Map<string, DescendantInfo>();
-  for (const d of descendants) {
-    descByGuidStr.set(d.guidStr, d);
-  }
-
-  // Build reverse map: descendant guidStr → override guidStr
-  const reverseMap = new Map<string, string>();
-  for (const [overGuidStr, descGuidStr] of result) {
-    reverseMap.set(descGuidStr, overGuidStr);
-  }
-
-  for (const overGuidStr of overriddenGuids) {
-    const descGuidStr = result.get(overGuidStr);
-    if (!descGuidStr) {continue;}
-
-    const descInfo = descByGuidStr.get(descGuidStr);
-    if (!descInfo || descInfo.visible !== false) {continue;}
-
-    // This variant-switching override targets a hidden descendant — likely wrong.
-    // Look for an adjacent descendant (±1 localID) that is visible + same type.
-    for (const delta of [-1, 1]) {
-      const adjLocalID = descInfo.guid.localID + delta;
-      const adjDescInfo = localIdToDescInfo.get(adjLocalID);
-      if (!adjDescInfo) {continue;}
-      if (adjDescInfo.nodeType !== descInfo.nodeType) {continue;}
-      if (adjDescInfo.visible === false) {continue;}
-
-      // Found a visible adjacent sibling — swap the mappings.
-      const adjOverGuidStr = reverseMap.get(adjDescInfo.guidStr);
-      if (adjOverGuidStr) {
-        result.set(overGuidStr, adjDescInfo.guidStr);
-        result.set(adjOverGuidStr, descGuidStr);
-        reverseMap.set(adjDescInfo.guidStr, overGuidStr);
-        reverseMap.set(descGuidStr, adjOverGuidStr);
-      } else {
-        result.set(overGuidStr, adjDescInfo.guidStr);
-      }
-      break;
-    }
-  }
-}
-
-/**
  * Translate override entries' first-level GUIDs using a translation map.
  *
  * Only translates the first GUID in each guidPath. Multi-level paths keep
@@ -1680,6 +1525,7 @@ function _fixAdjacentSiblingSwaps(
 export function translateOverrides(
   overrides: readonly FigKiwiSymbolOverride[],
   translationMap: GuidTranslationMap,
+  ctx: FigResolveContext = createFigResolveContext(),
 ): readonly FigKiwiSymbolOverride[] {
   if (translationMap.size === 0) {return overrides;}
 
@@ -1687,7 +1533,7 @@ export function translateOverrides(
     const guids = entry.guidPath?.guids;
     if (!guids || guids.length === 0) {return entry;}
 
-    const firstGuidStr = guidToString(guids[0]);
+    const firstGuidStr = ctx.guidString(guids[0]);
     const mapped = translationMap.get(firstGuidStr);
     if (!mapped) {return entry;}
 

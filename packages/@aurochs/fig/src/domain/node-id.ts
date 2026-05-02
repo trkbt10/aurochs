@@ -2,12 +2,15 @@
  * @file Branded ID types for fig design documents
  *
  * IDs are encoded as "sessionID:localID" strings matching the
- * guidToString() format from @aurochs/fig/parser.
+ * guidToString() format from @aurochs/fig/parser. The conversion
+ * helpers below delegate to that primitive — never inline the format
+ * here or anywhere else (the brand cast is the only addition).
  *
  * These are domain types — they define the identity model for
  * FigDesignNode / FigDesignDocument and are consumed by renderer,
  * builder, and editor packages alike.
  */
+import { guidToString, parseGuidString, type FigGuid } from "../parser";
 
 // =============================================================================
 // Branded ID Types
@@ -35,30 +38,36 @@ export type FigPageId = string & { readonly __brand: "FigPageId" };
 
 /**
  * Convert a FigGuid (from @aurochs/fig) to a FigNodeId string.
+ *
+ * Delegates the actual stringification to the SoT primitive
+ * `guidToString` — keep them aligned (this brand is just the type
+ * marker, not an alternative format).
  */
-export function guidToNodeId(guid: { readonly sessionID: number; readonly localID: number }): FigNodeId {
-  return `${guid.sessionID}:${guid.localID}` as FigNodeId;
+export function guidToNodeId(guid: FigGuid): FigNodeId {
+  return guidToString(guid) as FigNodeId;
 }
 
 /**
- * Convert a FigGuid to a FigPageId string.
+ * Convert a FigGuid to a FigPageId string. See `guidToNodeId` —
+ * same delegation, different brand.
  */
-export function guidToPageId(guid: { readonly sessionID: number; readonly localID: number }): FigPageId {
-  return `${guid.sessionID}:${guid.localID}` as FigPageId;
+export function guidToPageId(guid: FigGuid): FigPageId {
+  return guidToString(guid) as FigPageId;
 }
 
 /**
  * Parse a branded ID string back into session and local components.
+ *
+ * Delegates to `parseGuidString` — the inverse of `guidToString` and
+ * the single source of truth for parsing the `"sessionID:localID"`
+ * format. Validation that the input contains a separator is performed
+ * here (since `parseGuidString` assumes well-formed input).
  */
-export function parseId(id: FigNodeId | FigPageId): { readonly sessionID: number; readonly localID: number } {
-  const colonIndex = id.indexOf(":");
-  if (colonIndex === -1) {
+export function parseId(id: FigNodeId | FigPageId): FigGuid {
+  if (id.indexOf(":") === -1) {
     throw new Error(`Invalid fig ID format: "${id}" (expected "sessionID:localID")`);
   }
-  return {
-    sessionID: Number(id.substring(0, colonIndex)),
-    localID: Number(id.substring(colonIndex + 1)),
-  };
+  return parseGuidString(id);
 }
 
 /**

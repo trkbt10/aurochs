@@ -6,7 +6,7 @@
  */
 
 import type { FigDesignNode, FigNodeId } from "@aurochs/fig/domain";
-import { dfsById } from "@aurochs/fig/tree";
+import { dfsById, walkTree } from "@aurochs/fig/tree";
 
 // =============================================================================
 // Find
@@ -202,20 +202,15 @@ export function insertNodeInTree(
 
 /**
  * Flatten a tree of nodes into a flat array (pre-order traversal).
+ *
+ * Uses the `walkTree` SoT primitive (`@aurochs/fig/tree`) — the
+ * inline `function visit(...)` recursion that used to live here
+ * was a duplicate of the same generic walk every other tree
+ * collector goes through.
  */
 export function flattenNodes(nodes: readonly FigDesignNode[]): readonly FigDesignNode[] {
   const result: FigDesignNode[] = [];
-
-  function visit(nodeList: readonly FigDesignNode[]): void {
-    for (const node of nodeList) {
-      result.push(node);
-      if (node.children) {
-        visit(node.children);
-      }
-    }
-  }
-
-  visit(nodes);
+  walkTree(nodes, (node) => { result.push(node); }, { getChildren: (n) => n.children ?? [] });
   return result;
 }
 

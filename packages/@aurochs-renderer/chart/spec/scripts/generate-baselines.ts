@@ -20,10 +20,14 @@ const SPEC_DIR = path.join(import.meta.dir, "..");
 
 /**
  * Load a fixture module by path using runtime import.
- * Encapsulates the dynamic import needed for runtime-resolved fixture paths.
+ *
+ * Fixture paths are resolved by glob at runtime, so the import target
+ * is not knowable at compile time. ESM `import()` accepts a runtime
+ * specifier directly — Bun (the script runtime) resolves it against
+ * the current working directory.
  */
 async function loadFixtureModule(fixturePath: string): Promise<Record<string, unknown>> {
-  return Function("p", "return import(p)")(fixturePath);
+  return import(fixturePath);
 }
 
 async function main() {

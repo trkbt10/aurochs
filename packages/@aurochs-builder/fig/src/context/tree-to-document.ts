@@ -18,18 +18,21 @@ import type {
 } from "@aurochs/fig/types";
 import { FIG_NODE_TYPE } from "@aurochs/fig/types";
 import type { NodeTreeResult, FigBlob, FigGuid } from "@aurochs/fig/parser";
-import { getNodeType, safeChildren, guidToString } from "@aurochs/fig/parser";
-import { dfsById } from "@aurochs/fig/tree";
+import { getNodeType, guidToString, parseGuidString } from "@aurochs/fig/parser";
+import { walkTree } from "@aurochs/fig/tree";
 import {
   getEffectiveSymbolID,
   buildFigStyleRegistry,
   getInstanceSymbolOverrides,
   buildGuidTranslationMap,
+  analyzeOverrideSets,
   resolveSymbolGuidStr,
   styleRefKeys,
   isInstanceSelfOverride,
+  createFigResolveContext,
 } from "@aurochs/fig/symbols";
-import type { GuidTranslationMap } from "@aurochs/fig/symbols";
+import type { GuidTranslationMap, FigResolveContext } from "@aurochs/fig/symbols";
+import { defensiveMark } from "@aurochs/fig/diagnostics/defensive";
 import type { LoadedFigFile } from "@aurochs/fig/roundtrip";
 import type {
   FigDesignDocument, FigDesignNode, FigPage, AutoLayoutProps, LayoutConstraints, TextData, TextStyleOverride, SymbolOverride,
@@ -627,6 +630,7 @@ function collectRawFields(node: FigNode): Record<string, unknown> | undefined {
  *     guids are resolved in the variant's namespace.
  */
 function resolveOverridePaths(
+  ctx: FigResolveContext,
   node: FigNode,
   symbolMap: ReadonlyMap<string, FigNode> | undefined,
   blobs: readonly FigBlob[] | undefined,
@@ -681,7 +685,7 @@ function resolveOverridePaths(
   const resolve = (
     entries: readonly FigKiwiSymbolOverride[],
   ): readonly SymbolOverride[] => {
-    const effGuidStr = guidToString(effectiveGuid);
+    const effGuidStr = ctx.guidString(effectiveGuid);
     // Two-stage filter:
     //
     // Stage 1: the raw first guid must either exist in the file OR
@@ -731,8 +735,19 @@ function resolveOverridePaths(
     const filtered = entries.filter((e) => {
       const g = e.guidPath?.guids?.[0];
       if (!g) return true;
-      if (guidExistsInFile(g, symbolMap)) return true;
-      return ghostSessions.has(g.sessionID);
+      if (guidExistsInFile(ctx, g, symbolMap)) return true;
+      if (ghostSessions.has(g.sessionID)) {
+        defensiveMark("tree-to-document:ghost-session-filter:passed", {
+          sessionID: g.sessionID,
+          firstGuid: ctx.guidString(g),
+        });
+        return true;
+      }
+      defensiveMark("tree-to-document:ghost-session-filter:dropped", {
+        sessionID: g.sessionID,
+        firstGuid: ctx.guidString(g),
+      });
+      return false;
     });
     // Re-route self-override entries' paths to the SYMBOL root before
     // running the translation primitive so they don't get pulled into
@@ -751,18 +766,19 @@ function resolveOverridePaths(
       // for Action 5/4-1/2-1/3-1).
       const firstGuid = e.guidPath?.guids?.[0];
       if (firstGuid) {
-        const s = `${firstGuid.sessionID}:${firstGuid.localID}`;
+        const s = ctx.guidString(firstGuid);
         // Already an exact GUID match in the SYMBOL — leave as-is.
-        if (findInKiwiTree(effectiveSymbol.node, s) !== undefined) return e;
+        if (findInKiwiTree(ctx, effectiveSymbol.node, s) !== undefined) { return e; }
         // Or matches a descendant's overrideKey (Figma's stable
         // SYMBOL-side slot identifier).
-        if (overrideKeyExistsInSymbol(effectiveSymbol.node, s)) return e;
+        if (overrideKeyExistsInSymbol(ctx, effectiveSymbol.node, s)) { return e; }
       }
       const newPath = { guids: [effectiveGuid] };
       return { ...e, guidPath: newPath };
     });
-    const resolved = resolveEntryPaths(rerouted, effectiveSymbol.node, node, symbolMap, blobs);
+    const resolved = resolveEntryPaths(ctx, rerouted, effectiveSymbol.node, node, symbolMap, blobs);
     return resolved.filter((entry) => guidReachableInSymbol(
+      ctx,
       entry.guidPath?.guids?.[0],
       effectiveSymbol.node,
       effGuidStr,
@@ -776,27 +792,32 @@ function resolveOverridePaths(
 }
 
 function guidReachableInSymbol(
-  guid: { readonly sessionID: number; readonly localID: number } | undefined,
+  ctx: FigResolveContext,
+  guid: FigGuid | undefined,
   symbolRoot: FigNode,
   symbolIdStr: string,
 ): boolean {
   if (!guid) { return true; } // empty path — treated as no constraint
-  const s = `${guid.sessionID}:${guid.localID}`;
+  const s = ctx.guidString(guid);
   if (s === symbolIdStr) { return true; }
-  return findInKiwiTree(symbolRoot, s) !== undefined;
+  return findInKiwiTree(ctx, symbolRoot, s) !== undefined;
 }
 
 function guidExistsInFile(
-  guid: { readonly sessionID: number; readonly localID: number } | undefined,
+  ctx: FigResolveContext,
+  guid: FigGuid | undefined,
   symbolMap: ReadonlyMap<string, FigNode>,
 ): boolean {
   if (!guid) { return true; }
-  const s = `${guid.sessionID}:${guid.localID}`;
-  if (symbolMap.has(s)) { return true; }
-  for (const root of symbolMap.values()) {
-    if (findInKiwiTree(root, s)) { return true; }
-  }
-  return false;
+  // `symbolMap` is the full nodeMap built by `collectNodeMap` walking every
+  // root recursively, so it already contains every descendant by GUID — a
+  // direct `has` covers the entire file. A previous fallback iterated every
+  // value and walked each subtree via `findInKiwiTree`, which can only ever
+  // find descendants already keyed in the map, so it was guaranteed dead
+  // code that scaled O(N²) per missing GUID. On apple-ios26.fig that
+  // produced 36k cache-miss walks at ~15ms each (≈ 9 minutes of pure
+  // wasted work) and was the dominant cause of the editor hanging.
+  return symbolMap.has(ctx.guidString(guid));
 }
 
 /**
@@ -806,135 +827,65 @@ function guidExistsInFile(
  * descend into the variant's SYMBOL, not the default variant.
  */
 function resolveEntryPaths(
+  ctx: FigResolveContext,
   entries: readonly FigKiwiSymbolOverride[],
   symbolRoot: FigNode,
   instanceNode: FigNode,
   symbolMap: ReadonlyMap<string, FigNode>,
   blobs: readonly FigBlob[] | undefined,
 ): readonly SymbolOverride[] {
-  const primaryMap = buildGuidTranslationMap(
-    safeChildren(symbolRoot),
-    instanceNode.derivedSymbolData,
-    getInstanceSymbolOverrides(instanceNode),
+  // The override analysis is the SoT for what the override entries
+  // collectively say about each first-guid. `buildGuidTranslationMap`
+  // consumes the same bundle so we analyse once and thread the
+  // result to it.
+  const dsd = instanceNode.derivedSymbolData;
+  const so = getInstanceSymbolOverrides(instanceNode);
+  const overrideAnalysis = analyzeOverrideSets(ctx, dsd, so);
+
+  // `levelMap` is the translation primitive's output — and the only
+  // input the entry-path resolver consults. Earlier revisions merged
+  // a positional "offset fallback" into this map for first-guids the
+  // primitive couldn't resolve (`buildOffsetFallbackMap` paired
+  // unresolved guids to SYMBOL descendants in BFS order, hoping that
+  // matched Figma's allocation order). Calibration showed that of the
+  // ~98k pairings the fallback emitted across the production fixture
+  // corpus only ~85 (0.087%) survived the downstream
+  // `guidReachableInSymbol` filter to actually reach the document, and
+  // every one of those 85 was either type-mismatched (a SHAPE override
+  // landing on a TEXT descendant — exactly the structural class
+  // `buildGuidTranslationMap`'s Phase 1 validation explicitly removes)
+  // or had no type signal at all. Removing the fallback aligns the
+  // load-time pipeline with the runtime resolver in
+  // `@aurochs/fig/symbols/symbol-resolver` and the variant-switch
+  // resolver in `design-override-resolver` (neither carries a
+  // fallback): three call sites, one SoT.
+  const levelMap = buildGuidTranslationMap(
+    symbolRoot,
+    dsd,
+    so,
     instanceNode.componentPropAssignments,
     symbolMap,
     blobs,
+    ctx,
+    overrideAnalysis,
   );
-
-  // Fallback: offset-based mapping anchored at the self-override.
-  // When authored overrides carry consecutive localIDs (typical of
-  // Figma's INSTANCE GUID allocation — the SYMBOL itself at base and
-  // the override slots at base+1, base+2, ...) and the primitive
-  // heuristic couldn't group them under one session (e.g. SYMBOL has
-  // descendants across multiple sessions), we match by DFS order.
-  // `primaryMap` wins whenever it holds a key; fallback only fills the
-  // holes.
-  const effGuidStr = `${(instanceNode.symbolData?.symbolID ?? instanceNode.symbolID)?.sessionID ?? 0}:${(instanceNode.symbolData?.symbolID ?? instanceNode.symbolID)?.localID ?? 0}`;
-  const fallbackMap = buildOffsetFallbackMap(entries, symbolRoot, effGuidStr);
-
-  const levelMap: GuidTranslationMap = mergeMaps(primaryMap, fallbackMap);
 
   // `resolvedSlotGuid → variantSymbolGuid`: a sibling single-guid entry
   // with `overriddenSymbolID` announces that the INSTANCE at
   // `resolvedSlotGuid` is running the named variant. Multi-level paths
   // that pass through the same slot descend into the variant's SYMBOL.
+  // The raw `firstGuidStr → variantSymbolGuidStr` mapping comes from
+  // the SoT analysis bundle; we only translate keys through the
+  // resolved level map here.
   const variantAt = new Map<string, string>();
-  for (const entry of entries) {
-    const guids = entry.guidPath?.guids;
-    if (!guids || guids.length !== 1) { continue; }
-    if (!entry.overriddenSymbolID) { continue; }
-    const src = guidToString(guids[0]);
-    const resolved = levelMap.get(src) ?? src;
-    variantAt.set(
-      resolved,
-      `${entry.overriddenSymbolID.sessionID}:${entry.overriddenSymbolID.localID}`,
-    );
+  for (const [rawSrc, variantSymStr] of overrideAnalysis.singleGuidVariantOverrides) {
+    const resolved = levelMap.get(rawSrc) ?? rawSrc;
+    variantAt.set(resolved, variantSymStr);
   }
 
   return entries.map((entry) =>
-    resolveEntryPath(entry, levelMap, symbolRoot, symbolMap, blobs, variantAt),
+    resolveEntryPath(ctx, entry, levelMap, symbolRoot, symbolMap, blobs, variantAt),
   );
-}
-
-/**
- * Build an offset-anchored fallback mapping: when the override set
- * contains a self-override at `[symbolId]` and subsequent authored
- * guids have consecutive localIDs, pair each consecutive authored guid
- * with the next descendant in DFS order.
- *
- * This recovers the addressing convention Figma uses when its
- * majority-vote heuristic has insufficient cross-session signal to
- * group the override GUIDs. Without it, authored overrides targeting
- * SYMBOL descendants across different Kiwi session IDs fail to
- * resolve, producing `target node not found` warnings.
- */
-function buildOffsetFallbackMap(
-  entries: readonly FigKiwiSymbolOverride[],
-  symbolRoot: FigNode,
-  symbolIdStr: string,
-): ReadonlyMap<string, string> {
-  // Collect all unique override first-guids. Figma authoring allocates
-  // override slot GUIDs sequentially — we pair each authored guid with
-  // a descendant in DFS order, using localID as tiebreaker within the
-  // authoring session. Groups by session ID so authors using separate
-  // Kiwi sessions for the SYMBOL vs slot allocation still match.
-  const [symSessionStr] = symbolIdStr.split(":");
-  const anchorSession = Number(symSessionStr);
-
-  const seen = new Set<string>();
-  const sameSession: { str: string; local: number }[] = [];
-  for (const e of entries) {
-    const g = e.guidPath?.guids?.[0];
-    if (!g) { continue; }
-    const s = guidToString(g);
-    if (seen.has(s)) { continue; }
-    if (s === symbolIdStr) { continue; } // self-override, handled elsewhere
-    seen.add(s);
-    if (g.sessionID === anchorSession) {
-      sameSession.push({ str: s, local: g.localID });
-    }
-  }
-
-  // Only accept same-session candidates. Cross-session authored guids
-  // are ambiguous (could be historical slot IDs, rich-text style IDs,
-  // cross-component paste residue) — mapping them against DFS order
-  // produces false-positive slot matches that overwrite legitimate
-  // SYMBOL descendant guids. Reject them here so the downstream
-  // `overrideReachable` filter can drop them cleanly.
-  const candidates: { str: string; local: number }[] = sameSession.slice().sort((a, b) => a.local - b.local);
-  if (candidates.length === 0) { return new Map(); }
-
-  // DFS descendants of the SYMBOL frame.
-  const descendants: FigNode[] = [];
-  const stack = [...safeChildren(symbolRoot)];
-  while (stack.length > 0) {
-    const n = stack.shift();
-    if (!n) { continue; }
-    descendants.push(n);
-    for (const c of safeChildren(n)) { stack.push(c); }
-  }
-
-  // Pair each authored guid with the next descendant in DFS order.
-  // Figma's authoring allocates sequentially — position i in the
-  // candidates list corresponds to descendant position i.
-  const result = new Map<string, string>();
-  const max = Math.min(candidates.length, descendants.length);
-  for (let i = 0; i < max; i++) {
-    result.set(candidates[i].str, guidToString(descendants[i].guid));
-  }
-  return result;
-}
-
-function mergeMaps(
-  primary: GuidTranslationMap,
-  fallback: ReadonlyMap<string, string>,
-): GuidTranslationMap {
-  if (fallback.size === 0) { return primary; }
-  const merged = new Map(primary);
-  for (const [k, v] of fallback) {
-    if (!merged.has(k)) { merged.set(k, v); }
-  }
-  return merged;
 }
 
 /**
@@ -942,6 +893,7 @@ function mergeMaps(
  * namespace into the SYMBOL descendant namespace at each level.
  */
 function resolveEntryPath(
+  ctx: FigResolveContext,
   entry: FigKiwiSymbolOverride,
   topMap: GuidTranslationMap,
   symbolRoot: FigNode,
@@ -957,7 +909,7 @@ function resolveEntryPath(
   let levelSymbolRoot: FigNode | undefined = symbolRoot;
 
   for (let i = 0; i < guids.length; i++) {
-    const src = guidToString(guids[i]);
+    const src = ctx.guidString(guids[i]);
     // Identity preference: if the source guid already appears as a
     // descendant of the current SYMBOL, treat it as already-resolved
     // and do not consult the translation map. Without this check, the
@@ -968,19 +920,37 @@ function resolveEntryPath(
     // `[192:31517 → 315:31895 → 2072:9434]` where `315:31895` is a
     // direct child of the variant SYMBOL but was rewritten to a
     // sibling TEXT.
-    const alreadyDescendant = levelSymbolRoot !== undefined && findInKiwiTree(levelSymbolRoot, src) !== undefined;
+    const alreadyDescendant = levelSymbolRoot !== undefined && findInKiwiTree(ctx, levelSymbolRoot, src) !== undefined;
+    if (alreadyDescendant && levelMap.has(src)) {
+      // The translation primitive proposed a mapping for `src`, but
+      // `src` already exists as a descendant of the current SYMBOL.
+      // Identity preference wins (we keep `src` as-is) — but the fact
+      // that the translation map disagreed with reality is worth
+      // noticing: it usually means `buildGuidTranslationMap`'s
+      // heuristic phases would have re-routed a valid descendant guid
+      // to a different descendant. Recorded for calibration.
+      defensiveMark("tree-to-document:alreadyDescendant-overrides-translation", {
+        src,
+        proposed: levelMap.get(src),
+      });
+    }
     const resolvedStr = alreadyDescendant ? src : (levelMap.get(src) ?? src);
-    resolved.push(parseGuidToFigGuid(resolvedStr));
+    resolved.push(parseGuidString(resolvedStr));
 
     if (i === guids.length - 1 || !levelSymbolRoot) { break; }
 
-    const target = findInKiwiTree(levelSymbolRoot, resolvedStr);
+    const target = findInKiwiTree(ctx, levelSymbolRoot, resolvedStr);
     if (!target) { break; }
     if (getNodeType(target) !== FIG_NODE_TYPE.INSTANCE) { continue; }
 
+    // No variant override on this slot → use the INSTANCE's effective
+    // SYMBOL ID. This is the dominant code path (calibration: ~48k
+    // fires across the corpus, vs. ~few hundred variant overrides),
+    // so it is treated as the normal path rather than a defensive
+    // branch.
     const variantGuidStr = variantAt.get(resolvedStr);
     const nestedSymbolGuid = variantGuidStr
-      ? parseGuidToFigGuid(variantGuidStr)
+      ? parseGuidString(variantGuidStr)
       : getEffectiveSymbolID(target);
     if (!nestedSymbolGuid) { break; }
     const nestedSymbol = resolveSymbolGuidStr(nestedSymbolGuid, symbolMap);
@@ -1006,23 +976,21 @@ function resolveEntryPath(
       seed,
     ];
 
-    const primaryLevelMap = buildGuidTranslationMap(
-      safeChildren(nestedSymbol.node),
+    // Same SoT as the top-level call: one `analyzeOverrideSets` walk
+    // feeds the translation primitive directly. No positional offset
+    // fallback — see the rationale comment in `resolveEntryPaths`.
+    const nestedAnalysis = analyzeOverrideSets(ctx, target.derivedSymbolData, seeded);
+
+    levelMap = buildGuidTranslationMap(
+      nestedSymbol.node,
       target.derivedSymbolData,
       seeded,
       target.componentPropAssignments,
       symbolMap,
       blobs,
+      ctx,
+      nestedAnalysis,
     );
-
-    // Offset-based fallback at each level. Nested INSTANCE's own
-    // authoring session anchor is its effective SYMBOL id. When the
-    // primitive's heuristic fails (e.g. single seed guid, no majority
-    // vote signal), pair tail guids against DFS descendants by localID
-    // order. Same-session-priority policy applies at every level.
-    const nestedAnchorStr = `${nestedSymbolGuid.sessionID}:${nestedSymbolGuid.localID}`;
-    const nestedFallback = buildOffsetFallbackMap(seeded, nestedSymbol.node, nestedAnchorStr);
-    levelMap = mergeMaps(primaryLevelMap, nestedFallback);
     levelSymbolRoot = nestedSymbol.node;
   }
 
@@ -1055,45 +1023,34 @@ function resolveEntryPath(
 }
 
 /**
- * FigNode-tree slot lookup: delegates to the generic SoT primitive
- * `dfsById` in `@aurochs/fig/tree`. This type-ties the primitive to
- * the raw Kiwi `FigNode` shape via the `getId` / `getChildren`
- * extractors. Every reach/exist check at the FigNode layer in this
- * module MUST go through this wrapper, which in turn routes to
- * `dfsById` — the repo-wide SoT for DFS-by-id. Inline re-implementation
- * is banned by the ESLint rule `custom/no-inline-dfs-by-id`.
+ * SYMBOL-side slot lookup: returns the descendant FigNode whose `guid`
+ * stringifies to `guidStr`, or `undefined` when no such descendant
+ * exists. Routes through the cached `SymbolDescendantBundle.guidToDesc`
+ * map so the lookup is O(1) — every INSTANCE that calls in against
+ * the same SYMBOL shares the same Map. The previous DFS-per-call
+ * implementation re-walked the SYMBOL subtree once per call (per
+ * INSTANCE × per override entry), which was the residual O(N×k)
+ * cost on apple-ios26.fig after the bundle was introduced.
  */
-function findInKiwiTree(root: FigNode, guidStr: string): FigNode | undefined {
-  return dfsById(safeChildren(root), guidStr, {
-    getId: (n) => guidToString(n.guid),
-    getChildren: (n) => safeChildren(n),
-  });
+function findInKiwiTree(ctx: FigResolveContext, root: FigNode, guidStr: string): FigNode | undefined {
+  return ctx.symbolDescendants(root).guidToDesc.get(guidStr)?.node;
 }
 
 /**
  * `true` when any descendant of `root` has an `overrideKey` matching
- * the given `guid` string. Figma authors DSD entries against a
- * descendant's SYMBOL-side `overrideKey` (a stable identifier shared
- * across every INSTANCE that descends from the same SYMBOL); the
- * descendant's own `guid` is freshly assigned per clone. When a DSD
- * entry's first-guid matches a descendant's `overrideKey`, the entry
- * targets that descendant — NOT the SYMBOL root — and must NOT be
- * misclassified as a self-override even when its payload happens to
- * be a single INSTANCE-self field name like `size`.
+ * `guidStr`. Routes through the bundle's `directOverrideKeyMap` for
+ * an O(1) hit; same SoT pattern as `findInKiwiTree`. Figma authors
+ * DSD entries against the descendant's SYMBOL-side `overrideKey` (a
+ * stable identifier shared across every INSTANCE that descends from
+ * the same SYMBOL); the descendant's own `guid` is freshly assigned
+ * per clone. When a DSD entry's first-guid matches a descendant's
+ * `overrideKey`, the entry targets that descendant — NOT the SYMBOL
+ * root — and must NOT be misclassified as a self-override even when
+ * its payload happens to be a single INSTANCE-self field name like
+ * `size`.
  */
-function overrideKeyExistsInSymbol(root: FigNode, guidStr: string): boolean {
-  return dfsById(safeChildren(root), guidStr, {
-    getId: (n) => {
-      const ok = (n as { overrideKey?: { sessionID: number; localID: number } }).overrideKey;
-      return ok ? `${ok.sessionID}:${ok.localID}` : "";
-    },
-    getChildren: (n) => safeChildren(n),
-  }) !== undefined;
-}
-
-function parseGuidToFigGuid(guidStr: string): FigGuid {
-  const [sessionStr, localStr] = guidStr.split(":");
-  return { sessionID: Number(sessionStr), localID: Number(localStr) };
+function overrideKeyExistsInSymbol(ctx: FigResolveContext, root: FigNode, guidStr: string): boolean {
+  return ctx.symbolDescendants(root).directOverrideKeyMap.has(guidStr);
 }
 
 /**
@@ -1123,15 +1080,24 @@ export function convertFigNode(
    * fall back to sorted-localID pairing which mis-swaps such siblings.
    */
   blobs?: readonly FigBlob[],
+  /**
+   * Scoped resolve context — owns the GUID-string and safe-children
+   * caches for one conversion. Defaults to a fresh per-call context
+   * for external callers; `treeToDocument` passes an explicit shared
+   * context so caching is amortised across the whole document.
+   */
+  ctx: FigResolveContext = createFigResolveContext(),
 ): FigDesignNode {
   const nodeType = nodeTypeName(node);
   const id = guidToNodeId(node.guid);
 
-  const children = safeChildren(node);
-  const convertedChildren = children.length > 0 ? children.map((child) => convertFigNode(child, components, styleRegistry, symbolMap, blobs)) : undefined;
+  const children = ctx.safeChildren(node);
+  const convertedChildren = children.length > 0
+    ? children.map((child) => convertFigNode(child, components, styleRegistry, symbolMap, blobs, ctx))
+    : undefined;
 
   const { overrides: resolvedOverrides, derivedSymbolData: resolvedDerivedSymbolData } =
-    resolveOverridePaths(node, symbolMap, blobs);
+    resolveOverridePaths(ctx, node, symbolMap, blobs);
 
   const fills = resolveNodeFills(node, styleRegistry);
   const strokes = resolveNodeStrokes(node, styleRegistry);
@@ -1217,6 +1183,7 @@ export function convertFigNode(
  * Convert a CANVAS FigNode to a FigPage.
  */
 function convertCanvasToPage(
+  ctx: FigResolveContext,
   canvas: FigNode,
   components: Map<string, FigDesignNode>,
   styleRegistry: FigStyleRegistry,
@@ -1225,8 +1192,8 @@ function convertCanvasToPage(
 ): FigPage {
   const id = guidToPageId(canvas.guid);
 
-  const children = safeChildren(canvas);
-  const convertedChildren = children.map((child) => convertFigNode(child, components, styleRegistry, symbolMap, blobs));
+  const children = ctx.safeChildren(canvas);
+  const convertedChildren = children.map((child) => convertFigNode(child, components, styleRegistry, symbolMap, blobs, ctx));
 
   // Collect component definitions from all children
   collectComponentsRecursive(convertedChildren, components);
@@ -1242,19 +1209,17 @@ function convertCanvasToPage(
 
 /**
  * Walk the converted tree and collect any nested component definitions.
+ * Routes through `walkTree` — same SoT walk primitive as the
+ * raw-FigNode pass above, just typed for the domain `FigDesignNode`
+ * shape via the `getChildren` extractor.
  */
 function collectComponentsRecursive(
   nodes: readonly FigDesignNode[],
   components: Map<string, FigDesignNode>,
 ): void {
-  for (const node of nodes) {
-    if (COMPONENT_TYPES.has(node.type)) {
-      components.set(node.id, node);
-    }
-    if (node.children) {
-      collectComponentsRecursive(node.children, components);
-    }
-  }
+  walkTree(nodes, (node) => {
+    if (COMPONENT_TYPES.has(node.type)) { components.set(node.id, node); }
+  }, { getChildren: (n) => n.children ?? [] });
 }
 
 // =============================================================================
@@ -1270,21 +1235,16 @@ function collectComponentsRecursive(
  */
 /**
  * Collect all FigNodes in a tree into a flat Map keyed by GUID string.
- * Used to build the style registry before domain conversion.
+ * Used to build the style registry before domain conversion. Walk
+ * primitive comes from `@aurochs/fig/tree:walkTree` — local DFS
+ * re-implementations are banned by `custom/no-inline-dfs-by-id` and
+ * the same SoT rule applies to "visit every node".
  */
-function collectNodeMap(roots: readonly FigNode[]): ReadonlyMap<string, FigNode> {
+function collectNodeMap(ctx: FigResolveContext, roots: readonly FigNode[]): ReadonlyMap<string, FigNode> {
   const map = new Map<string, FigNode>();
-  function walk(node: FigNode): void {
-    if (node.guid) {
-      map.set(guidToString(node.guid), node);
-    }
-    for (const child of safeChildren(node)) {
-      walk(child);
-    }
-  }
-  for (const root of roots) {
-    walk(root);
-  }
+  walkTree(roots, (node) => {
+    if (node.guid) { map.set(ctx.guidString(node.guid), node); }
+  }, { getChildren: ctx.safeChildren });
   return map;
 }
 
@@ -1292,12 +1252,18 @@ export function treeToDocument(
   tree: NodeTreeResult,
   loaded: LoadedFigFile,
 ): FigDesignDocument {
+  // Single resolve context for the whole conversion. Owns the
+  // GUID-string interner and safe-children cache so repeated lookups on
+  // the same FigGuid / FigNode are O(1) instead of allocating a fresh
+  // string or filtered array each time. Lifetime ends with this call —
+  // no module-level state, no leakage across documents.
+  const ctx = createFigResolveContext();
   const components = new Map<string, FigDesignNode>();
   const pages: FigPage[] = [];
 
   // Build style registry from the raw FigNode tree BEFORE domain conversion.
   // This resolves styleIdForFill/styleIdForStrokeFill GUIDs to authoritative paints.
-  const nodeMap = collectNodeMap(tree.roots);
+  const nodeMap = collectNodeMap(ctx, tree.roots);
   const styleRegistry = nodeMap.size > 0 ? buildFigStyleRegistry(nodeMap) : EMPTY_FIG_STYLE_REGISTRY;
 
   // Walk roots to find DOCUMENT → CANVAS structure
@@ -1306,14 +1272,14 @@ export function treeToDocument(
 
     if (rootType === "DOCUMENT") {
       // DOCUMENT node: iterate CANVAS children
-      for (const canvas of safeChildren(root)) {
+      for (const canvas of ctx.safeChildren(root)) {
         if (getNodeType(canvas) === "CANVAS") {
-          pages.push(convertCanvasToPage(canvas, components, styleRegistry, nodeMap));
+          pages.push(convertCanvasToPage(ctx, canvas, components, styleRegistry, nodeMap));
         }
       }
     } else if (rootType === "CANVAS") {
       // Standalone CANVAS (unusual but handle gracefully)
-      pages.push(convertCanvasToPage(root, components, styleRegistry, nodeMap));
+      pages.push(convertCanvasToPage(ctx, root, components, styleRegistry, nodeMap));
     }
   }
 

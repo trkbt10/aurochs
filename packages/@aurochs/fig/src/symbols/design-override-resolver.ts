@@ -21,7 +21,7 @@
  */
 
 import type { FigKiwiSymbolOverride, FigComponentPropAssignment, FigPaint, FigVector, FigNodeType, FigNode, KiwiEnumValue } from "../types";
-import type { FigBlob } from "../parser";
+import { guidToString, parseGuidString, type FigBlob } from "../parser";
 import { buildGuidTranslationMap, type GuidTranslationMap } from "./guid-translation";
 
 /**
@@ -117,8 +117,17 @@ export function reresolveOverridesForVariant(args: {
     ? ownComponentPropertyAssignments.map((a) => designCPAToRawShape(a))
     : undefined;
 
+  // The translation primitive keys its SYMBOL-side cache on a SYMBOL
+  // root FigNode. This caller has only the variant SYMBOL's children
+  // (the variant root is a FigDesignNode, not a raw FigNode), so we
+  // wrap them in a minimal synthetic root whose `children` field is
+  // the descendants array. The primitive's bundle cache uses
+  // identity-keyed WeakMap, so this fresh root simply gets its own
+  // bundle — no cross-call leakage, no shared mis-cache.
+  const syntheticRoot = { children: descendantsAsRaw } as unknown as FigNode;
+
   const map: GuidTranslationMap = buildGuidTranslationMap(
-    descendantsAsRaw,
+    syntheticRoot,
     rawDsd,
     rawOverrides,
     cpa,
@@ -137,10 +146,9 @@ function applyMapToPath(
 ): DesignSymbolOverrideShape {
   const guids = override.guidPath?.guids;
   if (!guids || guids.length === 0) { return override; }
-  const [newSession, newLocal] = newSymbolId.split(":");
-  const newSymbolGuid = { sessionID: Number(newSession), localID: Number(newLocal) };
+  const newSymbolGuid = parseGuidString(newSymbolId);
   const rewritten = guids.map((g) => {
-    const key = `${g.sessionID}:${g.localID}`;
+    const key = guidToString(g);
     // Self-override on the old variant's SYMBOL guid → rewrite to the
     // new variant's SYMBOL guid. Self-override semantics point at the
     // symbol frame itself, so the meaning survives variant switching —
@@ -150,8 +158,7 @@ function applyMapToPath(
     if (key === oldSymbolId) { return newSymbolGuid; }
     const mapped = map.get(key);
     if (!mapped) { return g; }
-    const [sessionStr, localStr] = mapped.split(":");
-    return { sessionID: Number(sessionStr), localID: Number(localStr) };
+    return parseGuidString(mapped);
   });
   return { ...override, guidPath: { guids: rewritten } };
 }

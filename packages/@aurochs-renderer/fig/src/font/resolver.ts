@@ -11,6 +11,7 @@ import type {
 import { detectWeight, FONT_WEIGHTS } from "./weight";
 import { detectStyle } from "./style";
 import { COMMON_FONT_MAPPINGS, getDefaultFallbacks } from "./mappings";
+import { defensiveMark } from "@aurochs/fig/diagnostics/defensive";
 
 /**
  * Default font resolver configuration
@@ -200,6 +201,7 @@ export function createBrowserAvailabilityChecker(): FontAvailabilityChecker {
   return {
     isAvailable(family: string): boolean | Promise<boolean> {
       if (typeof document === "undefined" || !document.fonts) {
+        defensiveMark("font-resolver:browser-availability:no-document-fonts");
         return true; // Can't check, assume available
       }
 

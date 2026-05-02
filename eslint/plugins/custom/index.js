@@ -24,6 +24,7 @@ import preferSwitchOrMap from "./rules/prefer-switch-or-map.js";
 import noToKiwiRecordOutsideBuilder from "./rules/no-to-kiwi-record-outside-builder.js";
 import noGuidTranslationOutsideResolver from "./rules/no-guid-translation-outside-resolver.js";
 import noInlineDfsById from "./rules/no-inline-dfs-by-id.js";
+import noInlineGuidFormat from "./rules/no-inline-guid-format.js";
 export default {
   rules: {
     "ternary-length": ternaryLength,
@@ -49,5 +50,6 @@ export default {
     "no-to-kiwi-record-outside-builder": noToKiwiRecordOutsideBuilder,
     "no-guid-translation-outside-resolver": noGuidTranslationOutsideResolver,
     "no-inline-dfs-by-id": noInlineDfsById,
+    "no-inline-guid-format": noInlineGuidFormat,
   },
 };

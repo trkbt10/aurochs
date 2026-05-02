@@ -3,6 +3,7 @@
  */
 
 import type { FigNode, FigNodeType } from "../types";
+import { walkTree } from "../tree";
 
 /**
  * GUID identifier for a node
@@ -13,11 +14,40 @@ export type FigGuid = {
 };
 
 /**
- * Convert GUID to string key
+ * Convert GUID to string key.
+ *
+ * SoT primitive: every "format a GUID as a Map key / lookup string"
+ * call site in the fig pipeline routes through here — DO NOT inline
+ * `` `${guid.sessionID}:${guid.localID}` `` at call sites. Doing so
+ * fragments the format, defeats the cache layer, and forces every
+ * future format change (escaping, separator, etc.) into a hunt for
+ * silent duplicates.
+ *
+ * Hot loops that call this many times for the same `FigGuid` should
+ * route through a scoped `FigResolveContext`
+ * (`@aurochs/fig/symbols/resolve-context`) which interns the result
+ * per FigGuid for one conversion's lifetime.
  */
 export function guidToString(guid: FigGuid | undefined): string {
-  if (!guid) {return "";}
+  if (!guid) { return ""; }
   return `${guid.sessionID}:${guid.localID}`;
+}
+
+/**
+ * Parse a `"sessionID:localID"` GUID string back into a FigGuid.
+ *
+ * Inverse of `guidToString`. SoT primitive — duplicated parse helpers
+ * (`parseGuidString`, `parseGuidToFigGuid`) elsewhere in the codebase
+ * have been replaced with calls to this. Keep them in sync by using
+ * this function rather than re-rolling `split(":")` / `Number(...)`
+ * pairs at call sites.
+ */
+export function parseGuidString(guidStr: string): FigGuid {
+  const idx = guidStr.indexOf(":");
+  return {
+    sessionID: Number(guidStr.slice(0, idx)),
+    localID: Number(guidStr.slice(idx + 1)),
+  };
 }
 
 /**
@@ -157,27 +187,20 @@ export function getNodeType(node: FigNode): FigNodeType | "UNKNOWN" {
 }
 
 /**
- * Find all nodes of a specific type in the tree
+ * Find all nodes of a specific type in the tree.
+ *
+ * Routes through the `walkTree` SoT primitive (`@aurochs/fig/tree`)
+ * — the inline `function visit(n) { ...; for (c of children) visit(c); }`
+ * idiom that used to live here was a duplicate of that primitive.
  */
 export function findNodesByType(
   roots: readonly FigNode[],
   nodeType: string
 ): FigNode[] {
   const result: FigNode[] = [];
-
-  function visit(node: FigNode) {
-    if (getNodeType(node) === nodeType) {
-      result.push(node);
-    }
-    for (const child of safeChildren(node)) {
-      visit(child);
-    }
-  }
-
-  for (const root of roots) {
-    visit(root);
-  }
-
+  walkTree(roots, (node) => {
+    if (getNodeType(node) === nodeType) { result.push(node); }
+  }, { getChildren: safeChildren });
   return result;
 }
 
@@ -194,12 +217,33 @@ export function findNodeByGuid(
 /**
  * Get valid (non-null/undefined) children from a FigNode.
  *
- * Real .fig files can have sparse children arrays with null/undefined entries
- * caused by deleted nodes or malformed data. All tree-walking code must use
- * this function instead of accessing `.children` directly.
+ * Real .fig files can have sparse children arrays with null/undefined
+ * entries caused by deleted nodes or malformed data. All tree-walking
+ * code must use this function instead of accessing `.children`
+ * directly. Returns `readonly FigNode[]` — callers must not mutate the
+ * result.
+ *
+ * Pure primitive — no module-level caching. Hot conversion paths that
+ * call this for the same nodes repeatedly should route through a
+ * scoped `FigResolveContext` (see
+ * `@aurochs/fig/symbols/resolve-context`) which interns the result per
+ * node for one conversion's lifetime.
+ *
+ * Fast path: when the source array has no holes, return it as-is
+ * (typed readonly). Real .fig files almost never carry sparse children
+ * — the `.filter` walk is the rare exception, not the norm — so the
+ * common case avoids both the predicate scan and the fresh
+ * allocation. The contract permits this because the return type is
+ * already readonly.
  */
+const EMPTY_CHILDREN: readonly FigNode[] = [];
 export function safeChildren(node: FigNode): readonly FigNode[] {
   const children = node.children;
-  if (!children || children.length === 0) { return []; }
-  return children.filter((c): c is FigNode => c != null);
+  if (!children || children.length === 0) { return EMPTY_CHILDREN; }
+  for (let i = 0; i < children.length; i++) {
+    if (children[i] == null) {
+      return children.filter((c): c is FigNode => c != null);
+    }
+  }
+  return children as readonly FigNode[];
 }

@@ -42,8 +42,10 @@ export {
 
 export {
   buildGuidTranslationMap,
+  analyzeOverrideSets,
   translateOverrides,
   type GuidTranslationMap,
+  type OverrideAnalysis,
 } from "./guid-translation";
 
 export {
@@ -64,6 +66,13 @@ export {
   styleRefKey,
   styleRefKeys,
 } from "./style-registry";
+
+export {
+  createFigResolveContext,
+  type FigResolveContext,
+  type SymbolDescendant,
+  type SymbolDescendantBundle,
+} from "./resolve-context";
 
 export {
   projectVariableAnyValue,
