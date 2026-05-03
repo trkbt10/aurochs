@@ -54,6 +54,7 @@ import {
   type StrokeShape,
   type RenderClipPathDef,
 } from "../scene-graph/render-tree";
+import type { ResolvedFillDef } from "../scene-graph/render/fill";
 
 import { createShaderCache } from "./shaders";
 import {
@@ -89,6 +90,7 @@ import {
 } from "./stencil-fill";
 import type { CornerRadius } from "../scene-graph/types";
 import { svgPathDToContours } from "./path-contours";
+import { flattenPathCommands } from "./tessellation";
 
 /** Extract uniform radius from CornerRadius (per-corner → average for WebGL) */
 function uniformRadiusForGL(cr: CornerRadius | undefined): number | undefined {
@@ -397,6 +399,137 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
     return pattern;
   }
 
+  function parseSvgCoordinate(value: string | undefined, fallback: number): number {
+    if (!value) { return fallback; }
+    if (value.endsWith("%")) {
+      const parsed = Number(value.slice(0, -1));
+      return Number.isFinite(parsed) ? parsed / 100 : fallback;
+    }
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }
+
+  function parseStopOffset(value: string): number {
+    return parseSvgCoordinate(value, 0);
+  }
+
+  function resolvedGradientDefToFill(def: ResolvedFillDef | undefined): Fill | undefined {
+    if (!def) { return undefined; }
+    switch (def.type) {
+      case "linear-gradient":
+        return {
+          type: "linear-gradient",
+          start: { x: parseSvgCoordinate(def.x1, 0), y: parseSvgCoordinate(def.y1, 0.5) },
+          end: { x: parseSvgCoordinate(def.x2, 1), y: parseSvgCoordinate(def.y2, 0.5) },
+          stops: def.stops.map((stop) => ({
+            position: parseStopOffset(stop.offset),
+            color: { ...hexToColor(stop.stopColor), a: stop.stopOpacity ?? 1 },
+          })),
+          opacity: 1,
+        };
+      case "radial-gradient":
+        return {
+          type: "radial-gradient",
+          center: { x: parseSvgCoordinate(def.cx, 0.5), y: parseSvgCoordinate(def.cy, 0.5) },
+          radius: parseSvgCoordinate(def.r, 0.5),
+          stops: def.stops.map((stop) => ({
+            position: parseStopOffset(stop.offset),
+            color: { ...hexToColor(stop.stopColor), a: stop.stopOpacity ?? 1 },
+          })),
+          opacity: 1,
+        };
+      case "angular-gradient":
+        return {
+          type: "angular-gradient",
+          center: { x: parseSvgCoordinate(def.cx, 0.5), y: parseSvgCoordinate(def.cy, 0.5) },
+          rotation: def.rotation,
+          stops: def.stops.map((stop) => ({
+            position: parseStopOffset(stop.offset),
+            color: { ...hexToColor(stop.stopColor), a: stop.stopOpacity ?? 1 },
+          })),
+          opacity: 1,
+        };
+      case "diamond-gradient":
+        return {
+          type: "diamond-gradient",
+          center: { x: parseSvgCoordinate(def.cx, 0.5), y: parseSvgCoordinate(def.cy, 0.5) },
+          stops: def.stops.map((stop) => ({
+            position: parseStopOffset(stop.offset),
+            color: { ...hexToColor(stop.stopColor), a: stop.stopOpacity ?? 1 },
+          })),
+          opacity: 1,
+        };
+      case "image":
+        return undefined;
+    }
+  }
+
+  function pathContoursElementSize(contours: readonly PathContour[]): { readonly width: number; readonly height: number } {
+    const coordinates = contours.flatMap((contour) => flattenPathCommands(contour.commands));
+    if (coordinates.length < 2) {
+      return { width: 1, height: 1 };
+    }
+    let minX = Number.POSITIVE_INFINITY;
+    let minY = Number.POSITIVE_INFINITY;
+    let maxX = Number.NEGATIVE_INFINITY;
+    let maxY = Number.NEGATIVE_INFINITY;
+    for (let i = 0; i < coordinates.length - 1; i += 2) {
+      const x = coordinates[i] ?? 0;
+      const y = coordinates[i + 1] ?? 0;
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x);
+      maxY = Math.max(maxY, y);
+    }
+    return { width: Math.max(1, maxX - minX), height: Math.max(1, maxY - minY) };
+  }
+
+  function strokeShapeElementSize(shape: StrokeShape): { readonly width: number; readonly height: number } {
+    switch (shape.kind) {
+      case "rect":
+        return { width: shape.width, height: shape.height };
+      case "ellipse":
+        return { width: shape.rx * 2, height: shape.ry * 2 };
+      case "path": {
+        const contours = shape.paths.flatMap((path) => svgPathDToContours({
+          d: path.d,
+          windingRule: path.fillRule ?? "nonzero",
+        }));
+        return pathContoursElementSize(contours);
+      }
+    }
+  }
+
+  function drawStrokePaintLayer({
+    vertices,
+    layer,
+    attrs,
+    transform,
+    opacity,
+    elementSize,
+  }: {
+    readonly vertices: Float32Array;
+    readonly layer?: { readonly gradientDef?: ResolvedFillDef; readonly attrs?: { readonly strokeOpacity?: number } };
+    readonly attrs: { readonly stroke: string; readonly strokeOpacity?: number };
+    readonly transform: AffineMatrix;
+    readonly opacity: number;
+    readonly elementSize: { readonly width: number; readonly height: number };
+  }): void {
+    const strokeOpacity = attrs.strokeOpacity ?? layer?.attrs?.strokeOpacity ?? 1;
+    const gradientFill = resolvedGradientDefToFill(layer?.gradientDef);
+    if (gradientFill) {
+      drawFill({ vertices, fill: gradientFill, transform, opacity: opacity * strokeOpacity, elementSize });
+      return;
+    }
+    drawSolidFill({
+      ctx: getGlContext(),
+      vertices,
+      color: hexToColor(attrs.stroke),
+      transform,
+      opacity: opacity * strokeOpacity,
+    });
+  }
+
   /**
    * Render strokes from the StrokeRendering discriminated union.
    * This is the single stroke rendering path for all node types.
@@ -418,9 +551,7 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
         // SVG renders this as: stroke-width=2× + mask clips to the correct half.
         // WebGL uses stencil: draw fill shape to stencil, then draw 2× stroke
         // with stencil test (INSIDE=inside only, OUTSIDE=outside only).
-        const color = hexToColor(sr.attrs.stroke);
         const doubledWidth = sr.attrs.strokeWidth ?? 1;
-        const strokeOpacity = sr.attrs.strokeOpacity ?? 1;
         if (doubledWidth <= 0) { return; }
 
         const isInside = sr.attrs.strokeAlign === "INSIDE";
@@ -432,7 +563,14 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
             strokeWidth: doubledWidth / 2,
             align: isInside ? "INSIDE" : "OUTSIDE",
           });
-          drawSolidFill({ ctx: getGlContext(), vertices: alignedStrokeVerts, color, transform, opacity: opacity * strokeOpacity });
+          drawStrokePaintLayer({
+            vertices: alignedStrokeVerts,
+            layer: sr.layer,
+            attrs: sr.attrs,
+            transform,
+            opacity,
+            elementSize: { width: sr.shape.width, height: sr.shape.height },
+          });
           break;
         }
 
@@ -448,7 +586,14 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
         const fillVerts = tessellateShapeForStencil(sr.shape);
         if (fillVerts.length === 0) {
           // No fill shape — draw stroke without masking
-          drawSolidFill({ ctx: getGlContext(), vertices: strokeVerts, color, transform, opacity: opacity * strokeOpacity });
+          drawStrokePaintLayer({
+            vertices: strokeVerts,
+            layer: sr.layer,
+            attrs: sr.attrs,
+            transform,
+            opacity,
+            elementSize: strokeShapeElementSize(sr.shape),
+          });
           break;
         }
 
@@ -483,7 +628,14 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
           gl.stencilFunc(gl.EQUAL, ref, mask);
         }
         gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);
-        drawSolidFill({ ctx: getGlContext(), vertices: strokeVerts, color, transform, opacity: opacity * strokeOpacity });
+        drawStrokePaintLayer({
+          vertices: strokeVerts,
+          layer: sr.layer,
+          attrs: sr.attrs,
+          transform,
+          opacity,
+          elementSize: strokeShapeElementSize(sr.shape),
+        });
 
         // Step 3: Clear stencil bits
         gl.colorMask(false, false, false, false);
@@ -508,9 +660,7 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
       case "layers": {
         // Multi-paint stroke layers: draw each layer's stroke
         for (const layer of sr.layers) {
-          const color = hexToColor(layer.attrs.stroke);
           const strokeWidth = layer.attrs.strokeWidth ?? 1;
-          const strokeOpacity = layer.attrs.strokeOpacity ?? 1;
           if (strokeWidth <= 0) { continue; }
 
           const strokeVerts = tessellateStrokeShapeFromSR(
@@ -519,7 +669,14 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
             parseStrokeDasharray(layer.attrs.strokeDasharray),
           );
           if (strokeVerts.length > 0) {
-            drawSolidFill({ ctx: getGlContext(), vertices: strokeVerts, color, transform, opacity: opacity * strokeOpacity });
+            drawStrokePaintLayer({
+              vertices: strokeVerts,
+              layer,
+              attrs: layer.attrs,
+              transform,
+              opacity,
+              elementSize: strokeShapeElementSize(sr.shape),
+            });
           }
         }
         break;
@@ -1082,11 +1239,13 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
           dashPattern: parseStrokeDasharray(layer.attrs.strokeDasharray),
         });
         if (strokeVerts.length > 0) {
-          const color = hexToColor(layer.attrs.stroke);
-          drawSolidFill({
-            ctx: getGlContext(), vertices: strokeVerts,
-            color, transform,
-            opacity: opacity * (layer.attrs.strokeOpacity ?? 1),
+          drawStrokePaintLayer({
+            vertices: strokeVerts,
+            layer,
+            attrs: layer.attrs,
+            transform,
+            opacity,
+            elementSize: pathContoursElementSize(contours),
           });
         }
       }
@@ -1097,10 +1256,13 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
         dashPattern: node.sourceStroke.dashPattern,
       });
       if (strokeVerts.length > 0) {
-        drawSolidFill({
-          ctx: getGlContext(), vertices: strokeVerts,
-          color: node.sourceStroke.color, transform,
-          opacity: opacity * node.sourceStroke.opacity,
+        drawStrokePaintLayer({
+          vertices: strokeVerts,
+          layer: sr.layer,
+          attrs: sr.attrs,
+          transform,
+          opacity,
+          elementSize: pathContoursElementSize(contours),
         });
       }
     }

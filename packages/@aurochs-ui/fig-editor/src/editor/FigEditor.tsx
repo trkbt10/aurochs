@@ -11,10 +11,10 @@ import { EditorShell, CanvasArea, type EditorPanel } from "@aurochs-ui/editor-co
 import { FigEditorProvider } from "../context/FigEditorContext";
 import { FigEditorCanvas } from "../canvas/FigEditorCanvas";
 import { FigEditorToolbar } from "./FigEditorToolbar";
-import { PageListPanel } from "../panels/PageListPanel";
-import { PropertyPanel } from "../panels/PropertyPanel";
-import { LayerPanel } from "../panels/LayerPanel";
-import type { FigEditorRendererKind } from "../canvas/renderer-kind";
+import { PageListPanel } from "../panels/pages/PageListPanel";
+import { PropertyPanel } from "../panels/properties/PropertyPanel";
+import { LayerPanel } from "../panels/layers/LayerPanel";
+import type { FigEditorRendererKind } from "../canvas/rendering/renderer-kind";
 import type { CachingFontLoader } from "@aurochs-renderer/fig/font";
 
 // =============================================================================

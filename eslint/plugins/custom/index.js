@@ -25,6 +25,7 @@ import noToKiwiRecordOutsideBuilder from "./rules/no-to-kiwi-record-outside-buil
 import noGuidTranslationOutsideResolver from "./rules/no-guid-translation-outside-resolver.js";
 import noInlineDfsById from "./rules/no-inline-dfs-by-id.js";
 import noInlineGuidFormat from "./rules/no-inline-guid-format.js";
+import figEditorArchitecture from "./rules/fig-editor-architecture.js";
 export default {
   rules: {
     "ternary-length": ternaryLength,
@@ -51,5 +52,6 @@ export default {
     "no-guid-translation-outside-resolver": noGuidTranslationOutsideResolver,
     "no-inline-dfs-by-id": noInlineDfsById,
     "no-inline-guid-format": noInlineGuidFormat,
+    "fig-editor-architecture": figEditorArchitecture,
   },
 };

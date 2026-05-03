@@ -371,7 +371,7 @@ export type StrokeShape =
  */
 export type StrokeRendering =
   | { readonly mode: "uniform"; readonly attrs: ResolvedStrokeAttrs }
-  | { readonly mode: "masked"; readonly attrs: ResolvedStrokeAttrs; readonly maskId: string; readonly shape: StrokeShape; readonly blendMode?: BlendMode }
+  | { readonly mode: "masked"; readonly attrs: ResolvedStrokeAttrs; readonly maskId: string; readonly shape: StrokeShape; readonly blendMode?: BlendMode; readonly layer?: ResolvedStrokeLayer }
   | { readonly mode: "layers"; readonly layers: readonly ResolvedStrokeLayer[]; readonly shape: StrokeShape }
   | {
       readonly mode: "individual";

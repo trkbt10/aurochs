@@ -33,56 +33,50 @@ import type { ResizeHandlePosition } from "@aurochs-ui/editor-core/geometry";
 import type { DragState } from "@aurochs-ui/editor-core/drag-state";
 import { isDragThresholdExceeded } from "@aurochs-ui/editor-core/drag-utils";
 import type { FigNodeId, FigDesignNode } from "@aurochs/fig/domain";
-import type { FigMatrix, FigVectorPath } from "@aurochs/fig/types";
+import type { FigMatrix } from "@aurochs/fig/types";
 import { findNodeById } from "@aurochs-builder/fig/node-ops";
 import { useFigEditor, useFigDrag } from "../context/FigEditorContext";
-import { FigPageRenderer } from "./FigPageRenderer";
-import type { FigEditorRendererKind } from "./renderer-kind";
-import { useFigSceneGraph } from "./use-fig-scene-graph";
-import { useFigTextFontResolver } from "./use-fig-text-font-resolver";
-import { computeAbsoluteTransform, filterMarqueeSelectionByHierarchy, findDeepestBoundsAtPoint, flattenAllNodeBounds } from "./interaction/bounds";
+import { FigPageRenderer } from "./rendering/FigPageRenderer";
+import type { FigEditorRendererKind } from "./rendering/renderer-kind";
+import { useFigSceneGraph } from "./rendering/use-fig-scene-graph";
+import { useFigTextFontResolver } from "./rendering/use-fig-text-font-resolver";
+import { computeAbsoluteTransform, filterMarqueeSelectionByHierarchy, flattenAllNodeBounds } from "./interaction/bounds";
 import { resolveCanvasInteractionPolicy } from "./interaction/interaction-policy";
 import { resolveCanvasInteractionTarget, type CanvasTargetMode } from "./interaction/target-resolution";
-import { screenDashToPageDash, screenPxToPagePx, VECTOR_PATH_OVERLAY_STYLE } from "./interaction/vector-path-overlay-style";
+import { screenPxToPagePx, VECTOR_PATH_OVERLAY_STYLE } from "../vector-path/overlay-style";
 import { useFigKeyboard } from "./interaction/use-fig-keyboard";
-import { FigTextEditOverlay } from "./FigTextEditOverlay";
+import { FigTextEditOverlay } from "../text-edit/FigTextEditOverlay";
 import { computeAbsoluteNodeBounds } from "./interaction/bounds";
 import {
-  convertEditableSegmentToCurve,
-  convertEditableSegmentToLine,
-  deleteEditableAnchorCommand,
-  getEditableControlLines,
-  getEditableCommandPoints,
-  insertEditableLineAtNearestSegment,
-  parseEditablePathData,
-  replaceEditableCommandPoint,
-  serializeEditablePathData,
-  setEditablePathClosed,
-} from "./vector-path-data";
-import type { EditablePathCommand } from "./vector-path-data";
+  addVectorPathPoint,
+  canEnterVectorPathEdit,
+  collectEditableVectorPathOverlays,
+  collectVectorPathControlLines,
+  collectVectorPathHandles,
+  getVectorHandleAriaLabel,
+  pageToDrawingLocalPoint,
+  resolveContextVectorHandle,
+  resolvePathDrawingParent,
+  updateVectorPathCommands,
+  updateVectorPathEndpoint,
+  worldToLocalPoint,
+  type VectorPathDragState,
+  type VectorPathHandle,
+} from "../vector-path/editor-model";
 import {
-  appendVectorPathDraftPoint,
-  applyVectorPathDraftAnchorDrag,
-  canCommitVectorPathDraft,
-  closeVectorPathDraft,
+  applyVectorPathDraftOperation,
   commitVectorPathDraftToNodeSpec,
-  isVectorPathDraftClosePoint,
-  startVectorPathDraft,
-  updateVectorPathDraftPreview,
+  getVectorPathDraftControlLines,
+  getVectorPathDraftHandles,
   vectorPathDraftToPreviewPath,
   type VectorPathDraft,
-} from "./vector-path-draft";
+  type VectorPathDraftHandle,
+  type VectorPathDraftOperationResult,
+  type VectorPathDraftSession,
+} from "../vector-path/draft";
 import type { MenuEntry } from "@aurochs-ui/ui-components/context-menu";
 import { ContextMenu } from "@aurochs-ui/ui-components/context-menu";
 import type { CachingFontLoader } from "@aurochs-renderer/fig/font";
-import {
-  contourToSvgD,
-  generateEllipseContour,
-  generateLineContour,
-  generatePolygonContour,
-  generateRectContour,
-  generateStarContour,
-} from "@aurochs-renderer/fig/scene-graph";
 import { resolveFigUserIntent } from "../context/fig-editor/user-intent";
 import { allowsFigUserOperation, resolveFigUserOperationDomain } from "../context/fig-editor/user-operation";
 
@@ -195,492 +189,6 @@ type ContextMenuState = {
   readonly vectorHandle?: VectorPathHandle;
 } | null;
 
-type VectorPathHandle = {
-  readonly key: string;
-  readonly pathIndex: number;
-  readonly commandIndex: number;
-  readonly valueIndex: number;
-  readonly role: "anchor" | "control";
-  readonly x: number;
-  readonly y: number;
-};
-
-type VectorPathDragState = {
-  readonly nodeId: FigNodeId;
-  readonly pathIndex: number;
-  readonly commandIndex: number;
-  readonly valueIndex: number;
-};
-
-type VectorPathControlLine = {
-  readonly key: string;
-  readonly from: { readonly x: number; readonly y: number };
-  readonly to: { readonly x: number; readonly y: number };
-};
-
-type EditableVectorPathOverlay = {
-  readonly key: string;
-  readonly pathIndex: number;
-  readonly data: string;
-  readonly transform: string;
-};
-
-function resolveEditableVectorPaths(node: FigDesignNode | undefined): readonly FigVectorPath[] | undefined {
-  if (!node) {
-    return undefined;
-  }
-  if (node.vectorPaths && node.vectorPaths.length > 0) {
-    return node.vectorPaths;
-  }
-  return synthesizeEditableVectorPaths(node);
-}
-
-function synthesizeEditableVectorPaths(node: FigDesignNode): readonly FigVectorPath[] | undefined {
-  switch (node.type) {
-    case "RECTANGLE":
-    case "ROUNDED_RECTANGLE":
-      return [toEditablePath(contourToSvgD(generateRectContour(node.size.x, node.size.y, resolveEditableCornerRadius(node))))];
-    case "ELLIPSE":
-      return [toEditablePath(contourToSvgD(generateEllipseContour(node.size.x, node.size.y)))];
-    case "LINE":
-      return [toEditablePath(contourToSvgD(generateLineContour(node.size.x)))];
-    case "REGULAR_POLYGON":
-      return [toEditablePath(contourToSvgD(generatePolygonContour(node.size.x, node.size.y, node.pointCount ?? 3)))];
-    case "STAR":
-      return [toEditablePath(contourToSvgD(generateStarContour({
-        width: node.size.x,
-        height: node.size.y,
-        pointCount: node.pointCount ?? 5,
-        innerRadiusRatio: node.starInnerScale ?? node.starInnerRadius ?? 0.382,
-      })))];
-    default:
-      return undefined;
-  }
-}
-
-function toEditablePath(data: string): FigVectorPath {
-  return { windingRule: "NONZERO", data };
-}
-
-function resolveEditableCornerRadius(node: FigDesignNode): number | readonly [number, number, number, number] | undefined {
-  const radii = node.rectangleCornerRadii;
-  if (radii && radii.length === 4) {
-    return [radii[0] ?? 0, radii[1] ?? 0, radii[2] ?? 0, radii[3] ?? 0];
-  }
-  return node.cornerRadius;
-}
-
-function collectVectorPathHandles(
-  node: FigDesignNode | undefined,
-  activePage: { readonly children: readonly FigDesignNode[] } | null | undefined,
-): readonly VectorPathHandle[] {
-  const vectorPaths = resolveEditableVectorPaths(node);
-  if (!node || !activePage || !vectorPaths) {
-    return [];
-  }
-  const transform = computeAbsoluteTransform(activePage.children, node.id);
-  if (!transform) {
-    return [];
-  }
-  return vectorPaths.flatMap((path, pathIndex) => {
-    const commands = parseEditablePathData(path.data ?? "");
-    if (!commands) {
-      return [];
-    }
-    return commands.flatMap((command, commandIndex) => getEditableCommandPoints(command).map((point) => ({
-      key: `${pathIndex}:${commandIndex}:${point.valueIndex}`,
-      pathIndex,
-      commandIndex,
-      valueIndex: point.valueIndex,
-      role: point.role,
-      ...transformPoint(transform, point),
-    })));
-  });
-}
-
-function collectVectorPathControlLines(
-  node: FigDesignNode | undefined,
-  activePage: { readonly children: readonly FigDesignNode[] } | null | undefined,
-): readonly VectorPathControlLine[] {
-  const vectorPaths = resolveEditableVectorPaths(node);
-  if (!node || !activePage || !vectorPaths) {
-    return [];
-  }
-  const transform = computeAbsoluteTransform(activePage.children, node.id);
-  if (!transform) {
-    return [];
-  }
-  return vectorPaths.flatMap((path, pathIndex) => {
-    const commands = parseEditablePathData(path.data ?? "");
-    if (!commands) {
-      return [];
-    }
-    return getEditableControlLines(commands).map((line) => ({
-      key: `${pathIndex}:${line.key}`,
-      from: transformPoint(transform, line.from),
-      to: transformPoint(transform, line.to),
-    }));
-  });
-}
-
-function collectEditableVectorPathOverlays(
-  node: FigDesignNode | undefined,
-  activePage: { readonly children: readonly FigDesignNode[] } | null | undefined,
-): readonly EditableVectorPathOverlay[] {
-  const vectorPaths = resolveEditableVectorPaths(node);
-  if (!node || !activePage || !vectorPaths) {
-    return [];
-  }
-  const transform = computeAbsoluteTransform(activePage.children, node.id);
-  if (!transform) {
-    return [];
-  }
-  return vectorPaths.map((path, pathIndex) => ({
-    key: `${node.id}:${pathIndex}`,
-    pathIndex,
-    data: path.data ?? "",
-    transform: matrixToSvgTransform(transform),
-  }));
-}
-
-function findNearestVectorHandle(
-  handles: readonly VectorPathHandle[],
-  point: { readonly x: number; readonly y: number },
-): VectorPathHandle | undefined {
-  return handles.reduce<VectorPathHandle | undefined>((best, handle) => {
-    if (handle.role !== "anchor") {
-      return best;
-    }
-    if (!best) {
-      return handle;
-    }
-    const bestDistance = Math.hypot(best.x - point.x, best.y - point.y);
-    const candidateDistance = Math.hypot(handle.x - point.x, handle.y - point.y);
-    return candidateDistance < bestDistance ? handle : best;
-  }, undefined);
-}
-
-function resolveContextVectorHandle(
-  contextMenu: ContextMenuState,
-  handles: readonly VectorPathHandle[],
-): VectorPathHandle | undefined {
-  if (!contextMenu) {
-    return undefined;
-  }
-  if (contextMenu.vectorHandle) {
-    return contextMenu.vectorHandle;
-  }
-  return findNearestVectorHandle(handles, { x: contextMenu.pageX, y: contextMenu.pageY });
-}
-
-function canEnterVectorPathEdit(node: FigDesignNode | undefined): boolean {
-  return Boolean(resolveEditableVectorPaths(node));
-}
-
-function isContainerNode(node: FigDesignNode | undefined): boolean {
-  return node?.type === "FRAME" || node?.type === "COMPONENT" || node?.type === "COMPONENT_SET" || node?.type === "SYMBOL";
-}
-
-function resolvePathDrawingParent({
-  activePage,
-  itemBounds,
-  point,
-}: {
-  readonly activePage: { readonly children: readonly FigDesignNode[] } | null | undefined;
-  readonly itemBounds: readonly { readonly id: string; readonly x: number; readonly y: number; readonly width: number; readonly height: number }[];
-  readonly point: { readonly x: number; readonly y: number };
-}): { readonly parentId: FigNodeId | null; readonly parentTransform: FigMatrix | undefined } {
-  if (!activePage) {
-    return { parentId: null, parentTransform: undefined };
-  }
-  const parentBounds = findDeepestBoundsAtPoint(itemBounds, point, (bounds) => {
-    return isContainerNode(findNodeById(activePage.children, bounds.id as FigNodeId));
-  });
-  if (!parentBounds) {
-    return { parentId: null, parentTransform: undefined };
-  }
-  const parentId = parentBounds.id as FigNodeId;
-  return {
-    parentId,
-    parentTransform: computeAbsoluteTransform(activePage.children, parentId),
-  };
-}
-
-function toExplicitEditableVectorNode(node: FigDesignNode): FigDesignNode {
-  if (node.vectorPaths && node.vectorPaths.length > 0) {
-    return node;
-  }
-  const vectorPaths = resolveEditableVectorPaths(node);
-  if (!vectorPaths) {
-    return node;
-  }
-  return {
-    ...node,
-    type: "VECTOR",
-    vectorPaths,
-    cornerRadius: undefined,
-    rectangleCornerRadii: undefined,
-    pointCount: undefined,
-    starInnerRadius: undefined,
-    starInnerScale: undefined,
-  };
-}
-
-function addVectorPathPoint(
-  node: FigDesignNode,
-  pathIndex: number,
-  point: { readonly x: number; readonly y: number },
-): FigDesignNode {
-  const editableNode = toExplicitEditableVectorNode(node);
-  const paths = editableNode.vectorPaths ?? [];
-  const vectorPaths = paths.map((path, index) => {
-    if (index !== pathIndex) {
-      return path;
-    }
-    const commands = parseEditablePathData(path.data ?? "");
-    if (!commands) {
-      return path;
-    }
-    return { ...path, data: serializeEditablePathData(insertEditableLineAtNearestSegment(commands, point)) };
-  });
-  return { ...editableNode, vectorPaths };
-}
-
-function updateVectorPathCommands({
-  node,
-  pathIndex,
-  update,
-}: {
-  readonly node: FigDesignNode;
-  readonly pathIndex: number;
-  readonly update: (commands: readonly EditablePathCommand[]) => readonly EditablePathCommand[];
-}): FigDesignNode {
-  const paths = node.vectorPaths ?? [];
-  const vectorPaths = paths.map((path, index) => {
-    if (index !== pathIndex) {
-      return path;
-    }
-    const commands = parseEditablePathData(path.data ?? "");
-    if (!commands) {
-      return path;
-    }
-    return { ...path, data: serializeEditablePathData(update(commands)) };
-  });
-  return { ...node, vectorPaths };
-}
-
-function updateVectorPathEndpoint({
-  node,
-  pathIndex,
-  commandIndex,
-  valueIndex,
-  point,
-}: {
-  readonly node: FigDesignNode;
-  readonly pathIndex: number;
-  readonly commandIndex: number;
-  readonly valueIndex: number;
-  readonly point: { readonly x: number; readonly y: number };
-}): FigDesignNode {
-  if (!node.vectorPaths || node.vectorPaths.length === 0) {
-    return updateParametricShapeEndpoint({ node, commandIndex, point });
-  }
-  const paths = resolveEditableVectorPaths(node) ?? [];
-  const vectorPaths = paths.map((path, index) => {
-    if (index !== pathIndex) {
-      return path;
-    }
-    const commands = parseEditablePathData(path.data ?? "");
-    if (!commands) {
-      return path;
-    }
-    const nextCommands = replaceEditableCommandPoint({ commands, commandIndex, valueIndex, point });
-    return { ...path, data: serializeEditablePathData(nextCommands) };
-  });
-  return { ...node, vectorPaths };
-}
-
-function updateParametricShapeEndpoint({
-  node,
-  commandIndex,
-  point,
-}: {
-  readonly node: FigDesignNode;
-  readonly commandIndex: number;
-  readonly point: { readonly x: number; readonly y: number };
-}): FigDesignNode {
-  switch (node.type) {
-    case "RECTANGLE":
-    case "ROUNDED_RECTANGLE":
-      return updateRectanglePathEndpoint(node, commandIndex, point);
-    case "ELLIPSE":
-      return updateEllipsePathEndpoint(node, commandIndex, point);
-    case "LINE":
-      return updateLinePathEndpoint(node, commandIndex, point);
-    case "REGULAR_POLYGON":
-    case "STAR":
-      return updatePathBoundsFromSyntheticEndpoint({ node, commandIndex, point });
-    default:
-      return node;
-  }
-}
-
-function updateRectanglePathEndpoint(
-  node: FigDesignNode,
-  commandIndex: number,
-  point: { readonly x: number; readonly y: number },
-): FigDesignNode {
-  const width = Math.max(1, node.size.x);
-  const height = Math.max(1, node.size.y);
-  switch (commandIndex) {
-    case 0:
-      return resizeParametricNode({ node, left: point.x, top: point.y, right: width, bottom: height });
-    case 1:
-      return resizeParametricNode({ node, left: 0, top: point.y, right: point.x, bottom: height });
-    case 2:
-      return resizeParametricNode({ node, left: 0, top: 0, right: point.x, bottom: point.y });
-    case 3:
-      return resizeParametricNode({ node, left: point.x, top: 0, right: width, bottom: point.y });
-    default:
-      return node;
-  }
-}
-
-function updateEllipsePathEndpoint(
-  node: FigDesignNode,
-  commandIndex: number,
-  point: { readonly x: number; readonly y: number },
-): FigDesignNode {
-  const width = Math.max(1, node.size.x);
-  const height = Math.max(1, node.size.y);
-  switch (commandIndex) {
-    case 0:
-    case 4:
-      return resizeParametricNode({ node, left: 0, top: point.y, right: width, bottom: height });
-    case 1:
-      return resizeParametricNode({ node, left: 0, top: 0, right: point.x, bottom: height });
-    case 2:
-      return resizeParametricNode({ node, left: 0, top: 0, right: width, bottom: point.y });
-    case 3:
-      return resizeParametricNode({ node, left: point.x, top: 0, right: width, bottom: height });
-    default:
-      return node;
-  }
-}
-
-function updateLinePathEndpoint(
-  node: FigDesignNode,
-  commandIndex: number,
-  point: { readonly x: number; readonly y: number },
-): FigDesignNode {
-  if (commandIndex === 0) {
-    return resizeParametricNode({ node, left: point.x, top: point.y, right: node.size.x, bottom: 0 });
-  }
-  if (commandIndex === 1) {
-    return resizeParametricNode({ node, left: 0, top: 0, right: point.x, bottom: point.y });
-  }
-  return node;
-}
-
-function updatePathBoundsFromSyntheticEndpoint({
-  node,
-  commandIndex,
-  point,
-}: {
-  readonly node: FigDesignNode;
-  readonly commandIndex: number;
-  readonly point: { readonly x: number; readonly y: number };
-}): FigDesignNode {
-  const path = resolveEditableVectorPaths(node)?.[0];
-  const commands = parseEditablePathData(path?.data ?? "");
-  if (!commands) {
-    return node;
-  }
-  const nextCommands = replaceEditableCommandPoint({ commands, commandIndex, valueIndex: 0, point });
-  const anchors = nextCommands.flatMap((command) => getEditableCommandPoints(command).filter((candidate) => candidate.role === "anchor"));
-  if (anchors.length < 2) {
-    return node;
-  }
-  const left = Math.min(...anchors.map((anchor) => anchor.x));
-  const top = Math.min(...anchors.map((anchor) => anchor.y));
-  const right = Math.max(...anchors.map((anchor) => anchor.x));
-  const bottom = Math.max(...anchors.map((anchor) => anchor.y));
-  return resizeParametricNode({ node, left, top, right, bottom });
-}
-
-function resizeParametricNode({
-  node,
-  left,
-  top,
-  right,
-  bottom,
-}: {
-  readonly node: FigDesignNode;
-  readonly left: number;
-  readonly top: number;
-  readonly right: number;
-  readonly bottom: number;
-}): FigDesignNode {
-  const width = Math.max(1, right - left);
-  const height = Math.max(1, bottom - top);
-  return {
-    ...node,
-    transform: {
-      ...node.transform,
-      m02: node.transform.m02 + left,
-      m12: node.transform.m12 + top,
-    },
-    size: { x: width, y: height },
-  };
-}
-
-function worldToLocalPoint(
-  transform: { readonly m00: number; readonly m01: number; readonly m02: number; readonly m10: number; readonly m11: number; readonly m12: number },
-  point: { readonly x: number; readonly y: number },
-): { readonly x: number; readonly y: number } {
-  const det = transform.m00 * transform.m11 - transform.m01 * transform.m10;
-  if (Math.abs(det) < 0.000001) {
-    return { x: point.x - transform.m02, y: point.y - transform.m12 };
-  }
-  const dx = point.x - transform.m02;
-  const dy = point.y - transform.m12;
-  return {
-    x: (transform.m11 * dx - transform.m01 * dy) / det,
-    y: (-transform.m10 * dx + transform.m00 * dy) / det,
-  };
-}
-
-function pageToDrawingLocalPoint(
-  draw: Pick<VectorPathDraft, "parentTransform">,
-  point: { readonly x: number; readonly y: number },
-): { readonly x: number; readonly y: number } {
-  if (!draw.parentTransform) {
-    return point;
-  }
-  return worldToLocalPoint(draw.parentTransform, point);
-}
-
-function transformPoint(
-  transform: { readonly m00: number; readonly m01: number; readonly m02: number; readonly m10: number; readonly m11: number; readonly m12: number },
-  point: { readonly x: number; readonly y: number },
-): { readonly x: number; readonly y: number } {
-  return {
-    x: transform.m00 * point.x + transform.m01 * point.y + transform.m02,
-    y: transform.m10 * point.x + transform.m11 * point.y + transform.m12,
-  };
-}
-
-function matrixToSvgTransform(
-  transform: { readonly m00: number; readonly m01: number; readonly m02: number; readonly m10: number; readonly m11: number; readonly m12: number },
-): string {
-  return `matrix(${transform.m00} ${transform.m10} ${transform.m01} ${transform.m11} ${transform.m02} ${transform.m12})`;
-}
-
-function getVectorHandleAriaLabel(handle: VectorPathHandle): string {
-  const index = handle.commandIndex + 1;
-  return handle.role === "control" ? `Vector path control handle ${index}` : `Vector path anchor handle ${index}`;
-}
-
 function resolveInteractionTargetNodeId({
   activePage,
   itemBounds,
@@ -705,6 +213,13 @@ function resolveInteractionTargetNodeId({
     mode: targetMode,
     canEditPath: canEnterVectorPathEdit,
   });
+}
+
+function getVectorPathDraftHandleLabel(handle: VectorPathDraftHandle): string {
+  if (handle.role === "anchor") {
+    return `Draft vector path anchor handle ${handle.index + 1}`;
+  }
+  return `Draft vector path control handle ${handle.index + 1}`;
 }
 
 // =============================================================================
@@ -763,9 +278,9 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
   const [viewportScale, setViewportScale] = useState(1);
   const [contextMenu, setContextMenu] = useState<ContextMenuState>(null);
   const vectorPathDragRef = useRef<VectorPathDragState | null>(null);
-  const vectorPathDrawRef = useRef<VectorPathDraft | null>(null);
+  const vectorPathDraftSessionRef = useRef<VectorPathDraftSession | null>(null);
   const [vectorPathDrawPreview, setVectorPathDrawPreview] = useState<VectorPathDraft | null>(null);
-  const vectorPathDrawPointerRef = useRef<{ readonly clientX: number; readonly clientY: number } | null>(null);
+  const previousPathEditingEnabledRef = useRef(false);
 
   // =========================================================================
   // Item bounds — flattened tree with absolute coordinates
@@ -873,73 +388,49 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
     textFontResolver,
   });
 
+  const applyVectorPathDraftResult = useCallback((result: VectorPathDraftOperationResult) => {
+    vectorPathDraftSessionRef.current = result.session;
+    setVectorPathDrawPreview(result.session?.draft ?? null);
+    if (result.committedDraft) {
+      dispatch({
+        type: "ADD_NODE",
+        parentId: result.committedDraft.parentId ?? undefined,
+        spec: commitVectorPathDraftToNodeSpec(result.committedDraft),
+      });
+    }
+  }, [dispatch]);
+
   const addVectorPathDraftPointAt = useCallback(
     (
       point: { readonly x: number; readonly y: number },
       parent: { readonly parentId: FigNodeId | null; readonly parentTransform: FigMatrix | undefined },
       clientPoint: { readonly clientX: number; readonly clientY: number },
     ) => {
-      const currentDraft = vectorPathDrawRef.current;
-      vectorPathDrawPointerRef.current = clientPoint;
-      if (currentDraft && isVectorPathDraftClosePoint(
-        currentDraft,
-        point,
-        screenPxToPagePx(VECTOR_PATH_CLOSE_TOLERANCE_PX, viewportScale),
-      )) {
-        const nextDraft = closeVectorPathDraft(currentDraft);
-        vectorPathDrawRef.current = nextDraft;
-        setVectorPathDrawPreview(nextDraft);
-        dispatch({
-          type: "ADD_NODE",
-          parentId: nextDraft.parentId ?? undefined,
-          spec: commitVectorPathDraftToNodeSpec(nextDraft),
-        });
-        vectorPathDrawRef.current = null;
-        vectorPathDrawPointerRef.current = null;
-        setVectorPathDrawPreview(null);
-        return;
-      }
-      const localPoint = pageToDrawingLocalPoint(currentDraft ?? parent, point);
-      if (!currentDraft) {
-        const draft = startVectorPathDraft({
-          parent,
-          localPoint,
-          pagePoint: point,
-        });
-        vectorPathDrawRef.current = draft;
-        setVectorPathDrawPreview(draft);
-        return;
-      }
-      const nextDraft = appendVectorPathDraftPoint(currentDraft, localPoint, point);
-      vectorPathDrawRef.current = nextDraft;
-      setVectorPathDrawPreview(nextDraft);
+      const currentSession = vectorPathDraftSessionRef.current;
+      const localPoint = pageToDrawingLocalPoint(currentSession?.draft ?? parent, point);
+      applyVectorPathDraftResult(applyVectorPathDraftOperation(currentSession, {
+        type: "place-point",
+        parent,
+        localPoint,
+        pagePoint: point,
+        pointerStart: clientPoint,
+        closeTolerance: screenPxToPagePx(VECTOR_PATH_CLOSE_TOLERANCE_PX, viewportScale),
+      }));
     },
-    [dispatch, viewportScale],
+    [applyVectorPathDraftResult, viewportScale],
   );
 
   const commitVectorPathDraft = useCallback(() => {
-    const draft = vectorPathDrawRef.current;
-    if (!draft) {
-      return;
-    }
-    vectorPathDrawRef.current = null;
-    vectorPathDrawPointerRef.current = null;
-    setVectorPathDrawPreview(null);
-    if (!canCommitVectorPathDraft(draft)) {
-      return;
-    }
-    dispatch({
-      type: "ADD_NODE",
-      parentId: draft.parentId ?? undefined,
-      spec: commitVectorPathDraftToNodeSpec(draft),
-    });
-  }, [dispatch]);
+    applyVectorPathDraftResult(applyVectorPathDraftOperation(vectorPathDraftSessionRef.current, { type: "commit" }));
+  }, [applyVectorPathDraftResult]);
 
-  const cancelVectorPathDraft = useCallback(() => {
-    vectorPathDrawRef.current = null;
-    vectorPathDrawPointerRef.current = null;
-    setVectorPathDrawPreview(null);
-  }, []);
+  useEffect(() => {
+    const wasPathEditing = previousPathEditingEnabledRef.current;
+    previousPathEditingEnabledRef.current = interactionPolicy.pathEditingEnabled;
+    if (wasPathEditing && !interactionPolicy.pathEditingEnabled) {
+      commitVectorPathDraft();
+    }
+  }, [commitVectorPathDraft, interactionPolicy.pathEditingEnabled]);
 
   // =========================================================================
   // Item events
@@ -963,7 +454,7 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
       if (allowsFigUserOperation(operationDomain, "resolve-path-target")) {
         e.preventDefault();
         e.stopPropagation();
-        if (vectorPathDrawRef.current) {
+        if (vectorPathDraftSessionRef.current) {
           addVectorPathDraftPointAt(
             { x: coords.pageX, y: coords.pageY },
             { parentId: null, parentTransform: undefined },
@@ -1421,47 +912,50 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
     }
 
     const handlePointerMove = (event: PointerEvent) => {
-      const draw = vectorPathDrawRef.current;
-      if (!draw) {
+      const session = vectorPathDraftSessionRef.current;
+      if (!session) {
         return;
       }
       const pageCoords = canvasRef.current?.screenToPage(event.clientX, event.clientY);
       if (!pageCoords) {
         return;
       }
-      const next = updateVectorPathDraftPreview(draw, { x: pageCoords.pageX, y: pageCoords.pageY });
-      vectorPathDrawRef.current = next;
-      setVectorPathDrawPreview(next);
+      applyVectorPathDraftResult(applyVectorPathDraftOperation(session, {
+        type: "preview",
+        pagePoint: { x: pageCoords.pageX, y: pageCoords.pageY },
+      }));
     };
 
     const handlePointerUp = (event: PointerEvent) => {
-      const start = vectorPathDrawPointerRef.current;
-      const draw = vectorPathDrawRef.current;
-      if (!start || !draw) {
-        vectorPathDrawPointerRef.current = null;
+      const session = vectorPathDraftSessionRef.current;
+      const start = session?.pointerStart;
+      if (!session || !start) {
         return;
       }
-      vectorPathDrawPointerRef.current = null;
-      if (!exceedsThreshold({
+      const exceededThreshold = exceedsThreshold({
         startClientX: start.clientX,
         startClientY: start.clientY,
         clientX: event.clientX,
         clientY: event.clientY,
-      })) {
-        return;
-      }
+      });
       const pageCoords = canvasRef.current?.screenToPage(event.clientX, event.clientY);
       if (!pageCoords) {
+        applyVectorPathDraftResult(applyVectorPathDraftOperation(session, {
+          type: "anchor-drag-end",
+          localPoint: { x: 0, y: 0 },
+          pagePoint: { x: 0, y: 0 },
+          exceededThreshold: false,
+        }));
         return;
       }
-      const localPoint = pageToDrawingLocalPoint(draw, { x: pageCoords.pageX, y: pageCoords.pageY });
-      const next = applyVectorPathDraftAnchorDrag(
-        draw,
+      const pagePoint = { x: pageCoords.pageX, y: pageCoords.pageY };
+      const localPoint = pageToDrawingLocalPoint(session.draft, pagePoint);
+      applyVectorPathDraftResult(applyVectorPathDraftOperation(session, {
+        type: "anchor-drag-end",
         localPoint,
-        { x: pageCoords.pageX, y: pageCoords.pageY },
-      );
-      vectorPathDrawRef.current = next;
-      setVectorPathDrawPreview(next);
+        pagePoint,
+        exceededThreshold,
+      }));
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -1472,7 +966,7 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
       }
       if (event.key === "Escape") {
         event.preventDefault();
-        cancelVectorPathDraft();
+        commitVectorPathDraft();
       }
     };
 
@@ -1484,7 +978,56 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
       window.removeEventListener("pointerup", handlePointerUp);
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [cancelVectorPathDraft, commitVectorPathDraft, interactionPolicy.pathEditingEnabled]);
+  }, [applyVectorPathDraftResult, commitVectorPathDraft, interactionPolicy.pathEditingEnabled]);
+
+  const handleVectorPathDraftHandlePointerDown = useCallback((handle: VectorPathDraftHandle, event: React.PointerEvent) => {
+    const session = vectorPathDraftSessionRef.current;
+    if (!session) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    if (handle.role === "anchor" && handle.index === 0) {
+      applyVectorPathDraftResult(applyVectorPathDraftOperation(session, { type: "close-from-start-handle" }));
+      return;
+    }
+    const handlePointerMove = (moveEvent: PointerEvent) => {
+      const pageCoords = canvasRef.current?.screenToPage(moveEvent.clientX, moveEvent.clientY);
+      const current = vectorPathDraftSessionRef.current;
+      if (!pageCoords || !current) {
+        return;
+      }
+      const pagePoint = { x: pageCoords.pageX, y: pageCoords.pageY };
+      const localPoint = pageToDrawingLocalPoint(current.draft, pagePoint);
+      applyVectorPathDraftResult(applyVectorPathDraftOperation(current, {
+        type: "move-handle",
+        handle,
+        localPoint,
+        pagePoint,
+      }));
+    };
+    const handlePointerUp = () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+    };
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+  }, [applyVectorPathDraftResult]);
+
+  const handleVectorPathDraftSegmentPointerDown = useCallback((event: React.PointerEvent) => {
+    const session = vectorPathDraftSessionRef.current;
+    const pageCoords = canvasRef.current?.screenToPage(event.clientX, event.clientY);
+    if (!session || !pageCoords) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    addVectorPathDraftPointAt(
+      { x: pageCoords.pageX, y: pageCoords.pageY },
+      { parentId: session.draft.parentId, parentTransform: session.draft.parentTransform },
+      { clientX: event.clientX, clientY: event.clientY },
+    );
+  }, [addVectorPathDraftPointAt]);
 
   const contextMenuItems = useMemo((): readonly MenuEntry[] => {
     const hasSelection = nodeSelection.selectedIds.length > 0;
@@ -1592,12 +1135,12 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
             const handle = vectorHandle;
             dispatch({
               type: "UPDATE_NODE",
-        source: "path-edit",
+              source: "path-edit",
               nodeId: selectedIds[0],
               updater: (node) => updateVectorPathCommands({
                 node,
                 pathIndex: handle.pathIndex,
-                update: (commands) => convertEditableSegmentToCurve(commands, handle.commandIndex),
+                operation: { type: "convert-segment-to-curve", commandIndex: handle.commandIndex },
               }),
             });
           }
@@ -1607,12 +1150,12 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
             const handle = vectorHandle;
             dispatch({
               type: "UPDATE_NODE",
-        source: "path-edit",
+              source: "path-edit",
               nodeId: selectedIds[0],
               updater: (node) => updateVectorPathCommands({
                 node,
                 pathIndex: handle.pathIndex,
-                update: (commands) => convertEditableSegmentToLine(commands, handle.commandIndex),
+                operation: { type: "convert-segment-to-line", commandIndex: handle.commandIndex },
               }),
             });
           }
@@ -1622,12 +1165,12 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
             const handle = vectorHandle;
             dispatch({
               type: "UPDATE_NODE",
-        source: "path-edit",
+              source: "path-edit",
               nodeId: selectedIds[0],
               updater: (node) => updateVectorPathCommands({
                 node,
                 pathIndex: handle.pathIndex,
-                update: (commands) => deleteEditableAnchorCommand(commands, handle.commandIndex),
+                operation: { type: "delete-anchor", commandIndex: handle.commandIndex },
               }),
             });
           }
@@ -1636,12 +1179,12 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
           if (selectedIds.length === 1) {
             dispatch({
               type: "UPDATE_NODE",
-        source: "path-edit",
+              source: "path-edit",
               nodeId: selectedIds[0],
               updater: (node) => updateVectorPathCommands({
                 node,
                 pathIndex: vectorHandle?.pathIndex ?? 0,
-                update: (commands) => setEditablePathClosed(commands, true),
+                operation: { type: "set-closed", closed: true },
               }),
             });
           }
@@ -1650,12 +1193,12 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
           if (selectedIds.length === 1) {
             dispatch({
               type: "UPDATE_NODE",
-        source: "path-edit",
+              source: "path-edit",
               nodeId: selectedIds[0],
               updater: (node) => updateVectorPathCommands({
                 node,
                 pathIndex: vectorHandle?.pathIndex ?? 0,
-                update: (commands) => setEditablePathClosed(commands, false),
+                operation: { type: "set-closed", closed: false },
               }),
             });
           }
@@ -1995,7 +1538,7 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
               transform={path.transform}
               fill="none"
               stroke={VECTOR_PATH_OVERLAY_STYLE.segmentHitStroke}
-              strokeWidth={screenPxToPagePx(VECTOR_PATH_OVERLAY_STYLE.segmentHitStrokeWidthPx, viewportScale)}
+              strokeWidth={VECTOR_PATH_OVERLAY_STYLE.segmentHitStrokeWidthPx}
               vectorEffect="non-scaling-stroke"
               pointerEvents="stroke"
               style={{ cursor: "crosshair" }}
@@ -2015,8 +1558,8 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
               x2={line.to.x}
               y2={line.to.y}
               stroke={VECTOR_PATH_OVERLAY_STYLE.selectionColor}
-              strokeWidth={screenPxToPagePx(VECTOR_PATH_OVERLAY_STYLE.controlLineStrokeWidthPx, viewportScale)}
-              strokeDasharray={screenDashToPageDash(VECTOR_PATH_OVERLAY_STYLE.controlLineDashPx, viewportScale)}
+              strokeWidth={VECTOR_PATH_OVERLAY_STYLE.controlLineStrokeWidthPx}
+              strokeDasharray={VECTOR_PATH_OVERLAY_STYLE.controlLineDashPx.join(" ")}
               vectorEffect="non-scaling-stroke"
             />
           ))}
@@ -2036,13 +1579,62 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
               r={screenPxToPagePx(handle.role === "control" ? VECTOR_PATH_OVERLAY_STYLE.controlRadiusPx : VECTOR_PATH_OVERLAY_STYLE.anchorRadiusPx, viewportScale)}
               fill={handle.role === "control" ? VECTOR_PATH_OVERLAY_STYLE.selectionColor : VECTOR_PATH_OVERLAY_STYLE.anchorFill}
               stroke={VECTOR_PATH_OVERLAY_STYLE.selectionColor}
-              strokeWidth={screenPxToPagePx(VECTOR_PATH_OVERLAY_STYLE.handleStrokeWidthPx, viewportScale)}
+              strokeWidth={VECTOR_PATH_OVERLAY_STYLE.handleStrokeWidthPx}
               vectorEffect="non-scaling-stroke"
               pointerEvents="all"
               style={{ cursor: "move" }}
               onPointerDown={(event) => handleVectorPathHandlePointerDown(handle, event)}
               onMouseDown={(event) => handleVectorPathHandleMouseDown(handle, event)}
               onContextMenu={(event) => handleVectorPathHandleContextMenu(handle, event)}
+            />
+          ))}
+        </g>
+      )}
+
+      {vectorPathDrawPreview && (
+        <g>
+          <path
+            role="button"
+            aria-label="Draft vector path segment"
+            d={vectorPathDraftToPreviewPath(vectorPathDrawPreview)}
+            fill="none"
+            stroke={VECTOR_PATH_OVERLAY_STYLE.segmentHitStroke}
+            strokeWidth={VECTOR_PATH_OVERLAY_STYLE.segmentHitStrokeWidthPx}
+            vectorEffect="non-scaling-stroke"
+            pointerEvents="stroke"
+            onPointerDown={handleVectorPathDraftSegmentPointerDown}
+          />
+          {getVectorPathDraftControlLines(vectorPathDrawPreview).map((line) => (
+            <line
+              key={line.key}
+              aria-label="Draft vector path control line"
+              x1={line.from.x}
+              y1={line.from.y}
+              x2={line.to.x}
+              y2={line.to.y}
+              stroke={VECTOR_PATH_OVERLAY_STYLE.selectionColor}
+              strokeWidth={VECTOR_PATH_OVERLAY_STYLE.controlLineStrokeWidthPx}
+              strokeDasharray={VECTOR_PATH_OVERLAY_STYLE.controlLineDashPx.join(" ")}
+              vectorEffect="non-scaling-stroke"
+              pointerEvents="none"
+            />
+          ))}
+          {getVectorPathDraftHandles(vectorPathDrawPreview).map((handle) => (
+            <circle
+              key={handle.key}
+              role="button"
+              aria-label={getVectorPathDraftHandleLabel(handle)}
+              tabIndex={0}
+              cx={handle.x}
+              cy={handle.y}
+              r={screenPxToPagePx(handle.role === "control" ? VECTOR_PATH_OVERLAY_STYLE.controlRadiusPx : VECTOR_PATH_OVERLAY_STYLE.anchorRadiusPx, viewportScale)}
+              fill={handle.role === "control" ? VECTOR_PATH_OVERLAY_STYLE.selectionColor : VECTOR_PATH_OVERLAY_STYLE.anchorFill}
+              stroke={VECTOR_PATH_OVERLAY_STYLE.selectionColor}
+              strokeWidth={VECTOR_PATH_OVERLAY_STYLE.handleStrokeWidthPx}
+              vectorEffect="non-scaling-stroke"
+              pointerEvents="all"
+              style={{ cursor: "move" }}
+              onPointerDown={(event) => handleVectorPathDraftHandlePointerDown(handle, event)}
             />
           ))}
         </g>
@@ -2054,6 +1646,9 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
     handleVectorPathHandleContextMenu,
     handleVectorPathHandleMouseDown,
     handleVectorPathHandlePointerDown,
+    handleVectorPathDraftHandlePointerDown,
+    handleVectorPathDraftSegmentPointerDown,
+    vectorPathDrawPreview,
     vectorPathControlLines,
     vectorPathHandles,
     viewportScale,
@@ -2121,8 +1716,8 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
             d={vectorPathDraftToPreviewPath(vectorPathDrawPreview)}
             fill="none"
             stroke={VECTOR_PATH_OVERLAY_STYLE.selectionColor}
-            strokeWidth={screenPxToPagePx(VECTOR_PATH_OVERLAY_STYLE.controlLineStrokeWidthPx, viewportScale)}
-            strokeDasharray={screenDashToPageDash(VECTOR_PATH_OVERLAY_STYLE.creationPreviewDashPx, viewportScale)}
+            strokeWidth={VECTOR_PATH_OVERLAY_STYLE.controlLineStrokeWidthPx}
+            strokeDasharray={VECTOR_PATH_OVERLAY_STYLE.creationPreviewDashPx.join(" ")}
             vectorEffect="non-scaling-stroke"
             pointerEvents="none"
           />

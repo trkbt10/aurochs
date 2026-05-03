@@ -37,10 +37,10 @@ function figMatrixToAffine(m: FigMatrix): AffineTransform {
 export function getRootNormalizationTransform(frameNode: FigNode): FigMatrix {
   const nodeData = frameNode as Record<string, unknown>;
   const transform = nodeData.transform as FigMatrix | undefined;
-  if (!transform) return IDENTITY_MATRIX;
+  if (!transform) {return IDENTITY_MATRIX;}
   const offsetX = transform.m02 ?? 0;
   const offsetY = transform.m12 ?? 0;
-  if (offsetX === 0 && offsetY === 0) return IDENTITY_MATRIX;
+  if (offsetX === 0 && offsetY === 0) {return IDENTITY_MATRIX;}
   return createTranslationMatrix(-offsetX, -offsetY);
 }
 
@@ -86,7 +86,7 @@ export function collectFigBoxes(
   }
 
   for (const child of node.children ?? []) {
-    if (child === null || child === undefined) continue;
+    if (child === null || child === undefined) {continue;}
     boxes.push(...collectFigBoxes(child, transform, showHiddenNodes));
   }
 

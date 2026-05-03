@@ -12,10 +12,10 @@ import { injectCSSVariables } from "@aurochs-ui/ui-components/design-tokens";
 import { FigEditorProvider } from "../../src/context/FigEditorContext";
 import { FigEditorCanvas } from "../../src/canvas/FigEditorCanvas";
 import { FigEditorToolbar } from "../../src/editor/FigEditorToolbar";
-import { PropertyPanel } from "../../src/panels/PropertyPanel";
-import { PageListPanel } from "../../src/panels/PageListPanel";
-import { LayerPanel } from "../../src/panels/LayerPanel";
-import type { FigEditorRendererKind } from "../../src/canvas/renderer-kind";
+import { PropertyPanel } from "../../src/panels/properties/PropertyPanel";
+import { PageListPanel } from "../../src/panels/pages/PageListPanel";
+import { LayerPanel } from "../../src/panels/layers/LayerPanel";
+import type { FigEditorRendererKind } from "../../src/canvas/rendering/renderer-kind";
 import type {
   FigDesignDocument,
   FigDesignNode,

@@ -92,7 +92,7 @@ function findAbsoluteBounds(
       }
     }
   }
-  /* eslint-enable custom/no-inline-dfs-by-id */
+  /* eslint-enable custom/no-inline-dfs-by-id -- Node geometry lookup is the local SoT for reducer bounds updates. */
   return undefined;
 }
 

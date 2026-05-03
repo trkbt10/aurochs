@@ -144,6 +144,8 @@ export default [
         // the GUID-stringify format. Inline copies bypass the cache layer
         // and silently fork the format.
         "custom/no-inline-guid-format": "error",
+        // Keep fig-editor UI areas from regressing into flat "misc" folders.
+        "custom/fig-editor-architecture": "error",
         // Prohibit direct Accordion/PropertySection in inspector panels; use OptionalPropertySection
         // Spread from modular groups
         ...rulesJSDoc,

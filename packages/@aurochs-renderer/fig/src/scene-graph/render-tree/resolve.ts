@@ -573,8 +573,8 @@ function resolveStrokeRendering(
     // blendMode through onto the masked result so the formatter can wrap
     // the stroke draw in `style="mix-blend-mode:..."` — without this
     // pass-through the masked path would silently discard the blend.
-    const layerBlendMode = result.layers && result.layers.length === 1 ? result.layers[0].blendMode : undefined;
-    return { mode: "masked", attrs: result.attrs, maskId, shape, blendMode: layerBlendMode };
+    const layer = result.layers && result.layers.length === 1 ? result.layers[0] : undefined;
+    return { mode: "masked", attrs: result.attrs, maskId, shape, blendMode: layer?.blendMode, layer };
   }
 
   // Single-layer gradient without strokeAlign — emit as a regular

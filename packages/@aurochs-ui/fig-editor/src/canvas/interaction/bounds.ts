@@ -205,7 +205,7 @@ export function computeAbsoluteTransform(
       }
     }
   }
-  /* eslint-enable custom/no-inline-dfs-by-id */
+  /* eslint-enable custom/no-inline-dfs-by-id -- This exported tree geometry primitive owns recursive node lookup. */
   return undefined;
 }
 
@@ -247,7 +247,7 @@ function computeAbsoluteNodeBoundsInner(
       }
     }
   }
-  /* eslint-enable custom/no-inline-dfs-by-id */
+  /* eslint-enable custom/no-inline-dfs-by-id -- This exported tree geometry primitive owns recursive node lookup. */
   return undefined;
 }
 

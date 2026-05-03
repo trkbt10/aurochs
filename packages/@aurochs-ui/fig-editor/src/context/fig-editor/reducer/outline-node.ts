@@ -1,4 +1,5 @@
 /** @file Convert editable nodes to explicit VECTOR paths. */
+/* eslint-disable jsdoc/require-jsdoc -- This reducer helper exposes one domain operation; internal conversion helpers stay private. */
 
 import type { FigDesignDocument, FigDesignNode } from "@aurochs/fig/domain";
 import type { FigVectorPath } from "@aurochs/fig/types";
@@ -60,7 +61,17 @@ function linePath(width: number, height: number): FigVectorPath {
   return path(`M 0 0 L ${width} ${height}`);
 }
 
-function regularPoints(width: number, height: number, pointCount: number, innerScale?: number): readonly { readonly x: number; readonly y: number }[] {
+function regularPoints({
+  width,
+  height,
+  pointCount,
+  innerScale,
+}: {
+  readonly width: number;
+  readonly height: number;
+  readonly pointCount: number;
+  readonly innerScale?: number;
+}): readonly { readonly x: number; readonly y: number }[] {
   const count = Math.max(3, Math.floor(pointCount));
   const cx = width / 2;
   const cy = height / 2;
@@ -112,9 +123,14 @@ function outlineVectorPaths(node: FigDesignNode, doc: FigDesignDocument): readon
     case "LINE":
       return [linePath(node.size.x, node.size.y)];
     case "REGULAR_POLYGON":
-      return [pointsPath(regularPoints(node.size.x, node.size.y, node.pointCount ?? 3))];
+      return [pointsPath(regularPoints({ width: node.size.x, height: node.size.y, pointCount: node.pointCount ?? 3 }))];
     case "STAR":
-      return [pointsPath(regularPoints(node.size.x, node.size.y, node.pointCount ?? 5, node.starInnerScale ?? node.starInnerRadius ?? 0.382))];
+      return [pointsPath(regularPoints({
+        width: node.size.x,
+        height: node.size.y,
+        pointCount: node.pointCount ?? 5,
+        innerScale: node.starInnerScale ?? node.starInnerRadius ?? 0.382,
+      }))];
     case "TEXT": {
       const rendering = resolveTextRendering(node, { blobs: doc.blobs });
       if (rendering.kind !== "glyphs") {
@@ -128,6 +144,11 @@ function outlineVectorPaths(node: FigDesignNode, doc: FigDesignDocument): readon
       return undefined;
   }
 }
+
+
+
+
+
 
 export function outlineNode(node: FigDesignNode, doc: FigDesignDocument): FigDesignNode | undefined {
   const vectorPaths = outlineVectorPaths(node, doc);

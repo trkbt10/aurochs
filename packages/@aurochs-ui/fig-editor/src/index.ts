@@ -29,14 +29,14 @@ export { figEditorReducer, createFigEditorState } from "./context/fig-editor/red
 
 // Canvas components (for composition)
 export { FigEditorCanvas } from "./canvas/FigEditorCanvas";
-export { FigPageRenderer } from "./canvas/FigPageRenderer";
-export type { FigEditorRendererKind } from "./canvas/renderer-kind";
+export { FigPageRenderer } from "./canvas/rendering/FigPageRenderer";
+export type { FigEditorRendererKind } from "./canvas/rendering/renderer-kind";
 
 // Panels (for composition)
-export { PropertyPanel } from "./panels/PropertyPanel";
-export { PageListPanel } from "./panels/PageListPanel";
-export { LayerPanel } from "./panels/LayerPanel";
-export { FigInspectorPanel, type FigInspectorPanelProps } from "./panels/FigInspectorPanel";
+export { PropertyPanel } from "./panels/properties/PropertyPanel";
+export { PageListPanel } from "./panels/pages/PageListPanel";
+export { LayerPanel } from "./panels/layers/LayerPanel";
+export { FigInspectorPanel, type FigInspectorPanelProps } from "./panels/inspector/FigInspectorPanel";
 export {
   FigInspectorDetailsPanel,
   type FigInspectorDetailsPanelProps,
@@ -45,7 +45,7 @@ export {
   DetailSection,
   DetailRow,
   DetailSwatch,
-} from "./panels/FigInspectorDetailsPanel";
+} from "./panels/inspector/FigInspectorDetailsPanel";
 
 // Toolbar
 export { FigEditorToolbar } from "./editor/FigEditorToolbar";

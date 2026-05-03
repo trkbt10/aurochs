@@ -103,21 +103,24 @@ function pointToLocal(transform: FigMatrix, x: number, y: number): { readonly x:
   };
 }
 
-function findDeepestContainingContainer(
-  nodes: readonly FigDesignNode[],
-  x: number,
-  y: number,
-  parentTransform: FigMatrix = IDENTITY_MATRIX,
-): { readonly nodeId: FigNodeId; readonly transform: FigMatrix } | undefined {
+function findDeepestContainingContainer({
+  nodes,
+  x,
+  y,
+  parentTransform = IDENTITY_MATRIX,
+}: {
+  readonly nodes: readonly FigDesignNode[];
+  readonly x: number;
+  readonly y: number;
+  readonly parentTransform?: FigMatrix;
+}): { readonly nodeId: FigNodeId; readonly transform: FigMatrix } | undefined {
   for (let index = nodes.length - 1; index >= 0; index -= 1) {
     const node = nodes[index]!;
     if (!node.visible) {
       continue;
     }
     const absTransform = composeTransforms(parentTransform, node.transform);
-    const nested = node.children
-      ? findDeepestContainingContainer(node.children, x, y, absTransform)
-      : undefined;
+    const nested = findDeepestNestedContainer({ node, x, y, parentTransform: absTransform });
     if (nested) {
       return nested;
     }
@@ -130,6 +133,23 @@ function findDeepestContainingContainer(
     }
   }
   return undefined;
+}
+
+function findDeepestNestedContainer({
+  node,
+  x,
+  y,
+  parentTransform,
+}: {
+  readonly node: FigDesignNode;
+  readonly x: number;
+  readonly y: number;
+  readonly parentTransform: FigMatrix;
+}): { readonly nodeId: FigNodeId; readonly transform: FigMatrix } | undefined {
+  if (!node.children) {
+    return undefined;
+  }
+  return findDeepestContainingContainer({ nodes: node.children, x, y, parentTransform });
 }
 
 export const CREATION_HANDLERS: HandlerMap = {
@@ -158,7 +178,7 @@ export const CREATION_HANDLERS: HandlerMap = {
       return { ...state, drag: createIdleDragState(), creationMode: createSelectMode() };
     }
 
-    const parent = findDeepestContainingContainer(page.children, x, y);
+    const parent = findDeepestContainingContainer({ nodes: page.children, x, y });
     const localOrigin = parent ? pointToLocal(parent.transform, x, y) : undefined;
 
     const spec = buildNodeSpecFromCreationMode({
