@@ -41,7 +41,10 @@ type FigPageRendererProps = {
   readonly sceneGraph?: SceneGraph | null;
   readonly viewportX?: number;
   readonly viewportY?: number;
+  readonly viewportWidth?: number;
+  readonly viewportHeight?: number;
   readonly viewportScale?: number;
+  readonly webglPlacement?: "world" | "screen";
   readonly textFontResolver?: TextFontResolver;
 };
 
@@ -70,10 +73,26 @@ export function FigPageRenderer({
   sceneGraph: sceneGraphProp,
   viewportX = 0,
   viewportY = 0,
+  viewportWidth,
+  viewportHeight,
   viewportScale = 1,
+  webglPlacement = "world",
   textFontResolver,
 }: FigPageRendererProps) {
-  const builtSceneGraph = useFigSceneGraph({ page, canvasWidth, canvasHeight, viewportX, viewportY, images, blobs, symbolMap, styleRegistry, textFontResolver });
+  const builtSceneGraph = useFigSceneGraph({
+    page,
+    canvasWidth,
+    canvasHeight,
+    viewportX,
+    viewportY,
+    viewportWidth,
+    viewportHeight,
+    images,
+    blobs,
+    symbolMap,
+    styleRegistry,
+    textFontResolver,
+  });
   const sceneGraph = sceneGraphProp ?? builtSceneGraph;
 
   if (!sceneGraph) {
@@ -84,6 +103,6 @@ export function FigPageRenderer({
     case "svg":
       return <FigSvgViewportImage sceneGraph={sceneGraph} />;
     case "webgl":
-      return <FigWebGLViewportCanvas sceneGraph={sceneGraph} viewportScale={viewportScale} />;
+      return <FigWebGLViewportCanvas sceneGraph={sceneGraph} viewportScale={viewportScale} placement={webglPlacement} />;
   }
 }

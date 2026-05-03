@@ -202,6 +202,24 @@ export type RadialGradientFillParams = {
   elementSize: { width: number; height: number; x?: number; y?: number };
 };
 
+export type AngularGradientFillParams = {
+  ctx: GLContext;
+  vertices: Float32Array;
+  fill: Extract<Fill, { type: "angular-gradient" }>;
+  transform: AffineMatrix;
+  opacity: number;
+  elementSize: { width: number; height: number; x?: number; y?: number };
+};
+
+export type DiamondGradientFillParams = {
+  ctx: GLContext;
+  vertices: Float32Array;
+  fill: Extract<Fill, { type: "diamond-gradient" }>;
+  transform: AffineMatrix;
+  opacity: number;
+  elementSize: { width: number; height: number; x?: number; y?: number };
+};
+
 /** Draw a radial gradient fill using WebGL */
 export function drawRadialGradientFill(
   { ctx, vertices, fill, transform, opacity, elementSize }: RadialGradientFillParams
@@ -246,6 +264,104 @@ export function drawRadialGradientFill(
   }
 
   gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 2);
+}
+
+/** Draw an angular gradient fill using WebGL */
+export function drawAngularGradientFill(
+  { ctx, vertices, fill, transform, opacity, elementSize }: AngularGradientFillParams
+): void {
+  if (vertices.length === 0 || opacity <= 0) {return;}
+
+  const { gl, shaders, positionBuffer, width, height, pixelRatio } = ctx;
+  const program = shaders.get("angularGradient");
+  gl.useProgram(program);
+
+  bindGradientGeometry({ gl, program, positionBuffer, vertices, transform, width, height, pixelRatio });
+  gl.uniform2f(gl.getUniformLocation(program, "u_center"), fill.center.x, fill.center.y);
+  gl.uniform1f(gl.getUniformLocation(program, "u_rotation"), fill.rotation * (Math.PI / 180));
+  gl.uniform2f(gl.getUniformLocation(program, "u_elementSize"), elementSize.width, elementSize.height);
+  gl.uniform2f(gl.getUniformLocation(program, "u_elementOrigin"), elementSize.x ?? 0, elementSize.y ?? 0);
+  gl.uniform1f(gl.getUniformLocation(program, "u_opacity"), opacity * fill.opacity);
+  bindGradientStops({ gl, program, stops: fill.stops });
+
+  gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 2);
+}
+
+/** Draw a diamond gradient fill using WebGL */
+export function drawDiamondGradientFill(
+  { ctx, vertices, fill, transform, opacity, elementSize }: DiamondGradientFillParams
+): void {
+  if (vertices.length === 0 || opacity <= 0) {return;}
+
+  const { gl, shaders, positionBuffer, width, height, pixelRatio } = ctx;
+  const program = shaders.get("diamondGradient");
+  gl.useProgram(program);
+
+  bindGradientGeometry({ gl, program, positionBuffer, vertices, transform, width, height, pixelRatio });
+  gl.uniform2f(gl.getUniformLocation(program, "u_center"), fill.center.x, fill.center.y);
+  gl.uniform2f(gl.getUniformLocation(program, "u_elementSize"), elementSize.width, elementSize.height);
+  gl.uniform2f(gl.getUniformLocation(program, "u_elementOrigin"), elementSize.x ?? 0, elementSize.y ?? 0);
+  gl.uniform1f(gl.getUniformLocation(program, "u_opacity"), opacity * fill.opacity);
+  bindGradientStops({ gl, program, stops: fill.stops });
+
+  gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 2);
+}
+
+function bindGradientGeometry({
+  gl,
+  program,
+  positionBuffer,
+  vertices,
+  transform,
+  width,
+  height,
+  pixelRatio,
+}: {
+  readonly gl: WebGLRenderingContext;
+  readonly program: WebGLProgram;
+  readonly positionBuffer: WebGLBuffer;
+  readonly vertices: Float32Array;
+  readonly transform: AffineMatrix;
+  readonly width: number;
+  readonly height: number;
+  readonly pixelRatio: number;
+}): void {
+  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.DYNAMIC_DRAW);
+
+  const posLoc = gl.getAttribLocation(program, "a_position");
+  gl.enableVertexAttribArray(posLoc);
+  gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+
+  gl.uniformMatrix3fv(
+    gl.getUniformLocation(program, "u_transform"),
+    false,
+    matrixToGLUniform(transform, pixelRatio)
+  );
+  gl.uniform2f(
+    gl.getUniformLocation(program, "u_resolution"),
+    width * pixelRatio,
+    height * pixelRatio
+  );
+}
+
+function bindGradientStops({
+  gl,
+  program,
+  stops,
+}: {
+  readonly gl: WebGLRenderingContext;
+  readonly program: WebGLProgram;
+  readonly stops: Extract<Fill, { type: "linear-gradient" | "radial-gradient" | "angular-gradient" | "diamond-gradient" }>["stops"];
+}): void {
+  const stopCount = Math.min(stops.length, 8);
+  gl.uniform1i(gl.getUniformLocation(program, "u_stopCount"), stopCount);
+
+  for (let i = 0; i < stopCount; i++) {
+    const s = stops[i];
+    gl.uniform4f(gl.getUniformLocation(program, `u_stops[${i}]`), s.position, s.color.r, s.color.g, s.color.b);
+    gl.uniform4f(gl.getUniformLocation(program, `u_stopAlphas[${i}]`), s.color.a, 0, 0, 0);
+  }
 }
 
 // =============================================================================

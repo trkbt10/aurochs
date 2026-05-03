@@ -23,6 +23,41 @@ export type PathRenderContext = FigSvgRenderContext & {
   fontLoader: FontLoader;
 };
 
+function textRequiresGlyph(char: string): boolean {
+  return char.trim().length > 0;
+}
+
+function fontSupportsText(font: AbstractFont, textValue: string): boolean {
+  for (const char of textValue) {
+    if (textRequiresGlyph(char) && !fontHasGlyph(font, char)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+async function loadPrimaryOrFallbackFont(
+  props: ExtractedTextProps,
+  fontLoader: FontLoader,
+): Promise<{ readonly primary: LoadedFont; readonly fallback?: LoadedFont }> {
+  const request = {
+    family: props.fontFamily,
+    weight: props.fontWeight,
+    style: props.fontStyle === "italic" ? "italic" as const : "normal" as const,
+  };
+  const loaded = await fontLoader.loadFont(request);
+  const fallback = fontLoader.loadFallbackFont ? await fontLoader.loadFallbackFont(request) : undefined;
+
+  if (!loaded) {
+    if (fallback && fontSupportsText(fallback.font, props.characters)) {
+      return { primary: fallback, fallback };
+    }
+    throw new Error(`SVG path text renderer requires font ${props.fontFamily} ${props.fontWeight}`);
+  }
+
+  return { primary: loaded, fallback };
+}
+
 /**
  * Check if text wrapping is needed
  */
@@ -134,7 +169,6 @@ function getTextLinesForPath(props: ExtractedTextProps, font: AbstractFont): rea
  * Render text node as SVG path
  *
  * Uses opentype.js to convert text to paths.
- * Falls back to regular text rendering if font loading fails.
  */
 export async function renderTextNodeAsPath(node: FigNode, ctx: PathRenderContext): Promise<SvgString> {
   const props = extractTextProps(node);
@@ -143,34 +177,13 @@ export async function renderTextNodeAsPath(node: FigNode, ctx: PathRenderContext
     return EMPTY_SVG;
   }
 
-  // Try to load the font
-  const loadedFont = await ctx.fontLoader.loadFont({
-    family: props.fontFamily,
-    weight: props.fontWeight,
-    style: props.fontStyle === "italic" ? "italic" : "normal",
-  });
-
-  if (!loadedFont) {
-    // Font not available - this will need fallback handling
-    console.warn(`Font not found: ${props.fontFamily} ${props.fontWeight}`);
-    return EMPTY_SVG;
-  }
-
-  // Try to load a fallback font for CJK characters
-  const fallbackFontRef = { value: undefined as LoadedFont | undefined | undefined };
-  if (ctx.fontLoader.loadFallbackFont) {
-    fallbackFontRef.value = await ctx.fontLoader.loadFallbackFont({
-      family: props.fontFamily,
-      weight: props.fontWeight,
-      style: props.fontStyle === "italic" ? "italic" : "normal",
-    });
-  }
+  const fontResolution = await loadPrimaryOrFallbackFont(props, ctx.fontLoader);
 
   const transformStr = buildTransformAttr(props.transform);
   const { color: fillColor, opacity: fillOpacity } = getFillColorAndOpacity(props.fillPaints);
 
   // Get font metrics for accurate baseline and line height calculation
-  const font = loadedFont.font;
+  const font = fontResolution.primary.font;
   const ascenderRatio = font.ascender / font.unitsPerEm;
 
   // Calculate the natural line height from font metrics
@@ -212,13 +225,17 @@ export async function renderTextNodeAsPath(node: FigNode, ctx: PathRenderContext
     const linePath = renderLineAsPathWithFallback({
       text: lineText,
       primaryFont: font,
-      fallbackFont: fallbackFontRef.value?.font,
+      fallbackFont: fontResolution.fallback?.font,
       fontSize: props.fontSize,
       x,
       y,
       align: props.textAlignHorizontal,
       letterSpacing: props.letterSpacing,
     });
+
+    if (!linePath && lineText.trim().length > 0) {
+      throw new Error(`SVG path text renderer produced no path for non-empty line in text node ${node.id}`);
+    }
 
     if (linePath) {
       pathElements.push(
@@ -229,7 +246,6 @@ export async function renderTextNodeAsPath(node: FigNode, ctx: PathRenderContext
         }),
       );
     }
-
     // Render underline if needed
     if (props.textDecoration === "UNDERLINE") {
       const underlinePath = renderUnderlinePath({
@@ -259,6 +275,9 @@ export async function renderTextNodeAsPath(node: FigNode, ctx: PathRenderContext
   }
 
   if (pathElements.length === 0) {
+    if (props.characters.trim().length > 0) {
+      throw new Error(`SVG path text renderer produced no visible paths for non-empty text node ${node.id}`);
+    }
     return EMPTY_SVG;
   }
 
@@ -296,7 +315,9 @@ function segmentTextByFont(
   fallbackFont: AbstractFont | undefined,
 ): readonly TextSegment[] {
   if (!fallbackFont) {
-    // No fallback - use primary for everything
+    if (!fontSupportsText(primaryFont, text)) {
+      throw new Error("SVG path text renderer requires a fallback font for unsupported glyphs");
+    }
     return [{ text, font: primaryFont, useFallback: false }];
   }
 
@@ -386,11 +407,14 @@ function renderLineAsPathWithFallback({
   y: number;
   align: "LEFT" | "CENTER" | "RIGHT" | "JUSTIFIED";
   letterSpacing?: number;
-}): string | null {
+}): string | undefined {
   const segments = segmentTextByFont(text, primaryFont, fallbackFont);
 
   if (segments.length === 0) {
-    return null;
+    if (text.length > 0) {
+      throw new Error("SVG path text renderer failed to segment a non-empty text line");
+    }
+    return undefined;
   }
 
   // Calculate total width for alignment
@@ -425,7 +449,11 @@ function renderLineAsPathWithFallback({
     currentXRef2.value += calculateSegmentWidth({ text: segment.text, font: segment.font, fontSize, letterSpacing });
   }
 
-  return paths.join("") || null;
+  const joined = paths.join("");
+  if (!joined && text.trim().length > 0) {
+    throw new Error("SVG path text renderer produced empty outlines for a non-empty text line");
+  }
+  return joined || undefined;
 }
 
 /**

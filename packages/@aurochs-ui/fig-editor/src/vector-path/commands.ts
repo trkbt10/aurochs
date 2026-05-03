@@ -1,6 +1,6 @@
 /** @file Editable SVG path data helpers for fig vector path tools. */
 
-import type { VectorPathPoint, VectorPathSegmentLine } from "./geometry";
+import { sampleCubicBezier, type VectorPathPoint, type VectorPathSegmentLine } from "./geometry";
 
 export type EditablePathCommandType = "M" | "L" | "Q" | "C" | "Z";
 
@@ -37,6 +37,22 @@ const commandParamLabels: Record<EditablePathCommandType, readonly string[]> = {
   Z: [],
 };
 
+type EditableInsertionTarget =
+  | {
+      readonly kind: "command";
+      readonly commandIndex: number;
+      readonly start: VectorPathPoint;
+      readonly point: VectorPathPoint;
+      readonly t: number;
+      readonly distance: number;
+    }
+  | {
+      readonly kind: "close";
+      readonly commandIndex: number;
+      readonly point: VectorPathPoint;
+      readonly distance: number;
+    };
+
 /** Parse a limited absolute M/L/Q/C/Z path string into editable commands. */
 export function parseEditablePathData(data: string): readonly EditablePathCommand[] | undefined {
   const tokens = data.match(/[A-Za-z]|[-+]?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?/gi);
@@ -51,6 +67,24 @@ export function serializeEditablePathData(commands: readonly EditablePathCommand
   return commands
     .map((command) => [command.type, ...normalizeCommandValues(command.type, command.values)].join(" "))
     .join(" ");
+}
+
+/** Scale all path command coordinates around the local origin. */
+export function scaleEditablePathData(
+  data: string,
+  scaleX: number,
+  scaleY: number,
+): string {
+  const commands = parseEditablePathData(data);
+  if (!commands) {
+    return data;
+  }
+  return serializeEditablePathData(commands.map((command) => ({
+    ...command,
+    values: normalizeCommandValues(command.type, command.values).map((value, index) => (
+      index % 2 === 0 ? value * scaleX : value * scaleY
+    )),
+  })));
 }
 
 /** Return the final endpoint of a command, if it has one. */
@@ -125,17 +159,36 @@ export function replaceEditableCommandPoint({
   readonly valueIndex: number;
   readonly point: { readonly x: number; readonly y: number };
 }): readonly EditablePathCommand[] {
+  const command = commands[commandIndex];
+  const target = command ? getEditableCommandPoints(command).find((candidate) => candidate.valueIndex === valueIndex) : undefined;
+  if (!command || !target) {
+    return commands;
+  }
+  const delta = { x: point.x - target.x, y: point.y - target.y };
+  const isAnchorMove = target.role === "anchor";
   return commands.map((command, index) => {
-    if (index !== commandIndex) {
-      return command;
+    if (index === commandIndex) {
+      const values = [...normalizeCommandValues(command.type, command.values)];
+      if (valueIndex + 1 >= values.length) {
+        return command;
+      }
+      values[valueIndex] = point.x;
+      values[valueIndex + 1] = point.y;
+      return {
+        ...command,
+        values: resolveMovedCommandPointValues({
+          type: command.type,
+          values,
+          anchorValueIndex: valueIndex,
+          delta,
+          isAnchorMove,
+        }),
+      };
     }
-    const values = [...normalizeCommandValues(command.type, command.values)];
-    if (valueIndex + 1 >= values.length) {
-      return command;
+    if (isAnchorMove && index === commandIndex + 1) {
+      return translateOutgoingControlForAnchorMove(command, delta);
     }
-    values[valueIndex] = point.x;
-    values[valueIndex + 1] = point.y;
-    return { ...command, values };
+    return command;
   });
 }
 
@@ -158,9 +211,44 @@ export function insertEditableLineAtNearestSegment(
   commands: readonly EditablePathCommand[],
   point: { readonly x: number; readonly y: number },
 ): readonly EditablePathCommand[] {
-  const insertionIndex = findNearestInsertionIndex(commands, point);
-  const command: EditablePathCommand = { type: "L", values: [point.x, point.y] };
-  return [...commands.slice(0, insertionIndex), command, ...commands.slice(insertionIndex)];
+  const target = findNearestInsertionTarget(commands, point);
+  if (!target) {
+    return commands;
+  }
+  if (target.kind === "close") {
+    return [
+      ...commands.slice(0, target.commandIndex),
+      { type: "L", values: [target.point.x, target.point.y] },
+      ...commands.slice(target.commandIndex),
+    ];
+  }
+  const command = commands[target.commandIndex];
+  if (!command) {
+    return commands;
+  }
+  if (command.type === "L") {
+    return [
+      ...commands.slice(0, target.commandIndex),
+      { type: "L", values: [target.point.x, target.point.y] },
+      command,
+      ...commands.slice(target.commandIndex + 1),
+    ];
+  }
+  if (command.type === "C") {
+    return [
+      ...commands.slice(0, target.commandIndex),
+      ...splitEditableCubicSegment(target.start, command, target.t),
+      ...commands.slice(target.commandIndex + 1),
+    ];
+  }
+  if (command.type === "Q") {
+    return [
+      ...commands.slice(0, target.commandIndex),
+      ...splitEditableQuadraticSegment(target.start, command, target.t),
+      ...commands.slice(target.commandIndex + 1),
+    ];
+  }
+  return commands;
 }
 
 /** Insert a line command before the closing command when one exists. */
@@ -297,6 +385,82 @@ function normalizeCommandValues(type: EditablePathCommandType, values: readonly 
   return Array.from({ length: count }, (_, index) => values[index] ?? 0);
 }
 
+function translateIncomingControlForAnchorMove({
+  type,
+  values,
+  anchorValueIndex,
+  delta,
+}: {
+  readonly type: EditablePathCommandType;
+  readonly values: readonly number[];
+  readonly anchorValueIndex: number;
+  readonly delta: VectorPathPoint;
+}): readonly number[] {
+  if (type === "C" && anchorValueIndex === 4) {
+    return translateCommandValuePair(values, 2, delta);
+  }
+  if (type === "Q" && anchorValueIndex === 2) {
+    return translateCommandValuePair(values, 0, delta);
+  }
+  return values;
+}
+
+function resolveMovedCommandPointValues({
+  type,
+  values,
+  anchorValueIndex,
+  delta,
+  isAnchorMove,
+}: {
+  readonly type: EditablePathCommandType;
+  readonly values: readonly number[];
+  readonly anchorValueIndex: number;
+  readonly delta: VectorPathPoint;
+  readonly isAnchorMove: boolean;
+}): readonly number[] {
+  if (!isAnchorMove) {
+    return values;
+  }
+  return translateIncomingControlForAnchorMove({
+    type,
+    values,
+    anchorValueIndex,
+    delta,
+  });
+}
+
+function translateOutgoingControlForAnchorMove(
+  command: EditablePathCommand,
+  delta: VectorPathPoint,
+): EditablePathCommand {
+  if (command.type !== "C" && command.type !== "Q") {
+    return command;
+  }
+  return {
+    ...command,
+    values: translateCommandValuePair(normalizeCommandValues(command.type, command.values), 0, delta),
+  };
+}
+
+function translateCommandValuePair(
+  values: readonly number[],
+  valueIndex: number,
+  delta: VectorPathPoint,
+): readonly number[] {
+  if (valueIndex + 1 >= values.length) {
+    return values;
+  }
+  return values.map((value, index) => {
+    if (index === valueIndex) {
+      return value + delta.x;
+    }
+    if (index === valueIndex + 1) {
+      return value + delta.y;
+    }
+    return value;
+  });
+}
+
 function getPreviousEndpoint(
   commands: readonly EditablePathCommand[],
   commandIndex: number,
@@ -310,54 +474,268 @@ function getPreviousEndpoint(
   return undefined;
 }
 
-function findNearestInsertionIndex(
+function findNearestInsertionTarget(
   commands: readonly EditablePathCommand[],
   point: { readonly x: number; readonly y: number },
-): number {
+): EditableInsertionTarget | undefined {
   const closeIndex = commands.findIndex((candidate) => candidate.type === "Z");
-  const defaultIndex = closeIndex === -1 ? commands.length : closeIndex;
-  const best = commands.reduce(
+  const best = commands.reduce<EditableInsertionTarget | undefined>(
     (acc, command, commandIndex) => {
       const previous = getPreviousEndpoint(commands, commandIndex);
       const end = getEditableCommandEndpoint(command);
       if (commandIndex === 0 || command.type === "Z" || !previous || !end) {
         return acc;
       }
-      const distance = distanceToLineSegment(point, previous, end);
-      if (distance >= acc.distance) {
+      const target = resolveCommandInsertionTarget({
+        command,
+        commandIndex,
+        point,
+        previous,
+      });
+      if (!target || (acc && target.distance >= acc.distance)) {
         return acc;
       }
-      return { index: commandIndex + 1, distance };
+      return target;
     },
-    { index: defaultIndex, distance: Number.POSITIVE_INFINITY },
+    undefined,
   );
   if (closeIndex !== -1) {
     const start = getEditableCommandEndpoint(commands.find((command) => command.type === "M") ?? commands[0]!);
     const end = getPreviousEndpoint(commands, closeIndex);
     if (start && end) {
-      const distance = distanceToLineSegment(point, end, start);
-      if (distance < best.distance) {
-        return closeIndex;
+      const lineProjection = projectPointToLineSegment({ point, start: end, end: start });
+      if (!best || lineProjection.distance < best.distance) {
+        return {
+          kind: "close",
+          commandIndex: closeIndex,
+          point: lineProjection.point,
+          distance: lineProjection.distance,
+        };
       }
     }
   }
-  return best.index;
+  return best;
 }
 
-function distanceToLineSegment(
-  point: { readonly x: number; readonly y: number },
-  start: { readonly x: number; readonly y: number },
-  end: { readonly x: number; readonly y: number },
-): number {
+function resolveCommandInsertionTarget({
+  command,
+  commandIndex,
+  point,
+  previous,
+}: {
+  readonly command: EditablePathCommand;
+  readonly commandIndex: number;
+  readonly point: VectorPathPoint;
+  readonly previous: VectorPathPoint;
+}): EditableInsertionTarget | undefined {
+  if (command.type === "L") {
+    const end = getEditableCommandEndpoint(command);
+    if (!end) {
+      return undefined;
+    }
+    const lineProjection = projectPointToLineSegment({ point, start: previous, end });
+    return {
+      kind: "command",
+      commandIndex,
+      start: previous,
+      point: lineProjection.point,
+      t: lineProjection.t,
+      distance: lineProjection.distance,
+    };
+  }
+  if (command.type === "C") {
+    return findNearestCubicInsertionTarget({ command, commandIndex, point, previous });
+  }
+  if (command.type === "Q") {
+    return findNearestQuadraticInsertionTarget({ command, commandIndex, point, previous });
+  }
+  return undefined;
+}
+
+function projectPointToLineSegment({
+  point,
+  start,
+  end,
+}: {
+  readonly point: VectorPathPoint;
+  readonly start: VectorPathPoint;
+  readonly end: VectorPathPoint;
+}): { readonly point: VectorPathPoint; readonly t: number; readonly distance: number } {
   const dx = end.x - start.x;
   const dy = end.y - start.y;
   const lengthSquared = dx * dx + dy * dy;
   if (lengthSquared === 0) {
-    return Math.hypot(point.x - start.x, point.y - start.y);
+    return { point: start, t: 0, distance: Math.hypot(point.x - start.x, point.y - start.y) };
   }
   const t = Math.max(0, Math.min(1, ((point.x - start.x) * dx + (point.y - start.y) * dy) / lengthSquared));
   const projection = { x: start.x + t * dx, y: start.y + t * dy };
-  return Math.hypot(point.x - projection.x, point.y - projection.y);
+  return { point: projection, t, distance: Math.hypot(point.x - projection.x, point.y - projection.y) };
+}
+
+function findNearestCubicInsertionTarget({
+  command,
+  commandIndex,
+  point,
+  previous,
+}: {
+  readonly command: EditablePathCommand;
+  readonly commandIndex: number;
+  readonly point: VectorPathPoint;
+  readonly previous: VectorPathPoint;
+}): EditableInsertionTarget | undefined {
+  const values = normalizeCommandValues(command.type, command.values);
+  const samples = [
+    previous,
+    ...sampleCubicBezier({
+      start: previous,
+      control1: { x: values[0] ?? 0, y: values[1] ?? 0 },
+      control2: { x: values[2] ?? 0, y: values[3] ?? 0 },
+      end: { x: values[4] ?? 0, y: values[5] ?? 0 },
+    }),
+  ];
+  const nearest = findNearestSampledSegment({ point, samples });
+  if (!nearest) {
+    return undefined;
+  }
+  return {
+    kind: "command",
+    commandIndex,
+    start: previous,
+    point: nearest.point,
+    t: nearest.t,
+    distance: nearest.distance,
+  };
+}
+
+function findNearestQuadraticInsertionTarget({
+  command,
+  commandIndex,
+  point,
+  previous,
+}: {
+  readonly command: EditablePathCommand;
+  readonly commandIndex: number;
+  readonly point: VectorPathPoint;
+  readonly previous: VectorPathPoint;
+}): EditableInsertionTarget | undefined {
+  const values = normalizeCommandValues(command.type, command.values);
+  const samples = [
+    previous,
+    ...sampleQuadraticBezier({
+      start: previous,
+      control: { x: values[0] ?? 0, y: values[1] ?? 0 },
+      end: { x: values[2] ?? 0, y: values[3] ?? 0 },
+    }),
+  ];
+  const nearest = findNearestSampledSegment({ point, samples });
+  if (!nearest) {
+    return undefined;
+  }
+  return {
+    kind: "command",
+    commandIndex,
+    start: previous,
+    point: nearest.point,
+    t: nearest.t,
+    distance: nearest.distance,
+  };
+}
+
+function findNearestSampledSegment({
+  point,
+  samples,
+}: {
+  readonly point: VectorPathPoint;
+  readonly samples: readonly VectorPathPoint[];
+}): { readonly point: VectorPathPoint; readonly t: number; readonly distance: number } | undefined {
+  if (samples.length < 2) {
+    return undefined;
+  }
+  const segmentCount = samples.length - 1;
+  return samples.slice(1).reduce<{ readonly point: VectorPathPoint; readonly t: number; readonly distance: number } | undefined>(
+    (best, end, index) => {
+      const projection = projectPointToLineSegment({ point, start: samples[index]!, end });
+      const candidate = {
+        point: projection.point,
+        t: (index + projection.t) / segmentCount,
+        distance: projection.distance,
+      };
+      if (best && best.distance <= candidate.distance) {
+        return best;
+      }
+      return candidate;
+    },
+    undefined,
+  );
+}
+
+function sampleQuadraticBezier({
+  start,
+  control,
+  end,
+  steps = 32,
+}: {
+  readonly start: VectorPathPoint;
+  readonly control: VectorPathPoint;
+  readonly end: VectorPathPoint;
+  readonly steps?: number;
+}): readonly VectorPathPoint[] {
+  if (steps < 1) {
+    throw new Error("Quadratic Bezier sampling requires at least one step");
+  }
+  return Array.from({ length: steps }, (_value, index) => {
+    const t = (index + 1) / steps;
+    const oneMinusT = 1 - t;
+    return {
+      x: oneMinusT ** 2 * start.x + 2 * oneMinusT * t * control.x + t ** 2 * end.x,
+      y: oneMinusT ** 2 * start.y + 2 * oneMinusT * t * control.y + t ** 2 * end.y,
+    };
+  });
+}
+
+function splitEditableCubicSegment(
+  start: VectorPathPoint,
+  command: EditablePathCommand,
+  t: number,
+): readonly [EditablePathCommand, EditablePathCommand] {
+  const values = normalizeCommandValues(command.type, command.values);
+  const control1 = { x: values[0] ?? 0, y: values[1] ?? 0 };
+  const control2 = { x: values[2] ?? 0, y: values[3] ?? 0 };
+  const end = { x: values[4] ?? 0, y: values[5] ?? 0 };
+  const startControl = lerpPoint(start, control1, t);
+  const middleControl = lerpPoint(control1, control2, t);
+  const endControl = lerpPoint(control2, end, t);
+  const firstControl2 = lerpPoint(startControl, middleControl, t);
+  const secondControl1 = lerpPoint(middleControl, endControl, t);
+  const split = lerpPoint(firstControl2, secondControl1, t);
+  return [
+    { type: "C", values: [startControl.x, startControl.y, firstControl2.x, firstControl2.y, split.x, split.y] },
+    { type: "C", values: [secondControl1.x, secondControl1.y, endControl.x, endControl.y, end.x, end.y] },
+  ];
+}
+
+function splitEditableQuadraticSegment(
+  start: VectorPathPoint,
+  command: EditablePathCommand,
+  t: number,
+): readonly [EditablePathCommand, EditablePathCommand] {
+  const values = normalizeCommandValues(command.type, command.values);
+  const control = { x: values[0] ?? 0, y: values[1] ?? 0 };
+  const end = { x: values[2] ?? 0, y: values[3] ?? 0 };
+  const firstControl = lerpPoint(start, control, t);
+  const secondControl = lerpPoint(control, end, t);
+  const split = lerpPoint(firstControl, secondControl, t);
+  return [
+    { type: "Q", values: [firstControl.x, firstControl.y, split.x, split.y] },
+    { type: "Q", values: [secondControl.x, secondControl.y, end.x, end.y] },
+  ];
+}
+
+function lerpPoint(start: VectorPathPoint, end: VectorPathPoint, t: number): VectorPathPoint {
+  return {
+    x: start.x + (end.x - start.x) * t,
+    y: start.y + (end.y - start.y) * t,
+  };
 }
 
 function parsePathTokens(

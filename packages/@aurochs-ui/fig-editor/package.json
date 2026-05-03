@@ -18,7 +18,7 @@
     "react-dom": "^18.0.0 || ^19.0.0"
   },
   "scripts": {
-    "lint": "bun run lint:architecture && eslint src spec/e2e",
+    "lint": "bun run lint:architecture && eslint src dev spec/e2e",
     "lint:architecture": "bun scripts/check-architecture.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit --rootDir ../../..",
     "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-ui/fig-editor/src'",

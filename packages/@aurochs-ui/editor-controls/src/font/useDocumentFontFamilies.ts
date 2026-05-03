@@ -163,8 +163,8 @@ export function useDocumentFontFamilies(): readonly string[] {
         ?.then(() => {
           handleFontsUpdated();
         })
-        .catch(() => {
-          // Ignore font loading errors: keep initial snapshot
+        .catch((error) => {
+          throw new Error("Document font readiness failed", { cause: error });
         });
     }
 

@@ -25,6 +25,15 @@ function makeNode(id: string, x: number, y: number): FigDesignNode {
   };
 }
 
+function makeVectorNode(id: string, x: number, y: number): FigDesignNode {
+  return {
+    ...makeNode(id, x, y),
+    type: "VECTOR",
+    size: { x: 100, y: 80 },
+    vectorPaths: [{ windingRule: "NONZERO", data: "M 0 0 C 20 10 80 70 100 80" }],
+  };
+}
+
 function makeDocument(children: readonly FigDesignNode[]): FigDesignDocument {
   return {
     pages: [{
@@ -42,6 +51,33 @@ function makeDocument(children: readonly FigDesignNode[]): FigDesignDocument {
 }
 
 describe("drag handlers", () => {
+  it("scales vector path data when resizing the vector bounding box", () => {
+    const vector = makeVectorNode("vector", 10, 20);
+    const selected = figEditorReducer(createFigEditorState(makeDocument([vector])), {
+      type: "SELECT_NODE",
+      nodeId: vector.id,
+    });
+    const pending = figEditorReducer(selected, {
+      type: "START_PENDING_RESIZE",
+      handle: "e",
+      startX: 110,
+      startY: 60,
+      startClientX: 110,
+      startClientY: 60,
+      aspectLocked: false,
+    });
+    const resizing = figEditorReducer(figEditorReducer(pending, { type: "CONFIRM_RESIZE" }), {
+      type: "PREVIEW_RESIZE",
+      dx: 100,
+      dy: 0,
+    });
+    const committed = figEditorReducer(resizing, { type: "COMMIT_DRAG" });
+    const next = committed.documentHistory.present.pages[0]!.children[0]!;
+
+    expect(next.size).toEqual({ x: 200, y: 80 });
+    expect(next.vectorPaths?.[0]?.data).toBe("M 0 0 C 40 10 160 70 200 80");
+  });
+
   it("rotates a multi-selection around the combined bounding-box center", () => {
     const left = makeNode("left", 0, 0);
     const right = makeNode("right", 100, 0);

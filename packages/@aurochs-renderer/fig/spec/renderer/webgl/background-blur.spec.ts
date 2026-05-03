@@ -58,6 +58,7 @@ function makeScene(overlayEffects: RectNode["effects"]): SceneGraph {
   return {
     width: 100,
     height: 50,
+    viewport: { x: 0, y: 0, width: 100, height: 50 },
     root: {
       id: createNodeId("root"),
       type: "group",

@@ -34,6 +34,7 @@ export type VectorPathDraft = {
   readonly start: VectorPathPoint;
   readonly pageStart: VectorPathPoint;
   readonly segments: readonly VectorPathDraftSegment[];
+  readonly closingSegment: VectorPathDraftCubicSegment | undefined;
   readonly outgoingControl: VectorPathPoint | undefined;
   readonly pageOutgoingControl: VectorPathPoint | undefined;
   readonly previewPagePoint: VectorPathPoint | undefined;
@@ -64,6 +65,8 @@ export type VectorPathDraftPointerStart = {
   readonly clientY: number;
 };
 
+export type VectorPathDraftHandleIntent = "close-start-anchor" | "move-handle";
+
 export type VectorPathDraftSession = {
   readonly draft: VectorPathDraft;
   readonly pointerStart: VectorPathDraftPointerStart | undefined;
@@ -79,6 +82,12 @@ export type VectorPathDraftOperation =
       readonly closeTolerance: number;
     }
   | { readonly type: "preview"; readonly pagePoint: VectorPathPoint }
+  | {
+      readonly type: "anchor-drag-preview";
+      readonly localPoint: VectorPathPoint;
+      readonly pagePoint: VectorPathPoint;
+      readonly exceededThreshold: boolean;
+    }
   | {
       readonly type: "anchor-drag-end";
       readonly localPoint: VectorPathPoint;
@@ -116,6 +125,7 @@ export function startVectorPathDraft({
     start: localPoint,
     pageStart: pagePoint,
     segments: [],
+    closingSegment: undefined,
     outgoingControl: undefined,
     pageOutgoingControl: undefined,
     previewPagePoint: undefined,
@@ -160,6 +170,7 @@ export function applyVectorPathDraftAnchorDrag(
     segments,
     outgoingControl: localControlPoint,
     pageOutgoingControl: pageControlPoint,
+    previewPagePoint: pageControlPoint,
   };
 }
 
@@ -168,7 +179,14 @@ export function closeVectorPathDraft(draft: VectorPathDraft): VectorPathDraft {
   if (!canCommitVectorPathDraft(draft)) {
     return draft;
   }
-  return { ...draft, closed: true, previewPagePoint: undefined };
+  return {
+    ...draft,
+    closingSegment: createClosingSegment(draft),
+    outgoingControl: undefined,
+    pageOutgoingControl: undefined,
+    closed: true,
+    previewPagePoint: undefined,
+  };
 }
 
 /** Return whether a click should close the currently open draft. */
@@ -277,6 +295,45 @@ export function moveVectorPathDraftHandle(
   return moveDraftControl({ draft, controlIndex: handle.index, localPoint, pagePoint });
 }
 
+/** Resolve whether a handle click should close the path or start a handle drag. */
+export function resolveVectorPathDraftHandleIntent({
+  draft,
+  handle,
+  startClientX,
+  startClientY,
+  clientX,
+  clientY,
+  dragThresholdPx,
+}: {
+  readonly draft: VectorPathDraft;
+  readonly handle: VectorPathDraftHandle;
+  readonly startClientX: number;
+  readonly startClientY: number;
+  readonly clientX: number;
+  readonly clientY: number;
+  readonly dragThresholdPx: number;
+}): VectorPathDraftHandleIntent {
+  const moved = Math.hypot(clientX - startClientX, clientY - startClientY) > dragThresholdPx;
+  if (moved || handle.role !== "anchor" || handle.index !== 0 || !canCommitVectorPathDraft(draft)) {
+    return "move-handle";
+  }
+  return "close-start-anchor";
+}
+
+/** Cursor for draft vector path handles in the active pen operation. */
+export function getVectorPathDraftHandleCursor(
+  draft: VectorPathDraft,
+  handle: VectorPathDraftHandle,
+): string {
+  if (handle.role === "control") {
+    return "grab";
+  }
+  if (handle.index === 0 && canCommitVectorPathDraft(draft)) {
+    return "alias";
+  }
+  return "pointer";
+}
+
 /** Apply one user-intent operation to the in-progress path drawing session. */
 export function applyVectorPathDraftOperation(
   session: VectorPathDraftSession | null,
@@ -313,6 +370,16 @@ export function applyVectorPathDraftOperation(
         return { session };
       }
       return { session: { ...session, draft: updateVectorPathDraftPreview(session.draft, operation.pagePoint) } };
+    case "anchor-drag-preview":
+      if (!session || !session.pointerStart || !operation.exceededThreshold) {
+        return { session };
+      }
+      return {
+        session: {
+          ...session,
+          draft: applyVectorPathDraftAnchorDrag(session.draft, operation.localPoint, operation.pagePoint),
+        },
+      };
     case "anchor-drag-end":
       if (!session) {
         return { session };
@@ -420,6 +487,21 @@ function createSegmentToAnchor(
   };
 }
 
+function createClosingSegment(draft: VectorPathDraft): VectorPathDraftCubicSegment | undefined {
+  if (!draft.outgoingControl || !draft.pageOutgoingControl) {
+    return undefined;
+  }
+  return {
+    kind: "cubic",
+    control1: draft.outgoingControl,
+    pageControl1: draft.pageOutgoingControl,
+    control2: draft.start,
+    pageControl2: draft.pageStart,
+    anchor: draft.start,
+    pageAnchor: draft.pageStart,
+  };
+}
+
 function replaceLastSegmentWithIncomingControl(
   draft: VectorPathDraft,
   incomingControl: VectorPathPoint,
@@ -464,19 +546,87 @@ function moveDraftAnchor({
       start: localPoint,
       pageStart: pagePoint,
       segments: draft.segments.map((segment, index) => index === 0 ? translateSegmentControl1(segment, localDelta, pageDelta) : segment),
+      outgoingControl: draft.segments.length === 0 ? translatePoint(draft.outgoingControl, localDelta) : draft.outgoingControl,
+      pageOutgoingControl: draft.segments.length === 0 ? translatePoint(draft.pageOutgoingControl, pageDelta) : draft.pageOutgoingControl,
     };
   }
+  const currentAnchor = draft.segments[anchorIndex - 1]?.anchor;
+  const currentPageAnchor = draft.segments[anchorIndex - 1]?.pageAnchor;
+  if (!currentAnchor || !currentPageAnchor) {
+    return draft;
+  }
+  const localDelta = { x: localPoint.x - currentAnchor.x, y: localPoint.y - currentAnchor.y };
+  const pageDelta = { x: pagePoint.x - currentPageAnchor.x, y: pagePoint.y - currentPageAnchor.y };
+  const isCurrentAnchor = anchorIndex === draft.segments.length;
   return {
     ...draft,
     segments: draft.segments.map((segment, index) => {
-      if (index !== anchorIndex - 1) {
-        return segment;
+      if (index === anchorIndex - 1) {
+        return moveSegmentAnchor({
+          segment,
+          localPoint,
+          pagePoint,
+          localDelta,
+          pageDelta,
+        });
       }
-      if (segment.kind === "line") {
-        return { ...segment, anchor: localPoint, pageAnchor: pagePoint };
+      if (index === anchorIndex) {
+        return translateSegmentControl1(segment, localDelta, pageDelta);
       }
-      return { ...segment, anchor: localPoint, pageAnchor: pagePoint };
+      return segment;
     }),
+    outgoingControl: isCurrentAnchor ? translatePoint(draft.outgoingControl, localDelta) : draft.outgoingControl,
+    pageOutgoingControl: isCurrentAnchor ? translatePoint(draft.pageOutgoingControl, pageDelta) : draft.pageOutgoingControl,
+  };
+}
+
+function moveSegmentAnchor({
+  segment,
+  localPoint,
+  pagePoint,
+  localDelta,
+  pageDelta,
+}: {
+  readonly segment: VectorPathDraftSegment;
+  readonly localPoint: VectorPathPoint;
+  readonly pagePoint: VectorPathPoint;
+  readonly localDelta: VectorPathPoint;
+  readonly pageDelta: VectorPathPoint;
+}): VectorPathDraftSegment {
+  if (segment.kind === "line") {
+    return { ...segment, anchor: localPoint, pageAnchor: pagePoint };
+  }
+  return {
+    ...segment,
+    control2: { x: segment.control2.x + localDelta.x, y: segment.control2.y + localDelta.y },
+    pageControl2: { x: segment.pageControl2.x + pageDelta.x, y: segment.pageControl2.y + pageDelta.y },
+    anchor: localPoint,
+    pageAnchor: pagePoint,
+  };
+}
+
+function translatePoint(
+  point: VectorPathPoint | undefined,
+  delta: VectorPathPoint,
+): VectorPathPoint | undefined {
+  if (!point) {
+    return undefined;
+  }
+  return { x: point.x + delta.x, y: point.y + delta.y };
+}
+
+function translateSegmentControl1(
+  segment: VectorPathDraftSegment,
+  localDelta: VectorPathPoint,
+  pageDelta: VectorPathPoint,
+): VectorPathDraftSegment {
+  if (segment.kind !== "cubic") {
+    return segment;
+  }
+  return {
+    ...segment,
+    control1: { x: segment.control1.x + localDelta.x, y: segment.control1.y + localDelta.y },
+    pageControl1: { x: segment.pageControl1.x + pageDelta.x, y: segment.pageControl1.y + pageDelta.y },
   };
 }
 
@@ -511,25 +661,11 @@ function moveDraftControl({
   };
 }
 
-function translateSegmentControl1(
-  segment: VectorPathDraftSegment,
-  localDelta: VectorPathPoint,
-  pageDelta: VectorPathPoint,
-): VectorPathDraftSegment {
-  if (segment.kind !== "cubic") {
-    return segment;
-  }
-  return {
-    ...segment,
-    control1: { x: segment.control1.x + localDelta.x, y: segment.control1.y + localDelta.y },
-    pageControl1: { x: segment.pageControl1.x + pageDelta.x, y: segment.pageControl1.y + pageDelta.y },
-  };
-}
-
 function serializePagePath(draft: VectorPathDraft): string {
   return [
     `M ${formatVectorPathNumber(draft.pageStart.x)} ${formatVectorPathNumber(draft.pageStart.y)}`,
     ...draft.segments.map((segment) => serializePageSegment(segment)),
+    draft.closingSegment ? serializePageSegment(draft.closingSegment) : "",
     draft.closed ? "Z" : "",
   ].filter(Boolean).join(" ");
 }
@@ -548,6 +684,7 @@ function serializeLocalPath(
   return [
     `M ${formatRelativePoint(draft.start, bounds)}`,
     ...draft.segments.map((segment) => serializeLocalSegment(segment, bounds)),
+    draft.closingSegment ? serializeLocalSegment(draft.closingSegment, bounds) : "",
     draft.closed ? "Z" : "",
   ].filter(Boolean).join(" ");
 }
@@ -563,7 +700,8 @@ function serializeLocalSegment(
 }
 
 function collectRenderedPathBoundsPoints(draft: VectorPathDraft): readonly VectorPathPoint[] {
-  return draft.segments.reduce((state, segment) => {
+  const segments = draft.closingSegment ? [...draft.segments, draft.closingSegment] : draft.segments;
+  return segments.reduce((state, segment) => {
     if (segment.kind === "line") {
       return {
         current: segment.anchor,

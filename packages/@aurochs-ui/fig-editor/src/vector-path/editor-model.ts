@@ -1,11 +1,12 @@
 /** @file Vector path editor model consumed by canvas interaction code. */
 /* eslint-disable jsdoc/require-jsdoc -- Exported operation names are the vector-path domain contract and are covered by colocated specs. */
 
-import type { FigDesignNode, FigNodeId } from "@aurochs/fig/domain";
+import type { FigDesignBlob, FigDesignNode, FigNodeId } from "@aurochs/fig/domain";
 import type { FigMatrix, FigVectorPath } from "@aurochs/fig/types";
 import { findNodeById } from "@aurochs-builder/fig/node-ops";
 import {
   contourToSvgD,
+  decodeGeometryToContours,
   generateEllipseContour,
   generateLineContour,
   generatePolygonContour,
@@ -15,10 +16,12 @@ import {
 import { computeAbsoluteTransform, findDeepestBoundsAtPoint } from "../canvas/interaction/bounds";
 import {
   applyEditableVectorPathOperation,
+  getEditableCommandEndpoint,
   getEditableCommandPoints,
   getEditableControlLines,
   parseEditablePathData,
   serializeEditablePathData,
+  type EditablePathCommand,
   type EditableVectorPathOperation,
 } from "./commands";
 import type { VectorPathDraft } from "./draft";
@@ -38,7 +41,10 @@ export type VectorPathDragState = {
   readonly pathIndex: number;
   readonly commandIndex: number;
   readonly valueIndex: number;
+  readonly editableVectorPaths?: EditableVectorPathSource;
 };
+
+export type EditableVectorPathSource = readonly FigVectorPath[];
 
 export type VectorPathControlLine = {
   readonly key: string;
@@ -66,12 +72,21 @@ type ItemBounds = {
 
 
 
-export function resolveEditableVectorPaths(node: FigDesignNode | undefined): readonly FigVectorPath[] | undefined {
+export function resolveEditableVectorPaths(
+  node: FigDesignNode | undefined,
+  blobs: readonly FigDesignBlob[] = [],
+): readonly FigVectorPath[] | undefined {
   if (!node) {
     return undefined;
   }
-  if (node.vectorPaths && node.vectorPaths.length > 0) {
+  if (isExplicitEditableVectorPathNode(node) && node.vectorPaths && node.vectorPaths.length > 0) {
     return node.vectorPaths;
+  }
+  if (isExplicitEditableVectorPathNode(node)) {
+    const geometryPaths = decodeEditableGeometryVectorPaths(node, blobs);
+    if (geometryPaths.length > 0) {
+      return geometryPaths;
+    }
   }
   return synthesizeEditableVectorPaths(node);
 }
@@ -84,8 +99,9 @@ export function resolveEditableVectorPaths(node: FigDesignNode | undefined): rea
 export function collectVectorPathHandles(
   node: FigDesignNode | undefined,
   activePage: { readonly children: readonly FigDesignNode[] } | null | undefined,
+  editableVectorPaths?: EditableVectorPathSource,
 ): readonly VectorPathHandle[] {
-  const vectorPaths = resolveEditableVectorPaths(node);
+  const vectorPaths = editableVectorPaths ?? resolveEditableVectorPaths(node);
   if (!node || !activePage || !vectorPaths) {
     return [];
   }
@@ -98,14 +114,16 @@ export function collectVectorPathHandles(
     if (!commands) {
       return [];
     }
-    return commands.flatMap((command, commandIndex) => getEditableCommandPoints(command).map((point) => ({
-      key: `${pathIndex}:${commandIndex}:${point.valueIndex}`,
-      pathIndex,
-      commandIndex,
-      valueIndex: point.valueIndex,
-      role: point.role,
-      ...transformPoint(transform, point),
-    })));
+    return commands.flatMap((command, commandIndex) => getEditableCommandPoints(command)
+      .filter((point) => !isClosingAnchorPoint(commands, commandIndex, point))
+      .map((point) => ({
+        key: `${pathIndex}:${commandIndex}:${point.valueIndex}`,
+        pathIndex,
+        commandIndex,
+        valueIndex: point.valueIndex,
+        role: point.role,
+        ...transformPoint(transform, point),
+      })));
   });
 }
 
@@ -117,8 +135,9 @@ export function collectVectorPathHandles(
 export function collectVectorPathControlLines(
   node: FigDesignNode | undefined,
   activePage: { readonly children: readonly FigDesignNode[] } | null | undefined,
+  editableVectorPaths?: EditableVectorPathSource,
 ): readonly VectorPathControlLine[] {
-  const vectorPaths = resolveEditableVectorPaths(node);
+  const vectorPaths = editableVectorPaths ?? resolveEditableVectorPaths(node);
   if (!node || !activePage || !vectorPaths) {
     return [];
   }
@@ -147,8 +166,9 @@ export function collectVectorPathControlLines(
 export function collectEditableVectorPathOverlays(
   node: FigDesignNode | undefined,
   activePage: { readonly children: readonly FigDesignNode[] } | null | undefined,
+  editableVectorPaths?: EditableVectorPathSource,
 ): readonly EditableVectorPathOverlay[] {
-  const vectorPaths = resolveEditableVectorPaths(node);
+  const vectorPaths = editableVectorPaths ?? resolveEditableVectorPaths(node);
   if (!node || !activePage || !vectorPaths) {
     return [];
   }
@@ -210,7 +230,17 @@ export function resolveContextVectorHandle(
 
 
 export function canEnterVectorPathEdit(node: FigDesignNode | undefined): boolean {
-  return Boolean(resolveEditableVectorPaths(node));
+  if (!node) {
+    return false;
+  }
+  if (isExplicitEditableVectorPathNode(node)) {
+    return Boolean(
+      (node.vectorPaths && node.vectorPaths.length > 0)
+      || (node.fillGeometry && node.fillGeometry.length > 0)
+      || (node.strokeGeometry && node.strokeGeometry.length > 0),
+    );
+  }
+  return Boolean(synthesizeEditableVectorPaths(node));
 }
 
 
@@ -248,12 +278,18 @@ export function resolvePathDrawingParent({
 
 
 
-export function addVectorPathPoint(
-  node: FigDesignNode,
-  pathIndex: number,
-  point: { readonly x: number; readonly y: number },
-): FigDesignNode {
-  const editableNode = toExplicitEditableVectorNode(node);
+export function addVectorPathPoint({
+  node,
+  pathIndex,
+  point,
+  editableVectorPaths,
+}: {
+  readonly node: FigDesignNode;
+  readonly pathIndex: number;
+  readonly point: { readonly x: number; readonly y: number };
+  readonly editableVectorPaths?: EditableVectorPathSource;
+}): FigDesignNode {
+  const editableNode = toExplicitEditableVectorNode(node, editableVectorPaths);
   const paths = editableNode.vectorPaths ?? [];
   const vectorPaths = paths.map((path, index) => {
     if (index !== pathIndex) {
@@ -280,12 +316,15 @@ export function updateVectorPathCommands({
   node,
   pathIndex,
   operation,
+  editableVectorPaths,
 }: {
   readonly node: FigDesignNode;
   readonly pathIndex: number;
   readonly operation: EditableVectorPathOperation;
+  readonly editableVectorPaths?: EditableVectorPathSource;
 }): FigDesignNode {
-  const paths = node.vectorPaths ?? [];
+  const editableNode = toExplicitEditableVectorNode(node, editableVectorPaths);
+  const paths = editableNode.vectorPaths ?? [];
   const vectorPaths = paths.map((path, index) => {
     if (index !== pathIndex) {
       return path;
@@ -296,7 +335,7 @@ export function updateVectorPathCommands({
     }
     return { ...path, data: serializeEditablePathData(applyEditableVectorPathOperation(commands, operation)) };
   });
-  return { ...node, vectorPaths };
+  return { ...editableNode, vectorPaths };
 }
 
 
@@ -310,17 +349,17 @@ export function updateVectorPathEndpoint({
   commandIndex,
   valueIndex,
   point,
+  editableVectorPaths,
 }: {
   readonly node: FigDesignNode;
   readonly pathIndex: number;
   readonly commandIndex: number;
   readonly valueIndex: number;
   readonly point: { readonly x: number; readonly y: number };
+  readonly editableVectorPaths?: EditableVectorPathSource;
 }): FigDesignNode {
-  if (!node.vectorPaths || node.vectorPaths.length === 0) {
-    return updateParametricShapeEndpoint({ node, commandIndex, point });
-  }
-  const paths = resolveEditableVectorPaths(node) ?? [];
+  const editableNode = toExplicitEditableVectorNode(node, editableVectorPaths);
+  const paths = editableNode.vectorPaths ?? [];
   const vectorPaths = paths.map((path, index) => {
     if (index !== pathIndex) {
       return path;
@@ -337,7 +376,7 @@ export function updateVectorPathEndpoint({
     });
     return { ...path, data: serializeEditablePathData(nextCommands) };
   });
-  return { ...node, vectorPaths };
+  return { ...editableNode, vectorPaths };
 }
 
 
@@ -363,6 +402,18 @@ export function pageToDrawingLocalPoint(
 export function getVectorHandleAriaLabel(handle: VectorPathHandle): string {
   const index = handle.commandIndex + 1;
   return handle.role === "control" ? `Vector path control handle ${index}` : `Vector path anchor handle ${index}`;
+}
+
+function isClosingAnchorPoint(
+  commands: readonly EditablePathCommand[],
+  commandIndex: number,
+  point: { readonly x: number; readonly y: number; readonly role: "anchor" | "control" },
+): boolean {
+  if (point.role !== "anchor" || commands[commandIndex + 1]?.type !== "Z") {
+    return false;
+  }
+  const start = getEditableCommandEndpoint(commands[0]!);
+  return Boolean(start && Math.hypot(start.x - point.x, start.y - point.y) < 0.001);
 }
 
 function synthesizeEditableVectorPaths(node: FigDesignNode): readonly FigVectorPath[] | undefined {
@@ -392,6 +443,21 @@ function toEditablePath(data: string): FigVectorPath {
   return { windingRule: "NONZERO", data };
 }
 
+function decodeEditableGeometryVectorPaths(
+  node: FigDesignNode,
+  blobs: readonly FigDesignBlob[],
+): readonly FigVectorPath[] {
+  if (blobs.length === 0) {
+    return [];
+  }
+  const fillContours = decodeGeometryToContours(node.fillGeometry, blobs);
+  const contours = fillContours.length > 0 ? fillContours : decodeGeometryToContours(node.strokeGeometry, blobs);
+  return contours.map((contour) => ({
+    windingRule: contour.windingRule === "evenodd" ? "EVENODD" : "NONZERO",
+    data: contourToSvgD(contour),
+  }));
+}
+
 function resolveEditableCornerRadius(node: FigDesignNode): number | readonly [number, number, number, number] | undefined {
   const radii = node.rectangleCornerRadii;
   if (radii && radii.length === 4) {
@@ -404,11 +470,18 @@ function isContainerNode(node: FigDesignNode | undefined): boolean {
   return node?.type === "FRAME" || node?.type === "COMPONENT" || node?.type === "COMPONENT_SET" || node?.type === "SYMBOL";
 }
 
-function toExplicitEditableVectorNode(node: FigDesignNode): FigDesignNode {
-  if (node.vectorPaths && node.vectorPaths.length > 0) {
+function isExplicitEditableVectorPathNode(node: FigDesignNode): boolean {
+  return node.type === "VECTOR" || node.type === "BOOLEAN_OPERATION";
+}
+
+function toExplicitEditableVectorNode(
+  node: FigDesignNode,
+  editableVectorPaths?: EditableVectorPathSource,
+): FigDesignNode {
+  if (isExplicitEditableVectorPathNode(node) && node.vectorPaths && node.vectorPaths.length > 0) {
     return node;
   }
-  const vectorPaths = resolveEditableVectorPaths(node);
+  const vectorPaths = editableVectorPaths ?? resolveEditableVectorPaths(node);
   if (!vectorPaths) {
     return node;
   }
@@ -416,150 +489,14 @@ function toExplicitEditableVectorNode(node: FigDesignNode): FigDesignNode {
     ...node,
     type: "VECTOR",
     vectorPaths,
+    fillGeometry: undefined,
+    strokeGeometry: undefined,
+    vectorData: undefined,
     cornerRadius: undefined,
     rectangleCornerRadii: undefined,
     pointCount: undefined,
     starInnerRadius: undefined,
     starInnerScale: undefined,
-  };
-}
-
-function updateParametricShapeEndpoint({
-  node,
-  commandIndex,
-  point,
-}: {
-  readonly node: FigDesignNode;
-  readonly commandIndex: number;
-  readonly point: { readonly x: number; readonly y: number };
-}): FigDesignNode {
-  switch (node.type) {
-    case "RECTANGLE":
-    case "ROUNDED_RECTANGLE":
-      return updateRectanglePathEndpoint(node, commandIndex, point);
-    case "ELLIPSE":
-      return updateEllipsePathEndpoint(node, commandIndex, point);
-    case "LINE":
-      return updateLinePathEndpoint(node, commandIndex, point);
-    case "REGULAR_POLYGON":
-    case "STAR":
-      return updatePathBoundsFromSyntheticEndpoint({ node, commandIndex, point });
-    default:
-      return node;
-  }
-}
-
-function updateRectanglePathEndpoint(
-  node: FigDesignNode,
-  commandIndex: number,
-  point: { readonly x: number; readonly y: number },
-): FigDesignNode {
-  const width = Math.max(1, node.size.x);
-  const height = Math.max(1, node.size.y);
-  switch (commandIndex) {
-    case 0:
-      return resizeParametricNode({ node, left: point.x, top: point.y, right: width, bottom: height });
-    case 1:
-      return resizeParametricNode({ node, left: 0, top: point.y, right: point.x, bottom: height });
-    case 2:
-      return resizeParametricNode({ node, left: 0, top: 0, right: point.x, bottom: point.y });
-    case 3:
-      return resizeParametricNode({ node, left: point.x, top: 0, right: width, bottom: point.y });
-    default:
-      return node;
-  }
-}
-
-function updateEllipsePathEndpoint(
-  node: FigDesignNode,
-  commandIndex: number,
-  point: { readonly x: number; readonly y: number },
-): FigDesignNode {
-  const width = Math.max(1, node.size.x);
-  const height = Math.max(1, node.size.y);
-  switch (commandIndex) {
-    case 0:
-    case 4:
-      return resizeParametricNode({ node, left: 0, top: point.y, right: width, bottom: height });
-    case 1:
-      return resizeParametricNode({ node, left: 0, top: 0, right: point.x, bottom: height });
-    case 2:
-      return resizeParametricNode({ node, left: 0, top: 0, right: width, bottom: point.y });
-    case 3:
-      return resizeParametricNode({ node, left: point.x, top: 0, right: width, bottom: height });
-    default:
-      return node;
-  }
-}
-
-function updateLinePathEndpoint(
-  node: FigDesignNode,
-  commandIndex: number,
-  point: { readonly x: number; readonly y: number },
-): FigDesignNode {
-  if (commandIndex === 0) {
-    return resizeParametricNode({ node, left: point.x, top: point.y, right: node.size.x, bottom: 0 });
-  }
-  if (commandIndex === 1) {
-    return resizeParametricNode({ node, left: 0, top: 0, right: point.x, bottom: point.y });
-  }
-  return node;
-}
-
-function updatePathBoundsFromSyntheticEndpoint({
-  node,
-  commandIndex,
-  point,
-}: {
-  readonly node: FigDesignNode;
-  readonly commandIndex: number;
-  readonly point: { readonly x: number; readonly y: number };
-}): FigDesignNode {
-  const path = resolveEditableVectorPaths(node)?.[0];
-  const commands = parseEditablePathData(path?.data ?? "");
-  if (!commands) {
-    return node;
-  }
-  const nextCommands = applyEditableVectorPathOperation(commands, {
-    type: "move-command-point",
-    commandIndex,
-    valueIndex: 0,
-    point,
-  });
-  const anchors = nextCommands.flatMap((command) => getEditableCommandPoints(command).filter((candidate) => candidate.role === "anchor"));
-  if (anchors.length < 2) {
-    return node;
-  }
-  const left = Math.min(...anchors.map((anchor) => anchor.x));
-  const top = Math.min(...anchors.map((anchor) => anchor.y));
-  const right = Math.max(...anchors.map((anchor) => anchor.x));
-  const bottom = Math.max(...anchors.map((anchor) => anchor.y));
-  return resizeParametricNode({ node, left, top, right, bottom });
-}
-
-function resizeParametricNode({
-  node,
-  left,
-  top,
-  right,
-  bottom,
-}: {
-  readonly node: FigDesignNode;
-  readonly left: number;
-  readonly top: number;
-  readonly right: number;
-  readonly bottom: number;
-}): FigDesignNode {
-  const width = Math.max(1, right - left);
-  const height = Math.max(1, bottom - top);
-  return {
-    ...node,
-    transform: {
-      ...node.transform,
-      m02: node.transform.m02 + left,
-      m12: node.transform.m12 + top,
-    },
-    size: { x: width, y: height },
   };
 }
 

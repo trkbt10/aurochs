@@ -6,9 +6,12 @@ import {
   anchorHandleCount,
   clickNode,
   controlLineCount,
+  controlHandleCenter,
   editablePathScreenPoint,
+  anchorHandleCenter,
   firstAnchorHandleCenter,
   firstEditablePathData,
+  nearestAnchorHandleDistance,
   openEditor,
   renderedSvgMarkup,
   rightClickAnchorHandle,
@@ -43,6 +46,7 @@ test.describe("existing vector path editing", () => {
     await page.mouse.click(addPoint.x, addPoint.y);
 
     await expect.poll(() => vectorHandleCount(page)).toBe(handleCountBeforeAdd + 1);
+    await expect.poll(() => nearestAnchorHandleDistance(page, addPoint)).toBeLessThan(8);
     const anchorCountAfterAdd = await anchorHandleCount(page);
     const controlLineCountBeforeConvert = await controlLineCount(page);
 
@@ -62,6 +66,18 @@ test.describe("existing vector path editing", () => {
     await expect.poll(() => anchorHandleCount(page)).toBe(anchorCountAfterAdd - 1);
   });
 
+  test("clicks an unselected vector with the pen tool into path editing instead of normal selection fallback", async ({ page }) => {
+    await page.locator('button[title="Vector Edit (P)"]').click();
+    await clickNode(page, VECTOR);
+
+    await expect.poll(() => anchorHandleCount(page)).toBeGreaterThan(0);
+    const anchor = await firstAnchorHandleCenter(page);
+    await expect.poll(() => topmostAt(page, anchor)).toMatchObject({
+      ariaLabel: "Vector path anchor handle 1",
+      tagName: "circle",
+    });
+  });
+
   test("opens and closes an existing path through the vector context operation menu", async ({ page }) => {
     await clickNode(page, VECTOR);
     await page.locator('button[title="Vector Edit (P)"]').click();
@@ -74,5 +90,29 @@ test.describe("existing vector path editing", () => {
     await rightClickAnchorHandle(page, 1);
     await page.getByRole("menuitem", { name: "Close Vector Path" }).click();
     await expect.poll(() => firstEditablePathData(page)).toMatch(/ Z$/);
+  });
+
+  test("moves a curve anchor with attached controls instead of tearing the bezier unit apart", async ({ page }) => {
+    await clickNode(page, VECTOR);
+    await page.locator('button[title="Vector Edit (P)"]').click();
+    await expect.poll(() => controlLineCount(page)).toBeGreaterThan(0);
+
+    const anchorBefore = await anchorHandleCenter(page, 1);
+    const incomingControlBefore = await controlHandleCenter(page, 1);
+    const pathBefore = await firstEditablePathData(page);
+
+    await page.mouse.move(anchorBefore.x, anchorBefore.y);
+    await page.mouse.down();
+    await page.mouse.move(anchorBefore.x + 16, anchorBefore.y + 10, { steps: 4 });
+    await page.mouse.up();
+
+    await expect.poll(() => firstEditablePathData(page)).not.toBe(pathBefore);
+    await expect.poll(() => firstEditablePathData(page)).toContain("C ");
+    await expect.poll(() => controlLineCount(page)).toBeGreaterThan(0);
+    const anchorAfter = await anchorHandleCenter(page, 1);
+    const incomingControlAfter = await controlHandleCenter(page, 1);
+    expect(anchorAfter.x).toBeGreaterThan(anchorBefore.x + 8);
+    expect(incomingControlAfter.x).toBeGreaterThan(incomingControlBefore.x + 8);
+    expect(incomingControlAfter.y).toBeGreaterThan(incomingControlBefore.y + 4);
   });
 });

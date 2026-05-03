@@ -14,9 +14,11 @@ import { rotateShapeAroundCenter } from "@aurochs-ui/editor-core/geometry";
 import { pushHistory } from "@aurochs-ui/editor-core/history";
 import { updateNode } from "@aurochs-builder/fig/node-ops";
 import type { FigDesignDocument, FigNodeId, FigPageId } from "@aurochs/fig/domain";
+import type { FigVectorPath } from "@aurochs/fig/types";
 import { buildRotatedTransform, buildRotatedTransformAtWorldCenter } from "../rotation";
 import type { HandlerMap } from "./handler-types";
 import { getAbsoluteNodeBounds } from "../node-geometry";
+import { scaleEditablePathData } from "../../../vector-path/commands";
 
 export const DRAG_HANDLERS: HandlerMap = {
   START_PENDING_MOVE(state, action) {
@@ -396,6 +398,13 @@ function applyDragToDocument({ doc, pageId, drag }: ApplyDragOptions): FigDesign
         ...node,
         transform: { ...node.transform, m02: node.transform.m02 + absDx, m12: node.transform.m12 + absDy },
         size: { x: newW, y: newH },
+        vectorPaths: scaleVectorPathsForResize({
+          vectorPaths: node.vectorPaths,
+          oldWidth: initial.width,
+          oldHeight: initial.height,
+          newWidth: newW,
+          newHeight: newH,
+        }),
       }) });
     }, doc);
   }
@@ -471,4 +480,28 @@ function computeCombinedBounds(bounds: readonly SimpleBounds[]): SimpleBounds {
     width: maxX - minX,
     height: maxY - minY,
   };
+}
+
+function scaleVectorPathsForResize({
+  vectorPaths,
+  oldWidth,
+  oldHeight,
+  newWidth,
+  newHeight,
+}: {
+  readonly vectorPaths: readonly FigVectorPath[] | undefined;
+  readonly oldWidth: number;
+  readonly oldHeight: number;
+  readonly newWidth: number;
+  readonly newHeight: number;
+}): readonly FigVectorPath[] | undefined {
+  if (!vectorPaths || vectorPaths.length === 0) {
+    return vectorPaths;
+  }
+  const scaleX = oldWidth > 0 ? newWidth / oldWidth : 1;
+  const scaleY = oldHeight > 0 ? newHeight / oldHeight : 1;
+  return vectorPaths.map((path) => ({
+    ...path,
+    data: scaleEditablePathData(path.data ?? "", scaleX, scaleY),
+  }));
 }

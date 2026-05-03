@@ -19,7 +19,7 @@ export function WebGLCanvas({ sceneGraph, width, height }: Props) {
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || !sceneGraph) return;
+    if (!canvas || !sceneGraph) {return;}
 
     if (!rendererRef.current) {
       try {

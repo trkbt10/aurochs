@@ -13,7 +13,7 @@
  * (renderer, pre-resolver, builder) uses the same code path.
  */
 
-import type { FigGuid, FigNode, FigKiwiSymbolData } from "../types";
+import type { FigGuid, FigKiwiSymbolData } from "../types";
 
 // =============================================================================
 // Types
@@ -34,8 +34,8 @@ export type SymbolIDPair = {
  */
 type SymbolIDSource = {
   readonly symbolData?: FigKiwiSymbolData | Record<string, unknown>;
-  readonly symbolID?: FigGuid;
-  readonly overriddenSymbolID?: FigGuid;
+  readonly symbolID?: unknown;
+  readonly overriddenSymbolID?: unknown;
   readonly [key: string]: unknown;
 };
 
@@ -54,7 +54,7 @@ function resolveGuid(
   field: "symbolID" | "overriddenSymbolID",
 ): FigGuid | undefined {
   if (symbolData && isGuid(symbolData[field])) {
-    return symbolData[field] as FigGuid;
+    return symbolData[field];
   }
   const directValue = nodeData[field];
   if (isGuid(directValue)) {

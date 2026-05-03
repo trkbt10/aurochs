@@ -124,7 +124,12 @@ export function reresolveOverridesForVariant(args: {
   // the descendants array. The primitive's bundle cache uses
   // identity-keyed WeakMap, so this fresh root simply gets its own
   // bundle — no cross-call leakage, no shared mis-cache.
-  const syntheticRoot = { children: descendantsAsRaw } as unknown as FigNode;
+  const syntheticRoot: FigNode = {
+    guid: { sessionID: 0, localID: 0 },
+    phase: { value: 1, name: "CREATED" },
+    type: { value: 14, name: "SYMBOL" },
+    children: descendantsAsRaw,
+  };
 
   const map: GuidTranslationMap = buildGuidTranslationMap(
     syntheticRoot,

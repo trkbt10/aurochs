@@ -282,10 +282,8 @@ export type EffectsRendererInstance = {
   renderBackgroundBlur(params: { canvasWidth: number; canvasHeight: number; effect: BackgroundBlurEffect; pixelRatio: number; requireClipStencil: boolean; renderMask: () => void }): void;
   beginLayerCapture(canvasWidth: number, canvasHeight: number): Framebuffer;
   endLayerCaptureAndBlur(params: { canvasWidth: number; canvasHeight: number; effect: LayerBlurEffect; pixelRatio: number }): void;
-  /** Blit the captured layer FBO to screen with the given opacity (no blur). Returns false if blit shader unavailable. */
-  blitLayerWithOpacity(params: { canvasWidth: number; canvasHeight: number; opacity: number }): boolean;
-  /** Check if the blit shader is available (can be compiled in this GL context). */
-  isBlitAvailable(): boolean;
+  /** Blit the captured layer FBO to screen with the given opacity (no blur). */
+  blitLayerWithOpacity(params: { canvasWidth: number; canvasHeight: number; opacity: number }): void;
   applyGaussianBlur(source: Framebuffer, radius: number): Framebuffer;
   dispose(): void;
 };
@@ -329,30 +327,31 @@ export function createEffectsRenderer(gl: WebGLRenderingContext): EffectsRendere
   const shapeFBO = { value: null as Framebuffer | null };
   const layerFBO = { value: null as Framebuffer | null };
 
-  function compileProgram(vertexSrc: string, fragmentSrc: string): WebGLProgram | null {
-    const vs = gl.createShader(gl.VERTEX_SHADER);
-    if (!vs) { return null; }
-    gl.shaderSource(vs, vertexSrc);
-    gl.compileShader(vs);
-    if (!gl.getShaderParameter(vs, gl.COMPILE_STATUS)) {
-      console.warn("Vertex shader compile error:", gl.getShaderInfoLog(vs));
-      gl.deleteShader(vs);
-      return null;
+  function compileShader(label: string, type: number, source: string): WebGLShader {
+    const shader = gl.createShader(type);
+    if (!shader) {
+      throw new Error(`WebGL effects renderer failed to allocate ${label} shader`);
     }
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+      const info = gl.getShaderInfoLog(shader) ?? "unknown shader compile error";
+      gl.deleteShader(shader);
+      throw new Error(`WebGL effects renderer failed to compile ${label} shader: ${info}`);
+    }
+    return shader;
+  }
 
-    const fs = gl.createShader(gl.FRAGMENT_SHADER);
-    if (!fs) { gl.deleteShader(vs); return null; }
-    gl.shaderSource(fs, fragmentSrc);
-    gl.compileShader(fs);
-    if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) {
-      console.warn("Fragment shader compile error:", gl.getShaderInfoLog(fs));
-      gl.deleteShader(vs);
-      gl.deleteShader(fs);
-      return null;
-    }
+  function compileProgram(label: string, vertexSrc: string, fragmentSrc: string): WebGLProgram {
+    const vs = compileShader(`${label} vertex`, gl.VERTEX_SHADER, vertexSrc);
+    const fs = compileShader(`${label} fragment`, gl.FRAGMENT_SHADER, fragmentSrc);
 
     const program = gl.createProgram();
-    if (!program) { gl.deleteShader(vs); gl.deleteShader(fs); return null; }
+    if (!program) {
+      gl.deleteShader(vs);
+      gl.deleteShader(fs);
+      throw new Error(`WebGL effects renderer failed to allocate ${label} shader program`);
+    }
     gl.attachShader(program, vs);
     gl.attachShader(program, fs);
     gl.linkProgram(program);
@@ -361,9 +360,9 @@ export function createEffectsRenderer(gl: WebGLRenderingContext): EffectsRendere
     gl.deleteShader(fs);
 
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-      console.warn("Program link error:", gl.getProgramInfoLog(program));
+      const info = gl.getProgramInfoLog(program) ?? "unknown program link error";
       gl.deleteProgram(program);
-      return null;
+      throw new Error(`WebGL effects renderer failed to link ${label} shader program: ${info}`);
     }
 
     return program;
@@ -371,23 +370,26 @@ export function createEffectsRenderer(gl: WebGLRenderingContext): EffectsRendere
 
   function ensureResources(width: number, height: number): void {
     if (!blurProgram.value) {
-      blurProgram.value = compileProgram(gaussianBlurVertexShader, gaussianBlurFragmentShader);
+      blurProgram.value = compileProgram("gaussian blur", gaussianBlurVertexShader, gaussianBlurFragmentShader);
     }
 
     if (!morphologyProgram.value) {
-      morphologyProgram.value = compileProgram(gaussianBlurVertexShader, alphaMorphologyFragmentShader);
+      morphologyProgram.value = compileProgram("alpha morphology", gaussianBlurVertexShader, alphaMorphologyFragmentShader);
     }
 
     if (!compositeProgram.value) {
-      compositeProgram.value = compileProgram(compositeVertexShader, compositeFragmentShader);
+      compositeProgram.value = compileProgram("drop shadow composite", compositeVertexShader, compositeFragmentShader);
     }
 
     if (!blendShadowProgram.value) {
-      blendShadowProgram.value = compileProgram(compositeVertexShader, blendShadowFragmentShader);
+      blendShadowProgram.value = compileProgram("shadow blend", compositeVertexShader, blendShadowFragmentShader);
     }
 
     if (!fullscreenQuad.value) {
-      const buffer = gl.createBuffer()!;
+      const buffer = gl.createBuffer();
+      if (!buffer) {
+        throw new Error("WebGL effects renderer failed to allocate fullscreen quad buffer");
+      }
       gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
       gl.bufferData(
         gl.ARRAY_BUFFER,
@@ -415,7 +417,7 @@ export function createEffectsRenderer(gl: WebGLRenderingContext): EffectsRendere
 
   function ensureInnerShadowProgram(): void {
     if (!innerShadowProgram.value) {
-      innerShadowProgram.value = compileProgram(compositeVertexShader, innerShadowFragmentShader);
+      innerShadowProgram.value = compileProgram("inner shadow", compositeVertexShader, innerShadowFragmentShader);
     }
   }
 
@@ -437,12 +439,22 @@ export function createEffectsRenderer(gl: WebGLRenderingContext): EffectsRendere
 
   function ensureBlitProgram(): void {
     if (!blitProgram.value) {
-      blitProgram.value = compileProgram(compositeVertexShader, blitFragmentShader);
+      blitProgram.value = compileProgram("blit", compositeVertexShader, blitFragmentShader);
     }
   }
 
+  function requireProgram(program: WebGLProgram | null, label: string): WebGLProgram {
+    if (!program) {
+      throw new Error(`WebGL effects renderer failed to initialize ${label} shader program`);
+    }
+    return program;
+  }
+
   function drawFullscreenQuad(program: WebGLProgram): void {
-    gl.bindBuffer(gl.ARRAY_BUFFER, fullscreenQuad.value!);
+    if (!fullscreenQuad.value) {
+      throw new Error("WebGL effects renderer fullscreen quad buffer is not initialized");
+    }
+    gl.bindBuffer(gl.ARRAY_BUFFER, fullscreenQuad.value);
     const posLoc = gl.getAttribLocation(program, "a_position");
     gl.enableVertexAttribArray(posLoc);
     gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
@@ -464,8 +476,7 @@ export function createEffectsRenderer(gl: WebGLRenderingContext): EffectsRendere
   function drawBlurPass(
     { sourceTexture, width, height, dirX, dirY, radius }: { sourceTexture: WebGLTexture; width: number; height: number; dirX: number; dirY: number; radius: number }
   ): void {
-    const program = blurProgram.value;
-    if (!program) { return; }
+    const program = requireProgram(blurProgram.value, "gaussian blur");
     gl.useProgram(program);
 
     gl.activeTexture(gl.TEXTURE0);
@@ -519,8 +530,8 @@ export function createEffectsRenderer(gl: WebGLRenderingContext): EffectsRendere
 
   function applyAlphaMorphology(source: Framebuffer, spread: number): Framebuffer {
     ensureResources(source.width, source.height);
-    const program = morphologyProgram.value;
-    if (!program || spread === 0) { return source; }
+    if (spread === 0) { return source; }
+    const program = requireProgram(morphologyProgram.value, "alpha morphology");
 
     withStencilDisabled(() => {
       bindFramebuffer(gl, tempFBO1.value!);
@@ -569,8 +580,7 @@ export function createEffectsRenderer(gl: WebGLRenderingContext): EffectsRendere
       const blendModeCode = blendModeToShaderCode(effect.blendMode);
       if (blendModeCode !== 0) {
         const backdrop = copyDefaultFramebufferToLayer(canvasWidth, canvasHeight);
-        const programForBlend = blendShadowProgram.value;
-        if (!programForBlend) { bindFramebuffer(gl, null); gl.viewport(0, 0, canvasWidth, canvasHeight); return; }
+        const programForBlend = requireProgram(blendShadowProgram.value, "drop shadow blend");
         gl.useProgram(programForBlend);
 
         gl.activeTexture(gl.TEXTURE0);
@@ -609,8 +619,7 @@ export function createEffectsRenderer(gl: WebGLRenderingContext): EffectsRendere
         return;
       }
 
-      const program = compositeProgram.value;
-      if (!program) { bindFramebuffer(gl, null); gl.viewport(0, 0, canvasWidth, canvasHeight); return; }
+      const program = requireProgram(compositeProgram.value, "drop shadow composite");
       gl.useProgram(program);
 
       gl.activeTexture(gl.TEXTURE0);
@@ -672,8 +681,7 @@ export function createEffectsRenderer(gl: WebGLRenderingContext): EffectsRendere
       bindFramebuffer(gl, null);
       gl.viewport(0, 0, canvasWidth, canvasHeight);
 
-      const program = innerShadowProgram.value;
-      if (!program) { bindFramebuffer(gl, null); gl.viewport(0, 0, canvasWidth, canvasHeight); return; }
+      const program = requireProgram(innerShadowProgram.value, "inner shadow");
 
       const blendModeCode = blendModeToShaderCode(effect.blendMode);
       if (blendModeCode !== 0) {
@@ -708,8 +716,7 @@ export function createEffectsRenderer(gl: WebGLRenderingContext): EffectsRendere
         bindFramebuffer(gl, null);
         gl.viewport(0, 0, canvasWidth, canvasHeight);
         const backdrop = copyDefaultFramebufferToLayer(canvasWidth, canvasHeight);
-        const blendProgram = blendShadowProgram.value;
-        if (!blendProgram) { bindFramebuffer(gl, null); gl.viewport(0, 0, canvasWidth, canvasHeight); return; }
+        const blendProgram = requireProgram(blendShadowProgram.value, "inner shadow blend");
         gl.useProgram(blendProgram);
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, maskTarget.texture);
@@ -799,17 +806,15 @@ export function createEffectsRenderer(gl: WebGLRenderingContext): EffectsRendere
       }
       gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);
 
-      const program = blitProgram.value;
-      if (program) {
-        gl.useProgram(program);
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, blurred.texture);
-        gl.uniform1i(gl.getUniformLocation(program, "u_texture"), 0);
-        gl.uniform1f(gl.getUniformLocation(program, "u_opacity"), 1.0);
-        gl.disable(gl.BLEND);
-        drawFullscreenQuad(program);
-        gl.enable(gl.BLEND);
-      }
+      const program = requireProgram(blitProgram.value, "background blur blit");
+      gl.useProgram(program);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, blurred.texture);
+      gl.uniform1i(gl.getUniformLocation(program, "u_texture"), 0);
+      gl.uniform1f(gl.getUniformLocation(program, "u_opacity"), 1.0);
+      gl.disable(gl.BLEND);
+      drawFullscreenQuad(program);
+      gl.enable(gl.BLEND);
 
       gl.colorMask(false, false, false, false);
       gl.stencilMask(FILL_STENCIL_MASK);
@@ -856,8 +861,7 @@ export function createEffectsRenderer(gl: WebGLRenderingContext): EffectsRendere
       bindFramebuffer(gl, null);
       gl.viewport(0, 0, canvasWidth, canvasHeight);
 
-      const program = blitProgram.value;
-      if (!program) { bindFramebuffer(gl, null); gl.viewport(0, 0, canvasWidth, canvasHeight); return; }
+      const program = requireProgram(blitProgram.value, "layer blur blit");
       gl.useProgram(program);
 
       gl.activeTexture(gl.TEXTURE0);
@@ -887,7 +891,7 @@ export function createEffectsRenderer(gl: WebGLRenderingContext): EffectsRendere
 
     blitLayerWithOpacity(
       { canvasWidth, canvasHeight, opacity }: { canvasWidth: number; canvasHeight: number; opacity: number }
-    ): boolean {
+    ): void {
       ensureResources(canvasWidth, canvasHeight);
       ensureBlitProgram();
 
@@ -902,8 +906,7 @@ export function createEffectsRenderer(gl: WebGLRenderingContext): EffectsRendere
       bindFramebuffer(gl, null);
       gl.viewport(0, 0, canvasWidth, canvasHeight);
 
-      const program = blitProgram.value;
-      if (!program) { return false; }
+      const program = requireProgram(blitProgram.value, "group opacity blit");
       gl.useProgram(program);
 
       gl.activeTexture(gl.TEXTURE0);
@@ -923,12 +926,6 @@ export function createEffectsRenderer(gl: WebGLRenderingContext): EffectsRendere
         gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA,
         gl.ONE, gl.ONE_MINUS_SRC_ALPHA
       );
-      return true;
-    },
-
-    isBlitAvailable(): boolean {
-      ensureBlitProgram();
-      return blitProgram.value !== null;
     },
 
     applyGaussianBlur,

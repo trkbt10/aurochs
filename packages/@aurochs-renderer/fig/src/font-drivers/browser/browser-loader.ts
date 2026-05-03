@@ -77,6 +77,10 @@ type WindowWithLocalFonts = Window & {
   queryLocalFonts: (options?: { postscriptNames?: string[] }) => Promise<FontData[]>;
 };
 
+function isLoadableFontData(font: { readonly family: string; readonly fullName: string; readonly postscriptName: string; readonly style: string }): font is FontData {
+  return "blob" in font && typeof font.blob === "function";
+}
+
 /**
  * Get font weight from font style name
  */
@@ -202,6 +206,9 @@ export function createBrowserFontLoader(): BrowserFontLoaderInstance {
       // Index by family name (lowercase)
       const index = new Map<string, FontData[]>();
       for (const font of fonts) {
+        if (!isLoadableFontData(font)) {
+          continue;
+        }
         const familyLower = font.family.toLowerCase();
         const existing = index.get(familyLower) ?? [];
         index.set(familyLower, [...existing, font]);

@@ -398,7 +398,7 @@ describe("Text tessellation pipeline", () => {
   // =============================================================================
 
   describe("tessellateTextNode", () => {
-    it("returns null when no glyphContours", () => {
+    it("throws when no glyphContours", () => {
       const node = makeTextNode({
         textLineLayout: {
           lines: [{ text: "Hello", x: 0, y: 14 }],
@@ -409,12 +409,12 @@ describe("Text tessellation pipeline", () => {
           textAnchor: "start",
         },
       });
-      expect(tessellateTextNode(node)).toBeNull();
+      expect(() => tessellateTextNode(node)).toThrow("requires glyph contours");
     });
 
-    it("returns null when glyphContours is empty array", () => {
+    it("throws when glyphContours is empty array", () => {
       const node = makeTextNode({ glyphContours: [] });
-      expect(tessellateTextNode(node)).toBeNull();
+      expect(() => tessellateTextNode(node)).toThrow("requires glyph contours");
     });
 
     it("tessellates a node with glyph contours", () => {
@@ -476,7 +476,7 @@ describe("Text tessellation pipeline", () => {
         windingRule: "nonzero",
       };
       const vertices = tessellateContour(contour);
-      expect(vertices.length).toBeGreaterThanOrEqual(0);
+      expect(vertices.length).toBe(0);
     });
 
     it("handles zero-area contour (collinear points)", () => {
@@ -490,7 +490,7 @@ describe("Text tessellation pipeline", () => {
         windingRule: "nonzero",
       };
       const vertices = tessellateContour(contour);
-      expect(vertices.length).toBeGreaterThanOrEqual(0);
+      expect(vertices.length).toBe(0);
     });
 
     it("ALL-holes scenario: orphan holes are silently dropped", () => {

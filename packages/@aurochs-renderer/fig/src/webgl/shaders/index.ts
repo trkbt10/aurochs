@@ -5,9 +5,11 @@
 import { flatVertexShader, flatFragmentShader } from "./flat";
 import { linearGradientVertexShader, linearGradientFragmentShader } from "./linear-gradient";
 import { radialGradientVertexShader, radialGradientFragmentShader } from "./radial-gradient";
+import { angularGradientVertexShader, angularGradientFragmentShader } from "./angular-gradient";
+import { diamondGradientVertexShader, diamondGradientFragmentShader } from "./diamond-gradient";
 import { texturedVertexShader, texturedFragmentShader } from "./textured";
 
-export type ShaderProgramName = "flat" | "linearGradient" | "radialGradient" | "textured";
+export type ShaderProgramName = "flat" | "linearGradient" | "radialGradient" | "angularGradient" | "diamondGradient" | "textured";
 
 type ShaderSources = {
   readonly vertex: string;
@@ -18,6 +20,8 @@ const SHADER_SOURCES: Record<ShaderProgramName, ShaderSources> = {
   flat: { vertex: flatVertexShader, fragment: flatFragmentShader },
   linearGradient: { vertex: linearGradientVertexShader, fragment: linearGradientFragmentShader },
   radialGradient: { vertex: radialGradientVertexShader, fragment: radialGradientFragmentShader },
+  angularGradient: { vertex: angularGradientVertexShader, fragment: angularGradientFragmentShader },
+  diamondGradient: { vertex: diamondGradientVertexShader, fragment: diamondGradientFragmentShader },
   textured: { vertex: texturedVertexShader, fragment: texturedFragmentShader },
 };
 

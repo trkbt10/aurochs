@@ -16,6 +16,7 @@ test.describe("isolated bezier path tool UI", () => {
     await page.mouse.move(first.x, first.y);
     await page.mouse.down();
     await page.mouse.move(firstControl.x, firstControl.y, { steps: 5 });
+    await expect.poll(() => draftControlLineCount(page)).toBeGreaterThan(0);
     await page.mouse.up();
 
     await expect.poll(() => draftControlLineCount(page)).toBeGreaterThan(0);
@@ -57,6 +58,31 @@ test.describe("isolated bezier path tool UI", () => {
     await expect(page.getByLabel("Committed bezier path")).toBeVisible();
     await expect.poll(() => committedPathData(page)).toContain("C ");
     await expect.poll(() => committedPathData(page)).not.toMatch(/ Z$/);
+  });
+
+  test("keeps the start anchor editable until a click explicitly closes the draft", async ({ page }) => {
+    const first = await harnessPoint(page, { x: 110, y: 210 });
+    const second = await harnessPoint(page, { x: 280, y: 180 });
+
+    await page.mouse.click(first.x, first.y);
+    await page.mouse.click(second.x, second.y);
+    await expect.poll(() => draftAnchorCount(page)).toBe(2);
+
+    const startBefore = await draftAnchorCenter(page, 0);
+    await page.mouse.move(startBefore.x, startBefore.y);
+    await page.mouse.down();
+    await page.mouse.move(startBefore.x + 24, startBefore.y - 18, { steps: 4 });
+    await page.mouse.up();
+
+    await expect(page.getByLabel("Committed bezier path")).toBeHidden();
+    await expect.poll(() => draftAnchorCount(page)).toBe(2);
+    const startAfter = await draftAnchorCenter(page, 0);
+    expect(startAfter.x).toBeGreaterThan(startBefore.x + 16);
+    expect(startAfter.y).toBeLessThan(startBefore.y - 10);
+
+    await page.mouse.click(startAfter.x, startAfter.y);
+    await expect(page.getByLabel("Committed bezier path")).toBeVisible();
+    await expect.poll(() => committedPathData(page)).toMatch(/ Z$/);
   });
 });
 

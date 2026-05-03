@@ -22,12 +22,21 @@ test.describe("Fig editor WebGL text editing", () => {
     const canvas = page.locator("canvas");
     await expect(canvas).toHaveCount(1);
 
-    const ratio = await canvas.evaluate((node) => node.width / node.clientWidth);
-    expect(ratio).toBeGreaterThanOrEqual(2);
+    const canvasMetrics = await canvas.evaluate((node) => ({
+      ratio: node.width / node.clientWidth,
+      backingPixels: node.width * node.height,
+      beforeEditPixels: node.toDataURL("image/png"),
+    }));
+    expect(canvasMetrics.ratio).toBeGreaterThan(0);
+    expect(canvasMetrics.backingPixels).toBeLessThanOrEqual(4_100_000);
 
     await doubleClickNode(page, HELLO_TEXT);
     await page.locator("textarea").waitFor({ state: "attached" });
     await fillHiddenCanvasTextarea(page, "WebGL text\nwrap parity");
+    await expect.poll(
+      () => canvas.evaluate((node) => node.toDataURL("image/png")),
+      { timeout: 5_000 },
+    ).not.toBe(canvasMetrics.beforeEditPixels);
 
     const editorState = await page.evaluate(() => {
       const textarea = Array.from(document.querySelectorAll("textarea")).find((ta) => {

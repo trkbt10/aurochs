@@ -113,20 +113,24 @@ function renderDecorationPaths(decorations: readonly DerivedDecoration[] | undef
 /**
  * Render a single glyph as SVG path
  */
-function renderGlyphPath(glyph: DerivedGlyph, blobs: readonly FigBlob[], precision: number = 5): string | null {
-  if (glyph.commandsBlob === undefined || glyph.commandsBlob >= blobs.length) {
-    return null;
+function renderGlyphPath(glyph: DerivedGlyph, blobs: readonly FigBlob[], precision: number = 5): string | undefined {
+  if (glyph.commandsBlob === undefined) {
+    return undefined;
+  }
+
+  if (glyph.commandsBlob >= blobs.length) {
+    throw new Error(`Derived text glyph references missing commands blob ${glyph.commandsBlob}`);
   }
 
   const blob = blobs[glyph.commandsBlob];
   if (!blob) {
-    return null;
+    throw new Error(`Derived text glyph commands blob ${glyph.commandsBlob} is unavailable`);
   }
 
   // Decode path commands
   const commands = decodePathCommands(blob);
   if (commands.length === 0) {
-    return null;
+    throw new Error(`Derived text glyph commands blob ${glyph.commandsBlob} decoded to an empty path`);
   }
 
   // Transform to screen coordinates
@@ -150,8 +154,10 @@ export function renderTextNodeFromDerivedData(node: FigNode, ctx: DerivedPathRen
   // the same type, so no cast is needed.
   const derivedTextData: DerivedTextData | undefined = node.derivedTextData;
 
-  // No derived data - fallback to empty
   if (!derivedTextData?.glyphs || derivedTextData.glyphs.length === 0) {
+    if (props.characters.length > 0) {
+      throw new Error(`Derived text renderer requires glyph data for non-empty text node ${node.id}`);
+    }
     return EMPTY_SVG;
   }
 
@@ -173,6 +179,9 @@ export function renderTextNodeFromDerivedData(node: FigNode, ctx: DerivedPathRen
   const decorationPath = renderDecorationPaths(derivedTextData.decorations);
 
   if (glyphPaths.length === 0 && !decorationPath) {
+    if (props.characters.trim().length > 0) {
+      throw new Error(`Derived text renderer produced no visible paths for non-empty text node ${node.id}`);
+    }
     return EMPTY_SVG;
   }
 

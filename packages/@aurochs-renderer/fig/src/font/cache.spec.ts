@@ -42,4 +42,29 @@ describe("createCachingFontLoader", () => {
     expect(requested).toHaveLength(1);
     expect(loader.getCachedFont(options)).toBe(LOADED_FONT);
   });
+
+  it("exposes loaded fallback fonts through the fallback cache only", async () => {
+    const requested: FontLoadOptions[] = [];
+    const loader = createCachingFontLoader({
+      loadFont: async () => undefined,
+      isFontAvailable: async () => false,
+      loadFallbackFont: async (options) => {
+        requested.push(options);
+        return LOADED_FONT;
+      },
+    });
+    const options = { family: "Missing Sans", weight: 400, style: "normal" as const };
+
+    expect(loader.getCachedFont(options)).toBeUndefined();
+    expect(loader.getCachedFallbackFont(options)).toBeUndefined();
+    const fallback = loader.loadFallbackFont;
+    if (!fallback) {
+      throw new Error("Expected test loader to expose loadFallbackFont");
+    }
+    await fallback(options);
+
+    expect(requested).toHaveLength(1);
+    expect(loader.getCachedFont(options)).toBeUndefined();
+    expect(loader.getCachedFallbackFont(options)).toBe(LOADED_FONT);
+  });
 });

@@ -40,14 +40,14 @@ export type TessellatedText = {
  *
  * @param node - Scene graph text node
  * @param tolerance - Bezier flattening tolerance
- * @returns Tessellated text data, or null if no outlines available
+ * @returns Tessellated text data
  */
 export function tessellateTextNode(
   node: TextNode,
   tolerance: number = 0.25
-): TessellatedText | null {
+): TessellatedText {
   if (!node.glyphContours || node.glyphContours.length === 0) {
-    return null;
+    throw new Error(`WebGL text tessellation requires glyph contours for text node ${node.id}`);
   }
 
   // Figma glyph blobs use PostScript/CFF winding convention (invertWinding=true)

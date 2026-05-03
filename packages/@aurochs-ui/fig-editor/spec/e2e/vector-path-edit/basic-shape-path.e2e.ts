@@ -10,6 +10,7 @@ import {
   anchorHandleCount,
   clickNode,
   editablePathScreenPoint,
+  firstEditablePathData,
   firstAnchorHandleCenter,
   openEditor,
   renderedSvgMarkup,
@@ -34,6 +35,7 @@ test.describe("basic shape path editing", () => {
 
       const anchor = await firstAnchorHandleCenter(page);
       const boundsBefore = await selectionBoxPageBounds(page);
+      const pathBefore = await firstEditablePathData(page);
       await expect.poll(async () => {
         const target = await topmostAt(page, anchor);
         return target.tagName === "circle" && target.ariaLabel?.startsWith("Vector path anchor handle") === true;
@@ -44,7 +46,8 @@ test.describe("basic shape path editing", () => {
       await page.mouse.up();
 
       await expect.poll(() => renderedSvgMarkup(page)).not.toBe(svgBefore);
-      await expect.poll(() => selectionBoxPageBounds(page)).not.toEqual(boundsBefore);
+      await expect.poll(() => firstEditablePathData(page)).not.toBe(pathBefore);
+      await expect.poll(() => selectionBoxPageBounds(page)).toEqual(boundsBefore);
     }
   });
 
@@ -73,6 +76,7 @@ test.describe("basic shape path editing", () => {
     await expect.poll(() => anchorHandleCount(page)).toBeGreaterThan(0);
     const svgBefore = await renderedSvgMarkup(page);
     const boundsBefore = await selectionBoxPageBounds(page);
+    const pathBefore = await firstEditablePathData(page);
     const anchor = await firstAnchorHandleCenter(page);
 
     await expect.poll(() => topmostAt(page, anchor)).toMatchObject({ ariaLabel: "Vector path anchor handle 1" });
@@ -82,7 +86,8 @@ test.describe("basic shape path editing", () => {
     await page.mouse.up();
 
     await expect.poll(() => renderedSvgMarkup(page)).not.toBe(svgBefore);
-    await expect.poll(() => selectionBoxPageBounds(page)).not.toEqual(boundsBefore);
+    await expect.poll(() => firstEditablePathData(page)).not.toBe(pathBefore);
+    await expect.poll(() => selectionBoxPageBounds(page)).toEqual(boundsBefore);
     await expect.poll(() => selectionBoxPageBounds(page)).not.toEqual(FRAME);
   });
 });

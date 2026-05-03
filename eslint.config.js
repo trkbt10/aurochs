@@ -81,6 +81,7 @@ export default [
         // and remove this comment.
         "custom/no-as-outside-guard": "error",
         "custom/no-nested-try": "error",
+        "custom/no-implicit-catch": "error",
         "custom/no-iife-in-anonymous": "error",
         // Prohibit deep re-exports that cross multiple directory levels
         "custom/no-deep-reexport": ["error", { maxParentDepth: 0 }],
@@ -100,6 +101,8 @@ export default [
         "eslint-comments/no-restricted-disable": [
           "error",
           "custom/no-cross-package-reexport",
+          "custom/no-implicit-catch",
+          "custom/no-as-outside-guard",
         ],
         // Prohibit export * from (barrel exports)
         "custom/no-export-star": "error",

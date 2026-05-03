@@ -7,11 +7,14 @@ import {
   applyVectorPathDraftOperation,
   commitVectorPathDraftToNodeSpec,
   getVectorPathDraftControlLines,
+  getVectorPathDraftHandleCursor,
   getVectorPathDraftHandles,
+  resolveVectorPathDraftHandleIntent,
   vectorPathDraftToPreviewPath,
   type VectorPathDraftOperationResult,
   type VectorPathDraftSession,
 } from "../../../src/vector-path/draft";
+import { orderVectorPathHandlesForHitTesting } from "../../../src/vector-path/overlay-style";
 
 injectCSSVariables();
 
@@ -60,6 +63,16 @@ function BezierPathToolHarness() {
         return;
       }
       const point = pointFromEvent(event);
+      const start = current.pointerStart;
+      if (start) {
+        applyResult(applyVectorPathDraftOperation(current, {
+          type: "anchor-drag-preview",
+          localPoint: point,
+          pagePoint: point,
+          exceededThreshold: Math.hypot(event.clientX - start.clientX, event.clientY - start.clientY) > 3,
+        }));
+        return;
+      }
       applyResult(applyVectorPathDraftOperation(current, { type: "preview", pagePoint: point }));
     };
     const handlePointerUp = (event: PointerEvent) => {
@@ -112,16 +125,11 @@ function BezierPathToolHarness() {
     if (!handle) {
       return;
     }
-    if (handle.role === "anchor" && handle.index === 0) {
-      applyResult(applyVectorPathDraftOperation(current, { type: "close-from-start-handle" }));
-      return;
-    }
-    const move = (moveEvent: PointerEvent) => {
-      const movingSession = sessionRef.current;
-      if (!movingSession) {
-        return;
-      }
-      const point = pointFromEvent(moveEvent);
+    const startClientX = event.clientX;
+    const startClientY = event.clientY;
+    const dragState = { moved: false };
+    const moveHandleToPointer = (pointerEvent: PointerEvent, movingSession: VectorPathDraftSession) => {
+      const point = pointFromEvent(pointerEvent);
       applyResult(applyVectorPathDraftOperation(movingSession, {
         type: "move-handle",
         handle,
@@ -129,9 +137,49 @@ function BezierPathToolHarness() {
         pagePoint: point,
       }));
     };
-    const up = () => {
+    const move = (moveEvent: PointerEvent) => {
+      const movingSession = sessionRef.current;
+      if (!movingSession) {
+        return;
+      }
+      const intent = resolveVectorPathDraftHandleIntent({
+        draft: movingSession.draft,
+        handle,
+        startClientX,
+        startClientY,
+        clientX: moveEvent.clientX,
+        clientY: moveEvent.clientY,
+        dragThresholdPx: 3,
+      });
+      if (intent !== "move-handle") {
+        return;
+      }
+      dragState.moved = true;
+      moveHandleToPointer(moveEvent, movingSession);
+    };
+    const up = (upEvent: PointerEvent) => {
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
+      const movingSession = sessionRef.current;
+      if (!movingSession) {
+        return;
+      }
+      const intent = resolveVectorPathDraftHandleIntent({
+        draft: movingSession.draft,
+        handle,
+        startClientX,
+        startClientY,
+        clientX: upEvent.clientX,
+        clientY: upEvent.clientY,
+        dragThresholdPx: 3,
+      });
+      if (intent === "close-start-anchor" && !dragState.moved) {
+        applyResult(applyVectorPathDraftOperation(movingSession, { type: "close-from-start-handle" }));
+        return;
+      }
+      if (!dragState.moved && intent === "move-handle") {
+        moveHandleToPointer(upEvent, movingSession);
+      }
     };
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
@@ -185,7 +233,7 @@ function BezierPathToolHarness() {
                 strokeDasharray="4 3"
               />
             ))}
-            {getVectorPathDraftHandles(draft).map((handle) => (
+            {orderVectorPathHandlesForHitTesting(getVectorPathDraftHandles(draft)).map((handle) => (
               <circle
                 key={handle.key}
                 role="button"
@@ -196,6 +244,7 @@ function BezierPathToolHarness() {
                 fill={handle.role === "anchor" ? "#fff" : "#0066ff"}
                 stroke="#0066ff"
                 strokeWidth={1}
+                style={{ cursor: getVectorPathDraftHandleCursor(draft, handle) }}
                 onPointerDown={(event) => handleDraftHandlePointerDown(handle.index, event)}
               />
             ))}

@@ -51,9 +51,7 @@ export function finalizeImagePatternDefs(
     const imgDim = extractDimensionsFromDataUri(pattern.dataUri);
 
     if (!imgDim) {
-      // Can't determine image size — use objectBoundingBox stretch fallback
-      // (image fills entire pattern at 0..1 coords with preserveAspectRatio="none")
-      continue;
+      throw new Error(`Image pattern ${pattern.id} requires decodable image dimensions`);
     }
 
     const layout = computeImagePatternLayout({
@@ -64,35 +62,33 @@ export function finalizeImagePatternDefs(
       scalingFactor: pattern.scalingFactor,
     });
 
-    if (layout) {
-      // Replace the pattern def with finalized version.
-      //
-      // `patternTransform` is cleared because the finalized layout
-      // expresses all positioning through `imageTransform` (which
-      // transforms the inner <image> element). Leaving the
-      // pre-finalization `patternTransform` (the raw paint.transform)
-      // stacks two transforms — the wanted `imageTransform` AND the
-      // outer pattern transform — squashing/offsetting the image
-      // (e.g. Contact Avatar image was being vertically scaled to
-      // 0.87 and translated down by 0.063 because patternTransform
-      // was a residual of the raw paint.transform rather than an
-      // identity).
-      defs[i] = {
-        type: "pattern",
-        def: {
-          ...pattern,
-          // In objectBoundingBox space, the image uses its natural pixel dimensions
-          // and the transform maps those pixels to 0..1 space
-          width: layout.patternWidth,
-          height: layout.patternHeight,
-          imageWidth: layout.imageWidth,
-          imageHeight: layout.imageHeight,
-          preserveAspectRatio: layout.preserveAspectRatio,
-          imageTransform: layout.imageTransform,
-          patternTransform: undefined,
-        },
-      };
-    }
+    // Replace the pattern def with finalized version.
+    //
+    // `patternTransform` is cleared because the finalized layout
+    // expresses all positioning through `imageTransform` (which
+    // transforms the inner <image> element). Leaving the
+    // pre-finalization `patternTransform` (the raw paint.transform)
+    // stacks two transforms — the wanted `imageTransform` AND the
+    // outer pattern transform — squashing/offsetting the image
+    // (e.g. Contact Avatar image was being vertically scaled to
+    // 0.87 and translated down by 0.063 because patternTransform
+    // was a residual of the raw paint.transform rather than an
+    // identity).
+    defs[i] = {
+      type: "pattern",
+      def: {
+        ...pattern,
+        // In objectBoundingBox space, the image uses its natural pixel dimensions
+        // and the transform maps those pixels to 0..1 space
+        width: layout.patternWidth,
+        height: layout.patternHeight,
+        imageWidth: layout.imageWidth,
+        imageHeight: layout.imageHeight,
+        preserveAspectRatio: layout.preserveAspectRatio,
+        imageTransform: layout.imageTransform,
+        patternTransform: undefined,
+      },
+    };
   }
 }
 
@@ -107,9 +103,10 @@ function extractDimensionsFromDataUri(
   if (!mimeMatch) { return undefined; }
   const mimeType = mimeMatch[1];
 
-  // Decode enough of the base64 to read headers (first 1024 bytes is sufficient)
+  // Decode the full header-bearing payload. JPEG SOF markers can appear after
+  // APP/ICC metadata, so a fixed prefix can incorrectly hide valid dimensions.
   const base64Data = dataUri.slice(dataUri.indexOf(",") + 1);
-  const binaryStr = atob(base64Data.slice(0, 1400)); // ~1024 decoded bytes
+  const binaryStr = atob(base64Data);
   const bytes = new Uint8Array(binaryStr.length);
   for (let i = 0; i < binaryStr.length; i++) {
     bytes[i] = binaryStr.charCodeAt(i);
@@ -145,12 +142,12 @@ type ImagePatternLayoutParams = {
   readonly scalingFactor: number | undefined;
 };
 
-function computeImagePatternLayout(params: ImagePatternLayoutParams): ImagePatternLayout | undefined {
+function computeImagePatternLayout(params: ImagePatternLayoutParams): ImagePatternLayout {
   const { imgDim, elementSize, scaleMode, paintTransform, scalingFactor } = params;
   const imgW = imgDim.width;
   const imgH = imgDim.height;
   if (imgW <= 0 || imgH <= 0 || elementSize.width <= 0 || elementSize.height <= 0) {
-    return undefined;
+    throw new Error("Image pattern layout requires positive image and element dimensions");
   }
 
   // Extract paint transform components (identity if unset)
@@ -203,7 +200,7 @@ function computeImagePatternLayout(params: ImagePatternLayoutParams): ImagePatte
   // inv(paintTransform) × diag(1/imgW, 1/imgH)
   const det = pm00 * pm11 - pm01 * pm10;
   if (Math.abs(det) < 1e-12) {
-    return undefined;
+    throw new Error("Image pattern layout requires an invertible paint transform for CROP mode");
   }
 
   const invA = pm11 / det;
@@ -311,7 +308,9 @@ type ImageTransformParts = {
  * (Used for SVG numeric attributes / transform values.)
  */
 function fmt(n: number): string {
-  if (!Number.isFinite(n)) { return "0"; }
+  if (!Number.isFinite(n)) {
+    throw new Error(`Image pattern layout produced a non-finite transform value: ${n}`);
+  }
   if (n === 0) { return "0"; }
   const s = n.toPrecision(7);
   const asNum = Number.parseFloat(s);

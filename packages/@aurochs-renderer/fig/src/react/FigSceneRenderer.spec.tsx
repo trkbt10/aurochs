@@ -82,9 +82,9 @@ describe("FigSceneRenderer — React path FRAME decoration", () => {
     const innerShadowNode = nodesWithEffects.find((n) =>
       n.effects!.some((e) => (typeof e.type === "string" ? e.type : e.type?.name) === "INNER_SHADOW"),
     );
+    expect(innerShadowNode, "demo fixture must contain INNER_SHADOW coverage").toBeDefined();
     if (!innerShadowNode) {
-      console.warn("No INNER_SHADOW in demo — skipping inner-shadow assertion");
-      return;
+      throw new Error("demo fixture must contain INNER_SHADOW coverage");
     }
     const html = renderReact(doc, innerShadowNode, 200, 200);
     // Canonical recipe emits feFlood + feComposite(operator="in") + feOffset

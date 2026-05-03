@@ -24,3 +24,18 @@ export function screenPxToPagePx(px: number, viewportScale: number): number {
 export function screenDashToPageDash(dash: readonly [number, number], viewportScale: number): string {
   return dash.map((px) => screenPxToPagePx(px, viewportScale)).join(" ");
 }
+
+/** Draw controls first and anchors last so anchor completion wins hit testing. */
+export function orderVectorPathHandlesForHitTesting<T extends { readonly role: "anchor" | "control" }>(
+  handles: readonly T[],
+): readonly T[] {
+  return [
+    ...handles.filter((handle) => handle.role === "control"),
+    ...handles.filter((handle) => handle.role === "anchor"),
+  ];
+}
+
+/** Cursor for committed vector path handles. */
+export function getVectorPathHandleCursor(handle: { readonly role: "anchor" | "control" }): string {
+  return handle.role === "control" ? "grab" : "pointer";
+}

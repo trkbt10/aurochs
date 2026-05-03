@@ -1,6 +1,6 @@
 /** @file WebGL viewport canvas for the fig editor. */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { SceneGraph } from "@aurochs-renderer/fig/scene-graph";
 import {
   createWebGLFigmaRenderer,
@@ -11,16 +11,25 @@ import {
 type FigWebGLViewportCanvasProps = {
   readonly sceneGraph: SceneGraph;
   readonly viewportScale: number;
+  readonly placement?: "world" | "screen";
 };
 
 /** Render the WebGL backend as an inert viewport-aligned canvas layer. */
-export function FigWebGLViewportCanvas({ sceneGraph, viewportScale }: FigWebGLViewportCanvasProps) {
+export function FigWebGLViewportCanvas({ sceneGraph, viewportScale, placement = "world" }: FigWebGLViewportCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<WebGLFigmaRendererInstance | null>(null);
-  const preparedSceneRef = useRef<SceneGraph | null>(null);
+  const renderFrameRef = useRef<number | null>(null);
+  const prepareRunningRef = useRef(false);
+  const pendingPrepareRef = useRef<{ readonly scene: SceneGraph; readonly pixelRatio: number } | null>(null);
+  const latestRenderRef = useRef<{ readonly scene: SceneGraph; readonly pixelRatio: number } | null>(null);
   const [devicePixelRatio, setDevicePixelRatio] = useState(() => typeof window === "undefined" ? 1 : window.devicePixelRatio || 1);
   const viewport = sceneGraph.viewport ?? { x: 0, y: 0 };
-  const effectivePixelRatio = resolveWebGLViewportPixelRatio({ devicePixelRatio, viewportScale });
+  const effectivePixelRatio = resolveWebGLViewportPixelRatio({
+    devicePixelRatio,
+    viewportScale,
+    surfaceWidth: sceneGraph.width,
+    surfaceHeight: sceneGraph.height,
+  });
 
   useEffect(() => {
     if (typeof window === "undefined") { return; }
@@ -36,7 +45,7 @@ export function FigWebGLViewportCanvas({ sceneGraph, viewportScale }: FigWebGLVi
     };
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) { return; }
 
@@ -50,41 +59,84 @@ export function FigWebGLViewportCanvas({ sceneGraph, viewportScale }: FigWebGLVi
     }
 
     const renderer = rendererRef.current;
-    renderer.setPixelRatio(effectivePixelRatio);
-    if (preparedSceneRef.current === sceneGraph) {
+    latestRenderRef.current = { scene: sceneGraph, pixelRatio: effectivePixelRatio };
+    const renderLatestScene = () => {
+      renderFrameRef.current = null;
+      renderer.setPixelRatio(effectivePixelRatio);
       renderer.render(sceneGraph);
-      return;
+    };
+
+    if (typeof window === "undefined") {
+      renderLatestScene();
+    } else {
+      if (renderFrameRef.current !== null) {
+        window.cancelAnimationFrame(renderFrameRef.current);
+      }
+      renderFrameRef.current = window.requestAnimationFrame(renderLatestScene);
     }
 
-    const cancelledRef = { value: false };
-    void renderer.prepareScene(sceneGraph).then(() => {
-      if (!cancelledRef.value) {
-        preparedSceneRef.current = sceneGraph;
-        renderer.render(sceneGraph);
+    const runPrepareQueue = () => {
+      if (prepareRunningRef.current) {
+        return;
       }
-    });
+      const next = pendingPrepareRef.current;
+      if (!next) {
+        return;
+      }
+      pendingPrepareRef.current = null;
+      prepareRunningRef.current = true;
+      void renderer.prepareScene(next.scene).then(() => {
+        prepareRunningRef.current = false;
+        const latest = latestRenderRef.current;
+        if (latest?.scene === next.scene && latest.pixelRatio === next.pixelRatio) {
+          renderer.setPixelRatio(next.pixelRatio);
+          renderer.render(next.scene);
+        }
+        runPrepareQueue();
+      });
+    };
+
+    pendingPrepareRef.current = { scene: sceneGraph, pixelRatio: effectivePixelRatio };
+    runPrepareQueue();
+
     return () => {
-      cancelledRef.value = true;
+      if (renderFrameRef.current !== null && typeof window !== "undefined") {
+        window.cancelAnimationFrame(renderFrameRef.current);
+        renderFrameRef.current = null;
+      }
     };
   }, [sceneGraph, effectivePixelRatio]);
 
   useEffect(() => {
     return () => {
+      if (renderFrameRef.current !== null && typeof window !== "undefined") {
+        window.cancelAnimationFrame(renderFrameRef.current);
+        renderFrameRef.current = null;
+      }
+      pendingPrepareRef.current = null;
+      latestRenderRef.current = null;
       rendererRef.current?.dispose();
       rendererRef.current = null;
-      preparedSceneRef.current = null;
     };
   }, []);
+
+  if (sceneGraph.width <= 0 || sceneGraph.height <= 0) {
+    return null;
+  }
+
+  if (!sceneGraph.viewport) {
+    throw new Error("FigWebGLViewportCanvas requires sceneGraph.viewport");
+  }
 
   return (
     <canvas
       ref={canvasRef}
-      width={sceneGraph.width}
-      height={sceneGraph.height}
+      width={Math.ceil(sceneGraph.width * effectivePixelRatio)}
+      height={Math.ceil(sceneGraph.height * effectivePixelRatio)}
       style={{
         position: "absolute",
-        left: viewport.x,
-        top: viewport.y,
+        left: placement === "world" ? viewport.x : 0,
+        top: placement === "world" ? viewport.y : 0,
         display: "block",
         width: sceneGraph.width,
         height: sceneGraph.height,

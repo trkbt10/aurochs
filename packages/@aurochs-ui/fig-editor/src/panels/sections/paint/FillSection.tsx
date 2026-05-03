@@ -16,109 +16,19 @@
 import { useCallback, useRef, type ChangeEvent, type CSSProperties } from "react";
 import type { FigDesignNode } from "@aurochs/fig/domain";
 import type { FigImage } from "@aurochs/fig/parser";
-import type { FigPaint, FigColor, FigPaintType, FigImageScaleMode } from "@aurochs/fig/types";
+import type { FigImageScaleMode, FigPaint } from "@aurochs/fig/types";
 import type { FigEditorAction } from "../../../context/fig-editor/types";
 import { createPropertyTargetUpdateAction, type PropertyMutationTarget } from "../../properties/property-mutation-target";
 
 import { Input } from "@aurochs-ui/ui-components/primitives/Input";
 import { Select } from "@aurochs-ui/ui-components/primitives/Select";
-import type { SelectOption } from "@aurochs-ui/ui-components/types";
 import { colorTokens, fontTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { AddIcon, CloseIcon } from "@aurochs-ui/ui-components/icons";
 import { imageScaleModeOptions } from "./paint-options";
 import { createFigImageAsset } from "./image-asset";
 import { GradientPaintControls } from "./GradientPaintControls";
-
-// =============================================================================
-// Color helpers
-// =============================================================================
-
-function colorToHex(color: FigColor): string {
-  const r = Math.round(color.r * 255).toString(16).padStart(2, "0");
-  const g = Math.round(color.g * 255).toString(16).padStart(2, "0");
-  const b = Math.round(color.b * 255).toString(16).padStart(2, "0");
-  return `#${r}${g}${b}`;
-}
-
-function hexToColor(hex: string, alpha = 1): FigColor {
-  const h = hex.replace("#", "");
-  return {
-    r: parseInt(h.substring(0, 2), 16) / 255,
-    g: parseInt(h.substring(2, 4), 16) / 255,
-    b: parseInt(h.substring(4, 6), 16) / 255,
-    a: alpha,
-  };
-}
-
-function getPaintColor(paint: FigPaint): FigColor | undefined {
-  if ("color" in paint && paint.color) {
-    return paint.color;
-  }
-  return undefined;
-}
-
-function getPaintOpacity(paint: FigPaint): number {
-  if ("opacity" in paint && typeof paint.opacity === "number") {
-    return paint.opacity;
-  }
-  return 1;
-}
-
-/** Default solid white fill for new fills */
-function createDefaultSolidFill(): FigPaint {
-  return {
-    type: "SOLID",
-    color: { r: 0.85, g: 0.85, b: 0.85, a: 1 },
-    opacity: 1,
-    visible: true,
-  };
-}
-
-const paintTypeOptions: readonly SelectOption<FigPaint["type"]>[] = [
-  { value: "SOLID", label: "Solid" },
-  { value: "GRADIENT_LINEAR", label: "Linear" },
-  { value: "GRADIENT_RADIAL", label: "Radial" },
-  { value: "GRADIENT_ANGULAR", label: "Angular" },
-  { value: "GRADIENT_DIAMOND", label: "Diamond" },
-  { value: "IMAGE", label: "Image" },
-];
-
-function createDefaultGradientFill(type: Extract<FigPaintType, `GRADIENT_${string}`>): FigPaint {
-  return {
-    type,
-    visible: true,
-    opacity: 1,
-    gradientStops: [
-      { position: 0, color: { r: 0.2, g: 0.45, b: 1, a: 1 } },
-      { position: 1, color: { r: 0.8, g: 0.25, b: 0.9, a: 1 } },
-    ],
-    gradientHandlePositions: [
-      { x: 0, y: 0.5 },
-      { x: 1, y: 0.5 },
-      { x: 0, y: 1 },
-    ],
-  };
-}
-
-function createDefaultImageFill(): FigPaint {
-  return {
-    type: "IMAGE",
-    visible: true,
-    opacity: 1,
-    imageRef: "",
-    scaleMode: "FILL",
-  };
-}
-
-function createDefaultPaint(type: FigPaint["type"]): FigPaint {
-  if (type === "SOLID") {
-    return createDefaultSolidFill();
-  }
-  if (type === "IMAGE") {
-    return createDefaultImageFill();
-  }
-  return createDefaultGradientFill(type);
-}
+import { applyPaintOperation, colorToHex, getPaintColor, getPaintOpacity, paintTypeOptions } from "./paint-domain";
+import { applyAppearanceOperation } from "./appearance-domain";
 
 // =============================================================================
 // Styles
@@ -225,12 +135,14 @@ export function FillSection({ node, target, images, dispatch }: FillSectionProps
       dispatch(createPropertyTargetUpdateAction({
         target,
         updater: (n) => {
-          const newFills = [...n.fills];
-          const fill = newFills[fillIndex];
-          if (fill) {
-            newFills[fillIndex] = updater(fill);
+          const fill = n.fills[fillIndex];
+          if (!fill) {
+            return n;
           }
-          return { ...n, fills: newFills };
+          return applyAppearanceOperation(n, {
+            type: "fill-paints",
+            operation: { type: "update", index: fillIndex, operation: { type: "replace", paint: updater(fill) } },
+          });
         },
       }));
     },
@@ -239,53 +151,49 @@ export function FillSection({ node, target, images, dispatch }: FillSectionProps
 
   const updateFillColor = useCallback(
     (fillIndex: number, hex: string) => {
-      updateFill(fillIndex, (fill) => {
-        const currentColor = getPaintColor(fill);
-        const alpha = currentColor?.a ?? 1;
-        return { ...fill, color: hexToColor(hex, alpha) } as FigPaint;
-      });
+      updateFill(fillIndex, (fill) => applyPaintOperation(fill, { type: "set-color", hex }));
     },
     [updateFill],
   );
 
   const updateFillOpacity = useCallback(
     (fillIndex: number, opacity: number) => {
-      updateFill(fillIndex, (fill) => ({ ...fill, opacity } as FigPaint));
+      updateFill(fillIndex, (fill) => applyPaintOperation(fill, { type: "set-opacity", opacity }));
     },
     [updateFill],
   );
 
   const updateFillType = useCallback(
     (fillIndex: number, type: FigPaint["type"]) => {
-      updateFill(fillIndex, (fill) => ({ ...createDefaultPaint(type), opacity: getPaintOpacity(fill), visible: fill.visible }));
+      updateFill(fillIndex, (fill) => applyPaintOperation(fill, { type: "set-type", paintType: type, kind: "fill" }));
     },
     [updateFill],
   );
 
   const updateImageRef = useCallback(
     (fillIndex: number, imageRef: string) => {
-      updateFill(fillIndex, (fill) => ({ ...fill, imageRef } as FigPaint));
+      updateFill(fillIndex, (fill) => applyPaintOperation(fill, { type: "set-image-ref", imageRef }));
     },
     [updateFill],
   );
 
   const updateImageScaleMode = useCallback(
     (fillIndex: number, scaleMode: FigImageScaleMode) => {
-      updateFill(fillIndex, (fill) => ({ ...fill, scaleMode, imageScaleMode: scaleMode } as FigPaint));
+      updateFill(fillIndex, (fill) => applyPaintOperation(fill, { type: "set-image-scale-mode", scaleMode }));
     },
     [updateFill],
   );
 
   const updateImageScale = useCallback(
     (fillIndex: number, scale: number) => {
-      updateFill(fillIndex, (fill) => ({ ...fill, scalingFactor: scale, scale } as FigPaint));
+      updateFill(fillIndex, (fill) => applyPaintOperation(fill, { type: "set-image-scale", scale }));
     },
     [updateFill],
   );
 
   const updateImageRotation = useCallback(
     (fillIndex: number, rotationDeg: number) => {
-      updateFill(fillIndex, (fill) => ({ ...fill, rotation: rotationDeg * (Math.PI / 180) } as FigPaint));
+      updateFill(fillIndex, (fill) => applyPaintOperation(fill, { type: "set-image-rotation-deg", rotationDeg }));
     },
     [updateFill],
   );
@@ -321,9 +229,9 @@ export function FillSection({ node, target, images, dispatch }: FillSectionProps
     (fillIndex: number) => {
       dispatch(createPropertyTargetUpdateAction({
         target,
-        updater: (n) => ({
-          ...n,
-          fills: n.fills.filter((_, i) => i !== fillIndex),
+        updater: (n) => applyAppearanceOperation(n, {
+          type: "fill-paints",
+          operation: { type: "remove", index: fillIndex },
         }),
       }));
     },
@@ -333,9 +241,9 @@ export function FillSection({ node, target, images, dispatch }: FillSectionProps
   const addFill = useCallback(() => {
     dispatch(createPropertyTargetUpdateAction({
       target,
-      updater: (n) => ({
-        ...n,
-        fills: [...n.fills, createDefaultSolidFill()],
+      updater: (n) => applyAppearanceOperation(n, {
+        type: "fill-paints",
+        operation: { type: "add", kind: "fill" },
       }),
     }));
   }, [dispatch, target]);

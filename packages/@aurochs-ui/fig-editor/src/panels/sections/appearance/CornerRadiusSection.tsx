@@ -9,6 +9,17 @@ import type { FigEditorAction } from "../../../context/fig-editor/types";
 import { Input } from "@aurochs-ui/ui-components/primitives/Input";
 import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
 import { createPropertyTargetUpdateAction, type PropertyMutationTarget } from "../../properties/property-mutation-target";
+import {
+  collapseToUniformCornerRadius,
+  expandToIndividualCornerRadii,
+  hasIndividualCornerRadii,
+  isCornerRadiusEditableNode,
+  resolveIndividualCornerRadii,
+  resolveUniformCornerRadius,
+  setIndividualCornerRadius,
+  setUniformCornerRadius,
+  type CornerRadiusIndex,
+} from "./corner-radius-domain";
 
 type CornerRadiusSectionProps = {
   readonly node: FigDesignNode;
@@ -16,9 +27,15 @@ type CornerRadiusSectionProps = {
   readonly dispatch: (action: FigEditorAction) => void;
 };
 
-const CORNER_RADIUS_TYPES = new Set([
-  "RECTANGLE", "ROUNDED_RECTANGLE", "FRAME", "COMPONENT", "SYMBOL",
-]);
+const modeButtonStyle = {
+  height: 26,
+  minWidth: 72,
+  border: "1px solid var(--border-subtle, #d0d0d0)",
+  borderRadius: 4,
+  background: "transparent",
+  cursor: "pointer",
+  fontSize: 11,
+} as const;
 
 
 
@@ -27,64 +44,58 @@ const CORNER_RADIUS_TYPES = new Set([
 
 /** Panel section for editing corner radius properties of a Figma node. */
 export function CornerRadiusSection({ node, target, dispatch }: CornerRadiusSectionProps) {
-  if (!CORNER_RADIUS_TYPES.has(node.type)) {
+  if (!isCornerRadiusEditableNode(node)) {
     return null;
   }
 
-  const hasIndividualRadii = node.rectangleCornerRadii && node.rectangleCornerRadii.length === 4;
-  const uniformRadius = node.cornerRadius ?? 0;
+  const hasIndividualRadii = hasIndividualCornerRadii(node);
+  const uniformRadius = resolveUniformCornerRadius(node);
 
   if (hasIndividualRadii) {
-    const radii = node.rectangleCornerRadii!;
+    const radii = resolveIndividualCornerRadii(node);
+    const updateRadius = (index: CornerRadiusIndex, value: number) => dispatch(createPropertyTargetUpdateAction({
+      target,
+      updater: (n) => setIndividualCornerRadius(n, index, value),
+    }));
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
         <FieldRow>
           <FieldGroup label="TL" inline labelWidth={20}>
             <Input type="number" value={radii[0]} min={0} step={1} width={56}
-              onChange={(v) => dispatch(createPropertyTargetUpdateAction({
-                target,
-                updater: (n) => ({
-                  ...n,
-                  rectangleCornerRadii: [v as number, radii[1], radii[2], radii[3]],
-                }),
-              }))}
+              onChange={(v) => updateRadius(0, v as number)}
             />
           </FieldGroup>
           <FieldGroup label="TR" inline labelWidth={20}>
             <Input type="number" value={radii[1]} min={0} step={1} width={56}
-              onChange={(v) => dispatch(createPropertyTargetUpdateAction({
-                target,
-                updater: (n) => ({
-                  ...n,
-                  rectangleCornerRadii: [radii[0], v as number, radii[2], radii[3]],
-                }),
-              }))}
+              onChange={(v) => updateRadius(1, v as number)}
             />
           </FieldGroup>
         </FieldRow>
         <FieldRow>
           <FieldGroup label="BL" inline labelWidth={20}>
             <Input type="number" value={radii[3]} min={0} step={1} width={56}
-              onChange={(v) => dispatch(createPropertyTargetUpdateAction({
-                target,
-                updater: (n) => ({
-                  ...n,
-                  rectangleCornerRadii: [radii[0], radii[1], radii[2], v as number],
-                }),
-              }))}
+              onChange={(v) => updateRadius(3, v as number)}
             />
           </FieldGroup>
           <FieldGroup label="BR" inline labelWidth={20}>
             <Input type="number" value={radii[2]} min={0} step={1} width={56}
-              onChange={(v) => dispatch(createPropertyTargetUpdateAction({
-                target,
-                updater: (n) => ({
-                  ...n,
-                  rectangleCornerRadii: [radii[0], radii[1], v as number, radii[3]],
-                }),
-              }))}
+              onChange={(v) => updateRadius(2, v as number)}
             />
           </FieldGroup>
+        </FieldRow>
+        <FieldRow>
+          <button
+            type="button"
+            aria-label="Use uniform corner radius"
+            title="Use uniform corner radius"
+            style={modeButtonStyle}
+            onClick={() => dispatch(createPropertyTargetUpdateAction({
+              target,
+              updater: collapseToUniformCornerRadius,
+            }))}
+          >
+            Uniform
+          </button>
         </FieldRow>
       </div>
     );
@@ -101,12 +112,24 @@ export function CornerRadiusSection({ node, target, dispatch }: CornerRadiusSect
           onChange={(v) => {
             dispatch(createPropertyTargetUpdateAction({
               target,
-              updater: (n) => ({ ...n, cornerRadius: v as number }),
+              updater: (n) => setUniformCornerRadius(n, v as number),
             }));
           }}
           width={80}
         />
       </FieldGroup>
+      <button
+        type="button"
+        aria-label="Use individual corner radii"
+        title="Use individual corner radii"
+        style={modeButtonStyle}
+        onClick={() => dispatch(createPropertyTargetUpdateAction({
+          target,
+          updater: expandToIndividualCornerRadii,
+        }))}
+      >
+        Corners
+      </button>
     </FieldRow>
   );
 }

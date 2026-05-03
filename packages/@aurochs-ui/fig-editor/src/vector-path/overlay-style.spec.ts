@@ -1,6 +1,12 @@
 /** @file Tests for vector path overlay style constants. */
 
-import { screenDashToPageDash, screenPxToPagePx, VECTOR_PATH_OVERLAY_STYLE } from "./overlay-style";
+import {
+  getVectorPathHandleCursor,
+  orderVectorPathHandlesForHitTesting,
+  screenDashToPageDash,
+  screenPxToPagePx,
+  VECTOR_PATH_OVERLAY_STYLE,
+} from "./overlay-style";
 
 describe("vector path overlay style", () => {
   it("keeps interactive sizes in screen pixels across zoom", () => {
@@ -15,5 +21,17 @@ describe("vector path overlay style", () => {
 
   it("converts dash patterns through the same screen-pixel scaling rule", () => {
     expect(screenDashToPageDash(VECTOR_PATH_OVERLAY_STYLE.controlLineDashPx, 2)).toBe("2 1.5");
+  });
+
+  it("orders controls below anchors for hit testing and exposes role cursors", () => {
+    const ordered = orderVectorPathHandlesForHitTesting([
+      { role: "anchor" as const, id: "start" },
+      { role: "control" as const, id: "control" },
+      { role: "anchor" as const, id: "end" },
+    ]);
+
+    expect(ordered.map((handle) => handle.id)).toEqual(["control", "start", "end"]);
+    expect(getVectorPathHandleCursor({ role: "control" })).toBe("grab");
+    expect(getVectorPathHandleCursor({ role: "anchor" })).toBe("pointer");
   });
 });

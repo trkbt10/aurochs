@@ -47,6 +47,7 @@ function scene(children: readonly SceneNode[]): SceneGraph {
   return {
     width: 120,
     height: 90,
+    viewport: { x: 0, y: 0, width: 120, height: 90 },
     root: {
       id: createNodeId("root"),
       type: "group",

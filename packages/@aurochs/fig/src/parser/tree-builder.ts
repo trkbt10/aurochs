@@ -166,7 +166,7 @@ export function buildNodeTree(nodeChanges: readonly FigNode[]): NodeTreeResult {
  * here would silently widen every consumer's comparison and defeat
  * the SSoT the `FigNodeType` union provides.
  */
-export function getNodeType(node: FigNode): FigNodeType | "UNKNOWN" {
+export function getNodeType(node: { readonly type?: FigNode["type"] | string; readonly [key: string]: unknown }): FigNodeType | "UNKNOWN" {
   const type = node.type;
 
   // KiwiEnumValue has { value, name } — return the name string.

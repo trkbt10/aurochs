@@ -1,6 +1,7 @@
 /**
  * @file Drag and drop file upload component for .fig files
  */
+/* eslint-disable jsdoc/require-jsdoc -- Dev-only component API is intentionally small and local to the fig-editor harness. */
 
 import { useState, useCallback, useRef, type DragEvent, type ChangeEvent, type CSSProperties } from "react";
 import { colorTokens, spacingTokens, fontTokens, radiusTokens } from "@aurochs-ui/ui-components";
@@ -82,9 +83,44 @@ const spinnerStyle: CSSProperties = {
   animation: "spin 1s linear infinite",
 };
 
+function resolveDropZoneStateStyle({ isLoading, isDragging }: { readonly isLoading?: boolean; readonly isDragging: boolean }): CSSProperties {
+  if (isLoading) {
+    return dropZoneLoadingOverride;
+  }
+  if (isDragging) {
+    return dropZoneDraggingOverride;
+  }
+  return {};
+}
+
+function renderDropZoneContent({ isLoading, isDragging }: { readonly isLoading?: boolean; readonly isDragging: boolean }) {
+  if (isLoading) {
+    return (
+      <>
+        <div style={spinnerStyle} />
+        <div style={dropTitleStyle}>Parsing file...</div>
+      </>
+    );
+  }
+  return (
+    <>
+      <div style={iconStyle}>📁</div>
+      <div style={dropTitleStyle}>
+        {isDragging ? "Drop your .fig file here" : "Drag & drop a .fig file"}
+      </div>
+      <div style={subtitleStyle}>or click to browse</div>
+    </>
+  );
+}
+
 // =============================================================================
 // Component
 // =============================================================================
+
+
+
+
+
 
 export function FileDropZone({ onFile, isLoading }: Props) {
   const [isDragging, setIsDragging] = useState(false);
@@ -112,7 +148,7 @@ export function FileDropZone({ onFile, isLoading }: Props) {
       e.preventDefault();
       e.stopPropagation();
       setIsDragging(false);
-      if (isLoading) return;
+      if (isLoading) {return;}
       const files = e.dataTransfer.files;
       if (files.length > 0 && files[0].name.endsWith(".fig")) {
         onFile(files[0]);
@@ -140,7 +176,7 @@ export function FileDropZone({ onFile, isLoading }: Props) {
 
   const dropZoneStyle: CSSProperties = {
     ...dropZoneBaseStyle,
-    ...(isLoading ? dropZoneLoadingOverride : isDragging ? dropZoneDraggingOverride : {}),
+    ...resolveDropZoneStateStyle({ isLoading, isDragging }),
   };
 
   return (
@@ -154,20 +190,7 @@ export function FileDropZone({ onFile, isLoading }: Props) {
         onDrop={handleDrop}
         onClick={handleClick}
       >
-        {isLoading ? (
-          <>
-            <div style={spinnerStyle} />
-            <div style={dropTitleStyle}>Parsing file...</div>
-          </>
-        ) : (
-          <>
-            <div style={iconStyle}>📁</div>
-            <div style={dropTitleStyle}>
-              {isDragging ? "Drop your .fig file here" : "Drag & drop a .fig file"}
-            </div>
-            <div style={subtitleStyle}>or click to browse</div>
-          </>
-        )}
+        {renderDropZoneContent({ isLoading, isDragging })}
       </div>
       <input ref={inputRef} type="file" accept=".fig" style={inputStyle} onChange={handleInputChange} />
     </div>

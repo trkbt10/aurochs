@@ -76,14 +76,20 @@ test.describe("vector pen draft editing", () => {
     await page.mouse.move(third.x, third.y);
     await page.mouse.down();
     await page.mouse.move(third.x - 18, third.y + 16, { steps: 3 });
+    await expect.poll(() => draftControlLineCount(page)).toBeGreaterThan(0);
+    await expect.poll(() => draftControlHandleCount(page)).toBeGreaterThan(0);
     await page.mouse.up();
     const startAnchor = await draftAnchorHandleCenter(page, 0);
-    await expect.poll(() => topmostAt(page, startAnchor)).toMatchObject({ tagName: "circle" });
+    await expect.poll(() => topmostAt(page, startAnchor)).toMatchObject({
+      ariaLabel: "Draft vector path anchor handle 1",
+      tagName: "circle",
+    });
     await page.mouse.click(startAnchor.x, startAnchor.y);
 
     await expect.poll(() => renderedSvgMarkup(page)).not.toBe(svgBefore);
     await expect.poll(() => firstEditablePathData(page)).toContain("C ");
     await expect.poll(() => firstEditablePathData(page)).toMatch(/ Z$/);
+    await expect.poll(async () => (await firstEditablePathData(page)).match(/C/g)?.length ?? 0).toBeGreaterThanOrEqual(3);
     await expect.poll(() => anchorHandleCount(page)).toBe(3);
   });
 
@@ -140,6 +146,36 @@ test.describe("vector pen draft editing", () => {
     await expect.poll(() => renderedSvgMarkup(page)).not.toBe(svgBeforeToolCommit);
     await expect.poll(() => draftAnchorHandleCount(page)).toBe(0);
     await expect.poll(async () => committedVectorPathStrokeCount(await renderedSvgMarkup(page))).toBe(pathStrokeCountBeforeToolCommit + 1);
+  });
+
+  test("moves the first draft anchor instead of closing until the user clicks it", async ({ page }) => {
+    await page.locator('button[title="Vector Edit (P)"]').click();
+    const first = await nodeScreenPoint(page, FRAME, { x: 0.56, y: 0.80 });
+    const second = await nodeScreenPoint(page, FRAME, { x: 0.78, y: 0.74 });
+    const svgBefore = await renderedSvgMarkup(page);
+    const pathStrokeCountBefore = committedVectorPathStrokeCount(svgBefore);
+
+    await page.mouse.click(first.x, first.y);
+    await page.mouse.click(second.x, second.y);
+    await expect.poll(() => draftAnchorHandleCount(page)).toBe(2);
+
+    const startBefore = await draftAnchorHandleCenter(page, 0);
+    await expect.poll(() => topmostAt(page, startBefore)).toMatchObject({ tagName: "circle" });
+    await page.mouse.move(startBefore.x, startBefore.y);
+    await page.mouse.down();
+    await page.mouse.move(startBefore.x + 16, startBefore.y - 12, { steps: 4 });
+    await page.mouse.up();
+
+    await expect.poll(() => draftAnchorHandleCount(page)).toBe(2);
+    await expect.poll(async () => committedVectorPathStrokeCount(await renderedSvgMarkup(page))).toBe(pathStrokeCountBefore);
+    const startAfter = await draftAnchorHandleCenter(page, 0);
+    expect(startAfter.x).toBeGreaterThan(startBefore.x + 8);
+    expect(startAfter.y).toBeLessThan(startBefore.y - 6);
+
+    await page.mouse.click(startAfter.x, startAfter.y);
+    await expect.poll(() => draftAnchorHandleCount(page)).toBe(0);
+    await expect.poll(async () => committedVectorPathStrokeCount(await renderedSvgMarkup(page))).toBe(pathStrokeCountBefore + 1);
+    await expect.poll(() => firstEditablePathData(page)).toMatch(/ Z$/);
   });
 
   test("keeps vector edit overlay stroke sizes stable across viewport zoom", async ({ page }) => {

@@ -72,4 +72,29 @@ describe("resolveCanvasInteractionTarget", () => {
 
     expect(result).toBe("child");
   });
+
+  it("prefers the editable child when an imported frame also carries render vectorPaths", () => {
+    const child = makeNode("child", { type: "VECTOR", x: 20, y: 20, width: 40, height: 30, editable: true });
+    const frame = makeNode("frame", {
+      type: "FRAME",
+      x: 100,
+      y: 100,
+      width: 140,
+      height: 100,
+      children: [child],
+      editable: true,
+    });
+    const bounds = flattenAllNodeBounds([frame]);
+
+    const result = resolveCanvasInteractionTarget({
+      pageChildren: [frame],
+      itemBounds: bounds,
+      point: { x: 125, y: 125 },
+      hitNodeId: "frame" as FigNodeId,
+      mode: "path-edit",
+      canEditPath: (node) => node?.type === "VECTOR" && Boolean(node.vectorPaths),
+    });
+
+    expect(result).toBe("child");
+  });
 });

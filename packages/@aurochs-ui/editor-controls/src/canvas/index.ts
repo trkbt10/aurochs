@@ -32,6 +32,7 @@ export {
   type EditorCanvasProps,
   type EditorCanvasDrag,
   type EditorCanvasItemBounds,
+  type EditorCanvasViewportContentContext,
   type CanvasPageCoords,
 } from "./EditorCanvas";
 

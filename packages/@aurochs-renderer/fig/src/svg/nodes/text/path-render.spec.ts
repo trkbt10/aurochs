@@ -11,6 +11,92 @@ import {
 } from "./path-render";
 import type { FigNode } from "@aurochs/fig/types";
 import type { FigBlob } from "@aurochs/fig/parser";
+import type { AbstractFont, FontLoader, FontLoadOptions, LoadedFont } from "../../../font";
+
+function createFakeFont(supportedChars: string): AbstractFont {
+  return {
+    unitsPerEm: 1000,
+    ascender: 800,
+    descender: -200,
+    charToGlyph(char) {
+      const supported = supportedChars.includes(char);
+      return {
+        index: supported ? char.codePointAt(0) ?? 1 : 0,
+        advanceWidth: 500,
+        getPath(x, y, fontSize) {
+          if (!supported) {
+            return { commands: [], toPathData: () => "" };
+          }
+          return {
+            commands: [
+              { type: "M", x, y },
+              { type: "L", x: x + fontSize / 2, y },
+              { type: "L", x: x + fontSize / 2, y: y - fontSize },
+              { type: "L", x, y: y - fontSize },
+              { type: "Z" },
+            ],
+            toPathData: () => "",
+          };
+        },
+      };
+    },
+    getPath(...args: Parameters<AbstractFont["getPath"]>) {
+      const [text, x, y, fontSize, options] = args;
+      const commands = Array.from(text).flatMap((char, index) =>
+        this.charToGlyph(char).getPath(x + index * (fontSize / 2 + (options?.letterSpacing ?? 0)), y, fontSize).commands,
+      );
+      return { commands, toPathData: () => "" };
+    },
+  };
+}
+
+function loadedFont(font: AbstractFont, family: string): LoadedFont {
+  return { font, family, weight: 400, style: "normal" };
+}
+
+function createFakeFontLoader(params: {
+  readonly primary?: LoadedFont;
+  readonly fallback?: LoadedFont;
+}): FontLoader {
+  return {
+    loadFont(_options: FontLoadOptions) {
+      return Promise.resolve(params.primary);
+    },
+    loadFallbackFont(_options: FontLoadOptions) {
+      return Promise.resolve(params.fallback);
+    },
+    isFontAvailable() {
+      return Promise.resolve(params.primary !== undefined);
+    },
+  };
+}
+
+function createTextNode(characters: string): FigNode {
+  return {
+    type: { value: 8, name: "TEXT" },
+    name: "test",
+    characters,
+    fontSize: 16,
+    fontName: { family: "MissingPrimary", style: "Regular" },
+    size: { x: 100, y: 30 },
+    textAlignHorizontal: { value: 0, name: "LEFT" },
+    textAlignVertical: { value: 0, name: "TOP" },
+    fillPaints: [{ type: "SOLID", color: { r: 0, g: 0, b: 0, a: 1 }, opacity: 1 }],
+    guid: { sessionID: 0, localID: 0 },
+    phase: { value: 1, name: "CREATED" },
+  };
+}
+
+function createPathRenderContext(fontLoader: FontLoader): PathRenderContext {
+  return {
+    canvasSize: { width: 100, height: 30 },
+    blobs: [] as FigBlob[],
+    images: new Map(),
+    showHiddenNodes: false,
+    styleRegistry: { fills: new Map(), strokes: new Map() },
+    fontLoader,
+  };
+}
 
 describe("path-render", () => {
   const fontLoaderRef = { value: undefined as CachingFontLoader | undefined };
@@ -44,40 +130,14 @@ describe("path-render", () => {
 
   describe("renderTextNodeAsPath", () => {
     it("renders simple text as path", async () => {
-      const node: FigNode = {
-        type: { value: 8, name: "TEXT" },
-        name: "test",
-        characters: "Hello",
-        fontSize: 16,
-        fontName: { family: "Inter", style: "Regular" },
-        size: { x: 100, y: 30 },
-        textAlignHorizontal: { value: 0, name: "LEFT" },
-        textAlignVertical: { value: 0, name: "TOP" },
-        fillPaints: [{ type: "SOLID", color: { r: 0, g: 0, b: 0, a: 1 }, opacity: 1 }],
-        guid: { sessionID: 0, localID: 0 },
-        phase: { value: 1, name: "CREATED" },
-      };
-
-      const ctx: PathRenderContext = {
-        canvasSize: { width: 100, height: 30 },
-        blobs: [] as FigBlob[],
-        images: new Map(),
-        showHiddenNodes: false,
-        styleRegistry: { fills: new Map(), strokes: new Map() },
-        fontLoader: getFontLoader(),
-      };
+      const node = createTextNode("Hello");
+      const primary = loadedFont(createFakeFont("Helo"), "Primary");
+      const ctx = createPathRenderContext(createFakeFontLoader({ primary }));
 
       const result = await renderTextNodeAsPath(node, ctx);
 
-      // If font is available, should produce path output
-      if (result) {
-        // Check for SVG path element
-        expect(typeof result).toBe("string");
-        // May be empty if font not found, or contain path
-        if (result.includes("<path")) {
-          expect(result).toContain("d=");
-        }
-      }
+      expect(result).toContain("<path");
+      expect(result).toContain("d=");
     });
 
     it("returns empty for empty characters", async () => {
@@ -101,6 +161,24 @@ describe("path-render", () => {
 
       const result = await renderTextNodeAsPath(node, ctx);
       expect(result).toBe("");
+    });
+
+    it("uses the explicit fallback font when the primary font is unavailable and the fallback covers the text", async () => {
+      const fallback = loadedFont(createFakeFont("漢"), "FallbackCJK");
+      const ctx = createPathRenderContext(createFakeFontLoader({ fallback }));
+
+      const result = await renderTextNodeAsPath(createTextNode("漢"), ctx);
+
+      expect(result).toContain("<path");
+      expect(result).toContain("d=");
+    });
+
+    it("throws when neither the primary nor fallback font can cover visible text", async () => {
+      const fallback = loadedFont(createFakeFont("A"), "FallbackLatinOnly");
+      const ctx = createPathRenderContext(createFakeFontLoader({ fallback }));
+
+      await expect(renderTextNodeAsPath(createTextNode("漢"), ctx))
+        .rejects.toThrow("requires font");
     });
   });
 

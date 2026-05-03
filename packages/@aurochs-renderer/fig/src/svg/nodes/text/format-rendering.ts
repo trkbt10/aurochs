@@ -81,6 +81,9 @@ export function formatTextRenderingToSvg(rendering: TextRendering): SvgString {
     const decoD = contoursToPathD(rendering.decorationContours, PATH_PRECISION);
     const combined = glyphD + decoD;
     if (combined === "") {
+      if (rendering.props.characters.trim().length > 0) {
+        throw new Error("SVG text renderer received glyph rendering with no visible contours for non-empty text");
+      }
       return EMPTY_SVG;
     }
     const pathEl = svgPath({
@@ -94,6 +97,9 @@ export function formatTextRenderingToSvg(rendering: TextRendering): SvgString {
   // kind === "lines"
   const { layout, props, fillColor, fillOpacity } = rendering;
   if (layout.lines.length === 0) {
+    if (props.characters.trim().length > 0) {
+      throw new Error("SVG text renderer received line rendering with no lines for non-empty text");
+    }
     return EMPTY_SVG;
   }
 

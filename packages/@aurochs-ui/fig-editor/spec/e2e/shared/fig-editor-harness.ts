@@ -77,6 +77,51 @@ export async function clickNodeAt(
   await page.mouse.click(point.x, point.y);
 }
 
+export async function clickPagePoint(
+  page: Page,
+  point: { readonly x: number; readonly y: number },
+): Promise<void> {
+  const screenPoint = await pagePointToScreenPoint(page, point);
+  await page.mouse.click(screenPoint.x, screenPoint.y);
+}
+
+export async function clickNodeAtPagePosition(
+  page: Page,
+  node: NodeBounds,
+  ratio: { readonly x: number; readonly y: number },
+): Promise<void> {
+  await clickPagePoint(page, {
+    x: node.pageX + node.width * ratio.x,
+    y: node.pageY + node.height * ratio.y,
+  });
+}
+
+export async function pagePointToScreenPoint(
+  page: Page,
+  point: { readonly x: number; readonly y: number },
+): Promise<{ readonly x: number; readonly y: number }> {
+  const screenPoint = await page.evaluate(({ x, y }) => {
+    const svg = document.querySelector<SVGSVGElement>("svg");
+    const viewportGroup = Array.from(document.querySelectorAll<SVGGElement>("svg g[transform]")).find((group) => {
+      const transform = group.getAttribute("transform") ?? "";
+      return transform.includes("scale(");
+    }) ?? null;
+    const matrix = viewportGroup?.getScreenCTM();
+    if (!svg || !matrix) {
+      return null;
+    }
+    const svgPoint = svg.createSVGPoint();
+    svgPoint.x = x;
+    svgPoint.y = y;
+    const transformed = svgPoint.matrixTransform(matrix);
+    return { x: transformed.x, y: transformed.y };
+  }, point);
+  if (!screenPoint) {
+    throw new Error(`Could not map page point (${point.x}, ${point.y}) to screen coordinates`);
+  }
+  return screenPoint;
+}
+
 
 
 
@@ -199,6 +244,43 @@ export async function anchorHandleCenter(page: Page, index: number): Promise<{ r
   const bounds = await handle.boundingBox();
   if (!bounds) {
     throw new Error("Vector anchor handle had no visible bounding box");
+  }
+  return { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
+}
+
+
+
+
+
+
+export async function nearestAnchorHandleDistance(
+  page: Page,
+  point: { readonly x: number; readonly y: number },
+): Promise<number> {
+  const handles = page.locator("circle[role='button'][aria-label^='Vector path anchor handle']");
+  const count = await handles.count();
+  const distances = await Promise.all(Array.from({ length: count }, async (_value, index) => {
+    const bounds = await handles.nth(index).boundingBox();
+    if (!bounds) {
+      throw new Error("Vector anchor handle had no visible bounding box");
+    }
+    const center = { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
+    return Math.hypot(center.x - point.x, center.y - point.y);
+  }));
+  return Math.min(...distances);
+}
+
+
+
+
+
+
+export async function controlHandleCenter(page: Page, index: number): Promise<{ readonly x: number; readonly y: number }> {
+  const handle = page.locator("circle[role='button'][aria-label^='Vector path control handle']").nth(index);
+  await expect(handle).toBeVisible();
+  const bounds = await handle.boundingBox();
+  if (!bounds) {
+    throw new Error("Vector control handle had no visible bounding box");
   }
   return { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
 }

@@ -15,12 +15,12 @@ import { createFigDesignDocument, createEmptyFigDesignDocument } from "@aurochs-
 import type { EditorPanel } from "@aurochs-ui/editor-controls/editor-shell";
 import { Button, Select, Tabs, Toggle, injectCSSVariables, colorTokens, spacingTokens, fontTokens, radiusTokens } from "@aurochs-ui/ui-components";
 import { FigEditor } from "../src/editor/FigEditor";
-import type { FigEditorRendererKind } from "../src/canvas/renderer-kind";
-import { PageListPanel } from "../src/panels/PageListPanel";
-import { LayerPanel } from "../src/panels/LayerPanel";
-import { PropertyPanel } from "../src/panels/PropertyPanel";
-import { FigInspectorPanel } from "../src/panels/FigInspectorPanel";
-import { FigInspectorDetailsPanel } from "../src/panels/FigInspectorDetailsPanel";
+import type { FigEditorRendererKind } from "../src/canvas/rendering/renderer-kind";
+import { PageListPanel } from "../src/panels/pages/PageListPanel";
+import { LayerPanel } from "../src/panels/layers/LayerPanel";
+import { PropertyPanel } from "../src/panels/properties/PropertyPanel";
+import { FigInspectorPanel } from "../src/panels/inspector/FigInspectorPanel";
+import { FigInspectorDetailsPanel } from "../src/panels/inspector/FigInspectorDetailsPanel";
 import { FigInspectorOverlay } from "../src/inspector/FigInspectorOverlay";
 import { FigInspectorProvider } from "../src/inspector/FigInspectorContext";
 import { FileDropZone } from "./components/FileDropZone";

@@ -26,7 +26,7 @@
  */
 
 import { useRef, useMemo, useCallback, useState, useEffect, type ReactNode } from "react";
-import type { EditorCanvasHandle, CanvasPageCoords } from "@aurochs-ui/editor-controls/canvas";
+import type { EditorCanvasHandle, CanvasPageCoords, EditorCanvasViewportContentContext } from "@aurochs-ui/editor-controls/canvas";
 import { EditorCanvas } from "@aurochs-ui/editor-controls/canvas";
 import type { ZoomMode } from "@aurochs-ui/editor-controls/zoom";
 import type { ResizeHandlePosition } from "@aurochs-ui/editor-core/geometry";
@@ -43,7 +43,12 @@ import { useFigTextFontResolver } from "./rendering/use-fig-text-font-resolver";
 import { computeAbsoluteTransform, filterMarqueeSelectionByHierarchy, flattenAllNodeBounds } from "./interaction/bounds";
 import { resolveCanvasInteractionPolicy } from "./interaction/interaction-policy";
 import { resolveCanvasInteractionTarget, type CanvasTargetMode } from "./interaction/target-resolution";
-import { screenPxToPagePx, VECTOR_PATH_OVERLAY_STYLE } from "../vector-path/overlay-style";
+import {
+  getVectorPathHandleCursor,
+  orderVectorPathHandlesForHitTesting,
+  screenPxToPagePx,
+  VECTOR_PATH_OVERLAY_STYLE,
+} from "../vector-path/overlay-style";
 import { useFigKeyboard } from "./interaction/use-fig-keyboard";
 import { FigTextEditOverlay } from "../text-edit/FigTextEditOverlay";
 import { computeAbsoluteNodeBounds } from "./interaction/bounds";
@@ -56,6 +61,7 @@ import {
   getVectorHandleAriaLabel,
   pageToDrawingLocalPoint,
   resolveContextVectorHandle,
+  resolveEditableVectorPaths,
   resolvePathDrawingParent,
   updateVectorPathCommands,
   updateVectorPathEndpoint,
@@ -67,7 +73,9 @@ import {
   applyVectorPathDraftOperation,
   commitVectorPathDraftToNodeSpec,
   getVectorPathDraftControlLines,
+  getVectorPathDraftHandleCursor,
   getVectorPathDraftHandles,
+  resolveVectorPathDraftHandleIntent,
   vectorPathDraftToPreviewPath,
   type VectorPathDraft,
   type VectorPathDraftHandle,
@@ -89,6 +97,8 @@ const MIN_CANVAS_SIZE = 800;
 /** Padding around content for breathing room */
 const CANVAS_PADDING = 200;
 const VECTOR_PATH_CLOSE_TOLERANCE_PX = 8;
+const VECTOR_PATH_HANDLE_DRAG_THRESHOLD_PX = 3;
+const MIN_RENDER_WINDOW_SIZE = 1;
 
 /**
  * Compute canvas dimensions that enclose all nodes with padding.
@@ -139,6 +149,34 @@ function computeCanvasBoundsFromNodes(nodes: readonly FigDesignNode[]): {
     renderY: extremes.minTop - CANVAS_PADDING,
     renderWidth: Math.max(MIN_CANVAS_SIZE, extremes.maxRight - extremes.minLeft + CANVAS_PADDING * 2),
     renderHeight: Math.max(MIN_CANVAS_SIZE, extremes.maxBottom - extremes.minTop + CANVAS_PADDING * 2),
+  };
+}
+
+function computeViewportRenderWindow({
+  context,
+}: {
+  readonly context: EditorCanvasViewportContentContext | null;
+}): {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+  readonly surfaceWidth: number;
+  readonly surfaceHeight: number;
+} | null {
+  if (!context || context.viewportSize.width <= 0 || context.viewportSize.height <= 0 || context.viewport.scale <= 0) {
+    return null;
+  }
+
+  const usableWidth = Math.max(MIN_RENDER_WINDOW_SIZE, context.viewportSize.width - context.rulerThickness);
+  const usableHeight = Math.max(MIN_RENDER_WINDOW_SIZE, context.viewportSize.height - context.rulerThickness);
+  return {
+    x: -context.viewport.translateX / context.viewport.scale,
+    y: -context.viewport.translateY / context.viewport.scale,
+    width: usableWidth / context.viewport.scale,
+    height: usableHeight / context.viewport.scale,
+    surfaceWidth: usableWidth,
+    surfaceHeight: usableHeight,
   };
 }
 
@@ -276,6 +314,7 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
   const canvasRef = useRef<EditorCanvasHandle>(null);
   const [zoomMode, setZoomMode] = useState<ZoomMode>("fit");
   const [viewportScale, setViewportScale] = useState(1);
+  const [viewportRenderContext, setViewportRenderContext] = useState<EditorCanvasViewportContentContext | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState>(null);
   const vectorPathDragRef = useRef<VectorPathDragState | null>(null);
   const vectorPathDraftSessionRef = useRef<VectorPathDraftSession | null>(null);
@@ -311,6 +350,10 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
     () => computeCanvasBoundsFromNodes(activePage?.children ?? []),
     [activePage],
   );
+  const renderWindow = useMemo(
+    () => computeViewportRenderWindow({ context: viewportRenderContext }),
+    [viewportRenderContext],
+  );
   const textFontResolver = useFigTextFontResolver({ page: activePage, fontLoader });
   const primaryNode = useMemo(
     () => activePage && nodeSelection.primaryId ? findNodeById(activePage.children, nodeSelection.primaryId) : undefined,
@@ -328,6 +371,10 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
     () => resolveFigUserOperationDomain(userIntent),
     [userIntent],
   );
+  const primaryEditableVectorPaths = useMemo(
+    () => interactionPolicy.pathEditingEnabled ? resolveEditableVectorPaths(primaryNode, document.blobs) : undefined,
+    [document.blobs, interactionPolicy.pathEditingEnabled, primaryNode],
+  );
   useFigKeyboard({
     dispatch,
     hasSelection: nodeSelection.selectedIds.length > 0,
@@ -338,16 +385,31 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
     isTextEditing: textEdit.type === "active",
   });
   const vectorPathHandles = useMemo(
-    () => interactionPolicy.pathEditingEnabled ? collectVectorPathHandles(primaryNode, activePage) : [],
-    [activePage, interactionPolicy.pathEditingEnabled, primaryNode],
+    () => {
+      if (!interactionPolicy.pathEditingEnabled) {
+        return [];
+      }
+      return collectVectorPathHandles(primaryNode, activePage, primaryEditableVectorPaths);
+    },
+    [activePage, interactionPolicy.pathEditingEnabled, primaryEditableVectorPaths, primaryNode],
   );
   const vectorPathControlLines = useMemo(
-    () => interactionPolicy.pathEditingEnabled ? collectVectorPathControlLines(primaryNode, activePage) : [],
-    [activePage, interactionPolicy.pathEditingEnabled, primaryNode],
+    () => {
+      if (!interactionPolicy.pathEditingEnabled) {
+        return [];
+      }
+      return collectVectorPathControlLines(primaryNode, activePage, primaryEditableVectorPaths);
+    },
+    [activePage, interactionPolicy.pathEditingEnabled, primaryEditableVectorPaths, primaryNode],
   );
   const editableVectorPathOverlays = useMemo(
-    () => interactionPolicy.pathEditingEnabled ? collectEditableVectorPathOverlays(primaryNode, activePage) : [],
-    [activePage, interactionPolicy.pathEditingEnabled, primaryNode],
+    () => {
+      if (!interactionPolicy.pathEditingEnabled) {
+        return [];
+      }
+      return collectEditableVectorPathOverlays(primaryNode, activePage, primaryEditableVectorPaths);
+    },
+    [activePage, interactionPolicy.pathEditingEnabled, primaryEditableVectorPaths, primaryNode],
   );
 
   const addVectorPointAtPagePoint = useCallback(
@@ -356,7 +418,11 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
         return false;
       }
       const targetNode = findNodeById(activePage.children, nodeId);
-      if (!targetNode?.vectorPaths || targetNode.vectorPaths.length === 0) {
+      if (!canEnterVectorPathEdit(targetNode)) {
+        return false;
+      }
+      const editableVectorPaths = resolveEditableVectorPaths(targetNode, document.blobs);
+      if (!editableVectorPaths) {
         return false;
       }
       const transform = computeAbsoluteTransform(activePage.children, nodeId);
@@ -368,19 +434,21 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
         type: "UPDATE_NODE",
         source: "path-edit",
         nodeId,
-        updater: (node) => addVectorPathPoint(node, 0, point),
+        updater: (node) => addVectorPathPoint({ node, pathIndex: 0, point, editableVectorPaths }),
       });
       return true;
     },
-    [activePage, dispatch],
+    [activePage, dispatch, document.blobs],
   );
 
   const sceneGraph = useFigSceneGraph({
-    page: activePage,
-    canvasWidth: canvasSize.renderWidth,
-    canvasHeight: canvasSize.renderHeight,
-    viewportX: canvasSize.renderX,
-    viewportY: canvasSize.renderY,
+    page: renderWindow ? activePage : null,
+    canvasWidth: renderWindow?.surfaceWidth ?? MIN_RENDER_WINDOW_SIZE,
+    canvasHeight: renderWindow?.surfaceHeight ?? MIN_RENDER_WINDOW_SIZE,
+    viewportX: renderWindow?.x ?? 0,
+    viewportY: renderWindow?.y ?? 0,
+    viewportWidth: renderWindow?.width ?? MIN_RENDER_WINDOW_SIZE,
+    viewportHeight: renderWindow?.height ?? MIN_RENDER_WINDOW_SIZE,
     images: document.images,
     blobs: document.blobs,
     symbolMap: document.components,
@@ -484,7 +552,7 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
           );
           return;
         }
-        if (!nodeSelection.selectedIds.includes(nodeId)) {
+        if (!nodeSelection.selectedIds.includes(nodeId) || nodeSelection.primaryId !== nodeId) {
           if (allowsFigUserOperation(operationDomain, "select-node")) {
             dispatch({
               type: "SELECT_NODE",
@@ -528,11 +596,14 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
         });
       }
     },
-    [activePage, addVectorPathDraftPointAt, dispatch, interactionPolicy, itemBounds, nodeSelection.selectedIds, operationDomain, textEdit],
+    [activePage, addVectorPathDraftPointAt, dispatch, interactionPolicy, itemBounds, nodeSelection.primaryId, nodeSelection.selectedIds, operationDomain, textEdit],
   );
 
   const handleItemClick = useCallback(
     (id: string, coords: CanvasPageCoords, _e: React.MouseEvent) => {
+      if (allowsFigUserOperation(operationDomain, "resolve-path-target")) {
+        return;
+      }
       if (!allowsFigUserOperation(operationDomain, "select-node")) {
         return;
       }
@@ -758,22 +829,6 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
       if (!primaryNode || !allowsFigUserOperation(operationDomain, "edit-vector-path")) {
         return;
       }
-      if (e.button === 2) {
-        if (!allowsFigUserOperation(operationDomain, "open-context-menu")) {
-          return;
-        }
-        e.preventDefault();
-        e.stopPropagation();
-        setContextMenu({
-          x: e.clientX,
-          y: e.clientY,
-          pageX: handle.x,
-          pageY: handle.y,
-          targetId: primaryNode.id,
-          vectorHandle: handle,
-        });
-        return;
-      }
       if (e.button !== 0) {
         return;
       }
@@ -784,33 +839,15 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
         pathIndex: handle.pathIndex,
         commandIndex: handle.commandIndex,
         valueIndex: handle.valueIndex,
+        editableVectorPaths: primaryEditableVectorPaths,
       };
     },
-    [operationDomain, primaryNode],
+    [operationDomain, primaryEditableVectorPaths, primaryNode],
   );
 
   const handleVectorPathHandleContextMenu = useCallback(
     (handle: VectorPathHandle, e: React.MouseEvent) => {
       if (!primaryNode || !allowsFigUserOperation(operationDomain, "open-context-menu")) {
-        return;
-      }
-      e.preventDefault();
-      e.stopPropagation();
-      setContextMenu({
-        x: e.clientX,
-        y: e.clientY,
-        pageX: handle.x,
-        pageY: handle.y,
-        targetId: primaryNode.id,
-        vectorHandle: handle,
-      });
-    },
-    [operationDomain, primaryNode],
-  );
-
-  const handleVectorPathHandleMouseDown = useCallback(
-    (handle: VectorPathHandle, e: React.MouseEvent) => {
-      if (e.button !== 2 || !primaryNode || !allowsFigUserOperation(operationDomain, "open-context-menu")) {
         return;
       }
       e.preventDefault();
@@ -834,10 +871,8 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
       }
       e.preventDefault();
       e.stopPropagation();
-      if (!primaryNode.vectorPaths || primaryNode.vectorPaths.length === 0) {
-        // Topology operations on a parametric shape explicitly turn it
-        // into an editable vector path. Simple anchor drags above keep
-        // using shape-specific resize semantics.
+      if (!primaryEditableVectorPaths) {
+        return;
       }
       if (!nodeSelection.selectedIds.includes(primaryNode.id)) {
         if (allowsFigUserOperation(operationDomain, "select-node")) {
@@ -861,10 +896,10 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
         type: "UPDATE_NODE",
         source: "path-edit",
         nodeId: primaryNode.id,
-        updater: (node) => addVectorPathPoint(node, pathIndex, point),
+        updater: (node) => addVectorPathPoint({ node, pathIndex, point, editableVectorPaths: primaryEditableVectorPaths }),
       });
     },
-    [activePage, dispatch, nodeSelection.selectedIds, operationDomain, primaryNode],
+    [activePage, dispatch, nodeSelection.selectedIds, operationDomain, primaryEditableVectorPaths, primaryNode],
   );
 
   useEffect(() => {
@@ -892,6 +927,7 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
           commandIndex: currentDrag.commandIndex,
           valueIndex: currentDrag.valueIndex,
           point,
+          editableVectorPaths: currentDrag.editableVectorPaths,
         }),
       });
     };
@@ -918,6 +954,23 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
       }
       const pageCoords = canvasRef.current?.screenToPage(event.clientX, event.clientY);
       if (!pageCoords) {
+        return;
+      }
+      const start = session.pointerStart;
+      if (start) {
+        const exceededThreshold = exceedsThreshold({
+          startClientX: start.clientX,
+          startClientY: start.clientY,
+          clientX: event.clientX,
+          clientY: event.clientY,
+        });
+        const pagePoint = { x: pageCoords.pageX, y: pageCoords.pageY };
+        applyVectorPathDraftResult(applyVectorPathDraftOperation(session, {
+          type: "anchor-drag-preview",
+          localPoint: pageToDrawingLocalPoint(session.draft, pagePoint),
+          pagePoint,
+          exceededThreshold,
+        }));
         return;
       }
       applyVectorPathDraftResult(applyVectorPathDraftOperation(session, {
@@ -987,14 +1040,12 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
     }
     event.preventDefault();
     event.stopPropagation();
-    if (handle.role === "anchor" && handle.index === 0) {
-      applyVectorPathDraftResult(applyVectorPathDraftOperation(session, { type: "close-from-start-handle" }));
-      return;
-    }
-    const handlePointerMove = (moveEvent: PointerEvent) => {
-      const pageCoords = canvasRef.current?.screenToPage(moveEvent.clientX, moveEvent.clientY);
-      const current = vectorPathDraftSessionRef.current;
-      if (!pageCoords || !current) {
+    const startClientX = event.clientX;
+    const startClientY = event.clientY;
+    const dragState = { moved: false };
+    const moveHandleToPointer = (pointerEvent: PointerEvent, current: VectorPathDraftSession) => {
+      const pageCoords = canvasRef.current?.screenToPage(pointerEvent.clientX, pointerEvent.clientY);
+      if (!pageCoords) {
         return;
       }
       const pagePoint = { x: pageCoords.pageX, y: pageCoords.pageY };
@@ -1006,9 +1057,49 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
         pagePoint,
       }));
     };
-    const handlePointerUp = () => {
+    const handlePointerMove = (moveEvent: PointerEvent) => {
+      const current = vectorPathDraftSessionRef.current;
+      if (!current) {
+        return;
+      }
+      const intent = resolveVectorPathDraftHandleIntent({
+        draft: current.draft,
+        handle,
+        startClientX,
+        startClientY,
+        clientX: moveEvent.clientX,
+        clientY: moveEvent.clientY,
+        dragThresholdPx: VECTOR_PATH_HANDLE_DRAG_THRESHOLD_PX,
+      });
+      if (intent !== "move-handle") {
+        return;
+      }
+      dragState.moved = true;
+      moveHandleToPointer(moveEvent, current);
+    };
+    const handlePointerUp = (upEvent: PointerEvent) => {
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
+      const current = vectorPathDraftSessionRef.current;
+      if (!current) {
+        return;
+      }
+      const intent = resolveVectorPathDraftHandleIntent({
+        draft: current.draft,
+        handle,
+        startClientX,
+        startClientY,
+        clientX: upEvent.clientX,
+        clientY: upEvent.clientY,
+        dragThresholdPx: VECTOR_PATH_HANDLE_DRAG_THRESHOLD_PX,
+      });
+      if (intent === "close-start-anchor" && !dragState.moved) {
+        applyVectorPathDraftResult(applyVectorPathDraftOperation(current, { type: "close-from-start-handle" }));
+        return;
+      }
+      if (!dragState.moved && intent === "move-handle") {
+        moveHandleToPointer(upEvent, current);
+      }
     };
     window.addEventListener("pointermove", handlePointerMove);
     window.addEventListener("pointerup", handlePointerUp);
@@ -1141,6 +1232,7 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
                 node,
                 pathIndex: handle.pathIndex,
                 operation: { type: "convert-segment-to-curve", commandIndex: handle.commandIndex },
+                editableVectorPaths: primaryEditableVectorPaths,
               }),
             });
           }
@@ -1156,6 +1248,7 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
                 node,
                 pathIndex: handle.pathIndex,
                 operation: { type: "convert-segment-to-line", commandIndex: handle.commandIndex },
+                editableVectorPaths: primaryEditableVectorPaths,
               }),
             });
           }
@@ -1171,6 +1264,7 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
                 node,
                 pathIndex: handle.pathIndex,
                 operation: { type: "delete-anchor", commandIndex: handle.commandIndex },
+                editableVectorPaths: primaryEditableVectorPaths,
               }),
             });
           }
@@ -1185,6 +1279,7 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
                 node,
                 pathIndex: vectorHandle?.pathIndex ?? 0,
                 operation: { type: "set-closed", closed: true },
+                editableVectorPaths: primaryEditableVectorPaths,
               }),
             });
           }
@@ -1199,6 +1294,7 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
                 node,
                 pathIndex: vectorHandle?.pathIndex ?? 0,
                 operation: { type: "set-closed", closed: false },
+                editableVectorPaths: primaryEditableVectorPaths,
               }),
             });
           }
@@ -1226,7 +1322,7 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
       }
       setContextMenu(null);
     },
-    [addVectorPointAtPagePoint, contextMenu, dispatch, nodeSelection.selectedIds, operationDomain, vectorPathHandles],
+    [addVectorPointAtPagePoint, contextMenu, dispatch, nodeSelection.selectedIds, operationDomain, primaryEditableVectorPaths, vectorPathHandles],
   );
 
   const handleContextMenuClose = useCallback(() => {
@@ -1503,27 +1599,71 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
   }, [nodeSelection.selectedIds, activePage]);
 
   const viewportContent = useMemo(() => {
-    if (!activePage || !sceneGraph) {
+    if (renderer === "webgl" || !activePage || !sceneGraph || !renderWindow) {
       return undefined;
     }
     return (
       <FigPageRenderer
         page={activePage}
-        canvasWidth={canvasSize.renderWidth}
-        canvasHeight={canvasSize.renderHeight}
+        canvasWidth={renderWindow.width}
+        canvasHeight={renderWindow.height}
         images={document.images}
         blobs={document.blobs}
         symbolMap={document.components}
         styleRegistry={document.styleRegistry}
         renderer={renderer}
         sceneGraph={sceneGraph}
-        viewportX={canvasSize.renderX}
-        viewportY={canvasSize.renderY}
+        viewportX={renderWindow.x}
+        viewportY={renderWindow.y}
         viewportScale={viewportScale}
         textFontResolver={textFontResolver}
       />
     );
-  }, [activePage, sceneGraph, renderer, canvasSize, document.images, document.blobs, document.components, document.styleRegistry, viewportScale, textFontResolver]);
+  }, [activePage, sceneGraph, renderer, renderWindow, document.images, document.blobs, document.components, document.styleRegistry, viewportScale, textFontResolver]);
+
+  const screenViewportContent = useMemo(() => {
+    if (renderer !== "webgl" || !activePage || !sceneGraph || !renderWindow) {
+      return undefined;
+    }
+    return (
+      <FigPageRenderer
+        page={activePage}
+        canvasWidth={renderWindow.surfaceWidth}
+        canvasHeight={renderWindow.surfaceHeight}
+        images={document.images}
+        blobs={document.blobs}
+        symbolMap={document.components}
+        styleRegistry={document.styleRegistry}
+        renderer={renderer}
+        sceneGraph={sceneGraph}
+        viewportX={renderWindow.x}
+        viewportY={renderWindow.y}
+        viewportWidth={renderWindow.width}
+        viewportHeight={renderWindow.height}
+        viewportScale={viewportScale}
+        webglPlacement="screen"
+        textFontResolver={textFontResolver}
+      />
+    );
+  }, [activePage, sceneGraph, renderer, renderWindow, document.images, document.blobs, document.components, document.styleRegistry, viewportScale, textFontResolver]);
+
+  const handleViewportChange = useCallback((viewport: EditorCanvasViewportContentContext["viewport"], context: EditorCanvasViewportContentContext) => {
+    setViewportScale(viewport.scale);
+    setViewportRenderContext((previous) => {
+      if (
+        previous
+        && previous.rulerThickness === context.rulerThickness
+        && previous.viewportSize.width === context.viewportSize.width
+        && previous.viewportSize.height === context.viewportSize.height
+        && previous.viewport.translateX === context.viewport.translateX
+        && previous.viewport.translateY === context.viewport.translateY
+        && previous.viewport.scale === context.viewport.scale
+      ) {
+        return previous;
+      }
+      return context;
+    });
+  }, []);
 
   const pathInteractionOverlay = useMemo(() => (
     <>
@@ -1568,7 +1708,7 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
 
       {vectorPathHandles.length > 0 && (
         <g>
-          {vectorPathHandles.map((handle) => (
+          {orderVectorPathHandlesForHitTesting(vectorPathHandles).map((handle) => (
             <circle
               key={handle.key}
               role="button"
@@ -1582,9 +1722,8 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
               strokeWidth={VECTOR_PATH_OVERLAY_STYLE.handleStrokeWidthPx}
               vectorEffect="non-scaling-stroke"
               pointerEvents="all"
-              style={{ cursor: "move" }}
+              style={{ cursor: getVectorPathHandleCursor(handle) }}
               onPointerDown={(event) => handleVectorPathHandlePointerDown(handle, event)}
-              onMouseDown={(event) => handleVectorPathHandleMouseDown(handle, event)}
               onContextMenu={(event) => handleVectorPathHandleContextMenu(handle, event)}
             />
           ))}
@@ -1619,7 +1758,7 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
               pointerEvents="none"
             />
           ))}
-          {getVectorPathDraftHandles(vectorPathDrawPreview).map((handle) => (
+          {orderVectorPathHandlesForHitTesting(getVectorPathDraftHandles(vectorPathDrawPreview)).map((handle) => (
             <circle
               key={handle.key}
               role="button"
@@ -1633,7 +1772,7 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
               strokeWidth={VECTOR_PATH_OVERLAY_STYLE.handleStrokeWidthPx}
               vectorEffect="non-scaling-stroke"
               pointerEvents="all"
-              style={{ cursor: "move" }}
+              style={{ cursor: getVectorPathDraftHandleCursor(vectorPathDrawPreview, handle) }}
               onPointerDown={(event) => handleVectorPathDraftHandlePointerDown(handle, event)}
             />
           ))}
@@ -1644,7 +1783,6 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
     editableVectorPathOverlays,
     handleEditablePathPointerDown,
     handleVectorPathHandleContextMenu,
-    handleVectorPathHandleMouseDown,
     handleVectorPathHandlePointerDown,
     handleVectorPathDraftHandlePointerDown,
     handleVectorPathDraftSegmentPointerDown,
@@ -1664,7 +1802,7 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
         rulerCoordinateMode="unbounded"
         zoomMode={zoomMode}
         onZoomModeChange={setZoomMode}
-        onViewportChange={(viewport) => setViewportScale(viewport.scale)}
+        onViewportChange={handleViewportChange}
         itemBounds={itemBounds}
         selectedIds={nodeSelection.selectedIds}
         primaryId={nodeSelection.primaryId}
@@ -1692,6 +1830,7 @@ export function FigEditorCanvas({ canvasOverlay, renderer = "svg", fontLoader }:
         onMarqueeSelect={handleMarqueeSelect}
         viewportOverlay={textEditOverlay}
         viewportContent={viewportContent}
+        screenViewportContent={screenViewportContent}
         interactionOverlay={pathInteractionOverlay}
       >
         {/* Inspector / custom canvas overlay (page-coord space) */}

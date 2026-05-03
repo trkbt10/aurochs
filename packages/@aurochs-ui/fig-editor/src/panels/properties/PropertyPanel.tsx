@@ -14,6 +14,7 @@ import { OpacitySection } from "../sections/appearance/OpacitySection";
 import { FillSection } from "../sections/paint/FillSection";
 import { StrokeSection } from "../sections/paint/StrokeSection";
 import { CornerRadiusSection } from "../sections/appearance/CornerRadiusSection";
+import { isCornerRadiusEditableNode } from "../sections/appearance/corner-radius-domain";
 import { EffectsSection } from "../sections/paint/EffectsSection";
 import { AutoLayoutSection } from "../sections/layout/AutoLayoutSection";
 import { ComponentPropertiesSection } from "../sections/component/ComponentPropertiesSection";
@@ -111,7 +112,7 @@ export function PropertyPanel() {
       </OptionalPropertySection>
 
       {/* Corner Radius (only for applicable node types) */}
-      {(primaryNode.cornerRadius !== undefined || primaryNode.rectangleCornerRadii !== undefined) && (
+      {isCornerRadiusEditableNode(primaryNode) && (
         <OptionalPropertySection title="Corner Radius" defaultExpanded>
           <PropertyMutationScope disabled={propertyMutationDisabled}>
             <CornerRadiusSection node={primaryNode} target={propertyTarget} dispatch={dispatch} />

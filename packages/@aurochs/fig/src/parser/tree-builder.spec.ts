@@ -34,21 +34,21 @@ function createTestNode(options: TestNodeOptions): FigNode {
 }
 
 // Create a test node without type (for edge case testing)
-function createNodeWithoutType(guid: FigGuid): FigNode {
+function createNodeWithoutType(guid: FigGuid): { readonly guid: FigGuid; readonly phase: KiwiEnumValue } {
   const node = {
     guid,
     phase: { value: 0, name: "CREATED" },
-  } as unknown as FigNode;
+  };
   return node;
 }
 
 // Create a test node with legacy string type (for backwards compat testing)
-function createLegacyStringTypeNode(stringType: string, guid: FigGuid): FigNode {
+function createLegacyStringTypeNode(stringType: FigNodeType, guid: FigGuid): { readonly type: FigNodeType; readonly guid: FigGuid; readonly phase: KiwiEnumValue } {
   const node = {
     type: stringType,
     guid,
     phase: { value: 0, name: "CREATED" },
-  } as unknown as FigNode;
+  };
   return node;
 }
 

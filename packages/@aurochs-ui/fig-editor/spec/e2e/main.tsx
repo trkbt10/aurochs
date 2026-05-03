@@ -26,8 +26,83 @@ import type {
 import { EMPTY_FIG_STYLE_REGISTRY } from "@aurochs/fig/domain";
 import type { FigImage } from "@aurochs/fig/parser";
 import type { FigMatrix, KiwiEnumValue } from "@aurochs/fig/types";
+import {
+  createCachingFontLoader,
+  type AbstractFont,
+  type FontLoader,
+  type FontLoadOptions,
+  type FontPath,
+  type LoadedFont,
+} from "@aurochs-renderer/fig/font";
 
 injectCSSVariables();
+
+function createTestFontPath({ x, y, fontSize }: { readonly x: number; readonly y: number; readonly fontSize: number }): FontPath {
+  const w = fontSize * 0.48;
+  const h = fontSize * 0.7;
+  const top = y - h;
+  const commands: FontPath["commands"] = [
+    { type: "M", x, y: top },
+    { type: "L", x: x + w, y: top },
+    { type: "L", x: x + w, y },
+    { type: "L", x, y },
+    { type: "Z" },
+  ];
+  return {
+    commands,
+    toPathData: () => `M${x} ${top}L${x + w} ${top}L${x + w} ${y}L${x} ${y}Z`,
+  };
+}
+
+const TEST_FONT: AbstractFont = {
+  unitsPerEm: 1000,
+  ascender: 800,
+  descender: -200,
+  charToGlyph: () => ({
+    index: 1,
+    advanceWidth: 500,
+    getPath: (x, y, fontSize) => createTestFontPath({ x, y, fontSize }),
+  }),
+  // eslint-disable-next-line custom/max-params -- AbstractFont.getPath is a third-party-compatible callback signature.
+  getPath: (text, x, y, fontSize, options) => {
+    const letterSpacing = options?.letterSpacing ?? 0;
+    const advance = fontSize * 0.5 + letterSpacing;
+    const commands = Array.from(text).flatMap((char, index): FontPath["commands"] => (
+      char === " " ? [] : createTestFontPath({ x: x + index * advance, y, fontSize }).commands
+    ));
+    return {
+      commands,
+      toPathData: () => commands.map((command) => {
+        switch (command.type) {
+          case "M":
+          case "L":
+            return `${command.type}${command.x} ${command.y}`;
+          case "Q":
+            return `Q${command.x1} ${command.y1} ${command.x} ${command.y}`;
+          case "C":
+            return `C${command.x1} ${command.y1} ${command.x2} ${command.y2} ${command.x} ${command.y}`;
+          case "Z":
+            return "Z";
+        }
+      }).join(""),
+    };
+  },
+};
+
+const TEST_FONT_LOADER = createCachingFontLoader({
+  async loadFont(options: FontLoadOptions): Promise<LoadedFont> {
+    return {
+      font: TEST_FONT,
+      family: options.family,
+      weight: options.weight ?? 400,
+      style: options.style ?? "normal",
+      postscriptName: `${options.family}-Test`,
+    };
+  },
+  async isFontAvailable(): Promise<boolean> {
+    return true;
+  },
+} satisfies FontLoader);
 
 // =============================================================================
 // Node construction
@@ -219,6 +294,7 @@ function makeNestedFrameNode(): FigDesignNode {
     strokes: [],
     strokeWeight: 0,
     effects: [],
+    vectorPaths: [{ windingRule: "NONZERO", data: "M 0 0 L 220 0 L 220 150 L 0 150 Z" }],
     children: [makeInnerFrameNode()],
   } as FigDesignNode;
 }
@@ -243,6 +319,7 @@ function makeInnerFrameNode(): FigDesignNode {
     strokes: [],
     strokeWeight: 0,
     effects: [],
+    vectorPaths: [{ windingRule: "NONZERO", data: "M 0 0 L 160 0 L 160 110 L 0 110 Z" }],
     children: [makeFrameChildRectNode(), makeFrameChildVectorNode()],
   } as FigDesignNode;
 }
@@ -599,7 +676,7 @@ function App() {
               <LayerPanel />
             </aside>
           )}
-          <FigEditorCanvas renderer={renderer} />
+          <FigEditorCanvas renderer={renderer} fontLoader={TEST_FONT_LOADER} />
           {(panelMode === "property" || panelMode === "all") && (
             <aside aria-label="Properties" style={propertyPanelStyle}>
               <PropertyPanel />

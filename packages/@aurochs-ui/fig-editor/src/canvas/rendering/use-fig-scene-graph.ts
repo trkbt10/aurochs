@@ -12,6 +12,8 @@ export type UseFigSceneGraphParams = {
   readonly canvasHeight: number;
   readonly viewportX?: number;
   readonly viewportY?: number;
+  readonly viewportWidth?: number;
+  readonly viewportHeight?: number;
   readonly images: ReadonlyMap<string, FigImage>;
   readonly blobs: BuildSceneGraphOptions["blobs"];
   readonly symbolMap: ReadonlyMap<string, FigDesignNode>;
@@ -26,13 +28,15 @@ export function useFigSceneGraph({
   canvasHeight,
   viewportX = 0,
   viewportY = 0,
+  viewportWidth = canvasWidth,
+  viewportHeight = canvasHeight,
   images,
   blobs,
   symbolMap,
   styleRegistry,
   textFontResolver,
 }: UseFigSceneGraphParams) {
-  return useMemo(() => {
+  const contentSceneGraph = useMemo(() => {
     if (!page || page.children.length === 0) {
       return null;
     }
@@ -40,13 +44,26 @@ export function useFigSceneGraph({
     return buildSceneGraph(page.children, {
       blobs,
       images,
-      canvasSize: { width: canvasWidth, height: canvasHeight },
-      viewport: { x: viewportX, y: viewportY, width: canvasWidth, height: canvasHeight },
+      canvasSize: { width: 0, height: 0 },
+      viewport: { x: 0, y: 0, width: 0, height: 0 },
       symbolMap,
       styleRegistry,
       showHiddenNodes: false,
       warnings: [],
       textFontResolver,
     });
-  }, [page, canvasWidth, canvasHeight, viewportX, viewportY, images, blobs, symbolMap, styleRegistry, textFontResolver]);
+  }, [page, images, blobs, symbolMap, styleRegistry, textFontResolver]);
+
+  return useMemo(() => {
+    if (!contentSceneGraph) {
+      return null;
+    }
+
+    return {
+      ...contentSceneGraph,
+      width: canvasWidth,
+      height: canvasHeight,
+      viewport: { x: viewportX, y: viewportY, width: viewportWidth, height: viewportHeight },
+    };
+  }, [contentSceneGraph, canvasWidth, canvasHeight, viewportX, viewportY, viewportWidth, viewportHeight]);
 }

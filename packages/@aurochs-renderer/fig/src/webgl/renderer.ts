@@ -40,7 +40,6 @@ import type {
 } from "../scene-graph/types";
 
 import {
-  resolveRenderTree,
   type RenderNode,
   type RenderGroupNode,
   type RenderFrameNode,
@@ -66,6 +65,8 @@ import {
   drawSolidFill,
   drawLinearGradientFill,
   drawRadialGradientFill,
+  drawAngularGradientFill,
+  drawDiamondGradientFill,
   drawImageFill,
   type GLContext,
 } from "./fill-renderer";
@@ -82,6 +83,8 @@ import {
 import { createEffectsRenderer } from "./effects-renderer";
 import { buildEffectStack, renderShapeEffectStack } from "../scene-graph/render/effect-stack";
 import { createWebGLEffectRendering } from "./effect-rendering";
+import { shouldRenderVisualNode, type ViewportRect } from "./render-culling";
+import { createWebGLRenderTreeCache } from "./render-tree-cache";
 import {
   prepareFanTriangles,
   generateCoverQuad,
@@ -153,12 +156,19 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
   const height = { value: 0 };
   const clipActive = { value: false };
   const clipStencilValid = { value: false };
+  const renderTreeCache = createWebGLRenderTreeCache();
 
   const buffer = gl.createBuffer();
   if (!buffer) {
     throw new Error("Failed to create buffer");
   }
   const positionBuffer = buffer;
+  const geometryCache = {
+    rectVertices: new Map<string, Float32Array>(),
+    ellipseVertices: new Map<string, Float32Array>(),
+    pathGeometry: new Map<string, PathGeometry>(),
+    textGlyphGeometry: new Map<string, TextGlyphGeometry>(),
+  };
 
   // Enable blending for transparency
   gl.enable(gl.BLEND);
@@ -178,24 +188,136 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
     };
   }
 
+  type PathGeometry = {
+    readonly parsedContours: readonly PathContour[];
+    readonly prepared: ReturnType<typeof prepareFanTriangles>;
+    readonly pathVertices: Float32Array;
+    readonly backgroundMaskVertices: Float32Array;
+  };
+
+  type TextGlyphGeometry = {
+    readonly contours: readonly PathContour[];
+    readonly vertices: Float32Array;
+  };
+
+  const maxGeometryCacheEntries = 2048;
+
+  function getCachedGeometry<T>(cache: Map<string, T>, key: string, create: () => T): T {
+    const cached = cache.get(key);
+    if (cached) {
+      return cached;
+    }
+    const value = create();
+    if (cache.size >= maxGeometryCacheEntries) {
+      const firstKey = cache.keys().next().value;
+      if (typeof firstKey === "string") {
+        cache.delete(firstKey);
+      }
+    }
+    cache.set(key, value);
+    return value;
+  }
+
+  function cornerRadiusCacheKey(cornerRadius: CornerRadius | undefined): string {
+    return Array.isArray(cornerRadius) ? cornerRadius.join(",") : `${cornerRadius ?? ""}`;
+  }
+
+  function getRectVertices(widthValue: number, heightValue: number, cornerRadius?: CornerRadius): Float32Array {
+    return getCachedGeometry(
+      geometryCache.rectVertices,
+      `${widthValue}:${heightValue}:${cornerRadiusCacheKey(cornerRadius)}`,
+      () => generateRectVertices(widthValue, heightValue, cornerRadius),
+    );
+  }
+
+  function getEllipseVertices({ cx, cy, rx, ry }: { readonly cx: number; readonly cy: number; readonly rx: number; readonly ry: number }): Float32Array {
+    return getCachedGeometry(
+      geometryCache.ellipseVertices,
+      `${cx}:${cy}:${rx}:${ry}`,
+      () => generateEllipseVertices({ cx, cy, rx, ry }),
+    );
+  }
+
+  function renderPathCacheKey(node: RenderPathNode): string {
+    return node.paths.map((path) => `${path.fillRule ?? "nonzero"}:${path.d}`).join("\u001f");
+  }
+
+  function getPathGeometry(node: RenderPathNode): PathGeometry {
+    return getCachedGeometry(geometryCache.pathGeometry, renderPathCacheKey(node), () => {
+      const parsedContours = node.paths.flatMap((rp) => svgPathDToContours({
+        d: rp.d,
+        windingRule: rp.fillRule ?? "nonzero",
+      }));
+      const usesEvenOddFill = parsedContours.some((contour) => contour.windingRule === "evenodd");
+      return {
+        parsedContours,
+        prepared: usesEvenOddFill ? prepareFanTriangles(parsedContours) : null,
+        pathVertices: usesEvenOddFill ? new Float32Array(0) : tessellateContours(parsedContours, 0.25, true),
+        backgroundMaskVertices: tessellateContours(parsedContours, 0.25, true),
+      };
+    });
+  }
+
+  function getTextGlyphGeometry(pathData: string): TextGlyphGeometry {
+    return getCachedGeometry(geometryCache.textGlyphGeometry, pathData, () => {
+      const contours = svgPathDToContours({ d: pathData });
+      return {
+        contours,
+        vertices: tessellateContours(contours, 0.1, true),
+      };
+    });
+  }
+
   // =========================================================================
   // Image preloading — walk RenderTree, use source* fields for image data
   // =========================================================================
 
-  async function walkForImages(node: RenderNode): Promise<void> {
+  function currentViewportRect(): ViewportRect {
+    return { x: 0, y: 0, width: width.value, height: height.value };
+  }
+
+  function viewportToSurfaceTransform(
+    renderTree: { readonly width: number; readonly height: number; readonly viewport: { readonly x: number; readonly y: number; readonly width: number; readonly height: number } },
+  ): AffineMatrix {
+    if (renderTree.viewport.width <= 0 || renderTree.viewport.height <= 0) {
+      throw new Error("WebGL renderer requires a positive viewport size");
+    }
+    const scaleX = renderTree.width / renderTree.viewport.width;
+    const scaleY = renderTree.height / renderTree.viewport.height;
+    return {
+      ...IDENTITY_MATRIX,
+      m00: scaleX,
+      m11: scaleY,
+      m02: -renderTree.viewport.x * scaleX,
+      m12: -renderTree.viewport.y * scaleY,
+    };
+  }
+
+  function isVisualNodeInViewport(node: RenderNode, transform: AffineMatrix): boolean {
+    return shouldRenderVisualNode({
+      node,
+      transform,
+      viewport: currentViewportRect(),
+    });
+  }
+
+  async function walkForImages(node: RenderNode, parentTransform: AffineMatrix): Promise<void> {
+    const worldTransform = multiplyMatrices(parentTransform, node.source.transform);
+    const visible = isVisualNodeInViewport(node, worldTransform);
+
     // Image nodes carry source data for texture creation
-    if (node.type === "image") {
+    if (node.type === "image" && visible) {
       await textureCache.getOrCreate(imageTextureResource(node.sourceImageRef), node.sourceData, node.sourceMimeType);
     }
 
     // Shape and frame nodes share `sourceFills`. Walk all variants that
     // expose that field uniformly so any image fill is registered.
-    if (
+    if (visible && (
       node.type === "rect" ||
       node.type === "ellipse" ||
       node.type === "path" ||
       node.type === "frame"
-    ) {
+    )) {
       for (const fill of node.sourceFills) {
         if (fill.type === "image") {
           await textureCache.getOrCreate(imageTextureResource(fill.imageRef), fill.data, fill.mimeType);
@@ -206,7 +328,7 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
     // Recurse into children (group / frame are the only container variants).
     if (node.type === "group" || node.type === "frame") {
       for (const child of node.children) {
-        await walkForImages(child);
+        await walkForImages(child, worldTransform);
       }
     }
   }
@@ -263,33 +385,13 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
         break;
       }
 
-      case "angular-gradient": {
-        // Angular (conic) gradient: WebGL fallback — render as radial gradient.
-        // True conic rendering requires a dedicated shader.
-        const fallbackFill: Fill = {
-          type: "radial-gradient",
-          center: fill.center,
-          radius: 0.5,
-          stops: fill.stops,
-          opacity: fill.opacity,
-        };
-        drawRadialGradientFill({ ctx, vertices, fill: fallbackFill, transform, opacity, elementSize });
+      case "angular-gradient":
+        drawAngularGradientFill({ ctx, vertices, fill, transform, opacity, elementSize });
         break;
-      }
 
-      case "diamond-gradient": {
-        // Diamond gradient: WebGL fallback — render as radial gradient.
-        // True diamond rendering requires a dedicated shader.
-        const fallbackFill: Fill = {
-          type: "radial-gradient",
-          center: fill.center,
-          radius: 0.5,
-          stops: fill.stops,
-          opacity: fill.opacity,
-        };
-        drawRadialGradientFill({ ctx, vertices, fill: fallbackFill, transform, opacity, elementSize });
+      case "diamond-gradient":
+        drawDiamondGradientFill({ ctx, vertices, fill, transform, opacity, elementSize });
         break;
-      }
     }
   }
 
@@ -754,10 +856,10 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
   ): Float32Array {
     switch (shape.kind) {
       case "rect": {
-        return generateRectVertices(shape.width, shape.height, shape.cornerRadius);
+        return getRectVertices(shape.width, shape.height, shape.cornerRadius);
       }
       case "ellipse":
-        return generateEllipseVertices({ cx: shape.cx, cy: shape.cy, rx: shape.rx, ry: shape.ry });
+        return getEllipseVertices({ cx: shape.cx, cy: shape.cy, rx: shape.rx, ry: shape.ry });
       case "path": {
         const contours: PathContour[] = shape.paths.flatMap((p) => svgPathDToContours({
           d: p.d,
@@ -825,6 +927,9 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
     // RenderTree already excludes invisible nodes, so no visibility check needed
 
     const worldTransform = multiplyMatrices(parentTransform, node.source.transform);
+    if (node.type !== "group" && node.type !== "frame" && !isVisualNodeInViewport(node, worldTransform)) {
+      return;
+    }
     // Use wrapper opacity (resolved by RenderTree) — falls back to 1 if undefined
     const nodeOpacity = node.wrapper.opacity ?? 1;
     const worldOpacity = parentOpacity * nodeOpacity;
@@ -837,8 +942,8 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
     }
 
     if ((node.type === "group" || node.type === "frame") && nodeOpacity < 1) {
-      const didRender = tryRenderWithGroupOpacity({ node, worldTransform, parentOpacity, nodeOpacity });
-      if (didRender) { return; }
+      renderWithGroupOpacity({ node, worldTransform, parentOpacity, nodeOpacity });
+      return;
     }
 
     renderRenderNodeDirect(node, worldTransform, worldOpacity);
@@ -859,32 +964,17 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
   }
 
   /**
-   * Try to render a container node with isolated group opacity via FBO.
-   * Returns true if FBO rendering succeeded, false if unavailable.
+   * Render a container node with isolated group opacity via FBO.
    */
-  function tryRenderWithGroupOpacity(
+  function renderWithGroupOpacity(
     { node, worldTransform, parentOpacity, nodeOpacity }: {
       node: RenderNode; worldTransform: AffineMatrix; parentOpacity: number; nodeOpacity: number;
     }
-  ): boolean {
+  ): void {
     const canvasW = width.value * pixelRatioRef.value;
     const canvasH = height.value * pixelRatioRef.value;
 
-    // Pre-check: blit shader must be available to composite FBO content
-    if (!effectsRenderer.isBlitAvailable()) {
-      return false;
-    }
-
-    let fboCreated = true;
-    try {
-      effectsRenderer.beginLayerCapture(canvasW, canvasH);
-    } catch {
-      fboCreated = false;
-    }
-
-    if (!fboCreated) {
-      return false;
-    }
+    effectsRenderer.beginLayerCapture(canvasW, canvasH);
 
     const wasClipActive = clipActive.value;
     clipActive.value = false;
@@ -902,21 +992,10 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
 
     restoreOuterClipStencil(wasClipActive);
 
-    // Blit captured FBO with group opacity
-    const blitSuccess = effectsRenderer.blitLayerWithOpacity({
+    effectsRenderer.blitLayerWithOpacity({
       canvasWidth: canvasW, canvasHeight: canvasH,
       opacity: nodeOpacity,
     });
-
-    if (!blitSuccess) {
-      // Blit shader unavailable — need to re-render without FBO isolation.
-      // The FBO captured content is lost, so re-render directly.
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-      gl.viewport(0, 0, canvasW, canvasH);
-      restoreOuterClipStencil(wasClipActive);
-      renderRenderNodeDirect(node, worldTransform, parentOpacity * nodeOpacity);
-    }
-    return true;
   }
 
   function renderRenderNodeDirect(
@@ -957,18 +1036,7 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
     const canvasW = width.value * pixelRatioRef.value;
     const canvasH = height.value * pixelRatioRef.value;
 
-    let fboCreated = true;
-    try {
-      effectsRenderer.beginLayerCapture(canvasW, canvasH);
-    } catch {
-      // FBO creation failed — fall back to direct rendering without blur
-      fboCreated = false;
-    }
-
-    if (!fboCreated) {
-      renderRenderNodeDirect(node, worldTransform, worldOpacity);
-      return;
-    }
+    effectsRenderer.beginLayerCapture(canvasW, canvasH);
 
     const wasClipActive = clipActive.value;
     clipActive.value = false;
@@ -1048,7 +1116,7 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
     // Use RenderTree fields for dimensions and corner radius
     const elementSize = { width: node.width, height: node.height };
     const uniformCR = uniformRadiusForGL(node.cornerRadius);
-    const vertices = generateRectVertices(node.width, node.height, node.cornerRadius);
+    const vertices = getRectVertices(node.width, node.height, node.cornerRadius);
     const effects = getSourceEffects(node);
 
     // Check if node has visible content — SVG filters operate on rendered content,
@@ -1057,42 +1125,44 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
     const hasStroke = !!node.background?.strokeRendering;
     const hasVisibleContent = hasFills || hasStroke;
 
-    effectRendering.renderVertexShapeEffectStack({
-      effects,
-      hasVisibleContent,
-      vertices,
-      transform,
-      opacity,
-      renderContent: () => {
-        if (node.background) {
-          drawAllFills({ vertices, fills: node.sourceFills, transform, opacity, elementSize });
-        }
-      },
-      renderStroke: () => {
-        if (!node.background?.strokeRendering) { return; }
-        const sr = node.background.strokeRendering;
-        if (sr.mode === "uniform") {
-          const sourceStroke = node.sourceStroke;
-          if (sourceStroke && sourceStroke.width > 0) {
-            renderUniformStroke({
-              sr,
-              sourceStroke,
-              shapeVerticesFactory: (sw, dashPattern) => tessellateRectStroke({
-                w: node.width,
-                h: node.height,
-                cornerRadius: uniformCR ?? 0,
-                strokeWidth: sw,
-                dashPattern,
-              }),
-              transform,
-              opacity,
-            });
+    if (isVisualNodeInViewport(node, transform)) {
+      effectRendering.renderVertexShapeEffectStack({
+        effects,
+        hasVisibleContent,
+        vertices,
+        transform,
+        opacity,
+        renderContent: () => {
+          if (node.background) {
+            drawAllFills({ vertices, fills: node.sourceFills, transform, opacity, elementSize });
           }
-          return;
-        }
-        renderStrokeRendering(sr, transform, opacity);
-      },
-    });
+        },
+        renderStroke: () => {
+          if (!node.background?.strokeRendering) { return; }
+          const sr = node.background.strokeRendering;
+          if (sr.mode === "uniform") {
+            const sourceStroke = node.sourceStroke;
+            if (sourceStroke && sourceStroke.width > 0) {
+              renderUniformStroke({
+                sr,
+                sourceStroke,
+                shapeVerticesFactory: (sw, dashPattern) => tessellateRectStroke({
+                  w: node.width,
+                  h: node.height,
+                  cornerRadius: uniformCR ?? 0,
+                  strokeWidth: sw,
+                  dashPattern,
+                }),
+                transform,
+                opacity,
+              });
+            }
+            return;
+          }
+          renderStrokeRendering(sr, transform, opacity);
+        },
+      });
+    }
 
     // Children with clip — use RenderTree's clip-path def (which may be expanded
     // by child stroke overhang to prevent stroke clipping at frame edges)
@@ -1127,7 +1197,7 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
     // Use RenderTree fields for dimensions
     const elementSize = { width: node.width, height: node.height };
     const uniformCR = uniformRadiusForGL(node.cornerRadius);
-    const vertices = generateRectVertices(node.width, node.height, node.cornerRadius);
+    const vertices = getRectVertices(node.width, node.height, node.cornerRadius);
     const effects = getSourceEffects(node);
 
     // Skip effects when node has no visible content (fill=none + no stroke → empty silhouette)
@@ -1170,7 +1240,7 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
 
   function renderEllipseFromTree(node: RenderEllipseNode, transform: AffineMatrix, opacity: number): void {
     const elementSize = { width: node.rx * 2, height: node.ry * 2 };
-    const vertices = generateEllipseVertices({ cx: node.cx, cy: node.cy, rx: node.rx, ry: node.ry });
+    const vertices = getEllipseVertices({ cx: node.cx, cy: node.cy, rx: node.rx, ry: node.ry });
     const effects = getSourceEffects(node);
 
     const hasVisibleContent = node.sourceFills.length > 0 || !!node.strokeRendering;
@@ -1277,18 +1347,8 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
     const effects = getSourceEffects(node);
     const effectStack = buildEffectStack(effects);
 
-    // Parse RenderTree SVG paths to PathContours for tessellation
-    const parsedContours: PathContour[] = node.paths.flatMap((rp) => svgPathDToContours({
-      d: rp.d,
-      windingRule: rp.fillRule ?? "nonzero",
-    }));
-
     const hasVisibleContent = node.sourceFills.length > 0 || !!node.strokeRendering;
-
-    const usesEvenOddFill = parsedContours.some((contour) => contour.windingRule === "evenodd");
-    const prepared = usesEvenOddFill ? prepareFanTriangles(parsedContours) : null;
-    const pathVertices = usesEvenOddFill ? new Float32Array(0) : tessellateContours(parsedContours, 0.25, true);
-    const backgroundMaskVertices = tessellateContours(parsedContours, 0.25, true);
+    const { parsedContours, prepared, pathVertices, backgroundMaskVertices } = getPathGeometry(node);
 
     renderShapeEffectStack({
       stack: effectStack,
@@ -1345,9 +1405,7 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
       // Glyph path: parse the SVG path d string (SoT) and tessellate
       if (node.content.d.length === 0) { return; }
 
-      const glyphContours = svgPathDToContours({ d: node.content.d });
-
-      const vertices = tessellateContours(glyphContours, 0.1, true);
+      const { contours: glyphContours, vertices } = getTextGlyphGeometry(node.content.d);
       if (vertices.length > 0) {
         drawSolidFill({ ctx, vertices, color, transform, opacity: opacity * fillOpacity });
       } else {
@@ -1366,11 +1424,11 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
       return;
     }
 
-    // Lines mode intentionally does not render in WebGL. Text must arrive as
+    // Lines mode is not a WebGL rendering contract. Text must arrive as
     // glyph contours for GPU rendering; Canvas2D texture substitution hides
     // missing glyph data and diverges from fig as the source of truth.
     if (node.content.mode === "lines") {
-      return;
+      throw new Error(`WebGL text renderer requires glyph contours for text node ${node.id}`);
     }
   }
 
@@ -1378,7 +1436,7 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
     const entry = textureCache.getIfCached(imageTextureResource(node.sourceImageRef));
     if (!entry) { return; }
 
-    const vertices = generateRectVertices(node.width, node.height);
+    const vertices = getRectVertices(node.width, node.height);
     const elementSize = { width: node.width, height: node.height };
     drawImageFill({
       ctx: getGlContext(), vertices, texture: entry.texture, transform, opacity, elementSize,
@@ -1388,9 +1446,12 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
 
   return {
     async prepareScene(scene: SceneGraph): Promise<void> {
-      const renderTree = resolveRenderTree(scene);
+      width.value = scene.width;
+      height.value = scene.height;
+      const renderTree = renderTreeCache.get(scene);
+      const viewportTransform = viewportToSurfaceTransform(renderTree);
       for (const child of renderTree.children) {
-        await walkForImages(child);
+        await walkForImages(child, viewportTransform);
       }
     },
 
@@ -1421,25 +1482,29 @@ export function createWebGLFigmaRenderer(options: WebGLRendererOptions): WebGLFi
       clipActive.value = false;
       clipStencilValid.value = false;
 
-      const renderTree = resolveRenderTree(scene);
-      const viewportTransform = {
-        ...IDENTITY_MATRIX,
-        m02: -renderTree.viewport.x,
-        m12: -renderTree.viewport.y,
-      };
+      const renderTree = renderTreeCache.get(scene);
+      const viewportTransform = viewportToSurfaceTransform(renderTree);
       for (const child of renderTree.children) {
         renderRenderNode(child, viewportTransform, 1);
       }
     },
 
     setPixelRatio(pixelRatio: number): void {
-      pixelRatioRef.value = Math.max(1, pixelRatio);
+      if (!Number.isFinite(pixelRatio) || pixelRatio <= 0) {
+        throw new Error("WebGL renderer requires positive pixelRatio");
+      }
+      pixelRatioRef.value = pixelRatio;
     },
 
     dispose(): void {
       shaders.dispose();
       textureCache.dispose();
       effectsRenderer.dispose();
+      renderTreeCache.clear();
+      geometryCache.rectVertices.clear();
+      geometryCache.ellipseVertices.clear();
+      geometryCache.pathGeometry.clear();
+      geometryCache.textGlyphGeometry.clear();
       gl.deleteBuffer(positionBuffer);
     },
   };

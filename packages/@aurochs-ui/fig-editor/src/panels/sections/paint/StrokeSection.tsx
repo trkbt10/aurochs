@@ -8,7 +8,7 @@
 import { useCallback, useRef, type ChangeEvent, type CSSProperties } from "react";
 import type { FigDesignNode } from "@aurochs/fig/domain";
 import type { FigImage } from "@aurochs/fig/parser";
-import type { FigPaint, FigColor, FigPaintType, FigImageScaleMode, FigStrokeAlign, FigStrokeCap, FigStrokeJoin } from "@aurochs/fig/types";
+import type { FigImageScaleMode, FigPaint, FigStrokeAlign, FigStrokeCap, FigStrokeJoin } from "@aurochs/fig/types";
 import type { FigEditorAction } from "../../../context/fig-editor/types";
 import { Input } from "@aurochs-ui/ui-components/primitives/Input";
 import { Select } from "@aurochs-ui/ui-components/primitives/Select";
@@ -20,63 +20,12 @@ import { imageScaleModeOptions } from "./paint-options";
 import { createFigImageAsset } from "./image-asset";
 import { createPropertyTargetUpdateAction, type PropertyMutationTarget } from "../../properties/property-mutation-target";
 import { GradientPaintControls } from "./GradientPaintControls";
-
-// =============================================================================
-// Color helpers
-// =============================================================================
-
-function colorToHex(color: FigColor): string {
-  const r = Math.round(color.r * 255).toString(16).padStart(2, "0");
-  const g = Math.round(color.g * 255).toString(16).padStart(2, "0");
-  const b = Math.round(color.b * 255).toString(16).padStart(2, "0");
-  return `#${r}${g}${b}`;
-}
-
-function hexToColor(hex: string, alpha = 1): FigColor {
-  const h = hex.replace("#", "");
-  return {
-    r: parseInt(h.substring(0, 2), 16) / 255,
-    g: parseInt(h.substring(2, 4), 16) / 255,
-    b: parseInt(h.substring(4, 6), 16) / 255,
-    a: alpha,
-  };
-}
-
-function getStrokeColor(paint: FigPaint): FigColor | undefined {
-  if ("color" in paint && paint.color) {
-    return paint.color;
-  }
-  return undefined;
-}
-
-function getStrokePaintOpacity(paint: FigPaint): number {
-  if ("opacity" in paint && typeof paint.opacity === "number") {
-    return paint.opacity;
-  }
-  return 1;
-}
+import { applyPaintOperation, colorToHex, getPaintColor, getPaintOpacity, paintTypeOptions } from "./paint-domain";
+import { applyAppearanceOperation } from "./appearance-domain";
 
 function getStrokeAlignLabel(align: FigDesignNode["strokeAlign"]): string {
   return align ?? "";
 }
-
-function createDefaultStrokePaint(): FigPaint {
-  return {
-    type: "SOLID",
-    color: { r: 0, g: 0, b: 0, a: 1 },
-    opacity: 1,
-    visible: true,
-  };
-}
-
-const strokePaintTypeOptions: readonly SelectOption<FigPaint["type"]>[] = [
-  { value: "SOLID", label: "Solid" },
-  { value: "GRADIENT_LINEAR", label: "Linear" },
-  { value: "GRADIENT_RADIAL", label: "Radial" },
-  { value: "GRADIENT_ANGULAR", label: "Angular" },
-  { value: "GRADIENT_DIAMOND", label: "Diamond" },
-  { value: "IMAGE", label: "Image" },
-];
 
 const strokeAlignOptions: readonly SelectOption<FigStrokeAlign>[] = [
   { value: "CENTER", label: "Center" },
@@ -97,43 +46,6 @@ const strokeJoinOptions: readonly SelectOption<FigStrokeJoin>[] = [
   { value: "BEVEL", label: "Bevel" },
   { value: "ROUND", label: "Round" },
 ];
-
-function createDefaultGradientStroke(type: Extract<FigPaintType, `GRADIENT_${string}`>): FigPaint {
-  return {
-    type,
-    visible: true,
-    opacity: 1,
-    gradientStops: [
-      { position: 0, color: { r: 0, g: 0, b: 0, a: 1 } },
-      { position: 1, color: { r: 0.2, g: 0.45, b: 1, a: 1 } },
-    ],
-    gradientHandlePositions: [
-      { x: 0, y: 0.5 },
-      { x: 1, y: 0.5 },
-      { x: 0, y: 1 },
-    ],
-  };
-}
-
-function createDefaultImageStroke(): FigPaint {
-  return {
-    type: "IMAGE",
-    visible: true,
-    opacity: 1,
-    imageRef: "",
-    scaleMode: "FILL",
-  };
-}
-
-function createDefaultStrokePaintOfType(type: FigPaint["type"]): FigPaint {
-  if (type === "SOLID") {
-    return createDefaultStrokePaint();
-  }
-  if (type === "IMAGE") {
-    return createDefaultImageStroke();
-  }
-  return createDefaultGradientStroke(type);
-}
 
 // =============================================================================
 // Styles
@@ -235,7 +147,7 @@ export function StrokeSection({ node, target, images, dispatch }: StrokeSectionP
     (weight: number) => {
       dispatch(createPropertyTargetUpdateAction({
         target,
-        updater: (n) => ({ ...n, strokeWeight: weight }),
+        updater: (n) => applyAppearanceOperation(n, { type: "stroke-weight", weight }),
       }));
     },
     [dispatch, target],
@@ -245,7 +157,7 @@ export function StrokeSection({ node, target, images, dispatch }: StrokeSectionP
     (strokeAlign: FigStrokeAlign) => {
       dispatch(createPropertyTargetUpdateAction({
         target,
-        updater: (n) => ({ ...n, strokeAlign }),
+        updater: (n) => applyAppearanceOperation(n, { type: "stroke-align", strokeAlign }),
       }));
     },
     [dispatch, target],
@@ -255,7 +167,7 @@ export function StrokeSection({ node, target, images, dispatch }: StrokeSectionP
     (strokeCap: FigStrokeCap) => {
       dispatch(createPropertyTargetUpdateAction({
         target,
-        updater: (n) => ({ ...n, strokeCap }),
+        updater: (n) => applyAppearanceOperation(n, { type: "stroke-cap", strokeCap }),
       }));
     },
     [dispatch, target],
@@ -265,7 +177,7 @@ export function StrokeSection({ node, target, images, dispatch }: StrokeSectionP
     (strokeJoin: FigStrokeJoin) => {
       dispatch(createPropertyTargetUpdateAction({
         target,
-        updater: (n) => ({ ...n, strokeJoin }),
+        updater: (n) => applyAppearanceOperation(n, { type: "stroke-join", strokeJoin }),
       }));
     },
     [dispatch, target],
@@ -282,7 +194,10 @@ export function StrokeSection({ node, target, images, dispatch }: StrokeSectionP
       }
       dispatch(createPropertyTargetUpdateAction({
         target,
-        updater: (n) => ({ ...n, strokeDashes: dashPattern.length > 0 ? dashPattern : undefined }),
+        updater: (n) => applyAppearanceOperation(n, {
+          type: "stroke-dashes",
+          strokeDashes: dashPattern.length > 0 ? dashPattern : undefined,
+        }),
       }));
     },
     [dispatch, target],
@@ -293,12 +208,14 @@ export function StrokeSection({ node, target, images, dispatch }: StrokeSectionP
       dispatch(createPropertyTargetUpdateAction({
         target,
         updater: (n) => {
-          const newStrokes = [...n.strokes];
-          const paint = newStrokes[strokeIndex];
-          if (paint) {
-            newStrokes[strokeIndex] = updater(paint);
+          const paint = n.strokes[strokeIndex];
+          if (!paint) {
+            return n;
           }
-          return { ...n, strokes: newStrokes };
+          return applyAppearanceOperation(n, {
+            type: "stroke-paints",
+            operation: { type: "update", index: strokeIndex, operation: { type: "replace", paint: updater(paint) } },
+          });
         },
       }));
     },
@@ -307,53 +224,49 @@ export function StrokeSection({ node, target, images, dispatch }: StrokeSectionP
 
   const updateStrokeColor = useCallback(
     (strokeIndex: number, hex: string) => {
-      updateStrokePaint(strokeIndex, (paint) => {
-        const currentColor = getStrokeColor(paint);
-        const alpha = currentColor?.a ?? 1;
-        return { ...paint, color: hexToColor(hex, alpha) } as FigPaint;
-      });
+      updateStrokePaint(strokeIndex, (paint) => applyPaintOperation(paint, { type: "set-color", hex }));
     },
     [updateStrokePaint],
   );
 
   const updateStrokeOpacity = useCallback(
     (strokeIndex: number, opacity: number) => {
-      updateStrokePaint(strokeIndex, (paint) => ({ ...paint, opacity } as FigPaint));
+      updateStrokePaint(strokeIndex, (paint) => applyPaintOperation(paint, { type: "set-opacity", opacity }));
     },
     [updateStrokePaint],
   );
 
   const updateStrokeType = useCallback(
     (strokeIndex: number, type: FigPaint["type"]) => {
-      updateStrokePaint(strokeIndex, (paint) => ({ ...createDefaultStrokePaintOfType(type), opacity: getStrokePaintOpacity(paint), visible: paint.visible }));
+      updateStrokePaint(strokeIndex, (paint) => applyPaintOperation(paint, { type: "set-type", paintType: type, kind: "stroke" }));
     },
     [updateStrokePaint],
   );
 
   const updateImageRef = useCallback(
     (strokeIndex: number, imageRef: string) => {
-      updateStrokePaint(strokeIndex, (paint) => ({ ...paint, imageRef } as FigPaint));
+      updateStrokePaint(strokeIndex, (paint) => applyPaintOperation(paint, { type: "set-image-ref", imageRef }));
     },
     [updateStrokePaint],
   );
 
   const updateImageScaleMode = useCallback(
     (strokeIndex: number, scaleMode: FigImageScaleMode) => {
-      updateStrokePaint(strokeIndex, (paint) => ({ ...paint, scaleMode, imageScaleMode: scaleMode } as FigPaint));
+      updateStrokePaint(strokeIndex, (paint) => applyPaintOperation(paint, { type: "set-image-scale-mode", scaleMode }));
     },
     [updateStrokePaint],
   );
 
   const updateImageScale = useCallback(
     (strokeIndex: number, scale: number) => {
-      updateStrokePaint(strokeIndex, (paint) => ({ ...paint, scalingFactor: scale, scale } as FigPaint));
+      updateStrokePaint(strokeIndex, (paint) => applyPaintOperation(paint, { type: "set-image-scale", scale }));
     },
     [updateStrokePaint],
   );
 
   const updateImageRotation = useCallback(
     (strokeIndex: number, rotationDeg: number) => {
-      updateStrokePaint(strokeIndex, (paint) => ({ ...paint, rotation: rotationDeg * (Math.PI / 180) } as FigPaint));
+      updateStrokePaint(strokeIndex, (paint) => applyPaintOperation(paint, { type: "set-image-rotation-deg", rotationDeg }));
     },
     [updateStrokePaint],
   );
@@ -389,10 +302,9 @@ export function StrokeSection({ node, target, images, dispatch }: StrokeSectionP
     (strokeIndex: number) => {
       dispatch(createPropertyTargetUpdateAction({
         target,
-        updater: (n) => ({
-          ...n,
-          strokes: n.strokes.filter((_, i) => i !== strokeIndex),
-          strokeWeight: n.strokes.length <= 1 ? 0 : n.strokeWeight,
+        updater: (n) => applyAppearanceOperation(n, {
+          type: "stroke-paints",
+          operation: { type: "remove", index: strokeIndex },
         }),
       }));
     },
@@ -402,10 +314,9 @@ export function StrokeSection({ node, target, images, dispatch }: StrokeSectionP
   const addStroke = useCallback(() => {
     dispatch(createPropertyTargetUpdateAction({
       target,
-      updater: (n) => ({
-        ...n,
-        strokes: [...n.strokes, createDefaultStrokePaint()],
-        strokeWeight: typeof n.strokeWeight === "number" && n.strokeWeight > 0 ? n.strokeWeight : 1,
+      updater: (n) => applyAppearanceOperation(n, {
+        type: "stroke-paints",
+        operation: { type: "add", kind: "stroke" },
       }),
     }));
   }, [dispatch, target]);
@@ -483,8 +394,8 @@ export function StrokeSection({ node, target, images, dispatch }: StrokeSectionP
       )}
 
       {strokes.map((stroke, i) => {
-        const color = getStrokeColor(stroke);
-        const opacity = getStrokePaintOpacity(stroke);
+        const color = getPaintColor(stroke);
+        const opacity = getPaintOpacity(stroke);
 
         return (
           <div key={i} style={strokeRowStyle}>
@@ -492,7 +403,7 @@ export function StrokeSection({ node, target, images, dispatch }: StrokeSectionP
               <Select
                 value={stroke.type}
                 onChange={(type) => updateStrokeType(i, type)}
-                options={strokePaintTypeOptions}
+                options={paintTypeOptions}
                 ariaLabel={`Stroke paint type ${i + 1}`}
               />
               <Input

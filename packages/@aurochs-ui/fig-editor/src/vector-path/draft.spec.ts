@@ -8,7 +8,9 @@ import {
   closeVectorPathDraft,
   commitVectorPathDraftToNodeSpec,
   getVectorPathDraftControlLines,
+  getVectorPathDraftHandleCursor,
   isVectorPathDraftClosePoint,
+  resolveVectorPathDraftHandleIntent,
   startVectorPathDraft,
   updateVectorPathDraftPreview,
   vectorPathDraftToPreviewPath,
@@ -111,6 +113,30 @@ describe("vector path draft", () => {
     }
   });
 
+  it("moves draft anchors with their attached bezier controls", () => {
+    const first = startVectorPathDraft({
+      parent: { parentId: null, parentTransform: undefined },
+      localPoint: { x: 0, y: 0 },
+      pagePoint: { x: 100, y: 100 },
+    });
+    const draggedStart = applyVectorPathDraftAnchorDrag(first, { x: 20, y: 0 }, { x: 120, y: 100 });
+    const second = appendVectorPathDraftPoint(draggedStart, { x: 50, y: 50 }, { x: 150, y: 150 });
+    const draggedSecond = applyVectorPathDraftAnchorDrag(second, { x: 70, y: 60 }, { x: 170, y: 160 });
+
+    const moved = applyVectorPathDraftOperation({ draft: draggedSecond, pointerStart: undefined }, {
+      type: "move-handle",
+      handle: { key: "draft-anchor-1", role: "anchor", index: 1, x: 150, y: 150 },
+      localPoint: { x: 60, y: 70 },
+      pagePoint: { x: 160, y: 170 },
+    });
+
+    expect(getVectorPathDraftControlLines(moved.session!.draft)).toEqual([
+      { key: "draft-control-line-0-1", from: { x: 100, y: 100 }, to: { x: 120, y: 100 } },
+      { key: "draft-control-line-0-2", from: { x: 160, y: 170 }, to: { x: 140, y: 160 } },
+      { key: "draft-control-line-outgoing", from: { x: 160, y: 170 }, to: { x: 180, y: 180 } },
+    ]);
+  });
+
   it("closes a draft by reconnecting to the first anchor", () => {
     const draft = appendVectorPathDraftPoint(
       appendVectorPathDraftPoint(
@@ -136,6 +162,48 @@ describe("vector path draft", () => {
     }
   });
 
+  it("preserves the outgoing bezier handle when a dragged anchor closes to the start", () => {
+    const first = startVectorPathDraft({
+      parent: { parentId: null, parentTransform: undefined },
+      localPoint: { x: 0, y: 0 },
+      pagePoint: { x: 100, y: 100 },
+    });
+    const second = appendVectorPathDraftPoint(first, { x: 80, y: 0 }, { x: 180, y: 100 });
+    const third = appendVectorPathDraftPoint(second, { x: 80, y: 80 }, { x: 180, y: 180 });
+    const draggedThird = applyVectorPathDraftAnchorDrag(third, { x: 20, y: 90 }, { x: 120, y: 190 });
+
+    const spec = commitVectorPathDraftToNodeSpec(closeVectorPathDraft(draggedThird));
+
+    expect(spec.type).toBe("VECTOR");
+    if (spec.type === "VECTOR") {
+      expect(spec.vectorPaths[0]?.data).toBe("M 0 0 L 80 0 C 80 0 140 70 80 80 C 20 90 0 0 0 0 Z");
+    }
+  });
+
+  it("previews bezier handles during pointer drag before pointerup", () => {
+    const first = applyVectorPathDraftOperation(null, {
+      type: "place-point",
+      parent: { parentId: null, parentTransform: undefined },
+      localPoint: { x: 0, y: 0 },
+      pagePoint: { x: 100, y: 100 },
+      pointerStart: { clientX: 100, clientY: 100 },
+      closeTolerance: 6,
+    });
+    const preview = applyVectorPathDraftOperation(first.session, {
+      type: "anchor-drag-preview",
+      localPoint: { x: 30, y: -10 },
+      pagePoint: { x: 130, y: 90 },
+      exceededThreshold: true,
+    });
+
+    expect(getVectorPathDraftControlLines(preview.session!.draft)).toEqual([{
+      key: "draft-control-line-outgoing",
+      from: { x: 100, y: 100 },
+      to: { x: 130, y: 90 },
+    }]);
+    expect(preview.session?.pointerStart).toEqual({ clientX: 100, clientY: 100 });
+  });
+
   it("rejects committing incomplete drafts", () => {
     const draft = startVectorPathDraft({
       parent: { parentId: null, parentTransform: undefined },
@@ -144,6 +212,50 @@ describe("vector path draft", () => {
     });
 
     expect(() => commitVectorPathDraftToNodeSpec(draft)).toThrow("requires at least two anchors");
+  });
+
+  it("resolves start-anchor click as close and start-anchor drag as handle movement", () => {
+    const draft = appendVectorPathDraftPoint(
+      startVectorPathDraft({
+        parent: { parentId: null, parentTransform: undefined },
+        localPoint: { x: 0, y: 0 },
+        pagePoint: { x: 100, y: 100 },
+      }),
+      { x: 40, y: 10 },
+      { x: 140, y: 110 },
+    );
+    const startHandle = { key: "draft-anchor-0", role: "anchor" as const, index: 0, x: 100, y: 100 };
+    const secondHandle = { key: "draft-anchor-1", role: "anchor" as const, index: 1, x: 140, y: 110 };
+
+    expect(resolveVectorPathDraftHandleIntent({
+      draft,
+      handle: startHandle,
+      startClientX: 100,
+      startClientY: 100,
+      clientX: 101,
+      clientY: 101,
+      dragThresholdPx: 3,
+    })).toBe("close-start-anchor");
+    expect(resolveVectorPathDraftHandleIntent({
+      draft,
+      handle: startHandle,
+      startClientX: 100,
+      startClientY: 100,
+      clientX: 108,
+      clientY: 101,
+      dragThresholdPx: 3,
+    })).toBe("move-handle");
+    expect(resolveVectorPathDraftHandleIntent({
+      draft,
+      handle: secondHandle,
+      startClientX: 140,
+      startClientY: 110,
+      clientX: 140,
+      clientY: 110,
+      dragThresholdPx: 3,
+    })).toBe("move-handle");
+    expect(getVectorPathDraftHandleCursor(draft, startHandle)).toBe("alias");
+    expect(getVectorPathDraftHandleCursor(draft, { key: "control", role: "control", index: 1, x: 120, y: 100 })).toBe("grab");
   });
 
   it("drives place, bezier drag, close, and commit through the draft operation domain", () => {

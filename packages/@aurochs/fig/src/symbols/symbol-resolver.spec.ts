@@ -2,12 +2,49 @@
  * @file Unit tests for symbol resolver
  */
 
-import type { FigNode } from "@aurochs/fig/types";
+import { FIG_NODE_TYPE, type FigGuid, type FigNode, type FigNodeType } from "@aurochs/fig/types";
 import { cloneSymbolChildren } from "./symbol-resolver";
 
+type TestFigNodeInput = Omit<Partial<FigNode>, "children" | "type" | "guid" | "phase"> & {
+  readonly type?: string | FigNode["type"];
+  readonly guid?: FigGuid;
+  readonly phase?: FigNode["phase"];
+  readonly children?: readonly (TestFigNodeInput | FigNode | null | undefined)[];
+};
+
+const FIG_NODE_TYPE_VALUES: ReadonlySet<string> = new Set(Object.values(FIG_NODE_TYPE));
+
+function isFigNodeType(value: string): value is FigNodeType {
+  return FIG_NODE_TYPE_VALUES.has(value);
+}
+
+function normalizeType(type: TestFigNodeInput["type"]): FigNode["type"] {
+  if (typeof type === "string") {
+    if (!isFigNodeType(type)) {
+      throw new Error(`Unknown FigNodeType in symbol-resolver spec fixture: ${type}`);
+    }
+    return { value: -1, name: type };
+  }
+  return type ?? { value: -1, name: "VECTOR" };
+}
+
+function normalizeChildren(
+  children: readonly (TestFigNodeInput | FigNode | null | undefined)[] | undefined,
+): readonly FigNode[] | undefined {
+  return children
+    ?.filter((child): child is TestFigNodeInput | FigNode => child !== null && child !== undefined)
+    .map((child) => createTestNode(child));
+}
+
 /** Create a FigNode from partial data for testing */
-function createTestNode(data: Record<string, unknown>): FigNode {
-  return data as unknown as FigNode;
+function createTestNode(data: TestFigNodeInput | FigNode): FigNode {
+  return {
+    ...data,
+    guid: data.guid ?? { sessionID: 0, localID: 0 },
+    phase: data.phase ?? { value: 1, name: "CREATED" },
+    type: normalizeType(data.type),
+    children: normalizeChildren(data.children),
+  };
 }
 
 describe("cloneSymbolChildren", () => {

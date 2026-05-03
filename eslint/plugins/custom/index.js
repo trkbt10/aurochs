@@ -26,6 +26,7 @@ import noGuidTranslationOutsideResolver from "./rules/no-guid-translation-outsid
 import noInlineDfsById from "./rules/no-inline-dfs-by-id.js";
 import noInlineGuidFormat from "./rules/no-inline-guid-format.js";
 import figEditorArchitecture from "./rules/fig-editor-architecture.js";
+import noImplicitCatch from "./rules/no-implicit-catch.js";
 export default {
   rules: {
     "ternary-length": ternaryLength,
@@ -53,5 +54,6 @@ export default {
     "no-inline-dfs-by-id": noInlineDfsById,
     "no-inline-guid-format": noInlineGuidFormat,
     "fig-editor-architecture": figEditorArchitecture,
+    "no-implicit-catch": noImplicitCatch,
   },
 };

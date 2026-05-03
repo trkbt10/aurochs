@@ -51,6 +51,8 @@ export function createFontCache(): FontCache {
 export type CachingFontLoader = FontLoader & {
   /** Read a loaded font without triggering I/O or permission prompts. */
   getCachedFont(options: FontLoadOptions): LoadedFont | undefined;
+  /** Read a loaded fallback font without triggering I/O or permission prompts. */
+  getCachedFallbackFont(options: FontLoadOptions): LoadedFont | undefined;
   /** Clear the font cache */
   clearCache(): void;
 };
@@ -106,6 +108,10 @@ export function createCachingFontLoader(innerLoader: FontLoader): CachingFontLoa
 
     getCachedFont(options) {
       return fontCache.get(options);
+    },
+
+    getCachedFallbackFont(options) {
+      return fallbackCache.get({ family: "__CJK_FALLBACK__", weight: options.weight, style: options.style });
     },
 
     clearCache() {

@@ -20,6 +20,7 @@
 
 import {
   forwardRef,
+  memo,
   useCallback,
   useEffect,
   useImperativeHandle,
@@ -28,6 +29,7 @@ import {
   useState,
   type CSSProperties,
   type ReactNode,
+  type RefObject,
 } from "react";
 import { SelectionBox } from "./SelectionBox";
 import { SvgRulers } from "./SvgRulers";
@@ -83,6 +85,12 @@ export type EditorCanvasHandle = {
  */
 export type EditorCanvasDrag = { readonly type: string };
 
+export type EditorCanvasViewportContentContext = {
+  readonly viewport: ViewportTransform;
+  readonly viewportSize: ViewportSize;
+  readonly rulerThickness: number;
+};
+
 export type EditorCanvasProps = {
   // --- Canvas dimensions (in page/logical units) ---
   readonly canvasWidth: number;
@@ -92,7 +100,7 @@ export type EditorCanvasProps = {
   readonly zoomMode: ZoomMode;
   readonly onZoomModeChange: (mode: ZoomMode) => void;
   readonly onDisplayZoomChange?: (zoom: number) => void;
-  readonly onViewportChange?: (viewport: ViewportTransform) => void;
+  readonly onViewportChange?: (viewport: ViewportTransform, context: EditorCanvasViewportContentContext) => void;
   /**
    * Custom viewport clamp function for pan boundaries.
    * Default: standard slide clamping. Pass `(v) => v` for infinite canvas.
@@ -110,7 +118,9 @@ export type EditorCanvasProps = {
   /** Page-coordinate interaction overlay rendered above item hit areas and below selection chrome. */
   readonly interactionOverlay?: ReactNode;
   /** HTML/canvas content rendered behind the SVG overlay in the same page-coordinate viewport. */
-  readonly viewportContent?: ReactNode;
+  readonly viewportContent?: ReactNode | ((context: EditorCanvasViewportContentContext) => ReactNode);
+  /** HTML/canvas content rendered in viewport pixels, outside the page-coordinate pan/zoom transform. */
+  readonly screenViewportContent?: ReactNode | ((context: EditorCanvasViewportContentContext) => ReactNode);
   /** Embedded font CSS (@font-face declarations) injected as <style> in SVG. */
   readonly embeddedFontCss?: string;
 
@@ -206,9 +216,25 @@ export type EditorCanvasProps = {
 
 const DEFAULT_RULER_THICKNESS = 20;
 
+function resolveViewportContent(
+  content: EditorCanvasProps["viewportContent"],
+  context: EditorCanvasViewportContentContext,
+): ReactNode {
+  if (typeof content === "function") {
+    return content(context);
+  }
+  return content;
+}
+
 function getRotationTransform(b: EditorCanvasItemBounds): string | undefined {
   if (!b.rotation) {return undefined;}
   return `rotate(${b.rotation}, ${b.x + b.width / 2}, ${b.y + b.height / 2})`;
+}
+
+function useLatestValue<T>(value: T): RefObject<T> {
+  const ref = useRef(value);
+  ref.current = value;
+  return ref;
 }
 
 type MarqueeState = {
@@ -225,6 +251,44 @@ type ActiveTracking =
   | { readonly type: "rotate" };
 
 const IDLE_DRAG: EditorCanvasDrag = { type: "idle" };
+
+type HitAreaLayerProps = {
+  readonly itemBounds: readonly EditorCanvasItemBounds[];
+  readonly onItemClick: (id: string, e: React.MouseEvent) => void;
+  readonly onItemDoubleClick: (id: string, e: React.MouseEvent) => void;
+  readonly onItemPointerDown: (id: string, e: React.PointerEvent) => void;
+  readonly onItemContextMenu: (id: string, e: React.MouseEvent) => void;
+};
+
+const HitAreaLayer = memo(function HitAreaLayer({
+  itemBounds,
+  onItemClick,
+  onItemDoubleClick,
+  onItemPointerDown,
+  onItemContextMenu,
+}: HitAreaLayerProps) {
+  return (
+    <>
+      {itemBounds.map((b) => (
+        <g key={`hit-${b.id}`} transform={getRotationTransform(b)}>
+          <rect
+            x={b.x}
+            y={b.y}
+            width={Math.max(b.width, 1)}
+            height={Math.max(b.height, 1)}
+            fill="transparent"
+            style={hitAreaStyle}
+            onClick={(e) => onItemClick(b.id, e)}
+            onDoubleClick={(e) => onItemDoubleClick(b.id, e)}
+            onPointerDown={(e) => onItemPointerDown(b.id, e)}
+            onContextMenu={(e) => onItemContextMenu(b.id, e)}
+            data-shape-id={b.id}
+          />
+        </g>
+      ))}
+    </>
+  );
+});
 
 // =============================================================================
 // Component
@@ -251,6 +315,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
     children,
     interactionOverlay,
     viewportContent,
+    screenViewportContent,
     embeddedFontCss,
     itemBounds,
     selectedIds,
@@ -309,8 +374,8 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
 
   // Notify parent of viewport changes
   useEffect(() => {
-    onViewportChange?.(viewport);
-  }, [viewport, onViewportChange]);
+    onViewportChange?.(viewport, { viewport, viewportSize, rulerThickness });
+  }, [viewport, viewportSize, rulerThickness, onViewportChange]);
 
   // Register wheel handler (non-passive for preventDefault)
   useEffect(() => {
@@ -397,54 +462,76 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
     [screenToPage],
   );
 
+  const latestItemHandlers = useLatestValue({
+    makeCoordsFromEvent,
+    onItemPointerDown,
+    onItemDragMove,
+    onItemClick,
+    onItemDoubleClick,
+    onItemContextMenu,
+  });
+  const latestDragHandlers = useLatestValue({
+    makeCoordsFromEvent,
+    onItemDragMove,
+    onItemDragEnd,
+    onResizeDragMove,
+    onResizeDragEnd,
+    onRotateDragMove,
+    onRotateDragEnd,
+  });
+
   // --- Item event handlers ---
   const handleItemPointerDown = useCallback(
     (id: string, e: React.PointerEvent) => {
-      if (!onItemPointerDown) {return;}
+      const latest = latestItemHandlers.current;
+      if (!latest.onItemPointerDown) {return;}
       e.stopPropagation();
       e.preventDefault(); // Suppress browser text selection during drag
-      const coords = makeCoordsFromEvent(e);
+      const coords = latest.makeCoordsFromEvent(e);
       if (!coords) {return;}
-      onItemPointerDown(id, coords, e);
+      latest.onItemPointerDown(id, coords, e);
 
       // Start global drag tracking if callbacks provided
-      if (onItemDragMove) {
+      if (latest.onItemDragMove) {
         setActiveTracking({ type: "item", id });
       }
     },
-    [onItemPointerDown, onItemDragMove, makeCoordsFromEvent],
+    [latestItemHandlers],
   );
 
   const handleItemClick = useCallback(
     (id: string, e: React.MouseEvent) => {
-      if (!onItemClick) {return;}
+      const latest = latestItemHandlers.current;
+      if (!latest.onItemClick) {return;}
       e.stopPropagation();
-      const coords = makeCoordsFromEvent(e);
-      if (coords) {onItemClick(id, coords, e);}
+      const coords = latest.makeCoordsFromEvent(e);
+      if (coords) {latest.onItemClick(id, coords, e);}
     },
-    [onItemClick, makeCoordsFromEvent],
+    [latestItemHandlers],
   );
 
   const handleItemDoubleClick = useCallback(
     (id: string, e: React.MouseEvent) => {
-      if (!onItemDoubleClick) {return;}
+      const latest = latestItemHandlers.current;
+      if (!latest.onItemDoubleClick) {return;}
       e.stopPropagation();
       e.preventDefault();
-      const coords = makeCoordsFromEvent(e);
-      if (coords) {onItemDoubleClick(id, coords, e);}
+      const coords = latest.makeCoordsFromEvent(e);
+      if (coords) {latest.onItemDoubleClick(id, coords, e);}
     },
-    [onItemDoubleClick, makeCoordsFromEvent],
+    [latestItemHandlers],
   );
 
   const handleItemContextMenu = useCallback(
     (id: string, e: React.MouseEvent) => {
-      if (!onItemContextMenu) {return;}
+      const latest = latestItemHandlers.current;
+      if (!latest.onItemContextMenu) {return;}
       e.preventDefault();
       e.stopPropagation();
-      const coords = makeCoordsFromEvent(e);
-      if (coords) {onItemContextMenu(id, coords, e);}
+      const coords = latest.makeCoordsFromEvent(e);
+      if (coords) {latest.onItemContextMenu(id, coords, e);}
     },
-    [onItemContextMenu, makeCoordsFromEvent],
+    [latestItemHandlers],
   );
 
   // --- Selection handle events ---
@@ -625,34 +712,36 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
     if (!activeTracking) {return;}
 
     const handleMove = (e: PointerEvent) => {
-      const coords = makeCoordsFromEvent(e);
+      const latest = latestDragHandlers.current;
+      const coords = latest.makeCoordsFromEvent(e);
       if (!coords) {return;}
       switch (activeTracking.type) {
         case "item":
-          onItemDragMove?.(coords);
+          latest.onItemDragMove?.(coords);
           break;
         case "resize":
-          onResizeDragMove?.(activeTracking.handle, coords);
+          latest.onResizeDragMove?.(activeTracking.handle, coords);
           break;
         case "rotate":
-          onRotateDragMove?.(coords);
+          latest.onRotateDragMove?.(coords);
           break;
       }
     };
 
     const handleUp = (e: PointerEvent) => {
-      const coords = makeCoordsFromEvent(e);
+      const latest = latestDragHandlers.current;
+      const coords = latest.makeCoordsFromEvent(e);
       setActiveTracking(null);
       if (!coords) {return;}
       switch (activeTracking.type) {
         case "item":
-          onItemDragEnd?.(coords);
+          latest.onItemDragEnd?.(coords);
           break;
         case "resize":
-          onResizeDragEnd?.(activeTracking.handle, coords);
+          latest.onResizeDragEnd?.(activeTracking.handle, coords);
           break;
         case "rotate":
-          onRotateDragEnd?.(coords);
+          latest.onRotateDragEnd?.(coords);
           break;
       }
     };
@@ -669,7 +758,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
       window.removeEventListener("pointerup", handleUp);
       window.removeEventListener("pointercancel", handleCancel);
     };
-  }, [activeTracking, makeCoordsFromEvent, onItemDragMove, onItemDragEnd, onResizeDragMove, onResizeDragEnd, onRotateDragMove, onRotateDragEnd]);
+  }, [activeTracking, latestDragHandlers]);
 
   // --- Marquee rect for rendering ---
   const marqueeRect = useMemo(() => {
@@ -714,7 +803,20 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
             transform: `translate(${viewport.translateX}px, ${viewport.translateY}px) scale(${viewport.scale})`,
           }}
         >
-          {viewportContent}
+          {resolveViewportContent(viewportContent, { viewport, viewportSize, rulerThickness })}
+        </div>
+      )}
+      {screenViewportContent && (
+        <div
+          style={{
+            ...screenViewportContentStyle,
+            left: rulerThickness,
+            top: rulerThickness,
+            width: Math.max(0, viewportSize.width - rulerThickness),
+            height: Math.max(0, viewportSize.height - rulerThickness),
+          }}
+        >
+          {resolveViewportContent(screenViewportContent, { viewport, viewportSize, rulerThickness })}
         </div>
       )}
       <svg
@@ -737,23 +839,13 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
             {children}
 
             {/* Hit areas for items */}
-            {itemBounds.map((b) => (
-              <g key={`hit-${b.id}`} transform={getRotationTransform(b)}>
-                <rect
-                  x={b.x}
-                  y={b.y}
-                  width={Math.max(b.width, 1)}
-                  height={Math.max(b.height, 1)}
-                  fill="transparent"
-                  style={hitAreaStyle}
-                  onClick={(e) => handleItemClick(b.id, e)}
-                  onDoubleClick={(e) => handleItemDoubleClick(b.id, e)}
-                  onPointerDown={(e) => handleItemPointerDown(b.id, e)}
-                  onContextMenu={(e) => handleItemContextMenu(b.id, e)}
-                  data-shape-id={b.id}
-                />
-              </g>
-            ))}
+            <HitAreaLayer
+              itemBounds={itemBounds}
+              onItemClick={handleItemClick}
+              onItemDoubleClick={handleItemDoubleClick}
+              onItemPointerDown={handleItemPointerDown}
+              onItemContextMenu={handleItemContextMenu}
+            />
 
             {/* Selection boxes (computed from selectedIds + itemBounds + drag) */}
             <g style={selectionChromeStyle}>
@@ -857,5 +949,9 @@ const inertSelectionGroupStyle: CSSProperties = { pointerEvents: "none" };
 const viewportContentStyle: CSSProperties = {
   position: "absolute",
   transformOrigin: "0 0",
+  pointerEvents: "none",
+};
+const screenViewportContentStyle: CSSProperties = {
+  position: "absolute",
   pointerEvents: "none",
 };
