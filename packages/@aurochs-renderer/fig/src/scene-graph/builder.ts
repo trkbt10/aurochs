@@ -56,7 +56,7 @@ import { convertStrokeToSceneStroke } from "./convert/stroke";
 import { convertEffectsToScene } from "./convert/effects";
 import { decodeGeometryToContours, convertVectorPathsToContours, parseSvgPathD, type DecodedContour } from "./convert/path";
 import { reconstructStrokeCenterline } from "./convert/stroke-geometry-centerline";
-import { generateStarContour, generatePolygonContour, generateLineContour } from "./convert/shape-geometry";
+import { generateEllipseContour, generateLineContour, generatePolygonContour, generateRectContour, generateStarContour } from "./convert/shape-geometry";
 import { extractUniformCornerRadius as sharedExtractUniformCornerRadius, resolveClipsContent as sharedResolveClipsContent } from "../geometry";
 import { convertTextNode } from "./convert/text";
 import type { Fill, PathContour, BlendMode, MaskNode, CornerRadius, ArcData } from "./types";
@@ -64,13 +64,7 @@ import { convertFigmaBlendMode } from "./convert/blend-mode";
 import { resolveChildConstraints } from "@aurochs/fig/symbols";
 import type { TextAutoResize } from "../text/layout/types";
 import type { TextFontResolver } from "../text/rendering";
-import {
-  pathFromPathData,
-  pathToPathData,
-  pathBoolean,
-  FillRule,
-  PathBooleanOperation,
-} from "../../vendor/path-bool/index.js";
+import { evaluateBooleanPathResult, resolveBooleanOperationType, type BooleanPathInput } from "./boolean-operation";
 
 function convertBlendMode(node: FigDesignNode): BlendMode | undefined {
   return convertFigmaBlendMode(node.blendMode);
@@ -1031,6 +1025,10 @@ function resolveDesignInstance(
   const instanceSize = node.size;
   const symbolSize = symbol.size;
   const sameSize = instanceSize.x === symbolSize.x && instanceSize.y === symbolSize.y;
+  const symbolFills = symbol.fills ?? [];
+  const symbolStrokes = symbol.strokes ?? [];
+  const nodeFills = node.fills ?? [];
+  const nodeStrokes = node.strokes ?? [];
 
   const merged: MutableFigDesignNode = {
     ...node,
@@ -1039,8 +1037,8 @@ function resolveDesignInstance(
     // INSTANCE's fills/strokes are only used when the SYMBOL has none
     // (this preserves the stand-alone-INSTANCE case where no SYMBOL paint
     // exists at all).
-    fills: hasPaintDeclaration(symbol.fills) ? symbol.fills : node.fills,
-    strokes: hasPaintDeclaration(symbol.strokes) ? symbol.strokes : node.strokes,
+    fills: hasPaintDeclaration(symbolFills) ? symbolFills : nodeFills,
+    strokes: hasPaintDeclaration(symbolStrokes) ? symbolStrokes : nodeStrokes,
     strokeWeight: symbol.strokeWeight ?? node.strokeWeight,
     strokeJoin: symbol.strokeJoin ?? node.strokeJoin,
     strokeCap: symbol.strokeCap ?? node.strokeCap,
@@ -1057,7 +1055,7 @@ function resolveDesignInstance(
     strokeGeometry: sameSize ? (symbol.strokeGeometry ?? node.strokeGeometry) : node.strokeGeometry,
 
     // Effects — SYMBOL is authoritative
-    effects: symbol.effects,
+    effects: symbol.effects ?? [],
 
     // Compositing
     blendMode: symbol.blendMode ?? node.blendMode,
@@ -1366,6 +1364,11 @@ function synthesizeContours(node: FigDesignNode): DecodedContour[] {
   const h = node.size?.y ?? 0;
 
   switch (typeName) {
+    case "RECTANGLE":
+    case "ROUNDED_RECTANGLE":
+      return [generateRectContour(w, h, extractCornerRadius(node))];
+    case "ELLIPSE":
+      return [generateEllipseContour(w, h)];
     case "STAR":
       return [generateStarContour({
         width: w,
@@ -1585,30 +1588,6 @@ function buildTextNode(node: FigDesignNode, ctx: BuildContext): TextNode {
 // Boolean Operation Computation
 // =============================================================================
 
-type BooleanOpType = "UNION" | "SUBTRACT" | "INTERSECT" | "EXCLUDE";
-
-function getBooleanOpType(node: FigDesignNode): BooleanOpType {
-  const op = node.booleanOperation;
-  if (!op) { return "UNION"; }
-  const value = op.value;
-  switch (value) {
-    case 0: return "UNION";
-    case 1: return "SUBTRACT";
-    case 2: return "INTERSECT";
-    case 3: return "EXCLUDE";
-    default: return "UNION";
-  }
-}
-
-function toPathBoolOp(op: BooleanOpType): PathBooleanOperation {
-  switch (op) {
-    case "UNION": return PathBooleanOperation.Union;
-    case "SUBTRACT": return PathBooleanOperation.Difference;
-    case "INTERSECT": return PathBooleanOperation.Intersection;
-    case "EXCLUDE": return PathBooleanOperation.Exclusion;
-  }
-}
-
 /**
  * Apply a 2x3 affine transform to an SVG path d-string by transforming coordinates.
  */
@@ -1639,8 +1618,8 @@ function applyTransformToPathD(d: string, m: AffineMatrix): string {
 function collectChildPathsForBoolean(
   children: readonly FigDesignNode[],
   ctx: BuildContext,
-): { d: string; windingRule: "nonzero" | "evenodd" }[] {
-  const result: { d: string; windingRule: "nonzero" | "evenodd" }[] = [];
+): BooleanPathInput[] {
+  const result: BooleanPathInput[] = [];
 
   for (const child of children) {
     const base = extractBaseProps(child);
@@ -1696,59 +1675,23 @@ function collectChildPathsForBoolean(
 
 /**
  * Compute boolean operation result for a BOOLEAN_OPERATION node.
- * Returns SVG path d-strings or undefined if computation fails.
+ * Returns SVG path d-strings or undefined if no boolean input exists.
+ * Evaluation failures are thrown so callers and tests can observe them.
  */
 function computeBooleanResultFromNode(
   node: FigDesignNode,
   ctx: BuildContext,
-): string[] | undefined {
+): readonly string[] | undefined {
   const children: readonly FigDesignNode[] = node.children ?? [];
   const childPaths = collectChildPathsForBoolean(children, ctx);
-
-  if (childPaths.length === 0) { return undefined; }
-  if (childPaths.length === 1) { return [childPaths[0].d]; }
-
-  const opType = getBooleanOpType(node);
-  const boolOp = toPathBoolOp(opType);
-
-  function toFillRuleEnum(wr: "nonzero" | "evenodd"): FillRule {
-    return wr === "evenodd" ? FillRule.EvenOdd : FillRule.NonZero;
+  const result = evaluateBooleanPathResult(childPaths, resolveBooleanOperationType(node.booleanOperation));
+  if (result.ok) {
+    return result.paths;
   }
-
-  try {
-    let currentPath = pathFromPathData(childPaths[0].d);
-    let currentFillRule = toFillRuleEnum(childPaths[0].windingRule);
-
-    for (let i = 1; i < childPaths.length; i++) {
-      const nextPath = pathFromPathData(childPaths[i].d);
-      const nextFillRule = toFillRuleEnum(childPaths[i].windingRule);
-
-      const results = pathBoolean(
-        currentPath, currentFillRule,
-        nextPath, nextFillRule,
-        boolOp,
-      );
-
-      if (results.length === 0) {
-        if (boolOp === PathBooleanOperation.Difference) { continue; }
-        return [];
-      }
-
-      if (results.length === 1) {
-        currentPath = results[0];
-      } else {
-        const combinedD = results.map((p) => pathToPathData(p)).join(" ");
-        currentPath = pathFromPathData(combinedD);
-      }
-      currentFillRule = FillRule.NonZero;
-    }
-
-    const finalD = pathToPathData(currentPath);
-    if (!finalD || finalD.trim().length === 0) { return []; }
-    return [finalD];
-  } catch {
+  if (result.error.reason === "NO_INPUT_PATHS") {
     return undefined;
   }
+  throw new Error(`Boolean operation '${node.name}' failed: ${result.error.message}`);
 }
 
 /**
@@ -1757,7 +1700,7 @@ function computeBooleanResultFromNode(
 function buildBooleanOperationNode(
   node: FigDesignNode,
   ctx: BuildContext,
-  resultPaths: string[],
+  resultPaths: readonly string[],
 ): PathNode {
   const base = extractBaseProps(node);
   const { fillPaints, strokePaints, strokeWeight, strokeCap, strokeJoin, strokeDashes, strokeAlign } = extractPaintProps(node);

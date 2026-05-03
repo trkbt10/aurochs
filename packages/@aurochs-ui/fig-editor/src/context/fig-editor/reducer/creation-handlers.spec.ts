@@ -73,4 +73,27 @@ describe("creation handlers", () => {
     expect(child?.transform.m12).toBe(50);
     expect(next.nodeSelection.primaryId).toBe(child?.id);
   });
+
+  it("creates a new node inside the deepest containing symbol with local coordinates", () => {
+    const symbol = makeNode({ id: "symbol", type: "SYMBOL", x: 80, y: 90, width: 300, height: 200, children: [] });
+    const component = makeNode({ id: "component", type: "COMPONENT", x: 20, y: 30, width: 360, height: 260, children: [symbol] });
+    const state = createFigEditorState(makeDocument([component]));
+    const creating = figEditorReducer(state, { type: "SET_CREATION_MODE", mode: { type: "ellipse" } });
+    const next = figEditorReducer(creating, {
+      type: "COMMIT_CREATION",
+      x: 125,
+      y: 150,
+      width: 80,
+      height: 40,
+    });
+
+    const updatedComponent = next.documentHistory.present.pages[0]!.children[0]!;
+    const updatedSymbol = updatedComponent.children?.[0];
+    const child = updatedSymbol?.children?.[0];
+
+    expect(child?.type).toBe("ELLIPSE");
+    expect(child?.transform.m02).toBe(25);
+    expect(child?.transform.m12).toBe(30);
+    expect(next.nodeSelection.primaryId).toBe(child?.id);
+  });
 });

@@ -10,19 +10,23 @@
  * - Opacity slider
  * - Remove button
  *
- * Uses UPDATE_NODE action with immutable updater functions.
+ * Uses the property-panel mutation target SoT with immutable updater functions.
  */
 
-import { useCallback, type CSSProperties } from "react";
+import { useCallback, useRef, type ChangeEvent, type CSSProperties } from "react";
 import type { FigDesignNode } from "@aurochs/fig/domain";
-import type { FigPaint, FigColor, FigPaintType, FigGradientStop } from "@aurochs/fig/types";
+import type { FigImage } from "@aurochs/fig/parser";
+import type { FigPaint, FigColor, FigPaintType, FigGradientStop, FigImageScaleMode } from "@aurochs/fig/types";
 import type { FigEditorAction } from "../../context/fig-editor/types";
+import { createPropertyTargetUpdateAction, type PropertyMutationTarget } from "../property-mutation-target";
 
 import { Input } from "@aurochs-ui/ui-components/primitives/Input";
 import { Select } from "@aurochs-ui/ui-components/primitives/Select";
 import type { SelectOption } from "@aurochs-ui/ui-components/types";
 import { colorTokens, fontTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { AddIcon, CloseIcon } from "@aurochs-ui/ui-components/icons";
+import { imageScaleModeOptions } from "./paint-options";
+import { createFigImageAsset } from "./image-asset";
 
 // =============================================================================
 // Color helpers
@@ -201,6 +205,8 @@ const emptyStyle: CSSProperties = {
 
 type FillSectionProps = {
   readonly node: FigDesignNode;
+  readonly target: PropertyMutationTarget;
+  readonly images: ReadonlyMap<string, FigImage>;
   readonly dispatch: (action: FigEditorAction) => void;
 };
 
@@ -214,14 +220,16 @@ type FillSectionProps = {
 
 
 /** Panel section for viewing and editing fill paints of a Figma node. */
-export function FillSection({ node, dispatch }: FillSectionProps) {
+export function FillSection({ node, target, images, dispatch }: FillSectionProps) {
   const fills = node.fills;
+  const uploadTargetRef = useRef<number | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageOptions = [{ value: "", label: "No image" }, ...[...images.keys()].map((ref) => ({ value: ref, label: ref }))];
 
   const updateFill = useCallback(
     (fillIndex: number, updater: (fill: FigPaint) => FigPaint) => {
-      dispatch({
-        type: "UPDATE_NODE",
-        nodeId: node.id,
+      dispatch(createPropertyTargetUpdateAction({
+        target,
         updater: (n) => {
           const newFills = [...n.fills];
           const fill = newFills[fillIndex];
@@ -230,9 +238,9 @@ export function FillSection({ node, dispatch }: FillSectionProps) {
           }
           return { ...n, fills: newFills };
         },
-      });
+      }));
     },
-    [dispatch, node.id],
+    [dispatch, target],
   );
 
   const updateFillColor = useCallback(
@@ -279,33 +287,86 @@ export function FillSection({ node, dispatch }: FillSectionProps) {
     [updateFill],
   );
 
+  const updateImageScaleMode = useCallback(
+    (fillIndex: number, scaleMode: FigImageScaleMode) => {
+      updateFill(fillIndex, (fill) => ({ ...fill, scaleMode, imageScaleMode: scaleMode } as FigPaint));
+    },
+    [updateFill],
+  );
+
+  const updateImageScale = useCallback(
+    (fillIndex: number, scale: number) => {
+      updateFill(fillIndex, (fill) => ({ ...fill, scalingFactor: scale, scale } as FigPaint));
+    },
+    [updateFill],
+  );
+
+  const updateImageRotation = useCallback(
+    (fillIndex: number, rotationDeg: number) => {
+      updateFill(fillIndex, (fill) => ({ ...fill, rotation: rotationDeg * (Math.PI / 180) } as FigPaint));
+    },
+    [updateFill],
+  );
+
+  const startImageUpload = useCallback((fillIndex: number) => {
+    uploadTargetRef.current = fillIndex;
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleImageFileChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const file = event.currentTarget.files?.[0];
+      const fillIndex = uploadTargetRef.current;
+      event.currentTarget.value = "";
+      uploadTargetRef.current = null;
+      if (!file || fillIndex === null) {
+        return;
+      }
+      void file.arrayBuffer().then((buffer) => {
+        const image = createFigImageAsset({
+          data: new Uint8Array(buffer),
+          mimeType: file.type,
+          fileName: file.name,
+        });
+        dispatch({ type: "ADD_IMAGE_ASSET", image, source: "property-panel" });
+        updateImageRef(fillIndex, image.ref);
+      });
+    },
+    [dispatch, updateImageRef],
+  );
+
   const removeFill = useCallback(
     (fillIndex: number) => {
-      dispatch({
-        type: "UPDATE_NODE",
-        nodeId: node.id,
+      dispatch(createPropertyTargetUpdateAction({
+        target,
         updater: (n) => ({
           ...n,
           fills: n.fills.filter((_, i) => i !== fillIndex),
         }),
-      });
+      }));
     },
-    [dispatch, node.id],
+    [dispatch, target],
   );
 
   const addFill = useCallback(() => {
-    dispatch({
-      type: "UPDATE_NODE",
-      nodeId: node.id,
+    dispatch(createPropertyTargetUpdateAction({
+      target,
       updater: (n) => ({
         ...n,
         fills: [...n.fills, createDefaultSolidFill()],
       }),
-    });
-  }, [dispatch, node.id]);
+    }));
+  }, [dispatch, target]);
 
   return (
     <div style={emptyStyle}>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml"
+        onChange={handleImageFileChange}
+        style={{ display: "none" }}
+      />
       {fills.map((fill, i) => {
         const color = getPaintColor(fill);
         const opacity = getPaintOpacity(fill);
@@ -314,9 +375,15 @@ export function FillSection({ node, dispatch }: FillSectionProps) {
         return (
           <div key={i} style={fillRowStyle}>
             <div style={paintHeaderStyle}>
-              <Select value={fill.type} onChange={(type) => updateFillType(i, type)} options={paintTypeOptions} />
+              <Select
+                value={fill.type}
+                onChange={(type) => updateFillType(i, type)}
+                options={paintTypeOptions}
+                ariaLabel={`Fill paint type ${i + 1}`}
+              />
               <Input
                 type="number"
+                ariaLabel={`Fill opacity ${i + 1}`}
                 value={Math.round(opacity * 100)}
                 min={0}
                 max={100}
@@ -337,6 +404,7 @@ export function FillSection({ node, dispatch }: FillSectionProps) {
             {color && (
               <div style={paintInlineStyle}>
                 <input
+                  aria-label={`Fill color ${i + 1}`}
                   type="color"
                   value={colorToHex(color)}
                   onChange={(e) => updateFillColor(i, e.target.value)}
@@ -360,12 +428,45 @@ export function FillSection({ node, dispatch }: FillSectionProps) {
               </div>
             )}
             {fill.type === "IMAGE" && (
-              <Input
-                type="text"
-                value={fill.imageRef ?? ""}
-                placeholder="imageRef"
-                onChange={(v) => updateImageRef(i, String(v))}
-              />
+              <>
+                <div style={paintInlineStyle}>
+                  <Select
+                    value={fill.imageRef ?? ""}
+                    onChange={(value) => updateImageRef(i, value)}
+                    options={imageOptions}
+                    ariaLabel={`Fill image ${i + 1}`}
+                  />
+                  <button type="button" style={addButtonStyle} onClick={() => startImageUpload(i)}>
+                    Upload image
+                  </button>
+                </div>
+                <div style={paintInlineStyle}>
+                  <Select
+                    value={fill.scaleMode ?? fill.imageScaleMode ?? "FILL"}
+                    onChange={(value) => updateImageScaleMode(i, value)}
+                    options={imageScaleModeOptions}
+                    ariaLabel={`Fill image scale mode ${i + 1}`}
+                  />
+                  <Input
+                    type="number"
+                    ariaLabel={`Fill image scale ${i + 1}`}
+                    value={fill.scalingFactor ?? fill.scale ?? 1}
+                    min={0}
+                    step={0.05}
+                    onChange={(v) => updateImageScale(i, v as number)}
+                    width={64}
+                  />
+                  <Input
+                    type="number"
+                    ariaLabel={`Fill image rotation ${i + 1}`}
+                    value={Math.round(((fill.rotation ?? 0) * 180) / Math.PI)}
+                    step={1}
+                    onChange={(v) => updateImageRotation(i, v as number)}
+                    width={64}
+                    suffix="°"
+                  />
+                </div>
+              </>
             )}
           </div>
         );

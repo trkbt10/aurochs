@@ -9,9 +9,11 @@ import { Select } from "@aurochs-ui/ui-components/primitives/Select";
 import type { SelectOption } from "@aurochs-ui/ui-components/types";
 import { colorTokens, fontTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { AddIcon, CloseIcon } from "@aurochs-ui/ui-components/icons";
+import { createPropertyTargetUpdateAction, type PropertyMutationTarget } from "../property-mutation-target";
 
 type EffectsSectionProps = {
   readonly node: FigDesignNode;
+  readonly target: PropertyMutationTarget;
   readonly dispatch: (action: FigEditorAction) => void;
 };
 
@@ -140,18 +142,17 @@ function createEffectTypeEnum(type: FigEffectType): FigEffect["type"] {
 }
 
 /** Panel section for viewing and editing visual effects on a Figma node. */
-export function EffectsSection({ node, dispatch }: EffectsSectionProps) {
+export function EffectsSection({ node, target, dispatch }: EffectsSectionProps) {
   const effects = node.effects;
 
   const updateEffects = useCallback(
     (updater: (effects: readonly FigEffect[]) => readonly FigEffect[]) => {
-      dispatch({
-        type: "UPDATE_NODE",
-        nodeId: node.id,
+      dispatch(createPropertyTargetUpdateAction({
+        target,
         updater: (n) => ({ ...n, effects: updater(n.effects) }),
-      });
+      }));
     },
-    [dispatch, node.id],
+    [dispatch, target],
   );
 
   const updateEffect = useCallback(
@@ -184,6 +185,7 @@ export function EffectsSection({ node, dispatch }: EffectsSectionProps) {
                 value={typeName}
                 onChange={(type) => updateEffect(i, () => createDefaultEffect(type))}
                 options={effectTypeOptions}
+                ariaLabel={`Effect type ${i + 1}`}
               />
               <button type="button" title="Remove effect" onClick={() => removeEffect(i)} style={removeButtonStyle}>
                 <CloseIcon size={12} />
@@ -192,6 +194,7 @@ export function EffectsSection({ node, dispatch }: EffectsSectionProps) {
             <div style={effectControlsStyle}>
               <Input
                 type="number"
+                ariaLabel={`${formatEffectLabel(typeName)} radius`}
                 value={effect.radius ?? 0}
                 onChange={(v) => updateEffect(i, (current) => ({ ...current, radius: v as number }))}
                 suffix="r"
@@ -200,18 +203,21 @@ export function EffectsSection({ node, dispatch }: EffectsSectionProps) {
                 <>
                   <Input
                     type="number"
+                    ariaLabel={`${formatEffectLabel(typeName)} offset x`}
                     value={effect.offset?.x ?? 0}
                     onChange={(v) => updateEffect(i, (current) => ({ ...current, offset: { x: v as number, y: current.offset?.y ?? 0 } }))}
                     suffix="x"
                   />
                   <Input
                     type="number"
+                    ariaLabel={`${formatEffectLabel(typeName)} offset y`}
                     value={effect.offset?.y ?? 0}
                     onChange={(v) => updateEffect(i, (current) => ({ ...current, offset: { x: current.offset?.x ?? 0, y: v as number } }))}
                     suffix="y"
                   />
                   <Input
                     type="number"
+                    ariaLabel={`${formatEffectLabel(typeName)} spread`}
                     value={effect.spread ?? 0}
                     onChange={(v) => updateEffect(i, (current) => ({ ...current, spread: v as number }))}
                     suffix="s"
@@ -225,6 +231,7 @@ export function EffectsSection({ node, dispatch }: EffectsSectionProps) {
                   />
                   <Input
                     type="number"
+                    ariaLabel={`${formatEffectLabel(typeName)} opacity`}
                     value={Math.round(color.a * 100)}
                     min={0}
                     max={100}

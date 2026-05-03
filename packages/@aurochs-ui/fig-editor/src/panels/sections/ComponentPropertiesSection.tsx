@@ -13,12 +13,14 @@ import type {
   ComponentPropertyDef,
   ComponentPropertyAssignment,
   ComponentPropertyValue,
-  ComponentPropertyType,
 } from "@aurochs/fig/domain";
 import { useCallback } from "react";
 import type { FigEditorAction } from "../../context/fig-editor/types";
 import { Input } from "@aurochs-ui/ui-components/primitives/Input";
+import { Select } from "@aurochs-ui/ui-components/primitives/Select";
+import type { SelectOption } from "@aurochs-ui/ui-components/types";
 import { colorTokens, fontTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
+import { createPropertyPrimaryUpdateAction, type PropertyMutationTarget } from "../property-mutation-target";
 
 // =============================================================================
 // Resolution Logic
@@ -79,34 +81,6 @@ export function resolveComponentProperties(
 }
 
 // =============================================================================
-// Value Display Helpers
-// =============================================================================
-
-function formatPropertyValue(value: ComponentPropertyValue | undefined, type: ComponentPropertyType): string {
-  if (!value) {return "(none)";}
-
-  switch (type) {
-    case "BOOL":
-      return value.boolValue !== undefined ? (value.boolValue ? "true" : "false") : "(none)";
-    case "TEXT":
-      return value.textValue?.characters ?? "(none)";
-    case "COLOR":
-      // Color values may be stored in various formats
-      return "(color)";
-    case "INSTANCE_SWAP":
-      return value.referenceValue ?? "(none)";
-    case "VARIANT":
-      return value.textValue?.characters ?? "(none)";
-    case "NUMBER":
-      return String(value.numberValue ?? "(none)");
-    case "IMAGE":
-      return "(image)";
-    case "SLOT":
-      return "(slot)";
-  }
-}
-
-// =============================================================================
 // Styles
 // =============================================================================
 
@@ -161,29 +135,27 @@ const styles = {
 
 type Props = {
   readonly node: FigDesignNode;
+  readonly target: PropertyMutationTarget;
   readonly document: FigDesignDocument;
   readonly dispatch: (action: FigEditorAction) => void;
 };
 
 /** Panel section for viewing and editing component instance properties. */
-export function ComponentPropertiesSection({ node, document, dispatch }: Props) {
+export function ComponentPropertiesSection({ node, target, document, dispatch }: Props) {
   const properties = resolveComponentProperties(node, document);
   const updateAssignment = useCallback(
     (defId: FigNodeId, value: ComponentPropertyValue) => {
-      dispatch({
-        type: "UPDATE_NODE",
-        nodeId: node.id,
+      dispatch(createPropertyPrimaryUpdateAction({
+        target,
         updater: (current) => {
           const assignments = current.componentPropertyAssignments ?? [];
           const exists = assignments.some((assignment) => assignment.defId === defId);
-          const next = exists
-            ? assignments.map((assignment) => assignment.defId === defId ? { ...assignment, value } : assignment)
-            : [...assignments, { defId, value }];
+          const next = updateComponentPropertyAssignments({ assignments, defId, value, exists });
           return { ...current, componentPropertyAssignments: next };
         },
-      });
+      }));
     },
-    [dispatch, node.id],
+    [dispatch, target],
   );
 
   if (properties.length === 0) {
@@ -217,6 +189,7 @@ export function ComponentPropertiesSection({ node, document, dispatch }: Props) 
           </span>
           <ComponentPropertyValueEditor
             prop={prop}
+            document={document}
             onChange={(value) => updateAssignment(prop.def.id, value)}
           />
         </div>
@@ -226,17 +199,14 @@ export function ComponentPropertiesSection({ node, document, dispatch }: Props) 
 }
 
 function ComponentPropertyValueEditor(
-  { prop, onChange }: {
+  { prop, document, onChange }: {
     readonly prop: ResolvedComponentProperty;
+    readonly document: FigDesignDocument;
     readonly onChange: (value: ComponentPropertyValue) => void;
   },
 ) {
   const value = prop.value;
-  const badge = prop.isOverridden ? (
-    <span style={{ ...styles.badge, backgroundColor: colorTokens.accent.secondary }}>
-      override
-    </span>
-  ) : null;
+  const badge = renderOverrideBadge(prop.isOverridden);
 
   switch (prop.def.type) {
     case "BOOL":
@@ -244,6 +214,7 @@ function ComponentPropertyValueEditor(
         <span style={styles.value}>
           <input
             type="checkbox"
+            aria-label={componentPropertyControlLabel(prop)}
             checked={value?.boolValue ?? false}
             onChange={(e) => onChange({ boolValue: e.currentTarget.checked })}
           />
@@ -251,11 +222,11 @@ function ComponentPropertyValueEditor(
         </span>
       );
     case "TEXT":
-    case "VARIANT":
       return (
         <span style={{ ...styles.value, ...(prop.isOverridden ? styles.overridden : {}) }}>
           <Input
             type="text"
+            ariaLabel={componentPropertyControlLabel(prop)}
             value={value?.textValue?.characters ?? ""}
             onChange={(v) => onChange({ textValue: { characters: String(v) } })}
           />
@@ -267,6 +238,7 @@ function ComponentPropertyValueEditor(
         <span style={{ ...styles.value, ...(prop.isOverridden ? styles.overridden : {}) }}>
           <Input
             type="number"
+            ariaLabel={componentPropertyControlLabel(prop)}
             value={value?.numberValue ?? 0}
             onChange={(v) => onChange({ numberValue: v as number })}
           />
@@ -276,10 +248,23 @@ function ComponentPropertyValueEditor(
     case "INSTANCE_SWAP":
       return (
         <span style={{ ...styles.value, ...(prop.isOverridden ? styles.overridden : {}) }}>
-          <Input
-            type="text"
+          <Select
             value={value?.referenceValue ?? ""}
-            onChange={(v) => onChange({ referenceValue: String(v) as FigNodeId })}
+            onChange={(v) => onChange(createInstanceSwapValue(v))}
+            options={buildInstanceSwapOptions(document)}
+            ariaLabel={componentPropertyControlLabel(prop)}
+          />
+          {badge}
+        </span>
+      );
+    case "VARIANT":
+      return (
+        <span style={{ ...styles.value, ...(prop.isOverridden ? styles.overridden : {}) }}>
+          <Select
+            value={value?.referenceValue ?? ""}
+            onChange={(v) => onChange(createReferenceSelectValue(v))}
+            options={buildReferenceOptions(document)}
+            ariaLabel={componentPropertyControlLabel(prop)}
           />
           {badge}
         </span>
@@ -289,9 +274,94 @@ function ComponentPropertyValueEditor(
     case "SLOT":
       return (
         <span style={{ ...styles.value, ...(prop.isOverridden ? styles.overridden : {}) }}>
-          {formatPropertyValue(value, prop.def.type)}
+          <Input
+            type="text"
+            ariaLabel={componentPropertyControlLabel(prop)}
+            value={value?.referenceValue ?? ""}
+            onChange={(v) => onChange(createReferenceValue(String(v)))}
+          />
           {badge}
         </span>
       );
   }
+}
+
+function renderOverrideBadge(isOverridden: boolean) {
+  if (!isOverridden) {
+    return null;
+  }
+  return (
+    <span style={{ ...styles.badge, backgroundColor: colorTokens.accent.secondary }}>
+      override
+    </span>
+  );
+}
+
+function componentPropertyControlLabel(prop: ResolvedComponentProperty): string {
+  return `Component property ${prop.def.name}`;
+}
+
+function updateComponentPropertyAssignments(
+  {
+    assignments,
+    defId,
+    value,
+    exists,
+  }: {
+    readonly assignments: readonly ComponentPropertyAssignment[];
+    readonly defId: FigNodeId;
+    readonly value: ComponentPropertyValue;
+    readonly exists: boolean;
+  },
+): readonly ComponentPropertyAssignment[] {
+  if (!exists) {
+    return [...assignments, { defId, value }];
+  }
+  return assignments.map((assignment) => {
+    if (assignment.defId === defId) {
+      return { ...assignment, value };
+    }
+    return assignment;
+  });
+}
+
+function buildInstanceSwapOptions(document: FigDesignDocument): readonly SelectOption<FigNodeId | "">[] {
+  return [
+    { value: "", label: "None" },
+    ...[...document.components.values()].map((component) => ({
+      value: component.id,
+      label: component.name,
+    })),
+  ];
+}
+
+function buildReferenceOptions(document: FigDesignDocument): readonly SelectOption<FigNodeId | "">[] {
+  return [
+    { value: "", label: "None" },
+    ...[...document.components.values()].map((component) => ({
+      value: component.id,
+      label: component.name,
+    })),
+  ];
+}
+
+function createInstanceSwapValue(value: FigNodeId | ""): ComponentPropertyValue {
+  if (value === "") {
+    return {};
+  }
+  return { referenceValue: value };
+}
+
+function createReferenceSelectValue(value: FigNodeId | ""): ComponentPropertyValue {
+  if (value === "") {
+    return {};
+  }
+  return { referenceValue: value };
+}
+
+function createReferenceValue(value: string): ComponentPropertyValue {
+  if (value === "") {
+    return {};
+  }
+  return { referenceValue: value as FigNodeId };
 }

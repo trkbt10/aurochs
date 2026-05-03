@@ -7,6 +7,7 @@ import {
   computeWorldCenter,
   computePreRotationTopLeft,
   buildRotatedTransform,
+  buildRotatedTransformAtWorldCenter,
 } from "./rotation";
 import type { FigMatrix } from "@aurochs/fig/types";
 
@@ -112,5 +113,47 @@ describe("buildRotatedTransform", () => {
     expect(newT.m11).toBeCloseTo(1);
     expect(newT.m02).toBeCloseTo(100);
     expect(newT.m12).toBeCloseTo(200);
+  });
+
+  it("preserves an explicit local transform origin while rotating", () => {
+    const t = makeTransform(100, 200);
+    const origin = { x: 0, y: 10 };
+    const originBefore = {
+      x: t.m00 * origin.x + t.m01 * origin.y + t.m02,
+      y: t.m10 * origin.x + t.m11 * origin.y + t.m12,
+    };
+
+    const newT = buildRotatedTransform({
+      currentTransform: t,
+      width: 50,
+      height: 30,
+      newAngleDeg: 90,
+      origin,
+    });
+    const originAfter = {
+      x: newT.m00 * origin.x + newT.m01 * origin.y + newT.m02,
+      y: newT.m10 * origin.x + newT.m11 * origin.y + newT.m12,
+    };
+
+    expect(originAfter.x).toBeCloseTo(originBefore.x);
+    expect(originAfter.y).toBeCloseTo(originBefore.y);
+    expect(extractRotationDeg(newT)).toBeCloseTo(90);
+  });
+});
+
+describe("buildRotatedTransformAtWorldCenter", () => {
+  it("places the node center at the explicit world-space center", () => {
+    const transform = buildRotatedTransformAtWorldCenter({
+      width: 20,
+      height: 20,
+      newAngleDeg: 90,
+      centerX: 60,
+      centerY: -40,
+    });
+
+    const center = computeWorldCenter(transform, 20, 20);
+    expect(center.cx).toBeCloseTo(60);
+    expect(center.cy).toBeCloseTo(-40);
+    expect(extractRotationDeg(transform)).toBeCloseTo(90);
   });
 });

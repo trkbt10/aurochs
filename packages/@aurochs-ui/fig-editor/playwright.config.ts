@@ -15,9 +15,12 @@ export default defineConfig({
     browserName: "chromium",
     headless: true,
     viewport: { width: 1280, height: 720 },
+    launchOptions: {
+      args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"],
+    },
   },
   webServer: {
-    command: `npx vite --config spec/e2e/vite.config.ts --port ${PORT} --strictPort`,
+    command: `bunx vite --config spec/e2e/vite.config.ts --port ${PORT} --strictPort`,
     port: PORT,
     reuseExistingServer: false,
     timeout: 15_000,

@@ -15,16 +15,20 @@ import {
   EllipseIcon,
   LineIcon,
   TextBoxIcon,
+  PenIcon,
   StarIcon,
   DiamondIcon,
   DownloadIcon,
   UndoIcon,
   RedoIcon,
 } from "@aurochs-ui/ui-components/icons";
-import { iconTokens } from "@aurochs-ui/ui-components/design-tokens";
+import { colorTokens, iconTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { useFigEditor } from "../context/FigEditorContext";
 import type { FigCreationMode } from "../context/fig-editor/types";
 import { useExportFig } from "../hooks/use-export-fig";
+import { downloadFigExport, resolveFigExportFilename } from "../hooks/fig-export-download";
+import { allowsFigUserOperation } from "../context/fig-editor/user-operation";
+import { useFigOperationDomain } from "../context/use-fig-operation-domain";
 
 // =============================================================================
 // Tool definitions
@@ -42,6 +46,7 @@ const ICON_STROKE = iconTokens.strokeWidth;
 
 const TOOLS: readonly ToolDef[] = [
   { mode: { type: "select" }, label: "Select", shortcut: "V", icon: <SelectIcon size={ICON_SIZE} strokeWidth={ICON_STROKE} /> },
+  { mode: { type: "pen" }, label: "Vector Edit", shortcut: "P", icon: <PenIcon size={ICON_SIZE} strokeWidth={ICON_STROKE} /> },
   { mode: { type: "frame" }, label: "Frame", shortcut: "F", icon: <FrameIcon size={ICON_SIZE} strokeWidth={ICON_STROKE} /> },
   { mode: { type: "rectangle" }, label: "Rectangle", shortcut: "R", icon: <RectIcon size={ICON_SIZE} strokeWidth={ICON_STROKE} /> },
   { mode: { type: "ellipse" }, label: "Ellipse", shortcut: "O", icon: <EllipseIcon size={ICON_SIZE} strokeWidth={ICON_STROKE} /> },
@@ -59,28 +64,27 @@ const TOOLS: readonly ToolDef[] = [
  * Fig editor toolbar component.
  */
 export function FigEditorToolbar() {
-  const { dispatch, canUndo, canRedo, creationMode } = useFigEditor();
-  const { exportDocument, isExporting } = useExportFig();
+  const { dispatch, canUndo, canRedo, creationMode, document: figDocument } = useFigEditor();
+  const { exportDocument, isExporting, lastResult, error } = useExportFig();
+  const operationDomain = useFigOperationDomain();
 
   const handleToolClick = useCallback(
     (mode: FigCreationMode) => {
+      if (!allowsFigUserOperation(operationDomain, "set-tool")) {
+        return;
+      }
       dispatch({ type: "SET_CREATION_MODE", mode });
     },
-    [dispatch],
+    [dispatch, operationDomain],
   );
 
   const handleExportClick = useCallback(() => {
     void exportDocument().then((result) => {
-      const data = new Uint8Array(result.data);
-      const blob = new Blob([data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength)], { type: "application/octet-stream" });
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = "document.fig";
-      anchor.click();
-      URL.revokeObjectURL(url);
+      downloadFigExport(result, resolveFigExportFilename(figDocument.metadata), { document, url: URL });
     });
-  }, [exportDocument]);
+  }, [exportDocument, figDocument.metadata]);
+
+  const exportStatus = error?.message ?? formatExportStatus(lastResult?.size);
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 2, width: "100%" }}>
@@ -92,6 +96,7 @@ export function FigEditorToolbar() {
           label={`${tool.label} (${tool.shortcut})`}
           active={creationMode.type === tool.mode.type}
           onClick={() => handleToolClick(tool.mode)}
+          disabled={!allowsFigUserOperation(operationDomain, "set-tool")}
           size="sm"
         />
       ))}
@@ -102,15 +107,23 @@ export function FigEditorToolbar() {
       <ToolbarButton
         icon={<UndoIcon size={ICON_SIZE} strokeWidth={ICON_STROKE} />}
         label="Undo"
-        onClick={() => dispatch({ type: "UNDO" })}
-        disabled={!canUndo}
+        onClick={() => {
+          if (allowsFigUserOperation(operationDomain, "undo")) {
+            dispatch({ type: "UNDO" });
+          }
+        }}
+        disabled={!canUndo || !allowsFigUserOperation(operationDomain, "undo")}
         size="sm"
       />
       <ToolbarButton
         icon={<RedoIcon size={ICON_SIZE} strokeWidth={ICON_STROKE} />}
         label="Redo"
-        onClick={() => dispatch({ type: "REDO" })}
-        disabled={!canRedo}
+        onClick={() => {
+          if (allowsFigUserOperation(operationDomain, "redo")) {
+            dispatch({ type: "REDO" });
+          }
+        }}
+        disabled={!canRedo || !allowsFigUserOperation(operationDomain, "redo")}
         size="sm"
       />
 
@@ -123,6 +136,36 @@ export function FigEditorToolbar() {
         disabled={isExporting}
         size="sm"
       />
+      {exportStatus && (
+        <span
+          aria-live="polite"
+          style={{
+            color: getExportStatusColor(Boolean(error)),
+            fontSize: 11,
+            marginLeft: 4,
+            maxWidth: 180,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {exportStatus}
+        </span>
+      )}
     </div>
   );
+}
+
+function formatExportStatus(size: number | undefined): string | undefined {
+  if (size === undefined) {
+    return undefined;
+  }
+  return `Exported ${size.toLocaleString()} bytes`;
+}
+
+function getExportStatusColor(hasError: boolean): string {
+  if (hasError) {
+    return colorTokens.accent.danger;
+  }
+  return colorTokens.text.secondary;
 }

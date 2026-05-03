@@ -6,6 +6,7 @@ import type { FigDesignNode, FigNodeId } from "@aurochs/fig/domain";
 import { STACK_MODE_VALUES } from "@aurochs/fig/constants";
 import { toEnumValue } from "@aurochs/fig/constants";
 import { AutoLayoutSection } from "./AutoLayoutSection";
+import { createPropertyMutationTarget } from "../property-mutation-target";
 
 function makeFrame(autoLayout?: FigDesignNode["autoLayout"]): FigDesignNode {
   return {
@@ -27,7 +28,12 @@ function makeFrame(autoLayout?: FigDesignNode["autoLayout"]): FigDesignNode {
 
 describe("AutoLayoutSection", () => {
   it("renders an explicit None mode for frames without auto layout", () => {
-    const html = renderToStaticMarkup(createElement(AutoLayoutSection, { node: makeFrame(), dispatch: () => undefined }));
+    const node = makeFrame();
+    const html = renderToStaticMarkup(createElement(AutoLayoutSection, {
+      node,
+      target: createPropertyMutationTarget({ primaryNode: node, selectedNodes: [node] }),
+      dispatch: () => undefined,
+    }));
 
     expect(html).toContain("<select");
     expect(html).toContain('value="NONE"');
@@ -35,12 +41,17 @@ describe("AutoLayoutSection", () => {
   });
 
   it("renders editable spacing and padding fields when auto layout is enabled", () => {
+    const node = makeFrame({
+      stackMode: toEnumValue("HORIZONTAL", STACK_MODE_VALUES)!,
+      stackSpacing: 12,
+      stackPadding: { top: 1, right: 2, bottom: 3, left: 4 },
+      stackWrap: true,
+      stackCounterSpacing: 8,
+      itemReverseZIndex: true,
+    });
     const html = renderToStaticMarkup(createElement(AutoLayoutSection, {
-      node: makeFrame({
-        stackMode: toEnumValue("HORIZONTAL", STACK_MODE_VALUES)!,
-        stackSpacing: 12,
-        stackPadding: { top: 1, right: 2, bottom: 3, left: 4 },
-      }),
+      node,
+      target: createPropertyMutationTarget({ primaryNode: node, selectedNodes: [node] }),
       dispatch: () => undefined,
     }));
 
@@ -50,5 +61,10 @@ describe("AutoLayoutSection", () => {
     expect(html).toContain('value="4"');
     expect(html).toContain("Primary align");
     expect(html).toContain("Counter align");
+    expect(html).toContain("Align content");
+    expect(html).toContain("Counter gap");
+    expect(html).toContain('value="8"');
+    expect(html).toContain("Wrap");
+    expect(html).toContain("Reverse Z");
   });
 });

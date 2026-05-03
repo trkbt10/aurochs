@@ -8,13 +8,12 @@
 import { useMemo, type CSSProperties, type ReactNode } from "react";
 import type { FigDesignDocument } from "@aurochs/fig/domain";
 import { EditorShell, CanvasArea, type EditorPanel } from "@aurochs-ui/editor-controls/editor-shell";
-import { FigEditorProvider, useFigEditor } from "../context/FigEditorContext";
+import { FigEditorProvider } from "../context/FigEditorContext";
 import { FigEditorCanvas } from "../canvas/FigEditorCanvas";
 import { FigEditorToolbar } from "./FigEditorToolbar";
 import { PageListPanel } from "../panels/PageListPanel";
 import { PropertyPanel } from "../panels/PropertyPanel";
 import { LayerPanel } from "../panels/LayerPanel";
-import { useFigKeyboard } from "../canvas/interaction/use-fig-keyboard";
 import type { FigEditorRendererKind } from "../canvas/renderer-kind";
 import type { CachingFontLoader } from "@aurochs-renderer/fig/font";
 
@@ -133,19 +132,6 @@ function FigEditorContent({
   readonly renderer?: FigEditorRendererKind;
   readonly fontLoader?: CachingFontLoader;
 }) {
-  const { dispatch, nodeSelection, canUndo, canRedo, textEdit } = useFigEditor();
-  const hasSelection = nodeSelection.selectedIds.length > 0;
-
-  // Register keyboard shortcuts
-  useFigKeyboard({
-    dispatch,
-    hasSelection,
-    selectedIds: nodeSelection.selectedIds,
-    canUndo,
-    canRedo,
-    isTextEditing: textEdit.type === "active",
-  });
-
   const toolbarContent = useMemo(() => <FigEditorToolbar />, []);
   const resolvedPanels = panels ?? DEFAULT_PANELS;
 

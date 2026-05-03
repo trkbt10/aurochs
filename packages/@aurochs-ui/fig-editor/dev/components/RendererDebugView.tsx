@@ -33,6 +33,7 @@ import {
   FIG_LEGEND_ORDER,
 } from "../../src/inspector/fig-node-categories";
 import { useFigTextFontResolver } from "../../src/canvas/use-fig-text-font-resolver";
+import { isUserVisibleCanvasNode } from "./visible-canvas";
 import { WebGLCanvas } from "./WebGLCanvas";
 
 // =============================================================================
@@ -263,7 +264,7 @@ function RendererDebugContent({ parsedFile, designDoc }: { parsedFile: ParsedFig
 
   const { canvases, nodeCount, symbolMap, resolvedSymbolCache, symbolResolveWarnings } = useMemo(() => {
     const { roots, nodeMap } = buildNodeTree(parsedFile.nodeChanges);
-    const canvasNodes = findNodesByType(roots, "CANVAS");
+    const canvasNodes = findNodesByType(roots, "CANVAS").filter(isUserVisibleCanvasNode);
     const canvasInfos: CanvasInfo[] = canvasNodes.map((canvas) => {
       const frames: FrameInfo[] = (canvas.children ?? []).map((child) => {
         const childData = child as Record<string, unknown>;

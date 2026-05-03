@@ -11,6 +11,7 @@ export type ToggleProps = {
   readonly checked: boolean;
   readonly onChange: (checked: boolean) => void;
   readonly label?: string;
+  readonly ariaLabel?: string;
   readonly disabled?: boolean;
   readonly className?: string;
   readonly style?: CSSProperties;
@@ -63,7 +64,7 @@ const labelStyle: CSSProperties = {
 /**
  * Toggle switch input.
  */
-export function Toggle({ checked, onChange, label, disabled, className, style }: ToggleProps) {
+export function Toggle({ checked, onChange, label, ariaLabel, disabled, className, style }: ToggleProps) {
   const handleClick = useCallback(() => {
     if (!disabled) {
       onChange(!checked);
@@ -77,6 +78,7 @@ export function Toggle({ checked, onChange, label, disabled, className, style }:
       onClick={handleClick}
       role="switch"
       aria-checked={checked}
+      aria-label={ariaLabel ?? label}
     >
       <div style={trackStyle(checked, disabled ?? false)}>
         <div style={thumbStyle(checked)} />

@@ -4,10 +4,12 @@ import type { CSSProperties } from "react";
 import type { FigDesignNode } from "@aurochs/fig/domain";
 import type { FigEditorAction } from "../../context/fig-editor/types";
 import { colorTokens, fontTokens } from "@aurochs-ui/ui-components/design-tokens";
+import { allowsFigUserOperation, type FigUserOperationDomain } from "../../context/fig-editor/user-operation";
 
 type OutlineSectionProps = {
   readonly node: FigDesignNode;
   readonly dispatch: (action: FigEditorAction) => void;
+  readonly operationDomain?: FigUserOperationDomain;
 };
 
 const buttonStyle: CSSProperties = {
@@ -39,15 +41,20 @@ function supportsOutline(node: FigDesignNode): boolean {
 }
 
 /** Convert shape/text nodes to explicit VECTOR paths when source geometry is available. */
-export function OutlineSection({ node, dispatch }: OutlineSectionProps) {
-  const enabled = supportsOutline(node);
+export function OutlineSection({ node, dispatch, operationDomain }: OutlineSectionProps) {
+  const allowed = operationDomain ? allowsFigUserOperation(operationDomain, "outline-selection") : true;
+  const enabled = supportsOutline(node) && allowed;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       <button
         type="button"
         style={{ ...buttonStyle, opacity: enabled ? 1 : 0.5, cursor: enabled ? "pointer" : "default" }}
         disabled={!enabled}
-        onClick={() => dispatch({ type: "OUTLINE_SELECTION" })}
+        onClick={() => {
+          if (enabled) {
+            dispatch({ type: "OUTLINE_SELECTION" });
+          }
+        }}
       >
         Outline selection
       </button>

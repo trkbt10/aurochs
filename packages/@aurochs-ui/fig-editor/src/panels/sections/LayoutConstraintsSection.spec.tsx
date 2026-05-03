@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import type { FigDesignNode, FigNodeId } from "@aurochs/fig/domain";
 import { CONSTRAINT_TYPE_VALUES, STACK_POSITIONING_VALUES, STACK_SIZING_VALUES, toEnumValue } from "@aurochs/fig/constants";
 import { LayoutConstraintsSection } from "./LayoutConstraintsSection";
+import { createPropertyMutationTarget } from "../property-mutation-target";
 
 function makeNode(layoutConstraints?: FigDesignNode["layoutConstraints"]): FigDesignNode {
   return {
@@ -25,7 +26,12 @@ function makeNode(layoutConstraints?: FigDesignNode["layoutConstraints"]): FigDe
 
 describe("LayoutConstraintsSection", () => {
   it("renders explicit default child layout controls", () => {
-    const html = renderToStaticMarkup(createElement(LayoutConstraintsSection, { node: makeNode(), dispatch: () => undefined }));
+    const node = makeNode();
+    const html = renderToStaticMarkup(createElement(LayoutConstraintsSection, {
+      node,
+      target: createPropertyMutationTarget({ primaryNode: node, selectedNodes: [node] }),
+      dispatch: () => undefined,
+    }));
 
     expect(html).toContain("Position");
     expect(html).toContain('value="AUTO"');
@@ -34,14 +40,16 @@ describe("LayoutConstraintsSection", () => {
   });
 
   it("renders fixed positioning constraints when absolute", () => {
+    const node = makeNode({
+      stackPositioning: toEnumValue("ABSOLUTE", STACK_POSITIONING_VALUES)!,
+      stackPrimarySizing: toEnumValue("FILL", STACK_SIZING_VALUES)!,
+      stackCounterSizing: toEnumValue("HUG", STACK_SIZING_VALUES)!,
+      horizontalConstraint: toEnumValue("CENTER", CONSTRAINT_TYPE_VALUES)!,
+      verticalConstraint: toEnumValue("STRETCH", CONSTRAINT_TYPE_VALUES)!,
+    });
     const html = renderToStaticMarkup(createElement(LayoutConstraintsSection, {
-      node: makeNode({
-        stackPositioning: toEnumValue("ABSOLUTE", STACK_POSITIONING_VALUES)!,
-        stackPrimarySizing: toEnumValue("FILL", STACK_SIZING_VALUES)!,
-        stackCounterSizing: toEnumValue("HUG", STACK_SIZING_VALUES)!,
-        horizontalConstraint: toEnumValue("CENTER", CONSTRAINT_TYPE_VALUES)!,
-        verticalConstraint: toEnumValue("STRETCH", CONSTRAINT_TYPE_VALUES)!,
-      }),
+      node,
+      target: createPropertyMutationTarget({ primaryNode: node, selectedNodes: [node] }),
       dispatch: () => undefined,
     }));
 

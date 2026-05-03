@@ -7,12 +7,15 @@ import { STACK_ALIGN_VALUES, STACK_MODE_VALUES, type StackAlign, type StackMode 
 import { toEnumValue } from "@aurochs/fig/constants";
 import { Input } from "@aurochs-ui/ui-components/primitives/Input";
 import { Select } from "@aurochs-ui/ui-components/primitives/Select";
+import { Toggle } from "@aurochs-ui/ui-components/primitives/Toggle";
 import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
 import type { SelectOption } from "@aurochs-ui/ui-components/types";
 import type { FigEditorAction } from "../../context/fig-editor/types";
+import { createPropertyTargetUpdateAction, type PropertyMutationTarget } from "../property-mutation-target";
 
 type AutoLayoutSectionProps = {
   readonly node: FigDesignNode;
+  readonly target: PropertyMutationTarget;
   readonly dispatch: (action: FigEditorAction) => void;
 };
 
@@ -39,7 +42,7 @@ function enumName<T extends string>(val: KiwiEnumValue | undefined, fallback: T)
 }
 
 /** Panel section for viewing and editing auto layout properties of a Figma node. */
-export function AutoLayoutSection({ node, dispatch }: AutoLayoutSectionProps) {
+export function AutoLayoutSection({ node, target, dispatch }: AutoLayoutSectionProps) {
   const layout: EditableAutoLayout = {
     stackMode: node.autoLayout?.stackMode ?? toEnumValue("NONE", STACK_MODE_VALUES)!,
     stackSpacing: node.autoLayout?.stackSpacing ?? 0,
@@ -54,9 +57,8 @@ export function AutoLayoutSection({ node, dispatch }: AutoLayoutSectionProps) {
 
   const updateAutoLayout = useCallback(
     (updater: (layout: EditableAutoLayout) => AutoLayoutProps | undefined) => {
-      dispatch({
-        type: "UPDATE_NODE",
-        nodeId: node.id,
+      dispatch(createPropertyTargetUpdateAction({
+        target,
         updater: (current) => ({ ...current, autoLayout: updater({
           stackMode: current.autoLayout?.stackMode ?? toEnumValue("NONE", STACK_MODE_VALUES)!,
           stackSpacing: current.autoLayout?.stackSpacing ?? 0,
@@ -68,9 +70,9 @@ export function AutoLayoutSection({ node, dispatch }: AutoLayoutSectionProps) {
           stackCounterSpacing: current.autoLayout?.stackCounterSpacing,
           itemReverseZIndex: current.autoLayout?.itemReverseZIndex,
         }) }),
-      });
+      }));
     },
-    [dispatch, node.id],
+    [dispatch, target],
   );
 
   const updateMode = useCallback((mode: StackMode) => {
@@ -98,40 +100,68 @@ export function AutoLayoutSection({ node, dispatch }: AutoLayoutSectionProps) {
     updateAutoLayout((current) => ({ ...current, stackCounterAlignItems: toEnumValue(align, STACK_ALIGN_VALUES) }));
   }, [updateAutoLayout]);
 
+  const updatePrimaryAlignContent = useCallback((align: StackAlign) => {
+    updateAutoLayout((current) => ({ ...current, stackPrimaryAlignContent: toEnumValue(align, STACK_ALIGN_VALUES) }));
+  }, [updateAutoLayout]);
+
+  const updateWrap = useCallback((checked: boolean) => {
+    updateAutoLayout((current) => ({ ...current, stackWrap: checked }));
+  }, [updateAutoLayout]);
+
+  const updateCounterSpacing = useCallback((value: number) => {
+    updateAutoLayout((current) => ({ ...current, stackCounterSpacing: value }));
+  }, [updateAutoLayout]);
+
+  const updateReverseZIndex = useCallback((checked: boolean) => {
+    updateAutoLayout((current) => ({ ...current, itemReverseZIndex: checked }));
+  }, [updateAutoLayout]);
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       <FieldGroup label="Mode">
-        <Select value={enumName(layout.stackMode, "NONE")} onChange={updateMode} options={modeOptions} />
+        <Select value={enumName(layout.stackMode, "NONE")} onChange={updateMode} options={modeOptions} ariaLabel="Auto layout mode" />
       </FieldGroup>
       {enumName(layout.stackMode, "NONE") !== "NONE" && (
         <>
           <FieldRow>
             <FieldGroup label="Gap" inline labelWidth={40}>
-              <Input type="number" value={layout.stackSpacing ?? 0} onChange={(v) => updateGap(v as number)} />
+              <Input type="number" ariaLabel="Auto layout gap" value={layout.stackSpacing ?? 0} onChange={(v) => updateGap(v as number)} />
             </FieldGroup>
           </FieldRow>
           <FieldRow>
             <FieldGroup label="Top" inline labelWidth={28}>
-              <Input type="number" value={layout.stackPadding.top} onChange={(v) => updatePadding("top", v as number)} />
+              <Input type="number" ariaLabel="Auto layout padding top" value={layout.stackPadding.top} onChange={(v) => updatePadding("top", v as number)} />
             </FieldGroup>
             <FieldGroup label="Right" inline labelWidth={36}>
-              <Input type="number" value={layout.stackPadding.right} onChange={(v) => updatePadding("right", v as number)} />
+              <Input type="number" ariaLabel="Auto layout padding right" value={layout.stackPadding.right} onChange={(v) => updatePadding("right", v as number)} />
             </FieldGroup>
           </FieldRow>
           <FieldRow>
             <FieldGroup label="Bottom" inline labelWidth={44}>
-              <Input type="number" value={layout.stackPadding.bottom} onChange={(v) => updatePadding("bottom", v as number)} />
+              <Input type="number" ariaLabel="Auto layout padding bottom" value={layout.stackPadding.bottom} onChange={(v) => updatePadding("bottom", v as number)} />
             </FieldGroup>
             <FieldGroup label="Left" inline labelWidth={28}>
-              <Input type="number" value={layout.stackPadding.left} onChange={(v) => updatePadding("left", v as number)} />
+              <Input type="number" ariaLabel="Auto layout padding left" value={layout.stackPadding.left} onChange={(v) => updatePadding("left", v as number)} />
             </FieldGroup>
           </FieldRow>
           <FieldGroup label="Primary align">
-            <Select value={enumName(layout.stackPrimaryAlignItems, "MIN")} onChange={updatePrimaryAlign} options={alignOptions} />
+            <Select value={enumName(layout.stackPrimaryAlignItems, "MIN")} onChange={updatePrimaryAlign} options={alignOptions} ariaLabel="Auto layout primary align" />
           </FieldGroup>
           <FieldGroup label="Counter align">
-            <Select value={enumName(layout.stackCounterAlignItems, "MIN")} onChange={updateCounterAlign} options={alignOptions} />
+            <Select value={enumName(layout.stackCounterAlignItems, "MIN")} onChange={updateCounterAlign} options={alignOptions} ariaLabel="Auto layout counter align" />
           </FieldGroup>
+          <FieldGroup label="Align content">
+            <Select value={enumName(layout.stackPrimaryAlignContent, "MIN")} onChange={updatePrimaryAlignContent} options={alignOptions} ariaLabel="Auto layout align content" />
+          </FieldGroup>
+          <FieldRow>
+            <FieldGroup label="Counter gap" inline labelWidth={78}>
+              <Input type="number" ariaLabel="Auto layout counter gap" value={layout.stackCounterSpacing ?? 0} onChange={(v) => updateCounterSpacing(v as number)} />
+            </FieldGroup>
+          </FieldRow>
+          <FieldRow>
+            <Toggle checked={Boolean(layout.stackWrap)} onChange={updateWrap} label="Wrap" />
+            <Toggle checked={Boolean(layout.itemReverseZIndex)} onChange={updateReverseZIndex} label="Reverse Z" />
+          </FieldRow>
         </>
       )}
     </div>

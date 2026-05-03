@@ -30,6 +30,8 @@ import { FIG_NODE_CATEGORY_REGISTRY, FIG_LEGEND_ORDER } from "../inspector/fig-n
 import { designNodeToInspectorTree } from "../inspector/fig-inspector-adapter";
 import { useFigInspectorContextOptional } from "../inspector/FigInspectorContext";
 import type { FigNodeId } from "@aurochs/fig/domain";
+import { allowsFigUserOperation } from "../context/fig-editor/user-operation";
+import { useFigOperationDomain } from "../context/use-fig-operation-domain";
 
 // =============================================================================
 // Props
@@ -91,10 +93,13 @@ export function FigInspectorPanel({
   const { activePage, nodeSelection, dispatch } = useFigEditor();
   const inspectorCtx = useFigInspectorContextOptional();
   const [localHoveredId, setLocalHoveredId] = useState<FigNodeId | null>(null);
+  const operationDomain = useFigOperationDomain();
 
   // Convert active page children to inspector tree
   const treeRoot = useMemo(() => {
-    if (!activePage || activePage.children.length === 0) return null;
+    if (!activePage || activePage.children.length === 0) {
+      return null;
+    }
 
     // Wrap page children in a virtual root node
     return {
@@ -118,7 +123,9 @@ export function FigInspectorPanel({
       onNodeHighlight(highlightedNodeId === nodeId ? null : nodeId);
     } else {
       // Default: drive editor selection
-      dispatch({ type: "SELECT_NODE", nodeId: nodeId as FigNodeId, addToSelection: false });
+      if (allowsFigUserOperation(operationDomain, "select-node")) {
+        dispatch({ type: "SELECT_NODE", nodeId: nodeId as FigNodeId, addToSelection: false });
+      }
     }
   };
 

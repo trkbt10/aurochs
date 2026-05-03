@@ -266,7 +266,7 @@ test.describe("Fig editor text editing", () => {
     expect(await isCanvasTextEditActive(page)).toBe(false);
   });
 
-  test.skip("Delete key outside text edit deletes the selected node (requires useFigKeyboard, not canvas-only)", async ({ page }) => {
+  test("Delete key outside text edit deletes the selected node", async ({ page }) => {
     // Single-click to select the rectangle
     await clickNode(page, RECT);
     await page.waitForTimeout(200);
@@ -338,6 +338,7 @@ test.describe("Fig editor text editing", () => {
   });
 
   test("full user flow: double-click, type, backspace, escape without manual focus", async ({ page }) => {
+    const hitAreasBefore = await countCanvasHitAreas(page);
     // This test simulates the exact user flow with NO manual focus calls.
     // Every keyboard action uses whatever element the browser naturally focuses.
 
@@ -367,50 +368,32 @@ test.describe("Fig editor text editing", () => {
     expect(await isCanvasTextEditActive(page)).toBe(true);
     expect(await getCanvasTextareaValue(page)).toBe("Hello WorldA");
 
-    // Step 4: Screenshot for visual verification
-    await page.screenshot({ path: "test-results/full-flow-after-backspace.png" });
-
-    // Step 5: Escape
+    // Step 4: Escape
     await page.keyboard.press("Escape");
     await page.waitForTimeout(200);
     expect(await isCanvasTextEditActive(page)).toBe(false);
 
-    // Step 6: Verify the node still exists (hit-area count unchanged)
-    // All 4 nodes should still have hit areas
-    const hitAreas = await page.evaluate(() => {
-      const svgs = Array.from(document.querySelectorAll("svg"));
-      const canvasSvg = svgs.find((s) => s.getBoundingClientRect().width > 400);
-      return canvasSvg?.querySelectorAll("rect[fill='transparent']").length ?? 0;
-    });
-    expect(hitAreas).toBe(4);
+    // Step 5: Verify no node was deleted during text editing.
+    expect(await countCanvasHitAreas(page)).toBe(hitAreasBefore);
   });
 
-  test("visual: text edit mode shows correct caret and frame outline", async ({ page }) => {
+  test("text edit mode shows caret, frame outline, and selection chrome", async ({ page }) => {
     // Double-click to enter text edit
     await doubleClickNode(page, HELLO_TEXT);
     await page.waitForTimeout(500);
 
-    // Screenshot to visually verify:
-    // 1. Blue frame outline around the text node
-    // 2. Blinking caret at end of text
-    // 3. Text content unchanged (same rendering as non-edit mode)
-    await page.screenshot({ path: "test-results/text-edit-active.png" });
+    await expect.poll(() => countCarets(page)).toBe(1);
+    await expect.poll(() => countTextEditFrameOutlines(page)).toBeGreaterThan(0);
 
     // Type some text
     await focusCanvasTextarea(page);
     await page.keyboard.type("XY");
     await page.waitForTimeout(300);
 
-    // Screenshot after typing — text should update on canvas
-    await page.screenshot({ path: "test-results/text-edit-after-type.png" });
-
     // Select all text
     const modifier = process.platform === "darwin" ? "Meta" : "Control";
     await page.keyboard.press(`${modifier}+a`);
-    await page.waitForTimeout(200);
-
-    // Screenshot with selection — should show highlight over text
-    await page.screenshot({ path: "test-results/text-edit-select-all.png" });
+    await expect.poll(() => countSelectionRects(page)).toBeGreaterThan(0);
 
     // Just verify the basic state is correct
     expect(await getCanvasTextareaValue(page)).toBe("Hello WorldXY");
@@ -536,3 +519,31 @@ test.describe("Fig editor text editing", () => {
     expect(selection!.end - selection!.start).toBeGreaterThan(0);
   });
 });
+
+async function countCanvasHitAreas(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const svgs = Array.from(document.querySelectorAll("svg"));
+    const canvasSvg = svgs.find((s) => s.getBoundingClientRect().width > 400);
+    return canvasSvg?.querySelectorAll("rect[fill='transparent']").length ?? 0;
+  });
+}
+
+async function countCarets(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    return Array.from(document.querySelectorAll<SVGLineElement>("svg line[stroke-width='2']")).filter((line) => {
+      return line.getAttribute("x1") === line.getAttribute("x2") && line.getAttribute("y1") !== line.getAttribute("y2");
+    }).length;
+  });
+}
+
+async function countSelectionRects(page: Page): Promise<number> {
+  return page.evaluate(() => document.querySelectorAll("svg rect[fill-opacity='0.3']").length);
+}
+
+async function countTextEditFrameOutlines(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    return Array.from(document.querySelectorAll<SVGRectElement>("svg rect")).filter((rect) => {
+      return rect.getAttribute("fill") === "none" && rect.getAttribute("stroke") !== "transparent";
+    }).length;
+  });
+}

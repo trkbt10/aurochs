@@ -1,3 +1,5 @@
+/** @file Selection box chrome tests. */
+
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { SelectionBox } from "./SelectionBox";
@@ -15,7 +17,7 @@ describe("SelectionBox", () => {
       }),
     );
 
-    expect(html).toContain('stroke-width="1"');
+    expect(html).toContain('stroke-width="2"');
     expect(html).toContain('width="4"');
     expect(html).toContain('height="4"');
     expect(html).toContain('vector-effect="non-scaling-stroke"');

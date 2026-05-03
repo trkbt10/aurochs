@@ -30,6 +30,11 @@ export {
   type AlignYOptions,
 } from "./alignment";
 
+export {
+  textAlignHorizontalToAnchor,
+  type TextAnchor,
+} from "./text-anchor";
+
 // Fill handling
 export { getFillColorAndOpacity } from "./fill";
 

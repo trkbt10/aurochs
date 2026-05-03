@@ -11,6 +11,7 @@ import type { FigEditorAction } from "../../context/fig-editor/types";
 import { extractRotationDeg, computePreRotationTopLeft, buildRotatedTransform } from "../../context/fig-editor/rotation";
 import { Input } from "@aurochs-ui/ui-components/primitives/Input";
 import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
+import { createPropertyPrimaryUpdateAction, type PropertyMutationTarget } from "../property-mutation-target";
 
 // =============================================================================
 // Types
@@ -18,6 +19,7 @@ import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
 
 type TransformSectionProps = {
   readonly node: FigDesignNode;
+  readonly target: PropertyMutationTarget;
   readonly dispatch: (action: FigEditorAction) => void;
 };
 
@@ -28,19 +30,20 @@ type TransformSectionProps = {
 /**
  * Transform property editor section.
  */
-export function TransformSection({ node, dispatch }: TransformSectionProps) {
+export function TransformSection({ node, target, dispatch }: TransformSectionProps) {
   const { x: preRotX, y: preRotY } = computePreRotationTopLeft(node.transform, node.size.x, node.size.y);
   const x = Math.round(preRotX * 100) / 100;
   const y = Math.round(preRotY * 100) / 100;
   const w = Math.round(node.size.x * 100) / 100;
   const h = Math.round(node.size.y * 100) / 100;
   const rotation = Math.round(extractRotationDeg(node.transform) * 100) / 100;
+  const originX = Math.round((node.transformOrigin?.x ?? node.size.x / 2) * 100) / 100;
+  const originY = Math.round((node.transformOrigin?.y ?? node.size.y / 2) * 100) / 100;
 
   const updateTransform = useCallback(
-    (field: "x" | "y" | "w" | "h" | "rotation", value: number) => {
-      dispatch({
-        type: "UPDATE_NODE",
-        nodeId: node.id,
+    (field: "x" | "y" | "w" | "h" | "rotation" | "originX" | "originY", value: number) => {
+      dispatch(createPropertyPrimaryUpdateAction({
+        target,
         updater: (n) => {
           switch (field) {
             case "x":
@@ -74,15 +77,19 @@ export function TransformSection({ node, dispatch }: TransformSectionProps) {
             case "rotation":
               return {
                 ...n,
-                transform: buildRotatedTransform({ currentTransform: n.transform, width: n.size.x, height: n.size.y, newAngleDeg: value }),
+                transform: buildRotatedTransform({ currentTransform: n.transform, width: n.size.x, height: n.size.y, newAngleDeg: value, origin: n.transformOrigin }),
               };
+            case "originX":
+              return { ...n, transformOrigin: { x: value, y: n.transformOrigin?.y ?? n.size.y / 2 } };
+            case "originY":
+              return { ...n, transformOrigin: { x: n.transformOrigin?.x ?? n.size.x / 2, y: value } };
             default:
               return n;
           }
         },
-      });
+      }));
     },
-    [dispatch, node.id],
+    [dispatch, target],
   );
 
   return (
@@ -91,6 +98,7 @@ export function TransformSection({ node, dispatch }: TransformSectionProps) {
         <FieldGroup label="X" inline labelWidth={16}>
           <Input
             type="number"
+            ariaLabel="X"
             value={x}
             onChange={(v) => updateTransform("x", v as number)}
           />
@@ -98,6 +106,7 @@ export function TransformSection({ node, dispatch }: TransformSectionProps) {
         <FieldGroup label="Y" inline labelWidth={16}>
           <Input
             type="number"
+            ariaLabel="Y"
             value={y}
             onChange={(v) => updateTransform("y", v as number)}
           />
@@ -107,6 +116,7 @@ export function TransformSection({ node, dispatch }: TransformSectionProps) {
         <FieldGroup label="W" inline labelWidth={16}>
           <Input
             type="number"
+            ariaLabel="Width"
             value={w}
             onChange={(v) => updateTransform("w", v as number)}
           />
@@ -114,6 +124,7 @@ export function TransformSection({ node, dispatch }: TransformSectionProps) {
         <FieldGroup label="H" inline labelWidth={16}>
           <Input
             type="number"
+            ariaLabel="Height"
             value={h}
             onChange={(v) => updateTransform("h", v as number)}
           />
@@ -123,9 +134,28 @@ export function TransformSection({ node, dispatch }: TransformSectionProps) {
         <FieldGroup label="R" inline labelWidth={16}>
           <Input
             type="number"
+            ariaLabel="Rotation"
             value={rotation}
             onChange={(v) => updateTransform("rotation", v as number)}
             suffix="°"
+          />
+        </FieldGroup>
+      </FieldRow>
+      <FieldRow>
+        <FieldGroup label="OX" inline labelWidth={24}>
+          <Input
+            type="number"
+            ariaLabel="Origin X"
+            value={originX}
+            onChange={(v) => updateTransform("originX", v as number)}
+          />
+        </FieldGroup>
+        <FieldGroup label="OY" inline labelWidth={24}>
+          <Input
+            type="number"
+            ariaLabel="Origin Y"
+            value={originY}
+            onChange={(v) => updateTransform("originY", v as number)}
           />
         </FieldGroup>
       </FieldRow>

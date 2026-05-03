@@ -2,10 +2,9 @@
  * @file Rotation SoT for Figma nodes
  *
  * Figma's rotation model:
- * - The rotation origin is always the center of the node's bounding box.
- * - When rotating, the transform's translation (m02, m12) is adjusted so
- *   the center stays at the same world-space position.
- * - This is not configurable — all rotations use center origin.
+ * - Rotation defaults to the center of the node's bounding box.
+ * - The editor may carry an explicit local transform origin when the user
+ *   changes it; all rotation writers consume that same origin.
  *
  * This module provides the single source of truth for rotation-related
  * calculations. All code that reads or writes rotation must use these
@@ -71,6 +70,15 @@ type BuildRotatedTransformOptions = {
   readonly width: number;
   readonly height: number;
   readonly newAngleDeg: number;
+  readonly origin?: { readonly x: number; readonly y: number };
+};
+
+type BuildRotatedTransformAtWorldCenterOptions = {
+  readonly width: number;
+  readonly height: number;
+  readonly newAngleDeg: number;
+  readonly centerX: number;
+  readonly centerY: number;
 };
 
 /**
@@ -82,14 +90,26 @@ type BuildRotatedTransformOptions = {
  * @returns New transform matrix with adjusted position
  */
 export function buildRotatedTransform(
-  { currentTransform, width, height, newAngleDeg }: BuildRotatedTransformOptions,
+  { currentTransform, width, height, newAngleDeg, origin }: BuildRotatedTransformOptions,
+): FigMatrix {
+  const localOrigin = origin ?? { x: width / 2, y: height / 2 };
+  const centerX = currentTransform.m00 * localOrigin.x + currentTransform.m01 * localOrigin.y + currentTransform.m02;
+  const centerY = currentTransform.m10 * localOrigin.x + currentTransform.m11 * localOrigin.y + currentTransform.m12;
+  return buildRotatedTransformAtWorldOrigin({ origin: localOrigin, newAngleDeg, centerX, centerY });
+}
+
+/**
+ * Build a new transform matrix with the specified rotation angle around an
+ * explicit world-space center.
+ *
+ * This is used for bounding-box/group rotation where each node's center moves
+ * around the combined selection center before the node's own rotation changes.
+ */
+export function buildRotatedTransformAtWorldCenter(
+  { width, height, newAngleDeg, centerX, centerY }: BuildRotatedTransformAtWorldCenterOptions,
 ): FigMatrix {
   const halfW = width / 2;
   const halfH = height / 2;
-
-  // Current center in world space
-  const { cx, cy } = computeWorldCenter(currentTransform, width, height);
-
   // New rotation
   const radians = (newAngleDeg * Math.PI) / 180;
   const cos = Math.cos(radians);
@@ -102,9 +122,34 @@ export function buildRotatedTransform(
   return {
     m00: cos,
     m01: -sin,
-    m02: cx - cos * halfW + sin * halfH,
+    m02: centerX - cos * halfW + sin * halfH,
     m10: sin,
     m11: cos,
-    m12: cy - sin * halfW - cos * halfH,
+    m12: centerY - sin * halfW - cos * halfH,
+  };
+}
+
+/** Build a rotated matrix while pinning an explicit local origin to a world point. */
+export function buildRotatedTransformAtWorldOrigin({
+  origin,
+  newAngleDeg,
+  centerX,
+  centerY,
+}: {
+  readonly origin: { readonly x: number; readonly y: number };
+  readonly newAngleDeg: number;
+  readonly centerX: number;
+  readonly centerY: number;
+}): FigMatrix {
+  const radians = (newAngleDeg * Math.PI) / 180;
+  const cos = Math.cos(radians);
+  const sin = Math.sin(radians);
+  return {
+    m00: cos,
+    m01: -sin,
+    m02: centerX - cos * origin.x + sin * origin.y,
+    m10: sin,
+    m11: cos,
+    m12: centerY - sin * origin.x - cos * origin.y,
   };
 }

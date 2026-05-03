@@ -10,10 +10,11 @@ import type { DragState } from "@aurochs-ui/editor-core/drag-state";
 import type { SimpleBounds } from "@aurochs-ui/editor-core/geometry";
 import { calculateResizedDimensions } from "@aurochs-ui/editor-core/geometry";
 import { normalizeAngle } from "@aurochs-ui/editor-core/geometry";
+import { rotateShapeAroundCenter } from "@aurochs-ui/editor-core/geometry";
 import { pushHistory } from "@aurochs-ui/editor-core/history";
 import { updateNode } from "@aurochs-builder/fig/node-ops";
 import type { FigDesignDocument, FigNodeId, FigPageId } from "@aurochs/fig/domain";
-import { buildRotatedTransform } from "../rotation";
+import { buildRotatedTransform, buildRotatedTransformAtWorldCenter } from "../rotation";
 import type { HandlerMap } from "./handler-types";
 import { getAbsoluteNodeBounds } from "../node-geometry";
 
@@ -400,15 +401,46 @@ function applyDragToDocument({ doc, pageId, drag }: ApplyDragOptions): FigDesign
   }
 
   if (drag.type === "rotate") {
-    const { previewAngleDelta, initialRotationsMap } = drag;
+    const { previewAngleDelta, initialRotationsMap, initialBoundsMap, centerX, centerY } = drag;
     return drag.shapeIds.reduce((acc, nodeId) => {
       const initialRotation = initialRotationsMap.get(nodeId);
-      if (initialRotation === undefined) { return acc; }
-      const newAngle = normalizeAngle(initialRotation + previewAngleDelta);
-      return updateNode({ doc: acc, pageId, nodeId, updater: (node) => ({
-        ...node,
-        transform: buildRotatedTransform({ currentTransform: node.transform, width: node.size.x, height: node.size.y, newAngleDeg: newAngle }),
-      }) });
+      const initialBounds = initialBoundsMap.get(nodeId);
+      if (initialRotation === undefined || !initialBounds) { return acc; }
+      const rotated = rotateShapeAroundCenter({
+        shapeX: initialBounds.x,
+        shapeY: initialBounds.y,
+        shapeWidth: initialBounds.width,
+        shapeHeight: initialBounds.height,
+        initialRotation,
+        combinedCenterX: centerX,
+        combinedCenterY: centerY,
+        deltaAngleDeg: previewAngleDelta,
+      });
+      return updateNode({ doc: acc, pageId, nodeId, updater: (node) => {
+        const newAngleDeg = normalizeAngle(rotated.rotation);
+        if (drag.shapeIds.length === 1) {
+          return {
+            ...node,
+            transform: buildRotatedTransform({
+              currentTransform: node.transform,
+              width: node.size.x,
+              height: node.size.y,
+              newAngleDeg,
+              origin: node.transformOrigin,
+            }),
+          };
+        }
+        return {
+          ...node,
+          transform: buildRotatedTransformAtWorldCenter({
+            width: node.size.x,
+            height: node.size.y,
+            newAngleDeg,
+            centerX: rotated.x + initialBounds.width / 2,
+            centerY: rotated.y + initialBounds.height / 2,
+          }),
+        };
+      } });
     }, doc);
   }
 

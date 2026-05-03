@@ -13,6 +13,7 @@ export type SelectProps<T extends string = string> = {
   readonly onChange: (value: T) => void;
   readonly options: readonly SelectOption<T>[];
   readonly placeholder?: string;
+  readonly ariaLabel?: string;
   readonly disabled?: boolean;
   readonly className?: string;
   readonly style?: CSSProperties;
@@ -44,6 +45,7 @@ export function Select<T extends string = string>({
   onChange,
   options,
   placeholder,
+  ariaLabel,
   disabled,
   className,
   style,
@@ -59,6 +61,7 @@ export function Select<T extends string = string>({
     <select
       value={value}
       onChange={handleChange}
+      aria-label={ariaLabel}
       disabled={disabled}
       className={className}
       style={{ ...selectStyle, ...style }}

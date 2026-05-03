@@ -9,10 +9,10 @@
  * fields and ordering that the high-level model doesn't explicitly track.
  */
 
-import type { FigNode, FigGuid, FigParentIndex, KiwiEnumValue } from "@aurochs/fig/types";
+import type { FigNode, FigGuid, FigParentIndex, KiwiEnumValue, FigComponentPropValue } from "@aurochs/fig/types";
 import type { LoadedFigFile } from "@aurochs/fig/roundtrip";
 import { guidToString, type FigBlob } from "@aurochs/fig/parser";
-import type { FigDesignDocument, FigDesignNode, FigPage } from "@aurochs/fig/domain";
+import type { ComponentPropertyValue, FigDesignDocument, FigDesignNode, FigPage } from "@aurochs/fig/domain";
 import { parseId } from "@aurochs/fig/domain";
 import type { FigNodeId, FigPageId } from "@aurochs/fig/domain";
 
@@ -39,6 +39,41 @@ function nodeIdToGuid(id: FigNodeId | FigPageId): FigGuid {
 
 function createParentIndex(parentId: FigNodeId | FigPageId, position: string): FigParentIndex {
   return { guid: nodeIdToGuid(parentId), position };
+}
+
+const COMPONENT_PROP_TYPE_VALUES = {
+  BOOL: 0,
+  TEXT: 1,
+  COLOR: 2,
+  INSTANCE_SWAP: 3,
+  VARIANT: 4,
+  NUMBER: 5,
+  IMAGE: 6,
+  SLOT: 7,
+} as const;
+
+const COMPONENT_PROP_NODE_FIELD_VALUES = {
+  VISIBLE: 0,
+  TEXT_DATA: 1,
+  OVERRIDDEN_SYMBOL_ID: 2,
+  INHERIT_FILL_STYLE_ID: 3,
+  SLOT_CONTENT_ID: 4,
+} as const;
+
+function componentPropertyValueToFig(value: ComponentPropertyValue): FigComponentPropValue {
+  if (value.boolValue !== undefined) {
+    return { boolValue: value.boolValue };
+  }
+  if (value.textValue !== undefined) {
+    return { textValue: { characters: value.textValue.characters } };
+  }
+  if (value.referenceValue !== undefined) {
+    return { guidValue: nodeIdToGuid(value.referenceValue) };
+  }
+  if (value.numberValue !== undefined) {
+    return { numberValue: value.numberValue };
+  }
+  return {};
 }
 
 // =============================================================================
@@ -85,9 +120,11 @@ function designNodeToFigNode(
   base.opacity = node.opacity;
   base.transform = node.transform;
   base.size = node.size;
+  if (node.transformOrigin !== undefined) { base.transformOrigin = node.transformOrigin; }
   base.fillPaints = node.fills;
   base.strokePaints = node.strokes;
   base.strokeWeight = node.strokeWeight;
+  if (node.exportSettings !== undefined) { base.exportSettings = node.exportSettings; }
 
   if (node.strokeAlign !== undefined) { base.strokeAlign = node.strokeAlign; }
   if (node.strokeJoin !== undefined) { base.strokeJoin = node.strokeJoin; }
@@ -96,6 +133,7 @@ function designNodeToFigNode(
   if (node.rectangleCornerRadii !== undefined) { base.rectangleCornerRadii = node.rectangleCornerRadii; }
   if (node.effects.length > 0) { base.effects = node.effects; }
   if (node.clipsContent !== undefined) { base.clipsContent = node.clipsContent; }
+  if (node.sectionContentsHidden !== undefined) { base.sectionContentsHidden = node.sectionContentsHidden; }
 
   // AutoLayout
   if (node.autoLayout) {
@@ -117,6 +155,8 @@ function designNodeToFigNode(
     if (node.layoutConstraints.stackCounterSizing !== undefined) { base.stackCounterSizing = node.layoutConstraints.stackCounterSizing; }
     if (node.layoutConstraints.horizontalConstraint !== undefined) { base.horizontalConstraint = node.layoutConstraints.horizontalConstraint; }
     if (node.layoutConstraints.verticalConstraint !== undefined) { base.verticalConstraint = node.layoutConstraints.verticalConstraint; }
+    if (node.layoutConstraints.stackChildAlignSelf !== undefined) { base.stackChildAlignSelf = node.layoutConstraints.stackChildAlignSelf; }
+    if (node.layoutConstraints.stackChildPrimaryGrow !== undefined) { base.stackChildPrimaryGrow = node.layoutConstraints.stackChildPrimaryGrow; }
   }
 
   // Text
@@ -157,6 +197,36 @@ function designNodeToFigNode(
   // Component/instance
   if (node.symbolId !== undefined) { base.symbolID = node.symbolId; }
   if (node.overrides !== undefined) { base.symbolOverrides = node.overrides; }
+  if (node.componentPropertyDefs !== undefined) {
+    base.componentPropDefs = node.componentPropertyDefs.map((def) => ({
+      id: nodeIdToGuid(def.id),
+      name: def.name,
+      type: { value: COMPONENT_PROP_TYPE_VALUES[def.type], name: def.type },
+      initialValue: def.initialValue ? componentPropertyValueToFig(def.initialValue) : undefined,
+      sortPosition: def.sortPosition,
+    }));
+  }
+  if (node.componentPropertyRefs !== undefined) {
+    base.componentPropRefs = node.componentPropertyRefs.map((ref) => ({
+      defID: nodeIdToGuid(ref.defId),
+      componentPropNodeField: {
+        value: COMPONENT_PROP_NODE_FIELD_VALUES[ref.nodeField],
+        name: ref.nodeField,
+      },
+    }));
+  }
+  if (node.componentPropertyAssignments !== undefined) {
+    base.componentPropAssignments = node.componentPropertyAssignments.map((assignment) => ({
+      defID: nodeIdToGuid(assignment.defId),
+      value: componentPropertyValueToFig(assignment.value),
+    }));
+  }
+  if (node.variantPropSpecs !== undefined) {
+    base.variantPropSpecs = node.variantPropSpecs.map((spec) => ({
+      propDefId: nodeIdToGuid(spec.propDefId),
+      value: spec.value,
+    }));
+  }
 
   // Boolean operation
   if (node.booleanOperation !== undefined) { base.booleanOperation = node.booleanOperation; }

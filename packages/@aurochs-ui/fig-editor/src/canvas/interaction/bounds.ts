@@ -31,6 +31,45 @@ export type NodeBounds = {
   readonly rotation: number;
 };
 
+/** Axis-aligned page-space bounds. */
+export type BoundsLike = {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+};
+
+/** Page-space point. */
+export type PointLike = {
+  readonly x: number;
+  readonly y: number;
+};
+
+/** Return whether a point is inside or on the edge of an axis-aligned bounds. */
+export function containsPointInBounds(bounds: BoundsLike, point: PointLike): boolean {
+  return (
+    point.x >= bounds.x &&
+    point.y >= bounds.y &&
+    point.x <= bounds.x + bounds.width &&
+    point.y <= bounds.y + bounds.height
+  );
+}
+
+/** Return the topmost/deepest bounds containing a point, optionally filtered. */
+export function findDeepestBoundsAtPoint<T extends BoundsLike>(
+  boundsList: readonly T[],
+  point: PointLike,
+  predicate: (bounds: T) => boolean = () => true,
+): T | undefined {
+  for (let index = boundsList.length - 1; index >= 0; index -= 1) {
+    const bounds = boundsList[index]!;
+    if (containsPointInBounds(bounds, point) && predicate(bounds)) {
+      return bounds;
+    }
+  }
+  return undefined;
+}
+
 /**
  * Identity matrix — no transformation.
  */

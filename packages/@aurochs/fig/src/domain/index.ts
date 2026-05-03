@@ -30,6 +30,7 @@ export type {
   ComponentPropertyNodeField,
   ComponentPropertyRef,
   ComponentPropertyAssignment,
+  VariantPropSpec,
   FigStyleRegistry,
   FigDesignBlob,
 } from "./document";

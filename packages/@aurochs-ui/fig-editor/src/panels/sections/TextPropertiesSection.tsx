@@ -35,6 +35,7 @@ import {
   makeAutoResizeEnum,
   type FigTextAutoResize,
 } from "./fig-text-adapter";
+import { createPropertyPrimaryUpdateAction, type PropertyMutationTarget } from "../property-mutation-target";
 
 // =============================================================================
 // Feature flags — fig supports a subset of text formatting
@@ -137,6 +138,7 @@ const alignButtonStyle = (active: boolean): CSSProperties => ({
 
 type TextPropertiesSectionProps = {
   readonly node: FigDesignNode;
+  readonly target: PropertyMutationTarget;
   readonly dispatch: (action: FigEditorAction) => void;
 };
 
@@ -150,7 +152,7 @@ type TextPropertiesSectionProps = {
 
 
 /** Panel section for editing text formatting and layout properties of a Figma text node. */
-export function TextPropertiesSection({ node, dispatch }: TextPropertiesSectionProps) {
+export function TextPropertiesSection({ node, target, dispatch }: TextPropertiesSectionProps) {
   const textData = node.textData;
   if (!textData) {
     return null;
@@ -158,16 +160,15 @@ export function TextPropertiesSection({ node, dispatch }: TextPropertiesSectionP
 
   const updateTextData = useCallback(
     (updater: (td: TextData) => TextData) => {
-      dispatch({
-        type: "UPDATE_NODE",
-        nodeId: node.id,
+      dispatch(createPropertyPrimaryUpdateAction({
+        target,
         updater: (n) => {
           if (!n.textData) {return n;}
           return { ...n, textData: updater(n.textData) };
         },
-      });
+      }));
     },
-    [dispatch, node.id],
+    [dispatch, target],
   );
 
   // --- Shared editor: text run formatting ---

@@ -8,9 +8,11 @@ import type { FigDesignNode } from "@aurochs/fig/domain";
 import type { FigEditorAction } from "../../context/fig-editor/types";
 import { Input } from "@aurochs-ui/ui-components/primitives/Input";
 import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
+import { createPropertyTargetUpdateAction, type PropertyMutationTarget } from "../property-mutation-target";
 
 type CornerRadiusSectionProps = {
   readonly node: FigDesignNode;
+  readonly target: PropertyMutationTarget;
   readonly dispatch: (action: FigEditorAction) => void;
 };
 
@@ -24,7 +26,7 @@ const CORNER_RADIUS_TYPES = new Set([
 
 
 /** Panel section for editing corner radius properties of a Figma node. */
-export function CornerRadiusSection({ node, dispatch }: CornerRadiusSectionProps) {
+export function CornerRadiusSection({ node, target, dispatch }: CornerRadiusSectionProps) {
   if (!CORNER_RADIUS_TYPES.has(node.type)) {
     return null;
   }
@@ -39,52 +41,48 @@ export function CornerRadiusSection({ node, dispatch }: CornerRadiusSectionProps
         <FieldRow>
           <FieldGroup label="TL" inline labelWidth={20}>
             <Input type="number" value={radii[0]} min={0} step={1} width={56}
-              onChange={(v) => dispatch({
-                type: "UPDATE_NODE",
-                nodeId: node.id,
+              onChange={(v) => dispatch(createPropertyTargetUpdateAction({
+                target,
                 updater: (n) => ({
                   ...n,
                   rectangleCornerRadii: [v as number, radii[1], radii[2], radii[3]],
                 }),
-              })}
+              }))}
             />
           </FieldGroup>
           <FieldGroup label="TR" inline labelWidth={20}>
             <Input type="number" value={radii[1]} min={0} step={1} width={56}
-              onChange={(v) => dispatch({
-                type: "UPDATE_NODE",
-                nodeId: node.id,
+              onChange={(v) => dispatch(createPropertyTargetUpdateAction({
+                target,
                 updater: (n) => ({
                   ...n,
                   rectangleCornerRadii: [radii[0], v as number, radii[2], radii[3]],
                 }),
-              })}
+              }))}
             />
           </FieldGroup>
         </FieldRow>
         <FieldRow>
           <FieldGroup label="BL" inline labelWidth={20}>
             <Input type="number" value={radii[3]} min={0} step={1} width={56}
-              onChange={(v) => dispatch({
-                type: "UPDATE_NODE",
-                nodeId: node.id,
+              onChange={(v) => dispatch(createPropertyTargetUpdateAction({
+                target,
                 updater: (n) => ({
                   ...n,
                   rectangleCornerRadii: [radii[0], radii[1], radii[2], v as number],
                 }),
-              })}
+              }))}
             />
           </FieldGroup>
           <FieldGroup label="BR" inline labelWidth={20}>
             <Input type="number" value={radii[2]} min={0} step={1} width={56}
-              onChange={(v) => dispatch({
-                type: "UPDATE_NODE",
-                nodeId: node.id,
+              onChange={(v) => dispatch(createPropertyTargetUpdateAction({
+                target,
                 updater: (n) => ({
                   ...n,
                   rectangleCornerRadii: [radii[0], radii[1], v as number, radii[3]],
                 }),
-              })}
+              }))}
             />
           </FieldGroup>
         </FieldRow>
@@ -101,11 +99,10 @@ export function CornerRadiusSection({ node, dispatch }: CornerRadiusSectionProps
           min={0}
           step={1}
           onChange={(v) => {
-            dispatch({
-              type: "UPDATE_NODE",
-              nodeId: node.id,
+            dispatch(createPropertyTargetUpdateAction({
+              target,
               updater: (n) => ({ ...n, cornerRadius: v as number }),
-            });
+            }));
           }}
           width={80}
         />

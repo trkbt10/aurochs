@@ -11,6 +11,7 @@
 import type { FigDesignNode, FigNodeId } from "@aurochs/fig/domain";
 import type { FigMatrix } from "@aurochs/fig/types";
 import {
+  containsPointInBounds,
   getNodeBoundsForCanvas,
   getPageNodeBounds,
   flattenAllNodeBounds,
@@ -65,6 +66,23 @@ function makeNode(
 // =============================================================================
 // Scenario 1: Top-level bounds
 // =============================================================================
+
+describe("containsPointInBounds", () => {
+  it("returns true for points inside or on the edge", () => {
+    const bounds = { x: 10, y: 20, width: 30, height: 40 };
+
+    expect(containsPointInBounds(bounds, { x: 10, y: 20 })).toBe(true);
+    expect(containsPointInBounds(bounds, { x: 25, y: 35 })).toBe(true);
+    expect(containsPointInBounds(bounds, { x: 40, y: 60 })).toBe(true);
+  });
+
+  it("returns false for points outside", () => {
+    const bounds = { x: 10, y: 20, width: 30, height: 40 };
+
+    expect(containsPointInBounds(bounds, { x: 9.9, y: 20 })).toBe(false);
+    expect(containsPointInBounds(bounds, { x: 10, y: 60.1 })).toBe(false);
+  });
+});
 
 describe("getNodeBoundsForCanvas", () => {
   it("returns position from transform and size from node", () => {

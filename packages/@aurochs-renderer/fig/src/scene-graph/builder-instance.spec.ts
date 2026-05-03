@@ -273,6 +273,106 @@ describe("INSTANCE resolution — self-overrides", () => {
       expect(frame.fills[0].color.b).toBe(1); // blue
     }
   });
+
+  it("applies opacity override on the instance frame itself", () => {
+    const symbol = makeNode({
+      id: "0:1",
+      type: "COMPONENT",
+      fills: [],
+      children: [],
+      opacity: 1,
+    });
+
+    const instance = makeNode({
+      id: "0:2",
+      type: "INSTANCE",
+      symbolId: nid("0:1"),
+      overrides: [
+        { guidPath: gp("0:1"), opacity: 0.5 },
+      ],
+    });
+
+    const symbolMap = new Map([[nid("0:1"), symbol]]);
+    const sg = buildWithSymbols([instance], symbolMap);
+
+    const frame = sg.root.children[0] as FrameNode;
+    expect(frame.opacity).toBe(0.5);
+  });
+
+  it("does not route self opacity override into nested instance children", () => {
+    const nestedSymbol = makeNode({
+      id: "0:20",
+      type: "COMPONENT",
+      fills: [BLUE_FILL],
+      children: [],
+    });
+    const nestedInstance = makeNode({
+      id: "0:10",
+      type: "INSTANCE",
+      symbolId: nid("0:20"),
+      fills: [],
+    });
+    const symbol = makeNode({
+      id: "0:1",
+      type: "COMPONENT",
+      fills: [],
+      children: [nestedInstance],
+      opacity: 1,
+    });
+
+    const instance = makeNode({
+      id: "0:2",
+      type: "INSTANCE",
+      symbolId: nid("0:1"),
+      overrides: [
+        { guidPath: gp("0:1"), opacity: 0.5 },
+      ],
+    });
+
+    const symbolMap = new Map([[nid("0:1"), symbol], [nid("0:20"), nestedSymbol]]);
+    const sg = buildWithSymbols([instance], symbolMap);
+
+    const frame = sg.root.children[0] as FrameNode;
+    expect(frame.opacity).toBe(0.5);
+    expect(frame.children.length).toBe(1);
+  });
+
+  it("applies editor-authored self override addressed to the instance id without descending into component children", () => {
+    const iconSymbol = makeNode({
+      id: "21:1",
+      type: "COMPONENT",
+      fills: [GREEN_FILL],
+      children: [],
+    });
+    const iconInstance = makeNode({
+      id: "20:4",
+      type: "INSTANCE",
+      symbolId: nid("21:1"),
+      fills: [],
+    });
+    const symbol = makeNode({
+      id: "20:1",
+      type: "COMPONENT",
+      fills: [],
+      children: [iconInstance],
+      opacity: 1,
+    });
+    const instance = makeNode({
+      id: "22:1",
+      type: "INSTANCE",
+      symbolId: nid("20:1"),
+      overrides: [
+        { guidPath: gp("22:1"), opacity: 0.5 },
+      ],
+    });
+
+    const symbolMap = new Map([[nid("20:1"), symbol], [nid("21:1"), iconSymbol]]);
+    const sg = buildWithSymbols([instance], symbolMap);
+
+    const frame = sg.root.children[0] as FrameNode;
+    expect(frame.opacity).toBe(0.5);
+    expect(frame.children).toHaveLength(1);
+  });
 });
 
 // =============================================================================

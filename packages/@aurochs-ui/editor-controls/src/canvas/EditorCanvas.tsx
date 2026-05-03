@@ -102,10 +102,13 @@ export type EditorCanvasProps = {
   // --- Rulers ---
   readonly showRulers?: boolean;
   readonly rulerThickness?: number;
+  readonly rulerCoordinateMode?: "bounded" | "unbounded";
 
   // --- Content ---
   /** React children rendered inside the viewport transform group (e.g., SlideRenderer). */
   readonly children?: ReactNode;
+  /** Page-coordinate interaction overlay rendered above item hit areas and below selection chrome. */
+  readonly interactionOverlay?: ReactNode;
   /** HTML/canvas content rendered behind the SVG overlay in the same page-coordinate viewport. */
   readonly viewportContent?: ReactNode;
   /** Embedded font CSS (@font-face declarations) injected as <style> in SVG. */
@@ -126,6 +129,8 @@ export type EditorCanvasProps = {
   readonly isInteracting?: boolean;
   /** Whether text editing is active (hides selection handles). */
   readonly isTextEditing?: boolean;
+  /** Whether selection chrome may receive pointer interactions. */
+  readonly selectionInteractionEnabled?: boolean;
   /** Whether to show rotate handles on selection boxes (default: false). */
   readonly showRotateHandle?: boolean;
 
@@ -242,7 +247,9 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
     clampFn,
     showRulers = true,
     rulerThickness: rulerThicknessProp = DEFAULT_RULER_THICKNESS,
+    rulerCoordinateMode = "bounded",
     children,
+    interactionOverlay,
     viewportContent,
     embeddedFontCss,
     itemBounds,
@@ -251,6 +258,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
     drag,
     isInteracting = false,
     isTextEditing = false,
+    selectionInteractionEnabled = true,
     showRotateHandle = false,
     onItemPointerDown,
     onItemClick,
@@ -689,6 +697,9 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
     [cursor, isPanning, isInteracting],
   );
 
+  const canInteractWithSelectionChrome = selectionInteractionEnabled && !isTextEditing;
+  const selectionChromeStyle: CSSProperties = canInteractWithSelectionChrome ? selectionGroupStyle : inertSelectionGroupStyle;
+
   return (
     <CanvasViewportContext.Provider value={viewportContextValue}>
     <div style={outerContainerStyle} onContextMenu={onContextMenu}>
@@ -745,7 +756,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
             ))}
 
             {/* Selection boxes (computed from selectedIds + itemBounds + drag) */}
-            <g style={selectionGroupStyle}>
+            <g style={selectionChromeStyle}>
               {selectedBounds.map((bounds) => (
                 <SelectionBox
                   key={bounds.id}
@@ -755,8 +766,8 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
                   height={bounds.height}
                   rotation={bounds.rotation}
                   variant={hasMultiSelection ? "primary" : primaryId === bounds.id ? "primary" : "secondary"}
-                  showResizeHandles={!isTextEditing && !hasMultiSelection && primaryId === bounds.id}
-                  showRotateHandle={!isTextEditing && showRotateHandle && !hasMultiSelection && primaryId === bounds.id}
+                  showResizeHandles={canInteractWithSelectionChrome && !hasMultiSelection && primaryId === bounds.id}
+                  showRotateHandle={canInteractWithSelectionChrome && showRotateHandle && !hasMultiSelection && primaryId === bounds.id}
                   viewportScale={viewport.scale}
                   onResizeStart={handleResizeStart}
                   onRotateStart={handleRotateStart}
@@ -771,7 +782,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
                   width={multiSelectionBounds.width}
                   height={multiSelectionBounds.height}
                   variant="multi"
-                  showRotateHandle={showRotateHandle}
+                  showRotateHandle={canInteractWithSelectionChrome && showRotateHandle}
                   viewportScale={viewport.scale}
                   onResizeStart={handleResizeStart}
                   onRotateStart={handleRotateStart}
@@ -794,6 +805,8 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
               />
             )}
 
+            {interactionOverlay}
+
             {/* Canvas boundary is part of canvasBackground — no separate rendering here */}
           </g>
         </g>
@@ -805,6 +818,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
           slideSize={slideSize}
           rulerThickness={rulerThicknessProp}
           visible={showRulers}
+          coordinateMode={rulerCoordinateMode}
         />
       </svg>
 
@@ -839,6 +853,7 @@ const outerContainerStyle: CSSProperties = {
 
 const hitAreaStyle: CSSProperties = { cursor: "pointer" };
 const selectionGroupStyle: CSSProperties = { pointerEvents: "auto" };
+const inertSelectionGroupStyle: CSSProperties = { pointerEvents: "none" };
 const viewportContentStyle: CSSProperties = {
   position: "absolute",
   transformOrigin: "0 0",

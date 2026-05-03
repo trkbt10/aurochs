@@ -19,9 +19,11 @@ import { Select } from "@aurochs-ui/ui-components/primitives/Select";
 import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
 import type { SelectOption } from "@aurochs-ui/ui-components/types";
 import type { FigEditorAction } from "../../context/fig-editor/types";
+import { createPropertyTargetUpdateAction, type PropertyMutationTarget } from "../property-mutation-target";
 
 type LayoutConstraintsSectionProps = {
   readonly node: FigDesignNode;
+  readonly target: PropertyMutationTarget;
   readonly dispatch: (action: FigEditorAction) => void;
 };
 
@@ -81,21 +83,20 @@ function withDefaults(constraints: LayoutConstraints | undefined): EditableLayou
 }
 
 /** Edit child sizing/position constraints consumed by AutoLayout and fixed frames. */
-export function LayoutConstraintsSection({ node, dispatch }: LayoutConstraintsSectionProps) {
+export function LayoutConstraintsSection({ node, target, dispatch }: LayoutConstraintsSectionProps) {
   const constraints = withDefaults(node.layoutConstraints);
 
   const updateConstraints = useCallback(
     (updater: (current: EditableLayoutConstraints) => LayoutConstraints) => {
-      dispatch({
-        type: "UPDATE_NODE",
-        nodeId: node.id,
+      dispatch(createPropertyTargetUpdateAction({
+        target,
         updater: (current) => ({
           ...current,
           layoutConstraints: updater(withDefaults(current.layoutConstraints)),
         }),
-      });
+      }));
     },
-    [dispatch, node.id],
+    [dispatch, target],
   );
 
   const updatePositioning = useCallback((value: StackPositioning) => {
@@ -152,31 +153,31 @@ export function LayoutConstraintsSection({ node, dispatch }: LayoutConstraintsSe
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       <FieldGroup label="Position">
-        <Select value={positioning} onChange={updatePositioning} options={positioningOptions} />
+        <Select value={positioning} onChange={updatePositioning} options={positioningOptions} ariaLabel="Layout position" />
       </FieldGroup>
       <FieldRow>
         <FieldGroup label="Primary fit" inline labelWidth={70}>
-          <Select value={enumName(constraints.stackPrimarySizing, "FIXED")} onChange={updatePrimarySizing} options={sizingOptions} />
+          <Select value={enumName(constraints.stackPrimarySizing, "FIXED")} onChange={updatePrimarySizing} options={sizingOptions} ariaLabel="Layout primary fit" />
         </FieldGroup>
         <FieldGroup label="Counter fit" inline labelWidth={70}>
-          <Select value={enumName(constraints.stackCounterSizing, "FIXED")} onChange={updateCounterSizing} options={sizingOptions} />
+          <Select value={enumName(constraints.stackCounterSizing, "FIXED")} onChange={updateCounterSizing} options={sizingOptions} ariaLabel="Layout counter fit" />
         </FieldGroup>
       </FieldRow>
       <FieldRow>
         <FieldGroup label="Align self" inline labelWidth={70}>
-          <Select value={enumName(constraints.stackChildAlignSelf, "MIN" as StackAlign)} onChange={updateAlignSelf} options={alignSelfOptions} />
+          <Select value={enumName(constraints.stackChildAlignSelf, "MIN" as StackAlign)} onChange={updateAlignSelf} options={alignSelfOptions} ariaLabel="Layout align self" />
         </FieldGroup>
         <FieldGroup label="Grow" inline labelWidth={44}>
-          <Input type="number" value={constraints.stackChildPrimaryGrow} onChange={(v) => updateGrow(v as number)} />
+          <Input type="number" ariaLabel="Layout grow" value={constraints.stackChildPrimaryGrow} onChange={(v) => updateGrow(v as number)} />
         </FieldGroup>
       </FieldRow>
       {positioning === "ABSOLUTE" && (
         <FieldRow>
           <FieldGroup label="Horizontal" inline labelWidth={70}>
-            <Select value={enumName(constraints.horizontalConstraint, "MIN")} onChange={updateHorizontalConstraint} options={constraintOptions} />
+            <Select value={enumName(constraints.horizontalConstraint, "MIN")} onChange={updateHorizontalConstraint} options={constraintOptions} ariaLabel="Layout horizontal constraint" />
           </FieldGroup>
           <FieldGroup label="Vertical" inline labelWidth={70}>
-            <Select value={enumName(constraints.verticalConstraint, "MIN")} onChange={updateVerticalConstraint} options={constraintOptions} />
+            <Select value={enumName(constraints.verticalConstraint, "MIN")} onChange={updateVerticalConstraint} options={constraintOptions} ariaLabel="Layout vertical constraint" />
           </FieldGroup>
         </FieldRow>
       )}

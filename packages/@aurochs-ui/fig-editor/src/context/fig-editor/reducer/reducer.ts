@@ -21,6 +21,7 @@ import { HISTORY_HANDLERS } from "./history-handlers";
 import { CLIPBOARD_HANDLERS } from "./clipboard-handlers";
 import { CREATION_HANDLERS } from "./creation-handlers";
 import { TEXT_EDIT_HANDLERS } from "./text-edit-handlers";
+import { isFigEditorActionAllowed } from "./action-guard";
 
 /**
  * Combined handler map from all domains.
@@ -61,6 +62,9 @@ export function figEditorReducer(
   state: FigEditorState,
   action: FigEditorAction,
 ): FigEditorState {
+  if (!isFigEditorActionAllowed(state, action)) {
+    return state;
+  }
   const handler = ALL_HANDLERS[action.type] as ActionHandler | undefined;
   if (handler) {
     return handler(state, action);

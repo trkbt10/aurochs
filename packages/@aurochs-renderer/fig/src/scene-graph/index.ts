@@ -50,6 +50,17 @@ export type {
 
 export { createNodeId } from "./types";
 
+export {
+  createBooleanOperationEnum,
+  evaluateBooleanPathResult,
+  evaluateBooleanPaths,
+  resolveBooleanOperationType,
+  type BooleanEvaluationError,
+  type BooleanEvaluationResult,
+  type BooleanOperationType,
+  type BooleanPathInput,
+} from "./boolean-operation";
+
 // Builder
 export { buildSceneGraph, type BuildSceneGraphOptions } from "./builder";
 
@@ -125,6 +136,11 @@ export {
   convertPaintsToFills,
   convertStrokeToSceneStroke,
   convertEffectsToScene,
+  generateEllipseContour,
+  generateLineContour,
+  generatePolygonContour,
+  generateRectContour,
+  generateStarContour,
   parseSvgPathD,
   decodeGeometryToContours,
   convertVectorPathsToContours,

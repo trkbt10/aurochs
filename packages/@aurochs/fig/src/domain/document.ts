@@ -15,7 +15,7 @@
 import type {
   FigNodeType, FigMatrix, FigVector, FigColor, FigPaint, FigEffect, FigStrokeWeight, FigStrokeCap, FigStrokeJoin, FigStrokeAlign, FigFontName, KiwiEnumValue,
   FigDerivedBaseline, FigDerivedGlyph, FigDerivedDecoration, FigDerivedTextData,
-  FigVectorPath, FigVectorData, FigStyleId, FigFillGeometry, FigGuid,
+  FigVectorPath, FigVectorData, FigStyleId, FigFillGeometry, FigGuid, FigExportSetting,
   BlendMode,
 } from "../types";
 import type { LoadedFigFile, FigImage, FigMetadata } from "../roundtrip";
@@ -637,7 +637,8 @@ export type ComponentPropertyType =
  * Each field corresponds to a ComponentPropertyType:
  * - BOOL       → boolValue
  * - TEXT       → textValue
- * - INSTANCE_SWAP / VARIANT → referenceValue (FigNodeId of the target COMPONENT)
+ * - COLOR / INSTANCE_SWAP / VARIANT / IMAGE / SLOT
+ *              → referenceValue (domain projection of Kiwi guidValue)
  * - NUMBER     → numberValue
  *
  * At runtime, exactly one field is populated based on the property type.
@@ -713,6 +714,12 @@ export type ComponentPropertyAssignment = {
   readonly value: ComponentPropertyValue;
 };
 
+/** Variant value authored on a COMPONENT inside a COMPONENT_SET. */
+export type VariantPropSpec = {
+  readonly propDefId: FigNodeId;
+  readonly value: string;
+};
+
 // =============================================================================
 // Design Node
 // =============================================================================
@@ -736,6 +743,8 @@ export type FigDesignNode = {
   readonly opacity: number;
   readonly transform: FigMatrix;
   readonly size: FigVector;
+  /** Editor rotation/scaling origin in local node coordinates. Defaults to center when absent. */
+  readonly transformOrigin?: FigVector;
 
   // Paint & stroke
   readonly fills: readonly FigPaint[];
@@ -838,6 +847,7 @@ export type FigDesignNode = {
 
   // Frame/container specifics
   readonly clipsContent?: boolean;
+  readonly sectionContentsHidden?: boolean;
   readonly autoLayout?: AutoLayoutProps;
   readonly layoutConstraints?: LayoutConstraints;
 
@@ -895,6 +905,12 @@ export type FigDesignNode = {
    * Contains the overridden values for properties defined on the referenced SYMBOL.
    */
   readonly componentPropertyAssignments?: readonly ComponentPropertyAssignment[];
+
+  /** Variant values for COMPONENT nodes that participate in a COMPONENT_SET. */
+  readonly variantPropSpecs?: readonly VariantPropSpec[];
+
+  /** Node export presets as stored by Figma's ExportSettings message. */
+  readonly exportSettings?: readonly FigExportSetting[];
 
   // Boolean operation specifics
   readonly booleanOperation?: KiwiEnumValue;

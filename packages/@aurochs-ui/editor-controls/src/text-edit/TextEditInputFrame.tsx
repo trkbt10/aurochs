@@ -85,6 +85,7 @@ const HIDDEN_TEXTAREA_STYLE: CSSProperties = {
   width: "100%",
   height: "100%",
   opacity: 0,
+  backgroundColor: "transparent",
   cursor: "text",
   resize: "none",
   border: "none",

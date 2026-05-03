@@ -20,7 +20,7 @@ export type TextureEntry = {
  */
 export type TextureCache = {
   /** Get or create a texture from image data */
-  getOrCreate(resource: TextureResource, data: Uint8Array, mimeType: string): Promise<TextureEntry | null>;
+  getOrCreate(resource: TextureResource, data: Uint8Array, mimeType: string): Promise<TextureEntry>;
   /** Synchronous lookup for an already-cached texture */
   getIfCached(resource: TextureResource): TextureEntry | null;
   /** Release a texture reference */
@@ -54,32 +54,26 @@ export function createTextureCache(gl: WebGLRenderingContext): TextureCache {
       // due to recent ArrayBuffer-vs-SharedArrayBuffer narrowing. Keep
       // the cast scoped to this single boundary.
       const blob = new Blob([data as BlobPart], { type: mimeType });
-      const bitmapRef = { value: undefined as ImageBitmap | undefined };
-      try {
-        bitmapRef.value = await createImageBitmap(blob);
-      } catch (error) {
-        console.debug("Caught error:", error);
-        return null;
-      }
+      const bitmap = await createImageBitmap(blob);
 
       const texture = gl.createTexture();
       if (!texture) {
-        bitmapRef.value.close();
-        return null;
+        bitmap.close();
+        throw new Error(`Failed to create WebGL texture for image resource: ${resource.id}`);
       }
 
       gl.bindTexture(gl.TEXTURE_2D, texture);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, bitmapRef.value);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, bitmap);
       configureTextureParams();
 
       const entry: TextureEntry = {
         texture,
-        width: bitmapRef.value.width,
-        height: bitmapRef.value.height,
+        width: bitmap.width,
+        height: bitmap.height,
         refCount: 1,
       };
 
-      bitmapRef.value.close();
+      bitmap.close();
       cache.set(resource.id, entry);
       return entry;
     },

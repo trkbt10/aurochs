@@ -5,6 +5,7 @@
  */
 
 import type { TextAlignHorizontal } from "../../../text/layout/types";
+import { textAlignHorizontalToAnchor } from "../../../text/layout/text-anchor";
 
 /**
  * SVG text-anchor values
@@ -18,14 +19,5 @@ export type SvgTextAnchor = "start" | "middle" | "end";
  * @returns SVG text-anchor value
  */
 export function getTextAnchor(align: TextAlignHorizontal): SvgTextAnchor {
-  switch (align) {
-    case "CENTER":
-      return "middle";
-    case "RIGHT":
-      return "end";
-    case "LEFT":
-    case "JUSTIFIED":
-    default:
-      return "start";
-  }
+  return textAlignHorizontalToAnchor(align);
 }

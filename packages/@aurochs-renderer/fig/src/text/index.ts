@@ -25,6 +25,8 @@ export {
   getAlignedY,
   getAlignedYWithMetrics,
   type AlignYOptions,
+  textAlignHorizontalToAnchor,
+  type TextAnchor,
   getFillColorAndOpacity,
   computeTextLayout,
   textLayoutToCursorLayout,

@@ -15,8 +15,8 @@
  *
  * Architecture (same pattern as pptx-editor's TextEditController):
  * 1. Hidden textarea captures keyboard and IME input
- * 2. Text change → UPDATE_NODE → textData.characters update → SVG re-render
- * 3. Custom SVG children render cursor/selection using fig's layout result
+ * 2. Text change → UPDATE_NODE → textData.characters update → active backend re-render
+ * 3. Custom SVG children render only cursor/selection using fig's layout result
  * 4. Click-outside detection via CanvasViewportContext
  */
 
@@ -44,10 +44,7 @@ import {
   extractTextProps,
   computeTextLayout,
   textLayoutToCursorLayout,
-  type TextLayout,
 } from "@aurochs-renderer/fig/text";
-import { FigTextLines } from "@aurochs-renderer/fig/react";
-import type { TextLineLayout } from "@aurochs-renderer/fig/scene-graph";
 import { colorTokens } from "@aurochs-ui/ui-components/design-tokens";
 
 // =============================================================================
@@ -62,79 +59,6 @@ const CARET_BLINK_KEYFRAMES = `
   0%, 100% { opacity: 1; }
   50% { opacity: 0; }
 }`;
-
-// =============================================================================
-// Text anchor mapping (must match scene-graph/convert/text.ts exactly)
-// =============================================================================
-
-function getTextAnchor(alignH: string): "start" | "middle" | "end" {
-  switch (alignH) {
-    case "CENTER":
-      return "middle";
-    case "RIGHT":
-      return "end";
-    default:
-      return "start";
-  }
-}
-
-/**
- * Build TextLineLayout from layout result and text props.
- *
- * This constructs the SAME data structure that convertTextNode() in
- * scene-graph/convert/text.ts produces. By passing this to FigTextLines
- * (the shared component also used by TextNodeRenderer), we guarantee
- * identical SVG output for text during editing and normal display.
- */
-function buildTextLineLayout(
-  layout: TextLayout,
-  props: { fontFamily: string; fontSize: number; fontWeight?: number; fontStyle?: string; letterSpacing?: number; textAlignHorizontal: string; },
-): TextLineLayout {
-  return {
-    lines: layout.lines.map((line) => ({
-      text: line.text,
-      x: line.x,
-      y: line.y,
-    })),
-    fontFamily: props.fontFamily,
-    fontSize: props.fontSize,
-    fontWeight: props.fontWeight,
-    fontStyle: props.fontStyle,
-    letterSpacing: props.letterSpacing,
-    lineHeight: layout.lineHeight,
-    textAnchor: getTextAnchor(props.textAlignHorizontal),
-  };
-}
-
-// =============================================================================
-// Fill color extraction (must match scene-graph/convert/text.ts exactly)
-// =============================================================================
-
-function getFillColorHex(node: FigDesignNode): string {
-  const fills = node.fills;
-  if (fills.length > 0) {
-    const paint = fills[0];
-    if ("color" in paint && paint.color) {
-      const c = paint.color;
-      const r = Math.round(c.r * 255).toString(16).padStart(2, "0");
-      const g = Math.round(c.g * 255).toString(16).padStart(2, "0");
-      const b = Math.round(c.b * 255).toString(16).padStart(2, "0");
-      return `#${r}${g}${b}`;
-    }
-  }
-  return "#000000";
-}
-
-function getFillOpacity(node: FigDesignNode): number {
-  const fills = node.fills;
-  if (fills.length > 0) {
-    const paint = fills[0];
-    if ("opacity" in paint && typeof paint.opacity === "number") {
-      return paint.opacity;
-    }
-  }
-  return 1;
-}
 
 // =============================================================================
 // TextBody construction
@@ -167,23 +91,24 @@ function buildTextBodyFromCharacters(characters: string): TextBodyLike {
  * it matches what the browser renders for SVG <text> elements.
  */
 function createCanvasTextMeasurer(fontStr: string): (text: string) => number {
-  const canvasCtx = tryGetCanvasContext();
+  const canvasCtx = createRequiredCanvasContext();
 
   return (text: string): number => {
-    if (!canvasCtx || text.length === 0) {return 0;}
+    if (text.length === 0) {return 0;}
     canvasCtx.font = fontStr;
     return canvasCtx.measureText(text).width;
   };
 }
 
-function tryGetCanvasContext(): CanvasRenderingContext2D | null {
-  try {
-    return document.createElement("canvas").getContext("2d");
-  // eslint-disable-next-line no-restricted-syntax -- catch without param: error is intentionally discarded; SSR environment lacks canvas API and any error is a non-actionable environment mismatch
-  } catch {
-    // SSR fallback — return null to trigger estimatedWidth fallback
-    return null;
+function createRequiredCanvasContext(): CanvasRenderingContext2D {
+  if (typeof document === "undefined") {
+    throw new Error("FigTextEditOverlay requires a browser document for canvas text measurement");
   }
+  const canvasCtx = document.createElement("canvas").getContext("2d");
+  if (!canvasCtx) {
+    throw new Error("FigTextEditOverlay requires CanvasRenderingContext2D for cursor measurement");
+  }
+  return canvasCtx;
 }
 
 /**
@@ -198,16 +123,16 @@ function buildFigCursorContext(
   fontSize: number,
   ascenderRatio: number,
 ): CursorCalculationContext {
-  const canvasCtx = tryGetCanvasContext();
+  const canvasCtx = createRequiredCanvasContext();
 
   const measureSpanTextWidth = (span: LayoutSpanLike, substring: string): number => {
-    if (!canvasCtx || span.text.length === 0 || substring.length === 0) {
+    if (span.text.length === 0 || substring.length === 0) {
       return proportionalTextWidth(span, substring);
     }
     canvasCtx.font = fontStr;
     const fullWidth = canvasCtx.measureText(span.text).width;
     if (fullWidth <= 0) {
-      return proportionalTextWidth(span, substring);
+      throw new Error("Canvas text measurement returned zero width for a non-empty text span");
     }
     // Scale canvas measurement to match span.width (from layout)
     return (canvasCtx.measureText(substring).width / fullWidth) * span.width;
@@ -288,15 +213,6 @@ export function FigTextEditOverlay({
     () => textLayoutToCursorLayout(textLayout, canvasMeasurer),
     [textLayout, canvasMeasurer],
   );
-
-  // --- Build TextLineLayout for shared FigTextLines component ---
-  const editTextLineLayout = useMemo(
-    () => buildTextLineLayout(textLayout, textProps),
-    [textLayout, textProps],
-  );
-
-  const fillColor = useMemo(() => getFillColorHex(node), [node]);
-  const fillOpacity = useMemo(() => getFillOpacity(node), [node]);
 
   // --- Build TextBodyLike for cursor offset mapping ---
   const textBody = useMemo(
@@ -382,6 +298,7 @@ export function FigTextEditOverlay({
       const newText = e.target.value;
       dispatch({
         type: "UPDATE_NODE",
+        source: "text-edit",
         nodeId: node.id,
         updater: (n) => {
           if (!n.textData) {return n;}
@@ -576,16 +493,6 @@ export function FigTextEditOverlay({
           onPointerUp={handleSvgPointerUp}
         >
           <style>{CARET_BLINK_KEYFRAMES}</style>
-
-          {/*
-            Text re-rendered using FigTextLines — the SAME component
-            used by TextNodeRenderer for normal display.
-          */}
-          <FigTextLines
-            textLineLayout={editTextLineLayout}
-            fill={fillColor}
-            fillOpacity={fillOpacity}
-          />
 
           {/* Selection highlights */}
           {selRects.map((rect, i) => (

@@ -20,6 +20,12 @@ export type SvgRulersProps = {
   readonly rulerThickness: number;
   /** Whether to show rulers */
   readonly visible: boolean;
+  /**
+   * Bounded rulers clamp labels to [0, slideSize]. Infinite-canvas editors
+   * should use "unbounded" so negative / off-canvas page coordinates remain
+   * visible while panning.
+   */
+  readonly coordinateMode?: "bounded" | "unbounded";
 };
 
 const TICK_STEPS = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000];
@@ -47,10 +53,34 @@ function isMajorTick(value: number, majorStep: number): boolean {
   return Math.abs(ratio - Math.round(ratio)) < 1e-6;
 }
 
+/** Resolve the coordinate range displayed on a ruler axis. */
+function resolveVisibleRange(params: {
+  readonly rawStart: number;
+  readonly rawEnd: number;
+  readonly min: number;
+  readonly max: number;
+  readonly coordinateMode: "bounded" | "unbounded";
+}): { readonly start: number; readonly end: number } {
+  if (params.coordinateMode === "unbounded") {
+    return { start: params.rawStart, end: params.rawEnd };
+  }
+  return {
+    start: Math.max(params.min, params.rawStart),
+    end: Math.min(params.max, params.rawEnd),
+  };
+}
+
 /**
  * SVG-based rulers component.
  */
-export function SvgRulers({ viewport, viewportSize, slideSize, rulerThickness, visible }: SvgRulersProps) {
+export function SvgRulers({
+  viewport,
+  viewportSize,
+  slideSize,
+  rulerThickness,
+  visible,
+  coordinateMode = "bounded",
+}: SvgRulersProps) {
   if (!visible) {
     return null;
   }
@@ -58,35 +88,39 @@ export function SvgRulers({ viewport, viewportSize, slideSize, rulerThickness, v
   const { major, minor } = useMemo(() => getStepForZoom(viewport.scale), [viewport.scale]);
 
   // Calculate visible slide coordinate range for horizontal ruler
-  const hVisibleStart = Math.max(0, -viewport.translateX / viewport.scale);
-  const hVisibleEnd = Math.min(
-    slideSize.width,
-    (viewportSize.width - rulerThickness - viewport.translateX) / viewport.scale,
-  );
+  const hVisible = resolveVisibleRange({
+    rawStart: -viewport.translateX / viewport.scale,
+    rawEnd: (viewportSize.width - rulerThickness - viewport.translateX) / viewport.scale,
+    min: 0,
+    max: slideSize.width,
+    coordinateMode,
+  });
 
   // Calculate visible slide coordinate range for vertical ruler
-  const vVisibleStart = Math.max(0, -viewport.translateY / viewport.scale);
-  const vVisibleEnd = Math.min(
-    slideSize.height,
-    (viewportSize.height - rulerThickness - viewport.translateY) / viewport.scale,
-  );
+  const vVisible = resolveVisibleRange({
+    rawStart: -viewport.translateY / viewport.scale,
+    rawEnd: (viewportSize.height - rulerThickness - viewport.translateY) / viewport.scale,
+    min: 0,
+    max: slideSize.height,
+    coordinateMode,
+  });
 
   const hMinorTicks = useMemo(
-    () => getTickValues(hVisibleStart, hVisibleEnd, minor).filter((v) => !isMajorTick(v, major)),
-    [hVisibleStart, hVisibleEnd, minor, major],
+    () => getTickValues(hVisible.start, hVisible.end, minor).filter((v) => !isMajorTick(v, major)),
+    [hVisible.start, hVisible.end, minor, major],
   );
   const hMajorTicks = useMemo(
-    () => getTickValues(hVisibleStart, hVisibleEnd, major),
-    [hVisibleStart, hVisibleEnd, major],
+    () => getTickValues(hVisible.start, hVisible.end, major),
+    [hVisible.start, hVisible.end, major],
   );
 
   const vMinorTicks = useMemo(
-    () => getTickValues(vVisibleStart, vVisibleEnd, minor).filter((v) => !isMajorTick(v, major)),
-    [vVisibleStart, vVisibleEnd, minor, major],
+    () => getTickValues(vVisible.start, vVisible.end, minor).filter((v) => !isMajorTick(v, major)),
+    [vVisible.start, vVisible.end, minor, major],
   );
   const vMajorTicks = useMemo(
-    () => getTickValues(vVisibleStart, vVisibleEnd, major),
-    [vVisibleStart, vVisibleEnd, major],
+    () => getTickValues(vVisible.start, vVisible.end, major),
+    [vVisible.start, vVisible.end, major],
   );
 
   const rulerBgColor = `var(--bg-secondary, ${colorTokens.background.secondary})`;

@@ -12,6 +12,7 @@ import { getActivePage } from "../node-geometry";
 import type { SelectionState } from "@aurochs-ui/editor-core/selection";
 import type { FigEditorState } from "../types";
 import { outlineNode } from "./outline-node";
+import { createBooleanOperationEnum, type BooleanOperationType } from "@aurochs-renderer/fig/scene-graph";
 
 function buildNodeSelection(newIds: FigNodeId[]): SelectionState<FigNodeId> {
   if (newIds.length === 1) {
@@ -53,11 +54,17 @@ function computeGroupBounds(nodes: readonly FigDesignNode[]): { x: number; y: nu
   return { x: left, y: top, width: right - left, height: bottom - top };
 }
 
-function wrapSelectedSiblings(
-  pageChildren: readonly FigDesignNode[],
-  selectedIds: readonly FigNodeId[],
-  wrapperType: "GROUP" | "COMPONENT",
-): { readonly children: readonly FigDesignNode[]; readonly wrapper: FigDesignNode } | null {
+function wrapSelectedSiblings({
+  pageChildren,
+  selectedIds,
+  wrapperType,
+  operation,
+}: {
+  readonly pageChildren: readonly FigDesignNode[];
+  readonly selectedIds: readonly FigNodeId[];
+  readonly wrapperType: "GROUP" | "COMPONENT" | "SYMBOL" | "BOOLEAN_OPERATION";
+  readonly operation?: BooleanOperationType;
+}): { readonly children: readonly FigDesignNode[]; readonly wrapper: FigDesignNode } | null {
   if (selectedIds.length === 0) {
     return null;
   }
@@ -72,23 +79,28 @@ function wrapSelectedSiblings(
   if (selectedNodes.length === 0) {
     return null;
   }
+  if (wrapperType === "BOOLEAN_OPERATION" && !operation) {
+    return null;
+  }
 
   const bounds = computeGroupBounds(selectedNodes);
   const counter = createIdCounter(Date.now());
   const wrapperId = nextNodeId(counter);
+  const firstSelected = selectedNodes[0]!;
   const wrapper: FigDesignNode = {
     id: wrapperId,
     type: wrapperType,
-    name: wrapperType === "GROUP" ? "Group" : "Component",
+    name: getWrapperName(wrapperType, operation),
     visible: true,
     opacity: 1,
     transform: { m00: 1, m01: 0, m02: bounds.x, m10: 0, m11: 1, m12: bounds.y },
     size: { x: bounds.width, y: bounds.height },
-    fills: [],
-    strokes: [],
-    strokeWeight: 0,
+    fills: wrapperType === "BOOLEAN_OPERATION" ? firstSelected.fills : [],
+    strokes: wrapperType === "BOOLEAN_OPERATION" ? firstSelected.strokes : [],
+    strokeWeight: wrapperType === "BOOLEAN_OPERATION" ? firstSelected.strokeWeight : 0,
     effects: [],
-    clipsContent: wrapperType === "COMPONENT" ? true : undefined,
+    clipsContent: wrapperType === "GROUP" ? undefined : true,
+    booleanOperation: operation ? createBooleanOperationEnum(operation) : undefined,
     children: selectedNodes.map((node) => ({
       ...node,
       transform: {
@@ -117,6 +129,16 @@ function wrapSelectedSiblings(
 }
 
 export const NODE_HANDLERS: HandlerMap = {
+  ADD_IMAGE_ASSET(state, action) {
+    const doc = state.documentHistory.present;
+    const images = new Map(doc.images);
+    images.set(action.image.ref, action.image);
+    return {
+      ...state,
+      documentHistory: pushHistory(state.documentHistory, { ...doc, images }),
+    };
+  },
+
   ADD_NODE(state, action) {
     const pageId = state.activePageId;
     if (!pageId) {
@@ -159,6 +181,24 @@ export const NODE_HANDLERS: HandlerMap = {
 
     const doc = state.documentHistory.present;
     const updated = updateNode({ doc, pageId, nodeId: action.nodeId, updater: action.updater });
+
+    return {
+      ...state,
+      documentHistory: pushHistory(state.documentHistory, updated),
+    };
+  },
+
+  UPDATE_NODES(state, action) {
+    const pageId = state.activePageId;
+    if (!pageId || action.nodeIds.length === 0) {
+      return state;
+    }
+
+    const uniqueNodeIds = Array.from(new Set(action.nodeIds));
+    const updated = uniqueNodeIds.reduce(
+      (doc, nodeId) => updateNode({ doc, pageId, nodeId, updater: action.updater }),
+      state.documentHistory.present,
+    );
 
     return {
       ...state,
@@ -275,38 +315,47 @@ export const NODE_HANDLERS: HandlerMap = {
     return wrapSelection(state, "COMPONENT");
   },
 
+  MAKE_SYMBOL_FROM_SELECTION(state) {
+    return wrapSelection(state, "SYMBOL");
+  },
+
+  BOOLEAN_OPERATION_SELECTION(state, action) {
+    return wrapBooleanOperationSelection(state, action.operation);
+  },
+
   OUTLINE_SELECTION(state) {
     const pageId = state.activePageId;
     if (!pageId || state.nodeSelection.selectedIds.length === 0) {
       return state;
     }
     const doc = state.documentHistory.present;
-    let changed = false;
+    const page = getActivePage(doc, pageId);
+    if (!page) {
+      return state;
+    }
     const outlined = state.nodeSelection.selectedIds.reduce((acc, nodeId) => {
-      return updateNode({
-        doc: acc,
-        pageId,
-        nodeId,
-        updater: (node) => {
-          const next = outlineNode(node, doc);
-          if (next) {
-            changed = true;
-            return next;
-          }
-          return node;
-        },
-      });
-    }, doc);
+      const node = findNodeById(page.children, nodeId);
+      return {
+        doc: updateNode({
+          doc: acc.doc,
+          pageId,
+          nodeId,
+          updater: (current) => outlineNode(current, doc) ?? current,
+        }),
+        changed: acc.changed || Boolean(node && outlineNode(node, doc)),
+      };
+    }, { doc, changed: false });
 
-    return !changed
-      ? state
-      : { ...state, documentHistory: pushHistory(state.documentHistory, outlined) };
+    if (!outlined.changed) {
+      return state;
+    }
+    return { ...state, documentHistory: pushHistory(state.documentHistory, outlined.doc) };
   },
 };
 
 function wrapSelection(
   state: FigEditorState,
-  wrapperType: "GROUP" | "COMPONENT",
+  wrapperType: "GROUP" | "COMPONENT" | "SYMBOL",
 ): FigEditorState {
   const pageId = state.activePageId;
   if (!pageId || state.nodeSelection.selectedIds.length === 0) {
@@ -318,18 +367,87 @@ function wrapSelection(
     return state;
   }
 
-  const wrapped = wrapSelectedSiblings(page.children, state.nodeSelection.selectedIds, wrapperType);
+  const wrapped = wrapSelectedSiblings({
+    pageChildren: page.children,
+    selectedIds: state.nodeSelection.selectedIds,
+    wrapperType,
+  });
   if (!wrapped) {
     return state;
   }
 
   const pages = doc.pages.map((p) => p.id === pageId ? { ...p, children: wrapped.children } : p);
-  const components = wrapperType === "COMPONENT"
-    ? new Map([...doc.components, [wrapped.wrapper.id, wrapped.wrapper]])
-    : doc.components;
+  const components = resolveWrappedComponents({
+    components: doc.components,
+    wrapper: wrapped.wrapper,
+    wrapperType,
+  });
   return {
     ...state,
     documentHistory: pushHistory(state.documentHistory, { ...doc, pages, components }),
     nodeSelection: createSingleSelection(wrapped.wrapper.id),
   };
+}
+
+function wrapBooleanOperationSelection(
+  state: FigEditorState,
+  operation: BooleanOperationType,
+): FigEditorState {
+  const pageId = state.activePageId;
+  if (!pageId || state.nodeSelection.selectedIds.length < 2) {
+    return state;
+  }
+  const doc = state.documentHistory.present;
+  const page = getActivePage(doc, pageId);
+  if (!page) {
+    return state;
+  }
+
+  const wrapped = wrapSelectedSiblings({
+    pageChildren: page.children,
+    selectedIds: state.nodeSelection.selectedIds,
+    wrapperType: "BOOLEAN_OPERATION",
+    operation,
+  });
+  if (!wrapped) {
+    return state;
+  }
+
+  const pages = doc.pages.map((p) => p.id === pageId ? { ...p, children: wrapped.children } : p);
+  return {
+    ...state,
+    documentHistory: pushHistory(state.documentHistory, { ...doc, pages }),
+    nodeSelection: createSingleSelection(wrapped.wrapper.id),
+  };
+}
+
+function getWrapperName(
+  wrapperType: "GROUP" | "COMPONENT" | "SYMBOL" | "BOOLEAN_OPERATION",
+  operation?: BooleanOperationType,
+): string {
+  switch (wrapperType) {
+    case "GROUP":
+      return "Group";
+    case "COMPONENT":
+      return "Component";
+    case "SYMBOL":
+      return "Symbol";
+    case "BOOLEAN_OPERATION":
+      return operation ? operation[0] + operation.slice(1).toLowerCase() : "Boolean";
+  }
+}
+
+function resolveWrappedComponents({
+  components,
+  wrapper,
+  wrapperType,
+}: {
+  readonly components: FigEditorState["documentHistory"]["present"]["components"];
+  readonly wrapper: FigDesignNode;
+  readonly wrapperType: "GROUP" | "COMPONENT" | "SYMBOL";
+}): FigEditorState["documentHistory"]["present"]["components"] {
+  if (wrapperType === "GROUP") {
+    return components;
+  }
+  return new Map([...components, [wrapper.id, wrapper]]);
 }

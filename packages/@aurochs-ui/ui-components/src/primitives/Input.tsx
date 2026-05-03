@@ -16,6 +16,7 @@ export type InputProps = {
   readonly type?: "text" | "number";
   readonly suffix?: string;
   readonly placeholder?: string;
+  readonly ariaLabel?: string;
   readonly disabled?: boolean;
   readonly readOnly?: boolean;
   readonly onKeyDown?: (event: React.KeyboardEvent<HTMLInputElement>) => void;
@@ -100,6 +101,7 @@ export function Input({
   type = "text",
   suffix,
   placeholder,
+  ariaLabel,
   disabled,
   readOnly,
   onKeyDown,
@@ -149,6 +151,7 @@ export function Input({
         onCompositionUpdate={onCompositionUpdate}
         onCompositionEnd={onCompositionEnd}
         placeholder={placeholder}
+        aria-label={ariaLabel}
         disabled={disabled}
         readOnly={readOnly}
         min={min}

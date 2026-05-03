@@ -5,9 +5,10 @@
  * Supports: stroke color editing, weight, opacity, add/remove strokes.
  */
 
-import { useCallback, type CSSProperties } from "react";
+import { useCallback, useRef, type ChangeEvent, type CSSProperties } from "react";
 import type { FigDesignNode } from "@aurochs/fig/domain";
-import type { FigPaint, FigColor, FigPaintType, FigGradientStop } from "@aurochs/fig/types";
+import type { FigImage } from "@aurochs/fig/parser";
+import type { FigPaint, FigColor, FigPaintType, FigGradientStop, FigImageScaleMode } from "@aurochs/fig/types";
 import type { FigEditorAction } from "../../context/fig-editor/types";
 import { Input } from "@aurochs-ui/ui-components/primitives/Input";
 import { Select } from "@aurochs-ui/ui-components/primitives/Select";
@@ -15,6 +16,9 @@ import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
 import type { SelectOption } from "@aurochs-ui/ui-components/types";
 import { colorTokens, fontTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { AddIcon, CloseIcon } from "@aurochs-ui/ui-components/icons";
+import { imageScaleModeOptions } from "./paint-options";
+import { createFigImageAsset } from "./image-asset";
+import { createPropertyTargetUpdateAction, type PropertyMutationTarget } from "../property-mutation-target";
 
 // =============================================================================
 // Color helpers
@@ -190,6 +194,8 @@ const addButtonStyle: CSSProperties = {
 
 type StrokeSectionProps = {
   readonly node: FigDesignNode;
+  readonly target: PropertyMutationTarget;
+  readonly images: ReadonlyMap<string, FigImage>;
   readonly dispatch: (action: FigEditorAction) => void;
 };
 
@@ -203,27 +209,28 @@ type StrokeSectionProps = {
 
 
 /** Panel section for editing stroke properties of a Figma node. */
-export function StrokeSection({ node, dispatch }: StrokeSectionProps) {
+export function StrokeSection({ node, target, images, dispatch }: StrokeSectionProps) {
   const strokeWeight = typeof node.strokeWeight === "number" ? node.strokeWeight : 0;
   const strokes = node.strokes;
   const alignLabel = getStrokeAlignLabel(node.strokeAlign);
+  const uploadTargetRef = useRef<number | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageOptions = [{ value: "", label: "No image" }, ...[...images.keys()].map((ref) => ({ value: ref, label: ref }))];
 
   const updateStrokeWeight = useCallback(
     (weight: number) => {
-      dispatch({
-        type: "UPDATE_NODE",
-        nodeId: node.id,
+      dispatch(createPropertyTargetUpdateAction({
+        target,
         updater: (n) => ({ ...n, strokeWeight: weight }),
-      });
+      }));
     },
-    [dispatch, node.id],
+    [dispatch, target],
   );
 
   const updateStrokePaint = useCallback(
     (strokeIndex: number, updater: (paint: FigPaint) => FigPaint) => {
-      dispatch({
-        type: "UPDATE_NODE",
-        nodeId: node.id,
+      dispatch(createPropertyTargetUpdateAction({
+        target,
         updater: (n) => {
           const newStrokes = [...n.strokes];
           const paint = newStrokes[strokeIndex];
@@ -232,9 +239,9 @@ export function StrokeSection({ node, dispatch }: StrokeSectionProps) {
           }
           return { ...n, strokes: newStrokes };
         },
-      });
+      }));
     },
-    [dispatch, node.id],
+    [dispatch, target],
   );
 
   const updateStrokeColor = useCallback(
@@ -281,42 +288,96 @@ export function StrokeSection({ node, dispatch }: StrokeSectionProps) {
     [updateStrokePaint],
   );
 
+  const updateImageScaleMode = useCallback(
+    (strokeIndex: number, scaleMode: FigImageScaleMode) => {
+      updateStrokePaint(strokeIndex, (paint) => ({ ...paint, scaleMode, imageScaleMode: scaleMode } as FigPaint));
+    },
+    [updateStrokePaint],
+  );
+
+  const updateImageScale = useCallback(
+    (strokeIndex: number, scale: number) => {
+      updateStrokePaint(strokeIndex, (paint) => ({ ...paint, scalingFactor: scale, scale } as FigPaint));
+    },
+    [updateStrokePaint],
+  );
+
+  const updateImageRotation = useCallback(
+    (strokeIndex: number, rotationDeg: number) => {
+      updateStrokePaint(strokeIndex, (paint) => ({ ...paint, rotation: rotationDeg * (Math.PI / 180) } as FigPaint));
+    },
+    [updateStrokePaint],
+  );
+
+  const startImageUpload = useCallback((strokeIndex: number) => {
+    uploadTargetRef.current = strokeIndex;
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleImageFileChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const file = event.currentTarget.files?.[0];
+      const strokeIndex = uploadTargetRef.current;
+      event.currentTarget.value = "";
+      uploadTargetRef.current = null;
+      if (!file || strokeIndex === null) {
+        return;
+      }
+      void file.arrayBuffer().then((buffer) => {
+        const image = createFigImageAsset({
+          data: new Uint8Array(buffer),
+          mimeType: file.type,
+          fileName: file.name,
+        });
+        dispatch({ type: "ADD_IMAGE_ASSET", image, source: "property-panel" });
+        updateImageRef(strokeIndex, image.ref);
+      });
+    },
+    [dispatch, updateImageRef],
+  );
+
   const removeStroke = useCallback(
     (strokeIndex: number) => {
-      dispatch({
-        type: "UPDATE_NODE",
-        nodeId: node.id,
+      dispatch(createPropertyTargetUpdateAction({
+        target,
         updater: (n) => ({
           ...n,
           strokes: n.strokes.filter((_, i) => i !== strokeIndex),
           strokeWeight: n.strokes.length <= 1 ? 0 : n.strokeWeight,
         }),
-      });
+      }));
     },
-    [dispatch, node.id],
+    [dispatch, target],
   );
 
   const addStroke = useCallback(() => {
-    dispatch({
-      type: "UPDATE_NODE",
-      nodeId: node.id,
+    dispatch(createPropertyTargetUpdateAction({
+      target,
       updater: (n) => ({
         ...n,
         strokes: [...n.strokes, createDefaultStrokePaint()],
         strokeWeight: typeof n.strokeWeight === "number" && n.strokeWeight > 0 ? n.strokeWeight : 1,
       }),
-    });
-  }, [dispatch, node.id]);
+    }));
+  }, [dispatch, target]);
 
   const hasContent = strokes.length > 0 || strokeWeight > 0;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml"
+        onChange={handleImageFileChange}
+        style={{ display: "none" }}
+      />
       {hasContent && (
         <FieldRow>
           <FieldGroup label="Weight" inline labelWidth={50}>
             <Input
               type="number"
+              ariaLabel="Stroke weight"
               value={strokeWeight}
               min={0}
               step={0.5}
@@ -340,9 +401,15 @@ export function StrokeSection({ node, dispatch }: StrokeSectionProps) {
         return (
           <div key={i} style={strokeRowStyle}>
             <div style={strokeHeaderStyle}>
-              <Select value={stroke.type} onChange={(type) => updateStrokeType(i, type)} options={strokePaintTypeOptions} />
+              <Select
+                value={stroke.type}
+                onChange={(type) => updateStrokeType(i, type)}
+                options={strokePaintTypeOptions}
+                ariaLabel={`Stroke paint type ${i + 1}`}
+              />
               <Input
                 type="number"
+                ariaLabel={`Stroke opacity ${i + 1}`}
                 value={Math.round(opacity * 100)}
                 min={0}
                 max={100}
@@ -363,6 +430,7 @@ export function StrokeSection({ node, dispatch }: StrokeSectionProps) {
             {color && (
               <div style={strokeInlineStyle}>
                 <input
+                  aria-label={`Stroke color ${i + 1}`}
                   type="color"
                   value={colorToHex(color)}
                   onChange={(e) => updateStrokeColor(i, e.target.value)}
@@ -386,12 +454,45 @@ export function StrokeSection({ node, dispatch }: StrokeSectionProps) {
               </div>
             )}
             {stroke.type === "IMAGE" && (
-              <Input
-                type="text"
-                value={stroke.imageRef ?? ""}
-                placeholder="imageRef"
-                onChange={(v) => updateImageRef(i, String(v))}
-              />
+              <>
+                <div style={strokeInlineStyle}>
+                  <Select
+                    value={stroke.imageRef ?? ""}
+                    onChange={(value) => updateImageRef(i, value)}
+                    options={imageOptions}
+                    ariaLabel={`Stroke image ${i + 1}`}
+                  />
+                  <button type="button" style={addButtonStyle} onClick={() => startImageUpload(i)}>
+                    Upload image
+                  </button>
+                </div>
+                <div style={strokeInlineStyle}>
+                  <Select
+                    value={stroke.scaleMode ?? stroke.imageScaleMode ?? "FILL"}
+                    onChange={(value) => updateImageScaleMode(i, value)}
+                    options={imageScaleModeOptions}
+                    ariaLabel={`Stroke image scale mode ${i + 1}`}
+                  />
+                  <Input
+                    type="number"
+                    ariaLabel={`Stroke image scale ${i + 1}`}
+                    value={stroke.scalingFactor ?? stroke.scale ?? 1}
+                    min={0}
+                    step={0.05}
+                    onChange={(v) => updateImageScale(i, v as number)}
+                    width={64}
+                  />
+                  <Input
+                    type="number"
+                    ariaLabel={`Stroke image rotation ${i + 1}`}
+                    value={Math.round(((stroke.rotation ?? 0) * 180) / Math.PI)}
+                    step={1}
+                    onChange={(v) => updateImageRotation(i, v as number)}
+                    width={64}
+                    suffix="°"
+                  />
+                </div>
+              </>
             )}
           </div>
         );

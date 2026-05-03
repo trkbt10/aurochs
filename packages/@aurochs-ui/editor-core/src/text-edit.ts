@@ -243,6 +243,15 @@ export type LayoutLineLike = {
   readonly x: number;
   readonly y: number;
   readonly height: number;
+  /**
+   * Optional source paragraph range for this visual line.
+   *
+   * Fig text layout provides this as the SoT for wrapped lines. Consumers must
+   * not reconstruct source offsets by concatenating rendered line text because
+   * wrapping can suppress boundary whitespace.
+   */
+  readonly sourceStart?: number;
+  readonly sourceEnd?: number;
 };
 
 /**
@@ -407,6 +416,36 @@ export function getLineTextLength(line: LayoutLineLike): number {
   return line.spans.reduce((sum, span) => sum + span.text.length, 0);
 }
 
+function hasLineSourceRange(line: LayoutLineLike): boolean {
+  return typeof line.sourceStart === "number" && typeof line.sourceEnd === "number";
+}
+
+function getLineSourceStart(line: LayoutLineLike, fallback: number): number {
+  return typeof line.sourceStart === "number" ? line.sourceStart : fallback;
+}
+
+function getLineSourceEnd(line: LayoutLineLike, fallback: number): number {
+  return typeof line.sourceEnd === "number" ? line.sourceEnd : fallback + getLineTextLength(line);
+}
+
+function getLineLocalOffsetForSourceOffset(line: LayoutLineLike, sourceOffset: number): number {
+  const lineLength = getLineTextLength(line);
+  if (!hasLineSourceRange(line)) {
+    return Math.min(Math.max(sourceOffset, 0), lineLength);
+  }
+  return Math.min(Math.max(sourceOffset - (line.sourceStart ?? 0), 0), lineLength);
+}
+
+function getOffsetBeforeVisualLine(para: LayoutParagraphLike, lineIndex: number): number {
+  const line = para.lines[lineIndex];
+  if (line && typeof line.sourceStart === "number") {
+    return line.sourceStart;
+  }
+  return para.lines
+    .slice(0, lineIndex)
+    .reduce((sum, candidate) => sum + getLineTextLength(candidate), 0);
+}
+
 /**
  * Get text width for a portion of a span.
  */
@@ -561,15 +600,20 @@ export function cursorPositionToCoordinates(
     return getEmptyParagraphCoordinates(paragraphIndex, layoutResult, ctx);
   }
 
-  // eslint-disable-next-line no-restricted-syntax -- mutable remaining offset decremented across lines
-  let remainingOffset = charOffset;
+  // eslint-disable-next-line no-restricted-syntax -- mutable fallback offset for layouts without source ranges
+  let fallbackOffset = 0;
 
   for (const line of para.lines) {
     const lineTextLength = getLineTextLength(line);
-    if (remainingOffset <= lineTextLength) {
-      return getCursorInLineCoordinates(line, remainingOffset, ctx);
+    const lineStart = getLineSourceStart(line, fallbackOffset);
+    const lineEnd = getLineSourceEnd(line, fallbackOffset);
+    if (charOffset <= lineEnd) {
+      return getCursorInLineCoordinates(line, getLineLocalOffsetForSourceOffset(line, charOffset), ctx);
     }
-    remainingOffset -= lineTextLength;
+    fallbackOffset += lineTextLength;
+    if (charOffset < lineStart) {
+      return getCursorInLineCoordinates(line, 0, ctx);
+    }
   }
 
   const lastLine = para.lines[para.lines.length - 1];
@@ -679,9 +723,7 @@ export function coordinatesToCursorPosition(args: {
 
   const targetLine = targetParagraph.lines[bestLineIndex];
   const lineOffset = getCharOffsetForXInLine(targetLine, x, ctx);
-  const offsetBeforeLine = targetParagraph.lines
-    .slice(0, bestLineIndex)
-    .reduce((sum, line) => sum + getLineTextLength(line), 0);
+  const offsetBeforeLine = getOffsetBeforeVisualLine(targetParagraph, bestLineIndex);
 
   return { paragraphIndex: bestParagraphIndex, charOffset: offsetBeforeLine + lineOffset };
 }
@@ -803,12 +845,12 @@ function getSelectionRectsInParagraph(args: {
 
   for (const line of args.para.lines) {
     const lineLength = getLineTextLength(line);
-    const lineStart = currentOffset;
-    const lineEnd = currentOffset + lineLength;
+    const lineStart = getLineSourceStart(line, currentOffset);
+    const lineEnd = getLineSourceEnd(line, currentOffset);
 
     if (args.startOffset < lineEnd && args.endOffset > lineStart) {
-      const selStart = Math.max(args.startOffset - lineStart, 0);
-      const selEnd = Math.min(args.endOffset - lineStart, lineLength);
+      const selStart = getLineLocalOffsetForSourceOffset(line, args.startOffset);
+      const selEnd = getLineLocalOffsetForSourceOffset(line, args.endOffset);
 
       const startX = getXPositionInLine(line, selStart, args.ctx);
       const endX = getXPositionInLine(line, selEnd, args.ctx);
@@ -822,12 +864,15 @@ function getSelectionRectsInParagraph(args: {
       });
     }
 
-    currentOffset = lineEnd;
+    currentOffset += lineLength;
   }
 
   return rects;
 }
 
 function getParagraphTextLengthFromLayout(para: LayoutParagraphLike): number {
+  if (para.lines.some(hasLineSourceRange)) {
+    return para.lines.reduce((max, line) => Math.max(max, line.sourceEnd ?? 0), 0);
+  }
   return para.lines.reduce((sum, line) => sum + getLineTextLength(line), 0);
 }

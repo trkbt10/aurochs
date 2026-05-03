@@ -6,9 +6,11 @@ import type { FigDesignNode } from "@aurochs/fig/domain";
 import type { FigEditorAction } from "../../context/fig-editor/types";
 import { Input } from "@aurochs-ui/ui-components/primitives/Input";
 import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
+import { createPropertyTargetUpdateAction, type PropertyMutationTarget } from "../property-mutation-target";
 
 type OpacitySectionProps = {
   readonly node: FigDesignNode;
+  readonly target: PropertyMutationTarget;
   readonly dispatch: (action: FigEditorAction) => void;
 };
 
@@ -18,7 +20,7 @@ type OpacitySectionProps = {
 
 
 /** Panel section for editing the opacity of a Figma node. */
-export function OpacitySection({ node, dispatch }: OpacitySectionProps) {
+export function OpacitySection({ node, target, dispatch }: OpacitySectionProps) {
   const opacityPercent = Math.round(node.opacity * 100);
 
   return (
@@ -32,11 +34,10 @@ export function OpacitySection({ node, dispatch }: OpacitySectionProps) {
           step={1}
           suffix="%"
           onChange={(v) => {
-            dispatch({
-              type: "UPDATE_NODE",
-              nodeId: node.id,
+            dispatch(createPropertyTargetUpdateAction({
+              target,
               updater: (n) => ({ ...n, opacity: Math.max(0, Math.min(1, (v as number) / 100)) }),
-            });
+            }));
           }}
           width={80}
         />

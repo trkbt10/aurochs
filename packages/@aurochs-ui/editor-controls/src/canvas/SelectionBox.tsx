@@ -105,7 +105,6 @@ export function SelectionBox({
 }: SelectionBoxProps) {
   const style = VARIANT_STYLES[variant];
   const safeScale = viewportScale > 0 ? viewportScale : 1;
-  const strokeWidth = SELECTION_STROKE_WIDTH / safeScale;
   const rotateHitSlop = ROTATE_HIT_SLOP / safeScale;
   const centerX = x + width / 2;
   const centerY = y + height / 2;
@@ -140,7 +139,7 @@ export function SelectionBox({
         height={height}
         fill="none"
         stroke={style.color}
-        strokeWidth={strokeWidth}
+        strokeWidth={SELECTION_STROKE_WIDTH}
         strokeDasharray={style.strokeDasharray}
         vectorEffect="non-scaling-stroke"
         pointerEvents="none"

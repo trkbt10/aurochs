@@ -6,7 +6,9 @@
  */
 
 import type { FigDesignDocument, FigDesignNode, FigPage, FigNodeId, FigPageId } from "@aurochs/fig/domain";
+import type { FigImage } from "@aurochs/fig/parser";
 import type { NodeSpec } from "@aurochs-builder/fig/types";
+import type { BooleanOperationType } from "@aurochs-renderer/fig/scene-graph";
 import type { UndoRedoHistory } from "@aurochs-ui/editor-core/history";
 import type { SelectionState } from "@aurochs-ui/editor-core/selection";
 import type { DragState, ResizeHandlePosition } from "@aurochs-ui/editor-core/drag-state";
@@ -77,6 +79,14 @@ export type FigClipboardContent = {
   readonly pasteCount: number;
 };
 
+export type FigNodeMutationSource =
+  | "property-panel"
+  | "text-edit"
+  | "path-edit"
+  | "layer-panel"
+  | "canvas-menu"
+  | "test";
+
 // =============================================================================
 // Editor State
 // =============================================================================
@@ -101,6 +111,7 @@ export type FigEditorState = {
 export type FigEditorAction =
   // Document
   | { readonly type: "SET_DOCUMENT"; readonly document: FigDesignDocument }
+  | { readonly type: "ADD_IMAGE_ASSET"; readonly image: FigImage; readonly source: FigNodeMutationSource }
 
   // Page management
   | { readonly type: "SELECT_PAGE"; readonly pageId: FigPageId }
@@ -117,16 +128,25 @@ export type FigEditorAction =
       readonly type: "UPDATE_NODE";
       readonly nodeId: FigNodeId;
       readonly updater: (node: FigDesignNode) => FigDesignNode;
+      readonly source: FigNodeMutationSource;
+    }
+  | {
+      readonly type: "UPDATE_NODES";
+      readonly nodeIds: readonly FigNodeId[];
+      readonly updater: (node: FigDesignNode) => FigDesignNode;
+      readonly source: FigNodeMutationSource;
     }
   | {
       readonly type: "REORDER_NODE";
       readonly nodeId: FigNodeId;
       readonly direction: "front" | "back" | "forward" | "backward";
     }
-  | { readonly type: "RENAME_NODE"; readonly nodeId: FigNodeId; readonly name: string }
+  | { readonly type: "RENAME_NODE"; readonly nodeId: FigNodeId; readonly name: string; readonly source: FigNodeMutationSource }
   | { readonly type: "GROUP_SELECTION" }
   | { readonly type: "MAKE_COMPONENT_FROM_SELECTION" }
+  | { readonly type: "MAKE_SYMBOL_FROM_SELECTION" }
   | { readonly type: "OUTLINE_SELECTION" }
+  | { readonly type: "BOOLEAN_OPERATION_SELECTION"; readonly operation: BooleanOperationType }
 
   // Selection
   | {

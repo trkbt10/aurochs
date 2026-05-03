@@ -4,6 +4,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { FigDesignNode, FigNodeId } from "@aurochs/fig/domain";
 import { VectorPathSection } from "./VectorPathSection";
+import { createPropertyMutationTarget } from "../property-mutation-target";
 
 function makeVector(): FigDesignNode {
   return {
@@ -24,7 +25,12 @@ function makeVector(): FigDesignNode {
 
 describe("VectorPathSection", () => {
   it("renders editable SVG path data", () => {
-    const html = renderToStaticMarkup(createElement(VectorPathSection, { node: makeVector(), dispatch: () => undefined }));
+    const node = makeVector();
+    const html = renderToStaticMarkup(createElement(VectorPathSection, {
+      node,
+      target: createPropertyMutationTarget({ primaryNode: node, selectedNodes: [node] }),
+      dispatch: () => undefined,
+    }));
 
     expect(html).toContain('value="EVENODD"');
     expect(html).toContain("M 0 0 C 20 20 80 20 100 0");

@@ -7,6 +7,7 @@
 import type { FigDesignNode } from "@aurochs/fig/domain";
 import type { FigBlob } from "@aurochs/fig/parser";
 import { resolveTextRendering, type TextFontResolver, type TextRendering } from "../../text/rendering";
+import { textAlignHorizontalToAnchor } from "../../text/layout";
 import type { ExtractedTextProps } from "../../text/layout/types";
 import type { PathContour, Color, TextLineLayout } from "../types";
 
@@ -59,20 +60,6 @@ function normalizeContours(contours: readonly {
     }),
     windingRule: "nonzero" as const,
   }));
-}
-
-/**
- * Map text anchor from alignment
- */
-function getTextAnchor(align: string): "start" | "middle" | "end" {
-  switch (align) {
-    case "CENTER":
-      return "middle";
-    case "RIGHT":
-      return "end";
-    default:
-      return "start";
-  }
 }
 
 /**
@@ -135,6 +122,7 @@ function buildFontVariationSettings(
   return parts.length > 0 ? parts.join(", ") : undefined;
 }
 
+/** Convert a TEXT FigDesignNode into scene-graph text rendering data. */
 export function convertTextNode(node: FigDesignNode, options: TextConversionOptions): TextConversionResult {
   // Delegate resolution to the unified text rendering SoT. This is the only
   // place (alongside svg/renderer.ts) that decides glyphs-vs-lines strategy.
@@ -203,7 +191,7 @@ function buildTextLineLayout(
     fontStyle: props.fontStyle,
     letterSpacing: props.letterSpacing,
     lineHeight: rendering.layout.lineHeight,
-    textAnchor: getTextAnchor(props.textAlignHorizontal),
+    textAnchor: textAlignHorizontalToAnchor(props.textAlignHorizontal),
     textDecoration: mapTextDecoration(props.textDecoration),
     fontVariationSettings,
   };

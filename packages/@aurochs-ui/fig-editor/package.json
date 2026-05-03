@@ -21,6 +21,7 @@
     "lint": "eslint src",
     "typecheck": "tsc -p tsconfig.json --noEmit --rootDir ../../..",
     "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-ui/fig-editor/src'",
+    "e2e": "playwright test",
     "dev": "vite --config dev/vite.config.ts --open"
   },
   "exports": {

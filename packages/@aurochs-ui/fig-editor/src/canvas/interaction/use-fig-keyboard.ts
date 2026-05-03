@@ -13,6 +13,7 @@ import { useEffect } from "react";
 import type { FigEditorAction } from "../../context/fig-editor/types";
 import type { FigNodeId } from "@aurochs/fig/domain";
 import { isInputTarget } from "@aurochs-ui/editor-core/keyboard";
+import { allowsFigUserOperation, type FigUserOperationDomain } from "../../context/fig-editor/user-operation";
 
 type UseFigKeyboardOptions = {
   readonly dispatch: (action: FigEditorAction) => void;
@@ -20,6 +21,7 @@ type UseFigKeyboardOptions = {
   readonly selectedIds: readonly FigNodeId[];
   readonly canUndo: boolean;
   readonly canRedo: boolean;
+  readonly operationDomain: FigUserOperationDomain;
   /**
    * Whether inline text editing is currently active.
    *
@@ -41,6 +43,7 @@ export function useFigKeyboard({
   selectedIds,
   canUndo,
   canRedo,
+  operationDomain,
   isTextEditing,
 }: UseFigKeyboardOptions): void {
   useEffect(() => {
@@ -57,7 +60,9 @@ export function useFigKeyboard({
       if (isTextEditing) {
         if (e.key === "Escape") {
           e.preventDefault();
-          dispatch({ type: "EXIT_TEXT_EDIT" });
+          if (allowsFigUserOperation(operationDomain, "exit-text-edit")) {
+            dispatch({ type: "EXIT_TEXT_EDIT" });
+          }
         }
         return;
       }
@@ -67,6 +72,9 @@ export function useFigKeyboard({
 
       // Delete/Backspace: delete selected nodes
       if ((e.key === "Delete" || e.key === "Backspace") && hasSelection) {
+        if (!allowsFigUserOperation(operationDomain, "delete-selection")) {
+          return;
+        }
         e.preventDefault();
         dispatch({ type: "DELETE_NODES", nodeIds: selectedIds });
         return;
@@ -74,6 +82,9 @@ export function useFigKeyboard({
 
       // Cmd/Ctrl + Z: Undo
       if (isMod && key === "z" && !e.shiftKey && canUndo) {
+        if (!allowsFigUserOperation(operationDomain, "undo")) {
+          return;
+        }
         e.preventDefault();
         dispatch({ type: "UNDO" });
         return;
@@ -81,6 +92,9 @@ export function useFigKeyboard({
 
       // Cmd/Ctrl + Shift + Z: Redo
       if (isMod && key === "z" && e.shiftKey && canRedo) {
+        if (!allowsFigUserOperation(operationDomain, "redo")) {
+          return;
+        }
         e.preventDefault();
         dispatch({ type: "REDO" });
         return;
@@ -88,6 +102,9 @@ export function useFigKeyboard({
 
       // Cmd/Ctrl + D: Duplicate
       if (isMod && key === "d" && hasSelection) {
+        if (!allowsFigUserOperation(operationDomain, "duplicate-selection")) {
+          return;
+        }
         e.preventDefault();
         dispatch({ type: "DUPLICATE_NODES", nodeIds: selectedIds });
         return;
@@ -95,6 +112,9 @@ export function useFigKeyboard({
 
       // Cmd/Ctrl + C: Copy
       if (isMod && key === "c" && hasSelection) {
+        if (!allowsFigUserOperation(operationDomain, "copy-selection")) {
+          return;
+        }
         e.preventDefault();
         dispatch({ type: "COPY" });
         return;
@@ -102,38 +122,69 @@ export function useFigKeyboard({
 
       // Cmd/Ctrl + V: Paste
       if (isMod && key === "v") {
+        if (!allowsFigUserOperation(operationDomain, "paste")) {
+          return;
+        }
         e.preventDefault();
         dispatch({ type: "PASTE" });
         return;
       }
 
       if (isMod && key === "g" && hasSelection) {
+        if (!allowsFigUserOperation(operationDomain, "group-selection")) {
+          return;
+        }
         e.preventDefault();
         dispatch({ type: "GROUP_SELECTION" });
         return;
       }
 
       if (isMod && e.altKey && key === "k" && hasSelection) {
+        if (!allowsFigUserOperation(operationDomain, "make-component")) {
+          return;
+        }
         e.preventDefault();
         dispatch({ type: "MAKE_COMPONENT_FROM_SELECTION" });
+        return;
+      }
+
+      if (isMod && e.altKey && key === "s" && hasSelection) {
+        if (!allowsFigUserOperation(operationDomain, "make-symbol")) {
+          return;
+        }
+        e.preventDefault();
+        dispatch({ type: "MAKE_SYMBOL_FROM_SELECTION" });
         return;
       }
 
       // Escape: Clear selection or exit text edit
       if (e.key === "Escape") {
         e.preventDefault();
-        dispatch({ type: "EXIT_TEXT_EDIT" });
-        dispatch({ type: "CLEAR_NODE_SELECTION" });
-        dispatch({ type: "SET_CREATION_MODE", mode: { type: "select" } });
+        if (allowsFigUserOperation(operationDomain, "exit-text-edit")) {
+          dispatch({ type: "EXIT_TEXT_EDIT" });
+        }
+        if (allowsFigUserOperation(operationDomain, "clear-selection")) {
+          dispatch({ type: "CLEAR_NODE_SELECTION" });
+        }
+        if (allowsFigUserOperation(operationDomain, "set-tool")) {
+          dispatch({ type: "SET_CREATION_MODE", mode: { type: "select" } });
+        }
         return;
       }
 
       // Tool shortcuts (single key, no modifier)
       if (!isMod && !e.altKey) {
+        if (!allowsFigUserOperation(operationDomain, "set-tool")) {
+          return;
+        }
         switch (e.key) {
           case "v":
           case "V":
             dispatch({ type: "SET_CREATION_MODE", mode: { type: "select" } });
+            return;
+          case "p":
+          case "P":
+            dispatch({ type: "SET_CREATION_MODE", mode: { type: "pen" } });
             return;
           case "r":
           case "R":
@@ -161,5 +212,5 @@ export function useFigKeyboard({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [dispatch, hasSelection, selectedIds, canUndo, canRedo, isTextEditing]);
+  }, [dispatch, hasSelection, selectedIds, canUndo, canRedo, operationDomain, isTextEditing]);
 }

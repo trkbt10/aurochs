@@ -69,6 +69,24 @@ describe("convertFigNode", () => {
 
     expect(converted.fills).toEqual([BLUE_PAINT]);
   });
+
+  it("promotes section and child auto-layout Kiwi fields into the domain model", () => {
+    const node = createFrameNode({
+      type: { value: 25, name: "SECTION" },
+      sectionContentsHidden: true,
+      variantPropSpecs: [{ propDefId: { sessionID: 1, localID: 90 }, value: "Primary" }],
+      stackChildAlignSelf: { value: 3, name: "STRETCH" },
+      stackChildPrimaryGrow: 1,
+    });
+
+    const converted = convertFigNode(node, new Map());
+
+    expect(converted.sectionContentsHidden).toBe(true);
+    expect(converted.variantPropSpecs).toEqual([{ propDefId: "1:90", value: "Primary" }]);
+    expect(converted.layoutConstraints?.stackChildAlignSelf).toEqual({ value: 3, name: "STRETCH" });
+    expect(converted.layoutConstraints?.stackChildPrimaryGrow).toBe(1);
+    expect(converted._raw?.sectionContentsHidden).toBeUndefined();
+  });
 });
 
 describe("treeToDocument page visibility", () => {

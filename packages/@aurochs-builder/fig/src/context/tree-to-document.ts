@@ -96,6 +96,12 @@ const DEFAULT_SIZE: FigVector = { x: 0, y: 0 };
 /** Default color (black) */
 const _DEFAULT_COLOR: FigColor = { r: 0, g: 0, b: 0, a: 1 };
 
+function isFigVector(value: unknown): value is FigVector {
+  return typeof value === "object" && value !== null &&
+    "x" in value && typeof value.x === "number" &&
+    "y" in value && typeof value.y === "number";
+}
+
 /** Node types that are components */
 const COMPONENT_TYPES: ReadonlySet<FigNodeType> = new Set([
   FIG_NODE_TYPE.COMPONENT,
@@ -213,10 +219,11 @@ function extractIndividualStrokeWeights(node: FigNode): FigDesignNode["individua
 const MODELED_FIELDS: ReadonlySet<string> = new Set([
   "guid", "parentIndex", "children", "type", "phase",
   "name", "visible", "opacity",
-  "transform", "size",
+  "transform", "size", "transformOrigin",
   "fillPaints", "backgroundPaints", "strokePaints", "strokeWeight", "strokeAlign", "strokeJoin", "strokeCap", "strokeDashes",
   "borderTopWeight", "borderRightWeight", "borderBottomWeight", "borderLeftWeight", "borderStrokeWeightsIndependent",
   "styleIdForFill", "styleIdForStrokeFill",
+  "exportSettings",
   "cornerRadius", "rectangleCornerRadii", "cornerSmoothing",
   "rectangleTopLeftCornerRadius", "rectangleTopRightCornerRadius",
   "rectangleBottomLeftCornerRadius", "rectangleBottomRightCornerRadius",
@@ -225,6 +232,7 @@ const MODELED_FIELDS: ReadonlySet<string> = new Set([
   "effects",
   "derivedTextData",
   "clipsContent", "frameMaskDisabled",
+  "sectionContentsHidden",
   "stackMode", "stackSpacing", "stackPadding",
   "stackPrimaryAlignItems", "stackCounterAlignItems", "stackPrimaryAlignContent",
   "stackWrap", "stackCounterSpacing", "itemReverseZIndex",
@@ -236,7 +244,7 @@ const MODELED_FIELDS: ReadonlySet<string> = new Set([
   "textDecoration", "textCase", "lineHeight", "letterSpacing",
   "textTruncation", "leadingTrim", "fontVariations", "hyperlink", "textTracking",
   "symbolID", "symbolOverrides", "symbolData", "derivedSymbolData",
-  "componentPropDefs", "componentPropRefs", "componentPropAssignments",
+  "componentPropDefs", "componentPropRefs", "componentPropAssignments", "variantPropSpecs",
   "mask",
   "arcData",
   "vectorPaths", "vectorData",
@@ -535,6 +543,10 @@ function convertPropertyValue(raw: FigComponentPropValue | undefined): Component
     result.numberValue = raw.numberValue;
   }
 
+  if (typeof raw.floatValue === "number") {
+    result.numberValue = raw.floatValue;
+  }
+
   // Return undefined if no known fields were populated
   if (result.boolValue === undefined && result.textValue === undefined &&
       result.referenceValue === undefined && result.numberValue === undefined) {
@@ -587,6 +599,24 @@ function extractComponentPropertyAssignments(node: FigNode): readonly ComponentP
       value,
     });
   }
+  return result.length > 0 ? result : undefined;
+}
+
+function extractVariantPropSpecs(node: FigNode): FigDesignNode["variantPropSpecs"] {
+  const specs = node.variantPropSpecs;
+  if (!specs || specs.length === 0) {return undefined;}
+
+  const result: { readonly propDefId: FigNodeId; readonly value: string }[] = [];
+  for (const spec of specs) {
+    const propDefId = spec.propDefId;
+    if (!propDefId || typeof propDefId !== "object" || !("sessionID" in propDefId)) {continue;}
+    if (typeof spec.value !== "string") {continue;}
+    result.push({
+      propDefId: guidToNodeId(propDefId),
+      value: spec.value,
+    });
+  }
+
   return result.length > 0 ? result : undefined;
 }
 
@@ -1110,6 +1140,7 @@ export function convertFigNode(
     opacity: node.opacity ?? 1,
     transform: node.transform ?? IDENTITY_MATRIX,
     size: node.size ?? DEFAULT_SIZE,
+    transformOrigin: isFigVector(node.transformOrigin) ? node.transformOrigin : undefined,
 
     fills,
     strokes,
@@ -1131,6 +1162,7 @@ export function convertFigNode(
     children: convertedChildren,
 
     clipsContent: resolveClipsContentForDomain(node, nodeType),
+    sectionContentsHidden: node.sectionContentsHidden,
     autoLayout: extractAutoLayout(node),
     layoutConstraints: extractLayoutConstraints(node),
 
@@ -1144,6 +1176,8 @@ export function convertFigNode(
     componentPropertyDefs: extractComponentPropertyDefs(node),
     componentPropertyRefs: extractComponentPropertyRefs(node),
     componentPropertyAssignments: extractComponentPropertyAssignments(node),
+    variantPropSpecs: extractVariantPropSpecs(node),
+    exportSettings: node.exportSettings,
 
     styleIdForFill: node.styleIdForFill,
     styleIdForStrokeFill: node.styleIdForStrokeFill,

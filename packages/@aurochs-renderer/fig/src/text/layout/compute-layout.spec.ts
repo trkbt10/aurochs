@@ -161,6 +161,35 @@ describe("textLayoutToCursorLayout", () => {
     expect(cursor.paragraphs[0].lines.length).toBeGreaterThan(1);
   });
 
+  it("word-wrapped text preserves source ranges for skipped boundary whitespace", () => {
+    const layout = computeTextLayout({
+      props: makeProps({
+        characters: "Hello World",
+        size: { width: 60, height: 100 },
+        textAutoResize: "NONE",
+      }),
+    });
+
+    expect(layout.lines.map((line) => ({
+      text: line.text,
+      sourceStart: line.sourceStart,
+      sourceEnd: line.sourceEnd,
+    }))).toEqual([
+      { text: "Hello", sourceStart: 0, sourceEnd: 5 },
+      { text: "World", sourceStart: 6, sourceEnd: 11 },
+    ]);
+
+    const cursor = textLayoutToCursorLayout(layout);
+    expect(cursor.paragraphs[0].lines.map((line) => ({
+      text: line.spans[0].text,
+      sourceStart: line.sourceStart,
+      sourceEnd: line.sourceEnd,
+    }))).toEqual([
+      { text: "Hello", sourceStart: 0, sourceEnd: 5 },
+      { text: "World", sourceStart: 6, sourceEnd: 11 },
+    ]);
+  });
+
   it("mixed newlines and wrapping: paragraphs match \\n segments", () => {
     // "AAAA BBBB\nCC" with width 50 → paragraph 0 wraps into 2+ lines,
     // paragraph 1 stays as 1 line.

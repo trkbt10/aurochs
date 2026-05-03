@@ -92,6 +92,31 @@ const twoParagraphLayout: LayoutResultLike = {
   ],
 };
 
+const wrappedSourceRangeLayout: LayoutResultLike = {
+  paragraphs: [
+    {
+      lines: [
+        {
+          spans: [{ text: "Hello", width: 50, dx: 0, fontSize: 12, fontFamily: "Arial" }],
+          x: 10,
+          y: 20,
+          height: 16,
+          sourceStart: 0,
+          sourceEnd: 5,
+        },
+        {
+          spans: [{ text: "World", width: 50, dx: 0, fontSize: 12, fontFamily: "Arial" }],
+          x: 10,
+          y: 40,
+          height: 16,
+          sourceStart: 6,
+          sourceEnd: 11,
+        },
+      ],
+    },
+  ],
+};
+
 // =============================================================================
 // Cursor Position Tests
 // =============================================================================
@@ -287,6 +312,17 @@ describe("cursorPositionToCoordinates", () => {
     expect(coords).toBeDefined();
     expect(coords!.x).toBe(0);
   });
+
+  it("uses visual-line source ranges instead of concatenating wrapped line text", () => {
+    const endOfFirstLine = cursorPositionToCoordinates({ paragraphIndex: 0, charOffset: 5 }, wrappedSourceRangeLayout, DEFAULT_CURSOR_CONTEXT);
+    const startOfSecondLine = cursorPositionToCoordinates({ paragraphIndex: 0, charOffset: 6 }, wrappedSourceRangeLayout, DEFAULT_CURSOR_CONTEXT);
+
+    expect(endOfFirstLine).toBeDefined();
+    expect(startOfSecondLine).toBeDefined();
+    expect(endOfFirstLine!.x).toBe(60);
+    expect(startOfSecondLine!.x).toBe(10);
+    expect(startOfSecondLine!.y).toBeGreaterThan(endOfFirstLine!.y);
+  });
 });
 
 describe("coordinatesToCursorPosition", () => {
@@ -303,6 +339,11 @@ describe("coordinatesToCursorPosition", () => {
   it("maps to second paragraph when y is closer", () => {
     const pos = coordinatesToCursorPosition({ layoutResult: twoParagraphLayout, x: 10, y: 40, ctx: DEFAULT_CURSOR_CONTEXT });
     expect(pos.paragraphIndex).toBe(1);
+  });
+
+  it("returns source offsets for wrapped visual lines", () => {
+    const pos = coordinatesToCursorPosition({ layoutResult: wrappedSourceRangeLayout, x: 10, y: 40, ctx: DEFAULT_CURSOR_CONTEXT });
+    expect(pos).toEqual({ paragraphIndex: 0, charOffset: 6 });
   });
 });
 
@@ -328,5 +369,19 @@ describe("selectionToRects", () => {
     const sel: TextSelection = { start: { paragraphIndex: 0, charOffset: 0 }, end: { paragraphIndex: 1, charOffset: 5 } };
     const rects = selectionToRects(sel, twoParagraphLayout, DEFAULT_CURSOR_CONTEXT);
     expect(rects.length).toBe(2);
+  });
+
+  it("selects wrapped source ranges on their visual line", () => {
+    const sel: TextSelection = { start: { paragraphIndex: 0, charOffset: 6 }, end: { paragraphIndex: 0, charOffset: 11 } };
+    const rects = selectionToRects(sel, wrappedSourceRangeLayout, DEFAULT_CURSOR_CONTEXT);
+    expect(rects).toHaveLength(1);
+    expect(rects[0].x).toBe(10);
+    expect(rects[0].width).toBe(50);
+  });
+
+  it("does not draw a highlight for whitespace suppressed by wrapping", () => {
+    const sel: TextSelection = { start: { paragraphIndex: 0, charOffset: 5 }, end: { paragraphIndex: 0, charOffset: 6 } };
+    const rects = selectionToRects(sel, wrappedSourceRangeLayout, DEFAULT_CURSOR_CONTEXT);
+    expect(rects).toHaveLength(0);
   });
 });

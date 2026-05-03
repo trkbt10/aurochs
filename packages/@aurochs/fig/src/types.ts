@@ -522,13 +522,25 @@ export type FigComponentPropDef = {
 };
 
 /**
+ * Variant property assignment as stored in Kiwi binary format.
+ * COMPONENT nodes inside a COMPONENT_SET use this to declare which
+ * variant value they represent for a given component property definition.
+ */
+export type FigVariantPropSpec = {
+  readonly propDefId?: FigGuid;
+  readonly value?: string;
+  readonly [key: string]: unknown;
+};
+
+/**
  * Component property value as stored in Kiwi binary format.
  */
 export type FigComponentPropValue = {
   readonly boolValue?: boolean;
-  readonly textValue?: { readonly characters: string };
+  readonly textValue?: { readonly characters: string; readonly lines?: readonly unknown[] };
   readonly guidValue?: FigGuid;
   readonly numberValue?: number;
+  readonly floatValue?: number;
   readonly [key: string]: unknown;
 };
 
@@ -569,14 +581,7 @@ export type FigExportSetting = {
  */
 export type FigComponentPropAssignment = {
   readonly defID: FigGuid;
-  readonly value: {
-    readonly boolValue?: boolean;
-    readonly textValue?: {
-      readonly characters: string;
-      readonly lines?: readonly unknown[];
-    };
-    readonly [key: string]: unknown;
-  };
+  readonly value: FigComponentPropValue;
 };
 
 // =============================================================================
@@ -717,6 +722,8 @@ export type FigNode = {
   readonly componentPropDefs?: readonly FigComponentPropDef[];
   /** Component property references on child nodes (binds field to prop def) */
   readonly componentPropRefs?: readonly FigComponentPropRef[];
+  /** Variant property values on COMPONENT nodes inside a COMPONENT_SET */
+  readonly variantPropSpecs?: readonly FigVariantPropSpec[];
 
   // ---- Variable consumption (RESOLVE_VARIANT, color binding, etc.) ----
   /**

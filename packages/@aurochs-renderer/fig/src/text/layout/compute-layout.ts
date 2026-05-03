@@ -7,6 +7,7 @@
 
 import type { ExtractedTextProps, TextAlignHorizontal, TextAlignVertical } from "./types";
 import { getAlignedX, getAlignedYWithMetrics } from "./alignment";
+import { breakLines } from "../measure/line-break";
 
 /**
  * A single line of laid-out text
@@ -37,6 +38,16 @@ export type LayoutLine = {
    * uses paragraph structure, so the cursor layout must group lines by paragraph.
    */
   readonly paragraphIndex: number;
+  /**
+   * Start offset in the source paragraph for this visual line.
+   *
+   * This is part of the text layout contract. Renderers and editor overlays
+   * must consume this range instead of reconstructing wrapped-line offsets
+   * from rendered text, because wrapping may suppress leading/trailing spaces.
+   */
+  readonly sourceStart: number;
+  /** End offset in the source paragraph for this visual line. */
+  readonly sourceEnd: number;
   /**
    * Estimated pixel width of the line's text content.
    *
@@ -125,89 +136,15 @@ function estimateCharWidth(fontSize: number, letterSpacing: number | undefined):
  * @param text - Single paragraph text (no newlines)
  * @param maxWidth - Maximum line width in pixels
  * @param charWidth - Estimated width per character
- * @returns Array of line strings
+ * @returns Array of source-ranged line strings
  */
-function wrapParagraph(text: string, maxWidth: number, charWidth: number): string[] {
-  if (text.length === 0) {
-    return [""];
-  }
-
-  // If the whole text fits, no wrapping needed
-  if (text.length * charWidth <= maxWidth) {
-    return [text];
-  }
-
-  const lines: string[] = [];
-  const words = text.split(/( +)/); // Split keeping spaces as separate entries
-  // eslint-disable-next-line no-restricted-syntax -- mutable line buffer for word-wrap; cannot be expressed as pure reduce without complexity
-  let currentLine = "";
-  // eslint-disable-next-line no-restricted-syntax -- mutable width accumulator for word-wrap
-  let currentWidth = 0;
-
-  for (const word of words) {
-    const wordWidth = word.length * charWidth;
-
-    if (currentLine.length === 0) {
-      // First word on a new line — always take it (even if too wide)
-      if (wordWidth > maxWidth && word.trim().length > 0) {
-        // Word is wider than maxWidth — break by character
-        for (const ch of word) {
-          if (currentWidth + charWidth > maxWidth && currentLine.length > 0) {
-            lines.push(currentLine);
-            currentLine = "";
-            currentWidth = 0;
-          }
-          currentLine += ch;
-          currentWidth += charWidth;
-        }
-      } else {
-        currentLine = word;
-        currentWidth = wordWidth;
-      }
-    } else if (currentWidth + wordWidth <= maxWidth) {
-      // Word fits on the current line
-      currentLine += word;
-      currentWidth += wordWidth;
-    } else {
-      // Word doesn't fit — start a new line
-      // Trim trailing spaces from the current line
-      lines.push(currentLine.trimEnd());
-      // Skip leading spaces for the new line
-      const trimmedWord = word.trimStart();
-      if (trimmedWord.length === 0) {
-        currentLine = "";
-        currentWidth = 0;
-      } else if (trimmedWord.length * charWidth > maxWidth) {
-        // Word is wider than maxWidth — break by character
-        currentLine = "";
-        currentWidth = 0;
-        for (const ch of trimmedWord) {
-          if (currentWidth + charWidth > maxWidth && currentLine.length > 0) {
-            lines.push(currentLine);
-            currentLine = "";
-            currentWidth = 0;
-          }
-          currentLine += ch;
-          currentWidth += charWidth;
-        }
-      } else {
-        currentLine = trimmedWord;
-        currentWidth = trimmedWord.length * charWidth;
-      }
-    }
-  }
-
-  // Flush the last line
-  if (currentLine.length > 0) {
-    lines.push(currentLine.trimEnd());
-  }
-
-  // Ensure at least one line
-  if (lines.length === 0) {
-    lines.push("");
-  }
-
-  return lines;
+function wrapParagraph(text: string, maxWidth: number, charWidth: number): readonly SourceLine[] {
+  const charWidths = Array.from({ length: text.length }, () => charWidth);
+  return breakLines({ text, charWidths, maxWidth, mode: "auto" }).map((line) => ({
+    text: line.text,
+    sourceStart: line.startIndex,
+    sourceEnd: line.endIndex,
+  }));
 }
 
 /**
@@ -216,7 +153,19 @@ function wrapParagraph(text: string, maxWidth: number, charWidth: number): strin
 type LineWithParagraph = {
   readonly text: string;
   readonly paragraphIndex: number;
+  readonly sourceStart: number;
+  readonly sourceEnd: number;
 };
+
+type SourceLine = {
+  readonly text: string;
+  readonly sourceStart: number;
+  readonly sourceEnd: number;
+};
+
+function paragraphToSourceLine(text: string): SourceLine {
+  return { text, sourceStart: 0, sourceEnd: text.length };
+}
 
 /**
  * Split text into lines with optional word wrapping, preserving paragraph origin.
@@ -234,24 +183,24 @@ function splitTextIntoLines(props: ExtractedTextProps): LineWithParagraph[] {
   const paragraphs = props.characters.split("\n");
 
   if (!isFixedWidth(props.textAutoResize) || !props.size) {
-    return paragraphs.map((text, i) => ({ text, paragraphIndex: i }));
+    return paragraphs.map((text, i) => ({ ...paragraphToSourceLine(text), paragraphIndex: i }));
   }
 
   const maxWidth = props.size.width;
   if (maxWidth <= 0) {
-    return paragraphs.map((text, i) => ({ text, paragraphIndex: i }));
+    return paragraphs.map((text, i) => ({ ...paragraphToSourceLine(text), paragraphIndex: i }));
   }
 
   const charWidth = estimateCharWidth(props.fontSize, props.letterSpacing);
   if (charWidth <= 0) {
-    return paragraphs.map((text, i) => ({ text, paragraphIndex: i }));
+    return paragraphs.map((text, i) => ({ ...paragraphToSourceLine(text), paragraphIndex: i }));
   }
 
   const allLines: LineWithParagraph[] = [];
   for (let i = 0; i < paragraphs.length; i++) {
     const wrapped = wrapParagraph(paragraphs[i], maxWidth, charWidth);
     for (const line of wrapped) {
-      allLines.push({ text: line, paragraphIndex: i });
+      allLines.push({ ...line, paragraphIndex: i });
     }
   }
   return allLines;
@@ -262,7 +211,7 @@ function resolveLinesWithParagraph(
   props: ExtractedTextProps,
 ): LineWithParagraph[] {
   if (explicitLines) {
-    return explicitLines.map((text, i) => ({ text, paragraphIndex: i }));
+    return explicitLines.map((text, i) => ({ ...paragraphToSourceLine(text), paragraphIndex: i }));
   }
   return splitTextIntoLines(props);
 }
@@ -307,6 +256,8 @@ export function computeTextLayout(options: ComputeLayoutOptions): TextLayout {
     y: baseY + index * lineHeight,
     index,
     paragraphIndex: lwp.paragraphIndex,
+    sourceStart: lwp.sourceStart,
+    sourceEnd: lwp.sourceEnd,
     estimatedWidth: lwp.text.length * charWidth,
   }));
 
@@ -344,6 +295,8 @@ export type CursorLayoutLine = {
   readonly x: number;
   readonly y: number;
   readonly height: number;
+  readonly sourceStart: number;
+  readonly sourceEnd: number;
 };
 
 /**
@@ -429,6 +382,8 @@ function computeCursorLayout(
       x: leftX,
       y: line.y,
       height: layout.lineHeight,
+      sourceStart: line.sourceStart,
+      sourceEnd: line.sourceEnd,
     };
 
     const existing = grouped.get(line.paragraphIndex);

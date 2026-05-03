@@ -9,9 +9,11 @@ import { Input } from "@aurochs-ui/ui-components/primitives/Input";
 import type { SelectOption } from "@aurochs-ui/ui-components/types";
 import { AddIcon, CloseIcon } from "@aurochs-ui/ui-components/icons";
 import { colorTokens, fontTokens } from "@aurochs-ui/ui-components/design-tokens";
+import { createPropertyPrimaryUpdateAction, type PropertyMutationTarget } from "../property-mutation-target";
 
 type VectorPathSectionProps = {
   readonly node: FigDesignNode;
+  readonly target: PropertyMutationTarget;
   readonly dispatch: (action: FigEditorAction) => void;
 };
 
@@ -132,27 +134,28 @@ function parsePathData(data: string): readonly EditableCommand[] | undefined {
   if (!tokens) {
     return [];
   }
-  const commands: EditableCommand[] = [];
-  let index = 0;
-  while (index < tokens.length) {
-    const type = tokens[index]?.toUpperCase() as EditableCommandType | undefined;
-    if (!type || !commandParamLabels[type]) {
-      return undefined;
-    }
-    index += 1;
-    const count = commandParamCount(type);
-    const values: number[] = [];
-    for (let i = 0; i < count; i += 1) {
-      const token = tokens[index + i];
-      if (token === undefined || /[A-Za-z]/.test(token)) {
-        return undefined;
-      }
-      values.push(Number(token));
-    }
-    index += count;
-    commands.push({ type, values });
+  return parsePathTokens(tokens, 0, []);
+}
+
+function parsePathTokens(
+  tokens: readonly string[],
+  index: number,
+  commands: readonly EditableCommand[],
+): readonly EditableCommand[] | undefined {
+  if (index >= tokens.length) {
+    return commands;
   }
-  return commands;
+  const type = tokens[index]?.toUpperCase() as EditableCommandType | undefined;
+  if (!type || !commandParamLabels[type]) {
+    return undefined;
+  }
+  const count = commandParamCount(type);
+  const values = tokens.slice(index + 1, index + 1 + count);
+  if (values.length !== count || values.some((token) => /[A-Za-z]/.test(token))) {
+    return undefined;
+  }
+  const command: EditableCommand = { type, values: values.map(Number) };
+  return parsePathTokens(tokens, index + count + 1, [...commands, command]);
 }
 
 function serializePathData(commands: readonly EditableCommand[]): string {
@@ -169,19 +172,31 @@ function insertCommand(commands: readonly EditableCommand[], command: EditableCo
   return [...commands.slice(0, closeIndex), command, ...commands.slice(closeIndex)];
 }
 
+function replaceCommandType(
+  commands: readonly EditableCommand[],
+  commandIndex: number,
+  nextType: EditableCommandType,
+): readonly EditableCommand[] {
+  return commands.map((cmd, i) => {
+    if (i !== commandIndex) {
+      return cmd;
+    }
+    return { type: nextType, values: normalizeCommandValues(nextType, cmd.values) };
+  });
+}
+
 /** Edits SVG path data stored on VECTOR-like fig nodes. */
-export function VectorPathSection({ node, dispatch }: VectorPathSectionProps) {
+export function VectorPathSection({ node, target, dispatch }: VectorPathSectionProps) {
   const paths = node.vectorPaths ?? [];
 
   const updatePaths = useCallback(
     (updater: (paths: readonly FigVectorPath[]) => readonly FigVectorPath[]) => {
-      dispatch({
-        type: "UPDATE_NODE",
-        nodeId: node.id,
+      dispatch(createPropertyPrimaryUpdateAction({
+        target,
         updater: (current) => ({ ...current, vectorPaths: updater(current.vectorPaths ?? []) }),
-      });
+      }));
     },
-    [dispatch, node.id],
+    [dispatch, target],
   );
 
   const updatePath = useCallback(
@@ -201,7 +216,12 @@ export function VectorPathSection({ node, dispatch }: VectorPathSectionProps) {
       {paths.map((path, index) => (
         <div key={index} style={rowStyle}>
           <div style={headerStyle}>
-            <Select value={windingName(path)} onChange={(value) => updatePath(index, (current) => ({ ...current, windingRule: value }))} options={windingOptions} />
+            <Select
+              value={windingName(path)}
+              onChange={(value) => updatePath(index, (current) => ({ ...current, windingRule: value }))}
+              options={windingOptions}
+              ariaLabel={`Path ${index + 1} winding rule`}
+            />
             <button type="button" title="Remove path" style={removeButtonStyle} onClick={() => updatePaths((current) => current.filter((_, i) => i !== index))}>
               <CloseIcon size={12} />
             </button>
@@ -220,18 +240,18 @@ export function VectorPathSection({ node, dispatch }: VectorPathSectionProps) {
                     value={command.type}
                     onChange={(nextType) => updatePath(index, (current) => {
                       const commands = parsePathData(current.data ?? "") ?? [];
-                      const nextCommands = commands.map((cmd, i) => i === commandIndex
-                        ? { type: nextType, values: normalizeCommandValues(nextType, cmd.values) }
-                        : cmd);
+                      const nextCommands = replaceCommandType(commands, commandIndex, nextType);
                       return { ...current, data: serializePathData(nextCommands) };
                     })}
                     options={commandOptions}
+                    ariaLabel={`Path ${index + 1} command ${commandIndex + 1} type`}
                   />
                   <div style={commandFieldsStyle}>
                     {commandParamLabels[command.type].map((label, valueIndex) => (
                       <Input
                         key={`${commandIndex}-${label}`}
                         type="number"
+                        ariaLabel={`Path ${index + 1} command ${commandIndex + 1} ${label}`}
                         value={command.values[valueIndex] ?? 0}
                         suffix={label}
                         onChange={(value) => updatePath(index, (current) => {

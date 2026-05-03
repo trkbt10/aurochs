@@ -26,22 +26,9 @@ import {
   UnknownShapeIcon,
 } from "@aurochs-ui/ui-components/icons";
 import { iconTokens, colorTokens, fontTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
-
-// =============================================================================
-// Instance highlight color
-// =============================================================================
-
-/**
- * Figma uses purple (#9747FF) for component instance indicators.
- * We use a slightly muted variant for the icon tint and a very subtle
- * background tint for layer rows that are inside an INSTANCE scope.
- */
-const INSTANCE_COLOR = "#9747FF";
-const INSTANCE_BG_TINT = "rgba(151, 71, 255, 0.06)";
-const INSTANCE_ICON_COLOR = "#9747FF";
-const FRAME_BG_TINT = "rgba(36, 142, 255, 0.05)";
-const COMPONENT_BG_TINT = "rgba(151, 71, 255, 0.08)";
-const SYMBOL_BG_TINT = "rgba(16, 185, 129, 0.07)";
+import { resolveLayerNodePresentation, type LayerNodeBadge } from "./layer-node-presentation";
+import { allowsFigUserOperation, type FigUserOperationDomain } from "../context/fig-editor/user-operation";
+import { useFigOperationDomain } from "../context/use-fig-operation-domain";
 
 // =============================================================================
 // Icon helpers
@@ -49,9 +36,7 @@ const SYMBOL_BG_TINT = "rgba(16, 185, 129, 0.07)";
 
 const ICON_PROPS = { size: iconTokens.size.sm, strokeWidth: iconTokens.strokeWidth };
 
-function getNodeIcon(type: string, isInstanceContext: boolean): ReactNode {
-  // Instance-context nodes get a purple tint on their icon
-  const color = isInstanceContext ? INSTANCE_ICON_COLOR : undefined;
+function getNodeIcon(type: FigDesignNode["type"], color: string | undefined): ReactNode {
   const props = color ? { ...ICON_PROPS, color } : ICON_PROPS;
 
   switch (type) {
@@ -75,8 +60,7 @@ function getNodeIcon(type: string, isInstanceContext: boolean): ReactNode {
     case "STAR":
       return <StarIcon {...props} />;
     case "INSTANCE":
-      // INSTANCE nodes always get the purple diamond icon
-      return <DiamondIcon {...ICON_PROPS} color={INSTANCE_COLOR} />;
+      return <DiamondIcon {...props} />;
     default:
       return <UnknownShapeIcon {...props} />;
   }
@@ -96,7 +80,7 @@ const layerBadgeBaseStyle: CSSProperties = {
   letterSpacing: "0.02em",
 };
 
-function LayerBadge({ label, color }: { readonly label: string; readonly color: string }) {
+function LayerBadge({ label, color }: LayerNodeBadge) {
   return (
     <span
       style={{
@@ -108,48 +92,6 @@ function LayerBadge({ label, color }: { readonly label: string; readonly color: 
       {label}
     </span>
   );
-}
-
-const instanceRowStyle: CSSProperties = {
-  backgroundColor: INSTANCE_BG_TINT,
-};
-
-function getLayerRowStyle(node: FigDesignNode, isInstanceContext: boolean): CSSProperties | undefined {
-  if (isInstanceContext || node.type === "INSTANCE") {
-    return instanceRowStyle;
-  }
-  switch (node.type) {
-    case "FRAME":
-      return { backgroundColor: FRAME_BG_TINT };
-    case "COMPONENT":
-    case "COMPONENT_SET":
-      return { backgroundColor: COMPONENT_BG_TINT };
-    case "SYMBOL":
-      return { backgroundColor: SYMBOL_BG_TINT };
-    default:
-      return undefined;
-  }
-}
-
-function getLayerBadge(node: FigDesignNode, isInstanceContext: boolean): ReactNode | undefined {
-  if (node.type === "INSTANCE") {
-    return <LayerBadge label="Instance" color={INSTANCE_COLOR} />;
-  }
-  if (isInstanceContext) {
-    return <LayerBadge label="Inherited" color={INSTANCE_COLOR} />;
-  }
-  switch (node.type) {
-    case "FRAME":
-      return <LayerBadge label="Frame" color="#248EFF" />;
-    case "COMPONENT":
-      return <LayerBadge label="Component" color="#9747FF" />;
-    case "COMPONENT_SET":
-      return <LayerBadge label="Set" color="#9747FF" />;
-    case "SYMBOL":
-      return <LayerBadge label="Symbol" color="#10B981" />;
-    default:
-      return undefined;
-  }
 }
 
 const renameInputStyle: CSSProperties = {
@@ -192,6 +134,7 @@ function useExpansion(): ExpansionState {
 type LayerTreeProps = {
   readonly nodes: readonly FigDesignNode[];
   readonly depth: number;
+  readonly operationDomain: FigUserOperationDomain;
   /**
    * Whether this subtree is inside an INSTANCE node.
    * When true, all children are rendered with the instance accent color
@@ -200,14 +143,19 @@ type LayerTreeProps = {
   readonly isInstanceContext: boolean;
 };
 
-function LayerTree({ nodes, depth, isInstanceContext }: LayerTreeProps) {
+function LayerTree({ nodes, depth, operationDomain, isInstanceContext }: LayerTreeProps) {
   const { nodeSelection, dispatch } = useFigEditor();
   const { expandedIds, toggle } = useExpansion();
   const [editingId, setEditingId] = useState<FigNodeId | null>(null);
   const [editingName, setEditingName] = useState("");
+  const canSelectNode = allowsFigUserOperation(operationDomain, "select-node");
+  const canRenameNode = allowsFigUserOperation(operationDomain, "update-property");
 
   const handlePointerDown = useCallback(
     (nodeId: FigNodeId) => (e: ReactPointerEvent) => {
+      if (!canSelectNode) {
+        return;
+      }
       const addToSelection = e.shiftKey || e.metaKey || e.ctrlKey;
       dispatch({
         type: "SELECT_NODE",
@@ -215,27 +163,37 @@ function LayerTree({ nodes, depth, isInstanceContext }: LayerTreeProps) {
         addToSelection,
       });
     },
-    [dispatch],
+    [canSelectNode, dispatch],
   );
 
   const beginRename = useCallback((node: FigDesignNode) => {
+    if (!canRenameNode) {
+      return;
+    }
     setEditingId(node.id);
     setEditingName(node.name);
-  }, []);
+  }, [canRenameNode]);
 
   const commitRename = useCallback((nodeId: FigNodeId) => {
+    if (!canRenameNode) {
+      setEditingId(null);
+      return;
+    }
     const name = editingName.trim();
     if (name.length > 0) {
-      dispatch({ type: "RENAME_NODE", nodeId, name });
+      dispatch({ type: "RENAME_NODE", nodeId, name, source: "layer-panel" });
     }
     setEditingId(null);
-  }, [dispatch, editingName]);
+  }, [canRenameNode, dispatch, editingName]);
 
   const handleRenameKeyDown = useCallback((nodeId: FigNodeId) => (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      commitRename(nodeId);
-    } else if (e.key === "Escape") {
-      setEditingId(null);
+    switch (e.key) {
+      case "Enter":
+        commitRename(nodeId);
+        break;
+      case "Escape":
+        setEditingId(null);
+        break;
     }
   }, [commitRename]);
 
@@ -248,12 +206,12 @@ function LayerTree({ nodes, depth, isInstanceContext }: LayerTreeProps) {
         const isInstance = node.type === "INSTANCE";
         const childIsInstanceContext = isInstanceContext || isInstance;
         const isEditing = editingId === node.id;
-        const rowStyle = getLayerRowStyle(node, isInstanceContext);
-        const badge = getLayerBadge(node, isInstanceContext);
+        const presentation = resolveLayerNodePresentation(node.type, isInstanceContext);
+        const badge = presentation.badge ? <LayerBadge {...presentation.badge} /> : undefined;
 
-        return (
-          <div key={node.id} style={rowStyle}>
-            {isEditing ? (
+        if (isEditing) {
+          return (
+            <div key={node.id} style={presentation.rowStyle}>
               <div style={{ paddingLeft: 8 + depth * 16, paddingRight: 6, paddingTop: 2, paddingBottom: 2 }}>
                 <input
                   autoFocus
@@ -265,27 +223,31 @@ function LayerTree({ nodes, depth, isInstanceContext }: LayerTreeProps) {
                   onKeyDown={handleRenameKeyDown(node.id)}
                 />
               </div>
-            ) : (
-              <div onDoubleClick={() => beginRename(node)}>
-                <LayerItem
-                  id={node.id}
-                  label={node.name}
-                  icon={getNodeIcon(node.type, isInstanceContext)}
-                  depth={depth}
-                  selected={selected}
-                  dimmed={!node.visible}
-                  hasChildren={hasChildren}
-                  expanded={expanded}
-                  onToggle={hasChildren ? () => toggle(node.id) : undefined}
-                  onPointerDown={handlePointerDown(node.id as FigNodeId)}
-                  showVisibilityToggle={false}
-                  showLockToggle={false}
-                  badge={badge}
-                />
-              </div>
-            )}
+            </div>
+          );
+        }
+
+        return (
+          <div key={node.id} style={presentation.rowStyle}>
+            <div onDoubleClick={() => beginRename(node)}>
+              <LayerItem
+                id={node.id}
+                label={node.name}
+                icon={getNodeIcon(node.type, presentation.iconColor)}
+                depth={depth}
+                selected={selected}
+                dimmed={!node.visible}
+                hasChildren={hasChildren}
+                expanded={expanded}
+                onToggle={hasChildren ? () => toggle(node.id) : undefined}
+                onPointerDown={canSelectNode ? handlePointerDown(node.id) : undefined}
+                showVisibilityToggle={false}
+                showLockToggle={false}
+                badge={badge}
+              />
+            </div>
             {hasChildren && expanded && (
-              <LayerTree nodes={node.children!} depth={depth + 1} isInstanceContext={childIsInstanceContext} />
+              <LayerTree nodes={node.children!} depth={depth + 1} operationDomain={operationDomain} isInstanceContext={childIsInstanceContext} />
             )}
           </div>
         );
@@ -294,11 +256,17 @@ function LayerTree({ nodes, depth, isInstanceContext }: LayerTreeProps) {
   );
 }
 
-function buildLayerContent(
-  children: readonly FigDesignNode[],
-  expandedIds: ReadonlySet<string>,
-  toggleExpand: (id: string) => void,
-): ReactNode {
+function buildLayerContent({
+  children,
+  expandedIds,
+  toggleExpand,
+  operationDomain,
+}: {
+  readonly children: readonly FigDesignNode[];
+  readonly expandedIds: ReadonlySet<string>;
+  readonly toggleExpand: (id: string) => void;
+  readonly operationDomain: FigUserOperationDomain;
+}): ReactNode {
   if (children.length === 0) {
     return (
       <div style={{ padding: `${spacingTokens.xl} ${spacingTokens.lg}`, textAlign: "center", color: colorTokens.text.tertiary, fontSize: fontTokens.size.lg }}>
@@ -309,7 +277,7 @@ function buildLayerContent(
   return (
     <ExpansionContext.Provider value={{ expandedIds, toggle: toggleExpand }}>
       <div role="tree" aria-label="Layers">
-        <LayerTree nodes={children} depth={0} isInstanceContext={false} />
+        <LayerTree nodes={children} depth={0} operationDomain={operationDomain} isInstanceContext={false} />
       </div>
     </ExpansionContext.Provider>
   );
@@ -327,6 +295,7 @@ function buildLayerContent(
  */
 export function LayerPanel() {
   const { activePage } = useFigEditor();
+  const operationDomain = useFigOperationDomain();
   const [expandedIds, setExpandedIds] = useState<ReadonlySet<string>>(() => new Set());
 
   const toggleExpand = useCallback((id: string) => {
@@ -351,7 +320,12 @@ export function LayerPanel() {
     );
   }
 
-  const layerContent = buildLayerContent(activePage.children, expandedIds, toggleExpand);
+  const layerContent = buildLayerContent({
+    children: activePage.children,
+    expandedIds,
+    toggleExpand,
+    operationDomain,
+  });
 
   return (
     <OptionalPropertySection title="Layers" badge={activePage.children.length} defaultExpanded>
