@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `xlsx/builder` `exportXlsx` now writes `<drawing>` after `<rowBreaks>`/`<colBreaks>` per the ECMA-376 §18.3.1.99 `CT_Worksheet` sequence. Workbooks containing any `XlsxDrawing` previously emitted `<drawing>` between `<hyperlinks>` and `<printOptions>`, which Microsoft Excel for Windows/Mac rejected as "We found a problem with some content" (sheet1.xml load error). LibreOffice, ExcelJS, xmllint, and the aurochs parser accepted the misordered form, so the regression (introduced between 0.9.0 and 0.10.0) went undetected. Regression tests in `worksheet.spec.ts` now pin `<drawing>` after every page-setup child.
+
 ## [0.12.2] - 2026-04-13
 
 ### Fixed
