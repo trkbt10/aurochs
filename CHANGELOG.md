@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.4] - 2026-05-11
+
+### Fixed
+
+- `pages/app/pages/FigViewerPage.tsx` `buildSceneGraph` call now passes the required `viewport` and `textFontResolver` fields. `BuildSceneGraphOptions` made both required (every field of the builder is explicit by SoT) but this call site predated that contract and was caught by CI typecheck only after the 0.12.3 release.
+
 ## [0.12.3] - 2026-05-11
 
 ### Fixed
@@ -349,7 +355,8 @@ Project inception.
 - Text body and paragraph rendering
 - Theme and style support
 
-[Unreleased]: https://github.com/trkbt10/aurochs/compare/v0.12.3...HEAD
+[Unreleased]: https://github.com/trkbt10/aurochs/compare/v0.12.4...HEAD
+[0.12.4]: https://github.com/trkbt10/aurochs/compare/v0.12.3...v0.12.4
 [0.12.3]: https://github.com/trkbt10/aurochs/compare/v0.12.2...v0.12.3
 [0.12.2]: https://github.com/trkbt10/aurochs/compare/v0.12.1...v0.12.2
 [0.12.1]: https://github.com/trkbt10/aurochs/compare/v0.12.0...v0.12.1

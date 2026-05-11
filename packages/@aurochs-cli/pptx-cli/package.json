@@ -1,6 +1,6 @@
 {
   "name": "@aurochs-cli/pptx-cli",
-  "version": "0.12.3",
+  "version": "0.12.4",
   "type": "module",
   "bin": {
     "pptx": "./dist/cli.js"

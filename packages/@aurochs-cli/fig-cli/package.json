@@ -1,6 +1,6 @@
 {
   "name": "@aurochs-cli/fig-cli",
-  "version": "0.12.3",
+  "version": "0.12.4",
   "type": "module",
   "bin": {
     "fig": "./dist/cli.js"
