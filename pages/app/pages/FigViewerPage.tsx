@@ -86,10 +86,12 @@ function PageSvgContent({ page, document: doc, bounds }: PageSvgContentProps) {
       blobs: doc.blobs,
       images: doc.images,
       canvasSize: { width: bounds.width, height: bounds.height },
+      viewport: { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height },
       symbolMap: doc.components,
       styleRegistry: doc.styleRegistry,
       showHiddenNodes: false,
       warnings: [],
+      textFontResolver: undefined,
     });
   }, [page.children, doc, bounds.width, bounds.height]);
 
