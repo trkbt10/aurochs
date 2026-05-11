@@ -19,6 +19,7 @@ import {
   generateSharedStrings,
   createSharedStringTableBuilder,
   collectSharedStrings,
+  type MediaPart,
 } from "./exporter";
 import { parseXlsxWorkbook } from "@aurochs-office/xlsx/parser";
 import { loadZipPackage } from "@aurochs/zip";
@@ -26,7 +27,7 @@ import type { XlsxWorkbook, XlsxWorksheet, XlsxRow } from "@aurochs-office/xlsx/
 import type { Cell } from "@aurochs-office/xlsx/domain/cell/types";
 import { createDefaultStyleSheet } from "@aurochs-office/xlsx/domain/style/types";
 import { colIdx, rowIdx, sheetId } from "@aurochs-office/xlsx/domain/types";
-import { serializeElement } from "@aurochs/xml";
+import { serializeElement, parseXml } from "@aurochs/xml";
 
 // =============================================================================
 // Test Helper Functions
@@ -609,5 +610,260 @@ describe("Round-trip: export -> parse", () => {
 
     expect(cells[1].value.type).toBe("string");
     expect(cells[1].value.type === "string" && cells[1].value.value).toBe("Test");
+  });
+});
+
+// =============================================================================
+// Drawing Regression Tests
+// =============================================================================
+//
+// Excel for Windows/Mac rejected aurochs 0.10.0–0.12.2 workbooks containing any
+// XlsxDrawing with "We found a problem with some content … sheet1.xml part with
+// XML error." Root cause: serializeWorksheet placed <drawing> between
+// <hyperlinks> and <printOptions>, violating ECMA-376 §18.3.1.99 CT_Worksheet
+// sequence which requires <drawing> AFTER pageMargins/pageSetup/headerFooter/
+// rowBreaks/colBreaks. LibreOffice / ExcelJS / xmllint / aurochs's own parser
+// were all lenient, so single-component tests didn't catch the regression.
+//
+// These tests assert the end-to-end OPC package: byte order in sheet1.xml,
+// relationship wiring, content-type registrations, and media payload.
+// =============================================================================
+
+/** 1×1 transparent PNG (from the issue's repro). */
+const PNG_1X1_TRANSPARENT = new Uint8Array([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+  0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+  0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+  0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4,
+  0x89, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x44, 0x41,
+  0x54, 0x78, 0x9c, 0x62, 0x00, 0x01, 0x00, 0x00,
+  0x05, 0x00, 0x01, 0x0d, 0x0a, 0x2d, 0xb4, 0x00,
+  0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae,
+  0x42, 0x60, 0x82,
+]);
+
+/** Build the minimal workbook from the issue: one cell + one twoCellAnchor picture. */
+function createMinimalImageWorkbook(): XlsxWorkbook {
+  return {
+    dateSystem: "1900",
+    sharedStrings: [],
+    styles: createDefaultStyleSheet(),
+    sheets: [
+      {
+        dateSystem: "1900",
+        name: "S",
+        sheetId: sheetId(1),
+        state: "visible",
+        xmlPath: "xl/worksheets/sheet1.xml",
+        columns: [{ min: colIdx(1), max: colIdx(2), width: 20 }],
+        rows: [createRow(1, [createNumberCell(1, 1, 1)])],
+        mergeCells: [],
+        drawing: {
+          anchors: [
+            {
+              type: "twoCellAnchor",
+              editAs: "oneCell",
+              from: { col: colIdx(1), colOff: 0, row: rowIdx(1), rowOff: 0 },
+              to: { col: colIdx(2), colOff: 0, row: rowIdx(5), rowOff: 0 },
+              content: {
+                type: "picture",
+                nvPicPr: { id: 1, name: "img" },
+                blipRelId: "rId1",
+              },
+            },
+          ],
+        },
+      },
+    ],
+  };
+}
+
+/** Build the per-sheet media map for the minimal workbook above. */
+function createMinimalSheetMedia(): ReadonlyMap<number, ReadonlyMap<string, MediaPart>> {
+  const media = new Map<string, MediaPart>();
+  media.set("rId1", { data: PNG_1X1_TRANSPARENT, contentType: "image/png" });
+  const sheetMedia = new Map<number, ReadonlyMap<string, MediaPart>>();
+  sheetMedia.set(0, media);
+  return sheetMedia;
+}
+
+describe("exportXlsx — drawing regression (Excel-strict OOXML compliance)", () => {
+  it("places <drawing> after <pageMargins> in the emitted sheet1.xml bytes", async () => {
+    // ECMA-376 §18.3.1.99 sequence: <drawing> must come AFTER pageMargins/
+    // pageSetup/headerFooter/rowBreaks/colBreaks. Excel's strict validator
+    // rejects sheet1.xml otherwise (the symptom in the bug report was a load
+    // error pointing at the column where <pageMargins> begins).
+    const data = await exportXlsx(createMinimalImageWorkbook(), {
+      sheetMedia: createMinimalSheetMedia(),
+    });
+    const pkg = await loadZipPackage(data);
+    const sheetXml = pkg.readText("xl/worksheets/sheet1.xml");
+    expect(sheetXml).not.toBeNull();
+    const xml = sheetXml as string;
+
+    const pageMarginsPos = xml.indexOf("<pageMargins");
+    const drawingPos = xml.indexOf("<drawing");
+    expect(pageMarginsPos).toBeGreaterThan(-1);
+    expect(drawingPos).toBeGreaterThan(-1);
+    expect(drawingPos).toBeGreaterThan(pageMarginsPos);
+  });
+
+  it("emits <drawing r:id=\"...\"> matching the worksheet's drawing relationship", async () => {
+    const data = await exportXlsx(createMinimalImageWorkbook(), {
+      sheetMedia: createMinimalSheetMedia(),
+    });
+    const pkg = await loadZipPackage(data);
+
+    const sheetXml = pkg.readText("xl/worksheets/sheet1.xml");
+    expect(sheetXml).not.toBeNull();
+
+    // Extract the r:id from <drawing r:id="...">.
+    const match = /<drawing\s+r:id="([^"]+)"/.exec(sheetXml as string);
+    expect(match).not.toBeNull();
+    const drawingRelId = match![1];
+
+    // The corresponding relationship must exist in sheet1.xml.rels.
+    const relsXml = pkg.readText("xl/worksheets/_rels/sheet1.xml.rels");
+    expect(relsXml).not.toBeNull();
+    expect(relsXml).toContain(`Id="${drawingRelId}"`);
+    expect(relsXml).toContain(
+      'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing"',
+    );
+    expect(relsXml).toContain('Target="../drawings/drawing1.xml"');
+  });
+
+  it("wires the picture's blipRelId to a media file via drawing1.xml.rels", async () => {
+    const data = await exportXlsx(createMinimalImageWorkbook(), {
+      sheetMedia: createMinimalSheetMedia(),
+    });
+    const pkg = await loadZipPackage(data);
+
+    // drawing1.xml must reference rId1 (the blipRelId set on the picture content).
+    const drawingXml = pkg.readText("xl/drawings/drawing1.xml");
+    expect(drawingXml).not.toBeNull();
+    expect(drawingXml).toContain('r:embed="rId1"');
+
+    // drawing1.xml.rels must resolve rId1 to ../media/image_s1_1.png.
+    const drawingRelsXml = pkg.readText("xl/drawings/_rels/drawing1.xml.rels");
+    expect(drawingRelsXml).not.toBeNull();
+    expect(drawingRelsXml).toContain('Id="rId1"');
+    expect(drawingRelsXml).toContain(
+      'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"',
+    );
+    expect(drawingRelsXml).toContain('Target="../media/image_s1_1.png"');
+  });
+
+  it("registers the drawing override and PNG default in [Content_Types].xml", async () => {
+    const data = await exportXlsx(createMinimalImageWorkbook(), {
+      sheetMedia: createMinimalSheetMedia(),
+    });
+    const pkg = await loadZipPackage(data);
+
+    const contentTypesXml = pkg.readText("[Content_Types].xml");
+    expect(contentTypesXml).not.toBeNull();
+
+    // Drawing part override
+    expect(contentTypesXml).toContain('PartName="/xl/drawings/drawing1.xml"');
+    expect(contentTypesXml).toContain(
+      'ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"',
+    );
+
+    // PNG default extension (so OPC consumers know how to interpret xl/media/*.png)
+    expect(contentTypesXml).toContain('Extension="png"');
+    expect(contentTypesXml).toContain('ContentType="image/png"');
+  });
+
+  it("writes the media payload as binary bytes at xl/media/image_s1_1.png", async () => {
+    const data = await exportXlsx(createMinimalImageWorkbook(), {
+      sheetMedia: createMinimalSheetMedia(),
+    });
+    const pkg = await loadZipPackage(data);
+
+    const mediaBuf = pkg.readBinary("xl/media/image_s1_1.png");
+    expect(mediaBuf).not.toBeNull();
+    const bytes = new Uint8Array(mediaBuf as ArrayBuffer);
+    expect(bytes.length).toBe(PNG_1X1_TRANSPARENT.length);
+    // Verify the PNG signature survived the ZIP round-trip.
+    expect(bytes[0]).toBe(0x89);
+    expect(bytes[1]).toBe(0x50);
+    expect(bytes[2]).toBe(0x4e);
+    expect(bytes[3]).toBe(0x47);
+    // And full byte equality.
+    for (let i = 0; i < PNG_1X1_TRANSPARENT.length; i++) {
+      expect(bytes[i]).toBe(PNG_1X1_TRANSPARENT[i]);
+    }
+  });
+
+  it("produces the complete set of OPC parts required for a drawing-bearing workbook", async () => {
+    const data = await exportXlsx(createMinimalImageWorkbook(), {
+      sheetMedia: createMinimalSheetMedia(),
+    });
+    const pkg = await loadZipPackage(data);
+    const files = new Set(pkg.listFiles());
+
+    // Every required part the issue called out must be present.
+    expect(files.has("[Content_Types].xml")).toBe(true);
+    expect(files.has("_rels/.rels")).toBe(true);
+    expect(files.has("xl/workbook.xml")).toBe(true);
+    expect(files.has("xl/_rels/workbook.xml.rels")).toBe(true);
+    expect(files.has("xl/styles.xml")).toBe(true);
+    expect(files.has("xl/sharedStrings.xml")).toBe(true);
+    expect(files.has("xl/worksheets/sheet1.xml")).toBe(true);
+    expect(files.has("xl/worksheets/_rels/sheet1.xml.rels")).toBe(true);
+    expect(files.has("xl/drawings/drawing1.xml")).toBe(true);
+    expect(files.has("xl/drawings/_rels/drawing1.xml.rels")).toBe(true);
+    expect(files.has("xl/media/image_s1_1.png")).toBe(true);
+  });
+
+  it("emits sheet1.xml as well-formed XML that parses without errors", async () => {
+    // The Excel error message in the bug report pointed at a column inside
+    // sheet1.xml, so the file must at minimum be well-formed XML. This guards
+    // against a future regression where misordering produces unparsable output.
+    const data = await exportXlsx(createMinimalImageWorkbook(), {
+      sheetMedia: createMinimalSheetMedia(),
+    });
+    const pkg = await loadZipPackage(data);
+    const sheetXml = pkg.readText("xl/worksheets/sheet1.xml");
+    expect(sheetXml).not.toBeNull();
+    expect(() => parseXml(sheetXml as string)).not.toThrow();
+  });
+
+  it("survives export → parse round-trip: the drawing is preserved", async () => {
+    // Confirms the fixed ordering doesn't break the parser path either.
+    const data = await exportXlsx(createMinimalImageWorkbook(), {
+      sheetMedia: createMinimalSheetMedia(),
+    });
+    const pkg = await loadZipPackage(data);
+    const parsed = await parseXlsxWorkbook(async (path) => {
+      return pkg.readText(path) ?? undefined;
+    });
+
+    expect(parsed.sheets).toHaveLength(1);
+    const sheet = parsed.sheets[0];
+    expect(sheet.drawing).toBeDefined();
+    expect(sheet.drawing!.anchors).toHaveLength(1);
+
+    const anchor = sheet.drawing!.anchors[0];
+    expect(anchor.type).toBe("twoCellAnchor");
+    expect(anchor.content?.type).toBe("picture");
+  });
+
+  it("does not emit <drawing> when the worksheet has no drawing", async () => {
+    // The previous broken ordering still happened to work without a drawing,
+    // but we pin the negative case so a future refactor can't accidentally
+    // emit a dangling <drawing> reference.
+    const sheet = createWorksheet("Sheet1", 1, [createRow(1, [createNumberCell(1, 1, 42)])]);
+    const workbook = createTestWorkbook([sheet]);
+    const data = await exportXlsx(workbook);
+    const pkg = await loadZipPackage(data);
+
+    const sheetXml = pkg.readText("xl/worksheets/sheet1.xml");
+    expect(sheetXml).not.toBeNull();
+    expect(sheetXml).not.toContain("<drawing");
+
+    // And no drawing parts should exist in the package.
+    const files = pkg.listFiles();
+    expect(files.some((f) => f.startsWith("xl/drawings/"))).toBe(false);
+    expect(files.some((f) => f.startsWith("xl/media/"))).toBe(false);
   });
 });

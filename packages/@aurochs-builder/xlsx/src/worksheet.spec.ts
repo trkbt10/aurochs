@@ -1471,10 +1471,10 @@ describe("serializeWorksheet with new elements", () => {
       headerFooter: { oddHeader: "Title" },
       pageBreaks: { rowBreaks: [{ id: 5, manual: true }], colBreaks: [] },
     };
-    const element = serializeWorksheet(worksheet, sharedStrings);
+    const element = serializeWorksheet(worksheet, sharedStrings, "rId_drawing1");
     const xml = serializeElement(element);
 
-    // Verify ECMA-376 element order
+    // Verify ECMA-376 §18.3.1.99 (CT_Worksheet) child sequence
     const positions = [
       xml.indexOf("<sheetPr>"),
       xml.indexOf("<dimension"),
@@ -1491,9 +1491,66 @@ describe("serializeWorksheet with new elements", () => {
       xml.indexOf("<pageSetup"),
       xml.indexOf("<headerFooter"),
       xml.indexOf("<rowBreaks"),
+      xml.indexOf("<drawing"),
     ];
     for (let i = 1; i < positions.length; i++) {
       expect(positions[i]).toBeGreaterThan(positions[i - 1]);
     }
+  });
+
+  // Regression: aurochs 0.10.0–0.12.2 emitted <drawing> before <pageMargins>,
+  // which violates the CT_Worksheet sequence in ECMA-376 §18.3.1.99. Excel's
+  // strict OOXML validator rejected such sheet1.xml with "We found a problem
+  // with some content … sheet1.xml part with XML error." LibreOffice, ExcelJS,
+  // xmllint, and the aurochs parser all accepted the misordered form, so the
+  // regression went undetected. This test pins drawing AFTER all page-setup
+  // children so any future reordering breaks loudly.
+  it("should place <drawing> after pageMargins/pageSetup/headerFooter/rowBreaks/colBreaks", () => {
+    const sharedStrings = createMockSharedStrings();
+    const worksheet: XlsxWorksheet = createWorksheet([createRow(1, [numCell(1, 1, 1)])]);
+    const element = serializeWorksheet(worksheet, sharedStrings, "rId_drawing1");
+    const xml = serializeElement(element);
+
+    const drawingPos = xml.indexOf("<drawing");
+    expect(drawingPos).toBeGreaterThan(-1);
+
+    // pageMargins is always emitted (default values fall back if unset), so
+    // every drawing must follow it.
+    const pageMarginsPos = xml.indexOf("<pageMargins");
+    expect(pageMarginsPos).toBeGreaterThan(-1);
+    expect(drawingPos).toBeGreaterThan(pageMarginsPos);
+  });
+
+  it("should place <drawing> after every page-setup child when all are present", () => {
+    const sharedStrings = createMockSharedStrings();
+    const worksheet: XlsxWorksheet = {
+      ...createWorksheet([createRow(1, [numCell(1, 1, 1)])]),
+      printOptions: { gridLines: true },
+      pageMargins: { left: 1, right: 1, top: 1, bottom: 1, header: 0.5, footer: 0.5 },
+      pageSetup: { orientation: "portrait" },
+      headerFooter: { oddHeader: "Title" },
+      pageBreaks: {
+        rowBreaks: [{ id: 5, manual: true }],
+        colBreaks: [{ id: 3, manual: true }],
+      },
+    };
+    const element = serializeWorksheet(worksheet, sharedStrings, "rId_drawing1");
+    const xml = serializeElement(element);
+
+    const drawingPos = xml.indexOf("<drawing");
+    expect(drawingPos).toBeGreaterThan(xml.indexOf("<printOptions"));
+    expect(drawingPos).toBeGreaterThan(xml.indexOf("<pageMargins"));
+    expect(drawingPos).toBeGreaterThan(xml.indexOf("<pageSetup"));
+    expect(drawingPos).toBeGreaterThan(xml.indexOf("<headerFooter"));
+    expect(drawingPos).toBeGreaterThan(xml.indexOf("<rowBreaks"));
+    expect(drawingPos).toBeGreaterThan(xml.indexOf("<colBreaks"));
+  });
+
+  it("should omit <drawing> when no drawingRelId is provided", () => {
+    const sharedStrings = createMockSharedStrings();
+    const worksheet: XlsxWorksheet = createWorksheet([createRow(1, [numCell(1, 1, 1)])]);
+    const element = serializeWorksheet(worksheet, sharedStrings);
+    const xml = serializeElement(element);
+    expect(xml).not.toContain("<drawing");
   });
 });

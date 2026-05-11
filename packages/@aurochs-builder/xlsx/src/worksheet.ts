@@ -975,7 +975,7 @@ export function serializeColBreaks(breaks: readonly XlsxPageBreak[]): XmlElement
 /**
  * Serialize a complete worksheet to XML element.
  *
- * The child elements are ordered according to ECMA-376 §18.3.1.99:
+ * The child elements are ordered according to ECMA-376 §18.3.1.99 (CT_Worksheet):
  * 1. sheetPr (tabColor)
  * 2. dimension
  * 3. sheetViews
@@ -993,12 +993,19 @@ export function serializeColBreaks(breaks: readonly XlsxPageBreak[]): XmlElement
  * 15. pageSetup
  * 16. headerFooter
  * 17. rowBreaks / colBreaks
+ * 18. drawing
+ *
+ * NOTE: `<drawing>` must appear AFTER page setup elements per the CT_Worksheet
+ * schema sequence. Excel's strict OOXML validator rejects sheet1.xml when this
+ * order is violated (file opens as "unreadable content"), while LibreOffice and
+ * lenient parsers accept the misordered form.
  *
  * @param worksheet - Worksheet to serialize
  * @param sharedStrings - Shared string table for string values
  * @returns XmlElement for the worksheet element
  *
  * @see ECMA-376 Part 4, Section 18.3.1.99 (worksheet)
+ * @see ECMA-376 Part 4, Section 18.3.1.36 (drawing)
  */
 export function serializeWorksheet(
   worksheet: XlsxWorksheetInput,
@@ -1072,12 +1079,7 @@ export function serializeWorksheet(
     children.push(serializeHyperlinks(worksheet.hyperlinks));
   }
 
-  // 13. drawing (ECMA-376 Part 4, Section 18.3.1.36)
-  if (drawingRelId) {
-    children.push({ type: "element", name: "drawing", attrs: { "r:id": drawingRelId }, children: [] });
-  }
-
-  // 14. printOptions
+  // 13. printOptions
   if (worksheet.printOptions) {
     children.push(serializePrintOptions(worksheet.printOptions));
   }
@@ -1115,6 +1117,13 @@ export function serializeWorksheet(
     if (worksheet.pageBreaks.colBreaks.length > 0) {
       children.push(serializeColBreaks(worksheet.pageBreaks.colBreaks));
     }
+  }
+
+  // 18. drawing (ECMA-376 Part 4, Section 18.3.1.36)
+  // Must come after rowBreaks/colBreaks per CT_Worksheet sequence; Excel's
+  // strict validator rejects sheet1.xml otherwise.
+  if (drawingRelId) {
+    children.push({ type: "element", name: "drawing", attrs: { "r:id": drawingRelId }, children: [] });
   }
 
   return {
