@@ -1,6 +1,6 @@
 {
   "name": "@aurochs-cli/xlsx-cli",
-  "version": "0.12.2",
+  "version": "0.12.3",
   "type": "module",
   "bin": {
     "xlsx": "./dist/cli.js"
